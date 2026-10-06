@@ -1,0 +1,87 @@
+# Accounts and storage
+
+## Identity and sessions
+
+Usernames contain 3–24 ASCII letters/digits/underscores and are unique case-insensitively.
+Passwords contain 10–128 characters; hashes use salted asynchronous scrypt
+(`N=131072`, `r=8`, `p=1`) with bounded concurrency and HTTP rate limits.
+Account UUIDs are player IDs; editable nicknames do not change identity.
+Profiles include a 1–20-character nickname, six-digit color, avatar preset/optional
+uploaded avatar, optional table background, and match-history visibility.
+
+Login creates a seven-day opaque session. Storage contains only its SHA-256 digest;
+the browser uses an HttpOnly, SameSite=Lax cookie, Secure in production. Mutating HTTP
+requests require an allowed Origin and JSON content type. Socket handshake/actions
+revalidate sessions. Passwords and session tokens are never public DTO fields.
+Logout revokes the current session; logout-all/password changes revoke all sessions
+and disconnect affected sockets. Password changes require the existing password.
+There is no email/password-reset delivery workflow.
+
+Friend requests are persisted with unordered-pair uniqueness and sender/recipient
+permissions. Accepted friends include transient online/in-room presence. Room invitations
+are ephemeral and only available to accepted friends. Match history defaults to private;
+other signed-in players can read it only when the owner enables visibility.
+
+## Database and media
+
+The authoritative contracts are `server/src/database/repository.ts` and
+`server/src/database/schema.ts`. `migrations.ts` defines the current version **3**;
+startup migrates supported version 1/2 data and validates the result.
+
+| Collection | Contents |
+| --- | --- |
+| `accounts` | Identity, normalized username, password hash, profile and timestamps |
+| `sessions` | Token digest, account, creation/expiry |
+| `friendships` | Account pair, request/accepted status, timestamps |
+| `matches` | Stable game ID, game-specific result, participants, completion |
+| `emojis` | Owner, unique name, media reference |
+| `runtime` | Players, rooms/seats/readiness, games/private hands/logs, recent room chat |
+
+The default database is `server/data/database.json`, independent of cwd. Relative
+`DATABASE_PATH` overrides resolve from cwd. Production uses
+`/var/lib/card-together/database.json`; uploaded content-addressed images live alongside
+it in `media/`. Git ignores development state; it is never exposed as a static directory.
+Image reads are served through the controlled media endpoint.
+
+Only one server process may own a JSON file. An in-process duplicate-path guard is
+not a cross-process lock. Repository mutations serialize, validate schema/references,
+write a temporary file in the same directory, fsync, and atomically rename. In-memory
+state changes only after success. Invalid JSON, unsupported versions, duplicate records,
+or invalid references stop startup without replacing the original file. Atomic rename
+prevents partial files; power-loss durability also depends on the filesystem.
+
+Runtime actions commit a consistent game snapshot and completed match in one write,
+then acknowledge/broadcast; failure restores managers. Restarts restore private hands
+and provide a fresh 60-second reconnect window. Multiple tabs share a seat; only the
+last disconnect starts expiry. Empty rooms remove active game/chat records; completed
+matches remain. Chat retains the last 200 messages per room. Voice is not recorded or
+saved in JSON.
+
+## Backup and restore
+
+Stop the writer before copying the **entire state directory**, including `database.json`
+and `media/`. Keep backups private: they contain password hashes and private hands.
+Production deployment already creates protected snapshots; also maintain an off-host backup.
+See [deployment](deployment.md#operations-and-rollback) for systemd commands and backup layout.
+
+To restore, stop all candidate writers, preserve current complete state separately,
+restore a compatible complete snapshot, set directory/file ownership and restrictive
+permissions, then start one service and verify login/history/media/game resume.
+Restoring a snapshot loses newer writes. Do not edit live JSON, discard a database to
+fix startup, or restore JSON while leaving mismatched media.
+
+## Future SQL adapter
+
+SQL is not implemented. Preserve the asynchronous Repository/public DTO contracts,
+atomic username/pair constraints, compare-and-swap password updates, session revocation,
+and atomic runtime+completed-match writes. Initially a versioned JSON/JSONB runtime
+can preserve game semantics; multi-process room coordination needs a separate design.
+
+Implement and run repository/auth/social/runtime tests against the adapter first.
+Stop writes and back up/validate JSON before a single-transaction import of accounts,
+sessions, friendships, matches, emoji, and runtime. Preserve IDs/hashes/expiry/media
+references; reject conflicts rather than overwrite. Compare counts, uniqueness,
+references, and runtime contents, then verify login, history, friendships, media, and resume.
+Switch repository construction and resume traffic only after validation. After accepting
+SQL writes, rollback requires exporting/reconciling newer data; an old JSON snapshot is
+no longer current. Do not introduce dual writes without an explicit transactional design.

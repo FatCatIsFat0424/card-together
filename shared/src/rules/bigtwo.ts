@@ -1,5 +1,5 @@
 // ─── 台式大老二規則引擎（純函式，前後端共用） ───
-// 規格：docs/wiki/big-two-rules.md
+// Rules: docs/games.md#big-two
 
 import type { Card, Rank, Seat, Suit } from '../types';
 import { SEAT_ORDER_CLOCKWISE } from '../constants';
