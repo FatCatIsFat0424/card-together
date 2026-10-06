@@ -31,7 +31,7 @@ async function main(): Promise<void> {
     mediaDirectory: join(dirname(databasePath), 'media'),
   });
   application.httpServer.listen(port, host, () => {
-    console.warn(`[server] Bridge Online listening on port ${port}`);
+    console.warn(`[server] Card Together listening on port ${port}`);
   });
   let stopping = false;
   const shutdown = (): void => {

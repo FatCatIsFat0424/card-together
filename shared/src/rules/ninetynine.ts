@@ -1,5 +1,5 @@
 // ─── 99 規則引擎（純函式，前後端共用） ───
-// 規格：docs/wiki/ninety-nine-rules.md
+// Rules: docs/games.md#ninety-nine
 
 import type { Card } from '../types';
 

@@ -1,11 +1,12 @@
 // ─── Theme Store：介面主題 ───
 
 import { create } from 'zustand';
+import { readPreference, writePreference } from '../utils/preference-storage';
 
 export type Theme = 'dashboard' | 'felt' | 'paper';
 export const THEMES: readonly Theme[] = ['dashboard', 'felt', 'paper'];
 
-const STORAGE_KEY = 'bridge.theme';
+const STORAGE_KEY = 'theme';
 
 export function parseTheme(value: string | null | undefined): Theme {
   return THEMES.find((theme) => theme === value) ?? 'dashboard';
@@ -16,11 +17,7 @@ export function applyTheme(theme: Theme): void {
 }
 
 function readStoredTheme(): Theme {
-  try {
-    return parseTheme(typeof localStorage === 'undefined' ? null : localStorage.getItem(STORAGE_KEY));
-  } catch {
-    return 'dashboard';
-  }
+  return parseTheme(readPreference(STORAGE_KEY));
 }
 
 interface ThemeStore {
@@ -33,10 +30,6 @@ export const useThemeStore = create<ThemeStore>((set) => ({
   setTheme: (theme) => {
     set({ theme });
     applyTheme(theme);
-    try {
-      if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, theme);
-    } catch {
-      // Storage is optional.
-    }
+    writePreference(STORAGE_KEY, theme);
   },
 }));

@@ -7,26 +7,34 @@ import sys
 from dataclasses import dataclass
 
 HOST = "acserver.csie.org"
-SNIPPET = "/etc/nginx/snippets/bridge-online.conf"
-MARKER = "# Bridge Online managed route"
+SNIPPET = "/etc/nginx/snippets/card-together.conf"
+MARKER = "# Card Together managed route"
+OLD_MARKER = "# Bridge Online managed route"
 LEGACY_BLOCKS = {
-    "http": "\n" + MARKER + " BEGIN http\n"
+    "http": "\n" + OLD_MARKER + " BEGIN http\n"
     "    location = /bridge_online { return 308 https://acserver.csie.org$request_uri; }\n"
     "    location ^~ /bridge_online/ { return 308 https://acserver.csie.org$request_uri; }\n"
-    + MARKER + " END http\n",
-    "https": "\n" + MARKER + " BEGIN https\n"
-    f"    include {SNIPPET};\n"
-    + MARKER + " END https\n",
+    + OLD_MARKER + " END http\n",
+    "https": "\n" + OLD_MARKER + " BEGIN https\n"
+    "    include /etc/nginx/snippets/bridge-online.conf;\n"
+    + OLD_MARKER + " END https\n",
+}
+PREVIOUS_BLOCKS = {
+    protocol: "\n" + OLD_MARKER + f" BEGIN {protocol}\n"
+    f"    include /etc/nginx/snippets/{filename};\n"
+    + OLD_MARKER + f" END {protocol}\n"
+    for protocol, filename in (
+        ("http", "bridge-online-http.conf"), ("https", "bridge-online.conf")
+    )
 }
 BLOCKS = {
     protocol: "\n" + MARKER + f" BEGIN {protocol}\n"
     f"    include /etc/nginx/snippets/{filename};\n"
     + MARKER + f" END {protocol}\n"
     for protocol, filename in (
-        ("http", "bridge-online-http.conf"), ("https", "bridge-online.conf")
+        ("http", "card-together-http.conf"), ("https", "card-together.conf")
     )
 }
-
 
 
 @dataclass
@@ -138,15 +146,15 @@ def configure(source: str) -> str:
     original = source
     managed = {}
     for protocol, block in BLOCKS.items():
-        variants = set((block, LEGACY_BLOCKS[protocol]))
+        variants = set((block, LEGACY_BLOCKS[protocol], PREVIOUS_BLOCKS[protocol]))
         count = sum(source.count(variant) for variant in variants)
         if count > 1:
             raise ValueError(f"Duplicate managed {protocol} block")
         managed[protocol] = next((variant for variant in variants if variant in source), None)
         for variant in variants:
             source = source.replace(variant, "")
-    if MARKER in source:
-        raise ValueError("Unrecognized or modified Bridge Online managed block")
+    if MARKER in source or OLD_MARKER in source:
+        raise ValueError("Unrecognized or modified managed application block")
     servers = {}
     for node in walk(parse(source)):
         if node.words != ["server"] or node.children is None:
@@ -172,14 +180,14 @@ def configure(source: str) -> str:
             raise ValueError(f"Multiple {protocol} server blocks for {HOST}")
         for child in walk(node.children):
             if child.words[0] == "location" and any(
-                "bridge_online" in word for word in child.words[1:]
+                ("bridge_online" in word or "card-together" in word) for word in child.words[1:]
             ):
-                raise ValueError("Unmanaged conflicting /bridge_online location")
+                raise ValueError("Unmanaged conflicting application location")
             if child.words[0] == "include" and any(
-                "bridge-online" in word or "bridge_online" in word
+                "bridge-online" in word or "bridge_online" in word or "card-together" in word
                 for word in child.words[1:]
             ):
-                raise ValueError("Unmanaged conflicting Bridge Online include")
+                raise ValueError("Unmanaged conflicting application include")
         servers[protocol] = node
     if set(servers) != set(BLOCKS):
         raise ValueError(f"Expected one HTTP and one HTTPS server for {HOST}")

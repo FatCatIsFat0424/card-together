@@ -13,47 +13,64 @@ fi
   exit 1
 }
 command -v rsync >/dev/null
+command -v rg >/dev/null
+if [[ -f /etc/bridge-online/server.env && ! -f /etc/card-together/server.env ]]; then
+  echo "Migrate the existing installation with deploy/deploy.sh first." >&2
+  exit 1
+fi
+if systemctl is-active --quiet bridge-online.service; then
+  echo "Stop and disable bridge-online.service before installing." >&2
+  exit 1
+fi
 test -f "$repo_dir/node_modules/tsx/package.json"
 test -f "$repo_dir/client/dist/index.html"
-grep -q '/bridge_online/assets/' "$repo_dir/client/dist/index.html" || {
-  echo 'Build the client with VITE_BASE_PATH=/bridge_online/ before installing.' >&2
+rg -q '/card-together/assets/' "$repo_dir/client/dist/index.html" || {
+  echo 'Build the client with VITE_BASE_PATH=/card-together/ before installing.' >&2
   exit 1
 }
-getent passwd bridge-online >/dev/null || useradd --system --user-group \
-  --home-dir /var/lib/bridge-online --no-create-home --shell /usr/sbin/nologin bridge-online
-if systemctl cat bridge-online.service >/dev/null 2>&1; then
-  systemctl stop bridge-online.service
+getent passwd card-together >/dev/null || useradd --system --user-group \
+  --home-dir /var/lib/card-together --no-create-home --shell /usr/sbin/nologin card-together
+if systemctl cat card-together.service >/dev/null 2>&1; then
+  systemctl stop card-together.service
 fi
 empty_dir=$(mktemp -d)
 trap 'rm -rf -- "$empty_dir"' EXIT
-install -d -m 0755 /opt/bridge-online
-install -m 0644 "$repo_dir/package.json" /opt/bridge-online/package.json
+install -d -m 0755 /opt/card-together
+install -m 0644 "$repo_dir/package.json" /opt/card-together/package.json
 rsync -a --delete --chown=root:root --chmod=a+rX \
-  "$repo_dir/node_modules/" /opt/bridge-online/node_modules/
+  "$repo_dir/node_modules/" /opt/card-together/node_modules/
 for workspace in shared server client; do
-  install -d -m 0755 "/opt/bridge-online/$workspace"
-  install -m 0644 "$repo_dir/$workspace/package.json" "/opt/bridge-online/$workspace/package.json"
+  install -d -m 0755 "/opt/card-together/$workspace"
+  install -m 0644 "$repo_dir/$workspace/package.json" "/opt/card-together/$workspace/package.json"
   dependency_source="$repo_dir/$workspace/node_modules"
   if [[ ! -d $dependency_source ]]; then dependency_source=$empty_dir; fi
   rsync -a --delete --chown=root:root --chmod=a+rX \
-    "$dependency_source/" "/opt/bridge-online/$workspace/node_modules/"
+    "$dependency_source/" "/opt/card-together/$workspace/node_modules/"
 done
 for workspace in shared server; do
   rsync -a --delete --chown=root:root --chmod=D755,F644 \
-    "$repo_dir/$workspace/src/" "/opt/bridge-online/$workspace/src/"
-  install -m 0644 "$repo_dir/$workspace/tsconfig.json" "/opt/bridge-online/$workspace/tsconfig.json"
+    "$repo_dir/$workspace/src/" "/opt/card-together/$workspace/src/"
+  install -m 0644 "$repo_dir/$workspace/tsconfig.json" "/opt/card-together/$workspace/tsconfig.json"
 done
-install -m 0644 "$repo_dir/tsconfig.json" /opt/bridge-online/tsconfig.json
-install -d -m 0755 /opt/bridge-online/www/bridge_online
-rsync -a --delete --chown=root:root --chmod=D755,F644 \
-  "$repo_dir/client/dist/" /opt/bridge-online/www/bridge_online/
-install -m 0755 "$node_binary" /opt/bridge-online/node
-install -d -m 0700 /etc/bridge-online
-if [[ ! -e /etc/bridge-online/server.env ]]; then
-  install -m 0600 "$repo_dir/deploy/systemd/server.env.example" /etc/bridge-online/server.env
+install -m 0644 "$repo_dir/tsconfig.json" /opt/card-together/tsconfig.json
+# Keep old hashed assets available to already-open browser sessions.
+install -d -m 0755 /opt/card-together/www/bridge_online
+if [[ -d /opt/bridge-online/www/bridge_online ]]; then
+  rsync -a --chown=root:root --chmod=D755,F644 \
+    /opt/bridge-online/www/bridge_online/ /opt/card-together/www/bridge_online/
 fi
-install -m 0644 "$repo_dir/deploy/systemd/bridge-online.service" /etc/systemd/system/bridge-online.service
-systemd-analyze verify /etc/systemd/system/bridge-online.service
+rsync -a --exclude=/index.html --chown=root:root --chmod=D755,F644 \
+  "$repo_dir/client/dist/" /opt/card-together/www/bridge_online/
+install -d -m 0755 /opt/card-together/www/card-together
+rsync -a --delete --chown=root:root --chmod=D755,F644 \
+  "$repo_dir/client/dist/" /opt/card-together/www/card-together/
+install -m 0755 "$node_binary" /opt/card-together/node
+install -d -m 0700 /etc/card-together
+if [[ ! -e /etc/card-together/server.env ]]; then
+  install -m 0600 "$repo_dir/deploy/systemd/server.env.example" /etc/card-together/server.env
+fi
+install -m 0644 "$repo_dir/deploy/systemd/card-together.service" /etc/systemd/system/card-together.service
+systemd-analyze verify /etc/systemd/system/card-together.service
 systemctl daemon-reload
-echo 'Installed. Review /etc/bridge-online/server.env and migrate existing data before starting.'
-echo 'Start with: sudo systemctl enable --now bridge-online.service'
+echo 'Installed. Review /etc/card-together/server.env and migrate existing data before starting.'
+echo 'Start with: sudo systemctl enable --now card-together.service'

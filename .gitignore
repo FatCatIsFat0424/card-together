@@ -150,3 +150,10 @@ server/data/
 
 # Temporary implementation plans
 .plan/
+
+# Owner music originals and generated playback assets
+/local-music/
+/client/public/provided-music/imported-*
+/client/public/provided-music/.import-*/
+/client/src/audio/provided-music.generated.json
+/client/src/audio/provided-music.generated.json.*.tmp

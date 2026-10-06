@@ -17,7 +17,7 @@ npm ci --include=dev
 npm run typecheck
 npm run lint
 npm test
-VITE_BASE_PATH=/bridge_online/ VITE_SERVER_URL='' VITE_SOCKET_PATH=/bridge_online/socket.io npm run build:client
+VITE_BASE_PATH=/card-together/ VITE_SERVER_URL='' VITE_SOCKET_PATH=/card-together/socket.io npm run build:client
 install -d -m 0755 .deploy
 install -m 0755 "$(node -p 'process.execPath')" .deploy/node
 echo 'Build ready. Deploy with: bash deploy/deploy.sh'

@@ -11,7 +11,7 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
     basePath.split('/').some((segment) => segment === '.' || segment === '..')
   ) {
     throw new Error(
-      'VITE_BASE_PATH must be an absolute URL path ending with /, such as /bridge_online/.',
+      'VITE_BASE_PATH must be an absolute URL path ending with /, such as /card-together/.',
     );
   }
   const rewriteProxyPath = (requestPath: string): string => requestPath.slice(basePath.length - 1);

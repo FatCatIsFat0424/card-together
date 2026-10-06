@@ -1,19 +1,20 @@
 import { create } from 'zustand';
+import { readPreference, writePreference } from '../utils/preference-storage';
 
-const STORAGE_KEY = 'bridge.sound.turn';
+const STORAGE_KEY = 'sound.turn';
 interface TurnSoundState {
   enabled: boolean;
   setEnabled: (enabled: boolean) => void;
 }
 
 function savedEnabled(): boolean {
-  try { return localStorage.getItem(STORAGE_KEY) !== 'false'; } catch { return true; }
+  return readPreference(STORAGE_KEY) !== 'false';
 }
 
 export const useTurnSoundStore = create<TurnSoundState>((set) => ({
   enabled: savedEnabled(),
   setEnabled: (enabled) => {
     set({ enabled });
-    try { localStorage.setItem(STORAGE_KEY, String(enabled)); } catch { /* Storage is optional. */ }
+    writePreference(STORAGE_KEY, String(enabled));
   },
 }));

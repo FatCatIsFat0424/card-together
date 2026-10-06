@@ -54,4 +54,4 @@ Licensed under LGPL 3 - www.gnu.org/copyleft/lesser.html
 ----
 Source: https://github.com/richardschneider/cardsJS (cards/ directory), unmodified.
 These SVG files are LGPL-3.0-or-later (see COPYING.LESSER.txt and COPYING.txt);
-the rest of Bridge Online remains under its MIT license.
+the rest of Card Together remains under its MIT license.

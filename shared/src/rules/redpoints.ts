@@ -1,5 +1,5 @@
 // ─── 撿紅點規則引擎（純函式，前後端共用） ───
-// 規格：docs/wiki/red-points-rules.md
+// Rules: docs/games.md#red-points
 
 import type { Card } from '../types';
 
