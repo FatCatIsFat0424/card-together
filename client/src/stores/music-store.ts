@@ -1,16 +1,15 @@
-// ─── Music Store：背景音樂（跨路由存活的單例播放器與播放清單） ───
-
 import { create } from 'zustand';
-import { createBackgroundMusic } from '../audio/background-music';
-import type { BackgroundMusic } from '../audio/background-music';
-import { MUSIC_TRACKS, nextTrackIndex } from '../audio/music-tracks';
-import type { MusicMode } from '../audio/music-tracks';
+import { createFileMusicPlayer } from '../audio/file-music-player';
+import type { FileMusicPlayer } from '../audio/file-music-player';
+import { nextTrackIndex } from '../audio/music-playlist';
+import type { MusicMode } from '../audio/music-playlist';
+import { PROVIDED_MUSIC_TRACKS, providedMusicUrl } from '../audio/provided-music-catalog';
+import { readPreference, writePreference } from '../utils/preference-storage';
 
-const VOLUME_KEY = 'bridge.music.volume';
-const TRACK_KEY = 'bridge.music.track';
-const MODE_KEY = 'bridge.music.mode';
+const VOLUME_KEY = 'music.volume';
+const PROVIDED_TRACK_KEY = 'music.provided.track';
+const MODE_KEY = 'music.mode';
 const DEFAULT_VOLUME = 0.25;
-const LOOPS_PER_TRACK = 2;
 const MODES: readonly MusicMode[] = ['loop-one', 'sequential', 'shuffle'];
 
 interface MusicState {
@@ -18,9 +17,10 @@ interface MusicState {
   busy: boolean;
   error: boolean;
   volume: number;
-  trackId: string;
+  providedTrackId: string | null;
   mode: MusicMode;
   toggle: () => Promise<void>;
+  pause: () => Promise<void>;
   play: (trackId?: string) => Promise<void>;
   next: () => Promise<void>;
   prev: () => Promise<void>;
@@ -28,40 +28,46 @@ interface MusicState {
   setVolume: (volume: number) => void;
 }
 
-let player: BackgroundMusic | null = null;
-
-function stored(key: string): string | null {
-  try {
-    return typeof localStorage === 'undefined' ? null : localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function store(key: string, value: string): void {
-  try { localStorage.setItem(key, value); } catch { /* Storage is optional. */ }
-}
+let player: FileMusicPlayer | null = null;
+let playRequest = 0;
+let transportGeneration = 0;
+let wantsPlayback = false;
 
 function savedVolume(): number {
-  const value = Number(stored(VOLUME_KEY) ?? DEFAULT_VOLUME);
+  const value = Number(readPreference(VOLUME_KEY) ?? DEFAULT_VOLUME);
   return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : DEFAULT_VOLUME;
 }
 
-function trackIndex(trackId: string): number {
-  return Math.max(0, MUSIC_TRACKS.findIndex((track) => track.id === trackId));
+function providedIndex(trackId: string | null): number {
+  return Math.max(0, PROVIDED_MUSIC_TRACKS.findIndex((track) => track.id === trackId));
+}
+
+/** Invalidate pending requests and callbacks before disposing the failed transport. */
+function releasePlayer(): void {
+  playRequest += 1;
+  transportGeneration += 1;
+  wantsPlayback = false;
+  const previous = player;
+  player = null;
+  previous?.dispose();
 }
 
 export const useMusicStore = create<MusicState>((set, get) => {
-  const step = (direction: 1 | -1): Promise<void> => {
-    const { trackId, mode } = get();
-    const index = nextTrackIndex(trackIndex(trackId), MUSIC_TRACKS.length,
-      mode === 'loop-one' ? 'sequential' : mode, Math.random, direction);
-    return get().play(MUSIC_TRACKS[index].id);
+  const step = (direction: 1 | -1, automatic = false): Promise<void> => {
+    if (!PROVIDED_MUSIC_TRACKS.length) return Promise.resolve();
+    const { providedTrackId, mode } = get();
+    const index = nextTrackIndex(
+      providedIndex(providedTrackId),
+      PROVIDED_MUSIC_TRACKS.length,
+      !automatic && mode === 'loop-one' ? 'sequential' : mode,
+      Math.random,
+      direction,
+    );
+    return get().play(PROVIDED_MUSIC_TRACKS[index].id);
   };
   const fail = (): void => {
-    player?.dispose();
-    player = null;
-    set({ playing: false, error: true });
+    releasePlayer();
+    set({ playing: false, busy: false, error: true });
   };
 
   return {
@@ -69,50 +75,66 @@ export const useMusicStore = create<MusicState>((set, get) => {
     busy: false,
     error: false,
     volume: savedVolume(),
-    trackId: MUSIC_TRACKS[trackIndex(stored(TRACK_KEY) ?? '')].id,
-    mode: MODES.find((mode) => mode === stored(MODE_KEY)) ?? 'loop-one',
-    toggle: async () => {
-      if (!get().playing) return get().play();
-      set({ busy: true, error: false });
+    providedTrackId: PROVIDED_MUSIC_TRACKS[providedIndex(readPreference(PROVIDED_TRACK_KEY))]?.id ?? null,
+    mode: MODES.find((mode) => mode === readPreference(MODE_KEY)) ?? 'sequential',
+    toggle: async () => get().playing || get().busy ? get().pause() : get().play(),
+    pause: async () => {
+      playRequest += 1;
+      wantsPlayback = false;
+      set({ playing: false, busy: false, error: false });
       try {
-        await player?.pause();
+        player?.pause();
       } catch {
         fail();
-      } finally {
-        set({ busy: false });
       }
     },
-    play: async (trackId) => {
-      const track = MUSIC_TRACKS[trackIndex(trackId ?? get().trackId)];
-      set({ trackId: track.id, busy: true, error: false });
-      store(TRACK_KEY, track.id);
-      if (!player) {
-        player = createBackgroundMusic((playing) => set({ playing }), () => {
-          const { trackId: ended, mode } = get();
-          const index = nextTrackIndex(trackIndex(ended), MUSIC_TRACKS.length, mode, Math.random);
-          void get().play(MUSIC_TRACKS[index].id);
-        });
-        player.setVolume(get().volume);
+    play: async (requestedId) => {
+      if (!PROVIDED_MUSIC_TRACKS.length) return;
+      const id = requestedId ?? get().providedTrackId;
+      const track = PROVIDED_MUSIC_TRACKS.find((candidate) => candidate.id === id);
+      if (!track) {
+        set({ error: true });
+        return;
       }
+      const request = ++playRequest;
+      wantsPlayback = true;
+      set({ providedTrackId: track.id, busy: true, error: false });
+      writePreference(PROVIDED_TRACK_KEY, track.id);
       try {
-        await player.play(track, get().mode === 'loop-one' ? null : LOOPS_PER_TRACK);
+        if (!player) {
+          const generation = transportGeneration;
+          const current = (): boolean => generation === transportGeneration && wantsPlayback;
+          player = createFileMusicPlayer((playing) => {
+            if (current()) {
+              set({ playing, ...(playing ? { busy: false, error: false } : {}) });
+            }
+          }, () => {
+            if (current()) void step(1, true);
+          }, () => {
+            if (current()) fail();
+          });
+        }
+        player.setVolume(get().volume);
+        await player.play({ ...track, file: providedMusicUrl(track) });
       } catch {
-        fail();
+        if (request === playRequest) fail();
       } finally {
-        set({ busy: false });
+        if (request === playRequest) set({ busy: false });
       }
     },
     next: () => step(1),
     prev: () => step(-1),
     setMode: (mode) => {
+      if (!MODES.includes(mode)) return;
       set({ mode });
-      store(MODE_KEY, mode);
-      if (get().playing) void get().play();
+      writePreference(MODE_KEY, mode);
     },
-    setVolume: (volume) => {
+    setVolume: (value) => {
+      if (!Number.isFinite(value)) return;
+      const volume = Math.max(0, Math.min(1, value));
       set({ volume });
       player?.setVolume(volume);
-      store(VOLUME_KEY, String(volume));
+      writePreference(VOLUME_KEY, String(volume));
     },
   };
 });

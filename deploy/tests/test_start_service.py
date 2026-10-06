@@ -41,8 +41,8 @@ esac
     def test_first_install_does_not_reset_unloaded_unit(self):
         status, calls = self.run_start("unloaded")
         self.assertEqual(status, 0)
-        self.assertEqual(calls, ["is-failed --quiet bridge-online.service",
-                                 "enable --now bridge-online.service"])
+        self.assertEqual(calls, ["is-failed --quiet card-together.service",
+                                 "enable --now card-together.service"])
 
     def test_inactive_and_active_units_can_start(self):
         for state in ("inactive", "active"):
@@ -54,9 +54,9 @@ esac
     def test_failed_unit_resets_before_start(self):
         status, calls = self.run_start("failed")
         self.assertEqual(status, 0)
-        self.assertEqual(calls, ["is-failed --quiet bridge-online.service",
-                                 "reset-failed bridge-online.service",
-                                 "enable --now bridge-online.service"])
+        self.assertEqual(calls, ["is-failed --quiet card-together.service",
+                                 "reset-failed card-together.service",
+                                 "enable --now card-together.service"])
 
     def test_start_failure_is_not_suppressed(self):
         status, _ = self.run_start("inactive", "enable")

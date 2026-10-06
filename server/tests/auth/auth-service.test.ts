@@ -2,7 +2,12 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createAuthService } from '../../src/auth/auth-service';
+import {
+  createAuthService,
+  LEGACY_SESSION_COOKIE_NAME,
+  SESSION_COOKIE_NAME,
+  readSessionCookie,
+} from '../../src/auth/auth-service';
 import type { AuthService } from '../../src/auth/auth-service';
 import { createJsonRepository } from '../../src/database/json-repository';
 import type { Repository } from '../../src/database/repository';
@@ -43,6 +48,17 @@ describe('account authentication', () => {
     expect(await service.resolveSession(`other=foo; bridge_session=${login.token}`)).toMatchObject({
       account: registered.account,
     });
+  });
+
+  it('should prefer the new session cookie and preserve legacy authentication', async () => {
+    const current = await service.register({ username: 'alice', password: 'correct password' });
+    const legacy = await service.register({ username: 'bob', password: 'correct password' });
+    const legacyCookie = `${LEGACY_SESSION_COOKIE_NAME}=${legacy.token}`;
+    const cookie = `${legacyCookie}; ${SESSION_COOKIE_NAME}=${current.token}`;
+    expect((await service.resolveSession(cookie))?.account.id).toBe(current.account.id);
+    expect((await service.resolveSession(legacyCookie))?.account.id).toBe(legacy.account.id);
+    expect(await service.resolveSession(`${SESSION_COOKIE_NAME}=bad; ${legacyCookie}`)).toBeNull();
+    expect(readSessionCookie(SESSION_COOKIE_NAME)).toBeUndefined();
   });
 
   it('should return the same invalid-credentials error for unknown usernames and incorrect passwords', async () => {

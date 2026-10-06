@@ -134,7 +134,7 @@ export function TopBar(): ReactNode {
   return (
     <header className={styles.bar}>
       <NavLink to="/" className={styles.brand}>
-        <span aria-hidden="true">♠</span><span className={inGame ? styles.brandTextGame : undefined}> Bridge Online</span>
+        <span aria-hidden="true">♠</span><span className={inGame ? styles.brandTextGame : undefined}> Card Together</span>
       </NavLink>
       {showLinks && <nav className={styles.links}>{links}</nav>}
       {inGame && <GameChips />}

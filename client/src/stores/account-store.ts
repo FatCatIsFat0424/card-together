@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { AccountProfile } from '@shared/types';
-import { apiRequest, invalidateAccountRequests } from '../api';
+import { apiRequest, invalidateAccountRequests, migrateLegacySession } from '../api';
 import { disconnectSocket } from '../socket';
 import { usePlayerStore } from './player-store';
 import { useRoomStore } from './room-store';
@@ -64,7 +64,12 @@ export function restoreAccount(): Promise<void> {
   if (sessionRequest) return sessionRequest;
   const requestGeneration = accountGeneration;
   sessionRequest = (async (): Promise<void> => {
-    const result = await apiRequest<{ account: AccountProfile }>('/api/auth/me');
+    let result = await apiRequest<{ account: AccountProfile }>('/api/auth/me');
+    if (requestGeneration !== accountGeneration) return;
+    if (!result.success && result.status === 401 && await migrateLegacySession()) {
+      if (requestGeneration !== accountGeneration) return;
+      result = await apiRequest<{ account: AccountProfile }>('/api/auth/me');
+    }
     if (requestGeneration !== accountGeneration) return;
     if (result.success) {
       useAccountStore.getState().setAccount(result.account);

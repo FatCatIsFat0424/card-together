@@ -1,20 +1,21 @@
 [Unit]
-Description=Bridge Online server
+Description=Card Together server
 After=network.target
+Conflicts=bridge-online.service
 StartLimitIntervalSec=60
 StartLimitBurst=5
 
 [Service]
 Type=simple
-User=bridge-online
-Group=bridge-online
-WorkingDirectory=/opt/bridge-online/server
-EnvironmentFile=/etc/bridge-online/server.env
-ExecStart=/opt/bridge-online/node --import tsx src/index.ts
+User=card-together
+Group=card-together
+WorkingDirectory=/opt/card-together/server
+EnvironmentFile=/etc/card-together/server.env
+ExecStart=/opt/card-together/node --import tsx src/index.ts
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=60
-StateDirectory=bridge-online
+StateDirectory=card-together
 StateDirectoryMode=0700
 UMask=0077
 NoNewPrivileges=true
@@ -25,7 +26,7 @@ RestrictSUIDSGID=true
 CapabilityBoundingSet=
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=bridge-online
+SyslogIdentifier=card-together
 
 [Install]
 WantedBy=multi-user.target

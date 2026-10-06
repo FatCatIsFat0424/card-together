@@ -2,7 +2,11 @@ import { Router } from 'express';
 import type { CookieOptions, Request, RequestHandler, Response } from 'express';
 import type { AccountProfile } from '@shared/types';
 import type { AuthService, AuthResult } from '../auth/auth-service';
-import { SESSION_COOKIE_NAME } from '../auth/auth-service';
+import {
+  LEGACY_SESSION_COOKIE_NAME,
+  SESSION_COOKIE_NAME,
+  readSessionCookie,
+} from '../auth/auth-service';
 import {
   createRateLimiter,
   getRequestSession,
@@ -40,6 +44,31 @@ export function createAuthRouter(service: AuthService, config: AuthRouterConfig)
     };
   }
 
+  function clearSessionCookies(response: Response): void {
+    for (const name of [SESSION_COOKIE_NAME, LEGACY_SESSION_COOKIE_NAME]) {
+      for (const path of ['/', '/card-together/', '/bridge_online/']) {
+        response.clearCookie(name, { ...cookieOptions, path });
+      }
+    }
+  }
+
+  function clearLegacySessionCookies(response: Response): void {
+    for (const path of ['/', '/bridge_online/', '/card-together/']) {
+      response.clearCookie(LEGACY_SESSION_COOKIE_NAME, { ...cookieOptions, path });
+    }
+  }
+
+  async function revokePresentedSessions(request: Request): Promise<void> {
+    const revoked = new Set<string>();
+    for (const name of [SESSION_COOKIE_NAME, LEGACY_SESSION_COOKIE_NAME]) {
+      const auth = await service.resolveToken(readSessionCookie(request.headers.cookie, name));
+      if (!auth || revoked.has(auth.session.tokenHash)) continue;
+      await service.logout(auth.session);
+      revoked.add(auth.session.tokenHash);
+      await config.onSessionsRevoked?.(auth.account.id, auth.session.tokenHash);
+    }
+  }
+
   function signedIn(response: Response, result: AuthResult, status = 200): void {
     response.cookie(SESSION_COOKIE_NAME, result.token, {
       ...cookieOptions,
@@ -62,22 +91,61 @@ export function createAuthRouter(service: AuthService, config: AuthRouterConfig)
       signedIn(response, await service.login(request.body));
     }),
   );
+  router.post(
+    '/migrate-session',
+    route(async (request, response) => {
+      const origin = request.get('origin');
+      const fetchSite = request.get('sec-fetch-site');
+      if (
+        !origin ||
+        new URL(origin).host !== request.get('host') ||
+        (fetchSite !== undefined && fetchSite !== 'same-origin')
+      ) {
+        response.status(403).json({
+          success: false, error: 'Use the same origin to migrate a session.',
+        });
+        return;
+      }
+      const currentToken = readSessionCookie(request.headers.cookie);
+      const token = currentToken ??
+        readSessionCookie(request.headers.cookie, LEGACY_SESSION_COOKIE_NAME);
+      const authenticated = await service.resolveToken(token);
+      if (!authenticated) {
+        response.status(401).json({ success: false, error: 'Sign in to continue.' });
+        return;
+      }
+      // The legacy URL cannot receive a cookie scoped to the new application path.
+      // The client checks /me on the new path before requesting this migration.
+      response.cookie(SESSION_COOKIE_NAME, token, {
+        ...cookieOptions,
+        path: '/card-together/',
+        expires: new Date(authenticated.session.expiresAt),
+      });
+      clearLegacySessionCookies(response);
+      response.json({ success: true, account: authenticated.account });
+    }),
+  );
   router.get(
     '/me',
     auth,
-    route(async (_request, response) => {
-      response.json({ success: true, account: getRequestSession(response).account });
+    route(async (request, response) => {
+      const authenticated = getRequestSession(response);
+      if (readSessionCookie(request.headers.cookie) === undefined) {
+        response.cookie(
+          SESSION_COOKIE_NAME,
+          readSessionCookie(request.headers.cookie, LEGACY_SESSION_COOKIE_NAME),
+          { ...cookieOptions, expires: new Date(authenticated.session.expiresAt) },
+        );
+        clearLegacySessionCookies(response);
+      }
+      response.json({ success: true, account: authenticated.account });
     }),
   );
   router.post(
     '/logout',
     route(async (request, response) => {
-      const session = await service.resolveSession(request.headers.cookie);
-      if (session) {
-        await service.logout(session.session);
-        await config.onSessionsRevoked?.(session.account.id, session.session.tokenHash);
-      }
-      response.clearCookie(SESSION_COOKIE_NAME, cookieOptions);
+      await revokePresentedSessions(request);
+      clearSessionCookies(response);
       response.json({ success: true });
     }),
   );
@@ -88,7 +156,7 @@ export function createAuthRouter(service: AuthService, config: AuthRouterConfig)
       const { account } = getRequestSession(response);
       await service.logoutAll(account.id);
       await config.onSessionsRevoked?.(account.id);
-      response.clearCookie(SESSION_COOKIE_NAME, cookieOptions);
+      clearSessionCookies(response);
       response.json({ success: true });
     }),
   );
@@ -112,7 +180,7 @@ export function createAuthRouter(service: AuthService, config: AuthRouterConfig)
       const { account } = getRequestSession(response);
       await service.changePassword(account.id, request.body);
       await config.onSessionsRevoked?.(account.id);
-      response.clearCookie(SESSION_COOKIE_NAME, cookieOptions);
+      clearSessionCookies(response);
       response.json({ success: true });
     }),
   );

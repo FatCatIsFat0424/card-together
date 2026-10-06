@@ -8,41 +8,30 @@ import {
   parsePeerPrefs,
 } from '../voice/voice-session';
 import type { VoiceClientState, VoiceSession } from '../voice/voice-session';
+import { readPreference, writePreference } from '../utils/preference-storage';
 
 export type { VoiceErrorCode } from '../voice/voice-session';
 
-const PEERS_KEY = 'bridge.voice.peers';
-const INPUT_KEY = 'bridge.voice.input';
-const OUTPUT_KEY = 'bridge.voice.output';
+const PEERS_KEY = 'voice.peers';
+const INPUT_KEY = 'voice.input';
+const OUTPUT_KEY = 'voice.output';
 
 interface VoiceStoreState extends VoiceClientState {
   inputs: MediaDeviceInfo[];
   outputs: MediaDeviceInfo[];
 }
 
-function stored(key: string): string | null {
-  try {
-    return typeof localStorage === 'undefined' ? null : localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
 function persist(state: VoiceClientState): void {
-  try {
-    localStorage.setItem(PEERS_KEY, JSON.stringify(state.peerPrefs));
-    for (const [key, value] of [[INPUT_KEY, state.inputDeviceId], [OUTPUT_KEY, state.outputDeviceId]] as const) {
-      if (value) localStorage.setItem(key, value);
-      else localStorage.removeItem(key);
-    }
-  } catch { /* Storage is optional. */ }
+  writePreference(PEERS_KEY, JSON.stringify(state.peerPrefs));
+  writePreference(INPUT_KEY, state.inputDeviceId);
+  writePreference(OUTPUT_KEY, state.outputDeviceId);
 }
 
 export const useVoiceStore = create<VoiceStoreState>(() => ({
   ...initialVoiceState(),
-  inputDeviceId: stored(INPUT_KEY),
-  outputDeviceId: stored(OUTPUT_KEY),
-  peerPrefs: parsePeerPrefs(stored(PEERS_KEY)),
+  inputDeviceId: readPreference(INPUT_KEY),
+  outputDeviceId: readPreference(OUTPUT_KEY),
+  peerPrefs: parsePeerPrefs(readPreference(PEERS_KEY)),
   inputs: [],
   outputs: [],
 }));

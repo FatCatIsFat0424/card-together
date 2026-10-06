@@ -6,7 +6,8 @@ import { publicAccount } from '../database/repository';
 import { isObject } from '../database/schema';
 import { hashPassword, verifyPassword } from './password';
 
-export const SESSION_COOKIE_NAME = 'bridge_session';
+export const SESSION_COOKIE_NAME = 'card_together_session';
+export const LEGACY_SESSION_COOKIE_NAME = 'bridge_session';
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface AuthenticatedSession {
@@ -128,11 +129,14 @@ export function tokenHash(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
-export function readSessionCookie(cookieHeader: string | undefined): string | undefined {
+export function readSessionCookie(
+  cookieHeader: string | undefined,
+  cookieName: string = SESSION_COOKIE_NAME,
+): string | undefined {
   if (!cookieHeader) return undefined;
   for (const part of cookieHeader.split(';')) {
     const separator = part.indexOf('=');
-    if (part.slice(0, separator).trim() === SESSION_COOKIE_NAME)
+    if (separator >= 0 && part.slice(0, separator).trim() === cookieName)
       return part.slice(separator + 1).trim();
   }
   return undefined;
@@ -216,7 +220,10 @@ export function createAuthService(
         throw authError(401, 'INVALID_CREDENTIALS', 'Invalid username or password.');
       return createSession(account);
     },
-    resolveSession: (cookieHeader) => resolveToken(readSessionCookie(cookieHeader)),
+    resolveSession: (cookieHeader) =>
+      resolveToken(
+        readSessionCookie(cookieHeader) ?? readSessionCookie(cookieHeader, LEGACY_SESSION_COOKIE_NAME),
+      ),
     resolveToken,
     logout: (session) => repository.deleteSession(session.tokenHash),
     logoutAll: (accountId) => repository.deleteAccountSessions(accountId),

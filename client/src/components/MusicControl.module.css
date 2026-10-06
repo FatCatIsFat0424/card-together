@@ -9,13 +9,6 @@
 .title { white-space: nowrap; font-weight: 600; color: var(--text-primary); }
 .nowPlaying { color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .attributes { color: var(--text-muted); font-size: var(--text-xs); }
-.genre {
-  padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: var(--text-xs);
-  color: var(--text-primary);
-  background: var(--bg-card);
-}
-.group { list-style: none; margin: 0; padding: 0; }
 .controls { display: flex; gap: var(--spacing-xs); }
 .control {
   flex: 1;
