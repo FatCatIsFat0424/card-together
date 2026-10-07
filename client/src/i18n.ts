@@ -40,6 +40,12 @@ type TranslationKeys = Record<
   'room.seatEmpty': string;
   'room.seatTaken': string;
   'room.ready.status': string;
+  'room.addBot': string;
+  'room.removeBot': string;
+  'room.fillBots': string;
+  'room.botReady': string;
+  'player.bot': string;
+  'player.botSeat': string;
   // Game
   'game.dealing': string;
   'game.redealPending': string;
@@ -105,6 +111,12 @@ const translations: Record<Locale, TranslationKeys> = {
     'room.seatEmpty': '空位',
     'room.seatTaken': '已就座',
     'room.ready.status': '已準備',
+    'room.addBot': '加入 bot',
+    'room.removeBot': '移除 bot',
+    'room.fillBots': '用 bot 補滿空位',
+    'room.botReady': 'bot 已自動準備',
+    'player.bot': 'bot',
+    'player.botSeat': 'bot（{seat}）',
     'game.dealing': '發牌中',
     'game.redealPending': '倒牌確認',
     'game.bidding': '叫牌',
@@ -162,6 +174,12 @@ const translations: Record<Locale, TranslationKeys> = {
     'room.seatEmpty': 'Empty',
     'room.seatTaken': 'Seated',
     'room.ready.status': 'Ready',
+    'room.addBot': 'Add bot',
+    'room.removeBot': 'Remove bot',
+    'room.fillBots': 'Fill empty seats with bots',
+    'room.botReady': 'Bot is automatically ready',
+    'player.bot': 'Bot',
+    'player.botSeat': 'Bot ({seat})',
     'game.dealing': 'Dealing',
     'game.redealPending': 'Redeal Check',
     'game.bidding': 'Bidding',

@@ -39,7 +39,7 @@ function presentAction(roomCode: RoomCode, operation: () => Result): Result {
   const result = operation();
   const game = getGameState(roomCode);
   if (result.success && game) {
-    game.presentation = { id: randomUUID(), startedAt: Date.now(), logStart };
+    game.presentation = { id: randomUUID(), startedAt: Date.now(), logStart, timingVersion: 2 };
     if (game.gameType === 'bigtwo') bigtwo.prepareAutoPass(roomCode, getPresentationEndsAt(game));
   }
   return result;
@@ -63,7 +63,7 @@ export function startGame(
   else bridge.startGame(roomCode, players);
   const game = getGameState(roomCode);
   if (game?.phase === 'scoring') {
-    game.presentation = { id: randomUUID(), startedAt: Date.now(), logStart: 0 };
+    game.presentation = { id: randomUUID(), startedAt: Date.now(), logStart: 0, timingVersion: 2 };
   }
   return { success: true };
 }

@@ -13,7 +13,8 @@ local Nginx with durable state outside the application tree.
 | `server/src/app.ts`, `index.ts` | Compose services, read/validate configuration, start/close the app |
 | `auth/`, `social/` | Password/session/profile and friendship services |
 | `http/`, `socket/` | Validate/authenticate requests and translate service/runtime results |
-| `runtime/` | Serialize changes, validate/restore snapshots, commit, roll back, schedule Big Two auto-pass |
+| `runtime/` | Serialize changes, validate/restore snapshots, commit, roll back, schedule bot turns and Big Two auto-pass |
+| `bots/` | Per-game heuristics and weighted near-best choices with injectable randomness, using only filtered player state |
 | `managers/`, `managers/games/` | Player/room/game/chat/voice state and game-specific adapters |
 | `engine/` | Pure Bridge deck/dealing/bidding/playing/scoring |
 | `database/`, `media/` | Async Repository, JSON adapter/migrations/indexes, content-addressed images |
@@ -57,6 +58,9 @@ missing room/game state. Equal snapshot fields retain references to avoid redund
 
 Profile pages preserve room membership. Theme, motion, music, and voice preferences
 are local browser settings; account profile/image/history visibility is durable server data.
+The waiting room reserves content-sized rows for seats and a separate readiness action
+row. Its viewport height is a minimum, so short or zoomed windows scroll rather than
+overlap player details and controls; desktop chat scrolls inside the adjacent column.
 Legacy `bridge.*` preferences migrate without replacing existing `card-together.*` values.
 Music playback persists across routes/control-panel closure. Voice follows actual room
 membership and requires explicit user join; see [media](media.md).
@@ -66,11 +70,16 @@ membership and requires explicit user join; see [media](media.md).
 `shared/src/game-presentation.ts` derives public frames from committed log entries.
 Metadata supplies `id`, `startedAt`, `logStart`, and recipient `serverNow`; frames
 never contain other players' private hands or unrevealed stock.
+New actions use `timingVersion: 2`: ordinary Bridge/Big Two plays allow 300 ms for
+arrival followed by one second to read the result. Missing timing versions retain
+legacy deadlines so saved automatic passes remain valid across upgrades; the next
+action uses the new timing. Controls, turn highlights, reminders, bots, and automatic
+passes wait for the shared presentation deadline.
 
 | Frame | Duration |
 | --- | --- |
-| Bridge play / completed trick | 400 / 2,000 ms |
-| Big Two play / pass / round winner | 400 / 350 / 2,000 ms |
+| Bridge play / completed trick | 1,300 / 2,000 ms |
+| Big Two play / pass / round winner | 1,300 / 1,000 / 2,000 ms |
 | Red Points play or flip/capture | 1,900 ms per log entry |
 | Ninety-Nine play / elimination | 1,900 / 2,500 ms |
 | Final result before score overlay | 3,000 ms |
@@ -85,3 +94,9 @@ Legacy Bridge snapshots without metadata retain the local completed-trick queue.
 Each game shows current-match history reconstructed from its public records. Cross-match
 history is separately persisted in Repository matches. Big Two automatic passes use their
 own server scheduler and saved deadlines; see [rules](games.md#big-two).
+
+Bot timers are reconstructed from committed game turns at startup and after mutations.
+They recheck game/turn identity inside the runtime queue, wait for presentation completion,
+and publish only after persistence succeeds. Failed saves roll back and retry; abort,
+replacement, and shutdown cancel stale work. Bot decisions never receive opponents'
+private hands. Big Two's existing forced-pass scheduler owns forced passes for all seats.

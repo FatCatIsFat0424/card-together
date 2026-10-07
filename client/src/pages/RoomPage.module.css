@@ -93,8 +93,9 @@
     '.    north .'
     'west table east'
     '.    south .';
-  grid-template-columns: 1fr 2fr 1fr;
-  grid-template-rows: 1fr 1.5fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr);
+  /* Content minima keep the south seat above the separate action row. */
+  grid-template-rows: minmax(max-content, 1fr) minmax(max-content, 1fr) minmax(max-content, 1fr);
   gap: var(--spacing-md);
   /* 由可用高度反推寬度，座位與準備鈕不需捲動（約 310px = 上下內距 + 標題 + 遊戲選擇 + 準備鈕） */
   width: min(100%, 800px, calc((100dvh - var(--topbar-height) - 380px) * 4 / 3));
@@ -117,7 +118,7 @@
   }
 
   .seatSlot { padding: var(--spacing-sm); }
-  .seatSlot > a { flex-direction: column; gap: 2px; text-align: center; }
+  .seatSlot > [data-player-identity] { flex-direction: column; gap: 2px; text-align: center; }
 }
 
 .seatNorth { grid-area: north; }
@@ -135,12 +136,12 @@
 
 .tableArea {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(max-content, 1fr) auto;
   gap: var(--spacing-md);
   padding: var(--spacing-md);
   background: var(--table-surface);
   border-radius: var(--radius-xl);
-  min-height: 0;
+  min-width: 0;
 }
 
 .customTable {
@@ -165,7 +166,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-md);
+  padding: var(--spacing-sm);
   background: transparent;
   border: 2px solid transparent;
   border-radius: var(--radius-lg);
@@ -192,13 +193,39 @@
   color: var(--color-primary);
 }
 
-.seatSlot > a {
+.seatSlot > [data-player-identity] {
   padding: var(--spacing-sm);
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--bg-surface) 75%, transparent);
 }
 
-.seatSlotMine > a { box-shadow: 0 0 0 2px var(--color-primary); }
+.seatSlotMine > [data-player-identity] { box-shadow: 0 0 0 2px var(--color-primary); }
+
+.seatStatus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs) var(--spacing-sm);
+  margin-top: var(--spacing-xs);
+  font-size: var(--text-xs);
+}
+
+.seatStatus > * { white-space: nowrap; }
+
+.emptySlot { cursor: default; }
+.seatChoice {
+  width: 100%;
+  min-height: 72px;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-lg);
+}
+.seatChoice:disabled { opacity: 0.6; cursor: not-allowed; }
+.botAction {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--text-xs);
+}
 
 .hostBadge { color: var(--table-ink); }
 
@@ -251,6 +278,9 @@
 
 .roomFooter {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
   gap: var(--spacing-md);
   margin-top: var(--spacing-xl);
   animation: fadeIn 0.5s ease;
@@ -272,15 +302,14 @@
 /* Keep the waiting table and readiness controls beside the conversation. */
 .roomLayout {
   display: grid;
-  height: calc(100dvh - var(--topbar-height));
-  min-height: 600px;
+  min-height: calc(100dvh - var(--topbar-height));
   grid-template-columns: minmax(0, 1fr) clamp(300px, 28vw, 440px);
   grid-template-areas:
     'header header'
     'error error'
     'table chat';
-  grid-template-rows: auto auto minmax(0, 1fr);
-  align-items: start;
+  grid-template-rows: auto auto 1fr;
+  align-items: stretch;
   justify-content: center;
   column-gap: var(--spacing-xl);
   row-gap: var(--spacing-md);
@@ -289,14 +318,13 @@
 .roomLayout > * { min-width: 0; }
 .roomLayout .roomHeader { grid-area: header; max-width: none; margin-bottom: 0; }
 .roomLayout .error { grid-area: error; }
-.roomLayout .tableArea { grid-area: table; height: 100%; }
+.roomLayout .tableArea { grid-area: table; }
 .roomLayout .seatLayout {
   width: 100%;
-  height: 100%;
   min-width: 0;
   aspect-ratio: auto;
 }
-.roomLayout .roomFooter { justify-self: center; margin-top: 0; }
+.roomLayout .roomFooter { align-self: end; justify-self: center; margin-top: 0; }
 
 .roomLayout .chat {
   grid-area: chat;
@@ -304,9 +332,11 @@
   height: 100%;
   max-width: none;
   min-height: 0;
+  position: relative;
 }
 
-.roomLayout .chat > * { height: 100%; }
+/* Chat scrolls independently without making the table's intrinsic height grow. */
+.roomLayout .chat > * { position: absolute; inset: 0; height: 100%; }
 
 @media (max-width: 767px) {
   .roomLayout {

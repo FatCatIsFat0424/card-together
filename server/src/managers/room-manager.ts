@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from 'node:util';
+import { randomUUID } from 'node:crypto';
 import type { GameType, PlayerInfo, RoomCode, RoomInfo, RoomStatus, Seat, SeatMap } from '@shared/types';
 import { ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD } from '@shared/constants';
 import type { PersistedRoom } from '../runtime/types';
@@ -54,10 +55,60 @@ export function leaveRoom(code: RoomCode, playerId: string): { seat: Seat | null
     ...room.info, seats: { ...room.info.seats, [seat]: { player: null, isReady: false } },
   };
   room.memberIds = room.memberIds.filter((id) => id !== playerId);
-  const roomEmpty = room.memberIds.length === 0;
+  const humans = room.memberIds.filter((id) => !seats.some((seat) =>
+    room.info.seats[seat].player?.id === id && room.info.seats[seat].player?.isBot));
+  const roomEmpty = humans.length === 0;
   if (roomEmpty) rooms.delete(code);
-  else if (room.info.hostId === playerId) room.info = { ...room.info, hostId: room.memberIds[0] };
+  else if (room.info.hostId === playerId) room.info = { ...room.info, hostId: humans[0] };
   return { seat, roomEmpty };
+}
+
+function requireBotManagement(code: RoomCode, playerId: string): Result {
+  const room = rooms.get(code);
+  if (!room) return { success: false, reason: 'Room not found' };
+  if (room.info.hostId !== playerId) return { success: false, reason: 'Only the host can manage bots.' };
+  if (room.info.status !== 'waiting') return { success: false, reason: 'Cannot manage bots during game.' };
+  return { success: true };
+}
+
+export function addBot(code: RoomCode, playerId: string, seat: Seat): Result {
+  const allowed = requireBotManagement(code, playerId);
+  if (!allowed.success) return allowed;
+  const room = rooms.get(code)!;
+  if (room.info.seats[seat].player) return { success: false, reason: 'Seat is occupied' };
+  if (room.memberIds.length >= seats.length) return { success: false, reason: 'Room is full' };
+  const bot: PlayerInfo = {
+    id: `bot:${randomUUID()}`, username: `bot-${seat.toLowerCase()}`, nickname: `Bot ${seat}`,
+    color: '#64748b', avatar: 'owl', avatarImage: null, isBot: true,
+  };
+  room.memberIds.push(bot.id);
+  room.info = { ...room.info, seats: { ...room.info.seats, [seat]: { player: bot, isReady: true } } };
+  return { success: true };
+}
+
+export function removeBot(code: RoomCode, playerId: string, seat: Seat): Result {
+  const allowed = requireBotManagement(code, playerId);
+  if (!allowed.success) return allowed;
+  const room = rooms.get(code)!;
+  const bot = room.info.seats[seat].player;
+  if (!bot?.isBot) return { success: false, reason: 'No bot in this seat.' };
+  room.memberIds = room.memberIds.filter((id) => id !== bot.id);
+  room.info = { ...room.info, seats: { ...room.info.seats, [seat]: { player: null, isReady: false } } };
+  return { success: true };
+}
+
+export function fillBots(code: RoomCode, playerId: string): Result {
+  const allowed = requireBotManagement(code, playerId);
+  if (!allowed.success) return allowed;
+  const room = rooms.get(code)!;
+  for (const seat of seats) {
+    if (room.memberIds.length >= seats.length) break;
+    if (!room.info.seats[seat].player) {
+      const result = addBot(code, playerId, seat);
+      if (!result.success) return result;
+    }
+  }
+  return { success: true };
 }
 
 export function changeSeat(code: RoomCode, player: PlayerInfo, target: Seat): Result {
@@ -123,20 +174,34 @@ export function setGameType(code: RoomCode, playerId: string, gameType: GameType
 
 export type AbortVoteOutcome = 'pending' | 'passed' | 'failed';
 
-export function startAbortVote(code: RoomCode, playerId: string, now: number): Result {
+function humanVoterIds(code: RoomCode): string[] {
+  const room = rooms.get(code);
+  return room ? seats.flatMap((seat) => {
+    const player = room.info.seats[seat].player;
+    return player && !player.isBot ? [player.id] : [];
+  }) : [];
+}
+
+export function startAbortVote(
+  code: RoomCode, playerId: string, now: number,
+): { success: true; outcome: AbortVoteOutcome } | { success: false; reason: string } {
   const room = rooms.get(code);
   if (!room || room.info.status !== 'playing') return { success: false, reason: 'No game in progress.' };
-  if (!getPlayerSeat(code, playerId)) return { success: false, reason: 'Only seated players can vote.' };
+  const voters = humanVoterIds(code);
+  if (!voters.includes(playerId)) return { success: false, reason: 'Only seated players can vote.' };
   if (room.info.abortVote) return { success: false, reason: 'A vote is already in progress.' };
   if (room.info.abortVoteCooldownUntil !== null && now < room.info.abortVoteCooldownUntil) {
     return { success: false, reason: 'Please wait before starting another vote.' };
   }
+  const outcome = voters.length === 1 ? 'passed' : 'pending';
   room.info = {
     ...room.info,
-    abortVote: { startedBy: playerId, startedAt: now, expiresAt: now + ABORT_VOTE_DURATION_MS, yes: [playerId], no: [] },
-    abortVoteCooldownUntil: now + ABORT_VOTE_COOLDOWN_MS,
+    abortVote: outcome === 'passed' ? null : {
+      startedBy: playerId, startedAt: now, expiresAt: now + ABORT_VOTE_DURATION_MS, yes: [playerId], no: [],
+    },
+    abortVoteCooldownUntil: outcome === 'passed' ? null : now + ABORT_VOTE_COOLDOWN_MS,
   };
-  return { success: true };
+  return { success: true, outcome };
 }
 
 /** Records one vote; a decided vote is cleared here, the caller ends the game on `passed`. */
@@ -146,15 +211,21 @@ export function castAbortVote(
   const room = rooms.get(code);
   const vote = room?.info.abortVote;
   if (!room || !vote || now >= vote.expiresAt) return { success: false, reason: 'No vote in progress.' };
-  if (!getPlayerSeat(code, playerId)) return { success: false, reason: 'Only seated players can vote.' };
+  const voters = humanVoterIds(code);
+  if (!voters.includes(playerId)) return { success: false, reason: 'Only seated players can vote.' };
   if (vote.yes.includes(playerId) || vote.no.includes(playerId)) {
     return { success: false, reason: 'You have already voted.' };
   }
   const next = agree
     ? { ...vote, yes: [...vote.yes, playerId] } : { ...vote, no: [...vote.no, playerId] };
-  const outcome: AbortVoteOutcome = next.yes.length >= ABORT_VOTE_THRESHOLD ? 'passed'
-    : next.no.length > seats.length - ABORT_VOTE_THRESHOLD ? 'failed' : 'pending';
-  room.info = { ...room.info, abortVote: outcome === 'pending' ? next : null };
+  const threshold = Math.min(ABORT_VOTE_THRESHOLD, voters.length);
+  const outcome: AbortVoteOutcome = next.yes.length >= threshold ? 'passed'
+    : next.no.length > voters.length - threshold ? 'failed' : 'pending';
+  room.info = {
+    ...room.info,
+    abortVote: outcome === 'pending' ? next : null,
+    abortVoteCooldownUntil: outcome === 'passed' ? null : room.info.abortVoteCooldownUntil,
+  };
   return { success: true, outcome };
 }
 
@@ -178,7 +249,7 @@ export function resetAllReady(code: RoomCode): void {
   const room = rooms.get(code);
   if (!room) return;
   const next = { ...room.info.seats };
-  for (const seat of seats) next[seat] = { ...next[seat], isReady: false };
+  for (const seat of seats) next[seat] = { ...next[seat], isReady: next[seat].player?.isBot === true };
   room.info = { ...room.info, seats: next };
 }
 

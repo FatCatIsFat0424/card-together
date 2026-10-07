@@ -30,7 +30,7 @@ export interface FriendshipRecord {
 export interface MatchRecord {
   readonly id: string;
   readonly roomCode: string;
-  /** Ordered by seat N, E, S, W. */
+  /** Ordered by seat N, E, S, W; includes reserved bot IDs for synthetic participants. */
   readonly accountIds: readonly string[];
   readonly result: MatchResult;
   readonly finishedAt: number;

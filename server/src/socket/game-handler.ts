@@ -107,8 +107,15 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
 
   socket.on('game:abortVote:start', (callback) => runAction(context, socket, callback, () => {
     const code = requireRoom(socket);
-    requireSuccess(roomManager.startAbortVote(code, socket.data.accountId, Date.now()));
+    const started = roomManager.startAbortVote(code, socket.data.accountId, Date.now());
+    if (!started.success) throw actionError(started.reason);
     systemLine(code, socket.data.accountId, 'abortVote.started');
+    if (started.outcome === 'passed') {
+      gameManager.abortGame(code);
+      roomManager.setRoomStatus(code, 'waiting');
+      roomManager.resetAllReady(code);
+      systemLine(code, socket.data.accountId, 'abortVote.passed');
+    }
     return { success: true };
   }));
 

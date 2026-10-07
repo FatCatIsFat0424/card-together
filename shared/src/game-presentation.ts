@@ -25,13 +25,16 @@ export function getPresentationFrames(
 ): PresentationFrame[] {
   if (!game.presentation) return [];
   const { id, logStart } = game.presentation;
+  // New plays include 300 ms arrival plus one full second of readable results.
+  const playDuration = game.presentation.timingVersion === 2 ? 1300 : 400;
+  const passDuration = game.presentation.timingVersion === 2 ? 1000 : 350;
   const frames: PresentationFrame[] = [];
   for (let index = logStart; index < game.log.length; index++) {
     const key = `${id}:${index}`;
     if (game.gameType === 'bridge') {
       const entry = game.log[index];
       if (entry.type === 'play') {
-        frames.push({ key, kind: 'play', durationMs: 400, seat: entry.seat, cards: [entry.card] });
+        frames.push({ key, kind: 'play', durationMs: playDuration, seat: entry.seat, cards: [entry.card] });
       } else if (entry.type === 'trick_end') {
         const trick = game.playing?.completedTricks[entry.trickIndex - 1];
         const cardSeats = trick ? Object.keys(trick.cards) as Seat[] : [];
@@ -41,9 +44,9 @@ export function getPresentationFrames(
     } else if (game.gameType === 'bigtwo') {
       const entry = game.log[index];
       if (entry.type === 'play') {
-        frames.push({ key, kind: 'play', durationMs: 400, seat: entry.seat, cards: entry.cards });
+        frames.push({ key, kind: 'play', durationMs: playDuration, seat: entry.seat, cards: entry.cards });
       } else if (entry.type === 'pass') {
-        frames.push({ key, kind: 'pass', durationMs: 350, seat: entry.seat, cards: [] });
+        frames.push({ key, kind: 'pass', durationMs: passDuration, seat: entry.seat, cards: [] });
       } else if (entry.type === 'round_end') {
         const preceding = game.log.slice(0, index);
         const lastPlay = [...preceding].reverse().find((event) => event.type === 'play');

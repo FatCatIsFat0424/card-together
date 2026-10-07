@@ -91,6 +91,8 @@ export function AbortVoteBanner(): ReactNode {
   const [busy, error, run] = useVoteAction();
   if (!room || !vote) return null;
   const starter = seatedPlayer(room, vote.startedBy);
+  const threshold = Math.min(ABORT_VOTE_THRESHOLD,
+    Object.values(room.seats).filter(({ player }) => player && !player.isBot).length);
   const canVote = myId !== undefined && !vote.yes.includes(myId) && !vote.no.includes(myId);
   const cast = (agree: boolean): void =>
     run((done) => socket.timeout(10000).emit('game:abortVote:cast', { agree }, done));
@@ -100,7 +102,7 @@ export function AbortVoteBanner(): ReactNode {
         <span aria-hidden="true">🏳️</span> {t('abortVote.title', { name: starter?.nickname ?? '' })}
       </p>
       <p className={styles.meta}>
-        {t('abortVote.timeLeft', { time: formatCountdown(vote.expiresAt - now) })} · {t('abortVote.needed', { n: String(ABORT_VOTE_THRESHOLD) })}
+        {t('abortVote.timeLeft', { time: formatCountdown(vote.expiresAt - now) })} · {t('abortVote.needed', { n: String(threshold) })}
       </p>
       <Tally room={room} ids={vote.yes} label={`✅ ${t('abortVote.agree')}`} />
       <Tally room={room} ids={vote.no} label={`❌ ${t('abortVote.disagree')}`} />

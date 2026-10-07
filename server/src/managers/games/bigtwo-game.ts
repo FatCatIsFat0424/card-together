@@ -106,7 +106,7 @@ export function prepareAutoPass(roomCode: RoomCode, earliestAt: number): void {
   const game = games.get(roomCode);
   if (!game || game.pendingAutoPass || !needsAutoPass(game)) return;
   game.pendingAutoPass = { id: randomUUID(), seat: game.currentTurnSeat,
-    executeAt: Math.max(Date.now(), earliestAt) + randomInt(3001) };
+    executeAt: Math.max(Date.now(), earliestAt) + randomInt(5001) };
 }
 
 export function play(roomCode: RoomCode, seat: Seat, cards: readonly Card[]): Result {

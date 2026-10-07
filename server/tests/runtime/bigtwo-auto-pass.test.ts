@@ -82,7 +82,7 @@ describe('Big Two delayed automatic passing', () => {
   beforeEach(() => { vi.mocked(crypto.randomInt).mockReset().mockReturnValue(1500); vi.useFakeTimers(); vi.setSystemTime(10000); manager.restoreGames([]); });
   afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); manager.restoreGames([]); });
 
-  it.each([0, 3000])('should sample %i ms after presentation without exposing an early pass', (delay) => {
+  it.each([0, 5000])('should sample %i ms after presentation without exposing an early pass', (delay) => {
     const random = vi.mocked(crypto.randomInt).mockReturnValue(delay);
     restoreHands(singleHands());
     const length = game().log.length;
@@ -99,7 +99,7 @@ describe('Big Two delayed automatic passing', () => {
     expect(game()).toEqual(before);
     manager.preparePendingAutoPasses();
     expect(random).toHaveBeenCalledTimes(1);
-    expect(random).toHaveBeenCalledWith(3001);
+    expect(random).toHaveBeenCalledWith(5001);
     automaticPass();
     expect(game().currentTurnSeat).toBe('S');
     expect(game().lockedSeats).toEqual(['W']);
@@ -117,7 +117,7 @@ describe('Big Two delayed automatic passing', () => {
   });
 
   it('should allow a manual pass after presentation and invalidate its sampled job', () => {
-    vi.mocked(crypto.randomInt).mockReturnValue(3000);
+    vi.mocked(crypto.randomInt).mockReturnValue(5000);
     restoreHands(singleHands());
     manager.handleBigTwoPlay(CODE, 'N', [card('spades', 2)]);
     const old = game().pendingAutoPass!;
@@ -169,7 +169,7 @@ describe('Big Two delayed automatic passing', () => {
   });
 
   it('should restore a sampled deadline, commit before publishing, and cancel on shutdown', async () => {
-    vi.mocked(crypto.randomInt).mockReturnValue(3000);
+    vi.mocked(crypto.randomInt).mockReturnValue(5000);
     restoreHands(singleHands());
     manager.handleBigTwoPlay(CODE, 'N', [card('spades', 2)]);
     let saved = snapshot();
@@ -226,6 +226,33 @@ describe('Big Two delayed automatic passing', () => {
     stop();
   });
 
+  it('should restore an old short deadline and use readable timing on its next action', async () => {
+    vi.mocked(crypto.randomInt).mockReturnValue(0);
+    restoreHands(singleHands());
+    manager.handleBigTwoPlay(CODE, 'N', [card('spades', 2)]);
+    const state = game();
+    state.presentation = { ...state.presentation!, timingVersion: undefined };
+    state.pendingAutoPass = { ...state.pendingAutoPass!, executeAt: state.presentation!.startedAt + 400 };
+    let saved = snapshot();
+    expect(isRuntimeSnapshot(saved)).toBe(true);
+    const runtime = await createRuntimeCoordinator({
+      loadRuntime: async () => structuredClone(saved),
+      saveRuntime: async (next) => {
+        expect(isRuntimeSnapshot(next)).toBe(true);
+        saved = structuredClone(next);
+      },
+    });
+    const publish = vi.fn();
+    const stop = await startBigTwoAutoPass(runtime, publish);
+    expect(game().pendingAutoPass?.executeAt).toBe(10400);
+    await vi.advanceTimersByTimeAsync(400);
+    await runtime.idle();
+    expect(publish).toHaveBeenCalledTimes(1);
+    expect(game().presentation?.timingVersion).toBe(2);
+    expect(getPresentationEndsAt(game())).toBe(11400);
+    stop();
+  });
+
   it('should durably sample a legacy pending turn once and reuse it after restarting', async () => {
     restoreHands(singleHands());
     manager.handleBigTwoPlay(CODE, 'N', [card('spades', 2)]);
@@ -252,7 +279,7 @@ describe('Big Two delayed automatic passing', () => {
   });
 
   it('should cancel the old timer when a player manually passes first', async () => {
-    vi.mocked(crypto.randomInt).mockReturnValue(3000);
+    vi.mocked(crypto.randomInt).mockReturnValue(5000);
     restoreHands(singleHands());
     manager.handleBigTwoPlay(CODE, 'N', [card('spades', 2)]);
     const saved = snapshot();
@@ -262,12 +289,12 @@ describe('Big Two delayed automatic passing', () => {
     });
     const publish = vi.fn();
     const stop = await startBigTwoAutoPass(runtime, publish);
-    await vi.advanceTimersByTimeAsync(400);
+    await vi.advanceTimersByTimeAsync(getPresentationEndsAt(game()) - Date.now());
     await runtime.mutate(() => {
       expect(manager.handleBigTwoPass(CODE, 'W').success).toBe(true);
     });
     expect(vi.getTimerCount()).toBe(1);
-    await vi.advanceTimersByTimeAsync(3000);
+    await vi.advanceTimersByTimeAsync(5000);
     expect(publish).not.toHaveBeenCalled();
     expect(game().lockedSeats).toEqual(['W']);
     expect(game().currentTurnSeat).toBe('S');

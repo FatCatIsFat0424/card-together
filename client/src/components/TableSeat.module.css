@@ -151,8 +151,8 @@
     text-align: center;
   }
 
-  .left .plate > a,
-  .right .plate > a {
+  .left .plate > [data-player-identity],
+  .right .plate > [data-player-identity] {
     flex-direction: column;
     gap: 2px;
     font-size: var(--text-xs);
@@ -174,7 +174,7 @@
   .bottom { bottom: 32px; }
   .plate { gap: 4px; padding: 2px 8px 2px 2px; }
   /* 縮小頭像（Avatar 為 PlayerLink 第一個子元素） */
-  .plate > a > :first-child { width: 2.25rem; height: 2.25rem; font-size: 1.3rem; }
+  .plate > [data-player-identity] > :first-child { width: 2.25rem; height: 2.25rem; font-size: 1.3rem; }
   .back { width: calc(18px * var(--playing-card-scale)); margin-left: calc(-11px * var(--playing-card-scale)); }
   .fan { padding-left: calc(11px * var(--playing-card-scale)); }
 }
@@ -276,8 +276,8 @@
   .bottom { bottom: 2px; }
   .seat { gap: 2px; }
   .plate { padding: 2px 4px; gap: 2px; }
-  .plate > a { font-size: var(--text-xs); gap: 2px; }
-  .plate > a > :first-child { width: 24px; height: 24px; font-size: 1rem; }
+  .plate > [data-player-identity] { font-size: var(--text-xs); gap: 2px; }
+  .plate > [data-player-identity] > :first-child { width: 24px; height: 24px; font-size: 1rem; }
   .tags { gap: 2px; font-size: 10px; }
   .seatLabel, .me, .declarer, .dealer { padding: 0 3px; }
   .fan, .pileCards { display: none; }

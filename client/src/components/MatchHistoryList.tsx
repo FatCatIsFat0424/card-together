@@ -14,8 +14,11 @@ function MatchResultLabel({ match, players }: {
   const { result } = match;
   // accountIds 依座位 N, E, S, W 排序
   const mySeat = SEAT_ORDER_CLOCKWISE[match.accountIds.indexOf(myId ?? '')];
-  const seatName = (seat: Seat): string =>
-    players[match.accountIds[SEAT_ORDER_CLOCKWISE.indexOf(seat)]]?.nickname ?? t(`seat.${seat}`);
+  const seatName = (seat: Seat): string => {
+    const id = match.accountIds[SEAT_ORDER_CLOCKWISE.indexOf(seat)];
+    return id?.startsWith('bot:') ? t('player.botSeat', { seat: t(`seat.${seat}`) })
+      : players[id]?.nickname ?? t(`seat.${seat}`);
+  };
   if (result.gameType === 'redpoints') {
     return <span>{t('gameType.redpoints')} · 🏆 {result.winners.map(seatName).join('、')}
       {mySeat && <> · {t('redpoints.myPoints', { n: String(result.points[mySeat]) })}</>}</span>;
@@ -27,8 +30,7 @@ function MatchResultLabel({ match, players }: {
       {myRank && <> · {t('ninetynine.myRank', { n: String(myRank) })}</>}</span>;
   }
   if (result.gameType === 'bigtwo') {
-    const winnerId = match.accountIds[SEAT_ORDER_CLOCKWISE.indexOf(result.winnerSeat)];
-    return <span>{t('gameType.bigtwo')} · 🏆 {players[winnerId]?.nickname ?? t(`seat.${result.winnerSeat}`)}
+    return <span>{t('gameType.bigtwo')} · 🏆 {seatName(result.winnerSeat)}
       {result.dragon && ' 🐉'}
       {mySeat && <> · {t('bigtwo.myPenalty', { n: String(result.scores[mySeat]) })}</>}</span>;
   }
@@ -51,7 +53,9 @@ export function MatchHistoryList({ matches, players }: MatchHistory): ReactNode 
         </time>
       </div>
       <div className={styles.players}>
-        {match.accountIds.map((id) => players[id] && <PlayerLink key={id} player={players[id]} />)}
+        {match.accountIds.map((id, index) => id.startsWith('bot:')
+          ? <span key={id} className={styles.bot}>{t('player.botSeat', { seat: t(`seat.${SEAT_ORDER_CLOCKWISE[index]}`) })}</span>
+          : players[id] && <PlayerLink key={id} player={players[id]} />)}
       </div>
     </li>
   ))}</ul>;

@@ -5,6 +5,8 @@ import type { PlayerInfo, Seat } from './player';
 import type { BigTwoComboType } from '../rules/bigtwo';
 
 export interface GamePresentation {
+  /** Absent on legacy snapshots whose shorter deadlines must remain stable. */
+  readonly timingVersion?: 2;
   readonly serverNow?: number;
   readonly id: string;
   readonly startedAt: number;

@@ -32,6 +32,8 @@ describe('authoritative game presentation', () => {
     const state = games.getGameState(CODE)!;
     const before = structuredClone(state);
     const endsAt = getPresentationEndsAt(state);
+    expect(endsAt - Date.now()).toBe(1300);
+    expect(state.presentation?.timingVersion).toBe(2);
     vi.setSystemTime(endsAt - 1);
     expect(games.handleBigTwoPlay(CODE, 'W', [card(5)]).success).toBe(false);
     expect(games.handleBigTwoPass(CODE, 'W').success).toBe(false);
@@ -73,7 +75,7 @@ describe('authoritative game presentation', () => {
     expect(getPresentationFrames(state).map(({ kind, seat }) => ({ kind, seat }))).toEqual([
       { kind: 'pass', seat: 'E' }, { kind: 'round', seat: 'N' },
     ]);
-    expect(getPresentationEndsAt(state)).toBe(Date.now() + 2350);
+    expect(getPresentationEndsAt(state)).toBe(Date.now() + 3000);
     expect(getPresentationFrames(state).at(-1)).toMatchObject({
       cards: [{ suit: 'spades', rank: 2 }], passedSeats: ['W', 'S', 'E'],
     });

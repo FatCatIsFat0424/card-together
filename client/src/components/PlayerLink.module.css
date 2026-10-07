@@ -10,4 +10,14 @@
 .identity { min-width: 0; overflow-wrap: anywhere; }
 .nickname { font-weight: 600; }
 .username { display: block; color: var(--text-secondary); font-size: var(--text-sm); }
-.link:hover .nickname { color: var(--color-primary); text-decoration: underline; }
+a.link:hover .nickname { color: var(--color-primary); text-decoration: underline; }
+.botBadge {
+  display: inline-block;
+  margin-left: var(--spacing-xs);
+  padding: 0 5px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  color: var(--color-primary);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}

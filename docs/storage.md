@@ -6,6 +6,11 @@ Usernames contain 3–24 ASCII letters/digits/underscores and are unique case-in
 Passwords contain 10–128 characters; hashes use salted asynchronous scrypt
 (`N=131072`, `r=8`, `p=1`) with bounded concurrency and HTTP rate limits.
 Account UUIDs are player IDs; editable nicknames do not change identity.
+Bots use reserved `bot:<UUID>` player IDs and `isBot: true` in room/game snapshots.
+They have no account, session, or connected-player record. Match participant IDs retain
+N/E/S/W order and may include bot IDs; at least one participant must be a real account.
+Legacy human snapshots without `isBot` remain valid. Completed bot identities remain
+in match history after the bot is removed from its room.
 Profiles include a 1–20-character nickname, six-digit color, avatar preset/optional
 uploaded avatar, optional table background, and match-history visibility.
 

@@ -10,12 +10,42 @@ visible only to their owner.
 A host chooses the game while waiting. Four occupied, ready seats start a match.
 After scoring, continue returns to readiness. Leaving or failing to reconnect within
 60 seconds aborts an unfinished match. Seated players can propose/vote to abort an
-active game. Three yes votes out of four pass; the starter votes yes automatically.
-Votes last 60 seconds, with a three-minute cooldown between proposals. A successful
-vote returns the room to waiting. Match history retains completed results independently
+active game. Three yes votes out of four pass; with bots, the threshold is the smaller
+of three and the number of human players. Bots do not vote; the starter votes yes
+automatically, so a solo human can end the game immediately.
+Votes last 60 seconds. Starting a proposal sets a three-minute cooldown; failed or
+expired votes retain that cooldown. A successful vote returns the room to waiting
+and clears the cooldown, allowing an immediate proposal in the next match.
+Match history retains completed results independently
 of current-room public action history.
 Server presentation deadlines briefly gate actions between turns; see
 [architecture](architecture.md#presentation-timeline).
+
+### Bots
+
+While waiting, the host can add a bot to an empty seat, remove a bot, or fill available
+capacity with bots. Room members who have not selected a seat still reserve capacity.
+Bots are always ready; the match starts once all four seats are occupied and the humans
+are ready. Bots remain for the next match and support all four games. Only humans can
+host; the room is removed when its last human leaves.
+
+Bots evaluate legal moves using only their own hand and public state. They choose
+randomly among near-best evaluations, weighted toward better choices; immediate Big Two
+wins take priority over randomness. Randomness is injectable for reproducible tests.
+They remain heuristic practice opponents without configurable difficulty or hidden-hand
+search, and the evaluation scores do not guarantee optimal play.
+
+| Game | Decision priorities |
+| --- | --- |
+| Bridge | Use hand points and suit length for bounded opening/competitive bids, raise partners only with support, and stop repeated bidding by the same bot. Weak hands pass unless three opening passes require a low opening to keep play moving. Decline redeals. Use public played cards to identify established winners and opponents' voids; conserve trump/high cards and avoid overtaking a winning partner. |
+| Big Two | Plan the smallest number of legal groups needed to shed the remaining hand, avoiding unnecessary splits of useful combinations. Conserve strong cards/bombs normally, and favor blocking plays when an opponent has one card left. |
+| Red Points | Evaluate every legal capture, balancing immediate red points, future matches with the remaining hand, and the public table's exposure to unseen cards. |
+| Ninety-Nine | Compare both legal plus/minus choices, balance pressure against remaining rescue cards and short-handed risk, and evaluate reverse/designation using public living seats and hand counts. Randomize among similarly rated surviving designation targets. |
+
+The server waits for the previous presentation and a short thinking delay before each
+bot action. Actions are saved before broadcast and resume after server restart. Existing
+Big Two forced-pass timing still applies. Completed games with bots appear in human
+participants' history; bots have no account profile or social/voice participation.
 
 ## Bridge
 
@@ -65,7 +95,8 @@ Four-of-a-kind and straight flushes are bombs that beat any ordinary group, incl
 singles/pairs. Straight flush > four-of-a-kind; equal bomb types use their usual comparison.
 
 A responding player with no legal play (including bombs) receives a server automatic
-pass after the previous presentation plus one sampled integer delay of 0–3,000 ms.
+pass after the previous presentation plus one sampled integer delay of 0–5,000 ms
+(inclusive).
 No lock/turn/log changes appear before that committed pass. Manual pass is permitted
 once presentation ends. Free leads are never auto-passed. Each forced pass has a separate
 saved private deadline; restart preserves the sampled deadline and overdue work resumes

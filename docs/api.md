@@ -67,6 +67,8 @@ For exact unions and result fields, use
 | `room:leave` | — | Leave; unfinished game aborts |
 | `room:changeSeat` | `{ seat }` | Change available seat |
 | `room:setGameType` | `{ gameType }` | Host changes waiting room game |
+| `room:addBot`, `room:removeBot` | `{ seat }` | Host adds/removes a bot while waiting |
+| `room:fillBots` | — | Host fills available member capacity with ready bots |
 | `room:ready`, `room:unready` | — | Update readiness; four ready seats start |
 | `game:redealResponse` | `{ accept }` | Eligible Bridge player decides |
 | `game:bid` | `{ bid }` | Bridge bid/pass |
@@ -83,6 +85,8 @@ For exact unions and result fields, use
 
 Play/pass/capture and continue wait for the server's presentation deadline; continue also
 requires scoring. The server validates turn/card/room authority; see [games](games.md).
+Room/game players expose optional `isBot`; absent or false means a human. Bot identities
+use reserved `bot:<UUID>` IDs and cannot authenticate or receive player snapshots.
 
 `player:state` sends the same full `PlayerSnapshot` as resume: optional player, room,
 gameState, and recent chat history plus success/error. Missing room/game clears old client

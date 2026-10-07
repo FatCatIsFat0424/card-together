@@ -1,5 +1,5 @@
 import { GAME_TYPES } from '@shared/constants';
-import type { RoomInvite, Seat } from '@shared/types';
+import type { RoomCode, RoomInvite, Seat } from '@shared/types';
 import type { SocketContext, TypedSocket } from './context';
 import { actionError, requireRoom, requireSuccess, runAction, leaveCurrentRoom } from './context';
 import * as playerManager from '../managers/player-manager';
@@ -7,6 +7,22 @@ import * as roomManager from '../managers/room-manager';
 import * as gameManager from '../managers/game-manager';
 import * as chatManager from '../managers/chat-manager';
 import * as inviteManager from '../managers/invite-manager';
+
+function startIfReady(code: RoomCode): void {
+  const room = roomManager.getRoomInfo(code);
+  if (!room || !roomManager.isAllReady(code)) return;
+  const players = roomManager.getSeatPlayers(code);
+  if (!players) throw actionError('All four seats must be filled.');
+  roomManager.setRoomStatus(code, 'playing');
+  requireSuccess(gameManager.startGame(code, room.gameType, players));
+}
+
+function requireSeat(payload: { seat: Seat }): Seat {
+  if (!payload || !(['N', 'E', 'S', 'W'] as Seat[]).includes(payload.seat)) {
+    throw actionError('Invalid seat.');
+  }
+  return payload.seat;
+}
 
 export function registerRoomHandlers(context: SocketContext, socket: TypedSocket): void {
   socket.on('room:create', (payload, callback) => runAction(context, socket, callback, () => {
@@ -88,13 +104,28 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
   socket.on('room:ready', (callback) => runAction(context, socket, callback, () => {
     const code = requireRoom(socket);
     requireSuccess(roomManager.setReady(code, socket.data.accountId, true));
-    const room = roomManager.getRoomInfo(code);
-    if (room && roomManager.isAllReady(code)) {
-      const players = roomManager.getSeatPlayers(code);
-      if (!players) throw actionError('All four seats must be filled.');
-      roomManager.setRoomStatus(code, 'playing');
-      requireSuccess(gameManager.startGame(code, room.gameType, players));
-    }
+    startIfReady(code);
+    return { success: true };
+  }));
+
+  socket.on('room:addBot', (payload, callback) => runAction(context, socket, callback, () => {
+    const seat = requireSeat(payload);
+    const code = requireRoom(socket);
+    requireSuccess(roomManager.addBot(code, socket.data.accountId, seat));
+    startIfReady(code);
+    return { success: true };
+  }));
+
+  socket.on('room:removeBot', (payload, callback) => runAction(context, socket, callback, () => {
+    const seat = requireSeat(payload);
+    requireSuccess(roomManager.removeBot(requireRoom(socket), socket.data.accountId, seat));
+    return { success: true };
+  }));
+
+  socket.on('room:fillBots', (callback) => runAction(context, socket, callback, () => {
+    const code = requireRoom(socket);
+    requireSuccess(roomManager.fillBots(code, socket.data.accountId));
+    startIfReady(code);
     return { success: true };
   }));
 

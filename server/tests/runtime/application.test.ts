@@ -222,6 +222,86 @@ describe('persistent authenticated application', () => {
     expect(persist).toHaveBeenCalledTimes(3);
   }, 15_000);
 
+  it('should persist bots, start when ready and let one human abort after a restart', async () => {
+    const account = await register('bot_host');
+    let [client] = await connectPlayers([account]);
+    await client.timeout(5_000).emitWithAck('room:create', { gameType: 'bigtwo' });
+    await client.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'N' });
+    expect(await client.timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
+    expect(await client.timeout(5_000).emitWithAck('room:fillBots')).toEqual({ success: true });
+    const active = await resume(client);
+    expect(active.room?.status).toBe('playing');
+    expect(active.gameState?.gameType).toBe('bigtwo');
+    expect(active.gameState).not.toHaveProperty('hands');
+    expect(active.gameState).not.toHaveProperty('players');
+    expect(SEATS.slice(1).every((seat) => active.room?.seats[seat].player?.isBot)).toBe(true);
+    const stored = await repository.loadRuntime();
+    expect(stored?.players).toHaveLength(1);
+    expect(stored?.rooms[0].memberIds).toHaveLength(4);
+    expect(await client.timeout(5_000).emitWithAck('room:removeBot', { seat: 'E' }))
+      .toMatchObject({ success: false });
+
+    await stop();
+    await start();
+    [client] = await connectPlayers([account]);
+    expect((await resume(client)).room).toEqual(active.room);
+    expect(await client.timeout(5_000).emitWithAck('game:abortVote:start')).toEqual({ success: true });
+    const aborted = await resume(client);
+    expect(aborted.gameState).toBeUndefined();
+    expect(aborted.room).toMatchObject({ status: 'waiting', abortVote: null, abortVoteCooldownUntil: null });
+    expect(aborted.room?.seats.N.isReady).toBe(false);
+    expect(SEATS.slice(1).every((seat) => aborted.room?.seats[seat].isReady)).toBe(true);
+    expect(await repository.listMatches(account.account.id)).toEqual([]);
+    expect((await repository.loadRuntime())?.rooms[0].info.abortVoteCooldownUntil).toBeNull();
+    expect(await client.timeout(5_000).emitWithAck('room:setGameType', { gameType: 'bridge' }))
+      .toEqual({ success: true });
+    expect(await client.timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
+    expect((await resume(client)).room?.status).toBe('playing');
+    expect(await client.timeout(5_000).emitWithAck('game:abortVote:start')).toEqual({ success: true });
+    expect(await client.timeout(5_000).emitWithAck('room:leave')).toEqual({ success: true });
+    expect((await repository.loadRuntime())?.rooms).toEqual([]);
+    expect((await repository.loadRuntime())?.games).toEqual([]);
+  }, 15_000);
+
+  it('should enforce bot payloads and host rights while reserving seats for human members', async () => {
+    const accounts = [await register('manage_host'), await register('manage_guest')];
+    const [host, guest] = await connectPlayers(accounts);
+    const { roomCode } = await host.timeout(5_000).emitWithAck('room:create', { gameType: 'bridge' });
+    if (!roomCode) throw new Error('Expected room code');
+    await host.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'N' });
+    await guest.timeout(5_000).emitWithAck('room:join', { roomCode });
+    expect(await guest.timeout(5_000).emitWithAck('room:addBot', { seat: 'E' })).toMatchObject({ success: false });
+    expect(await guest.timeout(5_000).emitWithAck('room:fillBots')).toMatchObject({ success: false });
+    expect(await host.timeout(5_000).emitWithAck('room:addBot', { seat: 'invalid' as Seat }))
+      .toEqual({ success: false, error: 'Invalid seat.' });
+    expect(await host.timeout(5_000).emitWithAck('room:fillBots')).toEqual({ success: true });
+    expect(await host.timeout(5_000).emitWithAck('room:addBot', { seat: 'W' })).toMatchObject({ success: false });
+    expect((await resume(host)).room?.seats.W.player).toBeNull();
+    expect(await guest.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'W' })).toEqual({ success: true });
+    expect(await guest.timeout(5_000).emitWithAck('room:removeBot', { seat: 'E' })).toMatchObject({ success: false });
+    expect(await host.timeout(5_000).emitWithAck('room:removeBot', { seat: 'E' })).toEqual({ success: true });
+    expect((await resume(host)).room?.seats.E).toEqual({ player: null, isReady: false });
+  }, 15_000);
+
+  it('should roll back bot additions and automatic game start if persistence fails', async () => {
+    const account = await register('bot_rollback');
+    const [client] = await connectPlayers([account]);
+    await client.timeout(5_000).emitWithAck('room:create', { gameType: 'bigtwo' });
+    await client.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'N' });
+    await client.timeout(5_000).emitWithAck('room:ready');
+    const before = await resume(client);
+    vi.spyOn(console, 'error').mockImplementation((): void => undefined);
+    vi.spyOn(repository, 'saveRuntime').mockRejectedValueOnce(new Error('Disk full'));
+    expect(await client.timeout(5_000).emitWithAck('room:fillBots'))
+      .toMatchObject({ success: false, error: expect.stringContaining('save') });
+    const failed = await resume(client);
+    expect(failed.room).toEqual(before.room);
+    expect(failed.gameState).toBeUndefined();
+    expect((await repository.loadRuntime())?.rooms[0].memberIds).toEqual([account.account.id]);
+    expect(await client.timeout(5_000).emitWithAck('room:fillBots')).toEqual({ success: true });
+    expect((await resume(client)).room?.status).toBe('playing');
+  }, 15_000);
+
   it('should preserve ready rooms, private hands and active games across restarts and record a completed game', async () => {
     const accounts: RegisteredAccount[] = [];
     for (const username of ['north_player', 'east_player', 'south_player', 'west_player']) {
@@ -392,18 +472,29 @@ describe('persistent authenticated application', () => {
     expect((await resume(players[3])).room?.abortVote).toMatchObject({
       startedBy: accounts[0].account.id, yes: [accounts[0].account.id, accounts[1].account.id], no: [],
     });
+    const beforeDecisiveVote = await resume(players[3]);
+    vi.spyOn(console, 'error').mockImplementation((): void => undefined);
+    vi.spyOn(repository, 'saveRuntime').mockRejectedValueOnce(new Error('Disk full'));
+    expect(await players[2].timeout(5_000).emitWithAck('game:abortVote:cast', { agree: true }))
+      .toMatchObject({ success: false, error: expect.stringContaining('save') });
+    expect((await resume(players[3])).room).toEqual(beforeDecisiveVote.room);
     expect(await players[2].timeout(5_000).emitWithAck('game:abortVote:cast', { agree: true }))
       .toEqual({ success: true });
 
     const aborted = await resume(players[3]);
     expect(aborted.gameState).toBeUndefined();
-    expect(aborted.room).toMatchObject({ status: 'waiting', abortVote: null });
+    expect(aborted.room).toMatchObject({ status: 'waiting', abortVote: null, abortVoteCooldownUntil: null });
     expect(Object.values(aborted.room!.seats).every((seat) => !seat.isReady)).toBe(true);
     expect(aborted.chatHistory?.map((message) => [message.system, message.content])).toEqual([
       [true, 'abortVote.started'], [true, 'abortVote.passed'],
     ]);
     expect(await repository.listMatches(accounts[0].account.id)).toEqual([]);
     expect((await repository.loadRuntime())?.games).toEqual([]);
+    expect((await repository.loadRuntime())?.rooms[0].info.abortVoteCooldownUntil).toBeNull();
+    expect((await readyAll()).every((result) => result.success)).toBe(true);
+    expect(await players[0].timeout(5_000).emitWithAck('game:abortVote:start')).toEqual({ success: true });
+    const nextVote = (await resume(players[3])).room!;
+    expect(nextVote.abortVoteCooldownUntil).toBe(nextVote.abortVote!.startedAt + 3 * 60_000);
   }, 20_000);
 
   it('should play a full Big Two game across a restart and record it', async () => {

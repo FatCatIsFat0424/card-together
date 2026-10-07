@@ -35,6 +35,7 @@ export function RoomPage(): ReactNode {
   const leaving = useRef(false);
   const isReady = mySeat ? roomInfo?.seats[mySeat].isReady ?? false : false;
   const isHost = Boolean(playerId) && roomInfo?.hostId === playerId;
+  const hasEmptySeat = roomInfo ? Object.values(roomInfo.seats).some(({ player }) => !player) : false;
 
   useEffect(() => {
     if (leaving.current) return;
@@ -75,6 +76,21 @@ export function RoomPage(): ReactNode {
     setBusy(true);
     setError('');
     socket.timeout(10000).emit('room:setGameType', { gameType }, handleResult);
+  };
+  const addBot = (seat: Seat): void => {
+    setBusy(true);
+    setError('');
+    socket.timeout(10000).emit('room:addBot', { seat }, handleResult);
+  };
+  const removeBot = (seat: Seat): void => {
+    setBusy(true);
+    setError('');
+    socket.timeout(10000).emit('room:removeBot', { seat }, handleResult);
+  };
+  const fillBots = (): void => {
+    setBusy(true);
+    setError('');
+    socket.timeout(10000).emit('room:fillBots', handleResult);
   };
   const leave = (): void => {
     leaving.current = true;
@@ -130,20 +146,27 @@ export function RoomPage(): ReactNode {
             <div key={seat} className={className}>
               <div className={styles.seatLabel}>{t(`seat.${seat}`)}</div>
               <PlayerLink player={player} size="medium" />
-              {player.id === roomInfo.hostId &&
-                <span className={styles.hostBadge} title={t('room.host')}>👑 {t('room.host')}</span>}
-              {player.id === playerId && <span>{t('common.me')}</span>}
-              <div className={seatInfo.isReady ? styles.seatReadyBadge : styles.seatNotReadyBadge}>
-                {t(seatInfo.isReady ? 'room.ready.status' : 'room.seatTaken')}</div>
+              <div className={styles.seatStatus}>
+                {player.id === roomInfo.hostId &&
+                  <span className={styles.hostBadge} title={t('room.host')}>👑 {t('room.host')}</span>}
+                {player.id === playerId && <span>{t('common.me')}</span>}
+                <span className={seatInfo.isReady ? styles.seatReadyBadge : styles.seatNotReadyBadge}>
+                  {t(player.isBot ? 'room.botReady' : seatInfo.isReady ? 'room.ready.status' : 'room.seatTaken')}</span>
+              </div>
+              {isHost && player.isBot && <button type="button" className={`btn btn-outline ${styles.botAction}`}
+                disabled={busy} onClick={() => removeBot(seat)}>{t('room.removeBot')}</button>}
             </div>
           );
           return (
-            <button key={seat} type="button" disabled={busy}
-              className={className}
-              onClick={() => changeSeat(seat)}>
-              <div className={styles.seatLabel}>{t(`seat.${seat}`)}</div>
-              <div className={styles.seatEmpty}>{t('room.seatEmpty')}</div>
-            </button>
+            <div key={seat} className={`${className} ${styles.emptySlot}`}>
+              <button type="button" disabled={busy} className={styles.seatChoice}
+                onClick={() => changeSeat(seat)}>
+                <div className={styles.seatLabel}>{t(`seat.${seat}`)}</div>
+                <div className={styles.seatEmpty}>{t('room.seatEmpty')}</div>
+              </button>
+              {isHost && <button type="button" className={`btn btn-outline ${styles.botAction}`}
+                disabled={busy} onClick={() => addBot(seat)}>{t('room.addBot')}</button>}
+            </div>
           );
         })}
         <div className={styles.tableCenter}>
@@ -151,6 +174,8 @@ export function RoomPage(): ReactNode {
           {t('room.waiting')}</div></div>
       </div>
       <div className={styles.roomFooter}>
+        {isHost && <button type="button" className="btn btn-outline" onClick={fillBots}
+          disabled={busy || !hasEmptySeat}>{t('room.fillBots')}</button>}
         <button className={`btn ${isReady ? 'btn-danger' : 'btn-success'} ${styles.readyBtn}`}
           onClick={ready} disabled={busy || !mySeat}>{t(isReady ? 'room.unready' : 'room.ready')}</button>
       </div>

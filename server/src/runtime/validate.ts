@@ -35,6 +35,10 @@ function player(value: unknown): boolean {
   return (
     object(value) &&
     text(value.id) &&
+    (value.isBot === undefined || typeof value.isBot === 'boolean') &&
+    (value.isBot === true
+      ? /^bot:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.id)
+      : !value.id.startsWith('bot:')) &&
     text(value.username) &&
     text(value.nickname) &&
     typeof value.color === 'string' &&
@@ -314,6 +318,7 @@ function presentation(value: ObjectValue): boolean {
   if (value.presentation === undefined) return true;
   const metadata = value.presentation;
   return object(metadata) && text(metadata.id) && metadata.id.length <= 128 &&
+    (metadata.timingVersion === undefined || metadata.timingVersion === 2) &&
     number(metadata.startedAt) && metadata.serverNow === undefined &&
     Array.isArray(value.log) && typeof metadata.logStart === 'number' &&
     Number.isInteger(metadata.logStart) && metadata.logStart >= 0 &&
@@ -370,8 +375,8 @@ function abortVote(value: unknown, members: string[]): boolean {
     value.yes.includes(value.startedBy) &&
     voters.every((id) => oneOf(id, members)) &&
     new Set(voters).size === voters.length &&
-    value.yes.length < ABORT_VOTE_THRESHOLD &&
-    value.no.length <= seats.length - ABORT_VOTE_THRESHOLD
+    value.yes.length < Math.min(ABORT_VOTE_THRESHOLD, members.length) &&
+    value.no.length <= members.length - Math.min(ABORT_VOTE_THRESHOLD, members.length)
   );
 }
 
@@ -388,14 +393,15 @@ function room(value: unknown): boolean {
     return false;
   const info = value.info;
   const members = value.memberIds as string[];
+  const humans = members.filter((id) => !id.startsWith('bot:'));
   return (
     text(info.code) &&
     oneOf(info.gameType, [...GAME_TYPES]) &&
     oneOf(info.status, ['waiting', 'playing']) &&
     number(info.createdAt) &&
-    oneOf(info.hostId, members) &&
+    oneOf(info.hostId, humans) &&
     (info.abortVoteCooldownUntil === null || number(info.abortVoteCooldownUntil)) &&
-    (info.abortVote === null || (info.status === 'playing' && abortVote(info.abortVote, members))) &&
+    (info.abortVote === null || (info.status === 'playing' && abortVote(info.abortVote, humans))) &&
     object(info.seats) &&
     Object.keys(info.seats).length === 4 &&
     seats.every((seat) => {
@@ -405,6 +411,7 @@ function room(value: unknown): boolean {
         typeof entry.isReady === 'boolean' &&
         ((entry.player === null && !entry.isReady) ||
           (player(entry.player) &&
+            ((entry.player as ObjectValue).isBot !== true || entry.isReady) &&
             (value.memberIds as unknown[]).includes((entry.player as ObjectValue).id)))
       );
     })
@@ -611,6 +618,7 @@ export function isRuntimeSnapshot(value: unknown): value is RuntimeSnapshot {
       (entry: unknown) =>
         object(entry) &&
         player(entry.info) &&
+        (entry.info as ObjectValue).isBot !== true &&
         (entry.currentRoomCode === null || text(entry.currentRoomCode)) &&
         (entry.disconnectedAt === null || number(entry.disconnectedAt)),
     ) ||
@@ -659,6 +667,12 @@ export function isRuntimeSnapshot(value: unknown): value is RuntimeSnapshot {
     const vote = entry.info.abortVote;
     if (vote && ![...vote.yes, ...vote.no].every((id) => occupants.includes(id))) return false;
     for (const id of entry.memberIds) {
+      const bot = seats.map((seat) => entry.info.seats[seat].player).find((player) => player?.id === id && player.isBot);
+      if (bot) {
+        if (players.has(id) || memberships.has(id)) return false;
+        memberships.set(id, entry.info.code);
+        continue;
+      }
       if (
         !players.has(id) ||
         memberships.has(id) ||
@@ -688,7 +702,8 @@ export function isRuntimeSnapshot(value: unknown): value is RuntimeSnapshot {
     } else if (
       currentRoom.info.status !== 'playing' ||
       currentRoom.info.gameType !== entry.gameType ||
-      !seats.every((seat) => currentRoom.info.seats[seat].player?.id === entry.players[seat].id)
+      !seats.every((seat) => currentRoom.info.seats[seat].player?.id === entry.players[seat].id &&
+        (currentRoom.info.seats[seat].player?.isBot === true) === (entry.players[seat].isBot === true))
     )
       return false;
   }

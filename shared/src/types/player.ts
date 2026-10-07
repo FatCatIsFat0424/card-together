@@ -19,6 +19,7 @@ export interface PlayerInfo {
   readonly color: PlayerColor;
   readonly avatar: AvatarId;
   readonly avatarImage: MediaId | null;
+  readonly isBot?: boolean;
 }
 
 /** 玩家連線狀態 */

@@ -31,6 +31,10 @@ function nonEmpty(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0;
 }
 
+function botId(id: string): boolean {
+  return /^bot:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+}
+
 function validAccount(value: unknown): value is AccountRecord {
   return (
     isObject(value) &&
@@ -176,13 +180,15 @@ export function validateDocument(value: unknown): asserts value is DatabaseDocum
       (friendship) =>
         accountIds.has(friendship.requesterId) && accountIds.has(friendship.recipientId),
     ) &&
-    matches.every((match) => match.accountIds.every((id) => accountIds.has(id))) &&
+    matches.every((match) => match.accountIds.some((id) => accountIds.has(id)) &&
+      match.accountIds.every((id) => accountIds.has(id) || botId(id))) &&
     emojis.every((emoji) => accountIds.has(emoji.accountId)) &&
     [...emojiCounts.values()].every((count) => count <= MAX_EMOJIS_PER_ACCOUNT) &&
     (runtime === null ||
       (runtime.players.every((player) => accountIds.has(player.info.id)) &&
         runtime.games.every((game) =>
-          Object.values(game.players).every((player) => accountIds.has(player.id)),
+          Object.values(game.players).every((player) => player.isBot
+            ? botId(player.id) && !accountIds.has(player.id) : accountIds.has(player.id)),
         ) &&
         runtime.chat.every((room) =>
           room.messages.every((message) => accountIds.has(message.sender.id)),

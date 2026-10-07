@@ -4,3 +4,4 @@
 .time { font-size: var(--text-xs); color: var(--text-secondary); }
 .players { display: flex; flex-wrap: wrap; gap: var(--spacing-md); }
 .empty { color: var(--text-secondary); font-size: var(--text-sm); }
+.bot { display: inline-flex; align-items: center; color: var(--text-secondary); font-weight: 600; }

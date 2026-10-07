@@ -13,6 +13,7 @@ import { createEmojiRouter } from './http/emoji-routes';
 import { createMediaStore } from './media/media-store';
 import { createRuntimeCoordinator } from './runtime/coordinator';
 import { startBigTwoAutoPass } from './runtime/bigtwo-auto-pass';
+import { startBotTurns } from './runtime/bot-turns';
 import { broadcastState } from './socket/context';
 import { getRoomMemberIds } from './managers/room-manager';
 import { createVoiceManager } from './managers/voice-manager';
@@ -72,6 +73,9 @@ export async function createApplication(repository: Repository, options: Applica
     await new Promise<void>((resolve) => io.close(() => resolve()));
     throw error;
   }
+  const stopBots = startBotTurns(runtime, (code) => {
+    broadcastState(io, getRoomMemberIds(code));
+  });
   const stopConnections = setupConnectionHandler(context);
   app.use('/api/auth', createAuthRouter(auth, {
     ...options,
@@ -104,6 +108,7 @@ export async function createApplication(repository: Repository, options: Applica
   return {
     httpServer, io,
     close: async (): Promise<void> => {
+      stopBots();
       stopAutoPass();
       stopConnections();
       await new Promise<void>((resolve) => io.close(() => resolve()));

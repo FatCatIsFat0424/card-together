@@ -89,7 +89,11 @@ describe('vote to abort', () => {
     expect(roomManager.castAbortVote(code, 'b', false, NOW).success).toBe(false);
     expect(roomManager.castAbortVote(code, 'stranger', true, NOW).success).toBe(false);
     expect(roomManager.castAbortVote(code, 'c', true, NOW)).toEqual({ success: true, outcome: 'passed' });
-    expect(roomManager.getRoomInfo(code)?.abortVote).toBeNull();
+    expect(roomManager.getRoomInfo(code)).toMatchObject({ abortVote: null, abortVoteCooldownUntil: null });
+    roomManager.setRoomStatus(code, 'waiting');
+    roomManager.setRoomStatus(code, 'playing');
+    expect(roomManager.startAbortVote(code, 'b', NOW + 1)).toEqual({ success: true, outcome: 'pending' });
+    expect(roomManager.getRoomInfo(code)?.abortVoteCooldownUntil).toBe(NOW + 1 + ABORT_VOTE_COOLDOWN_MS);
   });
 
   it('should expire a vote at its deadline and keep the cooldown', () => {
