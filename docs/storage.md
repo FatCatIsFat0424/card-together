@@ -62,6 +62,12 @@ last disconnect starts expiry. Empty rooms remove active game/chat records; comp
 matches remain. Chat retains the last 200 messages per room. Voice is not recorded or
 saved in JSON.
 
+Runtime snapshots also persist room time controls, per-seat reserves, and the active
+turn deadline. Existing deadlines survive restart; legacy snapshots without these fields
+receive default settings and fresh clocks. Timer metadata is validated with the rest of
+the snapshot. See [turn clocks](architecture.md#turn-clocks) and
+[timer rules](games.md#turn-timer).
+
 ## Backup and restore
 
 Stop the writer before copying the **entire state directory**, including `database.json`

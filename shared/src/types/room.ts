@@ -29,8 +29,15 @@ export interface AbortVoteInfo {
   readonly no: readonly string[];
 }
 
+export interface TimeControl {
+  readonly baseSeconds: number;
+  readonly bankSeconds: number;
+}
+
 /** 房間資訊（對外暴露） */
 export interface RoomInfo {
+  /** Missing only on legacy snapshots. */
+  readonly timeControl?: TimeControl;
   readonly code: RoomCode;
   readonly gameType: GameType;
   readonly status: RoomStatus;

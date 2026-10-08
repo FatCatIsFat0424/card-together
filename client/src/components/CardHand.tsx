@@ -11,6 +11,7 @@ interface CardHandProps {
   playableCards?: readonly Card[];
   onCardClick?: (card: Card) => void;
   disabled?: boolean;
+  onCardPreview?: (card: Card | null) => void;
   /** 多選模式：每張牌皆可點擊切換，已選的牌升起（取代 playableCards 標示） */
   selectedCards?: readonly Card[];
   /** 額外標示的牌（99：出了會超過 99） */
@@ -24,7 +25,7 @@ function containsCard(card: Card, list?: readonly Card[]): boolean {
 }
 
 export function CardHand({
-  cards, playableCards, onCardClick, disabled, selectedCards, markedCards, markedLabel,
+  cards, playableCards, onCardClick, disabled, selectedCards, markedCards, markedLabel, onCardPreview,
 }: CardHandProps): ReactNode {
   const middle = (cards.length - 1) / 2;
   const selectMode = selectedCards !== undefined;
@@ -48,6 +49,12 @@ export function CardHand({
             className={cardClasses}
             style={{ '--fan': index - middle } as CSSProperties}
             onClick={() => playable && onCardClick?.(card)}
+            onPointerEnter={(event) => {
+              if (event.pointerType === 'mouse' && playable && !disabled) onCardPreview?.(card);
+            }}
+            onPointerLeave={() => onCardPreview?.(null)}
+            onFocus={() => { if (playable && !disabled) onCardPreview?.(card); }}
+            onBlur={() => onCardPreview?.(null)}
             disabled={disabled || !playable}
             aria-pressed={selectMode ? selected : undefined}
             aria-label={`${RANK_DISPLAY[card.rank]}${SUIT_SYMBOLS[card.suit]}${marked && markedLabel ? ` (${markedLabel})` : ''}`}

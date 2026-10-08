@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { GAME_TYPES } from '@shared/constants';
-import type { GameType, Seat } from '@shared/types';
+import type { GameType, Seat, TimeControl } from '@shared/types';
+import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import { socket } from '../socket';
 import { mediaUrl } from '../media';
 import { useAccountStore } from '../stores/account-store';
@@ -13,6 +14,7 @@ import { useI18nStore } from '../stores/i18n-store';
 import { PlayerLink } from '../components/PlayerLink';
 import { ChatPanel } from '../components/ChatPanel';
 import { InviteFriends } from '../components/InviteFriends';
+import { TimeControlSettings } from '../components/TimeControlSettings';
 import styles from './RoomPage.module.css';
 
 const SEAT_STYLE_MAP: Record<Seat, string> = {
@@ -30,6 +32,7 @@ export function RoomPage(): ReactNode {
   const { t } = useI18nStore();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const attemptedRoom = useRef<string | null>(null);
   const hadRoom = useRef(false);
   const leaving = useRef(false);
@@ -77,6 +80,11 @@ export function RoomPage(): ReactNode {
     setError('');
     socket.timeout(10000).emit('room:setGameType', { gameType }, handleResult);
   };
+  const setTimeControl = (settings: TimeControl): void => {
+    setBusy(true);
+    setError('');
+    socket.timeout(10000).emit('room:setTimeControl', settings, handleResult);
+  };
   const addBot = (seat: Seat): void => {
     setBusy(true);
     setError('');
@@ -108,7 +116,7 @@ export function RoomPage(): ReactNode {
   </main>;
 
   return (
-    <main className={`${styles.roomContainer} ${styles.roomLayout}`}>
+    <main className={`${styles.roomContainer} ${styles.roomLayout} ${chatOpen ? styles.chatOpen : ''}`}>
       <div className={styles.roomHeader}>
         <div><div className={styles.roomCodeLabel}>{t('room.code')}</div>
           <div className={styles.roomCode}>{roomInfo.code}</div></div>
@@ -127,9 +135,17 @@ export function RoomPage(): ReactNode {
           </div>
         </div>
         <div className={styles.headerActions}>
+          <button type="button" className={`btn btn-outline ${styles.chatToggle}`}
+            aria-pressed={chatOpen} aria-controls="room-chat" onClick={() => setChatOpen((open) => !open)}>
+            {t('chat.title')}
+          </button>
           <InviteFriends />
           <button className="btn btn-outline" onClick={leave} disabled={busy}>{t('room.leave')}</button>
         </div>
+        <TimeControlSettings
+          key={`${roomInfo.code}:${roomInfo.hostId}:${roomInfo.timeControl?.baseSeconds}:${roomInfo.timeControl?.bankSeconds}`}
+          value={roomInfo.timeControl ?? DEFAULT_TIME_CONTROL}
+          disabled={!isHost || busy || roomInfo.status !== 'waiting'} onSave={setTimeControl} />
       </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={`${styles.tableArea} ${tableBackground ? styles.customTable : ''}`}
@@ -180,7 +196,7 @@ export function RoomPage(): ReactNode {
           onClick={ready} disabled={busy || !mySeat}>{t(isReady ? 'room.unready' : 'room.ready')}</button>
       </div>
       </div>
-      <div className={styles.chat}><ChatPanel /></div>
+      <div className={styles.chat} id="room-chat"><ChatPanel /></div>
     </main>
   );
 }

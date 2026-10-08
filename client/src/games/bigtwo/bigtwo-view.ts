@@ -50,3 +50,21 @@ const SUPERSCRIPTS = ['⁰', '¹', '²', '³', '⁴'];
 export function penaltyFormula(cardsLeft: number, twosLeft: number, score: number): string {
   return `${cardsLeft} × 2${SUPERSCRIPTS[twosLeft] ?? `^${twosLeft}`} = ${score}`;
 }
+
+const QUICK_PLAY_PAGE_SIZE = 3;
+
+export function quickPlayTypes(plays: readonly BigTwoCombo[]): BigTwoComboType[] {
+  return [...new Set(plays.map((play) => play.type))];
+}
+
+/** Filter before paging so larger groups do not sit behind pages of single cards. */
+export function quickPlayPage(
+  plays: readonly BigTwoCombo[], requestedPage: number, type: BigTwoComboType | 'all' = 'all',
+): {
+  plays: readonly BigTwoCombo[]; page: number; totalPages: number;
+} {
+  const matching = type === 'all' ? plays : plays.filter((play) => play.type === type);
+  const totalPages = Math.max(1, Math.ceil(matching.length / QUICK_PLAY_PAGE_SIZE));
+  const page = Math.max(0, Math.trunc(requestedPage)) % totalPages;
+  return { plays: matching.slice(page * QUICK_PLAY_PAGE_SIZE, (page + 1) * QUICK_PLAY_PAGE_SIZE), page, totalPages };
+}

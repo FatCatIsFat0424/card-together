@@ -1,8 +1,9 @@
 // ─── BigTwoTable：大老二牌桌（上家出牌、手牌多選、資訊欄、結算） ───
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { canPlay, identifyCombo, isBomb, legalPlays, sortBigTwoHand } from '@shared/rules/bigtwo';
+import type { BigTwoCombo, BigTwoComboType } from '@shared/rules/bigtwo';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import type { BigTwoMatchResult, BigTwoVisibleState, Card, Seat } from '@shared/types';
 import { cardImageUrl } from '../../cards';
@@ -15,7 +16,7 @@ import { GameShell } from '../GameShell';
 import { RoundHistory } from '../RoundHistory';
 import { useGamePresentation } from '../use-game-presentation';
 import {
-  comboLabelKey, currentRoundEntries, lastPlayCombo, nextHint, penaltyFormula, sameCard, toggleCard,
+  comboLabelKey, currentRoundEntries, lastPlayCombo, penaltyFormula, quickPlayPage, quickPlayTypes, sameCard, toggleCard,
 } from './bigtwo-view';
 import styles from './BigTwoTable.module.css';
 
@@ -38,6 +39,46 @@ function CardFan({ cards, small }: { cards: readonly Card[]; small?: boolean }):
         style={{ '--fan': index - middle } as CSSProperties} />
     ))}
   </span>;
+}
+
+function QuickPlays({ plays, disabled, onPlay }: {
+  plays: readonly BigTwoCombo[]; disabled: boolean; onPlay: (cards: readonly Card[]) => void;
+}): ReactNode {
+  const { t } = useI18nStore();
+  const [page, setPage] = useState(0);
+  const [type, setType] = useState<BigTwoComboType | 'all'>('all');
+  const types = quickPlayTypes(plays);
+  const current = quickPlayPage(plays, page, type);
+  return <section className={styles.quickPlays} aria-label={t('bigtwo.quickPlays')}>
+    <div className={styles.quickHeading}>
+      <span className={styles.quickTitle}>{t('bigtwo.quickPlays')}</span>
+      {types.length > 1 && <select className={styles.quickFilter} value={type}
+        aria-label={t('bigtwo.allCombos')} disabled={disabled} onChange={(event) => {
+          setType(types.find((option) => option === event.target.value) ?? 'all');
+          setPage(0);
+        }}>
+        <option value="all">{t('bigtwo.allCombos')}</option>
+        {types.map((option) => <option key={option} value={option}>{t(comboLabelKey(option))}</option>)}
+      </select>}
+      {current.totalPages > 1 && <button type="button" className="btn btn-outline"
+        disabled={disabled} onClick={() => setPage(current.page + 1)}>
+        {t('bigtwo.morePlays')} · {t('bigtwo.quickPage', {
+          page: String(current.page + 1), total: String(current.totalPages),
+        })}
+      </button>}
+    </div>
+    <div className={styles.quickOptions}>
+      {current.plays.map((combo) => <button type="button" className={styles.quickPlay}
+        key={combo.cards.map((card) => `${card.suit}-${card.rank}`).join(',')}
+        disabled={disabled} onClick={() => onPlay(combo.cards)}>
+        <span className={styles.quickCards}>{combo.cards.map((card) => (
+          <span key={`${card.suit}-${card.rank}`}>{RANK_DISPLAY[card.rank]}{SUIT_SYMBOLS[card.suit]}</span>
+        ))}</span>
+        <span>{t('bigtwo.play')} · {t(comboLabelKey(combo.type))}</span>
+      </button>)}
+    </div>
+    {plays.length === 0 && <p className={styles.note} role="status">{t('bigtwo.noHint')}</p>}
+  </section>;
 }
 
 function Centre({ game }: { game: BigTwoVisibleState }): ReactNode {
@@ -143,44 +184,45 @@ export function BigTwoTable(): ReactNode {
   const [sortBy, setSortBy] = useState<'rank' | 'suit'>('rank');
   const [actionError, setActionError] = useState('');
   const [actionPending, setActionPending] = useState(false);
+  const actionInFlight = useRef(false);
 
   const hand = useMemo(() => sortBigTwoHand(game?.myHand ?? [], sortBy), [game?.myHand, sortBy]);
   // 別人出牌時保留預選；只剔除已不在手上的牌
   const selected = selection.filter((card) => hand.some((c) => sameCard(c, card)));
   const previous = lastPlayCombo(game?.lastPlay ?? null);
   const firstPlay = game?.firstPlay ?? false;
+  const availablePlays = useMemo(() => legalPlays(
+    game?.myHand ?? [], lastPlayCombo(game?.lastPlay ?? null), firstPlay,
+  ), [game?.myHand, game?.lastPlay, firstPlay]);
   const playing = game?.phase === 'playing';
   const isMyTurn = playing && !locked && game.currentTurnSeat === game.mySeat;
   const selectedCombo = identifyCombo(selected);
   const playable = isMyTurn && canPlay(selected, previous, firstPlay);
 
   const handleActionResult = useCallback<ActionCallback>((timeout, response) => {
+    actionInFlight.current = false;
     setActionPending(false);
     if (timeout) setActionError(t('auth.connectionError'));
     else if (!response?.success) setActionError(response?.error ?? t('common.error'));
   }, [t]);
 
-  const play = useCallback((): void => {
-    if (!playable || actionPending) return;
+  const play = (cards: readonly Card[]): void => {
+    if (!isMyTurn || actionInFlight.current || !canPlay(cards, previous, firstPlay)) return;
+    actionInFlight.current = true;
     setActionError('');
     setActionPending(true);
-    socket.timeout(10000).emit('game:bigtwo:play', { cards: selected }, (timeout, response) => {
+    socket.timeout(10000).emit('game:bigtwo:play', { cards: [...cards] }, (timeout, response) => {
       if (!timeout && response?.success) setSelection([]);
       handleActionResult(timeout, response);
     });
-  }, [playable, actionPending, selected, handleActionResult]);
+  };
 
   const pass = (): void => {
-    if (!isMyTurn || actionPending || !game?.lastPlay) return;
+    if (!isMyTurn || actionInFlight.current || !game?.lastPlay) return;
+    actionInFlight.current = true;
     setActionError('');
     setActionPending(true);
     socket.timeout(10000).emit('game:bigtwo:pass', handleActionResult);
-  };
-
-  const hint = (): void => {
-    const next = nextHint(legalPlays(hand, previous, firstPlay), selected);
-    if (next.length === 0) setActionError(t('bigtwo.noHint'));
-    else { setActionError(''); setSelection(next); }
   };
 
   const backToRoom = (): void => {
@@ -189,35 +231,23 @@ export function BigTwoTable(): ReactNode {
     socket.timeout(10000).emit('game:continue', handleActionResult);
   };
 
-  // Enter = 出牌（焦點在輸入框或按鈕上時不攔截）
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key !== 'Enter') return;
-      if (event.target instanceof Element && event.target.closest('input, textarea, select, button, [contenteditable]')) return;
-      play();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [play]);
-
   if (!game) return null;
 
   const handZone = <div className={styles.handArea}>
-    <CardHand cards={hand} selectedCards={selected} disabled={!playing}
+    <CardHand cards={hand} selectedCards={selected} disabled={!playing || actionPending}
       onCardClick={(card) => setSelection(toggleCard(selected, card))} />
+    {isMyTurn && <QuickPlays key={game.log.length} plays={availablePlays}
+      disabled={actionPending} onPlay={play} />}
     {playing && <div className={styles.controls}>
       <button type="button" className={`btn btn-outline ${styles.ctrl}`}
         onClick={() => setSortBy(sortBy === 'rank' ? 'suit' : 'rank')}>
         {t(sortBy === 'rank' ? 'bigtwo.sortSuit' : 'bigtwo.sortRank')}
       </button>
-      <button type="button" className={`btn btn-outline ${styles.ctrl}`} onClick={hint} disabled={!isMyTurn}>
-        {t('bigtwo.hint')}
-      </button>
       <button type="button" className={`btn btn-outline ${styles.ctrl}`} onClick={() => setSelection([])}
         disabled={selected.length === 0}>{t('bigtwo.clear')}</button>
       <button type="button" className={`btn btn-outline ${styles.ctrl}`} onClick={pass}
         disabled={!isMyTurn || actionPending || game.lastPlay === null}>{t('bigtwo.pass')}</button>
-      <button type="button" className={`btn btn-primary ${styles.ctrl}`} onClick={play}
+      <button type="button" className={`btn btn-primary ${styles.ctrl}`} onClick={() => play(selected)}
         disabled={!playable || actionPending}>
         {t('bigtwo.play')}
         {selected.length > 0 && <span className={styles.comboName}>

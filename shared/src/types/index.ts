@@ -9,6 +9,7 @@ export type {
 } from './player';
 
 export type {
+  TimeControl,
   RoomCode,
   GameType,
   RoomStatus,
@@ -19,6 +20,7 @@ export type {
 } from './room';
 
 export type {
+  GameClock,
   Suit,
   BidSuit,
   Rank,

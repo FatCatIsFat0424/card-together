@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { io as connectSocket } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AccountProfile, ClientToServerEvents, Seat, ServerToClientEvents } from '@shared/types';
+import type { AccountProfile, ClientToServerEvents, Seat, ServerToClientEvents, TimeControl } from '@shared/types';
 import type { PlayerSnapshot } from '@shared/types/socket-events';
 import { identifyCombo, isBomb, legalPlays } from '@shared/rules/bigtwo';
 import { rpPairOptions } from '@shared/rules/redpoints';
@@ -262,6 +262,42 @@ describe('persistent authenticated application', () => {
     expect((await repository.loadRuntime())?.rooms).toEqual([]);
     expect((await repository.loadRuntime())?.games).toEqual([]);
   }, 15_000);
+
+  it('validates host timer changes, resets readiness, and rolls back failed persistence', async () => {
+    const accounts = [await register('timer_host'), await register('timer_guest')];
+    const [host, guest] = await connectPlayers(accounts);
+    const { roomCode } = await host.timeout(5_000).emitWithAck('room:create', { gameType: 'ninetynine' });
+    await host.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'N' });
+    await guest.timeout(5_000).emitWithAck('room:join', { roomCode: roomCode! });
+    await guest.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'E' });
+    await guest.timeout(5_000).emitWithAck('room:ready');
+    expect((await resume(host)).room?.timeControl).toEqual({ baseSeconds: 5, bankSeconds: 20 });
+    expect(await guest.timeout(5_000).emitWithAck('room:setTimeControl', { baseSeconds: 8, bankSeconds: 0 }))
+      .toMatchObject({ success: false });
+    for (const payload of [null, {}, { baseSeconds: 0, bankSeconds: 20 },
+      { baseSeconds: 61, bankSeconds: 20 }, { baseSeconds: 5, bankSeconds: 301 },
+      { baseSeconds: 5, bankSeconds: -1 }, { baseSeconds: 1.5, bankSeconds: 20 },
+      { baseSeconds: '5', bankSeconds: 20 }, { baseSeconds: 5, bankSeconds: 20, extra: true }]) {
+      expect(await host.timeout(5_000).emitWithAck('room:setTimeControl', payload as TimeControl))
+        .toMatchObject({ success: false });
+    }
+    const before = (await resume(host)).room;
+    vi.spyOn(repository, 'saveRuntime').mockRejectedValueOnce(new Error('Disk full'));
+    expect(await host.timeout(5_000).emitWithAck('room:setTimeControl', { baseSeconds: 8, bankSeconds: 0 }))
+      .toMatchObject({ success: false });
+    expect((await resume(host)).room).toEqual(before);
+    expect(await host.timeout(5_000).emitWithAck('room:setTimeControl', { baseSeconds: 8, bankSeconds: 0 }))
+      .toEqual({ success: true });
+    const room = (await resume(guest)).room!;
+    expect(room.timeControl).toEqual({ baseSeconds: 8, bankSeconds: 0 });
+    expect(room.seats.E.isReady).toBe(false);
+    await host.timeout(5_000).emitWithAck('room:fillBots');
+    await host.timeout(5_000).emitWithAck('room:ready');
+    await guest.timeout(5_000).emitWithAck('room:ready');
+    expect((await resume(host)).gameState?.clock?.settings).toEqual({ baseSeconds: 8, bankSeconds: 0 });
+    expect(await host.timeout(5_000).emitWithAck('room:setTimeControl', { baseSeconds: 5, bankSeconds: 20 }))
+      .toMatchObject({ success: false });
+  });
 
   it('should enforce bot payloads and host rights while reserving seats for human members', async () => {
     const accounts = [await register('manage_host'), await register('manage_guest')];

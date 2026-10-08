@@ -5,6 +5,7 @@ import * as games from '../../src/managers/game-manager';
 import * as rooms from '../../src/managers/room-manager';
 import * as players from '../../src/managers/player-manager';
 import { createRuntimeCoordinator } from '../../src/runtime/coordinator';
+import { startTurnTimers } from '../../src/runtime/turn-timers';
 import { BOT_ACTION_DELAY_MS, startBotTurns } from '../../src/runtime/bot-turns';
 import type { RuntimeSnapshot } from '../../src/runtime/types';
 import { isRuntimeSnapshot } from '../../src/runtime/validate';
@@ -35,6 +36,8 @@ async function fixture() {
     games.startGame(code, 'redpoints', rooms.getSeatPlayers(code)!);
     const game = games.getGameState(code)!;
     if (game.gameType === 'redpoints') game.currentTurnSeat = 'S';
+    delete game.clock;
+    games.initializeClock(code);
   });
   repository.saveRuntime.mockClear();
   return { code, runtime, repository, saved: () => saved! };
@@ -102,11 +105,24 @@ describe('server bot turn scheduling', () => {
     expect(publish).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps bot turns exclusively with the bot scheduler even after their clock expires', async () => {
+    const { runtime } = await fixture();
+    const publish = vi.fn();
+    stops.push(await startTurnTimers(runtime, publish));
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(publish).not.toHaveBeenCalled();
+    stops.push(startBotTurns(runtime, publish));
+    await vi.advanceTimersByTimeAsync(BOT_ACTION_DELAY_MS);
+    expect(publish).toHaveBeenCalledTimes(1);
+  });
+
   it('does not take a human turn', async () => {
     const { code, runtime } = await fixture();
     await runtime.mutate(() => {
       const game = games.getGameState(code)!;
       if (game.gameType === 'redpoints') game.currentTurnSeat = 'N';
+      delete game.clock;
+      games.initializeClock(code);
     });
     const publish = vi.fn();
     stops.push(startBotTurns(runtime, publish));

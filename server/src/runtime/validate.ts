@@ -1,3 +1,5 @@
+import { isTimeControl } from '@shared/time-control';
+import { getTurnSeat } from '../managers/game-clock';
 import {
   ABORT_VOTE_THRESHOLD, GAME_TYPES, MAX_MESSAGE_EMOJIS, isEmojiName, isMediaId,
 } from '@shared/constants';
@@ -325,9 +327,27 @@ function presentation(value: ObjectValue): boolean {
     metadata.logStart <= value.log.length;
 }
 
+function gameClock(value: ObjectValue): boolean {
+  if (value.clock === undefined) return true;
+  const clock = value.clock;
+  if (!object(clock) || !isTimeControl(clock.settings) || clock.serverNow !== undefined
+    || !seatCounts(clock.bankRemainingMs, clock.settings.bankSeconds * 1000)) return false;
+  if (clock.lastTimeout !== undefined && (!object(clock.lastTimeout)
+    || !oneOf(clock.lastTimeout.seat, seats) || !number(clock.lastTimeout.at))) return false;
+  const state = value as unknown as AnyGameState;
+  const expectedSeat = getTurnSeat(state);
+  if (!expectedSeat || (state.gameType === 'bigtwo' && state.pendingAutoPass)) return clock.turn === null;
+  const turn = clock.turn;
+  return object(turn) && text(turn.id) && turn.id.length <= 128 && turn.seat === expectedSeat
+    && number(turn.startsAt) && turn.startsAt >= getPresentationEndsAt(state)
+    && number(turn.baseRemainingMs) && turn.baseRemainingMs <= clock.settings.baseSeconds * 1000
+    && number(turn.deadline)
+    && turn.deadline === turn.startsAt + turn.baseRemainingMs + clock.bankRemainingMs[expectedSeat];
+}
+
 function game(value: unknown): boolean {
   return object(value) && oneOf(value.gameType, [...GAME_TYPES]) &&
-    gameValidators[value.gameType as GameType](value) && presentation(value);
+    gameValidators[value.gameType as GameType](value) && presentation(value) && gameClock(value);
 }
 
 function bridgeGame(value: ObjectValue): boolean {
@@ -396,6 +416,7 @@ function room(value: unknown): boolean {
   const humans = members.filter((id) => !id.startsWith('bot:'));
   return (
     text(info.code) &&
+    (info.timeControl === undefined || isTimeControl(info.timeControl)) &&
     oneOf(info.gameType, [...GAME_TYPES]) &&
     oneOf(info.status, ['waiting', 'playing']) &&
     number(info.createdAt) &&

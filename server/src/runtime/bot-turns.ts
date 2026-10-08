@@ -1,8 +1,9 @@
 import { getPresentationEndsAt } from '@shared/game-presentation';
 import type { AnyGameState, RoomCode, Seat } from '@shared/types';
-import { getBotAction, type BotAction } from '../bots/bot-decisions';
+import { getBotAction } from '../bots/bot-decisions';
 import * as gameManager from '../managers/game-manager';
 import * as roomManager from '../managers/room-manager';
+import { applyAutomatedAction } from './automated-action';
 import type { RuntimeCoordinator } from './coordinator';
 
 export const BOT_ACTION_DELAY_MS = 650;
@@ -22,19 +23,6 @@ function pendingTurn(game: AnyGameState): BotTurn | null {
     : game.phase === 'playing' ? game.playing?.currentTurnSeat : null;
   if (!seat || !game.players[seat].isBot) return null;
   return { seat, key: `${game.id}:${game.phase}:${game.log.length}:${seat}` };
-}
-
-function applyAction(code: RoomCode, seat: Seat, action: BotAction): { success: boolean; reason?: string } {
-  switch (action.type) {
-    case 'bridge-redeal': return gameManager.handleRedealResponse(code, seat, action.accept);
-    case 'bridge-bid': return gameManager.handleBid(code, seat, action.action);
-    case 'bridge-play': return gameManager.handlePlayCard(code, seat, action.card);
-    case 'bigtwo-play': return gameManager.handleBigTwoPlay(code, seat, action.cards);
-    case 'bigtwo-pass': return gameManager.handleBigTwoPass(code, seat);
-    case 'redpoints-play': return gameManager.handleRedPointsPlay(code, seat, action.card, action.capture);
-    case 'redpoints-flip': return gameManager.handleRedPointsChooseFlip(code, seat, action.capture);
-    case 'ninetynine-play': return gameManager.handleNinetyNinePlay(code, seat, action.card, action.choice, action.target);
-  }
 }
 
 /** Rebuild timers from committed turns; bots use the same private view and rules as humans. */
@@ -68,7 +56,7 @@ export function startBotTurns(runtime: RuntimeCoordinator, publish: (code: RoomC
           const visible = gameManager.getPlayerVisibleState(code, turn.seat);
           const action = visible && getBotAction(visible);
           if (!action) throw new Error('No legal bot action for the pending turn.');
-          const result = applyAction(code, turn.seat, action);
+          const result = applyAutomatedAction(code, turn.seat, action);
           if (!result.success) throw new Error(result.reason ?? 'Bot action rejected.');
           changed = true;
         }, { skipUnchanged: true, afterCommit: () => {

@@ -15,13 +15,8 @@
 .chatCollapsed { grid-template-columns: minmax(240px, 280px) minmax(0, 1fr) 48px; }
 
 .actionError {
-  position: absolute;
-  left: 50%;
-  bottom: 96px;
-  transform: translateX(-50%);
-  z-index: 6;
-  max-width: 90%;
-  padding: 4px 12px;
+  min-width: 0;
+  padding: 2px 8px;
   border-radius: var(--radius-md);
   background: var(--bg-surface);
   color: var(--color-danger);
@@ -38,13 +33,17 @@
 }
 
 .table {
-  --seat-reserve-x: clamp(90px, 23cqw, 210px);
-  --seat-reserve-y: clamp(90px, 20cqh, 145px);
   position: relative;
   flex: 1;
   min-width: 0;
   min-height: 0;
   color: var(--table-ink);
+  display: grid;
+  grid-template-columns: minmax(100px, 17%) minmax(0, 1fr) minmax(100px, 17%);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: '. top .' 'left centre right';
+  gap: 6px;
+  padding: 8px;
 }
 
 /* Share the backdrop across seats and hands without extending into side panels. */
@@ -57,10 +56,10 @@
 }
 
 .tableCentre {
-  position: absolute;
-  /* The fitted centre stays between the four readable seat controls. */
-  inset: var(--seat-reserve-y) var(--seat-reserve-x);
-  z-index: 4;
+  position: relative;
+  grid-area: centre;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -76,6 +75,16 @@
   pointer-events: auto;
 }
 
+.responsiveCentre .centreContent,
+.responsiveCentre .centreBody {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  max-width: none;
+  transform: none;
+}
+
 .handZone {
   position: relative;
   z-index: 5;
@@ -85,23 +94,28 @@
   transition: box-shadow 0.3s ease;
 }
 
+.handStatus {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 24px;
+  padding-inline: 6px;
+  font-size: var(--text-xs);
+}
+
 /* ─── 輪到自己：手牌區發光 + 提示膠囊 ─── */
 .handMyTurn {
   box-shadow: 0 0 0 2px var(--turn-glow), 0 0 24px color-mix(in srgb, var(--turn-glow) 45%, transparent);
 }
 
 .yourTurn {
-  position: absolute;
-  right: 16px;
-  bottom: 48px;
-  z-index: 6;
-  padding: 4px 14px;
+  padding: 0 10px;
   border-radius: var(--radius-pill);
   background: var(--turn-glow);
   color: var(--text-inverse);
   font-weight: 800;
   box-shadow: var(--shadow-md);
-  animation: turnPop 0.4s ease-out, glow 1.6s ease-in-out 0.4s infinite;
+  white-space: nowrap;
 }
 
 @keyframes turnPop {
@@ -276,17 +290,18 @@
   .tableTools { display: flex; }
 
   .tableTools {
-    position: absolute;
-    z-index: 7;
-    top: 10px;
-    left: 10px;
+    grid-area: tools;
+    justify-content: flex-end;
     gap: var(--spacing-sm);
   }
 
   .chatFab { display: none; }
 
   /* Compact seat plates need a smaller reserved lane on tablets. */
-  .table { --seat-reserve-x: clamp(78px, 21cqw, 120px); }
+  .table {
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas: 'tools tools tools' '. top .' 'left centre right';
+  }
 }
 
 /* ─── 手機（< 768px）：單欄，資訊與聊天皆為底部抽屜 ─── */
@@ -299,11 +314,13 @@
   }
 
   .table {
-    --seat-reserve-x: clamp(74px, 21cqw, 100px);
-    --seat-reserve-y: clamp(85px, 18cqh, 120px);
+    grid-template-columns: minmax(64px, 20%) minmax(0, 1fr) minmax(64px, 20%);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas: 'tools tools tools' '. top .' 'left centre right';
+    gap: 4px;
+    padding: 4px;
   }
   .handZone { margin-top: 0; }
-  .actionError { bottom: 72px; }
 
   .infoPanel,
   .chatRail {
@@ -334,10 +351,8 @@
 
 /* Short landscape viewports prioritize the playable centre over seat decoration. */
 @container (max-height: 420px) {
-  .table {
-    --seat-reserve-x: clamp(62px, 18cqw, 110px);
-    --seat-reserve-y: 45px;
-  }
+  .table { gap: 2px; padding: 2px; }
+  .handStatus { min-height: 18px; line-height: 1.2; }
 }
 
 .motionSetting { display: flex; gap: 8px; align-items: center; color: var(--text-secondary); }
@@ -347,3 +362,65 @@
 .gameContainer[data-reduced-motion] *::after { animation: none !important; transition: none !important; }
 
 .settledCentre *, .settledCentre *::before, .settledCentre *::after { animation: none !important; }
+
+/* A short landscape viewport puts the hand beside the table instead of below it. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .gameContainer, .chatCollapsed { grid-template-columns: minmax(0, 1fr); padding: 4px; }
+  .infoPanel { display: none; }
+  .infoOpen > .infoPanel { display: flex; }
+  .chatCollapsed > .chatRail { display: none; }
+  .infoPanel, .chatRail {
+    position: fixed;
+    z-index: 20;
+    top: calc(var(--topbar-height) + 4px);
+    bottom: 4px;
+    width: min(340px, calc(100vw - 8px));
+    height: auto;
+    padding: 8px;
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-lg);
+  }
+  .infoPanel { left: 4px; right: auto; }
+  .chatRail { right: 4px; left: auto; }
+  .sheetHeader { display: flex; }
+  .gameContainer:not(.chatCollapsed) > .backdrop { display: block; }
+  .chatStrip { display: none; }
+  .centreColumn { flex-direction: column; }
+  .handZone { flex: none; min-width: 0; }
+  .table {
+    grid-template-columns: minmax(64px, 18%) minmax(0, 1fr) minmax(64px, 18%);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: 'tools top .' 'left centre right';
+  }
+  .tableTools { display: flex; justify-content: flex-start; gap: 2px; }
+  .chatFab { display: inline-flex; }
+  .toolBtn { width: 30px; height: 30px; }
+  .yourTurn { font-size: 10px; }
+}
+
+.handHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 0;
+}
+.handHeader > [data-table-seat] {
+  grid-area: auto;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+.handHeader > [role='timer'] { justify-self: end; }
+@media (max-height: 500px) and (min-width: 600px) {
+  .handHeader { gap: 4px; padding-inline: 4px; }
+}
+
+@media (max-height: 500px) and (min-width: 600px) {
+  .handZone { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; }
+  .handHeader { grid-column: 1; grid-row: 1; }
+  .handStatus { grid-column: 1; grid-row: 2; }
+  .handZone > :last-child { grid-column: 2; grid-row: 1 / 3; }
+}

@@ -1,13 +1,26 @@
 /* ─── RedPointsTable 樣式：桌面牌、牌堆翻牌、手牌提示、資訊欄、結算 ─── */
 
 /* ─── 牌桌中央 ─── */
+.centreFrame {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  container-type: size;
+  contain: size;
+  overflow: clip;
+}
+
 .centre {
-  --card-w: calc((clamp(40px, 7.5dvh, 64px)) * var(--playing-card-scale));
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-sm);
-  max-width: min(100%, 520px);
+  display: grid;
+  grid-template-rows: 36px minmax(0, 1fr) 36px;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 6px;
+  box-sizing: border-box;
   color: var(--table-ink);
 }
 
@@ -24,24 +37,12 @@
 .stockRow {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  justify-content: center;
+  gap: 12px;
+  min-width: 0;
 }
 
-.stock {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.back {
-  flex: none;
-  width: var(--card-w);
-  aspect-ratio: 224 / 313;
-  border-radius: calc(var(--card-w) * 0.08);
-  background: var(--card-back-image) center / 100% 100%, var(--card-back);
-  box-shadow: 2px 2px 0 color-mix(in srgb, var(--card-back) 70%, transparent), var(--shadow-md);
-}
+.flipCard { --card-w: 20px; }
 
 .stockCount {
   padding: 0 8px;
@@ -54,9 +55,14 @@
 }
 
 .flip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   perspective: 600px;
   animation: flipIn 0.45s ease;
 }
+
+.flipLabel { font-size: var(--text-sm); font-weight: 700; }
 
 .flipPending .flipCard {
   outline: 3px solid var(--turn-glow);
@@ -68,36 +74,74 @@
   100% { transform: rotateY(0) translateX(0); opacity: 1; }
 }
 
+.tableViewport {
+  overflow: clip;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  min-width: 0;
+}
+
 .tableGrid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(var(--table-columns), var(--card-w));
+  grid-auto-rows: calc(var(--card-w) * 313 / 224);
   justify-content: center;
   gap: 6px;
-  min-height: calc(var(--card-w) * 1.4);
 }
 
 .tableCard {
+  width: var(--card-w);
+  height: calc(var(--card-w) * 313 / 224);
+  min-height: 0;
+  line-height: 0;
   padding: 0;
   border: none;
   background: none;
   border-radius: calc(var(--card-w) * 0.08);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: box-shadow 0.2s ease, filter 0.2s ease;
 }
+
+.tableCard > .card { width: 100%; height: 100%; object-fit: contain; }
 
 .tableCard:disabled { cursor: default; }
 
 .pairable {
-  box-shadow: 0 0 0 3px var(--turn-glow), 0 0 14px var(--turn-glow);
-  transform: translateY(-4px);
-  animation: pulse 1.4s ease-in-out infinite;
+  outline: 2px solid var(--turn-glow);
+  outline-offset: 1px;
+  box-shadow: 0 0 8px var(--turn-glow);
 }
 
 .pairable:not(:disabled) { cursor: pointer; }
-.pairable:not(:disabled):hover { transform: translateY(-8px); }
+.pairable:not(:disabled):hover,
+.tableCard:focus-visible { outline: 3px solid var(--turn-glow); outline-offset: 1px; }
 
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 3px var(--turn-glow), 0 0 6px var(--turn-glow); }
-  50% { box-shadow: 0 0 0 3px var(--turn-glow), 0 0 18px var(--turn-glow); }
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pageButton {
+  width: 40px;
+  height: 36px;
+  border: 1px solid var(--rail-border);
+  border-radius: var(--radius-md);
+  background: var(--rail-bg);
+  color: var(--table-ink);
+  font-size: var(--text-lg);
+}
+
+.pageButton:disabled { opacity: 0.4; }
+.pageLabel { font-size: var(--text-xs); white-space: nowrap; }
+
+/* Compact controls leave a complete card row in short tablet and landscape centres. */
+@container (max-height: 179px) {
+  .centre { grid-template-rows: 28px minmax(0, 1fr) 28px; padding: 4px; }
+  .pageButton { height: 28px; }
+  .flipCard { --card-w: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -294,10 +338,18 @@ summary.caption { cursor: pointer; }
 }
 
 @media (max-width: 767px) {
-  .centre { --card-w: calc((clamp(30px, 9vw, 40px)) * var(--playing-card-scale)); gap: 6px; }
-  .tableGrid { max-width: calc(100vw - 190px); }
   .stockRow { gap: var(--spacing-sm); }
   .overlayCard { padding: var(--spacing-md); }
   .mini { --card-w: calc((20px) * var(--playing-card-scale)); }
   .ctrl { min-height: 40px; padding: 4px 10px; }
+}
+
+.previewed {
+  outline: 2px solid var(--turn-glow);
+  outline-offset: 1px;
+  box-shadow: 0 0 12px 3px color-mix(in srgb, var(--turn-glow) 70%, transparent);
+  filter: brightness(1.12);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tableCard { transition: none; }
 }

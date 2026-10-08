@@ -1,8 +1,23 @@
 // ─── 遊戲型別定義 ───
 
-import type { RoomCode } from './room';
+import type { RoomCode, TimeControl } from './room';
 import type { PlayerInfo, Seat } from './player';
 import type { BigTwoComboType } from '../rules/bigtwo';
+
+export interface GameClock {
+  readonly lastTimeout?: { readonly seat: Seat; readonly at: number };
+  readonly settings: TimeControl;
+  readonly bankRemainingMs: Record<Seat, number>;
+  readonly turn: {
+    readonly id: string;
+    readonly seat: Seat;
+    readonly startsAt: number;
+    readonly baseRemainingMs: number;
+    readonly deadline: number;
+  } | null;
+  /** Added to visible snapshots only. */
+  readonly serverNow?: number;
+}
 
 export interface GamePresentation {
   /** Absent on legacy snapshots whose shorter deadlines must remain stable. */
@@ -99,6 +114,7 @@ export interface BiddingState {
 
 /** 完整橋牌遊戲狀態（伺服器內部） */
 export interface BridgeGameState {
+  clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'bridge';
   readonly id: string;
@@ -119,6 +135,7 @@ export interface BridgeGameState {
 
 /** 給特定玩家的可見橋牌狀態（隱藏他人手牌） */
 export interface BridgeVisibleState {
+  clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'bridge';
   readonly validCards: readonly Card[];
@@ -163,6 +180,7 @@ export type BigTwoPhase = 'playing' | 'scoring';
 export interface BigTwoGameState {
   /** Private persisted deadline; never included in player-visible state. */
   pendingAutoPass?: { readonly id: string; readonly seat: Seat; readonly executeAt: number };
+  clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'bigtwo';
   readonly id: string;
@@ -182,6 +200,7 @@ export interface BigTwoGameState {
 }
 
 export interface BigTwoVisibleState {
+  clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'bigtwo';
   readonly phase: BigTwoPhase;
@@ -222,6 +241,7 @@ export type RedPointsPhase = 'playing' | 'scoring';
 export type RedPointsStep = 'play' | 'flip-choose';
 
 export interface RedPointsGameState {
+  clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'redpoints';
   readonly id: string;
@@ -242,6 +262,7 @@ export interface RedPointsGameState {
 }
 
 export interface RedPointsVisibleState {
+  clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'redpoints';
   readonly phase: RedPointsPhase;
@@ -286,6 +307,7 @@ export interface NinetyNineMatchResult {
 export type NinetyNinePhase = 'playing' | 'scoring';
 
 export interface NinetyNineGameState {
+  clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'ninetynine';
   readonly id: string;
@@ -308,6 +330,7 @@ export interface NinetyNineGameState {
 }
 
 export interface NinetyNineVisibleState {
+  clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'ninetynine';
   readonly phase: NinetyNinePhase;

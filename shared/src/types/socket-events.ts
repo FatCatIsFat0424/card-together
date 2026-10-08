@@ -1,5 +1,5 @@
 import type { PlayerInfo, Seat } from './player';
-import type { RoomCode, RoomInfo, GameType } from './room';
+import type { RoomCode, RoomInfo, GameType, TimeControl } from './room';
 import type { Card, BidAction, PlayerVisibleGameState } from './game';
 import type { ChatMessage } from './chat';
 import type { PublicAccount } from './social';
@@ -42,6 +42,9 @@ export interface ClientToServerEvents {
   ) => void;
   'room:setGameType': (
     payload: { gameType: GameType }, callback: (response: ActionResult) => void,
+  ) => void;
+  'room:setTimeControl': (
+    payload: TimeControl, callback: (response: ActionResult) => void,
   ) => void;
   'room:ready': (callback: (response: ActionResult) => void) => void;
   'room:addBot': (

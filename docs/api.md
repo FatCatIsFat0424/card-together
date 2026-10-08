@@ -67,6 +67,7 @@ For exact unions and result fields, use
 | `room:leave` | — | Leave; unfinished game aborts |
 | `room:changeSeat` | `{ seat }` | Change available seat |
 | `room:setGameType` | `{ gameType }` | Host changes waiting room game |
+| `room:setTimeControl` | `TimeControl` | Host changes waiting room timer; clears human readiness |
 | `room:addBot`, `room:removeBot` | `{ seat }` | Host adds/removes a bot while waiting |
 | `room:fillBots` | — | Host fills available member capacity with ready bots |
 | `room:ready`, `room:unready` | — | Update readiness; four ready seats start |
@@ -87,6 +88,12 @@ Play/pass/capture and continue wait for the server's presentation deadline; cont
 requires scoring. The server validates turn/card/room authority; see [games](games.md).
 Room/game players expose optional `isBot`; absent or false means a human. Bot identities
 use reserved `bot:<UUID>` IDs and cannot authenticate or receive player snapshots.
+
+Timer settings use [`TimeControl`](../shared/src/types/room.ts) and the validated
+[shared limits](../shared/src/time-control.ts). Visible game clocks use
+[`GameClock`](../shared/src/types/game.ts), with the active seat, committed deadlines,
+remaining reserves, and server time for client clock correction. The server enforces
+expiry; frontend countdowns do not authorize moves. See [timer rules](games.md#turn-timer).
 
 `player:state` sends the same full `PlayerSnapshot` as resume: optional player, room,
 gameState, and recent chat history plus success/error. Missing room/game clears old client

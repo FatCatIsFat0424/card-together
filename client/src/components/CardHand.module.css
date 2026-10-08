@@ -2,14 +2,14 @@
 
 .handContainer {
   /* Reserve room for every card plus the fan edges inside the table column. */
-  --card-w: min(96px, 14cqh, calc((100cqw - 32px) / (1.8 + (var(--hand-card-count) - 1) * (1 - var(--overlap)))));
+  --card-w: min(96px, 12cqh, calc((100cqw - 32px) / (1.8 + (var(--hand-card-count) - 1) * (1 - var(--overlap)))));
   --overlap: 0.42;
   --fan-step: 0.6deg;
   display: flex;
   justify-content: center;
   width: 100%;
   align-items: flex-end;
-  padding: 28px calc(var(--card-w) * 0.4) 12px;
+  padding: 24px calc(var(--card-w) * 0.4) 8px;
 }
 
 .handContainer:empty { padding: 0; }

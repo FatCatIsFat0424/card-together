@@ -13,6 +13,7 @@ import { createEmojiRouter } from './http/emoji-routes';
 import { createMediaStore } from './media/media-store';
 import { createRuntimeCoordinator } from './runtime/coordinator';
 import { startBigTwoAutoPass } from './runtime/bigtwo-auto-pass';
+import { startTurnTimers } from './runtime/turn-timers';
 import { startBotTurns } from './runtime/bot-turns';
 import { broadcastState } from './socket/context';
 import { getRoomMemberIds } from './managers/room-manager';
@@ -64,12 +65,17 @@ export async function createApplication(repository: Repository, options: Applica
     io, auth, runtime, voice: createVoiceManager(), friends: createFriendService(repository),
     listEmojis: (accountId: string) => repository.listEmojis(accountId),
   };
-  let stopAutoPass: () => void;
+  let stopAutoPass: (() => void) | undefined;
+  let stopTurnTimers: () => void;
   try {
     stopAutoPass = await startBigTwoAutoPass(runtime, (code) => {
       broadcastState(io, getRoomMemberIds(code));
     });
+    stopTurnTimers = await startTurnTimers(runtime, (code) => {
+      broadcastState(io, getRoomMemberIds(code));
+    });
   } catch (error) {
+    stopAutoPass?.();
     await new Promise<void>((resolve) => io.close(() => resolve()));
     throw error;
   }
@@ -109,7 +115,8 @@ export async function createApplication(repository: Repository, options: Applica
     httpServer, io,
     close: async (): Promise<void> => {
       stopBots();
-      stopAutoPass();
+      stopTurnTimers();
+      stopAutoPass?.();
       stopConnections();
       await new Promise<void>((resolve) => io.close(() => resolve()));
       await runtime.idle();

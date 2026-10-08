@@ -1,5 +1,6 @@
 // ─── Game Manager：依遊戲類型分派的門面 ───
 
+import { advanceGameClock, initializeGameClock } from './game-clock';
 import { randomUUID } from 'node:crypto';
 import { getPresentationEndsAt } from '@shared/game-presentation';
 import type {
@@ -15,6 +16,7 @@ import type {
   RedPointsGameState,
   RoomCode,
   Seat,
+  TimeControl,
 } from '@shared/types';
 import type { NnChoice } from '@shared/rules/ninetynine';
 import * as bridge from './games/bridge-game';
@@ -45,6 +47,29 @@ function presentAction(roomCode: RoomCode, operation: () => Result): Result {
   return result;
 }
 
+function timedAction(roomCode: RoomCode, seat: Seat, operation: () => Result, automatic: boolean): Result {
+  const game = getGameState(roomCode);
+  const clock = game?.clock;
+  const now = Date.now();
+  if (!automatic && clock?.turn?.seat === seat && now >= clock.turn.deadline) {
+    return { success: false, reason: 'Your turn has timed out. Please wait for the automatic action.' };
+  }
+  const hands = game?.hands;
+  const redPointsPlay = game?.gameType === 'redpoints' && game.step === 'play';
+  const result = operation();
+  if (result.success && game && clock) {
+    const sameTurn = redPointsPlay && game.gameType === 'redpoints' && game.step === 'flip-choose';
+    const redealt = game.gameType === 'bridge' && game.hands !== hands;
+    advanceGameClock(game, clock, sameTurn, redealt, now);
+  }
+  return result;
+}
+
+export function initializeClock(roomCode: RoomCode, settings?: TimeControl): void {
+  const game = getGameState(roomCode);
+  if (game && !game.clock) initializeGameClock(game, settings);
+}
+
 /** Missing games fall through to the game handlers, which report them. */
 function isGame(roomCode: RoomCode, gameType: GameType): boolean {
   return (getGameState(roomCode)?.gameType ?? gameType) === gameType;
@@ -54,6 +79,7 @@ export function startGame(
   roomCode: RoomCode,
   gameType: GameType,
   players: Record<Seat, PlayerInfo>,
+  settings?: TimeControl,
 ): Result {
   // A finished board of another game type may still be waiting for game:continue.
   removeGame(roomCode);
@@ -65,14 +91,20 @@ export function startGame(
   if (game?.phase === 'scoring') {
     game.presentation = { id: randomUUID(), startedAt: Date.now(), logStart: 0, timingVersion: 2 };
   }
+  if (game) initializeGameClock(game, settings);
   return { success: true };
 }
 
 export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): PlayerVisibleGameState | null {
   const visible = bridge.getPlayerVisibleState(roomCode, seat) ?? bigtwo.getPlayerVisibleState(roomCode, seat)
     ?? redpoints.getPlayerVisibleState(roomCode, seat) ?? ninetynine.getPlayerVisibleState(roomCode, seat);
-  const presentation = getGameState(roomCode)?.presentation;
-  return visible && presentation ? { ...visible, presentation: { ...presentation, serverNow: Date.now() } } : visible;
+  if (!visible) return null;
+  const game = getGameState(roomCode);
+  const serverNow = Date.now();
+  return { ...visible,
+    ...(game?.presentation ? { presentation: { ...game.presentation, serverNow } } : {}),
+    ...(game?.clock ? { clock: { ...game.clock, serverNow } } : {}),
+  };
 }
 
 export function getGameState(roomCode: RoomCode): AnyGameState | null {
@@ -108,38 +140,38 @@ export function restoreGames(records: AnyGameState[]): void {
   ninetynine.restoreGames(records.filter((game): game is NinetyNineGameState => game.gameType === 'ninetynine'));
 }
 
-export function handleRedealResponse(roomCode: RoomCode, seat: Seat, accept: boolean): Result {
-  return isGame(roomCode, 'bridge') ? bridge.handleRedealResponse(roomCode, seat, accept) : WRONG_GAME;
+export function handleRedealResponse(roomCode: RoomCode, seat: Seat, accept: boolean, automatic = false): Result {
+  return timedAction(roomCode, seat, () => isGame(roomCode, 'bridge') ? bridge.handleRedealResponse(roomCode, seat, accept) : WRONG_GAME, automatic);
 }
 
-export function handleBid(roomCode: RoomCode, seat: Seat, action: BidAction): Result {
-  return isGame(roomCode, 'bridge') ? bridge.handleBid(roomCode, seat, action) : WRONG_GAME;
+export function handleBid(roomCode: RoomCode, seat: Seat, action: BidAction, automatic = false): Result {
+  return timedAction(roomCode, seat, () => isGame(roomCode, 'bridge') ? bridge.handleBid(roomCode, seat, action) : WRONG_GAME, automatic);
 }
 
-export function handlePlayCard(roomCode: RoomCode, seat: Seat, card: Card): Result {
-  return isGame(roomCode, 'bridge') ? presentAction(roomCode, () => bridge.handlePlayCard(roomCode, seat, card)) : WRONG_GAME;
+export function handlePlayCard(roomCode: RoomCode, seat: Seat, card: Card, automatic = false): Result {
+  return timedAction(roomCode, seat, () => isGame(roomCode, 'bridge') ? presentAction(roomCode, () => bridge.handlePlayCard(roomCode, seat, card)) : WRONG_GAME, automatic);
 }
 
-export function handleBigTwoPlay(roomCode: RoomCode, seat: Seat, cards: readonly Card[]): Result {
-  return isGame(roomCode, 'bigtwo') ? presentAction(roomCode, () => bigtwo.play(roomCode, seat, cards)) : WRONG_GAME;
+export function handleBigTwoPlay(roomCode: RoomCode, seat: Seat, cards: readonly Card[], automatic = false): Result {
+  return timedAction(roomCode, seat, () => isGame(roomCode, 'bigtwo') ? presentAction(roomCode, () => bigtwo.play(roomCode, seat, cards)) : WRONG_GAME, automatic);
 }
 
-export function handleBigTwoPass(roomCode: RoomCode, seat: Seat): Result {
-  return isGame(roomCode, 'bigtwo') ? presentAction(roomCode, () => bigtwo.pass(roomCode, seat)) : WRONG_GAME;
+export function handleBigTwoPass(roomCode: RoomCode, seat: Seat, automatic = false): Result {
+  return timedAction(roomCode, seat, () => isGame(roomCode, 'bigtwo') ? presentAction(roomCode, () => bigtwo.pass(roomCode, seat)) : WRONG_GAME, automatic);
 }
 
-export function handleRedPointsPlay(roomCode: RoomCode, seat: Seat, card: Card, capture?: Card): Result {
-  return isGame(roomCode, 'redpoints') ? presentAction(roomCode, () => redpoints.play(roomCode, seat, card, capture)) : WRONG_GAME;
+export function handleRedPointsPlay(roomCode: RoomCode, seat: Seat, card: Card, capture?: Card, automatic = false): Result {
+  return timedAction(roomCode, seat, () => isGame(roomCode, 'redpoints') ? presentAction(roomCode, () => redpoints.play(roomCode, seat, card, capture)) : WRONG_GAME, automatic);
 }
 
-export function handleRedPointsChooseFlip(roomCode: RoomCode, seat: Seat, capture: Card): Result {
-  return isGame(roomCode, 'redpoints') ? presentAction(roomCode, () => redpoints.chooseFlip(roomCode, seat, capture)) : WRONG_GAME;
+export function handleRedPointsChooseFlip(roomCode: RoomCode, seat: Seat, capture: Card, automatic = false): Result {
+  return timedAction(roomCode, seat, () => isGame(roomCode, 'redpoints') ? presentAction(roomCode, () => redpoints.chooseFlip(roomCode, seat, capture)) : WRONG_GAME, automatic);
 }
 
 export function handleNinetyNinePlay(
-  roomCode: RoomCode, seat: Seat, card: Card, choice?: NnChoice, target?: Seat,
+  roomCode: RoomCode, seat: Seat, card: Card, choice?: NnChoice, target?: Seat, automatic = false,
 ): Result {
-  return isGame(roomCode, 'ninetynine') ? presentAction(roomCode, () => ninetynine.play(roomCode, seat, card, choice, target)) : WRONG_GAME;
+  return timedAction(roomCode, seat, () => isGame(roomCode, 'ninetynine') ? presentAction(roomCode, () => ninetynine.play(roomCode, seat, card, choice, target)) : WRONG_GAME, automatic);
 }
 
 /** Initializes legacy snapshots without changing an already sampled deadline. */
@@ -157,5 +189,5 @@ export function handlePendingAutoPass(roomCode: RoomCode, gameId: string, pendin
     || !bigtwo.needsAutoPass(game)) {
     return { success: false, reason: 'Automatic pass is no longer pending.' };
   }
-  return handleBigTwoPass(roomCode, pending.seat);
+  return handleBigTwoPass(roomCode, pending.seat, true);
 }

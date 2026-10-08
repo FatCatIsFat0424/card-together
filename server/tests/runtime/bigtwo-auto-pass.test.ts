@@ -3,6 +3,7 @@ import * as crypto from 'node:crypto';
 import { getPresentationEndsAt } from '@shared/game-presentation';
 import * as manager from '../../src/managers/game-manager';
 import { createRuntimeCoordinator } from '../../src/runtime/coordinator';
+import { startTurnTimers } from '../../src/runtime/turn-timers';
 import { startBigTwoAutoPass } from '../../src/runtime/bigtwo-auto-pass';
 import { isRuntimeSnapshot } from '../../src/runtime/validate';
 import type { RuntimeSnapshot } from '../../src/runtime/types';
@@ -81,6 +82,36 @@ function automaticPass(): void {
 describe('Big Two delayed automatic passing', () => {
   beforeEach(() => { vi.mocked(crypto.randomInt).mockReset().mockReturnValue(1500); vi.useFakeTimers(); vi.setSystemTime(10000); manager.restoreGames([]); });
   afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); manager.restoreGames([]); });
+
+  it('lets forced passes own their turns without spending the thinking bank or duplicating actions', async () => {
+    restoreHands(singleHands());
+    let saved = snapshot();
+    const runtime = await createRuntimeCoordinator({
+      loadRuntime: async () => structuredClone(saved),
+      saveRuntime: async (state) => {
+        expect(isRuntimeSnapshot(state)).toBe(true);
+        saved = structuredClone(state);
+      },
+    });
+    const timed = vi.fn();
+    const forced = vi.fn();
+    const stopTimers = await startTurnTimers(runtime, timed);
+    const stopPasses = await startBigTwoAutoPass(runtime, forced);
+    try {
+      await runtime.mutate(() => expect(manager.handleBigTwoPlay(CODE, 'N', [card('spades', 2)]).success).toBe(true));
+      expect(game().clock!.turn).toBeNull();
+      const deadline = game().pendingAutoPass!.executeAt;
+      await vi.advanceTimersByTimeAsync(deadline - Date.now());
+      await runtime.idle();
+      expect(forced).toHaveBeenCalledTimes(1);
+      expect(timed).not.toHaveBeenCalled();
+      expect(game().clock!.bankRemainingMs.W).toBe(20000);
+      expect(game().log.filter((entry) => entry.type === 'pass' && entry.seat === 'W')).toHaveLength(1);
+    } finally {
+      stopTimers();
+      stopPasses();
+    }
+  });
 
   it.each([0, 5000])('should sample %i ms after presentation without exposing an early pass', (delay) => {
     const random = vi.mocked(crypto.randomInt).mockReturnValue(delay);

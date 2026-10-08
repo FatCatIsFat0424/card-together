@@ -1,0 +1,26 @@
+.settings { position: relative; margin-left: auto; }
+.settings summary { cursor: pointer; color: var(--text-secondary); font-size: var(--text-sm); padding: 4px 0; }
+.panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 30;
+  width: min(440px, calc(100vw - 32px));
+  max-height: min(420px, calc(100dvh - var(--topbar-height) - 120px));
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+.settings fieldset { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; }
+.settings legend { color: var(--text-primary); font-weight: 600; padding: 0 4px; }
+.fields { display: flex; flex-wrap: wrap; align-items: end; gap: var(--spacing-sm); }
+.fields label { display: flex; flex-direction: column; gap: 4px; font-size: var(--text-sm); color: var(--text-secondary); }
+.fields input { width: 100px; padding: 6px 8px; }
+.fields button { margin-left: auto; }
+.plus { align-self: center; color: var(--text-muted); }
+.hint { color: var(--text-muted); font-size: var(--text-xs); margin-top: 6px; }
+.error { color: var(--color-danger); font-size: var(--text-sm); }

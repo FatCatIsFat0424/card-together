@@ -21,6 +21,36 @@ of current-room public action history.
 Server presentation deadlines briefly gate actions between turns; see
 [architecture](architecture.md#presentation-timeline).
 
+### Turn timer
+
+The default is **5 + 20 seconds**: each player gets a fresh five seconds each turn,
+then draws from their own twenty-second reserve for the deal. Unused turn time is
+not added to the reserve. While waiting, the host can change the turn allowance and
+reserve within the [shared limits](../shared/src/time-control.ts); changing settings
+clears human readiness. All players see the current settings; only their own reserve is displayed.
+
+Presentation animations consume neither allowance nor reserve. Red Points' hand play
+and flipped-card choice share one turn allowance, with animation time excluded.
+Bridge bidding and redeal decisions also use the clock. A new deal refills reserves.
+Disconnecting does not pause the clock or change the existing reconnect window.
+At expiry the server makes a legal decision using the same private view as the player;
+control remains with the player on subsequent turns. Redeal timeout declines the redeal.
+Big Two forced passes retain their existing scheduler and do not consume decision time.
+
+### Card controls
+
+Bridge and ordinary Ninety-Nine cards play with one click/tap. Ninety-Nine keeps explicit
+choices for plus/minus and the next player. Red Points plays immediately when there is
+zero or one capture target; multiple matches require choosing a highlighted table card.
+Red Points uses up to two rows of table cards, retaining one row when height is
+insufficient for readable cards, and paginates crowded tables. Capture
+highlights preserve the existing card order and current page; page buttons reveal the remaining table cards without scrolling the game page.
+
+Big Two offers complete legal groups beside the hand: clicking a group plays it directly.
+Filter by combination type and browse additional groups, or select individual cards and
+use Play/Pass. These options indicate legality, not a strategic recommendation. There is
+no double-click or global Enter-to-play shortcut; standard button accessibility remains.
+
 ### Bots
 
 While waiting, the host can add a bot to an empty seat, remove a bot, or fill available
@@ -29,15 +59,15 @@ Bots are always ready; the match starts once all four seats are occupied and the
 are ready. Bots remain for the next match and support all four games. Only humans can
 host; the room is removed when its last human leaves.
 
-Bots evaluate legal moves using only their own hand and public state. They choose
-randomly among near-best evaluations, weighted toward better choices; immediate Big Two
+Bots evaluate legal moves using only their own hand and public state. Scored move
+candidates are selected randomly among near-best evaluations, weighted toward better choices; immediate Big Two
 wins take priority over randomness. Randomness is injectable for reproducible tests.
 They remain heuristic practice opponents without configurable difficulty or hidden-hand
 search, and the evaluation scores do not guarantee optimal play.
 
 | Game | Decision priorities |
 | --- | --- |
-| Bridge | Use hand points and suit length for bounded opening/competitive bids, raise partners only with support, and stop repeated bidding by the same bot. Weak hands pass unless three opening passes require a low opening to keep play moving. Decline redeals. Use public played cards to identify established winners and opponents' voids; conserve trump/high cards and avoid overtaking a winning partner. |
+| Bridge | Use the natural bidding heuristics below to describe hand strength and suit length, interpret a partner's public calls, and make bounded responses/rebids. Decline redeals. Use public played cards to identify established winners and opponents' voids; conserve trump/high cards and avoid overtaking a winning partner. |
 | Big Two | Plan the smallest number of legal groups needed to shed the remaining hand, avoiding unnecessary splits of useful combinations. Conserve strong cards/bombs normally, and favor blocking plays when an opponent has one card left. |
 | Red Points | Evaluate every legal capture, balancing immediate red points, future matches with the remaining hand, and the public table's exposure to unseen cards. |
 | Ninety-Nine | Compare both legal plus/minus choices, balance pressure against remaining rescue cards and short-handed risk, and evaluate reverse/designation using public living seats and hand counts. Randomize among similarly rated surviving designation targets. |
@@ -68,6 +98,27 @@ The winner leads the next trick. Play all 13 tricks.
 EW and NS are partners. Declarer's team wins with at least `6 + contract level` tricks;
 otherwise defenders win. Results use this win condition rather than duplicate-Bridge
 vulnerability/bonus scoring.
+
+### Bot bidding agreements
+
+Bots use a simplified natural system, implemented in
+[`bridge-bidding.ts`](../server/src/bots/bridge-bidding.ts). They infer a partner's
+minimum HCP, announced suit lengths, and balanced shape from the full public auction,
+including calls before an opponent overcalls. Human calls are interpreted as estimates;
+the server does not enforce these agreements on players or disclose private hands.
+
+- Ordinary openings need 12 HCP; a major opening shows five cards. Minor openings
+  prefer the longest eligible suit. After three opening passes, the fourth seat still
+  makes a low opening with a weak hand to keep practice games moving.
+- Balanced means 4333, 4432, or 5332. A 1NT opening shows 15–17 HCP; 2NT shows
+  20–21. A 1NT overcall additionally needs a stopper in the opponent's announced suit.
+- New-suit responses show four cards and at least six HCP at the one level or ten
+  at the two level. Raises seek at least eight combined cards in a suit.
+- Combined estimated strength limits contract height: NT invites at 23 HCP and bids
+  3NT at 25; majors use 18/23/25 for levels 2/3/4; minors use 18/23/26/29 for 2/3/4/5.
+  A 2NT response to 1NT is interpreted as an invitation with at least eight HCP.
+- A bot can rebid when the partner's response establishes support or enough strength
+  for NT. It stops repeating unsupported descriptions and does not explore slams.
 
 ## Big Two
 
@@ -122,6 +173,10 @@ cards are flipped and hands exhausted, score the captured piles.
 Only hearts/diamonds score: ace=20, 2–9=face value, 10/J/Q/K=10. The deck contains
 208 red points; highest captured score wins, ties shared. Uncaptured table cards do
 not add to a player's pile. Each match scores independently.
+
+On your Red Points turn, hovering a hand card with a mouse or focusing it with the
+keyboard previews its legal captures with a glow transition. The existing table order and current page stay unchanged. Previewing does not select, submit, or enable a
+capture; clicking still follows the normal play/capture-choice rules.
 
 ## Ninety-Nine
 

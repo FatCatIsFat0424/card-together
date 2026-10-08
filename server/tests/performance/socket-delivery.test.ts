@@ -48,6 +48,9 @@ describe('socket delivery scope and read-only resume', () => {
         expected.gameState.presentation = { ...expected.gameState.presentation,
           serverNow: actual.gameState.presentation.serverNow };
       }
+      if (actual.gameState?.clock && expected.gameState?.clock) {
+        expected.gameState.clock = { ...expected.gameState.clock, serverNow: actual.gameState.clock.serverNow };
+      }
       expect(actual).toEqual(expected);
     }
   }

@@ -58,9 +58,21 @@ missing room/game state. Equal snapshot fields retain references to avoid redund
 
 Profile pages preserve room membership. Theme, motion, music, and voice preferences
 are local browser settings; account profile/image/history visibility is durable server data.
-The waiting room reserves content-sized rows for seats and a separate readiness action
-row. Its viewport height is a minimum, so short or zoomed windows scroll rather than
-overlap player details and controls; desktop chat scrolls inside the adjacent column.
+The application owns one dynamic viewport below the fixed-height top bar. Waiting rooms
+and games fill that space without document scrolling; long account pages, chat, and
+history retain internal scrolling. The waiting room uses a separate readiness row,
+with a two-by-two seat layout and a chat toggle on phones or short landscape windows.
+Timer settings expand in a bounded panel rather than pushing the seats down.
+
+Game seats and the central play area occupy separate grid cells. At every viewport
+size, the local seat stays below the centre, the opposite seat above it, and the
+other seats to its left and right. The local identity, score, and captured-card preview share the hand header,
+with a compact base + reserve clock at its right edge. Other seats show only their active turn allowance, never their reserve. Short landscape windows keep the local hand header
+below the table as well. Status/error text stays with the hand.
+Red Points measures the actual card viewport and paginates table cards to fit,
+preserving card order and the current page during capture highlights, and enlarging
+sparse tables without reserving empty rows. Other central presentations fit their
+grid cell without changing the space reserved for seats and controls.
 Legacy `bridge.*` preferences migrate without replacing existing `card-together.*` values.
 Music playback persists across routes/control-panel closure. Voice follows actual room
 membership and requires explicit user join; see [media](media.md).
@@ -100,3 +112,18 @@ They recheck game/turn identity inside the runtime queue, wait for presentation 
 and publish only after persistence succeeds. Failed saves roll back and retry; abort,
 replacement, and shutdown cancel stale work. Bot decisions never receive opponents'
 private hands. Big Two's existing forced-pass scheduler owns forced passes for all seats.
+
+## Turn clocks
+
+Room timer settings and per-game reserves/deadlines are durable state. Game actions
+settle elapsed decision time before advancing the clock; Red Points preserves the unused
+allowance across its two decision stages. Presentation deadlines postpone clock starts.
+The timeout scheduler rechecks the game and turn inside the runtime queue, applies one
+legal action from the player's filtered view, and publishes only after persistence.
+Failed writes restore the clock and game together. Manual actions also check expiry.
+
+Startup preserves existing deadlines, so an overdue turn resumes without a browser;
+subsequent turns start from the newly committed action rather than replaying missed turns.
+Legacy rooms/games without timing metadata receive default settings and fresh clocks.
+The client projects server timestamps locally and never decrements stored reserves itself.
+See [game timer rules](games.md#turn-timer) for settings and per-game behavior.

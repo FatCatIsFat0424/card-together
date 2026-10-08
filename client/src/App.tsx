@@ -12,6 +12,7 @@ import { useI18nStore } from './stores/i18n-store';
 import { connectSocket, disconnectSocket } from './socket';
 import { APP_BASE_PATH } from './deployment';
 import styles from './pages/AccountPages.module.css';
+import appStyles from './App.module.css';
 
 const LobbyPage = lazy(() => import('./pages/LobbyPage').then((page) => ({ default: page.LobbyPage })));
 const RoomPage = lazy(() => import('./pages/RoomPage').then((page) => ({ default: page.RoomPage })));
@@ -79,7 +80,7 @@ export function App(): ReactNode {
       <TopBar />
       {signedIn && <InviteToast />}
       {signedIn && <AbortVoteToast />}
-      <AppRoutes />
+      <div className={appStyles.viewport}><AppRoutes /></div>
     </BrowserRouter>
   );
 }

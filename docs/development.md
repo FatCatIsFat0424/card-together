@@ -68,6 +68,11 @@ not the entry file alone.
 
 After user-facing or deployment changes, check login/logout, room create/join/chat,
 refresh/reconnect, the affected game, and private-hand visibility using separate accounts.
+For layout changes, check 2560×1440, 1920×1080, 1366×768, 390×844, 375×667,
+360×640, and 844×390 CSS viewports. Waiting rooms and games must not scroll the
+document or route viewport; verify visible controls, seat/card intersections, timer
+settings, and chat/info open/close behavior. Exercise crowded Red Points tables and
+multiple capture targets, including the initial deal before presentation metadata exists.
 Check music pause/resume and route changes when touching playback. Voice verification
 needs separate browser participants; synthetic local streams do not prove real microphones
 or cross-NAT connectivity. Production migration checks are listed in [deployment](deployment.md).

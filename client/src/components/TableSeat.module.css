@@ -1,21 +1,23 @@
 /* ─── TableSeat 元件樣式 ─── */
 
 .seat {
-  position: absolute;
-  /* Keep player links and seat selection above enlarged centre cards. */
-  z-index: 6;
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  align-self: center;
+  justify-self: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 3px;
   color: var(--table-ink);
 }
-
-.top { top: 14px; left: 50%; transform: translateX(-50%); }
-.left { left: 8px; top: 50%; transform: translateY(-50%); }
-.right { right: 8px; top: 50%; transform: translateY(-50%); }
-/* 底部名牌在手牌上方（手牌會蓋住牌桌下緣約 34px） */
-.bottom { bottom: 44px; left: 50%; transform: translateX(-50%); }
+.stats { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px; max-width: 100%; }
+.stats:empty { display: none; }
+.top { grid-area: top; }
+.left { grid-area: left; }
+.right { grid-area: right; }
+.bottom { grid-area: bottom; }
 
 .plate {
   position: relative;
@@ -30,7 +32,11 @@
   border: 1px solid var(--rail-border);
   color: var(--text-primary);
   white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
 }
+
+.plate > [data-player-identity] > :last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .empty { padding: 0 var(--spacing-sm); color: var(--text-muted); }
 
@@ -56,7 +62,7 @@
 
 .turnFlag {
   position: absolute;
-  top: -10px;
+  top: -6px;
   right: -6px;
   padding: 0 7px;
   border-radius: var(--radius-pill);
@@ -136,14 +142,12 @@
 
 /* 平板／手機：左右座位改直式，讓出中央空間 */
 @media (max-width: 1023px) {
-  .left { left: 6px; }
-  .right { right: 6px; }
 
   .left .plate,
   .right .plate {
     flex-direction: column;
     gap: 4px;
-    max-width: 84px;
+    max-width: 100%;
     padding: 6px;
     border-radius: var(--radius-lg);
     white-space: normal;
@@ -170,8 +174,6 @@
 }
 
 @media (max-width: 767px) {
-  .top { top: 8px; }
-  .bottom { bottom: 32px; }
   .plate { gap: 4px; padding: 2px 8px 2px 2px; }
   /* 縮小頭像（Avatar 為 PlayerLink 第一個子元素） */
   .plate > [data-player-identity] > :first-child { width: 2.25rem; height: 2.25rem; font-size: 1.3rem; }
@@ -256,12 +258,6 @@
   line-height: 1.5;
 }
 
-/* Keep seat content inside its reserved lane, including remaining-card badges. */
-.left,
-.right {
-  max-width: calc(var(--seat-reserve-x) - 16px);
-}
-
 .left .plate,
 .right .plate {
   max-width: 100%;
@@ -272,8 +268,6 @@
 }
 
 @container (max-height: 420px) {
-  .top { top: 2px; }
-  .bottom { bottom: 2px; }
   .seat { gap: 2px; }
   .plate { padding: 2px 4px; gap: 2px; }
   .plate > [data-player-identity] { font-size: var(--text-xs); gap: 2px; }
@@ -284,6 +278,25 @@
   .backs { gap: 0; }
   .count, .bigCount, .redPoints { font-size: 10px; padding: 0 4px; }
   .left .plate, .right .plate { padding: 2px; gap: 2px; }
-  .top .backs, .bottom .backs { position: absolute; top: 100%; }
-  .bottom .backs { top: auto; bottom: 100%; }
+}
+
+@media (max-width: 767px) {
+  .seat { width: 100%; gap: 2px; }
+  .plate, .left .plate, .right .plate {
+    width: 100%; flex-direction: column; gap: 2px; padding: 3px; border-radius: var(--radius-md);
+  }
+  .plate > [data-player-identity], .left .plate > [data-player-identity], .right .plate > [data-player-identity] {
+    flex-direction: row; gap: 3px; font-size: var(--text-xs);
+  }
+  .plate > [data-player-identity] > :first-child { width: 24px; height: 24px; font-size: 1rem; }
+  .tags { font-size: 10px; gap: 1px; }
+  .seatLabel, .me, .declarer, .dealer { padding-inline: 3px; }
+  .turnFlag { font-size: 10px; right: 0; }
+}
+@media (max-width: 767px), (max-height: 500px) {
+  .pileCards, .fan { display: none; }
+  .pile, .left .pile, .right .pile, .backs, .left .backs, .right .backs { flex-direction: row; gap: 2px; }
+  .count, .bigCount, .redPoints { font-size: 10px; line-height: 1.4; padding: 0 4px; }
+  .stats { gap: 3px; }
+  .me { display: none; }
 }

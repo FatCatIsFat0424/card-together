@@ -11,10 +11,10 @@ import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useRoomStore } from '../stores/room-store';
 import { PlayerLink } from './PlayerLink';
+import { TurnClock } from './TurnClock';
 import styles from './TableSeat.module.css';
 
 const MAX_BACKS = 6;
-/** 撿紅點：吃到的紅牌只預覽最近幾張 */
 const MAX_PILE = 6;
 
 interface TableSeatProps {
@@ -25,9 +25,10 @@ interface TableSeatProps {
   /** 此座位剛出的牌（變動即重播閃光） */
   moveKey?: number | string;
   suppressTurn?: boolean;
+  hideClock?: boolean;
 }
 
-export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: TableSeatProps): ReactNode {
+export function TableSeat({ seat, position, onPick, moveKey, suppressTurn, hideClock }: TableSeatProps): ReactNode {
   const { t } = useI18nStore();
   const player = useRoomStore((state) => state.roomInfo?.seats[seat].player ?? null);
   const isMe = useRoomStore((state) => state.mySeat === seat);
@@ -48,10 +49,11 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
   })));
   const active = !suppressTurn && turn && (phase === 'bidding' || phase === 'playing');
   const cards = bigTwoCards ?? redPointsCards ?? ninetyNineCards ?? remainingCards(seat, playing);
+
   const redCaptured = captured?.filter((card) => rpCardPoints(card) > 0) ?? [];
 
   return (
-    <div className={`${styles.seat} ${styles[position]} ${active ? styles.turn : ''} ${busted ? styles.out : ''} ${onPick ? styles.pickable : ''}`}
+    <div data-table-seat={position} className={`${styles.seat} ${styles[position]} ${active ? styles.turn : ''} ${busted ? styles.out : ''} ${onPick ? styles.pickable : ''}`}
       role={onPick ? 'button' : undefined} tabIndex={onPick ? 0 : undefined} onClick={onPick}
       onKeyDown={onPick ? (event) => { if (event.key === 'Enter' || event.key === ' ') onPick(); } : undefined}>
       <div className={styles.plate}>
@@ -67,6 +69,8 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
         {active && <span className={styles.turnFlag}>▼ {t('table.turn')}</span>}
         {moveKey !== undefined && <span key={moveKey} className={styles.moved} aria-hidden="true" />}
       </div>
+      {!hideClock && <TurnClock seat={seat} showBank={isMe} />}
+      <div className={styles.stats}>
       {captured && <div className={styles.pile} title={t('redpoints.captured')}>
         <span className={styles.redPoints}>{t('redpoints.points', { n: String(rpScore(captured)) })}</span>
         {redCaptured.length > 0 && <span className={styles.pileCards} aria-hidden="true">
@@ -74,6 +78,7 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
             <img key={`${card.suit}-${card.rank}`} className={styles.pileCard} src={cardImageUrl(card)} alt="" draggable={false} />
           ))}
         </span>}
+
       </div>}
       {position !== 'bottom' && cards > 0 && <div className={styles.backs}>
         <span className={styles.fan} aria-hidden="true">
@@ -83,6 +88,7 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
           {t('table.cards', { n: String(cards) })}
         </span>
       </div>}
+      </div>
     </div>
   );
 }

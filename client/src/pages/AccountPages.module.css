@@ -1,5 +1,5 @@
 .page { width: 100%; max-width: 66rem; margin: 0 auto; padding: var(--spacing-xl); }
-.authPage { min-height: calc(100dvh - var(--topbar-height)); display: grid; place-items: center; padding: var(--spacing-lg); }
+.authPage { min-height: 100%; display: grid; place-items: center; padding: var(--spacing-lg); }
 .authCard { width: 100%; max-width: 30rem; padding: var(--spacing-xl); background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); }
 .title { font-size: var(--text-2xl); margin-bottom: var(--spacing-sm); }
 .subtitle { color: var(--text-secondary); margin-bottom: var(--spacing-xl); }

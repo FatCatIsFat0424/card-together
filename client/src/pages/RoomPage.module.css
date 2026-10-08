@@ -1,7 +1,8 @@
 /* ─── RoomPage 樣式 ─── */
 
 .roomContainer {
-  min-height: 75vh;
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -94,31 +95,12 @@
     'west table east'
     '.    south .';
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr);
-  /* Content minima keep the south seat above the separate action row. */
-  grid-template-rows: minmax(max-content, 1fr) minmax(max-content, 1fr) minmax(max-content, 1fr);
+  /* Fixed tracks leave the separate readiness row inside the viewport. */
+  grid-template-rows: repeat(3, minmax(0, 1fr));
   gap: var(--spacing-md);
-  /* 由可用高度反推寬度，座位與準備鈕不需捲動（約 310px = 上下內距 + 標題 + 遊戲選擇 + 準備鈕） */
-  width: min(100%, 800px, calc((100dvh - var(--topbar-height) - 380px) * 4 / 3));
-  min-width: min(100%, 480px);
-  aspect-ratio: 4 / 3;
+  min-height: 0;
+  width: 100%;
   animation: slideUp 0.5s ease;
-}
-
-@media (max-width: 767px) {
-  .roomContainer { padding: var(--spacing-md); }
-  .roomHeader { margin-bottom: var(--spacing-md); }
-  .roomFooter { margin-top: var(--spacing-md); }
-
-  .seatLayout {
-    width: 100%;
-    min-width: 0;
-    aspect-ratio: auto;
-    grid-template-rows: auto minmax(72px, auto) auto;
-    gap: var(--spacing-sm);
-  }
-
-  .seatSlot { padding: var(--spacing-sm); }
-  .seatSlot > [data-player-identity] { flex-direction: column; gap: 2px; text-align: center; }
 }
 
 .seatNorth { grid-area: north; }
@@ -136,7 +118,8 @@
 
 .tableArea {
   display: grid;
-  grid-template-rows: minmax(max-content, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
   gap: var(--spacing-md);
   padding: var(--spacing-md);
   background: var(--table-surface);
@@ -295,20 +278,17 @@
 .roomHeader { flex-wrap: wrap; row-gap: var(--spacing-sm); }
 .roomHeader button, .gameTypeLabel { white-space: nowrap; }
 
-@media (max-width: 767px) {
-  .gameTypeRow { order: 3; width: 100%; justify-content: center; }
-}
-
 /* Keep the waiting table and readiness controls beside the conversation. */
 .roomLayout {
   display: grid;
-  min-height: calc(100dvh - var(--topbar-height));
+  height: 100%;
+  min-height: 0;
   grid-template-columns: minmax(0, 1fr) clamp(300px, 28vw, 440px);
   grid-template-areas:
     'header header'
     'error error'
     'table chat';
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto auto minmax(0, 1fr);
   align-items: stretch;
   justify-content: center;
   column-gap: var(--spacing-xl);
@@ -338,16 +318,44 @@
 /* Chat scrolls independently without making the table's intrinsic height grow. */
 .roomLayout .chat > * { position: absolute; inset: 0; height: 100%; }
 
-@media (max-width: 767px) {
-  .roomLayout {
-    height: auto;
-    min-height: calc(100dvh - var(--topbar-height));
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'header' 'error' 'table' 'chat';
-    grid-template-rows: auto;
-  }
+/* Narrow or short viewports reserve the table height by switching to chat separately. */
+.chatToggle { display: none; }
 
-  .roomLayout .seatLayout { height: auto; }
-  .roomLayout .tableArea { height: auto; grid-template-rows: auto auto; }
-  .roomLayout .chat { height: 360px; }
+@media (max-width: 767px), (max-height: 500px) {
+  .roomContainer { padding: 8px; }
+  .roomLayout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'header' 'error' 'table';
+    grid-template-rows: auto auto minmax(0, 1fr);
+    gap: 6px;
+  }
+  .roomLayout .roomHeader { gap: 6px; }
+  .roomCode { font-size: var(--text-lg); letter-spacing: 2px; }
+  .roomCodeLabel { display: none; }
+  .headerActions { gap: 4px; margin-left: auto; }
+  .headerActions button { font-size: var(--text-xs); padding: 5px 7px; min-height: 32px; }
+  .gameTypeRow { width: auto; flex: 1 1 auto; justify-content: flex-start; order: 0; }
+  .gameTypeLabel { display: none; }
+  .segment, .segmentActive { padding: 4px 8px; font-size: var(--text-xs); }
+  .roomLayout .tableArea { gap: 6px; padding: 6px; }
+  .roomLayout .seatLayout {
+    grid-template-areas: 'north east' 'west south';
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .tableCenter { display: none; }
+  .seatSlot { padding: 6px; min-height: 0; overflow: auto; justify-content: safe center; }
+  .seatSlot > * { flex-shrink: 0; }
+  .seatSlot > [data-player-identity] { flex-direction: row; padding: 4px; gap: 6px; text-align: left; }
+  .seatSlot > [data-player-identity] > [role='img'] { width: 32px; height: 32px; font-size: 1.2rem; }
+  .seatStatus { gap: 3px; margin-top: 3px; }
+  .seatChoice { min-height: 48px; padding: 4px; }
+  .botAction { margin-top: 4px; padding: 3px 6px; min-height: 28px; }
+  .readyBtn { padding: 8px 24px; font-size: var(--text-base); }
+  .roomFooter { gap: 8px; }
+  .chatToggle { display: inline-flex; }
+  .roomLayout .chat { display: none; grid-area: table; }
+  .chatOpen .tableArea { display: none; }
+  .chatOpen .chat { display: block; }
 }

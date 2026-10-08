@@ -12,6 +12,7 @@ import { useChatStore } from '../stores/chat-store';
 import { useRoomStore } from '../stores/room-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { ChatPanel } from '../components/ChatPanel';
+import { TurnClock } from '../components/TurnClock';
 import { TableSeat } from '../components/TableSeat';
 import { lastElimination, lastMove, tablePosition } from '../game-view';
 import type { TablePosition } from '../game-view';
@@ -24,7 +25,7 @@ import { useMotionStore } from '../stores/motion-store';
 
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 const DESKTOP_QUERY = '(min-width: 1024px)';
-const PHONE_QUERY = '(max-width: 767px)';
+const SHEET_QUERY = '(max-width: 767px), (max-height: 500px) and (min-width: 600px)';
 const OUT_BANNER_MS = 3500;
 /** 出牌從該座位方向飛入中央 */
 const FLY_FROM: Record<TablePosition, CSSProperties> = {
@@ -72,11 +73,14 @@ interface GameShellProps {
   turnReady?: boolean;
 }
 
-function FittedCentre({ children, style }: { children: ReactNode; style?: CSSProperties }): ReactNode {
+function FittedCentre({ children, style, responsive }: {
+  children: ReactNode; style?: CSSProperties; responsive: boolean;
+}): ReactNode {
   const viewportRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
+    if (responsive) return;
     const viewport = viewportRef.current;
     const content = contentRef.current;
     if (!viewport || !content) return;
@@ -93,9 +97,10 @@ function FittedCentre({ children, style }: { children: ReactNode; style?: CSSPro
     observer.observe(content);
     fit();
     return () => observer.disconnect();
-  }, []);
+  }, [responsive]);
 
-  return <div className={styles.tableCentre} ref={viewportRef} style={style}>
+  return <div className={`${styles.tableCentre} ${responsive ? styles.responsiveCentre : ''}`}
+    ref={viewportRef} style={style} data-table-centre>
     <div className={styles.centreContent} ref={contentRef}>{children}</div>
   </div>;
 }
@@ -121,7 +126,7 @@ export function GameShell({
   const [outBanner, setOutBanner] = useState<{ seat: Seat; index: number } | null>(null);
   const { t } = useI18nStore();
   // 平板預設收合聊天；手機為底部抽屜，預設關閉
-  const [chatOpen, setChatOpen] = useState(() => matches(DESKTOP_QUERY));
+  const [chatOpen, setChatOpen] = useState(() => matches(DESKTOP_QUERY) && !matches(SHEET_QUERY));
   const [infoOpen, setInfoOpen] = useState(false);
   const [seenMessages, setSeenMessages] = useState(0);
   const bottomSeat: Seat = mySeat ?? 'S';
@@ -177,14 +182,19 @@ export function GameShell({
   // 縮到桌機寬度以下時收起聊天，避免手機版一進來就被聊天抽屜蓋住
   useEffect(() => {
     const query = window.matchMedia(DESKTOP_QUERY);
-    const onChange = (event: MediaQueryListEvent): void => { if (!event.matches) collapseChat(); };
+    const sheets = window.matchMedia(SHEET_QUERY);
+    const onChange = (): void => { if (!query.matches || sheets.matches) collapseChat(); };
     query.addEventListener('change', onChange);
-    return (): void => query.removeEventListener('change', onChange);
+    sheets.addEventListener('change', onChange);
+    return (): void => {
+      query.removeEventListener('change', onChange);
+      sheets.removeEventListener('change', onChange);
+    };
   }, [collapseChat]);
 
   // 手機一次只開一個抽屜
   const openInfo = (): void => {
-    if (matches(PHONE_QUERY) && chatOpen) collapseChat();
+    if (matches(SHEET_QUERY) && chatOpen) collapseChat();
     setInfoOpen((open) => !open);
   };
 
@@ -195,7 +205,7 @@ export function GameShell({
 
   const closeSheets = useCallback((): void => {
     setInfoOpen(false);
-    if (matches(PHONE_QUERY)) collapseChat();
+    if (matches(SHEET_QUERY)) collapseChat();
   }, [collapseChat]);
 
   useEffect(() => {
@@ -232,7 +242,7 @@ export function GameShell({
       <main className={`${styles.centreColumn} ${tableBackground ? styles.customTable : ''}`}
         style={tableBackground
           ? { '--table-image': `url("${mediaUrl(tableBackground)}")` } as CSSProperties : undefined}>
-        <div className={styles.table}>
+        <div className={styles.table} data-card-table>
           <div className={styles.tableTools}>
             <button type="button" className={styles.toolBtn} onClick={openInfo}
               aria-label={t('table.info')} title={t('table.info')}
@@ -245,7 +255,7 @@ export function GameShell({
               {unread > 0 && <span className={`${styles.unread} ${styles.fabBadge}`}>{unread}</span>}
             </button>
           </div>
-          {SEATS.map((seat) => (
+          {SEATS.filter((seat) => seat !== bottomSeat).map((seat) => (
             <TableSeat key={seat} seat={seat} position={tablePosition(seat, bottomSeat)}
               suppressTurn={presentation.locked}
               moveKey={visibleGame?.presentation
@@ -253,23 +263,36 @@ export function GameShell({
                 : move?.seat === seat ? move.index : undefined}
               onPick={onPickSeat && pickableSeats?.includes(seat) ? () => onPickSeat(seat) : undefined} />
           ))}
-          <FittedCentre style={move ? FLY_FROM[tablePosition(move.seat, bottomSeat)] : undefined}>
+          <FittedCentre responsive={visibleGame?.gameType === 'redpoints' && !presentation.frame}
+            style={move ? FLY_FROM[tablePosition(move.seat, bottomSeat)] : undefined}>
             {presentation.frame && visibleGame ? (
               <GamePresentation key={presentation.frame.key} frame={presentation.frame}
                 bottomSeat={bottomSeat} gameType={visibleGame.gameType}
                 elapsedMs={Math.max(0, Date.now() - presentation.frameStartedAt)}
                 summary={presentationSummary(visibleGame, locale, t)} />
-            ) : <div className={visibleGame?.presentation ? styles.settledCentre : undefined}>{centre}</div>}
+            ) : <div className={`${styles.centreBody} ${visibleGame?.presentation ? styles.settledCentre : ''}`}>{centre}</div>}
           </FittedCentre>
-          {myTurn && <p className={styles.yourTurn} role="status">{t('table.yourTurn')}</p>}
           {outBanner && <p key={outBanner.index} className={styles.outBanner} role="status">
             {t('table.eliminated', { name: seats?.[outBanner.seat].player?.nickname ?? t(`seat.${outBanner.seat}`) })}
           </p>}
           <AbortVoteBanner />
-          {error && <p className={styles.actionError} role="alert">{error}</p>}
         </div>
 
-        <div className={`${styles.handZone} ${myTurn ? styles.handMyTurn : ''}`}>{hand}</div>
+        <div className={`${styles.handZone} ${myTurn ? styles.handMyTurn : ''}`} data-hand-zone>
+          <div className={styles.handHeader}>
+            <TableSeat seat={bottomSeat} position="bottom" hideClock suppressTurn={presentation.locked}
+              moveKey={visibleGame?.presentation
+                ? presentation.frame?.seat === bottomSeat ? presentation.frame.key : undefined
+                : move?.seat === bottomSeat ? move.index : undefined}
+              onPick={onPickSeat && pickableSeats?.includes(bottomSeat) ? () => onPickSeat(bottomSeat) : undefined} />
+            {mySeat && <TurnClock seat={mySeat} compact />}
+          </div>
+          <div className={styles.handStatus}>
+            {myTurn && <p className={styles.yourTurn} role="status">{t('table.yourTurn')}</p>}
+            {error && <p className={styles.actionError} role="alert">{error}</p>}
+          </div>
+          {hand}
+        </div>
       </main>
 
       <aside className={styles.chatRail}>

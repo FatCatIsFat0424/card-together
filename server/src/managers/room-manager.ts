@@ -1,6 +1,7 @@
+import { DEFAULT_TIME_CONTROL, isTimeControl } from '@shared/time-control';
 import { isDeepStrictEqual } from 'node:util';
 import { randomUUID } from 'node:crypto';
-import type { GameType, PlayerInfo, RoomCode, RoomInfo, RoomStatus, Seat, SeatMap } from '@shared/types';
+import type { GameType, PlayerInfo, RoomCode, RoomInfo, RoomStatus, Seat, SeatMap, TimeControl } from '@shared/types';
 import { ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD } from '@shared/constants';
 import type { PersistedRoom } from '../runtime/types';
 import { generateRoomCode } from '../utils/id-generator';
@@ -22,7 +23,7 @@ export function createRoom(gameType: GameType, creatorId: string): RoomCode {
   rooms.set(code, {
     info: {
       code, gameType, status: 'waiting', seats: emptySeats(), createdAt: Date.now(),
-      hostId: creatorId, abortVote: null, abortVoteCooldownUntil: null,
+      timeControl: { ...DEFAULT_TIME_CONTROL }, hostId: creatorId, abortVote: null, abortVoteCooldownUntil: null,
     },
     memberIds: [creatorId],
   });
@@ -172,6 +173,18 @@ export function setGameType(code: RoomCode, playerId: string, gameType: GameType
   return { success: true };
 }
 
+export function setTimeControl(code: RoomCode, playerId: string, timeControl: TimeControl): Result {
+  const room = rooms.get(code);
+  if (!room) return { success: false, reason: 'Room not found' };
+  if (room.info.hostId !== playerId) return { success: false, reason: 'Only the host can change the timer.' };
+  if (room.info.status !== 'waiting') return { success: false, reason: 'Game is in progress' };
+  if (!isTimeControl(timeControl)) return { success: false, reason: 'Invalid time control.' };
+  if (isDeepStrictEqual(room.info.timeControl, timeControl)) return { success: true };
+  room.info = { ...room.info, timeControl: { ...timeControl } };
+  resetAllReady(code);
+  return { success: true };
+}
+
 export type AbortVoteOutcome = 'pending' | 'passed' | 'failed';
 
 function humanVoterIds(code: RoomCode): string[] {
@@ -269,5 +282,7 @@ export function exportRooms(): PersistedRoom[] {
 
 export function restoreRooms(records: PersistedRoom[]): void {
   rooms.clear();
-  for (const room of records) rooms.set(room.info.code, room);
+  for (const room of records) rooms.set(room.info.code, {
+    ...room, info: { ...room.info, timeControl: room.info.timeControl ?? { ...DEFAULT_TIME_CONTROL } },
+  });
 }
