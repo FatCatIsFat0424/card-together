@@ -64,9 +64,9 @@ describe('bridge bot strategy', () => {
     const bidding = applyBid(applyBid(createBiddingState('S'), 'S', { type: 'bid', level: 1, suit: 'spades' }), 'W', { type: 'pass' });
     const hand = [card('spades', 14), card('spades', 13), card('spades', 2), card('spades', 3), card('clubs', 14)];
     expect(getBridgeBotAction(visible({ myHand: hand, bidding }), () => 0)).toEqual({
-      type: 'bridge-bid', action: { type: 'bid', level: 2, suit: 'spades' },
+      type: 'bridge-bid', action: { type: 'bid', level: 3, suit: 'spades' },
     });
-    expect(getBridgeBotAction(visible({ myHand: balancedHand, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'pass' } });
+    expect(getBridgeBotAction(visible({ myHand: balancedHand, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'bid', level: 4, suit: 'spades' } });
   });
 
   it('does not repeatedly raise its own earlier bid', () => {
@@ -75,6 +75,54 @@ describe('bridge bot strategy', () => {
     bidding = applyBid(bidding, 'S', { type: 'pass' });
     bidding = applyBid(bidding, 'W', { type: 'pass' });
     expect(getBridgeBotAction(visible({ myHand: balancedHand, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'pass' } });
+  });
+
+  it('responds with a new suit and lets the opener find the fit on its rebid', () => {
+    const opener = [card('clubs', 14), card('clubs', 13), card('clubs', 12), card('clubs', 2), card('clubs', 3), card('spades', 14), card('spades', 7), card('spades', 6), card('spades', 5), card('hearts', 2), card('hearts', 3), card('diamonds', 2), card('diamonds', 3)];
+    const responder = [card('spades', 13), card('spades', 12), card('spades', 11), card('spades', 2), card('hearts', 5), card('hearts', 6), card('hearts', 7), card('diamonds', 5), card('diamonds', 6), card('diamonds', 7), card('clubs', 5), card('clubs', 6), card('clubs', 7)];
+    let bidding = applyBid(createBiddingState('N'), 'N', { type: 'bid', level: 1, suit: 'clubs' });
+    bidding = applyBid(bidding, 'E', { type: 'pass' });
+    const response = getBridgeBotAction(visible({ mySeat: 'S', myHand: responder, bidding }), () => 0)!;
+    expect(response).toEqual({ type: 'bridge-bid', action: { type: 'bid', level: 1, suit: 'spades' } });
+    if (response.type !== 'bridge-bid') throw new Error('Expected bid');
+    bidding = applyBid(bidding, 'S', response.action);
+    bidding = applyBid(bidding, 'W', { type: 'pass' });
+    expect(getBridgeBotAction(visible({ myHand: opener, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'bid', level: 2, suit: 'spades' } });
+  });
+
+  it('retains partner suit information after an opposing overcall', () => {
+    let bidding = applyBid(createBiddingState('S'), 'S', { type: 'bid', level: 1, suit: 'spades' });
+    bidding = applyBid(bidding, 'W', { type: 'bid', level: 2, suit: 'clubs' });
+    expect(getBridgeBotAction(visible({ myHand: balancedHand, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'bid', level: 4, suit: 'spades' } });
+  });
+
+  it('uses a partner NT opening to choose a bounded combined-points contract', () => {
+    let bidding = applyBid(createBiddingState('S'), 'S', { type: 'bid', level: 1, suit: 'nt' });
+    bidding = applyBid(bidding, 'W', { type: 'pass' });
+    expect(getBridgeBotAction(visible({ myHand: balancedHand, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'bid', level: 3, suit: 'nt' } });
+  });
+
+  it('declines a NT invitation with 16 points and accepts it with 17', () => {
+    let bidding = applyBid(createBiddingState('N'), 'N', { type: 'bid', level: 1, suit: 'nt' });
+    bidding = applyBid(bidding, 'E', { type: 'pass' });
+    bidding = applyBid(bidding, 'S', { type: 'bid', level: 2, suit: 'nt' });
+    bidding = applyBid(bidding, 'W', { type: 'pass' });
+    expect(getBridgeBotAction(visible({ myHand: balancedHand, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'pass' } });
+    const stronger = balancedHand.map((item) => item.suit === 'clubs' && item.rank === 9 ? card('clubs', 11) : item);
+    expect(getBridgeBotAction(visible({ myHand: stronger, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'bid', level: 3, suit: 'nt' } });
+  });
+
+  it('does not overstate a 5422 hand as a balanced NT opening', () => {
+    const hand = [...balancedHand.filter((item) => item.suit !== 'diamonds' && !(item.suit === 'hearts' && item.rank === 3)), card('spades', 5), card('clubs', 10), card('diamonds', 13), card('diamonds', 5)];
+    expect(getBridgeBotAction(visible({ myHand: hand }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'bid', level: 1, suit: 'clubs' } });
+  });
+
+  it('stops once the partnership has reached its supported contract', () => {
+    let bidding = applyBid(createBiddingState('S'), 'S', { type: 'bid', level: 1, suit: 'spades' });
+    bidding = applyBid(bidding, 'W', { type: 'pass' });
+    bidding = applyBid(bidding, 'N', { type: 'bid', level: 4, suit: 'spades' });
+    bidding = applyBid(bidding, 'E', { type: 'pass' });
+    expect(getBridgeBotAction(visible({ mySeat: 'S', myHand: balancedHand, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'pass' } });
   });
 
   it('varies similarly rated low leads while preserving the state', () => {
