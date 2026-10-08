@@ -99,3 +99,20 @@
   .cardPlayable:focus-visible { --lift: -14px; }
   .cardSelected { --lift: -16px; }
 }
+
+.cardReorderable {
+  touch-action: none;
+  cursor: grab;
+}
+
+.cardDragging {
+  z-index: 20;
+  cursor: grabbing;
+  transform: translateX(var(--drag-x)) translateY(-24px);
+  transition: none;
+}
+
+.cardDropTarget {
+  outline: 2px solid var(--turn-glow);
+  outline-offset: 2px;
+}

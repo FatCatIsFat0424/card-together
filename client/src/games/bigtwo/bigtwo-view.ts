@@ -13,21 +13,10 @@ export function sameCard(a: Card, b: Card): boolean {
   return a.suit === b.suit && a.rank === b.rank;
 }
 
-export function sameCardSet(a: readonly Card[], b: readonly Card[]): boolean {
-  return a.length === b.length && a.every((card) => b.some((other) => sameCard(card, other)));
-}
-
 /** Adds the card to the selection, or removes it if already selected. */
 export function toggleCard(selection: readonly Card[], card: Card): Card[] {
   return selection.some((c) => sameCard(c, card))
     ? selection.filter((c) => !sameCard(c, card)) : [...selection, card];
-}
-
-/** The play after the one matching the current selection (first play when none matches); empty when there are no plays. */
-export function nextHint(plays: readonly BigTwoCombo[], selection: readonly Card[]): Card[] {
-  if (plays.length === 0) return [];
-  const index = plays.findIndex((play) => sameCardSet(play.cards, selection));
-  return [...plays[(index + 1) % plays.length].cards];
 }
 
 export type BigTwoRoundEntry = Extract<BigTwoLogEntry, { type: 'play' | 'pass' }>;
@@ -49,22 +38,4 @@ const SUPERSCRIPTS = ['⁰', '¹', '²', '³', '⁴'];
 /** Penalty formula text, e.g. `5 × 2² = 20`. */
 export function penaltyFormula(cardsLeft: number, twosLeft: number, score: number): string {
   return `${cardsLeft} × 2${SUPERSCRIPTS[twosLeft] ?? `^${twosLeft}`} = ${score}`;
-}
-
-const QUICK_PLAY_PAGE_SIZE = 3;
-
-export function quickPlayTypes(plays: readonly BigTwoCombo[]): BigTwoComboType[] {
-  return [...new Set(plays.map((play) => play.type))];
-}
-
-/** Filter before paging so larger groups do not sit behind pages of single cards. */
-export function quickPlayPage(
-  plays: readonly BigTwoCombo[], requestedPage: number, type: BigTwoComboType | 'all' = 'all',
-): {
-  plays: readonly BigTwoCombo[]; page: number; totalPages: number;
-} {
-  const matching = type === 'all' ? plays : plays.filter((play) => play.type === type);
-  const totalPages = Math.max(1, Math.ceil(matching.length / QUICK_PLAY_PAGE_SIZE));
-  const page = Math.max(0, Math.trunc(requestedPage)) % totalPages;
-  return { plays: matching.slice(page * QUICK_PLAY_PAGE_SIZE, (page + 1) * QUICK_PLAY_PAGE_SIZE), page, totalPages };
 }

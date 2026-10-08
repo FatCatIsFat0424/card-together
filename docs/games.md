@@ -46,10 +46,12 @@ Red Points uses up to two rows of table cards, retaining one row when height is
 insufficient for readable cards, and paginates crowded tables. Capture
 highlights preserve the existing card order and current page; page buttons reveal the remaining table cards without scrolling the game page.
 
-Big Two offers complete legal groups beside the hand: clicking a group plays it directly.
-Filter by combination type and browse additional groups, or select individual cards and
-use Play/Pass. These options indicate legality, not a strategic recommendation. There is
-no double-click or global Enter-to-play shortcut; standard button accessibility remains.
+Big Two uses individual card selection and Play/Pass, without quick-play suggestions.
+Drag cards with a mouse or touch to arrange the hand; manual order is retained as turns
+advance and played cards leave the hand. Sorting by rank or suit replaces the manual
+order. With a card focused, Alt + Left/Right Arrow also moves it.
+Dragging only reorders cards; clicking or tapping still toggles selection.
+There is no double-click or global Enter-to-play shortcut; standard button accessibility remains.
 
 ### Bots
 
