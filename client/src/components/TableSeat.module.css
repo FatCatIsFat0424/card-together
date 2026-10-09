@@ -1,6 +1,8 @@
 /* ─── TableSeat 元件樣式 ─── */
 
 .seat {
+  --seat-card-width: calc(clamp(40px, 5vw, 72px) * var(--playing-card-scale));
+  --seat-card-overlap: calc(var(--seat-card-width) * 0.7);
   position: relative;
   min-width: 0;
   max-width: 100%;
@@ -128,14 +130,14 @@
   gap: var(--spacing-sm);
 }
 
-.fan { display: flex; padding-left: calc(13px * var(--playing-card-scale)); }
+.fan { display: flex; padding-left: var(--seat-card-overlap); }
 
 .back {
   flex: none;
-  width: calc(24px * var(--playing-card-scale));
+  width: var(--seat-card-width);
   aspect-ratio: 224 / 313;
-  margin-left: calc(-13px * var(--playing-card-scale));
-  border-radius: 3px;
+  margin-left: calc(-1 * var(--seat-card-overlap));
+  border-radius: calc(var(--seat-card-width) * 0.08);
   background: var(--card-back-image) center / 100% 100%, var(--card-back);
   box-shadow: var(--shadow-sm);
 }
@@ -177,8 +179,7 @@
   .plate { gap: 4px; padding: 2px 8px 2px 2px; }
   /* 縮小頭像（Avatar 為 PlayerLink 第一個子元素） */
   .plate > [data-player-identity] > :first-child { width: 2.25rem; height: 2.25rem; font-size: 1.3rem; }
-  .back { width: calc(18px * var(--playing-card-scale)); margin-left: calc(-11px * var(--playing-card-scale)); }
-  .fan { padding-left: calc(11px * var(--playing-card-scale)); }
+  .seat { --seat-card-width: calc(clamp(30px, 8vw, 40px) * var(--playing-card-scale)); }
 }
 
 .count {
@@ -227,14 +228,14 @@
   white-space: nowrap;
 }
 
-.pileCards { display: flex; padding-left: calc(12px * var(--playing-card-scale)); }
+.pileCards { display: flex; padding-left: var(--seat-card-overlap); }
 
 .pileCard {
   flex: none;
-  width: calc(22px * var(--playing-card-scale));
+  width: var(--seat-card-width);
   aspect-ratio: 224 / 313;
-  margin-left: calc(-12px * var(--playing-card-scale));
-  border-radius: 2px;
+  margin-left: calc(-1 * var(--seat-card-overlap));
+  border-radius: calc(var(--seat-card-width) * 0.08);
   background: var(--card-face);
   box-shadow: var(--shadow-sm);
 }
@@ -242,11 +243,6 @@
 @media (max-width: 1023px) {
   .left .pile,
   .right .pile { flex-direction: column; gap: 4px; }
-}
-
-@media (max-width: 767px) {
-  .pileCard { width: calc(16px * var(--playing-card-scale)); margin-left: calc(-10px * var(--playing-card-scale)); }
-  .pileCards { padding-left: calc(10px * var(--playing-card-scale)); }
 }
 
 .locked {
@@ -299,4 +295,12 @@
   .count, .bigCount, .redPoints { font-size: 10px; line-height: 1.4; padding: 0 4px; }
   .stats { gap: 3px; }
   .me { display: none; }
+}
+
+/* Landscape phones have room for visible cards when the fans stay compact. */
+@media (min-width: 600px) and (min-height: 360px) and (max-height: 500px) {
+  .seat { --seat-card-width: calc(clamp(34px, 5vw, 48px) * var(--playing-card-scale)); }
+  .fan, .pileCards { display: flex; }
+  .fan .back:not(:last-child),
+  .pileCards .pileCard:not(:last-child) { display: none; }
 }
