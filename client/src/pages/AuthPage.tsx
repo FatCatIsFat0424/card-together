@@ -21,6 +21,8 @@ export function AuthPage({ mode }: AuthPageProps): ReactNode {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const passwordType = showPassword ? 'text' : 'password';
   const register = mode === 'register';
   const locationState = location.state as { from?: string; passwordChanged?: boolean } | null;
   const from = locationState?.from;
@@ -78,7 +80,7 @@ export function AuthPage({ mode }: AuthPageProps): ReactNode {
           )}
           <div className={styles.field}>
             <label htmlFor="password">{t('auth.password')}</label>
-            <input id="password" type="password" autoComplete={register ? 'new-password' : 'current-password'}
+            <input id="password" type={passwordType} autoComplete={register ? 'new-password' : 'current-password'}
               value={password} onChange={(event) => setPassword(event.target.value)}
               required minLength={register ? 10 : undefined} maxLength={128}
               aria-describedby={register ? 'password-help' : undefined} />
@@ -87,11 +89,15 @@ export function AuthPage({ mode }: AuthPageProps): ReactNode {
           {register && (
             <div className={styles.field}>
               <label htmlFor="confirm-password">{t('auth.confirmPassword')}</label>
-              <input id="confirm-password" type="password" autoComplete="new-password"
+              <input id="confirm-password" type={passwordType} autoComplete="new-password"
                 value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)}
                 required minLength={10} maxLength={128} />
             </div>
           )}
+          <label className={styles.showPassword}>
+            <input type="checkbox" checked={showPassword} onChange={(event) => setShowPassword(event.target.checked)} />
+            {t('auth.showPassword')}
+          </label>
           {error && <p className={styles.error} role="alert">{error}</p>}
           <button className="btn btn-primary" type="submit" disabled={busy}>
             {busy ? t('common.loading') : t(register ? 'auth.register' : 'auth.login')}

@@ -27,6 +27,10 @@ server {
 '''
 
 
+def directives(location, name):
+    return [child.words for child in location.children if child.words[0] == name]
+
+
 class ConfigureTests(unittest.TestCase):
     def test_preservation_and_idempotency(self):
         result = MODULE.configure(SITE)
@@ -108,6 +112,55 @@ class ConfigureTests(unittest.TestCase):
         self.assertEqual(limit, '3m')
         maximum_background_json = 4 * ((2 * 1024 * 1024 + 2) // 3) + 64
         self.assertLess(maximum_background_json, 3 * 1024 * 1024)
+
+    def test_hashed_assets_are_immutable_and_never_fall_back_to_index(self):
+        locations = self.snippet_locations()
+        assets = locations['/card-together/assets/']
+        self.assertEqual(directives(assets, 'try_files'), [['try_files', '$uri', '=404']])
+        self.assertIn(
+            ['add_header', 'Cache-Control', 'public, max-age=31536000, immutable'],
+            directives(assets, 'add_header'),
+        )
+        shell = locations['/card-together/']
+        self.assertIn('/card-together/index.html', directives(shell, 'try_files')[0])
+        self.assertIn(['add_header', 'Cache-Control', 'no-cache'], directives(shell, 'add_header'))
+
+    def test_site_emoji_are_immutable_and_never_fall_back_to_index(self):
+        emoji = self.snippet_locations()['/card-together/provided-emoji/']
+        self.assertEqual(emoji.words[:2], ['location', '^~'])
+        self.assertEqual(directives(emoji, 'root'), [['root', '/opt/card-together/www']])
+        self.assertEqual(directives(emoji, 'try_files'), [['try_files', '$uri', '=404']])
+        self.assertIn(
+            ['add_header', 'Cache-Control', 'public, max-age=31536000, immutable'],
+            directives(emoji, 'add_header'),
+        )
+
+    def test_security_headers_are_repeated_where_add_header_is_used(self):
+        required = {'X-Content-Type-Options', 'Referrer-Policy', 'Content-Security-Policy-Report-Only'}
+        locations = self.snippet_locations()
+        for path in ('/card-together/assets/', '/card-together/provided-emoji/', '/card-together/'):
+            names = {words[1] for words in directives(locations[path], 'add_header')}
+            self.assertTrue(required <= names, path)
+        api = {words[1] for words in directives(locations['/card-together/api/'], 'add_header')}
+        self.assertIn('X-Content-Type-Options', api)
+        policy = next(words[2] for words in directives(locations['/card-together/'], 'add_header')
+                      if words[1] == 'Content-Security-Policy-Report-Only')
+        self.assertIn("frame-ancestors 'self'", policy)
+        self.assertIn("object-src 'none'", policy)
+        for words in directives(locations['/card-together/'], 'add_header'):
+            self.assertNotEqual(words[1], 'Content-Security-Policy')
+
+    def test_text_assets_are_compressed(self):
+        locations = self.snippet_locations()
+        for path in ('/card-together/assets/', '/card-together/'):
+            self.assertIn(['gzip', 'on'], directives(locations[path], 'gzip'))
+            types = directives(locations[path], 'gzip_types')[0][1:]
+            for mime in ('image/svg+xml', 'text/css', 'application/javascript'):
+                self.assertIn(mime, types)
+
+    def snippet_locations(self):
+        snippet = (Path(__file__).resolve().parents[1] / 'nginx/card-together.conf').read_text()
+        return {node.words[-1]: node for node in MODULE.parse(snippet) if node.words[0] == 'location'}
 
     def test_comments_quotes_escapes_and_variables(self):
         site = SITE.replace('ssl_certificate /etc/cert.pem;', r'''

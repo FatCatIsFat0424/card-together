@@ -1,10 +1,9 @@
-// ─── Game Store：遊戲狀態管理 ───
+// ─── Game Store ───
 
 import { create } from 'zustand';
 import type {
   Card,
   Seat,
-  BidAction,
   Contract,
   BiddingState,
   PlayingState,
@@ -42,19 +41,6 @@ interface GameStoreState {
 
 interface GameStoreActions {
   restore: (game: PlayerVisibleGameState) => void;
-  setPhase: (phase: GamePhase) => void;
-  setMyHand: (hand: Card[]) => void;
-  setDealerSeat: (seat: Seat) => void;
-  setCurrentTurn: (seat: Seat, validCards?: Card[]) => void;
-  setBidding: (bidding: BiddingState | null) => void;
-  addBid: (seat: Seat, action: BidAction) => void;
-  setContract: (contract: Contract) => void;
-  setPlaying: (playing: PlayingState | null) => void;
-  setResult: (result: GameResult) => void;
-  addLogEntry: (entry: GameLogEntry) => void;
-  setRedealPendingSeat: (seat: Seat | null) => void;
-  updateTrickEnd: (trickCountEW: number, trickCountNS: number) => void;
-  playCard: (seat: Seat, card: Card) => void;
   reset: () => void;
 }
 
@@ -125,43 +111,6 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
     return (Object.keys(nextState) as (keyof GameStoreState)[])
       .every((key) => Object.is(state[key], nextState[key])) ? state : nextState;
   }),
-  setPhase: (phase) => set({ phase }),
-  setMyHand: (hand) => set({ myHand: hand }),
-  setDealerSeat: (seat) => set({ dealerSeat: seat }),
-  setCurrentTurn: (seat, validCards) => set({ currentTurnSeat: seat, validCards: validCards ?? [] }),
-  setBidding: (bidding) => set({ bidding }),
-  addBid: (seat, action) =>
-    set((state) => ({
-      bidding: state.bidding
-        ? {
-            ...state.bidding,
-            bids: [...state.bidding.bids, { seat, action }],
-            currentBidderSeat: seat,
-          }
-        : null,
-    })),
-  setContract: (contract) => set({ contract, phase: 'playing' }),
-  setPlaying: (playing) => set({ playing }),
-  setResult: (result) => set({ result, phase: 'scoring' }),
-  addLogEntry: (entry) =>
-    set((state) => ({ log: [...state.log, entry] })),
-  setRedealPendingSeat: (seat) => set({ redealPendingSeat: seat }),
-  updateTrickEnd: (trickCountEW, trickCountNS) =>
-    set((state) => ({
-      playing: state.playing ? { ...state.playing, trickCountEW, trickCountNS, currentTrick: {} } : null,
-    })),
-  playCard: (seat, card) =>
-    set((state) => {
-      // 如果是自己的牌，從手牌移除
-      const newHand = state.myHand.filter(
-        (c) => !(c.suit === card.suit && c.rank === card.rank),
-      );
-      const newTrick = { ...(state.playing?.currentTrick ?? {}), [seat]: card };
-      return {
-        myHand: newHand.length < state.myHand.length ? newHand : state.myHand,
-        playing: state.playing ? { ...state.playing, currentTrick: newTrick } : null,
-      };
-    }),
   reset: () => set((state) => (Object.keys(initialState) as (keyof GameStoreState)[])
     .every((key) => equalSnapshotValue(state[key], initialState[key])) ? state : initialState),
 }));

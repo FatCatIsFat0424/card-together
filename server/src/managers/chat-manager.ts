@@ -1,50 +1,70 @@
-// ─── Chat Manager：聊天訊息管理 ───
+// ─── Chat Manager ───
 
-import type { RoomCode, ChatMessage, EmojiRecord, MediaId, PlayerInfo } from '@shared/types';
+import type {
+  RoomCode, ChatMessage, EmojiRecord, MediaId, PlayerInfo, ProvidedEmoji,
+} from '@shared/types';
 import { MAX_MESSAGE_EMOJIS, extractEmojiNames } from '@shared/constants';
 import { generateMessageId } from '../utils/id-generator';
 
-/** Maps the `:name:` tokens found in the sender's library (first MAX_MESSAGE_EMOJIS) to media. */
+export interface ResolvedMessageEmojis {
+  readonly emojis: Record<string, MediaId>;
+  readonly providedEmojis: Record<string, ProvidedEmoji['file']>;
+}
+
+/**
+ * Maps the first MAX_MESSAGE_EMOJIS known `:name:` tokens to images. The sender's library
+ * wins over site-provided emoji with the same name; unknown names stay text.
+ */
 export function resolveMessageEmojis(
   content: string,
   library: readonly Pick<EmojiRecord, 'name' | 'mediaId'>[],
-): Record<string, MediaId> {
+  provided: ReadonlyMap<string, ProvidedEmoji> = new Map(),
+): ResolvedMessageEmojis {
   const owned = new Map(library.map((emoji) => [emoji.name, emoji.mediaId]));
-  const used = extractEmojiNames(content).filter((name) => owned.has(name))
+  const used = extractEmojiNames(content).filter((name) => owned.has(name) || provided.has(name))
     .slice(0, MAX_MESSAGE_EMOJIS);
-  return Object.fromEntries(used.map((name) => [name, owned.get(name) as MediaId]));
+  const emojis: Record<string, MediaId> = {};
+  const providedEmojis: Record<string, ProvidedEmoji['file']> = {};
+  for (const name of used) {
+    const mediaId = owned.get(name);
+    if (mediaId) emojis[name] = mediaId;
+    else providedEmojis[name] = (provided.get(name) as ProvidedEmoji).file;
+  }
+  return { emojis, providedEmojis };
 }
 
-// ─── 模組私有狀態 ───
+// ─── Module-private state ───
 
-/** roomCode → 訊息列表 */
+/** roomCode → message list */
 const chatHistory: Map<RoomCode, ChatMessage[]> = new Map();
 
-// ─── 匯出函式 ───
+// ─── Exported functions ───
 
 /**
- * 初始化房間聊天
+ * Initialize room chat
  */
 export function initRoomChat(roomCode: RoomCode): void {
   chatHistory.set(roomCode, []);
 }
 
 /**
- * 新增聊天訊息
+ * Add a chat message
  */
 export function addMessage(
   roomCode: RoomCode,
   sender: PlayerInfo,
   content: string,
   library: readonly Pick<EmojiRecord, 'name' | 'mediaId'>[] = [],
+  provided: ReadonlyMap<string, ProvidedEmoji> = new Map(),
 ): ChatMessage {
-  const emojis = resolveMessageEmojis(content, library);
+  const { emojis, providedEmojis } = resolveMessageEmojis(content, library, provided);
   const message: ChatMessage = {
     id: generateMessageId(),
     sender,
     content,
     timestamp: Date.now(),
     ...(Object.keys(emojis).length > 0 && { emojis }),
+    ...(Object.keys(providedEmojis).length > 0 && { providedEmojis }),
   };
 
   append(roomCode, message);
@@ -67,14 +87,14 @@ function append(roomCode: RoomCode, message: ChatMessage): void {
 }
 
 /**
- * 取得房間聊天歷史
+ * Get room chat history
  */
 export function getChatHistory(roomCode: RoomCode): ChatMessage[] {
   return chatHistory.get(roomCode) ?? [];
 }
 
 /**
- * 清除房間聊天（房間銷毀時）
+ * Clear room chat (when the room is destroyed)
  */
 export function clearRoomChat(roomCode: RoomCode): void {
   chatHistory.delete(roomCode);
@@ -98,6 +118,20 @@ export function addSticker(
   const message: ChatMessage = {
     id: generateMessageId(), sender, content: '', timestamp: Date.now(),
     sticker: { id: asset.id, name: asset.name, mediaId: asset.mediaId },
+  };
+  append(roomCode, message);
+  return message;
+}
+
+/** Resolves stickers exclusively from the site-provided catalog, by emoji name. */
+export function addProvidedSticker(
+  roomCode: RoomCode, sender: PlayerInfo, name: string, provided: ReadonlyMap<string, ProvidedEmoji>,
+): ChatMessage | null {
+  const asset = provided.get(name);
+  if (!asset) return null;
+  const message: ChatMessage = {
+    id: generateMessageId(), sender, content: '', timestamp: Date.now(),
+    providedSticker: { name: asset.name, file: asset.file },
   };
   append(roomCode, message);
   return message;

@@ -1,8 +1,8 @@
 # Deployment
 
 Target: **https://acserver.csie.org/card-together/** on the existing acserver host.
-Run from the repository root as the deployment user. Required tools: npm, Node.js 24,
-Python 3, rsync, ripgrep (`rg`), util-linux (`flock`), sudo, systemd, and Nginx.
+Run from the repository root as the deployment user. Required tools: npm, the exact Node.js version in `.node-version`,
+Python 3, rsync, util-linux (`flock`), sudo, systemd, and Nginx.
 DNS/TLS/certificate renewal and an HTTPS virtual host for `acserver.csie.org` must
 already work; these scripts do not provision them.
 
@@ -10,17 +10,20 @@ already work; these scripts do not provision them.
 
 ```sh
 cd /home/acaccel/card-together
-npm exec --yes --package=node@24 -- bash deploy/build.sh &&
+npm exec --yes --package="node@$(cat .node-version)" -- bash deploy/build.sh &&
 bash deploy/deploy.sh
 ```
 
 Build installs locked dependencies including devDependencies, checks shell/Python
 helpers, runs typecheck/lint/tests, builds the `/card-together/` frontend, and prepares
 `.deploy/node`. Build on the target OS/architecture. The backend runs TypeScript through
-`tsx`, so runtime dependencies include development tools.
+`tsx`, so runtime dependencies include development tools. The frontend build imports owner
+music and [site emoji](media.md#site-provided-emoji); the generated emoji catalog lives in
+`shared/src/`, which `install.sh` copies for the backend. Previous site emoji files, like
+hashed assets, stay published until `prune-assets.sh` removes them after the grace period.
 
 `deploy.sh` obtains sudo, validates existing configuration, backs up application/settings/
-state, stops writers, installs artifacts, starts the new service, installs Nginx snippets,
+state (the application copy is taken before the service stops), stops writers, installs artifacts, starts the new service, installs Nginx snippets,
 updates managed includes in `/etc/nginx/sites-enabled/acserver.csie.org`, runs `nginx -t`,
 reloads Nginx, and checks local/public health. This briefly interrupts service.
 Build alone and `publish-client.sh` do not update Nginx.
@@ -31,11 +34,17 @@ Build alone and `publish-client.sh` do not update Nginx.
 | `/opt/card-together/www/card-together` | Served frontend |
 | `/etc/card-together/server.env` | Root-only runtime configuration |
 | `/var/lib/card-together/` | Database and uploaded `media/` |
-| `/var/backups/card-together/` | Protected deployment snapshots |
+| `/var/backups/card-together/` | Protected deployment snapshots (`deploy-*`, newest 5), frontend entry points (`frontend-*`, newest 5), and daily data snapshots (`data/`) |
 | `journalctl -u card-together.service` | Backend logs |
 
 systemd uses the `card-together` service user, read-only application files, a writable
-state directory, restart handling, and a 60-second graceful shutdown limit. Only one
+state directory, restart handling, and a 60-second graceful shutdown limit. The unit also
+restricts devices, kernel interfaces, cgroups, address families (Unix, IPv4/IPv6, netlink),
+namespaces, and personalities. `MemoryDenyWriteExecute` is intentionally not set because
+V8's JIT needs writable executable memory. `MemoryHigh=768M` throttles and `MemoryMax=1G`
+kills the backend if it leaks, protecting the other applications on the shared host
+(the unit restarts it). Raise both in `card-together.service` if journald shows memory
+kills under normal load. Only one
 backend may own the JSON database.
 
 ## Runtime settings
@@ -114,7 +123,16 @@ HTTPS server block: `include /etc/nginx/snippets/card-together.conf;`
 HTTP server block: `include /etc/nginx/snippets/card-together-http.conf;`
 Preserve TLS/other applications. Never put these at `http` scope or create a duplicate
 host. Snippets provide SPA fallback, prefix removal, WebSocket headers, cookie scope,
-and a 3 MiB upload limit for base64-encoded 2 MiB background images.
+and a 3 MiB upload limit for base64-encoded 2 MiB background and emoji images.
+
+The snippet also serves `/card-together/assets/` and the content-hashed
+`/card-together/provided-emoji/` with `try_files $uri =404` and
+`Cache-Control: public, max-age=31536000, immutable` (hashed files; a missing file is a
+404, never `index.html`), gzips CSS/JS/JSON/SVG, and sends `X-Content-Type-Options`,
+`Referrer-Policy`, and a **report-only** Content-Security-Policy (including
+`frame-ancestors`). Watch the browser console for CSP violations before enforcing it by
+renaming the header to `Content-Security-Policy`. Nginx drops inherited headers in any
+location that calls `add_header`, so each such location repeats the full set.
 After reviewing runtime configuration and completing any required state migration,
 finish the manual installation:
 
@@ -137,7 +155,8 @@ curl --fail --show-error https://acserver.csie.org/card-together/health
 
 Health returns `{"status":"ok"}`. Deployment polls for up to 30 seconds to tolerate
 startup and Nginx worker changes. In a browser verify login, room creation, refresh at
-`/card-together/login`, Socket connectivity, persisted resume, uploaded images, and music.
+`/card-together/login`, Socket connectivity, persisted resume, uploaded images, site emoji,
+and music.
 Test voice with real devices/networks; TURN may be needed. Verify old URL redirects,
 existing session migration, and browser preference migration on an existing client.
 
@@ -157,7 +176,33 @@ inspection. Services remain stopped to avoid restarting a writer against older s
 
 A deployment backup contains site/snippets, runtime configuration, units/enabled states,
 `application/` when a previous new installation exists, and complete
-`card-together-data/`/`bridge-online-data/` snapshots. Keep a separate off-host backup.
+`card-together-data/`/`bridge-online-data/` snapshots. `application/` omits `node_modules/`,
+the copied `node` binary, and `provided-music/` duplicates; rebuild them by checking out the
+matching revision and running `deploy/build.sh`. Only the newest five `deploy-*` snapshots
+are kept (older ones are removed after a successful deployment). A deployment interrupted by
+`SIGINT`/`SIGTERM` follows the same recovery path as a failure. Keep a separate off-host backup.
+
+### Daily data backup
+
+`install.sh` installs `/opt/card-together/backup-data.sh` and the
+`card-together-backup.service`/`.timer` units; `deploy.sh` enables the timer
+(`systemctl enable --now card-together-backup.timer`; a failure only prints a warning).
+To enable it without a full deployment, run `sudo bash deploy/install.sh "$PWD/.deploy/node"`
+and `sudo systemctl enable --now card-together-backup.timer`. At about 04:15 each day the
+service copies `database.json` (validated as JSON) and `media/` into
+`/var/backups/card-together/data/data-<UTC stamp>/` while the backend keeps running: the
+database is replaced by atomic rename and media files are content-addressed, so the copy is
+consistent. Unchanged media is hard-linked to the previous snapshot. The newest 14 snapshots
+(`KEEP`, default 14) are retained. Inspect with:
+
+```sh
+systemctl list-timers card-together-backup.timer
+sudo journalctl -u card-together-backup.service -n 20 --no-pager
+sudo ls /var/backups/card-together/data
+```
+
+This protects against corruption and mistakes on the same disk only; copy the snapshots
+off-host as well. Restore follows [storage](storage.md#backup-and-restore).
 
 Rollback requires stopping both services, selecting compatible application/dependencies/
 unit/configuration/Nginx, and reviewing the complete state. Use current state if the old
@@ -181,8 +226,12 @@ bash deploy/publish-client.sh
 ```
 
 The sudo publisher syncs assets before atomically replacing `index.html`, retains previous
-hashed assets and a backup entry point, and uses the deployment lock. It does not restart
-the backend or reload Nginx. Importing owner music alone does not publish it.
+hashed assets for 14 days (then `prune-assets.sh` removes files missing from the current
+build) and the newest five entry-point backups under `/var/backups/card-together/frontend-*`,
+and uses the deployment lock. It does not restart
+the backend or reload Nginx. Importing owner music alone does not publish it. The publisher
+refuses a build whose site emoji catalog differs from the installed backend's, because the
+backend would reject the new emoji; publish emoji changes with `deploy.sh`.
 
 ## Repository and compatibility
 

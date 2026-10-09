@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { PlayerInfo, Seat } from '@shared/types';
 import { createJsonRepository } from '../../src/database/json-repository';
+import { CURRENT_SCHEMA_VERSION } from '../../src/database/migrations';
 import type { DatabaseDocument } from '../../src/database/schema';
 import { validateDocument } from '../../src/database/schema';
 import type { RuntimeSnapshot } from '../../src/runtime/types';
@@ -26,7 +27,7 @@ function sessionHash(index: number): string {
 function createFixture(): DatabaseDocument {
   const runtime: RuntimeSnapshot = { players: [], rooms: [], games: [], chat: [] };
   const document: DatabaseDocument = {
-    schemaVersion: 2,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     runtime,
     accounts: Array.from({ length: RECORDS }, (_, index) => ({
       id: accountId(index),
@@ -36,7 +37,7 @@ function createFixture(): DatabaseDocument {
       color: '#123456',
       avatar: 'cat',
       avatarImage: null,
-      tableBackground: null,
+      tableBackground: null, tableBackgroundOpacity: 100, cardBack: null, cardBackOpacity: 100,
       matchesPublic: false,
       passwordHash: PASSWORD_HASH,
       createdAt: TIMESTAMP,

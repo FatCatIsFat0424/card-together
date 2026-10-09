@@ -1,0 +1,27 @@
+[Unit]
+Description=Card Together database and media backup
+ConditionPathExists=/var/lib/card-together/database.json
+
+[Service]
+Type=oneshot
+# Root is needed to read the 0700 state directory owned by the service user.
+ExecStart=/opt/card-together/backup-data.sh
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/var/lib/card-together
+ReadWritePaths=/var/backups/card-together
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+SystemCallArchitectures=native
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=card-together-backup

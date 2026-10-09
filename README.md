@@ -7,12 +7,14 @@ and npm workspaces.
 Players sign in, create or join four-seat rooms, chat, and play with
 server-authoritative rules. Accounts, friendships, match history, rooms, and
 unfinished games persist across server restarts. The interface supports
-Traditional Chinese and English, themes, uploaded avatars and table backgrounds,
-custom emoji/stickers, optional WebRTC voice, and owner-provided background music.
+Traditional Chinese and English, themes, uploaded avatars, table backgrounds and card backs,
+custom and site-provided emoji/stickers, optional WebRTC voice, and owner-provided
+background music.
 
 ## Development
 
-Use Node.js 22.13+ (Node.js 24 recommended) and npm. From the repository root:
+Use the Node.js version pinned in `.node-version` (24.x; 22.13+ also runs the app) and npm.
+From the repository root:
 
 ```sh
 npm ci
@@ -40,8 +42,9 @@ python3 -B -m unittest discover -s deploy/tests
 ```
 
 See [development](docs/development.md) for configuration, deployment script checks,
-and benchmarks. Music sources belong in ignored `local-music/`; a fresh checkout
-has an empty playlist. See [media](docs/media.md).
+and benchmarks. Music sources belong in ignored `local-music/` and site chat emoji in
+ignored `local-emoji/`; a fresh checkout has an empty playlist and no site emoji. See
+[media](docs/media.md).
 
 ## Production
 
@@ -49,7 +52,7 @@ The deployment wrapper installs the application, updates the existing Nginx
 site, starts systemd, and verifies local/public health. Run as the deployment user:
 
 ```sh
-npm exec --yes --package=node@24 -- bash deploy/build.sh &&
+npm exec --yes --package="node@$(cat .node-version)" -- bash deploy/build.sh &&
 bash deploy/deploy.sh
 ```
 

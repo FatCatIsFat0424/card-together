@@ -26,6 +26,14 @@ export async function migrateLegacySession(): Promise<boolean> {
   }
 }
 
+const REQUEST_TIMEOUT_MS = 15_000;
+// Base64 image uploads can be several megabytes on slow mobile uplinks.
+const MEDIA_UPLOAD_TIMEOUT_MS = 120_000;
+
+export function requestTimeoutMs(path: string, method: string): number {
+  return method === 'POST' && path === '/api/media' ? MEDIA_UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
+}
+
 export type ApiResult<T extends object = object> =
   | ({ success: true } & T)
   | { success: false; error: string; status: number };
@@ -42,7 +50,7 @@ export async function apiRequest<T extends object = object>(
       credentials: 'include',
       headers: method !== 'GET' ? { 'Content-Type': 'application/json' } : undefined,
       body: body ? JSON.stringify(body) : method === 'GET' ? undefined : '{}',
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(requestTimeoutMs(path, method)),
     });
     const result = await response.json() as { success?: boolean; error?: string };
     if (!response.ok || !result.success) {

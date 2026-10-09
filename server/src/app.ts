@@ -11,11 +11,12 @@ import { createPlayerRouter } from './http/player-routes';
 import { createMediaRouter } from './http/media-routes';
 import { createEmojiRouter } from './http/emoji-routes';
 import { createMediaStore } from './media/media-store';
+import type { ProvidedEmojiCatalog } from './media/provided-emoji';
 import { createRuntimeCoordinator } from './runtime/coordinator';
 import { startBigTwoAutoPass } from './runtime/bigtwo-auto-pass';
 import { startTurnTimers } from './runtime/turn-timers';
 import { startBotTurns } from './runtime/bot-turns';
-import { broadcastState } from './socket/context';
+import { broadcastState, readPresence } from './socket/context';
 import { getRoomMemberIds } from './managers/room-manager';
 import { createVoiceManager } from './managers/voice-manager';
 import { createFriendService } from './social/friend-service';
@@ -28,6 +29,10 @@ export interface ApplicationOptions {
   trustProxyLoopback?: boolean;
   /** Uploaded image directory; media routes answer 503 without it. */
   mediaDirectory?: string;
+  /** Site-provided chat emoji; none when omitted. */
+  providedEmojis?: ProvidedEmojiCatalog;
+  /** Listen before schedulers start; omitted when callers bind the server themselves. */
+  listen?: { readonly port: number; readonly host?: string };
 }
 
 export async function createApplication(repository: Repository, options: ApplicationOptions): Promise<{
@@ -39,15 +44,18 @@ export async function createApplication(repository: Repository, options: Applica
   app.disable('x-powered-by');
   if (options.trustProxyLoopback) app.set('trust proxy', 'loopback');
   app.use(cors({ origin: [...options.allowedOrigins], credentials: true }));
-  // Uploads need a larger body; registered first so the 16kb parser skips parsed requests.
-  app.use('/api/media', express.json({ limit: '3mb' }));
-  app.use(express.json({ limit: '16kb' }));
   app.use('/api', (_request, response, next) => {
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('X-Content-Type-Options', 'nosniff');
     next();
   });
   app.use('/api', protectMutations(options.allowedOrigins));
+  // The media router parses its larger uploads itself, after session and rate checks.
+  const smallJson = express.json({ limit: '16kb' });
+  app.use((request, response, next) => {
+    if (request.path === '/api/media' || request.path.startsWith('/api/media/')) next();
+    else smallJson(request, response, next);
+  });
   app.get('/health', (_request, response) => response.json({ status: 'ok' }));
   const httpServer = createServer(app);
   const io: TypedServer = new Server(httpServer, {
@@ -64,24 +72,8 @@ export async function createApplication(repository: Repository, options: Applica
   const context = {
     io, auth, runtime, voice: createVoiceManager(), friends: createFriendService(repository),
     listEmojis: (accountId: string) => repository.listEmojis(accountId),
+    providedEmojis: options.providedEmojis ?? new Map(),
   };
-  let stopAutoPass: (() => void) | undefined;
-  let stopTurnTimers: () => void;
-  try {
-    stopAutoPass = await startBigTwoAutoPass(runtime, (code) => {
-      broadcastState(io, getRoomMemberIds(code));
-    });
-    stopTurnTimers = await startTurnTimers(runtime, (code) => {
-      broadcastState(io, getRoomMemberIds(code));
-    });
-  } catch (error) {
-    stopAutoPass?.();
-    await new Promise<void>((resolve) => io.close(() => resolve()));
-    throw error;
-  }
-  const stopBots = startBotTurns(runtime, (code) => {
-    broadcastState(io, getRoomMemberIds(code));
-  });
   const stopConnections = setupConnectionHandler(context);
   app.use('/api/auth', createAuthRouter(auth, {
     ...options,
@@ -94,7 +86,7 @@ export async function createApplication(repository: Repository, options: Applica
       }
     },
   }));
-  app.use('/api/friends', createFriendRouter(repository, auth));
+  app.use('/api/friends', createFriendRouter(repository, auth, (ids) => readPresence(runtime, ids)));
   app.use('/api/players', createPlayerRouter(repository, auth));
   app.use('/api/media', createMediaRouter(media, auth));
   app.use('/api/emojis', createEmojiRouter(repository, auth, mediaExists));
@@ -110,6 +102,37 @@ export async function createApplication(repository: Repository, options: Applica
     response.status(status).json({ success: false,
       error: status === 500 ? 'Unable to complete the request. Please try again.' : 'Invalid request.' });
   });
+
+  // Bind before any scheduler can commit, so a second instance fails without writing.
+  if (options.listen) {
+    const { port, host } = options.listen;
+    try {
+      await new Promise<void>((resolve, reject) => {
+        httpServer.once('error', reject);
+        httpServer.listen(port, host, () => {
+          httpServer.off('error', reject);
+          resolve();
+        });
+      });
+    } catch (error) {
+      stopConnections();
+      await new Promise<void>((resolve) => io.close(() => resolve()));
+      throw error;
+    }
+  }
+  const publish = (code: string): void => broadcastState(io, getRoomMemberIds(code));
+  let stopAutoPass: (() => void) | undefined;
+  let stopTurnTimers: () => void;
+  try {
+    stopAutoPass = await startBigTwoAutoPass(runtime, publish);
+    stopTurnTimers = await startTurnTimers(runtime, publish);
+  } catch (error) {
+    stopAutoPass?.();
+    stopConnections();
+    await new Promise<void>((resolve) => io.close(() => resolve()));
+    throw error;
+  }
+  const stopBots = startBotTurns(runtime, publish);
 
   return {
     httpServer, io,

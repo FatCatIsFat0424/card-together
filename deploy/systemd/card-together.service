@@ -24,6 +24,21 @@ ProtectSystem=strict
 ProtectHome=true
 RestrictSUIDSGID=true
 CapabilityBoundingSet=
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+# AF_NETLINK stays allowed because libuv queries interfaces through it.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictNamespaces=true
+LockPersonality=true
+SystemCallArchitectures=native
+# No MemoryDenyWriteExecute: V8 needs writable executable memory for its JIT.
+# Sized far above the Node baseline plus the in-memory JSON database; the limits stop a leak
+# from starving the other applications on the host. MemoryHigh throttles before MemoryMax kills.
+MemoryHigh=768M
+MemoryMax=1G
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=card-together

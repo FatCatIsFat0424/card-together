@@ -59,7 +59,10 @@ describe('database migrations', () => {
     expect(migrated).toMatchObject({
       schemaVersion: CURRENT_SCHEMA_VERSION,
       emojis: [],
-      accounts: [{ avatarImage: null, tableBackground: null, matchesPublic: false }],
+      accounts: [{
+        avatarImage: null, tableBackground: null, tableBackgroundOpacity: 100,
+        cardBack: null, cardBackOpacity: 100, matchesPublic: false,
+      }],
     });
   });
 
@@ -91,7 +94,7 @@ describe('database migrations', () => {
       expect(await repository.getAccountById('account-1')).toMatchObject({ matchesPublic: false });
       await repository.close();
       expect(await readFile(`${path}.v1.bak`, 'utf8')).toBe(original);
-      expect(JSON.parse(await readFile(path, 'utf8')).schemaVersion).toBe(3);
+      expect(JSON.parse(await readFile(path, 'utf8')).schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
@@ -100,7 +103,7 @@ describe('database migrations', () => {
   it('should upgrade v2 games, match results and rooms to v3', () => {
     const migrated = migrateDocument(version2()) as ReturnType<typeof emptyDocument>;
     expect(() => validateDocument(migrated)).not.toThrow();
-    expect(migrated.schemaVersion).toBe(3);
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(migrated.matches[0].result).toMatchObject({ gameType: 'bridge', requiredTricks: 7 });
     expect(migrated.runtime!.rooms[0].info).toMatchObject({
       hostId: 'account-2', abortVote: null, abortVoteCooldownUntil: null,
@@ -109,6 +112,42 @@ describe('database migrations', () => {
       ...version2(), runtime: { ...version2().runtime as object, games: [{ id: 'board' }] },
     }) as { runtime: { games: unknown[] } };
     expect(games.runtime.games[0]).toEqual({ id: 'board', gameType: 'bridge' });
+  });
+
+  it('should default v3 accounts to no card back and full image opacity', () => {
+    const version3 = migrateDocument(version2()) as Record<string, unknown> & {
+      accounts: Record<string, unknown>[];
+    };
+    const input = {
+      ...version3,
+      schemaVersion: 3,
+      accounts: version3.accounts.map((account) => {
+        const { tableBackgroundOpacity: _table, cardBack: _back, cardBackOpacity: _opacity, ...rest } =
+          account;
+        return { ...rest, tableBackground: `${'a'.repeat(64)}.webp` };
+      }),
+    };
+    const migrated = migrateDocument(input) as ReturnType<typeof emptyDocument>;
+    expect(() => validateDocument(migrated)).not.toThrow();
+    expect(migrated.schemaVersion).toBe(4);
+    for (const account of migrated.accounts) {
+      expect(account).toMatchObject({
+        tableBackground: `${'a'.repeat(64)}.webp`, tableBackgroundOpacity: 100,
+        cardBack: null, cardBackOpacity: 100,
+      });
+    }
+  });
+
+  it('should reject accounts with an invalid card back or opacity', () => {
+    const migrated = migrateDocument(version2()) as ReturnType<typeof emptyDocument>;
+    const withAccount = (patch: Record<string, unknown>): unknown => ({
+      ...migrated, accounts: [{ ...migrated.accounts[0], ...patch }, ...migrated.accounts.slice(1)],
+    });
+    expect(() => validateDocument(withAccount({ cardBackOpacity: 20 }))).not.toThrow();
+    expect(() => validateDocument(withAccount({ cardBack: 'not-a-media-id' }))).toThrow();
+    expect(() => validateDocument(withAccount({ cardBackOpacity: 19 }))).toThrow();
+    expect(() => validateDocument(withAccount({ tableBackgroundOpacity: 101 }))).toThrow();
+    expect(() => validateDocument(withAccount({ cardBackOpacity: undefined }))).toThrow();
   });
 
   it('should keep a v2 backup when opening a v2 file', async () => {
@@ -120,7 +159,7 @@ describe('database migrations', () => {
       const repository = await createJsonRepository(path);
       await repository.close();
       expect(await readFile(`${path}.v2.bak`, 'utf8')).toBe(original);
-      expect(JSON.parse(await readFile(path, 'utf8')).schemaVersion).toBe(3);
+      expect(JSON.parse(await readFile(path, 'utf8')).schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

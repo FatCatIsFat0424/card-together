@@ -1,18 +1,16 @@
-// ─── Bidding Engine：叫牌規則引擎 ───
+// ─── Bidding Engine: bidding rules ───
 
 import type { Seat, BidAction, BidLevel, BidSuit, BiddingState } from '@shared/types';
-import { SEAT_ORDER_CLOCKWISE, BID_SUIT_ORDER } from '@shared/constants';
+import { BID_SUIT_ORDER } from '@shared/constants';
+import { nextSeatClockwise } from '@shared/rules/seats';
 
-/**
- * 取得順時鐘下一個座位
- */
+/** Bridge turns run clockwise. */
 export function getNextSeat(seat: Seat): Seat {
-  const idx = SEAT_ORDER_CLOCKWISE.indexOf(seat);
-  return SEAT_ORDER_CLOCKWISE[(idx + 1) % 4];
+  return nextSeatClockwise(seat);
 }
 
 /**
- * 建立初始叫牌狀態
+ * Create the initial bidding state
  */
 export function createBiddingState(startSeat: Seat): BiddingState {
   return {
@@ -25,8 +23,8 @@ export function createBiddingState(startSeat: Seat): BiddingState {
 }
 
 /**
- * 比較兩個叫牌大小
- * 回傳 > 0 表示 a > b，< 0 表示 a < b，= 0 表示相等
+ * Compare two bids
+ * Returns > 0 if a > b, < 0 if a < b, 0 if equal
  */
 export function compareBids(
   a: { level: BidLevel; suit: BidSuit },
@@ -37,7 +35,7 @@ export function compareBids(
 }
 
 /**
- * 取得當前可以叫的所有合法叫牌
+ * Get all legal bids currently available
  */
 export function getValidBids(state: BiddingState): BidAction[] {
   const validBids: BidAction[] = [{ type: 'pass' }];
@@ -57,24 +55,24 @@ export function getValidBids(state: BiddingState): BidAction[] {
 }
 
 /**
- * 驗證叫牌是否合法
+ * Validate a bid
  */
 export function validateBid(
   state: BiddingState,
   seat: Seat,
   action: BidAction,
 ): { valid: true } | { valid: false; reason: string } {
-  // 必須輪到你
+  // It must be the bidder's turn
   if (seat !== state.currentBidderSeat) {
     return { valid: false, reason: 'Not your turn' };
   }
 
-  // pass 永遠合法
+  // Pass is always legal
   if (action.type === 'pass') {
     return { valid: true };
   }
 
-  // 有最高叫牌時，新叫牌必須更高
+  // A new bid must outrank the current highest bid
   if (state.highestBid) {
     if (compareBids({ level: action.level, suit: action.suit }, state.highestBid) <= 0) {
       return { valid: false, reason: 'Bid must be higher than current highest bid' };
@@ -85,7 +83,7 @@ export function validateBid(
 }
 
 /**
- * 套用叫牌動作，回傳新狀態
+ * Apply a bidding action and return the new state
  */
 export function applyBid(
   state: BiddingState,
@@ -117,21 +115,21 @@ export function applyBid(
 }
 
 /**
- * 檢查叫牌是否結束
- * 回傳結果：
- * - 'continue': 叫牌繼續
- * - 'all_pass': 首輪四人全 pass → 需要重發
- * - 'contract': 有人叫牌後連續 3 pass → 合約確定
+ * Check whether bidding has ended
+ * Returns:
+ * - 'continue': bidding goes on
+ * - 'all_pass': all four pass in the first round, so redeal
+ * - 'contract': three consecutive passes after a bid, so the contract is set
  */
 export function checkBiddingEnd(
   state: BiddingState,
 ): 'continue' | 'all_pass' | 'contract' {
-  // 首輪四人全 pass
+  // All four players pass in the first round
   if (state.bids.length === 4 && state.consecutivePassCount === 4) {
     return 'all_pass';
   }
 
-  // 有人叫牌後連續 3 人 pass
+  // Three consecutive passes after a bid
   if (state.highestBid && state.consecutivePassCount >= 3) {
     return 'contract';
   }

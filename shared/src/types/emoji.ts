@@ -8,3 +8,10 @@ export interface EmojiRecord {
   readonly mediaId: MediaId;
   readonly createdAt: number;
 }
+
+/** A site-provided chat emoji available to every account; used in chat as `:name:`. */
+export interface ProvidedEmoji {
+  readonly name: string;
+  /** Content-hashed file name inside the static `provided-emoji/` directory; not a URL. */
+  readonly file: string;
+}

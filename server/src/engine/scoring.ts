@@ -1,10 +1,10 @@
-// ─── Scoring Engine：結算引擎 ───
+// ─── Scoring Engine ───
 
 import type { Seat, Contract, GameResult, Team } from '@shared/types';
 import { CONTRACT_BASE_TRICKS, TEAM_SEATS } from '@shared/constants';
 
 /**
- * 取得座位所屬的隊伍
+ * Get the team a seat belongs to
  */
 export function getSeatTeam(seat: Seat): Team {
   if (TEAM_SEATS.EW.includes(seat)) return 'EW';
@@ -12,7 +12,7 @@ export function getSeatTeam(seat: Seat): Team {
 }
 
 /**
- * 計算遊戲結果
+ * Compute the game result
  */
 export function calculateGameResult(
   contract: Contract,

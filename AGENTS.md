@@ -60,7 +60,8 @@ python3 -B -m unittest discover -s deploy/tests
 
 Use existing Vitest tests for behavior and boundary cases. No formatter or secret
 scanner is configured; follow adjacent formatting and review changed content.
-Root `lint` checks source files; Vitest discovers `server/tests/**/*.test.ts`.
+Root `typecheck` and `lint` also cover `server/tests` and benchmarks; Vitest discovers
+`server/tests/**/*.test.ts`. Run checks with the Node.js version in `.node-version`; CI runs them.
 
 ## Documentation and operations
 

@@ -11,17 +11,18 @@
   "scripts": {
     "dev:server": "cd server && npx tsx watch src/index.ts",
     "dev:client": "cd client && npm run dev",
-    "build:client": "cd client && npm run build",
+    "build:client": "npm run music:import && npm run emoji:import && cd client && npx tsc -b && npx vite build",
     "test": "cd server && npx vitest run",
     "test:watch": "cd server && npx vitest",
     "bench:database": "cd server && npx tsx tests/database/repository-benchmark.ts",
     "bench:socket": "cd server && npx tsx benchmarks/socket-benchmark.ts",
-    "lint": "eslint \"shared/src/**/*.ts\" \"server/src/**/*.ts\" \"client/src/**/*.{ts,tsx}\"",
+    "lint": "eslint \"shared/src/**/*.ts\" \"server/src/**/*.ts\" \"server/tests/**/*.ts\" \"server/benchmarks/**/*.ts\" \"client/src/**/*.{ts,tsx}\"",
     "typecheck": "npm run typecheck:shared && npm run typecheck:server && npm run typecheck:client",
     "typecheck:shared": "cd shared && npx tsc --noEmit",
-    "typecheck:server": "cd server && npx tsc --noEmit",
+    "typecheck:server": "cd server && npx tsc --noEmit && npx tsc -p tsconfig.test.json --noEmit",
     "typecheck:client": "cd client && npx tsc -p tsconfig.app.json --noEmit && npx tsc -p tsconfig.node.json --noEmit",
-    "music:import": "node scripts/audio/import-provided-music.mjs"
+    "music:import": "node scripts/audio/import-provided-music.mjs",
+    "emoji:import": "node scripts/emoji/import-provided-emoji.mjs"
   },
   "engines": {
     "node": ">=22.13.0"
@@ -29,6 +30,9 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.11.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "sharp": "^0.35.5",
+    "typescript": "~6.0.2",
     "typescript-eslint": "^8.71.0"
   }
 }

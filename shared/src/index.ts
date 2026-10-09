@@ -1,7 +1,8 @@
-// ─── Shared 層入口 ───
+// ─── Shared entry point ───
 
 export * from './types/index';
 export * from './constants/index';
 export * from './rules/bigtwo';
 export * from './rules/redpoints';
 export * from './rules/ninetynine';
+export * from './rules/seats';

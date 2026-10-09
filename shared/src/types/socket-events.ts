@@ -11,7 +11,17 @@ export interface PlayerSnapshot {
   player?: PlayerInfo;
   room?: RoomInfo;
   gameState?: PlayerVisibleGameState;
+  /**
+   * Complete room history, sent on resume and when the room changes; it replaces local
+   * history. Broadcasts omit it while the room is unchanged and send `chat:message` instead.
+   */
   chatHistory?: ChatMessage[];
+}
+
+/** One new message appended to the recipient's current room history. */
+export interface ChatMessageEvent {
+  roomCode: RoomCode;
+  message: ChatMessage;
 }
 
 export interface ActionResult {
@@ -83,7 +93,12 @@ export interface ClientToServerEvents {
     payload: { agree: boolean }, callback: (response: ActionResult) => void,
   ) => void;
   'chat:send': (
-    payload: { message: string; stickerId?: never } | { stickerId: string; message?: never }, callback: (response: ActionResult) => void,
+    payload:
+      | { message: string; stickerId?: never; providedSticker?: never }
+      | { stickerId: string; message?: never; providedSticker?: never }
+      /** Name of a site-provided emoji sent as a sticker. */
+      | { providedSticker: string; message?: never; stickerId?: never },
+    callback: (response: ActionResult) => void,
   ) => void;
 }
 
@@ -92,6 +107,7 @@ export interface ServerToClientEvents {
   'voice:signal': (payload: VoiceIncomingSignal) => void;
   'voice:left': (payload: { reason: string }) => void;
   'player:state': (payload: PlayerSnapshot) => void;
+  'chat:message': (payload: ChatMessageEvent) => void;
   'room:invited': (payload: RoomInvite) => void;
 }
 

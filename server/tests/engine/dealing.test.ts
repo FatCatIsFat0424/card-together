@@ -55,10 +55,6 @@ describe('dealing engine', () => {
 
   describe('calculateHandPoints', () => {
     it('should return 0 for hand with no face cards', () => {
-      const hand: Card[] = Array.from({ length: 13 }, (_, i) => ({
-        suit: 'spades' as const,
-        rank: (2 + (i % 9)) as Card['rank'],
-      }));
       // All ranks 2-10
       const lowHand: Card[] = [
         { suit: 'spades', rank: 2 }, { suit: 'spades', rank: 3 },

@@ -1,13 +1,13 @@
-// ─── ID 生成工具 ───
+// ─── ID generation utilities ───
 
 import { randomInt, randomUUID } from 'node:crypto';
 import type { RoomCode } from '@shared/types';
 import { ROOM_CODE_LENGTH } from '@shared/constants';
 
 /**
- * 生成房間代碼
- * 格式：6 碼大寫英數字（排除易混淆字元 0/O/I/1）
- * 碰撞檢查由呼叫者負責
+ * Generate a room code
+ * Format: 6 uppercase alphanumeric characters (excluding confusable 0/O/I/1)
+ * The caller is responsible for collision checks
  */
 export function generateRoomCode(): RoomCode {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -19,8 +19,8 @@ export function generateRoomCode(): RoomCode {
 }
 
 /**
- * 生成聊天訊息 ID
- * 格式：UUID v4
+ * Generate a chat message id
+ * Format: UUID v4
  */
 export function generateMessageId(): string {
   return randomUUID();

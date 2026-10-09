@@ -32,6 +32,14 @@ function snapshot(): RuntimeSnapshot {
   return structuredClone(currentState());
 }
 
+function notify(callback: (() => void) | undefined): void {
+  try {
+    callback?.();
+  } catch (error) {
+    console.error('[runtime] Post-commit notification failed:', error);
+  }
+}
+
 function restore(state: RuntimeSnapshot, restarting = false): void {
   playerManager.restorePlayers(state.players, restarting);
   roomManager.restoreRooms(state.rooms);
@@ -76,8 +84,9 @@ export async function createRuntimeCoordinator(repository: Pick<Repository, 'loa
         throw error;
       }
       // Notifications run only after durability is established, outside rollback handling.
-      options.afterCommit?.();
-      for (const listener of listeners) listener();
+      // A failing notifier must not report the committed mutation as failed.
+      notify(options.afterCommit);
+      for (const listener of listeners) notify(listener);
       return value;
     });
     queue = result.then(() => undefined, () => undefined);

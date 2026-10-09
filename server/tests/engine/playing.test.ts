@@ -3,7 +3,6 @@ import {
   createPlayingState,
   getValidPlays,
   validatePlay,
-  applyPlay,
   compareCards,
   determineTrickWinner,
   completeTrick,

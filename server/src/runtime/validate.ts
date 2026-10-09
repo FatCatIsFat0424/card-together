@@ -1,7 +1,7 @@
 import { isTimeControl } from '@shared/time-control';
 import { getTurnSeat } from '../managers/game-clock';
 import {
-  ABORT_VOTE_THRESHOLD, GAME_TYPES, MAX_MESSAGE_EMOJIS, isEmojiName, isMediaId,
+  ABORT_VOTE_THRESHOLD, GAME_TYPES, MAX_MESSAGE_EMOJIS, isEmojiName, isMediaId, isProvidedEmojiFile,
 } from '@shared/constants';
 import { isDeepStrictEqual } from 'node:util';
 import { getPresentationEndsAt } from '@shared/game-presentation';
@@ -55,6 +55,28 @@ function messageEmojis(value: unknown): boolean {
   const entries = Object.entries(value);
   return entries.length <= MAX_MESSAGE_EMOJIS &&
     entries.every(([name, mediaId]) => isEmojiName(name) && isMediaId(mediaId));
+}
+
+function providedMessageEmojis(value: unknown): boolean {
+  if (!object(value)) return false;
+  const entries = Object.entries(value);
+  return entries.length <= MAX_MESSAGE_EMOJIS &&
+    entries.every(([name, file]) => isEmojiName(name) && isProvidedEmojiFile(file));
+}
+
+/** Personal and provided inline emoji share the per-message cap and never overlap. */
+function inlineEmojiTotal(message: ObjectValue): boolean {
+  const personal = object(message.emojis) ? Object.keys(message.emojis) : [];
+  const provided = object(message.providedEmojis) ? Object.keys(message.providedEmojis) : [];
+  return personal.length + provided.length <= MAX_MESSAGE_EMOJIS &&
+    !provided.some((name) => personal.includes(name));
+}
+
+/** A sticker message carries exactly one image and no text, inline emoji, or system flag. */
+function stickerOnly(message: ObjectValue, field: 'sticker' | 'providedSticker'): boolean {
+  return message.content === '' && message.system === undefined &&
+    message.emojis === undefined && message.providedEmojis === undefined &&
+    message[field === 'sticker' ? 'providedSticker' : 'sticker'] === undefined;
 }
 
 function card(value: unknown): boolean {
@@ -336,7 +358,9 @@ function gameClock(value: ObjectValue): boolean {
     || !oneOf(clock.lastTimeout.seat, seats) || !number(clock.lastTimeout.at))) return false;
   const state = value as unknown as AnyGameState;
   const expectedSeat = getTurnSeat(state);
-  if (!expectedSeat || (state.gameType === 'bigtwo' && state.pendingAutoPass)) return clock.turn === null;
+  if (!expectedSeat) return clock.turn === null;
+  // Legacy forced passes were saved without a public turn.
+  if (state.gameType === 'bigtwo' && state.pendingAutoPass && clock.turn === null) return true;
   const turn = clock.turn;
   return object(turn) && text(turn.id) && turn.id.length <= 128 && turn.seat === expectedSeat
     && number(turn.startsAt) && turn.startsAt >= getPresentationEndsAt(state)
@@ -345,9 +369,17 @@ function gameClock(value: ObjectValue): boolean {
     && turn.deadline === turn.startsAt + turn.baseRemainingMs + clock.bankRemainingMs[expectedSeat];
 }
 
+function returnedSeats(value: ObjectValue): boolean {
+  if (value.returnedSeats === undefined) return true;
+  const returned = value.returnedSeats;
+  return value.result !== null && Array.isArray(returned) && returned.length < 4
+    && returned.every((seat: unknown) => oneOf(seat, seats)) && new Set(returned).size === returned.length;
+}
+
 function game(value: unknown): boolean {
   return object(value) && oneOf(value.gameType, [...GAME_TYPES]) &&
-    gameValidators[value.gameType as GameType](value) && presentation(value) && gameClock(value);
+    gameValidators[value.gameType as GameType](value) && presentation(value) && gameClock(value)
+    && returnedSeats(value);
 }
 
 function bridgeGame(value: ObjectValue): boolean {
@@ -661,9 +693,17 @@ export function isRuntimeSnapshot(value: unknown): value is RuntimeSnapshot {
               object(message.sticker) && text(message.sticker.id) &&
               isEmojiName(message.sticker.name) && isMediaId(message.sticker.mediaId) &&
               Object.keys(message.sticker).every((key) => ['id', 'name', 'mediaId'].includes(key)) &&
-              message.content === '' && message.system === undefined && message.emojis === undefined
+              stickerOnly(message, 'sticker')
+            )) &&
+            (message.providedSticker === undefined || (
+              object(message.providedSticker) && isEmojiName(message.providedSticker.name) &&
+              isProvidedEmojiFile(message.providedSticker.file) &&
+              Object.keys(message.providedSticker).every((key) => ['name', 'file'].includes(key)) &&
+              stickerOnly(message, 'providedSticker')
             )) &&
             (message.emojis === undefined || messageEmojis(message.emojis)) &&
+            (message.providedEmojis === undefined || providedMessageEmojis(message.providedEmojis)) &&
+            inlineEmojiTotal(message) &&
             (message.system === undefined || message.system === true),
         ),
     )

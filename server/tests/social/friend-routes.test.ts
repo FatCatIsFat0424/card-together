@@ -10,6 +10,7 @@ import { protectMutations } from '../../src/auth/http-middleware';
 import { createJsonRepository } from '../../src/database/json-repository';
 import type { Repository } from '../../src/database/repository';
 import { createFriendRouter } from '../../src/http/friend-routes';
+import type { FriendPresence } from '../../src/http/friend-routes';
 
 const ORIGIN = 'http://localhost:5173';
 const PASSWORD_HASH = `scrypt$131072$8$1$${'a'.repeat(32)}$${'b'.repeat(128)}`;
@@ -20,6 +21,7 @@ describe('friend HTTP routes', () => {
   let server: Server;
   let baseUrl: string;
   let cookies: Record<string, string>;
+  let presence: Map<string, FriendPresence>;
 
   beforeEach(async (): Promise<void> => {
     directory = await mkdtemp(join(tmpdir(), 'bridge-friend-routes-'));
@@ -37,6 +39,9 @@ describe('friend HTTP routes', () => {
         avatar: 'cat',
         avatarImage: null,
         tableBackground: null,
+        tableBackgroundOpacity: 100,
+        cardBack: null,
+        cardBackOpacity: 100,
         matchesPublic: false,
         createdAt: now,
         updatedAt: now,
@@ -53,7 +58,9 @@ describe('friend HTTP routes', () => {
     const app = express();
     app.use(express.json());
     app.use(protectMutations([ORIGIN]));
-    app.use('/api/friends', createFriendRouter(repository, createAuthService(repository)));
+    presence = new Map();
+    app.use('/api/friends', createFriendRouter(repository, createAuthService(repository),
+      async (ids) => new Map(ids.flatMap((id) => presence.has(id) ? [[id, presence.get(id)!] as const] : []))));
     server = createServer(app);
     await new Promise<void>((resolve): void => {
       server.listen(0, '127.0.0.1', resolve);
@@ -118,8 +125,11 @@ describe('friend HTTP routes', () => {
     expect(await accepted.json()).toEqual({ success: true });
     const listed = await fetch(baseUrl, { headers: headers('alice') });
     expect(await listed.json()).toMatchObject({
-      success: true, friends: [{ id: 'bob' }], incoming: [], outgoing: [],
+      success: true, friends: [{ id: 'bob', online: false, inRoom: false }], incoming: [], outgoing: [],
     });
+    presence.set('bob', { online: true, inRoom: true });
+    const present = await fetch(baseUrl, { headers: headers('alice') });
+    expect(await present.json()).toMatchObject({ friends: [{ id: 'bob', online: true, inRoom: true }] });
     const removed = await fetch(`${baseUrl}/bob`, { method: 'DELETE', headers: headers('alice') });
     expect(await removed.json()).toEqual({ success: true });
     const empty = await fetch(baseUrl, { headers: headers('bob') });

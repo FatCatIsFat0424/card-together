@@ -4,7 +4,14 @@ import type { AuthService } from '../auth/auth-service';
 import { getRequestSession, requireSession } from '../auth/http-middleware';
 import type { Repository } from '../database/repository';
 import { createFriendService } from '../social/friend-service';
-import * as playerManager from '../managers/player-manager';
+
+export interface FriendPresence {
+  readonly online: boolean;
+  readonly inRoom: boolean;
+}
+
+/** Reads committed runtime presence; injected so HTTP routes never touch managers directly. */
+export type PresenceReader = (accountIds: readonly string[]) => Promise<ReadonlyMap<string, FriendPresence>>;
 
 function handleAsync(
   handler: (request: Request, response: Response) => Promise<void>,
@@ -20,7 +27,9 @@ function usernameFromBody(body: unknown): unknown {
     : undefined;
 }
 
-export function createFriendRouter(repository: Repository, authService: AuthService): Router {
+export function createFriendRouter(
+  repository: Repository, authService: AuthService, readPresence: PresenceReader,
+): Router {
   const router = Router();
   const friends = createFriendService(repository);
   router.use(requireSession(authService));
@@ -28,11 +37,10 @@ export function createFriendRouter(repository: Repository, authService: AuthServ
   router.get('/', handleAsync(async (_request, response): Promise<void> => {
     const { account } = getRequestSession(response);
     const list = await friends.list(account.id);
-    response.json({ success: true, ...list, friends: list.friends.map((friend) => {
-      const state = playerManager.getPlayerState(friend.id);
-      return { ...friend, online: state?.connectionStatus === 'connected',
-        inRoom: Boolean(state?.currentRoomCode) };
-    }) });
+    const presence = await readPresence(list.friends.map((friend) => friend.id));
+    response.json({ success: true, ...list, friends: list.friends.map((friend) => ({
+      ...friend, online: presence.get(friend.id)?.online ?? false, inRoom: presence.get(friend.id)?.inRoom ?? false,
+    })) });
   }));
 
   router.get('/search', handleAsync(async (request, response): Promise<void> => {

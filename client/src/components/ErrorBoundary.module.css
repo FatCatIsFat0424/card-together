@@ -1,0 +1,10 @@
+.fallback {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--spacing-md);
+  min-height: 50vh;
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--text-primary);
+}

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { AUDIO_UNLOCK_EVENTS } from '../audio/audio-unlock';
 import { createTurnSound } from '../audio/turn-sound';
 import { createTurnSoundController } from '../audio/turn-sound-controller';
 import type { TurnSoundSnapshot } from '../audio/turn-sound-controller';
@@ -56,8 +57,7 @@ export function useTurnSound(): void {
     const unlock = (event: Event): void => {
       if (event.isTrusted) audio.unlock();
     };
-    window.addEventListener('pointerdown', unlock);
-    window.addEventListener('keydown', unlock);
+    for (const event of AUDIO_UNLOCK_EVENTS) window.addEventListener(event, unlock);
     const unsubscribe = [useGameStore.subscribe(update), useRoomStore.subscribe(update),
       useAccountStore.subscribe(update), useTurnSoundStore.subscribe(update)];
     update();
@@ -65,8 +65,7 @@ export function useTurnSound(): void {
       disposed = true;
       if (presentationTimer !== null) clearTimeout(presentationTimer);
       unsubscribe.forEach((remove) => remove());
-      window.removeEventListener('pointerdown', unlock);
-      window.removeEventListener('keydown', unlock);
+      for (const event of AUDIO_UNLOCK_EVENTS) window.removeEventListener(event, unlock);
       controller.dispose();
     };
   }, []);

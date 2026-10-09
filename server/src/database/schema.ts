@@ -1,6 +1,6 @@
 import { isBigTwoResult, isNinetyNineResult, isRedPointsResult, isRuntimeSnapshot } from '../runtime/validate';
 import {
-  GAME_TYPES, MAX_EMOJIS_PER_ACCOUNT, NICKNAME_MAX_LENGTH, isEmojiName, isMediaId,
+  GAME_TYPES, MAX_EMOJIS_PER_ACCOUNT, NICKNAME_MAX_LENGTH, isEmojiName, isImageOpacity, isMediaId,
 } from '@shared/constants';
 import type { GameType } from '@shared/types';
 import type { RuntimeSnapshot } from '../runtime/types';
@@ -51,6 +51,9 @@ function validAccount(value: unknown): value is AccountRecord {
     ['cat', 'fox', 'owl', 'bear', 'rabbit', 'panda'].includes(value.avatar) &&
     (value.avatarImage === null || isMediaId(value.avatarImage)) &&
     (value.tableBackground === null || isMediaId(value.tableBackground)) &&
+    isImageOpacity(value.tableBackgroundOpacity) &&
+    (value.cardBack === null || isMediaId(value.cardBack)) &&
+    isImageOpacity(value.cardBackOpacity) &&
     typeof value.matchesPublic === 'boolean' &&
     typeof value.passwordHash === 'string' &&
     /^scrypt\$131072\$8\$1\$[\da-f]{32}\$[\da-f]{128}$/.test(value.passwordHash) &&

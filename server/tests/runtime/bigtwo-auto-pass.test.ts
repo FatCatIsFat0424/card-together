@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import * as crypto from 'node:crypto';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import * as nodeCrypto from 'node:crypto';
 import { getPresentationEndsAt } from '@shared/game-presentation';
 import * as manager from '../../src/managers/game-manager';
 import { createRuntimeCoordinator } from '../../src/runtime/coordinator';
@@ -14,6 +14,9 @@ import * as bigtwo from '../../src/managers/games/bigtwo-game';
 vi.mock('node:crypto', async (importOriginal) => ({
   ...await importOriginal<typeof import('node:crypto')>(), randomInt: vi.fn(() => 1500),
 }));
+
+// randomInt is overloaded; expose only the synchronous signature the tests stub.
+const crypto = { randomInt: nodeCrypto.randomInt as unknown as Mock<(max: number) => number> };
 
 const CODE = 'AUTO01';
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
@@ -99,8 +102,10 @@ describe('Big Two delayed automatic passing', () => {
     const stopPasses = await startBigTwoAutoPass(runtime, forced);
     try {
       await runtime.mutate(() => expect(manager.handleBigTwoPlay(CODE, 'N', [card('spades', 2)]).success).toBe(true));
-      expect(game().clock!.turn).toBeNull();
+      const turn = game().clock!.turn!;
+      expect(turn.seat).toBe('W');
       const deadline = game().pendingAutoPass!.executeAt;
+      expect(deadline).toBeLessThanOrEqual(turn.startsAt + turn.baseRemainingMs);
       await vi.advanceTimersByTimeAsync(deadline - Date.now());
       await runtime.idle();
       expect(forced).toHaveBeenCalledTimes(1);
@@ -111,6 +116,39 @@ describe('Big Two delayed automatic passing', () => {
       stopTimers();
       stopPasses();
     }
+  });
+
+  it('should publish a forced-pass turn indistinguishable from a decision turn', () => {
+    const observe = (hands: Record<Seat, Card[]>, lead: Card): { pending: boolean; views: unknown[] } => {
+      restoreHands(hands);
+      manager.initializeClock(CODE);
+      expect(manager.handleBigTwoPlay(CODE, 'N', [lead])).toEqual({ success: true });
+      const views = SEATS.filter((seat) => seat !== 'W').map((seat) => {
+        const clock = manager.getPlayerVisibleState(CODE, seat)!.clock!;
+        return { ...clock, turn: clock.turn && { ...clock.turn, id: 'turn' } };
+      });
+      return { pending: game().pendingAutoPass !== undefined, views };
+    };
+    const forced = observe(singleHands(), card('spades', 2));
+    const decision = observe({ ...singleHands(), N: [card('clubs', 7), card('clubs', 3)], W: [card('spades', 14)] },
+      card('clubs', 7));
+    expect(forced.pending).toBe(true);
+    expect(decision.pending).toBe(false);
+    expect(forced.views).toEqual(decision.views);
+    expect(forced.views[0]).toMatchObject({ turn: { seat: 'W' } });
+  });
+
+  it('should keep a forced pass within a short turn allowance and never charge the reserve', () => {
+    const random = vi.mocked(crypto.randomInt).mockImplementation((max: number) => max - 1);
+    restoreHands(singleHands());
+    manager.initializeClock(CODE, { baseSeconds: 2, bankSeconds: 20 });
+    manager.handleBigTwoPlay(CODE, 'N', [card('spades', 2)]);
+    expect(random).toHaveBeenCalledWith(2001);
+    const turn = game().clock!.turn!;
+    expect(game().pendingAutoPass!.executeAt).toBe(turn.startsAt + 2000);
+    vi.setSystemTime(turn.startsAt + 9000);
+    expect(manager.handleBigTwoPass(CODE, 'W')).toEqual({ success: true });
+    expect(game().clock!.bankRemainingMs.W).toBe(20000);
   });
 
   it.each([0, 5000])('should sample %i ms after presentation without exposing an early pass', (delay) => {

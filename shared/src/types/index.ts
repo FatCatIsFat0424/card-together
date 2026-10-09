@@ -1,4 +1,4 @@
-// ─── Types 統一匯出 ───
+// ─── Types barrel ───
 
 export type {
   PlayerId,
@@ -61,13 +61,14 @@ export type {
 } from './game';
 
 export type { ChatMessage } from './chat';
-export type { EmojiRecord } from './emoji';
+export type { EmojiRecord, ProvidedEmoji } from './emoji';
 export type { AccountProfile, AvatarPreset, AvatarId, MediaId } from './account';
 
 export type {
   ClientToServerEvents,
   ServerToClientEvents,
   PlayerSnapshot,
+  ChatMessageEvent,
   RoomInvite,
 } from './socket-events';
 

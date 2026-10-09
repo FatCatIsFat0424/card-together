@@ -1,4 +1,4 @@
-// ─── GameInfoRail 元件：左側資訊欄（合約、墩數、叫牌過程） ───
+// ─── GameInfoRail: left info rail (contract, tricks, auction) ───
 
 import type { ReactNode } from 'react';
 import { useShallow } from 'zustand/react/shallow';

@@ -107,6 +107,22 @@ describe('account HTTP routes', () => {
     expect((await fetch(`${baseUrl}/me`, { headers: { Cookie: cookie } })).status).toBe(401);
   });
 
+  it('should report a saved profile as successful when live sync fails', async () => {
+    const { cookie, id } = await register();
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    onAccountUpdated.mockRejectedValueOnce(new Error('runtime unavailable'));
+    const updated = await fetch(`${baseUrl}/profile`, {
+      method: 'PATCH',
+      headers: { ...HEADERS, Cookie: cookie },
+      body: JSON.stringify({ nickname: 'Saved anyway' }),
+    });
+    expect(updated.status).toBe(200);
+    expect(await updated.json()).toMatchObject({ success: true, account: { id, nickname: 'Saved anyway' } });
+    expect(error).toHaveBeenCalledTimes(1);
+    expect((await repository.getAccountById(id))?.nickname).toBe('Saved anyway');
+    error.mockRestore();
+  });
+
   it('should migrate a legacy cookie without exposing the token or extending its expiry', async () => {
     const { id } = await register();
     const token = 'a'.repeat(43);

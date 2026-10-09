@@ -113,8 +113,8 @@ describe('capture and survival bot strategies', () => {
     });
   });
 
-  it('varies designation among surviving opponents and preserves the input', () => {
-    const state = ninetyNineState({ total: 99, myHand: [card('clubs', 5)], eliminated: ['E'] });
+  it('varies designation among similarly rated surviving opponents and preserves the input', () => {
+    const state = ninetyNineState({ total: 20, myHand: [card('clubs', 5)], eliminated: ['E'] });
     const original = structuredClone(state);
     const random = seededRandom(77);
     const targets = new Set<Seat>();
@@ -125,6 +125,12 @@ describe('capture and survival bot strategies', () => {
     }
     expect(targets).toEqual(new Set(['S', 'W']));
     expect(state).toEqual(original);
+    // Near 99, designating W leaves S to act before N; designating S returns the turn to N at once.
+    for (const roll of [0, 0.5, 0.999]) {
+      expect(getNinetyNineBotAction({ ...state, total: 99 }, () => roll)).toEqual({
+        type: 'ninetynine-play', card: card('clubs', 5), target: 'W',
+      });
+    }
   });
 
   it.each([7, 19, 41, 97])('finishes legal randomized capture and survival games with seed %i', (seed) => {

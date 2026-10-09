@@ -46,7 +46,8 @@ export interface Repository {
     id: string,
     profile: Pick<
       AccountProfile,
-      'nickname' | 'color' | 'avatar' | 'avatarImage' | 'tableBackground' | 'matchesPublic'
+      | 'nickname' | 'color' | 'avatar' | 'avatarImage' | 'tableBackground'
+      | 'tableBackgroundOpacity' | 'cardBack' | 'cardBackOpacity' | 'matchesPublic'
     >,
     now: number,
   ): Promise<AccountRecord | null>;
@@ -81,6 +82,8 @@ export interface Repository {
     now: number,
   ): Promise<EmojiRecord[]>;
   deleteEmoji(accountId: string, id: string): Promise<boolean>;
+  /** Deletes this account's entries among `ids` in one write; returns the deleted IDs. */
+  deleteEmojis(accountId: string, ids: readonly string[]): Promise<string[]>;
   /** Null when the emoji is not this account's; EMOJI_EXISTS when the name is taken. */
   renameEmoji(accountId: string, id: string, name: string): Promise<EmojiRecord | null>;
   close(): Promise<void>;
@@ -95,6 +98,9 @@ export function publicAccount(account: AccountRecord): AccountProfile {
     avatar: account.avatar,
     avatarImage: account.avatarImage,
     tableBackground: account.tableBackground,
+    tableBackgroundOpacity: account.tableBackgroundOpacity,
+    cardBack: account.cardBack,
+    cardBackOpacity: account.cardBackOpacity,
     matchesPublic: account.matchesPublic,
     createdAt: account.createdAt,
     updatedAt: account.updatedAt,

@@ -282,6 +282,17 @@ export async function createJsonRepository(filePath: string): Promise<Repository
           data.emojis.splice(index, 1);
           return true;
         }),
+      deleteEmojis: (accountId, ids) =>
+        write(['emojis'], (data) => {
+          const requested = new Set(ids);
+          const deleted: string[] = [];
+          data.emojis = data.emojis.filter((emoji) => {
+            const remove = emoji.accountId === accountId && requested.has(emoji.id);
+            if (remove) deleted.push(emoji.id);
+            return !remove;
+          });
+          return deleted;
+        }),
       renameEmoji: (accountId, id, name) =>
         write(['emojis'], (data) => {
           const index = data.emojis.findIndex(

@@ -2,7 +2,7 @@ import type { AnyGameState, GameClock, RoomCode } from '@shared/types';
 import { getBotAction } from '../bots/bot-decisions';
 import * as gameManager from '../managers/game-manager';
 import * as roomManager from '../managers/room-manager';
-import { applyAutomatedAction } from './automated-action';
+import { createFailureTracker, performAutomatedTurn } from './automated-action';
 import type { RuntimeCoordinator } from './coordinator';
 
 type Turn = NonNullable<GameClock['turn']>;
@@ -20,6 +20,7 @@ export async function startTurnTimers(
 ): Promise<() => void> {
   let stopped = false;
   const scheduled = new Map<RoomCode, { gameId: string; turnId: string; timer: ReturnType<typeof setTimeout> }>();
+  const failures = createFailureTracker();
 
   function reconcile(retryDelay = 0): void {
     if (stopped) return;
@@ -44,18 +45,16 @@ export async function startTurnTimers(
           const pending = current && pendingTurn(current);
           if (!current || current.id !== game.id || pending?.id !== turn.id
             || Date.now() < pending.deadline || gameManager.isPresentationActive(code)) return;
-          const visible = gameManager.getPlayerVisibleState(code, turn.seat);
-          const action = visible && getBotAction(visible);
-          if (!action) throw new Error('No legal action for the expired turn.');
-          const result = applyAutomatedAction(code, turn.seat, action);
-          if (!result.success) throw new Error(result.reason ?? 'Automatic turn rejected.');
-          if (current.clock) current.clock = { ...current.clock,
+          performAutomatedTurn(code, turn.seat, failures.count(code, turn.id), (visible) => getBotAction(visible));
+          if (current.clock && gameManager.getGameState(code) === current) current.clock = { ...current.clock,
             lastTimeout: { seat: turn.seat, at: Date.now() } };
           changed = true;
         }, { skipUnchanged: true, afterCommit: () => {
+          failures.clear(code);
           if (changed && !stopped) publish(code);
         } }).catch((error: unknown) => {
-          console.error('[runtime] Unable to commit expired turn:', error);
+          const count = failures.fail(code, turn.id);
+          console.error(`[runtime] Unable to commit expired turn (attempt ${count}):`, error);
           reconcile(1000);
         });
       }, Math.min(2_147_483_647, Math.max(0, retryDelay, turn.deadline - Date.now())));

@@ -7,32 +7,13 @@ import { useMusicStore } from '../stores/music-store';
 import { useTurnSoundStore } from '../stores/turn-sound-store';
 import styles from './MusicControl.module.css';
 
-const LABELS = {
-  'zh-TW': {
-    noTracks: '尚未加入音樂檔案。', title: '背景音樂',
-    play: '播放音樂', pause: '暫停音樂', volume: '音量', prev: '上一首', next: '下一首',
-    tracks: '曲目', loading: '載入中…', error: '無法播放音樂，請重試或使用支援音訊的瀏覽器。',
-    'loop-one': '單曲循環', sequential: '依序播放', shuffle: '隨機播放',
-    turnSound: '回合提醒音', turnSoundHint: '輪到自己時播放，與背景音樂分開控制。',
-  },
-  en: {
-    noTracks: 'No music files added yet.', title: 'Background music',
-    play: 'Play music', pause: 'Pause music', volume: 'Volume', prev: 'Previous track',
-    next: 'Next track', tracks: 'Tracks', loading: 'Loading…',
-    error: 'Music could not start. Try again or use a browser with audio support.',
-    'loop-one': 'Repeat one', sequential: 'Play in order', shuffle: 'Shuffle',
-    turnSound: 'Your-turn sound', turnSoundHint: 'Play when it is your turn, independently of music.',
-  },
-} as const;
-
 const MODE_ICONS: Record<MusicMode, string> = { 'loop-one': '🔂', sequential: '🔁', shuffle: '🔀' };
 const NEXT_MODE: Record<MusicMode, MusicMode> = { 'loop-one': 'sequential', sequential: 'shuffle', shuffle: 'loop-one' };
 
 export function MusicControl(): ReactNode {
   const turnSoundEnabled = useTurnSoundStore((state) => state.enabled);
   const setTurnSoundEnabled = useTurnSoundStore((state) => state.setEnabled);
-  const locale = useI18nStore((state) => state.locale);
-  const labels = LABELS[locale];
+  const { t } = useI18nStore();
   const { providedTrackId, playing, busy, error, volume, mode, toggle, play, next, prev, setMode, setVolume } = useMusicStore(
     useShallow((state) => ({
       providedTrackId: state.providedTrackId,
@@ -53,28 +34,28 @@ export function MusicControl(): ReactNode {
   const hasTracks = PROVIDED_MUSIC_TRACKS.length > 0;
 
   return (
-    <section className={styles.panel} aria-label={labels.title}>
-      <span className={styles.title}><span aria-hidden="true">♫ </span>{labels.title}</span>
+    <section className={styles.panel} aria-label={t('music.title')}>
+      <span className={styles.title}><span aria-hidden="true">♫ </span>{t('music.title')}</span>
       <p className={styles.nowPlaying} aria-live="polite">
-        {busy ? labels.loading : providedTrack?.title ?? labels.noTracks}
+        {busy ? t('music.loading') : providedTrack?.title ?? t('music.noTracks')}
       </p>
       <div className={styles.controls}>
-        <button type="button" className={styles.control} aria-label={labels.prev} title={labels.prev}
+        <button type="button" className={styles.control} aria-label={t('music.prev')} title={t('music.prev')}
           disabled={busy || !hasTracks} onClick={() => void prev()}>⏮</button>
         <button type="button" className={styles.control} aria-pressed={playing}
-          aria-label={playing || busy ? labels.pause : labels.play} title={playing || busy ? labels.pause : labels.play} disabled={!hasTracks} onClick={() => void toggle()}>⏯</button>
-        <button type="button" className={styles.control} aria-label={labels.next} title={labels.next}
+          aria-label={playing || busy ? t('music.pause') : t('music.play')} title={playing || busy ? t('music.pause') : t('music.play')} disabled={!hasTracks} onClick={() => void toggle()}>⏯</button>
+        <button type="button" className={styles.control} aria-label={t('music.next')} title={t('music.next')}
           disabled={busy || !hasTracks} onClick={() => void next()}>⏭</button>
-        <button type="button" className={styles.control} aria-label={labels[mode]} title={labels[mode]}
+        <button type="button" className={styles.control} aria-label={t(`music.${mode}`)} title={t(`music.${mode}`)}
           disabled={busy} onClick={() => setMode(NEXT_MODE[mode])}>{MODE_ICONS[mode]}</button>
       </div>
       <label htmlFor="music-volume" className={styles.volume}>
-        <span>{labels.volume}</span>
+        <span>{t('music.volume')}</span>
         <input id="music-volume" type="range" min="0" max="100" step="1"
           value={Math.round(volume * 100)} onChange={(event) => setVolume(Number(event.target.value) / 100)} />
         <output htmlFor="music-volume">{Math.round(volume * 100)}%</output>
       </label>
-      <ul className={styles.tracks} aria-label={labels.tracks}>
+      <ul className={styles.tracks} aria-label={t('music.tracks')}>
         {PROVIDED_MUSIC_TRACKS.map((track) => <li key={track.id}>
           <button type="button" className={styles.track} aria-current={track.id === providedTrackId}
             onClick={() => void play(track.id)}>
@@ -86,11 +67,11 @@ export function MusicControl(): ReactNode {
         <label className={styles.soundToggle}>
           <input type="checkbox" checked={turnSoundEnabled}
             onChange={(event) => setTurnSoundEnabled(event.target.checked)} />
-          <span>{labels.turnSound}</span>
+          <span>{t('music.turnSound')}</span>
         </label>
-        <p className={styles.attributes}>{labels.turnSoundHint}</p>
+        <p className={styles.attributes}>{t('music.turnSoundHint')}</p>
       </div>
-      {error && <p className={styles.error} role="alert">{labels.error}</p>}
+      {error && <p className={styles.error} role="alert">{t('music.error')}</p>}
     </section>
   );
 }

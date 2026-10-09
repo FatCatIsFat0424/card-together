@@ -24,12 +24,17 @@ function account(username: string): AccountRecord {
     avatar: 'cat',
     avatarImage: null,
     tableBackground: null,
+    tableBackgroundOpacity: 100,
+    cardBack: null,
+    cardBackOpacity: 100,
     matchesPublic: false,
     passwordHash: PASSWORD_HASH,
     createdAt: 100,
     updatedAt: 100,
   };
 }
+
+const PROFILE_DEFAULTS = { avatarImage: null, tableBackground: null, tableBackgroundOpacity: 100, cardBack: null, cardBackOpacity: 100, matchesPublic: false };
 
 function match(id: string, accounts: readonly AccountRecord[], finishedAt: number): MatchRecord {
   return {
@@ -69,7 +74,7 @@ describe('JSON repository', () => {
     await repository.close();
     repository = await createJsonRepository(path);
     for (const entry of accounts) expect(await repository.getAccountById(entry.id)).toEqual(entry);
-    expect(JSON.parse(await readFile(path, 'utf8')).schemaVersion).toBe(3);
+    expect(JSON.parse(await readFile(path, 'utf8')).schemaVersion).toBe(4);
   });
 
   it('should enforce case-normalized uniqueness atomically during concurrent registration', async () => {
@@ -240,7 +245,7 @@ describe('JSON repository', () => {
     await expect(
       repository.updateProfile(
         alice.id,
-        { nickname: 'Invalid', color: 'broken', avatar: 'fox' },
+        { ...PROFILE_DEFAULTS, nickname: 'Invalid', color: 'broken', avatar: 'fox' },
         200,
       ),
     ).rejects.toThrow();
@@ -248,7 +253,7 @@ describe('JSON repository', () => {
     expect(await repository.getAccountByUsername('alice')).toEqual(alice);
     const updated = await repository.updateProfile(
       alice.id,
-      { nickname: 'Updated', color: '#abcdef', avatar: 'fox' },
+      { ...PROFILE_DEFAULTS, nickname: 'Updated', color: '#abcdef', avatar: 'fox' },
       201,
     );
     expect(await repository.getAccountById(alice.id)).toEqual(updated);
@@ -326,7 +331,9 @@ describe('JSON repository', () => {
     ]);
     const history = await repository.listMatches(accounts[0].id);
     expect(history.map((entry) => entry.id)).toEqual(['newest', 'first', 'second']);
-    Object.assign(history[0].result.contract, { level: 7 });
+    const result = history[0].result;
+    if (result.gameType !== 'bridge') throw new Error('Expected a Bridge result');
+    Object.assign(result.contract, { level: 7 });
     (history[0].accountIds as string[]).splice(0, 1);
     expect((await repository.listMatches(accounts[0].id))[0]).toEqual(
       match('newest', original, 200),
@@ -401,5 +408,23 @@ describe('JSON repository', () => {
     expect(await repository.searchAccounts('PLAYER', '', 2.9)).toHaveLength(2);
     expect(await repository.searchAccounts('PLAYER', '', Infinity)).toHaveLength(50);
     expect(await repository.searchAccounts('missing', '')).toEqual([]);
+  });
+
+  it('should delete a batch of emoji all-or-nothing when persistence fails', async () => {
+    repository = await createJsonRepository(path);
+    const alice = await repository.createAccount(account('alice'));
+    const media = `${'c'.repeat(64)}.webp`;
+    const created = await repository.createEmojis(alice.id,
+      ['one', 'two', 'three'].map((name) => ({ name, mediaId: media })), 100);
+    const saved = await readFile(path, 'utf8');
+    vi.mocked(rename).mockRejectedValueOnce(Object.assign(new Error('Disk full'), { code: 'ENOSPC' }));
+
+    await expect(repository.deleteEmojis(alice.id, created.map((emoji) => emoji.id))).rejects.toThrow('Disk full');
+
+    expect(await readFile(path, 'utf8')).toBe(saved);
+    expect(await repository.listEmojis(alice.id)).toEqual(created);
+    expect(await repository.deleteEmojis(alice.id, [created[0].id, created[2].id]))
+      .toEqual([created[0].id, created[2].id]);
+    expect((await repository.listEmojis(alice.id)).map((emoji) => emoji.name)).toEqual(['two']);
   });
 });

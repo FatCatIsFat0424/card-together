@@ -1,4 +1,5 @@
 import type { EmojiRecord } from '@shared/types';
+import { isEmojiName } from '@shared/constants';
 import type { SocketContext, TypedSocket } from './context';
 import { actionError, requireRoom, runAction } from './context';
 import * as playerManager from '../managers/player-manager';
@@ -24,12 +25,20 @@ export function registerChatHandlers(context: SocketContext, socket: TypedSocket
           if (!chatManager.addSticker(roomCode, player, payload.stickerId, library)) {
             throw actionError('Sticker is not in your library.');
           }
+        } else if ('providedSticker' in payload) {
+          if (!isEmojiName(payload.providedSticker) ||
+            Object.keys(payload).some((key) => key !== 'providedSticker')) {
+            throw actionError('Invalid sticker payload.');
+          }
+          if (!chatManager.addProvidedSticker(roomCode, player, payload.providedSticker, context.providedEmojis)) {
+            throw actionError('Sticker is not available.');
+          }
         } else {
           const content = payload.message;
           if (typeof content !== 'string' || !content.trim() || content.trim().length > 500) {
             throw actionError('Messages must contain 1–500 characters.');
           }
-          chatManager.addMessage(roomCode, player, content.trim(), library);
+          chatManager.addMessage(roomCode, player, content.trim(), library, context.providedEmojis);
         }
         return { success: true };
       }));

@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import type { MediaId } from '@shared/types';
-import { isEmojiName, isMediaId } from '@shared/constants';
+import { MAX_EMOJIS_PER_ACCOUNT, isEmojiName, isMediaId } from '@shared/constants';
 import type { AuthService } from '../auth/auth-service';
 import { getRequestSession, requireSession } from '../auth/http-middleware';
 import type { Repository } from '../database/repository';
 
 const MAX_BATCH = 50;
+const NAME_RULE = '2–64 letters, digits, _, - or ., starting with a letter, digit or _';
 const CONFLICTS: Record<string, number> = { EMOJI_EXISTS: 409, EMOJI_LIMIT: 409 };
 
 function handleAsync(
@@ -42,6 +43,13 @@ function parseItems(
     ? items as { name: string; mediaId: MediaId }[] : null;
 }
 
+/** 1 to a full library of unique, non-empty ID strings. */
+function parseIds(value: unknown): string[] | null {
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_EMOJIS_PER_ACCOUNT) return null;
+  const valid = value.every((id: unknown) => typeof id === 'string' && id.length > 0 && id.length <= 64);
+  return valid && new Set(value).size === value.length ? value as string[] : null;
+}
+
 export function createEmojiRouter(
   repository: Repository,
   authService: AuthService,
@@ -59,7 +67,7 @@ export function createEmojiRouter(
     const items = parseItems(field(request.body, 'items'), mediaExists);
     if (!items) {
       response.status(400).json({ success: false, error:
-        `Send 1–${MAX_BATCH} emoji with unique names (2–32 of a–z, 0–9, _) and uploaded images.` });
+        `Send 1–${MAX_BATCH} emoji with unique names (${NAME_RULE}) and uploaded images.` });
       return;
     }
     const { account } = getRequestSession(response);
@@ -67,11 +75,23 @@ export function createEmojiRouter(
     response.status(201).json({ success: true, emojis });
   }));
 
+  // A POST body instead of DELETE with a body, which some proxies and clients drop.
+  router.post('/delete', handleAsync(async (request, response): Promise<void> => {
+    const ids = parseIds(field(request.body, 'ids'));
+    if (!ids) {
+      response.status(400).json({ success: false, error:
+        `Send 1–${MAX_EMOJIS_PER_ACCOUNT} unique emoji IDs.` });
+      return;
+    }
+    const { account } = getRequestSession(response);
+    response.json({ success: true, deleted: await repository.deleteEmojis(account.id, ids) });
+  }));
+
   router.patch('/:id', handleAsync(async (request, response): Promise<void> => {
     const name = field(request.body, 'name');
     if (!isEmojiName(name)) {
       response.status(400).json({ success: false, error:
-        'Emoji names use 2–32 lowercase letters, numbers, or underscores.' });
+        `Emoji names use ${NAME_RULE}.` });
       return;
     }
     const { account } = getRequestSession(response);

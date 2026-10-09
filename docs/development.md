@@ -1,7 +1,9 @@
 # Development
 
 Use the [README](../README.md) startup commands and [AGENTS.md](../AGENTS.md)
-implementation rules. Install dependencies from the root with `npm ci`.
+implementation rules. Use the exact Node.js version in `.node-version` (the default
+`node` of an older shell fails; deployment enforces the pinned version) and install
+dependencies from the root with `npm ci`. All workspaces share the root TypeScript version.
 
 ## Configuration
 
@@ -13,7 +15,7 @@ reference and is not auto-loaded. Vite loads `client/.env.local` on startup/buil
 | `PORT` | Defaults to `3001` |
 | `HOST` | Optional bind address; use `127.0.0.1` behind local Nginx |
 | `DATABASE_PATH` | Defaults to `server/data/database.json`, independent of cwd; relative overrides resolve from cwd |
-| `CLIENT_ORIGIN` | Comma-separated exact origins; development defaults to localhost/127.0.0.1 port 5173; required in production |
+| `CLIENT_ORIGIN` | Comma-separated exact `http(s)://host[:port]` origins without path, trailing slash, or default port; invalid entries stop startup; development defaults to localhost/127.0.0.1 port 5173; required in production |
 | `NODE_ENV` | `production` enables Secure cookies and requires HTTPS |
 | `TRUST_PROXY_LOOPBACK` | Defaults to `false`; enable only for a trusted local proxy overwriting forwarded client addresses |
 
@@ -38,8 +40,14 @@ for script in deploy/*.sh; do bash -n "$script"; done
 python3 -B -m unittest discover -s deploy/tests
 ```
 
-Typecheck covers all workspaces, including both client TypeScript configurations.
-Root lint covers shared/server/client source. Vitest runs from `server/` and discovers
+`build:client` runs the music/emoji imports and the client build directly from the root:
+npm 9 returns success from `npm run` inside a workspace even when the script fails.
+
+Typecheck covers all workspaces, including both client TypeScript configurations and
+`server/tests`/`server/benchmarks` (`server/tsconfig.test.json`). Root lint covers
+shared/server/client source plus server tests and benchmarks, applies the React hooks
+rules to the client, and reports floating promises as warnings. CI
+(`.github/workflows/ci.yml`) runs these checks and the deployment checks on every push and pull request. Vitest runs from `server/` and discovers
 `tests/**/*.test.ts`, including browser-controller tests executed in Node. Deployment
 helpers use Python standard-library unittest; they do not need a new test framework.
 No separate formatter or secret-check command is configured.
@@ -47,7 +55,9 @@ No separate formatter or secret-check command is configured.
 Use `npm run test:watch` during development. Test directories group engine, auth,
 database, runtime/socket, social, client, and voice behavior. Cover malformed inputs,
 authorization, private data boundaries, persistence failures, and cleanup where relevant.
-Run a production build because Vite's base paths and generated music catalog matter.
+Run a production build because Vite's base paths and generated music/emoji catalogs matter.
+The server reads the generated [site emoji](media.md#site-provided-emoji) catalog at startup;
+tests pass their own catalog and do not depend on local images.
 
 ## Benchmarks
 

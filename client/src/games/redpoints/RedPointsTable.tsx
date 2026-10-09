@@ -1,4 +1,4 @@
-// ─── RedPointsTable：撿紅點牌桌（桌面牌、牌堆翻牌、手牌、資訊欄、結算） ───
+// ─── RedPointsTable: Red Points table (table cards, stock flip, hand, info rail, settlement) ───
 
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
@@ -8,11 +8,14 @@ import type { Card, RedPointsMatchResult, RedPointsVisibleState, Seat } from '@s
 import { cardImageUrl } from '../../cards';
 import { socket } from '../../socket';
 import { useGameStore } from '../../stores/game-store';
-import { useRoomStore } from '../../stores/room-store';
 import { useI18nStore } from '../../stores/i18n-store';
 import { CardHand } from '../../components/CardHand';
 import { GameShell } from '../GameShell';
+import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
+import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
+import { joinNames, useSeatName } from '../seat-names';
+import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
 import styles from './RedPointsTable.module.css';
 import { redPointsCardAction, redPointsTableLayout, redPointsTablePage } from './redpoints-view';
@@ -24,12 +27,6 @@ type ActionCallback = (timeout: Error | null, response?: { success: boolean; err
 
 const sameCard = (a: Card, b: Card): boolean => a.suit === b.suit && a.rank === b.rank;
 const cardLabel = (card: Card): string => `${SUIT_SYMBOLS[card.suit]}${RANK_DISPLAY[card.rank]}`;
-
-function useSeatName(): (seat: Seat) => string {
-  const seats = useRoomStore((state) => state.roomInfo?.seats);
-  const { t } = useI18nStore();
-  return (seat: Seat): string => seats?.[seat].player?.nickname ?? t(`seat.${seat}`);
-}
 
 function CardImage({ card, className }: { card: Card; className?: string }): ReactNode {
   return <img className={`${styles.card} ${className ?? ''}`} src={cardImageUrl(card)} alt={cardLabel(card)} draggable={false} />;
@@ -92,13 +89,13 @@ function Centre({ game, options, previewOptions, onCapture }: {
       </div>
       <div className={styles.pagination}>
         {page.pageCount > 1 && <>
-          <button type="button" className={styles.pageButton} disabled={page.page === 0}
+          <button type="button" className={`${styles.pageButton} touch-target`} disabled={page.page === 0}
             aria-label={t('redpoints.tablePrevious')}
             onClick={() => setPagination({ key: pageKey, page: page.page - 1 })}>‹</button>
           <span className={styles.pageLabel} aria-live="polite">
             {t('redpoints.tablePage', { page: String(page.page + 1), total: String(page.pageCount) })}
           </span>
-          <button type="button" className={styles.pageButton} disabled={page.page === page.pageCount - 1}
+          <button type="button" className={`${styles.pageButton} touch-target`} disabled={page.page === page.pageCount - 1}
             aria-label={t('redpoints.tableNext')}
             onClick={() => setPagination({ key: pageKey, page: page.page + 1 })}>›</button>
         </>}
@@ -111,21 +108,20 @@ function Info({ game }: { game: RedPointsVisibleState }): ReactNode {
   const { t } = useI18nStore();
   const seatName = useSeatName();
   const recent = game.log.slice(-RECENT_MOVES).reverse();
-  return <aside className={styles.rail}>
-    <section className={styles.box}>
-      <p className={styles.turn}>{game.phase !== 'playing' ? t('game.scoring')
-        : game.currentTurnSeat === game.mySeat ? t('redpoints.yourTurn')
-          : t('redpoints.turnOf', { name: seatName(game.currentTurnSeat) })}</p>
-      <p className={styles.note}>{t('redpoints.stock')} {game.stockCount}</p>
-    </section>
+  return <aside className={infoStyles.rail}>
+    <TurnBox text={game.phase !== 'playing' ? t('game.scoring')
+      : game.currentTurnSeat === game.mySeat ? t('redpoints.yourTurn')
+        : t('redpoints.turnOf', { name: seatName(game.currentTurnSeat) })}>
+      <p className={infoStyles.note}>{t('redpoints.stock')} {game.stockCount}</p>
+    </TurnBox>
 
-    <section className={`${styles.box} ${styles.recentBox}`}>
-      <h2 className={styles.caption}>{t('redpoints.recent')}</h2>
-      {recent.length === 0 ? <p className={styles.note}>{t('redpoints.noMoves')}</p>
-        : <ol className={styles.recentList}>{recent.map((entry) => (
-          // 每張牌只會被出或翻一次
-          <li key={cardLabel(entry.card)} className={styles.recentRow}>
-            <span className={styles.recentName}>{seatName(entry.seat)}</span>
+    <section className={`${infoStyles.box} ${infoStyles.grow}`}>
+      <h2 className={infoStyles.caption}>{t('redpoints.recent')}</h2>
+      {recent.length === 0 ? <p className={infoStyles.note}>{t('redpoints.noMoves')}</p>
+        : <ol className={infoStyles.list}>{recent.map((entry) => (
+          // Each card is played or flipped only once
+          <li key={cardLabel(entry.card)} className={infoStyles.row}>
+            <span className={infoStyles.name}>{seatName(entry.seat)}</span>
             <span>{t(entry.type === 'play' ? 'redpoints.logPlay' : 'redpoints.logFlip')}</span>
             <CardImage card={entry.card} className={styles.mini} />
             {entry.captured ? <>→<CardImage card={entry.captured} className={styles.mini} /></>
@@ -134,49 +130,42 @@ function Info({ game }: { game: RedPointsVisibleState }): ReactNode {
         ))}</ol>}
     </section>
 
-    <details className={styles.box}>
-      <summary className={styles.caption}>{t('redpoints.rules')}</summary>
-      <p className={styles.note}>{t('redpoints.rulesPair')}</p>
-      <p className={styles.note}>{t('redpoints.rulesTurn')}</p>
-      <p className={styles.note}>{t('redpoints.rulesScore')}</p>
-    </details>
+    <RulesBox title={t('redpoints.rules')}
+      lines={[t('redpoints.rulesPair'), t('redpoints.rulesTurn'), t('redpoints.rulesScore')]} />
   </aside>;
 }
 
-function ResultOverlay({ result, captured, pending, error, onBack }: {
+function ResultOverlay({ result, captured, pending, error, disabled, onBack }: {
   result: RedPointsMatchResult; captured: Record<Seat, Card[]>;
-  pending: boolean; error: string; onBack: () => void;
+  pending: boolean; error: string; disabled: boolean; onBack: () => void;
 }): ReactNode {
-  const { t } = useI18nStore();
+  const { locale, t } = useI18nStore();
   const historyGame = useGameStore((state) => state.visible);
   const seatName = useSeatName();
-  return <div className={styles.scoreOverlay}>
-    <div className={styles.overlayCard}>
-      <h2 className={styles.scoreTitle}>{t('redpoints.winner', { name: result.winners.map(seatName).join('、') })}</h2>
-      <table className={styles.scoreTable}>
-        <thead><tr><th>{t('redpoints.player')}</th><th>{t('redpoints.score')}</th></tr></thead>
-        <tbody>{SEATS.map((seat) => {
-          const red = captured[seat].filter((card) => rpCardPoints(card) > 0);
-          return <tr key={seat} className={result.winners.includes(seat) ? styles.winnerRow : ''}>
-            <td>
-              <div>{result.winners.includes(seat) && '🏆 '}{seatName(seat)}</div>
-              {red.length > 0 && <span className={styles.miniRow}>
-                {red.map((card) => <CardImage key={`${card.suit}-${card.rank}`} card={card} className={styles.mini} />)}
-              </span>}
-            </td>
-            <td className={styles.pointsCell}>{result.points[seat]}</td>
-          </tr>;
-        })}</tbody>
-      </table>
-      {historyGame && <RoundHistory game={historyGame} />}
-      {error && <p className={styles.error} role="alert">{error}</p>}
-      <button className="btn btn-primary" disabled={pending} onClick={onBack}>{t('score.backToRoom')}</button>
-    </div>
-  </div>;
+  return <ResultDialog wide title={t('redpoints.winner', { name: joinNames(result.winners.map(seatName), locale) })}
+    pending={pending} error={error} disabled={disabled} onBack={onBack}>
+    <table className={resultStyles.table}>
+      <thead><tr><th>{t('redpoints.player')}</th><th>{t('redpoints.score')}</th></tr></thead>
+      <tbody>{SEATS.map((seat) => {
+        const red = captured[seat].filter((card) => rpCardPoints(card) > 0);
+        return <tr key={seat} className={result.winners.includes(seat) ? resultStyles.winnerRow : ''}>
+          <td>
+            <div>{result.winners.includes(seat) && '🏆 '}{seatName(seat)}</div>
+            {red.length > 0 && <span className={styles.miniRow}>
+              {red.map((card) => <CardImage key={`${card.suit}-${card.rank}`} card={card} className={styles.mini} />)}
+            </span>}
+          </td>
+          <td className={styles.pointsCell}>{result.points[seat]}</td>
+        </tr>;
+      })}</tbody>
+    </table>
+    {historyGame && <RoundHistory game={historyGame} />}
+  </ResultDialog>;
 }
 
 export function RedPointsTable(): ReactNode {
   const { locked } = useGamePresentation();
+  const connectionReady = useConnectionReady();
   const game = useGameStore((state) => state.redPoints);
   const { t } = useI18nStore();
   const seatName = useSeatName();
@@ -191,8 +180,8 @@ export function RedPointsTable(): ReactNode {
   const playing = game.phase === 'playing';
   const isMyTurn = playing && !locked && game.currentTurnSeat === game.mySeat;
   const choosingFlip = isMyTurn && game.step === 'flip-choose' && game.pendingFlip !== null;
-  const canPlay = isMyTurn && game.step === 'play' && !actionPending;
-  // 輪到別人時不保留選取；只認仍在手上的牌
+  const canPlay = isMyTurn && connectionReady && game.step === 'play' && !actionPending;
+  // Drop the selection when it is not our turn; only cards still in hand count
   const selected = canPlay && selection && game.myHand.some((card) => sameCard(card, selection)) ? selection : null;
   const options = choosingFlip && game.pendingFlip ? rpPairOptions(game.pendingFlip, game.table)
     : selected ? rpPairOptions(selected, game.table) : [];
@@ -208,7 +197,7 @@ export function RedPointsTable(): ReactNode {
   };
 
   const send = (capture: Card | null, card: Card | null = selected): void => {
-    if (!isMyTurn || actionInFlight.current || (!choosingFlip && (!canPlay || !card))) return;
+    if (!isMyTurn || !connectionReady || actionInFlight.current || (!choosingFlip && (!canPlay || !card))) return;
     if (choosingFlip && !capture) return;
     actionInFlight.current = true;
     setActionError('');
@@ -247,7 +236,7 @@ export function RedPointsTable(): ReactNode {
 
   const handZone = <div className={styles.handArea}>
     <CardHand cards={game.myHand} selectedCards={selected ? [selected] : []} disabled={!canPlay}
-      onCardClick={onCardClick} onCardPreview={setPreview} />
+      onCardClick={onCardClick} onCardPreview={setPreview} confirmTouch />
     {playing && <div className={styles.controls}>
       {prompt && <span className={`${styles.prompt} ${isMyTurn ? styles.promptActive : ''}`}>{prompt}</span>}
     </div>}
@@ -256,10 +245,11 @@ export function RedPointsTable(): ReactNode {
   return (
     <GameShell
       info={<Info game={game} />}
-      centre={<Centre game={game} options={options} previewOptions={previewOptions} onCapture={options.length > 0 && !actionPending ? send : null} />}
+      centre={<Centre game={game} options={options} previewOptions={previewOptions} onCapture={options.length > 0 && !actionPending && connectionReady ? send : null} />}
       hand={handZone}
       overlay={game.phase === 'scoring' && game.result && <ResultOverlay result={game.result}
-        captured={game.captured} pending={actionPending} error={actionError} onBack={backToRoom} />}
+        captured={game.captured} pending={actionPending} error={actionError} disabled={!connectionReady}
+        onBack={backToRoom} />}
       error={game.phase !== 'scoring' ? actionError : undefined}
     />
   );

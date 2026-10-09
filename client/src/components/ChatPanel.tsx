@@ -1,40 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import type { ChatMessage, EmojiRecord } from '@shared/types';
-import { splitEmojiText } from '@shared/constants';
 import { socket } from '../socket';
-import { mediaUrl } from '../media';
+import { PROVIDED_EMOJIS } from '../provided-emoji';
 import { useChatStore } from '../stores/chat-store';
 import { useEmojiStore } from '../stores/emoji-store';
 import { useI18nStore } from '../stores/i18n-store';
 import type { TranslationKey } from '../i18n';
 import { Avatar } from './Avatar';
+import { ChatMessageBody, EmojiPickerSections } from './ChatEmoji';
+import type { StickerPayload } from './ChatEmoji';
 import styles from './ChatPanel.module.css';
 
 interface ChatPanelProps {
-  /** 提供時：面板填滿容器高度，標題列顯示收合按鈕 */
+  /** When provided: the panel fills the container height and the header shows a collapse button */
   onCollapse?: () => void;
-}
-
-function StickerImage({ asset, small = false }: {
-  asset: Pick<EmojiRecord, 'name' | 'mediaId'>; small?: boolean;
-}): ReactNode {
-  const [failed, setFailed] = useState(false);
-  const { t } = useI18nStore();
-  return <span className={`${styles.stickerImage} ${small ? styles.smallImage : ''}`}>
-    {failed ? <span role="img" aria-label={asset.name}>{t('sticker.unavailable')}: {asset.name}</span>
-      : <img src={mediaUrl(asset.mediaId)} alt={asset.name} onError={() => setFailed(true)} />}
-  </span>;
-}
-
-/** Text stays text; only emoji the server attached to this message become images. */
-function messageContent(message: ChatMessage): ReactNode[] {
-  return splitEmojiText(message.content, message.emojis).map((segment, index) =>
-    typeof segment === 'string' ? segment : (
-      <img key={index} className={styles.emoji} src={mediaUrl(segment.mediaId)}
-        alt={`:${segment.name}:`} title={`:${segment.name}:`} />
-    ));
 }
 
 export function ChatPanel({ onCollapse }: ChatPanelProps): ReactNode {
@@ -106,12 +85,12 @@ export function ChatPanel({ onCollapse }: ChatPanelProps): ReactNode {
     });
   };
 
-  const sendSticker = (stickerId: string): void => {
+  const sendSticker = (payload: StickerPayload): void => {
     if (busyRef.current) return;
     busyRef.current = true;
     setBusy(true);
     setError('');
-    socket.timeout(10000).emit('chat:send', { stickerId }, (timeout, result) => {
+    socket.timeout(10000).emit('chat:send', payload, (timeout, result) => {
       busyRef.current = false;
       setBusy(false);
       if (timeout) setError(t('auth.connectionError'));
@@ -120,14 +99,11 @@ export function ChatPanel({ onCollapse }: ChatPanelProps): ReactNode {
     });
   };
 
-  const query = search.trim().toLowerCase();
-  const matches = emojis.filter((emoji) => emoji.name.includes(query));
-
   return (
     <section className={`${styles.chatContainer} ${onCollapse ? styles.fill : ''}`}>
       <div className={styles.chatHeader}>
         <h2 className={styles.chatTitle}>{t('chat.title')}</h2>
-        {onCollapse && <button type="button" className={styles.collapseBtn} onClick={onCollapse}
+        {onCollapse && <button type="button" className={`${styles.collapseBtn} touch-target`} onClick={onCollapse}
           aria-label={t('table.chatCollapse')} title={t('table.chatCollapse')}>›</button>}
       </div>
       <div ref={messagesRef} className={styles.chatMessages} role="log" aria-live="polite">
@@ -139,7 +115,7 @@ export function ChatPanel({ onCollapse }: ChatPanelProps): ReactNode {
           <div key={message.id} className={styles.chatMessage}>
             <Avatar avatar={message.sender.avatar} image={message.sender.avatarImage} color={message.sender.color} size="small" />
             <span className={styles.chatSender}>{message.sender.nickname}</span>
-            <span className={styles.chatContent}>{message.sticker ? <StickerImage asset={message.sticker} /> : messageContent(message)}</span>
+            <span className={styles.chatContent}><ChatMessageBody message={message} /></span>
           </div>
         ))}
       </div>
@@ -153,22 +129,8 @@ export function ChatPanel({ onCollapse }: ChatPanelProps): ReactNode {
           <input className={styles.pickerSearch} type="search" value={search} autoFocus
             aria-label={t('emoji.search')} placeholder={t('emoji.search')}
             onChange={(event) => setSearch(event.target.value)} />
-          {matches.length === 0 ? (
-            <p className={styles.pickerEmpty}>
-              {emojis.length === 0 ? t('emoji.empty') : t('emoji.noMatch')}{' '}
-              <Link to="/account">{t('emoji.manage')}</Link>
-            </p>
-          ) : (
-            <div className={styles.pickerGrid}>
-              {matches.map((emoji) => (
-                <button key={emoji.id} type="button" className={styles.pickerItem}
-                  title={`:${emoji.name}:`} disabled={mode === 'sticker' && busy}
-                  onClick={() => mode === 'emoji' ? insertEmoji(emoji.name) : sendSticker(emoji.id)}>
-                  <StickerImage asset={emoji} small />
-                </button>
-              ))}
-            </div>
-          )}
+          <EmojiPickerSections mode={mode} query={search.trim().toLowerCase()} personal={emojis}
+            provided={PROVIDED_EMOJIS} busy={busy} onInsert={insertEmoji} onSendSticker={sendSticker} />
         </div>
       )}
       <form className={styles.chatInputRow} onSubmit={send}>

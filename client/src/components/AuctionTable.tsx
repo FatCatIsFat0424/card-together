@@ -1,4 +1,4 @@
-// ─── AuctionTable 元件：叫牌過程表（西 北 東 南） ───
+// ─── AuctionTable: auction grid (W N E S) ───
 
 import type { ReactNode } from 'react';
 import type { BidLevel, BidSuit, Seat } from '@shared/types';

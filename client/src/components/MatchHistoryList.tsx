@@ -3,16 +3,17 @@ import type { MatchHistory, MatchSummary, PublicAccount, Seat } from '@shared/ty
 import { SEAT_ORDER_CLOCKWISE, SUIT_SYMBOLS } from '@shared/constants';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
+import { joinNames } from '../games/seat-names';
 import { PlayerLink } from './PlayerLink';
 import styles from './MatchHistoryList.module.css';
 
 function MatchResultLabel({ match, players }: {
   match: MatchSummary; players: Record<string, PublicAccount>;
 }): ReactNode {
-  const { t } = useI18nStore();
+  const { locale, t } = useI18nStore();
   const myId = useAccountStore((state) => state.account?.id);
   const { result } = match;
-  // accountIds 依座位 N, E, S, W 排序
+  // accountIds are ordered by seat N, E, S, W
   const mySeat = SEAT_ORDER_CLOCKWISE[match.accountIds.indexOf(myId ?? '')];
   const seatName = (seat: Seat): string => {
     const id = match.accountIds[SEAT_ORDER_CLOCKWISE.indexOf(seat)];
@@ -20,11 +21,11 @@ function MatchResultLabel({ match, players }: {
       : players[id]?.nickname ?? t(`seat.${seat}`);
   };
   if (result.gameType === 'redpoints') {
-    return <span>{t('gameType.redpoints')} · 🏆 {result.winners.map(seatName).join('、')}
+    return <span>{t('gameType.redpoints')} · 🏆 {joinNames(result.winners.map(seatName), locale)}
       {mySeat && <> · {t('redpoints.myPoints', { n: String(result.points[mySeat]) })}</>}</span>;
   }
   if (result.gameType === 'ninetynine') {
-    // 先淘汰者名次最後
+    // Players eliminated earlier rank lower
     const myRank = mySeat && (mySeat === result.winnerSeat ? 1 : 4 - result.eliminationOrder.indexOf(mySeat));
     return <span>{t('gameType.ninetynine')} · 🏆 {seatName(result.winnerSeat)}
       {myRank && <> · {t('ninetynine.myRank', { n: String(myRank) })}</>}</span>;

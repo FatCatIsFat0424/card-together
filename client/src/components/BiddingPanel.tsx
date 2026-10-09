@@ -1,96 +1,149 @@
-// ─── BiddingPanel 元件：叫牌面板（牌桌中央浮層） ───
+// ─── BiddingPanel: bidding panel (pick a bid, then confirm) ───
 
 import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { BidAction, BidLevel, BidSuit } from '@shared/types';
+import type { BidAction, BidLevel, BidSuit, Seat } from '@shared/types';
+import { SUIT_SYMBOLS } from '@shared/constants';
 import { socket } from '../socket';
 import { useGameStore } from '../stores/game-store';
 import { useRoomStore } from '../stores/room-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { BidLabel } from './AuctionTable';
+import {
+  BID_LEVELS, BID_SUITS, currentCall, isBidHigher, isLevelAvailable, lowestAvailableLevel, recentCalls,
+} from './bidding-choice';
+import type { PendingCall } from './bidding-choice';
 
 import styles from './BiddingPanel.module.css';
 
-const LEVELS: BidLevel[] = [1, 2, 3, 4, 5, 6, 7];
-const SUITS: BidSuit[] = ['clubs', 'diamonds', 'hearts', 'spades', 'nt'];
+const RECENT_CALLS = 4;
 
-export function BiddingPanel(): ReactNode {
+function CallLabel({ action }: { action: BidAction }): ReactNode {
+  const { t } = useI18nStore();
+  return action.type === 'pass' ? <>{t('game.pass')}</> : <BidLabel level={action.level} suit={action.suit} />;
+}
+
+/** Last few calls; shown only where the auction table lives in a closed drawer. */
+function RecentCalls(): ReactNode {
+  const { t } = useI18nStore();
+  const bids = useGameStore((state) => state.bidding?.bids);
+  const calls = recentCalls(bids ?? [], RECENT_CALLS);
+  if (calls.length === 0) return null;
+  return <ol className={styles.recent} aria-label={t('bidding.recent')}>
+    {calls.map((call, index) => <li key={`${bids?.length ?? 0}-${index}`} className={styles.recentCall}>
+      <span className={styles.recentSeat}>{t(`seat.${call.seat}`)}</span>
+      <span className={call.action.type === 'pass' ? styles.recentPass : undefined}>
+        <CallLabel action={call.action} />
+      </span>
+    </li>)}
+  </ol>;
+}
+
+/** Centre status while another seat is bidding. */
+export function BiddingWaiting({ seat }: { seat: Seat | null }): ReactNode {
+  const { t } = useI18nStore();
+  return <div className={styles.waiting}>
+    <div className={styles.waitingPill} role="status">
+      {t('table.waitingBid', { seat: seat ? t(`seat.${seat}`) : '...' })}
+    </div>
+    <RecentCalls />
+  </div>;
+}
+
+export function BiddingPanel({ disabled = false }: { disabled?: boolean }): ReactNode {
   const bidding = useGameStore((state) => state.bidding);
   const currentTurnSeat = useGameStore((state) => state.currentTurnSeat);
   const mySeat = useRoomStore((state) => state.mySeat);
   const { t } = useI18nStore();
   const [error, setError] = useState('');
-  const [pending, setPending] = useState(false);
-
-  const isMyTurn = mySeat === currentTurnSeat;
+  const [sending, setSending] = useState(false);
+  const [pending, setPending] = useState<PendingCall | null>(null);
+  const [levelPick, setLevelPick] = useState<{ auctionLength: number; level: BidLevel } | null>(null);
 
   const highestBid = bidding?.highestBid ?? null;
+  const auctionLength = bidding?.bids.length ?? 0;
+  const choice = currentCall(pending, auctionLength, highestBid);
+  const pickedLevel = levelPick?.auctionLength === auctionLength && isLevelAvailable(levelPick.level, highestBid)
+    ? levelPick.level : null;
+  const level = choice?.type === 'bid' ? choice.level : pickedLevel ?? lowestAvailableLevel(highestBid);
+  const blocked = disabled || sending;
 
-  const isBidHigher = useCallback((level: BidLevel, suit: BidSuit): boolean => {
-    if (!highestBid) return true;
-    if (level > highestBid.level) return true;
-    if (level === highestBid.level) {
-      const suitOrder = SUITS;
-      return suitOrder.indexOf(suit) > suitOrder.indexOf(highestBid.suit);
-    }
-    return false;
-  }, [highestBid]);
-
-  const handleBid = useCallback((action: BidAction): void => {
+  const submit = useCallback((action: BidAction): void => {
     setError('');
-    setPending(true);
+    setSending(true);
     socket.timeout(10000).emit('game:bid', { bid: action }, (timeout, response) => {
-      setPending(false);
+      setSending(false);
       if (timeout) setError(t('auth.connectionError'));
       else if (!response.success) setError(response.error ?? t('common.error'));
+      else setPending(null);
     });
   }, [t]);
 
-  if (!isMyTurn) {
-    return (
-      <div className={styles.waitingPill} role="status">
-        {t('table.waitingBid', { seat: currentTurnSeat ? t(`seat.${currentTurnSeat}`) : '...' })}
-      </div>
-    );
-  }
+  if (mySeat === null || mySeat !== currentTurnSeat) return null;
+
+  const sameCall = (action: BidAction): boolean => choice !== null && choice.type === action.type
+    && (action.type === 'pass' || (choice.type === 'bid' && choice.level === action.level && choice.suit === action.suit));
+
+  /** Second activation of the chosen call confirms it, matching two-step card play. */
+  const choose = (action: BidAction): void => {
+    if (blocked) return;
+    if (sameCall(action)) submit(action);
+    else setPending({ auctionLength, action });
+  };
+
+  const pickLevel = (next: BidLevel): void => {
+    setLevelPick({ auctionLength, level: next });
+    if (choice?.type === 'bid' && choice.level !== next) setPending(null);
+  };
 
   return (
-    <div className={styles.biddingContainer}>
+    <section className={styles.panel} aria-labelledby="bidding-panel-title">
       <div className={styles.header}>
-        <span className={styles.biddingTitle}>{t('table.yourBid')}</span>
+        <span className={styles.title} id="bidding-panel-title">{t('table.yourBid')}</span>
         {highestBid && <span className={styles.highest}>
           {t('table.highest')} <BidLabel level={highestBid.level} suit={highestBid.suit} />
         </span>}
       </div>
-      {error && <p className={styles.error} role="alert">{error}</p>}
-
-      {/* 叫牌格子 */}
-      <div className={styles.bidGrid}>
-        {LEVELS.map((level) =>
-          SUITS.map((suit) => {
-            const enabled = isBidHigher(level, suit);
-            return (
-              <button
-                key={`${level}${suit}`}
-                className={styles.bidBtn}
-                disabled={pending || !enabled}
-                onClick={() => handleBid({ type: 'bid', level, suit })}
-              >
-                <BidLabel level={level} suit={suit} />
-              </button>
-            );
-          }),
-        )}
+      <RecentCalls />
+      <div className={styles.levels} role="group" aria-label={t('bidding.level')}>
+        {BID_LEVELS.map((value) => (
+          <button key={value} type="button" className={styles.levelBtn}
+            aria-pressed={level === value} disabled={blocked || !isLevelAvailable(value, highestBid)}
+            onClick={() => pickLevel(value)}>
+            {value}
+          </button>
+        ))}
       </div>
-
-      {/* Pass 按鈕 */}
-      <button
-        className={styles.passBtn}
-        disabled={pending}
-        onClick={() => handleBid({ type: 'pass' })}
-      >
-        {t('game.pass')}
-      </button>
-    </div>
+      <div className={styles.suits} role="group" aria-label={t('bidding.suit')}>
+        {BID_SUITS.map((suit: BidSuit) => {
+          const legal = level !== null && isBidHigher(level, suit, highestBid);
+          const selected = choice?.type === 'bid' && choice.suit === suit;
+          return (
+            <button key={suit} type="button" className={styles.suitBtn} aria-pressed={selected}
+              aria-label={level !== null ? `${level}${suit === 'nt' ? 'NT' : SUIT_SYMBOLS[suit]}` : undefined}
+              disabled={blocked || !legal}
+              onClick={() => level !== null && choose({ type: 'bid', level, suit })}>
+              {level !== null ? <BidLabel level={level} suit={suit} /> : '—'}
+            </button>
+          );
+        })}
+      </div>
+      <div className={styles.actions}>
+        <button type="button" className={styles.passBtn} aria-pressed={choice?.type === 'pass'}
+          disabled={blocked} onClick={() => choose({ type: 'pass' })}>
+          {t('game.pass')}
+        </button>
+        <button type="button" className={styles.cancelBtn} disabled={blocked || !choice}
+          onClick={() => setPending(null)}>
+          {t('bidding.cancel')}
+        </button>
+        <button type="button" className={styles.confirmBtn} disabled={blocked || !choice}
+          onClick={() => choice && submit(choice)}>
+          {t('bidding.confirm')}{choice && <> <CallLabel action={choice} /></>}
+        </button>
+      </div>
+      <p className={styles.hint} aria-live="polite">{choice ? t('bidding.confirmHint') : t('bidding.chooseHint')}</p>
+      {error && <p className={styles.error} role="alert">{error}</p>}
+    </section>
   );
 }

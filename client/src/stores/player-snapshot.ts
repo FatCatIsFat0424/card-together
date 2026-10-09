@@ -1,4 +1,4 @@
-import type { PlayerSnapshot } from '@shared/types';
+import type { ChatMessageEvent, PlayerSnapshot } from '@shared/types';
 import { useAccountStore } from './account-store';
 import { usePlayerStore } from './player-store';
 import { useRoomStore } from './room-store';
@@ -9,6 +9,7 @@ export function applyPlayerSnapshot(snapshot: PlayerSnapshot): void {
   if (!snapshot.success || !snapshot.player) return;
   const account = useAccountStore.getState().account;
   if (!account || snapshot.player.id !== account.id) return;
+  const previousRoom = useRoomStore.getState().currentRoomCode;
   usePlayerStore.getState().setPlayer(snapshot.player);
   useAccountStore.getState().setAccount({ ...account, ...snapshot.player });
   if (snapshot.room) {
@@ -25,6 +26,13 @@ export function applyPlayerSnapshot(snapshot: PlayerSnapshot): void {
   } else {
     useGameStore.getState().reset();
   }
-  useChatStore.getState().setMessages(snapshot.chatHistory ?? []);
+  // Broadcasts omit unchanged history; new messages arrive through applyChatMessage.
+  if (snapshot.chatHistory) useChatStore.getState().setMessages(snapshot.chatHistory);
+  else if (!snapshot.room || snapshot.room.code !== previousRoom) useChatStore.getState().clearMessages();
   useAccountStore.getState().setConnection('ready');
+}
+
+export function applyChatMessage(event: ChatMessageEvent): void {
+  if (useRoomStore.getState().currentRoomCode !== event.roomCode) return;
+  useChatStore.getState().addMessage(event.message);
 }

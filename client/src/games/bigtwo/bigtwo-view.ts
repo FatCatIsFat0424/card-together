@@ -1,4 +1,4 @@
-// ─── 大老二畫面用純函式（無 React） ───
+// ─── Pure Big Two view helpers (no React) ───
 
 import { identifyCombo } from '@shared/rules/bigtwo';
 import type { BigTwoCombo, BigTwoComboType } from '@shared/rules/bigtwo';

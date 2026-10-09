@@ -1,4 +1,4 @@
-// ─── TrickArea 元件：當前墩顯示 ───
+// ─── TrickArea: current trick display ───
 
 import type { ReactNode } from 'react';
 import type { Card, Seat } from '@shared/types';
@@ -32,7 +32,7 @@ export function TrickArea({ currentTrick, leadSeat, bottomSeat, myTurn }: TrickA
         }
         return (
           <div key={seat} className={slotClass}>
-            {/* key 依牌面，連續兩墩同座位也會重播飛入 */}
+            {/* key follows the card so the fly-in replays even if the same seat leads two tricks in a row */}
             <div key={`${card.suit}${card.rank}`} className={styles.trickCard} role="img"
               aria-label={`${t(`seat.${seat}`)} ${RANK_DISPLAY[card.rank]}${SUIT_SYMBOLS[card.suit]}`}>
               <img src={cardImageUrl(card)} alt="" draggable={false} />

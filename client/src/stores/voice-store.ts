@@ -3,11 +3,12 @@ import { socket } from '../socket';
 import { parseIceServers } from '../voice/ice-servers';
 import {
   createVoiceSession,
+  DEFAULT_PEER_PREFERENCE,
   initialVoiceState,
   listAudioDevices,
   parsePeerPrefs,
 } from '../voice/voice-session';
-import type { VoiceClientState, VoiceSession } from '../voice/voice-session';
+import type { PeerPreference, VoiceClientState, VoiceSession } from '../voice/voice-session';
 import { readPreference, writePreference } from '../utils/preference-storage';
 
 export type { VoiceErrorCode } from '../voice/voice-session';
@@ -21,17 +22,49 @@ interface VoiceStoreState extends VoiceClientState {
   outputs: MediaDeviceInfo[];
 }
 
+/** Stored per-player preferences; older entries are dropped once the limit is exceeded. */
+export const MAX_STORED_PEER_PREFS = 50;
+
+/** Drops default-valued entries and keeps the most recently added remaining ones. */
+export function prunePeerPrefs(
+  prefs: Readonly<Record<string, PeerPreference>>,
+  limit = MAX_STORED_PEER_PREFS,
+): Record<string, PeerPreference> {
+  const entries = Object.entries(prefs).filter(([, preference]) =>
+    preference.muted !== DEFAULT_PEER_PREFERENCE.muted
+    || preference.volume !== DEFAULT_PEER_PREFERENCE.volume);
+  return Object.fromEntries(entries.slice(Math.max(0, entries.length - limit)));
+}
+
+const initialPeerPrefs = prunePeerPrefs(parsePeerPrefs(readPreference(PEERS_KEY)));
+const initialInputDeviceId = readPreference(INPUT_KEY);
+const initialOutputDeviceId = readPreference(OUTPUT_KEY);
+// Session updates arrive for every voice state change; write storage only when stored values change.
+let storedPeers = JSON.stringify(initialPeerPrefs);
+let storedInput = initialInputDeviceId;
+let storedOutput = initialOutputDeviceId;
+
 function persist(state: VoiceClientState): void {
-  writePreference(PEERS_KEY, JSON.stringify(state.peerPrefs));
-  writePreference(INPUT_KEY, state.inputDeviceId);
-  writePreference(OUTPUT_KEY, state.outputDeviceId);
+  const peers = JSON.stringify(prunePeerPrefs(state.peerPrefs));
+  if (peers !== storedPeers) {
+    storedPeers = peers;
+    writePreference(PEERS_KEY, peers);
+  }
+  if (state.inputDeviceId !== storedInput) {
+    storedInput = state.inputDeviceId;
+    writePreference(INPUT_KEY, state.inputDeviceId);
+  }
+  if (state.outputDeviceId !== storedOutput) {
+    storedOutput = state.outputDeviceId;
+    writePreference(OUTPUT_KEY, state.outputDeviceId);
+  }
 }
 
 export const useVoiceStore = create<VoiceStoreState>(() => ({
   ...initialVoiceState(),
-  inputDeviceId: readPreference(INPUT_KEY),
-  outputDeviceId: readPreference(OUTPUT_KEY),
-  peerPrefs: parsePeerPrefs(readPreference(PEERS_KEY)),
+  inputDeviceId: initialInputDeviceId,
+  outputDeviceId: initialOutputDeviceId,
+  peerPrefs: initialPeerPrefs,
   inputs: [],
   outputs: [],
 }));

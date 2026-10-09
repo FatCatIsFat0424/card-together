@@ -1,4 +1,4 @@
-/* ─── TrickArea 元件樣式 ─── */
+/* ─── TrickArea styles ─── */
 
 .trickContainer {
   --trick-w: calc((clamp(44px, 7dvh, 64px)) * var(--playing-card-scale));
@@ -77,7 +77,7 @@
   .placeholder, .trickCard { animation: none; }
 }
 
-/* 手機：中央需讓出左右直式座位 */
+/* Mobile: the center must leave room for the vertical side seats */
 @media (max-width: 767px) {
   .trickContainer { --trick-w: calc((clamp(34px, 10vw, 42px)) * var(--playing-card-scale)); }
 }

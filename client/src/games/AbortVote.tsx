@@ -1,6 +1,6 @@
-// ─── 投票終止對局：資訊欄按鈕、牌桌橫幅、通過提示 ───
+// ─── Abort vote: info-rail button, table banner, passed notice ───
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ABORT_VOTE_THRESHOLD } from '@shared/constants';
 import type { PlayerInfo, RoomInfo } from '@shared/types';
@@ -11,6 +11,7 @@ import { useRoomStore } from '../stores/room-store';
 import { Avatar } from '../components/Avatar';
 import { formatCountdown } from '../game-view';
 import styles from './AbortVote.module.css';
+import { useConnectionReady } from './use-connection-ready';
 
 /** Current time, ticking every second while `active`. */
 function useNow(active: boolean): number {
@@ -49,6 +50,7 @@ function useVoteAction(): [boolean, string, (send: (done: Done) => void) => void
 
 export function AbortVoteButton(): ReactNode {
   const { t } = useI18nStore();
+  const connectionReady = useConnectionReady();
   const room = useRoomStore((state) => state.roomInfo);
   const mySeat = useRoomStore((state) => state.mySeat);
   const [busy, error, run] = useVoteAction();
@@ -59,7 +61,7 @@ export function AbortVoteButton(): ReactNode {
   return (
     <div className={styles.rail}>
       <button type="button" className={`btn btn-outline ${styles.railBtn}`}
-        disabled={busy || cooling || room.abortVote !== null}
+        disabled={busy || !connectionReady || cooling || room.abortVote !== null}
         onClick={() => run((done) => socket.timeout(10000).emit('game:abortVote:start', done))}>
         <span aria-hidden="true">🏳️</span>{' '}
         {cooling ? t('abortVote.cooldown', { time: formatCountdown(cooldownUntil - now) }) : t('abortVote.button')}
@@ -89,16 +91,30 @@ export function AbortVoteBanner(): ReactNode {
   const vote = room?.abortVote ?? null;
   const now = useNow(vote !== null);
   const [busy, error, run] = useVoteAction();
+  const connectionReady = useConnectionReady();
+  const titleId = useId();
+  const bannerRef = useRef<HTMLDivElement>(null);
+  const votedFromBanner = useRef(false);
+  const canVote = Boolean(vote) && myId !== undefined && !vote?.yes.includes(myId) && !vote?.no.includes(myId);
+
+  // The vote buttons disappear once this player has voted; keep focus on the banner.
+  useEffect(() => {
+    if (canVote || !votedFromBanner.current) return;
+    votedFromBanner.current = false;
+    bannerRef.current?.focus({ preventScroll: true });
+  }, [canVote]);
+
   if (!room || !vote) return null;
   const starter = seatedPlayer(room, vote.startedBy);
   const threshold = Math.min(ABORT_VOTE_THRESHOLD,
     Object.values(room.seats).filter(({ player }) => player && !player.isBot).length);
-  const canVote = myId !== undefined && !vote.yes.includes(myId) && !vote.no.includes(myId);
-  const cast = (agree: boolean): void =>
+  const cast = (agree: boolean): void => {
+    votedFromBanner.current = true;
     run((done) => socket.timeout(10000).emit('game:abortVote:cast', { agree }, done));
+  };
   return (
-    <div className={styles.banner} role="dialog" aria-live="polite" aria-label={t('abortVote.button')}>
-      <p className={styles.title}>
+    <div ref={bannerRef} className={styles.banner} role="region" aria-labelledby={titleId} tabIndex={-1}>
+      <p className={styles.title} id={titleId} role="status">
         <span aria-hidden="true">🏳️</span> {t('abortVote.title', { name: starter?.nickname ?? '' })}
       </p>
       <p className={styles.meta}>
@@ -107,9 +123,9 @@ export function AbortVoteBanner(): ReactNode {
       <Tally room={room} ids={vote.yes} label={`✅ ${t('abortVote.agree')}`} />
       <Tally room={room} ids={vote.no} label={`❌ ${t('abortVote.disagree')}`} />
       {canVote && <div className={styles.actions}>
-        <button type="button" className="btn btn-danger" disabled={busy} onClick={() => cast(true)}>
+        <button type="button" className="btn btn-danger" disabled={busy || !connectionReady} onClick={() => cast(true)}>
           {t('abortVote.agree')}</button>
-        <button type="button" className="btn btn-outline" disabled={busy} onClick={() => cast(false)}>
+        <button type="button" className="btn btn-outline" disabled={busy || !connectionReady} onClick={() => cast(false)}>
           {t('abortVote.disagree')}</button>
       </div>}
       {error && <p className={styles.error} role="alert">{error}</p>}

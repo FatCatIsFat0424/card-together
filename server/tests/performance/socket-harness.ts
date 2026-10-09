@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { io as connectSocket } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
-import type { ClientToServerEvents, ServerToClientEvents, Seat } from '@shared/types';
+import type { ChatMessage, ChatMessageEvent, ClientToServerEvents, ServerToClientEvents, Seat } from '@shared/types';
 import type { PlayerSnapshot } from '@shared/types/socket-events';
 import { createApplication } from '../../src/app';
 import { SESSION_COOKIE_NAME, tokenHash } from '../../src/auth/auth-service';
@@ -21,6 +21,10 @@ export interface SocketMetrics {
   runtimeWrites: number;
   recipients: Map<string, number>;
   latestSnapshots: Map<string, PlayerSnapshot>;
+  /** Number of `chat:message` deliveries since the last reset. */
+  chatMessages: number;
+  /** Chat history per account as a client would rebuild it from broadcasts; never reset. */
+  chatViews: Map<string, ChatMessage[]>;
 }
 
 export interface SocketHarness {
@@ -43,7 +47,7 @@ export async function createSocketHarness(roomCount = 3): Promise<SocketHarness>
   const repository = await createJsonRepository(join(directory, 'database.json'));
   const metrics: SocketMetrics = {
     snapshots: 0, payloadBytes: 0, runtimeWrites: 0,
-    recipients: new Map(), latestSnapshots: new Map(),
+    recipients: new Map(), latestSnapshots: new Map(), chatMessages: 0, chatViews: new Map(),
   };
   const saveRuntime = repository.saveRuntime.bind(repository);
   repository.saveRuntime = async (...args): Promise<void> => {
@@ -63,7 +67,8 @@ export async function createSocketHarness(roomCount = 3): Promise<SocketHarness>
       const token = randomBytes(32).toString('base64url');
       await repository.createAccount({
         id, username, usernameNormalized: username, passwordHash, nickname: username,
-        avatar: 'cat', avatarImage: null, tableBackground: null, matchesPublic: false,
+        avatar: 'cat', avatarImage: null, tableBackground: null,
+        tableBackgroundOpacity: 100, cardBack: null, cardBackOpacity: 100, matchesPublic: false,
         color: '#2563eb', createdAt: now, updatedAt: now,
       });
       await repository.createSession({
@@ -78,13 +83,22 @@ export async function createSocketHarness(roomCount = 3): Promise<SocketHarness>
   const adapter = application.io.sockets.adapter;
   const broadcast = adapter.broadcast.bind(adapter);
   adapter.broadcast = (packet, options): void => {
+    if (packet.data?.[0] === 'chat:message') {
+      const { message } = packet.data[1] as ChatMessageEvent;
+      for (const room of options.rooms) {
+        if (!room.startsWith('account:')) continue;
+        const accountId = room.slice('account:'.length);
+        metrics.chatMessages += adapter.rooms.get(room)?.size ?? 0;
+        metrics.chatViews.set(accountId, [...metrics.chatViews.get(accountId) ?? [], message]);
+      }
+    }
     if (packet.data?.[0] === 'player:state') {
       const payload = packet.data[1] as PlayerSnapshot;
       const socketIds = new Set<string>();
       for (const room of options.rooms) {
         for (const socketId of adapter.rooms.get(room) ?? []) socketIds.add(socketId);
       }
-      for (const room of options.except) {
+      for (const room of options.except ?? []) {
         for (const socketId of adapter.rooms.get(room) ?? []) socketIds.delete(socketId);
       }
       const recipients = socketIds.size;
@@ -94,6 +108,8 @@ export async function createSocketHarness(roomCount = 3): Promise<SocketHarness>
         metrics.recipients.set(payload.player.id,
           (metrics.recipients.get(payload.player.id) ?? 0) + recipients);
         metrics.latestSnapshots.set(payload.player.id, payload);
+        if (payload.chatHistory) metrics.chatViews.set(payload.player.id, payload.chatHistory);
+        else if (!payload.room) metrics.chatViews.set(payload.player.id, []);
       }
     }
     broadcast(packet, options);
@@ -153,6 +169,7 @@ export async function createSocketHarness(roomCount = 3): Promise<SocketHarness>
     metrics.runtimeWrites = 0;
     metrics.recipients.clear();
     metrics.latestSnapshots.clear();
+    metrics.chatMessages = 0;
   }
   resetMetrics();
   return {

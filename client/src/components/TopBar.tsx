@@ -1,4 +1,4 @@
-// ─── TopBar 元件：全域頂列（導覽、牌局資訊、語音、音樂、主題、語系） ───
+// ─── TopBar: global top bar (navigation, game info, voice, music, theme, locale) ───
 
 import { lazy, Suspense, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -18,12 +18,15 @@ import { useTurnSound } from '../hooks/use-turn-sound';
 import { LanguageSwitch } from './LanguageSwitch';
 import { MusicControl } from './MusicControl';
 import { ThemeSwitch } from './ThemeSwitch';
+import { joinNames } from '../games/seat-names';
 import styles from './TopBar.module.css';
 
 const VoicePanel = lazy(() => import('./VoicePanel')
   .then((module) => ({ default: module.VoicePanel })));
 
 type Popover = 'menu' | 'voice' | 'music' | 'signOut';
+
+const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function BidLabel({ level, suit }: { level: BidLevel; suit: BidSuit }): ReactNode {
   if (suit === 'nt') return <>{level}NT</>;
@@ -32,7 +35,7 @@ function BidLabel({ level, suit }: { level: BidLevel; suit: BidSuit }): ReactNod
 }
 
 function GameChips(): ReactNode {
-  const { t } = useI18nStore();
+  const { locale, t } = useI18nStore();
   const roomCode = useRoomStore((state) => state.currentRoomCode);
   const bidding = useGameStore((state) => state.bidding);
   const contract = useGameStore((state) => state.contract);
@@ -56,7 +59,7 @@ function GameChips(): ReactNode {
         {mySeat && <> · {t('bigtwo.myPenalty', { n: String(bigTwoResult.scores[mySeat]) })}</>}
       </span>}
       {redPointsResult && <span className={styles.chip}>
-        🏆 {redPointsResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)).join('、')}
+        🏆 {joinNames(redPointsResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
       </span>}
       {myRedPoints !== null && <span className={styles.chip}>
         {t('redpoints.myPoints', { n: String(myRedPoints) })}
@@ -86,6 +89,8 @@ export function TopBar(): ReactNode {
   const { pathname } = useLocation();
   const accountId = useAccountStore((state) => state.account?.id);
   const roomCode = useRoomStore((state) => state.currentRoomCode);
+  const inActiveGame = useRoomStore((state) => state.roomInfo?.status === 'playing' && state.mySeat !== null);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const voiceStatus = useVoiceStore((state) => state.status);
   const musicPlaying = useMusicStore((state) => state.playing);
   const [open, setOpen] = useState<Popover | null>(null);
@@ -102,8 +107,16 @@ export function TopBar(): ReactNode {
     const onPointerDown = (event: PointerEvent): void => {
       if (!(event.target instanceof Element) || !event.target.closest('[data-popover]')) setOpen(null);
     };
+    const group = document.querySelector(`[data-popover="${open}"]`);
+    const trigger = group?.querySelector<HTMLElement>('button');
+    const panel = group?.querySelector<HTMLElement>('[data-popover-panel]');
+    if (panel) (panel.querySelector<HTMLElement>(FOCUSABLE) ?? panel).focus({ preventScroll: true });
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') setOpen(null);
+      if (event.key !== 'Escape') return;
+      // Only the topmost layer closes; the game sheets below ignore a handled Escape.
+      event.preventDefault();
+      setOpen(null);
+      trigger?.focus({ preventScroll: true });
     };
     document.addEventListener('pointerdown', onPointerDown);
     document.addEventListener('keydown', onKeyDown);
@@ -115,7 +128,16 @@ export function TopBar(): ReactNode {
 
   const toggle = (popover: Popover): void => setOpen((current) => current === popover ? null : popover);
 
+  const requestSignOut = (): void => {
+    if (inActiveGame) {
+      setError('');
+      setConfirmSignOut(true);
+      setOpen('signOut');
+    } else void signOut();
+  };
+
   const signOut = async (): Promise<void> => {
+    setConfirmSignOut(false);
     setBusy(true);
     setError('');
     const result = await apiRequest('/api/auth/logout', 'POST');
@@ -139,46 +161,55 @@ export function TopBar(): ReactNode {
       {showLinks && <nav className={styles.links}>{links}</nav>}
       {inGame && <GameChips />}
       <div className={styles.actions}>
-        {showVoice && <div className={styles.group} data-popover>
-          <button type="button" className={styles.iconBtn} onClick={() => toggle('voice')}
+        {showVoice && <div className={styles.group} data-popover="voice">
+          <button type="button" className={`${styles.iconBtn} touch-target`} onClick={() => toggle('voice')}
             aria-expanded={open === 'voice'} aria-label={t('topbar.voice')} title={t('topbar.voice')}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg>
             {(voiceStatus === 'joined' || voiceStatus === 'joining') &&
               <span className={voiceStatus === 'joined' ? styles.dotJoined : styles.dotJoining} />}
           </button>
-          <div className={`${styles.popover} ${open === 'voice' ? '' : styles.hidden}`}>
+          <div className={`${styles.popover} ${open === 'voice' ? '' : styles.hidden}`} data-popover-panel tabIndex={-1}>
             <Suspense fallback={null}><VoicePanel /></Suspense>
           </div>
         </div>}
-        <div className={styles.group} data-popover>
-          <button type="button" className={`${styles.iconBtn} ${musicPlaying ? styles.iconActive : ''}`}
+        <div className={styles.group} data-popover="music">
+          <button type="button" className={`${styles.iconBtn} touch-target ${musicPlaying ? styles.iconActive : ''}`}
             onClick={() => toggle('music')} aria-expanded={open === 'music'}
             aria-label={t('topbar.music')} title={t('topbar.music')}>
             <span aria-hidden="true">♪</span>
           </button>
-          {open === 'music' && <div className={styles.popover}><MusicControl /></div>}
+          {open === 'music' && <div className={styles.popover} data-popover-panel tabIndex={-1}><MusicControl /></div>}
         </div>
         <div className={styles.prefs}>
           <ThemeSwitch />
           <LanguageSwitch />
         </div>
-        <div className={`${styles.group} ${styles.menuGroup}`} data-popover>
-          <button type="button" className={styles.iconBtn} onClick={() => toggle('menu')}
+        <div className={`${styles.group} ${styles.menuGroup}`} data-popover="menu">
+          <button type="button" className={`${styles.iconBtn} touch-target`} onClick={() => toggle('menu')}
             aria-expanded={open === 'menu'} aria-label={t('topbar.menu')} title={t('topbar.menu')}>
             <span aria-hidden="true">☰</span>
           </button>
-          {open === 'menu' && <div className={`${styles.popover} ${styles.menu}`}>
+          {open === 'menu' && <div className={`${styles.popover} ${styles.menu}`} data-popover-panel tabIndex={-1}>
             {showLinks && <nav className={styles.menuLinks}>{links}</nav>}
             <ThemeSwitch />
             <LanguageSwitch />
           </div>}
         </div>
-        {accountId && <div className={styles.group} data-popover>
-          <button type="button" className={styles.iconBtn} onClick={() => void signOut()} disabled={busy}
+        {accountId && <div className={styles.group} data-popover="signOut">
+          <button type="button" className={`${styles.iconBtn} touch-target`} onClick={requestSignOut} disabled={busy}
+            aria-expanded={open === 'signOut' && confirmSignOut}
             aria-label={t('topbar.signOut')} title={t('topbar.signOut')}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
           </button>
           {open === 'signOut' && error && <p className={`${styles.popover} ${styles.error}`} role="alert">{error}</p>}
+          {open === 'signOut' && !error && confirmSignOut && <div className={`${styles.popover} ${styles.confirm}`}
+            data-popover-panel tabIndex={-1} role="alertdialog" aria-labelledby="sign-out-confirm">
+            <p id="sign-out-confirm">{t('topbar.signOutConfirm')}</p>
+            <div className={styles.confirmActions}>
+              <button type="button" className="btn btn-outline" onClick={() => setOpen(null)}>{t('topbar.cancel')}</button>
+              <button type="button" className="btn btn-danger" onClick={() => void signOut()}>{t('topbar.signOut')}</button>
+            </div>
+          </div>}
         </div>}
       </div>
     </header>

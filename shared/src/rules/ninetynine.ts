@@ -1,4 +1,4 @@
-// ─── 99 規則引擎（純函式，前後端共用） ───
+// ─── Ninety-Nine rules engine (pure functions, shared by client and server) ───
 // Rules: docs/games.md#ninety-nine
 
 import type { Card } from '../types';
@@ -14,12 +14,12 @@ export interface NnEffect {
   designate: boolean;
 }
 
-/** 10 與 Q 需選擇加或減 */
+/** 10 and Q require choosing add or subtract */
 export function nnRequiresChoice(card: Card): boolean {
   return card.rank === 10 || card.rank === 12;
 }
 
-/** 依牌效果計算新累計點數與流程變化；10/Q 未給 choice 時拋錯 */
+/** Apply the card effect to get the new total and turn-flow change; throws when 10/Q has no choice */
 export function nnApply(total: number, card: Card, choice?: NnChoice): NnEffect {
   const effect: NnEffect = { total, reverse: false, designate: false };
   switch (card.rank) {
@@ -33,7 +33,7 @@ export function nnApply(total: number, card: Card, choice?: NnChoice): NnEffect 
       effect.designate = true;
       break;
     case 11:
-      // J = PASS：點數不變，正常換下一位
+      // J = PASS: the total is unchanged and play moves to the next player
       break;
     case 13:
       effect.total = NN_MAX;
@@ -51,7 +51,7 @@ export function nnApply(total: number, card: Card, choice?: NnChoice): NnEffect 
   return effect;
 }
 
-/** 存在某個合法選擇使累計點數不超過 99 */
+/** Some legal choice keeps the running total at or below 99 */
 export function nnIsPlayable(total: number, card: Card): boolean {
   const choices: (NnChoice | undefined)[] = nnRequiresChoice(card) ? ['plus', 'minus'] : [undefined];
   return choices.some((choice) => nnApply(total, card, choice).total <= NN_MAX);

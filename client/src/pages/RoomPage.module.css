@@ -1,4 +1,4 @@
-/* ─── RoomPage 樣式 ─── */
+/* ─── RoomPage styles ─── */
 
 .roomContainer {
   height: 100%;
@@ -74,7 +74,7 @@
 .segment:hover:not(:disabled) { background: var(--bg-card-hover); color: var(--text-primary); }
 .segment:disabled { cursor: not-allowed; opacity: 0.6; }
 
-/* 目前遊戲：非房主看到的也是這個徽章 */
+/* Current game: non-hosts see this badge too */
 .segmentActive,
 .segmentActive:disabled {
   background: var(--color-primary);
@@ -128,16 +128,33 @@
 }
 
 .customTable {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Image on its own layer so opacity reveals the theme surface without fading the table. */
+.customTable::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
   background:
     linear-gradient(color-mix(in srgb, var(--bg-surface) 35%, transparent),
       color-mix(in srgb, var(--bg-surface) 35%, transparent)),
-    var(--table-image) center / cover no-repeat,
-    var(--table-surface);
+    var(--table-image) center / cover no-repeat;
+  opacity: var(--table-image-opacity, 1);
 }
 
 .tableCenterText {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
   padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--bg-surface) 75%, transparent);
   color: var(--text-primary);
   font-size: var(--text-sm);
@@ -198,6 +215,9 @@
 
 .emptySlot { cursor: default; }
 .seatChoice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   width: 100%;
   min-height: 72px;
   padding: var(--spacing-sm);
@@ -358,4 +378,53 @@
   .roomLayout .chat { display: none; grid-area: table; }
   .chatOpen .tableArea { display: none; }
   .chatOpen .chat { display: block; }
+}
+
+.codeBlock {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.copyBtn {
+  gap: 4px;
+  padding: 4px 12px;
+  font-size: var(--text-xs);
+}
+
+.chatToggle { position: relative; }
+
+.unread {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-danger);
+  color: var(--text-on-danger);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* The table centre shows progress on wide screens; compact layouts show it by the Ready button. */
+.progress {
+  display: none;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 767px), (max-height: 500px) {
+  .progress { display: block; }
+  .copyBtn { gap: 0; padding: 2px 8px; min-height: 28px; }
+  .copyText { display: none; }
 }

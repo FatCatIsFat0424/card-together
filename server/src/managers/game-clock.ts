@@ -13,8 +13,8 @@ export function getTurnSeat(game: AnyGameState): Seat | null {
 
 function createTurn(game: AnyGameState, clock: GameClock, baseRemainingMs: number, now: number): GameClock['turn'] {
   const seat = getTurnSeat(game);
-  // A forced pass offers no decision and must not consume thinking time.
-  if (!seat || (game.gameType === 'bigtwo' && game.pendingAutoPass)) return null;
+  // Forced Big Two passes publish an ordinary turn so other seats cannot infer the hand.
+  if (!seat) return null;
   const startsAt = Math.max(now, getPresentationEndsAt(game));
   return { id: randomUUID(), seat, startsAt, baseRemainingMs,
     deadline: startsAt + baseRemainingMs + clock.bankRemainingMs[seat] };
@@ -30,9 +30,12 @@ export function initializeGameClock(
   game.clock = { ...clock, turn: createTurn(game, clock, settings.baseSeconds * 1000, now) };
 }
 
-/** Settles only decision time; the next presentation shifts the start without charging the bank. */
+/**
+ * Settles only decision time; the next presentation shifts the start without charging the bank.
+ * Forced turns offered no decision, so they never charge the bank.
+ */
 export function advanceGameClock(
-  game: AnyGameState, previous: GameClock, sameTurn: boolean, redealt: boolean, now: number,
+  game: AnyGameState, previous: GameClock, sameTurn: boolean, redealt: boolean, now: number, forced = false,
 ): void {
   if (redealt) {
     initializeGameClock(game, previous.settings, now);
@@ -41,7 +44,7 @@ export function advanceGameClock(
   const bankRemainingMs = { ...previous.bankRemainingMs };
   const turn = previous.turn;
   const elapsed = turn ? Math.max(0, now - turn.startsAt) : 0;
-  if (turn) bankRemainingMs[turn.seat] = Math.max(0,
+  if (turn && !forced) bankRemainingMs[turn.seat] = Math.max(0,
     bankRemainingMs[turn.seat] - Math.max(0, elapsed - turn.baseRemainingMs));
   const baseRemainingMs = sameTurn && turn
     ? Math.max(0, turn.baseRemainingMs - elapsed) : previous.settings.baseSeconds * 1000;

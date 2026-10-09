@@ -1,9 +1,14 @@
 import { randomBytes } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { BridgeVisibleState } from '@shared/types';
 import type { PlayerSnapshot } from '@shared/types/socket-events';
 import { SESSION_COOKIE_NAME, tokenHash } from '../../src/auth/auth-service';
 import { createSocketHarness, SEATS, TEST_ORIGIN } from './socket-harness';
 import type { SocketHarness, TestClient } from './socket-harness';
+
+function bridgeView(snapshot: PlayerSnapshot | undefined): BridgeVisibleState | undefined {
+  return snapshot?.gameState?.gameType === 'bridge' ? snapshot.gameState : undefined;
+}
 
 describe('socket delivery scope and read-only resume', () => {
   let harness: SocketHarness;
@@ -41,14 +46,17 @@ describe('socket delivery scope and read-only resume', () => {
     const delivered = new Map(harness.metrics.latestSnapshots);
     for (let index = 0; index < 4; index += 1) {
       const actual = await resume(harness.clients[roomIndex][index]);
-      const expected = structuredClone(delivered.get(harness.accountIds[roomIndex][index]));
+      const accountId = harness.accountIds[roomIndex][index];
+      const expected = structuredClone(delivered.get(accountId));
+      // Broadcasts omit unchanged history; compare the history a client rebuilt from deltas.
+      if (expected) expected.chatHistory = harness.metrics.chatViews.get(accountId);
       if (expected?.gameState?.presentation && actual.gameState?.presentation) {
         expect(actual.gameState.presentation.serverNow)
           .toBeGreaterThanOrEqual(expected.gameState.presentation.serverNow!);
         expected.gameState.presentation = { ...expected.gameState.presentation,
           serverNow: actual.gameState.presentation.serverNow };
       }
-      if (actual.gameState?.clock && expected.gameState?.clock) {
+      if (actual.gameState?.clock && expected?.gameState?.clock) {
         expected.gameState.clock = { ...expected.gameState.clock, serverNow: actual.gameState.clock.serverNow };
       }
       expect(actual).toEqual(expected);
@@ -61,11 +69,31 @@ describe('socket delivery scope and read-only resume', () => {
       .toEqual({ success: true });
     expectRoomRecipients(0);
     expect(harness.metrics.runtimeWrites).toBe(1);
+    expect(harness.metrics.chatMessages).toBe(4);
     for (const accountId of harness.accountIds[0]) {
-      expect(harness.metrics.latestSnapshots.get(accountId)?.chatHistory?.at(-1)?.content)
+      expect(harness.metrics.latestSnapshots.get(accountId)).not.toHaveProperty('chatHistory');
+      expect(harness.metrics.chatViews.get(accountId)?.at(-1)?.content)
         .toBe('Only this table receives the update');
     }
     await expectDeliveredStateMatchesResume(0);
+  });
+
+  it('should send full history on room changes and replace it on resume', async () => {
+    const [actor, , , other] = harness.clients[0];
+    expect(await actor.timeout(5_000).emitWithAck('chat:send', { message: 'Before leaving' }))
+      .toEqual({ success: true });
+    expect(await harness.clients[1][3].timeout(5_000).emitWithAck('room:leave')).toEqual({ success: true });
+    harness.resetMetrics();
+    expect(await actor.timeout(5_000).emitWithAck('room:leave')).toEqual({ success: true });
+    expect(harness.metrics.latestSnapshots.get(harness.accountIds[0][0])?.chatHistory).toEqual([]);
+    expect(harness.metrics.latestSnapshots.get(harness.accountIds[0][3])).not.toHaveProperty('chatHistory');
+    expect(await actor.timeout(5_000).emitWithAck('room:join', { roomCode: harness.roomCodes[1] }))
+      .toMatchObject({ success: true });
+    expect(harness.metrics.latestSnapshots.get(harness.accountIds[0][0])?.chatHistory)
+      .toEqual((await resume(harness.clients[1][0])).chatHistory);
+    expect(harness.metrics.chatMessages).toBe(0);
+    const restored = await resume(other);
+    expect(restored.chatHistory?.at(-1)?.content).toBe('Before leaving');
   });
 
   it('should send a played card only to the four affected players', async () => {
@@ -82,7 +110,7 @@ describe('socket delivery scope and read-only resume', () => {
     }
     expect(state.gameState?.phase).toBe('bidding');
     for (let bidIndex = 0; bidIndex < 4; bidIndex += 1) {
-      const seat = state.gameState?.bidding?.currentBidderSeat;
+      const seat = bridgeView(state)?.bidding?.currentBidderSeat;
       if (!seat) throw new Error('Expected bidder');
       const bid = bidIndex === 0 ? { type: 'bid' as const, level: 1 as const, suit: 'clubs' as const }
         : { type: 'pass' as const };
@@ -90,17 +118,17 @@ describe('socket delivery scope and read-only resume', () => {
         .toEqual({ success: true });
       state = await resume(players[0]);
     }
-    const seat = state.gameState?.playing?.currentTurnSeat;
+    const seat = bridgeView(state)?.playing?.currentTurnSeat;
     if (!seat) throw new Error('Expected player turn');
     const actor = players[SEATS.indexOf(seat)];
-    const card = (await resume(actor)).gameState?.validCards[0];
+    const card = bridgeView(await resume(actor))?.validCards[0];
     if (!card) throw new Error('Expected valid card');
     harness.resetMetrics();
     expect(await actor.timeout(5_000).emitWithAck('game:playCard', { card })).toEqual({ success: true });
     expectRoomRecipients(0);
     for (const accountId of harness.accountIds[0]) {
       const snapshot = harness.metrics.latestSnapshots.get(accountId);
-      expect(snapshot?.gameState?.playing?.currentTrick[seat]).toEqual(card);
+      expect(bridgeView(snapshot)?.playing?.currentTrick[seat]).toEqual(card);
       expect(snapshot?.gameState).not.toHaveProperty('hands');
     }
     await expectDeliveredStateMatchesResume(0);

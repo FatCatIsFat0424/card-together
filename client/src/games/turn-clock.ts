@@ -25,3 +25,20 @@ export function seatClock(clock: GameClock, seat: Seat, receivedAt: number, now:
     bankMs,
   };
 }
+
+/** Slack so the re-render lands just after the displayed second changes. */
+const TICK_SLACK_MS = 15;
+
+/**
+ * Delay until a countdown shown as whole seconds (rounded up) changes, so redraws line up
+ * with second boundaries instead of polling.
+ */
+export function clockTickDelay(remainingMs: number): number {
+  if (!Number.isFinite(remainingMs) || remainingMs <= 0) return 1000;
+  return (remainingMs % 1000 || 1000) + TICK_SLACK_MS;
+}
+
+/** The value currently counting down: the turn allowance first, then the reserve. */
+export function countingMs(time: SeatClock): number {
+  return time.baseMs > 0 ? time.baseMs : time.bankMs;
+}

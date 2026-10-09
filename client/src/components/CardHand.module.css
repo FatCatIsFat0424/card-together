@@ -1,8 +1,8 @@
-/* ─── CardHand 元件樣式 ─── */
+/* ─── CardHand styles ─── */
 
 .handContainer {
   /* Reserve room for every card plus the fan edges inside the table column. */
-  --card-w: min(96px, 12cqh, calc((100cqw - 32px) / (1.8 + (var(--hand-card-count) - 1) * (1 - var(--overlap)))));
+  --card-w: min(calc(96px * var(--playing-card-scale)), 12cqh, calc((100cqw - 32px) / (1.8 + (var(--hand-card-count) - 1) * (1 - var(--overlap)))));
   --overlap: 0.42;
   --fan-step: 0.6deg;
   display: flex;
@@ -31,7 +31,7 @@
   position: relative;
   user-select: none;
   transform-origin: 50% 100%;
-  transform: rotate(calc(var(--fan) * var(--fan-step))) translateY(var(--lift, 0px));
+  transform: rotate(calc(var(--fan) * var(--fan-step))) translateY(var(--lift, 0px)) scale(var(--card-scale, 1));
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
@@ -44,7 +44,7 @@
   pointer-events: none;
 }
 
-.card:disabled { cursor: default; }
+.card[aria-disabled='true'] { cursor: default; }
 
 .cardPlayable {
   --lift: -10px;
@@ -68,7 +68,18 @@
     var(--shadow-md);
 }
 
-/* 標示但仍清楚可讀（99：會超過 99 的牌） */
+/* Touch: the first tap lifts and enlarges the card; the second tap plays it. */
+.card.cardArmed {
+  --lift: -24px;
+  --card-scale: 1.18;
+  z-index: 15;
+  box-shadow:
+    0 0 0 3px var(--turn-glow),
+    0 0 22px color-mix(in srgb, var(--turn-glow) 70%, transparent),
+    var(--shadow-lg);
+}
+
+/* Marked but still clearly readable (Ninety-Nine: cards that would exceed 99) */
 .cardMarked img { filter: saturate(0.6) brightness(0.9); }
 
 .cardMarked::after {
@@ -98,6 +109,7 @@
   .cardPlayable:hover,
   .cardPlayable:focus-visible { --lift: -14px; }
   .cardSelected { --lift: -16px; }
+  .card.cardArmed { --lift: -18px; }
 }
 
 .cardReorderable {

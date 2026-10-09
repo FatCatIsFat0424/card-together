@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { GAME_TYPES } from '@shared/constants';
 import type { GameType } from '@shared/types';
 import { socket } from '../socket';
@@ -49,6 +49,8 @@ export function LobbyPage(): ReactNode {
   };
 
   if (!account) return null;
+  // A seated player has nothing to do in the lobby, so the lobby link goes straight back to the table.
+  if (currentRoomCode) return <Navigate replace to={`/${phase ? 'game' : 'room'}/${currentRoomCode}`} />;
   return (
     <main className={styles.lobbyContainer}>
       <div className={styles.lobbyCard}>
@@ -58,10 +60,7 @@ export function LobbyPage(): ReactNode {
           <p>@{account.username} · {t('lobby.subtitle')}</p>
           <Link to="/account">{t('nav.account')}</Link>
         </div>
-        {currentRoomCode ? <Link className={`btn btn-primary ${styles.fullWidthBtn}`}
-          to={`/${phase ? 'game' : 'room'}/${currentRoomCode}`}>
-          {t('lobby.resume')} · {currentRoomCode}
-        </Link> : <div className={styles.roomActions}>
+        <div className={styles.roomActions}>
           <div className={styles.divider}>{t('lobby.createRoom')}</div>
           <div className={styles.gameChoices} role="group" aria-label={t('gameType.choose')}>
             {GAME_TYPES.map((gameType) => (
@@ -82,7 +81,7 @@ export function LobbyPage(): ReactNode {
             <button type="submit" className="btn btn-outline" disabled={loading}>
               {t('lobby.join')}</button>
           </form>
-        </div>}
+        </div>
         {error && <p className={styles.errorMsg} role="alert">{error}</p>}
       </div>
     </main>

@@ -1,26 +1,26 @@
-// ─── 房間型別定義 ───
+// ─── Room types ───
 
 import type { PlayerInfo, Seat } from './player';
 
-/** 房間代碼（6 碼英數字） */
+/** Room code (6 alphanumeric characters) */
 export type RoomCode = string;
 
-/** 遊戲類型 */
+/** Game type */
 export type GameType = 'bridge' | 'bigtwo' | 'redpoints' | 'ninetynine';
 
-/** 房間狀態 */
+/** Room status */
 export type RoomStatus = 'waiting' | 'playing';
 
-/** 座位資訊 */
+/** Seat info */
 export interface SeatInfo {
   readonly player: PlayerInfo | null;
   readonly isReady: boolean;
 }
 
-/** 座位表：四個方位的座位狀態 */
+/** Seat map: state of the four seats */
 export type SeatMap = Record<Seat, SeatInfo>;
 
-/** 進行中的投票終止對局（帳號 id） */
+/** Active abort-game vote (account ids) */
 export interface AbortVoteInfo {
   readonly startedBy: string;
   readonly startedAt: number;
@@ -34,7 +34,7 @@ export interface TimeControl {
   readonly bankSeconds: number;
 }
 
-/** 房間資訊（對外暴露） */
+/** Room info (public) */
 export interface RoomInfo {
   /** Missing only on legacy snapshots. */
   readonly timeControl?: TimeControl;
@@ -43,7 +43,7 @@ export interface RoomInfo {
   readonly status: RoomStatus;
   readonly seats: SeatMap;
   readonly createdAt: number;
-  /** 房主：建立者；離開時改由加入順序中下一位成員擔任 */
+  /** Host: the creator; passes to the next member in join order when they leave */
   readonly hostId: string;
   readonly abortVote: AbortVoteInfo | null;
   readonly abortVoteCooldownUntil: number | null;

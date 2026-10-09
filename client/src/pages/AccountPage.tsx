@@ -4,20 +4,31 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { AccountProfile, AvatarId, MatchHistory } from '@shared/types';
 import { apiRequest } from '../api';
 import { resizeImage } from '../image-resize';
-import { mediaUrl, uploadImage } from '../media';
+import { uploadImage } from '../media';
+import type { MediaPurpose } from '../media';
+import { cardBackStyle, tableBackgroundStyle } from '../account-appearance';
 import { clearAccount, useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { Avatar, AVATARS } from '../components/Avatar';
 import { MatchHistoryList } from '../components/MatchHistoryList';
 import { EmojiLibrary } from '../components/EmojiLibrary';
+import { OpacitySlider } from '../components/OpacitySlider';
 import styles from './AccountPages.module.css';
 
-type MediaField = 'avatarImage' | 'tableBackground';
+type MediaField = 'avatarImage' | 'tableBackground' | 'cardBack';
+type OpacityField = 'tableBackgroundOpacity' | 'cardBackOpacity';
+type SettingField = MediaField | OpacityField | 'matchesPublic';
 
 const RESIZE = {
   avatarImage: { size: 256, square: true, quality: 0.9, fallbackType: 'image/png' },
   tableBackground: { size: 1920, square: false, quality: 0.85, fallbackType: 'image/jpeg' },
+  // JPEG fallback keeps a 512-pixel photo well under the 512 KiB card back limit.
+  cardBack: { size: 512, square: false, quality: 0.85, fallbackType: 'image/jpeg' },
 } as const;
+
+const PURPOSE: Record<MediaField, MediaPurpose> = {
+  avatarImage: 'avatar', tableBackground: 'background', cardBack: 'cardBack',
+};
 
 export function AccountPage(): ReactNode {
   const account = useAccountStore((state) => state.account);
@@ -38,9 +49,11 @@ export function AccountPage(): ReactNode {
   const [history, setHistory] = useState<MatchHistory | null>(null);
   const [historyError, setHistoryError] = useState('');
   const [mediaBusy, setMediaBusy] = useState<MediaField | 'matchesPublic' | null>(null);
-  const [mediaError, setMediaError] = useState<{ field: MediaField | 'matchesPublic'; message: string } | null>(null);
+  const [mediaError, setMediaError] = useState<{ field: SettingField; message: string } | null>(null);
+  const [opacityDraft, setOpacityDraft] = useState<Partial<Record<OpacityField, number>>>({});
   const avatarInput = useRef<HTMLInputElement>(null);
   const backgroundInput = useRef<HTMLInputElement>(null);
+  const cardBackInput = useRef<HTMLInputElement>(null);
   const accountId = account?.id;
 
   useEffect(() => {
@@ -81,11 +94,39 @@ export function AccountPage(): ReactNode {
     event.target.value = '';
     if (!file) return;
     void patchSetting(field, async () => uploadImage(await resizeImage(file, RESIZE[field]),
-      field === 'avatarImage' ? 'avatar' : 'background'));
+      PURPOSE[field]));
   };
 
-  const mediaFeedback = (field: MediaField | 'matchesPublic'): ReactNode =>
+  const mediaFeedback = (field: SettingField): ReactNode =>
     mediaError?.field === field && <p role="alert" className={styles.error}>{mediaError.message}</p>;
+
+  /** Not marked busy: uploads stay usable while an opacity change saves in the background. */
+  const saveOpacity = async (field: OpacityField, value: number): Promise<void> => {
+    if (value !== account[field]) {
+      setMediaError(null);
+      const result = await apiRequest<{ account: AccountProfile }>('/api/auth/profile', 'PATCH', {
+        [field]: value,
+      });
+      if (result.success) setAccount(result.account);
+      else setMediaError({ field, message: result.error });
+    }
+    setOpacityDraft((draft) => (draft[field] === value ? { ...draft, [field]: undefined } : draft));
+  };
+
+  const opacitySlider = (field: OpacityField, label: string, enabled: boolean): ReactNode => (
+    <OpacitySlider id={`profile-${field}`} label={label} value={opacityDraft[field] ?? account[field]}
+      disabled={!enabled}
+      onChange={(value) => setOpacityDraft((draft) => ({ ...draft, [field]: value }))}
+      onCommit={(value) => void saveOpacity(field, value)} />
+  );
+
+  const tablePreview = tableBackgroundStyle({
+    ...account,
+    tableBackgroundOpacity: opacityDraft.tableBackgroundOpacity ?? account.tableBackgroundOpacity,
+  });
+  const cardBackPreview = cardBackStyle({
+    ...account, cardBackOpacity: opacityDraft.cardBackOpacity ?? account.cardBackOpacity,
+  });
 
   const saveProfile = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
@@ -222,8 +263,8 @@ export function AccountPage(): ReactNode {
         <section className={styles.card}>
           <h2>{t('profile.background')}</h2>
           <p className={styles.hint}>{t('profile.backgroundHelp')}</p>
-          {account.tableBackground && <img className={styles.backgroundPreview}
-            src={mediaUrl(account.tableBackground)} alt="" />}
+          {tablePreview && <div className={styles.backgroundPreview} style={tablePreview}
+            aria-hidden="true" />}
           <div className={`${styles.actions} ${styles.section}`}>
             <input ref={backgroundInput} type="file" accept="image/*" hidden
               onChange={chooseImage('tableBackground')} />
@@ -237,6 +278,28 @@ export function AccountPage(): ReactNode {
               {t('profile.removeBackground')}</button>}
           </div>
           {mediaFeedback('tableBackground')}
+          {opacitySlider('tableBackgroundOpacity', t('profile.backgroundOpacity'), !!account.tableBackground)}
+          {mediaFeedback('tableBackgroundOpacity')}
+        </section>
+        <section className={styles.card}>
+          <h2>{t('profile.cardBack')}</h2>
+          <p className={styles.hint}>{t('profile.cardBackHelp')}</p>
+          <span className={styles.cardBackPreview} style={cardBackPreview} aria-hidden="true" />
+          <div className={`${styles.actions} ${styles.section}`}>
+            <input ref={cardBackInput} type="file" accept="image/*" hidden
+              onChange={chooseImage('cardBack')} />
+            <button type="button" className="btn btn-outline" disabled={mediaBusy !== null}
+              onClick={() => cardBackInput.current?.click()}>
+              {mediaBusy === 'cardBack' ? t('profile.uploading') : t('profile.uploadCardBack')}
+            </button>
+            {account.cardBack && <button type="button" className="btn btn-outline"
+              disabled={mediaBusy !== null}
+              onClick={() => void patchSetting('cardBack', async () => null)}>
+              {t('profile.removeCardBack')}</button>}
+          </div>
+          {mediaFeedback('cardBack')}
+          {opacitySlider('cardBackOpacity', t('profile.cardBackOpacity'), !!account.cardBack)}
+          {mediaFeedback('cardBackOpacity')}
         </section>
         <section className={`${styles.card} ${styles.wide}`}>
           <h2>{t('emoji.title')}</h2>

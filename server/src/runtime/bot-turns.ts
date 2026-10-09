@@ -3,7 +3,7 @@ import type { AnyGameState, RoomCode, Seat } from '@shared/types';
 import { getBotAction } from '../bots/bot-decisions';
 import * as gameManager from '../managers/game-manager';
 import * as roomManager from '../managers/room-manager';
-import { applyAutomatedAction } from './automated-action';
+import { createFailureTracker, performAutomatedTurn } from './automated-action';
 import type { RuntimeCoordinator } from './coordinator';
 
 export const BOT_ACTION_DELAY_MS = 650;
@@ -29,6 +29,7 @@ function pendingTurn(game: AnyGameState): BotTurn | null {
 export function startBotTurns(runtime: RuntimeCoordinator, publish: (code: RoomCode) => void): () => void {
   let stopped = false;
   const scheduled = new Map<RoomCode, { key: string; timer: ReturnType<typeof setTimeout> }>();
+  const failures = createFailureTracker();
 
   function reconcile(retryDelay = 0): void {
     if (stopped) return;
@@ -53,16 +54,14 @@ export function startBotTurns(runtime: RuntimeCoordinator, publish: (code: RoomC
           if (stopped) return;
           const current = gameManager.getGameState(code);
           if (!current || pendingTurn(current)?.key !== turn.key || gameManager.isPresentationActive(code)) return;
-          const visible = gameManager.getPlayerVisibleState(code, turn.seat);
-          const action = visible && getBotAction(visible);
-          if (!action) throw new Error('No legal bot action for the pending turn.');
-          const result = applyAutomatedAction(code, turn.seat, action);
-          if (!result.success) throw new Error(result.reason ?? 'Bot action rejected.');
+          performAutomatedTurn(code, turn.seat, failures.count(code, turn.key), (visible) => getBotAction(visible));
           changed = true;
         }, { skipUnchanged: true, afterCommit: () => {
+          failures.clear(code);
           if (changed && !stopped) publish(code);
         } }).catch((error: unknown) => {
-          console.error('[runtime] Unable to commit bot action:', error);
+          const count = failures.fail(code, turn.key);
+          console.error(`[runtime] Unable to commit bot action (attempt ${count}):`, error);
           reconcile(1000);
         });
       }, delay);

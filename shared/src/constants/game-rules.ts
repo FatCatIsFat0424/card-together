@@ -1,48 +1,48 @@
-// ─── 遊戲規則常數 ───
+// ─── Game rule constants ───
 
 import type { Seat, BidSuit, Team, GameType } from '../types';
 
-/** 所有遊戲類型 */
+/** All game types */
 export const GAME_TYPES: readonly GameType[] = ['bridge', 'bigtwo', 'redpoints', 'ninetynine'];
 
-/** 投票終止：同意票達此數即通過 */
+/** Abort vote: passes once this many yes votes are cast */
 export const ABORT_VOTE_THRESHOLD = 3;
 
-/** 投票終止：投票時限（毫秒） */
+/** Abort vote: voting window (ms) */
 export const ABORT_VOTE_DURATION_MS = 60_000;
 
-/** 投票終止：自發起起算的冷卻時間（毫秒） */
+/** Abort vote: cooldown measured from initiation (ms) */
 export const ABORT_VOTE_COOLDOWN_MS = 180_000;
 
-/** 每位玩家的手牌數量 */
+/** Cards dealt to each player */
 export const HAND_SIZE = 13;
 
-/** 每局總墩數 */
+/** Tricks per deal */
 export const TOTAL_TRICKS = 13;
 
-/** 合約基礎墩數 */
+/** Book: tricks added to the contract level */
 export const CONTRACT_BASE_TRICKS = 6;
 
-/** 座位順時鐘順序 */
+/** Seat order, clockwise */
 export const SEAT_ORDER_CLOCKWISE: readonly Seat[] = ['N', 'E', 'S', 'W'];
 
-/** 隊伍劃分 */
+/** Team assignment */
 export const TEAM_SEATS: Record<Team, readonly [Seat, Seat]> = {
   EW: ['E', 'W'],
   NS: ['N', 'S'],
 };
 
-/** 叫牌花色大小順序（小到大） */
+/** Bid suit ranking (low to high) */
 export const BID_SUIT_ORDER: readonly BidSuit[] = ['clubs', 'diamonds', 'hearts', 'spades', 'nt'];
 
-/** 倒牌重洗條件：無 A 且總點數 ≤ 此值 */
+/** Redeal condition: no ace and total HCP at or below this value */
 export const REDEAL_MAX_POINTS = 4;
 
-/** 斷線重連超時（毫秒） */
+/** Reconnect timeout after disconnect (ms) */
 export const RECONNECT_TIMEOUT_MS = 60_000;
 
-/** 房間代碼長度 */
+/** Room code length */
 export const ROOM_CODE_LENGTH = 6;
 
-/** 暱稱最大長度 */
+/** Maximum nickname length */
 export const NICKNAME_MAX_LENGTH = 20;

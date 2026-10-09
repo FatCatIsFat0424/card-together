@@ -9,16 +9,21 @@ export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SER
   closeOnBeforeunload: true,
   withCredentials: true,
   transports: ['websocket', 'polling'],
+  // Fall back to polling on networks that block WebSocket upgrades.
+  tryAllTransports: true,
+  // The server keeps seats for a grace period; give up only when the page does.
   reconnection: true,
-  reconnectionAttempts: 10,
+  reconnectionAttempts: Infinity,
   reconnectionDelay: 1000,
   reconnectionDelayMax: 5000,
 });
 
-export function connectSocket(): void {
-  if (!socket.connected) socket.connect();
-}
-
 export function disconnectSocket(): void {
   socket.disconnect();
+}
+
+/** Starts a fresh connection attempt without waiting for the reconnection backoff. */
+export function reconnectSocket(): void {
+  socket.disconnect();
+  socket.connect();
 }

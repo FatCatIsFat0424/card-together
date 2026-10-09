@@ -168,7 +168,12 @@ export function createAuthRouter(service: AuthService, config: AuthRouterConfig)
         getRequestSession(response).account.id,
         request.body,
       );
-      await config.onAccountUpdated?.(account);
+      try {
+        await config.onAccountUpdated?.(account);
+      } catch (error) {
+        // The profile is saved; live tables catch up on the next snapshot or resume.
+        console.error('[auth] Unable to sync the updated profile:', error);
+      }
       response.json({ success: true, account });
     }),
   );

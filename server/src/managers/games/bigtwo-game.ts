@@ -1,4 +1,4 @@
-// ─── Big Two Game：台式大老二流程管理 ───
+// ─── Big Two Game: Taiwanese Big Two flow management ───
 
 import { randomInt, randomUUID } from 'node:crypto';
 import type {
@@ -18,9 +18,9 @@ import {
   identifyCombo,
   isDragon,
   legalPlays,
-  nextSeatCounterClockwise,
   sortBigTwoHand,
 } from '@shared/rules/bigtwo';
+import { nextSeatCounterClockwise } from '@shared/rules/seats';
 import { createDeck, shuffleDeck } from '../../engine/deck';
 import { dealCards } from '../../engine/dealing';
 
@@ -101,12 +101,15 @@ export function needsAutoPass(game: BigTwoGameState): boolean {
   return previous !== null && legalPlays(game.hands[game.currentTurnSeat], previous, false).length === 0;
 }
 
+export const AUTO_PASS_MAX_DELAY_MS = 5000;
+
 /** Sample once per eligible turn, after the preceding public presentation finishes. */
-export function prepareAutoPass(roomCode: RoomCode, earliestAt: number): void {
+export function prepareAutoPass(roomCode: RoomCode, earliestAt: number, maxDelayMs = AUTO_PASS_MAX_DELAY_MS): void {
   const game = games.get(roomCode);
   if (!game || game.pendingAutoPass || !needsAutoPass(game)) return;
+  const limit = Math.max(0, Math.min(AUTO_PASS_MAX_DELAY_MS, Math.floor(maxDelayMs)));
   game.pendingAutoPass = { id: randomUUID(), seat: game.currentTurnSeat,
-    executeAt: Math.max(Date.now(), earliestAt) + randomInt(5001) };
+    executeAt: Math.max(Date.now(), earliestAt) + randomInt(limit + 1) };
 }
 
 export function play(roomCode: RoomCode, seat: Seat, cards: readonly Card[]): Result {

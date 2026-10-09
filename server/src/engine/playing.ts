@@ -1,4 +1,4 @@
-// ─── Playing Engine：出牌規則引擎 ───
+// ─── Playing Engine: card-play rules ───
 
 import type {
   Card,
@@ -12,7 +12,7 @@ import { TOTAL_TRICKS, SEAT_ORDER_CLOCKWISE, TEAM_SEATS } from '@shared/constant
 import { getNextSeat } from './bidding';
 
 /**
- * 建立初始出牌狀態
+ * Create the initial playing state
  */
 export function createPlayingState(leadSeat: Seat): PlayingState {
   return {
@@ -26,36 +26,36 @@ export function createPlayingState(leadSeat: Seat): PlayingState {
 }
 
 /**
- * 取得合法出牌（跟牌規則）
- * - 首出牌者可出任何牌
- * - 後續必須跟主花色，若無主花色則可出任意牌
+ * Get legal plays (follow-suit rule)
+ * - The leader may play any card
+ * - Others must follow the lead suit, or play any card if void
  */
 export function getValidPlays(
   hand: readonly Card[],
   state: PlayingState,
 ): Card[] {
-  // 首出牌者可出任何牌
+  // The leader may play any card
   if (Object.keys(state.currentTrick).length === 0) {
     return [...hand];
   }
 
-  // 取得主花色
+  // Get the lead suit
   const leadCard = state.currentTrick[state.trickLeadSeat];
   if (!leadCard) return [...hand];
   const leadSuit = leadCard.suit;
 
-  // 手中有主花色的牌嗎？
+  // Does the hand hold the lead suit?
   const sameSuitCards = hand.filter((c) => c.suit === leadSuit);
   if (sameSuitCards.length > 0) {
     return sameSuitCards;
   }
 
-  // 無主花色：可出任意牌
+  // Void in the lead suit: any card is legal
   return [...hand];
 }
 
 /**
- * 驗證出牌是否合法
+ * Validate a play
  */
 export function validatePlay(
   hand: readonly Card[],
@@ -67,13 +67,13 @@ export function validatePlay(
     return { valid: false, reason: 'Not your turn' };
   }
 
-  // 檢查牌是否在手中
+  // Check the card is in hand
   const hasCard = hand.some((c) => c.suit === card.suit && c.rank === card.rank);
   if (!hasCard) {
     return { valid: false, reason: 'Card not in hand' };
   }
 
-  // 檢查跟牌規則
+  // Check the follow-suit rule
   const validPlays = getValidPlays(hand, state);
   const isValid = validPlays.some((c) => c.suit === card.suit && c.rank === card.rank);
   if (!isValid) {
@@ -84,7 +84,7 @@ export function validatePlay(
 }
 
 /**
- * 套用出牌，回傳新狀態
+ * Apply a play and return the new state
  */
 export function applyPlay(
   state: PlayingState,
@@ -92,17 +92,7 @@ export function applyPlay(
   card: Card,
 ): PlayingState {
   const newTrick = { ...state.currentTrick, [seat]: card };
-
-  // 是否四人都出牌了？
-  if (Object.keys(newTrick).length === 4) {
-    // 墩結束 — 但不在這裡結算，先記錄
-    return {
-      ...state,
-      currentTrick: newTrick,
-      currentTurnSeat: getNextSeat(seat), // 暫時設定，結算時會覆蓋
-    };
-  }
-
+  // A completed trick's next turn is provisional; completeTrick assigns the winner.
   return {
     ...state,
     currentTrick: newTrick,
@@ -111,12 +101,12 @@ export function applyPlay(
 }
 
 /**
- * 比較兩張牌的大小（在同一墩中）
- * @param a 待比較的牌
- * @param b 基準牌
- * @param leadSuit 主花色（該墩首出的花色）
- * @param trumpSuit 王牌花色（叫牌確定的）。'nt' 表示無王牌
- * @returns > 0 表示 a 贏 b
+ * Compare two cards within the same trick
+ * @param a Card to compare
+ * @param b Reference card
+ * @param leadSuit Lead suit (the suit led in the trick)
+ * @param trumpSuit Trump suit (set by bidding); 'nt' means no trump
+ * @returns > 0 if a beats b
  */
 export function compareCards(
   a: Card,
@@ -129,26 +119,26 @@ export function compareCards(
   const aIsLead = a.suit === leadSuit;
   const bIsLead = b.suit === leadSuit;
 
-  // 王牌 vs 非王牌
+  // Trump vs non-trump
   if (aIsTrump && !bIsTrump) return 1;
   if (!aIsTrump && bIsTrump) return -1;
 
-  // 都是王牌：比牌面
+  // Both trump: compare rank
   if (aIsTrump && bIsTrump) return a.rank - b.rank;
 
-  // 主花色 vs 非主花色
+  // Lead suit vs other suit
   if (aIsLead && !bIsLead) return 1;
   if (!aIsLead && bIsLead) return -1;
 
-  // 都是主花色：比牌面
+  // Both lead suit: compare rank
   if (aIsLead && bIsLead) return a.rank - b.rank;
 
-  // 都不是主花色也不是王牌：比牌面（但實際上都不贏）
+  // Neither lead suit nor trump: compare rank (neither can win in practice)
   return 0;
 }
 
 /**
- * 判定墩贏家
+ * Determine the trick winner
  */
 export function determineTrickWinner(
   trick: Record<Seat, Card>,
@@ -178,7 +168,7 @@ export function determineTrickWinner(
 }
 
 /**
- * 完成一墩，更新狀態
+ * Complete a trick and update the state
  */
 export function completeTrick(
   state: PlayingState,
@@ -205,14 +195,14 @@ export function completeTrick(
 }
 
 /**
- * 檢查出牌階段是否結束（13 墩全部完成）
+ * Check whether the playing phase is over (all 13 tricks done)
  */
 export function isPlayingComplete(state: PlayingState): boolean {
   return state.completedTricks.length >= TOTAL_TRICKS;
 }
 
 /**
- * 從手牌中移除一張牌
+ * Remove one card from a hand
  */
 export function removeCardFromHand(hand: readonly Card[], card: Card): Card[] {
   const idx = hand.findIndex((c) => c.suit === card.suit && c.rank === card.rank);

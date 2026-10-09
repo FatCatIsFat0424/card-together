@@ -1,18 +1,18 @@
-/* ─── GameShell 樣式：滿版牌桌，無頁面捲動 ─── */
+/* ─── GameShell styles: full-screen table, no page scroll ─── */
 
 .gameContainer {
   background: var(--bg-page);
   height: calc(100dvh - var(--topbar-height));
   overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr) minmax(280px, 320px);
+  grid-template-columns: minmax(200px, 220px) minmax(0, 1fr) minmax(240px, 260px);
   gap: 12px;
   padding: 12px;
 }
 
 .gameContainer > * { min-height: 0; min-width: 0; }
 
-.chatCollapsed { grid-template-columns: minmax(240px, 280px) minmax(0, 1fr) 48px; }
+.chatCollapsed { grid-template-columns: minmax(200px, 220px) minmax(0, 1fr) 48px; }
 
 .actionError {
   min-width: 0;
@@ -23,7 +23,7 @@
   font-size: var(--text-sm);
 }
 
-/* ─── 中央：牌桌 + 手牌 ─── */
+/* ─── Center: table + hand ─── */
 .centreColumn {
   background: var(--table-surface);
   container-type: size;
@@ -39,7 +39,8 @@
   min-height: 0;
   color: var(--table-ink);
   display: grid;
-  grid-template-columns: minmax(100px, 17%) minmax(0, 1fr) minmax(100px, 17%);
+  /* Side lanes wide enough for horizontal seat plates on common laptop widths. */
+  grid-template-columns: minmax(150px, 22%) minmax(0, 1fr) minmax(150px, 22%);
   grid-template-rows: auto minmax(0, 1fr);
   grid-template-areas: '. top .' 'left centre right';
   gap: 6px;
@@ -48,11 +49,23 @@
 
 /* Share the backdrop across seats and hands without extending into side panels. */
 .customTable {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Image on its own layer so opacity reveals the theme surface without fading the table. */
+.customTable::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
   background:
     linear-gradient(color-mix(in srgb, var(--bg-surface) 35%, transparent),
       color-mix(in srgb, var(--bg-surface) 35%, transparent)),
-    var(--table-image) center / cover no-repeat,
-    var(--table-surface);
+    var(--table-image) center / cover no-repeat;
+  opacity: var(--table-image-opacity, 1);
 }
 
 .tableCentre {
@@ -103,7 +116,7 @@
   font-size: var(--text-xs);
 }
 
-/* ─── 輪到自己：手牌區發光 + 提示膠囊 ─── */
+/* ─── Own turn: glowing hand area + hint pill ─── */
 .handMyTurn {
   box-shadow: 0 0 0 2px var(--turn-glow), 0 0 24px color-mix(in srgb, var(--turn-glow) 45%, transparent);
 }
@@ -118,13 +131,7 @@
   white-space: nowrap;
 }
 
-@keyframes turnPop {
-  0% { transform: scale(0.4); opacity: 0; }
-  70% { transform: scale(1.15); }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-/* ─── 出局橫幅（99 爆掉） ─── */
+/* ─── Eliminated banner (Ninety-Nine bust) ─── */
 .outBanner {
   position: absolute;
   top: 50%;
@@ -157,7 +164,7 @@
   .outBanner { animation: none; }
 }
 
-/* ─── 右側：聊天欄 ─── */
+/* ─── Right: chat column ─── */
 .chatRail {
   display: flex;
   flex-direction: column;
@@ -187,14 +194,14 @@
   padding: 0 5px;
   border-radius: var(--radius-pill);
   background: var(--color-danger);
-  color: var(--text-on-primary);
+  color: var(--text-on-danger);
   font-size: var(--text-xs);
   font-weight: 700;
   line-height: 18px;
   text-align: center;
 }
 
-/* ─── 資訊欄外框：桌機為欄位，平板為浮層，手機為底部抽屜 ─── */
+/* ─── Info rail wrapper: column on desktop, overlay on tablet, bottom drawer on mobile ─── */
 .infoPanel {
   display: flex;
   flex-direction: column;
@@ -255,6 +262,11 @@
   right: -6px;
 }
 
+@media (pointer: coarse) {
+  .sheetClose,
+  .toolBtn { width: 44px; height: 44px; }
+}
+
 .backdrop {
   position: fixed;
   inset: 0;
@@ -263,7 +275,7 @@
   animation: fadeIn 0.2s ease;
 }
 
-/* ─── 平板（768–1023px）：資訊欄改為牌桌左上 📋 開啟的浮層 ─── */
+/* ─── Tablet (768-1023px): the info rail becomes an overlay opened from the top-left of the table ─── */
 @media (max-width: 1023px) {
   .gameContainer { grid-template-columns: minmax(0, 1fr) minmax(260px, 300px); }
   .chatCollapsed { grid-template-columns: minmax(0, 1fr) 48px; }
@@ -304,7 +316,7 @@
   }
 }
 
-/* ─── 手機（< 768px）：單欄，資訊與聊天皆為底部抽屜 ─── */
+/* ─── Mobile (< 768px): single column; info and chat are bottom drawers ─── */
 @media (max-width: 767px) {
   .gameContainer,
   .chatCollapsed {
@@ -396,26 +408,17 @@
   .tableTools { display: flex; justify-content: flex-start; gap: 2px; }
   .chatFab { display: inline-flex; }
   .toolBtn { width: 30px; height: 30px; }
-  .yourTurn { font-size: 10px; }
+  .yourTurn { font-size: var(--text-xs); }
 }
 
+/* The own seat plate carries its clock; room above it fits the plate's status tab. */
 .handHeader {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 10px 0;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 10px 10px 0;
 }
-.handHeader > [data-table-seat] {
-  grid-area: auto;
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 4px;
-}
-.handHeader > [role='timer'] { justify-self: end; }
 @media (max-height: 500px) and (min-width: 600px) {
-  .handHeader { gap: 4px; padding-inline: 4px; }
+  .handHeader { padding: 8px 4px 0; }
 }
 
 @media (max-height: 500px) and (min-width: 600px) {
@@ -423,4 +426,54 @@
   .handHeader { grid-column: 1; grid-row: 1; }
   .handStatus { grid-column: 1; grid-row: 2; }
   .handZone > :last-child { grid-column: 2; grid-row: 1 / 3; }
+}
+
+/* Wide enough for 44px touch targets on phones; it never passes through FittedCentre scaling. */
+.actionPanel {
+  position: absolute;
+  z-index: 7;
+  left: 50%;
+  bottom: 4px;
+  transform: translateX(-50%);
+  width: min(400px, calc(100% - 8px));
+  max-height: calc(100% - 8px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (min-width: 1024px) and (min-height: 501px) {
+  .actionPanel { top: 50%; bottom: auto; transform: translate(-50%, -50%); }
+}
+
+@media (max-height: 500px) and (min-width: 600px) and (pointer: coarse) {
+  .toolBtn { width: 44px; height: 44px; }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Large screens widen the side rails and let the centre grow with the scaled cards. */
+@media (min-width: 1920px) and (min-height: 1000px) {
+  .gameContainer {
+    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr) minmax(320px, 400px);
+    gap: 16px;
+    padding: 16px;
+  }
+  .chatCollapsed { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr) 56px; }
+  /* Plates already fit side by side here; give the extra width to the centre. */
+  .table { grid-template-columns: minmax(100px, 17%) minmax(0, 1fr) minmax(100px, 17%); }
+  .centreContent { max-width: 680px; }
+  .actionPanel { width: min(460px, calc(100% - 8px)); }
+}
+
+@media (min-width: 2400px) and (min-height: 1300px) {
+  .gameContainer { grid-template-columns: minmax(320px, 380px) minmax(0, 1fr) minmax(360px, 440px); }
+  .chatCollapsed { grid-template-columns: minmax(320px, 380px) minmax(0, 1fr) 56px; }
+  .centreContent { max-width: 820px; }
 }

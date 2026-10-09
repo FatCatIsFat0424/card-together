@@ -1,4 +1,4 @@
-/* ─── TopBar 元件樣式 ─── */
+/* ─── TopBar styles ─── */
 
 .bar {
   position: sticky;
@@ -95,6 +95,9 @@
 
 .menuGroup { display: none; }
 
+.confirm { display: flex; flex-direction: column; gap: var(--spacing-md); font-size: var(--text-sm); }
+.confirmActions { display: flex; justify-content: flex-end; gap: var(--spacing-sm); }
+
 @media (max-width: 1023px) {
   .prefs { display: none; }
   .menuGroup { display: block; }
@@ -110,6 +113,12 @@
   .brandTextGame { display: none; }
   .actions { gap: var(--spacing-xs); }
   .iconBtn { width: 32px; height: 32px; }
+}
+
+/* Spread touch buttons so their 44px hit areas tile without overlapping. */
+@media (max-width: 767px) and (pointer: coarse) {
+  .actions { gap: var(--spacing-sm); }
+  .iconBtn { width: 36px; height: 36px; }
 }
 
 @media (max-width: 479px) {

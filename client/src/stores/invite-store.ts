@@ -1,4 +1,4 @@
-// ─── Invite Store：收到的房間邀請（最多 3 則，30 秒自動消失） ───
+// ─── Invite Store: received room invites (up to 3, auto-dismissed after 30 s) ───
 
 import { create } from 'zustand';
 import type { RoomInvite } from '@shared/types';
@@ -14,6 +14,7 @@ interface InviteStoreState {
   invites: ReceivedInvite[];
   receive: (invite: RoomInvite) => void;
   dismiss: (id: number) => void;
+  reset: () => void;
 }
 
 let nextId = 0;
@@ -29,4 +30,5 @@ export const useInviteStore = create<InviteStoreState>((set, get) => ({
     setTimeout(() => get().dismiss(id), INVITE_TTL_MS);
   },
   dismiss: (id) => set((state) => ({ invites: state.invites.filter((entry) => entry.id !== id) })),
+  reset: () => set((state) => state.invites.length === 0 ? state : { invites: [] }),
 }));

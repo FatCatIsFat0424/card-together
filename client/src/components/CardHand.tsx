@@ -1,11 +1,13 @@
-// ─── CardHand 元件：手牌顯示（扇形） ───
+// ─── CardHand: fanned hand display ───
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent, ReactNode } from 'react';
 import type { Card } from '@shared/types';
 import { SUIT_SYMBOLS, RANK_DISPLAY } from '@shared/constants';
 import { moveHandCard } from './card-hand-order';
+import { cardInput, cardTap, validArmedCard } from './card-hand-touch';
 import { cardImageUrl } from '../cards';
+import { useI18nStore } from '../stores/i18n-store';
 import styles from './CardHand.module.css';
 
 interface CardHandProps {
@@ -15,11 +17,13 @@ interface CardHandProps {
   disabled?: boolean;
   onReorder?: (cards: readonly Card[]) => void;
   onCardPreview?: (card: Card | null) => void;
-  /** 多選模式：每張牌皆可點擊切換，已選的牌升起（取代 playableCards 標示） */
+  /** Multi-select mode: every card toggles on click and selected cards rise (replaces the playableCards marking) */
   selectedCards?: readonly Card[];
-  /** 額外標示的牌（99：出了會超過 99） */
+  /** Extra marked cards (Ninety-Nine: playing them would exceed 99) */
   markedCards?: readonly Card[];
   markedLabel?: string;
+  /** Touch taps lift a card first and play it on the second tap; defaults to on outside selection mode. */
+  confirmTouch?: boolean;
 }
 
 function containsCard(card: Card, list?: readonly Card[]): boolean {
@@ -27,15 +31,38 @@ function containsCard(card: Card, list?: readonly Card[]): boolean {
   return list.some((c) => c.suit === card.suit && c.rank === card.rank);
 }
 
+function coarsePointer(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+}
+
 export function CardHand({
   cards, playableCards, onCardClick, disabled, selectedCards, markedCards, markedLabel, onCardPreview, onReorder,
+  confirmTouch,
 }: CardHandProps): ReactNode {
   const gesture = useRef<{
     pointerId: number; card: Card; startX: number; startY: number;
     source: number; centers: number[]; target: number; moved: boolean;
   } | null>(null);
   const suppressClick = useRef(false);
+  const lastPointer = useRef<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<{ card: Card; offset: number; target: number } | null>(null);
+  const [armedCard, setArmedCard] = useState<Card | null>(null);
+  const { t } = useI18nStore();
+  const selectMode = selectedCards !== undefined;
+  // Big Two keeps its own toggle selection; two-step touch play applies to immediate-play hands.
+  const twoStep = confirmTouch ?? !selectMode;
+  const armed = twoStep ? validArmedCard(armedCard, selectMode ? cards : playableCards, !disabled) : null;
+
+  useEffect(() => {
+    if (!armed) return;
+    const disarm = (event: Event): void => {
+      if (event.target instanceof Node && containerRef.current?.contains(event.target)) return;
+      setArmedCard(null);
+    };
+    document.addEventListener('pointerdown', disarm);
+    return () => document.removeEventListener('pointerdown', disarm);
+  }, [armed]);
 
   const finishDrag = (event: PointerEvent<HTMLButtonElement>, cancelled: boolean): void => {
     const current = gesture.current;
@@ -52,9 +79,9 @@ export function CardHand({
   };
 
   const middle = (cards.length - 1) / 2;
-  const selectMode = selectedCards !== undefined;
   return (
-    <div className={styles.handContainer}
+    <div className={styles.handContainer} ref={containerRef} role="group"
+      aria-label={t('hand.label', { n: String(cards.length) })}
       style={{ '--hand-card-count': Math.max(cards.length, 1) } as CSSProperties}>
       {cards.map((card, index) => {
         const playable = selectMode || containsCard(card, playableCards);
@@ -65,6 +92,7 @@ export function CardHand({
           playable && !disabled && !selectMode ? styles.cardPlayable : '',
           selected ? styles.cardSelected : '',
           marked ? styles.cardMarked : '',
+          armed && containsCard(card, [armed]) ? styles.cardArmed : '',
           onReorder && !disabled ? styles.cardReorderable : '',
           drag && containsCard(card, [drag.card]) ? styles.cardDragging : '',
           drag?.target === index ? styles.cardDropTarget : '',
@@ -79,6 +107,7 @@ export function CardHand({
               '--drag-x': `${drag && containsCard(card, [drag.card]) ? drag.offset : 0}px`,
             } as CSSProperties}
             onPointerDown={(event) => {
+              lastPointer.current = event.pointerType;
               if (!onReorder || disabled || !event.isPrimary || event.button !== 0) return;
               suppressClick.current = false;
               const buttons = event.currentTarget.parentElement?.querySelectorAll('button');
@@ -118,17 +147,38 @@ export function CardHand({
                 suppressClick.current = false;
                 return;
               }
-              if (playable && !disabled) onCardClick?.(card);
+              const pointerType = lastPointer.current;
+              lastPointer.current = null;
+              if (!playable || disabled) return;
+              if (!twoStep || containsCard(card, selectedCards)) {
+                setArmedCard(null);
+                onCardClick?.(card);
+                return;
+              }
+              const input = event.detail === 0 ? 'keyboard' : cardInput(pointerType, coarsePointer());
+              const tap = cardTap(armed, card, input);
+              if (tap.type === 'arm') {
+                setArmedCard(card);
+                onCardPreview?.(card);
+                return;
+              }
+              setArmedCard(null);
+              onCardClick?.(card);
             }}
             onPointerEnter={(event) => {
               if (event.pointerType === 'mouse' && playable && !disabled) onCardPreview?.(card);
             }}
-            onPointerLeave={() => onCardPreview?.(null)}
+            onPointerLeave={(event) => {
+              // Touch pointers leave right after lifting; keep the armed card's preview.
+              if (event.pointerType === 'mouse') onCardPreview?.(null);
+            }}
             onFocus={() => { if (playable && !disabled) onCardPreview?.(card); }}
             onBlur={() => onCardPreview?.(null)}
-            disabled={disabled || (!playable && !onReorder)}
+            // aria-disabled keeps every card focusable and readable; activation is still blocked above.
+            aria-disabled={disabled || !playable}
             aria-pressed={selectMode ? selected : undefined}
-            aria-label={`${RANK_DISPLAY[card.rank]}${SUIT_SYMBOLS[card.suit]}${marked && markedLabel ? ` (${markedLabel})` : ''}`}
+            aria-label={`${RANK_DISPLAY[card.rank]}${SUIT_SYMBOLS[card.suit]}${marked && markedLabel ? ` (${markedLabel})` : ''}${
+              armed && containsCard(card, [armed]) ? ` — ${t('hand.tapAgain')}` : ''}`}
             title={marked ? markedLabel : undefined}
           >
             <img src={cardImageUrl(card)} alt="" draggable={false} />

@@ -1,4 +1,4 @@
-// ─── BigTwoTable：大老二牌桌（上家出牌、手牌多選、資訊欄、結算） ───
+// ─── BigTwoTable: Big Two table (previous play, multi-select hand, info rail, settlement) ───
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
@@ -8,12 +8,15 @@ import type { BigTwoMatchResult, BigTwoVisibleState, Card, Seat } from '@shared/
 import { cardImageUrl } from '../../cards';
 import { socket } from '../../socket';
 import { useGameStore } from '../../stores/game-store';
-import { useRoomStore } from '../../stores/room-store';
 import { useI18nStore } from '../../stores/i18n-store';
 import { CardHand } from '../../components/CardHand';
 import { reconcileHandOrder } from '../../components/card-hand-order';
 import { GameShell } from '../GameShell';
+import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
+import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
+import { useSeatName } from '../seat-names';
+import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
 import {
   comboLabelKey, currentRoundEntries, lastPlayCombo, penaltyFormula, sameCard, toggleCard,
@@ -23,12 +26,6 @@ import styles from './BigTwoTable.module.css';
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 
 type ActionCallback = (timeout: Error | null, response?: { success: boolean; error?: string }) => void;
-
-function useSeatName(): (seat: Seat) => string {
-  const seats = useRoomStore((state) => state.roomInfo?.seats);
-  const { t } = useI18nStore();
-  return (seat: Seat): string => seats?.[seat].player?.nickname ?? t(`seat.${seat}`);
-}
 
 function CardFan({ cards, small }: { cards: readonly Card[]; small?: boolean }): ReactNode {
   const middle = (cards.length - 1) / 2;
@@ -53,7 +50,7 @@ function Centre({ game }: { game: BigTwoVisibleState }): ReactNode {
   }
   const bomb = isBomb(combo);
   return <div className={styles.centre}>
-    {/* key 依出牌次數，讓每次出牌都重播進場動畫 */}
+    {/* key follows the play count so each play replays the entrance animation */}
     <div key={`${game.lastPlay.seat}-${game.lastPlay.cards.map((card) => `${card.suit}${card.rank}`).join()}`} className={`${styles.lastPlay} ${bomb ? styles.bomb : ''}`}>
       <CardFan cards={game.lastPlay.cards} />
       <span className={styles.playMeta}>
@@ -69,75 +66,67 @@ function Info({ game }: { game: BigTwoVisibleState }): ReactNode {
   const { t } = useI18nStore();
   const seatName = useSeatName();
   const round = currentRoundEntries(game.log);
-  return <aside className={styles.rail}>
-    <section className={styles.box}>
-      <p className={styles.turn}>{game.phase !== 'playing' ? t('game.scoring')
-        : game.currentTurnSeat === game.mySeat ? t('bigtwo.yourTurn')
-          : t('bigtwo.turnOf', { name: seatName(game.currentTurnSeat) })}</p>
-      {game.phase === 'playing' && <p className={styles.note}>
+  return <aside className={infoStyles.rail}>
+    <TurnBox text={game.phase !== 'playing' ? t('game.scoring')
+      : game.currentTurnSeat === game.mySeat ? t('bigtwo.yourTurn')
+        : t('bigtwo.turnOf', { name: seatName(game.currentTurnSeat) })}>
+      {game.phase === 'playing' && <p className={infoStyles.note}>
         {game.lastPlay ? null : t('bigtwo.freeLead')}{game.firstPlay && <> · {t('bigtwo.clubThree')}</>}
       </p>}
-    </section>
+    </TurnBox>
 
-    <section className={`${styles.box} ${styles.roundBox}`}>
-      <h2 className={styles.caption}>{t('bigtwo.round')}</h2>
-      {round.length === 0 ? <p className={styles.note}>{t('bigtwo.roundEmpty')}</p>
-        : <ol className={styles.roundList}>{round.map((entry, index) => (
-          <li key={index} className={styles.roundRow}>
-            <span className={styles.roundName}>{seatName(entry.seat)}</span>
+    <section className={`${infoStyles.box} ${infoStyles.grow}`}>
+      <h2 className={infoStyles.caption}>{t('bigtwo.round')}</h2>
+      {round.length === 0 ? <p className={infoStyles.note}>{t('bigtwo.roundEmpty')}</p>
+        : <ol className={infoStyles.list}>{round.map((entry, index) => (
+          <li key={index} className={`${infoStyles.row} ${styles.roundRow}`}>
+            <span className={infoStyles.name}>{seatName(entry.seat)}</span>
             {entry.type === 'play' ? <>
               <CardFan cards={entry.cards} small />
-              <span className={styles.note}>{t(comboLabelKey(entry.comboType))}</span>
+              <span className={infoStyles.note}>{t(comboLabelKey(entry.comboType))}</span>
             </> : <span className={styles.passTag}>{t('bigtwo.pass')}</span>}
           </li>
         ))}</ol>}
     </section>
 
-    <details className={styles.box}>
-      <summary className={styles.caption}>{t('bigtwo.rules')}</summary>
-      <p className={styles.note}>{t('bigtwo.rulesCombos')}</p>
-      <p className={styles.note}>{t('bigtwo.rulesOrder')}</p>
-      <p className={styles.note}>{t('bigtwo.rulesScore')}</p>
-    </details>
+    <RulesBox title={t('bigtwo.rules')}
+      lines={[t('bigtwo.rulesCombos'), t('bigtwo.rulesOrder'), t('bigtwo.rulesScore')]} />
   </aside>;
 }
 
-function ResultOverlay({ result, revealed, pending, error, onBack }: {
+function ResultOverlay({ result, revealed, pending, error, disabled, onBack }: {
   result: BigTwoMatchResult; revealed: Record<Seat, Card[]> | null;
-  pending: boolean; error: string; onBack: () => void;
+  pending: boolean; error: string; disabled: boolean; onBack: () => void;
 }): ReactNode {
   const { t } = useI18nStore();
   const historyGame = useGameStore((state) => state.visible);
   const seatName = useSeatName();
-  return <div className={styles.scoreOverlay}>
-    <div className={styles.overlayCard}>
-      {result.dragon && <p className={styles.dragon}>{t('bigtwo.dragon')}</p>}
-      <h2 className={styles.scoreTitle}>{t('bigtwo.winner', { name: seatName(result.winnerSeat) })}</h2>
-      <table className={styles.scoreTable}>
-        <thead><tr>
-          <th>{t('bigtwo.player')}</th><th>{t('bigtwo.cardsLeft')}</th>
-          <th>{t('bigtwo.twosLeft')}</th><th>{t('bigtwo.penalty')}</th>
-        </tr></thead>
-        <tbody>{SEATS.map((seat) => <tr key={seat} className={seat === result.winnerSeat ? styles.winnerRow : ''}>
-          <td>
-            <div>{seat === result.winnerSeat && '🏆 '}{seatName(seat)}</div>
-            {revealed && revealed[seat].length > 0 && <CardFan cards={sortBigTwoHand(revealed[seat])} small />}
-          </td>
-          <td>{result.cardsLeft[seat]}</td>
-          <td>{result.twosLeft[seat]}</td>
-          <td>{seat === result.winnerSeat ? 0
-            : penaltyFormula(result.cardsLeft[seat], result.twosLeft[seat], result.scores[seat])}</td>
-        </tr>)}</tbody>
-      </table>
-      {historyGame && <RoundHistory game={historyGame} />}
-      {error && <p className={styles.error} role="alert">{error}</p>}
-      <button className="btn btn-primary" disabled={pending} onClick={onBack}>{t('score.backToRoom')}</button>
-    </div>
-  </div>;
+  return <ResultDialog wide title={t('bigtwo.winner', { name: seatName(result.winnerSeat) })}
+    eyebrow={result.dragon ? t('bigtwo.dragon') : undefined}
+    pending={pending} error={error} disabled={disabled} onBack={onBack}>
+    <table className={resultStyles.table}>
+      <thead><tr>
+        <th>{t('bigtwo.player')}</th><th>{t('bigtwo.cardsLeft')}</th>
+        <th>{t('bigtwo.twosLeft')}</th><th>{t('bigtwo.penalty')}</th>
+      </tr></thead>
+      <tbody>{SEATS.map((seat) => <tr key={seat} className={seat === result.winnerSeat ? resultStyles.winnerRow : ''}>
+        <td>
+          <div>{seat === result.winnerSeat && '🏆 '}{seatName(seat)}</div>
+          {revealed && revealed[seat].length > 0 && <CardFan cards={sortBigTwoHand(revealed[seat])} small />}
+        </td>
+        <td>{result.cardsLeft[seat]}</td>
+        <td>{result.twosLeft[seat]}</td>
+        <td className={styles.penaltyCell}>{seat === result.winnerSeat ? 0
+          : penaltyFormula(result.cardsLeft[seat], result.twosLeft[seat], result.scores[seat])}</td>
+      </tr>)}</tbody>
+    </table>
+    {historyGame && <RoundHistory game={historyGame} />}
+  </ResultDialog>;
 }
 
 export function BigTwoTable(): ReactNode {
   const { locked } = useGamePresentation();
+  const connectionReady = useConnectionReady();
   const game = useGameStore((state) => state.bigTwo);
   const { t } = useI18nStore();
   const [selection, setSelection] = useState<Card[]>([]);
@@ -150,7 +139,7 @@ export function BigTwoTable(): ReactNode {
   const hand = useMemo(() => reconcileHandOrder(
     sortBigTwoHand(game?.myHand ?? [], sortBy), manualOrder,
   ), [game?.myHand, sortBy, manualOrder]);
-  // 別人出牌時保留預選；只剔除已不在手上的牌
+  // Keep the preselection when others play; only drop cards no longer in hand
   const selected = selection.filter((card) => hand.some((c) => sameCard(c, card)));
   const previous = lastPlayCombo(game?.lastPlay ?? null);
   const firstPlay = game?.firstPlay ?? false;
@@ -167,7 +156,7 @@ export function BigTwoTable(): ReactNode {
   }, [t]);
 
   const play = (cards: readonly Card[]): void => {
-    if (!isMyTurn || actionInFlight.current || !canPlay(cards, previous, firstPlay)) return;
+    if (!isMyTurn || !connectionReady || actionInFlight.current || !canPlay(cards, previous, firstPlay)) return;
     actionInFlight.current = true;
     setActionError('');
     setActionPending(true);
@@ -178,7 +167,7 @@ export function BigTwoTable(): ReactNode {
   };
 
   const pass = (): void => {
-    if (!isMyTurn || actionInFlight.current || !game?.lastPlay) return;
+    if (!isMyTurn || !connectionReady || actionInFlight.current || !game?.lastPlay) return;
     actionInFlight.current = true;
     setActionError('');
     setActionPending(true);
@@ -208,9 +197,9 @@ export function BigTwoTable(): ReactNode {
       <button type="button" className={`btn btn-outline ${styles.ctrl}`} onClick={() => setSelection([])}
         disabled={selected.length === 0}>{t('bigtwo.clear')}</button>
       <button type="button" className={`btn btn-outline ${styles.ctrl}`} onClick={pass}
-        disabled={!isMyTurn || actionPending || game.lastPlay === null}>{t('bigtwo.pass')}</button>
+        disabled={!isMyTurn || actionPending || !connectionReady || game.lastPlay === null}>{t('bigtwo.pass')}</button>
       <button type="button" className={`btn btn-primary ${styles.ctrl}`} onClick={() => play(selected)}
-        disabled={!playable || actionPending}>
+        disabled={!playable || actionPending || !connectionReady}>
         {t('bigtwo.play')}
         {selected.length > 0 && <span className={styles.comboName}>
           {selectedCombo ? t(comboLabelKey(selectedCombo.type)) : t('bigtwo.invalid')}
@@ -225,7 +214,8 @@ export function BigTwoTable(): ReactNode {
       centre={<Centre game={game} />}
       hand={handZone}
       overlay={game.phase === 'scoring' && game.result && <ResultOverlay result={game.result}
-        revealed={game.revealedHands} pending={actionPending} error={actionError} onBack={backToRoom} />}
+        revealed={game.revealedHands} pending={actionPending} error={actionError} disabled={!connectionReady}
+        onBack={backToRoom} />}
       error={game.phase !== 'scoring' ? actionError : undefined}
     />
   );

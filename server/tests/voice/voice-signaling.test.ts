@@ -180,13 +180,21 @@ describe('table voice signaling', (): void => {
     expect(await answer).toEqual({ fromPeerId: replacement.peerId, description: answerDescription });
   });
 
-  it('removes voice on HTTP logout and reauthenticates both signal endpoints', async (): Promise<void> => {
+  it('removes voice on HTTP logout and rejects expired sessions at both signal endpoints', async (): Promise<void> => {
     const app = await fixture();
     const [a, b, c] = app.clients[0];
     const first = await join(a);
     const second = await join(b);
     await join(c);
-    await app.repository.deleteAccountSessions(app.accountIds[0][1]);
+    const sessionReads = vi.spyOn(app.repository, 'getSession');
+    const relayed = nextSignal(b);
+    expect(await a.timeout(5_000).emitWithAck('voice:signal', { targetPeerId: second.peerId, description }))
+      .toEqual({ success: true });
+    await relayed;
+    expect(sessionReads).not.toHaveBeenCalled();
+    const expiredSocket = app.application.io.sockets.sockets.get(b.id!);
+    if (!expiredSocket) throw new Error('Missing fixture socket');
+    expiredSocket.data.expiresAt = Date.now() - 1;
     expect(await a.timeout(5_000).emitWithAck('voice:signal', { targetPeerId: second.peerId, description }))
       .toMatchObject({ success: false });
     expect(await b.timeout(5_000).emitWithAck('voice:signal', { targetPeerId: first.peerId, description }))
@@ -202,7 +210,7 @@ describe('table voice signaling', (): void => {
     expect((await remaining).participants[0].accountId).toBe(app.accountIds[0][2]);
   });
 
-  it('retains voice on a failed durable room leave and queues signaling behind rollback', async (): Promise<void> => {
+  it('relays signaling during a pending durable write and retains voice after rollback', async (): Promise<void> => {
     const app = await fixture();
     const [a, b] = app.clients[0];
     const first = await join(a);
@@ -230,11 +238,11 @@ describe('table voice signaling', (): void => {
     const received = nextSignal(b);
     const pendingSignal = a.timeout(5_000).emitWithAck('voice:signal', { targetPeerId: second.peerId, description });
     await signalArrived;
+    expect(await pendingSignal).toEqual({ success: true });
+    expect(await received).toEqual({ fromPeerId: first.peerId, description });
     expect(sessionReads).not.toHaveBeenCalled();
     releaseWrite();
     expect(await failedLeave).toMatchObject({ success: false });
-    expect(await pendingSignal).toEqual({ success: true });
-    expect(await received).toEqual({ fromPeerId: first.peerId, description });
     expect(left).not.toHaveBeenCalled();
     expect((await join(a)).peerId).toBe(first.peerId);
   });

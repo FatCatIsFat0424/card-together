@@ -1,4 +1,4 @@
-/* ─── LobbyPage 樣式 ─── */
+/* ─── LobbyPage styles ─── */
 
 .lobbyContainer {
   height: 100%;
@@ -123,13 +123,6 @@
   text-transform: uppercase;
   letter-spacing: 2px;
   font-family: var(--font-mono);
-}
-
-.fullWidthBtn {
-  width: 100%;
-  padding: var(--spacing-md) var(--spacing-lg);
-  font-size: var(--text-base);
-  font-weight: 600;
 }
 
 .gameChoices {

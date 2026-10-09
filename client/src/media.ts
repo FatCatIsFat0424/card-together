@@ -2,7 +2,7 @@ import type { MediaId } from '@shared/types';
 import { apiRequest } from './api';
 import { API_BASE_URL } from './deployment';
 
-export type MediaPurpose = 'avatar' | 'emoji' | 'background';
+export type MediaPurpose = 'avatar' | 'emoji' | 'background' | 'cardBack';
 
 export function mediaUrl(id: MediaId): string {
   return `${API_BASE_URL}/api/media/${encodeURIComponent(id)}`;

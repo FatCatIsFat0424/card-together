@@ -1,4 +1,4 @@
-// ─── i18n Store：語系狀態管理 ───
+// ─── i18n Store: locale state ───
 
 import { create } from 'zustand';
 import type { Locale, TranslationKey } from '../i18n';

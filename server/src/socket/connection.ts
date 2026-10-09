@@ -9,9 +9,46 @@ import { registerGameHandlers, systemLine } from './game-handler';
 import { registerChatHandlers } from './chat-handler';
 import { leaveVoice, reconcileVoiceMembership, registerVoiceHandlers } from './voice-handler';
 
+interface RateWindow {
+  count: number;
+  resetAt: number;
+}
+
+type RateKind = 'action' | 'voice' | 'chat';
+
+/** Per-account budgets shared by every tab; voice negotiation has its own larger budget. */
+export const SOCKET_RATE_LIMITS: Readonly<Record<RateKind, { readonly limit: number; readonly windowMs: number }>> = {
+  action: { limit: 240, windowMs: 60_000 },
+  voice: { limit: 1200, windowMs: 60_000 },
+  chat: { limit: 5, windowMs: 5_000 },
+};
+
+function packetKinds(event: unknown): RateKind[] {
+  if (typeof event === 'string' && event.startsWith('voice:')) return ['voice'];
+  return event === 'chat:send' ? ['action', 'chat'] : ['action'];
+}
+
 export function setupConnectionHandler(context: SocketContext): () => void {
   const { io, auth, runtime } = context;
   let closing = false;
+  const rates = new Map<string, Map<RateKind, RateWindow>>();
+
+  /** Counts the packet only when every applicable budget still has room. */
+  function allowPacket(accountId: string, kinds: readonly RateKind[], now: number): boolean {
+    let windows = rates.get(accountId);
+    if (!windows) rates.set(accountId, windows = new Map());
+    const current = kinds.map((kind) => {
+      let window = windows.get(kind);
+      if (!window || now >= window.resetAt) {
+        window = { count: 0, resetAt: now + SOCKET_RATE_LIMITS[kind].windowMs };
+        windows.set(kind, window);
+      }
+      return { kind, window };
+    });
+    if (current.some(({ kind, window }) => window.count >= SOCKET_RATE_LIMITS[kind].limit)) return false;
+    for (const { window } of current) window.count += 1;
+    return true;
+  }
   io.use((socket, next) => {
     void auth.resolveSession(socket.handshake.headers.cookie).then((session) => {
       if (!session) { next(new Error('Sign in to play.')); return; }
@@ -28,15 +65,8 @@ export function setupConnectionHandler(context: SocketContext): () => void {
     const expiry = setTimeout(() => socket.disconnect(true),
       Math.max(0, socket.data.expiresAt - Date.now()));
     expiry.unref();
-    let count = 0;
-    let voiceCount = 0;
-    let resetAt = Date.now() + 60_000;
     socket.use((packet, next) => {
-      if (Date.now() >= resetAt) { count = 0; voiceCount = 0; resetAt = Date.now() + 60_000; }
-      const isVoice = typeof packet[0] === 'string' && packet[0].startsWith('voice:');
-      if (isVoice) voiceCount += 1;
-      else count += 1;
-      if ((isVoice && voiceCount > 1200) || (!isVoice && count > 240)) {
+      if (!allowPacket(socket.data.accountId, packetKinds(packet[0]), Date.now())) {
         const callback: unknown = packet[packet.length - 1];
         if (typeof callback === 'function') callback({ success: false, error: 'Too many actions. Please slow down.' });
         return;
@@ -59,12 +89,16 @@ export function setupConnectionHandler(context: SocketContext): () => void {
       void runtime.mutate(() => {
         for (const id of affectedAccounts(socket.data.accountId)) recipients.add(id);
         playerManager.markDisconnected(socket.id);
-      }, { skipUnchanged: true }).then(() => broadcastState(io, recipients))
+      }, { skipUnchanged: true, afterCommit: () => broadcastState(io, recipients) })
         .catch((error: unknown) => console.error('[disconnect]', error));
     });
   });
 
   const cleanup = setInterval(() => {
+    const now = Date.now();
+    for (const [accountId, windows] of rates) {
+      if ([...windows.values()].every((window) => now >= window.resetAt)) rates.delete(accountId);
+    }
     if (closing || (playerManager.getExpiredPlayers(RECONNECT_TIMEOUT_MS).length === 0
       && !roomManager.hasExpiredAbortVote(Date.now()))) return;
     const recipients = new Set<string>();
@@ -79,9 +113,11 @@ export function setupConnectionHandler(context: SocketContext): () => void {
         playerManager.removePlayer(player.info.id);
       }
     }, { skipUnchanged: true,
-      afterCommit: () => reconcileVoiceMembership(context, recipients),
-    }).then(() => broadcastState(io, recipients))
-      .catch((error: unknown) => console.error('[cleanup]', error));
+      afterCommit: () => {
+        reconcileVoiceMembership(context, recipients);
+        broadcastState(io, recipients);
+      },
+    }).catch((error: unknown) => console.error('[cleanup]', error));
   }, 5_000);
   cleanup.unref();
 
@@ -102,6 +138,5 @@ export async function updateConnectedProfile(
     playerManager.updatePlayerInfo(info);
     roomManager.updateRoomPlayer(info,
       playerManager.getPlayerState(account.id)?.currentRoomCode ?? null);
-  }, { skipUnchanged: true });
-  broadcastState(context.io, recipients);
+  }, { skipUnchanged: true, afterCommit: () => broadcastState(context.io, recipients) });
 }

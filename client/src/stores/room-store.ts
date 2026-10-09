@@ -1,4 +1,4 @@
-// ─── Room Store：房間狀態管理 ───
+// ─── Room Store ───
 
 import { create } from 'zustand';
 import type { RoomCode, RoomInfo, Seat } from '@shared/types';

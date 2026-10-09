@@ -1,4 +1,4 @@
-import type { Card, Seat } from '@shared/types';
+import type { BidAction, Card, Seat } from '@shared/types';
 import type { SocketContext, TypedSocket } from './context';
 import { actionError, requireRoom, requireSuccess, runAction } from './context';
 import * as roomManager from '../managers/room-manager';
@@ -43,7 +43,10 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
       throw actionError('Invalid bid.');
     }
     const code = requireRoom(socket);
-    requireSuccess(gameManager.handleBid(code, playerSeat(socket, code), bid));
+    // Rebuild the bid so client-supplied extra keys never reach saved logs or snapshots.
+    const action: BidAction = bid.type === 'pass' ? { type: 'pass' }
+      : { type: 'bid', level: bid.level, suit: bid.suit };
+    requireSuccess(gameManager.handleBid(code, playerSeat(socket, code), action));
     return { success: true };
   }));
 
@@ -51,7 +54,7 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
     const card = payload?.card;
     if (!isCard(card)) throw actionError('Invalid card.');
     const code = requireRoom(socket);
-    requireSuccess(gameManager.handlePlayCard(code, playerSeat(socket, code), card));
+    requireSuccess(gameManager.handlePlayCard(code, playerSeat(socket, code), { suit: card.suit, rank: card.rank }));
     return { success: true };
   }));
 
@@ -138,11 +141,13 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
 
   socket.on('game:continue', (callback) => runAction(context, socket, callback, () => {
     const code = requireRoom(socket);
+    const seat = playerSeat(socket, code);
     if (gameManager.getGameState(code)?.phase !== 'scoring') throw actionError('The game has not ended.');
     if (gameManager.isPresentationActive(code)) {
       throw actionError('Please wait for the current action to finish.');
     }
-    gameManager.removeGame(code);
+    // Each player returns on their own; the others keep viewing the result.
+    gameManager.returnFromResult(code, seat);
     return { success: true };
   }));
 }

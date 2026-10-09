@@ -14,8 +14,6 @@ interface FakeSource extends FakeNode {
   buffer: null;
 }
 
-// The returned mock context intentionally retains Vitest's inferred mock signatures.
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 function installAudio() {
   const node = (): FakeNode => ({ connect: vi.fn(), disconnect: vi.fn() });
   const sources: Array<ReturnType<typeof source>> = [];

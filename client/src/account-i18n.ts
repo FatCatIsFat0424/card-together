@@ -70,6 +70,13 @@ const english = {
   'profile.uploadBackground': 'Upload background',
   'profile.removeBackground': 'Clear background',
   'profile.uploading': 'Uploading…',
+  'auth.showPassword': 'Show password',
+  'profile.backgroundOpacity': 'Background opacity',
+  'profile.cardBack': 'Card back',
+  'profile.cardBackHelp': 'Shown on every face-down card on your screen. Only you see it.',
+  'profile.uploadCardBack': 'Upload card back',
+  'profile.removeCardBack': 'Use default card back',
+  'profile.cardBackOpacity': 'Card back opacity',
 } as const;
 
 export type AccountTranslationKey = keyof typeof english;
@@ -148,5 +155,12 @@ export const accountTranslations: Record<'en' | 'zh-TW', Record<AccountTranslati
     'profile.uploadBackground': '上傳背景',
     'profile.removeBackground': '清除背景',
     'profile.uploading': '上傳中…',
+    'auth.showPassword': '顯示密碼',
+    'profile.backgroundOpacity': '背景不透明度',
+    'profile.cardBack': '牌背',
+    'profile.cardBackHelp': '套用在你畫面上所有蓋著的牌，只有你看得到。',
+    'profile.uploadCardBack': '上傳牌背',
+    'profile.removeCardBack': '恢復預設牌背',
+    'profile.cardBackOpacity': '牌背不透明度',
   },
 };

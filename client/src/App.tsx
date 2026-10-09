@@ -1,4 +1,4 @@
-// ─── 根元件 ───
+// ─── Root component ───
 
 import { lazy, Suspense } from 'react';
 import type { ReactNode } from 'react';
@@ -9,7 +9,9 @@ import { AbortVoteToast } from './games/AbortVote';
 import { useAccountConnection } from './hooks/use-account-connection';
 import { restoreAccount, useAccountStore } from './stores/account-store';
 import { useI18nStore } from './stores/i18n-store';
-import { connectSocket, disconnectSocket } from './socket';
+import { ConnectionBanner } from './components/ConnectionBanner';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { reconnectSocket } from './socket';
 import { APP_BASE_PATH } from './deployment';
 import styles from './pages/AccountPages.module.css';
 import appStyles from './App.module.css';
@@ -31,17 +33,20 @@ function PageLoading(): ReactNode {
 function ProtectedRoute(): ReactNode {
   const accountId = useAccountStore((state) => state.account?.id);
   const connection = useAccountStore((state) => state.connection);
+  const hasConnected = useAccountStore((state) => state.hasConnected);
   const location = useLocation();
   const { t } = useI18nStore();
   if (!accountId) return <Navigate to="/login" state={{ from: location.pathname }} replace />;
-  return <>
-    {connection === 'ready' ? <Suspense fallback={<PageLoading />}><Outlet /></Suspense>
-      : <main className={styles.status}>
-      <p role="status">{t(connection === 'error' ? 'auth.connectionError' : 'auth.connecting')}</p>
-      {connection === 'error' && <button className="btn btn-primary"
-        onClick={() => { disconnectSocket(); connectSocket(); }}>{t('common.retry')}</button>}
-    </main>}
+  // After the first ready snapshot, keep pages mounted so drafts and selections survive drops.
+  if (hasConnected) return <>
+    <ConnectionBanner />
+    <Suspense fallback={<PageLoading />}><Outlet /></Suspense>
   </>;
+  return <main className={styles.status}>
+    <p role="status">{t(connection === 'error' ? 'auth.connectionError' : 'auth.connecting')}</p>
+    {connection === 'error' && <button className="btn btn-primary"
+      onClick={reconnectSocket}>{t('common.retry')}</button>}
+  </main>;
 }
 
 function AppRoutes(): ReactNode {
@@ -73,6 +78,12 @@ function AppRoutes(): ReactNode {
   );
 }
 
+// Navigating away from a failed page clears the error while the top bar stays usable.
+function RouteErrorBoundary({ children }: { readonly children: ReactNode }): ReactNode {
+  const { pathname } = useLocation();
+  return <ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary>;
+}
+
 export function App(): ReactNode {
   const signedIn = useAccountStore((state) => Boolean(state.account));
   return (
@@ -80,7 +91,9 @@ export function App(): ReactNode {
       <TopBar />
       {signedIn && <InviteToast />}
       {signedIn && <AbortVoteToast />}
-      <div className={appStyles.viewport}><AppRoutes /></div>
+      <div className={appStyles.viewport}>
+        <RouteErrorBoundary><AppRoutes /></RouteErrorBoundary>
+      </div>
     </BrowserRouter>
   );
 }

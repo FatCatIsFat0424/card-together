@@ -10,3 +10,14 @@
 .link:hover { text-decoration: underline; }
 .renameForm { display: flex; flex-direction: column; gap: var(--spacing-xs); width: 100%; font-size: var(--text-xs); text-align: center; }
 .renameForm input { min-width: 0; font-size: var(--text-xs); padding: var(--spacing-xs); }
+.library { border: 2px dashed transparent; border-radius: var(--radius-md); padding: var(--spacing-xs); transition: border-color var(--transition-fast), background var(--transition-fast); }
+.library:focus-visible { outline: 2px solid var(--border-color-focus); outline-offset: 2px; }
+.dropActive { border-color: var(--color-primary); background: var(--bg-card-hover); }
+.filter { width: 100%; min-height: 44px; margin-bottom: var(--spacing-sm); padding: var(--spacing-sm); font-size: var(--text-sm); }
+.selectionBar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm); font-size: var(--text-sm); }
+.selectionBar :global(.btn) { min-height: 44px; }
+.selected { border-color: var(--color-primary); background: var(--bg-card-hover); box-shadow: 0 0 0 1px var(--color-primary); }
+.selectTile { position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--spacing-xs); width: 100%; min-height: 44px; padding: var(--spacing-xs); border-radius: var(--radius-sm); user-select: none; cursor: pointer; }
+.selectTile:focus-visible { outline: 2px solid var(--border-color-focus); outline-offset: 2px; }
+.checkbox { position: absolute; top: 0; left: 0; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 2px solid var(--border-color-hover); border-radius: var(--radius-sm); background: var(--bg-input); color: var(--text-on-primary); font-size: var(--text-sm); font-weight: 700; }
+.selected .checkbox { border-color: var(--color-primary); background: var(--color-primary); }

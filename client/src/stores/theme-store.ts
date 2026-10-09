@@ -1,4 +1,4 @@
-// ─── Theme Store：介面主題 ───
+// ─── Theme Store: UI theme ───
 
 import { create } from 'zustand';
 import { readPreference, writePreference } from '../utils/preference-storage';

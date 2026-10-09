@@ -1,4 +1,4 @@
-// ─── Ninety-Nine Game：99 流程管理 ───
+// ─── Ninety-Nine Game: flow management ───
 
 import { randomInt, randomUUID } from 'node:crypto';
 import type {
@@ -10,7 +10,7 @@ import type {
   Seat,
 } from '@shared/types';
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
-import { nextSeatCounterClockwise } from '@shared/rules/bigtwo';
+import { nextSeatClockwise, nextSeatCounterClockwise } from '@shared/rules/seats';
 import { NN_HAND_SIZE, NN_MAX, nnApply, nnHasPlayable, nnIsPlayable, nnRequiresChoice } from '@shared/rules/ninetynine';
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { createDeck, shuffleDeck } from '../../engine/deck';
@@ -26,10 +26,6 @@ function seatMap<T>(value: (seat: Seat) => T): Record<Seat, T> {
 
 const sameCard = (a: Card, b: Card): boolean => a.suit === b.suit && a.rank === b.rank;
 
-function nextSeatClockwise(seat: Seat): Seat {
-  return SEAT_ORDER_CLOCKWISE[(SEAT_ORDER_CLOCKWISE.indexOf(seat) + 1) % SEAT_ORDER_CLOCKWISE.length];
-}
-
 /** Next seat still in the game, following the current direction. */
 function nextAlive(game: NinetyNineGameState, seat: Seat): Seat {
   const step = game.direction === 'ccw' ? nextSeatCounterClockwise : nextSeatClockwise;
@@ -43,7 +39,7 @@ function landOn(game: NinetyNineGameState, seat: Seat): void {
   let current = seat;
   while (!nnHasPlayable(game.total, game.hands[current])) {
     game.eliminated.push(current);
-    // 棄掉的手牌壓在最上面那張之下，最上面仍是最近打出的牌
+    // Discarded hand goes under the top card so the top stays the most recently played
     game.discard.splice(Math.max(0, game.discard.length - 1), 0, ...game.hands[current]);
     game.hands[current] = [];
     game.log.push({ type: 'eliminated', seat: current, timestamp: Date.now() });

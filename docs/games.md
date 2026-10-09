@@ -8,7 +8,9 @@ visible only to their owner.
 ## Shared room lifecycle
 
 A host chooses the game while waiting. Four occupied, ready seats start a match.
-After scoring, continue returns to readiness. Leaving or failing to reconnect within
+After scoring, each player returns to the room individually with continue while the others
+keep the result; the finished board is removed once every human has returned or the next
+match starts. Leaving or failing to reconnect within
 60 seconds aborts an unfinished match. Seated players can propose/vote to abort an
 active game. Three yes votes out of four pass; with bots, the threshold is the smaller
 of three and the number of human players. Bots do not vote; the starter votes yes
@@ -27,7 +29,9 @@ The default is **5 + 20 seconds**: each player gets a fresh five seconds each tu
 then draws from their own twenty-second reserve for the deal. Unused turn time is
 not added to the reserve. While waiting, the host can change the turn allowance and
 reserve within the [shared limits](../shared/src/time-control.ts); changing settings
-clears human readiness. All players see the current settings; only their own reserve is displayed.
+clears human readiness. All players see the current settings; only their own reserve is displayed:
+the own seat plate always shows "turn + reserve" seconds, and other seats show only their turn
+allowance while it is their turn.
 
 Presentation animations consume neither allowance nor reserve. Red Points' hand play
 and flipped-card choice share one turn allowance, with animation time excluded.
@@ -35,16 +39,30 @@ Bridge bidding and redeal decisions also use the clock. A new deal refills reser
 Disconnecting does not pause the clock or change the existing reconnect window.
 At expiry the server makes a legal decision using the same private view as the player;
 control remains with the player on subsequent turns. Redeal timeout declines the redeal.
+The seat shows an "Auto-played" badge until its next turn begins; a bot's seat shows
+"Thinking…" while it is the bot's turn. Each seat plate has a single status slot, so when
+several apply it shows Ninety-Nine bust, then Big Two pass lock, then thinking, then auto-played.
 Big Two forced passes retain their existing scheduler and do not consume decision time.
+Their clock is published like any other turn, so other seats cannot tell a forced pass apart.
 
 ### Card controls
 
-Bridge and ordinary Ninety-Nine cards play with one click/tap. Ninety-Nine keeps explicit
+Bridge calls are chosen first and then confirmed: pick a level and suit (or Pass), then
+press Confirm or choose the same call again; Cancel clears the choice. The bidding panel
+overlays the table so its buttons stay at least 44px tall on touch screens, and it shows
+the latest calls wherever the auction table sits in a closed info drawer.
+
+Bridge, Ninety-Nine, and Red Points hand cards play with one mouse click or keyboard
+activation. On touch, the first tap lifts and enlarges the card (and previews Red Points
+captures); a second tap on the same card plays it, tapping another card moves the lift,
+and tapping outside the hand clears it. Ninety-Nine keeps explicit
 choices for plus/minus and the next player. Red Points plays immediately when there is
 zero or one capture target; multiple matches require choosing a highlighted table card.
 Red Points uses up to two rows of table cards, retaining one row when height is
 insufficient for readable cards, and paginates crowded tables. Capture
 highlights preserve the existing card order and current page; page buttons reveal the remaining table cards without scrolling the game page.
+Each seat's red-point score is a button that lists every card that seat captured; the
+tray beside the seat previews only the latest red cards, overlapping them to fit narrow seats.
 
 Big Two uses individual card selection and Play/Pass, without quick-play suggestions.
 Drag cards with a mouse or touch to arrange the hand; manual order is retained as turns
@@ -52,6 +70,8 @@ advance and played cards leave the hand. Sorting by rank or suit replaces the ma
 order. With a card focused, Alt + Left/Right Arrow also moves it.
 Dragging only reorders cards; clicking or tapping still toggles selection.
 There is no double-click or global Enter-to-play shortcut; standard button accessibility remains.
+Hand cards form a labelled group and stay focusable while unplayable (`aria-disabled`), and
+a polite live region announces whose turn it is.
 
 ### Bots
 
@@ -70,9 +90,9 @@ search, and the evaluation scores do not guarantee optimal play.
 | Game | Decision priorities |
 | --- | --- |
 | Bridge | Use the natural bidding heuristics below to describe hand strength and suit length, interpret a partner's public calls, and make bounded responses/rebids. Decline redeals. Use public played cards to identify established winners and opponents' voids; conserve trump/high cards and avoid overtaking a winning partner. |
-| Big Two | Plan the smallest number of legal groups needed to shed the remaining hand, avoiding unnecessary splits of useful combinations. Conserve strong cards/bombs normally, and favor blocking plays when an opponent has one card left. |
+| Big Two | Plan the smallest number of legal groups needed to shed the remaining hand, avoiding unnecessary splits of useful combinations. When responding, play any ordinary answer (no bomb or 2, and the rest of the hand still fits a minimal plan); passing is considered only when every answer would spend a bomb or 2 or split a planned combination, and it is weighed as keeping the plan but giving up tempo. Bombs and 2s are strongly conserved while opponents and the bot's own plan are far from finishing. Once any opponent holds 5 or fewer cards, 2s and bombs are no longer saved and the bot never passes by choice. When an opponent who has not passed this round holds one card, also favor blocking plays. Leads are always plays. Timed-out human Big Two turns use the same decision. |
 | Red Points | Evaluate every legal capture, balancing immediate red points, future matches with the remaining hand, and the public table's exposure to unseen cards. |
-| Ninety-Nine | Compare both legal plus/minus choices, balance pressure against remaining rescue cards and short-handed risk, and evaluate reverse/designation using public living seats and hand counts. Randomize among similarly rated surviving designation targets. |
+| Ninety-Nine | Treat 4, 5, 10, J, Q, K and ♠A as rescue cards and keep them while number cards are safe, spending large number cards first. Compare both legal plus/minus choices and penalize leaving no card that fits the total expected when the bot acts again, more so in a duel. Model the next player's chance of being forced or eliminated only when the total is within 9 of 99, using unseen cards: the bot's own hand and public plays since the last reshuffle are excluded. Evaluate reverse/designation by who acts next and how many opponent turns pass before the bot acts again; near 99 it avoids shortening its own rotation. Pressure on the next player is discounted when that seat's latest play spent a rescue card while any number card was still safe, which suggests a hand without number cards. Randomize among similarly rated surviving designation targets. |
 
 The server waits for the previous presentation and a short thinking delay before each
 bot action. Actions are saved before broadcast and resume after server restart. Existing
@@ -149,7 +169,7 @@ singles/pairs. Straight flush > four-of-a-kind; equal bomb types use their usual
 
 A responding player with no legal play (including bombs) receives a server automatic
 pass after the previous presentation plus one sampled integer delay of 0–5,000 ms
-(inclusive).
+(inclusive), capped by the room's turn allowance so it never appears as a timeout.
 No lock/turn/log changes appear before that committed pass. Manual pass is permitted
 once presentation ends. Free leads are never auto-passed. Each forced pass has a separate
 saved private deadline; restart preserves the sampled deadline and overdue work resumes

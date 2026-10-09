@@ -1,10 +1,13 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
+import { EMOJI_MAX_BYTES } from '@shared/constants';
 import type { AuthService } from '../auth/auth-service';
-import { createRateLimiter, requireSession } from '../auth/http-middleware';
+import { createRateLimiter, getRequestSession, requireSession } from '../auth/http-middleware';
 import type { MediaStore } from '../media/media-store';
 import { sniffImage } from '../media/media-store';
 
-const MAX_BYTES = { avatar: 512 * 1024, emoji: 256 * 1024, background: 2 * 1024 * 1024 } as const;
+const MAX_BYTES = {
+  avatar: 512 * 1024, emoji: EMOJI_MAX_BYTES, background: 2 * 1024 * 1024, cardBack: 512 * 1024,
+} as const;
 const CONTENT_TYPES = {
   png: 'image/png', jpg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp',
 } as const;
@@ -28,6 +31,8 @@ export function createMediaRouter(store: MediaStore | null, authService: AuthSer
     requireSession(authService),
     // Room for one full emoji library import (300) per window.
     createRateLimiter(400, 15 * 60 * 1000, 'media'),
+    // Parse the large body only after origin, session, and rate checks have passed.
+    express.json({ limit: '3mb' }),
     (request, response, next) => {
       const body: unknown = request.body;
       const data = typeof body === 'object' && body !== null && 'data' in body ? body.data : null;
@@ -46,7 +51,11 @@ export function createMediaRouter(store: MediaStore | null, authService: AuthSer
         response.status(400).json({ success: false, error: 'Upload a PNG, JPEG, GIF, or WebP image.' });
         return;
       }
-      void store.save(bytes).then((id) => response.json({ success: true, id })).catch(next);
+      const { account } = getRequestSession(response);
+      void store.save(bytes, account.id).then((id) => {
+        if (id) response.json({ success: true, id });
+        else response.status(413).json({ success: false, error: 'Your image storage is full.' });
+      }).catch(next);
     },
   );
 

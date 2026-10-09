@@ -56,12 +56,23 @@ configured base path. `api.ts` handles cookies/HTTP and `socket.ts` handles real
 transport. Account connection hooks replace store state from server snapshots and clear
 missing room/game state. Equal snapshot fields retain references to avoid redundant updates.
 
+The socket retries indefinitely (1–5 s backoff) and may fall back to polling. Returning
+network or page visibility triggers an immediate reconnect; a page hidden for more than
+10 seconds re-sends `player:resume` and reconnects if it goes unanswered. Until the first
+ready snapshot, protected routes show a full-page connecting state; afterwards pages stay
+mounted under a non-blocking reconnect banner, and actions should check
+`selectConnectionReady` from the account store. Routes sit in an error boundary with a
+reload action, and a missing lazy chunk after a deployment reloads the page once per
+30 seconds. Media uploads use a 120-second request timeout instead of 15 seconds.
+
 Profile pages preserve room membership. Theme, motion, music, and voice preferences
 are local browser settings; account profile/image/history visibility is durable server data.
 The application owns one dynamic viewport below the fixed-height top bar. Waiting rooms
 and games fill that space without document scrolling; long account pages, chat, and
 history retain internal scrolling. The waiting room uses a separate readiness row,
-with a two-by-two seat layout and a chat toggle on phones or short landscape windows.
+with a two-by-two seat layout and a chat toggle (with an unread count) on phones or
+short landscape windows. Seated/ready counts appear in the table centre, or beside the
+Ready button where the centre is hidden; the room code has a copy button.
 Timer settings expand in a bounded panel rather than pushing the seats down.
 
 Game seats and the central play area occupy separate grid cells. At every viewport
@@ -73,6 +84,17 @@ Red Points measures the actual card viewport and paginates table cards to fit,
 preserving card order and the current page during capture highlights, and enlarging
 sparse tables without reserving empty rows. Other central presentations fit their
 grid cell without changing the space reserved for seats and controls.
+All four tables share one result dialog (`games/ResultDialog.tsx`) that stays below the
+top bar so music, voice, sign-out, and invite notices remain usable; it is a labelled
+modal dialog that focuses "Back to room" and reports the pending return.
+Overlay sheets (info, chat) and top-bar popovers move focus inside when opened and
+return it to their trigger when closed. Escape closes only the topmost layer: popovers
+mark the key handled so the game sheets underneath stay open. On phones and short
+landscape windows the abort-vote region sits at the bottom of the table so the tool
+buttons and the top seat stay visible.
+Game and room action controls (cards, bids, Play/Pass, votes, seat/ready/bot/host
+controls, Back to room) are disabled while the account connection is not `ready`;
+local-only controls such as sorting stay usable.
 Legacy `bridge.*` preferences migrate without replacing existing `card-together.*` values.
 Music playback persists across routes/control-panel closure. Voice follows actual room
 membership and requires explicit user join; see [media](media.md).
@@ -112,6 +134,9 @@ They recheck game/turn identity inside the runtime queue, wait for presentation 
 and publish only after persistence succeeds. Failed saves roll back and retry; abort,
 replacement, and shutdown cancel stale work. Bot decisions never receive opponents'
 private hands. Big Two's existing forced-pass scheduler owns forced passes for all seats.
+Bot and timeout attempts that fail three times in a row for the same turn fall back to the
+first legal action from the same filtered view; if none applies, the game is aborted with a
+system chat line instead of retrying forever. Every failed attempt is logged.
 
 ## Turn clocks
 

@@ -434,7 +434,7 @@ describe('voice session lifecycle', () => {
     receive('voice:state', room('self', ['remote', 'remote2']));
     expect(state.peerErrors).toEqual({ remote: 'connection-failed', remote2: 'connection-failed' });
     const refreshedRoom = room('self', ['refreshed', 'remote2']);
-    refreshedRoom.participants[1].accountId = 'account-remote';
+    Object.assign(refreshedRoom.participants[1], { accountId: 'account-remote' });
     receive('voice:state', refreshedRoom);
     expect(state.peerErrors).toEqual({ remote2: 'connection-failed' });
     expect(peerConnections).toHaveLength(3);

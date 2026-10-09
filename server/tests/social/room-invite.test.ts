@@ -124,6 +124,7 @@ describe('room invites and friend presence', () => {
     expect(result).toEqual({ success: false, error: 'You can only invite friends.' });
   });
 
+  // Five scrypt registrations can exceed the default timeout on a loaded machine.
   it('should reject inviting into a full room', async () => {
     const users = [
       await register('alice'), await register('bob'), await register('carol'),
@@ -138,5 +139,5 @@ describe('room invites and friend presence', () => {
     const result = await sockets[0].timeout(5_000)
       .emitWithAck('room:invite', { accountId: users[4].account.id });
     expect(result).toEqual({ success: false, error: 'Room is full.' });
-  });
+  }, 20_000);
 });

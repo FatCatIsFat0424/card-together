@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["node", "vitest/globals", "vite/client"],
+    "allowImportingTsExtensions": true,
+    "declaration": false,
+    "sourceMap": false,
+    "paths": {
+      "@shared/*": ["../shared/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts", "benchmarks/**/*.ts", "../shared/src/**/*.ts"]
+}

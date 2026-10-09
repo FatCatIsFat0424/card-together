@@ -4,14 +4,14 @@ set -Eeuo pipefail
 repo_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 node_binary="$repo_dir/.deploy/node"
 if [[ ! -x $node_binary || ! -f $repo_dir/client/dist/index.html ]]; then
-  echo 'Build first: npm exec --yes --package=node@24 -- bash deploy/build.sh' >&2
+  echo 'Build first: npm exec --yes --package="node@$(cat .node-version)" -- bash deploy/build.sh' >&2
   exit 1
 fi
 if [[ $EUID -ne 0 ]]; then
   exec sudo bash "$repo_dir/deploy/deploy.sh"
 fi
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
-for tool in python3 rsync nginx systemctl flock rg; do command -v "$tool" >/dev/null; done
+for tool in python3 rsync nginx systemctl flock; do command -v "$tool" >/dev/null; done
 exec 9>/run/lock/card-together-deploy.lock
 flock -n 9 || { echo 'Another Card Together deployment is running.' >&2; exit 1; }
 # Serialize migration with deployments using the previous release's lock.
@@ -68,6 +68,12 @@ for unit in card-together bridge-online; do
 done
 if [[ -f $snippet ]]; then cp -p "$snippet" "$backup_dir/snippet.conf"; fi
 if [[ -f $http_snippet ]]; then cp -p "$http_snippet" "$backup_dir/http-snippet.conf"; fi
+# The installed tree is only replaced by install.sh, so it can be copied while the service runs.
+# Dependencies, the Node binary, and music copies are rebuilt from the matching checkout.
+if [[ -d /opt/card-together ]]; then
+  rsync -a --exclude='/node' --exclude='node_modules/' --exclude='provided-music/' \
+    /opt/card-together/ "$backup_dir/application/"
+fi
 python3 "$repo_dir/deploy/configure-nginx.py" --input "$site_file" --output "$backup_dir/site.new.conf"
 python3 "$repo_dir/deploy/prepare-runtime.py" \
   --current /etc/card-together/server.env --legacy /etc/bridge-online/server.env \
@@ -75,12 +81,25 @@ python3 "$repo_dir/deploy/prepare-runtime.py" \
 
 nginx_changed=false
 service_changed=false
+site_temp=
+# Replace a file through a same-directory temporary (dot-prefixed, so Nginx globs never
+# include it), keeping the target's mode and ownership.
+replace_file() {
+  local source=$1 target=$2
+  site_temp=$(mktemp "$(dirname -- "$target")/.$(basename -- "$target").XXXXXX")
+  cat -- "$source" > "$site_temp"
+  chmod --reference="$target" -- "$site_temp"
+  chown --reference="$target" -- "$site_temp"
+  mv -f -- "$site_temp" "$target"
+  site_temp=
+}
 on_error() {
   local status=${1:-$?}
-  trap - ERR
+  trap - ERR INT TERM
+  if [[ -n $site_temp ]]; then rm -f -- "$site_temp"; fi
   if [[ $service_changed == true ]]; then systemctl stop card-together.service || true; fi
   if [[ $nginx_changed == true ]]; then
-    cp -p "$backup_dir/site.conf" "$site_file"
+    replace_file "$backup_dir/site.conf" "$site_file"
     if [[ -f $backup_dir/snippet.conf ]]; then
       cp -p "$backup_dir/snippet.conf" "$snippet"
     else
@@ -98,6 +117,9 @@ on_error() {
   exit "$status"
 }
 trap on_error ERR
+# A signal during the stopped-service window must still run the same recovery path.
+trap 'on_error 130' INT
+trap 'on_error 143' TERM
 service_changed=true
 if systemctl cat bridge-online.service >/dev/null 2>&1; then
   systemctl stop bridge-online.service
@@ -112,7 +134,6 @@ fi
 for directory in /var/lib/bridge-online /var/lib/card-together; do
   if [[ -d $directory ]]; then cp -a "$directory" "$backup_dir/$(basename "$directory")-data"; fi
 done
-if [[ -d /opt/card-together ]]; then cp -a /opt/card-together "$backup_dir/application"; fi
 getent passwd card-together >/dev/null || useradd --system --user-group \
   --home-dir /var/lib/card-together --no-create-home --shell /usr/sbin/nologin card-together
 install -d -m 0700 /etc/card-together
@@ -134,11 +155,17 @@ cmp -s "$backup_dir/site.conf" "$site_file" || {
 nginx_changed=true
 install -m 0644 "$repo_dir/deploy/nginx/card-together.conf" "$snippet"
 install -m 0644 "$repo_dir/deploy/nginx/card-together-http.conf" "$http_snippet"
-cat "$backup_dir/site.new.conf" > "$site_file"
+replace_file "$backup_dir/site.new.conf" "$site_file"
 nginx -t
 systemctl reload nginx
 python3 "$repo_dir/deploy/wait-for-health.py" https://acserver.csie.org/card-together/health
-trap - ERR
+trap - ERR INT TERM
+# A missing backup schedule must not turn a healthy deployment into a failure.
+systemctl enable --now card-together-backup.timer \
+  || echo 'Warning: could not enable card-together-backup.timer; enable it manually.' >&2
+# Retention: keep the five newest deployment snapshots (names sort chronologically).
+find /var/backups/card-together -mindepth 1 -maxdepth 1 -type d -name 'deploy-*' \
+  | sort | head -n -5 | while IFS= read -r stale; do rm -rf -- "$stale"; done || true
 echo 'Deployed: https://acserver.csie.org/card-together/'
 echo "Backups: $backup_dir"
 systemctl status card-together.service --no-pager

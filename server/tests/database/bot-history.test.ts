@@ -21,7 +21,8 @@ it('persists a completed mixed bot match and preserves human history after reope
   try {
     const account: AccountRecord = {
       id: randomUUID(), username: 'tester', usernameNormalized: 'tester', nickname: 'Tester',
-      color: '#123456', avatar: 'cat', avatarImage: null, tableBackground: null, matchesPublic: false,
+      color: '#123456', avatar: 'cat', avatarImage: null, tableBackground: null,
+      tableBackgroundOpacity: 100, cardBack: null, cardBackOpacity: 100, matchesPublic: false,
       passwordHash: `scrypt$131072$8$1$${'ab'.repeat(16)}$${'cd'.repeat(64)}`,
       createdAt: 1, updatedAt: 1,
     };

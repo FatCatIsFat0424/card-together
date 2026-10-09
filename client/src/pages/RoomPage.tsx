@@ -1,21 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { GAME_TYPES } from '@shared/constants';
 import type { GameType, Seat, TimeControl } from '@shared/types';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import { socket } from '../socket';
-import { mediaUrl } from '../media';
+import { tableBackgroundStyle } from '../account-appearance';
 import { useAccountStore } from '../stores/account-store';
 import { usePlayerStore } from '../stores/player-store';
 import { useRoomStore } from '../stores/room-store';
+import { useChatStore } from '../stores/chat-store';
 import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { PlayerLink } from '../components/PlayerLink';
 import { ChatPanel } from '../components/ChatPanel';
 import { InviteFriends } from '../components/InviteFriends';
 import { TimeControlSettings } from '../components/TimeControlSettings';
+import { useConnectionReady } from '../games/use-connection-ready';
 import styles from './RoomPage.module.css';
+import { roomProgress, unreadCount } from './room-progress';
+
+const COPIED_MS = 2000;
 
 const SEAT_STYLE_MAP: Record<Seat, string> = {
   N: styles.seatNorth, E: styles.seatEast, S: styles.seatSouth, W: styles.seatWest,
@@ -24,7 +29,8 @@ const SEAT_STYLE_MAP: Record<Seat, string> = {
 export function RoomPage(): ReactNode {
   const { roomCode } = useParams<{ roomCode: string }>();
   const navigate = useNavigate();
-  const tableBackground = useAccountStore((state) => state.account?.tableBackground);
+  const account = useAccountStore((state) => state.account);
+  const tableStyle = tableBackgroundStyle(account);
   const playerId = usePlayerStore((state) => state.playerId);
   const roomInfo = useRoomStore((state) => state.roomInfo);
   const mySeat = useRoomStore((state) => state.mySeat);
@@ -33,9 +39,15 @@ export function RoomPage(): ReactNode {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const messageCount = useChatStore((state) => state.messages.length);
+  const [seenMessages, setSeenMessages] = useState(messageCount);
+  const unread = unreadCount(messageCount, seenMessages, chatOpen);
   const attemptedRoom = useRef<string | null>(null);
   const hadRoom = useRef(false);
   const leaving = useRef(false);
+  const connectionReady = useConnectionReady();
+  const blocked = busy || !connectionReady;
   const isReady = mySeat ? roomInfo?.seats[mySeat].isReady ?? false : false;
   const isHost = Boolean(playerId) && roomInfo?.hostId === playerId;
   const hasEmptySeat = roomInfo ? Object.values(roomInfo.seats).some(({ player }) => !player) : false;
@@ -58,6 +70,24 @@ export function RoomPage(): ReactNode {
       navigate('/', { replace: true });
     }
   }, [roomCode, roomInfo, phase, navigate, t]);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), COPIED_MS);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
+  const copyCode = (code: string): void => {
+    if (!navigator.clipboard) {
+      setError(t('room.copyFailed'));
+      return;
+    }
+    navigator.clipboard.writeText(code).then(() => setCopied(true), () => setError(t('room.copyFailed')));
+  };
+  const toggleChat = (): void => {
+    setSeenMessages(messageCount);
+    setChatOpen((open) => !open);
+  };
 
   const handleResult = (timeout: Error | null, result?: { success: boolean; error?: string }): void => {
     setBusy(false);
@@ -105,7 +135,11 @@ export function RoomPage(): ReactNode {
     setBusy(true);
     socket.timeout(10000).emit('room:leave', (timeout, result) => {
       handleResult(timeout, result);
-      if (!timeout && result.success) navigate('/');
+      if (!timeout && result.success) {
+        // Clear the room before navigating so the lobby does not redirect back to it.
+        useRoomStore.getState().leaveRoom();
+        navigate('/');
+      }
       else leaving.current = false;
     });
   };
@@ -115,11 +149,26 @@ export function RoomPage(): ReactNode {
     {error && <Link to="/">{t('nav.lobby')}</Link>}
   </main>;
 
+  const progress = roomProgress(roomInfo.seats);
+  const progressText = t('room.progress', { seated: String(progress.seated), ready: String(progress.ready) });
+  const hintKey = !mySeat ? 'room.pickSeat' : progress.seated < 4 ? 'room.waiting'
+    : isReady ? 'room.waitingReady' : 'room.pressReady';
+
   return (
     <main className={`${styles.roomContainer} ${styles.roomLayout} ${chatOpen ? styles.chatOpen : ''}`}>
       <div className={styles.roomHeader}>
-        <div><div className={styles.roomCodeLabel}>{t('room.code')}</div>
-          <div className={styles.roomCode}>{roomInfo.code}</div></div>
+        <div className={styles.codeBlock}>
+          <div>
+            <div className={styles.roomCodeLabel}>{t('room.code')}</div>
+            <div className={styles.roomCode}>{roomInfo.code}</div>
+          </div>
+          <button type="button" className={`btn btn-outline touch-target ${styles.copyBtn}`}
+            onClick={() => copyCode(roomInfo.code)} aria-label={`${t('room.copyCode')} ${roomInfo.code}`}>
+            <span aria-hidden="true">{copied ? '✓' : '⧉'}</span>
+            <span className={styles.copyText}>{copied ? t('room.copied') : t('room.copyCode')}</span>
+          </button>
+          <span className={styles.srOnly} role="status">{copied ? t('room.copied') : ''}</span>
+        </div>
         <div className={styles.gameTypeRow}>
           <span className={styles.gameTypeLabel}>{t('gameType.label')}</span>
           <div className={styles.segmented} role="radiogroup" aria-label={t('gameType.label')}
@@ -127,7 +176,7 @@ export function RoomPage(): ReactNode {
             {GAME_TYPES.map((gameType) => (
               <button key={gameType} type="button" role="radio" aria-checked={roomInfo.gameType === gameType}
                 className={roomInfo.gameType === gameType ? styles.segmentActive : styles.segment}
-                disabled={!isHost || busy || roomInfo.gameType === gameType}
+                disabled={!isHost || blocked || roomInfo.gameType === gameType}
                 onClick={() => setGameType(gameType)}>
                 {t(`gameType.${gameType}`)}
               </button>
@@ -135,22 +184,22 @@ export function RoomPage(): ReactNode {
           </div>
         </div>
         <div className={styles.headerActions}>
-          <button type="button" className={`btn btn-outline ${styles.chatToggle}`}
-            aria-pressed={chatOpen} aria-controls="room-chat" onClick={() => setChatOpen((open) => !open)}>
+          <button type="button" className={`btn btn-outline touch-target ${styles.chatToggle}`}
+            aria-pressed={chatOpen} aria-controls="room-chat" onClick={toggleChat}>
             {t('chat.title')}
+            {unread > 0 && <span className={styles.unread} aria-label={t('room.unread', { n: String(unread) })}>
+              {unread}</span>}
           </button>
           <InviteFriends />
-          <button className="btn btn-outline" onClick={leave} disabled={busy}>{t('room.leave')}</button>
+          <button type="button" className="btn btn-outline touch-target" onClick={leave} disabled={blocked}>{t('room.leave')}</button>
         </div>
         <TimeControlSettings
           key={`${roomInfo.code}:${roomInfo.hostId}:${roomInfo.timeControl?.baseSeconds}:${roomInfo.timeControl?.bankSeconds}`}
           value={roomInfo.timeControl ?? DEFAULT_TIME_CONTROL}
-          disabled={!isHost || busy || roomInfo.status !== 'waiting'} onSave={setTimeControl} />
+          disabled={!isHost || blocked || roomInfo.status !== 'waiting'} onSave={setTimeControl} />
       </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
-      <div className={`${styles.tableArea} ${tableBackground ? styles.customTable : ''}`}
-        style={tableBackground
-          ? { '--table-image': `url("${mediaUrl(tableBackground)}")` } as CSSProperties : undefined}>
+      <div className={`${styles.tableArea} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}>
       <div className={styles.seatLayout}>
         {(['N', 'E', 'S', 'W'] as Seat[]).map((seat) => {
           const seatInfo = roomInfo.seats[seat];
@@ -169,31 +218,35 @@ export function RoomPage(): ReactNode {
                 <span className={seatInfo.isReady ? styles.seatReadyBadge : styles.seatNotReadyBadge}>
                   {t(player.isBot ? 'room.botReady' : seatInfo.isReady ? 'room.ready.status' : 'room.seatTaken')}</span>
               </div>
-              {isHost && player.isBot && <button type="button" className={`btn btn-outline ${styles.botAction}`}
-                disabled={busy} onClick={() => removeBot(seat)}>{t('room.removeBot')}</button>}
+              {isHost && player.isBot && <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
+                disabled={blocked} onClick={() => removeBot(seat)}>{t('room.removeBot')}</button>}
             </div>
           );
           return (
             <div key={seat} className={`${className} ${styles.emptySlot}`}>
-              <button type="button" disabled={busy} className={styles.seatChoice}
+              <button type="button" disabled={blocked} className={styles.seatChoice}
                 onClick={() => changeSeat(seat)}>
-                <div className={styles.seatLabel}>{t(`seat.${seat}`)}</div>
-                <div className={styles.seatEmpty}>{t('room.seatEmpty')}</div>
+                <span className={styles.seatLabel}>{t(`seat.${seat}`)}</span>
+                <span className={styles.seatEmpty}>{t('room.seatEmpty')}</span>
               </button>
-              {isHost && <button type="button" className={`btn btn-outline ${styles.botAction}`}
-                disabled={busy} onClick={() => addBot(seat)}>{t('room.addBot')}</button>}
+              {isHost && <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
+                disabled={blocked} onClick={() => addBot(seat)}>{t('room.addBot')}</button>}
             </div>
           );
         })}
         <div className={styles.tableCenter}>
           <div className={styles.tableCenterText}>
-          {t('room.waiting')}</div></div>
+            <strong>{progressText}</strong>
+            <span>{t(hintKey)}</span>
+          </div>
+        </div>
       </div>
       <div className={styles.roomFooter}>
+        <p className={styles.progress} role="status">{progressText}</p>
         {isHost && <button type="button" className="btn btn-outline" onClick={fillBots}
-          disabled={busy || !hasEmptySeat}>{t('room.fillBots')}</button>}
+          disabled={blocked || !hasEmptySeat}>{t('room.fillBots')}</button>}
         <button className={`btn ${isReady ? 'btn-danger' : 'btn-success'} ${styles.readyBtn}`}
-          onClick={ready} disabled={busy || !mySeat}>{t(isReady ? 'room.unready' : 'room.ready')}</button>
+          onClick={ready} disabled={blocked || !mySeat}>{t(isReady ? 'room.unready' : 'room.ready')}</button>
       </div>
       </div>
       <div className={styles.chat} id="room-chat"><ChatPanel /></div>

@@ -1,18 +1,17 @@
-// ─── GameShell：所有遊戲共用的牌桌外框（資訊欄 + 牌桌 + 聊天欄 + 投票終止） ───
+// ─── GameShell: table frame shared by all games (info rail + table + chat + abort vote) ───
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { PlayerVisibleGameState, Seat } from '@shared/types';
 import type { TranslationKey } from '../i18n';
 import { playCardSound, playOutSound, unlockCardSounds, disposeCardSounds } from '../audio/card-sound';
-import { mediaUrl } from '../media';
+import { cardBackStyle, tableBackgroundStyle } from '../account-appearance';
 import { useAccountStore } from '../stores/account-store';
 import { useGameStore } from '../stores/game-store';
 import { useChatStore } from '../stores/chat-store';
 import { useRoomStore } from '../stores/room-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { ChatPanel } from '../components/ChatPanel';
-import { TurnClock } from '../components/TurnClock';
 import { TableSeat } from '../components/TableSeat';
 import { lastElimination, lastMove, tablePosition } from '../game-view';
 import type { TablePosition } from '../game-view';
@@ -22,12 +21,14 @@ import { useGamePresentation } from './use-game-presentation';
 import { GamePresentation } from './GamePresentation';
 import { RoundHistory } from './RoundHistory';
 import { useMotionStore } from '../stores/motion-store';
+import { useSheetFocus } from './use-sheet-focus';
+import { AUDIO_UNLOCK_EVENTS } from '../audio/audio-unlock';
 
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 const DESKTOP_QUERY = '(min-width: 1024px)';
 const SHEET_QUERY = '(max-width: 767px), (max-height: 500px) and (min-width: 600px)';
 const OUT_BANNER_MS = 3500;
-/** 出牌從該座位方向飛入中央 */
+/** The played card flies to the center from that seat's direction */
 const FLY_FROM: Record<TablePosition, CSSProperties> = {
   bottom: { '--fly-x': '0px', '--fly-y': '28vh' } as CSSProperties,
   top: { '--fly-x': '0px', '--fly-y': '-28vh' } as CSSProperties,
@@ -36,7 +37,7 @@ const FLY_FROM: Record<TablePosition, CSSProperties> = {
 };
 
 function presentationSummary(
-  game: PlayerVisibleGameState, locale: 'zh-TW' | 'en',
+  game: PlayerVisibleGameState,
   t: (key: TranslationKey, params?: Record<string, string>) => string,
 ): string {
   if (game.gameType === 'bridge') {
@@ -46,8 +47,10 @@ function presentationSummary(
       `${t('seat.E')} / ${t('seat.W')}: ${game.playing.trickCountEW}` : '';
   }
   if (game.gameType === 'redpoints' && game.result) {
-    return game.result.winners.map((seat) => `${t(`seat.${seat}`)} ${game.result?.points[seat]}`)
-      .join(' · ') + (locale === 'zh-TW' ? ' 分獲勝' : ' points — winner');
+    const { points, winners } = game.result;
+    return t('presentation.redPointsWinners', {
+      scores: winners.map((seat) => `${t(`seat.${seat}`)} ${points[seat]}`).join(' · '),
+    });
   }
   return '';
 }
@@ -56,18 +59,24 @@ function matches(query: string): boolean {
   return typeof window !== 'undefined' && window.matchMedia(query).matches;
 }
 
+/** The info rail is a column only on wide, tall screens; elsewhere it is an overlay sheet. */
+const infoIsOverlay = (): boolean => !matches(DESKTOP_QUERY) || matches(SHEET_QUERY);
+const chatIsOverlay = (): boolean => matches(SHEET_QUERY);
+
 interface GameShellProps {
-  /** 資訊欄內容（桌機左欄、平板浮層、手機抽屜） */
+  /** Info rail content (left column on desktop, overlay on tablet, drawer on mobile) */
   info: ReactNode;
-  /** 牌桌中央 */
+  /** Table center */
   centre: ReactNode;
-  /** 牌桌下方手牌區 */
+  /** Hand area below the table */
   hand: ReactNode;
-  /** 全畫面浮層（結算） */
+  /** Full-screen overlay (settlement) */
   overlay?: ReactNode;
-  /** 牌桌上的動作錯誤 */
+  /** Action panel layered over the table, e.g. the Bridge bidding controls. */
+  panel?: ReactNode;
+  /** Action error shown on the table */
   error?: string;
-  /** 可點選的座位（99：指定下一位） */
+  /** Selectable seats (Ninety-Nine: choose the next player) */
   pickableSeats?: readonly Seat[];
   onPickSeat?: (seat: Seat) => void;
   turnReady?: boolean;
@@ -106,33 +115,45 @@ function FittedCentre({ children, style, responsive }: {
 }
 
 export function GameShell({
-  info, centre, hand, overlay, error, pickableSeats, onPickSeat, turnReady,
+  info, centre, hand, overlay, panel, error, pickableSeats, onPickSeat, turnReady,
 }: GameShellProps): ReactNode {
   const presentation = useGamePresentation();
   const visibleGame = useGameStore((state) => state.visible);
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const setReducedMotion = useMotionStore((state) => state.setReducedMotion);
-  const locale = useI18nStore((state) => state.locale);
   const mySeat = useRoomStore((state) => state.mySeat);
-  const tableBackground = useAccountStore((state) => state.account?.tableBackground);
+  const account = useAccountStore((state) => state.account);
+  const tableStyle = tableBackgroundStyle(account);
   const messageCount = useChatStore((state) => state.messages.length);
   const seats = useRoomStore((state) => state.roomInfo?.seats);
   const log = useGameStore((state) => state.bigTwo?.log ?? state.redPoints?.log ?? state.ninetyNine?.log ?? state.log);
   const ownedTurn = useGameStore((state) => mySeat !== null && state.currentTurnSeat === mySeat
     && (state.phase === 'bidding' || state.phase === 'playing'));
   const myTurn = (turnReady ?? ownedTurn) && !presentation.locked;
+  const turnSeat = useGameStore((state) => state.phase === 'bidding' || state.phase === 'playing'
+    ? state.currentTurnSeat : null);
   const move = lastMove(log);
   const out = lastElimination(log);
   const [outBanner, setOutBanner] = useState<{ seat: Seat; index: number } | null>(null);
   const { t } = useI18nStore();
-  // 平板預設收合聊天；手機為底部抽屜，預設關閉
+  const turnName = turnSeat ? seats?.[turnSeat].player?.nickname ?? t(`seat.${turnSeat}`) : '';
+  const turnAnnouncement = presentation.locked || !turnSeat ? ''
+    : turnSeat === mySeat ? (myTurn ? t('table.yourTurn') : '') : t('table.turnOf', { name: turnName });
+  // Chat is collapsed by default on tablet; on mobile it is a bottom drawer, closed by default
   const [chatOpen, setChatOpen] = useState(() => matches(DESKTOP_QUERY) && !matches(SHEET_QUERY));
   const [infoOpen, setInfoOpen] = useState(false);
   const [seenMessages, setSeenMessages] = useState(0);
+  const infoButtonRef = useRef<HTMLButtonElement>(null);
+  const chatButtonRef = useRef<HTMLButtonElement>(null);
+  const infoPanelRef = useRef<HTMLDivElement>(null);
+  const chatRailRef = useRef<HTMLElement>(null);
+  useSheetFocus(infoOpen, infoPanelRef, infoButtonRef, infoIsOverlay);
+  // Focusing the chat input would raise the phone keyboard; focus the sheet itself.
+  useSheetFocus(chatOpen, chatRailRef, chatButtonRef, chatIsOverlay, 'panel');
   const bottomSeat: Seat = mySeat ?? 'S';
   const unread = chatOpen ? 0 : Math.max(0, messageCount - seenMessages);
 
-  // 只對進桌後的新動作出聲；進桌／重連時的既有紀錄不響
+  // Play sounds only for actions after joining the table, not for the existing log on join or reconnect
   const heardMove = useRef(move?.index);
   useEffect(() => {
     if (visibleGame?.presentation || !move || move.index === heardMove.current) return;
@@ -142,17 +163,18 @@ export function GameShell({
 
   useEffect(() => {
     const unlock = (event: Event): void => { if (event.isTrusted) unlockCardSounds(); };
-    window.addEventListener('pointerdown', unlock);
-    window.addEventListener('keydown', unlock);
+    for (const event of AUDIO_UNLOCK_EVENTS) window.addEventListener(event, unlock);
     return () => {
-      window.removeEventListener('pointerdown', unlock);
-      window.removeEventListener('keydown', unlock);
+      for (const event of AUDIO_UNLOCK_EVENTS) window.removeEventListener(event, unlock);
       disposeCardSounds();
     };
   }, []);
 
-  // 依 index 觸發；out 每次 render 都是新物件，不能當依賴（否則計時器會被清掉）
+  // Trigger by log index. The hide timer lives in a ref: an effect cleanup on a later
+  // dependency change would otherwise cancel it and leave the banner up, which reduced
+  // motion (no fade-out animation) makes permanent.
   const heardOut = useRef(out?.index);
+  const outTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const outIndex = out?.index;
   const outSeat = out?.seat;
   useEffect(() => {
@@ -160,9 +182,15 @@ export function GameShell({
     heardOut.current = outIndex;
     playOutSound();
     setOutBanner({ seat: outSeat, index: outIndex });
-    const timer = setTimeout(() => setOutBanner(null), OUT_BANNER_MS);
-    return () => clearTimeout(timer);
+    if (outTimer.current) clearTimeout(outTimer.current);
+    outTimer.current = setTimeout(() => {
+      outTimer.current = null;
+      setOutBanner(null);
+    }, OUT_BANNER_MS);
   }, [outIndex, outSeat, visibleGame?.presentation]);
+  useEffect(() => () => {
+    if (outTimer.current) clearTimeout(outTimer.current);
+  }, []);
 
   const heardFrame = useRef(presentation.frame?.key);
   useEffect(() => {
@@ -179,7 +207,7 @@ export function GameShell({
     setChatOpen(false);
   }, [messageCount]);
 
-  // 縮到桌機寬度以下時收起聊天，避免手機版一進來就被聊天抽屜蓋住
+  // Collapse chat below desktop width so the mobile view is not covered by the chat drawer on entry
   useEffect(() => {
     const query = window.matchMedia(DESKTOP_QUERY);
     const sheets = window.matchMedia(SHEET_QUERY);
@@ -192,7 +220,7 @@ export function GameShell({
     };
   }, [collapseChat]);
 
-  // 手機一次只開一個抽屜
+  // Only one drawer is open at a time on mobile
   const openInfo = (): void => {
     if (matches(SHEET_QUERY) && chatOpen) collapseChat();
     setInfoOpen((open) => !open);
@@ -209,19 +237,21 @@ export function GameShell({
   }, [collapseChat]);
 
   useEffect(() => {
+    // Popovers above the sheets handle Escape first and mark it handled.
     const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') closeSheets();
+      if (event.key === 'Escape' && !event.defaultPrevented) closeSheets();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [closeSheets]);
 
   return (
-    <div data-reduced-motion={reducedMotion || undefined} className={`${styles.gameContainer} ${chatOpen ? '' : styles.chatCollapsed} ${infoOpen ? styles.infoOpen : ''}`}>
+    <div data-reduced-motion={reducedMotion || undefined} className={`${styles.gameContainer} ${chatOpen ? '' : styles.chatCollapsed} ${infoOpen ? styles.infoOpen : ''}`}
+      style={cardBackStyle(account)}>
       {(infoOpen || chatOpen) && <button type="button" className={styles.backdrop} tabIndex={-1}
         aria-label={t('table.close')} onClick={closeSheets} />}
 
-      <div className={styles.infoPanel} id="game-info-panel">
+      <div className={styles.infoPanel} id="game-info-panel" ref={infoPanelRef}>
         <div className={styles.sheetHeader}>
           <span>{t('table.info')}</span>
           <button type="button" className={styles.sheetClose} onClick={() => setInfoOpen(false)}
@@ -231,7 +261,7 @@ export function GameShell({
         <label className={styles.motionSetting}>
           <input type="checkbox" checked={reducedMotion}
             onChange={(event) => setReducedMotion(event.target.checked)} />
-          {locale === 'zh-TW' ? '減少動畫' : 'Reduce motion'}
+          {t('table.reduceMotion')}
         </label>
         <div className={styles.infoContent}>
           {info}
@@ -239,17 +269,15 @@ export function GameShell({
         </div>
       </div>
 
-      <main className={`${styles.centreColumn} ${tableBackground ? styles.customTable : ''}`}
-        style={tableBackground
-          ? { '--table-image': `url("${mediaUrl(tableBackground)}")` } as CSSProperties : undefined}>
+      <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}>
         <div className={styles.table} data-card-table>
           <div className={styles.tableTools}>
-            <button type="button" className={styles.toolBtn} onClick={openInfo}
+            <button type="button" className={styles.toolBtn} onClick={openInfo} ref={infoButtonRef}
               aria-label={t('table.info')} title={t('table.info')}
               aria-expanded={infoOpen} aria-controls="game-info-panel">
               <span aria-hidden="true">📋</span>
             </button>
-            <button type="button" className={`${styles.toolBtn} ${styles.chatFab}`} onClick={openChat}
+            <button type="button" className={`${styles.toolBtn} ${styles.chatFab}`} onClick={openChat} ref={chatButtonRef}
               aria-label={t('table.chatExpand')} title={t('table.chatExpand')} aria-expanded={chatOpen}>
               <span aria-hidden="true">💬</span>
               {unread > 0 && <span className={`${styles.unread} ${styles.fabBadge}`}>{unread}</span>}
@@ -269,33 +297,33 @@ export function GameShell({
               <GamePresentation key={presentation.frame.key} frame={presentation.frame}
                 bottomSeat={bottomSeat} gameType={visibleGame.gameType}
                 elapsedMs={Math.max(0, Date.now() - presentation.frameStartedAt)}
-                summary={presentationSummary(visibleGame, locale, t)} />
+                summary={presentationSummary(visibleGame, t)} />
             ) : <div className={`${styles.centreBody} ${visibleGame?.presentation ? styles.settledCentre : ''}`}>{centre}</div>}
           </FittedCentre>
           {outBanner && <p key={outBanner.index} className={styles.outBanner} role="status">
             {t('table.eliminated', { name: seats?.[outBanner.seat].player?.nickname ?? t(`seat.${outBanner.seat}`) })}
           </p>}
+          {panel && !presentation.locked && <div className={styles.actionPanel}>{panel}</div>}
           <AbortVoteBanner />
         </div>
 
         <div className={`${styles.handZone} ${myTurn ? styles.handMyTurn : ''}`} data-hand-zone>
           <div className={styles.handHeader}>
-            <TableSeat seat={bottomSeat} position="bottom" hideClock suppressTurn={presentation.locked}
+            <TableSeat seat={bottomSeat} position="bottom" suppressTurn={presentation.locked}
               moveKey={visibleGame?.presentation
                 ? presentation.frame?.seat === bottomSeat ? presentation.frame.key : undefined
                 : move?.seat === bottomSeat ? move.index : undefined}
               onPick={onPickSeat && pickableSeats?.includes(bottomSeat) ? () => onPickSeat(bottomSeat) : undefined} />
-            {mySeat && <TurnClock seat={mySeat} compact />}
           </div>
           <div className={styles.handStatus}>
-            {myTurn && <p className={styles.yourTurn} role="status">{t('table.yourTurn')}</p>}
+            {myTurn && <p className={styles.yourTurn}>{t('table.yourTurn')}</p>}
             {error && <p className={styles.actionError} role="alert">{error}</p>}
           </div>
           {hand}
         </div>
       </main>
 
-      <aside className={styles.chatRail}>
+      <aside className={styles.chatRail} ref={chatRailRef} tabIndex={-1} aria-label={t('chat.title')}>
         {!chatOpen && (
           <button type="button" className={styles.chatStrip} onClick={() => setChatOpen(true)}
             aria-label={t('table.chatExpand')} title={t('table.chatExpand')}>
@@ -308,6 +336,9 @@ export function GameShell({
         </div>
       </aside>
 
+      <p className={styles.srOnly} aria-live="polite" aria-atomic="true">
+        {turnAnnouncement}
+      </p>
       {!presentation.locked && overlay}
     </div>
   );

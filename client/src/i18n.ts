@@ -1,4 +1,4 @@
-// ─── i18n 多語系系統 ───
+// ─── i18n system ───
 
 import { accountTranslations } from './account-i18n';
 import type { AccountTranslationKey } from './account-i18n';
@@ -82,6 +82,11 @@ type TranslationKeys = Record<
   'common.me': string;
   'common.error': string;
   'common.loading': string;
+  // Connection and recovery
+  'connection.reconnecting': string;
+  'connection.interrupted': string;
+  'app.crashed': string;
+  'app.reload': string;
 };
 
 const translations: Record<Locale, TranslationKeys> = {
@@ -93,7 +98,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...emojiTranslations['zh-TW'],
     ...gameTranslations['zh-TW'],
     'lobby.title': 'Card Together',
-    'lobby.subtitle': '線上橋牌',
+    'lobby.subtitle': '橋牌、大老二、撿紅點、99，線上同桌一起玩',
     'lobby.nickname': '暱稱',
     'lobby.nicknamePlaceholder': '輸入暱稱...',
     'lobby.color': '顏色',
@@ -147,6 +152,10 @@ const translations: Record<Locale, TranslationKeys> = {
     'common.me': '（我）',
     'common.error': '發生錯誤',
     'common.loading': '載入中...',
+    'connection.reconnecting': '重新連線中…',
+    'connection.interrupted': '連線中斷，正在自動重試。',
+    'app.crashed': '頁面發生錯誤或版本已更新，請重新整理。',
+    'app.reload': '重新整理',
   },
   en: {
     ...accountTranslations.en,
@@ -156,7 +165,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...emojiTranslations.en,
     ...gameTranslations.en,
     'lobby.title': 'Card Together',
-    'lobby.subtitle': 'Online Bridge Game',
+    'lobby.subtitle': 'Bridge, Big Two, Red Points, and Ninety-Nine with friends online',
     'lobby.nickname': 'Nickname',
     'lobby.nicknamePlaceholder': 'Enter nickname...',
     'lobby.color': 'Color',
@@ -210,13 +219,17 @@ const translations: Record<Locale, TranslationKeys> = {
     'common.me': '(me)',
     'common.error': 'An error occurred',
     'common.loading': 'Loading...',
+    'connection.reconnecting': 'Reconnecting…',
+    'connection.interrupted': 'Connection lost. Retrying automatically.',
+    'app.crashed': 'Something went wrong or a new version is available. Reload to continue.',
+    'app.reload': 'Reload',
   },
 };
 
 export type TranslationKey = keyof TranslationKeys;
 
 /**
- * 取得翻譯文字
+ * Get translated text
  */
 export function t(key: TranslationKey, locale: Locale, params?: Record<string, string>): string {
   let text = translations[locale][key] ?? key;
@@ -231,7 +244,7 @@ export function t(key: TranslationKey, locale: Locale, params?: Record<string, s
 }
 
 /**
- * 取得所有可用語系
+ * Get all available locales
  */
 export function getAvailableLocales(): Locale[] {
   return ['zh-TW', 'en'];

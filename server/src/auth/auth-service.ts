@@ -1,6 +1,8 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { AccountProfile, AvatarPreset, MediaId } from '@shared/types';
-import { NICKNAME_MAX_LENGTH, isMediaId } from '@shared/constants';
+import {
+  IMAGE_OPACITY_MAX, IMAGE_OPACITY_MIN, NICKNAME_MAX_LENGTH, isImageOpacity, isMediaId,
+} from '@shared/constants';
 import type { Repository, SessionRecord, AccountRecord } from '../database/repository';
 import { publicAccount } from '../database/repository';
 import { isObject } from '../database/schema';
@@ -63,7 +65,8 @@ function passwordValue(input: unknown): string {
 
 type EditableProfile = Pick<
   AccountProfile,
-  'nickname' | 'color' | 'avatar' | 'avatarImage' | 'tableBackground' | 'matchesPublic'
+  | 'nickname' | 'color' | 'avatar' | 'avatarImage' | 'tableBackground'
+  | 'tableBackgroundOpacity' | 'cardBack' | 'cardBackOpacity' | 'matchesPublic'
 >;
 
 function mediaValue(
@@ -75,6 +78,18 @@ function mediaValue(
   if (input === null) return null;
   if (!isMediaId(input) || !mediaExists(input)) {
     throw authError(400, 'INVALID_MEDIA', 'Upload the image before using it.');
+  }
+  return input;
+}
+
+function opacityValue(input: unknown, fallback: number): number {
+  if (input === undefined) return fallback;
+  if (!isImageOpacity(input)) {
+    throw authError(
+      400,
+      'INVALID_OPACITY',
+      `Opacity must be a whole number from ${IMAGE_OPACITY_MIN} to ${IMAGE_OPACITY_MAX}.`,
+    );
   }
   return input;
 }
@@ -121,6 +136,11 @@ function profileValues(
     avatar: avatar as AvatarPreset,
     avatarImage: mediaValue(input.avatarImage, fallback.avatarImage, mediaExists),
     tableBackground: mediaValue(input.tableBackground, fallback.tableBackground, mediaExists),
+    tableBackgroundOpacity: opacityValue(
+      input.tableBackgroundOpacity, fallback.tableBackgroundOpacity,
+    ),
+    cardBack: mediaValue(input.cardBack, fallback.cardBack, mediaExists),
+    cardBackOpacity: opacityValue(input.cardBackOpacity, fallback.cardBackOpacity),
     matchesPublic,
   };
 }
@@ -189,6 +209,9 @@ export function createAuthService(
         avatar: 'cat',
         avatarImage: null,
         tableBackground: null,
+        tableBackgroundOpacity: IMAGE_OPACITY_MAX,
+        cardBack: null,
+        cardBackOpacity: IMAGE_OPACITY_MAX,
         matchesPublic: false,
       }, mediaExists);
       const passwordHash = await hashPassword(password);

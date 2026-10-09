@@ -20,6 +20,9 @@ function account(id: string, username: string): AccountRecord {
     avatar: 'cat',
     avatarImage: null,
     tableBackground: null,
+    tableBackgroundOpacity: 100,
+    cardBack: null,
+    cardBackOpacity: 100,
     matchesPublic: false,
     createdAt: 1,
     updatedAt: 1,
@@ -81,6 +84,7 @@ describe('friend service', () => {
     if (!requested.success) throw new Error('Expected friend request');
     await repository.updateProfile('bob-id', {
       nickname: 'New nickname', color: '#ff0000', avatar: 'fox',
+      avatarImage: null, tableBackground: null, tableBackgroundOpacity: 100, cardBack: null, cardBackOpacity: 100, matchesPublic: false,
     }, 2);
     const pending = await friends.list('alice-id');
     expect(pending.outgoing[0].recipient).toEqual({

@@ -1,4 +1,4 @@
-// ─── 遊戲型別定義 ───
+// ─── Game types ───
 
 import type { RoomCode, TimeControl } from './room';
 import type { PlayerInfo, Seat } from './player';
@@ -28,37 +28,37 @@ export interface GamePresentation {
   readonly logStart: number;
 }
 
-/** 花色 */
+/** Suit */
 export type Suit = 'clubs' | 'diamonds' | 'hearts' | 'spades';
 
-/** 叫牌花色（含 NT） */
+/** Bid suit (including NT) */
 export type BidSuit = Suit | 'nt';
 
-/** 牌面數字：2-14（11=J, 12=Q, 13=K, 14=A） */
+/** Rank: 2-14 (11=J, 12=Q, 13=K, 14=A) */
 export type Rank = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
 
-/** 一張牌 */
+/** A card */
 export interface Card {
   readonly suit: Suit;
   readonly rank: Rank;
 }
 
-/** 叫牌等級（1-7） */
+/** Bid level (1-7) */
 export type BidLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
-/** 叫牌動作 */
+/** Bidding action */
 export type BidAction =
   | { readonly type: 'bid'; readonly level: BidLevel; readonly suit: BidSuit }
   | { readonly type: 'pass' };
 
-/** 合約（叫牌結束後確定） */
+/** Contract (fixed when bidding ends) */
 export interface Contract {
   readonly level: BidLevel;
   readonly suit: BidSuit;
   readonly declarer: Seat;
 }
 
-/** 遊戲階段 */
+/** Game phase */
 export type GamePhase =
   | 'dealing'
   | 'redeal_pending'
@@ -66,14 +66,14 @@ export type GamePhase =
   | 'playing'
   | 'scoring';
 
-/** 一墩的記錄 */
+/** Record of one trick */
 export interface TrickRecord {
   readonly cards: Record<Seat, Card>;
   readonly leadSeat: Seat;
   readonly winnerSeat: Seat;
 }
 
-/** 遊戲動作日誌項目 */
+/** Game action log entry */
 export type GameLogEntry =
   | { readonly type: 'bid'; readonly seat: Seat; readonly action: BidAction; readonly timestamp: number }
   | { readonly type: 'play'; readonly seat: Seat; readonly card: Card; readonly timestamp: number }
@@ -81,7 +81,7 @@ export type GameLogEntry =
   | { readonly type: 'redeal'; readonly seat: Seat; readonly accepted: boolean; readonly timestamp: number }
   | { readonly type: 'system'; readonly message: string; readonly timestamp: number };
 
-/** 遊戲結算結果 */
+/** Game result */
 export interface GameResult {
   readonly contract: Contract;
   readonly declarerTeamTricks: number;
@@ -90,10 +90,10 @@ export interface GameResult {
   readonly declarerTeamWins: boolean;
 }
 
-/** 隊伍劃分：東西 vs 南北 */
+/** Teams: East-West vs North-South */
 export type Team = 'EW' | 'NS';
 
-/** 出牌階段狀態 */
+/** Playing phase state */
 export interface PlayingState {
   readonly currentTrick: Partial<Record<Seat, Card>>;
   readonly trickLeadSeat: Seat;
@@ -103,7 +103,7 @@ export interface PlayingState {
   readonly trickCountNS: number;
 }
 
-/** 叫牌階段狀態 */
+/** Bidding phase state */
 export interface BiddingState {
   readonly bids: ReadonlyArray<{ readonly seat: Seat; readonly action: BidAction }>;
   readonly currentBidderSeat: Seat;
@@ -112,10 +112,12 @@ export interface BiddingState {
   readonly isFirstRound: boolean;
 }
 
-/** 完整橋牌遊戲狀態（伺服器內部） */
+/** Full Bridge game state (server internal) */
 export interface BridgeGameState {
   clock?: GameClock;
   presentation?: GamePresentation;
+  /** Seats whose players already left the finished board for the room. */
+  returnedSeats?: Seat[];
   readonly gameType: 'bridge';
   readonly id: string;
   readonly startedAt: number;
@@ -133,7 +135,7 @@ export interface BridgeGameState {
   redealDeclinedSeats: Seat[];
 }
 
-/** 給特定玩家的可見橋牌狀態（隱藏他人手牌） */
+/** Bridge state visible to one player (other hands hidden) */
 export interface BridgeVisibleState {
   clock?: GameClock;
   presentation?: GamePresentation;
@@ -151,7 +153,7 @@ export interface BridgeVisibleState {
   readonly redealPendingSeat: Seat | null;
 }
 
-// ─── 大老二 ───
+// ─── Big Two ───
 
 export interface BigTwoPlay {
   readonly seat: Seat;
@@ -171,7 +173,7 @@ export interface BigTwoMatchResult {
   readonly dragon: boolean;
   readonly cardsLeft: Record<Seat, number>;
   readonly twosLeft: Record<Seat, number>;
-  /** 贏家為 0 */
+  /** The winner has 0 */
   readonly scores: Record<Seat, number>;
 }
 
@@ -182,6 +184,7 @@ export interface BigTwoGameState {
   pendingAutoPass?: { readonly id: string; readonly seat: Seat; readonly executeAt: number };
   clock?: GameClock;
   presentation?: GamePresentation;
+  returnedSeats?: Seat[];
   readonly gameType: 'bigtwo';
   readonly id: string;
   readonly startedAt: number;
@@ -190,10 +193,10 @@ export interface BigTwoGameState {
   phase: BigTwoPhase;
   hands: Record<Seat, Card[]>;
   currentTurnSeat: Seat;
-  /** null = 自由出牌 */
+  /** null = free lead */
   lastPlay: BigTwoPlay | null;
   lockedSeats: Seat[];
-  /** 首手仍須含 ♣3 */
+  /** The opening play must still include ♣3 */
   firstPlay: boolean;
   log: BigTwoLogEntry[];
   result: BigTwoMatchResult | null;
@@ -213,13 +216,13 @@ export interface BigTwoVisibleState {
   readonly firstPlay: boolean;
   readonly log: readonly BigTwoLogEntry[];
   readonly result: BigTwoMatchResult | null;
-  /** 結算時公開所有手牌 */
+  /** All hands are revealed at settlement */
   readonly revealedHands: Record<Seat, Card[]> | null;
 }
 
-// ─── 撿紅點 ───
+// ─── Red Points ───
 
-/** play = 手牌打出、flip = 牌堆翻開；captured 為吃走的桌面牌，null 表示留在桌上 */
+/** play = from hand, flip = from the stock; captured lists table cards taken, null means the card stays on the table */
 export interface RedPointsLogEntry {
   readonly type: 'play' | 'flip';
   readonly seat: Seat;
@@ -231,18 +234,19 @@ export interface RedPointsLogEntry {
 export interface RedPointsMatchResult {
   readonly gameType: 'redpoints';
   readonly points: Record<Seat, number>;
-  /** 最高分者（同分並列），依 N, E, S, W 排序 */
+  /** Highest scorers (ties included), ordered N, E, S, W */
   readonly winners: Seat[];
 }
 
 export type RedPointsPhase = 'playing' | 'scoring';
 
-/** play = 等待出牌；flip-choose = 翻牌有多張可吃，等待選擇 */
+/** play = waiting for a play; flip-choose = the flipped card matches several table cards, waiting for a choice */
 export type RedPointsStep = 'play' | 'flip-choose';
 
 export interface RedPointsGameState {
   clock?: GameClock;
   presentation?: GamePresentation;
+  returnedSeats?: Seat[];
   readonly gameType: 'redpoints';
   readonly id: string;
   readonly startedAt: number;
@@ -251,7 +255,7 @@ export interface RedPointsGameState {
   phase: RedPointsPhase;
   hands: Record<Seat, Card[]>;
   table: Card[];
-  /** 僅伺服器持有；stock[0] 為牌堆頂 */
+  /** Server only; stock[0] is the top of the pile */
   stock: Card[];
   captured: Record<Seat, Card[]>;
   currentTurnSeat: Seat;
@@ -283,7 +287,7 @@ export interface RedPointsVisibleState {
 
 export type NinetyNineDirection = 'ccw' | 'cw';
 
-/** play = 出牌（total 為出牌後累計點數）；eliminated = 輪到時無牌可出而爆掉 */
+/** play = a card played (total is the running total afterwards); eliminated = no playable card on turn, so the player busts */
 export type NinetyNineLogEntry =
   | {
     readonly type: 'play';
@@ -299,7 +303,7 @@ export type NinetyNineLogEntry =
 export interface NinetyNineMatchResult {
   readonly gameType: 'ninetynine';
   readonly winnerSeat: Seat;
-  /** 依淘汰先後 */
+  /** In elimination order */
   readonly eliminationOrder: Seat[];
   readonly finalTotal: number;
 }
@@ -309,6 +313,7 @@ export type NinetyNinePhase = 'playing' | 'scoring';
 export interface NinetyNineGameState {
   clock?: GameClock;
   presentation?: GamePresentation;
+  returnedSeats?: Seat[];
   readonly gameType: 'ninetynine';
   readonly id: string;
   readonly startedAt: number;
@@ -316,14 +321,14 @@ export interface NinetyNineGameState {
   readonly roomCode: RoomCode;
   phase: NinetyNinePhase;
   hands: Record<Seat, Card[]>;
-  /** 僅伺服器持有；stock[0] 為牌堆頂 */
+  /** Server only; stock[0] is the top of the pile */
   stock: Card[];
-  /** 僅伺服器持有；最後一張為最近打出的牌 */
+  /** Server only; the last card is the most recently played */
   discard: Card[];
   total: number;
   direction: NinetyNineDirection;
   currentTurnSeat: Seat;
-  /** 依淘汰先後 */
+  /** In elimination order */
   eliminated: Seat[];
   log: NinetyNineLogEntry[];
   result: NinetyNineMatchResult | null;
@@ -347,7 +352,7 @@ export interface NinetyNineVisibleState {
   readonly result: NinetyNineMatchResult | null;
 }
 
-// ─── 跨遊戲 ───
+// ─── Cross-game ───
 
 export type AnyGameState = BridgeGameState | BigTwoGameState | RedPointsGameState | NinetyNineGameState;
 
@@ -366,7 +371,7 @@ export type MatchResult =
 export interface MatchSummary {
   readonly id: string;
   readonly roomCode: RoomCode;
-  /** 依座位 N, E, S, W 排序 */
+  /** Ordered by seat N, E, S, W */
   readonly accountIds: readonly string[];
   readonly result: MatchResult;
   readonly finishedAt: number;

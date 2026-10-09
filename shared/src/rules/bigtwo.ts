@@ -1,4 +1,4 @@
-// ─── 台式大老二規則引擎（純函式，前後端共用） ───
+// ─── Taiwanese Big Two rules engine (pure functions, shared by client and server) ───
 // Rules: docs/games.md#big-two
 
 import type { Card, Rank, Seat, Suit } from '../types';
@@ -9,17 +9,17 @@ export type BigTwoComboType = 'single' | 'pair' | 'straight' | 'fullHouse' | 'fo
 export interface BigTwoCombo {
   readonly type: BigTwoComboType;
   readonly cards: Card[];
-  /** 同牌型之間的比較鍵，越大越強 */
+  /** Comparison key within the same hand type; larger is stronger */
   readonly key: number;
 }
 
-/** 點數由小到大：3, 4, …, K, A, 2 */
+/** Ranks low to high: 3, 4, ..., K, A, 2 */
 export const BIGTWO_RANK_ORDER: readonly number[] = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 2];
 
-/** 花色由小到大：♣ < ♦ < ♥ < ♠ */
+/** Suits low to high: ♣ < ♦ < ♥ < ♠ */
 export const BIGTWO_SUIT_ORDER: readonly Suit[] = ['clubs', 'diamonds', 'hearts', 'spades'];
 
-/** 順子由小到大，以 BIGTWO 點數表示（A2345 … 10JQKA）；最後一張為比較牌 */
+/** Straights low to high in BIGTWO ranks (A2345 ... 10JQKA); the last card is the comparison card */
 const STRAIGHTS: readonly (readonly Rank[])[] = [
   [14, 2, 3, 4, 5],
   [2, 3, 4, 5, 6],
@@ -56,7 +56,7 @@ export function sortBigTwoHand(cards: readonly Card[], by: 'rank' | 'suit' = 'ra
   return [...cards].sort((a, b) => suitValue(a.suit) - suitValue(b.suit) || rankValue(a.rank) - rankValue(b.rank));
 }
 
-/** 回傳順子索引（A2345 = 0 … 10JQKA = 9）與比較牌，非順子回傳 null */
+/** Returns the straight index (A2345 = 0 ... 10JQKA = 9) and comparison card, or null if not a straight */
 function straightOf(cards: readonly Card[]): { index: number; last: Card } | null {
   const index = STRAIGHTS.findIndex((ranks) => ranks.every((rank) => cards.some((card) => card.rank === rank)));
   if (index < 0) return null;
@@ -117,19 +117,14 @@ export function canPlay(cards: readonly Card[], previous: BigTwoCombo | null, mu
   return previous === null || beats(combo, previous);
 }
 
-/** 一條龍：13 張牌 3…2 各一張 */
+/** Dragon: all 13 ranks 3...2, one card each */
 export function isDragon(hand: readonly Card[]): boolean {
   return hand.length === 13 && rankCounts(hand).size === 13;
 }
 
-/** 剩餘張數 × 2^(剩下的 2 的張數) */
+/** Remaining cards × 2^(number of twos left) */
 export function bigTwoPenalty(hand: readonly Card[]): number {
   return hand.length * 2 ** hand.filter((card) => card.rank === 2).length;
-}
-
-export function nextSeatCounterClockwise(seat: Seat): Seat {
-  const index = SEAT_ORDER_CLOCKWISE.indexOf(seat);
-  return SEAT_ORDER_CLOCKWISE[(index + SEAT_ORDER_CLOCKWISE.length - 1) % SEAT_ORDER_CLOCKWISE.length];
 }
 
 export function findClubThreeHolder(hands: Record<Seat, readonly Card[]>): Seat {
@@ -147,7 +142,7 @@ function subsets(cards: readonly Card[], size: number): Card[][] {
   return result;
 }
 
-/** 手牌所有合法出法，由弱到強排序（炸彈最後） */
+/** All legal plays for a hand, weakest to strongest (bombs last) */
 export function legalPlays(hand: readonly Card[], previous: BigTwoCombo | null, mustContainClubThree: boolean): BigTwoCombo[] {
   const sorted = sortBigTwoHand(hand);
   const plays: BigTwoCombo[] = [];

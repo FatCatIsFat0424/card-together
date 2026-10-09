@@ -1,4 +1,5 @@
 import type { BigTwoVisibleState, Card } from '@shared/types';
+import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import {
   BIGTWO_RANK_ORDER, BIGTWO_SUIT_ORDER, identifyCombo, isBomb, legalPlays,
 } from '@shared/rules/bigtwo';
@@ -32,6 +33,10 @@ function handPlan(hand: readonly Card[]): { maskOf: (cards: readonly Card[]) => 
   return { maskOf, groups };
 }
 
+const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
+/** Once an opponent holds this many cards or fewer, the bot stops saving 2s and bombs and stops passing by choice. */
+const ENDGAME_CARDS = 5;
+
 export function getBigTwoBotAction(visible: BigTwoVisibleState, random: () => number): BotAction | null {
   if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat
     || visible.lockedSeats.includes(visible.mySeat)) return null;
@@ -43,17 +48,36 @@ export function getBigTwoBotAction(visible: BigTwoVisibleState, random: () => nu
 
   const plan = handPlan(visible.myHand);
   const full = (1 << visible.myHand.length) - 1;
-  const urgent = Object.entries(visible.handCounts).some(([seat, count]) =>
-    seat !== visible.mySeat && count === 1);
-  const scored = options.map((combo) => {
-    const remaining = full ^ plan.maskOf(combo.cards);
+  const currentGroups = plan.groups(full);
+  const opponents = SEAT_ORDER_CLOCKWISE.filter((seat) => seat !== visible.mySeat);
+  const fewestOpponentCards = Math.min(...opponents.map((seat) => visible.handCounts[seat]));
+  // Seats that passed stay locked until the round ends, so their last card cannot take this round.
+  const urgent = opponents.some((seat) => visible.handCounts[seat] === 1 && !visible.lockedSeats.includes(seat));
+  const endgame = fewestOpponentCards <= ENDGAME_CARDS;
+  const distance = clamp01((fewestOpponentCards - 2) / 8);
+  // Bombs and 2s win rounds later anyway, so spending them early trades lasting control for one group.
+  // Near the end each 2 still in hand doubles the losing penalty instead, so conservation fades out.
+  const conserve = endgame ? 0
+    : Math.min(clamp01((fewestOpponentCards - ENDGAME_CARDS) / 5), clamp01((currentGroups - 1) / 4));
+  let ordinaryAvailable = false;
+  const candidates: { value: BotAction; score: number }[] = options.map((combo) => {
+    const remainingGroups = plan.groups(full ^ plan.maskOf(combo.cards));
     const spent = combo.cards.reduce((sum, card) => sum + strength(card), 0);
-    let score = -18 * plan.groups(remaining) + combo.cards.length * 0.8 - spent * 1.5;
+    const twos = combo.cards.filter((card) => card.rank === 2).length;
+    // An ordinary play spends no bomb or 2 and leaves the rest of the hand in a minimal plan.
+    if (!isBomb(combo) && twos === 0 && remainingGroups < currentGroups) ordinaryAvailable = true;
+    let score = -18 * remainingGroups + combo.cards.length * 0.8 - spent * 1.5 - 25 * conserve * twos;
     // Save control cards unless the table is close to ending; avoid feeding a last-card opponent.
-    if (isBomb(combo) && !urgent) score -= 3;
+    if (isBomb(combo) && !urgent) score -= 3 + 30 * conserve;
     if (urgent && combo.type === 'single') score += 60 * strength(combo.cards[0]);
     if (urgent && combo.type !== 'single') score += 30;
-    return { value: { type: 'bigtwo-play' as const, cards: combo.cards }, score };
+    return { value: { type: 'bigtwo-play', cards: combo.cards }, score };
   });
-  return selectNearBest(scored, random, urgent ? 0.5 : 2);
+  // Passing is a choice only when every play spends a bomb or 2 or splits a planned combination.
+  // It keeps the plan intact but gives up tempo, which grows costly as opponents near the end;
+  // in the endgame holding cards costs more than any split, so the bot always plays.
+  if (previous && !endgame && !ordinaryAvailable) {
+    candidates.push({ value: { type: 'bigtwo-pass' }, score: -18 * currentGroups - 3 - 40 * (1 - distance) });
+  }
+  return selectNearBest(candidates, random, urgent ? 0.5 : 2);
 }

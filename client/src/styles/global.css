@@ -3,25 +3,27 @@
 /* Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Serif+TC:wght@400;700&display=swap');
 
-/* ─── CSS 變數 ─── */
-/* :root = dashboard 主題；[data-theme] 區塊只覆寫變數 */
+/* ─── CSS variables ─── */
+/* :root = dashboard theme; [data-theme] blocks only override variables */
 :root {
   --playing-card-scale: 1;
   color-scheme: dark;
 
-  /* 色彩 — 深色主題 */
+  /* Colors - dark theme */
   --color-primary: #4a9eff;
   --color-primary-hover: #3a8eef;
   --color-primary-active: #2a7edf;
   --color-accent: #818cf8;
-  --text-on-primary: #ffffff;
+  /* Dark text keeps >= 4.5:1 on the light primary and danger fills. */
+  --text-on-primary: #0f172a;
+  --text-on-danger: #0f172a;
   --color-success: #4ade80;
   --color-success-hover: #22c55e;
   --color-danger: #f87171;
   --color-danger-hover: #ef4444;
   --color-warning: #fbbf24;
 
-  /* 背景 */
+  /* Backgrounds */
   --bg-page: #0a0e17;
   --bg-surface: #111827;
   --bg-card: #1e293b;
@@ -30,7 +32,7 @@
   --bg-input-focus: #253349;
   --bg-overlay: rgba(0, 0, 0, 0.6);
 
-  /* 遊戲桌面 */
+  /* Game table */
   --bg-table: #0d4a2e;
   --bg-table-felt: #166534;
   --bg-table-border: #15803d;
@@ -41,25 +43,25 @@
   --turn-glow: #4a9eff;
   --badge-declarer: #f5b942;
 
-  /* 側欄 */
+  /* Sidebar */
   --rail-bg: rgba(22, 31, 52, 0.72);
   --rail-border: rgba(148, 163, 184, 0.14);
 
-  /* 頁面材質 */
+  /* Page texture */
   --page-texture: none;
 
-  /* 文字 */
+  /* Text */
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-muted: #8693a8;
   --text-inverse: #0f172a;
 
-  /* 撲克牌花色 */
+  /* Card suits */
   --suit-black: #e2e8f0;
   --suit-red: #ef4444;
   --suit-red-ui: #f87171;
 
-  /* 牌面 / 牌背 */
+  /* Card face / back */
   --card-face: linear-gradient(180deg, #ffffff, #f1f4f9);
   --card-border: #cfd6e2;
   --card-ink-black: #1e293b;
@@ -67,12 +69,12 @@
   --card-back: repeating-linear-gradient(45deg, #2b5fb8 0 3px, #1d4690 3px 6px);
   --card-back-image: url('../assets/cards/BLUE_BACK.svg');
 
-  /* 邊框 */
+  /* Borders */
   --border-color: #334155;
   --border-color-hover: #475569;
   --border-color-focus: var(--color-primary);
 
-  /* 間距 */
+  /* Spacing */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
@@ -80,29 +82,29 @@
   --spacing-xl: 32px;
   --spacing-2xl: 48px;
 
-  /* 圓角 */
+  /* Radii */
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
   --radius-pill: 999px;
 
-  /* 陰影 */
+  /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 0 20px rgba(74, 158, 255, 0.15);
   --shadow-inset: inset 0 2px 20px rgba(0, 0, 0, 0.3);
 
-  /* 字體 */
+  /* Fonts */
   --font-primary: 'Inter', 'Noto Sans TC', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   --font-display: var(--font-primary);
 
-  /* 版面 */
+  /* Layout */
   --topbar-height: 52px;
 
-  /* 字級 */
+  /* Font sizes */
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -111,20 +113,21 @@
   --text-2xl: 1.5rem;
   --text-3xl: 2rem;
 
-  /* 過渡 */
+  /* Transitions */
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
   --transition-slow: 400ms ease;
   --transition-spring: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* ─── 主題：經典牌桌（綠絨 + 木框 + 金） ─── */
+/* ─── Theme: classic table (green felt + wood frame + gold) ─── */
 [data-theme='felt'] {
   --color-primary: #e3b964;
   --color-primary-hover: #f6dc9a;
   --color-primary-active: #a8792c;
   --color-accent: #f6dc9a;
   --text-on-primary: #2a1a05;
+  --text-on-danger: #1d1b19;
 
   --bg-page: #15100c;
   --bg-surface: #1e1611;
@@ -187,7 +190,7 @@
   --font-display: 'Noto Serif TC', Georgia, serif;
 }
 
-/* ─── 主題：紙感（淺色） ─── */
+/* ─── Theme: paper (light) ─── */
 [data-theme='paper'] {
   color-scheme: light;
 
@@ -196,6 +199,7 @@
   --color-primary-active: #141c30;
   --color-accent: #c0392b;
   --text-on-primary: #fffdf8;
+  --text-on-danger: #fffdf8;
   --color-success: #3f7d4e;
   --color-success-hover: #346842;
   --color-danger: #c0392b;
@@ -229,7 +233,7 @@
 
   --text-primary: #1f2a44;
   --text-secondary: #4a5470;
-  --text-muted: #8a8f9e;
+  --text-muted: #686d7b;
   --text-inverse: #fffdf8;
 
   --suit-black: #1f2a44;
@@ -293,7 +297,7 @@ body {
 
 #root > header { flex: 0 0 var(--topbar-height); }
 
-/* ─── 全域基礎樣式 ─── */
+/* ─── Global base styles ─── */
 a {
   color: var(--color-primary);
   text-decoration: none;
@@ -339,12 +343,21 @@ textarea:focus {
   background: var(--bg-input-focus);
 }
 
+/* A visible ring, not just a border tint, for keyboard focus on every theme. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
 input::placeholder,
 textarea::placeholder {
   color: var(--text-muted);
 }
 
-/* ─── 通用按鈕樣式 ─── */
+/* ─── Shared button styles ─── */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -395,11 +408,26 @@ textarea::placeholder {
 
 .btn-danger {
   background: var(--color-danger);
-  color: white;
+  color: var(--text-on-danger);
 }
 
 .btn-danger:hover {
   background: var(--color-danger-hover);
+}
+
+/* Coarse pointers get at least a 44px hit area without changing the visual layout. */
+@media (pointer: coarse) {
+  .touch-target { position: relative; }
+
+  .touch-target::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
 }
 
 .btn-outline {
@@ -414,7 +442,7 @@ textarea::placeholder {
   background: var(--bg-card);
 }
 
-/* ─── 動畫 ─── */
+/* ─── Animations ─── */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -430,7 +458,7 @@ textarea::placeholder {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* 出牌：從 --fly-x / --fly-y（出牌者座位方向）飛入 */
+/* Card play: fly in from --fly-x / --fly-y (direction of the player's seat) */
 @keyframes flyIn {
   from { opacity: 0.4; transform: translate(var(--fly-x, 0px), var(--fly-y, 20px)) scale(0.6) rotate(-8deg); }
   to { opacity: 1; transform: none; }
@@ -486,4 +514,15 @@ textarea::placeholder {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--border-color-hover);
+}
+
+/* Large screens scale cards and type so the table fills 1920+ wide viewports. */
+@media (min-width: 1920px) and (min-height: 1000px) {
+  :root { --playing-card-scale: 1.2; }
+  html { font-size: 17px; }
+}
+
+@media (min-width: 2400px) and (min-height: 1300px) {
+  :root { --playing-card-scale: 1.4; }
+  html { font-size: 18px; }
 }

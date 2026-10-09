@@ -1,4 +1,4 @@
-// ─── Dealing Engine：發牌、排序、倒牌重洗 ───
+// ─── Dealing Engine: dealing, sorting, weak-hand redeal ───
 
 import type { Card, Seat } from '@shared/types';
 import {
@@ -10,9 +10,9 @@ import {
 } from '@shared/constants';
 
 /**
- * 將洗好的牌組分發給四位玩家
- * @param deck - 52 張牌
- * @returns 四位玩家的手牌（各 13 張）
+ * Deal a shuffled deck to the four players
+ * @param deck - 52 cards
+ * @returns Hands of the four players (13 cards each)
  */
 export function dealCards(deck: readonly Card[]): Record<Seat, Card[]> {
   const hands: Record<Seat, Card[]> = {
@@ -31,9 +31,9 @@ export function dealCards(deck: readonly Card[]): Record<Seat, Card[]> {
 }
 
 /**
- * 手牌排序：先按花色順序，同花色內按牌面大小遞減
- * 花色順序：♠ → ♥ → ♣ → ♦
- * 牌面順序：A → K → Q → J → 10 → ... → 2
+ * Sort a hand by suit order, then by descending rank within a suit
+ * Suit order: ♠ → ♥ → ♣ → ♦
+ * Rank order: A → K → Q → J → 10 → ... → 2
  */
 export function sortHand(hand: readonly Card[]): Card[] {
   return [...hand].sort((a, b) => {
@@ -44,23 +44,23 @@ export function sortHand(hand: readonly Card[]): Card[] {
 }
 
 /**
- * 計算手牌的高牌點數（HCP）
- * A=4, K=3, Q=2, J=1，其餘=0
+ * Compute a hand's high card points (HCP)
+ * A=4, K=3, Q=2, J=1, others 0
  */
 export function calculateHandPoints(hand: readonly Card[]): number {
   return hand.reduce((sum, card) => sum + HIGH_CARD_POINTS[card.rank], 0);
 }
 
 /**
- * 檢查手牌是否有 Ace
+ * Check whether a hand contains an ace
  */
 function hasAce(hand: readonly Card[]): boolean {
   return hand.some((card) => card.rank === 14);
 }
 
 /**
- * 檢查玩家是否符合倒牌重洗條件
- * 條件：不含任何 A 且總 HCP ≤ 4
+ * Check whether a player qualifies for a redeal
+ * Condition: no aces and total HCP at most 4
  */
 export function isRedealEligible(hand: readonly Card[]): boolean {
   if (hasAce(hand)) return false;
@@ -68,8 +68,8 @@ export function isRedealEligible(hand: readonly Card[]): boolean {
 }
 
 /**
- * 從指定玩家開始，按順時鐘檢查倒牌重洗資格
- * 回傳第一位符合條件的玩家座位，若都不符合則回傳 null
+ * Starting from the given player, check redeal eligibility clockwise
+ * Returns the first qualifying seat, or null if none qualify
  */
 export function findRedealEligibleSeat(
   hands: Record<Seat, readonly Card[]>,

@@ -1,4 +1,4 @@
-// ─── 牌面 SVG（cardsJS，LGPL-3.0，見 assets/cards/） ───
+// ─── Card face SVGs (cardsJS, LGPL-3.0, see assets/cards/) ───
 
 import type { Card, Rank, Suit } from '@shared/types';
 

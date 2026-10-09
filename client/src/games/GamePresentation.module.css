@@ -78,7 +78,7 @@
 .cardSeat {
   display: block;
   padding-top: var(--spacing-xs);
-  font-size: 0.65rem;
+  font-size: var(--text-xs);
   line-height: 1.15;
   max-height: 2.5em;
   overflow: hidden;

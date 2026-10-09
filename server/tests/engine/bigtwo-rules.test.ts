@@ -10,10 +10,10 @@ import {
   isBomb,
   isDragon,
   legalPlays,
-  nextSeatCounterClockwise,
   sortBigTwoHand,
   type BigTwoCombo,
 } from '@shared/rules/bigtwo';
+import { nextSeatClockwise, nextSeatCounterClockwise } from '@shared/rules/seats';
 
 const SUITS: Record<string, Suit> = { C: 'clubs', D: 'diamonds', H: 'hearts', S: 'spades' };
 const RANKS: Record<string, Rank> = {
@@ -232,6 +232,12 @@ describe('seats', () => {
     const order: Seat[] = ['N'];
     for (let i = 0; i < 4; i++) order.push(nextSeatCounterClockwise(order[order.length - 1]));
     expect(order).toEqual(['N', 'W', 'S', 'E', 'N']);
+  });
+
+  it('moves clockwise N → E → S → W → N', () => {
+    const order: Seat[] = ['N'];
+    for (let i = 0; i < 4; i++) order.push(nextSeatClockwise(order[order.length - 1]));
+    expect(order).toEqual(['N', 'E', 'S', 'W', 'N']);
   });
 
   it('finds the ♣3 holder', () => {

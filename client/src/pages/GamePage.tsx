@@ -1,4 +1,4 @@
-// ─── GamePage：依遊戲類型選擇牌桌 ───
+// ─── GamePage: pick the table by game type ───
 
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';

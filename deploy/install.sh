@@ -13,7 +13,6 @@ fi
   exit 1
 }
 command -v rsync >/dev/null
-command -v rg >/dev/null
 if [[ -f /etc/bridge-online/server.env && ! -f /etc/card-together/server.env ]]; then
   echo "Migrate the existing installation with deploy/deploy.sh first." >&2
   exit 1
@@ -24,7 +23,7 @@ if systemctl is-active --quiet bridge-online.service; then
 fi
 test -f "$repo_dir/node_modules/tsx/package.json"
 test -f "$repo_dir/client/dist/index.html"
-rg -q '/card-together/assets/' "$repo_dir/client/dist/index.html" || {
+grep -qF '/card-together/assets/' "$repo_dir/client/dist/index.html" || {
   echo 'Build the client with VITE_BASE_PATH=/card-together/ before installing.' >&2
   exit 1
 }
@@ -62,15 +61,33 @@ fi
 rsync -a --exclude=/index.html --chown=root:root --chmod=D755,F644 \
   "$repo_dir/client/dist/" /opt/card-together/www/bridge_online/
 install -d -m 0755 /opt/card-together/www/card-together
-rsync -a --delete --chown=root:root --chmod=D755,F644 \
+# Previous hashed assets stay for open tabs, and previous site emoji for chat history that
+# still references them; prune-assets.sh removes both after a grace period.
+rsync -a --delete --exclude=/assets/ --exclude=/provided-emoji/ --chown=root:root --chmod=D755,F644 \
   "$repo_dir/client/dist/" /opt/card-together/www/card-together/
+for subdirectory in assets provided-emoji; do
+  install -d -m 0755 "/opt/card-together/www/card-together/$subdirectory"
+  if [[ -d $repo_dir/client/dist/$subdirectory ]]; then
+    rsync -a --chown=root:root --chmod=D755,F644 \
+      "$repo_dir/client/dist/$subdirectory/" "/opt/card-together/www/card-together/$subdirectory/"
+  fi
+done
+for directory in /opt/card-together/www/card-together /opt/card-together/www/bridge_online; do
+  bash "$repo_dir/deploy/prune-assets.sh" "$repo_dir/client/dist" "$directory"
+done
 install -m 0755 "$node_binary" /opt/card-together/node
 install -d -m 0700 /etc/card-together
 if [[ ! -e /etc/card-together/server.env ]]; then
   install -m 0600 "$repo_dir/deploy/systemd/server.env.example" /etc/card-together/server.env
 fi
+install -m 0755 "$repo_dir/deploy/backup-data.sh" /opt/card-together/backup-data.sh
 install -m 0644 "$repo_dir/deploy/systemd/card-together.service" /etc/systemd/system/card-together.service
-systemd-analyze verify /etc/systemd/system/card-together.service
+install -m 0644 "$repo_dir/deploy/systemd/card-together-backup.service" \
+  /etc/systemd/system/card-together-backup.service
+install -m 0644 "$repo_dir/deploy/systemd/card-together-backup.timer" \
+  /etc/systemd/system/card-together-backup.timer
+systemd-analyze verify /etc/systemd/system/card-together.service \
+  /etc/systemd/system/card-together-backup.service /etc/systemd/system/card-together-backup.timer
 systemctl daemon-reload
 echo 'Installed. Review /etc/card-together/server.env and migrate existing data before starting.'
 echo 'Start with: sudo systemctl enable --now card-together.service'

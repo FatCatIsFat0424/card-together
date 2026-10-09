@@ -1,4 +1,4 @@
-// ─── InviteToast 元件：全域好友房間邀請通知 ───
+// ─── InviteToast: global friend room-invite notification ───
 
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';

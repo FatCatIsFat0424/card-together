@@ -8,7 +8,7 @@ import * as rooms from '../../src/managers/room-manager';
 import * as players from '../../src/managers/player-manager';
 import { createRuntimeCoordinator } from '../../src/runtime/coordinator';
 import { startTurnTimers } from '../../src/runtime/turn-timers';
-import { applyAutomatedAction } from '../../src/runtime/automated-action';
+import { applyAutomatedAction, MAX_AUTOMATED_FAILURES } from '../../src/runtime/automated-action';
 import * as decisions from '../../src/bots/bot-decisions';
 import type { RuntimeSnapshot } from '../../src/runtime/types';
 import { isRuntimeSnapshot } from '../../src/runtime/validate';
@@ -124,6 +124,27 @@ describe('durable turn clocks', () => {
     await runtime.mutate(() => expect(games.handleRedPointsChooseFlip(code, 'N', { suit: 'hearts', rank: 2 }).success).toBe(true));
     expect(game().clock!.bankRemainingMs.N).toBe(18000);
     expect(game().clock!.turn).toMatchObject({ seat: 'W', baseRemainingMs: 5000 });
+  });
+
+  it('applies the first legal action after repeated timeout strategy failures', async () => {
+    const { runtime, game, saved } = await fixture();
+    const turn = game().clock!.turn!;
+    const before = game().log.length;
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const choose = vi.spyOn(decisions, 'getBotAction').mockReturnValue(null);
+    const publish = vi.fn();
+    stops.push(await startTurnTimers(runtime, publish));
+    await vi.advanceTimersByTimeAsync(turn.deadline - Date.now() + (MAX_AUTOMATED_FAILURES - 1) * 1000);
+    await runtime.idle();
+    expect(choose).toHaveBeenCalledTimes(MAX_AUTOMATED_FAILURES);
+    expect(publish).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1000);
+    await runtime.idle();
+    expect(publish).toHaveBeenCalledTimes(1);
+    expect(game().log.length).toBeGreaterThan(before);
+    expect(game().clock!.lastTimeout).toEqual({ seat: turn.seat, at: Date.now() });
+    expect(saved().games[0]).toEqual(game());
   });
 
   it('rolls back a failed timeout save and retries without publishing uncommitted state', async () => {

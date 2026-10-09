@@ -1,4 +1,4 @@
-/* ─── 投票終止對局樣式 ─── */
+/* ─── Abort-vote styles ─── */
 
 .rail {
   display: flex;
@@ -14,7 +14,7 @@
   font-size: var(--text-sm);
 }
 
-/* 牌桌上方橫幅：所有人可見 */
+/* Banner above the table, visible to everyone */
 .banner {
   position: absolute;
   top: 12px;
@@ -59,6 +59,26 @@
 }
 
 .actions > * { flex: 1; }
+
+/* Phones and short landscape tables keep the tool buttons and top seat visible. */
+@media (max-width: 767px), (max-height: 500px) and (min-width: 600px) {
+  .banner {
+    top: auto;
+    bottom: 4px;
+    gap: 4px;
+    padding: var(--spacing-sm);
+  }
+
+  .tally { min-height: 24px; }
+}
+
+@media (max-height: 500px) and (min-width: 600px) {
+  .banner { width: min(420px, calc(100% - 16px)); }
+  .tally { display: inline-flex; margin-right: var(--spacing-sm); }
+}
+
+.banner:focus { outline: none; }
+.banner:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
 .toast {
   position: fixed;

@@ -1,4 +1,4 @@
-// ─── InviteFriends 元件：房間內邀請好友的彈出清單 ───
+// ─── InviteFriends: in-room popup list for inviting friends ───
 
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -58,7 +58,7 @@ export function InviteFriends(): ReactNode {
 
   return (
     <div className={styles.group} data-invite-popover>
-      <button type="button" className="btn btn-outline" aria-expanded={open}
+      <button type="button" className="btn btn-outline touch-target" aria-expanded={open}
         onClick={() => setOpen((current) => !current)}>{t('invite.open')}</button>
       {open && <div className={styles.popover}>
         {error && <p className={styles.error} role="alert">{error}</p>}

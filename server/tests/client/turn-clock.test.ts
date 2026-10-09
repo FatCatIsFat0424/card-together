@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GameClock } from '@shared/types';
-import { seatClock } from '../../../client/src/games/turn-clock';
+import { clockTickDelay, countingMs, seatClock } from '../../../client/src/games/turn-clock';
 
 function clock(): GameClock {
   return {
@@ -40,5 +40,25 @@ describe('seat clock presentation', () => {
   it('keeps final reserves available when no turn is active', () => {
     const finished = { ...clock(), turn: null };
     expect(seatClock(finished, 'N', 900000, 999999)).toMatchObject({ active: false, expired: false, bankMs: 20000 });
+  });
+});
+
+describe('turn clock ticks', () => {
+  it('should wait until the displayed whole second changes', () => {
+    expect(clockTickDelay(4300)).toBe(315);
+    expect(clockTickDelay(4000)).toBe(1015);
+    expect(clockTickDelay(1)).toBe(16);
+  });
+
+  it('should fall back to one second for finished or invalid values', () => {
+    expect(clockTickDelay(0)).toBe(1000);
+    expect(clockTickDelay(-5)).toBe(1000);
+    expect(clockTickDelay(Number.NaN)).toBe(1000);
+  });
+
+  it('should count the turn allowance before the reserve', () => {
+    const time = { active: true, paused: false, expired: false, baseMs: 0, bankMs: 7000 };
+    expect(countingMs(time)).toBe(7000);
+    expect(countingMs({ ...time, baseMs: 2500 })).toBe(2500);
   });
 });

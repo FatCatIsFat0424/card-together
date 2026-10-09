@@ -4,9 +4,12 @@ import type { PlayerInfo } from '@shared/types';
 import * as games from '../../src/managers/game-manager';
 import * as rooms from '../../src/managers/room-manager';
 import * as players from '../../src/managers/player-manager';
+import * as chat from '../../src/managers/chat-manager';
+import * as decisions from '../../src/bots/bot-decisions';
 import { createRuntimeCoordinator } from '../../src/runtime/coordinator';
 import { startTurnTimers } from '../../src/runtime/turn-timers';
 import { BOT_ACTION_DELAY_MS, startBotTurns } from '../../src/runtime/bot-turns';
+import { AUTOMATED_ABORT_MESSAGE, MAX_AUTOMATED_FAILURES } from '../../src/runtime/automated-action';
 import type { RuntimeSnapshot } from '../../src/runtime/types';
 import { isRuntimeSnapshot } from '../../src/runtime/validate';
 
@@ -128,5 +131,47 @@ describe('server bot turn scheduling', () => {
     stops.push(startBotTurns(runtime, publish));
     await vi.advanceTimersByTimeAsync(10000);
     expect(publish).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the first legal action after repeated strategy failures', async () => {
+    const { code, runtime } = await fixture();
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const strategy = vi.spyOn(decisions, 'getBotAction').mockImplementation(() => {
+      throw new Error('strategy bug');
+    });
+    const before = games.getGameState(code)!.log.length;
+    const publish = vi.fn();
+    stops.push(startBotTurns(runtime, publish));
+    await vi.advanceTimersByTimeAsync(BOT_ACTION_DELAY_MS + (MAX_AUTOMATED_FAILURES - 1) * 1000);
+    await runtime.idle();
+    expect(strategy).toHaveBeenCalledTimes(MAX_AUTOMATED_FAILURES);
+    expect(error).toHaveBeenCalledTimes(MAX_AUTOMATED_FAILURES);
+    expect(publish).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1000);
+    await runtime.idle();
+    expect(strategy).toHaveBeenCalledTimes(MAX_AUTOMATED_FAILURES);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(publish).toHaveBeenCalledTimes(1);
+    expect(games.getGameState(code)!.log.length).toBeGreaterThan(before);
+  });
+
+  it('aborts with a system message when no automated action can be applied', async () => {
+    const { code, runtime, saved } = await fixture();
+    await runtime.mutate(() => chat.initRoomChat(code));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(games, 'handleRedPointsPlay').mockReturnValue({ success: false, reason: 'rejected' });
+    vi.spyOn(games, 'handleRedPointsChooseFlip').mockReturnValue({ success: false, reason: 'rejected' });
+    const publish = vi.fn();
+    stops.push(startBotTurns(runtime, publish));
+    await vi.advanceTimersByTimeAsync(BOT_ACTION_DELAY_MS + MAX_AUTOMATED_FAILURES * 1000);
+    await runtime.idle();
+    expect(publish).toHaveBeenCalledTimes(1);
+    expect(games.getGameState(code)).toBeNull();
+    expect(rooms.getRoomInfo(code)?.status).toBe('waiting');
+    expect(saved().games).toEqual([]);
+    expect(chat.getChatHistory(code).at(-1)).toMatchObject({ system: true, content: AUTOMATED_ABORT_MESSAGE });
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(publish).toHaveBeenCalledTimes(1);
   });
 });

@@ -6,7 +6,7 @@ import { createApplication } from '../../src/app';
 import { SESSION_COOKIE_NAME, tokenHash } from '../../src/auth/auth-service';
 import { createJsonRepository } from '../../src/database/json-repository';
 import type { Repository } from '../../src/database/repository';
-import { sniffImage } from '../../src/media/media-store';
+import { createMediaStore, sniffImage } from '../../src/media/media-store';
 
 const ORIGIN = 'http://localhost:5173';
 const PASSWORD_HASH = `scrypt$131072$8$1$${'a'.repeat(32)}$${'b'.repeat(128)}`;
@@ -48,6 +48,7 @@ describe('media HTTP routes', () => {
     await repository.createAccount({
       id: 'alice', username: 'alice', usernameNormalized: 'alice', nickname: 'Alice',
       color: '#2563eb', avatar: 'cat', avatarImage: null, tableBackground: null,
+      tableBackgroundOpacity: 100, cardBack: null, cardBackOpacity: 100,
       matchesPublic: false, passwordHash: PASSWORD_HASH, createdAt: now, updatedAt: now,
     });
     await repository.createSession({
@@ -117,6 +118,16 @@ describe('media HTTP routes', () => {
       .toBe(413);
   });
 
+  it('should accept emoji up to 2 MiB and reject larger ones', async () => {
+    await start(join(directory, 'media'));
+    const emoji = Buffer.alloc(2 * 1024 * 1024);
+    Buffer.from('GIF89a').copy(emoji);
+    const uploaded = await upload(emoji, 'emoji');
+    expect(uploaded.status).toBe(200);
+    expect(await uploaded.json()).toMatchObject({ success: true, id: expect.stringMatching(/\.gif$/) });
+    expect((await upload(Buffer.concat([emoji, Buffer.alloc(1)]), 'emoji')).status).toBe(413);
+  });
+
   it('should return 404 for malformed and missing media ids', async () => {
     await start(join(directory, 'media'));
     for (const id of ['nope', '..%2Fdatabase.json', `${'0'.repeat(64)}.png`]) {
@@ -146,6 +157,74 @@ describe('media HTTP routes', () => {
     expect(await (await patch({ avatarImage: null })).json()).toMatchObject({
       account: { avatarImage: null, tableBackground: id },
     });
+  });
+
+  it('should enforce a durable per-account quota and let owned images re-upload freely', async () => {
+    const image = (fill: number): Buffer => Buffer.concat([PNG, Buffer.alloc(1000, fill)]);
+    const media = join(directory, 'media');
+    const store = createMediaStore(media, image(1).length * 2);
+    const first = await store.save(image(1), 'alice');
+    expect(await store.save(image(2), 'alice')).toMatch(/\.png$/);
+    expect(await store.save(image(3), 'alice')).toBeNull();
+    expect(await store.save(image(1), 'alice')).toBe(first);
+    expect(await store.save(image(3), 'bob')).toMatch(/\.png$/);
+    const restarted = createMediaStore(media, image(1).length * 2);
+    expect(await restarted.save(image(4), 'alice')).toBeNull();
+    expect(await restarted.save(image(2), 'alice')).not.toBeNull();
+    const parallel = createMediaStore(join(directory, 'parallel'), image(1).length);
+    const results = await Promise.all([parallel.save(image(5), 'carol'), parallel.save(image(6), 'carol')]);
+    expect(results.filter((id) => id === null)).toHaveLength(1);
+  });
+
+  it('should check origin and session before parsing a large upload body', async () => {
+    await start(join(directory, 'media'));
+    const body = `{"data":"${'A'.repeat(64 * 1024)}`;
+    const { Cookie: _cookie, ...anonymous } = HEADERS;
+    const send = (headers: Record<string, string>): Promise<Response> =>
+      fetch(`${baseUrl}/api/media`, { method: 'POST', headers, body });
+    expect((await send(anonymous)).status).toBe(401);
+    expect((await send({ ...HEADERS, Origin: 'https://evil.example' })).status).toBe(403);
+    expect((await send(HEADERS)).status).toBe(400);
+  });
+
+  it('should keep a card back private to its owner and limit its size', async () => {
+    await start(join(directory, 'media'));
+    const patch = (body: object): Promise<Response> => fetch(`${baseUrl}/api/auth/profile`, {
+      method: 'PATCH', headers: HEADERS, body: JSON.stringify(body),
+    });
+    const back = Buffer.alloc(512 * 1024);
+    PNG.copy(back);
+    const uploaded = await upload(back, 'cardBack');
+    expect(uploaded.status).toBe(200);
+    expect((await upload(Buffer.concat([back, Buffer.alloc(1)]), 'cardBack')).status).toBe(413);
+    const { id } = await uploaded.json() as { id: string };
+
+    expect((await patch({ cardBack: `${'0'.repeat(64)}.png` })).status).toBe(400);
+    expect((await patch({ cardBack: 'not-a-media-id' })).status).toBe(400);
+    expect(await (await patch({ cardBack: id })).json()).toMatchObject({
+      success: true, account: { cardBack: id, cardBackOpacity: 100, tableBackground: null },
+    });
+    const player = await fetch(`${baseUrl}/api/players/alice`, { headers: { Cookie: COOKIE } });
+    expect((await player.json()).account).not.toHaveProperty('cardBack');
+    expect(await (await patch({ cardBack: null })).json()).toMatchObject({
+      account: { cardBack: null },
+    });
+  });
+
+  it('should validate table background and card back opacity bounds', async () => {
+    await start(join(directory, 'media'));
+    const patch = (body: object): Promise<Response> => fetch(`${baseUrl}/api/auth/profile`, {
+      method: 'PATCH', headers: HEADERS, body: JSON.stringify(body),
+    });
+    for (const value of [19, 101, 50.5, '80', null, -1]) {
+      expect((await patch({ tableBackgroundOpacity: value })).status).toBe(400);
+      expect((await patch({ cardBackOpacity: value })).status).toBe(400);
+    }
+    expect(await (await patch({ tableBackgroundOpacity: 20, cardBackOpacity: 100 })).json())
+      .toMatchObject({ account: { tableBackgroundOpacity: 20, cardBackOpacity: 100 } });
+    expect(await (await patch({ cardBackOpacity: 65 })).json())
+      .toMatchObject({ account: { tableBackgroundOpacity: 20, cardBackOpacity: 65 } });
+    expect((await repository.getAccountById('alice'))?.cardBackOpacity).toBe(65);
   });
 
   it('should answer 503 when no media directory is configured', async () => {

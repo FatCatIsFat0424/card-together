@@ -1,4 +1,4 @@
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 type JsonObject = Record<string, unknown>;
 
@@ -104,8 +104,24 @@ function toVersion3(document: JsonObject): JsonObject {
   };
 }
 
+/** v4: personal card back and image opacity on accounts; defaults keep the existing look. */
+function toVersion4(document: JsonObject): JsonObject {
+  return {
+    ...document,
+    schemaVersion: 4,
+    accounts: mapArray(document.accounts, (account) => ({
+      ...account,
+      tableBackgroundOpacity: 100,
+      cardBack: null,
+      cardBackOpacity: 100,
+    })),
+  };
+}
+
 /** Index i upgrades version i + 1 to i + 2. Append new steps; never edit shipped ones. */
-const STEPS: readonly ((document: JsonObject) => JsonObject)[] = [toVersion2, toVersion3];
+const STEPS: readonly ((document: JsonObject) => JsonObject)[] = [
+  toVersion2, toVersion3, toVersion4,
+];
 
 /**
  * Upgrades a parsed document of any known older version to CURRENT_SCHEMA_VERSION; returns

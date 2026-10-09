@@ -8,6 +8,7 @@ const state = vi.hoisted(() => ({
   room: null as RoomInfo | null,
   playerId: 'alice',
   mySeat: 'N' as Seat | null,
+  connection: 'ready' as 'connecting' | 'ready' | 'error',
 }));
 
 vi.mock('../../../client/src/socket', () => ({ socket: {} }));
@@ -22,8 +23,10 @@ vi.mock('../../../client/src/stores/player-store', () => ({
   usePlayerStore: (select: (value: { playerId: string }) => unknown) => select({ playerId: state.playerId }),
 }));
 vi.mock('../../../client/src/stores/account-store', () => ({
-  useAccountStore: (select: (value: { account: { id: string; tableBackground: null } }) => unknown) =>
-    select({ account: { id: state.playerId, tableBackground: null } }),
+  useAccountStore: (select: (value: {
+    account: { id: string; tableBackground: null }; connection: typeof state.connection;
+  }) => unknown) => select({ account: { id: state.playerId, tableBackground: null }, connection: state.connection }),
+  selectConnectionReady: (value: { connection: string }): boolean => value.connection === 'ready',
 }));
 vi.mock('../../../client/src/stores/game-store', () => ({
   useGameStore: (select: (value: { phase: null }) => unknown) => select({ phase: null }),
@@ -61,6 +64,7 @@ describe('bot player interface', () => {
     state.room = room();
     state.playerId = human.id;
     state.mySeat = 'N';
+    state.connection = 'ready';
     useI18nStore.getState().setLocale('en');
   });
 
@@ -89,6 +93,15 @@ describe('bot player interface', () => {
     expect(visitorHtml).not.toContain('Remove bot');
     expect(visitorHtml).not.toContain('Fill empty seats with bots');
     expect(visitorHtml.match(/>Empty</g)).toHaveLength(2);
+  });
+
+  it('disables room actions until the connection is ready', () => {
+    expect(render(createElement(RoomPage))).not.toMatch(/disabled="">Ready<\/button>/);
+    state.connection = 'connecting';
+    const html = render(createElement(RoomPage));
+    expect(html).toMatch(/disabled="">Ready<\/button>/);
+    expect(html).toMatch(/disabled="">Fill empty seats with bots<\/button>/);
+    expect(html).toMatch(/disabled="">Leave Room<\/button>/);
   });
 
   it('disables filling when every seat is occupied', () => {
@@ -121,7 +134,11 @@ describe('bot player interface', () => {
       seats: { ...room().seats, S: { player: { ...human, id: 'bob' }, isReady: true } },
       abortVote: { startedBy: human.id, startedAt: Date.now(), expiresAt: Date.now() + 60000, yes: [human.id], no: [] },
     };
-    expect(render(createElement(AbortVoteBanner))).toContain('Ends when 2 players agree; bots do not vote');
+    const html = render(createElement(AbortVoteBanner));
+    expect(html).toContain('Ends when 2 players agree; bots do not vote');
+    expect(html).toContain('role="region"');
+    expect(html).not.toContain('role="dialog"');
+    expect(html).not.toContain('aria-live');
   });
 
   it('renders the bot controls and labels in Traditional Chinese', () => {

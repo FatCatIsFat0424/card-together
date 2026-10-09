@@ -40,7 +40,13 @@ export function createFileMusicPlayer(
   const configuredTimeout = options.loadTimeoutMs;
   const timeoutMs = configuredTimeout !== undefined && Number.isFinite(configuredTimeout)
     && configuredTimeout > 0 ? configuredTimeout : DEFAULT_LOAD_TIMEOUT_MS;
+  // iOS only lets an element play without a gesture once a gesture has started it, so
+  // every track reuses one element and swaps its source.
+  let media: HTMLAudioElement | null = null;
+  /** The shared element while it holds a usable source. */
   let audio: HTMLAudioElement | null = null;
+  /** Incremented per source so events and promises from replaced sources are ignored. */
+  let source = 0;
   let selected: FileMusicTrack | null = null;
   let removeListeners: (() => void) | null = null;
   let pending: PlayRequest | null = null;
@@ -67,13 +73,16 @@ export function createFileMusicPlayer(
     else request.resolve();
   };
 
-  const releaseAudio = (): void => {
+  /** Detaches the current source; `unload` also frees the element's media resources. */
+  const releaseAudio = (unload: boolean): void => {
     removeListeners?.();
     removeListeners = null;
+    source += 1;
     const previous = audio;
     audio = null;
     if (!previous) return;
     previous.pause();
+    if (!unload) return;
     previous.removeAttribute('src');
     previous.load();
   };
@@ -83,7 +92,7 @@ export function createFileMusicPlayer(
     wantsPlayback = false;
     failed = true;
     pendingSeek = null;
-    releaseAudio();
+    releaseAudio(true);
     notifyPlaying(false);
     finish(error);
     onError(error);
@@ -102,16 +111,18 @@ export function createFileMusicPlayer(
   };
 
   const initialize = (track: FileMusicTrack): HTMLAudioElement => {
-    releaseAudio();
+    releaseAudio(false);
     pendingSeek = null;
-    const element = createAudio();
+    media ??= createAudio();
+    const element = media;
+    const token = source;
     audio = element;
     selected = { ...track };
     failed = false;
     ended = false;
     element.preload = 'metadata';
     element.volume = volume;
-    const active = (): boolean => !disposed && audio === element;
+    const active = (): boolean => !disposed && audio === element && source === token;
     const listeners: ReadonlyArray<readonly [string, () => void]> = [
       ['playing', (): void => {
         if (!active()) return;
@@ -152,6 +163,7 @@ export function createFileMusicPlayer(
       finish();
       wantsPlayback = false;
       let element: HTMLAudioElement;
+      let token: number;
       try {
         const switching = !audio || failed || selected?.id !== track.id
           || selected.file !== track.file;
@@ -162,6 +174,7 @@ export function createFileMusicPlayer(
           pendingSeek = null;
         }
         ended = false;
+        token = source;
       } catch (error: unknown) {
         const playbackError = asPlaybackError(error);
         fail(playbackError);
@@ -176,6 +189,8 @@ export function createFileMusicPlayer(
         }, timeoutMs);
         try {
           void Promise.resolve(element.play()).then((): void => {
+            // The shared element now belongs to a newer source; leave it alone.
+            if (!disposed && source !== token) return;
             if (disposed || audio !== element || !wantsPlayback) {
               element.pause();
               return;
@@ -184,7 +199,7 @@ export function createFileMusicPlayer(
             notifyPlaying(true);
             finish();
           }).catch((error: unknown): void => {
-            if (!disposed && audio === element && pending === request) {
+            if (!disposed && audio === element && source === token && pending === request) {
               fail(asPlaybackError(error));
             }
           });
@@ -216,7 +231,8 @@ export function createFileMusicPlayer(
       disposed = true;
       wantsPlayback = false;
       finish();
-      releaseAudio();
+      releaseAudio(true);
+      media = null;
       selected = null;
       pendingSeek = null;
     },

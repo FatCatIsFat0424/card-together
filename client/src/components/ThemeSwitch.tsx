@@ -1,4 +1,4 @@
-// ─── ThemeSwitch 元件：主題切換 ───
+// ─── ThemeSwitch: theme switch ───
 
 import type { ReactNode } from 'react';
 import { useI18nStore } from '../stores/i18n-store';
@@ -15,7 +15,7 @@ export function ThemeSwitch(): ReactNode {
         <button
           key={option}
           type="button"
-          className={`${styles.themeBtn} ${theme === option ? styles.themeBtnActive : ''}`}
+          className={`${styles.themeBtn} touch-target ${theme === option ? styles.themeBtnActive : ''}`}
           aria-pressed={theme === option}
           onClick={() => setTheme(option)}
         >

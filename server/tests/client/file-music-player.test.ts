@@ -169,23 +169,41 @@ describe('file music player', (): void => {
     player.dispose();
   });
 
-  it('should release replaced sources and ignore their late playback and error events', async () => {
-    const { player, elements, changed, error } = setup();
+  it('should swap sources on one element and ignore late events from replaced sources', async () => {
+    const { player, elements, createAudio, changed, error } = setup();
     await player.play(FIRST_TRACK);
-    const old = elements[0];
-    const stalePlaying = [...old.listeners.get('playing')!][0];
-    const staleError = [...old.listeners.get('error')!][0];
+    const audio = elements[0];
+    const stalePlaying = [...audio.listeners.get('playing')!][0];
+    const staleError = [...audio.listeners.get('error')!][0];
     await player.play(SECOND_TRACK);
-    expect(old.pause).toHaveBeenCalledOnce();
-    expect(old.removeAttribute).toHaveBeenCalledExactlyOnceWith('src');
-    expect(old.load).toHaveBeenCalledOnce();
-    expect([...old.listeners.values()].every((listeners): boolean => listeners.size === 0)).toBe(true);
+    expect(createAudio).toHaveBeenCalledOnce();
+    expect(audio.pause).toHaveBeenCalledOnce();
+    expect(audio.removeAttribute).not.toHaveBeenCalled();
+    expect(audio.src).toBe(SECOND_TRACK.file);
+    expect(audio.listeners.get('playing')?.size).toBe(1);
+    expect(audio.listeners.get('playing')?.has(stalePlaying)).toBe(false);
     changed.mockClear();
     stalePlaying();
     staleError();
     expect(changed).not.toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
-    expect(elements[1].src).toBe(SECOND_TRACK.file);
+    player.dispose();
+  });
+
+  it('should leave the shared element alone when a replaced source settles late', async () => {
+    const { player, elements, changed } = setup();
+    await player.play(FIRST_TRACK);
+    const audio = elements[0];
+    const loading = deferred();
+    audio.play.mockReturnValueOnce(loading.promise);
+    const first = player.play(FIRST_TRACK);
+    await player.play(SECOND_TRACK);
+    await first;
+    const pauses = audio.pause.mock.calls.length;
+    loading.resolve();
+    await flush();
+    expect(audio.pause).toHaveBeenCalledTimes(pauses);
+    expect(changed).toHaveBeenLastCalledWith(true);
     player.dispose();
   });
 
@@ -193,8 +211,8 @@ describe('file music player', (): void => {
     const { player, elements } = setup();
     await player.play(FIRST_TRACK);
     await player.play({ ...FIRST_TRACK, file: '/music/replacement.ogg' });
-    expect(elements).toHaveLength(2);
-    expect(elements[1].src).toBe('/music/replacement.ogg');
+    expect(elements).toHaveLength(1);
+    expect(elements[0].src).toBe('/music/replacement.ogg');
     player.dispose();
   });
 
@@ -249,15 +267,18 @@ describe('file music player', (): void => {
     player.dispose();
   });
 
-  it('should reject browser playback failures and retry with a fresh element', async () => {
+  it('should reject browser playback failures and retry with a reloaded source', async () => {
     const { player, elements, error, changed } = setup();
     await player.play(FIRST_TRACK);
     elements[0].play.mockRejectedValueOnce(new Error('Playback denied'));
     await expect(player.play(FIRST_TRACK)).rejects.toThrow('Playback denied');
     expect(error).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ message: 'Playback denied' }));
     expect(changed).toHaveBeenLastCalledWith(false);
+    expect(elements[0].removeAttribute).toHaveBeenCalledExactlyOnceWith('src');
+    elements[0].src = '';
     await player.play(FIRST_TRACK);
-    expect(elements).toHaveLength(2);
+    expect(elements).toHaveLength(1);
+    expect(elements[0].src).toBe(FIRST_TRACK.file);
     player.dispose();
   });
 
@@ -276,7 +297,7 @@ describe('file music player', (): void => {
     expect(error).toHaveBeenCalledOnce();
     await player.play(FIRST_TRACK);
     player.pause();
-    elements[1].emit('error');
+    elements[0].emit('error');
     expect(error).toHaveBeenCalledOnce();
     player.dispose();
   });
@@ -293,7 +314,7 @@ describe('file music player', (): void => {
     expect(elements[0].removeAttribute).toHaveBeenCalledExactlyOnceWith('src');
     expect(elements[0].load).toHaveBeenCalledOnce();
     await player.play(FIRST_TRACK);
-    expect(elements).toHaveLength(2);
+    expect(elements).toHaveLength(1);
     player.dispose();
     expect(vi.getTimerCount()).toBe(0);
   });

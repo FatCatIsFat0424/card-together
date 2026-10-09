@@ -12,7 +12,8 @@ N/E/S/W order and may include bot IDs; at least one participant must be a real a
 Legacy human snapshots without `isBot` remain valid. Completed bot identities remain
 in match history after the bot is removed from its room.
 Profiles include a 1–20-character nickname, six-digit color, avatar preset/optional
-uploaded avatar, optional table background, and match-history visibility.
+uploaded avatar, optional personal table background and card back with their image
+opacity, and match-history visibility.
 
 Login creates a seven-day opaque session. Storage contains only its SHA-256 digest;
 the browser uses an HttpOnly, SameSite=Lax cookie, Secure in production. Mutating HTTP
@@ -30,8 +31,9 @@ other signed-in players can read it only when the owner enables visibility.
 ## Database and media
 
 The authoritative contracts are `server/src/database/repository.ts` and
-`server/src/database/schema.ts`. `migrations.ts` defines the current version **3**;
-startup migrates supported version 1/2 data and validates the result.
+`server/src/database/schema.ts`. `migrations.ts` defines the current version **4**;
+startup migrates supported version 1–3 data and validates the result. Version 4 adds the
+account card back and image opacity settings with defaults that keep the previous look.
 
 | Collection | Contents |
 | --- | --- |
@@ -45,8 +47,9 @@ startup migrates supported version 1/2 data and validates the result.
 The default database is `server/data/database.json`, independent of cwd. Relative
 `DATABASE_PATH` overrides resolve from cwd. Production uses
 `/var/lib/card-together/database.json`; uploaded content-addressed images live alongside
-it in `media/`. Git ignores development state; it is never exposed as a static directory.
-Image reads are served through the controlled media endpoint.
+it in `media/`, with empty per-account ownership markers in `media/owners/` that back the
+upload quota. Back up and restore `media/` as a whole. Git ignores development state;
+it is never exposed as a static directory. Image reads are served through the controlled media endpoint.
 
 Only one server process may own a JSON file. An in-process duplicate-path guard is
 not a cross-process lock. Repository mutations serialize, validate schema/references,
@@ -72,8 +75,10 @@ the snapshot. See [turn clocks](architecture.md#turn-clocks) and
 
 Stop the writer before copying the **entire state directory**, including `database.json`
 and `media/`. Keep backups private: they contain password hashes and private hands.
-Production deployment already creates protected snapshots; also maintain an off-host backup.
-See [deployment](deployment.md#operations-and-rollback) for systemd commands and backup layout.
+Production deployment already creates protected snapshots, and a daily timer keeps the last
+14 database-and-media snapshots (see [deployment](deployment.md#daily-data-backup)); also
+maintain an off-host backup. See [deployment](deployment.md#operations-and-rollback) for
+systemd commands and backup layout.
 
 To restore, stop all candidate writers, preserve current complete state separately,
 restore a compatible complete snapshot, set directory/file ownership and restrictive

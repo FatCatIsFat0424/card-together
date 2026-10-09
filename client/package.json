@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "predev": "node ../scripts/audio/import-provided-music.mjs",
-    "prebuild": "node ../scripts/audio/import-provided-music.mjs"
+    "predev": "node ../scripts/audio/import-provided-music.mjs && node ../scripts/emoji/import-provided-emoji.mjs",
+    "prebuild": "node ../scripts/audio/import-provided-music.mjs && node ../scripts/emoji/import-provided-emoji.mjs"
   },
   "dependencies": {
     "react": "^19.2.7",
@@ -22,7 +22,6 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
-    "typescript": "~6.0.2",
     "vite": "^8.1.1"
   }
 }

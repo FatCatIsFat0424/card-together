@@ -9,6 +9,11 @@ function voiceError(message: string): Error {
   return Object.assign(new Error(message), { publicMessage: message });
 }
 
+function publicMessage(error: unknown): string {
+  return error instanceof Error && 'publicMessage' in error && typeof error.publicMessage === 'string'
+    ? error.publicMessage : 'Voice chat is unavailable. Try again.';
+}
+
 function object(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -106,9 +111,7 @@ export function registerVoiceHandlers(context: SocketContext, socket: TypedSocke
       }
       return action();
     }).then(callback).catch((error: unknown) => {
-      const message = error instanceof Error && 'publicMessage' in error
-        && typeof error.publicMessage === 'string' ? error.publicMessage : 'Voice chat is unavailable. Try again.';
-      callback({ success: false, error: message });
+      callback({ success: false, error: publicMessage(error) });
     });
   }
 
@@ -135,23 +138,35 @@ export function registerVoiceHandlers(context: SocketContext, socket: TypedSocke
     return { success: true };
   }));
 
-  socket.on('voice:signal', (payload, callback) => run(callback, async (): Promise<ActionResult> => {
-    const signal = signalValue(payload);
-    const sender = joinedPeer(context, socket);
-    const target = context.voice.byPeer(signal.targetPeerId);
-    if (!target || target.peerId === sender.peerId || target.roomCode !== sender.roomCode
-      || currentRoom(target.accountId) !== sender.roomCode) throw voiceError('Voice peer is unavailable.');
-    const targetSocket = context.io.sockets.sockets.get(target.socketId);
-    const targetSession = targetSocket ? await context.auth.resolveSession(targetSocket.data.cookie) : null;
-    if (!targetSocket?.connected || !targetSession || targetSession.account.id !== target.accountId) {
-      leaveVoice(context, target.socketId, 'Your session has expired.');
-      throw voiceError('Voice peer is unavailable.');
+  // Signals bypass the runtime queue so ICE bursts never delay game actions. Voice peers
+  // mirror committed membership (reconciled after each commit), and revoked or expired
+  // sessions disconnect their sockets, so synchronous checks suffice here.
+  socket.on('voice:signal', (payload, callback) => {
+    if (typeof callback !== 'function') return;
+    try {
+      const signal = signalValue(payload);
+      if (!socket.connected || socket.data.expiresAt <= Date.now()) {
+        leaveVoice(context, socket.id, 'Your session has expired.');
+        throw voiceError('Your session has expired. Please sign in again.');
+      }
+      const sender = context.voice.bySocket(socket.id);
+      if (!sender) throw voiceError('Join your table voice chat first.');
+      const target = context.voice.byPeer(signal.targetPeerId);
+      if (!target || target.peerId === sender.peerId || target.roomCode !== sender.roomCode) {
+        throw voiceError('Voice peer is unavailable.');
+      }
+      const targetSocket = context.io.sockets.sockets.get(target.socketId);
+      if (!targetSocket?.connected || targetSocket.data.expiresAt <= Date.now()) {
+        leaveVoice(context, target.socketId, 'Your session has expired.');
+        throw voiceError('Voice peer is unavailable.');
+      }
+      context.io.to(target.socketId).emit('voice:signal', {
+        fromPeerId: sender.peerId,
+        ...(signal.description ? { description: signal.description } : { candidate: signal.candidate }),
+      });
+      callback({ success: true });
+    } catch (error) {
+      callback({ success: false, error: publicMessage(error) });
     }
-    if (!socket.connected || !context.voice.byPeer(sender.peerId)) throw voiceError('Voice peer is unavailable.');
-    context.io.to(target.socketId).emit('voice:signal', {
-      fromPeerId: sender.peerId,
-      ...(signal.description ? { description: signal.description } : { candidate: signal.candidate }),
-    });
-    return { success: true };
-  }));
+  });
 }

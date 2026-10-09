@@ -1,4 +1,4 @@
-// ─── LanguageSwitch 元件：語系切換 ───
+// ─── LanguageSwitch: locale switch ───
 
 import type { ReactNode } from 'react';
 import { useI18nStore } from '../stores/i18n-store';
@@ -19,7 +19,7 @@ export function LanguageSwitch(): ReactNode {
       {getAvailableLocales().map((loc) => (
         <button
           key={loc}
-          className={`${styles.langBtn} ${locale === loc ? styles.langBtnActive : ''}`}
+          className={`${styles.langBtn} touch-target ${locale === loc ? styles.langBtnActive : ''}`}
           onClick={() => setLocale(loc)}
         >
           {LOCALE_LABELS[loc]}

@@ -8,7 +8,6 @@ import {
   checkBiddingEnd,
   getNextSeat,
 } from '../../src/engine/bidding';
-import type { BidAction, Seat } from '@shared/types';
 
 describe('bidding engine', () => {
 

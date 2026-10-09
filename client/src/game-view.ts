@@ -1,4 +1,4 @@
-// ─── 牌桌畫面用純函式（無 React） ───
+// ─── Pure table-view helpers (no React) ───
 
 import type { BidAction, PlayingState, Seat } from '@shared/types';
 
@@ -62,7 +62,7 @@ function lastOf(log: LogLike, types: readonly string[]): { seat: Seat; index: nu
   return null;
 }
 
-/** Latest card play (or Big Two pass / 撿紅點 flip) in any game's log; `index` changes on every new move. */
+/** Latest card play (or Big Two pass / Red Points flip) in any game's log; `index` changes on every new move. */
 export function lastMove(log: LogLike): TableMove | null {
   const entry = lastOf(log, ['play', 'flip', 'pass']);
   return entry && { seat: entry.seat, index: entry.index, pass: entry.type === 'pass' };

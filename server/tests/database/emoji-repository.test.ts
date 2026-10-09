@@ -13,6 +13,7 @@ function account(username: string): AccountRecord {
   return {
     id: randomUUID(), username, usernameNormalized: username, nickname: username,
     color: '#123456', avatar: 'cat', avatarImage: null, tableBackground: null,
+    tableBackgroundOpacity: 100, cardBack: null, cardBackOpacity: 100,
     matchesPublic: false, passwordHash: PASSWORD_HASH, createdAt: 100, updatedAt: 100,
   };
 }
@@ -82,5 +83,27 @@ describe('emoji repository', () => {
     await expect(repository.createEmojis('missing', [{ name: 'wave', mediaId: MEDIA }], 200)).rejects.toThrow();
     await expect(repository.createEmojis(alice.id, [{ name: 'Bad Name', mediaId: MEDIA }], 200)).rejects.toThrow();
     expect(await repository.listEmojis(alice.id)).toEqual([]);
+  });
+
+  it('should batch delete only the owner\'s entries and report which were deleted', async () => {
+    const mine = await repository.createEmojis(alice.id,
+      ['a1', 'a2', 'a3'].map((name) => ({ name, mediaId: MEDIA })), 200);
+    const [theirs] = await repository.createEmojis(bob.id, [{ name: 'a1', mediaId: MEDIA }], 200);
+
+    expect(await repository.deleteEmojis(alice.id, [mine[2].id, theirs.id, 'missing', mine[0].id]))
+      .toEqual([mine[0].id, mine[2].id]);
+    expect(await repository.deleteEmojis(alice.id, [mine[0].id])).toEqual([]);
+    expect((await repository.listEmojis(alice.id)).map((emoji) => emoji.name)).toEqual(['a2']);
+    expect(await repository.listEmojis(bob.id)).toEqual([theirs]);
+    const reopened = JSON.parse(await readFile(path, 'utf8')) as { emojis: { id: string }[] };
+    expect(reopened.emojis.map((emoji) => emoji.id).sort()).toEqual([mine[1].id, theirs.id].sort());
+  });
+
+  it('should keep relaxed names case-sensitive', async () => {
+    const names = ['NEKO-3.v2', 'neko-3.v2', 'FB_IMG_1737436595895'];
+    await repository.createEmojis(alice.id, names.map((name) => ({ name, mediaId: MEDIA })), 200);
+    expect((await repository.listEmojis(alice.id)).map((emoji) => emoji.name)).toEqual(names);
+    await expect(repository.createEmojis(alice.id, [{ name: 'NEKO-3.v2', mediaId: MEDIA }], 300))
+      .rejects.toMatchObject({ code: 'EMOJI_EXISTS' });
   });
 });

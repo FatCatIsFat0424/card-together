@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AccountProfile, PlayerInfo, PlayerSnapshot } from '@shared/types';
+import type {
+  AccountProfile, BridgeVisibleState, PlayerInfo, PlayerSnapshot,
+} from '@shared/types';
 
 vi.mock('../../../client/src/socket', () => ({ disconnectSocket: vi.fn() }));
 vi.mock('../../../client/src/api', () => ({
@@ -7,7 +9,7 @@ vi.mock('../../../client/src/api', () => ({
   invalidateAccountRequests: vi.fn(),
 }));
 
-import { applyPlayerSnapshot } from '../../../client/src/stores/player-snapshot';
+import { applyChatMessage, applyPlayerSnapshot } from '../../../client/src/stores/player-snapshot';
 import { clearAccount, useAccountStore } from '../../../client/src/stores/account-store';
 import { usePlayerStore } from '../../../client/src/stores/player-store';
 import { useRoomStore } from '../../../client/src/stores/room-store';
@@ -19,7 +21,14 @@ const player: PlayerInfo = {
   id: 'alice', username: 'alice', nickname: 'Alice', avatar: 'cat', avatarImage: null,
   color: '#4a9eff',
 };
-const account: AccountProfile = { ...player, createdAt: 100, updatedAt: 200 };
+const account: AccountProfile = {
+  ...player, tableBackground: null, tableBackgroundOpacity: 100, cardBack: null, cardBackOpacity: 100, matchesPublic: false, createdAt: 100, updatedAt: 200,
+};
+
+function bridgeState(state: PlayerSnapshot['gameState']): BridgeVisibleState {
+  if (state?.gameType !== 'bridge') throw new Error('Expected a Bridge snapshot');
+  return state;
+}
 const snapshot: PlayerSnapshot = {
   success: true,
   player,
@@ -110,8 +119,8 @@ describe('client authoritative snapshot updates', () => {
     applyPlayerSnapshot({
       ...structuredClone(snapshot),
       gameState: {
-        ...structuredClone(snapshot.gameState!),
-        playing: { ...snapshot.gameState!.playing!, currentTurnSeat: 'E' },
+        ...structuredClone(bridgeState(snapshot.gameState)),
+        playing: { ...bridgeState(snapshot.gameState).playing!, currentTurnSeat: 'E' },
         validCards: [{ suit: 'spades', rank: 14 }],
       },
     });
@@ -174,7 +183,8 @@ describe('client authoritative snapshot updates', () => {
     applyPlayerSnapshot({
       ...snapshot,
       gameState: {
-        ...snapshot.gameState!, phase: 'bidding', validCards: [], playing: null, contract: null,
+        ...bridgeState(snapshot.gameState), phase: 'bidding', validCards: [], playing: null,
+        contract: null,
         bidding: {
           bids: [], currentBidderSeat: 'S', highestBid: null,
           consecutivePassCount: 0, isFirstRound: true,
@@ -218,5 +228,33 @@ describe('serialized snapshot equality', () => {
     expect(equalSnapshotValue([], {})).toBe(false);
     expect(equalSnapshotValue(null, {})).toBe(false);
     expect(equalSnapshotValue({ a: false }, { a: true })).toBe(false);
+  });
+});
+
+describe('chat history deltas', () => {
+  beforeEach(() => {
+    clearAccount();
+    useAccountStore.getState().setAccount(structuredClone(account));
+    applyPlayerSnapshot(structuredClone(snapshot));
+  });
+
+  it('should keep history when a broadcast omits it and append each delta once', () => {
+    const { chatHistory: _history, ...broadcast } = structuredClone(snapshot);
+    applyPlayerSnapshot(broadcast);
+    expect(useChatStore.getState().messages).toEqual(snapshot.chatHistory);
+    const message = { id: 'second', sender: player, content: 'Delta', timestamp: 456 };
+    applyChatMessage({ roomCode: 'ABC123', message });
+    applyChatMessage({ roomCode: 'ABC123', message });
+    applyChatMessage({ roomCode: 'OTHER1', message: { ...message, id: 'third' } });
+    expect(useChatStore.getState().messages.map((entry) => entry.id)).toEqual(['first', 'second']);
+  });
+
+  it('should replace history on resume and clear it when the room changes without history', () => {
+    const replaced = [{ id: 'resumed', sender: player, content: 'Server copy', timestamp: 789 }];
+    applyPlayerSnapshot({ ...structuredClone(snapshot), chatHistory: replaced });
+    expect(useChatStore.getState().messages).toEqual(replaced);
+    const { chatHistory: _history, ...moved } = structuredClone(snapshot);
+    applyPlayerSnapshot({ ...moved, room: { ...moved.room!, code: 'XYZ789' } });
+    expect(useChatStore.getState().messages).toEqual([]);
   });
 });

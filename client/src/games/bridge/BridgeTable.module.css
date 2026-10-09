@@ -1,30 +1,10 @@
-/* ─── BridgeTable 樣式：中央提示、倒牌確認、結算浮層 ─── */
+/* ─── BridgeTable styles: center prompt, redeal confirmation, settlement ─── */
 
 .centreText {
   color: var(--table-ink);
   opacity: 0.75;
   font-size: var(--text-sm);
   text-align: center;
-}
-
-.actionError {
-  position: absolute;
-  left: 50%;
-  bottom: 96px;
-  transform: translateX(-50%);
-  z-index: 6;
-  max-width: 90%;
-  padding: 4px 12px;
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  color: var(--color-danger);
-  font-size: var(--text-sm);
-}
-
-@media (max-width: 767px) {
-  .actionError {
-    bottom: 72px;
-  }
 }
 
 .overlayCard {
@@ -58,38 +38,18 @@
   justify-content: center;
 }
 
-.scoreOverlay {
-  position: fixed;
-  inset: 0;
-  background: var(--bg-overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-md);
-  animation: fadeIn 0.3s ease;
-  z-index: 100;
-}
-
-.scoreTitle {
-  font-family: var(--font-display);
-  font-size: var(--text-2xl);
-  font-weight: 700;
-  margin-bottom: var(--spacing-lg);
-}
-
-.scoreWin {
-  color: var(--color-success);
-}
-.scoreLose {
-  color: var(--color-danger);
-}
-
 .scoreDetails {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  gap: 4px var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
   font-size: var(--text-base);
   color: var(--text-secondary);
-  margin-bottom: var(--spacing-xl);
-  line-height: 2;
+  text-align: left;
 }
+
+.scoreDetails dd { color: var(--text-primary); font-weight: 700; }
 
 .completedTrick {
   position: relative;

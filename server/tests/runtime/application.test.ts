@@ -4,7 +4,9 @@ import { join } from 'node:path';
 import { io as connectSocket } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AccountProfile, ClientToServerEvents, Seat, ServerToClientEvents, TimeControl } from '@shared/types';
+import type {
+  AccountProfile, BridgeVisibleState, ClientToServerEvents, Seat, ServerToClientEvents, TimeControl,
+} from '@shared/types';
 import type { PlayerSnapshot } from '@shared/types/socket-events';
 import { identifyCombo, isBomb, legalPlays } from '@shared/rules/bigtwo';
 import { rpPairOptions } from '@shared/rules/redpoints';
@@ -23,6 +25,10 @@ type Application = Awaited<ReturnType<typeof createApplication>>;
 interface RegisteredAccount {
   account: AccountProfile;
   cookie: string;
+}
+
+function bridgeView(snapshot: PlayerSnapshot): BridgeVisibleState | undefined {
+  return snapshot.gameState?.gameType === 'bridge' ? snapshot.gameState : undefined;
 }
 
 describe('persistent authenticated application', () => {
@@ -394,7 +400,7 @@ describe('persistent authenticated application', () => {
     expect(new Set(allCards).size).toBe(52);
 
     for (let bidIndex = 0; bidIndex < 4; bidIndex += 1) {
-      const bidder = snapshot.gameState?.bidding?.currentBidderSeat;
+      const bidder = bridgeView(snapshot)?.bidding?.currentBidderSeat;
       if (!bidder) throw new Error('Expected current bidder');
       const bid = bidIndex === 0 ? { type: 'bid' as const, level: 1 as const, suit: 'clubs' as const }
         : { type: 'pass' as const };
@@ -406,11 +412,11 @@ describe('persistent authenticated application', () => {
     expect(await players[0].timeout(5_000).emitWithAck('game:continue')).toMatchObject({ success: false });
     expect((await resume(players[0])).gameState).toEqual(snapshot.gameState);
 
-    const firstTurn = snapshot.gameState?.playing?.currentTurnSeat;
+    const firstTurn = bridgeView(snapshot)?.playing?.currentTurnSeat;
     if (!firstTurn) throw new Error('Expected current player');
     const firstPlayer = players[SEATS.indexOf(firstTurn)];
     const firstState = await resume(firstPlayer);
-    const firstCard = firstState.gameState?.validCards[0];
+    const firstCard = bridgeView(firstState)?.validCards[0];
     if (!firstCard) throw new Error('Expected playable card');
     expect(await firstPlayer.timeout(5_000).emitWithAck('game:playCard', { card: firstCard }))
       .toEqual({ success: true });
@@ -436,11 +442,11 @@ describe('persistent authenticated application', () => {
     snapshot = resumed[0];
     for (let played = 0; snapshot.gameState?.phase === 'playing' && played < 52; played += 1) {
       finishPresentation(snapshot.gameState);
-      const seat = snapshot.gameState.playing?.currentTurnSeat;
+      const seat = bridgeView(snapshot)?.playing?.currentTurnSeat;
       if (!seat) throw new Error('Expected player turn');
       const client = players[SEATS.indexOf(seat)];
       const state = await resume(client);
-      const card = state.gameState?.validCards[0];
+      const card = bridgeView(state)?.validCards[0];
       if (!card) throw new Error('Expected a legal card');
       expect(await client.timeout(5_000).emitWithAck('game:playCard', { card })).toEqual({ success: true });
       snapshot = await resume(players[0]);
@@ -657,8 +663,7 @@ describe('persistent authenticated application', () => {
     expect(await players[0].timeout(5_000).emitWithAck('game:bigtwo:pass')).toMatchObject({ success: false });
     expect(await players[0].timeout(5_000).emitWithAck('game:redpoints:play', { card: { suit: 'x', rank: 1 } } as never))
       .toEqual({ success: false, error: 'Invalid card.' });
-    let snapshot = opening[0];
-    for (let moves = 0; moves < 6; moves += 1) snapshot = await step();
+    for (let moves = 0; moves < 6; moves += 1) await step();
 
     const before = await Promise.all(players.map(resume));
     await stop();
@@ -667,7 +672,7 @@ describe('persistent authenticated application', () => {
     const after = await Promise.all(players.map(resume));
     for (let index = 0; index < 4; index += 1) expect(after[index].gameState).toEqual(before[index].gameState);
 
-    snapshot = after[0];
+    let snapshot = after[0];
     for (let moves = 0; snapshot.gameState?.phase === 'playing' && moves < 100; moves += 1) snapshot = await step();
     const final = snapshot.gameState;
     if (final?.gameType !== 'redpoints' || !final.result) throw new Error('Expected a scored Red Points game');

@@ -1,6 +1,6 @@
-// ─── Bridge Game：橋牌流程管理 ───
+// ─── Bridge Game: flow management ───
 
-import { randomUUID } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import type {
   RoomCode,
   Seat,
@@ -34,24 +34,23 @@ import {
 } from '../../engine/playing';
 import { calculateGameResult } from '../../engine/scoring';
 
-// ─── 模組私有狀態 ───
+// ─── Module-private state ───
 
 /** roomCode → BridgeGameState */
 const games: Map<RoomCode, BridgeGameState> = new Map();
 
-// ─── 匯出函式 ───
+// ─── Exported functions ───
 
-/**
- * 開始新遊戲
- */
-export function startGame(roomCode: RoomCode, players: Record<Seat, PlayerInfo>): void {
-  const dealerIdx = Math.floor(Math.random() * 4);
-  const dealerSeat = SEAT_ORDER_CLOCKWISE[dealerIdx];
-
-  const deck = shuffleDeck(createDeck());
+/** `deck` and `dealerSeat` are test hooks; games normally deal a fresh shuffle. */
+export function startGame(
+  roomCode: RoomCode,
+  players: Record<Seat, PlayerInfo>,
+  deck: readonly Card[] = shuffleDeck(createDeck()),
+  dealerSeat: Seat = SEAT_ORDER_CLOCKWISE[randomInt(4)],
+): void {
   const rawHands = dealCards(deck);
 
-  // 排序手牌
+  // Sort hands
   const hands: Record<Seat, Card[]> = {
     N: sortHand(rawHands.N),
     E: sortHand(rawHands.E),
@@ -79,7 +78,7 @@ export function startGame(roomCode: RoomCode, players: Record<Seat, PlayerInfo>)
 
   games.set(roomCode, gameState);
 
-  // 檢查倒牌重洗
+  // Check for a redeal
   const biddingStartSeat = getNextSeat(dealerSeat);
   const redealSeat = findRedealEligibleSeat(hands, biddingStartSeat);
 
@@ -92,7 +91,7 @@ export function startGame(roomCode: RoomCode, players: Record<Seat, PlayerInfo>)
 }
 
 /**
- * 處理倒牌重洗回應
+ * Handle a redeal response
  */
 export function handleRedealResponse(
   roomCode: RoomCode,
@@ -108,7 +107,7 @@ export function handleRedealResponse(
 
   if (accept) {
     game.redealDeclinedSeats = [];
-    // 重洗牌
+    // Reshuffle
     const deck = shuffleDeck(createDeck());
     const rawHands = dealCards(deck);
     game.hands = {
@@ -118,7 +117,7 @@ export function handleRedealResponse(
       W: sortHand(rawHands.W),
     };
 
-    // 再次檢查倒牌重洗
+    // Check for a redeal again
     const biddingStartSeat = getNextSeat(game.dealerSeat);
     const nextRedealSeat = findRedealEligibleSeat(game.hands, biddingStartSeat);
 
@@ -129,17 +128,17 @@ export function handleRedealResponse(
     }
   } else {
     game.redealDeclinedSeats.push(seat);
-    // 拒絕：繼續檢查下一位
+    // Declined: check the next player
     const biddingStartSeat = getNextSeat(game.dealerSeat);
     const nextSeat = getNextSeat(seat);
 
-    // 從下一位開始繼續搜尋
+    // Continue searching from the next seat
     let foundNext = false;
     const startIdx = SEAT_ORDER_CLOCKWISE.indexOf(nextSeat);
 
     for (let i = 0; i < 4; i++) {
       const checkSeat = SEAT_ORDER_CLOCKWISE[(startIdx + i) % 4];
-      // 已經檢查過的不再檢查
+      // Skip seats already checked
       if (game.redealDeclinedSeats.includes(checkSeat)) continue;
 
       const hand = game.hands[checkSeat];
@@ -159,7 +158,7 @@ export function handleRedealResponse(
 }
 
 /**
- * 處理叫牌
+ * Handle a bid
  */
 export function handleBid(
   roomCode: RoomCode,
@@ -177,15 +176,15 @@ export function handleBid(
   game.bidding = applyBid(game.bidding, seat, action);
   addLog(game, { type: 'bid', seat, action, timestamp: Date.now() });
 
-  // 檢查叫牌結束
+  // Check whether bidding ended
   const endResult = checkBiddingEnd(game.bidding);
 
   if (endResult === 'all_pass') {
-    // 首輪全 pass → 重新發牌
+    // All pass in the first round: redeal
     addLog(game, { type: 'system', message: 'All pass - redealing', timestamp: Date.now() });
     restartDeal(roomCode);
   } else if (endResult === 'contract') {
-    // 合約確定
+    // Contract set
     const highest = game.bidding.highestBid!;
     const contract: Contract = {
       level: highest.level,
@@ -200,7 +199,7 @@ export function handleBid(
 }
 
 /**
- * 處理出牌
+ * Handle a card play
  */
 export function handlePlayCard(
   roomCode: RoomCode,
@@ -216,14 +215,14 @@ export function handlePlayCard(
   const validation = validatePlay(hand, game.playing, seat, card);
   if (!validation.valid) return { success: false, reason: validation.reason };
 
-  // 移除手牌
+  // Remove the card from hand
   game.hands[seat] = removeCardFromHand(hand, card);
 
-  // 套用出牌
+  // Apply the play
   game.playing = applyPlay(game.playing, seat, card);
   addLog(game, { type: 'play', seat, card, timestamp: Date.now() });
 
-  // 檢查是否一墩結束（4 張牌）
+  // Check whether the trick is complete (4 cards)
   if (Object.keys(game.playing.currentTrick).length === 4) {
     const trick = game.playing.currentTrick as Record<Seat, Card>;
     const winner = determineTrickWinner(trick, game.playing.trickLeadSeat, game.contract.suit);
@@ -232,7 +231,7 @@ export function handlePlayCard(
     const trickIdx = game.playing.completedTricks.length;
     addLog(game, { type: 'trick_end', winnerSeat: winner, trickIndex: trickIdx, timestamp: Date.now() });
 
-    // 檢查遊戲結束
+    // Check whether the game is over
     if (isPlayingComplete(game.playing)) {
       game.phase = 'scoring';
       game.result = calculateGameResult(
@@ -247,14 +246,14 @@ export function handlePlayCard(
 }
 
 /**
- * 中止遊戲
+ * Abort the game
  */
 export function abortGame(roomCode: RoomCode): void {
   games.delete(roomCode);
 }
 
 /**
- * 取得給特定玩家的可見狀態
+ * Get the state visible to one player
  */
 export function getPlayerVisibleState(
   roomCode: RoomCode,
@@ -281,7 +280,7 @@ export function getPlayerVisibleState(
 }
 
 /**
- * 取得遊戲內部狀態
+ * Get the internal game state
  */
 export function getGameState(roomCode: RoomCode): BridgeGameState | null {
   return games.get(roomCode) ?? null;
@@ -296,7 +295,7 @@ export function restoreGames(records: BridgeGameState[]): void {
   for (const game of records) games.set(game.roomCode, game);
 }
 
-// ─── 內部輔助函式 ───
+// ─── Internal helpers ───
 
 function addLog(game: BridgeGameState, entry: GameLogEntry): void {
   game.log.push(entry);
@@ -317,9 +316,9 @@ function startPlaying(roomCode: RoomCode, contract: Contract): void {
   const game = games.get(roomCode);
   if (!game) return;
 
-  // 莊家逆時鐘第一位開始出牌
+  // The player counterclockwise of the declarer leads
   const declarerIdx = SEAT_ORDER_CLOCKWISE.indexOf(contract.declarer);
-  const leadSeat = SEAT_ORDER_CLOCKWISE[(declarerIdx + 3) % 4]; // 逆時鐘 = index - 1 = (index + 3) % 4
+  const leadSeat = SEAT_ORDER_CLOCKWISE[(declarerIdx + 3) % 4]; // counterclockwise = index - 1 = (index + 3) % 4
 
   game.phase = 'playing';
   game.playing = createPlayingState(leadSeat);

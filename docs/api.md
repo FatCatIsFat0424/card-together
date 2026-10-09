@@ -28,20 +28,29 @@ except immutable uploaded-image reads. Contracts live in `shared/src/types/`.
 | `POST /api/friends/requests/:id/accept` | `{}` | Recipient accepts |
 | `DELETE /api/friends/requests/:id` | `{}` | Recipient declines or sender cancels |
 | `DELETE /api/friends/:accountId` | `{}` | Remove accepted friendship |
-| `POST /api/media` | `data` (base64), `purpose` | Uploaded image ID; purpose: avatar/emoji/background |
+| `POST /api/media` | `data` (base64), `purpose` | Uploaded image ID; purpose: avatar/emoji/background/cardBack ([limits](media.md#images-and-chat)) |
 | `GET /api/media/:id` | — | Public immutable image bytes |
 | `GET /api/emojis` | — | Current owner's emoji entries |
-| `POST /api/emojis` | `items: [{ name, mediaId }]` | 201, created entries; 1–50 unique names |
+| `POST /api/emojis` | `items: [{ name, mediaId }]` | 201, created entries; 1–50 unique [names](media.md#images-and-chat) |
 | `PATCH /api/emojis/:id` | `name` | Rename owned entry |
 | `DELETE /api/emojis/:id` | `{}` | Delete owned entry |
+| `POST /api/emojis/delete` | `ids`: 1–300 unique ID strings | `deleted`: IDs removed in one atomic write; IDs that are unknown or not the caller's are ignored |
 | `GET /health` | — | `{ status: 'ok' }` |
 
 Register/login and image/health reads do not require a prior session. Migration
 requires a valid existing legacy session, authenticated by the endpoint itself.
 Logout accepts unauthenticated requests but revokes any presented valid sessions;
 other routes require session authentication. Media endpoints return 503 if image storage is unavailable.
-Profile updates support nickname, color, preset avatar, uploaded avatar/table background,
-and history visibility. `AccountProfile` includes private profile preferences/timestamps;
+Uploads check origin, session, and rate limits before parsing the up-to-3 MiB body, which
+fits a base64-encoded 2 MiB emoji or background. Larger decoded images return 413. Each
+account may store `MEDIA_QUOTA_BYTES` (100 MiB, [media store](../server/src/media/media-store.ts))
+of distinct images it uploaded; re-uploading an owned image is free, and replaced images still
+count. Exceeding the quota returns 413. Ownership markers live in `media/owners/`.
+Profile updates support nickname, color, preset avatar, uploaded avatar/table
+background/card back (`avatarImage`, `tableBackground`, `cardBack`: an uploaded media ID or
+null), image opacity (`tableBackgroundOpacity`, `cardBackOpacity`: integer percent 20–100),
+and history visibility. Omitted fields keep their values; invalid values return 400.
+`AccountProfile` includes private profile preferences/timestamps;
 `PublicAccount` exposes only ID, username, nickname, color, avatar, and avatarImage.
 No response exposes credential/session digests. Invalid player IDs return 400, unknown
 players 404, and private histories 403. See [storage](storage.md) and [media limits](media.md).
@@ -79,10 +88,17 @@ For exact unions and result fields, use
 | `game:redpoints:play` | `{ card, capture? }` | Play and optional selected capture |
 | `game:redpoints:chooseFlip` | `{ capture }` | Resolve flipped-card capture choice |
 | `game:ninetynine:play` | `{ card, choice?, target? }` | +/- choice or target seat |
-| `game:continue` | — | Scoring to waiting room |
+| `game:continue` | — | Seated player leaves the result for the waiting room; others keep it |
 | `game:abortVote:start` | — | Start seated-player abort vote |
 | `game:abortVote:cast` | `{ agree }` | Record one vote |
-| `chat:send` | `{ message }` or `{ stickerId }` | Send owned text/sticker |
+| `chat:send` | `{ message }`, `{ stickerId }`, or `{ providedSticker }` | Send text, an owned sticker, or a site emoji sticker by name |
+
+[`ChatMessage`](../shared/src/types/chat.ts) carries server-resolved images only: `emojis`
+(name → personal media ID) and `providedEmojis` (name → site emoji file) for `:name:`
+tokens, at most 20 names combined and never the same name in both; or one `sticker`
+(personal) or `providedSticker` (`{ name, file }`) with empty content. Site emoji files are
+served from `<base>/provided-emoji/<file>`; see [media](media.md#site-provided-emoji).
+Messages stored before site emoji existed remain valid.
 
 Play/pass/capture and continue wait for the server's presentation deadline; continue also
 requires scoring. The server validates turn/card/room authority; see [games](games.md).
@@ -95,9 +111,12 @@ Timer settings use [`TimeControl`](../shared/src/types/room.ts) and the validate
 remaining reserves, and server time for client clock correction. The server enforces
 expiry; frontend countdowns do not authorize moves. See [timer rules](games.md#turn-timer).
 
-`player:state` sends the same full `PlayerSnapshot` as resume: optional player, room,
-gameState, and recent chat history plus success/error. Missing room/game clears old client
-state. Game state includes only the recipient's hand and legal choices plus public logs,
+`player:state` sends the same `PlayerSnapshot` as resume: optional player, room,
+gameState, and recent chat history plus success/error. Resume always includes chat history,
+which replaces the client's copy. Broadcasts include history only when the recipient's room
+changed; otherwise they omit it and each new message follows as
+`chat:message { roomCode, message }`, which clients append once by message ID. Missing
+room/game clears old client state. Game state includes only the recipient's hand and legal choices plus public logs,
 results, and presentation metadata. Actor/affected room members receive snapshots, including
 same-account tabs; unrelated rooms do not. `room:invited` delivers an ephemeral invite
 with room/game/sender/seat availability.
@@ -105,7 +124,9 @@ with room/game/sender/seat availability.
 ## Voice signaling
 
 Voice membership is ephemeral and authorized against committed room membership. Socket.IO
-carries negotiation; audio travels over WebRTC and does not write the database.
+carries negotiation; audio travels over WebRTC and does not write the database. Join, leave,
+and settings run in the runtime queue; `voice:signal` is relayed synchronously outside it,
+checking only the connection, its session expiry, and current voice peers.
 
 | Client action | Payload | Success |
 | --- | --- | --- |
@@ -117,8 +138,9 @@ carries negotiation; audio travels over WebRTC and does not write the database.
 Exactly one description/candidate is required. Descriptions accept offer/answer with
 SDP at most 12,000 characters; ICE candidates at most 2,048 characters with validated
 fields. Source identity is server-assigned; target must be a current same-room peer.
-One account may join from only one tab. Voice has a separate 1,200-actions/minute/connection
-limit; game actions use 240.
+One account may join from only one tab. Voice has a separate 1,200-actions/minute/account
+limit; other actions use 240, and `chat:send` additionally allows 5 per 5 seconds. Limits
+are shared by all of an account's tabs.
 
 Server events: `voice:state { roomCode, participants }`,
 `voice:signal { fromPeerId, description?, candidate? }`, and `voice:left { reason }`.

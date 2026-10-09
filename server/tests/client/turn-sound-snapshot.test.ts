@@ -39,11 +39,11 @@ describe('turn sound snapshot', () => {
     useGameStore.setState({ gameType: 'bridge', phase: 'bidding', currentTurnSeat: 'N' });
     const turn = getTurnSoundSnapshot().turn;
     expect(turn).not.toBeNull();
-    useGameStore.getState().addLogEntry({ type: 'system', message: 'unchanged', timestamp: 1 });
+    useGameStore.setState((state) => ({ log: [...state.log, { type: 'system', message: 'unchanged', timestamp: 1 }] }));
     expect(getTurnSoundSnapshot().turn).toBe(turn);
-    useGameStore.getState().setPhase('scoring');
+    useGameStore.setState({ phase: 'scoring' });
     expect(getTurnSoundSnapshot().turn).toBeNull();
-    useGameStore.getState().setPhase('playing');
+    useGameStore.setState({ phase: 'playing' });
     useAccountStore.setState({ connection: 'connecting' });
     expect(getTurnSoundSnapshot().turn).toBeNull();
     useAccountStore.setState({ connection: 'ready' });

@@ -1,4 +1,4 @@
-// ─── BridgeTable：橋牌牌桌（叫牌、出牌、倒牌確認、結算） ───
+// ─── BridgeTable: Bridge table (bidding, play, redeal confirmation, settlement) ───
 
 import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -10,10 +10,12 @@ import { useRoomStore } from '../../stores/room-store';
 import { useI18nStore } from '../../stores/i18n-store';
 import { BidLabel } from '../../components/AuctionTable';
 import { CardHand } from '../../components/CardHand';
-import { BiddingPanel } from '../../components/BiddingPanel';
+import { BiddingPanel, BiddingWaiting } from '../../components/BiddingPanel';
 import { GameInfoRail } from '../../components/GameInfoRail';
 import { TrickArea } from '../../components/TrickArea';
 import { GameShell } from '../GameShell';
+import { ResultDialog } from '../ResultDialog';
+import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
 import styles from './BridgeTable.module.css';
 import { useTrickPresentation } from './use-trick-presentation';
@@ -22,6 +24,7 @@ import { TrickHistory } from './TrickHistory';
 export function BridgeTable(): ReactNode {
   const mySeat = useRoomStore((state) => state.mySeat);
   const { t } = useI18nStore();
+  const connectionReady = useConnectionReady();
   const [actionError, setActionError] = useState('');
   const [actionPending, setActionPending] = useState(false);
   const { phase, myHand, currentTurnSeat, validCards, playing, result, redealPendingSeat } =
@@ -105,7 +108,7 @@ export function BridgeTable(): ReactNode {
       />
     );
   } else if (phase === 'bidding') {
-    centre = <BiddingPanel />;
+    centre = mySeat === currentTurnSeat ? null : <BiddingWaiting seat={currentTurnSeat} />;
   } else if (phase === 'redeal_pending' && redealPendingSeat === mySeat) {
     centre = (
       <div className={styles.overlayCard}>
@@ -114,14 +117,14 @@ export function BridgeTable(): ReactNode {
         <div className={styles.overlayActions}>
           <button
             className="btn btn-success"
-            disabled={actionPending}
+            disabled={actionPending || !connectionReady}
             onClick={() => handleRedealResponse(true)}
           >
             {t('redeal.accept')}
           </button>
           <button
             className="btn btn-outline"
-            disabled={actionPending}
+            disabled={actionPending || !connectionReady}
             onClick={() => handleRedealResponse(false)}
           >
             {t('redeal.decline')}
@@ -135,42 +138,22 @@ export function BridgeTable(): ReactNode {
     centre = <p className={styles.centreText}>{t('common.loading')}</p>;
   }
 
-  // 結算彈窗
   const overlay = phase === 'scoring' && result && !heldTrick && (
-    <div className={styles.scoreOverlay}>
-      <div className={styles.overlayCard}>
-        <h2
-          className={`${styles.scoreTitle} ${result.declarerTeamWins ? styles.scoreWin : styles.scoreLose}`}
-        >
-          {result.declarerTeamWins ? t('score.declarerWins') : t('score.defenderWins')}
-        </h2>
-        <div className={styles.scoreDetails}>
-          <div>
-            {t('game.contract')}：
-            <BidLabel level={result.contract.level} suit={result.contract.suit} /> by{' '}
-            {seatLabel(result.contract.declarer)}
-          </div>
-          <div>
-            {t('score.required')}：{result.requiredTricks}
-          </div>
-          <div>
-            {t('score.declarerTricks')}：{result.declarerTeamTricks}
-          </div>
-          <div>
-            {t('score.defenderTricks')}：{result.defenderTeamTricks}
-          </div>
-        </div>
-        <TrickHistory tricks={playing?.completedTricks ?? []} />
-        {actionError && (
-          <p className={styles.actionError} role="alert">
-            {actionError}
-          </p>
-        )}
-        <button className="btn btn-primary" disabled={actionPending} onClick={handleBackToRoom}>
-          {t('score.backToRoom')}
-        </button>
-      </div>
-    </div>
+    <ResultDialog tone={result.declarerTeamWins ? 'win' : 'lose'}
+      title={result.declarerTeamWins ? t('score.declarerWins') : t('score.defenderWins')}
+      pending={actionPending} error={actionError} disabled={!connectionReady} onBack={handleBackToRoom}>
+      <dl className={styles.scoreDetails}>
+        <dt>{t('game.contract')}</dt>
+        <dd>
+          <BidLabel level={result.contract.level} suit={result.contract.suit} />{' '}
+          {t('score.declarerSeat', { seat: seatLabel(result.contract.declarer) })}
+        </dd>
+        <dt>{t('score.required')}</dt><dd>{result.requiredTricks}</dd>
+        <dt>{t('score.declarerTricks')}</dt><dd>{result.declarerTeamTricks}</dd>
+        <dt>{t('score.defenderTricks')}</dt><dd>{result.defenderTeamTricks}</dd>
+      </dl>
+      <TrickHistory tricks={playing?.completedTricks ?? []} />
+    </ResultDialog>
   );
 
   return (
@@ -183,10 +166,12 @@ export function BridgeTable(): ReactNode {
           cards={myHand}
           playableCards={isMyTurn ? validCards : []}
           onCardClick={handlePlayCard}
-          disabled={actionPending || !isMyTurn || phase !== 'playing'}
+          disabled={actionPending || !connectionReady || !isMyTurn || phase !== 'playing'}
         />
       }
       overlay={overlay}
+      panel={phase === 'bidding' && mySeat !== null && mySeat === currentTurnSeat
+        ? <BiddingPanel disabled={!connectionReady} /> : undefined}
       error={phase !== 'scoring' ? actionError : undefined}
     />
   );

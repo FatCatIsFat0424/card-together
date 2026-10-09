@@ -1,4 +1,4 @@
-// ─── Constants 統一匯出 ───
+// ─── Constants barrel ───
 
 export {
   SUIT_DISPLAY_ORDER,
@@ -25,11 +25,15 @@ export {
   NICKNAME_MAX_LENGTH,
 } from './game-rules';
 
-export { isMediaId } from './media';
+export { IMAGE_OPACITY_MAX, IMAGE_OPACITY_MIN, isImageOpacity, isMediaId } from './media';
 export {
+  EMOJI_MAX_BYTES,
+  EMOJI_NAME_MAX_LENGTH,
   MAX_EMOJIS_PER_ACCOUNT,
   MAX_MESSAGE_EMOJIS,
   isEmojiName,
+  isProvidedEmojiFile,
+  parseProvidedEmojiCatalog,
   extractEmojiNames,
   splitEmojiText,
 } from './emoji';

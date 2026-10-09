@@ -1,4 +1,4 @@
-// ─── Red Points Game：撿紅點流程管理 ───
+// ─── Red Points Game: flow management ───
 
 import { randomInt, randomUUID } from 'node:crypto';
 import type {
@@ -11,7 +11,7 @@ import type {
   Seat,
 } from '@shared/types';
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
-import { nextSeatCounterClockwise } from '@shared/rules/bigtwo';
+import { nextSeatCounterClockwise } from '@shared/rules/seats';
 import { RP_HAND_SIZE, RP_TABLE_SIZE, rpNeedsRedeal, rpPairOptions, rpScore } from '@shared/rules/redpoints';
 import { createDeck, shuffleDeck } from '../../engine/deck';
 
