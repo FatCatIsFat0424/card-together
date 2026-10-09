@@ -7,6 +7,10 @@ import { joinNames } from '../games/seat-names';
 import { PlayerLink } from './PlayerLink';
 import styles from './MatchHistoryList.module.css';
 
+function signed(value: number): string {
+  return value > 0 ? `+${value}` : String(value);
+}
+
 function MatchResultLabel({ match, players }: {
   match: MatchSummary; players: Record<string, PublicAccount>;
 }): ReactNode {
@@ -23,6 +27,14 @@ function MatchResultLabel({ match, players }: {
   if (result.gameType === 'redpoints') {
     return <span>{t('gameType.redpoints')} · 🏆 {joinNames(result.winners.map(seatName), locale)}
       {mySeat && <> · {t('redpoints.myPoints', { n: String(result.points[mySeat]) })}</>}</span>;
+  }
+  if (result.gameType === 'sevens') {
+    return <span>{t('gameType.sevens')} · 🏆 {joinNames(result.winners.map(seatName), locale)}
+      {mySeat && <> · {t('sevens.myPenalty', { n: String(result.penalties[mySeat]) })}</>}</span>;
+  }
+  if (result.gameType === 'chinesepoker') {
+    return <span>{t('gameType.chinesepoker')} · 🏆 {joinNames(result.winners.map(seatName), locale)}
+      {mySeat && <> · {t('chinesepoker.myScore', { n: signed(result.scores[mySeat]) })}</>}</span>;
   }
   if (result.gameType === 'ninetynine') {
     // Players eliminated earlier rank lower

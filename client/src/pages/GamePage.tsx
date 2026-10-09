@@ -9,6 +9,8 @@ import { BridgeTable } from '../games/bridge/BridgeTable';
 import { BigTwoTable } from '../games/bigtwo/BigTwoTable';
 import { RedPointsTable } from '../games/redpoints/RedPointsTable';
 import { NinetyNineTable } from '../games/ninetynine/NinetyNineTable';
+import { SevensTable } from '../games/sevens/SevensTable';
+import { ChinesePokerTable } from '../games/chinesepoker/ChinesePokerTable';
 
 export function GamePage(): ReactNode {
   const { roomCode } = useParams<{ roomCode: string }>();
@@ -26,5 +28,7 @@ export function GamePage(): ReactNode {
   if (!phase) return null;
   if (gameType === 'bigtwo') return <BigTwoTable />;
   if (gameType === 'ninetynine') return <NinetyNineTable />;
+  if (gameType === 'sevens') return <SevensTable />;
+  if (gameType === 'chinesepoker') return <ChinesePokerTable />;
   return gameType === 'redpoints' ? <RedPointsTable /> : <BridgeTable />;
 }

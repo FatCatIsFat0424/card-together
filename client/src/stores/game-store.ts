@@ -15,6 +15,8 @@ import type {
   PlayerVisibleGameState,
   RedPointsVisibleState,
   NinetyNineVisibleState,
+  SevensVisibleState,
+  ChinesePokerVisibleState,
 } from '@shared/types';
 import { equalSnapshotValue, retainSnapshotValue } from './snapshot-equality';
 
@@ -25,6 +27,8 @@ interface GameStoreState {
   bigTwo: BigTwoVisibleState | null;
   redPoints: RedPointsVisibleState | null;
   ninetyNine: NinetyNineVisibleState | null;
+  sevens: SevensVisibleState | null;
+  chinesePoker: ChinesePokerVisibleState | null;
   gameType: GameType | null;
   phase: GamePhase | null;
   myHand: Card[];
@@ -50,6 +54,8 @@ const initialState: GameStoreState = {
   bigTwo: null,
   redPoints: null,
   ninetyNine: null,
+  sevens: null,
+  chinesePoker: null,
   gameType: null,
   phase: null,
   myHand: [],
@@ -85,12 +91,27 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       phase: game.phase,
       currentTurnSeat: game.phase === 'playing' ? game.currentTurnSeat : null,
       ninetyNine: retainSnapshotValue(state.ninetyNine, game),
+    } : game.gameType === 'sevens' ? {
+      ...initialState,
+      gameType: 'sevens',
+      phase: game.phase,
+      currentTurnSeat: game.phase === 'playing' ? game.currentTurnSeat : null,
+      sevens: retainSnapshotValue(state.sevens, game),
+    } : game.gameType === 'chinesepoker' ? {
+      ...initialState,
+      gameType: 'chinesepoker',
+      // The store phase only separates an active game from scoring; arranging is simultaneous,
+      // so no single seat holds the turn.
+      phase: game.phase === 'arranging' ? 'playing' : game.phase,
+      chinesePoker: retainSnapshotValue(state.chinesePoker, game),
     } : {
       visible: null,
       presentationReceivedAt: 0,
       bigTwo: null,
       redPoints: null,
       ninetyNine: null,
+      sevens: null,
+      chinesePoker: null,
       gameType: 'bridge',
       phase: game.phase,
       dealerSeat: game.dealerSeat,

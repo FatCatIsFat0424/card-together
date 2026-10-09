@@ -1,0 +1,17 @@
+/* ─── Static card row; the parent sets --cp-card-w ─── */
+.row {
+  --w: var(--cp-card-w, 28px);
+  display: inline-flex;
+  flex: none;
+  padding-left: calc(var(--w) * 0.35);
+}
+
+.card {
+  flex: none;
+  width: var(--w);
+  aspect-ratio: 224 / 313;
+  margin-left: calc(var(--w) * -0.35);
+  border-radius: calc(var(--w) * 0.08);
+  background: var(--card-face);
+  box-shadow: var(--shadow-sm);
+}

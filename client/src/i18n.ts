@@ -12,12 +12,16 @@ import { emojiTranslations } from './emoji-i18n';
 import type { EmojiTranslationKey } from './emoji-i18n';
 import { gameTranslations } from './game-i18n';
 import type { GameTranslationKey } from './game-i18n';
+import { sevensTranslations } from './sevens-i18n';
+import type { SevensTranslationKey } from './sevens-i18n';
+import { chinesePokerTranslations } from './chinesepoker-i18n';
+import type { ChinesePokerTranslationKey } from './chinesepoker-i18n';
 
 export type Locale = 'zh-TW' | 'en';
 
 type TranslationKeys = Record<
   AccountTranslationKey | PlayerTranslationKey | VoiceTranslationKey | UiTranslationKey
-    | EmojiTranslationKey | GameTranslationKey, string
+    | EmojiTranslationKey | GameTranslationKey | SevensTranslationKey | ChinesePokerTranslationKey, string
 > & {
   // Lobby
   'lobby.title': string;
@@ -97,8 +101,10 @@ const translations: Record<Locale, TranslationKeys> = {
     ...uiTranslations['zh-TW'],
     ...emojiTranslations['zh-TW'],
     ...gameTranslations['zh-TW'],
+    ...sevensTranslations['zh-TW'],
+    ...chinesePokerTranslations['zh-TW'],
     'lobby.title': 'Card Together',
-    'lobby.subtitle': '橋牌、大老二、撿紅點、99，線上同桌一起玩',
+    'lobby.subtitle': '橋牌、大老二、撿紅點、99、牌七、十三支，線上同桌一起玩',
     'lobby.nickname': '暱稱',
     'lobby.nicknamePlaceholder': '輸入暱稱...',
     'lobby.color': '顏色',
@@ -164,8 +170,10 @@ const translations: Record<Locale, TranslationKeys> = {
     ...uiTranslations.en,
     ...emojiTranslations.en,
     ...gameTranslations.en,
+    ...sevensTranslations.en,
+    ...chinesePokerTranslations.en,
     'lobby.title': 'Card Together',
-    'lobby.subtitle': 'Bridge, Big Two, Red Points, and Ninety-Nine with friends online',
+    'lobby.subtitle': 'Bridge, Big Two, Red Points, Ninety-Nine, Sevens, and Chinese Poker with friends online',
     'lobby.nickname': 'Nickname',
     'lobby.nicknamePlaceholder': 'Enter nickname...',
     'lobby.color': 'Color',

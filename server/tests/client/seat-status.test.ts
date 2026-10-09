@@ -43,11 +43,12 @@ describe('seat status badges', () => {
   });
 
   it('should show one status, lasting states first', () => {
-    const none = { busted: false, locked: false, thinking: false, autoPlayed: false };
+    const none = { busted: false, locked: false, thinking: false, autoPlayed: false, arranged: false };
     expect(seatStatus(none)).toBeNull();
     expect(seatStatus({ ...none, thinking: true, autoPlayed: true })).toBe('thinking');
     expect(seatStatus({ ...none, locked: true, autoPlayed: true })).toBe('locked');
-    expect(seatStatus({ busted: true, locked: true, thinking: true, autoPlayed: true })).toBe('busted');
-    expect(seatStatus({ ...none, autoPlayed: true })).toBe('autoPlayed');
+    expect(seatStatus({ busted: true, locked: true, thinking: true, autoPlayed: true, arranged: true })).toBe('busted');
+    expect(seatStatus({ ...none, autoPlayed: true, arranged: true })).toBe('autoPlayed');
+    expect(seatStatus({ ...none, arranged: true })).toBe('arranged');
   });
 });

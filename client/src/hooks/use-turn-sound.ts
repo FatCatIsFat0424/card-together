@@ -14,14 +14,17 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
   const room = useRoomStore.getState();
   const account = useAccountStore.getState();
   const held = presentationMoment(game.visible, game.presentationReceivedAt, Date.now());
+  // Chinese Poker has no single turn: every seat that still owes an arrangement is prompted.
+  const arranging = game.chinesePoker?.phase === 'arranging' && !game.chinesePoker.submitted[game.chinesePoker.mySeat];
   const owned = !held.locked && room.currentRoomCode && room.mySeat &&
     account.status === 'authenticated' && account.connection === 'ready' &&
     (game.phase === 'bidding' || game.phase === 'playing') &&
-    game.currentTurnSeat === room.mySeat;
+    (game.currentTurnSeat === room.mySeat || arranging);
   const completedTricks = game.playing?.completedTricks.length ?? 0;
   const actionCount = game.bigTwo?.log.filter((entry) =>
     'seat' in entry && entry.seat === room.mySeat).length ??
-    game.ninetyNine?.log.filter((entry) => entry.seat === room.mySeat).length ?? 0;
+    game.ninetyNine?.log.filter((entry) => entry.seat === room.mySeat).length ??
+    game.sevens?.log.filter((entry) => entry.seat === room.mySeat).length ?? 0;
   return {
     room: room.currentRoomCode,
     turn: owned ? [game.gameType, game.phase, room.mySeat, completedTricks,

@@ -63,7 +63,7 @@ directly. Failures always use `{ success: false, error }`. Account identity come
 session, never a client-supplied actor ID. Success is acknowledged only after persistence,
 except ephemeral signaling and unchanged-state operations.
 
-Game types: `bridge`, `bigtwo`, `redpoints`, `ninetynine`. Seats: `N`, `E`, `S`, `W`.
+Game types: `bridge`, `bigtwo`, `redpoints`, `ninetynine`, `sevens`, `chinesepoker`. Seats: `N`, `E`, `S`, `W`.
 For exact unions and result fields, use
 [`socket-events.ts`](../shared/src/types/socket-events.ts).
 
@@ -88,6 +88,9 @@ For exact unions and result fields, use
 | `game:redpoints:play` | `{ card, capture? }` | Play and optional selected capture |
 | `game:redpoints:chooseFlip` | `{ capture }` | Resolve flipped-card capture choice |
 | `game:ninetynine:play` | `{ card, choice?, target? }` | +/- choice or target seat |
+| `game:sevens:play` | `{ card }` | Sevens legal card |
+| `game:sevens:cover` | `{ card }` | Sevens face-down cover when no card is playable |
+| `game:chinesepoker:arrange` | `{ arrangement: { front, middle, back } }` | Final 3/5/5 Chinese Poker arrangement before the shared deadline |
 | `game:continue` | — | Seated player leaves the result for the waiting room; others keep it |
 | `game:abortVote:start` | — | Start seated-player abort vote |
 | `game:abortVote:cast` | `{ agree }` | Record one vote |

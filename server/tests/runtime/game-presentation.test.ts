@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BigTwoGameState, Card, PlayerInfo, Seat } from '@shared/types';
 import { getPresentationEndsAt, getPresentationFrames } from '@shared/game-presentation';
+import { cpGreedyArrangement } from '@shared/rules/chinesepoker-arrange';
 import * as games from '../../src/managers/game-manager';
 
 const CODE = 'PRES01';
@@ -118,6 +119,41 @@ describe('authoritative game presentation', () => {
       target: null, total: 9, timestamp: 0 });
     state.presentation = { ...state.presentation, logStart: 1 };
     expect(getPresentationFrames(state)[0]).toMatchObject({ previousTotal: 9, total: 99 });
+  });
+
+  it('should present Sevens covers without revealing the covered card', () => {
+    games.startGame(CODE, 'sevens', players);
+    const state = games.getGameState(CODE)!;
+    if (state.gameType !== 'sevens') throw new Error('Expected Sevens');
+    state.log = [
+      { type: 'play', seat: 'N', card: { suit: 'spades', rank: 7 }, timestamp: 1 },
+      { type: 'cover', seat: 'W', timestamp: 1 },
+    ];
+    state.presentation = { id: 'sevens', startedAt: 10000, logStart: 0, timingVersion: 2 };
+    expect(getPresentationFrames(state)).toEqual([
+      { key: 'sevens:0', kind: 'play', durationMs: 1300, seat: 'N', cards: [{ suit: 'spades', rank: 7 }] },
+      { key: 'sevens:1', kind: 'cover', durationMs: 1000, seat: 'W', cards: [] },
+    ]);
+  });
+
+  it('should let Chinese Poker seats submit without waiting and present only the showdown', () => {
+    games.startGame(CODE, 'chinesepoker', players);
+    const hands = (games.getGameState(CODE) as { hands: Record<Seat, Card[]> }).hands;
+    for (const seat of ['N', 'E', 'S'] as const) {
+      expect(games.handleChinesePokerArrange(CODE, seat, cpGreedyArrangement(hands[seat]))).toEqual({ success: true });
+      expect(games.isPresentationActive(CODE)).toBe(false);
+    }
+    expect(games.handleChinesePokerArrange(CODE, 'W', cpGreedyArrangement(hands.W))).toEqual({ success: true });
+    const state = games.getGameState(CODE)!;
+    if (state.gameType !== 'chinesepoker' || !state.result) throw new Error('Expected a finished Chinese Poker game');
+    const frames = getPresentationFrames(state);
+    expect(frames.slice(0, 3).map((frame) => [frame.kind, frame.row, frame.durationMs])).toEqual([
+      ['reveal', 'front', 2500], ['reveal', 'middle', 2500], ['reveal', 'back', 2500],
+    ]);
+    expect(frames.filter((frame) => frame.kind === 'shoot'))
+      .toHaveLength(state.result.matchups.filter((matchup) => matchup.shooter).length);
+    expect(frames.at(-1)).toMatchObject({ kind: 'finish', durationMs: 3000 });
+    expect(games.isPresentationActive(CODE)).toBe(true);
   });
 
   it('should preserve all four bridge trick cards after the engine clears the table', () => {

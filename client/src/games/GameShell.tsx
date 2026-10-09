@@ -52,6 +52,18 @@ function presentationSummary(
       scores: winners.map((seat) => `${t(`seat.${seat}`)} ${points[seat]}`).join(' · '),
     });
   }
+  if (game.gameType === 'sevens' && game.result) {
+    const { penalties, winners } = game.result;
+    return t('presentation.sevensWinners', {
+      scores: winners.map((seat) => `${t(`seat.${seat}`)} ${penalties[seat]}`).join(' · '),
+    });
+  }
+  if (game.gameType === 'chinesepoker' && game.result) {
+    const { scores, winners } = game.result;
+    return t('presentation.chinesePokerWinners', {
+      scores: winners.map((seat) => `${t(`seat.${seat}`)} ${scores[seat] > 0 ? '+' : ''}${scores[seat]}`).join(' · '),
+    });
+  }
   return '';
 }
 
@@ -126,7 +138,8 @@ export function GameShell({
   const tableStyle = tableBackgroundStyle(account);
   const messageCount = useChatStore((state) => state.messages.length);
   const seats = useRoomStore((state) => state.roomInfo?.seats);
-  const log = useGameStore((state) => state.bigTwo?.log ?? state.redPoints?.log ?? state.ninetyNine?.log ?? state.log);
+  const log = useGameStore((state) => state.bigTwo?.log ?? state.redPoints?.log ?? state.ninetyNine?.log
+    ?? state.sevens?.log ?? state.chinesePoker?.log ?? state.log);
   const ownedTurn = useGameStore((state) => mySeat !== null && state.currentTurnSeat === mySeat
     && (state.phase === 'bidding' || state.phase === 'playing'));
   const myTurn = (turnReady ?? ownedTurn) && !presentation.locked;
@@ -198,7 +211,8 @@ export function GameShell({
     if (!frame || heardFrame.current === frame.key) return;
     heardFrame.current = frame.key;
     if (frame.kind === 'play' || frame.kind === 'capture') playCardSound();
-    else if (frame.kind === 'pass') playCardSound(true);
+    else if (frame.kind === 'pass' || frame.kind === 'cover') playCardSound(true);
+    else if (frame.kind === 'reveal') playCardSound();
     else if (frame.kind === 'eliminated') playOutSound();
   }, [presentation.frame]);
 

@@ -11,6 +11,7 @@ import { useI18nStore } from '../stores/i18n-store';
 import { useMotionStore } from '../stores/motion-store';
 import { useRoomStore } from '../stores/room-store';
 import styles from './GamePresentation.module.css';
+import { ChinesePokerReveal } from './chinesepoker/ChinesePokerReveal';
 
 interface GamePresentationProps {
   frame: PresentationFrame;
@@ -50,6 +51,10 @@ export function GamePresentation({
     rootRef.current?.style.setProperty('--collect-delay', `${frame.durationMs - 300 - elapsed}ms`);
   }, [frame.key, frame.durationMs]);
 
+  // A showdown row compares all four seats at once, which needs its own layout.
+  if (frame.kind === 'reveal' && frame.row) {
+    return <ChinesePokerReveal key={frame.key} row={frame.row} bottomSeat={bottomSeat} />;
+  }
   return <div ref={rootRef} key={frame.key}
     className={[styles.presentation, styles[position], reducedMotion && styles.reducedMotion,
       frame.kind === 'eliminated' && styles.eliminated].filter(Boolean).join(' ')}
@@ -82,6 +87,9 @@ export function GamePresentation({
     {gameType === 'ninetynine' && frame.direction && <div className={styles.effect}>
       {frame.direction === 'cw' ? `↻ ${t('presentation.clockwise')}` : `↺ ${t('presentation.counterclockwise')}`}
       {frame.choice && ` ${frame.choice === 'plus' ? '+' : '−'}${frame.cards[0]?.rank === 12 ? 20 : 10}`}
+    </div>}
+    {frame.kind === 'shoot' && frame.target && <div className={styles.effect}>
+      → <strong>{name(frame.target)}</strong> ×2
     </div>}
     {frame.passedSeats && frame.passedSeats.length > 0 && <div className={styles.effect}>
       {t('presentation.pass')}: {frame.passedSeats.map(name).join(' · ')}

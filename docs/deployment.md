@@ -206,7 +206,8 @@ off-host as well. Restore follows [storage](storage.md#backup-and-restore).
 
 Rollback requires stopping both services, selecting compatible application/dependencies/
 unit/configuration/Nginx, and reviewing the complete state. Use current state if the old
-revision supports its schema. Restoring a snapshot discards newer writes; restore database
+revision supports its schema. Revisions before Sevens and Chinese Poker reject state that
+contains those rooms, games, or match results, so they cannot start against it. Restoring a snapshot discards newer writes; restore database
 and media together only after that operational decision. Preserve mode `0700` for state
 directories, `0600` for private files, and ownership matching the selected service user.
 Run `systemctl daemon-reload`, test/reload Nginx, and start only the chosen service.

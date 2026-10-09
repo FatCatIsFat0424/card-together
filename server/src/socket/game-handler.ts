@@ -1,4 +1,4 @@
-import type { BidAction, Card, Seat } from '@shared/types';
+import type { BidAction, Card, ChinesePokerArrangement, Seat } from '@shared/types';
 import type { SocketContext, TypedSocket } from './context';
 import { actionError, requireRoom, requireSuccess, runAction } from './context';
 import * as roomManager from '../managers/room-manager';
@@ -18,6 +18,19 @@ function isCard(value: unknown): value is Card {
   const { suit, rank } = value as { suit?: unknown; rank?: unknown };
   return typeof rank === 'number' && Number.isInteger(rank) && rank >= 2 && rank <= 14
     && typeof suit === 'string' && ['clubs', 'diamonds', 'hearts', 'spades'].includes(suit);
+}
+
+/** Rebuilds a 3/5/5 arrangement so client-supplied extra keys never reach saved state. */
+function parseArrangement(value: unknown): ChinesePokerArrangement | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const { front, middle, back } = value as { front?: unknown; middle?: unknown; back?: unknown };
+  const row = (cards: unknown, size: number): Card[] | null => Array.isArray(cards) && cards.length === size
+    && cards.every(isCard) ? cards.map(({ suit, rank }: Card): Card => ({ suit, rank })) : null;
+  const arrangement = { front: row(front, 3), middle: row(middle, 5), back: row(back, 5) };
+  if (!arrangement.front || !arrangement.middle || !arrangement.back) return null;
+  const all = [...arrangement.front, ...arrangement.middle, ...arrangement.back];
+  if (new Set(all.map((card) => `${card.suit}-${card.rank}`)).size !== all.length) return null;
+  return { front: arrangement.front, middle: arrangement.middle, back: arrangement.back };
 }
 
 /** Adds an abort-vote chat line about `accountId`, read from the room seats. */
@@ -92,6 +105,30 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
     const code = requireRoom(socket);
     requireSuccess(gameManager.handleRedPointsChooseFlip(code, playerSeat(socket, code),
       { suit: capture.suit, rank: capture.rank }));
+    return { success: true };
+  }));
+
+  socket.on('game:sevens:play', (payload, callback) => runAction(context, socket, callback, () => {
+    const card: unknown = payload?.card;
+    if (!isCard(card)) throw actionError('Invalid card.');
+    const code = requireRoom(socket);
+    requireSuccess(gameManager.handleSevensPlay(code, playerSeat(socket, code), { suit: card.suit, rank: card.rank }));
+    return { success: true };
+  }));
+
+  socket.on('game:sevens:cover', (payload, callback) => runAction(context, socket, callback, () => {
+    const card: unknown = payload?.card;
+    if (!isCard(card)) throw actionError('Invalid card.');
+    const code = requireRoom(socket);
+    requireSuccess(gameManager.handleSevensCover(code, playerSeat(socket, code), { suit: card.suit, rank: card.rank }));
+    return { success: true };
+  }));
+
+  socket.on('game:chinesepoker:arrange', (payload, callback) => runAction(context, socket, callback, () => {
+    const arrangement = parseArrangement(payload?.arrangement);
+    if (!arrangement) throw actionError('Invalid arrangement.');
+    const code = requireRoom(socket);
+    requireSuccess(gameManager.handleChinesePokerArrange(code, playerSeat(socket, code), arrangement));
     return { success: true };
   }));
 

@@ -11,7 +11,9 @@ import { useI18nStore } from '../stores/i18n-store';
 import { Avatar } from '../components/Avatar';
 import styles from './LobbyPage.module.css';
 
-const GAME_ICONS: Record<GameType, string> = { bridge: '♠', bigtwo: '🃏', redpoints: '🔴', ninetynine: '💯' };
+const GAME_ICONS: Record<GameType, string> = {
+  bridge: '♠', bigtwo: '🃏', redpoints: '🔴', ninetynine: '💯', sevens: '7️⃣', chinesepoker: '🀄',
+};
 
 export function LobbyPage(): ReactNode {
   const navigate = useNavigate();

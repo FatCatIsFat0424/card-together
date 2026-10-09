@@ -55,7 +55,8 @@ function clock(turnSeat: Seat | null, overrides: Partial<GameClock> = {}): GameC
 
 function baseGame(): Record<string, unknown> {
   return {
-    visible: null, presentationReceivedAt: 0, bigTwo: null, redPoints: null, ninetyNine: null,
+    visible: null, presentationReceivedAt: 0, bigTwo: null, redPoints: null, ninetyNine: null, sevens: null,
+    chinesePoker: null,
     phase: 'playing', currentTurnSeat: null, contract: null, dealerSeat: null, playing: null,
   };
 }
@@ -65,7 +66,7 @@ function render(props: Parameters<typeof TableSeat>[0]): string {
 }
 
 const statusLabels = (html: string): string[] =>
-  ['Bust', 'PASS', 'Thinking…', 'Auto-played'].filter((label) => html.includes(label));
+  ['Bust', 'PASS', 'Thinking…', 'Auto-played', 'Arranged'].filter((label) => html.includes(label));
 
 describe('table seat plate', () => {
   beforeEach(() => {
@@ -105,6 +106,38 @@ describe('table seat plate', () => {
     expect(statusLabels(html)).toEqual(['PASS']);
     expect(html).toContain('East');
     expect(html).toMatch(/aria-hidden="true">E<\/span>/);
+  });
+
+  it('shows how many cards a Sevens seat has covered without naming them', () => {
+    state.game = {
+      ...baseGame(),
+      sevens: { handCounts: counts(8), coveredCounts: { N: 0, E: 2, S: 0, W: 0 } },
+      visible: { clock: clock(null), log: [] },
+    };
+    const html = render({ seat: 'E', position: 'right' });
+    expect(html).toContain('8 cards');
+    expect(html).toContain('Covered 2');
+    expect(render({ seat: 'N', position: 'top' })).not.toContain('Covered');
+  });
+
+  it('shows Chinese Poker arrangement progress and the shared deadline only for the own pending seat', () => {
+    const chinesePoker = {
+      phase: 'arranging', arrangeDeadline: 45_000, autoArranged: [],
+      submitted: { N: true, E: false, S: false, W: false },
+    };
+    state.game = { ...baseGame(), chinesePoker, visible: { clock: clock(null), log: [] } };
+    const north = render({ seat: 'N', position: 'top' });
+    expect(statusLabels(north)).toEqual(['Arranged']);
+    expect(north).toContain('13 cards');
+    expect(statusLabels(render({ seat: 'W', position: 'left' }))).toEqual(['Thinking…']);
+    const own = render({ seat: 'S', position: 'bottom' });
+    expect(own).toMatch(/role="timer"[^>]*aria-label="Turn 45s"/);
+    expect(render({ seat: 'E', position: 'right' })).not.toContain('role="timer"');
+    state.game = { ...baseGame(), visible: { clock: clock(null), log: [] },
+      chinesePoker: { ...chinesePoker, autoArranged: ['S'], submitted: { N: true, E: true, S: true, W: false } } };
+    const auto = render({ seat: 'S', position: 'bottom' });
+    expect(statusLabels(auto)).toEqual(['Auto-played']);
+    expect(auto).not.toContain('role="timer"');
   });
 
   it('shows Bridge role chips and the remaining cards', () => {

@@ -1,0 +1,87 @@
+/* ─── Showdown row: four seats in a compact cross that FittedCentre scales ─── */
+.reveal {
+  --cp-card-w: 34px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-primary);
+  text-align: center;
+  pointer-events: none;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+/* Side seats span both middle rows so the frame stays two seats tall. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  grid-template-areas: 'left top right' 'left bottom right';
+  align-items: center;
+  justify-items: center;
+  gap: var(--spacing-xs) var(--spacing-sm);
+}
+
+.top { grid-area: top; --from-x: 0; --from-y: -12px; }
+.bottom { grid-area: bottom; --from-x: 0; --from-y: 12px; }
+.left { grid-area: left; --from-x: -12px; --from-y: 0; }
+.right { grid-area: right; --from-x: 12px; --from-y: 0; }
+
+.seat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 4px 6px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-surface) 60%, transparent);
+  animation: arrive 300ms ease-out var(--delay, 0ms) both;
+}
+
+.name {
+  max-width: 9em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.meta {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.meta strong { font-variant-numeric: tabular-nums; }
+.gain { color: var(--color-success); }
+.loss { color: var(--color-danger); }
+
+.foul {
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-danger);
+  color: var(--text-on-danger);
+  font-weight: 700;
+}
+
+.still .seat { animation: none; }
+
+@keyframes arrive {
+  from { opacity: 0; transform: translate(var(--from-x), var(--from-y)); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seat { animation: none; }
+}

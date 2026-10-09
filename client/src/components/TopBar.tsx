@@ -19,6 +19,7 @@ import { LanguageSwitch } from './LanguageSwitch';
 import { MusicControl } from './MusicControl';
 import { ThemeSwitch } from './ThemeSwitch';
 import { joinNames } from '../games/seat-names';
+import { useGamePresentation } from '../games/use-game-presentation';
 import styles from './TopBar.module.css';
 
 const VoicePanel = lazy(() => import('./VoicePanel')
@@ -48,6 +49,10 @@ function GameChips(): ReactNode {
     state.redPoints && mySeat ? rpScore(state.redPoints.captured[mySeat]) : null);
   const ninetyNineTotal = useGameStore((state) => state.ninetyNine?.total ?? null);
   const ninetyNineWinner = useGameStore((state) => state.ninetyNine?.result?.winnerSeat ?? null);
+  // Results stay hidden until the final presentation has shown them on the table.
+  const { locked } = useGamePresentation();
+  const sevensResult = useGameStore((state) => state.sevens?.result ?? null);
+  const chinesePokerResult = useGameStore((state) => state.chinesePoker?.result ?? null);
   const seats = useRoomStore((state) => state.roomInfo?.seats);
   const seatLabel = (seat: Seat): string => t(`seat.${seat}`);
   return <div className={styles.chips}>
@@ -66,6 +71,15 @@ function GameChips(): ReactNode {
       </span>}
       {ninetyNineTotal !== null && <span className={styles.chip} title={t('ninetynine.total')}>
         {ninetyNineTotal} / {NN_MAX}
+      </span>}
+      {sevensResult && !locked && <span className={styles.chip}>
+        🏆 {joinNames(sevensResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
+        {mySeat && <> · {t('sevens.myPenalty', { n: String(sevensResult.penalties[mySeat]) })}</>}
+      </span>}
+      {chinesePokerResult && !locked && <span className={styles.chip}>
+        🏆 {joinNames(chinesePokerResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
+        {mySeat && <> · {t('chinesepoker.myScore', {
+          n: `${chinesePokerResult.scores[mySeat] > 0 ? '+' : ''}${chinesePokerResult.scores[mySeat]}` })}</>}
       </span>}
       {ninetyNineWinner && <span className={styles.chip}>
         🏆 {seats?.[ninetyNineWinner].player?.nickname ?? seatLabel(ninetyNineWinner)}

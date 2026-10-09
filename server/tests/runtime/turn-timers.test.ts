@@ -62,7 +62,7 @@ describe('durable turn clocks', () => {
   beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(10000); });
   afterEach(() => { stops.splice(0).forEach((stop) => stop()); vi.restoreAllMocks(); vi.useRealTimers(); });
 
-  it.each<GameType>(['bridge', 'bigtwo', 'redpoints', 'ninetynine'])(
+  it.each<GameType>(['bridge', 'bigtwo', 'redpoints', 'ninetynine', 'sevens'])(
     'times out one filtered legal decision in %s and commits before publishing', async (type) => {
       const { code, runtime, game, saved } = await fixture(type);
       const before = structuredClone(game());

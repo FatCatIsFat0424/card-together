@@ -39,7 +39,7 @@ export function RoundHistory({ game }: { game: PlayerVisibleGameState }): ReactN
   const [open, setOpen] = useState(false);
   const { t } = useI18nStore();
   const rounds = useMemo(() => deriveRoundHistory(game), [game]);
-  if (game.gameType === 'bridge') return null;
+  if (game.gameType === 'bridge' || game.gameType === 'chinesepoker') return null;
   return <details className={styles.history} onToggle={(event) => {
     if (event.target === event.currentTarget) setOpen(event.currentTarget.open);
   }}>

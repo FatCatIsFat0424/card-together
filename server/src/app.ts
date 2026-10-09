@@ -16,6 +16,7 @@ import { createRuntimeCoordinator } from './runtime/coordinator';
 import { startBigTwoAutoPass } from './runtime/bigtwo-auto-pass';
 import { startTurnTimers } from './runtime/turn-timers';
 import { startBotTurns } from './runtime/bot-turns';
+import { startChinesePokerDeadlines } from './runtime/chinesepoker-deadline';
 import { broadcastState, readPresence } from './socket/context';
 import { getRoomMemberIds } from './managers/room-manager';
 import { createVoiceManager } from './managers/voice-manager';
@@ -133,10 +134,12 @@ export async function createApplication(repository: Repository, options: Applica
     throw error;
   }
   const stopBots = startBotTurns(runtime, publish);
+  const stopArrangeDeadlines = startChinesePokerDeadlines(runtime, publish);
 
   return {
     httpServer, io,
     close: async (): Promise<void> => {
+      stopArrangeDeadlines();
       stopBots();
       stopTurnTimers();
       stopAutoPass?.();

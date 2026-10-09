@@ -33,6 +33,12 @@ clears human readiness. All players see the current settings; only their own res
 the own seat plate always shows "turn + reserve" seconds, and other seats show only their turn
 allowance while it is their turn.
 
+Chinese Poker has no turns: all four seats arrange at once against one shared deadline of
+turn allowance + reserve, but at least 60 seconds (`cpArrangeSeconds` in
+[the rules](../shared/src/rules/chinesepoker.ts)). Only the own seat shows that countdown,
+and only until it submits. At the deadline the server arranges every missing seat with the
+bot algorithm (never fouled) and marks human seats "Auto-played".
+
 Presentation animations consume neither allowance nor reserve. Red Points' hand play
 and flipped-card choice share one turn allowance, with animation time excluded.
 Bridge bidding and redeal decisions also use the clock. A new deal refills reserves.
@@ -41,7 +47,8 @@ At expiry the server makes a legal decision using the same private view as the p
 control remains with the player on subsequent turns. Redeal timeout declines the redeal.
 The seat shows an "Auto-played" badge until its next turn begins; a bot's seat shows
 "Thinking…" while it is the bot's turn. Each seat plate has a single status slot, so when
-several apply it shows Ninety-Nine bust, then Big Two pass lock, then thinking, then auto-played.
+several apply it shows Ninety-Nine bust, then Big Two pass lock, then thinking, then auto-played,
+then Chinese Poker "Arranged".
 Big Two forced passes retain their existing scheduler and do not consume decision time.
 Their clock is published like any other turn, so other seats cannot tell a forced pass apart.
 
@@ -64,6 +71,12 @@ highlights preserve the existing card order and current page; page buttons revea
 Each seat's red-point score is a button that lists every card that seat captured; the
 tray beside the seat previews only the latest red cards, overlapping them to fit narrow seats.
 
+Sevens plays legal cards like Ninety-Nine and Red Points. When no card is playable, every
+hand card becomes selectable and covering needs a separate Cover button showing the card's
+penalty, because a cover cannot be undone. Chinese Poker selects cards and places them into
+the front, middle, or back row; a full arrangement shows each row's hand, and a fouled
+arrangement must be confirmed twice.
+
 Big Two uses individual card selection and Play/Pass, without quick-play suggestions.
 Drag cards with a mouse or touch to arrange the hand; manual order is retained as turns
 advance and played cards leave the hand. Sorting by rank or suit replaces the manual
@@ -78,7 +91,7 @@ a polite live region announces whose turn it is.
 While waiting, the host can add a bot to an empty seat, remove a bot, or fill available
 capacity with bots. Room members who have not selected a seat still reserve capacity.
 Bots are always ready; the match starts once all four seats are occupied and the humans
-are ready. Bots remain for the next match and support all four games. Only humans can
+are ready. Bots remain for the next match and support every game. Only humans can
 host; the room is removed when its last human leaves.
 
 Bots evaluate legal moves using only their own hand and public state. Scored move
@@ -93,6 +106,8 @@ search, and the evaluation scores do not guarantee optimal play.
 | Big Two | Plan the smallest number of legal groups needed to shed the remaining hand, avoiding unnecessary splits of useful combinations. When responding, play any ordinary answer (no bomb or 2, and the rest of the hand still fits a minimal plan); passing is considered only when every answer would spend a bomb or 2 or split a planned combination, and it is weighed as keeping the plan but giving up tempo. Bombs and 2s are strongly conserved while opponents and the bot's own plan are far from finishing. Once any opponent holds 5 or fewer cards, 2s and bombs are no longer saved and the bot never passes by choice. When an opponent who has not passed this round holds one card, also favor blocking plays. Leads are always plays. Timed-out human Big Two turns use the same decision. |
 | Red Points | Evaluate every legal capture, balancing immediate red points, future matches with the remaining hand, and the public table's exposure to unseen cards. |
 | Ninety-Nine | Treat 4, 5, 10, J, Q, K and ♠A as rescue cards and keep them while number cards are safe, spending large number cards first. Compare both legal plus/minus choices and penalize leaving no card that fits the total expected when the bot acts again, more so in a duel. Model the next player's chance of being forced or eliminated only when the total is within 9 of 99, using unseen cards: the bot's own hand and public plays since the last reshuffle are excluded. Evaluate reverse/designation by who acts next and how many opponent turns pass before the bot acts again; near 99 it avoids shortening its own rotation. Pressure on the next player is discounted when that seat's latest play spent a rescue card while any number card was still safe, which suggests a hand without number cards. Randomize among similarly rated surviving designation targets. |
+| Sevens | Must play: favor cards that continue into the bot's own cards and 7s of suits it holds many of; penalize opening directions it cannot follow, especially toward heavy cards. Must cover: weigh the card's penalty against own cards stranded beyond it, preferring cards an earlier cover already cut off. |
+| Chinese Poker | Search every non-fouled 3/5/5 split, estimating each row's chance of beating a random opponent's row, the row values, and sweep risk; choose among the closest top candidates. The "Auto arrange" button and deadline arrangements use the same search. |
 
 The server waits for the previous presentation and a short thinking delay before each
 bot action. Actions are saved before broadcast and resume after server restart. Existing
@@ -220,3 +235,44 @@ counterclockwise initially. Play one legal card, then replenish one. Total canno
 A player whose entire hand would exceed 99 is eliminated and discards its hand.
 The next surviving player acts in the current direction with unchanged total.
 Last survivor wins; reverse elimination order determines the remaining ranks.
+
+## Sevens
+
+Deal 13 cards each. The holder of ♠7 starts and must play ♠7; play continues
+counterclockwise. Each suit forms one row from its 7: A…6 below and 8…K above, with A at
+the low end and no wrap-around. A legal card is any 7, which opens its suit, or the card
+directly below a row's lowest card or above its highest card.
+
+A player with any legal card must play one. Only a player with no legal card covers: they
+place one chosen hand card face down. Other players see how many cards each seat has
+covered, never which. After every card is played or covered, each seat's penalty is the
+sum of its covered cards (A=1, 2–10 face value, J=11, Q=12, K=13), revealed at settlement.
+The lowest penalty wins; ties share the win. Scores do not accumulate across matches.
+
+## Chinese Poker
+
+Deal 13 cards each. Every player arranges them at the same time into a front row of 3
+and middle and back rows of 5, then confirms; a submitted arrangement is final and stays
+hidden until all four have submitted. Players can sort the hand, move cards between rows,
+or apply the same automatic arrangement the bots use before confirming.
+
+| Rows | Hands, high to low |
+| --- | --- |
+| Middle, back | Straight flush, four of a kind, full house, flush, straight, three of a kind, two pair, pair, high card |
+| Front | Three of a kind, pair, high card |
+
+Ranks run A > K > … > 2; suits never break ties, so equal ranks tie. A2345 is the lowest
+straight and 10JQKA the highest; straights do not wrap. A back row weaker than the middle,
+or a middle weaker than the front, is a foul (倒水). The server accepts fouls; the client
+warns and asks for a second confirmation.
+
+Each pair of players compares row by row. The row's winner gains and the loser loses the
+winner's row value: 1, except front three of a kind 3, middle full house 2, middle four of
+a kind 8, middle straight flush 10, back four of a kind 4, and back straight flush 5. A foul
+loses every row to a non-fouled opponent, who scores its own row values; two fouled players
+score 0 against each other. Winning all three rows against one opponent (a sweep, 打槍)
+doubles that pairing; sweeping all three opponents (home run, 全壘打) doubles those three
+pairings again. Scores sum to zero; the highest score wins, ties shared. Special
+declared hands (報到, such as a 13-card dragon or six pairs) are not used. Scores do not
+accumulate across matches.
+

@@ -5,6 +5,8 @@ import type { AnyGameState, GameClock, Seat, TimeControl } from '@shared/types';
 
 export function getTurnSeat(game: AnyGameState): Seat | null {
   if (game.phase === 'scoring') return null;
+  // Chinese Poker seats arrange simultaneously against the game's own shared deadline.
+  if (game.gameType === 'chinesepoker') return null;
   if (game.gameType !== 'bridge') return game.currentTurnSeat;
   if (game.phase === 'redeal_pending') return game.redealPendingSeat;
   if (game.phase === 'bidding') return game.bidding?.currentBidderSeat ?? null;

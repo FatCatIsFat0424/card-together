@@ -1,10 +1,11 @@
-import type { AnyGameState, Card, PlayerVisibleGameState } from './types/game';
+import type { AnyGameState, Card, ChinesePokerRow, PlayerVisibleGameState } from './types/game';
 import type { Seat } from './types/player';
 import { rpScore } from './rules/redpoints';
 
 export interface PresentationFrame {
   readonly key: string;
-  readonly kind: 'play' | 'pass' | 'trick' | 'round' | 'capture' | 'eliminated' | 'finish';
+  readonly kind: 'play' | 'pass' | 'trick' | 'round' | 'capture' | 'eliminated' | 'cover' | 'reveal' | 'shoot'
+    | 'homerun' | 'finish';
   readonly durationMs: number;
   readonly seat?: Seat;
   readonly cards: readonly Card[];
@@ -17,6 +18,8 @@ export interface PresentationFrame {
   readonly direction?: 'ccw' | 'cw';
   readonly choice?: 'plus' | 'minus' | null;
   readonly flipped?: boolean;
+  /** Chinese Poker row revealed by this frame */
+  readonly row?: ChinesePokerRow;
 }
 
 /** Reconstructs only public events; private hands and stock never enter presentation frames. */
@@ -62,6 +65,23 @@ export function getPresentationFrames(
       const cards = entry.captured ? [entry.card, entry.captured] : [entry.card];
       frames.push({ key, kind: entry.captured ? 'capture' : 'play', durationMs: 1900,
         seat: entry.seat, cards, flipped: entry.type === 'flip', points: entry.captured ? rpScore(cards) : 0 });
+    } else if (game.gameType === 'sevens') {
+      const entry = game.log[index];
+      if (entry.type === 'play') {
+        frames.push({ key, kind: 'play', durationMs: playDuration, seat: entry.seat, cards: [entry.card] });
+      } else {
+        frames.push({ key, kind: 'cover', durationMs: passDuration, seat: entry.seat, cards: [] });
+      }
+    } else if (game.gameType === 'chinesepoker') {
+      // Submissions are private and simultaneous, so only the showdown is presented.
+      const entry = game.log[index];
+      if (entry.type === 'reveal') {
+        frames.push({ key, kind: 'reveal', durationMs: 2500, cards: [], row: entry.row });
+      } else if (entry.type === 'shoot') {
+        frames.push({ key, kind: 'shoot', durationMs: 1500, seat: entry.seat, target: entry.target, cards: [] });
+      } else if (entry.type === 'homerun') {
+        frames.push({ key, kind: 'homerun', durationMs: 2500, seat: entry.seat, cards: [] });
+      }
     } else {
       const entry = game.log[index];
       if (entry.type === 'play') {
@@ -76,8 +96,10 @@ export function getPresentationFrames(
     }
   }
   if (game.phase === 'scoring') {
+    const winners = (game.gameType === 'sevens' || game.gameType === 'chinesepoker') && game.result
+      ? game.result.winners : [];
     const seat = game.gameType === 'bigtwo' || game.gameType === 'ninetynine'
-      ? game.result?.winnerSeat : undefined;
+      ? game.result?.winnerSeat : winners.length === 1 ? winners[0] : undefined;
     const lastCards = [...frames].reverse().find((frame) => frame.cards.length > 0);
     frames.push({ key: `${id}:finish`, kind: 'finish', durationMs: 3000,
       cards: lastCards?.cards ?? [],

@@ -196,6 +196,7 @@
 .autoPlayed { background: var(--color-warning); color: var(--text-inverse); }
 .locked { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); }
 .busted { background: var(--color-danger); color: var(--text-on-danger); }
+.arranged { background: var(--color-success); color: var(--text-inverse); }
 
 @keyframes thinkingPulse {
   0%, 100% { opacity: 1; }

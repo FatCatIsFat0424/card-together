@@ -11,6 +11,8 @@ import type {
   BigTwoGameState,
   BridgeGameState,
   Card,
+  ChinesePokerArrangement,
+  ChinesePokerGameState,
   GameType,
   NinetyNineGameState,
   PlayerInfo,
@@ -18,13 +20,17 @@ import type {
   RedPointsGameState,
   RoomCode,
   Seat,
+  SevensGameState,
   TimeControl,
 } from '@shared/types';
 import type { NnChoice } from '@shared/rules/ninetynine';
+import { cpArrangeSeconds } from '@shared/rules/chinesepoker';
 import * as bridge from './games/bridge-game';
 import * as bigtwo from './games/bigtwo-game';
 import * as redpoints from './games/redpoints-game';
 import * as ninetynine from './games/ninetynine-game';
+import * as sevens from './games/sevens-game';
+import * as chinesepoker from './games/chinesepoker-game';
 
 type Result = { success: true } | { success: false; reason: string };
 
@@ -94,7 +100,11 @@ export function startGame(
   if (gameType === 'bigtwo') bigtwo.startGame(roomCode, players);
   else if (gameType === 'redpoints') redpoints.startGame(roomCode, players);
   else if (gameType === 'ninetynine') ninetynine.startGame(roomCode, players);
-  else bridge.startGame(roomCode, players);
+  else if (gameType === 'sevens') sevens.startGame(roomCode, players);
+  else if (gameType === 'chinesepoker') {
+    const { baseSeconds, bankSeconds } = settings ?? DEFAULT_TIME_CONTROL;
+    chinesepoker.startGame(roomCode, players, cpArrangeSeconds(baseSeconds, bankSeconds) * 1000);
+  } else bridge.startGame(roomCode, players);
   const game = getGameState(roomCode);
   if (game?.phase === 'scoring') {
     game.presentation = { id: randomUUID(), startedAt: Date.now(), logStart: 0, timingVersion: 2 };
@@ -105,7 +115,8 @@ export function startGame(
 
 export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): PlayerVisibleGameState | null {
   const visible = bridge.getPlayerVisibleState(roomCode, seat) ?? bigtwo.getPlayerVisibleState(roomCode, seat)
-    ?? redpoints.getPlayerVisibleState(roomCode, seat) ?? ninetynine.getPlayerVisibleState(roomCode, seat);
+    ?? redpoints.getPlayerVisibleState(roomCode, seat) ?? ninetynine.getPlayerVisibleState(roomCode, seat)
+    ?? sevens.getPlayerVisibleState(roomCode, seat) ?? chinesepoker.getPlayerVisibleState(roomCode, seat);
   if (!visible) return null;
   const game = getGameState(roomCode);
   const serverNow = Date.now();
@@ -117,7 +128,7 @@ export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): PlayerVis
 
 export function getGameState(roomCode: RoomCode): AnyGameState | null {
   return bridge.getGameState(roomCode) ?? bigtwo.getGameState(roomCode) ?? redpoints.getGameState(roomCode)
-    ?? ninetynine.getGameState(roomCode);
+    ?? ninetynine.getGameState(roomCode) ?? sevens.getGameState(roomCode) ?? chinesepoker.getGameState(roomCode);
 }
 
 /** Ends a game without a match record. */
@@ -126,6 +137,8 @@ export function abortGame(roomCode: RoomCode): void {
   bigtwo.abortGame(roomCode);
   redpoints.abortGame(roomCode);
   ninetynine.abortGame(roomCode);
+  sevens.abortGame(roomCode);
+  chinesepoker.abortGame(roomCode);
 }
 
 export function removeGame(roomCode: RoomCode): void {
@@ -154,7 +167,7 @@ export function hasActiveGame(roomCode: RoomCode): boolean {
 
 export function exportGames(): AnyGameState[] {
   return [...bridge.exportGames(), ...bigtwo.exportGames(), ...redpoints.exportGames(),
-    ...ninetynine.exportGames()];
+    ...ninetynine.exportGames(), ...sevens.exportGames(), ...chinesepoker.exportGames()];
 }
 
 export function restoreGames(records: AnyGameState[]): void {
@@ -162,6 +175,8 @@ export function restoreGames(records: AnyGameState[]): void {
   bigtwo.restoreGames(records.filter((game): game is BigTwoGameState => game.gameType === 'bigtwo'));
   redpoints.restoreGames(records.filter((game): game is RedPointsGameState => game.gameType === 'redpoints'));
   ninetynine.restoreGames(records.filter((game): game is NinetyNineGameState => game.gameType === 'ninetynine'));
+  sevens.restoreGames(records.filter((game): game is SevensGameState => game.gameType === 'sevens'));
+  chinesepoker.restoreGames(records.filter((game): game is ChinesePokerGameState => game.gameType === 'chinesepoker'));
 }
 
 export function handleRedealResponse(roomCode: RoomCode, seat: Seat, accept: boolean, automatic = false): Result {
@@ -196,6 +211,32 @@ export function handleNinetyNinePlay(
   roomCode: RoomCode, seat: Seat, card: Card, choice?: NnChoice, target?: Seat, automatic = false,
 ): Result {
   return timedAction(roomCode, seat, () => isGame(roomCode, 'ninetynine') ? presentAction(roomCode, () => ninetynine.play(roomCode, seat, card, choice, target)) : WRONG_GAME, automatic);
+}
+
+export function handleSevensPlay(roomCode: RoomCode, seat: Seat, card: Card, automatic = false): Result {
+  return timedAction(roomCode, seat, () => isGame(roomCode, 'sevens') ? presentAction(roomCode, () => sevens.play(roomCode, seat, card)) : WRONG_GAME, automatic);
+}
+
+export function handleSevensCover(roomCode: RoomCode, seat: Seat, card: Card, automatic = false): Result {
+  return timedAction(roomCode, seat, () => isGame(roomCode, 'sevens') ? presentAction(roomCode, () => sevens.cover(roomCode, seat, card)) : WRONG_GAME, automatic);
+}
+
+/**
+ * Seats arrange simultaneously against one shared deadline, so the single-seat turn clock
+ * does not apply; the final submission starts the showdown presentation.
+ */
+export function handleChinesePokerArrange(
+  roomCode: RoomCode, seat: Seat, arrangement: ChinesePokerArrangement, automatic = false,
+): Result {
+  if (!isGame(roomCode, 'chinesepoker')) return WRONG_GAME;
+  return presentAction(roomCode, () => chinesepoker.arrange(roomCode, seat, arrangement, automatic));
+}
+
+/** Seats that still owe an arrangement once the shared deadline has passed. */
+export function overdueChinesePokerSeats(roomCode: RoomCode, gameId: string, now = Date.now()): Seat[] {
+  const game = chinesepoker.getGameState(roomCode);
+  if (!game || game.id !== gameId || game.phase !== 'arranging' || now < game.arrangeDeadline) return [];
+  return chinesepoker.pendingSeats(game);
 }
 
 /** Initializes legacy snapshots without changing an already sampled deadline. */

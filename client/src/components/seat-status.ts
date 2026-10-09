@@ -23,10 +23,10 @@ export function showsAutoPlayed(
   return lastActionAt <= timeout.at;
 }
 
-export type SeatStatus = 'busted' | 'locked' | 'thinking' | 'autoPlayed';
+export type SeatStatus = 'busted' | 'locked' | 'thinking' | 'autoPlayed' | 'arranged';
 
-/** Lasting states outrank the current turn, which outranks a past timeout. */
-const STATUS_PRIORITY: readonly SeatStatus[] = ['busted', 'locked', 'thinking', 'autoPlayed'];
+/** Lasting states outrank the current turn, which outranks a past timeout and a plain submission. */
+const STATUS_PRIORITY: readonly SeatStatus[] = ['busted', 'locked', 'thinking', 'autoPlayed', 'arranged'];
 
 /** The single status a seat plate shows when several apply at once. */
 export function seatStatus(flags: Readonly<Record<SeatStatus, boolean>>): SeatStatus | null {

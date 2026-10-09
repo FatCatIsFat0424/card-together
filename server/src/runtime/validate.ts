@@ -8,8 +8,12 @@ import { getPresentationEndsAt } from '@shared/game-presentation';
 import { bigTwoPenalty, identifyCombo, isDragon, legalPlays } from '@shared/rules/bigtwo';
 import { RP_HAND_SIZE, RP_TABLE_SIZE, rpPairOptions, rpScore } from '@shared/rules/redpoints';
 import { NN_HAND_SIZE, NN_MAX, nnHasPlayable } from '@shared/rules/ninetynine';
+import { SV_HAND_SIZE, svApply, svEmptyTable, svIsPlayable, svLegalPlays, svPenalty, svWinners } from '@shared/rules/sevens';
+import { CP_HAND_SIZE, CP_PAIRINGS, CP_ROWS, cpIsValidArrangement, cpMatchResult } from '@shared/rules/chinesepoker';
+import { nextSeatCounterClockwise } from '@shared/rules/seats';
 import type {
-  AnyGameState, BigTwoGameState, BridgeGameState, Card, GameType, NinetyNineGameState, RedPointsGameState, Seat,
+  AnyGameState, BigTwoGameState, BridgeGameState, Card, ChinesePokerArrangement, ChinesePokerGameState, GameType,
+  NinetyNineGameState, RedPointsGameState, Seat, SevensGameState, SevensTable,
 } from '@shared/types';
 import type { RuntimeSnapshot } from './types';
 
@@ -331,11 +335,129 @@ function ninetyNineGame(value: ObjectValue): boolean {
   );
 }
 
+/** Compares as persisted JSON, so in-memory signed zeros or undefined keys do not matter. */
+function sameJson(a: unknown, b: unknown): boolean {
+  return isDeepStrictEqual(JSON.parse(JSON.stringify(a)), JSON.parse(JSON.stringify(b)));
+}
+
+function commonGame(value: ObjectValue): boolean {
+  return text(value.id) && text(value.roomCode) && number(value.startedAt) && object(value.players) &&
+    Object.keys(value.players).length === 4 && seats.every((seat) => player((value.players as ObjectValue)[seat]));
+}
+
+function sevensTable(value: unknown): value is SevensTable {
+  return object(value) && Object.keys(value).length === 4 && suits.every((suit) => {
+    const row = value[suit];
+    return row === null || (object(row) && Object.keys(row).length === 2 && number(row.low) && number(row.high)
+      && row.low >= 1 && row.low <= 7 && row.high >= 7 && row.high <= 13);
+  });
+}
+
+/** Sevens result: penalties and winners follow from the covered cards. */
+export function isSevensResult(value: unknown): boolean {
+  if (!object(value) || value.gameType !== 'sevens') return false;
+  const penalties = value.penalties;
+  if (!seatCounts(penalties, 364) || !seatCards(value.covered, SV_HAND_SIZE) || !Array.isArray(value.winners)) return false;
+  const covered = value.covered as Record<Seat, Card[]>;
+  const all = seats.flatMap((seat) => covered[seat]);
+  return new Set(all.map(cardId)).size === all.length &&
+    seats.every((seat) => penalties[seat] === svPenalty(covered[seat])) &&
+    isDeepStrictEqual(value.winners, svWinners(penalties));
+}
+
+function sevensLog(value: unknown): boolean {
+  if (!object(value) || !number(value.timestamp) || !oneOf(value.seat, seats)) return false;
+  if (value.type === 'cover') return Object.keys(value).length === 3;
+  return value.type === 'play' && card(value.card);
+}
+
+function sevensGame(value: ObjectValue): boolean {
+  return commonGame(value) &&
+    oneOf(value.phase, ['playing', 'scoring']) &&
+    seatCards(value.hands, SV_HAND_SIZE) &&
+    seatCards(value.covered, SV_HAND_SIZE) &&
+    sevensTable(value.table) &&
+    oneOf(value.currentTurnSeat, seats) &&
+    Array.isArray(value.log) &&
+    value.log.every(sevensLog) &&
+    (value.result === null || isSevensResult(value.result));
+}
+
+function arrangementShape(value: unknown): value is ChinesePokerArrangement {
+  return object(value) && Object.keys(value).length === 3 && Array.isArray(value.front) && value.front.length === 3
+    && Array.isArray(value.middle) && value.middle.length === 5 && Array.isArray(value.back)
+    && value.back.length === 5 && CP_ROWS.every((row) => cards(value[row], 5));
+}
+
+function signedInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value);
+}
+
+function chinesePokerMatchup(value: unknown, pairing: readonly [Seat, Seat]): boolean {
+  return object(value) && Array.isArray(value.seats) && isDeepStrictEqual(value.seats, [...pairing]) &&
+    Array.isArray(value.rows) && value.rows.length === 3 && value.rows.every(signedInteger) &&
+    (value.shooter === null || pairing.includes(value.shooter as Seat)) && signedInteger(value.points);
+}
+
+/**
+ * Chinese Poker result. Stored match history must survive later scoring-rule changes, so this
+ * checks the arrangements and the arithmetic linking pairings, totals, and winners instead of
+ * rescoring the rows; live games are rescored in their coherence check.
+ */
+export function isChinesePokerResult(value: unknown): boolean {
+  if (!object(value) || value.gameType !== 'chinesepoker' || !object(value.arrangements)
+    || Object.keys(value.arrangements).length !== 4) return false;
+  const arrangements = value.arrangements;
+  if (!seats.every((seat) => arrangementShape(arrangements[seat]))) return false;
+  const all = seats.flatMap((seat) => CP_ROWS.flatMap((row) => (arrangements[seat] as ChinesePokerArrangement)[row]));
+  const { fouls, matchups, scores, winners } = value;
+  if (new Set(all.map(cardId)).size !== 52 || !Array.isArray(fouls)
+    || !isDeepStrictEqual(fouls, seats.filter((seat) => fouls.includes(seat)))
+    || !Array.isArray(matchups) || matchups.length !== CP_PAIRINGS.length
+    || !matchups.every((matchup, index) => chinesePokerMatchup(matchup, CP_PAIRINGS[index]))
+    || !(value.homeRun === null || oneOf(value.homeRun, seats))
+    || !object(scores) || Object.keys(scores).length !== 4 || !seats.every((seat) => signedInteger(scores[seat]))
+    || !Array.isArray(winners)) return false;
+  const pairings = matchups as { seats: [Seat, Seat]; points: number }[];
+  const totals = seats.map((seat) => pairings.reduce((sum, matchup) => sum
+    + (matchup.seats[0] === seat ? matchup.points : matchup.seats[1] === seat ? -matchup.points : 0), 0));
+  const best = Math.max(...totals);
+  return seats.every((seat, index) => scores[seat] === totals[index]) &&
+    isDeepStrictEqual(winners, seats.filter((_, index) => totals[index] === best));
+}
+
+function chinesePokerLog(value: unknown): boolean {
+  if (!object(value) || !number(value.timestamp)) return false;
+  if (value.type === 'reveal') return oneOf(value.row, [...CP_ROWS]);
+  if (value.type === 'shoot') return oneOf(value.seat, seats) && oneOf(value.target, seats) && value.seat !== value.target;
+  // A submission must never carry the arrangement it announces.
+  if (value.type === 'submit') return oneOf(value.seat, seats) && Object.keys(value).length === 3;
+  return value.type === 'homerun' && oneOf(value.seat, seats);
+}
+
+function chinesePokerGame(value: ObjectValue): boolean {
+  const arrangements = value.arrangements;
+  return commonGame(value) &&
+    oneOf(value.phase, ['arranging', 'scoring']) &&
+    seatCards(value.hands, CP_HAND_SIZE) &&
+    object(arrangements) &&
+    Object.keys(arrangements).length === 4 &&
+    seats.every((seat) => arrangements[seat] === null || arrangementShape(arrangements[seat])) &&
+    number(value.arrangeDeadline) &&
+    Array.isArray(value.autoArranged) &&
+    value.autoArranged.every((seat: unknown) => oneOf(seat, seats)) &&
+    Array.isArray(value.log) &&
+    value.log.every(chinesePokerLog) &&
+    (value.result === null || isChinesePokerResult(value.result));
+}
+
 const gameValidators: Record<GameType, (value: ObjectValue) => boolean> = {
   bridge: bridgeGame,
   bigtwo: bigTwoGame,
   redpoints: redPointsGame,
   ninetynine: ninetyNineGame,
+  sevens: sevensGame,
+  chinesepoker: chinesePokerGame,
 };
 
 function presentation(value: ObjectValue): boolean {
@@ -477,10 +599,82 @@ function coherentGame(state: AnyGameState): boolean {
     case 'bigtwo': return coherentBigTwoGame(state);
     case 'redpoints': return coherentRedPointsGame(state);
     case 'ninetynine': return coherentNinetyNineGame(state);
+    case 'sevens': return coherentSevensGame(state);
+    case 'chinesepoker': return coherentChinesePokerGame(state);
   }
 }
 
 const cardId = (entry: Card): string => `${entry.suit}-${entry.rank}`;
+
+/** Replaying the public log in counterclockwise turns reproduces the table and every pile. */
+function coherentSevensGame(state: SevensGameState): boolean {
+  if (new Set(seats.map((seat) => state.players[seat].id)).size !== 4) return false;
+  const played = state.log.flatMap((entry) => (entry.type === 'play' ? [entry.card] : []));
+  const all = [...seats.flatMap((seat) => [...state.hands[seat], ...state.covered[seat]]), ...played];
+  if (all.length !== 52 || new Set(all.map(cardId)).size !== 52 || state.log.length > 52) return false;
+  // Covers are stored in order, so each seat's hand can be rebuilt at every action.
+  const held = Object.fromEntries(seats.map((seat) => [seat, [...state.hands[seat], ...state.covered[seat],
+    ...state.log.flatMap((entry) => (entry.type === 'play' && entry.seat === seat ? [entry.card] : []))]])) as
+    Record<Seat, Card[]>;
+  const coversMade = { N: 0, E: 0, S: 0, W: 0 };
+  let table = svEmptyTable();
+  let previous: Seat | null = null;
+  for (const entry of state.log) {
+    if (previous && entry.seat !== nextSeatCounterClockwise(previous)) return false;
+    const card = entry.type === 'play' ? entry.card : state.covered[entry.seat][coversMade[entry.seat]++];
+    if (entry.type === 'play') {
+      if (!svIsPlayable(table, entry.card, previous === null)) return false;
+      table = svApply(table, entry.card);
+    } else if (previous === null || !card || svLegalPlays(held[entry.seat], table, false).length > 0) return false;
+    held[entry.seat] = held[entry.seat].filter((own) => cardId(own) !== cardId(card));
+    previous = entry.seat;
+  }
+  if (!isDeepStrictEqual(table, state.table) || !seats.every((seat) => {
+    const actions = state.log.filter((entry) => entry.seat === seat);
+    return state.covered[seat].length === actions.filter((entry) => entry.type === 'cover').length
+      && state.hands[seat].length === SV_HAND_SIZE - actions.length;
+  })) return false;
+  if (state.phase === 'playing') {
+    const spadeSeven = seats.find((seat) => state.hands[seat].some((entry) => entry.suit === 'spades' && entry.rank === 7));
+    return state.result === null && state.log.length < 52 &&
+      state.currentTurnSeat === (previous ? nextSeatCounterClockwise(previous) : spadeSeven);
+  }
+  const penalties = { N: svPenalty(state.covered.N), E: svPenalty(state.covered.E),
+    S: svPenalty(state.covered.S), W: svPenalty(state.covered.W) };
+  return state.log.length === 52 && state.currentTurnSeat === previous &&
+    sameJson(state.result, { gameType: 'sevens', penalties, covered: state.covered, winners: svWinners(penalties) });
+}
+
+/** Submissions match stored arrangements, and a finished showdown is exactly the recomputed one. */
+function coherentChinesePokerGame(state: ChinesePokerGameState): boolean {
+  if (new Set(seats.map((seat) => state.players[seat].id)).size !== 4) return false;
+  const all = seats.flatMap((seat) => state.hands[seat]);
+  if (!seats.every((seat) => state.hands[seat].length === CP_HAND_SIZE) || new Set(all.map(cardId)).size !== 52
+    || state.arrangeDeadline < state.startedAt) return false;
+  const submitted = seats.filter((seat) => state.arrangements[seat] !== null);
+  const submits = state.log.filter((entry) => entry.type === 'submit').map((entry) => entry.seat);
+  if (new Set(submits).size !== submits.length || !isDeepStrictEqual([...submits].sort(), [...submitted].sort())
+    || state.log.slice(0, submits.length).some((entry) => entry.type !== 'submit')
+    || !seats.every((seat) => {
+      const arrangement = state.arrangements[seat];
+      return arrangement === null || cpIsValidArrangement(state.hands[seat], arrangement);
+    })
+    || !isDeepStrictEqual(state.autoArranged, seats.filter((seat) => state.autoArranged.includes(seat)))
+    || state.autoArranged.some((seat) => !submitted.includes(seat) || state.players[seat].isBot)) return false;
+  if (state.phase === 'arranging') {
+    return state.result === null && submitted.length < 4 && state.log.length === submits.length;
+  }
+  if (submitted.length !== 4) return false;
+  const result = cpMatchResult(state.arrangements as Record<Seat, ChinesePokerArrangement>);
+  const showdown = [
+    ...CP_ROWS.map((row) => ({ type: 'reveal', row })),
+    ...result.matchups.flatMap((matchup) => matchup.shooter ? [{ type: 'shoot', seat: matchup.shooter,
+      target: matchup.seats[0] === matchup.shooter ? matchup.seats[1] : matchup.seats[0] }] : []),
+    ...(result.homeRun ? [{ type: 'homerun', seat: result.homeRun }] : []),
+  ];
+  const logged = state.log.slice(4).map(({ timestamp: _timestamp, ...entry }) => entry);
+  return sameJson(state.result, result) && sameJson(logged, showdown);
+}
 
 /** All 52 cards are accounted for, eliminations match the log, and the current seat can play. */
 function coherentNinetyNineGame(state: NinetyNineGameState): boolean {

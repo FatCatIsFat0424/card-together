@@ -82,9 +82,10 @@ with a compact base + reserve clock at its right edge. Other seats show only the
 below the table as well. Status/error text stays with the hand.
 Red Points measures the actual card viewport and paginates table cards to fit,
 preserving card order and the current page during capture highlights, and enlarging
-sparse tables without reserving empty rows. Other central presentations fit their
-grid cell without changing the space reserved for seats and controls.
-All four tables share one result dialog (`games/ResultDialog.tsx`) that stays below the
+sparse tables without reserving empty rows. Below 768px wide, Sevens shows each suit row's
+end cards and next open positions instead of all thirteen positions. Other central
+presentations fit their grid cell without changing the space reserved for seats and controls.
+Every table shares one result dialog (`games/ResultDialog.tsx`) that stays below the
 top bar so music, voice, sign-out, and invite notices remain usable; it is a labelled
 modal dialog that focuses "Back to room" and reports the pending return.
 Overlay sheets (info, chat) and top-bar popovers move focus inside when opened and
@@ -116,6 +117,8 @@ passes wait for the shared presentation deadline.
 | Big Two play / pass / round winner | 1,300 / 1,000 / 2,000 ms |
 | Red Points play or flip/capture | 1,900 ms per log entry |
 | Ninety-Nine play / elimination | 1,900 / 2,500 ms |
+| Sevens play / cover | 1,300 / 1,000 ms |
+| Chinese Poker row reveal / sweep / home run | 2,500 / 1,500 / 2,500 ms |
 | Final result before score overlay | 3,000 ms |
 
 Frames for one action run sequentially. The server rejects further play/pass/capture
@@ -146,6 +149,12 @@ allowance across its two decision stages. Presentation deadlines postpone clock 
 The timeout scheduler rechecks the game and turn inside the runtime queue, applies one
 legal action from the player's filtered view, and publishes only after persistence.
 Failed writes restore the clock and game together. Manual actions also check expiry.
+
+Chinese Poker seats arrange simultaneously, so its games publish no single-seat turn.
+The game stores one shared arrangement deadline; a separate runtime scheduler arranges every
+missing seat from that seat's filtered view at expiry, in one committed change. Bots submit
+one at a time through the ordinary bot scheduler. Submissions produce no presentation frames,
+so they never delay other seats; only the final submission starts the showdown.
 
 Startup preserves existing deadlines, so an overdue turn resumes without a browser;
 subsequent turns start from the newly committed action rather than replaying missed turns.

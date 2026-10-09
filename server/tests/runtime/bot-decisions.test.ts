@@ -19,6 +19,8 @@ import * as bridge from '../../src/managers/games/bridge-game';
 import * as bigtwo from '../../src/managers/games/bigtwo-game';
 import * as redpoints from '../../src/managers/games/redpoints-game';
 import * as ninetynine from '../../src/managers/games/ninetynine-game';
+import * as sevens from '../../src/managers/games/sevens-game';
+import * as chinesepoker from '../../src/managers/games/chinesepoker-game';
 
 const CODE = 'BOT123';
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
@@ -46,10 +48,18 @@ function execute(seat: Seat, action: BotAction): { success: boolean } {
     case 'redpoints-play': return redpoints.play(CODE, seat, action.card, action.capture);
     case 'redpoints-flip': return redpoints.chooseFlip(CODE, seat, action.capture);
     case 'ninetynine-play': return ninetynine.play(CODE, seat, action.card, action.choice, action.target);
+    case 'sevens-play': return sevens.play(CODE, seat, action.card);
+    case 'sevens-cover': return sevens.cover(CODE, seat, action.card);
+    case 'chinesepoker-arrange': return chinesepoker.arrange(CODE, seat, action.arrangement, true);
   }
 }
 
 function turn(game: AnyGameState): Seat {
+  if (game.gameType === 'chinesepoker') {
+    const pending = chinesepoker.pendingSeats(game)[0];
+    if (!pending) throw new Error('Every seat has arranged');
+    return pending;
+  }
   if (game.gameType !== 'bridge') return game.currentTurnSeat;
   if (game.phase === 'redeal_pending' && game.redealPendingSeat) return game.redealPendingSeat;
   if (game.phase === 'bidding' && game.bidding) return game.bidding.currentBidderSeat;
@@ -97,20 +107,24 @@ describe('filtered bot decisions', () => {
     bigtwo.restoreGames([]);
     redpoints.restoreGames([]);
     ninetynine.restoreGames([]);
+    sevens.restoreGames([]);
+    chinesepoker.restoreGames([]);
     vi.spyOn(Math, 'random').mockImplementation(random(42));
   });
   afterEach(() => vi.restoreAllMocks());
 
-  it.each((['bridge', 'bigtwo', 'redpoints', 'ninetynine'] as const).flatMap((gameType) =>
+  it.each((['bridge', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'chinesepoker'] as const).flatMap((gameType) =>
     [7, 41, 2026].map((seed) => ({ gameType, seed }))))(
     'should finish $gameType with seed $seed using only seat-visible decisions', ({ gameType, seed }) => {
       vi.mocked(Math.random).mockImplementation(random(seed));
       const choices = random(seed + 100);
-      const adapter = { bridge, bigtwo, redpoints, ninetynine }[gameType];
+      const adapter = { bridge, bigtwo, redpoints, ninetynine, sevens, chinesepoker }[gameType];
       if (gameType === 'bridge') bridge.startGame(CODE, PLAYERS);
       else if (gameType === 'bigtwo') bigtwo.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), random(seed)));
       else if (gameType === 'redpoints') redpoints.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), random(seed)), 'N');
-      else ninetynine.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), random(seed)), 'N');
+      else if (gameType === 'ninetynine') ninetynine.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), random(seed)), 'N');
+      else if (gameType === 'sevens') sevens.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), random(seed)));
+      else chinesepoker.startGame(CODE, PLAYERS, 60_000, shuffleDeck(createDeck(), random(seed)));
       let actions = 0;
       while (adapter.getGameState(CODE)?.phase !== 'scoring' && actions < 2000) {
         const state = adapter.getGameState(CODE);

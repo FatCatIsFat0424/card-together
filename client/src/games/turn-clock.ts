@@ -8,9 +8,14 @@ export interface SeatClock {
   readonly bankMs: number;
 }
 
-/** Project a committed server clock locally; duplicate snapshots retain their receipt time. */
+/** Server time projected from the snapshot's receipt; duplicate snapshots retain their receipt time. */
+export function projectedServerNow(clock: Pick<GameClock, 'serverNow'>, receivedAt: number, now: number): number {
+  return clock.serverNow === undefined ? now : clock.serverNow + Math.max(0, now - receivedAt);
+}
+
+/** Project a committed server clock locally. */
 export function seatClock(clock: GameClock, seat: Seat, receivedAt: number, now: number): SeatClock {
-  const serverNow = clock.serverNow === undefined ? now : clock.serverNow + Math.max(0, now - receivedAt);
+  const serverNow = projectedServerNow(clock, receivedAt, now);
   const turn = clock.turn;
   const active = turn?.seat === seat;
   const elapsed = active ? Math.max(0, serverNow - turn.startsAt) : 0;

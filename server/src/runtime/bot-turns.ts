@@ -1,3 +1,4 @@
+import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { getPresentationEndsAt } from '@shared/game-presentation';
 import type { AnyGameState, RoomCode, Seat } from '@shared/types';
 import { getBotAction } from '../bots/bot-decisions';
@@ -17,7 +18,10 @@ function pendingTurn(game: AnyGameState): BotTurn | null {
   if (roomManager.getRoomInfo(game.roomCode)?.status !== 'playing' || game.phase === 'scoring') return null;
   // The existing durable forced-pass scheduler owns these turns, including bot seats.
   if (game.gameType === 'bigtwo' && game.pendingAutoPass) return null;
-  const seat = game.gameType !== 'bridge' ? game.currentTurnSeat
+  // Simultaneous arrangements are submitted one bot at a time, each after its own thinking delay.
+  const seat = game.gameType === 'chinesepoker'
+    ? SEAT_ORDER_CLOCKWISE.find((pending) => game.arrangements[pending] === null && game.players[pending].isBot)
+    : game.gameType !== 'bridge' ? game.currentTurnSeat
     : game.phase === 'redeal_pending' ? game.redealPendingSeat
     : game.phase === 'bidding' ? game.bidding?.currentBidderSeat
     : game.phase === 'playing' ? game.playing?.currentTurnSeat : null;

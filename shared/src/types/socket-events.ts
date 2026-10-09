@@ -1,6 +1,6 @@
 import type { PlayerInfo, Seat } from './player';
 import type { RoomCode, RoomInfo, GameType, TimeControl } from './room';
-import type { Card, BidAction, PlayerVisibleGameState } from './game';
+import type { Card, BidAction, ChinesePokerArrangement, PlayerVisibleGameState } from './game';
 import type { ChatMessage } from './chat';
 import type { PublicAccount } from './social';
 import type { VoiceIncomingSignal, VoiceJoinResult, VoiceRoomState, VoiceSettings, VoiceSignal } from './voice';
@@ -86,6 +86,15 @@ export interface ClientToServerEvents {
   ) => void;
   'game:ninetynine:play': (
     payload: { card: Card; choice?: 'plus' | 'minus'; target?: Seat }, callback: (response: ActionResult) => void,
+  ) => void;
+  'game:sevens:play': (
+    payload: { card: Card }, callback: (response: ActionResult) => void,
+  ) => void;
+  'game:sevens:cover': (
+    payload: { card: Card }, callback: (response: ActionResult) => void,
+  ) => void;
+  'game:chinesepoker:arrange': (
+    payload: { arrangement: ChinesePokerArrangement }, callback: (response: ActionResult) => void,
   ) => void;
   'game:continue':(callback: (response: ActionResult) => void) => void;
   'game:abortVote:start': (callback: (response: ActionResult) => void) => void;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { BigTwoLogEntry, Card, NinetyNineLogEntry, RedPointsLogEntry } from '@shared/types';
+import type { BigTwoLogEntry, Card, NinetyNineLogEntry, RedPointsLogEntry, SevensLogEntry } from '@shared/types';
 import { deriveRoundHistory } from '../../../client/src/games/round-history';
 
 const card: Card = { suit: 'hearts', rank: 4 };
@@ -76,5 +76,19 @@ describe('round history', () => {
     expect(rounds[2].actions[0]).toMatchObject({ previousTotal: 0, total: 10, choice: 'plus' });
     expect(rounds.every((round) => round.complete)).toBe(true);
     expect(deriveRoundHistory(structuredClone(input))).toEqual(rounds);
+  });
+
+  it('should group Sevens actions by rotation and never show covered cards', () => {
+    const log: SevensLogEntry[] = [
+      { type: 'play', seat: 'N', card: { suit: 'spades', rank: 7 }, timestamp: 1 },
+      { type: 'cover', seat: 'W', timestamp: 2 },
+      { type: 'play', seat: 'S', card: { suit: 'spades', rank: 8 }, timestamp: 3 },
+      { type: 'play', seat: 'E', card: { suit: 'spades', rank: 6 }, timestamp: 4 },
+      { type: 'cover', seat: 'N', timestamp: 5 },
+    ];
+    const rounds = deriveRoundHistory({ gameType: 'sevens', phase: 'playing', log });
+    expect(rounds.map((round) => [round.number, round.complete, round.actions.length])).toEqual([[1, true, 4], [2, false, 1]]);
+    expect(rounds[0].actions[1]).toEqual({ kind: 'cover', seat: 'W', cards: [] });
+    expect(deriveRoundHistory({ gameType: 'chinesepoker', phase: 'scoring', log: [] })).toEqual([]);
   });
 });

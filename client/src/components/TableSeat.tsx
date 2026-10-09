@@ -131,12 +131,15 @@ function CardTray({ count, render }: { count: number; render: (index: number) =>
   </div>;
 }
 
-const STATUS_ICON: Record<SeatStatus, string> = { busted: '💥', locked: '🔒', thinking: '', autoPlayed: '⏱' };
+const STATUS_ICON: Record<SeatStatus, string> = {
+  busted: '💥', locked: '🔒', thinking: '', autoPlayed: '⏱', arranged: '✓',
+};
 const STATUS_LABEL: Record<SeatStatus, TranslationKey> = {
   busted: 'ninetynine.busted',
   locked: 'bigtwo.locked',
   thinking: 'seat.thinking',
   autoPlayed: 'seat.autoPlayed',
+  arranged: 'chinesepoker.arranged',
 };
 
 interface TableSeatProps {
@@ -155,7 +158,14 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
   const isMe = useRoomStore((state) => state.mySeat === seat);
   const {
     phase, turn, declarer, dealer, playing, bigTwoCards, redPointsCards, ninetyNineCards, locked, captured, busted,
+    sevensCards, sevensCovered, chinesePokerCards, arranging, arranged, autoArranged,
   } = useGameStore(useShallow((state) => ({
+    sevensCards: state.sevens?.handCounts[seat] ?? null,
+    sevensCovered: state.sevens?.coveredCounts[seat] ?? null,
+    chinesePokerCards: state.chinesePoker ? state.chinesePoker.phase === 'arranging' ? 13 : 0 : null,
+    arranging: state.chinesePoker?.phase === 'arranging' && !state.chinesePoker.submitted[seat],
+    arranged: state.chinesePoker?.phase === 'arranging' && state.chinesePoker.submitted[seat],
+    autoArranged: state.chinesePoker?.autoArranged.includes(seat) ?? false,
     ninetyNineCards: state.ninetyNine?.handCounts[seat] ?? null,
     busted: state.ninetyNine?.eliminated.includes(seat) ?? false,
     phase: state.phase,
@@ -175,10 +185,12 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
   const status = seatStatus({
     busted,
     locked,
-    thinking: active && Boolean(player?.isBot),
-    autoPlayed: showsAutoPlayed(clock, seat, lastActionAt),
+    thinking: (active || arranging) && Boolean(player?.isBot),
+    autoPlayed: autoArranged || showsAutoPlayed(clock, seat, lastActionAt),
+    arranged,
   });
-  const cards = bigTwoCards ?? redPointsCards ?? ninetyNineCards ?? remainingCards(seat, playing);
+  const cards = bigTwoCards ?? redPointsCards ?? ninetyNineCards ?? sevensCards ?? chinesePokerCards
+    ?? remainingCards(seat, playing);
   const name = player?.nickname ?? t(`seat.${seat}`);
   const bottom = position === 'bottom';
   const redCards = captured?.filter((card) => rpCardPoints(card) > 0).slice(-MAX_PILE) ?? [];
@@ -214,6 +226,9 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
           {captured && <CapturedPoints cards={captured} owner={name} />}
           {!bottom && cards > 0 && <span className={`${styles.chip} ${bigTwoCards !== null ? styles.bigCount : ''}`}>
             {t('table.cards', { n: String(cards) })}
+          </span>}
+          {sevensCovered !== null && sevensCovered > 0 && <span className={styles.chip}>
+            {t('sevens.covered', { n: String(sevensCovered) })}
           </span>}
           {declarer && <span className={`${styles.chip} ${styles.declarer}`}>{t('table.declarer')}</span>}
           {dealer && phase === 'bidding' && <span className={styles.chip}>{t('table.dealer')}</span>}

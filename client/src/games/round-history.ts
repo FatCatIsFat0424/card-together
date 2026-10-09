@@ -3,7 +3,7 @@ import type { BigTwoComboType } from '@shared/rules/bigtwo';
 import { rpScore } from '@shared/rules/redpoints';
 
 export interface HistoryAction {
-  kind: 'play' | 'pass' | 'round_end' | 'dragon' | 'flip' | 'eliminated';
+  kind: 'play' | 'pass' | 'round_end' | 'dragon' | 'flip' | 'eliminated' | 'cover';
   seat: Seat;
   cards: readonly Card[];
   comboType?: BigTwoComboType;
@@ -32,7 +32,8 @@ type HistoryInput = PlayerVisibleGameState extends infer T
 /** Rebuild history from the full public log, including after reconnects. */
 export function deriveRoundHistory(game: HistoryInput): HistoryRound[] {
   const rounds: HistoryRound[] = [];
-  if (game.gameType === 'bridge') return rounds;
+  // Chinese Poker has no turns; its showdown is shown in the result instead.
+  if (game.gameType === 'bridge' || game.gameType === 'chinesepoker') return rounds;
   let current: HistoryRound | undefined;
   const start = (): HistoryRound => {
     const round = { number: rounds.length + 1, complete: false, actions: [] as HistoryAction[] };
@@ -72,6 +73,16 @@ export function deriveRoundHistory(game: HistoryInput): HistoryRound[] {
     } else if (current && current.actions[0]?.seat !== game.currentTurnSeat) {
       current.complete = true;
     }
+  } else if (game.gameType === 'sevens') {
+    // Every seat acts once per rotation, so each four actions form one round.
+    game.log.forEach((entry, index) => {
+      const round = index % 4 === 0 ? start() : current ?? start();
+      round.actions.push({ kind: entry.type, seat: entry.seat, cards: entry.type === 'play' ? [entry.card] : [] });
+      if (round.actions.length === 4) {
+        round.complete = true;
+        current = undefined;
+      }
+    });
   } else {
     let previousTotal = 0;
     for (const entry of game.log) {
