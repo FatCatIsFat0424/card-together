@@ -21,6 +21,7 @@ import * as redpoints from '../../src/managers/games/redpoints-game';
 import * as ninetynine from '../../src/managers/games/ninetynine-game';
 import * as sevens from '../../src/managers/games/sevens-game';
 import * as chinesepoker from '../../src/managers/games/chinesepoker-game';
+import * as liarsdeck from '../../src/managers/games/liarsdeck-game';
 
 const CODE = 'BOT123';
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
@@ -51,6 +52,9 @@ function execute(seat: Seat, action: BotAction): { success: boolean } {
     case 'sevens-play': return sevens.play(CODE, seat, action.card);
     case 'sevens-cover': return sevens.cover(CODE, seat, action.card);
     case 'chinesepoker-arrange': return chinesepoker.arrange(CODE, seat, action.arrangement, true);
+    // Math.random is seeded in these tests, so trigger pulls and redeals are reproducible.
+    case 'liarsdeck-play': return liarsdeck.play(CODE, seat, action.cardIds);
+    case 'liarsdeck-challenge': return liarsdeck.challenge(CODE, seat, Math.random);
   }
 }
 
@@ -109,21 +113,23 @@ describe('filtered bot decisions', () => {
     ninetynine.restoreGames([]);
     sevens.restoreGames([]);
     chinesepoker.restoreGames([]);
+    liarsdeck.restoreGames([]);
     vi.spyOn(Math, 'random').mockImplementation(random(42));
   });
   afterEach(() => vi.restoreAllMocks());
 
-  it.each((['bridge', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'chinesepoker'] as const).flatMap((gameType) =>
+  it.each((['bridge', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'chinesepoker', 'liarsdeck'] as const).flatMap((gameType) =>
     [7, 41, 2026].map((seed) => ({ gameType, seed }))))(
     'should finish $gameType with seed $seed using only seat-visible decisions', ({ gameType, seed }) => {
       vi.mocked(Math.random).mockImplementation(random(seed));
       const choices = random(seed + 100);
-      const adapter = { bridge, bigtwo, redpoints, ninetynine, sevens, chinesepoker }[gameType];
+      const adapter = { bridge, bigtwo, redpoints, ninetynine, sevens, chinesepoker, liarsdeck }[gameType];
       if (gameType === 'bridge') bridge.startGame(CODE, PLAYERS);
       else if (gameType === 'bigtwo') bigtwo.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), random(seed)));
       else if (gameType === 'redpoints') redpoints.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), random(seed)), 'N');
       else if (gameType === 'ninetynine') ninetynine.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), random(seed)), 'N');
       else if (gameType === 'sevens') sevens.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), random(seed)));
+      else if (gameType === 'liarsdeck') liarsdeck.startGame(CODE, PLAYERS, random(seed));
       else chinesepoker.startGame(CODE, PLAYERS, 60_000, shuffleDeck(createDeck(), random(seed)));
       let actions = 0;
       while (adapter.getGameState(CODE)?.phase !== 'scoring' && actions < 2000) {

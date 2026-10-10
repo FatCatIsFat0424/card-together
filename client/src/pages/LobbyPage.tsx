@@ -12,7 +12,7 @@ import { Avatar } from '../components/Avatar';
 import styles from './LobbyPage.module.css';
 
 const GAME_ICONS: Record<GameType, string> = {
-  bridge: '♠', bigtwo: '🃏', redpoints: '🔴', ninetynine: '💯', sevens: '7️⃣', chinesepoker: '🀄',
+  bridge: '♠', bigtwo: '🃏', redpoints: '🔴', ninetynine: '💯', sevens: '7️⃣', chinesepoker: '🀄', liarsdeck: '🍺',
 };
 
 export function LobbyPage(): ReactNode {

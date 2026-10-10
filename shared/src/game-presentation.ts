@@ -1,11 +1,13 @@
-import type { AnyGameState, Card, ChinesePokerRow, PlayerVisibleGameState } from './types/game';
+import type {
+  AnyGameState, Card, ChinesePokerRow, LiarFace, LiarTableFace, PlayerVisibleGameState,
+} from './types/game';
 import type { Seat } from './types/player';
 import { rpScore } from './rules/redpoints';
 
 export interface PresentationFrame {
   readonly key: string;
   readonly kind: 'play' | 'pass' | 'trick' | 'round' | 'capture' | 'eliminated' | 'cover' | 'reveal' | 'shoot'
-    | 'homerun' | 'finish';
+    | 'homerun' | 'deal' | 'challenge' | 'roulette' | 'shot' | 'finish';
   readonly durationMs: number;
   readonly seat?: Seat;
   readonly cards: readonly Card[];
@@ -20,6 +22,17 @@ export interface PresentationFrame {
   readonly flipped?: boolean;
   /** Chinese Poker row revealed by this frame */
   readonly row?: ChinesePokerRow;
+  /** Liar's Deck: face-down cards played */
+  readonly count?: number;
+  /** Liar's Deck: the round's table face */
+  readonly tableFace?: LiarTableFace;
+  /** Liar's Deck: the challenged play, revealed */
+  readonly liarFaces?: readonly LiarFace[];
+  readonly lied?: boolean;
+  /** Liar's Deck: the shooter's trigger pull count including this one */
+  readonly shot?: number;
+  /** Liar's Deck: present only on the frame that resolves the pull */
+  readonly survived?: boolean;
 }
 
 /** Reconstructs only public events; private hands and stock never enter presentation frames. */
@@ -82,6 +95,21 @@ export function getPresentationFrames(
       } else if (entry.type === 'homerun') {
         frames.push({ key, kind: 'homerun', durationMs: 2500, seat: entry.seat, cards: [] });
       }
+    } else if (game.gameType === 'liarsdeck') {
+      const entry = game.log[index];
+      if (entry.type === 'round') {
+        frames.push({ key, kind: 'deal', durationMs: 2000, seat: entry.starter, cards: [], tableFace: entry.tableFace });
+      } else if (entry.type === 'play') {
+        frames.push({ key, kind: 'play', durationMs: playDuration, seat: entry.seat, cards: [], count: entry.count });
+      } else if (entry.type === 'challenge') {
+        frames.push({ key, kind: 'challenge', durationMs: 2500, seat: entry.seat, target: entry.target, cards: [],
+          liarFaces: entry.revealed, lied: entry.lied });
+      } else {
+        // The suspense frame carries no outcome so the table cannot reveal it early.
+        frames.push({ key, kind: 'roulette', durationMs: 2500, seat: entry.seat, cards: [], shot: entry.shot });
+        frames.push({ key: `${key}:result`, kind: 'shot', durationMs: 1500, seat: entry.seat, cards: [],
+          shot: entry.shot, survived: entry.survived });
+      }
     } else {
       const entry = game.log[index];
       if (entry.type === 'play') {
@@ -98,7 +126,7 @@ export function getPresentationFrames(
   if (game.phase === 'scoring') {
     const winners = (game.gameType === 'sevens' || game.gameType === 'chinesepoker') && game.result
       ? game.result.winners : [];
-    const seat = game.gameType === 'bigtwo' || game.gameType === 'ninetynine'
+    const seat = game.gameType === 'bigtwo' || game.gameType === 'ninetynine' || game.gameType === 'liarsdeck'
       ? game.result?.winnerSeat : winners.length === 1 ? winners[0] : undefined;
     const lastCards = [...frames].reverse().find((frame) => frame.cards.length > 0);
     frames.push({ key: `${id}:finish`, kind: 'finish', durationMs: 3000,
@@ -113,4 +141,10 @@ export function getPresentationEndsAt(game: AnyGameState | PlayerVisibleGameStat
   if (!game.presentation) return 0;
   return game.presentation.startedAt
     + getPresentationFrames(game).reduce((duration, frame) => duration + frame.durationMs, 0);
+}
+
+/** Log index a frame presents, or null for the closing result frame; keys are `${id}:${index}[:part]`. */
+export function frameLogIndex(frame: PresentationFrame): number | null {
+  const index = Number(frame.key.split(':')[1]);
+  return Number.isInteger(index) ? index : null;
 }

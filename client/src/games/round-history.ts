@@ -1,9 +1,9 @@
-import type { Card, PlayerVisibleGameState, Seat } from '@shared/types';
+import type { Card, LiarFace, LiarTableFace, PlayerVisibleGameState, Seat } from '@shared/types';
 import type { BigTwoComboType } from '@shared/rules/bigtwo';
 import { rpScore } from '@shared/rules/redpoints';
 
 export interface HistoryAction {
-  kind: 'play' | 'pass' | 'round_end' | 'dragon' | 'flip' | 'eliminated' | 'cover';
+  kind: 'play' | 'pass' | 'round_end' | 'dragon' | 'flip' | 'eliminated' | 'cover' | 'challenge' | 'shot';
   seat: Seat;
   cards: readonly Card[];
   comboType?: BigTwoComboType;
@@ -14,12 +14,21 @@ export interface HistoryAction {
   target?: Seat | null;
   choice?: 'plus' | 'minus' | null;
   pending?: boolean;
+  /** Liar's Deck: face-down cards played */
+  count?: number;
+  /** Liar's Deck: the revealed play and whether it held a lie */
+  faces?: readonly LiarFace[];
+  lied?: boolean;
+  shot?: number;
+  survived?: boolean;
 }
 
 export interface HistoryRound {
   number: number;
   complete: boolean;
   actions: HistoryAction[];
+  /** Liar's Deck: the round's table card */
+  tableFace?: LiarTableFace;
 }
 
 type HistoryInput = PlayerVisibleGameState extends infer T
@@ -83,6 +92,24 @@ export function deriveRoundHistory(game: HistoryInput): HistoryRound[] {
         current = undefined;
       }
     });
+  } else if (game.gameType === 'liarsdeck') {
+    for (const entry of game.log) {
+      if (entry.type === 'round') {
+        if (current) current.complete = true;
+        start().tableFace = entry.tableFace;
+        continue;
+      }
+      const round = current ?? start();
+      if (entry.type === 'play') {
+        round.actions.push({ kind: 'play', seat: entry.seat, cards: [], count: entry.count });
+      } else if (entry.type === 'challenge') {
+        round.actions.push({ kind: 'challenge', seat: entry.seat, cards: [], target: entry.target,
+          faces: entry.revealed, lied: entry.lied });
+      } else {
+        round.actions.push({ kind: 'shot', seat: entry.seat, cards: [], shot: entry.shot, survived: entry.survived });
+        round.complete = true;
+      }
+    }
   } else {
     let previousTotal = 0;
     for (const entry of game.log) {

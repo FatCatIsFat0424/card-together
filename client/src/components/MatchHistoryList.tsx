@@ -42,6 +42,11 @@ function MatchResultLabel({ match, players }: {
     return <span>{t('gameType.ninetynine')} · 🏆 {seatName(result.winnerSeat)}
       {myRank && <> · {t('ninetynine.myRank', { n: String(myRank) })}</>}</span>;
   }
+  if (result.gameType === 'liarsdeck') {
+    const myRank = mySeat && (mySeat === result.winnerSeat ? 1 : 4 - result.eliminationOrder.indexOf(mySeat));
+    return <span>{t('gameType.liarsdeck')} · 🏆 {seatName(result.winnerSeat)}
+      {myRank && <> · {t('liarsdeck.myRank', { n: String(myRank) })}</>}</span>;
+  }
   if (result.gameType === 'bigtwo') {
     return <span>{t('gameType.bigtwo')} · 🏆 {seatName(result.winnerSeat)}
       {result.dragon && ' 🐉'}

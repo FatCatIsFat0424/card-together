@@ -10,6 +10,8 @@ import { cardImageUrl } from '../cards';
 import type { TranslationKey } from '../i18n';
 import { remainingCards } from '../game-view';
 import type { TablePosition } from '../game-view';
+import { liarsDeckView } from '../games/liarsdeck/liarsdeck-view';
+import { useGamePresentation } from '../games/use-game-presentation';
 import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useRoomStore } from '../stores/room-store';
@@ -178,19 +180,24 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
     locked: state.bigTwo?.phase === 'playing' && state.bigTwo.lockedSeats.includes(seat),
     captured: state.redPoints?.captured[seat] ?? null,
   })));
+  const liarsDeck = useGameStore((state) => state.liarsDeck);
+  const { frame } = useGamePresentation();
+  // Liar's Deck seats follow the presentation so a trigger pull is not revealed before its suspense ends.
+  const liars = liarsDeck && liarsDeckView(liarsDeck, frame);
+  const dead = liars?.eliminated.includes(seat) ?? false;
   const clock = useGameStore((state) => state.visible?.clock);
   const receivedAt = useGameStore((state) => state.presentationReceivedAt);
   const lastActionAt = useGameStore((state) => latestSeatAction(state.visible?.log ?? [], seat));
   const active = !suppressTurn && turn && (phase === 'bidding' || phase === 'playing');
   const status = seatStatus({
-    busted,
+    busted: busted || dead,
     locked,
     thinking: (active || arranging) && Boolean(player?.isBot),
     autoPlayed: autoArranged || showsAutoPlayed(clock, seat, lastActionAt),
     arranged,
   });
   const cards = bigTwoCards ?? redPointsCards ?? ninetyNineCards ?? sevensCards ?? chinesePokerCards
-    ?? remainingCards(seat, playing);
+    ?? liars?.handCounts[seat] ?? remainingCards(seat, playing);
   const name = player?.nickname ?? t(`seat.${seat}`);
   const bottom = position === 'bottom';
   const redCards = captured?.filter((card) => rpCardPoints(card) > 0).slice(-MAX_PILE) ?? [];
@@ -203,7 +210,7 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
 
   return (
     <div data-table-seat={position}
-      className={`${styles.seat} ${styles[position]} ${active ? styles.turn : ''} ${busted ? styles.out : ''} ${onPick ? styles.pickable : ''}`}
+      className={`${styles.seat} ${styles[position]} ${active ? styles.turn : ''} ${busted || dead ? styles.out : ''} ${onPick ? styles.pickable : ''}`}
       role={onPick ? 'button' : undefined} tabIndex={onPick ? 0 : undefined} onClick={onPick}
       aria-label={onPick ? t('seat.pickNext', { name }) : undefined}
       onKeyDown={onPick ? (event) => {
@@ -230,14 +237,19 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
           {sevensCovered !== null && sevensCovered > 0 && <span className={styles.chip}>
             {t('sevens.covered', { n: String(sevensCovered) })}
           </span>}
+          {liars && <span className={`${styles.chip} ${liars.shots[seat] >= 4 ? styles.danger : ''}`}
+            title={t('liarsdeck.shotsTitle', { n: String(liars.shots[seat]) })}>
+            {t('liarsdeck.shots', { n: String(liars.shots[seat]) })}
+          </span>}
           {declarer && <span className={`${styles.chip} ${styles.declarer}`}>{t('table.declarer')}</span>}
           {dealer && phase === 'bidding' && <span className={styles.chip}>{t('table.dealer')}</span>}
           <TurnClock seat={seat} showBank={isMe} />
         </div>
         {status && <span className={`${styles.status} ${styles[status]}`}
           title={status === 'autoPlayed' ? t('clock.autoPlayed') : undefined}>
-          {STATUS_ICON[status] && <span className={styles.statusIcon} aria-hidden="true">{STATUS_ICON[status]} </span>}
-          {t(STATUS_LABEL[status])}
+          {STATUS_ICON[status] && <span className={styles.statusIcon} aria-hidden="true">
+            {dead && status === 'busted' ? '💀' : STATUS_ICON[status]} </span>}
+          {t(dead && status === 'busted' ? 'liarsdeck.dead' : STATUS_LABEL[status])}
         </span>}
         {active && <span className={styles.srOnly}>{isMe ? t('table.yourTurn') : t('table.turn')}</span>}
         {clockTurn && clock && <TurnBar key={clockTurn.id} turn={clockTurn} bankMs={isMe ? clock.bankRemainingMs[seat] : 0}

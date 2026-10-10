@@ -139,7 +139,7 @@ export function GameShell({
   const messageCount = useChatStore((state) => state.messages.length);
   const seats = useRoomStore((state) => state.roomInfo?.seats);
   const log = useGameStore((state) => state.bigTwo?.log ?? state.redPoints?.log ?? state.ninetyNine?.log
-    ?? state.sevens?.log ?? state.chinesePoker?.log ?? state.log);
+    ?? state.sevens?.log ?? state.chinesePoker?.log ?? state.liarsDeck?.log ?? state.log);
   const ownedTurn = useGameStore((state) => mySeat !== null && state.currentTurnSeat === mySeat
     && (state.phase === 'bidding' || state.phase === 'playing'));
   const myTurn = (turnReady ?? ownedTurn) && !presentation.locked;
@@ -212,8 +212,8 @@ export function GameShell({
     heardFrame.current = frame.key;
     if (frame.kind === 'play' || frame.kind === 'capture') playCardSound();
     else if (frame.kind === 'pass' || frame.kind === 'cover') playCardSound(true);
-    else if (frame.kind === 'reveal') playCardSound();
-    else if (frame.kind === 'eliminated') playOutSound();
+    else if (frame.kind === 'reveal' || frame.kind === 'challenge') playCardSound();
+    else if (frame.kind === 'eliminated' || frame.survived === false) playOutSound();
   }, [presentation.frame]);
 
   const collapseChat = useCallback((): void => {

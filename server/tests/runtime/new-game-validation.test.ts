@@ -4,8 +4,12 @@ import { cpGreedyArrangement } from '@shared/rules/chinesepoker-arrange';
 import type { AnyGameState, GameType, PlayerInfo, Seat } from '@shared/types';
 import { createDeck, shuffleDeck } from '../../src/engine/deck';
 import * as sevens from '../../src/managers/games/sevens-game';
+import { ldCanChallenge, ldMustChallenge } from '@shared/rules/liarsdeck';
 import * as chinesepoker from '../../src/managers/games/chinesepoker-game';
-import { isChinesePokerResult, isRuntimeSnapshot, isSevensResult } from '../../src/runtime/validate';
+import * as liarsdeck from '../../src/managers/games/liarsdeck-game';
+import {
+  isChinesePokerResult, isLiarsDeckResult, isRuntimeSnapshot, isSevensResult,
+} from '../../src/runtime/validate';
 import type { RuntimeSnapshot } from '../../src/runtime/types';
 
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
@@ -152,5 +156,72 @@ describe('persisted Chinese Poker games', () => {
     const truncated = structuredClone(chinesepoker.getGameState(CODE)!);
     truncated.log = truncated.log.slice(0, 5);
     expect(persists(truncated, 'chinesepoker')).toBe(false);
+  });
+});
+
+describe("persisted Liar's Deck games", () => {
+  afterEach(() => liarsdeck.restoreGames([]));
+
+  /** Plays random legal actions: calls about a third of the time it may, otherwise plays one to three cards. */
+  function playLiarsDeck(random: () => number): void {
+    const game = liarsdeck.getGameState(CODE)!;
+    const seat = game.currentTurnSeat;
+    const counts = Object.fromEntries(SEATS.map((entry) => [entry, game.hands[entry].length])) as Record<Seat, number>;
+    const call = ldMustChallenge(seat, counts, game.lastPlay)
+      || (ldCanChallenge(seat, game.lastPlay) && random() < 0.35);
+    const size = 1 + Math.floor(random() * Math.min(3, game.hands[seat].length));
+    const result = call ? liarsdeck.challenge(CODE, seat, random)
+      : liarsdeck.play(CODE, seat, game.hands[seat].slice(0, size).map((card) => card.id));
+    expect(result.success).toBe(true);
+  }
+
+  function finishedGame(seed: number): ReturnType<typeof liarsdeck.getGameState> {
+    const random = seeded(seed);
+    liarsdeck.startGame(CODE, PLAYERS, random);
+    for (let step = 0; step < 500 && liarsdeck.getGameState(CODE)!.phase !== 'scoring'; step++) {
+      expect(persists(liarsdeck.getGameState(CODE)!, 'liarsdeck')).toBe(true);
+      playLiarsDeck(random);
+    }
+    return liarsdeck.getGameState(CODE);
+  }
+
+  it('accepts every committed state through the last survivor', () => {
+    for (const seed of [3, 8, 21]) {
+      const game = finishedGame(seed)!;
+      expect(game.phase).toBe('scoring');
+      expect(persists(game, 'liarsdeck')).toBe(true);
+      expect(isLiarsDeckResult(game.result)).toBe(true);
+    }
+  });
+
+  it('rejects altered reveals, trigger pulls, bullets, and results', () => {
+    const game = finishedGame(5)!;
+    const challenge = game.log.findIndex((entry) => entry.type === 'challenge');
+    const reveal = structuredClone(game);
+    const entry = reveal.log[challenge];
+    if (entry.type !== 'challenge') throw new Error('Expected a challenge');
+    Object.assign(entry, { lied: !entry.lied });
+    expect(persists(reveal, 'liarsdeck')).toBe(false);
+    const survivor = game.result!.winnerSeat;
+    const bullets = structuredClone(game);
+    bullets.bullets[survivor] = game.shots[survivor];
+    expect(persists(bullets, 'liarsdeck')).toBe(false);
+    const result = structuredClone(game);
+    result.result = { ...result.result!, rounds: result.result!.rounds + 1 };
+    expect(persists(result, 'liarsdeck')).toBe(false);
+  });
+
+  it('rejects a playing state with duplicated cards or a misplaced turn', () => {
+    liarsdeck.startGame(CODE, PLAYERS, seeded(13));
+    const game = liarsdeck.getGameState(CODE)!;
+    const duplicate = structuredClone(game);
+    duplicate.hands.N[0] = { ...duplicate.hands.E[0] };
+    expect(persists(duplicate, 'liarsdeck')).toBe(false);
+    const turn = structuredClone(game);
+    turn.currentTurnSeat = SEATS[(SEATS.indexOf(game.currentTurnSeat) + 1) % 4];
+    expect(persists(turn, 'liarsdeck')).toBe(false);
+    const wrongFace = structuredClone(game);
+    wrongFace.hands.N[0] = { id: wrongFace.hands.N[0].id, face: wrongFace.hands.N[0].face === 'K' ? 'Q' : 'K' };
+    expect(persists(wrongFace, 'liarsdeck')).toBe(false);
   });
 });

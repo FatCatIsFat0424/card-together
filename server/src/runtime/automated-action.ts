@@ -4,6 +4,7 @@ import { NN_MAX, nnApply, nnIsPlayable, nnRequiresChoice } from '@shared/rules/n
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { rpPairOptions } from '@shared/rules/redpoints';
 import { cpGreedyArrangement } from '@shared/rules/chinesepoker-arrange';
+import { ldMustChallenge } from '@shared/rules/liarsdeck';
 import type { PlayerVisibleGameState, RoomCode, Seat } from '@shared/types';
 import type { BotAction } from '../bots/bot-decisions';
 import * as chatManager from '../managers/chat-manager';
@@ -29,6 +30,8 @@ export function applyAutomatedAction(code: RoomCode, seat: Seat, action: BotActi
     case 'sevens-play': return gameManager.handleSevensPlay(code, seat, action.card, true);
     case 'sevens-cover': return gameManager.handleSevensCover(code, seat, action.card, true);
     case 'chinesepoker-arrange': return gameManager.handleChinesePokerArrange(code, seat, action.arrangement, true);
+    case 'liarsdeck-play': return gameManager.handleLiarsDeckPlay(code, seat, action.cardIds, true);
+    case 'liarsdeck-challenge': return gameManager.handleLiarsDeckChallenge(code, seat, true);
   }
 }
 
@@ -76,6 +79,9 @@ export function firstLegalAction(visible: PlayerVisibleGameState): BotAction | n
     case 'chinesepoker':
       return visible.myArrangement || visible.submitted[visible.mySeat] ? null
         : { type: 'chinesepoker-arrange', arrangement: cpGreedyArrangement(visible.myHand) };
+    case 'liarsdeck':
+      if (ldMustChallenge(visible.mySeat, visible.handCounts, visible.lastPlay)) return { type: 'liarsdeck-challenge' };
+      return visible.myHand[0] ? { type: 'liarsdeck-play', cardIds: [visible.myHand[0].id] } : null;
   }
 }
 

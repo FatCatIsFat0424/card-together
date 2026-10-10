@@ -53,6 +53,8 @@ function GameChips(): ReactNode {
   const { locked } = useGamePresentation();
   const sevensResult = useGameStore((state) => state.sevens?.result ?? null);
   const chinesePokerResult = useGameStore((state) => state.chinesePoker?.result ?? null);
+  const liarsDeckWinner = useGameStore((state) => state.liarsDeck?.result?.winnerSeat ?? null);
+  const liarsDeckFace = useGameStore((state) => state.liarsDeck?.phase === 'playing' ? state.liarsDeck.tableFace : null);
   const seats = useRoomStore((state) => state.roomInfo?.seats);
   const seatLabel = (seat: Seat): string => t(`seat.${seat}`);
   return <div className={styles.chips}>
@@ -80,6 +82,12 @@ function GameChips(): ReactNode {
         🏆 {joinNames(chinesePokerResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
         {mySeat && <> · {t('chinesepoker.myScore', {
           n: `${chinesePokerResult.scores[mySeat] > 0 ? '+' : ''}${chinesePokerResult.scores[mySeat]}` })}</>}
+      </span>}
+      {liarsDeckFace && !locked && <span className={styles.chip} title={t('liarsdeck.tableCard')}>
+        {t('liarsdeck.tableCard')} {t(`liarsdeck.face.${liarsDeckFace}`)}
+      </span>}
+      {liarsDeckWinner && !locked && <span className={styles.chip}>
+        🏆 {seats?.[liarsDeckWinner].player?.nickname ?? seatLabel(liarsDeckWinner)}
       </span>}
       {ninetyNineWinner && <span className={styles.chip}>
         🏆 {seats?.[ninetyNineWinner].player?.nickname ?? seatLabel(ninetyNineWinner)}

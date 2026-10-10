@@ -12,6 +12,7 @@ import { useMotionStore } from '../stores/motion-store';
 import { useRoomStore } from '../stores/room-store';
 import styles from './GamePresentation.module.css';
 import { ChinesePokerReveal } from './chinesepoker/ChinesePokerReveal';
+import { LiarsDeckFrame } from './liarsdeck/LiarsDeckFrame';
 
 interface GamePresentationProps {
   frame: PresentationFrame;
@@ -57,12 +58,13 @@ export function GamePresentation({
   }
   return <div ref={rootRef} key={frame.key}
     className={[styles.presentation, styles[position], reducedMotion && styles.reducedMotion,
-      frame.kind === 'eliminated' && styles.eliminated].filter(Boolean).join(' ')}
+      (frame.kind === 'eliminated' || frame.survived === false) && styles.eliminated].filter(Boolean).join(' ')}
     role="status" aria-live="polite" aria-atomic="true" data-presentation-kind={frame.kind}>
     <div className={styles.heading}>
       {frame.seat && <strong className={styles.playerName}>{name(frame.seat)}</strong>}
       <span>{t(frame.kind === 'finish' && frame.seat ? 'presentation.winner' : `presentation.${frame.kind}`)}</span>
     </div>
+    {gameType === 'liarsdeck' && <LiarsDeckFrame frame={frame} name={name} />}
     {frame.cards.length > 0 && <div className={collecting ? styles.collecting : undefined}>
       <div className={[styles.cards, (frame.kind === 'play' || frame.kind === 'capture') && styles.arriving,
         frame.kind === 'trick' && styles.trickCards].filter(Boolean).join(' ')}>

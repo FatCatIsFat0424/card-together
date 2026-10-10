@@ -6,7 +6,7 @@ import type { PlayerInfo, Seat } from './player';
 export type RoomCode = string;
 
 /** Game type */
-export type GameType = 'bridge' | 'bigtwo' | 'redpoints' | 'ninetynine' | 'sevens' | 'chinesepoker';
+export type GameType = 'bridge' | 'bigtwo' | 'redpoints' | 'ninetynine' | 'sevens' | 'chinesepoker' | 'liarsdeck';
 
 /** Room status */
 export type RoomStatus = 'waiting' | 'playing';

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BigTwoGameState, Card, PlayerInfo, Seat } from '@shared/types';
-import { getPresentationEndsAt, getPresentationFrames } from '@shared/game-presentation';
+import { frameLogIndex, getPresentationEndsAt, getPresentationFrames } from '@shared/game-presentation';
 import { cpGreedyArrangement } from '@shared/rules/chinesepoker-arrange';
 import * as games from '../../src/managers/game-manager';
 
@@ -134,6 +134,32 @@ describe('authoritative game presentation', () => {
       { key: 'sevens:0', kind: 'play', durationMs: 1300, seat: 'N', cards: [{ suit: 'spades', rank: 7 }] },
       { key: 'sevens:1', kind: 'cover', durationMs: 1000, seat: 'W', cards: [] },
     ]);
+  });
+
+  it("should open Liar's Deck with the table card and resolve a pull only after its suspense", () => {
+    games.startGame(CODE, 'liarsdeck', players);
+    const state = games.getGameState(CODE)!;
+    if (state.gameType !== 'liarsdeck') throw new Error("Expected Liar's Deck");
+    expect(getPresentationFrames(state)).toEqual([expect.objectContaining({
+      kind: 'deal', durationMs: 2000, seat: state.currentTurnSeat, tableFace: state.tableFace, cards: [] })]);
+    expect(state.clock?.turn?.startsAt).toBe(getPresentationEndsAt(state));
+    vi.setSystemTime(getPresentationEndsAt(state));
+    const opener = state.currentTurnSeat;
+    expect(games.handleLiarsDeckPlay(CODE, opener, [state.hands[opener][0].id]).success).toBe(true);
+    expect(getPresentationFrames(state)).toEqual([
+      expect.objectContaining({ kind: 'play', seat: opener, count: 1, cards: [] })]);
+    expect(getPresentationFrames(state)[0]).not.toHaveProperty('liarFaces');
+    vi.setSystemTime(getPresentationEndsAt(state));
+    const caller = state.currentTurnSeat;
+    expect(games.handleLiarsDeckChallenge(CODE, caller).success).toBe(true);
+    const frames = getPresentationFrames(state);
+    expect(frames.map((frame) => frame.kind)).toEqual(state.phase === 'scoring'
+      ? ['challenge', 'roulette', 'shot', 'finish'] : ['challenge', 'roulette', 'shot', 'deal']);
+    expect(frames[0]).toMatchObject({ seat: caller, target: opener, durationMs: 2500 });
+    expect(frames[0].liarFaces).toHaveLength(1);
+    expect(frames[1]).not.toHaveProperty('survived');
+    expect(frames[2]).toMatchObject({ shot: 1, survived: expect.any(Boolean), durationMs: 1500 });
+    expect(frameLogIndex(frames[1])).toBe(frameLogIndex(frames[2]));
   });
 
   it('should let Chinese Poker seats submit without waiting and present only the showdown', () => {

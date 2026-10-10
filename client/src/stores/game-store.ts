@@ -17,6 +17,7 @@ import type {
   NinetyNineVisibleState,
   SevensVisibleState,
   ChinesePokerVisibleState,
+  LiarsDeckVisibleState,
 } from '@shared/types';
 import { equalSnapshotValue, retainSnapshotValue } from './snapshot-equality';
 
@@ -29,6 +30,7 @@ interface GameStoreState {
   ninetyNine: NinetyNineVisibleState | null;
   sevens: SevensVisibleState | null;
   chinesePoker: ChinesePokerVisibleState | null;
+  liarsDeck: LiarsDeckVisibleState | null;
   gameType: GameType | null;
   phase: GamePhase | null;
   myHand: Card[];
@@ -56,6 +58,7 @@ const initialState: GameStoreState = {
   ninetyNine: null,
   sevens: null,
   chinesePoker: null,
+  liarsDeck: null,
   gameType: null,
   phase: null,
   myHand: [],
@@ -104,6 +107,12 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       // so no single seat holds the turn.
       phase: game.phase === 'arranging' ? 'playing' : game.phase,
       chinesePoker: retainSnapshotValue(state.chinesePoker, game),
+    } : game.gameType === 'liarsdeck' ? {
+      ...initialState,
+      gameType: 'liarsdeck',
+      phase: game.phase,
+      currentTurnSeat: game.phase === 'playing' ? game.currentTurnSeat : null,
+      liarsDeck: retainSnapshotValue(state.liarsDeck, game),
     } : {
       visible: null,
       presentationReceivedAt: 0,
@@ -112,6 +121,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       ninetyNine: null,
       sevens: null,
       chinesePoker: null,
+      liarsDeck: null,
       gameType: 'bridge',
       phase: game.phase,
       dealerSeat: game.dealerSeat,

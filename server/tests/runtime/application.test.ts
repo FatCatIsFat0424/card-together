@@ -5,7 +5,7 @@ import { io as connectSocket } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
-  AccountProfile, BridgeVisibleState, ClientToServerEvents, Seat, ServerToClientEvents, TimeControl,
+  AccountProfile, BridgeVisibleState, Card, ClientToServerEvents, LiarCard, Seat, ServerToClientEvents, TimeControl,
 } from '@shared/types';
 import type { PlayerSnapshot } from '@shared/types/socket-events';
 import { identifyCombo, isBomb, legalPlays } from '@shared/rules/bigtwo';
@@ -13,12 +13,14 @@ import { rpPairOptions } from '@shared/rules/redpoints';
 import { NN_MAX, nnApply, nnIsPlayable, nnRequiresChoice } from '@shared/rules/ninetynine';
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { getPresentationEndsAt } from '@shared/game-presentation';
+import { ldCanChallenge, ldMustChallenge } from '@shared/rules/liarsdeck';
 import { createApplication } from '../../src/app';
 import { createJsonRepository } from '../../src/database/json-repository';
 import type { Repository } from '../../src/database/repository';
 
 const ORIGIN = 'http://localhost:5173';
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
+const cardKey = (card: Card | LiarCard): string => ('suit' in card ? `${card.suit}:${card.rank}` : `liar:${card.id}`);
 type Client = Socket<ServerToClientEvents, ClientToServerEvents>;
 type Application = Awaited<ReturnType<typeof createApplication>>;
 
@@ -395,7 +397,7 @@ describe('persistent authenticated application', () => {
       expect(state.gameState).not.toHaveProperty('hands');
       expect(state.gameState).not.toHaveProperty('players');
       expect(Object.values(state.room!.seats).every((seat) => seat.isReady)).toBe(true);
-      return state.gameState!.myHand.map((card) => `${card.suit}:${card.rank}`);
+      return state.gameState!.myHand.map(cardKey);
     });
     expect(new Set(allCards).size).toBe(52);
 
@@ -575,7 +577,7 @@ describe('persistent authenticated application', () => {
     }
 
     const opening = await Promise.all(players.map(resume));
-    const allCards = opening.flatMap((state) => state.gameState!.myHand.map((card) => `${card.suit}:${card.rank}`));
+    const allCards = opening.flatMap((state) => state.gameState!.myHand.map(cardKey));
     expect(new Set(allCards).size).toBe(52);
     let snapshot = opening[0];
     if (snapshot.gameState?.phase === 'playing') {
@@ -658,7 +660,7 @@ describe('persistent authenticated application', () => {
     expect(first).toMatchObject({ phase: 'playing', stockCount: 24, step: 'play' });
     expect(first.table).toHaveLength(4);
     expect(first).not.toHaveProperty('stock');
-    expect(new Set(opening.flatMap((state) => state.gameState!.myHand.map((card) => `${card.suit}:${card.rank}`))).size)
+    expect(new Set(opening.flatMap((state) => state.gameState!.myHand.map(cardKey))).size)
       .toBe(24);
     expect(await players[0].timeout(5_000).emitWithAck('game:bigtwo:pass')).toMatchObject({ success: false });
     expect(await players[0].timeout(5_000).emitWithAck('game:redpoints:play', { card: { suit: 'x', rank: 1 } } as never))
@@ -736,7 +738,7 @@ describe('persistent authenticated application', () => {
     expect(first).toMatchObject({ phase: 'playing', stockCount: 32, total: 0, direction: 'ccw', lastPlayed: null });
     expect(first).not.toHaveProperty('stock');
     expect(first).not.toHaveProperty('discard');
-    expect(new Set(opening.flatMap((state) => state.gameState!.myHand.map((card) => `${card.suit}:${card.rank}`))).size)
+    expect(new Set(opening.flatMap((state) => state.gameState!.myHand.map(cardKey))).size)
       .toBe(20);
     expect(await players[0].timeout(5_000).emitWithAck('game:redpoints:play', { card: first.myHand[0] }))
       .toMatchObject({ success: false });
@@ -771,5 +773,72 @@ describe('persistent authenticated application', () => {
     expect(await finalPlayer.timeout(5_000).emitWithAck('game:continue')).toMatchObject({ success: false });
     finishPresentation((await resume(finalPlayer)).gameState);
     expect(await finalPlayer.timeout(5_000).emitWithAck('game:continue')).toEqual({ success: true });
+  }, 60_000);
+
+  it("should play a full Liar's Deck game across a restart without leaking hidden cards", async () => {
+    const accounts: RegisteredAccount[] = [];
+    for (const username of ['ld_north', 'ld_east', 'ld_south', 'ld_west']) {
+      accounts.push(await register(username));
+    }
+    let players = await connectPlayers(accounts);
+    const created = await players[0].timeout(5_000).emitWithAck('room:create', { gameType: 'liarsdeck' });
+    const roomCode = created.roomCode;
+    if (!roomCode) throw new Error('Expected room code');
+    for (let index = 0; index < 4; index += 1) {
+      if (index > 0) await players[index].timeout(5_000).emitWithAck('room:join', { roomCode });
+      await players[index].timeout(5_000).emitWithAck('room:changeSeat', { seat: SEATS[index] });
+      expect(await players[index].timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
+    }
+
+    /** Calls whenever allowed after two plays this round, otherwise plays the first card. */
+    async function step(): Promise<PlayerSnapshot> {
+      const view = (await resume(players[0])).gameState;
+      finishPresentation(view);
+      if (view?.gameType !== 'liarsdeck') throw new Error("Expected Liar's Deck state");
+      const client = players[SEATS.indexOf(view.currentTurnSeat)];
+      const mine = (await resume(client)).gameState;
+      if (mine?.gameType !== 'liarsdeck') throw new Error("Expected Liar's Deck state");
+      expect(mine).not.toHaveProperty('pile');
+      expect(mine).not.toHaveProperty('bullets');
+      const call = ldMustChallenge(mine.mySeat, mine.handCounts, mine.lastPlay)
+        || (ldCanChallenge(mine.mySeat, mine.lastPlay) && mine.pileCount >= 2);
+      const response = call ? await client.timeout(5_000).emitWithAck('game:liarsdeck:challenge')
+        : await client.timeout(5_000).emitWithAck('game:liarsdeck:play', { cardIds: [mine.myHand[0].id] });
+      expect(response).toEqual({ success: true });
+      return resume(players[0]);
+    }
+
+    const opening = await Promise.all(players.map(resume));
+    const first = opening[0].gameState;
+    if (first?.gameType !== 'liarsdeck') throw new Error("Expected Liar's Deck state");
+    expect(first).toMatchObject({ phase: 'playing', round: 1, pileCount: 0, lastPlay: null });
+    expect(new Set(opening.flatMap((state) => state.gameState!.myHand.map(cardKey))).size).toBe(20);
+    finishPresentation(first);
+    const opener = players[SEATS.indexOf(first.currentTurnSeat)];
+    expect(await opener.timeout(5_000).emitWithAck('game:liarsdeck:challenge')).toMatchObject({ success: false });
+    expect(await opener.timeout(5_000).emitWithAck('game:liarsdeck:play', { cardIds: [0, 1, 2, 3] }))
+      .toEqual({ success: false, error: 'Invalid cards.' });
+    expect(await opener.timeout(5_000).emitWithAck('game:liarsdeck:play', { cardIds: ['x'] } as never))
+      .toEqual({ success: false, error: 'Invalid cards.' });
+    let snapshot = opening[0];
+    for (let moves = 0; snapshot.gameState?.phase === 'playing' && moves < 4; moves += 1) snapshot = await step();
+
+    const before = await Promise.all(players.map(resume));
+    await stop();
+    await start();
+    players = await connectPlayers(accounts);
+    const after = await Promise.all(players.map(resume));
+    for (let index = 0; index < 4; index += 1) expect(after[index].gameState).toEqual(before[index].gameState);
+
+    snapshot = after[0];
+    for (let moves = 0; snapshot.gameState?.phase === 'playing' && moves < 500; moves += 1) snapshot = await step();
+    const final = snapshot.gameState;
+    if (final?.gameType !== 'liarsdeck' || !final.result) throw new Error("Expected a finished Liar's Deck game");
+    expect(final.result.eliminationOrder).toEqual(final.eliminated);
+    expect(final.eliminated).not.toContain(final.result.winnerSeat);
+    expect(snapshot.room?.status).toBe('waiting');
+    const matches = await repository.listMatches(accounts[0].account.id);
+    expect(matches).toHaveLength(1);
+    expect(matches[0]).toMatchObject({ roomCode, result: final.result });
   }, 60_000);
 });

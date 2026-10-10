@@ -96,6 +96,10 @@ export interface ClientToServerEvents {
   'game:chinesepoker:arrange': (
     payload: { arrangement: ChinesePokerArrangement }, callback: (response: ActionResult) => void,
   ) => void;
+  'game:liarsdeck:play': (
+    payload: { cardIds: number[] }, callback: (response: ActionResult) => void,
+  ) => void;
+  'game:liarsdeck:challenge': (callback: (response: ActionResult) => void) => void;
   'game:continue':(callback: (response: ActionResult) => void) => void;
   'game:abortVote:start': (callback: (response: ActionResult) => void) => void;
   'game:abortVote:cast': (

@@ -25,10 +25,10 @@ export function createDeck(): Card[] {
  * @param randomFn - Random function (defaults to Math.random); inject a seeded one for reproducibility
  * @returns A new shuffled array
  */
-export function shuffleDeck(
-  deck: readonly Card[],
+export function shuffleDeck<T = Card>(
+  deck: readonly T[],
   randomFn: () => number = Math.random,
-): Card[] {
+): T[] {
   const shuffled = [...deck];
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(randomFn() * (i + 1));

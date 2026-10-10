@@ -3,7 +3,7 @@
 import type { Seat, BidSuit, Team, GameType } from '../types';
 
 /** All game types */
-export const GAME_TYPES: readonly GameType[] = ['bridge', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'chinesepoker'];
+export const GAME_TYPES: readonly GameType[] = ['bridge', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'chinesepoker', 'liarsdeck'];
 
 /** Abort vote: passes once this many yes votes are cast */
 export const ABORT_VOTE_THRESHOLD = 3;

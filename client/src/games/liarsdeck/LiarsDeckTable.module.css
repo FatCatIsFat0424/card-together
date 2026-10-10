@@ -1,0 +1,240 @@
+/* ─── LiarsDeckTable styles: table card, face-down pile, hand, call controls, info rail, settlement ─── */
+
+/* ─── Table center ─── */
+.centre {
+  --card-w: calc((clamp(48px, 10dvh, 76px)) * var(--playing-card-scale));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--table-ink);
+}
+
+.piles {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--spacing-lg);
+}
+
+.pile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.card {
+  position: relative;
+  flex: none;
+  display: block;
+  width: var(--card-w);
+  aspect-ratio: 224 / 313;
+  border-radius: calc(var(--card-w) * 0.08);
+  background: var(--card-face);
+  box-shadow: var(--shadow-md);
+}
+
+.back {
+  background: var(--card-back);
+  outline: var(--card-back-outline, none);
+  outline-offset: -1px;
+}
+
+/* Image on its own layer so a custom back can fade over the theme card base. */
+.back::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--card-back-image) center / var(--card-back-size, 100% 100%) no-repeat;
+  opacity: var(--card-back-opacity, 1);
+}
+
+.empty {
+  background: transparent;
+  border: 2px dashed color-mix(in srgb, var(--table-ink) 40%, transparent);
+  box-shadow: none;
+}
+
+/* Face-down cards overlap into one pile that grows with each play. */
+.stack {
+  display: flex;
+}
+
+.stack .card + .card { margin-left: calc(var(--card-w) * -0.82); }
+
+.pill {
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--bg-page) 45%, transparent);
+  border: 1px solid var(--rail-border);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.claim {
+  margin: 0;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: var(--shadow-sm);
+}
+
+.round {
+  font-size: var(--text-xs);
+  opacity: 0.75;
+}
+
+/* ─── Hand ─── */
+.handArea {
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hand {
+  --card-w: min(calc(84px * var(--playing-card-scale)), 13cqh, calc((100cqw - 56px) / 5.4));
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 22px var(--spacing-sm) 6px;
+}
+
+.handCard {
+  position: relative;
+  flex: none;
+  width: var(--card-w);
+  min-width: 44px;
+  aspect-ratio: 224 / 313;
+  padding: 0;
+  border: none;
+  border-radius: calc(var(--card-w) * 0.08);
+  background: var(--card-face);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  cursor: pointer;
+  transform: translateY(var(--lift, 0px));
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.handCard[aria-disabled='true'] { cursor: default; }
+
+.handCard:not([aria-disabled='true']):hover,
+.handCard:focus-visible { --lift: -8px; }
+
+.handFace {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Cards that match the table card carry a quiet marker; selection is the strong highlight. */
+.truth::after {
+  content: '✓';
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-success);
+  color: var(--text-inverse);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.selected {
+  --lift: -22px;
+  box-shadow:
+    0 0 0 3px var(--turn-glow),
+    0 0 18px color-mix(in srgb, var(--turn-glow) 60%, transparent),
+    var(--shadow-lg);
+}
+
+.selected:hover, .selected:focus-visible { --lift: -26px; }
+
+.played {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.mini {
+  width: calc(22px * var(--playing-card-scale));
+  aspect-ratio: 224 / 313;
+  border-radius: 2px;
+  box-shadow: var(--shadow-sm);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 6px var(--spacing-sm) 0;
+}
+
+.prompt {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.promptActive {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.ctrl {
+  min-height: 44px;
+  padding: 4px 16px;
+  font-size: var(--text-sm);
+}
+
+.call {
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+/* ─── Info rail ─── */
+.roundLine {
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.tag {
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--text-primary) 12%, transparent);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tagGood {
+  background: color-mix(in srgb, var(--color-success) 18%, transparent);
+  color: var(--color-success);
+}
+
+.tagBad {
+  background: color-mix(in srgb, var(--color-danger) 18%, transparent);
+  color: var(--color-danger);
+}
+
+/* ─── Settlement ─── */
+.rankTable td,
+.rankTable th { text-align: left; }
+
+@media (max-width: 767px) {
+  .centre { --card-w: calc((clamp(40px, 12vw, 58px)) * var(--playing-card-scale)); gap: 6px; }
+  .piles { gap: var(--spacing-md); }
+}

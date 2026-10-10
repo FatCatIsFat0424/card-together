@@ -6,6 +6,7 @@ import { getRedPointsBotAction } from './redpoints-strategy';
 import { getNinetyNineBotAction } from './ninetynine-strategy';
 import { getSevensBotAction } from './sevens-strategy';
 import { getChinesePokerBotAction } from './chinesepoker-strategy';
+import { getLiarsDeckBotAction } from './liarsdeck-strategy';
 
 export type BotAction =
   | { readonly type: 'bridge-redeal'; readonly accept: boolean }
@@ -18,7 +19,9 @@ export type BotAction =
   | { readonly type: 'ninetynine-play'; readonly card: Card; readonly choice?: NnChoice; readonly target?: Seat }
   | { readonly type: 'sevens-play'; readonly card: Card }
   | { readonly type: 'sevens-cover'; readonly card: Card }
-  | { readonly type: 'chinesepoker-arrange'; readonly arrangement: ChinesePokerArrangement };
+  | { readonly type: 'chinesepoker-arrange'; readonly arrangement: ChinesePokerArrangement }
+  | { readonly type: 'liarsdeck-play'; readonly cardIds: readonly number[] }
+  | { readonly type: 'liarsdeck-challenge' };
 
 /** Decisions receive only filtered player information and injectable randomness. */
 export function getBotAction(
@@ -32,5 +35,6 @@ export function getBotAction(
     case 'ninetynine': return getNinetyNineBotAction(visible, random);
     case 'sevens': return getSevensBotAction(visible, random);
     case 'chinesepoker': return getChinesePokerBotAction(visible, random);
+    case 'liarsdeck': return getLiarsDeckBotAction(visible, random);
   }
 }

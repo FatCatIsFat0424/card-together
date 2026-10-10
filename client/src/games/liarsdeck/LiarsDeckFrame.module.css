@@ -1,0 +1,90 @@
+/* ─── Liar's Deck presentation bodies: table card, face-down plays, revealed calls, revolver ─── */
+
+.body {
+  --frame-card-width: clamp(2.5rem, 8vw, 3.5rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: 0.8rem;
+}
+
+.row { flex-direction: row; }
+
+.cards {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: var(--spacing-xs);
+}
+
+.card {
+  position: relative;
+  display: block;
+  width: var(--frame-card-width);
+  aspect-ratio: 224 / 313;
+  border-radius: calc(var(--frame-card-width) * 0.08);
+  box-shadow: var(--shadow-sm);
+}
+
+.back {
+  background: var(--card-back);
+  outline: var(--card-back-outline, none);
+  outline-offset: -1px;
+}
+
+.back::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--card-back-image) center / var(--card-back-size, 100% 100%) no-repeat;
+  opacity: var(--card-back-opacity, 1);
+}
+
+.count {
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.callout { font-size: 1rem; }
+.good { color: var(--color-success); }
+.bad { color: var(--color-danger); }
+
+.revolver {
+  display: inline-block;
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
+.arrive { animation: arrive 300ms ease-out var(--enter-delay, 0ms) both; }
+.flip { animation: flip 400ms ease-out var(--enter-delay, 0ms) both; }
+/* Reveal the call after the "LIAR!" announcement has been read. */
+.delayed { animation-delay: calc(var(--enter-delay, 0ms) + 600ms); }
+.callout.delayed { animation: fade 300ms ease-out calc(var(--enter-delay, 0ms) + 1000ms) both; }
+.spin { animation: spin 600ms ease-in-out var(--enter-delay, 0ms) 4 both; }
+
+@keyframes arrive {
+  from { opacity: 0; transform: translateY(60%) scale(0.8); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes flip {
+  from { transform: perspective(20rem) rotateY(90deg); opacity: 0; }
+  to { transform: perspective(20rem) rotateY(0deg); opacity: 1; }
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes spin {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-14deg); }
+  75% { transform: rotate(14deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrive, .flip, .callout, .spin { animation: none; }
+}

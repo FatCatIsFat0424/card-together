@@ -19,7 +19,8 @@ function Round({ round }: { round: HistoryRound }): ReactNode {
   const name = useSeatName();
   return <details className={styles.round} onToggle={(event) => setOpen(event.currentTarget.open)}>
     <summary>{t('history.round', { n: String(round.number),
-      status: t(round.complete ? 'history.complete' : 'history.ongoing') })}</summary>
+      status: t(round.complete ? 'history.complete' : 'history.ongoing') })}
+    {round.tableFace && <> · {t('liarsdeck.tableCard')} {t(`liarsdeck.face.${round.tableFace}`)}</>}</summary>
     {open && <ol className={styles.actions}>{round.actions.map((action, index) => <li key={index}>
       <strong>{name(action.seat)}</strong> {t(`history.${action.kind}`)}
       {action.cards.length > 0 && <span className={styles.cards}> {action.cards.map(cardLabel).join(' ')}</span>}
@@ -29,7 +30,13 @@ function Round({ round }: { round: HistoryRound }): ReactNode {
       {action.points !== undefined && <span> · {t('history.points', { n: String(action.points) })}</span>}
       {action.total !== undefined && <span> · {action.previousTotal} → {action.total}</span>}
       {action.choice && <span> ({action.choice === 'plus' ? '+' : '−'}{action.cards[0]?.rank === 12 ? 20 : 10})</span>}
-      {action.target && <span> · {t('history.target', { name: name(action.target) })}</span>}
+      {action.count !== undefined && <span> · {t('liarsdeck.logPlay', { n: String(action.count) })}</span>}
+      {action.faces && <span> · {t('liarsdeck.logCall', { name: name(action.target ?? action.seat) })}:
+        {' '}{action.faces.map((face) => t(`liarsdeck.face.${face}`)).join(' ')}
+        {' '}({t(action.lied ? 'liarsdeck.logLied' : 'liarsdeck.logHonest')})</span>}
+      {action.shot !== undefined && <span> · {t(action.survived ? 'liarsdeck.logSurvived' : 'liarsdeck.logKilled',
+        { n: String(action.shot) })}</span>}
+      {action.target && !action.faces && <span> · {t('history.target', { name: name(action.target) })}</span>}
       {action.pending && <span> · {t('history.pending')}</span>}
     </li>)}</ol>}
   </details>;

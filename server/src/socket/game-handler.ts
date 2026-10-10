@@ -1,4 +1,5 @@
 import type { BidAction, Card, ChinesePokerArrangement, Seat } from '@shared/types';
+import { LD_DECK, LD_MAX_PLAY } from '@shared/rules/liarsdeck';
 import type { SocketContext, TypedSocket } from './context';
 import { actionError, requireRoom, requireSuccess, runAction } from './context';
 import * as roomManager from '../managers/room-manager';
@@ -142,6 +143,23 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
     const code = requireRoom(socket);
     requireSuccess(gameManager.handleNinetyNinePlay(code, playerSeat(socket, code), { suit: card.suit, rank: card.rank },
       choice, target as Seat | undefined));
+    return { success: true };
+  }));
+
+  socket.on('game:liarsdeck:play', (payload, callback) => runAction(context, socket, callback, () => {
+    const cardIds: unknown = payload?.cardIds;
+    if (!Array.isArray(cardIds) || cardIds.length < 1 || cardIds.length > LD_MAX_PLAY
+      || !cardIds.every((id) => Number.isInteger(id) && id >= 0 && id < LD_DECK.length)) {
+      throw actionError('Invalid cards.');
+    }
+    const code = requireRoom(socket);
+    requireSuccess(gameManager.handleLiarsDeckPlay(code, playerSeat(socket, code), [...cardIds] as number[]));
+    return { success: true };
+  }));
+
+  socket.on('game:liarsdeck:challenge', (callback) => runAction(context, socket, callback, () => {
+    const code = requireRoom(socket);
+    requireSuccess(gameManager.handleLiarsDeckChallenge(code, playerSeat(socket, code)));
     return { success: true };
   }));
 

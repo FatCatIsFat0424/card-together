@@ -41,13 +41,14 @@ bot algorithm (never fouled) and marks human seats "Auto-played".
 
 Presentation animations consume neither allowance nor reserve. Red Points' hand play
 and flipped-card choice share one turn allowance, with animation time excluded.
-Bridge bidding and redeal decisions also use the clock. A new deal refills reserves.
+Bridge bidding and redeal decisions also use the clock. A new deal refills reserves,
+including every new Liar's Deck round.
 Disconnecting does not pause the clock or change the existing reconnect window.
 At expiry the server makes a legal decision using the same private view as the player;
 control remains with the player on subsequent turns. Redeal timeout declines the redeal.
 The seat shows an "Auto-played" badge until its next turn begins; a bot's seat shows
 "Thinking…" while it is the bot's turn. Each seat plate has a single status slot, so when
-several apply it shows Ninety-Nine bust, then Big Two pass lock, then thinking, then auto-played,
+several apply it shows Ninety-Nine bust or Liar's Deck death, then Big Two pass lock, then thinking, then auto-played,
 then Chinese Poker "Arranged".
 Big Two forced passes retain their existing scheduler and do not consume decision time.
 Their clock is published like any other turn, so other seats cannot tell a forced pass apart.
@@ -107,6 +108,7 @@ search, and the evaluation scores do not guarantee optimal play.
 | Red Points | Evaluate every legal capture, balancing immediate red points, future matches with the remaining hand, and the public table's exposure to unseen cards. |
 | Ninety-Nine | Treat 4, 5, 10, J, Q, K and ♠A as rescue cards and keep them while number cards are safe, spending large number cards first. Compare both legal plus/minus choices and penalize leaving no card that fits the total expected when the bot acts again, more so in a duel. Model the next player's chance of being forced or eliminated only when the total is within 9 of 99, using unseen cards: the bot's own hand and public plays since the last reshuffle are excluded. Evaluate reverse/designation by who acts next and how many opponent turns pass before the bot acts again; near 99 it avoids shortening its own rotation. Pressure on the next player is discounted when that seat's latest play spent a rescue card while any number card was still safe, which suggests a hand without number cards. Randomize among similarly rated surviving designation targets. |
 | Sevens | Must play: favor cards that continue into the bot's own cards and 7s of suits it holds many of; penalize opening directions it cannot follow, especially toward heavy cards. Must cover: weigh the card's penalty against own cards stranded beyond it, preferring cards an earlier cover already cut off. |
+| Liar's Deck | Must call when it is the last seat holding cards. Otherwise score each option by the bot's own chance of dying on its next pull: calling risks a pull if the previous play was honest, estimated from the truths the bot cannot see (its own hand and plays this round are excluded, and earlier claims this round are assumed partly honest); lying risks a call that grows with the cards played and is certain when emptying the hand leaves one opponent holding cards. Small bonuses favor shedding cards and making an opponent pull. Honest plays spend non-joker truths first. |
 | Chinese Poker | Search every non-fouled 3/5/5 split, estimating each row's chance of beating a random opponent's row, the row values, and sweep risk; choose among the closest top candidates. The "Auto arrange" button and deadline arrangements use the same search. |
 
 The server waits for the previous presentation and a short thinking delay before each
@@ -276,3 +278,29 @@ pairings again. Scores sum to zero; the highest score wins, ties shared. Special
 declared hands (報到, such as a 13-card dragon or six pairs) are not used. Scores do not
 accumulate across matches.
 
+## Liar's Deck
+
+Based on the Liar's Deck mode of *Liar's Bar*. The deck has 20 cards: six each of K, Q, and A
+plus two jokers. Each player owns a revolver with one bullet in six chambers; the chamber is
+chosen at random when the game starts and never resets, so the n-th trigger pull fires with
+chance 1/(7 − n) and the sixth always fires. Trigger pull counts are public; bullet
+positions never leave the server.
+
+Each round deals five cards to every surviving seat and reveals a random table card from
+K/Q/A. The table face and jokers are truths; any other card is a lie. A random seat opens
+the first round; turns run counterclockwise and skip seats with empty hands. On a turn,
+play one to three cards face down, claiming they all match the table card, or call LIAR on
+the previous play. The opening play of a round cannot be called, and the only seat still
+holding cards must call.
+
+A call reveals only the previous play. If any revealed card is a lie, the seat that played it
+pulls its trigger; otherwise the caller does. The pull resolves automatically and ends the
+round. Unchallenged plays are never revealed, even after the game. A surviving shooter opens
+the next round; if the shooter dies, the next surviving seat does. The last survivor wins and
+earlier eliminations rank lower. Scores do not accumulate across matches.
+
+Players select one to three hand cards and press Play, or press LIAR. Cards matching the
+table card carry a check mark, and cards the player has already played this round are listed
+below the hand. The table shows each seat's hand size and pulls (🔫 n/6) and keeps a pull's
+outcome, the next round's cards, and eliminations hidden until their presentation frames.
+Devil and Chaos variants are not implemented.

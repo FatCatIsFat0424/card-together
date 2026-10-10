@@ -157,6 +157,7 @@
 }
 
 .declarer { background: var(--badge-declarer); color: var(--text-inverse); }
+.danger { background: color-mix(in srgb, var(--color-danger) 22%, transparent); color: var(--color-danger); }
 
 .points {
   cursor: pointer;
