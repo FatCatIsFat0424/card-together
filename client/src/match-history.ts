@@ -1,5 +1,6 @@
 import type { GameType, MatchSummary, PublicAccount } from '@shared/types';
 import { GAME_TYPES, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import { resultSeats } from './game-view';
 
 export type MatchOutcome = 'win' | 'loss' | 'tie' | 'completed';
 export type HistorySortKey = 'date' | 'room' | 'game' | 'result';
@@ -20,7 +21,8 @@ export interface HistoryFilters {
 /** Bridge outcomes follow partnerships; tied winners count as ties, not losses. */
 export function matchOutcome(match: MatchSummary, accountId?: string): MatchOutcome {
   const index = accountId ? match.accountIds.indexOf(accountId) : -1;
-  const seat = SEAT_ORDER_CLOCKWISE[index];
+  // accountIds follow the recorded seats; Blackjack and Hold'em may record fewer than four
+  const seat = resultSeats(match.result)[index];
   if (!seat) return 'completed';
   const { result } = match;
   if (result.gameType === 'bridge') {

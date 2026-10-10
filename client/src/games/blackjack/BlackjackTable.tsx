@@ -71,7 +71,7 @@ function Centre({ game, view }: { game: BlackjackVisibleState; view: BlackjackTa
   const peek = useGodViewStore((state) => state.hole) ?? undefined;
   const auto = autoBetSeats(game.log, view.logEnd);
   // My own hands sit in the hand zone while a hand is played; between hands the zone holds the bet controls.
-  const seats = BJ_SEATS.filter((seat) => view.betting || seat !== game.mySeat);
+  const seats = game.seats.filter((seat) => view.betting || seat !== game.mySeat);
   return <div className={styles.centre}>
     <div className={styles.dealerArea}>
       <DealerHand cards={view.dealer} holeHidden={view.holeHidden} size="md" peek={peek} />
@@ -145,7 +145,7 @@ function Info({ game, view, locked }: { game: BlackjackVisibleState; view: Black
 
     <section className={infoStyles.box}>
       <h2 className={infoStyles.caption}>{t('blackjack.players')}</h2>
-      <ul className={infoStyles.list}>{BJ_SEATS.map((seat) => {
+      <ul className={infoStyles.list}>{game.seats.map((seat) => {
         const out = blackjackSeatOut(view, seat);
         return <li key={seat} className={infoStyles.row}>
           <span className={infoStyles.name}>{seatName(seat)}</span>

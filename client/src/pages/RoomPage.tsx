@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { GAME_TYPES, MAX_SPECTATORS } from '@shared/constants';
+import { FLEXIBLE_SEAT_GAMES, GAME_TYPES, MAX_SPECTATORS } from '@shared/constants';
+import { minPlayers } from '@shared/rules/seats';
 import type { GameType, NinetyNineOptions, PlayerInfo, Seat, SevensOptions, TimeControl } from '@shared/types';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import { socket } from '../socket';
@@ -173,10 +174,15 @@ export function RoomPage(): ReactNode {
   </main>;
 
   const progress = roomProgress(roomInfo.seats);
-  const progressText = t('room.progress', { seated: String(progress.seated), ready: String(progress.ready) });
+  // Blackjack and Hold'em start with two to four seated players; empty seats sit out.
+  const flexible = FLEXIBLE_SEAT_GAMES.includes(roomInfo.gameType);
+  const needed = minPlayers(roomInfo.gameType);
+  const progressText = t(flexible ? 'room.progressFlexible' : 'room.progress',
+    { seated: String(progress.seated), ready: String(progress.ready) });
   const spectators = roomInfo.spectators ?? [];
-  const hintKey = !mySeat ? 'room.spectatorHint' : progress.seated < 4 ? 'room.waiting'
-    : isReady ? 'room.waitingReady' : 'room.pressReady';
+  const hint = !mySeat ? t('room.spectatorHint')
+    : progress.seated < needed ? flexible ? t('room.waitingFlexible', { n: String(needed) }) : t('room.waiting')
+      : t(isReady ? 'room.waitingReady' : flexible ? 'room.pressReadyFlexible' : 'room.pressReady');
 
   return (
     <main className={`${styles.roomContainer} ${styles.roomLayout} ${chatOpen ? styles.chatOpen : ''}`}>
@@ -283,7 +289,7 @@ export function RoomPage(): ReactNode {
         <div className={styles.tableCenter}>
           <div className={styles.tableCenterText}>
             <strong>{progressText}</strong>
-            <span>{t(hintKey)}</span>
+            <span>{hint}</span>
           </div>
         </div>
       </div>

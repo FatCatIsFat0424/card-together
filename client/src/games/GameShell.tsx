@@ -17,7 +17,7 @@ import { useI18nStore } from '../stores/i18n-store';
 import { ChatPanel } from '../components/ChatPanel';
 import { TableSeat } from '../components/TableSeat';
 import { AppCheckbox } from '../components/AppCheckbox';
-import { lastElimination, lastMove, tablePosition } from '../game-view';
+import { lastElimination, lastMove, matchSeats, tablePosition } from '../game-view';
 import type { TablePosition } from '../game-view';
 import { AbortVoteBanner, AbortVoteButton } from './AbortVote';
 import { SpectatorLeaveButton } from './SpectatorLeave';
@@ -195,6 +195,8 @@ export function GameShell({
   // Focusing the chat input would raise the phone keyboard; focus the sheet itself.
   useSheetFocus(chatOpen, chatRailRef, chatButtonRef, chatIsOverlay, 'panel');
   const bottomSeat: Seat = mySeat ?? 'S';
+  // Seats left empty in a Blackjack or Hold'em match get no plate.
+  const tableSeats = matchSeats(visibleGame);
   const unread = chatOpen ? 0 : Math.max(0, messageCount - seenMessages);
   const godView = useGodViewStore((state) => state.role);
 
@@ -340,7 +342,7 @@ export function GameShell({
               {unread > 0 && <span className={`${styles.unread} ${styles.fabBadge}`}>{unread}</span>}
             </button>
           </div>
-          {SEATS.filter((seat) => seat !== bottomSeat).map((seat) => (
+          {SEATS.filter((seat) => seat !== bottomSeat && tableSeats.includes(seat)).map((seat) => (
             <TableSeat key={seat} seat={seat} position={tablePosition(seat, bottomSeat)}
               suppressTurn={presentation.locked}
               moveKey={visibleGame?.presentation
@@ -366,11 +368,11 @@ export function GameShell({
 
         <div className={`${styles.handZone} ${myTurn ? styles.handMyTurn : ''}`} data-hand-zone>
           <div className={styles.handHeader}>
-            <TableSeat seat={bottomSeat} position="bottom" suppressTurn={presentation.locked}
+            {tableSeats.includes(bottomSeat) && <TableSeat seat={bottomSeat} position="bottom" suppressTurn={presentation.locked}
               moveKey={visibleGame?.presentation
                 ? presentation.frame?.seat === bottomSeat ? presentation.frame.key : undefined
                 : move?.seat === bottomSeat ? move.index : undefined}
-              onPick={onPickSeat && pickableSeats?.includes(bottomSeat) ? () => onPickSeat(bottomSeat) : undefined} />
+              onPick={onPickSeat && pickableSeats?.includes(bottomSeat) ? () => onPickSeat(bottomSeat) : undefined} />}
           </div>
           <div className={styles.handStatus}>
             {godView && <p className={styles.godView}>{t(godView === 'spectator' ? 'table.spectating' : 'table.godView')}</p>}

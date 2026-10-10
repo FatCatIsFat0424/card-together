@@ -1,19 +1,26 @@
 # Game rules
 
 These are the implemented house rules, not a claim of standard tournament rules.
-Four players occupy N/E/S/W. Clockwise is N → E → S → W; counterclockwise is
+Four players occupy N/E/S/W; Blackjack and Texas Hold'em also run with two or three, leaving
+the other seats empty. Clockwise is N → E → S → W; counterclockwise is
 N → W → S → E. The server controls legality, turns, and results; private hands are
 visible only to their owner.
 
 ## Shared room lifecycle
 
-A host chooses the game while waiting. Four occupied, ready seats start a match.
+A host chooses the game while waiting. Four occupied, ready seats start a match. Blackjack and
+Texas Hold'em start once at least two seats are occupied and every occupied seat is ready
+([`FLEXIBLE_SEAT_GAMES`](../shared/src/constants/game-rules.ts)); an empty seat takes no part: it
+holds no chips, is never dealt in or given a turn, the button, or a blind, and is absent from
+results and match history. In these two games a seat filling or emptying while waiting (a player
+sitting, standing, or leaving, or a bot added or removed) clears human readiness so the new table
+is confirmed before it starts.
 After scoring, each player returns to the room individually with continue while the others
 keep the result; the finished board is removed once every human has returned or the next
 match starts. Leaving or failing to reconnect within
 60 seconds aborts an unfinished match. Seated players can propose/vote to abort an
-active game. Three yes votes out of four pass; with bots, the threshold is the smaller
-of three and the number of human players. Bots do not vote; the starter votes yes
+active game. Three yes votes out of four pass; with bots or empty seats, the threshold is the
+smaller of three and the number of seated human players. Bots do not vote; the starter votes yes
 automatically, so a solo human can end the game immediately.
 Votes last 60 seconds. Starting a proposal sets a three-minute cooldown; failed or
 expired votes retain that cooldown. A successful vote returns the room to waiting
@@ -134,8 +141,8 @@ a polite live region announces whose turn it is.
 While waiting, the host can add a bot to an empty seat, remove a bot, or fill every empty
 seat with bots; members without a seat stay spectators. While no human is seated, the last
 empty seat stays open for a player: a match needs a seated human, who can vote to end it.
-Bots are always ready; the match starts once all four seats are occupied and the humans
-are ready. Bots remain for the next match and support every game. Only humans can
+Bots are always ready; the match starts once the seats the game needs are occupied and the
+humans are ready. Bots remain for the next match and support every game. Only humans can
 host; the room is removed when its last human leaves.
 
 Bots evaluate legal moves using only their own hand and public state. Scored move
@@ -376,9 +383,10 @@ Devil and Chaos variants are not implemented.
 
 ## Blackjack
 
-The server is the dealer; each seat plays only against it. Every seat starts with 1000 chips,
-which exist only within the match, and a match is eight hands. Each hand uses a freshly
-shuffled 52-card deck; hands that stop at 21 or bust can never use it up.
+The server is the dealer; each seat plays only against it. Two to four seats play; every
+occupied seat starts with 1000 chips, which exist only within the match, and a match is eight
+hands. Each hand uses a freshly shuffled 52-card deck; hands that stop at 21 or bust can never
+use it up.
 
 Each hand opens with simultaneous betting (see [turn timer](#turn-timer)): 10–200 chips in steps
 of 10, within the seat's chips. Bets stay hidden until the deal. A seat with fewer than 10 chips
@@ -400,15 +408,15 @@ the most chips win, ties shared. Scores do not accumulate across matches.
 
 ## Texas Hold'em
 
-No-limit Hold'em for the four seats. Every seat starts with 1000 chips, which exist only within
-the match. Blinds start at 10/20 and rise every four hands to 15/30, 25/50, 40/80, and 60/120
+No-limit Hold'em for two to four occupied seats. Every occupied seat starts with 1000 chips, which
+exist only within the match. Blinds start at 10/20 and rise every four hands to 15/30, 25/50, 40/80, and 60/120
 ([`HE_BLIND_LEVELS`](../shared/src/rules/holdem.ts)). The match ends once one seat holds every chip,
 or after the twentieth hand; the most chips win, ties shared, and seats that lost every chip rank
 by elimination order. Scores do not accumulate across matches.
 
-A random seat holds the button for the first hand; it then moves clockwise to the next seat with
-chips. Each hand is shuffled from a full deck and deals two private hole cards to every seat with
-chips, starting left of the button. The next two seats post the small and big blinds; heads-up the
+A random occupied seat holds the button for the first hand; it then moves clockwise to the next
+seat with chips, skipping empty seats. Each hand is shuffled from a full deck and deals two
+private hole cards to every seat with chips, starting left of the button. The next two seats post the small and big blinds; heads-up the
 button posts the small blind. A seat short of a blind posts what it has and is all-in. There are
 no antes and no burn cards.
 

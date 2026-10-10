@@ -11,6 +11,7 @@ import { blackjackTranslations } from '../../../client/src/blackjack-i18n';
 
 const c = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit });
 const seats = <T>(value: T): Record<Seat, T> => ({ N: value, E: value, S: value, W: value });
+const ALL: readonly Seat[] = ['N', 'E', 'S', 'W'];
 
 /**
  * Hand 1: N hits to 21, E has a natural, S splits eights and doubles the first hand, W doubles.
@@ -53,9 +54,9 @@ const log: BlackjackLogEntry[] = [
 ];
 
 function game(overrides: Partial<BlackjackVisibleState> = {}): BlackjackVisibleState {
-  const table = bjReplay(log);
+  const table = bjReplay(log, ALL);
   return {
-    gameType: 'blackjack', phase: 'playing', mySeat: 'S', hand: table.hand, chips: table.chips, myBet: null,
+    gameType: 'blackjack', phase: 'playing', mySeat: 'S', seats: ALL, hand: table.hand, chips: table.chips, myBet: null,
     betPlaced: seats(false), betDeadline: null, hands: table.hands, dealer: table.dealer, holeHidden: true,
     currentTurnSeat: 'N', activeHand: 0, log,
     presentation: { id: 'p', startedAt: 0, logStart: 5, timingVersion: 2 }, result: null, ...overrides,
@@ -111,7 +112,7 @@ describe('Blackjack table view', () => {
   });
 
   it('should derive the legal buttons for the local seat', () => {
-    const table = replayBlackjack(log, 5);
+    const table = replayBlackjack(log, ALL, 5);
     const turn = game({ hands: table.hands, chips: table.chips, currentTurnSeat: 'S' });
     expect(blackjackActions(turn, true)).toEqual(['hit', 'stand', 'double', 'split']);
     expect(blackjackActions(turn, false)).toEqual([]);
@@ -147,7 +148,7 @@ describe('Blackjack table view', () => {
     const betting = blackjackView(game({ phase: 'betting', chips: { N: 5, E: 100, S: 100, W: 100 } }), null);
     expect(blackjackSeatOut(betting, 'N')).toBe(true);
     expect(blackjackSeatOut(betting, 'E')).toBe(false);
-    const playing = blackjackView(game({ hands: { ...bjReplay(log).hands, W: [] } }), null);
+    const playing = blackjackView(game({ hands: { ...bjReplay(log, ALL).hands, W: [] } }), null);
     expect(blackjackSeatOut(playing, 'W')).toBe(true);
     expect(blackjackSeatOut(playing, 'N')).toBe(false);
     expect(autoBetSeats(log, 5)).toEqual(['S']);
@@ -165,6 +166,9 @@ describe('Blackjack table view', () => {
       { seat: 'W', place: 3, chips: 900, net: -100, winner: false },
       { seat: 'E', place: 4, chips: 700, net: -300, winner: false },
     ]);
+    expect(rankBlackjack({
+      gameType: 'blackjack', seats: ['E', 'S'], chips: { N: 0, E: 0, S: 0, W: 0 }, hands: 8, winners: ['E', 'S'],
+    }).map((row) => [row.seat, row.place, row.winner])).toEqual([['E', 1, true], ['S', 1, true]]);
     expect(handNet({ bet: 20 }, 'blackjack')).toBe(30);
     expect(handNet({ bet: 20 }, 'push')).toBe(0);
     expect(handNet({ bet: 40 }, 'bust')).toBe(-40);
@@ -172,7 +176,7 @@ describe('Blackjack table view', () => {
   });
 
   it('should list each hand as a history round with dealer draws and settlement', () => {
-    const rounds = deriveRoundHistory({ gameType: 'blackjack', phase: 'playing', log });
+    const rounds = deriveRoundHistory({ gameType: 'blackjack', phase: 'playing', seats: ALL, log });
     expect(rounds.map((round) => round.complete)).toEqual([true, false]);
     const [first] = rounds;
     expect(first.actions.filter((action) => action.kind === 'deal').map((action) => action.seat))
@@ -183,7 +187,7 @@ describe('Blackjack table view', () => {
       .toMatchObject({ handIndex: 0, handTotal: 21 });
     expect(first.actions.find((action) => action.kind === 'dealerHit')).toMatchObject({ seat: null, handTotal: 20 });
     expect(first.actions.filter((action) => action.kind === 'settle').map((action) => action.net)).toEqual([50, 30, 10, 0]);
-    expect(deriveRoundHistory(structuredClone({ gameType: 'blackjack' as const, phase: 'playing' as const, log })))
+    expect(deriveRoundHistory(structuredClone({ gameType: 'blackjack' as const, phase: 'playing' as const, seats: ALL, log })))
       .toEqual(rounds);
   });
 

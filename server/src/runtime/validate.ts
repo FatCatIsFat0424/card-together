@@ -3,7 +3,7 @@ import { isSevensOptions } from '@shared/sevens-options';
 import { isNinetyNineOptions } from '@shared/ninetynine-options';
 import { getTurnSeat } from '../managers/game-clock';
 import {
-  ABORT_VOTE_THRESHOLD, GAME_TYPES, MAX_MESSAGE_EMOJIS, MAX_ROOM_MEMBERS, isEmojiName, isMediaId, isProvidedEmojiFile,
+  ABORT_VOTE_THRESHOLD, GAME_TYPES, MAX_MESSAGE_EMOJIS, MIN_FLEXIBLE_PLAYERS, MAX_ROOM_MEMBERS, isEmojiName, isMediaId, isProvidedEmojiFile,
 } from '@shared/constants';
 import { isDeepStrictEqual } from 'node:util';
 import { getPresentationEndsAt } from '@shared/game-presentation';
@@ -26,7 +26,7 @@ import {
   heEliminations, heEmptyTable, heFirstToAct, heInHand, heLegalActions, heMatchOver, heNextButton, heNextToAct,
   heWinners,
 } from '@shared/rules/holdem';
-import { nextSeatCounterClockwise } from '@shared/rules/seats';
+import { nextSeatCounterClockwise, occupiedSeats } from '@shared/rules/seats';
 import type {
   AnyGameState, BigTwoGameState, BlackjackGameState, BridgeGameState, HoldemGameState, Card, ChinesePokerArrangement, ChinesePokerGameState, GameType,
   LiarsDeckGameState, LiarsDeckLastPlay, NinetyNineGameState, RedPointsGameState, Seat, SevensGameState, SevensTable,
@@ -369,6 +369,34 @@ function commonGame(value: ObjectValue): boolean {
     Object.keys(value.players).length === 4 && seats.every((seat) => player((value.players as ObjectValue)[seat]));
 }
 
+/** Blackjack and Hold'em: two to four seats hold players and empty seats are absent. */
+function flexibleSeatGame(value: ObjectValue): boolean {
+  if (!text(value.id) || !text(value.roomCode) || !number(value.startedAt) || !object(value.players)) return false;
+  const players = value.players;
+  const keys = Object.keys(players);
+  return keys.length >= MIN_FLEXIBLE_PLAYERS && keys.every((key) => oneOf(key, seats) && player(players[key]));
+}
+
+/** Seats a flexible-seat result lists in N, E, S, W order; legacy results omit them and had all four. */
+function resultSeats(value: ObjectValue): Seat[] | null {
+  if (value.seats === undefined) return seats;
+  const listed = value.seats;
+  return seatList(listed) && listed.length >= MIN_FLEXIBLE_PLAYERS
+    && sameJson(listed, seats.filter((seat) => listed.includes(seat))) ? listed : null;
+}
+
+/** The result a finished flexible-seat match must hold; legacy four-seat results did not list seats. */
+function flexibleResult<T extends object>(stored: unknown, participants: Seat[], expected: T): T & { seats?: Seat[] } {
+  return participants.length === seats.length && object(stored) && stored.seats === undefined
+    ? expected : { ...expected, seats: participants };
+}
+
+/** Distinct accounts hold the seats taking part. */
+function distinctPlayers(players: Readonly<Partial<Record<Seat, { readonly id: string }>>>): boolean {
+  const participants = occupiedSeats(players);
+  return new Set(participants.map((seat) => players[seat]?.id)).size === participants.length;
+}
+
 function sevensTable(value: unknown): value is SevensTable {
   return object(value) && Object.keys(value).length === 4 && suits.every((suit) => {
     const row = value[suit];
@@ -560,10 +588,14 @@ function chipCounts(value: unknown): value is Record<Seat, number> {
   return seatCounts(value, Number.MAX_SAFE_INTEGER);
 }
 
-/** Blackjack result: winners hold the most chips after one to eight hands. */
+/** Blackjack result: winners hold the most chips after one to eight hands; empty seats hold none. */
 export function isBlackjackResult(value: unknown): boolean {
-  return object(value) && value.gameType === 'blackjack' && chipCounts(value.chips) && number(value.hands)
-    && value.hands >= 1 && value.hands <= BJ_HANDS && sameJson(value.winners, bjWinners(value.chips));
+  if (!object(value) || value.gameType !== 'blackjack' || !chipCounts(value.chips) || !number(value.hands)
+    || value.hands < 1 || value.hands > BJ_HANDS) return false;
+  const chips = value.chips;
+  const participants = resultSeats(value);
+  return participants !== null && seats.every((seat) => participants.includes(seat) || chips[seat] === 0)
+    && sameJson(value.winners, bjWinners(chips, participants));
 }
 
 function blackjackLog(value: unknown): boolean {
@@ -595,7 +627,7 @@ function blackjackLog(value: unknown): boolean {
 }
 
 function blackjackGame(value: ObjectValue): boolean {
-  return commonGame(value) &&
+  return flexibleSeatGame(value) &&
     oneOf(value.phase, ['betting', 'playing', 'scoring']) &&
     number(value.hand) && value.hand <= BJ_HANDS &&
     chipCounts(value.chips) &&
@@ -626,11 +658,14 @@ export function isHoldemResult(value: unknown): boolean {
   if (!object(value) || value.gameType !== 'holdem' || !seatCounts(value.chips, HE_TOTAL_CHIPS) || !number(value.hands)
     || value.hands < 1 || value.hands > HE_HANDS || !seatList(value.eliminationOrder)) return false;
   const chips = value.chips;
+  const participants = resultSeats(value);
+  if (!participants) return false;
   const holders = seats.filter((seat) => chips[seat] > 0);
-  return seats.reduce((sum, seat) => sum + chips[seat], 0) === HE_TOTAL_CHIPS
+  return seats.reduce((sum, seat) => sum + chips[seat], 0) === HE_STARTING_CHIPS * participants.length
+    && holders.every((seat) => participants.includes(seat))
     && (value.hands === HE_HANDS || holders.length === 1)
-    && value.eliminationOrder.every((seat) => chips[seat] === 0)
-    && value.eliminationOrder.length === 4 - holders.length
+    && value.eliminationOrder.every((seat) => participants.includes(seat) && chips[seat] === 0)
+    && value.eliminationOrder.length === participants.length - holders.length
     && sameJson(value.winners, heWinners(chips));
 }
 
@@ -656,7 +691,7 @@ function holdemLog(value: unknown): boolean {
 }
 
 function holdemGame(value: ObjectValue): boolean {
-  return commonGame(value) &&
+  return flexibleSeatGame(value) &&
     oneOf(value.phase, ['playing', 'scoring']) &&
     number(value.hand) && value.hand >= 1 && value.hand <= HE_HANDS &&
     oneOf(value.button, seats) &&
@@ -997,8 +1032,9 @@ function coherentLiarsDeckGame(state: LiarsDeckGameState): boolean {
  * settlement; one deck per hand accounts for all 52 cards and the current phase matches the replay.
  */
 function coherentBlackjackGame(state: BlackjackGameState): boolean {
-  if (new Set(seats.map((seat) => state.players[seat].id)).size !== 4) return false;
-  const table = bjEmptyTable();
+  if (!distinctPlayers(state.players)) return false;
+  const participants = occupiedSeats(state.players);
+  const table = bjEmptyTable(participants);
   let betSeats: Seat[] = [];
   let inHand = false;
   let revealed = false;
@@ -1007,7 +1043,7 @@ function coherentBlackjackGame(state: BlackjackGameState): boolean {
     const natural = (): boolean => bjIsNatural({ cards: table.dealer, split: false });
     if (entry.type === 'bet') {
       if (inHand || betSeats.includes(entry.seat) || !bjSitsIn(table.chips[entry.seat])
-        || (entry.auto && state.players[entry.seat].isBot === true)) return false;
+        || (entry.auto && state.players[entry.seat]?.isBot === true)) return false;
       betSeats.push(entry.seat);
     } else if (entry.type === 'deal') {
       if (inHand || entry.hand !== table.hand + 1 || seats.some((seat) => {
@@ -1064,8 +1100,8 @@ function coherentBlackjackGame(state: BlackjackGameState): boolean {
       && turn.seat === state.currentTurnSeat && turn.handIndex === state.activeHand;
   }
   return !inHand && state.log.at(-1)?.type === 'settle' && (state.hand === BJ_HANDS || !anyoneSitsIn)
-    && sameJson(state.result, { gameType: 'blackjack', chips: state.chips, hands: state.hand,
-      winners: bjWinners(state.chips) });
+    && sameJson(state.result, flexibleResult(state.result, participants, { gameType: 'blackjack', chips: state.chips,
+      hands: state.hand, winners: bjWinners(state.chips, participants) }));
 }
 
 /** Whether a logged action is exactly what the rules allow for the acting seat. */
@@ -1091,8 +1127,9 @@ function legalHoldemAction(table: ReturnType<typeof heEmptyTable>, entry: Extrac
  * account for all 52 cards of the latest hand.
  */
 function coherentHoldemGame(state: HoldemGameState): boolean {
-  if (new Set(seats.map((seat) => state.players[seat].id)).size !== 4) return false;
-  const table = heEmptyTable();
+  if (!distinctPlayers(state.players)) return false;
+  const participants = occupiedSeats(state.players);
+  const table = heEmptyTable(participants);
   let inHand = false;
   let turn: Seat | null = null;
   for (const entry of state.log) {
@@ -1158,10 +1195,11 @@ function coherentHoldemGame(state: HoldemGameState): boolean {
     || seats.some((seat) => state.hands[seat].length !== (table.dealt.includes(seat) ? HE_HOLE_CARDS : 0)
       || (state.revealed[seat].length > 0 && !sameJson(state.revealed[seat], state.hands[seat])))) return false;
   if (state.phase === 'playing') return inHand && turn !== null && state.currentTurnSeat === turn && state.result === null;
-  return !inHand && state.log.at(-1)?.type === 'award' && heMatchOver(table) && sameJson(state.result, {
-    gameType: 'holdem', chips: state.chips, hands: state.hand, winners: heWinners(state.chips),
-    eliminationOrder: state.eliminated,
-  });
+  return !inHand && state.log.at(-1)?.type === 'award' && heMatchOver(table)
+    && sameJson(state.result, flexibleResult(state.result, participants, {
+      gameType: 'holdem', chips: state.chips, hands: state.hand, winners: heWinners(state.chips),
+      eliminationOrder: state.eliminated,
+    }));
 }
 
 /** Every deck card is accounted for, eliminations match the log, and the current seat can play. */
@@ -1455,8 +1493,8 @@ export function isRuntimeSnapshot(value: unknown): value is RuntimeSnapshot {
     } else if (
       currentRoom.info.status !== 'playing' ||
       currentRoom.info.gameType !== entry.gameType ||
-      !seats.every((seat) => currentRoom.info.seats[seat].player?.id === entry.players[seat].id &&
-        (currentRoom.info.seats[seat].player?.isBot === true) === (entry.players[seat].isBot === true))
+      !seats.every((seat) => currentRoom.info.seats[seat].player?.id === entry.players[seat]?.id &&
+        (currentRoom.info.seats[seat].player?.isBot === true) === (entry.players[seat]?.isBot === true))
     )
       return false;
   }

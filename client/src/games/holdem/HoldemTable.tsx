@@ -90,7 +90,7 @@ function Centre({ game, view }: { game: HoldemVisibleState; view: HoldemTableVie
   const blinds = holdemBlindSeats(view);
   const actions = streetActions(game.log, view.logEnd);
   return <div className={styles.centre}>
-    {HE_SEATS.map((seat) => <SeatSpot key={seat} seat={seat} view={view} position={tablePosition(seat, game.mySeat)}
+    {game.seats.map((seat) => <SeatSpot key={seat} seat={seat} view={view} position={tablePosition(seat, game.mySeat)}
       isMe={seat === game.mySeat} action={actions[seat]} blinds={blinds} />)}
     <div className={styles.middle}>
       {view.hand > 0 && <p className={styles.handLine}>
@@ -104,7 +104,9 @@ function Centre({ game, view }: { game: HoldemVisibleState; view: HoldemTableVie
   </div>;
 }
 
-function MoveLine({ log, index }: { log: readonly HoldemLogEntry[]; index: number }): ReactNode {
+function MoveLine({ log, seats, index }: {
+  log: readonly HoldemLogEntry[]; seats: readonly Seat[]; index: number;
+}): ReactNode {
   const { t } = useI18nStore();
   const seatName = useSeatName();
   const entry = log[index];
@@ -132,7 +134,7 @@ function MoveLine({ log, index }: { log: readonly HoldemLogEntry[]; index: numbe
     </>;
   }
   if (entry.type === 'showdown') {
-    const { board } = heReplay(log, index);
+    const { board } = heReplay(log, seats, index);
     return <div className={styles.moveBlock}>
       <span className={styles.handTitle}>{t('holdem.log.showdown')}</span>
       <span className={styles.moveDetail}>{HE_SEATS.filter((seat) => entry.cards[seat].length > 0).map((seat) => {
@@ -144,7 +146,7 @@ function MoveLine({ log, index }: { log: readonly HoldemLogEntry[]; index: numbe
       })}</span>
     </div>;
   }
-  const award = shownAward(log, index + 1);
+  const award = shownAward(log, seats, index + 1);
   return <div className={styles.moveBlock}>
     {award && HE_SEATS.filter((seat) => award.payouts[seat] > 0).map((seat) => <span key={seat}>
       <span className={infoStyles.name}>{seatName(seat)}</span> {t('holdem.log.wins', { n: String(award.payouts[seat]) })}
@@ -180,7 +182,7 @@ function Info({ game, view, locked }: { game: HoldemVisibleState; view: HoldemTa
 
     <section className={infoStyles.box}>
       <h2 className={infoStyles.caption}>{t('holdem.players')}</h2>
-      <ul className={infoStyles.list}>{HE_SEATS.map((seat) => {
+      <ul className={infoStyles.list}>{game.seats.map((seat) => {
         const state = seatState(view, seat);
         return <li key={seat} className={`${infoStyles.row} ${state === 'out' || state === 'folded' ? styles.dimRow : ''}`}>
           <span className={`${infoStyles.name} ${styles.infoName}`} title={state === 'folded' ? t('holdem.folded') : undefined}>
@@ -202,7 +204,7 @@ function Info({ game, view, locked }: { game: HoldemVisibleState; view: HoldemTa
         : <ol className={infoStyles.list}>{recent.map((entry, offset) => {
           const index = recentEnd - 1 - offset;
           return <li key={`${entry.timestamp}-${index}`} className={infoStyles.row}>
-            <MoveLine log={game.log} index={index} />
+            <MoveLine log={game.log} seats={game.seats} index={index} />
           </li>;
         })}</ol>}
     </section>

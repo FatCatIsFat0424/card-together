@@ -57,9 +57,11 @@ function scanHand(log: readonly BlackjackLogEntry[], end: number): {
   return { holeHidden, settlement };
 }
 
-/** The table replayed from the public log before `end`. */
-export function replayBlackjack(log: readonly BlackjackLogEntry[], end: number): BlackjackTableView {
-  const table = bjReplay(log, end);
+/** The table of a match between `seats` replayed from the public log before `end`. */
+export function replayBlackjack(
+  log: readonly BlackjackLogEntry[], seats: readonly Seat[], end: number,
+): BlackjackTableView {
+  const table = bjReplay(log, seats, end);
   const { holeHidden, settlement } = scanHand(log, end);
   return {
     hand: table.hand,
@@ -80,7 +82,7 @@ export function replayBlackjack(log: readonly BlackjackLogEntry[], end: number):
  */
 export function blackjackView(game: BlackjackVisibleState, frame: PresentationFrame | null): BlackjackTableView {
   const index = frame ? frameLogIndex(frame) : null;
-  if (index !== null) return replayBlackjack(game.log, index + 1);
+  if (index !== null) return replayBlackjack(game.log, game.seats, index + 1);
   return {
     hand: game.hand,
     chips: game.chips,
@@ -172,9 +174,9 @@ export interface BlackjackRanking {
   readonly winner: boolean;
 }
 
-/** Final standings by chips; tied seats share a place. */
+/** Final standings of the seats that took part by chips; tied seats share a place. */
 export function rankBlackjack(result: BlackjackMatchResult): BlackjackRanking[] {
-  const sorted = [...BJ_SEATS].sort((a, b) => result.chips[b] - result.chips[a]);
+  const sorted = [...result.seats ?? BJ_SEATS].sort((a, b) => result.chips[b] - result.chips[a]);
   return sorted.map((seat) => ({
     seat,
     place: sorted.findIndex((other) => result.chips[other] === result.chips[seat]) + 1,

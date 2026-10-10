@@ -5,6 +5,12 @@ import type { Seat, BidSuit, Team, GameType } from '../types';
 /** All game types */
 export const GAME_TYPES: readonly GameType[] = ['bridge', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'chinesepoker', 'liarsdeck', 'blackjack', 'holdem'];
 
+/** Games that start with two to four occupied seats; every other game needs all four */
+export const FLEXIBLE_SEAT_GAMES: readonly GameType[] = ['blackjack', 'holdem'];
+
+/** Fewest occupied seats a flexible-seat match starts with */
+export const MIN_FLEXIBLE_PLAYERS = 2;
+
 /** Unseated human members a room accepts besides its four seats */
 export const MAX_SPECTATORS = 8;
 

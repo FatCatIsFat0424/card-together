@@ -688,9 +688,12 @@ export type BlackjackLogEntry =
 
 export interface BlackjackMatchResult {
   readonly gameType: 'blackjack';
+  /** Seats that took part, ordered N, E, S, W; missing on legacy results, where all four did */
+  readonly seats?: Seat[];
+  /** 0 for empty seats */
   readonly chips: Record<Seat, number>;
   readonly hands: number;
-  /** Most chips (ties included), ordered N, E, S, W */
+  /** Most chips (ties included) among the seats that took part, ordered N, E, S, W */
   readonly winners: Seat[];
 }
 
@@ -705,7 +708,8 @@ export interface BlackjackGameState {
   readonly gameType: 'blackjack';
   readonly id: string;
   readonly startedAt: number;
-  readonly players: Record<Seat, PlayerInfo>;
+  /** Missing for empty seats, which never bet, act, or appear in results */
+  readonly players: Partial<Record<Seat, PlayerInfo>>;
   readonly roomCode: RoomCode;
   phase: BlackjackPhase;
   /** Hands dealt so far; betting is for hand `hand + 1` */
@@ -741,6 +745,8 @@ export interface BlackjackVisibleState {
   readonly gameType: 'blackjack';
   readonly phase: BlackjackPhase;
   readonly mySeat: Seat;
+  /** Seats taking part, ordered N, E, S, W */
+  readonly seats: readonly Seat[];
   readonly hand: number;
   readonly chips: Record<Seat, number>;
   /** This seat's pending bet while betting */
@@ -810,6 +816,9 @@ export type HoldemLogEntry =
 
 export interface HoldemMatchResult {
   readonly gameType: 'holdem';
+  /** Seats that took part, ordered N, E, S, W; missing on legacy results, where all four did */
+  readonly seats?: Seat[];
+  /** 0 for empty seats */
   readonly chips: Record<Seat, number>;
   readonly hands: number;
   /** Most chips (ties included), ordered N, E, S, W */
@@ -829,7 +838,8 @@ export interface HoldemGameState {
   readonly gameType: 'holdem';
   readonly id: string;
   readonly startedAt: number;
-  readonly players: Record<Seat, PlayerInfo>;
+  /** Missing for empty seats, which hold no chips and are never dealt in */
+  readonly players: Partial<Record<Seat, PlayerInfo>>;
   readonly roomCode: RoomCode;
   phase: HoldemPhase;
   hand: number;
@@ -870,6 +880,8 @@ export interface HoldemVisibleState extends ObserverView<Card> {
   readonly gameType: 'holdem';
   readonly phase: HoldemPhase;
   readonly mySeat: Seat;
+  /** Seats taking part, ordered N, E, S, W */
+  readonly seats: readonly Seat[];
   readonly myHand: readonly Card[];
   readonly hand: number;
   readonly button: Seat;
@@ -930,7 +942,7 @@ export type MatchResult =
 export interface MatchSummary {
   readonly id: string;
   readonly roomCode: RoomCode;
-  /** Ordered by seat N, E, S, W */
+  /** Ordered by seat N, E, S, W; only the result's `seats` when it lists them */
   readonly accountIds: readonly string[];
   readonly result: MatchResult;
   readonly finishedAt: number;

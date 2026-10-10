@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { PlayingState } from '@shared/types';
-import { AUCTION_COLUMNS, auctionRows, auctionWaitIndex, formatCountdown, lastElimination, lastMove, remainingCards } from '../../../client/src/game-view';
+import type { MatchResult, PlayerVisibleGameState, PlayingState } from '@shared/types';
+import {
+  AUCTION_COLUMNS, auctionRows, auctionWaitIndex, formatCountdown, lastElimination, lastMove, matchSeats, remainingCards,
+  resultSeats,
+} from '../../../client/src/game-view';
 import type { AuctionCall } from '../../../client/src/game-view';
 
 const pass = { type: 'pass' } as const;
@@ -95,5 +98,16 @@ describe('lastElimination', () => {
     expect(lastElimination([
       { type: 'eliminated', seat: 'E' }, { type: 'play', seat: 'S' }, { type: 'eliminated', seat: 'W' }, { type: 'play', seat: 'N' },
     ])).toEqual({ seat: 'W', index: 2 });
+  });
+});
+
+describe('seats taking part', () => {
+  it('lists only occupied Blackjack and Hold\'em seats and all four elsewhere', () => {
+    expect(matchSeats({ gameType: 'holdem', seats: ['N', 'W'] } as unknown as PlayerVisibleGameState)).toEqual(['N', 'W']);
+    expect(matchSeats({ gameType: 'sevens' } as unknown as PlayerVisibleGameState)).toEqual(['N', 'E', 'S', 'W']);
+    expect(matchSeats(null)).toEqual(['N', 'E', 'S', 'W']);
+    const blackjack = { gameType: 'blackjack', chips: { N: 900, E: 0, S: 1100, W: 0 }, hands: 8, winners: ['S'] };
+    expect(resultSeats({ ...blackjack, seats: ['N', 'S'] } as MatchResult)).toEqual(['N', 'S']);
+    expect(resultSeats(blackjack as MatchResult)).toEqual(['N', 'E', 'S', 'W']);
   });
 });

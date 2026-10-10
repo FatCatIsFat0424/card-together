@@ -110,7 +110,7 @@ function abortStuckGame(code: RoomCode, seat: Seat): void {
   const players = gameManager.getGameState(code)?.players;
   // Chat senders must be accounts, so a bot's stuck turn is reported about a human seat.
   const subject = players && [players[seat], ...SEAT_ORDER_CLOCKWISE.map((other) => players[other])]
-    .find((player) => !player.isBot);
+    .find((player) => player && !player.isBot);
   gameManager.abortGame(code);
   roomManager.setRoomStatus(code, 'waiting');
   roomManager.resetAllReady(code);

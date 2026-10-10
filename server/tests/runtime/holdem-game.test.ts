@@ -134,8 +134,8 @@ describe("Hold'em gameplay", () => {
     state = game();
     expect(state.phase).toBe('scoring');
     expect(state.log.at(-1)).toMatchObject({ type: 'award', eliminated: ['S', 'W'] });
-    expect(state.result).toEqual({ gameType: 'holdem', chips: { N: 4000, E: 0, S: 0, W: 0 }, hands: 2, winners: ['N'],
-      eliminationOrder: ['E', 'S', 'W'] });
+    expect(state.result).toEqual({ gameType: 'holdem', seats: ['N', 'E', 'S', 'W'], chips: { N: 4000, E: 0, S: 0, W: 0 },
+      hands: 2, winners: ['N'], eliminationOrder: ['E', 'S', 'W'] });
   });
 
   it('ends after the last hand with the most chips winning', () => {

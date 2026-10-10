@@ -15,7 +15,7 @@ function startIfReady(code: RoomCode): void {
   const room = roomManager.getRoomInfo(code);
   if (!room || !roomManager.isAllReady(code)) return;
   const players = roomManager.getSeatPlayers(code);
-  if (!players) throw actionError('All four seats must be filled.');
+  if (!players) throw actionError('Room not found.');
   roomManager.setRoomStatus(code, 'playing');
   requireSuccess(gameManager.startGame(
     code, room.gameType, players, room.timeControl, room.sevensOptions, room.ninetyNineOptions,

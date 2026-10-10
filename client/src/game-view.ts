@@ -1,6 +1,6 @@
 // ─── Pure table-view helpers (no React) ───
 
-import type { BidAction, PlayingState, Seat } from '@shared/types';
+import type { BidAction, MatchResult, PlayerVisibleGameState, PlayingState, Seat } from '@shared/types';
 
 export const AUCTION_COLUMNS: readonly Seat[] = ['W', 'N', 'E', 'S'];
 
@@ -32,6 +32,16 @@ export function auctionWaitIndex(calls: readonly AuctionCall[], toAct: Seat | nu
 export type TablePosition = 'bottom' | 'left' | 'top' | 'right';
 const CLOCKWISE: readonly Seat[] = ['N', 'E', 'S', 'W'];
 const POSITIONS: readonly TablePosition[] = ['bottom', 'left', 'top', 'right'];
+
+/** Seats taking part in the shown match; Blackjack and Hold'em may leave seats empty. */
+export function matchSeats(game: PlayerVisibleGameState | null): readonly Seat[] {
+  return game?.gameType === 'blackjack' || game?.gameType === 'holdem' ? game.seats : CLOCKWISE;
+}
+
+/** Seats a finished match recorded, in the order of its account ids; legacy results had all four. */
+export function resultSeats(result: MatchResult): readonly Seat[] {
+  return (result.gameType === 'blackjack' || result.gameType === 'holdem') && result.seats ? result.seats : CLOCKWISE;
+}
 
 /** Screen position of a seat when `bottomSeat` (me) sits at the bottom of the table. */
 export function tablePosition(seat: Seat, bottomSeat: Seat): TablePosition {

@@ -45,6 +45,15 @@ describe('history outcomes', () => {
     expect(participants.map((id) => matchOutcome(loss, id))).toEqual(['loss', 'loss', 'loss', 'win']);
   });
 
+  it('maps account ids through the recorded seats of a two-seat table', () => {
+    const headsUp: MatchSummary = {
+      id: 'heads-up', roomCode: 'ROOM3', accountIds: ['east', 'west'], finishedAt: 400,
+      result: { gameType: 'holdem', seats: ['E', 'W'], chips: { N: 0, E: 0, S: 0, W: 2000 }, hands: 9,
+        winners: ['W'], eliminationOrder: ['E'] },
+    };
+    expect(['east', 'west'].map((id) => matchOutcome(headsUp, id))).toEqual(['loss', 'win']);
+  });
+
   it('does not assign a win or loss to a nonparticipant', () => {
     expect(matchOutcome(bridge, 'visitor')).toBe('completed');
     expect(matchOutcome(bridge)).toBe('completed');

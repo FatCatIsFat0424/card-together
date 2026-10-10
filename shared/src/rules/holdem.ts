@@ -234,13 +234,14 @@ export function heMatchOver(table: HeTableView): boolean {
   return table.hand >= HE_HANDS || SEAT_ORDER_CLOCKWISE.filter((seat) => table.chips[seat] > 0).length <= 1;
 }
 
-export function heEmptyTable(): HeTable {
+/** Empty seats hold no chips, so they are never dealt in, hold the button, or post blinds. */
+export function heEmptyTable(seats: readonly Seat[]): HeTable {
   return {
     hand: 0,
     button: 'N',
     smallBlind: 0,
     bigBlind: 0,
-    chips: seatMap(() => HE_STARTING_CHIPS),
+    chips: seatMap((seat) => seats.includes(seat) ? HE_STARTING_CHIPS : 0),
     streetBets: seatMap(() => 0),
     totalBets: seatMap(() => 0),
     dealt: [],
@@ -323,9 +324,9 @@ export function heApplyEntry(table: HeTable, entry: HoldemLogEntry): void {
   }
 }
 
-/** The public table after the first `end` log entries. */
-export function heReplay(log: readonly HoldemLogEntry[], end = log.length): HeTable {
-  const table = heEmptyTable();
+/** The public table of a match between `seats` after the first `end` log entries. */
+export function heReplay(log: readonly HoldemLogEntry[], seats: readonly Seat[], end = log.length): HeTable {
+  const table = heEmptyTable(seats);
   for (const entry of log.slice(0, end)) heApplyEntry(table, entry);
   return table;
 }

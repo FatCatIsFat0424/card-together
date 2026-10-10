@@ -66,10 +66,11 @@ export async function createRuntimeCoordinator(repository: Pick<Repository, 'loa
             roomManager.setRoomStatus(game.roomCode, 'waiting');
             roomManager.resetAllReady(game.roomCode);
             // Bot games are practice; retain their runtime result without recording match history.
-            if (SEAT_ORDER_CLOCKWISE.some((seat) => game.players[seat].isBot)) continue;
+            if (SEAT_ORDER_CLOCKWISE.some((seat) => game.players[seat]?.isBot)) continue;
             matches.push({
               id: game.id, roomCode: game.roomCode,
-              accountIds: SEAT_ORDER_CLOCKWISE.map((seat) => game.players[seat].id),
+              // Empty seats of a Blackjack or Hold'em match are left out, matching the result's `seats`.
+              accountIds: SEAT_ORDER_CLOCKWISE.flatMap((seat) => game.players[seat]?.id ?? []),
               result: game.gameType === 'bridge' ? { ...game.result, gameType: 'bridge' } : game.result,
               finishedAt: Date.now(),
             });

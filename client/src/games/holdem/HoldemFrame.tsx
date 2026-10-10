@@ -25,10 +25,11 @@ export function usePotLabel(): (pot: PotLine, index: number, count: number) => s
 export function HoldemFrame({ frame, name }: { frame: PresentationFrame; name: (seat: Seat) => string }): ReactNode {
   const { t } = useI18nStore();
   const log = useGameStore((state) => state.holdem?.log);
+  const seats = useGameStore((state) => state.holdem?.seats);
   const potLabel = usePotLabel();
   const index = frameLogIndex(frame);
-  if (!log || index === null || !log[index]) return null;
-  const view = replayHoldem(log, index + 1);
+  if (!log || !seats || index === null || !log[index]) return null;
+  const view = replayHoldem(log, seats, index + 1);
   const entry = log[index];
   const pot = <span className={styles.pot}>{t('holdem.pot')} <ChipAmount amount={potTotal(view)} /></span>;
 

@@ -16,7 +16,7 @@ function seeded(seed: number): () => number {
 /** Preflop with N to act facing the big blind; W is the button, so E and S posted the blinds. */
 function visible(overrides: Partial<HoldemVisibleState> = {}): HoldemVisibleState {
   return {
-    gameType: 'holdem', phase: 'playing', mySeat: 'N', myHand: [card(2), card(7, 'hearts')], hand: 1, button: 'W',
+    gameType: 'holdem', phase: 'playing', mySeat: 'N', seats: ['N', 'E', 'S', 'W'], myHand: [card(2), card(7, 'hearts')], hand: 1, button: 'W',
     smallBlind: 10, bigBlind: 20, chips: { N: 1000, E: 990, S: 980, W: 1000 },
     streetBets: { N: 0, E: 10, S: 20, W: 0 }, totalBets: { N: 0, E: 10, S: 20, W: 0 },
     dealt: ['N', 'E', 'S', 'W'], folded: ['W'], street: 'preflop', board: [], currentBet: 20, minRaise: 20, acted: ['W'],

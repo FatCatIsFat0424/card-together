@@ -40,12 +40,12 @@ function handStart(log: readonly HoldemLogEntry[], end: number): number {
 }
 
 /** The award of the hand shown after the first `end` entries, if it has been reached. */
-export function shownAward(log: readonly HoldemLogEntry[], end: number): HoldemAwardView | null {
+export function shownAward(log: readonly HoldemLogEntry[], seats: readonly Seat[], end: number): HoldemAwardView | null {
   const stop = Math.min(end, log.length);
   for (let index = stop - 1; index > handStart(log, stop); index--) {
     const entry = log[index];
     if (entry.type !== 'award') continue;
-    const before = heReplay(log, index).chips;
+    const before = heReplay(log, seats, index).chips;
     return {
       pots: entry.pots,
       payouts: seatMap((seat) => Math.max(0, entry.chips[seat] - before[seat])),
@@ -55,9 +55,9 @@ export function shownAward(log: readonly HoldemLogEntry[], end: number): HoldemA
   return null;
 }
 
-/** The table rebuilt from the public log before `end`. */
-export function replayHoldem(log: readonly HoldemLogEntry[], end: number): HoldemTableView {
-  return { ...heReplay(log, end), award: shownAward(log, end), logEnd: Math.min(end, log.length) };
+/** The table of a match between `seats` rebuilt from the public log before `end`. */
+export function replayHoldem(log: readonly HoldemLogEntry[], seats: readonly Seat[], end: number): HoldemTableView {
+  return { ...heReplay(log, seats, end), award: shownAward(log, seats, end), logEnd: Math.min(end, log.length) };
 }
 
 /**
@@ -66,8 +66,8 @@ export function replayHoldem(log: readonly HoldemLogEntry[], end: number): Holde
  */
 export function holdemView(game: HoldemVisibleState, frame: PresentationFrame | null): HoldemTableView {
   const index = frame ? frameLogIndex(frame) : null;
-  if (index !== null) return replayHoldem(game.log, index + 1);
-  return { ...game, award: shownAward(game.log, game.log.length), logEnd: game.log.length };
+  if (index !== null) return replayHoldem(game.log, game.seats, index + 1);
+  return { ...game, award: shownAward(game.log, game.seats, game.log.length), logEnd: game.log.length };
 }
 
 /** Hole cards from an earlier hand, kept so a hand still being presented keeps showing them. */
@@ -261,10 +261,13 @@ export interface HoldemRanking {
   readonly eliminated: boolean;
 }
 
-/** Final standings: chips first (ties share a place), then busted seats, last to bust highest. */
+/**
+ * Final standings of the seats that took part: chips first (ties share a place), then busted
+ * seats, last to bust highest.
+ */
 export function rankHoldem(result: HoldemMatchResult): HoldemRanking[] {
   const out = (seat: Seat): number => result.eliminationOrder.indexOf(seat);
-  const sorted = [...HE_SEATS].sort((a, b) => result.chips[b] - result.chips[a] || out(b) - out(a));
+  const sorted = [...result.seats ?? HE_SEATS].sort((a, b) => result.chips[b] - result.chips[a] || out(b) - out(a));
   return sorted.map((seat, index) => {
     const eliminated = out(seat) >= 0;
     return {

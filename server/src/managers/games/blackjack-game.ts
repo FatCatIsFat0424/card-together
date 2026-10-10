@@ -12,9 +12,9 @@ import type {
   Seat,
 } from '@shared/types';
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import { occupiedSeats } from '@shared/rules/seats';
 import {
   BJ_HANDS,
-  BJ_STARTING_CHIPS,
   bjApplyEntry,
   bjDealerHits,
   bjDealerMustDraw,
@@ -24,6 +24,7 @@ import {
   bjLegalActions,
   bjNextTurn,
   bjSettle,
+  bjEmptyTable,
   bjSitsIn,
   bjWinners,
 } from '@shared/rules/blackjack';
@@ -63,12 +64,14 @@ export function pendingBetSeats(game: BlackjackGameState): Seat[] {
     : SEAT_ORDER_CLOCKWISE.filter((seat) => bjSitsIn(game.chips[seat]) && game.bets[seat] === null);
 }
 
+/** Seats missing from `players` stay empty for the whole match. */
 export function startGame(
   roomCode: RoomCode,
-  players: Record<Seat, PlayerInfo>,
+  players: Partial<Record<Seat, PlayerInfo>>,
   betMs: number,
   now: number = Date.now(),
 ): void {
+  const seats = occupiedSeats(players);
   games.set(roomCode, {
     gameType: 'blackjack',
     id: randomUUID(),
@@ -77,7 +80,7 @@ export function startGame(
     roomCode,
     phase: 'betting',
     hand: 0,
-    chips: seatMap(() => BJ_STARTING_CHIPS),
+    chips: bjEmptyTable(seats).chips,
     bets: seatMap(() => null),
     betMs,
     betDeadline: now + betMs,
@@ -85,7 +88,7 @@ export function startGame(
     hands: seatMap(() => []),
     dealer: [],
     hole: null,
-    currentTurnSeat: 'N',
+    currentTurnSeat: seats[0],
     activeHand: 0,
     log: [],
     result: null,
@@ -113,7 +116,9 @@ function finishHand(game: BlackjackGameState, now: number): void {
 
   if (game.hand >= BJ_HANDS || !SEAT_ORDER_CLOCKWISE.some((seat) => bjSitsIn(game.chips[seat]))) {
     game.phase = 'scoring';
-    game.result = { gameType: 'blackjack', chips: { ...game.chips }, hands: game.hand, winners: bjWinners(game.chips) };
+    const seats = occupiedSeats(game.players);
+    game.result = { gameType: 'blackjack', seats, chips: { ...game.chips }, hands: game.hand,
+      winners: bjWinners(game.chips, seats) };
     return;
   }
   game.phase = 'betting';
@@ -175,7 +180,7 @@ export function bet(
   }
 
   game.bets[seat] = amount;
-  record(game, { type: 'bet', seat, auto: automatic && !game.players[seat].isBot, timestamp: now });
+  record(game, { type: 'bet', seat, auto: automatic && !game.players[seat]?.isBot, timestamp: now });
   if (pendingBetSeats(game).length === 0) deal(game, now, random);
   return { success: true };
 }
@@ -209,6 +214,7 @@ export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): Blackjack
     gameType: 'blackjack',
     phase: game.phase,
     mySeat: seat,
+    seats: occupiedSeats(game.players),
     hand: game.hand,
     chips: game.chips,
     myBet: game.bets[seat],

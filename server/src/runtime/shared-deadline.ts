@@ -34,7 +34,7 @@ function overdueSeats(code: RoomCode, gameId: string): Seat[] {
 
 /** Bots keep their own decision; a human who missed the betting window stakes the minimum. */
 function expiredAction(code: RoomCode, seat: Seat, visible: PlayerVisibleGameState): BotAction | null {
-  if (visible.gameType === 'blackjack' && !gameManager.getGameState(code)?.players[seat].isBot) {
+  if (visible.gameType === 'blackjack' && !gameManager.getGameState(code)?.players[seat]?.isBot) {
     return { type: 'blackjack-bet', amount: BJ_MIN_BET };
   }
   return getBotAction(visible);

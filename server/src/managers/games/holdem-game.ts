@@ -30,6 +30,7 @@ import {
   heNextToAct,
   heWinners,
 } from '@shared/rules/holdem';
+import { occupiedSeats } from '@shared/rules/seats';
 import { createDeck, shuffleDeck } from '../../engine/deck';
 
 type Result = { success: true } | { success: false; reason: string };
@@ -103,8 +104,8 @@ function progress(game: HoldemGameState, next: Seat | null, now: number, random:
     record(game, { type: 'award', pots, chips: { ...chips }, eliminated: heEliminations(game, chips), timestamp: now });
     if (heMatchOver(game)) {
       game.phase = 'scoring';
-      game.result = { gameType: 'holdem', chips: { ...game.chips }, hands: game.hand, winners: heWinners(game.chips),
-        eliminationOrder: [...game.eliminated] };
+      game.result = { gameType: 'holdem', seats: occupiedSeats(game.players), chips: { ...game.chips }, hands: game.hand,
+        winners: heWinners(game.chips), eliminationOrder: [...game.eliminated] };
       return;
     }
     startHand(game, heNextButton(game.button, game.chips), now, random);
@@ -113,28 +114,32 @@ function progress(game: HoldemGameState, next: Seat | null, now: number, random:
   game.currentTurnSeat = seat;
 }
 
-/** `random` is a test hook; games normally use a cryptographic source. */
+/**
+ * Seats missing from `players` stay empty for the whole match. `random` is a test hook; games
+ * normally use a cryptographic source.
+ */
 export function startGame(
   roomCode: RoomCode,
-  players: Record<Seat, PlayerInfo>,
+  players: Partial<Record<Seat, PlayerInfo>>,
   random: () => number = secureRandom,
   now: number = Date.now(),
 ): void {
+  const seats = occupiedSeats(players);
   const game: HoldemGameState = {
-    ...heEmptyTable(),
+    ...heEmptyTable(seats),
     gameType: 'holdem',
     id: randomUUID(),
     startedAt: now,
     players: structuredClone(players),
     roomCode,
     phase: 'playing',
-    currentTurnSeat: 'N',
+    currentTurnSeat: seats[0],
     deck: [],
     hands: seatMap(() => []),
     log: [],
     result: null,
   };
-  const button = SEAT_ORDER_CLOCKWISE[Math.floor(random() * SEAT_ORDER_CLOCKWISE.length)];
+  const button = seats[Math.floor(random() * seats.length)];
   startHand(game, button, now, random);
   games.set(roomCode, game);
 }
@@ -189,6 +194,7 @@ export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): HoldemVis
     gameType: 'holdem',
     phase: game.phase,
     mySeat: seat,
+    seats: occupiedSeats(game.players),
     myHand: game.hands[seat],
     hand: game.hand,
     button: game.button,

@@ -133,7 +133,7 @@ describe('finished board dismissal', () => {
     await startBridge(app);
     const code = app.roomCodes[0];
     const game = games.getGameState(code)!;
-    expect(games.isViewingGame(code, 'N', game.players.N.id)).toBe(true);
-    expect(games.isViewingGame(code, 'N', game.players.E.id)).toBe(false);
+    expect(games.isViewingGame(code, 'N', game.players.N?.id ?? '')).toBe(true);
+    expect(games.isViewingGame(code, 'N', game.players.E?.id ?? '')).toBe(false);
   });
 });

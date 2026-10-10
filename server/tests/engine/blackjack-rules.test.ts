@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BlackjackHand, BlackjackLogEntry, Card, Seat } from '@shared/types';
+import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import {
   BJ_STARTING_CHIPS, bjBetSeconds, bjDealerHits, bjDealerMustDraw, bjDealerPeeks, bjIsNatural, bjIsValidBet,
   bjLegalActions, bjMaxBet, bjNextTurn, bjOutcome, bjPayout, bjReplay, bjSettle, bjTotal, bjWinners,
@@ -104,8 +105,8 @@ describe('Blackjack settlement', () => {
     expect(settlement.outcomes).toEqual({ N: ['blackjack'], E: ['win'], S: [], W: ['lose'] });
     expect(settlement.net).toEqual({ N: 75, E: 100, S: 0, W: -10 });
     expect(settlement.chips).toEqual({ N: 1075, E: 1100, S: 1000, W: 990 });
-    expect(bjWinners(settlement.chips)).toEqual(['E']);
-    expect(bjWinners(seats(1000))).toEqual(['N', 'E', 'S', 'W']);
+    expect(bjWinners(settlement.chips, SEAT_ORDER_CLOCKWISE)).toEqual(['E']);
+    expect(bjWinners(seats(1000), SEAT_ORDER_CLOCKWISE)).toEqual(['N', 'E', 'S', 'W']);
   });
 
   it('replays deals, splits, doubles, dealer draws, and settlements from the public log', () => {
@@ -119,7 +120,7 @@ describe('Blackjack settlement', () => {
       { type: 'reveal', card: card(10, 'clubs'), timestamp: 6 },
       { type: 'dealerHit', card: card(9, 'clubs'), timestamp: 7 },
     ];
-    const beforeSettle = bjReplay(log);
+    const beforeSettle = bjReplay(log, SEAT_ORDER_CLOCKWISE);
     expect(beforeSettle.chips).toEqual({ N: 850, E: 960, S: 1000, W: 1000 });
     expect(beforeSettle.hands.N.map((value) => [value.cards.length, value.bet, value.done])).toEqual([
       [3, 100, true], [2, 50, true]]);
@@ -127,8 +128,8 @@ describe('Blackjack settlement', () => {
     const { outcomes, net, chips } = bjSettle(beforeSettle);
     expect(outcomes).toEqual({ N: ['win', 'win'], E: ['win'], S: [], W: [] });
     log.push({ type: 'settle', hand: 1, outcomes, net, chips, timestamp: 8 });
-    expect(bjReplay(log).chips).toEqual({ N: 1150, E: 1040, S: BJ_STARTING_CHIPS, W: BJ_STARTING_CHIPS });
-    expect(bjReplay(log, 1).hands.N).toHaveLength(1);
+    expect(bjReplay(log, SEAT_ORDER_CLOCKWISE).chips).toEqual({ N: 1150, E: 1040, S: BJ_STARTING_CHIPS, W: BJ_STARTING_CHIPS });
+    expect(bjReplay(log, SEAT_ORDER_CLOCKWISE, 1).hands.N).toHaveLength(1);
     expect(log[0].type === 'deal' && log[0].cards.N).toHaveLength(2);
   });
 
@@ -137,7 +138,7 @@ describe('Blackjack settlement', () => {
       { type: 'deal', hand: 1, bets: { N: 50, E: 0, S: 0, W: 0 },
         cards: { N: [card(14), card(14, 'hearts')], E: [], S: [], W: [] }, upCard: card(6), timestamp: 1 },
       { type: 'split', seat: 'N', handIndex: 0, cards: [card(13), card(5)], timestamp: 2 },
-    ]);
+    ], SEAT_ORDER_CLOCKWISE);
     expect(table.hands.N.map((value) => value.done)).toEqual([true, true]);
     expect(bjIsNatural(table.hands.N[0])).toBe(false);
     expect(bjNextTurn(table.hands)).toBeNull();

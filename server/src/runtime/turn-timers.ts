@@ -9,7 +9,7 @@ type Turn = NonNullable<GameClock['turn']>;
 
 function pendingTurn(game: AnyGameState): Turn | null {
   const turn = game.clock?.turn;
-  return turn && game.phase !== 'scoring' && !game.players[turn.seat].isBot
+  return turn && game.phase !== 'scoring' && !game.players[turn.seat]?.isBot
     && roomManager.getRoomInfo(game.roomCode)?.status === 'playing'
     && !(game.gameType === 'bigtwo' && game.pendingAutoPass) ? turn : null;
 }

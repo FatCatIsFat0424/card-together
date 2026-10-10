@@ -5,9 +5,10 @@ import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import type { GameType, MatchHistory, MatchSummary, PublicAccount, Seat } from '@shared/types';
-import { GAME_TYPES, SEAT_ORDER_CLOCKWISE, SUIT_SYMBOLS } from '@shared/constants';
+import { GAME_TYPES, SUIT_SYMBOLS } from '@shared/constants';
 import { matchOutcome, selectHistoryMatches } from '../match-history';
 import type { HistorySortKey, MatchOutcome, SortDirection } from '../match-history';
+import { resultSeats } from '../game-view';
 import { nnRank, nnWinners } from '@shared/rules/ninetynine';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
@@ -26,10 +27,11 @@ function MatchResultLabel({ match, players, accountId }: {
 }): ReactNode {
   const { locale, t } = useI18nStore();
   const { result } = match;
-  // accountIds are ordered by seat N, E, S, W
-  const mySeat = SEAT_ORDER_CLOCKWISE[match.accountIds.indexOf(accountId ?? '')];
+  // accountIds follow the recorded seats in N, E, S, W order
+  const seats = resultSeats(result);
+  const mySeat = seats[match.accountIds.indexOf(accountId ?? '')];
   const seatName = (seat: Seat): string => {
-    const id = match.accountIds[SEAT_ORDER_CLOCKWISE.indexOf(seat)];
+    const id = match.accountIds[seats.indexOf(seat)];
     return id?.startsWith('bot:') ? t('player.botSeat', { seat: t(`seat.${seat}`) })
       : players[id]?.nickname ?? t(`seat.${seat}`);
   };
@@ -183,7 +185,7 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
             </div></td>
             <td><div className={styles.players}>
               {match.accountIds.map((id, index) => id.startsWith('bot:')
-                ? <span key={id} className={styles.bot}>{t('player.botSeat', { seat: t(`seat.${SEAT_ORDER_CLOCKWISE[index]}`) })}</span>
+                ? <span key={id} className={styles.bot}>{t('player.botSeat', { seat: t(`seat.${resultSeats(match.result)[index]}`) })}</span>
                 : players[id] && <PlayerLink key={id} player={players[id]} />)}
             </div></td>
           </tr>;

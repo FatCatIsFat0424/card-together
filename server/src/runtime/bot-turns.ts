@@ -25,12 +25,12 @@ function pendingTurn(game: AnyGameState): BotTurn | null {
     // Blackjack bets work the same way, while playing turns pass from seat to seat.
     : game.gameType === 'blackjack' && game.phase === 'betting'
       ? SEAT_ORDER_CLOCKWISE.find((pending) => game.bets[pending] === null && bjSitsIn(game.chips[pending])
-        && game.players[pending].isBot)
+        && game.players[pending]?.isBot)
     : game.gameType !== 'bridge' ? game.currentTurnSeat
     : game.phase === 'redeal_pending' ? game.redealPendingSeat
     : game.phase === 'bidding' ? game.bidding?.currentBidderSeat
     : game.phase === 'playing' ? game.playing?.currentTurnSeat : null;
-  if (!seat || !game.players[seat].isBot) return null;
+  if (!seat || !game.players[seat]?.isBot) return null;
   return { seat, key: `${game.id}:${game.phase}:${game.log.length}:${seat}` };
 }
 

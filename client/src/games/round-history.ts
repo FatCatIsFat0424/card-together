@@ -61,7 +61,8 @@ const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 type HistoryInput = PlayerVisibleGameState extends infer T
   ? T extends PlayerVisibleGameState
     ? Pick<T, 'gameType' | 'phase' | 'log'> & (T extends { pendingFlip: unknown; currentTurnSeat: Seat }
-      ? Pick<T, 'pendingFlip' | 'currentTurnSeat'> : object)
+      ? Pick<T, 'pendingFlip' | 'currentTurnSeat'> : object) & (T extends { seats: readonly Seat[] }
+      ? Pick<T, 'seats'> : object)
     : never
   : never;
 
@@ -139,7 +140,7 @@ export function deriveRoundHistory(game: HistoryInput): HistoryRound[] {
     }
   } else if (game.gameType === 'blackjack') {
     // Each hand is one round; totals come from replaying the public log alongside.
-    const table = bjEmptyTable();
+    const table = bjEmptyTable(game.seats);
     let autoBets: Seat[] = [];
     for (const entry of game.log) {
       if (entry.type === 'bet') {
@@ -179,7 +180,7 @@ export function deriveRoundHistory(game: HistoryInput): HistoryRound[] {
     }
   } else if (game.gameType === 'holdem') {
     // Each hand is one round; payouts and categories come from replaying the public log alongside.
-    const table = heEmptyTable();
+    const table = heEmptyTable(game.seats);
     game.log.forEach((entry, index) => {
       if (entry.type === 'hand') {
         if (current) current.complete = true;

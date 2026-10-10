@@ -11,7 +11,9 @@ asynchronous scrypt (`N=131072`, `r=8`, `p=1`) with bounded concurrency and HTTP
 Account UUIDs are player IDs; editable nicknames do not change identity.
 Bots use reserved `bot:<UUID>` player IDs and `isBot: true` in room/game snapshots.
 They have no account, session, or connected-player record. Match history records only
-four-human games, with participant IDs in N/E/S/W order. Any game containing a bot is
+human games, with participant IDs in N/E/S/W order: all four seats, or for Blackjack and
+Texas Hold'em only the occupied seats that the result's `seats` lists (legacy results
+without `seats` had four). Any game containing a bot is
 practice: its current runtime and result remain resumable but no match-history entry is
 created. Legacy bot history remains loadable and is excluded before applying history limits;
 remove it with the [offline cleanup](#legacy-bot-history-cleanup). Legacy human snapshots

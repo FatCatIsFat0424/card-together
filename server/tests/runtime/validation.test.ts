@@ -171,7 +171,7 @@ describe('persisted runtime validation', () => {
       ...duplicateSeat.rooms[0].info,
       seats: {
         ...duplicateSeat.rooms[0].info.seats,
-        E: { player: duplicateSeat.games[0].players.N, isReady: true },
+        E: { player: duplicateSeat.games[0].players.N ?? null, isReady: true },
       },
     };
     expect(isRuntimeSnapshot(duplicateSeat)).toBe(false);
@@ -270,7 +270,7 @@ describe('persisted runtime validation', () => {
       timestamp: 100,
     });
     expect(isRuntimeSnapshot(snapshot)).toBe(true);
-    expect(snapshot.games[0].players.N.id).toBe('north');
+    expect(snapshot.games[0].players.N?.id).toBe('north');
   });
 
   it('should reject incomplete or contradictory finished results', () => {

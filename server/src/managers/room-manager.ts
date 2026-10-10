@@ -7,8 +7,9 @@ import type {
   GameType, NinetyNineOptions, PlayerInfo, RoomCode, RoomInfo, RoomStatus, Seat, SeatMap, SevensOptions, TimeControl,
 } from '@shared/types';
 import {
-  ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD, MAX_SPECTATORS,
+  ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD, FLEXIBLE_SEAT_GAMES, MAX_SPECTATORS,
 } from '@shared/constants';
+import { minPlayers } from '@shared/rules/seats';
 import type { PersistedRoom } from '../runtime/types';
 import { generateRoomCode } from '../utils/id-generator';
 
@@ -71,9 +72,10 @@ export function leaveRoom(code: RoomCode, playerId: string): { seat: Seat | null
   const room = rooms.get(code);
   if (!room) return { seat: null, roomEmpty: true };
   const seat = getPlayerSeat(code, playerId);
-  if (seat) room.info = {
-    ...room.info, seats: { ...room.info.seats, [seat]: { player: null, isReady: false } },
-  };
+  if (seat) {
+    room.info = { ...room.info, seats: { ...room.info.seats, [seat]: { player: null, isReady: false } } };
+    tableChanged(room);
+  }
   room.memberIds = room.memberIds.filter((id) => id !== playerId);
   const humans = room.memberIds.filter((id) => !seats.some((seat) =>
     room.info.seats[seat].player?.id === id && room.info.seats[seat].player?.isBot));
@@ -100,6 +102,14 @@ function emptySeatCount(room: PersistedRoom): number {
   return seats.filter((seat) => !room.info.seats[seat].player).length;
 }
 
+/**
+ * A flexible-seat match starts as soon as every seated player is ready, so a seat filling or
+ * emptying asks the humans to confirm the new table rather than starting or blocking unexpectedly.
+ */
+function tableChanged(room: PersistedRoom): void {
+  if (room.info.status === 'waiting' && FLEXIBLE_SEAT_GAMES.includes(room.info.gameType)) resetAllReady(room.info.code);
+}
+
 export function addBot(code: RoomCode, playerId: string, seat: Seat): Result {
   const allowed = requireBotManagement(code, playerId);
   if (!allowed.success) return allowed;
@@ -114,6 +124,7 @@ export function addBot(code: RoomCode, playerId: string, seat: Seat): Result {
   };
   room.memberIds.push(bot.id);
   room.info = { ...room.info, seats: { ...room.info.seats, [seat]: { player: bot, isReady: true } } };
+  tableChanged(room);
   return { success: true };
 }
 
@@ -125,6 +136,7 @@ export function removeBot(code: RoomCode, playerId: string, seat: Seat): Result 
   if (!bot?.isBot) return { success: false, reason: 'No bot in this seat.' };
   room.memberIds = room.memberIds.filter((id) => id !== bot.id);
   room.info = { ...room.info, seats: { ...room.info.seats, [seat]: { player: null, isReady: false } } };
+  tableChanged(room);
   return { success: true };
 }
 
@@ -174,6 +186,7 @@ export function changeSeat(code: RoomCode, player: PlayerInfo, target: Seat): Re
   if (previous) next[previous] = { player: null, isReady: false };
   next[target] = { player, isReady: false };
   room.info = { ...room.info, seats: next };
+  tableChanged(room);
   return { success: true };
 }
 
@@ -185,6 +198,7 @@ export function standUp(code: RoomCode, playerId: string): Result {
   if (room.info.status === 'playing') return { success: false, reason: 'Cannot change seat during game' };
   if (!hasSpectatorRoom(code)) return { success: false, reason: 'The spectator area is full.' };
   room.info = { ...room.info, seats: { ...room.info.seats, [seat]: { player: null, isReady: false } } };
+  tableChanged(room);
   return { success: true };
 }
 
@@ -199,10 +213,12 @@ export function setReady(code: RoomCode, playerId: string, ready: boolean): Resu
   return { success: true };
 }
 
+/** Enough seats for the game are occupied and every occupied seat is ready. */
 export function isAllReady(code: RoomCode): boolean {
   const room = rooms.get(code);
-  return Boolean(room && hasSeatedHuman(room)
-    && seats.every((seat) => room.info.seats[seat].player && room.info.seats[seat].isReady));
+  if (!room || !hasSeatedHuman(room)) return false;
+  const occupied = seats.filter((seat) => room.info.seats[seat].player);
+  return occupied.length >= minPlayers(room.info.gameType) && occupied.every((seat) => room.info.seats[seat].isReady);
 }
 
 export function getPlayerSeat(code: RoomCode, playerId: string): Seat | null {
@@ -210,13 +226,16 @@ export function getPlayerSeat(code: RoomCode, playerId: string): Seat | null {
   return room ? seats.find((seat) => room.info.seats[seat].player?.id === playerId) ?? null : null;
 }
 
-export function getSeatPlayers(code: RoomCode): Record<Seat, PlayerInfo> | null {
+/** Players of the occupied seats; empty seats are left out. */
+export function getSeatPlayers(code: RoomCode): Partial<Record<Seat, PlayerInfo>> | null {
   const room = rooms.get(code);
-  if (!room || seats.some((seat) => !room.info.seats[seat].player)) return null;
-  return {
-    N: room.info.seats.N.player!, E: room.info.seats.E.player!,
-    S: room.info.seats.S.player!, W: room.info.seats.W.player!,
-  };
+  if (!room) return null;
+  const players: Partial<Record<Seat, PlayerInfo>> = {};
+  for (const seat of seats) {
+    const player = room.info.seats[seat].player;
+    if (player) players[seat] = player;
+  }
+  return players;
 }
 
 /** Any status change ends an abort vote; the cooldown stays. */

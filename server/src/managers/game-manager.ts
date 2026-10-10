@@ -34,6 +34,7 @@ import type {
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { cpArrangeSeconds } from '@shared/rules/chinesepoker';
 import { bjBetSeconds, bjSitsIn } from '@shared/rules/blackjack';
+import { minPlayers, occupiedSeats } from '@shared/rules/seats';
 import * as bridge from './games/bridge-game';
 import * as bigtwo from './games/bigtwo-game';
 import * as redpoints from './games/redpoints-game';
@@ -105,25 +106,34 @@ function isGame(roomCode: RoomCode, gameType: GameType): boolean {
   return (getGameState(roomCode)?.gameType ?? gameType) === gameType;
 }
 
+function isFullTable(players: Partial<Record<Seat, PlayerInfo>>): players is Record<Seat, PlayerInfo> {
+  return SEAT_ORDER_CLOCKWISE.every((seat) => players[seat] !== undefined);
+}
+
+/** Missing seats stay empty; only games with a flexible seat count accept them. */
 export function startGame(
   roomCode: RoomCode,
   gameType: GameType,
-  players: Record<Seat, PlayerInfo>,
+  players: Partial<Record<Seat, PlayerInfo>>,
   settings?: TimeControl,
   sevensOptions?: SevensOptions,
   ninetyNineOptions?: NinetyNineOptions,
 ): Result {
+  if (occupiedSeats(players).length < minPlayers(gameType)) {
+    return { success: false, reason: 'Not enough players to start this game.' };
+  }
   // A finished board of another game type may still be waiting for game:continue.
   removeGame(roomCode);
-  if (gameType === 'bigtwo') bigtwo.startGame(roomCode, players);
+  if (gameType === 'holdem') holdem.startGame(roomCode, players);
+  else if (gameType === 'blackjack') {
+    blackjack.startGame(roomCode, players, bjBetSeconds((settings ?? DEFAULT_TIME_CONTROL).baseSeconds) * 1000);
+  } else if (!isFullTable(players)) return { success: false, reason: 'All four seats must be filled.' };
+  else if (gameType === 'bigtwo') bigtwo.startGame(roomCode, players);
   else if (gameType === 'redpoints') redpoints.startGame(roomCode, players);
   else if (gameType === 'ninetynine') ninetynine.startGame(roomCode, players, undefined, undefined, ninetyNineOptions);
   else if (gameType === 'sevens') sevens.startGame(roomCode, players, undefined, sevensOptions);
   else if (gameType === 'liarsdeck') liarsdeck.startGame(roomCode, players);
-  else if (gameType === 'holdem') holdem.startGame(roomCode, players);
-  else if (gameType === 'blackjack') {
-    blackjack.startGame(roomCode, players, bjBetSeconds((settings ?? DEFAULT_TIME_CONTROL).baseSeconds) * 1000);
-  } else if (gameType === 'chinesepoker') {
+  else if (gameType === 'chinesepoker') {
     const { baseSeconds, bankSeconds } = settings ?? DEFAULT_TIME_CONTROL;
     chinesepoker.startGame(roomCode, players, cpArrangeSeconds(baseSeconds, bankSeconds) * 1000);
   } else bridge.startGame(roomCode, players);
@@ -190,7 +200,8 @@ function eliminationIndex(game: AnyGameState, seat: Seat): number {
       && !entry.survived);
     case 'holdem': return game.log.findIndex((entry) => entry.type === 'award' && entry.eliminated.includes(seat));
     // Chips only grow by betting, so a seat that cannot cover the minimum never plays again.
-    case 'blackjack': return game.log.findIndex((entry) => entry.type === 'settle' && !bjSitsIn(entry.chips[seat]));
+    case 'blackjack': return !game.players[seat] ? -1
+      : game.log.findIndex((entry) => entry.type === 'settle' && !bjSitsIn(entry.chips[seat]));
     default: return -1;
   }
 }
@@ -237,7 +248,7 @@ export function returnFromResult(roomCode: RoomCode, seat: Seat): void {
   const game = getGameState(roomCode);
   if (!game?.result) return;
   const returned = new Set([...(game.returnedSeats ?? []), seat]);
-  const humans = SEAT_ORDER_CLOCKWISE.filter((value) => !game.players[value].isBot);
+  const humans = SEAT_ORDER_CLOCKWISE.filter((value) => game.players[value] && !game.players[value].isBot);
   if (humans.every((value) => returned.has(value))) removeGame(roomCode);
   else game.returnedSeats = SEAT_ORDER_CLOCKWISE.filter((value) => returned.has(value));
 }
@@ -245,7 +256,7 @@ export function returnFromResult(roomCode: RoomCode, seat: Seat): void {
 /** The finished board stays visible only to its own players until they return. */
 export function isViewingGame(roomCode: RoomCode, seat: Seat, accountId: string): boolean {
   const game = getGameState(roomCode);
-  return Boolean(game && game.players[seat].id === accountId && !game.returnedSeats?.includes(seat));
+  return Boolean(game && game.players[seat]?.id === accountId && !game.returnedSeats?.includes(seat));
 }
 
 /**
@@ -254,7 +265,7 @@ export function isViewingGame(roomCode: RoomCode, seat: Seat, accountId: string)
  */
 export function isSpectating(roomCode: RoomCode, accountId: string): boolean {
   const game = getGameState(roomCode);
-  return Boolean(game && !SEAT_ORDER_CLOCKWISE.some((seat) => game.players[seat].id === accountId)
+  return Boolean(game && !SEAT_ORDER_CLOCKWISE.some((seat) => game.players[seat]?.id === accountId)
     && !game.returnedViewers?.includes(accountId));
 }
 

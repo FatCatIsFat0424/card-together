@@ -185,7 +185,7 @@ describe('Blackjack gameplay', () => {
     }
     const state = game();
     expect(state.phase).toBe('scoring');
-    expect(state.result).toEqual({ gameType: 'blackjack', chips: state.chips, hands: BJ_HANDS,
+    expect(state.result).toEqual({ gameType: 'blackjack', seats: SEATS, chips: state.chips, hands: BJ_HANDS,
       winners: ['N', 'E', 'S'] });
     expect(state.chips).toEqual({ N: 1400, E: 1400, S: 1400, W: 5 });
   });

@@ -158,10 +158,10 @@ export function bjSettle(table: Readonly<BjTable>): BjSettlement {
   };
 }
 
-/** Most chips, ties included, ordered N, E, S, W. */
-export function bjWinners(chips: Readonly<Record<Seat, number>>): Seat[] {
-  const best = Math.max(...SEAT_ORDER_CLOCKWISE.map((seat) => chips[seat]));
-  return SEAT_ORDER_CLOCKWISE.filter((seat) => chips[seat] === best);
+/** Most chips among the seats taking part, ties included, ordered N, E, S, W. */
+export function bjWinners(chips: Readonly<Record<Seat, number>>, seats: readonly Seat[]): Seat[] {
+  const best = Math.max(...seats.map((seat) => chips[seat]));
+  return SEAT_ORDER_CLOCKWISE.filter((seat) => seats.includes(seat) && chips[seat] === best);
 }
 
 function newHand(cards: readonly Card[], bet: number, split: boolean): BlackjackHand {
@@ -170,10 +170,11 @@ function newHand(cards: readonly Card[], bet: number, split: boolean): Blackjack
   return hand;
 }
 
-export function bjEmptyTable(): BjTable {
+/** Empty seats hold no chips, so they never bet. */
+export function bjEmptyTable(seats: readonly Seat[]): BjTable {
   return {
     hand: 0,
-    chips: seatMap(() => BJ_STARTING_CHIPS),
+    chips: seatMap((seat) => seats.includes(seat) ? BJ_STARTING_CHIPS : 0),
     hands: seatMap(() => []),
     dealer: [],
   };
@@ -233,9 +234,9 @@ export function bjApplyEntry(table: BjTable, entry: BlackjackLogEntry): void {
   }
 }
 
-/** The public table after the first `end` log entries. */
-export function bjReplay(log: readonly BlackjackLogEntry[], end = log.length): BjTable {
-  const table = bjEmptyTable();
+/** The public table of a match between `seats` after the first `end` log entries. */
+export function bjReplay(log: readonly BlackjackLogEntry[], seats: readonly Seat[], end = log.length): BjTable {
+  const table = bjEmptyTable(seats);
   for (const entry of log.slice(0, end)) bjApplyEntry(table, entry);
   return table;
 }

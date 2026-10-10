@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Card, HoldemLogEntry, Seat } from '@shared/types';
+import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import {
   HE_HANDS, heApplyEntry, heAward, heBestHand, heBlinds, heBlindSeats, heEliminations, heEmptyTable, heFirstToAct,
   heLegalActions, heMatchOver, heNextButton, heNextToAct, hePots, heWinners,
@@ -25,7 +26,7 @@ function applyOne(state: HeTable, entry: HoldemLogEntry): HeTable {
 
 /** The public table after `log`, starting from custom chip counts. */
 function table(log: HoldemLogEntry[], chips: Record<Seat, number> = seats(1000)): HeTable {
-  const state = heEmptyTable();
+  const state = heEmptyTable(SEAT_ORDER_CLOCKWISE);
   state.chips = { ...chips };
   for (const entry of log) heApplyEntry(state, entry);
   return state;
@@ -120,7 +121,7 @@ describe("Hold'em betting", () => {
 
 describe("Hold'em pots and awards", () => {
   it('builds side pots from contribution levels and returns uncalled chips', () => {
-    const state = heEmptyTable();
+    const state = heEmptyTable(SEAT_ORDER_CLOCKWISE);
     state.dealt = ['N', 'E', 'S', 'W'];
     state.folded = ['W'];
     state.totalBets = { N: 100, E: 300, S: 500, W: 50 };
@@ -132,7 +133,7 @@ describe("Hold'em pots and awards", () => {
   });
 
   it('awards each pot to its best hand, splitting with odd chips clockwise from the button', () => {
-    const state = heEmptyTable();
+    const state = heEmptyTable(SEAT_ORDER_CLOCKWISE);
     state.button = 'N';
     state.dealt = ['N', 'E', 'S', 'W'];
     state.folded = ['N'];
@@ -155,7 +156,7 @@ describe("Hold'em pots and awards", () => {
   });
 
   it('orders eliminations by starting stack and ends the match with one holder or after the last hand', () => {
-    const state = heEmptyTable();
+    const state = heEmptyTable(SEAT_ORDER_CLOCKWISE);
     state.dealt = ['N', 'E', 'S'];
     state.totalBets = { N: 300, E: 100, S: 900, W: 0 };
     expect(heEliminations(state, { N: 0, E: 0, S: 1300, W: 2700 })).toEqual(['E', 'N']);

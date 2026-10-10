@@ -16,9 +16,10 @@ import styles from './BlackjackFrame.module.css';
 export function BlackjackFrame({ frame, name }: { frame: PresentationFrame; name: (seat: Seat) => string }): ReactNode {
   const { t } = useI18nStore();
   const log = useGameStore((state) => state.blackjack?.log);
+  const seats = useGameStore((state) => state.blackjack?.seats);
   const index = frameLogIndex(frame);
-  if (!log || index === null) return null;
-  const view = replayBlackjack(log, index + 1);
+  if (!log || !seats || index === null) return null;
+  const view = replayBlackjack(log, seats, index + 1);
   const seated = BJ_SEATS.filter((seat) => view.hands[seat].length > 0);
 
   if (frame.kind === 'deal') {

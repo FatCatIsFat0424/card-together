@@ -983,11 +983,12 @@ describe('persistent authenticated application', () => {
     const created = await players[0].timeout(5_000).emitWithAck('room:create', { gameType: 'blackjack' });
     const roomCode = created.roomCode;
     if (!roomCode) throw new Error('Expected room code');
+    // Two ready seats would already start this game, so everyone sits down before readying.
     for (let index = 0; index < 4; index += 1) {
       if (index > 0) await players[index].timeout(5_000).emitWithAck('room:join', { roomCode });
       await players[index].timeout(5_000).emitWithAck('room:changeSeat', { seat: SEATS[index] });
-      expect(await players[index].timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
     }
+    for (const player of players) expect(await player.timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
 
     /** Every seat that owes a bet stakes 20; otherwise the acting hand hits below 12 and stands from 12. */
     async function step(): Promise<PlayerSnapshot> {
@@ -1062,11 +1063,12 @@ describe('persistent authenticated application', () => {
     const created = await players[0].timeout(5_000).emitWithAck('room:create', { gameType: 'holdem' });
     const roomCode = created.roomCode;
     if (!roomCode) throw new Error('Expected room code');
+    // Two ready seats would already start this game, so everyone sits down before readying.
     for (let index = 0; index < 4; index += 1) {
       if (index > 0) await players[index].timeout(5_000).emitWithAck('room:join', { roomCode });
       await players[index].timeout(5_000).emitWithAck('room:changeSeat', { seat: SEATS[index] });
-      expect(await players[index].timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
     }
+    for (const player of players) expect(await player.timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
 
     /** The acting seat calls or checks, except that every third hand opens with an all-in to reach eliminations. */
     async function step(): Promise<PlayerSnapshot> {

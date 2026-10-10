@@ -3,7 +3,7 @@ import {
   isRedPointsResult, isRuntimeSnapshot, isSevensResult,
 } from '../runtime/validate';
 import {
-  GAME_TYPES, MAX_EMOJIS_PER_ACCOUNT, NICKNAME_MAX_LENGTH, isEmojiName, isImageOpacity, isMediaId,
+  FLEXIBLE_SEAT_GAMES, GAME_TYPES, MAX_EMOJIS_PER_ACCOUNT, NICKNAME_MAX_LENGTH, isEmojiName, isImageOpacity, isMediaId,
   isUsername,
 } from '@shared/constants';
 import type { GameType } from '@shared/types';
@@ -98,12 +98,14 @@ function validMatch(value: unknown): value is MatchRecord {
     !nonEmpty(value.roomCode) ||
     !timestamp(value.finishedAt) ||
     !Array.isArray(value.accountIds) ||
-    value.accountIds.length !== 4 ||
     !value.accountIds.every(nonEmpty) ||
-    new Set(value.accountIds).size !== 4 ||
+    new Set(value.accountIds).size !== value.accountIds.length ||
     !isObject(value.result)
   )
     return false;
+  // Blackjack and Hold'em results list the seats that took part; every other match had four.
+  const participants = FLEXIBLE_SEAT_GAMES.includes(value.result.gameType as GameType) ? value.result.seats : undefined;
+  if (value.accountIds.length !== (Array.isArray(participants) ? participants.length : 4)) return false;
   const validators: Record<GameType, (result: Record<string, unknown>) => boolean> = {
     bridge: validBridgeResult,
     bigtwo: isBigTwoResult,
