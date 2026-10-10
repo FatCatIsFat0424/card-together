@@ -10,6 +10,7 @@ export type {
 
 export type {
   TimeControl,
+  SevensOptions,
   RoomCode,
   GameType,
   RoomStatus,

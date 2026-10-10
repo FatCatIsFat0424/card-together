@@ -1,5 +1,5 @@
 import type { PlayerInfo, Seat } from './player';
-import type { RoomCode, RoomInfo, GameType, TimeControl } from './room';
+import type { RoomCode, RoomInfo, GameType, SevensOptions, TimeControl } from './room';
 import type {
   Card, BidAction, BlackjackAction, ChinesePokerArrangement, HoldemAction, PlayerVisibleGameState,
 } from './game';
@@ -67,6 +67,9 @@ export interface ClientToServerEvents {
   ) => void;
   'room:setTimeControl': (
     payload: TimeControl, callback: (response: ActionResult) => void,
+  ) => void;
+  'room:setSevensOptions': (
+    payload: SevensOptions, callback: (response: ActionResult) => void,
   ) => void;
   'room:ready': (callback: (response: ActionResult) => void) => void;
   'room:addBot': (

@@ -1,7 +1,8 @@
 import { DEFAULT_TIME_CONTROL, isTimeControl } from '@shared/time-control';
+import { DEFAULT_SEVENS_OPTIONS, isSevensOptions } from '@shared/sevens-options';
 import { isDeepStrictEqual } from 'node:util';
 import { randomUUID } from 'node:crypto';
-import type { GameType, PlayerInfo, RoomCode, RoomInfo, RoomStatus, Seat, SeatMap, TimeControl } from '@shared/types';
+import type { GameType, PlayerInfo, RoomCode, RoomInfo, RoomStatus, Seat, SeatMap, SevensOptions, TimeControl } from '@shared/types';
 import {
   ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD, MAX_SPECTATORS,
 } from '@shared/constants';
@@ -26,6 +27,7 @@ export function createRoom(gameType: GameType, creatorId: string): RoomCode {
     info: {
       code, gameType, status: 'waiting', seats: emptySeats(), createdAt: Date.now(),
       timeControl: { ...DEFAULT_TIME_CONTROL }, hostId: creatorId, abortVote: null, abortVoteCooldownUntil: null,
+      sevensOptions: { ...DEFAULT_SEVENS_OPTIONS },
     },
     memberIds: [creatorId],
   });
@@ -241,6 +243,19 @@ export function setTimeControl(code: RoomCode, playerId: string, timeControl: Ti
   return { success: true };
 }
 
+export function setSevensOptions(code: RoomCode, playerId: string, sevensOptions: SevensOptions): Result {
+  const room = rooms.get(code);
+  if (!room) return { success: false, reason: 'Room not found' };
+  if (room.info.hostId !== playerId) return { success: false, reason: 'Only the host can change the rules.' };
+  if (room.info.status !== 'waiting') return { success: false, reason: 'Game is in progress' };
+  if (room.info.gameType !== 'sevens') return { success: false, reason: 'Not a Sevens room.' };
+  if (!isSevensOptions(sevensOptions)) return { success: false, reason: 'Invalid Sevens options.' };
+  if (isDeepStrictEqual(room.info.sevensOptions ?? DEFAULT_SEVENS_OPTIONS, sevensOptions)) return { success: true };
+  room.info = { ...room.info, sevensOptions: { ...sevensOptions } };
+  resetAllReady(code);
+  return { success: true };
+}
+
 export type AbortVoteOutcome = 'pending' | 'passed' | 'failed';
 
 function humanVoterIds(code: RoomCode): string[] {
@@ -352,6 +367,9 @@ export function exportRooms(): PersistedRoom[] {
 export function restoreRooms(records: PersistedRoom[]): void {
   rooms.clear();
   for (const room of records) rooms.set(room.info.code, {
-    ...room, info: { ...room.info, timeControl: room.info.timeControl ?? { ...DEFAULT_TIME_CONTROL } },
+    ...room, info: {
+      ...room.info, timeControl: room.info.timeControl ?? { ...DEFAULT_TIME_CONTROL },
+      sevensOptions: room.info.sevensOptions ?? { ...DEFAULT_SEVENS_OPTIONS },
+    },
   });
 }

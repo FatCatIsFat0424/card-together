@@ -1,4 +1,8 @@
 const english = {
+  'sevens.closeOnEnd': 'Dragon Slaying (close suit on A or K)',
+  'sevens.closeOnEndHint': 'Once either end reaches A or K, no more cards can be played in that suit. Only the host can change this before the game; changing it clears readiness.',
+  'sevens.closed': 'Closed',
+  'sevens.rulesCloseOnEnd': 'Dragon Slaying: an A or K closes its entire suit row; neither end can accept more cards.',
   'sevens.myPenalty': 'My penalty {n}',
   'sevens.observedPenalty': 'Penalty {n}',
   'sevens.covered': 'Covered {n}',
@@ -38,6 +42,10 @@ export type SevensTranslationKey = keyof typeof english;
 export const sevensTranslations: Record<'en' | 'zh-TW', Record<SevensTranslationKey, string>> = {
   en: english,
   'zh-TW': {
+    'sevens.closeOnEnd': '斬龍（A 或 K 封閉整墩）',
+    'sevens.closeOnEndHint': '同花色任一端接到 A 或 K，整墩就不能再接牌。僅房主可在開局前修改，修改後需重新準備。',
+    'sevens.closed': '已封閉',
+    'sevens.rulesCloseOnEnd': '斬龍：同花色任一端接到 A 或 K，就封閉整墩，兩端都不能再接牌。',
     'sevens.myPenalty': '我罰 {n} 點',
     'sevens.observedPenalty': '罰 {n} 點',
     'sevens.covered': '蓋 {n} 張',

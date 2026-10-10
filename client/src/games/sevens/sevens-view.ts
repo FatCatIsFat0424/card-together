@@ -1,5 +1,5 @@
 import { SUIT_DISPLAY_ORDER } from '@shared/constants';
-import { svCardPenalty } from '@shared/rules/sevens';
+import { svCardPenalty, svIsRowClosed } from '@shared/rules/sevens';
 import type { Card, Rank, SevensLogEntry, SevensTable, Suit } from '@shared/types';
 
 const ROW_LENGTH = 13;
@@ -18,6 +18,7 @@ export interface SevensSlot {
 export interface SevensRow {
   readonly suit: Suit;
   readonly open: boolean;
+  readonly closed: boolean;
   readonly slots: readonly SevensSlot[];
 }
 
@@ -35,19 +36,20 @@ export function rankAtOrder(order: number): Rank {
 }
 
 /** Thirteen A…K slots per suit in display order; targets mark where the player's valid cards would land. */
-export function sevensRows(table: SevensTable, targets: readonly Card[]): SevensRow[] {
+export function sevensRows(table: SevensTable, targets: readonly Card[], closeOnEnd = false): SevensRow[] {
   return SUIT_DISPLAY_ORDER.map((suit) => {
     const row = table[suit];
+    const closed = svIsRowClosed(row, closeOnEnd);
     const slots = Array.from({ length: ROW_LENGTH }, (_, index): SevensSlot => {
       const order = index + 1;
       const card: Card = { suit, rank: rankAtOrder(order) };
       const state: SevensSlotState = row
         ? order >= row.low && order <= row.high ? 'played'
-          : order === row.low - 1 || order === row.high + 1 ? 'next' : 'empty'
+          : !closed && (order === row.low - 1 || order === row.high + 1) ? 'next' : 'empty'
         : order === 7 ? 'next' : 'empty';
       return { order, card, state, target: state === 'next' && targets.some((target) => sameCard(target, card)) };
     });
-    return { suit, open: row !== null, slots };
+    return { suit, open: row !== null, closed, slots };
   });
 }
 

@@ -1,4 +1,5 @@
 import { isTimeControl } from '@shared/time-control';
+import { isSevensOptions } from '@shared/sevens-options';
 import { GAME_TYPES } from '@shared/constants';
 import type { RoomCode, RoomInvite, Seat } from '@shared/types';
 import type { SocketContext, TypedSocket } from './context';
@@ -15,7 +16,7 @@ function startIfReady(code: RoomCode): void {
   const players = roomManager.getSeatPlayers(code);
   if (!players) throw actionError('All four seats must be filled.');
   roomManager.setRoomStatus(code, 'playing');
-  requireSuccess(gameManager.startGame(code, room.gameType, players, room.timeControl));
+  requireSuccess(gameManager.startGame(code, room.gameType, players, room.timeControl, room.sevensOptions));
 }
 
 function requireSeat(payload: { seat: Seat }): Seat {
@@ -155,6 +156,12 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
   socket.on('room:setTimeControl', (payload, callback) => runAction(context, socket, callback, () => {
     if (!isTimeControl(payload)) throw actionError('Invalid time control.');
     requireSuccess(roomManager.setTimeControl(requireRoom(socket), socket.data.accountId, payload));
+    return { success: true };
+  }));
+
+  socket.on('room:setSevensOptions', (payload, callback) => runAction(context, socket, callback, () => {
+    if (!isSevensOptions(payload)) throw actionError('Invalid Sevens options.');
+    requireSuccess(roomManager.setSevensOptions(requireRoom(socket), socket.data.accountId, payload));
     return { success: true };
   }));
 

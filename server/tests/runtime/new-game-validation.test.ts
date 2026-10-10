@@ -58,7 +58,7 @@ describe('persisted Sevens games', () => {
       const game = sevens.getGameState(CODE)!;
       if (game.phase === 'scoring') return;
       const seat = game.currentTurnSeat;
-      const legal = svLegalPlays(game.hands[seat], game.table, game.log.length === 0);
+      const legal = svLegalPlays(game.hands[seat], game.table, game.log.length === 0, game.options?.closeOnEnd);
       const result = legal[0] ? sevens.play(CODE, seat, legal[0]) : sevens.cover(CODE, seat, game.hands[seat][0]);
       expect(result.success).toBe(true);
     }
@@ -73,6 +73,52 @@ describe('persisted Sevens games', () => {
     const game = sevens.getGameState(CODE)!;
     expect(game.phase).toBe('scoring');
     expect(isSevensResult(game.result)).toBe(true);
+  });
+
+  it.each([3, 9, 17])('accepts every committed state with suit closure enabled for seed %i', (seed) => {
+    sevens.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), seeded(seed)), { closeOnEnd: true });
+    for (let step = 0; step <= 52; step++) {
+      expect(persists(sevens.getGameState(CODE)!, 'sevens')).toBe(true);
+      playSevens(1);
+    }
+    const game = sevens.getGameState(CODE)!;
+    expect(game.phase).toBe('scoring');
+    expect(isSevensResult(game.result)).toBe(true);
+  });
+
+  it.each([null, {}, { closeOnEnd: 'true' }, { closeOnEnd: true, extra: false }])(
+    'rejects invalid persisted options %j', (options) => {
+      sevens.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), seeded(3)));
+      const game = structuredClone(sevens.getGameState(CODE)!);
+      Object.assign(game, { options });
+      expect(persists(game, 'sevens')).toBe(false);
+    },
+  );
+
+  it('accepts legacy states without options through settlement and restoration', () => {
+    sevens.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), seeded(3)));
+    const legacy = structuredClone(sevens.getGameState(CODE)!);
+    Reflect.deleteProperty(legacy, 'options');
+    expect(persists(legacy, 'sevens')).toBe(true);
+    sevens.restoreGames([legacy]);
+    expect(sevens.getPlayerVisibleState(CODE, legacy.currentTurnSeat)?.options).toEqual({ closeOnEnd: false });
+    for (let step = 0; step < 52; step++) {
+      playSevens(1);
+      expect(persists(sevens.getGameState(CODE)!, 'sevens')).toBe(true);
+    }
+    expect(sevens.getGameState(CODE)?.phase).toBe('scoring');
+  });
+
+  it('rejects a saved log that extends a suit after its ace or king closes it', () => {
+    sevens.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), seeded(3)));
+    playSevens(52);
+    const game = structuredClone(sevens.getGameState(CODE)!);
+    expect(game.log.some((entry, index) => entry.type === 'play'
+      && (entry.card.rank === 14 || entry.card.rank === 13)
+      && game.log.slice(index + 1).some((later) => later.type === 'play' && later.card.suit === entry.card.suit))).toBe(true);
+    expect(persists(game, 'sevens')).toBe(true);
+    Object.assign(game, { options: { closeOnEnd: true } });
+    expect(persists(game, 'sevens')).toBe(false);
   });
 
   it('rejects covered cards in the log, impossible tables, and altered penalties', () => {

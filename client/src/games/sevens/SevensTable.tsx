@@ -55,9 +55,11 @@ function SuitRow({ row, last, preview }: { row: SevensRow; last: Card | null; pr
   const range = played.length > 0
     ? `${RANK_DISPLAY[rankAtOrder(played[0].order)]}–${RANK_DISPLAY[rankAtOrder(played[played.length - 1].order)]}`
     : t('sevens.waiting');
-  return <div className={styles.row} role="group" aria-label={`${SUIT_SYMBOLS[row.suit]} ${range}`}>
+  const label = `${SUIT_SYMBOLS[row.suit]} ${range}${row.closed ? ` ${t('sevens.closed')}` : ''}`;
+  return <div className={styles.row} role="group" aria-label={label}>
     <span className={`${styles.rowSuit} ${isRed(row.suit) ? styles.redSuit : ''}`} aria-hidden="true">
       {SUIT_SYMBOLS[row.suit]}
+      {row.closed && <span className={styles.closedLabel}>{t('sevens.closed')}</span>}
     </span>
     <div className={styles.slots}>
       {row.slots.map((slot) => {
@@ -94,7 +96,7 @@ function SuitRow({ row, last, preview }: { row: SevensRow; last: Card | null; pr
 function Centre({ game, targets, preview }: {
   game: SevensVisibleState; targets: readonly Card[]; preview: Card | null;
 }): ReactNode {
-  const rows = sevensRows(game.table, targets);
+  const rows = sevensRows(game.table, targets, game.options?.closeOnEnd);
   const last = lastPlayedCard(game.log);
   return <div className={styles.centre}>
     {rows.map((row) => <SuitRow key={row.suit} row={row} last={last} preview={preview} />)}
@@ -159,6 +161,7 @@ function Info({ game }: { game: SevensVisibleState }): ReactNode {
 
     <RulesBox title={t('sevens.rules')} lines={[
       t('sevens.rulesOpen'), t('sevens.rulesExtend'), t('sevens.rulesCover'), t('sevens.rulesScore'),
+      ...(game.options?.closeOnEnd ? [t('sevens.rulesCloseOnEnd')] : []),
     ]} />
   </aside>;
 }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { GAME_TYPES, MAX_SPECTATORS } from '@shared/constants';
-import type { GameType, PlayerInfo, Seat, TimeControl } from '@shared/types';
+import type { GameType, PlayerInfo, Seat, SevensOptions, TimeControl } from '@shared/types';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import { socket } from '../socket';
 import { tableBackgroundStyle } from '../account-appearance';
@@ -123,6 +123,11 @@ export function RoomPage(): ReactNode {
     setError('');
     socket.timeout(10000).emit('room:setTimeControl', settings, handleResult);
   };
+  const setSevensOptions = (options: SevensOptions): void => {
+    setBusy(true);
+    setError('');
+    socket.timeout(10000).emit('room:setSevensOptions', options, handleResult);
+  };
   const addBot = (seat: Seat): void => {
     setBusy(true);
     setError('');
@@ -217,6 +222,16 @@ export function RoomPage(): ReactNode {
             ))}
           </div>
         </div>
+        {roomInfo.gameType === 'sevens' && <section className={styles.ruleOptions}>
+          <label>
+            <input type="checkbox" checked={roomInfo.sevensOptions?.closeOnEnd ?? false}
+              disabled={!isHost || blocked || roomInfo.status !== 'waiting'}
+              aria-describedby="sevens-close-on-end-hint"
+              onChange={(event) => setSevensOptions({ closeOnEnd: event.target.checked })} />
+            {t('sevens.closeOnEnd')}
+          </label>
+          <p id="sevens-close-on-end-hint">{t('sevens.closeOnEndHint')}</p>
+        </section>}
       </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={`${styles.tableArea} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}>

@@ -1,6 +1,6 @@
 // ─── Game types ───
 
-import type { RoomCode, TimeControl } from './room';
+import type { RoomCode, SevensOptions, TimeControl } from './room';
 import type { PlayerInfo, Seat } from './player';
 import type { BigTwoComboType } from '../rules/bigtwo';
 
@@ -392,6 +392,8 @@ export interface SevensMatchResult {
 }
 
 export interface SevensGameState {
+  /** Missing on legacy snapshots; defaults to standard Sevens rules. */
+  readonly options?: SevensOptions;
   clock?: GameClock;
   presentation?: GamePresentation;
   returnedSeats?: Seat[];
@@ -413,6 +415,7 @@ export interface SevensGameState {
 }
 
 export interface SevensVisibleState extends ObserverView<Card> {
+  readonly options?: SevensOptions;
   clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'sevens';

@@ -5,7 +5,7 @@ import { io as connectSocket } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
-  AccountProfile, BridgeVisibleState, Card, ClientToServerEvents, LiarCard, Seat, ServerToClientEvents, TimeControl,
+  AccountProfile, BridgeVisibleState, Card, ClientToServerEvents, LiarCard, Seat, ServerToClientEvents, SevensOptions, TimeControl,
 } from '@shared/types';
 import type { PlayerSnapshot } from '@shared/types/socket-events';
 import { identifyCombo, isBomb, legalPlays } from '@shared/rules/bigtwo';
@@ -315,6 +315,54 @@ describe('persistent authenticated application', () => {
     expect(await host.timeout(5_000).emitWithAck('room:setTimeControl', { baseSeconds: 5, bankSeconds: 20 }))
       .toMatchObject({ success: false });
   });
+
+  it('persists host Sevens options, resets readiness, and rolls back failed saves', async () => {
+    const accounts = [await register('sevens_host'), await register('sevens_guest')];
+    const [host, guest] = await connectPlayers(accounts);
+    const { roomCode } = await host.timeout(5_000).emitWithAck('room:create', { gameType: 'bridge' });
+    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: true }))
+      .toMatchObject({ success: false });
+    await host.timeout(5_000).emitWithAck('room:setGameType', { gameType: 'sevens' });
+    await host.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'N' });
+    await guest.timeout(5_000).emitWithAck('room:join', { roomCode: roomCode! });
+    await guest.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'E' });
+    await guest.timeout(5_000).emitWithAck('room:ready');
+    expect((await resume(host)).room?.sevensOptions).toEqual({ closeOnEnd: false });
+    expect(await guest.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: true }))
+      .toMatchObject({ success: false });
+    for (const payload of [null, {}, [], true, { closeOnEnd: 'true' }, { closeOnEnd: 1 },
+      { closeOnEnd: true, extra: true }]) {
+      expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', payload as SevensOptions))
+        .toMatchObject({ success: false });
+    }
+    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: false }))
+      .toEqual({ success: true });
+    const before = (await resume(host)).room!;
+    expect(before.seats.E.isReady).toBe(true);
+    vi.spyOn(repository, 'saveRuntime').mockRejectedValueOnce(new Error('Disk full'));
+    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: true }))
+      .toMatchObject({ success: false });
+    expect((await resume(host)).room).toEqual(before);
+    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: true }))
+      .toEqual({ success: true });
+    const changed = (await resume(guest)).room!;
+    expect(changed.sevensOptions).toEqual({ closeOnEnd: true });
+    expect(changed.seats.E.isReady).toBe(false);
+    expect((await repository.loadRuntime())?.rooms[0].info.sevensOptions).toEqual({ closeOnEnd: true });
+    await host.timeout(5_000).emitWithAck('room:fillBots');
+    await host.timeout(5_000).emitWithAck('room:ready');
+    await guest.timeout(5_000).emitWithAck('room:ready');
+    const active = await resume(host);
+    expect(active.gameState).toMatchObject({ gameType: 'sevens', options: { closeOnEnd: true } });
+    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: false }))
+      .toMatchObject({ success: false });
+    await stop();
+    await start();
+    const [reconnected] = await connectPlayers(accounts);
+    const restored = await resume(reconnected);
+    expect(restored.room?.sevensOptions).toEqual({ closeOnEnd: true });
+    expect(restored.gameState).toMatchObject({ gameType: 'sevens', options: { closeOnEnd: true } });
+  }, 15_000);
 
   it('should enforce bot payloads and host rights while unseated members spectate', async () => {
     const accounts = [await register('manage_host'), await register('manage_guest')];

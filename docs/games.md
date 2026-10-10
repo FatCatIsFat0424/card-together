@@ -291,6 +291,14 @@ counterclockwise. Each suit forms one row from its 7: A…6 below and 8…K abov
 the low end and no wrap-around. A legal card is any 7, which opens its suit, or the card
 directly below a row's lowest card or above its highest card.
 
+The host can enable **Dragon Slaying (close suit on A or K)**, labelled **斬龍** in
+Traditional Chinese, in a waiting Sevens room. It is off by default. When enabled,
+playing either A or K closes that entire suit row immediately:
+neither end accepts another card, while other suits remain playable. Closed rows are
+marked on the table. Changing the option clears human readiness; the setting is fixed
+for the match and survives server restarts. Legacy snapshots without the setting use
+standard rules.
+
 A player with any legal card must play one. Only a player with no legal card covers: they
 place one chosen hand card face down. Other players see how many cards each seat has
 covered, never which. After every card is played or covered, each seat's penalty is the

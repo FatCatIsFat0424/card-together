@@ -27,6 +27,7 @@ import type {
   RoomCode,
   Seat,
   SevensGameState,
+  SevensOptions,
   TimeControl,
 } from '@shared/types';
 import type { NnChoice } from '@shared/rules/ninetynine';
@@ -108,13 +109,14 @@ export function startGame(
   gameType: GameType,
   players: Record<Seat, PlayerInfo>,
   settings?: TimeControl,
+  sevensOptions?: SevensOptions,
 ): Result {
   // A finished board of another game type may still be waiting for game:continue.
   removeGame(roomCode);
   if (gameType === 'bigtwo') bigtwo.startGame(roomCode, players);
   else if (gameType === 'redpoints') redpoints.startGame(roomCode, players);
   else if (gameType === 'ninetynine') ninetynine.startGame(roomCode, players);
-  else if (gameType === 'sevens') sevens.startGame(roomCode, players);
+  else if (gameType === 'sevens') sevens.startGame(roomCode, players, undefined, sevensOptions);
   else if (gameType === 'liarsdeck') liarsdeck.startGame(roomCode, players);
   else if (gameType === 'holdem') holdem.startGame(roomCode, players);
   else if (gameType === 'blackjack') {

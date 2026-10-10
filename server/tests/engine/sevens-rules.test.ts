@@ -6,6 +6,7 @@ import {
   svCardPenalty,
   svEmptyTable,
   svIsPlayable,
+  svIsRowClosed,
   svLegalPlays,
   svOrder,
   svPenalty,
@@ -80,6 +81,52 @@ describe('sevens rules', () => {
     const table = place(svEmptyTable(), '7S', '8S', '7D');
     const hand = [c('9S'), c('3C'), c('6D'), c('KD'), c('7C'), c('9H')];
     expect(svLegalPlays(hand, table, false)).toEqual([c('9S'), c('6D'), c('7C')]);
+  });
+
+  it.each([
+    { row: { low: 2, high: 7 }, end: 'AS', blocked: '8S' },
+    { row: { low: 7, high: 12 }, end: 'KS', blocked: '6S' },
+  ])('closes the entire suit after playing $end when enabled', ({ row, end, blocked }) => {
+    const table = { ...svEmptyTable(), spades: row, hearts: { low: 7, high: 7 } };
+    const before = structuredClone(table);
+    expect(svIsRowClosed(row, true)).toBe(false);
+    expect(svIsPlayable(table, c(end), false, true)).toBe(true);
+
+    const next = svApply(table, c(end), true);
+    expect(svIsRowClosed(next.spades, true)).toBe(true);
+    expect(svIsPlayable(next, c(blocked), false, true)).toBe(false);
+    expect(() => svApply(next, c(blocked), true)).toThrow('card not playable');
+    const hand = [c(blocked), c('8H'), c('7C'), c(end), c('6H')];
+    const handBefore = structuredClone(hand);
+    expect(svLegalPlays(hand, next, false, true)).toEqual([c('8H'), c('7C'), c('6H')]);
+    expect(svApply(next, c('8H'), true).hearts).toEqual({ low: 7, high: 8 });
+    expect(table).toEqual(before);
+    expect(hand).toEqual(handBefore);
+    expect(next).not.toBe(table);
+    expect(next.spades).not.toBe(table.spades);
+    expect(next.hearts).toBe(table.hearts);
+  });
+
+  it.each([
+    { row: { low: 1, high: 7 }, card: '8S' },
+    { row: { low: 7, high: 13 }, card: '6S' },
+  ])('keeps end rows open by default and when disabled', ({ row, card }) => {
+    const table = { ...svEmptyTable(), spades: row };
+    expect(svIsRowClosed(row, false)).toBe(false);
+    expect(svIsPlayable(table, c(card), false)).toBe(true);
+    expect(svIsPlayable(table, c(card), false, false)).toBe(true);
+    expect(svLegalPlays([c(card)], table, false)).toEqual([c(card)]);
+    expect(svLegalPlays([c(card)], table, false, false)).toEqual([c(card)]);
+    expect(svApply(table, c(card))).toEqual(svApply(table, c(card), false));
+  });
+
+  it('keeps unopened suits and the first-play restriction unchanged when enabled', () => {
+    const table = svEmptyTable();
+    expect(svIsRowClosed(null, true)).toBe(false);
+    expect(svIsPlayable(table, c('7S'), true, true)).toBe(true);
+    expect(svIsPlayable(table, c('7H'), true, true)).toBe(false);
+    expect(svLegalPlays([c('7H'), c('7S')], table, true, true)).toEqual([c('7S')]);
+    expect(svApply(table, c('7S'), true).spades).toEqual({ low: 7, high: 7 });
   });
 
   it('throws when applying a card that does not fit', () => {

@@ -142,6 +142,50 @@ describe('Sevens gameplay', () => {
     expect(east.validCards.every((entry) => east.myHand.some((own) => same(own, entry)))).toBe(true);
   });
 
+  it.each([
+    { end: 14 as const, row: { low: 2, high: 7 }, blocked: 8 as const },
+    { end: 13 as const, row: { low: 7, high: 12 }, blocked: 6 as const },
+  ])('should require covering after rank $end closes the suit', ({ end, row, blocked }) => {
+    sevens.startGame(CODE, PLAYERS, stuckSouthDeck(), { closeOnEnd: true });
+    const state = game();
+    state.table.spades = row;
+    state.currentTurnSeat = 'N';
+    state.hands.N = [card('spades', end), card('clubs', 3)];
+    state.hands.W = [card('spades', blocked), card('clubs', 2)];
+    expect(visible('N').validCards).toEqual([card('spades', end)]);
+    expect(sevens.play(CODE, 'N', card('spades', end))).toEqual({ success: true });
+
+    const closed = structuredClone(game());
+    expect(visible('W').validCards).toEqual([]);
+    expect(sevens.play(CODE, 'W', card('spades', blocked))).toEqual({ success: false, reason: 'Illegal play' });
+    expect(game()).toEqual(closed);
+    expect(sevens.cover(CODE, 'W', card('spades', blocked))).toEqual({ success: true });
+    expect(game().covered.W).toEqual([card('spades', blocked)]);
+    expect(game().currentTurnSeat).toBe('S');
+  });
+
+  it('should preserve the enabled option in player and spectator views after restoring', () => {
+    sevens.startGame(CODE, PLAYERS, stuckSouthDeck(), { closeOnEnd: true });
+    step();
+    step();
+    const assertOptions = (): void => {
+      expect(game().options).toEqual({ closeOnEnd: true });
+      for (const seat of SEATS) {
+        expect(visible(seat).options).toEqual({ closeOnEnd: true });
+        expect(games.getRecipientVisibleState(CODE, seat)).toMatchObject({ options: { closeOnEnd: true } });
+      }
+      expect(games.getRecipientVisibleState(CODE, null)).toMatchObject({
+        observer: 'spectator', options: { closeOnEnd: true },
+      });
+    };
+    assertOptions();
+    const exported = structuredClone(sevens.exportGames());
+    sevens.abortGame(CODE);
+    sevens.restoreGames(exported);
+    assertOptions();
+    step();
+  });
+
   it('should reveal all covered cards only to spectators, including after restoring a match', () => {
     sevens.startGame(CODE, PLAYERS, stuckSouthDeck());
     const state = game();

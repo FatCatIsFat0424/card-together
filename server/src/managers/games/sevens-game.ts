@@ -8,9 +8,11 @@ import type {
   Seat,
   SevensGameState,
   SevensMatchResult,
+  SevensOptions,
   SevensVisibleState,
 } from '@shared/types';
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import { DEFAULT_SEVENS_OPTIONS } from '@shared/sevens-options';
 import { nextSeatCounterClockwise } from '@shared/rules/seats';
 import {
   svApply,
@@ -64,6 +66,7 @@ export function startGame(
   roomCode: RoomCode,
   players: Record<Seat, PlayerInfo>,
   deck: readonly Card[] = shuffleDeck(createDeck()),
+  options: SevensOptions = DEFAULT_SEVENS_OPTIONS,
 ): void {
   const dealt = dealCards(deck);
   const hands = seatMap((seat) => svSortHand(dealt[seat]));
@@ -73,6 +76,7 @@ export function startGame(
   games.set(roomCode, {
     gameType: 'sevens',
     id: randomUUID(),
+    options: { ...options },
     startedAt: Date.now(),
     players: structuredClone(players),
     roomCode,
@@ -102,8 +106,10 @@ function takeFromHand(game: SevensGameState, seat: Seat, card: Card): void {
 export function play(roomCode: RoomCode, seat: Seat, card: Card): Result {
   const game = actionableGame(roomCode, seat, card);
   if (typeof game === 'string') return { success: false, reason: game };
-  if (!svIsPlayable(game.table, card, isFirstPlay(game))) return { success: false, reason: 'Illegal play' };
-  game.table = svApply(game.table, card);
+  if (!svIsPlayable(game.table, card, isFirstPlay(game), game.options?.closeOnEnd)) {
+    return { success: false, reason: 'Illegal play' };
+  }
+  game.table = svApply(game.table, card, game.options?.closeOnEnd);
   takeFromHand(game, seat, card);
   game.log.push({ type: 'play', seat, card, timestamp: Date.now() });
   advance(game, seat);
@@ -113,7 +119,7 @@ export function play(roomCode: RoomCode, seat: Seat, card: Card): Result {
 export function cover(roomCode: RoomCode, seat: Seat, card: Card): Result {
   const game = actionableGame(roomCode, seat, card);
   if (typeof game === 'string') return { success: false, reason: game };
-  if (svLegalPlays(game.hands[seat], game.table, isFirstPlay(game)).length > 0) {
+  if (svLegalPlays(game.hands[seat], game.table, isFirstPlay(game), game.options?.closeOnEnd).length > 0) {
     return { success: false, reason: 'You must play a card when you can' };
   }
   takeFromHand(game, seat, card);
@@ -135,13 +141,14 @@ export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): SevensVis
   return {
     gameType: 'sevens',
     phase: game.phase,
+    options: game.options ?? DEFAULT_SEVENS_OPTIONS,
     mySeat: seat,
     myHand: game.hands[seat],
     myCovered: game.covered[seat],
     handCounts: seatMap((other) => game.hands[other].length),
     coveredCounts: seatMap((other) => game.covered[other].length),
     table: game.table,
-    validCards: myTurn ? svLegalPlays(game.hands[seat], game.table, isFirstPlay(game)) : [],
+    validCards: myTurn ? svLegalPlays(game.hands[seat], game.table, isFirstPlay(game), game.options?.closeOnEnd) : [],
     currentTurnSeat: game.currentTurnSeat,
     log: game.log,
     result: game.result,

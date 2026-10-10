@@ -34,8 +34,14 @@ export interface TimeControl {
   readonly bankSeconds: number;
 }
 
+export interface SevensOptions {
+  readonly closeOnEnd: boolean;
+}
+
 /** Room info (public) */
 export interface RoomInfo {
+  /** Missing on legacy snapshots; defaults to standard Sevens rules. */
+  readonly sevensOptions?: SevensOptions;
   /** Missing only on legacy snapshots. */
   readonly timeControl?: TimeControl;
   readonly code: RoomCode;

@@ -1,4 +1,5 @@
 import { isTimeControl } from '@shared/time-control';
+import { isSevensOptions } from '@shared/sevens-options';
 import { getTurnSeat } from '../managers/game-clock';
 import {
   ABORT_VOTE_THRESHOLD, GAME_TYPES, MAX_MESSAGE_EMOJIS, MAX_ROOM_MEMBERS, isEmojiName, isMediaId, isProvidedEmojiFile,
@@ -387,6 +388,7 @@ function sevensLog(value: unknown): boolean {
 
 function sevensGame(value: ObjectValue): boolean {
   return commonGame(value) &&
+    (value.options === undefined || isSevensOptions(value.options)) &&
     oneOf(value.phase, ['playing', 'scoring']) &&
     seatCards(value.hands, SV_HAND_SIZE) &&
     seatCards(value.covered, SV_HAND_SIZE) &&
@@ -801,6 +803,7 @@ function room(value: unknown): boolean {
   return (
     text(info.code) &&
     (info.timeControl === undefined || isTimeControl(info.timeControl)) &&
+    (info.sevensOptions === undefined || isSevensOptions(info.sevensOptions)) &&
     oneOf(info.gameType, [...GAME_TYPES]) &&
     oneOf(info.status, ['waiting', 'playing']) &&
     number(info.createdAt) &&
@@ -856,9 +859,10 @@ function coherentSevensGame(state: SevensGameState): boolean {
     if (previous && entry.seat !== nextSeatCounterClockwise(previous)) return false;
     const card = entry.type === 'play' ? entry.card : state.covered[entry.seat][coversMade[entry.seat]++];
     if (entry.type === 'play') {
-      if (!svIsPlayable(table, entry.card, previous === null)) return false;
-      table = svApply(table, entry.card);
-    } else if (previous === null || !card || svLegalPlays(held[entry.seat], table, false).length > 0) return false;
+      if (!svIsPlayable(table, entry.card, previous === null, state.options?.closeOnEnd)) return false;
+      table = svApply(table, entry.card, state.options?.closeOnEnd);
+    } else if (previous === null || !card
+      || svLegalPlays(held[entry.seat], table, false, state.options?.closeOnEnd).length > 0) return false;
     held[entry.seat] = held[entry.seat].filter((own) => cardId(own) !== cardId(card));
     previous = entry.seat;
   }

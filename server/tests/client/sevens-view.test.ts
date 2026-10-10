@@ -50,6 +50,33 @@ describe('sevensRows', () => {
     expect(rows[0].slots.filter((slot) => slot.state === 'next').map((slot) => slot.card.rank)).toEqual([8]);
   });
 
+  it('marks end rows closed and removes their next slots and targets when enabled', () => {
+    const table: SevensTable = {
+      spades: { low: 1, high: 7 }, hearts: { low: 7, high: 13 }, clubs: { low: 6, high: 7 }, diamonds: null,
+    };
+    const targets = [c(8, 'spades'), c(6, 'hearts'), c(8, 'clubs'), c(7, 'diamonds')];
+    const before = structuredClone(table);
+    const rows = sevensRows(table, targets, true);
+    for (const row of rows.slice(0, 2)) {
+      expect(row.open).toBe(true);
+      expect(row.closed).toBe(true);
+      expect(row.slots.some((slot) => slot.state === 'next' || slot.target)).toBe(false);
+      expect(row.slots.filter((slot) => slot.state === 'played')).toHaveLength(7);
+    }
+    expect(rows[2].closed).toBe(false);
+    expect(rows[3].closed).toBe(false);
+    expect(rows.flatMap((row) => row.slots.filter((slot) => slot.target).map((slot) => slot.card)))
+      .toEqual([c(8, 'clubs'), c(7, 'diamonds')]);
+    expect(table).toEqual(before);
+    expect(targets).toHaveLength(4);
+
+    const defaultRows = sevensRows(table, targets);
+    expect(defaultRows).toEqual(sevensRows(table, targets, false));
+    expect(defaultRows.slice(0, 2).every((row) => !row.closed)).toBe(true);
+    expect(defaultRows[0].slots[7].target).toBe(true);
+    expect(defaultRows[1].slots[5].target).toBe(true);
+  });
+
   it('highlights only next slots that match the player\'s valid cards', () => {
     const table: SevensTable = { ...empty, spades: { low: 7, high: 7 } };
     const targets = [c(6, 'spades'), c(7, 'diamonds'), c(9, 'spades')];

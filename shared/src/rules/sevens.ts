@@ -18,23 +18,38 @@ export function svEmptyTable(): SevensTable {
   return { spades: null, hearts: null, clubs: null, diamonds: null };
 }
 
+export function svIsRowClosed(row: SevensTable[Suit], closeOnEnd: boolean): boolean {
+  return closeOnEnd && row !== null && (row.low === SV_LOW_END || row.high === SV_HIGH_END);
+}
+
 /** The very first play must be the spade seven; afterwards a card must open or extend its suit row. */
-export function svIsPlayable(table: SevensTable, card: Card, firstPlay: boolean): boolean {
+export function svIsPlayable(
+  table: SevensTable,
+  card: Card,
+  firstPlay: boolean,
+  closeOnEnd: boolean = false,
+): boolean {
   if (firstPlay) return card.suit === 'spades' && card.rank === SV_SEVEN;
   const row = table[card.suit];
   const order = svOrder(card);
   if (!row) return order === SV_SEVEN;
+  if (svIsRowClosed(row, closeOnEnd)) return false;
   return order === row.low - 1 || order === row.high + 1;
 }
 
 /** Playable cards in hand order. */
-export function svLegalPlays(hand: readonly Card[], table: SevensTable, firstPlay: boolean): Card[] {
-  return hand.filter((card) => svIsPlayable(table, card, firstPlay));
+export function svLegalPlays(
+  hand: readonly Card[],
+  table: SevensTable,
+  firstPlay: boolean,
+  closeOnEnd: boolean = false,
+): Card[] {
+  return hand.filter((card) => svIsPlayable(table, card, firstPlay, closeOnEnd));
 }
 
 /** Returns a new table with the card placed; throws when the card does not open or extend its row. */
-export function svApply(table: SevensTable, card: Card): SevensTable {
-  if (!svIsPlayable(table, card, false)) throw new Error('card not playable');
+export function svApply(table: SevensTable, card: Card, closeOnEnd: boolean = false): SevensTable {
+  if (!svIsPlayable(table, card, false, closeOnEnd)) throw new Error('card not playable');
   const row = table[card.suit];
   const order = svOrder(card);
   const next = row

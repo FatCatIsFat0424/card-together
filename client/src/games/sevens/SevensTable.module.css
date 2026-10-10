@@ -19,7 +19,7 @@
 
 .rowSuit {
   flex: none;
-  width: calc(var(--chip-w) * 0.9);
+  width: max(44px, calc(var(--chip-w) * 0.9));
   font-size: calc(var(--chip-w) * 0.75);
   line-height: 1;
   text-align: center;
@@ -27,6 +27,15 @@
 }
 
 .redSuit { color: var(--suit-red-ui); }
+
+.closedLabel {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--text-xs);
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--table-ink);
+}
 
 .slots {
   display: grid;
