@@ -18,6 +18,7 @@ import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
 import { useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
+import { AppIcon } from '../../components/AppIcon';
 import styles from './NinetyNineTable.module.css';
 import { isOwnTurn } from '../observer-view';
 
@@ -89,7 +90,7 @@ function Info({ game }: { game: NinetyNineVisibleState }): ReactNode {
               <CardImage card={entry.card} className={styles.mini} />
               {entry.target && <span>→ {seatName(entry.target)}</span>}
               <span className={styles.recentTotal}>{entry.total}</span>
-            </> : <span className={styles.bustTag}>{t('ninetynine.logBusted')}</span>}
+            </> : <span className={styles.bustTag}>{t('ninetynine.logBusted')} <AppIcon name="burst" /></span>}
           </li>
         ))}</ol>}
     </section>
@@ -114,7 +115,7 @@ function ResultOverlay({ result, pending, error, disabled, onBack }: {
       <tbody>{ranking.map((seat, index) => (
         <tr key={seat} className={index === 0 ? resultStyles.winnerRow : ''}>
           <td>{t('ninetynine.place', { n: String(index + 1) })}</td>
-          <td>{index === 0 ? '🏆 ' : '💥 '}{seatName(seat)}</td>
+          <td><AppIcon name={index === 0 ? 'trophy' : 'burst'} /> {seatName(seat)}</td>
         </tr>
       ))}</tbody>
     </table>

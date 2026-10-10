@@ -17,6 +17,7 @@ import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
 import { joinNames, useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
+import { AppIcon } from '../../components/AppIcon';
 import styles from './RedPointsTable.module.css';
 import { redPointsCardAction, redPointsTableLayout, redPointsTablePage } from './redpoints-view';
 import { isOwnTurn } from '../observer-view';
@@ -92,13 +93,13 @@ function Centre({ game, options, previewOptions, onCapture }: {
         {page.pageCount > 1 && <>
           <button type="button" className={`${styles.pageButton} touch-target`} disabled={page.page === 0}
             aria-label={t('redpoints.tablePrevious')}
-            onClick={() => setPagination({ key: pageKey, page: page.page - 1 })}>‹</button>
+            onClick={() => setPagination({ key: pageKey, page: page.page - 1 })}><AppIcon name="previousPage" /></button>
           <span className={styles.pageLabel} aria-live="polite">
             {t('redpoints.tablePage', { page: String(page.page + 1), total: String(page.pageCount) })}
           </span>
           <button type="button" className={`${styles.pageButton} touch-target`} disabled={page.page === page.pageCount - 1}
             aria-label={t('redpoints.tableNext')}
-            onClick={() => setPagination({ key: pageKey, page: page.page + 1 })}>›</button>
+            onClick={() => setPagination({ key: pageKey, page: page.page + 1 })}><AppIcon name="nextPage" /></button>
         </>}
       </div>
     </div>
@@ -151,7 +152,7 @@ function ResultOverlay({ result, captured, pending, error, disabled, onBack }: {
         const red = captured[seat].filter((card) => rpCardPoints(card) > 0);
         return <tr key={seat} className={result.winners.includes(seat) ? resultStyles.winnerRow : ''}>
           <td>
-            <div>{result.winners.includes(seat) && '🏆 '}{seatName(seat)}</div>
+            <div>{result.winners.includes(seat) && <><AppIcon name="trophy" /> </>}{seatName(seat)}</div>
             {red.length > 0 && <span className={styles.miniRow}>
               {red.map((card) => <CardImage key={`${card.suit}-${card.rank}`} card={card} className={styles.mini} />)}
             </span>}

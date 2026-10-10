@@ -21,6 +21,7 @@ import { useGamePresentation } from '../use-game-presentation';
 import {
   comboLabelKey, currentRoundEntries, lastPlayCombo, penaltyFormula, sameCard, toggleCard,
 } from './bigtwo-view';
+import { AppIcon } from '../../components/AppIcon';
 import styles from './BigTwoTable.module.css';
 import { isOwnTurn, isSpectator } from '../observer-view';
 
@@ -55,7 +56,7 @@ function Centre({ game }: { game: BigTwoVisibleState }): ReactNode {
     <div key={`${game.lastPlay.seat}-${game.lastPlay.cards.map((card) => `${card.suit}${card.rank}`).join()}`} className={`${styles.lastPlay} ${bomb ? styles.bomb : ''}`}>
       <CardFan cards={game.lastPlay.cards} />
       <span className={styles.playMeta}>
-        {bomb && <span className={styles.boom} aria-hidden="true">💥</span>}
+        {bomb && <span className={styles.boom} aria-hidden="true"><AppIcon name="burst" /></span>}
         <strong>{t(comboLabelKey(combo.type))}</strong>
         <span>{seatName(game.lastPlay.seat)}</span>
       </span>
@@ -112,7 +113,7 @@ function ResultOverlay({ result, revealed, pending, error, disabled, onBack }: {
       </tr></thead>
       <tbody>{SEATS.map((seat) => <tr key={seat} className={seat === result.winnerSeat ? resultStyles.winnerRow : ''}>
         <td>
-          <div>{seat === result.winnerSeat && '🏆 '}{seatName(seat)}</div>
+          <div>{seat === result.winnerSeat && <><AppIcon name="trophy" /> </>}{seatName(seat)}</div>
           {revealed && revealed[seat].length > 0 && <CardFan cards={sortBigTwoHand(revealed[seat])} small />}
         </td>
         <td>{result.cardsLeft[seat]}</td>

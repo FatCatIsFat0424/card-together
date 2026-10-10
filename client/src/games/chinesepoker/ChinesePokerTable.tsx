@@ -28,6 +28,7 @@ import {
   sortCpHand, unplacedCards,
 } from './chinesepoker-view';
 import type { CpRowCards } from './chinesepoker-view';
+import { AppIcon } from '../../components/AppIcon';
 import styles from './ChinesePokerTable.module.css';
 import { isSpectator } from '../observer-view';
 
@@ -69,7 +70,7 @@ function RowSlot({ row, cards, rows, selection, editable, onPlace, onReturn }: R
         {hint.value > 1 && <span className={styles.rowValue}> · {t('chinesepoker.rowValue', { n: String(hint.value) })}</span>}
       </span>}
       {hint.beats && <span className={styles.foulHint} role="status">
-        ⚠ {t('chinesepoker.beats', { row: t(rowLabelKey(hint.beats)) })} · {t('chinesepoker.foul')}
+        <AppIcon name="warning" /> {t('chinesepoker.beats', { row: t(rowLabelKey(hint.beats)) })} · {t('chinesepoker.foul')}
       </span>}
     </header>
     <div className={styles.slots}>
@@ -108,7 +109,7 @@ function SettledCentre({ result, bottomSeat }: { result: ChinesePokerMatchResult
     {SEATS.map((seat) => <div key={seat}
       className={`${styles.settledSeat} ${styles[tablePosition(seat, bottomSeat)]} ${result.winners.includes(seat) ? styles.settledWinner : ''}`}>
       <span className={styles.settledName}>
-        {result.winners.includes(seat) && '🏆 '}{seatName(seat)}
+        {result.winners.includes(seat) && <><AppIcon name="trophy" /> </>}{seatName(seat)}
         <strong className={result.scores[seat] > 0 ? styles.gain : result.scores[seat] < 0 ? styles.loss : undefined}>
           {signedPoints(result.scores[seat])}
         </strong>
@@ -166,7 +167,7 @@ function Info({ game, locked }: { game: ChinesePokerVisibleState; locked: boolea
         {settled && game.result
           ? <strong className={styles.infoScore}>{signedPoints(game.result.scores[seat])}</strong>
           : <span className={game.submitted[seat] ? styles.statusDone : styles.statusPending}>
-            {game.submitted[seat] ? `✓ ${t('chinesepoker.arranged')}` : t('chinesepoker.arranging')}
+            {game.submitted[seat] ? <><AppIcon name="check" /> {t('chinesepoker.arranged')}</> : t('chinesepoker.arranging')}
           </span>}
         {game.autoArranged.includes(seat) && <span className={infoStyles.note}>{t('chinesepoker.autoTag')}</span>}
       </li>)}</ul>
@@ -185,7 +186,7 @@ function ResultOverlay({ result, autoArranged, pending, error, disabled, onBack 
   const { t, locale } = useI18nStore();
   const seatName = useSeatName();
   return <ResultDialog wide title={t('chinesepoker.winner', { names: joinNames(result.winners.map(seatName), locale) })}
-    eyebrow={result.homeRun ? `💥 ${t('chinesepoker.homeRunBy', { name: seatName(result.homeRun) })}` : undefined}
+    eyebrow={result.homeRun ? <><AppIcon name="burst" /> {t('chinesepoker.homeRunBy', { name: seatName(result.homeRun) })}</> : undefined}
     pending={pending} error={error} disabled={disabled} onBack={onBack}>
     <div className={styles.resultSeats}>
       {SEATS.map((seat) => {
@@ -193,7 +194,7 @@ function ResultOverlay({ result, autoArranged, pending, error, disabled, onBack 
         const score = result.scores[seat];
         return <section key={seat} className={`${styles.resultSeat} ${winner ? styles.resultWinner : ''}`}>
           <header className={styles.resultHeader}>
-            <span className={styles.resultName}>{winner && '🏆 '}{seatName(seat)}</span>
+            <span className={styles.resultName}>{winner && <><AppIcon name="trophy" /> </>}{seatName(seat)}</span>
             {result.fouls.includes(seat) && <span className={styles.foulTag}>{t('chinesepoker.foul')}</span>}
             {autoArranged.includes(seat) && <span className={styles.autoTag}>{t('chinesepoker.autoTag')}</span>}
             <span className={styles.resultTotal}>
@@ -226,7 +227,7 @@ function ResultOverlay({ result, autoArranged, pending, error, disabled, onBack 
       <tbody>{result.matchups.map(({ seats: [first, second], rows, shooter, points }) => <tr key={`${first}${second}`}>
         <td>
           <div>{t('chinesepoker.versus', { a: seatName(first), b: seatName(second) })}</div>
-          {shooter && <span className={styles.shootTag}>🎯 {t('chinesepoker.shotBy', { name: seatName(shooter) })}</span>}
+          {shooter && <span className={styles.shootTag}><AppIcon name="target" /> {t('chinesepoker.shotBy', { name: seatName(shooter) })}</span>}
         </td>
         {rows.map((value, index) => <td key={CP_ROWS[index]}>{signedPoints(value)}</td>)}
         <td><strong>{signedPoints(points)}</strong></td>

@@ -11,6 +11,7 @@ import type { TranslationKey } from '../i18n';
 import { Avatar } from './Avatar';
 import { ChatMessageBody, EmojiPickerSections } from './ChatEmoji';
 import type { StickerPayload } from './ChatEmoji';
+import { AppIcon } from './AppIcon';
 import styles from './ChatPanel.module.css';
 
 interface ChatPanelProps {
@@ -107,9 +108,9 @@ export function ChatPanel({ onCollapse }: ChatPanelProps): ReactNode {
   return (
     <section className={`${styles.chatContainer} ${onCollapse ? styles.fill : ''}`}>
       <div className={styles.chatHeader}>
-        <h2 className={styles.chatTitle}>{t('chat.title')}</h2>
+        <h2 className={styles.chatTitle}><AppIcon name="chat" /> {t('chat.title')}</h2>
         {onCollapse && <button type="button" className={`${styles.collapseBtn} touch-target`} onClick={onCollapse}
-          aria-label={t('table.chatCollapse')} title={t('table.chatCollapse')}>›</button>}
+          aria-label={t('table.chatCollapse')} title={t('table.chatCollapse')}><AppIcon name="nextPage" /></button>}
       </div>
       <div ref={messagesRef} className={styles.chatMessages} role="log" aria-live="polite">
         {messages.map((message) => message.system ? (
@@ -144,7 +145,7 @@ export function ChatPanel({ onCollapse }: ChatPanelProps): ReactNode {
       <form className={styles.chatInputRow} onSubmit={send}>
         <button type="button" className={styles.pickerBtn} data-emoji-picker
           aria-label={t('emoji.picker')} title={t('emoji.picker')} aria-expanded={pickerOpen}
-          onClick={() => setPickerOpen((open) => !open)}>☺</button>
+          onClick={() => setPickerOpen((open) => !open)}><AppIcon name="emoji" /></button>
         <input ref={inputRef} className={styles.chatInput} type="text" aria-label={t('chat.placeholder')}
           placeholder={t('chat.placeholder')} value={input} maxLength={500}
           onChange={(event) => setInput(event.target.value)} />

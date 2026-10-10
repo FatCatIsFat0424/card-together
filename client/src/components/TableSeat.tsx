@@ -23,7 +23,9 @@ import { ObservedCards, ObservedLiarCards } from './ObservedHand';
 import { PlayerLink } from './PlayerLink';
 import { latestSeatAction, seatStatus, showsAutoPlayed } from './seat-status';
 import type { SeatStatus } from './seat-status';
+import type { AppIconName } from './AppIcon';
 import { TurnClock } from './TurnClock';
+import { AppIcon } from './AppIcon';
 import styles from './TableSeat.module.css';
 
 const MAX_BACKS = 6;
@@ -88,7 +90,7 @@ function CardPileDetails({ cards, owner, covered = false }: {
           {t(covered ? 'sevens.coveredBy' : 'redpoints.capturedBy', { name: owner, n: String(points) })}
         </h2>
         <button type="button" className={`${styles.capturedClose} touch-target`} onClick={() => close(true)}
-          aria-label={t('table.close')} title={t('table.close')}>✕</button>
+          aria-label={t('table.close')} title={t('table.close')}><AppIcon name="close" /></button>
       </div>
       {cards.length === 0 ? <p className={styles.capturedEmpty}>{t('redpoints.noCaptured')}</p>
         : <ul className={styles.capturedCards}>{cards.map((card) => (
@@ -142,8 +144,8 @@ function CardTray({ count, render }: { count: number; render: (index: number) =>
   </div>;
 }
 
-const STATUS_ICON: Record<SeatStatus, string> = {
-  busted: '💥', locked: '🔒', thinking: '', autoPlayed: '⏱', arranged: '✓',
+const STATUS_ICON: Record<SeatStatus, AppIconName | ''> = {
+  busted: 'burst', locked: 'lock', thinking: '', autoPlayed: 'timer', arranged: 'check',
 };
 const STATUS_LABEL: Record<SeatStatus, TranslationKey> = {
   busted: 'ninetynine.busted',
@@ -300,7 +302,7 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
         </div>
         {status && <span className={`${styles.status} ${styles[status]}`}
           title={status === 'autoPlayed' || (heState === 'folded' && autoPlayed) ? t('clock.autoPlayed') : undefined}>
-          {statusIcon && <span className={styles.statusIcon} aria-hidden="true">{statusIcon} </span>}
+          {statusIcon && <span className={styles.statusIcon} aria-hidden="true">{statusIcon === '💀' ? statusIcon : <AppIcon name={statusIcon} />} </span>}
           {t(heStatusLabel ?? (dead && status === 'busted' ? 'liarsdeck.dead'
             : bj && status === 'arranged' ? 'blackjack.betPlaced' : STATUS_LABEL[status]))}
         </span>}

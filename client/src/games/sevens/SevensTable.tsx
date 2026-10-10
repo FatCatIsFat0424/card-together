@@ -22,6 +22,7 @@ import {
   coverCost, coverSelection, lastPlayedCard, rankAtOrder, recentMoves, sameCard, sevensHandMode, sevensRows,
 } from './sevens-view';
 import type { SevensHandMode, SevensRow } from './sevens-view';
+import { AppIcon } from '../../components/AppIcon';
 import styles from './SevensTable.module.css';
 import { isOwnTurn, isSpectator } from '../observer-view';
 
@@ -181,7 +182,7 @@ function ResultOverlay({ result, pending, error, disabled, onBack }: {
       <tbody>{SEATS.map((seat) => {
         const winner = result.winners.includes(seat);
         return <tr key={seat} className={winner ? resultStyles.winnerRow : ''}>
-          <td className={styles.playerCell}>{winner && '🏆 '}{seatName(seat)}</td>
+          <td className={styles.playerCell}>{winner && <><AppIcon name="trophy" /> </>}{seatName(seat)}</td>
           <td>{result.covered[seat].length > 0 ? <ChipList cards={result.covered[seat]} />
             : <span className={resultStyles.note}>{t('sevens.none')}</span>}</td>
           <td className={styles.penaltyCell}>{result.penalties[seat]}</td>

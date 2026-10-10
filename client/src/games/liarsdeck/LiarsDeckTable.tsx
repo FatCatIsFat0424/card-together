@@ -17,6 +17,7 @@ import { useGamePresentation } from '../use-game-presentation';
 import { LiarCardFace } from './LiarCardFace';
 import { liarsDeckHandMode, liarsDeckView, recentLiarsDeckMoves, toggleSelection } from './liarsdeck-view';
 import type { LiarsDeckTableView } from './liarsdeck-view';
+import { AppIcon } from '../../components/AppIcon';
 import styles from './LiarsDeckTable.module.css';
 import { isOwnTurn, isSpectator } from '../observer-view';
 
@@ -124,7 +125,7 @@ function ResultOverlay({ result, pending, error, disabled, onBack }: {
       <tbody>{ranking.map((seat, index) => (
         <tr key={seat} className={index === 0 ? resultStyles.winnerRow : ''}>
           <td>{t('liarsdeck.place', { n: String(index + 1) })}</td>
-          <td>{index === 0 ? '🏆 ' : '💀 '}{seatName(seat)}</td>
+          <td>{index === 0 ? <><AppIcon name="trophy" /> </> : '💀 '}{seatName(seat)}</td>
           <td>{result.shots[seat]} / 6</td>
         </tr>
       ))}</tbody>

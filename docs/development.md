@@ -5,6 +5,17 @@ implementation rules. Use the exact Node.js version in `.node-version` (the defa
 `node` of an older shell fails; deployment enforces the pinned version) and install
 dependencies from the root with `npm ci`. All workspaces share the root TypeScript version.
 
+Checkbox controls use [AppCheckbox](../client/src/components/AppCheckbox.tsx), which
+wraps MUI Checkbox with the existing theme variables and a 44px hit area. Keep labels
+associated with the native input and put input-specific accessibility attributes in
+`slotProps.input`. Emoji selection keeps whole-tile toggling and Shift-click ranges.
+
+Interface icons use [AppIcon](../client/src/components/AppIcon.tsx) and individual
+`@mui/icons-material` SVG imports, inheriting text size and theme color. Icons are
+decorative; keep accessible names on controls and translated text beside status icons.
+Keep existing artwork or symbols when Material Icons has no suitable equivalent,
+including card suits, avatars, crowns, skulls, dragons, and revolvers.
+
 ## Configuration
 
 The server reads process environment variables; `server/.env.example` is a

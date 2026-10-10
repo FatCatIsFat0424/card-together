@@ -24,6 +24,7 @@ import { joinNames } from '../games/seat-names';
 import { useGamePresentation } from '../games/use-game-presentation';
 import { blackjackHandNumber, blackjackView } from '../games/blackjack/blackjack-view';
 import { holdemView } from '../games/holdem/holdem-view';
+import { AppIcon } from './AppIcon';
 import styles from './TopBar.module.css';
 
 const VoicePanel = lazy(() => import('./VoicePanel')
@@ -73,11 +74,11 @@ function GameChips(): ReactNode {
     {gameType && gameType !== 'bridge' ? <>
       <span className={styles.chip}>{t(`gameType.${gameType}`)}</span>
       {bigTwoResult && <span className={styles.chip}>
-        🏆 {seats?.[bigTwoResult.winnerSeat].player?.nickname ?? seatLabel(bigTwoResult.winnerSeat)}
+        <AppIcon name="trophy" /> {seats?.[bigTwoResult.winnerSeat].player?.nickname ?? seatLabel(bigTwoResult.winnerSeat)}
         {mySeat && <> · {t('bigtwo.myPenalty', { n: String(bigTwoResult.scores[mySeat]) })}</>}
       </span>}
       {redPointsResult && <span className={styles.chip}>
-        🏆 {joinNames(redPointsResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
+        <AppIcon name="trophy" /> {joinNames(redPointsResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
       </span>}
       {myRedPoints !== null && <span className={styles.chip}>
         {t('redpoints.myPoints', { n: String(myRedPoints) })}
@@ -86,11 +87,11 @@ function GameChips(): ReactNode {
         {ninetyNineTotal} / {NN_MAX}
       </span>}
       {sevensResult && !locked && <span className={styles.chip}>
-        🏆 {joinNames(sevensResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
+        <AppIcon name="trophy" /> {joinNames(sevensResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
         {mySeat && <> · {t('sevens.myPenalty', { n: String(sevensResult.penalties[mySeat]) })}</>}
       </span>}
       {chinesePokerResult && !locked && <span className={styles.chip}>
-        🏆 {joinNames(chinesePokerResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
+        <AppIcon name="trophy" /> {joinNames(chinesePokerResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
         {mySeat && <> · {t('chinesepoker.myScore', {
           n: `${chinesePokerResult.scores[mySeat] > 0 ? '+' : ''}${chinesePokerResult.scores[mySeat]}` })}</>}
       </span>}
@@ -98,13 +99,13 @@ function GameChips(): ReactNode {
         {t('liarsdeck.tableCard')} {t(`liarsdeck.face.${liarsDeckFace}`)}
       </span>}
       {liarsDeckWinner && !locked && <span className={styles.chip}>
-        🏆 {seats?.[liarsDeckWinner].player?.nickname ?? seatLabel(liarsDeckWinner)}
+        <AppIcon name="trophy" /> {seats?.[liarsDeckWinner].player?.nickname ?? seatLabel(liarsDeckWinner)}
       </span>}
       {blackjackHand > 0 && <span className={styles.chip}>
         {t('blackjack.handOf', { n: String(blackjackHand), total: String(BJ_HANDS) })}
       </span>}
       {blackjackResult && !locked && <span className={styles.chip}>
-        🏆 {joinNames(blackjackResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
+        <AppIcon name="trophy" /> {joinNames(blackjackResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
         {mySeat && <> · {t('blackjack.myChips', { n: String(blackjackResult.chips[mySeat]) })}</>}
       </span>}
       {holdemShown && holdemShown.hand > 0 && <span className={styles.chip}>
@@ -112,11 +113,11 @@ function GameChips(): ReactNode {
         {' '}{t('holdem.blinds', { sb: String(holdemShown.smallBlind), bb: String(holdemShown.bigBlind) })}
       </span>}
       {holdemResult && !locked && <span className={styles.chip}>
-        🏆 {joinNames(holdemResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
+        <AppIcon name="trophy" /> {joinNames(holdemResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
         {mySeat && <> · {t('holdem.myChips', { n: String(holdemResult.chips[mySeat]) })}</>}
       </span>}
       {ninetyNineWinner && <span className={styles.chip}>
-        🏆 {seats?.[ninetyNineWinner].player?.nickname ?? seatLabel(ninetyNineWinner)}
+        <AppIcon name="trophy" /> {seats?.[ninetyNineWinner].player?.nickname ?? seatLabel(ninetyNineWinner)}
       </span>}
     </>
       : contract ? <span className={styles.chip} title={t('topbar.contract')}>
@@ -212,7 +213,7 @@ export function TopBar(): ReactNode {
         {showVoice && <div className={styles.group} data-popover="voice">
           <button type="button" className={`${styles.iconBtn} touch-target`} onClick={() => toggle('voice')}
             aria-expanded={open === 'voice'} aria-label={t('topbar.voice')} title={t('topbar.voice')}>
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg>
+            <AppIcon name="microphone" />
             {(voiceStatus === 'joined' || voiceStatus === 'joining') &&
               <span className={voiceStatus === 'joined' ? styles.dotJoined : styles.dotJoining} />}
           </button>
@@ -224,7 +225,7 @@ export function TopBar(): ReactNode {
           <button type="button" className={`${styles.iconBtn} touch-target ${musicPlaying ? styles.iconActive : ''}`}
             onClick={() => toggle('music')} aria-expanded={open === 'music'}
             aria-label={t('topbar.music')} title={t('topbar.music')}>
-            <span aria-hidden="true">♪</span>
+            <AppIcon name="music" />
           </button>
           {open === 'music' && <div className={styles.popover} data-popover-panel tabIndex={-1}><MusicControl /></div>}
         </div>
@@ -235,7 +236,7 @@ export function TopBar(): ReactNode {
         <div className={`${styles.group} ${styles.menuGroup}`} data-popover="menu">
           <button type="button" className={`${styles.iconBtn} touch-target`} onClick={() => toggle('menu')}
             aria-expanded={open === 'menu'} aria-label={t('topbar.menu')} title={t('topbar.menu')}>
-            <span aria-hidden="true">☰</span>
+            <AppIcon name="menu" />
           </button>
           {open === 'menu' && <div className={`${styles.popover} ${styles.menu}`} data-popover-panel tabIndex={-1}>
             {showLinks && <nav className={styles.menuLinks}>{links}</nav>}
@@ -247,7 +248,7 @@ export function TopBar(): ReactNode {
           <button type="button" className={`${styles.iconBtn} touch-target`} onClick={requestSignOut} disabled={busy}
             aria-expanded={open === 'signOut' && confirmSignOut}
             aria-label={t('topbar.signOut')} title={t('topbar.signOut')}>
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
+            <AppIcon name="logout" />
           </button>
           {open === 'signOut' && error && <p className={`${styles.popover} ${styles.error}`} role="alert">{error}</p>}
           {open === 'signOut' && !error && confirmSignOut && <div className={`${styles.popover} ${styles.confirm}`}

@@ -121,7 +121,6 @@
 }
 .ruleOption:has(input:checked) { border-color: var(--color-primary); color: var(--text-primary); }
 .ruleOption:has(input:disabled) { cursor: default; }
-.ruleOption input { width: 16px; height: 16px; margin: 0; accent-color: var(--color-primary); }
 
 /* Current game: non-hosts see this badge too */
 .segmentActive,
@@ -504,7 +503,6 @@
 
 .codePill:hover .copyState { color: var(--text-primary); }
 .copiedState, .codePill:hover .copiedState { color: var(--color-success); }
-.copyIcon { width: 16px; height: 16px; }
 
 .chatToggle { position: relative; }
 

@@ -16,7 +16,9 @@ import { PlayerLink } from '../components/PlayerLink';
 import { ChatPanel } from '../components/ChatPanel';
 import { InviteFriends } from '../components/InviteFriends';
 import { TimeControlSettings } from '../components/TimeControlSettings';
+import { AppCheckbox } from '../components/AppCheckbox';
 import { useConnectionReady } from '../games/use-connection-ready';
+import { AppIcon } from '../components/AppIcon';
 import styles from './RoomPage.module.css';
 import { roomProgress, unreadCount } from './room-progress';
 
@@ -25,14 +27,6 @@ const COPIED_MS = 2000;
 const SEAT_STYLE_MAP: Record<Seat, string> = {
   N: styles.seatNorth, E: styles.seatEast, S: styles.seatSouth, W: styles.seatWest,
 };
-
-/** Two overlapping sheets, drawn so the icon matches the surrounding text color. */
-function CopyIcon(): ReactNode {
-  return <svg className={styles.copyIcon} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-    <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
-    <path d="M10.5 3.5v-.5a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 3v5A1.5 1.5 0 0 0 4 9.5h.5" />
-  </svg>;
-}
 
 export function RoomPage(): ReactNode {
   const { roomCode } = useParams<{ roomCode: string }>();
@@ -189,7 +183,7 @@ export function RoomPage(): ReactNode {
             aria-label={`${t('room.copyCode')} ${roomInfo.code}`} title={t('room.copyCode')}>
             <span className={styles.roomCode}>{roomInfo.code}</span>
             <span className={`${styles.copyState} ${copied ? styles.copiedState : ''}`} aria-hidden="true">
-              {copied ? <>✓<span className={styles.copyText}>{t('room.copied')}</span></> : <CopyIcon />}
+              {copied ? <><AppIcon name="check" /><span className={styles.copyText}>{t('room.copied')}</span></> : <AppIcon name="copy" />}
             </span>
           </button>
           <span className={styles.srOnly} role="status">{copied ? t('room.copied') : ''}</span>
@@ -201,7 +195,7 @@ export function RoomPage(): ReactNode {
             disabled={!isHost || blocked || roomInfo.status !== 'waiting'} onSave={setTimeControl} />
           <button type="button" className={`btn btn-outline touch-target ${styles.chatToggle}`}
             aria-pressed={chatOpen} aria-controls="room-chat" onClick={toggleChat}>
-            {t('chat.title')}
+            <AppIcon name="chat" /> {t('chat.title')}
             {unread > 0 && <span className={styles.unread} aria-label={t('room.unread', { n: String(unread) })}>
               {unread}</span>}
           </button>
@@ -225,9 +219,9 @@ export function RoomPage(): ReactNode {
           </div>
           {/* Rule options sit beside the game they modify; the hint moves to a tooltip to save a row. */}
           {roomInfo.gameType === 'sevens' && <label className={styles.ruleOption} title={t('sevens.closeOnEndHint')}>
-            <input type="checkbox" checked={roomInfo.sevensOptions?.closeOnEnd ?? false}
+            <AppCheckbox checked={roomInfo.sevensOptions?.closeOnEnd ?? false}
               disabled={!isHost || blocked || roomInfo.status !== 'waiting'}
-              aria-describedby="sevens-close-on-end-hint"
+              slotProps={{ input: { 'aria-describedby': 'sevens-close-on-end-hint' } }}
               onChange={(event) => setSevensOptions({ closeOnEnd: event.target.checked })} />
             {t('sevens.closeOnEnd')}
             <span id="sevens-close-on-end-hint" className={styles.srOnly}>{t('sevens.closeOnEndHint')}</span>

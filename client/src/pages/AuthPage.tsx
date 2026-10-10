@@ -6,6 +6,7 @@ import {
 } from '@shared/constants';
 import type { AccountProfile } from '@shared/types';
 import { apiRequest } from '../api';
+import { AppCheckbox } from '../components/AppCheckbox';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './AccountPages.module.css';
@@ -98,7 +99,7 @@ export function AuthPage({ mode }: AuthPageProps): ReactNode {
             </div>
           )}
           <label className={styles.showPassword}>
-            <input type="checkbox" checked={showPassword} onChange={(event) => setShowPassword(event.target.checked)} />
+            <AppCheckbox checked={showPassword} onChange={(event) => setShowPassword(event.target.checked)} />
             {t('auth.showPassword')}
           </label>
           {error && <p className={styles.error} role="alert">{error}</p>}

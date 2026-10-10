@@ -28,6 +28,7 @@ import {
   clampBet, rankBlackjack, recentBlackjackMoves, signedChips, stepBet,
 } from './blackjack-view';
 import type { BlackjackTableView } from './blackjack-view';
+import { AppIcon } from '../../components/AppIcon';
 import styles from './BlackjackTable.module.css';
 import { isOwnTurn, isSpectator } from '../observer-view';
 import { useGodViewStore } from '../../stores/god-view-store';
@@ -47,7 +48,7 @@ function SeatHands({ seat, view, position, betPlaced, auto }: {
   const out = blackjackSeatOut(view, seat);
   const net = hands.length > 0 ? view.settlement?.net[seat] : undefined;
   const status = out ? t('blackjack.sittingOut')
-    : view.betting ? betPlaced ? `✓ ${t('blackjack.betPlaced')}` : t('blackjack.betting') : '';
+    : view.betting ? betPlaced ? <><AppIcon name="check" /> {t('blackjack.betPlaced')}</> : t('blackjack.betting') : '';
   return <section className={`${styles.seatHands} ${styles[position]} ${out ? styles.out : ''}`}
     aria-label={seatName(seat)}>
     <header className={styles.seatHeader}>
@@ -151,7 +152,7 @@ function Info({ game, view, locked }: { game: BlackjackVisibleState; view: Black
           <strong className={styles.infoChips}><ChipIcon />{view.chips[seat]}</strong>
           {out ? <span className={infoStyles.note}>{t('blackjack.sittingOut')}</span>
             : view.betting && game.betDeadline !== null && <span className={game.betPlaced[seat] ? styles.statusDone : infoStyles.note}>
-              {game.betPlaced[seat] ? `✓ ${t('blackjack.betPlaced')}` : t('blackjack.betting')}
+              {game.betPlaced[seat] ? <><AppIcon name="check" /> {t('blackjack.betPlaced')}</> : t('blackjack.betting')}
             </span>}
         </li>;
       })}</ul>
@@ -188,7 +189,7 @@ function ResultOverlay({ result, pending, error, disabled, onBack }: {
       <tbody>{rankBlackjack(result).map((row) => (
         <tr key={row.seat} className={row.winner ? resultStyles.winnerRow : ''}>
           <td>{t('blackjack.place', { n: String(row.place) })}</td>
-          <td>{row.winner && '🏆 '}{seatName(row.seat)}</td>
+          <td>{row.winner && <><AppIcon name="trophy" /> </>}{seatName(row.seat)}</td>
           <td>{row.chips}</td>
           <td className={toneClass(row.net)}>{signedChips(row.net)}</td>
         </tr>
@@ -210,7 +211,7 @@ function BetControls({ game, amount, onAmount, disabled, expired, sent, onBet }:
   }
   if (game.myBet !== null || game.betPlaced[game.mySeat] || sent) {
     return <p className={`${styles.prompt} ${styles.placed}`} role="status">
-      {game.myBet !== null ? `✓ ${t('blackjack.betPlacedNote', { n: String(game.myBet) })}` : t('blackjack.betPlacedHidden')}
+      {game.myBet !== null ? <><AppIcon name="check" /> {t('blackjack.betPlacedNote', { n: String(game.myBet) })}</> : t('blackjack.betPlacedHidden')}
     </p>;
   }
   if (game.betDeadline === null) return <p className={styles.prompt}>{t('blackjack.bettingSoon')}</p>;

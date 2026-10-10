@@ -14,6 +14,7 @@ import { MatchHistoryList } from '../components/MatchHistoryList';
 import { EmojiLibrary } from '../components/EmojiLibrary';
 import { OpacitySlider } from '../components/OpacitySlider';
 import { AccountProfilePreview } from '../components/AccountProfilePreview';
+import { AppCheckbox } from '../components/AppCheckbox';
 import styles from './AccountPages.module.css';
 import editorStyles from './AccountPage.module.css';
 
@@ -311,7 +312,7 @@ export function AccountPage(): ReactNode {
         <h2>{t('history.title')}</h2>
         <p className={styles.hint}>{t('history.humanOnly')}</p>
         <label className={`${styles.row} ${editorStyles.historyVisibility}`}>
-          <input type="checkbox" checked={account.matchesPublic} disabled={mediaBusy !== null}
+          <AppCheckbox checked={account.matchesPublic} disabled={mediaBusy !== null}
             onChange={(event) => {
               const value = event.target.checked;
               void patchSetting('matchesPublic', async () => value);

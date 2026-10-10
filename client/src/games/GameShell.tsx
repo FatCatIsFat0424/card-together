@@ -16,10 +16,12 @@ import { useRoomStore } from '../stores/room-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { ChatPanel } from '../components/ChatPanel';
 import { TableSeat } from '../components/TableSeat';
+import { AppCheckbox } from '../components/AppCheckbox';
 import { lastElimination, lastMove, tablePosition } from '../game-view';
 import type { TablePosition } from '../game-view';
 import { AbortVoteBanner, AbortVoteButton } from './AbortVote';
 import { SpectatorLeaveButton } from './SpectatorLeave';
+import { AppIcon } from '../components/AppIcon';
 import styles from './GameShell.module.css';
 import { useGamePresentation } from './use-game-presentation';
 import { GamePresentation } from './GamePresentation';
@@ -304,12 +306,12 @@ export function GameShell({
         <div className={styles.sheetHeader}>
           <span>{t('table.info')}</span>
           <button type="button" className={styles.sheetClose} onClick={() => setInfoOpen(false)}
-            aria-label={t('table.close')} title={t('table.close')}>✕</button>
+            aria-label={t('table.close')} title={t('table.close')}><AppIcon name="close" /></button>
         </div>
         <AbortVoteButton />
         <SpectatorLeaveButton />
         <label className={styles.motionSetting}>
-          <input type="checkbox" checked={reducedMotion}
+          <AppCheckbox checked={reducedMotion}
             onChange={(event) => setReducedMotion(event.target.checked)} />
           {t('table.reduceMotion')}
         </label>
@@ -325,11 +327,11 @@ export function GameShell({
             <button type="button" className={styles.toolBtn} onClick={openInfo} ref={infoButtonRef}
               aria-label={t('table.info')} title={t('table.info')}
               aria-expanded={infoOpen} aria-controls="game-info-panel">
-              <span aria-hidden="true">📋</span>
+              <AppIcon name="info" />
             </button>
             <button type="button" className={`${styles.toolBtn} ${styles.chatFab}`} onClick={openChat} ref={chatButtonRef}
               aria-label={t('table.chatExpand')} title={t('table.chatExpand')} aria-expanded={chatOpen}>
-              <span aria-hidden="true">💬</span>
+              <AppIcon name="chat" />
               {unread > 0 && <span className={`${styles.unread} ${styles.fabBadge}`}>{unread}</span>}
             </button>
           </div>
@@ -351,7 +353,7 @@ export function GameShell({
             ) : <div className={`${styles.centreBody} ${visibleGame?.presentation ? styles.settledCentre : ''}`}>{centre}</div>}
           </FittedCentre>
           {outBanner && <p key={outBanner.index} className={styles.outBanner} role="status">
-            {t('table.eliminated', { name: seats?.[outBanner.seat].player?.nickname ?? t(`seat.${outBanner.seat}`) })}
+            <AppIcon name="burst" /> {t('table.eliminated', { name: seats?.[outBanner.seat].player?.nickname ?? t(`seat.${outBanner.seat}`) })}
           </p>}
           {panel && !presentation.locked && <div className={styles.actionPanel}>{panel}</div>}
           <AbortVoteBanner />
@@ -378,7 +380,7 @@ export function GameShell({
         {!chatOpen && (
           <button type="button" className={styles.chatStrip} onClick={() => setChatOpen(true)}
             aria-label={t('table.chatExpand')} title={t('table.chatExpand')}>
-            <span aria-hidden="true">💬</span>
+            <AppIcon name="chat" />
             {unread > 0 && <span className={styles.unread}>{unread}</span>}
           </button>
         )}

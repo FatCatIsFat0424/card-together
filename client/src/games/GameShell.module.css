@@ -379,7 +379,6 @@
 }
 
 .motionSetting { display: flex; gap: 8px; align-items: center; color: var(--text-secondary); }
-.motionSetting input { width: auto; }
 .gameContainer[data-reduced-motion] *,
 .gameContainer[data-reduced-motion] *::before,
 .gameContainer[data-reduced-motion] *::after { animation: none !important; transition: none !important; }

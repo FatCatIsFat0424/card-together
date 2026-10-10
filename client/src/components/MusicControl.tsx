@@ -5,9 +5,12 @@ import type { MusicMode } from '../audio/music-playlist';
 import { useI18nStore } from '../stores/i18n-store';
 import { useMusicStore } from '../stores/music-store';
 import { useTurnSoundStore } from '../stores/turn-sound-store';
+import type { AppIconName } from './AppIcon';
+import { AppCheckbox } from './AppCheckbox';
+import { AppIcon } from './AppIcon';
 import styles from './MusicControl.module.css';
 
-const MODE_ICONS: Record<MusicMode, string> = { 'loop-one': '🔂', sequential: '🔁', shuffle: '🔀' };
+const MODE_ICONS: Record<MusicMode, AppIconName> = { 'loop-one': 'repeatOne', sequential: 'repeat', shuffle: 'shuffle' };
 const NEXT_MODE: Record<MusicMode, MusicMode> = { 'loop-one': 'sequential', sequential: 'shuffle', shuffle: 'loop-one' };
 
 export function MusicControl(): ReactNode {
@@ -35,19 +38,19 @@ export function MusicControl(): ReactNode {
 
   return (
     <section className={styles.panel} aria-label={t('music.title')}>
-      <span className={styles.title}><span aria-hidden="true">♫ </span>{t('music.title')}</span>
+      <span className={styles.title}><AppIcon name="music" /> {t('music.title')}</span>
       <p className={styles.nowPlaying} aria-live="polite">
         {busy ? t('music.loading') : providedTrack?.title ?? t('music.noTracks')}
       </p>
       <div className={styles.controls}>
         <button type="button" className={styles.control} aria-label={t('music.prev')} title={t('music.prev')}
-          disabled={busy || !hasTracks} onClick={() => void prev()}>⏮</button>
+          disabled={busy || !hasTracks} onClick={() => void prev()}><AppIcon name="previous" /></button>
         <button type="button" className={styles.control} aria-pressed={playing}
-          aria-label={playing || busy ? t('music.pause') : t('music.play')} title={playing || busy ? t('music.pause') : t('music.play')} disabled={!hasTracks} onClick={() => void toggle()}>⏯</button>
+          aria-label={playing || busy ? t('music.pause') : t('music.play')} title={playing || busy ? t('music.pause') : t('music.play')} disabled={!hasTracks} onClick={() => void toggle()}><AppIcon name={playing || busy ? 'pause' : 'play'} /></button>
         <button type="button" className={styles.control} aria-label={t('music.next')} title={t('music.next')}
-          disabled={busy || !hasTracks} onClick={() => void next()}>⏭</button>
+          disabled={busy || !hasTracks} onClick={() => void next()}><AppIcon name="next" /></button>
         <button type="button" className={styles.control} aria-label={t(`music.${mode}`)} title={t(`music.${mode}`)}
-          disabled={busy} onClick={() => setMode(NEXT_MODE[mode])}>{MODE_ICONS[mode]}</button>
+          disabled={busy} onClick={() => setMode(NEXT_MODE[mode])}><AppIcon name={MODE_ICONS[mode]} /></button>
       </div>
       <label htmlFor="music-volume" className={styles.volume}>
         <span>{t('music.volume')}</span>
@@ -65,7 +68,7 @@ export function MusicControl(): ReactNode {
       </ul>
       <div className={styles.soundSetting}>
         <label className={styles.soundToggle}>
-          <input type="checkbox" checked={turnSoundEnabled}
+          <AppCheckbox checked={turnSoundEnabled}
             onChange={(event) => setTurnSoundEnabled(event.target.checked)} />
           <span>{t('music.turnSound')}</span>
         </label>

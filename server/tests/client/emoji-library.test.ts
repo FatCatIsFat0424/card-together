@@ -108,14 +108,15 @@ describe('emoji library UI', () => {
   it('should render accessible checkbox tiles with selected state only in select mode', () => {
     useI18nStore.setState({ locale: 'en' });
     const selecting = grid(true, ['id-1']);
-    expect(selecting.match(/role="checkbox"/g)).toHaveLength(3);
-    expect(selecting).toContain('aria-checked="true" class="');
-    expect(selecting.match(/aria-checked="false"/g)).toHaveLength(2);
+    const inputs = selecting.match(/<input\b[^>]*type="checkbox"[^>]*>/g) ?? [];
+    expect(inputs).toHaveLength(3);
+    expect(inputs.filter((input) => input.includes('checked=""'))).toHaveLength(1);
+    expect(inputs.find((input) => input.includes('checked=""'))).toContain('aria-label="Select :Wave-2:"');
     expect(selecting).toContain('aria-label="Select :Wave-2:"');
     expect(selecting).not.toContain('Rename');
 
     const browsing = grid(false);
-    expect(browsing).not.toContain('role="checkbox"');
+    expect(browsing).not.toContain('type="checkbox"');
     expect(browsing.match(/>Rename</g)).toHaveLength(3);
     expect(browsing).toContain('alt=":cat.v2:"');
   });

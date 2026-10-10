@@ -3,6 +3,7 @@ import type { PresentationFrame } from '@shared/game-presentation';
 import type { Seat } from '@shared/types';
 import { useI18nStore } from '../../stores/i18n-store';
 import { LiarCardFace } from './LiarCardFace';
+import { AppIcon } from '../../components/AppIcon';
 import styles from './LiarsDeckFrame.module.css';
 
 /** Body of a Liar's Deck presentation frame; the shared frame supplies the heading and timing. */
@@ -41,7 +42,7 @@ export function LiarsDeckFrame({ frame, name }: { frame: PresentationFrame; name
     const resolved = frame.kind === 'shot';
     return <div className={styles.body}>
       <span className={`${styles.revolver} ${resolved ? '' : styles.spin}`} aria-hidden="true">
-        {resolved ? frame.survived ? '🔫' : '💥' : '🔫'}
+        {resolved && !frame.survived ? <AppIcon name="burst" /> : '🔫'}
       </span>
       <span>{t('presentation.pull', { n: String(frame.shot) })}</span>
       {resolved && <strong className={`${styles.callout} ${frame.survived ? styles.good : styles.bad}`}>

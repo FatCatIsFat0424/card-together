@@ -8,12 +8,18 @@ import { useAccountStore } from '../stores/account-store';
 import { useRoomStore } from '../stores/room-store';
 import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
+import type { AppIconName } from '../components/AppIcon';
 import { Avatar } from '../components/Avatar';
+import { AppIcon } from '../components/AppIcon';
 import styles from './LobbyPage.module.css';
 
 const GAME_ICONS: Record<GameType, string> = {
   bridge: '♠', bigtwo: '🃏', redpoints: '🔴', ninetynine: '💯', sevens: '7️⃣', chinesepoker: '🀄', liarsdeck: '🍺',
   blackjack: '🎰', holdem: '♦️',
+};
+
+const MATERIAL_GAME_ICONS: Partial<Record<GameType, AppIconName>> = {
+  redpoints: 'circle', sevens: 'seven', liarsdeck: 'beer',
 };
 
 export function LobbyPage(): ReactNode {
@@ -69,7 +75,9 @@ export function LobbyPage(): ReactNode {
             {GAME_TYPES.map((gameType) => (
               <button key={gameType} type="button" className={styles.gameChoice}
                 onClick={() => createRoom(gameType)} disabled={loading}>
-                <span className={styles.gameIcon} aria-hidden="true">{GAME_ICONS[gameType]}</span>
+                <span className={styles.gameIcon} aria-hidden="true">{MATERIAL_GAME_ICONS[gameType]
+                  ? <AppIcon name={MATERIAL_GAME_ICONS[gameType]}
+                    className={gameType === 'redpoints' ? styles.redGameIcon : undefined} /> : GAME_ICONS[gameType]}</span>
                 <span className={styles.gameName}>{t(`gameType.${gameType}`)}</span>
                 <span className={styles.gameDesc}>{t(`gameType.${gameType}Desc`)}</span>
               </button>

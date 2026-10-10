@@ -10,6 +10,7 @@ import { useI18nStore } from '../stores/i18n-store';
 import { useRoomStore } from '../stores/room-store';
 import { Avatar } from '../components/Avatar';
 import { formatCountdown } from '../game-view';
+import { AppIcon } from '../components/AppIcon';
 import styles from './AbortVote.module.css';
 import { useConnectionReady } from './use-connection-ready';
 
@@ -63,7 +64,7 @@ export function AbortVoteButton(): ReactNode {
       <button type="button" className={`btn btn-outline ${styles.railBtn}`}
         disabled={busy || !connectionReady || cooling || room.abortVote !== null}
         onClick={() => run((done) => socket.timeout(10000).emit('game:abortVote:start', done))}>
-        <span aria-hidden="true">🏳️</span>{' '}
+        <AppIcon name="flag" />{' '}
         {cooling ? t('abortVote.cooldown', { time: formatCountdown(cooldownUntil - now) }) : t('abortVote.button')}
       </button>
       {error && <p className={styles.error} role="alert">{error}</p>}
@@ -71,7 +72,7 @@ export function AbortVoteButton(): ReactNode {
   );
 }
 
-function Tally({ room, ids, label }: { room: RoomInfo; ids: readonly string[]; label: string }): ReactNode {
+function Tally({ room, ids, label }: { room: RoomInfo; ids: readonly string[]; label: ReactNode }): ReactNode {
   return <div className={styles.tally}>
     <span className={styles.tallyLabel}>{label} {ids.length}</span>
     {ids.map((id) => {
@@ -115,13 +116,13 @@ export function AbortVoteBanner(): ReactNode {
   return (
     <div ref={bannerRef} className={styles.banner} role="region" aria-labelledby={titleId} tabIndex={-1}>
       <p className={styles.title} id={titleId} role="status">
-        <span aria-hidden="true">🏳️</span> {t('abortVote.title', { name: starter?.nickname ?? '' })}
+        <AppIcon name="flag" /> {t('abortVote.title', { name: starter?.nickname ?? '' })}
       </p>
       <p className={styles.meta}>
         {t('abortVote.timeLeft', { time: formatCountdown(vote.expiresAt - now) })} · {t('abortVote.needed', { n: String(threshold) })}
       </p>
-      <Tally room={room} ids={vote.yes} label={`✅ ${t('abortVote.agree')}`} />
-      <Tally room={room} ids={vote.no} label={`❌ ${t('abortVote.disagree')}`} />
+      <Tally room={room} ids={vote.yes} label={<><AppIcon name="agree" /> {t('abortVote.agree')}</>} />
+      <Tally room={room} ids={vote.no} label={<><AppIcon name="disagree" /> {t('abortVote.disagree')}</>} />
       {canVote && <div className={styles.actions}>
         <button type="button" className="btn btn-danger" disabled={busy || !connectionReady} onClick={() => cast(true)}>
           {t('abortVote.agree')}</button>

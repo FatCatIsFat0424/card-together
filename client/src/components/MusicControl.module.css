@@ -13,7 +13,7 @@
 .control {
   flex: 1;
   color: var(--text-primary);
-  font-size: var(--text-xs);
+  font-size: var(--text-lg);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-pill);
   padding: var(--spacing-xs) var(--spacing-sm);
@@ -52,4 +52,3 @@
 .error { color: var(--color-danger); }
 .soundSetting { border-top: 1px solid var(--border-color); padding-top: var(--spacing-sm); }
 .soundToggle { display: flex; align-items: center; gap: var(--spacing-sm); color: var(--text-primary); }
-.soundToggle input { width: auto; accent-color: var(--color-primary); }

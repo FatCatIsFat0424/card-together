@@ -1,0 +1,6 @@
+.checkbox:global(.MuiCheckbox-root) { flex: none; width: 44px; height: 44px; padding: 10px; color: var(--text-secondary); }
+.checkbox:global(.MuiCheckbox-root.Mui-checked), .checkbox:global(.MuiCheckbox-root.MuiCheckbox-indeterminate) { color: var(--color-primary); }
+.checkbox:global(.MuiCheckbox-root):hover { background: color-mix(in srgb, var(--color-primary) 10%, transparent); }
+.checkbox:global(.MuiCheckbox-root.Mui-disabled) { color: var(--text-muted); opacity: 0.5; }
+.checkbox:global(.MuiCheckbox-root.Mui-focusVisible), .checkbox:global(.MuiCheckbox-root):has(input:focus-visible) { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.checkbox:global(.MuiCheckbox-root) input { width: 100%; height: 100%; min-width: 0; min-height: 0; margin: 0; padding: 0; border: 0; }

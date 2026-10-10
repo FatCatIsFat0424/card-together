@@ -11,6 +11,7 @@ import { mediaUrl, uploadImage } from '../media';
 import { useEmojiStore } from '../stores/emoji-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { joinNames } from '../games/seat-names';
+import { AppCheckbox } from './AppCheckbox';
 import styles from './EmojiLibrary.module.css';
 
 const ACCEPT = 'image/png,image/gif,image/webp,image/jpeg';
@@ -45,14 +46,21 @@ export function EmojiGrid({
         if (selecting) {
           return (
             <li key={emoji.id} className={`${styles.item} ${isSelected ? styles.selected : ''}`}>
-              {/* A checkbox-role button so the whole tile toggles and shift-click reaches onClick. */}
-              <button type="button" role="checkbox" aria-checked={isSelected} className={styles.selectTile}
-                disabled={busy} aria-label={t('emoji.selectItem', { name: emoji.name })}
-                onClick={(event) => onToggle(emoji.id, event.shiftKey)}>
-                <span className={styles.checkbox} aria-hidden="true">{isSelected ? '\u2713' : ''}</span>
+              <label className={styles.selectTile}>
+                <AppCheckbox checked={isSelected} disabled={busy} className={styles.checkbox}
+                  slotProps={{ input: {
+                    'aria-label': t('emoji.selectItem', { name: emoji.name }),
+                    onClick: (event) => onToggle(emoji.id, event.shiftKey),
+                    onKeyDown: (event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        onToggle(emoji.id, event.shiftKey);
+                      }
+                    },
+                  } }} />
                 <img className={styles.image} src={mediaUrl(emoji.mediaId)} alt="" />
                 <code className={styles.name}>:{emoji.name}:</code>
-              </button>
+              </label>
             </li>
           );
         }

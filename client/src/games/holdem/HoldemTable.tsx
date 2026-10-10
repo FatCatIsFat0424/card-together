@@ -25,6 +25,7 @@ import {
   signedChips, streetActions,
 } from './holdem-view';
 import type { HoldemBlindSeats, HoldemControls, HoldemTableView, RaiseControl, SeatAction } from './holdem-view';
+import { AppIcon } from '../../components/AppIcon';
 import styles from './HoldemTable.module.css';
 import { isOwnTurn, isSpectator } from '../observer-view';
 import { useGodViewStore } from '../../stores/god-view-store';
@@ -64,7 +65,7 @@ function SeatSpot({ seat, view, position, isMe, action, blinds }: {
       : observed?.length ? <HeCards cards={observed} size="xs" overlap peek label={seatName(seat)} />
         : <HeCards cards={[]} backs={2} size="xs" overlap />)}
     {category && <span className={styles.category}>{t(`holdem.category.${category}`)}</span>}
-    {won > 0 && <strong className={styles.won}>🏆 {t('holdem.wonAmount', { n: String(won) })}</strong>}
+    {won > 0 && <strong className={styles.won}><AppIcon name="trophy" /> {t('holdem.wonAmount', { n: String(won) })}</strong>}
     {bet > 0 && <BetStack amount={bet} title={t('holdem.betTitle', { n: String(bet) })} />}
   </section>;
 }
@@ -227,7 +228,7 @@ function ResultOverlay({ result, pending, error, disabled, onBack }: {
       <tbody>{rankHoldem(result).map((row) => (
         <tr key={row.seat} className={row.winner ? resultStyles.winnerRow : ''}>
           <td>{t('holdem.place', { n: String(row.place) })}</td>
-          <td>{row.winner && '🏆 '}{seatName(row.seat)}</td>
+          <td>{row.winner && <><AppIcon name="trophy" /> </>}{seatName(row.seat)}</td>
           <td>{row.eliminated ? t('holdem.out') : row.chips}</td>
           <td className={toneClass(row.net)}>{signedChips(row.net)}</td>
         </tr>
@@ -373,7 +374,7 @@ export function HoldemTable(): ReactNode {
       <HeCards cards={hole.cards} backs={hole.hidden ? 2 : 0} size="lg" label={t('holdem.hole')} />
       <div className={styles.myMeta}>
         {category && <span className={styles.bestHand}>{t('holdem.bestHand', { category: t(`holdem.category.${category}`) })}</span>}
-        {won > 0 && <strong className={styles.won}>🏆 {t('holdem.wonAmount', { n: String(won) })}</strong>}
+        {won > 0 && <strong className={styles.won}><AppIcon name="trophy" /> {t('holdem.wonAmount', { n: String(won) })}</strong>}
       </div>
     </div>}
     {game.phase === 'playing' && isSpectator(game) ? prompt && <p className={styles.prompt}>{prompt}</p>
