@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { GAME_TYPES } from '@shared/constants';
 import type { FriendEntry, GameType } from '@shared/types';
 import { socket } from '../socket';
@@ -40,6 +41,7 @@ export function LobbyPage(): ReactNode {
   const phase = useGameStore((state) => state.phase);
   const connectionReady = useConnectionReady();
   const { t } = useI18nStore();
+  const mobileLayout = useMediaQuery('(max-width: 52rem)');
   const [selectedGame, setSelectedGame] = useState<GameType>('bridge');
   const [rulesGame, setRulesGame] = useState<GameType | null>(null);
   const [roomCodeInput, setRoomCodeInput] = useState('');
@@ -49,11 +51,11 @@ export function LobbyPage(): ReactNode {
   const blocked = pending !== null || !connectionReady;
   const roomPath = currentRoomCode ? `/${phase ? 'game' : 'room'}/${currentRoomCode}` : '/';
 
-  const createRoom = (): void => {
+  const createRoom = (gameType: GameType): void => {
     if (blocked || currentRoomCode) return;
     setPending('create');
     setError('');
-    socket.timeout(10000).emit('room:create', { gameType: selectedGame }, (timeout, result) => {
+    socket.timeout(10000).emit('room:create', { gameType }, (timeout, result) => {
       setPending(null);
       if (timeout) setError(t('auth.connectionError'));
       else if (result.success && result.roomCode) navigate(`/room/${result.roomCode}`);
@@ -112,7 +114,7 @@ export function LobbyPage(): ReactNode {
 
   if (!account) return null;
   return <main className={styles.page}>
-    <LobbyBackground gameType={selectedGame} />
+    <LobbyBackground gameType={mobileLayout ? 'bridge' : selectedGame} />
     <header className={styles.header}>
       <div className={styles.welcome}>
         <Avatar avatar={account.avatar} image={account.avatarImage} color={account.color} size="large" />
@@ -122,10 +124,6 @@ export function LobbyPage(): ReactNode {
           <p className={styles.subtitle}>{t('lobby.description')}</p>
         </div>
       </div>
-      <section className={`${styles.panel} ${styles.joinPanel} ${styles.mobileOnly}`} aria-labelledby="lobby-join-title">
-        <h2 id="lobby-join-title">{t('lobby.joinRoom')}</h2>
-        {renderJoinForm('mobile')}
-      </section>
     </header>
 
     {currentRoomCode && <section className={styles.resume} aria-labelledby="lobby-current-room-title">
@@ -139,46 +137,54 @@ export function LobbyPage(): ReactNode {
 
     <div className={styles.layout}>
       <section className={styles.games} aria-label={t('gameType.choose')}>
-        <div className={styles.mobileCreate}>
-          <span aria-live="polite">{t(`gameType.${selectedGame}`)}</span>
-          <button type="button" className="btn btn-primary" onClick={createRoom}
+        <section className={`${styles.mobileRoomActions} ${styles.mobileOnly}`} aria-labelledby="lobby-join-title">
+          <h2 id="lobby-join-title">{t('lobby.joinRoom')}</h2>
+          {renderJoinForm('mobile')}
+          <div className={styles.mobileDivider} role="separator" aria-label={t('lobby.or')}>
+            <span>{t('lobby.or')}</span>
+          </div>
+          <button type="button" className={`btn btn-primary ${styles.createButton}`} onClick={() => createRoom('bridge')}
             disabled={blocked || Boolean(currentRoomCode)}
-            aria-describedby={currentRoomCode ? 'lobby-current-room-hint' : 'lobby-create-hint'}>
+            aria-label={t('lobby.createSelectedRoom', { game: t('gameType.bridge') })}
+            aria-describedby={currentRoomCode ? 'lobby-current-room-hint' : undefined}>
             {pending === 'create' ? t('common.loading') : t('lobby.createRoom')}</button>
-        </div>
-        <div className={styles.gameChoices} role="group" aria-label={t('gameType.choose')}>
+        </section>
+        <h2 id="lobby-rules-title" className={styles.rulesTitle}>{t('lobby.rulesIntro')}</h2>
+        <div className={styles.gameChoices} role="group" aria-label={t('gameType.choose')}
+          aria-labelledby={mobileLayout ? 'lobby-rules-title' : undefined}>
           {GAME_TYPES.map((gameType) => <button key={gameType} type="button"
-            className={`${styles.gameChoice} ${selectedGame === gameType ? styles.selected : ''}`}
-            aria-pressed={selectedGame === gameType} aria-controls="lobby-selected-game" disabled={pending !== null}
-            onClick={() => setSelectedGame(gameType)}>
+            className={`${styles.gameChoice} ${!mobileLayout && selectedGame === gameType ? styles.selected : ''}`}
+            aria-pressed={mobileLayout ? undefined : selectedGame === gameType} aria-controls={mobileLayout ? undefined : 'lobby-selected-game'}
+            aria-haspopup={mobileLayout ? 'dialog' : undefined} disabled={pending !== null}
+            onClick={() => {
+              if (mobileLayout) setRulesGame(gameType);
+              else setSelectedGame(gameType);
+            }}>
             <div className={styles.gameChoiceHeader}>
               <GameIcon gameType={gameType} />
-              {selectedGame === gameType && <AppIcon name="check" className={styles.selectedIcon} />}
+              {!mobileLayout && selectedGame === gameType && <AppIcon name="check" className={styles.selectedIcon} />}
             </div>
             <span className={styles.gameName}>{t(`gameType.${gameType}`)}</span>
             <span className={styles.gameDesc}>{t(`gameType.${gameType}Desc`)}</span>
+            {mobileLayout && <AppIcon name="nextPage" className={styles.rulesChevron} />}
           </button>)}
         </div>
       </section>
 
       <aside className={styles.sidebar}>
-        <section id="lobby-selected-game" className={styles.panel}
+        <section id="lobby-selected-game" className={`${styles.panel} ${styles.desktopRoomActions}`}
           aria-labelledby="lobby-create-title lobby-selected-game-title">
           <h2 id="lobby-create-title" className={styles.createTitle}>{t('lobby.createTitle')}</h2>
-          <p className={`${styles.eyebrow} ${styles.mobileOnly}`}>{t('lobby.yourTable')}</p>
           <div className={styles.selectedHeading}>
             <GameIcon gameType={selectedGame} />
             <h3 id="lobby-selected-game-title">{t(`gameType.${selectedGame}`)}</h3>
             <button type="button" className={styles.rulesLink} aria-haspopup="dialog"
               onClick={() => setRulesGame(selectedGame)}>{t('lobby.rulesIntro')}</button>
           </div>
-          <p className={`${styles.selectedDescription} ${styles.mobileOnly}`}>{t(`gameType.${selectedGame}Desc`)}</p>
-          <p className={`${styles.seatCount} ${styles.mobileOnly}`}>{t('lobby.seats')}</p>
-          <button type="button" className={`btn btn-primary ${styles.createButton} ${styles.desktopCreate}`} onClick={createRoom}
+          <button type="button" className={`btn btn-primary ${styles.createButton}`} onClick={() => createRoom(selectedGame)}
             disabled={blocked || Boolean(currentRoomCode)}
             aria-describedby={currentRoomCode ? 'lobby-current-room-hint' : undefined}>
             {pending === 'create' ? t('common.loading') : t('lobby.createRoom')}</button>
-          <p id="lobby-create-hint" className={`${styles.hint} ${styles.mobileOnly}`}>{t('lobby.createHint')}</p>
           <hr className={styles.divider} aria-hidden="true" />
           <section className={styles.desktopJoin} aria-labelledby="lobby-desktop-join-title">
             <h2 id="lobby-desktop-join-title">{t('lobby.joinRoom')}</h2>

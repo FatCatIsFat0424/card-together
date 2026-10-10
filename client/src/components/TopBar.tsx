@@ -157,7 +157,9 @@ export function TopBar(): ReactNode {
       if (!(event.target instanceof Element) || !event.target.closest('[data-popover]')) setOpen(null);
     };
     const group = document.querySelector(`[data-popover="${open}"]`);
-    const trigger = group?.querySelector<HTMLElement>('button');
+    const groupTrigger = group?.querySelector<HTMLElement>('button');
+    const trigger = open === 'signOut' && !groupTrigger?.getClientRects().length
+      ? document.querySelector<HTMLElement>('[data-popover="menu"] > button') : groupTrigger;
     const panel = group?.querySelector<HTMLElement>('[data-popover-panel]');
     if (panel) (panel.querySelector<HTMLElement>(FOCUSABLE) ?? panel).focus({ preventScroll: true });
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -242,13 +244,17 @@ export function TopBar(): ReactNode {
             {showLinks && <nav className={styles.menuLinks}>{links}</nav>}
             <ThemeSwitch />
             <LanguageSwitch />
+            {accountId && <button type="button" className={styles.menuSignOut} onClick={requestSignOut} disabled={busy}>
+              <AppIcon name="logout" /> {t('topbar.signOut')}
+            </button>}
           </div>}
         </div>
         {accountId && <div className={styles.group} data-popover="signOut">
-          <button type="button" className={`${styles.iconBtn} touch-target`} onClick={requestSignOut} disabled={busy}
+          <button type="button" className={`${styles.iconBtn} ${styles.signOutBtn} touch-target`} onClick={requestSignOut} disabled={busy}
             aria-expanded={open === 'signOut' && confirmSignOut}
             aria-label={t('topbar.signOut')} title={t('topbar.signOut')}>
             <AppIcon name="logout" />
+            <span className={styles.signOutLabel}>{t('topbar.signOut')}</span>
           </button>
           {open === 'signOut' && error && <p className={`${styles.popover} ${styles.error}`} role="alert">{error}</p>}
           {open === 'signOut' && !error && confirmSignOut && <div className={`${styles.popover} ${styles.confirm}`}

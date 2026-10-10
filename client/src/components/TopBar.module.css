@@ -62,6 +62,9 @@
 .iconBtn:disabled { opacity: 0.6; cursor: wait; }
 .iconActive { color: var(--color-primary); border-color: var(--color-primary); }
 
+.iconBtn.signOutBtn { display: flex; align-items: center; justify-content: center; gap: var(--spacing-xs); width: auto; padding: 0 var(--spacing-sm); }
+.signOutLabel { font-size: var(--text-sm); white-space: nowrap; }
+
 .dotJoined, .dotJoining {
   position: absolute;
   top: 3px;
@@ -95,6 +98,7 @@
 .error { color: var(--color-danger); font-size: var(--text-sm); }
 
 .menuGroup { display: none; }
+.menuSignOut { display: none; }
 
 .confirm { display: flex; flex-direction: column; gap: var(--spacing-md); font-size: var(--text-sm); }
 .confirmActions { display: flex; justify-content: flex-end; gap: var(--spacing-sm); }
@@ -117,6 +121,9 @@
   .brandTextGame { display: none; }
   .actions { gap: var(--spacing-xs); }
   .iconBtn { width: 32px; height: 32px; }
+  .iconBtn.signOutBtn { display: none; }
+  .menuSignOut { display: flex; align-items: center; gap: var(--spacing-sm); width: 100%; min-height: 44px; padding-top: var(--spacing-sm); border-top: 1px solid var(--border-color); color: var(--color-danger); font-size: var(--text-sm); text-align: left; }
+  .menuSignOut:disabled { opacity: 0.6; cursor: wait; }
 }
 
 /* Spread touch buttons so their 44px hit areas tile without overlapping. */

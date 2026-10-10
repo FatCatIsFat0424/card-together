@@ -2,7 +2,7 @@
 .heading { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-sm); }
 .heading h2 { font-size: var(--text-base); }
 .count { min-width: 1.5rem; padding: 2px var(--spacing-sm); text-align: center; color: var(--color-success); font-size: var(--text-xs); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--color-success) 12%, transparent); }
-.hint, .message { color: var(--text-secondary); font-size: var(--text-xs); line-height: 1.6; margin-top: var(--spacing-sm); }
+.message { color: var(--text-secondary); font-size: var(--text-xs); line-height: 1.6; margin-top: var(--spacing-sm); }
 .message { padding: var(--spacing-md) 0; }
 .list { padding: 0; margin: var(--spacing-md) 0 0; list-style: none; }
 .friend { display: flex; align-items: center; gap: var(--spacing-sm); padding: var(--spacing-md) 0; border-bottom: 1px solid var(--border-color); }

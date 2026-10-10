@@ -53,11 +53,10 @@ export function LobbyFriends({ disabled, refreshToken, onJoin }: {
       <h2 id="lobby-friends-title">{t('lobby.onlineFriends')}</h2>
       {data && <span className={styles.count}>{friends.length}</span>}
     </div>
-    <p className={styles.hint}>{t('lobby.friendsHint')}</p>
     {loading && <p className={styles.message} role="status">{t('common.loading')}</p>}
     {error && <p className={styles.error} role="alert">{error}</p>}
-    {data && !loading && friends.length === 0 && <p className={styles.message}>
-      {t(data.friends.length === 0 ? 'lobby.noFriends' : 'lobby.noOnlineFriends')}
+    {data && !loading && data.friends.length > 0 && friends.length === 0 && <p className={styles.message}>
+      {t('lobby.noOnlineFriends')}
     </p>}
     {data && !loading && friends.length > 0 && <ul className={styles.list}>
       {friends.map((friend) => <li key={friend.id} className={styles.friend}>

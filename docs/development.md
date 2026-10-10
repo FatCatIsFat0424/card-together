@@ -16,17 +16,24 @@ decorative; keep accessible names on controls and translated text beside status 
 Keep existing artwork or symbols when Material Icons has no suitable equivalent,
 including card suits, avatars, crowns, skulls, dragons, and revolvers.
 
+The top bar shows a translated sign-out label beside its icon at widths of 768px
+and above; narrower screens place a red sign-out icon and label last in the menu.
+
 The lobby uses the profile page width, with a game picker and separate room actions.
 On desktop, the sidebar groups the selected game, room-creation button, and code
-joining below a divider; game descriptions appear only in the picker. On smaller
-screens, code joining stays at the top. The friend panel uses the existing
+joining below a divider; game descriptions appear only in the picker. At widths
+up to 52rem, room-code joining, a divider labeled "Or", and a full-width creation
+button that always creates a Bridge room. The joined single-column list titled
+"Rules" uses right chevrons and opens each game's detailed rules without selecting
+a room mode or changing the background; the separate selected-game panel is hidden.
+Room actions, game rows, and the friend
+panel share the same width. The friend panel uses the existing
 [friends API](api.md#http), refreshes on focus and every 30 seconds while visible,
 and lists online friends with hosts first. Friend room admission uses `room:joinFriend`
 and requires confirmation before switching away from an existing room. The lobby
 remains accessible during a room or match and provides a return link; creating or
 joining by code requires leaving the current room first. Rules, timers, invitations,
-and bots are managed in the waiting room. On smaller screens, the game picker keeps
-the selected game and creation button in a sticky toolbar. See [Socket actions](api.md#socket-actions)
+and bots are managed in the waiting room. See [Socket actions](api.md#socket-actions)
 for authoritative room action contracts.
 
 The selected game's Rules link opens a themed MUI dialog with detailed English and
