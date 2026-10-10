@@ -10,14 +10,27 @@
   background: var(--bg-page);
 }
 
-.headerActions { display: flex; gap: var(--spacing-sm); }
+/* Actions stay on the code's row; the timer summary leads so its panel opens over the table. */
+.headerActions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+}
 .chat { width: 100%; max-width: 50rem; margin-top: var(--spacing-md); }
 .error { color: var(--color-danger); }
 
 .roomHeader {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'code actions'
+    'games games';
   align-items: center;
-  justify-content: space-between;
+  column-gap: var(--spacing-lg);
+  row-gap: var(--spacing-sm);
   width: 100%;
   max-width: 800px;
   margin-bottom: var(--spacing-xl);
@@ -28,6 +41,7 @@
   font-family: var(--font-mono);
   font-size: var(--text-2xl);
   font-weight: 700;
+  line-height: 1.2;
   letter-spacing: 4px;
   color: var(--color-primary);
 }
@@ -40,9 +54,11 @@
 }
 
 .gameTypeRow {
+  grid-area: games;
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  min-width: 0;
   margin: 0;
 }
 
@@ -53,17 +69,22 @@
   letter-spacing: 1px;
 }
 
+/* Options wrap rather than scroll, so every game stays visible on narrow screens. */
 .segmented {
   display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
   padding: 3px;
   gap: 3px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-lg);
   background: var(--bg-surface);
 }
 
 .segment,
 .segmentActive {
+  flex-shrink: 0;
+  white-space: nowrap;
   padding: var(--spacing-xs) var(--spacing-md);
   border-radius: var(--radius-pill);
   font-size: var(--text-sm);
@@ -354,7 +375,6 @@
   .roomCodeLabel { display: none; }
   .headerActions { gap: 4px; margin-left: auto; }
   .headerActions button { font-size: var(--text-xs); padding: 5px 7px; min-height: 32px; }
-  .gameTypeRow { width: auto; flex: 1 1 auto; justify-content: flex-start; order: 0; }
   .gameTypeLabel { display: none; }
   .segment, .segmentActive { padding: 4px 8px; font-size: var(--text-xs); }
   .roomLayout .tableArea { gap: 6px; padding: 6px; }
@@ -381,16 +401,48 @@
 }
 
 .codeBlock {
+  grid-area: code;
   display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
 }
 
-.copyBtn {
-  gap: 4px;
-  padding: 4px 12px;
-  font-size: var(--text-xs);
+.codePill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 4px 6px 4px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
 }
+
+.codePill:hover {
+  border-color: var(--color-primary);
+  background: var(--bg-card-hover);
+}
+
+.copyState {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.codePill:hover .copyState { color: var(--text-primary); }
+.copiedState, .codePill:hover .copiedState { color: var(--color-success); }
+.copyIcon { width: 16px; height: 16px; }
 
 .chatToggle { position: relative; }
 
@@ -425,6 +477,7 @@
 
 @media (max-width: 767px), (max-height: 500px) {
   .progress { display: block; }
-  .copyBtn { gap: 0; padding: 2px 8px; min-height: 28px; }
+  .codePill { padding: 2px 4px 2px 10px; }
+  .copyState { min-width: 26px; height: 26px; }
   .copyText { display: none; }
 }

@@ -26,6 +26,14 @@ const SEAT_STYLE_MAP: Record<Seat, string> = {
   N: styles.seatNorth, E: styles.seatEast, S: styles.seatSouth, W: styles.seatWest,
 };
 
+/** Two overlapping sheets, drawn so the icon matches the surrounding text color. */
+function CopyIcon(): ReactNode {
+  return <svg className={styles.copyIcon} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
+    <path d="M10.5 3.5v-.5a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 3v5A1.5 1.5 0 0 0 4 9.5h.5" />
+  </svg>;
+}
+
 export function RoomPage(): ReactNode {
   const { roomCode } = useParams<{ roomCode: string }>();
   const navigate = useNavigate();
@@ -164,20 +172,34 @@ export function RoomPage(): ReactNode {
     <main className={`${styles.roomContainer} ${styles.roomLayout} ${chatOpen ? styles.chatOpen : ''}`}>
       <div className={styles.roomHeader}>
         <div className={styles.codeBlock}>
-          <div>
-            <div className={styles.roomCodeLabel}>{t('room.code')}</div>
-            <div className={styles.roomCode}>{roomInfo.code}</div>
-          </div>
-          <button type="button" className={`btn btn-outline touch-target ${styles.copyBtn}`}
-            onClick={() => copyCode(roomInfo.code)} aria-label={`${t('room.copyCode')} ${roomInfo.code}`}>
-            <span aria-hidden="true">{copied ? '✓' : '⧉'}</span>
-            <span className={styles.copyText}>{copied ? t('room.copied') : t('room.copyCode')}</span>
+          <span className={styles.roomCodeLabel}>{t('room.code')}</span>
+          {/* The code itself is the copy control, so the action reads as part of the code. */}
+          <button type="button" className={`touch-target ${styles.codePill}`} onClick={() => copyCode(roomInfo.code)}
+            aria-label={`${t('room.copyCode')} ${roomInfo.code}`} title={t('room.copyCode')}>
+            <span className={styles.roomCode}>{roomInfo.code}</span>
+            <span className={`${styles.copyState} ${copied ? styles.copiedState : ''}`} aria-hidden="true">
+              {copied ? <>✓<span className={styles.copyText}>{t('room.copied')}</span></> : <CopyIcon />}
+            </span>
           </button>
           <span className={styles.srOnly} role="status">{copied ? t('room.copied') : ''}</span>
         </div>
+        <div className={styles.headerActions}>
+          <TimeControlSettings
+            key={`${roomInfo.code}:${roomInfo.hostId}:${roomInfo.timeControl?.baseSeconds}:${roomInfo.timeControl?.bankSeconds}`}
+            value={roomInfo.timeControl ?? DEFAULT_TIME_CONTROL}
+            disabled={!isHost || blocked || roomInfo.status !== 'waiting'} onSave={setTimeControl} />
+          <button type="button" className={`btn btn-outline touch-target ${styles.chatToggle}`}
+            aria-pressed={chatOpen} aria-controls="room-chat" onClick={toggleChat}>
+            {t('chat.title')}
+            {unread > 0 && <span className={styles.unread} aria-label={t('room.unread', { n: String(unread) })}>
+              {unread}</span>}
+          </button>
+          <InviteFriends />
+          <button type="button" className="btn btn-outline touch-target" onClick={leave} disabled={blocked}>{t('room.leave')}</button>
+        </div>
         <div className={styles.gameTypeRow}>
-          <span className={styles.gameTypeLabel}>{t('gameType.label')}</span>
-          <div className={styles.segmented} role="radiogroup" aria-label={t('gameType.label')}
+          <span className={styles.gameTypeLabel} id="room-game-label">{t('gameType.label')}</span>
+          <div className={styles.segmented} role="radiogroup" aria-labelledby="room-game-label"
             title={isHost ? undefined : t('room.hostOnly')}>
             {GAME_TYPES.map((gameType) => (
               <button key={gameType} type="button" role="radio" aria-checked={roomInfo.gameType === gameType}
@@ -189,20 +211,6 @@ export function RoomPage(): ReactNode {
             ))}
           </div>
         </div>
-        <div className={styles.headerActions}>
-          <button type="button" className={`btn btn-outline touch-target ${styles.chatToggle}`}
-            aria-pressed={chatOpen} aria-controls="room-chat" onClick={toggleChat}>
-            {t('chat.title')}
-            {unread > 0 && <span className={styles.unread} aria-label={t('room.unread', { n: String(unread) })}>
-              {unread}</span>}
-          </button>
-          <InviteFriends />
-          <button type="button" className="btn btn-outline touch-target" onClick={leave} disabled={blocked}>{t('room.leave')}</button>
-        </div>
-        <TimeControlSettings
-          key={`${roomInfo.code}:${roomInfo.hostId}:${roomInfo.timeControl?.baseSeconds}:${roomInfo.timeControl?.bankSeconds}`}
-          value={roomInfo.timeControl ?? DEFAULT_TIME_CONTROL}
-          disabled={!isHost || blocked || roomInfo.status !== 'waiting'} onSave={setTimeControl} />
       </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={`${styles.tableArea} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}>
