@@ -3,12 +3,10 @@ import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import type { AuthService } from '../auth/auth-service';
 import { getRequestSession, requireSession } from '../auth/http-middleware';
 import type { Repository } from '../database/repository';
+import type { FriendEntry } from '@shared/types';
 import { createFriendService } from '../social/friend-service';
 
-export interface FriendPresence {
-  readonly online: boolean;
-  readonly inRoom: boolean;
-}
+export type FriendPresence = Pick<FriendEntry, 'online' | 'inRoom' | 'hostedRoomCode'>;
 
 /** Reads committed runtime presence; injected so HTTP routes never touch managers directly. */
 export type PresenceReader = (accountIds: readonly string[]) => Promise<ReadonlyMap<string, FriendPresence>>;
@@ -40,6 +38,7 @@ export function createFriendRouter(
     const presence = await readPresence(list.friends.map((friend) => friend.id));
     response.json({ success: true, ...list, friends: list.friends.map((friend) => ({
       ...friend, online: presence.get(friend.id)?.online ?? false, inRoom: presence.get(friend.id)?.inRoom ?? false,
+      hostedRoomCode: presence.get(friend.id)?.hostedRoomCode ?? null,
     })) });
   }));
 

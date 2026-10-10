@@ -35,7 +35,8 @@ Spectators and permanently eliminated players (Ninety-Nine bust, Liar's Deck dea
 of chips, Blackjack unable to cover the minimum; not a Hold'em fold) have god view: every seat's
 hand appears face up beside its plate (two overlapping rows for long hands), and Blackjack's hole card and Hold'em hole cards
 appear face up with a dashed outline. Stock order, bullets, and other undealt cards stay hidden.
-In Sevens, spectators also see every seat's covered cards and penalty in the info panel;
+In Sevens, spectators also see every seat's covered cards and penalty in the info panel,
+and can click any seat's covered-count badge to inspect its complete pile on the table;
 playing seats see only their own covered cards until settlement.
 God view keeps its previous hands and Sevens covered cards while a presentation plays,
 and an eliminated player's view opens only after the frame that eliminates them.
@@ -132,8 +133,7 @@ a polite live region announces whose turn it is.
 
 While waiting, the host can add a bot to an empty seat, remove a bot, or fill every empty
 seat with bots; members without a seat stay spectators. While no human is seated, the last
-empty seat stays open for a player: a match needs a seated human, who can vote to end it and
-owns its history.
+empty seat stays open for a player: a match needs a seated human, who can vote to end it.
 Bots are always ready; the match starts once all four seats are occupied and the humans
 are ready. Bots remain for the next match and support every game. Only humans can
 host; the room is removed when its last human leaves.
@@ -158,8 +158,9 @@ search, and the evaluation scores do not guarantee optimal play.
 
 The server waits for the previous presentation and a short thinking delay before each
 bot action. Actions are saved before broadcast and resume after server restart. Existing
-Big Two forced-pass timing still applies. Completed games with bots appear in human
-participants' history; bots have no account profile or social/voice participation.
+Big Two forced-pass timing still applies. Games with any bot are practice and do not enter
+personal or public match history; their current state and result remain resumable.
+Bots have no account profile or social/voice participation.
 
 ## Bridge
 
@@ -410,4 +411,3 @@ pot, and all-in shortcuts). The table shows the board, the pot and side pots, ev
 the street, the button and blinds, and revealed hands with their categories at showdown; it follows
 the presentation, so the board, showdown, and the next hand's hole cards appear only with their
 frames.
-

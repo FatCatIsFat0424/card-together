@@ -29,8 +29,10 @@ import styles from './TableSeat.module.css';
 const MAX_BACKS = 6;
 const MAX_PILE = 6;
 
-/** Red Points score chip that opens every captured card, since narrow trays hide most of the pile. */
-function CapturedPoints({ cards, owner }: { cards: readonly Card[]; owner: string }): ReactNode {
+/** Opens a complete card pile without expanding the seat plate or overlapping the table. */
+function CardPileDetails({ cards, owner, covered = false }: {
+  cards: readonly Card[]; owner: string; covered?: boolean;
+}): ReactNode {
   const { t } = useI18nStore();
   const [open, setOpen] = useState(false);
   const titleId = useId();
@@ -62,14 +64,16 @@ function CapturedPoints({ cards, owner }: { cards: readonly Card[]; owner: strin
   }, [open]);
 
   return <>
-    <button ref={buttonRef} type="button" className={`${styles.chip} ${styles.points} touch-target`} aria-expanded={open}
-      aria-haspopup="dialog" title={t('redpoints.showCaptured')}
+    <button ref={buttonRef} type="button" className={`${styles.chip} ${covered ? styles.covered : styles.points} touch-target`}
+      aria-expanded={open} aria-haspopup="dialog"
+      aria-label={covered ? t('sevens.showCovered', { name: owner }) : undefined}
+      title={covered ? t('sevens.showCovered', { name: owner }) : t('redpoints.showCaptured')}
       onClick={(event) => {
         event.stopPropagation();
         if (open) close(false);
         else setOpen(true);
       }}>
-      {t('redpoints.points', { n: String(points) })}
+      {t(covered ? 'sevens.covered' : 'redpoints.points', { n: String(covered ? cards.length : points) })}
     </button>
     {open && <div ref={dialogRef} className={styles.capturedPopover} role="dialog" aria-labelledby={titleId}
       tabIndex={-1} onClick={(event) => event.stopPropagation()}
@@ -81,14 +85,14 @@ function CapturedPoints({ cards, owner }: { cards: readonly Card[]; owner: strin
       }}>
       <div className={styles.capturedHeader}>
         <h2 id={titleId} className={styles.capturedTitle}>
-          {t('redpoints.capturedBy', { name: owner, n: String(points) })}
+          {t(covered ? 'sevens.coveredBy' : 'redpoints.capturedBy', { name: owner, n: String(points) })}
         </h2>
         <button type="button" className={`${styles.capturedClose} touch-target`} onClick={() => close(true)}
           aria-label={t('table.close')} title={t('table.close')}>✕</button>
       </div>
       {cards.length === 0 ? <p className={styles.capturedEmpty}>{t('redpoints.noCaptured')}</p>
         : <ul className={styles.capturedCards}>{cards.map((card) => (
-          <li key={`${card.suit}-${card.rank}`} className={rpCardPoints(card) > 0 ? undefined : styles.capturedPlain}>
+          <li key={`${card.suit}-${card.rank}`} className={covered || rpCardPoints(card) > 0 ? undefined : styles.capturedPlain}>
             <img className={styles.capturedCard} src={cardImageUrl(card)} draggable={false}
               alt={`${SUIT_SYMBOLS[card.suit]}${RANK_DISPLAY[card.rank]}`} />
           </li>
@@ -209,6 +213,7 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
   const heLocked = heState === 'folded' || heState === 'allIn';
   const observedCards = useGodViewStore((state) => state.hands?.[seat]);
   const observedLiars = useGodViewStore((state) => state.liarHands?.[seat]);
+  const observedCovered = useGodViewStore((state) => state.role === 'spectator' ? state.covered?.[seat] : undefined);
   const clock = useGameStore((state) => state.visible?.clock);
   const receivedAt = useGameStore((state) => state.presentationReceivedAt);
   const lastActionAt = useGameStore((state) => latestSeatAction(state.visible?.log ?? [], seat));
@@ -265,13 +270,15 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
           <span className={styles.srOnly}>{t(`seat.${seat}`)}</span>
         </span>
         <div className={styles.chips}>
-          {captured && <CapturedPoints cards={captured} owner={name} />}
+          {captured && <CardPileDetails cards={captured} owner={name} />}
           {!bottom && cards > 0 && <span className={`${styles.chip} ${bigTwoCards !== null ? styles.bigCount : ''}`}>
             {t('table.cards', { n: String(cards) })}
           </span>}
-          {sevensCovered !== null && sevensCovered > 0 && <span className={styles.chip}>
-            {t('sevens.covered', { n: String(sevensCovered) })}
-          </span>}
+          {sevensCovered !== null && (observedCovered?.length
+            ? <CardPileDetails cards={observedCovered} owner={name} covered />
+            : sevensCovered > 0 && <span className={styles.chip}>
+              {t('sevens.covered', { n: String(sevensCovered) })}
+            </span>)}
           {liars && <span className={`${styles.chip} ${liars.shots[seat] >= 4 ? styles.danger : ''}`}
             title={t('liarsdeck.shotsTitle', { n: String(liars.shots[seat]) })}>
             {t('liarsdeck.shots', { n: String(liars.shots[seat]) })}

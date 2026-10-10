@@ -65,8 +65,8 @@ export async function createRuntimeCoordinator(repository: Pick<Repository, 'loa
           if (game.result && roomManager.getRoomInfo(game.roomCode)?.status === 'playing') {
             roomManager.setRoomStatus(game.roomCode, 'waiting');
             roomManager.resetAllReady(game.roomCode);
-            // Match history belongs to accounts; a bots-only result has nobody to record it for.
-            if (SEAT_ORDER_CLOCKWISE.every((seat) => game.players[seat].isBot)) continue;
+            // Bot games are practice; retain their runtime result without recording match history.
+            if (SEAT_ORDER_CLOCKWISE.some((seat) => game.players[seat].isBot)) continue;
             matches.push({
               id: game.id, roomCode: game.roomCode,
               accountIds: SEAT_ORDER_CLOCKWISE.map((seat) => game.players[seat].id),

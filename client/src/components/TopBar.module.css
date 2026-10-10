@@ -23,6 +23,7 @@
 }
 
 .links, .menuLinks { display: flex; align-items: center; gap: var(--spacing-md); }
+.links { flex-shrink: 0; }
 .links a, .menuLinks a { color: var(--text-secondary); font-size: var(--text-sm); white-space: nowrap; }
 .links a[aria-current='page'], .menuLinks a[aria-current='page'] { color: var(--color-primary); }
 
@@ -98,18 +99,21 @@
 .confirm { display: flex; flex-direction: column; gap: var(--spacing-md); font-size: var(--text-sm); }
 .confirmActions { display: flex; justify-content: flex-end; gap: var(--spacing-sm); }
 
-@media (max-width: 1023px) {
+@media (max-width: 1279px) {
   .prefs { display: none; }
   .menuGroup { display: block; }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .menuLinks { display: none; }
+}
+
+@media (max-width: 1023px) {
+  .links { display: none; }
 }
 
 @media (max-width: 767px) {
   .bar { gap: var(--spacing-sm); padding: 0 var(--spacing-sm); }
-  .links { display: none; }
   .brandTextGame { display: none; }
   .actions { gap: var(--spacing-xs); }
   .iconBtn { width: 32px; height: 32px; }

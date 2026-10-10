@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   room: null as unknown,
   mySeat: 'S' as string | null,
   game: {} as Record<string, unknown>,
+  godView: { role: null, covered: null } as Record<string, unknown>,
 }));
 
 vi.mock('../../../client/src/cards', () => ({ cardImageUrl: () => '/card.svg' }));
@@ -19,6 +20,9 @@ vi.mock('../../../client/src/stores/room-store', () => ({
 }));
 vi.mock('../../../client/src/stores/game-store', () => ({
   useGameStore: (select: (value: Record<string, unknown>) => unknown) => select(state.game),
+}));
+vi.mock('../../../client/src/stores/god-view-store', () => ({
+  useGodViewStore: (select: (value: Record<string, unknown>) => unknown) => select(state.godView),
 }));
 
 import { TableSeat } from '../../../client/src/components/TableSeat';
@@ -73,12 +77,32 @@ describe('table seat plate', () => {
     state.room = room();
     state.mySeat = 'S';
     state.game = baseGame();
+    state.godView = { role: null, covered: null };
     useI18nStore.getState().setLocale('en');
     // Clock snapshots below are taken at server time 0.
     vi.useFakeTimers({ now: 0 });
   });
 
   afterEach(() => vi.useRealTimers());
+
+  it('offers covered-card details at all four Sevens seats only to spectators', () => {
+    state.mySeat = null;
+    state.game = { ...baseGame(), sevens: { handCounts: counts(2), coveredCounts: counts(1) } };
+    const covered = { N: [card(2, 'clubs')], E: [card(4, 'diamonds')],
+      S: [card(6, 'hearts')], W: [card(9, 'spades')] };
+    state.godView = { role: 'spectator', covered };
+    for (const [seat, position] of [['N', 'top'], ['E', 'right'], ['S', 'bottom'], ['W', 'left']] as const) {
+      const html = render({ seat, position });
+      expect(html).toMatch(/<button[^>]*aria-haspopup="dialog"[^>]*aria-label="Show .+’s covered cards"/);
+      expect(html).toContain('>Covered 1</button>');
+    }
+    state.godView = { role: null, covered: null };
+    expect(render({ seat: 'N', position: 'top' })).not.toContain('aria-haspopup="dialog"');
+    expect(render({ seat: 'N', position: 'top' })).toContain('Covered 1</span>');
+    state.godView = { role: 'spectator', covered: { ...covered, N: [] } };
+    state.game = { ...state.game, sevens: { handCounts: counts(2), coveredCounts: { ...counts(1), N: 0 } } };
+    expect(render({ seat: 'N', position: 'top' })).not.toContain('aria-haspopup="dialog"');
+  });
 
   it('keeps the Red Points score as the captured-cards button and shows only red cards in the tray', () => {
     const captured = [card(9, 'hearts'), card(5, 'clubs'), card(13, 'diamonds'), card(14, 'hearts')];

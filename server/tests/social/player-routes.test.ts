@@ -182,6 +182,15 @@ describe('public player profile HTTP routes', () => {
       },
     });
     const history = `${baseUrl}/api/players/${accounts.bravo.id}/history`;
+    // Simulate history written by an older release; it must not enter either history endpoint.
+    await repository.saveMatch({
+      id: randomUUID(), roomCode: 'OLD123', finishedAt: 1000,
+      accountIds: [accounts.bravo.id, ...Array.from({ length: 3 }, () => `bot:${randomUUID()}`)],
+      result: { gameType: 'bridge', contract: { level: 1, suit: 'nt', declarer: 'N' },
+        declarerTeamTricks: 7, defenderTeamTricks: 6, requiredTricks: 7, declarerTeamWins: true },
+    });
+    const accountHistory = await fetch(`${baseUrl}/api/account/history`, { headers: headers('bravo') });
+    expect((await accountHistory.json()).matches).toHaveLength(1);
     const own = await fetch(history, { headers: headers('bravo') });
     expect(own.status).toBe(200);
     const body = await own.json();

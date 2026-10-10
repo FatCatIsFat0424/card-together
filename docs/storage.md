@@ -10,10 +10,12 @@ maximum length, so passwords set under earlier rules keep working. Hashes use sa
 asynchronous scrypt (`N=131072`, `r=8`, `p=1`) with bounded concurrency and HTTP rate limits.
 Account UUIDs are player IDs; editable nicknames do not change identity.
 Bots use reserved `bot:<UUID>` player IDs and `isBot: true` in room/game snapshots.
-They have no account, session, or connected-player record. Match participant IDs retain
-N/E/S/W order and may include bot IDs; at least one participant must be a real account.
-Legacy human snapshots without `isBot` remain valid. Completed bot identities remain
-in match history after the bot is removed from its room.
+They have no account, session, or connected-player record. Match history records only
+four-human games, with participant IDs in N/E/S/W order. Any game containing a bot is
+practice: its current runtime and result remain resumable but no match-history entry is
+created. Legacy bot history remains loadable and is excluded before applying history limits;
+remove it with the [offline cleanup](#legacy-bot-history-cleanup). Legacy human snapshots
+without `isBot` remain valid.
 Profiles include a 1–20-character nickname, six-digit color, avatar preset/optional
 uploaded avatar, optional personal table background and card back with their image
 opacity, and match-history visibility.
@@ -27,9 +29,38 @@ and disconnect affected sockets. Password changes require the existing password.
 There is no email/password-reset delivery workflow.
 
 Friend requests are persisted with unordered-pair uniqueness and sender/recipient
-permissions. Accepted friends include transient online/in-room presence. Room invitations
-are ephemeral and only available to accepted friends. Match history defaults to private;
+permissions. Accepted friends include transient online/in-room presence and the room code
+they currently host while online. Players can join that room without an invitation; the
+server rechecks friendship, host identity and capacity, and commits room switching atomically.
+Room invitations are ephemeral and only available to accepted friends. Match history defaults to private;
 other signed-in players can read it only when the owner enables visibility.
+
+## Legacy bot history cleanup
+
+Cleanup is an offline operation, separate from deployment. Until it is run, legacy bot
+entries are hidden from both personal and public history but remain in the file.
+Use the pinned Node.js version and an absolute path to the configured `DATABASE_PATH`.
+Run apply as the existing database file owner (normally the application service user);
+the tool rejects a different UID so replacement does not remove the service's access.
+The tool requires the current schema; upgrade older data through the normal backed-up
+startup migration before cleanup. Do not edit runtime game results or media files.
+
+1. Stop the application service and every other writer; preserve complete database/media
+   backups as described in [deployment](deployment.md).
+2. Preview the number of history entries to remove:
+   `npm run cleanup:bot-history -- /absolute/path/database.json`.
+3. Apply while writers remain stopped:
+   `npm run cleanup:bot-history -- /absolute/path/database.json --apply --writers-stopped`.
+   The flag acknowledges that writers are stopped; it does not stop or detect services.
+4. Keep the printed `.bot-history-<UUID>.bak` file. The tool validates the database, writes
+   a complete backup with mode 0600, and atomically replaces only the `matches` collection.
+   It preserves human matches, accounts, sessions, friendships, emoji, media references and
+   runtime. Changed source contents or invalid data abort cleanup; a repeated run is a no-op.
+5. Restart one application instance and verify login, human history and game resume. Restore
+   from the backup only after stopping writers again; preserve the corresponding media backup.
+
+This maintenance step must be scheduled for each existing installation; it is not run by
+the build, tests, or application startup. Backups deliberately retain the original bot entries.
 
 ## Database and media
 

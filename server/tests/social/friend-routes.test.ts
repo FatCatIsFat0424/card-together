@@ -127,9 +127,11 @@ describe('friend HTTP routes', () => {
     expect(await listed.json()).toMatchObject({
       success: true, friends: [{ id: 'bob', online: false, inRoom: false }], incoming: [], outgoing: [],
     });
-    presence.set('bob', { online: true, inRoom: true });
+    presence.set('bob', { online: true, inRoom: true, hostedRoomCode: 'ABC123' });
     const present = await fetch(baseUrl, { headers: headers('alice') });
-    expect(await present.json()).toMatchObject({ friends: [{ id: 'bob', online: true, inRoom: true }] });
+    expect(await present.json()).toMatchObject({
+      friends: [{ id: 'bob', online: true, inRoom: true, hostedRoomCode: 'ABC123' }],
+    });
     const removed = await fetch(`${baseUrl}/bob`, { method: 'DELETE', headers: headers('alice') });
     expect(await removed.json()).toEqual({ success: true });
     const empty = await fetch(baseUrl, { headers: headers('bob') });

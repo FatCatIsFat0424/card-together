@@ -71,6 +71,10 @@ reload action, and a missing lazy chunk after a deployment reloads the page once
 
 Profile pages preserve room membership. Theme, motion, music, and voice preferences
 are local browser settings; account profile/image/history visibility is durable server data.
+Global navigation remains available during matches: desktop shows the links in the top bar,
+while viewports below 1024px expose them in the menu. Navigating between account/friend
+pages preserves room membership; joining another friend's hosted room explicitly confirms
+the switch and commits both membership changes together.
 The application owns one dynamic viewport below the fixed-height top bar. Waiting rooms
 and games fill that space without document scrolling; long account pages, chat, and
 history retain internal scrolling. The waiting room uses a separate readiness row,
@@ -136,7 +140,9 @@ information and deadlines. Turn reminders wait for the full timeline to finish.
 Legacy Bridge snapshots without metadata retain the local completed-trick queue.
 
 Each game shows current-match history reconstructed from its public records. Cross-match
-history is separately persisted in Repository matches. Big Two automatic passes use their
+history is separately persisted in Repository matches for human-only games. Bot games retain
+their current runtime result for resume; see [storage](storage.md) for legacy history cleanup.
+Big Two automatic passes use their
 own server scheduler and saved deadlines; see [rules](games.md#big-two).
 
 Bot timers are reconstructed from committed game turns at startup and after mutations.
@@ -151,8 +157,8 @@ chat senders must be accounts) instead of retrying forever. Every failed attempt
 
 Rooms are removed when their last human member leaves, including after the 60-second reconnect
 window expires. The same cleanup interval also removes, as a safety net, any room none of whose
-human members still points at it, together with its game and chat. Bots-only results are not
-written to match history, which only records accounts.
+human members still points at it, together with its game and chat. Results containing any bot
+are not written to match history.
 
 ## Turn clocks
 

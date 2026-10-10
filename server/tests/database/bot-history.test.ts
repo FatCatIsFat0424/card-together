@@ -1,18 +1,19 @@
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, it, vi } from 'vitest';
 import { getPresentationEndsAt } from '@shared/game-presentation';
+import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { createJsonRepository } from '../../src/database/json-repository';
-import type { AccountRecord } from '../../src/database/repository';
+import type { AccountRecord, MatchRecord } from '../../src/database/repository';
 import { createRuntimeCoordinator } from '../../src/runtime/coordinator';
 import * as games from '../../src/managers/game-manager';
 import * as rooms from '../../src/managers/room-manager';
 import * as players from '../../src/managers/player-manager';
 import { getBotAction } from '../../src/bots/bot-decisions';
 
-it('persists a completed mixed bot match and preserves human history after reopening', async () => {
+it('retains mixed bot results for resume without storing them in match history', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'card-bot-history-'));
   const path = join(directory, 'database.json');
   let repository = await createJsonRepository(path);
@@ -54,19 +55,26 @@ it('persists a completed mixed bot match and preserves human history after reope
       });
     }
     expect(games.getGameState(code)?.phase).toBe('scoring');
-    const history = await repository.listMatches(account.id);
-    expect(history).toHaveLength(1);
-    expect(history[0].accountIds[0]).toBe(account.id);
-    expect(history[0].accountIds.slice(1).every((id) => id.startsWith('bot:'))).toBe(true);
+    expect(await repository.listMatches(account.id)).toEqual([]);
+    expect(JSON.parse(await readFile(path, 'utf8')).matches).toEqual([]);
+    expect(rooms.getRoomInfo(code)?.status).toBe('waiting');
+    expect(rooms.getRoomInfo(code)?.seats.N.isReady).toBe(false);
+    const finished = games.getGameState(code)!;
+    if (finished.gameType !== 'redpoints' || !finished.result) throw new Error('Expected a completed result');
+    const historical: MatchRecord = {
+      id: finished.id, roomCode: code, finishedAt: Date.now(), result: finished.result,
+      accountIds: SEAT_ORDER_CLOCKWISE.map((seat) => finished.players[seat].id),
+    };
     await runtime.mutate(() => { rooms.removeBot(code, account.id, 'E'); });
     await repository.close();
     repository = await createJsonRepository(path);
-    expect(await repository.listMatches(account.id)).toEqual(history);
+    expect(await repository.listMatches(account.id)).toEqual([]);
     expect((await repository.loadRuntime())?.games[0].phase).toBe('scoring');
-    await expect(repository.saveMatch({ ...history[0], id: randomUUID(),
-      accountIds: [account.id, randomUUID(), ...history[0].accountIds.slice(2)] })).rejects.toThrow('invalid references');
-    await expect(repository.saveMatch({ ...history[0], id: randomUUID(),
-      accountIds: [account.id, 'bot:invalid', ...history[0].accountIds.slice(2)] })).rejects.toThrow('invalid references');
+    expect((await repository.loadRuntime())?.games[0].result).toEqual(finished.result);
+    await expect(repository.saveMatch({ ...historical, id: randomUUID(),
+      accountIds: [account.id, randomUUID(), ...historical.accountIds.slice(2)] })).rejects.toThrow('invalid references');
+    await expect(repository.saveMatch({ ...historical, id: randomUUID(),
+      accountIds: [account.id, 'bot:invalid', ...historical.accountIds.slice(2)] })).rejects.toThrow('invalid references');
   } finally {
     vi.useRealTimers();
     await repository.close();

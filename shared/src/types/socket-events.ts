@@ -48,6 +48,11 @@ export interface ClientToServerEvents {
   'room:invite': (
     payload: { accountId: string }, callback: (response: ActionResult) => void,
   ) => void;
+  /** Join an accepted friend's hosted room, checking the listed room is still current. */
+  'room:joinFriend': (
+    payload: { accountId: string; roomCode: RoomCode },
+    callback: (response: ActionResult & { room?: RoomInfo }) => void,
+  ) => void;
   'room:leave': (callback: (response: ActionResult) => void) => void;
   'room:kick': (
     payload: { accountId: string }, callback: (response: ActionResult) => void,

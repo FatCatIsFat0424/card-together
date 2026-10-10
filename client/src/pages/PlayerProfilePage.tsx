@@ -157,6 +157,7 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
     </section>
     {history && <section className={`${styles.card} ${styles.history}`}>
       <h2>{t('history.title')}</h2>
+      <p className={styles.description}>{t('history.humanOnly')}</p>
       {history === 'private' ? <p className={styles.description}>{t('history.private')}</p>
         : <MatchHistoryList matches={history.matches} players={history.players} />}
     </section>}

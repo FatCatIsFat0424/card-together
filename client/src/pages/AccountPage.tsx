@@ -309,6 +309,7 @@ export function AccountPage(): ReactNode {
         </section>
         <section className={`${styles.card} ${styles.wide}`}>
           <h2>{t('history.title')}</h2>
+          <p className={styles.hint}>{t('history.humanOnly')}</p>
           <label className={styles.row}>
             <input type="checkbox" checked={account.matchesPublic} disabled={mediaBusy !== null}
               onChange={(event) => {

@@ -47,6 +47,30 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
     return { success: true, room: roomManager.getRoomInfo(roomCode) ?? undefined };
   }));
 
+  socket.on('room:joinFriend', (payload, callback) => runAction(context, socket, callback, async () => {
+    if (!payload || typeof payload.accountId !== 'string' || !payload.accountId.trim()
+      || typeof payload.roomCode !== 'string' || !payload.roomCode.trim()) {
+      throw actionError('Choose a friend room to join.');
+    }
+    const accountId = socket.data.accountId;
+    if (!await context.friends.areFriends(accountId, payload.accountId)) {
+      throw actionError('You can only join rooms hosted by friends.');
+    }
+    const host = playerManager.getPlayerState(payload.accountId);
+    const code = payload.roomCode.trim().toUpperCase();
+    const room = roomManager.getRoomInfo(code);
+    if (host?.connectionStatus !== 'connected' || host.currentRoomCode !== code
+      || room?.hostId !== payload.accountId) {
+      throw actionError('This friend is no longer hosting this room. Refresh your friends list.');
+    }
+    // Check admission before leaving; both membership changes commit or roll back together.
+    requireSuccess(roomManager.joinRoom(code, accountId));
+    const current = playerManager.getPlayerState(accountId)?.currentRoomCode;
+    if (current && current !== code) leaveCurrentRoom(accountId);
+    playerManager.setPlayerRoom(accountId, code);
+    return { success: true, room: roomManager.getRoomInfo(code) ?? undefined };
+  }));
+
   socket.on('room:invite', (payload, callback) => {
     if (typeof callback !== 'function') return;
     const targetId = payload?.accountId;

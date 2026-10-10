@@ -169,6 +169,9 @@
 
 .points:hover { background: color-mix(in srgb, var(--suit-red-ui) 28%, transparent); }
 
+.covered { cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.covered:hover { background: var(--bg-card-hover); }
+
 /* One status tab pinned to the top edge, so tags never make the plate taller. */
 .status {
   position: absolute;

@@ -251,7 +251,8 @@ export async function createJsonRepository(filePath: string): Promise<Repository
         }),
       listMatches: (accountId, limit = 50) =>
         read((data) =>
-          (indexes.matches(data.matches).byAccount.get(accountId) ?? []).slice(
+          (indexes.matches(data.matches).byAccount.get(accountId) ?? [])
+            .filter((match) => !match.accountIds.some((id) => id.startsWith('bot:'))).slice(
             0,
             boundedLimit(limit, 100),
           ),

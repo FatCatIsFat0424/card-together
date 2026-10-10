@@ -19,10 +19,10 @@ except immutable uploaded-image reads. Contracts live in `shared/src/types/`.
 | `POST /api/auth/password` | `currentPassword, newPassword` | Revoke all sessions; sign in again |
 | `POST /api/auth/logout` | `{}` | Revoke presented sessions and clear cookies |
 | `POST /api/auth/logout-all` | `{}` | Revoke every account session |
-| `GET /api/account/history` | — | Current account's latest 50 completed matches |
+| `GET /api/account/history` | — | Current account's latest 50 completed human-only matches |
 | `GET /api/players/:accountId` | — | Public profile |
-| `GET /api/players/:accountId/history` | — | Latest 50 matches and participant map; owner/public only |
-| `GET /api/friends` | — | `friends, incoming, outgoing`; friends include online/in-room presence |
+| `GET /api/players/:accountId/history` | — | Latest 50 human-only matches and participant map; owner/public only |
+| `GET /api/friends` | — | `friends, incoming, outgoing`; friends include online/in-room presence and nullable `hostedRoomCode` |
 | `GET /api/friends/search?username=...` | Exact username | Public account or null |
 | `POST /api/friends/requests` | `username` | 201, request |
 | `POST /api/friends/requests/:id/accept` | `{}` | Recipient accepts |
@@ -72,6 +72,7 @@ For exact unions and result fields, use
 | `player:resume` | — | PlayerSnapshot; attach/restore account |
 | `room:create` | `{ gameType }` | `{ success, roomCode }` |
 | `room:join` | `{ roomCode }` | `{ success, room }`; joins as a spectator, also during a match |
+| `room:joinFriend` | `{ accountId, roomCode }` | `{ success, room }`; joins an online accepted friend's currently hosted room as a spectator; atomically leaves the previous room |
 | `room:invite` | `{ accountId }` | Invite an accepted friend while spectator room remains |
 | `room:leave` | — | Leave; a seated player's leave aborts an unfinished game |
 | `room:kick` | `{ accountId }` | Host removes another human member (spectators also during a match); they may rejoin by code |

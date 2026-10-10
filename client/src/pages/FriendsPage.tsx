@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, USERNAME_PATTERN } from '@shared/constants';
-import type { FriendsData, PublicAccount } from '@shared/types/social';
+import type { FriendEntry, FriendsData, PublicAccount } from '@shared/types/social';
 import { apiRequest } from '../api';
+import { socket } from '../socket';
+import { useRoomStore } from '../stores/room-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { PlayerLink } from '../components/PlayerLink';
 import styles from './AccountPages.module.css';
@@ -13,6 +16,7 @@ function FriendIdentity({ person }: { person: PublicAccount }): ReactNode {
 
 export function FriendsPage(): ReactNode {
   const { t } = useI18nStore();
+  const navigate = useNavigate();
   const [data, setData] = useState<FriendsData | null>(null);
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
@@ -55,6 +59,25 @@ export function FriendsPage(): ReactNode {
     void act('/api/friends/requests', 'POST', { username: username.trim() });
   };
 
+  const join = (friend: FriendEntry): void => {
+    const roomCode = friend.hostedRoomCode;
+    if (!roomCode || busy) return;
+    const current = useRoomStore.getState().currentRoomCode;
+    if (current === roomCode) { navigate(`/room/${roomCode}`); return; }
+    if (current && !window.confirm(t('invite.confirmLeave', { code: roomCode }))) return;
+    setBusy(true);
+    setError('');
+    setSent(false);
+    socket.timeout(10000).emit('room:joinFriend', { accountId: friend.id, roomCode }, (timeout, result) => {
+      setBusy(false);
+      if (!timeout && result.success && result.room) navigate(`/room/${result.room.code}`);
+      else {
+        setError(timeout ? t('auth.connectionError') : result?.error ?? t('common.error'));
+        void refresh();
+      }
+    });
+  };
+
   return (
     <main className={styles.page}>
       <h1 className={styles.title}>{t('friends.title')}</h1>
@@ -93,8 +116,13 @@ export function FriendsPage(): ReactNode {
                   {t('friends.remove')}</button>
                 <button className="btn btn-outline" disabled={busy}
                   onClick={() => setRemoveId(null)}>{t('common.cancel')}</button>
-              </div> : <button className="btn btn-outline" disabled={busy}
-                onClick={() => setRemoveId(person.id)}>{t('friends.remove')}</button>}
+              </div> : <div className={styles.actions}>
+                {person.hostedRoomCode && <button type="button" className="btn btn-primary" disabled={busy}
+                  aria-label={t('friends.joinRoomLabel', { nickname: person.nickname })}
+                  onClick={() => join(person)}>{t('friends.joinRoom')}</button>}
+                <button className="btn btn-outline" disabled={busy}
+                  onClick={() => setRemoveId(person.id)}>{t('friends.remove')}</button>
+              </div>}
             </li>
           ))}</ul>
         </section>

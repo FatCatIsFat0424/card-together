@@ -14,6 +14,7 @@
     "build:client": "npm run music:import && npm run emoji:import && cd client && npx tsc -b && npx vite build",
     "test": "cd server && npx vitest run",
     "test:watch": "cd server && npx vitest",
+    "cleanup:bot-history": "cd server && tsx src/database/cleanup-bot-history-cli.ts",
     "bench:database": "cd server && npx tsx tests/database/repository-benchmark.ts",
     "bench:socket": "cd server && npx tsx benchmarks/socket-benchmark.ts",
     "lint": "eslint \"shared/src/**/*.ts\" \"server/src/**/*.ts\" \"server/tests/**/*.ts\" \"server/benchmarks/**/*.ts\" \"client/src/**/*.{ts,tsx}\"",

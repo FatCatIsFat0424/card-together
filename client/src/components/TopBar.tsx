@@ -145,7 +145,7 @@ export function TopBar(): ReactNode {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const inGame = pathname.startsWith('/game/');
-  const showLinks = Boolean(accountId) && !inGame;
+  const showLinks = Boolean(accountId);
   const showVoice = Boolean(accountId && roomCode);
 
   useEffect(() => { setOpen(null); }, [pathname]);

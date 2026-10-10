@@ -1,5 +1,6 @@
 import type { AccountProfile } from './account';
 import type { MatchSummary } from './game';
+import type { RoomCode } from './room';
 
 /** Account details visible to other signed-in players. */
 export type PublicAccount = Pick<
@@ -24,6 +25,8 @@ export interface FriendRequest {
 export type FriendEntry = PublicAccount & {
   readonly online: boolean;
   readonly inRoom: boolean;
+  /** Online friend's current room when they are its host; null otherwise. */
+  readonly hostedRoomCode: RoomCode | null;
 };
 
 export interface FriendsData {

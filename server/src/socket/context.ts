@@ -7,6 +7,7 @@ import type { RuntimeCoordinator, RuntimeMutationOptions } from '../runtime/coor
 import type { VoiceManager } from '../managers/voice-manager';
 import type { FriendService } from '../social/friend-service';
 import type { ProvidedEmojiCatalog } from '../media/provided-emoji';
+import type { FriendPresence } from '../http/friend-routes';
 import { reconcileVoiceMembership } from './voice-handler';
 import * as playerManager from '../managers/player-manager';
 import * as roomManager from '../managers/room-manager';
@@ -118,10 +119,15 @@ function chatUpdate(
 /** Live presence for friend lists, read in runtime queue order. */
 export function readPresence(
   runtime: RuntimeCoordinator, accountIds: readonly string[],
-): Promise<Map<string, { online: boolean; inRoom: boolean }>> {
+): Promise<Map<string, FriendPresence>> {
   return runtime.inspect(() => new Map(accountIds.map((id) => {
     const state = playerManager.getPlayerState(id);
-    return [id, { online: state?.connectionStatus === 'connected', inRoom: Boolean(state?.currentRoomCode) }];
+    const online = state?.connectionStatus === 'connected';
+    const room = state?.currentRoomCode ? roomManager.getRoomInfo(state.currentRoomCode) : null;
+    return [id, {
+      online, inRoom: Boolean(state?.currentRoomCode),
+      hostedRoomCode: online && room?.hostId === id ? room.code : null,
+    }];
   })));
 }
 
@@ -168,7 +174,7 @@ export function runAction(
   context: SocketContext,
   socket: TypedSocket,
   callback: (response: ActionResponse) => void,
-  action: () => ActionResponse,
+  action: () => ActionResponse | Promise<ActionResponse>,
   options: RuntimeMutationOptions = {},
 ): void {
   if (typeof callback !== 'function') return;
@@ -186,7 +192,7 @@ export function runAction(
     playerManager.updatePlayerInfo(info);
     roomManager.updateRoomPlayer(info,
       playerManager.getPlayerState(session.account.id)?.currentRoomCode ?? null);
-    const response = action();
+    const response = await action();
     for (const id of affectedAccounts(session.account.id)) recipients.add(id);
     return response;
   }, { ...options, afterCommit: () => {
