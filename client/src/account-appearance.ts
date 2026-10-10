@@ -29,6 +29,8 @@ export function cardBackStyle(
 ): CSSProperties | undefined {
   if (!appearance?.cardBack) return undefined;
   return {
+    // Plain card stock under the image so fading lightens it instead of exposing the theme pattern.
+    '--card-back': 'var(--card-face)',
     '--card-back-image': `url("${mediaUrl(appearance.cardBack)}")`,
     '--card-back-size': 'cover',
     '--card-back-opacity': opacity(appearance.cardBackOpacity),

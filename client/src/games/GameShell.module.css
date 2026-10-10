@@ -51,9 +51,11 @@
 .customTable {
   position: relative;
   isolation: isolate;
+  /* Solid base so a faded image blends toward one color, not the theme felt pattern. */
+  background: var(--bg-surface);
 }
 
-/* Image on its own layer so opacity reveals the theme surface without fading the table. */
+/* Image on its own layer so opacity fades only the image, not the table contents. */
 .customTable::before {
   content: '';
   position: absolute;

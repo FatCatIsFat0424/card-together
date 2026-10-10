@@ -58,8 +58,9 @@ card on the owner's screen, covering the card face (centered, cropped); without 
 theme's default back is used. The account page resizes uploads before sending them
 (backgrounds to a 1920-pixel and card backs to a 512-pixel long edge, WebP with JPEG
 fallback). Each image has an opacity of 20–100% (default 100%) that fades only the image
-layer, revealing the theme table surface or card base beneath; slider changes save after a
-short pause or on release.
+layer toward a plain base: the theme's solid surface color for tables and the card face
+color for card backs, never the theme's default pattern. Slider changes save after a short
+pause or on release.
 
 Emoji names are 2–64 ASCII letters, digits, `_`, `-`, or `.`, starting with a letter, digit,
 or `_` (`EMOJI_NAME_PATTERN` in [shared constants](../shared/src/constants/emoji.ts)). Names
