@@ -63,7 +63,7 @@ directly. Failures always use `{ success: false, error }`. Account identity come
 session, never a client-supplied actor ID. Success is acknowledged only after persistence,
 except ephemeral signaling and unchanged-state operations.
 
-Game types: `bridge`, `bigtwo`, `redpoints`, `ninetynine`, `sevens`, `chinesepoker`, `liarsdeck`, `blackjack`. Seats: `N`, `E`, `S`, `W`.
+Game types: `bridge`, `bigtwo`, `redpoints`, `ninetynine`, `sevens`, `chinesepoker`, `liarsdeck`, `blackjack`, `holdem`. Seats: `N`, `E`, `S`, `W`.
 For exact unions and result fields, use
 [`socket-events.ts`](../shared/src/types/socket-events.ts).
 
@@ -96,6 +96,7 @@ For exact unions and result fields, use
 | `game:liarsdeck:challenge` | — | Liar's Deck: call LIAR on the previous play |
 | `game:blackjack:bet` | `{ amount }` | Blackjack: 10–200 chips in steps of 10, within the seat's chips, before the shared betting deadline |
 | `game:blackjack:action` | `{ action }` | Blackjack: `hit`, `stand`, `double`, or `split` for the acting hand |
+| `game:holdem:action` | `{ action }` | Hold'em: `{ type: 'fold' \| 'check' \| 'call' }` or `{ type: 'raise', to }`, where `to` is the street stake after a bet or raise |
 | `game:continue` | — | Seated player leaves the result for the waiting room; others keep it |
 | `game:abortVote:start` | — | Start seated-player abort vote |
 | `game:abortVote:cast` | `{ agree }` | Record one vote |

@@ -14,6 +14,7 @@ import styles from './GamePresentation.module.css';
 import { ChinesePokerReveal } from './chinesepoker/ChinesePokerReveal';
 import { LiarsDeckFrame } from './liarsdeck/LiarsDeckFrame';
 import { BlackjackFrame } from './blackjack/BlackjackFrame';
+import { HoldemFrame } from './holdem/HoldemFrame';
 
 interface GamePresentationProps {
   frame: PresentationFrame;
@@ -64,12 +65,14 @@ export function GamePresentation({
     <div className={styles.heading}>
       {frame.seat && <strong className={styles.playerName}>{name(frame.seat)}</strong>}
       <span>{t(frame.kind === 'finish' && frame.seat ? 'presentation.winner'
-        : gameType === 'blackjack' && frame.kind === 'deal' ? 'blackjack.presentationDeal' : `presentation.${frame.kind}`)}</span>
+        : gameType === 'blackjack' && frame.kind === 'deal' ? 'blackjack.presentationDeal'
+          : gameType === 'holdem' && frame.kind === 'deal' ? 'holdem.presentationDeal' : `presentation.${frame.kind}`)}</span>
     </div>
     {gameType === 'liarsdeck' && <LiarsDeckFrame frame={frame} name={name} />}
     {gameType === 'blackjack' && <BlackjackFrame frame={frame} name={name} />}
-    {/* Blackjack frames draw whole hands themselves rather than the single new card. */}
-    {frame.cards.length > 0 && gameType !== 'blackjack' && <div className={collecting ? styles.collecting : undefined}>
+    {gameType === 'holdem' && <HoldemFrame frame={frame} name={name} />}
+    {/* Blackjack and Hold'em frames draw whole hands and the board themselves rather than the new cards. */}
+    {frame.cards.length > 0 && gameType !== 'blackjack' && gameType !== 'holdem' && <div className={collecting ? styles.collecting : undefined}>
       <div className={[styles.cards, (frame.kind === 'play' || frame.kind === 'capture') && styles.arriving,
         frame.kind === 'trick' && styles.trickCards].filter(Boolean).join(' ')}>
         {frame.cards.map((card, index) => <div className={styles.cardSlot}

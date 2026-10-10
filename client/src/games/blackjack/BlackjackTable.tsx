@@ -20,7 +20,8 @@ import { joinNames, useSeatName } from '../seat-names';
 import { projectedServerNow } from '../turn-clock';
 import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
-import { BjHand, ChipIcon, DealerHand } from './BlackjackCards';
+import { ChipIcon } from '../ChipIcon';
+import { BjHand, DealerHand } from './BlackjackCards';
 import {
   BJ_SEATS, autoBetSeats, betChips, blackjackActions, blackjackHandNumber, blackjackNeedsBet, blackjackSeatOut,
   blackjackView,

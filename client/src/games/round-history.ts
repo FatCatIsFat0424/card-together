@@ -1,12 +1,17 @@
-import type { BlackjackOutcome, Card, LiarFace, LiarTableFace, PlayerVisibleGameState, Seat } from '@shared/types';
+import type {
+  BlackjackOutcome, Card, ChinesePokerCategory, HoldemStreet, LiarFace, LiarTableFace, PlayerVisibleGameState, Seat,
+} from '@shared/types';
 import type { BigTwoComboType } from '@shared/rules/bigtwo';
 import { bjApplyEntry, bjEmptyTable, bjTotal } from '@shared/rules/blackjack';
+import { heApplyEntry, heAward, heBestHand, heEmptyTable } from '@shared/rules/holdem';
+import { chipsAdded } from './holdem/holdem-view';
 import { rpScore } from '@shared/rules/redpoints';
 
 export interface HistoryAction {
   kind: 'play' | 'pass' | 'round_end' | 'dragon' | 'flip' | 'eliminated' | 'cover' | 'challenge' | 'shot'
-    | 'deal' | 'hit' | 'stand' | 'double' | 'split' | 'dealerReveal' | 'dealerHit' | 'settle';
-  /** Null for the Blackjack dealer */
+    | 'deal' | 'hit' | 'stand' | 'double' | 'split' | 'dealerReveal' | 'dealerHit' | 'settle'
+    | 'button' | 'blind' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street' | 'showdown' | 'award';
+  /** Null for the Blackjack dealer and Hold'em board cards */
   seat: Seat | null;
   cards: readonly Card[];
   comboType?: BigTwoComboType;
@@ -33,6 +38,14 @@ export interface HistoryAction {
   handTotal?: number;
   outcomes?: readonly BlackjackOutcome[];
   net?: number;
+  /** Hold'em: chips a blind or call added, a bet or raise's street total, or chips won */
+  amount?: number;
+  /** Hold'em: the street a board entry dealt */
+  street?: Exclude<HoldemStreet, 'preflop'>;
+  /** Hold'em: the shown hand's best category */
+  category?: ChinesePokerCategory;
+  /** Hold'em: the hand's blinds, on the button entry */
+  blinds?: { readonly small: number; readonly big: number };
 }
 
 export interface HistoryRound {
@@ -164,6 +177,44 @@ export function deriveRoundHistory(game: HistoryInput): HistoryRound[] {
         round.complete = true;
       }
     }
+  } else if (game.gameType === 'holdem') {
+    // Each hand is one round; payouts and categories come from replaying the public log alongside.
+    const table = heEmptyTable();
+    game.log.forEach((entry, index) => {
+      if (entry.type === 'hand') {
+        if (current) current.complete = true;
+        const round = start();
+        round.actions.push({ kind: 'button', seat: entry.button, cards: [],
+          blinds: { small: entry.smallBlind, big: entry.bigBlind } });
+        for (const seat of SEATS) {
+          if (entry.blinds[seat] > 0) round.actions.push({ kind: 'blind', seat, cards: [], amount: entry.blinds[seat] });
+        }
+      } else if (entry.type === 'action') {
+        const kind = entry.allIn ? 'allIn' : entry.action;
+        (current ?? start()).actions.push({ kind, seat: entry.seat, cards: [],
+          ...(kind === 'fold' || kind === 'check' ? {}
+            : { amount: kind === 'call' ? chipsAdded(game.log, index) : entry.to }) });
+      } else if (entry.type === 'street') {
+        (current ?? start()).actions.push({ kind: 'street', seat: null, cards: entry.cards, street: entry.street });
+      } else if (entry.type === 'showdown') {
+        const round = current ?? start();
+        for (const seat of SEATS) {
+          const cards = entry.cards[seat];
+          if (cards.length === 0) continue;
+          round.actions.push({ kind: 'showdown', seat, cards,
+            ...(cards.length + table.board.length >= 5 ? { category: heBestHand([...cards, ...table.board]).category } : {}) });
+        }
+      } else {
+        const round = current ?? start();
+        const { payouts } = heAward(table);
+        for (const seat of SEATS) {
+          if (payouts[seat] > 0) round.actions.push({ kind: 'award', seat, cards: [], amount: payouts[seat] });
+        }
+        for (const seat of entry.eliminated) round.actions.push({ kind: 'eliminated', seat, cards: [] });
+        round.complete = true;
+      }
+      heApplyEntry(table, entry);
+    });
   } else {
     let previousTotal = 0;
     for (const entry of game.log) {

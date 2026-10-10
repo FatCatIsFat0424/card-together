@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { frameLogIndex } from '@shared/game-presentation';
+import type { PresentationFrame } from '@shared/game-presentation';
 import type { PlayerVisibleGameState, Seat } from '@shared/types';
 import type { TranslationKey } from '../i18n';
 import { playCardSound, playOutSound, unlockCardSounds, disposeCardSounds } from '../audio/card-sound';
@@ -70,7 +72,21 @@ function presentationSummary(
       scores: winners.map((seat) => `${t(`seat.${seat}`)} ${chips[seat]}`).join(' · '),
     });
   }
+  if (game.gameType === 'holdem' && game.result) {
+    const { chips, winners } = game.result;
+    return t('presentation.holdemWinners', {
+      scores: winners.map((seat) => `${t(`seat.${seat}`)} ${chips[seat]}`).join(' · '),
+    });
+  }
   return '';
+}
+
+/** A Hold'em award frame that knocks a seat out of the match. */
+function eliminatesSeat(game: PlayerVisibleGameState | null, frame: PresentationFrame): boolean {
+  if (game?.gameType !== 'holdem' || frame.kind !== 'award') return false;
+  const index = frameLogIndex(frame);
+  const entry = index === null ? undefined : game.log[index];
+  return entry?.type === 'award' && entry.eliminated.length > 0;
 }
 
 function matches(query: string): boolean {
@@ -145,7 +161,7 @@ export function GameShell({
   const messageCount = useChatStore((state) => state.messages.length);
   const seats = useRoomStore((state) => state.roomInfo?.seats);
   const log = useGameStore((state) => state.bigTwo?.log ?? state.redPoints?.log ?? state.ninetyNine?.log
-    ?? state.sevens?.log ?? state.chinesePoker?.log ?? state.liarsDeck?.log ?? state.blackjack?.log ?? state.log);
+    ?? state.sevens?.log ?? state.chinesePoker?.log ?? state.liarsDeck?.log ?? state.blackjack?.log ?? state.holdem?.log ?? state.log);
   const ownedTurn = useGameStore((state) => mySeat !== null && state.currentTurnSeat === mySeat
     && (state.phase === 'bidding' || state.phase === 'playing'));
   const myTurn = (turnReady ?? ownedTurn) && !presentation.locked;
@@ -221,8 +237,11 @@ export function GameShell({
     else if (frame.kind === 'reveal' || frame.kind === 'challenge') playCardSound();
     else if (frame.kind === 'hit' || frame.kind === 'double' || frame.kind === 'split'
       || frame.kind === 'dealerReveal' || frame.kind === 'dealerHit') playCardSound();
-    else if (frame.kind === 'eliminated' || frame.survived === false) playOutSound();
-  }, [presentation.frame]);
+    else if ((frame.kind === 'deal' && visibleGame?.gameType === 'holdem') || frame.kind === 'street'
+      || frame.kind === 'showdown') playCardSound();
+    else if (frame.kind === 'fold' || frame.kind === 'check') playCardSound(true);
+    else if (frame.kind === 'eliminated' || frame.survived === false || eliminatesSeat(visibleGame, frame)) playOutSound();
+  }, [presentation.frame, visibleGame]);
 
   const collapseChat = useCallback((): void => {
     setSeenMessages(messageCount);

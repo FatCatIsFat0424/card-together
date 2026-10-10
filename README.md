@@ -1,7 +1,7 @@
 # Card Together
 
 A browser-based multiplayer platform for Bridge, Taiwanese Big Two, Red Points,
-Ninety-Nine, Sevens, Chinese Poker, Liar's Deck, and Blackjack. Built with React 19, TypeScript, Zustand, Express, Socket.IO,
+Ninety-Nine, Sevens, Chinese Poker, Liar's Deck, Blackjack, and Texas Hold'em. Built with React 19, TypeScript, Zustand, Express, Socket.IO,
 and npm workspaces.
 
 Players sign in, create or join four-seat rooms, chat, and play with

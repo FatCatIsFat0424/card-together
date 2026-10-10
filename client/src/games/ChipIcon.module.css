@@ -1,0 +1,11 @@
+.chipIcon {
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: 0.3em;
+  border-radius: 50%;
+  border: 2px dashed color-mix(in srgb, var(--text-inverse) 70%, transparent);
+  background: var(--color-warning);
+  vertical-align: -0.1em;
+  box-sizing: border-box;
+}

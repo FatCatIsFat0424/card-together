@@ -7,6 +7,7 @@ import { SUIT_SYMBOLS } from '@shared/constants';
 import { rpScore } from '@shared/rules/redpoints';
 import { NN_MAX } from '@shared/rules/ninetynine';
 import { BJ_HANDS } from '@shared/rules/blackjack';
+import { HE_HANDS } from '@shared/rules/holdem';
 import type { BidLevel, BidSuit, Seat } from '@shared/types';
 import { apiRequest } from '../api';
 import { clearAccount, useAccountStore } from '../stores/account-store';
@@ -22,6 +23,7 @@ import { ThemeSwitch } from './ThemeSwitch';
 import { joinNames } from '../games/seat-names';
 import { useGamePresentation } from '../games/use-game-presentation';
 import { blackjackHandNumber, blackjackView } from '../games/blackjack/blackjack-view';
+import { holdemView } from '../games/holdem/holdem-view';
 import styles from './TopBar.module.css';
 
 const VoicePanel = lazy(() => import('./VoicePanel')
@@ -60,6 +62,10 @@ function GameChips(): ReactNode {
   const blackjack = useGameStore((state) => state.blackjack);
   const blackjackHand = blackjack && blackjack.phase !== 'scoring' ? blackjackHandNumber(blackjackView(blackjack, frame)) : 0;
   const blackjackResult = blackjack?.result ?? null;
+  const holdem = useGameStore((state) => state.holdem);
+  // The hand and blinds follow the presentation so the next hand's blinds appear with its deal.
+  const holdemShown = holdem && holdem.phase !== 'scoring' ? holdemView(holdem, frame) : null;
+  const holdemResult = holdem?.result ?? null;
   const seats = useRoomStore((state) => state.roomInfo?.seats);
   const seatLabel = (seat: Seat): string => t(`seat.${seat}`);
   return <div className={styles.chips}>
@@ -100,6 +106,14 @@ function GameChips(): ReactNode {
       {blackjackResult && !locked && <span className={styles.chip}>
         🏆 {joinNames(blackjackResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
         {mySeat && <> · {t('blackjack.myChips', { n: String(blackjackResult.chips[mySeat]) })}</>}
+      </span>}
+      {holdemShown && holdemShown.hand > 0 && <span className={styles.chip}>
+        {t('holdem.handOf', { n: String(holdemShown.hand), total: String(HE_HANDS) })} ·
+        {' '}{t('holdem.blinds', { sb: String(holdemShown.smallBlind), bb: String(holdemShown.bigBlind) })}
+      </span>}
+      {holdemResult && !locked && <span className={styles.chip}>
+        🏆 {joinNames(holdemResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
+        {mySeat && <> · {t('holdem.myChips', { n: String(holdemResult.chips[mySeat]) })}</>}
       </span>}
       {ninetyNineWinner && <span className={styles.chip}>
         🏆 {seats?.[ninetyNineWinner].player?.nickname ?? seatLabel(ninetyNineWinner)}

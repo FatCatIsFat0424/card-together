@@ -196,6 +196,31 @@ describe('authoritative game presentation', () => {
     expect(state.betDeadline).toBe(getPresentationEndsAt(state) + 15_000);
   });
 
+  it("should open Hold'em with the deal and present each action, street, showdown, and award", () => {
+    games.startGame(CODE, 'holdem', players);
+    const state = games.getGameState(CODE)!;
+    if (state.gameType !== 'holdem') throw new Error("Expected Hold'em");
+    expect(getPresentationFrames(state)).toEqual([expect.objectContaining({ kind: 'deal', durationMs: 1500,
+      seat: state.button, cards: [] })]);
+    expect(state.clock?.turn?.startsAt).toBe(getPresentationEndsAt(state));
+    const step = (action: Parameters<typeof games.handleHoldemAction>[2]): void => {
+      vi.setSystemTime(getPresentationEndsAt(state));
+      expect(games.handleHoldemAction(CODE, state.currentTurnSeat, action).success).toBe(true);
+    };
+    step({ type: 'raise', to: 60 });
+    expect(getPresentationFrames(state)).toEqual([expect.objectContaining({ kind: 'raise', amount: 60, durationMs: 900 })]);
+    step({ type: 'call' });
+    step({ type: 'fold' });
+    expect(getPresentationFrames(state)[0]).not.toHaveProperty('amount');
+    step({ type: 'fold' });
+    expect(getPresentationFrames(state).map((frame) => frame.kind)).toEqual(['fold', 'street']);
+    expect(getPresentationFrames(state)[1].cards).toHaveLength(3);
+    while (state.hand === 1) step({ type: 'check' });
+    const kinds = getPresentationFrames(state).map((frame) => frame.kind);
+    expect(kinds).toEqual(['check', 'showdown', 'award', 'deal']);
+    expect(state.clock?.turn?.startsAt).toBe(getPresentationEndsAt(state));
+  });
+
   it('should let Chinese Poker seats submit without waiting and present only the showdown', () => {
     games.startGame(CODE, 'chinesepoker', players);
     const hands = (games.getGameState(CODE) as { hands: Record<Seat, Card[]> }).hands;

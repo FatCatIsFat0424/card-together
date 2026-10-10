@@ -29,6 +29,7 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
     game.ninetyNine?.log.filter((entry) => entry.seat === room.mySeat).length ??
     game.sevens?.log.filter((entry) => entry.seat === room.mySeat).length ??
     game.liarsDeck?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
+    game.holdem?.log.filter((entry) => entry.type === 'action' && entry.seat === room.mySeat).length ??
     // One Blackjack turn spans several actions; prompt once per hand played, not on every hit.
     (game.blackjack ? `${game.blackjack.phase}-${game.blackjack.hand}-${game.blackjack.activeHand}` : 0);
   return {

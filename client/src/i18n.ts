@@ -20,13 +20,15 @@ import { liarsDeckTranslations } from './liarsdeck-i18n';
 import type { LiarsDeckTranslationKey } from './liarsdeck-i18n';
 import { blackjackTranslations } from './blackjack-i18n';
 import type { BlackjackTranslationKey } from './blackjack-i18n';
+import { holdemTranslations } from './holdem-i18n';
+import type { HoldemTranslationKey } from './holdem-i18n';
 
 export type Locale = 'zh-TW' | 'en';
 
 type TranslationKeys = Record<
   AccountTranslationKey | PlayerTranslationKey | VoiceTranslationKey | UiTranslationKey
     | EmojiTranslationKey | GameTranslationKey | SevensTranslationKey | ChinesePokerTranslationKey
-    | LiarsDeckTranslationKey | BlackjackTranslationKey, string
+    | LiarsDeckTranslationKey | BlackjackTranslationKey | HoldemTranslationKey, string
 > & {
   // Lobby
   'lobby.title': string;
@@ -110,8 +112,9 @@ const translations: Record<Locale, TranslationKeys> = {
     ...chinesePokerTranslations['zh-TW'],
     ...liarsDeckTranslations['zh-TW'],
     ...blackjackTranslations['zh-TW'],
+    ...holdemTranslations['zh-TW'],
     'lobby.title': 'Card Together',
-    'lobby.subtitle': '橋牌、大老二、撿紅點、99、牌七、十三支、騙子酒館、21 點，線上同桌一起玩',
+    'lobby.subtitle': '橋牌、大老二、撿紅點、99、牌七、十三支、騙子酒館、21 點、德州撲克，線上同桌一起玩',
     'lobby.nickname': '暱稱',
     'lobby.nicknamePlaceholder': '輸入暱稱...',
     'lobby.color': '顏色',
@@ -181,8 +184,9 @@ const translations: Record<Locale, TranslationKeys> = {
     ...chinesePokerTranslations.en,
     ...liarsDeckTranslations.en,
     ...blackjackTranslations.en,
+    ...holdemTranslations.en,
     'lobby.title': 'Card Together',
-    'lobby.subtitle': "Bridge, Big Two, Red Points, Ninety-Nine, Sevens, Chinese Poker, Liar's Deck, and Blackjack with friends online",
+    'lobby.subtitle': "Bridge, Big Two, Red Points, Ninety-Nine, Sevens, Chinese Poker, Liar's Deck, Blackjack, and Texas Hold'em with friends online",
     'lobby.nickname': 'Nickname',
     'lobby.nicknamePlaceholder': 'Enter nickname...',
     'lobby.color': 'Color',

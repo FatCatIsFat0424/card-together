@@ -2,7 +2,7 @@ import type { AnyGameState, GameClock, RoomCode } from '@shared/types';
 import { getBotAction } from '../bots/bot-decisions';
 import * as gameManager from '../managers/game-manager';
 import * as roomManager from '../managers/room-manager';
-import { createFailureTracker, performAutomatedTurn } from './automated-action';
+import { createFailureTracker, holdemPassiveAction, performAutomatedTurn } from './automated-action';
 import type { RuntimeCoordinator } from './coordinator';
 
 type Turn = NonNullable<GameClock['turn']>;
@@ -45,7 +45,9 @@ export async function startTurnTimers(
           const pending = current && pendingTurn(current);
           if (!current || current.id !== game.id || pending?.id !== turn.id
             || Date.now() < pending.deadline || gameManager.isPresentationActive(code)) return;
-          performAutomatedTurn(code, turn.seat, failures.count(code, turn.id), (visible) => getBotAction(visible));
+          // A Hold'em player who runs out of time checks or folds rather than letting a bot stake their chips.
+          performAutomatedTurn(code, turn.seat, failures.count(code, turn.id), (visible) => visible.gameType === 'holdem'
+            ? holdemPassiveAction(visible) : getBotAction(visible));
           if (current.clock && gameManager.getGameState(code) === current) current.clock = { ...current.clock,
             lastTimeout: { seat: turn.seat, at: Date.now() } };
           changed = true;

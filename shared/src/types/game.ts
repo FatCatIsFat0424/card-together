@@ -717,6 +717,139 @@ export interface BlackjackVisibleState {
   readonly result: BlackjackMatchResult | null;
 }
 
+// ─── Texas Hold'em ───
+
+export type HoldemStreet = 'preflop' | 'flop' | 'turn' | 'river';
+
+/** `raise` sets this street's total stake to `to`; it is a bet when nothing has been bet yet. */
+export type HoldemAction =
+  | { readonly type: 'fold' }
+  | { readonly type: 'check' }
+  | { readonly type: 'call' }
+  | { readonly type: 'raise'; readonly to: number };
+
+export interface HoldemPot {
+  readonly amount: number;
+  /** Unfolded seats that staked enough to win this pot, ordered N, E, S, W */
+  readonly eligible: Seat[];
+  readonly winners: Seat[];
+}
+
+/** Hole cards never enter the log until a showdown reveals them. */
+export type HoldemLogEntry =
+  | {
+    readonly type: 'hand';
+    readonly hand: number;
+    readonly button: Seat;
+    readonly smallBlind: number;
+    readonly bigBlind: number;
+    /** Chips each seat posted as a blind; a short stack posts all it has */
+    readonly blinds: Record<Seat, number>;
+    readonly timestamp: number;
+  }
+  | {
+    readonly type: 'action';
+    readonly seat: Seat;
+    readonly action: 'fold' | 'check' | 'call' | 'bet' | 'raise';
+    /** The seat's total stake on this street after the action */
+    readonly to: number;
+    readonly allIn: boolean;
+    readonly timestamp: number;
+  }
+  | { readonly type: 'street'; readonly street: Exclude<HoldemStreet, 'preflop'>; readonly cards: Card[]; readonly timestamp: number }
+  /** Hole cards of every unfolded seat; empty for the rest */
+  | { readonly type: 'showdown'; readonly cards: Record<Seat, Card[]>; readonly timestamp: number }
+  | {
+    readonly type: 'award';
+    readonly pots: HoldemPot[];
+    readonly chips: Record<Seat, number>;
+    /** Seats that lost their last chip this hand, in elimination order */
+    readonly eliminated: Seat[];
+    readonly timestamp: number;
+  };
+
+export interface HoldemMatchResult {
+  readonly gameType: 'holdem';
+  readonly chips: Record<Seat, number>;
+  readonly hands: number;
+  /** Most chips (ties included), ordered N, E, S, W */
+  readonly winners: Seat[];
+  /** Seats that lost every chip, in elimination order */
+  readonly eliminationOrder: Seat[];
+}
+
+export type HoldemPhase = 'playing' | 'scoring';
+
+export interface HoldemGameState {
+  clock?: GameClock;
+  presentation?: GamePresentation;
+  returnedSeats?: Seat[];
+  readonly gameType: 'holdem';
+  readonly id: string;
+  readonly startedAt: number;
+  readonly players: Record<Seat, PlayerInfo>;
+  readonly roomCode: RoomCode;
+  phase: HoldemPhase;
+  hand: number;
+  button: Seat;
+  smallBlind: number;
+  bigBlind: number;
+  /** Chips not yet staked this hand */
+  chips: Record<Seat, number>;
+  streetBets: Record<Seat, number>;
+  /** Chips staked this hand, including this street */
+  totalBets: Record<Seat, number>;
+  /** Seats dealt into this hand, ordered N, E, S, W */
+  dealt: Seat[];
+  folded: Seat[];
+  street: HoldemStreet;
+  board: Card[];
+  /** Highest street stake to match */
+  currentBet: number;
+  /** Smallest raise increment */
+  minRaise: number;
+  /** Seats that acted since the last full raise; others may still raise */
+  acted: Seat[];
+  /** Hole cards a showdown revealed this hand */
+  revealed: Record<Seat, Card[]>;
+  eliminated: Seat[];
+  currentTurnSeat: Seat;
+  /** Server only */
+  deck: Card[];
+  /** Server only; each seat's hole cards */
+  hands: Record<Seat, Card[]>;
+  log: HoldemLogEntry[];
+  result: HoldemMatchResult | null;
+}
+
+export interface HoldemVisibleState {
+  clock?: GameClock;
+  presentation?: GamePresentation;
+  readonly gameType: 'holdem';
+  readonly phase: HoldemPhase;
+  readonly mySeat: Seat;
+  readonly myHand: readonly Card[];
+  readonly hand: number;
+  readonly button: Seat;
+  readonly smallBlind: number;
+  readonly bigBlind: number;
+  readonly chips: Record<Seat, number>;
+  readonly streetBets: Record<Seat, number>;
+  readonly totalBets: Record<Seat, number>;
+  readonly dealt: readonly Seat[];
+  readonly folded: readonly Seat[];
+  readonly street: HoldemStreet;
+  readonly board: readonly Card[];
+  readonly currentBet: number;
+  readonly minRaise: number;
+  readonly acted: readonly Seat[];
+  readonly revealed: Record<Seat, readonly Card[]>;
+  readonly eliminated: readonly Seat[];
+  readonly currentTurnSeat: Seat;
+  readonly log: readonly HoldemLogEntry[];
+  readonly result: HoldemMatchResult | null;
+}
+
 // ─── Cross-game ───
 
 export type AnyGameState =
@@ -727,7 +860,8 @@ export type AnyGameState =
   | SevensGameState
   | ChinesePokerGameState
   | LiarsDeckGameState
-  | BlackjackGameState;
+  | BlackjackGameState
+  | HoldemGameState;
 
 export type PlayerVisibleGameState =
   | BridgeVisibleState
@@ -737,7 +871,8 @@ export type PlayerVisibleGameState =
   | SevensVisibleState
   | ChinesePokerVisibleState
   | LiarsDeckVisibleState
-  | BlackjackVisibleState;
+  | BlackjackVisibleState
+  | HoldemVisibleState;
 
 export type MatchResult =
   | ({ readonly gameType: 'bridge' } & GameResult)
@@ -747,7 +882,8 @@ export type MatchResult =
   | SevensMatchResult
   | ChinesePokerMatchResult
   | LiarsDeckMatchResult
-  | BlackjackMatchResult;
+  | BlackjackMatchResult
+  | HoldemMatchResult;
 
 export interface MatchSummary {
   readonly id: string;

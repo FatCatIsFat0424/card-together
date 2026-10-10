@@ -8,7 +8,8 @@ export interface PresentationFrame {
   readonly key: string;
   readonly kind: 'play' | 'pass' | 'trick' | 'round' | 'capture' | 'eliminated' | 'cover' | 'reveal' | 'shoot'
     | 'homerun' | 'deal' | 'challenge' | 'roulette' | 'shot' | 'hit' | 'stand' | 'double' | 'split'
-    | 'dealerReveal' | 'dealerHit' | 'settle' | 'finish';
+    | 'dealerReveal' | 'dealerHit' | 'settle' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street'
+    | 'showdown' | 'award' | 'finish';
   readonly durationMs: number;
   readonly seat?: Seat;
   readonly cards: readonly Card[];
@@ -36,6 +37,8 @@ export interface PresentationFrame {
   readonly survived?: boolean;
   /** Blackjack: the seat's hand the action applies to */
   readonly handIndex?: number;
+  /** Hold'em: the seat's street stake after a call, bet, or raise */
+  readonly amount?: number;
 }
 
 /** Reconstructs only public events; private hands and stock never enter presentation frames. */
@@ -133,6 +136,20 @@ export function getPresentationFrames(
       } else if (entry.type === 'settle') {
         frames.push({ key, kind: 'settle', durationMs: 2500, cards: [] });
       }
+    } else if (game.gameType === 'holdem') {
+      const entry = game.log[index];
+      if (entry.type === 'hand') {
+        frames.push({ key, kind: 'deal', durationMs: 1500, seat: entry.button, cards: [] });
+      } else if (entry.type === 'action') {
+        frames.push({ key, kind: entry.allIn ? 'allIn' : entry.action, durationMs: 900, seat: entry.seat, cards: [],
+          ...(entry.action === 'fold' || entry.action === 'check' ? {} : { amount: entry.to }) });
+      } else if (entry.type === 'street') {
+        frames.push({ key, kind: 'street', durationMs: 1300, cards: entry.cards });
+      } else if (entry.type === 'showdown') {
+        frames.push({ key, kind: 'showdown', durationMs: 2500, cards: [] });
+      } else {
+        frames.push({ key, kind: 'award', durationMs: 2500, cards: [] });
+      }
     } else {
       const entry = game.log[index];
       if (entry.type === 'play') {
@@ -147,8 +164,8 @@ export function getPresentationFrames(
     }
   }
   if (game.phase === 'scoring') {
-    const winners = (game.gameType === 'sevens' || game.gameType === 'chinesepoker' || game.gameType === 'blackjack')
-      && game.result
+    const winners = (game.gameType === 'sevens' || game.gameType === 'chinesepoker' || game.gameType === 'blackjack'
+      || game.gameType === 'holdem') && game.result
       ? game.result.winners : [];
     const seat = game.gameType === 'bigtwo' || game.gameType === 'ninetynine' || game.gameType === 'liarsdeck'
       ? game.result?.winnerSeat : winners.length === 1 ? winners[0] : undefined;

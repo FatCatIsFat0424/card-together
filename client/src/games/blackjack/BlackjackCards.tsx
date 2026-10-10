@@ -5,13 +5,9 @@ import type { BlackjackHand, BlackjackOutcome, Card } from '@shared/types';
 import { cardImageUrl } from '../../cards';
 import type { TranslationKey } from '../../i18n';
 import { useI18nStore } from '../../stores/i18n-store';
+import { ChipIcon } from '../ChipIcon';
 import { handNet, signedChips } from './blackjack-view';
 import styles from './BlackjackCards.module.css';
-
-/** A drawn chip; the coin emoji is missing from many system fonts. */
-export function ChipIcon(): ReactNode {
-  return <span className={styles.chipIcon} aria-hidden="true" />;
-}
 
 export function cardName(card: Card): string {
   return `${SUIT_SYMBOLS[card.suit]}${RANK_DISPLAY[card.rank]}`;

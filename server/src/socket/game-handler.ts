@@ -1,4 +1,4 @@
-import type { BidAction, BlackjackAction, Card, ChinesePokerArrangement, Seat } from '@shared/types';
+import type { BidAction, BlackjackAction, Card, ChinesePokerArrangement, HoldemAction, Seat } from '@shared/types';
 import { LD_DECK, LD_MAX_PLAY } from '@shared/rules/liarsdeck';
 import { BJ_ACTIONS, BJ_MAX_BET, BJ_MIN_BET } from '@shared/rules/blackjack';
 import type { SocketContext, TypedSocket } from './context';
@@ -20,6 +20,14 @@ function isCard(value: unknown): value is Card {
   const { suit, rank } = value as { suit?: unknown; rank?: unknown };
   return typeof rank === 'number' && Number.isInteger(rank) && rank >= 2 && rank <= 14
     && typeof suit === 'string' && ['clubs', 'diamonds', 'hearts', 'spades'].includes(suit);
+}
+
+/** Rebuilds a Hold'em action so client-supplied extra keys never reach saved state. */
+function parseHoldemAction(value: unknown): HoldemAction | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const { type, to } = value as { type?: unknown; to?: unknown };
+  if (type === 'fold' || type === 'check' || type === 'call') return { type };
+  return type === 'raise' && typeof to === 'number' && Number.isSafeInteger(to) && to > 0 ? { type, to } : null;
 }
 
 /** Rebuilds a 3/5/5 arrangement so client-supplied extra keys never reach saved state. */
@@ -179,6 +187,14 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
     if (!BJ_ACTIONS.includes(action as BlackjackAction)) throw actionError('Invalid action.');
     const code = requireRoom(socket);
     requireSuccess(gameManager.handleBlackjackAction(code, playerSeat(socket, code), action as BlackjackAction));
+    return { success: true };
+  }));
+
+  socket.on('game:holdem:action', (payload, callback) => runAction(context, socket, callback, () => {
+    const action = parseHoldemAction(payload?.action);
+    if (!action) throw actionError('Invalid action.');
+    const code = requireRoom(socket);
+    requireSuccess(gameManager.handleHoldemAction(code, playerSeat(socket, code), action));
     return { success: true };
   }));
 

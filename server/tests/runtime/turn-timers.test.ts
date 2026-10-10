@@ -88,6 +88,29 @@ describe('durable turn clocks', () => {
     },
   );
 
+  it("folds or checks for a timed-out Hold'em player instead of asking the bot, and refills banks each hand", async () => {
+    const { code, runtime, game } = await fixture('holdem');
+    const turn = game().clock!.turn!;
+    expect(turn.startsAt).toBe(getPresentationEndsAt(game()));
+    const choose = vi.spyOn(decisions, 'getBotAction');
+    stops.push(await startTurnTimers(runtime, vi.fn()));
+    await vi.advanceTimersByTimeAsync(turn.deadline - Date.now());
+    await runtime.idle();
+    expect(choose).not.toHaveBeenCalled();
+    expect(game().log.at(-1)).toMatchObject({ type: 'action', seat: turn.seat, action: 'fold' });
+    expect(game().clock!.lastTimeout).toEqual({ seat: turn.seat, at: Date.now() });
+    expect(game().clock!.bankRemainingMs[turn.seat]).toBe(0);
+    await runtime.mutate(() => {
+      const state = game();
+      if (state.gameType !== 'holdem') throw new Error("Expected Hold'em");
+      while (state.hand === 1) {
+        vi.setSystemTime(Math.max(Date.now(), getPresentationEndsAt(state)));
+        expect(games.handleHoldemAction(code, state.currentTurnSeat, { type: 'fold' }).success).toBe(true);
+      }
+    });
+    expect(game().clock!.bankRemainingMs).toEqual({ N: 20000, E: 20000, S: 20000, W: 20000 });
+  });
+
   it('charges only excess decision time, preserves other banks, and rejects expired manual actions', async () => {
     const { code, runtime, game } = await fixture();
     const first = game().clock!.turn!;

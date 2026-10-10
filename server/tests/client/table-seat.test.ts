@@ -144,6 +144,35 @@ describe('table seat plate', () => {
     expect(render({ seat: 'N', position: 'top' })).not.toContain('role="timer"');
   });
 
+  it('shows Hold\'em chips, button and blind markers, and folded, all-in, and out states', () => {
+    state.game = {
+      ...baseGame(),
+      currentTurnSeat: 'S',
+      holdem: {
+        gameType: 'holdem', phase: 'playing', mySeat: 'S', myHand: [card(14, 'spades'), card(13, 'spades')], hand: 6,
+        button: 'W', smallBlind: 15, bigBlind: 30, chips: { N: 0, E: 0, S: 940, W: 1200 },
+        streetBets: { N: 0, E: 0, S: 30, W: 30 }, totalBets: { N: 0, E: 500, S: 30, W: 30 },
+        dealt: ['E', 'S', 'W'], folded: ['W'], street: 'preflop', board: [], currentBet: 30, minRaise: 30,
+        acted: [], revealed: { N: [], E: [], S: [], W: [] }, eliminated: ['N'], currentTurnSeat: 'S', log: [], result: null,
+      },
+      visible: { clock: clock('S', { lastTimeout: { seat: 'W', at: 5 } }), log: [] },
+    };
+    const east = render({ seat: 'E', position: 'right' });
+    expect(east).toContain('All-in');
+    expect(east).toContain('>SB</span>');
+    expect(east).not.toContain('cards');
+    const west = render({ seat: 'W', position: 'left' });
+    expect(west).toContain('1200');
+    expect(west).toContain('Folded');
+    expect(west).toContain('>D</span>');
+    expect(west).toContain('title="Timeout: computer moved"');
+    expect(statusLabels(west)).toEqual([]);
+    const north = render({ seat: 'N', position: 'top' });
+    expect(north).toContain('>Out</span>');
+    expect(north).not.toContain('>D</span>');
+    expect(render({ seat: 'S', position: 'bottom' })).toContain('>BB</span>');
+  });
+
   it('shows Chinese Poker arrangement progress and the shared deadline only for the own pending seat', () => {
     const chinesePoker = {
       phase: 'arranging', arrangeDeadline: 45_000, autoArranged: [],

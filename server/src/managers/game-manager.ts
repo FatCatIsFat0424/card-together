@@ -16,6 +16,8 @@ import type {
   ChinesePokerArrangement,
   ChinesePokerGameState,
   GameType,
+  HoldemAction,
+  HoldemGameState,
   LiarsDeckGameState,
   NinetyNineGameState,
   PlayerInfo,
@@ -37,6 +39,7 @@ import * as sevens from './games/sevens-game';
 import * as chinesepoker from './games/chinesepoker-game';
 import * as liarsdeck from './games/liarsdeck-game';
 import * as blackjack from './games/blackjack-game';
+import * as holdem from './games/holdem-game';
 
 type Result = { success: true } | { success: false; reason: string };
 
@@ -81,8 +84,9 @@ function timedAction(roomCode: RoomCode, seat: Seat, operation: () => Result, au
   const result = operation();
   if (result.success && game && clock) {
     const sameTurn = redPointsPlay && game.gameType === 'redpoints' && game.step === 'flip-choose';
-    // Each Bridge redeal and Liar's Deck round is a new deal, which refills reserves.
-    const redealt = (game.gameType === 'bridge' || game.gameType === 'liarsdeck') && game.hands !== hands;
+    // Each Bridge redeal, Liar's Deck round, and Hold'em hand is a new deal, which refills reserves.
+    const redealt = (game.gameType === 'bridge' || game.gameType === 'liarsdeck' || game.gameType === 'holdem')
+      && game.hands !== hands;
     advanceGameClock(game, clock, sameTurn, redealt, now, forced);
   }
   return result;
@@ -111,6 +115,7 @@ export function startGame(
   else if (gameType === 'ninetynine') ninetynine.startGame(roomCode, players);
   else if (gameType === 'sevens') sevens.startGame(roomCode, players);
   else if (gameType === 'liarsdeck') liarsdeck.startGame(roomCode, players);
+  else if (gameType === 'holdem') holdem.startGame(roomCode, players);
   else if (gameType === 'blackjack') {
     blackjack.startGame(roomCode, players, bjBetSeconds((settings ?? DEFAULT_TIME_CONTROL).baseSeconds) * 1000);
   } else if (gameType === 'chinesepoker') {
@@ -118,8 +123,8 @@ export function startGame(
     chinesepoker.startGame(roomCode, players, cpArrangeSeconds(baseSeconds, bankSeconds) * 1000);
   } else bridge.startGame(roomCode, players);
   const game = getGameState(roomCode);
-  // Liar's Deck opens by revealing the first round's table card.
-  if (game?.phase === 'scoring' || game?.gameType === 'liarsdeck') {
+  // Liar's Deck opens by revealing the first round's table card, Hold'em by dealing the first hand.
+  if (game?.phase === 'scoring' || game?.gameType === 'liarsdeck' || game?.gameType === 'holdem') {
     game.presentation = { id: randomUUID(), startedAt: Date.now(), logStart: 0, timingVersion: 2 };
   }
   if (game) initializeGameClock(game, settings);
@@ -130,7 +135,8 @@ export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): PlayerVis
   const visible = bridge.getPlayerVisibleState(roomCode, seat) ?? bigtwo.getPlayerVisibleState(roomCode, seat)
     ?? redpoints.getPlayerVisibleState(roomCode, seat) ?? ninetynine.getPlayerVisibleState(roomCode, seat)
     ?? sevens.getPlayerVisibleState(roomCode, seat) ?? chinesepoker.getPlayerVisibleState(roomCode, seat)
-    ?? liarsdeck.getPlayerVisibleState(roomCode, seat) ?? blackjack.getPlayerVisibleState(roomCode, seat);
+    ?? liarsdeck.getPlayerVisibleState(roomCode, seat) ?? blackjack.getPlayerVisibleState(roomCode, seat)
+    ?? holdem.getPlayerVisibleState(roomCode, seat);
   if (!visible) return null;
   const game = getGameState(roomCode);
   const serverNow = Date.now();
@@ -143,7 +149,8 @@ export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): PlayerVis
 export function getGameState(roomCode: RoomCode): AnyGameState | null {
   return bridge.getGameState(roomCode) ?? bigtwo.getGameState(roomCode) ?? redpoints.getGameState(roomCode)
     ?? ninetynine.getGameState(roomCode) ?? sevens.getGameState(roomCode) ?? chinesepoker.getGameState(roomCode)
-    ?? liarsdeck.getGameState(roomCode) ?? blackjack.getGameState(roomCode);
+    ?? liarsdeck.getGameState(roomCode) ?? blackjack.getGameState(roomCode)
+    ?? holdem.getGameState(roomCode);
 }
 
 /** Ends a game without a match record. */
@@ -156,6 +163,7 @@ export function abortGame(roomCode: RoomCode): void {
   chinesepoker.abortGame(roomCode);
   liarsdeck.abortGame(roomCode);
   blackjack.abortGame(roomCode);
+  holdem.abortGame(roomCode);
 }
 
 export function removeGame(roomCode: RoomCode): void {
@@ -185,7 +193,7 @@ export function hasActiveGame(roomCode: RoomCode): boolean {
 export function exportGames(): AnyGameState[] {
   return [...bridge.exportGames(), ...bigtwo.exportGames(), ...redpoints.exportGames(),
     ...ninetynine.exportGames(), ...sevens.exportGames(), ...chinesepoker.exportGames(), ...liarsdeck.exportGames(),
-    ...blackjack.exportGames()];
+    ...blackjack.exportGames(), ...holdem.exportGames()];
 }
 
 export function restoreGames(records: AnyGameState[]): void {
@@ -197,6 +205,7 @@ export function restoreGames(records: AnyGameState[]): void {
   chinesepoker.restoreGames(records.filter((game): game is ChinesePokerGameState => game.gameType === 'chinesepoker'));
   liarsdeck.restoreGames(records.filter((game): game is LiarsDeckGameState => game.gameType === 'liarsdeck'));
   blackjack.restoreGames(records.filter((game): game is BlackjackGameState => game.gameType === 'blackjack'));
+  holdem.restoreGames(records.filter((game): game is HoldemGameState => game.gameType === 'holdem'));
 }
 
 export function handleRedealResponse(roomCode: RoomCode, seat: Seat, accept: boolean, automatic = false): Result {
@@ -251,6 +260,10 @@ export function handleLiarsDeckChallenge(roomCode: RoomCode, seat: Seat, automat
 
 export function handleBlackjackAction(roomCode: RoomCode, seat: Seat, action: BlackjackAction, automatic = false): Result {
   return timedAction(roomCode, seat, () => isGame(roomCode, 'blackjack') ? presentAction(roomCode, () => blackjack.act(roomCode, seat, action)) : WRONG_GAME, automatic);
+}
+
+export function handleHoldemAction(roomCode: RoomCode, seat: Seat, action: HoldemAction, automatic = false): Result {
+  return timedAction(roomCode, seat, () => isGame(roomCode, 'holdem') ? presentAction(roomCode, () => holdem.act(roomCode, seat, action)) : WRONG_GAME, automatic);
 }
 
 /**

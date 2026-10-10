@@ -46,6 +46,10 @@ settlement. At the deadline a missing human bet becomes the 10-chip minimum and 
 bots bet on their own. Hit/stand/double/split decisions use the ordinary turn clock, and each
 deal refills every reserve.
 
+Hold'em decisions use the ordinary turn clock and each hand refills every reserve. A human whose
+time runs out checks when nothing is owed and otherwise folds; the bot strategy never stakes their
+chips.
+
 Presentation animations consume neither allowance nor reserve. Red Points' hand play
 and flipped-card choice share one turn allowance, with animation time excluded.
 Bridge bidding and redeal decisions also use the clock. A new deal refills reserves,
@@ -55,8 +59,8 @@ At expiry the server makes a legal decision using the same private view as the p
 control remains with the player on subsequent turns. Redeal timeout declines the redeal.
 The seat shows an "Auto-played" badge until its next turn begins; a bot's seat shows
 "Thinking…" while it is the bot's turn. Each seat plate has a single status slot, so when
-several apply it shows Ninety-Nine bust or Liar's Deck death, then Big Two pass lock, then thinking, then auto-played,
-then Chinese Poker "Arranged".
+several apply it shows Ninety-Nine bust, Liar's Deck death, or Hold'em "Out", then Big Two pass lock or Hold'em
+"Folded"/"All-in", then thinking, then auto-played, then Chinese Poker "Arranged" or Blackjack "Bet placed".
 Big Two forced passes retain their existing scheduler and do not consume decision time.
 Their clock is published like any other turn, so other seats cannot tell a forced pass apart.
 
@@ -123,6 +127,7 @@ search, and the evaluation scores do not guarantee optimal play.
 | Sevens | Must play: favor cards that continue into the bot's own cards and 7s of suits it holds many of; penalize opening directions it cannot follow, especially toward heavy cards. Must cover: weigh the card's penalty against own cards stranded beyond it, preferring cards an earlier cover already cut off. |
 | Liar's Deck | Must call when it is the last seat holding cards. Otherwise score each option by the bot's own chance of dying on its next pull: calling risks a pull if the previous play was honest, estimated from the truths the bot cannot see (its own hand and plays this round are excluded, and earlier claims this round are assumed partly honest); lying risks a call that grows with the cards played and is certain when emptying the hand leaves one opponent holding cards. Small bonuses favor shedding cards and making an opponent pull. Honest plays spend non-joker truths first. |
 | Blackjack | Play standard basic strategy for a dealer who stands on soft 17 and peeks, with doubling after splits and no surrender: split aces and eights, never tens or fives, and double soft and hard totals against weak up cards; when doubling is unavailable, fall back to hitting (or standing on soft 18). Bet a random 3–8% of the current chips in table steps. |
+| Texas Hold'em | Preflop, score the hole cards with the Chen formula: raise premium hands to about 3 big blinds, call playable ones up to a few big blinds, limp marginal ones, and shove strong hands with 10 big blinds or less. After the flop, estimate equity by dealing random hands to each unfolded opponent and completing the board (150 runs). Equity times the players in the hand measures strength: strong hands bet or raise about 60% of the pot, playable hands call when the price is below their equity (more strength is required to commit half the stack), and occasional small bluffs are made against one or two opponents. Opponents are not modeled. |
 | Chinese Poker | Search every non-fouled 3/5/5 split, estimating each row's chance of beating a random opponent's row, the row values, and sweep risk; choose among the closest top candidates. The "Auto arrange" button and deadline arrangements use the same search. |
 
 The server waits for the previous presentation and a short thinking delay before each
@@ -342,3 +347,41 @@ The dealer then reveals the hole card and draws while below 17, standing on ever
 soft 17; it does not draw when every hand has busted or is a blackjack. Blackjack pays 3:2, a win
 1:1, and a push returns the bet. After the eighth hand, or once no seat can cover the minimum,
 the most chips win, ties shared. Scores do not accumulate across matches.
+
+## Texas Hold'em
+
+No-limit Hold'em for the four seats. Every seat starts with 1000 chips, which exist only within
+the match. Blinds start at 10/20 and rise every four hands to 15/30, 25/50, 40/80, and 60/120
+([`HE_BLIND_LEVELS`](../shared/src/rules/holdem.ts)). The match ends once one seat holds every chip,
+or after the twentieth hand; the most chips win, ties shared, and seats that lost every chip rank
+by elimination order. Scores do not accumulate across matches.
+
+A random seat holds the button for the first hand; it then moves clockwise to the next seat with
+chips. Each hand is shuffled from a full deck and deals two private hole cards to every seat with
+chips, starting left of the button. The next two seats post the small and big blinds; heads-up the
+button posts the small blind. A seat short of a blind posts what it has and is all-in. There are
+no antes and no burn cards.
+
+Action runs clockwise. Preflop the seat after the big blind acts first and the big blind may still
+raise when everyone has only called; on the flop (three cards), turn, and river (one card each)
+the first unfolded seat after the button acts first. A seat may fold, check when nothing is owed,
+call (all-in when short), or bet/raise to a street total of at least the current bet plus the
+last raise increment (the big blind when nothing has been raised), up to all its chips. An all-in
+below a full raise must be called but does not let seats that already acted raise again. Raising
+is unavailable when every other seat is all-in. A street ends when every seat that can still act
+has acted since the last full raise and matched the bet.
+
+When one seat remains the pot goes to it without a showdown. When betting closes with at most one
+seat able to act, the remaining board is dealt at once. At showdown every unfolded seat reveals its
+hole cards and plays the best five of its seven cards, ranked as in
+[Chinese Poker](#chinese-poker) (suits never break ties; A2345 is the lowest straight). Stakes form
+a main pot and side pots by contribution level; each pot goes to the best eligible hand, split
+evenly, with odd chips going clockwise from the button. Chips beyond what anyone else staked return
+to their owner.
+
+Players act with Fold, Check/Call, and a Bet/Raise control (slider, amount, and minimum, half-pot,
+pot, and all-in shortcuts). The table shows the board, the pot and side pots, every seat's stake on
+the street, the button and blinds, and revealed hands with their categories at showdown; it follows
+the presentation, so the board, showdown, and the next hand's hole cards appear only with their
+frames.
+

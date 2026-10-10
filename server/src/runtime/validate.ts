@@ -19,9 +19,14 @@ import {
   bjDealerMustDraw, bjDealerPeeks, bjEmptyTable, bjIsNatural, bjIsValidBet, bjLegalActions, bjNextTurn, bjSettle,
   bjSitsIn, bjWinners,
 } from '@shared/rules/blackjack';
+import {
+  HE_HANDS, HE_HOLE_CARDS, HE_STARTING_CHIPS, HE_STREET_CARDS, heApplyEntry, heAward, heBlinds, heBlindSeats,
+  heEliminations, heEmptyTable, heFirstToAct, heInHand, heLegalActions, heMatchOver, heNextButton, heNextToAct,
+  heWinners,
+} from '@shared/rules/holdem';
 import { nextSeatCounterClockwise } from '@shared/rules/seats';
 import type {
-  AnyGameState, BigTwoGameState, BlackjackGameState, BridgeGameState, Card, ChinesePokerArrangement, ChinesePokerGameState, GameType,
+  AnyGameState, BigTwoGameState, BlackjackGameState, BridgeGameState, HoldemGameState, Card, ChinesePokerArrangement, ChinesePokerGameState, GameType,
   LiarsDeckGameState, LiarsDeckLastPlay, NinetyNineGameState, RedPointsGameState, Seat, SevensGameState, SevensTable,
 } from '@shared/types';
 import type { RuntimeSnapshot } from './types';
@@ -598,6 +603,68 @@ function blackjackGame(value: ObjectValue): boolean {
     (value.result === null || isBlackjackResult(value.result));
 }
 
+/** Chips never enter or leave a Hold'em match. */
+const HE_TOTAL_CHIPS = HE_STARTING_CHIPS * 4;
+
+function seatList(value: unknown): value is Seat[] {
+  return Array.isArray(value) && value.every((seat: unknown) => oneOf(seat, seats)) && new Set(value).size === value.length;
+}
+
+/** Hold'em result: chips are conserved, winners hold the most, and the match had ended. */
+export function isHoldemResult(value: unknown): boolean {
+  if (!object(value) || value.gameType !== 'holdem' || !seatCounts(value.chips, HE_TOTAL_CHIPS) || !number(value.hands)
+    || value.hands < 1 || value.hands > HE_HANDS || !seatList(value.eliminationOrder)) return false;
+  const chips = value.chips;
+  const holders = seats.filter((seat) => chips[seat] > 0);
+  return seats.reduce((sum, seat) => sum + chips[seat], 0) === HE_TOTAL_CHIPS
+    && (value.hands === HE_HANDS || holders.length === 1)
+    && value.eliminationOrder.every((seat) => chips[seat] === 0)
+    && value.eliminationOrder.length === 4 - holders.length
+    && sameJson(value.winners, heWinners(chips));
+}
+
+function holdemLog(value: unknown): boolean {
+  if (!object(value) || !number(value.timestamp)) return false;
+  switch (value.type) {
+    case 'hand':
+      return number(value.hand) && value.hand >= 1 && value.hand <= HE_HANDS && oneOf(value.button, seats)
+        && number(value.smallBlind) && number(value.bigBlind) && seatCounts(value.blinds, HE_TOTAL_CHIPS);
+    case 'action':
+      return oneOf(value.seat, seats) && oneOf(value.action, ['fold', 'check', 'call', 'bet', 'raise'])
+        && number(value.to) && value.to <= HE_TOTAL_CHIPS && typeof value.allIn === 'boolean';
+    case 'street':
+      return oneOf(value.street, ['flop', 'turn', 'river']) && cards(value.cards, 3);
+    case 'showdown':
+      return seatValues(value.cards, (entry) => cards(entry, HE_HOLE_CARDS));
+    case 'award':
+      return Array.isArray(value.pots) && value.pots.every((pot: unknown) => object(pot) && number(pot.amount)
+        && seatList(pot.eligible) && seatList(pot.winners)) && seatCounts(value.chips, HE_TOTAL_CHIPS)
+        && seatList(value.eliminated);
+    default: return false;
+  }
+}
+
+function holdemGame(value: ObjectValue): boolean {
+  return commonGame(value) &&
+    oneOf(value.phase, ['playing', 'scoring']) &&
+    number(value.hand) && value.hand >= 1 && value.hand <= HE_HANDS &&
+    oneOf(value.button, seats) &&
+    number(value.smallBlind) && number(value.bigBlind) &&
+    seatCounts(value.chips, HE_TOTAL_CHIPS) && seatCounts(value.streetBets, HE_TOTAL_CHIPS) &&
+    seatCounts(value.totalBets, HE_TOTAL_CHIPS) &&
+    seatList(value.dealt) && seatList(value.folded) && seatList(value.acted) && seatList(value.eliminated) &&
+    oneOf(value.street, ['preflop', 'flop', 'turn', 'river']) &&
+    cards(value.board, 5) &&
+    number(value.currentBet) && number(value.minRaise) &&
+    seatValues(value.revealed, (entry) => cards(entry, HE_HOLE_CARDS)) &&
+    oneOf(value.currentTurnSeat, seats) &&
+    cards(value.deck, 52) &&
+    seatValues(value.hands, (entry) => cards(entry, HE_HOLE_CARDS)) &&
+    Array.isArray(value.log) &&
+    value.log.every(holdemLog) &&
+    (value.result === null || isHoldemResult(value.result));
+}
+
 const gameValidators: Record<GameType, (value: ObjectValue) => boolean> = {
   bridge: bridgeGame,
   bigtwo: bigTwoGame,
@@ -607,6 +674,7 @@ const gameValidators: Record<GameType, (value: ObjectValue) => boolean> = {
   chinesepoker: chinesePokerGame,
   liarsdeck: liarsDeckGame,
   blackjack: blackjackGame,
+  holdem: holdemGame,
 };
 
 function presentation(value: ObjectValue): boolean {
@@ -752,6 +820,7 @@ function coherentGame(state: AnyGameState): boolean {
     case 'chinesepoker': return coherentChinesePokerGame(state);
     case 'liarsdeck': return coherentLiarsDeckGame(state);
     case 'blackjack': return coherentBlackjackGame(state);
+    case 'holdem': return coherentHoldemGame(state);
   }
 }
 
@@ -970,6 +1039,102 @@ function coherentBlackjackGame(state: BlackjackGameState): boolean {
   return !inHand && state.log.at(-1)?.type === 'settle' && (state.hand === BJ_HANDS || !anyoneSitsIn)
     && sameJson(state.result, { gameType: 'blackjack', chips: state.chips, hands: state.hand,
       winners: bjWinners(state.chips) });
+}
+
+/** Whether a logged action is exactly what the rules allow for the acting seat. */
+function legalHoldemAction(table: ReturnType<typeof heEmptyTable>, entry: Extract<HoldemGameState['log'][number],
+  { type: 'action' }>): boolean {
+  const legal = heLegalActions(table, entry.seat);
+  if (!legal) return false;
+  const stake = table.streetBets[entry.seat];
+  switch (entry.action) {
+    case 'fold': return entry.to === stake && !entry.allIn;
+    case 'check': return legal.check && entry.to === stake && !entry.allIn;
+    case 'call':
+      return legal.call > 0 && entry.to === stake + legal.call && entry.allIn === (legal.call === table.chips[entry.seat]);
+    default:
+      return legal.raise !== null && entry.to >= legal.raise.min && entry.to <= legal.raise.max
+        && entry.action === (table.currentBet === 0 ? 'bet' : 'raise') && entry.allIn === (entry.to === legal.raise.max);
+  }
+}
+
+/**
+ * Replaying the public log reproduces every hand's button and blinds, each legal action in turn,
+ * streets and showdowns only once betting closes, and every award; the deck, hole cards, and board
+ * account for all 52 cards of the latest hand.
+ */
+function coherentHoldemGame(state: HoldemGameState): boolean {
+  if (new Set(seats.map((seat) => state.players[seat].id)).size !== 4) return false;
+  const table = heEmptyTable();
+  let inHand = false;
+  let turn: Seat | null = null;
+  for (const entry of state.log) {
+    const contested = heInHand(table).length > 1;
+    if (entry.type === 'hand') {
+      if (inHand || entry.hand !== table.hand + 1 || (table.hand > 0 && heMatchOver(table))) return false;
+      const dealt = seats.filter((seat) => table.chips[seat] > 0);
+      if (table.hand > 0 ? entry.button !== heNextButton(table.button, table.chips) : !dealt.includes(entry.button)) {
+        return false;
+      }
+      const { smallBlind, bigBlind } = heBlinds(entry.hand);
+      const { small, big } = heBlindSeats(dealt, entry.button);
+      const blinds = { N: 0, E: 0, S: 0, W: 0 };
+      blinds[small] = Math.min(smallBlind, table.chips[small]);
+      blinds[big] = Math.min(bigBlind, table.chips[big]);
+      if (entry.smallBlind !== smallBlind || entry.bigBlind !== bigBlind || !sameJson(entry.blinds, blinds)) return false;
+      heApplyEntry(table, entry);
+      inHand = true;
+      turn = heFirstToAct(table);
+      continue;
+    }
+    if (!inHand) return false;
+    if (entry.type === 'action') {
+      if (turn !== entry.seat || !legalHoldemAction(table, entry)) return false;
+      heApplyEntry(table, entry);
+      turn = heNextToAct(table, entry.seat);
+      continue;
+    }
+    if (turn !== null) return false;
+    if (entry.type === 'street') {
+      const expected = table.board.length === 0 ? 'flop' : table.board.length === 3 ? 'turn' : 'river';
+      if (!contested || table.board.length >= 5 || entry.street !== expected
+        || entry.cards.length !== HE_STREET_CARDS[expected]) return false;
+      heApplyEntry(table, entry);
+      turn = heFirstToAct(table);
+    } else if (entry.type === 'showdown') {
+      const showing = heInHand(table);
+      if (!contested || table.board.length !== 5 || seats.some((seat) =>
+        entry.cards[seat].length !== (showing.includes(seat) ? HE_HOLE_CARDS : 0))) return false;
+      heApplyEntry(table, entry);
+    } else {
+      if (contested && (table.board.length !== 5 || heInHand(table).some((seat) => table.revealed[seat].length === 0))) {
+        return false;
+      }
+      const { pots, payouts } = heAward(table);
+      const chips = { N: 0, E: 0, S: 0, W: 0 };
+      for (const seat of seats) chips[seat] = table.chips[seat] + payouts[seat];
+      if (!sameJson({ pots: entry.pots, chips: entry.chips, eliminated: entry.eliminated },
+        { pots, chips, eliminated: heEliminations(table, chips) })) return false;
+      heApplyEntry(table, entry);
+      inHand = false;
+    }
+  }
+  const publicState = (value: typeof table): unknown => ({
+    hand: value.hand, button: value.button, smallBlind: value.smallBlind, bigBlind: value.bigBlind,
+    chips: value.chips, streetBets: value.streetBets, totalBets: value.totalBets, dealt: value.dealt,
+    folded: value.folded, street: value.street, board: value.board, currentBet: value.currentBet,
+    minRaise: value.minRaise, acted: value.acted, revealed: value.revealed, eliminated: value.eliminated,
+  });
+  if (!sameJson(publicState(table), publicState(state))) return false;
+  const held = [...state.deck, ...seats.flatMap((seat) => state.hands[seat]), ...state.board];
+  if (new Set(held.map(cardId)).size !== held.length || held.length !== 52
+    || seats.some((seat) => state.hands[seat].length !== (table.dealt.includes(seat) ? HE_HOLE_CARDS : 0)
+      || (state.revealed[seat].length > 0 && !sameJson(state.revealed[seat], state.hands[seat])))) return false;
+  if (state.phase === 'playing') return inHand && turn !== null && state.currentTurnSeat === turn && state.result === null;
+  return !inHand && state.log.at(-1)?.type === 'award' && heMatchOver(table) && sameJson(state.result, {
+    gameType: 'holdem', chips: state.chips, hands: state.hand, winners: heWinners(state.chips),
+    eliminationOrder: state.eliminated,
+  });
 }
 
 /** All 52 cards are accounted for, eliminations match the log, and the current seat can play. */

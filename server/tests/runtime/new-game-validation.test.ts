@@ -8,9 +8,11 @@ import { ldCanChallenge, ldMustChallenge } from '@shared/rules/liarsdeck';
 import * as chinesepoker from '../../src/managers/games/chinesepoker-game';
 import * as liarsdeck from '../../src/managers/games/liarsdeck-game';
 import * as blackjack from '../../src/managers/games/blackjack-game';
+import * as holdem from '../../src/managers/games/holdem-game';
+import { heLegalActions } from '@shared/rules/holdem';
 import { BJ_BET_STEP, BJ_MIN_BET, bjLegalActions, bjMaxBet } from '@shared/rules/blackjack';
 import {
-  isBlackjackResult, isChinesePokerResult, isLiarsDeckResult, isRuntimeSnapshot, isSevensResult,
+  isBlackjackResult, isChinesePokerResult, isHoldemResult, isLiarsDeckResult, isRuntimeSnapshot, isSevensResult,
 } from '../../src/runtime/validate';
 import type { RuntimeSnapshot } from '../../src/runtime/types';
 
@@ -308,5 +310,78 @@ describe('persisted Blackjack games', () => {
     const over = structuredClone(blackjack.getGameState(CODE)!);
     over.bets.N = 1010;
     expect(persists(over, 'blackjack')).toBe(false);
+  });
+});
+
+describe("persisted Texas Hold'em games", () => {
+  afterEach(() => holdem.restoreGames([]));
+
+  /** One random legal action for the acting seat, folding rarely so hands reach showdowns and all-ins. */
+  function stepHoldem(random: () => number): void {
+    const game = holdem.getGameState(CODE)!;
+    const seat = game.currentTurnSeat;
+    const legal = heLegalActions(game, seat)!;
+    const roll = random();
+    const action = legal.raise && roll < 0.3
+      ? { type: 'raise' as const, to: roll < 0.08 ? legal.raise.max
+        : legal.raise.min + Math.floor(random() * (legal.raise.max - legal.raise.min + 1) / 4) }
+      : legal.check ? { type: 'check' as const }
+        : roll < 0.85 ? { type: 'call' as const } : { type: 'fold' as const };
+    expect(holdem.act(CODE, seat, action, 1000, random).success).toBe(true);
+  }
+
+  function finishedGame(seed: number): NonNullable<ReturnType<typeof holdem.getGameState>> {
+    const random = seeded(seed);
+    holdem.startGame(CODE, PLAYERS, random, 0);
+    for (let step = 0; step < 3000 && holdem.getGameState(CODE)!.phase !== 'scoring'; step++) {
+      expect(persists(holdem.getGameState(CODE)!, 'holdem')).toBe(true);
+      stepHoldem(random);
+    }
+    return holdem.getGameState(CODE)!;
+  }
+
+  it('accepts every committed state through the final award', () => {
+    for (const seed of [1, 6, 44]) {
+      const game = finishedGame(seed);
+      expect(game.phase).toBe('scoring');
+      expect(persists(game, 'holdem')).toBe(true);
+      expect(isHoldemResult(game.result)).toBe(true);
+      expect(game.log.some((entry) => entry.type === 'showdown')).toBe(true);
+    }
+  });
+
+  it('rejects altered awards, illegal raises, and results', () => {
+    const game = finishedGame(12);
+    const award = game.log.findIndex((entry) => entry.type === 'award');
+    const chips = structuredClone(game);
+    const entry = chips.log[award];
+    if (entry.type !== 'award') throw new Error('Expected an award');
+    entry.chips.N += 10;
+    expect(persists(chips, 'holdem')).toBe(false);
+    const raise = structuredClone(game);
+    const raised = raise.log.findIndex((value) => value.type === 'action' && (value.action === 'raise' || value.action === 'bet'));
+    expect(raised).toBeGreaterThanOrEqual(0);
+    raise.log[raised] = { ...raise.log[raised], to: 1 } as typeof raise.log[number];
+    expect(persists(raise, 'holdem')).toBe(false);
+    const result = structuredClone(game);
+    result.result = { ...result.result!, hands: result.result!.hands - 1 };
+    expect(persists(result, 'holdem')).toBe(false);
+  });
+
+  it('rejects duplicated cards, a misplaced turn, and leaked button moves', () => {
+    holdem.startGame(CODE, PLAYERS, seeded(3), 0);
+    const game = holdem.getGameState(CODE)!;
+    expect(persists(game, 'holdem')).toBe(true);
+    const duplicate = structuredClone(game);
+    duplicate.deck[0] = { ...duplicate.hands[game.dealt[0]][0] };
+    expect(persists(duplicate, 'holdem')).toBe(false);
+    const turn = structuredClone(game);
+    turn.currentTurnSeat = SEATS[(SEATS.indexOf(game.currentTurnSeat) + 1) % 4];
+    expect(persists(turn, 'holdem')).toBe(false);
+    const button = structuredClone(game);
+    const first = button.log[0];
+    if (first.type !== 'hand') throw new Error('Expected a hand');
+    button.log[0] = { ...first, blinds: { N: 0, E: 0, S: 0, W: 0 } };
+    expect(persists(button, 'holdem')).toBe(false);
   });
 });

@@ -6,6 +6,7 @@ import type { Card, PlayerVisibleGameState } from '@shared/types';
 import { useI18nStore } from '../stores/i18n-store';
 import { comboLabelKey } from './bigtwo/bigtwo-view';
 import { signedChips } from './blackjack/blackjack-view';
+import { ChipIcon } from './ChipIcon';
 import { deriveRoundHistory } from './round-history';
 import type { HistoryRound } from './round-history';
 import styles from './RoundHistory.module.css';
@@ -25,7 +26,9 @@ function Round({ round }: { round: HistoryRound }): ReactNode {
       status: t(round.complete ? 'history.complete' : 'history.ongoing') })}
     {round.tableFace && <> · {t('liarsdeck.tableCard')} {t(`liarsdeck.face.${round.tableFace}`)}</>}</summary>
     {open && <ol className={styles.actions}>{round.actions.map((action, index) => <li key={index}>
-      <strong>{action.seat ? name(action.seat) : t('blackjack.dealer')}</strong> {t(`history.${action.kind}`)}
+      <strong>{action.seat ? name(action.seat)
+        : action.street ? t(`holdem.street.${action.street}`) : t('blackjack.dealer')}</strong>
+      {action.kind !== 'street' && <> {t(`history.${action.kind}`)}</>}
       {action.handIndex !== undefined && <span> ({t('blackjack.handIndex', { n: String(action.handIndex + 1) })})</span>}
       {action.cards.length > 0 && <span className={styles.cards}> {action.cards.map(cardLabel).join(' ')}</span>}
       {action.comboType && <span> · {t(comboLabelKey(action.comboType))}</span>}
@@ -46,6 +49,9 @@ function Round({ round }: { round: HistoryRound }): ReactNode {
         {action.auto && ` (${t('blackjack.auto')})`}</span>}
       {action.outcomes && <span> · {action.outcomes.map((outcome) => t(`blackjack.outcome.${outcome}`)).join(' / ')}</span>}
       {action.net !== undefined && <strong> {signedChips(action.net)}</strong>}
+      {action.blinds && <span> · {t('holdem.blinds', { sb: String(action.blinds.small), bb: String(action.blinds.big) })}</span>}
+      {action.amount !== undefined && <span> <ChipIcon />{action.amount}</span>}
+      {action.category && <span> · {t(`holdem.category.${action.category}`)}</span>}
       {action.pending && <span> · {t('history.pending')}</span>}
     </li>)}</ol>}
   </details>;
@@ -55,11 +61,13 @@ export function RoundHistory({ game }: { game: PlayerVisibleGameState }): ReactN
   const [open, setOpen] = useState(false);
   const { t } = useI18nStore();
   const { frame } = useGamePresentation();
-  // Blackjack history follows the presentation so a settlement is not listed before its frame.
-  const index = game.gameType === 'blackjack' && frame ? frameLogIndex(frame) : null;
+  // Blackjack and Hold'em history follows the presentation so results are not listed before their frames.
+  const follows = game.gameType === 'blackjack' || game.gameType === 'holdem';
+  const index = follows && frame ? frameLogIndex(frame) : null;
   const end = index === null ? game.log.length : index + 1;
   const rounds = useMemo(() => deriveRoundHistory(game.gameType === 'blackjack'
-    ? { ...game, log: game.log.slice(0, end) } : game), [game, end]);
+    ? { ...game, log: game.log.slice(0, end) }
+    : game.gameType === 'holdem' ? { ...game, log: game.log.slice(0, end) } : game), [game, end]);
   if (game.gameType === 'bridge' || game.gameType === 'chinesepoker') return null;
   return <details className={styles.history} onToggle={(event) => {
     if (event.target === event.currentTarget) setOpen(event.currentTarget.open);

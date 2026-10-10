@@ -15,6 +15,7 @@ import type { NnChoice } from '@shared/rules/ninetynine';
 import { getPresentationEndsAt } from '@shared/game-presentation';
 import { ldCanChallenge, ldMustChallenge } from '@shared/rules/liarsdeck';
 import { bjTotal } from '@shared/rules/blackjack';
+import { heLegalActions } from '@shared/rules/holdem';
 import { createApplication } from '../../src/app';
 import { createJsonRepository } from '../../src/database/json-repository';
 import type { Repository } from '../../src/database/repository';
@@ -945,6 +946,79 @@ describe('persistent authenticated application', () => {
     if (final?.gameType !== 'blackjack' || !final.result) throw new Error('Expected a finished Blackjack match');
     expect(final.result.hands).toBe(8);
     expect(final.result.chips).toEqual(final.chips);
+    expect(snapshot.room?.status).toBe('waiting');
+    const matches = await repository.listMatches(accounts[0].account.id);
+    expect(matches).toHaveLength(1);
+    expect(matches[0]).toMatchObject({ roomCode, result: final.result });
+  }, 60_000);
+
+  it("should play a full Hold'em match across a restart without leaking hole cards", async () => {
+    const accounts: RegisteredAccount[] = [];
+    for (const username of ['he_north', 'he_east', 'he_south', 'he_west']) {
+      accounts.push(await register(username));
+    }
+    let players = await connectPlayers(accounts);
+    const created = await players[0].timeout(5_000).emitWithAck('room:create', { gameType: 'holdem' });
+    const roomCode = created.roomCode;
+    if (!roomCode) throw new Error('Expected room code');
+    for (let index = 0; index < 4; index += 1) {
+      if (index > 0) await players[index].timeout(5_000).emitWithAck('room:join', { roomCode });
+      await players[index].timeout(5_000).emitWithAck('room:changeSeat', { seat: SEATS[index] });
+      expect(await players[index].timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
+    }
+
+    /** The acting seat calls or checks, except that every third hand opens with an all-in to reach eliminations. */
+    async function step(): Promise<PlayerSnapshot> {
+      const view = (await resume(players[0])).gameState;
+      finishPresentation(view);
+      if (view?.gameType !== 'holdem') throw new Error("Expected Hold'em state");
+      const client = players[SEATS.indexOf(view.currentTurnSeat)];
+      const mine = (await resume(client)).gameState;
+      if (mine?.gameType !== 'holdem') throw new Error("Expected Hold'em state");
+      expect(mine).not.toHaveProperty('hands');
+      expect(mine).not.toHaveProperty('deck');
+      expect(mine.myHand).toHaveLength(2);
+      const legal = heLegalActions(mine, mine.mySeat)!;
+      const action = mine.hand % 3 === 0 && legal.raise ? { type: 'raise' as const, to: legal.raise.max }
+        : legal.check ? { type: 'check' as const } : { type: 'call' as const };
+      expect(await client.timeout(5_000).emitWithAck('game:holdem:action', { action })).toEqual({ success: true });
+      return resume(players[0]);
+    }
+
+    const opening = await Promise.all(players.map(resume));
+    const first = opening[0].gameState;
+    if (first?.gameType !== 'holdem') throw new Error("Expected Hold'em state");
+    expect(first).toMatchObject({ phase: 'playing', hand: 1, street: 'preflop', board: [] });
+    expect(new Set(opening.flatMap((state) => handOf(state).map(cardKey))).size).toBe(8);
+    for (const state of opening) {
+      if (state.gameState?.gameType !== 'holdem') throw new Error("Expected Hold'em state");
+      expect(state.gameState.revealed).toEqual({ N: [], E: [], S: [], W: [] });
+    }
+    finishPresentation(first);
+    const actor = players[SEATS.indexOf(first.currentTurnSeat)];
+    expect(await actor.timeout(5_000).emitWithAck('game:holdem:action', { action: { type: 'check' } }))
+      .toMatchObject({ success: false });
+    expect(await actor.timeout(5_000).emitWithAck('game:holdem:action', { action: { type: 'raise', to: -5 } }))
+      .toEqual({ success: false, error: 'Invalid action.' });
+    expect(await actor.timeout(5_000).emitWithAck('game:holdem:action', { action: { type: 'shove' } } as never))
+      .toEqual({ success: false, error: 'Invalid action.' });
+
+    let snapshot = opening[0];
+    for (let moves = 0; snapshot.gameState?.phase !== 'scoring' && moves < 6; moves += 1) snapshot = await step();
+
+    const before = await Promise.all(players.map(resume));
+    await stop();
+    await start();
+    players = await connectPlayers(accounts);
+    const after = await Promise.all(players.map(resume));
+    for (let index = 0; index < 4; index += 1) expect(after[index].gameState).toEqual(before[index].gameState);
+
+    snapshot = after[0];
+    for (let moves = 0; snapshot.gameState?.phase !== 'scoring' && moves < 1000; moves += 1) snapshot = await step();
+    const final = snapshot.gameState;
+    if (final?.gameType !== 'holdem' || !final.result) throw new Error("Expected a finished Hold'em match");
+    expect(final.result.chips).toEqual(final.chips);
+    expect(Object.values(final.chips).reduce((sum, value) => sum + value, 0)).toBe(4000);
     expect(snapshot.room?.status).toBe('waiting');
     const matches = await repository.listMatches(accounts[0].account.id);
     expect(matches).toHaveLength(1);

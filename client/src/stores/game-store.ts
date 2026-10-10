@@ -19,7 +19,10 @@ import type {
   ChinesePokerVisibleState,
   LiarsDeckVisibleState,
   BlackjackVisibleState,
+  HoldemVisibleState,
 } from '@shared/types';
+import { nextHeldHoleCards } from '../games/holdem/holdem-view';
+import type { HeldHoleCards } from '../games/holdem/holdem-view';
 import { equalSnapshotValue, retainSnapshotValue } from './snapshot-equality';
 
 /** Bridge state lives in the individual fields; other games keep their whole visible state in one field. */
@@ -33,6 +36,9 @@ interface GameStoreState {
   chinesePoker: ChinesePokerVisibleState | null;
   liarsDeck: LiarsDeckVisibleState | null;
   blackjack: BlackjackVisibleState | null;
+  holdem: HoldemVisibleState | null;
+  /** Hold'em: my hole cards from the previous hand while its presentation may still be playing */
+  holdemHeld: HeldHoleCards | null;
   gameType: GameType | null;
   phase: GamePhase | null;
   myHand: Card[];
@@ -62,6 +68,8 @@ const initialState: GameStoreState = {
   chinesePoker: null,
   liarsDeck: null,
   blackjack: null,
+  holdem: null,
+  holdemHeld: null,
   gameType: null,
   phase: null,
   myHand: [],
@@ -123,6 +131,13 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       phase: game.phase === 'betting' ? 'playing' : game.phase,
       currentTurnSeat: game.phase === 'playing' ? game.currentTurnSeat : null,
       blackjack: retainSnapshotValue(state.blackjack, game),
+    } : game.gameType === 'holdem' ? {
+      ...initialState,
+      gameType: 'holdem',
+      phase: game.phase,
+      currentTurnSeat: game.phase === 'playing' ? game.currentTurnSeat : null,
+      holdem: retainSnapshotValue(state.holdem, game),
+      holdemHeld: nextHeldHoleCards(state.holdem, game, state.holdemHeld),
     } : {
       visible: null,
       presentationReceivedAt: 0,
@@ -133,6 +148,8 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       chinesePoker: null,
       liarsDeck: null,
       blackjack: null,
+      holdem: null,
+      holdemHeld: null,
       gameType: 'bridge',
       phase: game.phase,
       dealerSeat: game.dealerSeat,
