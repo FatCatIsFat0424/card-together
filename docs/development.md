@@ -59,6 +59,11 @@ Run a production build because Vite's base paths and generated music/emoji catal
 The server reads the generated [site emoji](media.md#site-provided-emoji) catalog at startup;
 tests pass their own catalog and do not depend on local images.
 
+Run focused tests while editing, then run all applicable checks on the final change.
+Repeat a completed check only when later edits, failures, or unresolved concerns can
+affect its result. Documentation-only changes need content, link, and whitespace review;
+they do not require repeating application checks already completed for unchanged code.
+
 ## Benchmarks
 
 ```sh
@@ -76,13 +81,39 @@ not the entry file alone.
 
 ## Browser verification
 
-After user-facing or deployment changes, check login/logout, room create/join/chat,
-refresh/reconnect, the affected game, and private-hand visibility using separate accounts.
-For layout changes, check 2560×1440, 1920×1080, 1366×768, 390×844, 375×667,
-360×640, and 844×390 CSS viewports. Waiting rooms and games must not scroll the
-document or route viewport; verify visible controls, seat/card intersections, timer
-settings, and chat/info open/close behavior. Exercise crowded Red Points tables and
-multiple capture targets, including the initial deal before presentation metadata exists.
-Check music pause/resume and route changes when touching playback. Voice verification
-needs separate browser participants; synthetic local streams do not prove real microphones
-or cross-NAT connectivity. Production migration checks are listed in [deployment](deployment.md).
+Choose browser checks from the changed behavior and its affected dependencies. For a
+small, localized UI change, target 1–2 minutes of browser verification once the development
+environment is ready. This is a planning target, not a time limit or a passing criterion:
+finish the relevant checks and report failures or blockers. Diagnose slow setup or replace
+unnecessary waiting before expanding the test scope.
+
+| Change | Browser scope |
+| --- | --- |
+| Pure rules or server logic with no changed UI behavior | Use automated tests; no browser run is needed unless integration remains uncertain. |
+| Localized UI or game option | Exercise one real client/server flow and the affected visual states. Check 1366×768 and 360×640 when layout changes; add 844×390 when short or landscape layouts are affected. |
+| Shared layout, navigation, or responsive breakpoints | Exercise affected pages at 2560×1440, 1920×1080, 1366×768, 390×844, 375×667, 360×640, and 844×390. Add checks immediately around changed breakpoints where needed. |
+| Authentication, membership, transport, private data, or deployment | Check the affected login/logout, room create/join/chat, refresh/reconnect, and game flows. Use separate accounts when verifying permissions or private-hand visibility. Follow [deployment](deployment.md) for production migration checks. |
+
+Use automated tests for rule boundaries, complete matches, authorization, persistence
+failures, and restart recovery. In the browser, use existing helpers or development-only
+in-memory fixtures to reach visual states directly instead of playing a complete match
+or waiting for bots and animations. Fixtures verify rendering; a real client/server action
+must still verify changed wiring. Injected state does not prove authorization or durable
+persistence. Keep test data isolated from real accounts and databases, and do not add
+new test infrastructure for a one-off visual check without agreement.
+
+For affected waiting-room and game layouts, verify no document or route-viewport
+scrolling, visible controls, and no seat/card intersections. Check timer settings and
+chat/info open/close behavior when their controls or available space change. Exercise
+crowded Red Points tables, multiple capture targets, and the initial deal without
+presentation metadata when changing that game's table or shared layout. Check music
+pause/resume and route changes when touching playback. Voice verification needs separate
+browser participants; synthetic local streams do not prove real microphones or cross-NAT
+connectivity.
+
+Batch independent inspections and inspect screenshots only for states that need visual
+judgment. Reuse a working isolated development environment and synthetic accounts during
+the task. Expand coverage when a check fails, shared behavior changes, or an uncertainty
+remains; after a fix, repeat the affected checks. Once the selected checks pass, stop
+adding unrelated flows or viewport checks. Report the scope actually verified and any
+remaining limitations.
