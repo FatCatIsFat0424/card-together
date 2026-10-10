@@ -29,6 +29,7 @@ import {
 } from './chinesepoker-view';
 import type { CpRowCards } from './chinesepoker-view';
 import styles from './ChinesePokerTable.module.css';
+import { isSpectator } from '../observer-view';
 
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 const NO_CARDS: readonly Card[] = [];
@@ -127,11 +128,11 @@ function Centre({ game, rows, selection, editable, onPlace, onReturn, locked }: 
   if (game.phase === 'scoring' && game.result && !locked) {
     return <SettledCentre result={game.result} bottomSeat={game.mySeat} />;
   }
-  if (game.myArrangement) {
+  if (game.myArrangement || isSpectator(game)) {
     const waiting = SEATS.filter((seat) => !game.submitted[seat]);
     return <div className={styles.centre}>
-      <ArrangedRows rows={rowsFromArrangement(game.myArrangement)} selection={[]} editable={false}
-        onPlace={noop} onReturn={noop} />
+      {game.myArrangement && <ArrangedRows rows={rowsFromArrangement(game.myArrangement)} selection={[]}
+        editable={false} onPlace={noop} onReturn={noop} />}
       {game.phase === 'arranging' && <p className={styles.waiting} role="status">
         {t('chinesepoker.waiting')}{waiting.length > 0 && <>: {joinNames(waiting.map(seatName), locale)}</>}
       </p>}
@@ -151,10 +152,10 @@ function Info({ game, locked }: { game: ChinesePokerVisibleState; locked: boolea
   const settled = scoring && !locked;
   return <aside className={infoStyles.rail}>
     <TurnBox text={scoring ? t('game.scoring')
-      : game.submitted[game.mySeat] ? t('chinesepoker.waiting') : t('chinesepoker.yourArrange')}>
+      : game.submitted[game.mySeat] || isSpectator(game) ? t('chinesepoker.waiting') : t('chinesepoker.yourArrange')}>
       {!scoring && <p className={infoStyles.note}>
         {t('chinesepoker.arrangedCount', { n: String(arranged) })}
-        {!game.submitted[game.mySeat] && <> · {t('chinesepoker.hint')}</>}
+        {!game.submitted[game.mySeat] && !isSpectator(game) && <> · {t('chinesepoker.hint')}</>}
       </p>}
     </TurnBox>
 
@@ -275,9 +276,10 @@ export function ChinesePokerTable(): ReactNode {
   const foul = isFoulArrangement(rows);
   const foulWarned = foul && foulWarnedFor === arrangementKey;
   const arranging = game?.phase === 'arranging';
+  const watching = isSpectator(game);
   const submitted = game
     ? game.submitted[game.mySeat] || game.myArrangement !== null || sentFor === handKey : false;
-  const editable = arranging && !submitted && !expired && !locked && !actionPending;
+  const editable = arranging && !submitted && !watching && !expired && !locked && !actionPending;
 
   const update = (next: Partial<{ rows: CpRowCards; selection: readonly Card[] }>): void => {
     setLocal({ key: handKey, rows: next.rows ?? rows, selection: next.selection ?? selection });
@@ -328,7 +330,8 @@ export function ChinesePokerTable(): ReactNode {
   };
 
   const handZone = <div className={styles.handArea}>
-    {arranging && !submitted ? <>
+    {arranging && watching ? !submitted && <CardHand cards={sortCpHand(myHand, sortBy)} disabled />
+    : arranging && !submitted ? <>
       <CardHand cards={hand} selectedCards={selection} disabled={!editable}
         onCardClick={(card) => update({ selection: toggleCard(selection, card) })}
         onReorder={setManualOrder} />
@@ -368,7 +371,7 @@ export function ChinesePokerTable(): ReactNode {
         autoArranged={game.autoArranged} pending={actionPending} error={actionError} disabled={!connectionReady}
         onBack={backToRoom} />}
       error={game.phase !== 'scoring' ? actionError : undefined}
-      turnReady={arranging && !submitted}
+      turnReady={arranging && !submitted && !watching}
     />
   );
 }

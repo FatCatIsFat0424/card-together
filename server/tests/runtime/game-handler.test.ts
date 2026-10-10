@@ -111,8 +111,12 @@ describe('finished board dismissal', () => {
     expect(await visitor.timeout(5_000).emitWithAck('room:leave')).toEqual({ success: true });
     expect(await visitor.timeout(5_000).emitWithAck('room:join', { roomCode: code }))
       .toMatchObject({ success: true });
-    expect(await visitor.timeout(5_000).emitWithAck('game:continue'))
-      .toEqual({ success: false, error: 'Select a seat first.' });
+    // A spectator watches the finished board until returning, without removing it.
+    const watching = (await resume(visitor)).gameState;
+    expect(watching?.phase).toBe('scoring');
+    expect(watching?.gameType === 'bridge' && watching.observer).toBe('spectator');
+    expect(await visitor.timeout(5_000).emitWithAck('game:continue')).toEqual({ success: true });
+    expect((await resume(visitor)).gameState).toBeUndefined();
     expect(games.getGameState(code)?.phase).toBe('scoring');
     expect(await players[1].timeout(5_000).emitWithAck('game:continue')).toEqual({ success: true });
     expect(games.getGameState(code)?.returnedSeats).toEqual(['N', 'E']);

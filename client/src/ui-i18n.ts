@@ -35,6 +35,12 @@ const english = {
   'table.chatExpand': 'Expand chat',
   'table.info': 'Game info',
   'table.close': 'Close',
+  'table.spectating': 'Spectating · all hands visible',
+  'table.godView': 'You are out · all hands visible',
+  'table.observedHand': "{name}'s hand",
+  'chat.observerTag': 'Spectators',
+  'chat.observerTitle': 'Only spectators and eliminated players can see this message until the game ends.',
+  'chat.observerNotice': 'Players still in the game cannot see your messages until it ends.',
 } as const;
 
 export type UiTranslationKey = keyof typeof english;
@@ -78,5 +84,11 @@ export const uiTranslations: Record<'en' | 'zh-TW', Record<UiTranslationKey, str
     'table.chatExpand': '展開聊天',
     'table.info': '牌局資訊',
     'table.close': '關閉',
+    'table.spectating': '旁觀中 · 上帝視角',
+    'table.godView': '已出局 · 上帝視角',
+    'table.observedHand': '{name} 的手牌',
+    'chat.observerTag': '旁觀',
+    'chat.observerTitle': '牌局結束前，只有旁觀者和已出局的玩家看得到這則訊息。',
+    'chat.observerNotice': '牌局結束前，場上玩家看不到你的訊息。',
   },
 };

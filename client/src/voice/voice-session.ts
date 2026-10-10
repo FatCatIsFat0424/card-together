@@ -39,6 +39,8 @@ export interface VoiceClientState {
   inputDeviceId: string | null;
   outputDeviceId: string | null;
   peerPrefs: Record<string, PeerPreference>;
+  /** Accounts held silent during a match: observers, for a player still in it */
+  silenced: string[];
 }
 
 /** Local listening preference for one remote player, keyed by account ID. */
@@ -57,6 +59,7 @@ export interface VoiceSession {
   setOutputDevice(deviceId: string | null): void;
   setPeerMuted(accountId: string, muted: boolean): void;
   setPeerVolume(accountId: string, volume: number): void;
+  setSilenced(accountIds: readonly string[]): void;
   dispose(): void;
 }
 
@@ -96,6 +99,7 @@ export function initialVoiceState(): VoiceClientState {
     inputDeviceId: null,
     outputDeviceId: null,
     peerPrefs: {},
+    silenced: [],
   };
 }
 
@@ -163,6 +167,7 @@ export function createVoiceSession(
     inputDeviceId?: string | null;
     outputDeviceId?: string | null;
     peerPrefs?: Record<string, PeerPreference>;
+    silenced?: readonly string[];
   } = {},
 ): VoiceSession {
   let state = {
@@ -172,6 +177,7 @@ export function createVoiceSession(
     inputDeviceId: options.inputDeviceId ?? null,
     outputDeviceId: options.outputDeviceId ?? null,
     peerPrefs: { ...options.peerPrefs },
+    silenced: [...options.silenced ?? []],
   };
   let inputSwitch = 0;
   let generation = 0;
@@ -197,6 +203,7 @@ export function createVoiceSession(
         peerPrefs: { ...state.peerPrefs },
         peerErrors: { ...state.peerErrors },
         peerConnections: { ...state.peerConnections },
+        silenced: [...state.silenced],
       });
   }
 
@@ -220,13 +227,15 @@ export function createVoiceSession(
     trackListeners.set(track, ended);
   }
 
-  /** Effective playback: global deafen always wins over the per-player preference. */
+  /** Effective playback: global deafen and match silencing always win over the per-player preference. */
   function applyPeerAudio(peer: Peer): void {
     const accountId = state.participants.find(
       (participant) => participant.peerId === peer.id,
     )?.accountId;
     const preference = (accountId && state.peerPrefs[accountId]) || DEFAULT_PEER_PREFERENCE;
-    peer.audio.muted = state.deafened || preference.muted;
+    // An unknown peer stays silent while silencing applies, since it may be an observer.
+    const silenced = state.silenced.length > 0 && (!accountId || state.silenced.includes(accountId));
+    peer.audio.muted = state.deafened || preference.muted || silenced;
     peer.audio.volume = preference.volume;
   }
 
@@ -780,6 +789,11 @@ export function createVoiceSession(
     },
     setPeerVolume(accountId, volume): void {
       setPeerPreference(accountId, { volume: Math.max(0, Math.min(1, volume)) });
+    },
+    setSilenced(accountIds): void {
+      if (accountIds.length === state.silenced.length && accountIds.every((id) => state.silenced.includes(id))) return;
+      publish({ silenced: [...accountIds] });
+      for (const peer of peers.values()) applyPeerAudio(peer);
     },
     dispose(): void {
       if (disposed) return;

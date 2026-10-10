@@ -20,6 +20,7 @@ import type {
   HoldemGameState,
   LiarsDeckGameState,
   NinetyNineGameState,
+  ObserverRole,
   PlayerInfo,
   PlayerVisibleGameState,
   RedPointsGameState,
@@ -30,7 +31,7 @@ import type {
 } from '@shared/types';
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { cpArrangeSeconds } from '@shared/rules/chinesepoker';
-import { bjBetSeconds } from '@shared/rules/blackjack';
+import { bjBetSeconds, bjSitsIn } from '@shared/rules/blackjack';
 import * as bridge from './games/bridge-game';
 import * as bigtwo from './games/bigtwo-game';
 import * as redpoints from './games/redpoints-game';
@@ -146,6 +147,60 @@ export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): PlayerVis
   };
 }
 
+/** Adds every private hand (Blackjack: the hole card) for a recipient with god view. */
+function withGodView(
+  visible: PlayerVisibleGameState, game: AnyGameState, observer: ObserverRole,
+): PlayerVisibleGameState {
+  if (visible.gameType === 'blackjack' && game.gameType === 'blackjack') {
+    return game.hole ? { ...visible, observer, observedHole: game.hole } : { ...visible, observer };
+  }
+  if (visible.gameType === 'blackjack' || game.gameType === 'blackjack') return { ...visible, observer };
+  if (visible.gameType === 'liarsdeck' && game.gameType === 'liarsdeck') {
+    return { ...visible, observer, observedHands: game.hands };
+  }
+  if (visible.gameType === 'liarsdeck' || game.gameType === 'liarsdeck') return { ...visible, observer };
+  return { ...visible, observer, observedHands: game.hands };
+}
+
+/**
+ * The snapshot one room member receives: spectators (no seat) watch from South with god
+ * view, and seats permanently out of the match keep their own view plus god view.
+ * Bots and automatic actions must use `getPlayerVisibleState`, which never adds god view.
+ */
+export function getRecipientVisibleState(roomCode: RoomCode, seat: Seat | null): PlayerVisibleGameState | null {
+  const game = getGameState(roomCode);
+  const visible = getPlayerVisibleState(roomCode, seat ?? 'S');
+  if (!game || !visible) return null;
+  if (!seat) return withGodView(visible, game, 'spectator');
+  return eliminationIndex(game, seat) >= 0 ? withGodView(visible, game, 'eliminated') : visible;
+}
+
+/** Log index of the entry that knocked the seat out of the match for good, or -1. */
+function eliminationIndex(game: AnyGameState, seat: Seat): number {
+  switch (game.gameType) {
+    case 'ninetynine': return game.log.findIndex((entry) => entry.type === 'eliminated' && entry.seat === seat);
+    case 'liarsdeck': return game.log.findIndex((entry) => entry.type === 'shot' && entry.seat === seat
+      && !entry.survived);
+    case 'holdem': return game.log.findIndex((entry) => entry.type === 'award' && entry.eliminated.includes(seat));
+    // Chips only grow by betting, so a seat that cannot cover the minimum never plays again.
+    case 'blackjack': return game.log.findIndex((entry) => entry.type === 'settle' && !bjSitsIn(entry.chips[seat]));
+    default: return -1;
+  }
+}
+
+/**
+ * Whether the seat is out of the match and every player has already seen it happen. Until
+ * the eliminating presentation ends, the seat still counts as playing so its own chat and
+ * voice do not reveal the outcome early.
+ */
+export function isEliminationShown(roomCode: RoomCode, seat: Seat): boolean {
+  const game = getGameState(roomCode);
+  if (!game) return false;
+  const index = eliminationIndex(game, seat);
+  if (index < 0) return false;
+  return !game.presentation || Date.now() >= getPresentationEndsAt(game) || index < game.presentation.logStart;
+}
+
 export function getGameState(roomCode: RoomCode): AnyGameState | null {
   return bridge.getGameState(roomCode) ?? bigtwo.getGameState(roomCode) ?? redpoints.getGameState(roomCode)
     ?? ninetynine.getGameState(roomCode) ?? sevens.getGameState(roomCode) ?? chinesepoker.getGameState(roomCode)
@@ -184,6 +239,23 @@ export function returnFromResult(roomCode: RoomCode, seat: Seat): void {
 export function isViewingGame(roomCode: RoomCode, seat: Seat, accountId: string): boolean {
   const game = getGameState(roomCode);
   return Boolean(game && game.players[seat].id === accountId && !game.returnedSeats?.includes(seat));
+}
+
+/**
+ * Spectators watch the match and its finished board until they return to the room. Players
+ * of that match who later stood up are not pulled back to it.
+ */
+export function isSpectating(roomCode: RoomCode, accountId: string): boolean {
+  const game = getGameState(roomCode);
+  return Boolean(game && !SEAT_ORDER_CLOCKWISE.some((seat) => game.players[seat].id === accountId)
+    && !game.returnedViewers?.includes(accountId));
+}
+
+/** Lets one spectator leave the finished board; the players' return decides its removal. */
+export function returnViewerFromResult(roomCode: RoomCode, accountId: string): void {
+  const game = getGameState(roomCode);
+  if (!game?.result || game.returnedViewers?.includes(accountId)) return;
+  game.returnedViewers = [...(game.returnedViewers ?? []), accountId];
 }
 
 export function hasActiveGame(roomCode: RoomCode): boolean {

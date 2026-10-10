@@ -55,6 +55,8 @@ export interface ClientToServerEvents {
   'room:changeSeat': (
     payload: { seat: Seat }, callback: (response: ActionResult) => void,
   ) => void;
+  /** Leaves the seat to spectate; waiting rooms only. */
+  'room:standUp': (callback: (response: ActionResult) => void) => void;
   'room:setGameType': (
     payload: { gameType: GameType }, callback: (response: ActionResult) => void,
   ) => void;

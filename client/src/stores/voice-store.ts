@@ -77,13 +77,14 @@ function update(state: Partial<VoiceClientState>): void {
 
 function currentSession(): VoiceSession {
   if (!session) {
-    const { muted, deafened, inputDeviceId, outputDeviceId, peerPrefs } = useVoiceStore.getState();
+    const { muted, deafened, inputDeviceId, outputDeviceId, peerPrefs, silenced } = useVoiceStore.getState();
     session = createVoiceSession(socket, update, {
       muted,
       deafened,
       inputDeviceId,
       outputDeviceId,
       peerPrefs,
+      silenced,
       iceServers: () => parseIceServers(import.meta.env.VITE_WEBRTC_ICE_SERVERS),
     });
   }
@@ -125,6 +126,12 @@ export function setVoicePeerMuted(accountId: string, muted: boolean): void {
 
 export function setVoicePeerVolume(accountId: string, volume: number): void {
   session?.setPeerVolume(accountId, volume);
+}
+
+/** Observers whose voice a player still in the match must not hear. */
+export function setVoiceSilenced(accountIds: readonly string[]): void {
+  if (session) session.setSilenced(accountIds);
+  else useVoiceStore.setState({ silenced: [...accountIds] });
 }
 
 /** Loads the device lists now and whenever devices change; returns the unsubscribe. */

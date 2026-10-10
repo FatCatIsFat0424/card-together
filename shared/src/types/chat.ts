@@ -23,4 +23,9 @@ export interface ChatMessage {
   readonly providedEmojis?: Record<string, ProvidedEmoji['file']>;
   /** System line: `content` is a client i18n key, `sender` the player it concerns. */
   readonly system?: true;
+  /**
+   * Sent by a spectator or eliminated player during a match; hidden from the seats
+   * still playing so hidden hands cannot be passed on.
+   */
+  readonly audience?: 'observers';
 }

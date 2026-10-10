@@ -121,6 +121,15 @@
   box-shadow: 0 0 0 2px var(--turn-glow), 0 0 24px color-mix(in srgb, var(--turn-glow) 45%, transparent);
 }
 
+.godView {
+  margin: 0 6px 0 0;
+  padding: 0 10px;
+  border: 1px dashed var(--rail-border);
+  border-radius: var(--radius-pill);
+  color: var(--table-ink);
+  white-space: nowrap;
+}
+
 .yourTurn {
   padding: 0 10px;
   border-radius: var(--radius-pill);

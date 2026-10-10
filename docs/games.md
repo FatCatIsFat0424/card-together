@@ -20,6 +20,28 @@ expired votes retain that cooldown. A successful vote returns the room to waitin
 and clears the cooldown, allowing an immediate proposal in the next match.
 Match history retains completed results independently
 of current-room public action history.
+
+### Spectators and god view
+
+Besides the four seats a room holds up to eight spectators
+([`MAX_SPECTATORS`](../shared/src/constants/game-rules.ts)): every member without a seat. Players
+join as spectators, also during a match or through an invite, and take any empty seat while
+waiting; seated players can stand up while waiting. Spectators watch from South's side without
+controls (only Leave room, in the game info panel), never vote, and leaving or disconnecting never
+aborts the match. They keep the finished
+board until they press continue or it is removed.
+
+Spectators and permanently eliminated players (Ninety-Nine bust, Liar's Deck death, Hold'em out
+of chips, Blackjack unable to cover the minimum; not a Hold'em fold) have god view: every seat's
+hand appears face up beside its plate (two overlapping rows for long hands), and Blackjack's hole card and Hold'em hole cards
+appear face up with a dashed outline. Stock order, bullets, and other undealt cards stay hidden.
+God view keeps its previous hands while a presentation plays, and an eliminated player's view
+opens only after the frame that eliminates them.
+
+During a match, messages from these observers carry `audience: 'observers'` and reach only other
+observers; seats still playing see only their own channel, and everyone sees the full history once
+the match ends. A player still in the match also stops hearing observers in voice chat. An
+elimination moves the player to the observer channels only after its presentation ends.
 Server presentation deadlines briefly gate actions between turns; see
 [architecture](architecture.md#presentation-timeline).
 
@@ -106,8 +128,10 @@ a polite live region announces whose turn it is.
 
 ### Bots
 
-While waiting, the host can add a bot to an empty seat, remove a bot, or fill available
-capacity with bots. Room members who have not selected a seat still reserve capacity.
+While waiting, the host can add a bot to an empty seat, remove a bot, or fill every empty
+seat with bots; members without a seat stay spectators. While no human is seated, the last
+empty seat stays open for a player: a match needs a seated human, who can vote to end it and
+owns its history.
 Bots are always ready; the match starts once all four seats are occupied and the humans
 are ready. Bots remain for the next match and support every game. Only humans can
 host; the room is removed when its last human leaves.

@@ -138,6 +138,7 @@ describe('Blackjack table view', () => {
     expect(blackjackNeedsBet({ ...betting, betDeadline: null })).toBe(false);
     expect(blackjackNeedsBet({ ...betting, myBet: 20 })).toBe(false);
     expect(blackjackNeedsBet({ ...betting, betPlaced: { ...seats(false), S: true } })).toBe(false);
+    expect(blackjackNeedsBet({ ...betting, observer: 'spectator' })).toBe(false);
     expect(blackjackNeedsBet({ ...betting, chips: { ...betting.chips, S: 5 } })).toBe(false);
     expect(blackjackNeedsBet(game())).toBe(false);
   });

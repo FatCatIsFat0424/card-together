@@ -29,6 +29,8 @@ import {
 } from './blackjack-view';
 import type { BlackjackTableView } from './blackjack-view';
 import styles from './BlackjackTable.module.css';
+import { isOwnTurn, isSpectator } from '../observer-view';
+import { useGodViewStore } from '../../stores/god-view-store';
 
 const RECENT_MOVES = 10;
 
@@ -65,12 +67,13 @@ function SeatHands({ seat, view, position, betPlaced, auto }: {
 
 function Centre({ game, view }: { game: BlackjackVisibleState; view: BlackjackTableView }): ReactNode {
   const { t } = useI18nStore();
+  const peek = useGodViewStore((state) => state.hole) ?? undefined;
   const auto = autoBetSeats(game.log, view.logEnd);
   // My own hands sit in the hand zone while a hand is played; between hands the zone holds the bet controls.
   const seats = BJ_SEATS.filter((seat) => view.betting || seat !== game.mySeat);
   return <div className={styles.centre}>
     <div className={styles.dealerArea}>
-      <DealerHand cards={view.dealer} holeHidden={view.holeHidden} size="md" />
+      <DealerHand cards={view.dealer} holeHidden={view.holeHidden} size="md" peek={peek} />
     </div>
     {seats.map((seat) => <SeatHands key={seat} seat={seat} view={view} position={tablePosition(seat, game.mySeat)}
       betPlaced={game.betPlaced[seat]} auto={auto.includes(seat)} />)}
@@ -120,19 +123,22 @@ function Info({ game, view, locked }: { game: BlackjackVisibleState; view: Black
   const seatName = useSeatName();
   const recent = recentBlackjackMoves(game.log.slice(0, view.logEnd), RECENT_MOVES);
   const me = game.mySeat;
+  const watching = isSpectator(game);
   const text = game.phase === 'scoring' ? t('game.scoring')
     : locked ? t('game.playing')
       : game.phase === 'betting'
-        ? !bjSitsIn(game.chips[me]) ? t('blackjack.sittingOut')
+        ? watching ? t(game.betDeadline === null ? 'blackjack.bettingSoon' : 'blackjack.betting')
+          : !bjSitsIn(game.chips[me]) ? t('blackjack.sittingOut')
           : game.betDeadline === null ? t('blackjack.bettingSoon')
             : game.betPlaced[me] || game.myBet !== null ? t('blackjack.waitingBets') : t('blackjack.placeBet')
-        : game.currentTurnSeat === me ? t('blackjack.yourTurn')
+        : isOwnTurn(game) ? t('blackjack.yourTurn')
           : t('blackjack.turnOf', { name: seatName(game.currentTurnSeat) });
   const hand = blackjackHandNumber(view);
   return <aside className={infoStyles.rail}>
     <TurnBox text={text}>
       {hand > 0 && <p className={infoStyles.note}>
-        {t('blackjack.handOf', { n: String(hand), total: String(BJ_HANDS) })} · {t('blackjack.myChips', { n: String(view.chips[me]) })}
+        {t('blackjack.handOf', { n: String(hand), total: String(BJ_HANDS) })}
+        {!watching && <> · {t('blackjack.myChips', { n: String(view.chips[me]) })}</>}
       </p>}
     </TurnBox>
 
@@ -270,7 +276,7 @@ export function BlackjackTable(): ReactNode {
   const awaiting = sentAt !== null && sentAt === game.log.length;
   const ready = !locked && connectionReady && !actionPending && !awaiting;
   const legal = blackjackActions(game, ready);
-  const isMyTurn = game.phase === 'playing' && !locked && game.currentTurnSeat === game.mySeat;
+  const isMyTurn = game.phase === 'playing' && !locked && isOwnTurn(game);
   const myHands = view.hands[game.mySeat];
   const settlement = view.settlement;
   const needsBet = view.betting && blackjackNeedsBet(game) && !awaiting;
@@ -310,8 +316,11 @@ export function BlackjackTable(): ReactNode {
       : t('blackjack.yourTurn')
       : t('blackjack.turnOf', { name: seatName(game.currentTurnSeat) });
 
+  const watching = isSpectator(game);
   const handZone = <div className={styles.handArea}>
-    {view.betting ? <BetControls game={game} amount={amount} onAmount={setAmount}
+    {view.betting && watching ? <p className={styles.prompt}>{t(game.betDeadline === null
+      ? 'blackjack.bettingSoon' : 'blackjack.betting')}</p>
+    : view.betting ? <BetControls game={game} amount={amount} onAmount={setAmount}
       disabled={!ready} expired={expired} sent={awaiting && !actionPending} onBet={sendBet} />
       : <>
         {myHands.length > 0 ? <div className={styles.myHands} role="group" aria-label={t('blackjack.hand')}>
@@ -327,7 +336,7 @@ export function BlackjackTable(): ReactNode {
         </p>}
         {game.phase === 'playing' && myHands.length > 0 && <div className={styles.controls}>
           {prompt && <span className={`${styles.prompt} ${isMyTurn ? styles.promptActive : ''}`}>{prompt}</span>}
-          {BJ_ACTIONS.map((action) => <button key={action} type="button"
+          {!watching && BJ_ACTIONS.map((action) => <button key={action} type="button"
             className={`btn ${action === 'hit' ? 'btn-primary' : 'btn-outline'} ${styles.ctrl}`}
             disabled={!legal.includes(action)} title={t(`blackjack.hint.${action}`)}
             onClick={() => sendAction(action)}>

@@ -10,6 +10,7 @@ import { playCardSound, playOutSound, unlockCardSounds, disposeCardSounds } from
 import { cardBackStyle, tableBackgroundStyle } from '../account-appearance';
 import { useAccountStore } from '../stores/account-store';
 import { useGameStore } from '../stores/game-store';
+import { useGodViewStore } from '../stores/god-view-store';
 import { useChatStore } from '../stores/chat-store';
 import { useRoomStore } from '../stores/room-store';
 import { useI18nStore } from '../stores/i18n-store';
@@ -18,6 +19,7 @@ import { TableSeat } from '../components/TableSeat';
 import { lastElimination, lastMove, tablePosition } from '../game-view';
 import type { TablePosition } from '../game-view';
 import { AbortVoteBanner, AbortVoteButton } from './AbortVote';
+import { SpectatorLeaveButton } from './SpectatorLeave';
 import styles from './GameShell.module.css';
 import { useGamePresentation } from './use-game-presentation';
 import { GamePresentation } from './GamePresentation';
@@ -187,6 +189,12 @@ export function GameShell({
   useSheetFocus(chatOpen, chatRailRef, chatButtonRef, chatIsOverlay, 'panel');
   const bottomSeat: Seat = mySeat ?? 'S';
   const unread = chatOpen ? 0 : Math.max(0, messageCount - seenMessages);
+  const godView = useGodViewStore((state) => state.role);
+
+  useEffect(() => {
+    useGodViewStore.getState().update(visibleGame, presentation.locked);
+  }, [visibleGame, presentation.locked]);
+  useEffect(() => () => useGodViewStore.getState().update(null, false), []);
 
   // Play sounds only for actions after joining the table, not for the existing log on join or reconnect
   const heardMove = useRef(move?.index);
@@ -299,6 +307,7 @@ export function GameShell({
             aria-label={t('table.close')} title={t('table.close')}>✕</button>
         </div>
         <AbortVoteButton />
+        <SpectatorLeaveButton />
         <label className={styles.motionSetting}>
           <input type="checkbox" checked={reducedMotion}
             onChange={(event) => setReducedMotion(event.target.checked)} />
@@ -357,6 +366,7 @@ export function GameShell({
               onPick={onPickSeat && pickableSeats?.includes(bottomSeat) ? () => onPickSeat(bottomSeat) : undefined} />
           </div>
           <div className={styles.handStatus}>
+            {godView && <p className={styles.godView}>{t(godView === 'spectator' ? 'table.spectating' : 'table.godView')}</p>}
             {myTurn && <p className={styles.yourTurn}>{t('table.yourTurn')}</p>}
             {error && <p className={styles.actionError} role="alert">{error}</p>}
           </div>

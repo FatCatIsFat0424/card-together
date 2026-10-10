@@ -97,6 +97,8 @@ export type {
   HoldemVisibleState,
   AnyGameState,
   PlayerVisibleGameState,
+  ObserverRole,
+  ObserverView,
   MatchResult,
 } from './game';
 

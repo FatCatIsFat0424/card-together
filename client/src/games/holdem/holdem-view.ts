@@ -5,6 +5,7 @@ import type { HeTableView } from '@shared/rules/holdem';
 import type {
   Card, ChinesePokerCategory, HoldemLogEntry, HoldemMatchResult, HoldemPot, HoldemVisibleState, Seat,
 } from '@shared/types';
+import { isOwnTurn } from '../observer-view';
 
 export const HE_SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 /** Board slots, including streets not dealt yet */
@@ -206,7 +207,7 @@ export interface HoldemControls {
 
 /** Controls for the local seat; null unless it owes an action and the table is ready. */
 export function holdemControls(game: HoldemVisibleState, ready: boolean): HoldemControls | null {
-  if (!ready || game.phase !== 'playing' || game.currentTurnSeat !== game.mySeat) return null;
+  if (!ready || game.phase !== 'playing' || !isOwnTurn(game)) return null;
   const legal = heLegalActions(game, game.mySeat);
   if (!legal) return null;
   return {

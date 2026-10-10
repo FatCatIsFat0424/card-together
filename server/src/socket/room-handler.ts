@@ -57,8 +57,9 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
         const code = requireRoom(socket);
         const room = roomManager.getRoomInfo(code);
         const members = roomManager.getRoomMemberIds(code);
-        if (!room || room.status !== 'waiting') throw actionError('The game has already started.');
-        if (members.length >= 4) throw actionError('Room is full.');
+        if (!room) throw actionError('Room not found.');
+        // Invitees join as spectators, so only the spectator area limits invitations.
+        if (!roomManager.hasSpectatorRoom(code)) throw actionError('Room is full.');
         if (!isFriend) throw actionError('You can only invite friends.');
         if (members.includes(targetId)) throw actionError('This friend is already in the room.');
         if (playerManager.getPlayerState(targetId)?.connectionStatus !== 'connected') {
@@ -69,7 +70,8 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
         if (!inviteManager.tryReserveInvite(from.id, targetId)) {
           throw actionError('Please wait before inviting this friend again.');
         }
-        invite = { roomCode: code, gameType: room.gameType, from, seatsFree: 4 - members.length };
+        const seatsFree = Object.values(room.seats).filter((seat) => !seat.player).length;
+        invite = { roomCode: code, gameType: room.gameType, from, seatsFree: room.status === 'waiting' ? seatsFree : 0 };
         return { success: true };
       }, { skipUnchanged: true, afterCommit: () => {
         if (invite) context.io.to(`account:${targetId}`).emit('room:invited', invite);
@@ -112,6 +114,11 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
     const player = playerManager.getPlayerInfo(socket.data.accountId);
     if (!player) throw actionError('Player not found.');
     requireSuccess(roomManager.changeSeat(requireRoom(socket), player, payload.seat));
+    return { success: true };
+  }));
+
+  socket.on('room:standUp', (callback) => runAction(context, socket, callback, () => {
+    requireSuccess(roomManager.standUp(requireRoom(socket), socket.data.accountId));
     return { success: true };
   }));
 

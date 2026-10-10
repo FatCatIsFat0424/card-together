@@ -316,7 +316,7 @@ describe('persistent authenticated application', () => {
       .toMatchObject({ success: false });
   });
 
-  it('should enforce bot payloads and host rights while reserving seats for human members', async () => {
+  it('should enforce bot payloads and host rights while unseated members spectate', async () => {
     const accounts = [await register('manage_host'), await register('manage_guest')];
     const [host, guest] = await connectPlayers(accounts);
     const { roomCode } = await host.timeout(5_000).emitWithAck('room:create', { gameType: 'bridge' });
@@ -329,8 +329,12 @@ describe('persistent authenticated application', () => {
       .toEqual({ success: false, error: 'Invalid seat.' });
     expect(await host.timeout(5_000).emitWithAck('room:fillBots')).toEqual({ success: true });
     expect(await host.timeout(5_000).emitWithAck('room:addBot', { seat: 'W' })).toMatchObject({ success: false });
-    expect((await resume(host)).room?.seats.W.player).toBeNull();
+    const filled = (await resume(host)).room;
+    expect(filled?.seats.W.player?.isBot).toBe(true);
+    expect(filled?.spectators?.map((spectator) => spectator.id)).toEqual([accounts[1].account.id]);
+    expect(await host.timeout(5_000).emitWithAck('room:removeBot', { seat: 'W' })).toEqual({ success: true });
     expect(await guest.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'W' })).toEqual({ success: true });
+    expect((await resume(host)).room?.spectators).toEqual([]);
     expect(await guest.timeout(5_000).emitWithAck('room:removeBot', { seat: 'E' })).toMatchObject({ success: false });
     expect(await host.timeout(5_000).emitWithAck('room:removeBot', { seat: 'E' })).toEqual({ success: true });
     expect((await resume(host)).room?.seats.E).toEqual({ player: null, isReady: false });

@@ -231,13 +231,17 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
 
   socket.on('game:continue', (callback) => runAction(context, socket, callback, () => {
     const code = requireRoom(socket);
-    const seat = playerSeat(socket, code);
+    const accountId = socket.data.accountId;
+    const seat = roomManager.getPlayerSeat(code, accountId);
+    const spectating = gameManager.isSpectating(code, accountId);
+    if (!seat && !spectating) throw actionError('Select a seat first.');
     if (gameManager.getGameState(code)?.phase !== 'scoring') throw actionError('The game has not ended.');
     if (gameManager.isPresentationActive(code)) {
       throw actionError('Please wait for the current action to finish.');
     }
-    // Each player returns on their own; the others keep viewing the result.
-    gameManager.returnFromResult(code, seat);
+    // Each player and spectator returns on their own; the others keep viewing the result.
+    if (seat && gameManager.isViewingGame(code, seat, accountId)) gameManager.returnFromResult(code, seat);
+    else if (spectating) gameManager.returnViewerFromResult(code, accountId);
     return { success: true };
   }));
 }

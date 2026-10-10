@@ -28,6 +28,16 @@ export interface GamePresentation {
   readonly logStart: number;
 }
 
+/** Why a recipient sees every hand: an unseated spectator or a permanently eliminated seat. */
+export type ObserverRole = 'spectator' | 'eliminated';
+
+/** God view, added only to spectators' and eliminated players' snapshots. */
+export interface ObserverView<T> {
+  readonly observer?: ObserverRole;
+  /** Every seat's private hand */
+  readonly observedHands?: Record<Seat, readonly T[]>;
+}
+
 /** Suit */
 export type Suit = 'clubs' | 'diamonds' | 'hearts' | 'spades';
 
@@ -118,6 +128,8 @@ export interface BridgeGameState {
   presentation?: GamePresentation;
   /** Seats whose players already left the finished board for the room. */
   returnedSeats?: Seat[];
+  /** Spectator account ids that already left the finished board for the room. */
+  returnedViewers?: string[];
   readonly gameType: 'bridge';
   readonly id: string;
   readonly startedAt: number;
@@ -136,7 +148,7 @@ export interface BridgeGameState {
 }
 
 /** Bridge state visible to one player (other hands hidden) */
-export interface BridgeVisibleState {
+export interface BridgeVisibleState extends ObserverView<Card> {
   clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'bridge';
@@ -185,6 +197,8 @@ export interface BigTwoGameState {
   clock?: GameClock;
   presentation?: GamePresentation;
   returnedSeats?: Seat[];
+  /** Spectator account ids that already left the finished board for the room. */
+  returnedViewers?: string[];
   readonly gameType: 'bigtwo';
   readonly id: string;
   readonly startedAt: number;
@@ -202,7 +216,7 @@ export interface BigTwoGameState {
   result: BigTwoMatchResult | null;
 }
 
-export interface BigTwoVisibleState {
+export interface BigTwoVisibleState extends ObserverView<Card> {
   clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'bigtwo';
@@ -247,6 +261,8 @@ export interface RedPointsGameState {
   clock?: GameClock;
   presentation?: GamePresentation;
   returnedSeats?: Seat[];
+  /** Spectator account ids that already left the finished board for the room. */
+  returnedViewers?: string[];
   readonly gameType: 'redpoints';
   readonly id: string;
   readonly startedAt: number;
@@ -265,7 +281,7 @@ export interface RedPointsGameState {
   result: RedPointsMatchResult | null;
 }
 
-export interface RedPointsVisibleState {
+export interface RedPointsVisibleState extends ObserverView<Card> {
   clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'redpoints';
@@ -314,6 +330,8 @@ export interface NinetyNineGameState {
   clock?: GameClock;
   presentation?: GamePresentation;
   returnedSeats?: Seat[];
+  /** Spectator account ids that already left the finished board for the room. */
+  returnedViewers?: string[];
   readonly gameType: 'ninetynine';
   readonly id: string;
   readonly startedAt: number;
@@ -334,7 +352,7 @@ export interface NinetyNineGameState {
   result: NinetyNineMatchResult | null;
 }
 
-export interface NinetyNineVisibleState {
+export interface NinetyNineVisibleState extends ObserverView<Card> {
   clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'ninetynine';
@@ -377,6 +395,8 @@ export interface SevensGameState {
   clock?: GameClock;
   presentation?: GamePresentation;
   returnedSeats?: Seat[];
+  /** Spectator account ids that already left the finished board for the room. */
+  returnedViewers?: string[];
   readonly gameType: 'sevens';
   readonly id: string;
   readonly startedAt: number;
@@ -392,7 +412,7 @@ export interface SevensGameState {
   result: SevensMatchResult | null;
 }
 
-export interface SevensVisibleState {
+export interface SevensVisibleState extends ObserverView<Card> {
   clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'sevens';
@@ -466,6 +486,8 @@ export interface ChinesePokerGameState {
   clock?: GameClock;
   presentation?: GamePresentation;
   returnedSeats?: Seat[];
+  /** Spectator account ids that already left the finished board for the room. */
+  returnedViewers?: string[];
   readonly gameType: 'chinesepoker';
   readonly id: string;
   readonly startedAt: number;
@@ -484,7 +506,7 @@ export interface ChinesePokerGameState {
   result: ChinesePokerMatchResult | null;
 }
 
-export interface ChinesePokerVisibleState {
+export interface ChinesePokerVisibleState extends ObserverView<Card> {
   clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'chinesepoker';
@@ -552,6 +574,8 @@ export interface LiarsDeckGameState {
   clock?: GameClock;
   presentation?: GamePresentation;
   returnedSeats?: Seat[];
+  /** Spectator account ids that already left the finished board for the room. */
+  returnedViewers?: string[];
   readonly gameType: 'liarsdeck';
   readonly id: string;
   readonly startedAt: number;
@@ -574,7 +598,7 @@ export interface LiarsDeckGameState {
   result: LiarsDeckMatchResult | null;
 }
 
-export interface LiarsDeckVisibleState {
+export interface LiarsDeckVisibleState extends ObserverView<LiarCard> {
   clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'liarsdeck';
@@ -665,6 +689,8 @@ export interface BlackjackGameState {
   clock?: GameClock;
   presentation?: GamePresentation;
   returnedSeats?: Seat[];
+  /** Spectator account ids that already left the finished board for the room. */
+  returnedViewers?: string[];
   readonly gameType: 'blackjack';
   readonly id: string;
   readonly startedAt: number;
@@ -696,6 +722,9 @@ export interface BlackjackGameState {
 }
 
 export interface BlackjackVisibleState {
+  readonly observer?: ObserverRole;
+  /** God view of the face-down dealer card while it is hidden */
+  readonly observedHole?: Card;
   clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'blackjack';
@@ -784,6 +813,8 @@ export interface HoldemGameState {
   clock?: GameClock;
   presentation?: GamePresentation;
   returnedSeats?: Seat[];
+  /** Spectator account ids that already left the finished board for the room. */
+  returnedViewers?: string[];
   readonly gameType: 'holdem';
   readonly id: string;
   readonly startedAt: number;
@@ -822,7 +853,7 @@ export interface HoldemGameState {
   result: HoldemMatchResult | null;
 }
 
-export interface HoldemVisibleState {
+export interface HoldemVisibleState extends ObserverView<Card> {
   clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'holdem';

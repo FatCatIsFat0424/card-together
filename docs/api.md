@@ -71,15 +71,16 @@ For exact unions and result fields, use
 | --- | --- | --- |
 | `player:resume` | — | PlayerSnapshot; attach/restore account |
 | `room:create` | `{ gameType }` | `{ success, roomCode }` |
-| `room:join` | `{ roomCode }` | `{ success, room }` |
-| `room:invite` | `{ accountId }` | Invite an accepted friend |
-| `room:leave` | — | Leave; unfinished game aborts |
-| `room:kick` | `{ accountId }` | Host removes another human member while waiting; they may rejoin by code |
+| `room:join` | `{ roomCode }` | `{ success, room }`; joins as a spectator, also during a match |
+| `room:invite` | `{ accountId }` | Invite an accepted friend while spectator room remains |
+| `room:leave` | — | Leave; a seated player's leave aborts an unfinished game |
+| `room:kick` | `{ accountId }` | Host removes another human member (spectators also during a match); they may rejoin by code |
 | `room:changeSeat` | `{ seat }` | Change available seat |
+| `room:standUp` | — | Leave the seat to spectate while waiting |
 | `room:setGameType` | `{ gameType }` | Host changes waiting room game |
 | `room:setTimeControl` | `TimeControl` | Host changes waiting room timer; clears human readiness |
 | `room:addBot`, `room:removeBot` | `{ seat }` | Host adds/removes a bot while waiting |
-| `room:fillBots` | — | Host fills available member capacity with ready bots |
+| `room:fillBots` | — | Host fills every empty seat with ready bots |
 | `room:ready`, `room:unready` | — | Update readiness; four ready seats start |
 | `game:redealResponse` | `{ accept }` | Eligible Bridge player decides |
 | `game:bid` | `{ bid }` | Bridge bid/pass |
@@ -97,7 +98,7 @@ For exact unions and result fields, use
 | `game:blackjack:bet` | `{ amount }` | Blackjack: 10–200 chips in steps of 10, within the seat's chips, before the shared betting deadline |
 | `game:blackjack:action` | `{ action }` | Blackjack: `hit`, `stand`, `double`, or `split` for the acting hand |
 | `game:holdem:action` | `{ action }` | Hold'em: `{ type: 'fold' \| 'check' \| 'call' }` or `{ type: 'raise', to }`, where `to` is the street stake after a bet or raise |
-| `game:continue` | — | Seated player leaves the result for the waiting room; others keep it |
+| `game:continue` | — | Seated player or spectator leaves the result for the waiting room; others keep it |
 | `game:abortVote:start` | — | Start seated-player abort vote |
 | `game:abortVote:cast` | `{ agree }` | Record one vote |
 | `chat:send` | `{ message }`, `{ stickerId }`, or `{ providedSticker }` | Send text, an owned sticker, or a site emoji sticker by name |

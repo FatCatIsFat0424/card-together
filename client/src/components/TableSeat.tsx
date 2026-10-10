@@ -16,8 +16,10 @@ import { ChipIcon } from '../games/ChipIcon';
 import { holdemBlindSeats, holdemView, seatState } from '../games/holdem/holdem-view';
 import { useGamePresentation } from '../games/use-game-presentation';
 import { useGameStore } from '../stores/game-store';
+import { useGodViewStore } from '../stores/god-view-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useRoomStore } from '../stores/room-store';
+import { ObservedCards, ObservedLiarCards } from './ObservedHand';
 import { PlayerLink } from './PlayerLink';
 import { latestSeatAction, seatStatus, showsAutoPlayed } from './seat-status';
 import type { SeatStatus } from './seat-status';
@@ -205,6 +207,8 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
   const heBlinds = he ? holdemBlindSeats(he) : null;
   const heOut = heState === 'out';
   const heLocked = heState === 'folded' || heState === 'allIn';
+  const observedCards = useGodViewStore((state) => state.hands?.[seat]);
+  const observedLiars = useGodViewStore((state) => state.liarHands?.[seat]);
   const clock = useGameStore((state) => state.visible?.clock);
   const receivedAt = useGameStore((state) => state.presentationReceivedAt);
   const lastActionAt = useGameStore((state) => latestSeatAction(state.visible?.log ?? [], seat));
@@ -228,10 +232,15 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
   const bottom = position === 'bottom';
   const redCards = captured?.filter((card) => rpCardPoints(card) > 0).slice(-MAX_PILE) ?? [];
   const clockTurn = active && clock?.turn?.seat === seat ? clock.turn : null;
+  // God view shows the hand face up instead of card backs; Blackjack and Hold'em draw it on the felt.
+  const observed = bottom || cards === 0 ? null
+    : liarsDeck && observedLiars?.length ? <ObservedLiarCards cards={observedLiars} owner={name}
+      tableFace={liarsDeck.tableFace} />
+      : observedCards?.length ? <ObservedCards cards={observedCards} owner={name} /> : null;
   // Red Points shows captured red cards instead of card backs; the hand size stays a chip.
   const tray = captured ? redCards.length > 0 && <CardTray count={redCards.length} render={(index) => (
     <img className={styles.pileCard} src={cardImageUrl(redCards[index])} alt="" draggable={false} />
-  )} /> : !bottom && cards > 0 && <CardTray count={Math.min(cards, MAX_BACKS)}
+  )} /> : !bottom && cards > 0 && !observed && <CardTray count={Math.min(cards, MAX_BACKS)}
     render={() => <span className={styles.back} />} />;
 
   return (
@@ -295,6 +304,7 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
         {moveKey !== undefined && <span key={moveKey} className={styles.moved} aria-hidden="true" />}
       </div>
       {tray}
+      {observed}
     </div>
   );
 }

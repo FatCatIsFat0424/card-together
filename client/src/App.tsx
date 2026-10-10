@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'rea
 import { TopBar } from './components/TopBar';
 import { InviteToast } from './components/InviteToast';
 import { AbortVoteToast } from './games/AbortVote';
+import { useVoiceSilencing } from './hooks/use-voice-silencing';
 import { useAccountConnection } from './hooks/use-account-connection';
 import { restoreAccount, useAccountStore } from './stores/account-store';
 import { useI18nStore } from './stores/i18n-store';
@@ -51,6 +52,7 @@ function ProtectedRoute(): ReactNode {
 
 function AppRoutes(): ReactNode {
   useAccountConnection();
+  useVoiceSilencing();
   const status = useAccountStore((state) => state.status);
   const error = useAccountStore((state) => state.error);
   const { t } = useI18nStore();

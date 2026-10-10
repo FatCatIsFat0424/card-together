@@ -48,6 +48,13 @@
   box-shadow: none;
 }
 
+/* God view of hidden hole cards: face up, but dimmed and outlined as still hidden from players. */
+.peek {
+  opacity: 0.75;
+  outline: 2px dashed var(--table-ink, currentColor);
+  outline-offset: -2px;
+}
+
 .fresh { animation: arrive 320ms ease-out calc(var(--enter-delay, 0ms) + var(--card-index, 0) * 140ms) both; }
 
 @keyframes arrive {

@@ -9,6 +9,8 @@ import type {
 } from '@shared/types';
 import { createApplication } from '../../src/app';
 import { createJsonRepository } from '../../src/database/json-repository';
+import * as roomManager from '../../src/managers/room-manager';
+import { MAX_SPECTATORS } from '@shared/constants';
 
 const ORIGIN = 'http://localhost:5173';
 type Client = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -108,7 +110,7 @@ describe('room invites and friend presence', () => {
     expect(await host.timeout(5_000).emitWithAck('room:invite', { accountId: bob.account.id }))
       .toEqual({ success: true });
     expect(await received).toMatchObject({
-      roomCode, gameType: 'bridge', seatsFree: 3, from: { id: alice.account.id, nickname: 'alice' },
+      roomCode, gameType: 'bridge', seatsFree: 4, from: { id: alice.account.id, nickname: 'alice' },
     });
 
     const again = await host.timeout(5_000).emitWithAck('room:invite', { accountId: bob.account.id });
@@ -124,20 +126,16 @@ describe('room invites and friend presence', () => {
     expect(result).toEqual({ success: false, error: 'You can only invite friends.' });
   });
 
-  // Five scrypt registrations can exceed the default timeout on a loaded machine.
-  it('should reject inviting into a full room', async () => {
-    const users = [
-      await register('alice'), await register('bob'), await register('carol'),
-      await register('dave'), await register('erin'),
-    ];
-    await befriend(users[0], users[4]);
-    const sockets = await Promise.all(users.map(connect));
-    const roomCode = await createRoom(sockets[0]);
-    for (const member of sockets.slice(1, 4)) {
-      expect((await member.timeout(5_000).emitWithAck('room:join', { roomCode })).success).toBe(true);
+  it('should reject inviting once the spectator area is full', async () => {
+    const [alice, erin] = [await register('alice'), await register('erin')];
+    await befriend(alice, erin);
+    const [host] = [await connect(alice), await connect(erin)];
+    const roomCode = await createRoom(host);
+    // The unseated host is the first spectator; in-process members fill the rest.
+    for (let index = 1; index < MAX_SPECTATORS; index += 1) {
+      expect(roomManager.joinRoom(roomCode, `watcher-${index}`).success).toBe(true);
     }
-    const result = await sockets[0].timeout(5_000)
-      .emitWithAck('room:invite', { accountId: users[4].account.id });
+    const result = await host.timeout(5_000).emitWithAck('room:invite', { accountId: erin.account.id });
     expect(result).toEqual({ success: false, error: 'Room is full.' });
   }, 20_000);
 });

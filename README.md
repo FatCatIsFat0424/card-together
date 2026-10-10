@@ -4,7 +4,7 @@ A browser-based multiplayer platform for Bridge, Taiwanese Big Two, Red Points,
 Ninety-Nine, Sevens, Chinese Poker, Liar's Deck, Blackjack, and Texas Hold'em. Built with React 19, TypeScript, Zustand, Express, Socket.IO,
 and npm workspaces.
 
-Players sign in, create or join four-seat rooms, chat, and play with
+Players sign in, create or join four-seat rooms (with up to eight spectators), chat, and play with
 server-authoritative rules. Accounts, friendships, match history, rooms, and
 unfinished games persist across server restarts. The interface supports
 Traditional Chinese and English, themes, uploaded avatars, table backgrounds and card backs,

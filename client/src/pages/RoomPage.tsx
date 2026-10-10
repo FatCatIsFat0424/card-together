@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { GAME_TYPES } from '@shared/constants';
+import { GAME_TYPES, MAX_SPECTATORS } from '@shared/constants';
 import type { GameType, PlayerInfo, Seat, TimeControl } from '@shared/types';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import { socket } from '../socket';
@@ -139,6 +139,11 @@ export function RoomPage(): ReactNode {
     setError('');
     socket.timeout(10000).emit('room:kick', { accountId: player.id }, handleResult);
   };
+  const standUp = (): void => {
+    setBusy(true);
+    setError('');
+    socket.timeout(10000).emit('room:standUp', handleResult);
+  };
   const fillBots = (): void => {
     setBusy(true);
     setError('');
@@ -165,7 +170,8 @@ export function RoomPage(): ReactNode {
 
   const progress = roomProgress(roomInfo.seats);
   const progressText = t('room.progress', { seated: String(progress.seated), ready: String(progress.ready) });
-  const hintKey = !mySeat ? 'room.pickSeat' : progress.seated < 4 ? 'room.waiting'
+  const spectators = roomInfo.spectators ?? [];
+  const hintKey = !mySeat ? 'room.spectatorHint' : progress.seated < 4 ? 'room.waiting'
     : isReady ? 'room.waitingReady' : 'room.pressReady';
 
   return (
@@ -258,8 +264,26 @@ export function RoomPage(): ReactNode {
           </div>
         </div>
       </div>
+      <section className={styles.spectators} aria-labelledby="room-spectators-label">
+        <span className={styles.spectatorsLabel} id="room-spectators-label">
+          {t('room.spectators', { n: String(spectators.length), max: String(MAX_SPECTATORS) })}
+        </span>
+        {spectators.length === 0 ? <span className={styles.spectatorsEmpty}>{t('room.noSpectators')}</span>
+          : <ul className={styles.spectatorList}>{spectators.map((spectator) => (
+            <li key={spectator.id} className={styles.spectator}>
+              <PlayerLink player={spectator} size="small" />
+              {spectator.id === roomInfo.hostId && <span className={styles.hostBadge} title={t('room.host')}>👑</span>}
+              {spectator.id === playerId && <span>{t('common.me')}</span>}
+              {isHost && spectator.id !== playerId && <button type="button"
+                className={`btn btn-outline touch-target ${styles.botAction}`} disabled={blocked}
+                onClick={() => kick(spectator)}>{t('room.kick')}</button>}
+            </li>
+          ))}</ul>}
+      </section>
       <div className={styles.roomFooter}>
         <p className={styles.progress} role="status">{progressText}</p>
+        {mySeat && <button type="button" className="btn btn-outline" onClick={standUp}
+          disabled={blocked || roomInfo.status !== 'waiting'}>{t('room.standUp')}</button>}
         {isHost && <button type="button" className="btn btn-outline" onClick={fillBots}
           disabled={blocked || !hasEmptySeat}>{t('room.fillBots')}</button>}
         <button className={`btn ${isReady ? 'btn-danger' : 'btn-success'} ${styles.readyBtn}`}

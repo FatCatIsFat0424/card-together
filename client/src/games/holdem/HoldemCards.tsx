@@ -18,14 +18,16 @@ export function cardName(card: Card): string {
  * A row of face-up cards, plus `backs` face-down cards. Cards from `freshFrom` on animate in so a
  * presentation can show which cards just arrived.
  */
-export function HeCards({ cards, backs = 0, size = 'md', freshFrom, overlap = false, label }: {
+export function HeCards({ cards, backs = 0, size = 'md', freshFrom, overlap = false, label, peek = false }: {
   cards: readonly Card[]; backs?: number; size?: CardSize; freshFrom?: number; overlap?: boolean; label?: string;
+  /** God view: cards the players cannot see, drawn face up but marked as hidden */
+  peek?: boolean;
 }): ReactNode {
   const { t } = useI18nStore();
   return <span className={`${styles.cards} ${styles[size]} ${overlap ? styles.overlap : ''}`}
     role={label ? 'group' : undefined} aria-label={label}>
     {cards.map((card, index) => <img key={`${card.suit}-${card.rank}`}
-      className={`${styles.card} ${freshFrom !== undefined && index >= freshFrom ? styles.fresh : ''}`}
+      className={`${styles.card} ${peek ? styles.peek : ''} ${freshFrom !== undefined && index >= freshFrom ? styles.fresh : ''}`}
       style={{ '--card-index': index - (freshFrom ?? 0) } as CSSProperties}
       src={cardImageUrl(card)} alt={cardName(card)} draggable={false} />)}
     {Array.from({ length: backs }, (_, index) => <span key={`back-${index}`} className={`${styles.card} ${styles.back}`}

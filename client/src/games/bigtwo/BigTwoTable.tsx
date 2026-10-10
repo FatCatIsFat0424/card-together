@@ -22,6 +22,7 @@ import {
   comboLabelKey, currentRoundEntries, lastPlayCombo, penaltyFormula, sameCard, toggleCard,
 } from './bigtwo-view';
 import styles from './BigTwoTable.module.css';
+import { isOwnTurn, isSpectator } from '../observer-view';
 
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 
@@ -68,7 +69,7 @@ function Info({ game }: { game: BigTwoVisibleState }): ReactNode {
   const round = currentRoundEntries(game.log);
   return <aside className={infoStyles.rail}>
     <TurnBox text={game.phase !== 'playing' ? t('game.scoring')
-      : game.currentTurnSeat === game.mySeat ? t('bigtwo.yourTurn')
+      : isOwnTurn(game) ? t('bigtwo.yourTurn')
         : t('bigtwo.turnOf', { name: seatName(game.currentTurnSeat) })}>
       {game.phase === 'playing' && <p className={infoStyles.note}>
         {game.lastPlay ? null : t('bigtwo.freeLead')}{game.firstPlay && <> · {t('bigtwo.clubThree')}</>}
@@ -144,7 +145,7 @@ export function BigTwoTable(): ReactNode {
   const previous = lastPlayCombo(game?.lastPlay ?? null);
   const firstPlay = game?.firstPlay ?? false;
   const playing = game?.phase === 'playing';
-  const isMyTurn = playing && !locked && game.currentTurnSeat === game.mySeat;
+  const isMyTurn = playing && !locked && isOwnTurn(game);
   const selectedCombo = identifyCombo(selected);
   const playable = isMyTurn && canPlay(selected, previous, firstPlay);
 
@@ -182,11 +183,12 @@ export function BigTwoTable(): ReactNode {
 
   if (!game) return null;
 
+  const watching = isSpectator(game);
   const handZone = <div className={styles.handArea}>
-    <CardHand cards={hand} selectedCards={selected} disabled={!playing || actionPending}
+    <CardHand cards={hand} selectedCards={selected} disabled={!playing || actionPending || watching}
       onCardClick={(card) => setSelection(toggleCard(selected, card))}
       onReorder={setManualOrder} />
-    {playing && <div className={styles.controls}>
+    {playing && !watching && <div className={styles.controls}>
       <button type="button" className={`btn btn-outline ${styles.ctrl}`}
         onClick={() => {
           setSortBy(sortBy === 'rank' ? 'suit' : 'rank');

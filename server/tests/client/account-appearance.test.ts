@@ -21,6 +21,7 @@ vi.mock('../../../client/src/components/TurnClock', () => ({ TurnClock: () => nu
 vi.mock('../../../client/src/games/AbortVote', () => ({
   AbortVoteBanner: () => null, AbortVoteButton: () => null,
 }));
+vi.mock('../../../client/src/games/SpectatorLeave', () => ({ SpectatorLeaveButton: () => null }));
 vi.mock('../../../client/src/games/GamePresentation', () => ({ GamePresentation: () => null }));
 vi.mock('../../../client/src/games/RoundHistory', () => ({ RoundHistory: () => null }));
 vi.mock('../../../client/src/games/use-game-presentation', () => ({

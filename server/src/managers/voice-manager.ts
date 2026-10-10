@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { MAX_ROOM_MEMBERS } from '@shared/constants';
 import type { VoiceParticipant, VoiceRoomState, VoiceSettings } from '@shared/types';
 
 export interface VoicePeer extends VoiceParticipant {
@@ -41,7 +42,7 @@ export function createVoiceManager(): VoiceManager {
       if (existing && (existing.socketId !== socketId || existing.roomCode !== roomCode)) {
         return { success: false, error: 'Voice is already active in another tab. Leave it there first.' };
       }
-      if (!existing && roomPeers(roomCode).length >= 4) {
+      if (!existing && roomPeers(roomCode).length >= MAX_ROOM_MEMBERS) {
         return { success: false, error: 'This voice room is full.' };
       }
       const peer: VoicePeer = { peerId: existing?.peerId ?? randomUUID(), socketId,

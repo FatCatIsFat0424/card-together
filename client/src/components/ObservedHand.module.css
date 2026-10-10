@@ -1,0 +1,37 @@
+/* ─── Face-up hand beside a seat plate in god view ─── */
+
+.hand {
+  --observed-card-width: calc(clamp(30px, 3.2vw, 44px) * var(--playing-card-scale));
+  --observed-peek: calc(var(--observed-card-width) * 0.42);
+  max-width: min(100%, 260px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.row {
+  display: flex;
+  justify-content: center;
+  width: calc(var(--observed-peek) * (var(--row-cards) - 1) + var(--observed-card-width));
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Every card but the last sits in a shrinkable slot, so a narrow seat overlaps more. */
+.slot { flex: 0 1 var(--observed-peek); min-width: 6px; }
+.slot:last-child { flex: none; width: var(--observed-card-width); }
+
+.card {
+  display: block;
+  width: var(--observed-card-width);
+  aspect-ratio: 224 / 313;
+  border-radius: calc(var(--observed-card-width) * 0.08);
+  background: var(--card-face, #fff);
+  box-shadow: var(--shadow-sm);
+}
+
+.truth {
+  outline: 2px solid var(--color-success);
+  outline-offset: -2px;
+}

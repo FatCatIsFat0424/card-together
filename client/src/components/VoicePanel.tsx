@@ -99,7 +99,7 @@ export function VoicePanel(): ReactNode {
   const roomInfo = useRoomStore((state) => state.roomInfo);
   const accountId = account?.id;
   const { status, participants, muted, deafened, error, autoplayBlocked, peerPrefs,
-    peerErrors, peerConnections, peerId } =
+    peerErrors, peerConnections, peerId, silenced } =
     useVoiceStore(useShallow((state) => ({
       status: state.status,
       participants: state.participants,
@@ -111,6 +111,7 @@ export function VoicePanel(): ReactNode {
       peerErrors: state.peerErrors,
       peerConnections: state.peerConnections,
       peerId: state.peerId,
+      silenced: state.silenced,
     })));
   const [profiles, setProfiles] = useState<Record<string, PublicAccount>>({});
   const [showDevices, setShowDevices] = useState(false);
@@ -200,6 +201,8 @@ export function VoicePanel(): ReactNode {
       {error && <p className={styles.error} role="alert">{t(ERROR_TRANSLATIONS[error])}</p>}
       {joined && <>
         <p id="table-voice-hint" className={styles.hint}>{t('voice.hint')}</p>
+        {roomInfo?.observerIds?.includes(account.id) && <p className={styles.hint}>{t('voice.observerMuted')}</p>}
+        {silenced.length > 0 && <p className={styles.hint}>{t('voice.observersSilenced')}</p>}
         <ul className={styles.participants} aria-label={t('voice.participants')}>
           {participants.map((participant) => {
             const person = participant.accountId === account.id ? account

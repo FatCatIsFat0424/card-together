@@ -7,6 +7,7 @@ import type {
   BlackjackAction, BlackjackHand, BlackjackLogEntry, BlackjackMatchResult, BlackjackOutcome, BlackjackVisibleState,
   Card, Seat,
 } from '@shared/types';
+import { isOwnTurn } from '../observer-view';
 
 export const BJ_SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 /** Quick-pick chip values in the betting controls */
@@ -106,13 +107,14 @@ export function blackjackSeatOut(view: BlackjackTableView, seat: Seat): boolean 
 
 /** Actions the local player may take now; empty unless it is their turn and the table is ready. */
 export function blackjackActions(game: BlackjackVisibleState, ready: boolean): BlackjackAction[] {
-  if (!ready || game.phase !== 'playing' || game.currentTurnSeat !== game.mySeat) return [];
+  if (!ready || game.phase !== 'playing' || !isOwnTurn(game)) return [];
   return bjLegalActions(game.hands[game.mySeat], game.activeHand, game.chips[game.mySeat]);
 }
 
 /** The seat may still place a bet in the open betting window. */
 export function blackjackNeedsBet(game: BlackjackVisibleState): boolean {
-  return game.phase === 'betting' && game.betDeadline !== null && bjSitsIn(game.chips[game.mySeat])
+  return game.phase === 'betting' && game.observer !== 'spectator' && game.betDeadline !== null
+    && bjSitsIn(game.chips[game.mySeat])
     && !game.betPlaced[game.mySeat] && game.myBet === null;
 }
 

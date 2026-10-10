@@ -2,7 +2,9 @@ import { DEFAULT_TIME_CONTROL, isTimeControl } from '@shared/time-control';
 import { isDeepStrictEqual } from 'node:util';
 import { randomUUID } from 'node:crypto';
 import type { GameType, PlayerInfo, RoomCode, RoomInfo, RoomStatus, Seat, SeatMap, TimeControl } from '@shared/types';
-import { ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD } from '@shared/constants';
+import {
+  ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD, MAX_SPECTATORS,
+} from '@shared/constants';
 import type { PersistedRoom } from '../runtime/types';
 import { generateRoomCode } from '../utils/id-generator';
 
@@ -38,12 +40,23 @@ export function getRoomMemberIds(code: RoomCode): readonly string[] {
   return rooms.get(code)?.memberIds.slice() ?? [];
 }
 
+/** Members without a seat, in join order; bots always hold a seat. */
+export function getSpectatorIds(code: RoomCode): string[] {
+  const room = rooms.get(code);
+  return room ? room.memberIds.filter((id) => !seats.some((seat) => room.info.seats[seat].player?.id === id)) : [];
+}
+
+/** New members spectate until they take a seat, so capacity is the spectator limit. */
+export function hasSpectatorRoom(code: RoomCode): boolean {
+  return getSpectatorIds(code).length < MAX_SPECTATORS;
+}
+
+/** Joining is allowed during a match: the newcomer watches it as a spectator. */
 export function joinRoom(code: RoomCode, playerId: string): Result {
   const room = rooms.get(code);
   if (!room) return { success: false, reason: 'Room not found' };
   if (room.memberIds.includes(playerId)) return { success: true };
-  if (room.info.status === 'playing') return { success: false, reason: 'Game is in progress' };
-  if (room.memberIds.length >= 4) return { success: false, reason: 'Room is full' };
+  if (!hasSpectatorRoom(code)) return { success: false, reason: 'Room is full' };
   room.memberIds.push(playerId);
   return { success: true };
 }
@@ -72,12 +85,23 @@ function requireBotManagement(code: RoomCode, playerId: string): Result {
   return { success: true };
 }
 
+/** A match needs a seated human to vote, reconnect, and own its history. */
+function hasSeatedHuman(room: PersistedRoom): boolean {
+  return seats.some((seat) => room.info.seats[seat].player && !room.info.seats[seat].player?.isBot);
+}
+
+function emptySeatCount(room: PersistedRoom): number {
+  return seats.filter((seat) => !room.info.seats[seat].player).length;
+}
+
 export function addBot(code: RoomCode, playerId: string, seat: Seat): Result {
   const allowed = requireBotManagement(code, playerId);
   if (!allowed.success) return allowed;
   const room = rooms.get(code)!;
   if (room.info.seats[seat].player) return { success: false, reason: 'Seat is occupied' };
-  if (room.memberIds.length >= seats.length) return { success: false, reason: 'Room is full' };
+  if (!hasSeatedHuman(room) && emptySeatCount(room) === 1) {
+    return { success: false, reason: 'Leave a seat for a player.' };
+  }
   const bot: PlayerInfo = {
     id: `bot:${randomUUID()}`, username: `bot-${seat.toLowerCase()}`, nickname: `Bot ${seat}`,
     color: '#64748b', avatar: 'owl', avatarImage: null, isBot: true,
@@ -102,8 +126,10 @@ export function fillBots(code: RoomCode, playerId: string): Result {
   const allowed = requireBotManagement(code, playerId);
   if (!allowed.success) return allowed;
   const room = rooms.get(code)!;
+  // Spectators do not reserve seats; every empty seat receives a bot, except the last one
+  // while no human is seated.
   for (const seat of seats) {
-    if (room.memberIds.length >= seats.length) break;
+    if (!hasSeatedHuman(room) && emptySeatCount(room) === 1) break;
     if (!room.info.seats[seat].player) {
       const result = addBot(code, playerId, seat);
       if (!result.success) return result;
@@ -112,12 +138,17 @@ export function fillBots(code: RoomCode, playerId: string): Result {
   return { success: true };
 }
 
-/** Validates the host removing another human member; the caller performs the leave. */
+/**
+ * Validates the host removing another human member; the caller performs the leave.
+ * Spectators can be removed during a match because leaving does not affect it.
+ */
 export function canKick(code: RoomCode, hostId: string, targetId: string): Result {
   const room = rooms.get(code);
   if (!room) return { success: false, reason: 'Room not found' };
   if (room.info.hostId !== hostId) return { success: false, reason: 'Only the host can remove players.' };
-  if (room.info.status !== 'waiting') return { success: false, reason: 'Cannot remove players during game.' };
+  if (room.info.status !== 'waiting' && getPlayerSeat(code, targetId)) {
+    return { success: false, reason: 'Cannot remove players during game.' };
+  }
   if (targetId === hostId) return { success: false, reason: 'You cannot remove yourself.' };
   const isBot = seats.some((seat) => room.info.seats[seat].player?.id === targetId
     && room.info.seats[seat].player?.isBot);
@@ -140,6 +171,17 @@ export function changeSeat(code: RoomCode, player: PlayerInfo, target: Seat): Re
   return { success: true };
 }
 
+/** Leaves the current seat to spectate. */
+export function standUp(code: RoomCode, playerId: string): Result {
+  const room = rooms.get(code);
+  const seat = getPlayerSeat(code, playerId);
+  if (!room || !seat) return { success: false, reason: 'Not seated' };
+  if (room.info.status === 'playing') return { success: false, reason: 'Cannot change seat during game' };
+  if (!hasSpectatorRoom(code)) return { success: false, reason: 'The spectator area is full.' };
+  room.info = { ...room.info, seats: { ...room.info.seats, [seat]: { player: null, isReady: false } } };
+  return { success: true };
+}
+
 export function setReady(code: RoomCode, playerId: string, ready: boolean): Result {
   const room = rooms.get(code);
   const seat = getPlayerSeat(code, playerId);
@@ -153,7 +195,8 @@ export function setReady(code: RoomCode, playerId: string, ready: boolean): Resu
 
 export function isAllReady(code: RoomCode): boolean {
   const room = rooms.get(code);
-  return Boolean(room && seats.every((seat) => room.info.seats[seat].player && room.info.seats[seat].isReady));
+  return Boolean(room && hasSeatedHuman(room)
+    && seats.every((seat) => room.info.seats[seat].player && room.info.seats[seat].isReady));
 }
 
 export function getPlayerSeat(code: RoomCode, playerId: string): Seat | null {
@@ -287,6 +330,19 @@ export function updateRoomPlayer(player: PlayerInfo, roomCode: RoomCode | null):
   room.info = { ...room.info, seats: {
     ...room.info.seats, [seat]: { ...room.info.seats[seat], player },
   } };
+}
+
+/**
+ * Rooms none of whose human members is still in them; `isPresent` reports whether an account's
+ * player state still points at the room.
+ */
+export function findAbandonedRooms(isPresent: (accountId: string, code: RoomCode) => boolean): RoomCode[] {
+  return [...rooms].filter(([code, room]) => !room.memberIds.some((id) => !id.startsWith('bot:')
+    && isPresent(id, code))).map(([code]) => code);
+}
+
+export function removeRoom(code: RoomCode): void {
+  rooms.delete(code);
 }
 
 export function exportRooms(): PersistedRoom[] {

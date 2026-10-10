@@ -26,6 +26,8 @@ import {
 } from './holdem-view';
 import type { HoldemBlindSeats, HoldemControls, HoldemTableView, RaiseControl, SeatAction } from './holdem-view';
 import styles from './HoldemTable.module.css';
+import { isOwnTurn, isSpectator } from '../observer-view';
+import { useGodViewStore } from '../../stores/god-view-store';
 
 const RECENT_MOVES = 12;
 
@@ -41,6 +43,7 @@ function SeatSpot({ seat, view, position, isMe, action, blinds }: {
   const { t } = useI18nStore();
   const seatName = useSeatName();
   const state = seatState(view, seat);
+  const observed = useGodViewStore((store) => store.hands?.[seat]);
   // Busted seats are marked on their plate and have nothing on the felt.
   if (state === 'waiting' || state === 'out') return null;
   const revealed = view.revealed[seat];
@@ -58,7 +61,8 @@ function SeatSpot({ seat, view, position, isMe, action, blinds }: {
     </header>
     {!isMe && (revealed.length > 0
       ? <HeCards cards={revealed} size="sm" overlap label={seatName(seat)} />
-      : <HeCards cards={[]} backs={2} size="xs" overlap />)}
+      : observed?.length ? <HeCards cards={observed} size="xs" overlap peek label={seatName(seat)} />
+        : <HeCards cards={[]} backs={2} size="xs" overlap />)}
     {category && <span className={styles.category}>{t(`holdem.category.${category}`)}</span>}
     {won > 0 && <strong className={styles.won}>🏆 {t('holdem.wonAmount', { n: String(won) })}</strong>}
     {bet > 0 && <BetStack amount={bet} title={t('holdem.betTitle', { n: String(bet) })} />}
@@ -159,7 +163,7 @@ function Info({ game, view, locked }: { game: HoldemVisibleState; view: HoldemTa
   const recent = recentHoldemMoves(game.log, recentEnd, RECENT_MOVES);
   const text = game.phase === 'scoring' ? t('game.scoring')
     : locked ? t('game.playing')
-      : game.currentTurnSeat === me ? t('holdem.yourTurn')
+      : isOwnTurn(game) ? t('holdem.yourTurn')
         : t('holdem.turnOf', { name: seatName(game.currentTurnSeat) });
   return <aside className={infoStyles.rail}>
     <TurnBox text={text}>
@@ -168,7 +172,8 @@ function Info({ game, view, locked }: { game: HoldemVisibleState; view: HoldemTa
         {' '}{t('holdem.blinds', { sb: String(view.smallBlind), bb: String(view.bigBlind) })}
       </p>}
       <p className={infoStyles.note}>
-        {t('holdem.pot')} <ChipAmount amount={potTotal(view)} /> · {t('holdem.myChips', { n: String(view.chips[me]) })}
+        {t('holdem.pot')} <ChipAmount amount={potTotal(view)} />
+        {!isSpectator(game) && <> · {t('holdem.myChips', { n: String(view.chips[me]) })}</>}
       </p>
     </TurnBox>
 
@@ -357,7 +362,7 @@ export function HoldemTable(): ReactNode {
 
   const prompt = game.phase !== 'playing' || locked ? null
     // The shell already announces my turn; only the amount owed is added here.
-    : game.currentTurnSeat === me ? owed > 0 ? t('holdem.toCall', { n: String(owed) }) : null
+    : isOwnTurn(game) ? owed > 0 ? t('holdem.toCall', { n: String(owed) }) : null
       : t('holdem.turnOf', { name: seatName(game.currentTurnSeat) });
 
   const stateNote = myState === 'out' ? t('holdem.youOut') : myState === 'folded' ? t('holdem.youFolded')
@@ -371,9 +376,10 @@ export function HoldemTable(): ReactNode {
         {won > 0 && <strong className={styles.won}>🏆 {t('holdem.wonAmount', { n: String(won) })}</strong>}
       </div>
     </div>}
-    {game.phase === 'playing' && (myState === 'active'
+    {game.phase === 'playing' && isSpectator(game) ? prompt && <p className={styles.prompt}>{prompt}</p>
+      : game.phase === 'playing' && (myState === 'active'
       ? <>
-        {prompt && <p className={`${styles.prompt} ${game.currentTurnSeat === me && !locked ? styles.promptActive : ''}`}>{prompt}</p>}
+        {prompt && <p className={`${styles.prompt} ${isOwnTurn(game) && !locked ? styles.promptActive : ''}`}>{prompt}</p>}
         <Controls key={game.log.length} game={game} options={options} enabled={myTurn} onAction={sendAction} />
       </>
       : stateNote && <p className={styles.prompt} role="status">{stateNote}</p>)}

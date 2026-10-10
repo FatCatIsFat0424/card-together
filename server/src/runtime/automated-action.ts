@@ -107,7 +107,10 @@ export function firstLegalAction(visible: PlayerVisibleGameState): BotAction | n
 
 /** Ends a game that cannot progress so the table is not retried forever. */
 function abortStuckGame(code: RoomCode, seat: Seat): void {
-  const subject = gameManager.getGameState(code)?.players[seat];
+  const players = gameManager.getGameState(code)?.players;
+  // Chat senders must be accounts, so a bot's stuck turn is reported about a human seat.
+  const subject = players && [players[seat], ...SEAT_ORDER_CLOCKWISE.map((other) => players[other])]
+    .find((player) => !player.isBot);
   gameManager.abortGame(code);
   roomManager.setRoomStatus(code, 'waiting');
   roomManager.resetAllReady(code);
@@ -116,12 +119,19 @@ function abortStuckGame(code: RoomCode, seat: Seat): void {
 
 /**
  * Applies the strategy's action; after repeated failures uses the first legal action and,
- * if even that is impossible, aborts the game. Throws to request another attempt.
+ * if even that is impossible or keeps failing to commit, aborts the game. Throws to request
+ * another attempt.
  */
 export function performAutomatedTurn(
   code: RoomCode, seat: Seat, failures: number,
   choose: (visible: PlayerVisibleGameState) => BotAction | null,
 ): void {
+  // A fallback that applies but never persists would otherwise be retried forever.
+  if (failures >= MAX_AUTOMATED_FAILURES * 2) {
+    console.error(`[runtime] Aborting ${code}: the action for ${seat} failed to commit ${failures} times.`);
+    abortStuckGame(code, seat);
+    return;
+  }
   const visible = gameManager.getPlayerVisibleState(code, seat);
   if (failures < MAX_AUTOMATED_FAILURES) {
     const action = visible && choose(visible);

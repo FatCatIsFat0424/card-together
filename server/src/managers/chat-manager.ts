@@ -3,6 +3,9 @@
 import type {
   RoomCode, ChatMessage, EmojiRecord, MediaId, PlayerInfo, ProvidedEmoji,
 } from '@shared/types';
+
+/** `observers` limits a message to spectators and eliminated players during a match. */
+export type ChatAudience = ChatMessage['audience'];
 import { MAX_MESSAGE_EMOJIS, extractEmojiNames } from '@shared/constants';
 import { generateMessageId } from '../utils/id-generator';
 
@@ -56,6 +59,7 @@ export function addMessage(
   content: string,
   library: readonly Pick<EmojiRecord, 'name' | 'mediaId'>[] = [],
   provided: ReadonlyMap<string, ProvidedEmoji> = new Map(),
+  audience?: ChatAudience,
 ): ChatMessage {
   const { emojis, providedEmojis } = resolveMessageEmojis(content, library, provided);
   const message: ChatMessage = {
@@ -65,6 +69,7 @@ export function addMessage(
     timestamp: Date.now(),
     ...(Object.keys(emojis).length > 0 && { emojis }),
     ...(Object.keys(providedEmojis).length > 0 && { providedEmojis }),
+    ...(audience && { audience }),
   };
 
   append(roomCode, message);
@@ -112,12 +117,14 @@ export function restoreChat(records: { roomCode: string; messages: ChatMessage[]
 /** Resolves stickers exclusively from the authenticated sender's library. */
 export function addSticker(
   roomCode: RoomCode, sender: PlayerInfo, stickerId: string, library: readonly EmojiRecord[],
+  audience?: ChatAudience,
 ): ChatMessage | null {
   const asset = library.find((emoji) => emoji.id === stickerId && emoji.accountId === sender.id);
   if (!asset) return null;
   const message: ChatMessage = {
     id: generateMessageId(), sender, content: '', timestamp: Date.now(),
     sticker: { id: asset.id, name: asset.name, mediaId: asset.mediaId },
+    ...(audience && { audience }),
   };
   append(roomCode, message);
   return message;
@@ -126,12 +133,14 @@ export function addSticker(
 /** Resolves stickers exclusively from the site-provided catalog, by emoji name. */
 export function addProvidedSticker(
   roomCode: RoomCode, sender: PlayerInfo, name: string, provided: ReadonlyMap<string, ProvidedEmoji>,
+  audience?: ChatAudience,
 ): ChatMessage | null {
   const asset = provided.get(name);
   if (!asset) return null;
   const message: ChatMessage = {
     id: generateMessageId(), sender, content: '', timestamp: Date.now(),
     providedSticker: { name: asset.name, file: asset.file },
+    ...(audience && { audience }),
   };
   append(roomCode, message);
   return message;

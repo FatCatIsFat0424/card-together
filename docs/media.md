@@ -142,7 +142,9 @@ Voice follows room membership across room/game/profile pages. Leave, logout, dis
 or room removal releases microphone/peer resources. Refresh requires explicit rejoin.
 One account can join from only one tab at a time.
 
-WebRTC exchanges audio among up to four members (three remote peers each); Socket.IO
+WebRTC exchanges audio among up to twelve members (the room limit); during a match a player
+still in it mutes observers on its own side, since audio is peer to peer
+([spectators](games.md#spectators-and-god-view)). Socket.IO
 relays validated session/room/peer-bound signaling only. Voice is not recorded or saved.
 HTTPS or localhost is required for microphone access. Browser permissions/autoplay or
 unavailable devices can prevent audio even when transport reports connected.

@@ -22,6 +22,7 @@ import {
 } from './sevens-view';
 import type { SevensHandMode, SevensRow } from './sevens-view';
 import styles from './SevensTable.module.css';
+import { isOwnTurn, isSpectator } from '../observer-view';
 
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 const RECENT_MOVES = 8;
@@ -103,14 +104,14 @@ function turnText(
   game: SevensVisibleState, mode: SevensHandMode, t: Translate, seatName: (seat: Seat) => string,
 ): string {
   if (game.phase !== 'playing') return t('game.scoring');
-  if (game.currentTurnSeat !== game.mySeat) return t('sevens.turnOf', { name: seatName(game.currentTurnSeat) });
+  if (!isOwnTurn(game)) return t('sevens.turnOf', { name: seatName(game.currentTurnSeat) });
   return mode === 'cover' ? t('sevens.mustCoverTurn') : t('sevens.yourTurn');
 }
 
 function Info({ game }: { game: SevensVisibleState }): ReactNode {
   const { t } = useI18nStore();
   const seatName = useSeatName();
-  const mode = sevensHandMode(game.currentTurnSeat === game.mySeat, game.validCards, game.myHand.length);
+  const mode = sevensHandMode(isOwnTurn(game), game.validCards, game.myHand.length);
   const recent = recentMoves(game.log, RECENT_MOVES);
   return <aside className={infoStyles.rail}>
     <TurnBox text={turnText(game, mode, t, seatName)}>
@@ -123,7 +124,7 @@ function Info({ game }: { game: SevensVisibleState }): ReactNode {
         <li key={seat} className={infoStyles.row}>
           <span className={infoStyles.name}>{seatName(seat)}</span>
           <span className={styles.countTag}>{t('sevens.covered', { n: String(game.coveredCounts[seat]) })}</span>
-          {seat === game.mySeat && <span className={styles.penaltyTag}>
+          {seat === game.mySeat && !isSpectator(game) && <span className={styles.penaltyTag}>
             {t('sevens.myPenalty', { n: String(svPenalty(game.myCovered)) })}
           </span>}
         </li>
@@ -193,7 +194,7 @@ export function SevensTable(): ReactNode {
   if (!game) return null;
 
   const playing = game.phase === 'playing';
-  const isMyTurn = playing && !locked && game.currentTurnSeat === game.mySeat;
+  const isMyTurn = playing && !locked && isOwnTurn(game);
   const canAct = isMyTurn && connectionReady && !actionPending;
   const mode = sevensHandMode(isMyTurn, game.validCards, hand.length);
   const selected = mode === 'cover' && canAct && coverPick?.at === game.log.length

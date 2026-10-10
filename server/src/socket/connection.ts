@@ -1,7 +1,9 @@
 import { RECONNECT_TIMEOUT_MS } from '@shared/constants';
 import type { AccountProfile } from '@shared/types';
 import type { SocketContext } from './context';
-import { affectedAccounts, broadcastState, leaveCurrentRoom, playerSnapshot, runAction } from './context';
+import {
+  affectedAccounts, broadcastState, findAbandonedRooms, leaveCurrentRoom, playerSnapshot, removeAbandonedRooms, runAction,
+} from './context';
 import * as playerManager from '../managers/player-manager';
 import * as roomManager from '../managers/room-manager';
 import { registerRoomHandlers } from './room-handler';
@@ -100,7 +102,7 @@ export function setupConnectionHandler(context: SocketContext): () => void {
       if ([...windows.values()].every((window) => now >= window.resetAt)) rates.delete(accountId);
     }
     if (closing || (playerManager.getExpiredPlayers(RECONNECT_TIMEOUT_MS).length === 0
-      && !roomManager.hasExpiredAbortVote(Date.now()))) return;
+      && !roomManager.hasExpiredAbortVote(Date.now()) && findAbandonedRooms().length === 0)) return;
     const recipients = new Set<string>();
     void runtime.mutate(() => {
       for (const { code, startedBy } of roomManager.expireAbortVotes(Date.now())) {
@@ -112,6 +114,7 @@ export function setupConnectionHandler(context: SocketContext): () => void {
         leaveCurrentRoom(player.info.id);
         playerManager.removePlayer(player.info.id);
       }
+      for (const code of removeAbandonedRooms()) console.warn(`[cleanup] Removed abandoned room ${code}.`);
     }, { skipUnchanged: true,
       afterCommit: () => {
         reconcileVoiceMembership(context, recipients);

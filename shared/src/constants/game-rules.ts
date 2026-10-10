@@ -5,6 +5,12 @@ import type { Seat, BidSuit, Team, GameType } from '../types';
 /** All game types */
 export const GAME_TYPES: readonly GameType[] = ['bridge', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'chinesepoker', 'liarsdeck', 'blackjack', 'holdem'];
 
+/** Unseated human members a room accepts besides its four seats */
+export const MAX_SPECTATORS = 8;
+
+/** Room members at most: four seats (human or bot) plus spectators */
+export const MAX_ROOM_MEMBERS = 4 + MAX_SPECTATORS;
+
 /** Abort vote: passes once this many yes votes are cast */
 export const ABORT_VOTE_THRESHOLD = 3;
 

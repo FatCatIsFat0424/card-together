@@ -1,7 +1,7 @@
 import { isTimeControl } from '@shared/time-control';
 import { getTurnSeat } from '../managers/game-clock';
 import {
-  ABORT_VOTE_THRESHOLD, GAME_TYPES, MAX_MESSAGE_EMOJIS, isEmojiName, isMediaId, isProvidedEmojiFile,
+  ABORT_VOTE_THRESHOLD, GAME_TYPES, MAX_MESSAGE_EMOJIS, MAX_ROOM_MEMBERS, isEmojiName, isMediaId, isProvidedEmojiFile,
 } from '@shared/constants';
 import { isDeepStrictEqual } from 'node:util';
 import { getPresentationEndsAt } from '@shared/game-presentation';
@@ -715,10 +715,17 @@ function returnedSeats(value: ObjectValue): boolean {
     && returned.every((seat: unknown) => oneOf(seat, seats)) && new Set(returned).size === returned.length;
 }
 
+function returnedViewers(value: ObjectValue): boolean {
+  if (value.returnedViewers === undefined) return true;
+  const returned = value.returnedViewers;
+  return value.result !== null && Array.isArray(returned) && returned.every(text)
+    && new Set(returned).size === returned.length;
+}
+
 function game(value: unknown): boolean {
   return object(value) && oneOf(value.gameType, [...GAME_TYPES]) &&
     gameValidators[value.gameType as GameType](value) && presentation(value) && gameClock(value)
-    && returnedSeats(value);
+    && returnedSeats(value) && returnedViewers(value);
 }
 
 function bridgeGame(value: ObjectValue): boolean {
@@ -778,13 +785,19 @@ function room(value: unknown): boolean {
     !Array.isArray(value.memberIds) ||
     !value.memberIds.every(text) ||
     value.memberIds.length < 1 ||
-    value.memberIds.length > 4 ||
+    value.memberIds.length > MAX_ROOM_MEMBERS ||
     new Set(value.memberIds).size !== value.memberIds.length
   )
     return false;
   const info = value.info;
   const members = value.memberIds as string[];
   const humans = members.filter((id) => !id.startsWith('bot:'));
+  // Only seated humans vote; spectators are members without a seat.
+  const voters = object(info.seats) ? seats.flatMap((seat) => {
+    const entry = (info.seats as ObjectValue)[seat];
+    const occupant = object(entry) && object(entry.player) ? entry.player : null;
+    return occupant && occupant.isBot !== true && text(occupant.id) ? [occupant.id] : [];
+  }) : [];
   return (
     text(info.code) &&
     (info.timeControl === undefined || isTimeControl(info.timeControl)) &&
@@ -793,7 +806,7 @@ function room(value: unknown): boolean {
     number(info.createdAt) &&
     oneOf(info.hostId, humans) &&
     (info.abortVoteCooldownUntil === null || number(info.abortVoteCooldownUntil)) &&
-    (info.abortVote === null || (info.status === 'playing' && abortVote(info.abortVote, humans))) &&
+    (info.abortVote === null || (info.status === 'playing' && abortVote(info.abortVote, voters))) &&
     object(info.seats) &&
     Object.keys(info.seats).length === 4 &&
     seats.every((seat) => {
@@ -1359,7 +1372,8 @@ export function isRuntimeSnapshot(value: unknown): value is RuntimeSnapshot {
             (message.emojis === undefined || messageEmojis(message.emojis)) &&
             (message.providedEmojis === undefined || providedMessageEmojis(message.providedEmojis)) &&
             inlineEmojiTotal(message) &&
-            (message.system === undefined || message.system === true),
+            (message.system === undefined || message.system === true) &&
+            (message.audience === undefined || message.audience === 'observers'),
         ),
     )
   )

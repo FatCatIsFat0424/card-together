@@ -139,7 +139,7 @@
 
 .tableArea {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto auto;
   min-height: 0;
   gap: var(--spacing-md);
   padding: var(--spacing-md);
@@ -299,6 +299,37 @@
   top: var(--spacing-sm);
   right: var(--spacing-sm);
 }
+
+/* ─── Spectators: unseated members, listed in one wrapping row below the table ─── */
+.spectators {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--text-sm);
+  color: var(--table-ink);
+}
+
+.spectatorsLabel { font-weight: 700; white-space: nowrap; }
+.spectatorsEmpty { color: var(--table-ink); opacity: 0.75; }
+
+.spectatorList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs) var(--spacing-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.spectator {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.spectator .botAction { margin-top: 0; }
 
 .roomFooter {
   display: flex;

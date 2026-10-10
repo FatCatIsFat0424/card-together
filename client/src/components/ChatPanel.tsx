@@ -5,6 +5,8 @@ import { PROVIDED_EMOJIS } from '../provided-emoji';
 import { useChatStore } from '../stores/chat-store';
 import { useEmojiStore } from '../stores/emoji-store';
 import { useI18nStore } from '../stores/i18n-store';
+import { usePlayerStore } from '../stores/player-store';
+import { useRoomStore } from '../stores/room-store';
 import type { TranslationKey } from '../i18n';
 import { Avatar } from './Avatar';
 import { ChatMessageBody, EmojiPickerSections } from './ChatEmoji';
@@ -21,6 +23,9 @@ export function ChatPanel({ onCollapse }: ChatPanelProps): ReactNode {
   const emojis = useEmojiStore((state) => state.emojis);
   const loadEmojis = useEmojiStore((state) => state.load);
   const { t } = useI18nStore();
+  // During a match, observers' messages reach only other observers.
+  const playerId = usePlayerStore((state) => state.playerId);
+  const observing = useRoomStore((state) => Boolean(playerId && state.roomInfo?.observerIds?.includes(playerId)));
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -115,11 +120,14 @@ export function ChatPanel({ onCollapse }: ChatPanelProps): ReactNode {
           <div key={message.id} className={styles.chatMessage}>
             <Avatar avatar={message.sender.avatar} image={message.sender.avatarImage} color={message.sender.color} size="small" />
             <span className={styles.chatSender}>{message.sender.nickname}</span>
+            {message.audience === 'observers' && <span className={styles.observerTag}
+              title={t('chat.observerTitle')}>{t('chat.observerTag')}</span>}
             <span className={styles.chatContent}><ChatMessageBody message={message} /></span>
           </div>
         ))}
       </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
+      {observing && <p className={styles.observerNotice}>{t('chat.observerNotice')}</p>}
       {pickerOpen && (
         <div className={`${styles.picker} ${mode === 'sticker' ? styles.stickerPicker : ''}`} data-emoji-picker>
           <div className={styles.pickerTabs}>

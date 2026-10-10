@@ -47,4 +47,11 @@ export interface RoomInfo {
   readonly hostId: string;
   readonly abortVote: AbortVoteInfo | null;
   readonly abortVoteCooldownUntil: number | null;
+  /** Unseated human members in join order; added to snapshots only. */
+  readonly spectators?: readonly PlayerInfo[];
+  /**
+   * Accounts with god view during a match (spectators and eliminated seats); added to
+   * snapshots only, and empty outside a match.
+   */
+  readonly observerIds?: readonly string[];
 }

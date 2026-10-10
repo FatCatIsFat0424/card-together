@@ -36,7 +36,11 @@ applies manager changes, and writes the runtime and any completed match atomical
 Only then does it acknowledge and broadcast `player:state` to the actor and affected
 old/new room members, including their connected tabs. Persistence failure restores
 manager state. Unchanged resumes may skip writes while retaining authentication and
-synchronization. Each snapshot includes only the recipient's private hand/legal cards.
+synchronization. Each snapshot includes only the recipient's private hand/legal cards, except that
+spectators and eliminated seats also receive every hand (`observedHands`, Blackjack `observedHole`)
+from `getRecipientVisibleState`; bots and automatic actions use the filtered view only. Room
+snapshots add the spectator list and the current observer accounts, and chat history is filtered
+per recipient; see [spectators](games.md#spectators-and-god-view).
 
 Tabs share one account identity and seat. A final-tab disconnect starts a 60-second
 reconnect window. Restart restores room/game/chat state and gives disconnected players
@@ -141,8 +145,14 @@ and publish only after persistence succeeds. Failed saves roll back and retry; a
 replacement, and shutdown cancel stale work. Bot decisions never receive opponents'
 private hands. Big Two's existing forced-pass scheduler owns forced passes for all seats.
 Bot and timeout attempts that fail three times in a row for the same turn fall back to the
-first legal action from the same filtered view; if none applies, the game is aborted with a
-system chat line instead of retrying forever. Every failed attempt is logged.
+first legal action from the same filtered view; if none applies, or that action also fails to
+commit three more times, the game is aborted with a system chat line (about a human seat, since
+chat senders must be accounts) instead of retrying forever. Every failed attempt is logged.
+
+Rooms are removed when their last human member leaves, including after the 60-second reconnect
+window expires. The same cleanup interval also removes, as a safety net, any room none of whose
+human members still points at it, together with its game and chat. Bots-only results are not
+written to match history, which only records accounts.
 
 ## Turn clocks
 

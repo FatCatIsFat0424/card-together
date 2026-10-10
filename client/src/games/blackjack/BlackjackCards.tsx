@@ -28,8 +28,10 @@ export function totalLabel(cards: readonly Card[], split: boolean, t: Translate)
  * Overlapping face-up cards; `hole` adds the dealer's face-down card. `freshFrom` marks cards from
  * that index on as newly arrived so the presentation can animate them.
  */
-export function BjCards({ cards, hole = false, size = 'md', freshFrom }: {
+export function BjCards({ cards, hole = false, size = 'md', freshFrom, peek }: {
   cards: readonly Card[]; hole?: boolean; size?: 'sm' | 'md' | 'lg'; freshFrom?: number;
+  /** God view: the face-down hole card, drawn face up but marked as still hidden */
+  peek?: Card;
 }): ReactNode {
   const { t } = useI18nStore();
   return <span className={`${styles.cards} ${styles[size]}`}>
@@ -37,7 +39,9 @@ export function BjCards({ cards, hole = false, size = 'md', freshFrom }: {
       className={`${styles.card} ${freshFrom !== undefined && index >= freshFrom ? styles.fresh : ''}`}
       style={{ '--card-index': index - (freshFrom ?? 0) } as CSSProperties}
       src={cardImageUrl(card)} alt={cardName(card)} draggable={false} />)}
-    {hole && <span className={`${styles.card} ${styles.back}`} role="img" aria-label={t('blackjack.holeCard')} />}
+    {hole && (peek ? <img className={`${styles.card} ${styles.peek}`} src={cardImageUrl(peek)} draggable={false}
+      alt={`${t('blackjack.holeCard')} ${cardName(peek)}`} />
+      : <span className={`${styles.card} ${styles.back}`} role="img" aria-label={t('blackjack.holeCard')} />)}
   </span>;
 }
 
@@ -74,8 +78,8 @@ export function BjHand({ hand, outcome, active = false, size = 'md', label, fres
 }
 
 /** The dealer's cards: the up card and face-down hole card until it is revealed, then the total. */
-export function DealerHand({ cards, holeHidden, size = 'md', freshFrom }: {
-  cards: readonly Card[]; holeHidden: boolean; size?: 'sm' | 'md' | 'lg'; freshFrom?: number;
+export function DealerHand({ cards, holeHidden, size = 'md', freshFrom, peek }: {
+  cards: readonly Card[]; holeHidden: boolean; size?: 'sm' | 'md' | 'lg'; freshFrom?: number; peek?: Card;
 }): ReactNode {
   const { t } = useI18nStore();
   const total = holeHidden ? t('blackjack.dealerShows', { n: String(bjTotal(cards).total) })
@@ -86,7 +90,7 @@ export function DealerHand({ cards, holeHidden, size = 'md', freshFrom }: {
       ? <span className={`${styles.cards} ${styles[size]}`} aria-hidden="true">
         <span className={`${styles.card} ${styles.slot}`} /><span className={`${styles.card} ${styles.slot}`} />
       </span>
-      : <BjCards cards={cards} hole={holeHidden} size={size} freshFrom={freshFrom} />}
+      : <BjCards cards={cards} hole={holeHidden} size={size} freshFrom={freshFrom} peek={peek} />}
     {cards.length > 0 && <span className={styles.meta}>
       <span className={`${styles.total} ${bjTotal(cards).total > 21 ? styles.bustTotal : ''}`}>{total}</span>
     </span>}

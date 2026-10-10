@@ -19,6 +19,7 @@ import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
 import styles from './RedPointsTable.module.css';
 import { redPointsCardAction, redPointsTableLayout, redPointsTablePage } from './redpoints-view';
+import { isOwnTurn } from '../observer-view';
 
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 const RECENT_MOVES = 8;
@@ -110,7 +111,7 @@ function Info({ game }: { game: RedPointsVisibleState }): ReactNode {
   const recent = game.log.slice(-RECENT_MOVES).reverse();
   return <aside className={infoStyles.rail}>
     <TurnBox text={game.phase !== 'playing' ? t('game.scoring')
-      : game.currentTurnSeat === game.mySeat ? t('redpoints.yourTurn')
+      : isOwnTurn(game) ? t('redpoints.yourTurn')
         : t('redpoints.turnOf', { name: seatName(game.currentTurnSeat) })}>
       <p className={infoStyles.note}>{t('redpoints.stock')} {game.stockCount}</p>
     </TurnBox>
@@ -178,7 +179,7 @@ export function RedPointsTable(): ReactNode {
   if (!game) return null;
 
   const playing = game.phase === 'playing';
-  const isMyTurn = playing && !locked && game.currentTurnSeat === game.mySeat;
+  const isMyTurn = playing && !locked && isOwnTurn(game);
   const choosingFlip = isMyTurn && game.step === 'flip-choose' && game.pendingFlip !== null;
   const canPlay = isMyTurn && connectionReady && game.step === 'play' && !actionPending;
   // Drop the selection when it is not our turn; only cards still in hand count

@@ -18,6 +18,7 @@ import { LiarCardFace } from './LiarCardFace';
 import { liarsDeckHandMode, liarsDeckView, recentLiarsDeckMoves, toggleSelection } from './liarsdeck-view';
 import type { LiarsDeckTableView } from './liarsdeck-view';
 import styles from './LiarsDeckTable.module.css';
+import { isOwnTurn, isSpectator } from '../observer-view';
 
 const RECENT_MOVES = 8;
 const MAX_PILE_BACKS = 6;
@@ -83,7 +84,7 @@ function Info({ game, view, locked }: { game: LiarsDeckVisibleState; view: Liars
   const recent = recentLiarsDeckMoves(game.log.slice(0, view.logEnd), RECENT_MOVES);
   return <aside className={infoStyles.rail}>
     <TurnBox text={game.phase !== 'playing' || locked ? t('game.playing')
-      : game.currentTurnSeat === game.mySeat ? t('liarsdeck.yourTurn')
+      : isOwnTurn(game) ? t('liarsdeck.yourTurn')
         : t('liarsdeck.turnOf', { name: seatName(game.currentTurnSeat) })}>
       {view.tableFace && <p className={infoStyles.note}>
         {t('liarsdeck.round', { n: String(view.round) })} · {t('liarsdeck.tableCard')}
@@ -159,11 +160,12 @@ export function LiarsDeckTable(): ReactNode {
 
   const view = liarsDeckView(game, frame);
   const playing = game.phase === 'playing';
-  const isMyTurn = playing && !locked && game.currentTurnSeat === game.mySeat;
+  const isMyTurn = playing && !locked && isOwnTurn(game);
   const mode = liarsDeckHandMode(game, isMyTurn);
   const canAct = mode !== 'wait' && connectionReady && !actionPending;
   const chosen = selected.filter((id) => game.myHand.some((card) => card.id === id));
-  const out = view.eliminated.includes(game.mySeat);
+  const watching = isSpectator(game);
+  const out = !watching && view.eliminated.includes(game.mySeat);
 
   const handleActionResult: ActionCallback = (timeout, response) => {
     setActionPending(false);
@@ -196,6 +198,7 @@ export function LiarsDeckTable(): ReactNode {
   const face = t(`liarsdeck.face.${game.tableFace}`);
   const prompt = !playing ? null
     : view.handHidden ? t('liarsdeck.dealing')
+      : watching ? t('liarsdeck.turnOf', { name: seatName(game.currentTurnSeat) })
       : out ? t('liarsdeck.youAreOut')
         : game.myHand.length === 0 ? t('liarsdeck.outOfCards')
           : mode === 'wait' ? t('liarsdeck.turnOf', { name: seatName(game.currentTurnSeat) })

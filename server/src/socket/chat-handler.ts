@@ -1,7 +1,7 @@
 import type { EmojiRecord } from '@shared/types';
 import { isEmojiName } from '@shared/constants';
 import type { SocketContext, TypedSocket } from './context';
-import { actionError, requireRoom, runAction } from './context';
+import { actionError, observerIds, requireRoom, runAction } from './context';
 import * as playerManager from '../managers/player-manager';
 import * as chatManager from '../managers/chat-manager';
 
@@ -14,6 +14,7 @@ export function registerChatHandlers(context: SocketContext, socket: TypedSocket
         const player = playerManager.getPlayerInfo(socket.data.accountId);
         if (!player) throw actionError('Player not found.');
         const roomCode = requireRoom(socket);
+        const audience = observerIds(roomCode).includes(player.id) ? 'observers' : undefined;
         if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
           throw actionError('Invalid chat payload.');
         }
@@ -22,7 +23,7 @@ export function registerChatHandlers(context: SocketContext, socket: TypedSocket
             Object.keys(payload).some((key) => key !== 'stickerId')) {
             throw actionError('Invalid sticker payload.');
           }
-          if (!chatManager.addSticker(roomCode, player, payload.stickerId, library)) {
+          if (!chatManager.addSticker(roomCode, player, payload.stickerId, library, audience)) {
             throw actionError('Sticker is not in your library.');
           }
         } else if ('providedSticker' in payload) {
@@ -30,7 +31,8 @@ export function registerChatHandlers(context: SocketContext, socket: TypedSocket
             Object.keys(payload).some((key) => key !== 'providedSticker')) {
             throw actionError('Invalid sticker payload.');
           }
-          if (!chatManager.addProvidedSticker(roomCode, player, payload.providedSticker, context.providedEmojis)) {
+          if (!chatManager.addProvidedSticker(roomCode, player, payload.providedSticker, context.providedEmojis,
+            audience)) {
             throw actionError('Sticker is not available.');
           }
         } else {
@@ -38,7 +40,7 @@ export function registerChatHandlers(context: SocketContext, socket: TypedSocket
           if (typeof content !== 'string' || !content.trim() || content.trim().length > 500) {
             throw actionError('Messages must contain 1–500 characters.');
           }
-          chatManager.addMessage(roomCode, player, content.trim(), library, context.providedEmojis);
+          chatManager.addMessage(roomCode, player, content.trim(), library, context.providedEmojis, audience);
         }
         return { success: true };
       }));

@@ -19,6 +19,7 @@ import { useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
 import styles from './NinetyNineTable.module.css';
+import { isOwnTurn } from '../observer-view';
 
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 const RECENT_MOVES = 8;
@@ -71,7 +72,7 @@ function Info({ game }: { game: NinetyNineVisibleState }): ReactNode {
   const recent = game.log.slice(-RECENT_MOVES).reverse();
   return <aside className={infoStyles.rail}>
     <TurnBox text={game.phase !== 'playing' ? t('game.scoring')
-      : game.currentTurnSeat === game.mySeat ? t('ninetynine.yourTurn')
+      : isOwnTurn(game) ? t('ninetynine.yourTurn')
         : t('ninetynine.turnOf', { name: seatName(game.currentTurnSeat) })}>
       <p className={infoStyles.note}>
         {t('ninetynine.total')} {game.total} · {t(game.direction === 'ccw' ? 'ninetynine.directionCcw' : 'ninetynine.directionCw')}
@@ -136,7 +137,7 @@ export function NinetyNineTable(): ReactNode {
   if (!game) return null;
 
   const playing = game.phase === 'playing';
-  const isMyTurn = playing && !locked && game.currentTurnSeat === game.mySeat;
+  const isMyTurn = playing && !locked && isOwnTurn(game);
   const canPlay = isMyTurn && connectionReady && !actionPending;
   const playable = game.myHand.filter((card) => nnIsPlayable(game.total, card));
   const unplayable = game.myHand.filter((card) => !nnIsPlayable(game.total, card));

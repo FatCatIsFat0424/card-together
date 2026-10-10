@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { PlayerInfo, Seat } from '@shared/types';
+import { MAX_ROOM_MEMBERS, MAX_SPECTATORS } from '@shared/constants';
 import * as roomManager from '../../src/managers/room-manager';
 import * as gameManager from '../../src/managers/game-manager';
 import { isRuntimeSnapshot } from '../../src/runtime/validate';
@@ -52,15 +53,38 @@ describe('room bots', () => {
     expect(roomManager.getRoomMemberIds(code)).not.toContain(bot.id);
   });
 
-  it('should reserve member capacity for unseated humans when filling empty seats', () => {
+  it('should fill every empty seat and keep unseated humans as spectators', () => {
     const code = room();
     roomManager.joinRoom(code, 'guest');
     expect(roomManager.fillBots(code, 'host').success).toBe(true);
-    expect(roomManager.getRoomMemberIds(code)).toHaveLength(4);
-    expect(roomManager.getRoomInfo(code)!.seats.W.player).toBeNull();
-    expect(roomManager.addBot(code, 'host', 'W').success).toBe(false);
+    expect(roomManager.getRoomMemberIds(code)).toHaveLength(5);
+    expect(SEATS.slice(1).every((seat) => roomManager.getRoomInfo(code)!.seats[seat].player?.isBot)).toBe(true);
+    expect(roomManager.getSpectatorIds(code)).toEqual(['guest']);
+    expect(roomManager.changeSeat(code, player('guest'), 'W').success).toBe(false);
+    expect(roomManager.removeBot(code, 'host', 'W').success).toBe(true);
     expect(roomManager.changeSeat(code, player('guest'), 'W').success).toBe(true);
-    expect(roomManager.joinRoom(code, 'stranger').success).toBe(false);
+    expect(roomManager.getSpectatorIds(code)).toEqual([]);
+  });
+
+  it('should cap spectators, admit them during a match, and let seated players stand up', () => {
+    const code = room();
+    for (let index = 0; index < MAX_SPECTATORS; index += 1) {
+      expect(roomManager.joinRoom(code, `watcher-${index}`).success).toBe(true);
+    }
+    expect(roomManager.joinRoom(code, 'stranger')).toEqual({ success: false, reason: 'Room is full' });
+    expect(roomManager.standUp(code, 'host')).toEqual({ success: false, reason: 'The spectator area is full.' });
+    expect(roomManager.changeSeat(code, player('watcher-0'), 'E').success).toBe(true);
+    expect(roomManager.joinRoom(code, 'stranger').success).toBe(true);
+    expect(roomManager.standUp(code, 'watcher-0').success).toBe(false);
+    expect(roomManager.leaveRoom(code, 'watcher-7').roomEmpty).toBe(false);
+    expect(roomManager.standUp(code, 'watcher-0').success).toBe(true);
+    expect(roomManager.getRoomInfo(code)!.seats.E.player).toBeNull();
+    roomManager.leaveRoom(code, 'stranger');
+    roomManager.setRoomStatus(code, 'playing');
+    expect(roomManager.joinRoom(code, 'latecomer').success).toBe(true);
+    expect(roomManager.standUp(code, 'host').success).toBe(false);
+    expect(roomManager.canKick(code, 'host', 'latecomer').success).toBe(true);
+    expect(roomManager.canKick(code, 'host', 'host').success).toBe(false);
   });
 
   it('should keep bots ready across game changes and readiness resets', () => {
@@ -140,6 +164,39 @@ describe('persisted bot identities', () => {
     const active = snapshot(code);
     active.games = structuredClone(gameManager.exportGames());
     expect(isRuntimeSnapshot(active)).toBe(true);
+  });
+
+  it('should persist full spectator areas, spectator returns, and observer chat', () => {
+    const code = room();
+    roomManager.fillBots(code, 'host');
+    const watchers = Array.from({ length: MAX_SPECTATORS }, (_, index) => `watcher-${index}`);
+    for (const id of watchers) expect(roomManager.joinRoom(code, id).success).toBe(true);
+    const state = snapshot(code);
+    state.players.push(...watchers.map((id) => ({ info: player(id), currentRoomCode: code, disconnectedAt: null })));
+    state.chat = [{ roomCode: code, messages: [
+      { id: 'm1', sender: player('watcher-0'), content: 'psst', timestamp: 1, audience: 'observers' },
+    ] }];
+    expect(state.rooms[0].memberIds).toHaveLength(MAX_ROOM_MEMBERS);
+    expect(isRuntimeSnapshot(state)).toBe(true);
+
+    const active = structuredClone(state);
+    const players = roomManager.getSeatPlayers(code)!;
+    expect(gameManager.startGame(code, 'bridge', players).success).toBe(true);
+    const game = structuredClone(gameManager.exportGames()[0]);
+    active.rooms[0].info = { ...active.rooms[0].info, status: 'playing' };
+    active.games = [game];
+    expect(isRuntimeSnapshot(active)).toBe(true);
+    // Only a finished board records returned spectators.
+    active.games = [{ ...game, returnedViewers: ['watcher-0'] }];
+    expect(isRuntimeSnapshot(active)).toBe(false);
+
+    const crowded = structuredClone(state);
+    crowded.rooms[0].memberIds.push('stranger');
+    crowded.players.push({ info: player('stranger'), currentRoomCode: code, disconnectedAt: null });
+    expect(isRuntimeSnapshot(crowded)).toBe(false);
+    const whisper = structuredClone(state);
+    (whisper.chat[0].messages[0] as { audience: string }).audience = 'players';
+    expect(isRuntimeSnapshot(whisper)).toBe(false);
   });
 
   it('should reject fake bot flags, bot accounts, bot hosts and unseated or unready bots', () => {
