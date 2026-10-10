@@ -209,29 +209,30 @@ export function RoomPage(): ReactNode {
           <button type="button" className="btn btn-outline touch-target" onClick={leave} disabled={blocked}>{t('room.leave')}</button>
         </div>
         <div className={styles.gameTypeRow}>
-          <span className={styles.gameTypeLabel} id="room-game-label">{t('gameType.label')}</span>
-          <div className={styles.segmented} role="radiogroup" aria-labelledby="room-game-label"
-            title={isHost ? undefined : t('room.hostOnly')}>
-            {GAME_TYPES.map((gameType) => (
-              <button key={gameType} type="button" role="radio" aria-checked={roomInfo.gameType === gameType}
-                className={roomInfo.gameType === gameType ? styles.segmentActive : styles.segment}
-                disabled={!isHost || blocked || roomInfo.gameType === gameType}
-                onClick={() => setGameType(gameType)}>
-                {t(`gameType.${gameType}`)}
-              </button>
-            ))}
+          <div className={styles.gameTypePicker}>
+            <span className={styles.gameTypeLabel} id="room-game-label">{t('gameType.label')}</span>
+            <div className={styles.segmented} role="radiogroup" aria-labelledby="room-game-label"
+              title={isHost ? undefined : t('room.hostOnly')}>
+              {GAME_TYPES.map((gameType) => (
+                <button key={gameType} type="button" role="radio" aria-checked={roomInfo.gameType === gameType}
+                  className={roomInfo.gameType === gameType ? styles.segmentActive : styles.segment}
+                  disabled={!isHost || blocked || roomInfo.gameType === gameType}
+                  onClick={() => setGameType(gameType)}>
+                  {t(`gameType.${gameType}`)}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-        {roomInfo.gameType === 'sevens' && <section className={styles.ruleOptions}>
-          <label>
+          {/* Rule options sit beside the game they modify; the hint moves to a tooltip to save a row. */}
+          {roomInfo.gameType === 'sevens' && <label className={styles.ruleOption} title={t('sevens.closeOnEndHint')}>
             <input type="checkbox" checked={roomInfo.sevensOptions?.closeOnEnd ?? false}
               disabled={!isHost || blocked || roomInfo.status !== 'waiting'}
               aria-describedby="sevens-close-on-end-hint"
               onChange={(event) => setSevensOptions({ closeOnEnd: event.target.checked })} />
             {t('sevens.closeOnEnd')}
-          </label>
-          <p id="sevens-close-on-end-hint">{t('sevens.closeOnEndHint')}</p>
-        </section>}
+            <span id="sevens-close-on-end-hint" className={styles.srOnly}>{t('sevens.closeOnEndHint')}</span>
+          </label>}
+        </div>
       </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={`${styles.tableArea} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}>
