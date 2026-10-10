@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
+import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, USERNAME_PATTERN } from '@shared/constants';
 import type { FriendsData, PublicAccount } from '@shared/types/social';
 import { apiRequest } from '../api';
 import { useI18nStore } from '../stores/i18n-store';
@@ -62,8 +63,8 @@ export function FriendsPage(): ReactNode {
         <div className={styles.field}>
           <label htmlFor="friend-username">{t('friends.username')}</label>
           <input id="friend-username" autoCapitalize="none" spellCheck={false} value={username}
-            onChange={(event) => setUsername(event.target.value)} required minLength={3}
-            maxLength={24} pattern="[A-Za-z0-9_]{3,24}" />
+            onChange={(event) => setUsername(event.target.value)} required
+            minLength={USERNAME_MIN_LENGTH} maxLength={USERNAME_MAX_LENGTH} pattern={USERNAME_PATTERN} />
         </div>
         <button type="submit" className="btn btn-primary" disabled={busy}>
           {busy ? t('common.loading') : t('friends.add')}

@@ -9,6 +9,7 @@ import {
   readSessionCookie,
 } from '../../src/auth/auth-service';
 import type { AuthService } from '../../src/auth/auth-service';
+import { hashPassword } from '../../src/auth/password';
 import { createJsonRepository } from '../../src/database/json-repository';
 import type { Repository } from '../../src/database/repository';
 
@@ -155,4 +156,60 @@ describe('account authentication', () => {
       service.register({ username: 'ALICE', password: 'correct password' }),
     ).rejects.toMatchObject({ status: 409 });
   });
+
+  it('should accept single dot or hyphen separators in usernames and reject other symbols', async () => {
+    for (const username of ['a.b', 'first-last', 'j.r_r-t', 'a_1.b-2.c']) {
+      expect((await service.register({ username, password: 'correct password' })).account.username)
+        .toBe(username);
+    }
+    for (const username of [
+      'ab', 'x'.repeat(25), 'a b', 'a..b', 'a.-b', '.ab', 'ab-', 'a@b', 'a/b', 'ａｂｃ', '使用者',
+    ]) {
+      await expect(service.register({ username, password: 'correct password' })).rejects
+        .toMatchObject({ status: 400, code: 'INVALID_USERNAME' });
+    }
+    expect((await service.login({ username: '  A.B ', password: 'correct password' })).account
+      .username).toBe('a.b');
+  }, 30000);
+
+  it('should require 6–128 characters without edge whitespace or common choices for new passwords', async () => {
+    for (const password of [
+      'five5', 'x'.repeat(129), ' padded', 'padded ', '\tpadded', 'Password', 'qwerty123',
+    ]) {
+      await expect(service.register({ username: 'alice', password })).rejects.toMatchObject({
+        status: 400,
+        code: 'INVALID_PASSWORD',
+      });
+    }
+    const first = await service.register({ username: 'alice', password: 'six ch' });
+    await expect(
+      service.changePassword(first.account.id, { currentPassword: 'six ch', newPassword: 'password1' }),
+    ).rejects.toMatchObject({ status: 400, code: 'INVALID_PASSWORD' });
+    expect((await service.login({ username: 'alice', password: 'six ch' })).account.id)
+      .toBe(first.account.id);
+  }, 15000);
+
+  it('should keep accepting passwords that were set under earlier rules', async () => {
+    const legacyPassword = ' password123 ';
+    const first = await service.register({ username: 'alice', password: 'correct password' });
+    const account = await repository.getAccountById(first.account.id);
+    expect(
+      await repository.changePassword(
+        first.account.id,
+        account?.passwordHash ?? '',
+        await hashPassword(legacyPassword),
+        time,
+      ),
+    ).toBe(true);
+    expect((await service.login({ username: 'alice', password: legacyPassword })).account.id)
+      .toBe(first.account.id);
+    await service.changePassword(first.account.id, {
+      currentPassword: legacyPassword,
+      newPassword: 'a fresh password',
+    });
+    await expect(service.login({ username: 'alice', password: '' })).rejects.toMatchObject({
+      status: 400,
+      code: 'INVALID_PASSWORD',
+    });
+  }, 30000);
 });

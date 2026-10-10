@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import {
+  PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, USERNAME_PATTERN,
+} from '@shared/constants';
 import type { AccountProfile } from '@shared/types';
 import { apiRequest } from '../api';
 import { useAccountStore } from '../stores/account-store';
@@ -66,7 +69,7 @@ export function AuthPage({ mode }: AuthPageProps): ReactNode {
             <label htmlFor="username">{t('auth.username')}</label>
             <input id="username" autoComplete="username" autoCapitalize="none" spellCheck={false}
               value={username} onChange={(event) => setUsername(event.target.value)}
-              required minLength={3} maxLength={24} pattern="[A-Za-z0-9_]{3,24}"
+              required minLength={USERNAME_MIN_LENGTH} maxLength={USERNAME_MAX_LENGTH} pattern={USERNAME_PATTERN}
               aria-describedby={register ? 'username-help' : undefined} />
             {register && <p id="username-help" className={styles.hint}>{t('auth.usernameHelp')}</p>}
           </div>
@@ -82,7 +85,7 @@ export function AuthPage({ mode }: AuthPageProps): ReactNode {
             <label htmlFor="password">{t('auth.password')}</label>
             <input id="password" type={passwordType} autoComplete={register ? 'new-password' : 'current-password'}
               value={password} onChange={(event) => setPassword(event.target.value)}
-              required minLength={register ? 10 : undefined} maxLength={128}
+              required minLength={register ? PASSWORD_MIN_LENGTH : undefined} maxLength={PASSWORD_MAX_LENGTH}
               aria-describedby={register ? 'password-help' : undefined} />
             {register && <p id="password-help" className={styles.hint}>{t('auth.passwordHelp')}</p>}
           </div>
@@ -91,7 +94,7 @@ export function AuthPage({ mode }: AuthPageProps): ReactNode {
               <label htmlFor="confirm-password">{t('auth.confirmPassword')}</label>
               <input id="confirm-password" type={passwordType} autoComplete="new-password"
                 value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)}
-                required minLength={10} maxLength={128} />
+                required minLength={PASSWORD_MIN_LENGTH} maxLength={PASSWORD_MAX_LENGTH} />
             </div>
           )}
           <label className={styles.showPassword}>

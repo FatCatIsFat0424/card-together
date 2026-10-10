@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@shared/constants';
 import type { AccountProfile, AvatarId, MatchHistory } from '@shared/types';
 import { apiRequest } from '../api';
 import { resizeImage } from '../image-resize';
@@ -236,20 +237,21 @@ export function AccountPage(): ReactNode {
               <label htmlFor="current-password">{t('profile.currentPassword')}</label>
               <input id="current-password" type="password" autoComplete="current-password"
                 value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)}
-                required maxLength={128} />
+                required maxLength={PASSWORD_MAX_LENGTH} />
             </div>
             <div className={styles.field}>
               <label htmlFor="new-password">{t('profile.newPassword')}</label>
               <input id="new-password" type="password" autoComplete="new-password"
                 value={newPassword} onChange={(event) => setNewPassword(event.target.value)}
-                required minLength={10} maxLength={128} aria-describedby="new-password-help" />
+                required minLength={PASSWORD_MIN_LENGTH} maxLength={PASSWORD_MAX_LENGTH}
+                aria-describedby="new-password-help" />
               <p id="new-password-help" className={styles.hint}>{t('auth.passwordHelp')}</p>
             </div>
             <div className={styles.field}>
               <label htmlFor="new-password-confirm">{t('auth.confirmPassword')}</label>
               <input id="new-password-confirm" type="password" autoComplete="new-password"
                 value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)}
-                required minLength={10} maxLength={128} />
+                required minLength={PASSWORD_MIN_LENGTH} maxLength={PASSWORD_MAX_LENGTH} />
             </div>
             <p className={styles.hint}>{t('profile.passwordNotice')}</p>
             {securityError && <p role="alert" className={styles.error}>{securityError}</p>}

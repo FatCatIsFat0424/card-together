@@ -2,9 +2,12 @@
 
 ## Identity and sessions
 
-Usernames contain 3–24 ASCII letters/digits/underscores and are unique case-insensitively.
-Passwords contain 10–128 characters; hashes use salted asynchronous scrypt
-(`N=131072`, `r=8`, `p=1`) with bounded concurrency and HTTP rate limits.
+Usernames contain 3–24 ASCII letters/digits/underscores, optionally separated by single
+dots or hyphens, and are unique case-insensitively.
+New passwords contain 6–128 characters, cannot start or end with whitespace, and cannot
+be a listed common password. Sign-in and the current-password check only enforce the
+maximum length, so passwords set under earlier rules keep working. Hashes use salted
+asynchronous scrypt (`N=131072`, `r=8`, `p=1`) with bounded concurrency and HTTP rate limits.
 Account UUIDs are player IDs; editable nicknames do not change identity.
 Bots use reserved `bot:<UUID>` player IDs and `isBot: true` in room/game snapshots.
 They have no account, session, or connected-player record. Match participant IDs retain

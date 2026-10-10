@@ -25,6 +25,14 @@ export {
   NICKNAME_MAX_LENGTH,
 } from './game-rules';
 
+export {
+  USERNAME_MIN_LENGTH,
+  USERNAME_MAX_LENGTH,
+  USERNAME_PATTERN,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_MAX_LENGTH,
+  isUsername,
+} from './account';
 export { IMAGE_OPACITY_MAX, IMAGE_OPACITY_MIN, isImageOpacity, isMediaId } from './media';
 export {
   EMOJI_MAX_BYTES,

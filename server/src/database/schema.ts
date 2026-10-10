@@ -4,6 +4,7 @@ import {
 } from '../runtime/validate';
 import {
   GAME_TYPES, MAX_EMOJIS_PER_ACCOUNT, NICKNAME_MAX_LENGTH, isEmojiName, isImageOpacity, isMediaId,
+  isUsername,
 } from '@shared/constants';
 import type { GameType } from '@shared/types';
 import type { RuntimeSnapshot } from '../runtime/types';
@@ -43,7 +44,7 @@ function validAccount(value: unknown): value is AccountRecord {
     isObject(value) &&
     nonEmpty(value.id) &&
     typeof value.username === 'string' &&
-    /^[a-zA-Z0-9_]{3,24}$/.test(value.username) &&
+    isUsername(value.username) &&
     value.usernameNormalized === value.username.toLowerCase() &&
     typeof value.nickname === 'string' &&
     value.nickname.trim().length > 0 &&
