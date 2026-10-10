@@ -1,0 +1,27 @@
+.background {
+  position: fixed;
+  inset: var(--topbar-height) 0 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--bg-page);
+}
+.layer {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  transition: opacity 600ms ease-in-out;
+}
+.background::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom, color-mix(in srgb, var(--bg-page) 80%, transparent), transparent 55%),
+    radial-gradient(ellipse at 50% 30%, color-mix(in srgb, var(--bg-page) 88%, transparent), color-mix(in srgb, var(--bg-page) 22%, transparent));
+}
+@media (prefers-reduced-motion: reduce) {
+  .layer { transition: none; }
+}

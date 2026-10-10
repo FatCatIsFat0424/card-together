@@ -1,0 +1,26 @@
+.dialog.dialog {
+  background: var(--bg-surface);
+  background-image: none;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+}
+.backdrop.backdrop { background: var(--bg-overlay); }
+.header.header { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-md); padding: var(--spacing-lg); }
+.header h2 { font-size: var(--text-xl); line-height: 1.4; }
+.close { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 44px; height: 44px; padding: 0; }
+.content.content { padding: var(--spacing-lg); border-color: var(--border-color); overscroll-behavior: contain; }
+.rules { font-size: var(--text-sm); line-height: 1.8; }
+.rules > section + section { margin-top: var(--spacing-xl); }
+.rules h3 { margin-bottom: var(--spacing-sm); font-size: var(--text-base); color: var(--text-primary); }
+.rules ul { padding-left: var(--spacing-lg); color: var(--text-secondary); }
+.rules li + li { margin-top: var(--spacing-sm); }
+.tableScroll { max-width: 100%; overflow-x: auto; margin-bottom: var(--spacing-md); }
+.rules table { width: 100%; border-collapse: collapse; text-align: left; color: var(--text-secondary); }
+.rules th, .rules td { padding: var(--spacing-sm); border: 1px solid var(--border-color); vertical-align: top; }
+.rules th { font-weight: 600; color: var(--text-primary); background: var(--bg-card); }
+@media (max-width: 36rem) {
+  .dialog.dialog { margin: var(--spacing-sm); width: calc(100% - 2 * var(--spacing-sm)); max-height: calc(100% - 2 * var(--spacing-sm)); }
+  .header.header, .content.content { padding: var(--spacing-md); }
+}
