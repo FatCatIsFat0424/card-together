@@ -50,6 +50,11 @@ requests into horizontal MUI tabs with live counts and keyboard navigation. Only
 the selected panel is visible. Smaller screens retain the existing three-section layout.
 Friend search, requests, and room admission continue to use the existing friends API.
 
+Public player profiles omit the self-profile caption and show statistics and the
+match table without an additional history heading or bot-recording caption.
+Lobby navigation remains in the top bar;
+the profile footer appears only when there is an active room to return to.
+
 Selecting a game crossfades the lobby's decorative background over 600ms; the
 artwork is loaded before the previous background fades out. Background changes
 preserve the existing component styling and honor reduced motion preferences.

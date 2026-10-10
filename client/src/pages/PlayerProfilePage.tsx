@@ -115,10 +115,9 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
             <p className={styles.username}>@{player.username}</p>
           </div>
         </div>
-        {isSelf ? <>
-          <p className={styles.description}>{t('player.self')}</p>
+        {isSelf ? <div className={styles.actions}>
           <Link className="btn btn-primary" to="/account">{t('player.edit')}</Link>
-        </> : <>
+        </div> : <>
           {friends && <>
             <p className={styles.description}>{t(isFriend ? 'player.friends'
               : incoming ? 'player.incoming' : outgoing ? 'player.outgoing' : 'player.connect')}</p>
@@ -157,17 +156,14 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
         </>}
       </section>
       {history && <section className={`${styles.card} ${styles.history}`}>
-        <h2>{t('history.title')}</h2>
-        <p className={styles.description}>{t('history.humanOnly')}</p>
         {history === 'private' ? <p className={styles.description}>{t('history.private')}</p>
           : <MatchHistoryList matches={history.matches} players={history.players} accountId={accountId} />}
       </section>}
     </div>
-    <div className={styles.footer}>
-      {roomCode && <Link className="btn btn-outline" to={`/${phase ? 'game' : 'room'}/${roomCode}`}>
-        {t('lobby.resume')} · {roomCode}</Link>}
-      <Link to="/">{t('nav.lobby')}</Link>
-    </div>
+    {roomCode && <div className={styles.footer}>
+      <Link className="btn btn-outline" to={`/${phase ? 'game' : 'room'}/${roomCode}`}>
+        {t('lobby.resume')} · {roomCode}</Link>
+    </div>}
   </main>;
 }
 
