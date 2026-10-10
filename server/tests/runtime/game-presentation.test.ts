@@ -121,6 +121,20 @@ describe('authoritative game presentation', () => {
     expect(getPresentationFrames(state)[0]).toMatchObject({ previousTotal: 9, total: 99 });
   });
 
+  it('should name the 99 winner only when one seat wins', () => {
+    games.startGame(CODE, 'ninetynine', players);
+    const state = games.getGameState(CODE)!;
+    if (state.gameType !== 'ninetynine') throw new Error('Expected 99');
+    state.phase = 'scoring';
+    state.log = [{ type: 'play', seat: 'N', card: card(13), choice: null, target: null, total: 99, timestamp: 1 }];
+    state.presentation = { id: 'finish', startedAt: 10000, logStart: 0 };
+    state.result = { gameType: 'ninetynine', winnerSeat: 'E', eliminationOrder: ['N', 'S', 'W'], finalTotal: 99 };
+    expect(getPresentationFrames(state).at(-1)).toMatchObject({ kind: 'finish', seat: 'E' });
+    state.result = { gameType: 'ninetynine', winners: ['N', 'E'], eliminationOrder: ['S', 'W'], finalTotal: 99 };
+    expect(getPresentationFrames(state).at(-1)).toMatchObject({ kind: 'finish' });
+    expect(getPresentationFrames(state).at(-1)).not.toHaveProperty('seat');
+  });
+
   it('should present Sevens covers without revealing the covered card', () => {
     games.startGame(CODE, 'sevens', players);
     const state = games.getGameState(CODE)!;

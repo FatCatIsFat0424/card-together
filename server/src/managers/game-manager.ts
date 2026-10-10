@@ -20,6 +20,7 @@ import type {
   HoldemGameState,
   LiarsDeckGameState,
   NinetyNineGameState,
+  NinetyNineOptions,
   ObserverRole,
   PlayerInfo,
   PlayerVisibleGameState,
@@ -110,12 +111,13 @@ export function startGame(
   players: Record<Seat, PlayerInfo>,
   settings?: TimeControl,
   sevensOptions?: SevensOptions,
+  ninetyNineOptions?: NinetyNineOptions,
 ): Result {
   // A finished board of another game type may still be waiting for game:continue.
   removeGame(roomCode);
   if (gameType === 'bigtwo') bigtwo.startGame(roomCode, players);
   else if (gameType === 'redpoints') redpoints.startGame(roomCode, players);
-  else if (gameType === 'ninetynine') ninetynine.startGame(roomCode, players);
+  else if (gameType === 'ninetynine') ninetynine.startGame(roomCode, players, undefined, undefined, ninetyNineOptions);
   else if (gameType === 'sevens') sevens.startGame(roomCode, players, undefined, sevensOptions);
   else if (gameType === 'liarsdeck') liarsdeck.startGame(roomCode, players);
   else if (gameType === 'holdem') holdem.startGame(roomCode, players);

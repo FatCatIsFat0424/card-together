@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { NN_MAX, nnApply, nnIsPlayable, nnRequiresChoice } from '@shared/rules/ninetynine';
+import { NN_MAX, nnApply, nnIsPlayable, nnRank, nnRequiresChoice, nnWinners } from '@shared/rules/ninetynine';
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import type { Card, NinetyNineMatchResult, NinetyNineVisibleState, Seat } from '@shared/types';
@@ -15,7 +15,7 @@ import { GameShell } from '../GameShell';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
 import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
-import { useSeatName } from '../seat-names';
+import { joinNames, useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
 import { AppIcon } from '../../components/AppIcon';
@@ -44,6 +44,8 @@ function CardImage({ card, className }: { card: Card; className?: string }): Rea
 function Centre({ game }: { game: NinetyNineVisibleState }): ReactNode {
   const { t } = useI18nStore();
   const ccw = game.direction === 'ccw';
+  const stockLabel = t(game.options?.twoDecks ? 'ninetynine.stockFixed' : 'ninetynine.stock',
+    { n: String(game.stockCount) });
   return <div className={styles.centre}>
     <div className={styles.totalRow}>
       <span className={styles.direction} title={t(ccw ? 'ninetynine.directionCcw' : 'ninetynine.directionCw')}
@@ -55,9 +57,9 @@ function Centre({ game }: { game: NinetyNineVisibleState }): ReactNode {
       <span className={styles.max}>/ {NN_MAX}</span>
     </div>
     <div className={styles.pileRow}>
-      <div className={styles.pile} title={t('ninetynine.stock', { n: String(game.stockCount) })}>
+      <div className={styles.pile} title={stockLabel}>
         {game.stockCount > 0 && <span className={styles.back} aria-hidden="true" />}
-        <span className={styles.pill}>{t('ninetynine.stock', { n: String(game.stockCount) })}</span>
+        <span className={styles.pill}>{stockLabel}</span>
       </div>
       {game.lastPlayed && <div className={styles.pile}>
         <CardImage key={cardLabel(game.lastPlayed)} card={game.lastPlayed} className={styles.lastCard} />
@@ -95,31 +97,38 @@ function Info({ game }: { game: NinetyNineVisibleState }): ReactNode {
         ))}</ol>}
     </section>
 
-    <RulesBox title={t('ninetynine.rules')}
-      lines={[t('ninetynine.rulesNumbers'), t('ninetynine.rulesSpecial'), t('ninetynine.rulesBust')]} />
+    <RulesBox title={t('ninetynine.rules')} lines={[
+      t('ninetynine.rulesNumbers'), t('ninetynine.rulesSpecial'), t('ninetynine.rulesBust'),
+      ...(game.options?.twoDecks ? [t('ninetynine.rulesTwoDecks')] : []),
+    ]} />
   </aside>;
 }
 
 function ResultOverlay({ result, pending, error, disabled, onBack }: {
   result: NinetyNineMatchResult; pending: boolean; error: string; disabled: boolean; onBack: () => void;
 }): ReactNode {
-  const { t } = useI18nStore();
+  const { locale, t } = useI18nStore();
   const historyGame = useGameStore((state) => state.visible);
   const seatName = useSeatName();
-  // The last player eliminated ranks 2nd, and so on
-  const ranking = [result.winnerSeat, ...[...result.eliminationOrder].reverse()];
-  return <ResultDialog title={t('ninetynine.winner', { name: seatName(result.winnerSeat) })}
+  const winners = nnWinners(result);
+  // Winners share first; the last player eliminated ranks next, and so on
+  const ranking = [...winners, ...[...result.eliminationOrder].reverse()];
+  return <ResultDialog title={winners.length === 1 ? t('ninetynine.winner', { name: seatName(winners[0]) })
+    : t('ninetynine.tiedWinners', { names: joinNames(winners.map(seatName), locale) })}
     pending={pending} error={error} disabled={disabled} onBack={onBack}>
     <table className={`${resultStyles.table} ${styles.rankTable}`}>
       <thead><tr><th>{t('ninetynine.rank')}</th><th>{t('ninetynine.player')}</th></tr></thead>
-      <tbody>{ranking.map((seat, index) => (
-        <tr key={seat} className={index === 0 ? resultStyles.winnerRow : ''}>
-          <td>{t('ninetynine.place', { n: String(index + 1) })}</td>
-          <td><AppIcon name={index === 0 ? 'trophy' : 'burst'} /> {seatName(seat)}</td>
-        </tr>
-      ))}</tbody>
+      <tbody>{ranking.map((seat) => {
+        const won = winners.includes(seat);
+        return <tr key={seat} className={won ? resultStyles.winnerRow : ''}>
+          <td>{t('ninetynine.place', { n: String(nnRank(result, seat)) })}</td>
+          <td><AppIcon name={won ? 'trophy' : 'burst'} /> {seatName(seat)}</td>
+        </tr>;
+      })}</tbody>
     </table>
-    <p className={resultStyles.note}>{t('ninetynine.total')} {result.finalTotal}</p>
+    <p className={resultStyles.note}>
+      {winners.length > 1 && <>{t('ninetynine.stockOut')} · </>}{t('ninetynine.total')} {result.finalTotal}
+    </p>
     {historyGame && <RoundHistory game={historyGame} />}
   </ResultDialog>;
 }

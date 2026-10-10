@@ -67,11 +67,12 @@ function showedRescueRichHand(visible: NinetyNineVisibleState, seat: Seat): bool
 }
 
 /**
- * Cards whose location is unknown to the bot. Plays since the last reshuffle are still in the
- * public discard pile, so recently used rescue cards cannot be drawn or held by opponents.
+ * Cards whose location is unknown to the bot. Plays since the last reshuffle (every play with a
+ * two-deck stock) are still in the public discard pile, so recently used rescue cards cannot be
+ * drawn or held by opponents. Two decks hold two copies of each card; each known card removes one.
  */
-function unseenCards(visible: NinetyNineVisibleState): Card[] {
-  const deck = createDeck();
+export function unseenCards(visible: NinetyNineVisibleState): Card[] {
+  const deck = visible.options?.twoDecks ? [...createDeck(), ...createDeck()] : createDeck();
   const held = Object.values(visible.handCounts).reduce((sum, count) => sum + count, 0);
   const discardSize = deck.length - visible.stockCount - held;
   const known = [...visible.myHand];
@@ -84,7 +85,11 @@ function unseenCards(visible: NinetyNineVisibleState): Card[] {
     counted += size;
     if (entry.type === 'play') known.push(entry.card);
   }
-  return deck.filter((card) => !known.some((own) => own.suit === card.suit && own.rank === card.rank));
+  for (const card of known) {
+    const index = deck.findIndex((own) => own.suit === card.suit && own.rank === card.rank);
+    if (index >= 0) deck.splice(index, 1);
+  }
+  return deck;
 }
 
 /** Probability that every one of `draws` cards comes from a subset of `size` within `pool`. */
@@ -110,18 +115,22 @@ function scorePlay(visible: NinetyNineVisibleState, unseen: readonly Card[], ind
   const { total } = outcome;
   const remaining = visible.myHand.filter((_, cardIndex) => cardIndex !== index);
   const aliveCount = SEAT_ORDER_CLOCKWISE.filter((seat) => !visible.eliminated.includes(seat)).length;
-  let score = remaining.reduce((sum, card) => sum + keepValue(card), 0);
+  // A two-deck stock is never refilled and the match ends once it is drawn empty, so the kept hand
+  // matters only if the stock outlasts the opponent turns before the bot acts again.
+  const playsLeft = visible.options?.twoDecks ? visible.stockCount - 1 : Infinity;
+  const actsAgain = outcome.turnsUntilMine < playsLeft;
+  let score = actsAgain ? remaining.reduce((sum, card) => sum + keepValue(card), 0) : 0;
 
   // Each intervening turn tends to raise the total; with no safe card left, survival rests on the next draw.
   const returnHeadroom = NN_MAX - Math.min(NN_MAX, total + 5 * outcome.turnsUntilMine);
-  if (!remaining.some((card) => fits(card, returnHeadroom))) {
+  if (actsAgain && !remaining.some((card) => fits(card, returnHeadroom))) {
     const unsafeDraw = unseen.filter((card) => !fits(card, returnHeadroom)).length / Math.max(1, unseen.length);
     score -= unsafeDraw * (aliveCount === 2 ? 50 : 40);
   }
 
   // Only near 99 can number cards stop fitting, so the next player's risk is modeled only there.
   const headroom = NN_MAX - total;
-  if (headroom <= 9) {
+  if (headroom <= 9 && playsLeft > 0) {
     const draws = visible.handCounts[outcome.next];
     const unsafe = unseen.filter((card) => !fits(card, headroom)).length;
     const noNumber = unseen.filter((card) => isRescue(card) || pips(card) > headroom).length;

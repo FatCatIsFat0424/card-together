@@ -4,12 +4,14 @@ import { randomInt, randomUUID } from 'node:crypto';
 import type {
   Card,
   NinetyNineGameState,
+  NinetyNineOptions,
   NinetyNineVisibleState,
   PlayerInfo,
   RoomCode,
   Seat,
 } from '@shared/types';
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import { DEFAULT_NINETYNINE_OPTIONS } from '@shared/ninetynine-options';
 import { nextSeatClockwise, nextSeatCounterClockwise } from '@shared/rules/seats';
 import { NN_HAND_SIZE, NN_MAX, nnApply, nnHasPlayable, nnIsPlayable, nnRequiresChoice } from '@shared/rules/ninetynine';
 import type { NnChoice } from '@shared/rules/ninetynine';
@@ -57,35 +59,50 @@ function landOn(game: NinetyNineGameState, seat: Seat): void {
   game.currentTurnSeat = current;
 }
 
-/** Draws the stock top; an empty stock is refilled from the discard pile except its top card. */
+/**
+ * Draws the stock top. An empty single-deck stock is refilled from the discard pile except its
+ * top card; a two-deck stock is never refilled, so the draw that empties it ends the match.
+ */
 function draw(game: NinetyNineGameState, seat: Seat): void {
-  if (game.stock.length === 0) {
+  if (game.stock.length === 0 && !game.options?.twoDecks) {
     game.stock = shuffleDeck(game.discard.slice(0, -1));
     game.discard = game.discard.slice(-1);
   }
   const card = game.stock.shift();
   if (card) game.hands[seat].push(card);
+  if (game.options?.twoDecks && game.stock.length === 0) {
+    game.phase = 'scoring';
+    game.result = {
+      gameType: 'ninetynine',
+      winners: SEAT_ORDER_CLOCKWISE.filter((other) => !game.eliminated.includes(other)),
+      eliminationOrder: [...game.eliminated],
+      finalTotal: game.total,
+    };
+  }
 }
 
-/** `deck` and `firstSeat` are test hooks. */
+/** `deck` and `firstSeat` are test hooks; the default deck follows `options`. */
 export function startGame(
   roomCode: RoomCode,
   players: Record<Seat, PlayerInfo>,
-  deck: readonly Card[] = shuffleDeck(createDeck()),
+  deck?: readonly Card[],
   firstSeat: Seat = SEAT_ORDER_CLOCKWISE[randomInt(4)],
+  options: NinetyNineOptions = DEFAULT_NINETYNINE_OPTIONS,
 ): void {
+  const cards = deck ?? shuffleDeck(options.twoDecks ? [...createDeck(), ...createDeck()] : createDeck());
   const game: NinetyNineGameState = {
     gameType: 'ninetynine',
     id: randomUUID(),
+    options: { ...options },
     startedAt: Date.now(),
     players: structuredClone(players),
     roomCode,
     phase: 'playing',
     hands: seatMap((seat) => {
       const start = SEAT_ORDER_CLOCKWISE.indexOf(seat) * NN_HAND_SIZE;
-      return deck.slice(start, start + NN_HAND_SIZE);
+      return cards.slice(start, start + NN_HAND_SIZE);
     }),
-    stock: deck.slice(NN_HAND_SIZE * 4),
+    stock: cards.slice(NN_HAND_SIZE * 4),
     discard: [],
     total: 0,
     direction: 'ccw',
@@ -119,7 +136,9 @@ export function play(roomCode: RoomCode, seat: Seat, card: Card, choice?: NnChoi
     return { success: false, reason: 'Invalid target' };
   }
 
-  game.hands[seat] = hand.filter((own) => !sameCard(own, card));
+  // Two decks can deal both copies of a card to one hand; only one is played.
+  const index = hand.findIndex((own) => sameCard(own, card));
+  game.hands[seat] = [...hand.slice(0, index), ...hand.slice(index + 1)];
   game.discard.push(card);
   game.total = effect.total;
   if (effect.reverse) game.direction = game.direction === 'ccw' ? 'cw' : 'ccw';
@@ -127,6 +146,7 @@ export function play(roomCode: RoomCode, seat: Seat, card: Card, choice?: NnChoi
     type: 'play', seat, card, choice: choice ?? null, target: target ?? null, total: game.total, timestamp: Date.now(),
   });
   draw(game, seat);
+  if (game.result) return { success: true };
   const next = nextAlive(game, seat);
   landOn(game, target ?? next);
   return { success: true };
@@ -142,6 +162,7 @@ export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): NinetyNin
   return {
     gameType: 'ninetynine',
     phase: game.phase,
+    options: game.options ?? DEFAULT_NINETYNINE_OPTIONS,
     mySeat: seat,
     myHand: game.hands[seat],
     handCounts: seatMap((other) => game.hands[other].length),

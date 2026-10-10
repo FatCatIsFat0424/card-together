@@ -1,6 +1,6 @@
 // ─── Game types ───
 
-import type { RoomCode, SevensOptions, TimeControl } from './room';
+import type { NinetyNineOptions, RoomCode, SevensOptions, TimeControl } from './room';
 import type { PlayerInfo, Seat } from './player';
 import type { BigTwoComboType } from '../rules/bigtwo';
 
@@ -316,17 +316,22 @@ export type NinetyNineLogEntry =
   }
   | { readonly type: 'eliminated'; readonly seat: Seat; readonly timestamp: number };
 
-export interface NinetyNineMatchResult {
+/**
+ * The last survivor wins (`winnerSeat`, the only shape on legacy results); when a two-deck
+ * stock runs out first, every survivor ties for first (`winners`, ordered N, E, S, W).
+ */
+export type NinetyNineMatchResult = {
   readonly gameType: 'ninetynine';
-  readonly winnerSeat: Seat;
   /** In elimination order */
   readonly eliminationOrder: Seat[];
   readonly finalTotal: number;
-}
+} & ({ readonly winnerSeat: Seat } | { readonly winners: Seat[] });
 
 export type NinetyNinePhase = 'playing' | 'scoring';
 
 export interface NinetyNineGameState {
+  /** Missing on legacy snapshots; defaults to standard Ninety-Nine rules. */
+  readonly options?: NinetyNineOptions;
   clock?: GameClock;
   presentation?: GamePresentation;
   returnedSeats?: Seat[];
@@ -353,6 +358,7 @@ export interface NinetyNineGameState {
 }
 
 export interface NinetyNineVisibleState extends ObserverView<Card> {
+  readonly options?: NinetyNineOptions;
   clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'ninetynine';

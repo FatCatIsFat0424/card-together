@@ -97,10 +97,12 @@ export function CardHand({
           drag && containsCard(card, [drag.card]) ? styles.cardDragging : '',
           drag?.target === index ? styles.cardDropTarget : '',
         ].filter(Boolean).join(' ');
+        // Two-deck Ninety-Nine can deal both copies of a card to one hand.
+        const copy = cards.slice(0, index).filter((other) => containsCard(other, [card])).length;
 
         return (
           <button
-            key={`${card.suit}-${card.rank}`}
+            key={`${card.suit}-${card.rank}-${copy}`}
             className={cardClasses}
             style={{
               '--fan': index - middle,

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { GAME_TYPES, MAX_SPECTATORS } from '@shared/constants';
-import type { GameType, PlayerInfo, Seat, SevensOptions, TimeControl } from '@shared/types';
+import type { GameType, NinetyNineOptions, PlayerInfo, Seat, SevensOptions, TimeControl } from '@shared/types';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import { socket } from '../socket';
 import { tableBackgroundStyle } from '../account-appearance';
@@ -122,6 +122,11 @@ export function RoomPage(): ReactNode {
     setError('');
     socket.timeout(10000).emit('room:setSevensOptions', options, handleResult);
   };
+  const setNinetyNineOptions = (options: NinetyNineOptions): void => {
+    setBusy(true);
+    setError('');
+    socket.timeout(10000).emit('room:setNinetyNineOptions', options, handleResult);
+  };
   const addBot = (seat: Seat): void => {
     setBusy(true);
     setError('');
@@ -225,6 +230,14 @@ export function RoomPage(): ReactNode {
               onChange={(event) => setSevensOptions({ closeOnEnd: event.target.checked })} />
             {t('sevens.closeOnEnd')}
             <span id="sevens-close-on-end-hint" className={styles.srOnly}>{t('sevens.closeOnEndHint')}</span>
+          </label>}
+          {roomInfo.gameType === 'ninetynine' && <label className={styles.ruleOption} title={t('ninetynine.twoDecksHint')}>
+            <input type="checkbox" checked={roomInfo.ninetyNineOptions?.twoDecks ?? false}
+              disabled={!isHost || blocked || roomInfo.status !== 'waiting'}
+              aria-describedby="ninetynine-two-decks-hint"
+              onChange={(event) => setNinetyNineOptions({ twoDecks: event.target.checked })} />
+            {t('ninetynine.twoDecks')}
+            <span id="ninetynine-two-decks-hint" className={styles.srOnly}>{t('ninetynine.twoDecksHint')}</span>
           </label>}
         </div>
       </div>

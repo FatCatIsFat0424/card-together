@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Card, NinetyNineLogEntry, NinetyNineVisibleState, Seat } from '@shared/types';
-import { getNinetyNineBotAction } from '../../src/bots/ninetynine-strategy';
+import { getNinetyNineBotAction, unseenCards } from '../../src/bots/ninetynine-strategy';
 
 const card = (suit: Card['suit'], rank: Card['rank']): Card => ({ suit, rank });
 const samples = [0, 0.25, 0.5, 0.75, 0.9999];
@@ -49,14 +49,14 @@ describe('Ninety-Nine bot turn order', () => {
   });
 });
 
-describe('Ninety-Nine bot card conservation', () => {
-  function played(visible: NinetyNineVisibleState): Card[] {
-    return decisions(visible).map((action) => {
-      if (action?.type !== 'ninetynine-play') throw new Error('Expected play');
-      return action.card;
-    });
-  }
+function played(visible: NinetyNineVisibleState): Card[] {
+  return decisions(visible).map((action) => {
+    if (action?.type !== 'ninetynine-play') throw new Error('Expected play');
+    return action.card;
+  });
+}
 
+describe('Ninety-Nine bot card conservation', () => {
   it('keeps K and J at a low total and spends a number card instead', () => {
     const visible = state([card('clubs', 13), card('clubs', 11), card('clubs', 2), card('clubs', 3), card('clubs', 6)],
       { total: 10 });
@@ -100,5 +100,33 @@ describe('Ninety-Nine bot card conservation', () => {
     // Twenty cards in hands and twenty public plays in the discard pile leave twelve in stock.
     const depleted = state(hand, { total: 60, stockCount: 12, log });
     for (const spent of played(depleted)) expect(spent).toEqual(card('clubs', 13));
+  });
+});
+
+describe('Ninety-Nine bot with two decks and no reshuffle', () => {
+  const copies = (cards: readonly Card[], target: Card): number =>
+    cards.filter((entry) => entry.suit === target.suit && entry.rank === target.rank).length;
+
+  it('counts the second copy of a seen card as unseen', () => {
+    const queen = card('hearts', 12);
+    const hand = [queen, card('clubs', 2), card('clubs', 3), card('clubs', 6), card('clubs', 7)];
+    const log = [play('W', card('spades', 12), 20), play('S', card('spades', 12), 0)];
+    const single = unseenCards(state(hand, { stockCount: 30, log: log.slice(0, 1) }));
+    expect(single).toHaveLength(52 - 5 - 1);
+    expect(copies(single, queen)).toBe(0);
+    const twoDecks = unseenCards(state(hand, { stockCount: 82, log, options: { twoDecks: true } }));
+    expect(twoDecks).toHaveLength(104 - 5 - 2);
+    expect(copies(twoDecks, queen)).toBe(1);
+    expect(copies(twoDecks, card('spades', 12))).toBe(0);
+    expect(copies(twoDecks, card('clubs', 13))).toBe(2);
+  });
+
+  it('spends a rescue card on pressure once the stock runs out before its next turn', () => {
+    const hand = [card('clubs', 13), card('clubs', 9), card('diamonds', 9), card('clubs', 8), card('diamonds', 8)];
+    const early = state(hand, { total: 80, stockCount: 40, options: { twoDecks: true } });
+    for (const spent of played(early)) expect([8, 9]).toContain(spent.rank);
+    // The bot draws one of two stock cards and the next player's draw ends the match.
+    const ending = state(hand, { total: 80, stockCount: 2, options: { twoDecks: true } });
+    for (const spent of played(ending)) expect(spent).toEqual(card('clubs', 13));
   });
 });

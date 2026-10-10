@@ -5,7 +5,8 @@ import { io as connectSocket } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
-  AccountProfile, BridgeVisibleState, Card, ClientToServerEvents, LiarCard, Seat, ServerToClientEvents, SevensOptions, TimeControl,
+  AccountProfile, BridgeVisibleState, Card, ClientToServerEvents, LiarCard, NinetyNineOptions, Seat, ServerToClientEvents,
+  SevensOptions, TimeControl,
 } from '@shared/types';
 import type { PlayerSnapshot } from '@shared/types/socket-events';
 import { identifyCombo, isBomb, legalPlays } from '@shared/rules/bigtwo';
@@ -362,6 +363,53 @@ describe('persistent authenticated application', () => {
     const restored = await resume(reconnected);
     expect(restored.room?.sevensOptions).toEqual({ closeOnEnd: true });
     expect(restored.gameState).toMatchObject({ gameType: 'sevens', options: { closeOnEnd: true } });
+  }, 15_000);
+
+  it('persists host Ninety-Nine options, resets readiness, and rolls back failed saves', async () => {
+    const accounts = [await register('nn_opt_host'), await register('nn_opt_guest')];
+    const [host, guest] = await connectPlayers(accounts);
+    const { roomCode } = await host.timeout(5_000).emitWithAck('room:create', { gameType: 'sevens' });
+    expect(await host.timeout(5_000).emitWithAck('room:setNinetyNineOptions', { twoDecks: true }))
+      .toMatchObject({ success: false });
+    await host.timeout(5_000).emitWithAck('room:setGameType', { gameType: 'ninetynine' });
+    await host.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'N' });
+    await guest.timeout(5_000).emitWithAck('room:join', { roomCode: roomCode! });
+    await guest.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'E' });
+    await guest.timeout(5_000).emitWithAck('room:ready');
+    expect((await resume(host)).room?.ninetyNineOptions).toEqual({ twoDecks: false });
+    expect(await guest.timeout(5_000).emitWithAck('room:setNinetyNineOptions', { twoDecks: true }))
+      .toMatchObject({ success: false });
+    for (const payload of [null, {}, [], true, { twoDecks: 'true' }, { twoDecks: 1 }, { twoDecks: true, extra: true }]) {
+      expect(await host.timeout(5_000).emitWithAck('room:setNinetyNineOptions', payload as NinetyNineOptions))
+        .toMatchObject({ success: false });
+    }
+    expect(await host.timeout(5_000).emitWithAck('room:setNinetyNineOptions', { twoDecks: false }))
+      .toEqual({ success: true });
+    const before = (await resume(host)).room!;
+    expect(before.seats.E.isReady).toBe(true);
+    vi.spyOn(repository, 'saveRuntime').mockRejectedValueOnce(new Error('Disk full'));
+    expect(await host.timeout(5_000).emitWithAck('room:setNinetyNineOptions', { twoDecks: true }))
+      .toMatchObject({ success: false });
+    expect((await resume(host)).room).toEqual(before);
+    expect(await host.timeout(5_000).emitWithAck('room:setNinetyNineOptions', { twoDecks: true }))
+      .toEqual({ success: true });
+    const changed = (await resume(guest)).room!;
+    expect(changed.ninetyNineOptions).toEqual({ twoDecks: true });
+    expect(changed.seats.E.isReady).toBe(false);
+    expect((await repository.loadRuntime())?.rooms[0].info.ninetyNineOptions).toEqual({ twoDecks: true });
+    await host.timeout(5_000).emitWithAck('room:fillBots');
+    await host.timeout(5_000).emitWithAck('room:ready');
+    await guest.timeout(5_000).emitWithAck('room:ready');
+    const active = await resume(host);
+    expect(active.gameState).toMatchObject({ gameType: 'ninetynine', options: { twoDecks: true }, stockCount: 84 });
+    expect(await host.timeout(5_000).emitWithAck('room:setNinetyNineOptions', { twoDecks: false }))
+      .toMatchObject({ success: false });
+    await stop();
+    await start();
+    const [reconnected] = await connectPlayers(accounts);
+    const restored = await resume(reconnected);
+    expect(restored.room?.ninetyNineOptions).toEqual({ twoDecks: true });
+    expect(restored.gameState).toMatchObject({ gameType: 'ninetynine', options: { twoDecks: true } });
   }, 15_000);
 
   it('should enforce bot payloads and host rights while unseated members spectate', async () => {
@@ -841,6 +889,7 @@ describe('persistent authenticated application', () => {
     for (let moves = 0; snapshot.gameState?.phase === 'playing' && moves < 1000; moves += 1) snapshot = await step();
     const final = snapshot.gameState;
     if (final?.gameType !== 'ninetynine' || !final.result) throw new Error('Expected a finished 99 game');
+    if (!('winnerSeat' in final.result)) throw new Error('Expected a last survivor');
     expect(final.eliminated).toHaveLength(3);
     expect(final.result.eliminationOrder).toEqual(final.eliminated);
     expect(final.eliminated).not.toContain(final.result.winnerSeat);

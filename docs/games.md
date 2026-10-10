@@ -149,7 +149,7 @@ search, and the evaluation scores do not guarantee optimal play.
 | Bridge | Use the natural bidding heuristics below to describe hand strength and suit length, interpret a partner's public calls, and make bounded responses/rebids. Decline redeals. Use public played cards to identify established winners and opponents' voids; conserve trump/high cards and avoid overtaking a winning partner. |
 | Big Two | Plan the smallest number of legal groups needed to shed the remaining hand, avoiding unnecessary splits of useful combinations. When responding, play any ordinary answer (no bomb or 2, and the rest of the hand still fits a minimal plan); passing is considered only when every answer would spend a bomb or 2 or split a planned combination, and it is weighed as keeping the plan but giving up tempo. Bombs and 2s are strongly conserved while opponents and the bot's own plan are far from finishing. Once any opponent holds 5 or fewer cards, 2s and bombs are no longer saved and the bot never passes by choice. When an opponent who has not passed this round holds one card, also favor blocking plays. Leads are always plays. Timed-out human Big Two turns use the same decision. |
 | Red Points | Evaluate every legal capture, balancing immediate red points, future matches with the remaining hand, and the public table's exposure to unseen cards. |
-| Ninety-Nine | Treat 4, 5, 10, J, Q, K and ♠A as rescue cards and keep them while number cards are safe, spending large number cards first. Compare both legal plus/minus choices and penalize leaving no card that fits the total expected when the bot acts again, more so in a duel. Model the next player's chance of being forced or eliminated only when the total is within 9 of 99, using unseen cards: the bot's own hand and public plays since the last reshuffle are excluded. Evaluate reverse/designation by who acts next and how many opponent turns pass before the bot acts again; near 99 it avoids shortening its own rotation. Pressure on the next player is discounted when that seat's latest play spent a rescue card while any number card was still safe, which suggests a hand without number cards. Randomize among similarly rated surviving designation targets. |
+| Ninety-Nine | Treat 4, 5, 10, J, Q, K and ♠A as rescue cards and keep them while number cards are safe, spending large number cards first. Compare both legal plus/minus choices and penalize leaving no card that fits the total expected when the bot acts again, more so in a duel. Model the next player's chance of being forced or eliminated only when the total is within 9 of 99, using unseen cards: the bot's own hand and public plays since the last reshuffle are excluded, one copy per seen card with two decks. With a fixed two-deck stock, ignore kept cards and the return risk when the stock runs out before the bot acts again, and the next player's risk when the bot's own draw ends the match. Evaluate reverse/designation by who acts next and how many opponent turns pass before the bot acts again; near 99 it avoids shortening its own rotation. Pressure on the next player is discounted when that seat's latest play spent a rescue card while any number card was still safe, which suggests a hand without number cards. Randomize among similarly rated surviving designation targets. |
 | Sevens | Must play: favor cards that continue into the bot's own cards and 7s of suits it holds many of; penalize opening directions it cannot follow, especially toward heavy cards. Must cover: weigh the card's penalty against own cards stranded beyond it, preferring cards an earlier cover already cut off. |
 | Liar's Deck | Must call when it is the last seat holding cards. Otherwise score each option by the bot's own chance of dying on its next pull: calling risks a pull if the previous play was honest, estimated from the truths the bot cannot see (its own hand and plays this round are excluded, and earlier claims this round are assumed partly honest); lying risks a call that grows with the cards played and is certain when emptying the hand leaves one opponent holding cards. Small bonuses favor shedding cards and making an opponent pull. Honest plays spend non-joker truths first. |
 | Blackjack | Play standard basic strategy for a dealer who stands on soft 17 and peeks, with doubling after splits and no surrender: split aces and eights, never tens or fives, and double soft and hard totals against weak up cards; when doubling is unavailable, fall back to hitting (or standing on soft 18). Bet a random 3–8% of the current chips in table steps. |
@@ -267,7 +267,8 @@ capture; clicking still follows the normal play/capture-choice rules.
 
 Deal five cards each, remainder stock; total begins at zero. Random first player;
 counterclockwise initially. Play one legal card, then replenish one. Total cannot exceed
-99. When stock empties, reshuffle discards except the top card.
+99. When stock empties, reshuffle discards except the top card; the two-deck option below
+never reshuffles.
 
 | Card | Effect |
 | --- | --- |
@@ -283,6 +284,20 @@ counterclockwise initially. Play one legal card, then replenish one. Total canno
 A player whose entire hand would exceed 99 is eliminated and discards its hand.
 The next surviving player acts in the current direction with unchanged total.
 Last survivor wins; reverse elimination order determines the remaining ranks.
+
+The host can enable **Two decks, no reshuffle**, labelled **雙副牌不重洗** in Traditional
+Chinese, in a waiting Ninety-Nine room. It is off by default. When enabled, two 52-card
+decks are shuffled together (104 cards, so a hand may hold two identical cards); card effects,
+dealing, and turn flow are unchanged. The stock is never reshuffled: the draw after a play that
+takes the last stock card settles the match immediately, and every surviving seat ties for
+first while eliminated seats rank by reverse elimination order. The last-survivor ending still
+applies if it comes first. The table labels the stock as not reshuffled and lists the rule in
+the rules box. Changing the option clears human readiness; the setting is fixed for the match
+and survives server restarts. Legacy snapshots without the setting use the single-deck rules.
+
+Results record a single `winnerSeat` as before; only a tie after the stock runs out records
+`winners` instead (see [`NinetyNineMatchResult`](../shared/src/types/game.ts)). Releases
+before this option cannot read tied results, so a rollback needs data without them.
 
 ## Sevens
 

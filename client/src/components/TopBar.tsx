@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { SUIT_SYMBOLS } from '@shared/constants';
 import { rpScore } from '@shared/rules/redpoints';
-import { NN_MAX } from '@shared/rules/ninetynine';
+import { NN_MAX, nnWinners } from '@shared/rules/ninetynine';
 import { BJ_HANDS } from '@shared/rules/blackjack';
 import { HE_HANDS } from '@shared/rules/holdem';
 import type { BidLevel, BidSuit, Seat } from '@shared/types';
@@ -53,7 +53,7 @@ function GameChips(): ReactNode {
   const myRedPoints = useGameStore((state) =>
     state.redPoints && mySeat ? rpScore(state.redPoints.captured[mySeat]) : null);
   const ninetyNineTotal = useGameStore((state) => state.ninetyNine?.total ?? null);
-  const ninetyNineWinner = useGameStore((state) => state.ninetyNine?.result?.winnerSeat ?? null);
+  const ninetyNineResult = useGameStore((state) => state.ninetyNine?.result ?? null);
   // Results stay hidden until the final presentation has shown them on the table.
   const { locked, frame } = useGamePresentation();
   const sevensResult = useGameStore((state) => state.sevens?.result ?? null);
@@ -116,8 +116,8 @@ function GameChips(): ReactNode {
         <AppIcon name="trophy" /> {joinNames(holdemResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
         {mySeat && <> · {t('holdem.myChips', { n: String(holdemResult.chips[mySeat]) })}</>}
       </span>}
-      {ninetyNineWinner && <span className={styles.chip}>
-        <AppIcon name="trophy" /> {seats?.[ninetyNineWinner].player?.nickname ?? seatLabel(ninetyNineWinner)}
+      {ninetyNineResult && <span className={styles.chip}>
+        <AppIcon name="trophy" /> {joinNames(nnWinners(ninetyNineResult).map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
       </span>}
     </>
       : contract ? <span className={styles.chip} title={t('topbar.contract')}>

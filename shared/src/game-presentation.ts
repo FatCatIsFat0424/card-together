@@ -3,6 +3,7 @@ import type {
 } from './types/game';
 import type { Seat } from './types/player';
 import { rpScore } from './rules/redpoints';
+import { nnWinners } from './rules/ninetynine';
 
 export interface PresentationFrame {
   readonly key: string;
@@ -166,8 +167,9 @@ export function getPresentationFrames(
   if (game.phase === 'scoring') {
     const winners = (game.gameType === 'sevens' || game.gameType === 'chinesepoker' || game.gameType === 'blackjack'
       || game.gameType === 'holdem') && game.result
-      ? game.result.winners : [];
-    const seat = game.gameType === 'bigtwo' || game.gameType === 'ninetynine' || game.gameType === 'liarsdeck'
+      ? game.result.winners
+      : game.gameType === 'ninetynine' && game.result ? nnWinners(game.result) : [];
+    const seat = game.gameType === 'bigtwo' || game.gameType === 'liarsdeck'
       ? game.result?.winnerSeat : winners.length === 1 ? winners[0] : undefined;
     const lastCards = [...frames].reverse().find((frame) => frame.cards.length > 0);
     frames.push({ key: `${id}:finish`, kind: 'finish', durationMs: 3000,

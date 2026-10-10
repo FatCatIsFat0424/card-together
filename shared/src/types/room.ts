@@ -38,12 +38,18 @@ export interface SevensOptions {
   readonly closeOnEnd: boolean;
 }
 
+export interface NinetyNineOptions {
+  readonly twoDecks: boolean;
+}
+
 /** Room info (public) */
 export interface RoomInfo {
   /** Missing on legacy snapshots; defaults to standard Sevens rules. */
   readonly sevensOptions?: SevensOptions;
   /** Missing only on legacy snapshots. */
   readonly timeControl?: TimeControl;
+  /** Missing on legacy snapshots; defaults to standard Ninety-Nine rules. */
+  readonly ninetyNineOptions?: NinetyNineOptions;
   readonly code: RoomCode;
   readonly gameType: GameType;
   readonly status: RoomStatus;

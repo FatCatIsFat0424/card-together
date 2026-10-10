@@ -79,6 +79,7 @@ For exact unions and result fields, use
 | `room:setGameType` | `{ gameType }` | Host changes waiting room game |
 | `room:setTimeControl` | `TimeControl` | Host changes waiting room timer; clears human readiness |
 | `room:setSevensOptions` | `SevensOptions` | Host changes waiting Sevens room rules; clears human readiness |
+| `room:setNinetyNineOptions` | `NinetyNineOptions` | Host changes waiting Ninety-Nine room rules; clears human readiness |
 | `room:addBot`, `room:removeBot` | `{ seat }` | Host adds/removes a bot while waiting |
 | `room:fillBots` | — | Host fills every empty seat with ready bots |
 | `room:ready`, `room:unready` | — | Update readiness; four ready seats start |

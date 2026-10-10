@@ -1,5 +1,6 @@
 import { isTimeControl } from '@shared/time-control';
 import { isSevensOptions } from '@shared/sevens-options';
+import { isNinetyNineOptions } from '@shared/ninetynine-options';
 import { getTurnSeat } from '../managers/game-clock';
 import {
   ABORT_VOTE_THRESHOLD, GAME_TYPES, MAX_MESSAGE_EMOJIS, MAX_ROOM_MEMBERS, isEmojiName, isMediaId, isProvidedEmojiFile,
@@ -8,7 +9,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { getPresentationEndsAt } from '@shared/game-presentation';
 import { bigTwoPenalty, identifyCombo, isDragon, legalPlays } from '@shared/rules/bigtwo';
 import { RP_HAND_SIZE, RP_TABLE_SIZE, rpPairOptions, rpScore } from '@shared/rules/redpoints';
-import { NN_HAND_SIZE, NN_MAX, nnHasPlayable } from '@shared/rules/ninetynine';
+import { NN_HAND_SIZE, NN_MAX, nnDeckSize, nnHasPlayable } from '@shared/rules/ninetynine';
 import { SV_HAND_SIZE, svApply, svEmptyTable, svIsPlayable, svLegalPlays, svPenalty, svWinners } from '@shared/rules/sevens';
 import { CP_HAND_SIZE, CP_PAIRINGS, CP_ROWS, cpIsValidArrangement, cpMatchResult } from '@shared/rules/chinesepoker';
 import {
@@ -307,13 +308,19 @@ function redPointsGame(value: ObjectValue): boolean {
   );
 }
 
-/** 99 result: three distinct eliminated seats, the winner is the fourth. */
+/**
+ * 99 result: either a single `winnerSeat` after three eliminations (the legacy shape), or two or
+ * more tied `winners` in seat order when a two-deck stock ran out; together with the distinct
+ * eliminated seats they cover all four seats.
+ */
 export function isNinetyNineResult(value: unknown): boolean {
-  if (!object(value) || value.gameType !== 'ninetynine' || !oneOf(value.winnerSeat, seats) ||
-    !number(value.finalTotal) || value.finalTotal > NN_MAX || !Array.isArray(value.eliminationOrder)) return false;
-  const order: unknown[] = value.eliminationOrder;
-  return order.length === 3 && order.every((seat) => oneOf(seat, seats)) &&
-    new Set([...order, value.winnerSeat]).size === 4;
+  if (!object(value) || value.gameType !== 'ninetynine' || !number(value.finalTotal) || value.finalTotal > NN_MAX
+    || !seatList(value.eliminationOrder) || ('winnerSeat' in value) === ('winners' in value)) return false;
+  const tied = 'winners' in value;
+  const winners: unknown = tied ? value.winners : [value.winnerSeat];
+  if (!seatList(winners) || winners.length + value.eliminationOrder.length !== 4) return false;
+  return new Set([...value.eliminationOrder, ...winners]).size === 4 && (!tied
+    || (winners.length >= 2 && isDeepStrictEqual(winners, seats.filter((seat) => winners.includes(seat)))));
 }
 
 function ninetyNineLog(value: unknown): boolean {
@@ -326,6 +333,8 @@ function ninetyNineLog(value: unknown): boolean {
 }
 
 function ninetyNineGame(value: ObjectValue): boolean {
+  if (value.options !== undefined && !isNinetyNineOptions(value.options)) return false;
+  const deckSize = nnDeckSize(value.options);
   return (
     text(value.id) &&
     text(value.roomCode) &&
@@ -335,8 +344,8 @@ function ninetyNineGame(value: ObjectValue): boolean {
     seats.every((seat) => player((value.players as ObjectValue)[seat])) &&
     oneOf(value.phase, ['playing', 'scoring']) &&
     seatCards(value.hands, NN_HAND_SIZE) &&
-    cards(value.stock, 52) &&
-    cards(value.discard, 52) &&
+    cards(value.stock, deckSize) &&
+    cards(value.discard, deckSize) &&
     number(value.total) &&
     value.total <= NN_MAX &&
     oneOf(value.direction, ['ccw', 'cw']) &&
@@ -804,6 +813,7 @@ function room(value: unknown): boolean {
     text(info.code) &&
     (info.timeControl === undefined || isTimeControl(info.timeControl)) &&
     (info.sevensOptions === undefined || isSevensOptions(info.sevensOptions)) &&
+    (info.ninetyNineOptions === undefined || isNinetyNineOptions(info.ninetyNineOptions)) &&
     oneOf(info.gameType, [...GAME_TYPES]) &&
     oneOf(info.status, ['waiting', 'playing']) &&
     number(info.createdAt) &&
@@ -1154,26 +1164,35 @@ function coherentHoldemGame(state: HoldemGameState): boolean {
   });
 }
 
-/** All 52 cards are accounted for, eliminations match the log, and the current seat can play. */
+/** Every deck card is accounted for, eliminations match the log, and the current seat can play. */
 function coherentNinetyNineGame(state: NinetyNineGameState): boolean {
   if (new Set(seats.map((seat) => state.players[seat].id)).size !== 4) return false;
   const { eliminated, result } = state;
+  const twoDecks = state.options?.twoDecks === true;
   const all = [...seats.flatMap((seat) => state.hands[seat]), ...state.stock, ...state.discard];
-  if (all.length !== 52 || new Set(all.map(cardId)).size !== 52) return false;
+  const copies = new Map<string, number>();
+  for (const entry of all) copies.set(cardId(entry), (copies.get(cardId(entry)) ?? 0) + 1);
+  if (all.length !== nnDeckSize(state.options) || copies.size !== 52
+    || [...copies.values()].some((count) => count !== (twoDecks ? 2 : 1))) return false;
   const logged = state.log.flatMap((entry) => (entry.type === 'eliminated' ? [entry.seat] : []));
   if (!isDeepStrictEqual(logged, eliminated) || eliminated.some((seat) => state.hands[seat].length > 0)) return false;
   const lastPlay = state.log.filter((entry) => entry.type === 'play').at(-1);
   if (lastPlay?.type === 'play'
     ? lastPlay.total !== state.total || !isDeepStrictEqual(state.discard.at(-1), lastPlay.card)
     : state.total !== 0 || state.discard.length > 0) return false;
+  // A two-deck stock is never refilled, so it is empty exactly when the match settled by running out.
   if (state.phase === 'playing') {
     return result === null && eliminated.length < 3 && !eliminated.includes(state.currentTurnSeat) &&
-      nnHasPlayable(state.total, state.hands[state.currentTurnSeat]);
+      (!twoDecks || state.stock.length > 0) && nnHasPlayable(state.total, state.hands[state.currentTurnSeat]);
   }
-  return (
-    result !== null && eliminated.length === 3 && isDeepStrictEqual(result.eliminationOrder, eliminated) &&
-    result.winnerSeat === state.currentTurnSeat && result.finalTotal === state.total
-  );
+  if (result === null || !isDeepStrictEqual(result.eliminationOrder, eliminated) || result.finalTotal !== state.total) {
+    return false;
+  }
+  if ('winners' in result) {
+    return twoDecks && state.stock.length === 0 && lastPlay?.seat === state.currentTurnSeat &&
+      isDeepStrictEqual(result.winners, seats.filter((seat) => !eliminated.includes(seat)));
+  }
+  return eliminated.length === 3 && result.winnerSeat === state.currentTurnSeat && (!twoDecks || state.stock.length > 0);
 }
 
 /** All 52 cards are accounted for, piles match the log, and the pending step can resume. */

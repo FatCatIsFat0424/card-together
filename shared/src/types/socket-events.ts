@@ -1,5 +1,5 @@
 import type { PlayerInfo, Seat } from './player';
-import type { RoomCode, RoomInfo, GameType, SevensOptions, TimeControl } from './room';
+import type { RoomCode, RoomInfo, GameType, NinetyNineOptions, SevensOptions, TimeControl } from './room';
 import type {
   Card, BidAction, BlackjackAction, ChinesePokerArrangement, HoldemAction, PlayerVisibleGameState,
 } from './game';
@@ -70,6 +70,9 @@ export interface ClientToServerEvents {
   ) => void;
   'room:setSevensOptions': (
     payload: SevensOptions, callback: (response: ActionResult) => void,
+  ) => void;
+  'room:setNinetyNineOptions': (
+    payload: NinetyNineOptions, callback: (response: ActionResult) => void,
   ) => void;
   'room:ready': (callback: (response: ActionResult) => void) => void;
   'room:addBot': (

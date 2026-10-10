@@ -18,6 +18,7 @@ export type {
   SeatMap,
   RoomInfo,
   AbortVoteInfo,
+  NinetyNineOptions,
 } from './room';
 
 export type {

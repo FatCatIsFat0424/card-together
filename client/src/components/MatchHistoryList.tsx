@@ -8,6 +8,7 @@ import type { GameType, MatchHistory, MatchSummary, PublicAccount, Seat } from '
 import { GAME_TYPES, SEAT_ORDER_CLOCKWISE, SUIT_SYMBOLS } from '@shared/constants';
 import { matchOutcome, selectHistoryMatches } from '../match-history';
 import type { HistorySortKey, MatchOutcome, SortDirection } from '../match-history';
+import { nnRank, nnWinners } from '@shared/rules/ninetynine';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { joinNames } from '../games/seat-names';
@@ -53,9 +54,8 @@ function MatchResultLabel({ match, players, accountId }: {
       {mySeat && <> · {t('history.chips', { n: String(result.chips[mySeat]) })}</>}</span>;
   }
   if (result.gameType === 'ninetynine') {
-    // Players eliminated earlier rank lower
-    const myRank = mySeat && (mySeat === result.winnerSeat ? 1 : 4 - result.eliminationOrder.indexOf(mySeat));
-    return <span><AppIcon name="trophy" /> {seatName(result.winnerSeat)}
+    const myRank = mySeat && nnRank(result, mySeat);
+    return <span><AppIcon name="trophy" /> {joinNames(nnWinners(result).map(seatName), locale)}
       {myRank && <> · {t('history.rank', { n: String(myRank) })}</>}</span>;
   }
   if (result.gameType === 'liarsdeck') {

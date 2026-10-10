@@ -82,6 +82,11 @@ function presentationSummary(
       scores: winners.map((seat) => `${t(`seat.${seat}`)} ${chips[seat]}`).join(' · '),
     });
   }
+  if (game.gameType === 'ninetynine' && game.result && 'winners' in game.result) {
+    return t('presentation.ninetyNineTied', {
+      seats: game.result.winners.map((seat) => t(`seat.${seat}`)).join(' · '),
+    });
+  }
   return '';
 }
 
