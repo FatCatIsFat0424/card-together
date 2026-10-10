@@ -80,6 +80,18 @@ game/result filters use MUI outlined selects styled with the existing theme vari
 table scrolls within its container on small screens; these controls do not change the
 history API or stored match records.
 
+Above the record table, each supported game has its loaded match count and win rate,
+with a MUI X horizontal bar chart for comparing rates on larger screens.
+An overall donut chart shows each game's share of loaded matches, with the total in
+its center and a legend listing every game, including those with no loaded matches.
+These statistics summarize the viewed account's loaded history, independently of search
+or filters; they are not lifetime totals. Win rate is wins divided by matches played,
+with tied results counted separately and an unplayed game showing no percentage.
+Bridge wins follow partnerships. Private or unavailable public history does not reveal
+statistics. Public profiles use the account editor's page width, with avatar, colored
+nickname, username, and account actions on the left and available history/statistics on
+the right; the columns stack on smaller screens.
+
 Emoji names are 2–64 ASCII letters, digits, `_`, `-`, or `.`, starting with a letter, digit,
 or `_` (`EMOJI_NAME_PATTERN` in [shared constants](../shared/src/constants/emoji.ts)). Names
 are case-sensitive: `Cat` and `cat` are different emoji. Names valid under the earlier

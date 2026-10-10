@@ -12,6 +12,7 @@ import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { joinNames } from '../games/seat-names';
 import { PlayerLink } from './PlayerLink';
+import { MatchHistoryStatistics } from './MatchHistoryStatistics';
 import styles from './MatchHistoryList.module.css';
 
 function signed(value: number): string {
@@ -102,8 +103,12 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
   const reset = (): void => {
     setQuery(''); setGameType('all'); setOutcome('all'); setSortKey('date'); setDirection('desc');
   };
-  if (matches.length === 0) return <p className={styles.empty}>{t('history.empty')}</p>;
+  if (matches.length === 0) return <div className={styles.history}>
+    <MatchHistoryStatistics matches={matches} accountId={subjectId} />
+    <p className={styles.empty}>{t('history.empty')}</p>
+  </div>;
   return <div className={styles.history}>
+    <MatchHistoryStatistics matches={matches} accountId={subjectId} />
     <div className={styles.toolbar}>
       <div className={`${styles.field} ${styles.search}`}>
         <label htmlFor={`${filterId}-search`}>{t('history.search')}</label>

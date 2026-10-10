@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MatchSummary, PublicAccount } from '@shared/types';
-import { matchOutcome, selectHistoryMatches } from '../../../client/src/match-history';
+import { gameHistoryStatistics, matchOutcome, selectHistoryMatches } from '../../../client/src/match-history';
+import { GAME_TYPES } from '@shared/constants';
 import type { HistoryFilters } from '../../../client/src/match-history';
 
 const participants = ['north', 'east', 'south', 'west'];
@@ -84,5 +85,35 @@ describe('frontend history controls', () => {
       type === 'bridge' ? 'Zulu' : type === 'redpoints' ? 'Alpha' : 'Bravo' })).toEqual(['tie', 'loss', 'bridge']);
     expect(ids({ sortKey: 'result', direction: 'asc' })).toEqual(['loss', 'tie', 'bridge']);
     expect(ids({ sortKey: 'game', direction: 'asc', gameName: () => 'Same' })).toEqual(['bridge', 'tie', 'loss']);
+  });
+});
+
+describe('per-game history statistics', () => {
+  it('counts Bridge partnership wins and losses for the viewed account', () => {
+    const second: MatchSummary = { ...bridge, id: 'bridge-loss', result: {
+      ...bridge.result, gameType: 'bridge', contract: { level: 4, suit: 'spades', declarer: 'N' },
+      declarerTeamTricks: 9, defenderTeamTricks: 4, requiredTricks: 10, declarerTeamWins: false } };
+    const matches = Object.freeze([bridge, second, tie, loss]);
+    expect(gameHistoryStatistics(matches, 'south').find((game) => game.gameType === 'bridge'))
+      .toEqual({ gameType: 'bridge', played: 2, wins: 1, ties: 0, winRate: 0.5 });
+    expect(gameHistoryStatistics([bridge], 'east').find((game) => game.gameType === 'bridge')?.winRate).toBe(0);
+    expect(gameHistoryStatistics([loss], 'west').find((game) => game.gameType === 'ninetynine')?.winRate).toBe(1);
+    expect(matches.map((match) => match.id)).toEqual(['bridge', 'bridge-loss', 'tie', 'loss']);
+  });
+
+  it('keeps tied results separate from wins while including them in matches played', () => {
+    const win: MatchSummary = { ...tie, id: 'redpoints-win', result: {
+      gameType: 'redpoints', points: { N: 80, E: 40, S: 24, W: 24 }, winners: ['N'] } };
+    expect(gameHistoryStatistics([tie, win], 'north').find((game) => game.gameType === 'redpoints'))
+      .toEqual({ gameType: 'redpoints', played: 2, wins: 1, ties: 1, winRate: 0.5 });
+  });
+
+  it('lists every game and leaves unplayed or unrelated records without a win rate', () => {
+    for (const statistics of [gameHistoryStatistics([], 'north'),
+      gameHistoryStatistics([bridge, tie, loss], 'visitor'), gameHistoryStatistics([bridge])]) {
+      expect(statistics.map((game) => game.gameType)).toEqual(GAME_TYPES);
+      expect(statistics.every((game) => game.played === 0 && game.wins === 0
+        && game.ties === 0 && game.winRate === null)).toBe(true);
+    }
   });
 });

@@ -106,61 +106,63 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
 
   return <main className={styles.page}>
     <p className={styles.eyebrow}>{t('player.title')}</p>
-    <section className={styles.card}>
-      <div className={styles.identity}>
-        <Avatar avatar={player.avatar} image={player.avatarImage} color={player.color} size="large" />
-        <div className={styles.name}>
-          <h1>{player.nickname}</h1>
-          <p className={styles.username}>@{player.username}</p>
-        </div>
-      </div>
-      {isSelf ? <>
-        <p className={styles.description}>{t('player.self')}</p>
-        <Link className="btn btn-primary" to="/account">{t('player.edit')}</Link>
-      </> : <>
-        {friends && <>
-          <p className={styles.description}>{t(isFriend ? 'player.friends'
-            : incoming ? 'player.incoming' : outgoing ? 'player.outgoing' : 'player.connect')}</p>
-          <div className={styles.actions}>
-            {isFriend ? confirmRemove ? <>
-              <span>{t('friends.confirmRemove')}</span>
-              <button className="btn btn-danger" disabled={disabled}
-                onClick={() => void act(`/api/friends/${encodeURIComponent(accountId)}`, 'DELETE')}>
-                {t('friends.remove')}</button>
-              <button className="btn btn-outline" disabled={disabled}
-                onClick={() => setConfirmRemove(false)}>{t('common.cancel')}</button>
-            </> : <button className="btn btn-outline" disabled={disabled}
-              onClick={() => setConfirmRemove(true)}>{t('friends.remove')}</button>
-            : incoming ? <>
-              <button className="btn btn-primary" disabled={disabled}
-                onClick={() => void act(`/api/friends/requests/${incoming.id}/accept`, 'POST')}>
-                {t('friends.accept')}</button>
-              <button className="btn btn-outline" disabled={disabled}
-                onClick={() => void act(`/api/friends/requests/${incoming.id}`, 'DELETE')}>
-                {t('friends.decline')}</button>
-            </> : outgoing ? <button className="btn btn-outline" disabled={disabled}
-              onClick={() => void act(`/api/friends/requests/${outgoing.id}`, 'DELETE')}>
-              {t('friends.cancel')}</button>
-            : <button className="btn btn-primary" disabled={disabled}
-              onClick={() => void act('/api/friends/requests', 'POST', { username: player.username })}>
-              {t('friends.add')}</button>}
+    <div className={styles.layout}>
+      <section className={`${styles.card} ${styles.profile}`}>
+        <div className={styles.identity}>
+          <Avatar avatar={player.avatar} image={player.avatarImage} color={player.color} size="large" />
+          <div className={styles.name}>
+            <h1 style={{ color: player.color }}>{player.nickname}</h1>
+            <p className={styles.username}>@{player.username}</p>
           </div>
+        </div>
+        {isSelf ? <>
+          <p className={styles.description}>{t('player.self')}</p>
+          <Link className="btn btn-primary" to="/account">{t('player.edit')}</Link>
+        </> : <>
+          {friends && <>
+            <p className={styles.description}>{t(isFriend ? 'player.friends'
+              : incoming ? 'player.incoming' : outgoing ? 'player.outgoing' : 'player.connect')}</p>
+            <div className={styles.actions}>
+              {isFriend ? confirmRemove ? <>
+                <span>{t('friends.confirmRemove')}</span>
+                <button className="btn btn-danger" disabled={disabled}
+                  onClick={() => void act(`/api/friends/${encodeURIComponent(accountId)}`, 'DELETE')}>
+                  {t('friends.remove')}</button>
+                <button className="btn btn-outline" disabled={disabled}
+                  onClick={() => setConfirmRemove(false)}>{t('common.cancel')}</button>
+              </> : <button className="btn btn-outline" disabled={disabled}
+                onClick={() => setConfirmRemove(true)}>{t('friends.remove')}</button>
+              : incoming ? <>
+                <button className="btn btn-primary" disabled={disabled}
+                  onClick={() => void act(`/api/friends/requests/${incoming.id}/accept`, 'POST')}>
+                  {t('friends.accept')}</button>
+                <button className="btn btn-outline" disabled={disabled}
+                  onClick={() => void act(`/api/friends/requests/${incoming.id}`, 'DELETE')}>
+                  {t('friends.decline')}</button>
+              </> : outgoing ? <button className="btn btn-outline" disabled={disabled}
+                onClick={() => void act(`/api/friends/requests/${outgoing.id}`, 'DELETE')}>
+                {t('friends.cancel')}</button>
+              : <button className="btn btn-primary" disabled={disabled}
+                onClick={() => void act('/api/friends/requests', 'POST', { username: player.username })}>
+                {t('friends.add')}</button>}
+            </div>
+          </>}
+          {friendError && <div className={styles.feedback}>
+            <p className={styles.error} role="alert">{friendError}</p>
+            <button className="btn btn-outline" disabled={disabled}
+              onClick={() => void refresh()}>{t('common.retry')}</button>
+          </div>}
+          {updated && <p className={styles.success} role="status">{t('player.updated')}</p>}
+          <Link className={styles.friendsLink} to="/friends">{t('player.manageFriends')}</Link>
         </>}
-        {friendError && <div className={styles.feedback}>
-          <p className={styles.error} role="alert">{friendError}</p>
-          <button className="btn btn-outline" disabled={disabled}
-            onClick={() => void refresh()}>{t('common.retry')}</button>
-        </div>}
-        {updated && <p className={styles.success} role="status">{t('player.updated')}</p>}
-        <Link className={styles.friendsLink} to="/friends">{t('player.manageFriends')}</Link>
-      </>}
-    </section>
-    {history && <section className={`${styles.card} ${styles.history}`}>
-      <h2>{t('history.title')}</h2>
-      <p className={styles.description}>{t('history.humanOnly')}</p>
-      {history === 'private' ? <p className={styles.description}>{t('history.private')}</p>
-        : <MatchHistoryList matches={history.matches} players={history.players} accountId={accountId} />}
-    </section>}
+      </section>
+      {history && <section className={`${styles.card} ${styles.history}`}>
+        <h2>{t('history.title')}</h2>
+        <p className={styles.description}>{t('history.humanOnly')}</p>
+        {history === 'private' ? <p className={styles.description}>{t('history.private')}</p>
+          : <MatchHistoryList matches={history.matches} players={history.players} accountId={accountId} />}
+      </section>}
+    </div>
     <div className={styles.footer}>
       {roomCode && <Link className="btn btn-outline" to={`/${phase ? 'game' : 'room'}/${roomCode}`}>
         {t('lobby.resume')} · {roomCode}</Link>}

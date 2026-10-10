@@ -1,22 +1,29 @@
-.page { width: 100%; max-width: 44rem; padding: var(--spacing-xl); margin: 0 auto; }
+.page { width: 100%; max-width: 74rem; padding: var(--spacing-xl); margin: 0 auto; }
 .eyebrow { color: var(--text-secondary); font-size: var(--text-sm); margin-bottom: var(--spacing-md); }
+.layout { display: grid; grid-template-columns: minmax(0, 18rem) minmax(0, 1fr); align-items: start; gap: var(--spacing-lg); }
 .card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: var(--spacing-xl); box-shadow: var(--shadow-md); }
-.identity { display: flex; align-items: center; gap: var(--spacing-lg); }
+.profile { min-width: 0; }
+.identity { display: flex; flex-direction: column; align-items: start; gap: var(--spacing-lg); }
 .name { min-width: 0; overflow-wrap: anywhere; }
 .name h1 { font-size: var(--text-2xl); }
 .username { color: var(--text-secondary); }
 .description { color: var(--text-secondary); margin: var(--spacing-lg) 0; }
 .actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--spacing-sm); margin-top: var(--spacing-md); }
 .friendsLink { display: inline-block; margin-top: var(--spacing-lg); }
-.history { margin-top: var(--spacing-lg); }
+.history { min-width: 0; }
 .history h2 { font-size: var(--text-lg); margin-bottom: var(--spacing-md); }
 .footer { display: flex; align-items: center; flex-wrap: wrap; gap: var(--spacing-md); margin-top: var(--spacing-lg); }
 .feedback { margin-top: var(--spacing-md); }
 .error { color: var(--color-danger); margin: var(--spacing-md) 0; }
 .success { color: var(--color-success); margin-top: var(--spacing-md); }
 .status { text-align: center; padding: var(--spacing-2xl); }
+@media (max-width: 52rem) {
+  .page { padding: var(--spacing-lg); }
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .identity { flex-direction: row; align-items: center; }
+}
 @media (max-width: 40rem) {
-  .page { padding: var(--spacing-lg) var(--spacing-md); }
+  .page { padding: var(--spacing-md); }
   .card { padding: var(--spacing-lg); }
   .identity { gap: var(--spacing-md); }
 }

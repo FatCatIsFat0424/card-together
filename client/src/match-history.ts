@@ -1,5 +1,5 @@
 import type { GameType, MatchSummary, PublicAccount } from '@shared/types';
-import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import { GAME_TYPES, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 
 export type MatchOutcome = 'win' | 'loss' | 'tie' | 'completed';
 export type HistorySortKey = 'date' | 'room' | 'game' | 'result';
@@ -30,6 +30,34 @@ export function matchOutcome(match: MatchSummary, accountId?: string): MatchOutc
   if ('winnerSeat' in result) return result.winnerSeat === seat ? 'win' : 'loss';
   if (!result.winners.includes(seat)) return 'loss';
   return result.winners.length > 1 ? 'tie' : 'win';
+}
+
+export interface GameHistoryStatistics {
+  readonly gameType: GameType;
+  readonly played: number;
+  readonly wins: number;
+  readonly ties: number;
+  readonly winRate: number | null;
+}
+
+/** Summarize the subject's loaded matches, independently of table filters. */
+export function gameHistoryStatistics(
+  matches: readonly MatchSummary[], accountId?: string,
+): GameHistoryStatistics[] {
+  return GAME_TYPES.map((gameType) => {
+    let played = 0;
+    let wins = 0;
+    let ties = 0;
+    for (const match of matches) {
+      if (match.result.gameType !== gameType) continue;
+      const outcome = matchOutcome(match, accountId);
+      if (outcome === 'completed') continue;
+      played += 1;
+      if (outcome === 'win') wins += 1;
+      if (outcome === 'tie') ties += 1;
+    }
+    return { gameType, played, wins, ties, winRate: played ? wins / played : null };
+  });
 }
 
 /** Filter only the loaded records and sort a copy, preserving the API response. */
