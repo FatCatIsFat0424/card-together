@@ -8,6 +8,7 @@ import type { Card, Seat, SevensMatchResult, SevensVisibleState, Suit } from '@s
 import type { TranslationKey } from '../../i18n';
 import { socket } from '../../socket';
 import { useGameStore } from '../../stores/game-store';
+import { useGodViewStore } from '../../stores/god-view-store';
 import { useI18nStore } from '../../stores/i18n-store';
 import { CardHand } from '../../components/CardHand';
 import { GameShell } from '../GameShell';
@@ -113,6 +114,8 @@ function Info({ game }: { game: SevensVisibleState }): ReactNode {
   const seatName = useSeatName();
   const mode = sevensHandMode(isOwnTurn(game), game.validCards, game.myHand.length);
   const recent = recentMoves(game.log, RECENT_MOVES);
+  const covered = useGodViewStore((state) => state.covered);
+  const observedCovered = isSpectator(game) ? covered : null;
   return <aside className={infoStyles.rail}>
     <TurnBox text={turnText(game, mode, t, seatName)}>
       {game.phase === 'playing' && game.log.length === 0 && <p className={infoStyles.note}>{t('sevens.spadeSeven')}</p>}
@@ -121,15 +124,24 @@ function Info({ game }: { game: SevensVisibleState }): ReactNode {
     <section className={infoStyles.box}>
       <h2 className={infoStyles.caption}>{t('sevens.coveredCards')}</h2>
       <ul className={infoStyles.list}>{SEATS.map((seat) => (
-        <li key={seat} className={infoStyles.row}>
-          <span className={infoStyles.name}>{seatName(seat)}</span>
-          <span className={styles.countTag}>{t('sevens.covered', { n: String(game.coveredCounts[seat]) })}</span>
-          {seat === game.mySeat && !isSpectator(game) && <span className={styles.penaltyTag}>
-            {t('sevens.myPenalty', { n: String(svPenalty(game.myCovered)) })}
-          </span>}
+        <li key={seat} className={styles.coveredSeat}>
+          <div className={infoStyles.row}>
+            <span className={infoStyles.name}>{seatName(seat)}</span>
+            <span className={styles.countTag}>{t('sevens.covered', {
+              n: String(observedCovered ? observedCovered[seat].length : game.coveredCounts[seat]),
+            })}</span>
+            {seat === game.mySeat && !isSpectator(game) && <span className={styles.penaltyTag}>
+              {t('sevens.myPenalty', { n: String(svPenalty(game.myCovered)) })}
+            </span>}
+            {observedCovered && <span className={styles.penaltyTag}>
+              {t('sevens.observedPenalty', { n: String(svPenalty(observedCovered[seat])) })}
+            </span>}
+          </div>
+          {observedCovered && observedCovered[seat].length > 0 && <ChipList cards={observedCovered[seat]}
+            label={`${seatName(seat)} ${t('sevens.coveredCards')}`} />}
         </li>
       ))}</ul>
-      <p className={infoStyles.note}>{t('sevens.coveredPrivate')}</p>
+      {!isSpectator(game) && <p className={infoStyles.note}>{t('sevens.coveredPrivate')}</p>}
     </section>
 
     <section className={`${infoStyles.box} ${infoStyles.grow}`}>
@@ -260,7 +272,7 @@ export function SevensTable(): ReactNode {
         onCardClick={onCardClick} />
       : <CardHand cards={hand} playableCards={targets} disabled={!canAct}
         onCardClick={onCardClick} onCardPreview={setPreview} />}
-    {playing && <div className={styles.controls}>
+    {playing && !isSpectator(game) && <div className={styles.controls}>
       <span className={styles.penaltyTag}>{t('sevens.myPenalty', { n: String(penalty) })}</span>
       {game.myCovered.length > 0 && <ChipList cards={game.myCovered} label={t('sevens.myCovered')} />}
       {prompt && <span className={`${styles.prompt} ${isMyTurn ? styles.promptActive : ''} ${

@@ -155,6 +155,9 @@ function withGodView(
     return game.hole ? { ...visible, observer, observedHole: game.hole } : { ...visible, observer };
   }
   if (visible.gameType === 'blackjack' || game.gameType === 'blackjack') return { ...visible, observer };
+  if (visible.gameType === 'sevens' && game.gameType === 'sevens') {
+    return { ...visible, observer, observedHands: game.hands, observedCovered: game.covered };
+  }
   if (visible.gameType === 'liarsdeck' && game.gameType === 'liarsdeck') {
     return { ...visible, observer, observedHands: game.hands };
   }

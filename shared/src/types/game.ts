@@ -377,7 +377,7 @@ export type SevensPhase = 'playing' | 'scoring';
 /** Lowest and highest played order per suit (A=1 … K=13); null until that suit's 7 is played. */
 export type SevensTable = Record<Suit, { readonly low: number; readonly high: number } | null>;
 
-/** A cover entry never names the card; covered cards stay private until settlement. */
+/** A cover entry never names the card; other playing seats cannot read it before settlement. */
 export type SevensLogEntry =
   | { readonly type: 'play'; readonly seat: Seat; readonly card: Card; readonly timestamp: number }
   | { readonly type: 'cover'; readonly seat: Seat; readonly timestamp: number };
@@ -405,7 +405,7 @@ export interface SevensGameState {
   phase: SevensPhase;
   hands: Record<Seat, Card[]>;
   table: SevensTable;
-  /** Server only until settlement */
+  /** Visible only to the owner and spectators until settlement */
   covered: Record<Seat, Card[]>;
   currentTurnSeat: Seat;
   log: SevensLogEntry[];
@@ -420,6 +420,8 @@ export interface SevensVisibleState extends ObserverView<Card> {
   readonly mySeat: Seat;
   readonly myHand: readonly Card[];
   readonly myCovered: readonly Card[];
+  /** Every seat's covered cards, added only to spectator snapshots */
+  readonly observedCovered?: Record<Seat, readonly Card[]>;
   readonly handCounts: Record<Seat, number>;
   readonly coveredCounts: Record<Seat, number>;
   readonly table: SevensTable;

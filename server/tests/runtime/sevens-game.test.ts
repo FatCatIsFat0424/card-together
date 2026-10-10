@@ -3,6 +3,7 @@ import type { Card, PlayerInfo, Seat, SevensGameState } from '@shared/types';
 import { svPenalty } from '@shared/rules/sevens';
 import { createDeck, shuffleDeck } from '../../src/engine/deck';
 import * as sevens from '../../src/managers/games/sevens-game';
+import * as games from '../../src/managers/game-manager';
 
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 const CODE = 'ABC123';
@@ -139,6 +140,44 @@ describe('Sevens gameplay', () => {
     sevens.cover(CODE, 'S', card('diamonds', 2));
     const east = visible('E');
     expect(east.validCards.every((entry) => east.myHand.some((own) => same(own, entry)))).toBe(true);
+  });
+
+  it('should reveal all covered cards only to spectators, including after restoring a match', () => {
+    sevens.startGame(CODE, PLAYERS, stuckSouthDeck());
+    const state = game();
+    state.table.spades = { low: 7, high: 7 };
+    state.currentTurnSeat = 'N';
+    state.hands = {
+      N: [card('clubs', 2), card('clubs', 3)],
+      E: [card('diamonds', 4), card('diamonds', 5)],
+      S: [card('hearts', 6), card('hearts', 8)],
+      W: [card('clubs', 9), card('clubs', 10)],
+    };
+    for (const seat of ['N', 'W', 'S', 'E'] as const) {
+      expect(sevens.cover(CODE, seat, state.hands[seat][0])).toEqual({ success: true });
+    }
+    const expected = {
+      N: [card('clubs', 2)], E: [card('diamonds', 4)],
+      S: [card('hearts', 6)], W: [card('clubs', 9)],
+    };
+    const assertViews = (): void => {
+      const watching = games.getRecipientVisibleState(CODE, null);
+      expect(watching).toMatchObject({ gameType: 'sevens', observer: 'spectator', phase: 'playing',
+        mySeat: 'S', observedCovered: expected, observedHands: game().hands });
+      for (const seat of SEATS) {
+        const seated = games.getRecipientVisibleState(CODE, seat);
+        expect(seated).toMatchObject({ myCovered: expected[seat] });
+        expect(seated).not.toHaveProperty('observedCovered');
+        expect(seated).not.toHaveProperty('observedHands');
+        expect(games.getPlayerVisibleState(CODE, seat)).not.toHaveProperty('observedCovered');
+      }
+      for (const entry of game().log) expect(entry).not.toHaveProperty('card');
+    };
+    assertViews();
+    const exported = structuredClone(sevens.exportGames());
+    sevens.abortGame(CODE);
+    sevens.restoreGames(exported);
+    assertViews();
   });
 
   it('should play whole games to scoring with correct penalties and winners', () => {

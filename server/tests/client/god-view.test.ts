@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Card, NinetyNineVisibleState, PlayerVisibleGameState, Seat } from '@shared/types';
-import { HIDDEN_GOD_VIEW, nextGodView } from '../../../client/src/stores/god-view-store';
+import type { Card, NinetyNineVisibleState, PlayerVisibleGameState, Seat, SevensVisibleState } from '@shared/types';
+import { HIDDEN_GOD_VIEW, nextGodView, useGodViewStore } from '../../../client/src/stores/god-view-store';
 import { isOwnTurn, isSpectator } from '../../../client/src/games/observer-view';
 import { observedRows, sortObserved } from '../../../client/src/components/ObservedHand';
 
@@ -36,6 +36,35 @@ describe('god view', () => {
     const visible = ninetyNine({ observer: 'eliminated', observedHands: hands, eliminated: ['S'] });
     expect(nextGodView(HIDDEN_GOD_VIEW, visible, true)).toBe(HIDDEN_GOD_VIEW);
     expect(nextGodView(HIDDEN_GOD_VIEW, visible, false)).toMatchObject({ role: 'eliminated', hands });
+  });
+
+  it('should update Sevens hands and covered cards together after the cover presentation', () => {
+    const covered = { N: [], E: [c(3, 'diamonds')], S: [], W: [c(4, 'clubs')] };
+    const visible: SevensVisibleState = {
+      gameType: 'sevens', phase: 'playing', observer: 'spectator', mySeat: 'S', myHand: hands.S,
+      myCovered: [], handCounts: { N: 1, E: 1, S: 1, W: 0 }, coveredCounts: { N: 0, E: 1, S: 0, W: 1 },
+      table: { spades: { low: 7, high: 7 }, hearts: null, clubs: null, diamonds: null },
+      validCards: [], currentTurnSeat: 'N', log: [], result: null,
+      observedHands: hands, observedCovered: covered,
+    };
+    const update = useGodViewStore.getState().update;
+    update(null, false);
+    update(visible, false);
+    const shown = useGodViewStore.getState();
+    expect(shown).toMatchObject({ role: 'spectator', hands, covered });
+    const next = { ...visible, observedHands: { ...hands, N: [] },
+      observedCovered: { ...covered, N: hands.N }, coveredCounts: { ...visible.coveredCounts, N: 1 } };
+    update(next, true);
+    expect(useGodViewStore.getState()).toBe(shown);
+    update(next, false);
+    expect(useGodViewStore.getState()).toMatchObject({
+      hands: next.observedHands, covered: next.observedCovered,
+    });
+    const settled = useGodViewStore.getState();
+    update(structuredClone(next), false);
+    expect(useGodViewStore.getState()).toBe(settled);
+    update(null, false);
+    expect(useGodViewStore.getState()).toMatchObject(HIDDEN_GOD_VIEW);
   });
 
   it('should keep an equal view and clear it when the match ends for the recipient', () => {

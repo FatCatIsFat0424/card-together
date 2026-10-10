@@ -8,22 +8,25 @@ export interface GodView {
   /** Set once the hands may be shown; an eliminated seat waits for its elimination frame. */
   readonly role: ObserverRole | null;
   readonly hands: Record<Seat, readonly Card[]> | null;
+  readonly covered: Record<Seat, readonly Card[]> | null;
   readonly liarHands: Record<Seat, readonly LiarCard[]> | null;
   /** Blackjack's face-down dealer card */
   readonly hole: Card | null;
 }
 
-export const HIDDEN_GOD_VIEW: GodView = { role: null, hands: null, liarHands: null, hole: null };
+export const HIDDEN_GOD_VIEW: GodView = { role: null, hands: null, covered: null, liarHands: null, hole: null };
 
 function godViewOf(visible: PlayerVisibleGameState, role: ObserverRole): GodView {
   if (visible.gameType === 'blackjack') return { ...HIDDEN_GOD_VIEW, role, hole: visible.observedHole ?? null };
   if (visible.gameType === 'liarsdeck') return { ...HIDDEN_GOD_VIEW, role, liarHands: visible.observedHands ?? null };
+  if (visible.gameType === 'sevens') return { ...HIDDEN_GOD_VIEW, role,
+    hands: visible.observedHands ?? null, covered: visible.observedCovered ?? null };
   return { ...HIDDEN_GOD_VIEW, role, hands: visible.observedHands ?? null };
 }
 
 /**
- * Hands stay as they were while a presentation plays, so god view never shows a result before
- * its frame; an eliminated player's view opens only after the frame that eliminates them.
+ * Hands and covered cards stay as they were while a presentation plays, so god view never
+ * shows a result before its frame; an eliminated view opens after the eliminating frame.
  */
 export function nextGodView(
   current: GodView, visible: PlayerVisibleGameState | null, locked: boolean,
@@ -41,7 +44,8 @@ interface GodViewStore extends GodView {
 export const useGodViewStore = create<GodViewStore>((set) => ({
   ...HIDDEN_GOD_VIEW,
   update: (visible, locked) => set((state) => {
-    const current: GodView = { role: state.role, hands: state.hands, liarHands: state.liarHands, hole: state.hole };
+    const current: GodView = { role: state.role, hands: state.hands, covered: state.covered,
+      liarHands: state.liarHands, hole: state.hole };
     const next = nextGodView(current, visible, locked);
     return next === current ? state : next;
   }),

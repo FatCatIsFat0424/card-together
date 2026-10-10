@@ -35,8 +35,10 @@ Spectators and permanently eliminated players (Ninety-Nine bust, Liar's Deck dea
 of chips, Blackjack unable to cover the minimum; not a Hold'em fold) have god view: every seat's
 hand appears face up beside its plate (two overlapping rows for long hands), and Blackjack's hole card and Hold'em hole cards
 appear face up with a dashed outline. Stock order, bullets, and other undealt cards stay hidden.
-God view keeps its previous hands while a presentation plays, and an eliminated player's view
-opens only after the frame that eliminates them.
+In Sevens, spectators also see every seat's covered cards and penalty in the info panel;
+playing seats see only their own covered cards until settlement.
+God view keeps its previous hands and Sevens covered cards while a presentation plays,
+and an eliminated player's view opens only after the frame that eliminates them.
 
 During a match, messages from these observers carry `audience: 'observers'` and reach only other
 observers; seats still playing see only their own channel, and everyone sees the full history once

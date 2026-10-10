@@ -204,6 +204,12 @@
 }
 
 /* ─── Info rail ─── */
+.coveredSeat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .countTag,
 .coverTag {
   padding: 0 6px;

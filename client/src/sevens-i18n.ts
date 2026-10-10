@@ -1,5 +1,6 @@
 const english = {
   'sevens.myPenalty': 'My penalty {n}',
+  'sevens.observedPenalty': 'Penalty {n}',
   'sevens.covered': 'Covered {n}',
   'presentation.sevensWinners': '{scores} penalty — winner',
   'sevens.yourTurn': 'Your turn',
@@ -36,6 +37,7 @@ export const sevensTranslations: Record<'en' | 'zh-TW', Record<SevensTranslation
   en: english,
   'zh-TW': {
     'sevens.myPenalty': '我罰 {n} 點',
+    'sevens.observedPenalty': '罰 {n} 點',
     'sevens.covered': '蓋 {n} 張',
     'presentation.sevensWinners': '罰 {scores} 點獲勝',
     'sevens.yourTurn': '輪到你出牌',
