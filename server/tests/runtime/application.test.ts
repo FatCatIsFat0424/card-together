@@ -14,6 +14,7 @@ import { NN_MAX, nnApply, nnIsPlayable, nnRequiresChoice } from '@shared/rules/n
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { getPresentationEndsAt } from '@shared/game-presentation';
 import { ldCanChallenge, ldMustChallenge } from '@shared/rules/liarsdeck';
+import { bjTotal } from '@shared/rules/blackjack';
 import { createApplication } from '../../src/app';
 import { createJsonRepository } from '../../src/database/json-repository';
 import type { Repository } from '../../src/database/repository';
@@ -21,6 +22,13 @@ import type { Repository } from '../../src/database/repository';
 const ORIGIN = 'http://localhost:5173';
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 const cardKey = (card: Card | LiarCard): string => ('suit' in card ? `${card.suit}:${card.rank}` : `liar:${card.id}`);
+
+/** Every game except Blackjack, whose cards are public, has a private hand. */
+function handOf(state: PlayerSnapshot): readonly (Card | LiarCard)[] {
+  const game = state.gameState;
+  if (!game || !('myHand' in game)) throw new Error('Expected a private hand');
+  return game.myHand;
+}
 type Client = Socket<ServerToClientEvents, ClientToServerEvents>;
 type Application = Awaited<ReturnType<typeof createApplication>>;
 
@@ -415,11 +423,11 @@ describe('persistent authenticated application', () => {
     const dealt = await Promise.all(players.map(resume));
     const allCards = dealt.flatMap((state, index) => {
       expect(state.gameState?.mySeat).toBe(SEATS[index]);
-      expect(state.gameState?.myHand).toHaveLength(13);
+      expect(handOf(state)).toHaveLength(13);
       expect(state.gameState).not.toHaveProperty('hands');
       expect(state.gameState).not.toHaveProperty('players');
       expect(Object.values(state.room!.seats).every((seat) => seat.isReady)).toBe(true);
-      return state.gameState!.myHand.map(cardKey);
+      return handOf(state).map(cardKey);
     });
     expect(new Set(allCards).size).toBe(52);
 
@@ -445,7 +453,7 @@ describe('persistent authenticated application', () => {
     expect(await firstPlayer.timeout(5_000).emitWithAck('game:playCard', { card: firstCard }))
       .toEqual({ success: true });
     const active = await Promise.all(players.map(resume));
-    expect(active.reduce((total, state) => total + state.gameState!.myHand.length, 0)).toBe(51);
+    expect(active.reduce((total, state) => total + handOf(state).length, 0)).toBe(51);
 
     players[0].disconnect();
     players[0] = await connect(accounts[0].cookie);
@@ -599,7 +607,7 @@ describe('persistent authenticated application', () => {
     }
 
     const opening = await Promise.all(players.map(resume));
-    const allCards = opening.flatMap((state) => state.gameState!.myHand.map(cardKey));
+    const allCards = opening.flatMap((state) => handOf(state).map(cardKey));
     expect(new Set(allCards).size).toBe(52);
     let snapshot = opening[0];
     if (snapshot.gameState?.phase === 'playing') {
@@ -682,7 +690,7 @@ describe('persistent authenticated application', () => {
     expect(first).toMatchObject({ phase: 'playing', stockCount: 24, step: 'play' });
     expect(first.table).toHaveLength(4);
     expect(first).not.toHaveProperty('stock');
-    expect(new Set(opening.flatMap((state) => state.gameState!.myHand.map(cardKey))).size)
+    expect(new Set(opening.flatMap((state) => handOf(state).map(cardKey))).size)
       .toBe(24);
     expect(await players[0].timeout(5_000).emitWithAck('game:bigtwo:pass')).toMatchObject({ success: false });
     expect(await players[0].timeout(5_000).emitWithAck('game:redpoints:play', { card: { suit: 'x', rank: 1 } } as never))
@@ -760,7 +768,7 @@ describe('persistent authenticated application', () => {
     expect(first).toMatchObject({ phase: 'playing', stockCount: 32, total: 0, direction: 'ccw', lastPlayed: null });
     expect(first).not.toHaveProperty('stock');
     expect(first).not.toHaveProperty('discard');
-    expect(new Set(opening.flatMap((state) => state.gameState!.myHand.map(cardKey))).size)
+    expect(new Set(opening.flatMap((state) => handOf(state).map(cardKey))).size)
       .toBe(20);
     expect(await players[0].timeout(5_000).emitWithAck('game:redpoints:play', { card: first.myHand[0] }))
       .toMatchObject({ success: false });
@@ -834,7 +842,7 @@ describe('persistent authenticated application', () => {
     const first = opening[0].gameState;
     if (first?.gameType !== 'liarsdeck') throw new Error("Expected Liar's Deck state");
     expect(first).toMatchObject({ phase: 'playing', round: 1, pileCount: 0, lastPlay: null });
-    expect(new Set(opening.flatMap((state) => state.gameState!.myHand.map(cardKey))).size).toBe(20);
+    expect(new Set(opening.flatMap((state) => handOf(state).map(cardKey))).size).toBe(20);
     finishPresentation(first);
     const opener = players[SEATS.indexOf(first.currentTurnSeat)];
     expect(await opener.timeout(5_000).emitWithAck('game:liarsdeck:challenge')).toMatchObject({ success: false });
@@ -858,6 +866,85 @@ describe('persistent authenticated application', () => {
     if (final?.gameType !== 'liarsdeck' || !final.result) throw new Error("Expected a finished Liar's Deck game");
     expect(final.result.eliminationOrder).toEqual(final.eliminated);
     expect(final.eliminated).not.toContain(final.result.winnerSeat);
+    expect(snapshot.room?.status).toBe('waiting');
+    const matches = await repository.listMatches(accounts[0].account.id);
+    expect(matches).toHaveLength(1);
+    expect(matches[0]).toMatchObject({ roomCode, result: final.result });
+  }, 60_000);
+
+  it('should play a full Blackjack match across a restart without leaking bets or the hole card', async () => {
+    const accounts: RegisteredAccount[] = [];
+    for (const username of ['bj_north', 'bj_east', 'bj_south', 'bj_west']) {
+      accounts.push(await register(username));
+    }
+    let players = await connectPlayers(accounts);
+    const created = await players[0].timeout(5_000).emitWithAck('room:create', { gameType: 'blackjack' });
+    const roomCode = created.roomCode;
+    if (!roomCode) throw new Error('Expected room code');
+    for (let index = 0; index < 4; index += 1) {
+      if (index > 0) await players[index].timeout(5_000).emitWithAck('room:join', { roomCode });
+      await players[index].timeout(5_000).emitWithAck('room:changeSeat', { seat: SEATS[index] });
+      expect(await players[index].timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
+    }
+
+    /** Every seat that owes a bet stakes 20; otherwise the acting hand hits below 12 and stands from 12. */
+    async function step(): Promise<PlayerSnapshot> {
+      const view = (await resume(players[0])).gameState;
+      finishPresentation(view);
+      if (view?.gameType !== 'blackjack') throw new Error('Expected Blackjack state');
+      expect(view).not.toHaveProperty('bets');
+      expect(view).not.toHaveProperty('hole');
+      expect(view).not.toHaveProperty('deck');
+      if (view.phase === 'betting') {
+        for (const seat of SEATS) {
+          if (view.betPlaced[seat] || view.chips[seat] < 10) continue;
+          expect(await players[SEATS.indexOf(seat)].timeout(5_000).emitWithAck('game:blackjack:bet', { amount: 20 }))
+            .toEqual({ success: true });
+        }
+        return resume(players[0]);
+      }
+      if (view.holeHidden) expect(view.dealer).toHaveLength(1);
+      const hand = view.hands[view.currentTurnSeat][view.activeHand];
+      const action = bjTotal(hand.cards).total < 12 ? 'hit' : 'stand';
+      expect(await players[SEATS.indexOf(view.currentTurnSeat)].timeout(5_000)
+        .emitWithAck('game:blackjack:action', { action })).toEqual({ success: true });
+      return resume(players[0]);
+    }
+
+    const opening = await resume(players[0]);
+    expect(opening.gameState).toMatchObject({ gameType: 'blackjack', phase: 'betting', hand: 0,
+      chips: { N: 1000, E: 1000, S: 1000, W: 1000 } });
+    expect(await players[0].timeout(5_000).emitWithAck('game:blackjack:bet', { amount: 5 }))
+      .toEqual({ success: false, error: 'Invalid bet.' });
+    expect(await players[0].timeout(5_000).emitWithAck('game:blackjack:bet', { amount: 15 }))
+      .toMatchObject({ success: false });
+    expect(await players[0].timeout(5_000).emitWithAck('game:blackjack:action', { action: 'surrender' } as never))
+      .toEqual({ success: false, error: 'Invalid action.' });
+    expect(await players[0].timeout(5_000).emitWithAck('game:blackjack:action', { action: 'hit' }))
+      .toMatchObject({ success: false });
+    expect(await players[0].timeout(5_000).emitWithAck('game:blackjack:bet', { amount: 40 })).toEqual({ success: true });
+    const east = (await resume(players[1])).gameState;
+    if (east?.gameType !== 'blackjack') throw new Error('Expected Blackjack state');
+    expect(east.myBet).toBeNull();
+    expect(east.betPlaced.N).toBe(true);
+    expect((await resume(players[0])).gameState).toMatchObject({ myBet: 40 });
+
+    let snapshot = opening;
+    for (let moves = 0; snapshot.gameState?.phase !== 'scoring' && moves < 6; moves += 1) snapshot = await step();
+
+    const before = await Promise.all(players.map(resume));
+    await stop();
+    await start();
+    players = await connectPlayers(accounts);
+    const after = await Promise.all(players.map(resume));
+    for (let index = 0; index < 4; index += 1) expect(after[index].gameState).toEqual(before[index].gameState);
+
+    snapshot = after[0];
+    for (let moves = 0; snapshot.gameState?.phase !== 'scoring' && moves < 500; moves += 1) snapshot = await step();
+    const final = snapshot.gameState;
+    if (final?.gameType !== 'blackjack' || !final.result) throw new Error('Expected a finished Blackjack match');
+    expect(final.result.hands).toBe(8);
+    expect(final.result.chips).toEqual(final.chips);
     expect(snapshot.room?.status).toBe('waiting');
     const matches = await repository.listMatches(accounts[0].account.id);
     expect(matches).toHaveLength(1);

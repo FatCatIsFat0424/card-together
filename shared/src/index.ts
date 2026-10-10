@@ -8,4 +8,5 @@ export * from './rules/ninetynine';
 export * from './rules/sevens';
 export * from './rules/chinesepoker';
 export * from './rules/liarsdeck';
+export * from './rules/blackjack';
 export * from './rules/seats';

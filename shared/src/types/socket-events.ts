@@ -1,6 +1,6 @@
 import type { PlayerInfo, Seat } from './player';
 import type { RoomCode, RoomInfo, GameType, TimeControl } from './room';
-import type { Card, BidAction, ChinesePokerArrangement, PlayerVisibleGameState } from './game';
+import type { Card, BidAction, BlackjackAction, ChinesePokerArrangement, PlayerVisibleGameState } from './game';
 import type { ChatMessage } from './chat';
 import type { PublicAccount } from './social';
 import type { VoiceIncomingSignal, VoiceJoinResult, VoiceRoomState, VoiceSettings, VoiceSignal } from './voice';
@@ -103,6 +103,12 @@ export interface ClientToServerEvents {
     payload: { cardIds: number[] }, callback: (response: ActionResult) => void,
   ) => void;
   'game:liarsdeck:challenge': (callback: (response: ActionResult) => void) => void;
+  'game:blackjack:bet': (
+    payload: { amount: number }, callback: (response: ActionResult) => void,
+  ) => void;
+  'game:blackjack:action': (
+    payload: { action: BlackjackAction }, callback: (response: ActionResult) => void,
+  ) => void;
   'game:continue':(callback: (response: ActionResult) => void) => void;
   'game:abortVote:start': (callback: (response: ActionResult) => void) => void;
   'game:abortVote:cast': (

@@ -1,0 +1,141 @@
+/* ─── Blackjack card rows and hand plates, shared by the table and presentation frames ─── */
+
+.cards {
+  --card-w: calc(48px * var(--playing-card-scale));
+  display: inline-flex;
+  align-items: flex-end;
+}
+
+.sm { --card-w: calc(34px * var(--playing-card-scale)); }
+.md { --card-w: calc(52px * var(--playing-card-scale)); }
+.lg { --card-w: min(calc(84px * var(--playing-card-scale)), 13cqh, calc((100cqw - 56px) / 6)); }
+
+.card {
+  position: relative;
+  flex: none;
+  display: block;
+  width: var(--card-w);
+  min-width: 26px;
+  aspect-ratio: 224 / 313;
+  border-radius: calc(var(--card-w) * 0.08);
+  background: var(--card-face);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Cards overlap so long hands stay compact while every rank corner stays readable. */
+.card + .card { margin-left: calc(var(--card-w) * -0.55); }
+.lg .card + .card { margin-left: calc(var(--card-w) * -0.4); }
+
+.back {
+  background: var(--card-back);
+  outline: var(--card-back-outline, none);
+  outline-offset: -1px;
+}
+
+.back::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--card-back-image) center / var(--card-back-size, 100% 100%) no-repeat;
+  opacity: var(--card-back-opacity, 1);
+}
+
+.fresh { animation: arrive 320ms ease-out calc(var(--enter-delay, 0ms) + var(--card-index, 0) * 140ms) both; }
+
+@keyframes arrive {
+  from { opacity: 0; transform: translateY(-40%) scale(0.85); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ─── Hand plate ─── */
+.hand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: var(--radius-md);
+  border: 2px solid transparent;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.active {
+  border-color: var(--turn-glow);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--turn-glow) 55%, transparent);
+}
+
+.done { opacity: 0.85; }
+
+.handLabel {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.total,
+.bet,
+.tag,
+.badge {
+  padding: 0 7px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  line-height: 1.6;
+}
+
+.total {
+  background: color-mix(in srgb, var(--bg-page) 70%, transparent);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.bustTotal { color: var(--color-danger); }
+
+.bet {
+  background: color-mix(in srgb, var(--color-warning) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 55%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.marker { color: var(--color-warning); font-weight: 900; }
+
+.tag { background: color-mix(in srgb, var(--table-ink) 18%, transparent); }
+
+.badge { font-variant-numeric: tabular-nums; }
+.good { background: var(--color-success); color: var(--text-inverse); }
+.bad { background: var(--color-danger); color: var(--text-on-danger); }
+.even { background: color-mix(in srgb, var(--table-ink) 25%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fresh { animation: none; }
+}
+
+.dealer .handLabel { letter-spacing: 0.08em; text-transform: uppercase; }
+
+.slot {
+  background: transparent;
+  border: 2px dashed color-mix(in srgb, var(--table-ink) 40%, transparent);
+  box-shadow: none;
+}
+
+.chipIcon {
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: 0.3em;
+  border-radius: 50%;
+  border: 2px dashed color-mix(in srgb, var(--text-inverse) 70%, transparent);
+  background: var(--color-warning);
+  vertical-align: -0.1em;
+  box-sizing: border-box;
+}

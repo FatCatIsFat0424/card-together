@@ -36,6 +36,10 @@ function MatchResultLabel({ match, players }: {
     return <span>{t('gameType.chinesepoker')} · 🏆 {joinNames(result.winners.map(seatName), locale)}
       {mySeat && <> · {t('chinesepoker.myScore', { n: signed(result.scores[mySeat]) })}</>}</span>;
   }
+  if (result.gameType === 'blackjack') {
+    return <span>{t('gameType.blackjack')} · 🏆 {joinNames(result.winners.map(seatName), locale)}
+      {mySeat && <> · {t('blackjack.myChips', { n: String(result.chips[mySeat]) })}</>}</span>;
+  }
   if (result.gameType === 'ninetynine') {
     // Players eliminated earlier rank lower
     const myRank = mySeat && (mySeat === result.winnerSeat ? 1 : 4 - result.eliminationOrder.indexOf(mySeat));

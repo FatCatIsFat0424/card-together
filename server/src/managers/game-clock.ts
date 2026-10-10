@@ -7,6 +7,8 @@ export function getTurnSeat(game: AnyGameState): Seat | null {
   if (game.phase === 'scoring') return null;
   // Chinese Poker seats arrange simultaneously against the game's own shared deadline.
   if (game.gameType === 'chinesepoker') return null;
+  // Blackjack bets share a deadline; only playing turns belong to one seat.
+  if (game.gameType === 'blackjack') return game.phase === 'playing' ? game.currentTurnSeat : null;
   if (game.gameType !== 'bridge') return game.currentTurnSeat;
   if (game.phase === 'redeal_pending') return game.redealPendingSeat;
   if (game.phase === 'bidding') return game.bidding?.currentBidderSeat ?? null;

@@ -7,7 +7,8 @@ import { rpScore } from './rules/redpoints';
 export interface PresentationFrame {
   readonly key: string;
   readonly kind: 'play' | 'pass' | 'trick' | 'round' | 'capture' | 'eliminated' | 'cover' | 'reveal' | 'shoot'
-    | 'homerun' | 'deal' | 'challenge' | 'roulette' | 'shot' | 'finish';
+    | 'homerun' | 'deal' | 'challenge' | 'roulette' | 'shot' | 'hit' | 'stand' | 'double' | 'split'
+    | 'dealerReveal' | 'dealerHit' | 'settle' | 'finish';
   readonly durationMs: number;
   readonly seat?: Seat;
   readonly cards: readonly Card[];
@@ -33,6 +34,8 @@ export interface PresentationFrame {
   readonly shot?: number;
   /** Liar's Deck: present only on the frame that resolves the pull */
   readonly survived?: boolean;
+  /** Blackjack: the seat's hand the action applies to */
+  readonly handIndex?: number;
 }
 
 /** Reconstructs only public events; private hands and stock never enter presentation frames. */
@@ -110,6 +113,26 @@ export function getPresentationFrames(
         frames.push({ key: `${key}:result`, kind: 'shot', durationMs: 1500, seat: entry.seat, cards: [],
           shot: entry.shot, survived: entry.survived });
       }
+    } else if (game.gameType === 'blackjack') {
+      const entry = game.log[index];
+      // Bets stay hidden until the deal, so they have no frame and never delay other bettors.
+      if (entry.type === 'deal') {
+        frames.push({ key, kind: 'deal', durationMs: 1800, cards: [] });
+      } else if (entry.type === 'hit' || entry.type === 'double') {
+        frames.push({ key, kind: entry.type, durationMs: entry.type === 'hit' ? 1000 : 1300, seat: entry.seat,
+          cards: [entry.card], handIndex: entry.handIndex });
+      } else if (entry.type === 'stand') {
+        frames.push({ key, kind: 'stand', durationMs: 700, seat: entry.seat, cards: [], handIndex: entry.handIndex });
+      } else if (entry.type === 'split') {
+        frames.push({ key, kind: 'split', durationMs: 1300, seat: entry.seat, cards: [...entry.cards],
+          handIndex: entry.handIndex });
+      } else if (entry.type === 'reveal') {
+        frames.push({ key, kind: 'dealerReveal', durationMs: 1300, cards: [entry.card] });
+      } else if (entry.type === 'dealerHit') {
+        frames.push({ key, kind: 'dealerHit', durationMs: 1000, cards: [entry.card] });
+      } else if (entry.type === 'settle') {
+        frames.push({ key, kind: 'settle', durationMs: 2500, cards: [] });
+      }
     } else {
       const entry = game.log[index];
       if (entry.type === 'play') {
@@ -124,7 +147,8 @@ export function getPresentationFrames(
     }
   }
   if (game.phase === 'scoring') {
-    const winners = (game.gameType === 'sevens' || game.gameType === 'chinesepoker') && game.result
+    const winners = (game.gameType === 'sevens' || game.gameType === 'chinesepoker' || game.gameType === 'blackjack')
+      && game.result
       ? game.result.winners : [];
     const seat = game.gameType === 'bigtwo' || game.gameType === 'ninetynine' || game.gameType === 'liarsdeck'
       ? game.result?.winnerSeat : winners.length === 1 ? winners[0] : undefined;

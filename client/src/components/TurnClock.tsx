@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { bjSitsIn } from '@shared/rules/blackjack';
 import type { Seat } from '@shared/types';
 import { clockTickDelay, countingMs, projectedServerNow, seatClock } from '../games/turn-clock';
 import { useGameStore } from '../stores/game-store';
@@ -12,8 +13,8 @@ interface TurnClockProps {
   showBank?: boolean;
 }
 
-/** Chinese Poker's shared arrangement deadline, shown only on seats that still owe an arrangement. */
-function ArrangeClock({ deadline }: { deadline: number }): ReactNode {
+/** A shared deadline for simultaneous choices (Chinese Poker arrangements, Blackjack bets). */
+export function DeadlineClock({ deadline }: { deadline: number }): ReactNode {
   const clock = useGameStore((state) => state.visible?.clock);
   const receivedAt = useGameStore((state) => state.presentationReceivedAt);
   const { t } = useI18nStore();
@@ -46,7 +47,11 @@ export function TurnClock({ seat, showBank = true }: TurnClockProps): ReactNode 
   const arrangeDeadline = useGameStore((state) => state.chinesePoker?.phase === 'arranging'
     && !state.chinesePoker.submitted[seat] ? state.chinesePoker.arrangeDeadline : null);
   const simultaneous = useGameStore((state) => Boolean(state.chinesePoker));
-  if (simultaneous) return showBank && arrangeDeadline !== null ? <ArrangeClock deadline={arrangeDeadline} /> : null;
+  const betDeadline = useGameStore((state) => state.blackjack?.phase === 'betting'
+    && !state.blackjack.betPlaced[seat] && bjSitsIn(state.blackjack.chips[seat]) ? state.blackjack.betDeadline : null);
+  const betting = useGameStore((state) => state.blackjack?.phase === 'betting');
+  if (simultaneous) return showBank && arrangeDeadline !== null ? <DeadlineClock deadline={arrangeDeadline} /> : null;
+  if (betting) return showBank && betDeadline !== null ? <DeadlineClock deadline={betDeadline} /> : null;
   return <SeatTurnClock seat={seat} showBank={showBank} />;
 }
 

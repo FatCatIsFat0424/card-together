@@ -6,6 +6,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { SUIT_SYMBOLS } from '@shared/constants';
 import { rpScore } from '@shared/rules/redpoints';
 import { NN_MAX } from '@shared/rules/ninetynine';
+import { BJ_HANDS } from '@shared/rules/blackjack';
 import type { BidLevel, BidSuit, Seat } from '@shared/types';
 import { apiRequest } from '../api';
 import { clearAccount, useAccountStore } from '../stores/account-store';
@@ -20,6 +21,7 @@ import { MusicControl } from './MusicControl';
 import { ThemeSwitch } from './ThemeSwitch';
 import { joinNames } from '../games/seat-names';
 import { useGamePresentation } from '../games/use-game-presentation';
+import { blackjackHandNumber, blackjackView } from '../games/blackjack/blackjack-view';
 import styles from './TopBar.module.css';
 
 const VoicePanel = lazy(() => import('./VoicePanel')
@@ -50,11 +52,14 @@ function GameChips(): ReactNode {
   const ninetyNineTotal = useGameStore((state) => state.ninetyNine?.total ?? null);
   const ninetyNineWinner = useGameStore((state) => state.ninetyNine?.result?.winnerSeat ?? null);
   // Results stay hidden until the final presentation has shown them on the table.
-  const { locked } = useGamePresentation();
+  const { locked, frame } = useGamePresentation();
   const sevensResult = useGameStore((state) => state.sevens?.result ?? null);
   const chinesePokerResult = useGameStore((state) => state.chinesePoker?.result ?? null);
   const liarsDeckWinner = useGameStore((state) => state.liarsDeck?.result?.winnerSeat ?? null);
   const liarsDeckFace = useGameStore((state) => state.liarsDeck?.phase === 'playing' ? state.liarsDeck.tableFace : null);
+  const blackjack = useGameStore((state) => state.blackjack);
+  const blackjackHand = blackjack && blackjack.phase !== 'scoring' ? blackjackHandNumber(blackjackView(blackjack, frame)) : 0;
+  const blackjackResult = blackjack?.result ?? null;
   const seats = useRoomStore((state) => state.roomInfo?.seats);
   const seatLabel = (seat: Seat): string => t(`seat.${seat}`);
   return <div className={styles.chips}>
@@ -88,6 +93,13 @@ function GameChips(): ReactNode {
       </span>}
       {liarsDeckWinner && !locked && <span className={styles.chip}>
         🏆 {seats?.[liarsDeckWinner].player?.nickname ?? seatLabel(liarsDeckWinner)}
+      </span>}
+      {blackjackHand > 0 && <span className={styles.chip}>
+        {t('blackjack.handOf', { n: String(blackjackHand), total: String(BJ_HANDS) })}
+      </span>}
+      {blackjackResult && !locked && <span className={styles.chip}>
+        🏆 {joinNames(blackjackResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
+        {mySeat && <> · {t('blackjack.myChips', { n: String(blackjackResult.chips[mySeat]) })}</>}
       </span>}
       {ninetyNineWinner && <span className={styles.chip}>
         🏆 {seats?.[ninetyNineWinner].player?.nickname ?? seatLabel(ninetyNineWinner)}

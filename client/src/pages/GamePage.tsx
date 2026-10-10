@@ -12,6 +12,7 @@ import { NinetyNineTable } from '../games/ninetynine/NinetyNineTable';
 import { SevensTable } from '../games/sevens/SevensTable';
 import { ChinesePokerTable } from '../games/chinesepoker/ChinesePokerTable';
 import { LiarsDeckTable } from '../games/liarsdeck/LiarsDeckTable';
+import { BlackjackTable } from '../games/blackjack/BlackjackTable';
 
 export function GamePage(): ReactNode {
   const { roomCode } = useParams<{ roomCode: string }>();
@@ -32,5 +33,6 @@ export function GamePage(): ReactNode {
   if (gameType === 'sevens') return <SevensTable />;
   if (gameType === 'chinesepoker') return <ChinesePokerTable />;
   if (gameType === 'liarsdeck') return <LiarsDeckTable />;
+  if (gameType === 'blackjack') return <BlackjackTable />;
   return gameType === 'redpoints' ? <RedPointsTable /> : <BridgeTable />;
 }

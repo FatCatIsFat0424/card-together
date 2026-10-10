@@ -1,4 +1,4 @@
-import type { BidAction, Card, ChinesePokerArrangement, PlayerVisibleGameState, Seat } from '@shared/types';
+import type { BidAction, BlackjackAction, Card, ChinesePokerArrangement, PlayerVisibleGameState, Seat } from '@shared/types';
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { getBridgeBotAction } from './bridge-strategy';
 import { getBigTwoBotAction } from './bigtwo-strategy';
@@ -7,6 +7,7 @@ import { getNinetyNineBotAction } from './ninetynine-strategy';
 import { getSevensBotAction } from './sevens-strategy';
 import { getChinesePokerBotAction } from './chinesepoker-strategy';
 import { getLiarsDeckBotAction } from './liarsdeck-strategy';
+import { getBlackjackBotAction } from './blackjack-strategy';
 
 export type BotAction =
   | { readonly type: 'bridge-redeal'; readonly accept: boolean }
@@ -21,7 +22,9 @@ export type BotAction =
   | { readonly type: 'sevens-cover'; readonly card: Card }
   | { readonly type: 'chinesepoker-arrange'; readonly arrangement: ChinesePokerArrangement }
   | { readonly type: 'liarsdeck-play'; readonly cardIds: readonly number[] }
-  | { readonly type: 'liarsdeck-challenge' };
+  | { readonly type: 'liarsdeck-challenge' }
+  | { readonly type: 'blackjack-bet'; readonly amount: number }
+  | { readonly type: 'blackjack-action'; readonly action: BlackjackAction };
 
 /** Decisions receive only filtered player information and injectable randomness. */
 export function getBotAction(
@@ -36,5 +39,6 @@ export function getBotAction(
     case 'sevens': return getSevensBotAction(visible, random);
     case 'chinesepoker': return getChinesePokerBotAction(visible, random);
     case 'liarsdeck': return getLiarsDeckBotAction(visible, random);
+    case 'blackjack': return getBlackjackBotAction(visible, random);
   }
 }

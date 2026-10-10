@@ -595,6 +595,128 @@ export interface LiarsDeckVisibleState {
   readonly result: LiarsDeckMatchResult | null;
 }
 
+// ─── Blackjack ───
+
+/** One player hand; a split seat holds two. */
+export interface BlackjackHand {
+  cards: Card[];
+  bet: number;
+  doubled: boolean;
+  /** Created by a split, so a two-card 21 is not a blackjack */
+  split: boolean;
+  /** Stood, doubled, busted, reached 21, a natural, or a split ace */
+  done: boolean;
+}
+
+export type BlackjackAction = 'hit' | 'stand' | 'double' | 'split';
+
+export type BlackjackOutcome = 'blackjack' | 'win' | 'push' | 'lose' | 'bust';
+
+/**
+ * Bets stay hidden until the deal, which makes every seat's cards and bet public. Hands are
+ * indexed within the seat; a split inserts the new hand right after the split one.
+ */
+export type BlackjackLogEntry =
+  | { readonly type: 'bet'; readonly seat: Seat; readonly auto: boolean; readonly timestamp: number }
+  | {
+    readonly type: 'deal';
+    readonly hand: number;
+    /** 0 for seats sitting out */
+    readonly bets: Record<Seat, number>;
+    readonly cards: Record<Seat, Card[]>;
+    readonly upCard: Card;
+    readonly timestamp: number;
+  }
+  | { readonly type: 'hit'; readonly seat: Seat; readonly handIndex: number; readonly card: Card; readonly timestamp: number }
+  | { readonly type: 'stand'; readonly seat: Seat; readonly handIndex: number; readonly timestamp: number }
+  | { readonly type: 'double'; readonly seat: Seat; readonly handIndex: number; readonly card: Card; readonly timestamp: number }
+  /** `cards[0]` completes the split hand and `cards[1]` the new hand after it */
+  | {
+    readonly type: 'split';
+    readonly seat: Seat;
+    readonly handIndex: number;
+    readonly cards: readonly [Card, Card];
+    readonly timestamp: number;
+  }
+  | { readonly type: 'reveal'; readonly card: Card; readonly timestamp: number }
+  | { readonly type: 'dealerHit'; readonly card: Card; readonly timestamp: number }
+  | {
+    readonly type: 'settle';
+    readonly hand: number;
+    /** Per hand, in seat hand order; empty for seats sitting out */
+    readonly outcomes: Record<Seat, BlackjackOutcome[]>;
+    /** Chips won minus chips staked this hand */
+    readonly net: Record<Seat, number>;
+    readonly chips: Record<Seat, number>;
+    readonly timestamp: number;
+  };
+
+export interface BlackjackMatchResult {
+  readonly gameType: 'blackjack';
+  readonly chips: Record<Seat, number>;
+  readonly hands: number;
+  /** Most chips (ties included), ordered N, E, S, W */
+  readonly winners: Seat[];
+}
+
+export type BlackjackPhase = 'betting' | 'playing' | 'scoring';
+
+export interface BlackjackGameState {
+  clock?: GameClock;
+  presentation?: GamePresentation;
+  returnedSeats?: Seat[];
+  readonly gameType: 'blackjack';
+  readonly id: string;
+  readonly startedAt: number;
+  readonly players: Record<Seat, PlayerInfo>;
+  readonly roomCode: RoomCode;
+  phase: BlackjackPhase;
+  /** Hands dealt so far; betting is for hand `hand + 1` */
+  hand: number;
+  /** Chips not staked on the table */
+  chips: Record<Seat, number>;
+  /** Server only while betting; null until the seat bets or when it sits out */
+  bets: Record<Seat, number | null>;
+  /** Length of the shared betting window */
+  readonly betMs: number;
+  /** Null until the previous hand's presentation ends and betting opens */
+  betDeadline: number | null;
+  /** Server only; the undealt part of this hand's shuffled deck */
+  deck: Card[];
+  /** The latest hand's cards, kept on the table while the next hand is bet */
+  hands: Record<Seat, BlackjackHand[]>;
+  /** Face-up dealer cards: the up card, then the revealed hole card and draws */
+  dealer: Card[];
+  /** Server only; the face-down card until the dealer reveals it */
+  hole: Card | null;
+  currentTurnSeat: Seat;
+  activeHand: number;
+  log: BlackjackLogEntry[];
+  result: BlackjackMatchResult | null;
+}
+
+export interface BlackjackVisibleState {
+  clock?: GameClock;
+  presentation?: GamePresentation;
+  readonly gameType: 'blackjack';
+  readonly phase: BlackjackPhase;
+  readonly mySeat: Seat;
+  readonly hand: number;
+  readonly chips: Record<Seat, number>;
+  /** This seat's pending bet while betting */
+  readonly myBet: number | null;
+  readonly betPlaced: Record<Seat, boolean>;
+  readonly betDeadline: number | null;
+  readonly hands: Record<Seat, readonly BlackjackHand[]>;
+  readonly dealer: readonly Card[];
+  /** The dealer holds a face-down card */
+  readonly holeHidden: boolean;
+  readonly currentTurnSeat: Seat;
+  readonly activeHand: number;
+  readonly log: readonly BlackjackLogEntry[];
+  readonly result: BlackjackMatchResult | null;
+}
+
 // ─── Cross-game ───
 
 export type AnyGameState =
@@ -604,7 +726,8 @@ export type AnyGameState =
   | NinetyNineGameState
   | SevensGameState
   | ChinesePokerGameState
-  | LiarsDeckGameState;
+  | LiarsDeckGameState
+  | BlackjackGameState;
 
 export type PlayerVisibleGameState =
   | BridgeVisibleState
@@ -613,7 +736,8 @@ export type PlayerVisibleGameState =
   | NinetyNineVisibleState
   | SevensVisibleState
   | ChinesePokerVisibleState
-  | LiarsDeckVisibleState;
+  | LiarsDeckVisibleState
+  | BlackjackVisibleState;
 
 export type MatchResult =
   | ({ readonly gameType: 'bridge' } & GameResult)
@@ -622,7 +746,8 @@ export type MatchResult =
   | NinetyNineMatchResult
   | SevensMatchResult
   | ChinesePokerMatchResult
-  | LiarsDeckMatchResult;
+  | LiarsDeckMatchResult
+  | BlackjackMatchResult;
 
 export interface MatchSummary {
   readonly id: string;

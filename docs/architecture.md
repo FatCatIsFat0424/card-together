@@ -120,6 +120,7 @@ passes wait for the shared presentation deadline.
 | Sevens play / cover | 1,300 / 1,000 ms |
 | Chinese Poker row reveal / sweep / home run | 2,500 / 1,500 / 2,500 ms |
 | Liar's Deck new round / play / LIAR call / trigger suspense / pull result | 2,000 / 1,300 / 2,500 / 2,500 / 1,500 ms |
+| Blackjack deal / hit / double / stand / split / dealer reveal / dealer draw / settlement | 1,800 / 1,000 / 1,300 / 700 / 1,300 / 1,300 / 1,000 / 2,500 ms |
 | Final result before score overlay | 3,000 ms |
 
 Frames for one action run sequentially. The server rejects further play/pass/capture
@@ -151,11 +152,13 @@ The timeout scheduler rechecks the game and turn inside the runtime queue, appli
 legal action from the player's filtered view, and publishes only after persistence.
 Failed writes restore the clock and game together. Manual actions also check expiry.
 
-Chinese Poker seats arrange simultaneously, so its games publish no single-seat turn.
-The game stores one shared arrangement deadline; a separate runtime scheduler arranges every
-missing seat from that seat's filtered view at expiry, in one committed change. Bots submit
-one at a time through the ordinary bot scheduler. Submissions produce no presentation frames,
-so they never delay other seats; only the final submission starts the showdown.
+Chinese Poker arrangements and Blackjack bets are simultaneous, so those phases publish no
+single-seat turn. The game stores one shared deadline per window; the shared-deadline runtime
+scheduler makes every missing decision from that seat's filtered view at expiry, in one committed
+change (Blackjack stakes the minimum bet for humans). Bots submit one at a time through the
+ordinary bot scheduler. Submissions produce no presentation frames, so they never delay other
+seats; only the final submission starts the showdown or deal. Each Blackjack betting window
+opens when the previous settlement presentation ends, and each deal refills every reserve.
 
 Startup preserves existing deadlines, so an overdue turn resumes without a browser;
 subsequent turns start from the newly committed action rather than replaying missed turns.

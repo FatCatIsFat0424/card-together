@@ -162,6 +162,40 @@ describe('authoritative game presentation', () => {
     expect(frameLogIndex(frames[1])).toBe(frameLogIndex(frames[2]));
   });
 
+  it('should keep Blackjack bets frameless, start the first turn after the deal, and open betting after settlement', () => {
+    games.startGame(CODE, 'blackjack', players);
+    const state = games.getGameState(CODE)!;
+    if (state.gameType !== 'blackjack') throw new Error('Expected Blackjack');
+    expect(state.clock?.turn).toBeNull();
+    expect(state.betDeadline).toBe(Date.now() + 15_000);
+    for (const seat of ['N', 'E', 'S'] as const) {
+      expect(games.handleBlackjackBet(CODE, seat, 50).success).toBe(true);
+      expect(getPresentationFrames(state)).toEqual([]);
+    }
+    const bank = state.clock!.bankRemainingMs.N;
+    expect(games.handleBlackjackBet(CODE, 'W', 50).success).toBe(true);
+    const frames = getPresentationFrames(state);
+    expect(frames[0]).toMatchObject({ kind: 'deal', durationMs: 1800, cards: [] });
+    if (state.phase === 'playing') {
+      expect(frames).toHaveLength(1);
+      expect(state.clock?.turn).toMatchObject({ seat: state.currentTurnSeat, startsAt: getPresentationEndsAt(state) });
+      expect(state.clock?.bankRemainingMs.N).toBe(bank);
+      vi.setSystemTime(getPresentationEndsAt(state) - 1);
+      expect(games.handleBlackjackAction(CODE, state.currentTurnSeat, 'stand').success).toBe(false);
+      vi.setSystemTime(getPresentationEndsAt(state));
+      while (state.phase === 'playing') {
+        expect(games.handleBlackjackAction(CODE, state.currentTurnSeat, 'stand').success).toBe(true);
+        vi.setSystemTime(getPresentationEndsAt(state));
+      }
+    }
+    expect(state.phase).toBe('betting');
+    const kinds = getPresentationFrames(state).map((frame) => frame.kind);
+    expect(kinds.slice(-1)).toEqual(['settle']);
+    expect(kinds).toContain('dealerReveal');
+    expect(state.clock?.turn).toBeNull();
+    expect(state.betDeadline).toBe(getPresentationEndsAt(state) + 15_000);
+  });
+
   it('should let Chinese Poker seats submit without waiting and present only the showdown', () => {
     games.startGame(CODE, 'chinesepoker', players);
     const hands = (games.getGameState(CODE) as { hands: Record<Seat, Card[]> }).hands;

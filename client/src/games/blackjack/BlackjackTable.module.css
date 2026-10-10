@@ -1,0 +1,265 @@
+/* ─── BlackjackTable styles: dealer and seat hands, betting and action controls, info rail, settlement ─── */
+
+/* ─── Table centre: hands sit toward their seat around the dealer ─── */
+.centre {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-areas:
+    '. top .'
+    'left dealer right'
+    '. bottom .'
+    'notice notice notice';
+  align-items: center;
+  justify-items: center;
+  gap: var(--spacing-sm) var(--spacing-md);
+  color: var(--table-ink);
+}
+
+.dealerArea {
+  grid-area: dealer;
+  padding: 4px 10px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg-page) 18%, transparent);
+}
+
+.seatHands {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.top { grid-area: top; }
+.left { grid-area: left; }
+.right { grid-area: right; }
+.bottom { grid-area: bottom; }
+
+.out { opacity: 0.5; }
+
+.seatHeader {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  font-size: var(--text-xs);
+}
+
+.seatName {
+  max-width: 9em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.net { font-variant-numeric: tabular-nums; }
+
+.handRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+}
+
+.pill,
+.auto,
+.tag {
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pill {
+  background: color-mix(in srgb, var(--bg-page) 45%, transparent);
+  border: 1px solid var(--rail-border);
+}
+
+.auto,
+.tag {
+  margin-left: auto;
+  background: color-mix(in srgb, var(--color-warning) 25%, transparent);
+}
+
+.notice {
+  grid-area: notice;
+  margin: 0;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: var(--shadow-sm);
+}
+
+.gain { color: var(--color-success); }
+.loss { color: var(--color-danger); }
+
+/* ─── Hand zone ─── */
+.handArea {
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.myHands {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: 6px var(--spacing-sm) 0;
+}
+
+.myNet {
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 6px var(--spacing-sm);
+}
+
+.prompt {
+  margin: 0;
+  padding: 6px var(--spacing-sm);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.promptActive {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.placed {
+  color: var(--color-success);
+  font-weight: 700;
+}
+
+.ctrl {
+  min-height: 44px;
+  min-width: 72px;
+  padding: 4px 16px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+/* ─── Betting ─── */
+.betting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 6px;
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 var(--spacing-sm);
+}
+
+.chipButton {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3px dashed color-mix(in srgb, var(--text-inverse) 70%, transparent);
+  background: var(--color-warning);
+  color: var(--text-inverse);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.chipButton:not(:disabled):hover,
+.chipButton:focus-visible { transform: translateY(-3px); }
+
+.chipButton:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.chipActive {
+  box-shadow: 0 0 0 3px var(--turn-glow), 0 0 14px color-mix(in srgb, var(--turn-glow) 60%, transparent);
+}
+
+.stepButton {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  font-size: var(--text-lg);
+  font-weight: 800;
+}
+
+.amount {
+  min-width: 4.5em;
+  text-align: center;
+  font-size: var(--text-lg);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.deadline { display: inline-flex; }
+
+.limits {
+  margin: 0;
+  padding-bottom: 4px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* ─── Info rail ─── */
+.infoChips {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.statusDone {
+  color: var(--color-success);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.moveBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.handLine { font-weight: 700; }
+
+.moveDetail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+/* ─── Settlement ─── */
+.rankTable td,
+.rankTable th { text-align: left; }
+
+@media (max-width: 767px) {
+  .centre { gap: 6px var(--spacing-sm); }
+  .chipButton { width: 44px; height: 44px; font-size: var(--text-sm); }
+  .ctrl { min-width: 64px; padding: 4px 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chipButton { transition: none; }
+}

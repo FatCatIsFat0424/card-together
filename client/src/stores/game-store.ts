@@ -18,6 +18,7 @@ import type {
   SevensVisibleState,
   ChinesePokerVisibleState,
   LiarsDeckVisibleState,
+  BlackjackVisibleState,
 } from '@shared/types';
 import { equalSnapshotValue, retainSnapshotValue } from './snapshot-equality';
 
@@ -31,6 +32,7 @@ interface GameStoreState {
   sevens: SevensVisibleState | null;
   chinesePoker: ChinesePokerVisibleState | null;
   liarsDeck: LiarsDeckVisibleState | null;
+  blackjack: BlackjackVisibleState | null;
   gameType: GameType | null;
   phase: GamePhase | null;
   myHand: Card[];
@@ -59,6 +61,7 @@ const initialState: GameStoreState = {
   sevens: null,
   chinesePoker: null,
   liarsDeck: null,
+  blackjack: null,
   gameType: null,
   phase: null,
   myHand: [],
@@ -113,6 +116,13 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       phase: game.phase,
       currentTurnSeat: game.phase === 'playing' ? game.currentTurnSeat : null,
       liarsDeck: retainSnapshotValue(state.liarsDeck, game),
+    } : game.gameType === 'blackjack' ? {
+      ...initialState,
+      gameType: 'blackjack',
+      // Betting is simultaneous, so no single seat holds the turn.
+      phase: game.phase === 'betting' ? 'playing' : game.phase,
+      currentTurnSeat: game.phase === 'playing' ? game.currentTurnSeat : null,
+      blackjack: retainSnapshotValue(state.blackjack, game),
     } : {
       visible: null,
       presentationReceivedAt: 0,
@@ -122,6 +132,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       sevens: null,
       chinesePoker: null,
       liarsDeck: null,
+      blackjack: null,
       gameType: 'bridge',
       phase: game.phase,
       dealerSeat: game.dealerSeat,

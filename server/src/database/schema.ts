@@ -1,5 +1,5 @@
 import {
-  isBigTwoResult, isChinesePokerResult, isLiarsDeckResult, isNinetyNineResult, isRedPointsResult, isRuntimeSnapshot,
+  isBigTwoResult, isBlackjackResult, isChinesePokerResult, isLiarsDeckResult, isNinetyNineResult, isRedPointsResult, isRuntimeSnapshot,
   isSevensResult,
 } from '../runtime/validate';
 import {
@@ -111,6 +111,7 @@ function validMatch(value: unknown): value is MatchRecord {
     sevens: isSevensResult,
     chinesepoker: isChinesePokerResult,
     liarsdeck: isLiarsDeckResult,
+    blackjack: isBlackjackResult,
   };
   const gameType = value.result.gameType;
   return typeof gameType === 'string' && GAME_TYPES.includes(gameType as GameType) &&

@@ -11,6 +11,8 @@ import type { TranslationKey } from '../i18n';
 import { remainingCards } from '../game-view';
 import type { TablePosition } from '../game-view';
 import { liarsDeckView } from '../games/liarsdeck/liarsdeck-view';
+import { blackjackSeatOut, blackjackView } from '../games/blackjack/blackjack-view';
+import { ChipIcon } from '../games/blackjack/BlackjackCards';
 import { useGamePresentation } from '../games/use-game-presentation';
 import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
@@ -160,9 +162,11 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
   const isMe = useRoomStore((state) => state.mySeat === seat);
   const {
     phase, turn, declarer, dealer, playing, bigTwoCards, redPointsCards, ninetyNineCards, locked, captured, busted,
-    sevensCards, sevensCovered, chinesePokerCards, arranging, arranged, autoArranged,
+    sevensCards, sevensCovered, chinesePokerCards, arranging, arranged, autoArranged, blackjackCards,
   } = useGameStore(useShallow((state) => ({
     sevensCards: state.sevens?.handCounts[seat] ?? null,
+    // Blackjack hands are drawn face up on the table, so the plate shows no card backs.
+    blackjackCards: state.blackjack ? 0 : null,
     sevensCovered: state.sevens?.coveredCounts[seat] ?? null,
     chinesePokerCards: state.chinesePoker ? state.chinesePoker.phase === 'arranging' ? 13 : 0 : null,
     arranging: state.chinesePoker?.phase === 'arranging' && !state.chinesePoker.submitted[seat],
@@ -185,6 +189,12 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
   // Liar's Deck seats follow the presentation so a trigger pull is not revealed before its suspense ends.
   const liars = liarsDeck && liarsDeckView(liarsDeck, frame);
   const dead = liars?.eliminated.includes(seat) ?? false;
+  const blackjack = useGameStore((state) => state.blackjack);
+  // Blackjack chips follow the presentation so a settlement is not paid out before its frame.
+  const bj = blackjack && blackjackView(blackjack, frame);
+  const sittingOut = bj ? blackjackSeatOut(bj, seat) : false;
+  const bettingOpen = Boolean(bj?.betting && blackjack?.betDeadline !== null && !sittingOut);
+  const betPlaced = bettingOpen && Boolean(blackjack?.betPlaced[seat]);
   const clock = useGameStore((state) => state.visible?.clock);
   const receivedAt = useGameStore((state) => state.presentationReceivedAt);
   const lastActionAt = useGameStore((state) => latestSeatAction(state.visible?.log ?? [], seat));
@@ -192,12 +202,12 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
   const status = seatStatus({
     busted: busted || dead,
     locked,
-    thinking: (active || arranging) && Boolean(player?.isBot),
+    thinking: (active || arranging || (bettingOpen && !betPlaced)) && Boolean(player?.isBot),
     autoPlayed: autoArranged || showsAutoPlayed(clock, seat, lastActionAt),
-    arranged,
+    arranged: arranged || betPlaced,
   });
   const cards = bigTwoCards ?? redPointsCards ?? ninetyNineCards ?? sevensCards ?? chinesePokerCards
-    ?? liars?.handCounts[seat] ?? remainingCards(seat, playing);
+    ?? liars?.handCounts[seat] ?? blackjackCards ?? remainingCards(seat, playing);
   const name = player?.nickname ?? t(`seat.${seat}`);
   const bottom = position === 'bottom';
   const redCards = captured?.filter((card) => rpCardPoints(card) > 0).slice(-MAX_PILE) ?? [];
@@ -210,7 +220,7 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
 
   return (
     <div data-table-seat={position}
-      className={`${styles.seat} ${styles[position]} ${active ? styles.turn : ''} ${busted || dead ? styles.out : ''} ${onPick ? styles.pickable : ''}`}
+      className={`${styles.seat} ${styles[position]} ${active ? styles.turn : ''} ${busted || dead || sittingOut ? styles.out : ''} ${onPick ? styles.pickable : ''}`}
       role={onPick ? 'button' : undefined} tabIndex={onPick ? 0 : undefined} onClick={onPick}
       aria-label={onPick ? t('seat.pickNext', { name }) : undefined}
       onKeyDown={onPick ? (event) => {
@@ -241,6 +251,9 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
             title={t('liarsdeck.shotsTitle', { n: String(liars.shots[seat]) })}>
             {t('liarsdeck.shots', { n: String(liars.shots[seat]) })}
           </span>}
+          {bj && <span className={styles.chip} title={t('blackjack.chipsTitle', { n: String(bj.chips[seat]) })}>
+            <ChipIcon />{bj.chips[seat]}
+          </span>}
           {declarer && <span className={`${styles.chip} ${styles.declarer}`}>{t('table.declarer')}</span>}
           {dealer && phase === 'bidding' && <span className={styles.chip}>{t('table.dealer')}</span>}
           <TurnClock seat={seat} showBank={isMe} />
@@ -249,8 +262,10 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
           title={status === 'autoPlayed' ? t('clock.autoPlayed') : undefined}>
           {STATUS_ICON[status] && <span className={styles.statusIcon} aria-hidden="true">
             {dead && status === 'busted' ? '💀' : STATUS_ICON[status]} </span>}
-          {t(dead && status === 'busted' ? 'liarsdeck.dead' : STATUS_LABEL[status])}
+          {t(dead && status === 'busted' ? 'liarsdeck.dead'
+            : bj && status === 'arranged' ? 'blackjack.betPlaced' : STATUS_LABEL[status])}
         </span>}
+        {sittingOut && <span className={styles.srOnly}>{t('blackjack.sittingOut')}</span>}
         {active && <span className={styles.srOnly}>{isMe ? t('table.yourTurn') : t('table.turn')}</span>}
         {clockTurn && clock && <TurnBar key={clockTurn.id} turn={clockTurn} bankMs={isMe ? clock.bankRemainingMs[seat] : 0}
           serverNow={clock.serverNow} receivedAt={receivedAt} />}

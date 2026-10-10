@@ -7,8 +7,10 @@ import * as sevens from '../../src/managers/games/sevens-game';
 import { ldCanChallenge, ldMustChallenge } from '@shared/rules/liarsdeck';
 import * as chinesepoker from '../../src/managers/games/chinesepoker-game';
 import * as liarsdeck from '../../src/managers/games/liarsdeck-game';
+import * as blackjack from '../../src/managers/games/blackjack-game';
+import { BJ_BET_STEP, BJ_MIN_BET, bjLegalActions, bjMaxBet } from '@shared/rules/blackjack';
 import {
-  isChinesePokerResult, isLiarsDeckResult, isRuntimeSnapshot, isSevensResult,
+  isBlackjackResult, isChinesePokerResult, isLiarsDeckResult, isRuntimeSnapshot, isSevensResult,
 } from '../../src/runtime/validate';
 import type { RuntimeSnapshot } from '../../src/runtime/types';
 
@@ -223,5 +225,88 @@ describe("persisted Liar's Deck games", () => {
     const wrongFace = structuredClone(game);
     wrongFace.hands.N[0] = { id: wrongFace.hands.N[0].id, face: wrongFace.hands.N[0].face === 'K' ? 'Q' : 'K' };
     expect(persists(wrongFace, 'liarsdeck')).toBe(false);
+  });
+});
+
+describe('persisted Blackjack games', () => {
+  afterEach(() => blackjack.restoreGames([]));
+
+  /** One random legal decision: a bet from the next seat that owes one, or the acting hand's action. */
+  function stepBlackjack(random: () => number): void {
+    const game = blackjack.getGameState(CODE)!;
+    if (game.phase === 'betting') {
+      const seat = blackjack.pendingBetSeats(game)[0];
+      const steps = (bjMaxBet(game.chips[seat]) - BJ_MIN_BET) / BJ_BET_STEP;
+      const amount = BJ_MIN_BET + Math.floor(random() * (steps + 1)) * BJ_BET_STEP;
+      expect(blackjack.bet(CODE, seat, amount, true, 1000, random).success).toBe(true);
+      return;
+    }
+    const seat = game.currentTurnSeat;
+    const legal = bjLegalActions(game.hands[seat], game.activeHand, game.chips[seat]);
+    expect(blackjack.act(CODE, seat, legal[Math.floor(random() * legal.length)], 1000).success).toBe(true);
+  }
+
+  function finishedGame(seed: number): NonNullable<ReturnType<typeof blackjack.getGameState>> {
+    const random = seeded(seed);
+    blackjack.startGame(CODE, PLAYERS, 15_000, 0);
+    for (let step = 0; step < 500 && blackjack.getGameState(CODE)!.phase !== 'scoring'; step++) {
+      expect(persists(blackjack.getGameState(CODE)!, 'blackjack')).toBe(true);
+      stepBlackjack(random);
+    }
+    return blackjack.getGameState(CODE)!;
+  }
+
+  it('accepts every committed state through the final settlement', () => {
+    for (const seed of [2, 9, 31]) {
+      const game = finishedGame(seed);
+      expect(game.phase).toBe('scoring');
+      expect(persists(game, 'blackjack')).toBe(true);
+      expect(isBlackjackResult(game.result)).toBe(true);
+    }
+  });
+
+  it('rejects altered settlements, dealer draws, and results', () => {
+    const game = finishedGame(4);
+    const settle = game.log.findIndex((entry) => entry.type === 'settle');
+    const chips = structuredClone(game);
+    const entry = chips.log[settle];
+    if (entry.type !== 'settle') throw new Error('Expected a settlement');
+    entry.chips.N += 10;
+    expect(persists(chips, 'blackjack')).toBe(false);
+    const result = structuredClone(game);
+    result.result = { ...result.result!, chips: { ...result.result!.chips, E: result.result!.chips.E + 10 } };
+    expect(persists(result, 'blackjack')).toBe(false);
+    const extraDraw = structuredClone(game);
+    const reveal = extraDraw.log.findIndex((value) => value.type === 'reveal');
+    extraDraw.log.splice(reveal + 1, 0, { type: 'dealerHit', card: { suit: 'spades', rank: 2 }, timestamp: 1000 });
+    expect(persists(extraDraw, 'blackjack')).toBe(false);
+  });
+
+  it('rejects duplicated cards, a misplaced turn, and bets from seats that cannot bet', () => {
+    const random = seeded(17);
+    blackjack.startGame(CODE, PLAYERS, 15_000, 0);
+    while (blackjack.getGameState(CODE)!.phase === 'betting') stepBlackjack(random);
+    const game = blackjack.getGameState(CODE)!;
+    if (game.phase === 'playing') {
+      const duplicate = structuredClone(game);
+      duplicate.deck[0] = { ...duplicate.dealer[0] };
+      expect(persists(duplicate, 'blackjack')).toBe(false);
+      const turn = structuredClone(game);
+      turn.currentTurnSeat = SEATS[(SEATS.indexOf(game.currentTurnSeat) + 1) % 4];
+      expect(persists(turn, 'blackjack')).toBe(false);
+      const hidden = structuredClone(game);
+      hidden.hole = null;
+      expect(persists(hidden, 'blackjack')).toBe(false);
+    }
+    blackjack.startGame(CODE, PLAYERS, 15_000, 0);
+    const betting = blackjack.getGameState(CODE)!;
+    const unplaced = structuredClone(betting);
+    unplaced.bets.N = 50;
+    expect(persists(unplaced, 'blackjack')).toBe(false);
+    expect(blackjack.bet(CODE, 'N', 50, true, 0).success).toBe(true);
+    expect(persists(blackjack.getGameState(CODE)!, 'blackjack')).toBe(true);
+    const over = structuredClone(blackjack.getGameState(CODE)!);
+    over.bets.N = 1010;
+    expect(persists(over, 'blackjack')).toBe(false);
   });
 });

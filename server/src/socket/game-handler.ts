@@ -1,5 +1,6 @@
-import type { BidAction, Card, ChinesePokerArrangement, Seat } from '@shared/types';
+import type { BidAction, BlackjackAction, Card, ChinesePokerArrangement, Seat } from '@shared/types';
 import { LD_DECK, LD_MAX_PLAY } from '@shared/rules/liarsdeck';
+import { BJ_ACTIONS, BJ_MAX_BET, BJ_MIN_BET } from '@shared/rules/blackjack';
 import type { SocketContext, TypedSocket } from './context';
 import { actionError, requireRoom, requireSuccess, runAction } from './context';
 import * as roomManager from '../managers/room-manager';
@@ -160,6 +161,24 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
   socket.on('game:liarsdeck:challenge', (callback) => runAction(context, socket, callback, () => {
     const code = requireRoom(socket);
     requireSuccess(gameManager.handleLiarsDeckChallenge(code, playerSeat(socket, code)));
+    return { success: true };
+  }));
+
+  socket.on('game:blackjack:bet', (payload, callback) => runAction(context, socket, callback, () => {
+    const amount: unknown = payload?.amount;
+    if (typeof amount !== 'number' || !Number.isSafeInteger(amount) || amount < BJ_MIN_BET || amount > BJ_MAX_BET) {
+      throw actionError('Invalid bet.');
+    }
+    const code = requireRoom(socket);
+    requireSuccess(gameManager.handleBlackjackBet(code, playerSeat(socket, code), amount));
+    return { success: true };
+  }));
+
+  socket.on('game:blackjack:action', (payload, callback) => runAction(context, socket, callback, () => {
+    const action: unknown = payload?.action;
+    if (!BJ_ACTIONS.includes(action as BlackjackAction)) throw actionError('Invalid action.');
+    const code = requireRoom(socket);
+    requireSuccess(gameManager.handleBlackjackAction(code, playerSeat(socket, code), action as BlackjackAction));
     return { success: true };
   }));
 

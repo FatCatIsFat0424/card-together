@@ -1,10 +1,13 @@
-import type { Card, LiarFace, LiarTableFace, PlayerVisibleGameState, Seat } from '@shared/types';
+import type { BlackjackOutcome, Card, LiarFace, LiarTableFace, PlayerVisibleGameState, Seat } from '@shared/types';
 import type { BigTwoComboType } from '@shared/rules/bigtwo';
+import { bjApplyEntry, bjEmptyTable, bjTotal } from '@shared/rules/blackjack';
 import { rpScore } from '@shared/rules/redpoints';
 
 export interface HistoryAction {
-  kind: 'play' | 'pass' | 'round_end' | 'dragon' | 'flip' | 'eliminated' | 'cover' | 'challenge' | 'shot';
-  seat: Seat;
+  kind: 'play' | 'pass' | 'round_end' | 'dragon' | 'flip' | 'eliminated' | 'cover' | 'challenge' | 'shot'
+    | 'deal' | 'hit' | 'stand' | 'double' | 'split' | 'dealerReveal' | 'dealerHit' | 'settle';
+  /** Null for the Blackjack dealer */
+  seat: Seat | null;
   cards: readonly Card[];
   comboType?: BigTwoComboType;
   captured?: Card | null;
@@ -21,6 +24,15 @@ export interface HistoryAction {
   lied?: boolean;
   shot?: number;
   survived?: boolean;
+  /** Blackjack: stake dealt to the seat, and whether the bet was placed automatically */
+  bet?: number;
+  auto?: boolean;
+  /** Blackjack: which of a split seat's hands acted */
+  handIndex?: number;
+  /** Blackjack: the hand's total after this action */
+  handTotal?: number;
+  outcomes?: readonly BlackjackOutcome[];
+  net?: number;
 }
 
 export interface HistoryRound {
@@ -30,6 +42,8 @@ export interface HistoryRound {
   /** Liar's Deck: the round's table card */
   tableFace?: LiarTableFace;
 }
+
+const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 
 type HistoryInput = PlayerVisibleGameState extends infer T
   ? T extends PlayerVisibleGameState
@@ -107,6 +121,46 @@ export function deriveRoundHistory(game: HistoryInput): HistoryRound[] {
           faces: entry.revealed, lied: entry.lied });
       } else {
         round.actions.push({ kind: 'shot', seat: entry.seat, cards: [], shot: entry.shot, survived: entry.survived });
+        round.complete = true;
+      }
+    }
+  } else if (game.gameType === 'blackjack') {
+    // Each hand is one round; totals come from replaying the public log alongside.
+    const table = bjEmptyTable();
+    let autoBets: Seat[] = [];
+    for (const entry of game.log) {
+      if (entry.type === 'bet') {
+        if (entry.auto) autoBets.push(entry.seat);
+        continue;
+      }
+      bjApplyEntry(table, entry);
+      if (entry.type === 'deal') {
+        if (current) current.complete = true;
+        const round = start();
+        for (const seat of SEATS) {
+          if (entry.bets[seat] === 0) continue;
+          round.actions.push({ kind: 'deal', seat, cards: entry.cards[seat], bet: entry.bets[seat],
+            handTotal: bjTotal(entry.cards[seat]).total, ...(autoBets.includes(seat) ? { auto: true } : {}) });
+        }
+        round.actions.push({ kind: 'deal', seat: null, cards: [entry.upCard] });
+        autoBets = [];
+        continue;
+      }
+      const round = current ?? start();
+      if (entry.type === 'hit' || entry.type === 'double' || entry.type === 'stand' || entry.type === 'split') {
+        const hands = table.hands[entry.seat];
+        round.actions.push({ kind: entry.type, seat: entry.seat,
+          cards: entry.type === 'stand' ? [] : entry.type === 'split' ? entry.cards : [entry.card],
+          ...(hands.length > 1 && entry.type !== 'split' ? { handIndex: entry.handIndex } : {}),
+          ...(entry.type === 'split' ? {} : { handTotal: bjTotal(hands[entry.handIndex].cards).total }) });
+      } else if (entry.type === 'reveal' || entry.type === 'dealerHit') {
+        round.actions.push({ kind: entry.type === 'reveal' ? 'dealerReveal' : 'dealerHit', seat: null,
+          cards: [entry.card], handTotal: bjTotal(table.dealer).total });
+      } else if (entry.type === 'settle') {
+        for (const seat of SEATS) {
+          if (entry.outcomes[seat].length === 0) continue;
+          round.actions.push({ kind: 'settle', seat, cards: [], outcomes: entry.outcomes[seat], net: entry.net[seat] });
+        }
         round.complete = true;
       }
     }

@@ -120,6 +120,30 @@ describe('table seat plate', () => {
     expect(render({ seat: 'N', position: 'top' })).not.toContain('Covered');
   });
 
+  it('shows Blackjack chips, betting progress, the bet deadline, and dims seats that sit out', () => {
+    state.game = {
+      ...baseGame(),
+      blackjack: {
+        gameType: 'blackjack', phase: 'betting', mySeat: 'S', hand: 1, chips: { N: 1050, E: 5, S: 1010, W: 1000 },
+        myBet: null, betPlaced: { N: true, E: false, S: false, W: false }, betDeadline: 30_000,
+        hands: { N: [{ cards: [card(10, 'spades'), card(9, 'hearts')], bet: 50, doubled: false, split: false, done: true }],
+          E: [], S: [], W: [] },
+        dealer: [], holeHidden: false, currentTurnSeat: 'N', activeHand: 0, log: [], result: null,
+      },
+      visible: { clock: clock(null), log: [] },
+    };
+    const north = render({ seat: 'N', position: 'top' });
+    expect(north).toContain('1050');
+    expect(north).toContain('Bet placed');
+    expect(north).not.toContain('cards');
+    expect(statusLabels(render({ seat: 'W', position: 'left' }))).toEqual(['Thinking…']);
+    const east = render({ seat: 'E', position: 'right' });
+    expect(east).toContain('Sitting out');
+    expect(statusLabels(east)).toEqual([]);
+    expect(render({ seat: 'S', position: 'bottom' })).toMatch(/role="timer"[^>]*aria-label="Turn 30s"/);
+    expect(render({ seat: 'N', position: 'top' })).not.toContain('role="timer"');
+  });
+
   it('shows Chinese Poker arrangement progress and the shared deadline only for the own pending seat', () => {
     const chinesePoker = {
       phase: 'arranging', arrangeDeadline: 45_000, autoArranged: [],

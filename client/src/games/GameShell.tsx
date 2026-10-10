@@ -64,6 +64,12 @@ function presentationSummary(
       scores: winners.map((seat) => `${t(`seat.${seat}`)} ${scores[seat] > 0 ? '+' : ''}${scores[seat]}`).join(' · '),
     });
   }
+  if (game.gameType === 'blackjack' && game.result) {
+    const { chips, winners } = game.result;
+    return t('presentation.blackjackWinners', {
+      scores: winners.map((seat) => `${t(`seat.${seat}`)} ${chips[seat]}`).join(' · '),
+    });
+  }
   return '';
 }
 
@@ -139,7 +145,7 @@ export function GameShell({
   const messageCount = useChatStore((state) => state.messages.length);
   const seats = useRoomStore((state) => state.roomInfo?.seats);
   const log = useGameStore((state) => state.bigTwo?.log ?? state.redPoints?.log ?? state.ninetyNine?.log
-    ?? state.sevens?.log ?? state.chinesePoker?.log ?? state.liarsDeck?.log ?? state.log);
+    ?? state.sevens?.log ?? state.chinesePoker?.log ?? state.liarsDeck?.log ?? state.blackjack?.log ?? state.log);
   const ownedTurn = useGameStore((state) => mySeat !== null && state.currentTurnSeat === mySeat
     && (state.phase === 'bidding' || state.phase === 'playing'));
   const myTurn = (turnReady ?? ownedTurn) && !presentation.locked;
@@ -213,6 +219,8 @@ export function GameShell({
     if (frame.kind === 'play' || frame.kind === 'capture') playCardSound();
     else if (frame.kind === 'pass' || frame.kind === 'cover') playCardSound(true);
     else if (frame.kind === 'reveal' || frame.kind === 'challenge') playCardSound();
+    else if (frame.kind === 'hit' || frame.kind === 'double' || frame.kind === 'split'
+      || frame.kind === 'dealerReveal' || frame.kind === 'dealerHit') playCardSound();
     else if (frame.kind === 'eliminated' || frame.survived === false) playOutSound();
   }, [presentation.frame]);
 

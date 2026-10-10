@@ -39,6 +39,13 @@ turn allowance + reserve, but at least 60 seconds (`cpArrangeSeconds` in
 and only until it submits. At the deadline the server arranges every missing seat with the
 bot algorithm (never fouled) and marks human seats "Auto-played".
 
+Blackjack bets work the same way: every seat that can bet does so at once against one shared
+deadline of twice the turn allowance, but at least 15 seconds (`bjBetSeconds` in
+[the rules](../shared/src/rules/blackjack.ts)), counted from the end of the previous hand's
+settlement. At the deadline a missing human bet becomes the 10-chip minimum and is marked "Auto";
+bots bet on their own. Hit/stand/double/split decisions use the ordinary turn clock, and each
+deal refills every reserve.
+
 Presentation animations consume neither allowance nor reserve. Red Points' hand play
 and flipped-card choice share one turn allowance, with animation time excluded.
 Bridge bidding and redeal decisions also use the clock. A new deal refills reserves,
@@ -78,6 +85,12 @@ penalty, because a cover cannot be undone. Chinese Poker selects cards and place
 the front, middle, or back row; a full arrangement shows each row's hand, and a fouled
 arrangement must be confirmed twice.
 
+Blackjack bets with chip buttons (10/20/50/100/200) and −/+ steps, then Bet; amounts above
+the seat's limit are disabled. While betting, seat plates show "Bet placed" or, for bots,
+"Thinking…", and the previous hand stays on the table. During play the acting hand is highlighted
+and Hit/Stand/Double/Split follow the legal actions. The table, seat chips, and round history follow
+the presentation, so a hole card, settlement, or next deal never appears before its frame.
+
 Big Two uses individual card selection and Play/Pass, without quick-play suggestions.
 Drag cards with a mouse or touch to arrange the hand; manual order is retained as turns
 advance and played cards leave the hand. Sorting by rank or suit replaces the manual
@@ -109,6 +122,7 @@ search, and the evaluation scores do not guarantee optimal play.
 | Ninety-Nine | Treat 4, 5, 10, J, Q, K and ♠A as rescue cards and keep them while number cards are safe, spending large number cards first. Compare both legal plus/minus choices and penalize leaving no card that fits the total expected when the bot acts again, more so in a duel. Model the next player's chance of being forced or eliminated only when the total is within 9 of 99, using unseen cards: the bot's own hand and public plays since the last reshuffle are excluded. Evaluate reverse/designation by who acts next and how many opponent turns pass before the bot acts again; near 99 it avoids shortening its own rotation. Pressure on the next player is discounted when that seat's latest play spent a rescue card while any number card was still safe, which suggests a hand without number cards. Randomize among similarly rated surviving designation targets. |
 | Sevens | Must play: favor cards that continue into the bot's own cards and 7s of suits it holds many of; penalize opening directions it cannot follow, especially toward heavy cards. Must cover: weigh the card's penalty against own cards stranded beyond it, preferring cards an earlier cover already cut off. |
 | Liar's Deck | Must call when it is the last seat holding cards. Otherwise score each option by the bot's own chance of dying on its next pull: calling risks a pull if the previous play was honest, estimated from the truths the bot cannot see (its own hand and plays this round are excluded, and earlier claims this round are assumed partly honest); lying risks a call that grows with the cards played and is certain when emptying the hand leaves one opponent holding cards. Small bonuses favor shedding cards and making an opponent pull. Honest plays spend non-joker truths first. |
+| Blackjack | Play standard basic strategy for a dealer who stands on soft 17 and peeks, with doubling after splits and no surrender: split aces and eights, never tens or fives, and double soft and hard totals against weak up cards; when doubling is unavailable, fall back to hitting (or standing on soft 18). Bet a random 3–8% of the current chips in table steps. |
 | Chinese Poker | Search every non-fouled 3/5/5 split, estimating each row's chance of beating a random opponent's row, the row values, and sweep risk; choose among the closest top candidates. The "Auto arrange" button and deadline arrangements use the same search. |
 
 The server waits for the previous presentation and a short thinking delay before each
@@ -304,3 +318,27 @@ table card carry a check mark, and cards the player has already played this roun
 below the hand. The table shows each seat's hand size and pulls (🔫 n/6) and keeps a pull's
 outcome, the next round's cards, and eliminations hidden until their presentation frames.
 Devil and Chaos variants are not implemented.
+
+## Blackjack
+
+The server is the dealer; each seat plays only against it. Every seat starts with 1000 chips,
+which exist only within the match, and a match is eight hands. Each hand uses a freshly
+shuffled 52-card deck; hands that stop at 21 or bust can never use it up.
+
+Each hand opens with simultaneous betting (see [turn timer](#turn-timer)): 10–200 chips in steps
+of 10, within the seat's chips. Bets stay hidden until the deal. A seat with fewer than 10 chips
+sits out and only watches. The deal gives each bettor two face-up cards and the dealer one up
+card and one face-down hole card. With an ace or ten-value up card the dealer checks the hole
+card first: a dealer blackjack ends the hand at once, and only player blackjacks push.
+
+Bettors then act in N, E, S, W order. Hit draws a card; stand ends the hand; double (first two
+cards only) stakes the bet again and draws exactly one card; split (two cards of equal value,
+once per seat) stakes the bet again and plays the two hands in order, each completed with one
+new card at once. Split aces receive only that card. A split two-card 21 is not a blackjack.
+Doubling and splitting require chips to cover the extra stake. Reaching 21, busting, and
+naturals end a hand automatically. There is no insurance or surrender.
+
+The dealer then reveals the hole card and draws while below 17, standing on every 17 including
+soft 17; it does not draw when every hand has busted or is a blackjack. Blackjack pays 3:2, a win
+1:1, and a push returns the bet. After the eighth hand, or once no seat can cover the minimum,
+the most chips win, ties shared. Scores do not accumulate across matches.

@@ -9,6 +9,8 @@ import type {
   AnyGameState,
   BidAction,
   BigTwoGameState,
+  BlackjackAction,
+  BlackjackGameState,
   BridgeGameState,
   Card,
   ChinesePokerArrangement,
@@ -26,6 +28,7 @@ import type {
 } from '@shared/types';
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { cpArrangeSeconds } from '@shared/rules/chinesepoker';
+import { bjBetSeconds } from '@shared/rules/blackjack';
 import * as bridge from './games/bridge-game';
 import * as bigtwo from './games/bigtwo-game';
 import * as redpoints from './games/redpoints-game';
@@ -33,6 +36,7 @@ import * as ninetynine from './games/ninetynine-game';
 import * as sevens from './games/sevens-game';
 import * as chinesepoker from './games/chinesepoker-game';
 import * as liarsdeck from './games/liarsdeck-game';
+import * as blackjack from './games/blackjack-game';
 
 type Result = { success: true } | { success: false; reason: string };
 
@@ -53,6 +57,8 @@ function presentAction(roomCode: RoomCode, operation: () => Result): Result {
   if (result.success && game) {
     game.presentation = { id: randomUUID(), startedAt: Date.now(), logStart, timingVersion: 2 };
     if (game.gameType === 'bigtwo') bigtwo.prepareAutoPass(roomCode, getPresentationEndsAt(game), autoPassMaxDelay(game));
+    // The next hand's betting window starts only after the settlement has been shown.
+    if (game.gameType === 'blackjack') blackjack.openBetting(roomCode, getPresentationEndsAt(game));
   }
   return result;
 }
@@ -105,7 +111,9 @@ export function startGame(
   else if (gameType === 'ninetynine') ninetynine.startGame(roomCode, players);
   else if (gameType === 'sevens') sevens.startGame(roomCode, players);
   else if (gameType === 'liarsdeck') liarsdeck.startGame(roomCode, players);
-  else if (gameType === 'chinesepoker') {
+  else if (gameType === 'blackjack') {
+    blackjack.startGame(roomCode, players, bjBetSeconds((settings ?? DEFAULT_TIME_CONTROL).baseSeconds) * 1000);
+  } else if (gameType === 'chinesepoker') {
     const { baseSeconds, bankSeconds } = settings ?? DEFAULT_TIME_CONTROL;
     chinesepoker.startGame(roomCode, players, cpArrangeSeconds(baseSeconds, bankSeconds) * 1000);
   } else bridge.startGame(roomCode, players);
@@ -122,7 +130,7 @@ export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): PlayerVis
   const visible = bridge.getPlayerVisibleState(roomCode, seat) ?? bigtwo.getPlayerVisibleState(roomCode, seat)
     ?? redpoints.getPlayerVisibleState(roomCode, seat) ?? ninetynine.getPlayerVisibleState(roomCode, seat)
     ?? sevens.getPlayerVisibleState(roomCode, seat) ?? chinesepoker.getPlayerVisibleState(roomCode, seat)
-    ?? liarsdeck.getPlayerVisibleState(roomCode, seat);
+    ?? liarsdeck.getPlayerVisibleState(roomCode, seat) ?? blackjack.getPlayerVisibleState(roomCode, seat);
   if (!visible) return null;
   const game = getGameState(roomCode);
   const serverNow = Date.now();
@@ -135,7 +143,7 @@ export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): PlayerVis
 export function getGameState(roomCode: RoomCode): AnyGameState | null {
   return bridge.getGameState(roomCode) ?? bigtwo.getGameState(roomCode) ?? redpoints.getGameState(roomCode)
     ?? ninetynine.getGameState(roomCode) ?? sevens.getGameState(roomCode) ?? chinesepoker.getGameState(roomCode)
-    ?? liarsdeck.getGameState(roomCode);
+    ?? liarsdeck.getGameState(roomCode) ?? blackjack.getGameState(roomCode);
 }
 
 /** Ends a game without a match record. */
@@ -147,6 +155,7 @@ export function abortGame(roomCode: RoomCode): void {
   sevens.abortGame(roomCode);
   chinesepoker.abortGame(roomCode);
   liarsdeck.abortGame(roomCode);
+  blackjack.abortGame(roomCode);
 }
 
 export function removeGame(roomCode: RoomCode): void {
@@ -175,7 +184,8 @@ export function hasActiveGame(roomCode: RoomCode): boolean {
 
 export function exportGames(): AnyGameState[] {
   return [...bridge.exportGames(), ...bigtwo.exportGames(), ...redpoints.exportGames(),
-    ...ninetynine.exportGames(), ...sevens.exportGames(), ...chinesepoker.exportGames(), ...liarsdeck.exportGames()];
+    ...ninetynine.exportGames(), ...sevens.exportGames(), ...chinesepoker.exportGames(), ...liarsdeck.exportGames(),
+    ...blackjack.exportGames()];
 }
 
 export function restoreGames(records: AnyGameState[]): void {
@@ -186,6 +196,7 @@ export function restoreGames(records: AnyGameState[]): void {
   sevens.restoreGames(records.filter((game): game is SevensGameState => game.gameType === 'sevens'));
   chinesepoker.restoreGames(records.filter((game): game is ChinesePokerGameState => game.gameType === 'chinesepoker'));
   liarsdeck.restoreGames(records.filter((game): game is LiarsDeckGameState => game.gameType === 'liarsdeck'));
+  blackjack.restoreGames(records.filter((game): game is BlackjackGameState => game.gameType === 'blackjack'));
 }
 
 export function handleRedealResponse(roomCode: RoomCode, seat: Seat, accept: boolean, automatic = false): Result {
@@ -236,6 +247,30 @@ export function handleLiarsDeckPlay(roomCode: RoomCode, seat: Seat, cardIds: rea
 
 export function handleLiarsDeckChallenge(roomCode: RoomCode, seat: Seat, automatic = false): Result {
   return timedAction(roomCode, seat, () => isGame(roomCode, 'liarsdeck') ? presentAction(roomCode, () => liarsdeck.challenge(roomCode, seat)) : WRONG_GAME, automatic);
+}
+
+export function handleBlackjackAction(roomCode: RoomCode, seat: Seat, action: BlackjackAction, automatic = false): Result {
+  return timedAction(roomCode, seat, () => isGame(roomCode, 'blackjack') ? presentAction(roomCode, () => blackjack.act(roomCode, seat, action)) : WRONG_GAME, automatic);
+}
+
+/**
+ * Seats bet simultaneously against one shared deadline. The final bet deals a new hand, which
+ * refills every reserve and starts the first player's turn after the deal presentation.
+ */
+export function handleBlackjackBet(roomCode: RoomCode, seat: Seat, amount: number, automatic = false): Result {
+  if (!isGame(roomCode, 'blackjack')) return WRONG_GAME;
+  const before = blackjack.getGameState(roomCode)?.hand;
+  const result = presentAction(roomCode, () => blackjack.bet(roomCode, seat, amount, automatic));
+  const game = blackjack.getGameState(roomCode);
+  if (result.success && game?.clock && game.hand !== before) initializeGameClock(game, game.clock.settings);
+  return result;
+}
+
+/** Seats that still owe a bet once the shared betting deadline has passed. */
+export function overdueBlackjackSeats(roomCode: RoomCode, gameId: string, now = Date.now()): Seat[] {
+  const game = blackjack.getGameState(roomCode);
+  if (!game || game.id !== gameId || game.betDeadline === null || now < game.betDeadline) return [];
+  return blackjack.pendingBetSeats(game);
 }
 
 /**

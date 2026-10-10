@@ -5,6 +5,7 @@ import type { NnChoice } from '@shared/rules/ninetynine';
 import { rpPairOptions } from '@shared/rules/redpoints';
 import { cpGreedyArrangement } from '@shared/rules/chinesepoker-arrange';
 import { ldMustChallenge } from '@shared/rules/liarsdeck';
+import { BJ_MIN_BET, bjSitsIn } from '@shared/rules/blackjack';
 import type { PlayerVisibleGameState, RoomCode, Seat } from '@shared/types';
 import type { BotAction } from '../bots/bot-decisions';
 import * as chatManager from '../managers/chat-manager';
@@ -32,6 +33,8 @@ export function applyAutomatedAction(code: RoomCode, seat: Seat, action: BotActi
     case 'chinesepoker-arrange': return gameManager.handleChinesePokerArrange(code, seat, action.arrangement, true);
     case 'liarsdeck-play': return gameManager.handleLiarsDeckPlay(code, seat, action.cardIds, true);
     case 'liarsdeck-challenge': return gameManager.handleLiarsDeckChallenge(code, seat, true);
+    case 'blackjack-bet': return gameManager.handleBlackjackBet(code, seat, action.amount, true);
+    case 'blackjack-action': return gameManager.handleBlackjackAction(code, seat, action.action, true);
   }
 }
 
@@ -82,6 +85,12 @@ export function firstLegalAction(visible: PlayerVisibleGameState): BotAction | n
     case 'liarsdeck':
       if (ldMustChallenge(visible.mySeat, visible.handCounts, visible.lastPlay)) return { type: 'liarsdeck-challenge' };
       return visible.myHand[0] ? { type: 'liarsdeck-play', cardIds: [visible.myHand[0].id] } : null;
+    case 'blackjack':
+      if (visible.phase === 'betting') {
+        return visible.myBet === null && bjSitsIn(visible.chips[visible.mySeat])
+          ? { type: 'blackjack-bet', amount: BJ_MIN_BET } : null;
+      }
+      return visible.currentTurnSeat === visible.mySeat ? { type: 'blackjack-action', action: 'stand' } : null;
   }
 }
 

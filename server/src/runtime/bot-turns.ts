@@ -1,5 +1,6 @@
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { getPresentationEndsAt } from '@shared/game-presentation';
+import { bjSitsIn } from '@shared/rules/blackjack';
 import type { AnyGameState, RoomCode, Seat } from '@shared/types';
 import { getBotAction } from '../bots/bot-decisions';
 import * as gameManager from '../managers/game-manager';
@@ -21,6 +22,10 @@ function pendingTurn(game: AnyGameState): BotTurn | null {
   // Simultaneous arrangements are submitted one bot at a time, each after its own thinking delay.
   const seat = game.gameType === 'chinesepoker'
     ? SEAT_ORDER_CLOCKWISE.find((pending) => game.arrangements[pending] === null && game.players[pending].isBot)
+    // Blackjack bets work the same way, while playing turns pass from seat to seat.
+    : game.gameType === 'blackjack' && game.phase === 'betting'
+      ? SEAT_ORDER_CLOCKWISE.find((pending) => game.bets[pending] === null && bjSitsIn(game.chips[pending])
+        && game.players[pending].isBot)
     : game.gameType !== 'bridge' ? game.currentTurnSeat
     : game.phase === 'redeal_pending' ? game.redealPendingSeat
     : game.phase === 'bidding' ? game.bidding?.currentBidderSeat
