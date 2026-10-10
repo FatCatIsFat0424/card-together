@@ -22,12 +22,15 @@ and above; narrower screens place a red sign-out icon and label last in the menu
 The lobby uses the profile page width, with a game picker and separate room actions.
 On desktop, the sidebar groups the selected game, room-creation button, and code
 joining below a divider; game descriptions appear only in the picker. At widths
-up to 52rem, room-code joining, a divider labeled "Or", and a full-width creation
-button that always creates a Bridge room. The joined single-column list titled
+up to 52rem, room-code joining and a divider labeled "Or" precede a full-width
+creation button that always creates a Bridge room. The joined single-column list titled
 "Rules" uses right chevrons and opens each game's detailed rules without selecting
 a room mode or changing the background; the separate selected-game panel is hidden.
-Room actions, game rows, and the friend
-panel share the same width. The friend panel uses the existing
+The online-friend panel sits below the room actions in the desktop sidebar and
+below the rules list on smaller screens. Desktop friends stay in one horizontal
+scrolling row, regardless of count; at widths up to 52rem, all friends are displayed
+in a vertical list with no height cap. Host room codes and presence captions are omitted, while join buttons remain
+available for hosts. The friend panel uses the existing
 [friends API](api.md#http), refreshes on focus and every 30 seconds while visible,
 and lists online friends with hosts first. Friend room admission uses `room:joinFriend`
 and requires confirmation before switching away from an existing room. The lobby
@@ -41,6 +44,11 @@ Traditional Chinese instructions, scoring tables, examples, and shared room rule
 Keep this content in `client/src/game-rules-i18n.ts` aligned with the implemented
 rules in [Game rules](games.md) and the linked shared rule functions. The dialog
 supports scrolling, Escape/backdrop dismissal, focus trapping, and focus return.
+
+Above 52rem, the friends page separates friends, sent requests, and incoming
+requests into horizontal MUI tabs with live counts and keyboard navigation. Only
+the selected panel is visible. Smaller screens retain the existing three-section layout.
+Friend search, requests, and room admission continue to use the existing friends API.
 
 Selecting a game crossfades the lobby's decorative background over 600ms; the
 artwork is loaded before the previous background fades out. Background changes

@@ -5,6 +5,7 @@ import type { FriendEntry, FriendsData } from '@shared/types';
 import { apiRequest } from '../api';
 import { useI18nStore } from '../stores/i18n-store';
 import { PlayerLink } from './PlayerLink';
+import { AppIcon } from './AppIcon';
 import styles from './LobbyFriends.module.css';
 
 /** Online friends appear in the lobby, with hosts first and input order preserved otherwise. */
@@ -50,8 +51,17 @@ export function LobbyFriends({ disabled, refreshToken, onJoin }: {
   const friends = onlineLobbyFriends(data?.friends ?? []);
   return <section className={styles.panel} aria-labelledby="lobby-friends-title">
     <div className={styles.heading}>
-      <h2 id="lobby-friends-title">{t('lobby.onlineFriends')}</h2>
-      {data && <span className={styles.count}>{friends.length}</span>}
+      <div className={styles.title}>
+        <h2 id="lobby-friends-title">{t('lobby.onlineFriends')}</h2>
+        {data && <span className={styles.count}>{friends.length}</span>}
+      </div>
+      <div className={styles.actions}>
+        <Link to="/friends">{t('player.manageFriends')}</Link>
+        <button type="button" className="btn btn-outline" disabled={loading}
+          aria-label={t('common.refresh')} title={t('common.refresh')} onClick={() => {
+            setLoading(true); setError(''); setRevision((value) => value + 1);
+          }}><AppIcon name="refresh" /></button>
+      </div>
     </div>
     {loading && <p className={styles.message} role="status">{t('common.loading')}</p>}
     {error && <p className={styles.error} role="alert">{error}</p>}
@@ -60,12 +70,8 @@ export function LobbyFriends({ disabled, refreshToken, onJoin }: {
     </p>}
     {data && !loading && friends.length > 0 && <ul className={styles.list}>
       {friends.map((friend) => <li key={friend.id} className={styles.friend}>
-        <div className={styles.friendIdentity}>
+        <div className={styles.friendIdentity} title={friend.nickname}>
           <PlayerLink player={friend} showUsername />
-          <p className={styles.status}><span className={styles.onlineDot} aria-hidden="true" />
-            {friend.hostedRoomCode ? t('lobby.hosting', { code: friend.hostedRoomCode })
-              : t(friend.inRoom ? 'lobby.friendInRoom' : 'friends.online')}
-          </p>
         </div>
         {friend.hostedRoomCode && <button type="button" className={`btn btn-outline ${styles.joinButton}`}
           disabled={disabled} aria-label={t('friends.joinRoomLabel', { nickname: friend.nickname })}
@@ -75,11 +81,5 @@ export function LobbyFriends({ disabled, refreshToken, onJoin }: {
     {data && data.incoming.length > 0 && <Link className={styles.requests} to="/friends">
       {t('lobby.friendRequests', { n: String(data.incoming.length) })}
     </Link>}
-    <div className={styles.actions}>
-      <Link to="/friends">{t('player.manageFriends')}</Link>
-      <button type="button" className="btn btn-outline" disabled={loading} onClick={() => {
-        setLoading(true); setError(''); setRevision((value) => value + 1);
-      }}>{t('common.refresh')}</button>
-    </div>
   </section>;
 }

@@ -121,7 +121,6 @@ export function LobbyPage(): ReactNode {
         <div className={styles.identity}>
           <p className={styles.eyebrow}>{t('nav.lobby')}</p>
           <h1>{t('lobby.welcome', { nickname: account.nickname })}</h1>
-          <p className={styles.subtitle}>{t('lobby.description')}</p>
         </div>
       </div>
     </header>

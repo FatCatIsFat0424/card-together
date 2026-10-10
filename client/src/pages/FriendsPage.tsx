@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, USERNAME_PATTERN } from '@shared/constants';
 import type { FriendEntry, FriendsData, PublicAccount } from '@shared/types/social';
 import { apiRequest } from '../api';
@@ -9,6 +12,10 @@ import { useRoomStore } from '../stores/room-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { PlayerLink } from '../components/PlayerLink';
 import styles from './AccountPages.module.css';
+import tabStyles from './FriendsPage.module.css';
+
+const FRIEND_TABS = ['accepted', 'outgoing', 'incoming'] as const;
+type FriendTab = typeof FRIEND_TABS[number];
 
 function FriendIdentity({ person }: { person: PublicAccount }): ReactNode {
   return <PlayerLink player={person} showUsername size="medium" />;
@@ -24,6 +31,8 @@ export function FriendsPage(): ReactNode {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [removeId, setRemoveId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<FriendTab>('accepted');
+  const mobileLayout = useMediaQuery('(max-width: 52rem)');
 
   const refresh = useCallback(async (): Promise<void> => {
     const result = await apiRequest<FriendsData>('/api/friends');
@@ -78,6 +87,8 @@ export function FriendsPage(): ReactNode {
     });
   };
 
+  const counts = { accepted: data?.friends.length, outgoing: data?.outgoing.length, incoming: data?.incoming.length };
+
   return (
     <main className={styles.page}>
       <h1 className={styles.title}>{t('friends.title')}</h1>
@@ -97,9 +108,21 @@ export function FriendsPage(): ReactNode {
       </form>
       {error && <p className={styles.error} role="alert">{error}</p>}
       {sent && <p className={styles.success} role="status">{t('friends.sent')}</p>}
+      {!mobileLayout && <Tabs value={activeTab} onChange={(_event, tab: FriendTab) => setActiveTab(tab)}
+        variant="scrollable" scrollButtons="auto"
+        aria-label={t('nav.friends')} className={tabStyles.tabs}
+        slotProps={{ indicator: { className: tabStyles.indicator } }}>
+        {FRIEND_TABS.map((tab) => <Tab key={tab} value={tab} id={`friends-tab-${tab}`}
+          aria-controls={`friends-panel-${tab}`} className={tabStyles.tab}
+          label={<span className={tabStyles.label}>{t(`friends.${tab}`)}
+            {counts[tab] !== undefined && <span className={tabStyles.count}>{counts[tab]}</span>}
+          </span>} />)}
+      </Tabs>}
       {loading && <p role="status">{t('common.loading')}</p>}
-      {data && <div className={`${styles.grid} ${styles.section}`}>
-        <section className={`${styles.card} ${styles.wide}`}>
+      {data && <div className={`${styles.section} ${mobileLayout ? styles.grid : ''}`}>
+        <section id="friends-panel-accepted" role={mobileLayout ? undefined : 'tabpanel'}
+          aria-labelledby={mobileLayout ? undefined : 'friends-tab-accepted'}
+          className={`${styles.card} ${styles.wide}`} hidden={!mobileLayout && activeTab !== 'accepted'}>
           <h2>{t('friends.accepted')} ({data.friends.length})</h2>
           {data.friends.length === 0 && <p className={styles.empty}>{t('friends.empty')}</p>}
           <ul className={styles.list}>{data.friends.map((person) => (
@@ -126,7 +149,9 @@ export function FriendsPage(): ReactNode {
             </li>
           ))}</ul>
         </section>
-        <section className={styles.card}>
+        <section id="friends-panel-incoming" role={mobileLayout ? undefined : 'tabpanel'}
+          aria-labelledby={mobileLayout ? undefined : 'friends-tab-incoming'}
+          className={styles.card} hidden={!mobileLayout && activeTab !== 'incoming'}>
           <h2>{t('friends.incoming')} ({data.incoming.length})</h2>
           {data.incoming.length === 0 && <p className={styles.empty}>{t('friends.noIncoming')}</p>}
           <ul className={styles.list}>{data.incoming.map((request) => (
@@ -143,7 +168,9 @@ export function FriendsPage(): ReactNode {
             </li>
           ))}</ul>
         </section>
-        <section className={styles.card}>
+        <section id="friends-panel-outgoing" role={mobileLayout ? undefined : 'tabpanel'}
+          aria-labelledby={mobileLayout ? undefined : 'friends-tab-outgoing'}
+          className={styles.card} hidden={!mobileLayout && activeTab !== 'outgoing'}>
           <h2>{t('friends.outgoing')} ({data.outgoing.length})</h2>
           {data.outgoing.length === 0 && <p className={styles.empty}>{t('friends.noOutgoing')}</p>}
           <ul className={styles.list}>{data.outgoing.map((request) => (
