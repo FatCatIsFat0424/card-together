@@ -159,7 +159,7 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
       <h2>{t('history.title')}</h2>
       <p className={styles.description}>{t('history.humanOnly')}</p>
       {history === 'private' ? <p className={styles.description}>{t('history.private')}</p>
-        : <MatchHistoryList matches={history.matches} players={history.players} />}
+        : <MatchHistoryList matches={history.matches} players={history.players} accountId={accountId} />}
     </section>}
     <div className={styles.footer}>
       {roomCode && <Link className="btn btn-outline" to={`/${phase ? 'game' : 'room'}/${roomCode}`}>

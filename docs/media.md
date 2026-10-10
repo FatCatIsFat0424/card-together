@@ -62,6 +62,24 @@ layer toward a plain base: the theme's solid surface color for tables and the ca
 color for card backs, never the theme's default pattern. Slider changes save after a short
 pause or on release.
 
+The account editor combines identity and personal table appearance beside one live
+table preview. Nickname, avatar preset, color, and opacity changes appear in the preview
+immediately; uploaded images appear after their upload saves. Nickname, avatar preset,
+and color still use **Save changes**, while image settings save automatically. The
+account header has Profile, History, Emoji, and Password tabs. History contains matches
+and their visibility setting; Emoji contains the custom emoji library; Password contains
+password changes and sign-out controls. Switching tabs preserves unsaved profile edits.
+The layout stacks the preview above the controls on smaller screens.
+
+History displays a table with date, room, game, result, and players. Search, game/result
+filters, and column sorting operate entirely on the records already loaded in the browser
+(currently up to 50 recent matches). Search matches room codes, player nicknames/usernames,
+game names, and result labels. Results follow the account being viewed, including Bridge
+partnerships and tied winners. Reset restores all records and newest-first sorting. The
+game/result filters use MUI outlined selects styled with the existing theme variables. The
+table scrolls within its container on small screens; these controls do not change the
+history API or stored match records.
+
 Emoji names are 2–64 ASCII letters, digits, `_`, `-`, or `.`, starting with a letter, digit,
 or `_` (`EMOJI_NAME_PATTERN` in [shared constants](../shared/src/constants/emoji.ts)). Names
 are case-sensitive: `Cat` and `cat` are different emoji. Names valid under the earlier
