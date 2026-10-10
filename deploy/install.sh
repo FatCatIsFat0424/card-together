@@ -52,14 +52,6 @@ for workspace in shared server; do
   install -m 0644 "$repo_dir/$workspace/tsconfig.json" "/opt/card-together/$workspace/tsconfig.json"
 done
 install -m 0644 "$repo_dir/tsconfig.json" /opt/card-together/tsconfig.json
-# Keep old hashed assets available to already-open browser sessions.
-install -d -m 0755 /opt/card-together/www/bridge_online
-if [[ -d /opt/bridge-online/www/bridge_online ]]; then
-  rsync -a --chown=root:root --chmod=D755,F644 \
-    /opt/bridge-online/www/bridge_online/ /opt/card-together/www/bridge_online/
-fi
-rsync -a --exclude=/index.html --chown=root:root --chmod=D755,F644 \
-  "$repo_dir/client/dist/" /opt/card-together/www/bridge_online/
 install -d -m 0755 /opt/card-together/www/card-together
 # Previous hashed assets stay for open tabs, and previous site emoji for chat history that
 # still references them; prune-assets.sh removes both after a grace period.
@@ -72,9 +64,7 @@ for subdirectory in assets provided-emoji; do
       "$repo_dir/client/dist/$subdirectory/" "/opt/card-together/www/card-together/$subdirectory/"
   fi
 done
-for directory in /opt/card-together/www/card-together /opt/card-together/www/bridge_online; do
-  bash "$repo_dir/deploy/prune-assets.sh" "$repo_dir/client/dist" "$directory"
-done
+bash "$repo_dir/deploy/prune-assets.sh" "$repo_dir/client/dist" /opt/card-together/www/card-together
 install -m 0755 "$node_binary" /opt/card-together/node
 install -d -m 0700 /etc/card-together
 if [[ ! -e /etc/card-together/server.env ]]; then

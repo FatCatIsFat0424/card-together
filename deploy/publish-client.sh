@@ -35,8 +35,6 @@ trap 'rm -f -- "$index_temp"' EXIT
 # Preserve old hashed assets for browsers still using the previous entry point.
 rsync -a --exclude=/index.html --chown=root:root --chmod=D755,F644 \
   "$build_dir/" "$site_dir/"
-rsync -a --exclude=/index.html --chown=root:root --chmod=D755,F644 \
-  "$build_dir/" /opt/card-together/www/bridge_online/
 install -m 0644 "$build_dir/index.html" "$index_temp"
 mv -f -- "$index_temp" "$site_dir/index.html"
 # Keep only the newest entry-point backups, and drop leftovers of the former /tmp location.
@@ -44,8 +42,6 @@ find /var/backups/card-together -mindepth 1 -maxdepth 1 -type d -name 'frontend-
   | sort | head -n -5 | while IFS= read -r stale; do rm -rf -- "$stale"; done || true
 find /tmp -mindepth 1 -maxdepth 1 -type d -name 'card-together-frontend.*' -mtime +7 \
   -exec rm -rf -- {} +
-for directory in "$site_dir" /opt/card-together/www/bridge_online; do
-  bash "$repo_dir/deploy/prune-assets.sh" "$build_dir" "$directory"
-done
+bash "$repo_dir/deploy/prune-assets.sh" "$build_dir" "$site_dir"
 echo "Frontend published. Previous entry point: $backup_dir/index.html"
 echo 'No backend restart or Nginx reload was performed.'

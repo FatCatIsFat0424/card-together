@@ -97,13 +97,10 @@ for a legacy systemd installation. The state helper rejects symlinks/partially p
 destinations, keeps the source, and copies database **and media** together. See
 [storage](storage.md#backup-and-restore) before resolving existing destination state.
 
-Legacy `/bridge_online/` pages redirect to the equivalent canonical URL and preserve
-queries. Legacy API/Socket/health/static routes support open browser sessions; old hashed
-assets are retained in `/opt/card-together/www/bridge_online/`. Cookies on normal API
-responses follow the proxy path. After canonical `/me` reports unauthorized, the client
-uses same-origin JSON `POST /bridge_online/api/auth/migrate-session`, then retries `/me`.
-Migration scopes the new cookie to `/card-together/` without extending expiry; tokens never
-enter URLs. Existing new browser preferences take precedence over migrated `bridge.*` values.
+The former `/bridge_online/` URL is no longer served: Nginx has no routes for it and the
+backend has no session-migration endpoint, so browsers that only hold a session from that
+path sign in again. Cookies on API responses follow the proxy path. Existing new browser
+preferences take precedence over migrated `bridge.*` values.
 
 ## Manual Nginx installation
 
@@ -157,8 +154,8 @@ Health returns `{"status":"ok"}`. Deployment polls for up to 30 seconds to toler
 startup and Nginx worker changes. In a browser verify login, room creation, refresh at
 `/card-together/login`, Socket connectivity, persisted resume, uploaded images, site emoji,
 and music.
-Test voice with real devices/networks; TURN may be needed. Verify old URL redirects,
-existing session migration, and browser preference migration on an existing client.
+Test voice with real devices/networks; TURN may be needed. Verify browser preference
+migration on an existing client.
 
 ## Operations and rollback
 
@@ -244,7 +241,7 @@ git remote set-url origin git@github.com:FatCatIsFat0424/card-together.git
 git ls-remote origin HEAD
 ```
 
-The production service and public route use `card-together`. Retain the old-path
-redirects, session/preference migration, and stopped legacy state for compatibility
-and reviewed rollback; they are not incomplete renames. Browser migration, music
-playback, and real-device voice acceptance follow the checks in [Verify](#verify).
+The production service and public route use `card-together`. Retain the preference
+migration and stopped legacy state for compatibility and reviewed rollback; they are
+not incomplete renames. Browser migration, music playback, and real-device voice
+acceptance follow the checks in [Verify](#verify).

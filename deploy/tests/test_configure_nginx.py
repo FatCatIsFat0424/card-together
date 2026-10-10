@@ -41,49 +41,15 @@ class ConfigureTests(unittest.TestCase):
             restored = restored.replace(block, "")
         self.assertEqual(restored, SITE)
 
-    def test_legacy_http_block_migration(self):
-        legacy = MODULE.configure(SITE).replace(
-            MODULE.BLOCKS['http'], MODULE.LEGACY_BLOCKS['http']
-        )
-        result = MODULE.configure(legacy)
-        self.assertEqual(result, MODULE.configure(SITE))
-        self.assertEqual(MODULE.configure(result), result)
+    def test_cookie_rewrite_preserves_explicit_expiry_paths(self):
+        location = self.snippet_locations()['/card-together/api/']
+        directive = next(child.words for child in location.children
+                         if child.words[0] == 'proxy_cookie_path')
+        self.assertEqual(directive, ['proxy_cookie_path', '~^/$', '/card-together/'])
 
-    def test_previous_include_blocks_migrate(self):
-        previous = MODULE.configure(SITE)
-        for protocol, block in MODULE.BLOCKS.items():
-            previous = previous.replace(block, MODULE.PREVIOUS_BLOCKS[protocol])
-        self.assertEqual(MODULE.configure(previous), MODULE.configure(SITE))
-
-    def test_legacy_page_redirect_preserves_suffix_and_query(self):
-        snippet = (Path(__file__).resolve().parents[1] / 'nginx/card-together.conf').read_text()
-        location = next(node for node in MODULE.parse(snippet)
-                        if node.words == ['location', '/bridge_online/'])
-        rewrite = next(child.words for child in location.children
-                       if child.words[0] == 'rewrite')
-        self.assertEqual(rewrite, ['rewrite', '^/bridge_online/(.*)$',
-                                  '/card-together/$1', 'permanent'])
-        self.assertNotIn('?', rewrite[2])
-
-    def test_cookie_rewrite_preserves_explicit_migration_paths(self):
-        snippet = (Path(__file__).resolve().parents[1] / 'nginx/card-together.conf').read_text()
-        for path in ('/card-together/api/', '/bridge_online/api/'):
-            location = next(node for node in MODULE.parse(snippet) if node.words[-1] == path)
-            directive = next(child.words for child in location.children
-                             if child.words[0] == 'proxy_cookie_path')
-            expected = '/bridge_online/' if path.startswith('/bridge_online/') else '/card-together/'
-            self.assertEqual(directive, ['proxy_cookie_path', '~^/$', expected])
-
-    def test_duplicate_legacy_and_current_block(self):
+    def test_duplicate_managed_block(self):
         with self.assertRaises(ValueError):
-            MODULE.configure(MODULE.configure(SITE) + MODULE.LEGACY_BLOCKS['http'])
-
-    def test_modified_legacy_block_is_rejected(self):
-        legacy = MODULE.configure(SITE).replace(
-            MODULE.BLOCKS['http'], MODULE.LEGACY_BLOCKS['http'].replace('308', '301')
-        )
-        with self.assertRaises(ValueError):
-            MODULE.configure(legacy)
+            MODULE.configure(MODULE.configure(SITE) + MODULE.BLOCKS['http'])
 
     def test_proxy_paths_remove_service_prefix(self):
         snippet = (Path(__file__).resolve().parents[1] / 'nginx/card-together.conf').read_text()
@@ -92,9 +58,6 @@ class ConfigureTests(unittest.TestCase):
             '/card-together/api/': 'http://127.0.0.1:3001/api/',
             '/card-together/socket.io/': 'http://127.0.0.1:3001/socket.io/',
             '/card-together/health': 'http://127.0.0.1:3001/health',
-            '/bridge_online/api/': 'http://127.0.0.1:3001/api/',
-            '/bridge_online/socket.io/': 'http://127.0.0.1:3001/socket.io/',
-            '/bridge_online/health': 'http://127.0.0.1:3001/health',
         }
         actual = {
             node.words[-1]: child.words[1]
@@ -177,10 +140,6 @@ class ConfigureTests(unittest.TestCase):
 
     def test_conflicting_routes_and_includes(self):
         for directive in (
-            'location = /bridge_online { return 404; }',
-            'location ^~ /bridge_online/ { return 404; }',
-            'location ~ "^/bridge_online" { return 404; }',
-            'include /etc/nginx/snippets/bridge-online.conf;',
             'location ^~ /card-together/ { return 404; }',
             'include /etc/nginx/snippets/card-together.conf;',
         ):
@@ -210,7 +169,7 @@ class ConfigureTests(unittest.TestCase):
             MODULE.configure(SITE + MODULE.BLOCKS['https'])
 
     def test_unrelated_server_remains_untouched(self):
-        unrelated = 'server { listen 80; server_name example.org; location /bridge_online {} }\n'
+        unrelated = 'server { listen 80; server_name example.org; location /unrelated {} }\n'
         result = MODULE.configure(SITE + unrelated)
         self.assertTrue(result.endswith(unrelated))
 

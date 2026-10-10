@@ -14,7 +14,6 @@ except immutable uploaded-image reads. Contracts live in `shared/src/types/`.
 | `POST /api/auth/register` | `username, password, nickname?, color?, avatar?` | 201, account and session cookie |
 | `POST /api/auth/login` | `username, password` | Account and session cookie |
 | `GET /api/auth/me` | — | Current account |
-| `POST /api/auth/migrate-session` | `{}` | Same-origin legacy session migration; unchanged expiry |
 | `PATCH /api/auth/profile` | Profile fields | Updated account and connected-player synchronization |
 | `POST /api/auth/password` | `currentPassword, newPassword` | Revoke all sessions; sign in again |
 | `POST /api/auth/logout` | `{}` | Revoke presented sessions and clear cookies |
@@ -37,8 +36,7 @@ except immutable uploaded-image reads. Contracts live in `shared/src/types/`.
 | `POST /api/emojis/delete` | `ids`: 1–300 unique ID strings | `deleted`: IDs removed in one atomic write; IDs that are unknown or not the caller's are ignored |
 | `GET /health` | — | `{ status: 'ok' }` |
 
-Register/login and image/health reads do not require a prior session. Migration
-requires a valid existing legacy session, authenticated by the endpoint itself.
+Register/login and image/health reads do not require a prior session.
 Logout accepts unauthenticated requests but revokes any presented valid sessions;
 other routes require session authentication. Media endpoints return 503 if image storage is unavailable.
 Uploads check origin, session, and rate limits before parsing the up-to-3 MiB body, which

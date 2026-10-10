@@ -5,7 +5,6 @@ vi.mock('../../../client/src/socket', () => ({ disconnectSocket: vi.fn() }));
 vi.mock('../../../client/src/api', () => ({
   apiRequest: vi.fn(),
   invalidateAccountRequests: vi.fn(),
-  migrateLegacySession: vi.fn(),
 }));
 
 import {

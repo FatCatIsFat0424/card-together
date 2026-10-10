@@ -46,14 +46,14 @@ export function createAuthRouter(service: AuthService, config: AuthRouterConfig)
 
   function clearSessionCookies(response: Response): void {
     for (const name of [SESSION_COOKIE_NAME, LEGACY_SESSION_COOKIE_NAME]) {
-      for (const path of ['/', '/card-together/', '/bridge_online/']) {
+      for (const path of ['/', '/card-together/']) {
         response.clearCookie(name, { ...cookieOptions, path });
       }
     }
   }
 
   function clearLegacySessionCookies(response: Response): void {
-    for (const path of ['/', '/bridge_online/', '/card-together/']) {
+    for (const path of ['/', '/card-together/']) {
       response.clearCookie(LEGACY_SESSION_COOKIE_NAME, { ...cookieOptions, path });
     }
   }
@@ -89,40 +89,6 @@ export function createAuthRouter(service: AuthService, config: AuthRouterConfig)
     sensitiveLimit,
     route(async (request, response) => {
       signedIn(response, await service.login(request.body));
-    }),
-  );
-  router.post(
-    '/migrate-session',
-    route(async (request, response) => {
-      const origin = request.get('origin');
-      const fetchSite = request.get('sec-fetch-site');
-      if (
-        !origin ||
-        new URL(origin).host !== request.get('host') ||
-        (fetchSite !== undefined && fetchSite !== 'same-origin')
-      ) {
-        response.status(403).json({
-          success: false, error: 'Use the same origin to migrate a session.',
-        });
-        return;
-      }
-      const currentToken = readSessionCookie(request.headers.cookie);
-      const token = currentToken ??
-        readSessionCookie(request.headers.cookie, LEGACY_SESSION_COOKIE_NAME);
-      const authenticated = await service.resolveToken(token);
-      if (!authenticated) {
-        response.status(401).json({ success: false, error: 'Sign in to continue.' });
-        return;
-      }
-      // The legacy URL cannot receive a cookie scoped to the new application path.
-      // The client checks /me on the new path before requesting this migration.
-      response.cookie(SESSION_COOKIE_NAME, token, {
-        ...cookieOptions,
-        path: '/card-together/',
-        expires: new Date(authenticated.session.expiresAt),
-      });
-      clearLegacySessionCookies(response);
-      response.json({ success: true, account: authenticated.account });
     }),
   );
   router.get(
