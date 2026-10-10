@@ -327,6 +327,28 @@ describe('persistent authenticated application', () => {
     expect((await resume(host)).room?.seats.E).toEqual({ player: null, isReady: false });
   }, 15_000);
 
+  it('should let the host remove a waiting member and notify them', async () => {
+    const accounts = [await register('kick_host'), await register('kick_guest')];
+    const [host, guest] = await connectPlayers(accounts);
+    const { roomCode } = await host.timeout(5_000).emitWithAck('room:create', { gameType: 'bridge' });
+    if (!roomCode) throw new Error('Expected room code');
+    await guest.timeout(5_000).emitWithAck('room:join', { roomCode });
+    await guest.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'S' });
+    const guestId = accounts[1].account.id;
+    expect(await host.timeout(5_000).emitWithAck('room:kick', { accountId: 42 as unknown as string }))
+      .toEqual({ success: false, error: 'Choose a player to remove.' });
+    expect(await guest.timeout(5_000).emitWithAck('room:kick', { accountId: accounts[0].account.id }))
+      .toMatchObject({ success: false });
+    const kicked = new Promise<{ roomCode: string }>((resolve): void => { guest.once('room:kicked', resolve); });
+    expect(await host.timeout(5_000).emitWithAck('room:kick', { accountId: guestId })).toEqual({ success: true });
+    expect(await kicked).toEqual({ roomCode });
+    expect((await resume(guest)).room).toBeUndefined();
+    const room = (await resume(host)).room;
+    expect(room?.seats.S.player).toBeNull();
+    expect(await host.timeout(5_000).emitWithAck('room:kick', { accountId: guestId })).toMatchObject({ success: false });
+    expect(await guest.timeout(5_000).emitWithAck('room:join', { roomCode })).toMatchObject({ success: true });
+  }, 15_000);
+
   it('should roll back bot additions and automatic game start if persistence fails', async () => {
     const account = await register('bot_rollback');
     const [client] = await connectPlayers([account]);

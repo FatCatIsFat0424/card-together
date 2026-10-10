@@ -112,6 +112,19 @@ export function fillBots(code: RoomCode, playerId: string): Result {
   return { success: true };
 }
 
+/** Validates the host removing another human member; the caller performs the leave. */
+export function canKick(code: RoomCode, hostId: string, targetId: string): Result {
+  const room = rooms.get(code);
+  if (!room) return { success: false, reason: 'Room not found' };
+  if (room.info.hostId !== hostId) return { success: false, reason: 'Only the host can remove players.' };
+  if (room.info.status !== 'waiting') return { success: false, reason: 'Cannot remove players during game.' };
+  if (targetId === hostId) return { success: false, reason: 'You cannot remove yourself.' };
+  const isBot = seats.some((seat) => room.info.seats[seat].player?.id === targetId
+    && room.info.seats[seat].player?.isBot);
+  if (!room.memberIds.includes(targetId) || isBot) return { success: false, reason: 'Player is not in this room.' };
+  return { success: true };
+}
+
 export function changeSeat(code: RoomCode, player: PlayerInfo, target: Seat): Result {
   const room = rooms.get(code);
   if (!room || !room.memberIds.includes(player.id)) return { success: false, reason: 'Not in room' };

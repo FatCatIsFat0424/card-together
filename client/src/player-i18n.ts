@@ -23,6 +23,10 @@ const english = {
   'invite.join': 'Join',
   'invite.ignore': 'Ignore',
   'invite.confirmLeave': 'Leave your current room and join {code}?',
+  'room.kick': 'Remove',
+  'room.kickConfirm': 'Remove {nickname} from the room?',
+  'room.kicked': 'The host removed you from room {code}.',
+  'room.kickedDismiss': 'OK',
 } as const;
 
 export type PlayerTranslationKey = keyof typeof english;
@@ -54,5 +58,9 @@ export const playerTranslations: Record<'en' | 'zh-TW', Record<PlayerTranslation
     'invite.join': '加入',
     'invite.ignore': '忽略',
     'invite.confirmLeave': '要離開目前的房間並加入 {code} 嗎？',
+    'room.kick': '移出',
+    'room.kickConfirm': '要將 {nickname} 移出房間嗎？',
+    'room.kicked': '房主已將你移出房間 {code}。',
+    'room.kickedDismiss': '知道了',
   },
 };

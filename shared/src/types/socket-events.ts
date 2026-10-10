@@ -47,6 +47,9 @@ export interface ClientToServerEvents {
     payload: { accountId: string }, callback: (response: ActionResult) => void,
   ) => void;
   'room:leave': (callback: (response: ActionResult) => void) => void;
+  'room:kick': (
+    payload: { accountId: string }, callback: (response: ActionResult) => void,
+  ) => void;
   'room:changeSeat': (
     payload: { seat: Seat }, callback: (response: ActionResult) => void,
   ) => void;
@@ -122,6 +125,8 @@ export interface ServerToClientEvents {
   'player:state': (payload: PlayerSnapshot) => void;
   'chat:message': (payload: ChatMessageEvent) => void;
   'room:invited': (payload: RoomInvite) => void;
+  /** Sent to a member the host removed, after their state no longer includes the room. */
+  'room:kicked': (payload: { roomCode: RoomCode }) => void;
 }
 
 /** Ephemeral friend invite; never persisted. */

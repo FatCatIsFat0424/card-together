@@ -74,6 +74,7 @@ For exact unions and result fields, use
 | `room:join` | `{ roomCode }` | `{ success, room }` |
 | `room:invite` | `{ accountId }` | Invite an accepted friend |
 | `room:leave` | — | Leave; unfinished game aborts |
+| `room:kick` | `{ accountId }` | Host removes another human member while waiting; they may rejoin by code |
 | `room:changeSeat` | `{ seat }` | Change available seat |
 | `room:setGameType` | `{ gameType }` | Host changes waiting room game |
 | `room:setTimeControl` | `TimeControl` | Host changes waiting room timer; clears human readiness |
@@ -124,7 +125,8 @@ changed; otherwise they omit it and each new message follows as
 room/game clears old client state. Game state includes only the recipient's hand and legal choices plus public logs,
 results, and presentation metadata. Actor/affected room members receive snapshots, including
 same-account tabs; unrelated rooms do not. `room:invited` delivers an ephemeral invite
-with room/game/sender/seat availability.
+with room/game/sender/seat availability. `room:kicked { roomCode }` follows the removed
+member's room-less snapshot.
 
 ## Voice signaling
 

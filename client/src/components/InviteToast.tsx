@@ -1,4 +1,4 @@
-// ─── InviteToast: global friend room-invite notification ───
+// ─── InviteToast: global friend room-invite and removal notifications ───
 
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -17,11 +17,17 @@ export function InviteToast(): ReactNode {
   const invites = useInviteStore((state) => state.invites);
   const dismiss = useInviteStore((state) => state.dismiss);
   const [error, setError] = useState('');
+  const [kickedFrom, setKickedFrom] = useState<string | null>(null);
 
   useEffect(() => {
     const { receive } = useInviteStore.getState();
+    const kicked = ({ roomCode }: { roomCode: string }): void => setKickedFrom(roomCode);
     socket.on('room:invited', receive);
-    return () => { socket.off('room:invited', receive); };
+    socket.on('room:kicked', kicked);
+    return () => {
+      socket.off('room:invited', receive);
+      socket.off('room:kicked', kicked);
+    };
   }, []);
 
   const fail = (timeout: Error | null, result?: { error?: string }): void =>
@@ -47,9 +53,14 @@ export function InviteToast(): ReactNode {
     });
   };
 
-  if (invites.length === 0 && !error) return null;
+  if (invites.length === 0 && !error && !kickedFrom) return null;
   return (
     <div className={styles.stack} aria-live="polite">
+      {kickedFrom && <p className={`${styles.toast} ${styles.error}`} role="alert">
+        {t('room.kicked', { code: kickedFrom })}
+        <button type="button" className="btn btn-outline" onClick={() => setKickedFrom(null)}>
+          {t('room.kickedDismiss')}</button>
+      </p>}
       {error && <p className={`${styles.toast} ${styles.error}`} role="alert">
         {error}
         <button type="button" className="btn btn-outline" onClick={() => setError('')}>

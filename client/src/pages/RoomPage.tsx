@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { GAME_TYPES } from '@shared/constants';
-import type { GameType, Seat, TimeControl } from '@shared/types';
+import type { GameType, PlayerInfo, Seat, TimeControl } from '@shared/types';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import { socket } from '../socket';
 import { tableBackgroundStyle } from '../account-appearance';
@@ -125,6 +125,12 @@ export function RoomPage(): ReactNode {
     setError('');
     socket.timeout(10000).emit('room:removeBot', { seat }, handleResult);
   };
+  const kick = (player: PlayerInfo): void => {
+    if (!window.confirm(t('room.kickConfirm', { nickname: player.nickname }))) return;
+    setBusy(true);
+    setError('');
+    socket.timeout(10000).emit('room:kick', { accountId: player.id }, handleResult);
+  };
   const fillBots = (): void => {
     setBusy(true);
     setError('');
@@ -220,6 +226,9 @@ export function RoomPage(): ReactNode {
               </div>
               {isHost && player.isBot && <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
                 disabled={blocked} onClick={() => removeBot(seat)}>{t('room.removeBot')}</button>}
+              {isHost && !player.isBot && player.id !== playerId && roomInfo.status === 'waiting' &&
+                <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
+                  disabled={blocked} onClick={() => kick(player)}>{t('room.kick')}</button>}
             </div>
           );
           return (

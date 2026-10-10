@@ -86,7 +86,26 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
     return { success: true };
   }));
 
-  socket.on('room:changeSeat', (payload, callback) => runAction(context, socket, callback, () => {
+  socket.on('room:kick', (payload, callback) => {
+    if (typeof callback !== 'function') return;
+    const targetId = payload?.accountId;
+    if (typeof targetId !== 'string') { callback({ success: false, error: 'Choose a player to remove.' }); return; }
+    let kickedFrom: RoomCode | null = null;
+    runAction(context, socket, callback, () => {
+      const code = requireRoom(socket);
+      requireSuccess(roomManager.canKick(code, socket.data.accountId, targetId));
+      if (playerManager.getPlayerState(targetId)?.currentRoomCode !== code) {
+        throw actionError('Player is not in this room.');
+      }
+      leaveCurrentRoom(targetId);
+      kickedFrom = code;
+      return { success: true };
+    }, { afterCommit: () => {
+      if (kickedFrom) context.io.to(`account:${targetId}`).emit('room:kicked', { roomCode: kickedFrom });
+    } });
+  });
+
+  socket.on('room:changeSeat',(payload, callback) => runAction(context, socket, callback, () => {
     if (!payload || !(['N', 'E', 'S', 'W'] as Seat[]).includes(payload.seat)) {
       throw actionError('Invalid seat.');
     }

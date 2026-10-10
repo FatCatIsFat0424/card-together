@@ -86,6 +86,21 @@ describe('room bots', () => {
     expect(roomManager.getRoomInfo(code)).toBeNull();
   });
 
+  it('should let only the waiting room host remove other human members', () => {
+    const code = room();
+    roomManager.joinRoom(code, 'guest');
+    roomManager.changeSeat(code, player('guest'), 'S');
+    roomManager.addBot(code, 'host', 'E');
+    const botId = roomManager.getRoomInfo(code)!.seats.E.player!.id;
+    expect(roomManager.canKick(code, 'guest', 'host').success).toBe(false);
+    expect(roomManager.canKick(code, 'host', 'host').success).toBe(false);
+    expect(roomManager.canKick(code, 'host', botId).success).toBe(false);
+    expect(roomManager.canKick(code, 'host', 'stranger').success).toBe(false);
+    expect(roomManager.canKick(code, 'host', 'guest')).toEqual({ success: true });
+    roomManager.setRoomStatus(code, 'playing');
+    expect(roomManager.canKick(code, 'host', 'guest').success).toBe(false);
+  });
+
   it('should allow human votes to end games without votes from bots', () => {
     const solo = room();
     roomManager.fillBots(solo, 'host');
