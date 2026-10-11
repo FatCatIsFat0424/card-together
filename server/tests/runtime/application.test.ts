@@ -399,11 +399,14 @@ describe('persistent authenticated application', () => {
     expect(changed.sevensOptions).toEqual({ closeOnEnd: true });
     expect(changed.seats.E.isReady).toBe(false);
     expect((await repository.loadRuntime())?.rooms[0].info.sevensOptions).toEqual({ closeOnEnd: true });
-    // The slaying effect is a host choice saved with the rules and fixed for the match.
+    // The slaying effect is a host choice saved with the rules and fixed for the match; being only a
+    // presentation choice, it leaves everyone ready.
+    await guest.timeout(5_000).emitWithAck('room:ready');
     expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: true, slayEffect: 'fire' }))
       .toEqual({ success: true });
     expect((await repository.loadRuntime())?.rooms[0].info.sevensOptions)
       .toEqual({ closeOnEnd: true, slayEffect: 'fire' });
+    expect((await resume(guest)).room?.seats.E.isReady).toBe(true);
     await host.timeout(5_000).emitWithAck('room:fillBots');
     await host.timeout(5_000).emitWithAck('room:ready');
     await guest.timeout(5_000).emitWithAck('room:ready');

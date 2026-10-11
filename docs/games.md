@@ -338,7 +338,7 @@ its body. When its snout reaches the row's far end, a fast blade sweeps along th
 lengthwise. With Dragon Slaying on, the host can instead choose the 1.7-second **fire only**
 effect (**火焰**): with no dragon, a quick blade sweeps the row from left to right and the
 fire follows it, setting the row alight as it passes. The choice is saved with the room rules and
-fixed for the match; rooms saved before it existed use the dragon. The row stays darkened
+fixed for the match; rooms saved before it existed use the dragon; changing only the effect keeps everyone ready. The row stays darkened
 afterwards. Reduced motion shows a still frame; the next turn waits for it.
 
 Once Dragon Slaying has closed all four suits, no card can be played again, and every remaining

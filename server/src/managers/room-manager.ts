@@ -380,9 +380,11 @@ export function setSevensOptions(code: RoomCode, playerId: string, sevensOptions
   if (room.info.status !== 'waiting') return { success: false, reason: 'Game is in progress' };
   if (room.info.gameType !== 'sevens') return { success: false, reason: 'Not a Sevens room.' };
   if (!isSevensOptions(sevensOptions)) return { success: false, reason: 'Invalid Sevens options.' };
-  if (isDeepStrictEqual(room.info.sevensOptions ?? DEFAULT_SEVENS_OPTIONS, sevensOptions)) return { success: true };
+  const previous = room.info.sevensOptions ?? DEFAULT_SEVENS_OPTIONS;
+  if (isDeepStrictEqual(previous, sevensOptions)) return { success: true };
   room.info = { ...room.info, sevensOptions: { ...sevensOptions } };
-  resetAllReady(code);
+  // The slaying effect is only a presentation choice; readiness resets only when the rules change.
+  if (previous.closeOnEnd !== sevensOptions.closeOnEnd) resetAllReady(code);
   return { success: true };
 }
 
