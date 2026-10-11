@@ -10,6 +10,7 @@ import * as liarsdeck from '../../src/managers/games/liarsdeck-game';
 import * as blackjack from '../../src/managers/games/blackjack-game';
 import * as holdem from '../../src/managers/games/holdem-game';
 import { heLegalActions } from '@shared/rules/holdem';
+import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import { BJ_BET_STEP, BJ_MIN_BET, bjLegalActions, bjMaxBet } from '@shared/rules/blackjack';
 import {
   isBlackjackResult, isChinesePokerResult, isHoldemResult, isLiarsDeckResult, isRuntimeSnapshot, isSevensResult,
@@ -131,6 +132,29 @@ describe('persisted Sevens games', () => {
       expect(visible.validCards).toHaveLength(2);
       expect(sevens.play(CODE, seat, visible.validCards[0])).toEqual({ success: true });
       expect(persists(sevens.getGameState(CODE)!, 'sevens')).toBe(true);
+    });
+
+    it('restores a turn scheduled after the legacy 2,400 ms slay frame', () => {
+      sevens.setDevPreset(true);
+      sevens.startGame(CODE, PLAYERS, undefined, { closeOnEnd: true });
+      const seat = sevens.getGameState(CODE)!.currentTurnSeat;
+      const slayCard = sevens.getPlayerVisibleState(CODE, seat)!.validCards[0];
+      expect(sevens.play(CODE, seat, slayCard)).toEqual({ success: true });
+      const game = sevens.getGameState(CODE)!;
+      const startsAt = 10000 + 1300 + 2400;
+      const bankRemainingMs = { N: 20000, E: 20000, S: 20000, W: 20000 };
+      const saved = {
+        ...game,
+        presentation: { id: 'legacy-slay', startedAt: 10000, logStart: game.log.length - 1, timingVersion: 2 as const },
+        clock: {
+          settings: DEFAULT_TIME_CONTROL, bankRemainingMs,
+          turn: { id: 'turn', seat: game.currentTurnSeat, startsAt, baseRemainingMs: 5000,
+            deadline: startsAt + 5000 + bankRemainingMs[game.currentTurnSeat] },
+        },
+      };
+      expect(persists(saved, 'sevens')).toBe(true);
+      // The same turn would start inside a current dragon frame.
+      expect(persists({ ...saved, presentation: { ...saved.presentation, timingVersion: 3 } }, 'sevens')).toBe(false);
     });
 
     it('leaves explicit test decks and disabled servers on ordinary deals', () => {

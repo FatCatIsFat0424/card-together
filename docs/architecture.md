@@ -113,10 +113,12 @@ membership and requires explicit user join; see [media](media.md).
 `shared/src/game-presentation.ts` derives public frames from committed log entries.
 Metadata supplies `id`, `startedAt`, `logStart`, and recipient `serverNow`; frames
 never contain other players' private hands or unrevealed stock.
-New actions use `timingVersion: 2`: ordinary Bridge/Big Two plays allow 300 ms for
-arrival followed by one second to read the result. Missing timing versions retain
-legacy deadlines so saved automatic passes remain valid across upgrades; the next
-action uses the new timing. Controls, turn highlights, reminders, bots, and automatic
+New actions use `timingVersion: 3`: ordinary Bridge/Big Two plays allow 300 ms for
+arrival followed by one second to read the result. Restored presentations keep their
+version so saved deadlines remain valid across upgrades, and the next action uses the
+new timing: a missing version keeps the shorter legacy play and pass frames, and
+version 2 keeps the 2,400 ms Sevens Dragon Slaying close. Any change to a frame
+duration that can delay a saved turn needs a new timing version. Controls, turn highlights, reminders, bots, and automatic
 passes wait for the shared presentation deadline.
 
 | Frame | Duration |

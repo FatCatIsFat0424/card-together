@@ -2,7 +2,7 @@
 
 import { advanceGameClock, initializeGameClock } from './game-clock';
 import { randomUUID } from 'node:crypto';
-import { getPresentationEndsAt } from '@shared/game-presentation';
+import { getPresentationEndsAt, PRESENTATION_TIMING_VERSION } from '@shared/game-presentation';
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import type {
@@ -64,7 +64,7 @@ function presentAction(roomCode: RoomCode, operation: () => Result): Result {
   const result = operation();
   const game = getGameState(roomCode);
   if (result.success && game) {
-    game.presentation = { id: randomUUID(), startedAt: Date.now(), logStart, timingVersion: 2 };
+    game.presentation = { id: randomUUID(), startedAt: Date.now(), logStart, timingVersion: PRESENTATION_TIMING_VERSION };
     if (game.gameType === 'bigtwo') bigtwo.prepareAutoPass(roomCode, getPresentationEndsAt(game), autoPassMaxDelay(game));
     // The next hand's betting window starts only after the settlement has been shown.
     if (game.gameType === 'blackjack') blackjack.openBetting(roomCode, getPresentationEndsAt(game));
@@ -149,7 +149,7 @@ export function startGame(
   const game = getGameState(roomCode);
   // Liar's Deck opens by revealing the first round's table card, Hold'em by dealing the first hand.
   if (game?.phase === 'scoring' || game?.gameType === 'liarsdeck' || game?.gameType === 'holdem') {
-    game.presentation = { id: randomUUID(), startedAt: Date.now(), logStart: 0, timingVersion: 2 };
+    game.presentation = { id: randomUUID(), startedAt: Date.now(), logStart: 0, timingVersion: PRESENTATION_TIMING_VERSION };
   }
   if (game) initializeGameClock(game, settings);
   return { success: true };

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BigTwoGameState, Card, PlayerInfo, Seat } from '@shared/types';
-import { frameLogIndex, getPresentationEndsAt, getPresentationFrames } from '@shared/game-presentation';
+import {
+  frameLogIndex, getPresentationEndsAt, getPresentationFrames, PRESENTATION_TIMING_VERSION,
+} from '@shared/game-presentation';
 import { cpGreedyArrangement } from '@shared/rules/chinesepoker-arrange';
 import * as games from '../../src/managers/game-manager';
 
@@ -34,7 +36,7 @@ describe('authoritative game presentation', () => {
     const before = structuredClone(state);
     const endsAt = getPresentationEndsAt(state);
     expect(endsAt - Date.now()).toBe(1300);
-    expect(state.presentation?.timingVersion).toBe(2);
+    expect(state.presentation?.timingVersion).toBe(PRESENTATION_TIMING_VERSION);
     vi.setSystemTime(endsAt - 1);
     expect(games.handleBigTwoPlay(CODE, 'W', [card(5)]).success).toBe(false);
     expect(games.handleBigTwoPass(CODE, 'W').success).toBe(false);
@@ -161,7 +163,7 @@ describe('authoritative game presentation', () => {
       { type: 'play', seat: 'W', card: { suit: 'hearts', rank: 12 }, timestamp: 1 },
       { type: 'play', seat: 'S', card: ace, timestamp: 1 },
     ];
-    state.presentation = { id: 'sevens', startedAt: 10000, logStart: 0, timingVersion: 2 };
+    state.presentation = { id: 'sevens', startedAt: 10000, logStart: 0, timingVersion: 3 };
     expect(getPresentationFrames(state).map((frame) => frame.kind)).toEqual(['play', 'play', 'play']);
 
     Object.assign(state, { options: { closeOnEnd: true } });
@@ -180,6 +182,10 @@ describe('authoritative game presentation', () => {
     expect(getPresentationFrames(state).filter((frame) => frame.kind === 'slay')
       .map((frame) => frame.durationMs)).toEqual([1700, 1700]);
     expect(getPresentationEndsAt(state)).toBe(10000 + 3 * 1300 + 2 * 1700);
+
+    // Games saved before the selectable effects keep the deadlines they were committed with.
+    state.presentation = { ...state.presentation, timingVersion: 2 };
+    expect(getPresentationEndsAt(state)).toBe(10000 + 3 * 1300 + 2 * 2400);
   });
 
   it("should open Liar's Deck with the table card and resolve a pull only after its suspense", () => {

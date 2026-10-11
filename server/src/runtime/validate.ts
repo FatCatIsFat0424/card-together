@@ -735,7 +735,7 @@ function presentation(value: ObjectValue): boolean {
   if (value.presentation === undefined) return true;
   const metadata = value.presentation;
   return object(metadata) && text(metadata.id) && metadata.id.length <= 128 &&
-    (metadata.timingVersion === undefined || metadata.timingVersion === 2) &&
+    (metadata.timingVersion === undefined || metadata.timingVersion === 2 || metadata.timingVersion === 3) &&
     number(metadata.startedAt) && metadata.serverNow === undefined &&
     Array.isArray(value.log) && typeof metadata.logStart === 'number' &&
     Number.isInteger(metadata.logStart) && metadata.logStart >= 0 &&

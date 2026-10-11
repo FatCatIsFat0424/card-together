@@ -20,8 +20,11 @@ export interface GameClock {
 }
 
 export interface GamePresentation {
-  /** Absent on legacy snapshots whose shorter deadlines must remain stable. */
-  readonly timingVersion?: 2;
+  /**
+   * Absent on legacy snapshots whose shorter deadlines must remain stable; 2 keeps the 2,400 ms
+   * Sevens slay frame that games saved before the selectable slay effects were committed with.
+   */
+  readonly timingVersion?: 2 | 3;
   readonly serverNow?: number;
   readonly id: string;
   readonly startedAt: number;

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import * as nodeCrypto from 'node:crypto';
-import { getPresentationEndsAt } from '@shared/game-presentation';
+import { getPresentationEndsAt, PRESENTATION_TIMING_VERSION } from '@shared/game-presentation';
 import * as manager from '../../src/managers/game-manager';
 import { createRuntimeCoordinator } from '../../src/runtime/coordinator';
 import { startTurnTimers } from '../../src/runtime/turn-timers';
@@ -317,7 +317,7 @@ describe('Big Two delayed automatic passing', () => {
     await vi.advanceTimersByTimeAsync(400);
     await runtime.idle();
     expect(publish).toHaveBeenCalledTimes(1);
-    expect(game().presentation?.timingVersion).toBe(2);
+    expect(game().presentation?.timingVersion).toBe(PRESENTATION_TIMING_VERSION);
     expect(getPresentationEndsAt(game())).toBe(11400);
     stop();
   });

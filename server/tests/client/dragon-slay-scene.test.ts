@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getPresentationFrames } from '@shared/game-presentation';
+import { getPresentationFrames, PRESENTATION_TIMING_VERSION } from '@shared/game-presentation';
 import { SEVENS_SLAY_FRAME_MS } from '@shared/sevens-options';
 import type { Card } from '@shared/types';
 import {
@@ -19,7 +19,7 @@ describe('dragon slaying timeline', () => {
     const king: Card = { suit: 'hearts', rank: 13 };
     const frames = getPresentationFrames({
       gameType: 'sevens', phase: 'playing', options: { closeOnEnd: true },
-      presentation: { id: 'p', startedAt: 0, logStart: 0 },
+      presentation: { id: 'p', startedAt: 0, logStart: 0, timingVersion: PRESENTATION_TIMING_VERSION },
       log: [{ type: 'play', seat: 'N', card: king, timestamp: 0 }],
     } as unknown as Parameters<typeof getPresentationFrames>[0]);
     expect(frames.find((frame) => frame.kind === 'slay')?.durationMs).toBe(SLAY_DURATION_MS);

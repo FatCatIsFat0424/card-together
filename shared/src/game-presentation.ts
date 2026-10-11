@@ -6,6 +6,12 @@ import { rpScore } from './rules/redpoints';
 import { nnWinners } from './rules/ninetynine';
 import { SEVENS_SLAY_FRAME_MS, sevensSlayEffect } from './sevens-options';
 
+/** Stamped on new presentations; restored ones keep their version so saved deadlines stay valid. */
+export const PRESENTATION_TIMING_VERSION = 3;
+
+/** Slay frame length before the dragon and fire effects had their own durations. */
+const LEGACY_SLAY_FRAME_MS = 2400;
+
 export interface PresentationFrame {
   readonly key: string;
   readonly kind: 'play' | 'pass' | 'trick' | 'round' | 'capture' | 'eliminated' | 'cover' | 'reveal' | 'shoot'
@@ -48,10 +54,10 @@ export function getPresentationFrames(
   game: AnyGameState | PlayerVisibleGameState,
 ): PresentationFrame[] {
   if (!game.presentation) return [];
-  const { id, logStart } = game.presentation;
+  const { id, logStart, timingVersion } = game.presentation;
   // New plays include 300 ms arrival plus one full second of readable results.
-  const playDuration = game.presentation.timingVersion === 2 ? 1300 : 400;
-  const passDuration = game.presentation.timingVersion === 2 ? 1000 : 350;
+  const playDuration = timingVersion ? 1300 : 400;
+  const passDuration = timingVersion ? 1000 : 350;
   const frames: PresentationFrame[] = [];
   for (let index = logStart; index < game.log.length; index++) {
     const key = `${id}:${index}`;
@@ -92,8 +98,10 @@ export function getPresentationFrames(
         frames.push({ key, kind: 'play', durationMs: playDuration, seat: entry.seat, cards: [entry.card] });
         // Under Dragon Slaying an A or K always reaches its row end, which closes the whole suit.
         if (game.options?.closeOnEnd && (entry.card.rank === 14 || entry.card.rank === 13)) {
-          frames.push({ key: `${key}:slay`, kind: 'slay', durationMs: SEVENS_SLAY_FRAME_MS[sevensSlayEffect(game.options)],
-            seat: entry.seat, cards: [entry.card] });
+          const durationMs = timingVersion === PRESENTATION_TIMING_VERSION
+            ? SEVENS_SLAY_FRAME_MS[sevensSlayEffect(game.options)]
+            : LEGACY_SLAY_FRAME_MS;
+          frames.push({ key: `${key}:slay`, kind: 'slay', durationMs, seat: entry.seat, cards: [entry.card] });
         }
       } else {
         frames.push({ key, kind: 'cover', durationMs: passDuration, seat: entry.seat, cards: [] });
