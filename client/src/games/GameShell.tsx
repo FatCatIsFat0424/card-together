@@ -22,6 +22,8 @@ import type { TablePosition } from '../game-view';
 import { AbortVoteBanner, AbortVoteButton } from './AbortVote';
 import { SpectatorLeaveButton } from './SpectatorLeave';
 import { AppIcon } from '../components/AppIcon';
+import { GameRulesDialog } from '../components/GameRulesDialog';
+import { matchRulesContext } from '../game-rules-context';
 import styles from './GameShell.module.css';
 import { useGamePresentation } from './use-game-presentation';
 import { GamePresentation } from './GamePresentation';
@@ -186,14 +188,17 @@ export function GameShell({
   // Chat is collapsed by default on tablet; on mobile it is a bottom drawer, closed by default
   const [chatOpen, setChatOpen] = useState(() => matches(DESKTOP_QUERY) && !matches(SHEET_QUERY));
   const [infoOpen, setInfoOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const settlementVisible = Boolean(overlay) && !presentation.locked;
+  const rulesVisible = rulesOpen && !settlementVisible && visibleGame !== null;
   const [seenMessages, setSeenMessages] = useState(0);
   const infoButtonRef = useRef<HTMLButtonElement>(null);
   const chatButtonRef = useRef<HTMLButtonElement>(null);
   const infoPanelRef = useRef<HTMLDivElement>(null);
   const chatRailRef = useRef<HTMLElement>(null);
-  useSheetFocus(infoOpen, infoPanelRef, infoButtonRef, infoIsOverlay);
+  useSheetFocus(infoOpen && !rulesVisible, infoPanelRef, infoButtonRef, infoIsOverlay);
   // Focusing the chat input would raise the phone keyboard; focus the sheet itself.
-  useSheetFocus(chatOpen, chatRailRef, chatButtonRef, chatIsOverlay, 'panel');
+  useSheetFocus(chatOpen && !rulesVisible, chatRailRef, chatButtonRef, chatIsOverlay, 'panel');
   const bottomSeat: Seat = mySeat ?? 'S';
   // Seats left empty in a Blackjack or Hold'em match get no plate.
   const tableSeats = matchSeats(visibleGame);
@@ -294,14 +299,22 @@ export function GameShell({
     if (matches(SHEET_QUERY)) collapseChat();
   }, [collapseChat]);
 
+  const openRules = (): void => {
+    closeSheets();
+    setRulesOpen(true);
+  };
+
+  // Settlement owns focus; a cleared match must not reopen its previous rules.
+  if (rulesOpen && (settlementVisible || !visibleGame)) setRulesOpen(false);
+
   useEffect(() => {
     // Popovers above the sheets handle Escape first and mark it handled.
     const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape' && !event.defaultPrevented) closeSheets();
+      if (event.key === 'Escape' && !event.defaultPrevented && !rulesVisible) closeSheets();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [closeSheets]);
+  }, [closeSheets, rulesVisible]);
 
   return (
     <div data-reduced-motion={reducedMotion || undefined} className={`${styles.gameContainer} ${chatOpen ? '' : styles.chatCollapsed} ${infoOpen ? styles.infoOpen : ''}`}
@@ -317,6 +330,10 @@ export function GameShell({
         </div>
         <AbortVoteButton />
         <SpectatorLeaveButton />
+        {visibleGame && <button type="button" className={`btn btn-outline ${styles.rulesRailButton}`}
+          aria-haspopup="dialog" onClick={openRules}>
+          <AppIcon name="rules" /> {t('rules.open')}
+        </button>}
         <label className={styles.motionSetting}>
           <AppCheckbox checked={reducedMotion}
             onChange={(event) => setReducedMotion(event.target.checked)} />
@@ -331,6 +348,10 @@ export function GameShell({
       <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}>
         <div className={styles.table} data-card-table>
           <div className={styles.tableTools}>
+            {visibleGame && <button type="button" className={`${styles.toolBtn} ${styles.rulesToolButton}`}
+              onClick={openRules} aria-haspopup="dialog" aria-label={t('rules.open')} title={t('rules.open')}>
+              <AppIcon name="rules" />
+            </button>}
             <button type="button" className={styles.toolBtn} onClick={openInfo} ref={infoButtonRef}
               aria-label={t('table.info')} title={t('table.info')}
               aria-expanded={infoOpen} aria-controls="game-info-panel">
@@ -400,6 +421,8 @@ export function GameShell({
         {turnAnnouncement}
       </p>
       {!presentation.locked && overlay}
+      {rulesVisible && visibleGame && <GameRulesDialog gameType={visibleGame.gameType}
+        context={matchRulesContext(visibleGame)} onClose={() => setRulesOpen(false)} />}
     </div>
   );
 }

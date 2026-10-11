@@ -22,6 +22,8 @@ import { TimeControlSettings } from '../components/TimeControlSettings';
 import { AppCheckbox } from '../components/AppCheckbox';
 import { useConnectionReady } from '../games/use-connection-ready';
 import { AppIcon } from '../components/AppIcon';
+import { GameRulesDialog } from '../components/GameRulesDialog';
+import { roomRulesContext } from '../game-rules-context';
 import styles from './RoomPage.module.css';
 import { roomProgress, unreadCount } from './room-progress';
 
@@ -45,6 +47,7 @@ export function RoomPage(): ReactNode {
   const [busy, setBusy] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const messageCount = useChatStore((state) => state.messages.length);
   const [seenMessages, setSeenMessages] = useState(messageCount);
   const unread = unreadCount(messageCount, seenMessages, chatOpen);
@@ -260,6 +263,10 @@ export function RoomPage(): ReactNode {
             {t('blackjack.playerDealer')}
             <span id="blackjack-player-dealer-hint" className={styles.srOnly}>{t('blackjack.playerDealerHint')}</span>
           </label>}
+          <button type="button" className="btn btn-outline touch-target" aria-haspopup="dialog"
+            onClick={() => setRulesOpen(true)}>
+            <AppIcon name="rules" /> {t('rules.open')}
+          </button>
         </div>
       </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
@@ -335,6 +342,8 @@ export function RoomPage(): ReactNode {
       </div>
       </div>
       <div className={styles.chat} id="room-chat"><ChatPanel /></div>
+      {rulesOpen && <GameRulesDialog gameType={roomInfo.gameType} context={roomRulesContext(roomInfo)}
+        onClose={() => setRulesOpen(false)} />}
     </main>
   );
 }

@@ -12,6 +12,11 @@
 .close { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 44px; height: 44px; padding: 0; }
 .content.content { padding: var(--spacing-lg); border-color: var(--border-color); overscroll-behavior: contain; }
 .rules { font-size: var(--text-sm); line-height: 1.8; }
+.roomSettings { padding: var(--spacing-md); border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--bg-card); margin-bottom: var(--spacing-lg); }
+.option { display: flex; align-items: baseline; justify-content: space-between; gap: var(--spacing-md); }
+.option dt { color: var(--text-secondary); }
+.option dd { flex-shrink: 0; font-weight: 600; color: var(--color-primary); }
+.playNotice { color: var(--text-muted); margin-bottom: var(--spacing-lg); }
 .rules > section + section { margin-top: var(--spacing-xl); }
 .rules h3 { margin-bottom: var(--spacing-sm); font-size: var(--text-base); color: var(--text-primary); }
 .rules ul { padding-left: var(--spacing-lg); color: var(--text-secondary); }

@@ -2,6 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { GAME_TYPES } from '@shared/constants';
 import type { MatchSummary, PlayerInfo, RoomInfo, Seat } from '@shared/types';
 
 const state = vi.hoisted(() => ({
@@ -93,6 +94,20 @@ describe('bot player interface', () => {
     expect(visitorHtml).not.toContain('Remove bot');
     expect(visitorHtml).not.toContain('Fill empty seats with bots');
     expect(visitorHtml.match(/>Empty</g)).toHaveLength(2);
+  });
+
+  it('keeps rules access available to hosts, guests, and disconnected spectators', () => {
+    for (const gameType of GAME_TYPES) {
+      state.room = { ...room(), gameType };
+      for (const playerId of ['alice', 'visitor']) {
+        state.playerId = playerId;
+        state.mySeat = null;
+        state.connection = 'connecting';
+        const trigger = render(createElement(RoomPage)).match(/<button[^>]*aria-haspopup="dialog"[^>]*>[\s\S]*?Game rules<\/button>/)?.[0];
+        expect(trigger).toBeDefined();
+        expect(trigger).not.toContain('disabled');
+      }
+    }
   });
 
   it('disables room actions until the connection is ready', () => {

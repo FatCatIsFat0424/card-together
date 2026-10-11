@@ -1,4 +1,9 @@
 const english = {
+  'rules.open': 'Game rules',
+  'rules.roomSettings': 'Room rules',
+  'rules.enabled': 'On',
+  'rules.disabled': 'Off',
+  'rules.playContinues': 'Play and the turn timer continue while you read the rules.',
   'theme.label': 'Theme',
   'theme.dashboard': 'Modern',
   'theme.felt': 'Classic',
@@ -48,6 +53,11 @@ export type UiTranslationKey = keyof typeof english;
 export const uiTranslations: Record<'en' | 'zh-TW', Record<UiTranslationKey, string>> = {
   en: english,
   'zh-TW': {
+    'rules.open': '遊戲規則',
+    'rules.roomSettings': '本房規則',
+    'rules.enabled': '開啟',
+    'rules.disabled': '關閉',
+    'rules.playContinues': '查看規則時，對局與回合計時仍會繼續。',
     'theme.label': '主題',
     'theme.dashboard': '現代',
     'theme.felt': '經典',

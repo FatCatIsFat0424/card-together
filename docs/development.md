@@ -44,6 +44,13 @@ Traditional Chinese instructions, scoring tables, examples, and shared room rule
 Keep this content in `client/src/game-rules-i18n.ts` aligned with the implemented
 rules in [Game rules](games.md) and the linked shared rule functions. The dialog
 supports scrolling, Escape/backdrop dismissal, focus trapping, and focus return.
+The waiting room adds a Game rules button beside the mode selector. Every match
+uses the same dialog, opened from the desktop information rail or the table tools
+on compact layouts. All players and spectators can read it. Applicable room options
+show their on/off state above the full rules: Sevens Dragon Slaying, Ninety-Nine
+two decks without reshuffling, and Blackjack player dealer. Waiting-room content
+tracks host changes; match content uses the current game's options. Reading rules
+does not pause play or the turn timer, and settlement dismisses an open rules dialog.
 
 Above 52rem, the friends page separates friends, sent requests, and incoming
 requests into horizontal MUI tabs with live counts and keyboard navigation. Only
