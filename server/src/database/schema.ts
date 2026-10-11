@@ -54,6 +54,7 @@ function validAccount(value: unknown): value is AccountRecord {
     typeof value.avatar === 'string' &&
     ['cat', 'fox', 'owl', 'bear', 'rabbit', 'panda'].includes(value.avatar) &&
     (value.avatarImage === null || isMediaId(value.avatarImage)) &&
+    (value.seatBackground === undefined || value.seatBackground === null || isMediaId(value.seatBackground)) &&
     (value.tableBackground === null || isMediaId(value.tableBackground)) &&
     isImageOpacity(value.tableBackgroundOpacity) &&
     (value.cardBack === null || isMediaId(value.cardBack)) &&

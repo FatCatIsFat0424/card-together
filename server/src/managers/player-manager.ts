@@ -12,7 +12,9 @@ const socketToPlayer = new Map<string, PlayerId>();
 /** Only table-visible fields; account settings stay out of room and chat broadcasts. */
 export function toPlayerInfo(account: AccountProfile): PlayerInfo {
   const { id, username, nickname, color, avatar, avatarImage } = account;
-  return { id, username, nickname, color, avatar, avatarImage };
+  return { id, username, nickname, color, avatar, avatarImage,
+    ...(account.seatBackground ? { seatBackground: account.seatBackground } : {}),
+  };
 }
 
 export function attachPlayer(socketId: string, info: PlayerInfo): void {

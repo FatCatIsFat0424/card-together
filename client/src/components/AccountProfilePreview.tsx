@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { AccountProfile, AvatarId } from '@shared/types';
 import { Link } from 'react-router-dom';
 import type { AccountAppearance } from '../account-appearance';
-import { cardBackStyle, tableBackgroundStyle } from '../account-appearance';
+import { cardBackStyle, seatBackgroundStyle, tableBackgroundStyle } from '../account-appearance';
 import { useI18nStore } from '../stores/i18n-store';
 import aceOfSpades from '../assets/cards/AS.svg';
 import { Avatar } from './Avatar';
@@ -22,6 +22,7 @@ export function AccountProfilePreview({
 }: AccountProfilePreviewProps): ReactNode {
   const { t, locale } = useI18nStore();
   const background = tableBackgroundStyle(appearance);
+  const seatBackground = seatBackgroundStyle(appearance);
   return <aside className={styles.preview} aria-label={t('profile.livePreview')}>
     <div className={styles.previewHeading}>
       <span className={styles.liveLabel}><span aria-hidden="true" />{t('profile.livePreview')}</span>
@@ -41,6 +42,13 @@ export function AccountProfilePreview({
           <h2>{nickname.trim() || account.username}</h2>
           <p>@{account.username}</p>
         </div>
+      </div>
+    </div>
+    <div className={styles.seatPreviewSection}>
+      <span className={styles.previewCaption}>{t('profile.seatBackground')}</span>
+      <div className={`${styles.seatPreviewCard} ${seatBackground ? styles.customSeat : ''}`} style={seatBackground}>
+        <Avatar avatar={avatar} image={account.avatarImage} color={color} size="large" />
+        <h3>{nickname.trim() || account.username}</h3>
       </div>
     </div>
     <div className={styles.previewFooter}>

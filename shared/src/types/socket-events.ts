@@ -62,6 +62,12 @@ export interface ClientToServerEvents {
   'room:changeSeat': (
     payload: { seat: Seat }, callback: (response: ActionResult) => void,
   ) => void;
+  'room:addSeat': (callback: (response: ActionResult) => void) => void;
+  /** Removes the last additional seat, which must be empty. */
+  'room:removeSeat': (callback: (response: ActionResult) => void) => void;
+  'room:changeAdditionalSeat': (
+    payload: { index: number }, callback: (response: ActionResult) => void,
+  ) => void;
   /** Leaves the seat to spectate; waiting rooms only. */
   'room:standUp': (callback: (response: ActionResult) => void) => void;
   'room:setGameType': (

@@ -99,7 +99,7 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
         if (!inviteManager.tryReserveInvite(from.id, targetId)) {
           throw actionError('Please wait before inviting this friend again.');
         }
-        const seatsFree = Object.values(room.seats).filter((seat) => !seat.player).length;
+        const seatsFree = [...Object.values(room.seats), ...room.additionalSeats ?? []].filter((seat) => !seat.player).length;
         invite = { roomCode: code, gameType: room.gameType, from, seatsFree: room.status === 'waiting' ? seatsFree : 0 };
         return { success: true };
       }, { skipUnchanged: true, afterCommit: () => {
@@ -148,6 +148,24 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
 
   socket.on('room:standUp', (callback) => runAction(context, socket, callback, () => {
     requireSuccess(roomManager.standUp(requireRoom(socket), socket.data.accountId));
+    return { success: true };
+  }));
+
+  socket.on('room:addSeat', (callback) => runAction(context, socket, callback, () => {
+    requireSuccess(roomManager.addSeat(requireRoom(socket), socket.data.accountId));
+    return { success: true };
+  }));
+
+  socket.on('room:removeSeat', (callback) => runAction(context, socket, callback, () => {
+    requireSuccess(roomManager.removeSeat(requireRoom(socket), socket.data.accountId));
+    return { success: true };
+  }));
+
+  socket.on('room:changeAdditionalSeat', (payload, callback) => runAction(context, socket, callback, () => {
+    if (!payload || !Number.isInteger(payload.index) || payload.index < 0) throw actionError('Invalid seat.');
+    const player = playerManager.getPlayerInfo(socket.data.accountId);
+    if (!player) throw actionError('Player not found.');
+    requireSuccess(roomManager.changeAdditionalSeat(requireRoom(socket), player, payload.index));
     return { success: true };
   }));
 

@@ -1,4 +1,4 @@
-import type { SeatMap } from '@shared/types';
+import type { SeatInfo, SeatMap } from '@shared/types';
 
 export interface RoomProgress {
   readonly seated: number;
@@ -6,8 +6,8 @@ export interface RoomProgress {
 }
 
 /** Occupied and ready seats; bots are always ready. */
-export function roomProgress(seats: SeatMap): RoomProgress {
-  const occupied = Object.values(seats).filter((seat) => seat.player !== null);
+export function roomProgress(seats: SeatMap, additionalSeats: readonly SeatInfo[] = []): RoomProgress {
+  const occupied = [...Object.values(seats), ...additionalSeats].filter((seat) => seat.player !== null);
   return {
     seated: occupied.length,
     ready: occupied.filter((seat) => seat.isReady || seat.player?.isBot).length,

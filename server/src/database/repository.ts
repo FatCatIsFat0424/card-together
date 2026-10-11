@@ -46,7 +46,7 @@ export interface Repository {
     id: string,
     profile: Pick<
       AccountProfile,
-      | 'nickname' | 'color' | 'avatar' | 'avatarImage' | 'tableBackground'
+      | 'nickname' | 'color' | 'avatar' | 'avatarImage' | 'seatBackground' | 'tableBackground'
       | 'tableBackgroundOpacity' | 'cardBack' | 'cardBackOpacity' | 'matchesPublic'
     >,
     now: number,
@@ -97,6 +97,7 @@ export function publicAccount(account: AccountRecord): AccountProfile {
     color: account.color,
     avatar: account.avatar,
     avatarImage: account.avatarImage,
+    seatBackground: account.seatBackground ?? null,
     tableBackground: account.tableBackground,
     tableBackgroundOpacity: account.tableBackgroundOpacity,
     cardBack: account.cardBack,

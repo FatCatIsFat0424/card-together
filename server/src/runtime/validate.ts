@@ -4,7 +4,7 @@ import { isNinetyNineOptions } from '@shared/ninetynine-options';
 import { isBlackjackOptions } from '@shared/blackjack-options';
 import { getTurnSeat } from '../managers/game-clock';
 import {
-  ABORT_VOTE_THRESHOLD, GAME_TYPES, MAX_MESSAGE_EMOJIS, MIN_FLEXIBLE_PLAYERS, MAX_ROOM_MEMBERS, isEmojiName, isMediaId, isProvidedEmojiFile,
+  ABORT_VOTE_THRESHOLD, EXPANDABLE_ROOM_GAMES, GAME_TYPES, MAX_MESSAGE_EMOJIS, MIN_FLEXIBLE_PLAYERS, MAX_ROOM_MEMBERS, MAX_ROOM_SEATS, isEmojiName, isMediaId, isProvidedEmojiFile,
 } from '@shared/constants';
 import { isDeepStrictEqual } from 'node:util';
 import { getPresentationEndsAt } from '@shared/game-presentation';
@@ -67,7 +67,8 @@ function player(value: unknown): boolean {
     typeof value.color === 'string' &&
     /^#[a-fA-F0-9]{6}$/.test(value.color) &&
     oneOf(value.avatar, ['cat', 'fox', 'owl', 'bear', 'rabbit', 'panda']) &&
-    (value.avatarImage === null || isMediaId(value.avatarImage))
+    (value.avatarImage === null || isMediaId(value.avatarImage)) &&
+    (value.seatBackground === undefined || value.seatBackground === null || isMediaId(value.seatBackground))
   );
 }
 
@@ -843,6 +844,13 @@ function room(value: unknown): boolean {
   const info = value.info;
   const members = value.memberIds as string[];
   const humans = members.filter((id) => !id.startsWith('bot:'));
+  if (info.additionalSeats !== undefined && (!Array.isArray(info.additionalSeats)
+    || info.additionalSeats.length > MAX_ROOM_SEATS - 4
+    || (info.additionalSeats.length > 0 && (info.status !== 'waiting'
+      || !oneOf(info.gameType, [...EXPANDABLE_ROOM_GAMES])))
+    || !info.additionalSeats.every((entry: unknown) => object(entry) && entry.isReady === false
+      && (entry.player === null || (player(entry.player) && object(entry.player)
+        && entry.player.isBot !== true && members.includes(String(entry.player.id))))))) return false;
   // Only seated humans vote; spectators are members without a seat.
   const voters = object(info.seats) ? seats.flatMap((seat) => {
     const entry = (info.seats as ObjectValue)[seat];
@@ -1475,7 +1483,8 @@ export function isRuntimeSnapshot(value: unknown): value is RuntimeSnapshot {
     return false;
   const memberships = new Map<string, string>();
   for (const entry of snapshot.rooms) {
-    const occupants = seats.flatMap((seat) => entry.info.seats[seat].player?.id ?? []);
+    const occupants = [...seats.flatMap((seat) => entry.info.seats[seat].player?.id ?? []),
+      ...(entry.info.additionalSeats ?? []).flatMap((seat) => seat.player?.id ?? [])];
     if (new Set(occupants).size !== occupants.length) return false;
     const vote = entry.info.abortVote;
     if (vote && ![...vote.yes, ...vote.no].every((id) => occupants.includes(id))) return false;

@@ -45,9 +45,11 @@ account may store `MEDIA_QUOTA_BYTES` (100 MiB, [media store](../server/src/medi
 of distinct images it uploaded; re-uploading an owned image is free, and replaced images still
 count. Exceeding the quota returns 413. Ownership markers live in `media/owners/`.
 Profile updates support nickname, color, preset avatar, uploaded avatar/table
-background/card back (`avatarImage`, `tableBackground`, `cardBack`: an uploaded media ID or
+background/card back (`avatarImage`, `seatBackground`, `tableBackground`, `cardBack`: an uploaded media ID or
 null), image opacity (`tableBackgroundOpacity`, `cardBackOpacity`: integer percent 20–100),
 and history visibility. Omitted fields keep their values; invalid values return 400.
+`seatBackground` uses the existing `background` upload purpose and is shared in
+room `PlayerInfo` identities. Setting it to null restores the default seat background.
 `AccountProfile` includes private profile preferences/timestamps;
 `PublicAccount` exposes only ID, username, nickname, color, avatar, and avatarImage.
 No response exposes credential/session digests. Invalid player IDs return 400, unknown
@@ -75,6 +77,8 @@ For exact unions and result fields, use
 | `room:leave` | — | Leave; a seated player's leave aborts an unfinished game |
 | `room:kick` | `{ accountId }` | Host removes another human member (spectators also during a match); they may rejoin by code |
 | `room:changeSeat` | `{ seat }` | Change available seat |
+| `room:addSeat`, `room:removeSeat` | — | Host appends an additional seat (eight total maximum) or removes the last empty additional seat; waiting Ninety-Nine/Blackjack/Hold'em rooms only |
+| `room:changeAdditionalSeat` | `{ index }` | Take an available additional seat; index is zero-based in `RoomInfo.additionalSeats` |
 | `room:standUp` | — | Leave the seat to spectate while waiting |
 | `room:setGameType` | `{ gameType }` | Host changes waiting room game |
 | `room:setTimeControl` | `TimeControl` | Host changes waiting room timer; clears human readiness |

@@ -2,6 +2,10 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { io } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
+import type { ClientToServerEvents, ServerToClientEvents } from '@shared/types';
+import { isRuntimeSnapshot } from '../../src/runtime/validate';
 import { createApplication } from '../../src/app';
 import { SESSION_COOKIE_NAME, tokenHash } from '../../src/auth/auth-service';
 import { createJsonRepository } from '../../src/database/json-repository';
@@ -142,6 +146,8 @@ describe('media HTTP routes', () => {
     });
     expect((await patch({ avatarImage: `${'0'.repeat(64)}.png` })).status).toBe(400);
     expect((await patch({ tableBackground: 'not-a-media-id' })).status).toBe(400);
+    expect((await patch({ seatBackground: `${'0'.repeat(64)}.png` })).status).toBe(400);
+    expect((await patch({ seatBackground: 'https://example.com/image.png' })).status).toBe(400);
     expect((await patch({ matchesPublic: 'true' })).status).toBe(400);
     const { id } = await (await upload(PNG)).json() as { id: string };
     const updated = await patch({ avatarImage: id, tableBackground: id, matchesPublic: true });
@@ -174,6 +180,44 @@ describe('media HTTP routes', () => {
     const parallel = createMediaStore(join(directory, 'parallel'), image(1).length);
     const results = await Promise.all([parallel.save(image(5), 'carol'), parallel.save(image(6), 'carol')]);
     expect(results.filter((id) => id === null)).toHaveLength(1);
+  });
+
+  it('should persist uploaded seat artwork, synchronize room identities, and clear it independently', async () => {
+    await start(join(directory, 'media'));
+    const client: Socket<ServerToClientEvents, ClientToServerEvents> = io(baseUrl, {
+      autoConnect: false, forceNew: true, reconnection: false, transports: ['websocket'],
+      extraHeaders: { Cookie: COOKIE, Origin: ORIGIN },
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        client.once('connect', resolve);
+        client.once('connect_error', reject);
+        client.connect();
+      });
+      expect((await client.timeout(5000).emitWithAck('player:resume')).success).toBe(true);
+      expect((await client.timeout(5000).emitWithAck('room:create', { gameType: 'bridge' })).success).toBe(true);
+      expect((await client.timeout(5000).emitWithAck('room:changeSeat', { seat: 'N' })).success).toBe(true);
+      expect((await repository.getAccountById('alice'))?.seatBackground).toBeUndefined();
+      const { id } = await (await upload(PNG, 'background')).json() as { id: string };
+      const patch = (body: object): Promise<Response> => fetch(`${baseUrl}/api/auth/profile`, {
+        method: 'PATCH', headers: HEADERS, body: JSON.stringify(body),
+      });
+      expect(await (await patch({ seatBackground: id, tableBackground: id })).json())
+        .toMatchObject({ account: { seatBackground: id, tableBackground: id } });
+      const snapshot = await client.timeout(5000).emitWithAck('player:resume');
+      expect(snapshot.room?.seats.N.player?.seatBackground).toBe(id);
+      expect(snapshot.room?.seats.N.player).not.toHaveProperty('tableBackground');
+      expect((await repository.getAccountById('alice'))?.seatBackground).toBe(id);
+      expect(isRuntimeSnapshot(await repository.loadRuntime())).toBe(true);
+      expect(await (await patch({ nickname: 'New name' })).json()).toMatchObject({ account: { seatBackground: id } });
+      expect(await (await patch({ seatBackground: null })).json())
+        .toMatchObject({ account: { seatBackground: null, tableBackground: id } });
+      expect((await client.timeout(5000).emitWithAck('player:resume')).room?.seats.N.player?.seatBackground)
+        .toBeUndefined();
+      expect(isRuntimeSnapshot(await repository.loadRuntime())).toBe(true);
+    } finally {
+      client.disconnect();
+    }
   });
 
   it('should check origin and session before parsing a large upload body', async () => {

@@ -1,4 +1,8 @@
 const english = {
+  'room.addSeat': 'Add seat',
+  'room.removeSeat': 'Remove last empty seat',
+  'room.additionalSeat': 'Seat {n}',
+  'room.fourPlayersOnly': 'Only four-player matches are currently supported. Use four seats with four seated players to start.',
   'auth.login': 'Sign in',
   'auth.register': 'Create account',
   'auth.welcome': 'Your seat at the table.',
@@ -125,6 +129,8 @@ const english = {
   'profile.uploadAvatar': 'Upload avatar',
   'profile.removeAvatar': 'Remove custom avatar',
   'profile.background': 'Table background',
+  'profile.seatBackground': 'Seat background',
+  'profile.seatBackgroundHelp': 'Shown on your waiting-room seat card. Everyone in the room can see it.',
   'profile.backgroundHelp': 'Shown under your cards at the table. Only you see it.',
   'profile.uploadBackground': 'Upload background',
   'profile.removeBackground': 'Clear background',
@@ -143,6 +149,10 @@ export type AccountTranslationKey = keyof typeof english;
 export const accountTranslations: Record<'en' | 'zh-TW', Record<AccountTranslationKey, string>> = {
   en: english,
   'zh-TW': {
+    'room.addSeat': '新增座位',
+    'room.removeSeat': '移除最後一個空座位',
+    'room.additionalSeat': '第 {n} 席',
+    'room.fourPlayersOnly': '目前僅支援 4 人對局；請保留 4 席並讓 4 位玩家就座後開始。',
     'auth.login': '登入',
     'auth.register': '建立帳號',
     'auth.welcome': '你的牌桌，等你入座。',
@@ -269,6 +279,8 @@ export const accountTranslations: Record<'en' | 'zh-TW', Record<AccountTranslati
     'profile.uploadAvatar': '上傳頭像',
     'profile.removeAvatar': '移除自訂頭像',
     'profile.background': '牌桌背景',
+    'profile.seatBackground': '座位背景',
+    'profile.seatBackgroundHelp': '顯示在你的房間座位卡上，同房玩家都看得到。',
     'profile.backgroundHelp': '顯示在牌桌底下，只有你看得到。',
     'profile.uploadBackground': '上傳背景',
     'profile.removeBackground': '清除背景',

@@ -19,6 +19,8 @@ export interface PlayerInfo {
   readonly color: PlayerColor;
   readonly avatar: AvatarId;
   readonly avatarImage: MediaId | null;
+  /** Public waiting-room seat artwork; omitted/null keeps the theme background. */
+  readonly seatBackground?: MediaId | null;
   readonly isBot?: boolean;
 }
 

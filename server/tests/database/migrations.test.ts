@@ -150,6 +150,17 @@ describe('database migrations', () => {
     expect(() => validateDocument(withAccount({ cardBackOpacity: undefined }))).toThrow();
   });
 
+  it('should retain legacy accounts without seat artwork and validate optional new artwork', () => {
+    const migrated = migrateDocument(version2()) as ReturnType<typeof emptyDocument>;
+    const withSeatBackground = (seatBackground: unknown): unknown => ({
+      ...migrated, accounts: [{ ...migrated.accounts[0], seatBackground }, ...migrated.accounts.slice(1)],
+    });
+    expect(() => validateDocument(migrated)).not.toThrow();
+    expect(() => validateDocument(withSeatBackground(null))).not.toThrow();
+    expect(() => validateDocument(withSeatBackground(`${'a'.repeat(64)}.webp`))).not.toThrow();
+    expect(() => validateDocument(withSeatBackground('not-a-media-id'))).toThrow();
+  });
+
   it('should keep a v2 backup when opening a v2 file', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'bridge-migration-'));
     const path = join(directory, 'database.json');

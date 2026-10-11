@@ -20,7 +20,15 @@ remove it with the [offline cleanup](#legacy-bot-history-cleanup). Legacy human 
 without `isBot` remain valid.
 Profiles include a 1–20-character nickname, six-digit color, avatar preset/optional
 uploaded avatar, optional personal table background and card back with their image
-opacity, and match-history visibility.
+opacity, an optional room seat background, and match-history visibility.
+
+`AccountProfile.seatBackground` and `PlayerInfo.seatBackground` are optional uploaded
+media IDs. Missing/null retains the theme seat artwork, so existing accounts and
+runtime snapshots remain readable without a schema-version change. Seat artwork is
+shared in room player identities; personal table backgrounds and card backs stay
+private. The existing background upload limits and complete database/media backups
+apply. Earlier servers tolerate this optional field; rollback can hide the seat
+artwork while retaining the account data and uploaded images.
 
 Login creates a seven-day opaque session. Storage contains only its SHA-256 digest;
 the browser uses an HttpOnly, SameSite=Lax cookie, Secure in production. Mutating HTTP
@@ -36,6 +44,16 @@ they currently host while online. Players can join that room without an invitati
 server rechecks friendship, host identity and capacity, and commits room switching atomically.
 Room invitations are ephemeral and only available to accepted friends. Match history defaults to private;
 other signed-in players can read it only when the owner enables visibility.
+
+## Waiting-room seats
+
+Waiting Ninety-Nine/Blackjack/Hold'em rooms may contain optional `RoomInfo.additionalSeats`;
+older snapshots without it retain four seats. At most four additional seats are
+accepted, for eight total. Additional seats are human-only,
+persisted in runtime snapshots, and excluded from spectators. Rooms with additional
+seats cannot start matches yet. Before rolling back to a server version without
+this field, have players leave these seats and the host remove them, then preserve
+the complete database/media backup using the deployment procedure.
 
 ## Legacy bot history cleanup
 

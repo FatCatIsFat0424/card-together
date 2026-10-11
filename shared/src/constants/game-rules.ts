@@ -17,6 +17,12 @@ export const MAX_SPECTATORS = 8;
 /** Room members at most: four seats (human or bot) plus spectators */
 export const MAX_ROOM_MEMBERS = 4 + MAX_SPECTATORS;
 
+/** Maximum configured waiting-room seats, including the four standard seats. */
+export const MAX_ROOM_SEATS = 8;
+
+/** Modes with additional waiting-room seats; matches currently still require four seats. */
+export const EXPANDABLE_ROOM_GAMES: readonly GameType[] = ['ninetynine', 'blackjack', 'holdem'];
+
 /** Abort vote: passes once this many yes votes are cast */
 export const ABORT_VOTE_THRESHOLD = 3;
 

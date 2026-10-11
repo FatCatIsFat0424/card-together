@@ -8,9 +8,9 @@ import type {
   BlackjackOptions, GameType, NinetyNineOptions, PlayerInfo, RoomCode, RoomInfo, RoomStatus, Seat, SeatMap, SevensOptions, TimeControl,
 } from '@shared/types';
 import {
-  ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD, FLEXIBLE_SEAT_GAMES, MAX_SPECTATORS,
+  ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD, EXPANDABLE_ROOM_GAMES,
+  FLEXIBLE_SEAT_GAMES, MAX_ROOM_MEMBERS, MAX_ROOM_SEATS, MAX_SPECTATORS,
 } from '@shared/constants';
-import { minPlayers } from '@shared/rules/seats';
 import type { PersistedRoom } from '../runtime/types';
 import { generateRoomCode } from '../utils/id-generator';
 
@@ -51,12 +51,13 @@ export function getRoomMemberIds(code: RoomCode): readonly string[] {
 /** Members without a seat, in join order; bots always hold a seat. */
 export function getSpectatorIds(code: RoomCode): string[] {
   const room = rooms.get(code);
-  return room ? room.memberIds.filter((id) => !seats.some((seat) => room.info.seats[seat].player?.id === id)) : [];
+  return room ? room.memberIds.filter((id) => !seats.some((seat) => room.info.seats[seat].player?.id === id)
+    && !(room.info.additionalSeats ?? []).some((seat) => seat.player?.id === id)) : [];
 }
 
 /** New members spectate until they take a seat, so capacity is the spectator limit. */
 export function hasSpectatorRoom(code: RoomCode): boolean {
-  return getSpectatorIds(code).length < MAX_SPECTATORS;
+  return getSpectatorIds(code).length < MAX_SPECTATORS && getRoomMemberIds(code).length < MAX_ROOM_MEMBERS;
 }
 
 /** Joining is allowed during a match: the newcomer watches it as a spectator. */
@@ -77,6 +78,7 @@ export function leaveRoom(code: RoomCode, playerId: string): { seat: Seat | null
     room.info = { ...room.info, seats: { ...room.info.seats, [seat]: { player: null, isReady: false } } };
     tableChanged(room);
   }
+  clearAdditionalSeat(room, playerId);
   room.memberIds = room.memberIds.filter((id) => id !== playerId);
   const humans = room.memberIds.filter((id) => !seats.some((seat) =>
     room.info.seats[seat].player?.id === id && room.info.seats[seat].player?.isBot));
@@ -183,6 +185,7 @@ export function changeSeat(code: RoomCode, player: PlayerInfo, target: Seat): Re
   if (occupant && occupant.id !== player.id) return { success: false, reason: 'Seat is occupied' };
   const previous = getPlayerSeat(code, player.id);
   if (previous === target) return { success: true };
+  clearAdditionalSeat(room, player.id);
   const next = { ...room.info.seats };
   if (previous) next[previous] = { player: null, isReady: false };
   next[target] = { player, isReady: false };
@@ -195,10 +198,13 @@ export function changeSeat(code: RoomCode, player: PlayerInfo, target: Seat): Re
 export function standUp(code: RoomCode, playerId: string): Result {
   const room = rooms.get(code);
   const seat = getPlayerSeat(code, playerId);
-  if (!room || !seat) return { success: false, reason: 'Not seated' };
+  if (!room || (!seat && !(room.info.additionalSeats ?? []).some((entry) => entry.player?.id === playerId))) {
+    return { success: false, reason: 'Not seated' };
+  }
   if (room.info.status === 'playing') return { success: false, reason: 'Cannot change seat during game' };
-  if (!hasSpectatorRoom(code)) return { success: false, reason: 'The spectator area is full.' };
-  room.info = { ...room.info, seats: { ...room.info.seats, [seat]: { player: null, isReady: false } } };
+  if (getSpectatorIds(code).length >= MAX_SPECTATORS) return { success: false, reason: 'The spectator area is full.' };
+  if (seat) room.info = { ...room.info, seats: { ...room.info.seats, [seat]: { player: null, isReady: false } } };
+  clearAdditionalSeat(room, playerId);
   tableChanged(room);
   return { success: true };
 }
@@ -208,6 +214,9 @@ export function setReady(code: RoomCode, playerId: string, ready: boolean): Resu
   const seat = getPlayerSeat(code, playerId);
   if (!room || !seat) return { success: false, reason: 'Not seated' };
   if (room.info.status === 'playing') return { success: false, reason: 'Game is in progress' };
+  if (ready && (room.info.additionalSeats?.length ?? 0) > 0) {
+    return { success: false, reason: 'Only four-seat matches are currently supported. Remove the additional seats first.' };
+  }
   room.info = { ...room.info, seats: {
     ...room.info.seats, [seat]: { ...room.info.seats[seat], isReady: ready },
   } };
@@ -219,7 +228,66 @@ export function isAllReady(code: RoomCode): boolean {
   const room = rooms.get(code);
   if (!room || !hasSeatedHuman(room)) return false;
   const occupied = seats.filter((seat) => room.info.seats[seat].player);
-  return occupied.length >= minPlayers(room.info.gameType) && occupied.every((seat) => room.info.seats[seat].isReady);
+  return occupied.length === 4 && (room.info.additionalSeats?.length ?? 0) === 0
+    && occupied.every((seat) => room.info.seats[seat].isReady);
+}
+
+function clearAdditionalSeat(room: PersistedRoom, playerId: string): void {
+  if (!room.info.additionalSeats?.some((entry) => entry.player?.id === playerId)) return;
+  room.info = { ...room.info, additionalSeats: room.info.additionalSeats.map((entry) =>
+    entry.player?.id === playerId ? { player: null, isReady: false } : entry) };
+  resetAllReady(room.info.code);
+}
+
+function requireSeatManagement(code: RoomCode, playerId: string): Result {
+  const room = rooms.get(code);
+  if (!room) return { success: false, reason: 'Room not found' };
+  if (room.info.hostId !== playerId) return { success: false, reason: 'Only the host can manage seats.' };
+  if (room.info.status !== 'waiting') return { success: false, reason: 'Cannot manage seats during game.' };
+  if (!EXPANDABLE_ROOM_GAMES.includes(room.info.gameType)) return { success: false, reason: 'This game uses four seats.' };
+  return { success: true };
+}
+
+export function addSeat(code: RoomCode, playerId: string): Result {
+  const allowed = requireSeatManagement(code, playerId);
+  if (!allowed.success) return allowed;
+  const room = rooms.get(code)!;
+  const additional = room.info.additionalSeats ?? [];
+  if (additional.length >= MAX_ROOM_SEATS - 4) return { success: false, reason: 'Seat limit reached.' };
+  room.info = { ...room.info, additionalSeats: [...additional, { player: null, isReady: false }] };
+  resetAllReady(code);
+  return { success: true };
+}
+
+export function removeSeat(code: RoomCode, playerId: string): Result {
+  const allowed = requireSeatManagement(code, playerId);
+  if (!allowed.success) return allowed;
+  const room = rooms.get(code)!;
+  const additional = room.info.additionalSeats ?? [];
+  if (additional.length === 0) return { success: false, reason: 'No additional seat to remove.' };
+  if (additional[additional.length - 1].player) return { success: false, reason: 'Seat is occupied' };
+  room.info = { ...room.info, additionalSeats: additional.slice(0, -1) };
+  resetAllReady(code);
+  return { success: true };
+}
+
+export function changeAdditionalSeat(code: RoomCode, player: PlayerInfo, index: number): Result {
+  const room = rooms.get(code);
+  if (!room || !room.memberIds.includes(player.id)) return { success: false, reason: 'Not in room' };
+  if (room.info.status !== 'waiting') return { success: false, reason: 'Cannot change seat during game' };
+  const target = room.info.additionalSeats?.[index];
+  if (!Number.isInteger(index) || index < 0 || !target) return { success: false, reason: 'Invalid seat.' };
+  if (target.player && target.player.id !== player.id) return { success: false, reason: 'Seat is occupied' };
+  if (target.player?.id === player.id) return { success: true };
+  const previous = getPlayerSeat(code, player.id);
+  clearAdditionalSeat(room, player.id);
+  room.info = { ...room.info,
+    seats: previous ? { ...room.info.seats, [previous]: { player: null, isReady: false } } : room.info.seats,
+    additionalSeats: room.info.additionalSeats!.map((entry, position) => position === index
+      ? { player, isReady: false } : entry),
+  };
+  resetAllReady(code);
+  return { success: true };
 }
 
 export function getPlayerSeat(code: RoomCode, playerId: string): Seat | null {
@@ -250,7 +318,12 @@ export function setGameType(code: RoomCode, playerId: string, gameType: GameType
   if (!room) return { success: false, reason: 'Room not found' };
   if (room.info.hostId !== playerId) return { success: false, reason: 'Only the host can change the game.' };
   if (room.info.status !== 'waiting') return { success: false, reason: 'Game is in progress' };
-  room.info = { ...room.info, gameType };
+  if (!EXPANDABLE_ROOM_GAMES.includes(gameType) && room.info.additionalSeats?.some((entry) => entry.player)) {
+    return { success: false, reason: 'Empty the additional seats before changing to a four-seat game.' };
+  }
+  room.info = { ...room.info, gameType,
+    ...(room.info.additionalSeats && !EXPANDABLE_ROOM_GAMES.includes(gameType) ? { additionalSeats: [] } : {}),
+  };
   resetAllReady(code);
   return { success: true };
 }
@@ -395,7 +468,15 @@ export function updateRoomPlayer(player: PlayerInfo, roomCode: RoomCode | null):
   if (!roomCode) return;
   const room = rooms.get(roomCode);
   const seat = getPlayerSeat(roomCode, player.id);
-  if (!room || !seat || isDeepStrictEqual(room.info.seats[seat].player, player)) return;
+  if (!room) return;
+  if (!seat) {
+    if (room.info.additionalSeats?.some((entry) => entry.player?.id === player.id && !isDeepStrictEqual(entry.player, player))) {
+      room.info = { ...room.info, additionalSeats: room.info.additionalSeats.map((entry) =>
+        entry.player?.id === player.id ? { ...entry, player } : entry) };
+    }
+    return;
+  }
+  if (isDeepStrictEqual(room.info.seats[seat].player, player)) return;
   room.info = { ...room.info, seats: {
     ...room.info.seats, [seat]: { ...room.info.seats[seat], player },
   } };

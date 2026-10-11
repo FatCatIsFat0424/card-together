@@ -111,6 +111,10 @@ describe('bot player interface', () => {
   });
 
   it('disables room actions until the connection is ready', () => {
+    state.room = { ...room(), seats: { ...room().seats,
+      S: { player: { ...bot, id: 'bot:south' }, isReady: true },
+      W: { player: { ...bot, id: 'bot:west' }, isReady: true },
+    } };
     expect(render(createElement(RoomPage))).not.toMatch(/disabled="">Ready<\/button>/);
     state.connection = 'connecting';
     const html = render(createElement(RoomPage));
@@ -119,11 +123,50 @@ describe('bot player interface', () => {
     expect(html).toMatch(/disabled="">Leave Room<\/button>/);
   });
 
+  it('keeps Ready clickable without permanent player-count notices', () => {
+    expect(render(createElement(RoomPage))).not.toMatch(/disabled="">Ready<\/button>/);
+    state.room = { ...room(), gameType: 'holdem', additionalSeats: [{ player: null, isReady: false }] };
+    const html = render(createElement(RoomPage));
+    expect(html).toContain('Seat 5');
+    expect(html).not.toMatch(/disabled="">Ready<\/button>/);
+    expect(html).not.toContain('Only four-player matches are currently supported');
+    expect(html).not.toMatch(/\d\/\d seated/);
+    expect(html).not.toMatch(/\d\/\d ready/);
+    state.mySeat = null;
+    expect(render(createElement(RoomPage))).not.toMatch(/disabled="">Ready<\/button>/);
+  });
+
+  it('shows the seat expansion control only to hosts of Ninety-Nine, Blackjack, and Hold\'em', () => {
+    for (const gameType of GAME_TYPES) {
+      state.room = { ...room(), gameType };
+      const expandable = gameType === 'ninetynine' || gameType === 'blackjack' || gameType === 'holdem';
+      const html = render(createElement(RoomPage));
+      expect(html.includes('aria-label="Add seat"')).toBe(expandable);
+      expect(html.includes('expandedSeats')).toBe(expandable);
+    }
+    state.room = { ...room(), gameType: 'holdem', hostId: 'another-player' };
+    expect(render(createElement(RoomPage))).not.toContain('aria-label="Add seat"');
+  });
+
   it('disables filling when every seat is occupied', () => {
     state.room = {
       ...room(), seats: { ...room().seats, S: { player: bot, isReady: true }, W: { player: bot, isReady: true } },
     };
     expect(render(createElement(RoomPage))).toMatch(/disabled="">Fill empty seats with bots<\/button>/);
+  });
+
+  it('offers the eighth seat and hides the add control at eight seats', () => {
+    state.room = { ...room(), gameType: 'holdem',
+      additionalSeats: Array.from({ length: 3 }, () => ({ player: null, isReady: false })),
+    };
+    const addButton = (): string | undefined => render(createElement(RoomPage))
+      .match(/<button[^>]*aria-label="Add seat"[^>]*>/)?.[0];
+    expect(addButton()).toBeDefined();
+    expect(addButton()).not.toContain('disabled');
+    state.room = { ...state.room, additionalSeats: [
+      ...state.room.additionalSeats!, { player: null, isReady: false },
+    ] };
+    expect(addButton()).toBeUndefined();
   });
 
   it('keeps bot participants and bot winners visible in match history without profile links', () => {

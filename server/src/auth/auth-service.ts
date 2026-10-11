@@ -96,7 +96,7 @@ function newPasswordValue(input: unknown): string {
 
 type EditableProfile = Pick<
   AccountProfile,
-  | 'nickname' | 'color' | 'avatar' | 'avatarImage' | 'tableBackground'
+  | 'nickname' | 'color' | 'avatar' | 'avatarImage' | 'seatBackground' | 'tableBackground'
   | 'tableBackgroundOpacity' | 'cardBack' | 'cardBackOpacity' | 'matchesPublic'
 >;
 
@@ -166,6 +166,7 @@ function profileValues(
     color: color.toLowerCase(),
     avatar: avatar as AvatarPreset,
     avatarImage: mediaValue(input.avatarImage, fallback.avatarImage, mediaExists),
+    seatBackground: mediaValue(input.seatBackground, fallback.seatBackground ?? null, mediaExists),
     tableBackground: mediaValue(input.tableBackground, fallback.tableBackground, mediaExists),
     tableBackgroundOpacity: opacityValue(
       input.tableBackgroundOpacity, fallback.tableBackgroundOpacity,
@@ -239,6 +240,7 @@ export function createAuthService(
         color: '#4f8cff',
         avatar: 'cat',
         avatarImage: null,
+        seatBackground: null,
         tableBackground: null,
         tableBackgroundOpacity: IMAGE_OPACITY_MAX,
         cardBack: null,

@@ -11,6 +11,8 @@ export interface AccountProfile {
   readonly color: string;
   readonly avatar: AvatarPreset;
   readonly avatarImage: MediaId | null;
+  /** Optional for older accounts; shared as the owner's waiting-room seat artwork. */
+  readonly seatBackground?: MediaId | null;
   readonly tableBackground: MediaId | null;
   /** Integer percent applied to the table background image layer only. */
   readonly tableBackgroundOpacity: number;

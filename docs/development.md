@@ -43,6 +43,28 @@ joining by code requires leaving the current room first. Rules, timers, invitati
 and bots are managed in the waiting room. See [Socket actions](api.md#socket-actions)
 for authoritative room action contracts.
 
+The desktop waiting room shows North, East, South, and West as four equal-width outlined
+portrait cards. Ninety-Nine, Blackjack, and Hold'em always use two rows of four
+columns, even before additional seats are configured; other modes use one row.
+There is no horizontal scrollbar. Empty cards
+are full-card seat buttons; their bot controls remain separate. Ninety-Nine, Blackjack, and
+Hold'em expose a host-only plus button that appends additional human seats, up to
+eight configured seats. The last empty additional seat can be removed.
+The plus button occupies the next available grid cell starting at the fifth seat,
+showing only the plus icon. At eight seats it disappears.
+Players can upload or clear their Seat background in the account appearance settings,
+with a live preview. Each occupied seat uses its player's uploaded artwork, synchronized
+through profile updates. Bots use the bundled [mechanical dealer artwork](../client/src/assets/room-backgrounds/README.md);
+empty seats and human seats without artwork keep the theme surface.
+Additional seats persist and synchronize through the room API. Starting is temporarily
+limited to four configured seats with four seated players, for every mode; additional
+seats must be emptied and removed before starting. Ready remains clickable while
+connected and idle: invalid player/seat counts show a dismissible MUI Snackbar warning
+instead of permanent progress text; spectators are prompted to sit before preparing.
+Compact screens use two equal-width
+columns with smaller avatars and controls, allowing up to four rows for eight seats.
+The seat list scrolls vertically when those rows exceed the available table height.
+
 The selected game's Rules link opens a themed MUI dialog with detailed English and
 Traditional Chinese instructions, scoring tables, examples, and shared room rules.
 Keep this content in `client/src/game-rules-i18n.ts` aligned with the implemented

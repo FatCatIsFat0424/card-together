@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Add from '@mui/icons-material/Add';
 import ArrowDownward from '@mui/icons-material/ArrowDownward';
 import ArrowUpward from '@mui/icons-material/ArrowUpward';
 import AssignmentOutlined from '@mui/icons-material/AssignmentOutlined';
@@ -23,6 +24,7 @@ import MenuBookOutlined from '@mui/icons-material/MenuBookOutlined';
 import MicNone from '@mui/icons-material/MicNone';
 import MusicNote from '@mui/icons-material/MusicNote';
 import Pause from '@mui/icons-material/Pause';
+import PersonOutline from '@mui/icons-material/PersonOutlineOutlined';
 import PlayArrow from '@mui/icons-material/PlayArrow';
 import Repeat from '@mui/icons-material/Repeat';
 import RepeatOne from '@mui/icons-material/RepeatOne';
@@ -38,6 +40,7 @@ import WarningAmber from '@mui/icons-material/WarningAmber';
 import styles from './AppIcon.module.css';
 
 const ICONS = {
+  add: Add, person: PersonOutline,
   arrowDown: ArrowDownward, arrowUp: ArrowUpward, info: AssignmentOutlined,
   chat: ChatBubbleOutline, check: Check, agree: CheckCircleOutline,
   previousPage: ChevronLeft, nextPage: ChevronRight, circle: Circle,

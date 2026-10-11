@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
+import Alert from '@mui/material/Alert';
+import Snackbar from '@mui/material/Snackbar';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { FLEXIBLE_SEAT_GAMES, GAME_TYPES, MAX_SPECTATORS } from '@shared/constants';
-import { minPlayers } from '@shared/rules/seats';
+import { EXPANDABLE_ROOM_GAMES, GAME_TYPES, MAX_ROOM_SEATS, MAX_SPECTATORS, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import type {
-  BlackjackOptions, GameType, NinetyNineOptions, PlayerInfo, Seat, SevensOptions, TimeControl,
+  BlackjackOptions, GameType, NinetyNineOptions, PlayerInfo, Seat, SeatInfo, SevensOptions, TimeControl,
 } from '@shared/types';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import { socket } from '../socket';
-import { tableBackgroundStyle } from '../account-appearance';
+import { seatBackgroundStyle, tableBackgroundStyle } from '../account-appearance';
 import { useAccountStore } from '../stores/account-store';
 import { usePlayerStore } from '../stores/player-store';
 import { useRoomStore } from '../stores/room-store';
@@ -25,13 +26,18 @@ import { AppIcon } from '../components/AppIcon';
 import { GameRulesDialog } from '../components/GameRulesDialog';
 import { roomRulesContext } from '../game-rules-context';
 import styles from './RoomPage.module.css';
-import { roomProgress, unreadCount } from './room-progress';
+import botSeatBackground from '../assets/room-backgrounds/bot-seat.webp';
+import { unreadCount } from './room-progress';
 
 const COPIED_MS = 2000;
 
-const SEAT_STYLE_MAP: Record<Seat, string> = {
-  N: styles.seatNorth, E: styles.seatEast, S: styles.seatSouth, W: styles.seatWest,
-};
+interface RoomSeatCard {
+  readonly key: string;
+  readonly label: string;
+  readonly info: SeatInfo;
+  readonly seat?: Seat;
+  readonly additionalIndex?: number;
+}
 
 export function RoomPage(): ReactNode {
   const { roomCode } = useParams<{ roomCode: string }>();
@@ -48,12 +54,14 @@ export function RoomPage(): ReactNode {
   const [chatOpen, setChatOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [readyNotice, setReadyNotice] = useState<{ id: number; message: string } | null>(null);
   const messageCount = useChatStore((state) => state.messages.length);
   const [seenMessages, setSeenMessages] = useState(messageCount);
   const unread = unreadCount(messageCount, seenMessages, chatOpen);
   const attemptedRoom = useRef<string | null>(null);
   const hadRoom = useRef(false);
   const leaving = useRef(false);
+  const myAdditionalSeat = roomInfo?.additionalSeats?.findIndex((entry) => entry.player?.id === playerId) ?? -1;
   const connectionReady = useConnectionReady();
   const blocked = busy || !connectionReady;
   const isReady = mySeat ? roomInfo?.seats[mySeat].isReady ?? false : false;
@@ -107,11 +115,41 @@ export function RoomPage(): ReactNode {
     setError('');
     socket.timeout(10000).emit('room:changeSeat', { seat }, handleResult);
   };
-  const ready = (): void => {
-    if (!mySeat) return;
+  const changeAdditionalSeat = (index: number): void => {
     setBusy(true);
     setError('');
-    socket.timeout(10000).emit(isReady ? 'room:unready' : 'room:ready', handleResult);
+    socket.timeout(10000).emit('room:changeAdditionalSeat', { index }, handleResult);
+  };
+  const addSeat = (): void => {
+    setBusy(true);
+    setError('');
+    socket.timeout(10000).emit('room:addSeat', handleResult);
+  };
+  const removeSeat = (): void => {
+    setBusy(true);
+    setError('');
+    socket.timeout(10000).emit('room:removeSeat', handleResult);
+  };
+  const ready = (): void => {
+    if (blocked || !roomInfo) return;
+    if (!isReady && ((roomInfo.additionalSeats?.length ?? 0) > 0
+      || Object.values(roomInfo.seats).some(({ player }) => !player))) {
+      setReadyNotice({ id: Date.now(), message: t('room.fourPlayersOnly') });
+      return;
+    }
+    if (!mySeat) {
+      setReadyNotice({ id: Date.now(), message: t('room.spectatorHint') });
+      return;
+    }
+    setBusy(true);
+    setError('');
+    setReadyNotice(null);
+    socket.timeout(10000).emit(isReady ? 'room:unready' : 'room:ready', (timeout, result) => {
+      setBusy(false);
+      if (timeout || !result?.success) setReadyNotice({ id: Date.now(),
+        message: timeout ? t('auth.connectionError') : result?.error ?? t('common.error'),
+      });
+    });
   };
   const setGameType = (gameType: GameType): void => {
     setBusy(true);
@@ -183,16 +221,21 @@ export function RoomPage(): ReactNode {
     {error && <Link to="/">{t('nav.lobby')}</Link>}
   </main>;
 
-  const progress = roomProgress(roomInfo.seats);
-  // Blackjack and Hold'em start with two to four seated players; empty seats sit out.
-  const flexible = FLEXIBLE_SEAT_GAMES.includes(roomInfo.gameType);
-  const needed = minPlayers(roomInfo.gameType);
-  const progressText = t(flexible ? 'room.progressFlexible' : 'room.progress',
-    { seated: String(progress.seated), ready: String(progress.ready) });
+  const additionalSeats = roomInfo.additionalSeats ?? [];
+  const seatCards: RoomSeatCard[] = [
+    ...SEAT_ORDER_CLOCKWISE.map((seat) => ({ key: seat, label: t(`seat.${seat}`), info: roomInfo.seats[seat], seat })),
+    ...additionalSeats.map((info, index) => ({ key: `additional-${index}`,
+      label: t('room.additionalSeat', { n: String(index + 5) }), info, additionalIndex: index })),
+  ];
   const spectators = roomInfo.spectators ?? [];
-  const hint = !mySeat ? t('room.spectatorHint')
-    : progress.seated < needed ? flexible ? t('room.waitingFlexible', { n: String(needed) }) : t('room.waiting')
-      : t(isReady ? 'room.waitingReady' : flexible ? 'room.pressReadyFlexible' : 'room.pressReady');
+  const expandableSeats = EXPANDABLE_ROOM_GAMES.includes(roomInfo.gameType);
+  const addSeatButton = isHost && expandableSeats
+    && seatCards.length < MAX_ROOM_SEATS && <button type="button"
+      className={`${styles.seatSlot} ${styles.addSeatSlot}`}
+      disabled={blocked || roomInfo.status !== 'waiting'}
+      aria-label={t('room.addSeat')} title={t('room.addSeat')} onClick={addSeat}>
+      <AppIcon name="add" />
+    </button>;
 
   return (
     <main className={`${styles.roomContainer} ${styles.roomLayout} ${chatOpen ? styles.chatOpen : ''}`}>
@@ -271,16 +314,24 @@ export function RoomPage(): ReactNode {
       </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={`${styles.tableArea} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}>
-      <div className={styles.seatLayout}>
-        {(['N', 'E', 'S', 'W'] as Seat[]).map((seat) => {
-          const seatInfo = roomInfo.seats[seat];
+      <div className={styles.seatStrip}>
+      <div className={`${styles.seatLayout} ${expandableSeats ? styles.expandedSeats : ''}`}>
+        {seatCards.map((seatCard) => {
+          const seatInfo = seatCard.info;
           const player = seatInfo.player;
-          const className = [styles.seatSlot, SEAT_STYLE_MAP[seat],
+          const seatStyle = player?.isBot
+            ? { '--seat-image': `url("${botSeatBackground}")` } as CSSProperties
+            : seatBackgroundStyle(player);
+          const sit = (): void => {
+            if (seatCard.seat) changeSeat(seatCard.seat);
+            else if (seatCard.additionalIndex !== undefined) changeAdditionalSeat(seatCard.additionalIndex);
+          };
+          const className = [styles.seatSlot,
             player ? styles.seatSlotOccupied : '',
             player?.id === playerId ? styles.seatSlotMine : ''].filter(Boolean).join(' ');
           if (player) return (
-            <div key={seat} className={className}>
-              <div className={styles.seatLabel}>{t(`seat.${seat}`)}</div>
+            <div key={seatCard.key} className={`${className} ${seatStyle ? styles.customSeat : ''}`} style={seatStyle}>
+              <div className={styles.seatLabel}>{seatCard.label}</div>
               <PlayerLink player={player} size="medium" />
               <div className={styles.seatStatus}>
                 {player.id === roomInfo.hostId &&
@@ -289,31 +340,33 @@ export function RoomPage(): ReactNode {
                 <span className={seatInfo.isReady ? styles.seatReadyBadge : styles.seatNotReadyBadge}>
                   {t(player.isBot ? 'room.botReady' : seatInfo.isReady ? 'room.ready.status' : 'room.seatTaken')}</span>
               </div>
-              {isHost && player.isBot && <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
-                disabled={blocked} onClick={() => removeBot(seat)}>{t('room.removeBot')}</button>}
+              {isHost && player.isBot && seatCard.seat && <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
+                disabled={blocked} onClick={() => { if (seatCard.seat) removeBot(seatCard.seat); }}>{t('room.removeBot')}</button>}
               {isHost && !player.isBot && player.id !== playerId && roomInfo.status === 'waiting' &&
                 <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
                   disabled={blocked} onClick={() => kick(player)}>{t('room.kick')}</button>}
             </div>
           );
           return (
-            <div key={seat} className={`${className} ${styles.emptySlot}`}>
-              <button type="button" disabled={blocked} className={styles.seatChoice}
-                onClick={() => changeSeat(seat)}>
-                <span className={styles.seatLabel}>{t(`seat.${seat}`)}</span>
+            <div key={seatCard.key} className={`${className} ${styles.emptySlot}`}>
+              <button type="button" disabled={blocked || roomInfo.status !== 'waiting'} className={styles.seatChoice}
+                onClick={sit}>
+                <span className={styles.seatLabel}>{seatCard.label}</span>
+                <AppIcon name="person" className={styles.emptyIcon} />
                 <span className={styles.seatEmpty}>{t('room.seatEmpty')}</span>
               </button>
-              {isHost && <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
-                disabled={blocked} onClick={() => addBot(seat)}>{t('room.addBot')}</button>}
+              {isHost && seatCard.seat && <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
+                disabled={blocked} onClick={() => { if (seatCard.seat) addBot(seatCard.seat); }}>{t('room.addBot')}</button>}
+              {isHost && seatCard.additionalIndex === additionalSeats.length - 1 && <button type="button"
+                className={styles.removeSeatButton} disabled={blocked || roomInfo.status !== 'waiting'}
+                aria-label={t('room.removeSeat')} title={t('room.removeSeat')} onClick={removeSeat}>
+                <AppIcon name="close" />
+              </button>}
             </div>
           );
         })}
-        <div className={styles.tableCenter}>
-          <div className={styles.tableCenterText}>
-            <strong>{progressText}</strong>
-            <span>{hint}</span>
-          </div>
-        </div>
+        {addSeatButton}
+      </div>
       </div>
       <section className={styles.spectators} aria-labelledby="room-spectators-label">
         <span className={styles.spectatorsLabel} id="room-spectators-label">
@@ -332,16 +385,23 @@ export function RoomPage(): ReactNode {
           ))}</ul>}
       </section>
       <div className={styles.roomFooter}>
-        <p className={styles.progress} role="status">{progressText}</p>
-        {mySeat && <button type="button" className="btn btn-outline" onClick={standUp}
+        {(mySeat || myAdditionalSeat >= 0) && <button type="button" className="btn btn-outline" onClick={standUp}
           disabled={blocked || roomInfo.status !== 'waiting'}>{t('room.standUp')}</button>}
         {isHost && <button type="button" className="btn btn-outline" onClick={fillBots}
           disabled={blocked || !hasEmptySeat}>{t('room.fillBots')}</button>}
         <button className={`btn ${isReady ? 'btn-danger' : 'btn-success'} ${styles.readyBtn}`}
-          onClick={ready} disabled={blocked || !mySeat}>{t(isReady ? 'room.unready' : 'room.ready')}</button>
+          onClick={ready} disabled={blocked}>{t(isReady ? 'room.unready' : 'room.ready')}</button>
       </div>
       </div>
       <div className={styles.chat} id="room-chat"><ChatPanel /></div>
+      <Snackbar key={readyNotice?.id} open={readyNotice !== null} autoHideDuration={5000}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        onClose={(_, reason) => { if (reason !== 'clickaway') setReadyNotice(null); }}>
+        <Alert severity="warning" variant="filled" closeText={t('table.close')}
+          onClose={() => setReadyNotice(null)} sx={{ width: '100%' }}>
+          {readyNotice?.message}
+        </Alert>
+      </Snackbar>
       {rulesOpen && <GameRulesDialog gameType={roomInfo.gameType} context={roomRulesContext(roomInfo)}
         onClose={() => setRulesOpen(false)} />}
     </main>

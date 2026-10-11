@@ -61,6 +61,8 @@ export interface RoomInfo {
   readonly gameType: GameType;
   readonly status: RoomStatus;
   readonly seats: SeatMap;
+  /** Additional waiting-room seats, numbered from 5; omitted by older snapshots. */
+  readonly additionalSeats?: readonly SeatInfo[];
   readonly createdAt: number;
   /** Host: the creator; passes to the next member in join order when they leave */
   readonly hostId: string;

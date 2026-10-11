@@ -51,9 +51,11 @@ vi.mock('../../../client/src/stores/game-store', () => ({
     select({ phase: null, visible: null, log: [], currentTurnSeat: null }),
 }));
 
-import { cardBackStyle, tableBackgroundStyle } from '../../../client/src/account-appearance';
+import { cardBackStyle, seatBackgroundStyle, tableBackgroundStyle } from '../../../client/src/account-appearance';
 import { GameShell } from '../../../client/src/games/GameShell';
 import { RoomPage } from '../../../client/src/pages/RoomPage';
+import roomStyles from '../../../client/src/pages/RoomPage.module.css';
+import botSeatBackground from '../../../client/src/assets/room-backgrounds/bot-seat.webp';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
 
 const alice: PlayerInfo = {
@@ -132,5 +134,39 @@ describe('personal account appearance', () => {
     const html = renderRoom();
     expect(html).toContain(`--table-image:url(&quot;/api/media/${BACKGROUND}&quot;)`);
     expect(html).toContain('--table-image-opacity:0.2');
+  });
+
+  it('should use the default bot artwork while preserving human artwork and empty seats', () => {
+    state.account = { ...state.account, seatBackground: BACKGROUND };
+    state.room = { ...room(), seats: { ...room().seats,
+      N: { player: { ...alice, seatBackground: CARD_BACK }, isReady: false },
+      E: { player: { ...alice, id: 'bot-e', isBot: true }, isReady: true },
+      S: { player: { ...alice, id: 'bot-s', isBot: true, seatBackground: BACKGROUND }, isReady: true },
+    } };
+    const html = renderRoom();
+    expect(html.split(`--seat-image:url(&quot;${botSeatBackground}&quot;)`)).toHaveLength(3);
+    expect(html.split(roomStyles.customSeat)).toHaveLength(4);
+    expect(html.match(/--seat-image:/g)).toHaveLength(3);
+    expect(html).toContain(`--seat-image:url(&quot;/api/media/${CARD_BACK}&quot;)`);
+    expect(html).not.toContain(BACKGROUND);
+    expect(html).toContain('West');
+  });
+
+  it('should render each player seat artwork instead of the viewing account background', () => {
+    const otherBackground = `${'c'.repeat(64)}.jpg`;
+    state.account = { ...state.account, seatBackground: BACKGROUND };
+    state.room = { ...room(), seats: { ...room().seats,
+      N: { player: { ...alice, seatBackground: CARD_BACK }, isReady: false },
+      E: { player: { ...alice, id: 'bob', seatBackground: otherBackground }, isReady: false },
+    } };
+    const html = renderRoom();
+    expect(html.match(/--seat-image:/g)).toHaveLength(2);
+    expect(html).toContain(`--seat-image:url(&quot;/api/media/${CARD_BACK}&quot;)`);
+    expect(html).toContain(`--seat-image:url(&quot;/api/media/${otherBackground}&quot;)`);
+    expect(html).not.toContain(BACKGROUND);
+    expect(seatBackgroundStyle({})).toBeUndefined();
+    expect(seatBackgroundStyle({ seatBackground: null })).toBeUndefined();
+    state.room = room();
+    expect(renderRoom()).not.toContain('--seat-image:');
   });
 });

@@ -18,7 +18,7 @@ import { AppCheckbox } from '../components/AppCheckbox';
 import styles from './AccountPages.module.css';
 import editorStyles from './AccountPage.module.css';
 
-type MediaField = 'avatarImage' | 'tableBackground' | 'cardBack';
+type MediaField = 'avatarImage' | 'seatBackground' | 'tableBackground' | 'cardBack';
 type OpacityField = 'tableBackgroundOpacity' | 'cardBackOpacity';
 type SettingField = MediaField | OpacityField | 'matchesPublic';
 
@@ -27,13 +27,14 @@ type AccountTab = typeof ACCOUNT_TABS[number];
 
 const RESIZE = {
   avatarImage: { size: 256, square: true, quality: 0.9, fallbackType: 'image/png' },
+  seatBackground: { size: 1280, square: false, quality: 0.85, fallbackType: 'image/jpeg' },
   tableBackground: { size: 1920, square: false, quality: 0.85, fallbackType: 'image/jpeg' },
   // JPEG fallback keeps a 512-pixel photo well under the 512 KiB card back limit.
   cardBack: { size: 512, square: false, quality: 0.85, fallbackType: 'image/jpeg' },
 } as const;
 
 const PURPOSE: Record<MediaField, MediaPurpose> = {
-  avatarImage: 'avatar', tableBackground: 'background', cardBack: 'cardBack',
+  avatarImage: 'avatar', seatBackground: 'background', tableBackground: 'background', cardBack: 'cardBack',
 };
 
 export function AccountPage(): ReactNode {
@@ -60,6 +61,7 @@ export function AccountPage(): ReactNode {
   const [opacityDraft, setOpacityDraft] = useState<Partial<Record<OpacityField, number>>>({});
   const avatarInput = useRef<HTMLInputElement>(null);
   const backgroundInput = useRef<HTMLInputElement>(null);
+  const seatBackgroundInput = useRef<HTMLInputElement>(null);
   const cardBackInput = useRef<HTMLInputElement>(null);
   const accountId = account?.id;
 
@@ -261,6 +263,25 @@ export function AccountPage(): ReactNode {
             <section className={editorStyles.appearance} aria-labelledby="profile-appearance-heading">
               <h2 id="profile-appearance-heading">{t('profile.appearance')}</h2>
               <p className={styles.hint}>{t('profile.appearanceAutoSave')}</p>
+              <div className={editorStyles.imageSetting}>
+                <div className={editorStyles.imageHeading}>
+                  <h3>{t('profile.seatBackground')}</h3>
+                  <div className={editorStyles.compactActions}>
+                    <input ref={seatBackgroundInput} type="file" accept="image/*" hidden
+                      onChange={chooseImage('seatBackground')} />
+                    <button type="button" className="btn btn-outline" disabled={mediaBusy !== null}
+                      onClick={() => seatBackgroundInput.current?.click()}>
+                      {mediaBusy === 'seatBackground' ? t('profile.uploading') : t('profile.uploadBackground')}
+                    </button>
+                    {account.seatBackground && <button type="button" className="btn btn-outline"
+                      disabled={mediaBusy !== null}
+                      onClick={() => void patchSetting('seatBackground', async () => null)}>
+                      {t('profile.removeBackground')}</button>}
+                  </div>
+                </div>
+                <p className={styles.hint}>{t('profile.seatBackgroundHelp')}</p>
+                {mediaFeedback('seatBackground')}
+              </div>
               <div className={editorStyles.imageSetting}>
                 <div className={editorStyles.imageHeading}>
                   <h3>{t('profile.background')}</h3>

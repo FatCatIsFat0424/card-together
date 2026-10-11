@@ -94,7 +94,7 @@ describe('two to four seat tables', () => {
     gameManager.restoreGames([]);
   });
 
-  it('should start Blackjack and Hold\'em with two or three ready seats while other games need four', () => {
+  it('should block two- and three-player room starts for every mode during the four-player rollout', () => {
     const code = roomManager.createRoom('blackjack', 'host');
     roomManager.joinRoom(code, 'guest');
     roomManager.joinRoom(code, 'third');
@@ -106,16 +106,16 @@ describe('two to four seat tables', () => {
     // The guest sitting down asked the host to confirm the new table.
     expect(roomManager.isAllReady(code)).toBe(false);
     roomManager.setReady(code, 'host', true);
-    expect(roomManager.isAllReady(code)).toBe(true);
+    expect(roomManager.isAllReady(code)).toBe(false);
     expect(Object.keys(roomManager.getSeatPlayers(code)!)).toEqual(['N', 'S']);
 
     roomManager.changeSeat(code, player('third'), 'E');
     expect(roomManager.getRoomInfo(code)!.seats.N.isReady).toBe(false);
     for (const id of ['host', 'guest', 'third']) roomManager.setReady(code, id, true);
-    expect(roomManager.isAllReady(code)).toBe(true);
+    expect(roomManager.isAllReady(code)).toBe(false);
     expect(roomManager.setGameType(code, 'host', 'holdem').success).toBe(true);
     for (const id of ['host', 'guest', 'third']) roomManager.setReady(code, id, true);
-    expect(roomManager.isAllReady(code)).toBe(true);
+    expect(roomManager.isAllReady(code)).toBe(false);
 
     expect(roomManager.setGameType(code, 'host', 'bridge').success).toBe(true);
     for (const id of ['host', 'guest', 'third']) roomManager.setReady(code, id, true);
@@ -283,7 +283,8 @@ it('records a two-player Hold\'em match with only the seated accounts', async ()
         roomManager.changeSeat(code, info, index === 0 ? 'N' : 'S');
       });
       for (const account of accounts) roomManager.setReady(code, account.id, true);
-      expect(roomManager.isAllReady(code)).toBe(true);
+      // The engine retains legacy two-seat snapshot compatibility; new room starts are gated.
+      expect(roomManager.isAllReady(code)).toBe(false);
       roomManager.setRoomStatus(code, 'playing');
       expect(gameManager.startGame(code, 'holdem', roomManager.getSeatPlayers(code)!).success).toBe(true);
     });
