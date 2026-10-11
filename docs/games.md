@@ -317,7 +317,10 @@ The host can enable **Dragon Slaying (close suit on A or K)**, labelled **斬龍
 Traditional Chinese, in a waiting Sevens room. It is off by default. When enabled,
 playing either A or K closes that entire suit row immediately:
 neither end accepts another card, while other suits remain playable. Closed rows are
-marked on the table. Changing the option clears human readiness; the setting is fixed
+marked on the table. The closing play is followed by a 2.4-second presentation without text: a blade
+sweeps the row from left to right, darkening it and setting it alight in the same order, and
+the row stays darkened afterwards. Reduced motion shows a still frame; the next turn waits for it.
+Changing the option clears human readiness; the setting is fixed
 for the match and survives server restarts. Legacy snapshots without the setting use
 standard rules.
 

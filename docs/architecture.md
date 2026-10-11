@@ -125,7 +125,7 @@ passes wait for the shared presentation deadline.
 | Big Two play / pass / round winner | 1,300 / 1,000 / 2,000 ms |
 | Red Points play or flip/capture | 1,900 ms per log entry |
 | Ninety-Nine play / elimination | 1,900 / 2,500 ms |
-| Sevens play / cover | 1,300 / 1,000 ms |
+| Sevens play / cover / Dragon Slaying close | 1,300 / 1,000 / 2,400 ms |
 | Chinese Poker row reveal / sweep / home run | 2,500 / 1,500 / 2,500 ms |
 | Liar's Deck new round / play / LIAR call / trigger suspense / pull result | 2,000 / 1,300 / 2,500 / 2,500 / 1,500 ms |
 | Blackjack deal / hit / double / stand / split / dealer reveal / dealer draw / settlement | 1,800 / 1,000 / 1,300 / 700 / 1,300 / 1,300 / 1,000 / 2,500 ms |

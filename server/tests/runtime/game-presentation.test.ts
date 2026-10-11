@@ -150,6 +150,32 @@ describe('authoritative game presentation', () => {
     ]);
   });
 
+  it('should follow a Dragon Slaying A or K with a slay frame that delays the next turn', () => {
+    games.startGame(CODE, 'sevens', players);
+    const state = games.getGameState(CODE)!;
+    if (state.gameType !== 'sevens') throw new Error('Expected Sevens');
+    const king = { suit: 'hearts', rank: 13 } as const;
+    const ace = { suit: 'clubs', rank: 14 } as const;
+    state.log = [
+      { type: 'play', seat: 'N', card: king, timestamp: 1 },
+      { type: 'play', seat: 'W', card: { suit: 'hearts', rank: 12 }, timestamp: 1 },
+      { type: 'play', seat: 'S', card: ace, timestamp: 1 },
+    ];
+    state.presentation = { id: 'sevens', startedAt: 10000, logStart: 0, timingVersion: 2 };
+    expect(getPresentationFrames(state).map((frame) => frame.kind)).toEqual(['play', 'play', 'play']);
+
+    Object.assign(state, { options: { closeOnEnd: true } });
+    expect(getPresentationFrames(state)).toEqual([
+      { key: 'sevens:0', kind: 'play', durationMs: 1300, seat: 'N', cards: [king] },
+      { key: 'sevens:0:slay', kind: 'slay', durationMs: 2400, seat: 'N', cards: [king] },
+      { key: 'sevens:1', kind: 'play', durationMs: 1300, seat: 'W', cards: [{ suit: 'hearts', rank: 12 }] },
+      { key: 'sevens:2', kind: 'play', durationMs: 1300, seat: 'S', cards: [ace] },
+      { key: 'sevens:2:slay', kind: 'slay', durationMs: 2400, seat: 'S', cards: [ace] },
+    ]);
+    expect(getPresentationEndsAt(state)).toBe(10000 + 3 * 1300 + 2 * 2400);
+    expect(frameLogIndex(getPresentationFrames(state)[4])).toBe(2);
+  });
+
   it("should open Liar's Deck with the table card and resolve a pull only after its suspense", () => {
     games.startGame(CODE, 'liarsdeck', players);
     const state = games.getGameState(CODE)!;

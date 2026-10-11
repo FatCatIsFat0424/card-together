@@ -23,6 +23,7 @@ import {
 } from './sevens-view';
 import type { SevensHandMode, SevensRow } from './sevens-view';
 import { AppIcon } from '../../components/AppIcon';
+import { DragonSlay } from './DragonSlay';
 import styles from './SevensTable.module.css';
 import { isOwnTurn, isSpectator } from '../observer-view';
 
@@ -50,16 +51,20 @@ function ChipList({ cards, label }: { cards: readonly Card[]; label?: string }):
   </span>;
 }
 
-function SuitRow({ row, last, preview }: { row: SevensRow; last: Card | null; preview: Card | null }): ReactNode {
+function SuitRow({ row, last, preview, slaying }: {
+  row: SevensRow; last: Card | null; preview: Card | null; slaying: boolean;
+}): ReactNode {
   const { t } = useI18nStore();
   const played = row.slots.filter((slot) => slot.state === 'played');
   const range = played.length > 0
     ? `${RANK_DISPLAY[rankAtOrder(played[0].order)]}–${RANK_DISPLAY[rankAtOrder(played[played.length - 1].order)]}`
     : t('sevens.waiting');
   const label = `${SUIT_SYMBOLS[row.suit]} ${range}${row.closed ? ` ${t('sevens.closed')}` : ''}`;
-  return <div className={styles.row} role="group" aria-label={label}>
+  // A closed row stays dark; while its slash plays, the effect layer darkens it behind the blade instead.
+  return <div className={`${styles.row} ${row.closed && !slaying ? styles.closedRow : ''}`} role="group"
+    aria-label={label} data-sevens-row={row.suit}>
     <span className={`${styles.rowSuit} ${isRed(row.suit) ? styles.redSuit : ''}`} aria-hidden="true">
-      {SUIT_SYMBOLS[row.suit]}
+      <span className={styles.suitGlyph}>{SUIT_SYMBOLS[row.suit]}</span>
       {row.closed && <span className={styles.closedLabel}>{t('sevens.closed')}</span>}
     </span>
     <div className={styles.slots}>
@@ -94,13 +99,14 @@ function SuitRow({ row, last, preview }: { row: SevensRow; last: Card | null; pr
   </div>;
 }
 
-function Centre({ game, targets, preview }: {
-  game: SevensVisibleState; targets: readonly Card[]; preview: Card | null;
+function Centre({ game, targets, preview, slaying }: {
+  game: SevensVisibleState; targets: readonly Card[]; preview: Card | null; slaying: Suit | null;
 }): ReactNode {
   const rows = sevensRows(game.table, targets, game.options?.closeOnEnd);
   const last = lastPlayedCard(game.log);
   return <div className={styles.centre}>
-    {rows.map((row) => <SuitRow key={row.suit} row={row} last={last} preview={preview} />)}
+    {rows.map((row) => <SuitRow key={row.suit} row={row} last={last} preview={preview}
+      slaying={row.suit === slaying} />)}
   </div>;
 }
 
@@ -194,7 +200,9 @@ function ResultOverlay({ result, pending, error, disabled, onBack }: {
 }
 
 export function SevensTable(): ReactNode {
-  const { locked } = useGamePresentation();
+  const { locked, frame, frameStartedAt } = useGamePresentation();
+  // The slash is drawn across the real suit row, so the table stays in view for this frame.
+  const slaying = frame?.kind === 'slay' ? frame : null;
   const connectionReady = useConnectionReady();
   const game = useGameStore((state) => state.sevens);
   const { t } = useI18nStore();
@@ -295,9 +303,11 @@ export function SevensTable(): ReactNode {
   return (
     <GameShell
       info={<Info game={game} />}
-      centre={<Centre game={game} targets={targets}
+      centre={<Centre game={game} targets={targets} slaying={slaying?.cards[0]?.suit ?? null}
         preview={preview && targets.some((card) => sameCard(card, preview)) ? preview : null} />}
       hand={handZone}
+      tableEffect={slaying && <DragonSlay key={slaying.key} frame={slaying} frameStartedAt={frameStartedAt} />}
+      centreVisible={slaying !== null}
       overlay={game.phase === 'scoring' && game.result && <ResultOverlay result={game.result}
         pending={actionPending} error={actionError} disabled={!connectionReady} onBack={backToRoom} />}
       error={game.phase !== 'scoring' ? actionError : undefined}

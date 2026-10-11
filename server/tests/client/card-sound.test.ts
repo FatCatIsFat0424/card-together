@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { disposeCardSounds, playCardSound, playOutSound, unlockCardSounds } from '../../../client/src/audio/card-sound';
+import {
+  disposeCardSounds, playCardSound, playOutSound, playSlashSound, unlockCardSounds,
+} from '../../../client/src/audio/card-sound';
 
 interface FakeNode {
   connect: ReturnType<typeof vi.fn>;
@@ -76,6 +78,21 @@ describe('card sounds', () => {
     disposeCardSounds();
     expect(sources.every((source) => source.onended === null)).toBe(true);
     expect(context.close).toHaveBeenCalledOnce();
+  });
+
+  it('should play the Dragon Slaying whoosh and fire only while audio runs, releasing both voices', () => {
+    const { context, sources, nodes } = installAudio();
+    playSlashSound();
+    unlockCardSounds();
+    playSlashSound();
+    expect(sources).toHaveLength(0);
+    context.state = 'running';
+    playSlashSound();
+    expect(sources).toHaveLength(2);
+    expect(sources.map((source) => source.start.mock.calls[0][0])).toEqual([0.25, 0.3]);
+    expect(context.createBiquadFilter.mock.results.map((result) => result.value.type)).toEqual(['bandpass', 'lowpass']);
+    for (const source of sources) source.onended?.();
+    expect([...sources, ...nodes].every((node) => node.disconnect.mock.calls.length === 1)).toBe(true);
   });
 
   it('should stop pending tones on disposal and require another gesture to reopen', () => {

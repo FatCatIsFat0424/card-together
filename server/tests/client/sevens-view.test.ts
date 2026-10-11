@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { Card, SevensLogEntry, SevensTable } from '@shared/types';
 import {
   coverCost, coverSelection, lastPlayedCard, rankAtOrder, recentMoves, sevensHandMode, sevensRows,
+  SLAY_DURATION_MS, SLAY_PARTICLES, SLAY_SWEEP_MS, SLAY_SWEEP_START_MS, slayAnchor, slayArrivalMs,
 } from '../../../client/src/games/sevens/sevens-view';
+import { getPresentationFrames } from '@shared/game-presentation';
 import { sevensTranslations } from '../../../client/src/sevens-i18n';
 
 const c = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit });
@@ -134,6 +136,51 @@ describe('log helpers', () => {
     expect(recentMoves(log, 10)).toHaveLength(3);
     expect(recentMoves(log, 0)).toEqual([]);
     expect(log.map((entry) => entry.timestamp)).toEqual([1, 2, 3]);
+  });
+});
+
+describe('dragon slaying effect', () => {
+  it('matches the shared frame length and keeps every particle inside it', () => {
+    const frames = getPresentationFrames({
+      gameType: 'sevens', phase: 'playing', options: { closeOnEnd: true }, presentation: { id: 'p', startedAt: 0, logStart: 0 },
+      log: [{ type: 'play', seat: 'N', card: c(13, 'hearts'), timestamp: 0 }],
+    } as unknown as Parameters<typeof getPresentationFrames>[0]);
+    expect(frames.find((frame) => frame.kind === 'slay')?.durationMs).toBe(SLAY_DURATION_MS);
+    expect(SLAY_SWEEP_START_MS + SLAY_SWEEP_MS).toBeLessThan(SLAY_DURATION_MS);
+    for (const particle of SLAY_PARTICLES) {
+      expect(particle.t).toBeGreaterThanOrEqual(0);
+      expect(particle.t).toBeLessThanOrEqual(1);
+      expect(particle.delayMs + particle.lifeMs).toBeLessThanOrEqual(SLAY_DURATION_MS);
+    }
+  });
+
+  it('lights every layer left to right, never before the blade reaches its position', () => {
+    const layers = new Set(SLAY_PARTICLES.map((particle) => particle.layer));
+    expect([...layers].sort()).toEqual(['back', 'core', 'ember', 'mid', 'smoke']);
+    for (const layer of layers) {
+      const particles = SLAY_PARTICLES.filter((particle) => particle.layer === layer);
+      for (const particle of particles) expect(particle.delayMs).toBeGreaterThanOrEqual(Math.floor(slayArrivalMs(particle.t)));
+      // Positions advance across the row, spreading each layer along its full width.
+      expect(particles.map((particle) => particle.t)).toEqual([...particles.map((particle) => particle.t)].sort((a, b) => a - b));
+      expect(particles[0].t).toBeLessThan(0.15);
+      expect(particles.at(-1)!.t).toBeGreaterThan(0.85);
+    }
+    expect(slayArrivalMs(0)).toBe(SLAY_SWEEP_START_MS);
+    expect(slayArrivalMs(1)).toBe(SLAY_SWEEP_START_MS + SLAY_SWEEP_MS);
+  });
+
+  it('lays the slash horizontally along the slain row with a small overshoot', () => {
+    const layer = { left: 100, top: 50, width: 800, height: 500 };
+    expect(slayAnchor(layer, { left: 300, top: 400, width: 400, height: 40 })).toEqual({
+      left: 184, y: 370, width: 432, rowLeft: 200, rowWidth: 400, rowHeight: 40,
+    });
+  });
+
+  it('falls back to the middle of the table when the row is not rendered', () => {
+    const layer = { left: 0, top: 0, width: 600, height: 400 };
+    const fallback = { left: 90, y: 200, width: 420, rowLeft: 90, rowWidth: 0, rowHeight: 0 };
+    expect(slayAnchor(layer, null)).toEqual(fallback);
+    expect(slayAnchor(layer, { left: 10, top: 10, width: 0, height: 0 })).toEqual(fallback);
   });
 });
 

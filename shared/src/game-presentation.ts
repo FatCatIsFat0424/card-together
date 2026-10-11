@@ -10,7 +10,7 @@ export interface PresentationFrame {
   readonly kind: 'play' | 'pass' | 'trick' | 'round' | 'capture' | 'eliminated' | 'cover' | 'reveal' | 'shoot'
     | 'homerun' | 'deal' | 'challenge' | 'roulette' | 'shot' | 'hit' | 'stand' | 'double' | 'split'
     | 'dealerReveal' | 'dealerHit' | 'dealerStand' | 'settle' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street'
-    | 'showdown' | 'award' | 'finish';
+    | 'showdown' | 'award' | 'slay' | 'finish';
   readonly durationMs: number;
   readonly seat?: Seat;
   readonly cards: readonly Card[];
@@ -89,6 +89,10 @@ export function getPresentationFrames(
       const entry = game.log[index];
       if (entry.type === 'play') {
         frames.push({ key, kind: 'play', durationMs: playDuration, seat: entry.seat, cards: [entry.card] });
+        // Under Dragon Slaying an A or K always reaches its row end, which closes the whole suit.
+        if (game.options?.closeOnEnd && (entry.card.rank === 14 || entry.card.rank === 13)) {
+          frames.push({ key: `${key}:slay`, kind: 'slay', durationMs: 2400, seat: entry.seat, cards: [entry.card] });
+        }
       } else {
         frames.push({ key, kind: 'cover', durationMs: passDuration, seat: entry.seat, cards: [] });
       }

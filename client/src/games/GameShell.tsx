@@ -6,7 +6,7 @@ import { frameLogIndex } from '@shared/game-presentation';
 import type { PresentationFrame } from '@shared/game-presentation';
 import type { PlayerVisibleGameState, Seat } from '@shared/types';
 import type { TranslationKey } from '../i18n';
-import { playCardSound, playOutSound, unlockCardSounds, disposeCardSounds } from '../audio/card-sound';
+import { playCardSound, playOutSound, playSlashSound, unlockCardSounds, disposeCardSounds } from '../audio/card-sound';
 import { cardBackStyle, tableBackgroundStyle } from '../account-appearance';
 import { useAccountStore } from '../stores/account-store';
 import { useGameStore } from '../stores/game-store';
@@ -119,6 +119,10 @@ interface GameShellProps {
   overlay?: ReactNode;
   /** Action panel layered over the table, e.g. the Bridge bidding controls. */
   panel?: ReactNode;
+  /** Presentation effect layered over the whole table, above the seats. */
+  tableEffect?: ReactNode;
+  /** Keep the table centre in place of the current presentation frame's card. */
+  centreVisible?: boolean;
   /** Action error shown on the table */
   error?: string;
   /** Selectable seats (Ninety-Nine: choose the next player) */
@@ -160,7 +164,7 @@ function FittedCentre({ children, style, responsive }: {
 }
 
 export function GameShell({
-  info, centre, hand, overlay, panel, error, pickableSeats, onPickSeat, turnReady,
+  info, centre, hand, overlay, panel, tableEffect, centreVisible, error, pickableSeats, onPickSeat, turnReady,
 }: GameShellProps): ReactNode {
   const presentation = useGamePresentation();
   const visibleGame = useGameStore((state) => state.visible);
@@ -262,6 +266,7 @@ export function GameShell({
     else if ((frame.kind === 'deal' && visibleGame?.gameType === 'holdem') || frame.kind === 'street'
       || frame.kind === 'showdown') playCardSound();
     else if (frame.kind === 'fold' || frame.kind === 'check') playCardSound(true);
+    else if (frame.kind === 'slay') playSlashSound();
     else if (frame.kind === 'eliminated' || frame.survived === false || eliminatesSeat(visibleGame, frame)) playOutSound();
   }, [presentation.frame, visibleGame]);
 
@@ -373,13 +378,14 @@ export function GameShell({
           ))}
           <FittedCentre responsive={visibleGame?.gameType === 'redpoints' && !presentation.frame}
             style={move ? FLY_FROM[tablePosition(move.seat, bottomSeat)] : undefined}>
-            {presentation.frame && visibleGame ? (
+            {presentation.frame && visibleGame && !centreVisible ? (
               <GamePresentation key={presentation.frame.key} frame={presentation.frame}
                 bottomSeat={bottomSeat} gameType={visibleGame.gameType}
                 elapsedMs={Math.max(0, Date.now() - presentation.frameStartedAt)}
                 summary={presentationSummary(visibleGame, t)} />
             ) : <div className={`${styles.centreBody} ${visibleGame?.presentation ? styles.settledCentre : ''}`}>{centre}</div>}
           </FittedCentre>
+          {tableEffect}
           {outBanner && <p key={outBanner.index} className={styles.outBanner} role="status">
             <AppIcon name="burst" /> {t('table.eliminated', { name: seats?.[outBanner.seat].player?.nickname ?? t(`seat.${outBanner.seat}`) })}
           </p>}

@@ -28,6 +28,9 @@
 
 .redSuit { color: var(--suit-red-ui); }
 
+/* Dragon Slaying: a closed row stays charred, matching the darkness the slash effect leaves behind. */
+.closedRow .slots, .closedRow .suitGlyph { filter: brightness(0.42) saturate(0.45); }
+
 .closedLabel {
   display: block;
   margin-top: 4px;
