@@ -18,6 +18,7 @@ interface AccountStore {
   /** True once this account's socket session has been ready; later drops keep pages mounted. */
   hasConnected: boolean;
   setAccount: (account: AccountProfile) => void;
+  setCoins: (accountId: string, coins: number) => void;
   setConnection: (connection: AccountStore['connection']) => void;
 }
 
@@ -52,11 +53,19 @@ export const useAccountStore = create<AccountStore>((set, get) => ({
       set({ connection: 'connecting', hasConnected: false });
     }
     set((state) => {
-      const nextAccount = retainSnapshotValue(state.account, account);
+      const nextAccount = retainSnapshotValue(state.account, {
+        ...account,
+        coins: Math.max(account.coins ?? 0, state.account?.id === account.id ? state.account.coins ?? 0 : 0),
+      });
       return nextAccount === state.account && state.status === 'authenticated' && !state.error
         ? state : { account: nextAccount, status: 'authenticated', error: '' };
     });
   },
+  setCoins: (accountId, coins) => set((state) => {
+    if (state.account?.id !== accountId || !Number.isSafeInteger(coins) || coins < 0
+      || coins <= (state.account.coins ?? 0)) return state;
+    return { account: { ...state.account, coins } };
+  }),
   setConnection: (connection) => set((state) => state.connection === connection
     ? state : { connection, hasConnected: state.hasConnected || connection === 'ready' }),
 }));

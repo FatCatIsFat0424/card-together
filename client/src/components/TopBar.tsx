@@ -3,7 +3,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { SUIT_SYMBOLS } from '@shared/constants';
+import { GAME_COIN_REWARD, SUIT_SYMBOLS } from '@shared/constants';
 import { rpScore } from '@shared/rules/redpoints';
 import { NN_MAX, nnWinners } from '@shared/rules/ninetynine';
 import { HE_HANDS } from '@shared/rules/holdem';
@@ -136,6 +136,7 @@ export function TopBar(): ReactNode {
   const { t } = useI18nStore();
   const { pathname } = useLocation();
   const accountId = useAccountStore((state) => state.account?.id);
+  const coins = useAccountStore((state) => state.account?.coins ?? 0);
   const roomCode = useRoomStore((state) => state.currentRoomCode);
   const inActiveGame = useRoomStore((state) => state.roomInfo?.status === 'playing' && state.mySeat !== null);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
@@ -211,6 +212,11 @@ export function TopBar(): ReactNode {
       {showLinks && <nav className={styles.links}>{links}</nav>}
       {inGame && <GameChips />}
       <div className={styles.actions}>
+        {accountId && <span className={styles.coinBalance} role="status"
+          aria-label={t('coins.balance', { n: String(coins) })}
+          title={t('coins.earnHint', { n: String(GAME_COIN_REWARD) })}>
+          <AppIcon name="coins" /><span>{coins.toLocaleString()}</span>
+        </span>}
         {showVoice && <div className={styles.group} data-popover="voice">
           <button type="button" className={`${styles.iconBtn} touch-target`} onClick={() => toggle('voice')}
             aria-expanded={open === 'voice'} aria-label={t('topbar.voice')} title={t('topbar.voice')}>

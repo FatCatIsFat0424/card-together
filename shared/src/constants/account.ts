@@ -2,6 +2,8 @@ export const USERNAME_MIN_LENGTH = 3;
 export const USERNAME_MAX_LENGTH = 24;
 export const PASSWORD_MIN_LENGTH = 6;
 export const PASSWORD_MAX_LENGTH = 128;
+/** Granted once per completed game to each participating human account. */
+export const GAME_COIN_REWARD = 10;
 
 /**
  * ASCII letters, digits, and `_`, with single `.` or `-` separators between them. A strict

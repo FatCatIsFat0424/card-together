@@ -123,6 +123,23 @@ describe('bot player interface', () => {
     expect(html).toMatch(/disabled="">Leave Room<\/button>/);
   });
 
+  it('exposes placement handles only for humans managed by a connected waiting-room host', () => {
+    state.room = { ...room(), spectators: [{ ...human, id: 'spectator', nickname: 'Visitor' }] };
+    const html = render(createElement(RoomPage));
+    expect(html).toContain('aria-label="Move Alice"');
+    expect(html).toContain('aria-label="Move Visitor"');
+    expect(html).not.toContain('aria-label="Move Bot East"');
+    expect(html).toContain('data-room-drop="spectator"');
+    state.playerId = 'visitor';
+    expect(render(createElement(RoomPage))).not.toContain('data-seat-drag-handle');
+    state.playerId = human.id;
+    state.connection = 'connecting';
+    expect(render(createElement(RoomPage))).not.toContain('data-seat-drag-handle');
+    state.connection = 'ready';
+    state.room = { ...state.room!, status: 'playing' };
+    expect(render(createElement(RoomPage))).not.toContain('data-seat-drag-handle');
+  });
+
   it('keeps Ready clickable without permanent player-count notices', () => {
     expect(render(createElement(RoomPage))).not.toMatch(/disabled="">Ready<\/button>/);
     state.room = { ...room(), gameType: 'holdem', additionalSeats: [{ player: null, isReady: false }] };

@@ -43,6 +43,8 @@
 .suitRed { color: var(--suit-red-ui); }
 
 .actions { display: flex; align-items: center; gap: var(--spacing-sm); margin-left: auto; flex-shrink: 0; }
+.coinBalance { display: inline-flex; align-items: center; gap: 4px; color: var(--color-warning); font-size: var(--text-sm); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.coinBalance > svg { font-size: var(--text-lg); }
 .prefs { display: flex; align-items: center; gap: var(--spacing-sm); }
 .group { position: relative; }
 
@@ -117,6 +119,7 @@
 }
 
 @media (max-width: 767px) {
+  .coinBalance { font-size: var(--text-xs); }
   .bar { gap: var(--spacing-sm); padding: 0 var(--spacing-sm); }
   .brandTextGame { display: none; }
   .actions { gap: var(--spacing-xs); }

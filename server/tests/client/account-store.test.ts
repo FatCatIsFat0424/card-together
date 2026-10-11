@@ -26,6 +26,22 @@ afterEach(() => {
 });
 
 describe('account store connection state', () => {
+  it('should retain earned coins through stale responses and isolate account changes', () => {
+    const store = useAccountStore.getState();
+    store.setAccount(account('alice'));
+    expect(useAccountStore.getState().account?.coins).toBe(0);
+    store.setCoins('alice', 10);
+    store.setAccount(account('alice'));
+    expect(useAccountStore.getState().account?.coins).toBe(10);
+    for (const value of [-1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) store.setCoins('alice', value);
+    store.setCoins('bob', 1000);
+    store.setCoins('alice', 0);
+    expect(useAccountStore.getState().account?.coins).toBe(10);
+    store.setAccount(account('bob'));
+    expect(useAccountStore.getState().account?.coins).toBe(0);
+    store.setCoins('alice', 1000);
+    expect(useAccountStore.getState().account?.coins).toBe(0);
+  });
   it('should remember the first ready session until the account changes', () => {
     const store = useAccountStore.getState();
     store.setAccount(account('alice'));

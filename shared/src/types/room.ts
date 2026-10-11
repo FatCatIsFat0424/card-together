@@ -20,6 +20,12 @@ export interface SeatInfo {
 /** Seat map: state of the four seats */
 export type SeatMap = Record<Seat, SeatInfo>;
 
+/** Destination for a host moving a human member in a waiting room. */
+export type RoomSeatTarget =
+  | { readonly type: 'seat'; readonly seat: Seat }
+  | { readonly type: 'additional'; readonly index: number }
+  | { readonly type: 'spectator' };
+
 /** Active abort-game vote (account ids) */
 export interface AbortVoteInfo {
   readonly startedBy: string;

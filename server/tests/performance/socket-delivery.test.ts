@@ -59,7 +59,10 @@ describe('socket delivery scope and read-only resume', () => {
       if (actual.gameState?.clock && expected?.gameState?.clock) {
         expected.gameState.clock = { ...expected.gameState.clock, serverNow: actual.gameState.clock.serverNow };
       }
-      expect(actual).toEqual(expected);
+      // Resume also carries a private balance; normal state broadcasts carry game/room data.
+      expect(actual.coins).toBe((await harness.repository.getAccountById(accountId))?.coins ?? 0);
+      const { coins: _coins, ...actualState } = actual;
+      expect(actualState).toEqual(expected);
     }
   }
 

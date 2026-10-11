@@ -71,7 +71,8 @@ export interface Repository {
     expectedStatus?: FriendshipRecord['status'],
   ): Promise<boolean>;
   loadRuntime(): Promise<RuntimeSnapshot | null>;
-  saveRuntime(snapshot: RuntimeSnapshot, matches?: readonly MatchRecord[]): Promise<void>;
+  /** Completed game IDs award coins atomically with runtime/history, once per game. */
+  saveRuntime(snapshot: RuntimeSnapshot, matches?: readonly MatchRecord[], completedGameIds?: readonly string[]): Promise<void>;
   saveMatch(match: MatchRecord): Promise<void>;
   listMatches(accountId: string, limit?: number): Promise<MatchRecord[]>;
   listEmojis(accountId: string): Promise<EmojiRecord[]>;
@@ -93,6 +94,7 @@ export function publicAccount(account: AccountRecord): AccountProfile {
   return {
     id: account.id,
     username: account.username,
+    coins: account.coins ?? 0,
     nickname: account.nickname,
     color: account.color,
     avatar: account.avatar,

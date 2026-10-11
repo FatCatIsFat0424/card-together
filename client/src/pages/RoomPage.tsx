@@ -5,7 +5,7 @@ import Snackbar from '@mui/material/Snackbar';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { EXPANDABLE_ROOM_GAMES, GAME_TYPES, MAX_ROOM_SEATS, MAX_SPECTATORS, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import type {
-  BlackjackOptions, GameType, NinetyNineOptions, PlayerInfo, Seat, SeatInfo, SevensOptions, TimeControl,
+  BlackjackOptions, GameType, NinetyNineOptions, PlayerInfo, RoomSeatTarget, Seat, SeatInfo, SevensOptions, TimeControl,
 } from '@shared/types';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import { socket } from '../socket';
@@ -28,6 +28,7 @@ import { roomRulesContext } from '../game-rules-context';
 import styles from './RoomPage.module.css';
 import botSeatBackground from '../assets/room-backgrounds/bot-seat.webp';
 import { unreadCount } from './room-progress';
+import { useRoomSeatDrag } from '../hooks/use-room-seat-drag';
 
 const COPIED_MS = 2000;
 
@@ -67,6 +68,22 @@ export function RoomPage(): ReactNode {
   const isReady = mySeat ? roomInfo?.seats[mySeat].isReady ?? false : false;
   const isHost = Boolean(playerId) && roomInfo?.hostId === playerId;
   const hasEmptySeat = roomInfo ? Object.values(roomInfo.seats).some(({ player }) => !player) : false;
+  const canMovePlayers = isHost && !blocked && roomInfo?.status === 'waiting';
+  const handleResult = (timeout: Error | null, result?: { success: boolean; error?: string }): void => {
+    setBusy(false);
+    if (timeout) setError(t('auth.connectionError'));
+    else if (!result?.success) setError(result?.error ?? t('common.error'));
+  };
+  const movePlayer = (player: PlayerInfo, target: RoomSeatTarget): void => {
+    if (!canMovePlayers || !roomInfo) return;
+    if (target.type === 'seat' && roomInfo.seats[target.seat].player?.id === player.id) return;
+    if (target.type === 'additional' && roomInfo.additionalSeats?.[target.index]?.player?.id === player.id) return;
+    if (target.type === 'spectator' && roomInfo.spectators?.some((entry) => entry.id === player.id)) return;
+    setBusy(true);
+    setError('');
+    socket.timeout(10000).emit('room:movePlayer', { accountId: player.id, target }, handleResult);
+  };
+  const seatDrag = useRoomSeatDrag(canMovePlayers, movePlayer);
 
   useEffect(() => {
     if (leaving.current) return;
@@ -105,11 +122,6 @@ export function RoomPage(): ReactNode {
     setChatOpen((open) => !open);
   };
 
-  const handleResult = (timeout: Error | null, result?: { success: boolean; error?: string }): void => {
-    setBusy(false);
-    if (timeout) setError(t('auth.connectionError'));
-    else if (!result?.success) setError(result?.error ?? t('common.error'));
-  };
   const changeSeat = (seat: Seat): void => {
     setBusy(true);
     setError('');
@@ -229,6 +241,12 @@ export function RoomPage(): ReactNode {
   ];
   const spectators = roomInfo.spectators ?? [];
   const expandableSeats = EXPANDABLE_ROOM_GAMES.includes(roomInfo.gameType);
+  const movingPlayer = seatDrag.drag?.player ?? seatDrag.selected;
+  const dragHandle = (player: PlayerInfo): ReactNode => canMovePlayers && !player.isBot &&
+    <button type="button" className={styles.dragHandle} data-seat-drag-handle="true"
+      aria-label={t('room.movePlayer', { nickname: player.nickname })}
+      aria-pressed={movingPlayer?.id === player.id} title={t('room.dragHint')}
+      onClick={() => seatDrag.select(player)}><AppIcon name="drag" /></button>;
   const addSeatButton = isHost && expandableSeats
     && seatCards.length < MAX_ROOM_SEATS && <button type="button"
       className={`${styles.seatSlot} ${styles.addSeatSlot}`}
@@ -313,7 +331,9 @@ export function RoomPage(): ReactNode {
         </div>
       </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
-      <div className={`${styles.tableArea} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}>
+      <div className={`${styles.tableArea} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}
+        onClickCapture={seatDrag.choose} onPointerMove={seatDrag.move} onPointerUp={seatDrag.finish}
+        onPointerCancel={seatDrag.cancel}>
       <div className={styles.seatStrip}>
       <div className={`${styles.seatLayout} ${expandableSeats ? styles.expandedSeats : ''}`}>
         {seatCards.map((seatCard) => {
@@ -328,10 +348,15 @@ export function RoomPage(): ReactNode {
           };
           const className = [styles.seatSlot,
             player ? styles.seatSlotOccupied : '',
+            canMovePlayers && player && !player.isBot ? styles.draggableSeat : '',
+            movingPlayer?.id === player?.id && player ? styles.movingSeat : '',
+            seatDrag.drag?.targetKey === seatCard.key ? styles.dropTarget : '',
             player?.id === playerId ? styles.seatSlotMine : ''].filter(Boolean).join(' ');
           if (player) return (
-            <div key={seatCard.key} className={`${className} ${seatStyle ? styles.customSeat : ''}`} style={seatStyle}>
+            <div key={seatCard.key} className={`${className} ${seatStyle ? styles.customSeat : ''}`} style={seatStyle}
+              data-room-drop={seatCard.key} onPointerDown={(event) => seatDrag.start(event, player)}>
               <div className={styles.seatLabel}>{seatCard.label}</div>
+              {dragHandle(player)}
               <PlayerLink player={player} size="medium" />
               <div className={styles.seatStatus}>
                 {player.id === roomInfo.hostId &&
@@ -348,7 +373,7 @@ export function RoomPage(): ReactNode {
             </div>
           );
           return (
-            <div key={seatCard.key} className={`${className} ${styles.emptySlot}`}>
+            <div key={seatCard.key} className={`${className} ${styles.emptySlot}`} data-room-drop={seatCard.key}>
               <button type="button" disabled={blocked || roomInfo.status !== 'waiting'} className={styles.seatChoice}
                 onClick={sit}>
                 <span className={styles.seatLabel}>{seatCard.label}</span>
@@ -368,13 +393,19 @@ export function RoomPage(): ReactNode {
         {addSeatButton}
       </div>
       </div>
-      <section className={styles.spectators} aria-labelledby="room-spectators-label">
+      <section className={`${styles.spectators} ${seatDrag.drag?.targetKey === 'spectator' ? styles.dropTarget : ''}`}
+        data-room-drop="spectator" aria-labelledby="room-spectators-label">
         <span className={styles.spectatorsLabel} id="room-spectators-label">
           {t('room.spectators', { n: String(spectators.length), max: String(MAX_SPECTATORS) })}
         </span>
+        {movingPlayer && <button type="button" className="btn btn-outline" onClick={() => {
+          movePlayer(movingPlayer, { type: 'spectator' }); seatDrag.cancel();
+        }}>{t('room.dropSpectator')}</button>}
         {spectators.length === 0 ? <span className={styles.spectatorsEmpty}>{t('room.noSpectators')}</span>
           : <ul className={styles.spectatorList}>{spectators.map((spectator) => (
-            <li key={spectator.id} className={styles.spectator}>
+            <li key={spectator.id} className={`${styles.spectator} ${movingPlayer?.id === spectator.id ? styles.movingSeat : ''}`}
+              onPointerDown={(event) => seatDrag.start(event, spectator)}>
+              {dragHandle(spectator)}
               <PlayerLink player={spectator} size="small" />
               {spectator.id === roomInfo.hostId && <span className={styles.hostBadge} title={t('room.host')}>👑</span>}
               {spectator.id === playerId && <span>{t('common.me')}</span>}
@@ -383,6 +414,7 @@ export function RoomPage(): ReactNode {
                 onClick={() => kick(spectator)}>{t('room.kick')}</button>}
             </li>
           ))}</ul>}
+        {seatDrag.selected && <p className={styles.moveHint} role="status">{t('room.placePlayer', { nickname: seatDrag.selected.nickname })}</p>}
       </section>
       <div className={styles.roomFooter}>
         {(mySeat || myAdditionalSeat >= 0) && <button type="button" className="btn btn-outline" onClick={standUp}
@@ -393,6 +425,8 @@ export function RoomPage(): ReactNode {
           onClick={ready} disabled={blocked}>{t(isReady ? 'room.unready' : 'room.ready')}</button>
       </div>
       </div>
+      {seatDrag.drag && <div className={styles.dragPreview} aria-hidden="true"
+        style={{ left: seatDrag.drag.x, top: seatDrag.drag.y }}>{seatDrag.drag.player.nickname}</div>}
       <div className={styles.chat} id="room-chat"><ChatPanel /></div>
       <Snackbar key={readyNotice?.id} open={readyNotice !== null} autoHideDuration={5000}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}

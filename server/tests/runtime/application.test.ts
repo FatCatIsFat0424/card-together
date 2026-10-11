@@ -268,6 +268,7 @@ describe('persistent authenticated application', () => {
     expect(aborted.gameState).toBeUndefined();
     expect(aborted.room).toMatchObject({ status: 'waiting', abortVote: null, abortVoteCooldownUntil: null });
     expect(aborted.room?.seats.N.isReady).toBe(false);
+    expect(aborted.coins).toBe(0);
     expect(SEATS.slice(1).every((seat) => aborted.room?.seats[seat].isReady)).toBe(true);
     expect(await repository.listMatches(account.account.id)).toEqual([]);
     expect((await repository.loadRuntime())?.rooms[0].info.abortVoteCooldownUntil).toBeNull();
@@ -573,6 +574,9 @@ describe('persistent authenticated application', () => {
     }
 
     snapshot = resumed[0];
+    const rewardedBalances = players.map((client) => new Promise<{ coins: number }>((resolve) => {
+      client.once('account:coins', resolve);
+    }));
     for (let played = 0; snapshot.gameState?.phase === 'playing' && played < 52; played += 1) {
       finishPresentation(snapshot.gameState);
       const seat = bridgeView(snapshot)?.playing?.currentTurnSeat;
@@ -585,11 +589,15 @@ describe('persistent authenticated application', () => {
       snapshot = await resume(players[0]);
     }
     expect(snapshot.gameState?.phase).toBe('scoring');
+    expect(await Promise.all(rewardedBalances)).toEqual(accounts.map(() => ({ coins: 10 })));
     expect(snapshot.room?.status).toBe('waiting');
     expect(Object.values(snapshot.room!.seats).every((seat) => !seat.isReady)).toBe(true);
     const stored = await repository.loadRuntime();
     expect(stored?.games[0].result).toEqual(snapshot.gameState?.result);
     for (const registered of accounts) {
+      expect((await repository.getAccountById(registered.account.id))?.coins).toBe(10);
+      const me = await fetch(`${baseUrl}/api/auth/me`, { headers: headers(registered.cookie) });
+      expect(await me.json()).toMatchObject({ account: { coins: 10 } });
       const response = await fetch(`${baseUrl}/api/account/history`, { headers: headers(registered.cookie) });
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -603,7 +611,9 @@ describe('persistent authenticated application', () => {
     await stop();
     await start();
     const finalPlayer = await connect(accounts[0].cookie);
-    expect((await resume(finalPlayer)).gameState?.result).toEqual(snapshot.gameState?.result);
+    const finalSnapshot = await resume(finalPlayer);
+    expect(finalSnapshot.gameState?.result).toEqual(snapshot.gameState?.result);
+    expect(finalSnapshot.coins).toBe(10);
     expect(await repository.listMatches(accounts[0].account.id)).toHaveLength(1);
   }, 30_000);
 

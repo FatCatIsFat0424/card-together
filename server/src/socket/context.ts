@@ -1,5 +1,5 @@
 import type { Server, Socket } from 'socket.io';
-import type { ChatMessage, ClientToServerEvents, EmojiRecord, ServerToClientEvents } from '@shared/types';
+import type { AccountProfile, ChatMessage, ClientToServerEvents, EmojiRecord, ServerToClientEvents } from '@shared/types';
 import type { PlayerSnapshot } from '@shared/types/socket-events';
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import type { AuthService } from '../auth/auth-service';
@@ -174,7 +174,7 @@ export function runAction(
   context: SocketContext,
   socket: TypedSocket,
   callback: (response: ActionResponse) => void,
-  action: () => ActionResponse | Promise<ActionResponse>,
+  action: (account: AccountProfile) => ActionResponse | Promise<ActionResponse>,
   options: RuntimeMutationOptions = {},
 ): void {
   if (typeof callback !== 'function') return;
@@ -192,7 +192,7 @@ export function runAction(
     playerManager.updatePlayerInfo(info);
     roomManager.updateRoomPlayer(info,
       playerManager.getPlayerState(session.account.id)?.currentRoomCode ?? null);
-    const response = await action();
+    const response = await action(session.account);
     for (const id of affectedAccounts(session.account.id)) recipients.add(id);
     return response;
   }, { ...options, afterCommit: () => {

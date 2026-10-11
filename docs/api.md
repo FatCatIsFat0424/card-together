@@ -51,6 +51,13 @@ and history visibility. Omitted fields keep their values; invalid values return 
 `seatBackground` uses the existing `background` upload purpose and is shared in
 room `PlayerInfo` identities. Setting it to null restores the default seat background.
 `AccountProfile` includes private profile preferences/timestamps;
+it also returns the owner's `coins` balance (zero for older accounts). Coins are
+server-owned: profile updates cannot change them. Completing a game grants each
+participating human account `GAME_COIN_REWARD` (currently 10), regardless of winner,
+including bot games. Spectators and aborted games earn nothing. Existing history is
+not rewarded retroactively; Hold'em/Blackjack hands reward only the complete match.
+After durable settlement, private `account:coins` Socket events update all tabs of
+each rewarded account. Authenticated `player:resume` also returns the owner's balance.
 `PublicAccount` exposes only ID, username, nickname, color, avatar, and avatarImage.
 No response exposes credential/session digests. Invalid player IDs return 400, unknown
 players 404, and private histories 403. See [storage](storage.md) and [media limits](media.md).
@@ -77,6 +84,7 @@ For exact unions and result fields, use
 | `room:leave` | — | Leave; a seated player's leave aborts an unfinished game |
 | `room:kick` | `{ accountId }` | Host removes another human member (spectators also during a match); they may rejoin by code |
 | `room:changeSeat` | `{ seat }` | Change available seat |
+| `room:movePlayer` | `{ accountId, target }` | Host moves a human member while waiting; `target` is the shared `RoomSeatTarget` union |
 | `room:addSeat`, `room:removeSeat` | — | Host appends an additional seat (eight total maximum) or removes the last empty additional seat; waiting Ninety-Nine/Blackjack/Hold'em rooms only |
 | `room:changeAdditionalSeat` | `{ index }` | Take an available additional seat; index is zero-based in `RoomInfo.additionalSeats` |
 | `room:standUp` | — | Leave the seat to spectate while waiting |
@@ -121,6 +129,14 @@ Play/pass/capture and continue wait for the server's presentation deadline; cont
 requires scoring. The server validates turn/card/room authority; see [games](games.md).
 Room/game players expose optional `isBot`; absent or false means a human. Bot identities
 use reserved `bot:<UUID>` IDs and cannot authenticate or receive player snapshots.
+
+Host placement uses [`RoomSeatTarget`](../shared/src/types/room.ts): a standard seat,
+a zero-based additional seat index, or spectators. `room:movePlayer` requires a human
+member of the host's waiting room. Occupied destinations exchange occupants, preserving
+room membership; a spectator taking an occupied human seat exchanges spectator status.
+Moving a seated player to spectators respects their capacity limit. Bots cannot be
+dragged or displaced into spectators/additional seats. Changed placement resets human
+readiness while keeping bots ready, and is saved before acknowledgement or broadcast.
 
 Timer settings use [`TimeControl`](../shared/src/types/room.ts) and the validated
 [shared limits](../shared/src/time-control.ts). Visible game clocks use

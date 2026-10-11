@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { copyFile, mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { MAX_EMOJIS_PER_ACCOUNT } from '@shared/constants';
+import { GAME_COIN_REWARD, MAX_EMOJIS_PER_ACCOUNT } from '@shared/constants';
 import type { Repository, AccountRecord, MatchRecord } from './repository';
 import { publicAccount, repositoryError } from './repository';
 import { emptyDocument, isObject, validateDocument } from './schema';
 import { migrateDocument } from './migrations';
 import type { DatabaseDocument } from './schema';
+import type { RuntimeSnapshot } from '../runtime/types';
 import { createDatabaseIndexes, friendshipPair } from './indexes';
 
 const activePaths = new Set<string>();
@@ -113,6 +114,29 @@ export async function createJsonRepository(filePath: string): Promise<Repository
           data.matches.push(structuredClone(match));
         } else data.matches[position] = structuredClone(match);
       }
+    }
+
+    function awardGameCoins(data: DatabaseDocument, snapshot: RuntimeSnapshot, completedGameIds: readonly string[]): void {
+      if (completedGameIds.length === 0) return;
+      const rewarded = new Set(data.rewardedGameIds ?? []);
+      const positions = indexes.accounts(document.accounts).positions;
+      data.accounts = data.accounts.slice();
+      for (const id of completedGameIds) {
+        if (rewarded.has(id)) continue;
+        const game = snapshot.games.find((entry) => entry.id === id);
+        if (!game?.result) throw new Error('Coin rewards require a completed game.');
+        const humans = new Set(Object.values(game.players).filter((player) => !player.isBot).map((player) => player.id));
+        for (const accountId of humans) {
+          const index = positions.get(accountId);
+          if (index === undefined) throw new Error('Coin reward account does not exist.');
+          const account = data.accounts[index];
+          const coins = (account.coins ?? 0) + GAME_COIN_REWARD;
+          if (!Number.isSafeInteger(coins)) throw new Error('Coin balance exceeds the supported limit.');
+          data.accounts[index] = { ...account, coins };
+        }
+        rewarded.add(id);
+      }
+      data.rewardedGameIds = [...rewarded];
     }
 
     return {
@@ -240,10 +264,11 @@ export async function createJsonRepository(filePath: string): Promise<Repository
           return true;
         }),
       loadRuntime: () => read((data) => data.runtime),
-      saveRuntime: (snapshot, matches = []) =>
+      saveRuntime: (snapshot, matches = [], completedGameIds = []) =>
         write([], (data) => {
           data.runtime = structuredClone(snapshot);
           upsertMatches(data, matches);
+          awardGameCoins(data, snapshot, completedGameIds);
         }),
       saveMatch: (match) =>
         write([], (data) => {

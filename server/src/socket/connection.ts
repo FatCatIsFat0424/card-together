@@ -80,8 +80,8 @@ export function setupConnectionHandler(context: SocketContext): () => void {
     registerGameHandlers(context, socket);
     registerChatHandlers(context, socket);
     registerVoiceHandlers(context, socket);
-    socket.on('player:resume', (callback) => runAction(context, socket, callback, () =>
-      playerSnapshot(socket.data.accountId), { skipUnchanged: true }));
+    socket.on('player:resume', (callback) => runAction(context, socket, callback, (account) =>
+      ({ ...playerSnapshot(socket.data.accountId), coins: account.coins ?? 0 }), { skipUnchanged: true }));
 
     socket.on('disconnect', () => {
       clearTimeout(expiry);

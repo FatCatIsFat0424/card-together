@@ -37,6 +37,7 @@ export {
   USERNAME_PATTERN,
   PASSWORD_MIN_LENGTH,
   PASSWORD_MAX_LENGTH,
+  GAME_COIN_REWARD,
   isUsername,
 } from './account';
 export { IMAGE_OPACITY_MAX, IMAGE_OPACITY_MIN, isImageOpacity, isMediaId } from './media';

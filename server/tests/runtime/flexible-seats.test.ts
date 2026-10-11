@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -19,6 +19,11 @@ import { isRuntimeSnapshot } from '../../src/runtime/validate';
 import type { RuntimeSnapshot } from '../../src/runtime/types';
 
 const CODE = 'FLEX01';
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const original = await importOriginal<typeof import('node:fs/promises')>();
+  return { ...original, rename: vi.fn(original.rename) };
+});
 
 function player(id: string): PlayerInfo {
   return { id, username: id, nickname: id, color: '#123456', avatar: 'cat', avatarImage: null };
@@ -254,7 +259,7 @@ describe('two to four seat tables', () => {
   });
 });
 
-it('records a two-player Hold\'em match with only the seated accounts', async () => {
+it.each([false, true])('awards a completed Hold\'em match once with bot=%s, preserving history and spectators', async (withBot) => {
   const directory = await mkdtemp(join(tmpdir(), 'card-flexible-history-'));
   const path = join(directory, 'database.json');
   let repository = await createJsonRepository(path);
@@ -272,6 +277,9 @@ it('records a two-player Hold\'em match with only the seated accounts', async ()
     roomManager.restoreRooms([]);
     gameManager.restoreGames([]);
     const runtime = await createRuntimeCoordinator(repository);
+    const rewards = vi.fn();
+    runtime.subscribeCoinRewards(rewards);
+    let rejectedCompletion = false;
     let code = '';
     await runtime.mutate(() => {
       code = roomManager.createRoom('holdem', accounts[0].id);
@@ -280,8 +288,9 @@ it('records a two-player Hold\'em match with only the seated accounts', async ()
         playerManager.attachPlayer(`socket-${index}`, info);
         if (index > 0) roomManager.joinRoom(code, account.id);
         playerManager.setPlayerRoom(account.id, code);
-        roomManager.changeSeat(code, info, index === 0 ? 'N' : 'S');
+        if (!withBot || index === 0) roomManager.changeSeat(code, info, index === 0 ? 'N' : 'S');
       });
+      if (withBot) expect(roomManager.addBot(code, accounts[0].id, 'S').success).toBe(true);
       for (const account of accounts) roomManager.setReady(code, account.id, true);
       // The engine retains legacy two-seat snapshot compatibility; new room starts are gated.
       expect(roomManager.isAllReady(code)).toBe(false);
@@ -289,23 +298,51 @@ it('records a two-player Hold\'em match with only the seated accounts', async ()
       expect(gameManager.startGame(code, 'holdem', roomManager.getSeatPlayers(code)!).success).toBe(true);
     });
     for (let actions = 0; gameManager.getGameState(code)?.phase === 'playing' && actions < 400; actions++) {
+      expect((await repository.getAccountById(accounts[0].id))?.coins ?? 0).toBe(0);
       const game = gameManager.getGameState(code)!;
       if (game.gameType !== 'holdem') throw new Error("Expected Hold'em");
       vi.setSystemTime(Math.max(Date.now(), getPresentationEndsAt(game)) + 1);
-      await runtime.mutate(() => {
+      const mutation = runtime.mutate(() => {
         const legal = heLegalActions(game, game.currentTurnSeat)!;
         const action = legal.raise ? { type: 'raise', to: legal.raise.max } as const : { type: 'call' } as const;
         expect(gameManager.handleHoldemAction(code, game.currentTurnSeat, action).success).toBe(true);
+        if (gameManager.getGameState(code)?.result && !rejectedCompletion) {
+          vi.mocked(rename).mockRejectedValueOnce(new Error('Reward write failed'));
+          rejectedCompletion = true;
+        }
       });
+      try {
+        await mutation;
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error);
+        expect((error as Error).message).toBe('Reward write failed');
+        expect(gameManager.getGameState(code)?.result).toBeNull();
+        expect((await repository.getAccountById(accounts[0].id))?.coins ?? 0).toBe(0);
+        expect(rewards).not.toHaveBeenCalled();
+      }
     }
     const finished = gameManager.getGameState(code);
     if (finished?.gameType !== 'holdem' || !finished.result) throw new Error('Expected a finished match');
     expect(finished.result.seats).toEqual(['N', 'S']);
-    const [record] = await repository.listMatches(accounts[1].id);
-    expect(record.accountIds).toEqual(accounts.map((account) => account.id));
+    expect(rejectedCompletion).toBe(true);
+    expect(rewards).toHaveBeenCalledTimes(1);
+    expect(rewards).toHaveBeenCalledWith(withBot ? [accounts[0].id] : accounts.map((account) => account.id));
+    expect((await repository.getAccountById(accounts[0].id))?.coins).toBe(10);
+    expect((await repository.getAccountById(accounts[1].id))?.coins ?? 0).toBe(withBot ? 0 : 10);
+    const records = await repository.listMatches(accounts[1].id);
+    if (withBot) expect(records).toEqual([]);
+    else expect(records[0].accountIds).toEqual(accounts.map((account) => account.id));
+    const persisted = await repository.loadRuntime();
+    expect(persisted).not.toBeNull();
+    await Promise.all([
+      repository.saveRuntime(persisted!, [], [finished.id, finished.id]),
+      repository.saveRuntime(persisted!, [], [finished.id]),
+    ]);
+    expect((await repository.getAccountById(accounts[0].id))?.coins).toBe(10);
     await repository.close();
     repository = await createJsonRepository(path);
-    expect((await repository.listMatches(accounts[0].id)).map((match) => match.id)).toEqual([record.id]);
+    expect((await repository.getAccountById(accounts[0].id))?.coins).toBe(10);
+    expect((await repository.listMatches(accounts[0].id)).map((match) => match.id)).toEqual(withBot ? [] : [records[0].id]);
   } finally {
     vi.useRealTimers();
     await repository.close();

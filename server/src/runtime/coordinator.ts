@@ -18,6 +18,7 @@ export interface RuntimeCoordinator {
   inspect: <T>(operation: () => T | Promise<T>) => Promise<T>;
   snapshot: () => RuntimeSnapshot;
   subscribe: (listener: () => void) => () => void;
+  subscribeCoinRewards: (listener: (rewardedAccountIds: readonly string[]) => void) => () => void;
   idle: () => Promise<void>;
 }
 
@@ -53,18 +54,25 @@ export async function createRuntimeCoordinator(repository: Pick<Repository, 'loa
   restore(initial ?? { players: [], rooms: [], games: [], chat: [] }, true);
   let queue = Promise.resolve();
   const listeners = new Set<() => void>();
+  const coinListeners = new Set<(rewardedAccountIds: readonly string[]) => void>();
 
   function mutate<T>(operation: () => T | Promise<T>, options: RuntimeMutationOptions = {}): Promise<T> {
     const result = queue.then(async (): Promise<T> => {
       const before = snapshot();
       let value: T;
+      const rewardedAccountIds = new Set<string>();
       try {
         value = await operation();
         const matches: MatchRecord[] = [];
+        const completedGameIds: string[] = [];
         for (const game of gameManager.exportGames()) {
           if (game.result && roomManager.getRoomInfo(game.roomCode)?.status === 'playing') {
             roomManager.setRoomStatus(game.roomCode, 'waiting');
             roomManager.resetAllReady(game.roomCode);
+            completedGameIds.push(game.id);
+            for (const player of Object.values(game.players)) {
+              if (!player.isBot) rewardedAccountIds.add(player.id);
+            }
             // Bot games are practice; retain their runtime result without recording match history.
             if (SEAT_ORDER_CLOCKWISE.some((seat) => game.players[seat]?.isBot)) continue;
             matches.push({
@@ -80,7 +88,7 @@ export async function createRuntimeCoordinator(repository: Pick<Repository, 'loa
         if (!options.skipUnchanged || matches.length > 0 || !isDeepStrictEqual(before, after)) {
           // Hold the runtime queue until the repository has copied and committed this view.
           // Only the rollback/public snapshots need a separate full deep clone here.
-          await repository.saveRuntime(after, matches);
+          await repository.saveRuntime(after, matches, completedGameIds);
         }
       } catch (error) {
         restore(before);
@@ -90,6 +98,9 @@ export async function createRuntimeCoordinator(repository: Pick<Repository, 'loa
       // A failing notifier must not report the committed mutation as failed.
       notify(options.afterCommit);
       for (const listener of listeners) notify(listener);
+      if (rewardedAccountIds.size > 0) {
+        for (const listener of coinListeners) notify(() => listener([...rewardedAccountIds]));
+      }
       return value;
     });
     queue = result.then(() => undefined, () => undefined);
@@ -107,5 +118,10 @@ export async function createRuntimeCoordinator(repository: Pick<Repository, 'loa
     return () => { listeners.delete(listener); };
   }
 
-  return { mutate, inspect, snapshot, subscribe, idle: (): Promise<void> => queue };
+  function subscribeCoinRewards(listener: (rewardedAccountIds: readonly string[]) => void): () => void {
+    coinListeners.add(listener);
+    return () => { coinListeners.delete(listener); };
+  }
+
+  return { mutate, inspect, snapshot, subscribe, subscribeCoinRewards, idle: (): Promise<void> => queue };
 }

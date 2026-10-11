@@ -22,6 +22,7 @@ const player: PlayerInfo = {
   color: '#4a9eff',
 };
 const account: AccountProfile = {
+  coins: 0,
   ...player, tableBackground: null, tableBackgroundOpacity: 100, cardBack: null, cardBackOpacity: 100, matchesPublic: false, createdAt: 100, updatedAt: 200,
 };
 
@@ -70,6 +71,13 @@ function observeStores(): Record<'account' | 'player' | 'room' | 'game' | 'chat'
 }
 
 describe('client authoritative snapshot updates', () => {
+  it('should refresh own coins from resume without exposing them through player identity', () => {
+    applyPlayerSnapshot({ ...snapshot, coins: 10 });
+    expect(useAccountStore.getState().account?.coins).toBe(10);
+    expect(usePlayerStore.getState().player).not.toHaveProperty('coins');
+    applyPlayerSnapshot({ ...snapshot, player: { ...player, id: 'other' }, coins: 1000 });
+    expect(useAccountStore.getState().account?.coins).toBe(10);
+  });
   beforeEach(() => {
     clearAccount();
     useAccountStore.getState().setAccount(structuredClone(account));

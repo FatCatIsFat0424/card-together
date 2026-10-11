@@ -21,6 +21,8 @@ export interface DatabaseDocument {
   matches: MatchRecord[];
   emojis: EmojiRecord[];
   runtime: RuntimeSnapshot | null;
+  /** Durable receipts prevent replayed completions from awarding coins twice. */
+  rewardedGameIds?: string[];
 }
 
 export function isObject(value: unknown): value is Record<string, unknown> {
@@ -45,6 +47,7 @@ function validAccount(value: unknown): value is AccountRecord {
     nonEmpty(value.id) &&
     typeof value.username === 'string' &&
     isUsername(value.username) &&
+    (value.coins === undefined || timestamp(value.coins)) &&
     value.usernameNormalized === value.username.toLowerCase() &&
     typeof value.nickname === 'string' &&
     value.nickname.trim().length > 0 &&
@@ -172,6 +175,8 @@ export function validateDocument(value: unknown): asserts value is DatabaseDocum
     !value.matches.every(validMatch) ||
     !Array.isArray(value.emojis) ||
     !value.emojis.every(validEmoji) ||
+    (value.rewardedGameIds !== undefined && (!Array.isArray(value.rewardedGameIds)
+      || !value.rewardedGameIds.every(nonEmpty) || !unique(value.rewardedGameIds))) ||
     !(value.runtime === null || isRuntimeSnapshot(value.runtime))
   ) {
     throw new Error(

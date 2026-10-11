@@ -11,6 +11,8 @@ import ChevronRight from '@mui/icons-material/ChevronRight';
 import Circle from '@mui/icons-material/Circle';
 import Close from '@mui/icons-material/Close';
 import ContentCopy from '@mui/icons-material/ContentCopy';
+import DragIndicator from '@mui/icons-material/DragIndicator';
+import MonetizationOnOutlined from '@mui/icons-material/MonetizationOnOutlined';
 import EmojiEventsOutlined from '@mui/icons-material/EmojiEventsOutlined';
 import Filter7 from '@mui/icons-material/Filter7';
 import FlagOutlined from '@mui/icons-material/FlagOutlined';
@@ -41,6 +43,8 @@ import styles from './AppIcon.module.css';
 
 const ICONS = {
   add: Add, person: PersonOutline,
+  drag: DragIndicator,
+  coins: MonetizationOnOutlined,
   arrowDown: ArrowDownward, arrowUp: ArrowUpward, info: AssignmentOutlined,
   chat: ChatBubbleOutline, check: Check, agree: CheckCircleOutline,
   previousPage: ChevronLeft, nextPage: ChevronRight, circle: Circle,

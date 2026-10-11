@@ -5,7 +5,7 @@ import { DEFAULT_BLACKJACK_OPTIONS, isBlackjackOptions } from '@shared/blackjack
 import { isDeepStrictEqual } from 'node:util';
 import { randomUUID } from 'node:crypto';
 import type {
-  BlackjackOptions, GameType, NinetyNineOptions, PlayerInfo, RoomCode, RoomInfo, RoomStatus, Seat, SeatMap, SevensOptions, TimeControl,
+  BlackjackOptions, GameType, NinetyNineOptions, PlayerInfo, RoomCode, RoomInfo, RoomSeatTarget, RoomStatus, Seat, SeatMap, SevensOptions, TimeControl,
 } from '@shared/types';
 import {
   ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD, EXPANDABLE_ROOM_GAMES,
@@ -191,6 +191,39 @@ export function changeSeat(code: RoomCode, player: PlayerInfo, target: Seat): Re
   next[target] = { player, isReady: false };
   room.info = { ...room.info, seats: next };
   tableChanged(room);
+  return { success: true };
+}
+
+/** Host placement preserves membership; occupied destinations exchange their players. */
+export function movePlayer(code: RoomCode, hostId: string, player: PlayerInfo, target: RoomSeatTarget): Result {
+  const room = rooms.get(code);
+  if (!room) return { success: false, reason: 'Room not found' };
+  if (room.info.hostId !== hostId) return { success: false, reason: 'Only the host can manage seats.' };
+  if (room.info.status !== 'waiting') return { success: false, reason: 'Cannot change seats during game.' };
+  if (player.isBot || !room.memberIds.includes(player.id)) return { success: false, reason: 'Player is not in this room.' };
+  const positions = [...seats.map((seat) => room.info.seats[seat]), ...(room.info.additionalSeats ?? [])];
+  const previous = positions.findIndex((entry) => entry.player?.id === player.id);
+  const destination = target.type === 'spectator' ? -1 : target.type === 'seat'
+    ? seats.indexOf(target.seat) : Number.isInteger(target.index) && target.index >= 0 ? target.index + 4 : -1;
+  if (target.type !== 'spectator' && (destination < 0 || destination >= positions.length)) {
+    return { success: false, reason: 'Invalid seat.' };
+  }
+  if (previous === destination) return { success: true };
+  if (destination === -1 && getSpectatorIds(code).length >= MAX_SPECTATORS) {
+    return { success: false, reason: 'The spectator area is full.' };
+  }
+  const occupant = destination >= 0 ? positions[destination].player : null;
+  if (occupant?.isBot && (previous < 0 || previous >= 4)) {
+    return { success: false, reason: 'Bots must stay in a standard seat.' };
+  }
+  if (previous >= 0) positions[previous] = { player: occupant, isReady: occupant?.isBot === true };
+  if (destination >= 0) positions[destination] = { player, isReady: false };
+  const next = { ...room.info.seats };
+  seats.forEach((seat, index) => { next[seat] = positions[index]; });
+  room.info = { ...room.info, seats: next,
+    ...(room.info.additionalSeats ? { additionalSeats: positions.slice(4) } : {}),
+  };
+  resetAllReady(code);
   return { success: true };
 }
 

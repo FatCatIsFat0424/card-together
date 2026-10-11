@@ -3,7 +3,7 @@ import { isSevensOptions } from '@shared/sevens-options';
 import { isNinetyNineOptions } from '@shared/ninetynine-options';
 import { isBlackjackOptions } from '@shared/blackjack-options';
 import { GAME_TYPES } from '@shared/constants';
-import type { RoomCode, RoomInvite, Seat } from '@shared/types';
+import type { RoomCode, RoomInvite, RoomSeatTarget, Seat } from '@shared/types';
 import type { SocketContext, TypedSocket } from './context';
 import { actionError, requireRoom, requireSuccess, runAction, leaveCurrentRoom } from './context';
 import * as playerManager from '../managers/player-manager';
@@ -28,6 +28,21 @@ function requireSeat(payload: { seat: Seat }): Seat {
     throw actionError('Invalid seat.');
   }
   return payload.seat;
+}
+
+function requireSeatTarget(target: unknown): RoomSeatTarget {
+  if (target && typeof target === 'object' && 'type' in target) {
+    if (target.type === 'spectator') return { type: 'spectator' };
+    if (target.type === 'seat' && 'seat' in target
+      && (['N', 'E', 'S', 'W'] as readonly unknown[]).includes(target.seat)) {
+      return { type: 'seat', seat: target.seat as Seat };
+    }
+    if (target.type === 'additional' && 'index' in target && typeof target.index === 'number'
+      && Number.isInteger(target.index) && target.index >= 0) {
+      return { type: 'additional', index: target.index };
+    }
+  }
+  throw actionError('Invalid seat.');
 }
 
 export function registerRoomHandlers(context: SocketContext, socket: TypedSocket): void {
@@ -143,6 +158,18 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
     const player = playerManager.getPlayerInfo(socket.data.accountId);
     if (!player) throw actionError('Player not found.');
     requireSuccess(roomManager.changeSeat(requireRoom(socket), player, payload.seat));
+    return { success: true };
+  }));
+
+  socket.on('room:movePlayer', (payload, callback) => runAction(context, socket, callback, () => {
+    if (!payload || typeof payload.accountId !== 'string' || !payload.accountId) throw actionError('Invalid player.');
+    const code = requireRoom(socket);
+    const target = requireSeatTarget(payload.target);
+    const player = playerManager.getPlayerInfo(payload.accountId);
+    if (!player || playerManager.getPlayerState(player.id)?.currentRoomCode !== code) {
+      throw actionError('Player is not in this room.');
+    }
+    requireSuccess(roomManager.movePlayer(code, socket.data.accountId, player, target));
     return { success: true };
   }));
 

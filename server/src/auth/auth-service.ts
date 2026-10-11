@@ -256,6 +256,7 @@ export function createAuthService(
           usernameNormalized: username.toLowerCase(),
           passwordHash,
           ...profile,
+          coins: 0,
           createdAt,
           updatedAt: createdAt,
         });

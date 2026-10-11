@@ -17,6 +17,7 @@ export type {
   RoomStatus,
   SeatInfo,
   SeatMap,
+  RoomSeatTarget,
   RoomInfo,
   AbortVoteInfo,
   NinetyNineOptions,

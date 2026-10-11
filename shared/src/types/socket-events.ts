@@ -1,6 +1,6 @@
 import type { PlayerInfo, Seat } from './player';
 import type {
-  BlackjackOptions, RoomCode, RoomInfo, GameType, NinetyNineOptions, SevensOptions, TimeControl,
+  BlackjackOptions, RoomCode, RoomInfo, RoomSeatTarget, GameType, NinetyNineOptions, SevensOptions, TimeControl,
 } from './room';
 import type {
   Card, BidAction, BlackjackAction, BlackjackDealerAction, ChinesePokerArrangement, HoldemAction, PlayerVisibleGameState,
@@ -13,6 +13,8 @@ export interface PlayerSnapshot {
   success: boolean;
   error?: string;
   player?: PlayerInfo;
+  /** Own balance on authenticated resume; never included in room identities. */
+  coins?: number;
   room?: RoomInfo;
   gameState?: PlayerVisibleGameState;
   /**
@@ -61,6 +63,10 @@ export interface ClientToServerEvents {
   ) => void;
   'room:changeSeat': (
     payload: { seat: Seat }, callback: (response: ActionResult) => void,
+  ) => void;
+  /** Host only; swaps occupied destinations and resets human readiness. */
+  'room:movePlayer': (
+    payload: { accountId: string; target: RoomSeatTarget }, callback: (response: ActionResult) => void,
   ) => void;
   'room:addSeat': (callback: (response: ActionResult) => void) => void;
   /** Removes the last additional seat, which must be empty. */
@@ -158,6 +164,8 @@ export interface ClientToServerEvents {
 }
 
 export interface ServerToClientEvents {
+  /** Private balance refresh after a durable completed-game reward. */
+  'account:coins': (payload: { coins: number }) => void;
   'voice:state': (payload: VoiceRoomState) => void;
   'voice:signal': (payload: VoiceIncomingSignal) => void;
   'voice:left': (payload: { reason: string }) => void;

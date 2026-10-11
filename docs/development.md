@@ -21,6 +21,14 @@ including card suits, avatars, crowns, skulls, dragons, and revolvers.
 The top bar shows a translated sign-out label beside its icon at widths of 768px
 and above; narrower screens place a red sign-out icon and label last in the menu.
 
+The signed-in top bar displays the owner's coin balance with a Material coin icon
+on desktop and compact screens. Its hint explains the 10-coin completed-game reward.
+Balances update through authenticated resume and private `account:coins` events;
+room identities and public profiles do not expose them. Coins only increase through
+durably completed games, so the account store keeps the higher balance when a stale
+profile response arrives. Clear/reset on account changes still starts the new account
+from its own balance. See [game coins](storage.md#game-coins) for persistence semantics.
+
 The lobby uses the profile page width, with a game picker and separate room actions.
 On desktop, the sidebar groups the selected game, room-creation button, and code
 joining below a divider; game descriptions appear only in the picker. At widths
@@ -64,6 +72,15 @@ instead of permanent progress text; spectators are prompted to sit before prepar
 Compact screens use two equal-width
 columns with smaller avatars and controls, allowing up to four rows for eight seats.
 The seat list scrolls vertically when those rows exceed the available table height.
+
+While waiting, the host can drag human players between seats or into the spectator
+area, including players in additional seats. Occupied destinations swap occupants;
+moving a spectator into an occupied human seat sends its occupant to spectators.
+The Material drag handle supports mouse and touch, or click/keyboard selection followed
+by choosing a destination; Escape cancels. Profile links keep their normal behavior
+outside placement. Bots can exchange standard seats with seated humans, but remain
+in standard seats. Each change clears human readiness and uses the persisted room
+action, so save failure restores the previous arrangement before any broadcast.
 
 The selected game's Rules link opens a themed MUI dialog with detailed English and
 Traditional Chinese instructions, scoring tables, examples, and shared room rules.

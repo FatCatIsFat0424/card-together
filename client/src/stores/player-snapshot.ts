@@ -12,6 +12,7 @@ export function applyPlayerSnapshot(snapshot: PlayerSnapshot): void {
   const previousRoom = useRoomStore.getState().currentRoomCode;
   usePlayerStore.getState().setPlayer(snapshot.player);
   useAccountStore.getState().setAccount({ ...account, ...snapshot.player });
+  if (snapshot.coins !== undefined) useAccountStore.getState().setCoins(account.id, snapshot.coins);
   if (snapshot.room) {
     useRoomStore.getState().setRoom(snapshot.room.code, snapshot.room);
     const seat = (['N', 'E', 'S', 'W'] as const).find(

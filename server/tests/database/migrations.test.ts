@@ -7,6 +7,20 @@ import { CURRENT_SCHEMA_VERSION, migrateDocument } from '../../src/database/migr
 import { emptyDocument, validateDocument } from '../../src/database/schema';
 
 const PASSWORD_HASH = `scrypt$131072$8$1$${'ab'.repeat(16)}$${'cd'.repeat(64)}`;
+
+it('preserves older zero-balance accounts and validates coin balances and completion receipts', () => {
+  const legacy = migrateDocument(version1()) as ReturnType<typeof emptyDocument>;
+  expect(legacy.accounts[0].coins).toBeUndefined();
+  expect(() => validateDocument(legacy)).not.toThrow();
+  const rewarded = { ...legacy, accounts: [{ ...legacy.accounts[0], coins: 10 }], rewardedGameIds: ['game-1'] };
+  expect(() => validateDocument(rewarded)).not.toThrow();
+  for (const coins of [-1, 1.5, NaN, Number.MAX_SAFE_INTEGER + 1, null, '10']) {
+    expect(() => validateDocument({ ...rewarded, accounts: [{ ...rewarded.accounts[0], coins }] })).toThrow();
+  }
+  for (const rewardedGameIds of [null, [1], [''], ['game-1', 'game-1']]) {
+    expect(() => validateDocument({ ...rewarded, rewardedGameIds })).toThrow();
+  }
+});
 const V1_PLAYER = {
   id: 'account-1', username: 'alice', nickname: 'Alice', color: '#123456', avatar: 'cat',
 };

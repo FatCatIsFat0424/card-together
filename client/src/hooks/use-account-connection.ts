@@ -20,6 +20,8 @@ export function useAccountConnection(): void {
 
   useEffect(() => {
     if (!accountId) return;
+    const updateCoins = ({ coins }: { coins: number }): void => useAccountStore.getState().setCoins(accountId, coins);
+    socket.on('account:coins', updateCoins);
     socket.on('player:state', applyPlayerSnapshot);
     socket.on('chat:message', applyChatMessage);
     const stop = startAccountConnection({
@@ -31,6 +33,7 @@ export function useAccountConnection(): void {
       restoreAccount: () => { void restoreAccount(); },
     });
     return () => {
+      socket.off('account:coins', updateCoins);
       socket.off('player:state', applyPlayerSnapshot);
       socket.off('chat:message', applyChatMessage);
       stop();

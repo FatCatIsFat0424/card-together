@@ -45,6 +45,18 @@ server rechecks friendship, host identity and capacity, and commits room switchi
 Room invitations are ephemeral and only available to accepted friends. Match history defaults to private;
 other signed-in players can read it only when the owner enables visibility.
 
+## Game coins
+
+Accounts may contain optional `coins`, a nonnegative safe integer; an absent field
+means zero. The optional `rewardedGameIds` table stores unique completion receipts.
+Both are compatible with existing schema-v4 files; no historical games are backfilled.
+`Repository.saveRuntime` commits completed game IDs, account balance increments,
+receipts, runtime, and match history in one atomic write. Retrying an already-rewarded
+game, including after a restart, does not credit it again. `saveMatch` does not grant
+coins. Human participants in bot matches earn coins even though those matches remain
+excluded from history. Preserve balances and receipts together in complete database
+backups; earlier servers retain these optional fields while awarding no new coins.
+
 ## Waiting-room seats
 
 Waiting Ninety-Nine/Blackjack/Hold'em rooms may contain optional `RoomInfo.additionalSeats`;

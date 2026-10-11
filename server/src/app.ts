@@ -76,6 +76,13 @@ export async function createApplication(repository: Repository, options: Applica
     providedEmojis: options.providedEmojis ?? new Map(),
   };
   const stopConnections = setupConnectionHandler(context);
+  const stopCoinUpdates = runtime.subscribeCoinRewards((accountIds) => {
+    for (const accountId of accountIds) {
+      void repository.getAccountById(accountId).then((account) => {
+        if (account) io.to(`account:${accountId}`).emit('account:coins', { coins: account.coins ?? 0 });
+      }).catch((error: unknown) => console.error('[coins] Balance notification failed:', error));
+    }
+  });
   app.use('/api/auth', createAuthRouter(auth, {
     ...options,
     onAccountUpdated: (account) => updateConnectedProfile(context, account),
@@ -139,6 +146,7 @@ export async function createApplication(repository: Repository, options: Applica
   return {
     httpServer, io,
     close: async (): Promise<void> => {
+      stopCoinUpdates();
       stopSharedDeadlines();
       stopBots();
       stopTurnTimers();

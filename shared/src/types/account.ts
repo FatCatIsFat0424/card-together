@@ -7,6 +7,8 @@ export type MediaId = string;
 export interface AccountProfile {
   readonly id: string;
   readonly username: string;
+  /** Server-owned balance. Older accounts without this field start at zero. */
+  readonly coins?: number;
   readonly nickname: string;
   readonly color: string;
   readonly avatar: AvatarPreset;

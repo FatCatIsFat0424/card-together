@@ -87,10 +87,10 @@ describe('account HTTP routes', () => {
     const updated = await fetch(`${baseUrl}/profile`, {
       method: 'PATCH',
       headers: { ...HEADERS, Cookie: cookie },
-      body: JSON.stringify({ nickname: 'Alice Fox', avatar: 'fox', id: 'someone-else' }),
+      body: JSON.stringify({ nickname: 'Alice Fox', avatar: 'fox', id: 'someone-else', coins: 1000000 }),
     });
     expect(await updated.json()).toMatchObject({
-      account: { id, nickname: 'Alice Fox', avatar: 'fox' },
+      account: { id, nickname: 'Alice Fox', avatar: 'fox', coins: 0 },
     });
     expect(onAccountUpdated).toHaveBeenCalledWith(expect.objectContaining({ id, avatar: 'fox' }));
     const logout = await fetch(`${baseUrl}/logout`, {

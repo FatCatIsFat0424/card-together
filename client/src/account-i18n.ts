@@ -1,4 +1,6 @@
 const english = {
+  'coins.balance': '{n} coins',
+  'coins.earnHint': 'Complete a game to earn {n} coins.',
   'room.addSeat': 'Add seat',
   'room.removeSeat': 'Remove last empty seat',
   'room.additionalSeat': 'Seat {n}',
@@ -149,6 +151,8 @@ export type AccountTranslationKey = keyof typeof english;
 export const accountTranslations: Record<'en' | 'zh-TW', Record<AccountTranslationKey, string>> = {
   en: english,
   'zh-TW': {
+    'coins.balance': '{n} 枚金幣',
+    'coins.earnHint': '完成一場對局可獲得 {n} 枚金幣。',
     'room.addSeat': '新增座位',
     'room.removeSeat': '移除最後一個空座位',
     'room.additionalSeat': '第 {n} 席',
