@@ -38,6 +38,8 @@ describe('account authentication', () => {
       password: 'correct horse battery',
     });
     expect(registered.account.username).toBe('Alice');
+    expect(registered.account.matchesPublic).toBe(true);
+    expect((await repository.getAccountById(registered.account.id))?.matchesPublic).toBe(true);
     expect(registered.account).not.toHaveProperty('passwordHash');
     const text = await readFile(path, 'utf8');
     expect(text).not.toContain('correct horse battery');
@@ -49,6 +51,19 @@ describe('account authentication', () => {
     expect(await service.resolveSession(`other=foo; bridge_session=${login.token}`)).toMatchObject({
       account: registered.account,
     });
+  });
+
+  it('should preserve explicit private history through profile edits and reopening', async () => {
+    const registered = await service.register({
+      username: 'alice', password: 'correct password', matchesPublic: false,
+    });
+    expect(registered.account.matchesPublic).toBe(false);
+    const updated = await service.updateProfile(registered.account.id, { nickname: 'Alice' });
+    expect(updated.matchesPublic).toBe(false);
+    await repository.close();
+    repository = await createJsonRepository(path);
+    service = createAuthService(repository, { now: () => time, sessionTtlMs: 10000 });
+    expect((await service.resolveToken(registered.token))?.account.matchesPublic).toBe(false);
   });
 
   it('should prefer the new session cookie and preserve legacy authentication', async () => {

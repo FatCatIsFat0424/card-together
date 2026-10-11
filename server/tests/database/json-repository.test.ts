@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createJsonRepository } from '../../src/database/json-repository';
 import type { AccountRecord, MatchRecord, Repository } from '../../src/database/repository';
 import { emptyDocument } from '../../src/database/schema';
+import { CURRENT_SCHEMA_VERSION } from '../../src/database/migrations';
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const original = await importOriginal<typeof import('node:fs/promises')>();
@@ -126,7 +127,7 @@ describe('JSON repository', () => {
     await repository.close();
     repository = await createJsonRepository(path);
     for (const entry of accounts) expect(await repository.getAccountById(entry.id)).toEqual(entry);
-    expect(JSON.parse(await readFile(path, 'utf8')).schemaVersion).toBe(4);
+    expect(JSON.parse(await readFile(path, 'utf8')).schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
   });
 
   it('should enforce case-normalized uniqueness atomically during concurrent registration', async () => {

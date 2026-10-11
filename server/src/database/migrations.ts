@@ -1,4 +1,4 @@
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
 
 type JsonObject = Record<string, unknown>;
 
@@ -118,9 +118,18 @@ function toVersion4(document: JsonObject): JsonObject {
   };
 }
 
+/** v5: make all existing match histories public once; later owner choices remain saved. */
+function toVersion5(document: JsonObject): JsonObject {
+  return {
+    ...document,
+    schemaVersion: 5,
+    accounts: mapArray(document.accounts, (account) => ({ ...account, matchesPublic: true })),
+  };
+}
+
 /** Index i upgrades version i + 1 to i + 2. Append new steps; never edit shipped ones. */
 const STEPS: readonly ((document: JsonObject) => JsonObject)[] = [
-  toVersion2, toVersion3, toVersion4,
+  toVersion2, toVersion3, toVersion4, toVersion5,
 ];
 
 /**

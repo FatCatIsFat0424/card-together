@@ -252,7 +252,7 @@ export function createAuthService(
         tableBackgroundOpacity: IMAGE_OPACITY_MAX,
         cardBack: null,
         cardBackOpacity: IMAGE_OPACITY_MAX,
-        matchesPublic: false,
+        matchesPublic: true,
       }, mediaExists);
       const passwordHash = await hashPassword(password);
       if (profile.avatarBorder) throw authError(403, 'BORDER_NOT_OWNED', 'Purchase this avatar border first.');

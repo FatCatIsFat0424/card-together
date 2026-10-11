@@ -32,7 +32,7 @@ export function createPlayerRouter(repository: Repository, authService: AuthServ
       .catch(next);
   });
 
-  /** Visible to the owner, or to everyone once the owner made it public. */
+  /** Visible to the owner, or to other signed-in players while public. */
   router.get('/:accountId/history', (request, response, next) => {
     const { accountId } = request.params;
     if (!isAccountId(accountId)) {

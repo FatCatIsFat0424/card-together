@@ -226,6 +226,32 @@ describe('public player profile HTTP routes', () => {
     expect(missing.status).toBe(404);
   });
 
+  it('should expose new account history by default and allow the owner to make it private', async () => {
+    const registered = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { Origin: ORIGIN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'charlie', password: 'correct password' }),
+    });
+    expect(registered.status).toBe(201);
+    const { account } = await registered.json();
+    expect(account.matchesPublic).toBe(true);
+    const cookie = registered.headers.get('set-cookie')!.split(';')[0];
+    const ownerHeaders = { Cookie: cookie, Origin: ORIGIN, 'Content-Type': 'application/json' };
+    const history = `${baseUrl}/api/players/${account.id}/history`;
+    expect((await fetch(history)).status).toBe(401);
+    const visible = await fetch(history, { headers: headers() });
+    expect(visible.status).toBe(200);
+    expect(await visible.json()).toEqual({ success: true, matches: [], players: {} });
+
+    const hidden = await fetch(`${baseUrl}/api/auth/profile`, {
+      method: 'PATCH', headers: ownerHeaders, body: JSON.stringify({ matchesPublic: false }),
+    });
+    expect(hidden.status).toBe(200);
+    expect((await repository.getAccountById(account.id))?.matchesPublic).toBe(false);
+    expect((await fetch(history, { headers: headers() })).status).toBe(403);
+    expect((await fetch(history, { headers: ownerHeaders })).status).toBe(200);
+  });
+
   it('should use the application error handler without exposing repository details', async () => {
     const lookup = repository.getAccountById.bind(repository);
     vi.spyOn(repository, 'getAccountById').mockImplementation(async (id) => {

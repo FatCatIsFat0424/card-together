@@ -42,8 +42,11 @@ Friend requests are persisted with unordered-pair uniqueness and sender/recipien
 permissions. Accepted friends include transient online/in-room presence and the room code
 they currently host while online. Players can join that room without an invitation; the
 server rechecks friendship, host identity and capacity, and commits room switching atomically.
-Room invitations are ephemeral and only available to accepted friends. Match history defaults to private;
-other signed-in players can read it only when the owner enables visibility.
+Room invitations are ephemeral and only available to accepted friends. New accounts default to public
+match history, readable by other signed-in players. Owners can disable visibility in their account
+settings. The one-time schema-v5 migration makes every existing account's history public,
+including accounts that previously disabled visibility. Later owner choices remain saved
+across restarts.
 
 ## Game coins
 
@@ -114,9 +117,14 @@ the build, tests, or application startup. Backups deliberately retain the origin
 ## Database and media
 
 The authoritative contracts are `server/src/database/repository.ts` and
-`server/src/database/schema.ts`. `migrations.ts` defines the current version **4**;
-startup migrates supported version 1–3 data and validates the result. Version 4 adds the
+`server/src/database/schema.ts`. `migrations.ts` defines the current version **5**;
+startup migrates supported version 1–4 data and validates the result. Version 4 adds the
 account card back and image opacity settings with defaults that keep the previous look.
+Version 5 sets match-history visibility to public for all existing accounts once. Opening
+an older database preserves its original file as `database.json.v<version>.bak` before
+persisting the migration. Follow the complete database/media backup procedure before
+deployment. Servers supporting only schema v4 reject v5 files; stop writers and restore a
+compatible complete backup before rollback, accounting for writes made since that backup.
 
 | Collection | Contents |
 | --- | --- |

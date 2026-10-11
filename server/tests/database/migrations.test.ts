@@ -64,7 +64,7 @@ function version1Runtime(): unknown {
 }
 
 describe('database migrations', () => {
-  it('should upgrade a v1 document to v2 defaults without mutating the input', () => {
+  it('should upgrade a v1 document to current defaults without mutating the input', () => {
     const input = version1();
     const before = structuredClone(input);
     const migrated = migrateDocument(input);
@@ -75,7 +75,7 @@ describe('database migrations', () => {
       emojis: [],
       accounts: [{
         avatarImage: null, tableBackground: null, tableBackgroundOpacity: 100,
-        cardBack: null, cardBackOpacity: 100, matchesPublic: false,
+        cardBack: null, cardBackOpacity: 100, matchesPublic: true,
       }],
     });
   });
@@ -105,7 +105,7 @@ describe('database migrations', () => {
       const original = JSON.stringify(version1(version1Runtime()));
       await writeFile(path, original);
       const repository = await createJsonRepository(path);
-      expect(await repository.getAccountById('account-1')).toMatchObject({ matchesPublic: false });
+      expect(await repository.getAccountById('account-1')).toMatchObject({ matchesPublic: true });
       await repository.close();
       expect(await readFile(`${path}.v1.bak`, 'utf8')).toBe(original);
       expect(JSON.parse(await readFile(path, 'utf8')).schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
@@ -143,12 +143,63 @@ describe('database migrations', () => {
     };
     const migrated = migrateDocument(input) as ReturnType<typeof emptyDocument>;
     expect(() => validateDocument(migrated)).not.toThrow();
-    expect(migrated.schemaVersion).toBe(4);
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     for (const account of migrated.accounts) {
       expect(account).toMatchObject({
         tableBackground: `${'a'.repeat(64)}.webp`, tableBackgroundOpacity: 100,
         cardBack: null, cardBackOpacity: 100,
       });
+    }
+  });
+
+  it('should make every v4 account history public without changing other data or the input', () => {
+    const current = migrateDocument(version2()) as ReturnType<typeof emptyDocument>;
+    const input = {
+      ...current,
+      schemaVersion: 4,
+      accounts: current.accounts.map((account, index) => ({
+        ...account, matchesPublic: index % 2 === 0, coins: 10,
+      })),
+      rewardedGameIds: ['game-1'],
+    };
+    const before = structuredClone(input);
+    const migrated = migrateDocument(input);
+    expect(input).toEqual(before);
+    expect(() => validateDocument(migrated)).not.toThrow();
+    expect(migrated).toEqual({
+      ...input,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      accounts: input.accounts.map((account) => ({ ...account, matchesPublic: true })),
+    });
+  });
+
+  it('should back up v4 data and preserve later private choices across reopening', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'bridge-migration-'));
+    const path = join(directory, 'database.json');
+    let repository: Awaited<ReturnType<typeof createJsonRepository>> | undefined;
+    try {
+      const current = migrateDocument(version2()) as ReturnType<typeof emptyDocument>;
+      const original = JSON.stringify({
+        ...current, schemaVersion: 4,
+        accounts: current.accounts.map((account) => ({ ...account, matchesPublic: false })),
+      });
+      await writeFile(path, original);
+      repository = await createJsonRepository(path);
+      for (const account of current.accounts) {
+        expect((await repository.getAccountById(account.id))?.matchesPublic).toBe(true);
+      }
+      expect(await readFile(`${path}.v4.bak`, 'utf8')).toBe(original);
+      const account = await repository.getAccountById('account-2');
+      await repository.updateProfile('account-2', { ...account!, matchesPublic: false }, 200);
+      await repository.close();
+      repository = await createJsonRepository(path);
+      expect((await repository.getAccountById('account-2'))?.matchesPublic).toBe(false);
+      expect((await repository.getAccountById('account-3'))?.matchesPublic).toBe(true);
+      expect(await readFile(`${path}.v4.bak`, 'utf8')).toBe(original);
+      expect(JSON.parse(await readFile(path, 'utf8')).schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    } finally {
+      await repository?.close();
+      await rm(directory, { recursive: true, force: true });
     }
   });
 
