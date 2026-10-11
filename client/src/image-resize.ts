@@ -1,4 +1,4 @@
-// Browser-only (canvas); keep out of unit tests.
+// Static image resizing requires browser canvas APIs.
 
 interface ResizeOptions {
   /** Square output edge, or the longest side limit when `square` is false. */
@@ -15,6 +15,8 @@ function encode(canvas: HTMLCanvasElement, type: string, quality: number): Promi
 }
 
 export async function resizeImage(file: Blob, options: ResizeOptions): Promise<Blob> {
+  // Canvas encodes a single frame, so preserve GIF bytes to retain their animation.
+  if (file.type === 'image/gif') return file;
   const bitmap = await createImageBitmap(file);
   const crop = options.square ? Math.min(bitmap.width, bitmap.height) : 0;
   const sourceWidth = crop || bitmap.width;

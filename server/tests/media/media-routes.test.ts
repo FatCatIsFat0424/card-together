@@ -18,6 +18,10 @@ const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
   'base64',
 );
+const ANIMATED_GIF = Buffer.from(
+  'R0lGODlhAQABAIAAAExpcf8AACH/C05FVFNDQVBFMi4wAwEAAAAh+QQFCgAAACwAAAAAAQABAAACAkwBACH5BAUKAAAALAAAAAABAAEAgExpcQAA/wICTAEAOw==',
+  'base64',
+);
 const COOKIE = `${SESSION_COOKIE_NAME}=${'a'.repeat(43)}`;
 const HEADERS = { Cookie: COOKIE, Origin: ORIGIN, 'Content-Type': 'application/json' };
 
@@ -90,6 +94,29 @@ describe('media HTTP routes', () => {
     expect(served.headers.get('x-content-type-options')).toBe('nosniff');
     expect(served.headers.get('content-security-policy')).toBe("default-src 'none'");
     expect(Buffer.from(await served.arrayBuffer()).equals(PNG)).toBe(true);
+  });
+
+  it.each([
+    ['avatarImage', 'avatar'], ['seatBackground', 'background'],
+    ['tableBackground', 'background'], ['cardBack', 'cardBack'],
+  ])('should preserve animated GIFs uploaded for %s', async (field, purpose) => {
+    await start(join(directory, 'media'));
+    const uploaded = await upload(ANIMATED_GIF, purpose);
+    expect(uploaded.status).toBe(200);
+    const { id } = await uploaded.json() as { id: string };
+    expect(id).toMatch(/^[a-f0-9]{64}\.gif$/);
+    const updated = await fetch(`${baseUrl}/api/auth/profile`, {
+      method: 'PATCH', headers: HEADERS, body: JSON.stringify({ [field]: id }),
+    });
+    expect(updated.status).toBe(200);
+    expect(await updated.json()).toMatchObject({ account: { [field]: id } });
+    const served = await fetch(`${baseUrl}/api/media/${id}`);
+    expect(served.status).toBe(200);
+    expect(served.headers.get('content-type')).toBe('image/gif');
+    expect(Buffer.from(await served.arrayBuffer())).toEqual(ANIMATED_GIF);
+    const limit = purpose === 'background' ? 2 * 1024 * 1024 : 512 * 1024;
+    const oversized = Buffer.concat([ANIMATED_GIF, Buffer.alloc(limit)]);
+    expect((await upload(oversized, purpose)).status).toBe(413);
   });
 
   it('should reject non-images, oversize avatars, bad purposes and anonymous uploads', async () => {

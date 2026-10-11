@@ -55,7 +55,9 @@ animated emoji can reach that quota before the 300-entry library cap.
 Table backgrounds and card backs are personal display settings: only the owner sees them,
 nothing is broadcast, and game state is unchanged. A card back replaces every face-down
 card on the owner's screen, covering the card face (centered, cropped); without one the
-theme's default back is used. The account page resizes uploads before sending them
+theme's default back is used. GIF uploads retain their original bytes and animation for
+avatars, seat backgrounds, table backgrounds, and card backs; they must fit the same
+per-purpose byte limits. The account page resizes static uploads before sending them
 (backgrounds to a 1920-pixel and card backs to a 512-pixel long edge, WebP with JPEG
 fallback). Each image has an opacity of 20–100% (default 100%) that fades only the image
 layer toward a plain base: the theme's solid surface color for tables and the card face
