@@ -9,6 +9,8 @@ Checkbox controls use [AppCheckbox](../client/src/components/AppCheckbox.tsx), w
 wraps MUI Checkbox with the existing theme variables and a 44px hit area. Keep labels
 associated with the native input and put input-specific accessibility attributes in
 `slotProps.input`. Emoji selection keeps whole-tile toggling and Shift-click ranges.
+The waiting room's Dragon Slaying option matches the height of one game-picker
+row. The checkbox's 44px hit area extends beyond the compact visual frame.
 
 Interface icons use [AppIcon](../client/src/components/AppIcon.tsx) and individual
 `@mui/icons-material` SVG imports, inheriting text size and theme color. Icons are
