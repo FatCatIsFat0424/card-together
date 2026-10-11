@@ -257,7 +257,7 @@ export function t(key: TranslationKey, locale: Locale, params?: Record<string, s
 
   if (params) {
     for (const [k, v] of Object.entries(params)) {
-      text = text.replace(`{${k}}`, v);
+      text = text.replaceAll(`{${k}}`, v);
     }
   }
 

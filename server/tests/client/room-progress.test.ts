@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PlayerInfo, SeatMap } from '@shared/types';
+import { t } from '../../../client/src/i18n';
 import { roomProgress, unreadCount } from '../../../client/src/pages/room-progress';
 
 const player = (id: string, isBot = false): PlayerInfo => ({
@@ -20,6 +21,11 @@ describe('room progress', () => {
   it('should report an empty room', () => {
     const empty = { player: null, isReady: false };
     expect(roomProgress({ N: empty, E: empty, S: empty, W: empty })).toEqual({ seated: 0, ready: 0 });
+  });
+
+  it('should fill every occurrence of a placeholder in the flexible-seat progress', () => {
+    expect(t('room.progressFlexible', 'en', { seated: '2', ready: '1' })).toBe('2/4 seated · 1/2 ready');
+    expect(t('room.progressFlexible', 'zh-TW', { seated: '3', ready: '3' })).toBe('3/4 就座 · 3/3 準備');
   });
 
   it('should count unread chat only while the panel is hidden', () => {
