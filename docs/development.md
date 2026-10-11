@@ -24,10 +24,10 @@ and above; narrower screens place a red sign-out icon and label last in the menu
 The signed-in top bar displays the owner's coin balance with a Material coin icon
 on desktop and compact screens. Its hint explains the 10-coin completed-game reward.
 Balances update through authenticated resume and private `account:coins` events;
-room identities and public profiles do not expose them. Coins only increase through
-durably completed games, so the account store keeps the higher balance when a stale
-profile response arrives. Clear/reset on account changes still starts the new account
-from its own balance. See [game coins](storage.md#game-coins) for persistence semantics.
+room identities and public profiles do not expose them. A server-owned balance revision
+orders rewards and purchase debits, so stale HTTP responses cannot undo either.
+Private `account:updated` events synchronize saved profiles and purchased inventory
+across the owner's tabs. See [game coins](storage.md#game-coins) for persistence semantics.
 
 The lobby uses the profile page width, with a game picker and separate room actions.
 On desktop, the sidebar groups the selected game, room-creation button, and code
@@ -105,13 +105,16 @@ match table without an additional history heading or bot-recording caption.
 Lobby navigation remains in the top bar;
 the profile footer appears only when there is an active room to return to.
 
-The authenticated `/shop` route is an example avatar-border catalog, accessible from
-desktop and mobile navigation. Its catalog lives in `client/src/shop-catalog.ts`;
+The authenticated `/shop` route sells permanent avatar borders, accessible from
+desktop and mobile navigation. Its authoritative catalog lives in `shared/src/constants/shop.ts`;
 prices span 50–300 earned coins (5–30 completed games at the current reward).
 Try-on uses the account's preset/uploaded avatar and a CSS border in the live preview.
-Selection and reset are local to the shop page; purchases are not yet available and
-previewing does not change the balance or saved profile. The wallet reads the existing
-account balance and reward rate rather than introducing mock currency.
+Selection and reset are local to the shop page; previewing does not change the balance
+or saved profile. Buying atomically debits earned coins and adds the border to private
+inventory; a repeated purchase does not charge again. The account editor's Material
+select offers owned borders and the original avatar, previews the selection immediately,
+and saves it with the identity form. Equipped borders appear on player avatars in the
+lobby, public profile, friends, chat and rooms. Both preset and uploaded avatars work.
 
 Selecting a game crossfades the lobby's decorative background over 600ms; the
 artwork is loaded before the previous background fades out. Background changes

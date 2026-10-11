@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { copyFile, mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { GAME_COIN_REWARD, MAX_EMOJIS_PER_ACCOUNT } from '@shared/constants';
+import { AVATAR_BORDERS, GAME_COIN_REWARD, MAX_EMOJIS_PER_ACCOUNT } from '@shared/constants';
 import type { Repository, AccountRecord, MatchRecord } from './repository';
 import { publicAccount, repositoryError } from './repository';
 import { emptyDocument, isObject, validateDocument } from './schema';
@@ -132,7 +132,7 @@ export async function createJsonRepository(filePath: string): Promise<Repository
           const account = data.accounts[index];
           const coins = (account.coins ?? 0) + GAME_COIN_REWARD;
           if (!Number.isSafeInteger(coins)) throw new Error('Coin balance exceeds the supported limit.');
-          data.accounts[index] = { ...account, coins };
+          data.accounts[index] = { ...account, coins, coinRevision: (account.coinRevision ?? 0) + 1 };
         }
         rewarded.add(id);
       }
@@ -176,9 +176,31 @@ export async function createJsonRepository(filePath: string): Promise<Repository
         write(['accounts'], (data) => {
           const index = indexes.accounts(document.accounts).positions.get(id);
           if (index === undefined) return null;
-          const account: AccountRecord = { ...data.accounts[index], ...profile, updatedAt: now };
+          if (profile.avatarBorder && !data.accounts[index].ownedAvatarBorders?.includes(profile.avatarBorder)) {
+            throw repositoryError('BORDER_NOT_OWNED', 'Purchase this avatar border first.');
+          }
+          const account: AccountRecord = { ...data.accounts[index], ...profile,
+            updatedAt: Math.max(now, data.accounts[index].updatedAt + 1) };
           data.accounts[index] = account;
           return account;
+        }),
+      purchaseAvatarBorder: (id, border, now) =>
+        write(['accounts'], (data) => {
+          const index = indexes.accounts(document.accounts).positions.get(id);
+          if (index === undefined) return null;
+          const account = data.accounts[index];
+          if (account.ownedAvatarBorders?.includes(border)) return account;
+          const item = AVATAR_BORDERS.find((entry) => entry.id === border);
+          if (!item) throw repositoryError('INVALID_BORDER', 'Choose an available avatar border.');
+          if ((account.coins ?? 0) < item.price) {
+            throw repositoryError('INSUFFICIENT_COINS', 'Not enough coins. Play more games to earn coins.');
+          }
+          const updated = { ...account, coins: (account.coins ?? 0) - item.price,
+            coinRevision: (account.coinRevision ?? 0) + 1,
+            ownedAvatarBorders: [...(account.ownedAvatarBorders ?? []), border],
+            updatedAt: Math.max(now, account.updatedAt + 1) };
+          data.accounts[index] = updated;
+          return updated;
         }),
       changePassword: (id, expectedHash, passwordHash, now) =>
         write(['accounts'], (data) => {

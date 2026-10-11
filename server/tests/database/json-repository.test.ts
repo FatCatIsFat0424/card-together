@@ -67,6 +67,58 @@ describe('JSON repository', () => {
     await rm(directory, { recursive: true, force: true });
   });
 
+  it('should debit permanent borders once, serialize overspending and retain purchases after reopening', async () => {
+    repository = await createJsonRepository(path);
+    const alice = { ...account('alice'), coins: 200 };
+    await repository.createAccount(alice);
+    await Promise.all(Array.from({ length: 5 }, () => repository!.purchaseAvatarBorder(alice.id, 'cat', 101)));
+    expect(await repository.getAccountById(alice.id)).toMatchObject({
+      coins: 50, coinRevision: 1, ownedAvatarBorders: ['cat'],
+    });
+    const results = await Promise.allSettled([
+      repository.purchaseAvatarBorder(alice.id, 'copper', 102),
+      repository.purchaseAvatarBorder(alice.id, 'silver', 102),
+    ]);
+    expect(results.map((result) => result.status)).toEqual(['fulfilled', 'rejected']);
+    await repository.close();
+    repository = await createJsonRepository(path);
+    expect(await repository.getAccountById(alice.id)).toMatchObject({
+      coins: 0, coinRevision: 2, ownedAvatarBorders: ['cat', 'copper'],
+    });
+    await expect(repository.purchaseAvatarBorder(alice.id, 'cat', 103)).resolves.toMatchObject({ coins: 0 });
+  });
+
+  it('should leave balance and inventory intact when purchase persistence fails', async () => {
+    repository = await createJsonRepository(path);
+    const alice = { ...account('alice'), coins: 50 };
+    await repository.createAccount(alice);
+    const saved = await readFile(path, 'utf8');
+    vi.mocked(rename).mockRejectedValueOnce(Object.assign(new Error('Disk full'), { code: 'ENOSPC' }));
+    await expect(repository.purchaseAvatarBorder(alice.id, 'copper', 101)).rejects.toThrow('Disk full');
+    expect(await readFile(path, 'utf8')).toBe(saved);
+    expect(await repository.getAccountById(alice.id)).toEqual(alice);
+    await expect(repository.purchaseAvatarBorder(alice.id, 'copper', 102)).resolves.toMatchObject({
+      coins: 0, ownedAvatarBorders: ['copper'],
+    });
+  });
+
+  it('should reject malformed inventories and equipment without changing older accounts', async () => {
+    repository = await createJsonRepository(path);
+    const alice = account('alice');
+    await repository.createAccount(alice);
+    await expect(repository.purchaseAvatarBorder(alice.id, 'copper', 101))
+      .rejects.toMatchObject({ code: 'INSUFFICIENT_COINS' });
+    for (const invalid of [
+      { ownedAvatarBorders: ['unknown'] }, { ownedAvatarBorders: ['cat', 'cat'] },
+      { avatarBorder: 'gold' }, { coinRevision: -1 },
+    ]) {
+      await expect(repository.createAccount({ ...account('bob'), ...invalid } as AccountRecord)).rejects.toThrow();
+    }
+    await repository.close();
+    repository = await createJsonRepository(path);
+    expect(await repository.getAccountById(alice.id)).toEqual(alice);
+  });
+
   it('should serialize concurrent writes and preserve every committed account after reopening', async () => {
     repository = await createJsonRepository(path);
     const accounts = Array.from({ length: 12 }, (_, index) => account(`player_${index}`));

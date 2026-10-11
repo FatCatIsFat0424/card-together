@@ -117,7 +117,7 @@ export function LobbyPage(): ReactNode {
     <LobbyBackground gameType={mobileLayout ? 'bridge' : selectedGame} />
     <header className={styles.header}>
       <div className={styles.welcome}>
-        <Avatar avatar={account.avatar} image={account.avatarImage} color={account.color} size="large" />
+        <Avatar avatar={account.avatar} image={account.avatarImage} border={account.avatarBorder} color={account.color} size="large" />
         <div className={styles.identity}>
           <p className={styles.eyebrow}>{t('nav.lobby')}</p>
           <h1>{t('lobby.welcome', { nickname: account.nickname })}</h1>

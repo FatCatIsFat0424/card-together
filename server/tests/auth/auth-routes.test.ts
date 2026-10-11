@@ -119,6 +119,41 @@ describe('account HTTP routes', () => {
     error.mockRestore();
   });
 
+  it('should authenticate purchases, ignore client prices and equip only owned borders', async () => {
+    const { cookie, id } = await register();
+    const headers = { ...HEADERS, Cookie: cookie };
+    const buy = (body: object, requestHeaders: Record<string, string> = headers): Promise<Response> => fetch(`${baseUrl}/shop/avatar-borders`, {
+      method: 'POST', headers: requestHeaders, body: JSON.stringify(body),
+    });
+    expect((await buy({ border: 'copper' }, HEADERS)).status).toBe(401);
+    expect((await buy({ border: 'copper' }, { ...headers, Origin: 'https://attacker.example' })).status).toBe(403);
+    expect((await buy({ border: 'unknown' })).status).toBe(400);
+    expect((await buy({ border: 'copper', price: 0, coins: 9999 })).status).toBe(409);
+    const account = await repository.getAccountById(id);
+    if (!account) throw new Error('Expected a registered account.');
+    // Seed a separate isolated test account; production balances remain game-earned.
+    await repository.createAccount({ ...account, id: 'shop-test-bob', username: 'bob', usernameNormalized: 'bob', coins: 100 });
+    const login = await fetch(`${baseUrl}/login`, {
+      method: 'POST', headers: HEADERS, body: JSON.stringify({ username: 'bob', password: 'correct password' }),
+    });
+    const bobHeaders = { ...HEADERS, Cookie: login.headers.get('set-cookie')!.split(';')[0] };
+    const response = await buy({ border: 'copper', price: 0, accountId: id }, bobHeaders);
+    expect(await response.json()).toMatchObject({ account: {
+      id: 'shop-test-bob', coins: 50, coinRevision: 1, ownedAvatarBorders: ['copper'], avatarBorder: null,
+    } });
+    expect(await (await buy({ border: 'copper' }, bobHeaders)).json()).toMatchObject({ account: { coins: 50 } });
+    const patch = (body: object): Promise<Response> => fetch(`${baseUrl}/profile`, {
+      method: 'PATCH', headers: bobHeaders, body: JSON.stringify(body),
+    });
+    expect((await patch({ avatarBorder: 'gold', ownedAvatarBorders: ['gold'] })).status).toBe(403);
+    expect(await (await patch({ avatarBorder: 'copper', coins: 9999 })).json()).toMatchObject({ account: {
+      coins: 50, avatarBorder: 'copper', ownedAvatarBorders: ['copper'],
+    } });
+    expect(onAccountUpdated).toHaveBeenCalledWith(expect.objectContaining({ avatarBorder: 'copper' }));
+    expect(await (await patch({ avatarBorder: null })).json()).toMatchObject({ account: { avatarBorder: null, coins: 50 } });
+    expect((await repository.getAccountById(id))?.coins).toBe(0);
+  });
+
   it('should upgrade a legacy cookie on authenticated restore with its original expiry', async () => {
     const { cookie, id } = await register();
     const token = cookie.split('=')[1];

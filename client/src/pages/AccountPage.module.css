@@ -68,6 +68,17 @@
   .previewFooter { flex-direction: row; flex-wrap: wrap; justify-content: space-between; }
   .controls { padding: var(--spacing-lg); border-left: 0; border-top: 1px solid var(--border-color); }
 }
+.borderSelect :global(.MuiInputLabel-root) { font-family: var(--font-primary); color: var(--text-secondary); }
+.borderSelect :global(.MuiInputLabel-root.Mui-focused) { color: var(--color-primary); }
+.borderSelect :global(.MuiOutlinedInput-root) { min-height: 44px; border-radius: var(--radius-md); font-family: var(--font-primary); font-size: var(--text-sm); color: var(--text-primary); background: var(--bg-input); }
+.borderSelect :global(.MuiOutlinedInput-notchedOutline) { border-color: var(--border-color); }
+.borderSelect :global(.MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline) { border-color: var(--text-secondary); }
+.borderSelect :global(.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline) { border-color: var(--color-primary); }
+.borderSelect :global(.MuiSelect-icon) { color: var(--text-secondary); }
+.borderMenu:global(.MuiPaper-root) { color: var(--text-primary); background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
+.borderMenu :global(.MuiMenuItem-root) { min-height: 44px; font-family: var(--font-primary); font-size: var(--text-sm); }
+.borderMenu :global(.MuiMenuItem-root:hover), .borderMenu :global(.MuiMenuItem-root.Mui-focusVisible) { background: var(--bg-card-hover); }
+.borderMenu :global(.MuiMenuItem-root.Mui-selected) { color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 14%, transparent); }
 @media (max-width: 40rem) {
   .page { padding: var(--spacing-md); }
   .header h1 { font-size: var(--text-2xl); }

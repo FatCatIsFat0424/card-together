@@ -61,7 +61,8 @@ describe('socket delivery scope and read-only resume', () => {
       }
       // Resume also carries a private balance; normal state broadcasts carry game/room data.
       expect(actual.coins).toBe((await harness.repository.getAccountById(accountId))?.coins ?? 0);
-      const { coins: _coins, ...actualState } = actual;
+      expect(actual.coinRevision).toBe((await harness.repository.getAccountById(accountId))?.coinRevision ?? 0);
+      const { coins: _coins, coinRevision: _coinRevision, ...actualState } = actual;
       expect(actualState).toEqual(expected);
     }
   }

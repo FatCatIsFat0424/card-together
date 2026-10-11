@@ -78,7 +78,7 @@ function Tally({ room, ids, label }: { room: RoomInfo; ids: readonly string[]; l
     {ids.map((id) => {
       const player = seatedPlayer(room, id);
       return player && <span key={id} title={player.nickname}>
-        <Avatar avatar={player.avatar} image={player.avatarImage} color={player.color} size="small" />
+        <Avatar avatar={player.avatar} image={player.avatarImage} border={player.avatarBorder} color={player.color} size="small" />
       </span>;
     })}
   </div>;

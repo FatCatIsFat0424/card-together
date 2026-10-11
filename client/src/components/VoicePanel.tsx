@@ -210,7 +210,7 @@ export function VoicePanel(): ReactNode {
                 .find((seat) => seat.player?.id === participant.accountId)?.player
                 ?? profiles[participant.accountId];
             return <li key={participant.peerId} className={styles.participant}>
-              {person && <Avatar avatar={person.avatar} image={person.avatarImage} color={person.color} size="small" />}
+              {person && <Avatar avatar={person.avatar} image={person.avatarImage} border={person.avatarBorder} color={person.color} size="small" />}
               <span className={styles.name}>{person?.nickname ?? t('voice.player')}
                 {participant.accountId === account.id && ` ${t('common.me')}`}</span>
               <span className={participant.muted ? styles.muted : styles.status}>

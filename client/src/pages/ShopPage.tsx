@@ -1,5 +1,10 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
+import type { AccountProfile } from '@shared/types';
+import { Link } from 'react-router-dom';
+import Alert from '@mui/material/Alert';
+import Snackbar from '@mui/material/Snackbar';
+import { apiRequest } from '../api';
 import { GAME_COIN_REWARD } from '@shared/constants';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
@@ -13,11 +18,25 @@ export function ShopPage(): ReactNode {
   const account = useAccountStore((state) => state.account);
   const { t, locale } = useI18nStore();
   const [selected, setSelected] = useState<AvatarBorderId | null>('cat');
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
   if (!account) return null;
   const item = AVATAR_BORDERS.find((border) => border.id === selected);
   const name = item ? t(`shop.item.${item.id}.name`) : t('shop.original');
   const format = (value: number): string => value.toLocaleString(locale);
   const avatar = { avatar: account.avatar, image: account.avatarImage, color: account.color };
+  const owned = (id: AvatarBorderId): boolean => account.ownedAvatarBorders?.includes(id) ?? false;
+  const purchase = async (border: AvatarBorderId): Promise<void> => {
+    if (busy) return;
+    setBusy(true);
+    const result = await apiRequest<{ account: AccountProfile }>('/api/auth/shop/avatar-borders', 'POST', { border });
+    setBusy(false);
+    if (useAccountStore.getState().account?.id !== account.id) return;
+    if (result.success) {
+      useAccountStore.getState().setAccount(result.account);
+      setNotice({ message: t('shop.purchased'), severity: 'success' });
+    } else setNotice({ message: result.status === 409 ? t('shop.insufficient') : result.error, severity: 'error' });
+  };
   const tryOn = (border: AvatarBorderId): void => {
     setSelected(border);
     if (window.matchMedia('(max-width: 52rem)').matches) {
@@ -56,7 +75,8 @@ export function ShopPage(): ReactNode {
         <section className={styles.wallet} aria-labelledby="shop-wallet-title">
           <span id="shop-wallet-title">{t('shop.balance')}</span>
           <strong><AppIcon name="coins" />{format(account.coins ?? 0)}</strong>
-          <p>{t('shop.demo')}</p>
+          <p>{t('shop.inventoryHelp')}</p>
+          <Link to="/account">{t('shop.manage')}</Link>
         </section>
       </aside>
       <section className={styles.catalog} aria-labelledby="shop-catalog-title">
@@ -82,10 +102,20 @@ export function ShopPage(): ReactNode {
                   {active && <AppIcon name="check" />}{t(active ? 'shop.tryingOn' : 'shop.tryOn')}
                 </button>
               </div>
+              <button type="button" className={`btn btn-primary ${styles.buy}`} disabled={busy || owned(border.id)}
+                aria-label={t(owned(border.id) ? 'shop.ownedNamed' : 'shop.buyNamed', { name: productName })}
+                onClick={() => void purchase(border.id)}>
+                {t(owned(border.id) ? 'shop.owned' : busy ? 'common.loading' : 'shop.buy')}
+              </button>
             </div>
           </li>;
         })}</ul>
       </section>
     </div>
+    <Snackbar open={notice !== null} autoHideDuration={5000} onClose={() => setNotice(null)}>
+      <Alert severity={notice?.severity ?? 'success'} onClose={() => setNotice(null)} variant="filled">
+        {notice?.message}
+      </Alert>
+    </Snackbar>
   </main>;
 }

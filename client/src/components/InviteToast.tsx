@@ -68,7 +68,7 @@ export function InviteToast(): ReactNode {
       </p>}
       {invites.map((invite) => (
         <div key={invite.id} className={styles.toast} role="status">
-          <Avatar avatar={invite.from.avatar} image={invite.from.avatarImage}
+          <Avatar avatar={invite.from.avatar} image={invite.from.avatarImage} border={invite.from.avatarBorder}
             color={invite.from.color} size="small" />
           <span className={styles.message}>
             {t('invite.message', { nickname: invite.from.nickname, code: invite.roomCode })}</span>

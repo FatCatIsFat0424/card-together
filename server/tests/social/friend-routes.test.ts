@@ -164,7 +164,7 @@ describe('friend HTTP routes', () => {
       success: true,
       account: {
         id: 'bob', username: 'bob', nickname: 'bob', color: '#2563eb', avatar: 'cat',
-        avatarImage: null,
+        avatarImage: null, avatarBorder: null,
       },
     });
   });

@@ -41,6 +41,7 @@ export {
   isUsername,
 } from './account';
 export { IMAGE_OPACITY_MAX, IMAGE_OPACITY_MIN, isImageOpacity, isMediaId } from './media';
+export { AVATAR_BORDERS, isAvatarBorderId } from './shop';
 export {
   EMOJI_MAX_BYTES,
   EMOJI_NAME_MAX_LENGTH,

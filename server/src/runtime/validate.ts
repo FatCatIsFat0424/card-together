@@ -1,4 +1,5 @@
 import { isTimeControl } from '@shared/time-control';
+import { isAvatarBorderId } from '@shared/constants';
 import { isSevensOptions } from '@shared/sevens-options';
 import { isNinetyNineOptions } from '@shared/ninetynine-options';
 import { isBlackjackOptions } from '@shared/blackjack-options';
@@ -68,6 +69,7 @@ function player(value: unknown): boolean {
     /^#[a-fA-F0-9]{6}$/.test(value.color) &&
     oneOf(value.avatar, ['cat', 'fox', 'owl', 'bear', 'rabbit', 'panda']) &&
     (value.avatarImage === null || isMediaId(value.avatarImage)) &&
+    (value.avatarBorder === undefined || value.avatarBorder === null || isAvatarBorderId(value.avatarBorder)) &&
     (value.seatBackground === undefined || value.seatBackground === null || isMediaId(value.seatBackground))
   );
 }

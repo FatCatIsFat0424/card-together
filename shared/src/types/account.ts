@@ -1,3 +1,4 @@
+import type { AvatarBorderId } from '../constants/shop';
 export type AvatarPreset = 'cat' | 'fox' | 'owl' | 'bear' | 'rabbit' | 'panda';
 export type AvatarId = AvatarPreset;
 /** Uploaded image: 64 lowercase hex sha256 + `.png|.jpg|.gif|.webp`. */
@@ -9,6 +10,11 @@ export interface AccountProfile {
   readonly username: string;
   /** Server-owned balance. Older accounts without this field start at zero. */
   readonly coins?: number;
+  /** Increases on every balance change, including purchases. Missing means zero. */
+  readonly coinRevision?: number;
+  /** Private inventory; older accounts own no borders. */
+  readonly ownedAvatarBorders?: readonly AvatarBorderId[];
+  readonly avatarBorder?: AvatarBorderId | null;
   readonly nickname: string;
   readonly color: string;
   readonly avatar: AvatarPreset;

@@ -3,7 +3,7 @@ import type { AccountProfile, AvatarPreset, MediaId } from '@shared/types';
 import {
   IMAGE_OPACITY_MAX, IMAGE_OPACITY_MIN, NICKNAME_MAX_LENGTH, PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH, USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, isImageOpacity, isMediaId,
-  isUsername,
+  isUsername, isAvatarBorderId,
 } from '@shared/constants';
 import type { Repository, SessionRecord, AccountRecord } from '../database/repository';
 import { publicAccount } from '../database/repository';
@@ -32,6 +32,7 @@ export interface AuthService {
   logout(session: SessionRecord): Promise<void>;
   logoutAll(accountId: string): Promise<void>;
   updateProfile(accountId: string, input: unknown): Promise<AccountProfile>;
+  purchaseAvatarBorder(accountId: string, input: unknown): Promise<AccountProfile>;
   changePassword(accountId: string, input: unknown): Promise<void>;
 }
 
@@ -98,6 +99,7 @@ type EditableProfile = Pick<
   AccountProfile,
   | 'nickname' | 'color' | 'avatar' | 'avatarImage' | 'seatBackground' | 'tableBackground'
   | 'tableBackgroundOpacity' | 'cardBack' | 'cardBackOpacity' | 'matchesPublic'
+  | 'avatarBorder'
 >;
 
 function mediaValue(
@@ -161,10 +163,15 @@ function profileValues(
   if (typeof matchesPublic !== 'boolean') {
     throw authError(400, 'INVALID_INPUT', 'Match visibility must be true or false.');
   }
+  const avatarBorder = input.avatarBorder === undefined ? fallback.avatarBorder ?? null : input.avatarBorder;
+  if (avatarBorder !== null && !isAvatarBorderId(avatarBorder)) {
+    throw authError(400, 'INVALID_BORDER', 'Choose an available avatar border.');
+  }
   return {
     nickname: nickname.trim(),
     color: color.toLowerCase(),
     avatar: avatar as AvatarPreset,
+    avatarBorder,
     avatarImage: mediaValue(input.avatarImage, fallback.avatarImage, mediaExists),
     seatBackground: mediaValue(input.seatBackground, fallback.seatBackground ?? null, mediaExists),
     tableBackground: mediaValue(input.tableBackground, fallback.tableBackground, mediaExists),
@@ -248,6 +255,7 @@ export function createAuthService(
         matchesPublic: false,
       }, mediaExists);
       const passwordHash = await hashPassword(password);
+      if (profile.avatarBorder) throw authError(403, 'BORDER_NOT_OWNED', 'Purchase this avatar border first.');
       const createdAt = now();
       try {
         const account = await repository.createAccount({
@@ -289,9 +297,28 @@ export function createAuthService(
       const account = await repository.getAccountById(accountId);
       if (!account) throw authError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
       const profile = profileValues(body, account, mediaExists);
+      if (profile.avatarBorder && !account.ownedAvatarBorders?.includes(profile.avatarBorder)) {
+        throw authError(403, 'BORDER_NOT_OWNED', 'Purchase this avatar border first.');
+      }
       const updated = await repository.updateProfile(accountId, profile, now());
       if (!updated) throw authError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
       return publicAccount(updated);
+    },
+    purchaseAvatarBorder: async (accountId, input) => {
+      const body = requiredObject(input);
+      if (!isAvatarBorderId(body.border)) {
+        throw authError(400, 'INVALID_BORDER', 'Choose an available avatar border.');
+      }
+      try {
+        const account = await repository.purchaseAvatarBorder(accountId, body.border, now());
+        if (!account) throw authError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
+        return publicAccount(account);
+      } catch (error) {
+        if (isObject(error) && error.code === 'INSUFFICIENT_COINS') {
+          throw authError(409, 'INSUFFICIENT_COINS', 'Not enough coins. Play more games to earn coins.');
+        }
+        throw error;
+      }
     },
     changePassword: async (accountId, input) => {
       const body = requiredObject(input);

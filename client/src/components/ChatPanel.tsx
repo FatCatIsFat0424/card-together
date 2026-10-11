@@ -119,7 +119,7 @@ export function ChatPanel({ onCollapse }: ChatPanelProps): ReactNode {
           </p>
         ) : (
           <div key={message.id} className={styles.chatMessage}>
-            <Avatar avatar={message.sender.avatar} image={message.sender.avatarImage} color={message.sender.color} size="small" />
+            <Avatar avatar={message.sender.avatar} image={message.sender.avatarImage} border={message.sender.avatarBorder} color={message.sender.color} size="small" />
             <span className={styles.chatSender}>{message.sender.nickname}</span>
             {message.audience === 'observers' && <span className={styles.observerTag}
               title={t('chat.observerTitle')}>{t('chat.observerTag')}</span>}

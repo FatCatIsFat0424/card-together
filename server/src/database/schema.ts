@@ -4,7 +4,7 @@ import {
 } from '../runtime/validate';
 import {
   FLEXIBLE_SEAT_GAMES, GAME_TYPES, MAX_EMOJIS_PER_ACCOUNT, NICKNAME_MAX_LENGTH, isEmojiName, isImageOpacity, isMediaId,
-  isUsername,
+  isUsername, isAvatarBorderId,
 } from '@shared/constants';
 import type { GameType } from '@shared/types';
 import type { RuntimeSnapshot } from '../runtime/types';
@@ -48,6 +48,13 @@ function validAccount(value: unknown): value is AccountRecord {
     typeof value.username === 'string' &&
     isUsername(value.username) &&
     (value.coins === undefined || timestamp(value.coins)) &&
+    (value.coinRevision === undefined || timestamp(value.coinRevision)) &&
+    (value.ownedAvatarBorders === undefined || (Array.isArray(value.ownedAvatarBorders)
+      && value.ownedAvatarBorders.every(isAvatarBorderId)
+      && new Set(value.ownedAvatarBorders).size === value.ownedAvatarBorders.length)) &&
+    (value.avatarBorder === undefined || value.avatarBorder === null
+      || (isAvatarBorderId(value.avatarBorder) && Array.isArray(value.ownedAvatarBorders)
+        && value.ownedAvatarBorders.includes(value.avatarBorder))) &&
     value.usernameNormalized === value.username.toLowerCase() &&
     typeof value.nickname === 'string' &&
     value.nickname.trim().length > 0 &&

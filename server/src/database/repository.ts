@@ -1,4 +1,4 @@
-import type { AccountProfile, EmojiRecord, MatchResult, MediaId } from '@shared/types';
+import type { AccountProfile, AvatarBorderId, EmojiRecord, MatchResult, MediaId } from '@shared/types';
 
 export type { EmojiRecord };
 import type { RuntimeSnapshot } from '../runtime/types';
@@ -48,9 +48,12 @@ export interface Repository {
       AccountProfile,
       | 'nickname' | 'color' | 'avatar' | 'avatarImage' | 'seatBackground' | 'tableBackground'
       | 'tableBackgroundOpacity' | 'cardBack' | 'cardBackOpacity' | 'matchesPublic'
+      | 'avatarBorder'
     >,
     now: number,
   ): Promise<AccountRecord | null>;
+  /** Atomically debit the catalog price and grant ownership; repeats do not debit again. */
+  purchaseAvatarBorder(id: string, border: AvatarBorderId, now: number): Promise<AccountRecord | null>;
   changePassword(
     id: string,
     expectedHash: string,
@@ -96,6 +99,9 @@ export function publicAccount(account: AccountRecord): AccountProfile {
     id: account.id,
     username: account.username,
     coins: account.coins ?? 0,
+    coinRevision: account.coinRevision ?? 0,
+    ownedAvatarBorders: account.ownedAvatarBorders ?? [],
+    avatarBorder: account.avatarBorder ?? null,
     nickname: account.nickname,
     color: account.color,
     avatar: account.avatar,

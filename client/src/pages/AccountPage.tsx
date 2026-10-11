@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, KeyboardEvent, ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@shared/constants';
-import type { AccountProfile, AvatarId, MatchHistory } from '@shared/types';
+import type { AccountProfile, AvatarBorderId, AvatarId, MatchHistory } from '@shared/types';
 import { apiRequest } from '../api';
 import { resizeImage } from '../image-resize';
 import { uploadImage } from '../media';
@@ -46,6 +50,8 @@ export function AccountPage(): ReactNode {
   const [nickname, setNickname] = useState(account?.nickname ?? '');
   const [color, setColor] = useState(account?.color ?? '#4a9eff');
   const [avatar, setAvatar] = useState<AvatarId>(account?.avatar ?? 'cat');
+  const [avatarBorder, setAvatarBorder] = useState<AvatarBorderId | null>(account?.avatarBorder ?? null);
+  const [borderDirty, setBorderDirty] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -77,6 +83,7 @@ export function AccountPage(): ReactNode {
   }, [accountId]);
 
   if (!account) return null;
+  const selectedBorder = borderDirty ? avatarBorder : account.avatarBorder ?? null;
 
   const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number): void => {
     let nextIndex: number;
@@ -154,12 +161,13 @@ export function AccountPage(): ReactNode {
     setSaved(false);
     setProfileBusy(true);
     const result = await apiRequest<{ account: AccountProfile }>('/api/auth/profile', 'PATCH', {
-      nickname: nickname.trim(), color, avatar,
+      nickname: nickname.trim(), color, avatar, avatarBorder: selectedBorder,
     });
     setProfileBusy(false);
     if (result.success) {
       setAccount(result.account);
       setNickname(result.account.nickname);
+      setBorderDirty(false);
       setSaved(true);
     } else setProfileError(result.error);
   };
@@ -208,7 +216,7 @@ export function AccountPage(): ReactNode {
       <div id="account-panel-profile" role="tabpanel" aria-labelledby="account-tab-profile"
         hidden={activeTab !== 'profile'}>
         <div className={editorStyles.editor}>
-          <AccountProfilePreview account={account} nickname={nickname} avatar={avatar} color={color}
+          <AccountProfilePreview account={{ ...account, avatarBorder: selectedBorder }} nickname={nickname} avatar={avatar} color={color}
             appearance={appearance} />
           <div className={editorStyles.controls}>
             <div className={editorStyles.sectionHeading}><h2>{t('profile.identity')}</h2></div>
@@ -252,6 +260,21 @@ export function AccountPage(): ReactNode {
                 </div>
                 {mediaFeedback('avatarImage')}
               </fieldset>
+              <FormControl fullWidth size="small" className={editorStyles.borderSelect}>
+                <InputLabel id="profile-border-label" shrink>{t('shop.catalog')}</InputLabel>
+                <Select id="profile-border" labelId="profile-border-label" label={t('shop.catalog')}
+                  value={selectedBorder ?? ''} displayEmpty
+                  MenuProps={{ disableScrollLock: true, slotProps: { paper: { className: editorStyles.borderMenu } } }}
+                  onChange={(event) => {
+                    const border = account.ownedAvatarBorders?.find((id) => id === event.target.value) ?? null;
+                    setAvatarBorder(border); setBorderDirty(true); setSaved(false);
+                  }}>
+                  <MenuItem value="">{t('shop.original')}</MenuItem>
+                  {(account.ownedAvatarBorders ?? []).map((id) =>
+                    <MenuItem key={id} value={id}>{t(`shop.item.${id}.name`)}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <Link to="/shop">{t('shop.visit')}</Link>
               {profileError && <p role="alert" className={styles.error}>{profileError}</p>}
               <div className={editorStyles.saveRow}>
                 <button type="submit" className="btn btn-primary" disabled={profileBusy || !nickname.trim()}>

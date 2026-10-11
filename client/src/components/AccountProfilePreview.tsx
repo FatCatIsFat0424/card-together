@@ -37,7 +37,7 @@ export function AccountProfilePreview({
         <img className={styles.previewFace} src={aceOfSpades} alt="" />
       </div>
       <div className={styles.previewIdentity}>
-        <Avatar avatar={avatar} image={account.avatarImage} color={color} size="large" />
+        <Avatar avatar={avatar} image={account.avatarImage} border={account.avatarBorder} color={color} size="large" />
         <div>
           <h2>{nickname.trim() || account.username}</h2>
           <p>@{account.username}</p>
@@ -47,7 +47,7 @@ export function AccountProfilePreview({
     <div className={styles.seatPreviewSection}>
       <span className={styles.previewCaption}>{t('profile.seatBackground')}</span>
       <div className={`${styles.seatPreviewCard} ${seatBackground ? styles.customSeat : ''}`} style={seatBackground}>
-        <Avatar avatar={avatar} image={account.avatarImage} color={color} size="large" />
+        <Avatar avatar={avatar} image={account.avatarImage} border={account.avatarBorder} color={color} size="large" />
         <h3>{nickname.trim() || account.username}</h3>
       </div>
     </div>

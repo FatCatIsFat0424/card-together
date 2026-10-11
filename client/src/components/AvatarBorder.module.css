@@ -10,6 +10,12 @@
   flex-shrink: 0;
 }
 .preview { --frame-size: 132px; }
+.equipped { isolation: isolate; --frame-size: 3rem; }
+.equipped[data-avatar-size='small'] { --frame-size: 1.6rem; }
+.equipped[data-avatar-size='large'] { --frame-size: 4.5rem; }
+.frame > span[data-avatar-size], .frame > span {
+  width: 100%; height: 100%; --frame-size: inherit; font-size: calc(var(--frame-size) * 0.5);
+}
 .rim {
   position: absolute;
   inset: 0;

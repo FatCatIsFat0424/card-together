@@ -15,6 +15,7 @@ except immutable uploaded-image reads. Contracts live in `shared/src/types/`.
 | `POST /api/auth/login` | `username, password` | Account and session cookie |
 | `GET /api/auth/me` | — | Current account |
 | `PATCH /api/auth/profile` | Profile fields | Updated account and connected-player synchronization |
+| `POST /api/auth/shop/avatar-borders` | `border`: catalog ID | Updated account; permanent border purchase using the server price |
 | `POST /api/auth/password` | `currentPassword, newPassword` | Revoke all sessions; sign in again |
 | `POST /api/auth/logout` | `{}` | Revoke presented sessions and clear cookies |
 | `POST /api/auth/logout-all` | `{}` | Revoke every account session |
@@ -48,6 +49,13 @@ Profile updates support nickname, color, preset avatar, uploaded avatar/table
 background/card back (`avatarImage`, `seatBackground`, `tableBackground`, `cardBack`: an uploaded media ID or
 null), image opacity (`tableBackgroundOpacity`, `cardBackOpacity`: integer percent 20–100),
 and history visibility. Omitted fields keep their values; invalid values return 400.
+`avatarBorder` accepts null (original avatar) or an owned catalog ID; unowned equipment
+returns 403. `ownedAvatarBorders`, `coins`, and `coinRevision` are server-owned and
+cannot be changed through registration or profile updates. Purchase requests require
+the same session, Origin, JSON and rate checks as other account mutations; unknown
+border IDs return 400, insufficient coins 409. Prices come from
+[`shop.ts`](../shared/src/constants/shop.ts), never client inputs. Repeating a purchase
+returns the owned item without charging twice. Purchases do not automatically equip.
 `seatBackground` uses the existing `background` upload purpose and is shared in
 room `PlayerInfo` identities. Setting it to null restores the default seat background.
 `AccountProfile` includes private profile preferences/timestamps;
@@ -57,8 +65,11 @@ participating human account `GAME_COIN_REWARD` (currently 10), regardless of win
 including bot games. Spectators and aborted games earn nothing. Existing history is
 not rewarded retroactively; Hold'em/Blackjack hands reward only the complete match.
 After durable settlement, private `account:coins` Socket events update all tabs of
-each rewarded account. Authenticated `player:resume` also returns the owner's balance.
-`PublicAccount` exposes only ID, username, nickname, color, avatar, and avatarImage.
+each rewarded account. Their `coinRevision` increases on every balance change,
+including debits; authenticated `player:resume` also returns balance and revision.
+Private `account:updated` events return the owner's account after purchases or saved
+profile changes. `PublicAccount` exposes only ID, username, nickname, color, avatar,
+avatarImage and the equipped `avatarBorder`; inventory and balance remain private.
 No response exposes credential/session digests. Invalid player IDs return 400, unknown
 players 404, and private histories 403. See [storage](storage.md) and [media limits](media.md).
 

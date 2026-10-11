@@ -69,8 +69,11 @@
   .reset { grid-column: 1 / -1; margin-top: var(--spacing-sm); }
   .wallet { grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: var(--spacing-md); }
   .wallet p { grid-column: 1 / -1; }
+  .wallet > a { grid-column: 1 / -1; }
   .products { gap: var(--spacing-sm); }
   .productBody { padding: 12px; }
   .productArt { min-height: 152px; }
   .productFooter { gap: 6px; }
 }
+
+.buy { width: 100%; margin-top: 0.65rem; }

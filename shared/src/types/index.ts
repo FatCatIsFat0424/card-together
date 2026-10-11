@@ -110,6 +110,7 @@ export type {
 export type { ChatMessage } from './chat';
 export type { EmojiRecord, ProvidedEmoji } from './emoji';
 export type { AccountProfile, AvatarPreset, AvatarId, MediaId } from './account';
+export type { AvatarBorderId } from '../constants/shop';
 
 export type {
   ClientToServerEvents,

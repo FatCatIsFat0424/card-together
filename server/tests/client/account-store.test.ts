@@ -26,6 +26,23 @@ afterEach(() => {
 });
 
 describe('account store connection state', () => {
+  it('should accept purchase debits and reject older balance revisions or profile responses', () => {
+    const store = useAccountStore.getState();
+    store.setAccount({ ...account('alice'), coins: 200, coinRevision: 1 });
+    store.setCoins('alice', 150, 2);
+    store.setAccount({ ...account('alice'), coins: 200, coinRevision: 1 });
+    store.setCoins('alice', 200, 1);
+    store.setCoins('alice', 1000);
+    expect(useAccountStore.getState().account).toMatchObject({ coins: 150, coinRevision: 2 });
+    store.setAccount({ ...account('alice'), coins: 100, coinRevision: 3,
+      ownedAvatarBorders: ['copper'], avatarBorder: 'copper', updatedAt: 5 });
+    store.setAccount({ ...account('alice'), coins: 200, coinRevision: 1 });
+    expect(useAccountStore.getState().account).toMatchObject({
+      coins: 100, coinRevision: 3, ownedAvatarBorders: ['copper'], avatarBorder: 'copper',
+    });
+    store.setCoins('alice', 110, 4);
+    expect(useAccountStore.getState().account).toMatchObject({ coins: 110, coinRevision: 4 });
+  });
   it('should retain earned coins through stale responses and isolate account changes', () => {
     const store = useAccountStore.getState();
     store.setAccount(account('alice'));

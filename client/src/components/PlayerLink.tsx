@@ -15,7 +15,7 @@ interface PlayerLinkProps {
 export function PlayerLink({ player, showUsername = false, size = 'small', linked = true }: PlayerLinkProps): ReactNode {
   const { t } = useI18nStore();
   const identity = <>
-    <Avatar avatar={player.avatar} image={player.avatarImage} color={player.color} size={size} />
+    <Avatar avatar={player.avatar} image={player.avatarImage} border={player.avatarBorder} color={player.color} size={size} />
     <span className={styles.identity}>
       <span className={styles.nickname}>{player.nickname}</span>
       {player.isBot && <span className={styles.botBadge}>{t('player.bot')}</span>}

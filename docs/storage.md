@@ -57,6 +57,23 @@ coins. Human participants in bot matches earn coins even though those matches re
 excluded from history. Preserve balances and receipts together in complete database
 backups; earlier servers retain these optional fields while awarding no new coins.
 
+## Avatar border purchases
+
+Schema-v4 accounts may contain optional `ownedAvatarBorders`, `avatarBorder`, and
+`coinRevision`. Missing fields mean an empty inventory, original avatar and revision
+zero; existing balances and media remain unchanged. The repository validates catalog
+IDs, inventory uniqueness and equipment ownership. `purchaseAvatarBorder` serializes
+the balance check, debit and ownership grant in one durable write. Repeated purchases
+are idempotent; failed writes preserve both the previous balance and inventory.
+Rewards and debits increment the revision to order private notifications and HTTP
+responses. Preserve these fields with the complete database backup.
+
+Earlier servers preserve these optional account fields but cannot manage purchases
+or display borders. Do not run mixed writers; stop the service and preserve complete
+database/media backups before deploying or rolling back, following
+[deployment](deployment.md#operations-and-rollback). No destructive migration or
+historical reward backfill is required.
+
 ## Waiting-room seats
 
 Waiting Ninety-Nine/Blackjack/Hold'em rooms may contain optional `RoomInfo.additionalSeats`;

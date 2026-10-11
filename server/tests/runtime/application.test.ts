@@ -161,6 +161,54 @@ describe('persistent authenticated application', () => {
     expect(blocked.status).toBe(429);
   });
 
+  it('should privately sync purchases across tabs and publish only the equipped border', async () => {
+    const outsider = await register('shop_outsider');
+    const template = await repository.getAccountById(outsider.account.id);
+    if (!template) throw new Error('Expected a registered account.');
+    await repository.createAccount({ ...template, id: 'shop-owner', username: 'shop_owner',
+      usernameNormalized: 'shop_owner', coins: 100 });
+    const login = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ username: 'shop_owner', password: 'A valid test password 123' }),
+    });
+    const cookie = login.headers.get('set-cookie')!.split(';')[0];
+    const first = await connect(cookie);
+    const second = await connect(cookie);
+    const other = await connect(outsider.cookie);
+    await Promise.all([first, second, other].map(resume));
+    const leaked = vi.fn();
+    other.on('account:updated', leaked);
+    const updates = [first, second].map((client) => new Promise<AccountProfile>((resolve) => {
+      client.once('account:updated', resolve);
+    }));
+    const purchase = await fetch(`${baseUrl}/api/auth/shop/avatar-borders`, {
+      method: 'POST', headers: headers(cookie), body: JSON.stringify({ border: 'copper' }),
+    });
+    expect(purchase.status).toBe(200);
+    for (const account of await Promise.all(updates)) {
+      expect(account).toMatchObject({ coins: 50, coinRevision: 1, ownedAvatarBorders: ['copper'] });
+      expect(account).not.toHaveProperty('passwordHash');
+    }
+    const equipped = await fetch(`${baseUrl}/api/auth/profile`, {
+      method: 'PATCH', headers: headers(cookie), body: JSON.stringify({ avatarBorder: 'copper' }),
+    });
+    expect(equipped.status).toBe(200);
+    const snapshot = await resume(second);
+    expect(snapshot).toMatchObject({ coins: 50, coinRevision: 1, player: { avatarBorder: 'copper' } });
+    expect(snapshot.player).not.toHaveProperty('ownedAvatarBorders');
+    const profile = await fetch(`${baseUrl}/api/players/shop-owner`, { headers: headers(outsider.cookie) });
+    const publicAccount = (await profile.json()).account;
+    expect(publicAccount.avatarBorder).toBe('copper');
+    for (const key of ['coins', 'coinRevision', 'ownedAvatarBorders', 'passwordHash']) {
+      expect(publicAccount).not.toHaveProperty(key);
+    }
+    await resume(other);
+    expect(leaked).not.toHaveBeenCalled();
+    await stop();
+    await start();
+    expect((await resume(await connect(cookie))).player?.avatarBorder).toBe('copper');
+  }, 15_000);
+
   it('should rate limit clients separately behind a trusted loopback proxy', async () => {
     await stop();
     await start(true);
@@ -589,7 +637,7 @@ describe('persistent authenticated application', () => {
       snapshot = await resume(players[0]);
     }
     expect(snapshot.gameState?.phase).toBe('scoring');
-    expect(await Promise.all(rewardedBalances)).toEqual(accounts.map(() => ({ coins: 10 })));
+    expect(await Promise.all(rewardedBalances)).toEqual(accounts.map(() => ({ coins: 10, coinRevision: 1 })));
     expect(snapshot.room?.status).toBe('waiting');
     expect(Object.values(snapshot.room!.seats).every((seat) => !seat.isReady)).toBe(true);
     const stored = await repository.loadRuntime();

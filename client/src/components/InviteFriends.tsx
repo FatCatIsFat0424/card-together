@@ -66,7 +66,7 @@ export function InviteFriends(): ReactNode {
         {friends?.length === 0 && <p className={styles.empty}>{t('invite.noFriends')}</p>}
         <ul className={styles.list}>{friends?.map((friend) => (
           <li key={friend.id} className={`${styles.row} ${friend.online ? '' : styles.offline}`}>
-            <Avatar avatar={friend.avatar} image={friend.avatarImage} color={friend.color} size="small" />
+            <Avatar avatar={friend.avatar} image={friend.avatarImage} border={friend.avatarBorder} color={friend.color} size="small" />
             <span className={styles.name}>{friend.nickname}
               {friend.inRoom && <span className={styles.note}>{t('invite.inRoom')}</span>}</span>
             <button type="button" className="btn btn-primary"

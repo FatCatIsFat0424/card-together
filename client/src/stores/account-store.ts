@@ -18,7 +18,7 @@ interface AccountStore {
   /** True once this account's socket session has been ready; later drops keep pages mounted. */
   hasConnected: boolean;
   setAccount: (account: AccountProfile) => void;
-  setCoins: (accountId: string, coins: number) => void;
+  setCoins: (accountId: string, coins: number, coinRevision?: number) => void;
   setConnection: (connection: AccountStore['connection']) => void;
 }
 
@@ -53,18 +53,24 @@ export const useAccountStore = create<AccountStore>((set, get) => ({
       set({ connection: 'connecting', hasConnected: false });
     }
     set((state) => {
+      const current = state.account?.id === account.id ? state.account : null;
+      const staleBalance = current && (account.coinRevision ?? -1) < (current.coinRevision ?? -1);
       const nextAccount = retainSnapshotValue(state.account, {
-        ...account,
-        coins: Math.max(account.coins ?? 0, state.account?.id === account.id ? state.account.coins ?? 0 : 0),
+        ...(current && account.updatedAt < current.updatedAt ? current : account),
+        coins: staleBalance ? current.coins ?? 0 : account.coinRevision !== undefined
+          ? account.coins ?? 0 : Math.max(account.coins ?? 0, current?.coins ?? 0),
+        ...(staleBalance ? { coinRevision: current.coinRevision } : {}),
       });
       return nextAccount === state.account && state.status === 'authenticated' && !state.error
         ? state : { account: nextAccount, status: 'authenticated', error: '' };
     });
   },
-  setCoins: (accountId, coins) => set((state) => {
+  setCoins: (accountId, coins, coinRevision) => set((state) => {
     if (state.account?.id !== accountId || !Number.isSafeInteger(coins) || coins < 0
-      || coins <= (state.account.coins ?? 0)) return state;
-    return { account: { ...state.account, coins } };
+      || (coinRevision === undefined ? state.account.coinRevision !== undefined || coins <= (state.account.coins ?? 0)
+        : !Number.isSafeInteger(coinRevision) || coinRevision < 0
+          || coinRevision <= (state.account.coinRevision ?? -1))) return state;
+    return { account: { ...state.account, coins, ...(coinRevision === undefined ? {} : { coinRevision }) } };
   }),
   setConnection: (connection) => set((state) => state.connection === connection
     ? state : { connection, hasConnected: state.hasConnected || connection === 'ready' }),

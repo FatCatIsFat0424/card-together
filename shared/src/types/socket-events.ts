@@ -7,6 +7,7 @@ import type {
 } from './game';
 import type { ChatMessage } from './chat';
 import type { PublicAccount } from './social';
+import type { AccountProfile } from './account';
 import type { VoiceIncomingSignal, VoiceJoinResult, VoiceRoomState, VoiceSettings, VoiceSignal } from './voice';
 
 export interface PlayerSnapshot {
@@ -15,6 +16,7 @@ export interface PlayerSnapshot {
   player?: PlayerInfo;
   /** Own balance on authenticated resume; never included in room identities. */
   coins?: number;
+  coinRevision?: number;
   room?: RoomInfo;
   gameState?: PlayerVisibleGameState;
   /**
@@ -165,7 +167,8 @@ export interface ClientToServerEvents {
 
 export interface ServerToClientEvents {
   /** Private balance refresh after a durable completed-game reward. */
-  'account:coins': (payload: { coins: number }) => void;
+  'account:coins': (payload: { coins: number; coinRevision?: number }) => void;
+  'account:updated': (account: AccountProfile) => void;
   'voice:state': (payload: VoiceRoomState) => void;
   'voice:signal': (payload: VoiceIncomingSignal) => void;
   'voice:left': (payload: { reason: string }) => void;

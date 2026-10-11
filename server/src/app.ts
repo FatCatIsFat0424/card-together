@@ -79,13 +79,18 @@ export async function createApplication(repository: Repository, options: Applica
   const stopCoinUpdates = runtime.subscribeCoinRewards((accountIds) => {
     for (const accountId of accountIds) {
       void repository.getAccountById(accountId).then((account) => {
-        if (account) io.to(`account:${accountId}`).emit('account:coins', { coins: account.coins ?? 0 });
+        if (account) io.to(`account:${accountId}`).emit('account:coins', {
+          coins: account.coins ?? 0, coinRevision: account.coinRevision ?? 0,
+        });
       }).catch((error: unknown) => console.error('[coins] Balance notification failed:', error));
     }
   });
   app.use('/api/auth', createAuthRouter(auth, {
     ...options,
-    onAccountUpdated: (account) => updateConnectedProfile(context, account),
+    onAccountUpdated: (account) => {
+      io.to(`account:${account.id}`).emit('account:updated', account);
+      return updateConnectedProfile(context, account);
+    },
     onSessionsRevoked: (accountId, tokenHash) => {
       for (const socket of io.sockets.sockets.values()) {
         if (socket.data.accountId === accountId && (!tokenHash || socket.data.tokenHash === tokenHash)) {
