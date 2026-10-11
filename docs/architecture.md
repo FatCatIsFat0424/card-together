@@ -132,7 +132,8 @@ passes wait for the shared presentation deadline.
 | Liar's Deck new round / play / LIAR call / trigger suspense / pull result | 2,000 / 1,300 / 2,500 / 2,500 / 1,500 ms |
 | Blackjack deal / hit / double / stand / split / dealer reveal / dealer draw / settlement | 1,800 / 1,000 / 1,300 / 700 / 1,300 / 1,300 / 1,000 / 2,500 ms |
 | Hold'em new hand / action / street / showdown / award | 1,500 / 900 / 1,300 / 2,500 / 2,500 ms |
-| Final result before score overlay | 3,000 ms |
+| Sevens table collapse after every suit is slain / broken table before the result | 1,800 / 2,000 ms |
+| Final result before score overlay | 3,000 ms (2,000 ms after a Sevens table collapse) |
 
 Frames for one action run sequentially. The server rejects further play/pass/capture
 and continue actions until the deadline; continue also requires scoring. Clients disable

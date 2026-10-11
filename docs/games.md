@@ -340,6 +340,15 @@ effect (**火焰**): with no dragon, a quick blade sweeps the row from left to r
 fire follows it, setting the row alight as it passes. The choice is saved with the room rules and
 fixed for the match; rooms saved before it existed use the dragon. The row stays darkened
 afterwards. Reduced motion shows a still frame; the next turn waits for it.
+
+Once Dragon Slaying has closed all four suits, no card can be played again, and every remaining
+card would end up covered whatever the order. The server therefore covers all remaining hands at
+once, still in turn order, and settles the match: penalties are exactly what covering card by card
+would give. These automatic covers are marked `auto` in the log and are only valid after every suit
+is closed. After the last slaying presentation, the table collapses for 1.8 seconds (it shatters
+into shards from the middle of the rows, the centre caves in, the rows sink), holds broken for 2 seconds, then
+shows the result; the broken table stays under the result dialog.
+
 Changing the option clears human readiness; the setting is fixed
 for the match and survives server restarts. Legacy snapshots without the setting use
 standard rules.

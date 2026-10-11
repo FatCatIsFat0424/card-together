@@ -7,6 +7,10 @@ export const SEVENS_SLAY_EFFECTS: readonly SevensSlayEffect[] = ['dragon', 'fire
 /** Length of the presentation after a Dragon Slaying close; the client scene uses the same values. */
 export const SEVENS_SLAY_FRAME_MS: Readonly<Record<SevensSlayEffect, number>> = { dragon: 2900, fire: 1700 };
 
+/** When Dragon Slaying closes the last suit, the table collapses, then holds broken before the result. */
+export const SEVENS_COLLAPSE_MS = 1800;
+export const SEVENS_COLLAPSE_SETTLE_MS = 2000;
+
 /** Missing on rooms and games saved before the choice existed; they keep the dragon. */
 export function sevensSlayEffect(options: SevensOptions | undefined): SevensSlayEffect {
   return options?.slayEffect ?? 'dragon';

@@ -82,6 +82,11 @@ export function lastPlayedCard(log: readonly SevensLogEntry[]): Card | null {
   return null;
 }
 
+/** The match ended with the table collapsing: Dragon Slaying closed every suit and the rest was covered. */
+export function collapsedByLog(log: readonly SevensLogEntry[]): boolean {
+  return log.some((entry) => entry.type === 'cover' && entry.auto === true);
+}
+
 /** Newest first, limited to `limit` entries. */
 export function recentMoves(log: readonly SevensLogEntry[], limit: number): SevensLogEntry[] {
   return limit > 0 ? log.slice(-limit).reverse() : [];

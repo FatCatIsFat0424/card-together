@@ -22,6 +22,11 @@ export function svIsRowClosed(row: SevensTable[Suit], closeOnEnd: boolean): bool
   return closeOnEnd && row !== null && (row.low === SV_LOW_END || row.high === SV_HIGH_END);
 }
 
+/** Under Dragon Slaying, every suit is open and closed, so no card can ever be played again. */
+export function svAllClosed(table: SevensTable, closeOnEnd: boolean): boolean {
+  return Object.values(table).every((row) => svIsRowClosed(row, closeOnEnd));
+}
+
 /** The very first play must be the spade seven; afterwards a card must open or extend its suit row. */
 export function svIsPlayable(
   table: SevensTable,

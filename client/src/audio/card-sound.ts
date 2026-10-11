@@ -131,3 +131,18 @@ export function playSlashSound(timing: {
     disposeCardSounds();
   }
 }
+
+/** Table collapse: a sharp crack, splintering as the cracks run, and a deep rumble as the table gives way. */
+export function playCollapseSound(): void {
+  const audio = context;
+  if (!audio || audio.state !== 'running') return;
+  try {
+    const now = audio.currentTime;
+    for (const at of [0, 0.08, 0.17, 0.29, 0.43]) {
+      noiseVoice(audio, 0.07, now + at, 'bandpass', 2600, 0.7, (position) => (1 - position) ** 4);
+    }
+    noiseVoice(audio, 1.6, now + 0.35, 'lowpass', 140, 1, (position) => Math.min(1, position * 10) * (1 - position) ** 2);
+  } catch {
+    disposeCardSounds();
+  }
+}

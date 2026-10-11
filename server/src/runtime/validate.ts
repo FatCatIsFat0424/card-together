@@ -12,7 +12,9 @@ import { getPresentationEndsAt } from '@shared/game-presentation';
 import { bigTwoPenalty, identifyCombo, isDragon, legalPlays } from '@shared/rules/bigtwo';
 import { RP_HAND_SIZE, RP_TABLE_SIZE, rpPairOptions, rpScore } from '@shared/rules/redpoints';
 import { NN_HAND_SIZE, NN_MAX, nnDeckSize, nnHasPlayable } from '@shared/rules/ninetynine';
-import { SV_HAND_SIZE, svApply, svEmptyTable, svIsPlayable, svLegalPlays, svPenalty, svWinners } from '@shared/rules/sevens';
+import {
+  SV_HAND_SIZE, svAllClosed, svApply, svEmptyTable, svIsPlayable, svLegalPlays, svPenalty, svWinners,
+} from '@shared/rules/sevens';
 import { CP_HAND_SIZE, CP_PAIRINGS, CP_ROWS, cpIsValidArrangement, cpMatchResult } from '@shared/rules/chinesepoker';
 import {
   LD_CHAMBERS, LD_DECK, LD_HAND_SIZE, LD_MAX_PLAY, LD_TABLE_FACES, ldCanChallenge, ldIsLie, ldMustChallenge,
@@ -423,7 +425,9 @@ export function isSevensResult(value: unknown): boolean {
 
 function sevensLog(value: unknown): boolean {
   if (!object(value) || !number(value.timestamp) || !oneOf(value.seat, seats)) return false;
-  if (value.type === 'cover') return Object.keys(value).length === 3;
+  if (value.type === 'cover') {
+    return Object.keys(value).length === 3 || (Object.keys(value).length === 4 && value.auto === true);
+  }
   return value.type === 'play' && card(value.card);
 }
 
@@ -923,7 +927,9 @@ function coherentSevensGame(state: SevensGameState): boolean {
       if (!svIsPlayable(table, entry.card, previous === null, state.options?.closeOnEnd)) return false;
       table = svApply(table, entry.card, state.options?.closeOnEnd);
     } else if (previous === null || !card
-      || svLegalPlays(held[entry.seat], table, false, state.options?.closeOnEnd).length > 0) return false;
+      || svLegalPlays(held[entry.seat], table, false, state.options?.closeOnEnd).length > 0
+      // Automatic covers only follow Dragon Slaying closing every suit.
+      || (entry.auto && !svAllClosed(table, state.options?.closeOnEnd ?? false))) return false;
     held[entry.seat] = held[entry.seat].filter((own) => cardId(own) !== cardId(card));
     previous = entry.seat;
   }

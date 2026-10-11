@@ -1,10 +1,10 @@
 import type {
-  AnyGameState, Card, ChinesePokerRow, LiarFace, LiarTableFace, PlayerVisibleGameState,
+  AnyGameState, Card, ChinesePokerRow, LiarFace, LiarTableFace, PlayerVisibleGameState, SevensLogEntry,
 } from './types/game';
 import type { Seat } from './types/player';
 import { rpScore } from './rules/redpoints';
 import { nnWinners } from './rules/ninetynine';
-import { SEVENS_SLAY_FRAME_MS, sevensSlayEffect } from './sevens-options';
+import { SEVENS_COLLAPSE_MS, SEVENS_COLLAPSE_SETTLE_MS, SEVENS_SLAY_FRAME_MS, sevensSlayEffect } from './sevens-options';
 
 /** Stamped on new presentations; restored ones keep their version so saved deadlines stay valid. */
 export const PRESENTATION_TIMING_VERSION = 3;
@@ -17,7 +17,7 @@ export interface PresentationFrame {
   readonly kind: 'play' | 'pass' | 'trick' | 'round' | 'capture' | 'eliminated' | 'cover' | 'reveal' | 'shoot'
     | 'homerun' | 'deal' | 'challenge' | 'roulette' | 'shot' | 'hit' | 'stand' | 'double' | 'split'
     | 'dealerReveal' | 'dealerHit' | 'dealerStand' | 'settle' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street'
-    | 'showdown' | 'award' | 'slay' | 'finish';
+    | 'showdown' | 'award' | 'slay' | 'collapse' | 'finish';
   readonly durationMs: number;
   readonly seat?: Seat;
   readonly cards: readonly Card[];
@@ -47,6 +47,10 @@ export interface PresentationFrame {
   readonly handIndex?: number;
   /** Hold'em: the seat's street stake after a call, bet, or raise */
   readonly amount?: number;
+}
+
+function isAutoCover(entry: SevensLogEntry | undefined): boolean {
+  return entry?.type === 'cover' && entry.auto === true;
 }
 
 /** Reconstructs only public events; private hands and stock never enter presentation frames. */
@@ -103,8 +107,11 @@ export function getPresentationFrames(
             : LEGACY_SLAY_FRAME_MS;
           frames.push({ key: `${key}:slay`, kind: 'slay', durationMs, seat: entry.seat, cards: [entry.card] });
         }
-      } else {
+      } else if (!entry.auto) {
         frames.push({ key, kind: 'cover', durationMs: passDuration, seat: entry.seat, cards: [] });
+      } else if (!isAutoCover(game.log[index - 1])) {
+        // The remaining hands are covered all at once, shown as the table collapsing rather than card by card.
+        frames.push({ key, kind: 'collapse', durationMs: SEVENS_COLLAPSE_MS, cards: [] });
       }
     } else if (game.gameType === 'chinesepoker') {
       // Submissions are private and simultaneous, so only the showdown is presented.
@@ -188,7 +195,9 @@ export function getPresentationFrames(
     const seat = game.gameType === 'bigtwo' || game.gameType === 'liarsdeck'
       ? game.result?.winnerSeat : winners.length === 1 ? winners[0] : undefined;
     const lastCards = [...frames].reverse().find((frame) => frame.cards.length > 0);
-    frames.push({ key: `${id}:finish`, kind: 'finish', durationMs: 3000,
+    // After a collapse the broken table holds briefly instead of showing the usual closing frame.
+    const collapsed = game.gameType === 'sevens' && game.log.some(isAutoCover);
+    frames.push({ key: `${id}:finish`, kind: 'finish', durationMs: collapsed ? SEVENS_COLLAPSE_SETTLE_MS : 3000,
       cards: lastCards?.cards ?? [],
       ...(lastCards?.cardSeats ? { cardSeats: lastCards.cardSeats } : {}),
       ...(seat ? { seat } : {}) });

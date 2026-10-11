@@ -298,7 +298,8 @@ describe('Sevens bot full games', () => {
     for (let seed = 1; seed <= 60; seed++) {
       const random = mulberry32(seed);
       sevens.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), random), { closeOnEnd });
-      for (let turn = 0; turn < 52; turn++) {
+      // A collapse after every suit is slain covers the rest at once, so a match can end before 52 turns.
+      for (let turn = 0; turn < 52 && sevens.getGameState(CODE)!.phase === 'playing'; turn++) {
         const seat = sevens.getGameState(CODE)!.currentTurnSeat;
         const view = sevens.getPlayerVisibleState(CODE, seat)!;
         const action = getSevensBotAction(view, random);

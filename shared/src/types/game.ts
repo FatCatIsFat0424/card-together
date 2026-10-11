@@ -386,10 +386,13 @@ export type SevensPhase = 'playing' | 'scoring';
 /** Lowest and highest played order per suit (A=1 … K=13); null until that suit's 7 is played. */
 export type SevensTable = Record<Suit, { readonly low: number; readonly high: number } | null>;
 
-/** A cover entry never names the card; other playing seats cannot read it before settlement. */
+/**
+ * A cover entry never names the card; other playing seats cannot read it before settlement. `auto` marks the
+ * covers the server makes at once after Dragon Slaying has closed all four suits and no card can be played.
+ */
 export type SevensLogEntry =
   | { readonly type: 'play'; readonly seat: Seat; readonly card: Card; readonly timestamp: number }
-  | { readonly type: 'cover'; readonly seat: Seat; readonly timestamp: number };
+  | { readonly type: 'cover'; readonly seat: Seat; readonly timestamp: number; readonly auto?: true };
 
 export interface SevensMatchResult {
   readonly gameType: 'sevens';

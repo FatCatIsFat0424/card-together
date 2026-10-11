@@ -28,6 +28,17 @@
 
 .redSuit { color: var(--suit-red-ui); }
 
+/* The table caved in: each row drops and tilts a little as the cracks open, and stays that way. */
+.sunk {
+  transform: translateY(var(--sink-y)) rotate(var(--sink-turn));
+  filter: brightness(0.7);
+  transition: transform 700ms cubic-bezier(0.5, 0, 0.8, 0.4) 400ms, filter 700ms ease 400ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sunk { transition: none; }
+}
+
 /* Dragon Slaying: a closed row stays charred, matching the darkness the slash effect leaves behind. */
 .closedRow .slots, .closedRow .suitGlyph { filter: brightness(0.42) saturate(0.45); }
 

@@ -21,11 +21,13 @@ import { joinNames, useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
 import {
-  coverCost, coverSelection, lastPlayedCard, rankAtOrder, recentMoves, sameCard, sevensHandMode, sevensRows,
+  collapsedByLog, coverCost, coverSelection, lastPlayedCard, rankAtOrder, recentMoves, sameCard, sevensHandMode,
+  sevensRows,
 } from './sevens-view';
 import type { SevensHandMode, SevensRow } from './sevens-view';
 import { AppIcon } from '../../components/AppIcon';
 import { DragonSlay } from './DragonSlay';
+import { TableCollapse } from './TableCollapse';
 import styles from './SevensTable.module.css';
 import { isOwnTurn, isSpectator } from '../observer-view';
 
@@ -53,8 +55,14 @@ function ChipList({ cards, label }: { cards: readonly Card[]; label?: string }):
   </span>;
 }
 
-function SuitRow({ row, last, preview, slaying }: {
+/** How far each row drops and tilts when the table caves in. */
+const SINK: readonly { readonly y: number; readonly turn: number }[] = [
+  { y: 5, turn: -1.4 }, { y: 11, turn: 1.1 }, { y: 7, turn: 1.8 }, { y: 13, turn: -0.9 },
+];
+
+function SuitRow({ row, last, preview, slaying, sink }: {
   row: SevensRow; last: Card | null; preview: Card | null; slaying: boolean;
+  sink: { readonly y: number; readonly turn: number } | null;
 }): ReactNode {
   const { t } = useI18nStore();
   const played = row.slots.filter((slot) => slot.state === 'played');
@@ -63,8 +71,9 @@ function SuitRow({ row, last, preview, slaying }: {
     : t('sevens.waiting');
   const label = `${SUIT_SYMBOLS[row.suit]} ${range}${row.closed ? ` ${t('sevens.closed')}` : ''}`;
   // A closed row stays dark; while its slash plays, the effect layer darkens it behind the blade instead.
-  return <div className={`${styles.row} ${row.closed && !slaying ? styles.closedRow : ''}`} role="group"
-    aria-label={label} data-sevens-row={row.suit}>
+  return <div className={`${styles.row} ${row.closed && !slaying ? styles.closedRow : ''} ${sink ? styles.sunk : ''}`}
+    style={sink ? { '--sink-y': `${sink.y}px`, '--sink-turn': `${sink.turn}deg` } as CSSProperties : undefined}
+    role="group" aria-label={label} data-sevens-row={row.suit}>
     <span className={`${styles.rowSuit} ${isRed(row.suit) ? styles.redSuit : ''}`} aria-hidden="true">
       <span className={styles.suitGlyph}>{SUIT_SYMBOLS[row.suit]}</span>
       {row.closed && <span className={styles.closedLabel}>{t('sevens.closed')}</span>}
@@ -101,14 +110,14 @@ function SuitRow({ row, last, preview, slaying }: {
   </div>;
 }
 
-function Centre({ game, targets, preview, slaying }: {
-  game: SevensVisibleState; targets: readonly Card[]; preview: Card | null; slaying: Suit | null;
+function Centre({ game, targets, preview, slaying, sunk }: {
+  game: SevensVisibleState; targets: readonly Card[]; preview: Card | null; slaying: Suit | null; sunk: boolean;
 }): ReactNode {
   const rows = sevensRows(game.table, targets, game.options?.closeOnEnd);
   const last = lastPlayedCard(game.log);
   return <div className={styles.centre}>
-    {rows.map((row) => <SuitRow key={row.suit} row={row} last={last} preview={preview}
-      slaying={row.suit === slaying} />)}
+    {rows.map((row, index) => <SuitRow key={row.suit} row={row} last={last} preview={preview}
+      slaying={row.suit === slaying} sink={sunk ? SINK[index % SINK.length] : null} />)}
   </div>;
 }
 
@@ -302,15 +311,27 @@ export function SevensTable(): ReactNode {
     </div>}
   </div>;
 
+  // When the last suit is slain the table caves in during its frame, then holds broken through the closing
+  // frame and under the result.
+  const collapsing = frame?.kind === 'collapse' ? frame : null;
+  const broken = collapsedByLog(game.log)
+    && (collapsing !== null || frame?.kind === 'finish' || (!locked && game.phase === 'scoring'));
+  const tableEffect = slaying
+    ? <DragonSlay key={slaying.key} frame={slaying} frameStartedAt={frameStartedAt}
+      effect={sevensSlayEffect(game.options)} />
+    : broken
+      ? <TableCollapse key={collapsing?.key ?? 'settled'} startedAt={collapsing ? frameStartedAt : 0}
+        settled={!collapsing} />
+      : null;
+
   return (
     <GameShell
       info={<Info game={game} />}
-      centre={<Centre game={game} targets={targets} slaying={slaying?.cards[0]?.suit ?? null}
+      centre={<Centre game={game} targets={targets} slaying={slaying?.cards[0]?.suit ?? null} sunk={broken}
         preview={preview && targets.some((card) => sameCard(card, preview)) ? preview : null} />}
       hand={handZone}
-      tableEffect={slaying && <DragonSlay key={slaying.key} frame={slaying} frameStartedAt={frameStartedAt}
-        effect={sevensSlayEffect(game.options)} />}
-      centreVisible={slaying !== null}
+      tableEffect={tableEffect}
+      centreVisible={slaying !== null || broken}
       overlay={game.phase === 'scoring' && game.result && <ResultOverlay result={game.result}
         pending={actionPending} error={actionError} disabled={!connectionReady} onBack={backToRoom} />}
       error={game.phase !== 'scoring' ? actionError : undefined}

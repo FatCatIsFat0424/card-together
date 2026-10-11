@@ -15,6 +15,7 @@ import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { DEFAULT_SEVENS_OPTIONS } from '@shared/sevens-options';
 import { nextSeatCounterClockwise } from '@shared/rules/seats';
 import {
+  svAllClosed,
   svApply,
   svEmptyTable,
   svIsPlayable,
@@ -147,7 +148,25 @@ export function play(roomCode: RoomCode, seat: Seat, card: Card): Result {
   takeFromHand(game, seat, card);
   game.log.push({ type: 'play', seat, card, timestamp: Date.now() });
   advance(game, seat);
+  if (game.phase === 'playing' && svAllClosed(game.table, game.options?.closeOnEnd ?? false)) collapse(game);
   return { success: true };
+}
+
+/**
+ * Once Dragon Slaying has closed every suit, nobody can play again and every remaining card would be covered
+ * whatever the order, so the server covers them all at once, still in turn order, and settles the match.
+ */
+function collapse(game: SevensGameState): void {
+  const timestamp = Date.now();
+  while (game.phase === 'playing') {
+    const seat = game.currentTurnSeat;
+    const [card] = game.hands[seat];
+    if (!card) throw new Error('Collapse reached a seat with no cards');
+    takeFromHand(game, seat, card);
+    game.covered[seat].push(card);
+    game.log.push({ type: 'cover', seat, timestamp, auto: true });
+    advance(game, seat);
+  }
 }
 
 export function cover(roomCode: RoomCode, seat: Seat, card: Card): Result {

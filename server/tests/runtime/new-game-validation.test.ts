@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { svLegalPlays } from '@shared/rules/sevens';
+import { svAllClosed, svLegalPlays, svPenalty } from '@shared/rules/sevens';
+import { getPresentationFrames, PRESENTATION_TIMING_VERSION } from '@shared/game-presentation';
 import { cpGreedyArrangement } from '@shared/rules/chinesepoker-arrange';
 import type { AnyGameState, GameType, PlayerInfo, Seat } from '@shared/types';
 import { createDeck, shuffleDeck } from '../../src/engine/deck';
@@ -109,6 +110,65 @@ describe('persisted Sevens games', () => {
       expect(persists(sevens.getGameState(CODE)!, 'sevens')).toBe(true);
     }
     expect(sevens.getGameState(CODE)?.phase).toBe('scoring');
+  });
+
+  describe('table collapse after every suit is slain', () => {
+    afterEach(() => sevens.setDevPreset(false));
+
+    /** Plays the near-slay preset out: a legal card when there is one, otherwise a cover. */
+    function playOut(): void {
+      sevens.setDevPreset(true);
+      sevens.startGame(CODE, PLAYERS, undefined, { closeOnEnd: true });
+      while (sevens.getGameState(CODE)!.phase === 'playing') {
+        const seat = sevens.getGameState(CODE)!.currentTurnSeat;
+        const visible = sevens.getPlayerVisibleState(CODE, seat)!;
+        const result = visible.validCards[0]
+          ? sevens.play(CODE, seat, visible.validCards[0])
+          : sevens.cover(CODE, seat, visible.myHand[0]);
+        expect(result).toEqual({ success: true });
+      }
+    }
+
+    it('covers every remaining card at once, in turn order, and settles the match', () => {
+      playOut();
+      const game = sevens.getGameState(CODE)!;
+      const first = game.log.findIndex((entry) => entry.type === 'cover' && entry.auto);
+      expect(first).toBeGreaterThan(0);
+      // The play just before closed the last suit; nothing but automatic covers follows it.
+      expect(game.log[first - 1].type).toBe('play');
+      expect(game.log.slice(first).every((entry) => entry.type === 'cover' && entry.auto)).toBe(true);
+      expect(svAllClosed(game.table, true)).toBe(true);
+      expect(game.phase).toBe('scoring');
+      expect(SEATS.every((seat) => game.hands[seat].length === 0)).toBe(true);
+      expect(game.result!.penalties).toEqual(Object.fromEntries(SEATS.map((seat) => [seat, svPenalty(game.covered[seat])])));
+      expect(persists(game, 'sevens')).toBe(true);
+    });
+
+    it('presents the slay, then the collapse, then a two-second hold before the result', () => {
+      playOut();
+      const game = structuredClone(sevens.getGameState(CODE)!);
+      const closing = game.log.findIndex((entry) => entry.type === 'cover' && entry.auto) - 1;
+      game.presentation = { id: 'collapse', startedAt: 0, logStart: closing, timingVersion: PRESENTATION_TIMING_VERSION };
+      expect(getPresentationFrames(game).map((frame) => [frame.kind, frame.durationMs])).toEqual([
+        ['play', 1300], ['slay', 2900], ['collapse', 1800], ['finish', 2000],
+      ]);
+    });
+
+    it('rejects automatic covers before every suit is closed, and malformed cover entries', () => {
+      sevens.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), seeded(5)));
+      playSevens(52);
+      const game = sevens.getGameState(CODE)!;
+      const cover = game.log.findIndex((entry) => entry.type === 'cover');
+      expect(cover).toBeGreaterThanOrEqual(0);
+      const early = structuredClone(game);
+      Object.assign(early.log[cover], { auto: true });
+      expect(persists(early, 'sevens')).toBe(false);
+      for (const extra of [{ auto: false }, { auto: 'yes' }, { reason: 'collapse' }]) {
+        const malformed = structuredClone(game);
+        Object.assign(malformed.log[cover], extra);
+        expect(persists(malformed, 'sevens')).toBe(false);
+      }
+    });
   });
 
   describe('developer near-slay preset', () => {
