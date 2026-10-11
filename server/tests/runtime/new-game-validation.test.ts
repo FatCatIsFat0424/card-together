@@ -110,6 +110,39 @@ describe('persisted Sevens games', () => {
     expect(sevens.getGameState(CODE)?.phase).toBe('scoring');
   });
 
+  describe('developer near-slay preset', () => {
+    afterEach(() => sevens.setDevPreset(false));
+
+    it('lays every suit from 2 to Q through legal logged plays, leaving two aces or kings per seat', () => {
+      sevens.setDevPreset(true);
+      sevens.startGame(CODE, PLAYERS, undefined, { closeOnEnd: true });
+      const game = sevens.getGameState(CODE)!;
+      expect(game.log).toHaveLength(44);
+      expect(game.log.every((entry) => entry.type === 'play')).toBe(true);
+      expect(Object.values(game.table)).toEqual(Array(4).fill({ low: 2, high: 12 }));
+      for (const seat of SEATS) {
+        expect(game.hands[seat]).toHaveLength(2);
+        expect(game.hands[seat].every((card) => card.rank === 13 || card.rank === 14)).toBe(true);
+      }
+      expect(persists(game, 'sevens')).toBe(true);
+      // Every remaining card is playable, and the first one closes its row.
+      const seat = game.currentTurnSeat;
+      const visible = sevens.getPlayerVisibleState(CODE, seat)!;
+      expect(visible.validCards).toHaveLength(2);
+      expect(sevens.play(CODE, seat, visible.validCards[0])).toEqual({ success: true });
+      expect(persists(sevens.getGameState(CODE)!, 'sevens')).toBe(true);
+    });
+
+    it('leaves explicit test decks and disabled servers on ordinary deals', () => {
+      sevens.setDevPreset(true);
+      sevens.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), seeded(3)));
+      expect(sevens.getGameState(CODE)!.log).toHaveLength(0);
+      sevens.setDevPreset(false);
+      sevens.startGame(CODE, PLAYERS);
+      expect(sevens.getGameState(CODE)!.log).toHaveLength(0);
+    });
+  });
+
   it('rejects a saved log that extends a suit after its ace or king closes it', () => {
     sevens.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), seeded(3)));
     playSevens(52);

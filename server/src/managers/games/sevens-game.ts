@@ -61,14 +61,44 @@ function advance(game: SevensGameState, seat: Seat): void {
   game.currentTurnSeat = nextSeatCounterClockwise(seat);
 }
 
-/** `deck` is a test hook; games normally deal a fresh shuffle. */
+/** Developer-only (`SEVENS_DEV_PRESET=near-slay`); the server sets it at startup. */
+let devPreset = false;
+
+export function setDevPreset(enabled: boolean): void {
+  devPreset = enabled;
+}
+
+const PRESET_SUITS: readonly Card['suit'][] = ['spades', 'hearts', 'clubs', 'diamonds'];
+/** Each suit opens at its 7 and grows outward to 2 and Q, leaving only aces and kings. */
+const PRESET_RANKS: readonly Card['rank'][] = [7, 8, 6, 9, 5, 10, 4, 11, 3, 12, 2];
+
+/**
+ * A deal and its first 44 plays, taken in turn from the spade seven, that leave every suit laid from 2 to Q.
+ * Each seat keeps two aces or kings, so the next plays close rows. The plays are ordinary legal moves, so
+ * the log, saved snapshots and validation work as in any game.
+ */
+export function nearSlayPreset(): { deck: Card[]; plays: Card[] } {
+  const plays = PRESET_SUITS.flatMap((suit) => PRESET_RANKS.map((rank): Card => ({ suit, rank })));
+  const ends = PRESET_SUITS.flatMap((suit): Card[] => [{ suit, rank: 14 }, { suit, rank: 13 }]);
+  const turns: Seat[] = [];
+  for (let seat: Seat = 'N'; turns.length < 4; seat = nextSeatCounterClockwise(seat)) turns.push(seat);
+  const hands = seatMap((): Card[] => []);
+  [...plays, ...ends].forEach((card, index) => hands[turns[index % 4]].push(card));
+  // dealCards hands the deck out one card at a time in clockwise seat order.
+  const deck = Array.from({ length: 52 },
+    (_, index) => hands[SEAT_ORDER_CLOCKWISE[index % 4]][Math.floor(index / 4)]);
+  return { deck, plays };
+}
+
+/** `deck` is a test hook; games normally deal a fresh shuffle, or the developer preset when enabled. */
 export function startGame(
   roomCode: RoomCode,
   players: Record<Seat, PlayerInfo>,
-  deck: readonly Card[] = shuffleDeck(createDeck()),
+  deck?: readonly Card[],
   options: SevensOptions = DEFAULT_SEVENS_OPTIONS,
 ): void {
-  const dealt = dealCards(deck);
+  const preset = deck === undefined && devPreset ? nearSlayPreset() : null;
+  const dealt = dealCards(preset?.deck ?? deck ?? shuffleDeck(createDeck()));
   const hands = seatMap((seat) => svSortHand(dealt[seat]));
   const opener = SEAT_ORDER_CLOCKWISE.find((seat) =>
     hands[seat].some((card) => card.suit === 'spades' && card.rank === 7));
@@ -88,6 +118,10 @@ export function startGame(
     log: [],
     result: null,
   });
+  for (const card of preset?.plays ?? []) {
+    const result = play(roomCode, games.get(roomCode)?.currentTurnSeat ?? opener, card);
+    if (!result.success) throw new Error(`Developer preset play failed: ${result.reason}`);
+  }
 }
 
 function actionableGame(roomCode: RoomCode, seat: Seat, card: Card): SevensGameState | string {

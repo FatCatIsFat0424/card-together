@@ -3,7 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { isIP } from 'node:net';
 import { createJsonRepository } from './database/json-repository';
 import { createApplication } from './app';
-import { parseAllowedOrigins } from './config';
+import { parseAllowedOrigins, parseSevensDevPreset } from './config';
 import { PROVIDED_EMOJI_CATALOG_PATH, loadProvidedEmojiCatalog } from './media/provided-emoji';
 
 const port = Number(process.env.PORT ?? 3001);
@@ -26,6 +26,8 @@ async function main(): Promise<void> {
     throw new Error('Set CLIENT_ORIGIN to the public application origin in production.');
   }
   const allowedOrigins = parseAllowedOrigins(clientOrigins);
+  const sevensDevPreset = parseSevensDevPreset(process.env.SEVENS_DEV_PRESET, process.env.NODE_ENV === 'production');
+  if (sevensDevPreset) console.warn('[server] SEVENS_DEV_PRESET=near-slay: Sevens games start with 2-Q laid out.');
   const providedEmojis = await loadProvidedEmojiCatalog(PROVIDED_EMOJI_CATALOG_PATH);
   const repository = await createJsonRepository(databasePath);
   let application: Awaited<ReturnType<typeof createApplication>>;
@@ -35,6 +37,7 @@ async function main(): Promise<void> {
       trustProxyLoopback: trustProxyLoopback === 'true',
       mediaDirectory: join(dirname(databasePath), 'media'),
       providedEmojis,
+      sevensDevPreset,
       listen: { port, host },
     });
   } catch (error) {

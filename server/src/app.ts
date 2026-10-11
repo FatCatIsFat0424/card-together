@@ -19,6 +19,7 @@ import { startBotTurns } from './runtime/bot-turns';
 import { startSharedDeadlines } from './runtime/shared-deadline';
 import { broadcastState, readPresence } from './socket/context';
 import { getRoomMemberIds } from './managers/room-manager';
+import { setSevensDevPreset } from './managers/game-manager';
 import { createVoiceManager } from './managers/voice-manager';
 import { createFriendService } from './social/friend-service';
 import type { TypedServer } from './socket/context';
@@ -34,6 +35,8 @@ export interface ApplicationOptions {
   providedEmojis?: ProvidedEmojiCatalog;
   /** Listen before schedulers start; omitted when callers bind the server themselves. */
   listen?: { readonly port: number; readonly host?: string };
+  /** Developer-only: start every Sevens game with 2-Q laid out; see `parseSevensDevPreset`. */
+  sevensDevPreset?: boolean;
 }
 
 export async function createApplication(repository: Repository, options: ApplicationOptions): Promise<{
@@ -41,6 +44,7 @@ export async function createApplication(repository: Repository, options: Applica
   io: TypedServer;
   close: () => Promise<void>;
 }> {
+  setSevensDevPreset(options.sevensDevPreset ?? false);
   const app = express();
   app.disable('x-powered-by');
   if (options.trustProxyLoopback) app.set('trust proxy', 'loopback');

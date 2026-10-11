@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApplication } from '../../src/app';
-import { parseAllowedOrigins } from '../../src/config';
+import { parseAllowedOrigins, parseSevensDevPreset } from '../../src/config';
 import { createJsonRepository } from '../../src/database/json-repository';
 import * as autoPass from '../../src/runtime/bigtwo-auto-pass';
 import * as turnTimers from '../../src/runtime/turn-timers';
@@ -18,6 +18,16 @@ describe('server startup', () => {
     for (const value of ['', ' , ', 'example.com', 'https://example.com/', 'https://example.com/app',
       'ftp://example.com', 'https://user@example.com', 'https://example.com:443']) {
       expect(() => parseAllowedOrigins(value)).toThrow(/CLIENT_ORIGIN/);
+    }
+  });
+
+  it('should enable the developer Sevens preset only by name and never in production', () => {
+    expect(parseSevensDevPreset(undefined, false)).toBe(false);
+    expect(parseSevensDevPreset('', true)).toBe(false);
+    expect(parseSevensDevPreset('near-slay', false)).toBe(true);
+    expect(() => parseSevensDevPreset('near-slay', true)).toThrow(/development only/);
+    for (const value of ['true', '1', 'NEAR-SLAY', ' near-slay']) {
+      expect(() => parseSevensDevPreset(value, false)).toThrow(/SEVENS_DEV_PRESET/);
     }
   });
 

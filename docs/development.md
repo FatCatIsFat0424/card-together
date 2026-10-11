@@ -137,6 +137,7 @@ reference and is not auto-loaded. Vite loads `client/.env.local` on startup/buil
 | `CLIENT_ORIGIN` | Comma-separated exact `http(s)://host[:port]` origins without path, trailing slash, or default port; invalid entries stop startup; development defaults to localhost/127.0.0.1 port 5173; required in production |
 | `NODE_ENV` | `production` enables Secure cookies and requires HTTPS |
 | `TRUST_PROXY_LOOPBACK` | Defaults to `false`; enable only for a trusted local proxy overwriting forwarded client addresses |
+| `SEVENS_DEV_PRESET` | Development only. `near-slay` starts every Sevens game with each suit laid from 2 to Q through 44 ordinary logged plays, leaving each seat two aces or kings, to test Dragon Slaying quickly. Any other value, or any value with `NODE_ENV=production`, stops startup |
 
 | Vite variable | Behavior |
 | --- | --- |

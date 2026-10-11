@@ -112,6 +112,11 @@ function isFullTable(players: Partial<Record<Seat, PlayerInfo>>): players is Rec
   return SEAT_ORDER_CLOCKWISE.every((seat) => players[seat] !== undefined);
 }
 
+/** Developer-only Sevens deal chosen at startup; normal games otherwise. */
+export function setSevensDevPreset(enabled: boolean): void {
+  sevens.setDevPreset(enabled);
+}
+
 /** Missing seats stay empty; only games with a flexible seat count accept them. */
 export function startGame(
   roomCode: RoomCode,
