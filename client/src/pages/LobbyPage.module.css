@@ -32,7 +32,7 @@
 .selectedIcon { color: var(--color-primary); }
 .gameName { font-family: var(--font-display); font-size: var(--text-base); font-weight: 700; }
 .gameDesc { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; color: var(--text-secondary); font-size: var(--text-xs); line-height: 1.6; }
-.sidebar { display: flex; flex-direction: column; align-self: stretch; gap: var(--spacing-lg); min-width: 0; min-height: 0; contain: size; }
+.sidebar { display: flex; flex-direction: column; align-self: stretch; gap: var(--spacing-lg); min-width: 0; min-height: 0; }
 .desktopRoomActions { flex-shrink: 0; }
 .createTitle { font-size: var(--text-base); margin-bottom: var(--spacing-md); }
 .selectedHeading { display: flex; align-items: center; gap: var(--spacing-sm); margin: 0 0 var(--spacing-md); }
@@ -60,7 +60,7 @@
   .gameName { padding-right: var(--spacing-lg); }
   .gameDesc { display: none; }
   .rulesChevron { position: absolute; right: var(--spacing-md); top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: var(--text-xl); }
-  .sidebar { align-items: stretch; contain: none; }
+  .sidebar { align-items: stretch; }
   .resume { align-items: start; flex-direction: column; gap: var(--spacing-md); }
 }
 @media (max-width: 36rem) {
