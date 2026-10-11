@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Card, NinetyNineGameState, NinetyNineMatchResult, PlayerInfo, Seat } from '@shared/types';
 import { nnApply, nnIsPlayable, nnRank, nnRequiresChoice, nnWinners } from '@shared/rules/ninetynine';
 import type { NnChoice } from '@shared/rules/ninetynine';
@@ -130,20 +130,34 @@ describe('Ninety-Nine gameplay', () => {
     expect(persists()).toBe(true);
   });
 
-  it('should reshuffle the discard pile except its top card when the stock runs out', () => {
+  it.each([
+    { drawnCard: 'a former stock card', drawPreviousTop: false },
+    { drawnCard: 'the previous discard top', drawPreviousTop: true },
+  ])('should reshuffle except its top card and draw $drawnCard when the stock runs out', ({ drawPreviousTop }) => {
     const deck = deckWith({ N: [card('clubs', 2)], W: [card('clubs', 3)] });
     ninetynine.startGame(CODE, PLAYERS, deck, 'N');
     expect(ninetynine.play(CODE, 'N', card('clubs', 2))).toEqual({ success: true });
     const state = game();
     state.discard = [...state.stock, ...state.discard];
     state.stock = [];
+    const recycled = [...state.discard];
+    const remainingHand = state.hands.W.filter((entry) => !same(entry, card('clubs', 3)));
     expect(persists()).toBe(true);
 
-    expect(ninetynine.play(CODE, 'W', card('clubs', 3))).toEqual({ success: true });
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0.999);
+    if (drawPreviousTop) random.mockReturnValueOnce(0);
+    try {
+      expect(ninetynine.play(CODE, 'W', card('clubs', 3))).toEqual({ success: true });
+    } finally {
+      random.mockRestore();
+    }
     expect(game().discard).toEqual([card('clubs', 3)]);
     expect(game().stock).toHaveLength(31);
-    expect(game().stock).toContainEqual(card('clubs', 2));
     expect(game().hands.W).toHaveLength(5);
+    expect(game().hands.W.slice(0, 4)).toEqual(remainingHand);
+    const drawn = game().hands.W.slice(4);
+    expect(drawn).toEqual([drawPreviousTop ? card('clubs', 2) : recycled[0]]);
+    expect([...game().stock, ...drawn]).toEqual(expect.arrayContaining(recycled));
     expect(persists()).toBe(true);
   });
 
