@@ -274,14 +274,12 @@ export async function createJsonRepository(filePath: string): Promise<Repository
         write([], (data) => {
           upsertMatches(data, [match]);
         }),
-      listMatches: (accountId, limit = 50) =>
-        read((data) =>
-          (indexes.matches(data.matches).byAccount.get(accountId) ?? [])
-            .filter((match) => !match.accountIds.some((id) => id.startsWith('bot:'))).slice(
-            0,
-            boundedLimit(limit, 100),
-          ),
-        ),
+      listMatches: (accountId, limit) =>
+        read((data) => {
+          const matches = (indexes.matches(data.matches).byAccount.get(accountId) ?? [])
+            .filter((match) => !match.accountIds.some((id) => id.startsWith('bot:')));
+          return limit === undefined ? matches : matches.slice(0, boundedLimit(limit, 100));
+        }),
       listEmojis: (accountId) =>
         read((data) => data.emojis.filter((emoji) => emoji.accountId === accountId)),
       createEmojis: (accountId, items, now) =>

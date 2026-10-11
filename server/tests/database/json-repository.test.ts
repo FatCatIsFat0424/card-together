@@ -176,6 +176,20 @@ describe('JSON repository', () => {
     expect(await repository.listMatches('unrelated')).toEqual([]);
   });
 
+  it('should return all matches by default while preserving explicit subset limits', async () => {
+    repository = await createJsonRepository(path);
+    const players = ['alice', 'bravo', 'charlie', 'delta'].map(account);
+    for (const player of players) await repository.createAccount(player);
+    const matches = Array.from({ length: 125 }, (_, index) => match(`history-${index}`, players, index));
+    await repository.saveRuntime({ players: [], rooms: [], games: [], chat: [] }, matches);
+    const expected = matches.slice().reverse();
+    expect(await repository.listMatches(players[0].id)).toEqual(expected);
+    expect(await repository.listMatches(players[0].id, 1)).toEqual(expected.slice(0, 1));
+    expect(await repository.listMatches(players[0].id, 100)).toEqual(expected.slice(0, 100));
+    expect(await repository.listMatches(players[0].id, 0)).toEqual([]);
+    expect(await repository.listMatches('unrelated')).toEqual([]);
+  });
+
   it('should reject runtime player identities that have no durable account', async () => {
     repository = await createJsonRepository(path);
     await expect(

@@ -49,7 +49,7 @@ export function createPlayerRouter(repository: Repository, authService: AuthServ
         response.status(403).json({ success: false, error: 'Match history is private.' });
         return;
       }
-      const matches = await repository.listMatches(account.id, 50);
+      const matches = await repository.listMatches(account.id);
       const players: Record<string, PublicAccount> = {};
       for (const id of new Set(matches.flatMap((match) => match.accountIds))) {
         const player = await repository.getAccountById(id);

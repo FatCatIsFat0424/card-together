@@ -99,7 +99,7 @@ export async function createApplication(repository: Repository, options: Applica
   app.use('/api/media', createMediaRouter(media, auth));
   app.use('/api/emojis', createEmojiRouter(repository, auth, mediaExists));
   app.get('/api/account/history', requireSession(auth), (_request, response, next) => {
-    void repository.listMatches(getRequestSession(response).account.id, 50)
+    void repository.listMatches(getRequestSession(response).account.id)
       .then((matches) => response.json({ success: true, matches })).catch(next);
   });
   app.use('/api', (_request, response) => response.status(404).json({ success: false, error: 'Not found.' }));

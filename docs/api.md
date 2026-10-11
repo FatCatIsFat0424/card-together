@@ -18,9 +18,9 @@ except immutable uploaded-image reads. Contracts live in `shared/src/types/`.
 | `POST /api/auth/password` | `currentPassword, newPassword` | Revoke all sessions; sign in again |
 | `POST /api/auth/logout` | `{}` | Revoke presented sessions and clear cookies |
 | `POST /api/auth/logout-all` | `{}` | Revoke every account session |
-| `GET /api/account/history` | — | Current account's latest 50 completed human-only matches |
+| `GET /api/account/history` | — | All of the current account's completed human-only matches, newest first |
 | `GET /api/players/:accountId` | — | Public profile |
-| `GET /api/players/:accountId/history` | — | Latest 50 human-only matches and participant map; owner/public only |
+| `GET /api/players/:accountId/history` | — | All human-only matches, newest first, and participant map; owner/public only |
 | `GET /api/friends` | — | `friends, incoming, outgoing`; friends include online/in-room presence and nullable `hostedRoomCode` |
 | `GET /api/friends/search?username=...` | Exact username | Public account or null |
 | `POST /api/friends/requests` | `username` | 201, request |
@@ -61,6 +61,10 @@ each rewarded account. Authenticated `player:resume` also returns the owner's ba
 `PublicAccount` exposes only ID, username, nickname, color, avatar, and avatarImage.
 No response exposes credential/session digests. Invalid player IDs return 400, unknown
 players 404, and private histories 403. See [storage](storage.md) and [media limits](media.md).
+
+History endpoints return the complete eligible record set without pagination or a record
+count cap. The frontend performs search, filtering, sorting, and game statistics over
+that full response. Participant maps include accounts from older matches as well.
 
 ## Socket actions
 

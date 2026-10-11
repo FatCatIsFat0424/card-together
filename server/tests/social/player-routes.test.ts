@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApplication } from '../../src/app';
 import { SESSION_COOKIE_NAME, tokenHash } from '../../src/auth/auth-service';
 import { createJsonRepository } from '../../src/database/json-repository';
-import type { AccountRecord, Repository } from '../../src/database/repository';
+import type { AccountRecord, MatchRecord, Repository } from '../../src/database/repository';
 
 const ORIGIN = 'http://localhost:5173';
 const PASSWORD_HASH = `scrypt$131072$8$1$${'a'.repeat(32)}$${'b'.repeat(128)}`;
@@ -162,16 +162,19 @@ describe('public player profile HTTP routes', () => {
     });
   });
 
-  it('should show match history to its owner and to others only once made public', async () => {
+  it('should return the complete history beyond 100 records to its owner and public viewers', async () => {
     const extra = ['charlie', 'delta'].map((username) => ({
       ...accounts.alice, id: randomUUID(), username, usernameNormalized: username,
     }));
     for (const account of extra) await repository.createAccount(account);
-    await repository.saveMatch({
+    const oldestParticipant = { ...extra[0], id: randomUUID(), username: 'echo', usernameNormalized: 'echo' };
+    await repository.createAccount(oldestParticipant);
+    const matches = Array.from({ length: 125 }, (_, index): MatchRecord => ({
       id: randomUUID(),
       roomCode: 'ABC123',
-      accountIds: [accounts.alice.id, accounts.bravo.id, ...extra.map((account) => account.id)],
-      finishedAt: 500,
+      accountIds: [accounts.alice.id, accounts.bravo.id, extra[0].id,
+        index === 0 ? oldestParticipant.id : extra[1].id],
+      finishedAt: index + 1,
       result: {
         gameType: 'bridge',
         contract: { level: 1, suit: 'nt', declarer: 'N' },
@@ -180,7 +183,9 @@ describe('public player profile HTTP routes', () => {
         requiredTricks: 7,
         declarerTeamWins: true,
       },
-    });
+    }));
+    await repository.saveRuntime({ players: [], rooms: [], games: [], chat: [] }, matches);
+    const expected = matches.slice().reverse();
     const history = `${baseUrl}/api/players/${accounts.bravo.id}/history`;
     // Simulate history written by an older release; it must not enter either history endpoint.
     await repository.saveMatch({
@@ -190,11 +195,12 @@ describe('public player profile HTTP routes', () => {
         declarerTeamTricks: 7, defenderTeamTricks: 6, requiredTricks: 7, declarerTeamWins: true },
     });
     const accountHistory = await fetch(`${baseUrl}/api/account/history`, { headers: headers('bravo') });
-    expect((await accountHistory.json()).matches).toHaveLength(1);
+    expect((await accountHistory.json()).matches).toEqual(expected);
     const own = await fetch(history, { headers: headers('bravo') });
     expect(own.status).toBe(200);
     const body = await own.json();
-    expect(body.matches).toHaveLength(1);
+    expect(body.matches).toEqual(expected);
+    expect(body.players[oldestParticipant.id]).toMatchObject({ username: 'echo' });
     expect(body.players[accounts.alice.id]).toMatchObject({ username: 'alice', avatarImage: null });
     expect(body.players[accounts.alice.id]).not.toHaveProperty('passwordHash');
 
@@ -210,7 +216,9 @@ describe('public player profile HTTP routes', () => {
     expect(published.status).toBe(200);
     const visible = await fetch(history, { headers: headers() });
     expect(visible.status).toBe(200);
-    expect((await visible.json()).matches).toHaveLength(1);
+    const publicHistory = await visible.json();
+    expect(publicHistory.matches).toEqual(expected);
+    expect(publicHistory.players[oldestParticipant.id]).toMatchObject({ username: 'echo' });
 
     const missing = await fetch(`${baseUrl}/api/players/${randomUUID()}/history`, { headers: headers() });
     expect(missing.status).toBe(404);

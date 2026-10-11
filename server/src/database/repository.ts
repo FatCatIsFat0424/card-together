@@ -74,6 +74,7 @@ export interface Repository {
   /** Completed game IDs award coins atomically with runtime/history, once per game. */
   saveRuntime(snapshot: RuntimeSnapshot, matches?: readonly MatchRecord[], completedGameIds?: readonly string[]): Promise<void>;
   saveMatch(match: MatchRecord): Promise<void>;
+  /** All human-only matches, newest first; an explicit limit requests a bounded subset. */
   listMatches(accountId: string, limit?: number): Promise<MatchRecord[]>;
   listEmojis(accountId: string): Promise<EmojiRecord[]>;
   /** All-or-nothing: EMOJI_EXISTS on a duplicate name, EMOJI_LIMIT past the per-account cap. */
