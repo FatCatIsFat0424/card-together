@@ -37,8 +37,8 @@ export function Avatar({ avatar, image, color, border, size = 'medium' }: Avatar
   </span>;
   return (
     <span className={`${styles.avatar} ${styles[size]}`} role="img" aria-label={t(`avatar.${avatar}`)}>
-      {color && <svg className={styles.ring} viewBox="0 0 100 100" aria-hidden="true">
-        <circle cx="50" cy="50" r="47" fill="none" stroke={color} strokeWidth="5" />
+      {color && <svg className={styles.ring} viewBox="0 0 116 116" aria-hidden="true">
+        <circle cx="58" cy="58" r="54" fill="none" stroke={color} strokeWidth="8" />
       </svg>}
       {image ? <img className={styles.image} src={mediaUrl(image)} alt="" /> : AVATAR_SYMBOLS[avatar]}
     </span>

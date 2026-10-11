@@ -117,6 +117,8 @@ and saves it with the identity form. Equipped borders appear on player avatars i
 lobby, public profile, friends, chat and rooms. Both preset and uploaded avatars work.
 Borders extend around the full-size avatar; equipping one preserves the same responsive
 avatar dimensions and accessible image label as the original avatar.
+The original single-color ring uses the same outer extent as shop borders, leaving
+the preset or uploaded avatar fully visible at its original size.
 
 Selecting a game crossfades the lobby's decorative background over 600ms; the
 artwork is loaded before the previous background fades out. Background changes
