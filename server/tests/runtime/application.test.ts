@@ -381,7 +381,7 @@ describe('persistent authenticated application', () => {
     expect(await guest.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: true }))
       .toMatchObject({ success: false });
     for (const payload of [null, {}, [], true, { closeOnEnd: 'true' }, { closeOnEnd: 1 },
-      { closeOnEnd: true, extra: true }]) {
+      { closeOnEnd: true, extra: true }, { closeOnEnd: true, slayEffect: 'smoke' }, { slayEffect: 'fire' }]) {
       expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', payload as SevensOptions))
         .toMatchObject({ success: false });
     }
@@ -399,19 +399,24 @@ describe('persistent authenticated application', () => {
     expect(changed.sevensOptions).toEqual({ closeOnEnd: true });
     expect(changed.seats.E.isReady).toBe(false);
     expect((await repository.loadRuntime())?.rooms[0].info.sevensOptions).toEqual({ closeOnEnd: true });
+    // The slaying effect is a host choice saved with the rules and fixed for the match.
+    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: true, slayEffect: 'fire' }))
+      .toEqual({ success: true });
+    expect((await repository.loadRuntime())?.rooms[0].info.sevensOptions)
+      .toEqual({ closeOnEnd: true, slayEffect: 'fire' });
     await host.timeout(5_000).emitWithAck('room:fillBots');
     await host.timeout(5_000).emitWithAck('room:ready');
     await guest.timeout(5_000).emitWithAck('room:ready');
     const active = await resume(host);
-    expect(active.gameState).toMatchObject({ gameType: 'sevens', options: { closeOnEnd: true } });
+    expect(active.gameState).toMatchObject({ gameType: 'sevens', options: { closeOnEnd: true, slayEffect: 'fire' } });
     expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: false }))
       .toMatchObject({ success: false });
     await stop();
     await start();
     const [reconnected] = await connectPlayers(accounts);
     const restored = await resume(reconnected);
-    expect(restored.room?.sevensOptions).toEqual({ closeOnEnd: true });
-    expect(restored.gameState).toMatchObject({ gameType: 'sevens', options: { closeOnEnd: true } });
+    expect(restored.room?.sevensOptions).toEqual({ closeOnEnd: true, slayEffect: 'fire' });
+    expect(restored.gameState).toMatchObject({ gameType: 'sevens', options: { closeOnEnd: true, slayEffect: 'fire' } });
   }, 15_000);
 
   it('persists host Ninety-Nine options, resets readiness, and rolls back failed saves', async () => {

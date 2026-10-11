@@ -86,7 +86,8 @@ describe('persisted Sevens games', () => {
     expect(isSevensResult(game.result)).toBe(true);
   });
 
-  it.each([null, {}, { closeOnEnd: 'true' }, { closeOnEnd: true, extra: false }])(
+  it.each([null, {}, { closeOnEnd: 'true' }, { closeOnEnd: true, extra: false },
+    { closeOnEnd: true, slayEffect: 'smoke' }, { closeOnEnd: true, slayEffect: null }])(
     'rejects invalid persisted options %j', (options) => {
       sevens.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), seeded(3)));
       const game = structuredClone(sevens.getGameState(CODE)!);

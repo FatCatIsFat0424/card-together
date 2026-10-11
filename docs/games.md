@@ -331,9 +331,15 @@ The host can enable **Dragon Slaying (close suit on A or K)**, labelled **斬龍
 Traditional Chinese, in a waiting Sevens room. It is off by default. When enabled,
 playing either A or K closes that entire suit row immediately:
 neither end accepts another card, while other suits remain playable. Closed rows are
-marked on the table. The closing play is followed by a 2.4-second presentation without text: a blade
-sweeps the row from left to right, darkening it and setting it alight in the same order, and
-the row stays darkened afterwards. Reduced motion shows a still frame; the next turn waits for it.
+marked on the table. The closing play is followed by a 2.9-second presentation without text, seen from
+directly above: a long green dragon rises out of the table's bottom-left corner, sweeps a 180-degree
+turn onto that row, and flies along it breathing fire that chars and ignites the row and spreads over
+its body. When its snout reaches the row's far end, a fast blade sweeps along the row and splits it
+lengthwise. With Dragon Slaying on, the host can instead choose the 1.7-second **fire only**
+effect (**火焰**): with no dragon, a quick blade sweeps the row from left to right and the
+fire follows it, setting the row alight as it passes. The choice is saved with the room rules and
+fixed for the match; rooms saved before it existed use the dragon. The row stays darkened
+afterwards. Reduced motion shows a still frame; the next turn waits for it.
 Changing the option clears human readiness; the setting is fixed
 for the match and survives server restarts. Legacy snapshots without the setting use
 standard rules.

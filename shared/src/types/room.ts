@@ -40,8 +40,13 @@ export interface TimeControl {
   readonly bankSeconds: number;
 }
 
+/** Presentation shown when Dragon Slaying closes a row: a dragon cut down along it, or the fire alone. */
+export type SevensSlayEffect = 'dragon' | 'fire';
+
 export interface SevensOptions {
   readonly closeOnEnd: boolean;
+  /** Missing means the dragon */
+  readonly slayEffect?: SevensSlayEffect;
 }
 
 export interface NinetyNineOptions {

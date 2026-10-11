@@ -11,6 +11,7 @@ export type {
 export type {
   TimeControl,
   SevensOptions,
+  SevensSlayEffect,
   BlackjackOptions,
   RoomCode,
   GameType,

@@ -80,17 +80,20 @@ describe('card sounds', () => {
     expect(context.close).toHaveBeenCalledOnce();
   });
 
-  it('should play the Dragon Slaying whoosh and fire only while audio runs, releasing both voices', () => {
+  it('should play the Dragon Slaying breath, whoosh and impact only while audio runs, releasing every voice', () => {
     const { context, sources, nodes } = installAudio();
-    playSlashSound();
+    const timing = { fireStart: 0.3, fireEnd: 1.85, strike: 1.85, cut: 0.12 };
+    playSlashSound(timing);
     unlockCardSounds();
-    playSlashSound();
+    playSlashSound(timing);
     expect(sources).toHaveLength(0);
     context.state = 'running';
-    playSlashSound();
-    expect(sources).toHaveLength(2);
-    expect(sources.map((source) => source.start.mock.calls[0][0])).toEqual([0.25, 0.3]);
-    expect(context.createBiquadFilter.mock.results.map((result) => result.value.type)).toEqual(['bandpass', 'lowpass']);
+    playSlashSound(timing);
+    expect(sources).toHaveLength(3);
+    // Roar from the first flames, whoosh just before the strike, crash after the 120 ms sweep.
+    for (const [index, at] of [0.3, 1.83, 1.97].entries()) expect(sources[index].start.mock.calls[0][0]).toBeCloseTo(at);
+    expect(context.createBiquadFilter.mock.results.map((result) => result.value.type))
+      .toEqual(['lowpass', 'bandpass', 'lowpass']);
     for (const source of sources) source.onended?.();
     expect([...sources, ...nodes].every((node) => node.disconnect.mock.calls.length === 1)).toBe(true);
   });

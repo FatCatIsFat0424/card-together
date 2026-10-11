@@ -167,13 +167,19 @@ describe('authoritative game presentation', () => {
     Object.assign(state, { options: { closeOnEnd: true } });
     expect(getPresentationFrames(state)).toEqual([
       { key: 'sevens:0', kind: 'play', durationMs: 1300, seat: 'N', cards: [king] },
-      { key: 'sevens:0:slay', kind: 'slay', durationMs: 2400, seat: 'N', cards: [king] },
+      { key: 'sevens:0:slay', kind: 'slay', durationMs: 2900, seat: 'N', cards: [king] },
       { key: 'sevens:1', kind: 'play', durationMs: 1300, seat: 'W', cards: [{ suit: 'hearts', rank: 12 }] },
       { key: 'sevens:2', kind: 'play', durationMs: 1300, seat: 'S', cards: [ace] },
-      { key: 'sevens:2:slay', kind: 'slay', durationMs: 2400, seat: 'S', cards: [ace] },
+      { key: 'sevens:2:slay', kind: 'slay', durationMs: 2900, seat: 'S', cards: [ace] },
     ]);
-    expect(getPresentationEndsAt(state)).toBe(10000 + 3 * 1300 + 2 * 2400);
+    expect(getPresentationEndsAt(state)).toBe(10000 + 3 * 1300 + 2 * 2900);
     expect(frameLogIndex(getPresentationFrames(state)[4])).toBe(2);
+
+    // The fire-only effect is shorter, so the next turn comes sooner.
+    Object.assign(state, { options: { closeOnEnd: true, slayEffect: 'fire' } });
+    expect(getPresentationFrames(state).filter((frame) => frame.kind === 'slay')
+      .map((frame) => frame.durationMs)).toEqual([1700, 1700]);
+    expect(getPresentationEndsAt(state)).toBe(10000 + 3 * 1300 + 2 * 1700);
   });
 
   it("should open Liar's Deck with the table card and resolve a pull only after its suspense", () => {

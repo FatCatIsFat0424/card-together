@@ -8,6 +8,7 @@ import type {
   BlackjackOptions, GameType, NinetyNineOptions, PlayerInfo, RoomSeatTarget, Seat, SeatInfo, SevensOptions, TimeControl,
 } from '@shared/types';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
+import { DEFAULT_SEVENS_OPTIONS, SEVENS_SLAY_EFFECTS, sevensSlayEffect } from '@shared/sevens-options';
 import { socket } from '../socket';
 import { seatBackgroundStyle, tableBackgroundStyle } from '../account-appearance';
 import { useAccountStore } from '../stores/account-store';
@@ -304,10 +305,29 @@ export function RoomPage(): ReactNode {
             <AppCheckbox checked={roomInfo.sevensOptions?.closeOnEnd ?? false}
               disabled={!isHost || blocked || roomInfo.status !== 'waiting'}
               slotProps={{ input: { 'aria-describedby': 'sevens-close-on-end-hint' } }}
-              onChange={(event) => setSevensOptions({ closeOnEnd: event.target.checked })} />
+              onChange={(event) => setSevensOptions({
+                ...(roomInfo.sevensOptions ?? DEFAULT_SEVENS_OPTIONS), closeOnEnd: event.target.checked,
+              })} />
             {t('sevens.closeOnEnd')}
             <span id="sevens-close-on-end-hint" className={styles.srOnly}>{t('sevens.closeOnEndHint')}</span>
           </label>}
+          {/* The effect only matters once Dragon Slaying is on, so it appears beside that option. */}
+          {roomInfo.gameType === 'sevens' && roomInfo.sevensOptions?.closeOnEnd
+            && <label className={styles.ruleOption} title={t('sevens.slayEffectHint')}>
+              {t('sevens.slayEffect')}
+              <select className={styles.ruleSelect} value={sevensSlayEffect(roomInfo.sevensOptions)}
+                disabled={!isHost || blocked || roomInfo.status !== 'waiting'}
+                aria-describedby="sevens-slay-effect-hint"
+                onChange={(event) => {
+                  const slayEffect = SEVENS_SLAY_EFFECTS.find((effect) => effect === event.target.value);
+                  if (slayEffect && roomInfo.sevensOptions) setSevensOptions({ ...roomInfo.sevensOptions, slayEffect });
+                }}>
+                {SEVENS_SLAY_EFFECTS.map((effect) => (
+                  <option key={effect} value={effect}>{t(`sevens.slayEffect.${effect}`)}</option>
+                ))}
+              </select>
+              <span id="sevens-slay-effect-hint" className={styles.srOnly}>{t('sevens.slayEffectHint')}</span>
+            </label>}
           {roomInfo.gameType === 'ninetynine' && <label className={styles.ruleOption} title={t('ninetynine.twoDecksHint')}>
             <input type="checkbox" checked={roomInfo.ninetyNineOptions?.twoDecks ?? false}
               disabled={!isHost || blocked || roomInfo.status !== 'waiting'}

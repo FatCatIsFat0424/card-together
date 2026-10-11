@@ -110,19 +110,23 @@ function noiseVoice(
   source.start(at);
 }
 
-/** Dragon Slaying: a blade whoosh in step with the 450 ms sweep, then crackling fire. */
-export function playSlashSound(): void {
+/**
+ * Dragon Slaying: a fire roar while the fire burns, a whoosh rising across the blade's sweep, and an impact as
+ * it reaches the far end. Times are seconds from the start of the presentation.
+ */
+export function playSlashSound(timing: {
+  readonly fireStart: number; readonly fireEnd: number; readonly strike: number; readonly cut: number;
+}): void {
   const audio = context;
   if (!audio || audio.state !== 'running') return;
   try {
     const now = audio.currentTime;
-    // The whoosh swells across the sweep and cuts off as the blade leaves the row.
-    noiseVoice(audio, 0.45, now + 0.25, 'bandpass', 3200, 0.5, (position) => Math.sin(Math.PI * position ** 1.6));
-    // Fire: a low roar with sparse crackles, fading with the flames.
-    noiseVoice(audio, 1.6, now + 0.3, 'lowpass', 900, 0.4, (position) => {
+    noiseVoice(audio, timing.fireEnd - timing.fireStart, now + timing.fireStart, 'lowpass', 750, 0.35, (position) => {
       const crackle = Math.random() < 0.004 ? 3 : 1;
-      return Math.min(1, position * 8) * (1 - position) ** 1.5 * crackle;
+      return Math.min(1, position * 6) * (1 - position ** 6) * crackle;
     });
+    noiseVoice(audio, timing.cut + 0.02, now + timing.strike - 0.02, 'bandpass', 4200, 0.6, (position) => position ** 2);
+    noiseVoice(audio, 0.5, now + timing.strike + timing.cut, 'lowpass', 280, 0.9, (position) => (1 - position) ** 3);
   } catch {
     disposeCardSounds();
   }

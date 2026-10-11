@@ -6,7 +6,7 @@ import { frameLogIndex } from '@shared/game-presentation';
 import type { PresentationFrame } from '@shared/game-presentation';
 import type { PlayerVisibleGameState, Seat } from '@shared/types';
 import type { TranslationKey } from '../i18n';
-import { playCardSound, playOutSound, playSlashSound, unlockCardSounds, disposeCardSounds } from '../audio/card-sound';
+import { playCardSound, playOutSound, unlockCardSounds, disposeCardSounds } from '../audio/card-sound';
 import { cardBackStyle, tableBackgroundStyle } from '../account-appearance';
 import { useAccountStore } from '../stores/account-store';
 import { useGameStore } from '../stores/game-store';
@@ -281,7 +281,6 @@ export function GameShell({
     else if ((frame.kind === 'deal' && visibleGame?.gameType === 'holdem') || frame.kind === 'street'
       || frame.kind === 'showdown') playCardSound();
     else if (frame.kind === 'fold' || frame.kind === 'check') playCardSound(true);
-    else if (frame.kind === 'slay') playSlashSound();
     else if (frame.kind === 'eliminated' || frame.survived === false || eliminatesSeat(visibleGame, frame)) playOutSound();
   }, [presentation.frame, visibleGame]);
 

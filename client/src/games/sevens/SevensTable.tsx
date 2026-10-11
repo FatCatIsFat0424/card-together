@@ -3,6 +3,7 @@
 import { Fragment, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { svPenalty, svSortHand } from '@shared/rules/sevens';
+import { sevensSlayEffect } from '@shared/sevens-options';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import type { Card, Seat, SevensMatchResult, SevensVisibleState, Suit } from '@shared/types';
 import type { TranslationKey } from '../../i18n';
@@ -307,7 +308,8 @@ export function SevensTable(): ReactNode {
       centre={<Centre game={game} targets={targets} slaying={slaying?.cards[0]?.suit ?? null}
         preview={preview && targets.some((card) => sameCard(card, preview)) ? preview : null} />}
       hand={handZone}
-      tableEffect={slaying && <DragonSlay key={slaying.key} frame={slaying} frameStartedAt={frameStartedAt} />}
+      tableEffect={slaying && <DragonSlay key={slaying.key} frame={slaying} frameStartedAt={frameStartedAt}
+        effect={sevensSlayEffect(game.options)} />}
       centreVisible={slaying !== null}
       overlay={game.phase === 'scoring' && game.result && <ResultOverlay result={game.result}
         pending={actionPending} error={actionError} disabled={!connectionReady} onBack={backToRoom} />}

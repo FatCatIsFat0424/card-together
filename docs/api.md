@@ -105,7 +105,7 @@ For exact unions and result fields, use
 | `room:standUp` | — | Leave the seat to spectate while waiting |
 | `room:setGameType` | `{ gameType }` | Host changes waiting room game |
 | `room:setTimeControl` | `TimeControl` | Host changes waiting room timer; clears human readiness |
-| `room:setSevensOptions` | `SevensOptions` | Host changes waiting Sevens room rules; clears human readiness |
+| `room:setSevensOptions` | `SevensOptions` | Host changes waiting Sevens room rules and the Dragon Slaying effect (`slayEffect`: `dragon` or `fire`, missing means `dragon`); clears human readiness |
 | `room:setNinetyNineOptions` | `NinetyNineOptions` | Host changes waiting Ninety-Nine room rules; clears human readiness |
 | `room:setBlackjackOptions` | `BlackjackOptions` | Host changes waiting Blackjack room rules (player dealer); clears human readiness |
 | `room:addBot`, `room:removeBot` | `{ seat }` | Host adds/removes a bot while waiting |

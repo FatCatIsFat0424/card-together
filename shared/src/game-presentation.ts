@@ -4,6 +4,7 @@ import type {
 import type { Seat } from './types/player';
 import { rpScore } from './rules/redpoints';
 import { nnWinners } from './rules/ninetynine';
+import { SEVENS_SLAY_FRAME_MS, sevensSlayEffect } from './sevens-options';
 
 export interface PresentationFrame {
   readonly key: string;
@@ -91,7 +92,8 @@ export function getPresentationFrames(
         frames.push({ key, kind: 'play', durationMs: playDuration, seat: entry.seat, cards: [entry.card] });
         // Under Dragon Slaying an A or K always reaches its row end, which closes the whole suit.
         if (game.options?.closeOnEnd && (entry.card.rank === 14 || entry.card.rank === 13)) {
-          frames.push({ key: `${key}:slay`, kind: 'slay', durationMs: 2400, seat: entry.seat, cards: [entry.card] });
+          frames.push({ key: `${key}:slay`, kind: 'slay', durationMs: SEVENS_SLAY_FRAME_MS[sevensSlayEffect(game.options)],
+            seat: entry.seat, cards: [entry.card] });
         }
       } else {
         frames.push({ key, kind: 'cover', durationMs: passDuration, seat: entry.seat, cards: [] });

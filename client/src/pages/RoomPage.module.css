@@ -128,6 +128,19 @@
 .ruleOption:has(input:checked) { border-color: var(--color-primary); color: var(--text-primary); }
 .ruleOption:has(input:disabled) { cursor: default; }
 
+.ruleSelect {
+  min-height: 32px;
+  padding: 0 var(--spacing-xs);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.ruleSelect:disabled { cursor: default; }
+
 /* Current game: non-hosts see this badge too */
 .segmentActive,
 .segmentActive:disabled {
