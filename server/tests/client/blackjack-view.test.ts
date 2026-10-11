@@ -187,6 +187,8 @@ describe('Blackjack table view', () => {
       ['dealerStand', null, undefined], ['settle', 'E', 20], ['settle', 'N', -20],
     ]);
     expect(replayBlackjack(dealt, ['N', 'E'], 5)).toMatchObject({ dealerSeat: 'N', dealerTurn: true });
+    const nextBetting = { ...dealing, phase: 'betting' as const, dealerSeat: 'E' as const, log: dealt, presentation: undefined };
+    expect(blackjackView(nextBetting, null)).toMatchObject({ dealerSeat: 'N', currentDealer: 'E', betting: true });
   });
 
   it('should rank final chips with shared places and report net results', () => {

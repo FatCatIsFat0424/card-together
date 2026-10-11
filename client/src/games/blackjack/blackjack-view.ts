@@ -33,8 +33,10 @@ export interface BlackjackTableView {
   readonly settlement: BlackjackSettlementView | null;
   /** The hand to act, while hands are being played */
   readonly turn: { readonly seat: Seat; readonly handIndex: number } | null;
-  /** The player dealer of the shown hand (while betting, of the next one); null with the house */
+  /** The player dealer of the shown hand; null with the house */
   readonly dealerSeat: Seat | null;
+  /** The player dealer of the hand in progress or, while betting, of the next one */
+  readonly currentDealer: Seat | null;
   /** A player dealer is playing its own hand */
   readonly dealerTurn: boolean;
   /** Seats are betting on the next hand right now */
@@ -62,6 +64,11 @@ function scanHand(log: readonly BlackjackLogEntry[], end: number): {
   return { holeHidden, settlement };
 }
 
+function lastDealer(log: readonly BlackjackLogEntry[]): Seat | null {
+  const deal = log.findLast((entry) => entry.type === 'deal');
+  return deal?.type === 'deal' ? deal.dealer ?? null : null;
+}
+
 /** The table of a match between `seats` replayed from the public log before `end`. */
 export function replayBlackjack(
   log: readonly BlackjackLogEntry[], seats: readonly Seat[], end: number,
@@ -77,6 +84,7 @@ export function replayBlackjack(
     settlement,
     turn: holeHidden && !settlement ? bjNextTurn(table.hands) : null,
     dealerSeat: table.dealerSeat ?? null,
+    currentDealer: table.dealerSeat ?? null,
     dealerTurn: Boolean(table.dealerSeat) && table.hand > 0 && !holeHidden && !settlement,
     betting: false,
     logEnd: Math.min(end, log.length),
@@ -98,7 +106,9 @@ export function blackjackView(game: BlackjackVisibleState, frame: PresentationFr
     holeHidden: game.holeHidden,
     settlement: scanHand(game.log, game.log.length).settlement,
     turn: game.phase === 'playing' ? { seat: game.currentTurnSeat, handIndex: game.activeHand } : null,
-    dealerSeat: game.dealerSeat,
+    // While betting, the cards on the table still belong to the hand the previous dealer dealt.
+    dealerSeat: game.phase === 'betting' ? lastDealer(game.log) : game.dealerSeat,
+    currentDealer: game.dealerSeat,
     dealerTurn: game.phase === 'playing' && !game.holeHidden,
     betting: game.phase === 'betting',
     logEnd: game.log.length,
@@ -112,7 +122,7 @@ export function blackjackHandNumber(view: BlackjackTableView): number {
 
 /** A seat that cannot bet while betting, or holds no cards in the shown hand; a player dealer never is. */
 export function blackjackSeatOut(view: BlackjackTableView, seat: Seat): boolean {
-  if (seat === view.dealerSeat) return false;
+  if (seat === view.currentDealer) return false;
   if (view.betting) return !bjSitsIn(view.chips[seat]);
   return view.hand > 0 && view.hands[seat].length === 0;
 }

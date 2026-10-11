@@ -6,7 +6,6 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { SUIT_SYMBOLS } from '@shared/constants';
 import { rpScore } from '@shared/rules/redpoints';
 import { NN_MAX, nnWinners } from '@shared/rules/ninetynine';
-import { BJ_HANDS } from '@shared/rules/blackjack';
 import { HE_HANDS } from '@shared/rules/holdem';
 import type { BidLevel, BidSuit, Seat } from '@shared/types';
 import { apiRequest } from '../api';
@@ -101,8 +100,8 @@ function GameChips(): ReactNode {
       {liarsDeckWinner && !locked && <span className={styles.chip}>
         <AppIcon name="trophy" /> {seats?.[liarsDeckWinner].player?.nickname ?? seatLabel(liarsDeckWinner)}
       </span>}
-      {blackjackHand > 0 && <span className={styles.chip}>
-        {t('blackjack.handOf', { n: String(blackjackHand), total: String(BJ_HANDS) })}
+      {blackjack && blackjackHand > 0 && <span className={styles.chip}>
+        {t('blackjack.handOf', { n: String(blackjackHand), total: String(blackjack.totalHands) })}
       </span>}
       {blackjackResult && !locked && <span className={styles.chip}>
         <AppIcon name="trophy" /> {joinNames(blackjackResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}

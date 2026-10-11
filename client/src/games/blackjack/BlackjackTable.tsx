@@ -160,7 +160,7 @@ function Info({ game, view, locked }: { game: BlackjackVisibleState; view: Black
         return <li key={seat} className={infoStyles.row}>
           <span className={infoStyles.name}>{seatName(seat)}</span>
           <strong className={styles.infoChips}><ChipIcon />{view.chips[seat]}</strong>
-          {seat === view.dealerSeat ? <span className={infoStyles.note}>{t('blackjack.dealerTag')}</span>
+          {seat === view.currentDealer ? <span className={infoStyles.note}>{t('blackjack.dealerTag')}</span>
             : out ? <span className={infoStyles.note}>{t('blackjack.sittingOut')}</span>
             : view.betting && game.betDeadline !== null && <span className={game.betPlaced[seat] ? styles.statusDone : infoStyles.note}>
               {game.betPlaced[seat] ? <><AppIcon name="check" /> {t('blackjack.betPlaced')}</> : t('blackjack.betting')}
