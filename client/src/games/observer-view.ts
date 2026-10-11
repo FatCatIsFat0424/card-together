@@ -8,7 +8,7 @@ interface TurnView {
   readonly observer?: ObserverRole;
 }
 
-/** Spectators watch from South's side of the table but never act for that seat. */
+/** A viewing perspective never grants a spectator permission to act for that seat. */
 export function isOwnTurn(game: TurnView): boolean {
   return game.observer !== 'spectator' && game.currentTurnSeat === game.mySeat;
 }

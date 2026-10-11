@@ -27,7 +27,7 @@ function state(myHand: Card[], tableState: SevensTable, overrides: Partial<Seven
   return {
     gameType: 'sevens', phase: 'playing', mySeat: 'N', myHand, myCovered: [],
     handCounts: { N: myHand.length, E: 10, S: 10, W: 10 }, coveredCounts: { N: 0, E: 0, S: 0, W: 0 },
-    table: tableState, validCards: svLegalPlays(myHand, tableState, false), currentTurnSeat: 'N',
+    table: tableState, validCards: svLegalPlays(myHand, tableState, false, overrides.options?.closeOnEnd), currentTurnSeat: 'N',
     log: [], result: null, ...overrides,
   };
 }
@@ -118,11 +118,186 @@ describe('Sevens bot covering', () => {
   });
 });
 
+describe('Sevens bot Dragon Slaying', () => {
+  const options = { closeOnEnd: true };
+
+  it.each([
+    { end: 13 as const, own: 5 as const, row: { low: 6, high: 12 } },
+    { end: 14 as const, own: 9 as const, row: { low: 2, high: 8 } },
+  ])('saves its opposite-end card before closing with rank $end', ({ end, own, row }) => {
+    const hand = [card('spades', end), card('spades', own)];
+    const visible = state(hand, table({ spades: row }), { options });
+    expect(visible.validCards).toEqual(hand);
+    for (const action of decisions(visible)) {
+      expect(action).toEqual({ type: 'sevens-play', card: card('spades', own) });
+    }
+    for (const action of decisions(state(hand, visible.table))) {
+      expect(action).toEqual({ type: 'sevens-play', card: card('spades', end) });
+    }
+  });
+
+  it('closes a suit to block opponents heavy cards when it sacrifices none of its own', () => {
+    const hand = [card('spades', 14), card('hearts', 8), card('hearts', 9)];
+    const rows = table({ spades: { low: 2, high: 8 }, hearts: { low: 7, high: 7 } });
+    for (const action of decisions(state(hand, rows, { options }))) {
+      expect(action).toEqual({ type: 'sevens-play', card: card('spades', 14) });
+    }
+    for (const action of decisions(state(hand, rows))) {
+      expect(action).toEqual({ type: 'sevens-play', card: card('hearts', 8) });
+    }
+  });
+
+  it('discounts the blocking benefit when opponents have already covered many cards', () => {
+    const hand = [card('spades', 14), card('hearts', 8), card('hearts', 9)];
+    const visible = state(hand, table({ spades: { low: 2, high: 8 }, hearts: { low: 7, high: 7 } }), {
+      options, handCounts: { N: 3, E: 5, S: 5, W: 5 }, coveredCounts: { N: 0, E: 8, S: 8, W: 8 },
+    });
+    for (const action of decisions(visible)) {
+      expect(action).toEqual({ type: 'sevens-play', card: card('hearts', 8) });
+    }
+  });
+
+  it('does not sacrifice cards already cut off by its own earlier cover', () => {
+    const hand = [card('spades', 13), card('spades', 4), card('hearts', 8)];
+    const visible = state(hand, table({ spades: { low: 7, high: 12 }, hearts: { low: 7, high: 7 } }), {
+      options, myCovered: [card('spades', 5)],
+    });
+    for (const action of decisions(visible)) {
+      expect(action).toEqual({ type: 'sevens-play', card: card('spades', 13) });
+    }
+  });
+
+  it('covers a closed-suit card before sacrificing a card in a suit that can still open', () => {
+    const hand = [card('spades', 13), card('hearts', 4)];
+    const rows = table({ spades: { low: 1, high: 7 } });
+    const visible = state(hand, rows, { options });
+    expect(visible.validCards).toEqual([]);
+    for (const action of decisions(visible)) {
+      expect(action).toEqual({ type: 'sevens-cover', card: card('spades', 13) });
+    }
+    for (const action of decisions(state(hand, rows))) {
+      expect(action).toEqual({ type: 'sevens-cover', card: card('hearts', 4) });
+    }
+  });
+
+  it('does not consult observed opponent hands', () => {
+    const hand = [card('spades', 13), card('spades', 5)];
+    const visible = state(hand, table({ spades: { low: 6, high: 12 } }), { options });
+    expect(decisions({ ...visible, observedHands: { N: hand, E: [], S: [], W: [] } }))
+      .toEqual(decisions({ ...visible, observedHands: { N: [], E: hand, S: hand, W: hand } }));
+  });
+});
+
+describe('Sevens bot penalty-aware planning', () => {
+  it('prefers saving higher penalties when both continuations have the same length', () => {
+    const visible = state([card('spades', 11), card('spades', 12), card('hearts', 3), card('hearts', 2)],
+      table({ spades: { low: 7, high: 10 }, hearts: { low: 4, high: 7 } }));
+    for (const action of decisions(visible)) expect(action).toEqual({ type: 'sevens-play', card: card('spades', 11) });
+  });
+
+  it('does not reward high cards behind a covered gate', () => {
+    const visible = state([card('spades', 8), card('spades', 10), card('spades', 11), card('hearts', 6), card('hearts', 5)],
+      table({ spades: { low: 7, high: 7 }, hearts: { low: 7, high: 7 } }), { myCovered: [card('spades', 9)] });
+    for (const action of decisions(visible)) expect(action).toEqual({ type: 'sevens-play', card: card('hearts', 6) });
+  });
+
+  it('covers a high dead card before a low card that can still be saved', () => {
+    const visible = state([card('spades', 13), card('hearts', 14)], table({ spades: { low: 1, high: 7 } }),
+      { options: { closeOnEnd: true } });
+    for (const action of decisions(visible)) expect(action).toEqual({ type: 'sevens-cover', card: card('spades', 13) });
+  });
+
+  it('uses forced-cover history to identify a dead direction', () => {
+    const visible = state([card('spades', 13), card('hearts', 14)],
+      table({ spades: { low: 7, high: 7 }, hearts: { low: 7, high: 7 } }), {
+        coveredCounts: { N: 0, E: 1, S: 1, W: 1 },
+        log: [
+          { type: 'play', seat: 'N', card: card('spades', 7), timestamp: 0 },
+          { type: 'cover', seat: 'W', timestamp: 1 },
+          { type: 'cover', seat: 'S', timestamp: 2 },
+          { type: 'cover', seat: 'E', timestamp: 3 },
+          { type: 'play', seat: 'N', card: card('hearts', 7), timestamp: 4 },
+        ],
+      });
+    for (const action of decisions(visible)) expect(action).toEqual({ type: 'sevens-cover', card: card('spades', 13) });
+    for (const action of decisions({ ...visible, log: [] })) {
+      expect(action).toEqual({ type: 'sevens-cover', card: card('hearts', 14) });
+    }
+  });
+
+  it('never reads spectator information or settlement results while planning', () => {
+    const visible = state([card('spades', 8), card('spades', 9), card('hearts', 7)],
+      table({ spades: { low: 7, high: 7 } }), { options: { closeOnEnd: true } });
+    const expected = decisions(visible);
+    for (const property of ['observedHands', 'observedCovered', 'result']) {
+      Object.defineProperty(visible, property, { get: () => { throw new Error(`Private property read: ${property}`); } });
+    }
+    expect(decisions(visible)).toEqual(expected);
+  });
+});
+
+describe('Sevens bot anticipatory Dragon Slaying', () => {
+  it('delays 2 to avoid exposing A while its high cards remain vulnerable', () => {
+    const hand = [card('spades', 2), card('spades', 11), card('spades', 12), card('spades', 13), card('hearts', 8)];
+    const rows = table({ spades: { low: 3, high: 9 }, hearts: { low: 7, high: 7 } });
+    for (const action of decisions(state(hand, rows, { options: { closeOnEnd: true } }))) {
+      expect(action).toEqual({ type: 'sevens-play', card: card('hearts', 8) });
+    }
+    for (const action of decisions(state(hand, rows))) {
+      expect(action).toEqual({ type: 'sevens-play', card: card('spades', 2) });
+    }
+  });
+
+  it('delays Q to avoid exposing K while its low cards remain vulnerable', () => {
+    const hand = [card('spades', 12), card('spades', 3), card('spades', 2), card('spades', 14), card('hearts', 7)];
+    const rows = table({ spades: { low: 5, high: 11 } });
+    for (const action of decisions(state(hand, rows, { options: { closeOnEnd: true } }))) {
+      expect(action).toEqual({ type: 'sevens-play', card: card('hearts', 7) });
+    }
+    for (const action of decisions(state(hand, rows))) {
+      expect(action).toEqual({ type: 'sevens-play', card: card('spades', 12) });
+    }
+  });
+
+  it('detects a two-play path to closure before exposing 2', () => {
+    const hand = [card('spades', 3), card('spades', 11), card('spades', 12), card('spades', 13), card('hearts', 7)];
+    const rows = table({ spades: { low: 4, high: 9 } });
+    for (const action of decisions(state(hand, rows, { options: { closeOnEnd: true } }))) {
+      expect(action).toEqual({ type: 'sevens-play', card: card('hearts', 7) });
+    }
+    for (const action of decisions(state(hand, rows))) {
+      expect(action).toEqual({ type: 'sevens-play', card: card('spades', 3) });
+    }
+  });
+
+  it('does not assume one opponent can play both 2 and A in one rotation', () => {
+    const hand = [card('spades', 3), card('spades', 11), card('spades', 12), card('spades', 13), card('hearts', 7)];
+    const visible = state(hand, table({ spades: { low: 4, high: 9 } }), {
+      options: { closeOnEnd: true }, handCounts: { N: hand.length, E: 0, S: 0, W: 10 },
+    });
+    for (const action of decisions(visible)) expect(action).toEqual({ type: 'sevens-play', card: card('spades', 3) });
+  });
+
+  it('can safely expose A when it holds that endpoint itself', () => {
+    const hand = [card('spades', 2), card('spades', 14), card('spades', 11), card('spades', 12), card('spades', 13), card('hearts', 8)];
+    const visible = state(hand, table({ spades: { low: 3, high: 9 }, hearts: { low: 7, high: 7 } }),
+      { options: { closeOnEnd: true } });
+    for (const action of decisions(visible)) expect(action).toEqual({ type: 'sevens-play', card: card('spades', 2) });
+  });
+
+  it('still plays its only legal card even when closure exposure is costly', () => {
+    const hand = [card('spades', 2), card('spades', 11), card('spades', 12), card('spades', 13)];
+    const visible = state(hand, table({ spades: { low: 3, high: 9 } }), { options: { closeOnEnd: true } });
+    const action = getSevensBotAction(visible, () => { throw new Error('Single move needs no random selection'); });
+    expect(action).toEqual({ type: 'sevens-play', card: card('spades', 2) });
+  });
+});
+
 describe('Sevens bot full games', () => {
-  it('always returns a legal action over many seeded deals', () => {
+  it.each([false, true])('always returns a legal action over many seeded deals with closeOnEnd=%s', (closeOnEnd) => {
     for (let seed = 1; seed <= 60; seed++) {
       const random = mulberry32(seed);
-      sevens.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), random));
+      sevens.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), random), { closeOnEnd });
       for (let turn = 0; turn < 52; turn++) {
         const seat = sevens.getGameState(CODE)!.currentTurnSeat;
         const view = sevens.getPlayerVisibleState(CODE, seat)!;

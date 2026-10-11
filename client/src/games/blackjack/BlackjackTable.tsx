@@ -13,6 +13,7 @@ import { socket } from '../../socket';
 import { useGameStore } from '../../stores/game-store';
 import { useI18nStore } from '../../stores/i18n-store';
 import { GameShell } from '../GameShell';
+import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
 import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
@@ -263,7 +264,8 @@ function BetControls({ game, amount, onAmount, disabled, expired, sent, onBet }:
 export function BlackjackTable(): ReactNode {
   const { locked, frame } = useGamePresentation();
   const connectionReady = useConnectionReady();
-  const game = useGameStore((state) => state.blackjack);
+  const game = useViewedGame(useGameStore((state) => state.blackjack));
+  const observedHole = useGodViewStore((state) => state.hole);
   const clock = useGameStore((state) => state.visible?.clock);
   const receivedAt = useGameStore((state) => state.presentationReceivedAt);
   const { t } = useI18nStore();
@@ -350,6 +352,9 @@ export function BlackjackTable(): ReactNode {
       ? 'blackjack.bettingSoon' : 'blackjack.betting')}</p>
     : view.betting ? <BetControls game={game} amount={amount} onAmount={setAmount}
       disabled={!ready} expired={expired} sent={awaiting && !actionPending} onBet={sendBet} />
+      : watching && view.dealerSeat === game.mySeat ? <DealerHand cards={view.dealer}
+        holeHidden={view.holeHidden} size="lg" peek={observedHole ?? undefined}
+        label={t('blackjack.dealerOf', { name: seatName(game.mySeat) })} />
       : dealing ? <div className={styles.controls}>
         {settlement ? <strong className={`${styles.myNet} ${toneClass(settlement.net[game.mySeat]) ?? ''}`}>
           {signedChips(settlement.net[game.mySeat])}

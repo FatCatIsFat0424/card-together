@@ -11,6 +11,7 @@ import { useGameStore } from '../../stores/game-store';
 import { useI18nStore } from '../../stores/i18n-store';
 import { ChipIcon } from '../ChipIcon';
 import { GameShell } from '../GameShell';
+import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
 import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
@@ -317,7 +318,7 @@ function Controls({ game, options, enabled, onAction }: {
 export function HoldemTable(): ReactNode {
   const { locked, frame } = useGamePresentation();
   const connectionReady = useConnectionReady();
-  const game = useGameStore((state) => state.holdem);
+  const game = useViewedGame(useGameStore((state) => state.holdem));
   const held = useGameStore((state) => state.holdemHeld);
   const { t } = useI18nStore();
   const seatName = useSeatName();
@@ -335,7 +336,9 @@ export function HoldemTable(): ReactNode {
   const options = holdemControls(game, true);
   const myTurn = options !== null && ready;
   const myState = seatState(view, me);
-  const hole = shownHoleCards(game, view, held);
+  const hole = isSpectator(game)
+    ? { cards: view.dealt.includes(me) ? game.myHand : [], hidden: false }
+    : shownHoleCards(game, view, held);
   const category = holdemCategory(hole.cards, view.board);
   const won = view.award?.payouts[me] ?? 0;
   const owed = Math.max(0, view.currentBet - view.streetBets[me]);

@@ -20,9 +20,11 @@ import { useGamePresentation } from '../use-game-presentation';
 import styles from './BridgeTable.module.css';
 import { useTrickPresentation } from './use-trick-presentation';
 import { TrickHistory } from './TrickHistory';
+import { useTablePerspective, useViewedGame } from '../use-table-perspective';
 
 export function BridgeTable(): ReactNode {
   const mySeat = useRoomStore((state) => state.mySeat);
+  const viewed = useViewedGame(useGameStore((state) => state.visible));
   const { t } = useI18nStore();
   const connectionReady = useConnectionReady();
   const [actionError, setActionError] = useState('');
@@ -44,8 +46,8 @@ export function BridgeTable(): ReactNode {
   const legacyTrick = useTrickPresentation();
   const hasPresentation = useGameStore((state) => Boolean(state.visible?.presentation));
   const heldTrick = hasPresentation ? null : legacyTrick;
-  const isMyTurn = mySeat === currentTurnSeat && !heldTrick && !locked;
-  const bottomSeat: Seat = mySeat ?? 'S';
+  const isMyTurn = mySeat !== null && mySeat === currentTurnSeat && !heldTrick && !locked;
+  const bottomSeat = useTablePerspective();
 
   const seatLabel = (seat: Seat): string => t(`seat.${seat}`);
 
@@ -163,7 +165,7 @@ export function BridgeTable(): ReactNode {
       centre={centre}
       hand={
         <CardHand
-          cards={myHand}
+          cards={viewed?.gameType === 'bridge' ? viewed.myHand : myHand}
           playableCards={isMyTurn ? validCards : []}
           onCardClick={handlePlayCard}
           disabled={actionPending || !connectionReady || !isMyTurn || phase !== 'playing'}

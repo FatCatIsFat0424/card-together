@@ -12,6 +12,7 @@ import { useI18nStore } from '../../stores/i18n-store';
 import { CardHand } from '../../components/CardHand';
 import { reconcileHandOrder } from '../../components/card-hand-order';
 import { GameShell } from '../GameShell';
+import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
 import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
@@ -129,7 +130,7 @@ function ResultOverlay({ result, revealed, pending, error, disabled, onBack }: {
 export function BigTwoTable(): ReactNode {
   const { locked } = useGamePresentation();
   const connectionReady = useConnectionReady();
-  const game = useGameStore((state) => state.bigTwo);
+  const game = useViewedGame(useGameStore((state) => state.bigTwo));
   const { t } = useI18nStore();
   const [selection, setSelection] = useState<Card[]>([]);
   const [manualOrder, setManualOrder] = useState<readonly Card[]>([]);

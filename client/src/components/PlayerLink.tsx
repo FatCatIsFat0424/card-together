@@ -9,9 +9,10 @@ interface PlayerLinkProps {
   player: PlayerInfo;
   showUsername?: boolean;
   size?: 'small' | 'medium';
+  linked?: boolean;
 }
 
-export function PlayerLink({ player, showUsername = false, size = 'small' }: PlayerLinkProps): ReactNode {
+export function PlayerLink({ player, showUsername = false, size = 'small', linked = true }: PlayerLinkProps): ReactNode {
   const { t } = useI18nStore();
   const identity = <>
     <Avatar avatar={player.avatar} image={player.avatarImage} color={player.color} size={size} />
@@ -21,7 +22,7 @@ export function PlayerLink({ player, showUsername = false, size = 'small' }: Pla
       {showUsername && !player.isBot && <span className={styles.username}>@{player.username}</span>}
     </span>
   </>;
-  if (player.isBot) return <span className={styles.link} data-player-identity>{identity}</span>;
+  if (player.isBot || !linked) return <span className={styles.link} data-player-identity>{identity}</span>;
   return (
     <Link className={styles.link} data-player-identity to={`/players/${encodeURIComponent(player.id)}`}
       aria-label={t('player.view', { nickname: player.nickname })}>

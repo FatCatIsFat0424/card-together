@@ -160,12 +160,13 @@ interface TableSeatProps {
   position: TablePosition;
   /** Selectable seat (Ninety-Nine: choose the next player) */
   onPick?: () => void;
+  onObserve?: () => void;
   /** Card this seat just played (a change replays the flash) */
   moveKey?: number | string;
   suppressTurn?: boolean;
 }
 
-export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: TableSeatProps): ReactNode {
+export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppressTurn }: TableSeatProps): ReactNode {
   const { t } = useI18nStore();
   const player = useRoomStore((state) => state.roomInfo?.seats[seat].player ?? null);
   const isMe = useRoomStore((state) => state.mySeat === seat);
@@ -237,6 +238,7 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
     : dead && status === 'busted' ? '💀' : status ? STATUS_ICON[status] : '';
   const name = player?.nickname ?? t(`seat.${seat}`);
   const bottom = position === 'bottom';
+  const select = onObserve ?? onPick;
   const redCards = captured?.filter((card) => rpCardPoints(card) > 0).slice(-MAX_PILE) ?? [];
   const clockTurn = active && clock?.turn?.seat === seat ? clock.turn : null;
   // God view shows the hand face up instead of card backs; Blackjack and Hold'em draw it on the felt.
@@ -252,18 +254,19 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
 
   return (
     <div data-table-seat={position}
-      className={`${styles.seat} ${styles[position]} ${active ? styles.turn : ''} ${busted || dead || sittingOut || heOut || heState === 'folded' ? styles.out : ''} ${onPick ? styles.pickable : ''}`}
-      role={onPick ? 'button' : undefined} tabIndex={onPick ? 0 : undefined} onClick={onPick}
-      aria-label={onPick ? t('seat.pickNext', { name }) : undefined}
-      onKeyDown={onPick ? (event) => {
+      className={`${styles.seat} ${styles[position]} ${active ? styles.turn : ''} ${busted || dead || sittingOut || heOut || heState === 'folded' ? styles.out : ''} ${onObserve ? styles.observable : onPick ? styles.pickable : ''}`}
+      role={select ? 'button' : undefined} tabIndex={select ? 0 : undefined} onClick={select}
+      aria-label={onObserve ? t('table.observePlayer', { name }) : onPick ? t('seat.pickNext', { name }) : undefined}
+      title={onObserve ? t('table.observePlayer', { name }) : undefined}
+      onKeyDown={select ? (event) => {
         if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return;
         // Space would otherwise scroll; Enter must not also activate a focused child.
         event.preventDefault();
-        onPick();
+        select();
       } : undefined}>
       <div className={styles.plate} data-seat-plate>
         <div className={styles.name}>
-          {player ? <PlayerLink player={player} size="medium" />
+          {player ? <PlayerLink player={player} size="medium" linked={!onObserve} />
             : <><span className={styles.emptyAvatar} aria-hidden="true" /><span className={styles.empty}>—</span></>}
           {isMe && <span className={styles.meTag}>{t('seat.meTag')}</span>}
         </div>

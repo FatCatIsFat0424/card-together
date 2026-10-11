@@ -85,6 +85,19 @@ describe('table seat plate', () => {
 
   afterEach(() => vi.useRealTimers());
 
+  it('makes the whole spectator plate selectable without a profile navigation link', () => {
+    const html = render({ seat: 'S', position: 'bottom', onObserve: () => undefined });
+    expect(html).toContain('role="button" tabindex="0"');
+    expect(html).toContain('aria-label="View Alice at the bottom"');
+    expect(html).not.toContain('/players/alice');
+    expect(render({ seat: 'S', position: 'bottom' })).toContain('/players/alice');
+    expect(render({ seat: 'N', position: 'top', onPick: () => undefined }))
+      .toContain('aria-label="Choose Bot North to play next"');
+    useI18nStore.getState().setLocale('zh-TW');
+    expect(render({ seat: 'S', position: 'bottom', onObserve: () => undefined }))
+      .toContain('將 Alice 移到底部觀看');
+  });
+
   it('offers covered-card details at all four Sevens seats only to spectators', () => {
     state.mySeat = null;
     state.game = { ...baseGame(), sevens: { handCounts: counts(2), coveredCounts: counts(1) } };

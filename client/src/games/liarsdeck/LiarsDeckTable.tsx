@@ -8,6 +8,7 @@ import { socket } from '../../socket';
 import { useGameStore } from '../../stores/game-store';
 import { useI18nStore } from '../../stores/i18n-store';
 import { GameShell } from '../GameShell';
+import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
 import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
@@ -150,7 +151,7 @@ function HandCard({ card, variant, selected, truth, disabled, onToggle }: {
 export function LiarsDeckTable(): ReactNode {
   const { locked, frame } = useGamePresentation();
   const connectionReady = useConnectionReady();
-  const game = useGameStore((state) => state.liarsDeck);
+  const game = useViewedGame(useGameStore((state) => state.liarsDeck));
   const { t } = useI18nStore();
   const seatName = useSeatName();
   const [selected, setSelected] = useState<number[]>([]);

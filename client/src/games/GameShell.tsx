@@ -31,6 +31,9 @@ import { RoundHistory } from './RoundHistory';
 import { useMotionStore } from '../stores/motion-store';
 import { useSheetFocus } from './use-sheet-focus';
 import { AUDIO_UNLOCK_EVENTS } from '../audio/audio-unlock';
+import { isSpectator } from './observer-view';
+import { useTablePerspective } from './use-table-perspective';
+import { useTablePerspectiveStore } from '../stores/table-perspective-store';
 
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 const DESKTOP_QUERY = '(min-width: 1024px)';
@@ -203,7 +206,16 @@ export function GameShell({
   useSheetFocus(infoOpen && !rulesVisible, infoPanelRef, infoButtonRef, infoIsOverlay);
   // Focusing the chat input would raise the phone keyboard; focus the sheet itself.
   useSheetFocus(chatOpen && !rulesVisible, chatRailRef, chatButtonRef, chatIsOverlay, 'panel');
-  const bottomSeat: Seat = mySeat ?? 'S';
+  const bottomSeat = useTablePerspective();
+  const selectSeat = useTablePerspectiveStore((state) => state.selectSeat);
+  const watching = isSpectator(visibleGame);
+  const observeSeat = (seat: Seat): void => {
+    const restoreFocus = document.activeElement?.matches('[data-table-seat]');
+    selectSeat(seat);
+    if (restoreFocus) requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>('[data-table-seat="bottom"]')?.focus({ preventScroll: true });
+    });
+  };
   // Seats left empty in a Blackjack or Hold'em match get no plate.
   const tableSeats = matchSeats(visibleGame);
   const unread = chatOpen ? 0 : Math.max(0, messageCount - seenMessages);
@@ -212,7 +224,10 @@ export function GameShell({
   useEffect(() => {
     useGodViewStore.getState().update(visibleGame, presentation.locked);
   }, [visibleGame, presentation.locked]);
-  useEffect(() => () => useGodViewStore.getState().update(null, false), []);
+  useEffect(() => () => {
+    useGodViewStore.getState().update(null, false);
+    useTablePerspectiveStore.getState().reset();
+  }, []);
 
   // Play sounds only for actions after joining the table, not for the existing log on join or reconnect
   const heardMove = useRef(move?.index);
@@ -370,6 +385,7 @@ export function GameShell({
           </div>
           {SEATS.filter((seat) => seat !== bottomSeat && tableSeats.includes(seat)).map((seat) => (
             <TableSeat key={seat} seat={seat} position={tablePosition(seat, bottomSeat)}
+              onObserve={watching ? () => observeSeat(seat) : undefined}
               suppressTurn={presentation.locked}
               moveKey={visibleGame?.presentation
                 ? presentation.frame?.seat === seat ? presentation.frame.key : undefined
@@ -396,13 +412,16 @@ export function GameShell({
         <div className={`${styles.handZone} ${myTurn ? styles.handMyTurn : ''}`} data-hand-zone>
           <div className={styles.handHeader}>
             {tableSeats.includes(bottomSeat) && <TableSeat seat={bottomSeat} position="bottom" suppressTurn={presentation.locked}
+              onObserve={watching ? () => observeSeat(bottomSeat) : undefined}
               moveKey={visibleGame?.presentation
                 ? presentation.frame?.seat === bottomSeat ? presentation.frame.key : undefined
                 : move?.seat === bottomSeat ? move.index : undefined}
               onPick={onPickSeat && pickableSeats?.includes(bottomSeat) ? () => onPickSeat(bottomSeat) : undefined} />}
           </div>
           <div className={styles.handStatus}>
-            {godView && <p className={styles.godView}>{t(godView === 'spectator' ? 'table.spectating' : 'table.godView')}</p>}
+            {godView && <p className={styles.godView} title={watching ? t('table.changePerspective') : undefined}>
+              {t(godView === 'spectator' ? 'table.spectating' : 'table.godView')}
+            </p>}
             {myTurn && <p className={styles.yourTurn}>{t('table.yourTurn')}</p>}
             {error && <p className={styles.actionError} role="alert">{error}</p>}
           </div>

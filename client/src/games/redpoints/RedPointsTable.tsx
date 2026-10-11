@@ -11,6 +11,7 @@ import { useGameStore } from '../../stores/game-store';
 import { useI18nStore } from '../../stores/i18n-store';
 import { CardHand } from '../../components/CardHand';
 import { GameShell } from '../GameShell';
+import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
 import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
@@ -168,7 +169,7 @@ function ResultOverlay({ result, captured, pending, error, disabled, onBack }: {
 export function RedPointsTable(): ReactNode {
   const { locked } = useGamePresentation();
   const connectionReady = useConnectionReady();
-  const game = useGameStore((state) => state.redPoints);
+  const game = useViewedGame(useGameStore((state) => state.redPoints));
   const { t } = useI18nStore();
   const seatName = useSeatName();
   const [preview, setPreview] = useState<Card | null>(null);

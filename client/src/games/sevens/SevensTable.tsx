@@ -12,6 +12,7 @@ import { useGodViewStore } from '../../stores/god-view-store';
 import { useI18nStore } from '../../stores/i18n-store';
 import { CardHand } from '../../components/CardHand';
 import { GameShell } from '../GameShell';
+import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
 import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
@@ -204,7 +205,7 @@ export function SevensTable(): ReactNode {
   // The slash is drawn across the real suit row, so the table stays in view for this frame.
   const slaying = frame?.kind === 'slay' ? frame : null;
   const connectionReady = useConnectionReady();
-  const game = useGameStore((state) => state.sevens);
+  const game = useViewedGame(useGameStore((state) => state.sevens));
   const { t } = useI18nStore();
   const seatName = useSeatName();
   const [preview, setPreview] = useState<Card | null>(null);

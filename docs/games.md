@@ -33,10 +33,17 @@ of current-room public action history.
 Besides the four seats a room holds up to eight spectators
 ([`MAX_SPECTATORS`](../shared/src/constants/game-rules.ts)): every member without a seat. Players
 join as spectators, also during a match or through an invite, and take any empty seat while
-waiting; seated players can stand up while waiting. Spectators watch from South's side without
+waiting; seated players can stand up while waiting. Spectators initially watch from South's side without
 controls (only Leave room, in the game info panel), never vote, and leaving or disconnecting never
 aborts the match. They keep the finished
 board until they press continue or it is removed.
+
+In every game, spectators can click a player's plate, avatar, or name (or focus the plate
+and press Enter or Space) to move that player to the bottom and enlarge their hand.
+The table content and presentation rotate with that perspective. This changes only the
+local view, never the actual seats or action permissions; switching also works for players
+with no cards. The selected perspective lasts until leaving the table. Seated and eliminated
+players retain their own perspective. Covered-card badges still open their pile details.
 
 Spectators and permanently eliminated players (Ninety-Nine bust, Liar's Deck death, Hold'em out
 of chips, Blackjack unable to cover the minimum with the house dealer; not a Hold'em fold) have god view: every seat's
@@ -157,11 +164,18 @@ search, and the evaluation scores do not guarantee optimal play.
 | Big Two | Plan the smallest number of legal groups needed to shed the remaining hand, avoiding unnecessary splits of useful combinations. When responding, play any ordinary answer (no bomb or 2, and the rest of the hand still fits a minimal plan); passing is considered only when every answer would spend a bomb or 2 or split a planned combination, and it is weighed as keeping the plan but giving up tempo. Bombs and 2s are strongly conserved while opponents and the bot's own plan are far from finishing. Once any opponent holds 5 or fewer cards, 2s and bombs are no longer saved and the bot never passes by choice. When an opponent who has not passed this round holds one card, also favor blocking plays. Leads are always plays. Timed-out human Big Two turns use the same decision. |
 | Red Points | Evaluate every legal capture, balancing immediate red points, future matches with the remaining hand, and the public table's exposure to unseen cards. |
 | Ninety-Nine | Treat 4, 5, 10, J, Q, K and ♠A as rescue cards and keep them while number cards are safe, spending large number cards first. Compare both legal plus/minus choices and penalize leaving no card that fits the total expected when the bot acts again, more so in a duel. Model the next player's chance of being forced or eliminated only when the total is within 9 of 99, using unseen cards: the bot's own hand and public plays since the last reshuffle are excluded, one copy per seen card with two decks. With a fixed two-deck stock, ignore kept cards and the return risk when the stock runs out before the bot acts again, and the next player's risk when the bot's own draw ends the match. Evaluate reverse/designation by who acts next and how many opponent turns pass before the bot acts again; near 99 it avoids shortening its own rotation. Pressure on the next player is discounted when that seat's latest play spent a rescue card while any number card was still safe, which suggests a hand without number cards. Randomize among similarly rated surviving designation targets. |
-| Sevens | Must play: favor cards that continue into the bot's own cards and 7s of suits it holds many of; penalize opening directions it cannot follow, especially toward heavy cards. Must cover: weigh the card's penalty against own cards stranded beyond it, preferring cards an earlier cover already cut off. |
+| Sevens | Must play: value continuations by the penalties they can save, discounting missing gates and waiting; retain follow-up moves and avoid opening directions that only help opponents. Public forced covers exclude every then-legal card from that player's remaining hand; choosing another play does not imply absence. Unknown-card availability uses remaining and hidden-cover counts. Must cover: compare newly lost reachable penalties and a conservative blocking benefit, consuming known dead cards unless a live-card block has a clear benefit. Dragon Slaying also checks paths to A/K within one opponent rotation, including exposing them with 2/Q; each opponent gets at most one gate play in counterclockwise order. |
 | Liar's Deck | Must call when it is the last seat holding cards. Otherwise score each option by the bot's own chance of dying on its next pull: calling risks a pull if the previous play was honest, estimated from the truths the bot cannot see (its own hand and plays this round are excluded, and earlier claims this round are assumed partly honest); lying risks a call that grows with the cards played and is certain when emptying the hand leaves one opponent holding cards. Small bonuses favor shedding cards and making an opponent pull. Honest plays spend non-joker truths first. |
 | Blackjack | Play standard basic strategy for a dealer who stands on soft 17 and peeks, with doubling after splits and no surrender: split aces and eights, never tens or fives, and double soft and hard totals against weak up cards; when doubling is unavailable, fall back to hitting (or standing on soft 18). Bet a random 3–8% of the current chips in table steps. As a player dealer, hit below 17; from 17 compare the chips standing wins or loses against every live player hand with the expected result of drawing (from the cards not yet seen this hand, choosing the better option after each draw), ignoring a short bank's proportional payouts. |
 | Texas Hold'em | Preflop, score the hole cards with the Chen formula: raise premium hands to about 3 big blinds, call playable ones up to a few big blinds, limp marginal ones, and shove strong hands with 10 big blinds or less. After the flop, estimate equity by dealing random hands to each unfolded opponent and completing the board (150 runs). Equity times the players in the hand measures strength: strong hands bet or raise about 60% of the pot, playable hands call when the price is below their equity (more strength is required to commit half the stack), and occasional small bluffs are made against one or two opponents. Opponents are not modeled. |
 | Chinese Poker | Search every non-fouled 3/5/5 split, estimating each row's chance of beating a random opponent's row, the row values, and sweep risk; choose among the closest top candidates. The "Auto arrange" button and deadline arrangements use the same search. |
+
+Sevens availability and closure exposure are lightweight heuristic estimates, not an exact
+hidden-card distribution or a measured win-probability model. Gate estimates are combined
+approximately; closure risk conservatively assumes opponents use exposed gates. Blocking
+benefits are shared across active opponents rather than targeting an inferred leader.
+Only own cards and public history/counts enter these decisions; spectator hands, spectator
+covers, and settlement results are excluded.
 
 The server waits for the previous presentation and a short thinking delay before each
 bot action. Actions are saved before broadcast and resume after server restart. Existing

@@ -15,6 +15,7 @@ import { CardHand } from '../../components/CardHand';
 import { reconcileHandOrder } from '../../components/card-hand-order';
 import { tablePosition } from '../../game-view';
 import { GameShell } from '../GameShell';
+import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
 import { joinNames, useSeatName } from '../seat-names';
@@ -239,7 +240,7 @@ function ResultOverlay({ result, autoArranged, pending, error, disabled, onBack 
 export function ChinesePokerTable(): ReactNode {
   const { locked } = useGamePresentation();
   const connectionReady = useConnectionReady();
-  const game = useGameStore((state) => state.chinesePoker);
+  const game = useViewedGame(useGameStore((state) => state.chinesePoker));
   const { t } = useI18nStore();
   const myHand = game?.myHand ?? NO_CARDS;
   const handKey = cardsKey(myHand);
@@ -331,7 +332,7 @@ export function ChinesePokerTable(): ReactNode {
   };
 
   const handZone = <div className={styles.handArea}>
-    {arranging && watching ? !submitted && <CardHand cards={sortCpHand(myHand, sortBy)} disabled />
+    {arranging && watching ? <CardHand cards={sortCpHand(myHand, sortBy)} disabled />
     : arranging && !submitted ? <>
       <CardHand cards={hand} selectedCards={selection} disabled={!editable}
         onCardClick={(card) => update({ selection: toggleCard(selection, card) })}
