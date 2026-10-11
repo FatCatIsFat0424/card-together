@@ -27,9 +27,11 @@ creation button that always creates a Bridge room. The joined single-column list
 "Rules" uses right chevrons and opens each game's detailed rules without selecting
 a room mode or changing the background; the separate selected-game panel is hidden.
 The online-friend panel sits below the room actions in the desktop sidebar and
-below the rules list on smaller screens. Desktop friends stay in one horizontal
-scrolling row, regardless of count; at widths up to 52rem, all friends are displayed
-in a vertical list with no height cap. Host room codes and presence captions are omitted, while join buttons remain
+below the rules list on smaller screens. Friends use a vertical scrolling list
+capped at five rows on all screen sizes. The desktop sidebar stays within the game
+picker's height, so less available space shows fewer rows without extending the
+lobby. Long names are truncated to keep row heights consistent. Host room codes
+and presence captions are omitted, while join buttons remain
 available for hosts. The friend panel uses the existing
 [friends API](api.md#http), refreshes on focus and every 30 seconds while visible,
 and lists online friends with hosts first. Friend room admission uses `room:joinFriend`
