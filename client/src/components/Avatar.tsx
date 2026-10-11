@@ -23,13 +23,13 @@ interface AvatarProps {
 export function Avatar({ avatar, image, color, border, size = 'medium' }: AvatarProps): ReactNode {
   const { t } = useI18nStore();
   if (border) return <span className={`${styles.avatar} ${styles[size]} ${borderStyles.equipped} ${borderStyles[border]}`}
-    data-avatar-size={size}>
+    data-avatar-size={size} role="img" aria-label={t(`avatar.${avatar}`)}>
     <span className={borderStyles.rim} aria-hidden="true" />
     {(border === 'cat' || border === 'rabbit') && <>
       <span className={`${borderStyles.ear} ${borderStyles.leftEar}`} aria-hidden="true" />
       <span className={`${borderStyles.ear} ${borderStyles.rightEar}`} aria-hidden="true" />
     </>}
-    <span className={borderStyles.face}><Avatar avatar={avatar} image={image} size={size} /></span>
+    <span className={borderStyles.face} aria-hidden="true"><Avatar avatar={avatar} image={image} size={size} /></span>
     {border === 'starlight' && <>
       <span className={`${borderStyles.star} ${borderStyles.firstStar}`} aria-hidden="true"><AppIcon name="burst" /></span>
       <span className={`${borderStyles.star} ${borderStyles.secondStar}`} aria-hidden="true"><AppIcon name="burst" /></span>

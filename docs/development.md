@@ -115,6 +115,8 @@ inventory; a repeated purchase does not charge again. The account editor's Mater
 select offers owned borders and the original avatar, previews the selection immediately,
 and saves it with the identity form. Equipped borders appear on player avatars in the
 lobby, public profile, friends, chat and rooms. Both preset and uploaded avatars work.
+Borders extend around the full-size avatar; equipping one preserves the same responsive
+avatar dimensions and accessible image label as the original avatar.
 
 Selecting a game crossfades the lobby's decorative background over 600ms; the
 artwork is loaded before the previous background fades out. Background changes
