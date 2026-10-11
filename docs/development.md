@@ -109,6 +109,8 @@ The authenticated `/shop` route sells permanent avatar borders, accessible from
 desktop and mobile navigation. Its authoritative catalog lives in `shared/src/constants/shop.ts`;
 prices span 50–300 earned coins (5–30 completed games at the current reward).
 Try-on uses the account's preset/uploaded avatar and a CSS border in the live preview.
+Animal decorations include cat, rabbit, frog, bear, and dog styles, plus branching
+antlers and Cthulhu tentacles. Decorations use CSS and SVG and scale with the avatar.
 Selection and reset are local to the shop page; previewing does not change the balance
 or saved profile. Buying atomically debits earned coins and adds the border to private
 inventory; a repeated purchase does not charge again. The account editor's Material

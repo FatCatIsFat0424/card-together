@@ -10,6 +10,8 @@
   flex-shrink: 0;
 }
 .preview { --frame-size: 132px; }
+.frame.antlers { margin-top: calc(var(--frame-size) * 0.26); }
+.frame.cthulhu { margin-bottom: calc(var(--frame-size) * 0.3); }
 .equipped { isolation: isolate; --frame-size: 3rem; }
 .equipped[data-avatar-size='small'] { --frame-size: 1.6rem; }
 .equipped[data-avatar-size='large'] { --frame-size: 4.5rem; }
@@ -64,6 +66,42 @@
 .rabbit .ear::after { inset: 12% 28% 15%; }
 .rabbit .leftEar { left: 18%; transform: rotate(-12deg); }
 .rabbit .rightEar { right: 18%; transform: rotate(12deg); }
+.frog { --border-paint: linear-gradient(135deg, #d9f396, #70af58 42%, #bde78b 75%, #4e8d49); }
+.frog .ear {
+  top: -21%; width: 35%; height: 35%; clip-path: none; border-radius: 50%;
+  background: linear-gradient(135deg, #c5ed91, #73b45a);
+}
+.frog .ear::after {
+  inset: 15%;
+  background: radial-gradient(circle at 50% 58%, #183b29 0 24%, #ffffff 27% 65%, #d6f2ad 68%);
+}
+.frog .leftEar { left: 0; transform: rotate(-8deg); }
+.frog .rightEar { right: 0; transform: rotate(8deg); }
+.bear { --border-paint: linear-gradient(135deg, #f1cf9c, #9c633c 43%, #dba971 78%, #815130); }
+.bear .ear {
+  top: -18%; width: 40%; height: 40%; clip-path: none; border-radius: 50%;
+  background: linear-gradient(135deg, #deb381, #9a623f);
+}
+.bear .ear::after { inset: 22%; background: linear-gradient(135deg, #e8b19e, #b77660); }
+.bear .leftEar { left: -5%; transform: rotate(-12deg); }
+.bear .rightEar { right: -5%; transform: rotate(12deg); }
+.dog { --border-paint: linear-gradient(135deg, #fff0cf, #cb9b62 43%, #f2d29c 78%, #b78047); }
+.dog .ear {
+  top: -4%; width: 35%; height: 72%; clip-path: none; border-radius: 45% 50% 60% 65%;
+  background: linear-gradient(140deg, #c28d59, #895632 80%);
+}
+.dog .ear::after { inset: 14% 25% 18%; background: linear-gradient(#d8ab7c, #a57249); }
+.dog .leftEar { left: -18%; transform: rotate(15deg); }
+.dog .rightEar { right: -18%; transform: scaleX(-1) rotate(15deg); }
+.antlers { --border-paint: linear-gradient(135deg, #f5e7c5, #b99b68 43%, #e9d4a9 78%, #8f734c); }
+.antlerArt, .tentacleArt {
+  position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none;
+  fill: none; stroke-linecap: round; stroke-linejoin: round;
+}
+.antlerArt { stroke: #ae8053; stroke-width: 6; filter: drop-shadow(0 1px 1px #593e3550); }
+.cthulhu { --border-paint: linear-gradient(135deg, #87d3a7, #286455 35%, #ad87c4 70%, #3a866d); }
+.cthulhu .rim { box-shadow: inset 0 1px 2px #c3ffe580, 0 0 14px #64c6a030; }
+.tentacleArt { stroke: #5ba88b; stroke-width: 7; filter: drop-shadow(0 2px 1px #123c3540); }
 .copper { --border-paint: linear-gradient(135deg, #703e2b, #ffcba4 22%, #9a5635 40%, #f6b383 56%, #824b33 73%, #e1a478); }
 .silver { --border-paint: linear-gradient(135deg, #65717f, #f5f8fd 22%, #83919f 40%, #ffffff 56%, #778492 73%, #c8d1dc); }
 .gold { --border-paint: linear-gradient(135deg, #8e611c, #fff0a5 22%, #b77b23 40%, #ffe49b 56%, #a87520 73%, #f4cf65); }

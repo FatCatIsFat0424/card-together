@@ -10,6 +10,8 @@ export const AVATARS: readonly AvatarId[] = ['cat', 'fox', 'owl', 'bear', 'rabbi
 const AVATAR_SYMBOLS: Record<AvatarId, string> = {
   cat: '🐱', fox: '🦊', owl: '🦉', bear: '🐻', rabbit: '🐰', panda: '🐼',
 };
+const ANTLER_PATH = 'M18 16 C12 5 10 -10 12 -32 M12 -13 L2 -22 L0 -34 M12 -22 L22 -32 L23 -42 M10 -2 L-1 -9 L-4 -21';
+const TENTACLE_PATH = 'M0 61 C-18 70 -17 93 -4 98 C8 103 6 88 -2 89 M8 85 C-6 106 9 123 22 113 C29 108 21 99 17 107 M30 102 C25 122 43 130 46 116';
 
 interface AvatarProps {
   avatar: AvatarId;
@@ -25,10 +27,18 @@ export function Avatar({ avatar, image, color, border, size = 'medium' }: Avatar
   if (border) return <span className={`${styles.avatar} ${styles[size]} ${borderStyles.equipped} ${borderStyles[border]}`}
     data-avatar-size={size} role="img" aria-label={t(`avatar.${avatar}`)}>
     <span className={borderStyles.rim} aria-hidden="true" />
-    {(border === 'cat' || border === 'rabbit') && <>
+    {['cat', 'rabbit', 'frog', 'bear', 'dog'].includes(border) && <>
       <span className={`${borderStyles.ear} ${borderStyles.leftEar}`} aria-hidden="true" />
       <span className={`${borderStyles.ear} ${borderStyles.rightEar}`} aria-hidden="true" />
     </>}
+    {border === 'antlers' && <svg className={borderStyles.antlerArt} viewBox="0 0 100 100" aria-hidden="true">
+      <path d={ANTLER_PATH} />
+      <path d={ANTLER_PATH} transform="translate(100 0) scale(-1 1)" />
+    </svg>}
+    {border === 'cthulhu' && <svg className={borderStyles.tentacleArt} viewBox="0 0 100 100" aria-hidden="true">
+      <path d={TENTACLE_PATH} />
+      <path d={TENTACLE_PATH} transform="translate(100 0) scale(-1 1)" />
+    </svg>}
     <span className={borderStyles.face} aria-hidden="true"><Avatar avatar={avatar} image={image} size={size} /></span>
     {border === 'starlight' && <>
       <span className={`${borderStyles.star} ${borderStyles.firstStar}`} aria-hidden="true"><AppIcon name="burst" /></span>

@@ -154,6 +154,36 @@ describe('account HTTP routes', () => {
     expect((await repository.getAccountById(id))?.coins).toBe(0);
   });
 
+  it.each([
+    ['frog', 160], ['bear', 150], ['dog', 150], ['antlers', 220], ['cthulhu', 280],
+  ])('should purchase and equip the %s border at its catalog price', async (border, price) => {
+    const { id } = await register();
+    const account = await repository.getAccountById(id);
+    if (!account) throw new Error('Expected a registered account.');
+    await repository.createAccount({ ...account, id: 'animal-border-bob',
+      username: 'bob', usernameNormalized: 'bob', coins: 1000 });
+    const login = await fetch(`${baseUrl}/login`, {
+      method: 'POST', headers: HEADERS, body: JSON.stringify({ username: 'bob', password: 'correct password' }),
+    });
+    const headers = { ...HEADERS, Cookie: login.headers.get('set-cookie')!.split(';')[0] };
+    const purchased = await fetch(`${baseUrl}/shop/avatar-borders`, {
+      method: 'POST', headers, body: JSON.stringify({ border, price: 0 }),
+    });
+    expect(purchased.status).toBe(200);
+    expect(await purchased.json()).toMatchObject({ account: {
+      coins: 1000 - price, ownedAvatarBorders: [border], avatarBorder: null,
+    } });
+    const equipped = await fetch(`${baseUrl}/profile`, {
+      method: 'PATCH', headers, body: JSON.stringify({ avatarBorder: border }),
+    });
+    expect(equipped.status).toBe(200);
+    expect(await equipped.json()).toMatchObject({ account: { avatarBorder: border } });
+    const restored = await fetch(`${baseUrl}/me`, { headers: { Cookie: headers.Cookie } });
+    expect(await restored.json()).toMatchObject({ account: {
+      coins: 1000 - price, ownedAvatarBorders: [border], avatarBorder: border,
+    } });
+  });
+
   it('should upgrade a legacy cookie on authenticated restore with its original expiry', async () => {
     const { cookie, id } = await register();
     const token = cookie.split('=')[1];
