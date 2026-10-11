@@ -78,7 +78,7 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Ending, ties, and controls', 'The match ends after all hand cards are used and all 24 stock cards are flipped. Cards left on the table are not awarded to anyone. Highest captured total wins; tied highest totals share the win.', 'Hover or focus a hand card to preview its matches. When zero or one target exists, playing resolves immediately; multiple targets require choosing a highlighted table card. Each seat’s score opens its captured-card list.'),
   ],
   ninetynine: [
-    section('Goal and setup', 'Be the last surviving player. Each player receives five cards; the running total starts at 0. The first player is random, and play initially moves counterclockwise.', 'On each turn play one legal card, apply its effect, then draw one replacement. The total must never exceed 99. When stock runs out, all discards except the newest played card are reshuffled.'),
+    section('Goal and setup', 'Be the last surviving player. Each player receives five cards; the running total starts at 0. The first player is random, and play initially moves counterclockwise.', 'On each turn play one legal card, apply its effect, then draw one replacement. The total must never exceed 99. When stock runs out, all discards except the newest played card are reshuffled, unless the two-deck option is on.'),
     table('Every card effect', ['Card', 'Effect'], [
       ['A other than ♠A', 'Add 1.'], ['♠A', 'Reset the total to 0.'], ['2, 3, 6, 7, 8, 9', 'Add the printed number.'],
       ['4', 'Reverse direction; total unchanged.'], ['5', 'Choose another surviving player to act next; total unchanged.'],
@@ -86,6 +86,7 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
       ['Q', 'Choose +20 or −20. Subtraction cannot reduce the total below 0.'], ['K', 'Set the total to 99.'],
     ], 'For 10 and Q, choosing a legal subtraction is allowed even when addition would exceed 99. A 5 cannot designate yourself or an eliminated player.'),
     section('Elimination and ranking', 'A player with no legal card is eliminated automatically and discards the entire hand. The total stays unchanged, and the next surviving player acts in the current direction.', 'With two survivors, reversing still sends the turn to the other player. A designation sends the next turn directly to the selected player; subsequent turns follow the current direction.', 'The last survivor wins. Other positions follow reverse elimination order: the most recently eliminated player places higher.'),
+    section('Two decks, no reshuffle option', 'The host can turn this on before the match. Two 52-card decks are shuffled together (104 cards), so a hand may hold identical cards; card effects are unchanged.', 'The stock is never reshuffled. When the last stock card is drawn, the match ends at once and every surviving player ties for first; eliminated players rank as usual. If one player outlasts the rest first, that player wins as normal.'),
     section('Examples and controls', 'At total 95, an 8 is illegal; a 4, 5, J, K, ♠A, or a subtracting 10/Q is legal. At total 6, subtracting 10 sets the total to 0.', 'Choose plus/minus explicitly for 10 and Q, and choose the next player for 5. On touch, select a card with one tap and play it with the second.'),
   ],
   sevens: [
@@ -116,7 +117,7 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Result and controls', 'The last survivor wins; later eliminations rank above earlier ones. Devil and Chaos variants are not included.', 'Select one to three cards and press Play, or press LIAR. Truthful cards are marked, and your already-played cards for this round remain listed. Emptying your hand does not itself win the match.'),
   ],
   blackjack: [
-    section('Goal and match format', 'Each of the four seats plays against the dealer, not against the other players. Everyone starts with 1000 match-only chips. A match lasts up to eight hands, using a freshly shuffled 52-card deck each hand.', 'Finish with the most chips. If no seat can cover the minimum bet, the match ends early. Tied highest stacks share the win; chips reset next match.'),
+    section('Goal and match format', 'Two to four seated players each play against the dealer, not against one another; empty seats sit out. Everyone starts with 1000 match-only chips. A match lasts up to eight hands, using a freshly shuffled 52-card deck each hand.', 'Finish with the most chips. If no seat can cover the minimum bet, the match ends early. Tied highest stacks share the win; chips reset next match.'),
     section('Betting and deal', 'Bets are 10–200 chips in steps of 10, limited by your available chips. A seat with fewer than 10 sits out.', 'All eligible seats bet simultaneously; bets are hidden until the deal. The window is twice the turn allowance, but at least 15 seconds. A missing human bet becomes the 10-chip minimum at expiry.', 'Each bettor receives two face-up cards. The dealer receives one up card and one hidden hole card. An ace or ten-value up card triggers a blackjack check before anyone acts.', 'A dealer blackjack ends the hand immediately. Only a player’s own natural blackjack pushes against it; every other hand loses.'),
     section('Card values and natural blackjack', 'A counts as 11, reduced to 1 whenever needed to avoid busting; 2–10 use face value; J/Q/K count as 10. A total is soft while an ace still counts as 11.', 'An original, unsplit two-card 21 is a natural blackjack. A 21 after splitting is an ordinary 21. Reaching 21, busting, and naturals end that hand automatically.'),
     table('Available actions', ['Action', 'Rule'], [
@@ -129,10 +130,11 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
       ['Natural blackjack', '2.5 × stake: profit 3:2, unless the dealer also has blackjack.'], ['Ordinary win', '2 × stake: profit 1:1.'],
       ['Push', 'The original stake is returned.'], ['Loss or bust', 'Nothing is returned.'],
     ], 'Bust loses even if the dealer also busts. Otherwise a natural beats a non-natural 21; a higher unbusted total wins against the dealer, and equal ordinary totals push. Split hands settle separately.', 'Example: a 20-chip blackjack returns 50 (30 profit); an ordinary win returns 40 (20 profit); a push returns 20.'),
+    section('Player dealer option', 'With this room option on, the seated players take turns as dealer instead of the house, clockwise from a random seat, for two full rotations (two seated players play four hands). The dealer does not bet and sees its own hole card.', 'After the players finish, the dealer chooses Hit or Stand with every hand in view, but must hit below 17. If time runs out it hits below 17 and otherwise stands.', 'Each player wins from or loses to the dealer’s chips. A dealer who cannot cover every win pays winners in proportion and drops to 0.'),
     section('Controls', 'Choose chips or use the amount steps and press Bet. During your turn choose Hit, Stand, Double, or Split; unavailable actions are disabled. The acting hand is highlighted.'),
   ],
   holdem: [
-    section('Goal, stacks, and match length', 'Four-seat no-limit Texas Hold’em. Everyone starts with 1000 match-only chips. Win every chip or finish with the largest stack after at most 20 hands. Tied largest stacks share the win.', 'Players with no chips are eliminated. Earlier eliminations rank lower; simultaneous eliminations are ordered by their starting stack for that hand, then N/E/S/W for equal stacks. Stacks reset next match.'),
+    section('Goal, stacks, and match length', 'No-limit Texas Hold’em for two to four seated players; empty seats sit out. Everyone starts with 1000 match-only chips. Win every chip or finish with the largest stack after at most 20 hands. Tied largest stacks share the win.', 'Players with no chips are eliminated. Earlier eliminations rank lower; simultaneous eliminations are ordered by their starting stack for that hand, then N/E/S/W for equal stacks. Stacks reset next match.'),
     table('Blind levels', ['Hands', 'Small / big blind'], [['1–4', '10 / 20'], ['5–8', '15 / 30'], ['9–12', '25 / 50'], ['13–16', '40 / 80'], ['17–20', '60 / 120']], 'The opening button is random; it moves clockwise to the next seat with chips each hand. The next two dealt seats post the small and big blind. Heads-up, the button posts the small blind.', 'A short stack posts all it has. There are no antes or burn cards; each hand uses a freshly shuffled full deck and gives each remaining seat two private hole cards.'),
     section('Streets and acting order', 'Preflop: the seat after the big blind acts first. The big blind still gets an option to raise after everyone only calls.', 'Flop: reveal three community cards. Turn and river: reveal one each. On these streets the first eligible seat after the button acts first; play moves clockwise.', 'A street ends when every player able to act has acted since the last full raise and matched the current bet. Folded and all-in seats are skipped.'),
     table('Decisions and raises', ['Action', 'Rule'], [
@@ -182,7 +184,7 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('結束、平手與操作', '所有手牌出完且 24 張牌庫全部翻完後結算。桌上未被吃掉的牌不歸任何人。紅點最高者獲勝，最高同分共同獲勝。', '滑鼠移到手牌或鍵盤聚焦可預覽可吃牌；零個或一個對象時直接處理，多個對象要點選高亮桌牌。點每個座位的分數可查看該玩家吃過的完整牌堆。'),
   ],
   ninetynine: [
-    section('目標與準備', '成為最後存活的人。每人 5 張，總點數從 0 開始。隨機先手，起始方向為逆時針。', '每回合打一張合法牌、執行效果，再補一張；總點數不能超過 99。牌庫用完時，保留最新打出的那張，其餘棄牌洗回牌庫。'),
+    section('目標與準備', '成為最後存活的人。每人 5 張，總點數從 0 開始。隨機先手，起始方向為逆時針。', '每回合打一張合法牌、執行效果，再補一張；總點數不能超過 99。牌庫用完時，保留最新打出的那張，其餘棄牌洗回牌庫；開啟雙副牌選項時不重洗。'),
     table('所有牌的效果', ['牌', '效果'], [
       ['除了 ♠A 的 A', '總點數＋1。'], ['♠A', '總點數歸 0。'], ['2、3、6、7、8、9', '加上牌面點數。'],
       ['4', '反轉出牌方向，點數不變。'], ['5', '指定另一位存活玩家下一個出牌，點數不變。'],
@@ -190,6 +192,7 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
       ['Q', '自行選擇＋20 或－20，最低減到 0。'], ['K', '總點數直接變成 99。'],
     ], '10 或 Q 的加法會超過 99 時，仍可選擇合法的減法。5 不能指定自己或已淘汰玩家。'),
     section('爆掉、輪序與名次', '整手牌沒有任何合法出法時，玩家自動爆掉，整手牌丟入棄牌區。總點數不變，依目前方向換下一位存活玩家。', '只剩兩人時，反轉後仍換另一位出牌。指定牌只決定下一位，之後繼續依目前方向輪流。', '最後存活者獲勝，其他名次依淘汰順序反向排列，越晚爆掉名次越高。'),
+    section('雙副牌不重洗選項', '房主可在開局前開啟。兩副 52 張牌混在一起洗（共 104 張），手牌可能出現相同的牌；牌的效果不變。', '牌庫用完不會重洗：最後一張被摸走時立刻結算，所有還沒爆掉的玩家並列第一，已爆掉的玩家照原本方式排名。若在此之前只剩一人存活，照常由他獲勝。'),
     section('例子與操作', '總點數 95 時，8 不能出；4、5、J、K、♠A，以及選減法的 10／Q 都可以。總點數 6 時，選－10 的結果是 0。', '出 10、Q 時要明確選加或減，出 5 時要選下一位。觸控先點選手牌，再點同一張出牌。'),
   ],
   sevens: [
@@ -219,7 +222,7 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('勝負與操作', '最後存活者獲勝，越晚淘汰名次越高。未包含 Devil 或 Chaos 變體。', '選 1～3 張後按出牌，或按 LIAR。符合桌牌的真牌會標記，自己本輪已出過的牌仍列在手牌下方。出完手牌本身不代表獲勝。'),
   ],
   blackjack: [
-    section('目標與局數', '四個座位各自對莊家，不互相比牌。每人初始 1000 籌碼，只用於本場；最多打 8 手，每手使用重新洗過的 52 張牌。', '最後籌碼最多者獲勝，最高同籌碼共同獲勝。如果沒人能付最低下注，提早結束；下場籌碼重設。'),
+    section('目標與局數', '兩到四位就座玩家各自對莊家，不互相比牌；空位不參加。每人初始 1000 籌碼，只用於本場；最多打 8 手，每手使用重新洗過的 52 張牌。', '最後籌碼最多者獲勝，最高同籌碼共同獲勝。如果沒人能付最低下注，提早結束；下場籌碼重設。'),
     section('下注與發牌', '每手下注 10～200，必須為 10 的倍數且不超過自己的籌碼；少於 10 者只能旁觀。', '所有可下注玩家同時下注，發牌前下注內容隱藏。期限為每回合時間的兩倍，至少 15 秒；真人逾時未下注，系統補最低 10。', '每位下注者拿兩張明牌，莊家一張明牌、一張暗牌。莊家明牌為 A 或 10 點牌時，先檢查是否 Blackjack。', '莊家 Blackjack 立刻結束該手；只有玩家自己的天然 Blackjack 平手，其餘都輸。'),
     section('點數與天然 Blackjack', 'A 算 11，若會爆牌則降為 1；2～10 依牌面，J／Q／K 算 10。仍有 A 算 11 的牌稱為軟點。', '原始未分牌的兩張合計 21 才是天然 Blackjack。分牌後的兩張 21 是普通 21。到 21、爆牌、天然 Blackjack 都會自動結束該手行動。'),
     table('四種行動', ['行動', '規則'], [
@@ -232,10 +235,11 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
       ['天然 Blackjack', '下注 × 2.5，淨贏 3：2；莊家也 Blackjack 時平手。'], ['一般贏', '下注 × 2，淨贏 1：1。'],
       ['平手 Push', '退回原下注。'], ['輸或爆牌', '不返還。'],
     ], '玩家爆牌，即使莊家也爆牌仍輸。天然 Blackjack 大於非天然 21；其他未爆牌手比較點數，較高者贏、相同平手，分出的兩手各自結算。', '例：押 20，Blackjack 返還 50（淨贏 30）、普通贏返還 40（淨贏 20）、平手返還 20。'),
+    section('玩家當莊家選項', '開啟這個房間選項後，改由就座玩家輪流當莊家：從隨機一位開始依順時針輪替，共輪兩圈（兩人時打 4 手）。莊家不下注，看得到自己的暗牌。', '閒家都結束後，莊家看著所有人的牌決定要牌或停牌，但未滿 17 點必須要牌；逾時時未滿 17 點自動要牌，否則停牌。', '閒家的輸贏直接和莊家的籌碼結算；莊家不夠賠時，依比例賠給贏家，籌碼歸零。'),
     section('操作方式', '用籌碼按鈕或增減金額選下注，再按下注確認。輪到自己時選要牌、停牌、加倍、分牌；不合法的行動會停用，目前操作的手會高亮。'),
   ],
   holdem: [
-    section('目標、籌碼與局數', '四人無限注德州撲克，每人初始 1000 籌碼，只用於本場。拿到全桌籌碼或最多 20 手後籌碼最多者獲勝；最高同籌碼共同獲勝。', '沒有籌碼就淘汰，越早淘汰名次越低。同手淘汰先按該手起始籌碼較少者，若相同再依北／東／南／西排列；下一場重新給籌碼。'),
+    section('目標、籌碼與局數', '兩到四人無限注德州撲克，空位不參加；每人初始 1000 籌碼，只用於本場。拿到全桌籌碼或最多 20 手後籌碼最多者獲勝；最高同籌碼共同獲勝。', '沒有籌碼就淘汰，越早淘汰名次越低。同手淘汰先按該手起始籌碼較少者，若相同再依北／東／南／西排列；下一場重新給籌碼。'),
     table('盲注級別', ['手數', '小盲／大盲'], [['1～4', '10／20'], ['5～8', '15／30'], ['9～12', '25／50'], ['13～16', '40／80'], ['17～20', '60／120']], '第一手莊位隨機，每手順時針移到下一位仍有籌碼的人；其後兩位發牌玩家付小盲、大盲。只剩兩人時莊位付小盲。', '不夠付盲注就押入全部剩餘籌碼。沒有前注或燒牌；每手重新洗完整牌組，每位存活者拿兩張私有底牌。'),
     section('四條街與行動順序', '翻牌前：大盲後一位先行動。即使前面都只跟注，大盲仍有加注機會。', '翻牌開三張公共牌，轉牌、河牌各再開一張；這三條街從莊位後第一位可行動者開始，順時針輪流。', '所有仍可行動的人在最近一次完整加注後都已行動且補齊目前下注，該街才結束；棄牌或 All-in 者跳過。'),
     table('行動與加注', ['行動', '規則'], [
