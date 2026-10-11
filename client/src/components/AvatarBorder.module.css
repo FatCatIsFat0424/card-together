@@ -1,0 +1,70 @@
+.frame {
+  --frame-size: 88px;
+  --border-paint: var(--border-color);
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  isolation: isolate;
+  width: var(--frame-size);
+  height: var(--frame-size);
+  flex-shrink: 0;
+}
+.preview { --frame-size: 132px; }
+.rim {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--border-paint);
+  box-shadow: inset 0 1px 2px #ffffff90, inset 0 -2px 4px #00000060, 0 5px 14px #00000020;
+}
+.rim::after {
+  content: '';
+  position: absolute;
+  inset: 4%;
+  border: 1px solid #ffffff50;
+  border-radius: inherit;
+}
+.face { position: relative; width: 84%; height: 84%; }
+.face > span { width: 100%; height: 100%; font-size: calc(var(--frame-size) * 0.5); }
+.ear {
+  position: absolute;
+  z-index: -1;
+  top: -16%;
+  width: 36%;
+  height: 45%;
+  background: linear-gradient(140deg, #e4d7fa, #a084cb);
+  clip-path: polygon(5% 100%, 12% 0, 100% 100%);
+}
+.ear::after {
+  content: '';
+  position: absolute;
+  inset: 20% 24% 12%;
+  background: linear-gradient(#ffc3d6, #d47eac);
+  clip-path: inherit;
+  border-radius: inherit;
+}
+.leftEar { left: 4%; transform: rotate(-15deg); }
+.rightEar { right: 4%; transform: scaleX(-1) rotate(-15deg); }
+.cat { --border-paint: linear-gradient(135deg, #e3c5f2, #a084cb 42%, #f4b7cc 73%, #bd95d8); }
+.rabbit { --border-paint: linear-gradient(135deg, #fff1df, #dba4b9 48%, #f9d9df 80%, #fff1df); }
+.rabbit .ear {
+  top: -34%;
+  width: 23%;
+  height: 55%;
+  background: linear-gradient(90deg, #e8d8c6, #fff5e9 50%, #e8d8c6);
+  border-radius: 70% 70% 40% 40%;
+  clip-path: none;
+}
+.rabbit .ear::after { inset: 12% 28% 15%; }
+.rabbit .leftEar { left: 18%; transform: rotate(-12deg); }
+.rabbit .rightEar { right: 18%; transform: rotate(12deg); }
+.copper { --border-paint: linear-gradient(135deg, #703e2b, #ffcba4 22%, #9a5635 40%, #f6b383 56%, #824b33 73%, #e1a478); }
+.silver { --border-paint: linear-gradient(135deg, #65717f, #f5f8fd 22%, #83919f 40%, #ffffff 56%, #778492 73%, #c8d1dc); }
+.gold { --border-paint: linear-gradient(135deg, #8e611c, #fff0a5 22%, #b77b23 40%, #ffe49b 56%, #a87520 73%, #f4cf65); }
+.starlight { --border-paint: linear-gradient(145deg, #708fe4, #263d81 40%, #a4b4ff 65%, #42559e); }
+.star { position: absolute; color: #ffe196; filter: drop-shadow(0 0 4px #e9b85990); }
+.firstStar { top: -5%; right: -5%; font-size: calc(var(--frame-size) * 0.3); }
+.secondStar { bottom: -2%; left: 0; font-size: calc(var(--frame-size) * 0.22); }
+.rainbow { --border-paint: conic-gradient(#f89bb7, #f5c76e, #c6e577, #70d4b4, #73beec, #b197ee, #f89bb7); }
+.neon { --border-paint: linear-gradient(135deg, #92f4ff, #40b9d7 30%, #b791ff 65%, #5ee7f3); }
+.neon .rim { box-shadow: 0 0 0 2px #68d7e94d, 0 0 16px #5bcfe940, inset 0 0 0 2px #ffffff80; }

@@ -105,6 +105,14 @@ match table without an additional history heading or bot-recording caption.
 Lobby navigation remains in the top bar;
 the profile footer appears only when there is an active room to return to.
 
+The authenticated `/shop` route is an example avatar-border catalog, accessible from
+desktop and mobile navigation. Its catalog lives in `client/src/shop-catalog.ts`;
+prices span 50–300 earned coins (5–30 completed games at the current reward).
+Try-on uses the account's preset/uploaded avatar and a CSS border in the live preview.
+Selection and reset are local to the shop page; purchases are not yet available and
+previewing does not change the balance or saved profile. The wallet reads the existing
+account balance and reward rate rather than introducing mock currency.
+
 Selecting a game crossfades the lobby's decorative background over 600ms; the
 artwork is loaded before the previous background fades out. Background changes
 preserve the existing component styling and honor reduced motion preferences.

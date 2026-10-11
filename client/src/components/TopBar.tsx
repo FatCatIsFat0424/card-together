@@ -200,6 +200,7 @@ export function TopBar(): ReactNode {
   const links = accountId && <>
     <NavLink to="/" end>{t('nav.lobby')}</NavLink>
     <NavLink to="/friends">{t('nav.friends')}</NavLink>
+    <NavLink to="/shop">{t('nav.shop')}</NavLink>
     <NavLink to={`/players/${encodeURIComponent(accountId)}`}>{t('player.myProfile')}</NavLink>
     <NavLink to="/account">{t('nav.account')}</NavLink>
   </>;

@@ -23,6 +23,7 @@ const GamePage = lazy(() => import('./pages/GamePage').then((page) => ({ default
 const AuthPage = lazy(() => import('./pages/AuthPage').then((page) => ({ default: page.AuthPage })));
 const AccountPage = lazy(() => import('./pages/AccountPage').then((page) => ({ default: page.AccountPage })));
 const FriendsPage = lazy(() => import('./pages/FriendsPage').then((page) => ({ default: page.FriendsPage })));
+const ShopPage = lazy(() => import('./pages/ShopPage').then((page) => ({ default: page.ShopPage })));
 const PlayerProfilePage = lazy(() => import('./pages/PlayerProfilePage')
   .then((page) => ({ default: page.PlayerProfilePage })));
 
@@ -70,6 +71,7 @@ function AppRoutes(): ReactNode {
         <Route path="/" element={<LobbyPage />} />
         <Route path="/account" element={<AccountPage />} />
         <Route path="/friends" element={<FriendsPage />} />
+        <Route path="/shop" element={<ShopPage />} />
         <Route path="/players/:accountId" element={<PlayerProfilePage />} />
         <Route path="/room/:roomCode" element={<RoomPage />} />
         <Route path="/game/:roomCode" element={<GamePage />} />

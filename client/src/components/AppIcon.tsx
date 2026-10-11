@@ -36,6 +36,7 @@ import Shuffle from '@mui/icons-material/Shuffle';
 import SkipNext from '@mui/icons-material/SkipNext';
 import SkipPrevious from '@mui/icons-material/SkipPrevious';
 import SportsBar from '@mui/icons-material/SportsBar';
+import StorefrontOutlined from '@mui/icons-material/StorefrontOutlined';
 import TimerOutlined from '@mui/icons-material/TimerOutlined';
 import UnfoldMore from '@mui/icons-material/UnfoldMore';
 import WarningAmber from '@mui/icons-material/WarningAmber';
@@ -43,6 +44,7 @@ import styles from './AppIcon.module.css';
 
 const ICONS = {
   add: Add, person: PersonOutline,
+  shop: StorefrontOutlined,
   drag: DragIndicator,
   coins: MonetizationOnOutlined,
   arrowDown: ArrowDownward, arrowUp: ArrowUpward, info: AssignmentOutlined,
