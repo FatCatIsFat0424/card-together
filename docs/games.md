@@ -39,7 +39,7 @@ aborts the match. They keep the finished
 board until they press continue or it is removed.
 
 Spectators and permanently eliminated players (Ninety-Nine bust, Liar's Deck death, Hold'em out
-of chips, Blackjack unable to cover the minimum; not a Hold'em fold) have god view: every seat's
+of chips, Blackjack unable to cover the minimum with the house dealer; not a Hold'em fold) have god view: every seat's
 hand appears face up beside its plate (two overlapping rows for long hands), and Blackjack's hole card and Hold'em hole cards
 appear face up with a dashed outline. Stock order, bullets, and other undealt cards stay hidden.
 In Sevens, spectators also see every seat's covered cards and penalty in the info panel,
@@ -159,7 +159,7 @@ search, and the evaluation scores do not guarantee optimal play.
 | Ninety-Nine | Treat 4, 5, 10, J, Q, K and ♠A as rescue cards and keep them while number cards are safe, spending large number cards first. Compare both legal plus/minus choices and penalize leaving no card that fits the total expected when the bot acts again, more so in a duel. Model the next player's chance of being forced or eliminated only when the total is within 9 of 99, using unseen cards: the bot's own hand and public plays since the last reshuffle are excluded, one copy per seen card with two decks. With a fixed two-deck stock, ignore kept cards and the return risk when the stock runs out before the bot acts again, and the next player's risk when the bot's own draw ends the match. Evaluate reverse/designation by who acts next and how many opponent turns pass before the bot acts again; near 99 it avoids shortening its own rotation. Pressure on the next player is discounted when that seat's latest play spent a rescue card while any number card was still safe, which suggests a hand without number cards. Randomize among similarly rated surviving designation targets. |
 | Sevens | Must play: favor cards that continue into the bot's own cards and 7s of suits it holds many of; penalize opening directions it cannot follow, especially toward heavy cards. Must cover: weigh the card's penalty against own cards stranded beyond it, preferring cards an earlier cover already cut off. |
 | Liar's Deck | Must call when it is the last seat holding cards. Otherwise score each option by the bot's own chance of dying on its next pull: calling risks a pull if the previous play was honest, estimated from the truths the bot cannot see (its own hand and plays this round are excluded, and earlier claims this round are assumed partly honest); lying risks a call that grows with the cards played and is certain when emptying the hand leaves one opponent holding cards. Small bonuses favor shedding cards and making an opponent pull. Honest plays spend non-joker truths first. |
-| Blackjack | Play standard basic strategy for a dealer who stands on soft 17 and peeks, with doubling after splits and no surrender: split aces and eights, never tens or fives, and double soft and hard totals against weak up cards; when doubling is unavailable, fall back to hitting (or standing on soft 18). Bet a random 3–8% of the current chips in table steps. |
+| Blackjack | Play standard basic strategy for a dealer who stands on soft 17 and peeks, with doubling after splits and no surrender: split aces and eights, never tens or fives, and double soft and hard totals against weak up cards; when doubling is unavailable, fall back to hitting (or standing on soft 18). Bet a random 3–8% of the current chips in table steps. As a player dealer, hit below 17; from 17 compare the chips standing wins or loses against every live player hand with the expected result of drawing (from the cards not yet seen this hand, choosing the better option after each draw), ignoring a short bank's proportional payouts. |
 | Texas Hold'em | Preflop, score the hole cards with the Chen formula: raise premium hands to about 3 big blinds, call playable ones up to a few big blinds, limp marginal ones, and shove strong hands with 10 big blinds or less. After the flop, estimate equity by dealing random hands to each unfolded opponent and completing the board (150 runs). Equity times the players in the hand measures strength: strong hands bet or raise about 60% of the pot, playable hands call when the price is below their equity (more strength is required to commit half the stack), and occasional small bluffs are made against one or two opponents. Opponents are not modeled. |
 | Chinese Poker | Search every non-fouled 3/5/5 split, estimating each row's chance of beating a random opponent's row, the row values, and sweep risk; choose among the closest top candidates. The "Auto arrange" button and deadline arrangements use the same search. |
 
@@ -405,6 +405,31 @@ The dealer then reveals the hole card and draws while below 17, standing on ever
 soft 17; it does not draw when every hand has busted or is a blackjack. Blackjack pays 3:2, a win
 1:1, and a push returns the bet. After the eighth hand, or once no seat can cover the minimum,
 the most chips win, ties shared. Scores do not accumulate across matches.
+
+### Player dealer
+
+While waiting, the host can turn on **Player dealer** beside the game selector (off by default;
+changing it clears human readiness). The seats then deal in turn instead of the house: a random
+seat taking part deals the first hand and the deal passes clockwise, skipping empty seats, for two
+full rotations, so a match is twice as many hands as seats (8 with four seats, 4 with two).
+
+The dealer does not bet. Its hole card is visible to it (and god view) but hidden from the other
+seats until the reveal. Peeking for blackjack, 3:2 blackjacks, doubling, splitting, and no
+insurance work as with the house. Once every player hand is finished the hole card is revealed
+and, unless no hand needs beating (every hand busted or is a blackjack) or the dealer has a
+blackjack, the dealer seat plays its own hand with Hit and Stand: it must hit below 17 and may hit
+or stand from 17; reaching 21 or busting ends its turn. When its turn times out it follows the
+house rule (hit below 17, otherwise stand).
+
+Settlement moves chips between each player and the dealer only. Each seat's net loss goes to the
+dealer first; the dealer then pays each seat's net win (1:1, blackjack 3:2) from its chips plus
+those collections, and pushes return the stake. When that pool cannot cover every win, winners
+share it in proportion to what they are owed, each rounded down, and the leftover chips go one at a
+time to winners clockwise from the dealer's left
+([`bjProportionalPayouts`](../shared/src/rules/blackjack.ts)); the dealer ends with zero. A seat
+with fewer than 10 chips cannot bet but still deals in its turn, even with no chips, so nobody is
+permanently out. The match ends after the last hand or once fewer than two seats can cover the
+minimum bet, since every hand the only such seat dealt would have no bettor.
 
 ## Texas Hold'em
 

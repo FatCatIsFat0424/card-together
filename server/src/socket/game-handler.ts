@@ -1,6 +1,8 @@
-import type { BidAction, BlackjackAction, Card, ChinesePokerArrangement, HoldemAction, Seat } from '@shared/types';
+import type {
+  BidAction, BlackjackAction, BlackjackDealerAction, Card, ChinesePokerArrangement, HoldemAction, Seat,
+} from '@shared/types';
 import { LD_DECK, LD_MAX_PLAY } from '@shared/rules/liarsdeck';
-import { BJ_ACTIONS, BJ_MAX_BET, BJ_MIN_BET } from '@shared/rules/blackjack';
+import { BJ_ACTIONS, BJ_DEALER_ACTIONS, BJ_MAX_BET, BJ_MIN_BET } from '@shared/rules/blackjack';
 import type { SocketContext, TypedSocket } from './context';
 import { actionError, requireRoom, requireSuccess, runAction } from './context';
 import * as roomManager from '../managers/room-manager';
@@ -187,6 +189,15 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
     if (!BJ_ACTIONS.includes(action as BlackjackAction)) throw actionError('Invalid action.');
     const code = requireRoom(socket);
     requireSuccess(gameManager.handleBlackjackAction(code, playerSeat(socket, code), action as BlackjackAction));
+    return { success: true };
+  }));
+
+  socket.on('game:blackjack:dealerAction', (payload, callback) => runAction(context, socket, callback, () => {
+    const action: unknown = payload?.action;
+    if (!BJ_DEALER_ACTIONS.includes(action as BlackjackDealerAction)) throw actionError('Invalid action.');
+    const code = requireRoom(socket);
+    requireSuccess(gameManager.handleBlackjackDealerAction(code, playerSeat(socket, code),
+      action as BlackjackDealerAction));
     return { success: true };
   }));
 

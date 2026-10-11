@@ -1,6 +1,7 @@
 import { isTimeControl } from '@shared/time-control';
 import { isSevensOptions } from '@shared/sevens-options';
 import { isNinetyNineOptions } from '@shared/ninetynine-options';
+import { isBlackjackOptions } from '@shared/blackjack-options';
 import { GAME_TYPES } from '@shared/constants';
 import type { RoomCode, RoomInvite, Seat } from '@shared/types';
 import type { SocketContext, TypedSocket } from './context';
@@ -18,7 +19,7 @@ function startIfReady(code: RoomCode): void {
   if (!players) throw actionError('Room not found.');
   roomManager.setRoomStatus(code, 'playing');
   requireSuccess(gameManager.startGame(
-    code, room.gameType, players, room.timeControl, room.sevensOptions, room.ninetyNineOptions,
+    code, room.gameType, players, room.timeControl, room.sevensOptions, room.ninetyNineOptions, room.blackjackOptions,
   ));
 }
 
@@ -171,6 +172,12 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
   socket.on('room:setNinetyNineOptions', (payload, callback) => runAction(context, socket, callback, () => {
     if (!isNinetyNineOptions(payload)) throw actionError('Invalid Ninety-Nine options.');
     requireSuccess(roomManager.setNinetyNineOptions(requireRoom(socket), socket.data.accountId, payload));
+    return { success: true };
+  }));
+
+  socket.on('room:setBlackjackOptions', (payload, callback) => runAction(context, socket, callback, () => {
+    if (!isBlackjackOptions(payload)) throw actionError('Invalid Blackjack options.');
+    requireSuccess(roomManager.setBlackjackOptions(requireRoom(socket), socket.data.accountId, payload));
     return { success: true };
   }));
 

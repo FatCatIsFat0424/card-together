@@ -1,5 +1,6 @@
 import type {
-  BidAction, BlackjackAction, Card, ChinesePokerArrangement, HoldemAction, PlayerVisibleGameState, Seat,
+  BidAction, BlackjackAction, BlackjackDealerAction, Card, ChinesePokerArrangement, HoldemAction, PlayerVisibleGameState,
+  Seat,
 } from '@shared/types';
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { getBridgeBotAction } from './bridge-strategy';
@@ -28,6 +29,7 @@ export type BotAction =
   | { readonly type: 'liarsdeck-challenge' }
   | { readonly type: 'blackjack-bet'; readonly amount: number }
   | { readonly type: 'blackjack-action'; readonly action: BlackjackAction }
+  | { readonly type: 'blackjack-dealer'; readonly action: BlackjackDealerAction }
   | { readonly type: 'holdem-action'; readonly action: HoldemAction };
 
 /** Decisions receive only filtered player information and injectable randomness. */

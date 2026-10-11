@@ -1,6 +1,6 @@
 // ─── Game types ───
 
-import type { NinetyNineOptions, RoomCode, SevensOptions, TimeControl } from './room';
+import type { BlackjackOptions, NinetyNineOptions, RoomCode, SevensOptions, TimeControl } from './room';
 import type { PlayerInfo, Seat } from './player';
 import type { BigTwoComboType } from '../rules/bigtwo';
 
@@ -645,6 +645,9 @@ export interface BlackjackHand {
 
 export type BlackjackAction = 'hit' | 'stand' | 'double' | 'split';
 
+/** A player dealer's choice once every player hand is finished */
+export type BlackjackDealerAction = 'hit' | 'stand';
+
 export type BlackjackOutcome = 'blackjack' | 'win' | 'push' | 'lose' | 'bust';
 
 /**
@@ -656,10 +659,12 @@ export type BlackjackLogEntry =
   | {
     readonly type: 'deal';
     readonly hand: number;
-    /** 0 for seats sitting out */
+    /** 0 for seats sitting out and the player dealer */
     readonly bets: Record<Seat, number>;
     readonly cards: Record<Seat, Card[]>;
     readonly upCard: Card;
+    /** The seat dealing this hand; missing with the house dealer */
+    readonly dealer?: Seat;
     readonly timestamp: number;
   }
   | { readonly type: 'hit'; readonly seat: Seat; readonly handIndex: number; readonly card: Card; readonly timestamp: number }
@@ -675,12 +680,14 @@ export type BlackjackLogEntry =
   }
   | { readonly type: 'reveal'; readonly card: Card; readonly timestamp: number }
   | { readonly type: 'dealerHit'; readonly card: Card; readonly timestamp: number }
+  /** A player dealer stands; the house dealer's stand is implied by the settlement */
+  | { readonly type: 'dealerStand'; readonly timestamp: number }
   | {
     readonly type: 'settle';
     readonly hand: number;
-    /** Per hand, in seat hand order; empty for seats sitting out */
+    /** Per hand, in seat hand order; empty for seats sitting out and the player dealer */
     readonly outcomes: Record<Seat, BlackjackOutcome[]>;
-    /** Chips won minus chips staked this hand */
+    /** Chips won minus chips staked this hand; for a player dealer, chips collected minus chips paid */
     readonly net: Record<Seat, number>;
     readonly chips: Record<Seat, number>;
     readonly timestamp: number;
@@ -700,6 +707,15 @@ export interface BlackjackMatchResult {
 export type BlackjackPhase = 'betting' | 'playing' | 'scoring';
 
 export interface BlackjackGameState {
+  /** Missing on legacy snapshots; defaults to the house dealer. */
+  readonly options?: BlackjackOptions;
+  /**
+   * Player dealer only: the seat dealing the hand being played, or while betting the next one.
+   * Missing with the house dealer.
+   */
+  dealerSeat?: Seat;
+  /** Player dealer only: the dealer stood, ending its turn */
+  dealerStood?: boolean;
   clock?: GameClock;
   presentation?: GamePresentation;
   returnedSeats?: Seat[];
@@ -730,6 +746,7 @@ export interface BlackjackGameState {
   dealer: Card[];
   /** Server only; the face-down card until the dealer reveals it */
   hole: Card | null;
+  /** A player seat's hand, or the player dealer's seat once every player hand is finished */
   currentTurnSeat: Seat;
   activeHand: number;
   log: BlackjackLogEntry[];
@@ -740,6 +757,13 @@ export interface BlackjackVisibleState {
   readonly observer?: ObserverRole;
   /** God view of the face-down dealer card while it is hidden */
   readonly observedHole?: Card;
+  /** The player dealer's own face-down card while it is hidden from the others */
+  readonly myHole?: Card;
+  readonly options: BlackjackOptions;
+  /** The player dealer of the hand being played, or while betting the next one; null with the house */
+  readonly dealerSeat: Seat | null;
+  /** Hands in this match */
+  readonly totalHands: number;
   clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'blackjack';

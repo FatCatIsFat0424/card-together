@@ -3,7 +3,9 @@ import type { ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { FLEXIBLE_SEAT_GAMES, GAME_TYPES, MAX_SPECTATORS } from '@shared/constants';
 import { minPlayers } from '@shared/rules/seats';
-import type { GameType, NinetyNineOptions, PlayerInfo, Seat, SevensOptions, TimeControl } from '@shared/types';
+import type {
+  BlackjackOptions, GameType, NinetyNineOptions, PlayerInfo, Seat, SevensOptions, TimeControl,
+} from '@shared/types';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import { socket } from '../socket';
 import { tableBackgroundStyle } from '../account-appearance';
@@ -128,6 +130,11 @@ export function RoomPage(): ReactNode {
     setError('');
     socket.timeout(10000).emit('room:setNinetyNineOptions', options, handleResult);
   };
+  const setBlackjackOptions = (options: BlackjackOptions): void => {
+    setBusy(true);
+    setError('');
+    socket.timeout(10000).emit('room:setBlackjackOptions', options, handleResult);
+  };
   const addBot = (seat: Seat): void => {
     setBusy(true);
     setError('');
@@ -244,6 +251,14 @@ export function RoomPage(): ReactNode {
               onChange={(event) => setNinetyNineOptions({ twoDecks: event.target.checked })} />
             {t('ninetynine.twoDecks')}
             <span id="ninetynine-two-decks-hint" className={styles.srOnly}>{t('ninetynine.twoDecksHint')}</span>
+          </label>}
+          {roomInfo.gameType === 'blackjack' && <label className={styles.ruleOption} title={t('blackjack.playerDealerHint')}>
+            <input type="checkbox" checked={roomInfo.blackjackOptions?.playerDealer ?? false}
+              disabled={!isHost || blocked || roomInfo.status !== 'waiting'}
+              aria-describedby="blackjack-player-dealer-hint"
+              onChange={(event) => setBlackjackOptions({ playerDealer: event.target.checked })} />
+            {t('blackjack.playerDealer')}
+            <span id="blackjack-player-dealer-hint" className={styles.srOnly}>{t('blackjack.playerDealerHint')}</span>
           </label>}
         </div>
       </div>

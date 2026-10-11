@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { BJ_ACTIONS, BJ_HANDS, BJ_MIN_BET, bjMaxBet, bjSitsIn } from '@shared/rules/blackjack';
+import { BJ_ACTIONS, BJ_DEALER_ACTIONS, BJ_MIN_BET, bjMaxBet, bjSitsIn } from '@shared/rules/blackjack';
 import type {
-  BlackjackAction, BlackjackLogEntry, BlackjackMatchResult, BlackjackVisibleState, Seat,
+  BlackjackAction, BlackjackDealerAction, BlackjackLogEntry, BlackjackMatchResult, BlackjackVisibleState, Seat,
 } from '@shared/types';
 import { DeadlineClock } from '../../components/TurnClock';
 import { tablePosition } from '../../game-view';
@@ -23,8 +23,8 @@ import { useGamePresentation } from '../use-game-presentation';
 import { ChipIcon } from '../ChipIcon';
 import { BjHand, DealerHand } from './BlackjackCards';
 import {
-  BJ_SEATS, autoBetSeats, betChips, blackjackActions, blackjackHandNumber, blackjackNeedsBet, blackjackSeatOut,
-  blackjackView,
+  BJ_SEATS, autoBetSeats, betChips, blackjackActions, blackjackDealerActions, blackjackHandNumber, blackjackNeedsBet,
+  blackjackSeatOut, blackjackView,
   clampBet, rankBlackjack, recentBlackjackMoves, signedChips, stepBet,
 } from './blackjack-view';
 import type { BlackjackTableView } from './blackjack-view';
@@ -46,8 +46,9 @@ function SeatHands({ seat, view, position, betPlaced, auto }: {
   const seatName = useSeatName();
   const hands = view.hands[seat];
   const out = blackjackSeatOut(view, seat);
-  const net = hands.length > 0 ? view.settlement?.net[seat] : undefined;
-  const status = out ? t('blackjack.sittingOut')
+  const dealing = seat === view.dealerSeat;
+  const net = hands.length > 0 || dealing ? view.settlement?.net[seat] : undefined;
+  const status = dealing ? t('blackjack.dealerTag') : out ? t('blackjack.sittingOut')
     : view.betting ? betPlaced ? <><AppIcon name="check" /> {t('blackjack.betPlaced')}</> : t('blackjack.betting') : '';
   return <section className={`${styles.seatHands} ${styles[position]} ${out ? styles.out : ''}`}
     aria-label={seatName(seat)}>
@@ -68,18 +69,21 @@ function SeatHands({ seat, view, position, betPlaced, auto }: {
 
 function Centre({ game, view }: { game: BlackjackVisibleState; view: BlackjackTableView }): ReactNode {
   const { t } = useI18nStore();
-  const peek = useGodViewStore((state) => state.hole) ?? undefined;
+  const seatName = useSeatName();
+  // A player dealer holds its own hole card the way god view does.
+  const peek = useGodViewStore((state) => state.hole) ?? game.myHole;
   const auto = autoBetSeats(game.log, view.logEnd);
   // My own hands sit in the hand zone while a hand is played; between hands the zone holds the bet controls.
   const seats = game.seats.filter((seat) => view.betting || seat !== game.mySeat);
   return <div className={styles.centre}>
     <div className={styles.dealerArea}>
-      <DealerHand cards={view.dealer} holeHidden={view.holeHidden} size="md" peek={peek} />
+      <DealerHand cards={view.dealer} holeHidden={view.holeHidden} size="md" peek={peek}
+        label={view.dealerSeat ? t('blackjack.dealerOf', { name: seatName(view.dealerSeat) }) : undefined} />
     </div>
     {seats.map((seat) => <SeatHands key={seat} seat={seat} view={view} position={tablePosition(seat, game.mySeat)}
       betPlaced={game.betPlaced[seat]} auto={auto.includes(seat)} />)}
     {view.betting && <p className={styles.notice}>
-      {t('blackjack.handOf', { n: String(blackjackHandNumber(view)), total: String(BJ_HANDS) })} ·
+      {t('blackjack.handOf', { n: String(blackjackHandNumber(view)), total: String(game.totalHands) })} ·
       {' '}{t(game.betDeadline === null ? 'blackjack.bettingSoon' : 'blackjack.placeBet')}
     </p>}
   </div>;
@@ -90,7 +94,9 @@ function MoveLine({ entry }: { entry: BlackjackLogEntry }): ReactNode {
   const seatName = useSeatName();
   if (entry.type === 'deal' || entry.type === 'settle') {
     const amounts = entry.type === 'deal' ? entry.bets : entry.net;
-    const seats = BJ_SEATS.filter((seat) => entry.type === 'deal' ? entry.bets[seat] > 0 : entry.outcomes[seat].length > 0);
+    // A settlement also lists a player dealer by the chips it collected or paid.
+    const seats = BJ_SEATS.filter((seat) => entry.type === 'deal' ? entry.bets[seat] > 0
+      : entry.outcomes[seat].length > 0 || entry.net[seat] !== 0);
     return <div className={styles.moveBlock}>
       <span className={styles.handLine}>
         {t(entry.type === 'deal' ? 'blackjack.logDeal' : 'blackjack.logSettle', { n: String(entry.hand) })}
@@ -103,10 +109,11 @@ function MoveLine({ entry }: { entry: BlackjackLogEntry }): ReactNode {
       </span>)}</span>
     </div>;
   }
-  if (entry.type === 'reveal' || entry.type === 'dealerHit') {
+  if (entry.type === 'reveal' || entry.type === 'dealerHit' || entry.type === 'dealerStand') {
     return <>
       <span className={infoStyles.name}>{t('blackjack.dealer')}</span>
-      <span>{t(entry.type === 'reveal' ? 'blackjack.logReveal' : 'blackjack.logDealerHit')}</span>
+      <span>{t(entry.type === 'reveal' ? 'blackjack.logReveal'
+        : entry.type === 'dealerHit' ? 'blackjack.logDealerHit' : 'blackjack.logDealerStand')}</span>
     </>;
   }
   const label = entry.type === 'bet' ? 'blackjack.logBet' : entry.type === 'hit' ? 'blackjack.logHit'
@@ -129,16 +136,19 @@ function Info({ game, view, locked }: { game: BlackjackVisibleState; view: Black
     : locked ? t('game.playing')
       : game.phase === 'betting'
         ? watching ? t(game.betDeadline === null ? 'blackjack.bettingSoon' : 'blackjack.betting')
+          : game.dealerSeat === me ? t('blackjack.dealingNote')
           : !bjSitsIn(game.chips[me]) ? t('blackjack.sittingOut')
           : game.betDeadline === null ? t('blackjack.bettingSoon')
             : game.betPlaced[me] || game.myBet !== null ? t('blackjack.waitingBets') : t('blackjack.placeBet')
-        : isOwnTurn(game) ? t('blackjack.yourTurn')
-          : t('blackjack.turnOf', { name: seatName(game.currentTurnSeat) });
+        : view.dealerTurn ? isOwnTurn(game) ? t('blackjack.yourDealerTurn')
+          : t('blackjack.dealerTurnOf', { name: seatName(game.currentTurnSeat) })
+          : isOwnTurn(game) ? t('blackjack.yourTurn')
+            : t('blackjack.turnOf', { name: seatName(game.currentTurnSeat) });
   const hand = blackjackHandNumber(view);
   return <aside className={infoStyles.rail}>
     <TurnBox text={text}>
       {hand > 0 && <p className={infoStyles.note}>
-        {t('blackjack.handOf', { n: String(hand), total: String(BJ_HANDS) })}
+        {t('blackjack.handOf', { n: String(hand), total: String(game.totalHands) })}
         {!watching && <> · {t('blackjack.myChips', { n: String(view.chips[me]) })}</>}
       </p>}
     </TurnBox>
@@ -150,7 +160,8 @@ function Info({ game, view, locked }: { game: BlackjackVisibleState; view: Black
         return <li key={seat} className={infoStyles.row}>
           <span className={infoStyles.name}>{seatName(seat)}</span>
           <strong className={styles.infoChips}><ChipIcon />{view.chips[seat]}</strong>
-          {out ? <span className={infoStyles.note}>{t('blackjack.sittingOut')}</span>
+          {seat === view.dealerSeat ? <span className={infoStyles.note}>{t('blackjack.dealerTag')}</span>
+            : out ? <span className={infoStyles.note}>{t('blackjack.sittingOut')}</span>
             : view.betting && game.betDeadline !== null && <span className={game.betPlaced[seat] ? styles.statusDone : infoStyles.note}>
               {game.betPlaced[seat] ? <><AppIcon name="check" /> {t('blackjack.betPlaced')}</> : t('blackjack.betting')}
             </span>}
@@ -168,8 +179,9 @@ function Info({ game, view, locked }: { game: BlackjackVisibleState; view: Black
         ))}</ol>}
     </section>
 
-    <RulesBox title={t('blackjack.rules')} lines={[t('blackjack.rulesBet'), t('blackjack.rulesPlay'),
-      t('blackjack.rulesDealer'), t('blackjack.rulesPay')]} />
+    <RulesBox title={t('blackjack.rules')} lines={[t('blackjack.rulesBet', { hands: String(game.totalHands) }),
+      t('blackjack.rulesPlay'), t(game.options.playerDealer ? 'blackjack.rulesPlayerDealer' : 'blackjack.rulesDealer'),
+      t('blackjack.rulesPay', { hands: String(game.totalHands) })]} />
   </aside>;
 }
 
@@ -206,8 +218,10 @@ function BetControls({ game, amount, onAmount, disabled, expired, sent, onBet }:
 }): ReactNode {
   const { t } = useI18nStore();
   const chips = game.chips[game.mySeat];
+  if (game.dealerSeat === game.mySeat) return <p className={styles.prompt}>{t('blackjack.dealingNote')}</p>;
   if (!bjSitsIn(chips)) {
-    return <p className={styles.prompt}>{t('blackjack.sitOutNote', { n: String(BJ_MIN_BET) })}</p>;
+    return <p className={styles.prompt}>{t(game.options.playerDealer ? 'blackjack.sitOutDealerNote'
+      : 'blackjack.sitOutNote', { n: String(BJ_MIN_BET) })}</p>;
   }
   if (game.myBet !== null || game.betPlaced[game.mySeat] || sent) {
     return <p className={`${styles.prompt} ${styles.placed}`} role="status">
@@ -277,6 +291,7 @@ export function BlackjackTable(): ReactNode {
   const awaiting = sentAt !== null && sentAt === game.log.length;
   const ready = !locked && connectionReady && !actionPending && !awaiting;
   const legal = blackjackActions(game, ready);
+  const dealerLegal = blackjackDealerActions(game, ready);
   const isMyTurn = game.phase === 'playing' && !locked && isOwnTurn(game);
   const myHands = view.hands[game.mySeat];
   const settlement = view.settlement;
@@ -305,6 +320,14 @@ export function BlackjackTable(): ReactNode {
     socket.timeout(10000).emit('game:blackjack:action', { action }, handleActionResult);
   };
 
+  const sendDealerAction = (action: BlackjackDealerAction): void => {
+    if (!dealerLegal.includes(action)) return;
+    setActionError('');
+    setActionPending(true);
+    setSentAt(game.log.length);
+    socket.timeout(10000).emit('game:blackjack:dealerAction', { action }, handleActionResult);
+  };
+
   const backToRoom = (): void => {
     setActionError('');
     setActionPending(true);
@@ -318,11 +341,27 @@ export function BlackjackTable(): ReactNode {
       : t('blackjack.turnOf', { name: seatName(game.currentTurnSeat) });
 
   const watching = isSpectator(game);
+  const dealing = !watching && view.dealerSeat === game.mySeat;
+  const dealerHint = (action: BlackjackDealerAction): string => action === 'hit' ? t('blackjack.hint.dealerHit')
+    : dealerLegal.includes('hit') && !dealerLegal.includes('stand') ? t('blackjack.mustHit')
+      : t('blackjack.hint.dealerStand');
   const handZone = <div className={styles.handArea}>
     {view.betting && watching ? <p className={styles.prompt}>{t(game.betDeadline === null
       ? 'blackjack.bettingSoon' : 'blackjack.betting')}</p>
     : view.betting ? <BetControls game={game} amount={amount} onAmount={setAmount}
       disabled={!ready} expired={expired} sent={awaiting && !actionPending} onBet={sendBet} />
+      : dealing ? <div className={styles.controls}>
+        {settlement ? <strong className={`${styles.myNet} ${toneClass(settlement.net[game.mySeat]) ?? ''}`}>
+          {signedChips(settlement.net[game.mySeat])}
+        </strong> : <span className={`${styles.prompt} ${view.dealerTurn ? styles.promptActive : ''}`}>
+          {t(view.dealerTurn ? 'blackjack.yourDealerTurn' : 'blackjack.dealerWait')}
+        </span>}
+        {game.phase === 'playing' && BJ_DEALER_ACTIONS.map((action) => <button key={action} type="button"
+          className={`btn ${action === 'hit' ? 'btn-primary' : 'btn-outline'} ${styles.ctrl}`}
+          disabled={!dealerLegal.includes(action)} title={dealerHint(action)} onClick={() => sendDealerAction(action)}>
+          {t(`blackjack.action.${action}`)}
+        </button>)}
+      </div>
       : <>
         {myHands.length > 0 ? <div className={styles.myHands} role="group" aria-label={t('blackjack.hand')}>
           {myHands.map((hand, handIndex) => <BjHand key={handIndex} hand={hand} size="lg"

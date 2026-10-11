@@ -1,7 +1,9 @@
 import type { PlayerInfo, Seat } from './player';
-import type { RoomCode, RoomInfo, GameType, NinetyNineOptions, SevensOptions, TimeControl } from './room';
 import type {
-  Card, BidAction, BlackjackAction, ChinesePokerArrangement, HoldemAction, PlayerVisibleGameState,
+  BlackjackOptions, RoomCode, RoomInfo, GameType, NinetyNineOptions, SevensOptions, TimeControl,
+} from './room';
+import type {
+  Card, BidAction, BlackjackAction, BlackjackDealerAction, ChinesePokerArrangement, HoldemAction, PlayerVisibleGameState,
 } from './game';
 import type { ChatMessage } from './chat';
 import type { PublicAccount } from './social';
@@ -74,6 +76,9 @@ export interface ClientToServerEvents {
   'room:setNinetyNineOptions': (
     payload: NinetyNineOptions, callback: (response: ActionResult) => void,
   ) => void;
+  'room:setBlackjackOptions': (
+    payload: BlackjackOptions, callback: (response: ActionResult) => void,
+  ) => void;
   'room:ready': (callback: (response: ActionResult) => void) => void;
   'room:addBot': (
     payload: { seat: Seat }, callback: (response: ActionResult) => void,
@@ -123,6 +128,10 @@ export interface ClientToServerEvents {
   ) => void;
   'game:blackjack:action': (
     payload: { action: BlackjackAction }, callback: (response: ActionResult) => void,
+  ) => void;
+  /** The player dealer's own hand, after every player hand is finished */
+  'game:blackjack:dealerAction': (
+    payload: { action: BlackjackDealerAction }, callback: (response: ActionResult) => void,
   ) => void;
   'game:holdem:action': (
     payload: { action: HoldemAction }, callback: (response: ActionResult) => void,

@@ -9,7 +9,7 @@ import { rpScore } from '@shared/rules/redpoints';
 
 export interface HistoryAction {
   kind: 'play' | 'pass' | 'round_end' | 'dragon' | 'flip' | 'eliminated' | 'cover' | 'challenge' | 'shot'
-    | 'deal' | 'hit' | 'stand' | 'double' | 'split' | 'dealerReveal' | 'dealerHit' | 'settle'
+    | 'deal' | 'hit' | 'stand' | 'double' | 'split' | 'dealerReveal' | 'dealerHit' | 'dealerStand' | 'settle'
     | 'button' | 'blind' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street' | 'showdown' | 'award';
   /** Null for the Blackjack dealer and Hold'em board cards */
   seat: Seat | null;
@@ -38,6 +38,8 @@ export interface HistoryAction {
   handTotal?: number;
   outcomes?: readonly BlackjackOutcome[];
   net?: number;
+  /** Blackjack: the settlement row of a player dealer */
+  dealer?: boolean;
   /** Hold'em: chips a blind or call added, a bet or raise's street total, or chips won */
   amount?: number;
   /** Hold'em: the street a board entry dealt */
@@ -170,10 +172,17 @@ export function deriveRoundHistory(game: HistoryInput): HistoryRound[] {
       } else if (entry.type === 'reveal' || entry.type === 'dealerHit') {
         round.actions.push({ kind: entry.type === 'reveal' ? 'dealerReveal' : 'dealerHit', seat: null,
           cards: [entry.card], handTotal: bjTotal(table.dealer).total });
+      } else if (entry.type === 'dealerStand') {
+        round.actions.push({ kind: 'dealerStand', seat: null, cards: [], handTotal: bjTotal(table.dealer).total });
       } else if (entry.type === 'settle') {
         for (const seat of SEATS) {
           if (entry.outcomes[seat].length === 0) continue;
           round.actions.push({ kind: 'settle', seat, cards: [], outcomes: entry.outcomes[seat], net: entry.net[seat] });
+        }
+        // A player dealer's row records the chips it collected or paid.
+        if (table.dealerSeat) {
+          round.actions.push({ kind: 'settle', seat: table.dealerSeat, cards: [], net: entry.net[table.dealerSeat],
+            dealer: true });
         }
         round.complete = true;
       }

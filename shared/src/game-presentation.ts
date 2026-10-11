@@ -9,7 +9,7 @@ export interface PresentationFrame {
   readonly key: string;
   readonly kind: 'play' | 'pass' | 'trick' | 'round' | 'capture' | 'eliminated' | 'cover' | 'reveal' | 'shoot'
     | 'homerun' | 'deal' | 'challenge' | 'roulette' | 'shot' | 'hit' | 'stand' | 'double' | 'split'
-    | 'dealerReveal' | 'dealerHit' | 'settle' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street'
+    | 'dealerReveal' | 'dealerHit' | 'dealerStand' | 'settle' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street'
     | 'showdown' | 'award' | 'finish';
   readonly durationMs: number;
   readonly seat?: Seat;
@@ -134,6 +134,8 @@ export function getPresentationFrames(
         frames.push({ key, kind: 'dealerReveal', durationMs: 1300, cards: [entry.card] });
       } else if (entry.type === 'dealerHit') {
         frames.push({ key, kind: 'dealerHit', durationMs: 1000, cards: [entry.card] });
+      } else if (entry.type === 'dealerStand') {
+        frames.push({ key, kind: 'dealerStand', durationMs: 700, cards: [] });
       } else if (entry.type === 'settle') {
         frames.push({ key, kind: 'settle', durationMs: 2500, cards: [] });
       }

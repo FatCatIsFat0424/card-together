@@ -10,7 +10,9 @@ import type {
   BidAction,
   BigTwoGameState,
   BlackjackAction,
+  BlackjackDealerAction,
   BlackjackGameState,
+  BlackjackOptions,
   BridgeGameState,
   Card,
   ChinesePokerArrangement,
@@ -118,6 +120,7 @@ export function startGame(
   settings?: TimeControl,
   sevensOptions?: SevensOptions,
   ninetyNineOptions?: NinetyNineOptions,
+  blackjackOptions?: BlackjackOptions,
 ): Result {
   if (occupiedSeats(players).length < minPlayers(gameType)) {
     return { success: false, reason: 'Not enough players to start this game.' };
@@ -126,7 +129,8 @@ export function startGame(
   removeGame(roomCode);
   if (gameType === 'holdem') holdem.startGame(roomCode, players);
   else if (gameType === 'blackjack') {
-    blackjack.startGame(roomCode, players, bjBetSeconds((settings ?? DEFAULT_TIME_CONTROL).baseSeconds) * 1000);
+    blackjack.startGame(roomCode, players, bjBetSeconds((settings ?? DEFAULT_TIME_CONTROL).baseSeconds) * 1000,
+      undefined, blackjackOptions);
   } else if (!isFullTable(players)) return { success: false, reason: 'All four seats must be filled.' };
   else if (gameType === 'bigtwo') bigtwo.startGame(roomCode, players);
   else if (gameType === 'redpoints') redpoints.startGame(roomCode, players);
@@ -199,8 +203,9 @@ function eliminationIndex(game: AnyGameState, seat: Seat): number {
     case 'liarsdeck': return game.log.findIndex((entry) => entry.type === 'shot' && entry.seat === seat
       && !entry.survived);
     case 'holdem': return game.log.findIndex((entry) => entry.type === 'award' && entry.eliminated.includes(seat));
-    // Chips only grow by betting, so a seat that cannot cover the minimum never plays again.
-    case 'blackjack': return !game.players[seat] ? -1
+    // Chips only grow by betting, so a seat that cannot cover the minimum never plays again. A
+    // player dealer can still win chips back when its deal comes round, so nobody is out for good.
+    case 'blackjack': return !game.players[seat] || game.dealerSeat ? -1
       : game.log.findIndex((entry) => entry.type === 'settle' && !bjSitsIn(entry.chips[seat]));
     default: return -1;
   }
@@ -350,6 +355,12 @@ export function handleLiarsDeckChallenge(roomCode: RoomCode, seat: Seat, automat
 
 export function handleBlackjackAction(roomCode: RoomCode, seat: Seat, action: BlackjackAction, automatic = false): Result {
   return timedAction(roomCode, seat, () => isGame(roomCode, 'blackjack') ? presentAction(roomCode, () => blackjack.act(roomCode, seat, action)) : WRONG_GAME, automatic);
+}
+
+export function handleBlackjackDealerAction(
+  roomCode: RoomCode, seat: Seat, action: BlackjackDealerAction, automatic = false,
+): Result {
+  return timedAction(roomCode, seat, () => isGame(roomCode, 'blackjack') ? presentAction(roomCode, () => blackjack.dealerAct(roomCode, seat, action)) : WRONG_GAME, automatic);
 }
 
 export function handleHoldemAction(roomCode: RoomCode, seat: Seat, action: HoldemAction, automatic = false): Result {

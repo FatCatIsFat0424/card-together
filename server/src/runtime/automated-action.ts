@@ -5,7 +5,7 @@ import type { NnChoice } from '@shared/rules/ninetynine';
 import { rpPairOptions } from '@shared/rules/redpoints';
 import { cpGreedyArrangement } from '@shared/rules/chinesepoker-arrange';
 import { ldMustChallenge } from '@shared/rules/liarsdeck';
-import { BJ_MIN_BET, bjSitsIn } from '@shared/rules/blackjack';
+import { BJ_MIN_BET, bjDealerHits, bjSitsIn } from '@shared/rules/blackjack';
 import { heLegalActions } from '@shared/rules/holdem';
 import type { PlayerVisibleGameState, RoomCode, Seat } from '@shared/types';
 import type { BotAction } from '../bots/bot-decisions';
@@ -36,6 +36,7 @@ export function applyAutomatedAction(code: RoomCode, seat: Seat, action: BotActi
     case 'liarsdeck-challenge': return gameManager.handleLiarsDeckChallenge(code, seat, true);
     case 'blackjack-bet': return gameManager.handleBlackjackBet(code, seat, action.amount, true);
     case 'blackjack-action': return gameManager.handleBlackjackAction(code, seat, action.action, true);
+    case 'blackjack-dealer': return gameManager.handleBlackjackDealerAction(code, seat, action.action, true);
     case 'holdem-action': return gameManager.handleHoldemAction(code, seat, action.action, true);
   }
 }
@@ -59,6 +60,15 @@ export function holdemPassiveAction(visible: Extract<PlayerVisibleGameState, { g
   const legal = heLegalActions(visible, visible.mySeat);
   if (!legal) return null;
   return { type: 'holdem-action', action: legal.check ? { type: 'check' } : { type: 'fold' } };
+}
+
+/** A player dealer who runs out of time follows the house rule: hit below 17, otherwise stand. */
+export function blackjackDealerDefault(
+  visible: Extract<PlayerVisibleGameState, { gameType: 'blackjack' }>,
+): BotAction | null {
+  if (visible.phase !== 'playing' || visible.dealerSeat !== visible.mySeat || visible.currentTurnSeat !== visible.mySeat
+    || visible.holeHidden) return null;
+  return { type: 'blackjack-dealer', action: bjDealerHits(visible.dealer) ? 'hit' : 'stand' };
 }
 
 /** A deliberately simple legal move used only after the strategy repeatedly fails. */
@@ -97,9 +107,10 @@ export function firstLegalAction(visible: PlayerVisibleGameState): BotAction | n
       return visible.myHand[0] ? { type: 'liarsdeck-play', cardIds: [visible.myHand[0].id] } : null;
     case 'blackjack':
       if (visible.phase === 'betting') {
-        return visible.myBet === null && bjSitsIn(visible.chips[visible.mySeat])
+        return visible.myBet === null && visible.dealerSeat !== visible.mySeat && bjSitsIn(visible.chips[visible.mySeat])
           ? { type: 'blackjack-bet', amount: BJ_MIN_BET } : null;
       }
+      if (visible.dealerSeat === visible.mySeat) return blackjackDealerDefault(visible);
       return visible.currentTurnSeat === visible.mySeat ? { type: 'blackjack-action', action: 'stand' } : null;
     case 'holdem': return holdemPassiveAction(visible);
   }

@@ -77,15 +77,19 @@ export function BjHand({ hand, outcome, active = false, size = 'md', label, fres
   </div>;
 }
 
-/** The dealer's cards: the up card and face-down hole card until it is revealed, then the total. */
-export function DealerHand({ cards, holeHidden, size = 'md', freshFrom, peek }: {
+/**
+ * The dealer's cards: the up card and face-down hole card until it is revealed, then the total.
+ * `label` names a player dealer.
+ */
+export function DealerHand({ cards, holeHidden, size = 'md', freshFrom, peek, label }: {
   cards: readonly Card[]; holeHidden: boolean; size?: 'sm' | 'md' | 'lg'; freshFrom?: number; peek?: Card;
+  label?: string;
 }): ReactNode {
   const { t } = useI18nStore();
   const total = holeHidden ? t('blackjack.dealerShows', { n: String(bjTotal(cards).total) })
     : totalLabel(cards, false, t);
   return <div className={`${styles.hand} ${styles.dealer}`}>
-    <span className={styles.handLabel}>{t('blackjack.dealer')}</span>
+    <span className={styles.handLabel}>{label ?? t('blackjack.dealer')}</span>
     {cards.length === 0
       ? <span className={`${styles.cards} ${styles[size]}`} aria-hidden="true">
         <span className={`${styles.card} ${styles.slot}`} /><span className={`${styles.card} ${styles.slot}`} />

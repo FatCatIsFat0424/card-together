@@ -42,10 +42,17 @@ export interface NinetyNineOptions {
   readonly twoDecks: boolean;
 }
 
+export interface BlackjackOptions {
+  /** Seats take turns as the dealer instead of the house */
+  readonly playerDealer: boolean;
+}
+
 /** Room info (public) */
 export interface RoomInfo {
   /** Missing on legacy snapshots; defaults to standard Sevens rules. */
   readonly sevensOptions?: SevensOptions;
+  /** Missing on legacy snapshots; defaults to the house dealer. */
+  readonly blackjackOptions?: BlackjackOptions;
   /** Missing only on legacy snapshots. */
   readonly timeControl?: TimeControl;
   /** Missing on legacy snapshots; defaults to standard Ninety-Nine rules. */

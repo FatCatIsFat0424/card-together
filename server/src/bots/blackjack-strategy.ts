@@ -1,12 +1,19 @@
-import type { BlackjackAction, BlackjackHand, BlackjackVisibleState, Card } from '@shared/types';
+import type {
+  BlackjackAction, BlackjackDealerAction, BlackjackHand, BlackjackVisibleState, Card, Seat,
+} from '@shared/types';
 import {
-  BJ_BET_STEP, BJ_MIN_BET, bjCardValue, bjLegalActions, bjMaxBet, bjSitsIn, bjTotal,
+  BJ_BET_STEP, BJ_DEALER_STANDS, BJ_MIN_BET, bjCardValue, bjDealerActions, bjIsBust, bjIsNatural, bjLegalActions,
+  bjMaxBet, bjSitsIn, bjTotal,
 } from '@shared/rules/blackjack';
+import { createDeck } from '../engine/deck';
 import type { BotAction } from './bot-decisions';
 
 // Heuristic summary: plays follow the standard basic strategy for a dealer who stands on soft 17, peeks for
 // blackjack, and allows doubling after a split; there is no surrender or insurance. The table is indexed by the
-// dealer's up card (2–11, ace = 11). Bets stake a random 3–8% of the bot's chips in table steps.
+// dealer's up card (2–11, ace = 11). Bets stake a random 3–8% of the bot's chips in table steps. As a player
+// dealer the bot must hit below 17; from 17 it compares the chips standing wins or loses against every live
+// player hand with the expected result of drawing, estimated from the cards not yet seen this hand and
+// assuming it keeps choosing the better option after each draw. Short-bank proportional payouts are ignored.
 
 const MIN_BET_SHARE = 0.03;
 const MAX_BET_SHARE = 0.08;
@@ -63,10 +70,67 @@ export function blackjackBet(chips: number, random: () => number): number {
   return Math.max(BJ_MIN_BET, Math.min(bjMaxBet(chips), stepped));
 }
 
+/** Chips the dealer wins (positive) or pays against live hands when it finishes on `total`. */
+function dealerResult(total: number, live: readonly { total: number; bet: number }[]): number {
+  if (total > 21) return -live.reduce((sum, hand) => sum + hand.bet, 0);
+  return live.reduce((sum, hand) => sum + Math.sign(total - hand.total) * hand.bet, 0);
+}
+
+/**
+ * A player dealer's choice against the visible player hands. Busted hands and naturals are already
+ * decided, so only the remaining hands weigh on hitting or standing.
+ */
+export function blackjackDealerDecision(
+  dealer: readonly Card[], hands: Readonly<Record<Seat, readonly BlackjackHand[]>>,
+): BlackjackDealerAction {
+  const legal = bjDealerActions(dealer);
+  if (!legal.includes('stand')) return 'hit';
+  const all = Object.values(hands).flat();
+  const live = all.filter((hand) => !bjIsBust(hand.cards) && !bjIsNatural(hand))
+    .map((hand) => ({ total: bjTotal(hand.cards).total, bet: hand.bet }));
+  const seen = new Set([...dealer, ...all.flatMap((hand) => hand.cards)].map((card) => `${card.suit}${card.rank}`));
+  const unseen = createDeck().filter((card) => !seen.has(`${card.suit}${card.rank}`));
+  // Hard points per draw (ace = 1) and how often each appears among the unseen cards.
+  const draws = new Map<number, number>();
+  for (const card of unseen) {
+    const points = card.rank === 14 ? 1 : bjCardValue(card);
+    draws.set(points, (draws.get(points) ?? 0) + 1 / unseen.length);
+  }
+  const memo = new Map<string, number>();
+  const best = (hard: number, ace: boolean): { stand: number; hit: number } => {
+    const total = ace && hard + 10 <= 21 ? hard + 10 : hard;
+    const stand = dealerResult(total, live);
+    if (total >= 21) return { stand, hit: stand };
+    let hit = 0;
+    for (const [points, chance] of draws) {
+      const next = hard + points;
+      const key = `${next}:${ace || points === 1}`;
+      let value = memo.get(key);
+      if (value === undefined) {
+        const options = best(next, ace || points === 1);
+        const nextTotal = (ace || points === 1) && next + 10 <= 21 ? next + 10 : next;
+        value = nextTotal < BJ_DEALER_STANDS ? options.hit : Math.max(options.stand, options.hit);
+        memo.set(key, value);
+      }
+      hit += chance * value;
+    }
+    return { stand, hit };
+  };
+  const hard = dealer.reduce((sum, card) => sum + (card.rank === 14 ? 1 : bjCardValue(card)), 0);
+  const { stand, hit } = best(hard, dealer.some((card) => card.rank === 14));
+  return hit > stand ? 'hit' : 'stand';
+}
+
 export function getBlackjackBotAction(visible: BlackjackVisibleState, random: () => number): BotAction | null {
   const chips = visible.chips[visible.mySeat];
+  const dealing = visible.dealerSeat === visible.mySeat;
   if (visible.phase === 'betting') {
-    return visible.myBet === null && bjSitsIn(chips) ? { type: 'blackjack-bet', amount: blackjackBet(chips, random) } : null;
+    return visible.myBet === null && !dealing && bjSitsIn(chips)
+      ? { type: 'blackjack-bet', amount: blackjackBet(chips, random) } : null;
+  }
+  if (dealing) {
+    return visible.phase === 'playing' && visible.currentTurnSeat === visible.mySeat && !visible.holeHidden
+      ? { type: 'blackjack-dealer', action: blackjackDealerDecision(visible.dealer, visible.hands) } : null;
   }
   if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat || !visible.dealer[0]) return null;
   const hands = visible.hands[visible.mySeat];

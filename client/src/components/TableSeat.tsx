@@ -288,6 +288,7 @@ export function TableSeat({ seat, position, onPick, moveKey, suppressTurn }: Tab
           {bj && <span className={styles.chip} title={t('blackjack.chipsTitle', { n: String(bj.chips[seat]) })}>
             <ChipIcon />{bj.chips[seat]}
           </span>}
+          {bj?.dealerSeat === seat && <span className={`${styles.chip} ${styles.declarer}`}>{t('blackjack.dealerTag')}</span>}
           {he && <span className={styles.chip} title={t('holdem.chipsTitle', { n: String(he.chips[seat]) })}>
             <ChipIcon />{he.chips[seat]}
           </span>}

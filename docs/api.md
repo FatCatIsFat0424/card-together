@@ -80,6 +80,7 @@ For exact unions and result fields, use
 | `room:setTimeControl` | `TimeControl` | Host changes waiting room timer; clears human readiness |
 | `room:setSevensOptions` | `SevensOptions` | Host changes waiting Sevens room rules; clears human readiness |
 | `room:setNinetyNineOptions` | `NinetyNineOptions` | Host changes waiting Ninety-Nine room rules; clears human readiness |
+| `room:setBlackjackOptions` | `BlackjackOptions` | Host changes waiting Blackjack room rules (player dealer); clears human readiness |
 | `room:addBot`, `room:removeBot` | `{ seat }` | Host adds/removes a bot while waiting |
 | `room:fillBots` | — | Host fills every empty seat with ready bots |
 | `room:ready`, `room:unready` | — | Update readiness; four ready seats start |
@@ -98,6 +99,7 @@ For exact unions and result fields, use
 | `game:liarsdeck:challenge` | — | Liar's Deck: call LIAR on the previous play |
 | `game:blackjack:bet` | `{ amount }` | Blackjack: 10–200 chips in steps of 10, within the seat's chips, before the shared betting deadline |
 | `game:blackjack:action` | `{ action }` | Blackjack: `hit`, `stand`, `double`, or `split` for the acting hand |
+| `game:blackjack:dealerAction` | `{ action }` | Blackjack player dealer: `hit` or `stand` on its own turn; standing below 17 is rejected |
 | `game:holdem:action` | `{ action }` | Hold'em: `{ type: 'fold' \| 'check' \| 'call' }` or `{ type: 'raise', to }`, where `to` is the street stake after a bet or raise |
 | `game:continue` | — | Seated player or spectator leaves the result for the waiting room; others keep it |
 | `game:abortVote:start` | — | Start seated-player abort vote |

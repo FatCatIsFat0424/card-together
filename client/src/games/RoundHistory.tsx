@@ -28,6 +28,7 @@ function Round({ round }: { round: HistoryRound }): ReactNode {
     {open && <ol className={styles.actions}>{round.actions.map((action, index) => <li key={index}>
       <strong>{action.seat ? name(action.seat)
         : action.street ? t(`holdem.street.${action.street}`) : t('blackjack.dealer')}</strong>
+      {action.dealer && <span> ({t('blackjack.dealerTag')})</span>}
       {action.kind !== 'street' && <> {t(`history.${action.kind}`)}</>}
       {action.handIndex !== undefined && <span> ({t('blackjack.handIndex', { n: String(action.handIndex + 1) })})</span>}
       {action.cards.length > 0 && <span className={styles.cards}> {action.cards.map(cardLabel).join(' ')}</span>}

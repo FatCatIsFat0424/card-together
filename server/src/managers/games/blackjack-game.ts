@@ -1,9 +1,11 @@
-// ─── Blackjack Game: shared betting window, player turns, and the house dealer ───
+// ─── Blackjack Game: shared betting window, player turns, and the house or a player dealer ───
 
 import { randomInt, randomUUID } from 'node:crypto';
 import type {
   BlackjackAction,
+  BlackjackDealerAction,
   BlackjackGameState,
+  BlackjackOptions,
   BlackjackLogEntry,
   BlackjackVisibleState,
   Card,
@@ -12,19 +14,23 @@ import type {
   Seat,
 } from '@shared/types';
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import { DEFAULT_BLACKJACK_OPTIONS } from '@shared/blackjack-options';
 import { occupiedSeats } from '@shared/rules/seats';
 import {
-  BJ_HANDS,
   bjApplyEntry,
-  bjDealerHits,
-  bjDealerMustDraw,
+  bjBettingSeats,
+  bjDealerActions,
+  bjDealerDone,
   bjDealerPeeks,
+  bjEmptyTable,
   bjIsNatural,
   bjIsValidBet,
   bjLegalActions,
+  bjMatchHands,
+  bjMatchOver,
+  bjNextDealer,
   bjNextTurn,
   bjSettle,
-  bjEmptyTable,
   bjSitsIn,
   bjWinners,
 } from '@shared/rules/blackjack';
@@ -61,18 +67,25 @@ function draw(game: BlackjackGameState): Card {
 /** Seats that must still bet this hand, ordered N, E, S, W */
 export function pendingBetSeats(game: BlackjackGameState): Seat[] {
   return game.phase !== 'betting' ? []
-    : SEAT_ORDER_CLOCKWISE.filter((seat) => bjSitsIn(game.chips[seat]) && game.bets[seat] === null);
+    : bjBettingSeats(game.chips, game.dealerSeat).filter((seat) => game.bets[seat] === null);
 }
 
-/** Seats missing from `players` stay empty for the whole match. */
+/**
+ * Seats missing from `players` stay empty for the whole match. With a player dealer the first hand
+ * is dealt by a random seat taking part. `random` is a test hook.
+ */
 export function startGame(
   roomCode: RoomCode,
   players: Partial<Record<Seat, PlayerInfo>>,
   betMs: number,
   now: number = Date.now(),
+  options: BlackjackOptions = DEFAULT_BLACKJACK_OPTIONS,
+  random: () => number = secureRandom,
 ): void {
   const seats = occupiedSeats(players);
   games.set(roomCode, {
+    options: { ...options },
+    ...(options.playerDealer ? { dealerSeat: seats[Math.floor(random() * seats.length)] } : {}),
     gameType: 'blackjack',
     id: randomUUID(),
     startedAt: now,
@@ -101,22 +114,13 @@ export function openBetting(roomCode: RoomCode, startsAt: number): void {
   if (game?.phase === 'betting' && game.betDeadline === null) game.betDeadline = startsAt + game.betMs;
 }
 
-/** Reveals the hole card, draws to 17 when a hand still needs beating, then settles. */
-function finishHand(game: BlackjackGameState, now: number): void {
-  const hole = game.hole;
-  if (!hole) throw new Error('Blackjack hole card missing');
-  game.hole = null;
-  record(game, { type: 'reveal', card: hole, timestamp: now });
-  const naturalDealer = bjIsNatural({ cards: game.dealer, split: false });
-  while (!naturalDealer && bjDealerMustDraw(game.hands) && bjDealerHits(game.dealer)) {
-    record(game, { type: 'dealerHit', card: draw(game), timestamp: now });
-  }
+/** Settles the hand, then opens betting on the next one (passing the deal on) or ends the match. */
+function settle(game: BlackjackGameState, now: number): void {
   const { outcomes, net, chips } = bjSettle(game);
   record(game, { type: 'settle', hand: game.hand, outcomes, net, chips: { ...chips }, timestamp: now });
-
-  if (game.hand >= BJ_HANDS || !SEAT_ORDER_CLOCKWISE.some((seat) => bjSitsIn(game.chips[seat]))) {
+  const seats = occupiedSeats(game.players);
+  if (bjMatchOver(game.hand, game.chips, seats, game.dealerSeat !== undefined)) {
     game.phase = 'scoring';
-    const seats = occupiedSeats(game.players);
     game.result = { gameType: 'blackjack', seats, chips: { ...game.chips }, hands: game.hand,
       winners: bjWinners(game.chips, seats) };
     return;
@@ -124,6 +128,25 @@ function finishHand(game: BlackjackGameState, now: number): void {
   game.phase = 'betting';
   game.bets = seatMap(() => null);
   game.betDeadline = null;
+  if (game.dealerSeat) game.dealerSeat = bjNextDealer(game.dealerSeat, seats);
+}
+
+/**
+ * Reveals the hole card once every player hand is finished. The house then draws to 17 when a hand
+ * still needs beating and settles; a player dealer takes its own turn unless nothing is left to play.
+ */
+function finishHand(game: BlackjackGameState, now: number): void {
+  const hole = game.hole;
+  if (!hole) throw new Error('Blackjack hole card missing');
+  game.hole = null;
+  record(game, { type: 'reveal', card: hole, timestamp: now });
+  if (game.dealerSeat && !bjDealerDone(game)) {
+    game.currentTurnSeat = game.dealerSeat;
+    game.activeHand = 0;
+    return;
+  }
+  while (!bjDealerDone(game)) record(game, { type: 'dealerHit', card: draw(game), timestamp: now });
+  settle(game, now);
 }
 
 function advance(game: BlackjackGameState, now: number): void {
@@ -149,7 +172,8 @@ function deal(game: BlackjackGameState, now: number, random: () => number): void
   game.bets = seatMap(() => null);
   game.betDeadline = null;
   game.phase = 'playing';
-  record(game, { type: 'deal', hand: game.hand + 1, bets, cards, upCard, timestamp: now });
+  record(game, { type: 'deal', hand: game.hand + 1, bets, cards, upCard,
+    ...(game.dealerSeat ? { dealer: game.dealerSeat } : {}), timestamp: now });
   if (bjDealerPeeks(upCard) && bjIsNatural({ cards: [upCard, game.hole], split: false })) {
     finishHand(game, now);
     return;
@@ -158,8 +182,8 @@ function deal(game: BlackjackGameState, now: number, random: () => number): void
 }
 
 /**
- * A bet is hidden until every seat that can cover the minimum has bet. `automatic` marks
- * server-made bets, which are accepted past the deadline. `random` is a test hook.
+ * A bet is hidden until every seat that can cover the minimum, except a player dealer, has bet.
+ * `automatic` marks server-made bets, which are accepted past the deadline. `random` is a test hook.
  */
 export function bet(
   roomCode: RoomCode,
@@ -172,6 +196,7 @@ export function bet(
   const game = games.get(roomCode);
   if (!game) return { success: false, reason: 'Game not found' };
   if (game.phase !== 'betting') return { success: false, reason: 'Not in betting phase' };
+  if (seat === game.dealerSeat) return { success: false, reason: 'The dealer does not bet' };
   if (!bjSitsIn(game.chips[seat])) return { success: false, reason: 'Not enough chips to bet' };
   if (game.bets[seat] !== null) return { success: false, reason: 'Already bet' };
   if (!bjIsValidBet(amount, game.chips[seat])) return { success: false, reason: 'Invalid bet' };
@@ -202,19 +227,46 @@ export function act(roomCode: RoomCode, seat: Seat, action: BlackjackAction, now
   return { success: true };
 }
 
+/** The player dealer's turn, after every player hand: it must hit below 17 and may stand from 17. */
+export function dealerAct(
+  roomCode: RoomCode, seat: Seat, action: BlackjackDealerAction, now: number = Date.now(),
+): Result {
+  const game = games.get(roomCode);
+  if (!game) return { success: false, reason: 'Game not found' };
+  if (game.phase !== 'playing') return { success: false, reason: 'Not in playing phase' };
+  if (!game.dealerSeat || game.dealerSeat !== seat) return { success: false, reason: 'You are not the dealer' };
+  if (game.currentTurnSeat !== seat || game.hole !== null) return { success: false, reason: 'Not your turn' };
+  if (!bjDealerActions(game.dealer).includes(action)) {
+    return { success: false, reason: action === 'stand' ? 'The dealer must hit below 17' : 'This action is not available' };
+  }
+  record(game, action === 'hit' ? { type: 'dealerHit', card: draw(game), timestamp: now }
+    : { type: 'dealerStand', timestamp: now });
+  if (bjDealerDone(game)) settle(game, now);
+  return { success: true };
+}
+
 export function abortGame(roomCode: RoomCode): void {
   games.delete(roomCode);
 }
 
-/** Other seats' bets stay hidden until the deal; the hole card until the dealer reveals it. */
+/**
+ * Other seats' bets stay hidden until the deal; the hole card until the dealer reveals it, except
+ * from a player dealer, who holds it.
+ */
 export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): BlackjackVisibleState | null {
   const game = games.get(roomCode);
   if (!game) return null;
+  const seats = occupiedSeats(game.players);
+  const options = game.options ?? DEFAULT_BLACKJACK_OPTIONS;
   return {
+    ...(game.hole && seat === game.dealerSeat ? { myHole: game.hole } : {}),
+    options,
+    dealerSeat: game.dealerSeat ?? null,
+    totalHands: bjMatchHands(seats.length, game.dealerSeat !== undefined),
     gameType: 'blackjack',
     phase: game.phase,
     mySeat: seat,
-    seats: occupiedSeats(game.players),
+    seats,
     hand: game.hand,
     chips: game.chips,
     myBet: game.bets[seat],

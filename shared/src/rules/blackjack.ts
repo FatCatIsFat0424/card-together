@@ -2,22 +2,26 @@
 // Rules: docs/games.md#blackjack
 
 import type {
-  BlackjackAction, BlackjackHand, BlackjackLogEntry, BlackjackOutcome, Card, Seat,
+  BlackjackAction, BlackjackDealerAction, BlackjackHand, BlackjackLogEntry, BlackjackOutcome, Card, Seat,
 } from '../types';
 import { SEAT_ORDER_CLOCKWISE } from '../constants';
+import { nextSeatClockwise } from './seats';
 
 export const BJ_STARTING_CHIPS = 1000;
 export const BJ_MIN_BET = 10;
 export const BJ_MAX_BET = 200;
 export const BJ_BET_STEP = 10;
-/** Hands per match */
+/** Hands per match with the house dealer; a player-dealer match lasts two dealer rotations */
 export const BJ_HANDS = 8;
+/** Dealer rotations in a player-dealer match */
+export const BJ_DEALER_ROTATIONS = 2;
 /** One split per seat */
 export const BJ_MAX_SEAT_HANDS = 2;
 export const BJ_MIN_BET_SECONDS = 15;
 /** The dealer stands on every 17, including soft 17. */
 export const BJ_DEALER_STANDS = 17;
 export const BJ_ACTIONS: readonly BlackjackAction[] = ['hit', 'stand', 'double', 'split'];
+export const BJ_DEALER_ACTIONS: readonly BlackjackDealerAction[] = ['hit', 'stand'];
 export const BJ_OUTCOMES: readonly BlackjackOutcome[] = ['blackjack', 'win', 'push', 'lose', 'bust'];
 
 /** Public table state rebuilt from the log. */
@@ -26,6 +30,10 @@ export interface BjTable {
   chips: Record<Seat, number>;
   hands: Record<Seat, BlackjackHand[]>;
   dealer: Card[];
+  /** The player dealer of the latest hand; missing with the house dealer */
+  dealerSeat?: Seat;
+  /** The player dealer stood this hand */
+  dealerStood?: boolean;
 }
 
 export interface BjSettlement {
@@ -77,6 +85,35 @@ export function bjSitsIn(chips: number): boolean {
   return chips >= BJ_MIN_BET;
 }
 
+/** Seats that bet a hand: every seat covering the minimum except its player dealer, ordered N, E, S, W. */
+export function bjBettingSeats(chips: Readonly<Record<Seat, number>>, dealerSeat?: Seat): Seat[] {
+  return SEAT_ORDER_CLOCKWISE.filter((seat) => seat !== dealerSeat && bjSitsIn(chips[seat]));
+}
+
+/** Two full rotations give every seat the deal equally often. */
+export function bjMatchHands(seatCount: number, playerDealer: boolean): number {
+  return playerDealer ? seatCount * BJ_DEALER_ROTATIONS : BJ_HANDS;
+}
+
+/** The deal passes clockwise to the next seat taking part. */
+export function bjNextDealer(dealer: Seat, seats: readonly Seat[]): Seat {
+  let next = nextSeatClockwise(dealer);
+  while (!seats.includes(next)) next = nextSeatClockwise(next);
+  return next;
+}
+
+/**
+ * The match ends after its last hand. With the house dealer it also ends once no seat can bet;
+ * with a player dealer once fewer than two seats can, because otherwise every hand that seat
+ * deals would have no bettor.
+ */
+export function bjMatchOver(
+  hand: number, chips: Readonly<Record<Seat, number>>, seats: readonly Seat[], playerDealer: boolean,
+): boolean {
+  const bettors = seats.filter((seat) => bjSitsIn(chips[seat])).length;
+  return hand >= bjMatchHands(seats.length, playerDealer) || bettors < (playerDealer ? 2 : 1);
+}
+
 export function bjMaxBet(chips: number): number {
   return Math.min(BJ_MAX_BET, chips - (chips % BJ_BET_STEP));
 }
@@ -107,6 +144,13 @@ export function bjDealerPeeks(upCard: Card): boolean {
 
 export function bjDealerHits(dealer: readonly Card[]): boolean {
   return bjTotal(dealer).total < BJ_DEALER_STANDS;
+}
+
+/** A player dealer must hit below 17 and may choose from 17; reaching 21 or busting ends the turn. */
+export function bjDealerActions(dealer: readonly Card[]): BlackjackDealerAction[] {
+  const { total } = bjTotal(dealer);
+  if (total >= 21) return [];
+  return total < BJ_DEALER_STANDS ? ['hit'] : ['hit', 'stand'];
 }
 
 /** The dealer draws only while some hand is neither busted nor a natural. */
@@ -145,17 +189,64 @@ export function bjPayout(bet: number, outcome: BlackjackOutcome): number {
   return outcome === 'push' ? bet : 0;
 }
 
-/** Settles every hand against the dealer's final cards. */
+/**
+ * What a short player dealer pays each winning seat: `pool` split in proportion to what each is
+ * owed, rounded down, with the leftover chips paid one each clockwise from the dealer's left.
+ */
+export function bjProportionalPayouts(
+  owed: Readonly<Record<Seat, number>>, pool: number, dealer: Seat,
+): Record<Seat, number> {
+  const total = SEAT_ORDER_CLOCKWISE.reduce((sum, seat) => sum + owed[seat], 0);
+  if (pool >= total) return { ...owed };
+  const paid = seatMap((seat) => Math.floor(owed[seat] * pool / total));
+  let left = pool - SEAT_ORDER_CLOCKWISE.reduce((sum, seat) => sum + paid[seat], 0);
+  for (let seat = nextSeatClockwise(dealer); left > 0; seat = nextSeatClockwise(seat)) {
+    if (paid[seat] >= owed[seat]) continue;
+    paid[seat] += 1;
+    left -= 1;
+  }
+  return paid;
+}
+
+/**
+ * Settles every hand against the dealer's final cards. The house pays every win in full. A player
+ * dealer collects each seat's net loss first and then pays each seat's net win from its chips plus
+ * those collections; when that pool falls short, winners share it proportionally and the dealer
+ * ends with nothing.
+ */
 export function bjSettle(table: Readonly<BjTable>): BjSettlement {
   const outcomes = seatMap((seat) => table.hands[seat].map((hand) => bjOutcome(hand, table.dealer)));
   const payout = seatMap((seat) => table.hands[seat]
     .reduce((sum, hand, index) => sum + bjPayout(hand.bet, outcomes[seat][index]), 0));
   const staked = seatMap((seat) => table.hands[seat].reduce((sum, hand) => sum + hand.bet, 0));
+  const dealer = table.dealerSeat;
+  if (!dealer) {
+    return {
+      outcomes,
+      net: seatMap((seat) => payout[seat] - staked[seat]),
+      chips: seatMap((seat) => table.chips[seat] + payout[seat]),
+    };
+  }
+  const returned = seatMap((seat) => Math.min(payout[seat], staked[seat]));
+  const collected = SEAT_ORDER_CLOCKWISE.reduce((sum, seat) => sum + staked[seat] - returned[seat], 0);
+  const owed = seatMap((seat) => payout[seat] - returned[seat]);
+  const pool = table.chips[dealer] + collected;
+  const paid = bjProportionalPayouts(owed, pool, dealer);
+  const dealerChips = pool - SEAT_ORDER_CLOCKWISE.reduce((sum, seat) => sum + paid[seat], 0);
+  const chips = seatMap((seat) => seat === dealer ? dealerChips : table.chips[seat] + returned[seat] + paid[seat]);
   return {
     outcomes,
-    net: seatMap((seat) => payout[seat] - staked[seat]),
-    chips: seatMap((seat) => table.chips[seat] + payout[seat]),
+    net: seatMap((seat) => seat === dealer ? dealerChips - table.chips[dealer]
+      : returned[seat] + paid[seat] - staked[seat]),
+    chips,
   };
+}
+
+/** The dealer's turn is over: no hand needs beating, it has a blackjack, 21 or more, or a player dealer stood. */
+export function bjDealerDone(table: Readonly<BjTable>): boolean {
+  return bjIsNatural({ cards: table.dealer, split: false }) || !bjDealerMustDraw(table.hands)
+    || (table.dealerSeat ? table.dealerStood === true || bjDealerActions(table.dealer).length === 0
+      : !bjDealerHits(table.dealer));
 }
 
 /** Most chips among the seats taking part, ties included, ordered N, E, S, W. */
@@ -192,6 +283,10 @@ export function bjApplyEntry(table: BjTable, entry: BlackjackLogEntry): void {
       for (const seat of SEAT_ORDER_CLOCKWISE) table.chips[seat] -= entry.bets[seat];
       table.hands = seatMap((seat) => entry.bets[seat] > 0 ? [newHand(entry.cards[seat], entry.bets[seat], false)] : []);
       table.dealer = [entry.upCard];
+      if (entry.dealer) {
+        table.dealerSeat = entry.dealer;
+        table.dealerStood = false;
+      }
       return;
     case 'hit': {
       const hand = table.hands[entry.seat][entry.handIndex];
@@ -228,6 +323,9 @@ export function bjApplyEntry(table: BjTable, entry: BlackjackLogEntry): void {
     case 'reveal':
     case 'dealerHit':
       table.dealer.push(entry.card);
+      return;
+    case 'dealerStand':
+      table.dealerStood = true;
       return;
     case 'settle':
       table.chips = { ...bjSettle(table).chips };

@@ -59,6 +59,7 @@ function execute(seat: Seat, action: BotAction): { success: boolean } {
     case 'liarsdeck-challenge': return liarsdeck.challenge(CODE, seat, Math.random);
     case 'blackjack-bet': return blackjack.bet(CODE, seat, action.amount, true, Date.now(), Math.random);
     case 'blackjack-action': return blackjack.act(CODE, seat, action.action);
+    case 'blackjack-dealer': return blackjack.dealerAct(CODE, seat, action.action);
     case 'holdem-action': return holdem.act(CODE, seat, action.action, Date.now(), Math.random);
   }
 }

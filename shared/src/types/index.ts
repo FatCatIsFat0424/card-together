@@ -11,6 +11,7 @@ export type {
 export type {
   TimeControl,
   SevensOptions,
+  BlackjackOptions,
   RoomCode,
   GameType,
   RoomStatus,
@@ -83,6 +84,7 @@ export type {
   LiarsDeckVisibleState,
   BlackjackHand,
   BlackjackAction,
+  BlackjackDealerAction,
   BlackjackOutcome,
   BlackjackLogEntry,
   BlackjackMatchResult,

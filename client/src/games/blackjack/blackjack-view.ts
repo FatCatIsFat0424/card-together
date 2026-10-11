@@ -1,11 +1,12 @@
 import { frameLogIndex } from '@shared/game-presentation';
 import type { PresentationFrame } from '@shared/game-presentation';
 import {
-  BJ_BET_STEP, BJ_MIN_BET, BJ_STARTING_CHIPS, bjLegalActions, bjMaxBet, bjNextTurn, bjPayout, bjReplay, bjSitsIn,
+  BJ_BET_STEP, BJ_MIN_BET, BJ_STARTING_CHIPS, bjDealerActions, bjLegalActions, bjMaxBet, bjNextTurn, bjPayout, bjReplay,
+  bjSitsIn,
 } from '@shared/rules/blackjack';
 import type {
-  BlackjackAction, BlackjackHand, BlackjackLogEntry, BlackjackMatchResult, BlackjackOutcome, BlackjackVisibleState,
-  Card, Seat,
+  BlackjackAction, BlackjackDealerAction, BlackjackHand, BlackjackLogEntry, BlackjackMatchResult, BlackjackOutcome,
+  BlackjackVisibleState, Card, Seat,
 } from '@shared/types';
 import { isOwnTurn } from '../observer-view';
 
@@ -32,6 +33,10 @@ export interface BlackjackTableView {
   readonly settlement: BlackjackSettlementView | null;
   /** The hand to act, while hands are being played */
   readonly turn: { readonly seat: Seat; readonly handIndex: number } | null;
+  /** The player dealer of the shown hand (while betting, of the next one); null with the house */
+  readonly dealerSeat: Seat | null;
+  /** A player dealer is playing its own hand */
+  readonly dealerTurn: boolean;
   /** Seats are betting on the next hand right now */
   readonly betting: boolean;
   /** Log entries already shown */
@@ -71,6 +76,8 @@ export function replayBlackjack(
     holeHidden,
     settlement,
     turn: holeHidden && !settlement ? bjNextTurn(table.hands) : null,
+    dealerSeat: table.dealerSeat ?? null,
+    dealerTurn: Boolean(table.dealerSeat) && table.hand > 0 && !holeHidden && !settlement,
     betting: false,
     logEnd: Math.min(end, log.length),
   };
@@ -91,6 +98,8 @@ export function blackjackView(game: BlackjackVisibleState, frame: PresentationFr
     holeHidden: game.holeHidden,
     settlement: scanHand(game.log, game.log.length).settlement,
     turn: game.phase === 'playing' ? { seat: game.currentTurnSeat, handIndex: game.activeHand } : null,
+    dealerSeat: game.dealerSeat,
+    dealerTurn: game.phase === 'playing' && !game.holeHidden,
     betting: game.phase === 'betting',
     logEnd: game.log.length,
   };
@@ -101,8 +110,9 @@ export function blackjackHandNumber(view: BlackjackTableView): number {
   return view.betting ? view.hand + 1 : view.hand;
 }
 
-/** A seat that cannot bet while betting, or holds no cards in the shown hand. */
+/** A seat that cannot bet while betting, or holds no cards in the shown hand; a player dealer never is. */
 export function blackjackSeatOut(view: BlackjackTableView, seat: Seat): boolean {
+  if (seat === view.dealerSeat) return false;
   if (view.betting) return !bjSitsIn(view.chips[seat]);
   return view.hand > 0 && view.hands[seat].length === 0;
 }
@@ -113,10 +123,17 @@ export function blackjackActions(game: BlackjackVisibleState, ready: boolean): B
   return bjLegalActions(game.hands[game.mySeat], game.activeHand, game.chips[game.mySeat]);
 }
 
-/** The seat may still place a bet in the open betting window. */
+/** Dealer buttons for the local player dealer; empty unless its own turn has come and the table is ready. */
+export function blackjackDealerActions(game: BlackjackVisibleState, ready: boolean): BlackjackDealerAction[] {
+  if (!ready || game.phase !== 'playing' || game.holeHidden || game.dealerSeat !== game.mySeat
+    || !isOwnTurn(game)) return [];
+  return bjDealerActions(game.dealer);
+}
+
+/** The seat may still place a bet in the open betting window; a player dealer never bets. */
 export function blackjackNeedsBet(game: BlackjackVisibleState): boolean {
   return game.phase === 'betting' && game.observer !== 'spectator' && game.betDeadline !== null
-    && bjSitsIn(game.chips[game.mySeat])
+    && game.dealerSeat !== game.mySeat && bjSitsIn(game.chips[game.mySeat])
     && !game.betPlaced[game.mySeat] && game.myBet === null;
 }
 

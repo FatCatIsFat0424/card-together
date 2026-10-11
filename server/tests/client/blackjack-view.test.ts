@@ -3,7 +3,7 @@ import { getPresentationFrames } from '@shared/game-presentation';
 import { bjReplay } from '@shared/rules/blackjack';
 import type { BlackjackLogEntry, BlackjackVisibleState, Card, Seat } from '@shared/types';
 import {
-  autoBetSeats, betChips, blackjackActions, blackjackHandNumber, blackjackNeedsBet, blackjackSeatOut, blackjackView,
+  autoBetSeats, betChips, blackjackActions, blackjackDealerActions, blackjackHandNumber, blackjackNeedsBet, blackjackSeatOut, blackjackView,
   clampBet, handNet, rankBlackjack, recentBlackjackMoves, replayBlackjack, signedChips, stepBet,
 } from '../../../client/src/games/blackjack/blackjack-view';
 import { deriveRoundHistory } from '../../../client/src/games/round-history';
@@ -56,7 +56,8 @@ const log: BlackjackLogEntry[] = [
 function game(overrides: Partial<BlackjackVisibleState> = {}): BlackjackVisibleState {
   const table = bjReplay(log, ALL);
   return {
-    gameType: 'blackjack', phase: 'playing', mySeat: 'S', seats: ALL, hand: table.hand, chips: table.chips, myBet: null,
+    gameType: 'blackjack', phase: 'playing', mySeat: 'S', seats: ALL, options: { playerDealer: false },
+    dealerSeat: null, totalHands: 8, hand: table.hand, chips: table.chips, myBet: null,
     betPlaced: seats(false), betDeadline: null, hands: table.hands, dealer: table.dealer, holeHidden: true,
     currentTurnSeat: 'N', activeHand: 0, log,
     presentation: { id: 'p', startedAt: 0, logStart: 5, timingVersion: 2 }, result: null, ...overrides,
@@ -155,6 +156,37 @@ describe('Blackjack table view', () => {
     expect(autoBetSeats(log, 4)).toEqual([]);
     expect(autoBetSeats(log, log.length)).toEqual([]);
     expect(recentBlackjackMoves(log, 2).map((entry) => entry.type)).toEqual(['deal', 'bet']);
+  });
+
+  it('should give a player dealer its own controls, never ask it to bet, and list its settlement', () => {
+    const dealing = game({ mySeat: 'N', dealerSeat: 'N', options: { playerDealer: true }, totalHands: 8 });
+    expect(blackjackNeedsBet({ ...dealing, phase: 'betting', betDeadline: 99 })).toBe(false);
+    expect(blackjackSeatOut(blackjackView({ ...dealing, phase: 'betting', chips: { ...dealing.chips, N: 0 } }, null), 'N'))
+      .toBe(false);
+    const turn = { ...dealing, holeHidden: false, currentTurnSeat: 'N' as const, dealer: [c(10, 'hearts'), c(7, 'clubs')] };
+    expect(blackjackDealerActions(turn, true)).toEqual(['hit', 'stand']);
+    expect(blackjackDealerActions({ ...turn, dealer: [c(10, 'hearts'), c(5, 'clubs')] }, true)).toEqual(['hit']);
+    expect(blackjackDealerActions({ ...turn, holeHidden: true }, true)).toEqual([]);
+    expect(blackjackDealerActions({ ...turn, mySeat: 'E' }, true)).toEqual([]);
+    expect(blackjackDealerActions(turn, false)).toEqual([]);
+    expect(blackjackView(turn, null)).toMatchObject({ dealerSeat: 'N', dealerTurn: true });
+
+    const dealt: BlackjackLogEntry[] = [
+      { type: 'bet', seat: 'E', auto: false, timestamp: 1 },
+      { type: 'deal', hand: 1, bets: { N: 0, E: 20, S: 0, W: 0 }, dealer: 'N',
+        cards: { N: [], E: [c(10, 'spades'), c(8, 'hearts')], S: [], W: [] }, upCard: c(10, 'clubs'), timestamp: 2 },
+      { type: 'stand', seat: 'E', handIndex: 0, timestamp: 3 },
+      { type: 'reveal', card: c(7, 'diamonds'), timestamp: 4 },
+      { type: 'dealerStand', timestamp: 5 },
+      { type: 'settle', hand: 1, outcomes: { N: [], E: ['win'], S: [], W: [] }, net: { N: -20, E: 20, S: 0, W: 0 },
+        chips: { N: 980, E: 1020, S: 0, W: 0 }, timestamp: 6 },
+    ];
+    const [round] = deriveRoundHistory({ gameType: 'blackjack', phase: 'betting', seats: ['N', 'E'], log: dealt });
+    expect(round.actions.map((action) => [action.kind, action.seat, action.net])).toEqual([
+      ['deal', 'E', undefined], ['deal', null, undefined], ['stand', 'E', undefined], ['dealerReveal', null, undefined],
+      ['dealerStand', null, undefined], ['settle', 'E', 20], ['settle', 'N', -20],
+    ]);
+    expect(replayBlackjack(dealt, ['N', 'E'], 5)).toMatchObject({ dealerSeat: 'N', dealerTurn: true });
   });
 
   it('should rank final chips with shared places and report net results', () => {

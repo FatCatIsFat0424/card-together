@@ -13,6 +13,7 @@ function decide(cards: Card[], up: Card['rank'], chips = 1000): string {
 function visible(overrides: Partial<BlackjackVisibleState> = {}): BlackjackVisibleState {
   return {
     gameType: 'blackjack', phase: 'playing', mySeat: 'N', seats: ['N', 'E', 'S', 'W'], hand: 1,
+    options: { playerDealer: false }, dealerSeat: null, totalHands: 8,
     chips: { N: 950, E: 950, S: 950, W: 950 }, myBet: null, betPlaced: { N: false, E: false, S: false, W: false },
     betDeadline: null, hands: { N: [hand([card(10), card(6)])], E: [], S: [], W: [] }, dealer: [card(10, 'hearts')],
     holeHidden: true, currentTurnSeat: 'N', activeHand: 0, log: [], result: null, ...overrides,

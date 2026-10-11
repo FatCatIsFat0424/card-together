@@ -1,6 +1,7 @@
 import { isTimeControl } from '@shared/time-control';
 import { isSevensOptions } from '@shared/sevens-options';
 import { isNinetyNineOptions } from '@shared/ninetynine-options';
+import { isBlackjackOptions } from '@shared/blackjack-options';
 import { getTurnSeat } from '../managers/game-clock';
 import {
   ABORT_VOTE_THRESHOLD, GAME_TYPES, MAX_MESSAGE_EMOJIS, MIN_FLEXIBLE_PLAYERS, MAX_ROOM_MEMBERS, isEmojiName, isMediaId, isProvidedEmojiFile,
@@ -17,9 +18,9 @@ import {
   ldNextAlive, ldNextHolder,
 } from '@shared/rules/liarsdeck';
 import {
-  BJ_HANDS, BJ_MAX_BET, BJ_MAX_SEAT_HANDS, BJ_MIN_BET, BJ_OUTCOMES, bjApplyEntry, bjDealerHits,
-  bjDealerMustDraw, bjDealerPeeks, bjEmptyTable, bjIsNatural, bjIsValidBet, bjLegalActions, bjNextTurn, bjSettle,
-  bjSitsIn, bjWinners,
+  BJ_HANDS, BJ_MAX_BET, BJ_MAX_SEAT_HANDS, BJ_MIN_BET, BJ_OUTCOMES, bjApplyEntry, bjBettingSeats, bjDealerActions,
+  bjDealerDone, bjDealerPeeks, bjEmptyTable, bjIsNatural, bjIsValidBet, bjLegalActions, bjMatchOver, bjNextDealer,
+  bjNextTurn, bjSettle, bjWinners,
 } from '@shared/rules/blackjack';
 import {
   HE_HANDS, HE_HOLE_CARDS, HE_STARTING_CHIPS, HE_STREET_CARDS, heApplyEntry, heAward, heBlinds, heBlindSeats,
@@ -605,7 +606,7 @@ function blackjackLog(value: unknown): boolean {
     case 'deal':
       return number(value.hand) && value.hand >= 1 && value.hand <= BJ_HANDS
         && seatCounts(value.bets, BJ_MAX_BET) && seatValues(value.cards, (entry) => cards(entry, 2))
-        && card(value.upCard);
+        && card(value.upCard) && (value.dealer === undefined || oneOf(value.dealer, seats));
     case 'hit':
     case 'double':
       return oneOf(value.seat, seats) && number(value.handIndex) && card(value.card);
@@ -616,6 +617,7 @@ function blackjackLog(value: unknown): boolean {
     case 'reveal':
     case 'dealerHit':
       return card(value.card);
+    case 'dealerStand': return true;
     case 'settle':
       return number(value.hand) && value.hand >= 1 && value.hand <= BJ_HANDS
         && seatValues(value.outcomes, (entry) => Array.isArray(entry) && entry.length <= BJ_MAX_SEAT_HANDS
@@ -628,6 +630,9 @@ function blackjackLog(value: unknown): boolean {
 
 function blackjackGame(value: ObjectValue): boolean {
   return flexibleSeatGame(value) &&
+    (value.options === undefined || isBlackjackOptions(value.options)) &&
+    (value.dealerSeat === undefined || oneOf(value.dealerSeat, seats)) &&
+    (value.dealerStood === undefined || typeof value.dealerStood === 'boolean') &&
     oneOf(value.phase, ['betting', 'playing', 'scoring']) &&
     number(value.hand) && value.hand <= BJ_HANDS &&
     chipCounts(value.chips) &&
@@ -849,6 +854,7 @@ function room(value: unknown): boolean {
     (info.timeControl === undefined || isTimeControl(info.timeControl)) &&
     (info.sevensOptions === undefined || isSevensOptions(info.sevensOptions)) &&
     (info.ninetyNineOptions === undefined || isNinetyNineOptions(info.ninetyNineOptions)) &&
+    (info.blackjackOptions === undefined || isBlackjackOptions(info.blackjackOptions)) &&
     oneOf(info.gameType, [...GAME_TYPES]) &&
     oneOf(info.status, ['waiting', 'playing']) &&
     number(info.createdAt) &&
@@ -1030,25 +1036,34 @@ function coherentLiarsDeckGame(state: LiarsDeckGameState): boolean {
 /**
  * Replaying the public log in order reproduces every bet window, legal action, dealer draw, and
  * settlement; one deck per hand accounts for all 52 cards and the current phase matches the replay.
+ * A player dealer deals in clockwise turn from its first hand, never bets, and plays its own hand.
  */
 function coherentBlackjackGame(state: BlackjackGameState): boolean {
   if (!distinctPlayers(state.players)) return false;
   const participants = occupiedSeats(state.players);
+  const playerDealer = state.options?.playerDealer === true;
+  if (playerDealer !== (state.dealerSeat !== undefined) || (!playerDealer && state.dealerStood !== undefined)
+    || (state.dealerSeat !== undefined && !participants.includes(state.dealerSeat))) return false;
+  const firstDeal = state.log.find((entry) => entry.type === 'deal');
+  const firstDealer = firstDeal?.type === 'deal' ? firstDeal.dealer : state.dealerSeat;
   const table = bjEmptyTable(participants);
+  /** The seat dealing the hand being bet: the first dealer, then clockwise after the latest one. */
+  const nextDealer = (): Seat | undefined => !playerDealer ? undefined
+    : table.dealerSeat ? bjNextDealer(table.dealerSeat, participants) : firstDealer;
   let betSeats: Seat[] = [];
   let inHand = false;
   let revealed = false;
   let acted = false;
   for (const entry of state.log) {
-    const natural = (): boolean => bjIsNatural({ cards: table.dealer, split: false });
     if (entry.type === 'bet') {
-      if (inHand || betSeats.includes(entry.seat) || !bjSitsIn(table.chips[entry.seat])
+      if (inHand || betSeats.includes(entry.seat) || !bjBettingSeats(table.chips, nextDealer()).includes(entry.seat)
         || (entry.auto && state.players[entry.seat]?.isBot === true)) return false;
       betSeats.push(entry.seat);
     } else if (entry.type === 'deal') {
-      if (inHand || entry.hand !== table.hand + 1 || seats.some((seat) => {
+      const bettors = bjBettingSeats(table.chips, nextDealer());
+      if (inHand || entry.hand !== table.hand + 1 || entry.dealer !== nextDealer() || seats.some((seat) => {
         const bet = entry.bets[seat];
-        return betSeats.includes(seat) !== bjSitsIn(table.chips[seat]) || (bet > 0) !== betSeats.includes(seat)
+        return betSeats.includes(seat) !== bettors.includes(seat) || (bet > 0) !== betSeats.includes(seat)
           || (bet > 0 && !bjIsValidBet(bet, table.chips[seat])) || entry.cards[seat].length !== (bet > 0 ? 2 : 0);
       })) return false;
       inHand = true;
@@ -1060,11 +1075,14 @@ function coherentBlackjackGame(state: BlackjackGameState): boolean {
       if (!inHand || revealed || (bjNextTurn(table.hands) !== null && !peeked)) return false;
       revealed = true;
     } else if (entry.type === 'dealerHit') {
-      if (!revealed || natural() || !bjDealerMustDraw(table.hands) || !bjDealerHits(table.dealer)) return false;
+      if (!revealed || bjDealerDone(table)) return false;
+    } else if (entry.type === 'dealerStand') {
+      if (!revealed || !playerDealer || bjDealerDone(table) || !bjDealerActions(table.dealer).includes('stand')) {
+        return false;
+      }
     } else if (entry.type === 'settle') {
       const { outcomes, net, chips } = bjSettle(table);
-      if (!revealed || entry.hand !== table.hand
-        || (!natural() && bjDealerMustDraw(table.hands) && bjDealerHits(table.dealer))
+      if (!revealed || entry.hand !== table.hand || !bjDealerDone(table)
         || !sameJson({ outcomes: entry.outcomes, net: entry.net, chips: entry.chips }, { outcomes, net, chips })) {
         return false;
       }
@@ -1081,25 +1099,29 @@ function coherentBlackjackGame(state: BlackjackGameState): boolean {
     bjApplyEntry(table, entry);
   }
   if (table.hand !== state.hand || !sameJson(table.chips, state.chips) || !sameJson(table.hands, state.hands)
-    || !sameJson(table.dealer, state.dealer) || (state.hole !== null) !== (inHand && !revealed)) return false;
+    || !sameJson(table.dealer, state.dealer) || table.dealerStood !== state.dealerStood
+    || (state.hole !== null) !== (inHand && !revealed)) return false;
   const held = [...state.deck, ...seats.flatMap((seat) => state.hands[seat].flatMap((hand) => hand.cards)),
     ...state.dealer, ...(state.hole ? [state.hole] : [])];
   if (new Set(held.map(cardId)).size !== held.length || held.length !== (state.hand > 0 ? 52 : 0)) return false;
-  const anyoneSitsIn = seats.some((seat) => bjSitsIn(state.chips[seat]));
+  const over = bjMatchOver(state.hand, state.chips, participants, playerDealer);
 
   if (state.phase === 'betting') {
-    return !inHand && state.result === null && state.hand < BJ_HANDS && anyoneSitsIn
+    return !inHand && state.result === null && !over && state.dealerSeat === nextDealer()
       && seats.every((seat) => (state.bets[seat] !== null) === betSeats.includes(seat)
         && (state.bets[seat] === null || bjIsValidBet(state.bets[seat], state.chips[seat])))
-      && seats.some((seat) => bjSitsIn(state.chips[seat]) && state.bets[seat] === null);
+      && bjBettingSeats(state.chips, state.dealerSeat).some((seat) => state.bets[seat] === null);
   }
-  if (betSeats.length > 0 || seats.some((seat) => state.bets[seat] !== null) || state.betDeadline !== null) return false;
+  if (betSeats.length > 0 || seats.some((seat) => state.bets[seat] !== null) || state.betDeadline !== null
+    || state.dealerSeat !== table.dealerSeat) return false;
   if (state.phase === 'playing') {
+    if (!inHand || state.result !== null) return false;
+    // A player dealer's own turn follows the reveal once every player hand is finished.
+    if (revealed) return playerDealer && !bjDealerDone(table) && state.currentTurnSeat === state.dealerSeat;
     const turn = bjNextTurn(state.hands);
-    return inHand && !revealed && state.result === null && turn !== null
-      && turn.seat === state.currentTurnSeat && turn.handIndex === state.activeHand;
+    return turn !== null && turn.seat === state.currentTurnSeat && turn.handIndex === state.activeHand;
   }
-  return !inHand && state.log.at(-1)?.type === 'settle' && (state.hand === BJ_HANDS || !anyoneSitsIn)
+  return !inHand && state.log.at(-1)?.type === 'settle' && over
     && sameJson(state.result, flexibleResult(state.result, participants, { gameType: 'blackjack', chips: state.chips,
       hands: state.hand, winners: bjWinners(state.chips, participants) }));
 }
