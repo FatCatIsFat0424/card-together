@@ -71,6 +71,7 @@ rollback are documented in the [deployment guide](docs/deployment.md).
 | [API](docs/api.md) | HTTP and Socket contracts |
 | [Games](docs/games.md) | The four games' house rules |
 | [Media](docs/media.md) | Music files, images, stickers, and voice |
+| [Roadmap](docs/roadmap.md) | Phased plan for public operation and revenue |
 | [Agent instructions](AGENTS.md) | Project-specific contribution rules |
 
 The application is [MIT-licensed](LICENSE). Playing-card graphics by Chris Aguilar
