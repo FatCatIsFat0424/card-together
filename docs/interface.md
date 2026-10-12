@@ -130,8 +130,10 @@ Per-game controls: [games](games.md#card-controls).
 
 - `/shop` sells permanent avatar borders from the [catalog](../shared/src/constants/shop.ts)
   for 50–300 coins (5–30 completed games).
-- Try-on with preset or uploaded avatars is a local preview; it changes neither balance
-  nor profile. Purchase and coin rules: [storage](storage.md#avatar-borders).
+- Product cards preview each border on the player's preset or uploaded avatar.
+  The shop header shows the coin balance; hovering or focusing this balance or the
+  global header's coins explains the 10-coin reward per completed game.
+  Purchase and coin rules: [storage](storage.md#avatar-borders).
 - Buying opens a confirmation dialog with the chosen border, price, and remaining
   balance. Cancel leaves coins unchanged; confirmation is disabled for owned borders
   or insufficient coins, and the dialog cannot be dismissed during a purchase.

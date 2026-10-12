@@ -2,6 +2,7 @@
 
 import { lazy, Suspense, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import Tooltip from '@mui/material/Tooltip';
 import { NavLink, useLocation } from 'react-router-dom';
 import { GAME_COIN_REWARD } from '@shared/constants';
 import { apiRequest } from '../api';
@@ -123,11 +124,12 @@ export function TopBar(): ReactNode {
       {showLinks && <nav className={styles.links}>{links}</nav>}
       {inGame && <RoomCodeButton />}
       <div className={styles.actions}>
-        {accountId && <span className={styles.coinBalance} role="status"
-          aria-label={t('coins.balance', { n: String(coins) })}
-          title={t('coins.earnHint', { n: String(GAME_COIN_REWARD) })}>
-          <AppIcon name="coins" /><span>{coins.toLocaleString()}</span>
-        </span>}
+        {accountId && <Tooltip title={t('shop.earn', { n: String(GAME_COIN_REWARD) })} describeChild arrow>
+          <span className={styles.coinBalance} role="status" tabIndex={0}
+            aria-label={t('coins.balance', { n: String(coins) })}>
+            <AppIcon name="coins" /><span>{coins.toLocaleString()}</span>
+          </span>
+        </Tooltip>}
         {accountId && <div className={styles.group} data-popover="notifications">
           <button type="button" className={`${styles.iconBtn} touch-target`} onClick={() => toggle('notifications')}
             aria-expanded={open === 'notifications'} aria-controls="social-notifications"
