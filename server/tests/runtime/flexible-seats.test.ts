@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { randomUUID } from 'node:crypto';
 import { mkdtemp, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -99,7 +100,7 @@ describe('two to four seat tables', () => {
     gameManager.restoreGames([]);
   });
 
-  it('should block two- and three-player room starts for every mode during the four-player rollout', () => {
+  it('allows prepared two- and three-player flexible tables while requiring four for Bridge', () => {
     const code = roomManager.createRoom('blackjack', 'host');
     roomManager.joinRoom(code, 'guest');
     roomManager.joinRoom(code, 'third');
@@ -111,16 +112,16 @@ describe('two to four seat tables', () => {
     // The guest sitting down asked the host to confirm the new table.
     expect(roomManager.isAllReady(code)).toBe(false);
     roomManager.setReady(code, 'host', true);
-    expect(roomManager.isAllReady(code)).toBe(false);
+    expect(roomManager.isAllReady(code)).toBe(true);
     expect(Object.keys(roomManager.getSeatPlayers(code)!)).toEqual(['N', 'S']);
 
     roomManager.changeSeat(code, player('third'), 'E');
     expect(roomManager.getRoomInfo(code)!.seats.N.isReady).toBe(false);
     for (const id of ['host', 'guest', 'third']) roomManager.setReady(code, id, true);
-    expect(roomManager.isAllReady(code)).toBe(false);
+    expect(roomManager.isAllReady(code)).toBe(true);
     expect(roomManager.setGameType(code, 'host', 'holdem').success).toBe(true);
     for (const id of ['host', 'guest', 'third']) roomManager.setReady(code, id, true);
-    expect(roomManager.isAllReady(code)).toBe(false);
+    expect(roomManager.isAllReady(code)).toBe(true);
 
     expect(roomManager.setGameType(code, 'host', 'bridge').success).toBe(true);
     for (const id of ['host', 'guest', 'third']) roomManager.setReady(code, id, true);
@@ -196,8 +197,8 @@ describe('two to four seat tables', () => {
     state = holdemGame();
     expect(state.phase).toBe('scoring');
     // W's aces beat E's seven high.
-    expect(state.result).toEqual({ gameType: 'holdem', seats, chips: { N: 0, E: 0, S: 0, W: 2000 }, hands: 1,
-      winners: ['W'], eliminationOrder: ['E'] });
+    expect(state.result).toEqual(gameSeatValues({ gameType: 'holdem', seats, chips: { N: 0, E: 0, S: 0, W: 2000 }, hands: 1,
+      winners: ['W'], eliminationOrder: ['E'] }));
     expect(isRuntimeSnapshot({ ...snapshot(seats, 'holdem'),
       rooms: snapshot(seats, 'holdem').rooms.map((room) => ({ ...room, info: { ...room.info, status: 'waiting' } })) }))
       .toBe(true);
@@ -206,7 +207,7 @@ describe('two to four seat tables', () => {
   it('should keep empty Blackjack seats out of betting, dealing, and the result', () => {
     const seats: Seat[] = ['N', 'S'];
     blackjack.startGame(CODE, seated(seats), 15_000, 1000);
-    expect(blackjackGame().chips).toEqual({ N: 1000, E: 0, S: 1000, W: 0 });
+    expect(blackjackGame().chips).toEqual(gameSeatValues({ N: 1000, E: 0, S: 1000, W: 0 }));
     expect(blackjack.pendingBetSeats(blackjackGame())).toEqual(seats);
     expect(blackjack.bet(CODE, 'E', 10, true, 1000).success).toBe(false);
     expect(blackjack.getPlayerVisibleState(CODE, 'S')!.seats).toEqual(seats);
@@ -292,8 +293,8 @@ it.each([false, true])('awards a completed Hold\'em match once with bot=%s, pres
       });
       if (withBot) expect(roomManager.addBot(code, accounts[0].id, 'S').success).toBe(true);
       for (const account of accounts) roomManager.setReady(code, account.id, true);
-      // The engine retains legacy two-seat snapshot compatibility; new room starts are gated.
-      expect(roomManager.isAllReady(code)).toBe(false);
+      // A valid prepared heads-up table can be started explicitly.
+      expect(roomManager.isAllReady(code)).toBe(true);
       roomManager.setRoomStatus(code, 'playing');
       expect(gameManager.startGame(code, 'holdem', roomManager.getSeatPlayers(code)!).success).toBe(true);
     });

@@ -1,16 +1,16 @@
 // ─── Game types ───
 
 import type { BlackjackOptions, NinetyNineOptions, RoomCode, SevensOptions, TimeControl } from './room';
-import type { PlayerInfo, Seat } from './player';
+import type { GameSeat, PlayerInfo, Seat } from './player';
 import type { BigTwoComboType } from '../rules/bigtwo';
 
 export interface GameClock {
-  readonly lastTimeout?: { readonly seat: Seat; readonly at: number };
+  readonly lastTimeout?: { readonly seat: GameSeat; readonly at: number };
   readonly settings: TimeControl;
-  readonly bankRemainingMs: Record<Seat, number>;
+  readonly bankRemainingMs: Record<Seat, number> & Partial<Record<GameSeat, number>>;
   readonly turn: {
     readonly id: string;
-    readonly seat: Seat;
+    readonly seat: GameSeat;
     readonly startsAt: number;
     readonly baseRemainingMs: number;
     readonly deadline: number;
@@ -38,7 +38,7 @@ export type ObserverRole = 'spectator' | 'eliminated';
 export interface ObserverView<T> {
   readonly observer?: ObserverRole;
   /** Every seat's private hand */
-  readonly observedHands?: Record<Seat, readonly T[]>;
+  readonly observedHands?: Partial<Record<GameSeat, readonly T[]>>;
 }
 
 /** Suit */
@@ -310,25 +310,26 @@ export type NinetyNineDirection = 'ccw' | 'cw';
 export type NinetyNineLogEntry =
   | {
     readonly type: 'play';
-    readonly seat: Seat;
+    readonly seat: GameSeat;
     readonly card: Card;
     readonly choice: 'plus' | 'minus' | null;
-    readonly target: Seat | null;
+    readonly target: GameSeat | null;
     readonly total: number;
     readonly timestamp: number;
   }
-  | { readonly type: 'eliminated'; readonly seat: Seat; readonly timestamp: number };
+  | { readonly type: 'eliminated'; readonly seat: GameSeat; readonly timestamp: number };
 
 /**
  * The last survivor wins (`winnerSeat`, the only shape on legacy results); when a two-deck
  * stock runs out first, every survivor ties for first (`winners`, ordered N, E, S, W).
  */
 export type NinetyNineMatchResult = {
+  readonly seats?: GameSeat[];
   readonly gameType: 'ninetynine';
   /** In elimination order */
-  readonly eliminationOrder: Seat[];
+  readonly eliminationOrder: GameSeat[];
   readonly finalTotal: number;
-} & ({ readonly winnerSeat: Seat } | { readonly winners: Seat[] });
+} & ({ readonly winnerSeat: GameSeat } | { readonly winners: GameSeat[] });
 
 export type NinetyNinePhase = 'playing' | 'scoring';
 
@@ -337,44 +338,45 @@ export interface NinetyNineGameState {
   readonly options?: NinetyNineOptions;
   clock?: GameClock;
   presentation?: GamePresentation;
-  returnedSeats?: Seat[];
+  returnedSeats?: GameSeat[];
   /** Spectator account ids that already left the finished board for the room. */
   returnedViewers?: string[];
   readonly gameType: 'ninetynine';
   readonly id: string;
   readonly startedAt: number;
-  readonly players: Record<Seat, PlayerInfo>;
+  readonly players: Partial<Record<GameSeat, PlayerInfo>>;
   readonly roomCode: RoomCode;
   phase: NinetyNinePhase;
-  hands: Record<Seat, Card[]>;
+  hands: Record<GameSeat, Card[]>;
   /** Server only; stock[0] is the top of the pile */
   stock: Card[];
   /** Server only; the last card is the most recently played */
   discard: Card[];
   total: number;
   direction: NinetyNineDirection;
-  currentTurnSeat: Seat;
+  currentTurnSeat: GameSeat;
   /** In elimination order */
-  eliminated: Seat[];
+  eliminated: GameSeat[];
   log: NinetyNineLogEntry[];
   result: NinetyNineMatchResult | null;
 }
 
 export interface NinetyNineVisibleState extends ObserverView<Card> {
+  readonly seats?: readonly GameSeat[];
   readonly options?: NinetyNineOptions;
   clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'ninetynine';
   readonly phase: NinetyNinePhase;
-  readonly mySeat: Seat;
+  readonly mySeat: GameSeat;
   readonly myHand: readonly Card[];
-  readonly handCounts: Record<Seat, number>;
+  readonly handCounts: Record<GameSeat, number>;
   readonly total: number;
   readonly direction: NinetyNineDirection;
-  readonly currentTurnSeat: Seat;
+  readonly currentTurnSeat: GameSeat;
   readonly lastPlayed: Card | null;
   readonly stockCount: number;
-  readonly eliminated: readonly Seat[];
+  readonly eliminated: readonly GameSeat[];
   readonly log: readonly NinetyNineLogEntry[];
   readonly result: NinetyNineMatchResult | null;
 }
@@ -661,25 +663,25 @@ export type BlackjackOutcome = 'blackjack' | 'win' | 'push' | 'lose' | 'bust';
  * indexed within the seat; a split inserts the new hand right after the split one.
  */
 export type BlackjackLogEntry =
-  | { readonly type: 'bet'; readonly seat: Seat; readonly auto: boolean; readonly timestamp: number }
+  | { readonly type: 'bet'; readonly seat: GameSeat; readonly auto: boolean; readonly timestamp: number }
   | {
     readonly type: 'deal';
     readonly hand: number;
     /** 0 for seats sitting out and the player dealer */
-    readonly bets: Record<Seat, number>;
-    readonly cards: Record<Seat, Card[]>;
+    readonly bets: Record<GameSeat, number>;
+    readonly cards: Record<GameSeat, Card[]>;
     readonly upCard: Card;
     /** The seat dealing this hand; missing with the house dealer */
-    readonly dealer?: Seat;
+    readonly dealer?: GameSeat;
     readonly timestamp: number;
   }
-  | { readonly type: 'hit'; readonly seat: Seat; readonly handIndex: number; readonly card: Card; readonly timestamp: number }
-  | { readonly type: 'stand'; readonly seat: Seat; readonly handIndex: number; readonly timestamp: number }
-  | { readonly type: 'double'; readonly seat: Seat; readonly handIndex: number; readonly card: Card; readonly timestamp: number }
+  | { readonly type: 'hit'; readonly seat: GameSeat; readonly handIndex: number; readonly card: Card; readonly timestamp: number }
+  | { readonly type: 'stand'; readonly seat: GameSeat; readonly handIndex: number; readonly timestamp: number }
+  | { readonly type: 'double'; readonly seat: GameSeat; readonly handIndex: number; readonly card: Card; readonly timestamp: number }
   /** `cards[0]` completes the split hand and `cards[1]` the new hand after it */
   | {
     readonly type: 'split';
-    readonly seat: Seat;
+    readonly seat: GameSeat;
     readonly handIndex: number;
     readonly cards: readonly [Card, Card];
     readonly timestamp: number;
@@ -692,22 +694,22 @@ export type BlackjackLogEntry =
     readonly type: 'settle';
     readonly hand: number;
     /** Per hand, in seat hand order; empty for seats sitting out and the player dealer */
-    readonly outcomes: Record<Seat, BlackjackOutcome[]>;
+    readonly outcomes: Record<GameSeat, BlackjackOutcome[]>;
     /** Chips won minus chips staked this hand; for a player dealer, chips collected minus chips paid */
-    readonly net: Record<Seat, number>;
-    readonly chips: Record<Seat, number>;
+    readonly net: Record<GameSeat, number>;
+    readonly chips: Record<GameSeat, number>;
     readonly timestamp: number;
   };
 
 export interface BlackjackMatchResult {
   readonly gameType: 'blackjack';
   /** Seats that took part, ordered N, E, S, W; missing on legacy results, where all four did */
-  readonly seats?: Seat[];
+  readonly seats?: GameSeat[];
   /** 0 for empty seats */
-  readonly chips: Record<Seat, number>;
+  readonly chips: Record<GameSeat, number>;
   readonly hands: number;
   /** Most chips (ties included) among the seats that took part, ordered N, E, S, W */
-  readonly winners: Seat[];
+  readonly winners: GameSeat[];
 }
 
 export type BlackjackPhase = 'betting' | 'playing' | 'scoring';
@@ -719,27 +721,27 @@ export interface BlackjackGameState {
    * Player dealer only: the seat dealing the hand being played, or while betting the next one.
    * Missing with the house dealer.
    */
-  dealerSeat?: Seat;
+  dealerSeat?: GameSeat;
   /** Player dealer only: the dealer stood, ending its turn */
   dealerStood?: boolean;
   clock?: GameClock;
   presentation?: GamePresentation;
-  returnedSeats?: Seat[];
+  returnedSeats?: GameSeat[];
   /** Spectator account ids that already left the finished board for the room. */
   returnedViewers?: string[];
   readonly gameType: 'blackjack';
   readonly id: string;
   readonly startedAt: number;
   /** Missing for empty seats, which never bet, act, or appear in results */
-  readonly players: Partial<Record<Seat, PlayerInfo>>;
+  readonly players: Partial<Record<GameSeat, PlayerInfo>>;
   readonly roomCode: RoomCode;
   phase: BlackjackPhase;
   /** Hands dealt so far; betting is for hand `hand + 1` */
   hand: number;
   /** Chips not staked on the table */
-  chips: Record<Seat, number>;
+  chips: Record<GameSeat, number>;
   /** Server only while betting; null until the seat bets or when it sits out */
-  bets: Record<Seat, number | null>;
+  bets: Record<GameSeat, number | null>;
   /** Length of the shared betting window */
   readonly betMs: number;
   /** Null until the previous hand's presentation ends and betting opens */
@@ -747,13 +749,13 @@ export interface BlackjackGameState {
   /** Server only; the undealt part of this hand's shuffled deck */
   deck: Card[];
   /** The latest hand's cards, kept on the table while the next hand is bet */
-  hands: Record<Seat, BlackjackHand[]>;
+  hands: Record<GameSeat, BlackjackHand[]>;
   /** Face-up dealer cards: the up card, then the revealed hole card and draws */
   dealer: Card[];
   /** Server only; the face-down card until the dealer reveals it */
   hole: Card | null;
   /** A player seat's hand, or the player dealer's seat once every player hand is finished */
-  currentTurnSeat: Seat;
+  currentTurnSeat: GameSeat;
   activeHand: number;
   log: BlackjackLogEntry[];
   result: BlackjackMatchResult | null;
@@ -767,27 +769,27 @@ export interface BlackjackVisibleState {
   readonly myHole?: Card;
   readonly options: BlackjackOptions;
   /** The player dealer of the hand being played, or while betting the next one; null with the house */
-  readonly dealerSeat: Seat | null;
+  readonly dealerSeat: GameSeat | null;
   /** Hands in this match */
   readonly totalHands: number;
   clock?: GameClock;
   presentation?: GamePresentation;
   readonly gameType: 'blackjack';
   readonly phase: BlackjackPhase;
-  readonly mySeat: Seat;
+  readonly mySeat: GameSeat;
   /** Seats taking part, ordered N, E, S, W */
-  readonly seats: readonly Seat[];
+  readonly seats: readonly GameSeat[];
   readonly hand: number;
-  readonly chips: Record<Seat, number>;
+  readonly chips: Record<GameSeat, number>;
   /** This seat's pending bet while betting */
   readonly myBet: number | null;
-  readonly betPlaced: Record<Seat, boolean>;
+  readonly betPlaced: Record<GameSeat, boolean>;
   readonly betDeadline: number | null;
-  readonly hands: Record<Seat, readonly BlackjackHand[]>;
+  readonly hands: Record<GameSeat, readonly BlackjackHand[]>;
   readonly dealer: readonly Card[];
   /** The dealer holds a face-down card */
   readonly holeHidden: boolean;
-  readonly currentTurnSeat: Seat;
+  readonly currentTurnSeat: GameSeat;
   readonly activeHand: number;
   readonly log: readonly BlackjackLogEntry[];
   readonly result: BlackjackMatchResult | null;
@@ -807,8 +809,8 @@ export type HoldemAction =
 export interface HoldemPot {
   readonly amount: number;
   /** Unfolded seats that staked enough to win this pot, ordered N, E, S, W */
-  readonly eligible: Seat[];
-  readonly winners: Seat[];
+  readonly eligible: GameSeat[];
+  readonly winners: GameSeat[];
 }
 
 /** Hole cards never enter the log until a showdown reveals them. */
@@ -816,16 +818,16 @@ export type HoldemLogEntry =
   | {
     readonly type: 'hand';
     readonly hand: number;
-    readonly button: Seat;
+    readonly button: GameSeat;
     readonly smallBlind: number;
     readonly bigBlind: number;
     /** Chips each seat posted as a blind; a short stack posts all it has */
-    readonly blinds: Record<Seat, number>;
+    readonly blinds: Record<GameSeat, number>;
     readonly timestamp: number;
   }
   | {
     readonly type: 'action';
-    readonly seat: Seat;
+    readonly seat: GameSeat;
     readonly action: 'fold' | 'check' | 'call' | 'bet' | 'raise';
     /** The seat's total stake on this street after the action */
     readonly to: number;
@@ -834,27 +836,27 @@ export type HoldemLogEntry =
   }
   | { readonly type: 'street'; readonly street: Exclude<HoldemStreet, 'preflop'>; readonly cards: Card[]; readonly timestamp: number }
   /** Hole cards of every unfolded seat; empty for the rest */
-  | { readonly type: 'showdown'; readonly cards: Record<Seat, Card[]>; readonly timestamp: number }
+  | { readonly type: 'showdown'; readonly cards: Record<GameSeat, Card[]>; readonly timestamp: number }
   | {
     readonly type: 'award';
     readonly pots: HoldemPot[];
-    readonly chips: Record<Seat, number>;
+    readonly chips: Record<GameSeat, number>;
     /** Seats that lost their last chip this hand, in elimination order */
-    readonly eliminated: Seat[];
+    readonly eliminated: GameSeat[];
     readonly timestamp: number;
   };
 
 export interface HoldemMatchResult {
   readonly gameType: 'holdem';
   /** Seats that took part, ordered N, E, S, W; missing on legacy results, where all four did */
-  readonly seats?: Seat[];
+  readonly seats?: GameSeat[];
   /** 0 for empty seats */
-  readonly chips: Record<Seat, number>;
+  readonly chips: Record<GameSeat, number>;
   readonly hands: number;
   /** Most chips (ties included), ordered N, E, S, W */
-  readonly winners: Seat[];
+  readonly winners: GameSeat[];
   /** Seats that lost every chip, in elimination order */
-  readonly eliminationOrder: Seat[];
+  readonly eliminationOrder: GameSeat[];
 }
 
 export type HoldemPhase = 'playing' | 'scoring';
@@ -862,28 +864,28 @@ export type HoldemPhase = 'playing' | 'scoring';
 export interface HoldemGameState {
   clock?: GameClock;
   presentation?: GamePresentation;
-  returnedSeats?: Seat[];
+  returnedSeats?: GameSeat[];
   /** Spectator account ids that already left the finished board for the room. */
   returnedViewers?: string[];
   readonly gameType: 'holdem';
   readonly id: string;
   readonly startedAt: number;
   /** Missing for empty seats, which hold no chips and are never dealt in */
-  readonly players: Partial<Record<Seat, PlayerInfo>>;
+  readonly players: Partial<Record<GameSeat, PlayerInfo>>;
   readonly roomCode: RoomCode;
   phase: HoldemPhase;
   hand: number;
-  button: Seat;
+  button: GameSeat;
   smallBlind: number;
   bigBlind: number;
   /** Chips not yet staked this hand */
-  chips: Record<Seat, number>;
-  streetBets: Record<Seat, number>;
+  chips: Record<GameSeat, number>;
+  streetBets: Record<GameSeat, number>;
   /** Chips staked this hand, including this street */
-  totalBets: Record<Seat, number>;
+  totalBets: Record<GameSeat, number>;
   /** Seats dealt into this hand, ordered N, E, S, W */
-  dealt: Seat[];
-  folded: Seat[];
+  dealt: GameSeat[];
+  folded: GameSeat[];
   street: HoldemStreet;
   board: Card[];
   /** Highest street stake to match */
@@ -891,15 +893,15 @@ export interface HoldemGameState {
   /** Smallest raise increment */
   minRaise: number;
   /** Seats that acted since the last full raise; others may still raise */
-  acted: Seat[];
+  acted: GameSeat[];
   /** Hole cards a showdown revealed this hand */
-  revealed: Record<Seat, Card[]>;
-  eliminated: Seat[];
-  currentTurnSeat: Seat;
+  revealed: Record<GameSeat, Card[]>;
+  eliminated: GameSeat[];
+  currentTurnSeat: GameSeat;
   /** Server only */
   deck: Card[];
   /** Server only; each seat's hole cards */
-  hands: Record<Seat, Card[]>;
+  hands: Record<GameSeat, Card[]>;
   log: HoldemLogEntry[];
   result: HoldemMatchResult | null;
 }
@@ -909,27 +911,27 @@ export interface HoldemVisibleState extends ObserverView<Card> {
   presentation?: GamePresentation;
   readonly gameType: 'holdem';
   readonly phase: HoldemPhase;
-  readonly mySeat: Seat;
+  readonly mySeat: GameSeat;
   /** Seats taking part, ordered N, E, S, W */
-  readonly seats: readonly Seat[];
+  readonly seats: readonly GameSeat[];
   readonly myHand: readonly Card[];
   readonly hand: number;
-  readonly button: Seat;
+  readonly button: GameSeat;
   readonly smallBlind: number;
   readonly bigBlind: number;
-  readonly chips: Record<Seat, number>;
-  readonly streetBets: Record<Seat, number>;
-  readonly totalBets: Record<Seat, number>;
-  readonly dealt: readonly Seat[];
-  readonly folded: readonly Seat[];
+  readonly chips: Record<GameSeat, number>;
+  readonly streetBets: Record<GameSeat, number>;
+  readonly totalBets: Record<GameSeat, number>;
+  readonly dealt: readonly GameSeat[];
+  readonly folded: readonly GameSeat[];
   readonly street: HoldemStreet;
   readonly board: readonly Card[];
   readonly currentBet: number;
   readonly minRaise: number;
-  readonly acted: readonly Seat[];
-  readonly revealed: Record<Seat, readonly Card[]>;
-  readonly eliminated: readonly Seat[];
-  readonly currentTurnSeat: Seat;
+  readonly acted: readonly GameSeat[];
+  readonly revealed: Record<GameSeat, readonly Card[]>;
+  readonly eliminated: readonly GameSeat[];
+  readonly currentTurnSeat: GameSeat;
   readonly log: readonly HoldemLogEntry[];
   readonly result: HoldemMatchResult | null;
 }

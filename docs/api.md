@@ -113,7 +113,9 @@ Omitted fields keep their values; invalid values return 400.
 | `room:addSeat`, `room:removeSeat` | — | Host adds an extra seat (eight total) or removes the last empty one; waiting Ninety-Nine, Blackjack, Hold'em only |
 | `room:addBot`, `room:removeBot` | `{ seat }` | Host adds or removes a bot while waiting |
 | `room:fillBots` | — | Host fills empty seats with ready bots |
-| `room:ready`, `room:unready` | — | Sets readiness; four ready seats start the match |
+| `room:ready`, `room:unready` | — | Sets a seated player's readiness while waiting, regardless of current player count; never starts a match |
+| `room:start` | — | Host starts only when all occupied seats are ready and the game's player count is valid |
+| `room:setShuffleSeats` | `{ enabled }` | Host changes automatic seat shuffling while waiting; defaults to false and resets human readiness |
 
 **Waiting-room settings** (host only; each clears human readiness unless noted)
 

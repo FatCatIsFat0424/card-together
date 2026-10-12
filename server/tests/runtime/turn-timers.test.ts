@@ -78,7 +78,7 @@ describe('durable turn clocks', () => {
       expect(game().log.length).toBeGreaterThan(before.log.length);
       expect(game().clock!.bankRemainingMs[turn.seat]).toBe(0);
       expect(game().clock!.lastTimeout).toEqual({ seat: turn.seat, at: Date.now() });
-      expect(game().players[turn.seat]?.isBot).not.toBe(true);
+      expect(game().players[(turn.seat as Seat)]?.isBot).not.toBe(true);
       expect(choose).toHaveBeenCalledTimes(1);
       expect(choose.mock.calls[0][0]).not.toHaveProperty('hands');
       expect(choose.mock.calls[0][0]).not.toHaveProperty('stock');
@@ -200,7 +200,7 @@ describe('durable turn clocks', () => {
     expect(publish).toHaveBeenCalledTimes(1);
     expect(game().clock!.turn!.deadline).toBeGreaterThan(Date.now());
     expect(game().roomCode).toBe(code);
-    expect(game().players[turn.seat]?.isBot).not.toBe(true);
+    expect(game().players[(turn.seat as Seat)]?.isBot).not.toBe(true);
   });
 
   it('discards a timeout queued behind a manual action whose save is still pending', async () => {

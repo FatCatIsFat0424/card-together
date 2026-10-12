@@ -1,10 +1,10 @@
 // ─── God view: spectators and eliminated players (no React) ───
 
-import type { ObserverRole, Seat } from '@shared/types';
+import type { ObserverRole, GameSeat } from '@shared/types';
 
 interface TurnView {
-  readonly currentTurnSeat: Seat;
-  readonly mySeat: Seat;
+  readonly currentTurnSeat: GameSeat;
+  readonly mySeat: GameSeat;
   readonly observer?: ObserverRole;
 }
 

@@ -1,7 +1,8 @@
+import { gamePlayer } from '@shared/rules/seats';
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { getPresentationEndsAt } from '@shared/game-presentation';
 import { bjSitsIn } from '@shared/rules/blackjack';
-import type { AnyGameState, RoomCode, Seat } from '@shared/types';
+import type { AnyGameState, RoomCode, GameSeat } from '@shared/types';
 import { getBotAction } from '../bots/bot-decisions';
 import * as gameManager from '../managers/game-manager';
 import * as roomManager from '../managers/room-manager';
@@ -11,7 +12,7 @@ import type { RuntimeCoordinator } from './coordinator';
 export const BOT_ACTION_DELAY_MS = 650;
 
 interface BotTurn {
-  readonly seat: Seat;
+  readonly seat: GameSeat;
   readonly key: string;
 }
 
@@ -21,16 +22,16 @@ function pendingTurn(game: AnyGameState): BotTurn | null {
   if (game.gameType === 'bigtwo' && game.pendingAutoPass) return null;
   // Simultaneous arrangements are submitted one bot at a time, each after its own thinking delay.
   const seat = game.gameType === 'chinesepoker'
-    ? SEAT_ORDER_CLOCKWISE.find((pending) => game.arrangements[pending] === null && game.players[pending].isBot)
+    ? SEAT_ORDER_CLOCKWISE.find((pending) => game.arrangements[pending] === null && gamePlayer(game, pending)?.isBot)
     // Blackjack bets work the same way, while playing turns pass from seat to seat.
     : game.gameType === 'blackjack' && game.phase === 'betting'
       ? SEAT_ORDER_CLOCKWISE.find((pending) => game.bets[pending] === null && pending !== game.dealerSeat
-        && bjSitsIn(game.chips[pending]) && game.players[pending]?.isBot)
+        && bjSitsIn(game.chips[pending]) && gamePlayer(game, pending)?.isBot)
     : game.gameType !== 'bridge' ? game.currentTurnSeat
     : game.phase === 'redeal_pending' ? game.redealPendingSeat
     : game.phase === 'bidding' ? game.bidding?.currentBidderSeat
     : game.phase === 'playing' ? game.playing?.currentTurnSeat : null;
-  if (!seat || !game.players[seat]?.isBot) return null;
+  if (!seat || !gamePlayer(game, seat)?.isBot) return null;
   return { seat, key: `${game.id}:${game.phase}:${game.log.length}:${seat}` };
 }
 

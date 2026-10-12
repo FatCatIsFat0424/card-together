@@ -1,4 +1,4 @@
-import type { GameType, MatchSummary, PublicAccount } from '@shared/types';
+import type { GameSeat, GameType, MatchSummary, PublicAccount } from '@shared/types';
 import { GAME_TYPES, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { resultSeats } from './game-view';
 
@@ -30,7 +30,7 @@ export function matchOutcome(match: MatchSummary, accountId?: string): MatchOutc
     return (index % 2 === declarerIndex % 2) === result.declarerTeamWins ? 'win' : 'loss';
   }
   if ('winnerSeat' in result) return result.winnerSeat === seat ? 'win' : 'loss';
-  if (!result.winners.includes(seat)) return 'loss';
+  if (!new Set<GameSeat>(result.winners).has(seat)) return 'loss';
   return result.winners.length > 1 ? 'tie' : 'win';
 }
 

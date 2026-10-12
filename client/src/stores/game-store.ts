@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import type {
   Card,
-  Seat,
+  GameSeat,
   Contract,
   BiddingState,
   PlayingState,
@@ -42,15 +42,15 @@ interface GameStoreState {
   gameType: GameType | null;
   phase: GamePhase | null;
   myHand: Card[];
-  dealerSeat: Seat | null;
-  currentTurnSeat: Seat | null;
+  dealerSeat: GameSeat | null;
+  currentTurnSeat: GameSeat | null;
   validCards: Card[];
   bidding: BiddingState | null;
   contract: Contract | null;
   playing: PlayingState | null;
   result: GameResult | null;
   log: GameLogEntry[];
-  redealPendingSeat: Seat | null;
+  redealPendingSeat: GameSeat | null;
 }
 
 interface GameStoreActions {

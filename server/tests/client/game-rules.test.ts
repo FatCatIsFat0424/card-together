@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -34,18 +35,18 @@ const sevens: SevensVisibleState = {
   handCounts: counts, coveredCounts: counts, validCards: [], currentTurnSeat: 'N',
   table: { spades: null, hearts: null, diamonds: null, clubs: null }, log: [], result: null,
 };
-const ninetyNine: NinetyNineVisibleState = {
+const ninetyNine: NinetyNineVisibleState = gameSeatValues({
   gameType: 'ninetynine', phase: 'playing', mySeat: 'N', myHand: [], handCounts: counts,
   total: 0, direction: 'ccw', currentTurnSeat: 'N', lastPlayed: null, stockCount: 30,
   eliminated: [], log: [], result: null,
-};
-const blackjack: BlackjackVisibleState = {
+});
+const blackjack: BlackjackVisibleState = gameSeatValues({
   gameType: 'blackjack', phase: 'betting', options: { playerDealer: true }, dealerSeat: 'N',
   totalHands: 8, mySeat: 'N', seats: ['N', 'E'], hand: 1, chips: { N: 1000, E: 1000, S: 0, W: 0 },
   myBet: null, betPlaced: { N: false, E: false, S: false, W: false }, betDeadline: null,
   hands: { N: [], E: [], S: [], W: [] }, dealer: [], holeHidden: false,
   currentTurnSeat: 'N', activeHand: 0, log: [], result: null,
-};
+});
 
 function render(gameType: GameType, context?: GameRulesContext): string {
   return renderToStaticMarkup(createElement(GameRulesContent, { gameType, context }));

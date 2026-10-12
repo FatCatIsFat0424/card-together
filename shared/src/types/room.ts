@@ -60,6 +60,8 @@ export interface BlackjackOptions {
 
 /** Room info (public) */
 export interface RoomInfo {
+  /** Randomize occupied seats when the host starts; missing defaults to false. */
+  readonly shuffleSeats?: boolean;
   /** Missing on legacy snapshots; defaults to standard Sevens rules. */
   readonly sevensOptions?: SevensOptions;
   /** Missing on legacy snapshots; defaults to the house dealer. */

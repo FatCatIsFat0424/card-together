@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { describe, expect, it } from 'vitest';
 import type { Card, NinetyNineVisibleState, PlayerVisibleGameState, Seat, SevensVisibleState } from '@shared/types';
 import { HIDDEN_GOD_VIEW, nextGodView, useGodViewStore } from '../../../client/src/stores/god-view-store';
@@ -8,11 +9,11 @@ const c = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit });
 const seats = <T>(value: T): Record<Seat, T> => ({ N: value, E: value, S: value, W: value });
 
 function ninetyNine(overrides: Partial<NinetyNineVisibleState> = {}): NinetyNineVisibleState {
-  return {
+  return gameSeatValues({
     gameType: 'ninetynine', phase: 'playing', mySeat: 'S', myHand: [c(2, 'clubs')], handCounts: seats(1),
     total: 0, direction: 'ccw', currentTurnSeat: 'S', lastPlayed: null, stockCount: 30, eliminated: [],
     log: [], result: null, ...overrides,
-  };
+  });
 }
 
 describe('god view', () => {
@@ -24,12 +25,13 @@ describe('god view', () => {
   });
 
   it('should show a spectator every hand at once and hold it during later presentations', () => {
-    const shown = nextGodView(HIDDEN_GOD_VIEW, ninetyNine({ observer: 'spectator', observedHands: hands }), true);
-    expect(shown).toEqual({ ...HIDDEN_GOD_VIEW, role: 'spectator', hands });
+    const expanded = gameSeatValues(hands);
+    const shown = nextGodView(HIDDEN_GOD_VIEW, ninetyNine({ observer: 'spectator', observedHands: expanded }), true);
+    expect(shown).toEqual({ ...HIDDEN_GOD_VIEW, role: 'spectator', hands: expanded });
     const played = { ...hands, N: [] };
     const next = ninetyNine({ observer: 'spectator', observedHands: played });
     expect(nextGodView(shown, next, true)).toBe(shown);
-    expect(nextGodView(shown, next, false).hands).toEqual(played);
+    expect(nextGodView(shown, next, false).hands).toEqual(gameSeatValues(played));
   });
 
   it('should open an eliminated view only after the eliminating presentation', () => {

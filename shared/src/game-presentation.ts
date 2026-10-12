@@ -1,7 +1,7 @@
 import type {
   AnyGameState, Card, ChinesePokerRow, LiarFace, LiarTableFace, PlayerVisibleGameState, SevensLogEntry,
 } from './types/game';
-import type { Seat } from './types/player';
+import type { GameSeat, Seat } from './types/player';
 import { rpScore } from './rules/redpoints';
 import { nnWinners } from './rules/ninetynine';
 import { SEVENS_COLLAPSE_MS, SEVENS_COLLAPSE_SETTLE_MS, SEVENS_SLAY_FRAME_MS, sevensSlayEffect } from './sevens-options';
@@ -19,14 +19,14 @@ export interface PresentationFrame {
     | 'dealerReveal' | 'dealerHit' | 'dealerStand' | 'settle' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street'
     | 'showdown' | 'award' | 'slay' | 'collapse' | 'finish';
   readonly durationMs: number;
-  readonly seat?: Seat;
+  readonly seat?: GameSeat;
   readonly cards: readonly Card[];
-  readonly cardSeats?: readonly Seat[];
+  readonly cardSeats?: readonly GameSeat[];
   readonly total?: number;
   readonly previousTotal?: number;
   readonly points?: number;
-  readonly target?: Seat;
-  readonly passedSeats?: readonly Seat[];
+  readonly target?: GameSeat;
+  readonly passedSeats?: readonly GameSeat[];
   readonly direction?: 'ccw' | 'cw';
   readonly choice?: 'plus' | 'minus' | null;
   readonly flipped?: boolean;

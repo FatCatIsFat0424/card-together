@@ -255,7 +255,7 @@ describe('Ninety-Nine with two decks and no reshuffle', () => {
     expect(game()).toMatchObject({ phase: 'scoring', currentTurnSeat: 'S', stock: [] });
     expect(game().hands.S).toHaveLength(5);
     expect(game().result).toEqual({
-      gameType: 'ninetynine', winners: ['N', 'E', 'S'], eliminationOrder: ['W'], finalTotal: 99,
+      gameType: 'ninetynine', seats: ['N', 'E', 'S', 'W'], winners: ['N', 'E', 'S'], eliminationOrder: ['W'], finalTotal: 99,
     });
     expect(isNinetyNineResult(game().result)).toBe(true);
     expect(persists()).toBe(true);
@@ -267,7 +267,7 @@ describe('Ninety-Nine with two decks and no reshuffle', () => {
     ninetynine.startGame(CODE, PLAYERS, deck, 'N', TWO_DECKS);
     expect(ninetynine.play(CODE, 'N', card('spades', 13))).toEqual({ success: true });
     expect(game().result).toEqual({
-      gameType: 'ninetynine', winnerSeat: 'N', eliminationOrder: ['W', 'S', 'E'], finalTotal: 99,
+      gameType: 'ninetynine', seats: ['N', 'E', 'S', 'W'], winnerSeat: 'N', eliminationOrder: ['W', 'S', 'E'], finalTotal: 99,
     });
     expect(game().stock).toHaveLength(83);
     expect(persists()).toBe(true);

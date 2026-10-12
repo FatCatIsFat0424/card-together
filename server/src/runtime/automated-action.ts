@@ -1,3 +1,4 @@
+import { isCompassSeat } from '@shared/rules/seats';
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { legalPlays } from '@shared/rules/bigtwo';
 import { NN_MAX, nnApply, nnIsPlayable, nnRequiresChoice } from '@shared/rules/ninetynine';
@@ -7,7 +8,7 @@ import { cpGreedyArrangement } from '@shared/rules/chinesepoker-arrange';
 import { ldMustChallenge } from '@shared/rules/liarsdeck';
 import { BJ_MIN_BET, bjDealerHits, bjSitsIn } from '@shared/rules/blackjack';
 import { heLegalActions } from '@shared/rules/holdem';
-import type { PlayerVisibleGameState, RoomCode, Seat } from '@shared/types';
+import type { PlayerInfo, PlayerVisibleGameState, RoomCode, GameSeat, Seat } from '@shared/types';
 import type { BotAction } from '../bots/bot-decisions';
 import * as chatManager from '../managers/chat-manager';
 import * as gameManager from '../managers/game-manager';
@@ -19,21 +20,25 @@ export const MAX_AUTOMATED_FAILURES = 3;
 /** Client i18n key for the chat line shown when a stuck game is aborted. */
 export const AUTOMATED_ABORT_MESSAGE = 'game.automatedAborted';
 
-export function applyAutomatedAction(code: RoomCode, seat: Seat, action: BotAction): { success: boolean; reason?: string } {
+export function applyAutomatedAction(code: RoomCode, seat: GameSeat, action: BotAction): { success: boolean; reason?: string } {
+  if (!isCompassSeat(seat) && !['ninetynine-play', 'blackjack-bet', 'blackjack-action', 'blackjack-dealer', 'holdem-action'].includes(action.type)) {
+    return { success: false, reason: 'This action requires a compass seat.' };
+  }
+  const compass = seat as Seat;
   switch (action.type) {
-    case 'bridge-redeal': return gameManager.handleRedealResponse(code, seat, action.accept, true);
-    case 'bridge-bid': return gameManager.handleBid(code, seat, action.action, true);
-    case 'bridge-play': return gameManager.handlePlayCard(code, seat, action.card, true);
-    case 'bigtwo-play': return gameManager.handleBigTwoPlay(code, seat, action.cards, true);
-    case 'bigtwo-pass': return gameManager.handleBigTwoPass(code, seat, true);
-    case 'redpoints-play': return gameManager.handleRedPointsPlay(code, seat, action.card, action.capture, true);
-    case 'redpoints-flip': return gameManager.handleRedPointsChooseFlip(code, seat, action.capture, true);
+    case 'bridge-redeal': return gameManager.handleRedealResponse(code, compass, action.accept, true);
+    case 'bridge-bid': return gameManager.handleBid(code, compass, action.action, true);
+    case 'bridge-play': return gameManager.handlePlayCard(code, compass, action.card, true);
+    case 'bigtwo-play': return gameManager.handleBigTwoPlay(code, compass, action.cards, true);
+    case 'bigtwo-pass': return gameManager.handleBigTwoPass(code, compass, true);
+    case 'redpoints-play': return gameManager.handleRedPointsPlay(code, compass, action.card, action.capture, true);
+    case 'redpoints-flip': return gameManager.handleRedPointsChooseFlip(code, compass, action.capture, true);
     case 'ninetynine-play': return gameManager.handleNinetyNinePlay(code, seat, action.card, action.choice, action.target, true);
-    case 'sevens-play': return gameManager.handleSevensPlay(code, seat, action.card, true);
-    case 'sevens-cover': return gameManager.handleSevensCover(code, seat, action.card, true);
-    case 'chinesepoker-arrange': return gameManager.handleChinesePokerArrange(code, seat, action.arrangement, true);
-    case 'liarsdeck-play': return gameManager.handleLiarsDeckPlay(code, seat, action.cardIds, true);
-    case 'liarsdeck-challenge': return gameManager.handleLiarsDeckChallenge(code, seat, true);
+    case 'sevens-play': return gameManager.handleSevensPlay(code, compass, action.card, true);
+    case 'sevens-cover': return gameManager.handleSevensCover(code, compass, action.card, true);
+    case 'chinesepoker-arrange': return gameManager.handleChinesePokerArrange(code, compass, action.arrangement, true);
+    case 'liarsdeck-play': return gameManager.handleLiarsDeckPlay(code, compass, action.cardIds, true);
+    case 'liarsdeck-challenge': return gameManager.handleLiarsDeckChallenge(code, compass, true);
     case 'blackjack-bet': return gameManager.handleBlackjackBet(code, seat, action.amount, true);
     case 'blackjack-action': return gameManager.handleBlackjackAction(code, seat, action.action, true);
     case 'blackjack-dealer': return gameManager.handleBlackjackDealerAction(code, seat, action.action, true);
@@ -49,7 +54,7 @@ function ninetyNineAction(visible: Extract<PlayerVisibleGameState, { gameType: '
     : undefined;
   const effect = nnApply(visible.total, card, choice);
   const target = effect.designate
-    ? SEAT_ORDER_CLOCKWISE.find((seat) => seat !== visible.mySeat && !visible.eliminated.includes(seat))
+    ? (visible.seats ?? SEAT_ORDER_CLOCKWISE).find((seat) => seat !== visible.mySeat && !visible.eliminated.includes(seat))
     : undefined;
   return { type: 'ninetynine-play', card, ...(choice ? { choice } : {}), ...(target ? { target } : {}) };
 }
@@ -117,8 +122,8 @@ export function firstLegalAction(visible: PlayerVisibleGameState): BotAction | n
 }
 
 /** Ends a game that cannot progress so the table is not retried forever. */
-function abortStuckGame(code: RoomCode, seat: Seat): void {
-  const players = gameManager.getGameState(code)?.players;
+function abortStuckGame(code: RoomCode, seat: GameSeat): void {
+  const players: Partial<Record<GameSeat, PlayerInfo>> | undefined = gameManager.getGameState(code)?.players;
   // Chat senders must be accounts, so a bot's stuck turn is reported about a human seat.
   const subject = players && [players[seat], ...SEAT_ORDER_CLOCKWISE.map((other) => players[other])]
     .find((player) => player && !player.isBot);
@@ -134,7 +139,7 @@ function abortStuckGame(code: RoomCode, seat: Seat): void {
  * another attempt.
  */
 export function performAutomatedTurn(
-  code: RoomCode, seat: Seat, failures: number,
+  code: RoomCode, seat: GameSeat, failures: number,
   choose: (visible: PlayerVisibleGameState) => BotAction | null,
 ): void {
   // A fallback that applies but never persists would otherwise be retried forever.

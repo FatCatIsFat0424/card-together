@@ -1,15 +1,15 @@
 // ─── God View Store: other seats' hands for spectators and eliminated players ───
 
 import { create } from 'zustand';
-import type { Card, LiarCard, ObserverRole, PlayerVisibleGameState, Seat } from '@shared/types';
+import type { Card, LiarCard, ObserverRole, PlayerVisibleGameState, GameSeat } from '@shared/types';
 import { retainSnapshotValue } from './snapshot-equality';
 
 export interface GodView {
   /** Set once the hands may be shown; an eliminated seat waits for its elimination frame. */
   readonly role: ObserverRole | null;
-  readonly hands: Record<Seat, readonly Card[]> | null;
-  readonly covered: Record<Seat, readonly Card[]> | null;
-  readonly liarHands: Record<Seat, readonly LiarCard[]> | null;
+  readonly hands: Partial<Record<GameSeat, readonly Card[]>> | null;
+  readonly covered: Partial<Record<GameSeat, readonly Card[]>> | null;
+  readonly liarHands: Partial<Record<GameSeat, readonly LiarCard[]>> | null;
   /** Blackjack's face-down dealer card */
   readonly hole: Card | null;
 }

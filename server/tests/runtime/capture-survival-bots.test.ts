@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { runSeededGame } from './seeded-game-runner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Card, NinetyNineVisibleState, PlayerInfo, RedPointsVisibleState, Seat } from '@shared/types';
@@ -33,12 +34,12 @@ function redPointsState(overrides: Partial<RedPointsVisibleState> = {}): RedPoin
 }
 
 function ninetyNineState(overrides: Partial<NinetyNineVisibleState> = {}): NinetyNineVisibleState {
-  return {
+  return gameSeatValues({
     gameType: 'ninetynine', phase: 'playing', mySeat: 'N', myHand: [],
     handCounts: { N: 5, E: 5, S: 5, W: 5 }, total: 0, direction: 'ccw',
     currentTurnSeat: 'N', lastPlayed: null, stockCount: 32, eliminated: [],
     log: [], result: null, ...overrides,
-  };
+  });
 }
 
 describe('capture and survival bot strategies', () => {
@@ -122,7 +123,7 @@ describe('capture and survival bot strategies', () => {
     for (let index = 0; index < 40; index++) {
       const action = getNinetyNineBotAction(state, random);
       expect(action?.type).toBe('ninetynine-play');
-      if (action?.type === 'ninetynine-play') targets.add(action.target!);
+      if (action?.type === 'ninetynine-play') targets.add((action.target as Seat)!);
     }
     expect(targets).toEqual(new Set(['S', 'W']));
     expect(state).toEqual(original);
@@ -141,14 +142,14 @@ describe('capture and survival bot strategies', () => {
       adapter.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), random), 'N');
       runSeededGame(`${gameType}/${seed}`, 2000, () => adapter.getGameState(CODE)?.phase === 'scoring', () => {
         const seat = adapter.getGameState(CODE)!.currentTurnSeat;
-        const state = adapter.getPlayerVisibleState(CODE, seat)!;
+        const state = adapter.getPlayerVisibleState(CODE, (seat as Seat))!;
         const original = structuredClone(state);
         const action = state.gameType === 'redpoints'
           ? getRedPointsBotAction(state, random) : getNinetyNineBotAction(state, random);
         expect(action).not.toBeNull();
         expect(state).toEqual(original);
-        if (action?.type === 'redpoints-play') expect(redpoints.play(CODE, seat, action.card, action.capture).success).toBe(true);
-        else if (action?.type === 'redpoints-flip') expect(redpoints.chooseFlip(CODE, seat, action.capture).success).toBe(true);
+        if (action?.type === 'redpoints-play') expect(redpoints.play(CODE, (seat as Seat), action.card, action.capture).success).toBe(true);
+        else if (action?.type === 'redpoints-flip') expect(redpoints.chooseFlip(CODE, (seat as Seat), action.capture).success).toBe(true);
         else if (action?.type === 'ninetynine-play') {
           expect(ninetynine.play(CODE, seat, action.card, action.choice, action.target).success).toBe(true);
         } else throw new Error('Unexpected bot action');

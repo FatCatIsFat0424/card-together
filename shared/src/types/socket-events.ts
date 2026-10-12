@@ -1,4 +1,4 @@
-import type { PlayerInfo, Seat } from './player';
+import type { GameSeat, PlayerInfo, Seat } from './player';
 import type {
   BlackjackOptions, RoomCode, RoomInfo, RoomSeatTarget, GameType, NinetyNineOptions, SevensOptions, TimeControl,
 } from './room';
@@ -94,6 +94,8 @@ export interface ClientToServerEvents {
     payload: BlackjackOptions, callback: (response: ActionResult) => void,
   ) => void;
   'room:ready': (callback: (response: ActionResult) => void) => void;
+  'room:start': (callback: (response: ActionResult) => void) => void;
+  'room:setShuffleSeats': (payload: { enabled: boolean }, callback: (response: ActionResult) => void) => void;
   'room:addBot': (
     payload: { seat: Seat }, callback: (response: ActionResult) => void,
   ) => void;
@@ -122,7 +124,7 @@ export interface ClientToServerEvents {
     payload: { capture: Card }, callback: (response: ActionResult) => void,
   ) => void;
   'game:ninetynine:play': (
-    payload: { card: Card; choice?: 'plus' | 'minus'; target?: Seat }, callback: (response: ActionResult) => void,
+    payload: { card: Card; choice?: 'plus' | 'minus'; target?: GameSeat }, callback: (response: ActionResult) => void,
   ) => void;
   'game:sevens:play': (
     payload: { card: Card }, callback: (response: ActionResult) => void,

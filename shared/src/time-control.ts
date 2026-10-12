@@ -2,7 +2,7 @@ import type { TimeControl } from './types/room';
 
 export const DEFAULT_TIME_CONTROL: TimeControl = { baseSeconds: 5, bankSeconds: 20 };
 export const TIME_CONTROL_LIMITS = {
-  baseSeconds: { min: 1, max: 60 },
+  baseSeconds: { min: 1, max: 300 },
   bankSeconds: { min: 0, max: 300 },
 } as const;
 

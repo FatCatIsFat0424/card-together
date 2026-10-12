@@ -1,3 +1,4 @@
+import { roomCanStart, roomSeatInfo } from '@shared/rules/seats';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import Alert from '@mui/material/Alert';
@@ -66,7 +67,7 @@ export function RoomPage(): ReactNode {
   const myAdditionalSeat = roomInfo?.additionalSeats?.findIndex((entry) => entry.player?.id === playerId) ?? -1;
   const connectionReady = useConnectionReady();
   const blocked = busy || !connectionReady;
-  const isReady = mySeat ? roomInfo?.seats[mySeat].isReady ?? false : false;
+  const isReady = mySeat ? (roomInfo ? roomSeatInfo(roomInfo, mySeat)?.isReady : false) ?? false : false;
   const isHost = Boolean(playerId) && roomInfo?.hostId === playerId;
   const hasEmptySeat = roomInfo ? Object.values(roomInfo.seats).some(({ player }) => !player) : false;
   const canMovePlayers = isHost && !blocked && roomInfo?.status === 'waiting';
@@ -143,14 +144,20 @@ export function RoomPage(): ReactNode {
     setError('');
     socket.timeout(10000).emit('room:removeSeat', handleResult);
   };
+  const start = (): void => {
+    if (blocked || !roomInfo || !roomCanStart(roomInfo) || !isHost) return;
+    setBusy(true);
+    setError('');
+    socket.timeout(10000).emit('room:start', handleResult);
+  };
+  const setShuffleSeats = (enabled: boolean): void => {
+    setBusy(true);
+    setError('');
+    socket.timeout(10000).emit('room:setShuffleSeats', { enabled }, handleResult);
+  };
   const ready = (): void => {
     if (blocked || !roomInfo) return;
-    if (!isReady && ((roomInfo.additionalSeats?.length ?? 0) > 0
-      || Object.values(roomInfo.seats).some(({ player }) => !player))) {
-      setReadyNotice({ id: Date.now(), message: t('room.fourPlayersOnly') });
-      return;
-    }
-    if (!mySeat) {
+    if (!mySeat && myAdditionalSeat < 0) {
       setReadyNotice({ id: Date.now(), message: t('room.spectatorHint') });
       return;
     }
@@ -272,6 +279,12 @@ export function RoomPage(): ReactNode {
           <span className={styles.srOnly} role="status">{copied ? t('room.copied') : ''}</span>
         </div>
         <div className={styles.headerActions}>
+          <label className={styles.ruleOption}>
+            <AppCheckbox checked={roomInfo.shuffleSeats ?? false}
+              disabled={!isHost || blocked || roomInfo.status !== 'waiting'}
+              onChange={(event) => setShuffleSeats(event.target.checked)} />
+            {t('room.shuffleSeats')}
+          </label>
           <TimeControlSettings
             key={`${roomInfo.code}:${roomInfo.hostId}:${roomInfo.timeControl?.baseSeconds}:${roomInfo.timeControl?.bankSeconds}`}
             value={roomInfo.timeControl ?? DEFAULT_TIME_CONTROL}
@@ -442,7 +455,9 @@ export function RoomPage(): ReactNode {
         {isHost && <button type="button" className="btn btn-outline" onClick={fillBots}
           disabled={blocked || !hasEmptySeat}>{t('room.fillBots')}</button>}
         <button className={`btn ${isReady ? 'btn-danger' : 'btn-success'} ${styles.readyBtn}`}
-          onClick={ready} disabled={blocked}>{t(isReady ? 'room.unready' : 'room.ready')}</button>
+          onClick={ready} disabled={blocked || roomInfo.status !== 'waiting'}>{t(isReady ? 'room.unready' : 'room.ready')}</button>
+        {isHost && <button type="button" className="btn btn-primary" onClick={start}
+          disabled={blocked || !roomCanStart(roomInfo)}>{t('room.start')}</button>}
       </div>
       </div>
       {seatDrag.drag && <div className={styles.dragPreview} aria-hidden="true"

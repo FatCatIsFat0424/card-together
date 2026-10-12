@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { NN_MAX, nnApply, nnIsPlayable, nnRank, nnRequiresChoice, nnWinners } from '@shared/rules/ninetynine';
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
-import type { Card, NinetyNineMatchResult, NinetyNineVisibleState, Seat } from '@shared/types';
+import type { Card, NinetyNineMatchResult, NinetyNineVisibleState, GameSeat } from '@shared/types';
 import { cardImageUrl } from '../../cards';
 import { socket } from '../../socket';
 import { useGameStore } from '../../stores/game-store';
@@ -23,7 +23,7 @@ import { AppIcon } from '../../components/AppIcon';
 import styles from './NinetyNineTable.module.css';
 import { isOwnTurn } from '../observer-view';
 
-const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
+const SEATS: readonly GameSeat[] = ['N', 'E', 'S', 'W'];
 const RECENT_MOVES = 8;
 
 type ActionCallback = (timeout: Error | null, response?: { success: boolean; error?: string }) => void;
@@ -154,7 +154,7 @@ export function NinetyNineTable(): ReactNode {
   const unplayable = game.myHand.filter((card) => !nnIsPlayable(game.total, card));
   const chosen = canPlay && pendingCard && game.myHand.some((card) => sameCard(card, pendingCard)) ? pendingCard : null;
   const targets = chosen?.rank === 5
-    ? SEATS.filter((seat) => seat !== game.mySeat && !game.eliminated.includes(seat)) : [];
+    ? (game.seats ?? SEATS).filter((seat) => seat !== game.mySeat && !game.eliminated.includes(seat)) : [];
 
   const handleActionResult: ActionCallback = (timeout, response) => {
     setActionPending(false);
@@ -162,7 +162,7 @@ export function NinetyNineTable(): ReactNode {
     else if (!response?.success) setActionError(response?.error ?? t('common.error'));
   };
 
-  const send = (card: Card, choice?: NnChoice, target?: Seat): void => {
+  const send = (card: Card, choice?: NnChoice, target?: GameSeat): void => {
     if (!canPlay) return;
     setActionError('');
     setActionPending(true);

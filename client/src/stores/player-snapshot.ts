@@ -1,3 +1,5 @@
+import { GAME_SEAT_ORDER } from '@shared/constants';
+import { roomSeatInfo } from '@shared/rules/seats';
 import type { ChatMessageEvent, PlayerSnapshot } from '@shared/types';
 import { useAccountStore } from './account-store';
 import { usePlayerStore } from './player-store';
@@ -15,8 +17,8 @@ export function applyPlayerSnapshot(snapshot: PlayerSnapshot): void {
   if (snapshot.coins !== undefined) useAccountStore.getState().setCoins(account.id, snapshot.coins, snapshot.coinRevision);
   if (snapshot.room) {
     useRoomStore.getState().setRoom(snapshot.room.code, snapshot.room);
-    const seat = (['N', 'E', 'S', 'W'] as const).find(
-      (value) => snapshot.room?.seats[value].player?.id === snapshot.player?.id,
+    const seat = GAME_SEAT_ORDER.find(
+      (value) => (snapshot.room ? roomSeatInfo(snapshot.room, value)?.player?.id : null) === snapshot.player?.id,
     );
     useRoomStore.getState().setMySeat(seat ?? null);
   } else {

@@ -58,6 +58,7 @@ describe('joining a room hosted by a friend', () => {
   it('allows spectating a playing room without revealing private hands to seated players', async () => {
     for (const client of app.clients[0]) expect(await client.timeout(5_000).emitWithAck('room:ready'))
       .toEqual({ success: true });
+    expect(await app.clients[0][0].timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
     expect(await join()).toMatchObject({ success: true, room: { status: 'playing' } });
     const spectator = await app.clients[1][0].timeout(5_000).emitWithAck('player:resume');
     expect(spectator.gameState).toMatchObject({ observer: 'spectator' });

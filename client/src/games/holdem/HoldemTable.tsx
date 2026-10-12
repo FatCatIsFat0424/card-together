@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { HE_HANDS, heReplay } from '@shared/rules/holdem';
-import type { HoldemAction, HoldemLogEntry, HoldemMatchResult, HoldemVisibleState, Seat } from '@shared/types';
+import type { HoldemAction, HoldemLogEntry, HoldemMatchResult, HoldemVisibleState, GameSeat } from '@shared/types';
 import { tablePosition } from '../../game-view';
 import type { TablePosition } from '../../game-view';
 import { socket } from '../../socket';
@@ -39,7 +39,7 @@ const toneClass = (value: number): string | undefined => value > 0 ? styles.gain
 
 /** One seat's corner of the felt: hole cards (opponents), last action, street stake, and winnings. */
 function SeatSpot({ seat, view, position, isMe, action, blinds }: {
-  seat: Seat; view: HoldemTableView; position: TablePosition; isMe: boolean; action: SeatAction | undefined;
+  seat: GameSeat; view: HoldemTableView; position: TablePosition; isMe: boolean; action: SeatAction | undefined;
   blinds: HoldemBlindSeats | null;
 }): ReactNode {
   const { t } = useI18nStore();
@@ -90,8 +90,8 @@ function Centre({ game, view }: { game: HoldemVisibleState; view: HoldemTableVie
   const { t } = useI18nStore();
   const blinds = holdemBlindSeats(view);
   const actions = streetActions(game.log, view.logEnd);
-  return <div className={styles.centre}>
-    {game.seats.map((seat) => <SeatSpot key={seat} seat={seat} view={view} position={tablePosition(seat, game.mySeat)}
+  return <div className={[styles.centre, game.seats.some((seat) => seat.startsWith('P')) && styles.expandedCentre].filter(Boolean).join(' ')}>
+    {game.seats.map((seat) => <SeatSpot key={seat} seat={seat} view={view} position={tablePosition(seat, game.mySeat, game.seats)}
       isMe={seat === game.mySeat} action={actions[seat]} blinds={blinds} />)}
     <div className={styles.middle}>
       {view.hand > 0 && <p className={styles.handLine}>
@@ -106,7 +106,7 @@ function Centre({ game, view }: { game: HoldemVisibleState; view: HoldemTableVie
 }
 
 function MoveLine({ log, seats, index }: {
-  log: readonly HoldemLogEntry[]; seats: readonly Seat[]; index: number;
+  log: readonly HoldemLogEntry[]; seats: readonly GameSeat[]; index: number;
 }): ReactNode {
   const { t } = useI18nStore();
   const seatName = useSeatName();

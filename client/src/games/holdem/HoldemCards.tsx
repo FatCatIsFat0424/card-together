@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
-import type { Card, Seat } from '@shared/types';
+import type { Card, GameSeat } from '@shared/types';
 import { cardImageUrl } from '../../cards';
 import { useI18nStore } from '../../stores/i18n-store';
 import { ChipIcon } from '../ChipIcon';
@@ -65,7 +65,7 @@ export function ChipAmount({ amount }: { amount: number }): ReactNode {
 
 /** Dealer button and blind markers for one seat. */
 export function SeatMarkers({ seat, blinds }: {
-  seat: Seat; blinds: HoldemBlindSeats | null;
+  seat: GameSeat; blinds: HoldemBlindSeats | null;
 }): ReactNode {
   const { t } = useI18nStore();
   if (!blinds) return null;

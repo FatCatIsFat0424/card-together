@@ -12,9 +12,12 @@ import * as gameManager from '../managers/game-manager';
 import * as chatManager from '../managers/chat-manager';
 import * as inviteManager from '../managers/invite-manager';
 
-function startIfReady(code: RoomCode): void {
+function startPreparedRoom(code: RoomCode, hostId: string): void {
   const room = roomManager.getRoomInfo(code);
-  if (!room || !roomManager.isAllReady(code)) return;
+  if (!room) throw actionError('Room not found.');
+  if (room.hostId !== hostId) throw actionError('Only the host can start the game.');
+  if (!roomManager.isAllReady(code)) throw actionError('Meet the player count requirement and prepare every seated player first.');
+  roomManager.shuffleReadySeats(code);
   const players = roomManager.getSeatPlayers(code);
   if (!players) throw actionError('Room not found.');
   roomManager.setRoomStatus(code, 'playing');
@@ -229,7 +232,17 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
   socket.on('room:ready', (callback) => runAction(context, socket, callback, () => {
     const code = requireRoom(socket);
     requireSuccess(roomManager.setReady(code, socket.data.accountId, true));
-    startIfReady(code);
+    return { success: true };
+  }));
+
+  socket.on('room:start', (callback) => runAction(context, socket, callback, () => {
+    startPreparedRoom(requireRoom(socket), socket.data.accountId);
+    return { success: true };
+  }));
+
+  socket.on('room:setShuffleSeats', (payload, callback) => runAction(context, socket, callback, () => {
+    if (!payload || typeof payload.enabled !== 'boolean') throw actionError('Invalid seat shuffle setting.');
+    requireSuccess(roomManager.setShuffleSeats(requireRoom(socket), socket.data.accountId, payload.enabled));
     return { success: true };
   }));
 
@@ -237,7 +250,6 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
     const seat = requireSeat(payload);
     const code = requireRoom(socket);
     requireSuccess(roomManager.addBot(code, socket.data.accountId, seat));
-    startIfReady(code);
     return { success: true };
   }));
 
@@ -250,7 +262,6 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
   socket.on('room:fillBots', (callback) => runAction(context, socket, callback, () => {
     const code = requireRoom(socket);
     requireSuccess(roomManager.fillBots(code, socket.data.accountId));
-    startIfReady(code);
     return { success: true };
   }));
 

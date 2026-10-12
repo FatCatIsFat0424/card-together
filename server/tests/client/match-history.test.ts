@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { describe, expect, it } from 'vitest';
 import type { MatchSummary, PublicAccount } from '@shared/types';
 import { gameHistoryStatistics, matchOutcome, selectHistoryMatches } from '../../../client/src/match-history';
@@ -48,8 +49,8 @@ describe('history outcomes', () => {
   it('maps account ids through the recorded seats of a two-seat table', () => {
     const headsUp: MatchSummary = {
       id: 'heads-up', roomCode: 'ROOM3', accountIds: ['east', 'west'], finishedAt: 400,
-      result: { gameType: 'holdem', seats: ['E', 'W'], chips: { N: 0, E: 0, S: 0, W: 2000 }, hands: 9,
-        winners: ['W'], eliminationOrder: ['E'] },
+      result: gameSeatValues({ gameType: 'holdem', seats: ['E', 'W'], chips: { N: 0, E: 0, S: 0, W: 2000 }, hands: 9,
+        winners: ['W'], eliminationOrder: ['E'] }),
     };
     expect(['east', 'west'].map((id) => matchOutcome(headsUp, id))).toEqual(['loss', 'win']);
   });

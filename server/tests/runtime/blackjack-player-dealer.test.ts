@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   bjDealerActions, bjMatchHands, bjMatchOver, bjNextDealer, bjProportionalPayouts, bjSettle,
@@ -88,10 +89,10 @@ describe('Blackjack player dealer rules', () => {
     expect(bjMatchHands(3, false)).toBe(8);
     expect(bjNextDealer('E', ['N', 'E', 'W'])).toBe('W');
     expect(bjNextDealer('W', ['N', 'E', 'W'])).toBe('N');
-    expect(bjMatchOver(3, { N: 500, E: 500, S: 0, W: 0 }, ['N', 'E'], true)).toBe(false);
-    expect(bjMatchOver(4, { N: 500, E: 500, S: 0, W: 0 }, ['N', 'E'], true)).toBe(true);
-    expect(bjMatchOver(1, { N: 995, E: 5, S: 0, W: 0 }, ['N', 'E'], true)).toBe(true);
-    expect(bjMatchOver(1, { N: 995, E: 5, S: 0, W: 0 }, ['N', 'E'], false)).toBe(false);
+    expect(bjMatchOver(3, gameSeatValues({ N: 500, E: 500, S: 0, W: 0 }), ['N', 'E'], true)).toBe(false);
+    expect(bjMatchOver(4, gameSeatValues({ N: 500, E: 500, S: 0, W: 0 }), ['N', 'E'], true)).toBe(true);
+    expect(bjMatchOver(1, gameSeatValues({ N: 995, E: 5, S: 0, W: 0 }), ['N', 'E'], true)).toBe(true);
+    expect(bjMatchOver(1, gameSeatValues({ N: 995, E: 5, S: 0, W: 0 }), ['N', 'E'], false)).toBe(false);
   });
 
   it('should let a player dealer hit below 17, choose from 17, and stop at 21', () => {
@@ -103,7 +104,7 @@ describe('Blackjack player dealer rules', () => {
   });
 
   it('should move chips between each player and the dealer', () => {
-    const settlement = bjSettle({
+    const settlement = bjSettle(gameSeatValues({
       hand: 1, dealerSeat: 'N', dealerStood: true,
       chips: { N: 1000, E: 950, S: 900, W: 950 },
       hands: {
@@ -113,27 +114,27 @@ describe('Blackjack player dealer rules', () => {
         W: [hand([card(10), card(8)])],
       },
       dealer: [card(10), card(8)],
-    });
-    expect(settlement.outcomes).toEqual({ N: [], E: ['blackjack'], S: ['win'], W: ['push'] });
-    expect(settlement.net).toEqual({ N: -175, E: 75, S: 100, W: 0 });
-    expect(settlement.chips).toEqual({ N: 825, E: 1075, S: 1100, W: 1000 });
+    }));
+    expect(settlement.outcomes).toEqual(gameSeatValues({ N: [], E: ['blackjack'], S: ['win'], W: ['push'] }));
+    expect(settlement.net).toEqual(gameSeatValues({ N: -175, E: 75, S: 100, W: 0 }));
+    expect(settlement.chips).toEqual(gameSeatValues({ N: 825, E: 1075, S: 1100, W: 1000 }));
   });
 
   it('should pay winners in proportion when the dealer runs short, rounding down and passing leftovers clockwise', () => {
-    expect(bjProportionalPayouts({ N: 0, E: 100, S: 50, W: 50 }, 101, 'N')).toEqual({ N: 0, E: 51, S: 25, W: 25 });
-    expect(bjProportionalPayouts({ N: 0, E: 100, S: 50, W: 50 }, 103, 'N')).toEqual({ N: 0, E: 52, S: 26, W: 25 });
-    expect(bjProportionalPayouts({ N: 30, E: 0, S: 30, W: 30 }, 50, 'E')).toEqual({ N: 16, E: 0, S: 17, W: 17 });
+    expect(bjProportionalPayouts(gameSeatValues({ N: 0, E: 100, S: 50, W: 50 }), 101, 'N')).toEqual(gameSeatValues({ N: 0, E: 51, S: 25, W: 25 }));
+    expect(bjProportionalPayouts(gameSeatValues({ N: 0, E: 100, S: 50, W: 50 }), 103, 'N')).toEqual(gameSeatValues({ N: 0, E: 52, S: 26, W: 25 }));
+    expect(bjProportionalPayouts(gameSeatValues({ N: 30, E: 0, S: 30, W: 30 }), 50, 'E')).toEqual(gameSeatValues({ N: 16, E: 0, S: 17, W: 17 }));
     // The dealer collects W's lost stake first, then splits its 30 + 40 between E and S (46.7 and 23.3,
     // the leftover chip going to E as the first winner after the dealer) and ends at zero.
-    const settlement = bjSettle({
+    const settlement = bjSettle(gameSeatValues({
       hand: 1, dealerSeat: 'N', dealerStood: true,
       chips: { N: 30, E: 900, S: 950, W: 960 },
       hands: { N: [], E: [hand([card(10), card(9)], 100)], S: [hand([card(10), card(9, 'hearts')], 50)],
         W: [hand([card(10), card(6)], 40)] },
       dealer: [card(10), card(8)],
-    });
-    expect(settlement.chips).toEqual({ N: 0, E: 1047, S: 1023, W: 960 });
-    expect(settlement.net).toEqual({ N: -30, E: 47, S: 23, W: -40 });
+    }));
+    expect(settlement.chips).toEqual(gameSeatValues({ N: 0, E: 1047, S: 1023, W: 960 }));
+    expect(settlement.net).toEqual(gameSeatValues({ N: -30, E: 47, S: 23, W: -40 }));
   });
 });
 
@@ -195,7 +196,7 @@ describe('Blackjack player dealer gameplay', () => {
       .toEqual({ type: 'blackjack-dealer', action: 'stand' });
     expect(blackjack.dealerAct(CODE, 'N', 'stand').success).toBe(true);
     expect(game().log.slice(-2).map((entry) => entry.type)).toEqual(['dealerStand', 'settle']);
-    expect(game().chips).toEqual({ N: 980, E: 0, S: 1020, W: 0 });
+    expect(game().chips).toEqual(gameSeatValues({ N: 980, E: 0, S: 1020, W: 0 }));
     expect(game().dealerSeat).toBe('S');
     expect(isRuntimeSnapshot(snapshot())).toBe(true);
 
@@ -212,7 +213,7 @@ describe('Blackjack player dealer gameplay', () => {
     for (let steps = 0; game().phase !== 'scoring' && steps < 100; steps++) {
       const state = game();
       if (state.phase === 'betting') {
-        dealers.push(state.dealerSeat!);
+        dealers.push((state.dealerSeat as Seat)!);
         for (const seat of blackjack.pendingBetSeats(state)) blackjack.bet(CODE, seat, 10, true, 1000);
       } else if (state.hole === null) {
         blackjack.dealerAct(CODE, state.currentTurnSeat, bjDealerActions(state.dealer)[0]);
@@ -288,12 +289,12 @@ describe('Blackjack player dealer bot and timer', () => {
   });
 
   it('should keep a bot dealer from betting and use the house rule when a human dealer times out', () => {
-    const view = {
+    const view = gameSeatValues({
       gameType: 'blackjack', phase: 'betting', mySeat: 'N', seats: ['N', 'E'], options: PLAYER_DEALER,
       dealerSeat: 'N', totalHands: 4, hand: 0, chips: { N: 1000, E: 1000, S: 0, W: 0 }, myBet: null,
       betPlaced: { N: false, E: false, S: false, W: false }, betDeadline: 1, hands: hands({}), dealer: [],
       holeHidden: false, currentTurnSeat: 'N', activeHand: 0, log: [], result: null,
-    } as const;
+    } as const);
     expect(getBlackjackBotAction(view, () => 0.5)).toBeNull();
     const turn = { ...view, phase: 'playing', dealer: [card(10), card(6)] } as const;
     expect(blackjackDealerDefault(turn)).toEqual({ type: 'blackjack-dealer', action: 'hit' });

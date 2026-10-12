@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { describe, expect, it } from 'vitest';
 import type { BlackjackHand, BlackjackVisibleState, Card } from '@shared/types';
 import { bjLegalActions } from '@shared/rules/blackjack';
@@ -11,13 +12,13 @@ function decide(cards: Card[], up: Card['rank'], chips = 1000): string {
 }
 
 function visible(overrides: Partial<BlackjackVisibleState> = {}): BlackjackVisibleState {
-  return {
+  return gameSeatValues({
     gameType: 'blackjack', phase: 'playing', mySeat: 'N', seats: ['N', 'E', 'S', 'W'], hand: 1,
     options: { playerDealer: false }, dealerSeat: null, totalHands: 8,
     chips: { N: 950, E: 950, S: 950, W: 950 }, myBet: null, betPlaced: { N: false, E: false, S: false, W: false },
     betDeadline: null, hands: { N: [hand([card(10), card(6)])], E: [], S: [], W: [] }, dealer: [card(10, 'hearts')],
     holeHidden: true, currentTurnSeat: 'N', activeHand: 0, log: [], result: null, ...overrides,
-  };
+  });
 }
 
 describe('Blackjack bot strategy', () => {
@@ -65,6 +66,6 @@ describe('Blackjack bot strategy', () => {
     expect(getBlackjackBotAction(visible({ currentTurnSeat: 'E' }), () => 0.5)).toBeNull();
     expect(getBlackjackBotAction(visible({ phase: 'betting' }), () => 0)).toEqual({ type: 'blackjack-bet', amount: 30 });
     expect(getBlackjackBotAction(visible({ phase: 'betting', myBet: 30 }), () => 0)).toBeNull();
-    expect(getBlackjackBotAction(visible({ phase: 'betting', chips: { N: 5, E: 0, S: 0, W: 0 } }), () => 0)).toBeNull();
+    expect(getBlackjackBotAction(visible(gameSeatValues({ phase: 'betting', chips: { N: 5, E: 0, S: 0, W: 0 } })), () => 0)).toBeNull();
   });
 });

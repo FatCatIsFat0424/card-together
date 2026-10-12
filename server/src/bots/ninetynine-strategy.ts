@@ -1,5 +1,5 @@
-import type { Card, NinetyNineDirection, NinetyNineLogEntry, NinetyNineVisibleState, Seat } from '@shared/types';
-import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import type { Card, NinetyNineDirection, NinetyNineLogEntry, NinetyNineVisibleState, GameSeat } from '@shared/types';
+import { GAME_SEAT_ORDER, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { NN_HAND_SIZE, NN_MAX, nnApply, nnRequiresChoice } from '@shared/rules/ninetynine';
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { createDeck } from '../engine/deck';
@@ -28,21 +28,22 @@ const fits = (card: Card, headroom: number): boolean => isRescue(card) || pips(c
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 
-function step(seat: Seat, direction: NinetyNineDirection): Seat {
-  const offset = direction === 'cw' ? 1 : SEAT_ORDER_CLOCKWISE.length - 1;
-  return SEAT_ORDER_CLOCKWISE[(SEAT_ORDER_CLOCKWISE.indexOf(seat) + offset) % SEAT_ORDER_CLOCKWISE.length];
+function step(seat: GameSeat, direction: NinetyNineDirection): GameSeat {
+  const offset = direction === 'cw' ? 1 : GAME_SEAT_ORDER.length - 1;
+  return GAME_SEAT_ORDER[(GAME_SEAT_ORDER.indexOf(seat) + offset) % GAME_SEAT_ORDER.length];
 }
 
-function nextAlive(visible: NinetyNineVisibleState, from: Seat, direction: NinetyNineDirection): Seat {
+function nextAlive(visible: NinetyNineVisibleState, from: GameSeat, direction: NinetyNineDirection): GameSeat {
   let seat = step(from, direction);
-  while (visible.eliminated.includes(seat) && seat !== from) seat = step(seat, direction);
+  while ((!(visible.seats ?? SEAT_ORDER_CLOCKWISE as readonly GameSeat[]).includes(seat)
+    || visible.eliminated.includes(seat)) && seat !== from) seat = step(seat, direction);
   return seat;
 }
 
 /** Opponent turns before the bot acts again, assuming no further reverse or designation. */
-function turnsUntilMine(visible: NinetyNineVisibleState, first: Seat, direction: NinetyNineDirection): number {
+function turnsUntilMine(visible: NinetyNineVisibleState, first: GameSeat, direction: NinetyNineDirection): number {
   let turns = 0;
-  for (let seat = first; seat !== visible.mySeat && turns < SEAT_ORDER_CLOCKWISE.length; turns++) {
+  for (let seat = first; seat !== visible.mySeat && turns < GAME_SEAT_ORDER.length; turns++) {
     seat = nextAlive(visible, seat, direction);
   }
   return turns;
@@ -54,9 +55,9 @@ type PlayEntry = Extract<NinetyNineLogEntry, { type: 'play' }>;
  * A rescue card spent while every number card was still safe suggests a hand without number cards,
  * so pressure on that seat is unlikely to force an elimination.
  */
-function showedRescueRichHand(visible: NinetyNineVisibleState, seat: Seat): boolean {
+function showedRescueRichHand(visible: NinetyNineVisibleState, seat: GameSeat): boolean {
   const plays = visible.log.filter((entry): entry is PlayEntry => entry.type === 'play');
-  const recent = Math.max(0, plays.length - SEAT_ORDER_CLOCKWISE.length * 2);
+  const recent = Math.max(0, plays.length - GAME_SEAT_ORDER.length * 2);
   for (let index = plays.length - 1; index >= recent; index--) {
     const entry = plays[index];
     if (entry.seat !== seat) continue;
@@ -101,11 +102,11 @@ function allFrom(size: number, pool: number, draws: number): number {
 
 interface Outcome {
   readonly total: number;
-  readonly next: Seat;
+  readonly next: GameSeat;
   readonly turnsUntilMine: number;
 }
 
-function outcomeOf(visible: NinetyNineVisibleState, total: number, reverse: boolean, target?: Seat): Outcome {
+function outcomeOf(visible: NinetyNineVisibleState, total: number, reverse: boolean, target?: GameSeat): Outcome {
   const direction: NinetyNineDirection = reverse ? (visible.direction === 'cw' ? 'ccw' : 'cw') : visible.direction;
   const next = target ?? nextAlive(visible, visible.mySeat, direction);
   return { total, next, turnsUntilMine: turnsUntilMine(visible, next, direction) };
@@ -114,7 +115,7 @@ function outcomeOf(visible: NinetyNineVisibleState, total: number, reverse: bool
 function scorePlay(visible: NinetyNineVisibleState, unseen: readonly Card[], index: number, outcome: Outcome): number {
   const { total } = outcome;
   const remaining = visible.myHand.filter((_, cardIndex) => cardIndex !== index);
-  const aliveCount = SEAT_ORDER_CLOCKWISE.filter((seat) => !visible.eliminated.includes(seat)).length;
+  const aliveCount = (visible.seats ?? SEAT_ORDER_CLOCKWISE).filter((seat) => !visible.eliminated.includes(seat)).length;
   // A two-deck stock is never refilled and the match ends once it is drawn empty, so the kept hand
   // matters only if the stock outlasts the opponent turns before the bot acts again.
   const playsLeft = visible.options?.twoDecks ? visible.stockCount - 1 : Infinity;
@@ -146,7 +147,7 @@ function scorePlay(visible: NinetyNineVisibleState, unseen: readonly Card[], ind
 export function getNinetyNineBotAction(visible: NinetyNineVisibleState, random: () => number): BotAction | null {
   if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat
     || visible.eliminated.includes(visible.mySeat)) return null;
-  const opponents: Seat[] = SEAT_ORDER_CLOCKWISE
+  const opponents: GameSeat[] = (visible.seats ?? SEAT_ORDER_CLOCKWISE)
     .filter((seat) => seat !== visible.mySeat && !visible.eliminated.includes(seat));
   const unseen = unseenCards(visible);
   const options: { value: BotAction; score: number }[] = [];
@@ -155,7 +156,7 @@ export function getNinetyNineBotAction(visible: NinetyNineVisibleState, random: 
     for (const choice of choices) {
       const effect = nnApply(visible.total, card, choice);
       if (effect.total > NN_MAX) continue;
-      const targets: readonly (Seat | undefined)[] = effect.designate ? opponents : [undefined];
+      const targets: readonly (GameSeat | undefined)[] = effect.designate ? opponents : [undefined];
       for (const target of targets) {
         options.push({
           value: {

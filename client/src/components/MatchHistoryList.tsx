@@ -1,10 +1,11 @@
+import { gameSeatValue } from '@shared/rules/seats';
 import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
-import type { GameType, MatchHistory, MatchSummary, PublicAccount, Seat } from '@shared/types';
+import type { GameType, MatchHistory, MatchSummary, PublicAccount, GameSeat } from '@shared/types';
 import { GAME_TYPES, SUIT_SYMBOLS } from '@shared/constants';
 import { matchOutcome, selectHistoryMatches } from '../match-history';
 import type { HistorySortKey, MatchOutcome, SortDirection } from '../match-history';
@@ -30,30 +31,30 @@ function MatchResultLabel({ match, players, accountId }: {
   // accountIds follow the recorded seats in N, E, S, W order
   const seats = resultSeats(result);
   const mySeat = seats[match.accountIds.indexOf(accountId ?? '')];
-  const seatName = (seat: Seat): string => {
+  const seatName = (seat: GameSeat): string => {
     const id = match.accountIds[seats.indexOf(seat)];
     return id?.startsWith('bot:') ? t('player.botSeat', { seat: t(`seat.${seat}`) })
       : players[id]?.nickname ?? t(`seat.${seat}`);
   };
   if (result.gameType === 'redpoints') {
     return <span><AppIcon name="trophy" /> {joinNames(result.winners.map(seatName), locale)}
-      {mySeat && <> · {t('history.points', { n: String(result.points[mySeat]) })}</>}</span>;
+      {mySeat && <> · {t('history.points', { n: String((gameSeatValue(result.points, mySeat) ?? 0)) })}</>}</span>;
   }
   if (result.gameType === 'sevens') {
     return <span><AppIcon name="trophy" /> {joinNames(result.winners.map(seatName), locale)}
-      {mySeat && <> · {t('history.penalty', { n: String(result.penalties[mySeat]) })}</>}</span>;
+      {mySeat && <> · {t('history.penalty', { n: String((gameSeatValue(result.penalties, mySeat) ?? 0)) })}</>}</span>;
   }
   if (result.gameType === 'chinesepoker') {
     return <span><AppIcon name="trophy" /> {joinNames(result.winners.map(seatName), locale)}
-      {mySeat && <> · {t('history.score', { n: signed(result.scores[mySeat]) })}</>}</span>;
+      {mySeat && <> · {t('history.score', { n: signed((gameSeatValue(result.scores, mySeat) ?? 0)) })}</>}</span>;
   }
   if (result.gameType === 'blackjack') {
     return <span><AppIcon name="trophy" /> {joinNames(result.winners.map(seatName), locale)}
-      {mySeat && <> · {t('history.chips', { n: String(result.chips[mySeat]) })}</>}</span>;
+      {mySeat && <> · {t('history.chips', { n: String((gameSeatValue(result.chips, mySeat) ?? 0)) })}</>}</span>;
   }
   if (result.gameType === 'holdem') {
     return <span><AppIcon name="trophy" /> {joinNames(result.winners.map(seatName), locale)}
-      {mySeat && <> · {t('history.chips', { n: String(result.chips[mySeat]) })}</>}</span>;
+      {mySeat && <> · {t('history.chips', { n: String((gameSeatValue(result.chips, mySeat) ?? 0)) })}</>}</span>;
   }
   if (result.gameType === 'ninetynine') {
     const myRank = mySeat && nnRank(result, mySeat);
@@ -61,14 +62,14 @@ function MatchResultLabel({ match, players, accountId }: {
       {myRank && <> · {t('history.rank', { n: String(myRank) })}</>}</span>;
   }
   if (result.gameType === 'liarsdeck') {
-    const myRank = mySeat && (mySeat === result.winnerSeat ? 1 : 4 - result.eliminationOrder.indexOf(mySeat));
+    const myRank = mySeat && (mySeat === result.winnerSeat ? 1 : 4 - result.eliminationOrder.findIndex((seat) => seat === mySeat));
     return <span><AppIcon name="trophy" /> {seatName(result.winnerSeat)}
       {myRank && <> · {t('history.rank', { n: String(myRank) })}</>}</span>;
   }
   if (result.gameType === 'bigtwo') {
     return <span><AppIcon name="trophy" /> {seatName(result.winnerSeat)}
       {result.dragon && ' 🐉'}
-      {mySeat && <> · {t('history.penalty', { n: String(result.scores[mySeat]) })}</>}</span>;
+      {mySeat && <> · {t('history.penalty', { n: String((gameSeatValue(result.scores, mySeat) ?? 0)) })}</>}</span>;
   }
   return <span>{result.contract.level}{result.contract.suit === 'nt' ? 'NT'
     : SUIT_SYMBOLS[result.contract.suit]} · {result.declarerTeamTricks}

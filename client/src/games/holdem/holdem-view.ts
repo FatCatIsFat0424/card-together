@@ -1,13 +1,14 @@
+import { GAME_SEAT_ORDER, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { frameLogIndex } from '@shared/game-presentation';
 import type { PresentationFrame } from '@shared/game-presentation';
 import { HE_STARTING_CHIPS, heBestHand, heBlindSeats, heLegalActions, hePots, heReplay } from '@shared/rules/holdem';
 import type { HeTableView } from '@shared/rules/holdem';
 import type {
-  Card, ChinesePokerCategory, HoldemLogEntry, HoldemMatchResult, HoldemPot, HoldemVisibleState, Seat,
+  Card, ChinesePokerCategory, HoldemLogEntry, HoldemMatchResult, HoldemPot, HoldemVisibleState, GameSeat,
 } from '@shared/types';
 import { isOwnTurn } from '../observer-view';
 
-export const HE_SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
+export const HE_SEATS: readonly GameSeat[] = GAME_SEAT_ORDER;
 /** Board slots, including streets not dealt yet */
 export const HE_BOARD_SLOTS = 5;
 
@@ -15,9 +16,9 @@ export const HE_BOARD_SLOTS = 5;
 export interface HoldemAwardView {
   readonly pots: readonly HoldemPot[];
   /** Chips each seat collected from the pots */
-  readonly payouts: Record<Seat, number>;
+  readonly payouts: Record<GameSeat, number>;
   /** Seats that lost their last chip in this hand */
-  readonly eliminated: readonly Seat[];
+  readonly eliminated: readonly GameSeat[];
 }
 
 /** Public table as the presentation currently shows it. */
@@ -27,8 +28,8 @@ export interface HoldemTableView extends HeTableView {
   readonly logEnd: number;
 }
 
-function seatMap<T>(value: (seat: Seat) => T): Record<Seat, T> {
-  return { N: value('N'), E: value('E'), S: value('S'), W: value('W') };
+function seatMap<T>(value: (seat: GameSeat) => T): Record<GameSeat, T> {
+  return Object.fromEntries(GAME_SEAT_ORDER.map((seat) => [seat, value(seat)])) as Record<GameSeat, T>;
 }
 
 /** Index of the latest `hand` entry before `end`, or -1 before the first deal. */
@@ -40,7 +41,7 @@ function handStart(log: readonly HoldemLogEntry[], end: number): number {
 }
 
 /** The award of the hand shown after the first `end` entries, if it has been reached. */
-export function shownAward(log: readonly HoldemLogEntry[], seats: readonly Seat[], end: number): HoldemAwardView | null {
+export function shownAward(log: readonly HoldemLogEntry[], seats: readonly GameSeat[], end: number): HoldemAwardView | null {
   const stop = Math.min(end, log.length);
   for (let index = stop - 1; index > handStart(log, stop); index--) {
     const entry = log[index];
@@ -56,7 +57,7 @@ export function shownAward(log: readonly HoldemLogEntry[], seats: readonly Seat[
 }
 
 /** The table of a match between `seats` rebuilt from the public log before `end`. */
-export function replayHoldem(log: readonly HoldemLogEntry[], seats: readonly Seat[], end: number): HoldemTableView {
+export function replayHoldem(log: readonly HoldemLogEntry[], seats: readonly GameSeat[], end: number): HoldemTableView {
   return { ...heReplay(log, seats, end), award: shownAward(log, seats, end), logEnd: Math.min(end, log.length) };
 }
 
@@ -114,7 +115,7 @@ export function holdemCategory(hole: readonly Card[], board: readonly Card[]): C
   return heBestHand([...hole, ...board]).category;
 }
 
-export interface HoldemBlindSeats { readonly button: Seat; readonly small: Seat; readonly big: Seat }
+export interface HoldemBlindSeats { readonly button: GameSeat; readonly small: GameSeat; readonly big: GameSeat }
 
 export function holdemBlindSeats(view: HeTableView): HoldemBlindSeats | null {
   if (view.hand === 0 || view.dealt.length < 2) return null;
@@ -128,8 +129,8 @@ export function potTotal(view: HeTableView): number {
 
 export interface PotLine {
   readonly amount: number;
-  readonly eligible: readonly Seat[];
-  readonly winners: readonly Seat[];
+  readonly eligible: readonly GameSeat[];
+  readonly winners: readonly GameSeat[];
   /** Excess only its owner staked, returned rather than won */
   readonly returned: boolean;
 }
@@ -139,7 +140,7 @@ export interface PotLine {
  * pots (current bets sit in front of each seat); after showdown or the award every stake counts.
  */
 export function potLines(view: HoldemTableView): PotLine[] {
-  const mark = (pots: readonly { amount: number; eligible: readonly Seat[]; winners?: readonly Seat[] }[]): PotLine[] =>
+  const mark = (pots: readonly { amount: number; eligible: readonly GameSeat[]; winners?: readonly GameSeat[] }[]): PotLine[] =>
     pots.map((pot, index) => ({
       amount: pot.amount,
       eligible: pot.eligible,
@@ -156,8 +157,8 @@ export function potLines(view: HoldemTableView): PotLine[] {
 export type SeatAction = 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn';
 
 /** Each seat's latest action on the shown street. */
-export function streetActions(log: readonly HoldemLogEntry[], end: number): Partial<Record<Seat, SeatAction>> {
-  const actions: Partial<Record<Seat, SeatAction>> = {};
+export function streetActions(log: readonly HoldemLogEntry[], end: number): Partial<Record<GameSeat, SeatAction>> {
+  const actions: Partial<Record<GameSeat, SeatAction>> = {};
   for (let index = Math.min(end, log.length) - 1; index >= 0; index--) {
     const entry = log[index];
     if (entry.type === 'hand' || entry.type === 'street') break;
@@ -182,7 +183,7 @@ export function chipsAdded(log: readonly HoldemLogEntry[], index: number): numbe
 export type SeatState = 'out' | 'folded' | 'allIn' | 'active' | 'waiting';
 
 /** Out: lost every chip; waiting: not dealt into the shown hand (before the first deal). */
-export function seatState(view: HeTableView, seat: Seat): SeatState {
+export function seatState(view: HeTableView, seat: GameSeat): SeatState {
   if (view.eliminated.includes(seat)) return 'out';
   if (!view.dealt.includes(seat)) return 'waiting';
   if (view.folded.includes(seat)) return 'folded';
@@ -231,7 +232,7 @@ export const QUICK_SIZES: readonly QuickSize[] = ['min', 'halfPot', 'pot', 'allI
  * Street totals for the shortcuts. A pot-sized raise first calls, then raises by the pot after
  * that call; half pot raises by half of it. Every size is clamped to the legal range.
  */
-export function quickRaise(size: QuickSize, view: HeTableView, seat: Seat, range: Pick<RaiseControl, 'min' | 'max'>): number {
+export function quickRaise(size: QuickSize, view: HeTableView, seat: GameSeat, range: Pick<RaiseControl, 'min' | 'max'>): number {
   if (size === 'min') return range.min;
   if (size === 'allIn') return range.max;
   const owed = Math.max(0, view.currentBet - view.streetBets[seat]);
@@ -253,7 +254,7 @@ export function recentHoldemMoves(log: readonly HoldemLogEntry[], end: number, l
 }
 
 export interface HoldemRanking {
-  readonly seat: Seat;
+  readonly seat: GameSeat;
   readonly place: number;
   readonly chips: number;
   readonly net: number;
@@ -266,8 +267,8 @@ export interface HoldemRanking {
  * seats, last to bust highest.
  */
 export function rankHoldem(result: HoldemMatchResult): HoldemRanking[] {
-  const out = (seat: Seat): number => result.eliminationOrder.indexOf(seat);
-  const sorted = [...result.seats ?? HE_SEATS].sort((a, b) => result.chips[b] - result.chips[a] || out(b) - out(a));
+  const out = (seat: GameSeat): number => result.eliminationOrder.indexOf(seat);
+  const sorted = [...result.seats ?? SEAT_ORDER_CLOCKWISE].sort((a, b) => result.chips[b] - result.chips[a] || out(b) - out(a));
   return sorted.map((seat, index) => {
     const eliminated = out(seat) >= 0;
     return {

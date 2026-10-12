@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { afterEach, describe, expect, it } from 'vitest';
 import { svAllClosed, svLegalPlays, svPenalty } from '@shared/rules/sevens';
 import { getPresentationFrames, PRESENTATION_TIMING_VERSION } from '@shared/game-presentation';
@@ -458,7 +459,7 @@ describe('persisted Blackjack games', () => {
       duplicate.deck[0] = { ...duplicate.dealer[0] };
       expect(persists(duplicate, 'blackjack')).toBe(false);
       const turn = structuredClone(game);
-      turn.currentTurnSeat = SEATS[(SEATS.indexOf(game.currentTurnSeat) + 1) % 4];
+      turn.currentTurnSeat = SEATS[(SEATS.indexOf((game.currentTurnSeat as Seat)) + 1) % 4];
       expect(persists(turn, 'blackjack')).toBe(false);
       const hidden = structuredClone(game);
       hidden.hole = null;
@@ -540,12 +541,12 @@ describe("persisted Texas Hold'em games", () => {
     duplicate.deck[0] = { ...duplicate.hands[game.dealt[0]][0] };
     expect(persists(duplicate, 'holdem')).toBe(false);
     const turn = structuredClone(game);
-    turn.currentTurnSeat = SEATS[(SEATS.indexOf(game.currentTurnSeat) + 1) % 4];
+    turn.currentTurnSeat = SEATS[(SEATS.indexOf((game.currentTurnSeat as Seat)) + 1) % 4];
     expect(persists(turn, 'holdem')).toBe(false);
     const button = structuredClone(game);
     const first = button.log[0];
     if (first.type !== 'hand') throw new Error('Expected a hand');
-    button.log[0] = { ...first, blinds: { N: 0, E: 0, S: 0, W: 0 } };
+    button.log[0] = gameSeatValues({ ...first, blinds: { N: 0, E: 0, S: 0, W: 0 } });
     expect(persists(button, 'holdem')).toBe(false);
   });
 });

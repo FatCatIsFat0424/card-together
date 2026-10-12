@@ -8,11 +8,11 @@ import type {
   NinetyNineVisibleState,
   PlayerInfo,
   RoomCode,
-  Seat,
+  GameSeat,
 } from '@shared/types';
-import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import { GAME_SEAT_ORDER } from '@shared/constants';
 import { DEFAULT_NINETYNINE_OPTIONS } from '@shared/ninetynine-options';
-import { nextSeatClockwise, nextSeatCounterClockwise } from '@shared/rules/seats';
+import { nextGameSeat, occupiedSeats } from '@shared/rules/seats';
 import { NN_HAND_SIZE, NN_MAX, nnApply, nnHasPlayable, nnIsPlayable, nnRequiresChoice } from '@shared/rules/ninetynine';
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { createDeck, shuffleDeck } from '../../engine/deck';
@@ -22,22 +22,22 @@ type Result = { success: true } | { success: false; reason: string };
 /** roomCode → NinetyNineGameState */
 const games: Map<RoomCode, NinetyNineGameState> = new Map();
 
-function seatMap<T>(value: (seat: Seat) => T): Record<Seat, T> {
-  return { N: value('N'), E: value('E'), S: value('S'), W: value('W') };
+function seatMap<T>(value: (seat: GameSeat) => T): Record<GameSeat, T> {
+  return Object.fromEntries(GAME_SEAT_ORDER.map((seat) => [seat, value(seat)])) as Record<GameSeat, T>;
 }
 
 const sameCard = (a: Card, b: Card): boolean => a.suit === b.suit && a.rank === b.rank;
 
 /** Next seat still in the game, following the current direction. */
-function nextAlive(game: NinetyNineGameState, seat: Seat): Seat {
-  const step = game.direction === 'ccw' ? nextSeatCounterClockwise : nextSeatClockwise;
+function nextAlive(game: NinetyNineGameState, seat: GameSeat): GameSeat {
+  const step = (value: GameSeat): GameSeat => nextGameSeat(value, game.direction === 'ccw');
   let next = step(seat);
-  while (game.eliminated.includes(next)) next = step(next);
+  while (!game.players[next] || game.eliminated.includes(next)) next = step(next);
   return next;
 }
 
 /** Turn lands on `seat`: busted seats are eliminated in turn until someone can play or one player remains. */
-function landOn(game: NinetyNineGameState, seat: Seat): void {
+function landOn(game: NinetyNineGameState, seat: GameSeat): void {
   let current = seat;
   while (!nnHasPlayable(game.total, game.hands[current])) {
     game.eliminated.push(current);
@@ -45,12 +45,12 @@ function landOn(game: NinetyNineGameState, seat: Seat): void {
     game.discard.splice(Math.max(0, game.discard.length - 1), 0, ...game.hands[current]);
     game.hands[current] = [];
     game.log.push({ type: 'eliminated', seat: current, timestamp: Date.now() });
-    const alive = SEAT_ORDER_CLOCKWISE.filter((other) => !game.eliminated.includes(other));
+    const alive = occupiedSeats(game.players).filter((other) => !game.eliminated.includes(other));
     if (alive.length === 1) {
       game.phase = 'scoring';
       game.currentTurnSeat = alive[0];
       game.result = {
-        gameType: 'ninetynine', winnerSeat: alive[0], eliminationOrder: [...game.eliminated], finalTotal: game.total,
+        gameType: 'ninetynine', seats: occupiedSeats(game.players), winnerSeat: alive[0], eliminationOrder: [...game.eliminated], finalTotal: game.total,
       };
       return;
     }
@@ -63,7 +63,7 @@ function landOn(game: NinetyNineGameState, seat: Seat): void {
  * Draws the stock top. An empty single-deck stock is refilled from the discard pile except its
  * top card; a two-deck stock is never refilled, so the draw that empties it ends the match.
  */
-function draw(game: NinetyNineGameState, seat: Seat): void {
+function draw(game: NinetyNineGameState, seat: GameSeat): void {
   if (game.stock.length === 0 && !game.options?.twoDecks) {
     game.stock = shuffleDeck(game.discard.slice(0, -1));
     game.discard = game.discard.slice(-1);
@@ -74,7 +74,8 @@ function draw(game: NinetyNineGameState, seat: Seat): void {
     game.phase = 'scoring';
     game.result = {
       gameType: 'ninetynine',
-      winners: SEAT_ORDER_CLOCKWISE.filter((other) => !game.eliminated.includes(other)),
+      seats: occupiedSeats(game.players),
+      winners: occupiedSeats(game.players).filter((other) => !game.eliminated.includes(other)),
       eliminationOrder: [...game.eliminated],
       finalTotal: game.total,
     };
@@ -84,12 +85,14 @@ function draw(game: NinetyNineGameState, seat: Seat): void {
 /** `deck` and `firstSeat` are test hooks; the default deck follows `options`. */
 export function startGame(
   roomCode: RoomCode,
-  players: Record<Seat, PlayerInfo>,
+  players: Partial<Record<GameSeat, PlayerInfo>>,
   deck?: readonly Card[],
-  firstSeat: Seat = SEAT_ORDER_CLOCKWISE[randomInt(4)],
+  firstSeat?: GameSeat,
   options: NinetyNineOptions = DEFAULT_NINETYNINE_OPTIONS,
 ): void {
   const cards = deck ?? shuffleDeck(options.twoDecks ? [...createDeck(), ...createDeck()] : createDeck());
+  const participants = occupiedSeats(players);
+  const first = firstSeat ?? participants[randomInt(participants.length)];
   const game: NinetyNineGameState = {
     gameType: 'ninetynine',
     id: randomUUID(),
@@ -99,23 +102,23 @@ export function startGame(
     roomCode,
     phase: 'playing',
     hands: seatMap((seat) => {
-      const start = SEAT_ORDER_CLOCKWISE.indexOf(seat) * NN_HAND_SIZE;
-      return cards.slice(start, start + NN_HAND_SIZE);
+      const start = participants.indexOf(seat) * NN_HAND_SIZE;
+      return start < 0 ? [] : cards.slice(start, start + NN_HAND_SIZE);
     }),
-    stock: cards.slice(NN_HAND_SIZE * 4),
+    stock: cards.slice(NN_HAND_SIZE * participants.length),
     discard: [],
     total: 0,
     direction: 'ccw',
-    currentTurnSeat: firstSeat,
+    currentTurnSeat: first,
     eliminated: [],
     log: [],
     result: null,
   };
-  landOn(game, firstSeat);
+  landOn(game, first);
   games.set(roomCode, game);
 }
 
-export function play(roomCode: RoomCode, seat: Seat, card: Card, choice?: NnChoice, target?: Seat): Result {
+export function play(roomCode: RoomCode, seat: GameSeat, card: Card, choice?: NnChoice, target?: GameSeat): Result {
   const game = games.get(roomCode);
   if (!game) return { success: false, reason: 'Game not found' };
   if (game.phase !== 'playing') return { success: false, reason: 'Not in playing phase' };
@@ -132,7 +135,7 @@ export function play(roomCode: RoomCode, seat: Seat, card: Card, choice?: NnChoi
   if (effect.designate !== (target !== undefined)) {
     return { success: false, reason: effect.designate ? 'Choose the next player' : 'This card takes no target' };
   }
-  if (target !== undefined && (target === seat || game.eliminated.includes(target))) {
+  if (target !== undefined && (!game.players[target] || target === seat || game.eliminated.includes(target))) {
     return { success: false, reason: 'Invalid target' };
   }
 
@@ -156,7 +159,7 @@ export function abortGame(roomCode: RoomCode): void {
   games.delete(roomCode);
 }
 
-export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): NinetyNineVisibleState | null {
+export function getPlayerVisibleState(roomCode: RoomCode, seat: GameSeat): NinetyNineVisibleState | null {
   const game = games.get(roomCode);
   if (!game) return null;
   return {
@@ -164,6 +167,7 @@ export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): NinetyNin
     phase: game.phase,
     options: game.options ?? DEFAULT_NINETYNINE_OPTIONS,
     mySeat: seat,
+    seats: occupiedSeats(game.players),
     myHand: game.hands[seat],
     handCounts: seatMap((other) => game.hands[other].length),
     total: game.total,

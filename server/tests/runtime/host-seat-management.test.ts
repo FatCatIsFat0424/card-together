@@ -70,6 +70,7 @@ describe('host seat management', () => {
     }
     expect(rooms.getPlayerSeat(app.roomCodes[0], guestId)).toBe('E');
     for (const client of app.clients[0]) expect(await client.emitWithAck('room:ready')).toEqual({ success: true });
+    expect(await host.emitWithAck('room:start')).toEqual({ success: true });
     expect(rooms.getRoomInfo(app.roomCodes[0])?.status).toBe('playing');
     expect(await host.emitWithAck('room:movePlayer', payload)).toMatchObject({ success: false });
     expect(rooms.getPlayerSeat(app.roomCodes[0], guestId)).toBe('E');

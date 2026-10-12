@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { frameLogIndex } from '@shared/game-presentation';
 import type { PresentationFrame } from '@shared/game-presentation';
-import type { Seat } from '@shared/types';
+import type { GameSeat } from '@shared/types';
 import { useGameStore } from '../../stores/game-store';
 import { useI18nStore } from '../../stores/i18n-store';
 import { BjHand, DealerHand } from './BlackjackCards';
@@ -12,7 +12,7 @@ import styles from './BlackjackFrame.module.css';
  * Body of a Blackjack presentation frame, drawn from the table as of the frame's own log entry;
  * the shared frame supplies the heading and timing.
  */
-export function BlackjackFrame({ frame, name }: { frame: PresentationFrame; name: (seat: Seat) => string }): ReactNode {
+export function BlackjackFrame({ frame, name }: { frame: PresentationFrame; name: (seat: GameSeat) => string }): ReactNode {
   const { t } = useI18nStore();
   const log = useGameStore((state) => state.blackjack?.log);
   const seats = useGameStore((state) => state.blackjack?.seats);

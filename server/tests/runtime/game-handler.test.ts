@@ -28,6 +28,7 @@ async function startBridge(app: SocketHarness): Promise<TestClient[]> {
   for (const client of players) {
     expect(await client.timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
   }
+  expect(await players[0].timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
   let snapshot = await resume(players[0]);
   for (let attempt = 0; snapshot.gameState?.phase === 'redeal_pending' && attempt < 30; attempt += 1) {
     const seat = snapshot.gameState.redealPendingSeat;

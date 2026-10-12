@@ -3,7 +3,7 @@ import { DEFAULT_SEVENS_OPTIONS, isSevensOptions } from '@shared/sevens-options'
 import { DEFAULT_NINETYNINE_OPTIONS, isNinetyNineOptions } from '@shared/ninetynine-options';
 import { DEFAULT_BLACKJACK_OPTIONS, isBlackjackOptions } from '@shared/blackjack-options';
 import { isDeepStrictEqual } from 'node:util';
-import { randomUUID } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import type {
   BlackjackOptions, GameType, NinetyNineOptions, PlayerInfo, RoomCode, RoomInfo, RoomSeatTarget, RoomStatus, Seat, SeatMap, SevensOptions, TimeControl,
 } from '@shared/types';
@@ -13,6 +13,8 @@ import {
 } from '@shared/constants';
 import type { PersistedRoom } from '../runtime/types';
 import { generateRoomCode } from '../utils/id-generator';
+import { roomPlayers, roomCanStart } from '@shared/rules/seats';
+import type { GameSeat } from '@shared/types';
 
 const rooms = new Map<RoomCode, PersistedRoom>();
 const seats: Seat[] = ['N', 'E', 'S', 'W'];
@@ -98,7 +100,7 @@ function requireBotManagement(code: RoomCode, playerId: string): Result {
 
 /** A match needs a seated human to vote, reconnect, and own its history. */
 function hasSeatedHuman(room: PersistedRoom): boolean {
-  return seats.some((seat) => room.info.seats[seat].player && !room.info.seats[seat].player?.isBot);
+  return Object.values(roomPlayers(room.info)).some((player) => !player.isBot);
 }
 
 function emptySeatCount(room: PersistedRoom): number {
@@ -106,8 +108,7 @@ function emptySeatCount(room: PersistedRoom): number {
 }
 
 /**
- * A flexible-seat match starts as soon as every seated player is ready, so a seat filling or
- * emptying asks the humans to confirm the new table rather than starting or blocking unexpectedly.
+ * A flexible-seat roster change asks humans to confirm the new table before the host starts it.
  */
 function tableChanged(room: PersistedRoom): void {
   if (room.info.status === 'waiting' && FLEXIBLE_SEAT_GAMES.includes(room.info.gameType)) resetAllReady(room.info.code);
@@ -167,7 +168,7 @@ export function canKick(code: RoomCode, hostId: string, targetId: string): Resul
   const room = rooms.get(code);
   if (!room) return { success: false, reason: 'Room not found' };
   if (room.info.hostId !== hostId) return { success: false, reason: 'Only the host can remove players.' };
-  if (room.info.status !== 'waiting' && getPlayerSeat(code, targetId)) {
+  if (room.info.status !== 'waiting' && getGamePlayerSeat(code, targetId)) {
     return { success: false, reason: 'Cannot remove players during game.' };
   }
   if (targetId === hostId) return { success: false, reason: 'You cannot remove yourself.' };
@@ -245,10 +246,15 @@ export function standUp(code: RoomCode, playerId: string): Result {
 export function setReady(code: RoomCode, playerId: string, ready: boolean): Result {
   const room = rooms.get(code);
   const seat = getPlayerSeat(code, playerId);
-  if (!room || !seat) return { success: false, reason: 'Not seated' };
+  if (!room) return { success: false, reason: 'Room not found' };
   if (room.info.status === 'playing') return { success: false, reason: 'Game is in progress' };
-  if (ready && (room.info.additionalSeats?.length ?? 0) > 0) {
-    return { success: false, reason: 'Only four-seat matches are currently supported. Remove the additional seats first.' };
+  if (!seat) {
+    if (!room.info.additionalSeats?.some((entry) => entry.player?.id === playerId)) {
+      return { success: false, reason: 'Not seated' };
+    }
+    room.info = { ...room.info, additionalSeats: room.info.additionalSeats.map((entry) =>
+      entry.player?.id === playerId ? { ...entry, isReady: ready } : entry) };
+    return { success: true };
   }
   room.info = { ...room.info, seats: {
     ...room.info.seats, [seat]: { ...room.info.seats[seat], isReady: ready },
@@ -259,10 +265,36 @@ export function setReady(code: RoomCode, playerId: string, ready: boolean): Resu
 /** Enough seats for the game are occupied and every occupied seat is ready. */
 export function isAllReady(code: RoomCode): boolean {
   const room = rooms.get(code);
-  if (!room || !hasSeatedHuman(room)) return false;
-  const occupied = seats.filter((seat) => room.info.seats[seat].player);
-  return occupied.length === 4 && (room.info.additionalSeats?.length ?? 0) === 0
-    && occupied.every((seat) => room.info.seats[seat].isReady);
+  return room ? roomCanStart(room.info) : false;
+}
+
+export function setShuffleSeats(code: RoomCode, playerId: string, enabled: boolean): Result {
+  const room = rooms.get(code);
+  if (!room) return { success: false, reason: 'Room not found' };
+  if (room.info.hostId !== playerId) return { success: false, reason: 'Only the host can change seat shuffling.' };
+  if (room.info.status !== 'waiting') return { success: false, reason: 'Game is in progress' };
+  if ((room.info.shuffleSeats ?? false) === enabled) return { success: true };
+  room.info = { ...room.info, shuffleSeats: enabled };
+  resetAllReady(code);
+  return { success: true };
+}
+
+/** Called by the start coordinator, after checking readiness. Preserve each player's ready state. */
+export function shuffleReadySeats(code: RoomCode, random: (max: number) => number = randomInt): void {
+  const room = rooms.get(code);
+  if (!room?.info.shuffleSeats) return;
+  const positions = [...seats.map((seat) => room.info.seats[seat]), ...room.info.additionalSeats ?? []];
+  // Bots retain their standard seats; shuffle the humans across the remaining occupied seats.
+  const occupied = positions.map((entry, index) => entry.player && !entry.player.isBot ? index : -1)
+    .filter((index) => index >= 0);
+  for (let index = occupied.length - 1; index > 0; index--) {
+    const other = random(index + 1);
+    [positions[occupied[index]], positions[occupied[other]]] = [positions[occupied[other]], positions[occupied[index]]];
+  }
+  const next = { ...room.info.seats };
+  seats.forEach((seat, index) => { next[seat] = positions[index]; });
+  room.info = { ...room.info, seats: next,
+    ...(room.info.additionalSeats ? { additionalSeats: positions.slice(4) } : {}) };
 }
 
 function clearAdditionalSeat(room: PersistedRoom, playerId: string): void {
@@ -329,15 +361,15 @@ export function getPlayerSeat(code: RoomCode, playerId: string): Seat | null {
 }
 
 /** Players of the occupied seats; empty seats are left out. */
-export function getSeatPlayers(code: RoomCode): Partial<Record<Seat, PlayerInfo>> | null {
+export function getGamePlayerSeat(code: RoomCode, playerId: string): GameSeat | null {
+  const room = rooms.get(code);
+  return room ? (Object.entries(roomPlayers(room.info)).find(([, player]) => player?.id === playerId)?.[0] as GameSeat | undefined) ?? null : null;
+}
+
+export function getSeatPlayers(code: RoomCode): Partial<Record<GameSeat, PlayerInfo>> | null {
   const room = rooms.get(code);
   if (!room) return null;
-  const players: Partial<Record<Seat, PlayerInfo>> = {};
-  for (const seat of seats) {
-    const player = room.info.seats[seat].player;
-    if (player) players[seat] = player;
-  }
-  return players;
+  return roomPlayers(room.info);
 }
 
 /** Any status change ends an abort vote; the cooldown stays. */
@@ -422,8 +454,7 @@ export type AbortVoteOutcome = 'pending' | 'passed' | 'failed';
 
 function humanVoterIds(code: RoomCode): string[] {
   const room = rooms.get(code);
-  return room ? seats.flatMap((seat) => {
-    const player = room.info.seats[seat].player;
+  return room ? Object.values(roomPlayers(room.info)).flatMap((player) => {
     return player && !player.isBot ? [player.id] : [];
   }) : [];
 }
@@ -496,7 +527,9 @@ export function resetAllReady(code: RoomCode): void {
   if (!room) return;
   const next = { ...room.info.seats };
   for (const seat of seats) next[seat] = { ...next[seat], isReady: next[seat].player?.isBot === true };
-  room.info = { ...room.info, seats: next };
+  room.info = { ...room.info, seats: next,
+    ...(room.info.additionalSeats ? { additionalSeats: room.info.additionalSeats.map((entry) =>
+      ({ ...entry, isReady: entry.player?.isBot === true })) } : {}) };
 }
 
 export function updateRoomPlayer(player: PlayerInfo, roomCode: RoomCode | null): void {

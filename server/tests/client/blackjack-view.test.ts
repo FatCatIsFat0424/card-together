@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { describe, expect, it } from 'vitest';
 import { getPresentationFrames } from '@shared/game-presentation';
 import { bjReplay } from '@shared/rules/blackjack';
@@ -21,14 +22,14 @@ const log: BlackjackLogEntry[] = [
   { type: 'bet', seat: 'E', auto: false, timestamp: 2 },
   { type: 'bet', seat: 'S', auto: true, timestamp: 3 },
   { type: 'bet', seat: 'W', auto: false, timestamp: 4 },
-  {
+  gameSeatValues({
     type: 'deal', hand: 1, bets: { N: 50, E: 20, S: 10, W: 20 },
     cards: {
       N: [c(10, 'spades'), c(6, 'hearts')], E: [c(14, 'spades'), c(13, 'hearts')],
       S: [c(8, 'clubs'), c(8, 'diamonds')], W: [c(5, 'spades'), c(6, 'diamonds')],
     },
     upCard: c(9, 'hearts'), timestamp: 5,
-  },
+  }),
   { type: 'hit', seat: 'N', handIndex: 0, card: c(5, 'clubs'), timestamp: 6 },
   { type: 'split', seat: 'S', handIndex: 0, cards: [c(3, 'spades'), c(10, 'clubs')], timestamp: 7 },
   { type: 'double', seat: 'S', handIndex: 0, card: c(10, 'diamonds'), timestamp: 8 },
@@ -36,31 +37,31 @@ const log: BlackjackLogEntry[] = [
   { type: 'double', seat: 'W', handIndex: 0, card: c(9, 'spades'), timestamp: 10 },
   { type: 'reveal', card: c(7, 'clubs'), timestamp: 11 },
   { type: 'dealerHit', card: c(4, 'diamonds'), timestamp: 12 },
-  {
+  gameSeatValues({
     type: 'settle', hand: 1,
     outcomes: { N: ['win'], E: ['blackjack'], S: ['win', 'lose'], W: ['push'] },
     net: { N: 50, E: 30, S: 10, W: 0 }, chips: { N: 1050, E: 1030, S: 1010, W: 1000 }, timestamp: 13,
-  },
+  }),
   { type: 'bet', seat: 'N', auto: false, timestamp: 14 },
-  {
+  gameSeatValues({
     type: 'deal', hand: 2, bets: seats(10),
     cards: {
       N: [c(2, 'spades'), c(3, 'hearts')], E: [c(4, 'spades'), c(5, 'hearts')],
       S: [c(6, 'clubs'), c(7, 'diamonds')], W: [c(9, 'clubs'), c(9, 'diamonds')],
     },
     upCard: c(14, 'hearts'), timestamp: 15,
-  },
+  }),
 ];
 
 function game(overrides: Partial<BlackjackVisibleState> = {}): BlackjackVisibleState {
   const table = bjReplay(log, ALL);
-  return {
+  return gameSeatValues({
     gameType: 'blackjack', phase: 'playing', mySeat: 'S', seats: ALL, options: { playerDealer: false },
     dealerSeat: null, totalHands: 8, hand: table.hand, chips: table.chips, myBet: null,
     betPlaced: seats(false), betDeadline: null, hands: table.hands, dealer: table.dealer, holeHidden: true,
     currentTurnSeat: 'N', activeHand: 0, log,
     presentation: { id: 'p', startedAt: 0, logStart: 5, timingVersion: 2 }, result: null, ...overrides,
-  };
+  });
 }
 
 describe('Blackjack table view', () => {
@@ -106,7 +107,7 @@ describe('Blackjack table view', () => {
     const betting = game({ phase: 'betting', log: log.slice(0, 13), hand: 1, holeHidden: false, betDeadline: 99 });
     const view = blackjackView(betting, null);
     expect(view).toMatchObject({ betting: true, turn: null });
-    expect(view.settlement?.net).toEqual({ N: 50, E: 30, S: 10, W: 0 });
+    expect(view.settlement?.net).toEqual(gameSeatValues({ N: 50, E: 30, S: 10, W: 0 }));
     expect(blackjackHandNumber(view)).toBe(2);
     expect(blackjackHandNumber(blackjackView(state, null))).toBe(2);
   });
@@ -138,14 +139,14 @@ describe('Blackjack table view', () => {
     expect(blackjackNeedsBet(betting)).toBe(true);
     expect(blackjackNeedsBet({ ...betting, betDeadline: null })).toBe(false);
     expect(blackjackNeedsBet({ ...betting, myBet: 20 })).toBe(false);
-    expect(blackjackNeedsBet({ ...betting, betPlaced: { ...seats(false), S: true } })).toBe(false);
+    expect(blackjackNeedsBet(gameSeatValues({ ...betting, betPlaced: { ...seats(false), S: true } }))).toBe(false);
     expect(blackjackNeedsBet({ ...betting, observer: 'spectator' })).toBe(false);
     expect(blackjackNeedsBet({ ...betting, chips: { ...betting.chips, S: 5 } })).toBe(false);
     expect(blackjackNeedsBet(game())).toBe(false);
   });
 
   it('should mark sitting-out seats, automatic bets, and recent moves', () => {
-    const betting = blackjackView(game({ phase: 'betting', chips: { N: 5, E: 100, S: 100, W: 100 } }), null);
+    const betting = blackjackView(game(gameSeatValues({ phase: 'betting', chips: { N: 5, E: 100, S: 100, W: 100 } })), null);
     expect(blackjackSeatOut(betting, 'N')).toBe(true);
     expect(blackjackSeatOut(betting, 'E')).toBe(false);
     const playing = blackjackView(game({ hands: { ...bjReplay(log, ALL).hands, W: [] } }), null);
@@ -172,13 +173,13 @@ describe('Blackjack table view', () => {
 
     const dealt: BlackjackLogEntry[] = [
       { type: 'bet', seat: 'E', auto: false, timestamp: 1 },
-      { type: 'deal', hand: 1, bets: { N: 0, E: 20, S: 0, W: 0 }, dealer: 'N',
-        cards: { N: [], E: [c(10, 'spades'), c(8, 'hearts')], S: [], W: [] }, upCard: c(10, 'clubs'), timestamp: 2 },
+      gameSeatValues({ type: 'deal', hand: 1, bets: { N: 0, E: 20, S: 0, W: 0 }, dealer: 'N',
+        cards: { N: [], E: [c(10, 'spades'), c(8, 'hearts')], S: [], W: [] }, upCard: c(10, 'clubs'), timestamp: 2 }),
       { type: 'stand', seat: 'E', handIndex: 0, timestamp: 3 },
       { type: 'reveal', card: c(7, 'diamonds'), timestamp: 4 },
       { type: 'dealerStand', timestamp: 5 },
-      { type: 'settle', hand: 1, outcomes: { N: [], E: ['win'], S: [], W: [] }, net: { N: -20, E: 20, S: 0, W: 0 },
-        chips: { N: 980, E: 1020, S: 0, W: 0 }, timestamp: 6 },
+      gameSeatValues({ type: 'settle', hand: 1, outcomes: { N: [], E: ['win'], S: [], W: [] }, net: { N: -20, E: 20, S: 0, W: 0 },
+        chips: { N: 980, E: 1020, S: 0, W: 0 }, timestamp: 6 }),
     ];
     const [round] = deriveRoundHistory({ gameType: 'blackjack', phase: 'betting', seats: ['N', 'E'], log: dealt });
     expect(round.actions.map((action) => [action.kind, action.seat, action.net])).toEqual([
@@ -191,17 +192,17 @@ describe('Blackjack table view', () => {
   });
 
   it('should rank final chips with shared places and report net results', () => {
-    expect(rankBlackjack({
+    expect(rankBlackjack(gameSeatValues({
       gameType: 'blackjack', chips: { N: 1200, E: 700, S: 1200, W: 900 }, hands: 8, winners: ['N', 'S'],
-    })).toEqual([
+    }))).toEqual([
       { seat: 'N', place: 1, chips: 1200, net: 200, winner: true },
       { seat: 'S', place: 1, chips: 1200, net: 200, winner: true },
       { seat: 'W', place: 3, chips: 900, net: -100, winner: false },
       { seat: 'E', place: 4, chips: 700, net: -300, winner: false },
     ]);
-    expect(rankBlackjack({
+    expect(rankBlackjack(gameSeatValues({
       gameType: 'blackjack', seats: ['E', 'S'], chips: { N: 0, E: 0, S: 0, W: 0 }, hands: 8, winners: ['E', 'S'],
-    }).map((row) => [row.seat, row.place, row.winner])).toEqual([['E', 1, true], ['S', 1, true]]);
+    })).map((row) => [row.seat, row.place, row.winner])).toEqual([['E', 1, true], ['S', 1, true]]);
     expect(handNet({ bet: 20 }, 'blackjack')).toBe(30);
     expect(handNet({ bet: 20 }, 'push')).toBe(0);
     expect(handNet({ bet: 40 }, 'bust')).toBe(-40);

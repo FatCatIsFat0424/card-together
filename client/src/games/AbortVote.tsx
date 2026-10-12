@@ -1,3 +1,4 @@
+import { roomSeatInfo } from '@shared/rules/seats';
 // ─── Abort vote: info-rail button, table banner, passed notice ───
 
 import { useEffect, useId, useRef, useState } from 'react';
@@ -27,7 +28,8 @@ function useNow(active: boolean): number {
 }
 
 function seatedPlayer(room: RoomInfo, id: string): PlayerInfo | null {
-  return Object.values(room.seats).find((seat) => seat.player?.id === id)?.player ?? null;
+  return [...Object.values(room.seats), ...room.additionalSeats ?? []]
+    .find((seat) => seat.player?.id === id)?.player ?? null;
 }
 
 type Done = (timeout: Error | null, result?: { success: boolean; error?: string }) => void;
@@ -88,7 +90,7 @@ export function AbortVoteBanner(): ReactNode {
   const { t } = useI18nStore();
   const room = useRoomStore((state) => state.roomInfo);
   const mySeat = useRoomStore((state) => state.mySeat);
-  const myId = mySeat ? room?.seats[mySeat].player?.id : undefined;
+  const myId = mySeat && room ? roomSeatInfo(room, mySeat)?.player?.id : undefined;
   const vote = room?.abortVote ?? null;
   const now = useNow(vote !== null);
   const [busy, error, run] = useVoteAction();
@@ -108,7 +110,7 @@ export function AbortVoteBanner(): ReactNode {
   if (!room || !vote) return null;
   const starter = seatedPlayer(room, vote.startedBy);
   const threshold = Math.min(ABORT_VOTE_THRESHOLD,
-    Object.values(room.seats).filter(({ player }) => player && !player.isBot).length);
+    [...Object.values(room.seats), ...room.additionalSeats ?? []].filter(({ player }) => player && !player.isBot).length);
   const cast = (agree: boolean): void => {
     votedFromBanner.current = true;
     run((done) => socket.timeout(10000).emit('game:abortVote:cast', { agree }, done));

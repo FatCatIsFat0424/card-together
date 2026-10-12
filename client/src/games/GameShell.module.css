@@ -491,3 +491,18 @@
   .chatCollapsed { grid-template-columns: minmax(320px, 380px) minmax(0, 1fr) 56px; }
   .centreContent { max-width: 820px; }
 }
+
+.table.expandedTable {
+  grid-template-columns: minmax(70px, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(70px, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-areas: 'tools tools tools tools' 'topLeft top top topRight' 'left centre centre right' 'bottomLeft centre centre bottomRight';
+}
+
+@media (max-width: 767px) and (min-height: 501px) {
+  .table.expandedTable {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto repeat(4, auto) minmax(0, 1fr);
+    grid-template-areas: 'tools tools' 'topLeft topRight' 'left right' 'bottomLeft bottomRight' 'top top' 'centre centre';
+    gap: 4px;
+  }
+}

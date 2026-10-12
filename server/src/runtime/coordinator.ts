@@ -1,5 +1,6 @@
+import { gamePlayer } from '@shared/rules/seats';
 import { isDeepStrictEqual } from 'node:util';
-import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import { GAME_SEAT_ORDER } from '@shared/constants';
 import type { Repository, MatchRecord } from '../database/repository';
 import type { RuntimeSnapshot } from './types';
 import * as playerManager from '../managers/player-manager';
@@ -74,11 +75,11 @@ export async function createRuntimeCoordinator(repository: Pick<Repository, 'loa
               if (!player.isBot) rewardedAccountIds.add(player.id);
             }
             // Bot games are practice; retain their runtime result without recording match history.
-            if (SEAT_ORDER_CLOCKWISE.some((seat) => game.players[seat]?.isBot)) continue;
+            if (GAME_SEAT_ORDER.some((seat) => gamePlayer(game, seat)?.isBot)) continue;
             matches.push({
               id: game.id, roomCode: game.roomCode,
               // Empty seats of a Blackjack or Hold'em match are left out, matching the result's `seats`.
-              accountIds: SEAT_ORDER_CLOCKWISE.flatMap((seat) => game.players[seat]?.id ?? []),
+              accountIds: GAME_SEAT_ORDER.flatMap((seat) => gamePlayer(game, seat)?.id ?? []),
               result: game.gameType === 'bridge' ? { ...game.result, gameType: 'bridge' } : game.result,
               finishedAt: Date.now(),
             });

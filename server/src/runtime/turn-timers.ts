@@ -1,3 +1,4 @@
+import { gamePlayer } from '@shared/rules/seats';
 import type { AnyGameState, GameClock, RoomCode } from '@shared/types';
 import { getBotAction } from '../bots/bot-decisions';
 import * as gameManager from '../managers/game-manager';
@@ -11,7 +12,7 @@ type Turn = NonNullable<GameClock['turn']>;
 
 function pendingTurn(game: AnyGameState): Turn | null {
   const turn = game.clock?.turn;
-  return turn && game.phase !== 'scoring' && !game.players[turn.seat]?.isBot
+  return turn && game.phase !== 'scoring' && !gamePlayer(game, turn.seat)?.isBot
     && roomManager.getRoomInfo(game.roomCode)?.status === 'playing'
     && !(game.gameType === 'bigtwo' && game.pendingAutoPass) ? turn : null;
 }

@@ -1,3 +1,6 @@
+import { normalizeFlexibleGame, normalizeGameSeatMaps } from '@shared/game-seat-compat';
+import { GAME_SEAT_ORDER, MAX_SPECTATORS } from '@shared/constants';
+import { gameSeatMap, roomSeatInfo } from '@shared/rules/seats';
 import { isTimeControl } from '@shared/time-control';
 import { isAvatarBorderId } from '@shared/constants';
 import { isSevensOptions } from '@shared/sevens-options';
@@ -21,7 +24,7 @@ import {
   ldNextAlive, ldNextHolder,
 } from '@shared/rules/liarsdeck';
 import {
-  BJ_HANDS, BJ_MAX_BET, BJ_MAX_SEAT_HANDS, BJ_MIN_BET, BJ_OUTCOMES, bjApplyEntry, bjBettingSeats, bjDealerActions,
+  BJ_MAX_BET, BJ_MAX_SEAT_HANDS, BJ_MIN_BET, BJ_OUTCOMES, bjApplyEntry, bjBettingSeats, bjDealerActions,
   bjDealerDone, bjDealerPeeks, bjEmptyTable, bjIsNatural, bjIsValidBet, bjLegalActions, bjMatchOver, bjNextDealer,
   bjNextTurn, bjSettle, bjWinners,
 } from '@shared/rules/blackjack';
@@ -33,12 +36,13 @@ import {
 import { nextSeatCounterClockwise, occupiedSeats } from '@shared/rules/seats';
 import type {
   AnyGameState, BigTwoGameState, BlackjackGameState, BridgeGameState, HoldemGameState, Card, ChinesePokerArrangement, ChinesePokerGameState, GameType,
-  LiarsDeckGameState, LiarsDeckLastPlay, NinetyNineGameState, RedPointsGameState, Seat, SevensGameState, SevensTable,
+  LiarsDeckGameState, LiarsDeckLastPlay, NinetyNineGameState, RedPointsGameState, GameSeat, Seat, SevensGameState, SevensTable,
 } from '@shared/types';
 import type { RuntimeSnapshot } from './types';
 
 type ObjectValue = Record<string, unknown>;
 const seats: Seat[] = ['N', 'E', 'S', 'W'];
+const gameSeats: GameSeat[] = [...GAME_SEAT_ORDER];
 const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
 
 function object(value: unknown): value is ObjectValue {
@@ -321,20 +325,22 @@ function redPointsGame(value: ObjectValue): boolean {
  */
 export function isNinetyNineResult(value: unknown): boolean {
   if (!object(value) || value.gameType !== 'ninetynine' || !number(value.finalTotal) || value.finalTotal > NN_MAX
-    || !seatList(value.eliminationOrder) || ('winnerSeat' in value) === ('winners' in value)) return false;
+    || !gameSeatList(value.eliminationOrder) || ('winnerSeat' in value) === ('winners' in value)) return false;
+  const participants = resultSeats(value);
   const tied = 'winners' in value;
   const winners: unknown = tied ? value.winners : [value.winnerSeat];
-  if (!seatList(winners) || winners.length + value.eliminationOrder.length !== 4) return false;
-  return new Set([...value.eliminationOrder, ...winners]).size === 4 && (!tied
-    || (winners.length >= 2 && isDeepStrictEqual(winners, seats.filter((seat) => winners.includes(seat)))));
+  if (!participants || !gameSeatList(winners) || winners.length + value.eliminationOrder.length !== participants.length) return false;
+  return new Set([...value.eliminationOrder, ...winners]).size === participants.length
+    && [...value.eliminationOrder, ...winners].every((seat) => participants.includes(seat))
+    && (!tied || (winners.length >= 2 && sameJson(winners, participants.filter((seat) => winners.includes(seat)))));
 }
 
 function ninetyNineLog(value: unknown): boolean {
-  if (!object(value) || !number(value.timestamp) || !oneOf(value.seat, seats)) return false;
+  if (!object(value) || !number(value.timestamp) || !oneOf(value.seat, gameSeats)) return false;
   if (value.type === 'eliminated') return true;
   return value.type === 'play' && card(value.card) &&
     (value.choice === null || oneOf(value.choice, ['plus', 'minus'])) &&
-    (value.target === null || oneOf(value.target, seats)) &&
+    (value.target === null || oneOf(value.target, gameSeats)) &&
     number(value.total) && value.total <= NN_MAX;
 }
 
@@ -345,19 +351,17 @@ function ninetyNineGame(value: ObjectValue): boolean {
     text(value.id) &&
     text(value.roomCode) &&
     number(value.startedAt) &&
-    object(value.players) &&
-    Object.keys(value.players).length === 4 &&
-    seats.every((seat) => player((value.players as ObjectValue)[seat])) &&
+    flexibleSeatGame(value) &&
     oneOf(value.phase, ['playing', 'scoring']) &&
-    seatCards(value.hands, NN_HAND_SIZE) &&
+    gameSeatValues(value.hands, (hand) => cards(hand, NN_HAND_SIZE)) &&
     cards(value.stock, deckSize) &&
     cards(value.discard, deckSize) &&
     number(value.total) &&
     value.total <= NN_MAX &&
     oneOf(value.direction, ['ccw', 'cw']) &&
-    oneOf(value.currentTurnSeat, seats) &&
+    oneOf(value.currentTurnSeat, gameSeats) &&
     Array.isArray(value.eliminated) &&
-    value.eliminated.every((seat: unknown) => oneOf(seat, seats)) &&
+    value.eliminated.every((seat: unknown) => oneOf(seat, gameSeats)) &&
     new Set(value.eliminated).size === value.eliminated.length &&
     Array.isArray(value.log) &&
     value.log.every(ninetyNineLog) &&
@@ -380,25 +384,25 @@ function flexibleSeatGame(value: ObjectValue): boolean {
   if (!text(value.id) || !text(value.roomCode) || !number(value.startedAt) || !object(value.players)) return false;
   const players = value.players;
   const keys = Object.keys(players);
-  return keys.length >= MIN_FLEXIBLE_PLAYERS && keys.every((key) => oneOf(key, seats) && player(players[key]));
+  return keys.length >= MIN_FLEXIBLE_PLAYERS && keys.length <= 8 && keys.every((key) => oneOf(key, gameSeats) && player(players[key]));
 }
 
 /** Seats a flexible-seat result lists in N, E, S, W order; legacy results omit them and had all four. */
-function resultSeats(value: ObjectValue): Seat[] | null {
+function resultSeats(value: ObjectValue): GameSeat[] | null {
   if (value.seats === undefined) return seats;
   const listed = value.seats;
-  return seatList(listed) && listed.length >= MIN_FLEXIBLE_PLAYERS
-    && sameJson(listed, seats.filter((seat) => listed.includes(seat))) ? listed : null;
+  return gameSeatList(listed) && listed.length >= MIN_FLEXIBLE_PLAYERS
+    && sameJson(listed, gameSeats.filter((seat) => listed.includes(seat))) ? listed : null;
 }
 
 /** The result a finished flexible-seat match must hold; legacy four-seat results did not list seats. */
-function flexibleResult<T extends object>(stored: unknown, participants: Seat[], expected: T): T & { seats?: Seat[] } {
+function flexibleResult<T extends object>(stored: unknown, participants: GameSeat[], expected: T): T & { seats?: GameSeat[] } {
   return participants.length === seats.length && object(stored) && stored.seats === undefined
     ? expected : { ...expected, seats: participants };
 }
 
 /** Distinct accounts hold the seats taking part. */
-function distinctPlayers(players: Readonly<Partial<Record<Seat, { readonly id: string }>>>): boolean {
+function distinctPlayers(players: Readonly<Partial<Record<GameSeat, { readonly id: string }>>>): boolean {
   const participants = occupiedSeats(players);
   return new Set(participants.map((seat) => players[seat]?.id)).size === participants.length;
 }
@@ -578,8 +582,8 @@ function liarsDeckGame(value: ObjectValue): boolean {
     (value.result === null || isLiarsDeckResult(value.result));
 }
 
-/** A dealt hand never needs more than 11 cards: four aces, four 2s, and three 3s reach 21. */
-const BJ_MAX_HAND_CARDS = 11;
+/** Two decks allow eight aces and six twos (hard 20), followed by one final draw. */
+const BJ_MAX_HAND_CARDS = 15;
 
 function blackjackHand(value: unknown): boolean {
   return object(value) && Object.keys(value).length === 5 && Array.isArray(value.cards)
@@ -588,48 +592,53 @@ function blackjackHand(value: unknown): boolean {
     && typeof value.split === 'boolean' && typeof value.done === 'boolean';
 }
 
-function seatValues(value: unknown, valid: (entry: unknown) => boolean): value is Record<Seat, unknown> {
-  return object(value) && Object.keys(value).length === 4 && seats.every((seat) => valid(value[seat]));
+function gameSeatValues(value: unknown, valid: (entry: unknown) => boolean): value is Record<GameSeat, unknown> {
+  return object(value) && Object.keys(value).length === 8 && gameSeats.every((seat) => valid(value[seat]));
 }
 
-function chipCounts(value: unknown): value is Record<Seat, number> {
-  return seatCounts(value, Number.MAX_SAFE_INTEGER);
+function gameSeatCounts(value: unknown, max: number): value is Record<GameSeat, number> {
+  return gameSeatValues(value, (entry) => number(entry) && entry <= max);
 }
 
-/** Blackjack result: winners hold the most chips after one to eight hands; empty seats hold none. */
+function chipCounts(value: unknown): value is Record<GameSeat, number> {
+  return gameSeatCounts(value, Number.MAX_SAFE_INTEGER);
+}
+
+/** Blackjack result: winners hold the most chips after one to eight hands; empty gameSeats hold none. */
 export function isBlackjackResult(value: unknown): boolean {
+  value = normalizeGameSeatMaps(value);
   if (!object(value) || value.gameType !== 'blackjack' || !chipCounts(value.chips) || !number(value.hands)
-    || value.hands < 1 || value.hands > BJ_HANDS) return false;
+    || value.hands < 1 || value.hands > 16) return false;
   const chips = value.chips;
   const participants = resultSeats(value);
-  return participants !== null && seats.every((seat) => participants.includes(seat) || chips[seat] === 0)
+  return participants !== null && gameSeats.every((seat) => participants.includes(seat) || chips[seat] === 0)
     && sameJson(value.winners, bjWinners(chips, participants));
 }
 
 function blackjackLog(value: unknown): boolean {
   if (!object(value) || !number(value.timestamp)) return false;
   switch (value.type) {
-    case 'bet': return oneOf(value.seat, seats) && typeof value.auto === 'boolean';
+    case 'bet': return oneOf(value.seat, gameSeats) && typeof value.auto === 'boolean';
     case 'deal':
-      return number(value.hand) && value.hand >= 1 && value.hand <= BJ_HANDS
-        && seatCounts(value.bets, BJ_MAX_BET) && seatValues(value.cards, (entry) => cards(entry, 2))
-        && card(value.upCard) && (value.dealer === undefined || oneOf(value.dealer, seats));
+      return number(value.hand) && value.hand >= 1 && value.hand <= 16
+        && gameSeatCounts(value.bets, BJ_MAX_BET) && gameSeatValues(value.cards, (entry) => cards(entry, 2))
+        && card(value.upCard) && (value.dealer === undefined || oneOf(value.dealer, gameSeats));
     case 'hit':
     case 'double':
-      return oneOf(value.seat, seats) && number(value.handIndex) && card(value.card);
-    case 'stand': return oneOf(value.seat, seats) && number(value.handIndex);
+      return oneOf(value.seat, gameSeats) && number(value.handIndex) && card(value.card);
+    case 'stand': return oneOf(value.seat, gameSeats) && number(value.handIndex);
     case 'split':
-      return oneOf(value.seat, seats) && number(value.handIndex) && Array.isArray(value.cards)
+      return oneOf(value.seat, gameSeats) && number(value.handIndex) && Array.isArray(value.cards)
         && value.cards.length === 2 && cards(value.cards, 2);
     case 'reveal':
     case 'dealerHit':
       return card(value.card);
     case 'dealerStand': return true;
     case 'settle':
-      return number(value.hand) && value.hand >= 1 && value.hand <= BJ_HANDS
-        && seatValues(value.outcomes, (entry) => Array.isArray(entry) && entry.length <= BJ_MAX_SEAT_HANDS
+      return number(value.hand) && value.hand >= 1 && value.hand <= 16
+        && gameSeatValues(value.outcomes, (entry) => Array.isArray(entry) && entry.length <= BJ_MAX_SEAT_HANDS
           && entry.every((outcome: unknown) => oneOf(outcome, [...BJ_OUTCOMES])))
-        && seatValues(value.net, (entry) => typeof entry === 'number' && Number.isSafeInteger(entry))
+        && gameSeatValues(value.net, (entry) => typeof entry === 'number' && Number.isSafeInteger(entry))
         && chipCounts(value.chips);
     default: return false;
   }
@@ -638,20 +647,20 @@ function blackjackLog(value: unknown): boolean {
 function blackjackGame(value: ObjectValue): boolean {
   return flexibleSeatGame(value) &&
     (value.options === undefined || isBlackjackOptions(value.options)) &&
-    (value.dealerSeat === undefined || oneOf(value.dealerSeat, seats)) &&
+    (value.dealerSeat === undefined || oneOf(value.dealerSeat, gameSeats)) &&
     (value.dealerStood === undefined || typeof value.dealerStood === 'boolean') &&
     oneOf(value.phase, ['betting', 'playing', 'scoring']) &&
-    number(value.hand) && value.hand <= BJ_HANDS &&
+    number(value.hand) && value.hand <= 16 &&
     chipCounts(value.chips) &&
-    seatValues(value.bets, (entry) => entry === null || (number(entry) && entry <= BJ_MAX_BET)) &&
+    gameSeatValues(value.bets, (entry) => entry === null || (number(entry) && entry <= BJ_MAX_BET)) &&
     number(value.betMs) && value.betMs > 0 &&
     (value.betDeadline === null || number(value.betDeadline)) &&
-    cards(value.deck, 52) &&
-    seatValues(value.hands, (entry) => Array.isArray(entry) && entry.length <= BJ_MAX_SEAT_HANDS
+    cards(value.deck, 104) &&
+    gameSeatValues(value.hands, (entry) => Array.isArray(entry) && entry.length <= BJ_MAX_SEAT_HANDS
       && entry.every(blackjackHand)) &&
     cards(value.dealer, BJ_MAX_HAND_CARDS) &&
     (value.hole === null || card(value.hole)) &&
-    oneOf(value.currentTurnSeat, seats) &&
+    oneOf(value.currentTurnSeat, gameSeats) &&
     number(value.activeHand) && value.activeHand < BJ_MAX_SEAT_HANDS &&
     Array.isArray(value.log) &&
     value.log.every(blackjackLog) &&
@@ -659,21 +668,22 @@ function blackjackGame(value: ObjectValue): boolean {
 }
 
 /** Chips never enter or leave a Hold'em match. */
-const HE_TOTAL_CHIPS = HE_STARTING_CHIPS * 4;
+const HE_TOTAL_CHIPS = HE_STARTING_CHIPS * 8;
 
-function seatList(value: unknown): value is Seat[] {
-  return Array.isArray(value) && value.every((seat: unknown) => oneOf(seat, seats)) && new Set(value).size === value.length;
+function gameSeatList(value: unknown): value is GameSeat[] {
+  return Array.isArray(value) && value.every((seat: unknown) => oneOf(seat, gameSeats)) && new Set(value).size === value.length;
 }
 
 /** Hold'em result: chips are conserved, winners hold the most, and the match had ended. */
 export function isHoldemResult(value: unknown): boolean {
-  if (!object(value) || value.gameType !== 'holdem' || !seatCounts(value.chips, HE_TOTAL_CHIPS) || !number(value.hands)
-    || value.hands < 1 || value.hands > HE_HANDS || !seatList(value.eliminationOrder)) return false;
+  value = normalizeGameSeatMaps(value);
+  if (!object(value) || value.gameType !== 'holdem' || !gameSeatCounts(value.chips, HE_TOTAL_CHIPS) || !number(value.hands)
+    || value.hands < 1 || value.hands > HE_HANDS || !gameSeatList(value.eliminationOrder)) return false;
   const chips = value.chips;
   const participants = resultSeats(value);
   if (!participants) return false;
-  const holders = seats.filter((seat) => chips[seat] > 0);
-  return seats.reduce((sum, seat) => sum + chips[seat], 0) === HE_STARTING_CHIPS * participants.length
+  const holders = gameSeats.filter((seat) => chips[seat] > 0);
+  return gameSeats.reduce((sum, seat) => sum + chips[seat], 0) === HE_STARTING_CHIPS * participants.length
     && holders.every((seat) => participants.includes(seat))
     && (value.hands === HE_HANDS || holders.length === 1)
     && value.eliminationOrder.every((seat) => participants.includes(seat) && chips[seat] === 0)
@@ -685,19 +695,19 @@ function holdemLog(value: unknown): boolean {
   if (!object(value) || !number(value.timestamp)) return false;
   switch (value.type) {
     case 'hand':
-      return number(value.hand) && value.hand >= 1 && value.hand <= HE_HANDS && oneOf(value.button, seats)
-        && number(value.smallBlind) && number(value.bigBlind) && seatCounts(value.blinds, HE_TOTAL_CHIPS);
+      return number(value.hand) && value.hand >= 1 && value.hand <= HE_HANDS && oneOf(value.button, gameSeats)
+        && number(value.smallBlind) && number(value.bigBlind) && gameSeatCounts(value.blinds, HE_TOTAL_CHIPS);
     case 'action':
-      return oneOf(value.seat, seats) && oneOf(value.action, ['fold', 'check', 'call', 'bet', 'raise'])
+      return oneOf(value.seat, gameSeats) && oneOf(value.action, ['fold', 'check', 'call', 'bet', 'raise'])
         && number(value.to) && value.to <= HE_TOTAL_CHIPS && typeof value.allIn === 'boolean';
     case 'street':
       return oneOf(value.street, ['flop', 'turn', 'river']) && cards(value.cards, 3);
     case 'showdown':
-      return seatValues(value.cards, (entry) => cards(entry, HE_HOLE_CARDS));
+      return gameSeatValues(value.cards, (entry) => cards(entry, HE_HOLE_CARDS));
     case 'award':
       return Array.isArray(value.pots) && value.pots.every((pot: unknown) => object(pot) && number(pot.amount)
-        && seatList(pot.eligible) && seatList(pot.winners)) && seatCounts(value.chips, HE_TOTAL_CHIPS)
-        && seatList(value.eliminated);
+        && gameSeatList(pot.eligible) && gameSeatList(pot.winners)) && gameSeatCounts(value.chips, HE_TOTAL_CHIPS)
+        && gameSeatList(value.eliminated);
     default: return false;
   }
 }
@@ -706,18 +716,18 @@ function holdemGame(value: ObjectValue): boolean {
   return flexibleSeatGame(value) &&
     oneOf(value.phase, ['playing', 'scoring']) &&
     number(value.hand) && value.hand >= 1 && value.hand <= HE_HANDS &&
-    oneOf(value.button, seats) &&
+    oneOf(value.button, gameSeats) &&
     number(value.smallBlind) && number(value.bigBlind) &&
-    seatCounts(value.chips, HE_TOTAL_CHIPS) && seatCounts(value.streetBets, HE_TOTAL_CHIPS) &&
-    seatCounts(value.totalBets, HE_TOTAL_CHIPS) &&
-    seatList(value.dealt) && seatList(value.folded) && seatList(value.acted) && seatList(value.eliminated) &&
+    gameSeatCounts(value.chips, HE_TOTAL_CHIPS) && gameSeatCounts(value.streetBets, HE_TOTAL_CHIPS) &&
+    gameSeatCounts(value.totalBets, HE_TOTAL_CHIPS) &&
+    gameSeatList(value.dealt) && gameSeatList(value.folded) && gameSeatList(value.acted) && gameSeatList(value.eliminated) &&
     oneOf(value.street, ['preflop', 'flop', 'turn', 'river']) &&
     cards(value.board, 5) &&
     number(value.currentBet) && number(value.minRaise) &&
-    seatValues(value.revealed, (entry) => cards(entry, HE_HOLE_CARDS)) &&
-    oneOf(value.currentTurnSeat, seats) &&
+    gameSeatValues(value.revealed, (entry) => cards(entry, HE_HOLE_CARDS)) &&
+    oneOf(value.currentTurnSeat, gameSeats) &&
     cards(value.deck, 52) &&
-    seatValues(value.hands, (entry) => cards(entry, HE_HOLE_CARDS)) &&
+    gameSeatValues(value.hands, (entry) => cards(entry, HE_HOLE_CARDS)) &&
     Array.isArray(value.log) &&
     value.log.every(holdemLog) &&
     (value.result === null || isHoldemResult(value.result));
@@ -750,9 +760,16 @@ function gameClock(value: ObjectValue): boolean {
   if (value.clock === undefined) return true;
   const clock = value.clock;
   if (!object(clock) || !isTimeControl(clock.settings) || clock.serverNow !== undefined
-    || !seatCounts(clock.bankRemainingMs, clock.settings.bankSeconds * 1000)) return false;
+    || !object(clock.bankRemainingMs) || !object(value.players)) return false;
+  const banks = clock.bankRemainingMs;
+  const bankLimit = clock.settings.bankSeconds * 1000;
+  const allowedSeats = oneOf(value.gameType, [...EXPANDABLE_ROOM_GAMES]) ? gameSeats : seats;
+  const required = new Set([...seats, ...Object.keys(value.players)]);
+  if (![...required].every((seat) => number(banks[seat]) && banks[seat] <= bankLimit)
+    || !Object.entries(banks).every(([seat, bank]) => (allowedSeats as readonly string[]).includes(seat)
+      && number(bank) && bank <= bankLimit)) return false;
   if (clock.lastTimeout !== undefined && (!object(clock.lastTimeout)
-    || !oneOf(clock.lastTimeout.seat, seats) || !number(clock.lastTimeout.at))) return false;
+    || !oneOf(clock.lastTimeout.seat, Object.keys(value.players)) || !number(clock.lastTimeout.at))) return false;
   const state = value as unknown as AnyGameState;
   const expectedSeat = getTurnSeat(state);
   if (!expectedSeat) return clock.turn === null;
@@ -763,14 +780,14 @@ function gameClock(value: ObjectValue): boolean {
     && number(turn.startsAt) && turn.startsAt >= getPresentationEndsAt(state)
     && number(turn.baseRemainingMs) && turn.baseRemainingMs <= clock.settings.baseSeconds * 1000
     && number(turn.deadline)
-    && turn.deadline === turn.startsAt + turn.baseRemainingMs + clock.bankRemainingMs[expectedSeat];
+    && turn.deadline === turn.startsAt + turn.baseRemainingMs + (clock.bankRemainingMs as Record<string, number>)[expectedSeat];
 }
 
 function returnedSeats(value: ObjectValue): boolean {
   if (value.returnedSeats === undefined) return true;
   const returned = value.returnedSeats;
-  return value.result !== null && Array.isArray(returned) && returned.length < 4
-    && returned.every((seat: unknown) => oneOf(seat, seats)) && new Set(returned).size === returned.length;
+  return value.result !== null && Array.isArray(returned) && returned.length < 8
+    && returned.every((seat: unknown) => oneOf(seat, gameSeats)) && new Set(returned).size === returned.length;
 }
 
 function returnedViewers(value: ObjectValue): boolean {
@@ -781,6 +798,7 @@ function returnedViewers(value: ObjectValue): boolean {
 }
 
 function game(value: unknown): boolean {
+  if (object(value) && typeof value.gameType === 'string') value = normalizeFlexibleGame({ ...value, gameType: value.gameType });
   return object(value) && oneOf(value.gameType, [...GAME_TYPES]) &&
     gameValidators[value.gameType as GameType](value) && presentation(value) && gameClock(value)
     && returnedSeats(value) && returnedViewers(value);
@@ -852,19 +870,19 @@ function room(value: unknown): boolean {
   const humans = members.filter((id) => !id.startsWith('bot:'));
   if (info.additionalSeats !== undefined && (!Array.isArray(info.additionalSeats)
     || info.additionalSeats.length > MAX_ROOM_SEATS - 4
-    || (info.additionalSeats.length > 0 && (info.status !== 'waiting'
-      || !oneOf(info.gameType, [...EXPANDABLE_ROOM_GAMES])))
-    || !info.additionalSeats.every((entry: unknown) => object(entry) && entry.isReady === false
-      && (entry.player === null || (player(entry.player) && object(entry.player)
+    || (info.additionalSeats.length > 0 && !oneOf(info.gameType, [...EXPANDABLE_ROOM_GAMES]))
+    || !info.additionalSeats.every((entry: unknown) => object(entry) && typeof entry.isReady === 'boolean'
+      && ((entry.player === null && !entry.isReady) || (player(entry.player) && object(entry.player)
         && entry.player.isBot !== true && members.includes(String(entry.player.id))))))) return false;
   // Only seated humans vote; spectators are members without a seat.
-  const voters = object(info.seats) ? seats.flatMap((seat) => {
-    const entry = (info.seats as ObjectValue)[seat];
+  const voters = object(info.seats) ? [...Object.values(info.seats),
+    ...Array.isArray(info.additionalSeats) ? info.additionalSeats : []].flatMap((entry: unknown) => {
     const occupant = object(entry) && object(entry.player) ? entry.player : null;
     return occupant && occupant.isBot !== true && text(occupant.id) ? [occupant.id] : [];
   }) : [];
   return (
     text(info.code) &&
+    (info.shuffleSeats === undefined || typeof info.shuffleSeats === 'boolean') &&
     (info.timeControl === undefined || isTimeControl(info.timeControl)) &&
     (info.sevensOptions === undefined || isSevensOptions(info.sevensOptions)) &&
     (info.ninetyNineOptions === undefined || isNinetyNineOptions(info.ninetyNineOptions)) &&
@@ -1064,9 +1082,9 @@ function coherentBlackjackGame(state: BlackjackGameState): boolean {
   const firstDealer = firstDeal?.type === 'deal' ? firstDeal.dealer : state.dealerSeat;
   const table = bjEmptyTable(participants);
   /** The seat dealing the hand being bet: the first dealer, then clockwise after the latest one. */
-  const nextDealer = (): Seat | undefined => !playerDealer ? undefined
+  const nextDealer = (): GameSeat | undefined => !playerDealer ? undefined
     : table.dealerSeat ? bjNextDealer(table.dealerSeat, participants) : firstDealer;
-  let betSeats: Seat[] = [];
+  let betSeats: GameSeat[] = [];
   let inHand = false;
   let revealed = false;
   let acted = false;
@@ -1077,7 +1095,7 @@ function coherentBlackjackGame(state: BlackjackGameState): boolean {
       betSeats.push(entry.seat);
     } else if (entry.type === 'deal') {
       const bettors = bjBettingSeats(table.chips, nextDealer());
-      if (inHand || entry.hand !== table.hand + 1 || entry.dealer !== nextDealer() || seats.some((seat) => {
+      if (inHand || entry.hand !== table.hand + 1 || entry.dealer !== nextDealer() || gameSeats.some((seat) => {
         const bet = entry.bets[seat];
         return betSeats.includes(seat) !== bettors.includes(seat) || (bet > 0) !== betSeats.includes(seat)
           || (bet > 0 && !bjIsValidBet(bet, table.chips[seat])) || entry.cards[seat].length !== (bet > 0 ? 2 : 0);
@@ -1117,18 +1135,22 @@ function coherentBlackjackGame(state: BlackjackGameState): boolean {
   if (table.hand !== state.hand || !sameJson(table.chips, state.chips) || !sameJson(table.hands, state.hands)
     || !sameJson(table.dealer, state.dealer) || table.dealerStood !== state.dealerStood
     || (state.hole !== null) !== (inHand && !revealed)) return false;
-  const held = [...state.deck, ...seats.flatMap((seat) => state.hands[seat].flatMap((hand) => hand.cards)),
+  const held = [...state.deck, ...gameSeats.flatMap((seat) => state.hands[seat].flatMap((hand) => hand.cards)),
     ...state.dealer, ...(state.hole ? [state.hole] : [])];
-  if (new Set(held.map(cardId)).size !== held.length || held.length !== (state.hand > 0 ? 52 : 0)) return false;
+  const copies = participants.length > 4 ? 2 : 1;
+  const counts = new Map<string, number>();
+  for (const card of held) counts.set(cardId(card), (counts.get(cardId(card)) ?? 0) + 1);
+  if (held.length !== (state.hand > 0 ? 52 * copies : 0)
+    || [...counts.values()].some((count) => count !== copies)) return false;
   const over = bjMatchOver(state.hand, state.chips, participants, playerDealer);
 
   if (state.phase === 'betting') {
     return !inHand && state.result === null && !over && state.dealerSeat === nextDealer()
-      && seats.every((seat) => (state.bets[seat] !== null) === betSeats.includes(seat)
+      && gameSeats.every((seat) => (state.bets[seat] !== null) === betSeats.includes(seat)
         && (state.bets[seat] === null || bjIsValidBet(state.bets[seat], state.chips[seat])))
       && bjBettingSeats(state.chips, state.dealerSeat).some((seat) => state.bets[seat] === null);
   }
-  if (betSeats.length > 0 || seats.some((seat) => state.bets[seat] !== null) || state.betDeadline !== null
+  if (betSeats.length > 0 || gameSeats.some((seat) => state.bets[seat] !== null) || state.betDeadline !== null
     || state.dealerSeat !== table.dealerSeat) return false;
   if (state.phase === 'playing') {
     if (!inHand || state.result !== null) return false;
@@ -1169,18 +1191,18 @@ function coherentHoldemGame(state: HoldemGameState): boolean {
   const participants = occupiedSeats(state.players);
   const table = heEmptyTable(participants);
   let inHand = false;
-  let turn: Seat | null = null;
+  let turn: GameSeat | null = null;
   for (const entry of state.log) {
     const contested = heInHand(table).length > 1;
     if (entry.type === 'hand') {
       if (inHand || entry.hand !== table.hand + 1 || (table.hand > 0 && heMatchOver(table))) return false;
-      const dealt = seats.filter((seat) => table.chips[seat] > 0);
+      const dealt = gameSeats.filter((seat) => table.chips[seat] > 0);
       if (table.hand > 0 ? entry.button !== heNextButton(table.button, table.chips) : !dealt.includes(entry.button)) {
         return false;
       }
       const { smallBlind, bigBlind } = heBlinds(entry.hand);
       const { small, big } = heBlindSeats(dealt, entry.button);
-      const blinds = { N: 0, E: 0, S: 0, W: 0 };
+      const blinds = gameSeatMap(() => 0);
       blinds[small] = Math.min(smallBlind, table.chips[small]);
       blinds[big] = Math.min(bigBlind, table.chips[big]);
       if (entry.smallBlind !== smallBlind || entry.bigBlind !== bigBlind || !sameJson(entry.blinds, blinds)) return false;
@@ -1205,7 +1227,7 @@ function coherentHoldemGame(state: HoldemGameState): boolean {
       turn = heFirstToAct(table);
     } else if (entry.type === 'showdown') {
       const showing = heInHand(table);
-      if (!contested || table.board.length !== 5 || seats.some((seat) =>
+      if (!contested || table.board.length !== 5 || gameSeats.some((seat) =>
         entry.cards[seat].length !== (showing.includes(seat) ? HE_HOLE_CARDS : 0))) return false;
       heApplyEntry(table, entry);
     } else {
@@ -1213,8 +1235,8 @@ function coherentHoldemGame(state: HoldemGameState): boolean {
         return false;
       }
       const { pots, payouts } = heAward(table);
-      const chips = { N: 0, E: 0, S: 0, W: 0 };
-      for (const seat of seats) chips[seat] = table.chips[seat] + payouts[seat];
+      const chips = gameSeatMap(() => 0);
+      for (const seat of gameSeats) chips[seat] = table.chips[seat] + payouts[seat];
       if (!sameJson({ pots: entry.pots, chips: entry.chips, eliminated: entry.eliminated },
         { pots, chips, eliminated: heEliminations(table, chips) })) return false;
       heApplyEntry(table, entry);
@@ -1228,9 +1250,9 @@ function coherentHoldemGame(state: HoldemGameState): boolean {
     minRaise: value.minRaise, acted: value.acted, revealed: value.revealed, eliminated: value.eliminated,
   });
   if (!sameJson(publicState(table), publicState(state))) return false;
-  const held = [...state.deck, ...seats.flatMap((seat) => state.hands[seat]), ...state.board];
+  const held = [...state.deck, ...gameSeats.flatMap((seat) => state.hands[seat]), ...state.board];
   if (new Set(held.map(cardId)).size !== held.length || held.length !== 52
-    || seats.some((seat) => state.hands[seat].length !== (table.dealt.includes(seat) ? HE_HOLE_CARDS : 0)
+    || gameSeats.some((seat) => state.hands[seat].length !== (table.dealt.includes(seat) ? HE_HOLE_CARDS : 0)
       || (state.revealed[seat].length > 0 && !sameJson(state.revealed[seat], state.hands[seat])))) return false;
   if (state.phase === 'playing') return inHand && turn !== null && state.currentTurnSeat === turn && state.result === null;
   return !inHand && state.log.at(-1)?.type === 'award' && heMatchOver(table)
@@ -1242,7 +1264,13 @@ function coherentHoldemGame(state: HoldemGameState): boolean {
 
 /** Every deck card is accounted for, eliminations match the log, and the current seat can play. */
 function coherentNinetyNineGame(state: NinetyNineGameState): boolean {
-  if (new Set(seats.map((seat) => state.players[seat].id)).size !== 4) return false;
+  if (!distinctPlayers(state.players)) return false;
+  const seats = occupiedSeats(state.players);
+  if (!seats.includes(state.currentTurnSeat) || state.eliminated.some((seat) => !seats.includes(seat))
+    || state.log.some((entry) => !seats.includes(entry.seat)
+      || (entry.type === 'play' && entry.target !== null && !seats.includes(entry.target)))) return false;
+  if (state.result && !sameJson(resultSeats(state.result as unknown as ObjectValue), seats)) return false;
+  if (GAME_SEAT_ORDER.some((seat) => !state.players[seat] && state.hands[seat].length > 0)) return false;
   const { eliminated, result } = state;
   const twoDecks = state.options?.twoDecks === true;
   const all = [...seats.flatMap((seat) => state.hands[seat]), ...state.stock, ...state.discard];
@@ -1258,7 +1286,7 @@ function coherentNinetyNineGame(state: NinetyNineGameState): boolean {
     : state.total !== 0 || state.discard.length > 0) return false;
   // A two-deck stock is never refilled, so it is empty exactly when the match settled by running out.
   if (state.phase === 'playing') {
-    return result === null && eliminated.length < 3 && !eliminated.includes(state.currentTurnSeat) &&
+    return result === null && eliminated.length < seats.length - 1 && !eliminated.includes(state.currentTurnSeat) &&
       (!twoDecks || state.stock.length > 0) && nnHasPlayable(state.total, state.hands[state.currentTurnSeat]);
   }
   if (result === null || !isDeepStrictEqual(result.eliminationOrder, eliminated) || result.finalTotal !== state.total) {
@@ -1268,7 +1296,7 @@ function coherentNinetyNineGame(state: NinetyNineGameState): boolean {
     return twoDecks && state.stock.length === 0 && lastPlay?.seat === state.currentTurnSeat &&
       isDeepStrictEqual(result.winners, seats.filter((seat) => !eliminated.includes(seat)));
   }
-  return eliminated.length === 3 && result.winnerSeat === state.currentTurnSeat && (!twoDecks || state.stock.length > 0);
+  return eliminated.length === seats.length - 1 && result.winnerSeat === state.currentTurnSeat && (!twoDecks || state.stock.length > 0);
 }
 
 /** All 52 cards are accounted for, piles match the log, and the pending step can resume. */
@@ -1494,6 +1522,7 @@ export function isRuntimeSnapshot(value: unknown): value is RuntimeSnapshot {
     const occupants = [...seats.flatMap((seat) => entry.info.seats[seat].player?.id ?? []),
       ...(entry.info.additionalSeats ?? []).flatMap((seat) => seat.player?.id ?? [])];
     if (new Set(occupants).size !== occupants.length) return false;
+    if (entry.memberIds.filter((id) => !occupants.includes(id)).length > MAX_SPECTATORS) return false;
     const vote = entry.info.abortVote;
     if (vote && ![...vote.yes, ...vote.no].every((id) => occupants.includes(id))) return false;
     for (const id of entry.memberIds) {
@@ -1525,15 +1554,15 @@ export function isRuntimeSnapshot(value: unknown): value is RuntimeSnapshot {
     return false;
   for (const entry of snapshot.games) {
     const currentRoom = rooms.get(entry.roomCode);
-    if (!currentRoom || !coherentGame(entry)) return false;
+    if (!currentRoom || !coherentGame(normalizeFlexibleGame(entry))) return false;
     if (entry.phase === 'scoring') {
       // The completed board is historical: seats and members may have changed already.
       if (currentRoom.info.status !== 'waiting') return false;
     } else if (
       currentRoom.info.status !== 'playing' ||
       currentRoom.info.gameType !== entry.gameType ||
-      !seats.every((seat) => currentRoom.info.seats[seat].player?.id === entry.players[seat]?.id &&
-        (currentRoom.info.seats[seat].player?.isBot === true) === (entry.players[seat]?.isBot === true))
+      !gameSeats.every((seat) => roomSeatInfo(currentRoom.info, seat)?.player?.id === (entry.players as Partial<Record<GameSeat, { id: string }>>)[seat]?.id
+        && (roomSeatInfo(currentRoom.info, seat)?.player?.isBot === true) === ((entry.players as Partial<Record<GameSeat, { isBot?: boolean }>>)[seat]?.isBot === true))
     )
       return false;
   }

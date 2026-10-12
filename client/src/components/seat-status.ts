@@ -1,9 +1,9 @@
-import type { GameClock, Seat } from '@shared/types';
+import type { GameClock, GameSeat } from '@shared/types';
 
-type LogEntry = { readonly seat?: Seat; readonly timestamp: number };
+type LogEntry = { readonly seat?: GameSeat; readonly timestamp: number };
 
 /** Timestamp of the seat's latest logged action, or 0 when it has not acted. */
-export function latestSeatAction(log: readonly LogEntry[], seat: Seat): number {
+export function latestSeatAction(log: readonly LogEntry[], seat: GameSeat): number {
   for (let index = log.length - 1; index >= 0; index--) {
     if (log[index].seat === seat) return log[index].timestamp;
   }
@@ -15,7 +15,7 @@ export function latestSeatAction(log: readonly LogEntry[], seat: Seat): number {
  * `lastTimeout` across turns, so later turns and actions are what clear it.
  */
 export function showsAutoPlayed(
-  clock: Pick<GameClock, 'lastTimeout' | 'turn'> | undefined, seat: Seat, lastActionAt: number,
+  clock: Pick<GameClock, 'lastTimeout' | 'turn'> | undefined, seat: GameSeat, lastActionAt: number,
 ): boolean {
   const timeout = clock?.lastTimeout;
   if (!timeout || timeout.seat !== seat) return false;

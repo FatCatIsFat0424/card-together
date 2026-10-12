@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { describe, expect, it } from 'vitest';
 import type { Card, NinetyNineLogEntry, NinetyNineVisibleState, Seat } from '@shared/types';
 import { getNinetyNineBotAction, unseenCards } from '../../src/bots/ninetynine-strategy';
@@ -6,12 +7,12 @@ const card = (suit: Card['suit'], rank: Card['rank']): Card => ({ suit, rank });
 const samples = [0, 0.25, 0.5, 0.75, 0.9999];
 
 function state(myHand: Card[], overrides: Partial<NinetyNineVisibleState> = {}): NinetyNineVisibleState {
-  return {
+  return gameSeatValues({
     gameType: 'ninetynine', phase: 'playing', mySeat: 'N', myHand,
     handCounts: { N: myHand.length, E: 5, S: 5, W: 5 }, total: 0, direction: 'ccw',
     currentTurnSeat: 'N', lastPlayed: null, stockCount: 20, eliminated: [],
     log: [], result: null, ...overrides,
-  };
+  });
 }
 
 function play(seat: Seat, played: Card, total: number): NinetyNineLogEntry {

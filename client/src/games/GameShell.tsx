@@ -1,10 +1,11 @@
+import { roomSeatInfo } from '@shared/rules/seats';
 // ─── GameShell: table frame shared by all games (info rail + table + chat + abort vote) ───
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { frameLogIndex } from '@shared/game-presentation';
 import type { PresentationFrame } from '@shared/game-presentation';
-import type { PlayerVisibleGameState, Seat } from '@shared/types';
+import type { PlayerVisibleGameState, GameSeat } from '@shared/types';
 import type { TranslationKey } from '../i18n';
 import { playCardSound, playOutSound, unlockCardSounds, disposeCardSounds } from '../audio/card-sound';
 import { cardBackStyle, tableBackgroundStyle } from '../account-appearance';
@@ -35,12 +36,15 @@ import { isSpectator } from './observer-view';
 import { useTablePerspective } from './use-table-perspective';
 import { useTablePerspectiveStore } from '../stores/table-perspective-store';
 
-const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 const DESKTOP_QUERY = '(min-width: 1024px)';
 const SHEET_QUERY = '(max-width: 767px), (max-height: 500px) and (min-width: 600px)';
 const OUT_BANNER_MS = 3500;
 /** The played card flies to the center from that seat's direction */
 const FLY_FROM: Record<TablePosition, CSSProperties> = {
+  topLeft: { '--fly-x': '-24vw', '--fly-y': '-28vh' } as CSSProperties,
+  topRight: { '--fly-x': '24vw', '--fly-y': '-28vh' } as CSSProperties,
+  bottomLeft: { '--fly-x': '-24vw', '--fly-y': '20vh' } as CSSProperties,
+  bottomRight: { '--fly-x': '24vw', '--fly-y': '20vh' } as CSSProperties,
   bottom: { '--fly-x': '0px', '--fly-y': '28vh' } as CSSProperties,
   top: { '--fly-x': '0px', '--fly-y': '-28vh' } as CSSProperties,
   left: { '--fly-x': '-30vw', '--fly-y': '0px' } as CSSProperties,
@@ -129,8 +133,8 @@ interface GameShellProps {
   /** Action error shown on the table */
   error?: string;
   /** Selectable seats (Ninety-Nine: choose the next player) */
-  pickableSeats?: readonly Seat[];
-  onPickSeat?: (seat: Seat) => void;
+  pickableSeats?: readonly GameSeat[];
+  onPickSeat?: (seat: GameSeat) => void;
   turnReady?: boolean;
 }
 
@@ -177,7 +181,7 @@ export function GameShell({
   const account = useAccountStore((state) => state.account);
   const tableStyle = tableBackgroundStyle(account);
   const messageCount = useChatStore((state) => state.messages.length);
-  const seats = useRoomStore((state) => state.roomInfo?.seats);
+  const room = useRoomStore((state) => state.roomInfo);
   const log = useGameStore((state) => state.bigTwo?.log ?? state.redPoints?.log ?? state.ninetyNine?.log
     ?? state.sevens?.log ?? state.chinesePoker?.log ?? state.liarsDeck?.log ?? state.blackjack?.log ?? state.holdem?.log ?? state.log);
   const ownedTurn = useGameStore((state) => mySeat !== null && state.currentTurnSeat === mySeat
@@ -187,9 +191,9 @@ export function GameShell({
     ? state.currentTurnSeat : null);
   const move = lastMove(log);
   const out = lastElimination(log);
-  const [outBanner, setOutBanner] = useState<{ seat: Seat; index: number } | null>(null);
+  const [outBanner, setOutBanner] = useState<{ seat: GameSeat; index: number } | null>(null);
   const { t } = useI18nStore();
-  const turnName = turnSeat ? seats?.[turnSeat].player?.nickname ?? t(`seat.${turnSeat}`) : '';
+  const turnName = turnSeat ? (room ? roomSeatInfo(room, turnSeat)?.player?.nickname : null) ?? t(`seat.${turnSeat}`) : '';
   const turnAnnouncement = presentation.locked || !turnSeat ? ''
     : turnSeat === mySeat ? (myTurn ? t('table.yourTurn') : '') : t('table.turnOf', { name: turnName });
   // Chat is collapsed by default on tablet; on mobile it is a bottom drawer, closed by default
@@ -209,7 +213,7 @@ export function GameShell({
   const bottomSeat = useTablePerspective();
   const selectSeat = useTablePerspectiveStore((state) => state.selectSeat);
   const watching = isSpectator(visibleGame);
-  const observeSeat = (seat: Seat): void => {
+  const observeSeat = (seat: GameSeat): void => {
     const restoreFocus = document.activeElement?.matches('[data-table-seat]');
     selectSeat(seat);
     if (restoreFocus) requestAnimationFrame(() => {
@@ -365,7 +369,7 @@ export function GameShell({
       </div>
 
       <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}>
-        <div className={styles.table} data-card-table>
+        <div className={`${styles.table} ${tableSeats.some((seat) => !['N', 'E', 'S', 'W'].includes(seat)) ? styles.expandedTable : ''}`} data-card-table>
           <div className={styles.tableTools}>
             {visibleGame && <button type="button" className={`${styles.toolBtn} ${styles.rulesToolButton}`}
               onClick={openRules} aria-haspopup="dialog" aria-label={t('rules.open')} title={t('rules.open')}>
@@ -382,8 +386,8 @@ export function GameShell({
               {unread > 0 && <span className={`${styles.unread} ${styles.fabBadge}`}>{unread}</span>}
             </button>
           </div>
-          {SEATS.filter((seat) => seat !== bottomSeat && tableSeats.includes(seat)).map((seat) => (
-            <TableSeat key={seat} seat={seat} position={tablePosition(seat, bottomSeat)}
+          {tableSeats.filter((seat) => seat !== bottomSeat && tableSeats.includes(seat)).map((seat) => (
+            <TableSeat key={seat} seat={seat} position={tablePosition(seat, bottomSeat, tableSeats)}
               onObserve={watching ? () => observeSeat(seat) : undefined}
               suppressTurn={presentation.locked}
               moveKey={visibleGame?.presentation
@@ -392,7 +396,7 @@ export function GameShell({
               onPick={onPickSeat && pickableSeats?.includes(seat) ? () => onPickSeat(seat) : undefined} />
           ))}
           <FittedCentre responsive={visibleGame?.gameType === 'redpoints' && !presentation.frame}
-            style={move ? FLY_FROM[tablePosition(move.seat, bottomSeat)] : undefined}>
+            style={move ? FLY_FROM[tablePosition(move.seat, bottomSeat, tableSeats)] : undefined}>
             {presentation.frame && visibleGame && !centreVisible ? (
               <GamePresentation key={presentation.frame.key} frame={presentation.frame}
                 bottomSeat={bottomSeat} gameType={visibleGame.gameType}
@@ -402,7 +406,7 @@ export function GameShell({
           </FittedCentre>
           {tableEffect}
           {outBanner && <p key={outBanner.index} className={styles.outBanner} role="status">
-            <AppIcon name="burst" /> {t('table.eliminated', { name: seats?.[outBanner.seat].player?.nickname ?? t(`seat.${outBanner.seat}`) })}
+            <AppIcon name="burst" /> {t('table.eliminated', { name: (room ? roomSeatInfo(room, outBanner.seat)?.player?.nickname : null) ?? t(`seat.${outBanner.seat}`) })}
           </p>}
           {panel && !presentation.locked && <div className={styles.actionPanel}>{panel}</div>}
           <AbortVoteBanner />

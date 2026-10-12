@@ -2,10 +2,10 @@
 // Rules: docs/games.md#blackjack
 
 import type {
-  BlackjackAction, BlackjackDealerAction, BlackjackHand, BlackjackLogEntry, BlackjackOutcome, Card, Seat,
+  BlackjackAction, BlackjackDealerAction, BlackjackHand, BlackjackLogEntry, BlackjackOutcome, Card, GameSeat,
 } from '../types';
-import { SEAT_ORDER_CLOCKWISE } from '../constants';
-import { nextSeatClockwise } from './seats';
+import { GAME_SEAT_ORDER } from '../constants';
+import { nextGameSeat } from './seats';
 
 export const BJ_STARTING_CHIPS = 1000;
 export const BJ_MIN_BET = 10;
@@ -27,23 +27,23 @@ export const BJ_OUTCOMES: readonly BlackjackOutcome[] = ['blackjack', 'win', 'pu
 /** Public table state rebuilt from the log. */
 export interface BjTable {
   hand: number;
-  chips: Record<Seat, number>;
-  hands: Record<Seat, BlackjackHand[]>;
+  chips: Record<GameSeat, number>;
+  hands: Record<GameSeat, BlackjackHand[]>;
   dealer: Card[];
   /** The player dealer of the latest hand; missing with the house dealer */
-  dealerSeat?: Seat;
+  dealerSeat?: GameSeat;
   /** The player dealer stood this hand */
   dealerStood?: boolean;
 }
 
 export interface BjSettlement {
-  readonly outcomes: Record<Seat, BlackjackOutcome[]>;
-  readonly net: Record<Seat, number>;
-  readonly chips: Record<Seat, number>;
+  readonly outcomes: Record<GameSeat, BlackjackOutcome[]>;
+  readonly net: Record<GameSeat, number>;
+  readonly chips: Record<GameSeat, number>;
 }
 
-function seatMap<T>(value: (seat: Seat) => T): Record<Seat, T> {
-  return { N: value('N'), E: value('E'), S: value('S'), W: value('W') };
+function seatMap<T>(value: (seat: GameSeat) => T): Record<GameSeat, T> {
+  return Object.fromEntries(GAME_SEAT_ORDER.map((seat) => [seat, value(seat)])) as Record<GameSeat, T>;
 }
 
 /** Shared betting window: twice the turn allowance, but at least 15 seconds. */
@@ -86,8 +86,8 @@ export function bjSitsIn(chips: number): boolean {
 }
 
 /** Seats that bet a hand: every seat covering the minimum except its player dealer, ordered N, E, S, W. */
-export function bjBettingSeats(chips: Readonly<Record<Seat, number>>, dealerSeat?: Seat): Seat[] {
-  return SEAT_ORDER_CLOCKWISE.filter((seat) => seat !== dealerSeat && bjSitsIn(chips[seat]));
+export function bjBettingSeats(chips: Readonly<Record<GameSeat, number>>, dealerSeat?: GameSeat): GameSeat[] {
+  return GAME_SEAT_ORDER.filter((seat) => seat !== dealerSeat && bjSitsIn(chips[seat]));
 }
 
 /** Two full rotations give every seat the deal equally often. */
@@ -96,9 +96,9 @@ export function bjMatchHands(seatCount: number, playerDealer: boolean): number {
 }
 
 /** The deal passes clockwise to the next seat taking part. */
-export function bjNextDealer(dealer: Seat, seats: readonly Seat[]): Seat {
-  let next = nextSeatClockwise(dealer);
-  while (!seats.includes(next)) next = nextSeatClockwise(next);
+export function bjNextDealer(dealer: GameSeat, seats: readonly GameSeat[]): GameSeat {
+  let next = nextGameSeat(dealer);
+  while (!seats.includes(next)) next = nextGameSeat(next);
   return next;
 }
 
@@ -108,7 +108,7 @@ export function bjNextDealer(dealer: Seat, seats: readonly Seat[]): Seat {
  * deals would have no bettor.
  */
 export function bjMatchOver(
-  hand: number, chips: Readonly<Record<Seat, number>>, seats: readonly Seat[], playerDealer: boolean,
+  hand: number, chips: Readonly<Record<GameSeat, number>>, seats: readonly GameSeat[], playerDealer: boolean,
 ): boolean {
   const bettors = seats.filter((seat) => bjSitsIn(chips[seat])).length;
   return hand >= bjMatchHands(seats.length, playerDealer) || bettors < (playerDealer ? 2 : 1);
@@ -154,15 +154,15 @@ export function bjDealerActions(dealer: readonly Card[]): BlackjackDealerAction[
 }
 
 /** The dealer draws only while some hand is neither busted nor a natural. */
-export function bjDealerMustDraw(hands: Readonly<Record<Seat, readonly BlackjackHand[]>>): boolean {
-  return SEAT_ORDER_CLOCKWISE.some((seat) => hands[seat].some((hand) => !bjIsBust(hand.cards) && !bjIsNatural(hand)));
+export function bjDealerMustDraw(hands: Readonly<Record<GameSeat, readonly BlackjackHand[]>>): boolean {
+  return GAME_SEAT_ORDER.some((seat) => hands[seat].some((hand) => !bjIsBust(hand.cards) && !bjIsNatural(hand)));
 }
 
 /** First unfinished hand in N, E, S, W order. */
 export function bjNextTurn(
-  hands: Readonly<Record<Seat, readonly BlackjackHand[]>>,
-): { seat: Seat; handIndex: number } | null {
-  for (const seat of SEAT_ORDER_CLOCKWISE) {
+  hands: Readonly<Record<GameSeat, readonly BlackjackHand[]>>,
+): { seat: GameSeat; handIndex: number } | null {
+  for (const seat of GAME_SEAT_ORDER) {
     const handIndex = hands[seat].findIndex((hand) => !hand.done);
     if (handIndex >= 0) return { seat, handIndex };
   }
@@ -194,13 +194,13 @@ export function bjPayout(bet: number, outcome: BlackjackOutcome): number {
  * owed, rounded down, with the leftover chips paid one each clockwise from the dealer's left.
  */
 export function bjProportionalPayouts(
-  owed: Readonly<Record<Seat, number>>, pool: number, dealer: Seat,
-): Record<Seat, number> {
-  const total = SEAT_ORDER_CLOCKWISE.reduce((sum, seat) => sum + owed[seat], 0);
+  owed: Readonly<Record<GameSeat, number>>, pool: number, dealer: GameSeat,
+): Record<GameSeat, number> {
+  const total = GAME_SEAT_ORDER.reduce((sum, seat) => sum + owed[seat], 0);
   if (pool >= total) return { ...owed };
   const paid = seatMap((seat) => Math.floor(owed[seat] * pool / total));
-  let left = pool - SEAT_ORDER_CLOCKWISE.reduce((sum, seat) => sum + paid[seat], 0);
-  for (let seat = nextSeatClockwise(dealer); left > 0; seat = nextSeatClockwise(seat)) {
+  let left = pool - GAME_SEAT_ORDER.reduce((sum, seat) => sum + paid[seat], 0);
+  for (let seat = nextGameSeat(dealer); left > 0; seat = nextGameSeat(seat)) {
     if (paid[seat] >= owed[seat]) continue;
     paid[seat] += 1;
     left -= 1;
@@ -228,11 +228,11 @@ export function bjSettle(table: Readonly<BjTable>): BjSettlement {
     };
   }
   const returned = seatMap((seat) => Math.min(payout[seat], staked[seat]));
-  const collected = SEAT_ORDER_CLOCKWISE.reduce((sum, seat) => sum + staked[seat] - returned[seat], 0);
+  const collected = GAME_SEAT_ORDER.reduce((sum, seat) => sum + staked[seat] - returned[seat], 0);
   const owed = seatMap((seat) => payout[seat] - returned[seat]);
   const pool = table.chips[dealer] + collected;
   const paid = bjProportionalPayouts(owed, pool, dealer);
-  const dealerChips = pool - SEAT_ORDER_CLOCKWISE.reduce((sum, seat) => sum + paid[seat], 0);
+  const dealerChips = pool - GAME_SEAT_ORDER.reduce((sum, seat) => sum + paid[seat], 0);
   const chips = seatMap((seat) => seat === dealer ? dealerChips : table.chips[seat] + returned[seat] + paid[seat]);
   return {
     outcomes,
@@ -250,9 +250,9 @@ export function bjDealerDone(table: Readonly<BjTable>): boolean {
 }
 
 /** Most chips among the seats taking part, ties included, ordered N, E, S, W. */
-export function bjWinners(chips: Readonly<Record<Seat, number>>, seats: readonly Seat[]): Seat[] {
+export function bjWinners(chips: Readonly<Record<GameSeat, number>>, seats: readonly GameSeat[]): GameSeat[] {
   const best = Math.max(...seats.map((seat) => chips[seat]));
-  return SEAT_ORDER_CLOCKWISE.filter((seat) => seats.includes(seat) && chips[seat] === best);
+  return GAME_SEAT_ORDER.filter((seat) => seats.includes(seat) && chips[seat] === best);
 }
 
 function newHand(cards: readonly Card[], bet: number, split: boolean): BlackjackHand {
@@ -262,7 +262,7 @@ function newHand(cards: readonly Card[], bet: number, split: boolean): Blackjack
 }
 
 /** Empty seats hold no chips, so they never bet. */
-export function bjEmptyTable(seats: readonly Seat[]): BjTable {
+export function bjEmptyTable(seats: readonly GameSeat[]): BjTable {
   return {
     hand: 0,
     chips: seatMap((seat) => seats.includes(seat) ? BJ_STARTING_CHIPS : 0),
@@ -280,7 +280,7 @@ export function bjApplyEntry(table: BjTable, entry: BlackjackLogEntry): void {
     case 'bet': return;
     case 'deal':
       table.hand = entry.hand;
-      for (const seat of SEAT_ORDER_CLOCKWISE) table.chips[seat] -= entry.bets[seat];
+      for (const seat of GAME_SEAT_ORDER) table.chips[seat] -= entry.bets[seat];
       table.hands = seatMap((seat) => entry.bets[seat] > 0 ? [newHand(entry.cards[seat], entry.bets[seat], false)] : []);
       table.dealer = [entry.upCard];
       if (entry.dealer) {
@@ -333,7 +333,7 @@ export function bjApplyEntry(table: BjTable, entry: BlackjackLogEntry): void {
 }
 
 /** The public table of a match between `seats` after the first `end` log entries. */
-export function bjReplay(log: readonly BlackjackLogEntry[], seats: readonly Seat[], end = log.length): BjTable {
+export function bjReplay(log: readonly BlackjackLogEntry[], seats: readonly GameSeat[], end = log.length): BjTable {
   const table = bjEmptyTable(seats);
   for (const entry of log.slice(0, end)) bjApplyEntry(table, entry);
   return table;

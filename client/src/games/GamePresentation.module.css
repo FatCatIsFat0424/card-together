@@ -23,6 +23,10 @@
 .top { --travel-y: -90%; }
 .left { --travel-x: -90%; --travel-y: 0%; }
 .right { --travel-x: 90%; --travel-y: 0%; }
+.topLeft { --travel-x: -90%; --travel-y: -90%; }
+.topRight { --travel-x: 90%; --travel-y: -90%; }
+.bottomLeft { --travel-x: -90%; --travel-y: 90%; }
+.bottomRight { --travel-x: 90%; --travel-y: 90%; }
 
 .heading {
   display: flex;

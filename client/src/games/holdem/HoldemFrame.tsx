@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { frameLogIndex } from '@shared/game-presentation';
 import type { PresentationFrame } from '@shared/game-presentation';
 import { HE_HANDS } from '@shared/rules/holdem';
-import type { Seat } from '@shared/types';
+import type { GameSeat } from '@shared/types';
 import { useGameStore } from '../../stores/game-store';
 import { useI18nStore } from '../../stores/i18n-store';
 import { ChipIcon } from '../ChipIcon';
@@ -22,7 +22,7 @@ export function usePotLabel(): (pot: PotLine, index: number, count: number) => s
  * Body of a Hold'em presentation frame, drawn from the table as of the frame's own log entry so
  * the board and pot never run ahead; the shared frame supplies the heading and timing.
  */
-export function HoldemFrame({ frame, name }: { frame: PresentationFrame; name: (seat: Seat) => string }): ReactNode {
+export function HoldemFrame({ frame, name }: { frame: PresentationFrame; name: (seat: GameSeat) => string }): ReactNode {
   const { t } = useI18nStore();
   const log = useGameStore((state) => state.holdem?.log);
   const seats = useGameStore((state) => state.holdem?.seats);

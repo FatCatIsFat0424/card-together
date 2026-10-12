@@ -9,7 +9,7 @@ describe('additional waiting-room seats', () => {
   let harness: SocketHarness | undefined;
   afterEach(async () => { await harness?.close(); harness = undefined; vi.restoreAllMocks(); });
 
-  it('should persist and synchronize additional seats, seat humans, and block five-seat starts', async () => {
+  it('should persist and synchronize additional seats and allow preparation before all seats fill', async () => {
     const app = await (harness = await createSocketHarness(2));
     const host = app.clients[0][0];
     const guest = app.clients[0][1];
@@ -19,7 +19,7 @@ describe('additional waiting-room seats', () => {
     expect(await guest.emitWithAck('room:addSeat')).toMatchObject({ success: false });
     expect(await host.emitWithAck('room:addSeat')).toEqual({ success: true });
     expect((await guest.emitWithAck('player:resume')).room?.additionalSeats).toHaveLength(1);
-    expect(await host.emitWithAck('room:ready')).toMatchObject({ success: false });
+    expect(await host.emitWithAck('room:ready')).toEqual({ success: true });
     expect(rooms.isAllReady(code)).toBe(false);
     expect(await visitor.emitWithAck('room:leave')).toEqual({ success: true });
     expect(await visitor.emitWithAck('room:join', { roomCode: code })).toMatchObject({ success: true });
@@ -94,7 +94,7 @@ describe('additional waiting-room seats', () => {
     expect(isRuntimeSnapshot(oversized)).toBe(false);
   });
 
-  it('should block two-player room starts and still start four-player rooms', async () => {
+  it('should wait for the host to start a prepared two-player room', async () => {
     const app = await (harness = await createSocketHarness(1));
     const [host, east, south, west] = app.clients[0];
     const code = app.roomCodes[0];
@@ -104,9 +104,8 @@ describe('additional waiting-room seats', () => {
     expect(await host.emitWithAck('room:ready')).toEqual({ success: true });
     expect(await south.emitWithAck('room:ready')).toEqual({ success: true });
     expect(rooms.getRoomInfo(code)?.status).toBe('waiting');
-    expect(await east.emitWithAck('room:changeSeat', { seat: 'E' })).toEqual({ success: true });
-    expect(await west.emitWithAck('room:changeSeat', { seat: 'W' })).toEqual({ success: true });
-    for (const client of app.clients[0]) expect(await client.emitWithAck('room:ready')).toEqual({ success: true });
+    expect(await south.emitWithAck('room:start')).toMatchObject({ success: false });
+    expect(await host.emitWithAck('room:start')).toEqual({ success: true });
     expect(rooms.getRoomInfo(code)?.status).toBe('playing');
   });
 });

@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { describe, expect, it } from 'vitest';
 import type { Card, HoldemLogEntry, Seat } from '@shared/types';
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
@@ -12,7 +13,7 @@ const seats = <T>(value: T): Record<Seat, T> => ({ N: value, E: value, S: value,
 
 function hand(button: Seat, blinds: Partial<Record<Seat, number>>, number = 1): HoldemLogEntry {
   const { smallBlind, bigBlind } = heBlinds(number);
-  return { type: 'hand', hand: number, button, smallBlind, bigBlind, blinds: { ...seats(0), ...blinds }, timestamp: 1 };
+  return gameSeatValues({ type: 'hand', hand: number, button, smallBlind, bigBlind, blinds: { ...seats(0), ...blinds }, timestamp: 1 });
 }
 
 function act(seat: Seat, action: 'fold' | 'check' | 'call' | 'bet' | 'raise', to: number, allIn = false): HoldemLogEntry {
@@ -27,7 +28,7 @@ function applyOne(state: HeTable, entry: HoldemLogEntry): HeTable {
 /** The public table after `log`, starting from custom chip counts. */
 function table(log: HoldemLogEntry[], chips: Record<Seat, number> = seats(1000)): HeTable {
   const state = heEmptyTable(SEAT_ORDER_CLOCKWISE);
-  state.chips = { ...chips };
+  state.chips = gameSeatValues({ ...chips });
   for (const entry of log) heApplyEntry(state, entry);
   return state;
 }
@@ -57,7 +58,7 @@ describe("Hold'em positions and blinds", () => {
     expect(heBlindSeats(['N', 'E', 'S', 'W'], 'W')).toEqual({ small: 'N', big: 'E' });
     expect(heBlindSeats(['N', 'S', 'W'], 'N')).toEqual({ small: 'S', big: 'W' });
     expect(heBlindSeats(['E', 'W'], 'W')).toEqual({ small: 'W', big: 'E' });
-    expect(heNextButton('E', { N: 100, E: 50, S: 0, W: 10 })).toBe('W');
+    expect(heNextButton('E', gameSeatValues({ N: 100, E: 50, S: 0, W: 10 }))).toBe('W');
   });
 
   it('opens preflop after the big blind and gives the big blind its option', () => {
@@ -124,7 +125,7 @@ describe("Hold'em pots and awards", () => {
     const state = heEmptyTable(SEAT_ORDER_CLOCKWISE);
     state.dealt = ['N', 'E', 'S', 'W'];
     state.folded = ['W'];
-    state.totalBets = { N: 100, E: 300, S: 500, W: 50 };
+    state.totalBets = gameSeatValues({ N: 100, E: 300, S: 500, W: 50 });
     expect(hePots(state)).toEqual([
       { amount: 350, eligible: ['N', 'E', 'S'] },
       { amount: 400, eligible: ['E', 'S'] },
@@ -137,36 +138,36 @@ describe("Hold'em pots and awards", () => {
     state.button = 'N';
     state.dealt = ['N', 'E', 'S', 'W'];
     state.folded = ['N'];
-    state.chips = seats(0);
-    state.totalBets = { N: 5, E: 100, S: 100, W: 40 };
+    state.chips = gameSeatValues(seats(0));
+    state.totalBets = gameSeatValues({ N: 5, E: 100, S: 100, W: 40 });
     state.board = [card(2, 'hearts'), card(7, 'clubs'), card(9, 'diamonds'), card(12, 'clubs'), card(13, 'hearts')];
-    state.revealed = { N: [], E: [card(14), card(3)], S: [card(14, 'clubs'), card(3, 'hearts')], W: [card(13), card(13, 'clubs')] };
+    state.revealed = gameSeatValues({ N: [], E: [card(14), card(3)], S: [card(14, 'clubs'), card(3, 'hearts')], W: [card(13), card(13, 'clubs')] });
     const award = heAward(state);
     expect(award.pots).toEqual([
       { amount: 125, eligible: ['E', 'S', 'W'], winners: ['W'] },
       { amount: 120, eligible: ['E', 'S'], winners: ['E', 'S'] },
     ]);
-    expect(award.payouts).toEqual({ N: 0, E: 60, S: 60, W: 125 });
-    state.totalBets = { N: 0, E: 51, S: 51, W: 0 };
+    expect(award.payouts).toEqual(gameSeatValues({ N: 0, E: 60, S: 60, W: 125 }));
+    state.totalBets = gameSeatValues({ N: 0, E: 51, S: 51, W: 0 });
     state.revealed.W = [];
     state.dealt = ['N', 'E', 'S'];
-    expect(heAward(state).payouts).toEqual({ N: 0, E: 51, S: 51, W: 0 });
-    state.totalBets = { N: 1, E: 51, S: 51, W: 0 };
-    expect(heAward(state).payouts).toEqual({ N: 0, E: 52, S: 51, W: 0 });
+    expect(heAward(state).payouts).toEqual(gameSeatValues({ N: 0, E: 51, S: 51, W: 0 }));
+    state.totalBets = gameSeatValues({ N: 1, E: 51, S: 51, W: 0 });
+    expect(heAward(state).payouts).toEqual(gameSeatValues({ N: 0, E: 52, S: 51, W: 0 }));
   });
 
   it('orders eliminations by starting stack and ends the match with one holder or after the last hand', () => {
     const state = heEmptyTable(SEAT_ORDER_CLOCKWISE);
     state.dealt = ['N', 'E', 'S'];
-    state.totalBets = { N: 300, E: 100, S: 900, W: 0 };
-    expect(heEliminations(state, { N: 0, E: 0, S: 1300, W: 2700 })).toEqual(['E', 'N']);
-    state.chips = { N: 0, E: 0, S: 0, W: 4000 };
+    state.totalBets = gameSeatValues({ N: 300, E: 100, S: 900, W: 0 });
+    expect(heEliminations(state, gameSeatValues({ N: 0, E: 0, S: 1300, W: 2700 }))).toEqual(['E', 'N']);
+    state.chips = gameSeatValues({ N: 0, E: 0, S: 0, W: 4000 });
     expect(heMatchOver(state)).toBe(true);
-    state.chips = { N: 1000, E: 1000, S: 1000, W: 1000 };
+    state.chips = gameSeatValues({ N: 1000, E: 1000, S: 1000, W: 1000 });
     state.hand = HE_HANDS - 1;
     expect(heMatchOver(state)).toBe(false);
     state.hand = HE_HANDS;
     expect(heMatchOver(state)).toBe(true);
-    expect(heWinners({ N: 1500, E: 1500, S: 1000, W: 0 })).toEqual(['N', 'E']);
+    expect(heWinners(gameSeatValues({ N: 1500, E: 1500, S: 1000, W: 0 }))).toEqual(['N', 'E']);
   });
 });

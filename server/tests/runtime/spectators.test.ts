@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ChatMessageEvent, PlayerInfo, Seat } from '@shared/types';
 import type { PlayerSnapshot } from '@shared/types/socket-events';
@@ -28,6 +29,7 @@ async function watchedMatch(app: SocketHarness): Promise<{ players: TestClient[]
   for (const client of players) {
     expect(await client.timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
   }
+  expect(await players[0].timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
   const visitor = app.clients[1][0];
   expect(await visitor.timeout(5_000).emitWithAck('room:leave')).toEqual({ success: true });
   expect(await visitor.timeout(5_000).emitWithAck('room:join', { roomCode: app.roomCodes[0] }))
@@ -144,10 +146,10 @@ describe('eliminated god view', () => {
 
     game.chips.W = 0;
     game.hands.W = [];
-    game.log.push({
+    game.log.push(gameSeatValues({
       type: 'settle', hand: 1, outcomes: { N: [], E: [], S: [], W: [] }, net: { N: 0, E: 0, S: 0, W: -10 },
       chips: { ...game.chips }, timestamp: 1000,
-    });
+    }));
     expect(games.getRecipientVisibleState(CODE, 'W')).toMatchObject({ observer: 'eliminated' });
   });
 });

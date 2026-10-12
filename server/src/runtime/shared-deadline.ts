@@ -1,5 +1,5 @@
 import { BJ_MIN_BET } from '@shared/rules/blackjack';
-import type { PlayerVisibleGameState, RoomCode, Seat } from '@shared/types';
+import type { PlayerVisibleGameState, RoomCode, GameSeat } from '@shared/types';
 import { getBotAction } from '../bots/bot-decisions';
 import type { BotAction } from '../bots/bot-decisions';
 import * as gameManager from '../managers/game-manager';
@@ -26,15 +26,15 @@ function pendingDeadline(code: RoomCode): PendingDeadline | null {
   return null;
 }
 
-function overdueSeats(code: RoomCode, gameId: string): Seat[] {
+function overdueSeats(code: RoomCode, gameId: string): GameSeat[] {
   return gameManager.getGameState(code)?.gameType === 'blackjack'
     ? gameManager.overdueBlackjackSeats(code, gameId)
     : gameManager.overdueChinesePokerSeats(code, gameId);
 }
 
 /** Bots keep their own decision; a human who missed the betting window stakes the minimum. */
-function expiredAction(code: RoomCode, seat: Seat, visible: PlayerVisibleGameState): BotAction | null {
-  if (visible.gameType === 'blackjack' && !gameManager.getGameState(code)?.players[seat]?.isBot) {
+function expiredAction(code: RoomCode, seat: GameSeat, visible: PlayerVisibleGameState): BotAction | null {
+  if (visible.gameType === 'blackjack' && !roomManager.getSeatPlayers(code)?.[seat]?.isBot) {
     return { type: 'blackjack-bet', amount: BJ_MIN_BET };
   }
   return getBotAction(visible);

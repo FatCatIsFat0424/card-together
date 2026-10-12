@@ -1,4 +1,4 @@
-import type { GameClock, Seat } from '@shared/types';
+import type { GameClock, GameSeat } from '@shared/types';
 
 export interface SeatClock {
   readonly active: boolean;
@@ -14,13 +14,13 @@ export function projectedServerNow(clock: Pick<GameClock, 'serverNow'>, received
 }
 
 /** Project a committed server clock locally. */
-export function seatClock(clock: GameClock, seat: Seat, receivedAt: number, now: number): SeatClock {
+export function seatClock(clock: GameClock, seat: GameSeat, receivedAt: number, now: number): SeatClock {
   const serverNow = projectedServerNow(clock, receivedAt, now);
   const turn = clock.turn;
   const active = turn?.seat === seat;
   const elapsed = active ? Math.max(0, serverNow - turn.startsAt) : 0;
   const baseMs = active ? Math.max(0, turn.baseRemainingMs - elapsed) : 0;
-  const bankMs = Math.max(0, clock.bankRemainingMs[seat]
+  const bankMs = Math.max(0, (clock.bankRemainingMs[seat] ?? 0)
     - (active ? Math.max(0, elapsed - turn.baseRemainingMs) : 0));
   return {
     active,

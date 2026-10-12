@@ -1,9 +1,11 @@
+import { occupiedSeats, roomPlayers, roomSeatInfo } from '@shared/rules/seats';
+import type { Seat } from '@shared/types';
 import { useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import type { PresentationFrame } from '@shared/game-presentation';
 import { NN_MAX } from '@shared/rules/ninetynine';
-import type { Card, GameType, Seat } from '@shared/types';
+import type { Card, GameType, GameSeat } from '@shared/types';
 import { cardImageUrl } from '../cards';
 import { tablePosition } from '../game-view';
 import type { TranslationKey } from '../i18n';
@@ -18,7 +20,7 @@ import { HoldemFrame } from './holdem/HoldemFrame';
 
 interface GamePresentationProps {
   frame: PresentationFrame;
-  bottomSeat: Seat;
+  bottomSeat: GameSeat;
   gameType: GameType;
   summary?: string;
   elapsedMs?: number;
@@ -41,10 +43,10 @@ export function GamePresentation({
   const timingRef = useRef({ key: frame.key, elapsedMs });
   if (timingRef.current.key !== frame.key) timingRef.current = { key: frame.key, elapsedMs };
   const { t } = useI18nStore();
-  const seats = useRoomStore((state) => state.roomInfo?.seats);
+  const room = useRoomStore((state) => state.roomInfo);
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
-  const name = (seat: Seat): string => seats?.[seat].player?.nickname ?? t(`seat.${seat}`);
-  const position = frame.seat ? tablePosition(frame.seat, bottomSeat) : 'bottom';
+  const name = (seat: GameSeat): string => (room ? roomSeatInfo(room, seat)?.player?.nickname : null) ?? t(`seat.${seat}`);
+  const position = frame.seat ? tablePosition(frame.seat, bottomSeat, room ? occupiedSeats(roomPlayers(room)) : undefined) : 'bottom';
   const collecting = frame.kind === 'trick' || frame.kind === 'capture';
   const effect = gameType === 'ninetynine' ? specialEffect(frame.cards[0], t) : '';
 
@@ -56,7 +58,7 @@ export function GamePresentation({
 
   // A showdown row compares all four seats at once, which needs its own layout.
   if (frame.kind === 'reveal' && frame.row) {
-    return <ChinesePokerReveal key={frame.key} row={frame.row} bottomSeat={bottomSeat} />;
+    return <ChinesePokerReveal key={frame.key} row={frame.row} bottomSeat={bottomSeat as Seat} />;
   }
   return <div ref={rootRef} key={frame.key}
     className={[styles.presentation, styles[position], reducedMotion && styles.reducedMotion,

@@ -279,6 +279,7 @@ describe('persistent authenticated application', () => {
     await client.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'N' });
     expect(await client.timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
     expect(await client.timeout(5_000).emitWithAck('room:fillBots')).toEqual({ success: true });
+    expect(await client.timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
     const active = await resume(client);
     expect(active.room?.status).toBe('playing');
     expect(active.gameState?.gameType).toBe('bigtwo');
@@ -307,6 +308,7 @@ describe('persistent authenticated application', () => {
     expect(await client.timeout(5_000).emitWithAck('room:setGameType', { gameType: 'bridge' }))
       .toEqual({ success: true });
     expect(await client.timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
+    expect(await client.timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
     expect((await resume(client)).room?.status).toBe('playing');
     expect(await client.timeout(5_000).emitWithAck('game:abortVote:start')).toEqual({ success: true });
     expect(await client.timeout(5_000).emitWithAck('room:leave')).toEqual({ success: true });
@@ -326,7 +328,7 @@ describe('persistent authenticated application', () => {
     expect(await guest.timeout(5_000).emitWithAck('room:setTimeControl', { baseSeconds: 8, bankSeconds: 0 }))
       .toMatchObject({ success: false });
     for (const payload of [null, {}, { baseSeconds: 0, bankSeconds: 20 },
-      { baseSeconds: 61, bankSeconds: 20 }, { baseSeconds: 5, bankSeconds: 301 },
+      { baseSeconds: 301, bankSeconds: 20 }, { baseSeconds: 5, bankSeconds: 301 },
       { baseSeconds: 5, bankSeconds: -1 }, { baseSeconds: 1.5, bankSeconds: 20 },
       { baseSeconds: '5', bankSeconds: 20 }, { baseSeconds: 5, bankSeconds: 20, extra: true }]) {
       expect(await host.timeout(5_000).emitWithAck('room:setTimeControl', payload as TimeControl))
@@ -345,6 +347,7 @@ describe('persistent authenticated application', () => {
     await host.timeout(5_000).emitWithAck('room:fillBots');
     await host.timeout(5_000).emitWithAck('room:ready');
     await guest.timeout(5_000).emitWithAck('room:ready');
+    expect(await host.timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
     expect((await resume(host)).gameState?.clock?.settings).toEqual({ baseSeconds: 8, bankSeconds: 0 });
     expect(await host.timeout(5_000).emitWithAck('room:setTimeControl', { baseSeconds: 5, bankSeconds: 20 }))
       .toMatchObject({ success: false });
@@ -394,6 +397,7 @@ describe('persistent authenticated application', () => {
     await host.timeout(5_000).emitWithAck('room:fillBots');
     await host.timeout(5_000).emitWithAck('room:ready');
     await guest.timeout(5_000).emitWithAck('room:ready');
+    expect(await host.timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
     const active = await resume(host);
     expect(active.gameState).toMatchObject({ gameType: 'sevens', options: { closeOnEnd: true, slayEffect: 'fire' } });
     expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: false }))
@@ -441,6 +445,7 @@ describe('persistent authenticated application', () => {
     await host.timeout(5_000).emitWithAck('room:fillBots');
     await host.timeout(5_000).emitWithAck('room:ready');
     await guest.timeout(5_000).emitWithAck('room:ready');
+    expect(await host.timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
     const active = await resume(host);
     expect(active.gameState).toMatchObject({ gameType: 'ninetynine', options: { twoDecks: true }, stockCount: 84 });
     expect(await host.timeout(5_000).emitWithAck('room:setNinetyNineOptions', { twoDecks: false }))
@@ -499,7 +504,7 @@ describe('persistent authenticated application', () => {
     expect(await guest.timeout(5_000).emitWithAck('room:join', { roomCode })).toMatchObject({ success: true });
   }, 15_000);
 
-  it('should roll back bot additions and automatic game start if persistence fails', async () => {
+  it('should roll back bot additions before an explicit game start if persistence fails', async () => {
     const account = await seedAccount('bot_rollback');
     const [client] = await connectPlayers([account]);
     await client.timeout(5_000).emitWithAck('room:create', { gameType: 'bigtwo' });
@@ -515,6 +520,7 @@ describe('persistent authenticated application', () => {
     expect(failed.gameState).toBeUndefined();
     expect((await repository.loadRuntime())?.rooms[0].memberIds).toEqual([account.account.id]);
     expect(await client.timeout(5_000).emitWithAck('room:fillBots')).toEqual({ success: true });
+    expect(await client.timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
     expect((await resume(client)).room?.status).toBe('playing');
   }, 15_000);
 
@@ -552,6 +558,7 @@ describe('persistent authenticated application', () => {
     expect(restored.chatHistory).toEqual(waiting.chatHistory);
     expect(restored.gameState).toBeUndefined();
     expect(await players[3].timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
+    expect(await players[0].timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
 
     let snapshot = await resume(players[0]);
     for (let attempt = 0; snapshot.gameState?.phase === 'redeal_pending' && attempt < 30; attempt += 1) {
@@ -673,6 +680,7 @@ describe('persistent authenticated application', () => {
     const readyAll = async (): Promise<(typeof created)[]> => {
       const results = [];
       for (const client of players) results.push(await client.timeout(5_000).emitWithAck('room:ready'));
+      results.push(await players[0].timeout(5_000).emitWithAck('room:start'));
       return results;
     };
     expect((await resume(players[1])).room).toMatchObject({
@@ -736,6 +744,8 @@ describe('persistent authenticated application', () => {
       await players[index].timeout(5_000).emitWithAck('room:changeSeat', { seat: SEATS[index] });
       expect(await players[index].timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
     }
+    for (const player of players) await player.timeout(5_000).emitWithAck('room:ready');
+    expect(await players[0].timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
 
     /** Leads the weakest play; follows with the weakest non-bomb, else passes. */
     async function step(): Promise<PlayerSnapshot> {
@@ -813,6 +823,8 @@ describe('persistent authenticated application', () => {
       await players[index].timeout(5_000).emitWithAck('room:changeSeat', { seat: SEATS[index] });
       expect(await players[index].timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
     }
+    for (const player of players) await player.timeout(5_000).emitWithAck('room:ready');
+    expect(await players[0].timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
 
     /** Plays the first hand card, capturing the first match; resolves flips with the first match. */
     async function step(): Promise<PlayerSnapshot> {
@@ -890,13 +902,15 @@ describe('persistent authenticated application', () => {
       await players[index].timeout(5_000).emitWithAck('room:changeSeat', { seat: SEATS[index] });
       expect(await players[index].timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
     }
+    for (const player of players) await player.timeout(5_000).emitWithAck('room:ready');
+    expect(await players[0].timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
 
     /** Plays the card reaching the highest legal total; a 5 names the first other seat still in. */
     async function step(): Promise<PlayerSnapshot> {
       const view = (await resume(players[0])).gameState;
       finishPresentation(view);
       if (view?.gameType !== 'ninetynine') throw new Error('Expected 99 state');
-      const client = players[SEATS.indexOf(view.currentTurnSeat)];
+      const client = players[SEATS.indexOf((view.currentTurnSeat as Seat))];
       const mine = (await resume(client)).gameState;
       if (mine?.gameType !== 'ninetynine') throw new Error('Expected 99 state');
       const options = mine.myHand.filter((card) => nnIsPlayable(mine.total, card)).flatMap((card) =>
@@ -971,6 +985,8 @@ describe('persistent authenticated application', () => {
       await players[index].timeout(5_000).emitWithAck('room:changeSeat', { seat: SEATS[index] });
       expect(await players[index].timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
     }
+    for (const player of players) await player.timeout(5_000).emitWithAck('room:ready');
+    expect(await players[0].timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
 
     /** Calls whenever allowed after two plays this round, otherwise plays the first card. */
     async function step(): Promise<PlayerSnapshot> {
@@ -1039,6 +1055,7 @@ describe('persistent authenticated application', () => {
       await players[index].timeout(5_000).emitWithAck('room:changeSeat', { seat: SEATS[index] });
     }
     for (const player of players) expect(await player.timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
+    expect(await players[0].timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
 
     /** Every seat that owes a bet stakes 20; otherwise the acting hand hits below 12 and stands from 12. */
     async function step(): Promise<PlayerSnapshot> {
@@ -1059,7 +1076,7 @@ describe('persistent authenticated application', () => {
       if (view.holeHidden) expect(view.dealer).toHaveLength(1);
       const hand = view.hands[view.currentTurnSeat][view.activeHand];
       const action = bjTotal(hand.cards).total < 12 ? 'hit' : 'stand';
-      expect(await players[SEATS.indexOf(view.currentTurnSeat)].timeout(5_000)
+      expect(await players[SEATS.indexOf((view.currentTurnSeat as Seat))].timeout(5_000)
         .emitWithAck('game:blackjack:action', { action })).toEqual({ success: true });
       return resume(players[0]);
     }
@@ -1119,13 +1136,14 @@ describe('persistent authenticated application', () => {
       await players[index].timeout(5_000).emitWithAck('room:changeSeat', { seat: SEATS[index] });
     }
     for (const player of players) expect(await player.timeout(5_000).emitWithAck('room:ready')).toEqual({ success: true });
+    expect(await players[0].timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
 
     /** The acting seat calls or checks, except that every third hand opens with an all-in to reach eliminations. */
     async function step(): Promise<PlayerSnapshot> {
       const view = (await resume(players[0])).gameState;
       finishPresentation(view);
       if (view?.gameType !== 'holdem') throw new Error("Expected Hold'em state");
-      const client = players[SEATS.indexOf(view.currentTurnSeat)];
+      const client = players[SEATS.indexOf((view.currentTurnSeat as Seat))];
       const mine = (await resume(client)).gameState;
       if (mine?.gameType !== 'holdem') throw new Error("Expected Hold'em state");
       expect(mine).not.toHaveProperty('hands');
@@ -1145,10 +1163,10 @@ describe('persistent authenticated application', () => {
     expect(new Set(opening.flatMap((state) => handOf(state).map(cardKey))).size).toBe(8);
     for (const state of opening) {
       if (state.gameState?.gameType !== 'holdem') throw new Error("Expected Hold'em state");
-      expect(state.gameState.revealed).toEqual({ N: [], E: [], S: [], W: [] });
+      expect(state.gameState.revealed).toEqual({ N: [], E: [], S: [], W: [], P5: [], P6: [], P7: [], P8: [] });
     }
     finishPresentation(first);
-    const actor = players[SEATS.indexOf(first.currentTurnSeat)];
+    const actor = players[SEATS.indexOf((first.currentTurnSeat as Seat))];
     expect(await actor.timeout(5_000).emitWithAck('game:holdem:action', { action: { type: 'check' } }))
       .toMatchObject({ success: false });
     expect(await actor.timeout(5_000).emitWithAck('game:holdem:action', { action: { type: 'raise', to: -5 } }))

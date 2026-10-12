@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { PlayerInfo, Seat } from '@shared/types';
-import { MAX_ROOM_MEMBERS, MAX_SPECTATORS } from '@shared/constants';
+import { MAX_SPECTATORS } from '@shared/constants';
 import * as roomManager from '../../src/managers/room-manager';
 import * as gameManager from '../../src/managers/game-manager';
 import { isRuntimeSnapshot } from '../../src/runtime/validate';
@@ -176,7 +176,7 @@ describe('persisted bot identities', () => {
     state.chat = [{ roomCode: code, messages: [
       { id: 'm1', sender: player('watcher-0'), content: 'psst', timestamp: 1, audience: 'observers' },
     ] }];
-    expect(state.rooms[0].memberIds).toHaveLength(MAX_ROOM_MEMBERS);
+    expect(state.rooms[0].memberIds).toHaveLength(4 + MAX_SPECTATORS);
     expect(isRuntimeSnapshot(state)).toBe(true);
 
     const active = structuredClone(state);

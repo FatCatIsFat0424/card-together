@@ -10,9 +10,10 @@ turns, and results.
 
 | Stage | Behavior |
 | --- | --- |
-| Waiting | The host picks the game and options. Every mode starts only with four standard seats occupied and ready, and no extra seats configured |
-| Extra seats | Ninety-Nine, Blackjack, and Hold'em rooms can add up to four extra human seats, but cannot start with them yet |
-| Two- or three-player rules | Blackjack and Hold'em rules support two to four occupied seats ([constants](../shared/src/constants/game-rules.ts)); [room startup](../server/src/managers/room-manager.ts) still requires four. An empty seat gets no chips, cards, turn, button, blind, result, or history entry |
+| Waiting | Everyone seated, including the host, can prepare at any player count. Readiness never starts a match; the host separately presses Start after all occupied seats are ready and the player count is valid |
+| Player counts | Ninety-Nine, Blackjack, and Hold'em support 2–8 occupied seats; other games require N/E/S/W. At least one seated human is required. Empty configured seats do not block a flexible game |
+| Extra seats | Flexible rooms can add P5/P6/P7/P8. Turn order continues after W and skips unoccupied seats; empty seats receive no cards, chips, turns, results, or history entries |
+| Shuffle seats | Available for every game, off by default. At start, shuffle humans among their occupied positions; bots keep their standard seats and empty seats remain empty. Seat changes and the game commit together |
 | Readiness | Sitting, standing, leaving, adding or removing bots, and option changes clear human readiness; changing only the Sevens effect keeps it |
 | Finished | Each human returns with Continue; others keep the result until everyone returns or the next match starts |
 | Leave or reconnect expiry | Leaving, or not reconnecting within 60 seconds, aborts an unfinished match |
@@ -21,7 +22,7 @@ turns, and results.
 **Abort votes**
 
 - Seated humans propose and vote; the proposer votes yes automatically. Bots never vote.
-- Passing needs three of four votes, or `min(3, seated humans)` with bots or empty seats;
+- Passing needs `min(3, seated humans)` votes, including humans in additional seats;
   a lone human ends the match immediately.
 - A vote lasts 60 seconds. Starting one sets a three-minute cooldown that remains after
   failure or expiry. Success returns the room to waiting and clears the cooldown.
@@ -58,7 +59,7 @@ turns, and results.
 | --- | --- |
 | Default | A fresh 5 seconds per turn, then the player's 20-second reserve for the deal |
 | Unused allowance | Never added to the reserve |
-| Settings | Host only, while waiting, within [shared limits](../shared/src/time-control.ts) |
+| Settings | Host only, while waiting: 1–300 seconds allowance plus 0–300 seconds reserve ([shared limits](../shared/src/time-control.ts)) |
 | Display | Own plate shows allowance and reserve; others show allowance only while acting |
 | Animations | Consume no time |
 | Disconnect | Neither pauses clocks nor extends the reconnect window |
@@ -356,14 +357,14 @@ hand sizes, and pull counts. Outcomes wait for their presentation frames.
 | --- | --- |
 | Opponent | House dealer by default; each seat plays only against it |
 | Chips | 1,000 per seat, reset every match |
-| Match | Eight hands; a freshly shuffled 52-card deck each hand |
+| Match | Eight hands; a freshly shuffled 52-card deck for 2–4 players, two decks for 5–8 players |
 | Bet | Simultaneous, 10–200 in steps of 10 within chips, hidden until the deal ([timer](#turn-timer)) |
 | Under 10 chips | Watches only |
 
 1. Bettors get two face-up cards; the dealer gets an up card and a hidden hole card.
 2. With an ace or ten-value up card the dealer peeks; a dealer blackjack ends the hand,
    and only player blackjacks push.
-3. Bettors act N, E, S, W. Reaching 21, busting, or a natural ends a hand automatically.
+3. Bettors act in occupied-seat order N, E, S, W, P5, P6, P7, P8. Reaching 21, busting, or a natural ends a hand automatically.
 4. The dealer reveals and hits below 17, standing on every 17 including soft 17. No draws
    if every hand busted or is a blackjack.
 5. Settle. After hand eight, or when no seat can cover the minimum, most chips wins (ties shared).
@@ -402,7 +403,7 @@ ends after the last hand, or when fewer than two seats can cover the minimum.
 
 | Item | Rule |
 | --- | --- |
-| Format | No-limit, two to four occupied seats, 1,000 chips each, reset every match |
+| Format | No-limit, two to eight occupied seats, 1,000 chips each, reset every match |
 | Blinds | 10/20 → 15/30 → 25/50 → 40/80 → 60/120, rising every four hands ([levels](../shared/src/rules/holdem.ts)) |
 | End | One seat holds all chips, or hand 20 finishes; most chips wins, ties shared |
 | Ranking | Eliminated seats rank by the order they lost all chips |

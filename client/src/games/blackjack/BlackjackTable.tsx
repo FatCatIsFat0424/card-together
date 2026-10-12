@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { BJ_ACTIONS, BJ_DEALER_ACTIONS, BJ_MIN_BET, bjMaxBet, bjSitsIn } from '@shared/rules/blackjack';
 import type {
-  BlackjackAction, BlackjackDealerAction, BlackjackLogEntry, BlackjackMatchResult, BlackjackVisibleState, Seat,
+  BlackjackAction, BlackjackDealerAction, BlackjackLogEntry, BlackjackMatchResult, BlackjackVisibleState, GameSeat,
 } from '@shared/types';
 import { DeadlineClock } from '../../components/TurnClock';
 import { tablePosition } from '../../game-view';
@@ -41,7 +41,7 @@ type ActionCallback = (timeout: Error | null, response?: { success: boolean; err
 const toneClass = (value: number): string | undefined => value > 0 ? styles.gain : value < 0 ? styles.loss : undefined;
 
 function SeatHands({ seat, view, position, betPlaced, auto }: {
-  seat: Seat; view: BlackjackTableView; position: TablePosition; betPlaced: boolean; auto: boolean;
+  seat: GameSeat; view: BlackjackTableView; position: TablePosition; betPlaced: boolean; auto: boolean;
 }): ReactNode {
   const { t } = useI18nStore();
   const seatName = useSeatName();
@@ -76,12 +76,12 @@ function Centre({ game, view }: { game: BlackjackVisibleState; view: BlackjackTa
   const auto = autoBetSeats(game.log, view.logEnd);
   // My own hands sit in the hand zone while a hand is played; between hands the zone holds the bet controls.
   const seats = game.seats.filter((seat) => view.betting || seat !== game.mySeat);
-  return <div className={styles.centre}>
+  return <div className={[styles.centre, game.seats.some((seat) => seat.startsWith('P')) && styles.expandedCentre].filter(Boolean).join(' ')}>
     <div className={styles.dealerArea}>
       <DealerHand cards={view.dealer} holeHidden={view.holeHidden} size="md" peek={peek}
         label={view.dealerSeat ? t('blackjack.dealerOf', { name: seatName(view.dealerSeat) }) : undefined} />
     </div>
-    {seats.map((seat) => <SeatHands key={seat} seat={seat} view={view} position={tablePosition(seat, game.mySeat)}
+    {seats.map((seat) => <SeatHands key={seat} seat={seat} view={view} position={tablePosition(seat, game.mySeat, game.seats)}
       betPlaced={game.betPlaced[seat]} auto={auto.includes(seat)} />)}
     {view.betting && <p className={styles.notice}>
       {t('blackjack.handOf', { n: String(blackjackHandNumber(view)), total: String(game.totalHands) })} ·

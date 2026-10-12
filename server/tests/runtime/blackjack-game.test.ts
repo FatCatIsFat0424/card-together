@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { BlackjackGameState, Card, PlayerInfo, Seat } from '@shared/types';
 import { BJ_HANDS } from '@shared/rules/blackjack';
@@ -43,7 +44,7 @@ function betAll(top: readonly Card[], amounts: Partial<Record<Seat, number>> = {
   const pending = blackjack.pendingBetSeats(game());
   const random = rigged(top);
   for (const seat of pending) {
-    expect(blackjack.bet(CODE, seat, amounts[seat] ?? 50, true, 1000, random)).toEqual({ success: true });
+    expect(blackjack.bet(CODE, seat, amounts[(seat as Seat)] ?? 50, true, 1000, random)).toEqual({ success: true });
   }
 }
 
@@ -77,7 +78,7 @@ describe('Blackjack gameplay', () => {
     expect(blackjack.bet(CODE, 'W', 30, true, 1000).success).toBe(true);
     const view = blackjack.getPlayerVisibleState(CODE, 'S')!;
     expect(view.myBet).toBeNull();
-    expect(view.betPlaced).toEqual({ N: true, E: true, S: false, W: true });
+    expect(view.betPlaced).toEqual(gameSeatValues({ N: true, E: true, S: false, W: true }));
     expect(view).not.toHaveProperty('bets');
     expect(view).not.toHaveProperty('deck');
     expect(view).not.toHaveProperty('hole');
@@ -110,7 +111,7 @@ describe('Blackjack gameplay', () => {
     expect(state.log.slice(-2).map((entry) => entry.type)).toEqual(['reveal', 'settle']);
     expect(state.log.at(-1)).toMatchObject({ outcomes: { N: ['push'], E: ['lose'], S: ['lose'], W: ['lose'] },
       net: { N: 0, E: -50, S: -50, W: -50 } });
-    expect(state.chips).toEqual({ N: 1000, E: 950, S: 950, W: 950 });
+    expect(state.chips).toEqual(gameSeatValues({ N: 1000, E: 950, S: 950, W: 950 }));
     blackjack.openBetting(CODE, 5000);
     expect(game().betDeadline).toBe(5000 + BET_MS);
   });
@@ -160,7 +161,7 @@ describe('Blackjack gameplay', () => {
     expect(state.dealer).toEqual([card(14, 'hearts'), card(2), card(4)]);
     expect(state.log.at(-1)).toMatchObject({ type: 'settle',
       outcomes: { N: ['blackjack'], E: ['win'], S: ['push'], W: ['win'] } });
-    expect(state.chips).toEqual({ N: 1075, E: 1050, S: 1000, W: 1050 });
+    expect(state.chips).toEqual(gameSeatValues({ N: 1075, E: 1050, S: 1000, W: 1050 }));
     expect(state.phase).toBe('betting');
   });
 
@@ -169,7 +170,7 @@ describe('Blackjack gameplay', () => {
       card(12, 'clubs'), card(12, 'diamonds'), card(9), card(13), card(13, 'hearts'), card(13, 'clubs'), card(13, 'diamonds')]);
     for (const seat of SEATS) expect(blackjack.act(CODE, seat, 'hit').success).toBe(true);
     expect(game().dealer).toEqual([card(6), card(9)]);
-    expect(game().chips).toEqual({ N: 950, E: 950, S: 950, W: 950 });
+    expect(game().chips).toEqual(gameSeatValues({ N: 950, E: 950, S: 950, W: 950 }));
   });
 
   it('seats without the minimum sit out, and the match ends after the last hand', () => {
@@ -187,6 +188,6 @@ describe('Blackjack gameplay', () => {
     expect(state.phase).toBe('scoring');
     expect(state.result).toEqual({ gameType: 'blackjack', seats: SEATS, chips: state.chips, hands: BJ_HANDS,
       winners: ['N', 'E', 'S'] });
-    expect(state.chips).toEqual({ N: 1400, E: 1400, S: 1400, W: 5 });
+    expect(state.chips).toEqual(gameSeatValues({ N: 1400, E: 1400, S: 1400, W: 5 }));
   });
 });

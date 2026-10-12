@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { describe, expect, it } from 'vitest';
 import { getPresentationFrames } from '@shared/game-presentation';
 import { heAward, heEliminations, heReplay } from '@shared/rules/holdem';
@@ -19,7 +20,7 @@ function award(log: readonly HoldemLogEntry[]): HoldemLogEntry {
   const { pots, payouts } = heAward(table);
   const chips = { N: table.chips.N + payouts.N, E: table.chips.E + payouts.E, S: table.chips.S + payouts.S,
     W: table.chips.W + payouts.W };
-  return { type: 'award', pots, chips, eliminated: heEliminations(table, chips), timestamp: 0 };
+  return gameSeatValues({ type: 'award', pots, chips, eliminated: heEliminations(table, gameSeatValues(chips)), timestamp: 0 });
 }
 
 const NORTH_HOLE = [c(13, 'hearts'), c(13, 'diamonds')];
@@ -32,7 +33,7 @@ const WEST_HOLE = [c(12, 'hearts'), c(12, 'diamonds')];
  */
 function buildLog(): HoldemLogEntry[] {
   const log: HoldemLogEntry[] = [
-    { type: 'hand', hand: 1, button: 'N', smallBlind: 10, bigBlind: 20, blinds: { N: 0, E: 10, S: 20, W: 0 }, timestamp: 1 },
+    gameSeatValues({ type: 'hand', hand: 1, button: 'N', smallBlind: 10, bigBlind: 20, blinds: { N: 0, E: 10, S: 20, W: 0 }, timestamp: 1 }),
     { type: 'action', seat: 'W', action: 'call', to: 20, allIn: false, timestamp: 2 },
     { type: 'action', seat: 'N', action: 'raise', to: 60, allIn: false, timestamp: 3 },
     { type: 'action', seat: 'E', action: 'fold', to: 10, allIn: false, timestamp: 4 },
@@ -49,11 +50,11 @@ function buildLog(): HoldemLogEntry[] {
     { type: 'street', street: 'river', cards: [c(4, 'spades')], timestamp: 15 },
     { type: 'action', seat: 'W', action: 'bet', to: 200, allIn: false, timestamp: 16 },
     { type: 'action', seat: 'N', action: 'call', to: 200, allIn: false, timestamp: 17 },
-    { type: 'showdown', cards: { N: NORTH_HOLE, E: [], S: [], W: WEST_HOLE }, timestamp: 18 },
+    gameSeatValues({ type: 'showdown', cards: { N: NORTH_HOLE, E: [], S: [], W: WEST_HOLE }, timestamp: 18 }),
   ];
   log.push(award(log));
-  log.push({ type: 'hand', hand: 2, button: 'E', smallBlind: 10, bigBlind: 20, blinds: { N: 0, E: 0, S: 10, W: 20 },
-    timestamp: 20 });
+  log.push(gameSeatValues({ type: 'hand', hand: 2, button: 'E', smallBlind: 10, bigBlind: 20, blinds: { N: 0, E: 0, S: 10, W: 20 },
+    timestamp: 20 }));
   return log;
 }
 
@@ -88,7 +89,7 @@ describe("Texas Hold'em table view", () => {
 
     const paid = holdemView(state, awarded);
     expect(paid.hand).toBe(1);
-    expect(paid.award?.payouts).toEqual({ N: 790, E: 0, S: 0, W: 0 });
+    expect(paid.award?.payouts).toEqual(gameSeatValues({ N: 790, E: 0, S: 0, W: 0 }));
     expect(paid.award?.pots[0]).toMatchObject({ amount: 790, winners: ['N'] });
     expect(paid.chips.N).toBe(1000 - 360 + 790);
     expect(holdemBlindSeats(paid)).toEqual({ button: 'N', small: 'E', big: 'S' });
@@ -178,20 +179,20 @@ describe("Texas Hold'em table view", () => {
 
   it('should split main and side pots without counting open street bets', () => {
     const base = replayHoldem(log, ALL, 0);
-    const table: HoldemTableView = {
+    const table: HoldemTableView = gameSeatValues({
       ...base, hand: 3, dealt: ['N', 'E', 'S', 'W'], folded: ['W'], street: 'turn',
       totalBets: { N: 400, E: 100, S: 300, W: 20 }, streetBets: { N: 100, E: 0, S: 0, W: 0 },
-    };
+    });
     expect(potTotal(table)).toBe(820);
     // N's uncalled 100 stays in front of N; folded W's 20 joins the main pot.
     expect(potLines(table)).toEqual([
       { amount: 320, eligible: ['N', 'E', 'S'], winners: [], returned: false },
       { amount: 400, eligible: ['N', 'S'], winners: [], returned: false },
     ]);
-    const awarded: HoldemTableView = { ...table, award: {
+    const awarded: HoldemTableView = { ...table, award: gameSeatValues({
       pots: [{ amount: 320, eligible: ['N', 'E', 'S'], winners: ['E'] }, { amount: 100, eligible: ['N'], winners: ['N'] }],
       payouts: { N: 100, E: 320, S: 0, W: 0 }, eliminated: [],
-    } };
+    }) };
     expect(potLines(awarded).map((line) => line.returned)).toEqual([false, true]);
     expect(potLines(awarded)[0].winners).toEqual(['E']);
   });
@@ -220,18 +221,18 @@ describe("Texas Hold'em table view", () => {
   });
 
   it('should rank by chips, then busted seats by reverse elimination order', () => {
-    const result: HoldemMatchResult = { gameType: 'holdem', chips: { N: 2500, E: 0, S: 1500, W: 0 }, hands: 14,
-      winners: ['N'], eliminationOrder: ['W', 'E'] };
+    const result: HoldemMatchResult = gameSeatValues({ gameType: 'holdem', chips: { N: 2500, E: 0, S: 1500, W: 0 }, hands: 14,
+      winners: ['N'], eliminationOrder: ['W', 'E'] });
     expect(rankHoldem(result).map((row) => [row.seat, row.place, row.net, row.eliminated])).toEqual([
       ['N', 1, 1500, false], ['S', 2, 500, false], ['E', 3, -1000, true], ['W', 4, -1000, true],
     ]);
-    const tied: HoldemMatchResult = { ...result, chips: { N: 2000, E: 0, S: 2000, W: 0 }, winners: ['N', 'S'],
-      eliminationOrder: ['E', 'W'] };
+    const tied: HoldemMatchResult = gameSeatValues({ ...result, chips: { N: 2000, E: 0, S: 2000, W: 0 }, winners: ['N', 'S'],
+      eliminationOrder: ['E', 'W'] });
     expect(rankHoldem(tied).map((row) => [row.seat, row.place, row.winner])).toEqual([
       ['N', 1, true], ['S', 1, true], ['W', 3, false], ['E', 4, false],
     ]);
-    const headsUp: HoldemMatchResult = { gameType: 'holdem', seats: ['E', 'W'], chips: { N: 0, E: 2000, S: 0, W: 0 },
-      hands: 3, winners: ['E'], eliminationOrder: ['W'] };
+    const headsUp: HoldemMatchResult = gameSeatValues({ gameType: 'holdem', seats: ['E', 'W'], chips: { N: 0, E: 2000, S: 0, W: 0 },
+      hands: 3, winners: ['E'], eliminationOrder: ['W'] });
     expect(rankHoldem(headsUp).map((row) => [row.seat, row.place, row.eliminated])).toEqual([
       ['E', 1, false], ['W', 2, true],
     ]);
@@ -240,13 +241,13 @@ describe("Texas Hold'em table view", () => {
   it('should replay a table with empty seats left out of the deal and the award', () => {
     const seats: Seat[] = ['N', 'S'];
     const headsUp: HoldemLogEntry[] = [
-      { type: 'hand', hand: 1, button: 'S', smallBlind: 10, bigBlind: 20, blinds: { N: 20, E: 0, S: 10, W: 0 },
-        timestamp: 1 },
+      gameSeatValues({ type: 'hand', hand: 1, button: 'S', smallBlind: 10, bigBlind: 20, blinds: { N: 20, E: 0, S: 10, W: 0 },
+        timestamp: 1 }),
       { type: 'action', seat: 'S', action: 'fold', to: 10, allIn: false, timestamp: 2 },
     ];
     const table = replayHoldem(headsUp, seats, headsUp.length);
     expect(table.dealt).toEqual(seats);
-    expect(table.chips).toEqual({ N: 980, E: 0, S: 990, W: 0 });
+    expect(table.chips).toEqual(gameSeatValues({ N: 980, E: 0, S: 990, W: 0 }));
     expect(holdemBlindSeats(table)).toEqual({ button: 'S', small: 'S', big: 'N' });
     expect(seatState(table, 'E')).toBe('waiting');
   });
@@ -278,7 +279,7 @@ describe("Texas Hold'em table view", () => {
 
   it('should list eliminations after the winnings in history', () => {
     const shortLog: HoldemLogEntry[] = [
-      { type: 'hand', hand: 1, button: 'N', smallBlind: 10, bigBlind: 20, blinds: { N: 0, E: 10, S: 20, W: 0 }, timestamp: 1 },
+      gameSeatValues({ type: 'hand', hand: 1, button: 'N', smallBlind: 10, bigBlind: 20, blinds: { N: 0, E: 10, S: 20, W: 0 }, timestamp: 1 }),
       { type: 'action', seat: 'W', action: 'raise', to: 1000, allIn: true, timestamp: 2 },
       { type: 'action', seat: 'N', action: 'call', to: 1000, allIn: true, timestamp: 3 },
       { type: 'action', seat: 'E', action: 'fold', to: 10, allIn: false, timestamp: 4 },
@@ -286,7 +287,7 @@ describe("Texas Hold'em table view", () => {
       { type: 'street', street: 'flop', cards: [c(13, 'spades'), c(7, 'hearts'), c(2, 'diamonds')], timestamp: 6 },
       { type: 'street', street: 'turn', cards: [c(9, 'clubs')], timestamp: 7 },
       { type: 'street', street: 'river', cards: [c(4, 'spades')], timestamp: 8 },
-      { type: 'showdown', cards: { N: NORTH_HOLE, E: [], S: [], W: WEST_HOLE }, timestamp: 9 },
+      gameSeatValues({ type: 'showdown', cards: { N: NORTH_HOLE, E: [], S: [], W: WEST_HOLE }, timestamp: 9 }),
     ];
     shortLog.push(award(shortLog));
     const [round] = deriveRoundHistory({ gameType: 'holdem', phase: 'playing', seats: ALL, log: shortLog });

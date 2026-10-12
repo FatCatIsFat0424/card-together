@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { getPresentationEndsAt } from '@shared/game-presentation';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
-import type { AnyGameState, GameClock, Seat, TimeControl } from '@shared/types';
+import type { AnyGameState, GameClock, GameSeat, TimeControl } from '@shared/types';
+import { occupiedSeats, isCompassSeat } from '@shared/rules/seats';
 
-export function getTurnSeat(game: AnyGameState): Seat | null {
+export function getTurnSeat(game: AnyGameState): GameSeat | null {
   if (game.phase === 'scoring') return null;
   // Chinese Poker seats arrange simultaneously against the game's own shared deadline.
   if (game.gameType === 'chinesepoker') return null;
@@ -21,7 +22,7 @@ function createTurn(game: AnyGameState, clock: GameClock, baseRemainingMs: numbe
   if (!seat) return null;
   const startsAt = Math.max(now, getPresentationEndsAt(game));
   return { id: randomUUID(), seat, startsAt, baseRemainingMs,
-    deadline: startsAt + baseRemainingMs + clock.bankRemainingMs[seat] };
+    deadline: startsAt + baseRemainingMs + (clock.bankRemainingMs[seat] ?? 0) };
 }
 
 export function initializeGameClock(
@@ -29,7 +30,8 @@ export function initializeGameClock(
 ): void {
   const bank = settings.bankSeconds * 1000;
   const clock: GameClock = {
-    settings: { ...settings }, bankRemainingMs: { N: bank, E: bank, S: bank, W: bank }, turn: null,
+    settings: { ...settings }, bankRemainingMs: { N: bank, E: bank, S: bank, W: bank,
+      ...Object.fromEntries(occupiedSeats(game.players).filter((seat) => !isCompassSeat(seat)).map((seat) => [seat, bank])) }, turn: null,
   };
   game.clock = { ...clock, turn: createTurn(game, clock, settings.baseSeconds * 1000, now) };
 }
@@ -49,7 +51,7 @@ export function advanceGameClock(
   const turn = previous.turn;
   const elapsed = turn ? Math.max(0, now - turn.startsAt) : 0;
   if (turn && !forced) bankRemainingMs[turn.seat] = Math.max(0,
-    bankRemainingMs[turn.seat] - Math.max(0, elapsed - turn.baseRemainingMs));
+    (bankRemainingMs[turn.seat] ?? 0) - Math.max(0, elapsed - turn.baseRemainingMs));
   const baseRemainingMs = sameTurn && turn
     ? Math.max(0, turn.baseRemainingMs - elapsed) : previous.settings.baseSeconds * 1000;
   const clock = { ...previous, bankRemainingMs };

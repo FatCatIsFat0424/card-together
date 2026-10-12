@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { describe, expect, it } from 'vitest';
 import type { Card, HoldemVisibleState, Seat } from '@shared/types';
 import { chenScore, getHoldemBotAction, holdemEquity } from '../../src/bots/holdem-strategy';
@@ -15,13 +16,13 @@ function seeded(seed: number): () => number {
 
 /** Preflop with N to act facing the big blind; W is the button, so E and S posted the blinds. */
 function visible(overrides: Partial<HoldemVisibleState> = {}): HoldemVisibleState {
-  return {
+  return gameSeatValues({
     gameType: 'holdem', phase: 'playing', mySeat: 'N', seats: ['N', 'E', 'S', 'W'], myHand: [card(2), card(7, 'hearts')], hand: 1, button: 'W',
     smallBlind: 10, bigBlind: 20, chips: { N: 1000, E: 990, S: 980, W: 1000 },
     streetBets: { N: 0, E: 10, S: 20, W: 0 }, totalBets: { N: 0, E: 10, S: 20, W: 0 },
     dealt: ['N', 'E', 'S', 'W'], folded: ['W'], street: 'preflop', board: [], currentBet: 20, minRaise: 20, acted: ['W'],
     revealed: seats([]), eliminated: [], currentTurnSeat: 'N', log: [], result: null, ...overrides,
-  };
+  });
 }
 
 describe("Hold'em bot strategy", () => {
@@ -47,23 +48,23 @@ describe("Hold'em bot strategy", () => {
     expect(getHoldemBotAction(visible(), seeded(1))).toEqual({ type: 'holdem-action', action: { type: 'fold' } });
     expect(getHoldemBotAction(visible({ myHand: [card(14), card(14, 'hearts')] }), seeded(1)))
       .toEqual({ type: 'holdem-action', action: { type: 'raise', to: 60 } });
-    expect(getHoldemBotAction(visible({ mySeat: 'S', currentTurnSeat: 'S', streetBets: { N: 20, E: 20, S: 20, W: 0 },
-      acted: ['W', 'N', 'E'] }), seeded(1))).toEqual({ type: 'holdem-action', action: { type: 'check' } });
+    expect(getHoldemBotAction(visible(gameSeatValues({ mySeat: 'S', currentTurnSeat: 'S', streetBets: { N: 20, E: 20, S: 20, W: 0 },
+      acted: ['W', 'N', 'E'] })), seeded(1))).toEqual({ type: 'holdem-action', action: { type: 'check' } });
   });
 
   it('shoves strong hands when short-stacked and acts only on its own turn', () => {
-    expect(getHoldemBotAction(visible({ myHand: [card(10), card(10, 'hearts')], chips: { N: 150, E: 990, S: 980, W: 1000 } }),
+    expect(getHoldemBotAction(visible(gameSeatValues({ myHand: [card(10), card(10, 'hearts')], chips: { N: 150, E: 990, S: 980, W: 1000 } })),
       seeded(1))).toEqual({ type: 'holdem-action', action: { type: 'raise', to: 150 } });
     expect(getHoldemBotAction(visible({ currentTurnSeat: 'E' }), seeded(1))).toBeNull();
     expect(getHoldemBotAction(visible({ phase: 'scoring' }), seeded(1))).toBeNull();
   });
 
   it('bets made hands after the flop and folds weak ones to a large bet', () => {
-    const flop = { street: 'flop' as const, board: [card(14, 'hearts'), card(14, 'clubs'), card(7, 'diamonds')],
-      currentBet: 0, minRaise: 20, streetBets: seats(0), acted: [] as Seat[], totalBets: { N: 20, E: 20, S: 20, W: 0 } };
+    const flop = gameSeatValues({ street: 'flop' as const, board: [card(14, 'hearts'), card(14, 'clubs'), card(7, 'diamonds')],
+      currentBet: 0, minRaise: 20, streetBets: seats(0), acted: [] as Seat[], totalBets: { N: 20, E: 20, S: 20, W: 0 } });
     const strong = getHoldemBotAction(visible({ ...flop, myHand: [card(14), card(13)] }), seeded(2));
     expect(strong?.type === 'holdem-action' && strong.action.type).toBe('raise');
-    const facing = { ...flop, currentBet: 200, streetBets: { N: 0, E: 200, S: 0, W: 0 }, totalBets: { N: 20, E: 220, S: 20, W: 0 } };
+    const facing = gameSeatValues({ ...flop, currentBet: 200, streetBets: { N: 0, E: 200, S: 0, W: 0 }, totalBets: { N: 20, E: 220, S: 20, W: 0 } });
     expect(getHoldemBotAction(visible({ ...facing, myHand: [card(2), card(3, 'hearts')] }), seeded(2)))
       .toEqual({ type: 'holdem-action', action: { type: 'fold' } });
   });

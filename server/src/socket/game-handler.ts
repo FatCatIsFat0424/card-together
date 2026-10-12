@@ -1,5 +1,8 @@
+import { roomSeatInfo } from '@shared/rules/seats';
+import { isCompassSeat } from '@shared/rules/seats';
+import { GAME_SEAT_ORDER } from '@shared/constants';
 import type {
-  BidAction, BlackjackAction, BlackjackDealerAction, Card, ChinesePokerArrangement, HoldemAction, Seat,
+  BidAction, BlackjackAction, BlackjackDealerAction, Card, ChinesePokerArrangement, HoldemAction, GameSeat, Seat,
 } from '@shared/types';
 import { LD_DECK, LD_MAX_PLAY } from '@shared/rules/liarsdeck';
 import { BJ_ACTIONS, BJ_DEALER_ACTIONS, BJ_MAX_BET, BJ_MIN_BET } from '@shared/rules/blackjack';
@@ -9,11 +12,17 @@ import * as roomManager from '../managers/room-manager';
 import * as gameManager from '../managers/game-manager';
 import * as chatManager from '../managers/chat-manager';
 
-const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
+const SEATS = GAME_SEAT_ORDER;
+
+function playerGameSeat(socket: TypedSocket, code: string): GameSeat {
+  const seat = roomManager.getGamePlayerSeat(code, socket.data.accountId);
+  if (!seat) throw actionError('Select a seat first.');
+  return seat;
+}
 
 function playerSeat(socket: TypedSocket, code: string): Seat {
-  const seat = roomManager.getPlayerSeat(code, socket.data.accountId);
-  if (!seat) throw actionError('Select a seat first.');
+  const seat = playerGameSeat(socket, code);
+  if (!isCompassSeat(seat)) throw actionError('This game uses four seats.');
   return seat;
 }
 
@@ -47,8 +56,9 @@ function parseArrangement(value: unknown): ChinesePokerArrangement | null {
 
 /** Adds an abort-vote chat line about `accountId`, read from the room seats. */
 export function systemLine(code: string, accountId: string, key: string): void {
-  const seat = roomManager.getPlayerSeat(code, accountId);
-  const subject = seat ? roomManager.getRoomInfo(code)?.seats[seat].player : null;
+  const seat = roomManager.getGamePlayerSeat(code, accountId);
+  const room = roomManager.getRoomInfo(code);
+  const subject = seat && room ? roomSeatInfo(room, seat)?.player : null;
   if (subject) chatManager.addSystemMessage(code, subject, key);
 }
 
@@ -150,10 +160,10 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
     const target: unknown = payload?.target;
     if (!isCard(card)) throw actionError('Invalid card.');
     if (choice !== undefined && choice !== 'plus' && choice !== 'minus') throw actionError('Invalid choice.');
-    if (target !== undefined && !SEATS.includes(target as Seat)) throw actionError('Invalid target.');
+    if (target !== undefined && !SEATS.includes(target as GameSeat)) throw actionError('Invalid target.');
     const code = requireRoom(socket);
-    requireSuccess(gameManager.handleNinetyNinePlay(code, playerSeat(socket, code), { suit: card.suit, rank: card.rank },
-      choice, target as Seat | undefined));
+    requireSuccess(gameManager.handleNinetyNinePlay(code, playerGameSeat(socket, code), { suit: card.suit, rank: card.rank },
+      choice, target as GameSeat | undefined));
     return { success: true };
   }));
 
@@ -180,7 +190,7 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
       throw actionError('Invalid bet.');
     }
     const code = requireRoom(socket);
-    requireSuccess(gameManager.handleBlackjackBet(code, playerSeat(socket, code), amount));
+    requireSuccess(gameManager.handleBlackjackBet(code, playerGameSeat(socket, code), amount));
     return { success: true };
   }));
 
@@ -188,7 +198,7 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
     const action: unknown = payload?.action;
     if (!BJ_ACTIONS.includes(action as BlackjackAction)) throw actionError('Invalid action.');
     const code = requireRoom(socket);
-    requireSuccess(gameManager.handleBlackjackAction(code, playerSeat(socket, code), action as BlackjackAction));
+    requireSuccess(gameManager.handleBlackjackAction(code, playerGameSeat(socket, code), action as BlackjackAction));
     return { success: true };
   }));
 
@@ -196,7 +206,7 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
     const action: unknown = payload?.action;
     if (!BJ_DEALER_ACTIONS.includes(action as BlackjackDealerAction)) throw actionError('Invalid action.');
     const code = requireRoom(socket);
-    requireSuccess(gameManager.handleBlackjackDealerAction(code, playerSeat(socket, code),
+    requireSuccess(gameManager.handleBlackjackDealerAction(code, playerGameSeat(socket, code),
       action as BlackjackDealerAction));
     return { success: true };
   }));
@@ -205,7 +215,7 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
     const action = parseHoldemAction(payload?.action);
     if (!action) throw actionError('Invalid action.');
     const code = requireRoom(socket);
-    requireSuccess(gameManager.handleHoldemAction(code, playerSeat(socket, code), action));
+    requireSuccess(gameManager.handleHoldemAction(code, playerGameSeat(socket, code), action));
     return { success: true };
   }));
 
@@ -243,7 +253,7 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
   socket.on('game:continue', (callback) => runAction(context, socket, callback, () => {
     const code = requireRoom(socket);
     const accountId = socket.data.accountId;
-    const seat = roomManager.getPlayerSeat(code, accountId);
+    const seat = roomManager.getGamePlayerSeat(code, accountId);
     const spectating = gameManager.isSpectating(code, accountId);
     if (!seat && !spectating) throw actionError('Select a seat first.');
     if (gameManager.getGameState(code)?.phase !== 'scoring') throw actionError('The game has not ended.');

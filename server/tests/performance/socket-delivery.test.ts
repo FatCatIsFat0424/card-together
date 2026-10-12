@@ -104,6 +104,7 @@ describe('socket delivery scope and read-only resume', () => {
     const players = harness.clients[0];
     for (const player of players) expect(await player.timeout(5_000).emitWithAck('room:ready'))
       .toEqual({ success: true });
+    expect(await players[0].timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
     let state = await resume(players[0]);
     for (let attempt = 0; state.gameState?.phase === 'redeal_pending' && attempt < 30; attempt += 1) {
       const seat = state.gameState.redealPendingSeat;

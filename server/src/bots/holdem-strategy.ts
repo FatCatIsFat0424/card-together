@@ -1,4 +1,4 @@
-import type { Card, HoldemAction, HoldemVisibleState, Seat } from '@shared/types';
+import type { Card, HoldemAction, HoldemVisibleState, GameSeat } from '@shared/types';
 import { cpCompare } from '@shared/rules/chinesepoker';
 import { heBestHand, heInHand, heLegalActions } from '@shared/rules/holdem';
 import type { HeLegalActions } from '@shared/rules/holdem';
@@ -96,7 +96,7 @@ function preflop(visible: HoldemVisibleState, legal: HeLegalActions, random: () 
 
 function postflop(visible: HoldemVisibleState, legal: HeLegalActions, random: () => number): HoldemAction {
   const seat = visible.mySeat;
-  const opponents = heInHand(visible).filter((other: Seat) => other !== seat).length;
+  const opponents = heInHand(visible).filter((other: GameSeat) => other !== seat).length;
   const equity = holdemEquity(visible.myHand, visible.board, opponents, random);
   const strength = equity * (opponents + 1);
   const pot = Object.values(visible.totalBets).reduce((sum, value) => sum + value, 0);

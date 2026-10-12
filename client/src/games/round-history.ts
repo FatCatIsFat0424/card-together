@@ -1,5 +1,5 @@
 import type {
-  BlackjackOutcome, Card, ChinesePokerCategory, HoldemStreet, LiarFace, LiarTableFace, PlayerVisibleGameState, Seat,
+  BlackjackOutcome, Card, ChinesePokerCategory, HoldemStreet, LiarFace, LiarTableFace, PlayerVisibleGameState, GameSeat,
 } from '@shared/types';
 import type { BigTwoComboType } from '@shared/rules/bigtwo';
 import { bjApplyEntry, bjEmptyTable, bjTotal } from '@shared/rules/blackjack';
@@ -12,14 +12,14 @@ export interface HistoryAction {
     | 'deal' | 'hit' | 'stand' | 'double' | 'split' | 'dealerReveal' | 'dealerHit' | 'dealerStand' | 'settle'
     | 'button' | 'blind' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street' | 'showdown' | 'award';
   /** Null for the Blackjack dealer and Hold'em board cards */
-  seat: Seat | null;
+  seat: GameSeat | null;
   cards: readonly Card[];
   comboType?: BigTwoComboType;
   captured?: Card | null;
   points?: number;
   previousTotal?: number;
   total?: number;
-  target?: Seat | null;
+  target?: GameSeat | null;
   choice?: 'plus' | 'minus' | null;
   pending?: boolean;
   /** Liar's Deck: face-down cards played */
@@ -58,12 +58,12 @@ export interface HistoryRound {
   tableFace?: LiarTableFace;
 }
 
-const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
+const SEATS: readonly GameSeat[] = ['N', 'E', 'S', 'W'];
 
 type HistoryInput = PlayerVisibleGameState extends infer T
   ? T extends PlayerVisibleGameState
-    ? Pick<T, 'gameType' | 'phase' | 'log'> & (T extends { pendingFlip: unknown; currentTurnSeat: Seat }
-      ? Pick<T, 'pendingFlip' | 'currentTurnSeat'> : object) & (T extends { seats: readonly Seat[] }
+    ? Pick<T, 'gameType' | 'phase' | 'log'> & (T extends { pendingFlip: unknown; currentTurnSeat: GameSeat }
+      ? Pick<T, 'pendingFlip' | 'currentTurnSeat'> : object) & (T extends { seats: readonly GameSeat[] }
       ? Pick<T, 'seats'> : object)
     : never
   : never;
@@ -143,7 +143,7 @@ export function deriveRoundHistory(game: HistoryInput): HistoryRound[] {
   } else if (game.gameType === 'blackjack') {
     // Each hand is one round; totals come from replaying the public log alongside.
     const table = bjEmptyTable(game.seats);
-    let autoBets: Seat[] = [];
+    let autoBets: GameSeat[] = [];
     for (const entry of game.log) {
       if (entry.type === 'bet') {
         if (entry.auto) autoBets.push(entry.seat);

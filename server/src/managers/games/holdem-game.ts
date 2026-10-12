@@ -9,9 +9,9 @@ import type {
   HoldemVisibleState,
   PlayerInfo,
   RoomCode,
-  Seat,
+  GameSeat,
 } from '@shared/types';
-import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import { GAME_SEAT_ORDER } from '@shared/constants';
 import {
   HE_HOLE_CARDS,
   HE_STREET_CARDS,
@@ -42,8 +42,8 @@ const secureRandom = (): number => randomInt(RANDOM_RANGE) / RANDOM_RANGE;
 /** roomCode → HoldemGameState */
 const games: Map<RoomCode, HoldemGameState> = new Map();
 
-function seatMap<T>(value: (seat: Seat) => T): Record<Seat, T> {
-  return { N: value('N'), E: value('E'), S: value('S'), W: value('W') };
+function seatMap<T>(value: (seat: GameSeat) => T): Record<GameSeat, T> {
+  return Object.fromEntries(GAME_SEAT_ORDER.map((seat) => [seat, value(seat)])) as Record<GameSeat, T>;
 }
 
 function record(game: HoldemGameState, entry: HoldemLogEntry): void {
@@ -58,11 +58,11 @@ function draw(game: HoldemGameState): Card {
 }
 
 /** Shuffles, deals two hole cards from the button's left, and posts the blinds. */
-function startHand(game: HoldemGameState, button: Seat, now: number, random: () => number): void {
+function startHand(game: HoldemGameState, button: GameSeat, now: number, random: () => number): void {
   game.deck = shuffleDeck(createDeck(), random);
   const hand = game.hand + 1;
   const { smallBlind, bigBlind } = heBlinds(hand);
-  const dealt = SEAT_ORDER_CLOCKWISE.filter((seat) => game.chips[seat] > 0);
+  const dealt = GAME_SEAT_ORDER.filter((seat) => game.chips[seat] > 0);
   const hands = seatMap((): Card[] => []);
   for (let round = 0; round < HE_HOLE_CARDS; round++) {
     let seat = heNextSeat(button, (candidate) => dealt.includes(candidate)) ?? button;
@@ -84,7 +84,7 @@ function startHand(game: HoldemGameState, button: Seat, now: number, random: () 
  * Gives the turn to `next`, or once betting closes deals the next street, shows down, awards the
  * pots, and starts the following hand or ends the match.
  */
-function progress(game: HoldemGameState, next: Seat | null, now: number, random: () => number): void {
+function progress(game: HoldemGameState, next: GameSeat | null, now: number, random: () => number): void {
   let seat = next;
   while (!seat) {
     const inHand = heInHand(game);
@@ -120,7 +120,7 @@ function progress(game: HoldemGameState, next: Seat | null, now: number, random:
  */
 export function startGame(
   roomCode: RoomCode,
-  players: Partial<Record<Seat, PlayerInfo>>,
+  players: Partial<Record<GameSeat, PlayerInfo>>,
   random: () => number = secureRandom,
   now: number = Date.now(),
 ): void {
@@ -146,7 +146,7 @@ export function startGame(
 
 export function act(
   roomCode: RoomCode,
-  seat: Seat,
+  seat: GameSeat,
   action: HoldemAction,
   now: number = Date.now(),
   random: () => number = secureRandom,
@@ -187,7 +187,7 @@ export function abortGame(roomCode: RoomCode): void {
 }
 
 /** Only the seat's own hole cards; others appear only when a showdown reveals them. */
-export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): HoldemVisibleState | null {
+export function getPlayerVisibleState(roomCode: RoomCode, seat: GameSeat): HoldemVisibleState | null {
   const game = games.get(roomCode);
   if (!game) return null;
   return {

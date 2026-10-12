@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { GameType, PlayerInfo, Seat } from '@shared/types';
 import * as games from '../../src/managers/game-manager';
@@ -35,7 +36,7 @@ describe('first legal automated action', () => {
         delete game.presentation;
         // Fallback bidding always passes, so open once to reach play instead of redealing forever.
         if (game.gameType === 'bridge' && game.phase === 'bidding' && !game.bidding?.highestBid) {
-          expect(games.handleBid(CODE, seat, { type: 'bid', level: 1, suit: 'clubs' }, true)).toEqual({ success: true });
+          expect(games.handleBid(CODE, (seat as Seat), { type: 'bid', level: 1, suit: 'clubs' }, true)).toEqual({ success: true });
           continue;
         }
         const visible = games.getPlayerVisibleState(CODE, seat)!;
@@ -86,8 +87,8 @@ describe('first legal automated action', () => {
     if (visible.gameType !== 'holdem') throw new Error('Expected Holdem visible state');
     const before = structuredClone(visible);
     const streetBets = { N: 0, E: 0, S: 0, W: 0 };
-    expect(firstLegalAction({ ...visible, currentBet: 0, streetBets })).toEqual({ type: 'holdem-action', action: { type: 'check' } });
-    expect(firstLegalAction({ ...visible, currentBet: 20, streetBets })).toEqual({ type: 'holdem-action', action: { type: 'fold' } });
+    expect(firstLegalAction(gameSeatValues({ ...visible, currentBet: 0, streetBets }))).toEqual({ type: 'holdem-action', action: { type: 'check' } });
+    expect(firstLegalAction(gameSeatValues({ ...visible, currentBet: 20, streetBets }))).toEqual({ type: 'holdem-action', action: { type: 'fold' } });
     expect(firstLegalAction({ ...visible, currentTurnSeat: SEATS.find((other) => other !== seat)! })).toBeNull();
     expect(visible).toEqual(before);
   });

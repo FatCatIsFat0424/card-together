@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react';
 import type { PresentationFrame } from '@shared/game-presentation';
-import type { Seat } from '@shared/types';
+import type { GameSeat } from '@shared/types';
 import { useI18nStore } from '../../stores/i18n-store';
 import { LiarCardFace } from './LiarCardFace';
 import { AppIcon } from '../../components/AppIcon';
 import styles from './LiarsDeckFrame.module.css';
 
 /** Body of a Liar's Deck presentation frame; the shared frame supplies the heading and timing. */
-export function LiarsDeckFrame({ frame, name }: { frame: PresentationFrame; name: (seat: Seat) => string }): ReactNode {
+export function LiarsDeckFrame({ frame, name }: { frame: PresentationFrame; name: (seat: GameSeat) => string }): ReactNode {
   const { t } = useI18nStore();
   if (frame.kind === 'deal' && frame.tableFace) {
     return <div className={styles.body}>

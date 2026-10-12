@@ -1,19 +1,19 @@
 // ─── Room Store ───
 
 import { create } from 'zustand';
-import type { RoomCode, RoomInfo, Seat } from '@shared/types';
+import type { RoomCode, RoomInfo, GameSeat } from '@shared/types';
 import { retainSnapshotValue } from './snapshot-equality';
 
 interface RoomStoreState {
   currentRoomCode: RoomCode | null;
   roomInfo: RoomInfo | null;
-  mySeat: Seat | null;
+  mySeat: GameSeat | null;
 }
 
 interface RoomStoreActions {
   setRoom: (roomCode: RoomCode, roomInfo: RoomInfo) => void;
   updateRoomInfo: (roomInfo: RoomInfo) => void;
-  setMySeat: (seat: Seat | null) => void;
+  setMySeat: (seat: GameSeat | null) => void;
   leaveRoom: () => void;
 }
 

@@ -1,3 +1,4 @@
+import { GAME_SEAT_ORDER, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { frameLogIndex } from '@shared/game-presentation';
 import type { PresentationFrame } from '@shared/game-presentation';
 import {
@@ -6,17 +7,17 @@ import {
 } from '@shared/rules/blackjack';
 import type {
   BlackjackAction, BlackjackDealerAction, BlackjackHand, BlackjackLogEntry, BlackjackMatchResult, BlackjackOutcome,
-  BlackjackVisibleState, Card, Seat,
+  BlackjackVisibleState, Card, GameSeat,
 } from '@shared/types';
 import { isOwnTurn } from '../observer-view';
 
-export const BJ_SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
+export const BJ_SEATS: readonly GameSeat[] = GAME_SEAT_ORDER;
 /** Quick-pick chip values in the betting controls */
 export const BJ_CHIP_VALUES: readonly number[] = [10, 20, 50, 100, 200];
 
 export interface BlackjackSettlementView {
-  readonly outcomes: Record<Seat, readonly BlackjackOutcome[]>;
-  readonly net: Record<Seat, number>;
+  readonly outcomes: Record<GameSeat, readonly BlackjackOutcome[]>;
+  readonly net: Record<GameSeat, number>;
 }
 
 /** Public table state as the presentation currently shows it. */
@@ -24,19 +25,19 @@ export interface BlackjackTableView {
   /** Hands dealt so far */
   readonly hand: number;
   /** Chips not staked on the table */
-  readonly chips: Record<Seat, number>;
-  readonly hands: Record<Seat, readonly BlackjackHand[]>;
+  readonly chips: Record<GameSeat, number>;
+  readonly hands: Record<GameSeat, readonly BlackjackHand[]>;
   /** Face-up dealer cards */
   readonly dealer: readonly Card[];
   readonly holeHidden: boolean;
   /** Outcomes of the shown hand once its settlement has been reached */
   readonly settlement: BlackjackSettlementView | null;
   /** The hand to act, while hands are being played */
-  readonly turn: { readonly seat: Seat; readonly handIndex: number } | null;
+  readonly turn: { readonly seat: GameSeat; readonly handIndex: number } | null;
   /** The player dealer of the shown hand; null with the house */
-  readonly dealerSeat: Seat | null;
+  readonly dealerSeat: GameSeat | null;
   /** The player dealer of the hand in progress or, while betting, of the next one */
-  readonly currentDealer: Seat | null;
+  readonly currentDealer: GameSeat | null;
   /** A player dealer is playing its own hand */
   readonly dealerTurn: boolean;
   /** Seats are betting on the next hand right now */
@@ -64,14 +65,14 @@ function scanHand(log: readonly BlackjackLogEntry[], end: number): {
   return { holeHidden, settlement };
 }
 
-function lastDealer(log: readonly BlackjackLogEntry[]): Seat | null {
+function lastDealer(log: readonly BlackjackLogEntry[]): GameSeat | null {
   const deal = log.findLast((entry) => entry.type === 'deal');
   return deal?.type === 'deal' ? deal.dealer ?? null : null;
 }
 
 /** The table of a match between `seats` replayed from the public log before `end`. */
 export function replayBlackjack(
-  log: readonly BlackjackLogEntry[], seats: readonly Seat[], end: number,
+  log: readonly BlackjackLogEntry[], seats: readonly GameSeat[], end: number,
 ): BlackjackTableView {
   const table = bjReplay(log, seats, end);
   const { holeHidden, settlement } = scanHand(log, end);
@@ -121,7 +122,7 @@ export function blackjackHandNumber(view: BlackjackTableView): number {
 }
 
 /** A seat that cannot bet while betting, or holds no cards in the shown hand; a player dealer never is. */
-export function blackjackSeatOut(view: BlackjackTableView, seat: Seat): boolean {
+export function blackjackSeatOut(view: BlackjackTableView, seat: GameSeat): boolean {
   if (seat === view.currentDealer) return false;
   if (view.betting) return !bjSitsIn(view.chips[seat]);
   return view.hand > 0 && view.hands[seat].length === 0;
@@ -175,9 +176,9 @@ export function signedChips(value: number): string {
 }
 
 /** Seats whose bet on the latest hand dealt before `end` was placed automatically at the deadline. */
-export function autoBetSeats(log: readonly BlackjackLogEntry[], end: number): Seat[] {
-  let pending: Seat[] = [];
-  let dealt: Seat[] = [];
+export function autoBetSeats(log: readonly BlackjackLogEntry[], end: number): GameSeat[] {
+  let pending: GameSeat[] = [];
+  let dealt: GameSeat[] = [];
   for (const entry of log.slice(0, end)) {
     if (entry.type === 'bet' && entry.auto) pending.push(entry.seat);
     else if (entry.type === 'deal') {
@@ -194,7 +195,7 @@ export function recentBlackjackMoves(log: readonly BlackjackLogEntry[], limit: n
 }
 
 export interface BlackjackRanking {
-  readonly seat: Seat;
+  readonly seat: GameSeat;
   readonly place: number;
   readonly chips: number;
   readonly net: number;
@@ -203,7 +204,7 @@ export interface BlackjackRanking {
 
 /** Final standings of the seats that took part by chips; tied seats share a place. */
 export function rankBlackjack(result: BlackjackMatchResult): BlackjackRanking[] {
-  const sorted = [...result.seats ?? BJ_SEATS].sort((a, b) => result.chips[b] - result.chips[a]);
+  const sorted = [...result.seats ?? SEAT_ORDER_CLOCKWISE].sort((a, b) => result.chips[b] - result.chips[a]);
   return sorted.map((seat) => ({
     seat,
     place: sorted.findIndex((other) => result.chips[other] === result.chips[seat]) + 1,

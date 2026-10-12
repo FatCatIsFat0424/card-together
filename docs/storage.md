@@ -23,8 +23,12 @@
 
 - Bots are `bot:<UUID>` with `isBot: true` and have no account, session, or profile.
 - Any match with a bot is practice: it stays resumable but adds no history.
-- History lists participants in N/E/S/W order. Blackjack and Hold'em list occupied seats
-  only; legacy results without `seats` list four.
+- History lists participants in N/E/S/W/P5/P6/P7/P8 order. Ninety-Nine, Blackjack, and
+  Hold'em list occupied seats only; legacy results without `seats` list four.
+- Flexible game snapshots restore legacy four-seat value maps with empty additional
+  values. New matches persist up to eight seats; missing `shuffleSeats` means false.
+  These extended snapshots/results require this version or newer: when rolling back
+  to an older server, restore the complete compatible backup following the deployment guide.
 - History is public by default and owners can hide it. Schema v5 made every existing
   account public once; later choices persist.
 - Seat backgrounds are shared with the room. Table backgrounds and card backs are private.

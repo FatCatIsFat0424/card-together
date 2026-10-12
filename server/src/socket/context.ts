@@ -1,7 +1,8 @@
+import { roomSeatInfo } from '@shared/rules/seats';
 import type { Server, Socket } from 'socket.io';
 import type { AccountProfile, ChatMessage, ClientToServerEvents, EmojiRecord, ServerToClientEvents } from '@shared/types';
 import type { PlayerSnapshot } from '@shared/types/socket-events';
-import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import { GAME_SEAT_ORDER } from '@shared/constants';
 import type { AuthService } from '../auth/auth-service';
 import type { RuntimeCoordinator, RuntimeMutationOptions } from '../runtime/coordinator';
 import type { VoiceManager } from '../managers/voice-manager';
@@ -55,8 +56,8 @@ export function requireSuccess(result: { success: boolean; reason?: string }): v
 export function observerIds(code: string): string[] {
   const room = roomManager.getRoomInfo(code);
   if (room?.status !== 'playing') return [];
-  const eliminated = SEAT_ORDER_CLOCKWISE.flatMap((seat) => {
-    const player = room.seats[seat].player;
+  const eliminated = GAME_SEAT_ORDER.flatMap((seat) => {
+    const player = roomSeatInfo(room, seat)?.player;
     return player && !player.isBot && gameManager.isEliminationShown(code, seat) ? [player.id] : [];
   });
   return [...roomManager.getSpectatorIds(code), ...eliminated];
@@ -64,7 +65,7 @@ export function observerIds(code: string): string[] {
 
 /** Seats still playing a match never receive observers' messages. */
 function hidesObserverChat(code: string, accountId: string, observers: readonly string[]): boolean {
-  return roomManager.getRoomInfo(code)?.status === 'playing' && roomManager.getPlayerSeat(code, accountId) !== null
+  return roomManager.getRoomInfo(code)?.status === 'playing' && roomManager.getGamePlayerSeat(code, accountId) !== null
     && !observers.includes(accountId);
 }
 
@@ -80,7 +81,7 @@ export function playerSnapshot(accountId: string, includeChat = true): PlayerSna
   const state = playerManager.getPlayerState(accountId);
   if (!state) return { success: false, error: 'Player is not connected.' };
   const info = state.currentRoomCode ? roomManager.getRoomInfo(state.currentRoomCode) : null;
-  const seat = info ? roomManager.getPlayerSeat(info.code, accountId) : null;
+  const seat = info ? roomManager.getGamePlayerSeat(info.code, accountId) : null;
   const viewing = info && (seat ? gameManager.isViewingGame(info.code, seat, accountId)
     : gameManager.isSpectating(info.code, accountId));
   const gameState = info && viewing ? gameManager.getRecipientVisibleState(info.code, seat) : null;
@@ -237,7 +238,7 @@ export function removeAbandonedRooms(): string[] {
 export function leaveCurrentRoom(accountId: string): void {
   const code = playerManager.getPlayerState(accountId)?.currentRoomCode;
   if (!code) return;
-  const seat = roomManager.getPlayerSeat(code, accountId);
+  const seat = roomManager.getGamePlayerSeat(code, accountId);
   // A spectator's departure never affects the match.
   if (seat && roomManager.getRoomInfo(code)?.status === 'playing') {
     gameManager.abortGame(code);

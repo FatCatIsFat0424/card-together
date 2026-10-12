@@ -1,7 +1,7 @@
 // ─── Ninety-Nine rules engine (pure functions, shared by client and server) ───
 // Rules: docs/games.md#ninety-nine
 
-import type { Card, NinetyNineMatchResult, NinetyNineOptions, Seat } from '../types';
+import type { Card, NinetyNineMatchResult, NinetyNineOptions, GameSeat } from '../types';
 
 export const NN_HAND_SIZE = 5;
 export const NN_MAX = 99;
@@ -67,12 +67,12 @@ export function nnDeckSize(options?: NinetyNineOptions): number {
 }
 
 /** Seats tied for first: the last survivor, or every survivor when a two-deck stock ran out. */
-export function nnWinners(result: NinetyNineMatchResult): Seat[] {
+export function nnWinners(result: NinetyNineMatchResult): GameSeat[] {
   return 'winners' in result ? result.winners : [result.winnerSeat];
 }
 
 /** Ranks with ties: winners share first; eliminated seats follow in reverse elimination order. */
-export function nnRank(result: NinetyNineMatchResult, seat: Seat): number {
+export function nnRank(result: NinetyNineMatchResult, seat: GameSeat): number {
   const winners = nnWinners(result);
-  return winners.includes(seat) ? 1 : 4 - result.eliminationOrder.indexOf(seat);
+  return winners.includes(seat) ? 1 : (result.seats?.length ?? 4) - result.eliminationOrder.indexOf(seat);
 }

@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Card, HoldemAction, HoldemGameState, PlayerInfo, Seat } from '@shared/types';
 import { HE_HANDS } from '@shared/rules/holdem';
@@ -51,12 +52,12 @@ describe("Hold'em gameplay", () => {
     const state = game();
     expect(state).toMatchObject({ hand: 1, button: 'W', smallBlind: 10, bigBlind: 20, currentTurnSeat: 'S',
       chips: { N: 990, E: 980, S: 1000, W: 1000 }, streetBets: { N: 10, E: 20, S: 0, W: 0 }, currentBet: 20 });
-    expect(state.hands).toEqual({ N: [card(2), card(6)], E: [card(3), card(7)], S: [card(4), card(8)], W: [card(5), card(9)] });
+    expect(state.hands).toEqual(gameSeatValues({ N: [card(2), card(6)], E: [card(3), card(7)], S: [card(4), card(8)], W: [card(5), card(9)] }));
     const view = holdem.getPlayerVisibleState(CODE, 'E')!;
     expect(view.myHand).toEqual([card(3), card(7)]);
     expect(view).not.toHaveProperty('hands');
     expect(view).not.toHaveProperty('deck');
-    expect(view.revealed).toEqual({ N: [], E: [], S: [], W: [] });
+    expect(view.revealed).toEqual(gameSeatValues({ N: [], E: [], S: [], W: [] }));
   });
 
   it('rejects out-of-turn and illegal actions without changes', () => {
@@ -103,7 +104,7 @@ describe("Hold'em gameplay", () => {
     expect(state.log.find((entry) => entry.type === 'award')).toMatchObject({
       pots: [{ amount: 80, eligible: ['N', 'E', 'S', 'W'], winners: ['N'] }] });
     expect(state.hand).toBe(2);
-    expect(state.revealed).toEqual({ N: [], E: [], S: [], W: [] });
+    expect(state.revealed).toEqual(gameSeatValues({ N: [], E: [], S: [], W: [] }));
   });
 
   it('runs out the board after all-ins, eliminates busted seats, and ends when one seat holds every chip', () => {
@@ -134,8 +135,8 @@ describe("Hold'em gameplay", () => {
     state = game();
     expect(state.phase).toBe('scoring');
     expect(state.log.at(-1)).toMatchObject({ type: 'award', eliminated: ['S', 'W'] });
-    expect(state.result).toEqual({ gameType: 'holdem', seats: ['N', 'E', 'S', 'W'], chips: { N: 4000, E: 0, S: 0, W: 0 },
-      hands: 2, winners: ['N'], eliminationOrder: ['E', 'S', 'W'] });
+    expect(state.result).toEqual(gameSeatValues({ gameType: 'holdem', seats: ['N', 'E', 'S', 'W'], chips: { N: 4000, E: 0, S: 0, W: 0 },
+      hands: 2, winners: ['N'], eliminationOrder: ['E', 'S', 'W'] }));
   });
 
   it('ends after the last hand with the most chips winning', () => {

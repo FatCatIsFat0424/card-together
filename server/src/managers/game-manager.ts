@@ -28,7 +28,7 @@ import type {
   PlayerVisibleGameState,
   RedPointsGameState,
   RoomCode,
-  Seat,
+  GameSeat, Seat,
   SevensGameState,
   SevensOptions,
   TimeControl,
@@ -36,7 +36,8 @@ import type {
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { cpArrangeSeconds } from '@shared/rules/chinesepoker';
 import { bjBetSeconds, bjSitsIn } from '@shared/rules/blackjack';
-import { minPlayers, occupiedSeats } from '@shared/rules/seats';
+import { gamePlayer, isCompassSeat, minPlayers, occupiedSeats } from '@shared/rules/seats';
+import { normalizeFlexibleGame } from '@shared/game-seat-compat';
 import * as bridge from './games/bridge-game';
 import * as bigtwo from './games/bigtwo-game';
 import * as redpoints from './games/redpoints-game';
@@ -77,7 +78,7 @@ function autoPassMaxDelay(game: AnyGameState): number {
   return Math.min(bigtwo.AUTO_PASS_MAX_DELAY_MS, (game.clock?.settings ?? DEFAULT_TIME_CONTROL).baseSeconds * 1000);
 }
 
-function timedAction(roomCode: RoomCode, seat: Seat, operation: () => Result, automatic: boolean): Result {
+function timedAction(roomCode: RoomCode, seat: GameSeat, operation: () => Result, automatic: boolean): Result {
   const game = getGameState(roomCode);
   const clock = game?.clock;
   const now = Date.now();
@@ -121,7 +122,7 @@ export function setSevensDevPreset(enabled: boolean): void {
 export function startGame(
   roomCode: RoomCode,
   gameType: GameType,
-  players: Partial<Record<Seat, PlayerInfo>>,
+  players: Partial<Record<GameSeat, PlayerInfo>>,
   settings?: TimeControl,
   sevensOptions?: SevensOptions,
   ninetyNineOptions?: NinetyNineOptions,
@@ -130,16 +131,20 @@ export function startGame(
   if (occupiedSeats(players).length < minPlayers(gameType)) {
     return { success: false, reason: 'Not enough players to start this game.' };
   }
+  if (!['ninetynine', 'blackjack', 'holdem'].includes(gameType)
+    && (!isFullTable(players) || occupiedSeats(players).length !== 4)) {
+    return { success: false, reason: 'All four seats must be filled.' };
+  }
   // A finished board of another game type may still be waiting for game:continue.
   removeGame(roomCode);
   if (gameType === 'holdem') holdem.startGame(roomCode, players);
   else if (gameType === 'blackjack') {
     blackjack.startGame(roomCode, players, bjBetSeconds((settings ?? DEFAULT_TIME_CONTROL).baseSeconds) * 1000,
       undefined, blackjackOptions);
-  } else if (!isFullTable(players)) return { success: false, reason: 'All four seats must be filled.' };
+  } else if (gameType === 'ninetynine') ninetynine.startGame(roomCode, players, undefined, undefined, ninetyNineOptions);
+  else if (!isFullTable(players)) return { success: false, reason: 'All four seats must be filled.' };
   else if (gameType === 'bigtwo') bigtwo.startGame(roomCode, players);
   else if (gameType === 'redpoints') redpoints.startGame(roomCode, players);
-  else if (gameType === 'ninetynine') ninetynine.startGame(roomCode, players, undefined, undefined, ninetyNineOptions);
   else if (gameType === 'sevens') sevens.startGame(roomCode, players, undefined, sevensOptions);
   else if (gameType === 'liarsdeck') liarsdeck.startGame(roomCode, players);
   else if (gameType === 'chinesepoker') {
@@ -155,11 +160,13 @@ export function startGame(
   return { success: true };
 }
 
-export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): PlayerVisibleGameState | null {
-  const visible = bridge.getPlayerVisibleState(roomCode, seat) ?? bigtwo.getPlayerVisibleState(roomCode, seat)
-    ?? redpoints.getPlayerVisibleState(roomCode, seat) ?? ninetynine.getPlayerVisibleState(roomCode, seat)
-    ?? sevens.getPlayerVisibleState(roomCode, seat) ?? chinesepoker.getPlayerVisibleState(roomCode, seat)
-    ?? liarsdeck.getPlayerVisibleState(roomCode, seat) ?? blackjack.getPlayerVisibleState(roomCode, seat)
+export function getPlayerVisibleState(roomCode: RoomCode, seat: GameSeat): PlayerVisibleGameState | null {
+  if (!isCompassSeat(seat) && !['ninetynine', 'blackjack', 'holdem'].includes(getGameState(roomCode)?.gameType ?? '')) return null;
+  const compass = isCompassSeat(seat) ? seat : 'N';
+  const visible = bridge.getPlayerVisibleState(roomCode, compass) ?? bigtwo.getPlayerVisibleState(roomCode, compass)
+    ?? redpoints.getPlayerVisibleState(roomCode, compass) ?? ninetynine.getPlayerVisibleState(roomCode, seat)
+    ?? sevens.getPlayerVisibleState(roomCode, compass) ?? chinesepoker.getPlayerVisibleState(roomCode, compass)
+    ?? liarsdeck.getPlayerVisibleState(roomCode, compass) ?? blackjack.getPlayerVisibleState(roomCode, seat)
     ?? holdem.getPlayerVisibleState(roomCode, seat);
   if (!visible) return null;
   const game = getGameState(roomCode);
@@ -193,7 +200,7 @@ function withGodView(
  * view, and seats permanently out of the match keep their own view plus god view.
  * Bots and automatic actions must use `getPlayerVisibleState`, which never adds god view.
  */
-export function getRecipientVisibleState(roomCode: RoomCode, seat: Seat | null): PlayerVisibleGameState | null {
+export function getRecipientVisibleState(roomCode: RoomCode, seat: GameSeat | null): PlayerVisibleGameState | null {
   const game = getGameState(roomCode);
   const visible = getPlayerVisibleState(roomCode, seat ?? 'S');
   if (!game || !visible) return null;
@@ -202,7 +209,7 @@ export function getRecipientVisibleState(roomCode: RoomCode, seat: Seat | null):
 }
 
 /** Log index of the entry that knocked the seat out of the match for good, or -1. */
-function eliminationIndex(game: AnyGameState, seat: Seat): number {
+function eliminationIndex(game: AnyGameState, seat: GameSeat): number {
   switch (game.gameType) {
     case 'ninetynine': return game.log.findIndex((entry) => entry.type === 'eliminated' && entry.seat === seat);
     case 'liarsdeck': return game.log.findIndex((entry) => entry.type === 'shot' && entry.seat === seat
@@ -221,7 +228,7 @@ function eliminationIndex(game: AnyGameState, seat: Seat): number {
  * the eliminating presentation ends, the seat still counts as playing so its own chat and
  * voice do not reveal the outcome early.
  */
-export function isEliminationShown(roomCode: RoomCode, seat: Seat): boolean {
+export function isEliminationShown(roomCode: RoomCode, seat: GameSeat): boolean {
   const game = getGameState(roomCode);
   if (!game) return false;
   const index = eliminationIndex(game, seat);
@@ -254,19 +261,19 @@ export function removeGame(roomCode: RoomCode): void {
 }
 
 /** Lets one player leave the finished board; it is removed once every human has left. */
-export function returnFromResult(roomCode: RoomCode, seat: Seat): void {
+export function returnFromResult(roomCode: RoomCode, seat: GameSeat): void {
   const game = getGameState(roomCode);
   if (!game?.result) return;
   const returned = new Set([...(game.returnedSeats ?? []), seat]);
-  const humans = SEAT_ORDER_CLOCKWISE.filter((value) => game.players[value] && !game.players[value].isBot);
+  const humans = occupiedSeats(game.players).filter((value) => gamePlayer(game, value)?.isBot === false || gamePlayer(game, value)?.isBot === undefined);
   if (humans.every((value) => returned.has(value))) removeGame(roomCode);
-  else game.returnedSeats = SEAT_ORDER_CLOCKWISE.filter((value) => returned.has(value));
+  else game.returnedSeats = occupiedSeats(game.players).filter((value) => returned.has(value));
 }
 
 /** The finished board stays visible only to its own players until they return. */
-export function isViewingGame(roomCode: RoomCode, seat: Seat, accountId: string): boolean {
+export function isViewingGame(roomCode: RoomCode, seat: GameSeat, accountId: string): boolean {
   const game = getGameState(roomCode);
-  return Boolean(game && game.players[seat]?.id === accountId && !game.returnedSeats?.includes(seat));
+  return Boolean(game && gamePlayer(game, seat)?.id === accountId && !(game.returnedSeats as readonly GameSeat[] | undefined)?.includes(seat));
 }
 
 /**
@@ -275,7 +282,7 @@ export function isViewingGame(roomCode: RoomCode, seat: Seat, accountId: string)
  */
 export function isSpectating(roomCode: RoomCode, accountId: string): boolean {
   const game = getGameState(roomCode);
-  return Boolean(game && !SEAT_ORDER_CLOCKWISE.some((seat) => game.players[seat]?.id === accountId)
+  return Boolean(game && !Object.values(game.players).some((player) => player?.id === accountId)
     && !game.returnedViewers?.includes(accountId));
 }
 
@@ -297,6 +304,7 @@ export function exportGames(): AnyGameState[] {
 }
 
 export function restoreGames(records: AnyGameState[]): void {
+  records = records.map(normalizeFlexibleGame);
   bridge.restoreGames(records.filter((game): game is BridgeGameState => game.gameType === 'bridge'));
   bigtwo.restoreGames(records.filter((game): game is BigTwoGameState => game.gameType === 'bigtwo'));
   redpoints.restoreGames(records.filter((game): game is RedPointsGameState => game.gameType === 'redpoints'));
@@ -337,7 +345,7 @@ export function handleRedPointsChooseFlip(roomCode: RoomCode, seat: Seat, captur
 }
 
 export function handleNinetyNinePlay(
-  roomCode: RoomCode, seat: Seat, card: Card, choice?: NnChoice, target?: Seat, automatic = false,
+  roomCode: RoomCode, seat: GameSeat, card: Card, choice?: NnChoice, target?: GameSeat, automatic = false,
 ): Result {
   return timedAction(roomCode, seat, () => isGame(roomCode, 'ninetynine') ? presentAction(roomCode, () => ninetynine.play(roomCode, seat, card, choice, target)) : WRONG_GAME, automatic);
 }
@@ -358,17 +366,17 @@ export function handleLiarsDeckChallenge(roomCode: RoomCode, seat: Seat, automat
   return timedAction(roomCode, seat, () => isGame(roomCode, 'liarsdeck') ? presentAction(roomCode, () => liarsdeck.challenge(roomCode, seat)) : WRONG_GAME, automatic);
 }
 
-export function handleBlackjackAction(roomCode: RoomCode, seat: Seat, action: BlackjackAction, automatic = false): Result {
+export function handleBlackjackAction(roomCode: RoomCode, seat: GameSeat, action: BlackjackAction, automatic = false): Result {
   return timedAction(roomCode, seat, () => isGame(roomCode, 'blackjack') ? presentAction(roomCode, () => blackjack.act(roomCode, seat, action)) : WRONG_GAME, automatic);
 }
 
 export function handleBlackjackDealerAction(
-  roomCode: RoomCode, seat: Seat, action: BlackjackDealerAction, automatic = false,
+  roomCode: RoomCode, seat: GameSeat, action: BlackjackDealerAction, automatic = false,
 ): Result {
   return timedAction(roomCode, seat, () => isGame(roomCode, 'blackjack') ? presentAction(roomCode, () => blackjack.dealerAct(roomCode, seat, action)) : WRONG_GAME, automatic);
 }
 
-export function handleHoldemAction(roomCode: RoomCode, seat: Seat, action: HoldemAction, automatic = false): Result {
+export function handleHoldemAction(roomCode: RoomCode, seat: GameSeat, action: HoldemAction, automatic = false): Result {
   return timedAction(roomCode, seat, () => isGame(roomCode, 'holdem') ? presentAction(roomCode, () => holdem.act(roomCode, seat, action)) : WRONG_GAME, automatic);
 }
 
@@ -376,7 +384,7 @@ export function handleHoldemAction(roomCode: RoomCode, seat: Seat, action: Holde
  * Seats bet simultaneously against one shared deadline. The final bet deals a new hand, which
  * refills every reserve and starts the first player's turn after the deal presentation.
  */
-export function handleBlackjackBet(roomCode: RoomCode, seat: Seat, amount: number, automatic = false): Result {
+export function handleBlackjackBet(roomCode: RoomCode, seat: GameSeat, amount: number, automatic = false): Result {
   if (!isGame(roomCode, 'blackjack')) return WRONG_GAME;
   const before = blackjack.getGameState(roomCode)?.hand;
   const result = presentAction(roomCode, () => blackjack.bet(roomCode, seat, amount, automatic));
@@ -386,7 +394,7 @@ export function handleBlackjackBet(roomCode: RoomCode, seat: Seat, amount: numbe
 }
 
 /** Seats that still owe a bet once the shared betting deadline has passed. */
-export function overdueBlackjackSeats(roomCode: RoomCode, gameId: string, now = Date.now()): Seat[] {
+export function overdueBlackjackSeats(roomCode: RoomCode, gameId: string, now = Date.now()): GameSeat[] {
   const game = blackjack.getGameState(roomCode);
   if (!game || game.id !== gameId || game.betDeadline === null || now < game.betDeadline) return [];
   return blackjack.pendingBetSeats(game);

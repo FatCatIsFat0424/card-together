@@ -1,3 +1,4 @@
+import { isCompassSeat } from '@shared/rules/seats';
 // ─── GameInfoRail: left info rail (contract, tricks, auction) ───
 
 import type { ReactNode } from 'react';
@@ -22,7 +23,7 @@ function Pips({ count, target, team }: { count: number; target: number; team: 'n
 
 export function GameInfoRail(): ReactNode {
   const { t } = useI18nStore();
-  const mySeat = useRoomStore((state) => state.mySeat);
+  const mySeat = useRoomStore((state) => ['N', 'E', 'S', 'W'].includes(state.mySeat ?? '') ? state.mySeat as Seat : null);
   const roomInfo = useRoomStore((state) => state.roomInfo);
   const { phase, bidding, dealerSeat, currentTurnSeat, contract, playing } = useGameStore(useShallow((state) => ({
     phase: state.phase,
@@ -56,7 +57,7 @@ export function GameInfoRail(): ReactNode {
           <div className={styles.kv}>{t('table.needs', { n: String(needed) })}</div>
         </> : <div className={styles.kv}>
           {phase === 'bidding' && <span className={styles.status}>{t('table.biddingNow')}</span>}
-          {dealerSeat && <span>{t('table.dealerIs', { seat: seatLabel(dealerSeat) })}</span>}
+          {dealerSeat && <span>{t('table.dealerIs', { seat: seatLabel(dealerSeat as Seat) })}</span>}
         </div>}
       </section>
 
@@ -81,7 +82,7 @@ export function GameInfoRail(): ReactNode {
         <h2 className={styles.caption}>{t('table.auction')}</h2>
         <div className={styles.scroll}>
           <AuctionTable calls={calls} mySeat={mySeat}
-            toAct={phase === 'bidding' ? currentTurnSeat : null} />
+            toAct={phase === 'bidding' && currentTurnSeat && isCompassSeat(currentTurnSeat) ? currentTurnSeat : null} />
         </div>
       </section>
       <TrickHistory tricks={playing?.completedTricks ?? []} />

@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { bjSitsIn } from '@shared/rules/blackjack';
-import type { Seat } from '@shared/types';
+import type { GameSeat } from '@shared/types';
+import { gameSeatValue } from '@shared/rules/seats';
 import { clockTickDelay, countingMs, projectedServerNow, seatClock } from '../games/turn-clock';
 import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './TurnClock.module.css';
 
 interface TurnClockProps {
-  seat: Seat;
+  seat: GameSeat;
   /** Players see only their own reserve; other seats show the turn allowance alone. */
   showBank?: boolean;
 }
@@ -42,10 +43,10 @@ export function DeadlineClock({ deadline }: { deadline: number }): ReactNode {
   </div>;
 }
 
-/** Seat clock chip: "turn + reserve" seconds for the own seat, the turn allowance elsewhere. */
+/** GameSeat clock chip: "turn + reserve" seconds for the own seat, the turn allowance elsewhere. */
 export function TurnClock({ seat, showBank = true }: TurnClockProps): ReactNode {
   const arrangeDeadline = useGameStore((state) => state.chinesePoker?.phase === 'arranging'
-    && !state.chinesePoker.submitted[seat] ? state.chinesePoker.arrangeDeadline : null);
+    && !gameSeatValue(state.chinesePoker.submitted, seat) ? state.chinesePoker.arrangeDeadline : null);
   const simultaneous = useGameStore((state) => Boolean(state.chinesePoker));
   const betDeadline = useGameStore((state) => state.blackjack?.phase === 'betting'
     && !state.blackjack.betPlaced[seat] && bjSitsIn(state.blackjack.chips[seat]) ? state.blackjack.betDeadline : null);

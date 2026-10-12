@@ -1,12 +1,12 @@
 // ─── Game rule constants ───
 
-import type { Seat, BidSuit, Team, GameType } from '../types';
+import type { GameSeat, Seat, BidSuit, Team, GameType } from '../types';
 
 /** All game types */
 export const GAME_TYPES: readonly GameType[] = ['bridge', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'chinesepoker', 'liarsdeck', 'blackjack', 'holdem'];
 
-/** Games that start with two to four occupied seats; every other game needs all four */
-export const FLEXIBLE_SEAT_GAMES: readonly GameType[] = ['blackjack', 'holdem'];
+/** Games that start with two to eight occupied seats; every other game needs all four */
+export const FLEXIBLE_SEAT_GAMES: readonly GameType[] = ['ninetynine', 'blackjack', 'holdem'];
 
 /** Fewest occupied seats a flexible-seat match starts with */
 export const MIN_FLEXIBLE_PLAYERS = 2;
@@ -14,8 +14,8 @@ export const MIN_FLEXIBLE_PLAYERS = 2;
 /** Unseated human members a room accepts besides its four seats */
 export const MAX_SPECTATORS = 8;
 
-/** Room members at most: four seats (human or bot) plus spectators */
-export const MAX_ROOM_MEMBERS = 4 + MAX_SPECTATORS;
+/** Room members at most: eight seats (human or bot) plus spectators */
+export const MAX_ROOM_MEMBERS = 8 + MAX_SPECTATORS;
 
 /** Maximum configured waiting-room seats, including the four standard seats. */
 export const MAX_ROOM_SEATS = 8;
@@ -43,6 +43,7 @@ export const CONTRACT_BASE_TRICKS = 6;
 
 /** Seat order, clockwise */
 export const SEAT_ORDER_CLOCKWISE: readonly Seat[] = ['N', 'E', 'S', 'W'];
+export const GAME_SEAT_ORDER: readonly GameSeat[] = ['N', 'E', 'S', 'W', 'P5', 'P6', 'P7', 'P8'];
 
 /** Team assignment */
 export const TEAM_SEATS: Record<Team, readonly [Seat, Seat]> = {

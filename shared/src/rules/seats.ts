@@ -1,5 +1,49 @@
-import type { GameType, Seat } from '../types';
+import type { GameSeat, GameType, PlayerInfo, RoomInfo, Seat, SeatInfo } from '../types';
 import { FLEXIBLE_SEAT_GAMES, MIN_FLEXIBLE_PLAYERS, SEAT_ORDER_CLOCKWISE } from '../constants';
+import { GAME_SEAT_ORDER } from '../constants';
+
+export function nextGameSeat(seat: GameSeat, reverse = false): GameSeat {
+  const step = reverse ? -1 : 1;
+  return GAME_SEAT_ORDER[(GAME_SEAT_ORDER.indexOf(seat) + step + 8) % 8];
+}
+
+export function isCompassSeat(seat: GameSeat): seat is Seat {
+  return (SEAT_ORDER_CLOCKWISE as readonly GameSeat[]).includes(seat);
+}
+
+export function gameSeatMap<T>(value: (seat: GameSeat) => T): Record<GameSeat, T> {
+  return Object.fromEntries(GAME_SEAT_ORDER.map((seat) => [seat, value(seat)])) as Record<GameSeat, T>;
+}
+
+export function roomSeatInfo(room: RoomInfo, seat: GameSeat): SeatInfo | undefined {
+  return isCompassSeat(seat) ? room.seats[seat] : room.additionalSeats?.[GAME_SEAT_ORDER.indexOf(seat) - 4];
+}
+
+export function roomPlayers(room: RoomInfo): Partial<Record<GameSeat, PlayerInfo>> {
+  return Object.fromEntries(GAME_SEAT_ORDER.flatMap((seat) => {
+    const player = roomSeatInfo(room, seat)?.player;
+    return player ? [[seat, player]] : [];
+  }));
+}
+
+export function gamePlayer(game: { readonly players: Readonly<Partial<Record<GameSeat, PlayerInfo>>> }, seat: GameSeat): PlayerInfo | undefined {
+  return game.players[seat];
+}
+
+export function gameSeatValue<T>(values: Readonly<Partial<Record<GameSeat, T>>> | undefined, seat: GameSeat): T | undefined {
+  return values?.[seat];
+}
+
+export function roomCanStart(room: RoomInfo): boolean {
+  const occupied = GAME_SEAT_ORDER.flatMap((seat) => {
+    const entry = roomSeatInfo(room, seat);
+    return entry?.player ? [entry] : [];
+  });
+  return room.status === 'waiting' && occupied.length >= minPlayers(room.gameType)
+    && occupied.length <= (FLEXIBLE_SEAT_GAMES.includes(room.gameType) ? 8 : 4)
+    && occupied.some((entry) => !entry.player?.isBot)
+    && occupied.every((entry) => entry.isReady);
+}
 
 /** N → E → S → W → N. */
 export function nextSeatClockwise(seat: Seat): Seat {
@@ -18,6 +62,6 @@ export function minPlayers(gameType: GameType): number {
 }
 
 /** Seats with a player, ordered N, E, S, W; empty seats take no part in the match. */
-export function occupiedSeats(players: Readonly<Partial<Record<Seat, unknown>>>): Seat[] {
-  return SEAT_ORDER_CLOCKWISE.filter((seat) => players[seat] !== undefined);
+export function occupiedSeats(players: Readonly<Partial<Record<GameSeat, unknown>>>): GameSeat[] {
+  return GAME_SEAT_ORDER.filter((seat) => players[seat] !== undefined);
 }

@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import type { Seat } from '@shared/types';
+import type { GameSeat } from '@shared/types';
 
 interface TablePerspectiveStore {
-  seat: Seat;
-  selectSeat: (seat: Seat) => void;
+  seat: GameSeat;
+  selectSeat: (seat: GameSeat) => void;
   reset: () => void;
 }
 

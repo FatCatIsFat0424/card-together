@@ -1,3 +1,4 @@
+import { gameSeatValues } from '../helpers/game-seat-values';
 import { runSeededGame } from './seeded-game-runner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
@@ -69,14 +70,14 @@ function turn(game: AnyGameState): Seat {
   if (game.gameType === 'chinesepoker') {
     const pending = chinesepoker.pendingSeats(game)[0];
     if (!pending) throw new Error('Every seat has arranged');
-    return pending;
+    return pending as Seat;
   }
   if (game.gameType === 'blackjack' && game.phase === 'betting') {
     const pending = blackjack.pendingBetSeats(game)[0];
     if (!pending) throw new Error('Every seat has bet');
-    return pending;
+    return pending as Seat;
   }
-  if (game.gameType !== 'bridge') return game.currentTurnSeat;
+  if (game.gameType !== 'bridge') return game.currentTurnSeat as Seat;
   if (game.phase === 'redeal_pending' && game.redealPendingSeat) return game.redealPendingSeat;
   if (game.phase === 'bidding' && game.bidding) return game.bidding.currentBidderSeat;
   if (game.playing) return game.playing.currentTurnSeat;
@@ -111,12 +112,12 @@ function redPointsState(overrides: Partial<RedPointsVisibleState> = {}): RedPoin
 
 
 function ninetyNineState(overrides: Partial<NinetyNineVisibleState> = {}): NinetyNineVisibleState {
-  return {
+  return gameSeatValues({
     gameType: 'ninetynine', phase: 'playing', mySeat: 'N', myHand: [],
     handCounts: { N: 0, E: 0, S: 0, W: 0 }, total: 0, direction: 'ccw',
     currentTurnSeat: 'N', lastPlayed: null, stockCount: 0, eliminated: [],
     log: [], result: null, ...overrides,
-  };
+  });
 }
 
 describe('filtered bot decisions', () => {

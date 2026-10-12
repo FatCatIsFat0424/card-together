@@ -1,10 +1,11 @@
+import { gameSeatValue, isCompassSeat, roomSeatInfo } from '@shared/rules/seats';
 // ─── TableSeat: compact seat info plate (avatar, name, key numbers, status) and card tray ───
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import { useShallow } from 'zustand/react/shallow';
-import type { Card, GameClock, Seat } from '@shared/types';
+import type { Card, GameClock, GameSeat } from '@shared/types';
 import { rpCardPoints, rpScore } from '@shared/rules/redpoints';
 import { cardImageUrl } from '../cards';
 import type { TranslationKey } from '../i18n';
@@ -156,7 +157,7 @@ const STATUS_LABEL: Record<SeatStatus, TranslationKey> = {
 };
 
 interface TableSeatProps {
-  seat: Seat;
+  seat: GameSeat;
   position: TablePosition;
   /** Selectable seat (Ninety-Nine: choose the next player) */
   onPick?: () => void;
@@ -168,39 +169,39 @@ interface TableSeatProps {
 
 export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppressTurn }: TableSeatProps): ReactNode {
   const { t } = useI18nStore();
-  const player = useRoomStore((state) => state.roomInfo?.seats[seat].player ?? null);
+  const player = useRoomStore((state) => state.roomInfo ? roomSeatInfo(state.roomInfo, seat)?.player ?? null : null);
   const isMe = useRoomStore((state) => state.mySeat === seat);
   const {
     phase, turn, declarer, dealer, playing, bigTwoCards, redPointsCards, ninetyNineCards, locked, captured, busted,
     sevensCards, sevensCovered, chinesePokerCards, arranging, arranged, autoArranged, blackjackCards, holdemCards,
   } = useGameStore(useShallow((state) => ({
-    sevensCards: state.sevens?.handCounts[seat] ?? null,
+    sevensCards: gameSeatValue(state.sevens?.handCounts, seat) ?? null,
     // Blackjack hands are drawn face up on the table, so the plate shows no card backs.
     blackjackCards: state.blackjack ? 0 : null,
     // Hold'em hole cards are drawn on the felt, so the plate shows no card backs either.
     holdemCards: state.holdem ? 0 : null,
-    sevensCovered: state.sevens?.coveredCounts[seat] ?? null,
+    sevensCovered: gameSeatValue(state.sevens?.coveredCounts, seat) ?? null,
     chinesePokerCards: state.chinesePoker ? state.chinesePoker.phase === 'arranging' ? 13 : 0 : null,
-    arranging: state.chinesePoker?.phase === 'arranging' && !state.chinesePoker.submitted[seat],
-    arranged: state.chinesePoker?.phase === 'arranging' && state.chinesePoker.submitted[seat],
-    autoArranged: state.chinesePoker?.autoArranged.includes(seat) ?? false,
-    ninetyNineCards: state.ninetyNine?.handCounts[seat] ?? null,
+    arranging: state.chinesePoker?.phase === 'arranging' && !gameSeatValue(state.chinesePoker.submitted, seat),
+    arranged: state.chinesePoker?.phase === 'arranging' && gameSeatValue(state.chinesePoker.submitted, seat),
+    autoArranged: (isCompassSeat(seat) && state.chinesePoker?.autoArranged.includes(seat)) ?? false,
+    ninetyNineCards: gameSeatValue(state.ninetyNine?.handCounts, seat) ?? null,
     busted: state.ninetyNine?.eliminated.includes(seat) ?? false,
     phase: state.phase,
     turn: state.currentTurnSeat === seat,
     declarer: state.contract?.declarer === seat,
     dealer: state.dealerSeat === seat,
     playing: state.playing,
-    bigTwoCards: state.bigTwo?.handCounts[seat] ?? null,
-    redPointsCards: state.redPoints?.handCounts[seat] ?? null,
-    locked: state.bigTwo?.phase === 'playing' && state.bigTwo.lockedSeats.includes(seat),
-    captured: state.redPoints?.captured[seat] ?? null,
+    bigTwoCards: gameSeatValue(state.bigTwo?.handCounts, seat) ?? null,
+    redPointsCards: gameSeatValue(state.redPoints?.handCounts, seat) ?? null,
+    locked: state.bigTwo?.phase === 'playing' && isCompassSeat(seat) && state.bigTwo.lockedSeats.includes(seat),
+    captured: gameSeatValue(state.redPoints?.captured, seat) ?? null,
   })));
   const liarsDeck = useGameStore((state) => state.liarsDeck);
   const { frame } = useGamePresentation();
   // Liar's Deck seats follow the presentation so a trigger pull is not revealed before its suspense ends.
   const liars = liarsDeck && liarsDeckView(liarsDeck, frame);
-  const dead = liars?.eliminated.includes(seat) ?? false;
+  const dead = (isCompassSeat(seat) && liars?.eliminated.includes(seat)) ?? false;
   const blackjack = useGameStore((state) => state.blackjack);
   // Blackjack chips follow the presentation so a settlement is not paid out before its frame.
   const bj = blackjack && blackjackView(blackjack, frame);
@@ -230,7 +231,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
     arranged: arranged || betPlaced,
   });
   const cards = bigTwoCards ?? redPointsCards ?? ninetyNineCards ?? sevensCards ?? chinesePokerCards
-    ?? liars?.handCounts[seat] ?? blackjackCards ?? holdemCards ?? remainingCards(seat, playing);
+    ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? remainingCards(seat, playing);
   // A Hold'em fold outranks a timeout in the status slot, so a timed-out fold keeps the timeout icon.
   const heStatusLabel: TranslationKey | null = heOut && status === 'busted' ? 'holdem.out'
     : heLocked && status === 'locked' ? heState === 'folded' ? 'holdem.folded' : 'holdem.allIn' : null;
@@ -284,9 +285,9 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
             : sevensCovered > 0 && <span className={styles.chip}>
               {t('sevens.covered', { n: String(sevensCovered) })}
             </span>)}
-          {liars && <span className={`${styles.chip} ${liars.shots[seat] >= 4 ? styles.danger : ''}`}
-            title={t('liarsdeck.shotsTitle', { n: String(liars.shots[seat]) })}>
-            {t('liarsdeck.shots', { n: String(liars.shots[seat]) })}
+          {liars && <span className={`${styles.chip} ${(gameSeatValue(liars.shots, seat) ?? 0) >= 4 ? styles.danger : ''}`}
+            title={t('liarsdeck.shotsTitle', { n: String((gameSeatValue(liars.shots, seat) ?? 0)) })}>
+            {t('liarsdeck.shots', { n: String((gameSeatValue(liars.shots, seat) ?? 0)) })}
           </span>}
           {bj && <span className={styles.chip} title={t('blackjack.chipsTitle', { n: String(bj.chips[seat]) })}>
             <ChipIcon />{bj.chips[seat]}
@@ -312,7 +313,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
         </span>}
         {sittingOut && <span className={styles.srOnly}>{t('blackjack.sittingOut')}</span>}
         {active && <span className={styles.srOnly}>{isMe ? t('table.yourTurn') : t('table.turn')}</span>}
-        {clockTurn && clock && <TurnBar key={clockTurn.id} turn={clockTurn} bankMs={isMe ? clock.bankRemainingMs[seat] : 0}
+        {clockTurn && clock && <TurnBar key={clockTurn.id} turn={clockTurn} bankMs={isMe ? clock.bankRemainingMs[seat] ?? 0 : 0}
           serverNow={clock.serverNow} receivedAt={receivedAt} />}
         {moveKey !== undefined && <span key={moveKey} className={styles.moved} aria-hidden="true" />}
       </div>

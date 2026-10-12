@@ -47,7 +47,7 @@ export function BridgeTable(): ReactNode {
   const hasPresentation = useGameStore((state) => Boolean(state.visible?.presentation));
   const heldTrick = hasPresentation ? null : legacyTrick;
   const isMyTurn = mySeat !== null && mySeat === currentTurnSeat && !heldTrick && !locked;
-  const bottomSeat = useTablePerspective();
+  const bottomSeat = useTablePerspective() as Seat;
 
   const seatLabel = (seat: Seat): string => t(`seat.${seat}`);
 
@@ -110,7 +110,7 @@ export function BridgeTable(): ReactNode {
       />
     );
   } else if (phase === 'bidding') {
-    centre = mySeat === currentTurnSeat ? null : <BiddingWaiting seat={currentTurnSeat} />;
+    centre = mySeat === currentTurnSeat ? null : <BiddingWaiting seat={currentTurnSeat as Seat | null} />;
   } else if (phase === 'redeal_pending' && redealPendingSeat === mySeat) {
     centre = (
       <div className={styles.overlayCard}>

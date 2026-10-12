@@ -8,6 +8,8 @@ export type PlayerId = string;
 
 /** Seat position */
 export type Seat = 'N' | 'E' | 'S' | 'W';
+export type AdditionalSeat = 'P5' | 'P6' | 'P7' | 'P8';
+export type GameSeat = Seat | AdditionalSeat;
 
 /** Player color (hex code) */
 export type PlayerColor = string;

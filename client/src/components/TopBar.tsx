@@ -3,14 +3,9 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { GAME_COIN_REWARD, SUIT_SYMBOLS } from '@shared/constants';
-import { rpScore } from '@shared/rules/redpoints';
-import { NN_MAX, nnWinners } from '@shared/rules/ninetynine';
-import { HE_HANDS } from '@shared/rules/holdem';
-import type { BidLevel, BidSuit, Seat } from '@shared/types';
+import { GAME_COIN_REWARD } from '@shared/constants';
 import { apiRequest } from '../api';
 import { clearAccount, useAccountStore } from '../stores/account-store';
-import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useMusicStore } from '../stores/music-store';
 import { useRoomStore } from '../stores/room-store';
@@ -19,10 +14,6 @@ import { useTurnSound } from '../hooks/use-turn-sound';
 import { LanguageSwitch } from './LanguageSwitch';
 import { MusicControl } from './MusicControl';
 import { ThemeSwitch } from './ThemeSwitch';
-import { joinNames } from '../games/seat-names';
-import { useGamePresentation } from '../games/use-game-presentation';
-import { blackjackHandNumber, blackjackView } from '../games/blackjack/blackjack-view';
-import { holdemView } from '../games/holdem/holdem-view';
 import { AppIcon } from './AppIcon';
 import { NotificationPanel } from './NotificationPanel';
 import { socialUnreadCount, useSocialStore } from '../stores/social-store';
@@ -35,102 +26,18 @@ type Popover = 'notifications' | 'menu' | 'voice' | 'music' | 'signOut';
 
 const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-function BidLabel({ level, suit }: { level: BidLevel; suit: BidSuit }): ReactNode {
-  if (suit === 'nt') return <>{level}NT</>;
-  const red = suit === 'hearts' || suit === 'diamonds';
-  return <>{level}<span className={red ? styles.suitRed : undefined}>{SUIT_SYMBOLS[suit]}</span></>;
-}
-
-function GameChips(): ReactNode {
-  const { locale, t } = useI18nStore();
-  const roomCode = useRoomStore((state) => state.currentRoomCode);
-  const bidding = useGameStore((state) => state.bidding);
-  const contract = useGameStore((state) => state.contract);
-  const playing = useGameStore((state) => state.playing);
-  const gameType = useGameStore((state) => state.gameType);
-  const bigTwoResult = useGameStore((state) => state.bigTwo?.result ?? null);
-  const mySeat = useRoomStore((state) => state.mySeat);
-  const redPointsResult = useGameStore((state) => state.redPoints?.result ?? null);
-  const myRedPoints = useGameStore((state) =>
-    state.redPoints && mySeat ? rpScore(state.redPoints.captured[mySeat]) : null);
-  const ninetyNineTotal = useGameStore((state) => state.ninetyNine?.total ?? null);
-  const ninetyNineResult = useGameStore((state) => state.ninetyNine?.result ?? null);
-  // Results stay hidden until the final presentation has shown them on the table.
-  const { locked, frame } = useGamePresentation();
-  const sevensResult = useGameStore((state) => state.sevens?.result ?? null);
-  const chinesePokerResult = useGameStore((state) => state.chinesePoker?.result ?? null);
-  const liarsDeckWinner = useGameStore((state) => state.liarsDeck?.result?.winnerSeat ?? null);
-  const liarsDeckFace = useGameStore((state) => state.liarsDeck?.phase === 'playing' ? state.liarsDeck.tableFace : null);
-  const blackjack = useGameStore((state) => state.blackjack);
-  const blackjackHand = blackjack && blackjack.phase !== 'scoring' ? blackjackHandNumber(blackjackView(blackjack, frame)) : 0;
-  const blackjackResult = blackjack?.result ?? null;
-  const holdem = useGameStore((state) => state.holdem);
-  // The hand and blinds follow the presentation so the next hand's blinds appear with its deal.
-  const holdemShown = holdem && holdem.phase !== 'scoring' ? holdemView(holdem, frame) : null;
-  const holdemResult = holdem?.result ?? null;
-  const seats = useRoomStore((state) => state.roomInfo?.seats);
-  const seatLabel = (seat: Seat): string => t(`seat.${seat}`);
-  return <div className={styles.chips}>
-    {roomCode && <span className={`${styles.chip} ${styles.roomChip}`} title={t('topbar.room')}>{roomCode}</span>}
-    {gameType && gameType !== 'bridge' ? <>
-      <span className={styles.chip}>{t(`gameType.${gameType}`)}</span>
-      {bigTwoResult && <span className={styles.chip}>
-        <AppIcon name="trophy" /> {seats?.[bigTwoResult.winnerSeat].player?.nickname ?? seatLabel(bigTwoResult.winnerSeat)}
-        {mySeat && <> · {t('bigtwo.myPenalty', { n: String(bigTwoResult.scores[mySeat]) })}</>}
-      </span>}
-      {redPointsResult && <span className={styles.chip}>
-        <AppIcon name="trophy" /> {joinNames(redPointsResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
-      </span>}
-      {myRedPoints !== null && <span className={styles.chip}>
-        {t('redpoints.myPoints', { n: String(myRedPoints) })}
-      </span>}
-      {ninetyNineTotal !== null && <span className={styles.chip} title={t('ninetynine.total')}>
-        {ninetyNineTotal} / {NN_MAX}
-      </span>}
-      {sevensResult && !locked && <span className={styles.chip}>
-        <AppIcon name="trophy" /> {joinNames(sevensResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
-        {mySeat && <> · {t('sevens.myPenalty', { n: String(sevensResult.penalties[mySeat]) })}</>}
-      </span>}
-      {chinesePokerResult && !locked && <span className={styles.chip}>
-        <AppIcon name="trophy" /> {joinNames(chinesePokerResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
-        {mySeat && <> · {t('chinesepoker.myScore', {
-          n: `${chinesePokerResult.scores[mySeat] > 0 ? '+' : ''}${chinesePokerResult.scores[mySeat]}` })}</>}
-      </span>}
-      {liarsDeckFace && !locked && <span className={styles.chip} title={t('liarsdeck.tableCard')}>
-        {t('liarsdeck.tableCard')} {t(`liarsdeck.face.${liarsDeckFace}`)}
-      </span>}
-      {liarsDeckWinner && !locked && <span className={styles.chip}>
-        <AppIcon name="trophy" /> {seats?.[liarsDeckWinner].player?.nickname ?? seatLabel(liarsDeckWinner)}
-      </span>}
-      {blackjack && blackjackHand > 0 && <span className={styles.chip}>
-        {t('blackjack.handOf', { n: String(blackjackHand), total: String(blackjack.totalHands) })}
-      </span>}
-      {blackjackResult && !locked && <span className={styles.chip}>
-        <AppIcon name="trophy" /> {joinNames(blackjackResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
-        {mySeat && <> · {t('blackjack.myChips', { n: String(blackjackResult.chips[mySeat]) })}</>}
-      </span>}
-      {holdemShown && holdemShown.hand > 0 && <span className={styles.chip}>
-        {t('holdem.handOf', { n: String(holdemShown.hand), total: String(HE_HANDS) })} ·
-        {' '}{t('holdem.blinds', { sb: String(holdemShown.smallBlind), bb: String(holdemShown.bigBlind) })}
-      </span>}
-      {holdemResult && !locked && <span className={styles.chip}>
-        <AppIcon name="trophy" /> {joinNames(holdemResult.winners.map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
-        {mySeat && <> · {t('holdem.myChips', { n: String(holdemResult.chips[mySeat]) })}</>}
-      </span>}
-      {ninetyNineResult && <span className={styles.chip}>
-        <AppIcon name="trophy" /> {joinNames(nnWinners(ninetyNineResult).map((seat) => seats?.[seat].player?.nickname ?? seatLabel(seat)), locale)}
-      </span>}
-    </>
-      : contract ? <span className={styles.chip} title={t('topbar.contract')}>
-      <BidLabel level={contract.level} suit={contract.suit} /> · {seatLabel(contract.declarer)}
-    </span> : bidding && <span className={styles.chip}>
-      {t('game.bidding')}
-      {bidding.highestBid && <> <BidLabel level={bidding.highestBid.level} suit={bidding.highestBid.suit} /></>}
-    </span>}
-    {playing && <span className={styles.chip} title={t('topbar.tricks')}>
-      NS {playing.trickCountNS} · EW {playing.trickCountEW}
-    </span>}
-  </div>;
+function RoomCodeButton(): ReactNode {
+  const code = useRoomStore((state) => state.currentRoomCode);
+  const { t } = useI18nStore();
+  const [copied, setCopied] = useState(false);
+  if (!code) return null;
+  const copy = async (): Promise<void> => {
+    try { await navigator.clipboard.writeText(code); setCopied(true); } catch { setCopied(false); }
+  };
+  return <button type="button" className={styles.roomCodeButton} onClick={() => void copy()}
+    aria-label={t('room.copyCode', { code })} title={t(copied ? 'room.copied' : 'room.copyCode', { code })}>
+    <AppIcon name={copied ? 'check' : 'copy'} />{code}
+  </button>;
 }
 
 export function TopBar(): ReactNode {
@@ -214,7 +121,7 @@ export function TopBar(): ReactNode {
         <span aria-hidden="true">♠</span><span className={inGame ? styles.brandTextGame : undefined}> Card Together</span>
       </NavLink>
       {showLinks && <nav className={styles.links}>{links}</nav>}
-      {inGame && <GameChips />}
+      {inGame && <RoomCodeButton />}
       <div className={styles.actions}>
         {accountId && <span className={styles.coinBalance} role="status"
           aria-label={t('coins.balance', { n: String(coins) })}

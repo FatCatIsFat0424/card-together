@@ -11,9 +11,9 @@ import type {
   Card,
   PlayerInfo,
   RoomCode,
-  Seat,
+  GameSeat,
 } from '@shared/types';
-import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import { GAME_SEAT_ORDER } from '@shared/constants';
 import { DEFAULT_BLACKJACK_OPTIONS } from '@shared/blackjack-options';
 import { occupiedSeats } from '@shared/rules/seats';
 import {
@@ -45,8 +45,8 @@ const secureRandom = (): number => randomInt(RANDOM_RANGE) / RANDOM_RANGE;
 /** roomCode → BlackjackGameState */
 const games: Map<RoomCode, BlackjackGameState> = new Map();
 
-function seatMap<T>(value: (seat: Seat) => T): Record<Seat, T> {
-  return { N: value('N'), E: value('E'), S: value('S'), W: value('W') };
+function seatMap<T>(value: (seat: GameSeat) => T): Record<GameSeat, T> {
+  return Object.fromEntries(GAME_SEAT_ORDER.map((seat) => [seat, value(seat)])) as Record<GameSeat, T>;
 }
 
 function record(game: BlackjackGameState, entry: BlackjackLogEntry): void {
@@ -55,8 +55,8 @@ function record(game: BlackjackGameState, entry: BlackjackLogEntry): void {
 }
 
 /**
- * Hands that stop at 21 or bust can never use 52 cards: a hand holds at most 30 hard points and the
- * deck 340, even with the dealer and two split hands per seat. A fresh deck per hand always suffices.
+ * Each hand holds at most 30 hard points. One deck (340 points) covers four split-capable players;
+ * two decks (680 points) cover eight. A fresh shoe is used for each hand.
  */
 function draw(game: BlackjackGameState): Card {
   const card = game.deck.shift();
@@ -65,7 +65,7 @@ function draw(game: BlackjackGameState): Card {
 }
 
 /** Seats that must still bet this hand, ordered N, E, S, W */
-export function pendingBetSeats(game: BlackjackGameState): Seat[] {
+export function pendingBetSeats(game: BlackjackGameState): GameSeat[] {
   return game.phase !== 'betting' ? []
     : bjBettingSeats(game.chips, game.dealerSeat).filter((seat) => game.bets[seat] === null);
 }
@@ -76,7 +76,7 @@ export function pendingBetSeats(game: BlackjackGameState): Seat[] {
  */
 export function startGame(
   roomCode: RoomCode,
-  players: Partial<Record<Seat, PlayerInfo>>,
+  players: Partial<Record<GameSeat, PlayerInfo>>,
   betMs: number,
   now: number = Date.now(),
   options: BlackjackOptions = DEFAULT_BLACKJACK_OPTIONS,
@@ -162,8 +162,8 @@ function advance(game: BlackjackGameState, now: number): void {
 /** Deals two cards to each bettor and the dealer; a dealer blackjack under a peek ends the hand at once. */
 function deal(game: BlackjackGameState, now: number, random: () => number): void {
   const bets = seatMap((seat) => game.bets[seat] ?? 0);
-  game.deck = shuffleDeck(createDeck(), random);
-  const bettors = SEAT_ORDER_CLOCKWISE.filter((seat) => bets[seat] > 0);
+  game.deck = shuffleDeck(occupiedSeats(game.players).length > 4 ? [...createDeck(), ...createDeck()] : createDeck(), random);
+  const bettors = GAME_SEAT_ORDER.filter((seat) => bets[seat] > 0);
   const cards = seatMap((): Card[] => []);
   for (const seat of bettors) cards[seat].push(draw(game));
   const upCard = draw(game);
@@ -187,7 +187,7 @@ function deal(game: BlackjackGameState, now: number, random: () => number): void
  */
 export function bet(
   roomCode: RoomCode,
-  seat: Seat,
+  seat: GameSeat,
   amount: number,
   automatic: boolean,
   now: number = Date.now(),
@@ -210,7 +210,7 @@ export function bet(
   return { success: true };
 }
 
-export function act(roomCode: RoomCode, seat: Seat, action: BlackjackAction, now: number = Date.now()): Result {
+export function act(roomCode: RoomCode, seat: GameSeat, action: BlackjackAction, now: number = Date.now()): Result {
   const game = games.get(roomCode);
   if (!game) return { success: false, reason: 'Game not found' };
   if (game.phase !== 'playing') return { success: false, reason: 'Not in playing phase' };
@@ -229,7 +229,7 @@ export function act(roomCode: RoomCode, seat: Seat, action: BlackjackAction, now
 
 /** The player dealer's turn, after every player hand: it must hit below 17 and may stand from 17. */
 export function dealerAct(
-  roomCode: RoomCode, seat: Seat, action: BlackjackDealerAction, now: number = Date.now(),
+  roomCode: RoomCode, seat: GameSeat, action: BlackjackDealerAction, now: number = Date.now(),
 ): Result {
   const game = games.get(roomCode);
   if (!game) return { success: false, reason: 'Game not found' };
@@ -253,7 +253,7 @@ export function abortGame(roomCode: RoomCode): void {
  * Other seats' bets stay hidden until the deal; the hole card until the dealer reveals it, except
  * from a player dealer, who holds it.
  */
-export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): BlackjackVisibleState | null {
+export function getPlayerVisibleState(roomCode: RoomCode, seat: GameSeat): BlackjackVisibleState | null {
   const game = games.get(roomCode);
   if (!game) return null;
   const seats = occupiedSeats(game.players);

@@ -148,16 +148,16 @@ function Info({ game }: { game: SevensVisibleState }): ReactNode {
           <div className={infoStyles.row}>
             <span className={infoStyles.name}>{seatName(seat)}</span>
             <span className={styles.countTag}>{t('sevens.covered', {
-              n: String(observedCovered ? observedCovered[seat].length : game.coveredCounts[seat]),
+              n: String(observedCovered ? (observedCovered[seat] ?? []).length : game.coveredCounts[seat]),
             })}</span>
             {seat === game.mySeat && !isSpectator(game) && <span className={styles.penaltyTag}>
               {t('sevens.myPenalty', { n: String(svPenalty(game.myCovered)) })}
             </span>}
             {observedCovered && <span className={styles.penaltyTag}>
-              {t('sevens.observedPenalty', { n: String(svPenalty(observedCovered[seat])) })}
+              {t('sevens.observedPenalty', { n: String(svPenalty((observedCovered[seat] ?? []))) })}
             </span>}
           </div>
-          {observedCovered && observedCovered[seat].length > 0 && <ChipList cards={observedCovered[seat]}
+          {observedCovered && (observedCovered[seat] ?? []).length > 0 && <ChipList cards={(observedCovered[seat] ?? [])}
             label={`${seatName(seat)} ${t('sevens.coveredCards')}`} />}
         </li>
       ))}</ul>

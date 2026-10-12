@@ -1,6 +1,6 @@
 import type {
   BidAction, BlackjackAction, BlackjackDealerAction, Card, ChinesePokerArrangement, HoldemAction, PlayerVisibleGameState,
-  Seat,
+  GameSeat,
 } from '@shared/types';
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { getBridgeBotAction } from './bridge-strategy';
@@ -21,7 +21,7 @@ export type BotAction =
   | { readonly type: 'bigtwo-pass' }
   | { readonly type: 'redpoints-play'; readonly card: Card; readonly capture?: Card }
   | { readonly type: 'redpoints-flip'; readonly capture: Card }
-  | { readonly type: 'ninetynine-play'; readonly card: Card; readonly choice?: NnChoice; readonly target?: Seat }
+  | { readonly type: 'ninetynine-play'; readonly card: Card; readonly choice?: NnChoice; readonly target?: GameSeat }
   | { readonly type: 'sevens-play'; readonly card: Card }
   | { readonly type: 'sevens-cover'; readonly card: Card }
   | { readonly type: 'chinesepoker-arrange'; readonly arrangement: ChinesePokerArrangement }

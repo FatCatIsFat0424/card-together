@@ -3,6 +3,8 @@
 export type {
   PlayerId,
   Seat,
+  GameSeat,
+  AdditionalSeat,
   PlayerColor,
   PlayerInfo,
   ConnectionStatus,

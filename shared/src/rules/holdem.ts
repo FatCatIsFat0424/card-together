@@ -1,11 +1,11 @@
 // ─── Texas Hold'em rules engine (pure functions, shared by client and server) ───
 // Rules: docs/games.md#texas-holdem
 
-import type { Card, HoldemLogEntry, HoldemPot, HoldemStreet, Seat } from '../types';
-import { SEAT_ORDER_CLOCKWISE } from '../constants';
+import type { Card, HoldemLogEntry, HoldemPot, HoldemStreet, GameSeat } from '../types';
+import { GAME_SEAT_ORDER } from '../constants';
 import { cpCompare, cpEvaluate } from './chinesepoker';
 import type { CpEvaluation } from './chinesepoker';
-import { nextSeatClockwise } from './seats';
+import { nextGameSeat } from './seats';
 
 export const HE_STARTING_CHIPS = 1000;
 /** Hands per match unless one seat wins every chip first */
@@ -19,41 +19,41 @@ export const HE_STREET_CARDS: Record<Exclude<HoldemStreet, 'preflop'>, number> =
 /** Public table state rebuilt from the log. */
 export interface HeTable {
   hand: number;
-  button: Seat;
+  button: GameSeat;
   smallBlind: number;
   bigBlind: number;
-  chips: Record<Seat, number>;
-  streetBets: Record<Seat, number>;
-  totalBets: Record<Seat, number>;
-  dealt: Seat[];
-  folded: Seat[];
+  chips: Record<GameSeat, number>;
+  streetBets: Record<GameSeat, number>;
+  totalBets: Record<GameSeat, number>;
+  dealt: GameSeat[];
+  folded: GameSeat[];
   street: HoldemStreet;
   board: Card[];
   currentBet: number;
   minRaise: number;
-  acted: Seat[];
-  revealed: Record<Seat, Card[]>;
-  eliminated: Seat[];
+  acted: GameSeat[];
+  revealed: Record<GameSeat, Card[]>;
+  eliminated: GameSeat[];
 }
 
 /** Read-only form accepted by every query, so a player's visible state can be passed directly. */
 export interface HeTableView {
   readonly hand: number;
-  readonly button: Seat;
+  readonly button: GameSeat;
   readonly smallBlind: number;
   readonly bigBlind: number;
-  readonly chips: Readonly<Record<Seat, number>>;
-  readonly streetBets: Readonly<Record<Seat, number>>;
-  readonly totalBets: Readonly<Record<Seat, number>>;
-  readonly dealt: readonly Seat[];
-  readonly folded: readonly Seat[];
+  readonly chips: Readonly<Record<GameSeat, number>>;
+  readonly streetBets: Readonly<Record<GameSeat, number>>;
+  readonly totalBets: Readonly<Record<GameSeat, number>>;
+  readonly dealt: readonly GameSeat[];
+  readonly folded: readonly GameSeat[];
   readonly street: HoldemStreet;
   readonly board: readonly Card[];
   readonly currentBet: number;
   readonly minRaise: number;
-  readonly acted: readonly Seat[];
-  readonly revealed: Readonly<Record<Seat, readonly Card[]>>;
-  readonly eliminated: readonly Seat[];
+  readonly acted: readonly GameSeat[];
+  readonly revealed: Readonly<Record<GameSeat, readonly Card[]>>;
+  readonly eliminated: readonly GameSeat[];
 }
 
 export interface HeLegalActions {
@@ -67,16 +67,16 @@ export interface HeLegalActions {
 
 export interface HeAward {
   readonly pots: HoldemPot[];
-  readonly payouts: Record<Seat, number>;
+  readonly payouts: Record<GameSeat, number>;
 }
 
-function seatMap<T>(value: (seat: Seat) => T): Record<Seat, T> {
-  return { N: value('N'), E: value('E'), S: value('S'), W: value('W') };
+function seatMap<T>(value: (seat: GameSeat) => T): Record<GameSeat, T> {
+  return Object.fromEntries(GAME_SEAT_ORDER.map((seat) => [seat, value(seat)])) as Record<GameSeat, T>;
 }
 
-const ordered = (seats: Iterable<Seat>): Seat[] => {
+const ordered = (seats: Iterable<GameSeat>): GameSeat[] => {
   const set = new Set(seats);
-  return SEAT_ORDER_CLOCKWISE.filter((seat) => set.has(seat));
+  return GAME_SEAT_ORDER.filter((seat) => set.has(seat));
 };
 
 export function heBlinds(hand: number): { smallBlind: number; bigBlind: number } {
@@ -85,36 +85,36 @@ export function heBlinds(hand: number): { smallBlind: number; bigBlind: number }
 }
 
 /** First seat clockwise after `seat` that satisfies `include`, possibly `seat` itself last. */
-export function heNextSeat(seat: Seat, include: (candidate: Seat) => boolean): Seat | null {
-  let next = nextSeatClockwise(seat);
-  for (let step = 0; step < SEAT_ORDER_CLOCKWISE.length; step++) {
+export function heNextSeat(seat: GameSeat, include: (candidate: GameSeat) => boolean): GameSeat | null {
+  let next = nextGameSeat(seat);
+  for (let step = 0; step < GAME_SEAT_ORDER.length; step++) {
     if (include(next)) return next;
-    next = nextSeatClockwise(next);
+    next = nextGameSeat(next);
   }
   return null;
 }
 
 /** The button moves clockwise to the next seat that still has chips. */
-export function heNextButton(previous: Seat, chips: Readonly<Record<Seat, number>>): Seat {
+export function heNextButton(previous: GameSeat, chips: Readonly<Record<GameSeat, number>>): GameSeat {
   return heNextSeat(previous, (seat) => chips[seat] > 0) ?? previous;
 }
 
 /** Heads-up, the button posts the small blind; otherwise the next two dealt seats post. */
-export function heBlindSeats(dealt: readonly Seat[], button: Seat): { small: Seat; big: Seat } {
+export function heBlindSeats(dealt: readonly GameSeat[], button: GameSeat): { small: GameSeat; big: GameSeat } {
   const small = dealt.length === 2 ? button : heNextSeat(button, (seat) => dealt.includes(seat)) ?? button;
   return { small, big: heNextSeat(small, (seat) => dealt.includes(seat)) ?? small };
 }
 
-export function heInHand(table: HeTableView): Seat[] {
+export function heInHand(table: HeTableView): GameSeat[] {
   return table.dealt.filter((seat) => !table.folded.includes(seat));
 }
 
 /** An unfolded seat with chips behind can still act; an all-in seat cannot. */
-export function heCanAct(table: HeTableView, seat: Seat): boolean {
+export function heCanAct(table: HeTableView, seat: GameSeat): boolean {
   return table.dealt.includes(seat) && !table.folded.includes(seat) && table.chips[seat] > 0;
 }
 
-function needsAction(table: HeTableView, seat: Seat): boolean {
+function needsAction(table: HeTableView, seat: GameSeat): boolean {
   return heCanAct(table, seat) && (!table.acted.includes(seat) || table.streetBets[seat] < table.currentBet);
 }
 
@@ -131,18 +131,18 @@ export function heBettingClosed(table: HeTableView): boolean {
 }
 
 /** Next seat clockwise after `seat` that owes an action, or null once betting is closed. */
-export function heNextToAct(table: HeTableView, seat: Seat): Seat | null {
+export function heNextToAct(table: HeTableView, seat: GameSeat): GameSeat | null {
   if (heBettingClosed(table)) return null;
   return heNextSeat(seat, (candidate) => needsAction(table, candidate));
 }
 
 /** Preflop the seat after the big blind opens; later streets start after the button. */
-export function heFirstToAct(table: HeTableView): Seat | null {
+export function heFirstToAct(table: HeTableView): GameSeat | null {
   const anchor = table.street === 'preflop' ? heBlindSeats(table.dealt, table.button).big : table.button;
   return heNextToAct(table, anchor);
 }
 
-export function heLegalActions(table: HeTableView, seat: Seat): HeLegalActions | null {
+export function heLegalActions(table: HeTableView, seat: GameSeat): HeLegalActions | null {
   if (!needsAction(table, seat)) return null;
   const owed = table.currentBet - table.streetBets[seat];
   const max = table.streetBets[seat] + table.chips[seat];
@@ -174,14 +174,14 @@ export function heBestHand(cards: readonly Card[]): CpEvaluation {
  * Stakes split into layers by contribution level; unfolded seats that reached a layer are its
  * eligible winners. Adjacent layers with the same eligible seats merge into one pot.
  */
-export function hePots(table: HeTableView): { amount: number; eligible: Seat[] }[] {
+export function hePots(table: HeTableView): { amount: number; eligible: GameSeat[] }[] {
   const inHand = heInHand(table);
   const levels = [...new Set(table.dealt.map((seat) => table.totalBets[seat]).filter((value) => value > 0))]
     .sort((a, b) => a - b);
-  const pots: { amount: number; eligible: Seat[] }[] = [];
+  const pots: { amount: number; eligible: GameSeat[] }[] = [];
   let previous = 0;
   for (const level of levels) {
-    const amount = SEAT_ORDER_CLOCKWISE.reduce((sum, seat) =>
+    const amount = GAME_SEAT_ORDER.reduce((sum, seat) =>
       sum + Math.max(0, Math.min(table.totalBets[seat], level) - previous), 0);
     const eligible = inHand.filter((seat) => table.totalBets[seat] >= level);
     previous = level;
@@ -218,24 +218,24 @@ export function heAward(table: HeTableView): HeAward {
 }
 
 /** Dealt seats left without chips, smaller starting stacks first, then N, E, S, W. */
-export function heEliminations(table: HeTableView, chips: Readonly<Record<Seat, number>>): Seat[] {
+export function heEliminations(table: HeTableView, chips: Readonly<Record<GameSeat, number>>): GameSeat[] {
   return table.dealt.filter((seat) => chips[seat] === 0)
-    .sort((a, b) => table.totalBets[a] - table.totalBets[b] || SEAT_ORDER_CLOCKWISE.indexOf(a) - SEAT_ORDER_CLOCKWISE.indexOf(b));
+    .sort((a, b) => table.totalBets[a] - table.totalBets[b] || GAME_SEAT_ORDER.indexOf(a) - GAME_SEAT_ORDER.indexOf(b));
 }
 
 /** Most chips, ties included, ordered N, E, S, W. */
-export function heWinners(chips: Readonly<Record<Seat, number>>): Seat[] {
-  const best = Math.max(...SEAT_ORDER_CLOCKWISE.map((seat) => chips[seat]));
-  return SEAT_ORDER_CLOCKWISE.filter((seat) => chips[seat] === best);
+export function heWinners(chips: Readonly<Record<GameSeat, number>>): GameSeat[] {
+  const best = Math.max(...GAME_SEAT_ORDER.map((seat) => chips[seat]));
+  return GAME_SEAT_ORDER.filter((seat) => chips[seat] === best);
 }
 
 /** The match ends after the last hand or once a single seat holds chips. */
 export function heMatchOver(table: HeTableView): boolean {
-  return table.hand >= HE_HANDS || SEAT_ORDER_CLOCKWISE.filter((seat) => table.chips[seat] > 0).length <= 1;
+  return table.hand >= HE_HANDS || GAME_SEAT_ORDER.filter((seat) => table.chips[seat] > 0).length <= 1;
 }
 
 /** Empty seats hold no chips, so they are never dealt in, hold the button, or post blinds. */
-export function heEmptyTable(seats: readonly Seat[]): HeTable {
+export function heEmptyTable(seats: readonly GameSeat[]): HeTable {
   return {
     hand: 0,
     button: 'N',
@@ -267,7 +267,7 @@ export function heApplyEntry(table: HeTable, entry: HoldemLogEntry): void {
       table.button = entry.button;
       table.smallBlind = entry.smallBlind;
       table.bigBlind = entry.bigBlind;
-      table.dealt = SEAT_ORDER_CLOCKWISE.filter((seat) => table.chips[seat] > 0);
+      table.dealt = GAME_SEAT_ORDER.filter((seat) => table.chips[seat] > 0);
       table.chips = seatMap((seat) => table.chips[seat] - entry.blinds[seat]);
       table.streetBets = { ...entry.blinds };
       table.totalBets = { ...entry.blinds };
@@ -325,7 +325,7 @@ export function heApplyEntry(table: HeTable, entry: HoldemLogEntry): void {
 }
 
 /** The public table of a match between `seats` after the first `end` log entries. */
-export function heReplay(log: readonly HoldemLogEntry[], seats: readonly Seat[], end = log.length): HeTable {
+export function heReplay(log: readonly HoldemLogEntry[], seats: readonly GameSeat[], end = log.length): HeTable {
   const table = heEmptyTable(seats);
   for (const entry of log.slice(0, end)) heApplyEntry(table, entry);
   return table;

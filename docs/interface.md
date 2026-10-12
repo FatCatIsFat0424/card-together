@@ -61,9 +61,10 @@ Frontend page behavior and layout. Client architecture and connection handling:
 - Seat artwork: the player's uploaded seat background, the
   [bot dealer artwork](../client/src/assets/room-backgrounds/README.md) for bots, or the
   theme surface.
-- Readiness has its own row; seated and ready counts sit in the table center, or beside
-  Ready when the center is hidden. Ready stays clickable while connected; invalid seat
-  counts show a dismissible message, and spectators are asked to sit first.
+- Readiness has its own row. Connected seated players can prepare before the player
+  count is met. The host's separate Start button enables only when the game has enough
+  players and every occupied seat is ready. Spectators are asked to sit first.
+- The host can enable automatic seat shuffling for any game; it starts off.
 - Room codes have a copy button. Timer settings expand inside a bounded panel; the
   Sevens Dragon Slaying option matches one game-picker row in height.
 - Phones and short landscape windows use two-by-two seats and a chat toggle with an
@@ -80,7 +81,8 @@ Frontend page behavior and layout. Client architecture and connection handling:
 ## Game table
 
 - Seats and play area use separate grid cells: local player below, opposite seat above,
-  others left and right at every size.
+  others around the table, with corner positions for additional seats.
+- The top-left header shows a copyable room code instead of repeated game-status tags.
 - The local hand header holds identity, score, captured-card preview, status, errors,
   and the base + reserve clock at its right edge. Other seats show only the active allowance.
 - Red Points measures the card area, paginates in card order, keeps the page during
