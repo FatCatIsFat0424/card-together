@@ -146,3 +146,13 @@ export function playCollapseSound(): void {
     disposeCardSounds();
   }
 }
+
+/** A single low impact with a crisp attack for the simultaneous player reveal. */
+export function playStartSound(): void {
+  const audio = context;
+  if (!audio || audio.state !== 'running') return;
+  try {
+    noiseVoice(audio, 0.55, audio.currentTime, 'lowpass', 180, 0.85, (position) => (1 - position) ** 3);
+    noiseVoice(audio, 0.1, audio.currentTime, 'bandpass', 1800, 0.35, (position) => (1 - position) ** 4);
+  } catch { disposeCardSounds(); }
+}

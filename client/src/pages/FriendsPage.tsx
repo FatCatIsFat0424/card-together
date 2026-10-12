@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -13,12 +13,10 @@ import { useAccountStore } from '../stores/account-store';
 import { useRoomStore } from '../stores/room-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { PlayerLink } from '../components/PlayerLink';
-import { MessageConversations } from '../components/MessageConversations';
-import { DirectConversation } from '../components/DirectConversation';
 import styles from './AccountPages.module.css';
 import tabStyles from './FriendsPage.module.css';
 
-const FRIEND_TABS = ['accepted', 'messages', 'outgoing', 'incoming'] as const;
+const FRIEND_TABS = ['accepted', 'outgoing', 'incoming'] as const;
 type FriendTab = typeof FRIEND_TABS[number];
 
 function FriendIdentity({ person }: { person: PublicAccount }): ReactNode {
@@ -28,7 +26,6 @@ function FriendIdentity({ person }: { person: PublicAccount }): ReactNode {
 export function FriendsPage(): ReactNode {
   const { t } = useI18nStore();
   const navigate = useNavigate();
-  const { accountId: otherId } = useParams<{ accountId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const accountId = useAccountStore((state) => state.account?.id);
   const conversations = useSocialStore((state) => state.conversations);
@@ -39,13 +36,11 @@ export function FriendsPage(): ReactNode {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [removeId, setRemoveId] = useState<string | null>(null);
-  const activeTab: FriendTab = otherId ? 'messages'
-    : FRIEND_TABS.find((tab) => tab === searchParams.get('tab')) ?? 'accepted';
+  const activeTab: FriendTab = FRIEND_TABS.find((tab) => tab === searchParams.get('tab')) ?? 'accepted';
   const setActiveTab = (tab: FriendTab): void => {
     const next = new URLSearchParams(searchParams);
     next.set('tab', tab);
-    if (otherId) navigate({ pathname: '/friends', search: `?${next.toString()}` }, { replace: true });
-    else setSearchParams(next, { replace: true });
+    setSearchParams(next, { replace: true });
   };
   const mobileLayout = useMediaQuery('(max-width: 52rem)');
 
@@ -104,8 +99,9 @@ export function FriendsPage(): ReactNode {
     });
   };
 
-  const unreadMessages = conversations.reduce((total, conversation) => total + conversation.unreadCount, 0);
-  const counts = { accepted: data?.friends.length, messages: unreadMessages || undefined,
+  if (searchParams.get('tab') === 'messages') return <Navigate to="/messages" replace />;
+
+  const counts = { accepted: data?.friends.length,
     outgoing: data?.outgoing.length, incoming: data?.incoming.length };
 
   return (
@@ -133,16 +129,15 @@ export function FriendsPage(): ReactNode {
         slotProps={{ indicator: { className: tabStyles.indicator } }}>
         {FRIEND_TABS.map((tab) => <Tab key={tab} value={tab} id={`friends-tab-${tab}`}
           aria-controls={`friends-panel-${tab}`} className={tabStyles.tab}
-          label={<span className={tabStyles.label}>{tab === 'messages' ? t('messages.title') : t(`friends.${tab}`)}
-            {counts[tab] !== undefined && <span className={tabStyles.count}
-              aria-label={tab === 'messages' ? t('social.unread', { n: String(counts[tab]) }) : undefined}>{counts[tab]}</span>}
+          label={<span className={tabStyles.label}>{t(`friends.${tab}`)}
+            {counts[tab] !== undefined && <span className={tabStyles.count}>{counts[tab]}</span>}
           </span>} />)}
       </Tabs>}
-      {loading && (mobileLayout || activeTab !== 'messages') && <p role="status">{t('common.loading')}</p>}
+      {loading && <p role="status">{t('common.loading')}</p>}
       <div className={`${styles.section} ${mobileLayout ? styles.grid : ''}`}>
         {data && <section id="friends-panel-accepted" role={mobileLayout ? undefined : 'tabpanel'}
           aria-labelledby={mobileLayout ? undefined : 'friends-tab-accepted'}
-          className={`${styles.card} ${styles.wide}`} hidden={Boolean(otherId) || (!mobileLayout && activeTab !== 'accepted')}>
+          className={`${styles.card} ${styles.wide}`} hidden={!mobileLayout && activeTab !== 'accepted'}>
           <h2>{t('friends.accepted')} ({data.friends.length})</h2>
           {data.friends.length === 0 && <p className={styles.empty}>{t('friends.empty')}</p>}
           <ul className={styles.list}>{data.friends.map((person) => {
@@ -162,7 +157,7 @@ export function FriendsPage(): ReactNode {
                 <button className="btn btn-outline" disabled={busy}
                   onClick={() => setRemoveId(null)}>{t('common.cancel')}</button>
               </div> : <div className={styles.actions}>
-                <Link className="btn btn-outline" to={`/friends/messages/${encodeURIComponent(person.id)}`}
+                <Link className="btn btn-outline" to={`/messages/${encodeURIComponent(person.id)}`}
                   aria-label={t('messages.openFor', { nickname: person.nickname })}>
                   {t('messages.open')}
                   {unread > 0 && <span className={tabStyles.count}
@@ -178,16 +173,9 @@ export function FriendsPage(): ReactNode {
             );
           })}</ul>
         </section>}
-        <section id="friends-panel-messages" role={mobileLayout ? undefined : 'tabpanel'}
-          aria-labelledby={mobileLayout ? undefined : 'friends-tab-messages'}
-          className={`${styles.card} ${styles.wide}`} hidden={!mobileLayout && activeTab !== 'messages'}>
-          {(mobileLayout || activeTab === 'messages') && (otherId && accountId
-            ? <DirectConversation key={`${accountId}:${otherId}`} ownId={accountId} otherId={otherId} />
-            : <MessageConversations />)}
-        </section>
         {data && <><section id="friends-panel-incoming" role={mobileLayout ? undefined : 'tabpanel'}
           aria-labelledby={mobileLayout ? undefined : 'friends-tab-incoming'}
-          className={styles.card} hidden={Boolean(otherId) || (!mobileLayout && activeTab !== 'incoming')}>
+          className={styles.card} hidden={!mobileLayout && activeTab !== 'incoming'}>
           <h2>{t('friends.incoming')} ({data.incoming.length})</h2>
           {data.incoming.length === 0 && <p className={styles.empty}>{t('friends.noIncoming')}</p>}
           <ul className={styles.list}>{data.incoming.map((request) => (
@@ -206,7 +194,7 @@ export function FriendsPage(): ReactNode {
         </section>
         <section id="friends-panel-outgoing" role={mobileLayout ? undefined : 'tabpanel'}
           aria-labelledby={mobileLayout ? undefined : 'friends-tab-outgoing'}
-          className={styles.card} hidden={Boolean(otherId) || (!mobileLayout && activeTab !== 'outgoing')}>
+          className={styles.card} hidden={!mobileLayout && activeTab !== 'outgoing'}>
           <h2>{t('friends.outgoing')} ({data.outgoing.length})</h2>
           {data.outgoing.length === 0 && <p className={styles.empty}>{t('friends.noOutgoing')}</p>}
           <ul className={styles.list}>{data.outgoing.map((request) => (

@@ -70,9 +70,9 @@ Every runtime mutation:
 ## Frontend
 
 - Public routes: `/login`, `/register`. Authenticated: `/`, `/account`, `/friends`,
-  `/friends/messages/:accountId`, `/shop`, `/players/:accountId`, `/room/:roomCode`,
-  `/game/:roomCode`, all below the configured base path. Legacy `/messages` links redirect
-  into the friends page.
+  `/messages`, `/messages/:accountId`, `/shop`, `/players/:accountId`, `/room/:roomCode`,
+  `/game/:roomCode`, all below the configured base path. Legacy `/friends?tab=messages`
+  and `/friends/messages/:accountId` links redirect to the independent messages page.
 - `api.ts` handles HTTP with cookies (15-second timeout, 120 seconds for uploads);
   `socket.ts` handles realtime.
 - Account hooks replace store state from server snapshots, clear a missing room or

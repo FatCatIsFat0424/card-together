@@ -2,20 +2,8 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { GAME_TYPES } from '@shared/constants';
 import type { GameType } from '@shared/types';
-import bridge from '../assets/lobby-backgrounds/bridge.webp';
-import bigtwo from '../assets/lobby-backgrounds/bigtwo.webp';
-import redpoints from '../assets/lobby-backgrounds/redpoints.webp';
-import ninetynine from '../assets/lobby-backgrounds/ninetynine.webp';
-import sevens from '../assets/lobby-backgrounds/sevens.webp';
-import chinesepoker from '../assets/lobby-backgrounds/chinesepoker.webp';
-import liarsdeck from '../assets/lobby-backgrounds/liarsdeck.webp';
-import blackjack from '../assets/lobby-backgrounds/blackjack.webp';
-import holdem from '../assets/lobby-backgrounds/holdem.webp';
+import { GAME_BACKGROUNDS } from '../game-backgrounds';
 import styles from './LobbyBackground.module.css';
-
-const BACKGROUNDS: Readonly<Record<GameType, string>> = {
-  bridge, bigtwo, redpoints, ninetynine, sevens, chinesepoker, liarsdeck, blackjack, holdem,
-};
 
 interface BackgroundState {
   readonly activeGame: GameType;
@@ -36,7 +24,7 @@ export function LobbyBackground({ gameType }: { readonly gameType: GameType }): 
       activeGame: gameType,
       loadedGames: current.loadedGames.includes(gameType) ? current.loadedGames : [...current.loadedGames, gameType],
     }));
-    image.src = BACKGROUNDS[gameType];
+    image.src = GAME_BACKGROUNDS[gameType];
     return () => { image.onload = null; };
   }, [gameType, background.activeGame, background.loadedGames]);
 
@@ -44,7 +32,7 @@ export function LobbyBackground({ gameType }: { readonly gameType: GameType }): 
     {GAME_TYPES.map((type) => <div key={type} className={styles.layer}
       data-game-background={type} data-active={background.activeGame === type}
       style={{
-        backgroundImage: background.loadedGames.includes(type) ? `url("${BACKGROUNDS[type]}")` : undefined,
+        backgroundImage: background.loadedGames.includes(type) ? `url("${GAME_BACKGROUNDS[type]}")` : undefined,
         opacity: background.activeGame === type && background.loadedGames.includes(type) ? 1 : 0,
       }} />)}
   </div>;

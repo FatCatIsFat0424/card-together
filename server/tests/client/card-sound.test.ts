@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  disposeCardSounds, playCardSound, playOutSound, playSlashSound, unlockCardSounds,
+  disposeCardSounds, playCardSound, playOutSound, playSlashSound, playStartSound, unlockCardSounds,
 } from '../../../client/src/audio/card-sound';
 
 interface FakeNode {
@@ -94,6 +94,20 @@ describe('card sounds', () => {
     for (const [index, at] of [0.3, 1.83, 1.97].entries()) expect(sources[index].start.mock.calls[0][0]).toBeCloseTo(at);
     expect(context.createBiquadFilter.mock.results.map((result) => result.value.type))
       .toEqual(['lowpass', 'bandpass', 'lowpass']);
+    for (const source of sources) source.onended?.();
+    expect([...sources, ...nodes].every((node) => node.disconnect.mock.calls.length === 1)).toBe(true);
+  });
+
+  it('plays one simultaneous impact only after a gesture unlocks audio and releases its nodes', () => {
+    const { context, sources, nodes } = installAudio();
+    playStartSound();
+    unlockCardSounds();
+    playStartSound();
+    expect(sources).toHaveLength(0);
+    context.state = 'running';
+    playStartSound();
+    expect(sources).toHaveLength(2);
+    for (const source of sources) expect(source.start).toHaveBeenCalledWith(context.currentTime);
     for (const source of sources) source.onended?.();
     expect([...sources, ...nodes].every((node) => node.disconnect.mock.calls.length === 1)).toBe(true);
   });

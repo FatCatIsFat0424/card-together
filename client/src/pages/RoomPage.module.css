@@ -465,12 +465,6 @@
   animation: fadeIn 0.5s ease;
 }
 
-.readyBtn {
-  padding: var(--spacing-md) var(--spacing-2xl);
-  font-size: var(--text-lg);
-  font-weight: 700;
-}
-
 .roomHeader { flex-wrap: wrap; row-gap: var(--spacing-sm); }
 .roomHeader button, .gameTypeLabel { white-space: nowrap; }
 
@@ -556,7 +550,6 @@
   .emptySlot { justify-content: flex-end; }
   .botAction { margin-top: 4px; padding: 3px 6px; min-height: 28px; }
   .removeSeatButton { width: 32px; height: 32px; top: 3px; right: 3px; }
-  .readyBtn { padding: 8px 24px; font-size: var(--text-base); }
   .roomFooter { gap: 8px; }
   .chatToggle { display: inline-flex; }
   .roomLayout .chat { display: none; grid-area: table; }

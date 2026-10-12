@@ -18,8 +18,9 @@ import { useSocialStore } from '../stores/social-store';
 import chatStyles from './ChatPanel.module.css';
 import styles from './DirectMessages.module.css';
 
-export function DirectConversation({ ownId, otherId }: {
+export function DirectConversation({ ownId, otherId, embedded = false }: {
   readonly ownId: string; readonly otherId: string;
+  readonly embedded?: boolean;
 }): ReactNode {
   const { locale, t } = useI18nStore();
   const revision = useSocialStore((state) => state.revision);
@@ -187,11 +188,15 @@ export function DirectConversation({ ownId, otherId }: {
   };
 
   return <>
-    <MessageHeading onRefresh={() => void load()} disabled={loading || paging} />
-    <section className={styles.conversation} aria-label={t('messages.title')}>
+    {!embedded && <MessageHeading onRefresh={() => void load()} disabled={loading || paging} />}
+    <section className={`${styles.conversation} ${embedded ? styles.embedded : ''}`} aria-label={t('messages.title')}>
     <header className={styles.header}>
-      <Link to="/friends?tab=messages"><AppIcon name="previousPage" /> {t('messages.back')}</Link>
+      {!embedded && <Link to="/messages"><AppIcon name="previousPage" /> {t('messages.back')}</Link>}
       {history && <PlayerLink player={history.account} showUsername size="medium" />}
+      {embedded && <button type="button" className={`${styles.refreshButton} touch-target`} disabled={loading || paging}
+        aria-label={t('common.refresh')} title={t('common.refresh')} onClick={() => void load()}>
+        <AppIcon name="refresh" />
+      </button>}
     </header>
     {loading && <p className={styles.notice} role="status">{t('common.loading')}</p>}
     {error && <div className={styles.notice} role="alert"><p>{error}</p>

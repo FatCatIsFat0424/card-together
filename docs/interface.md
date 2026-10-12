@@ -21,9 +21,13 @@ Frontend page behavior and layout. Client architecture and connection handling:
 
 - The top bar provides in-app notifications for incoming friend requests, accepted
   requests, and unread private messages. Opening the panel does not mark messages read.
-- The chat icon beside top-bar notifications opens the friends page's private-message
-  section. Both the list and individual chats preserve room membership and provide
+- The chat icon beside top-bar notifications opens the independent `/messages` page.
+  Friends retain only friend and invitation management. The message list and individual
+  chats preserve room membership and provide
   a return-to-room link when applicable.
+- On desktop, messages use a divided layout: an independently scrolling conversation
+  list with avatars, names, last messages, and timestamps on the left, and the selected
+  chat on the right. Mobile keeps separate list and conversation views.
 - Private chat supports the existing emoji/sticker libraries, older-history pagination,
   and retry after a failed send. Only a visible conversation marks incoming messages read.
   Former-friend conversations are read-only; the latest 90 days are available.
@@ -40,10 +44,9 @@ Frontend page behavior and layout. Client architecture and connection handling:
   30 seconds while visible.
 - Creating or joining by code requires leaving the current room. Joining a friend's
   room asks for confirmation, then switches rooms in one commit.
-- Friends page: above 52rem, tabs for friends, private messages, sent requests, and
-  incoming requests, in that order. Private messages show the conversation list and an
-  unread badge, with a refresh icon beside the section title; the other tabs show live
-  counts. Smaller screens stack the four sections.
+- Friends page: above 52rem, tabs for friends, sent requests, and incoming requests,
+  with live counts. Smaller screens stack these three sections. Private messages
+  have their own page.
 - Public profiles: avatar, colored nickname, username, and actions on the left; history
   and statistics on the right; stacked on small screens.
 
@@ -65,6 +68,13 @@ Frontend page behavior and layout. Client architecture and connection handling:
   count is met. The host's separate Start button enables only when the game has enough
   players and every occupied seat is ready. Spectators are asked to sit first.
 - The host can enable automatic seat shuffling for any game; it starts off.
+- Ready and Cancel ready use the same button sizing as the other footer actions.
+- A live start shows a skippable 2.9-second intro: the game's lobby artwork and name
+  fade in, all occupied seats appear together with avatars and names, then the table
+  is revealed. Reduced motion uses a one-second static reveal. The impact sound uses
+  gesture-unlocked effects audio and follows the turn-sound toggle. Reconnects, page
+  reloads, and starts received in background tabs do not replay the intro. Server play
+  and clocks continue during this client presentation; Escape or Skip reveals the table.
 - Room codes have a copy button. Timer settings expand inside a bounded panel; the
   Sevens Dragon Slaying option matches one game-picker row in height.
 - Phones and short landscape windows use two-by-two seats and a chat toggle with an

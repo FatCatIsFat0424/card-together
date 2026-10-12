@@ -454,7 +454,7 @@ export function RoomPage(): ReactNode {
           disabled={blocked || roomInfo.status !== 'waiting'}>{t('room.standUp')}</button>}
         {isHost && <button type="button" className="btn btn-outline" onClick={fillBots}
           disabled={blocked || !hasEmptySeat}>{t('room.fillBots')}</button>}
-        <button className={`btn ${isReady ? 'btn-danger' : 'btn-success'} ${styles.readyBtn}`}
+        <button className={`btn ${isReady ? 'btn-danger' : 'btn-success'}`}
           onClick={ready} disabled={blocked || roomInfo.status !== 'waiting'}>{t(isReady ? 'room.unready' : 'room.ready')}</button>
         {isHost && <button type="button" className="btn btn-primary" onClick={start}
           disabled={blocked || !roomCanStart(roomInfo)}>{t('room.start')}</button>}

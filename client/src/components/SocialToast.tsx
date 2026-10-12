@@ -14,7 +14,7 @@ function Notice({ notice }: { readonly notice: SocialNotice }): ReactNode {
   }, [notice.id]);
   return <div className={styles.toast}>
     <Link to={notice.kind === 'incoming' ? '/friends?tab=incoming'
-      : `/friends/messages/${encodeURIComponent(notice.accountId)}`}
+      : `/messages/${encodeURIComponent(notice.accountId)}`}
       onClick={() => useSocialStore.getState().dismissNotice(notice.id)}>
       {t(`social.${notice.kind}`, { nickname: notice.nickname })}
     </Link>

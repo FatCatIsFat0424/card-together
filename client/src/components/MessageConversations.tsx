@@ -4,6 +4,7 @@ import { useI18nStore } from '../stores/i18n-store';
 import { useSocialStore } from '../stores/social-store';
 import { useRoomStore } from '../stores/room-store';
 import { AppIcon } from './AppIcon';
+import { Avatar } from './Avatar';
 import styles from './DirectMessages.module.css';
 
 export function MessageHeading({ onRefresh, disabled = false }: {
@@ -15,7 +16,7 @@ export function MessageHeading({ onRefresh, disabled = false }: {
   const inGame = useRoomStore((state) => state.roomInfo?.status === 'playing');
   return <>
     <div className={styles.messageHeading}>
-      <h2 className={styles.headingTitle}>{t('messages.title')}</h2>
+      <h1 className={styles.headingTitle}>{t('messages.title')}</h1>
       <button type="button" className={`${styles.refreshButton} touch-target`} disabled={disabled}
         aria-label={t('common.refresh')} title={t('common.refresh')} onClick={onRefresh}>
         <AppIcon name="refresh" />
@@ -27,7 +28,10 @@ export function MessageHeading({ onRefresh, disabled = false }: {
   </>;
 }
 
-export function MessageConversations(): ReactNode {
+export function MessageConversations({ selectedId, split = false }: {
+  readonly selectedId?: string;
+  readonly split?: boolean;
+}): ReactNode {
   const conversations = useSocialStore((state) => state.conversations);
   const status = useSocialStore((state) => state.status);
   const error = useSocialStore((state) => state.error);
@@ -37,8 +41,12 @@ export function MessageConversations(): ReactNode {
     {status === 'loading' && <p role="status">{t('common.loading')}</p>}
     {error && <p className={styles.notice} role="alert">{error}</p>}
     {status === 'ready' && conversations.length === 0 && <p className={styles.empty}>{t('messages.empty')}</p>}
-    <ul className={styles.conversations}>{conversations.map((conversation) => <li key={conversation.account.id}>
-      <Link to={`/friends/messages/${encodeURIComponent(conversation.account.id)}`}>
+    <ul className={`${styles.conversations} ${split ? styles.splitList : ''}`}>{conversations.map((conversation) => <li key={conversation.account.id}>
+      <Link to={`/messages/${encodeURIComponent(conversation.account.id)}`}
+        aria-current={selectedId === conversation.account.id ? 'page' : undefined}>
+        {split && <span className={styles.conversationAvatar}><Avatar avatar={conversation.account.avatar}
+          image={conversation.account.avatarImage} border={conversation.account.avatarBorder}
+          color={conversation.account.color} size="medium" /></span>}
         <strong>{conversation.account.nickname}</strong><span className={styles.username}>@{conversation.account.username}</span>
         <span className={styles.preview}>{conversation.lastMessage.sticker || conversation.lastMessage.providedSticker
           ? t('messages.sticker') : conversation.lastMessage.content}</span>

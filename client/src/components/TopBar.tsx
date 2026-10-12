@@ -141,7 +141,7 @@ export function TopBar(): ReactNode {
             <NotificationPanel />
           </div>}
         </div>}
-        {accountId && <Link to="/friends?tab=messages" className={`${styles.iconBtn} touch-target`}
+        {accountId && <Link to="/messages" className={`${styles.iconBtn} touch-target`}
           aria-label={t('messages.title')} title={t('messages.title')} onClick={() => setOpen(null)}>
           <AppIcon name="chat" />
         </Link>}

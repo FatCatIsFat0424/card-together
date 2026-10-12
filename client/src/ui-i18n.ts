@@ -1,4 +1,5 @@
 const english = {
+  'intro.skip': 'Skip intro',
   'rules.open': 'Game rules',
   'rules.roomSettings': 'Room rules',
   'rules.enabled': 'On',
@@ -55,6 +56,7 @@ export type UiTranslationKey = keyof typeof english;
 export const uiTranslations: Record<'en' | 'zh-TW', Record<UiTranslationKey, string>> = {
   en: english,
   'zh-TW': {
+    'intro.skip': '跳過動畫',
     'rules.open': '遊戲規則',
     'rules.roomSettings': '本房規則',
     'rules.enabled': '開啟',

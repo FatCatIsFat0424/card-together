@@ -24,19 +24,19 @@ export function NotificationPanel(): ReactNode {
         <Link to="/friends?tab=incoming">{t('social.incoming', { nickname: request.requester.nickname })}</Link>
       </li>)}
       {accepted.map((notice) => <li key={notice.id} className={styles.accepted}>
-        <Link to={`/friends/messages/${encodeURIComponent(notice.account.id)}`}>
+        <Link to={`/messages/${encodeURIComponent(notice.account.id)}`}>
           {t('social.accepted', { nickname: notice.account.nickname })}</Link>
         <button type="button" className={styles.dismiss}
           aria-label={t('social.dismiss')}
           onClick={() => void useSocialStore.getState().dismissAccepted([notice.id])}>×</button>
       </li>)}
       {unread.map((conversation) => <li key={conversation.account.id}>
-        <Link to={`/friends/messages/${encodeURIComponent(conversation.account.id)}`}>
+        <Link to={`/messages/${encodeURIComponent(conversation.account.id)}`}>
           {t('social.message', { nickname: conversation.account.nickname })}
           <small>{t('social.unread', { n: String(conversation.unreadCount) })}</small>
         </Link>
       </li>)}
     </ul>
-    <Link className="btn btn-outline" to="/friends?tab=messages">{t('messages.title')}</Link>
+    <Link className="btn btn-outline" to="/messages">{t('messages.title')}</Link>
   </section>;
 }
