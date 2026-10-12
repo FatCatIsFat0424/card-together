@@ -65,6 +65,6 @@ describe('topbar navigation', () => {
   it('shows the legacy zero balance with the completed-game reward hint', () => {
     const html = render('/account');
     expect(html).toContain('aria-label="0 枚金幣"');
-    expect(html).toContain('完成一場對局可獲得 10 枚金幣。');
+    expect(html).toContain('title="每完成一場對局，可獲得 10 枚金幣。"');
   });
 });
