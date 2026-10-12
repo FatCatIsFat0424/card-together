@@ -130,6 +130,9 @@ Per-game controls: [games](games.md#card-controls).
   for 50–300 coins (5–30 completed games).
 - Try-on with preset or uploaded avatars is a local preview; it changes neither balance
   nor profile. Purchase and coin rules: [storage](storage.md#avatar-borders).
+- Buying opens a confirmation dialog with the chosen border, price, and remaining
+  balance. Cancel leaves coins unchanged; confirmation is disabled for owned borders
+  or insufficient coins, and the dialog cannot be dismissed during a purchase.
 - Decorations (cat, rabbit, frog, bear, dog, antlers, tentacles) scale with the avatar.
   The original single-color ring has the same outer extent as shop borders.
 - The account page selects an owned border or the original avatar. Equipped borders show

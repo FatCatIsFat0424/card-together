@@ -77,3 +77,11 @@
 }
 
 .buy { width: 100%; margin-top: 0.65rem; }
+.purchaseDialog.purchaseDialog {
+  background: var(--bg-surface); background-image: none; color: var(--text-primary);
+  border: 1px solid var(--border-color); border-radius: var(--radius-xl);
+}
+.purchaseContent.purchaseContent { display: grid; gap: var(--spacing-md); border-color: var(--border-color); }
+.purchaseArt { display: grid; place-items: center; min-height: 176px; padding-top: 30px; }
+.purchaseBalance { color: var(--text-secondary); font-size: var(--text-sm); }
+.purchaseActions.purchaseActions { gap: var(--spacing-sm); padding: var(--spacing-lg); flex-wrap: wrap; }

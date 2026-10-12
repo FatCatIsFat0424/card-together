@@ -4,6 +4,10 @@ import type { AccountProfile } from '@shared/types';
 import { Link } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import { apiRequest } from '../api';
 import { GAME_COIN_REWARD } from '@shared/constants';
 import { useAccountStore } from '../stores/account-store';
@@ -18,6 +22,7 @@ export function ShopPage(): ReactNode {
   const account = useAccountStore((state) => state.account);
   const { t, locale } = useI18nStore();
   const [selected, setSelected] = useState<AvatarBorderId | null>('cat');
+  const [pendingPurchase, setPendingPurchase] = useState<AvatarBorderId | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
   if (!account) return null;
@@ -26,11 +31,15 @@ export function ShopPage(): ReactNode {
   const format = (value: number): string => value.toLocaleString(locale);
   const avatar = { avatar: account.avatar, image: account.avatarImage, color: account.color };
   const owned = (id: AvatarBorderId): boolean => account.ownedAvatarBorders?.includes(id) ?? false;
+  const purchaseItem = AVATAR_BORDERS.find((border) => border.id === pendingPurchase);
+  const purchaseOwned = purchaseItem ? owned(purchaseItem.id) : false;
+  const purchaseAffordable = purchaseItem ? (account.coins ?? 0) >= purchaseItem.price : false;
   const purchase = async (border: AvatarBorderId): Promise<void> => {
-    if (busy) return;
+    if (busy || owned(border)) return;
     setBusy(true);
     const result = await apiRequest<{ account: AccountProfile }>('/api/auth/shop/avatar-borders', 'POST', { border });
     setBusy(false);
+    setPendingPurchase(null);
     if (useAccountStore.getState().account?.id !== account.id) return;
     if (result.success) {
       useAccountStore.getState().setAccount(result.account);
@@ -104,7 +113,7 @@ export function ShopPage(): ReactNode {
               </div>
               <button type="button" className={`btn btn-primary ${styles.buy}`} disabled={busy || owned(border.id)}
                 aria-label={t(owned(border.id) ? 'shop.ownedNamed' : 'shop.buyNamed', { name: productName })}
-                onClick={() => void purchase(border.id)}>
+                onClick={() => setPendingPurchase(border.id)}>
                 {t(owned(border.id) ? 'shop.owned' : busy ? 'common.loading' : 'shop.buy')}
               </button>
             </div>
@@ -112,6 +121,31 @@ export function ShopPage(): ReactNode {
         })}</ul>
       </section>
     </div>
+    {purchaseItem && <Dialog open fullWidth maxWidth="xs"
+      aria-labelledby="shop-purchase-title" aria-describedby="shop-purchase-description"
+      onClose={() => { if (!busy) setPendingPurchase(null); }}
+      slotProps={{ paper: { className: styles.purchaseDialog } }}>
+      <DialogTitle id="shop-purchase-title">{t('shop.confirmTitle')}</DialogTitle>
+      <DialogContent dividers className={styles.purchaseContent}>
+        <div className={styles.purchaseArt}><AvatarBorder border={purchaseItem.id} {...avatar} /></div>
+        <p id="shop-purchase-description">{t('shop.confirmDescription', {
+          name: t(`shop.item.${purchaseItem.id}.name`), n: format(purchaseItem.price),
+        })}</p>
+        {purchaseOwned ? <Alert severity="info">{t('shop.owned')}</Alert>
+          : purchaseAffordable ? <p className={styles.purchaseBalance}>{t('shop.balanceAfter', {
+            n: format((account.coins ?? 0) - purchaseItem.price),
+          })}</p>
+            : <Alert severity="warning">{t('shop.insufficient')}</Alert>}
+      </DialogContent>
+      <DialogActions disableSpacing className={styles.purchaseActions}>
+        <button type="button" className="btn btn-outline" disabled={busy}
+          onClick={() => setPendingPurchase(null)} autoFocus>{t('common.cancel')}</button>
+        <button type="button" className="btn btn-primary" disabled={busy || purchaseOwned || !purchaseAffordable}
+          onClick={() => void purchase(purchaseItem.id)}>
+          {t(busy ? 'common.loading' : 'shop.confirmBuy')}
+        </button>
+      </DialogActions>
+    </Dialog>}
     <Snackbar open={notice !== null} autoHideDuration={5000} onClose={() => setNotice(null)}>
       <Alert severity={notice?.severity ?? 'success'} onClose={() => setNotice(null)} variant="filled">
         {notice?.message}
