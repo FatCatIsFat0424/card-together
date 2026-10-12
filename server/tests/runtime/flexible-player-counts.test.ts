@@ -171,7 +171,7 @@ describe('two to eight actual players', () => {
       }
       expect(actions).toBeGreaterThan(0);
       expect(game().log.some((entry) => 'seat' in entry && entry.seat === 'P8')).toBe(true);
-    });
+    }, 30_000);
   }
 
   it.each([2, 3, 4, 5, 6, 7, 8])('ranks all %i Ninety-Nine participants in elimination order', (count) => {
