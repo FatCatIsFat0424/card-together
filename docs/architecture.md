@@ -1,9 +1,11 @@
 # Architecture
 
-Card Together is a server-authoritative TypeScript monorepo. HTTP handles accounts,
-friends, profiles, and media; authenticated Socket.IO actions drive rooms and games.
-Browsers exchange voice audio over WebRTC. Production has one systemd backend behind
-local Nginx with durable state outside the application tree.
+Card Together is a server-authoritative TypeScript monorepo:
+
+- **HTTP:** accounts, friends, profiles, and media.
+- **Socket.IO:** authenticated room and game actions.
+- **WebRTC:** voice audio between browsers.
+- **Production:** one systemd backend behind local Nginx; durable state outside the application tree.
 
 ## Module boundaries
 
@@ -23,29 +25,32 @@ local Nginx with durable state outside the application tree.
 | `client/src/audio/`, `voice/` | Native file playback/turn reminder and WebRTC controllers |
 | `deploy/` | Prepared runtime, systemd/Nginx install, backup/migration, publication |
 
-Dependency direction is transport → runtime/managers → pure engine/shared rules.
-Engine code cannot access managers, storage, or network. Managers do not directly
-coordinate each other; Socket context/runtime owns those operations. HTTP services
-use the Repository contract. The detailed [API](api.md) and [storage](storage.md)
-documents define transport/data boundaries.
+- Dependencies flow **transport → runtime/managers → pure engine/shared rules**.
+- Engine code has no manager, storage, or network access.
+- Socket context/runtime coordinates managers; managers do not coordinate each other directly.
+- HTTP services use the Repository contract.
+- See [API](api.md) and [storage](storage.md) for transport/data boundaries.
 
 ## Committed game state
 
-Each mutation validates session/room/turn authority, snapshots state for rollback,
-applies manager changes, and writes the runtime and any completed match atomically.
-Only then does it acknowledge and broadcast `player:state` to the actor and affected
-old/new room members, including their connected tabs. Persistence failure restores
-manager state. Unchanged resumes may skip writes while retaining authentication and
-synchronization. Each snapshot includes only the recipient's private hand/legal cards, except that
-spectators and eliminated seats also receive every hand (`observedHands`, Blackjack `observedHole`)
-from `getRecipientVisibleState`; bots and automatic actions use the filtered view only. Room
-snapshots add the spectator list and the current observer accounts, and chat history is filtered
-per recipient; see [spectators](games.md#spectators-and-god-view).
+**Mutation sequence:**
 
-Tabs share one account identity and seat. A final-tab disconnect starts a 60-second
-reconnect window. Restart restores room/game/chat state and gives disconnected players
-a fresh window. Expiry or voluntary departure aborts an unfinished match; completed
-history remains. Socket IDs and voice membership are never durable.
+1. Validate session, room, and turn authority; snapshot state for rollback.
+2. Apply manager changes; atomically save runtime and any completed match.
+3. Acknowledge and broadcast `player:state` to the actor and affected old/new room members, including their tabs.
+
+- Failed persistence restores manager state.
+- Unchanged resumes may skip writes but still authenticate and synchronize.
+- `getRecipientVisibleState` filters private hands/legal cards per recipient. Spectators and eliminated seats also receive all hands (`observedHands`, Blackjack `observedHole`); bots and automatic actions use only their filtered view.
+- Room snapshots include spectators and current observer accounts; chat history is recipient-filtered. See [spectators](games.md#spectators-and-god-view).
+
+| Lifecycle | Behavior |
+| --- | --- |
+| Multiple tabs | Share one account identity and seat |
+| Final-tab disconnect | Starts a 60-second reconnect window |
+| Restart | Restores room/game/chat; disconnected players receive a fresh window |
+| Reconnect expiry or voluntary departure | Aborts an unfinished match; completed history remains |
+| Socket IDs and voice membership | Never durable |
 
 JSON writes still validate/serialize the complete document and atomically replace the
 file. In-memory indexes accelerate account/session/friendship/history reads; scoped
@@ -54,72 +59,61 @@ not enable multiple server processes.
 
 ## Frontend
 
-Public routes are `/login` and `/register`; authenticated routes include `/`, `/account`,
-`/friends`, `/players/:accountId`, `/room/:roomCode`, and `/game/:roomCode` under the
-configured base path. `api.ts` handles cookies/HTTP and `socket.ts` handles realtime
-transport. Account connection hooks replace store state from server snapshots and clear
-missing room/game state. Equal snapshot fields retain references to avoid redundant updates.
+| Area | Behavior |
+| --- | --- |
+| Public routes | `/login`, `/register` |
+| Authenticated routes | `/`, `/account`, `/friends`, `/players/:accountId`, `/room/:roomCode`, `/game/:roomCode` |
+| Route prefix | Configured base path |
+| Transport | `api.ts`: cookies/HTTP; `socket.ts`: realtime |
+| Account hooks | Replace store state from server snapshots; clear missing room/game; retain equal field references |
+| Browser preferences | Theme, motion, music, and voice |
+| Durable profile data | Profile/image/history visibility |
 
-The socket retries indefinitely (1–5 s backoff) and may fall back to polling. Returning
-network or page visibility triggers an immediate reconnect; a page hidden for more than
-10 seconds re-sends `player:resume` and reconnects if it goes unanswered. Until the first
-ready snapshot, protected routes show a full-page connecting state; afterwards pages stay
-mounted under a non-blocking reconnect banner, and actions should check
-`selectConnectionReady` from the account store. Routes sit in an error boundary with a
-reload action, and a missing lazy chunk after a deployment reloads the page once per
-30 seconds. Media uploads use a 120-second request timeout instead of 15 seconds.
+**Connection and recovery:**
 
-Profile pages preserve room membership. Theme, motion, music, and voice preferences
-are local browser settings; account profile/image/history visibility is durable server data.
-Global navigation remains available during matches: desktop shows the links in the top bar,
-while viewports below 1024px expose them in the menu. Navigating between account/friend
-pages preserves room membership; joining another friend's hosted room explicitly confirms
-the switch and commits both membership changes together.
-The application owns one dynamic viewport below the fixed-height top bar. Waiting rooms
-and games fill that space without document scrolling; long account pages, chat, and
-history retain internal scrolling. The waiting room uses a separate readiness row,
-with a two-by-two seat layout and a chat toggle (with an unread count) on phones or
-short landscape windows. Seated/ready counts appear in the table centre, or beside the
-Ready button where the centre is hidden; the room code has a copy button.
-Timer settings expand in a bounded panel rather than pushing the seats down.
+- Socket retries indefinitely with 1–5 s backoff and polling fallback.
+- Returning network/page visibility triggers immediate reconnect. After more than 10 seconds hidden, the page re-sends `player:resume` and reconnects if unanswered.
+- Before the first ready snapshot, protected routes show a full-page connecting state. Later disconnects leave pages mounted under a reconnect banner.
+- Actions check account-store `selectConnectionReady`. Cards, bids, Play/Pass, votes, seat/ready/bot/host controls, and Back to room are disabled unless `ready`; local sorting remains usable.
+- Route errors offer reload. Missing lazy chunks reload once per 30 seconds after deployment.
+- HTTP timeout: 15 seconds normally; 120 seconds for media uploads.
 
-Game seats and the central play area occupy separate grid cells. At every viewport
-size, the local seat stays below the centre, the opposite seat above it, and the
-other seats to its left and right. The local identity, score, and captured-card preview share the hand header,
-with a compact base + reserve clock at its right edge. Other seats show only their active turn allowance, never their reserve. Short landscape windows keep the local hand header
-below the table as well. Status/error text stays with the hand.
-Red Points measures the actual card viewport and paginates table cards to fit,
-preserving card order and the current page during capture highlights, and enlarging
-sparse tables without reserving empty rows. Below 768px wide, Sevens shows each suit row's
-end cards and next open positions instead of all thirteen positions. Other central
-presentations fit their grid cell without changing the space reserved for seats and controls.
-Every table shares one result dialog (`games/ResultDialog.tsx`) that stays below the
-top bar so music, voice, sign-out, and invite notices remain usable; it is a labelled
-modal dialog that focuses "Back to room" and reports the pending return.
-Overlay sheets (info, chat) and top-bar popovers move focus inside when opened and
-return it to their trigger when closed. Escape closes only the topmost layer: popovers
-mark the key handled so the game sheets underneath stay open. On phones and short
-landscape windows the abort-vote region sits at the bottom of the table so the tool
-buttons and the top seat stay visible.
-Game and room action controls (cards, bids, Play/Pass, votes, seat/ready/bot/host
-controls, Back to room) are disabled while the account connection is not `ready`;
-local-only controls such as sorting stay usable.
+**Navigation and layout:**
+
+- Navigation stays available during matches: top-bar links on desktop, menu below 1024px.
+- Account, friend, and profile navigation preserves room membership. Joining another friend's hosted room confirms the switch and commits both membership changes together.
+- The app fills one dynamic viewport below the fixed top bar. Rooms/games avoid document scrolling; long account pages, chat, and history scroll internally.
+- Waiting rooms use a separate readiness row. Phones/short landscape windows use two-by-two seats and a chat toggle with unread count.
+- Seated/ready counts appear in the table centre, or beside Ready when the centre is hidden. Room codes have a copy button; timer settings expand inside a bounded panel.
+- Seats and play area occupy separate grid cells: local below, opposite above, others left/right at every viewport size.
+- Local identity, score, and captured-card preview share the hand header below the table, including short landscape windows; the base + reserve clock sits at its right edge. Other seats show active allowance only. Status/errors stay with the hand.
+
+**Game presentation and accessibility:**
+
+- Red Points measures the card viewport, paginates in card order, keeps the page during capture highlights, and enlarges sparse tables without empty rows.
+- Below 768px, Sevens shows suit end cards and next open positions instead of all thirteen positions. Other presentations fit their grid cell without shrinking reserved seat/control space.
+- Shared `games/ResultDialog.tsx` stays below the top bar, leaving music, voice, sign-out, and invite notices available. The labelled modal focuses Back to room and reports a pending return.
+- Info/chat sheets and top-bar popovers move focus inside on open and return it to the trigger on close. Escape closes only the topmost layer; popovers mark it handled to preserve underlying sheets.
+- On phones/short landscape windows, abort voting sits at the table bottom so tools and the top seat remain visible.
+
 Legacy `bridge.*` preferences migrate without replacing existing `card-together.*` values.
-Music playback persists across routes/control-panel closure. Voice follows actual room
-membership and requires explicit user join; see [media](media.md).
+Music persists across routes/panel closure; voice requires explicit join and follows actual
+room membership. See [media](media.md).
 
 ## Presentation timeline
 
-`shared/src/game-presentation.ts` derives public frames from committed log entries.
-Metadata supplies `id`, `startedAt`, `logStart`, and recipient `serverNow`; frames
-never contain other players' private hands or unrevealed stock.
-New actions use `timingVersion: 3`: ordinary Bridge/Big Two plays allow 300 ms for
-arrival followed by one second to read the result. Restored presentations keep their
-version so saved deadlines remain valid across upgrades, and the next action uses the
-new timing: a missing version keeps the shorter legacy play and pass frames, and
-version 2 keeps the 2,400 ms Sevens Dragon Slaying close. Any change to a frame
-duration that can delay a saved turn needs a new timing version. Controls, turn highlights, reminders, bots, and automatic
-passes wait for the shared presentation deadline.
+[`game-presentation.ts`](../shared/src/game-presentation.ts) derives public frames from
+committed logs. Metadata includes `id`, `startedAt`, `logStart`, and recipient `serverNow`;
+frames exclude opponents' private hands and unrevealed stock.
+
+| Timing version | Behavior |
+| --- | --- |
+| New actions: `timingVersion: 3` | Ordinary Bridge/Big Two plays: 300 ms arrival + 1,000 ms reading time |
+| Restored version 2 | Retains the 2,400 ms Sevens Dragon Slaying close |
+| Missing version | Retains shorter legacy play/pass frames |
+
+Restored presentations keep their version/deadlines; the next action uses current timing.
+Any duration change that can delay a saved turn requires a new timing version.
 
 | Frame | Duration |
 | --- | --- |
@@ -135,53 +129,40 @@ passes wait for the shared presentation deadline.
 | Sevens table collapse after every suit is slain / broken table before the result | 1,800 / 2,000 ms |
 | Final result before score overlay | 3,000 ms (2,000 ms after a Sevens table collapse) |
 
-Frames for one action run sequentially. The server rejects further play/pass/capture
-and continue actions until the deadline; continue also requires scoring. Clients disable
-corresponding controls and delay score overlays. Refresh/resume skips expired frames
-and displays remaining time rather than restarting animations. Reduced motion preserves
-information and deadlines. Turn reminders wait for the full timeline to finish.
-Legacy Bridge snapshots without metadata retain the local completed-trick queue.
+**Timeline rules:**
 
-Each game shows current-match history reconstructed from its public records. Cross-match
-history is separately persisted in Repository matches for human-only games. Bot games retain
-their current runtime result for resume; see [storage](storage.md) for legacy history cleanup.
-Big Two automatic passes use their
-own server scheduler and saved deadlines; see [rules](games.md#big-two).
+- Frames run sequentially. Controls, turn highlights, reminders, bots, and auto-pass wait for the shared deadline.
+- Server rejects play/pass/capture and continue before the deadline; continue also requires scoring. Clients disable controls and delay score overlays.
+- Refresh/resume skips expired frames and shows remaining time. Reduced motion preserves information/deadlines.
+- Legacy Bridge snapshots without metadata retain the local completed-trick queue.
+- Current-match history comes from public records. Repository match history contains human-only games; bot games retain runtime results for resume. See [storage](storage.md) for legacy cleanup.
+- Big Two forced passes have their own scheduler and saved deadlines for all seats. See [rules](games.md#big-two).
 
-Bot timers are reconstructed from committed game turns at startup and after mutations.
-They recheck game/turn identity inside the runtime queue, wait for presentation completion,
-and publish only after persistence succeeds. Failed saves roll back and retry; abort,
-replacement, and shutdown cancel stale work. Bot decisions never receive opponents'
-private hands. Big Two's existing forced-pass scheduler owns forced passes for all seats.
-Bot and timeout attempts that fail three times in a row for the same turn fall back to the
-first legal action from the same filtered view; if none applies, or that action also fails to
-commit three more times, the game is aborted with a system chat line (about a human seat, since
-chat senders must be accounts) instead of retrying forever. Every failed attempt is logged.
+**Bots and cleanup:**
 
-Rooms are removed when their last human member leaves, including after the 60-second reconnect
-window expires. The same cleanup interval also removes, as a safety net, any room none of whose
-human members still points at it, together with its game and chat. Results containing any bot
-are not written to match history.
+- Rebuild bot timers from committed turns at startup/after mutations; recheck game/turn inside the runtime queue and wait for presentation completion.
+- Publish after persistence. Failed saves roll back and retry; abort, replacement, and shutdown cancel stale work. Bots never receive opponents' private hands.
+- After three consecutive bot/timeout failures on the same turn, try the first legal action from the same filtered view. If none applies, or it fails three more commits, abort with a system chat line about a human seat (chat senders must be accounts). Log every failure.
+- Remove rooms, games, and chat when the last human leaves, including reconnect expiry. The cleanup interval also removes orphaned rooms with no human still pointing at them.
+- Results containing any bot are excluded from match history.
 
 ## Turn clocks
 
-Room timer settings and per-game reserves/deadlines are durable state. Game actions
-settle elapsed decision time before advancing the clock; Red Points preserves the unused
-allowance across its two decision stages. Presentation deadlines postpone clock starts.
-The timeout scheduler rechecks the game and turn inside the runtime queue, applies one
-legal action from the player's filtered view, and publishes only after persistence.
-Failed writes restore the clock and game together. Manual actions also check expiry.
+- Room timer settings and per-game reserves/deadlines are durable.
+- Actions settle elapsed decision time before advancing; Red Points carries unused allowance across both decision stages.
+- Presentation deadlines postpone clock starts.
+- Timeout work rechecks game/turn in the runtime queue, uses one legal action from the player's filtered view, and publishes after persistence. Failed writes restore clocks and game together; manual actions also check expiry.
 
-Chinese Poker arrangements and Blackjack bets are simultaneous, so those phases publish no
-single-seat turn. The game stores one shared deadline per window; the shared-deadline runtime
-scheduler makes every missing decision from that seat's filtered view at expiry, in one committed
-change (Blackjack stakes the minimum bet for humans). Bots submit one at a time through the
-ordinary bot scheduler. Submissions produce no presentation frames, so they never delay other
-seats; only the final submission starts the showdown or deal. Each Blackjack betting window
-opens when the previous settlement presentation ends, and each deal refills every reserve.
+**Simultaneous phases — Chinese Poker arrangements and Blackjack bets:**
 
-Startup preserves existing deadlines, so an overdue turn resumes without a browser;
-subsequent turns start from the newly committed action rather than replaying missed turns.
-Legacy rooms/games without timing metadata receive default settings and fresh clocks.
-The client projects server timestamps locally and never decrements stored reserves itself.
-See [game timer rules](games.md#turn-timer) for settings and per-game behavior.
+- Publish no single-seat turn; store one shared deadline per window.
+- At expiry, the shared-deadline scheduler resolves all missing decisions from each seat's filtered view in one commit. Blackjack humans receive the minimum bet.
+- Bots submit individually through the ordinary scheduler. Submissions have no presentation frames; only the final submission starts showdown/deal.
+- Blackjack betting opens after the previous settlement presentation; each deal refills all reserves.
+
+**Restart and client behavior:**
+
+- Startup preserves deadlines; overdue turns resume without a browser. Later turns start from the newly committed action, without replaying missed turns.
+- Legacy rooms/games without timing metadata receive defaults and fresh clocks.
+- Clients project server timestamps; they never decrement stored reserves.
+- See [game timer rules](games.md#turn-timer) for settings/per-game behavior.

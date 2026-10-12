@@ -1,178 +1,118 @@
 # Development
 
-Use the [README](../README.md) startup commands and [AGENTS.md](../AGENTS.md)
-implementation rules. Use the exact Node.js version in `.node-version` (the default
-`node` of an older shell fails; deployment enforces the pinned version) and install
-dependencies from the root with `npm ci`. All workspaces share the root TypeScript version.
+## Setup
 
-Checkbox controls use [AppCheckbox](../client/src/components/AppCheckbox.tsx), which
-wraps MUI Checkbox with the existing theme variables and a 44px hit area. Keep labels
-associated with the native input and put input-specific accessibility attributes in
-`slotProps.input`. Emoji selection keeps whole-tile toggling and Shift-click ranges.
-The waiting room's Dragon Slaying option matches the height of one game-picker
-row. The checkbox's 44px hit area extends beyond the compact visual frame.
+- Start with [README](../README.md); follow [AGENTS.md](../AGENTS.md) for implementation rules.
+- Use the exact Node.js version in [.node-version](../.node-version). Older shell defaults fail; deployment enforces the pinned version.
+- Run `npm ci` from the root. All workspaces share the root TypeScript version.
 
-Interface icons use [AppIcon](../client/src/components/AppIcon.tsx) and individual
-`@mui/icons-material` SVG imports, inheriting text size and theme color. Icons are
-decorative; keep accessible names on controls and translated text beside status icons.
-Keep existing artwork or symbols when Material Icons has no suitable equivalent,
-including card suits, avatars, crowns, skulls, dragons, and revolvers.
+## UI conventions
 
-The top bar shows a translated sign-out label beside its icon at widths of 768px
-and above; narrower screens place a red sign-out icon and label last in the menu.
+| Component | Rules |
+| --- | --- |
+| [AppCheckbox](../client/src/components/AppCheckbox.tsx) | MUI Checkbox with theme variables and a 44px hit area, extending beyond the compact frame. Associate labels with the native input; use `slotProps.input` for input accessibility attributes. |
+| Checkbox placement | Emoji selection supports whole-tile toggling and Shift-click ranges. The waiting-room Dragon Slaying option matches one game-picker row's height. |
+| [AppIcon](../client/src/components/AppIcon.tsx) | Use individual `@mui/icons-material` SVG imports; inherit text size/color. Decorative icons need accessible control names and translated status text. |
+| Artwork | Keep suits, avatars, crowns, skulls, dragons, and revolvers where Material Icons has no suitable equivalent. |
+| Lobby backgrounds | Preload artwork, then crossfade over 600ms. Preserve component styling and respect reduced motion. |
 
-The signed-in top bar displays the owner's coin balance with a Material coin icon
-on desktop and compact screens. Its hint explains the 10-coin completed-game reward.
-Balances update through authenticated resume and private `account:coins` events;
-room identities and public profiles do not expose them. A server-owned balance revision
-orders rewards and purchase debits, so stale HTTP responses cannot undo either.
-Private `account:updated` events synchronize saved profiles and purchased inventory
-across the owner's tabs. See [game coins](storage.md#game-coins) for persistence semantics.
+### Navigation and account state
 
-The lobby uses the profile page width, with a game picker and separate room actions.
-On desktop, the sidebar groups the selected game, room-creation button, and code
-joining below a divider; game descriptions appear only in the picker. At widths
-up to 52rem, room-code joining and a divider labeled "Or" precede a full-width
-creation button that always creates a Bridge room. The joined single-column list titled
-"Rules" uses right chevrons and opens each game's detailed rules without selecting
-a room mode or changing the background; the separate selected-game panel is hidden.
-The online-friend panel sits below the room actions in the desktop sidebar and
-below the rules list on smaller screens. Friends use a vertical scrolling list
-capped at three rows on all screen sizes. The desktop sidebar can extend below the
-game picker to show up to three friends before scrolling. Long names are truncated
-to keep row heights consistent. Host room codes
-and presence captions are omitted, while join buttons remain
-available for hosts. The friend panel uses the existing
-[friends API](api.md#http), refreshes on focus and every 30 seconds while visible,
-and lists online friends with hosts first. Friend room admission uses `room:joinFriend`
-and requires confirmation before switching away from an existing room. The lobby
-remains accessible during a room or match and provides a return link; creating or
-joining by code requires leaving the current room first. Rules, timers, invitations,
-and bots are managed in the waiting room. See [Socket actions](api.md#socket-actions)
-for authoritative room action contracts.
+- Sign-out: icon and translated label at widths ≥768px; red icon and label last in the menu on narrower screens.
+- Coin balance: owner-only Material coin icon on desktop/compact screens, with a hint explaining the 10-coin completed-game reward.
+- Authenticated resume and private `account:coins` events update balances. Server-owned revisions prevent stale HTTP responses from undoing rewards or purchase debits.
+- Private `account:updated` events synchronize saved profiles/inventory across the owner's tabs. Public profiles and room identities omit balances. See [game coins](storage.md#game-coins).
 
-The desktop waiting room shows North, East, South, and West as four equal-width outlined
-portrait cards. Ninety-Nine, Blackjack, and Hold'em always use two rows of four
-columns, even before additional seats are configured; other modes use one row.
-There is no horizontal scrollbar. Empty cards
-are full-card seat buttons; their bot controls remain separate. Ninety-Nine, Blackjack, and
-Hold'em expose a host-only plus button that appends additional human seats, up to
-eight configured seats. The last empty additional seat can be removed.
-The plus button occupies the next available grid cell starting at the fifth seat,
-showing only the plus icon. At eight seats it disappears.
-Players can upload or clear their Seat background in the account appearance settings,
-with a live preview. Each occupied seat uses its player's uploaded artwork, synchronized
-through profile updates. Bots use the bundled [mechanical dealer artwork](../client/src/assets/room-backgrounds/README.md);
-empty seats and human seats without artwork keep the theme surface.
-Additional seats persist and synchronize through the room API. Starting is temporarily
-limited to four configured seats with four seated players, for every mode; additional
-seats must be emptied and removed before starting. Ready remains clickable while
-connected and idle: invalid player/seat counts show a dismissible MUI Snackbar warning
-instead of permanent progress text; spectators are prompted to sit before preparing.
-Compact screens use two equal-width
-columns with smaller avatars and controls, allowing up to four rows for eight seats.
-The seat list scrolls vertically when those rows exceed the available table height.
+### Lobby and friends
 
-While waiting, the host can drag human players between seats or into the spectator
-area, including players in additional seats. Occupied destinations swap occupants;
-moving a spectator into an occupied human seat sends its occupant to spectators.
-The Material drag handle supports mouse and touch, or click/keyboard selection followed
-by choosing a destination; Escape cancels. Profile links keep their normal behavior
-outside placement. Bots can exchange standard seats with seated humans, but remain
-in standard seats. Each change clears human readiness and uses the persisted room
-action, so save failure restores the previous arrangement before any broadcast.
+The lobby uses the profile page width and separates the game picker from room actions.
 
-The selected game's Rules link opens a themed MUI dialog with detailed English and
-Traditional Chinese instructions, scoring tables, examples, and shared room rules.
-Keep this content in `client/src/game-rules-i18n.ts` aligned with the implemented
-rules in [Game rules](games.md) and the linked shared rule functions. The dialog
-supports scrolling, Escape/backdrop dismissal, focus trapping, and focus return.
-The waiting room adds a Game rules button beside the mode selector. Every match
-uses the same dialog, opened from the desktop information rail or the table tools
-on compact layouts. All players and spectators can read it. Applicable room options
-show their on/off state above the full rules: Sevens Dragon Slaying, Ninety-Nine
-two decks without reshuffling, and Blackjack player dealer. Waiting-room content
-tracks host changes; match content uses the current game's options. Reading rules
-does not pause play or the turn timer, and settlement dismisses an open rules dialog.
+| Layout | Behavior |
+| --- | --- |
+| Desktop | Sidebar: selected game, creation button, then code joining below a divider. Descriptions appear only in the picker; friends appear below room actions. |
+| Width ≤52rem | Code joining, “Or” divider, then full-width creation button that always creates Bridge. Hide the selected-game panel; show friends below the rules list. |
+| Rules list | Single column titled “Rules” with right chevrons. Opening details does not select a mode or change the background. |
+| Online friends | Vertical scrolling, at most three rows on every screen; desktop sidebar may extend below the picker. Truncate long names; omit host codes/presence captions, retain host join buttons. |
 
-Above 52rem, the friends page separates friends, sent requests, and incoming
-requests into horizontal MUI tabs with live counts and keyboard navigation. Only
-the selected panel is visible. Smaller screens retain the existing three-section layout.
-Friend search, requests, and room admission continue to use the existing friends API.
+- Online friends use the [friends API](api.md#http), refresh on focus/every 30 seconds while visible, and list hosts first.
+- `room:joinFriend` requires confirmation before switching rooms.
+- The lobby remains accessible during rooms/matches with a return link. Creating/joining by code requires leaving the current room first.
+- Waiting-room controls own rules, timers, invitations, and bots; see [Socket actions](api.md#socket-actions).
+- Friends page: above 52rem, horizontal MUI tabs for friends/sent/incoming requests with live counts, keyboard navigation, and one visible panel. Smaller screens retain three sections. Search, requests, and room admission use the existing API.
+- Public profiles: show statistics/match table; omit self-profile caption, extra history heading, and bot-recording caption. Keep lobby navigation in the top bar; show the footer only for an active room return link.
 
-Public player profiles omit the self-profile caption and show statistics and the
-match table without an additional history heading or bot-recording caption.
-Lobby navigation remains in the top bar;
-the profile footer appears only when there is an active room to return to.
+### Waiting-room seats
 
-The authenticated `/shop` route sells permanent avatar borders, accessible from
-desktop and mobile navigation. Its authoritative catalog lives in `shared/src/constants/shop.ts`;
-prices span 50–300 earned coins (5–30 completed games at the current reward).
-Try-on uses the account's preset/uploaded avatar and a CSS border in the live preview.
-Animal decorations include cat, rabbit, frog, bear, and dog styles, plus branching
-antlers and Cthulhu tentacles. Decorations use CSS and SVG and scale with the avatar.
-Selection and reset are local to the shop page; previewing does not change the balance
-or saved profile. Buying atomically debits earned coins and adds the border to private
-inventory; a repeated purchase does not charge again. The account editor's Material
-select offers owned borders and the original avatar, previews the selection immediately,
-and saves it with the identity form. Equipped borders appear on player avatars in the
-lobby, public profile, friends, chat and rooms. Both preset and uploaded avatars work.
-Borders extend around the full-size avatar; equipping one preserves the same responsive
-avatar dimensions and accessible image label as the original avatar.
-The original single-color ring uses the same outer extent as shop borders, leaving
-the preset or uploaded avatar fully visible at its original size.
+| Layout | Seats |
+| --- | --- |
+| Desktop | Equal-width outlined portrait cards for North/East/South/West; no horizontal scrollbar. Ninety-Nine, Blackjack, and Hold'em always have two rows of four columns; other modes have one row. |
+| Compact | Two equal-width columns, smaller avatars/controls, up to four rows. Scroll seats vertically when they exceed table height. |
 
-Selecting a game crossfades the lobby's decorative background over 600ms; the
-artwork is loaded before the previous background fades out. Background changes
-preserve the existing component styling and honor reduced motion preferences.
+- Empty cards are full-card seat buttons; bot controls remain separate.
+- Ninety-Nine/Blackjack/Hold'em: host-only plus icon occupies the next cell starting at seat five, adds human seats up to eight, then disappears. Remove only the last empty additional seat.
+- Additional seats persist/synchronize through the room API. Every mode currently requires exactly four configured seats and four seated players to start; empty/remove additional seats first.
+- Ready stays clickable while connected/idle. Invalid counts trigger a dismissible MUI Snackbar; spectators are prompted to sit before preparing.
+- Account appearance settings upload/clear Seat backgrounds with live preview. Profile updates synchronize occupied-seat artwork; bots use [mechanical dealer artwork](../client/src/assets/room-backgrounds/README.md). Empty/human seats without artwork retain the theme surface.
+
+Host placement while waiting:
+
+- Drag humans between any seats or into spectators. Occupied seats swap; placing a spectator in an occupied human seat moves its occupant to spectators.
+- Material drag handle supports mouse/touch and click/keyboard selection followed by a destination; Escape cancels. Profile links work normally outside placement.
+- Bots can swap standard seats with humans, but remain in standard seats.
+- Changes clear human readiness. Persist before broadcasting; save failure restores the arrangement.
+
+### Rules dialog
+
+- Keep bilingual content in `client/src/game-rules-i18n.ts`, aligned with [game rules](games.md) and linked shared functions: instructions, scoring tables, examples, and shared room rules.
+- Use a themed MUI dialog with scrolling, Escape/backdrop dismissal, focus trapping, and focus return.
+- Entry points: lobby Rules link, waiting-room Game rules button beside mode selector, desktop match information rail, compact table tools. Available to players/spectators.
+- Show applicable option states above full rules: Sevens Dragon Slaying, Ninety-Nine two decks without reshuffling, Blackjack player dealer.
+- Waiting-room options track host changes; match options use current game state. Reading does not pause play/timers; settlement closes the dialog.
+
+### Shop and avatar borders
+
+- Authenticated `/shop` appears in desktop/mobile navigation. [Shared catalog](../shared/src/constants/shop.ts) is authoritative; permanent borders cost 50–300 coins (5–30 completed games).
+- Try-on uses preset/uploaded avatars with CSS borders. CSS/SVG decorations scale with avatars: cat, rabbit, frog, bear, dog, branching antlers, and Cthulhu tentacles.
+- Selection/reset are local previews; they do not change balance/profile. Buying atomically debits coins/adds private inventory; repeat purchases charge nothing.
+- Account Material select offers owned borders/original avatar, previews immediately, and saves with identity.
+- Equipped borders appear in lobby, public profiles, friends, chat, and rooms. Preserve full-size responsive avatar dimensions, accessible labels, and unobscured artwork.
+- Original single-color ring shares shop borders' outer extent.
 
 ## Configuration
 
-The server reads process environment variables; `server/.env.example` is a
-reference and is not auto-loaded. Vite loads `client/.env.local` on startup/build.
+- Server reads process environment variables. `server/.env.example` is reference-only, not auto-loaded.
+- Vite loads `client/.env.local` at startup/build. Restart development or rebuild production after frontend environment changes.
+- `VITE_` values enter public JavaScript; never use them for secrets.
 
 | Server variable | Behavior |
 | --- | --- |
-| `PORT` | Defaults to `3001` |
+| `PORT` | Default `3001` |
 | `HOST` | Optional bind address; use `127.0.0.1` behind local Nginx |
-| `DATABASE_PATH` | Defaults to `server/data/database.json`, independent of cwd; relative overrides resolve from cwd |
-| `CLIENT_ORIGIN` | Comma-separated exact `http(s)://host[:port]` origins without path, trailing slash, or default port; invalid entries stop startup; development defaults to localhost/127.0.0.1 port 5173; required in production |
+| `DATABASE_PATH` | Default `server/data/database.json`, independent of cwd; relative overrides resolve from cwd |
+| `CLIENT_ORIGIN` | Comma-separated exact `http(s)://host[:port]` origins, without path/trailing slash/default port. Invalid entries stop startup. Development defaults to `localhost:5173`/`127.0.0.1:5173`; required in production. |
 | `NODE_ENV` | `production` enables Secure cookies and requires HTTPS |
-| `TRUST_PROXY_LOOPBACK` | Defaults to `false`; enable only for a trusted local proxy overwriting forwarded client addresses |
-| `SEVENS_DEV_PRESET` | Development only. `near-slay` starts every Sevens game with each suit laid from 2 to Q through 44 ordinary logged plays, leaving each seat two aces or kings, to test Dragon Slaying quickly. Any other value, or any value with `NODE_ENV=production`, stops startup |
+| `TRUST_PROXY_LOOPBACK` | Default `false`; enable only for a trusted local proxy overwriting forwarded client addresses |
+| `SEVENS_DEV_PRESET` | Development-only `near-slay`: 44 ordinary logged plays lay each suit from 2 to Q, leaving two aces/kings per seat. Any other value, or any production value, stops startup. |
 
 | Vite variable | Behavior |
 | --- | --- |
-| `VITE_BASE_PATH` | Application base; defaults to `/`, must start/end with `/` |
-| `VITE_SERVER_URL` | Optional external API/Socket origin; empty uses the app origin/base |
+| `VITE_BASE_PATH` | Default `/`; must start/end with `/` |
+| `VITE_SERVER_URL` | Optional external API/Socket origin; empty uses app origin/base |
 | `VITE_SOCKET_PATH` | Optional Socket.IO path; deployment uses `/card-together/socket.io` |
 | `VITE_WEBRTC_ICE_SERVERS` | Browser-visible JSON ICE configuration; see [voice](media.md#voice) |
 
-Do not put private secrets in `VITE_` variables: they enter public JavaScript.
-Frontend environment changes require a restart in development or a production rebuild.
-
 ## Checks
 
-Use the focused gate while editing and the complete gate before finishing a behavior
-change. [Testing](testing.md) defines commands, dependency selection, cache behavior,
-coverage boundaries, and failure reporting. CI runs the same complete gate; deployment
-builds use its release variant with an explicit application base and Socket path.
+[Testing](testing.md) owns commands, selection/cache behavior, coverage, and failure reporting.
 
-Standalone typecheck, lint, Vitest, build, Bash syntax, and Python commands remain
-available. The complete gate prepares catalogs before five TypeScript environments,
-then runs typed ESLint, all Vitest correctness tests, one Vite bundle, real artifact
-validation, and all deployment checks. `build:client` remains an independently checked
-build. Root lint also checks validation/import scripts and Vite/Vitest configurations;
-floating promises remain errors. Existing React hooks warnings are not disabled.
-No separate formatter or secret-check command is configured.
-
-Use `npm run test:watch` when working repeatedly on behavior. Tests cover malformed
-inputs, authorization, private data, persistence failure/restart, and cleanup. The server
-reads the generated [site emoji](media.md#site-provided-emoji) catalog at startup;
-tests supply their own catalogs instead of requiring owner originals.
-
-Repeat a completed check when later changes, failures, or unresolved concerns affect
-its result. Documentation-only changes require content, links, and whitespace review.
+- During edits: focused gate or `npm run test:watch` for repeated behavior work.
+- Before completing behavior changes: `npm run check -- full`, also used by CI.
+- Deployment builds: release gate with explicit application base/Socket path.
+- Documentation-only changes: content, local links, and whitespace review.
+- Repeat checks only when later changes, failures, or unresolved concerns affect results.
+- `build:client` independently checks the build; root lint covers validation/import scripts and Vite/Vitest configs.
+- No separate formatter/secret scanner is configured; floating promises remain lint errors and existing React hooks warnings remain enabled.
+- Server startup reads the generated [emoji catalog](media.md#site-provided-emoji); tests inject catalogs instead of requiring owner originals.
 
 ## Benchmarks
 
@@ -182,54 +122,38 @@ npm run bench:socket
 npm run bench:arrange
 ```
 
-Benchmarks create and clean up independent temporary JSON databases; they do not use
-production `DATABASE_PATH`. The database workload measures indexed queries and
-persistent writes. The Socket workload reports snapshot and chat delivery bytes separately, plus
-runtime writes across multiple rooms. Its legacy `payloadBytes` field measures snapshots
-only; `snapshotPayloadBytes` keeps that meaning and `chatPayloadBytes` measures chat.
-Acknowledgments, recipient counts, and workload sanity checks must pass before results
-are accepted. Arrange uses seed 23, one warmup, and 20 measured samples; its timing
-budget lives in the opt-in benchmark while the full correctness corpus stays in Vitest.
-Compare identical workloads and runtime versions;
-time results depend on hardware/filesystem/load. Tests assert behavior rather than
-performance deadlines. Assess startup frontend size using entry **and preloaded** chunks,
-not the entry file alone.
+| Workload | Metrics and acceptance |
+| --- | --- |
+| Database | Indexed queries/persistent writes |
+| Socket | Snapshot/chat bytes and runtime writes across rooms. `payloadBytes` and `snapshotPayloadBytes` mean snapshots; `chatPayloadBytes` means chat. Validate acknowledgments, recipients, and workload sanity before accepting results. |
+| Arrange | Seed 23, one warmup, 20 measured samples. Timing budget is opt-in; full correctness corpus remains in Vitest. |
+
+- All benchmarks create/clean independent temporary JSON databases; never use production `DATABASE_PATH`.
+- Compare identical workloads/runtime versions; hardware, filesystem, and load affect timings. Correctness tests avoid performance deadlines.
+- Frontend startup size includes entry **and preloaded** chunks.
 
 ## Browser verification
 
-Choose browser checks from the changed behavior and its affected dependencies. For a
-small, localized UI change, target 1–2 minutes of browser verification once the development
-environment is ready. This is a planning target, not a time limit or a passing criterion:
-finish the relevant checks and report failures or blockers. Diagnose slow setup or replace
-unnecessary waiting before expanding the test scope.
+Choose scope from affected behavior/dependencies. For localized UI, plan 1–2 minutes after setup; finish relevant checks regardless of that target. Diagnose slow setup/unnecessary waits before expanding scope.
 
 | Change | Browser scope |
 | --- | --- |
-| Pure rules or server logic with no changed UI behavior | Use automated tests; no browser run is needed unless integration remains uncertain. |
-| Localized UI or game option | Exercise one real client/server flow and the affected visual states. Check 1366×768 and 360×640 when layout changes; add 844×390 when short or landscape layouts are affected. |
-| Shared layout, navigation, or responsive breakpoints | Exercise affected pages at 2560×1440, 1920×1080, 1366×768, 390×844, 375×667, 360×640, and 844×390. Add checks immediately around changed breakpoints where needed. |
-| Authentication, membership, transport, private data, or deployment | Check the affected login/logout, room create/join/chat, refresh/reconnect, and game flows. Use separate accounts when verifying permissions or private-hand visibility. Follow [deployment](deployment.md) for production migration checks. |
+| Pure rules/server logic without UI changes | Automated tests; browser only for unresolved integration. |
+| Localized UI/game option | One real client/server flow and affected visuals. Layout checks: 1366×768 and 360×640; add 844×390 for short/landscape impact. |
+| Shared layout/navigation/breakpoints | Affected pages at 2560×1440, 1920×1080, 1366×768, 390×844, 375×667, 360×640, 844×390; add checks around changed breakpoints. |
+| Authentication/membership/transport/private data/deployment | Affected login/logout, room create/join/chat, refresh/reconnect, and game flows. Separate accounts for permissions/private hands; follow [deployment](deployment.md) for migration. |
 
-Use automated tests for rule boundaries, complete matches, authorization, persistence
-failures, and restart recovery. In the browser, use existing helpers or development-only
-in-memory fixtures to reach visual states directly instead of playing a complete match
-or waiting for bots and animations. Fixtures verify rendering; a real client/server action
-must still verify changed wiring. Injected state does not prove authorization or durable
-persistence. Keep test data isolated from real accounts and databases, and do not add
-new test infrastructure for a one-off visual check without agreement.
+Verification rules:
 
-For affected waiting-room and game layouts, verify no document or route-viewport
-scrolling, visible controls, and no seat/card intersections. Check timer settings and
-chat/info open/close behavior when their controls or available space change. Exercise
-crowded Red Points tables, multiple capture targets, and the initial deal without
-presentation metadata when changing that game's table or shared layout. Check music
-pause/resume and route changes when touching playback. Voice verification needs separate
-browser participants; synthetic local streams do not prove real microphones or cross-NAT
-connectivity.
+- Automated tests cover rule boundaries, full matches, authorization, persistence failure, and restart recovery.
+- Reach visuals with existing helpers/development-only in-memory fixtures; avoid full matches or bot/animation waits. Verify changed wiring with a real action: injected state cannot prove authorization/durability.
+- Isolate synthetic accounts/databases; do not introduce one-off test infrastructure without agreement.
+- Batch independent inspections; use screenshots for visual judgment. Reuse isolated environments/accounts.
+- Expand after failures/shared changes/remaining uncertainty; repeat affected checks after fixes. Stop adding unrelated flows/viewports once selected checks pass; report actual scope and limitations.
 
-Batch independent inspections and inspect screenshots only for states that need visual
-judgment. Reuse a working isolated development environment and synthetic accounts during
-the task. Expand coverage when a check fails, shared behavior changes, or an uncertainty
-remains; after a fix, repeat the affected checks. Once the selected checks pass, stop
-adding unrelated flows or viewport checks. Report the scope actually verified and any
-remaining limitations.
+| Affected area | Additional checks |
+| --- | --- |
+| Waiting-room/game layout | No document/route-viewport scrolling; visible controls; no seat/card intersections. Check timers and chat/info toggles when controls/space change. |
+| Red Points/shared table | Crowded tables, multiple capture targets, initial deal without presentation metadata |
+| Music | Pause/resume and route changes |
+| Voice | Separate browser participants; synthetic streams do not prove microphones or cross-NAT connectivity |

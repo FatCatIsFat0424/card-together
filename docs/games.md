@@ -1,501 +1,454 @@
 # Game rules
 
-These are the implemented house rules, not a claim of standard tournament rules.
-Four players occupy N/E/S/W; Blackjack and Texas Hold'em also run with two or three, leaving
-the other seats empty. Clockwise is N → E → S → W; counterclockwise is
-N → W → S → E. The server controls legality, turns, and results; private hands are
-visible only to their owner.
+Implemented house rules; tournament rules may differ.
+
+- Four seats: N/E/S/W. Current rooms require all four to start; Blackjack/Hold'em
+  rules can also represent two- or three-seat games.
+- Clockwise: N → E → S → W; counterclockwise: N → W → S → E.
+- The server decides legality, turns and results. Playing seats see only their own hands;
+  observer exceptions are described below.
 
 ## Shared room lifecycle
 
-A host chooses the game while waiting. Four occupied, ready seats start a match. Blackjack and
-Texas Hold'em start once at least two seats are occupied and every occupied seat is ready
-([`FLEXIBLE_SEAT_GAMES`](../shared/src/constants/game-rules.ts)); an empty seat takes no part: it
-holds no chips, is never dealt in or given a turn, the button, or a blind, and is absent from
-results and match history. In these two games a seat filling or emptying while waiting (a player
-sitting, standing, or leaving, or a bot added or removed) clears human readiness so the new table
-is confirmed before it starts.
-After scoring, each player returns to the room individually with continue while the others
-keep the result; the finished board is removed once every human has returned or the next
-match starts. Leaving or failing to reconnect within
-60 seconds aborts an unfinished match. Seated players can propose/vote to abort an
-active game. Three yes votes out of four pass; with bots or empty seats, the threshold is the
-smaller of three and the number of seated human players. Bots do not vote; the starter votes yes
-automatically, so a solo human can end the game immediately.
-Votes last 60 seconds. Starting a proposal sets a three-minute cooldown; failed or
-expired votes retain that cooldown. A successful vote returns the room to waiting
-and clears the cooldown, allowing an immediate proposal in the next match.
-Match history retains completed results independently
-of current-room public action history.
+| Stage | Behavior |
+| --- | --- |
+| Waiting | Host selects the game; all modes require four configured, occupied, ready seats and no additional seats to start |
+| Blackjack/Hold'em rules | Can represent two to four occupied seats ([constants](../shared/src/constants/game-rules.ts)); current [room startup](../server/src/managers/room-manager.ts) still requires four |
+| Empty flexible seat | No chips, cards, turn, button, blind, result or history entry |
+| Flexible seat changes | Sitting/standing/leaving or adding/removing bots clears human readiness |
+| Finished | Humans return individually with Continue; others retain the result until everyone returns or the next match starts |
+| Leave/reconnect expiry | Leaving or failing to reconnect within 60 seconds aborts an unfinished match |
+| History | Completed results persist independently of room action history |
+
+**Abort votes**
+
+- Seated humans may propose/vote; bots never vote. The starter automatically votes yes.
+- Threshold: three of four, or `min(3, seated humans)` with bots/empty seats; a solo human can end immediately.
+- Votes last 60 seconds. Starting one sets a three-minute cooldown, retained after failure/expiry.
+- Success returns the room to waiting and clears cooldown, including for the next match.
 
 ### Spectators and god view
 
-Besides the four seats a room holds up to eight spectators
-([`MAX_SPECTATORS`](../shared/src/constants/game-rules.ts)): every member without a seat. Players
-join as spectators, also during a match or through an invite, and take any empty seat while
-waiting; seated players can stand up while waiting. Spectators initially watch from South's side without
-controls (only Leave room, in the game info panel), never vote, and leaving or disconnecting never
-aborts the match. They keep the finished
-board until they press continue or it is removed.
+**Room membership and perspective**
 
-In every game, spectators can click a player's plate, avatar, or name (or focus the plate
-and press Enter or Space) to move that player to the bottom and enlarge their hand.
-The table content and presentation rotate with that perspective. This changes only the
-local view, never the actual seats or action permissions; switching also works for players
-with no cards. The selected perspective lasts until leaving the table. Seated and eliminated
-players retain their own perspective. Covered-card badges still open their pile details.
+- Up to [eight spectators](../shared/src/constants/game-rules.ts), in addition to seats.
+  Members without seats are spectators; joining/invites work during a match.
+- While waiting, spectators may sit in an empty seat and seated humans may stand.
+- Spectators start at South, have no play/vote controls, and can Leave via game info.
+  Their departure/disconnection never aborts a match; Continue dismisses their finished board.
+- Click a plate/avatar/name, or focus the plate and press Enter/Space, to choose the bottom seat
+  and enlarge its hand. Content/presentation rotate locally; actual seats/permissions do not change.
+- Perspective works for empty hands and lasts until leaving. Seated/eliminated players keep
+  their own perspective; covered-card badges still open pile details.
 
-Spectators and permanently eliminated players (Ninety-Nine bust, Liar's Deck death, Hold'em out
-of chips, Blackjack unable to cover the minimum with the house dealer; not a Hold'em fold) have god view: every seat's
-hand appears face up beside its plate (two overlapping rows for long hands), and Blackjack's hole card and Hold'em hole cards
-appear face up with a dashed outline. Stock order, bullets, and other undealt cards stay hidden.
-In Sevens, spectators also see every seat's covered cards and penalty in the info panel,
-and can click any seat's covered-count badge to inspect its complete pile on the table;
-playing seats see only their own covered cards until settlement.
-God view keeps its previous hands and Sevens covered cards while a presentation plays,
-and an eliminated player's view opens only after the frame that eliminates them.
+| Observer | God-view access |
+| --- | --- |
+| Spectator | All seat hands |
+| Permanently eliminated player | Ninety-Nine bust, Liar's Deck death, Hold'em out of chips, house-Blackjack unable to cover minimum |
+| Hold'em folded player | No god view |
 
-During a match, messages from these observers carry `audience: 'observers'` and reach only other
-observers; seats still playing see only their own channel, and everyone sees the full history once
-the match ends. A player still in the match also stops hearing observers in voice chat. An
-elimination moves the player to the observer channels only after its presentation ends.
-Server presentation deadlines briefly gate actions between turns; see
-[architecture](architecture.md#presentation-timeline).
+- Hands appear face up beside plates (two overlapping rows for long hands).
+  Blackjack dealer/Hold'em hole cards use dashed outlines.
+- Stock order, bullets and undealt cards remain hidden.
+- Sevens observers see all covered piles/penalties and can inspect each covered-count badge;
+  active seats see only their own covers until settlement.
+- Previous hands/covers remain during presentation; elimination access starts after its frame.
+- Observer messages use `audience: 'observers'` and reach observers only. Active seats have
+  their own channel and stop hearing observers in voice; full chat becomes visible after settlement.
+- Elimination switches channels only after presentation. See [presentation timing](architecture.md#presentation-timeline).
 
 ### Turn timer
 
-The default is **5 + 20 seconds**: each player gets a fresh five seconds each turn,
-then draws from their own twenty-second reserve for the deal. Unused turn time is
-not added to the reserve. While waiting, the host can change the turn allowance and
-reserve within the [shared limits](../shared/src/time-control.ts); changing settings
-clears human readiness. All players see the current settings; only their own reserve is displayed:
-the own seat plate always shows "turn + reserve" seconds, and other seats show only their turn
-allowance while it is their turn.
+| Clock | Rule |
+| --- | --- |
+| Default | Fresh 5 seconds per turn, then the player's 20-second deal reserve |
+| Unused allowance | Never added to reserve |
+| Host changes | Waiting only, within [shared limits](../shared/src/time-control.ts); clears human readiness |
+| Display | Own plate always shows turn + own reserve; other plates show allowance only while acting |
+| Animations | Consume neither allowance nor reserve |
+| Disconnect | Does not pause clocks or extend reconnect time |
+| New deal | Refills reserves, including each Liar's Deck round |
 
-Chinese Poker has no turns: all four seats arrange at once against one shared deadline of
-turn allowance + reserve, but at least 60 seconds (`cpArrangeSeconds` in
-[the rules](../shared/src/rules/chinesepoker.ts)). Only the own seat shows that countdown,
-and only until it submits. At the deadline the server arranges every missing seat with the
-bot algorithm (never fouled) and marks human seats "Auto-played".
+| Game/stage | Deadline and timeout action |
+| --- | --- |
+| Ordinary turns, Bridge bidding/redeal | Private-view legal decision; redeal timeout declines |
+| Red Points | Hand play and flipped-card choice share an allowance, excluding animations |
+| Chinese Poker | All arrange together: allowance + reserve, minimum 60 seconds ([`cpArrangeSeconds`](../shared/src/rules/chinesepoker.ts)); missing arrangements use the non-fouled bot search |
+| Blackjack betting | All bet together: twice allowance, minimum 15 seconds ([`bjBetSeconds`](../shared/src/rules/blackjack.ts)); starts after prior settlement; missing human bets become minimum 10 |
+| Blackjack decisions | Ordinary turn clock; each deal refills reserves |
+| Hold'em | Ordinary turn clock/refill each hand; timeout checks if nothing owed, otherwise folds; bot strategy never stakes timed-out humans' chips |
+| Big Two forced passes | Separate scheduler; no decision time consumed, but ordinary-looking clock remains public |
 
-Blackjack bets work the same way: every seat that can bet does so at once against one shared
-deadline of twice the turn allowance, but at least 15 seconds (`bjBetSeconds` in
-[the rules](../shared/src/rules/blackjack.ts)), counted from the end of the previous hand's
-settlement. At the deadline a missing human bet becomes the 10-chip minimum and is marked "Auto";
-bots bet on their own. Hit/stand/double/split decisions use the ordinary turn clock, and each
-deal refills every reserve.
-
-Hold'em decisions use the ordinary turn clock and each hand refills every reserve. A human whose
-time runs out checks when nothing is owed and otherwise folds; the bot strategy never stakes their
-chips.
-
-Presentation animations consume neither allowance nor reserve. Red Points' hand play
-and flipped-card choice share one turn allowance, with animation time excluded.
-Bridge bidding and redeal decisions also use the clock. A new deal refills reserves,
-including every new Liar's Deck round.
-Disconnecting does not pause the clock or change the existing reconnect window.
-At expiry the server makes a legal decision using the same private view as the player;
-control remains with the player on subsequent turns. Redeal timeout declines the redeal.
-The seat shows an "Auto-played" badge until its next turn begins; a bot's seat shows
-"Thinking…" while it is the bot's turn. Each seat plate has a single status slot, so when
-several apply it shows Ninety-Nine bust, Liar's Deck death, or Hold'em "Out", then Big Two pass lock or Hold'em
-"Folded"/"All-in", then thinking, then auto-played, then Chinese Poker "Arranged" or Blackjack "Bet placed".
-Big Two forced passes retain their existing scheduler and do not consume decision time.
-Their clock is published like any other turn, so other seats cannot tell a forced pass apart.
+- Shared-deadline countdowns appear only on the owner's seat until submission.
+- Humans regain control on subsequent turns. Auto-played persists until the next turn;
+  bots show Thinking while acting. Missing Blackjack bets show Auto.
+- One status slot per plate, highest priority first:
+  eliminated → pass lock/Folded/All-in → Thinking → Auto-played → Arranged/Bet placed.
 
 ### Card controls
 
-Bridge calls are chosen first and then confirmed: pick a level and suit (or Pass), then
-press Confirm or choose the same call again; Cancel clears the choice. The bidding panel
-overlays the table so its buttons stay at least 44px tall on touch screens, and it shows
-the latest calls wherever the auction table sits in a closed info drawer.
+| Game | Interaction |
+| --- | --- |
+| Bridge calls | Pick level/suit or Pass, then Confirm or select the same call again; Cancel clears |
+| Bridge/Ninety-Nine/Red Points | Mouse click or keyboard activation plays; touch lifts first, second tap plays; another card changes selection, outside tap clears |
+| Ninety-Nine | Explicit plus/minus and next-player choices |
+| Red Points | Zero/one target plays immediately; multiple targets require a highlighted table-card choice |
+| Sevens | Legal cards play directly; when blocked, select any card then use the irreversible Cover button with its penalty |
+| Chinese Poker | Place selected cards in front/middle/back; full rows show hand types; fouls require double confirmation |
+| Blackjack | Chip buttons 10/20/50/100/200 and −/+ steps, then Bet; over-limit values disabled; Hit/Stand/Double/Split follow legality |
+| Big Two | Select cards then Play/Pass; no quick-play suggestions, double-click or global Enter shortcut |
 
-Bridge, Ninety-Nine, and Red Points hand cards play with one mouse click or keyboard
-activation. On touch, the first tap lifts and enlarges the card (and previews Red Points
-captures); a second tap on the same card plays it, tapping another card moves the lift,
-and tapping outside the hand clears it. Ninety-Nine keeps explicit
-choices for plus/minus and the next player. Red Points plays immediately when there is
-zero or one capture target; multiple matches require choosing a highlighted table card.
-Red Points uses up to two rows of table cards, retaining one row when height is
-insufficient for readable cards, and paginates crowded tables. Capture
-highlights preserve the existing card order and current page; page buttons reveal the remaining table cards without scrolling the game page.
-Each seat's red-point score is a button that lists every card that seat captured; the
-tray beside the seat previews only the latest red cards, overlapping them to fit narrow seats.
+**Layout and accessibility**
 
-Sevens plays legal cards like Ninety-Nine and Red Points. When no card is playable, every
-hand card becomes selectable and covering needs a separate Cover button showing the card's
-penalty, because a cover cannot be undone. Chinese Poker selects cards and places them into
-the front, middle, or back row; a full arrangement shows each row's hand, and a fouled
-arrangement must be confirmed twice.
-
-Blackjack bets with chip buttons (10/20/50/100/200) and −/+ steps, then Bet; amounts above
-the seat's limit are disabled. While betting, seat plates show "Bet placed" or, for bots,
-"Thinking…", and the previous hand stays on the table. During play the acting hand is highlighted
-and Hit/Stand/Double/Split follow the legal actions. The table, seat chips, and round history follow
-the presentation, so a hole card, settlement, or next deal never appears before its frame.
-
-Big Two uses individual card selection and Play/Pass, without quick-play suggestions.
-Drag cards with a mouse or touch to arrange the hand; manual order is retained as turns
-advance and played cards leave the hand. Sorting by rank or suit replaces the manual
-order. With a card focused, Alt + Left/Right Arrow also moves it.
-Dragging only reorders cards; clicking or tapping still toggles selection.
-There is no double-click or global Enter-to-play shortcut; standard button accessibility remains.
-Hand cards form a labelled group and stay focusable while unplayable (`aria-disabled`), and
-a polite live region announces whose turn it is.
+- Bridge bidding overlays the table with touch targets at least 44px tall; latest calls stay
+  visible when the auction's info drawer is closed.
+- Red Points table: up to two rows, one when height is insufficient; crowded tables paginate.
+  Capture highlights preserve order/page. Score buttons list all captures; overlapping seat trays show latest red cards.
+- Blackjack: betting plates show Bet placed/Thinking; prior hand stays visible. Acting hand is
+  highlighted; cards, chips, settlement and history reveal only at their presentation frame.
+- Big Two: mouse/touch drag or focused Alt + Left/Right reorders; order survives turns/removals.
+  Rank/suit sort replaces it; click/tap still toggles selection. Cards stay focusable with
+  `aria-disabled`; labelled hand group and polite turn announcements remain accessible.
 
 ### Bots
 
-While waiting, the host can add a bot to an empty seat, remove a bot, or fill every empty
-seat with bots; members without a seat stay spectators. While no human is seated, the last
-empty seat stays open for a player: a match needs a seated human, who can vote to end it.
-Bots are always ready; the match starts once the seats the game needs are occupied and the
-humans are ready. Bots remain for the next match and support every game. Only humans can
-host; the room is removed when its last human leaves.
+- Waiting host may add/remove bots or fill empty seats; unseated members remain spectators.
+- With no seated human, the final empty seat stays open. A match needs a seated human who can end it.
+- Bots support all games, are always ready and remain for the next match. Only humans host;
+  the room disappears when its last human leaves.
+- Inputs: own hand and public state only. Injectable randomness selects weighted near-best
+  candidates; immediate Big Two wins override randomness.
+- Heuristic practice opponents: no difficulty settings, hidden-hand search or optimal-play guarantee.
+- Wait for presentation plus a short thinking delay; save before broadcast and resume after restart.
+  Existing Big Two forced-pass timing remains separate.
+- Bot matches keep resumable state/results but never enter public/personal history.
+  Bots have no account profile or social/voice participation.
 
-Bots evaluate legal moves using only their own hand and public state. Scored move
-candidates are selected randomly among near-best evaluations, weighted toward better choices; immediate Big Two
-wins take priority over randomness. Randomness is injectable for reproducible tests.
-They remain heuristic practice opponents without configurable difficulty or hidden-hand
-search, and the evaluation scores do not guarantee optimal play.
-
-| Game | Decision priorities |
+| Game | Strategy summary and authoritative implementation |
 | --- | --- |
-| Bridge | Use the natural bidding heuristics below to describe hand strength and suit length, interpret a partner's public calls, and make bounded responses/rebids. Decline redeals. Use public played cards to identify established winners and opponents' voids; conserve trump/high cards and avoid overtaking a winning partner. |
-| Big Two | Plan the smallest number of legal groups needed to shed the remaining hand, avoiding unnecessary splits of useful combinations. When responding, play any ordinary answer (no bomb or 2, and the rest of the hand still fits a minimal plan); passing is considered only when every answer would spend a bomb or 2 or split a planned combination, and it is weighed as keeping the plan but giving up tempo. Bombs and 2s are strongly conserved while opponents and the bot's own plan are far from finishing. Once any opponent holds 5 or fewer cards, 2s and bombs are no longer saved and the bot never passes by choice. When an opponent who has not passed this round holds one card, also favor blocking plays. Leads are always plays. Timed-out human Big Two turns use the same decision. |
-| Red Points | Evaluate every legal capture, balancing immediate red points, future matches with the remaining hand, and the public table's exposure to unseen cards. |
-| Ninety-Nine | Treat 4, 5, 10, J, Q, K and ♠A as rescue cards and keep them while number cards are safe, spending large number cards first. Compare both legal plus/minus choices and penalize leaving no card that fits the total expected when the bot acts again, more so in a duel. Model the next player's chance of being forced or eliminated only when the total is within 9 of 99, using unseen cards: the bot's own hand and public plays since the last reshuffle are excluded, one copy per seen card with two decks. With a fixed two-deck stock, ignore kept cards and the return risk when the stock runs out before the bot acts again, and the next player's risk when the bot's own draw ends the match. Evaluate reverse/designation by who acts next and how many opponent turns pass before the bot acts again; near 99 it avoids shortening its own rotation. Pressure on the next player is discounted when that seat's latest play spent a rescue card while any number card was still safe, which suggests a hand without number cards. Randomize among similarly rated surviving designation targets. |
-| Sevens | Must play: value continuations by the penalties they can save, discounting missing gates and waiting; retain follow-up moves and avoid opening directions that only help opponents. Public forced covers exclude every then-legal card from that player's remaining hand; choosing another play does not imply absence. Unknown-card availability uses remaining and hidden-cover counts. Must cover: compare newly lost reachable penalties and a conservative blocking benefit, consuming known dead cards unless a live-card block has a clear benefit. Dragon Slaying also checks paths to A/K within one opponent rotation, including exposing them with 2/Q; each opponent gets at most one gate play in counterclockwise order. |
-| Liar's Deck | Must call when it is the last seat holding cards. Otherwise score each option by the bot's own chance of dying on its next pull: calling risks a pull if the previous play was honest, estimated from the truths the bot cannot see (its own hand and plays this round are excluded, and earlier claims this round are assumed partly honest); lying risks a call that grows with the cards played and is certain when emptying the hand leaves one opponent holding cards. Small bonuses favor shedding cards and making an opponent pull. Honest plays spend non-joker truths first. |
-| Blackjack | Play standard basic strategy for a dealer who stands on soft 17 and peeks, with doubling after splits and no surrender: split aces and eights, never tens or fives, and double soft and hard totals against weak up cards; when doubling is unavailable, fall back to hitting (or standing on soft 18). Bet a random 3–8% of the current chips in table steps. As a player dealer, hit below 17; from 17 compare the chips standing wins or loses against every live player hand with the expected result of drawing (from the cards not yet seen this hand, choosing the better option after each draw), ignoring a short bank's proportional payouts. |
-| Texas Hold'em | Preflop, score the hole cards with the Chen formula: raise premium hands to about 3 big blinds, call playable ones up to a few big blinds, limp marginal ones, and shove strong hands with 10 big blinds or less. After the flop, estimate equity by dealing random hands to each unfolded opponent and completing the board (150 runs). Equity times the players in the hand measures strength: strong hands bet or raise about 60% of the pot, playable hands call when the price is below their equity (more strength is required to commit half the stack), and occasional small bluffs are made against one or two opponents. Opponents are not modeled. |
-| Chinese Poker | Search every non-fouled 3/5/5 split, estimating each row's chance of beating a random opponent's row, the row values, and sweep risk; choose among the closest top candidates. The "Auto arrange" button and deadline arrangements use the same search. |
+| Bridge | Natural bidding/partner calls; decline redeals; public winners/voids guide trump conservation and partner support ([strategy](../server/src/bots/bridge-strategy.ts)) |
+| Big Two | Minimal remaining groups; ordinary replies preferred, bombs/2s conserved; no voluntary pass when any opponent has ≤5 cards; block active one-card opponents ([strategy](../server/src/bots/bigtwo-strategy.ts)) |
+| Red Points | Compare captures by immediate red points, future hand matches and unseen-card exposure ([strategy](../server/src/bots/redpoints-strategy.ts)) |
+| Ninety-Nine | Preserve rescue cards, spend larger safe numbers; compare return/next-seat risk, rotation and public evidence of no number cards ([strategy](../server/src/bots/ninetynine-strategy.ts)) |
+| Sevens | Save reachable penalties, maintain follow-ups, infer absence only from forced covers; compare dead-card covers/blocking and A/K closure exposure ([strategy](../server/src/bots/sevens-strategy.ts), [knowledge](../server/src/bots/sevens-knowledge.ts)) |
+| Liar's Deck | Balance next-pull death risk, estimated honesty and challenge probability; shed cards, prefer non-joker truths, force calls when required ([strategy](../server/src/bots/liarsdeck-strategy.ts)) |
+| Blackjack | Basic strategy: soft-17 stand/peek, double after split, no surrender; random 3–8% bets; player dealers compare standing with unseen-card draw expectation ([strategy](../server/src/bots/blackjack-strategy.ts)) |
+| Hold'em | Chen preflop scoring, ~3-BB premium raises/short-stack shoves; 150-run postflop equity, ~60%-pot strong bets, price-aware calls and small bluffs; no opponent model ([strategy](../server/src/bots/holdem-strategy.ts)) |
+| Chinese Poker | Search all non-fouled 3/5/5 splits; estimate row wins/values and sweep risk; Auto arrange/deadline use the same search ([strategy](../server/src/bots/chinesepoker-strategy.ts)) |
 
-Sevens availability and closure exposure are lightweight heuristic estimates, not an exact
-hidden-card distribution or a measured win-probability model. Gate estimates are combined
-approximately; closure risk conservatively assumes opponents use exposed gates. Blocking
-benefits are shared across active opponents rather than targeting an inferred leader.
-Only own cards and public history/counts enter these decisions; spectator hands, spectator
-covers, and settlement results are excluded.
+**Strategy boundaries**
 
-The server waits for the previous presentation and a short thinking delay before each
-bot action. Actions are saved before broadcast and resume after server restart. Existing
-Big Two forced-pass timing still applies. Games with any bot are practice and do not enter
-personal or public match history; their current state and result remain resumable.
-Bots have no account profile or social/voice participation.
+- Big Two passes only when replies spend bombs/2s or break a minimal plan, trading tempo for
+  preservation. Leads always play; human timeout decisions use the same strategy.
+- Ninety-Nine rescue cards: 4/5/10/J/Q/K/♠A. Near-99 risk uses unseen cards/public plays since
+  reshuffle (per-copy with two decks); stock exhaustion suppresses risks beyond match end.
+- Sevens estimates are approximate, not exact hidden-card distributions or measured win rates.
+  Counts include hidden covers; closure exposure gives each opponent at most one gate play per
+  counterclockwise rotation, conservatively assuming use. Blocking benefit is shared across opponents.
+- Sevens excludes spectator hands/covers and settlement results; voluntarily choosing another
+  play never proves a card absent.
+- Liar's Deck calls reveal only the previous play. Honesty estimates exclude own cards/plays
+  and partially trust earlier claims; emptying a hand with one opponent remaining guarantees a call.
+- Blackjack player-dealer expectation ignores short-bank proportional payout effects.
 
 ## Bridge
 
-Deal a 52-card deck into four 13-card hands. Display suits ♠, ♥, ♣, ♦ and ranks
-A down to 2. HCP is A=4, K=3, Q=2, J=1. A hand with no ace and HCP ≤4 may request
-redeal. Check eligible players clockwise from the randomly selected auction starter;
-accepting redeals all hands, declining checks the next player. Declined seats are not
-asked again for the same deal; redealing clears that record.
+| Setup | Rule |
+| --- | --- |
+| Deal | 52 cards, four hands of 13 |
+| Display | Suits ♠/♥/♣/♦; ranks A down to 2 |
+| HCP | A=4, K=3, Q=2, J=1 |
+| Redeal eligibility | No ace and HCP ≤4 |
 
-Auction runs clockwise. A bid is level 1–7 plus ♣/♦/♥/♠/NT, or pass. Higher level
-wins; equal levels rank NT > ♠ > ♥ > ♦ > ♣. Each non-pass must exceed the highest
-bid. Four opening passes redeal; three consecutive passes after a bid end the auction.
-The **last non-pass bidder** is declarer in this implementation. Its bid defines trump,
-or none for NT. There is no double/redouble or standard dummy-hand mechanism.
-
-Declarer's counterclockwise neighbor leads the first trick. Play runs clockwise;
-follow the lead suit when possible, otherwise any card is legal. Highest trump wins,
-or highest card of the led suit if no trump was played; rank A > K > … > 2.
-The winner leads the next trick. Play all 13 tricks.
-EW and NS are partners. Declarer's team wins with at least `6 + contract level` tricks;
-otherwise defenders win. Results use this win condition rather than duplicate-Bridge
-vulnerability/bonus scoring.
+- Check redeal offers clockwise from a random auction starter. Acceptance redeals all hands;
+  decline checks the next eligible seat and is remembered for that deal only.
+- Auction runs clockwise: level 1–7 with ♣/♦/♥/♠/NT or Pass. Bids must increase;
+  equal-level order is NT > ♠ > ♥ > ♦ > ♣.
+- Four opening passes redeal; three passes after a bid finish the auction.
+- **Last non-pass bidder** is declarer, determining trump/NT; no double/redouble or standard dummy.
+- Declarer's counterclockwise neighbor leads. Play clockwise, following suit when possible.
+  Highest trump wins, otherwise highest led-suit card (A > K > … > 2); winner leads next.
+- After 13 tricks, declarer's NS/EW team wins with at least `6 + contract level` tricks;
+  otherwise defenders win. No duplicate-Bridge vulnerability/bonus scoring.
 
 ### Bot bidding agreements
 
-Bots use a simplified natural system, implemented in
-[`bridge-bidding.ts`](../server/src/bots/bridge-bidding.ts). They infer a partner's
-minimum HCP, announced suit lengths, and balanced shape from the full public auction,
-including calls before an opponent overcalls. Human calls are interpreted as estimates;
-the server does not enforce these agreements on players or disclose private hands.
+Simplified natural [bidding system](../server/src/bots/bridge-bidding.ts), not enforced on humans.
+Bots infer partner minimum HCP, suit lengths and shape from the full public auction, including
+calls before an overcall; human calls are estimates, never private-hand disclosure.
 
-- Ordinary openings need 12 HCP; a major opening shows five cards. Minor openings
-  prefer the longest eligible suit. After three opening passes, the fourth seat still
-  makes a low opening with a weak hand to keep practice games moving.
-- Balanced means 4333, 4432, or 5332. A 1NT opening shows 15–17 HCP; 2NT shows
-  20–21. A 1NT overcall additionally needs a stopper in the opponent's announced suit.
-- New-suit responses show four cards and at least six HCP at the one level or ten
-  at the two level. Raises seek at least eight combined cards in a suit.
-- Combined estimated strength limits contract height: NT invites at 23 HCP and bids
-  3NT at 25; majors use 18/23/25 for levels 2/3/4; minors use 18/23/26/29 for 2/3/4/5.
-  A 2NT response to 1NT is interpreted as an invitation with at least eight HCP.
-- A bot can rebid when the partner's response establishes support or enough strength
-  for NT. It stops repeating unsupported descriptions and does not explore slams.
+| Call/agreement | Estimate |
+| --- | --- |
+| Ordinary opening | 12 HCP; major shows five cards; minor prefers longest eligible suit |
+| Fourth-seat exception | Weak low opening after three passes keeps practice moving |
+| Balanced shape | 4333, 4432, 5332 |
+| 1NT / 2NT opening | 15–17 / 20–21 HCP; 1NT overcall also needs a stopper |
+| New-suit response | Four cards; ≥6 HCP at level one, ≥10 at level two |
+| Suit raise | Seek ≥8 combined cards |
+| Combined NT strength | Invite at 23 HCP; 3NT at 25 |
+| Combined major strength | 18/23/25 HCP for levels 2/3/4 |
+| Combined minor strength | 18/23/26/29 HCP for levels 2/3/4/5 |
+| 2NT response to 1NT | Invitation, ≥8 HCP |
+
+Rebid only with established support/NT strength; stop repeating unsupported descriptions.
+No slam exploration.
 
 ## Big Two
 
-Deal 13 cards each. Rank 2 > A > K > Q > J > 10 > … > 3; suit ♠ > ♥ > ♦ > ♣.
-The holder of ♣3 leads every deal, and the first play must include ♣3. Play counterclockwise.
-Responses must have the same size/type and beat the preceding play, except bombs.
-Passing locks that player out until the round ends. Three opponents passed/locked grants
-the last player a free lead and clears locks. No last-card announcement or compulsory
-highest-single rule applies.
+- Deal 13 each; rank 2 > A > K > Q > J > 10 > … > 3; suit ♠ > ♥ > ♦ > ♣.
+- ♣3 holder leads every deal with a play containing ♣3; turns run counterclockwise.
+- Replies match size/type and beat the preceding play, except bombs.
+- Passing locks the seat for that round; three other seats passed/locked grants a free lead and clears locks.
+- No last-card announcement or compulsory highest-single rule.
 
 | Cards | Legal type | Comparison |
 | --- | --- | --- |
 | 1 | Single | Rank, then suit |
 | 2 | Pair | Higher card |
-| 5 | Straight | Ending card's rank, then its suit |
+| 5 | Straight | Ending rank, then that card's suit |
 | 5 | Full house | Triple rank |
 | 5 | Four-of-a-kind + kicker | Quad rank |
 | 5 | Straight flush | Straight comparison |
 
-Standalone triples, ordinary flushes, and four-card plays are illegal.
-Straight order: A2345 < 23456 < 34567 < … < 910JQK < 10JQKA.
-Compare the ending 5/6/…/A card, not another member; JQKA2/QKA23/KA234 are invalid.
-Ordinary straights only beat straights; full houses only beat full houses.
-Four-of-a-kind and straight flushes are bombs that beat any ordinary group, including
-singles/pairs. Straight flush > four-of-a-kind; equal bomb types use their usual comparison.
+- Standalone triples, ordinary flushes and four-card plays are illegal.
+- Straights: A2345 < 23456 < 34567 < … < 910JQK < 10JQKA; compare ending 5/6/…/A.
+  JQKA2/QKA23/KA234 are invalid. Ordinary straights/full houses beat only their own type.
+- Bombs beat all ordinary groups, including singles/pairs. Straight flush > four-of-a-kind;
+  equal bomb types use normal comparison.
 
-A responding player with no legal play (including bombs) receives a server automatic
-pass after the previous presentation plus one sampled integer delay of 0–5,000 ms
-(inclusive), capped by the room's turn allowance so it never appears as a timeout.
-No lock/turn/log changes appear before that committed pass. Manual pass is permitted
-once presentation ends. Free leads are never auto-passed. Each forced pass has a separate
-saved private deadline; restart preserves the sampled deadline and overdue work resumes
-through the serialized runtime coordinator without browser participation.
+**Forced passes**
 
-A hand containing one of every rank 3 through 2 wins immediately (dragon).
-Otherwise first empty hand wins. Each loser scores
-`remaining cards × 2^(remaining twos)`; a dragon settles opponents' original hands
-with the same formula. Scores do not accumulate across matches.
+- No legal reply, including bombs: auto-pass after presentation plus a sampled integer
+  0–5,000 ms, capped by turn allowance so it does not appear as a timeout.
+- No lock/turn/log change before commit. Manual pass works after presentation; free leads never auto-pass.
+- Each pass saves its private deadline. Restart preserves the sample; overdue work resumes
+  through the serialized runtime coordinator without browser participation.
+
+**Settlement**
+
+- One card of every rank 3 through 2 is an immediate dragon win; otherwise first empty hand wins.
+- Loser score: `remaining cards × 2^(remaining twos)`; dragons score original opponent hands.
+- Scores do not accumulate between matches.
 
 ## Red Points
 
-Four players receive six cards each; four cards face up on the table and 24 remain
-in stock. Redeal if the opening table has at least three cards of one rank. Random
-first player; counterclockwise turns.
+| Setup/scoring | Rule |
+| --- | --- |
+| Deal | Six each, four table cards, 24 stock cards; redeal if ≥3 opening table cards share a rank |
+| Turns | Random starter, counterclockwise |
+| A–9 capture | Sum to 10; ace=1 |
+| 10/J/Q/K capture | Same rank only |
+| Red score | Hearts/diamonds only: ace=20, 2–9 face value, 10/J/Q/K=10; deck total 208 |
+| Winner | Highest captured score, ties shared; no cross-match accumulation |
 
-A–9 capture a table card summing to 10 (ace=1); 10/J/Q/K capture only equal rank.
-Each turn plays one hand card, then flips one stock card. Each card must capture one
-matching table card if possible; choose when several matches exist. Without a match it
-stays on the table. Captured pairs join that player's score pile. After all 24 stock
-cards are flipped and hands exhausted, score the captured piles.
+1. Play a hand card, then flip one stock card.
+2. Each must capture one matching table card if available; choose among multiple targets.
+   Unmatched cards stay on the table; pairs join the acting player's pile.
+3. Exhaust stock and hands, then score captured piles. Uncaptured table cards score nothing.
 
-Only hearts/diamonds score: ace=20, 2–9=face value, 10/J/Q/K=10. The deck contains
-208 red points; highest captured score wins, ties shared. Uncaptured table cards do
-not add to a player's pile. Each match scores independently.
-
-On your Red Points turn, hovering a hand card with a mouse or focusing it with the
-keyboard previews its legal captures with a glow transition. The existing table order and current page stay unchanged. Previewing does not select, submit, or enable a
-capture; clicking still follows the normal play/capture-choice rules.
+Hover/focus previews legal captures with a glow, preserving table order/page. It does not
+select, submit or enable a capture; normal click/capture-choice controls still apply.
 
 ## Ninety-Nine
 
-Deal five cards each, remainder stock; total begins at zero. Random first player;
-counterclockwise initially. Play one legal card, then replenish one. Total cannot exceed
-99. When stock empties, reshuffle discards except the top card; the two-deck option below
-never reshuffles.
+- Five cards each, remainder stock, total zero; random starter, initially counterclockwise.
+- Play one legal card then replenish one; total cannot exceed 99.
+- Empty stock reshuffles discards except the top card, unless two-deck mode is enabled.
 
 | Card | Effect |
 | --- | --- |
-| A | +1, except ♠A resets to zero |
+| A | +1; ♠A resets to zero |
 | 2, 3, 6, 7, 8, 9 | Add face value |
-| 4 | Reverse direction, unchanged total |
-| 5 | Select another surviving player next, unchanged total |
-| 10 | Choose +10 or −10; subtraction floors at zero |
-| J | Pass, unchanged total |
-| Q | Choose +20 or −20; subtraction floors at zero |
+| 4 | Reverse direction; unchanged total |
+| 5 | Choose another surviving seat next; unchanged total |
+| 10 | Choose +10/−10; subtraction floors at zero |
+| J | Pass; unchanged total |
+| Q | Choose +20/−20; subtraction floors at zero |
 | K | Set total to 99 |
 
-A player whose entire hand would exceed 99 is eliminated and discards its hand.
-The next surviving player acts in the current direction with unchanged total.
-Last survivor wins; reverse elimination order determines the remaining ranks.
+- No legal card: eliminate the seat/discard its hand; next survivor acts with unchanged total.
+- Last survivor wins; others rank in reverse elimination order.
 
-The host can enable **Two decks, no reshuffle**, labelled **雙副牌不重洗** in Traditional
-Chinese, in a waiting Ninety-Nine room. It is off by default. When enabled, two 52-card
-decks are shuffled together (104 cards, so a hand may hold two identical cards); card effects,
-dealing, and turn flow are unchanged. The stock is never reshuffled: the draw after a play that
-takes the last stock card settles the match immediately, and every surviving seat ties for
-first while eliminated seats rank by reverse elimination order. The last-survivor ending still
-applies if it comes first. The table labels the stock as not reshuffled and lists the rule in
-the rules box. Changing the option clears human readiness; the setting is fixed for the match
-and survives server restarts. Legacy snapshots without the setting use the single-deck rules.
+**Two decks, no reshuffle / 雙副牌不重洗**
 
-Results record a single `winnerSeat` as before; only a tie after the stock runs out records
-`winners` instead (see [`NinetyNineMatchResult`](../shared/src/types/game.ts)). Releases
-before this option cannot read tied results, so a rollback needs data without them.
+| Setting | Behavior |
+| --- | --- |
+| Default | Off; legacy snapshots use single-deck rules |
+| Setup | Host changes while waiting; clears human readiness; fixed for match and survives restart |
+| Deck | Two shuffled 52-card decks; duplicate cards possible; effects/deal/turns unchanged |
+| Stock | Never reshuffles; the draw taking the last stock card ends the match immediately |
+| Result | Surviving seats tie for first; eliminated seats retain reverse-order ranks; last-survivor ending may happen first |
+| UI | Stock labelled no reshuffle; rules box lists the option |
+
+Single wins keep `winnerSeat`; stock-exhaustion ties use `winners`
+([result contract](../shared/src/types/game.ts)). Earlier releases cannot read tied results;
+rollback requires data without them.
 
 ## Sevens
 
-Deal 13 cards each. The holder of ♠7 starts and must play ♠7; play continues
-counterclockwise. Each suit forms one row from its 7: A…6 below and 8…K above, with A at
-the low end and no wrap-around. A legal card is any 7, which opens its suit, or the card
-directly below a row's lowest card or above its highest card.
+- Deal 13 each; ♠7 holder starts with ♠7, then counterclockwise.
+- Each suit grows from 7: A…6 below, 8…K above; no wrap-around.
+- Legal: any 7 opens a suit, or a card directly adjacent to the row's low/high end.
+- Must play if possible. Otherwise cover a chosen card face down; other active seats see only the count.
+- At settlement reveal covers and sum penalties: A=1, 2–10 face value, J=11, Q=12, K=13.
+  Lowest penalty wins, ties shared; no cross-match accumulation.
 
-The host can enable **Dragon Slaying (close suit on A or K)**, labelled **斬龍** in
-Traditional Chinese, in a waiting Sevens room. It is off by default. When enabled,
-playing either A or K closes that entire suit row immediately:
-neither end accepts another card, while other suits remain playable. Closed rows are
-marked on the table. The closing play is followed by a 2.9-second presentation without text, seen from
-directly above: a long green dragon rises out of the table's bottom-left corner, sweeps a 180-degree
-turn onto that row, and flies along it breathing fire that chars and ignites the row and spreads over
-its body. When its snout reaches the row's far end, a fast blade sweeps along the row and splits it
-lengthwise. With Dragon Slaying on, the host can instead choose the 1.7-second **fire only**
-effect (**火焰**): with no dragon, a quick blade sweeps the row from left to right and the
-fire follows it, setting the row alight as it passes. The choice is saved with the room rules and
-fixed for the match; rooms saved before it existed use the dragon; changing only the effect keeps everyone ready. The row stays darkened
-afterwards. Reduced motion shows a still frame; the next turn waits for it.
+**Dragon Slaying (close suit on A or K) / 斬龍**
 
-Once Dragon Slaying has closed all four suits, no card can be played again, and every remaining
-card would end up covered whatever the order. The server therefore covers all remaining hands at
-once, still in turn order, and settles the match: penalties are exactly what covering card by card
-would give. These automatic covers are marked `auto` in the log and are only valid after every suit
-is closed. After the last slaying presentation, the table collapses for 1.8 seconds (it shatters
-into shards from the middle of the rows, the centre caves in, the rows sink), holds broken for 2 seconds, then
-shows the result; the broken table stays under the result dialog.
+| Setting/effect | Behavior |
+| --- | --- |
+| Default | Off; legacy snapshots use standard rules |
+| Host changes | Waiting only; clears human readiness; fixed for match and survives restart |
+| A or K play | Immediately closes the entire suit, blocking both ends; other suits remain playable |
+| Dragon | 2.9-second overhead dragon/fire/blade presentation without text |
+| Fire only / 火焰 | 1.7-second blade/fire presentation without a dragon |
+| Effect selection | Saved/fixed for match; legacy choice is dragon; changing only effect preserves readiness |
+| Afterwards | Row stays darkened; reduced motion uses a still frame; next turn waits |
 
-Changing the option clears human readiness; the setting is fixed
-for the match and survives server restarts. Legacy snapshots without the setting use
-standard rules.
+When all four suits close:
 
-A player with any legal card must play one. Only a player with no legal card covers: they
-place one chosen hand card face down. Other players see how many cards each seat has
-covered, never which. After every card is played or covered, each seat's penalty is the
-sum of its covered cards (A=1, 2–10 face value, J=11, Q=12, K=13), revealed at settlement.
-The lowest penalty wins; ties share the win. Scores do not accumulate across matches.
+1. Cover remaining hands at once, in turn order, with identical penalties to individual covers.
+   These log entries use `auto` and are valid only after every suit closes.
+2. After the last closing presentation, collapse the table for 1.8 seconds and hold for 2 seconds.
+3. Show settlement; the broken table remains under the result dialog.
 
 ## Chinese Poker
 
-Deal 13 cards each. Every player arranges them at the same time into a front row of 3
-and middle and back rows of 5, then confirms; a submitted arrangement is final and stays
-hidden until all four have submitted. Players can sort the hand, move cards between rows,
-or apply the same automatic arrangement the bots use before confirming.
+- Deal 13 each. All arrange simultaneously into front 3 / middle 5 / back 5.
+- Sort, move cards or Auto arrange with the bot algorithm before confirming.
+- Submission is final and hidden until all four submit.
+- Rank A > K > … > 2; suits never break ties. A2345 is lowest, 10JQKA highest; no wrap-around.
+- Back weaker than middle, or middle weaker than front, is a foul (倒水).
+  Server accepts it; client warns and requires second confirmation.
 
-| Rows | Hands, high to low |
+| Row | Hands, high to low |
 | --- | --- |
-| Middle, back | Straight flush, four of a kind, full house, flush, straight, three of a kind, two pair, pair, high card |
+| Middle/back | Straight flush, four of a kind, full house, flush, straight, three of a kind, two pair, pair, high card |
 | Front | Three of a kind, pair, high card |
 
-Ranks run A > K > … > 2; suits never break ties, so equal ranks tie. A2345 is the lowest
-straight and 10JQKA the highest; straights do not wrap. A back row weaker than the middle,
-or a middle weaker than the front, is a foul (倒水). The server accepts fouls; the client
-warns and asks for a second confirmation.
+**Pairwise scoring**
 
-Each pair of players compares row by row. The row's winner gains and the loser loses the
-winner's row value: 1, except front three of a kind 3, middle full house 2, middle four of
-a kind 8, middle straight flush 10, back four of a kind 4, and back straight flush 5. A foul
-loses every row to a non-fouled opponent, who scores its own row values; two fouled players
-score 0 against each other. Winning all three rows against one opponent (a sweep, 打槍)
-doubles that pairing; sweeping all three opponents (home run, 全壘打) doubles those three
-pairings again. Scores sum to zero; the highest score wins, ties shared. Special
-declared hands (報到, such as a 13-card dragon or six pairs) are not used. Scores do not
-accumulate across matches.
+| Winning hand | Row value (otherwise 1) |
+| --- | --- |
+| Front three of a kind | 3 |
+| Middle full house / four of a kind / straight flush | 2 / 8 / 10 |
+| Back four of a kind / straight flush | 4 / 5 |
+
+- Compare each row against each opponent; winner gains/loser loses the winner's row value.
+- Foul loses all rows to a non-fouled opponent at that opponent's values; two fouls score zero.
+- Sweep (打槍): all three rows won against one opponent doubles that pairing.
+- Home run (全壘打): sweep all three opponents doubles those pairings again.
+- Zero-sum total; highest score wins, ties shared. No cross-match accumulation.
+- No special declared hands (報到), including 13-card dragons or six pairs.
 
 ## Liar's Deck
 
-Based on the Liar's Deck mode of *Liar's Bar*. The deck has 20 cards: six each of K, Q, and A
-plus two jokers. Each player owns a revolver with one bullet in six chambers; the chamber is
-chosen at random when the game starts and never resets, so the n-th trigger pull fires with
-chance 1/(7 − n) and the sixth always fires. Trigger pull counts are public; bullet
-positions never leave the server.
+Based on the Liar's Deck mode of *Liar's Bar*; Devil/Chaos variants are not implemented.
 
-Each round deals five cards to every surviving seat and reveals a random table card from
-K/Q/A. The table face and jokers are truths; any other card is a lie. A random seat opens
-the first round; turns run counterclockwise and skip seats with empty hands. On a turn,
-play one to three cards face down, claiming they all match the table card, or call LIAR on
-the previous play. The opening play of a round cannot be called, and the only seat still
-holding cards must call.
+| Setup | Rule |
+| --- | --- |
+| Deck | 20 cards: six each K/Q/A and two jokers |
+| Revolver | One bullet in six chambers; random fixed position for the entire game |
+| Trigger risk | n-th pull: `1/(7 − n)`; sixth always fires |
+| Public/private | Pull counts public; bullet positions stay server-only |
+| Round | Five cards per survivor; random K/Q/A table face; matching cards/jokers are truths |
 
-A call reveals only the previous play. If any revealed card is a lie, the seat that played it
-pulls its trigger; otherwise the caller does. The pull resolves automatically and ends the
-round. Unchallenged plays are never revealed, even after the game. A surviving shooter opens
-the next round; if the shooter dies, the next surviving seat does. The last survivor wins and
-earlier eliminations rank lower. Scores do not accumulate across matches.
+1. Random first-round starter; counterclockwise turns skip empty hands.
+2. Play 1–3 face-down cards claiming table-face matches, or call LIAR on the previous play.
+   Round-opening play cannot be called; the only remaining seat with cards must call.
+3. Reveal only the challenged play: any lie makes its player pull, otherwise the caller pulls.
+   Resolution is automatic and ends the round; unchallenged cards are never revealed, even after the game.
+4. Surviving shooter opens next round; if dead, next surviving seat opens.
+5. Last survivor wins; earlier eliminations rank lower; no cross-match accumulation.
 
-Players select one to three hand cards and press Play, or press LIAR. Cards matching the
-table card carry a check mark, and cards the player has already played this round are listed
-below the hand. The table shows each seat's hand size and pulls (🔫 n/6) and keeps a pull's
-outcome, the next round's cards, and eliminations hidden until their presentation frames.
-Devil and Chaos variants are not implemented.
+UI: Play/LIAR buttons, checks on matching cards, own played-card list, seat hand sizes and
+pull counts. Pull outcome, next cards and elimination wait for their presentation frames.
 
 ## Blackjack
 
-The server is the dealer; each seat plays only against it. Two to four seats play; every
-occupied seat starts with 1000 chips, which exist only within the match, and a match is eight
-hands. Each hand uses a freshly shuffled 52-card deck; hands that stop at 21 or bust can never
-use it up.
+| Setup | Rule |
+| --- | --- |
+| House dealer | Two to four seats, each playing only against the server |
+| Chips | 1000 per occupied seat, match-only |
+| Match | Eight hands; freshly shuffled 52-card deck per hand, sufficient for hands ending at 21/bust |
+| Bet | Simultaneous, 10–200 in steps of 10 within balance; hidden until deal ([timer](#turn-timer)) |
+| Sit out | Fewer than 10 chips: watch only |
 
-Each hand opens with simultaneous betting (see [turn timer](#turn-timer)): 10–200 chips in steps
-of 10, within the seat's chips. Bets stay hidden until the deal. A seat with fewer than 10 chips
-sits out and only watches. The deal gives each bettor two face-up cards and the dealer one up
-card and one face-down hole card. With an ace or ten-value up card the dealer checks the hole
-card first: a dealer blackjack ends the hand at once, and only player blackjacks push.
+1. Deal bettors two face-up cards; dealer gets an up card and hidden hole card.
+2. Ace/ten-value up card: peek; dealer blackjack ends immediately, with only player blackjacks pushing.
+3. Bettors act N/E/S/W; reaching 21, busting or a natural ends the hand automatically.
+4. Reveal dealer hole card; hit below 17, stand on all 17s including soft 17.
+   Skip draws if every hand busted or is a blackjack.
+5. Settle. After hand eight, or no seat can cover minimum, most chips wins (ties shared).
+   No cross-match accumulation.
 
-Bettors then act in N, E, S, W order. Hit draws a card; stand ends the hand; double (first two
-cards only) stakes the bet again and draws exactly one card; split (two cards of equal value,
-once per seat) stakes the bet again and plays the two hands in order, each completed with one
-new card at once. Split aces receive only that card. A split two-card 21 is not a blackjack.
-Doubling and splitting require chips to cover the extra stake. Reaching 21, busting, and
-naturals end a hand automatically. There is no insurance or surrender.
-
-The dealer then reveals the hole card and draws while below 17, standing on every 17 including
-soft 17; it does not draw when every hand has busted or is a blackjack. Blackjack pays 3:2, a win
-1:1, and a push returns the bet. After the eighth hand, or once no seat can cover the minimum,
-the most chips win, ties shared. Scores do not accumulate across matches.
+| Action/result | Rule |
+| --- | --- |
+| Hit / Stand | Draw / finish |
+| Double | First two cards only; stake again, draw exactly one |
+| Split | Equal-value cards, once per seat; stake again and play two hands in order, each immediately completed with one new card |
+| Split aces | Only the one additional card; split two-card 21 is not blackjack |
+| Extra stakes | Double/split require enough chips |
+| Payout | Blackjack 3:2, ordinary win 1:1, push returns stake |
+| Unsupported | Insurance and surrender |
 
 ### Player dealer
 
-While waiting, the host can turn on **Player dealer** beside the game selector (off by default;
-changing it clears human readiness). The seats then deal in turn instead of the house: a random
-seat taking part deals the first hand and the deal passes clockwise, skipping empty seats, for two
-full rotations, so a match is twice as many hands as seats (8 with four seats, 4 with two).
+- Host enables while waiting (default off); changing it clears human readiness.
+- Random participating dealer first, then clockwise skipping empty seats for two full rotations:
+  `2 × occupied seats` hands (eight for four, four for two).
+- Dealer does not bet; sees its own hole card (also visible in god view), hidden from other seats until reveal.
+- House peek/payout/double/split/no-insurance rules still apply.
+- After players finish, reveal the hole card. Dealer acts unless it has blackjack or every
+  player hand busted/is blackjack. Hit below 17; hit or stand from 17; 21/bust ends the turn.
+  Timeout follows house strategy.
 
-The dealer does not bet. Its hole card is visible to it (and god view) but hidden from the other
-seats until the reveal. Peeking for blackjack, 3:2 blackjacks, doubling, splitting, and no
-insurance work as with the house. Once every player hand is finished the hole card is revealed
-and, unless no hand needs beating (every hand busted or is a blackjack) or the dealer has a
-blackjack, the dealer seat plays its own hand with Hit and Stand: it must hit below 17 and may hit
-or stand from 17; reaching 21 or busting ends its turn. When its turn times out it follows the
-house rule (hit below 17, otherwise stand).
+**Settlement**
 
-Settlement moves chips between each player and the dealer only. Each seat's net loss goes to the
-dealer first; the dealer then pays each seat's net win (1:1, blackjack 3:2) from its chips plus
-those collections, and pushes return the stake. When that pool cannot cover every win, winners
-share it in proportion to what they are owed, each rounded down, and the leftover chips go one at a
-time to winners clockwise from the dealer's left
-([`bjProportionalPayouts`](../shared/src/rules/blackjack.ts)); the dealer ends with zero. A seat
-with fewer than 10 chips cannot bet but still deals in its turn, even with no chips, so nobody is
-permanently out. The match ends after the last hand or once fewer than two seats can cover the
-minimum bet, since every hand the only such seat dealt would have no bettor.
+1. Collect each player's net loss into the dealer's pool; pushes return stakes.
+2. Pay net wins (ordinary 1:1, blackjack 3:2) from dealer chips plus collections.
+3. If insufficient, prorate/round down winnings, then distribute leftovers clockwise
+   from dealer's left; dealer ends at zero ([payout rule](../shared/src/rules/blackjack.ts)).
+
+Seats below 10 cannot bet but still deal, even at zero chips; no permanent elimination.
+End after the last hand or fewer than two seats can cover minimum (a lone eligible dealer has no bettors).
 
 ## Texas Hold'em
 
-No-limit Hold'em for two to four occupied seats. Every occupied seat starts with 1000 chips, which
-exist only within the match. Blinds start at 10/20 and rise every four hands to 15/30, 25/50, 40/80, and 60/120
-([`HE_BLIND_LEVELS`](../shared/src/rules/holdem.ts)). The match ends once one seat holds every chip,
-or after the twentieth hand; the most chips win, ties shared, and seats that lost every chip rank
-by elimination order. Scores do not accumulate across matches.
+| Setup/end | Rule |
+| --- | --- |
+| Seats/chips | No-limit, two to four occupied seats; 1000 match-only chips each |
+| Blinds | 10/20 → 15/30 → 25/50 → 40/80 → 60/120, increasing every four hands ([levels](../shared/src/rules/holdem.ts)) |
+| End | One seat owns all chips or hand 20 completes; most chips wins, ties shared |
+| Eliminated ranks | Order of losing all chips; no cross-match accumulation |
 
-A random occupied seat holds the button for the first hand; it then moves clockwise to the next
-seat with chips, skipping empty seats. Each hand is shuffled from a full deck and deals two
-private hole cards to every seat with chips, starting left of the button. The next two seats post the small and big blinds; heads-up the
-button posts the small blind. A seat short of a blind posts what it has and is all-in. There are
-no antes and no burn cards.
+**Deal and action order**
 
-Action runs clockwise. Preflop the seat after the big blind acts first and the big blind may still
-raise when everyone has only called; on the flop (three cards), turn, and river (one card each)
-the first unfolded seat after the button acts first. A seat may fold, check when nothing is owed,
-call (all-in when short), or bet/raise to a street total of at least the current bet plus the
-last raise increment (the big blind when nothing has been raised), up to all its chips. An all-in
-below a full raise must be called but does not let seats that already acted raise again. Raising
-is unavailable when every other seat is all-in. A street ends when every seat that can still act
-has acted since the last full raise and matched the bet.
+- Random occupied button first; rotates clockwise to seats with chips, skipping empties.
+- Fresh deck per hand, two private cards per funded seat, dealing from button's left.
+- Next two seats post blinds; heads-up button posts small blind. Short blind is all-in.
+  No antes or burn cards.
+- Clockwise action: preflop starts after big blind, which may raise after everyone calls;
+  flop (3 cards), turn and river (1 each) start with first unfolded seat after button.
 
-When one seat remains the pot goes to it without a showdown. When betting closes with at most one
-seat able to act, the remaining board is dealt at once. At showdown every unfolded seat reveals its
-hole cards and plays the best five of its seven cards, ranked as in
-[Chinese Poker](#chinese-poker) (suits never break ties; A2345 is the lowest straight). Stakes form
-a main pot and side pots by contribution level; each pot goes to the best eligible hand, split
-evenly, with odd chips going clockwise from the button. Chips beyond what anyone else staked return
-to their owner.
+| Action | Rule |
+| --- | --- |
+| Fold | Leave this hand |
+| Check | Only with nothing owed |
+| Call | Match, all-in when short |
+| Bet/raise | Street total ≥ current bet + last full raise (big blind initially), up to own chips |
+| Short all-in raise | Must be called; does not reopen raising for seats that already acted |
+| Other seats all-in | Raising unavailable |
+| Street complete | Every actionable seat has acted since the last full raise and matched the bet |
 
-Players act with Fold, Check/Call, and a Bet/Raise control (slider, amount, and minimum, half-pot,
-pot, and all-in shortcuts). The table shows the board, the pot and side pots, every seat's stake on
-the street, the button and blinds, and revealed hands with their categories at showdown; it follows
-the presentation, so the board, showdown, and the next hand's hole cards appear only with their
-frames.
+**Settlement and display**
+
+- One remaining seat wins without showdown. With at most one actionable seat after betting,
+  deal the remaining board at once.
+- Showdown reveals unfolded hands, best five of seven; [Chinese Poker ranking](#chinese-poker),
+  no suit tie-break, A2345 lowest straight.
+- Contribution levels create main/side pots; best eligible hands split each pot, odd chips
+  clockwise from button. Unmatched contributions return to owners.
+- Controls: Fold, Check/Call, Bet/Raise slider/amount and minimum/half-pot/pot/all-in shortcuts.
+- Board, pots, street stakes, button/blinds and showdown categories follow presentation frames;
+  next-hand hole cards never appear early.

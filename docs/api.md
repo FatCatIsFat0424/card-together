@@ -1,11 +1,10 @@
 # HTTP and Socket API
 
-HTTP paths below are backend-relative. Production Nginx mounts them below
-`/card-together/`. Requests/responses are JSON; successful operations use
-`{ success: true, ... }`, failures `{ success: false, error: string }` with an appropriate
-HTTP status. Mutations require an allowed Origin and JSON Content-Type (`{}` for an empty
-body). Session cookies authenticate protected routes. API responses are not cached,
-except immutable uploaded-image reads. Contracts live in `shared/src/types/`.
+- Paths are backend-relative; production Nginx mounts them below `/card-together/`.
+- Requests/responses use JSON: `{ success: true, ... }` or `{ success: false, error: string }`, with appropriate HTTP status.
+- Mutations require an allowed Origin and JSON Content-Type; send `{}` for an empty body.
+- Protected routes use session cookies. Only immutable uploaded-image reads are cached.
+- Authoritative contracts: `shared/src/types/`.
 
 ## HTTP
 
@@ -37,57 +36,56 @@ except immutable uploaded-image reads. Contracts live in `shared/src/types/`.
 | `POST /api/emojis/delete` | `ids`: 1–300 unique ID strings | `deleted`: IDs removed in one atomic write; IDs that are unknown or not the caller's are ignored |
 | `GET /health` | — | `{ status: 'ok' }` |
 
-Register/login and image/health reads do not require a prior session.
-Logout accepts unauthenticated requests but revokes any presented valid sessions;
-other routes require session authentication. Media endpoints return 503 if image storage is unavailable.
-Uploads check origin, session, and rate limits before parsing the up-to-3 MiB body, which
-fits a base64-encoded 2 MiB emoji or background. Larger decoded images return 413. Each
-account may store `MEDIA_QUOTA_BYTES` (100 MiB, [media store](../server/src/media/media-store.ts))
-of distinct images it uploaded; re-uploading an owned image is free, and replaced images still
-count. Exceeding the quota returns 413. Ownership markers live in `media/owners/`.
-Profile updates support nickname, color, preset avatar, uploaded avatar/table
-background/card back (`avatarImage`, `seatBackground`, `tableBackground`, `cardBack`: an uploaded media ID or
-null), image opacity (`tableBackgroundOpacity`, `cardBackOpacity`: integer percent 20–100),
-and history visibility. Omitted fields keep their values; invalid values return 400.
-`avatarBorder` accepts null (original avatar) or an owned catalog ID; unowned equipment
-returns 403. `ownedAvatarBorders`, `coins`, and `coinRevision` are server-owned and
-cannot be changed through registration or profile updates. Purchase requests require
-the same session, Origin, JSON and rate checks as other account mutations; unknown
-border IDs return 400, insufficient coins 409. Prices come from
-[`shop.ts`](../shared/src/constants/shop.ts), never client inputs. Repeating a purchase
-returns the owned item without charging twice. Purchases do not automatically equip.
-`seatBackground` uses the existing `background` upload purpose and is shared in
-room `PlayerInfo` identities. Setting it to null restores the default seat background.
-`AccountProfile` includes private profile preferences/timestamps;
-it also returns the owner's `coins` balance (zero for older accounts). Coins are
-server-owned: profile updates cannot change them. Completing a game grants each
-participating human account `GAME_COIN_REWARD` (currently 10), regardless of winner,
-including bot games. Spectators and aborted games earn nothing. Existing history is
-not rewarded retroactively; Hold'em/Blackjack hands reward only the complete match.
-After durable settlement, private `account:coins` Socket events update all tabs of
-each rewarded account. Their `coinRevision` increases on every balance change,
-including debits; authenticated `player:resume` also returns balance and revision.
-Private `account:updated` events return the owner's account after purchases or saved
-profile changes. `PublicAccount` exposes only ID, username, nickname, color, avatar,
-avatarImage and the equipped `avatarBorder`; inventory and balance remain private.
-No response exposes credential/session digests. Invalid player IDs return 400, unknown
-players 404, and private histories 403. See [storage](storage.md) and [media limits](media.md).
+**Authentication and media:**
 
-History endpoints return the complete eligible record set without pagination or a record
-count cap. The frontend performs search, filtering, sorting, and game statistics over
-that full response. Participant maps include accounts from older matches as well.
+- Register/login and image/health reads need no prior session. Logout also accepts unauthenticated requests and revokes any presented valid sessions; other routes require authentication.
+- Media endpoints return 503 when image storage is unavailable.
+- Uploads check Origin, session, and rate limits before parsing. The 3 MiB body limit fits a base64-encoded 2 MiB emoji/background; oversized decoded images return 413.
+- Per-account quota: `MEDIA_QUOTA_BYTES` (100 MiB of distinct uploaded images). Owned-image reuploads are free; replaced images still count. Exceeding quota returns 413; ownership markers live in `media/owners/`.
+- See [media store](../server/src/media/media-store.ts) and [media limits](media.md).
+
+**Profile updates:**
+
+| Fields | Accepted values / behavior |
+| --- | --- |
+| Nickname, color, preset avatar, history visibility | Validated profile values |
+| `avatarImage`, `seatBackground`, `tableBackground`, `cardBack` | Uploaded media ID or null |
+| `tableBackgroundOpacity`, `cardBackOpacity` | Integer percent 20–100 |
+| `avatarBorder` | Null (original avatar) or owned catalog ID; unowned returns 403 |
+| `seatBackground` | Uses `background` upload purpose; shared in room `PlayerInfo`; null restores default |
+| Omitted fields | Keep current values |
+| Invalid values | 400 |
+| `ownedAvatarBorders`, `coins`, `coinRevision` | Server-owned; cannot be changed through registration/profile updates |
+
+**Shop and coins:**
+
+- Purchases use the usual session, Origin, JSON, and rate checks. Unknown border: 400; insufficient coins: 409.
+- Prices come from [`shop.ts`](../shared/src/constants/shop.ts), never client inputs. Repeat purchases do not charge twice; purchases do not equip automatically.
+- A completed game grants each participating human `GAME_COIN_REWARD` (currently 10), regardless of winner, including bot games. Spectators/aborted games earn nothing.
+- No retroactive history rewards; Hold'em/Blackjack reward the complete match, not individual hands.
+- After durable settlement, private `account:coins` events update every rewarded account's tabs. `coinRevision` increases on every balance change, including debits; authenticated resume also returns balance/revision.
+- Private `account:updated` events return the owner's account after purchases/saved profile changes.
+
+**Privacy and history:**
+
+| Contract / response | Contents / limits |
+| --- | --- |
+| `AccountProfile` | Private preferences/timestamps and owner's coins (zero for older accounts) |
+| `PublicAccount` | ID, username, nickname, color, avatar, avatarImage, equipped avatarBorder; no inventory/balance |
+| All responses | No credential/session digests |
+| Player/history errors | Invalid ID: 400; unknown player: 404; private history: 403 |
+| History endpoints | All eligible records, no pagination/count cap; participant maps include older-match accounts |
+
+The frontend searches, filters, sorts, and calculates statistics over the full history
+response. See [storage](storage.md).
 
 ## Socket actions
 
-Handshake and every action require a valid session and allowed Origin. The final argument
-is a callback; actions without one do not execute. Empty-payload actions take the callback
-directly. Failures always use `{ success: false, error }`. Account identity comes from the
-session, never a client-supplied actor ID. Success is acknowledged only after persistence,
-except ephemeral signaling and unchanged-state operations.
-
-Game types: `bridge`, `bigtwo`, `redpoints`, `ninetynine`, `sevens`, `chinesepoker`, `liarsdeck`, `blackjack`, `holdem`. Seats: `N`, `E`, `S`, `W`.
-For exact unions and result fields, use
-[`socket-events.ts`](../shared/src/types/socket-events.ts).
+- Handshake/every action require a valid session and allowed Origin. Actor identity comes from the session, never client input.
+- The final argument must be a callback; without it, actions do not execute. Empty-payload actions take the callback directly.
+- Failures: `{ success: false, error }`. Acknowledge success after persistence, except ephemeral signaling/unchanged-state operations.
+- Game types: `bridge`, `bigtwo`, `redpoints`, `ninetynine`, `sevens`, `chinesepoker`, `liarsdeck`, `blackjack`, `holdem`.
+- Standard seats: `N`, `E`, `S`, `W`. Exact unions/results: [`socket-events.ts`](../shared/src/types/socket-events.ts).
 
 | Action | Payload | Success |
 | --- | --- | --- |
@@ -133,49 +131,46 @@ For exact unions and result fields, use
 | `game:abortVote:cast` | `{ agree }` | Record one vote |
 | `chat:send` | `{ message }`, `{ stickerId }`, or `{ providedSticker }` | Send text, an owned sticker, or a site emoji sticker by name |
 
-[`ChatMessage`](../shared/src/types/chat.ts) carries server-resolved images only: `emojis`
-(name → personal media ID) and `providedEmojis` (name → site emoji file) for `:name:`
-tokens, at most 20 names combined and never the same name in both; or one `sticker`
-(personal) or `providedSticker` (`{ name, file }`) with empty content. Site emoji files are
-served from `<base>/provided-emoji/<file>`; see [media](media.md#site-provided-emoji).
-Messages stored before site emoji existed remain valid.
+**Chat images — [`ChatMessage`](../shared/src/types/chat.ts):**
 
-Play/pass/capture and continue wait for the server's presentation deadline; continue also
-requires scoring. The server validates turn/card/room authority; see [games](games.md).
-Room/game players expose optional `isBot`; absent or false means a human. Bot identities
-use reserved `bot:<UUID>` IDs and cannot authenticate or receive player snapshots.
+- Images are server-resolved. `:name:` tokens use `emojis` (personal media IDs) and `providedEmojis` (site files): at most 20 names combined, with no name in both.
+- Sticker messages have empty content and one personal `sticker` or `providedSticker: { name, file }`.
+- Site files: `<base>/provided-emoji/<file>`. Older messages remain valid; see [media](media.md#site-provided-emoji).
 
-Host placement uses [`RoomSeatTarget`](../shared/src/types/room.ts): a standard seat,
-a zero-based additional seat index, or spectators. `room:movePlayer` requires a human
-member of the host's waiting room. Occupied destinations exchange occupants, preserving
-room membership; a spectator taking an occupied human seat exchanges spectator status.
-Moving a seated player to spectators respects their capacity limit. Bots cannot be
-dragged or displaced into spectators/additional seats. Changed placement resets human
-readiness while keeping bots ready, and is saved before acknowledgement or broadcast.
+**Authority, bots, and host placement:**
 
-Timer settings use [`TimeControl`](../shared/src/types/room.ts) and the validated
-[shared limits](../shared/src/time-control.ts). Visible game clocks use
-[`GameClock`](../shared/src/types/game.ts), with the active seat, committed deadlines,
-remaining reserves, and server time for client clock correction. The server enforces
-expiry; frontend countdowns do not authorize moves. See [timer rules](games.md#turn-timer).
+- Play/pass/capture and continue wait for the presentation deadline; continue also requires scoring. Server validates turn/card/room authority; see [games](games.md).
+- Optional `isBot`: absent/false means human. Reserved `bot:<UUID>` identities cannot authenticate or receive player snapshots.
+- [`RoomSeatTarget`](../shared/src/types/room.ts): standard seat, zero-based additional seat index, or spectators.
+- `room:movePlayer` targets a human in the host's waiting room. Occupied destinations exchange occupants; a spectator taking an occupied human seat exchanges spectator status, preserving membership.
+- Moving to spectators respects capacity. Bots cannot be dragged/displaced into spectators or additional seats.
+- Placement changes reset human readiness, keep bots ready, and persist before acknowledgement/broadcast.
 
-`player:state` sends the same `PlayerSnapshot` as resume: optional player, room,
-gameState, and recent chat history plus success/error. Resume always includes chat history,
-which replaces the client's copy. Broadcasts include history only when the recipient's room
-changed; otherwise they omit it and each new message follows as
-`chat:message { roomCode, message }`, which clients append once by message ID. Missing
-room/game clears old client state. Game state includes only the recipient's hand and legal choices plus public logs,
-results, and presentation metadata. Actor/affected room members receive snapshots, including
-same-account tabs; unrelated rooms do not. `room:invited` delivers an ephemeral invite
-with room/game/sender/seat availability. `room:kicked { roomCode }` follows the removed
-member's room-less snapshot.
+**Clocks:**
+
+- [`TimeControl`](../shared/src/types/room.ts) uses validated [shared limits](../shared/src/time-control.ts).
+- [`GameClock`](../shared/src/types/game.ts) exposes active seat, committed deadlines, remaining reserves, and server time for client correction.
+- Server enforces expiry; frontend countdowns do not authorize moves. See [timer rules](games.md#turn-timer).
+
+**Server snapshots and notices:**
+
+| Event / field | Behavior |
+| --- | --- |
+| `player:state` | Same `PlayerSnapshot` as resume: optional player, room, gameState, recent chat, success/error |
+| Resume chat history | Always included; replaces the client's copy |
+| Broadcast chat history | Included only when recipient's room changes |
+| `chat:message { roomCode, message }` | New messages appended once by ID |
+| Missing room/game | Clears old client state |
+| Game state | Recipient-filtered hand/legal choices, public logs, results, presentation metadata; see [spectator visibility](games.md#spectators-and-god-view) |
+| Snapshot recipients | Actor/affected room members and same-account tabs; no unrelated rooms |
+| `room:invited` | Ephemeral room/game/sender/seat-availability notice |
+| `room:kicked { roomCode }` | Follows removed member's room-less snapshot |
 
 ## Voice signaling
 
-Voice membership is ephemeral and authorized against committed room membership. Socket.IO
-carries negotiation; audio travels over WebRTC and does not write the database. Join, leave,
-and settings run in the runtime queue; `voice:signal` is relayed synchronously outside it,
-checking only the connection, its session expiry, and current voice peers.
+- Voice membership is ephemeral and authorized against committed room membership.
+- Socket.IO carries negotiation; WebRTC carries audio without database writes.
+- Join/leave/settings use the runtime queue. `voice:signal` relays synchronously outside it, checking connection, session expiry, and current voice peers.
 
 | Client action | Payload | Success |
 | --- | --- | --- |
@@ -184,14 +179,22 @@ checking only the connection, its session expiry, and current voice peers.
 | `voice:settings` | `{ muted, deafened }` | `{ success }` |
 | `voice:signal` | `{ targetPeerId, description?, candidate? }` | `{ success }` |
 
-Exactly one description/candidate is required. Descriptions accept offer/answer with
-SDP at most 12,000 characters; ICE candidates at most 2,048 characters with validated
-fields. Source identity is server-assigned; target must be a current same-room peer.
-One account may join from only one tab. Voice has a separate 1,200-actions/minute/account
-limit; other actions use 240, and `chat:send` additionally allows 5 per 5 seconds. Limits
-are shared by all of an account's tabs.
+**Validation and limits:**
 
-Server events: `voice:state { roomCode, participants }`,
-`voice:signal { fromPeerId, description?, candidate? }`, and `voice:left { reason }`.
-Participants include peerId/accountId/muted/deafened. Fresh join cycles receive fresh
-peer IDs. See [voice operation/configuration](media.md#voice).
+- Exactly one description/candidate. Offer/answer SDP: at most 12,000 characters; validated ICE candidate: at most 2,048 characters.
+- Source identity is server-assigned; target must be a current same-room peer.
+- One voice tab per account; each new join cycle receives a fresh peer ID.
+
+| Action group | Per-account limit, shared across tabs |
+| --- | --- |
+| Voice | 1,200 actions/minute, separate from other actions |
+| Other actions | 240 actions/minute |
+| `chat:send` | Additional 5 messages per 5 seconds |
+
+| Server event | Payload |
+| --- | --- |
+| `voice:state` | `{ roomCode, participants }`; participants: peerId/accountId/muted/deafened |
+| `voice:signal` | `{ fromPeerId, description?, candidate? }` |
+| `voice:left` | `{ reason }` |
+
+See [voice operation/configuration](media.md#voice).

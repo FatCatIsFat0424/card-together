@@ -2,11 +2,14 @@
 
 ## Background music
 
-The playlist contains audio files supplied by the site owner. Players cannot upload
-music or enter URLs. The menu supports play/pause, previous/next, repeat-one,
-sequential/shuffle modes, and volume. Native audio playback survives route changes and
-closing controls; pause preserves position. Reload starts stopped. Volume defaults to
-25%; volume/track/mode are local browser preferences and tolerate unavailable storage.
+Only the site owner supplies playlist files; players cannot upload music or enter URLs.
+
+| Playback | Behavior |
+| --- | --- |
+| Controls | Play/pause, previous/next, repeat-one, sequential/shuffle, volume |
+| Navigation | Native playback survives route changes and closing controls; pause keeps position |
+| Reload | Starts stopped |
+| Preferences | Volume defaults to 25%; volume/track/mode stay local and tolerate unavailable browser storage |
 
 Place sources in ignored `local-music/` at the repository root:
 
@@ -14,188 +17,183 @@ Place sources in ignored `local-music/` at the repository root:
 npm run music:import
 ```
 
-Client `predev` and `prebuild` automatically import before development/build, including
-workspace commands. If files change during development, rerun import and refresh.
-There is no background watcher.
+Client `predev` and `prebuild` import automatically, including workspace commands.
+During development, rerun import and refresh after changes; there is no watcher.
 
-- Recursively accepts MP3, OGG, WAV, M4A, AAC, and FLAC, case-insensitively.
-- Titles are filenames without extension; natural relative-path order determines
-  playlist order. Prefix numbers to choose ordering.
-- Relative paths generate stable track IDs; moving/renaming changes identity.
-  Content-hashed output filenames invalidate caches for replaced bytes.
-- Copies original bytes without transcoding/level changes. Codec support depends
-  on the browser; MP3 is a broadly supported choice. Import validates structure,
-  paths, and nonempty files, not audio decodability.
-- Rejects symlinks/empty audio before replacing the active catalog; ignores unsupported
-  files and removes only stale importer-owned output.
+| Import rule | Details |
+| --- | --- |
+| Formats | MP3, OGG, WAV, M4A, AAC, FLAC; recursive, case-insensitive |
+| Titles/order | Filename without extension; natural relative-path order. Prefix numbers to choose order |
+| Identity/cache | Relative paths give stable track IDs; moves/renames change identity. Content-hashed filenames invalidate replaced-byte caches |
+| Audio | Copies original bytes without transcoding or level changes; browser codec support varies (MP3 is broadly supported) |
+| Validation | Checks structure, paths, and nonempty files, not audio decodability |
+| Safety | Rejects symlinks/empty audio before replacing the catalog; ignores unsupported files; removes only stale importer-owned output |
 
-Generated outputs are `client/src/audio/provided-music.generated.json` and
-`client/public/provided-music/imported-*`; do not edit them. Sources and outputs are
-Git-ignored. A fresh checkout has an empty playlist; build on a machine with the desired
-sources. Import alone does not update a deployed site: rebuild and publish the frontend
-as described in [deployment](deployment.md#frontend-only-publication), then reload.
-
-Instrument/sample libraries, original composition catalogs, audition pages, and rendering
-tools were moved to the separate `~/daw-tmp` workspace. The game does not depend on them.
-Turn reminders remain an independent synthesized chime, enabled by default: music
-pause/volume does not disable them. A browser gesture (including click/touchend for iOS)
-unlocks audio; blocked/obsolete reminders are not queued. Music reuses one audio element
-across tracks so automatic track changes keep the gesture unlock. Reminders wait for the authoritative presentation deadline.
+- Generated files: `client/src/audio/provided-music.generated.json` and
+  `client/public/provided-music/imported-*`. **Do not edit them.** Sources and outputs
+  are Git-ignored; a fresh checkout has an empty playlist.
+- Build with the desired sources, then [publish the frontend](deployment.md#frontend-only-publication)
+  and reload. Import alone does not update deployment.
+- Instrument/sample libraries, composition catalogs, audition pages, and rendering
+  tools live in `~/daw-tmp`; the game does not depend on them.
+- Turn reminders are separate synthesized chimes, enabled by default. Music pause/volume
+  does not disable them; they wait for the authoritative presentation deadline.
+- A browser gesture (including click/touchend on iOS) unlocks audio. Blocked/obsolete
+  reminders are not queued. Music reuses one audio element to preserve unlock across tracks.
 
 ## Images and chat
 
-Account settings support uploaded avatars, table backgrounds, card backs, and a shared
-custom emoji library. Supported uploads are PNG/JPEG/GIF/WebP. Decoded limits are 512 KiB
-for avatars and card backs and 2 MiB for emoji and backgrounds. The proxy and server accept
-3 MiB JSON, which fits a base64-encoded 2 MiB image. Assets use SHA-256 content-addressed
-IDs and immutable controlled reads.
-Each account has an upload quota; see [API](api.md) for the limit and its accounting. Large
-animated emoji can reach that quota before the 300-entry library cap.
+### Uploads and personal appearance
 
-Table backgrounds and card backs are personal display settings: only the owner sees them,
-nothing is broadcast, and game state is unchanged. A card back replaces every face-down
-card on the owner's screen, covering the card face (centered, cropped); without one the
-theme's default back is used. GIF uploads retain their original bytes and animation for
-avatars, seat backgrounds, table backgrounds, and card backs; they must fit the same
-per-purpose byte limits. The account page resizes static uploads before sending them
-(backgrounds to a 1920-pixel and card backs to a 512-pixel long edge, WebP with JPEG
-fallback). Each image has an opacity of 20–100% (default 100%) that fades only the image
-layer toward a plain base: the theme's solid surface color for tables and the card face
-color for card backs, never the theme's default pattern. Slider changes save after a short
-pause or on release.
+Account settings support avatars, table backgrounds, card backs, and a shared custom emoji library.
 
-The account editor combines identity and personal table appearance beside one live
-table preview. Nickname, avatar preset, color, and opacity changes appear in the preview
-immediately; uploaded images appear after their upload saves. Nickname, avatar preset,
-and color still use **Save changes**, while image settings save automatically. The
-account header has Profile, History, Emoji, and Password tabs. History contains matches
-and their visibility setting; Emoji contains the custom emoji library; Password contains
-password changes and sign-out controls. Switching tabs preserves unsaved profile edits.
-The layout stacks the preview above the controls on smaller screens.
+| Upload property | Rule |
+| --- | --- |
+| Formats | PNG, JPEG, GIF, WebP |
+| Decoded size | Avatars/card backs: 512 KiB; emoji/backgrounds: 2 MiB |
+| Request size | Proxy/server accept 3 MiB JSON, enough for a base64-encoded 2 MiB image |
+| Storage | SHA-256 content-addressed IDs; immutable controlled reads |
+| Quota | Per account; see [API](api.md) for limits/accounting. Large animated emoji can exhaust it before the 300-entry cap |
+| GIF | Original bytes/animation retained for avatars, seat/table backgrounds, and card backs; same per-purpose byte limits |
+| Static resize | Account page resizes backgrounds to a 1920-pixel long edge and card backs to 512 pixels; WebP with JPEG fallback |
 
-History displays a table with date, room, game, result, and players. Search, game/result
-filters, and column sorting operate entirely on the records already loaded in the browser
-(currently up to 50 recent matches). Search matches room codes, player nicknames/usernames,
-game names, and result labels. Results follow the account being viewed, including Bridge
-partnerships and tied winners. Reset restores all records and newest-first sorting. The
-game/result filters use MUI outlined selects styled with the existing theme variables. The
-table scrolls within its container on small screens; these controls do not change the
-history API or stored match records.
+- Table backgrounds/card backs are owner-only display settings: no broadcast or game-state change.
+- A custom card back covers every face-down card (centered/cropped); otherwise the theme's
+  default back is used.
+- Image opacity is 20–100% (default 100%). It fades only the image toward a plain base:
+  the theme's solid table surface or card face color, never its default pattern.
+- Opacity saves after a short pause or on slider release.
 
-Above the record table, each supported game has its loaded match count and win rate,
-with a MUI X horizontal bar chart for comparing rates on larger screens.
-An overall donut chart shows each game's share of loaded matches, with the total in
-its center and a legend listing every game, including those with no loaded matches.
-These statistics summarize the viewed account's loaded history, independently of search
-or filters; they are not lifetime totals. Win rate is wins divided by matches played,
-with tied results counted separately and an unplayed game showing no percentage.
-Bridge wins follow partnerships. Private or unavailable public history does not reveal
-statistics. Public profiles use the account editor's page width, with avatar, colored
-nickname, username, and account actions on the left and available history/statistics on
-the right; the columns stack on smaller screens.
+### Account editor and history
 
-Emoji names are 2–64 ASCII letters, digits, `_`, `-`, or `.`, starting with a letter, digit,
-or `_` (`EMOJI_NAME_PATTERN` in [shared constants](../shared/src/constants/emoji.ts)). Names
-are case-sensitive: `Cat` and `cat` are different emoji. Names valid under the earlier
-lowercase 2–32 rule remain valid. Accounts may store 300 entries; API imports accept up to
-50 entries per batch. File/folder UI imports process images: static emoji shrink to a
-128-pixel long edge and WebP (PNG fallback); GIFs retain bytes and must be at most 2 MiB.
-Names come from file names: a valid name is kept, otherwise other characters become `_`,
-repeats collapse, and leading separators and trailing `_` are removed (`emoji` when too
-little remains); duplicates get `_2`, `_3`, and so on.
-Besides the file and folder pickers, the account page imports images and folders dropped
-onto the library and images pasted while it has focus, through the same pipeline. A name
-filter narrows the grid. Select mode adds a checkbox to each tile (shift-click selects a
-range); select all applies to the filtered list, and one confirmation deletes the visible
-selection in a single request. Deleting library entries does not delete uploaded images.
-Stickers reuse these assets and can look softer in their larger display box.
+| Account editor | Behavior |
+| --- | --- |
+| Preview | Identity and table appearance controls share one live table preview; stacks above controls on small screens |
+| Immediate preview | Nickname, avatar preset, color, opacity |
+| Saving | Nickname/avatar preset/color use **Save changes**; uploaded images appear after saving; image settings save automatically |
+| Tabs | Profile; History (matches/visibility); Emoji (library); Password (password/sign-out) |
+| Tab switching | Preserves unsaved profile edits |
 
-Chat accepts trimmed text of 1–500 characters, with `:name:` tokens resolved from the
-sender's library and then from the [site-provided emoji](#site-provided-emoji) (up to 20
-resolved names in total), or a standalone sticker: an owned sticker ID or a provided emoji
-name. Clients cannot choose arbitrary
-URLs or another account's image. Sticker sends preserve text drafts and prevent duplicate
-pending sends. Ordinary text stays text; missing assets show unavailable labels.
-See [API](api.md) for payloads. Room chat remains available independently of voice settings.
+History and statistics cover all eligible records loaded from the [history API](api.md#http).
+
+- Table columns: date, room, game, result, players. It scrolls within its container on small screens.
+- Search, game/result filters, and column sorting run locally; they do not change the API or records.
+- Search matches room codes, player nicknames/usernames, game names, and result labels.
+- Results follow the viewed account, including Bridge partnerships and tied winners.
+- Reset restores all loaded records and newest-first order. Game/result filters use MUI
+  outlined selects styled with existing theme variables.
+
+| Statistics | Meaning |
+| --- | --- |
+| Per-game summary | Loaded match count and win rate for each supported game; MUI X horizontal comparison chart on larger screens |
+| Overall donut | Each game's share of loaded matches; total in center; legend includes games with no matches |
+| Win rate | Wins / matches played; ties counted separately; unplayed games have no percentage; Bridge wins follow partnerships |
+| Filters/privacy | Independent of search/filters; private or unavailable public history reveals no statistics |
+| Public profile | Same page width as account editor; avatar, colored nickname, username, actions on left; available history/statistics on right; stacks on small screens |
+
+### Personal emoji library
+
+| Rule | Details |
+| --- | --- |
+| Names | 2–64 ASCII letters/digits/`_`/`-`/`.`; start with letter, digit, or `_`. See `EMOJI_NAME_PATTERN` in [shared constants](../shared/src/constants/emoji.ts) |
+| Case/compatibility | Case-sensitive (`Cat` and `cat` differ); earlier lowercase 2–32 names remain valid |
+| Limits | 300 entries per account; API imports up to 50 per batch |
+| Static imports | Resize to a 128-pixel long edge; WebP with PNG fallback |
+| GIF imports | Original bytes; at most 2 MiB |
+| Name normalization | Keep valid filenames; otherwise replace invalid characters with `_`, collapse repeats, strip leading separators/trailing `_`; use `emoji` if too little remains. Duplicates get `_2`, `_3`, etc. |
+
+- File/folder pickers, dropped images/folders, and pasted images (while the library has
+  focus) share the import pipeline.
+- A name filter narrows the grid. Select mode adds checkboxes; shift-click selects a range.
+- Select all uses the filtered list; one confirmation deletes the visible selection in
+  one request. Deleting entries does not delete uploaded images.
+- Stickers reuse the assets and may look softer at their larger display size.
+
+### Room chat
+
+- Text is trimmed to 1–500 characters. `:name:` resolves from the sender's library,
+  then [site emoji](#site-provided-emoji), with at most 20 resolved names total.
+- A standalone sticker uses an owned sticker ID or provided emoji name; clients cannot
+  choose arbitrary URLs or another account's image.
+- Sticker sends preserve text drafts and prevent duplicate pending sends.
+- Ordinary text stays text; missing assets show unavailable labels.
+- Chat works independently of voice settings. See [API](api.md) for payloads.
 
 ## Site-provided emoji
 
-The site owner can supply chat emoji that every account may use, inline as `:name:` or as
-a sticker. The chat picker lists them in a separate section after the personal library.
-When a name exists in both, the sender's own emoji wins in text, so the picker hides the
-shadowed site emoji while inserting; both remain available as stickers.
+The owner can supply emoji for all accounts, as `:name:` text or stickers.
+The picker lists them after the personal library.
 
-Place images in ignored `local-emoji/` at the repository root (subfolders allowed):
+- Personal emoji win same-name text matches; the picker hides shadowed site emoji
+  while inserting. Both remain available as stickers.
+- Place images in ignored `local-emoji/` at the repository root; subfolders are allowed:
 
 ```sh
 npm run emoji:import
 ```
 
-Client `predev` and `prebuild` run this import after the music import. A missing or empty
-folder produces an empty catalog: the picker shows no site section and the build succeeds.
+Client `predev`/`prebuild` run this after music import. A missing/empty folder produces
+an empty catalog: no site picker section, successful build.
 
-- Accepts PNG, JPEG, GIF, and WebP files (`.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`,
-  case-insensitive); other files are ignored. The output type comes from the file's magic
-  bytes. Unreadable files and content that is not one of these images are skipped.
-- The emoji name is the file name without extension, using the personal emoji name rules.
-  Invalid names never fail the import: they are normalized like UI imports (whitespace and
-  other characters become `_`, repeats collapse, leading separators and trailing `_` are
-  removed, at most 64 characters), and a name with fewer than 2 characters left becomes
-  `emoji_<6 hex of the path hash>`.
-- Names are unique across all subfolders and extensions, case-sensitively. Files whose own
-  name is valid keep it, first in sorted path order; other duplicates get `_2`, `_3`, and so
-  on in sorted path order.
-- Files up to 2 MiB, the personal emoji upload limit, are published unchanged. Larger
-  images are compressed with build-time `sharp`: resized to at most a 256-pixel long edge
-  (never enlarged) and encoded as WebP, animated input as animated WebP with every frame
-  and its timing. If the result is still over 2 MiB, smaller sizes and lower quality are
-  tried down to 96 pixels; an image that still does not fit is skipped.
-- The import succeeds with a summary of compressed files (before/after sizes) and
-  warnings for renamed and skipped files; fix or rename sources and rerun if needed.
-- Symlinks are refused and fail the import before anything is replaced; only stale
-  importer-owned output is removed.
-- Output names are `<name>-<content hash>.<type>`, so replaced images get new cacheable
-  URLs. Chat history keeps the file it was sent with; removed or replaced images stay
-  published for the asset grace period, then show the unavailable label.
+| Import rule | Details |
+| --- | --- |
+| Formats | PNG/JPEG/GIF/WebP (`.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, case-insensitive); other files ignored; output type follows magic bytes |
+| Invalid files | Skip unreadable files or content outside these image formats |
+| Names | Filename without extension, using personal name rules. Invalid names are normalized like UI imports, capped at 64 characters; fewer than 2 characters becomes `emoji_<6 hex of the path hash>` |
+| Uniqueness | Case-sensitive across subfolders/extensions; valid original names keep priority in sorted path order; duplicates get `_2`, `_3`, etc. in sorted path order |
+| Up to 2 MiB | Published unchanged (the personal emoji upload limit) |
+| Over 2 MiB | Build-time `sharp` compresses to WebP at a maximum 256-pixel long edge, never enlarging; animated WebP retains every frame/timing. Retry smaller sizes/lower quality down to 96 pixels; skip if still too large |
+| Safety | Symlinks fail import before replacement; remove only stale importer-owned output |
+| Cache/history | `<name>-<content hash>.<type>` gives new URLs for changed bytes. History keeps the original file; removed/replaced images remain during the asset grace period, then show unavailable labels |
 
-Generated outputs are `shared/src/provided-emoji.generated.json` and
-`client/public/provided-emoji/<name>-*`; do not edit them. Sources and outputs are
-Git-ignored. The client bundles the catalog for the picker, while the server reads the same
-file at startup (a missing file means no site emoji; an invalid one stops startup) and
-accepts only names in it. Restart the development server after importing. In production,
-publish changed emoji with the full [deployment](deployment.md#build-and-deploy), not the
-frontend-only publisher, so the backend loads the new catalog.
+The import reports compressed sizes and renamed/skipped warnings; fix sources and rerun as needed.
+
+| Generated catalog | Use |
+| --- | --- |
+| `shared/src/provided-emoji.generated.json` | Bundled by the client; read by the server at startup, accepting only listed names |
+| `client/public/provided-emoji/<name>-*` | Published images |
+
+- **Do not edit generated files.** Sources and outputs are Git-ignored.
+- Missing server catalog means no site emoji; an invalid catalog stops startup.
+- Restart the development server after import.
+- In production, use the [full deployment](deployment.md#build-and-deploy), so the backend
+  reloads the catalog; the frontend-only publisher is insufficient.
 
 ## Voice
 
-A user explicitly joins room voice and grants microphone permission. Mute stops local
-transmission; deafen stops remote playback independently of background music. The UI
-also supports per-player volume/listening and available input/output device selection.
-Voice follows room membership across room/game/profile pages. Leave, logout, disconnect,
-or room removal releases microphone/peer resources. Refresh requires explicit rejoin.
-One account can join from only one tab at a time.
+| User action | Behavior |
+| --- | --- |
+| Join | Explicitly join room voice and grant microphone permission |
+| Mute/deafen | Mute stops local transmission; deafen stops remote playback independently of music |
+| Controls | Per-player volume/listening; available input/output device selection |
+| Navigation | Follows membership across room/game/profile pages |
+| Leave/logout/disconnect/removal | Releases microphone/peer resources |
+| Refresh/tabs | Explicit rejoin required; only one tab per account can join |
 
-WebRTC exchanges audio among up to twelve members (the room limit); during a match a player
-still in it mutes observers on its own side, since audio is peer to peer
-([spectators](games.md#spectators-and-god-view)). Socket.IO
-relays validated session/room/peer-bound signaling only. Voice is not recorded or saved.
-HTTPS or localhost is required for microphone access. Browser permissions/autoplay or
-unavailable devices can prevent audio even when transport reports connected.
+- WebRTC sends peer-to-peer audio among up to twelve members (the room limit).
+  During matches, participating players mute observers on their own side; see
+  [spectators](games.md#spectators-and-god-view).
+- Socket.IO relays only validated session/room/peer-bound signaling. **Voice is never
+  recorded or saved.**
+- Microphone access needs HTTPS or localhost. Permissions, autoplay, or unavailable
+  devices may prevent audio despite connected transport.
 
-Default ICE uses `stun:stun.l.google.com:19302`. Restrictive NAT/firewalls need an operated
-TURN relay. Set `VITE_WEBRTC_ICE_SERVERS` in `client/.env.local` and rebuild/redeploy:
+Default ICE is `stun:stun.l.google.com:19302`. Restrictive NAT/firewalls need an operated
+TURN relay. Set `VITE_WEBRTC_ICE_SERVERS` in `client/.env.local`, then rebuild/redeploy:
 
 ```dotenv
 VITE_WEBRTC_ICE_SERVERS=[{"urls":"stun:stun.example.com:3478"},{"urls":"turn:turn.example.com:3478","username":"browser-user","credential":"browser-credential"}]
 ```
 
-This public configuration accepts at most eight servers/sixteen URLs using
-`stun:`, `stuns:`, `turn:`, or `turns:`; invalid configuration surfaces an error.
-Use browser-appropriate short-lived/restricted TURN credentials, not private app keys.
-A local synthetic-stream test does not verify real microphones or cross-network routing.
+- This is **public configuration**: use browser-appropriate short-lived/restricted TURN
+  credentials, never private app keys.
+- Maximum eight servers/sixteen URLs; schemes: `stun:`, `stuns:`, `turn:`, `turns:`.
+  Invalid configuration surfaces an error.
+- Synthetic local-stream tests do not verify real microphones or cross-network routing.
 
-Each join cycle has a fresh peer ID; stale signaling cannot attach to a new call.
-Peer errors remain independent. Rejoin replaces failed links while preserving preferences;
-a refresh may retry an expired duplicate-tab membership for up to 45 seconds without
-seizing another active tab. Peer connection waits are bounded; failures release the
-failed link while retaining other calls. SDP/candidate sizes and signaling queues are bounded.
+| Connection handling | Behavior |
+| --- | --- |
+| Join identity | Fresh peer ID each cycle; stale signaling cannot attach to a new call |
+| Errors/rejoin | Peer errors stay independent; rejoin replaces failed links and preserves preferences |
+| Duplicate tab | Refresh may retry expired membership for up to 45 seconds without seizing another active tab |
+| Bounds | Peer waits, SDP/candidate sizes, and signaling queues are bounded; failed links release resources while other calls remain |
