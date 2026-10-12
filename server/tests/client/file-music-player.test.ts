@@ -90,6 +90,23 @@ afterEach((): void => {
 });
 
 describe('file music player', (): void => {
+  it('should default to half volume before any preference is applied', async () => {
+    const { player, elements } = setup();
+    await player.play(FIRST_TRACK);
+    expect(elements[0].volume).toBe(0.5);
+    player.dispose();
+  });
+
+  it('should preserve autoplay denial for the callback and rejected promise', async () => {
+    const { player, elements, error } = setup();
+    await player.play(FIRST_TRACK);
+    const denied = new DOMException('User activation required', 'NotAllowedError');
+    elements[0].play.mockRejectedValueOnce(denied);
+    await expect(player.play(FIRST_TRACK)).rejects.toBe(denied);
+    expect(error).toHaveBeenCalledExactlyOnceWith(denied);
+    player.dispose();
+  });
+
   it('should allocate audio only on play and retain its position across pause and resume', async () => {
     const { player, elements, createAudio, changed } = setup();
     player.setVolume(0.4);

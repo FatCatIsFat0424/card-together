@@ -51,7 +51,7 @@ export function createFileMusicPlayer(
   let removeListeners: (() => void) | null = null;
   let pending: PlayRequest | null = null;
   let pendingSeek: number | null = null;
-  let volume = 0.25;
+  let volume = 0.5;
   let wantsPlayback = false;
   let playing = false;
   let ended = false;

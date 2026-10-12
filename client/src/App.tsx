@@ -1,6 +1,6 @@
 // ─── Root component ───
 
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import { TopBar } from './components/TopBar';
@@ -12,6 +12,7 @@ import { useSocialNotifications } from './hooks/use-social-notifications';
 import { SocialToast } from './components/SocialToast';
 import { restoreAccount, useAccountStore } from './stores/account-store';
 import { useI18nStore } from './stores/i18n-store';
+import { startMusicAutoplay } from './stores/music-store';
 import { ConnectionBanner } from './components/ConnectionBanner';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { reconnectSocket } from './socket';
@@ -101,6 +102,7 @@ function RouteErrorBoundary({ children }: { readonly children: ReactNode }): Rea
 }
 
 export function App(): ReactNode {
+  useEffect(() => startMusicAutoplay(), []);
   const signedIn = useAccountStore((state) => Boolean(state.account));
   return (
     <BrowserRouter basename={APP_BASE_PATH}>

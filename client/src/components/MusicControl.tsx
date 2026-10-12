@@ -43,11 +43,11 @@ export function MusicControl(): ReactNode {
         {busy ? t('music.loading') : providedTrack?.title ?? t('music.noTracks')}
       </p>
       <div className={styles.controls}>
-        <button type="button" className={styles.control} aria-label={t('music.prev')} title={t('music.prev')}
+        <button type="button" data-music-transport className={styles.control} aria-label={t('music.prev')} title={t('music.prev')}
           disabled={busy || !hasTracks} onClick={() => void prev()}><AppIcon name="previous" /></button>
-        <button type="button" className={styles.control} aria-pressed={playing}
+        <button type="button" data-music-transport className={styles.control} aria-pressed={playing}
           aria-label={playing || busy ? t('music.pause') : t('music.play')} title={playing || busy ? t('music.pause') : t('music.play')} disabled={!hasTracks} onClick={() => void toggle()}><AppIcon name={playing || busy ? 'pause' : 'play'} /></button>
-        <button type="button" className={styles.control} aria-label={t('music.next')} title={t('music.next')}
+        <button type="button" data-music-transport className={styles.control} aria-label={t('music.next')} title={t('music.next')}
           disabled={busy || !hasTracks} onClick={() => void next()}><AppIcon name="next" /></button>
         <button type="button" className={styles.control} aria-label={t(`music.${mode}`)} title={t(`music.${mode}`)}
           disabled={busy} onClick={() => setMode(NEXT_MODE[mode])}><AppIcon name={MODE_ICONS[mode]} /></button>
@@ -60,7 +60,7 @@ export function MusicControl(): ReactNode {
       </label>
       <ul className={styles.tracks} aria-label={t('music.tracks')}>
         {PROVIDED_MUSIC_TRACKS.map((track) => <li key={track.id}>
-          <button type="button" className={styles.track} aria-current={track.id === providedTrackId}
+          <button type="button" data-music-transport className={styles.track} aria-current={track.id === providedTrackId}
             onClick={() => void play(track.id)}>
             <span>{track.title}</span>
           </button>

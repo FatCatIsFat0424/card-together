@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { AUDIO_UNLOCK_EVENTS } from '../audio/audio-unlock';
 import { createFileMusicPlayer } from '../audio/file-music-player';
 import type { FileMusicPlayer } from '../audio/file-music-player';
 import { nextTrackIndex } from '../audio/music-playlist';
@@ -9,7 +10,7 @@ import { readPreference, writePreference } from '../utils/preference-storage';
 const VOLUME_KEY = 'music.volume';
 const PROVIDED_TRACK_KEY = 'music.provided.track';
 const MODE_KEY = 'music.mode';
-const DEFAULT_VOLUME = 0.25;
+const DEFAULT_VOLUME = 0.5;
 const MODES: readonly MusicMode[] = ['loop-one', 'sequential', 'shuffle'];
 
 interface MusicState {
@@ -32,6 +33,8 @@ let player: FileMusicPlayer | null = null;
 let playRequest = 0;
 let transportGeneration = 0;
 let wantsPlayback = false;
+let autoplayStarted = false;
+let awaitingAutoplayUnlock = false;
 
 function savedVolume(): number {
   const value = Number(readPreference(VOLUME_KEY) ?? DEFAULT_VOLUME);
@@ -53,6 +56,12 @@ function releasePlayer(): void {
 }
 
 export const useMusicStore = create<MusicState>((set, get) => {
+  const mode = MODES.find((candidate) => candidate === readPreference(MODE_KEY)) ?? 'shuffle';
+  const savedTrackId = readPreference(PROVIDED_TRACK_KEY);
+  const savedTrack = PROVIDED_MUSIC_TRACKS.find((track) => track.id === savedTrackId);
+  const initialTrack = savedTrack ?? PROVIDED_MUSIC_TRACKS[
+    mode === 'shuffle' ? Math.floor(Math.random() * PROVIDED_MUSIC_TRACKS.length) : 0
+  ];
   const step = (direction: 1 | -1, automatic = false): Promise<void> => {
     if (!PROVIDED_MUSIC_TRACKS.length) return Promise.resolve();
     const { providedTrackId, mode } = get();
@@ -65,9 +74,10 @@ export const useMusicStore = create<MusicState>((set, get) => {
     );
     return get().play(PROVIDED_MUSIC_TRACKS[index].id);
   };
-  const fail = (): void => {
+  const fail = (error?: Error): void => {
     releasePlayer();
-    set({ playing: false, busy: false, error: true });
+    awaitingAutoplayUnlock = error?.name === 'NotAllowedError';
+    set({ playing: false, busy: false, error: !awaitingAutoplayUnlock });
   };
 
   return {
@@ -75,10 +85,11 @@ export const useMusicStore = create<MusicState>((set, get) => {
     busy: false,
     error: false,
     volume: savedVolume(),
-    providedTrackId: PROVIDED_MUSIC_TRACKS[providedIndex(readPreference(PROVIDED_TRACK_KEY))]?.id ?? null,
-    mode: MODES.find((mode) => mode === readPreference(MODE_KEY)) ?? 'sequential',
+    providedTrackId: initialTrack?.id ?? null,
+    mode,
     toggle: async () => get().playing || get().busy ? get().pause() : get().play(),
     pause: async () => {
+      awaitingAutoplayUnlock = false;
       playRequest += 1;
       wantsPlayback = false;
       set({ playing: false, busy: false, error: false });
@@ -89,6 +100,7 @@ export const useMusicStore = create<MusicState>((set, get) => {
       }
     },
     play: async (requestedId) => {
+      awaitingAutoplayUnlock = false;
       if (!PROVIDED_MUSIC_TRACKS.length) return;
       const id = requestedId ?? get().providedTrackId;
       const track = PROVIDED_MUSIC_TRACKS.find((candidate) => candidate.id === id);
@@ -110,14 +122,14 @@ export const useMusicStore = create<MusicState>((set, get) => {
             }
           }, () => {
             if (current()) void step(1, true);
-          }, () => {
-            if (current()) fail();
+          }, (error) => {
+            if (current()) fail(error);
           });
         }
         player.setVolume(get().volume);
         await player.play({ ...track, file: providedMusicUrl(track) });
-      } catch {
-        if (request === playRequest) fail();
+      } catch (error: unknown) {
+        if (request === playRequest) fail(error instanceof Error ? error : undefined);
       } finally {
         if (request === playRequest) set({ busy: false });
       }
@@ -138,3 +150,22 @@ export const useMusicStore = create<MusicState>((set, get) => {
     },
   };
 });
+
+/** Retry browser-blocked playback in a trusted gesture without restarting paused music. */
+export function startMusicAutoplay(target: Document = document): () => void {
+  const unlock = (event: Event): void => {
+    // Let transport buttons handle their own click, including clicks after touchend.
+    if (event.composedPath().some((target) => target instanceof Element
+      && target.closest('[data-music-transport]'))) return;
+    if (event.isTrusted && awaitingAutoplayUnlock) void useMusicStore.getState().play();
+  };
+  for (const event of AUDIO_UNLOCK_EVENTS) target.addEventListener(event, unlock);
+  // The player outlives React effects, including StrictMode's setup/cleanup cycle.
+  if (!autoplayStarted) {
+    autoplayStarted = true;
+    void useMusicStore.getState().play();
+  }
+  return (): void => {
+    for (const event of AUDIO_UNLOCK_EVENTS) target.removeEventListener(event, unlock);
+  };
+}

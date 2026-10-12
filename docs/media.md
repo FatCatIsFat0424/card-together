@@ -21,8 +21,11 @@ Only the site owner supplies music; players cannot upload tracks or enter URLs.
 - Generated, Git-ignored, **do not edit:** `client/src/audio/provided-music.generated.json`
   and `client/public/provided-music/imported-*`. A fresh checkout has an empty playlist.
 - Player controls: play/pause, previous/next, repeat-one, sequential or shuffle, volume
-  (default 25%). Volume, track, and mode are stored locally.
-- Playback continues across routes and when the panel closes; reloading starts stopped.
+  (default 50%). New visitors start with shuffle and a random track; saved volume,
+  track, and mode are restored locally.
+- Entering or reloading the site starts playback. If the browser blocks autoplay,
+  playback waits for a trusted user gesture; pausing cancels this retry.
+  Playback continues across routes and when the panel closes.
   One audio element is reused so the browser unlock carries across tracks.
 - Turn reminders are separate synthesized chimes, on by default and unaffected by music
   pause or volume. They wait for the presentation deadline and are dropped, not queued,
