@@ -27,7 +27,10 @@ Frontend page behavior and layout. Client architecture and connection handling:
   a return-to-room link when applicable.
 - On desktop, messages use a divided layout: an independently scrolling conversation
   list with avatars, names, last messages, and timestamps on the left, and the selected
-  chat on the right. Mobile keeps separate list and conversation views.
+  chat on the right. The desktop panel fills the available viewport with 32px outer
+  padding and extra spacing between avatars and the aligned name, last-message, and
+  timestamp text. Mobile keeps separate list
+  and conversation views.
 - Private chat supports the existing emoji/sticker libraries, older-history pagination,
   and retry after a failed send. Only a visible conversation marks incoming messages read.
   Former-friend conversations are read-only; the latest 90 days are available.
