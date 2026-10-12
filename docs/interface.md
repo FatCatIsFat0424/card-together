@@ -19,6 +19,15 @@ Frontend page behavior and layout. Client architecture and connection handling:
 
 ## Lobby and friends
 
+- The top bar provides in-app notifications for incoming friend requests, accepted
+  requests, and unread private messages. Opening the panel does not mark messages read.
+- Private messages belong to the friends page, with no separate top-bar navigation or
+  conversation-list page. Both the list and individual chats use its private-message
+  section, preserve room membership, and provide a return-to-room link when applicable.
+- Private chat supports the existing emoji/sticker libraries, older-history pagination,
+  and retry after a failed send. Only a visible conversation marks incoming messages read.
+  Former-friend conversations are read-only; the latest 90 days are available.
+
 | Width | Lobby layout |
 | --- | --- |
 | Desktop | Game picker beside a sidebar: selected game, Create, then join-by-code below a divider; online friends below the room actions |
@@ -31,8 +40,10 @@ Frontend page behavior and layout. Client architecture and connection handling:
   30 seconds while visible.
 - Creating or joining by code requires leaving the current room. Joining a friend's
   room asks for confirmation, then switches rooms in one commit.
-- Friends page: above 52rem, tabs for friends, sent, and incoming requests with live
-  counts; smaller screens show three sections.
+- Friends page: above 52rem, tabs for friends, private messages, sent requests, and
+  incoming requests, in that order. Private messages show the conversation list and an
+  unread badge, with a refresh icon beside the section title; the other tabs show live
+  counts. Smaller screens stack the four sections.
 - Public profiles: avatar, colored nickname, username, and actions on the left; history
   and statistics on the right; stacked on small screens.
 

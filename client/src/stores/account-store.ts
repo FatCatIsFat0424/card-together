@@ -8,6 +8,7 @@ import { useGameStore } from './game-store';
 import { useChatStore } from './chat-store';
 import { useEmojiStore } from './emoji-store';
 import { useInviteStore } from './invite-store';
+import { useSocialStore } from './social-store';
 import { retainSnapshotValue } from './snapshot-equality';
 
 interface AccountStore {
@@ -32,6 +33,7 @@ function clearGameSession(): void {
   useChatStore.getState().clearMessages();
   useEmojiStore.getState().reset();
   useInviteStore.getState().reset();
+  useSocialStore.getState().reset();
 }
 
 /** Game and room actions require a live, resumed socket session. */

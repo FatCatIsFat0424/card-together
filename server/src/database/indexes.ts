@@ -1,4 +1,4 @@
-import type { AccountRecord, FriendshipRecord, MatchRecord, SessionRecord } from './repository';
+import type { AccountRecord, DirectMessageRecord, FriendshipRecord, MatchRecord, SessionRecord } from './repository';
 
 interface AccountIndexes {
   byId: Map<string, AccountRecord>;
@@ -18,10 +18,19 @@ interface MatchIndexes {
   positions: Map<string, number>;
 }
 
+interface DirectMessageIndexes {
+  byId: Map<string, DirectMessageRecord>;
+  byClient: Map<string, DirectMessageRecord>;
+  byAccount: Map<string, DirectMessageRecord[]>;
+  byPair: Map<string, DirectMessageRecord[]>;
+  order: Map<string, number>;
+}
+
 interface DatabaseIndexes {
   accounts(records: readonly AccountRecord[]): AccountIndexes;
   sessions(records: readonly SessionRecord[]): Map<string, SessionRecord>;
   friendships(records: readonly FriendshipRecord[]): FriendshipIndexes;
+  directMessages(records: readonly DirectMessageRecord[]): DirectMessageIndexes;
   matches(records: readonly MatchRecord[]): MatchIndexes;
 }
 
@@ -81,6 +90,24 @@ export function createDatabaseIndexes(): DatabaseIndexes {
         append(byAccount, record.recipientId, record);
       });
       return { byId, byAccount, positions, pairs };
+    }),
+    directMessages: cacheTable((records: readonly DirectMessageRecord[]): DirectMessageIndexes => {
+      const byId = new Map<string, DirectMessageRecord>();
+      const byClient = new Map<string, DirectMessageRecord>();
+      const byAccount = new Map<string, DirectMessageRecord[]>();
+      const byPair = new Map<string, DirectMessageRecord[]>();
+      const order = new Map<string, number>();
+      // Sort once per published table; equal timestamps retain durable insertion order.
+      const chronological = [...records].sort((first, second) => first.timestamp - second.timestamp);
+      chronological.forEach((record, index) => {
+        byId.set(record.id, record);
+        byClient.set(JSON.stringify([record.senderId, record.clientId]), record);
+        order.set(record.id, index);
+        append(byAccount, record.senderId, record);
+        append(byAccount, record.recipientId, record);
+        append(byPair, friendshipPair(record.senderId, record.recipientId), record);
+      });
+      return { byId, byClient, byAccount, byPair, order };
     }),
     matches: cacheTable((records: readonly MatchRecord[]): MatchIndexes => {
       const byAccount = new Map<string, MatchRecord[]>();

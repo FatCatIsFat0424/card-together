@@ -54,3 +54,4 @@ export {
   splitEmojiText,
 } from './emoji';
 export type { EmojiSegment } from './emoji';
+export { SOCIAL_HISTORY_RETENTION_MS } from './social';

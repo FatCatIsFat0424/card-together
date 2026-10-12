@@ -110,11 +110,11 @@
   .menuGroup { display: block; }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .menuLinks { display: none; }
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1279px) {
   .links { display: none; }
 }
 
@@ -137,4 +137,10 @@
 
 @media (max-width: 479px) {
   .roomChip { display: none; }
+}
+
+.badge { position: absolute; top: -5px; right: -7px; min-width: 18px; padding: 1px 4px; border-radius: var(--radius-pill); background: var(--color-danger); color: var(--bg-surface); font-size: 10px; font-weight: 700; }
+@media (max-width: 479px) {
+  .brand { font-size: var(--text-sm); }
+  .brand span:last-child { display: none; }
 }

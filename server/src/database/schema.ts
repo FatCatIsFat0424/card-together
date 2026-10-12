@@ -3,13 +3,13 @@ import {
   isRedPointsResult, isRuntimeSnapshot, isSevensResult,
 } from '../runtime/validate';
 import {
-  FLEXIBLE_SEAT_GAMES, GAME_TYPES, MAX_EMOJIS_PER_ACCOUNT, NICKNAME_MAX_LENGTH, isEmojiName, isImageOpacity, isMediaId,
-  isUsername, isAvatarBorderId,
+  FLEXIBLE_SEAT_GAMES, GAME_TYPES, MAX_EMOJIS_PER_ACCOUNT, MAX_MESSAGE_EMOJIS, NICKNAME_MAX_LENGTH, isEmojiName, isImageOpacity, isMediaId,
+  isUsername, isAvatarBorderId, isProvidedEmojiFile,
 } from '@shared/constants';
 import type { GameType } from '@shared/types';
 import type { RuntimeSnapshot } from '../runtime/types';
 import type {
-  AccountRecord, EmojiRecord, FriendshipRecord, MatchRecord, SessionRecord,
+  AccountRecord, DirectMessageRecord, EmojiRecord, FriendNotificationRecord, FriendshipRecord, MatchRecord, MessageReadRecord, SessionRecord,
 } from './repository';
 import { CURRENT_SCHEMA_VERSION } from './migrations';
 
@@ -20,6 +20,9 @@ export interface DatabaseDocument {
   friendships: FriendshipRecord[];
   matches: MatchRecord[];
   emojis: EmojiRecord[];
+  directMessages: DirectMessageRecord[];
+  messageReads: MessageReadRecord[];
+  friendNotifications: FriendNotificationRecord[];
   runtime: RuntimeSnapshot | null;
   /** Durable receipts prevent replayed completions from awarding coins twice. */
   rewardedGameIds?: string[];
@@ -163,6 +166,46 @@ function validEmoji(value: unknown): value is EmojiRecord {
   );
 }
 
+export function validDirectMessage(value: unknown): value is DirectMessageRecord {
+  if (!isObject(value) || !nonEmpty(value.id) || !nonEmpty(value.clientId) || value.clientId.length > 128 ||
+    !nonEmpty(value.senderId) || !nonEmpty(value.recipientId) || value.senderId === value.recipientId ||
+    !timestamp(value.timestamp) || typeof value.content !== 'string' ||
+    Object.keys(value).some((key) => ![
+      'id', 'clientId', 'senderId', 'recipientId', 'timestamp', 'content',
+      'sticker', 'providedSticker', 'emojis', 'providedEmojis',
+    ].includes(key))) return false;
+  const sticker = value.sticker;
+  const providedSticker = value.providedSticker;
+  if (sticker !== undefined || providedSticker !== undefined) {
+    if (value.content !== '' || value.emojis !== undefined || value.providedEmojis !== undefined ||
+      (sticker !== undefined && providedSticker !== undefined)) return false;
+    return sticker !== undefined
+      ? isObject(sticker) && nonEmpty(sticker.id) && isEmojiName(sticker.name) && isMediaId(sticker.mediaId) &&
+        Object.keys(sticker).every((key) => ['id', 'name', 'mediaId'].includes(key))
+      : isObject(providedSticker) && isEmojiName(providedSticker.name) && isProvidedEmojiFile(providedSticker.file) &&
+        Object.keys(providedSticker).every((key) => ['name', 'file'].includes(key));
+  }
+  if (!value.content.trim() || value.content.length > 500 || value.content !== value.content.trim()) return false;
+  if (value.emojis !== undefined && (!isObject(value.emojis) ||
+    !Object.entries(value.emojis).every(([name, media]) => isEmojiName(name) && isMediaId(media)))) return false;
+  if (value.providedEmojis !== undefined && (!isObject(value.providedEmojis) ||
+    !Object.entries(value.providedEmojis).every(([name, file]) => isEmojiName(name) && isProvidedEmojiFile(file)))) return false;
+  const personal = isObject(value.emojis) ? Object.keys(value.emojis) : [];
+  const provided = isObject(value.providedEmojis) ? Object.keys(value.providedEmojis) : [];
+  return personal.length + provided.length <= MAX_MESSAGE_EMOJIS &&
+    !provided.some((name) => personal.includes(name));
+}
+
+function validMessageRead(value: unknown): value is MessageReadRecord {
+  return isObject(value) && nonEmpty(value.accountId) && nonEmpty(value.otherId) &&
+    value.accountId !== value.otherId && nonEmpty(value.messageId);
+}
+
+function validFriendNotification(value: unknown): value is FriendNotificationRecord {
+  return isObject(value) && nonEmpty(value.id) && nonEmpty(value.accountId) && nonEmpty(value.actorId) &&
+    value.accountId !== value.actorId && timestamp(value.createdAt);
+}
+
 function unique(values: readonly string[]): boolean {
   return new Set(values).size === values.length;
 }
@@ -182,6 +225,9 @@ export function validateDocument(value: unknown): asserts value is DatabaseDocum
     !value.matches.every(validMatch) ||
     !Array.isArray(value.emojis) ||
     !value.emojis.every(validEmoji) ||
+    !Array.isArray(value.directMessages) || !value.directMessages.every(validDirectMessage) ||
+    !Array.isArray(value.messageReads) || !value.messageReads.every(validMessageRead) ||
+    !Array.isArray(value.friendNotifications) || !value.friendNotifications.every(validFriendNotification) ||
     (value.rewardedGameIds !== undefined && (!Array.isArray(value.rewardedGameIds)
       || !value.rewardedGameIds.every(nonEmpty) || !unique(value.rewardedGameIds))) ||
     !(value.runtime === null || isRuntimeSnapshot(value.runtime))
@@ -195,6 +241,10 @@ export function validateDocument(value: unknown): asserts value is DatabaseDocum
   const friendships = value.friendships as FriendshipRecord[];
   const matches = value.matches as MatchRecord[];
   const emojis = value.emojis as EmojiRecord[];
+  const directMessages = value.directMessages as DirectMessageRecord[];
+  const messageReads = value.messageReads as MessageReadRecord[];
+  const friendNotifications = value.friendNotifications as FriendNotificationRecord[];
+  const messagesById = new Map(directMessages.map((message) => [message.id, message]));
   const runtime = value.runtime as RuntimeSnapshot | null;
   const accountIds = new Set(accounts.map((account) => account.id));
   const emojiCounts = new Map<string, number>();
@@ -210,6 +260,12 @@ export function validateDocument(value: unknown): asserts value is DatabaseDocum
     matches.every((match) => match.accountIds.some((id) => accountIds.has(id)) &&
       match.accountIds.every((id) => accountIds.has(id) || botId(id))) &&
     emojis.every((emoji) => accountIds.has(emoji.accountId)) &&
+    directMessages.every((message) => accountIds.has(message.senderId) && accountIds.has(message.recipientId)) &&
+    messageReads.every((cursor) => {
+      const message = messagesById.get(cursor.messageId);
+      return message?.recipientId === cursor.accountId && message.senderId === cursor.otherId;
+    }) &&
+    friendNotifications.every((notification) => accountIds.has(notification.accountId) && accountIds.has(notification.actorId)) &&
     [...emojiCounts.values()].every((count) => count <= MAX_EMOJIS_PER_ACCOUNT) &&
     (runtime === null ||
       (runtime.players.every((player) => accountIds.has(player.info.id)) &&
@@ -229,7 +285,11 @@ export function validateDocument(value: unknown): asserts value is DatabaseDocum
     !unique(friendships.map((f) => [f.requesterId, f.recipientId].sort().join(':'))) ||
     !unique(matches.map((m) => m.id)) ||
     !unique(emojis.map((e) => e.id)) ||
-    !unique(emojis.map((e) => JSON.stringify([e.accountId, e.name])))
+    !unique(emojis.map((e) => JSON.stringify([e.accountId, e.name]))) ||
+    !unique(directMessages.map((message) => message.id)) ||
+    !unique(directMessages.map((message) => JSON.stringify([message.senderId, message.clientId]))) ||
+    !unique(messageReads.map((cursor) => JSON.stringify([cursor.accountId, cursor.otherId]))) ||
+    !unique(friendNotifications.map((notification) => notification.id))
   ) {
     throw new Error(
       'Database has invalid references or duplicate records. The original file was preserved.',
@@ -245,6 +305,9 @@ export function emptyDocument(): DatabaseDocument {
     friendships: [],
     matches: [],
     emojis: [],
+    directMessages: [],
+    messageReads: [],
+    friendNotifications: [],
     runtime: null,
   };
 }

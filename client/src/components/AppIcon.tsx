@@ -25,6 +25,7 @@ import Menu from '@mui/icons-material/Menu';
 import MenuBookOutlined from '@mui/icons-material/MenuBookOutlined';
 import MicNone from '@mui/icons-material/MicNone';
 import MusicNote from '@mui/icons-material/MusicNote';
+import NotificationsNone from '@mui/icons-material/NotificationsNone';
 import Pause from '@mui/icons-material/Pause';
 import PersonOutline from '@mui/icons-material/PersonOutlineOutlined';
 import PlayArrow from '@mui/icons-material/PlayArrow';
@@ -55,7 +56,7 @@ const ICONS = {
   lock: LockOutlined, logout: Logout, menu: Menu, microphone: MicNone,
   music: MusicNote, pause: Pause, play: PlayArrow, repeat: Repeat,
   repeatOne: RepeatOne, shuffle: Shuffle, next: SkipNext, previous: SkipPrevious,
-  refresh: Refresh,
+  refresh: Refresh, notifications: NotificationsNone,
   rules: MenuBookOutlined,
   beer: SportsBar, timer: TimerOutlined, sort: UnfoldMore, warning: WarningAmber,
   emoji: SentimentSatisfiedOutlined,

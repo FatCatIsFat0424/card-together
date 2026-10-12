@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import type { ChatMessage, EmojiRecord, ProvidedEmoji } from '@shared/types';
+import type { EmojiRecord, ProvidedEmoji } from '@shared/types';
+import type { MessageContent } from '@shared/types/direct-message';
 import { splitEmojiText } from '@shared/constants';
 import { mediaUrl } from '../media';
 import { providedEmojiUrl } from '../provided-emoji';
@@ -23,7 +24,7 @@ export function StickerImage({ name, src, small = false }: {
 }
 
 /** Text stays text; only emoji the server attached to this message become images. */
-export function ChatMessageBody({ message }: { message: ChatMessage }): ReactNode {
+export function ChatMessageBody({ message }: { message: MessageContent }): ReactNode {
   if (message.sticker) {
     return <StickerImage name={message.sticker.name} src={mediaUrl(message.sticker.mediaId)} />;
   }

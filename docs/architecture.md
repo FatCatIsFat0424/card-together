@@ -4,7 +4,7 @@ Server-authoritative TypeScript monorepo.
 
 | Channel | Carries |
 | --- | --- |
-| HTTP | Accounts, profiles, friends, history, media |
+| HTTP | Accounts, profiles, friends, private messages, history, media |
 | Socket.IO | Authenticated room, game, chat actions; voice signaling |
 | WebRTC | Voice audio between browsers |
 
@@ -17,7 +17,7 @@ application tree ([deployment](deployment.md)).
 | --- | --- |
 | `shared/src/` | Types, constants, pure game rules, presentation frames |
 | `server/src/app.ts`, `index.ts` | Configuration, service composition, start and shutdown |
-| `auth/`, `social/` | Password, session, profile, and friendship services |
+| `auth/`, `social/` | Password, session, profile, friendship, and private-message services |
 | `http/`, `socket/` | Validate and authenticate requests; translate results |
 | `runtime/` | Serialize changes, snapshot and restore, commit, schedule bots and timeouts |
 | `bots/` | Per-game heuristics using only the bot's filtered view |
@@ -36,7 +36,7 @@ application tree ([deployment](deployment.md)).
 
 ## State commits
 
-Every mutation:
+Every runtime mutation:
 
 1. Validates session, room, and turn authority, then snapshots state.
 2. Applies manager changes and atomically saves runtime plus any completed match.
@@ -53,6 +53,10 @@ Every mutation:
 - Each write still validates and serializes the full JSON document. In-memory indexes,
   scoped broadcasts, and unchanged-state checks reduce work but do **not** allow
   multiple server processes.
+- Private messages and friend notifications use Repository transactions directly,
+  independently of room snapshots. HTTP emits `social:changed` to affected accounts
+  after persistence; clients reload through authenticated endpoints. Retention and
+  permissions: [storage](storage.md#identity-and-sessions).
 
 | Lifecycle | Behavior |
 | --- | --- |
@@ -66,8 +70,9 @@ Every mutation:
 ## Frontend
 
 - Public routes: `/login`, `/register`. Authenticated: `/`, `/account`, `/friends`,
-  `/shop`, `/players/:accountId`, `/room/:roomCode`, `/game/:roomCode`, all below the
-  configured base path.
+  `/friends/messages/:accountId`, `/shop`, `/players/:accountId`, `/room/:roomCode`,
+  `/game/:roomCode`, all below the configured base path. Legacy `/messages` links redirect
+  into the friends page.
 - `api.ts` handles HTTP with cookies (15-second timeout, 120 seconds for uploads);
   `socket.ts` handles realtime.
 - Account hooks replace store state from server snapshots, clear a missing room or

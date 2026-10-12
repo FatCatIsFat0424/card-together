@@ -1,4 +1,4 @@
-import type { RequestHandler, Response } from 'express';
+import type { Request, RequestHandler, Response } from 'express';
 import type { AuthService, AuthenticatedSession } from './auth-service';
 
 export function protectMutations(allowedOrigins: readonly string[]): RequestHandler {
@@ -50,11 +50,15 @@ interface RateBucket {
 }
 
 /** Bounded, process-local abuse protection using Express's configured proxy trust policy. */
-export function createRateLimiter(limit: number, windowMs: number, keyPrefix = ''): RequestHandler {
+export function createRateLimiter(
+  limit: number, windowMs: number, keyPrefix = '',
+  identity?: (request: Request, response: Response) => string,
+): RequestHandler {
   const buckets = new Map<string, RateBucket>();
   return (request, response, next) => {
     const now = Date.now();
-    const key = `${keyPrefix}:${request.ip ?? request.socket.remoteAddress ?? 'unknown'}`;
+    const key = `${keyPrefix}:${identity ? identity(request, response)
+      : request.ip ?? request.socket.remoteAddress ?? 'unknown'}`;
     for (const [entryKey, bucket] of buckets) if (bucket.resetAt <= now) buckets.delete(entryKey);
     let bucket = buckets.get(key);
     if (!bucket) {

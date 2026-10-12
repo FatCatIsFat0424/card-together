@@ -36,6 +36,24 @@
 - Joining a friend's room rechecks friendship, host, and capacity. Invitations are
   ephemeral and limited to accepted friends.
 
+**Direct messages and notifications**
+
+- Only accepted friends can send private text, emoji, and stickers; the repository
+  rechecks friendship atomically when storing a message. Only participants can read it.
+- Messages support offline delivery and survive restart. Former friends retain read-only
+  access to their existing conversation. Message records expire after 90 days, are hidden
+  on every read, and are removed durably at startup and hourly while the server runs.
+- Read cursors advance only to an incoming message in that conversation; older updates
+  cannot make a message unread again. Read status is private to the reader.
+- Sender-scoped client IDs deduplicate retries. Reusing an ID for another recipient or
+  message returns a conflict. Media references preserve the original resolved content.
+- Pending invitations come from friendships. Accepting an invitation creates a durable
+  notice for its requester, dismissed only by that account or after 90 days.
+- Notifications remain inside the site. Socket events invalidate participant data after
+  persistence; reconnect reloads unread counts and history through authenticated HTTP.
+- Retention applies to the active database. Backups retain their original contents and
+  uploaded media follow the separate [media](media.md) lifecycle.
+
 ## Game coins
 
 - Each human in a completed game earns `GAME_COIN_REWARD` (10) regardless of result,
@@ -79,12 +97,14 @@ Contracts: [`Repository`](../server/src/database/repository.ts),
 
 | Schema version | Change |
 | --- | --- |
-| 5 (current) | Makes existing match history public once |
+| 6 (current) | Adds direct messages, private read cursors, and accepted-request notices |
+| 5 | Makes existing match history public once |
 | 4 | Card back and image opacity defaults that keep the previous look |
 | 1–3 | Migrated at startup |
 
 - Startup migrates older versions, validates the result, and saves the original as
-  `database.json.v<version>.bak` first. Servers that only support v4 reject v5 files.
+  `database.json.v<version>.bak` first. Earlier servers reject v6 files; rollback requires
+  a compatible complete backup and loses writes made after that backup.
 - Invalid JSON, versions, duplicates, or references stop startup without touching the file.
 
 | Collection | Contents |
@@ -94,6 +114,9 @@ Contracts: [`Repository`](../server/src/database/repository.ts),
 | `friendships` | Account pair, status, timestamps |
 | `matches` | Game ID, result, participants, completion time |
 | `emojis` | Owner, unique name, media reference |
+| `directMessages` | Sender, recipient, client ID, resolved content, timestamp |
+| `messageReads` | Account, conversation peer, last incoming message read |
+| `friendNotifications` | Requester, accepting account, timestamp |
 | `runtime` | Players, rooms, readiness, games with private hands and logs, recent chat, clocks |
 
 | Location | Path |

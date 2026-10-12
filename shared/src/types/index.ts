@@ -109,6 +109,10 @@ export type {
 } from './game';
 
 export type { ChatMessage } from './chat';
+export type {
+  MessageContent, DirectMessage, MessageInput, Conversation, MessageHistory,
+  AcceptedFriendNotification, SocialOverview,
+} from './direct-message';
 export type { EmojiRecord, ProvidedEmoji } from './emoji';
 export type { AccountProfile, AvatarPreset, AvatarId, MediaId } from './account';
 export type { AvatarBorderId } from '../constants/shop';

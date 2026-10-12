@@ -1,40 +1,15 @@
 // ─── Chat Manager ───
 
 import type {
-  RoomCode, ChatMessage, EmojiRecord, MediaId, PlayerInfo, ProvidedEmoji,
+  RoomCode, ChatMessage, EmojiRecord, PlayerInfo, ProvidedEmoji,
 } from '@shared/types';
 
 /** `observers` limits a message to spectators and eliminated players during a match. */
 export type ChatAudience = ChatMessage['audience'];
-import { MAX_MESSAGE_EMOJIS, extractEmojiNames } from '@shared/constants';
 import { generateMessageId } from '../utils/id-generator';
-
-export interface ResolvedMessageEmojis {
-  readonly emojis: Record<string, MediaId>;
-  readonly providedEmojis: Record<string, ProvidedEmoji['file']>;
-}
-
-/**
- * Maps the first MAX_MESSAGE_EMOJIS known `:name:` tokens to images. The sender's library
- * wins over site-provided emoji with the same name; unknown names stay text.
- */
-export function resolveMessageEmojis(
-  content: string,
-  library: readonly Pick<EmojiRecord, 'name' | 'mediaId'>[],
-  provided: ReadonlyMap<string, ProvidedEmoji> = new Map(),
-): ResolvedMessageEmojis {
-  const owned = new Map(library.map((emoji) => [emoji.name, emoji.mediaId]));
-  const used = extractEmojiNames(content).filter((name) => owned.has(name) || provided.has(name))
-    .slice(0, MAX_MESSAGE_EMOJIS);
-  const emojis: Record<string, MediaId> = {};
-  const providedEmojis: Record<string, ProvidedEmoji['file']> = {};
-  for (const name of used) {
-    const mediaId = owned.get(name);
-    if (mediaId) emojis[name] = mediaId;
-    else providedEmojis[name] = (provided.get(name) as ProvidedEmoji).file;
-  }
-  return { emojis, providedEmojis };
-}
+import { resolveMessageEmojis } from '../media/message-content';
+export { resolveMessageEmojis } from '../media/message-content';
+export type { ResolvedMessageEmojis } from '../media/message-content';
 
 // ─── Module-private state ───
 

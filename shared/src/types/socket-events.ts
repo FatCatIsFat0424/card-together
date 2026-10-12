@@ -169,6 +169,7 @@ export interface ServerToClientEvents {
   /** Private balance refresh after a durable completed-game reward. */
   'account:coins': (payload: { coins: number; coinRevision?: number }) => void;
   'account:updated': (account: AccountProfile) => void;
+  'social:changed': () => void;
   'voice:state': (payload: VoiceRoomState) => void;
   'voice:signal': (payload: VoiceIncomingSignal) => void;
   'voice:left': (payload: { reason: string }) => void;

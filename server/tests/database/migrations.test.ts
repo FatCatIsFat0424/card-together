@@ -90,6 +90,49 @@ describe('database migrations', () => {
     expect(runtime.chat[0].messages[0].sender.avatarImage).toBeNull();
   });
 
+  it('should add empty social history to v5 while preserving account visibility choices', () => {
+    const current = migrateDocument(version2()) as ReturnType<typeof emptyDocument>;
+    const { directMessages: _messages, messageReads: _reads, friendNotifications: _notifications, ...legacy } = current;
+    const input = { ...legacy, schemaVersion: 5,
+      accounts: legacy.accounts.map((account) => ({ ...account, matchesPublic: false })) };
+    const before = structuredClone(input);
+    const migrated = migrateDocument(input);
+    expect(input).toEqual(before);
+    expect(migrated).toEqual({ ...input, schemaVersion: CURRENT_SCHEMA_VERSION,
+      directMessages: [], messageReads: [], friendNotifications: [] });
+    expect(() => validateDocument(migrated)).not.toThrow();
+    const migratedAgain = migrateDocument(migrated);
+    expect(migratedAgain).toBe(migrated);
+  });
+
+  it('should back up v5 data and persist social tables without changing later account choices', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'bridge-social-migration-'));
+    const path = join(directory, 'database.json');
+    let repository: Awaited<ReturnType<typeof createJsonRepository>> | undefined;
+    try {
+      const current = migrateDocument(version2()) as ReturnType<typeof emptyDocument>;
+      const { directMessages: _messages, messageReads: _reads, friendNotifications: _notifications, ...legacy } = current;
+      const original = JSON.stringify({ ...legacy, schemaVersion: 5,
+        accounts: legacy.accounts.map((account) => ({ ...account, matchesPublic: false })) });
+      await writeFile(path, original);
+      repository = await createJsonRepository(path);
+      expect(await readFile(`${path}.v5.bak`, 'utf8')).toBe(original);
+      expect(JSON.parse(await readFile(path, 'utf8'))).toMatchObject({
+        schemaVersion: CURRENT_SCHEMA_VERSION, directMessages: [], messageReads: [], friendNotifications: [],
+      });
+      await repository.close();
+      repository = await createJsonRepository(path);
+      expect((await repository.getAccountById('account-2'))?.matchesPublic).toBe(false);
+      expect(await repository.listDirectMessages('account-2')).toEqual([]);
+      expect(await repository.listMessageReads('account-2')).toEqual([]);
+      expect(await repository.listFriendNotifications('account-2')).toEqual([]);
+      expect(await readFile(`${path}.v5.bak`, 'utf8')).toBe(original);
+    } finally {
+      await repository?.close();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it('should return a current document untouched and reject unknown versions', () => {
     const current = emptyDocument();
     expect(migrateDocument(current)).toBe(current);

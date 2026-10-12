@@ -30,6 +30,11 @@ backend-relative; production Nginx serves them below `/card-together/`.
 | `POST /api/friends/requests/:id/accept` | `{}` | Recipient accepts |
 | `DELETE /api/friends/requests/:id` | `{}` | Recipient declines or sender cancels |
 | `DELETE /api/friends/:accountId` | `{}` | Removes the friendship |
+| `GET /api/messages` | — | Incoming invitations, accepted-request notices, conversations with unread counts |
+| `GET /api/messages/:accountId` | Optional `before` message ID | Latest 50 messages before the cursor, chronological; account, `hasMore`, `canSend` |
+| `POST /api/messages/:accountId` | `clientId` plus `message`, `stickerId`, or `providedSticker` | 201, message; accepted friends only |
+| `POST /api/messages/:accountId/read` | `messageId` | Advances the reader's incoming-message cursor |
+| `POST /api/messages/notifications/read` | `ids`: 1–100 unique notice IDs | Dismisses only the authenticated account's accepted-request notices |
 | `POST /api/media` | `data` (base64), `purpose`: `avatar`, `emoji`, `background`, `cardBack` | Image ID |
 | `GET /api/media/:id` | — | Immutable image bytes |
 | `GET /api/emojis` | — | Own emoji entries |
@@ -71,6 +76,12 @@ Omitted fields keep their values; invalid values return 400.
 - Shop prices come from [`shop.ts`](../shared/src/constants/shop.ts), never from the
   client. Repeat purchases do not charge again and do not equip. Coin rules:
   [storage](storage.md#game-coins).
+- Direct-message contracts: [`direct-message.ts`](../shared/src/types/direct-message.ts).
+  Reads require an accepted friendship or retained participant history. Sending allows
+  1–500 trimmed characters or one owned/site sticker. `clientId` uses 8–64 ASCII letters,
+  digits, underscores, or hyphens; retry the same ID and content after an uncertain result.
+  Non-friends return 403, conflicting retries 409, inaccessible conversations 404,
+  malformed or expired cursors 400. Retention and removal: [storage](storage.md#identity-and-sessions).
 
 ## Socket actions
 
@@ -159,6 +170,7 @@ Omitted fields keep their values; invalid values return 400.
 | `room:kicked` | `{ roomCode }`, after the removed member's room-less snapshot |
 | `account:coins` | Private balance and `coinRevision` after rewards |
 | `account:updated` | Private account after purchases or saved profile changes, to all owner tabs |
+| `social:changed` | No payload; affected accounts reload invitations, conversations, and unread counts |
 
 - Snapshots go to the actor's tabs and affected room members only. Game state is
   recipient-filtered ([spectators](games.md#spectators-and-god-view)).
@@ -205,3 +217,6 @@ Per account, shared across tabs:
 | `chat:send` | Also 5 per 5 seconds |
 
 HTTP credential and upload routes have their own limits ([storage](storage.md#identity-and-sessions)).
+Direct-message sends allow 5 requests per 5 seconds per account across tabs, including
+retries. HTTP 429 includes `Retry-After`; reading history and marking read do not consume
+the sending budget.

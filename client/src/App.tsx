@@ -2,12 +2,14 @@
 
 import { lazy, Suspense } from 'react';
 import type { ReactNode } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import { TopBar } from './components/TopBar';
 import { InviteToast } from './components/InviteToast';
 import { AbortVoteToast } from './games/AbortVote';
 import { useVoiceSilencing } from './hooks/use-voice-silencing';
 import { useAccountConnection } from './hooks/use-account-connection';
+import { useSocialNotifications } from './hooks/use-social-notifications';
+import { SocialToast } from './components/SocialToast';
 import { restoreAccount, useAccountStore } from './stores/account-store';
 import { useI18nStore } from './stores/i18n-store';
 import { ConnectionBanner } from './components/ConnectionBanner';
@@ -32,6 +34,12 @@ function PageLoading(): ReactNode {
   return <main className={styles.status}><p role="status">{t('common.loading')}</p></main>;
 }
 
+function LegacyMessageRedirect(): ReactNode {
+  const { accountId } = useParams<{ accountId: string }>();
+  return <Navigate to={accountId ? `/friends/messages/${encodeURIComponent(accountId)}`
+    : '/friends?tab=messages'} replace />;
+}
+
 function ProtectedRoute(): ReactNode {
   const accountId = useAccountStore((state) => state.account?.id);
   const connection = useAccountStore((state) => state.connection);
@@ -53,6 +61,7 @@ function ProtectedRoute(): ReactNode {
 
 function AppRoutes(): ReactNode {
   useAccountConnection();
+  useSocialNotifications();
   useVoiceSilencing();
   const status = useAccountStore((state) => state.status);
   const error = useAccountStore((state) => state.error);
@@ -71,6 +80,9 @@ function AppRoutes(): ReactNode {
         <Route path="/" element={<LobbyPage />} />
         <Route path="/account" element={<AccountPage />} />
         <Route path="/friends" element={<FriendsPage />} />
+        <Route path="/friends/messages/:accountId" element={<FriendsPage />} />
+        <Route path="/messages" element={<LegacyMessageRedirect />} />
+        <Route path="/messages/:accountId" element={<LegacyMessageRedirect />} />
         <Route path="/shop" element={<ShopPage />} />
         <Route path="/players/:accountId" element={<PlayerProfilePage />} />
         <Route path="/room/:roomCode" element={<RoomPage />} />
@@ -94,6 +106,7 @@ export function App(): ReactNode {
     <BrowserRouter basename={APP_BASE_PATH}>
       <TopBar />
       {signedIn && <InviteToast />}
+      {signedIn && <SocialToast />}
       {signedIn && <AbortVoteToast />}
       <div className={appStyles.viewport}>
         <RouteErrorBoundary><AppRoutes /></RouteErrorBoundary>

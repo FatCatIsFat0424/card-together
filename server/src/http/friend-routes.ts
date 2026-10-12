@@ -5,6 +5,7 @@ import { getRequestSession, requireSession } from '../auth/http-middleware';
 import type { Repository } from '../database/repository';
 import type { FriendEntry } from '@shared/types';
 import { createFriendService } from '../social/friend-service';
+import type { SocialPublisher } from './message-routes';
 
 export type FriendPresence = Pick<FriendEntry, 'online' | 'inRoom' | 'hostedRoomCode'>;
 
@@ -27,6 +28,7 @@ function usernameFromBody(body: unknown): unknown {
 
 export function createFriendRouter(
   repository: Repository, authService: AuthService, readPresence: PresenceReader,
+  publish: SocialPublisher = () => {},
 ): Router {
   const router = Router();
   const friends = createFriendService(repository);
@@ -58,26 +60,31 @@ export function createFriendRouter(
       response.status(result.status).json({ success: false, error: result.error });
       return;
     }
+    publish([result.data.requester.id, result.data.recipient.id]);
     response.status(201).json({ success: true, request: result.data });
   }));
 
   router.post('/requests/:id/accept', handleAsync(async (request, response): Promise<void> => {
     const { account } = getRequestSession(response);
+    const relationship = await repository.getFriendship(request.params.id);
     const result = await friends.accept(account.id, request.params.id);
     if (!result.success) {
       response.status(result.status).json({ success: false, error: result.error });
       return;
     }
+    if (relationship) publish([relationship.requesterId, relationship.recipientId]);
     response.json({ success: true });
   }));
 
   router.delete('/requests/:id', handleAsync(async (request, response): Promise<void> => {
     const { account } = getRequestSession(response);
+    const relationship = await repository.getFriendship(request.params.id);
     const result = await friends.dismiss(account.id, request.params.id);
     if (!result.success) {
       response.status(result.status).json({ success: false, error: result.error });
       return;
     }
+    if (relationship) publish([relationship.requesterId, relationship.recipientId]);
     response.json({ success: true });
   }));
 
@@ -88,6 +95,7 @@ export function createFriendRouter(
       response.status(result.status).json({ success: false, error: result.error });
       return;
     }
+    publish([account.id, request.params.accountId]);
     response.json({ success: true });
   }));
 

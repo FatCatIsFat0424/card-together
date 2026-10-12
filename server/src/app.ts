@@ -7,6 +7,7 @@ import { createAuthService } from './auth/auth-service';
 import { getRequestSession, protectMutations, requireSession } from './auth/http-middleware';
 import { createAuthRouter } from './http/auth-routes';
 import { createFriendRouter } from './http/friend-routes';
+import { createMessageRouter } from './http/message-routes';
 import { createPlayerRouter } from './http/player-routes';
 import { createMediaRouter } from './http/media-routes';
 import { createEmojiRouter } from './http/emoji-routes';
@@ -103,7 +104,11 @@ export async function createApplication(repository: Repository, options: Applica
       }
     },
   }));
-  app.use('/api/friends', createFriendRouter(repository, auth, (ids) => readPresence(runtime, ids)));
+  const publishSocial = (accountIds: readonly string[]): void => {
+    for (const id of new Set(accountIds)) io.to(`account:${id}`).emit('social:changed');
+  };
+  app.use('/api/friends', createFriendRouter(repository, auth, (ids) => readPresence(runtime, ids), publishSocial));
+  app.use('/api/messages', createMessageRouter(repository, auth, context.providedEmojis, publishSocial));
   app.use('/api/players', createPlayerRouter(repository, auth));
   app.use('/api/media', createMediaRouter(media, auth));
   app.use('/api/emojis', createEmojiRouter(repository, auth, mediaExists));
@@ -141,9 +146,12 @@ export async function createApplication(repository: Repository, options: Applica
   let stopAutoPass: (() => void) | undefined;
   let stopTurnTimers: () => void;
   try {
+    // Bind first so a second process cannot prune a database owned by the running server.
+    await repository.pruneSocialHistory(Date.now());
     stopAutoPass = await startBigTwoAutoPass(runtime, publish);
     stopTurnTimers = await startTurnTimers(runtime, publish);
   } catch (error) {
+    stopCoinUpdates();
     stopAutoPass?.();
     stopConnections();
     await new Promise<void>((resolve) => io.close(() => resolve()));
@@ -151,10 +159,17 @@ export async function createApplication(repository: Repository, options: Applica
   }
   const stopBots = startBotTurns(runtime, publish);
   const stopSharedDeadlines = startSharedDeadlines(runtime, publish);
+  const socialCleanup = setInterval(() => {
+    void repository.pruneSocialHistory(Date.now()).catch((error: unknown) => {
+      console.error('[social] History cleanup failed:', error);
+    });
+  }, 60 * 60 * 1000);
+  socialCleanup.unref();
 
   return {
     httpServer, io,
     close: async (): Promise<void> => {
+      clearInterval(socialCleanup);
       stopCoinUpdates();
       stopSharedDeadlines();
       stopBots();

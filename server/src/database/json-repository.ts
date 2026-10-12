@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import { copyFile, mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { AVATAR_BORDERS, GAME_COIN_REWARD, MAX_EMOJIS_PER_ACCOUNT } from '@shared/constants';
 import type { Repository, AccountRecord, MatchRecord } from './repository';
-import { publicAccount, repositoryError } from './repository';
-import { emptyDocument, isObject, validateDocument } from './schema';
+import { publicAccount, repositoryError, SOCIAL_HISTORY_RETENTION_MS } from './repository';
+import { emptyDocument, isObject, validDirectMessage, validateDocument } from './schema';
 import { migrateDocument } from './migrations';
 import type { DatabaseDocument } from './schema';
 import type { RuntimeSnapshot } from '../runtime/types';
@@ -20,8 +21,13 @@ function boundedLimit(limit: number, maximum: number): number {
   return Math.trunc(Math.min(Math.max(limit, 0), maximum)) || 0;
 }
 
+export interface JsonRepositoryOptions {
+  readonly now?: () => number;
+}
+
 /** A single server process owns a JSON file. A SQL adapter can implement Repository unchanged. */
-export async function createJsonRepository(filePath: string): Promise<Repository> {
+export async function createJsonRepository(filePath: string, options: JsonRepositoryOptions = {}): Promise<Repository> {
+  const now = options.now ?? Date.now;
   const path = resolve(filePath);
   const pathKey = process.platform === 'win32' ? path.toLowerCase() : path;
   if (activePaths.has(pathKey))
@@ -81,7 +87,7 @@ export async function createJsonRepository(filePath: string): Promise<Repository
     }
 
     function write<T>(
-      copiedTables: readonly ('accounts' | 'sessions' | 'friendships' | 'matches' | 'emojis')[],
+      copiedTables: readonly ('accounts' | 'sessions' | 'friendships' | 'matches' | 'emojis' | 'directMessages' | 'messageReads' | 'friendNotifications')[],
       update: (data: DatabaseDocument) => T,
     ): Promise<T> {
       if (closed) return Promise.reject(new Error('Repository is closed.'));
@@ -256,7 +262,7 @@ export async function createJsonRepository(filePath: string): Promise<Repository
           return friendship;
         }),
       acceptFriendship: (id, recipientId) =>
-        write(['friendships'], (data) => {
+        write(['friendships', 'friendNotifications'], (data) => {
           const index = indexes.friendships(document.friendships).positions.get(id);
           if (
             index === undefined ||
@@ -267,9 +273,11 @@ export async function createJsonRepository(filePath: string): Promise<Repository
           const friendship = {
             ...data.friendships[index],
             status: 'accepted' as const,
-            updatedAt: Date.now(),
+            updatedAt: now(),
           };
           data.friendships[index] = friendship;
+          data.friendNotifications.push({ id: randomUUID(), accountId: friendship.requesterId,
+            actorId: recipientId, createdAt: friendship.updatedAt });
           return friendship;
         }),
       deleteFriendship: (id, accountId, expectedStatus) =>
@@ -285,6 +293,84 @@ export async function createJsonRepository(filePath: string): Promise<Repository
           data.friendships.splice(index, 1);
           return true;
         }),
+      listDirectMessages: (accountId, otherId) => read((data) => {
+        const messages = indexes.directMessages(data.directMessages);
+        const records = otherId === undefined
+          ? messages.byAccount.get(accountId)
+          : messages.byPair.get(friendshipPair(accountId, otherId));
+        const cutoff = now() - SOCIAL_HISTORY_RETENTION_MS;
+        return (records ?? []).filter((message) => message.timestamp > cutoff);
+      }),
+      createDirectMessage: (input) => {
+        const message = structuredClone(input);
+        return write(['directMessages'], (data) => {
+          if (!validDirectMessage(message)) {
+            throw repositoryError('INVALID_MESSAGE', 'Invalid direct message.');
+          }
+          const messages = indexes.directMessages(document.directMessages);
+          const existing = messages.byClient.get(JSON.stringify([message.senderId, message.clientId]));
+          if (existing) {
+            const { id: _existingId, timestamp: _existingTimestamp, ...previous } = existing;
+            const { id: _requestedId, timestamp: _requestedTimestamp, ...requested } = message;
+            if (!isDeepStrictEqual(previous, requested)) {
+              throw repositoryError('MESSAGE_CONFLICT', 'This message request was already used for different content.');
+            }
+            if (existing.timestamp <= now() - SOCIAL_HISTORY_RETENTION_MS) {
+              throw repositoryError('MESSAGE_EXPIRED', 'This message has expired. Send a new message.');
+            }
+            return existing;
+          }
+          if (messages.byId.has(message.id) || message.timestamp > now() ||
+            message.timestamp <= now() - SOCIAL_HISTORY_RETENTION_MS) {
+            throw repositoryError('INVALID_MESSAGE', 'Invalid direct message.');
+          }
+          const friendship = indexes.friendships(document.friendships).byAccount.get(message.senderId)
+            ?.find((record) => record.status === 'accepted' &&
+              friendshipPair(record.requesterId, record.recipientId) === friendshipPair(message.senderId, message.recipientId));
+          if (!friendship) throw repositoryError('NOT_FRIENDS', 'You can only send messages to friends.');
+          data.directMessages.push(message);
+          return message;
+        });
+      },
+      listMessageReads: (accountId) => read((data) => {
+        const messages = indexes.directMessages(data.directMessages).byId;
+        const cutoff = now() - SOCIAL_HISTORY_RETENTION_MS;
+        return data.messageReads.filter((cursor) => cursor.accountId === accountId &&
+          (messages.get(cursor.messageId)?.timestamp ?? 0) > cutoff);
+      }),
+      markDirectMessagesRead: (accountId, otherId, messageId) => write(['messageReads'], (data) => {
+        const messages = indexes.directMessages(document.directMessages);
+        const message = messages.byId.get(messageId);
+        if (!message || message.senderId !== otherId || message.recipientId !== accountId ||
+          message.timestamp <= now() - SOCIAL_HISTORY_RETENTION_MS) {
+          throw repositoryError('INVALID_MESSAGE_READ', 'Choose a retained message received from this friend.');
+        }
+        const position = data.messageReads.findIndex((cursor) => cursor.accountId === accountId && cursor.otherId === otherId);
+        const cursor = { accountId, otherId, messageId };
+        if (position === -1) data.messageReads.push(cursor);
+        else {
+          const previousOrder = messages.order.get(data.messageReads[position].messageId) ?? -1;
+          if (messages.order.get(messageId)! > previousOrder) data.messageReads[position] = cursor;
+        }
+      }),
+      listFriendNotifications: (accountId) => read((data) => {
+        const cutoff = now() - SOCIAL_HISTORY_RETENTION_MS;
+        return data.friendNotifications.filter((entry) => entry.accountId === accountId && entry.createdAt > cutoff)
+          .sort((first, second) => second.createdAt - first.createdAt);
+      }),
+      dismissFriendNotifications: (accountId, ids) => write([], (data) => {
+        const selected = new Set(ids);
+        data.friendNotifications = data.friendNotifications.filter((entry) =>
+          entry.accountId !== accountId || !selected.has(entry.id));
+      }),
+      pruneSocialHistory: (time) => write([], (data) => {
+        if (!Number.isSafeInteger(time) || time < 0) throw new Error('Invalid social history pruning time.');
+        const cutoff = time - SOCIAL_HISTORY_RETENTION_MS;
+        data.directMessages = data.directMessages.filter((message) => message.timestamp > cutoff);
+        const retainedIds = new Set(data.directMessages.map((message) => message.id));
+        data.messageReads = data.messageReads.filter((cursor) => retainedIds.has(cursor.messageId));
+        data.friendNotifications = data.friendNotifications.filter((entry) => entry.createdAt > cutoff);
+      }),
       loadRuntime: () => read((data) => data.runtime),
       saveRuntime: (snapshot, matches = [], completedGameIds = []) =>
         write([], (data) => {

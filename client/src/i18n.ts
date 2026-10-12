@@ -1,5 +1,7 @@
 // ─── i18n system ───
 
+import { socialTranslations } from './social-i18n';
+import type { SocialTranslationKey } from './social-i18n';
 import { accountTranslations } from './account-i18n';
 import type { AccountTranslationKey } from './account-i18n';
 import { playerTranslations } from './player-i18n';
@@ -28,7 +30,7 @@ import type { ShopTranslationKey } from './shop-i18n';
 export type Locale = 'zh-TW' | 'en';
 
 type TranslationKeys = Record<
-  AccountTranslationKey | PlayerTranslationKey | VoiceTranslationKey | UiTranslationKey
+  SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | VoiceTranslationKey | UiTranslationKey
     | EmojiTranslationKey | GameTranslationKey | SevensTranslationKey | ChinesePokerTranslationKey
     | LiarsDeckTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | ShopTranslationKey, string
 > & {
@@ -104,6 +106,7 @@ type TranslationKeys = Record<
 
 const translations: Record<Locale, TranslationKeys> = {
   'zh-TW': {
+    ...socialTranslations['zh-TW'],
     ...accountTranslations['zh-TW'],
     ...playerTranslations['zh-TW'],
     ...voiceTranslations['zh-TW'],
@@ -177,6 +180,7 @@ const translations: Record<Locale, TranslationKeys> = {
     'app.reload': '重新整理',
   },
   en: {
+    ...socialTranslations.en,
     ...accountTranslations.en,
     ...playerTranslations.en,
     ...voiceTranslations.en,

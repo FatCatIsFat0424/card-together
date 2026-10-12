@@ -24,12 +24,14 @@ import { useGamePresentation } from '../games/use-game-presentation';
 import { blackjackHandNumber, blackjackView } from '../games/blackjack/blackjack-view';
 import { holdemView } from '../games/holdem/holdem-view';
 import { AppIcon } from './AppIcon';
+import { NotificationPanel } from './NotificationPanel';
+import { socialUnreadCount, useSocialStore } from '../stores/social-store';
 import styles from './TopBar.module.css';
 
 const VoicePanel = lazy(() => import('./VoicePanel')
   .then((module) => ({ default: module.VoicePanel })));
 
-type Popover = 'menu' | 'voice' | 'music' | 'signOut';
+type Popover = 'notifications' | 'menu' | 'voice' | 'music' | 'signOut';
 
 const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -134,8 +136,9 @@ function GameChips(): ReactNode {
 export function TopBar(): ReactNode {
   useTurnSound();
   const { t } = useI18nStore();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const accountId = useAccountStore((state) => state.account?.id);
+  const notificationCount = useSocialStore(socialUnreadCount);
   const coins = useAccountStore((state) => state.account?.coins ?? 0);
   const roomCode = useRoomStore((state) => state.currentRoomCode);
   const inActiveGame = useRoomStore((state) => state.roomInfo?.status === 'playing' && state.mySeat !== null);
@@ -149,7 +152,7 @@ export function TopBar(): ReactNode {
   const showLinks = Boolean(accountId);
   const showVoice = Boolean(accountId && roomCode);
 
-  useEffect(() => { setOpen(null); }, [pathname]);
+  useEffect(() => { setOpen(null); }, [pathname, search]);
 
   useEffect(() => {
     if (!open) return;
@@ -218,6 +221,17 @@ export function TopBar(): ReactNode {
           title={t('coins.earnHint', { n: String(GAME_COIN_REWARD) })}>
           <AppIcon name="coins" /><span>{coins.toLocaleString()}</span>
         </span>}
+        {accountId && <div className={styles.group} data-popover="notifications">
+          <button type="button" className={`${styles.iconBtn} touch-target`} onClick={() => toggle('notifications')}
+            aria-expanded={open === 'notifications'} aria-controls="social-notifications"
+            aria-label={t('social.notificationCount', { n: String(notificationCount) })} title={t('social.notifications')}>
+            <AppIcon name="notifications" />
+            {notificationCount > 0 && <span className={styles.badge} aria-hidden="true">{notificationCount > 99 ? '99+' : notificationCount}</span>}
+          </button>
+          {open === 'notifications' && <div id="social-notifications" className={styles.popover} data-popover-panel tabIndex={-1}>
+            <NotificationPanel />
+          </div>}
+        </div>}
         {showVoice && <div className={styles.group} data-popover="voice">
           <button type="button" className={`${styles.iconBtn} touch-target`} onClick={() => toggle('voice')}
             aria-expanded={open === 'voice'} aria-label={t('topbar.voice')} title={t('topbar.voice')}>

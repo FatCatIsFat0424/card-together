@@ -1,4 +1,4 @@
-import type { AccountProfile, AvatarBorderId, EmojiRecord, MatchResult, MediaId } from '@shared/types';
+import type { AccountProfile, AvatarBorderId, EmojiRecord, MatchResult, MediaId, MessageContent } from '@shared/types';
 
 export type { EmojiRecord };
 import type { RuntimeSnapshot } from '../runtime/types';
@@ -34,6 +34,29 @@ export interface MatchRecord {
   readonly accountIds: readonly string[];
   readonly result: MatchResult;
   readonly finishedAt: number;
+}
+
+export { SOCIAL_HISTORY_RETENTION_MS } from '@shared/constants';
+
+export interface DirectMessageRecord extends MessageContent {
+  readonly id: string;
+  readonly clientId: string;
+  readonly senderId: string;
+  readonly recipientId: string;
+  readonly timestamp: number;
+}
+
+export interface MessageReadRecord {
+  readonly accountId: string;
+  readonly otherId: string;
+  readonly messageId: string;
+}
+
+export interface FriendNotificationRecord {
+  readonly id: string;
+  readonly accountId: string;
+  readonly actorId: string;
+  readonly createdAt: number;
 }
 
 /** All writes resolve after durable storage. SQL adapters must preserve atomic checks. */
@@ -73,6 +96,17 @@ export interface Repository {
     accountId: string,
     expectedStatus?: FriendshipRecord['status'],
   ): Promise<boolean>;
+  /** Participant-only chronological history, excluding messages at least 90 days old. */
+  listDirectMessages(accountId: string, otherId?: string): Promise<DirectMessageRecord[]>;
+  /** Check friendship and deduplicate sender/clientId atomically; conflicting retries fail. */
+  createDirectMessage(message: DirectMessageRecord): Promise<DirectMessageRecord>;
+  listMessageReads(accountId: string): Promise<MessageReadRecord[]>;
+  /** A retained message received from this peer advances the cursor; stale updates are ignored. */
+  markDirectMessagesRead(accountId: string, otherId: string, messageId: string): Promise<void>;
+  listFriendNotifications(accountId: string): Promise<FriendNotificationRecord[]>;
+  dismissFriendNotifications(accountId: string, ids: readonly string[]): Promise<void>;
+  /** Durably remove expired messages, notifications, and their orphaned read cursors. */
+  pruneSocialHistory(now: number): Promise<void>;
   loadRuntime(): Promise<RuntimeSnapshot | null>;
   /** Completed game IDs award coins atomically with runtime/history, once per game. */
   saveRuntime(snapshot: RuntimeSnapshot, matches?: readonly MatchRecord[], completedGameIds?: readonly string[]): Promise<void>;
