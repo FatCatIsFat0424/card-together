@@ -2,13 +2,13 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { AccountProfile, AvatarPreset, MediaId } from '@shared/types';
 import {
   IMAGE_OPACITY_MAX, IMAGE_OPACITY_MIN, NICKNAME_MAX_LENGTH, PASSWORD_MAX_LENGTH,
-  PASSWORD_MIN_LENGTH, USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, isImageOpacity, isMediaId,
+  USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, isImageOpacity, isMediaId,
   isUsername, isAvatarBorderId,
 } from '@shared/constants';
 import type { Repository, SessionRecord, AccountRecord } from '../database/repository';
 import { publicAccount } from '../database/repository';
 import { isObject } from '../database/schema';
-import { isCommonPassword } from './common-passwords';
+import { validateNewPassword } from './password-policy';
 import { hashPassword, verifyPassword } from './password';
 
 export const SESSION_COOKIE_NAME = 'card_together_session';
@@ -70,27 +70,6 @@ function existingPasswordValue(input: unknown): string {
       'INVALID_PASSWORD',
       `Enter a password of up to ${PASSWORD_MAX_LENGTH} characters.`,
     );
-  }
-  return input;
-}
-
-function newPasswordValue(input: unknown): string {
-  if (
-    typeof input !== 'string' ||
-    input.length < PASSWORD_MIN_LENGTH ||
-    input.length > PASSWORD_MAX_LENGTH
-  ) {
-    throw authError(
-      400,
-      'INVALID_PASSWORD',
-      `Password must be ${PASSWORD_MIN_LENGTH}–${PASSWORD_MAX_LENGTH} characters.`,
-    );
-  }
-  if (input.trim() !== input) {
-    throw authError(400, 'INVALID_PASSWORD', 'Password cannot start or end with a space.');
-  }
-  if (isCommonPassword(input)) {
-    throw authError(400, 'INVALID_PASSWORD', 'Password is too common. Choose another one.');
   }
   return input;
 }
@@ -241,7 +220,7 @@ export function createAuthService(
     register: async (input) => {
       const body = requiredObject(input);
       const username = usernameValue(body.username);
-      const password = newPasswordValue(body.password);
+      const password = validateNewPassword(body.password);
       const profile = profileValues(body, {
         nickname: username.slice(0, NICKNAME_MAX_LENGTH),
         color: '#4f8cff',
@@ -323,7 +302,7 @@ export function createAuthService(
     changePassword: async (accountId, input) => {
       const body = requiredObject(input);
       const currentPassword = existingPasswordValue(body.currentPassword);
-      const newPassword = newPasswordValue(body.newPassword);
+      const newPassword = validateNewPassword(body.newPassword);
       const account = await repository.getAccountById(accountId);
       if (!account || !(await verifyPassword(currentPassword, account.passwordHash))) {
         throw authError(401, 'INVALID_CREDENTIALS', 'Current password is incorrect.');

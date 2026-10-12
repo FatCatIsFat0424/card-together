@@ -37,6 +37,7 @@ revalidate sessions. Passwords and session tokens are never public DTO fields.
 Logout revokes the current session; logout-all/password changes revoke all sessions
 and disconnect affected sockets. Password changes require the existing password.
 There is no email/password-reset delivery workflow.
+Administrators with host access can use the [offline password reset](#administrator-password-reset).
 
 Friend requests are persisted with unordered-pair uniqueness and sender/recipient
 permissions. Accepted friends include transient online/in-room presence and the room code
@@ -86,6 +87,60 @@ persisted in runtime snapshots, and excluded from spectators. Rooms with additio
 seats cannot start matches yet. Before rolling back to a server version without
 this field, have players leave these seats and the host remove them, then preserve
 the complete database/media backup using the deployment procedure.
+
+## Administrator password reset
+
+Host-only CLI: resets a password without the old one; no website admin role or recovery endpoint.
+
+| Preparation | Requirement |
+| --- | --- |
+| Requester | Establish ownership through a trusted channel; username/nickname/history alone is not proof |
+| Database | Explicit configured `DATABASE_PATH`; current schema; regular file without symbolic/hard links |
+| Account | Login username, case-insensitive; not nickname or account ID |
+| Runtime | Pinned Node version; apply as the database file owner |
+| Input | Interactive terminal; two hidden password prompts; no password arguments/env/redirected input |
+
+1. Stop **all database writers** and preserve complete database/media backups;
+   this interrupts players. See [operations](deployment.md#operations-and-rollback).
+2. Preview from the repository root (no password prompt or writes):
+
+   ```sh
+   npm run admin:reset-password -- /absolute/path/database.json alice
+   ```
+
+3. Apply as the file owner while writers stay stopped:
+
+   ```sh
+   npm run admin:reset-password -- /absolute/path/database.json alice --apply --writers-stopped
+   ```
+
+4. Keep the printed `.password-reset-<UUID>.bak` privately. Deliver the new password through
+   a trusted private channel and ask the owner to change it after signing in.
+5. Restart one instance. Verify the new password and revoked sessions; the old password fails
+   only if a different value was set. Replacement passwords do not expire or force a later change.
+
+**Installed production commands** (after stopping writers):
+
+```sh
+sudo -u card-together sh -c 'cd /opt/card-together/server && ../node --import tsx src/auth/reset-password-cli.ts /var/lib/card-together/database.json alice'
+sudo -u card-together sh -c 'cd /opt/card-together/server && ../node --import tsx src/auth/reset-password-cli.ts /var/lib/card-together/database.json alice --apply --writers-stopped'
+```
+
+Replace `/absolute/path/database.json` (or the production path) with the configured database;
+replace `alice` with the target login username. Preview reports path, ID, saved username and session count.
+
+| Outcome | Handling |
+| --- | --- |
+| Applied | Complete 0600 backup/replacement; same password policy/scrypt as registration; changes only target password/timestamp and revokes its sessions |
+| Rejected | Invalid data/account/password, wrong UID, source change or write failure leaves the database unreplaced; assess any retained backup |
+| Applied with cleanup warnings | Password is already changed; resolve reported temporary/lock files instead of treating it as an unapplied reset |
+| Stale `.password-reset.lock` | Confirm no reset process is active before removal; never remove an active lock |
+| Restore backup | Stop writers first; restores old password/sessions and loses newer writes |
+
+- `--writers-stopped` acknowledges the prerequisite; it neither stops nor detects services.
+- The lock serializes reset tools only; it does **not** lock out application writers.
+- No database creation or migration; other accounts/runtime/history/media/coins/preferences stay intact.
+- Stopping the application closes its live Socket connections.
 
 ## Legacy bot history cleanup
 
