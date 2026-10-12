@@ -92,7 +92,7 @@ full matches, authorization, persistence failure, and restart recovery.
 | --- | --- |
 | Waiting room or game layout | No document scrolling, visible controls, no seat/card overlap; timers and chat/info toggles when space changes |
 | Red Points or shared table | Crowded tables, multiple capture targets, initial deal without presentation metadata |
-| Music | Pause/resume across route changes |
+| Music | Pause/resume across route changes; a paused tab stays paused after reload |
 | Voice | Separate browser participants; synthetic streams prove neither microphones nor cross-NAT routing |
 
 Rules:

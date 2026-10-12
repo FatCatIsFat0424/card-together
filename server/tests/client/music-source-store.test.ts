@@ -13,6 +13,7 @@ vi.mock('../../../client/src/audio/provided-music-catalog', () => ({
   providedMusicUrl: (track: { file: string }): string => `/provided-music/${track.file}`,
 }));
 let storage: Map<string, string>;
+let session: Map<string, string>;
 beforeEach(() => {
   vi.resetModules();
   vi.resetAllMocks();
@@ -25,6 +26,12 @@ beforeEach(() => {
     getItem: (key: string): string | null => storage.get(key) ?? null,
     setItem: (key: string, value: string): void => { storage.set(key, value); },
     removeItem: (key: string): void => { storage.delete(key); },
+  });
+  session = new Map();
+  vi.stubGlobal('sessionStorage', {
+    getItem: (key: string): string | null => session.get(key) ?? null,
+    setItem: (key: string, value: string): void => { session.set(key, value); },
+    removeItem: (key: string): void => { session.delete(key); },
   });
   mocks.createFile.mockReturnValue(mocks.file);
   mocks.file.play.mockResolvedValue(undefined);
@@ -102,6 +109,40 @@ describe('provided music store', () => {
     gesture('click');
     expect(mocks.file.play).toHaveBeenCalledOnce();
     cleanupAgain();
+  });
+
+  it('should keep a pause made in this tab across reloads', async () => {
+    const store = await state();
+    await store.getState().pause();
+    expect(session.get('card-together.music.paused')).toBe('true');
+    vi.resetModules();
+    const { startMusicAutoplay } = await import('../../../client/src/stores/music-store');
+    const { target, gesture } = autoplayTarget();
+    const cleanup = startMusicAutoplay(target);
+    gesture('click');
+    expect(mocks.file.play).not.toHaveBeenCalled();
+    cleanup();
+  });
+
+  it('should autoplay again after the player resumes in this tab', async () => {
+    const store = await state();
+    await store.getState().pause();
+    await store.getState().play();
+    expect(session.has('card-together.music.paused')).toBe(false);
+    vi.resetModules();
+    const { startMusicAutoplay } = await import('../../../client/src/stores/music-store');
+    const cleanup = startMusicAutoplay(autoplayTarget().target);
+    expect(mocks.file.play).toHaveBeenCalledTimes(2);
+    cleanup();
+  });
+
+  it('should not treat a blocked autoplay as a pause', async () => {
+    const { startMusicAutoplay } = await import('../../../client/src/stores/music-store');
+    mocks.file.play.mockRejectedValueOnce(new DOMException('Blocked', 'NotAllowedError'));
+    const cleanup = startMusicAutoplay(autoplayTarget().target);
+    await Promise.resolve();
+    expect(session.has('card-together.music.paused')).toBe(false);
+    cleanup();
   });
 
   it.each(['pointerdown', 'keydown', 'click', 'touchend'])(
@@ -402,11 +443,19 @@ describe('provided music store', () => {
   });
 
   it('should remain usable when browser storage is unavailable', async () => {
-    vi.stubGlobal('localStorage', {
-      getItem: (): never => { throw new Error('disabled'); },
-      setItem: (): never => { throw new Error('disabled'); },
-    });
+    for (const name of ['localStorage', 'sessionStorage']) {
+      vi.stubGlobal(name, {
+        getItem: (): never => { throw new Error('disabled'); },
+        setItem: (): never => { throw new Error('disabled'); },
+        removeItem: (): never => { throw new Error('disabled'); },
+      });
+    }
     const store = await state();
+    const { startMusicAutoplay } = await import('../../../client/src/stores/music-store');
+    const cleanup = startMusicAutoplay(autoplayTarget().target);
+    expect(mocks.file.play).toHaveBeenCalledOnce();
+    cleanup();
+    await store.getState().pause();
     await store.getState().play();
     store.getState().setVolume(0.4);
     store.getState().setMode('shuffle');

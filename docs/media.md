@@ -23,8 +23,9 @@ Only the site owner supplies music; players cannot upload tracks or enter URLs.
 - Player controls: play/pause, previous/next, repeat-one, sequential or shuffle, volume
   (default 50%). New visitors start with shuffle and a random track; saved volume,
   track, and mode are restored locally.
-- Entering or reloading the site starts playback. If the browser blocks autoplay,
-  playback waits for a trusted user gesture; pausing cancels this retry.
+- Opening the site in a new tab starts playback. A reload keeps a pause made in that
+  tab (session storage) until the player presses play again. If the browser blocks
+  autoplay, playback waits for a trusted user gesture; pausing cancels this retry.
   Playback continues across routes and when the panel closes.
   One audio element is reused so the browser unlock carries across tracks.
 - Turn reminders are separate synthesized chimes, on by default and unaffected by music

@@ -10,6 +10,8 @@ import { readPreference, writePreference } from '../utils/preference-storage';
 const VOLUME_KEY = 'music.volume';
 const PROVIDED_TRACK_KEY = 'music.provided.track';
 const MODE_KEY = 'music.mode';
+// Tab-scoped so a reload keeps the player's pause while a new tab autoplays again.
+const SESSION_PAUSED_KEY = 'card-together.music.paused';
 const DEFAULT_VOLUME = 0.5;
 const MODES: readonly MusicMode[] = ['loop-one', 'sequential', 'shuffle'];
 
@@ -39,6 +41,24 @@ let awaitingAutoplayUnlock = false;
 function savedVolume(): number {
   const value = Number(readPreference(VOLUME_KEY) ?? DEFAULT_VOLUME);
   return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : DEFAULT_VOLUME;
+}
+
+function setSessionPaused(paused: boolean): void {
+  try {
+    if (typeof sessionStorage === 'undefined') return;
+    if (paused) sessionStorage.setItem(SESSION_PAUSED_KEY, 'true');
+    else sessionStorage.removeItem(SESSION_PAUSED_KEY);
+  } catch {
+    // Storage is optional; without it every page load autoplays.
+  }
+}
+
+function sessionPaused(): boolean {
+  try {
+    return typeof sessionStorage !== 'undefined' && sessionStorage.getItem(SESSION_PAUSED_KEY) === 'true';
+  } catch {
+    return false;
+  }
 }
 
 function providedIndex(trackId: string | null): number {
@@ -92,6 +112,7 @@ export const useMusicStore = create<MusicState>((set, get) => {
       awaitingAutoplayUnlock = false;
       playRequest += 1;
       wantsPlayback = false;
+      setSessionPaused(true);
       set({ playing: false, busy: false, error: false });
       try {
         player?.pause();
@@ -110,6 +131,7 @@ export const useMusicStore = create<MusicState>((set, get) => {
       }
       const request = ++playRequest;
       wantsPlayback = true;
+      setSessionPaused(false);
       set({ providedTrackId: track.id, busy: true, error: false });
       writePreference(PROVIDED_TRACK_KEY, track.id);
       try {
@@ -151,7 +173,10 @@ export const useMusicStore = create<MusicState>((set, get) => {
   };
 });
 
-/** Retry browser-blocked playback in a trusted gesture without restarting paused music. */
+/**
+ * Autoplay unless the player paused earlier in this tab, and retry browser-blocked
+ * playback in a trusted gesture without restarting paused music.
+ */
 export function startMusicAutoplay(target: Document = document): () => void {
   const unlock = (event: Event): void => {
     // Let transport buttons handle their own click, including clicks after touchend.
@@ -163,7 +188,7 @@ export function startMusicAutoplay(target: Document = document): () => void {
   // The player outlives React effects, including StrictMode's setup/cleanup cycle.
   if (!autoplayStarted) {
     autoplayStarted = true;
-    void useMusicStore.getState().play();
+    if (!sessionPaused()) void useMusicStore.getState().play();
   }
   return (): void => {
     for (const event of AUDIO_UNLOCK_EVENTS) target.removeEventListener(event, unlock);
