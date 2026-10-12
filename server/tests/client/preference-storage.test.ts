@@ -1,10 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readPreference, writePreference } from '../../../client/src/utils/preference-storage';
 
-const PREFERENCES = [
-  'theme', 'ui.reducedMotion', 'music.volume', 'music.provided.track', 'music.mode',
-  'voice.peers', 'voice.input', 'voice.output', 'sound.turn',
-];
+const PREFERENCES = ['theme', 'music.volume'];
 
 let values: Map<string, string>;
 

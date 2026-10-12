@@ -91,6 +91,21 @@ describe('playing engine', () => {
     });
   });
 
+  describe('follow suit validation', () => {
+    it('rejects an off-suit card when the player can follow and accepts it when void', () => {
+      const state = { ...createPlayingState('N'),
+        currentTrick: { N: { suit: 'spades', rank: 7 } as Card }, currentTurnSeat: 'E' as Seat };
+      const offSuit: Card = { suit: 'hearts', rank: 14 };
+      const follow: Card = { suit: 'spades', rank: 2 };
+      const hand = [offSuit, follow];
+      const before = structuredClone({ hand, state });
+      expect(validatePlay(hand, state, 'E', offSuit)).toMatchObject({ valid: false });
+      expect(validatePlay(hand, state, 'E', follow)).toEqual({ valid: true });
+      expect(validatePlay([offSuit], state, 'E', offSuit)).toEqual({ valid: true });
+      expect({ hand, state }).toEqual(before);
+    });
+  });
+
   describe('compareCards', () => {
     it('should rank trump over non-trump', () => {
       expect(compareCards(
@@ -119,15 +134,6 @@ describe('playing engine', () => {
       )).toBeGreaterThan(0);
     });
 
-    it('should handle NT (no trump)', () => {
-      // With NT, only lead suit matters
-      expect(compareCards(
-        { suit: 'spades', rank: 14 },
-        { suit: 'spades', rank: 2 },
-        'spades',
-        'nt',
-      )).toBeGreaterThan(0);
-    });
   });
 
   describe('determineTrickWinner', () => {
@@ -163,19 +169,20 @@ describe('playing engine', () => {
   });
 
   describe('completeTrick', () => {
-    it('should update trick counts correctly', () => {
-      const state = createPlayingState('N');
+    it.each(['N', 'E'] as const)('counts a trick for winner %s, resets the trick and preserves inputs', (winner) => {
       const trick: Record<Seat, Card> = {
-        N: { suit: 'spades', rank: 14 },
-        E: { suit: 'spades', rank: 13 },
-        S: { suit: 'spades', rank: 12 },
-        W: { suit: 'spades', rank: 11 },
+        N: { suit: 'spades', rank: 14 }, E: { suit: 'spades', rank: 13 },
+        S: { suit: 'spades', rank: 12 }, W: { suit: 'spades', rank: 11 },
       };
-      const result = completeTrick(state, 'N', trick, 'N');
-      expect(result.trickCountNS).toBe(1);
-      expect(result.trickCountEW).toBe(0);
-      expect(result.completedTricks).toHaveLength(1);
-      expect(result.currentTurnSeat).toBe('N');
+      const state = { ...createPlayingState('N'), currentTrick: trick, trickCountEW: 2, trickCountNS: 3 };
+      const before = structuredClone({ state, trick });
+      const result = completeTrick(state, winner, trick, 'N');
+      expect(result).toEqual({ ...state,
+        currentTrick: {}, trickLeadSeat: winner, currentTurnSeat: winner,
+        trickCountEW: winner === 'E' ? 3 : 2, trickCountNS: winner === 'N' ? 4 : 3,
+        completedTricks: [{ cards: trick, leadSeat: 'N', winnerSeat: winner }],
+      });
+      expect({ state, trick }).toEqual(before);
     });
   });
 

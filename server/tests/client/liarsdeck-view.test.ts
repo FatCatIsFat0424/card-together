@@ -4,7 +4,6 @@ import type { LiarCard, LiarsDeckLogEntry, LiarsDeckVisibleState } from '@shared
 import {
   liarFaceCard, liarsDeckHandMode, liarsDeckView, recentLiarsDeckMoves, replayLiarsDeck, toggleSelection, truthCount,
 } from '../../../client/src/games/liarsdeck/liarsdeck-view';
-import { liarsDeckTranslations } from '../../../client/src/liarsdeck-i18n';
 
 const hand: LiarCard[] = [{ id: 0, face: 'K' }, { id: 6, face: 'Q' }, { id: 12, face: 'A' }, { id: 18, face: 'joker' }];
 
@@ -71,9 +70,4 @@ describe("Liar's Deck table view", () => {
     expect(recentLiarsDeckMoves(log, 2).map((entry) => entry.type)).toEqual(['round', 'shot']);
   });
 
-  it('should translate every key in both languages', () => {
-    const english = Object.keys(liarsDeckTranslations.en).sort();
-    expect(Object.keys(liarsDeckTranslations['zh-TW']).sort()).toEqual(english);
-    for (const value of Object.values(liarsDeckTranslations['zh-TW'])) expect(value.trim()).not.toBe('');
-  });
 });

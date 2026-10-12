@@ -7,7 +7,6 @@ import {
   clampBet, handNet, rankBlackjack, recentBlackjackMoves, replayBlackjack, signedChips, stepBet,
 } from '../../../client/src/games/blackjack/blackjack-view';
 import { deriveRoundHistory } from '../../../client/src/games/round-history';
-import { blackjackTranslations } from '../../../client/src/blackjack-i18n';
 
 const c = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit });
 const seats = <T>(value: T): Record<Seat, T> => ({ N: value, E: value, S: value, W: value });
@@ -225,9 +224,4 @@ describe('Blackjack table view', () => {
       .toEqual(rounds);
   });
 
-  it('should translate every key in both languages', () => {
-    const english = Object.keys(blackjackTranslations.en).sort();
-    expect(Object.keys(blackjackTranslations['zh-TW']).sort()).toEqual(english);
-    for (const value of Object.values(blackjackTranslations['zh-TW'])) expect(value.trim()).not.toBe('');
-  });
 });

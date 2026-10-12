@@ -11,6 +11,37 @@ const impact = { x: 450, y: 200 };
 const distance = (a: { x: number; y: number }, b: { x: number; y: number }): number => Math.hypot(a.x - b.x, a.y - b.y);
 
 describe('table collapse scene', () => {
+  it('keeps compact shards and cracks finite and inside the padded table', () => {
+    const width = 320;
+    const height = 160;
+    const scene = shatterTable(width, height, { x: width / 2, y: height / 2 });
+    expect(scene.shards.length).toBeGreaterThan(0);
+    expect(scene.cracks.length).toBeGreaterThan(0);
+    for (const shard of scene.shards) {
+      expect(shard.polygon.length).toBeGreaterThanOrEqual(3);
+      expect(Number.isFinite(shard.depth)).toBe(true);
+      expect(shard.depth).toBeGreaterThanOrEqual(0);
+      expect(shard.depth).toBeLessThanOrEqual(1);
+      for (const point of shard.polygon) {
+        expect(Number.isFinite(point.x) && Number.isFinite(point.y)).toBe(true);
+        expect(point.x).toBeGreaterThanOrEqual(-30.000001);
+        expect(point.x).toBeLessThanOrEqual(width + 30.000001);
+        expect(point.y).toBeGreaterThanOrEqual(-30.000001);
+        expect(point.y).toBeLessThanOrEqual(height + 30.000001);
+      }
+    }
+    for (const crack of scene.cracks) {
+      expect(crack.lengths.every(Number.isFinite)).toBe(true);
+      expect(crack.lengths.at(-1)).toBeGreaterThan(0);
+    }
+  });
+
+  it.each([[0, 0], [0, 160], [320, 0]])('does not generate shards for a %s×%s table', (width, height) => {
+    const scene = shatterTable(width, height, { x: 0, y: 0 });
+    expect(scene.shards).toHaveLength(0);
+    expect(scene.cracks).toHaveLength(0);
+  });
+
   it('shares the frame length and finishes opening before the frame ends', () => {
     expect(COLLAPSE_MS).toBe(SEVENS_COLLAPSE_MS);
     expect(CRACK_OPEN_MS[1]).toBeLessThan(COLLAPSE_MS);

@@ -7,6 +7,7 @@ import type { PlayerInfo, Seat } from '@shared/types';
 import { createJsonRepository } from '../../src/database/json-repository';
 import { CURRENT_SCHEMA_VERSION } from '../../src/database/migrations';
 import type { DatabaseDocument } from '../../src/database/schema';
+import type { Repository } from '../../src/database/repository';
 import { validateDocument } from '../../src/database/schema';
 import type { RuntimeSnapshot } from '../../src/runtime/types';
 import { createDeck } from '../../src/engine/deck';
@@ -165,13 +166,20 @@ async function measure(
 
 async function main(): Promise<void> {
   const directory = await mkdtemp(join(tmpdir(), 'bridge-repository-benchmark-'));
-  const path = join(directory, 'database.json');
-  const fixture = createFixture();
-  await writeFile(path, `${JSON.stringify(fixture, null, 2)}\n`);
-  const start = performance.now();
-  const repository = await createJsonRepository(path);
-  const openMs = Number((performance.now() - start).toFixed(2));
+  let openedRepository: Repository | undefined;
   try {
+    const path = join(directory, 'database.json');
+    const fixture = createFixture();
+    await writeFile(path, `${JSON.stringify(fixture, null, 2)}\n`);
+    const start = performance.now();
+    const repository = await createJsonRepository(path);
+    openedRepository = repository;
+    const openMs = Number((performance.now() - start).toFixed(2));
+    if ((await repository.getAccountById(accountId(0)))?.id !== accountId(0) ||
+      (await repository.getAccountByUsername('player_0'))?.id !== accountId(0) ||
+      (await repository.getSession(sessionHash(0)))?.accountId !== accountId(0) ||
+      !(await repository.listFriendships(accountId(0))).length || !(await repository.listMatches(accountId(0))).length ||
+      (await repository.searchAccounts('player', '', 20)).length !== 20) throw new Error('Invalid benchmark query workload.');
     const measurements = {
       accountById: await measure(10_000, (index) =>
         repository.getAccountById(accountId((index * 7919) % RECORDS)),
@@ -215,8 +223,8 @@ async function main(): Promise<void> {
       ),
     );
   } finally {
-    await repository.close();
-    await rm(directory, { recursive: true, force: true });
+    try { await openedRepository?.close(); }
+    finally { await rm(directory, { recursive: true, force: true }); }
   }
 }
 

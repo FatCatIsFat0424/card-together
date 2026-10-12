@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "tsBuildInfoFile": "../node_modules/.tmp/server-tests.tsbuildinfo",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "types": ["node", "vitest/globals", "vite/client"],
@@ -11,5 +12,5 @@
       "@shared/*": ["../shared/src/*"]
     }
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "benchmarks/**/*.ts", "../shared/src/**/*.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "benchmarks/**/*.ts", "../shared/src/**/*.ts", "../scripts/**/*.ts", "vitest.config.ts"]
 }

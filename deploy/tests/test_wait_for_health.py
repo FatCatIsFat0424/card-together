@@ -24,7 +24,11 @@ class WaitForHealthTests(unittest.TestCase):
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
-                self.wfile.write(body)
+                try:
+                    self.wfile.write(body)
+                except (BrokenPipeError, ConnectionResetError):
+                    # Timeout cases deliberately disconnect before a final response.
+                    pass
 
             def log_message(self, format, *args):
                 pass
@@ -62,17 +66,12 @@ class WaitForHealthTests(unittest.TestCase):
             (result.stdout + result.stderr).lower(), r"timeout|timed out",
         )
 
-    def test_retries_404_until_health_endpoint_is_ready(self):
-        result, calls = self.run_health_check([
-            (404, b"Not Found"), (404, b"Not Found"), HEALTHY,
-        ])
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(len(calls), 3)
-
-    def test_retries_502_until_backend_is_ready(self):
-        result, calls = self.run_health_check([(502, b"Bad Gateway"), HEALTHY])
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(len(calls), 2)
+    def test_retries_http_errors_until_the_health_endpoint_is_ready(self):
+        for status, body, retries in ((404, b"Not Found", 2), (502, b"Bad Gateway", 1)):
+            with self.subTest(status=status):
+                result, calls = self.run_health_check([(status, body)] * retries + [HEALTHY])
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(calls, ["/health"] * (retries + 1))
 
     def test_invalid_json_does_not_count_as_healthy(self):
         result, calls = self.run_health_check([(200, b"not json")])

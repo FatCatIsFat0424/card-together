@@ -106,11 +106,19 @@ describe('finished board dismissal', () => {
     await resume(players[1]);
     expect(games.getGameState(code)?.phase).toBe('scoring');
     expect(rooms.getRoomInfo(code)?.status).toBe('waiting');
-    expect(await players[0].timeout(5_000).emitWithAck('room:leave')).toEqual({ success: true });
     const visitor = app.clients[1][0];
     expect(await visitor.timeout(5_000).emitWithAck('room:leave')).toEqual({ success: true });
     expect(await visitor.timeout(5_000).emitWithAck('room:join', { roomCode: code }))
       .toMatchObject({ success: true });
+    expect(await players[0].timeout(5_000).emitWithAck('room:standUp')).toEqual({ success: true });
+    expect(games.getGameState(code)?.returnedSeats ?? []).toEqual([]);
+    expect(games.getGameState(code)?.returnedViewers ?? []).toEqual([]);
+    expect(await visitor.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'N' })).toEqual({ success: true });
+    expect((await resume(visitor)).gameState).toBeUndefined();
+    expect((await resume(players[2])).gameState?.phase).toBe('scoring');
+    expect(await visitor.timeout(5_000).emitWithAck('room:standUp')).toEqual({ success: true });
+    expect(await players[0].timeout(5_000).emitWithAck('room:changeSeat', { seat: 'N' })).toEqual({ success: true });
+    expect(await players[0].timeout(5_000).emitWithAck('room:leave')).toEqual({ success: true });
     // A spectator watches the finished board until returning, without removing it.
     const watching = (await resume(visitor)).gameState;
     expect(watching?.phase).toBe('scoring');
@@ -128,12 +136,12 @@ describe('finished board dismissal', () => {
     expect(games.getGameState(code)).toBeNull();
   });
 
-  it('should hide a finished board from a different player in the same seat', async () => {
-    const app = await (harness = await createSocketHarness(2));
-    await startBridge(app);
-    const code = app.roomCodes[0];
-    const game = games.getGameState(code)!;
-    expect(games.isViewingGame(code, 'N', game.players.N?.id ?? '')).toBe(true);
-    expect(games.isViewingGame(code, 'N', game.players.E?.id ?? '')).toBe(false);
+  it('checks the original account when deciding whether a seat views its board', () => {
+    games.startGame('VIEW01', 'bridge', Object.fromEntries(SEATS.map((seat) => [seat, {
+      id: seat, username: seat, nickname: seat, color: '#123456', avatar: 'cat', avatarImage: null,
+    }])));
+    expect(games.isViewingGame('VIEW01', 'N', 'N')).toBe(true);
+    expect(games.isViewingGame('VIEW01', 'N', 'E')).toBe(false);
+    games.restoreGames([]);
   });
 });

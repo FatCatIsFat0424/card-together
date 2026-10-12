@@ -1,3 +1,4 @@
+import { runSeededGame } from './seeded-game-runner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Card, NinetyNineVisibleState, PlayerInfo, RedPointsVisibleState, Seat } from '@shared/types';
 import { nnApply } from '@shared/rules/ninetynine';
@@ -138,8 +139,7 @@ describe('capture and survival bot strategies', () => {
       const random = seededRandom(seed);
       const adapter = gameType === 'redpoints' ? redpoints : ninetynine;
       adapter.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), random), 'N');
-      let turns = 0;
-      while (adapter.getGameState(CODE)?.phase !== 'scoring' && turns < 2000) {
+      runSeededGame(`${gameType}/${seed}`, 2000, () => adapter.getGameState(CODE)?.phase === 'scoring', () => {
         const seat = adapter.getGameState(CODE)!.currentTurnSeat;
         const state = adapter.getPlayerVisibleState(CODE, seat)!;
         const original = structuredClone(state);
@@ -152,8 +152,7 @@ describe('capture and survival bot strategies', () => {
         else if (action?.type === 'ninetynine-play') {
           expect(ninetynine.play(CODE, seat, action.card, action.choice, action.target).success).toBe(true);
         } else throw new Error('Unexpected bot action');
-        turns++;
-      }
+      });
       expect(adapter.getGameState(CODE)?.phase).toBe('scoring');
       expect(adapter.getGameState(CODE)?.result).not.toBeNull();
     }

@@ -1,3 +1,4 @@
+import { runSeededGame } from './seeded-game-runner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BridgeVisibleState, Card, PlayerInfo, Seat } from '@shared/types';
 import { getBridgeBotAction } from '../../src/bots/bridge-strategy';
@@ -202,9 +203,8 @@ describe('bridge bot strategy', () => {
     const rng = random(seed);
     vi.spyOn(Math, 'random').mockImplementation(rng);
     bridge.startGame('BRBOT1', players);
-    for (let count = 0; count < 200; count++) {
+    runSeededGame(`bridge/${seed}`, 200, () => bridge.getGameState('BRBOT1')?.phase === 'scoring', () => {
       const game = bridge.getGameState('BRBOT1')!;
-      if (game.phase === 'scoring') break;
       const seat = game.phase === 'redeal_pending' ? game.redealPendingSeat! : game.phase === 'bidding' ? game.bidding!.currentBidderSeat : game.playing!.currentTurnSeat;
       const state = bridge.getPlayerVisibleState('BRBOT1', seat)!;
       const before = structuredClone(state);
@@ -217,7 +217,7 @@ describe('bridge bot strategy', () => {
         expect(bridge.handleBid('BRBOT1', seat, action.action).success).toBe(true);
       } else if (action.type === 'bridge-play') expect(bridge.handlePlayCard('BRBOT1', seat, action.card).success).toBe(true);
       else throw new Error('Unexpected non-Bridge action');
-    }
+    });
     const game = bridge.getGameState('BRBOT1')!;
     expect(game.phase).toBe('scoring');
     expect(game.playing!.completedTricks).toHaveLength(13);

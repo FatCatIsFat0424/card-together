@@ -38,18 +38,13 @@ esac
                                     capture_output=True, text=True)
             return result.returncode, log.read_text().splitlines()
 
-    def test_first_install_does_not_reset_unloaded_unit(self):
-        status, calls = self.run_start("unloaded")
-        self.assertEqual(status, 0)
-        self.assertEqual(calls, ["is-failed --quiet card-together.service",
-                                 "enable --now card-together.service"])
-
-    def test_inactive_and_active_units_can_start(self):
-        for state in ("inactive", "active"):
+    def test_nonfailed_units_start_without_reset(self):
+        for state in ("unloaded", "inactive", "active"):
             with self.subTest(state=state):
                 status, calls = self.run_start(state)
                 self.assertEqual(status, 0)
-                self.assertEqual(len(calls), 2)
+                self.assertEqual(calls, ["is-failed --quiet card-together.service",
+                                        "enable --now card-together.service"])
 
     def test_failed_unit_resets_before_start(self):
         status, calls = self.run_start("failed")

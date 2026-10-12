@@ -93,12 +93,18 @@ export function createMediaStore(directory: string, quotaBytes = MEDIA_QUOTA_BYT
     const used = await usedBytes(ownerId);
     if (used + bytes.length > quotaBytes) return null;
     const target = join(root, id);
-    if (!existsSync(target)) {
-      await mkdir(root, { recursive: true });
-      await writeAtomically(target, bytes);
+    // Record ownership before publishing new bytes; failed ownership must not expose an upload.
+    try {
+      await mkdir(owner, { recursive: true });
+      await writeFile(marker, '', { mode: 0o600 });
+      if (!existsSync(target)) {
+        await mkdir(root, { recursive: true });
+        await writeAtomically(target, bytes);
+      }
+    } catch (error) {
+      await unlink(marker).catch(() => undefined);
+      throw error;
     }
-    await mkdir(owner, { recursive: true });
-    await writeFile(marker, '', { mode: 0o600 });
     usage.set(ownerId, used + bytes.length);
     return id;
   }

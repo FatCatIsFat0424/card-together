@@ -41,22 +41,18 @@ Use Node.js 22.13+; deployment uses Node.js 24.
 
 ## Setup and checks
 
-See [development](docs/development.md) for setup and test locations. Required checks
-for behavior changes, from the repository root:
+See [development](docs/development.md) for setup and [testing](docs/testing.md) for
+selection, cache behavior, and standalone commands. Required gate for behavior changes,
+from the repository root:
 
 ```sh
-npm run typecheck
-npm run lint
-npm test
-npm run build:client
+npm run check -- full
 ```
 
-For deployment changes also run:
-
-```sh
-for script in deploy/*.sh; do bash -n "$script"; done
-python3 -B -m unittest discover -s deploy/tests
-```
+This includes all workspace type environments, typed lint, all Vitest correctness tests,
+a production bundle and artifact validation, Bash syntax, and Python deployment tests.
+Use focused mode while editing; it does not replace this completion gate. Deployment
+builds use release mode with explicit production base/Socket configuration.
 
 Use existing Vitest tests for behavior and boundary cases. No formatter or secret
 scanner is configured; follow adjacent formatting and review changed content.

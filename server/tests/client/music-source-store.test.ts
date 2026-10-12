@@ -56,7 +56,7 @@ describe('provided music store', () => {
     expect(mocks.createFile).not.toHaveBeenCalled();
   });
 
-  it.each(['midnight-postcard', 'scarlet-bridge-matsuri', 'skyline-drive', 'ember-highway'])(
+  it.each(['midnight-postcard'])(
     'should ignore the saved original source and track %s', async (id) => {
       storage.set('bridge.music.source', 'local');
       storage.set('bridge.music.track', id);

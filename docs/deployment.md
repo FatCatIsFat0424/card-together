@@ -17,7 +17,9 @@ bash deploy/deploy.sh
 Build installs locked dependencies including devDependencies, checks shell/Python
 helpers, runs typecheck/lint/tests, builds the `/card-together/` frontend, and prepares
 `.deploy/node`. Build on the target OS/architecture. The backend runs TypeScript through
-`tsx`, so runtime dependencies include development tools. The frontend build imports owner
+`tsx`, so runtime dependencies include development tools. The release build uses the
+complete [testing gate](testing.md#complete-gate-and-caches) with explicit production
+base and Socket paths before preparing its Node artifact. The frontend build imports owner
 music and [site emoji](media.md#site-provided-emoji); the generated emoji catalog lives in
 `shared/src/`, which `install.sh` copies for the backend. Previous site emoji files, like
 hashed assets, stay published until `prune-assets.sh` removes them after the grace period.

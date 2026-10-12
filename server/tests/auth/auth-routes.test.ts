@@ -13,7 +13,9 @@ import {
 } from '../../src/auth/auth-service';
 import { createJsonRepository } from '../../src/database/json-repository';
 import type { Repository } from '../../src/database/repository';
+import * as passwords from '../../src/auth/password';
 import { createAuthRouter } from '../../src/http/auth-routes';
+import { seedAuthenticatedAccount } from './account-fixture';
 
 const ORIGIN = 'http://localhost:5173';
 const HEADERS = { Origin: ORIGIN, 'Content-Type': 'application/json' };
@@ -80,6 +82,11 @@ describe('account HTTP routes', () => {
     return { cookie: cookieHeader.split(';')[0], id: body.account.id as string };
   }
 
+  async function seedAccount(username = 'alice'): Promise<{ cookie: string; id: string }> {
+    const seeded = await seedAuthenticatedAccount(repository, username);
+    return { cookie: seeded.cookie, id: seeded.account.id };
+  }
+
   it('should issue secure cookies, protect profile identity and invalidate the session on logout', async () => {
     const { cookie, id } = await register();
     const me = await fetch(`${baseUrl}/me`, { headers: { Cookie: cookie } });
@@ -104,7 +111,7 @@ describe('account HTTP routes', () => {
   });
 
   it('should report a saved profile as successful when live sync fails', async () => {
-    const { cookie, id } = await register();
+    const { cookie, id } = await seedAccount();
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     onAccountUpdated.mockRejectedValueOnce(new Error('runtime unavailable'));
     const updated = await fetch(`${baseUrl}/profile`, {
@@ -120,7 +127,7 @@ describe('account HTTP routes', () => {
   });
 
   it('should authenticate purchases, ignore client prices and equip only owned borders', async () => {
-    const { cookie, id } = await register();
+    const { cookie, id } = await seedAccount();
     const headers = { ...HEADERS, Cookie: cookie };
     const buy = (body: object, requestHeaders: Record<string, string> = headers): Promise<Response> => fetch(`${baseUrl}/shop/avatar-borders`, {
       method: 'POST', headers: requestHeaders, body: JSON.stringify(body),
@@ -129,14 +136,8 @@ describe('account HTTP routes', () => {
     expect((await buy({ border: 'copper' }, { ...headers, Origin: 'https://attacker.example' })).status).toBe(403);
     expect((await buy({ border: 'unknown' })).status).toBe(400);
     expect((await buy({ border: 'copper', price: 0, coins: 9999 })).status).toBe(409);
-    const account = await repository.getAccountById(id);
-    if (!account) throw new Error('Expected a registered account.');
-    // Seed a separate isolated test account; production balances remain game-earned.
-    await repository.createAccount({ ...account, id: 'shop-test-bob', username: 'bob', usernameNormalized: 'bob', coins: 100 });
-    const login = await fetch(`${baseUrl}/login`, {
-      method: 'POST', headers: HEADERS, body: JSON.stringify({ username: 'bob', password: 'correct password' }),
-    });
-    const bobHeaders = { ...HEADERS, Cookie: login.headers.get('set-cookie')!.split(';')[0] };
+    const bob = await seedAuthenticatedAccount(repository, 'bob', { id: 'shop-test-bob', coins: 100 });
+    const bobHeaders = { ...HEADERS, Cookie: bob.cookie };
     const response = await buy({ border: 'copper', price: 0, accountId: id }, bobHeaders);
     expect(await response.json()).toMatchObject({ account: {
       id: 'shop-test-bob', coins: 50, coinRevision: 1, ownedAvatarBorders: ['copper'], avatarBorder: null,
@@ -185,7 +186,7 @@ describe('account HTTP routes', () => {
   });
 
   it('should upgrade a legacy cookie on authenticated restore with its original expiry', async () => {
-    const { cookie, id } = await register();
+    const { cookie, id } = await seedAccount();
     const token = cookie.split('=')[1];
     const session = await repository.getSession(tokenHash(token));
     const response = await fetch(`${baseUrl}/me`, {
@@ -211,8 +212,8 @@ describe('account HTTP routes', () => {
   });
 
   it('should retain a valid new identity and revoke both presented sessions on logout', async () => {
-    const current = await register('alice');
-    const legacy = await register('bob');
+    const current = await seedAccount('alice');
+    const legacy = await seedAccount('bob');
     const legacyCookie = legacy.cookie.replace(SESSION_COOKIE_NAME, LEGACY_SESSION_COOKIE_NAME);
     const cookie = `${legacyCookie}; ${current.cookie}`;
     const restored = await fetch(`${baseUrl}/me`, { headers: { Cookie: cookie } });
@@ -262,11 +263,14 @@ describe('account HTTP routes', () => {
       });
       expect(response.status).toBe(400);
     }
+    const derive = vi.spyOn(passwords, 'verifyPassword');
     const blocked = await fetch(`${baseUrl}/login`, {
       method: 'POST',
       headers: HEADERS,
-      body: '{}',
+      body: JSON.stringify({ username: 'alice', password: 'valid password' }),
     });
+    expect(derive).not.toHaveBeenCalled();
+    derive.mockRestore();
     expect(blocked.status).toBe(429);
     expect(Number(blocked.headers.get('retry-after'))).toBeGreaterThan(0);
   });

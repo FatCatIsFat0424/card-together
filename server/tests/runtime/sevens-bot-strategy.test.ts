@@ -1,3 +1,4 @@
+import { runSeededGame } from './seeded-game-runner';
 import { describe, expect, it } from 'vitest';
 import type { Card, PlayerInfo, Seat, SevensTable, SevensVisibleState } from '@shared/types';
 import { svEmptyTable, svLegalPlays } from '@shared/rules/sevens';
@@ -299,7 +300,7 @@ describe('Sevens bot full games', () => {
       const random = mulberry32(seed);
       sevens.startGame(CODE, PLAYERS, shuffleDeck(createDeck(), random), { closeOnEnd });
       // A collapse after every suit is slain covers the rest at once, so a match can end before 52 turns.
-      for (let turn = 0; turn < 52 && sevens.getGameState(CODE)!.phase === 'playing'; turn++) {
+      runSeededGame(`sevens/${seed}/closeOnEnd=${closeOnEnd}`, 52, () => sevens.getGameState(CODE)?.phase === 'scoring', (turn) => {
         const seat = sevens.getGameState(CODE)!.currentTurnSeat;
         const view = sevens.getPlayerVisibleState(CODE, seat)!;
         const action = getSevensBotAction(view, random);
@@ -313,7 +314,7 @@ describe('Sevens bot full games', () => {
         } else {
           throw new Error('Unexpected action type');
         }
-      }
+      });
       const final = sevens.getGameState(CODE)!;
       expect(final.phase).toBe('scoring');
       expect(final.result).not.toBeNull();

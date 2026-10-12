@@ -8,9 +8,11 @@ import type {
   AccountProfile, ClientToServerEvents, FriendsData, RoomInvite, ServerToClientEvents,
 } from '@shared/types';
 import { createApplication } from '../../src/app';
+import type { Repository } from '../../src/database/repository';
 import { createJsonRepository } from '../../src/database/json-repository';
 import * as roomManager from '../../src/managers/room-manager';
 import { MAX_SPECTATORS } from '@shared/constants';
+import { seedAuthenticatedAccount } from '../auth/account-fixture';
 
 const ORIGIN = 'http://localhost:5173';
 type Client = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -24,12 +26,13 @@ interface Registered {
 describe('room invites and friend presence', () => {
   let directory: string;
   let application: Application;
+  let repository: Repository;
   let baseUrl: string;
   const clients: Client[] = [];
 
   beforeEach(async (): Promise<void> => {
     directory = await mkdtemp(join(tmpdir(), 'bridge-invite-'));
-    const repository = await createJsonRepository(join(directory, 'database.json'));
+    repository = await createJsonRepository(join(directory, 'database.json'));
     application = await createApplication(repository, { allowedOrigins: [ORIGIN] });
     const server = application.httpServer;
     await new Promise<void>((resolve, reject): void => {
@@ -51,16 +54,8 @@ describe('room invites and friend presence', () => {
     return { Origin: ORIGIN, 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) };
   }
 
-  async function register(username: string): Promise<Registered> {
-    const response = await fetch(`${baseUrl}/api/auth/register`, {
-      method: 'POST', headers: headers(),
-      body: JSON.stringify({ username, password: 'A valid test password 123', nickname: username }),
-    });
-    expect(response.status).toBe(201);
-    const body = await response.json() as { account: AccountProfile };
-    const cookie = response.headers.get('set-cookie')?.split(';')[0];
-    if (!cookie) throw new Error('Expected session cookie');
-    return { account: body.account, cookie };
+  async function seedAccount(username: string): Promise<Registered> {
+    return seedAuthenticatedAccount(repository, username);
   }
 
   async function befriend(first: Registered, second: Registered): Promise<void> {
@@ -97,7 +92,7 @@ describe('room invites and friend presence', () => {
   }
 
   it('should deliver an invite to an online friend and enforce the cooldown', async () => {
-    const [alice, bob] = [await register('alice'), await register('bob')];
+    const [alice, bob] = [await seedAccount('alice'), await seedAccount('bob')];
     await befriend(alice, bob);
     const [host, guest] = [await connect(alice), await connect(bob)];
     const roomCode = await createRoom(host);
@@ -118,7 +113,7 @@ describe('room invites and friend presence', () => {
   });
 
   it('should reject inviting a non-friend', async () => {
-    const [alice, bob] = [await register('alice'), await register('bob')];
+    const [alice, bob] = [await seedAccount('alice'), await seedAccount('bob')];
     const host = await connect(alice);
     await connect(bob);
     await createRoom(host);
@@ -127,7 +122,7 @@ describe('room invites and friend presence', () => {
   });
 
   it('should reject inviting once the spectator area is full', async () => {
-    const [alice, erin] = [await register('alice'), await register('erin')];
+    const [alice, erin] = [await seedAccount('alice'), await seedAccount('erin')];
     await befriend(alice, erin);
     const [host] = [await connect(alice), await connect(erin)];
     const roomCode = await createRoom(host);

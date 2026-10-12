@@ -1,6 +1,6 @@
 """Exercise backup and frontend retention scripts in temporary directories."""
 
-import json
+import fcntl
 import os
 from pathlib import Path
 import subprocess
@@ -22,48 +22,27 @@ class PruneAssetsTests(unittest.TestCase):
         return subprocess.run(["bash", str(DEPLOY / "prune-assets.sh"), str(build), str(site), *extra],
                               capture_output=True, text=True)
 
-    def test_only_stale_files_missing_from_the_build_are_removed(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            build, site = root / "build", root / "site"
-            for base in (build, site):
-                (base / "assets").mkdir(parents=True)
-            (build / "assets" / "current.js").write_text("new")
-            (site / "assets" / "current.js").write_text("new")
-            (site / "assets" / "old-stale.js").write_text("old")
-            (site / "assets" / "old-recent.js").write_text("old")
-            age(site / "assets" / "current.js", 40)
-            age(site / "assets" / "old-stale.js", 40)
-            age(site / "assets" / "old-recent.js", 2)
-            (site / "index.html").write_text("entry")
-            age(site / "index.html", 40)
+    def test_only_stale_files_missing_from_each_build_directory_are_removed(self):
+        for subdirectory in ("assets", "provided-emoji", "provided-music"):
+            with self.subTest(subdirectory=subdirectory), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                build, site = root / "build", root / "site"
+                for base in (build, site):
+                    (base / subdirectory).mkdir(parents=True)
+                (build / subdirectory / "current file").write_text("new")
+                for name, days in (("current file", 40), ("old stale file", 40), ("old recent file", 2)):
+                    path = site / subdirectory / name
+                    path.write_text(name)
+                    age(path, days)
+                (site / "index.html").write_text("entry")
+                age(site / "index.html", 40)
 
-            result = self.run_prune(build, site)
+                result = self.run_prune(build, site)
 
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertTrue((site / "assets" / "current.js").exists())
-            self.assertTrue((site / "assets" / "old-recent.js").exists())
-            self.assertFalse((site / "assets" / "old-stale.js").exists())
-            self.assertTrue((site / "index.html").exists())
-
-    def test_stale_site_emoji_are_removed_after_the_grace_period(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            build, site = root / "build", root / "site"
-            for base in (build, site):
-                (base / "provided-emoji").mkdir(parents=True)
-            (build / "provided-emoji" / "wave-new.png").write_text("new")
-            for name in ("wave-new.png", "wave-old.png", "cat-recent.png"):
-                (site / "provided-emoji" / name).write_text(name)
-            age(site / "provided-emoji" / "wave-new.png", 40)
-            age(site / "provided-emoji" / "wave-old.png", 40)
-            age(site / "provided-emoji" / "cat-recent.png", 2)
-
-            result = self.run_prune(build, site)
-
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(sorted(path.name for path in (site / "provided-emoji").iterdir()),
-                             ["cat-recent.png", "wave-new.png"])
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(sorted(path.name for path in (site / subdirectory).iterdir()),
+                                 ["current file", "old recent file"])
+                self.assertEqual((site / "index.html").read_text(), "entry")
 
     def test_invalid_arguments_fail_without_deleting(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -77,16 +56,32 @@ class PruneAssetsTests(unittest.TestCase):
 
 
 class BackupDataTests(unittest.TestCase):
-    def run_backup(self, state, backups, keep="14"):
-        environment = {**os.environ, "STATE_DIR": str(state), "BACKUP_DIR": str(backups), "KEEP": keep}
-        return subprocess.run(["bash", str(DEPLOY / "backup-data.sh")], env=environment,
-                              capture_output=True, text=True)
+    def run_backup(self, state, backups, keep="14", stamp="20261012T000000Z", failure=""):
+        with tempfile.TemporaryDirectory(prefix="backup-command-test-") as directory:
+            commands = Path(directory)
+            date = commands / "date"
+            date.write_text('#!/bin/sh\nprintf "%s\\n" "$FIXTURE_STAMP"\n')
+            date.chmod(0o755)
+            if failure:
+                self.assertIn(failure, ("cp", "rsync"))
+                command = commands / failure
+                command.write_text('#!/bin/sh\nexit 7\n')
+                command.chmod(0o755)
+            environment = {**os.environ, "STATE_DIR": str(state), "BACKUP_DIR": str(backups),
+                           "KEEP": keep, "FIXTURE_STAMP": stamp,
+                           "PATH": f"{commands}:{os.environ['PATH']}"}
+            return subprocess.run(["bash", str(DEPLOY / "backup-data.sh")], env=environment,
+                                  capture_output=True, text=True, timeout=10)
 
     def make_state(self, root):
         state = root / "state"
         (state / "media").mkdir(parents=True)
         (state / "database.json").write_text('{"schemaVersion": 3}')
         (state / "media" / "a.png").write_bytes(b"image-a")
+        marker = state / "media/owners/account/a.png"
+        marker.parent.mkdir(parents=True)
+        marker.write_bytes(b"")
+        marker.chmod(0o600)
         return state
 
     def snapshots(self, backups):
@@ -97,9 +92,8 @@ class BackupDataTests(unittest.TestCase):
             root = Path(directory)
             state, backups = self.make_state(root), root / "backups"
             self.assertEqual(self.run_backup(state, backups).returncode, 0)
-            time.sleep(1.1)
             (state / "media" / "b.png").write_bytes(b"image-b")
-            result = self.run_backup(state, backups)
+            result = self.run_backup(state, backups, stamp="20261012T000001Z")
             self.assertEqual(result.returncode, 0, result.stderr)
 
             first, second = self.snapshots(backups)
@@ -108,6 +102,9 @@ class BackupDataTests(unittest.TestCase):
             self.assertEqual((first / "media" / "a.png").stat().st_ino,
                              (second / "media" / "a.png").stat().st_ino)
             self.assertEqual(oct(second.stat().st_mode & 0o777), "0o700")
+            marker = second / "media/owners/account/a.png"
+            self.assertEqual(marker.read_bytes(), b"")
+            self.assertEqual(marker.stat().st_mode & 0o777, 0o600)
             self.assertEqual([path.name for path in backups.iterdir() if path.name.startswith(".staging")], [])
 
     def test_retention_keeps_newest_snapshots(self):
@@ -128,9 +125,8 @@ class BackupDataTests(unittest.TestCase):
             root = Path(directory)
             state, backups = self.make_state(root), root / "backups"
             self.assertEqual(self.run_backup(state, backups).returncode, 0)
-            time.sleep(1.1)
             (state / "database.json").write_text("{broken")
-            result = self.run_backup(state, backups)
+            result = self.run_backup(state, backups, stamp="20261012T000001Z")
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual(len(self.snapshots(backups)), 1)
             self.assertEqual([path.name for path in backups.iterdir() if path.name.startswith(".staging")], [])
@@ -143,6 +139,47 @@ class BackupDataTests(unittest.TestCase):
             (state / "database.json").unlink()
             self.assertNotEqual(self.run_backup(state, backups).returncode, 0)
 
+    def test_lock_contention_does_not_create_a_partial_snapshot(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state, backups = self.make_state(root), root / "backups"
+            backups.mkdir()
+            with (backups / ".lock").open("w") as lock:
+                fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                result = self.run_backup(state, backups)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Another data backup", result.stderr)
+            self.assertEqual(self.snapshots(backups), [])
+            self.assertEqual(list(backups.glob(".staging-*")), [])
+
+    def test_copy_failures_preserve_old_snapshots_and_clean_staging(self):
+        for command in ("cp", "rsync"):
+            with self.subTest(command=command), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                state, backups = self.make_state(root), root / "backups"
+                self.assertEqual(self.run_backup(state, backups).returncode, 0)
+                original = self.snapshots(backups)[0]
+                saved = (original / "database.json").read_bytes()
+                result = self.run_backup(state, backups, stamp="20261012T000001Z", failure=command)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.snapshots(backups), [original])
+                self.assertEqual((original / "database.json").read_bytes(), saved)
+                self.assertEqual(list(backups.glob(".staging-*")), [])
+
+    def test_timestamp_collision_keeps_the_existing_snapshot(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state, backups = self.make_state(root), root / "backups"
+            self.assertEqual(self.run_backup(state, backups).returncode, 0)
+            original = self.snapshots(backups)[0]
+            saved = (original / "database.json").read_bytes()
+            (state / "database.json").write_text('{"schemaVersion": 4}')
+            result = self.run_backup(state, backups)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Snapshot already exists", result.stderr)
+            self.assertEqual((original / "database.json").read_bytes(), saved)
+            self.assertEqual(list(backups.glob(".staging-*")), [])
+
 
 class DeployScriptContractTests(unittest.TestCase):
     def test_scripts_do_not_depend_on_ripgrep(self):
@@ -150,27 +187,6 @@ class DeployScriptContractTests(unittest.TestCase):
             with self.subTest(script=script.name):
                 text = script.read_text()
                 self.assertNotRegex(text, r"(?m)(^|[\s;|(])rg\s")
-
-    def test_deploy_recovers_on_signals_and_replaces_site_atomically(self):
-        text = (DEPLOY / "deploy.sh").read_text()
-        self.assertIn("trap 'on_error 130' INT", text)
-        self.assertIn("trap 'on_error 143' TERM", text)
-        self.assertIn('replace_file "$backup_dir/site.new.conf" "$site_file"', text)
-        self.assertNotIn('> "$site_file"', text)
-        self.assertLess(text.index("rsync -a --exclude='/node'"), text.index("systemctl stop card-together.service"))
-
-    def test_client_build_does_not_rely_on_workspace_npm_run(self):
-        # npm 9 exits 0 from `npm run` inside a workspace even when the script fails.
-        scripts = json.loads((DEPLOY.parent / "package.json").read_text())["scripts"]
-        build = scripts["build:client"]
-        self.assertIn("npm run emoji:import", build)
-        self.assertNotRegex(build, r"cd client && npm run")
-
-    def test_deploy_enables_backup_timer_only_after_success(self):
-        text = (DEPLOY / "deploy.sh").read_text()
-        handler = text[text.index("on_error() {"):text.index("trap on_error ERR")]
-        self.assertNotIn("card-together-backup.timer", handler)
-        self.assertLess(text.rindex("trap - ERR INT TERM"), text.index("enable --now card-together-backup.timer"))
 
 
 if __name__ == "__main__":

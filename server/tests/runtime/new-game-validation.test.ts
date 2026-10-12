@@ -244,11 +244,10 @@ describe('persisted Sevens games', () => {
     playSevens(52);
     const game = sevens.getGameState(CODE)!;
     const cover = game.log.findIndex((entry) => entry.type === 'cover');
-    if (cover >= 0) {
-      const leaked = structuredClone(game);
-      Object.assign(leaked.log[cover], { card: game.covered[game.log[cover].seat][0] });
-      expect(persists(leaked, 'sevens')).toBe(false);
-    }
+    expect(cover).toBeGreaterThanOrEqual(0);
+    const leaked = structuredClone(game);
+    Object.assign(leaked.log[cover], { card: game.covered[game.log[cover].seat][0] });
+    expect(persists(leaked, 'sevens')).toBe(false);
     const table = structuredClone(game);
     table.table.spades = { low: 7, high: 7 };
     expect(persists(table, 'sevens')).toBe(false);
@@ -453,7 +452,8 @@ describe('persisted Blackjack games', () => {
     blackjack.startGame(CODE, PLAYERS, 15_000, 0);
     while (blackjack.getGameState(CODE)!.phase === 'betting') stepBlackjack(random);
     const game = blackjack.getGameState(CODE)!;
-    if (game.phase === 'playing') {
+    expect(game.phase).toBe('playing');
+    {
       const duplicate = structuredClone(game);
       duplicate.deck[0] = { ...duplicate.dealer[0] };
       expect(persists(duplicate, 'blackjack')).toBe(false);

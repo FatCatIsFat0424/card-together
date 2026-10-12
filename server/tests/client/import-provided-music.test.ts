@@ -55,9 +55,10 @@ function importMusic(root: string): ImportedTrack[] {
 
 function snapshotOutputs(root: string): Record<string, string> {
   const snapshot: Record<string, string> = {
+    receipt: readFileSync(outputPath(root, '.import-state/manifest.json'), 'utf8'),
     manifest: readFileSync(manifestPath(root), 'utf8'),
   };
-  for (const file of readdirSync(outputPath(root, ''))) {
+  for (const file of readdirSync(outputPath(root, '')).filter((name) => !name.startsWith('.import-'))) {
     snapshot[file] = readFileSync(outputPath(root, file)).toString('base64');
   }
   return snapshot;
@@ -148,7 +149,7 @@ describe('provided music import CLI', () => {
     expect(tracks).toHaveLength(6);
     expect(tracks.map((track) => track.file.split('.').at(-1)).sort())
       .toEqual(['aac', 'flac', 'm4a', 'mp3', 'ogg', 'wav']);
-    expect(readdirSync(outputPath(root, ''))).toHaveLength(6);
+    expect(readdirSync(outputPath(root, '')).filter((name) => !name.startsWith('.import-'))).toHaveLength(6);
   });
 
   it('should reject an empty audio file without changing previous outputs', () => {

@@ -92,6 +92,7 @@ function fractured(from: Point, to: Point, random: () => number): Point[] {
  * edges, bordered by straight, jagged cracks. Deterministic for a seed so every viewer sees the same break.
  */
 export function shatterTable(width: number, height: number, impact: Point, seed = 11): Shatter {
+  if (width <= 0 || height <= 0) return { shards: [], cracks: [] };
   const random = seededRandom(seed);
   const reach = Math.max(...[[0, 0], [width, 0], [0, height], [width, height]]
     .map(([x, y]) => Math.hypot(x - impact.x, y - impact.y)));

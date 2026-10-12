@@ -205,3 +205,177 @@ describe('Blackjack simultaneous betting', () => {
     expect(blackjackGame().hand).toBe(1);
   });
 });
+
+describe('shared deadline atomicity and lifecycle', () => {
+  const stops: (() => void)[] = [];
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(10000); });
+  afterEach(() => {
+    stops.splice(0).forEach((stop) => stop());
+    games.restoreGames([]);
+    rooms.restoreRooms([]);
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it.each(['chinesepoker', 'blackjack'] as const)('publishes %s decisions only after a deferred durable save', async (type) => {
+    const { runtime, repository, saved } = await fixture(false, type);
+    const originalSave = repository.saveRuntime.getMockImplementation()!;
+    let release!: () => void;
+    let started!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const saveStarted = new Promise<void>((resolve) => { started = resolve; });
+    repository.saveRuntime.mockImplementationOnce(async (snapshot) => {
+      started();
+      await gate;
+      await originalSave(snapshot);
+    });
+    vi.spyOn(decisions, 'getBotAction').mockImplementation((visible) => visible.gameType === 'chinesepoker'
+      ? { type: 'chinesepoker-arrange', arrangement: cpGreedyArrangement(visible.myHand) }
+      : { type: 'blackjack-bet', amount: BJ_MIN_BET });
+    const stored = structuredClone(saved());
+    const publish = vi.fn(() => expect(saved()).toEqual(runtime.snapshot()));
+    stops.push(startSharedDeadlines(runtime, publish));
+    await vi.advanceTimersByTimeAsync(type === 'chinesepoker' ? ARRANGE_MS : 15_000);
+    await saveStarted;
+    const inspect = vi.fn(() => runtime.snapshot());
+    const read = runtime.inspect(inspect);
+    expect(inspect).not.toHaveBeenCalled();
+    expect(publish).not.toHaveBeenCalled();
+    expect(saved()).toEqual(stored);
+    release();
+    await runtime.idle();
+    await expect(read).resolves.toEqual(saved());
+    expect(publish).toHaveBeenCalledTimes(1);
+    expect(inspect).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['chinesepoker', 'blackjack'] as const)('rolls back all pending %s decisions on save failure and retries once', async (type) => {
+    const { code, runtime, repository, game, blackjackGame, saved } = await fixture(true, type);
+    await runtime.mutate(() => {
+      const result = type === 'chinesepoker'
+        ? games.handleChinesePokerArrange(code, 'N', cpGreedyArrangement(game().hands.N))
+        : games.handleBlackjackBet(code, 'N', 50);
+      expect(result.success).toBe(true);
+    });
+    const before = runtime.snapshot();
+    const stored = structuredClone(saved());
+    const choose = vi.spyOn(decisions, 'getBotAction').mockImplementation((visible) => {
+      if (visible.gameType === 'chinesepoker') return {
+        type: 'chinesepoker-arrange', arrangement: cpGreedyArrangement(visible.myHand),
+      };
+      return { type: 'blackjack-bet', amount: BJ_MIN_BET };
+    });
+    repository.saveRuntime.mockClear();
+    repository.saveRuntime.mockRejectedValueOnce(new Error('disk unavailable'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const publish = vi.fn(() => expect(saved().games).toEqual(runtime.snapshot().games));
+    stops.push(startSharedDeadlines(runtime, publish));
+    await vi.advanceTimersByTimeAsync(type === 'chinesepoker' ? ARRANGE_MS : 15_000);
+    await runtime.idle();
+    expect(runtime.snapshot()).toEqual(before);
+    expect(saved()).toEqual(stored);
+    expect(publish).not.toHaveBeenCalled();
+    expect(choose).toHaveBeenCalledTimes(3);
+    for (const [visible] of choose.mock.calls) {
+      expect(visible).not.toHaveProperty('deck');
+      if (visible.gameType === 'chinesepoker') expect(visible).not.toHaveProperty('hands');
+      else expect(visible).not.toHaveProperty('hole');
+    }
+    await vi.advanceTimersByTimeAsync(999);
+    expect(publish).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    await runtime.idle();
+    expect(repository.saveRuntime).toHaveBeenCalledTimes(2);
+    expect(choose).toHaveBeenCalledTimes(6);
+    expect(publish).toHaveBeenCalledTimes(1);
+    if (type === 'chinesepoker') {
+      expect(game().arrangements.N).toEqual(before.games[0].gameType === 'chinesepoker' && before.games[0].arrangements.N);
+      expect(SEATS.every((seat) => game().arrangements[seat] !== null)).toBe(true);
+      expect(game().phase).toBe('scoring');
+    } else {
+      expect(blackjackGame().log.find((entry) => entry.type === 'deal')).toMatchObject({ bets: { N: 50, E: 10, S: 10, W: 10 } });
+    }
+  });
+
+  it.each(['chinesepoker', 'blackjack'] as const)('rolls back earlier seats when the second %s strategy throws', async (type) => {
+    const { code, runtime, repository, game } = await fixture(true, type);
+    await runtime.mutate(() => {
+      expect((type === 'chinesepoker'
+        ? games.handleChinesePokerArrange(code, 'N', cpGreedyArrangement(game().hands.N))
+        : games.handleBlackjackBet(code, 'N', 50)).success).toBe(true);
+    });
+    const before = runtime.snapshot();
+    let calls = 0;
+    vi.spyOn(decisions, 'getBotAction').mockImplementation((visible) => {
+      calls++;
+      if (calls === 2) throw new Error('strategy unavailable');
+      return visible.gameType === 'chinesepoker'
+        ? { type: 'chinesepoker-arrange', arrangement: cpGreedyArrangement(visible.myHand) }
+        : { type: 'blackjack-bet', amount: BJ_MIN_BET };
+    });
+    repository.saveRuntime.mockClear();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const publish = vi.fn();
+    stops.push(startSharedDeadlines(runtime, publish));
+    await vi.advanceTimersByTimeAsync(type === 'chinesepoker' ? ARRANGE_MS : 15_000);
+    await runtime.idle();
+    expect(calls).toBe(2);
+    expect(runtime.snapshot()).toEqual(before);
+    expect(repository.saveRuntime).not.toHaveBeenCalled();
+    expect(publish).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1000);
+    await runtime.idle();
+    expect(calls).toBe(5);
+    expect(publish).toHaveBeenCalledTimes(1);
+  });
+
+  it.each((['chinesepoker', 'blackjack'] as const).flatMap((type) =>
+    (['manual', 'replacement', 'abort', 'stop'] as const).map((change) => ({ type, change }))))(
+    'ignores an expired $type job queued before $change', async ({ type, change }) => {
+      const { code, runtime, repository, game, blackjackGame } = await fixture(false, type);
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      const publish = vi.fn();
+      const choose = vi.spyOn(decisions, 'getBotAction');
+      const stop = startSharedDeadlines(runtime, publish);
+      stops.push(stop);
+      const prior = runtime.mutate(async () => {
+        if (change !== 'manual') await gate;
+        if (change === 'manual') {
+          for (const seat of SEATS) {
+            expect((type === 'chinesepoker'
+              ? games.handleChinesePokerArrange(code, seat, cpGreedyArrangement(game().hands[seat]))
+              : games.handleBlackjackBet(code, seat, BJ_MIN_BET)).success).toBe(true);
+          }
+          if (type === 'blackjack') {
+            while (blackjackGame().phase === 'playing') {
+              vi.setSystemTime(Math.max(Date.now(), getPresentationEndsAt(blackjackGame())));
+              expect(games.handleBlackjackAction(code, blackjackGame().currentTurnSeat, 'stand').success).toBe(true);
+            }
+            expect(blackjackGame().phase).toBe('betting');
+            expect(blackjackGame().hand).toBe(1);
+          }
+        } else if (change === 'replacement') {
+          games.startGame(code, type, rooms.getSeatPlayers(code)!);
+        } else if (change === 'abort') {
+          games.abortGame(code);
+          rooms.setRoomStatus(code, 'waiting');
+        }
+        if (change === 'manual') await gate;
+      });
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(type === 'chinesepoker' ? ARRANGE_MS : 15_000);
+      if (change === 'stop') stop();
+      release();
+      await prior;
+      const saves = repository.saveRuntime.mock.calls.length;
+      await runtime.idle();
+      expect(repository.saveRuntime).toHaveBeenCalledTimes(saves);
+      expect(choose).not.toHaveBeenCalled();
+      expect(publish).not.toHaveBeenCalled();
+      if (change === 'replacement' || change === 'stop') {
+        if (type === 'chinesepoker') expect(game().phase).toBe('arranging');
+        else expect(blackjackGame().phase).toBe('betting');
+      }
+  });
+});

@@ -5,6 +5,7 @@ import {
 } from '@shared/game-presentation';
 import { cpGreedyArrangement } from '@shared/rules/chinesepoker-arrange';
 import * as games from '../../src/managers/game-manager';
+import * as blackjack from '../../src/managers/games/blackjack-game';
 
 const CODE = 'PRES01';
 const card = (rank: Card['rank']): Card => ({ suit: 'clubs', rank });
@@ -27,7 +28,7 @@ function restore(): BigTwoGameState {
 
 describe('authoritative game presentation', () => {
   beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(10000); games.restoreGames([]); });
-  afterEach(() => { games.restoreGames([]); vi.useRealTimers(); });
+  afterEach(() => { games.restoreGames([]); vi.restoreAllMocks(); vi.useRealTimers(); });
 
   it('should reject early actions without mutations and accept the exact deadline', () => {
     restore();
@@ -215,6 +216,14 @@ describe('authoritative game presentation', () => {
   });
 
   it('should keep Blackjack bets frameless, start the first turn after the deal, and open betting after settlement', () => {
+    let seed = 17;
+    const random = (): number => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+    const bet = blackjack.bet;
+    vi.spyOn(blackjack, 'bet').mockImplementation((code, seat, amount, automatic, now) =>
+      bet(code, seat, amount, automatic, now, random));
     games.startGame(CODE, 'blackjack', players);
     const state = games.getGameState(CODE)!;
     if (state.gameType !== 'blackjack') throw new Error('Expected Blackjack');
@@ -228,7 +237,8 @@ describe('authoritative game presentation', () => {
     expect(games.handleBlackjackBet(CODE, 'W', 50).success).toBe(true);
     const frames = getPresentationFrames(state);
     expect(frames[0]).toMatchObject({ kind: 'deal', durationMs: 1800, cards: [] });
-    if (state.phase === 'playing') {
+    expect(state.phase).toBe('playing');
+    {
       expect(frames).toHaveLength(1);
       expect(state.clock?.turn).toMatchObject({ seat: state.currentTurnSeat, startsAt: getPresentationEndsAt(state) });
       expect(state.clock?.bankRemainingMs.N).toBe(bank);

@@ -173,6 +173,24 @@ describe('fire-only effect', () => {
 });
 
 describe('fire simulation', () => {
+  it.each([[320, 160], [0, 0]])('keeps a %s×%s scene finite and within its particle budget', (width, height) => {
+    const compact = slayLayout({ left: 0, top: 0, width, height }, null);
+    const fire = createFireSystem(compact);
+    for (const ms of [0, SLAY_BREATH_START_MS, SLAY_STRIKE_MS, SLAY_DURATION_MS]) {
+      const head = snoutPoint(compact, ms);
+      expect([head.x, head.y, head.hx, head.hy].every(Number.isFinite)).toBe(true);
+      const spine = dragonSpine(compact, ms);
+      expect(spine.length).toBeGreaterThan(0);
+      expect(spine.every((point) => [point.x, point.y, point.nx, point.ny].every(Number.isFinite))).toBe(true);
+      emitRow(fire, compact, ms, 0.05);
+      emitBody(fire, compact, spine, ms, 0.05);
+      emitBreath(fire, compact, head, 0, ms, 0.05);
+      stepFire(fire, compact.card, ms, 0.05);
+      expect(fire.particles.length).toBeLessThanOrEqual(fire.cap);
+      expect(fire.particles.every((particle) => [particle.x, particle.y, particle.age].every(Number.isFinite))).toBe(true);
+    }
+  });
+
   it('is deterministic for a seed', () => {
     const first = seededRandom(3);
     const second = seededRandom(3);

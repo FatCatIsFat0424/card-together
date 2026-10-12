@@ -3,57 +3,22 @@ import { getSeatTeam, calculateGameResult } from '../../src/engine/scoring';
 import type { Contract } from '@shared/types';
 
 describe('scoring engine', () => {
-
-  describe('getSeatTeam', () => {
-    it('should return EW for East and West', () => {
-      expect(getSeatTeam('E')).toBe('EW');
-      expect(getSeatTeam('W')).toBe('EW');
-    });
-
-    it('should return NS for North and South', () => {
-      expect(getSeatTeam('N')).toBe('NS');
-      expect(getSeatTeam('S')).toBe('NS');
-    });
+  it('maps every seat to its partnership', () => {
+    expect(['N', 'E', 'S', 'W'].map((seat) => getSeatTeam(seat as Contract['declarer'])))
+      .toEqual(['NS', 'EW', 'NS', 'EW']);
   });
 
-  describe('calculateGameResult', () => {
-    it('should declare NS wins when N is declarer and NS has enough tricks', () => {
-      const contract: Contract = { level: 3, suit: 'nt', declarer: 'N' };
-      const result = calculateGameResult(contract, 4, 9);
-      expect(result.declarerTeamWins).toBe(true);
-      expect(result.declarerTeamTricks).toBe(9);
-      expect(result.defenderTeamTricks).toBe(4);
-      expect(result.requiredTricks).toBe(9); // 6 + 3
-    });
-
-    it('should declare EW wins when E is declarer and EW has enough tricks', () => {
-      const contract: Contract = { level: 1, suit: 'spades', declarer: 'E' };
-      const result = calculateGameResult(contract, 7, 6);
-      expect(result.declarerTeamWins).toBe(true);
-      expect(result.requiredTricks).toBe(7); // 6 + 1
-    });
-
-    it('should declare defenders win when declarer fails', () => {
-      const contract: Contract = { level: 7, suit: 'hearts', declarer: 'S' };
-      const result = calculateGameResult(contract, 1, 12);
-      expect(result.declarerTeamWins).toBe(false);
-      expect(result.requiredTricks).toBe(13); // 6 + 7
-      expect(result.declarerTeamTricks).toBe(12);
-    });
-
-    it('should handle exact boundary (declarer wins with exactly required tricks)', () => {
-      const contract: Contract = { level: 4, suit: 'clubs', declarer: 'W' };
-      const result = calculateGameResult(contract, 10, 3);
-      expect(result.declarerTeamWins).toBe(true);
-      expect(result.requiredTricks).toBe(10); // 6 + 4
-      expect(result.declarerTeamTricks).toBe(10);
-    });
-
-    it('should handle grand slam (7 level)', () => {
-      const contract: Contract = { level: 7, suit: 'nt', declarer: 'N' };
-      const result = calculateGameResult(contract, 0, 13);
-      expect(result.declarerTeamWins).toBe(true);
-      expect(result.requiredTricks).toBe(13);
+  it.each<{ name: string; contract: Contract; ew: number; ns: number; tricks: number; required: number; wins: boolean }>([
+    { name: 'North exact no trump', contract: { level: 3, suit: 'nt', declarer: 'N' }, ew: 4, ns: 9, tricks: 9, required: 9, wins: true },
+    { name: 'East minimum contract', contract: { level: 1, suit: 'spades', declarer: 'E' }, ew: 7, ns: 6, tricks: 7, required: 7, wins: true },
+    { name: 'South one below grand slam', contract: { level: 7, suit: 'hearts', declarer: 'S' }, ew: 1, ns: 12, tricks: 12, required: 13, wins: false },
+    { name: 'West exact four level', contract: { level: 4, suit: 'clubs', declarer: 'W' }, ew: 10, ns: 3, tricks: 10, required: 10, wins: true },
+    { name: 'North grand slam', contract: { level: 7, suit: 'nt', declarer: 'N' }, ew: 0, ns: 13, tricks: 13, required: 13, wins: true },
+    { name: 'North overtrick', contract: { level: 3, suit: 'nt', declarer: 'N' }, ew: 3, ns: 10, tricks: 10, required: 9, wins: true },
+  ])('settles $name', ({ contract, ew, ns, tricks, required, wins }) => {
+    expect(calculateGameResult(contract, ew, ns)).toMatchObject({
+      contract, declarerTeamWins: wins, declarerTeamTricks: tricks,
+      defenderTeamTricks: 13 - tricks, requiredTricks: required,
     });
   });
 });

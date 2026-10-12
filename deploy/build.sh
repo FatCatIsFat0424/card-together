@@ -12,13 +12,8 @@ expected_node=$(tr -d '[:space:]' < .node-version)
   echo "Use Node.js $expected_node: npm exec --yes --package=node@$expected_node -- bash deploy/build.sh" >&2
   exit 1
 }
-for script in deploy/*.sh; do bash -n "$script"; done
-python3 -B -m unittest discover -s deploy/tests
 npm ci --include=dev
-npm run typecheck
-npm run lint
-npm test
-VITE_BASE_PATH=/card-together/ VITE_SERVER_URL='' VITE_SOCKET_PATH=/card-together/socket.io npm run build:client
+VITE_BASE_PATH=/card-together/ VITE_SERVER_URL='' VITE_SOCKET_PATH=/card-together/socket.io npm run check -- release
 install -d -m 0755 .deploy
 install -m 0755 "$(node -p 'process.execPath')" .deploy/node
 echo 'Build ready. Deploy with: bash deploy/deploy.sh'

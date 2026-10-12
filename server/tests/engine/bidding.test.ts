@@ -32,39 +32,14 @@ describe('bidding engine', () => {
   });
 
   describe('compareBids', () => {
-    it('should rank higher level above lower level', () => {
-      expect(compareBids(
-        { level: 2, suit: 'clubs' },
-        { level: 1, suit: 'nt' },
-      )).toBeGreaterThan(0);
-    });
-
-    it('should rank NT above spades at same level', () => {
-      expect(compareBids(
-        { level: 1, suit: 'nt' },
-        { level: 1, suit: 'spades' },
-      )).toBeGreaterThan(0);
-    });
-
-    it('should rank spades above hearts at same level', () => {
-      expect(compareBids(
-        { level: 1, suit: 'spades' },
-        { level: 1, suit: 'hearts' },
-      )).toBeGreaterThan(0);
-    });
-
-    it('should rank clubs as lowest suit', () => {
-      expect(compareBids(
-        { level: 1, suit: 'clubs' },
-        { level: 1, suit: 'diamonds' },
-      )).toBeLessThan(0);
-    });
-
-    it('should return 0 for identical bids', () => {
-      expect(compareBids(
-        { level: 3, suit: 'hearts' },
-        { level: 3, suit: 'hearts' },
-      )).toBe(0);
+    it.each([
+      { name: 'higher level', first: { level: 2, suit: 'clubs' }, second: { level: 1, suit: 'nt' }, sign: 1 },
+      { name: 'NT over spades', first: { level: 1, suit: 'nt' }, second: { level: 1, suit: 'spades' }, sign: 1 },
+      { name: 'spades over hearts', first: { level: 1, suit: 'spades' }, second: { level: 1, suit: 'hearts' }, sign: 1 },
+      { name: 'clubs below diamonds', first: { level: 1, suit: 'clubs' }, second: { level: 1, suit: 'diamonds' }, sign: -1 },
+      { name: 'identical bids', first: { level: 3, suit: 'hearts' }, second: { level: 3, suit: 'hearts' }, sign: 0 },
+    ] as const)('compares $name', ({ first, second, sign }) => {
+      expect(Math.sign(compareBids(first, second))).toBe(sign);
     });
   });
 
@@ -165,20 +140,18 @@ describe('bidding engine', () => {
       expect(valid[0]).toEqual({ type: 'pass' });
     });
 
-    it('should only include bids higher than current highest', () => {
-      let state = createBiddingState('N');
-      state = applyBid(state, 'N', { type: 'bid', level: 3, suit: 'hearts' });
-      const valid = getValidBids(state);
-      // Should include pass + bids > 3H
-      const bidActions = valid.filter((b) => b.type === 'bid');
-      for (const bid of bidActions) {
-        if (bid.type === 'bid') {
-          expect(compareBids(
-            { level: bid.level, suit: bid.suit },
-            { level: 3, suit: 'hearts' },
-          )).toBeGreaterThan(0);
-        }
-      }
+    it('returns the exact legal bids above three hearts', () => {
+      const state = applyBid(createBiddingState('N'), 'N', { type: 'bid', level: 3, suit: 'hearts' });
+      expect(getValidBids(state)).toEqual([
+        { type: 'pass' }, { type: 'bid', level: 3, suit: 'spades' }, { type: 'bid', level: 3, suit: 'nt' },
+        ...[4, 5, 6, 7].flatMap((level) => ['clubs', 'diamonds', 'hearts', 'spades', 'nt']
+          .map((suit) => ({ type: 'bid', level, suit }))),
+      ]);
+    });
+
+    it('returns only pass above seven no trump', () => {
+      const state = applyBid(createBiddingState('N'), 'N', { type: 'bid', level: 7, suit: 'nt' });
+      expect(getValidBids(state)).toEqual([{ type: 'pass' }]);
     });
   });
 });

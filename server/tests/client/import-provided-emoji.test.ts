@@ -59,8 +59,8 @@ function addSource(root: string, file: string, header: Buffer = PNG, marker = fi
   writeSource(root, file, Buffer.concat([header, Buffer.from(marker)]));
 }
 
-function runImport(root: string): { status: number | null; stdout: string; stderr: string } {
-  const result = spawnSync(process.execPath, [IMPORT_SCRIPT, root], { encoding: 'utf8' });
+function runImport(root: string, flags: readonly string[] = []): { status: number | null; stdout: string; stderr: string } {
+  const result = spawnSync(process.execPath, [IMPORT_SCRIPT, root, ...flags], { encoding: 'utf8' });
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
@@ -111,8 +111,11 @@ async function paddedAnimatedGif(width: number, height: number, frames: number):
 }
 
 function snapshotOutputs(root: string): Record<string, string> {
-  const snapshot: Record<string, string> = { catalog: readFileSync(catalogPath(root), 'utf8') };
-  for (const file of readdirSync(outputPath(root, ''))) {
+  const snapshot: Record<string, string> = {
+    receipt: readFileSync(outputPath(root, '.import-state/manifest.json'), 'utf8'),
+    catalog: readFileSync(catalogPath(root), 'utf8'),
+  };
+  for (const file of readdirSync(outputPath(root, '')).filter((name) => !name.startsWith('.import-'))) {
     snapshot[file] = readFileSync(outputPath(root, file)).toString('base64');
   }
   return snapshot;
@@ -142,7 +145,7 @@ describe('provided emoji import CLI', () => {
     const wave = emoji.find((entry) => entry.name === 'wave')!;
     expect(readFileSync(outputPath(root, wave.file)))
       .toEqual(Buffer.concat([PNG, Buffer.from('faces/wave.PNG')]));
-    expect(readdirSync(outputPath(root, ''))).toHaveLength(4);
+    expect(readdirSync(outputPath(root, '')).filter((name) => !name.startsWith('.import-'))).toHaveLength(4);
   });
 
   it('should produce deterministic output and new file names only for changed bytes', () => {
@@ -269,11 +272,14 @@ describe('provided emoji import CLI', () => {
     expect(gif.length).toBeGreaterThan(LIMIT);
     writeSource(root, 'dance.gif', gif);
 
-    const result = runImport(root);
+    const result = runImport(root, ['--profile']);
 
     expect(result.status).toBe(0);
+    const coldProfile = JSON.parse(result.stderr.trim().split('\n').at(-1) ?? '') as { reused: boolean; phasesMs: Record<string, number> };
+    expect(coldProfile.reused).toBe(false);
+    expect(coldProfile.phasesMs.codec).toBeGreaterThan(0);
     const emoji = readCatalog(root);
-    expect(readFileSync(outputPath(root, byName(emoji, 'exact').file))).toEqual(exact);
+    expect(readFileSync(outputPath(root, byName(emoji, 'exact').file)).equals(exact)).toBe(true);
     expect(result.stdout).toContain('Compressed to WebP (2):');
     expect(result.stdout).toMatch(/dance\.gif: 2\.\d MiB -> \d+\.\d KiB/);
 
@@ -281,16 +287,36 @@ describe('provided emoji import CLI', () => {
     expect(photo.file).toMatch(/^photo-[a-f0-9]{24}\.webp$/);
     const photoBytes = readFileSync(outputPath(root, photo.file));
     expect(photoBytes.length).toBeLessThanOrEqual(LIMIT);
+    expect(photo.file).toBe(`photo-${createHash('sha256').update(photoBytes).digest('hex').slice(0, 24)}.webp`);
     expect(await sharp(photoBytes).metadata()).toMatchObject({ format: 'webp', width: 256, height: 128 });
 
     const dance = byName(emoji, 'dance');
     expect(dance.file).toMatch(/^dance-[a-f0-9]{24}\.webp$/);
     const danceBytes = readFileSync(outputPath(root, dance.file));
     expect(danceBytes.length).toBeLessThanOrEqual(LIMIT);
+    expect(dance.file).toBe(`dance-${createHash('sha256').update(danceBytes).digest('hex').slice(0, 24)}.webp`);
     expect(await sharp(danceBytes, { animated: true }).metadata()).toMatchObject({
       format: 'webp', pages: 4, width: 256, pageHeight: 160, delay: [40, 50, 60, 70], loop: 0,
     });
-    expect(readdirSync(outputPath(root, '')).filter((file) => file.startsWith('.'))).toEqual([]);
+    expect(readdirSync(outputPath(root, '')).filter((file) => file.startsWith('.'))).toEqual(['.import-state']);
+    expect(readdirSync(outputPath(root, '.import-state'))).toEqual(['lock', 'manifest.json']);
+    const imported = snapshotOutputs(root);
+    const warm = runImport(root, ['--profile']);
+    expect(warm.status).toBe(0);
+    expect(warm.stdout).toContain('Reused');
+    expect(warm.stdout).toContain('Compressed to WebP (2):');
+    const warmProfile = JSON.parse(warm.stderr.trim().split('\n').at(-1) ?? '') as typeof coldProfile;
+    expect(warmProfile.reused).toBe(true);
+    expect(warmProfile.phasesMs.codec).toBeUndefined();
+    expect(warmProfile.phasesMs.publish).toBeUndefined();
+    expect(snapshotOutputs(root)).toEqual(imported);
+    const forced = runImport(root, ['--no-cache', '--profile']);
+    expect(forced.status).toBe(0);
+    const forcedProfile = JSON.parse(forced.stderr.trim().split('\n').at(-1) ?? '') as typeof coldProfile;
+    expect(forcedProfile.reused).toBe(false);
+    expect(forcedProfile.phasesMs.codec).toBeGreaterThan(0);
+    expect(forcedProfile.phasesMs.publish).toBeGreaterThan(0);
+    expect(snapshotOutputs(root)).toEqual(imported);
   }, 60_000);
 
   it('should skip an image that cannot fit at the smallest size', async () => {
@@ -303,11 +329,13 @@ describe('provided emoji import CLI', () => {
     writeSource(root, 'noise.webp', animation);
     addSource(root, 'wave.png');
 
-    const result = runImport(root);
+    const result = runImport(root, ['--profile']);
 
     expect(result.status).toBe(0);
     expect(readCatalog(root).map((entry) => entry.name)).toEqual(['wave']);
     expect(result.stderr).toMatch(/noise\.webp: \d+\.\d MiB does not fit 2\.0 MiB even at the smallest size/);
+    const profile = JSON.parse(result.stderr.trim().split('\n').at(-1) ?? '') as { phasesMs: Record<string, number> };
+    expect(profile.phasesMs.codec).toBeGreaterThan(0);
   }, 120_000);
 
   it.each(['file', 'directory'] as const)(

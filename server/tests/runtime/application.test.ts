@@ -20,6 +20,7 @@ import { heLegalActions } from '@shared/rules/holdem';
 import { createApplication } from '../../src/app';
 import { createJsonRepository } from '../../src/database/json-repository';
 import type { Repository } from '../../src/database/repository';
+import { seedAuthenticatedAccount } from '../auth/account-fixture';
 
 const ORIGIN = 'http://localhost:5173';
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
@@ -101,17 +102,8 @@ describe('persistent authenticated application', () => {
     };
   }
 
-  async function register(username: string): Promise<RegisteredAccount> {
-    const response = await fetch(`${baseUrl}/api/auth/register`, {
-      method: 'POST', headers: headers(),
-      body: JSON.stringify({ username, password: 'A valid test password 123', nickname: username }),
-    });
-    expect(response.status).toBe(201);
-    const body = await response.json() as { success: boolean; account: AccountProfile };
-    expect(body.success).toBe(true);
-    const cookie = response.headers.get('set-cookie')?.split(';')[0];
-    if (!cookie) throw new Error('Expected session cookie');
-    return { account: body.account, cookie };
+  async function seedAccount(username: string): Promise<RegisteredAccount> {
+    return seedAuthenticatedAccount(repository, username);
   }
 
   async function connect(cookie?: string): Promise<Client> {
@@ -162,16 +154,8 @@ describe('persistent authenticated application', () => {
   });
 
   it('should privately sync purchases across tabs and publish only the equipped border', async () => {
-    const outsider = await register('shop_outsider');
-    const template = await repository.getAccountById(outsider.account.id);
-    if (!template) throw new Error('Expected a registered account.');
-    await repository.createAccount({ ...template, id: 'shop-owner', username: 'shop_owner',
-      usernameNormalized: 'shop_owner', coins: 100 });
-    const login = await fetch(`${baseUrl}/api/auth/login`, {
-      method: 'POST', headers: headers(),
-      body: JSON.stringify({ username: 'shop_owner', password: 'A valid test password 123' }),
-    });
-    const cookie = login.headers.get('set-cookie')!.split(';')[0];
+    const outsider = await seedAccount('shop_outsider');
+    const { cookie } = await seedAuthenticatedAccount(repository, 'shop_owner', { id: 'shop-owner', coins: 100 });
     const first = await connect(cookie);
     const second = await connect(cookie);
     const other = await connect(outsider.cookie);
@@ -236,7 +220,7 @@ describe('persistent authenticated application', () => {
 
   it('should reject anonymous sockets and revoke a connected socket on logout', async () => {
     await expect(connect()).rejects.toThrow('Sign in');
-    const registered = await register('session_player');
+    const registered = await seedAccount('session_player');
     const client = await connect(registered.cookie);
     expect((await resume(client)).player?.id).toBe(registered.account.id);
     const disconnected = new Promise<string>((resolve): void => {
@@ -254,7 +238,7 @@ describe('persistent authenticated application', () => {
   }, 15_000);
 
   it('should reject malformed first actions and still allow a valid authenticated action', async () => {
-    const registered = await register('payload_player');
+    const registered = await seedAccount('payload_player');
     const client = await connect(registered.cookie);
     const invalid = await client.timeout(5_000).emitWithAck('room:changeSeat',
       null as unknown as { seat: Seat });
@@ -270,7 +254,7 @@ describe('persistent authenticated application', () => {
   }, 15_000);
 
   it('should roll back a failed durable write and allow the same connection to retry', async () => {
-    const registered = await register('rollback_player');
+    const registered = await seedAccount('rollback_player');
     const client = await connect(registered.cookie);
     const logged = vi.spyOn(console, 'error').mockImplementation((): void => undefined);
     const persist = vi.spyOn(repository, 'saveRuntime').mockRejectedValueOnce(new Error('Disk full'));
@@ -289,7 +273,7 @@ describe('persistent authenticated application', () => {
   }, 15_000);
 
   it('should persist bots, start when ready and let one human abort after a restart', async () => {
-    const account = await register('bot_host');
+    const account = await seedAccount('bot_host');
     let [client] = await connectPlayers([account]);
     await client.timeout(5_000).emitWithAck('room:create', { gameType: 'bigtwo' });
     await client.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'N' });
@@ -331,7 +315,7 @@ describe('persistent authenticated application', () => {
   }, 15_000);
 
   it('validates host timer changes, resets readiness, and rolls back failed persistence', async () => {
-    const accounts = [await register('timer_host'), await register('timer_guest')];
+    const accounts = [await seedAccount('timer_host'), await seedAccount('timer_guest')];
     const [host, guest] = await connectPlayers(accounts);
     const { roomCode } = await host.timeout(5_000).emitWithAck('room:create', { gameType: 'ninetynine' });
     await host.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'N' });
@@ -367,7 +351,7 @@ describe('persistent authenticated application', () => {
   });
 
   it('persists host Sevens options, resets readiness, and rolls back failed saves', async () => {
-    const accounts = [await register('sevens_host'), await register('sevens_guest')];
+    const accounts = [await seedAccount('sevens_host'), await seedAccount('sevens_guest')];
     const [host, guest] = await connectPlayers(accounts);
     const { roomCode } = await host.timeout(5_000).emitWithAck('room:create', { gameType: 'bridge' });
     expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: true }))
@@ -423,7 +407,7 @@ describe('persistent authenticated application', () => {
   }, 15_000);
 
   it('persists host Ninety-Nine options, resets readiness, and rolls back failed saves', async () => {
-    const accounts = [await register('nn_opt_host'), await register('nn_opt_guest')];
+    const accounts = [await seedAccount('nn_opt_host'), await seedAccount('nn_opt_guest')];
     const [host, guest] = await connectPlayers(accounts);
     const { roomCode } = await host.timeout(5_000).emitWithAck('room:create', { gameType: 'sevens' });
     expect(await host.timeout(5_000).emitWithAck('room:setNinetyNineOptions', { twoDecks: true }))
@@ -470,7 +454,7 @@ describe('persistent authenticated application', () => {
   }, 15_000);
 
   it('should enforce bot payloads and host rights while unseated members spectate', async () => {
-    const accounts = [await register('manage_host'), await register('manage_guest')];
+    const accounts = [await seedAccount('manage_host'), await seedAccount('manage_guest')];
     const [host, guest] = await connectPlayers(accounts);
     const { roomCode } = await host.timeout(5_000).emitWithAck('room:create', { gameType: 'bridge' });
     if (!roomCode) throw new Error('Expected room code');
@@ -494,7 +478,7 @@ describe('persistent authenticated application', () => {
   }, 15_000);
 
   it('should let the host remove a waiting member and notify them', async () => {
-    const accounts = [await register('kick_host'), await register('kick_guest')];
+    const accounts = [await seedAccount('kick_host'), await seedAccount('kick_guest')];
     const [host, guest] = await connectPlayers(accounts);
     const { roomCode } = await host.timeout(5_000).emitWithAck('room:create', { gameType: 'bridge' });
     if (!roomCode) throw new Error('Expected room code');
@@ -516,7 +500,7 @@ describe('persistent authenticated application', () => {
   }, 15_000);
 
   it('should roll back bot additions and automatic game start if persistence fails', async () => {
-    const account = await register('bot_rollback');
+    const account = await seedAccount('bot_rollback');
     const [client] = await connectPlayers([account]);
     await client.timeout(5_000).emitWithAck('room:create', { gameType: 'bigtwo' });
     await client.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'N' });
@@ -537,7 +521,7 @@ describe('persistent authenticated application', () => {
   it('should preserve ready rooms, private hands and active games across restarts and record a completed game', async () => {
     const accounts: RegisteredAccount[] = [];
     for (const username of ['north_player', 'east_player', 'south_player', 'west_player']) {
-      accounts.push(await register(username));
+      accounts.push(await seedAccount(username));
     }
     let players = await connectPlayers(accounts);
     const created = await players[0].timeout(5_000).emitWithAck('room:create', { gameType: 'bridge' });
@@ -676,7 +660,7 @@ describe('persistent authenticated application', () => {
   it('should switch game type as host and abort a game by vote without a match record', async () => {
     const accounts: RegisteredAccount[] = [];
     for (const username of ['vote_north', 'vote_east', 'vote_south', 'vote_west']) {
-      accounts.push(await register(username));
+      accounts.push(await seedAccount(username));
     }
     const players = await connectPlayers(accounts);
     const created = await players[0].timeout(5_000).emitWithAck('room:create', { gameType: 'bigtwo' });
@@ -741,7 +725,7 @@ describe('persistent authenticated application', () => {
   it('should play a full Big Two game across a restart and record it', async () => {
     const accounts: RegisteredAccount[] = [];
     for (const username of ['big_north', 'big_east', 'big_south', 'big_west']) {
-      accounts.push(await register(username));
+      accounts.push(await seedAccount(username));
     }
     let players = await connectPlayers(accounts);
     const created = await players[0].timeout(5_000).emitWithAck('room:create', { gameType: 'bigtwo' });
@@ -818,7 +802,7 @@ describe('persistent authenticated application', () => {
   it('should play a full Red Points game across a restart and record it', async () => {
     const accounts: RegisteredAccount[] = [];
     for (const username of ['red_north', 'red_east', 'red_south', 'red_west']) {
-      accounts.push(await register(username));
+      accounts.push(await seedAccount(username));
     }
     let players = await connectPlayers(accounts);
     const created = await players[0].timeout(5_000).emitWithAck('room:create', { gameType: 'redpoints' });
@@ -895,7 +879,7 @@ describe('persistent authenticated application', () => {
   it('should play a full 99 game across a restart and record it', async () => {
     const accounts: RegisteredAccount[] = [];
     for (const username of ['nn_north', 'nn_east', 'nn_south', 'nn_west']) {
-      accounts.push(await register(username));
+      accounts.push(await seedAccount(username));
     }
     let players = await connectPlayers(accounts);
     const created = await players[0].timeout(5_000).emitWithAck('room:create', { gameType: 'ninetynine' });
@@ -976,7 +960,7 @@ describe('persistent authenticated application', () => {
   it("should play a full Liar's Deck game across a restart without leaking hidden cards", async () => {
     const accounts: RegisteredAccount[] = [];
     for (const username of ['ld_north', 'ld_east', 'ld_south', 'ld_west']) {
-      accounts.push(await register(username));
+      accounts.push(await seedAccount(username));
     }
     let players = await connectPlayers(accounts);
     const created = await players[0].timeout(5_000).emitWithAck('room:create', { gameType: 'liarsdeck' });
@@ -1043,7 +1027,7 @@ describe('persistent authenticated application', () => {
   it('should play a full Blackjack match across a restart without leaking bets or the hole card', async () => {
     const accounts: RegisteredAccount[] = [];
     for (const username of ['bj_north', 'bj_east', 'bj_south', 'bj_west']) {
-      accounts.push(await register(username));
+      accounts.push(await seedAccount(username));
     }
     let players = await connectPlayers(accounts);
     const created = await players[0].timeout(5_000).emitWithAck('room:create', { gameType: 'blackjack' });
@@ -1123,7 +1107,7 @@ describe('persistent authenticated application', () => {
   it("should play a full Hold'em match across a restart without leaking hole cards", async () => {
     const accounts: RegisteredAccount[] = [];
     for (const username of ['he_north', 'he_east', 'he_south', 'he_west']) {
-      accounts.push(await register(username));
+      accounts.push(await seedAccount(username));
     }
     let players = await connectPlayers(accounts);
     const created = await players[0].timeout(5_000).emitWithAck('room:create', { gameType: 'holdem' });

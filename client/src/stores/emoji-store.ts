@@ -11,16 +11,25 @@ interface EmojiStore {
   reset: () => void;
 }
 
+let libraryGeneration = 0;
+
 export const useEmojiStore = create<EmojiStore>((set, get) => ({
   emojis: [],
   status: 'idle',
   load: async () => {
     if (get().status === 'loading' || get().status === 'ready') return;
+    const generation = libraryGeneration;
     set({ status: 'loading' });
     const result = await apiRequest<{ emojis: EmojiRecord[] }>('/api/emojis');
-    if (get().status !== 'loading') return;
+    if (generation !== libraryGeneration || get().status !== 'loading') return;
     set(result.success ? { emojis: result.emojis, status: 'ready' } : { status: 'error' });
   },
-  setEmojis: (emojis) => set({ emojis, status: 'ready' }),
-  reset: () => set({ emojis: [], status: 'idle' }),
+  setEmojis: (emojis) => {
+    libraryGeneration += 1;
+    set({ emojis, status: 'ready' });
+  },
+  reset: () => {
+    libraryGeneration += 1;
+    set({ emojis: [], status: 'idle' });
+  },
 }));

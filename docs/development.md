@@ -153,50 +153,44 @@ Frontend environment changes require a restart in development or a production re
 
 ## Checks
 
-```sh
-npm run typecheck
-npm run lint
-npm test
-npm run build:client
-for script in deploy/*.sh; do bash -n "$script"; done
-python3 -B -m unittest discover -s deploy/tests
-```
+Use the focused gate while editing and the complete gate before finishing a behavior
+change. [Testing](testing.md) defines commands, dependency selection, cache behavior,
+coverage boundaries, and failure reporting. CI runs the same complete gate; deployment
+builds use its release variant with an explicit application base and Socket path.
 
-`build:client` runs the music/emoji imports and the client build directly from the root:
-npm 9 returns success from `npm run` inside a workspace even when the script fails.
-
-Typecheck covers all workspaces, including both client TypeScript configurations and
-`server/tests`/`server/benchmarks` (`server/tsconfig.test.json`). Root lint covers
-shared/server/client source plus server tests and benchmarks, applies the React hooks
-rules to the client, and reports floating promises as warnings. CI
-(`.github/workflows/ci.yml`) runs these checks and the deployment checks on every push and pull request. Vitest runs from `server/` and discovers
-`tests/**/*.test.ts`, including browser-controller tests executed in Node. Deployment
-helpers use Python standard-library unittest; they do not need a new test framework.
+Standalone typecheck, lint, Vitest, build, Bash syntax, and Python commands remain
+available. The complete gate prepares catalogs before five TypeScript environments,
+then runs typed ESLint, all Vitest correctness tests, one Vite bundle, real artifact
+validation, and all deployment checks. `build:client` remains an independently checked
+build. Root lint also checks validation/import scripts and Vite/Vitest configurations;
+floating promises remain errors. Existing React hooks warnings are not disabled.
 No separate formatter or secret-check command is configured.
 
-Use `npm run test:watch` during development. Test directories group engine, auth,
-database, runtime/socket, social, client, and voice behavior. Cover malformed inputs,
-authorization, private data boundaries, persistence failures, and cleanup where relevant.
-Run a production build because Vite's base paths and generated music/emoji catalogs matter.
-The server reads the generated [site emoji](media.md#site-provided-emoji) catalog at startup;
-tests pass their own catalog and do not depend on local images.
+Use `npm run test:watch` when working repeatedly on behavior. Tests cover malformed
+inputs, authorization, private data, persistence failure/restart, and cleanup. The server
+reads the generated [site emoji](media.md#site-provided-emoji) catalog at startup;
+tests supply their own catalogs instead of requiring owner originals.
 
-Run focused tests while editing, then run all applicable checks on the final change.
-Repeat a completed check only when later edits, failures, or unresolved concerns can
-affect its result. Documentation-only changes need content, link, and whitespace review;
-they do not require repeating application checks already completed for unchanged code.
+Repeat a completed check when later changes, failures, or unresolved concerns affect
+its result. Documentation-only changes require content, links, and whitespace review.
 
 ## Benchmarks
 
 ```sh
 npm run bench:database
 npm run bench:socket
+npm run bench:arrange
 ```
 
 Benchmarks create and clean up independent temporary JSON databases; they do not use
 production `DATABASE_PATH`. The database workload measures indexed queries and
-persistent writes. The Socket workload reports snapshot counts, payload bytes, and
-runtime writes across multiple rooms. Compare identical workloads and runtime versions;
+persistent writes. The Socket workload reports snapshot and chat delivery bytes separately, plus
+runtime writes across multiple rooms. Its legacy `payloadBytes` field measures snapshots
+only; `snapshotPayloadBytes` keeps that meaning and `chatPayloadBytes` measures chat.
+Acknowledgments, recipient counts, and workload sanity checks must pass before results
+are accepted. Arrange uses seed 23, one warmup, and 20 measured samples; its timing
+budget lives in the opt-in benchmark while the full correctness corpus stays in Vitest.
+Compare identical workloads and runtime versions;
 time results depend on hardware/filesystem/load. Tests assert behavior rather than
 performance deadlines. Assess startup frontend size using entry **and preloaded** chunks,
 not the entry file alone.

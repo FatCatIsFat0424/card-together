@@ -237,11 +237,12 @@ describe('Blackjack player dealer gameplay', () => {
         const current = game();
         const seat = current.phase === 'betting' ? blackjack.pendingBetSeats(current)[0] : current.currentTurnSeat;
         const action = getBotAction(blackjack.getPlayerVisibleState(CODE, seat)!, random);
-        if (action?.type === 'blackjack-bet') blackjack.bet(CODE, seat, action.amount, true, 1000, random);
+        if (action?.type === 'blackjack-bet') expect(blackjack.bet(CODE, seat, action.amount, true, 1000, random).success).toBe(true);
         else if (action?.type === 'blackjack-action') expect(blackjack.act(CODE, seat, action.action).success).toBe(true);
         else if (action?.type === 'blackjack-dealer') {
           expect(blackjack.dealerAct(CODE, seat, action.action).success).toBe(true);
         } else throw new Error('Expected a Blackjack decision');
+        expect(isRuntimeSnapshot(snapshot())).toBe(true);
       }
       expect(game().phase).toBe('scoring');
       expect(isRuntimeSnapshot(snapshot())).toBe(true);

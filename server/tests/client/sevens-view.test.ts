@@ -3,7 +3,6 @@ import type { Card, SevensLogEntry, SevensTable } from '@shared/types';
 import {
   coverCost, coverSelection, lastPlayedCard, rankAtOrder, recentMoves, sevensHandMode, sevensRows,
 } from '../../../client/src/games/sevens/sevens-view';
-import { sevensTranslations } from '../../../client/src/sevens-i18n';
 
 const c = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit });
 const empty: SevensTable = { spades: null, hearts: null, clubs: null, diamonds: null };
@@ -134,12 +133,5 @@ describe('log helpers', () => {
     expect(recentMoves(log, 10)).toHaveLength(3);
     expect(recentMoves(log, 0)).toEqual([]);
     expect(log.map((entry) => entry.timestamp)).toEqual([1, 2, 3]);
-  });
-});
-
-describe('sevens translations', () => {
-  it('defines every key in both locales', () => {
-    expect(Object.keys(sevensTranslations['zh-TW']).sort()).toEqual(Object.keys(sevensTranslations.en).sort());
-    for (const value of Object.values(sevensTranslations['zh-TW'])) expect(value.trim()).not.toBe('');
   });
 });

@@ -1,9 +1,11 @@
 /* eslint @typescript-eslint/explicit-function-return-type: off -- Native Node CLI uses JavaScript. */
 import process from 'node:process';
-import { createHash } from 'node:crypto';
-import { lstat, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
-import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  assertManagedFiles, assertSafePath, cleanupInterrupted, ensureTypeScriptSupport, importOptions, importProfile, inputFingerprint, publishImport, readSafeFile,
+  reusableImport, safeDirectory, scanSources, sha256, withImportLock,
+} from '../assets/import-state.mjs';
 
 const EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp']);
 // Mirrors EMOJI_NAME_PATTERN in shared/src/constants/emoji.ts.
@@ -21,26 +23,11 @@ const COMPRESSION_STEPS = [
   { size: 128, quality: 40 },
   { size: 96, quality: 40 },
 ];
-const root = resolve(process.argv[2] ?? join(dirname(fileURLToPath(import.meta.url)), '../..'));
-const input = join(root, 'local-emoji');
-const output = join(root, 'client/public/provided-emoji');
-const catalog = join(root, 'shared/src/provided-emoji.generated.json');
-
-async function safeDirectory(path) {
-  await mkdir(path, { recursive: true });
-  if ((await lstat(path)).isSymbolicLink()) throw new Error(`Directory must not be a symlink: ${path}`);
-}
-
-async function collect(directory) {
-  const files = [];
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    const path = join(directory, entry.name);
-    if (entry.isSymbolicLink()) throw new Error(`Symlinks are not allowed: ${path}`);
-    if (entry.isDirectory()) files.push(...await collect(path));
-    else if (entry.isFile() && EXTENSIONS.has(extname(entry.name).toLowerCase())) files.push(path);
-  }
-  return files;
-}
+const script = fileURLToPath(import.meta.url);
+ensureTypeScriptSupport(script, process.argv.slice(2));
+const { parseProvidedEmojiCatalog } = await import('../../shared/src/constants/emoji.ts');
+const policy = { extensions: [...EXTENSIONS], name: NAME.source, ownFile: OWN_FILE.source, maxBytes: MAX_BYTES,
+  steps: COMPRESSION_STEPS, schema: 1 };
 
 function startsWith(bytes, signature, offset = 0) {
   return signature.every((byte, index) => bytes[offset + index] === byte);
@@ -55,10 +42,6 @@ function sniffImage(bytes) {
     return 'webp';
   }
   return null;
-}
-
-function sha256(value) {
-  return createHash('sha256').update(value).digest('hex');
 }
 
 function formatBytes(bytes) {
@@ -120,24 +103,24 @@ async function loadSharp() {
 }
 
 /** WebP bytes from the first step that fits, or null when none does. */
-async function compress(bytes) {
+async function compress(bytes, profile) {
   const sharp = await loadSharp();
   for (const { size, quality } of COMPRESSION_STEPS) {
-    const result = await sharp(bytes, { animated: true })
+    const result = await profile.measure('codec', () => sharp(bytes, { animated: true })
       .rotate()
       .resize({ width: size, height: size, fit: 'inside', withoutEnlargement: true })
       .webp({ quality })
-      .toBuffer();
+      .toBuffer());
     if (result.length <= MAX_BYTES) return result;
   }
   return null;
 }
 
 /** Reads and, when needed, compresses one source; returns a skip reason instead of throwing. */
-async function prepare(path, relativePath) {
+async function prepare(path, relativePath, profile) {
   let source;
   try {
-    source = await readFile(path);
+    source = await readSafeFile(path);
   } catch (error) {
     return { skip: `unreadable (${error.code ?? error.message})` };
   }
@@ -146,71 +129,92 @@ async function prepare(path, relativePath) {
   if (source.length <= MAX_BYTES) return { bytes: source, kind };
   let bytes;
   try {
-    bytes = await compress(source);
+    bytes = await compress(source, profile);
   } catch (error) {
     return { skip: `could not be decoded for compression (${error.message})` };
   }
   if (!bytes) {
     return { skip: `${formatBytes(source.length)} does not fit ${formatBytes(MAX_BYTES)} even at the smallest size` };
   }
-  return { bytes, kind: 'webp', compressed: { relativePath, before: source.length, after: bytes.length } };
+  const sharp = await loadSharp();
+  const metadata = await sharp(bytes, { animated: true }).metadata();
+  return { bytes, kind: 'webp', metadata: { format: metadata.format, width: metadata.width, height: metadata.height,
+    pages: metadata.pages ?? 1, pageHeight: metadata.pageHeight, delay: metadata.delay, loop: metadata.loop },
+    compressed: { relativePath, before: source.length, after: bytes.length } };
 }
 
 function report(stream, title, lines) {
   if (lines.length > 0) stream.write(`${title} (${lines.length}):\n  ${lines.join('\n  ')}\n`);
 }
 
+function printReport(input, records, details, reused) {
+  process.stdout.write(`${reused ? 'Reused' : 'Imported'} ${records.length} site emoji from ${input}\n`);
+  report(process.stdout, 'Compressed to WebP', details.compressed);
+  report(process.stderr, 'Warning: renamed', details.renamed);
+  report(process.stderr, 'Warning: skipped', details.skipped);
+}
+
 async function main() {
+  const options = importOptions(process.argv.slice(2), join(dirname(script), '../..'));
+  const profile = importProfile(options.profile);
+  const input = join(options.root, 'local-emoji');
+  const output = join(options.root, 'client/public/provided-emoji');
+  const catalog = join(options.root, 'shared/src/provided-emoji.generated.json');
   await safeDirectory(input);
-  const paths = (await collect(input))
-    .map((path) => ({ path, relativePath: relative(input, path).split(sep).join('/') }))
-    .sort((a, b) => (a.relativePath < b.relativePath ? -1 : a.relativePath > b.relativePath ? 1 : 0));
-  // Prepare every source before changing the published snapshot.
-  const records = [];
-  const skipped = [];
-  const compressed = [];
-  for (const { path, relativePath } of paths) {
-    const prepared = await prepare(path, relativePath);
-    if (prepared.skip) {
-      skipped.push(`${relativePath}: ${prepared.skip}`);
-      continue;
-    }
-    if (prepared.compressed) compressed.push(prepared.compressed);
-    records.push({ relativePath, rawName: basename(path, extname(path)), ...prepared });
-  }
-  assignNames(records);
-  for (const record of records) {
-    record.emoji = { name: record.name, file: `${record.name}-${sha256(record.bytes).slice(0, 24)}.${record.kind}` };
-  }
-  records.sort((a, b) => (a.emoji.name < b.emoji.name ? -1 : 1));
-  await safeDirectory(output);
+  await assertSafePath(output);
+  await assertSafePath(catalog);
   await safeDirectory(dirname(catalog));
-  const stage = join(output, `.import-${process.pid}`);
-  const catalogTemp = `${catalog}.${process.pid}.tmp`;
-  await mkdir(stage);
-  try {
-    // Publish the bytes that were checked and hashed, not a later re-read of the source.
-    for (const { bytes, emoji } of records) await writeFile(join(stage, emoji.file), bytes);
-    for (const { emoji } of records) await rename(join(stage, emoji.file), join(output, emoji.file));
-    await writeFile(catalogTemp, JSON.stringify(records.map(({ emoji }) => emoji), null, 2) + '\n');
-    await rename(catalogTemp, catalog);
-    const retained = new Set(records.map(({ emoji }) => emoji.file));
-    for (const entry of await readdir(output, { withFileTypes: true })) {
-      if (entry.isFile() && OWN_FILE.test(entry.name) && !retained.has(entry.name)) {
-        await rm(join(output, entry.name));
-      }
+  await withImportLock(output, async (state) => {
+    await cleanupInterrupted(output, catalog, state);
+    await assertManagedFiles(output, OWN_FILE);
+    const sources = await scanSources(input, EXTENSIONS, profile);
+    const fingerprint = await inputFingerprint('emoji', sources, policy, script);
+    const reuse = options.noCache ? null : await profile.measure('validateOutputs', () => reusableImport({
+      state, output, catalog, fingerprint, ownFile: OWN_FILE, validateCatalog: parseProvidedEmojiCatalog,
+    }));
+    if (reuse) {
+      printReport(input, reuse.records, reuse.report, true);
+      profile.report('emoji', true);
+      return;
     }
-  } finally {
-    await rm(stage, { recursive: true, force: true });
-    await rm(catalogTemp, { force: true });
-  }
-  process.stdout.write(`Imported ${records.length} site emoji from ${input}\n`);
-  report(process.stdout, 'Compressed to WebP', compressed.map(({ relativePath, before, after }) =>
-    `${relativePath}: ${formatBytes(before)} -> ${formatBytes(after)}`));
-  report(process.stderr, 'Warning: renamed', records.filter((record) => record.name !== record.rawName)
-    .sort((a, b) => (a.relativePath < b.relativePath ? -1 : 1))
-    .map((record) => `${record.relativePath} -> :${record.name}:`));
-  report(process.stderr, 'Warning: skipped', skipped);
+    const records = [];
+    const skipped = [];
+    const compressed = [];
+    for (const { path, relativePath } of sources) {
+      const prepared = await profile.measure('prepare', () => prepare(path, relativePath, profile));
+      if (prepared.skip) { skipped.push(`${relativePath}: ${prepared.skip}`); continue; }
+      if (prepared.compressed) compressed.push(prepared.compressed);
+      records.push({ relativePath, rawName: basename(path, extname(path)), ...prepared });
+    }
+    assignNames(records);
+    for (const record of records) {
+      record.emoji = { name: record.name, file: `${record.name}-${sha256(record.bytes).slice(0, 24)}.${record.kind}` };
+    }
+    records.sort((a, b) => (a.emoji.name < b.emoji.name ? -1 : 1));
+    parseProvidedEmojiCatalog(records.map((record) => record.emoji));
+    const details = {
+      skipped,
+      renamed: records.filter((record) => record.name !== record.rawName)
+        .sort((a, b) => (a.relativePath < b.relativePath ? -1 : 1))
+        .map((record) => `${record.relativePath} -> :${record.name}:`),
+      compressed: compressed.map(({ relativePath, before, after }) =>
+        `${relativePath}: ${formatBytes(before)} -> ${formatBytes(after)}`),
+    };
+    await profile.measure('publish', () => publishImport({
+      output, catalog, state, fingerprint,
+      records: records.map((record) => ({ file: record.emoji.file, bytes: record.bytes,
+        catalog: record.emoji, metadata: record.metadata })),
+      ownFile: OWN_FILE, report: details,
+      verifyInputs: async () => {
+        const current = await scanSources(input, EXTENSIONS, profile);
+        if (await inputFingerprint('emoji', current, policy, script) !== fingerprint) {
+          throw new Error('Emoji changed during import; retry after copying finishes.');
+        }
+      },
+    }));
+    printReport(input, records, details, false);
+    profile.report('emoji', false);
+  });
 }
 
 main().catch((error) => {

@@ -51,6 +51,18 @@ function render(gameType: GameType, context?: GameRulesContext): string {
   return renderToStaticMarkup(createElement(GameRulesContent, { gameType, context }));
 }
 
+const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', string>>>> = {
+  bridge: { en: 'Playing a trick', 'zh-TW': '出牌與牌墩' },
+  bigtwo: { en: 'Legal combinations', 'zh-TW': '合法牌型' },
+  redpoints: { en: 'Capturing cards', 'zh-TW': '吃牌配對' },
+  ninetynine: { en: 'Every card effect', 'zh-TW': '所有牌的效果' },
+  sevens: { en: 'Covering and blocked cards', 'zh-TW': '蓋牌與封鎖' },
+  chinesepoker: { en: 'Front row and fouls', 'zh-TW': '前墩與倒水' },
+  liarsdeck: { en: 'Calling LIAR and the next round', 'zh-TW': '質疑、開槍與下一輪' },
+  blackjack: { en: 'Betting and deal', 'zh-TW': '下注與發牌' },
+  holdem: { en: 'Main pot, side pots, and ties', 'zh-TW': '主池、邊池與平手' },
+};
+
 describe('contextual game rules', () => {
   beforeEach(() => useI18nStore.getState().setLocale('en'));
 
@@ -58,8 +70,29 @@ describe('contextual game rules', () => {
     for (const locale of ['en', 'zh-TW'] as const) {
       useI18nStore.getState().setLocale(locale);
       const html = render(gameType);
-      for (const section of getGameRules(gameType, locale)) {
+      const sections = getGameRules(gameType, locale);
+      expect(sections.length).toBeGreaterThanOrEqual(3);
+      expect(sections.map((section) => section.title)).toContain(requiredRule[gameType][locale]);
+      for (const section of sections) {
+        expect(section.title.trim()).not.toBe('');
+        expect(section.paragraphs.length + (section.table?.rows.length ?? 0)).toBeGreaterThan(0);
         expect(html).toContain(`<h3>${section.title}</h3>`);
+        for (const paragraph of section.paragraphs) {
+          expect(paragraph.trim()).not.toBe('');
+          expect(html).toContain(renderToStaticMarkup(createElement('li', null, paragraph)));
+        }
+        if (section.table) {
+          expect(section.table.headers.length).toBeGreaterThan(0);
+          expect(section.table.rows.length).toBeGreaterThan(0);
+          for (const header of section.table.headers) expect(header.trim()).not.toBe('');
+          for (const row of section.table.rows) {
+            expect(row).toHaveLength(section.table.headers.length);
+            for (const cell of row) {
+              expect(cell.trim()).not.toBe('');
+              expect(html).toContain(renderToStaticMarkup(createElement('span', null, cell)).slice(6, -7));
+            }
+          }
+        }
       }
       expect(html).not.toContain(useI18nStore.getState().t('rules.roomSettings'));
       expect(html).not.toContain(useI18nStore.getState().t('rules.playContinues'));

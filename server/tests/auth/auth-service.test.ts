@@ -12,6 +12,7 @@ import type { AuthService } from '../../src/auth/auth-service';
 import { hashPassword } from '../../src/auth/password';
 import { createJsonRepository } from '../../src/database/json-repository';
 import type { Repository } from '../../src/database/repository';
+import { seedAuthenticatedAccount, seedAuthenticatedSession } from './account-fixture';
 
 describe('account authentication', () => {
   let directory: string;
@@ -32,12 +33,17 @@ describe('account authentication', () => {
     await rm(directory, { recursive: true, force: true });
   });
 
+  function seedAccount(username: string): ReturnType<typeof seedAuthenticatedAccount> {
+    return seedAuthenticatedAccount(repository, username, {}, { now: time, sessionTtlMs: 10000 });
+  }
+
   it('should register, authenticate case-insensitively, and never store raw credentials or tokens', async () => {
     const registered = await service.register({
       username: 'Alice',
       password: 'correct horse battery',
     });
     expect(registered.account.username).toBe('Alice');
+    expect(registered.session).toMatchObject({ createdAt: time, expiresAt: time + 10000 });
     expect(registered.account.matchesPublic).toBe(true);
     expect((await repository.getAccountById(registered.account.id))?.matchesPublic).toBe(true);
     expect(registered.account).not.toHaveProperty('passwordHash');
@@ -67,8 +73,8 @@ describe('account authentication', () => {
   });
 
   it('should prefer the new session cookie and preserve legacy authentication', async () => {
-    const current = await service.register({ username: 'alice', password: 'correct password' });
-    const legacy = await service.register({ username: 'bob', password: 'correct password' });
+    const current = await seedAccount('alice');
+    const legacy = await seedAccount('bob');
     const legacyCookie = `${LEGACY_SESSION_COOKIE_NAME}=${legacy.token}`;
     const cookie = `${legacyCookie}; ${SESSION_COOKIE_NAME}=${current.token}`;
     expect((await service.resolveSession(cookie))?.account.id).toBe(current.account.id);
@@ -88,8 +94,8 @@ describe('account authentication', () => {
   });
 
   it('should preserve sessions across reopening, reject expired sessions, and support logout-all', async () => {
-    const first = await service.register({ username: 'alice', password: 'correct password' });
-    const second = await service.login({ username: 'alice', password: 'correct password' });
+    const first = await seedAccount('alice');
+    const second = await seedAuthenticatedSession(repository, first.account.id, { now: time, sessionTtlMs: 10000 });
     await repository.close();
     repository = await createJsonRepository(path);
     service = createAuthService(repository, { now: () => time, sessionTtlMs: 10000 });
@@ -103,8 +109,8 @@ describe('account authentication', () => {
   });
 
   it('should revoke only the selected session on ordinary logout', async () => {
-    const first = await service.register({ username: 'alice', password: 'correct password' });
-    const second = await service.login({ username: 'alice', password: 'correct password' });
+    const first = await seedAccount('alice');
+    const second = await seedAuthenticatedSession(repository, first.account.id, { now: time, sessionTtlMs: 10000 });
     await service.logout(first.session);
     expect(await service.resolveToken(first.token)).toBeNull();
     expect(await service.resolveToken(second.token)).not.toBeNull();
@@ -135,13 +141,7 @@ describe('account authentication', () => {
   }, 15000);
 
   it('should validate account fields and persist profile changes without changing identity', async () => {
-    await expect(
-      service.register({ username: 'a', password: 'correct password' }),
-    ).rejects.toMatchObject({ status: 400 });
-    await expect(service.register({ username: 'alice', password: 'short' })).rejects.toMatchObject({
-      status: 400,
-    });
-    const first = await service.register({ username: 'alice', password: 'correct password' });
+    const first = await seedAccount('alice');
     for (const input of [
       { nickname: ' ' },
       { nickname: 'x'.repeat(21) },
@@ -203,6 +203,14 @@ describe('account authentication', () => {
     expect((await service.login({ username: 'alice', password: 'six ch' })).account.id)
       .toBe(first.account.id);
   }, 15000);
+
+  it('accepts the maximum username and password lengths through real registration and login', async () => {
+    const username = 'a'.repeat(24);
+    const password = 'x'.repeat(128);
+    const registered = await service.register({ username, password });
+    expect(registered.account.username).toBe(username);
+    expect((await service.login({ username, password })).account.id).toBe(registered.account.id);
+  });
 
   it('should keep accepting passwords that were set under earlier rules', async () => {
     const legacyPassword = ' password123 ';

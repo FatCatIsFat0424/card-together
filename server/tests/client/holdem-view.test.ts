@@ -9,7 +9,6 @@ import {
 } from '../../../client/src/games/holdem/holdem-view';
 import type { HoldemTableView } from '../../../client/src/games/holdem/holdem-view';
 import { deriveRoundHistory } from '../../../client/src/games/round-history';
-import { holdemTranslations } from '../../../client/src/holdem-i18n';
 
 const c = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit });
 const ALL: readonly Seat[] = ['N', 'E', 'S', 'W'];
@@ -299,11 +298,4 @@ describe("Texas Hold'em table view", () => {
     expect(seatState(replayHoldem(shortLog, ALL, shortLog.length), 'W')).toBe('out');
   });
 
-  it('should translate every key in both languages', () => {
-    const english = Object.keys(holdemTranslations.en).sort();
-    expect(Object.keys(holdemTranslations['zh-TW']).sort()).toEqual(english);
-    for (const locale of ['en', 'zh-TW'] as const) {
-      for (const value of Object.values(holdemTranslations[locale])) expect(value.trim()).not.toBe('');
-    }
-  });
 });

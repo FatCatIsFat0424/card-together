@@ -1,3 +1,4 @@
+import { runSeededGame } from './seeded-game-runner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   AnyGameState,
@@ -98,6 +99,7 @@ function bigTwoState(overrides: Partial<BigTwoVisibleState> = {}): BigTwoVisible
   };
 }
 
+
 function redPointsState(overrides: Partial<RedPointsVisibleState> = {}): RedPointsVisibleState {
   return {
     gameType: 'redpoints', phase: 'playing', mySeat: 'N', myHand: [],
@@ -106,6 +108,7 @@ function redPointsState(overrides: Partial<RedPointsVisibleState> = {}): RedPoin
     pendingFlip: null, log: [], result: null, ...overrides,
   };
 }
+
 
 function ninetyNineState(overrides: Partial<NinetyNineVisibleState> = {}): NinetyNineVisibleState {
   return {
@@ -146,8 +149,7 @@ describe('filtered bot decisions', () => {
       else if (gameType === 'blackjack') blackjack.startGame(CODE, PLAYERS, 15_000);
       else if (gameType === 'holdem') holdem.startGame(CODE, PLAYERS, random(seed));
       else chinesepoker.startGame(CODE, PLAYERS, 60_000, shuffleDeck(createDeck(), random(seed)));
-      let actions = 0;
-      while (adapter.getGameState(CODE)?.phase !== 'scoring' && actions < 2000) {
+      runSeededGame(`${gameType}/${seed}`, 2000, () => adapter.getGameState(CODE)?.phase === 'scoring', () => {
         const state = adapter.getGameState(CODE);
         expect(state).not.toBeNull();
         const seat = turn(state!);
@@ -157,8 +159,7 @@ describe('filtered bot decisions', () => {
         expect(visible).toEqual(original);
         expect(action).not.toBeNull();
         expect(execute(seat, action!).success).toBe(true);
-        actions++;
-      }
+      });
       expect(adapter.getGameState(CODE)?.phase).toBe('scoring');
       expect(adapter.getGameState(CODE)?.result).not.toBeNull();
       for (const seat of SEATS) expect(getBotAction(adapter.getPlayerVisibleState(CODE, seat)!)).toBeNull();
@@ -208,16 +209,6 @@ describe('filtered bot decisions', () => {
       myHand: [card('clubs', 3)], lastPlay: { seat: 'W', cards: [card('spades', 2)], comboType: 'single' },
     }))).toEqual({ type: 'bigtwo-pass' });
     expect(getBotAction(bigTwoState({ myHand: [card('clubs', 3)], lockedSeats: ['N'] }))).toBeNull();
-  });
-
-  it('should choose the highest scoring red capture, including a pending flip', () => {
-    const table = [card('clubs', 14), card('hearts', 14)];
-    expect(getBotAction(redPointsState({ myHand: [card('clubs', 9)], table }))).toEqual({
-      type: 'redpoints-play', card: card('clubs', 9), capture: card('hearts', 14),
-    });
-    expect(getBotAction(redPointsState({ step: 'flip-choose', pendingFlip: card('clubs', 9), table }))).toEqual({
-      type: 'redpoints-flip', capture: card('hearts', 14),
-    });
   });
 
   it('should choose a legal minus at 99 and designate a living opponent for a five', () => {

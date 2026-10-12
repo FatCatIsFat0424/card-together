@@ -210,4 +210,26 @@ describe('friend service', () => {
     await expect(friends.request('alice-id', 'bob')).rejects.toThrow('Disk unavailable');
     expect(await repository.listFriendships('alice-id')).toEqual([]);
   });
+
+  it('sorts accepted friends by current nickname and each request direction newest first', async () => {
+    for (const username of ['david', 'ellen', 'frank', 'grace']) await repository.createAccount(account(`${username}-id`, username));
+    await repository.updateProfile('bob-id', { ...account('bob-id', 'Bob'), nickname: 'Zulu' }, 2);
+    await repository.updateProfile('carol-id', { ...account('carol-id', 'Carol'), nickname: 'Alpha' }, 2);
+    const relationships = [
+      { id: 'accepted-bob', requesterId: 'alice-id', recipientId: 'bob-id', status: 'accepted' as const, createdAt: 1, updatedAt: 2 },
+      { id: 'accepted-carol', requesterId: 'carol-id', recipientId: 'alice-id', status: 'accepted' as const, createdAt: 2, updatedAt: 3 },
+      { id: 'out-old', requesterId: 'alice-id', recipientId: 'david-id', status: 'pending' as const, createdAt: 10, updatedAt: 10 },
+      { id: 'out-new', requesterId: 'alice-id', recipientId: 'ellen-id', status: 'pending' as const, createdAt: 20, updatedAt: 20 },
+      { id: 'in-old', requesterId: 'frank-id', recipientId: 'alice-id', status: 'pending' as const, createdAt: 30, updatedAt: 30 },
+      { id: 'in-new', requesterId: 'grace-id', recipientId: 'alice-id', status: 'pending' as const, createdAt: 40, updatedAt: 40 },
+    ];
+    for (const relationship of relationships) {
+      await repository.createFriendship({ ...relationship, status: 'pending' });
+      if (relationship.status === 'accepted') await repository.acceptFriendship(relationship.id, relationship.recipientId);
+    }
+    const list = await friends.list('alice-id');
+    expect(list.friends.map((friend) => friend.id)).toEqual(['carol-id', 'bob-id']);
+    expect(list.incoming.map((request) => request.id)).toEqual(['in-new', 'in-old']);
+    expect(list.outgoing.map((request) => request.id)).toEqual(['out-new', 'out-old']);
+  });
 });

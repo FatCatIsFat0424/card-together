@@ -13,6 +13,7 @@ import { createApplication } from '../../src/app';
 import { SOCKET_RATE_LIMITS } from '../../src/socket/connection';
 import { createJsonRepository } from '../../src/database/json-repository';
 import type { Repository } from '../../src/database/repository';
+import { seedAuthenticatedAccount } from '../auth/account-fixture';
 
 const ORIGIN = 'http://localhost:5173';
 const PNG = Buffer.from(
@@ -58,16 +59,8 @@ describe('custom emoji routes and chat', () => {
     return { Origin: ORIGIN, 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) };
   }
 
-  async function register(username: string): Promise<{ account: AccountProfile; cookie: string }> {
-    const response = await fetch(`${baseUrl}/api/auth/register`, {
-      method: 'POST', headers: headers(),
-      body: JSON.stringify({ username, password: 'A valid test password 123', nickname: username }),
-    });
-    expect(response.status).toBe(201);
-    const body = await response.json() as { account: AccountProfile };
-    const cookie = response.headers.get('set-cookie')?.split(';')[0];
-    if (!cookie) throw new Error('Expected session cookie');
-    return { account: body.account, cookie };
+  async function seedAccount(username: string): Promise<{ account: AccountProfile; cookie: string }> {
+    return seedAuthenticatedAccount(repository, username);
   }
 
   async function api(
@@ -95,8 +88,8 @@ describe('custom emoji routes and chat', () => {
   }
 
   it('should manage a library of uploaded emoji per account', async () => {
-    const alice = await register('emoji_alice');
-    const bob = await register('emoji_bob');
+    const alice = await seedAccount('emoji_alice');
+    const bob = await seedAccount('emoji_bob');
     expect((await api(alice.cookie, '/api/emojis')).body).toEqual({ success: true, emojis: [] });
     expect((await fetch(`${baseUrl}/api/emojis`, { headers: headers() })).status).toBe(401);
     const upload = await api(alice.cookie, '/api/media', 'POST',
@@ -140,8 +133,8 @@ describe('custom emoji routes and chat', () => {
   }, 15_000);
 
   it('should batch delete only the caller\'s emoji and keep their media served', async () => {
-    const alice = await register('bulk_alice');
-    const bob = await register('bulk_bob');
+    const alice = await seedAccount('bulk_alice');
+    const bob = await seedAccount('bulk_bob');
     const upload = await api(alice.cookie, '/api/media', 'POST',
       { data: PNG.toString('base64'), purpose: 'emoji' });
     const mediaId = upload.body.id as string;
@@ -181,8 +174,8 @@ describe('custom emoji routes and chat', () => {
   }, 15_000);
 
   it('should attach only used emoji from the sender library to chat messages', async () => {
-    const alice = await register('chat_alice');
-    const bob = await register('chat_bob');
+    const alice = await seedAccount('chat_alice');
+    const bob = await seedAccount('chat_bob');
     const aliceMedia = `${'a'.repeat(64)}.png`;
     const bobMedia = `${'b'.repeat(64)}.gif`;
     await repository.createEmojis(alice.account.id,
@@ -207,8 +200,8 @@ describe('custom emoji routes and chat', () => {
   it('should send owned stickers, reject forged payloads and restore durable history', async () => {
     let now = Date.now();
     vi.spyOn(Date, 'now').mockImplementation(() => now);
-    const alice = await register('sticker_alice');
-    const bob = await register('sticker_bob');
+    const alice = await seedAccount('sticker_alice');
+    const bob = await seedAccount('sticker_bob');
     const mediaId = `${'a'.repeat(64)}.webp`;
     const [asset] = await repository.createEmojis(alice.account.id, [{ name: 'wave', mediaId }], 1);
     const client = await connect(alice.cookie);
@@ -258,8 +251,8 @@ describe('custom emoji routes and chat', () => {
   it('should resolve site-provided emoji after the sender library and send provided stickers', async () => {
     let now = Date.now();
     vi.spyOn(Date, 'now').mockImplementation(() => now);
-    const alice = await register('site_alice');
-    const bob = await register('site_bob');
+    const alice = await seedAccount('site_alice');
+    const bob = await seedAccount('site_bob');
     const aliceMedia = `${'a'.repeat(64)}.png`;
     await repository.createEmojis(alice.account.id, [{ name: 'wave', mediaId: aliceMedia }], 1);
     const aliceClient = await connect(alice.cookie);

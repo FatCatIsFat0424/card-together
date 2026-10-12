@@ -30,13 +30,14 @@ module.exports = tseslint.config(
     },
   },
   {
-    files: ['shared/src/**/*.ts', 'server/**/*.ts', 'client/src/**/*.{ts,tsx}'],
+    files: ['shared/src/**/*.ts', 'server/**/*.ts', 'client/src/**/*.{ts,tsx}', 'scripts/**/*.ts', 'client/vite.config.ts'],
     languageOptions: {
       parserOptions: {
         project: [
           './shared/tsconfig.json',
           './server/tsconfig.test.json',
           './client/tsconfig.app.json',
+          './client/tsconfig.node.json',
         ],
         tsconfigRootDir: __dirname,
       },
@@ -47,6 +48,10 @@ module.exports = tseslint.config(
         allowForKnownSafeCalls: [{ from: 'package', name: 'NavigateFunction', package: 'react-router' }],
       }],
     },
+  },
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { globals: { Buffer: 'readonly', console: 'readonly', process: 'readonly', setTimeout: 'readonly', clearTimeout: 'readonly' } },
   },
   {
     files: ['server/tests/**/*.ts', 'server/benchmarks/**/*.ts'],

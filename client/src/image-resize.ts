@@ -18,18 +18,22 @@ export async function resizeImage(file: Blob, options: ResizeOptions): Promise<B
   // Canvas encodes a single frame, so preserve GIF bytes to retain their animation.
   if (file.type === 'image/gif') return file;
   const bitmap = await createImageBitmap(file);
-  const crop = options.square ? Math.min(bitmap.width, bitmap.height) : 0;
-  const sourceWidth = crop || bitmap.width;
-  const sourceHeight = crop || bitmap.height;
-  const scale = Math.min(1, options.size / Math.max(sourceWidth, sourceHeight));
-  const canvas = document.createElement('canvas');
-  canvas.width = options.square ? options.size : Math.round(sourceWidth * scale);
-  canvas.height = options.square ? options.size : Math.round(sourceHeight * scale);
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('Canvas is unavailable.');
-  context.drawImage(bitmap, (bitmap.width - sourceWidth) / 2, (bitmap.height - sourceHeight) / 2,
-    sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
+  let canvas: HTMLCanvasElement;
+  try {
+    const crop = options.square ? Math.min(bitmap.width, bitmap.height) : 0;
+    const sourceWidth = crop || bitmap.width;
+    const sourceHeight = crop || bitmap.height;
+    const scale = Math.min(1, options.size / Math.max(sourceWidth, sourceHeight));
+    canvas = document.createElement('canvas');
+    canvas.width = options.square ? options.size : Math.round(sourceWidth * scale);
+    canvas.height = options.square ? options.size : Math.round(sourceHeight * scale);
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Canvas is unavailable.');
+    context.drawImage(bitmap, (bitmap.width - sourceWidth) / 2, (bitmap.height - sourceHeight) / 2,
+      sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
+  } finally {
+    bitmap.close();
+  }
   const webp = await encode(canvas, 'image/webp', options.quality);
   if (webp?.type === 'image/webp') return webp;
   const fallback = await encode(canvas, options.fallbackType, options.quality);
