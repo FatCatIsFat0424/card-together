@@ -3,7 +3,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import Tooltip from '@mui/material/Tooltip';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { GAME_COIN_REWARD } from '@shared/constants';
 import { apiRequest } from '../api';
 import { clearAccount, useAccountStore } from '../stores/account-store';
@@ -141,6 +141,10 @@ export function TopBar(): ReactNode {
             <NotificationPanel />
           </div>}
         </div>}
+        {accountId && <Link to="/friends?tab=messages" className={`${styles.iconBtn} touch-target`}
+          aria-label={t('messages.title')} title={t('messages.title')} onClick={() => setOpen(null)}>
+          <AppIcon name="chat" />
+        </Link>}
         {showVoice && <div className={styles.group} data-popover="voice">
           <button type="button" className={`${styles.iconBtn} touch-target`} onClick={() => toggle('voice')}
             aria-expanded={open === 'voice'} aria-label={t('topbar.voice')} title={t('topbar.voice')}>

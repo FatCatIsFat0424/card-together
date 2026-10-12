@@ -47,6 +47,8 @@ describe('topbar navigation', () => {
     for (const label of ['大廳', '好友', '我的個人頁面', '我的帳號']) expect(html).toContain(label);
     expect(html).toContain('href="/players/alice"');
     expect(html).toContain('href="/shop"');
+    expect(html).toContain('href="/friends?tab=messages"');
+    expect(html).toContain('aria-label="私人訊息"');
     expect(html).not.toContain('href="/messages"');
     expect(html).not.toContain('>私人訊息<');
     if (path.startsWith('/game/')) expect(html).toContain('ABC123');
@@ -59,6 +61,7 @@ describe('topbar navigation', () => {
     expect(html).not.toContain('我的帳號');
     expect(html).not.toContain('href="/friends"');
     expect(html).not.toContain('href="/shop"');
+    expect(html).not.toContain('href="/friends?tab=messages"');
     expect(html).not.toContain('枚金幣');
   });
 

@@ -200,8 +200,6 @@ export function AccountPage(): ReactNode {
   return (
     <main className={editorStyles.page}>
       <header className={editorStyles.header}>
-        <h1>{t('profile.title')}</h1>
-        <p>{t('profile.description')}</p>
         <div className={editorStyles.tabs} role="tablist" aria-label={t('nav.account')}>
           {ACCOUNT_TABS.map((tab, index) => (
             <button key={tab} id={`account-tab-${tab}`} type="button" role="tab"
