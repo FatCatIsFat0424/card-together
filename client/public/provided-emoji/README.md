@@ -1,4 +1,4 @@
 # Site-provided chat emoji
 
-See the authoritative [emoji guide](../../../docs/media.md#site-provided-emoji) for
-`local-emoji/`, naming rules, supported formats, import, and production publication.
+Files here besides this README are importer output; do not edit them. Sources, naming, import, and publication:
+[site-provided emoji](../../../docs/media.md#site-provided-emoji).

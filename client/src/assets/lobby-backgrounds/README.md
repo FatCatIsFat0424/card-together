@@ -1,12 +1,12 @@
 # Lobby background artwork
 
-Nine original illustrations generated using the built-in imagegen tool for Card Together.
-Encoded as WebP at quality 82 using the repository's Sharp dependency, with the
-original dimensions and composition preserved. Artwork is decorative; it does not
-contain interface components or replace licensed card graphics.
+Nine original decorative illustrations, one per game, generated with the built-in
+imagegen tool. They contain no interface elements and do not replace the licensed card
+graphics.
 
-Each final prompt consists of the common specification below followed by its
-corresponding scene line.
+- Encoded as WebP (quality 82) with the repository's Sharp dependency, keeping the
+  original dimensions and composition.
+- Each prompt is the common specification followed by the file's scene line.
 
 ## Common specification
 

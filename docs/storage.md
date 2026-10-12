@@ -4,238 +4,215 @@
 
 | Item | Rule |
 | --- | --- |
-| Username | 3–24 ASCII letters/digits/underscores, optionally separated by single dots or hyphens; unique case-insensitively |
-| New password | 6–128 characters; no leading/trailing whitespace or listed common passwords |
-| Existing password checks | Enforce the maximum length only, preserving older passwords |
-| Password storage | Salted asynchronous scrypt (`N=131072`, `r=8`, `p=1`), bounded concurrency and HTTP rate limits |
-| Identity | Account UUID is the player ID; changing a nickname does not change identity |
-| Profile | Nickname (1–20 characters), six-digit color, avatar, optional artwork/opacity, seat background and history visibility |
+| Username | 3–24 ASCII letters, digits, underscores, optionally separated by single dots or hyphens; unique ignoring case |
+| New password | 6–128 characters, no leading or trailing whitespace, not a listed common password |
+| Existing passwords | Only the maximum length is enforced, so older passwords keep working |
+| Password hashing | Salted async scrypt (`N=131072`, `r=8`, `p=1`) with bounded concurrency and HTTP rate limits |
+| Identity | The account UUID is the player ID; nickname changes keep identity |
+| Profile | Nickname (1–20 characters), six-digit color, avatar, optional images and opacity, seat background, history visibility |
 
-**Sessions and recovery**
+- Login creates a seven-day opaque session; only its SHA-256 digest is stored.
+- Cookies are HttpOnly and SameSite=Lax, plus Secure in production. Socket handshakes
+  and actions revalidate the session.
+- Logout revokes one session. Logout-all and password changes revoke every session and
+  disconnect affected sockets.
+- Password changes require the current password. There is no email or self-service
+  recovery; administrators use the [offline reset](#administrator-password-reset).
 
-- Login creates a seven-day opaque session; storage contains only its SHA-256 digest.
-- Cookies: HttpOnly, SameSite=Lax, and Secure in production.
-- HTTP mutations require an allowed Origin and JSON; Socket handshake/actions revalidate sessions.
-- Passwords and session tokens never appear in public DTOs.
-- Logout revokes one session; logout-all/password changes revoke all and disconnect affected sockets.
-- User password changes require the existing password. No email/self-service recovery exists;
-  host administrators can use [offline password reset](#administrator-password-reset).
+**Players and privacy**
 
-**Players, history, and privacy**
+- Bots are `bot:<UUID>` with `isBot: true` and have no account, session, or profile.
+- Any match with a bot is practice: it stays resumable but adds no history.
+- History lists participants in N/E/S/W order. Blackjack and Hold'em list occupied seats
+  only; legacy results without `seats` list four.
+- History is public by default and owners can hide it. Schema v5 made every existing
+  account public once; later choices persist.
+- Seat backgrounds are shared with the room. Table backgrounds and card backs are private.
 
-- Bots use `bot:<UUID>` and `isBot: true`, with no account/session/connected-player record.
-- Any match containing a bot is practice: resumable runtime/result, but no new history entry.
-  Legacy bot history loads but is excluded before history limits; see [cleanup](#legacy-bot-history-cleanup).
-- Human history records participants in N/E/S/W order. Blackjack/Hold'em use occupied result
-  seats only; legacy results without `seats` include four. Legacy snapshots without `isBot` remain valid.
-- New accounts default to public history; owners can disable it. Schema v5 makes all existing
-  accounts public once, including previously private accounts; later choices persist.
-- Optional `AccountProfile.seatBackground` / `PlayerInfo.seatBackground` media IDs default to
-  theme artwork when absent/null. Seat artwork is shared; personal table backgrounds/card backs are private.
-- Seat artwork needs no schema change. Earlier servers tolerate it; rollback may hide the artwork
-  while retaining data/media. Background upload limits and complete media backups still apply.
+**Friends**
 
-**Social state**
-
-- Friend requests persist with unordered-pair uniqueness and sender/recipient permissions.
-- Accepted friends expose transient presence and the room code they host while online.
-- Joining a friend's room rechecks friendship, host identity and capacity; switching rooms is atomic.
-- Invitations are ephemeral and limited to accepted friends.
+- Requests are unique per unordered pair, with sender and recipient permissions.
+- Accepted friends see each other's online presence and hosted room code.
+- Joining a friend's room rechecks friendship, host, and capacity. Invitations are
+  ephemeral and limited to accepted friends.
 
 ## Game coins
 
-| Field/operation | Behavior |
-| --- | --- |
-| `coins` | Optional nonnegative safe integer; absent means zero |
-| `rewardedGameIds` | Optional unique completion receipts; prevents repeat awards, including after restart |
-| `Repository.saveRuntime` | Commits rewards, receipts, runtime and completed history atomically |
-| `saveMatch` | Does not award coins |
-| Bot matches | Human participants earn coins, but the match remains excluded from history |
+- Each human in a completed game earns `GAME_COIN_REWARD` (10) regardless of result,
+  including games with bots. Spectators and aborted games earn nothing. Blackjack and
+  Hold'em reward the whole match, not individual hands. Past matches were not rewarded.
+- `rewardedGameIds` receipts prevent repeat awards, including after restarts.
+- `Repository.saveRuntime` commits rewards, receipts, runtime, and completed history in one
+  atomic write; `saveMatch` never awards coins.
+- `coinRevision` increases on every balance change, including purchases, so clients can
+  discard stale responses. Updates reach the owner through `account:coins`, `account:updated`,
+  and resume ([API](api.md#socket-actions)).
 
-- Compatible with schema-v4 files; no historical rewards are backfilled.
-- Back up balances and receipts together. Earlier servers retain these fields but award no new coins.
+## Avatar borders
 
-## Avatar border purchases
+- `purchaseAvatarBorder` checks the price, debits coins, and grants ownership in one
+  atomic write. Repeat purchases are free no-ops; failed writes change nothing.
+- The Repository validates catalog IDs, unique inventory, and that the equipped border is owned.
 
-| Optional field | Default |
-| --- | --- |
-| `ownedAvatarBorders` | Empty inventory |
-| `avatarBorder` | Original avatar |
-| `coinRevision` | Zero |
+## Data compatibility
 
-- Compatible with schema-v4 accounts; preserves existing balances and media.
-- Repository validates catalog IDs, inventory uniqueness and equipment ownership.
-- `purchaseAvatarBorder` atomically checks/debits coins and grants ownership; repeat purchases are idempotent.
-- Failed writes preserve balance/inventory; rewards and debits increment the private notification revision.
-- Earlier servers preserve fields but cannot manage/display borders. Do not mix writers;
-  follow [deployment/rollback](deployment.md#operations-and-rollback) and complete backups.
-- No destructive migration or historical backfill is required.
+Optional fields added without a schema change; absent values use the default:
 
-## Waiting-room seats
+| Field | Default | Earlier servers |
+| --- | --- | --- |
+| `coins`, `coinRevision` | 0 | Keep the fields; award nothing |
+| `rewardedGameIds` | Empty | Keep the field |
+| `ownedAvatarBorders`, `avatarBorder` | Empty / original avatar | Keep the fields; cannot show or manage borders |
+| `seatBackground` | Theme artwork | Ignore it; data and media stay |
+| `RoomInfo.additionalSeats` (Ninety-Nine, Blackjack, Hold'em) | Four seats; up to four human-only extras | Unsupported: have players leave extra seats and the host remove them first |
 
-- Ninety-Nine/Blackjack/Hold'em may persist optional `RoomInfo.additionalSeats`.
-- Absent means four seats; at most four extra human-only seats (eight total), separate from spectators.
-- Rooms with extra seats cannot start matches yet.
-- Before rollback to an unsupported server, have players leave extra seats and the host remove them;
-  preserve complete database/media backups following [deployment](deployment.md).
+- Ninety-Nine tied results (`winners`) cannot be read by earlier releases.
+- Revisions before Sevens, Chinese Poker, Liar's Deck, Blackjack, or Texas Hold'em reject
+  state containing those games.
+- Never run two server versions against one database. Rollback steps:
+  [deployment](deployment.md#rollback).
 
-## Administrator password reset
-
-Host-only CLI: resets a password without the old one; no website admin role or recovery endpoint.
-
-| Preparation | Requirement |
-| --- | --- |
-| Requester | Establish ownership through a trusted channel; username/nickname/history alone is not proof |
-| Database | Explicit configured `DATABASE_PATH`; current schema; regular file without symbolic/hard links |
-| Account | Login username, case-insensitive; not nickname or account ID |
-| Runtime | Pinned Node version; apply as the database file owner |
-| Input | Interactive terminal; two hidden password prompts; no password arguments/env/redirected input |
-
-1. Stop **all database writers** and preserve complete database/media backups;
-   this interrupts players. See [operations](deployment.md#operations-and-rollback).
-2. Preview from the repository root (no password prompt or writes):
-
-   ```sh
-   npm run admin:reset-password -- /absolute/path/database.json alice
-   ```
-
-3. Apply as the file owner while writers stay stopped:
-
-   ```sh
-   npm run admin:reset-password -- /absolute/path/database.json alice --apply --writers-stopped
-   ```
-
-4. Keep the printed `.password-reset-<UUID>.bak` privately. Deliver the new password through
-   a trusted private channel and ask the owner to change it after signing in.
-5. Restart one instance. Verify the new password and revoked sessions; the old password fails
-   only if a different value was set. Replacement passwords do not expire or force a later change.
-
-**Installed production commands** (after stopping writers):
-
-```sh
-sudo -u card-together sh -c 'cd /opt/card-together/server && ../node --import tsx src/auth/reset-password-cli.ts /var/lib/card-together/database.json alice'
-sudo -u card-together sh -c 'cd /opt/card-together/server && ../node --import tsx src/auth/reset-password-cli.ts /var/lib/card-together/database.json alice --apply --writers-stopped'
-```
-
-Replace `/absolute/path/database.json` (or the production path) with the configured database;
-replace `alice` with the target login username. Preview reports path, ID, saved username and session count.
-
-| Outcome | Handling |
-| --- | --- |
-| Applied | Complete 0600 backup/replacement; same password policy/scrypt as registration; changes only target password/timestamp and revokes its sessions |
-| Rejected | Invalid data/account/password, wrong UID, source change or write failure leaves the database unreplaced; assess any retained backup |
-| Applied with cleanup warnings | Password is already changed; resolve reported temporary/lock files instead of treating it as an unapplied reset |
-| Stale `.password-reset.lock` | Confirm no reset process is active before removal; never remove an active lock |
-| Restore backup | Stop writers first; restores old password/sessions and loses newer writes |
-
-- `--writers-stopped` acknowledges the prerequisite; it neither stops nor detects services.
-- The lock serializes reset tools only; it does **not** lock out application writers.
-- No database creation or migration; other accounts/runtime/history/media/coins/preferences stay intact.
-- Stopping the application closes its live Socket connections.
-
-## Legacy bot history cleanup
-
-Offline maintenance only; not run by builds, tests or startup. Until applied, legacy bot
-entries remain on disk but are hidden from history.
-
-1. Stop all writers and preserve complete [database/media backups](deployment.md).
-2. Use pinned Node, explicit `DATABASE_PATH` and the current schema; apply as the file owner.
-   Upgrade older data through normal backed-up startup migration first.
-3. Preview, then apply while writers remain stopped:
-
-   ```sh
-   npm run cleanup:bot-history -- /absolute/path/database.json
-   npm run cleanup:bot-history -- /absolute/path/database.json --apply --writers-stopped
-   ```
-
-4. Retain the private `.bot-history-<UUID>.bak`; restart one instance and verify login,
-   human history and game resume.
-
-- The flag acknowledges stopped writers; it does not stop/detect them.
-- Validates data, writes a complete 0600 backup, then atomically replaces only `matches`.
-- Preserves human history, accounts, sessions, friendships, emoji, media references and runtime;
-  do not edit runtime results or media files.
-- Changed/invalid input aborts; repeated cleanup is a no-op. Backups retain original bot entries.
-- Restore only with writers stopped and the corresponding complete media backup.
-
-## Database and media
+## Database
 
 Contracts: [`Repository`](../server/src/database/repository.ts),
-[`schema`](../server/src/database/schema.ts), [migrations](../server/src/database/migrations.ts).
+[schema](../server/src/database/schema.ts), [migrations](../server/src/database/migrations.ts).
 
-| Schema | Compatibility |
+| Schema version | Change |
 | --- | --- |
-| Current: **5** | Startup migrates versions 1–4 and validates the result |
-| v4 | Adds card back/image opacity defaults that preserve the previous look |
-| v5 | Makes existing match history public once |
-| Migration backup | Original file saved as `database.json.v<version>.bak` before persistence |
-| Rollback | v4-only servers reject v5; stop writers and restore a compatible complete backup, accounting for newer writes |
+| 5 (current) | Makes existing match history public once |
+| 4 | Card back and image opacity defaults that keep the previous look |
+| 1–3 | Migrated at startup |
+
+- Startup migrates older versions, validates the result, and saves the original as
+  `database.json.v<version>.bak` first. Servers that only support v4 reject v5 files.
+- Invalid JSON, versions, duplicates, or references stop startup without touching the file.
 
 | Collection | Contents |
 | --- | --- |
-| `accounts` | Identity, normalized username, password hash, profile, timestamps |
-| `sessions` | Token digest, account, creation/expiry |
-| `friendships` | Account pair, request/accepted status, timestamps |
-| `matches` | Stable game ID, result, participants, completion |
+| `accounts` | Identity, normalized username, password hash, profile, coins, timestamps |
+| `sessions` | Token digest, account, creation and expiry |
+| `friendships` | Account pair, status, timestamps |
+| `matches` | Game ID, result, participants, completion time |
 | `emojis` | Owner, unique name, media reference |
-| `runtime` | Players, rooms/readiness, games/private hands/logs, recent chat |
+| `runtime` | Players, rooms, readiness, games with private hands and logs, recent chat, clocks |
 
-| Location | Rule |
+| Location | Path |
 | --- | --- |
-| Development default | `server/data/database.json`, independent of cwd |
-| `DATABASE_PATH` override | Relative paths resolve from cwd |
+| Development | `server/data/database.json` (override: [`DATABASE_PATH`](development.md#configuration)) |
 | Production | `/var/lib/card-together/database.json` |
-| Images | Adjacent `media/`; content-addressed files and `media/owners/` quota markers |
+| Images | `media/` beside the database: content-addressed files plus `media/owners/` quota markers |
 
-- Back up/restore **all** media. Development state is Git-ignored, never statically exposed;
-  images use the controlled endpoint.
-- One process owns each JSON file; the duplicate-path guard is in-process, not a cross-process lock.
-- Writes serialize, validate, write/fsync a same-directory temporary file, then rename atomically.
-  Memory publishes only after success; power-loss durability also depends on the filesystem.
-- Invalid JSON/version, duplicates or references stop startup without replacing the original.
-- Runtime snapshots and completed matches commit together before ack/broadcast; failure restores managers.
-- Restart preserves private hands and gives a fresh 60-second reconnect window. Tabs share a seat;
-  only the last disconnect starts expiry.
-- Empty rooms remove active game/chat state, not completed history. Chat retains 200 messages per room;
-  voice is neither recorded nor stored in JSON.
-- Room clocks, reserves and active deadlines persist. Existing deadlines survive restart;
-  legacy snapshots get defaults/fresh clocks. See [turn clocks](architecture.md#turn-clocks)
-  and [timer rules](games.md#turn-timer).
+**Write and recovery behavior**
+
+- One process owns each JSON file. The duplicate-path guard is in-process only, not a
+  cross-process lock.
+- Each write serializes and validates, writes and fsyncs a temporary file in the same
+  directory, then renames it. Memory updates only after success; power-loss durability
+  also depends on the filesystem.
+- Runtime and completed matches commit together before acknowledgment and broadcast.
+- Restart keeps private hands, clocks, and deadlines, and gives disconnected players a
+  fresh 60-second window ([architecture](architecture.md#state-commits)).
+- Removing an empty room deletes its game and chat, not history. Chat keeps 200 messages
+  per room. Voice is never stored.
+- Development state is Git-ignored and never served statically; images go through the
+  media endpoint.
 
 ## Backup and restore
 
-**Backup**
+**Backup:** stop writers, then copy the whole state directory (`database.json` and
+`media/`). Backups hold password hashes and private hands: keep them private and keep an
+off-host copy. Production snapshots: [deployment](deployment.md#backups).
 
-- Stop writers; copy the **entire state directory** (`database.json` and `media/`).
-- Keep backups private: they contain password hashes and private hands. Maintain an off-host copy.
-- Production deployment takes protected snapshots; [daily backup](deployment.md#daily-data-backup)
-  keeps 14 complete snapshots. See [operations](deployment.md#operations-and-rollback) for commands/layout.
+**Restore:**
 
-**Restore**
+1. Stop every possible writer and save the current complete state separately.
+2. Restore a compatible complete snapshot with restrictive permissions and correct ownership.
+3. Start one service; verify login, history, media, and game resume.
 
-1. Stop every candidate writer and preserve current complete state separately.
-2. Restore a compatible complete snapshot with correct ownership/restrictive permissions.
-3. Start one service; verify login, history, media and game resume.
+Restoring loses newer writes. Never edit live JSON, delete data to fix startup, or
+restore a database with mismatched media.
 
-Restoring loses newer writes. Do not edit live JSON, discard data to fix startup,
-or restore JSON with mismatched media.
+## Maintenance tools
+
+Both tools are offline and share these requirements:
+
+- Stop **all database writers** first and keep complete database and media backups.
+  This disconnects players. `--writers-stopped` only confirms this; it neither stops
+  nor detects services.
+- Pass the configured database path explicitly. The file must use the current schema
+  and be a regular file without symbolic or hard links; upgrade older data through a
+  normal backed-up startup first.
+- Run with the pinned Node.js version as the database file owner.
+- Preview first (no writes), then apply. Keep the printed `.bak` file private.
+- Restart a single instance afterwards.
+
+### Administrator password reset
+
+Resets a password without the old one. There is no web admin role or recovery endpoint.
+
+1. Confirm the requester owns the account through a trusted channel; username,
+   nickname, or history alone is not proof.
+2. Preview, then apply (replace the path and the login username):
+
+   ```sh
+   npm run admin:reset-password -- /absolute/path/database.json alice
+   npm run admin:reset-password -- /absolute/path/database.json alice --apply --writers-stopped
+   ```
+
+   Production, from the installed tree:
+
+   ```sh
+   sudo -u card-together sh -c 'cd /opt/card-together/server && ../node --import tsx src/auth/reset-password-cli.ts /var/lib/card-together/database.json alice'
+   sudo -u card-together sh -c 'cd /opt/card-together/server && ../node --import tsx src/auth/reset-password-cli.ts /var/lib/card-together/database.json alice --apply --writers-stopped'
+   ```
+
+3. Enter the new password twice at the hidden prompts. Passwords are never accepted as
+   arguments, environment variables, or redirected input.
+4. Send the password through a trusted private channel and ask the owner to change it.
+5. Restart and verify the new password works and old sessions are revoked.
+
+- The username match ignores case; nicknames and account IDs are not accepted.
+- Preview reports path, account ID, saved username, and session count.
+- Apply writes a 0600 backup `.password-reset-<UUID>.bak`, uses the registration
+  password policy and hashing, and changes only the target's password, timestamp, and sessions.
+- Rejected input, wrong file owner, a concurrent source change, or a write failure leaves
+  the database unchanged. "Applied with cleanup warnings" means the password **did**
+  change; clean up the reported temporary or lock files.
+- `.password-reset.lock` serializes reset tools only, not the application. Remove a stale
+  lock only after confirming no reset is running.
+- Restoring the backup restores the old password and sessions and loses newer writes.
+
+### Legacy bot history cleanup
+
+Older versions recorded bot matches in history. They are hidden at load time; this tool
+removes them from disk. It never runs automatically.
+
+```sh
+npm run cleanup:bot-history -- /absolute/path/database.json
+npm run cleanup:bot-history -- /absolute/path/database.json --apply --writers-stopped
+```
+
+- Writes a 0600 backup `.bot-history-<UUID>.bak`, then atomically replaces only `matches`.
+- Keeps human history, accounts, sessions, friends, emoji, media, and runtime.
+- Changed or invalid input aborts; a repeat run changes nothing.
+- After restart, verify login, human history, and game resume.
 
 ## Future SQL adapter
 
-SQL is not implemented. Preserve these contracts:
+Not implemented. An adapter must keep:
 
-- Asynchronous Repository/public DTOs; atomic username/pair constraints.
-- Compare-and-swap password updates, session revocation, atomic runtime+completed-history writes.
-- Versioned JSON/JSONB runtime can preserve game semantics; multi-process room coordination needs separate design.
+- The async Repository contract, public DTOs, and atomic username and friend-pair constraints.
+- Compare-and-swap password updates, session revocation, and atomic runtime plus history writes.
+- Versioned JSON/JSONB runtime is fine; multi-process room coordination needs a separate design.
 
-Migration sequence:
+Migration:
 
-1. Run repository/auth/social/runtime tests against the adapter.
-2. Stop writes; back up and validate JSON.
-3. Import accounts, sessions, friendships, matches, emoji and runtime in one transaction.
-   Preserve IDs/hashes/expiry/media references; reject conflicts rather than overwrite.
-4. Compare counts, uniqueness, references and runtime; verify login/history/friendships/media/resume.
-5. Switch repository construction and resume traffic only after validation.
+1. Pass the repository, auth, social, and runtime tests against the adapter.
+2. Stop writes; back up and validate the JSON.
+3. Import all collections in one transaction, keeping IDs, hashes, expiry, and media
+   references; reject conflicts instead of overwriting.
+4. Compare counts, uniqueness, and references; verify login, history, friends, media, and resume.
+5. Switch the repository and resume traffic only after validation.
 
-After SQL accepts writes, rollback must export/reconcile newer data; the old JSON backup
-is stale. Do not add dual writes without an explicit transactional design.
+Once SQL accepts writes, the JSON backup is stale: rollback must export newer data. Do
+not add dual writes without a transactional design.
