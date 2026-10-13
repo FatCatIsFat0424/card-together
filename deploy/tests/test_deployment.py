@@ -62,6 +62,25 @@ class DeploymentTests(unittest.TestCase):
                          (fixture.state / 'database.json').read_bytes())
         self.assertEqual(list((fixture.host / 'tmp').iterdir()), [])
 
+    def test_invalid_build_fails_before_service_shutdown_or_backup(self):
+        for case in ('development-base', 'missing-build'):
+            with self.subTest(case=case):
+                fixture = DeploymentFixture()
+                try:
+                    entry = fixture.checkout / 'client/dist/index.html'
+                    if case == 'development-base':
+                        entry.write_text('/assets/new.js')
+                    else:
+                        entry.unlink()
+                    result = fixture.run('deploy_application')
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn('build.sh', result.stderr)
+                    self.assertEqual((fixture.root / 'service-state').read_text(), 'card-together.service')
+                    self.assertFalse(any(call[:2] == ['systemctl', 'stop'] for call in fixture.calls()))
+                    self.assertEqual(list((fixture.host / 'var/backups/card-together').glob('deploy-*')), [])
+                finally:
+                    fixture.close()
+
     def test_nginx_reload_or_public_health_failure_restores_site_and_snippets(self):
         for failure in ('nginx -t', 'systemctl reload nginx',
                         'python3 ' + str(self.fixture.checkout / 'deploy/wait-for-health.py')):

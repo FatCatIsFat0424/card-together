@@ -30,14 +30,28 @@ start_application_service() {
   systemctl enable --now card-together.service
 }
 
-install_application() (
-  trap - ERR INT TERM
+# Checked before any service stops so a wrong or missing build cannot cause an outage.
+validate_install_artifacts() {
   local node_binary=$1
   "$node_binary" -e 'const [major, minor] = process.versions.node.split(".").map(Number); if (major < 22 || (major === 22 && minor < 13)) process.exit(1)' || {
     echo 'Node.js 22.13 or newer is required; use Node.js 24.' >&2
-    exit 1
+    return 1
   }
   command -v rsync >/dev/null
+  if [[ ! -f $repo_dir/node_modules/tsx/package.json || ! -f $repo_dir/client/dist/index.html ]]; then
+    echo 'Build first: npm exec --yes --package="node@$(cat .node-version)" -- bash deploy/build.sh' >&2
+    return 1
+  fi
+  grep -qF '/card-together/assets/' "$repo_dir/client/dist/index.html" || {
+    echo 'Build the client with VITE_BASE_PATH=/card-together/ before installing (run deploy/build.sh).' >&2
+    return 1
+  }
+}
+
+install_application() (
+  trap - ERR INT TERM
+  local node_binary=$1
+  validate_install_artifacts "$node_binary"
   if [[ -f $legacy_configuration_dir/server.env && ! -f $configuration_dir/server.env ]]; then
     echo 'Migrate the existing installation with deploy/deploy.sh first.' >&2
     exit 1
@@ -46,12 +60,6 @@ install_application() (
     echo 'Stop and disable bridge-online.service before installing.' >&2
     exit 1
   fi
-  test -f "$repo_dir/node_modules/tsx/package.json"
-  test -f "$repo_dir/client/dist/index.html"
-  grep -qF '/card-together/assets/' "$repo_dir/client/dist/index.html" || {
-    echo 'Build the client with VITE_BASE_PATH=/card-together/ before installing.' >&2
-    exit 1
-  }
   getent passwd card-together >/dev/null || useradd --system --user-group \
     --home-dir "$state_dir" --no-create-home --shell /usr/sbin/nologin card-together
   if systemctl cat card-together.service >/dev/null 2>&1; then
@@ -153,6 +161,7 @@ publish_client() (
 deploy_application() (
   local node_binary=$1 site_file backup_dir snippet http_snippet directory unit
   for tool in python3 rsync nginx systemctl flock; do command -v "$tool" >/dev/null; done
+  validate_install_artifacts "$node_binary"
   exec 9>"$lock_dir/card-together-deploy.lock"
   flock -n 9 || { echo 'Another Card Together deployment is running.' >&2; exit 1; }
   exec 7>"$lock_dir/bridge-online-deploy.lock"

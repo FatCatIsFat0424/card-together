@@ -103,6 +103,9 @@ permissions, then `sudo systemctl reset-failed card-together.service` if needed.
 
 - `deploy.sh` locks against concurrent deploys (including legacy ones) and shared Nginx
   edits, detects concurrent site changes, and snapshots before installing.
+- A missing build or one without the `/card-together/` base fails before any service
+  stops. `npm run check -- full` rebuilds `client/dist` with `/`, so run `build.sh`
+  immediately before `deploy.sh`.
 - A failure or `SIGINT`/`SIGTERM` after shutdown stops the new service and restores the
   changed Nginx configuration. Application and state stay in place for inspection, and
   services stay stopped so nothing writes against older state.
