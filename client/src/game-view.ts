@@ -20,6 +20,12 @@ export function auctionRows(calls: readonly AuctionCall[]): (AuctionCall | null)
   return rows;
 }
 
+/** Index of the seat's most recent call in the auction, or -1 before it has called. */
+export function latestCallIndex(calls: readonly AuctionCall[], seat: GameSeat): number {
+  for (let index = calls.length - 1; index >= 0; index--) if (calls[index].seat === seat) return index;
+  return -1;
+}
+
 /** Locate the next bidder after the last call, including an empty auction. */
 export function auctionWaitIndex(calls: readonly AuctionCall[], toAct: GameSeat | null): number {
   if (!toAct) return -1;

@@ -242,6 +242,32 @@ describe('table seat plate', () => {
     expect(html).toContain('>Dealer</span>');
   });
 
+  it("shows each Bridge seat's latest call beside its name during the auction only", () => {
+    const bidding = {
+      bids: [
+        { seat: 'N', action: { type: 'bid', level: 1, suit: 'clubs' } },
+        { seat: 'E', action: { type: 'pass' } },
+        { seat: 'S', action: { type: 'bid', level: 1, suit: 'hearts' } },
+        { seat: 'W', action: { type: 'pass' } },
+        { seat: 'N', action: { type: 'bid', level: 2, suit: 'nt' } },
+      ],
+      currentBidderSeat: 'E', highestBid: { level: 2, suit: 'nt', seat: 'N' }, consecutivePassCount: 0,
+      isFirstRound: false,
+    };
+    state.game = { ...baseGame(), phase: 'bidding', bidding, visible: { clock: clock(null), log: [] } };
+    const call = (seat: Seat): string => /title="Latest call">(.*?)<\/span>/.exec(render({ seat, position: 'top' }))?.[1] ?? '';
+    // North's earlier 1♣ is replaced by its latest call.
+    expect(call('N')).toBe('2NT');
+    expect(call('E')).toBe('Pass');
+    expect(call('S')).toContain('♥');
+    expect(call('S')).toContain('suitRed');
+    state.game = { ...baseGame(), phase: 'bidding', bidding: { ...bidding, bids: bidding.bids.slice(0, 1) },
+      visible: { clock: clock(null), log: [] } };
+    expect(render({ seat: 'E', position: 'top' })).not.toContain('Latest call');
+    state.game = { ...baseGame(), phase: 'playing', bidding, visible: { clock: clock(null), log: [] } };
+    expect(render({ seat: 'N', position: 'top' })).not.toContain('Latest call');
+  });
+
   it('prefers a bust over a thinking bot and keeps the pickable seat label', () => {
     state.game = {
       ...baseGame(),

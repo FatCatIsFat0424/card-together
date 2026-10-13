@@ -9,7 +9,7 @@ import type { Card, GameClock, GameSeat } from '@shared/types';
 import { rpCardPoints, rpScore } from '@shared/rules/redpoints';
 import { cardImageUrl } from '../cards';
 import type { TranslationKey } from '../i18n';
-import { remainingCards } from '../game-view';
+import { latestCallIndex, remainingCards } from '../game-view';
 import type { TablePosition } from '../game-view';
 import { liarsDeckView } from '../games/liarsdeck/liarsdeck-view';
 import { blackjackSeatOut, blackjackView } from '../games/blackjack/blackjack-view';
@@ -26,6 +26,7 @@ import { latestSeatAction, seatStatus, showsAutoPlayed } from './seat-status';
 import type { SeatStatus } from './seat-status';
 import type { AppIconName } from './AppIcon';
 import { TurnClock } from './TurnClock';
+import { BidLabel } from './AuctionTable';
 import { AppIcon } from './AppIcon';
 import styles from './TableSeat.module.css';
 
@@ -221,6 +222,10 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const clock = useGameStore((state) => state.visible?.clock);
   const receivedAt = useGameStore((state) => state.presentationReceivedAt);
   const lastActionAt = useGameStore((state) => latestSeatAction(state.visible?.log ?? [], seat));
+  // Bridge: each seat's latest call sits beside its name while the auction runs.
+  const callIndex = useGameStore((state) => (state.phase === 'bidding' && state.bidding
+    ? latestCallIndex(state.bidding.bids, seat) : -1));
+  const call = useGameStore((state) => (callIndex >= 0 ? state.bidding?.bids[callIndex]?.action ?? null : null));
   const active = !suppressTurn && turn && (phase === 'bidding' || phase === 'playing');
   const autoPlayed = autoArranged || showsAutoPlayed(clock, seat, lastActionAt);
   const status = seatStatus({
@@ -270,6 +275,10 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
           {player ? <PlayerLink player={player} size="medium" linked={!onObserve} />
             : <><span className={styles.emptyAvatar} aria-hidden="true" /><span className={styles.empty}>—</span></>}
           {isMe && <span className={styles.meTag}>{t('seat.meTag')}</span>}
+          {call && <span key={callIndex} className={`${styles.call} ${call.type === 'pass' ? styles.callPass : ''}`}
+            title={t('table.lastCall')}>
+            {call.type === 'pass' ? t('game.pass') : <BidLabel level={call.level} suit={call.suit} />}
+          </span>}
         </div>
         <span className={styles.seatBadge} title={t(`seat.${seat}`)}>
           <span aria-hidden="true">{t(`seat.short.${seat}`)}</span>

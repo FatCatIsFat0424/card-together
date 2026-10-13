@@ -94,6 +94,39 @@
 
 .empty { color: var(--text-muted); }
 
+/* Bridge: the seat's latest call, filling the space beside the name and popping in when it changes. */
+.call {
+  flex: none;
+  margin-left: auto;
+  padding: 0 7px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  white-space: nowrap;
+  animation: callIn 260ms ease-out;
+}
+
+.callPass {
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  border-color: color-mix(in srgb, var(--text-primary) 18%, transparent);
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+@keyframes callIn {
+  from { transform: scale(1.3); opacity: 0.4; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .call { animation: none; }
+}
+
 .meTag {
   flex: none;
   padding: 0 5px;

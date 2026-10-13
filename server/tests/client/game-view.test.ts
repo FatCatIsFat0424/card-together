@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { MatchResult, PlayerVisibleGameState, PlayingState } from '@shared/types';
 import {
-  AUCTION_COLUMNS, auctionRows, auctionWaitIndex, formatCountdown, lastElimination, lastMove, matchSeats, remainingCards,
-  resultSeats,
+  AUCTION_COLUMNS, auctionRows, auctionWaitIndex, formatCountdown, lastElimination, lastMove, latestCallIndex, matchSeats,
+  remainingCards, resultSeats,
 } from '../../../client/src/game-view';
 import type { AuctionCall } from '../../../client/src/game-view';
 
@@ -50,6 +50,23 @@ describe('auction seat alignment', () => {
     expect(auctionWaitIndex(calls.slice(0, 3), 'W')).toBe(4);
     expect(auctionWaitIndex(calls, 'N')).toBe(5);
     expect(auctionWaitIndex(calls, null)).toBe(-1);
+  });
+});
+
+describe('latestCallIndex', () => {
+  it("finds each seat's most recent call, or -1 before it has called", () => {
+    const auction: AuctionCall[] = [
+      { seat: 'N', action: { type: 'bid', level: 1, suit: 'clubs' } },
+      { seat: 'E', action: pass },
+      { seat: 'S', action: { type: 'bid', level: 1, suit: 'nt' } },
+      { seat: 'W', action: pass },
+      { seat: 'N', action: { type: 'bid', level: 3, suit: 'hearts' } },
+    ];
+    expect(latestCallIndex(auction, 'N')).toBe(4);
+    expect(latestCallIndex(auction, 'E')).toBe(1);
+    expect(latestCallIndex(auction, 'S')).toBe(2);
+    expect(latestCallIndex([], 'W')).toBe(-1);
+    expect(latestCallIndex(auction.slice(0, 2), 'S')).toBe(-1);
   });
 });
 

@@ -97,7 +97,8 @@ Runtime mechanics: [architecture](architecture.md#turn-clocks).
 | Big Two | Select cards, then Play or Pass. No suggestions, double-click play, or Enter shortcut |
 
 - Bridge bidding overlays the table with touch targets at least 44px tall; recent calls
-  stay visible with the info drawer closed.
+  stay visible with the info drawer closed. During the auction each plate shows that seat's
+  latest call (a bid with its suit, NT, or Pass) beside the name, updated as calls arrive.
 - Red Points uses up to two table rows (one when short) and paginates crowded tables.
   Score buttons list all captures; seat trays show the latest red cards.
 - Blackjack plates show Bet placed or Thinking while betting; the previous hand stays
