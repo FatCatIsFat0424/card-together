@@ -268,6 +268,15 @@ describe('table seat plate', () => {
     expect(render({ seat: 'N', position: 'top' })).not.toContain('Latest call');
   });
 
+  it("puts only the Bridge partner's hand beside its plate at the top", () => {
+    const bridge = { ...baseGame(), phase: 'playing', visible: { gameType: 'bridge', clock: clock(null), log: [] } };
+    state.game = bridge;
+    expect(render({ seat: 'N', position: 'top' })).toContain('handBeside');
+    expect(render({ seat: 'W', position: 'left' })).not.toContain('handBeside');
+    state.game = { ...bridge, visible: { gameType: 'bigtwo', clock: clock(null), log: [] } };
+    expect(render({ seat: 'N', position: 'top' })).not.toContain('handBeside');
+  });
+
   it('prefers a bust over a thinking bot and keeps the pickable seat label', () => {
     state.game = {
       ...baseGame(),

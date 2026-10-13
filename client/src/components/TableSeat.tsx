@@ -226,6 +226,8 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const callIndex = useGameStore((state) => (state.phase === 'bidding' && state.bidding
     ? latestCallIndex(state.bidding.bids, seat) : -1));
   const call = useGameStore((state) => (callIndex >= 0 ? state.bidding?.bids[callIndex]?.action ?? null : null));
+  // Bridge: the partner's hand sits beside its plate so the top row stays short and the trick area grows.
+  const handBeside = useGameStore((state) => position === 'top' && state.visible?.gameType === 'bridge');
   const active = !suppressTurn && turn && (phase === 'bidding' || phase === 'playing');
   const autoPlayed = autoArranged || showsAutoPlayed(clock, seat, lastActionAt);
   const status = seatStatus({
@@ -260,7 +262,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
 
   return (
     <div data-table-seat={position}
-      className={`${styles.seat} ${styles[position]} ${active ? styles.turn : ''} ${busted || dead || sittingOut || heOut || heState === 'folded' ? styles.out : ''} ${onObserve ? styles.observable : onPick ? styles.pickable : ''}`}
+      className={`${styles.seat} ${styles[position]} ${handBeside ? styles.handBeside : ''} ${active ? styles.turn : ''} ${busted || dead || sittingOut || heOut || heState === 'folded' ? styles.out : ''} ${onObserve ? styles.observable : onPick ? styles.pickable : ''}`}
       role={select ? 'button' : undefined} tabIndex={select ? 0 : undefined} onClick={select}
       aria-label={onObserve ? t('table.observePlayer', { name }) : onPick ? t('seat.pickNext', { name }) : undefined}
       title={onObserve ? t('table.observePlayer', { name }) : undefined}

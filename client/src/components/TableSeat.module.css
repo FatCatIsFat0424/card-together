@@ -46,6 +46,15 @@
 
 .bottom .plate { width: auto; flex: 0 1 auto; min-width: 0; max-width: 280px; }
 
+/* Bridge partner at the top: hand beside the plate instead of below it, so the trick area gets the height. */
+.handBeside {
+  flex-direction: row;
+  justify-content: center;
+  gap: 10px;
+}
+
+.handBeside .plate { width: auto; flex: 0 1 auto; min-width: 0; }
+
 /* The avatar (first child of PlayerLink) spans both rows at the plate's left edge. */
 .plate [data-player-identity] > :first-child,
 .emptyAvatar {
@@ -357,6 +366,7 @@
 }
 
 .bottom .tray { flex: none; max-width: 30%; }
+.handBeside .tray { flex: none; max-width: 45%; }
 
 /* Every card but the last sits in a shrinkable slot, so a narrow tray overlaps more. */
 .cardSlot { flex: 0 1 var(--card-peek); min-width: 2px; }
@@ -476,6 +486,13 @@
 @media (max-width: 767px) {
   .seat { gap: 3px; }
   .bottom .plate { max-width: 100%; }
+}
+
+/* Too narrow for a plate and a hand side by side: stack them again. */
+@media (max-width: 599px) {
+  .handBeside { flex-direction: column; gap: 3px; }
+  .handBeside .plate { width: 100%; }
+  .handBeside .tray { max-width: min(100%, 230px); }
 }
 
 /* Captured cards: fixed and centred in the table column so edge seats never push it off-screen. */

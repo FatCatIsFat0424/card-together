@@ -1,7 +1,9 @@
 /* ─── TrickArea styles ─── */
 
 .trickContainer {
-  --trick-w: calc((clamp(44px, 7dvh, 64px)) * var(--playing-card-scale));
+  /* Grow with the table (the centre column is the size container): the trick fills the centre cell,
+     about four cards tall and four and a half wide, without passing the centre content's width cap. */
+  --trick-w: max(44px, min(calc(112px * var(--playing-card-scale)), 12cqh, 10cqw));
   position: relative;
   width: calc(var(--trick-w) * 4.4);
   height: calc(var(--trick-w) * 4);
