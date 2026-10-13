@@ -64,17 +64,18 @@ export function GameInfoRail(): ReactNode {
       {contract && <section className={styles.box}>
         <h2 className={styles.caption}>{t('table.tricks')}</h2>
         <div className={styles.scoreRow}>
-          <span className={`${styles.team} ${styles.nsText}`}>NS</span>
+          <span className={`${styles.team} ${styles.nsText}`}>{t('table.teamNS')}</span>
           <Pips count={playing?.trickCountNS ?? 0} target={targetNS} team="ns" />
           <span className={`${styles.count} ${styles.nsText}`}>{playing?.trickCountNS ?? 0}</span>
         </div>
         <div className={styles.scoreRow}>
-          <span className={`${styles.team} ${styles.ewText}`}>EW</span>
+          <span className={`${styles.team} ${styles.ewText}`}>{t('table.teamEW')}</span>
           <Pips count={playing?.trickCountEW ?? 0} target={targetEW} team="ew" />
           <span className={`${styles.count} ${styles.ewText}`}>{playing?.trickCountEW ?? 0}</span>
         </div>
         <p className={styles.note}>
-          {t('table.target', { team: 'NS', n: String(targetNS) })} · {t('table.target', { team: 'EW', n: String(targetEW) })}
+          {t('table.target', { team: t('table.teamNS'), n: String(targetNS) })} · {t('table.target', {
+            team: t('table.teamEW'), n: String(targetEW) })}
         </p>
       </section>}
 
