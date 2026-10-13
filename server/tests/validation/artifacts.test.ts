@@ -34,6 +34,16 @@ describe('real build artifact boundaries', () => {
     await expect(validateArtifacts(root, '/')).rejects.toThrow();
   });
 
+  it('accepts a string music group and rejects other group values', async () => {
+    const { root, file } = await fixture();
+    const catalog = join(root, 'client/src/audio/provided-music.generated.json');
+    const track = { id: `provided-${'a'.repeat(24)}`, title: 'Fixture', file };
+    await writeFile(catalog, JSON.stringify([{ ...track, group: 'Album' }]));
+    await expect(validateArtifacts(root, '/card-together/')).resolves.toMatchObject({ music: 1 });
+    await writeFile(catalog, JSON.stringify([{ ...track, group: 1 }]));
+    await expect(validateArtifacts(root, '/card-together/')).rejects.toThrow('Invalid provided music record');
+  });
+
   it('rejects missing or corrupted built assets', async () => {
     const { root, file } = await fixture();
     await writeFile(join(root, 'client/dist/provided-music', file), 'corrupt');

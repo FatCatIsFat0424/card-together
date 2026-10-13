@@ -11,8 +11,9 @@ Only the site owner supplies music; players cannot upload tracks or enter URLs.
 
 | Import rule | Behavior |
 | --- | --- |
-| Formats | MP3, OGG, WAV, M4A, AAC, FLAC; recursive, case-insensitive; other files ignored |
-| Title and order | Filename without extension, in natural path order; prefix numbers to set order |
+| Formats | MP3, OGG, OPUS, WAV, M4A, AAC, FLAC; recursive, case-insensitive; other files ignored |
+| Title and order | Filename without extension; root files first, then folders, each in natural path order; prefix numbers to set order |
+| Groups | Each first-level folder is a player list section; deeper folders join it |
 | Track ID | Relative path, so moves and renames change identity; hashed output names refresh caches |
 | Audio | Original bytes, no transcoding; browser codec support varies (MP3 is safest) |
 | Validation | Structure, paths, and nonempty files; not decodability |

@@ -44,9 +44,12 @@ function parseMusic(value: unknown): ProvidedMusicTrack[] {
   const tracks = value.map((item: unknown): ProvidedMusicTrack => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('Invalid provided music record.');
     const record = item as Record<string, unknown>;
-    if (Object.keys(record).length !== 3 || typeof record.id !== 'string' ||
-      typeof record.title !== 'string' || typeof record.file !== 'string') throw new Error('Invalid provided music record.');
-    return { id: record.id, title: record.title, file: record.file };
+    const hasGroup = 'group' in record;
+    if (Object.keys(record).length !== (hasGroup ? 4 : 3) || typeof record.id !== 'string' ||
+      typeof record.title !== 'string' || typeof record.file !== 'string' ||
+      (hasGroup && typeof record.group !== 'string')) throw new Error('Invalid provided music record.');
+    const track = { id: record.id, title: record.title, file: record.file };
+    return typeof record.group === 'string' ? { ...track, group: record.group } : track;
   });
   validateProvidedMusicCatalog(tracks);
   return tracks;

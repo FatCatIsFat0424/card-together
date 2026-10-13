@@ -3,6 +3,8 @@ export interface ProvidedMusicTrack {
   readonly title: string;
   /** File name inside public/provided-music; not an arbitrary URL. */
   readonly file: string;
+  /** First-level source folder; absent for files at the music root. */
+  readonly group?: string;
 }
 
 export function validateProvidedMusicCatalog(tracks: readonly ProvidedMusicTrack[]): void {
@@ -10,8 +12,8 @@ export function validateProvidedMusicCatalog(tracks: readonly ProvidedMusicTrack
   const files = new Set<string>();
   for (const track of tracks) {
     if (!/^[a-z0-9][a-z0-9_-]*$/.test(track.id) || ids.has(track.id)
-      || !track.title.trim() || !/^[\p{L}\p{N}_ -]+\.(mp3|ogg|wav|m4a|aac|flac)$/iu.test(track.file)
-      || files.has(track.file)) {
+      || !track.title.trim() || !/^[\p{L}\p{N}_ -]+\.(mp3|ogg|wav|m4a|aac|flac|opus)$/iu.test(track.file)
+      || files.has(track.file) || (track.group !== undefined && !track.group.trim())) {
       throw new Error('Invalid or duplicate provided music catalog entry');
     }
     ids.add(track.id);

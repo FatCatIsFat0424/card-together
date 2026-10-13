@@ -1,7 +1,9 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { PROVIDED_MUSIC_TRACKS, providedMusicUrl, validateProvidedMusicCatalog } from '../../../client/src/audio/provided-music-catalog';
+import {
+  PROVIDED_MUSIC_TRACKS, groupProvidedMusicTracks, providedMusicUrl, validateProvidedMusicCatalog,
+} from '../../../client/src/audio/provided-music-catalog';
 
 afterEach(() => { vi.unstubAllEnvs(); });
 describe('owner-provided music catalog', () => {
@@ -18,6 +20,21 @@ describe('owner-provided music catalog', () => {
     }
     expect(() => validateProvidedMusicCatalog([track, track])).toThrow();
     expect(() => validateProvidedMusicCatalog([track, { ...track, id: 'second' }])).toThrow();
+    expect(() => validateProvidedMusicCatalog([{ ...track, group: ' ' }])).toThrow();
+    expect(() => validateProvidedMusicCatalog([{ ...track, group: 'Album' }])).not.toThrow();
+  });
+  it('groups consecutive tracks by folder in playback order', () => {
+    const tracks = [
+      { id: 'a', title: 'A', file: 'a.mp3' },
+      { id: 'b', title: 'B', file: 'b.mp3', group: 'Album' },
+      { id: 'c', title: 'C', file: 'c.mp3', group: 'Album' },
+      { id: 'd', title: 'D', file: 'd.mp3', group: 'Composer' },
+    ];
+    expect(groupProvidedMusicTracks(tracks)).toEqual([
+      { name: undefined, tracks: [tracks[0]] },
+      { name: 'Album', tracks: [tracks[1], tracks[2]] },
+      { name: 'Composer', tracks: [tracks[3]] },
+    ]);
   });
   it('encodes file names relative to the deployment base', () => {
     vi.stubEnv('BASE_URL', '/card-together/');

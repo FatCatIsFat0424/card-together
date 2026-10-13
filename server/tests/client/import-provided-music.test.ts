@@ -17,6 +17,7 @@ interface ImportedTrack {
   id: string;
   title: string;
   file: string;
+  group?: string;
 }
 
 const IMPORT_SCRIPT = resolve(import.meta.dirname, '../../../scripts/audio/import-provided-music.mjs');
@@ -88,6 +89,26 @@ describe('provided music import CLI', () => {
       .toEqual(['first source', 'second source']);
   });
 
+  it('should group tracks by first-level folder after root tracks', () => {
+    const root = createRoot();
+    addSource(root, 'Zeta root.mp3');
+    addSource(root, 'Album 10/song.mp3');
+    addSource(root, 'Album 2/disc 2/b.mp3');
+    addSource(root, 'Album 2/a.mp3');
+    addSource(root, 'Alpha root.mp3');
+
+    const tracks = importMusic(root);
+
+    expect(tracks.map(({ title, group }) => [group ?? null, title])).toEqual([
+      [null, 'Alpha root'],
+      [null, 'Zeta root'],
+      ['Album 2', 'a'],
+      ['Album 2', 'b'],
+      ['Album 10', 'song'],
+    ]);
+    expect(tracks.filter((track) => track.group === undefined).every((track) => !('group' in track))).toBe(true);
+  });
+
   it('should order numbered filenames naturally and produce deterministic output', () => {
     const root = createRoot();
     addSource(root, 'track10.mp3');
@@ -138,7 +159,7 @@ describe('provided music import CLI', () => {
 
   it('should skip unsupported files and import every supported extension', () => {
     const root = createRoot();
-    for (const extension of ['mp3', 'ogg', 'wav', 'm4a', 'aac', 'flac']) {
+    for (const extension of ['mp3', 'ogg', 'wav', 'm4a', 'aac', 'flac', 'opus']) {
       addSource(root, `song.${extension}`);
     }
     addSource(root, 'notes.txt', '');
@@ -146,10 +167,10 @@ describe('provided music import CLI', () => {
 
     const tracks = importMusic(root);
 
-    expect(tracks).toHaveLength(6);
+    expect(tracks).toHaveLength(7);
     expect(tracks.map((track) => track.file.split('.').at(-1)).sort())
-      .toEqual(['aac', 'flac', 'm4a', 'mp3', 'ogg', 'wav']);
-    expect(readdirSync(outputPath(root, '')).filter((name) => !name.startsWith('.import-'))).toHaveLength(6);
+      .toEqual(['aac', 'flac', 'm4a', 'mp3', 'ogg', 'opus', 'wav']);
+    expect(readdirSync(outputPath(root, '')).filter((name) => !name.startsWith('.import-'))).toHaveLength(7);
   });
 
   it('should reject an empty audio file without changing previous outputs', () => {

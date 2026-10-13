@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { PROVIDED_MUSIC_TRACKS } from '../audio/provided-music-catalog';
+import { PROVIDED_MUSIC_TRACKS, groupProvidedMusicTracks } from '../audio/provided-music-catalog';
+import type { ProvidedMusicTrack } from '../audio/provided-music-catalog';
 import { useShallow } from 'zustand/react/shallow';
 import type { MusicMode } from '../audio/music-playlist';
 import { useI18nStore } from '../stores/i18n-store';
@@ -12,6 +13,7 @@ import styles from './MusicControl.module.css';
 
 const MODE_ICONS: Record<MusicMode, AppIconName> = { 'loop-one': 'repeatOne', sequential: 'repeat', shuffle: 'shuffle' };
 const NEXT_MODE: Record<MusicMode, MusicMode> = { 'loop-one': 'sequential', sequential: 'shuffle', shuffle: 'loop-one' };
+const TRACK_GROUPS = groupProvidedMusicTracks(PROVIDED_MUSIC_TRACKS);
 
 export function MusicControl(): ReactNode {
   const turnSoundEnabled = useTurnSoundStore((state) => state.enabled);
@@ -35,6 +37,12 @@ export function MusicControl(): ReactNode {
   );
   const providedTrack = PROVIDED_MUSIC_TRACKS.find((track) => track.id === providedTrackId);
   const hasTracks = PROVIDED_MUSIC_TRACKS.length > 0;
+  const renderTrack = (track: ProvidedMusicTrack): ReactNode => (
+    <button type="button" data-music-transport className={styles.track} aria-current={track.id === providedTrackId}
+      onClick={() => void play(track.id)}>
+      <span>{track.title}</span>
+    </button>
+  );
 
   return (
     <section className={styles.panel} aria-label={t('music.title')}>
@@ -59,12 +67,14 @@ export function MusicControl(): ReactNode {
         <output htmlFor="music-volume">{Math.round(volume * 100)}%</output>
       </label>
       <ul className={styles.tracks} aria-label={t('music.tracks')}>
-        {PROVIDED_MUSIC_TRACKS.map((track) => <li key={track.id}>
-          <button type="button" data-music-transport className={styles.track} aria-current={track.id === providedTrackId}
-            onClick={() => void play(track.id)}>
-            <span>{track.title}</span>
-          </button>
-        </li>)}
+        {TRACK_GROUPS.map((group) => group.name === undefined
+          ? group.tracks.map((track) => <li key={track.id}>{renderTrack(track)}</li>)
+          : <li key={`group:${group.name}`} className={styles.group}>
+            <span className={styles.groupName}>{group.name}</span>
+            <ul aria-label={group.name}>
+              {group.tracks.map((track) => <li key={track.id}>{renderTrack(track)}</li>)}
+            </ul>
+          </li>)}
       </ul>
       <div className={styles.soundSetting}>
         <label className={styles.soundToggle}>

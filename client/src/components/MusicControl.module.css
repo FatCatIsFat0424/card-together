@@ -35,6 +35,23 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
 }
+.group ul { margin: 0; padding: 0; list-style: none; }
+.groupName {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: block;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-weight: 600;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-color);
+}
+.group:first-child .groupName { border-top: 0; }
+.group .track { padding-left: var(--spacing-md); }
 .track {
   display: flex;
   flex-direction: column;
