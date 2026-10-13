@@ -77,7 +77,8 @@ Frontend page behavior and layout. Client architecture and connection handling:
   is revealed. Reduced motion uses a one-second static reveal. The impact sound uses
   gesture-unlocked effects audio and follows the turn-sound toggle. Reconnects, page
   reloads, and starts received in background tabs do not replay the intro. Server play
-  and clocks continue during this client presentation; Escape or Skip reveals the table.
+  and clocks continue during this client presentation. A click or tap anywhere on the intro,
+  Escape, Enter, or Space reveals the table; a quiet line at the bottom says so.
 - Room codes have a copy button. Timer settings expand inside a bounded panel; the
   Sevens Dragon Slaying option matches one game-picker row in height.
 - Phones and short landscape windows use two-by-two seats and a chat toggle with an

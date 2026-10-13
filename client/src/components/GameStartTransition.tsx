@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import Dialog from '@mui/material/Dialog';
 import type { RoomInfo } from '@shared/types';
@@ -34,15 +34,22 @@ function IntroScreen({ intro, finish }: { readonly intro: Intro; readonly finish
       if (document.visibilityState === 'visible' && useTurnSoundStore.getState().enabled) playStartSound();
     },
   }), [intro.startedAt, reduced, finish]);
+  // Escape closes the dialog; Enter and Space skip too, matching a click anywhere on the scene.
+  const skipKey = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    finish();
+  };
   useEffect(() => {
     const hide = (): void => { if (document.visibilityState !== 'visible') finish(); };
     document.addEventListener('visibilitychange', hide);
     return () => document.removeEventListener('visibilitychange', hide);
   }, [finish]);
 
-  return <Dialog open fullScreen transitionDuration={0} onClose={finish} aria-labelledby="game-intro-title"
+  return <Dialog open fullScreen transitionDuration={0} onClose={finish} onKeyDown={skipKey}
+    aria-labelledby="game-intro-title" aria-describedby="game-intro-skip"
     slotProps={{ paper: { className: styles.screen } }}>
-    <div className={styles.scene} data-stage={stage} data-reduced={reduced}>
+    <div className={styles.scene} data-stage={stage} data-reduced={reduced} onClick={finish}>
       <div className={styles.background} style={{ backgroundImage: `url("${GAME_BACKGROUNDS[intro.room.gameType]}")` }} />
       <div className={styles.shade} />
       <h1 id="game-intro-title" className={styles.title}>{t(`gameType.${intro.room.gameType}`)}</h1>
@@ -53,7 +60,7 @@ function IntroScreen({ intro, finish }: { readonly intro: Intro; readonly finish
           <span className={styles.name}>{player.nickname}</span>
         </li>)}
       </ul>
-      <button type="button" className={styles.skip} onClick={finish} autoFocus>{t('intro.skip')}</button>
+      <p id="game-intro-skip" className={styles.skipHint}>{t('intro.skip')}</p>
     </div>
   </Dialog>;
 }
