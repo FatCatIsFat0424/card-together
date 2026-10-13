@@ -111,7 +111,7 @@ recipient's `serverNow`; frames never include opponents' hands or unrevealed sto
 | Big Two play / pass / round winner | 1,300 / 1,000 / 2,000 |
 | Red Points play or flip/capture | 1,900 per log entry |
 | Ninety-Nine play / elimination | 1,900 / 2,500 |
-| Sevens play / cover / Dragon Slaying (dragon / fire only) | 1,300 / 1,000 / 2,900 / 1,700 |
+| Sevens play / cover / Dragon Slaying (dragon / fire only) | 1,300 / 1,000 / 2,200 / 1,700 |
 | Sevens table collapse / broken table hold | 1,800 / 2,000 |
 | Chinese Poker row reveal / sweep / home run | 2,500 / 1,500 / 2,500 |
 | Liar's Deck new round / play / LIAR call / trigger suspense / pull result | 2,000 / 1,300 / 2,500 / 2,500 / 1,500 |

@@ -5,7 +5,7 @@ export const DEFAULT_SEVENS_OPTIONS: SevensOptions = { closeOnEnd: false };
 export const SEVENS_SLAY_EFFECTS: readonly SevensSlayEffect[] = ['dragon', 'fire'];
 
 /** Length of the presentation after a Dragon Slaying close; the client scene uses the same values. */
-export const SEVENS_SLAY_FRAME_MS: Readonly<Record<SevensSlayEffect, number>> = { dragon: 2900, fire: 1700 };
+export const SEVENS_SLAY_FRAME_MS: Readonly<Record<SevensSlayEffect, number>> = { dragon: 2200, fire: 1700 };
 
 /** When Dragon Slaying closes the last suit, the table collapses, then holds broken before the result. */
 export const SEVENS_COLLAPSE_MS = 1800;

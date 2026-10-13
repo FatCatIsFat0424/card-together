@@ -7,7 +7,7 @@ import {
   emitBody, emitBreath, emitCut, emitRow, emitSurge, FIRE_CUT_MS, FIRE_STRIKE_MS, fireSweepFront, flameHeat, flightPath,
   headPose,
   pathPoint, rowFireFront, sceneFade, scorch, slayTimeline,
-  seededRandom, slayLayout, SLAY_BREATH_START_MS, SLAY_CUT_MS, SLAY_DURATION_MS, SLAY_FLY_MS, SLAY_FLY_START_MS,
+  seededRandom, slayLayout, SLAY_BODY_CATCH_MS, SLAY_BREATH_START_MS, SLAY_CUT_MS, SLAY_DURATION_MS, SLAY_FLY_MS, SLAY_FLY_START_MS,
   SLAY_SPLIT_MS, SLAY_STRIKE_MS, snoutDistance, snoutPoint, SPINE_POINTS, splitPose, stepFire,
 } from '../../../client/src/games/sevens/dragon-slay-scene';
 import type { Particle, SlayLayout } from '../../../client/src/games/sevens/dragon-slay-scene';
@@ -108,7 +108,9 @@ describe('dragon pose', () => {
   it('spreads fire from the neck to the tail and scorches what has burned', () => {
     expect(burnFront(layout, 0)).toBe(0);
     expect(burnFront(layout, SLAY_STRIKE_MS)).toBe(DRAGON_BODY * layout.card);
-    expect(scorch(layout, 900, 0)).toBeGreaterThan(scorch(layout, 900, 300));
+    // Halfway through the spread, the neck is charred while the far side of the burn front is not yet.
+    const midway = (SLAY_BODY_CATCH_MS[0] + SLAY_BODY_CATCH_MS[1]) / 2;
+    expect(scorch(layout, midway, 0)).toBeGreaterThan(scorch(layout, midway, 300));
     expect(scorch(layout, 0, 0)).toBe(0);
   });
 
@@ -132,6 +134,24 @@ describe('dragon pose', () => {
   });
 });
 
+describe('dragon effect pacing', () => {
+  it('keeps every phase in the proportions of the original 2.9-second layout', () => {
+    const pace = SLAY_DURATION_MS / 2900;
+    expect(SLAY_DURATION_MS).toBe(2200);
+    for (const [phase, original] of [[SLAY_FLY_START_MS, 150], [SLAY_FLY_MS, 1700], [SLAY_CUT_MS, 120],
+      [SLAY_SPLIT_MS, 700], [SLAY_BREATH_START_MS, 300]] as const) {
+      expect(phase).toBeCloseTo(original * pace, -0.5);
+    }
+    // The blade still lands at the same fraction of the frame, with the halves parted before it ends.
+    expect(SLAY_STRIKE_MS / SLAY_DURATION_MS).toBeCloseTo(1850 / 2900, 2);
+    expect(SLAY_STRIKE_MS + SLAY_CUT_MS + SLAY_SPLIT_MS).toBeLessThanOrEqual(SLAY_DURATION_MS);
+    const dragon = slayTimeline('dragon');
+    expect(dragon.pace).toBeCloseTo(pace);
+    expect(dragon.fade).toBe(Math.round(300 * pace));
+    expect(dragon.fadeIn).toBe(SLAY_FLY_START_MS);
+  });
+});
+
 describe('fire-only effect', () => {
   it('uses the shared frame lengths and finishes the cut with time left before the end', () => {
     for (const effect of ['dragon', 'fire'] as const) {
@@ -144,7 +164,8 @@ describe('fire-only effect', () => {
     expect(slayTimeline('dragon').cut).toBe(SLAY_CUT_MS);
     expect(slayTimeline('fire').duration).toBeLessThan(slayTimeline('dragon').duration);
     // Fire only: the blade sweeps from 0.28 s to 0.58 s, the row burns until 1.4 s, then fades out by 1.7 s.
-    expect(slayTimeline('fire')).toEqual({ duration: 1700, fireStart: 280, fireEnd: 1400, strike: 280, cut: 300 });
+    expect(slayTimeline('fire')).toEqual({ duration: 1700, fadeIn: 150, fade: 300, pace: 1, fireStart: 280,
+      fireEnd: 1400, strike: 280, cut: 300 });
     expect(sceneFade(1400, 1700)).toBe(1);
     expect(sceneFade(1700, 1700)).toBe(0);
   });

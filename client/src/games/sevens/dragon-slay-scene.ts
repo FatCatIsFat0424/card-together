@@ -5,21 +5,25 @@ import type { SevensSlayEffect } from '@shared/types';
 
 /** Presentation length of the dragon effect, shared with the `slay` frame. */
 export const SLAY_DURATION_MS = SEVENS_SLAY_FRAME_MS.dragon;
+/** The dragon's phases were laid out for a 2.9-second frame; all of them scale with its actual length. */
+const DRAGON_DESIGN_MS = 2900;
+export const DRAGON_PACE = SLAY_DURATION_MS / DRAGON_DESIGN_MS;
+const paced = (ms: number): number => Math.round(ms * DRAGON_PACE);
 /**
  * Seen from above, the dragon rises out of the bottom-left corner, sweeps a 180-degree turn up the left side
  * of the table, and flies along the row until its snout reaches the K end.
  */
-export const SLAY_FLY_START_MS = 150;
-export const SLAY_FLY_MS = 1700;
+export const SLAY_FLY_START_MS = paced(150);
+export const SLAY_FLY_MS = paced(1700);
 /** Then a blade sweeps the row left to right, splitting the dragon lengthwise, and the halves fly apart. */
 export const SLAY_STRIKE_MS = SLAY_FLY_START_MS + SLAY_FLY_MS;
-export const SLAY_CUT_MS = 120;
-export const SLAY_SPLIT_MS = 700;
+export const SLAY_CUT_MS = paced(120);
+export const SLAY_SPLIT_MS = paced(700);
 /** Fire breath runs from here until the blade comes. */
-export const SLAY_BREATH_START_MS = 300;
+export const SLAY_BREATH_START_MS = paced(300);
 /** Fire spreads over the dragon from the neck to the tail tip between these times. */
-export const SLAY_BODY_CATCH_MS = [400, 1500] as const;
-export const SLAY_FADE_MS = 300;
+export const SLAY_BODY_CATCH_MS = [paced(400), paced(1500)] as const;
+export const SLAY_FADE_MS = paced(300);
 
 /** Fire-only effect: a quick blade sweeps the row left to right, setting it alight as it passes. */
 export const FIRE_DURATION_MS = SEVENS_SLAY_FRAME_MS.fire;
@@ -27,10 +31,17 @@ export const FIRE_STRIKE_MS = 280;
 export const FIRE_CUT_MS = 300;
 /** The row keeps burning this long after the sweep before the fade. */
 const FIRE_BURN_AFTER_MS = 820;
+const FIRE_FADE_IN_MS = 150;
+const FIRE_FADE_MS = 300;
 
 /** The moments both effects share, in ms from the start of the frame. */
 export interface SlayTimeline {
   readonly duration: number;
+  /** The table darkens over `fadeIn` at the start and everything but the char fades over `fade` at the end */
+  readonly fadeIn: number;
+  readonly fade: number;
+  /** Speed of the after-cut flash, streak, wound and jolt, relative to their original lengths */
+  readonly pace: number;
   /** Fire roars from `fireStart` to `fireEnd` */
   readonly fireStart: number;
   readonly fireEnd: number;
@@ -41,10 +52,10 @@ export interface SlayTimeline {
 
 export function slayTimeline(effect: SevensSlayEffect): SlayTimeline {
   return effect === 'fire'
-    ? { duration: FIRE_DURATION_MS, fireStart: FIRE_STRIKE_MS, fireEnd: FIRE_STRIKE_MS + FIRE_CUT_MS + FIRE_BURN_AFTER_MS,
-      strike: FIRE_STRIKE_MS, cut: FIRE_CUT_MS }
-    : { duration: SLAY_DURATION_MS, fireStart: SLAY_BREATH_START_MS, fireEnd: SLAY_STRIKE_MS, strike: SLAY_STRIKE_MS,
-      cut: SLAY_CUT_MS };
+    ? { duration: FIRE_DURATION_MS, fadeIn: FIRE_FADE_IN_MS, fade: FIRE_FADE_MS, pace: 1, fireStart: FIRE_STRIKE_MS,
+      fireEnd: FIRE_STRIKE_MS + FIRE_CUT_MS + FIRE_BURN_AFTER_MS, strike: FIRE_STRIKE_MS, cut: FIRE_CUT_MS }
+    : { duration: SLAY_DURATION_MS, fadeIn: SLAY_FLY_START_MS, fade: SLAY_FADE_MS, pace: DRAGON_PACE,
+      fireStart: SLAY_BREATH_START_MS, fireEnd: SLAY_STRIKE_MS, strike: SLAY_STRIKE_MS, cut: SLAY_CUT_MS };
 }
 
 /** Head length (snout tip to neck) and body length (neck to tail tip), in card heights. */
@@ -280,21 +291,22 @@ export function splitPose(layout: SlayLayout, ms: number): { upper: HalfPose; lo
 }
 
 /** Everything but the charred row fades out at the end. */
-export function sceneFade(ms: number, duration = SLAY_DURATION_MS): number {
-  return 1 - clamp01((ms - (duration - SLAY_FADE_MS)) / SLAY_FADE_MS);
+export function sceneFade(ms: number, duration = SLAY_DURATION_MS, fade = SLAY_FADE_MS): number {
+  return 1 - clamp01((ms - (duration - fade)) / fade);
 }
 
-export function backdropAlpha(ms: number, duration = SLAY_DURATION_MS): number {
-  return clamp01(ms / SLAY_FLY_START_MS) * sceneFade(ms, duration);
+export function backdropAlpha(ms: number, duration = SLAY_DURATION_MS, fade = SLAY_FADE_MS,
+  fadeIn = SLAY_FLY_START_MS): number {
+  return clamp01(ms / fadeIn) * sceneFade(ms, duration, fade);
 }
 
-/** Jolt offset in px just after the cut lands. */
-export function shake(layout: SlayLayout, ms: number, strike = SLAY_STRIKE_MS, cut = SLAY_CUT_MS): {
-  x: number; y: number;
-} {
+/** Jolt offset in px just after the cut lands; `pace` shortens it with the rest of the effect. */
+export function shake(layout: SlayLayout, ms: number, strike = SLAY_STRIKE_MS, cut = SLAY_CUT_MS,
+  pace = DRAGON_PACE): { x: number; y: number } {
+  const length = 260 * pace;
   const elapsed = ms - strike - cut;
-  if (elapsed < 0 || elapsed > 260) return { x: 0, y: 0 };
-  const strength = layout.card * 0.12 * (1 - elapsed / 260);
+  if (elapsed < 0 || elapsed > length) return { x: 0, y: 0 };
+  const strength = layout.card * 0.12 * (1 - elapsed / length);
   return { x: Math.sin(elapsed * 0.11) * strength, y: Math.cos(elapsed * 0.17) * strength };
 }
 

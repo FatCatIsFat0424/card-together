@@ -456,8 +456,9 @@ function drawBlade(context: Context, layout: SlayLayout, ms: number, timeline: S
   if (since < 0) return;
   const tip = blade ?? end;
   // The blade streak fades quickly after it crosses; the wound it leaves cools slowly.
-  const streak = blade !== null ? 1 : clamp01(1 - (since - timeline.cut) / 400);
-  const wound = sceneFade(ms, timeline.duration) * clamp01(1 - (since - timeline.cut) / 900);
+  const streak = blade !== null ? 1 : clamp01(1 - (since - timeline.cut) / (400 * timeline.pace));
+  const wound = sceneFade(ms, timeline.duration, timeline.fade)
+    * clamp01(1 - (since - timeline.cut) / (900 * timeline.pace));
   context.save();
   context.globalCompositeOperation = 'lighter';
   if (wound > 0) {
@@ -494,7 +495,7 @@ function drawBlade(context: Context, layout: SlayLayout, ms: number, timeline: S
     }
   }
   // A flash along the whole row as the blade reaches the far end.
-  const flash = (ms - timeline.strike - timeline.cut + 36) / 320;
+  const flash = (ms - timeline.strike - timeline.cut + 36 * timeline.pace) / (320 * timeline.pace);
   if (flash >= 0 && flash <= 1) {
     context.globalAlpha = (1 - flash) ** 2 * 0.9;
     const middle = (layout.rowLeft + layout.rowRight) / 2;
@@ -533,12 +534,12 @@ export function createSlayRenderer(canvas: HTMLCanvasElement): SlayRenderer {
 
       context.setTransform(1, 0, 0, 1, 0, 0);
       context.clearRect(0, 0, width, height);
-      const jolt = still ? { x: 0, y: 0 } : shake(layout, ms, timeline.strike, timeline.cut);
+      const jolt = still ? { x: 0, y: 0 } : shake(layout, ms, timeline.strike, timeline.cut, timeline.pace);
       context.setTransform(ratio, 0, 0, ratio, jolt.x * ratio, jolt.y * ratio);
 
       // Darken the table, leaving a window on the row.
       const middle = { x: (layout.rowLeft + layout.rowRight) / 2, y: layout.rowY };
-      context.globalAlpha = still ? 0.85 : backdropAlpha(ms, timeline.duration);
+      context.globalAlpha = still ? 0.85 : backdropAlpha(ms, timeline.duration, timeline.fade, timeline.fadeIn);
       context.fillStyle = radial(context, middle, Math.max(layout.width, layout.height) * 0.8,
         [[0, 'rgba(60,10,0,0.12)'], [0.35, 'rgba(30,4,0,0.45)'], [1, 'rgba(8,0,0,0.75)']]);
       context.fillRect(-card, -card, layout.width + 2 * card, layout.height + 2 * card);
@@ -562,7 +563,7 @@ export function createSlayRenderer(canvas: HTMLCanvasElement): SlayRenderer {
         return;
       }
 
-      const fade = sceneFade(ms, timeline.duration);
+      const fade = sceneFade(ms, timeline.duration, timeline.fade);
       const spine = dragonShown ? dragonSpine(layout, ms) : null;
       emitRow(fire, layout, ms, dt, front, fade, dragonShown ? 1 : FIRE_ONLY_INTENSITY);
       if (spine) {

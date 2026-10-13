@@ -1,7 +1,8 @@
 import { gameSeatValues } from '../helpers/game-seat-values';
 import { afterEach, describe, expect, it } from 'vitest';
 import { svAllClosed, svLegalPlays, svPenalty } from '@shared/rules/sevens';
-import { getPresentationFrames, PRESENTATION_TIMING_VERSION } from '@shared/game-presentation';
+import { getPresentationEndsAt, getPresentationFrames, PRESENTATION_TIMING_VERSION } from '@shared/game-presentation';
+import { SEVENS_SLAY_FRAME_MS } from '@shared/sevens-options';
 import { cpGreedyArrangement } from '@shared/rules/chinesepoker-arrange';
 import type { AnyGameState, GameType, PlayerInfo, Seat } from '@shared/types';
 import { createDeck, shuffleDeck } from '../../src/engine/deck';
@@ -151,7 +152,7 @@ describe('persisted Sevens games', () => {
       const closing = game.log.findIndex((entry) => entry.type === 'cover' && entry.auto) - 1;
       game.presentation = { id: 'collapse', startedAt: 0, logStart: closing, timingVersion: PRESENTATION_TIMING_VERSION };
       expect(getPresentationFrames(game).map((frame) => [frame.kind, frame.durationMs])).toEqual([
-        ['play', 1300], ['slay', 2900], ['collapse', 1800], ['finish', 2000],
+        ['play', 1300], ['slay', 2200], ['collapse', 1800], ['finish', 2000],
       ]);
     });
 
@@ -214,8 +215,10 @@ describe('persisted Sevens games', () => {
         },
       };
       expect(persists(saved, 'sevens')).toBe(true);
-      // The same turn would start inside a current dragon frame.
-      expect(persists({ ...saved, presentation: { ...saved.presentation, timingVersion: 3 } }, 'sevens')).toBe(false);
+      // The saved game keeps its legacy 2,400 ms frame whatever the current dragon length is.
+      expect(getPresentationEndsAt(saved)).toBe(startsAt);
+      expect(getPresentationEndsAt({ ...saved, presentation: { ...saved.presentation, timingVersion: 3 } }))
+        .toBe(10000 + 1300 + SEVENS_SLAY_FRAME_MS.dragon);
     });
 
     it('leaves explicit test decks and disabled servers on ordinary deals', () => {

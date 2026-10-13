@@ -289,7 +289,7 @@ Hovering or focusing a card highlights its legal captures without selecting anyt
 - Off by default; host option while waiting, fixed for the match, kept across restarts.
 - Playing a suit's A or K closes the whole suit at both ends; other suits stay open. The
   row stays darkened afterwards and the next turn waits for the effect.
-- Effects: **Dragon** (default, 2.9 s overhead dragon, fire, and blade) or **Fire only**
+- Effects: **Dragon** (default, 2.2 s overhead dragon, fire, and blade) or **Fire only**
   (火焰, 1.7 s). Neither shows text; reduced motion shows a still frame.
 
 When all four suits are closed:
