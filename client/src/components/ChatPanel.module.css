@@ -56,17 +56,41 @@
 .chatMessages {
   flex: 1;
   overflow-y: auto;
-  padding: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
+/* The avatar slot leaves room for frame decorations that stick out of the avatar. */
 .chatMessage {
-  overflow-wrap: anywhere;
+  display: grid;
+  grid-template-columns: 2.4rem minmax(0, 1fr);
+  column-gap: var(--spacing-sm);
+  align-items: start;
+  padding-top: 0.5rem;
   font-size: var(--text-sm);
-  line-height: 1.4;
-  padding: 2px 0;
+}
+
+.chatAvatar {
+  display: flex;
+  justify-content: center;
+}
+
+.chatBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.chatHeading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs);
+  min-height: 1.6rem;
 }
 
 .systemMessage {
@@ -78,12 +102,12 @@
 }
 
 .chatSender {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
   font-weight: 600;
-  margin-right: var(--spacing-xs);
 }
 
 .observerTag {
-  margin-right: var(--spacing-xs);
   padding: 0 6px;
   border: 1px dashed var(--border-color);
   border-radius: var(--radius-pill);
@@ -99,11 +123,13 @@
 }
 
 .chatContent {
-  color: var(--text-secondary);
+  color: var(--text-primary);
+  line-height: 1.55;
 }
 
 .chatInputRow {
   display: flex;
+  min-height: 44px;
   border-top: 1px solid var(--border-color);
 }
 
@@ -119,6 +145,11 @@
 
 .chatInput:focus {
   background: var(--bg-input-focus);
+}
+
+/* Below 16px, iOS Safari zooms the page when the input gains focus. */
+@media (max-width: 767px) {
+  .chatInput { font-size: 16px; }
 }
 
 .chatSendBtn {
