@@ -519,7 +519,6 @@
 }
 
 .spectatorsLabel { font-weight: 700; white-space: nowrap; }
-.spectatorsEmpty { color: var(--table-ink); opacity: 0.75; }
 
 .spectatorList {
   display: flex;

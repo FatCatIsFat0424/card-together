@@ -15,7 +15,7 @@ import { GameShell } from '../GameShell';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
-import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
+import { infoStyles, TurnBox } from '../TableInfo';
 import { useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
@@ -91,9 +91,6 @@ function Info({ game }: { game: BigTwoVisibleState }): ReactNode {
           </li>
         ))}</ol>}
     </section>
-
-    <RulesBox title={t('bigtwo.rules')}
-      lines={[t('bigtwo.rulesCombos'), t('bigtwo.rulesOrder'), t('bigtwo.rulesScore')]} />
   </aside>;
 }
 

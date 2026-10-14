@@ -16,7 +16,7 @@ import { GameShell } from '../GameShell';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
-import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
+import { infoStyles, TurnBox } from '../TableInfo';
 import { joinNames, useSeatName } from '../seat-names';
 import { projectedServerNow } from '../turn-clock';
 import { useConnectionReady } from '../use-connection-ready';
@@ -179,10 +179,6 @@ function Info({ game, view, locked }: { game: BlackjackVisibleState; view: Black
           </li>
         ))}</ol>}
     </section>
-
-    <RulesBox title={t('blackjack.rules')} lines={[t('blackjack.rulesBet', { hands: String(game.totalHands) }),
-      t('blackjack.rulesPlay'), t(game.options.playerDealer ? 'blackjack.rulesPlayerDealer' : 'blackjack.rulesDealer'),
-      t('blackjack.rulesPay', { hands: String(game.totalHands) })]} />
   </aside>;
 }
 
@@ -383,7 +379,8 @@ export function BlackjackTable(): ReactNode {
           {prompt && <span className={`${styles.prompt} ${isMyTurn ? styles.promptActive : ''}`}>{prompt}</span>}
           {!watching && BJ_ACTIONS.map((action) => <button key={action} type="button"
             className={`btn ${action === 'hit' ? 'btn-primary' : 'btn-outline'} ${styles.ctrl}`}
-            disabled={!legal.includes(action)} title={t(`blackjack.hint.${action}`)}
+            disabled={!legal.includes(action)}
+            title={action === 'double' || action === 'split' ? t(`blackjack.hint.${action}`) : undefined}
             onClick={() => sendAction(action)}>
             {t(`blackjack.action.${action}`)}
           </button>)}

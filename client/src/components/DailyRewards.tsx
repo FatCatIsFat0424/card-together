@@ -177,7 +177,6 @@ export function DailyRewards(): ReactNode {
             onClaim={(id) => { void mutate(id); }} onReplace={(id) => { void mutate(id, true); }} /> : <>
             <p className={styles.checkInReward}><AppIcon name="coins" />{t('daily.reward', { coins: String(DAILY_CHECK_IN_COINS) })}</p>
             <CheckInCalendar status={status} pending={pending} onCheckIn={() => { void mutate('check-in'); }} />
-            <p className={styles.hint}>{t('daily.calendarHint')}</p>
           </>}
       </DialogContent>
     </Dialog>

@@ -124,7 +124,7 @@ export function ShopPage(): ReactNode {
     <header className={styles.header}>
       <div className={styles.heading}>
         <span className={styles.shopIcon}><AppIcon name="shop" /></span>
-        <div><h1>{t('shop.title')}</h1><p>{t('shop.description')}</p></div>
+        <h1>{t('shop.title')}</h1>
       </div>
       <Tooltip title={t('shop.earn', { n: String(GAME_COIN_REWARD) })} describeChild arrow>
         <section className={styles.wallet} aria-labelledby="shop-wallet-title" tabIndex={0}>
@@ -134,8 +134,7 @@ export function ShopPage(): ReactNode {
       </Tooltip>
     </header>
     <div className={styles.shopLayout}>
-      <nav className={styles.sidebar} aria-labelledby="shop-categories-title">
-        <h2 id="shop-categories-title">{t('shop.categories')}</h2>
+      <nav className={styles.sidebar} aria-label={t('shop.categories')}>
         <ul ref={categoryList} className={styles.filters}>{(['all', ...PRODUCT_TYPES] as const).map((type) => {
           const count = type === 'all' ? SHOP_ITEMS.length : SHOP_ITEMS.filter((item) => item.type === type).length;
           return <li key={type}><button type="button" className={styles.filter}
@@ -145,7 +144,6 @@ export function ShopPage(): ReactNode {
             <span className={styles.filterCount}>{format(count)}</span>
           </button></li>;
         })}</ul>
-        <p className={styles.permanent}>{t('shop.permanent')}</p>
       </nav>
       <section id="shop-catalog" className={styles.catalog} aria-labelledby="shop-catalog-title">
         <div className={styles.catalogHeader} aria-live="polite" aria-atomic="true">
@@ -156,7 +154,9 @@ export function ShopPage(): ReactNode {
             {selectedType !== 'all' && selectedType !== 'avatarBorder'
               && <p className={styles.catalogSubtitle}>{t(`shop.visibility.${selectedType}`)}</p>}
           </div>
-          <span>{t('shop.itemCount', { n: format(products.length) })}</span></div>
+          {/* Category buttons already show totals; only a series filter changes the count. */}
+          {selectedType === 'avatarBorder' && selectedSeries !== 'all'
+            && <span>{t('shop.itemCount', { n: format(products.length) })}</span>}</div>
         {selectedType === 'avatarBorder' && <div className={styles.seriesFilters} role="group" aria-label={t('shop.allSeries')}>
           {(['all', ...BORDER_SERIES] as const).map((series) => <button key={series} type="button"
             className={styles.filter} aria-pressed={selectedSeries === series} aria-controls="shop-catalog"

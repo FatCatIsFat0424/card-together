@@ -14,7 +14,7 @@ import { GameShell } from '../GameShell';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
-import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
+import { infoStyles, TurnBox } from '../TableInfo';
 import { joinNames, useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
@@ -209,9 +209,6 @@ function Info({ game, view, locked }: { game: HoldemVisibleState; view: HoldemTa
           </li>;
         })}</ol>}
     </section>
-
-    <RulesBox title={t('holdem.rules')} lines={[t('holdem.rulesChips'), t('holdem.rulesDeal'),
-      t('holdem.rulesAction'), t('holdem.rulesShowdown')]} />
   </aside>;
 }
 

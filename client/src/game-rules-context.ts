@@ -1,3 +1,4 @@
+import { bjMatchHands } from '@shared/rules/blackjack';
 import type { GameType, PlayerVisibleGameState, RoomInfo } from '@shared/types';
 
 interface GameRulesOption {
@@ -9,6 +10,8 @@ export interface GameRulesContext {
   readonly gameType: GameType;
   readonly option: GameRulesOption | null;
   readonly active: boolean;
+  /** Match length for Blackjack; player-dealer matches depend on the seats taking part. */
+  readonly blackjackHands?: number;
 }
 
 export function roomRulesContext(room: RoomInfo): GameRulesContext {
@@ -19,7 +22,10 @@ export function roomRulesContext(room: RoomInfo): GameRulesContext {
       : room.gameType === 'blackjack'
         ? { label: 'blackjack.playerDealer', enabled: room.blackjackOptions?.playerDealer ?? false }
         : null;
-  return { gameType: room.gameType, option, active: false };
+  if (room.gameType !== 'blackjack') return { gameType: room.gameType, option, active: false };
+  const seated = [...Object.values(room.seats), ...(room.additionalSeats ?? [])].filter((seat) => seat.player).length;
+  return { gameType: room.gameType, option, active: false,
+    blackjackHands: bjMatchHands(Math.max(1, seated), option?.enabled ?? false) };
 }
 
 export function matchRulesContext(game: PlayerVisibleGameState): GameRulesContext {
@@ -30,5 +36,6 @@ export function matchRulesContext(game: PlayerVisibleGameState): GameRulesContex
       : game.gameType === 'blackjack'
         ? { label: 'blackjack.playerDealer', enabled: game.options?.playerDealer ?? false }
         : null;
-  return { gameType: game.gameType, option, active: game.phase !== 'scoring' };
+  return { gameType: game.gameType, option, active: game.phase !== 'scoring',
+    ...(game.gameType === 'blackjack' && { blackjackHands: game.totalHands }) };
 }

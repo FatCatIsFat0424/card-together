@@ -11,7 +11,7 @@ import { GameShell } from '../GameShell';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
-import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
+import { infoStyles, TurnBox } from '../TableInfo';
 import { useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
@@ -103,9 +103,6 @@ function Info({ game, view, locked }: { game: LiarsDeckVisibleState; view: Liars
           </li>
         ))}</ol>}
     </section>
-
-    <RulesBox title={t('liarsdeck.rules')} lines={[t('liarsdeck.rulesDeck'), t('liarsdeck.rulesPlay'),
-      t('liarsdeck.rulesCall'), t('liarsdeck.rulesGun')]} />
   </aside>;
 }
 

@@ -31,7 +31,6 @@ export function AchievementDetails({ categoryId, status, pending, onClaim }: {
         <Nameplate id={category.reward} />
         <div className={styles.progressLabel}><span>{t('achievements.progress')}</span><strong>{percent}%</strong></div>
         <progress value={completed} max={category.items.length} aria-label={t('achievements.progress')} />
-        <p>{t('achievements.rewardHint')}</p>
       </div>
       <div className={styles.rewardActions}>
         <button type="button" className="btn btn-primary" disabled={pending || !eligible || state?.claimed}

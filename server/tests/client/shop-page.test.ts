@@ -29,9 +29,10 @@ describe('shop categories and inventory', () => {
 
   it('shows all products with accessible category controls and catalog counts', () => {
     const html = render();
-    expect(html).toContain('id="shop-categories-title">Product categories</h2>');
-    expect(html).toContain('aria-labelledby="shop-categories-title"');
-    expect(html).toContain(`${SHOP_ITEMS.length} products`);
+    expect(html).toContain('<nav class="_sidebar');
+    expect(html).toContain('aria-label="Product categories"');
+    // Category buttons carry the totals, so the catalog header repeats a count only for series filters.
+    expect(html).not.toContain(`${SHOP_ITEMS.length} products`);
     expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(SHOP_ITEMS.length);
     expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
     expect(html).toMatch(/aria-pressed="true" aria-controls="shop-catalog"[^>]*><span>All products<\/span>/);
@@ -55,7 +56,7 @@ describe('shop categories and inventory', () => {
 
   it.each(['?series=unknown', '?type=unknown', '?series=', '?unrelated=metal'])('falls back to all products for %s', (query) => {
     const html = render(query);
-    expect(html).toContain(`${SHOP_ITEMS.length} products`);
+    expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(SHOP_ITEMS.length);
     expect(html).toContain('id="shop-catalog-title">All products</h2>');
   });
 
@@ -78,7 +79,7 @@ describe('shop categories and inventory', () => {
   ] as const)('restores the %s product type from the URL', (type, label, count, included, excluded) => {
     const html = render(`?type=${type}`);
     expect(html).toContain(`id="shop-catalog-title">${label}</h2>`);
-    expect(html).toContain(`${count} products`);
+    expect(html).not.toContain(`${count} products`);
     expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(count);
     expect(html).toContain(`<h3>${included}</h3>`);
     expect(html).not.toContain(`<h3>${excluded}</h3>`);
@@ -116,7 +117,7 @@ describe('shop categories and inventory', () => {
       expect(render(`?type=${type}`)).not.toContain('shop.visibility.');
     }
     if (locale === 'zh-TW') {
-      for (const text of ['商品種類', '牌背', '稱號與名牌', '貼圖包', '櫻花花冠', `${SHOP_ITEMS.length} 項商品`]) expect(html).toContain(text);
+      for (const text of ['商品種類', '牌背', '稱號與名牌', '貼圖包', '櫻花花冠']) expect(html).toContain(text);
     }
   });
 

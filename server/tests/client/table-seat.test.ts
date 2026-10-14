@@ -202,7 +202,7 @@ describe('table seat plate', () => {
     expect(west).toContain('1200');
     expect(west).toContain('Folded');
     expect(west).toContain('>D</span>');
-    expect(west).toContain('title="Timeout: computer moved"');
+    expect(west).toContain('title="Timeout: bot moved"');
     expect(statusLabels(west)).toEqual([]);
     const north = render({ seat: 'N', position: 'top' });
     expect(north).toContain('>Out</span>');

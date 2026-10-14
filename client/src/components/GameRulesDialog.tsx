@@ -6,6 +6,7 @@ import DialogContent from '@mui/material/DialogContent';
 import type { GameType } from '@shared/types';
 import { getGameRules } from '../game-rules-i18n';
 import type { GameRulesContext } from '../game-rules-context';
+import { gameRulesSummary } from '../games/rules-summary';
 import { useI18nStore } from '../stores/i18n-store';
 import { useMotionStore } from '../stores/motion-store';
 import { AppIcon } from './AppIcon';
@@ -17,7 +18,12 @@ export function GameRulesContent({ gameType, context }: {
   readonly context?: GameRulesContext;
 }): ReactNode {
   const { locale, t } = useI18nStore();
+  const summary = gameRulesSummary(gameType, context, t);
   return <article className={styles.rules}>
+    {summary.length > 0 && <section className={styles.summary}>
+      <h3>{t('rules.summary')}</h3>
+      <ul>{summary.map((line) => <li key={line}>{line}</li>)}</ul>
+    </section>}
     {context?.option && <section className={styles.roomSettings}>
       <h3>{t('rules.roomSettings')}</h3>
       <dl className={styles.option}>

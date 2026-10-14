@@ -85,7 +85,7 @@ describe('bot player interface', () => {
     expect(hostHtml).toContain('Remove bot');
     expect(hostHtml).toContain('Fill empty seats with bots');
     expect(hostHtml.match(/>Empty</g)).toHaveLength(2);
-    expect(hostHtml).toContain('Bot is automatically ready');
+    expect(hostHtml).toMatch(/>Ready<\/span>/);
     expect(hostHtml).not.toContain('/players/bot');
 
     state.playerId = 'visitor';
@@ -241,6 +241,6 @@ describe('bot player interface', () => {
     expect(html).toContain('加入 bot');
     expect(html).toContain('移除 bot');
     expect(html).toContain('用 bot 補滿空位');
-    expect(html).toContain('bot 已自動準備');
+    expect(html).toMatch(/>已準備<\/span>/);
   });
 });

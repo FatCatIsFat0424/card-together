@@ -27,8 +27,6 @@
   color: var(--text-muted);
 }
 
-summary.caption { cursor: pointer; }
-
 .turn {
   margin-top: 4px;
   font-family: var(--font-display);

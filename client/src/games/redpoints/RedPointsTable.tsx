@@ -14,7 +14,7 @@ import { GameShell } from '../GameShell';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
-import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
+import { infoStyles, TurnBox } from '../TableInfo';
 import { joinNames, useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
@@ -132,9 +132,6 @@ function Info({ game }: { game: RedPointsVisibleState }): ReactNode {
           </li>
         ))}</ol>}
     </section>
-
-    <RulesBox title={t('redpoints.rules')}
-      lines={[t('redpoints.rulesPair'), t('redpoints.rulesTurn'), t('redpoints.rulesScore')]} />
   </aside>;
 }
 

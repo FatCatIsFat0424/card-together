@@ -58,8 +58,8 @@ describe('lobby page', () => {
     expect(html).not.toContain('Choose a game to preview the rules, then create your table.');
     expect(html.match(/aria-controls="lobby-selected-game"/g)).toHaveLength(9);
     expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
-    expect(html).toContain('id="lobby-create-title"');
-    expect(html).toContain('id="lobby-selected-game-title">Bridge</h3>');
+    expect(html).not.toContain('id="lobby-create-title"');
+    expect(html).toContain('id="lobby-selected-game-title">Bridge</h2>');
     expect(html).toContain('aria-haspopup="dialog"');
     expect(html).not.toMatch(/disabled=""[^>]*>Create Room/);
     expect(html).toContain('Friends online');

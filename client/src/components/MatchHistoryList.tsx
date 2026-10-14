@@ -38,7 +38,7 @@ function MatchResultLabel({ match, players, accountId }: {
   };
   if (result.gameType === 'redpoints') {
     return <span><AppIcon name="trophy" /> {joinNames(result.winners.map(seatName), locale)}
-      {mySeat && <> · {t('history.points', { n: String((gameSeatValue(result.points, mySeat) ?? 0)) })}</>}</span>;
+      {mySeat && <> · {t('history.matchPoints', { n: String((gameSeatValue(result.points, mySeat) ?? 0)) })}</>}</span>;
   }
   if (result.gameType === 'sevens') {
     return <span><AppIcon name="trophy" /> {joinNames(result.winners.map(seatName), locale)}
@@ -109,7 +109,7 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
   };
   if (matches.length === 0) return <div className={styles.history}>
     <MatchHistoryStatistics matches={matches} accountId={subjectId} />
-    <p className={styles.empty}>{t('history.empty')}</p>
+    <p className={styles.empty}>{t('history.noMatches')}</p>
   </div>;
   return <div className={styles.history}>
     <MatchHistoryStatistics matches={matches} accountId={subjectId} />
@@ -161,7 +161,7 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
     <p role="status" className={styles.count}>
       {t('history.count', { shown: String(visibleMatches.length), total: String(matches.length) })}
     </p>
-    <div className={styles.tableViewport} role="region" aria-label={t('history.title')} tabIndex={0}>
+    <div className={styles.tableViewport} role="region" aria-label={t('history.matches')} tabIndex={0}>
       <table className={styles.table}>
         <caption className={styles.caption}>{t('history.tableCaption')}</caption>
         <thead><tr>

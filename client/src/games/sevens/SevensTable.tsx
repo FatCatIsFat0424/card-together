@@ -16,7 +16,7 @@ import { GameShell } from '../GameShell';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
-import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
+import { infoStyles, TurnBox } from '../TableInfo';
 import { joinNames, useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
@@ -176,11 +176,6 @@ function Info({ game }: { game: SevensVisibleState }): ReactNode {
           </li>
         ))}</ol>}
     </section>
-
-    <RulesBox title={t('sevens.rules')} lines={[
-      t('sevens.rulesOpen'), t('sevens.rulesExtend'), t('sevens.rulesCover'), t('sevens.rulesScore'),
-      ...(game.options?.closeOnEnd ? [t('sevens.rulesCloseOnEnd')] : []),
-    ]} />
   </aside>;
 }
 

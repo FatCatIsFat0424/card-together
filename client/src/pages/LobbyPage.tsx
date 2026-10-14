@@ -119,7 +119,6 @@ export function LobbyPage(): ReactNode {
       <div className={styles.welcome}>
         <Avatar avatar={account.avatar} image={account.avatarImage} border={account.avatarBorder} color={account.color} size="large" />
         <div className={styles.identity}>
-          <p className={styles.eyebrow}>{t('nav.lobby')}</p>
           <h1>{t('lobby.welcome', { nickname: account.nickname })}</h1>
         </div>
       </div>
@@ -165,11 +164,10 @@ export function LobbyPage(): ReactNode {
 
       <aside className={styles.sidebar}>
         <section id="lobby-selected-game" className={`${styles.panel} ${styles.desktopRoomActions}`}
-          aria-labelledby="lobby-create-title lobby-selected-game-title">
-          <h2 id="lobby-create-title" className={styles.createTitle}>{t('lobby.createTitle')}</h2>
+          aria-labelledby="lobby-selected-game-title">
           <div className={styles.selectedHeading}>
             <GameIcon gameType={selectedGame} />
-            <h3 id="lobby-selected-game-title">{t(`gameType.${selectedGame}`)}</h3>
+            <h2 id="lobby-selected-game-title">{t(`gameType.${selectedGame}`)}</h2>
             <button type="button" className={styles.rulesLink} aria-haspopup="dialog"
               onClick={() => setRulesGame(selectedGame)}>{t('lobby.rulesIntro')}</button>
           </div>

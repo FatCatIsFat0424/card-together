@@ -419,8 +419,8 @@ export function RoomPage(): ReactNode {
               <PlayerLink player={player} size="medium" />
               <div className={styles.seatStatus}>
                 {player.id === playerId && <span>{t('common.me')}</span>}
-                <span className={seatInfo.isReady ? styles.seatReadyBadge : styles.seatNotReadyBadge}>
-                  {t(player.isBot ? 'room.botReady' : seatInfo.isReady ? 'room.ready.status' : 'room.seatTaken')}</span>
+                <span className={seatInfo.isReady || player.isBot ? styles.seatReadyBadge : styles.seatNotReadyBadge}>
+                  {t(seatInfo.isReady || player.isBot ? 'room.ready.status' : 'room.notReady')}</span>
               </div>
               {isHost && player.isBot && seatCard.seat && <div className={styles.botControls}>
                 <label className={styles.botDifficulty}>
@@ -475,19 +475,18 @@ export function RoomPage(): ReactNode {
         {movingPlayer && <button type="button" className="btn btn-outline" onClick={() => {
           movePlayer(movingPlayer, { type: 'spectator' }); seatDrag.cancel();
         }}>{t('room.dropSpectator')}</button>}
-        {spectators.length === 0 ? <span className={styles.spectatorsEmpty}>{t('room.noSpectators')}</span>
-          : <ul className={styles.spectatorList}>{spectators.map((spectator) => (
-            <li key={spectator.id} className={`${styles.spectator} ${canMovePlayers && !spectator.isBot ? styles.draggableSeat : ''} ${movingPlayer?.id === spectator.id ? styles.movingSeat : ''}`}
-              onPointerDown={(event) => seatDrag.start(event, spectator)}>
-              {dragHandle(spectator)}
-              <PlayerLink player={spectator} size="small" showTitle={false} />
-              {spectator.id === roomInfo.hostId && <span className={styles.hostBadge} title={t('room.host')}>👑</span>}
-              {spectator.id === playerId && <span>{t('common.me')}</span>}
-              {isHost && spectator.id !== playerId && <button type="button"
-                className={`btn btn-outline touch-target ${styles.botAction}`} disabled={blocked}
-                onClick={() => kick(spectator)}>{t('room.kick')}</button>}
-            </li>
-          ))}</ul>}
+        {spectators.length > 0 && <ul className={styles.spectatorList}>{spectators.map((spectator) => (
+          <li key={spectator.id} className={`${styles.spectator} ${canMovePlayers && !spectator.isBot ? styles.draggableSeat : ''} ${movingPlayer?.id === spectator.id ? styles.movingSeat : ''}`}
+            onPointerDown={(event) => seatDrag.start(event, spectator)}>
+            {dragHandle(spectator)}
+            <PlayerLink player={spectator} size="small" showTitle={false} />
+            {spectator.id === roomInfo.hostId && <span className={styles.hostBadge} title={t('room.host')}>👑</span>}
+            {spectator.id === playerId && <span>{t('common.me')}</span>}
+            {isHost && spectator.id !== playerId && <button type="button"
+              className={`btn btn-outline touch-target ${styles.botAction}`} disabled={blocked}
+              onClick={() => kick(spectator)}>{t('room.kick')}</button>}
+          </li>
+        ))}</ul>}
         {seatDrag.selected && <p className={styles.moveHint} role="status">{t('room.placePlayer', { nickname: seatDrag.selected.nickname })}</p>}
       </section>
       <div className={styles.roomFooter}>

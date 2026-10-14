@@ -27,7 +27,6 @@ export function AccountProfilePreview({
   return <aside className={styles.preview} aria-label={t('profile.livePreview')}>
     <div className={styles.previewHeading}>
       <span className={styles.liveLabel}><span aria-hidden="true" />{t('profile.livePreview')}</span>
-      <span className={styles.previewCaption}>{t('profile.previewHint')}</span>
     </div>
     <div className={`${styles.previewTable} ${background ? styles.customTable : ''}`}
       style={{ ...background, ...cardBackStyle(appearance) }}>

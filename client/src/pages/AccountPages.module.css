@@ -2,7 +2,6 @@
 .authPage { min-height: 100%; display: grid; place-items: center; padding: var(--spacing-lg); }
 .authCard { width: 100%; max-width: 30rem; padding: var(--spacing-xl); background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); }
 .title { font-size: var(--text-2xl); margin-bottom: var(--spacing-sm); }
-.subtitle { color: var(--text-secondary); margin-bottom: var(--spacing-xl); }
 .form { display: flex; flex-direction: column; gap: var(--spacing-md); }
 .field { display: flex; flex-direction: column; gap: var(--spacing-xs); }
 .showPassword { display: flex; align-items: center; gap: var(--spacing-sm); font-size: var(--text-sm); color: var(--text-secondary); }

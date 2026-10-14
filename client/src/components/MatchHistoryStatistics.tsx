@@ -39,14 +39,13 @@ export function MatchHistoryStatistics({ matches, accountId }: MatchHistoryStati
               valueFormatter: (game) => `${number.format(game.value)} · ${percent.format(game.value / total)}` }]}
             title={t('history.gameMix')} desc={t('history.gameMixHint')}
             slotProps={{ tooltip: { className: styles.tooltip } }} />
-          <div className={styles.donutCenter} aria-hidden="true">
+          <div className={styles.donutCenter}>
             <strong>{number.format(total)}</strong><span>{t('history.totalPlayed')}</span>
           </div>
         </> : <p className={styles.emptyMix}>{t('history.notPlayed')}</p>}
       </div>
       <div className={styles.mixDetails}>
         <h4>{t('history.gameMix')}</h4>
-        <p className={styles.hint}>{t('history.gameMixHint')}</p>
         <ul className={styles.legend}>
           {distribution.map((game) => <li key={game.id}>
             <span className={styles.swatch} style={{ background: game.color }} aria-hidden="true" />
@@ -54,7 +53,6 @@ export function MatchHistoryStatistics({ matches, accountId }: MatchHistoryStati
             <span className={styles.share}>{percent.format(total ? game.value / total : 0)}</span>
           </li>)}
         </ul>
-        <p className={styles.total}>{t('history.totalMatches', { n: number.format(total) })}</p>
       </div>
     </div>
     <div className={styles.visualization}>
@@ -85,7 +83,7 @@ export function MatchHistoryStatistics({ matches, accountId }: MatchHistoryStati
             valueFormatter: (value: number) => percent.format(value) }]}
           grid={{ vertical: true }} borderRadius={4} hideLegend skipAnimation
           title={t('history.winRate')} desc={t('history.statisticsHint')}
-          localeText={{ noData: t('history.empty'), loading: t('common.loading') }}
+          localeText={{ noData: t('history.noMatches'), loading: t('common.loading') }}
           slotProps={{ tooltip: { className: styles.tooltip } }} />
       </div>
     </div>

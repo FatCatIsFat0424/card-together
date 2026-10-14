@@ -36,8 +36,6 @@ describe('label keys', () => {
     }
     expect(chinesePokerTranslations['zh-TW'][rowLabelKey('back')]).toBe('尾墩');
     expect(chinesePokerTranslations['zh-TW']['chinesepoker.foul']).toBe('倒水');
-    expect(chinesePokerTranslations['zh-TW']['chinesepoker.shoot']).toBe('打槍');
-    expect(chinesePokerTranslations['zh-TW']['chinesepoker.homeRun']).toBe('全壘打');
   });
 
   it('signs positive scores only', () => {

@@ -16,6 +16,7 @@
 .option { display: flex; align-items: baseline; justify-content: space-between; gap: var(--spacing-md); }
 .option dt { color: var(--text-secondary); }
 .option dd { flex-shrink: 0; font-weight: 600; color: var(--color-primary); }
+.summary { padding: var(--spacing-md); border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--bg-card); }
 .playNotice { color: var(--text-muted); margin-bottom: var(--spacing-lg); }
 .rules > section + section { margin-top: var(--spacing-xl); }
 .rules h3 { margin-bottom: var(--spacing-sm); font-size: var(--text-base); color: var(--text-primary); }

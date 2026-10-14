@@ -107,7 +107,6 @@ export function FriendsPage(): ReactNode {
   return (
     <main className={styles.page}>
       <h1 className={styles.title}>{t('friends.title')}</h1>
-      <p className={styles.subtitle}>{t('friends.description')}</p>
       <form className={styles.addForm} onSubmit={add}>
         <div className={styles.field}>
           <label htmlFor="friend-username">{t('friends.username')}</label>
@@ -138,7 +137,7 @@ export function FriendsPage(): ReactNode {
         {data && <section id="friends-panel-accepted" role={mobileLayout ? undefined : 'tabpanel'}
           aria-labelledby={mobileLayout ? undefined : 'friends-tab-accepted'}
           className={`${styles.card} ${styles.wide}`} hidden={!mobileLayout && activeTab !== 'accepted'}>
-          <h2>{t('friends.accepted')} ({data.friends.length})</h2>
+          {mobileLayout && <h2>{t('friends.accepted')} ({data.friends.length})</h2>}
           {data.friends.length === 0 && <p className={styles.empty}>{t('friends.empty')}</p>}
           <ul className={styles.list}>{data.friends.map((person) => {
             const unread = conversations.find((conversation) => conversation.account.id === person.id)?.unreadCount ?? 0;
@@ -176,7 +175,7 @@ export function FriendsPage(): ReactNode {
         {data && <><section id="friends-panel-incoming" role={mobileLayout ? undefined : 'tabpanel'}
           aria-labelledby={mobileLayout ? undefined : 'friends-tab-incoming'}
           className={styles.card} hidden={!mobileLayout && activeTab !== 'incoming'}>
-          <h2>{t('friends.incoming')} ({data.incoming.length})</h2>
+          {mobileLayout && <h2>{t('friends.incoming')} ({data.incoming.length})</h2>}
           {data.incoming.length === 0 && <p className={styles.empty}>{t('friends.noIncoming')}</p>}
           <ul className={styles.list}>{data.incoming.map((request) => (
             <li key={request.id} className={styles.person}>
@@ -195,7 +194,7 @@ export function FriendsPage(): ReactNode {
         <section id="friends-panel-outgoing" role={mobileLayout ? undefined : 'tabpanel'}
           aria-labelledby={mobileLayout ? undefined : 'friends-tab-outgoing'}
           className={styles.card} hidden={!mobileLayout && activeTab !== 'outgoing'}>
-          <h2>{t('friends.outgoing')} ({data.outgoing.length})</h2>
+          {mobileLayout && <h2>{t('friends.outgoing')} ({data.outgoing.length})</h2>}
           {data.outgoing.length === 0 && <p className={styles.empty}>{t('friends.noOutgoing')}</p>}
           <ul className={styles.list}>{data.outgoing.map((request) => (
             <li key={request.id} className={styles.person}>
