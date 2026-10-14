@@ -1,7 +1,8 @@
 import { runSeededGame } from './seeded-game-runner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { BridgeVisibleState, Card, PlayerInfo, Seat } from '@shared/types';
+import type { BidAction, BidLevel, BidSuit, BiddingState, BridgeVisibleState, Card, PlayerInfo, Seat } from '@shared/types';
 import { getBridgeBotAction } from '../../src/bots/bridge-strategy';
+import { analyzeAuction } from '../../src/bots/bridge-auction';
 import { applyBid, createBiddingState, validateBid } from '../../src/engine/bidding';
 import { createPlayingState } from '../../src/engine/playing';
 import * as bridge from '../../src/managers/games/bridge-game';
@@ -27,6 +28,28 @@ function playing(hand: readonly Card[], overrides: Partial<BridgeVisibleState> =
     contract: { level: 1, suit: 'nt', declarer: 'N' }, playing: createPlayingState('N'), ...overrides,
   });
 }
+const SUIT_CODES: Record<string, Card['suit']> = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+const HONOR_RANKS: Record<string, Card['rank']> = { A: 14, K: 13, Q: 12, J: 11, T: 10 };
+/** Parses a spades.hearts.diamonds.clubs hand such as 'KQJ972.84.753.92'. */
+function hand(text: string): Card[] {
+  return text.split('.').flatMap((holding, index) => holding === '-' ? [] : [...holding].map((rank) => card(
+    SUIT_CODES['SHDC'[index]], HONOR_RANKS[rank] ?? Number(rank) as Card['rank'],
+  )));
+}
+/** Applies space-separated calls such as '1S P 2NT' clockwise from the starting seat. */
+function auction(start: Seat, calls: string): BiddingState {
+  const strains: Record<string, BidSuit> = { C: 'clubs', D: 'diamonds', H: 'hearts', S: 'spades', NT: 'nt' };
+  return calls.split(' ').filter(Boolean).reduce((state, call) => applyBid(state, state.currentBidderSeat, call === 'P'
+    ? { type: 'pass' }
+    : { type: 'bid', level: Number(call[0]) as BidLevel, suit: strains[call.slice(1)] }), createBiddingState(start));
+}
+function callFor(text: string, bidding: BiddingState): BidAction {
+  const action = getBridgeBotAction(visible({ mySeat: bidding.currentBidderSeat, myHand: hand(text), bidding }), () => 0);
+  if (action?.type !== 'bridge-bid') throw new Error('Expected a bid');
+  return action.action;
+}
+const pass: BidAction = { type: 'pass' };
+const bid = (level: BidLevel, suit: BidSuit): BidAction => ({ type: 'bid', level, suit });
 const balancedHand = [
   card('spades', 14), card('spades', 13), card('spades', 2),
   card('hearts', 14), card('hearts', 3), card('hearts', 4),
@@ -61,21 +84,21 @@ describe('bridge bot strategy', () => {
     }
   });
 
-  it('raises a partner only with sufficient points and suit support', () => {
+  it('raises a partner with support only to a safe level instead of chasing game', () => {
     const bidding = applyBid(applyBid(createBiddingState('S'), 'S', { type: 'bid', level: 1, suit: 'spades' }), 'W', { type: 'pass' });
     const hand = [card('spades', 14), card('spades', 13), card('spades', 2), card('spades', 3), card('clubs', 14)];
     expect(getBridgeBotAction(visible({ myHand: hand, bidding }), () => 0)).toEqual({
       type: 'bridge-bid', action: { type: 'bid', level: 3, suit: 'spades' },
     });
-    expect(getBridgeBotAction(visible({ myHand: balancedHand, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'bid', level: 4, suit: 'spades' } });
+    expect(getBridgeBotAction(visible({ myHand: balancedHand, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'bid', level: 3, suit: 'spades' } });
   });
 
-  it('does not repeatedly raise its own earlier bid', () => {
+  it('does not rebid an unsupported four-card suit in competition', () => {
     let bidding = applyBid(createBiddingState('N'), 'N', { type: 'bid', level: 1, suit: 'clubs' });
     bidding = applyBid(bidding, 'E', { type: 'bid', level: 1, suit: 'spades' });
     bidding = applyBid(bidding, 'S', { type: 'pass' });
     bidding = applyBid(bidding, 'W', { type: 'pass' });
-    expect(getBridgeBotAction(visible({ myHand: balancedHand, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'pass' } });
+    expect(callFor('542.AK4.AK6.Q987', bidding)).toEqual(pass);
   });
 
   it('responds with a new suit and lets the opener find the fit on its rebid', () => {
@@ -94,23 +117,57 @@ describe('bridge bot strategy', () => {
   it('retains partner suit information after an opposing overcall', () => {
     let bidding = applyBid(createBiddingState('S'), 'S', { type: 'bid', level: 1, suit: 'spades' });
     bidding = applyBid(bidding, 'W', { type: 'bid', level: 2, suit: 'clubs' });
-    expect(getBridgeBotAction(visible({ myHand: balancedHand, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'bid', level: 4, suit: 'spades' } });
+    expect(getBridgeBotAction(visible({ myHand: balancedHand, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'bid', level: 3, suit: 'spades' } });
   });
 
-  it('uses a partner NT opening to choose a bounded combined-points contract', () => {
+  it('stops in partner NT opening because game earns no bonus', () => {
     let bidding = applyBid(createBiddingState('S'), 'S', { type: 'bid', level: 1, suit: 'nt' });
     bidding = applyBid(bidding, 'W', { type: 'pass' });
-    expect(getBridgeBotAction(visible({ myHand: balancedHand, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'bid', level: 3, suit: 'nt' } });
+    expect(getBridgeBotAction(visible({ myHand: balancedHand, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'pass' } });
   });
 
-  it('declines a NT invitation with 16 points and accepts it with 17', () => {
+  it('passes a NT invitation whatever its strength', () => {
     let bidding = applyBid(createBiddingState('N'), 'N', { type: 'bid', level: 1, suit: 'nt' });
     bidding = applyBid(bidding, 'E', { type: 'pass' });
     bidding = applyBid(bidding, 'S', { type: 'bid', level: 2, suit: 'nt' });
     bidding = applyBid(bidding, 'W', { type: 'pass' });
     expect(getBridgeBotAction(visible({ myHand: balancedHand, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'pass' } });
     const stronger = balancedHand.map((item) => item.suit === 'clubs' && item.rank === 9 ? card('clubs', 11) : item);
-    expect(getBridgeBotAction(visible({ myHand: stronger, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'bid', level: 3, suit: 'nt' } });
+    expect(getBridgeBotAction(visible({ myHand: stronger, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'pass' } });
+  });
+
+  it('rebids by opening range: 1NT when minimum balanced, a reverse only with extra strength', () => {
+    expect(callFor('K32.Q54.A76.KJ52', auction('N', '1C P 1H P'))).toEqual(bid(1, 'nt'));
+    expect(callFor('3.AQ64.AKQ75.K82', auction('N', '1D P 1S P'))).toEqual(bid(2, 'hearts'));
+    expect(callFor('3.Q643.AK752.K82', auction('N', '1D P 1S P'))).toEqual(bid(2, 'diamonds'));
+  });
+
+  it('treats a new-suit response as forcing unless responder is a passed hand', () => {
+    expect(callFor('Q42.5.A763.AK973', auction('N', '1C P 1H P'))).toEqual(bid(2, 'clubs'));
+    const passedResponder = auction('S', 'P P 1C P 1H P');
+    expect(callFor('Q42.5.A763.AK973', passedResponder)).toEqual(pass);
+    const profile = analyzeAuction(passedResponder.bids).profiles.S;
+    expect(profile).toMatchObject({ passedHand: true, minPoints: 6, maxPoints: 11 });
+    expect(profile.minLength.hearts).toBe(4);
+  });
+
+  it('signs off in a five-card suit over partner 1NT and opener passes it', () => {
+    expect(callFor('J2.Q8642.T75.932', auction('S', '1NT P'))).toEqual(bid(2, 'hearts'));
+    expect(callFor('K72.Q86.T752.K93', auction('S', '1NT P'))).toEqual(pass);
+    expect(callFor('A32.K4.QJ6.AT987', auction('N', '1NT P 2H P'))).toEqual(pass);
+  });
+
+  it('preempts with a weak long suit except in fourth seat', () => {
+    expect(callFor('KQJ972.84.753.92', auction('N', ''))).toEqual(bid(2, 'spades'));
+    expect(callFor('KQJ9732.84.75.92', auction('N', ''))).toEqual(bid(3, 'spades'));
+    expect(callFor('KQJ972.84.753.92', auction('N', 'P P P'))).toEqual(bid(1, 'spades'));
+  });
+
+  it('competes with a known fit up to the total trump count', () => {
+    expect(callFor('QT74.82.K973.J62', auction('E', '1H 1S 2H'))).toEqual(bid(2, 'spades'));
+    expect(callFor('T7.82.K9763.J632', auction('E', '1H 1S 2H'))).toEqual(pass);
+    expect(callFor('K2.KQJT63.A4.Q93', auction('N', '1H 1S 2H 2S'))).toEqual(bid(3, 'hearts'));
+    expect(callFor('K2.KQJT6.A43.Q93', auction('N', '1H 1S 2H 2S'))).toEqual(pass);
   });
 
   it('does not overstate a 5422 hand as a balanced NT opening', () => {
@@ -124,6 +181,31 @@ describe('bridge bot strategy', () => {
     bidding = applyBid(bidding, 'N', { type: 'bid', level: 4, suit: 'spades' });
     bidding = applyBid(bidding, 'E', { type: 'pass' });
     expect(getBridgeBotAction(visible({ mySeat: 'S', myHand: balancedHand, bidding }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'pass' } });
+  });
+
+  it('leads partner bid suit, top of a doubleton', () => {
+    const myHand = hand('83.753.Q96.K7542');
+    const state = playing(myHand, {
+      mySeat: 'W', bidding: auction('N', '1H 1S 2H P P P'),
+      contract: { level: 2, suit: 'hearts', declarer: 'N' }, playing: createPlayingState('W'),
+    });
+    for (const sample of [0, 0.5, 0.999]) expect(getBridgeBotAction(state, () => sample)).toEqual({ type: 'bridge-play', card: card('spades', 8) });
+    const silent = getBridgeBotAction({ ...state, bidding: createBiddingState('N') }, () => 0);
+    expect(silent?.type === 'bridge-play' && silent.card.suit).toBe('clubs');
+  });
+
+  it('draws trumps with three small when partner has shown the long trump holding', () => {
+    const myHand = hand('742.KQJ.9876.543');
+    const state = playing(myHand, {
+      mySeat: 'S', bidding: auction('N', '1S P 2S P P P'),
+      contract: { level: 2, suit: 'spades', declarer: 'N' }, playing: createPlayingState('S'),
+    });
+    for (const sample of [0, 0.999]) {
+      const action = getBridgeBotAction(state, () => sample);
+      expect(action?.type === 'bridge-play' && action.card.suit).toBe('spades');
+    }
+    const unknown = getBridgeBotAction({ ...state, bidding: createBiddingState('N') }, () => 0);
+    expect(unknown?.type === 'bridge-play' && unknown.card.suit).not.toBe('spades');
   });
 
   it('varies similarly rated low leads while preserving the state', () => {

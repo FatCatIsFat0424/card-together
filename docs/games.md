@@ -123,15 +123,15 @@ Runtime mechanics: [architecture](architecture.md#turn-clocks).
 
 | Game | Strategy |
 | --- | --- |
-| Bridge | Natural bidding ([agreements](#bot-bidding-agreements)); declines redeals; public winners and voids guide trump use and partner support ([code](../server/src/bots/bridge-strategy.ts)) |
+| Bridge | Natural bidding ([agreements](#bot-bidding-agreements)) that competes by estimated make chances and stops at the lowest winning level; declines redeals. Play uses the auction model: leads partner's bid suit, avoids the opponents' suits, and judges trump drawing from partner's shown length and public voids ([code](../server/src/bots/bridge-strategy.ts)) |
 | Big Two | Fewest remaining groups; prefers ordinary replies and saves bombs and 2s; never passes voluntarily when an opponent has ≤5 cards; blocks one-card opponents ([code](../server/src/bots/bigtwo-strategy.ts)) |
-| Red Points | Weighs immediate red points, future hand matches, and exposure to unseen cards ([code](../server/src/bots/redpoints-strategy.ts)) |
+| Red Points | Weighs immediate red points, future hand matches, and exposure to unseen cards; a discarded card also costs its own points, so black discards come first ([code](../server/src/bots/redpoints-strategy.ts)) |
 | Ninety-Nine | Keeps rescue cards, spends larger safe numbers; weighs return risk, next-seat risk, direction, and public evidence ([code](../server/src/bots/ninetynine-strategy.ts)) |
 | Sevens | Saves reachable penalties, keeps follow-ups, weighs dead-card covers, blocking, and A/K closure ([code](../server/src/bots/sevens-strategy.ts), [knowledge](../server/src/bots/sevens-knowledge.ts)) |
 | Chinese Poker | Searches all non-fouled 3/5/5 splits by estimated row wins, values, and sweep risk; also used by Auto arrange and timeouts ([code](../server/src/bots/chinesepoker-strategy.ts)) |
-| Liar's Deck | Balances death risk, estimated honesty, and challenge odds; sheds cards, prefers non-joker truths ([code](../server/src/bots/liarsdeck-strategy.ts)) |
-| Blackjack | Basic strategy for stand-on-soft-17 with peek, double after split, no surrender; bets 3–8% at random; player dealers compare standing with expected draws ([code](../server/src/bots/blackjack-strategy.ts)) |
-| Hold'em | Chen preflop score, ~3 BB premium raises, short-stack shoves; 150-run postflop equity, ~60% pot strong bets, price-aware calls, small bluffs; no opponent model ([code](../server/src/bots/holdem-strategy.ts)) |
+| Liar's Deck | Balances death risk, estimated honesty, and challenge odds; sheds cards, prefers non-joker truths; bluffs one card a quarter of the time while holding a truth ([code](../server/src/bots/liarsdeck-strategy.ts)) |
+| Blackjack | Basic strategy for stand-on-soft-17 with peek, double after split, no surrender; bets 3–8% at random, but in the last two hands chases the leader when behind and protects a lead; player dealers compare standing with expected draws ([code](../server/src/bots/blackjack-strategy.ts)) |
+| Hold'em | Preflop by position, depth in big blinds, and pot price against raisers' ranges inferred from each seat's raise and shove rates this match; at most two re-raises per seat and four per hand. Postflop equity against ranges that narrow when opponents bet, mixing slowplays, check-raises, and semi-bluffs, with sizes unrelated to strength; widens when trailing and tightens when leading in the last hands ([code](../server/src/bots/holdem-strategy.ts)) |
 
 **Strategy limits**
 
@@ -139,14 +139,16 @@ Runtime mechanics: [architecture](architecture.md#turn-clocks).
   play. Human timeouts use the same strategy.
 - Ninety-Nine rescue cards are 4, 5, 10, J, Q, K, and ♠A. Risk near 99 counts unseen cards
   and plays since the last reshuffle (per copy with two decks); once the stock can run out,
-  risks beyond the match end are ignored.
+  risks beyond the match end are ignored. Two-deck matches pressure the next seat less.
 - Sevens estimates are approximate. Absence is inferred only from forced covers, never from
   a voluntary play. Closure exposure assumes each opponent gets at most one gate play per
   rotation. Spectator views and settlement results are never used.
 - Liar's Deck: a call reveals only the previous play. Honesty estimates exclude the bot's
   own cards and partly trust earlier claims. Emptying a hand against one remaining
-  opponent guarantees a call.
+  opponent guarantees a call. Voluntary bluffs stop after two pulls.
 - Blackjack player-dealer estimates ignore prorated payouts when the dealer is short.
+- Hold'em opponent rates read only the public log and start from priors that dominate the
+  first hands of a match. Position matters only preflop.
 
 ## Bridge
 
@@ -169,25 +171,28 @@ Runtime mechanics: [architecture](architecture.md#turn-clocks).
 
 ### Bot bidding agreements
 
-A simplified natural [system](../server/src/bots/bridge-bidding.ts) used by bots only.
-Bots estimate partner strength and shape from the whole public auction; human calls are
-treated as estimates, never as hand disclosure.
+A simplified natural [system](../server/src/bots/bridge-bidding.ts) used by bots only, with no
+artificial conventions. A shared [auction model](../server/src/bots/bridge-auction.ts) reads every
+call, human calls included, with these agreements as estimates of HCP range, suit lengths,
+balance, and passed hand; it never treats them as hand disclosure.
 
 | Agreement | Meaning |
 | --- | --- |
-| Opening | 12 HCP; a major shows five cards; a minor uses the longest eligible suit |
-| Fourth seat | May open weak after three passes to keep practice moving |
+| Opening | 1 of a suit with 12+ HCP (11 with Rule of 20); a major shows 5 cards, otherwise the longer minor (4-4 opens ♦, 3-3 opens ♣); strong unbalanced hands also open at 1 |
 | Balanced | 4333, 4432, 5332 |
-| 1NT / 2NT opening | 15–17 / 20–21 HCP; a 1NT overcall also needs a stopper |
-| New suit response | Four cards; ≥6 HCP at level one, ≥10 at level two |
-| Suit raise | Aims for ≥8 combined cards |
-| NT game | Invite at 23 combined HCP; 3NT at 25 |
-| Major levels 2/3/4 | 18 / 23 / 25 combined HCP |
-| Minor levels 2/3/4/5 | 18 / 23 / 26 / 29 combined HCP |
-| 2NT over 1NT | Invitation, ≥8 HCP |
-
-Bots rebid only with established support or NT strength, stop repeating unsupported
-suits, and never explore slams.
+| 1NT / 2NT opening | 15–17 / 20–21 balanced |
+| Weak opening | 5–10 HCP with a good suit: 6 cards at the 2 level, 7 at the 3 level; never in fourth seat |
+| Fourth seat | After three passes, opens the longest suit at the 1 level even when weak, to keep practice moving |
+| Passed hand | An opening-round pass shows at most 11 HCP; its new-suit responses are not forcing |
+| Raise | Simple raise with 5–12 support points and 3+ for a major (4+ ♦, 5+ ♣); jump raise with 10+ HCP only when safe |
+| New-suit response | 1 level: 4+ cards, 6+ HCP; 2 level: 10+ HCP, 4+ cards (5+ ♥); forcing one round unless responder passed |
+| 1NT / 2NT response | 1NT: 6–12, no fit and no 1-level suit (8+ with a stopper when contested); 2NT: 13+ balanced |
+| Over partner's NT | A 5+ card suit at the 2 level (3 over 2NT) is a sign-off at any strength; otherwise pass |
+| Opener's rebid | 1NT 11–14 balanced; minimum raise, 6-card rebid, or lower new suit 11–18; reverse 16+; jumps 18+ only when safe |
+| Overcall | Good 5+ suit: 1 level 8–18, 2 level 10–18; 1NT 15–19 balanced with a stopper; weak jump 5–10 with a good 6–7 cards |
+| Advance | Raise with 3+ only to the 2 level; new good 5+ suit with 10+; 1NT 8–12 with a stopper |
+| Competition | Only with a shown 8+ card fit or a 6-card suit, at most total trumps − 6, and when the estimated make chance beats the opponents' fail chance by 15 points |
+| Level | No game or slam bonus: stop at the lowest winning level; a descriptive bid may raise the level only if the combined minimum still makes it at least 60% of the time |
 
 ## Big Two
 

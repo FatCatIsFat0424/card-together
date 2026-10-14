@@ -100,6 +100,13 @@ function allFrom(size: number, pool: number, draws: number): number {
   return probability;
 }
 
+/**
+ * Value of leaving the next player no safe card. Two-deck matches mostly end in shared survival when the stock
+ * runs out, so stronger pressure there only trades bots' own survival for little gain.
+ */
+const PRESSURE_WEIGHT = 70;
+const TWO_DECK_PRESSURE_WEIGHT = 45;
+
 interface Outcome {
   readonly total: number;
   readonly next: GameSeat;
@@ -136,7 +143,8 @@ function scorePlay(visible: NinetyNineVisibleState, unseen: readonly Card[], ind
     const unsafe = unseen.filter((card) => !fits(card, headroom)).length;
     const noNumber = unseen.filter((card) => isRescue(card) || pips(card) > headroom).length;
     const seatFactor = showedRescueRichHand(visible, outcome.next) ? 0.25 : 1;
-    score += seatFactor * (allFrom(unsafe, unseen.length, draws) * 45 + allFrom(noNumber, unseen.length, draws) * 1.5);
+    const pressure = visible.options?.twoDecks ? TWO_DECK_PRESSURE_WEIGHT : PRESSURE_WEIGHT;
+    score += seatFactor * (allFrom(unsafe, unseen.length, draws) * pressure + allFrom(noNumber, unseen.length, draws) * 1.5);
     // Every turn near 99 costs a rescue card, so acting again sooner than the normal rotation is costly.
     score -= clamp01((total - 80) / (NN_MAX - 80)) * 3 * (aliveCount - 1 - outcome.turnsUntilMine);
   }

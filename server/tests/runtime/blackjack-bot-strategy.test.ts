@@ -55,10 +55,21 @@ describe('Blackjack bot strategy', () => {
   });
 
   it('bets 3–8% of its chips in table steps within the limits', () => {
-    expect(blackjackBet(1000, () => 0)).toBe(30);
-    expect(blackjackBet(1000, () => 0.999)).toBe(80);
-    expect(blackjackBet(5000, () => 0.999)).toBe(200);
-    expect(blackjackBet(40, () => 0)).toBe(10);
+    const betting = (chips: number): BlackjackVisibleState => visible(gameSeatValues({ phase: 'betting', chips: { N: chips, E: chips, S: chips, W: chips } }));
+    expect(blackjackBet(betting(1000), () => 0)).toBe(30);
+    expect(blackjackBet(betting(1000), () => 0.999)).toBe(80);
+    expect(blackjackBet(betting(5000), () => 0.999)).toBe(200);
+    expect(blackjackBet(betting(40), () => 0)).toBe(10);
+  });
+
+  it('bets for the standings near the end of the match', () => {
+    const late = (hand: number, mine: number): BlackjackVisibleState =>
+      visible(gameSeatValues({ phase: 'betting', hand, chips: { N: mine, E: 1000, S: 900, W: 800 } }));
+    expect(blackjackBet(late(7, 900), () => 0)).toBe(200);
+    expect(blackjackBet(late(7, 1100), () => 0.999)).toBe(10);
+    expect(blackjackBet(late(6, 700), () => 0)).toBe(150);
+    expect(blackjackBet(late(6, 1400), () => 0.999)).toBe(40);
+    expect(blackjackBet(late(5, 700), () => 0)).toBe(20);
   });
 
   it('acts only on its own turn or its own pending bet', () => {

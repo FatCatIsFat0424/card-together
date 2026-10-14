@@ -13,7 +13,6 @@ const SEVEN = 7;
 const LOW_END = 1;
 const HIGH_END = 13;
 const PROGRESS_VALUE = 0.3;
-const WAIT_DISCOUNT = 0.5;
 const END_CARD_VALUE = 0.5;
 const OUTER_CARD_VALUE = 0.1;
 const OPEN_BASE_PENALTY = 1;
@@ -62,10 +61,10 @@ function directionValue(visible: SevensVisibleState, knowledge: SevensKnowledge,
   const own = new Set(visible.myHand.filter((entry) => entry.suit === card.suit).map(svOrder));
   let availability = 1;
   let saved = 0;
+  // A gap's live probability already prices the wait; discounting it again undervalued long chains.
   for (const order of beyond) {
     availability *= sevensLiveProbability(knowledge, atOrder(card.suit, order));
     if (own.has(order)) saved += order * availability;
-    else availability *= WAIT_DISCOUNT;
   }
   const next = atOrder(card.suit, beyond[0]);
   if (own.has(beyond[0])) return PROGRESS_VALUE * saved;

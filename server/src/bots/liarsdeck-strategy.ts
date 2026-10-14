@@ -20,6 +20,8 @@ import { selectNearBest } from './selection';
 // - Playing truths is safe and invites a losing call; leaving only lies in hand forces a lie later.
 // - Lying risks a call that grows with the number of cards, and is certain when it empties the hand while only one
 //   opponent still holds cards, since that opponent must call.
+// - Scoring alone never prefers a lie over an available truth, which would make every play by a bot holding a truth
+//   honest; an occasional single-card bluff hides that tell while the bot can still afford a pull.
 
 const HONEST_RATE = 0.9;
 const PRIOR_CLAIM_HONESTY = 0.6;
@@ -27,10 +29,12 @@ const SHED_VALUE = 0.01;
 const HIT_VALUE = 0.15;
 const FUTURE_LIE_WEIGHT = 0.3;
 const BASE_CALL_CHANCE = 0.35;
-const CALL_CHANCE_PER_CARD = 0.12;
+const CALL_CHANCE_PER_CARD = 0.25;
 const MAX_CALL_CHANCE = 0.9;
 const WRONG_CALL_SHARE = 0.5;
 const MARGIN = 0.03;
+const BLUFF_RATE = 0.25;
+const BLUFF_MAX_SHOTS = 2;
 
 interface PlayOption {
   readonly cards: readonly LiarCard[];
@@ -125,5 +129,9 @@ export function getLiarsDeckBotAction(visible: LiarsDeckVisibleState, random: ()
     const lie = lieChance(visible);
     options.push({ value: { type: 'liarsdeck-challenge' }, score: -(1 - lie) * deathRisk + lie * HIT_VALUE });
   }
-  return selectNearBest(options, random, MARGIN);
+  const choice = selectNearBest(options, random, MARGIN);
+  if (choice?.type !== 'liarsdeck-play' || visible.shots[me] > BLUFF_MAX_SHOTS || visible.myHand.length < 2) return choice;
+  const truthHeld = visible.myHand.some((card) => ldIsTruth(card.face, visible.tableFace));
+  const lie = visible.myHand.find((card) => !ldIsTruth(card.face, visible.tableFace));
+  return truthHeld && lie && random() < BLUFF_RATE ? { type: 'liarsdeck-play', cardIds: [lie.id] } : choice;
 }

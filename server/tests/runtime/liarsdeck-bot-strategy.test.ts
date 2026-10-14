@@ -74,6 +74,17 @@ describe("Liar's Deck bot strategy", () => {
     expect(decide(visible).every((action) => action?.type === 'liarsdeck-play')).toBe(true);
   });
 
+  it('should sometimes bluff one card while holding a truth, but not when a pull is too risky', () => {
+    const myHand = hand(['K', 'Q', 'A', 'Q', 'A']);
+    const truthIds = new Set(myHand.filter((card) => card.face === 'K').map((card) => card.id));
+    const playsLie = (action: ReturnType<typeof getLiarsDeckBotAction>): boolean =>
+      action?.type === 'liarsdeck-play' && action.cardIds.some((id) => !truthIds.has(id));
+    expect(playsLie(getLiarsDeckBotAction(state(myHand), () => 0))).toBe(true);
+    expect(playsLie(getLiarsDeckBotAction(state(myHand), () => 0.9999))).toBe(false);
+    const risky = state(myHand, { shots: { N: 3, E: 0, S: 0, W: 0 } });
+    expect(decide(risky).some(playsLie)).toBe(false);
+  });
+
   it('should wait outside its turn and after the game ends', () => {
     expect(getLiarsDeckBotAction(state(hand(['K']), { currentTurnSeat: 'E' }), () => 0)).toBeNull();
     expect(getLiarsDeckBotAction(state(hand(['K']), { phase: 'scoring' }), () => 0)).toBeNull();

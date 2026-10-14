@@ -92,6 +92,14 @@ describe('Sevens bot playing', () => {
     }
   });
 
+  it('opens a suit toward its own high cards even across gaps', () => {
+    const rows = table({ spades: { low: 6, high: 8 }, hearts: { low: 7, high: 7 } });
+    const hand = [card('diamonds', 12), card('hearts', 6), card('diamonds', 11), card('diamonds', 7), card('clubs', 13)];
+    for (const action of decisions(state(hand, rows))) {
+      expect(action).toEqual({ type: 'sevens-play', card: card('diamonds', 7) });
+    }
+  });
+
   it('plays a row-end card for free', () => {
     const rows = table({ spades: { low: 7, high: 12 }, hearts: { low: 7, high: 7 } });
     const visible = state([card('spades', 13), card('hearts', 8)], rows);

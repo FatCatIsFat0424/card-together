@@ -52,7 +52,7 @@ describe('Big Two bot hand planning', () => {
   });
 
   it('varies similarly rated moves reproducibly with an injected random source', () => {
-    const visible = state([card('clubs', 4), card('diamonds', 7), card('hearts', 9)]);
+    const visible = state([card('clubs', 4), card('diamonds', 5), card('hearts', 9)]);
     const first = getBigTwoBotAction(visible, () => 0);
     const last = getBigTwoBotAction(visible, () => 0.9999);
     expect(first).not.toEqual(last);
@@ -60,6 +60,13 @@ describe('Big Two bot hand planning', () => {
     for (const action of [first, last]) {
       if (action?.type !== 'bigtwo-play') throw new Error('Expected play');
       expect(canPlay(action.cards, null, false)).toBe(true);
+    }
+  });
+
+  it('does not randomly spend a much higher single than an equivalent low one', () => {
+    const visible = state([card('clubs', 4), card('diamonds', 9), card('hearts', 13)]);
+    for (const sample of [0, 0.5, 0.9999]) {
+      expect(getBigTwoBotAction(visible, () => sample)).toEqual({ type: 'bigtwo-play', cards: [card('clubs', 4)] });
     }
   });
 

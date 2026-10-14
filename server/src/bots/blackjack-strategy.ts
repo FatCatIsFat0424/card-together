@@ -10,13 +10,19 @@ import type { BotAction } from './bot-decisions';
 
 // Heuristic summary: plays follow the standard basic strategy for a dealer who stands on soft 17, peeks for
 // blackjack, and allows doubling after a split; there is no surrender or insurance. The table is indexed by the
-// dealer's up card (2–11, ace = 11). Bets stake a random 3–8% of the bot's chips in table steps. As a player
+// dealer's up card (2–11, ace = 11). Bets stake a random 3–8% of the bot's chips in table steps; in the last two
+// hands the bot bets for the standings instead, since only the largest final stack wins. As a player
 // dealer the bot must hit below 17; from 17 it compares the chips standing wins or loses against every live
 // player hand with the expected result of drawing, estimated from the cards not yet seen this hand and
 // assuming it keeps choosing the better option after each draw. Short-bank proportional payouts are ignored.
 
 const MIN_BET_SHARE = 0.03;
 const MAX_BET_SHARE = 0.08;
+/** Hands before the match end, including the current one, in which bets follow the standings. */
+const STANDINGS_HANDS = 2;
+/** Two hands from the end, a lead shrinks the bet by `lead / LEAD_SCALE`, at most by `MAX_LEAD_CUT`. */
+const LEAD_SCALE = 400;
+const MAX_LEAD_CUT = 0.6;
 
 function between(value: number, low: number, high: number): boolean {
   return value >= low && value <= high;
@@ -64,9 +70,19 @@ export function blackjackBasicStrategy(
   return decision === 'doubleOrStand' ? 'stand' : 'hit';
 }
 
-export function blackjackBet(chips: number, random: () => number): number {
+export function blackjackBet(visible: BlackjackVisibleState, random: () => number): number {
+  const chips = visible.chips[visible.mySeat];
   const share = MIN_BET_SHARE + random() * (MAX_BET_SHARE - MIN_BET_SHARE);
-  const stepped = Math.round((chips * share) / BJ_BET_STEP) * BJ_BET_STEP;
+  let amount = chips * share;
+  const handsLeft = visible.totalHands - visible.hand;
+  const rivals = visible.seats.filter((seat) => seat !== visible.mySeat).map((seat) => visible.chips[seat]);
+  if (handsLeft <= STANDINGS_HANDS && rivals.length > 0) {
+    const deficit = Math.max(...rivals) - chips;
+    // Trailing needs variance to catch up; leading protects the stack.
+    if (deficit > 0) amount = handsLeft <= 1 ? bjMaxBet(chips) : Math.max(amount, deficit / handsLeft);
+    else amount = handsLeft <= 1 ? BJ_MIN_BET : amount * (1 - Math.min(MAX_LEAD_CUT, -deficit / LEAD_SCALE));
+  }
+  const stepped = Math.round(amount / BJ_BET_STEP) * BJ_BET_STEP;
   return Math.max(BJ_MIN_BET, Math.min(bjMaxBet(chips), stepped));
 }
 
@@ -126,7 +142,7 @@ export function getBlackjackBotAction(visible: BlackjackVisibleState, random: ()
   const dealing = visible.dealerSeat === visible.mySeat;
   if (visible.phase === 'betting') {
     return visible.myBet === null && !dealing && bjSitsIn(chips)
-      ? { type: 'blackjack-bet', amount: blackjackBet(chips, random) } : null;
+      ? { type: 'blackjack-bet', amount: blackjackBet(visible, random) } : null;
   }
   if (dealing) {
     return visible.phase === 'playing' && visible.currentTurnSeat === visible.mySeat && !visible.holeHidden

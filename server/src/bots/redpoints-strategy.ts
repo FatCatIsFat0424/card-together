@@ -58,9 +58,10 @@ export function getRedPointsBotAction(visible: RedPointsVisibleState, random: ()
     const table = capture ? visible.table.filter((entry) => !sameCard(entry, capture)) : [...visible.table, card];
     const hand = flipping ? visible.myHand : visible.myHand.filter((entry) => !sameCard(entry, card));
     const immediate = capture ? rpCardPoints(card) + rpCardPoints(capture) : 0;
-    // Future captures are discounted because other players act before our next hand play.
+    // Future captures are discounted because other players act before our next hand play. Exposure saturates once
+    // opponents hold many cards, so a discarded red card is also charged its own points to prefer black discards.
     const score = immediate * 4 + remainingOpportunity(hand, table) * 0.6
-      - tableExposure(table, unknown, opponentCards) * 1.2;
+      - tableExposure(table, unknown, opponentCards) * 1.2 - (capture ? 0 : rpCardPoints(card));
     const value: BotAction = flipping && capture
       ? { type: 'redpoints-flip', capture }
       : { type: 'redpoints-play', card, ...(capture ? { capture } : {}) };

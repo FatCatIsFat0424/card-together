@@ -79,5 +79,6 @@ export function getBigTwoBotAction(visible: BigTwoVisibleState, random: () => nu
   if (previous && !endgame && !ordinaryAvailable) {
     candidates.push({ value: { type: 'bigtwo-pass' }, score: -18 * currentGroups - 3 - 40 * (1 - distance) });
   }
-  return selectNearBest(candidates, random, urgent ? 0.5 : 2);
+  // A rank step is worth about 0.12 points, so only adjacent-rank alternatives stay in the random pool.
+  return selectNearBest(candidates, random, urgent ? 0.5 : 0.2);
 }
