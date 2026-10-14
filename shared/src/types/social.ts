@@ -5,7 +5,7 @@ import type { RoomCode } from './room';
 /** Account details visible to other signed-in players. */
 export type PublicAccount = Pick<
   AccountProfile,
-  'id' | 'username' | 'nickname' | 'color' | 'avatar' | 'avatarImage' | 'avatarBorder'
+  'id' | 'username' | 'nickname' | 'color' | 'avatar' | 'avatarImage' | 'avatarBorder' | 'nameplate'
 >;
 
 /** `GET /api/players/:id/history`; `players` resolves every match participant still on record. */

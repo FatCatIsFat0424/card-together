@@ -1,7 +1,8 @@
 import type { ChatMessage } from './chat';
 import type { FriendRequest, PublicAccount } from './social';
+import type { ShopStickerId } from '../constants/shop';
 
-export type MessageContent = Pick<ChatMessage, 'content' | 'sticker' | 'providedSticker' | 'emojis' | 'providedEmojis'>;
+export type MessageContent = Pick<ChatMessage, 'content' | 'sticker' | 'providedSticker' | 'shopSticker' | 'emojis' | 'providedEmojis'>;
 
 export interface DirectMessage extends MessageContent {
   readonly id: string;
@@ -11,7 +12,7 @@ export interface DirectMessage extends MessageContent {
   readonly timestamp: number;
 }
 
-export type MessageInput = { message: string } | { stickerId: string } | { providedSticker: string };
+export type MessageInput = { message: string } | { stickerId: string } | { providedSticker: string } | { shopSticker: ShopStickerId };
 
 export interface Conversation {
   readonly account: PublicAccount;

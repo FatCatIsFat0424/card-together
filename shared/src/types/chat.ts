@@ -3,6 +3,7 @@
 import type { MediaId } from './account';
 import type { EmojiRecord, ProvidedEmoji } from './emoji';
 import type { PlayerInfo } from './player';
+import type { ShopStickerId } from '../constants/shop';
 
 /** Chat message */
 export interface ChatMessage {
@@ -14,6 +15,8 @@ export interface ChatMessage {
   readonly sticker?: Pick<EmojiRecord, 'id' | 'name' | 'mediaId'>;
   /** Large standalone image resolved from the site-provided emoji catalog. */
   readonly providedSticker?: ProvidedEmoji;
+  /** Official sticker whose pack ownership was checked before sending. */
+  readonly shopSticker?: ShopStickerId;
   /** Custom emoji used in `content` (name → media), resolved from the sender's library. */
   readonly emojis?: Record<string, MediaId>;
   /**

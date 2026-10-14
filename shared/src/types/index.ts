@@ -117,7 +117,10 @@ export type {
 } from './direct-message';
 export type { EmojiRecord, ProvidedEmoji } from './emoji';
 export type { AccountProfile, AvatarPreset, AvatarId, MediaId } from './account';
-export type { AvatarBorderId } from '../constants/shop';
+export type {
+  AvatarBorderId, ShopItem, ShopItemId, ShopItemType, CardBackStyleId, TableBackgroundStyleId,
+  SeatBackgroundStyleId, NameplateId, ShopStickerId,
+} from '../constants/shop';
 
 export type {
   ClientToServerEvents,

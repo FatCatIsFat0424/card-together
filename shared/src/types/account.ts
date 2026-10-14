@@ -1,4 +1,6 @@
-import type { AvatarBorderId } from '../constants/shop';
+import type {
+  AvatarBorderId, CardBackStyleId, NameplateId, SeatBackgroundStyleId, ShopItemId, TableBackgroundStyleId,
+} from '../constants/shop';
 export type AvatarPreset = 'cat' | 'fox' | 'owl' | 'bear' | 'rabbit' | 'panda';
 export type AvatarId = AvatarPreset;
 /** Uploaded image: 64 lowercase hex sha256 + `.png|.jpg|.gif|.webp`. */
@@ -15,6 +17,13 @@ export interface AccountProfile {
   /** Private inventory; older accounts own no borders. */
   readonly ownedAvatarBorders?: readonly AvatarBorderId[];
   readonly avatarBorder?: AvatarBorderId | null;
+  /** Private permanent inventory for products other than legacy avatar borders. */
+  readonly ownedShopItems?: readonly ShopItemId[];
+  /** Official styles take precedence over uploaded images; null restores the uploaded image/theme. */
+  readonly cardBackStyle?: CardBackStyleId | null;
+  readonly tableBackgroundStyle?: TableBackgroundStyleId | null;
+  readonly seatBackgroundStyle?: SeatBackgroundStyleId | null;
+  readonly nameplate?: NameplateId | null;
   readonly nickname: string;
   readonly color: string;
   readonly avatar: AvatarPreset;

@@ -8,6 +8,7 @@ import type {
 import type { ChatMessage } from './chat';
 import type { PublicAccount } from './social';
 import type { AccountProfile } from './account';
+import type { ShopStickerId } from '../constants/shop';
 import type { VoiceIncomingSignal, VoiceJoinResult, VoiceRoomState, VoiceSettings, VoiceSignal } from './voice';
 
 export interface PlayerSnapshot {
@@ -159,10 +160,11 @@ export interface ClientToServerEvents {
   ) => void;
   'chat:send': (
     payload:
-      | { message: string; stickerId?: never; providedSticker?: never }
-      | { stickerId: string; message?: never; providedSticker?: never }
+      | { message: string; stickerId?: never; providedSticker?: never; shopSticker?: never }
+      | { stickerId: string; message?: never; providedSticker?: never; shopSticker?: never }
       /** Name of a site-provided emoji sent as a sticker. */
-      | { providedSticker: string; message?: never; stickerId?: never },
+      | { providedSticker: string; message?: never; stickerId?: never; shopSticker?: never }
+      | { shopSticker: ShopStickerId; message?: never; stickerId?: never; providedSticker?: never },
     callback: (response: ActionResult) => void,
   ) => void;
 }
