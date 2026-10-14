@@ -335,6 +335,15 @@
 .dragHandle:active { cursor: grabbing; }
 .dragHandle:hover, .dragHandle[aria-pressed='true'] { color: var(--color-primary); }
 .spectator .dragHandle { position: static; flex-shrink: 0; }
+.dragHandle:not(:focus-visible) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .dragPreview {
   position: fixed;
   z-index: 1400;
@@ -638,9 +647,26 @@
   .removeSeatButton { width: 32px; height: 32px; top: 3px; right: 3px; }
   .roomFooter { gap: 8px; }
   .chatToggle { display: inline-flex; }
-  .roomLayout .chat { display: none; grid-area: table; }
-  .chatOpen .tableArea { display: none; }
-  .chatOpen .chat { display: block; }
+  .roomLayout .chat {
+    grid-area: table;
+    z-index: 3;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+    transition: visibility 0s linear 200ms;
+  }
+  .roomLayout .chat > * {
+    transform: translateY(calc(100% + 8px));
+    transition: transform 200ms ease-in;
+  }
+  .chatOpen .chat { visibility: visible; pointer-events: auto; transition-delay: 0s; }
+  .chatOpen .chat > * { transform: translateY(0); transition-timing-function: ease-out; }
+}
+
+.roomContainer[data-reduced-motion] .chat,
+.roomContainer[data-reduced-motion] .chat > * { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .roomLayout .chat, .roomLayout .chat > * { transition: none; }
 }
 
 .codeBlock {

@@ -6,6 +6,7 @@ import Snackbar from '@mui/material/Snackbar';
 import Popover from '@mui/material/Popover';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { EXPANDABLE_ROOM_GAMES, GAME_TYPES, MAX_ROOM_SEATS, MAX_SPECTATORS, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import type {
@@ -22,6 +23,7 @@ import { useRoomStore } from '../stores/room-store';
 import { useChatStore } from '../stores/chat-store';
 import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
+import { useMotionStore } from '../stores/motion-store';
 import { PlayerLink } from '../components/PlayerLink';
 import { ChatPanel } from '../components/ChatPanel';
 import { InviteFriends } from '../components/InviteFriends';
@@ -59,6 +61,8 @@ export function RoomPage(): ReactNode {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const compactLayout = useMediaQuery('(max-width: 1023px), (max-height: 700px)');
+  const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const [copied, setCopied] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState<HTMLButtonElement | null>(null);
@@ -274,7 +278,8 @@ export function RoomPage(): ReactNode {
     </button>;
 
   return (
-    <main className={`${styles.roomContainer} ${styles.roomLayout} ${chatOpen ? styles.chatOpen : ''}`}>
+    <main data-reduced-motion={reducedMotion || undefined}
+      className={`${styles.roomContainer} ${styles.roomLayout} ${chatOpen ? styles.chatOpen : ''}`}>
       <div className={styles.roomHeader}>
         <div className={styles.codeBlock}>
           <span className={styles.roomCodeLabel}>{t('room.code')}</span>
@@ -325,6 +330,7 @@ export function RoomPage(): ReactNode {
           </button>
           </div>
           <Popover open={Boolean(settingsAnchor)} anchorEl={settingsAnchor} onClose={() => setSettingsAnchor(null)}
+            transitionDuration={200}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             slotProps={{ paper: { className: styles.settingsPanel, id: 'room-game-settings', role: 'dialog',
@@ -388,6 +394,7 @@ export function RoomPage(): ReactNode {
       </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={`${styles.tableArea} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}
+        inert={compactLayout && chatOpen}
         onDragStart={(event) => { if (canMovePlayers) event.preventDefault(); }}
         onClickCapture={seatDrag.choose} onPointerMove={seatDrag.move} onPointerUp={seatDrag.finish}
         onPointerCancel={seatDrag.cancel}>
@@ -503,7 +510,7 @@ export function RoomPage(): ReactNode {
       </div>
       {seatDrag.drag && <div className={styles.dragPreview} aria-hidden="true"
         style={{ left: seatDrag.drag.x, top: seatDrag.drag.y }}>{seatDrag.drag.player.nickname}</div>}
-      <div className={styles.chat} id="room-chat"><ChatPanel /></div>
+      <div className={styles.chat} id="room-chat" inert={compactLayout && !chatOpen}><ChatPanel /></div>
       <Snackbar key={readyNotice?.id} open={readyNotice !== null} autoHideDuration={5000}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         onClose={(_, reason) => { if (reason !== 'clickaway') setReadyNotice(null); }}>

@@ -427,6 +427,27 @@
   .yourTurn { font-size: var(--text-xs); }
 }
 
+/* Keep the mobile chat content visible through its closing slide. */
+@media (max-width: 767px), (max-height: 500px) and (min-width: 600px) {
+  .chatRail {
+    animation: none;
+    transform: translateY(0);
+    visibility: visible;
+    transition: transform 200ms ease-out, visibility 0s;
+  }
+  .chatCollapsed > .chatRail {
+    display: flex;
+    transform: translateY(calc(100% + 8px));
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 200ms ease-in, visibility 0s linear 200ms;
+  }
+  .chatRail > .chatBody { display: block; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chatRail, .chatCollapsed > .chatRail { transition: none; }
+}
+
 /* The own seat plate carries its clock; room above it fits the plate's status tab. */
 .handHeader {
   display: grid;

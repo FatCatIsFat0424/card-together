@@ -447,7 +447,7 @@ export function GameShell({
             {unread > 0 && <span className={styles.unread}>{unread}</span>}
           </button>
         )}
-        <div className={chatOpen ? styles.chatBody : styles.hidden}>
+        <div className={`${styles.chatBody} ${chatOpen ? '' : styles.hidden}`} inert={!chatOpen}>
           <ChatPanel onCollapse={collapseChat} />
         </div>
       </aside>

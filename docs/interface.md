@@ -99,6 +99,10 @@ Frontend page behavior and layout. Client architecture and connection handling:
   an Apply button and no nested disclosure. Guests can inspect these settings; only the waiting-room host can
   change them. Game rules sits immediately to the right of Settings beside the game picker.
   Compact layouts place the chat toggle to the right of Game rules in the same action group.
+  The waiting-room chat slides up to open and down to close over 200ms, respecting
+  reduced-motion preferences. The seats remain visible behind the sliding chat;
+  covered seat controls and closed chat controls cannot receive input.
+  The Settings popover uses a 200ms transition.
   The game picker row matches the Settings button height; selection colors transition
   over 180ms, respecting the system reduced-motion preference.
 - Ready and Cancel ready use the same button sizing as the other footer actions.
@@ -117,7 +121,8 @@ Frontend page behavior and layout. Client architecture and connection handling:
 **Host placement**
 
 - The host drags humans between seats or into spectators, using mouse, touch, or a
-  drag handle with click/keyboard selection then a destination; Escape cancels.
+  keyboard-focused drag handle to select a player then a destination; Escape cancels.
+  The six-dot handle stays visually hidden unless focused by keyboard.
 - Occupied seats swap. A spectator placed on a human's seat sends that player to spectators.
   Bots can swap with humans but stay in standard seats.
 - Changes clear human readiness and persist before broadcast; a failed save restores the arrangement.
@@ -143,6 +148,8 @@ Frontend page behavior and layout. Client architecture and connection handling:
 - Below 768px, Sevens shows suit end cards and next open positions instead of all thirteen.
 - On phones and short landscape windows, abort voting sits at the table bottom.
 - Compact table toolbars use matching 44px square buttons for rules, info, and chat.
+- The mobile game chat slides up to open and down to close over 200ms, respecting
+  reduced-motion preferences. Its controls become inactive as soon as it closes.
 - On phones and short landscape windows, a matching icon-only abort-vote button sits
   at the left of the table toolbar; the info drawer omits its duplicate. Starting an
   abort vote requires confirmation on all layouts. The confirmation uses the same
