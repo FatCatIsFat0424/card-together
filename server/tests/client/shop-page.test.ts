@@ -105,6 +105,8 @@ describe('shop categories and inventory', () => {
     useI18nStore.getState().setLocale(locale);
     const html = render();
     for (const prefix of ['shop.item.', 'shop.visibility.', 'shop.type.']) expect(html).not.toContain(prefix);
+    // Borders already preview on the avatar, so only other products explain where they show.
+    expect(html.match(/<p class="[^"]*visibility[^"]*"/g)).toHaveLength(SHOP_ITEMS.filter((item) => item.type !== 'avatarBorder').length);
     if (locale === 'zh-TW') {
       for (const text of ['商品種類', '牌背', '稱號與名牌', '貼圖包', '櫻花花冠', '30 項商品']) expect(html).toContain(text);
     }

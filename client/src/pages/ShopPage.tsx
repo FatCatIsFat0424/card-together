@@ -173,7 +173,7 @@ export function ShopPage(): ReactNode {
             <div className={styles.productBody}>
               <h3>{productName}</h3>
               <p className={styles.description}>{t(`shop.item.${item.id}.description`)}</p>
-              <p className={styles.visibility}>{t(`shop.visibility.${item.type}`)}</p>
+              {item.type !== 'avatarBorder' && <p className={styles.visibility}>{t(`shop.visibility.${item.type}`)}</p>}
               <div className={styles.productFooter}>
                 <span className={styles.price} aria-label={t('shop.price', { n: format(item.price) })}>
                   <AppIcon name="coins" />{format(item.price)}</span>
@@ -199,7 +199,8 @@ export function ShopPage(): ReactNode {
         <p id="shop-purchase-description">{t('shop.confirmDescription', {
           name: t(`shop.item.${purchaseItem.id}.name`), n: format(purchaseItem.price),
         })}</p>
-        <p className={styles.visibility}>{t(`shop.visibility.${purchaseItem.type}`)} {t('shop.permanent')}</p>
+        <p className={styles.visibility}>{purchaseItem.type !== 'avatarBorder'
+          && `${t(`shop.visibility.${purchaseItem.type}`)} `}{t('shop.permanent')}</p>
         {purchaseOwned ? <Alert severity="info">{t('shop.owned')}</Alert>
           : purchaseAffordable ? <p className={styles.purchaseBalance}>{t('shop.balanceAfter', {
             n: format((account.coins ?? 0) - purchaseItem.price),
