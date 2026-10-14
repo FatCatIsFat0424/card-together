@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GAME_SEAT_ORDER } from '@shared/constants';
+import { normalizeGameSeatMaps } from '@shared/game-seat-compat';
 import { getPresentationEndsAt } from '@shared/game-presentation';
 import { heLegalActions } from '@shared/rules/holdem';
 import { nnApply, nnRank, nnRequiresChoice, nnWinners } from '@shared/rules/ninetynine';
@@ -193,6 +194,36 @@ describe('two to eight actual players', () => {
     Reflect.deleteProperty(missingBank.games[0].clock!.bankRemainingMs, 'P8');
     expect(isRuntimeSnapshot(missingBank)).toBe(false);
     expect(isRuntimeSnapshot(original)).toBe(true);
+  });
+
+  it('restores legacy Blackjack betting windows after the north seat has bet', () => {
+    const participants = GAME_SEAT_ORDER.slice(0, 4);
+    start('blackjack', participants);
+    act();
+    act();
+    const legacy = structuredClone(game());
+    if (legacy.gameType !== 'blackjack') throw new Error('Expected Blackjack.');
+    for (const seat of GAME_SEAT_ORDER.slice(4)) Reflect.deleteProperty(legacy.bets, seat);
+    const original = structuredClone(legacy);
+    expect(legacy.bets).toEqual({ N: 10, E: 10, S: null, W: null });
+    expect(isRuntimeSnapshot(snapshot(legacy))).toBe(true);
+    gameManager.restoreGames([legacy]);
+    const restored = game();
+    if (restored.gameType !== 'blackjack') throw new Error('Expected Blackjack.');
+    expect(restored.bets).toEqual({ N: 10, E: 10, S: null, W: null, P5: null, P6: null, P7: null, P8: null });
+    expect(legacy).toEqual(original);
+    act();
+    expect(isRuntimeSnapshot(snapshot(game()))).toBe(true);
+  });
+
+  it('keeps logged Blackjack wagers and chip maps numeric when every legacy seat has a value', () => {
+    const values = { bets: { N: 10, E: 20, S: 10, W: 30 }, chips: { N: 1000, E: 1000, S: 1000, W: 1000 } };
+    const original = structuredClone(values);
+    expect(normalizeGameSeatMaps(values)).toEqual({
+      bets: { ...values.bets, P5: 0, P6: 0, P7: 0, P8: 0 },
+      chips: { ...values.chips, P5: 0, P6: 0, P7: 0, P8: 0 },
+    });
+    expect(values).toEqual(original);
   });
 
   it.each(MODES)('%s restores four-seat saves with legacy value maps without mutating them', (mode) => {
