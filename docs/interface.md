@@ -25,8 +25,9 @@ Frontend page behavior and layout. Client architecture and connection handling:
   The notification panel keeps links to individual conversations without a separate
   button to the message inbox.
   Friends retain only friend and invitation management. The message list and individual
-  chats preserve room membership and provide
-  a return-to-room link when applicable. The panel's top-right Close control returns
+  chats preserve room membership. Explicit return-to-room buttons are limited to the
+  lobby and game results; the top bar, message toolbar, and player profiles omit them.
+  The panel's top-right Close control returns
   to the current room or game, or the lobby when no room is joined.
   Refresh, the room/game return link, retention information, and loading errors share
   the panel's title bar and wrap on narrow screens. Refresh updates both the list and

@@ -55,12 +55,12 @@ describe('topbar navigation', () => {
     if (path.startsWith('/game/')) expect(html).toContain('ABC123');
   });
 
-  it('offers a way back to the room away from it, leaving the lobby to its own banner', () => {
+  it('leaves room return controls to the lobby and game results', () => {
     const back = 'aria-label="返回房間"';
-    for (const path of ['/friends', '/shop', '/account', '/messages', '/players/alice']) {
+    for (const path of ['/friends', '/shop', '/account', '/messages', '/players/alice', '/achievements']) {
       const html = render(path);
-      expect(html).toContain(back);
-      expect(html).toContain('href="/room/ABC123"');
+      expect(html).not.toContain(back);
+      expect(html).not.toContain('href="/room/ABC123"');
     }
     expect(render('/')).not.toContain(back);
     expect(render('/room/ABC123')).not.toContain(back);

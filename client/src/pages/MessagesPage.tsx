@@ -52,8 +52,6 @@ export function MessagesPage(): ReactNode {
             onClick={() => void refresh()}>
             <AppIcon name="refresh" />
           </button>
-          {roomCode && <Link className={`btn btn-outline ${styles.roomLink}`} to={`/${inGame ? 'game' : 'room'}/${roomCode}`}>
-            {t(inGame ? 'messages.returnGame' : 'messages.returnRoom')}</Link>}
           <p className={styles.retention}>{t('messages.retention')}</p>
           {status === 'loading' && <p className={styles.status} role="status">{t('common.loading')}</p>}
           {error && <p className={styles.error} role="alert">{error}</p>}

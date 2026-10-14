@@ -7,16 +7,12 @@ import { Nameplate } from '../components/Nameplate';
 import { Avatar } from '../components/Avatar';
 import { MatchHistoryList } from '../components/MatchHistoryList';
 import { useAccountStore } from '../stores/account-store';
-import { useRoomStore } from '../stores/room-store';
-import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './PlayerProfilePage.module.css';
 
 function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
   const { t } = useI18nStore();
   const viewerId = useAccountStore((state) => state.account?.id);
-  const roomCode = useRoomStore((state) => state.currentRoomCode);
-  const phase = useGameStore((state) => state.phase);
   const isSelf = viewerId === accountId;
   const [player, setPlayer] = useState<PublicAccount | null>(null);
   const [history, setHistory] = useState<MatchHistory | 'private' | null>(null);
@@ -162,10 +158,6 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
           : <MatchHistoryList matches={history.matches} players={history.players} accountId={accountId} />}
       </section>}
     </div>
-    {roomCode && <div className={styles.footer}>
-      <Link className="btn btn-outline" to={`/${phase ? 'game' : 'room'}/${roomCode}`}>
-        {t('lobby.resume')} · {roomCode}</Link>
-    </div>}
   </main>;
 }
 

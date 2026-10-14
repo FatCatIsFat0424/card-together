@@ -78,7 +78,8 @@ describe('independent private messages', () => {
       const toolbar = html.match(/<header\b[\s\S]*?<\/header>/)?.[0];
       expect(toolbar).toContain('aria-label="重新整理"');
       expect(toolbar).toContain('href="/room/ABC123"');
-      expect(toolbar).toContain('返回房間');
+      expect(toolbar).not.toContain('返回房間');
+      expect(toolbar).not.toContain('返回遊戲');
       expect(toolbar).toContain('訊息保留 90 天。');
       expect(toolbar).toContain('role="alert"');
       expect(toolbar).toContain(state.socialError);

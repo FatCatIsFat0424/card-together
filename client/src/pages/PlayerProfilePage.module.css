@@ -12,7 +12,6 @@
 .friendsLink { display: inline-block; margin-top: var(--spacing-lg); }
 .history { min-width: 0; }
 .history h2 { font-size: var(--text-lg); margin-bottom: var(--spacing-md); }
-.footer { display: flex; align-items: center; flex-wrap: wrap; gap: var(--spacing-md); margin-top: var(--spacing-lg); }
 .feedback { margin-top: var(--spacing-md); }
 .error { color: var(--color-danger); margin: var(--spacing-md) 0; }
 .success { color: var(--color-success); margin-top: var(--spacing-md); }
