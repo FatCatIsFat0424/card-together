@@ -2,7 +2,9 @@
 
 /* ─── Table center ─── */
 .centre {
-  --card-w: calc((clamp(48px, 10dvh, 76px)) * var(--playing-card-scale));
+  /* Grow with the table (the centre column is the size container), keeping the two piles inside the
+     centre cell between the side seats. */
+  --card-w: max(48px, min(calc(112px * var(--playing-card-scale)), 14cqh, 8cqw));
   display: flex;
   flex-direction: column;
   align-items: center;

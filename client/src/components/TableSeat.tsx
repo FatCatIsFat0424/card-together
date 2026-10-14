@@ -5,7 +5,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import { useShallow } from 'zustand/react/shallow';
-import type { Card, GameClock, GameSeat } from '@shared/types';
+import type { Card, GameClock, GameSeat, GameType } from '@shared/types';
 import { rpCardPoints, rpScore } from '@shared/rules/redpoints';
 import { cardImageUrl } from '../cards';
 import type { TranslationKey } from '../i18n';
@@ -31,6 +31,8 @@ import { AppIcon } from './AppIcon';
 import styles from './TableSeat.module.css';
 
 const MAX_BACKS = 6;
+/** Games whose centre sizes itself to the table, so a shorter top row makes it larger. */
+const HAND_BESIDE_GAMES: readonly GameType[] = ['bridge', 'sevens', 'liarsdeck'];
 const MAX_PILE = 6;
 
 /** Opens a complete card pile without expanding the seat plate or overlapping the table. */
@@ -226,9 +228,9 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const callIndex = useGameStore((state) => (state.phase === 'bidding' && state.bidding
     ? latestCallIndex(state.bidding.bids, seat) : -1));
   const call = useGameStore((state) => (callIndex >= 0 ? state.bidding?.bids[callIndex]?.action ?? null : null));
-  // Bridge and Sevens: the opposite hand sits beside its plate so the top row stays short and the centre grows.
-  const handBeside = useGameStore((state) => position === 'top'
-    && (state.visible?.gameType === 'bridge' || state.visible?.gameType === 'sevens'));
+  // The opposite hand sits beside its plate so the top row stays short and the centre grows.
+  const handBeside = useGameStore((state) => position === 'top' && state.visible !== null
+    && HAND_BESIDE_GAMES.includes(state.visible.gameType));
   const active = !suppressTurn && turn && (phase === 'bidding' || phase === 'playing');
   const autoPlayed = autoArranged || showsAutoPlayed(clock, seat, lastActionAt);
   const status = seatStatus({
