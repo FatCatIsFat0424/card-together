@@ -4,7 +4,8 @@ Browser-based multiplayer card games with server-authoritative rules: Bridge,
 Taiwanese Big Two, Red Points, Ninety-Nine, Sevens, Chinese Poker, Liar's Deck,
 Blackjack, and Texas Hold'em.
 
-- Four-seat rooms with up to eight spectators, chat, bots, and turn timers.
+- Rooms with up to eight spectators, chat, bots, and turn timers; Ninety-Nine,
+  Blackjack, and Hold'em support 2–8 occupied seats, while other games use four.
 - Accounts, friends, match history, rooms, and unfinished games survive restarts.
 - Traditional Chinese and English, themes, uploaded avatars and table artwork,
   custom and site-provided emoji, optional WebRTC voice, and owner-provided music.
@@ -43,7 +44,7 @@ which creates the Git-ignored `server/data/database.json`.
 | [Development](docs/development.md) | Environment, configuration, benchmarks, browser checks |
 | [Testing](docs/testing.md) | Check runner, gates, caches, coverage |
 | [Deployment](docs/deployment.md) | Build, install, Nginx, backups, rollback |
-| [Roadmap](docs/roadmap.md) | Phases toward public operation (Traditional Chinese) |
+| [Roadmap](docs/roadmap.md) | Public launch gates, monetization, operations, and development priorities |
 
 ## License
 

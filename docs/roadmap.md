@@ -1,180 +1,311 @@
-# Roadmap
+# Commercial roadmap
 
-- 方向：從朋友間的私人牌桌，轉為公開營運、有營收的服務。
-- 本文件只記錄階段目標與完成條件；執行計畫放在 Git 忽略的 `.plan/`。
-- 法規內容是待律師確認的風險提醒，不是法律意見。
+Goal: operate a sustainable multiplayer card service and earn profit after payment,
+infrastructure, content, acquisition, support, and operator labor costs. This is a
+prioritized decision guide, not a commitment to build every idea. Temporary execution
+plans belong in Git-ignored `.plan/`.
 
-## 現況缺口
+## Scope and recommendation
 
-| 面向 | 缺口 |
-| --- | --- |
-| 大廳 | 只能用房號加入，沒有公開房間列表或配對 |
-| 帳號 | 沒有 email、自助密碼復原、刪除帳號、年齡資訊或第三方登入；目前只有[主機端人工重設](storage.md#administrator-password-reset) |
-| 社交與媒體 | 沒有檢舉、封鎖或內容管理；上傳圖片未經審核；站方音樂和 emoji 授權未盤點 |
-| 儲存 | 單一 process 的 JSON 檔，沒有 transaction，限制同時在線量 |
-| 維運 | 沒有異地備份、監控、告警，也沒有語音用的 TURN 中繼 |
-| 遊戲 | 開局固定四個座位；bot 沒有難度分級；觀戰者可看到所有手牌 |
+Confirmed first-release scope: Taiwan first, operated as a web service. Mobile store
+distribution is a later investment, not a first-release requirement. A small operating
+team and no wagering for money or transferable value remain planning assumptions;
+staffing and budget still require owner decisions. Deployment, public operation,
+charging customers, and mobile store release have different acceptance gates.
 
-## 基本原則
+Start with **recurring private tables for friend groups and clubs**: Taiwanese rules,
+easy invitations, reliable mobile sessions, and social play. Choose one or two existing
+games as the acquisition focus through pilot use; keep other games available without
+creating nine separate matching queues. Validate return visits and willingness to pay
+before investing in unrestricted stranger discovery, more games, or native apps.
+Bridge learning and organized club play are an alternative specialization with more
+instructional, scoring, and tournament work.
 
-| 原則 | 要求 |
-| --- | --- |
-| 1. 遊戲結果不連結真實價值 | 籌碼每局重設；金幣只靠完成對局取得、與輸贏無關；不可購買、轉讓、換現金或下注 |
-| 2. 公平性 | 只賣外觀與便利功能，不賣影響輸贏的商品 |
-| 3. 直接標價 | 不賣機率型商品；若有付費抽獎，須揭露百分比機率 |
-| 4. 伺服器權威 | 權益、排名、購買都由伺服器判定 |
-| 5. 階段順序 | 先穩定維運，達成完成條件才進入下一階段 |
+This is a product hypothesis, not measured market demand. Interview hosts, observe
+complete sessions, compare the alternatives they actually use, and test a concrete
+paid offer. Feature requests and registrations alone do not demonstrate willingness
+to pay. Each experiment needs an owner, spending ceiling, evaluation window, and
+advance/stop criteria agreed before implementation.
 
-需法務確認：刑法第 266 條對網路賭博財物的規定，以及「遊戲結果會增減虛擬遊戲幣」的
-牌類遊戲是否列為輔 15 級。
+## Verified baseline and remaining gaps
 
-## Phase 0：上線準備
+Repository assessment: 2026-10-14. Deployment is documented; live capacity, backup
+execution, usage, commercial asset rights, and revenue were not audited. The linked
+guides remain authoritative for current behavior.
 
-目標：可以合法、安全地開放給陌生玩家。
-
-| 面向 | 工作 |
-| --- | --- |
-| 法務 | 營業登記；中英文使用條款、隱私權政策、社群守則；分級與必要的年齡確認 |
-| 授權 | 盤點 LGPL 牌面圖、音樂、emoji 的商用授權；保留聲明；決定程式碼是否公開 |
-| 帳號 | email 驗證、自助密碼復原、刪除與匯出；LINE、Google 登入 |
-| 社群 | 檢舉、靜音、封鎖；管理後台、操作稽核、聊天過濾 |
-| 媒體 | 上傳圖片審核；公開房間預設關閉語音 |
-| 維運 | 商用主機、異地加密備份與還原演練、監控告警、TURN 中繼 |
-
-完成條件：
-
-- 法律文件已發布，檢舉能一路處理到封鎖。
-- 異地備份可以還原，跨行動網路的語音可以連線。
-
-## Phase 1：公開測試
-
-目標：陌生玩家能很快湊滿一桌，而且願意回來。
-
-| 面向 | 工作 |
-| --- | --- |
-| 儲存 | 沿用 Repository 遷移到 SQL（Phase 2 金流的前提），流程見 [storage](storage.md#future-sql-adapter) |
-| 找牌局 | 公開房間列表、快速配對、逾時以 bot 補位、邀請連結 |
-| 新手 | 互動教學、PWA、遊戲介紹頁 |
-| 數據 | 註冊漏斗、湊桌時間、留存 |
-
-完成條件：
-
-- SQL 通過 production 資料驗證。
-- 每週追蹤湊桌時間與留存。
-
-## Phase 2：營利
-
-目標：在不影響公平性的前提下取得營收。
-
-| 面向 | 工作 |
-| --- | --- |
-| 帳本 | 訂單與權益在同一個 transaction；callback 可重複處理；退款、對帳 |
-| 金流 | 支援台灣電子發票的業者，例如綠界、藍新、TapPay |
-| 外觀商店 | 牌背、桌布、貼圖包、頭像框、主題；沿用現有外觀顯示並擴充擁有權 |
-| 免費玩家 | 金幣可換部分外觀，但不開放購買金幣 |
-| 贊助訂閱 | 免廣告、較大上傳額度、完整統計、徽章、賽後分析 |
-| 廣告（可選） | 只出現在大廳，訂閱者不顯示 |
-
-完成條件：
-
-- 購買、退款、發票通過 sandbox 與 production 測試。
-- 帳本與金流報表一致。
-
-## Phase 3：社群與留存
-
-目標：讓玩家每週回來，並邀請朋友。
-
-| 面向 | 工作 |
-| --- | --- |
-| 積分賽 | 技巧型遊戲的賽季積分與排行榜；不放 bot，使用標準規則 |
-| 回放與公開觀戰 | 回放從公開 log 重建；公開觀戰前先處理 [god view 洩漏](#公平與防作弊) |
-| 成就與免費錦標賽 | 獎勵只限徽章和外觀 |
-| 遊戲模組化 | 每款遊戲的規則、驗證、bot、畫面集中成一個模組，降低新增遊戲的成本 |
-
-完成條件：
-
-- 賽季自動運作。
-- 回放與觀戰不洩漏私人手牌，並有測試涵蓋。
-
-## Phase 4：規模化
-
-- 多 process 水平擴展與 CDN。這會改變「單一 process 擁有資料」的規則，須先做設計審查。
-- 上架手機商店；先確認各商店對牌類與模擬博弈內容的規定。
-- 社群與企業私人活動，作為第二條營收來源。
-
-## 遊戲內容發展方向
-
-新遊戲建議等 Phase 3 遊戲模組化完成後再大量加入。
-
-### 新遊戲候選
-
-| 遊戲 | 可重用 | 技術前提 |
+| Area | Implemented | Remaining work |
 | --- | --- | --- |
-| 紅心、拱豬 | Bridge 的吃墩邏輯與 bot | 無，成本最低 |
-| 黑桃王（Spades） | Bridge 的叫牌、吃墩、隊伍座位 | 無 |
-| 抽鬼牌、釣魚 | 彈性座位 | 抽鬼牌需要鬼牌 |
-| 鬥地主、跑得快 | 大老二的牌型判定與 bot | 各遊戲自訂人數、三人座位方位 |
-| 升級（拖拉機） | 隊伍座位、吃墩 | 兩副牌加鬼牌 |
-| 心臟病（拍牌） | 房間、聊天 | 即時判定與延遲補償，需先評估 |
-| 台灣十六張麻將 | 房間、計時、bot 排程 | 全新牌具與美術，風險較高，屬於獨立的產品決策 |
+| Games | Nine games, bots, timers, restart recovery; Ninety-Nine, Blackjack, and Hold'em support 2–8 occupied seats ([rules](games.md)) | Public-table fairness, mobile interruptions, onboarding, bot levels, standardized competitive rules |
+| Accounts | Password hashing, opaque sessions, revocation, Origin validation and rate limits ([identity](storage.md#identity-and-sessions)) | Recoverable identity, self-service recovery, account/data requests, legal pages and versioned consent |
+| Social | Friends, invitations, durable private messages, in-app notifications and voice listening controls ([storage](storage.md#direct-messages-and-notifications), [voice](media.md#voice)) | Reporting, blocking, durable sanctions, operator permissions/audit and abuse response across channels |
+| Discovery | Room codes, friend-room joining and authenticated room deep links ([interface](interface.md#lobby-and-friends)) | Public landing pages, copy/share invitation URLs, intentional mobile game selection; public matching after demand and safety readiness |
+| Cosmetics | Earned coins, official shop, permanent ownership, atomic coin purchases and equipment validation ([inventory](storage.md#cosmetic-inventory)) | Real-money orders, payment verification/reconciliation, refunds and paid entitlement lifecycle |
+| Storage | Serialized, validated, fsynced temporary-file replacement; runtime/history/rewards commit together ([database](storage.md#database)) | Whole-file write cost, growing records/media, cross-process ownership protection and transactional billing storage |
+| Operations | Deploy locks, rollback procedures, systemd hardening, health route and same-host daily snapshots ([deployment](deployment.md)) | Off-host copies and restore evidence, alerts/readiness, incidents/support coverage, measured capacity and recurring costs |
+| Media | Upload quotas, content-addressed files, original official SVG cosmetics, optional WebRTC ([media](media.md)) | Rights register, safe decoding, review/removal, retention/cleanup, cross-network voice verification and relay cost control |
 
-避免使用 UNO 等商標名稱，也不照搬其規則。
+JSON already provides atomic whole-file commits, but no general SQL transactions or
+horizontal room coordination. A capped free pilot does not automatically require SQL.
+Paid billing needs a reviewed durable transaction design, preferably the
+[SQL adapter](storage.md#future-sql-adapter). SQL alone does not make a stateful game
+server safe across multiple processes.
 
-### 深化現有遊戲
+## Product and revenue constraints
 
-- **房規框架：** 把排七斬龍、99 雙副牌、21 點玩家當莊整合成共用機制，再加入大老二、
-  Bridge 計分、德州撲克盲注等選項。房規記入對戰紀錄，統計與排名只比較同規則的對局。
-- **新模式：** 快速局、複式橋牌（多桌同牌比成績）、每日挑戰（全站使用同一個固定種子）、
-  牌局謎題、節慶限時活動。
-- **德州撲克與 21 點：** 擴充到 5–6 人。
+- Keep gameplay, legal moves, timers, and competitive outcomes independent of payment.
+- Separate match chips from account coins. Coins reward completion, not winning.
+  Neither may be bought, transferred, cashed out, staked for valuable prizes, or used
+  to facilitate external wagering. These constraints do not establish legal clearance.
+- Sell directly priced products or subscriptions; no paid random rewards at launch.
+  Paid rights are server-authoritative and separate from earned-coin balances.
+- Preserve earned cosmetic ownership and durable product IDs. Define free/paid catalogs
+  before selling; do not retroactively revoke earned purchases.
+- Preserve existing free uploads by default. Differentiate through original design,
+  convenience, social visibility, and service value. Any upload restriction or free
+  benefit change requires an explicit owner decision and clear transition policy.
+- Before stranger play, prevent unrevealed hands from reaching spectators or eliminated
+  players on the server. UI hiding and separate chat/voice channels cannot prevent
+  collusion through external communication.
+- Recovery, security, reporting and data-rights requests stay accessible to free players.
+  Review safe history/privacy defaults before acquiring unfamiliar users.
 
-### Bot 與 AI
+## Launch stages and acceptance gates
 
-- 難度分級：困難模式從自己的手牌和公開資訊抽樣推估，不讀對手真實手牌。
-- 不同個性（保守、激進），以及只在對局結束後提供的賽後分析。
-- 有 bot 的對局維持不計入戰績。
+Backlog IDs below track future work. P0 blocks the stated stage; P1 follows once that
+stage is safe; P2 depends on demonstrated demand. Gates replace calendar promises.
 
-### 公平與防作弊
+### Stage A: capped invitation pilot
 
-- **god view：** 觀戰者和已淘汰玩家能看到所有手牌，陌生人可以透過外部管道通報。
-  公開房間和積分桌應延遲顯示，或只顯示公開資訊。
-- **共謀偵測：** 積分賽累積資料後，偵測固定組合的放水模式。
-- **可驗證洗牌（可選）：** 開局前公布種子雜湊，局後公開種子。
+Goal: independent groups complete sessions and voluntarily return. No real-money
+checkout or unrestricted stranger discovery.
 
-### 無障礙
+| ID | Priority | Work and acceptance condition |
+| --- | --- | --- |
+| A1 | P0 | Name the operator/support owner, pilot capacity and spending ceiling; confirm permission for intended commercial use of the host/domain |
+| A2 | P0 | Establish asset rights and appropriate terms/privacy/rating notices before distribution; offer actionable recovery/data requests, initially manual if manageable |
+| A3 | P0 | Share a usable room URL through login; let mobile users intentionally choose their game; provide a short first-table guide and reconnect/timeout expectations |
+| A4 | P0 | Test representative data/load and restore complete off-host database/media backups into an isolated environment; set capacity caps and maintenance/rollback procedures |
+| A5 | P0 | Define privacy-conscious events; measure invitation → join → first completed game → return, separating groups, bots and organic users |
+| A6 | P1 | Test real iOS Safari/Android Chrome, rotation, background/foreground, weak networks, expired sessions, retries and complete sessions for focus games |
 
-四色牌面、大字模式、螢幕閱讀器播報出牌。
+Suggested pilot: 5–10 independent groups over four weeks, a sampling plan rather than
+a statistically validated demand threshold. Advance when several groups return
+without operator prompting, serious defects are resolved, and hosts identify a
+specific unmet need worth paying for. If sessions require constant manual rescue,
+improve the core journey before promotion.
 
-## 指標
+### Stage B: public free operation
 
-| 類別 | 指標 |
+Goal: safely admit strangers and measure repeat use. Automated matching is optional.
+
+| ID | Priority | Work and acceptance condition |
+| --- | --- | --- |
+| B1 | P0 | Publish reviewed terms/privacy/community rules, rating/age information, operator details/support, consent versions and required notices |
+| B2 | P0 | Complete report → triage → removal/sanction → appeal, protected operator access, session revocation and audit; cover chats, private messages, profiles, stickers and uploads |
+| B3 | P0 | Establish recoverable identity and expiring single-use recovery; implement authenticated deletion/data-copy requests, retention exceptions and re-deletion after backup restores. Both LINE and Google login are not required |
+| B4 | P0 | Filter spectator/eliminated-player snapshots server-side; verify private hands are absent from events, resume, exposed logs and replay. Until then, remain invitation-only; restricting spectator entry alone leaves eliminated-player leaks |
+| B5 | P0 | Monitor external HTTPS/Socket flows, save failures/latency, event-loop delay, memory, disk/media growth, backup freshness and alert delivery; rehearse incident/restore workflows |
+| B6 | P0 | Review uploads and voice defaults; disable unmanageable channels. Offered uploads need server-side decode/pixel/frame limits and review/removal; offered voice needs distinct-network testing and restricted/short-lived TURN credentials |
+| B7 | P1 | Public product/game pages, help/announcements and tracked invitations; recruit clubs and hold regular sessions before buying broad traffic |
+| B8 | P1 | Pilot room discovery with privacy/capacity/rule filters; disclose bots and waiting limits. Add matching only when concurrent demand supports it |
+| B9 | P1 | Revisit whole-game abort after departure or missed 60-second reconnect; design game-specific substitution/forfeit and reward effects before changing this contract |
+| B10 | P1 | Improve abuse defenses, dependency updates and enforced CSP after compatibility review; client resizing is not an upload security boundary |
+
+Exit: reports/account requests work end to end; recipient privacy passes tests; off-host
+restore and actionable alerts are demonstrated; measured peak load fits the caps.
+Observe at least four weekly cohorts before attributing growth to retention. Do not
+purchase broad traffic while completion and returning-group rates remain poor.
+
+### Stage C: paid web pilot
+
+Goal: validate a specific paid benefit and its contribution margin. Start with one
+offer and one provider; manual sales also require legal, tax and delivery readiness.
+A private-table paid pilot can follow Stage A once the applicable Stage B legal,
+account, safety and operational gates pass; public discovery is not a prerequisite.
+
+| ID | Priority | Work and acceptance condition |
+| --- | --- | --- |
+| C1 | P0 | Confirm business/tax/provider eligibility, prices, receipts/invoices, refunds and cancellation terms with appropriate advisers before production payment |
+| C2 | P0 | Review billing persistence; migrate to transactional storage as needed, preserving Repository constraints, coins/ownership and a validated migration/rollback path |
+| C3 | P0 | Server-priced orders, verified callbacks, unique external transaction IDs and atomic local order/right updates; tolerate duplicated, delayed and out-of-order events |
+| C4 | P0 | Handle pending/failed/paid/refunded/disputed states, right revocation/downgrade, expiry/cancellation where applicable, auditable records and daily provider reconciliation |
+| C5 | P0 | Test retries/crashes, paid-but-ungranted recovery, invalid callbacks, refunds/disputes and restore. External payment and local commit are separate: reconcile mismatches |
+| C6 | P1 | Launch one original cosmetic pack or time-limited host plan; observe paid usage and renewals before large catalogs or automatic renewal |
+| C7 | P1 | Define earning limits, receipts retention and abuse controls before coins unlock premium substitutes; evaluate bot farming, alternate accounts and forced completion |
+
+Exit: sandbox cases and controlled production purchase/refund succeed; orders, rights
+and provider statements reconcile; support resolves missing purchases; the cohort
+contributes more than variable payment, content, delivery and servicing costs.
+Positive contribution is not yet profit: include development and operator labor.
+
+### Stage D: retention and selective growth
+
+Select a direction supported by observed use; do not pursue all in parallel.
+
+| ID | Direction | Value and prerequisites |
+| --- | --- | --- |
+| D1 | Persistent clubs, scheduled tables, host tools | Recurring-group subscription value; permissions, invitations and abuse controls |
+| D2 | Tutorials, puzzles, practice and post-game review | Learning differentiation; accurate game-specific explanations and fair-information analysis |
+| D3 | Ratings, seasons, free competitions | Competitive retention; standardized rules, separate bot/custom-rule records, abandonment/collusion controls and recipient privacy |
+| D4 | Replay and delayed public spectating | Coaching/community; consent, private/public records, retention and safe timing of hidden-information release |
+| D5 | Organization/club event packages | Potential higher-value sales; actual pilot buyer and bounded preparation, hosting, support and customization |
+| D6 | Public matching | Sufficient players per game/time zone, queue limits, disclosed bot fallback and safety; avoid fragmented skill/mode queues |
+| D7 | Mobile stores | Proven mobile experience and acquisition hypothesis; billing/privacy/moderation/review gates below |
+| D8 | Horizontal scaling | Measured saturation/availability need; room ownership, routing, coordination and recovery design before adding processes |
+
+## Monetization options and economics
+
+| Model | Fit | Main limitation | Recommendation |
+| --- | --- | --- | --- |
+| Original cosmetic packs | Existing shop/inventory foundation | Free uploads/earned items are substitutes; most table/card styles are owner-only | Small transaction experiment; prioritize shared-visible frames/nameplates/stickers and preserve earned rights |
+| Host/club plan | One paying organizer can bring a group | Needs recurring value: schedules, persistent clubs, shared themes, useful summaries | Strong initial hypothesis for returning groups; basic joining/gameplay remain free |
+| Learning/review subscription | Potential committed learners | Rules help is not a curriculum; accuracy and analysis cost matter | Validate focus-game demand first; never provide an unfair active-game advantage |
+| Organization events | Fewer customers may cover costs | Sales/setup/live support can dominate margin | Interview real buyers early; bounded service packages, not unlimited customization |
+| Lobby advertising | Revenue from non-paying visitors | Unknown volume/fill/yield; consent, ad eligibility and policy work | Defer until measured traffic justifies it; never interrupt turns |
+| Paid entry/transferable currency | Poor fit with fair social play | Legal, store and abuse exposure | Exclude from this roadmap |
+
+Calculate economics per acquisition cohort and channel:
+
+- Net monthly contribution = settled revenue minus refunds, payment/store fees,
+  applicable tax allowance, variable infrastructure/TURN/media, content and support.
+- Break-even payers = monthly fixed operating cost / monthly contribution per payer.
+  Include unpaid development/support labor when evaluating actual business profit.
+- Compare renewal/churn, lifetime contribution and acquisition cost; early samples do
+  not support a reliable lifetime-value forecast. Use observed ad impressions/yield.
+
+Illustration only: NT$10,000 fixed monthly costs and NT$125 monthly contribution per
+payer imply 80 payers. At an assumed 2% monthly payer rate, that implies 4,000 monthly
+active users. These are arithmetic inputs, not measured pricing, conversion, costs
+or a forecast. Labor and channel fees can materially change the result.
+
+## Development directions and trade-offs
+
+Relative effort: S is bounded; M spans components; L adds substantial rules,
+persistence or operations. These compare scope, not elapsed implementation time.
+
+| ID | Direction | Effort | Order and constraint |
+| --- | --- | --- | --- |
+| E1 | Mobile selection, invitation sharing, first-game help, readable errors, easier practice entry | S–M | First; improves acquisition/completion. Evaluate beginner timer presets and limited account-free practice |
+| E2 | Contrast, large/four-color cards, keyboard play, screen-reader announcements | M | Incremental; existing focus/ARIA/reduced-motion support is not accessibility certification |
+| E3 | Bot difficulty/personality and independent practice progress | M | After onboarding evidence; only permitted information, disclose bots and separate practice from competitive records |
+| E4 | Shared house-rule configuration and cleaner game adapters | M–L | Extend established shared/runtime boundaries for concrete modes; no blanket rewrite before demand |
+| E5 | Hearts, Gong Zhu, Spades | M | Trick-taking concepts are reusable, not interchangeable Bridge rules; choose a requested title |
+| E6 | Old Maid, Go Fish | M | Flexible-group onboarding; game-specific seating, rules, bots and UI still needed |
+| E7 | Dou Dizhu, Run Fast | M–L | Regional appeal; three-seat layouts and distinct combinations/scoring |
+| E8 | Tractor, duplicate Bridge | L | Multi-deck/joker or multi-table orchestration/scoring; established club demand first |
+| E9 | Real-time slap-card games | L | Latency fairness, simultaneous arbitration and accessibility; high risk relative to turn-based strengths |
+| E10 | Taiwanese sixteen-tile Mahjong | L | New pieces/art/rules/bots and market positioning; separate product investment |
+| E11 | Daily challenges and replay-based review | M–L | Practice without concurrent players; separate challenge seeds from live randomness and protect active private hands |
+
+Review rights before copying branded names, artwork or text. LLM coaching is optional:
+evaluate accuracy, inference cost and private-data handling against deterministic
+review first. Shuffle verification needs a threat model; do not reveal seeds before
+all linked play ends or claim a commitment alone prevents manipulation/collusion.
+
+## Operations after launch
+
+| Cadence | Required work |
 | --- | --- |
-| 成長 | 註冊完成率、首次開局時間、湊桌時間 |
-| 留存 | 第 1、7、30 天留存，DAU/MAU |
-| 營收 | 付費轉換率、每位付費玩家營收、訂閱流失率 |
-| 健康度 | 可用率、操作延遲 p95、每千局檢舉數 |
+| Continuous/on-call | Service/security incidents, severe abuse and payment anomalies; define coverage/escalation before release |
+| Daily | Off-host backup freshness, disk/media growth, failed writes, reports/support queue; payment reconciliation once charging |
+| Weekly | Completion/abandonment, returning-group cohorts, queue times, spend/support hours, sanctions/appeals, earning abuse and dependencies |
+| Monthly | Scheduled restore drills, access review, invoice/tax reconciliation, churn/margin/capacity and provider-policy review |
+| Every release | Applicable checks, production-path build, schema/rollback review, maintenance notices and real end-to-end smoke checks |
 
-## 主要風險
+Keep lasting runbooks in [deployment](deployment.md), [storage](storage.md), and
+[media](media.md) as features ship. This roadmap does not certify those processes run.
 
-| 風險 | 因應 |
+| Metric | Definition/use |
 | --- | --- |
-| 德州撲克或 21 點被視為賭博或從嚴分級 | 原則 1、律師審查、可依通路關閉特定遊戲 |
-| 聊天、上傳、語音遭濫用 | 公開上線前完成 Phase 0 的信任與安全工作 |
-| 上線初期湊不滿桌 | 快速配對加 bot 補位，先經營種子社群 |
-| 儲存或主機故障 | 異地備份、遷移到 SQL |
-| 素材授權爭議 | Phase 0 盤點授權 |
+| Acquisition | Landing → registration → join → first completed game, source tags and invited/organic separation |
+| Core value | Active human groups, independent returns, completed sessions and invite acceptance; bot activity separate |
+| Retention | D1/D7/D30 cohorts and weekly returning groups; show sample sizes and exclude unobservable windows |
+| Match health | Start/wait time, completion, disconnect/abort/timeout rates, rule errors and latency p95 |
+| Operations | Availability, write failures/duration, backup age, restore RPO/RTO, media/TURN traffic and response time |
+| Business | Settled revenue, payer rate, contribution, renewal/churn, refunds/disputes, acquisition cost and operator hours |
 
-## 待決事項
+Set service targets and capacity from measurements. Daily snapshots alone can lose
+nearly 24 hours of writes; paid orders need stricter recovery/reconciliation. Set and
+drill RPO/RTO based on player/billing impact. Health currently returns a fixed `ok`;
+it does not establish database writability or successful player sessions.
 
-- 營運主體、預算與團隊人數。
-- 只做台灣，或進入其他地區。
-- 德州撲克與 21 點是否保留在公開版和 app 版。
-- 金幣防刷：bot 局也會給金幣；若金幣可換外觀，可設每日上限或只計真人對局。
-- 免費自訂上傳與付費外觀如何並存：維持免費加審核、改為訂閱福利，或免費玩家只用內建款式。
-- 開始營利後，程式碼的公開與授權方式。
+Operational review must also address these concrete boundaries:
 
-## 參考資料
+- Uploaded files have a public hash-addressed GET route and long-lived immutable
+  caching. Owner-only presentation is not authenticated file confidentiality.
+  Removal/deletion needs a served-file, cache, backup and reference-retention design.
+- Each account can accumulate 100 MiB of images; replacement still counts and emoji
+  deletion does not remove the file. Plan safe reference-aware cleanup, global limits
+  and storage/backup/bandwidth cost; never delete files still referenced by messages.
+- Host kicks are not durable service bans. Sanctions must prevent re-entry and handle
+  sessions, rooms and alternate-account abuse without over-collecting personal data.
+- Payment webhooks need independent provider verification and routing; do not disable
+  the existing browser Origin guard globally to receive callbacks.
+- Analytics/logs must exclude passwords/session tokens, private hands, private message
+  contents and voice. Operational access and backups hold sensitive game/account data.
 
-- [遊戲軟體分級管理辦法](https://6laws.net/6law/law3/遊戲軟體分級管理辦法.htm)
-- [網路連線遊戲服務定型化契約應記載及不得記載事項](https://srps.kl.edu.tw/news/file/780/%E7%B6%B2%E8%B7%AF%E9%80%A3%E7%B7%9A%E9%81%8A%E6%88%B2%E6%9C%8D%E5%8B%99%E5%AE%9A%E5%9E%8B%E5%8C%96%E5%A5%91%E7%B4%84%E6%87%89%E8%A8%98%E8%BC%89%E5%8F%8A%E4%B8%8D%E5%BE%97%E8%A8%98%E8%BC%89%E4%BA%8B%E9%A0%85.pdf)
-- [Google Play 真錢與模擬博弈政策](https://support.google.com/googleplay/android-developer/answer/9877032)
+## Legal, licensing and mobile distribution
+
+Review work, not legal advice or a classification. Official sources checked on
+2026-10-14; recheck effective rules before release.
+
+- **Taiwan ratings:** Article 6(6) addresses result-driven virtual currency; Article
+  7(5) also covers card games without that relationship. No cash-out does not make
+  a service all-ages. Review chips/coins, Liar's Deck imagery, chat/uploads and the
+  combined release against the [Game Software Rating Regulations](https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=J0030086).
+- **Consumer obligations:** map actual fees, support, game records, termination and
+  product-specific refunds to the [online-game contract requirements](https://law.moda.gov.tw/LawContent.aspx?id=GL000018).
+  Do not assume every digital sale is non-refundable.
+- **Personal data:** notice, access/copy/correction/deletion and justified retention
+  need real procedures covering social records/media, backups and billing. The
+  [Personal Data Protection Act](https://law.moj.gov.tw/LawClass/LawAll.aspx?PCode=I0050021)
+  marks some amendments as not yet effective; confirm the applicable version.
+- **Gambling:** [Criminal Code Article 266](https://mojlaw.moj.gov.tw/LawContent.aspx?TypeSort=2&lawNumber=266&lsid=FL001424&media=print)
+  includes internet gambling for property. Review monetization/competitions/value
+  transfer with counsel; payment-provider acceptance is a separate requirement.
+- **Licensing:** the application is already [MIT-licensed](../LICENSE); monetization
+  does not require closing it. Card graphics have separate [LGPL notices](../client/src/assets/cards/README.txt).
+  Audit distribution obligations, music/site emoji, generated/commissioned artwork,
+  fonts, sounds and dependencies; preserve provenance and permissions. Owner-supplied
+  or Git-ignored assets are not automatically commercially licensed.
+
+Mobile release is a separate investment after demand/revenue evidence:
+
+1. Choose supported platforms/regions and maintained packaging/native approach;
+   verify touch, lifecycle, reconnect, audio/voice, performance and review access on
+   real devices. A web wrapper alone does not establish sufficient app quality.
+2. Prepare ratings, privacy/data-safety disclosures, permission explanations, support
+   links and review accounts. Account-creating Apple apps need an in-app deletion
+   path; Google Play also requires an external deletion resource.
+3. Design receipt validation, store notifications, purchase restoration, refunds,
+   subscription cancellation and cross-channel rights. Digital goods generally use
+   store billing; regional programs/exceptions require specific review. Taiwan web
+   checkout is not automatically a valid native checkout.
+4. Complete UGC filtering, reporting, blocking and timely response. Review simulated-
+   gambling presentation and advertising rules per channel; Google's real-money
+   policy is not a blanket prohibition on all virtual card games.
+5. Budget fees, review/maintenance and support; verify incremental acquisition or
+   retention through a limited release before supporting multiple native platforms.
+
+Sources: [Apple App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/),
+[Google Play payments](https://support.google.com/googleplay/android-developer/answer/9858738),
+[Google account deletion](https://support.google.com/googleplay/android-developer/answer/13327111),
+and [Google gambling/related ads](https://support.google.com/googleplay/android-developer/answer/9877032).
+
+## Confirmed scope and remaining owner decisions
+
+| Decision | Status or starting hypothesis | Impact |
+| --- | --- | --- |
+| First market | Confirmed: Taiwan first | Local legal, payment, invoicing and support readiness |
+| Audience/focus games | Friend groups/clubs; select through pilot use | Onboarding, acquisition and paid offer |
+| Distribution | Confirmed: web service first; evaluate PWA usefulness and stores after repeat-use/revenue evidence | Platform/billing/maintenance workload |
+| Operator/resources | Named support owner, budget/capacity and spending cap | Realistic availability, moderation and pace |
+| First paid offer | One original pack or host plan | Rights, billing and recurring content costs |
+| Public Blackjack/Hold'em/Liar's Deck | Review ratings, provider and audience fit per channel | Release content, age controls and marketing |
+| Free uploads/catalog | Preserve earned rights/uploads by default | Fair transition, differentiation and media costs |
+| Advance/stop rules | Predefine return/completion/contribution/support-cost targets | Continue only when demand and economics justify investment |
+
+Suggested order: A1–A5 → observed pilot → applicable B1–B6 safety/operations gates
+→ C1–C6 paid validation or broader free beta → one validated Stage D direction.
+OAuth, automatic matching, new games, large catalogs and native apps are not all
+prerequisites for the first pilot.
