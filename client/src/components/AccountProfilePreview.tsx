@@ -6,6 +6,7 @@ import { cardBackStyle, seatBackgroundStyle, tableBackgroundStyle } from '../acc
 import { useI18nStore } from '../stores/i18n-store';
 import aceOfSpades from '../assets/cards/AS.svg';
 import { Avatar } from './Avatar';
+import { Nameplate } from './Nameplate';
 import styles from '../pages/AccountPage.module.css';
 
 interface AccountProfilePreviewProps {
@@ -40,6 +41,7 @@ export function AccountProfilePreview({
         <Avatar avatar={avatar} image={account.avatarImage} border={account.avatarBorder} color={color} size="large" />
         <div>
           <h2>{nickname.trim() || account.username}</h2>
+          <Nameplate id={account.nameplate} />
           <p>@{account.username}</p>
         </div>
       </div>

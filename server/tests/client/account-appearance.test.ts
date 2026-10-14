@@ -12,6 +12,7 @@ const state = vi.hoisted(() => ({
   room: null as RoomInfo | null,
 }));
 
+vi.mock('../../../client/src/api', () => ({ apiRequest: vi.fn() }));
 vi.mock('../../../client/src/socket', () => ({ socket: {} }));
 vi.mock('../../../client/src/media', () => ({ mediaUrl: (id: string) => `/api/media/${id}` }));
 vi.mock('../../../client/src/components/ChatPanel', () => ({ ChatPanel: () => null }));
@@ -52,6 +53,10 @@ vi.mock('../../../client/src/stores/game-store', () => ({
 }));
 
 import { cardBackStyle, seatBackgroundStyle, tableBackgroundStyle } from '../../../client/src/account-appearance';
+import { shopArtworkUrl } from '../../../client/src/shop-art';
+import { Nameplate } from '../../../client/src/components/Nameplate';
+import { PlayerLink } from '../../../client/src/components/PlayerLink';
+import { EquipmentSettings } from '../../../client/src/components/EquipmentSettings';
 import { GameShell } from '../../../client/src/games/GameShell';
 import { RoomPage } from '../../../client/src/pages/RoomPage';
 import roomStyles from '../../../client/src/pages/RoomPage.module.css';
@@ -114,6 +119,70 @@ describe('personal account appearance', () => {
       '--card-back-image': `url("/api/media/${CARD_BACK}")`, '--card-back-size': 'cover',
       '--card-back-opacity': '0.65',
     });
+  });
+
+  it('should prioritize official artwork without discarding uploaded fallbacks', () => {
+    const appearance: Partial<AccountProfile> = {
+      seatBackground: BACKGROUND, seatBackgroundStyle: 'seat-sakura',
+      tableBackground: BACKGROUND, tableBackgroundStyle: 'table-tide', tableBackgroundOpacity: 45,
+      cardBack: CARD_BACK, cardBackStyle: 'card-back-aurora', cardBackOpacity: 70,
+    };
+    expect(seatBackgroundStyle(appearance)).toEqual({
+      '--seat-image': `url("${shopArtworkUrl('seat-sakura')}")`,
+    });
+    expect(tableBackgroundStyle(appearance)).toEqual({
+      '--table-image': `url("${shopArtworkUrl('table-tide')}")`, '--table-image-opacity': '0.45',
+    });
+    expect(cardBackStyle(appearance)).toMatchObject({
+      '--card-back-image': `url("${shopArtworkUrl('card-back-aurora')}")`, '--card-back-opacity': '0.7',
+    });
+    expect(seatBackgroundStyle({ ...appearance, seatBackgroundStyle: null })).toEqual({
+      '--seat-image': `url("/api/media/${BACKGROUND}")`,
+    });
+    expect(tableBackgroundStyle({ ...appearance, tableBackgroundStyle: null })).toMatchObject({
+      '--table-image': `url("/api/media/${BACKGROUND}")`,
+    });
+    expect(cardBackStyle({ ...appearance, cardBackStyle: null })).toMatchObject({
+      '--card-back-image': `url("/api/media/${CARD_BACK}")`,
+    });
+    expect(cardBackStyle({ cardBackStyle: null, cardBack: null })).toBeUndefined();
+    expect(tableBackgroundStyle({ tableBackgroundStyle: null })).toBeUndefined();
+    expect(seatBackgroundStyle({ seatBackgroundStyle: null })).toBeUndefined();
+  });
+
+  it('should render official styles in the game and other players waiting seats', () => {
+    state.account = { ...state.account, cardBackStyle: 'card-back-sakura', tableBackgroundStyle: 'table-aurora' };
+    state.room = { ...room(), seats: { ...room().seats,
+      N: { player: { ...alice, seatBackgroundStyle: 'seat-tide' }, isReady: false },
+    } };
+    expect(renderShell().replaceAll('&#x27;', "'")).toContain(shopArtworkUrl('card-back-sakura'));
+    expect(renderShell().replaceAll('&#x27;', "'")).toContain(shopArtworkUrl('table-aurora'));
+    expect(renderRoom().replaceAll('&#x27;', "'")).toContain(shopArtworkUrl('seat-tide'));
+  });
+
+  it('should show only owned equipment and keep uploaded images available', () => {
+    const html = renderToStaticMarkup(createElement(EquipmentSettings, { account: {
+      ...state.account, ownedShopItems: ['card-back-aurora', 'table-tide', 'nameplate-sakura'],
+      cardBackStyle: 'card-back-aurora',
+    } as AccountProfile }));
+    expect(html).toContain('value="card-back-aurora" selected=""');
+    expect(html).toContain('value="table-tide"');
+    expect(html).toContain('value="nameplate-sakura"');
+    expect(html).not.toContain('value="card-back-tide"');
+    expect(html).not.toContain('value="seat-sakura"');
+    expect(html.match(/<option value=""/g)).toHaveLength(4);
+  });
+
+  it('should display cosmetic titles beside public player identities and hide unequipped titles', () => {
+    expect(renderToStaticMarkup(createElement(Nameplate, { id: null }))).toBe('');
+    for (const locale of ['en', 'zh-TW'] as const) {
+      useI18nStore.getState().setLocale(locale);
+      const html = renderToStaticMarkup(createElement(MemoryRouter, null,
+        createElement(PlayerLink, { player: { ...alice, nameplate: 'nameplate-tide' } })));
+      expect(html).toContain('data-nameplate="nameplate-tide"');
+      expect(html).toContain(useI18nStore.getState().t('shop.title.nameplate-tide'));
+      expect(html).not.toContain('shop.title.nameplate-tide');
+    }
   });
 
   it('should apply the owner card back and table opacity to the game table', () => {

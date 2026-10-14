@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { PlayerInfo } from '@shared/types';
 import { useI18nStore } from '../stores/i18n-store';
 import { Avatar } from './Avatar';
+import { Nameplate } from './Nameplate';
 import styles from './PlayerLink.module.css';
 
 interface PlayerLinkProps {
@@ -19,6 +20,7 @@ export function PlayerLink({ player, showUsername = false, size = 'small', linke
     <span className={styles.identity}>
       <span className={styles.nickname}>{player.nickname}</span>
       {player.isBot && <span className={styles.botBadge}>{t('player.bot')}</span>}
+      <span data-cosmetic-title className={styles.title}><Nameplate id={player.nameplate} /></span>
       {showUsername && !player.isBot && <span className={styles.username}>@{player.username}</span>}
     </span>
   </>;

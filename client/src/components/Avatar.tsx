@@ -39,6 +39,16 @@ export function Avatar({ avatar, image, color, border, size = 'medium' }: Avatar
       <path d={TENTACLE_PATH} />
       <path d={TENTACLE_PATH} transform="translate(100 0) scale(-1 1)" />
     </svg>}
+    {border === 'sakura' && <svg className={borderStyles.flowerArt} viewBox="0 0 100 100" aria-hidden="true">
+      <g transform="translate(83 10)">
+        {[0, 72, 144, 216, 288].map((angle) =>
+          <ellipse key={angle} cx="0" cy="-6" rx="4" ry="7" transform={`rotate(${angle})`} />)}
+        <circle r="3" />
+      </g>
+    </svg>}
+    {border === 'tide' && <svg className={borderStyles.waveArt} viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M3 70 Q15 58 28 70 T53 70 M50 97 Q64 82 78 93 T105 89" />
+    </svg>}
     <span className={borderStyles.face} aria-hidden="true"><Avatar avatar={avatar} image={image} size={size} /></span>
     {border === 'starlight' && <>
       <span className={`${borderStyles.star} ${borderStyles.firstStar}`} aria-hidden="true"><AppIcon name="burst" /></span>

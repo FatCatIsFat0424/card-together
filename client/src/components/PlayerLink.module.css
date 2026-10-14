@@ -21,3 +21,6 @@ a.link:hover .nickname { color: var(--color-primary); text-decoration: underline
   font-size: var(--text-xs);
   font-weight: 700;
 }
+
+.title:has(> *) { display: block; flex-basis: 100%; margin-top: 0.2rem; }
+.title:empty { display: none; }

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { FriendsData, MatchHistory, PublicAccount } from '@shared/types';
 import { apiRequest } from '../api';
+import { Nameplate } from '../components/Nameplate';
 import { Avatar } from '../components/Avatar';
 import { MatchHistoryList } from '../components/MatchHistoryList';
 import { useAccountStore } from '../stores/account-store';
@@ -112,6 +113,7 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
           <Avatar avatar={player.avatar} image={player.avatarImage} border={player.avatarBorder} color={player.color} size="large" />
           <div className={styles.name}>
             <h1 style={{ color: player.color }}>{player.nickname}</h1>
+            <Nameplate id={player.nameplate} />
             <p className={styles.username}>@{player.username}</p>
           </div>
         </div>

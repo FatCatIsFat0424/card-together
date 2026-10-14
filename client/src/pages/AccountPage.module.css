@@ -86,3 +86,10 @@
   .imageHeading { align-items: start; flex-direction: column; }
   .managementPanel { padding: var(--spacing-lg); }
 }
+.equipment { border-top: 1px solid var(--border-color); margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); }
+.equipment h2 { margin-bottom: var(--spacing-sm); font-size: var(--text-lg); }
+.equipment > p { margin-block: var(--spacing-sm); font-size: var(--text-sm); color: var(--text-secondary); }
+.equipment > [role='alert'] { color: var(--color-danger); }
+.equipmentGrid { display: grid; gap: var(--spacing-md); margin-top: var(--spacing-md); }
+.equipmentGrid label { display: block; margin-bottom: var(--spacing-xs); font-size: var(--text-sm); }
+.equipmentGrid select { width: 100%; min-height: 44px; padding: var(--spacing-sm); border: 1px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); background: var(--bg-input); font: inherit; font-size: var(--text-sm); }

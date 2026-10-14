@@ -15,6 +15,7 @@ import { clearAccount, useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { Avatar, AVATARS } from '../components/Avatar';
 import { MatchHistoryList } from '../components/MatchHistoryList';
+import { EquipmentSettings } from '../components/EquipmentSettings';
 import { EmojiLibrary } from '../components/EmojiLibrary';
 import { OpacitySlider } from '../components/OpacitySlider';
 import { AccountProfilePreview } from '../components/AccountProfilePreview';
@@ -281,6 +282,7 @@ export function AccountPage(): ReactNode {
                 {saved && <p role="status" className={styles.success}>{t('profile.saved')}</p>}
               </div>
             </form>
+            <EquipmentSettings key={account.id} account={account} />
             <section className={editorStyles.appearance} aria-labelledby="profile-appearance-heading">
               <h2 id="profile-appearance-heading">{t('profile.appearance')}</h2>
               <p className={styles.hint}>{t('profile.appearanceAutoSave')}</p>
@@ -321,7 +323,7 @@ export function AccountPage(): ReactNode {
                 </div>
                 <p className={styles.hint}>{t('profile.backgroundHelp')}</p>
                 {mediaFeedback('tableBackground')}
-                {opacitySlider('tableBackgroundOpacity', t('profile.backgroundOpacity'), !!account.tableBackground)}
+                {opacitySlider('tableBackgroundOpacity', t('profile.backgroundOpacity'), !!(account.tableBackgroundStyle || account.tableBackground))}
                 {mediaFeedback('tableBackgroundOpacity')}
               </div>
               <div className={editorStyles.imageSetting}>
@@ -342,7 +344,7 @@ export function AccountPage(): ReactNode {
                 </div>
                 <p className={styles.hint}>{t('profile.cardBackHelp')}</p>
                 {mediaFeedback('cardBack')}
-                {opacitySlider('cardBackOpacity', t('profile.cardBackOpacity'), !!account.cardBack)}
+                {opacitySlider('cardBackOpacity', t('profile.cardBackOpacity'), !!(account.cardBackStyle || account.cardBack))}
                 {mediaFeedback('cardBackOpacity')}
               </div>
             </section>

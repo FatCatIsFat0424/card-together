@@ -85,6 +85,7 @@
 
 .name [data-player-identity] > :last-child {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
   min-width: 0;
@@ -100,6 +101,7 @@
 }
 
 .name [data-player-identity] > :last-child > :not(:first-child) { flex: none; margin-left: 0; }
+.name [data-cosmetic-title]:has(> *) { width: 100%; }
 
 .empty { color: var(--text-muted); }
 

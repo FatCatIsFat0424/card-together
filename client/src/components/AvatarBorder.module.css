@@ -112,3 +112,14 @@
 .rainbow { --border-paint: conic-gradient(#f89bb7, #f5c76e, #c6e577, #70d4b4, #73beec, #b197ee, #f89bb7); }
 .neon { --border-paint: linear-gradient(135deg, #92f4ff, #40b9d7 30%, #b791ff 65%, #5ee7f3); }
 .neon .rim { box-shadow: 0 0 0 2px #68d7e94d, 0 0 16px #5bcfe940, inset 0 0 0 2px #ffffff80; }
+.sakura { --border-paint: conic-gradient(#f7dddf, #cc729d, #fff0d9, #e9a7c4, #f7dddf); }
+.sakura .rim::after { border: 2px dotted #fff4e7; inset: 2%; }
+.tide { --border-paint: conic-gradient(from 30deg, #e2f8ef, #3e9db7, #93dfd6, #265c86, #d4f5ee, #3e9db7, #e2f8ef); }
+.tide .rim::after { border-color: #dcfff2; border-style: dashed; inset: 3%; }
+.eclipse { --border-paint: conic-gradient(from -35deg, #fff0b5, #ffb557 18%, #725193 35%, #272a4f 70%, #ffd991); }
+.eclipse .rim { box-shadow: 0 0 0 1px #b7885a70, 0 0 14px #e7a45630, inset 0 1px 2px #ffe7ba70; }
+
+.flowerArt, .waveArt { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.flowerArt { z-index: 1; fill: #ffcddd; stroke: #b76d94; stroke-width: 0.8; }
+.flowerArt circle { fill: #ffeac1; stroke: none; }
+.waveArt { z-index: 1; fill: none; stroke: #dcfff4; stroke-width: 3; stroke-linecap: round; }
