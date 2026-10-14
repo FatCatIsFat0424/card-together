@@ -4,13 +4,15 @@ import {
 } from '../runtime/validate';
 import {
   FLEXIBLE_SEAT_GAMES, GAME_TYPES, MAX_EMOJIS_PER_ACCOUNT, MAX_MESSAGE_EMOJIS, NICKNAME_MAX_LENGTH, isEmojiName, isImageOpacity, isMediaId,
-  isUsername, isAvatarBorderId, isProvidedEmojiFile,
+  isUsername, isAvatarBorderId, isProvidedEmojiFile, getShopItem,
 } from '@shared/constants';
 import type { GameType } from '@shared/types';
 import type { RuntimeSnapshot } from '../runtime/types';
 import type {
   AccountRecord, DirectMessageRecord, EmojiRecord, FriendNotificationRecord, FriendshipRecord, MatchRecord, MessageReadRecord, SessionRecord,
 } from './repository';
+import { equipmentError } from './shop-equipment';
+import type { ShopItemId } from '@shared/types';
 import { CURRENT_SCHEMA_VERSION } from './migrations';
 
 export interface DatabaseDocument {
@@ -58,6 +60,13 @@ function validAccount(value: unknown): value is AccountRecord {
     (value.avatarBorder === undefined || value.avatarBorder === null
       || (isAvatarBorderId(value.avatarBorder) && Array.isArray(value.ownedAvatarBorders)
         && value.ownedAvatarBorders.includes(value.avatarBorder))) &&
+    (value.ownedShopItems === undefined || (Array.isArray(value.ownedShopItems)
+      && value.ownedShopItems.every((id: unknown) => {
+        const item = getShopItem(id);
+        return item !== undefined && item.type !== 'avatarBorder';
+      })
+      && new Set(value.ownedShopItems).size === value.ownedShopItems.length)) &&
+    equipmentError(value, { ownedShopItems: value.ownedShopItems as readonly ShopItemId[] | undefined }) === null &&
     value.usernameNormalized === value.username.toLowerCase() &&
     typeof value.nickname === 'string' &&
     value.nickname.trim().length > 0 &&

@@ -1,4 +1,4 @@
-import type { AccountProfile, AvatarBorderId, EmojiRecord, MatchResult, MediaId, MessageContent } from '@shared/types';
+import type { AccountProfile, AvatarBorderId, EmojiRecord, MatchResult, MediaId, MessageContent, ShopItemId } from '@shared/types';
 
 export type { EmojiRecord };
 import type { RuntimeSnapshot } from '../runtime/types';
@@ -71,12 +71,14 @@ export interface Repository {
       AccountProfile,
       | 'nickname' | 'color' | 'avatar' | 'avatarImage' | 'seatBackground' | 'tableBackground'
       | 'tableBackgroundOpacity' | 'cardBack' | 'cardBackOpacity' | 'matchesPublic'
-      | 'avatarBorder'
+      | 'avatarBorder' | 'cardBackStyle' | 'tableBackgroundStyle' | 'seatBackgroundStyle' | 'nameplate'
     >,
     now: number,
   ): Promise<AccountRecord | null>;
   /** Atomically debit the catalog price and grant ownership; repeats do not debit again. */
   purchaseAvatarBorder(id: string, border: AvatarBorderId, now: number): Promise<AccountRecord | null>;
+  /** Atomically debit the catalog price and grant permanent ownership, once per item. */
+  purchaseShopItem(id: string, item: ShopItemId, now: number): Promise<AccountRecord | null>;
   changePassword(
     id: string,
     expectedHash: string,
@@ -136,6 +138,11 @@ export function publicAccount(account: AccountRecord): AccountProfile {
     coinRevision: account.coinRevision ?? 0,
     ownedAvatarBorders: account.ownedAvatarBorders ?? [],
     avatarBorder: account.avatarBorder ?? null,
+    ownedShopItems: account.ownedShopItems ?? [],
+    cardBackStyle: account.cardBackStyle ?? null,
+    tableBackgroundStyle: account.tableBackgroundStyle ?? null,
+    seatBackgroundStyle: account.seatBackgroundStyle ?? null,
+    nameplate: account.nameplate ?? null,
     nickname: account.nickname,
     color: account.color,
     avatar: account.avatar,

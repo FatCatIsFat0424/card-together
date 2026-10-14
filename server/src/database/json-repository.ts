@@ -2,12 +2,14 @@ import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { copyFile, mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { AVATAR_BORDERS, GAME_COIN_REWARD, MAX_EMOJIS_PER_ACCOUNT } from '@shared/constants';
+import { getShopItem, isAvatarBorderId, ownsShopItem, GAME_COIN_REWARD, MAX_EMOJIS_PER_ACCOUNT } from '@shared/constants';
 import type { Repository, AccountRecord, MatchRecord } from './repository';
 import { publicAccount, repositoryError, SOCIAL_HISTORY_RETENTION_MS } from './repository';
 import { emptyDocument, isObject, validDirectMessage, validateDocument } from './schema';
 import { migrateDocument } from './migrations';
 import type { DatabaseDocument } from './schema';
+import type { ShopItemId } from '@shared/types';
+import { equipmentError } from './shop-equipment';
 import type { RuntimeSnapshot } from '../runtime/types';
 import { createDatabaseIndexes, friendshipPair } from './indexes';
 
@@ -145,6 +147,29 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       data.rewardedGameIds = [...rewarded];
     }
 
+    function purchaseShopItem(id: string, itemId: ShopItemId, now: number): Promise<AccountRecord | null> {
+      return write(['accounts'], (data) => {
+        const index = indexes.accounts(document.accounts).positions.get(id);
+        if (index === undefined) return null;
+        const account = data.accounts[index];
+        const item = getShopItem(itemId);
+        if (!item) throw repositoryError('INVALID_SHOP_ITEM', 'Choose an available shop item.');
+        if (ownsShopItem(account, item)) return account;
+        if ((account.coins ?? 0) < item.price) {
+          throw repositoryError('INSUFFICIENT_COINS', 'Not enough coins. Play more games to earn coins.');
+        }
+        const inventory = item.type === 'avatarBorder'
+          ? { ownedAvatarBorders: [...(account.ownedAvatarBorders ?? []), item.id] }
+          : { ownedShopItems: [...(account.ownedShopItems ?? []), item.id] };
+        const updated: AccountRecord = { ...account, ...inventory,
+          coins: (account.coins ?? 0) - item.price,
+          coinRevision: (account.coinRevision ?? 0) + 1,
+          updatedAt: Math.max(now, account.updatedAt + 1) };
+        data.accounts[index] = updated;
+        return updated;
+      });
+    }
+
     return {
       getAccountById: (id) => read((data) => indexes.accounts(data.accounts).byId.get(id) ?? null),
       getAccountByUsername: (usernameNormalized) =>
@@ -185,29 +210,18 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
           if (profile.avatarBorder && !data.accounts[index].ownedAvatarBorders?.includes(profile.avatarBorder)) {
             throw repositoryError('BORDER_NOT_OWNED', 'Purchase this avatar border first.');
           }
+          const invalidEquipment = equipmentError(profile, data.accounts[index]);
+          if (invalidEquipment) throw repositoryError(invalidEquipment, 'Choose an owned item for this equipment slot.');
           const account: AccountRecord = { ...data.accounts[index], ...profile,
             updatedAt: Math.max(now, data.accounts[index].updatedAt + 1) };
           data.accounts[index] = account;
           return account;
         }),
-      purchaseAvatarBorder: (id, border, now) =>
-        write(['accounts'], (data) => {
-          const index = indexes.accounts(document.accounts).positions.get(id);
-          if (index === undefined) return null;
-          const account = data.accounts[index];
-          if (account.ownedAvatarBorders?.includes(border)) return account;
-          const item = AVATAR_BORDERS.find((entry) => entry.id === border);
-          if (!item) throw repositoryError('INVALID_BORDER', 'Choose an available avatar border.');
-          if ((account.coins ?? 0) < item.price) {
-            throw repositoryError('INSUFFICIENT_COINS', 'Not enough coins. Play more games to earn coins.');
-          }
-          const updated = { ...account, coins: (account.coins ?? 0) - item.price,
-            coinRevision: (account.coinRevision ?? 0) + 1,
-            ownedAvatarBorders: [...(account.ownedAvatarBorders ?? []), border],
-            updatedAt: Math.max(now, account.updatedAt + 1) };
-          data.accounts[index] = updated;
-          return updated;
-        }),
+      purchaseAvatarBorder: (id, border, now) => {
+        if (!isAvatarBorderId(border)) return Promise.reject(repositoryError('INVALID_BORDER', 'Choose an available avatar border.'));
+        return purchaseShopItem(id, border, now);
+      },
+      purchaseShopItem,
       changePassword: (id, expectedHash, passwordHash, now) =>
         write(['accounts'], (data) => {
           const index = indexes.accounts(document.accounts).positions.get(id);

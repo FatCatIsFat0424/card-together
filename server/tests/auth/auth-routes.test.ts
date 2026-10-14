@@ -155,6 +155,51 @@ describe('account HTTP routes', () => {
     expect((await repository.getAccountById(id))?.coins).toBe(0);
   });
 
+  it('should authenticate every shop category, enforce catalog pricing and preserve equipment ownership', async () => {
+    const owner = await seedAuthenticatedAccount(repository, 'cosmetic_owner', { coins: 1000 });
+    const headers = { ...HEADERS, Cookie: owner.cookie };
+    const buy = (body: unknown, requestHeaders: Record<string, string> = headers): Promise<Response> =>
+      fetch(`${baseUrl}/shop/items`, { method: 'POST', headers: requestHeaders, body: JSON.stringify(body) });
+    const patch = (body: unknown): Promise<Response> => fetch(`${baseUrl}/profile`, {
+      method: 'PATCH', headers, body: JSON.stringify(body),
+    });
+    expect((await buy({ item: 'card-back-aurora' }, HEADERS)).status).toBe(401);
+    expect((await buy({ item: 'card-back-aurora' }, { ...headers, Origin: 'https://attacker.example' })).status).toBe(403);
+    for (const body of [null, [], {}, { item: 'unknown' }, { item: { id: 'card-back-aurora' } }]) {
+      expect((await buy(body)).status).toBe(400);
+    }
+    expect((await patch({ cardBackStyle: 'card-back-aurora', ownedShopItems: ['card-back-aurora'] })).status).toBe(403);
+    expect((await patch({ cardBackStyle: 'table-aurora' })).status).toBe(400);
+    for (const item of ['card-back-aurora', 'table-tide', 'seat-sakura', 'nameplate-aurora', 'stickers-table-talk', 'sakura']) {
+      expect((await buy({ item, price: 0, coins: 9999, accountId: 'another-account' })).status).toBe(200);
+    }
+    expect(await (await buy({ item: 'card-back-aurora' })).json()).toMatchObject({ account: {
+      id: owner.account.id, coins: 200, coinRevision: 6,
+      ownedAvatarBorders: ['sakura'],
+      ownedShopItems: ['card-back-aurora', 'table-tide', 'seat-sakura', 'nameplate-aurora', 'stickers-table-talk'],
+    } });
+    expect(await (await patch({ cardBackStyle: 'card-back-aurora', tableBackgroundStyle: 'table-tide',
+      seatBackgroundStyle: 'seat-sakura', nameplate: 'nameplate-aurora', avatarBorder: 'sakura', coins: 9999 })).json())
+      .toMatchObject({ account: { coins: 200, cardBackStyle: 'card-back-aurora', tableBackgroundStyle: 'table-tide',
+        seatBackgroundStyle: 'seat-sakura', nameplate: 'nameplate-aurora', avatarBorder: 'sakura' } });
+    expect(onAccountUpdated).toHaveBeenCalledWith(expect.objectContaining({ nameplate: 'nameplate-aurora' }));
+    expect((await patch({ nameplate: 'nameplate-tide' })).status).toBe(403);
+    expect((await patch({ nameplate: 'stickers-table-talk' })).status).toBe(400);
+    expect(await (await patch({ cardBackStyle: null, tableBackgroundStyle: null, seatBackgroundStyle: null, nameplate: null })).json())
+      .toMatchObject({ account: { cardBackStyle: null, tableBackgroundStyle: null, seatBackgroundStyle: null, nameplate: null, coins: 200 } });
+    expect((await buy({ item: 'gold', price: 0 })).status).toBe(409);
+  });
+
+  it('should reject unowned official equipment when registering', async () => {
+    const response = await fetch(`${baseUrl}/register`, {
+      method: 'POST', headers: HEADERS,
+      body: JSON.stringify({ username: 'new_owner', password: 'correct password', nameplate: 'nameplate-aurora',
+        ownedShopItems: ['nameplate-aurora'] }),
+    });
+    expect(response.status).toBe(403);
+    expect(await repository.getAccountByUsername('new_owner')).toBeNull();
+  });
+
   it.each([
     ['frog', 160], ['bear', 150], ['dog', 150], ['antlers', 220], ['cthulhu', 280],
   ])('should purchase and equip the %s border at its catalog price', async (border, price) => {

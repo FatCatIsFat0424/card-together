@@ -32,6 +32,7 @@ export function publicProfile(account: AccountRecord): PublicAccount {
     avatar: account.avatar,
     avatarImage: account.avatarImage,
     avatarBorder: account.avatarBorder ?? null,
+    nameplate: account.nameplate ?? null,
   };
 }
 

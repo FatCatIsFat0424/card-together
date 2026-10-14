@@ -2,6 +2,7 @@ import { normalizeFlexibleGame, normalizeGameSeatMaps } from '@shared/game-seat-
 import { GAME_SEAT_ORDER, MAX_SPECTATORS } from '@shared/constants';
 import { gameSeatMap, roomSeatInfo } from '@shared/rules/seats';
 import { isTimeControl } from '@shared/time-control';
+import { isEquipmentStyle } from '../database/shop-equipment';
 import { isAvatarBorderId } from '@shared/constants';
 import { isSevensOptions } from '@shared/sevens-options';
 import { isNinetyNineOptions } from '@shared/ninetynine-options';
@@ -76,6 +77,8 @@ function player(value: unknown): boolean {
     oneOf(value.avatar, ['cat', 'fox', 'owl', 'bear', 'rabbit', 'panda']) &&
     (value.avatarImage === null || isMediaId(value.avatarImage)) &&
     (value.avatarBorder === undefined || value.avatarBorder === null || isAvatarBorderId(value.avatarBorder)) &&
+    (value.nameplate === undefined || value.nameplate === null || isEquipmentStyle('nameplate', value.nameplate)) &&
+    (value.seatBackgroundStyle === undefined || value.seatBackgroundStyle === null || isEquipmentStyle('seatBackgroundStyle', value.seatBackgroundStyle)) &&
     (value.seatBackground === undefined || value.seatBackground === null || isMediaId(value.seatBackground))
   );
 }

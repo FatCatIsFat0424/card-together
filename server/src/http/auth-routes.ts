@@ -164,6 +164,15 @@ export function createAuthRouter(service: AuthService, config: AuthRouterConfig)
     }
     response.json({ success: true, account });
   }));
+  router.post('/shop/items', auth, route(async (request, response) => {
+    const account = await service.purchaseShopItem(getRequestSession(response).account.id, request.body);
+    try {
+      await config.onAccountUpdated?.(account);
+    } catch (error) {
+      console.error('[auth] Unable to sync the purchase:', error);
+    }
+    response.json({ success: true, account });
+  }));
   router.use(
     (error: unknown, _request: Request, response: Response, _next: (error?: unknown) => void) => {
       if (

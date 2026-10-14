@@ -3,10 +3,12 @@ import type { AccountProfile, AvatarPreset, MediaId } from '@shared/types';
 import {
   IMAGE_OPACITY_MAX, IMAGE_OPACITY_MIN, NICKNAME_MAX_LENGTH, PASSWORD_MAX_LENGTH,
   USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, isImageOpacity, isMediaId,
-  isUsername, isAvatarBorderId,
+  isUsername, isAvatarBorderId, isShopItemId,
 } from '@shared/constants';
 import type { Repository, SessionRecord, AccountRecord } from '../database/repository';
 import { publicAccount } from '../database/repository';
+import { equipmentError, isEquipmentStyle } from '../database/shop-equipment';
+import type { EquipmentSlot } from '../database/shop-equipment';
 import { isObject } from '../database/schema';
 import { validateNewPassword } from './password-policy';
 import { hashPassword, verifyPassword } from './password';
@@ -33,6 +35,7 @@ export interface AuthService {
   logoutAll(accountId: string): Promise<void>;
   updateProfile(accountId: string, input: unknown): Promise<AccountProfile>;
   purchaseAvatarBorder(accountId: string, input: unknown): Promise<AccountProfile>;
+  purchaseShopItem(accountId: string, input: unknown): Promise<AccountProfile>;
   changePassword(accountId: string, input: unknown): Promise<void>;
 }
 
@@ -78,7 +81,7 @@ type EditableProfile = Pick<
   AccountProfile,
   | 'nickname' | 'color' | 'avatar' | 'avatarImage' | 'seatBackground' | 'tableBackground'
   | 'tableBackgroundOpacity' | 'cardBack' | 'cardBackOpacity' | 'matchesPublic'
-  | 'avatarBorder'
+  | 'avatarBorder' | 'cardBackStyle' | 'tableBackgroundStyle' | 'seatBackgroundStyle' | 'nameplate'
 >;
 
 function mediaValue(
@@ -104,6 +107,19 @@ function opacityValue(input: unknown, fallback: number): number {
     );
   }
   return input;
+}
+
+function equipmentValue<Slot extends EquipmentSlot>(
+  slot: Slot, input: unknown, fallback: AccountProfile[Slot],
+): AccountProfile[Slot] {
+  if (input === undefined) return fallback ?? null;
+  if (input === null || isEquipmentStyle(slot, input)) return input;
+  throw authError(400, 'INVALID_SHOP_ITEM', 'Choose an available item for this equipment slot.');
+}
+
+function requireOwnedEquipment(profile: EditableProfile, account: Pick<AccountProfile, 'ownedShopItems'>): void {
+  const error = equipmentError(profile, account);
+  if (error) throw authError(error === 'INVALID_SHOP_ITEM' ? 400 : 403, error, 'Purchase this item before equipping it.');
 }
 
 function profileValues(
@@ -151,6 +167,10 @@ function profileValues(
     color: color.toLowerCase(),
     avatar: avatar as AvatarPreset,
     avatarBorder,
+    cardBackStyle: equipmentValue('cardBackStyle', input.cardBackStyle, fallback.cardBackStyle),
+    tableBackgroundStyle: equipmentValue('tableBackgroundStyle', input.tableBackgroundStyle, fallback.tableBackgroundStyle),
+    seatBackgroundStyle: equipmentValue('seatBackgroundStyle', input.seatBackgroundStyle, fallback.seatBackgroundStyle),
+    nameplate: equipmentValue('nameplate', input.nameplate, fallback.nameplate),
     avatarImage: mediaValue(input.avatarImage, fallback.avatarImage, mediaExists),
     seatBackground: mediaValue(input.seatBackground, fallback.seatBackground ?? null, mediaExists),
     tableBackground: mediaValue(input.tableBackground, fallback.tableBackground, mediaExists),
@@ -235,6 +255,7 @@ export function createAuthService(
       }, mediaExists);
       const passwordHash = await hashPassword(password);
       if (profile.avatarBorder) throw authError(403, 'BORDER_NOT_OWNED', 'Purchase this avatar border first.');
+      requireOwnedEquipment(profile, {});
       const createdAt = now();
       try {
         const account = await repository.createAccount({
@@ -279,6 +300,7 @@ export function createAuthService(
       if (profile.avatarBorder && !account.ownedAvatarBorders?.includes(profile.avatarBorder)) {
         throw authError(403, 'BORDER_NOT_OWNED', 'Purchase this avatar border first.');
       }
+      requireOwnedEquipment(profile, account);
       const updated = await repository.updateProfile(accountId, profile, now());
       if (!updated) throw authError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
       return publicAccount(updated);
@@ -290,6 +312,22 @@ export function createAuthService(
       }
       try {
         const account = await repository.purchaseAvatarBorder(accountId, body.border, now());
+        if (!account) throw authError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
+        return publicAccount(account);
+      } catch (error) {
+        if (isObject(error) && error.code === 'INSUFFICIENT_COINS') {
+          throw authError(409, 'INSUFFICIENT_COINS', 'Not enough coins. Play more games to earn coins.');
+        }
+        throw error;
+      }
+    },
+    purchaseShopItem: async (accountId, input) => {
+      const body = requiredObject(input);
+      if (!isShopItemId(body.item)) {
+        throw authError(400, 'INVALID_SHOP_ITEM', 'Choose an available shop item.');
+      }
+      try {
+        const account = await repository.purchaseShopItem(accountId, body.item, now());
         if (!account) throw authError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
         return publicAccount(account);
       } catch (error) {

@@ -20,6 +20,7 @@ import { heLegalActions } from '@shared/rules/holdem';
 import { createApplication } from '../../src/app';
 import { createJsonRepository } from '../../src/database/json-repository';
 import type { Repository } from '../../src/database/repository';
+import { isRuntimeSnapshot } from '../../src/runtime/validate';
 import { seedAuthenticatedAccount } from '../auth/account-fixture';
 
 const ORIGIN = 'http://localhost:5173';
@@ -191,6 +192,71 @@ describe('persistent authenticated application', () => {
     await stop();
     await start();
     expect((await resume(await connect(cookie))).player?.avatarBorder).toBe('copper');
+  }, 15_000);
+
+  it('syncs shop ownership privately and shares equipped nameplates and seat artwork after restarting', async () => {
+    const owner = await seedAuthenticatedAccount(repository, 'cosmetic_owner', { id: 'cosmetic-owner', coins: 1000 });
+    const guest = await seedAccount('cosmetic_guest');
+    const [host, second, other] = await Promise.all([connect(owner.cookie), connect(owner.cookie), connect(guest.cookie)]);
+    await Promise.all([host, second, other].map(resume));
+    const { roomCode } = await host.timeout(5_000).emitWithAck('room:create', { gameType: 'bridge' });
+    await host.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'N' });
+    await other.timeout(5_000).emitWithAck('room:join', { roomCode: roomCode! });
+    const hostUpdates = vi.fn();
+    const secondUpdates = vi.fn();
+    const guestUpdates = vi.fn();
+    host.on('account:updated', hostUpdates);
+    second.on('account:updated', secondUpdates);
+    other.on('account:updated', guestUpdates);
+    for (const item of ['card-back-aurora', 'table-tide', 'seat-sakura', 'nameplate-aurora']) {
+      const purchase = await fetch(`${baseUrl}/api/auth/shop/items`, {
+        method: 'POST', headers: headers(owner.cookie), body: JSON.stringify({ item }),
+      });
+      expect(purchase.status).toBe(200);
+    }
+    const equipped = await fetch(`${baseUrl}/api/auth/profile`, {
+      method: 'PATCH', headers: headers(owner.cookie), body: JSON.stringify({
+        cardBackStyle: 'card-back-aurora', tableBackgroundStyle: 'table-tide',
+        seatBackgroundStyle: 'seat-sakura', nameplate: 'nameplate-aurora',
+      }),
+    });
+    expect(equipped.status).toBe(200);
+    const ownerState = await resume(second);
+    const guestState = await resume(other);
+    expect(ownerState.player).toMatchObject({ nameplate: 'nameplate-aurora', seatBackgroundStyle: 'seat-sakura' });
+    const publicSeat = guestState.room?.seats.N.player;
+    expect(publicSeat).toMatchObject({ nameplate: 'nameplate-aurora', seatBackgroundStyle: 'seat-sakura' });
+    for (const field of ['ownedShopItems', 'ownedAvatarBorders', 'coins', 'cardBackStyle', 'tableBackgroundStyle', 'passwordHash']) {
+      expect(publicSeat).not.toHaveProperty(field);
+      expect(ownerState.player).not.toHaveProperty(field);
+    }
+    for (const update of [hostUpdates, secondUpdates]) {
+      expect(update).toHaveBeenCalledWith(expect.objectContaining({
+        coins: 480, coinRevision: 4, ownedShopItems: ['card-back-aurora', 'table-tide', 'seat-sakura', 'nameplate-aurora'],
+        nameplate: 'nameplate-aurora',
+      }));
+    }
+    expect(guestUpdates).not.toHaveBeenCalled();
+    const profile = await fetch(`${baseUrl}/api/players/cosmetic-owner`, { headers: headers(guest.cookie) });
+    const publicProfile = (await profile.json()).account;
+    expect(publicProfile.nameplate).toBe('nameplate-aurora');
+    for (const field of ['ownedShopItems', 'ownedAvatarBorders', 'coins', 'cardBackStyle', 'tableBackgroundStyle', 'seatBackgroundStyle']) {
+      expect(publicProfile).not.toHaveProperty(field);
+    }
+    const saved = await repository.loadRuntime();
+    expect(isRuntimeSnapshot(saved)).toBe(true);
+    for (const invalid of [{ nameplate: 'card-back-aurora' }, { seatBackgroundStyle: 'table-tide' }]) {
+      const malformed = structuredClone(saved)!;
+      Object.assign(malformed.players.find((entry) => entry.info.id === owner.account.id)!.info, invalid);
+      expect(isRuntimeSnapshot(malformed)).toBe(false);
+    }
+    await stop();
+    await start();
+    const restored = await resume(await connect(owner.cookie));
+    expect(restored.player).toMatchObject({ nameplate: 'nameplate-aurora', seatBackgroundStyle: 'seat-sakura' });
+    expect(restored.room?.seats.N.player).toMatchObject({ nameplate: 'nameplate-aurora', seatBackgroundStyle: 'seat-sakura' });
+    const me = await fetch(`${baseUrl}/api/auth/me`, { headers: headers(owner.cookie) });
+    expect((await me.json()).account).toMatchObject({ cardBackStyle: 'card-back-aurora', tableBackgroundStyle: 'table-tide', coins: 480 });
   }, 15_000);
 
   it('should rate limit clients separately behind a trusted loopback proxy', async () => {

@@ -89,7 +89,7 @@ describe('friend service', () => {
     const pending = await friends.list('alice-id');
     expect(pending.outgoing[0].recipient).toEqual({
       id: 'bob-id', username: 'Bob', nickname: 'New nickname', color: '#ff0000', avatar: 'fox',
-      avatarImage: null, avatarBorder: null,
+      avatarImage: null, avatarBorder: null, nameplate: null,
     });
     await friends.accept('bob-id', requested.data.id);
     const accepted = await friends.list('alice-id');
@@ -190,7 +190,7 @@ describe('friend service', () => {
       success: true,
       data: {
         id: 'alice-id', username: 'Alice', nickname: 'Alice nickname', color: '#2563eb', avatar: 'cat',
-        avatarImage: null, avatarBorder: null,
+        avatarImage: null, avatarBorder: null, nameplate: null,
       },
     });
     expect(await friends.findByUsername('ali')).toEqual({ success: true, data: null });

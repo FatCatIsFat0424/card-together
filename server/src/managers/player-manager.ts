@@ -14,6 +14,8 @@ export function toPlayerInfo(account: AccountProfile): PlayerInfo {
   const { id, username, nickname, color, avatar, avatarImage } = account;
   return { id, username, nickname, color, avatar, avatarImage,
     avatarBorder: account.avatarBorder ?? null,
+    nameplate: account.nameplate ?? null,
+    seatBackgroundStyle: account.seatBackgroundStyle ?? null,
     ...(account.seatBackground ? { seatBackground: account.seatBackground } : {}),
   };
 }

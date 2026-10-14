@@ -120,7 +120,7 @@ describe('public player profile HTTP routes', () => {
           color: account.color,
           avatar: account.avatar,
           avatarImage: null,
-          avatarBorder: null,
+          avatarBorder: null, nameplate: null,
         },
       });
     }
@@ -158,7 +158,7 @@ describe('public player profile HTTP routes', () => {
         nickname: 'New nickname',
         avatar: 'fox',
         avatarImage: null,
-        avatarBorder: null,
+        avatarBorder: null, nameplate: null,
         color: '#abcdef',
       },
     });
