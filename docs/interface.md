@@ -24,13 +24,18 @@ Frontend page behavior and layout. Client architecture and connection handling:
 - The chat icon beside top-bar notifications opens the independent `/messages` page.
   Friends retain only friend and invitation management. The message list and individual
   chats preserve room membership and provide
-  a return-to-room link when applicable.
+  a return-to-room link when applicable. The panel's top-right Close control returns
+  to the current room or game, or the lobby when no room is joined.
+  Refresh, the room/game return link, retention information, and loading errors share
+  the panel's title bar and wrap on narrow screens. Refresh updates both the list and
+  the selected conversation; matching list and conversation errors appear only once.
 - On desktop, messages use a divided layout: an independently scrolling conversation
   list with avatars, names, last messages, and timestamps on the left, and the selected
   chat on the right. The desktop panel fills the available viewport with 32px outer
-  padding and extra spacing between avatars and the aligned name, last-message, and
-  timestamp text. Mobile keeps separate list
-  and conversation views.
+  padding; the conversation list uses 28% of the width, bounded to 15–20rem. Avatars
+  align beside the name, last-message, and timestamp text. Mobile keeps separate list
+  and conversation views. Both layouts keep the header and composer visible within
+  the available viewport; conversation lists and message history scroll independently.
 - Private chat supports the existing emoji/sticker libraries, older-history pagination,
   and retry after a failed send. Only a visible conversation marks incoming messages read.
   Former-friend conversations are read-only; the latest 90 days are available.

@@ -6,7 +6,6 @@ import { apiRequest } from '../api';
 import { createMessageClientId } from '../messages/message-client-id';
 import { latestIncomingMessageId, mergeDirectMessages } from '../messages/message-history';
 import { AppIcon } from './AppIcon';
-import { MessageHeading } from './MessageConversations';
 import { ChatMessageBody, EmojiPickerSections } from './ChatEmoji';
 import type { StickerPayload } from './ChatEmoji';
 import { PlayerLink } from './PlayerLink';
@@ -18,9 +17,11 @@ import { useSocialStore } from '../stores/social-store';
 import chatStyles from './ChatPanel.module.css';
 import styles from './DirectMessages.module.css';
 
-export function DirectConversation({ ownId, otherId, embedded = false }: {
+export function DirectConversation({ ownId, otherId, embedded = false, onLoadError, refreshVersion = 0 }: {
   readonly ownId: string; readonly otherId: string;
   readonly embedded?: boolean;
+  readonly onLoadError: (otherId: string, error: string) => void;
+  readonly refreshVersion?: number;
 }): ReactNode {
   const { locale, t } = useI18nStore();
   const revision = useSocialStore((state) => state.revision);
@@ -50,6 +51,8 @@ export function DirectConversation({ ownId, otherId, embedded = false }: {
   const latestIncoming = latestIncomingMessageId(history?.messages ?? [], ownId, otherId);
   const current = (): boolean => mounted.current && useAccountStore.getState().account?.id === ownId;
 
+  useEffect(() => { onLoadError(otherId, error); }, [error, onLoadError, otherId]);
+
   useEffect(() => {
     mounted.current = true;
     void useEmojiStore.getState().load();
@@ -71,7 +74,7 @@ export function DirectConversation({ ownId, otherId, embedded = false }: {
     setLoading(false);
     setPaging(false);
     pagingRef.current = false;
-    if (!result.success) { scrollBefore.current = null; refreshAfterPage.current = false; setError(result.error); return; }
+    if (!result.success) { scrollBefore.current = null; setError(result.error); return; }
     setHistory((previous) => {
       const previousIds = new Set(previous?.messages.map((message) => message.id));
       // Reload the bounded window after a long disconnection to avoid hiding a history gap.
@@ -88,7 +91,7 @@ export function DirectConversation({ ownId, otherId, embedded = false }: {
   useEffect(() => {
     if (pagingRef.current) refreshAfterPage.current = true;
     else void load();
-  }, [load, revision]);
+  }, [load, revision, refreshVersion]);
 
   useEffect(() => {
     if (!paging && refreshAfterPage.current) { refreshAfterPage.current = false; void load(); }
@@ -188,19 +191,12 @@ export function DirectConversation({ ownId, otherId, embedded = false }: {
   };
 
   return <>
-    {!embedded && <MessageHeading onRefresh={() => void load()} disabled={loading || paging} />}
     <section className={`${styles.conversation} ${embedded ? styles.embedded : ''}`} aria-label={t('messages.title')}>
     <header className={styles.header}>
       {!embedded && <Link to="/messages"><AppIcon name="previousPage" /> {t('messages.back')}</Link>}
       {history && <PlayerLink player={history.account} showUsername size="medium" />}
-      {embedded && <button type="button" className={`${styles.refreshButton} touch-target`} disabled={loading || paging}
-        aria-label={t('common.refresh')} title={t('common.refresh')} onClick={() => void load()}>
-        <AppIcon name="refresh" />
-      </button>}
     </header>
     {loading && <p className={styles.notice} role="status">{t('common.loading')}</p>}
-    {error && <div className={styles.notice} role="alert"><p>{error}</p>
-      <button type="button" className="btn btn-outline" onClick={() => void load()}>{t('common.retry')}</button></div>}
     <div ref={messagesRef} className={styles.messages} role="log" aria-live="polite" aria-relevant="additions" aria-busy={loading || paging}>
       {history?.hasMore && <button type="button" className="btn btn-outline" disabled={paging}
         onClick={() => void load(history.messages[0]?.id)}>
