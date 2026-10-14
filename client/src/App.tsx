@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import { TopBar } from './components/TopBar';
+import { FloatingRoomCard } from './components/FloatingRoomCard';
 import { GameStartTransition } from './components/GameStartTransition';
 import { InviteToast } from './components/InviteToast';
 import { AbortVoteToast } from './games/AbortVote';
@@ -111,6 +112,7 @@ export function App(): ReactNode {
   return (
     <BrowserRouter basename={APP_BASE_PATH}>
       <TopBar />
+      <FloatingRoomCard />
       {signedIn && <InviteToast />}
       {signedIn && <SocialToast />}
       {signedIn && <AbortVoteToast />}

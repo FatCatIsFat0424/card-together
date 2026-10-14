@@ -25,11 +25,17 @@ Frontend page behavior and layout. Client architecture and connection handling:
   The notification panel keeps links to individual conversations without a separate
   button to the message inbox.
   Friends retain only friend and invitation management. The message list and individual
-  chats preserve room membership. Explicit return-to-room buttons are limited to the
-  lobby and game results; the top bar, message toolbar, and player profiles omit them.
+  chats preserve room membership. Game results retain their return-to-room button;
+  the top bar, message toolbar, and player profiles omit separate return buttons.
+  While still in a room, other pages (including the lobby) show a compact floating
+  room card at bottom left. It shows the variant, room code, seated players, ready
+  counts or match status, and spectator count from live room snapshots. Clicking it
+  returns to the waiting room or active/result table. It hides on room/game pages,
+  after leaving the room, and on authentication pages; reconnecting is marked explicitly.
+  The lobby uses this card instead of a separate current-room banner.
   The panel's top-right Close control returns
   to the current room or game, or the lobby when no room is joined.
-  Refresh, the room/game return link, retention information, and loading errors share
+  Refresh, retention information, and loading errors share
   the panel's title bar and wrap on narrow screens. Refresh updates both the list and
   the selected conversation; matching list and conversation errors appear only once.
 - On desktop, messages use a divided layout: an independently scrolling conversation

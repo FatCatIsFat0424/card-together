@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { GAME_TYPES } from '@shared/constants';
 import type { FriendEntry, GameType } from '@shared/types';
@@ -105,8 +105,7 @@ export function LobbyPage(): ReactNode {
         <input id={inputId} type="text" placeholder={t('lobby.roomCodePlaceholder')}
           value={roomCodeInput} onChange={(event) => setRoomCodeInput(event.target.value.toUpperCase())}
           disabled={blocked || Boolean(currentRoomCode)} maxLength={6} required autoComplete="off"
-          autoCapitalize="characters" spellCheck={false}
-          aria-describedby={currentRoomCode ? 'lobby-current-room-hint' : undefined} />
+          autoCapitalize="characters" spellCheck={false} />
         <button type="submit" className="btn btn-primary" disabled={blocked || Boolean(currentRoomCode) || !roomCodeInput.trim()}>
           {pending === 'join' ? t('common.loading') : t('lobby.join')}</button>
       </div>
@@ -127,13 +126,6 @@ export function LobbyPage(): ReactNode {
       <DailyRewards key={account.id} />
     </header>
 
-    {currentRoomCode && <section className={styles.resume} aria-labelledby="lobby-current-room-title">
-      <div>
-        <h2 id="lobby-current-room-title">{t('lobby.currentRoom', { code: currentRoomCode })}</h2>
-        <p id="lobby-current-room-hint">{t('lobby.currentRoomHint')}</p>
-      </div>
-      <Link className="btn btn-primary" to={roomPath}>{t('lobby.resume')}</Link>
-    </section>}
     {error && <p className={styles.error} role="alert">{error}</p>}
 
     <div className={styles.layout}>
@@ -146,8 +138,7 @@ export function LobbyPage(): ReactNode {
           </div>
           <button type="button" className={`btn btn-primary ${styles.createButton}`} onClick={() => createRoom('bridge')}
             disabled={blocked || Boolean(currentRoomCode)}
-            aria-label={t('lobby.createSelectedRoom', { game: t('gameType.bridge') })}
-            aria-describedby={currentRoomCode ? 'lobby-current-room-hint' : undefined}>
+            aria-label={t('lobby.createSelectedRoom', { game: t('gameType.bridge') })}>
             {pending === 'create' ? t('common.loading') : t('lobby.createRoom')}</button>
         </section>
         <h2 id="lobby-rules-title" className={styles.rulesTitle}>{t('lobby.rulesIntro')}</h2>
@@ -183,8 +174,7 @@ export function LobbyPage(): ReactNode {
               onClick={() => setRulesGame(selectedGame)}>{t('lobby.rulesIntro')}</button>
           </div>
           <button type="button" className={`btn btn-primary ${styles.createButton}`} onClick={() => createRoom(selectedGame)}
-            disabled={blocked || Boolean(currentRoomCode)}
-            aria-describedby={currentRoomCode ? 'lobby-current-room-hint' : undefined}>
+            disabled={blocked || Boolean(currentRoomCode)}>
             {pending === 'create' ? t('common.loading') : t('lobby.createRoom')}</button>
           <hr className={styles.divider} aria-hidden="true" />
           <section className={styles.desktopJoin} aria-labelledby="lobby-desktop-join-title">

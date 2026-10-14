@@ -15,10 +15,6 @@
 .joinRow { display: flex; align-items: stretch; gap: var(--spacing-sm); }
 .joinRow input { flex: 1; min-width: 0; width: 100%; min-height: 44px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; }
 .joinRow button { flex-shrink: 0; min-height: 44px; }
-.resume { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-lg); padding: var(--spacing-md) var(--spacing-lg); margin-bottom: var(--spacing-lg); border: 1px solid color-mix(in srgb, var(--color-primary) 45%, var(--border-color)); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--color-primary) 8%, var(--bg-surface)); }
-.resume h2 { font-size: var(--text-base); }
-.resume p { color: var(--text-secondary); font-size: var(--text-sm); margin-top: var(--spacing-xs); }
-.resume a { flex-shrink: 0; min-height: 44px; }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 19rem; align-items: start; gap: var(--spacing-lg); }
 .games { min-width: 0; }
 .gameChoices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--spacing-md); }
@@ -61,7 +57,6 @@
   .gameDesc { display: none; }
   .rulesChevron { position: absolute; right: var(--spacing-md); top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: var(--text-xl); }
   .sidebar { align-items: stretch; }
-  .resume { align-items: start; flex-direction: column; gap: var(--spacing-md); }
 }
 @media (max-width: 36rem) {
   .page { padding: var(--spacing-md); }

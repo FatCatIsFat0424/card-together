@@ -67,15 +67,15 @@ describe('lobby page', () => {
     expect(html).toContain('Daily check-in');
   });
 
-  it('keeps the lobby available and links back to the current room or game', () => {
+  it('keeps room actions disabled without duplicating the floating room card with a banner', () => {
     state.currentRoomCode = 'ABC123';
     const waiting = render();
-    expect(waiting).toContain('href="/room/ABC123"');
+    expect(waiting).not.toContain('href="/room/ABC123"');
     expect(waiting).toContain('Choose a game');
     expect(waiting).toMatch(/disabled=""[^>]*>Create Room/);
-    expect(waiting).toContain('aria-describedby="lobby-current-room-hint"');
+    expect(waiting).not.toContain('lobby-current-room');
     state.phase = 'playing';
-    expect(render()).toContain('href="/game/ABC123"');
+    expect(render()).not.toContain('href="/game/ABC123"');
   });
 
   it('disables room creation while disconnected but still allows game browsing', () => {
