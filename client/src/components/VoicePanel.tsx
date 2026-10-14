@@ -172,7 +172,7 @@ export function VoicePanel(): ReactNode {
               {t('voice.mute')}
             </button>
             <button type="button" className={`btn btn-outline ${styles.toggle}`}
-              aria-pressed={deafened} aria-describedby="table-voice-hint"
+              aria-pressed={deafened}
               onClick={() => setVoiceDeafened(!deafened)}>
               {t('voice.deafen')}
             </button>
@@ -200,7 +200,6 @@ export function VoicePanel(): ReactNode {
       {joining && <p className={styles.hint} role="status">{t('voice.joining')}</p>}
       {error && <p className={styles.error} role="alert">{t(ERROR_TRANSLATIONS[error])}</p>}
       {joined && <>
-        <p id="table-voice-hint" className={styles.hint}>{t('voice.hint')}</p>
         {roomInfo?.observerIds?.includes(account.id) && <p className={styles.hint}>{t('voice.observerMuted')}</p>}
         {silenced.length > 0 && <p className={styles.hint}>{t('voice.observersSilenced')}</p>}
         <ul className={styles.participants} aria-label={t('voice.participants')}>
@@ -240,7 +239,6 @@ export function VoicePanel(): ReactNode {
             </li>;
           })}
         </ul>
-        {participants.length === 1 && <p className={styles.hint}>{t('voice.empty')}</p>}
         {autoplayBlocked && !deafened && <div className={styles.playback}>
           <p role="status">{t('voice.autoplay')}</p>
           <button type="button" className="btn btn-primary"

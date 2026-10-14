@@ -135,7 +135,8 @@ picker hides the shadowed site emoji); both remain usable as stickers.
 | Action | Behavior |
 | --- | --- |
 | Join | Explicit; requires microphone permission |
-| Mute / deafen | Stops sending / stops remote playback (music unaffected) |
+| Mute | Stops sending; unmuting while deafened also ends deafen |
+| Deafen | Stops remote playback and mutes the microphone; ending it restores the previous mute (music unaffected) |
 | Controls | Per-player volume and listening; input and output device selection |
 | Navigation | Follows room membership across room, game, and profile pages |
 | Leave, logout, disconnect, removal | Releases microphone and peer connections |

@@ -4,8 +4,10 @@ import { parseIceServers } from '../voice/ice-servers';
 import {
   createVoiceSession,
   DEFAULT_PEER_PREFERENCE,
+  deafenSettings,
   initialVoiceState,
   listAudioDevices,
+  muteSettings,
   parsePeerPrefs,
 } from '../voice/voice-session';
 import type { PeerPreference, VoiceClientState, VoiceSession } from '../voice/voice-session';
@@ -77,10 +79,13 @@ function update(state: Partial<VoiceClientState>): void {
 
 function currentSession(): VoiceSession {
   if (!session) {
-    const { muted, deafened, inputDeviceId, outputDeviceId, peerPrefs, silenced } = useVoiceStore.getState();
+    const {
+      muted, deafened, mutedBeforeDeafen, inputDeviceId, outputDeviceId, peerPrefs, silenced,
+    } = useVoiceStore.getState();
     session = createVoiceSession(socket, update, {
       muted,
       deafened,
+      mutedBeforeDeafen,
       inputDeviceId,
       outputDeviceId,
       peerPrefs,
@@ -101,12 +106,12 @@ export function leaveVoice(): void {
 
 export function setVoiceMuted(muted: boolean): void {
   if (session) session.setMuted(muted);
-  else useVoiceStore.setState({ muted });
+  else useVoiceStore.setState(muteSettings(useVoiceStore.getState(), muted));
 }
 
 export function setVoiceDeafened(deafened: boolean): void {
   if (session) session.setDeafened(deafened);
-  else useVoiceStore.setState({ deafened });
+  else useVoiceStore.setState(deafenSettings(useVoiceStore.getState(), deafened));
 }
 
 export async function setVoiceInputDevice(deviceId: string | null): Promise<void> {
