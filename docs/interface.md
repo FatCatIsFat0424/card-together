@@ -142,18 +142,32 @@ Per-game controls: [games](games.md#card-controls).
 - Donut chart: each game's share of matches, total in the center; the legend lists all games.
 - Statistics ignore search and filters. Private or unavailable history shows no statistics.
 
-## Shop and avatar borders
+## Cosmetic shop
 
-- `/shop` sells permanent avatar borders from the [catalog](../shared/src/constants/shop.ts)
-  for 50–300 coins (5–30 completed games).
-- Product cards preview each border on the player's preset or uploaded avatar.
+- `/shop` sells permanent, cosmetic-only products from the
+  [catalog](../shared/src/constants/shop.ts): avatar borders, card backs, table and
+  seat backgrounds, title/nameplates, and sticker packs. Prices are in game coins.
+- The category sidebar shows catalog counts; `type` selects a product type and
+  `series` filters avatar borders into Playful, Metal, or Glow. Legacy series-only
+  URLs still select borders. Reload and browser Back/Forward retain filters;
+  unknown filters show all products. At ≤52rem categories become a horizontally
+  scrollable row above products.
+- Product cards preview the actual artwork, border on the player's avatar, title,
+  or all stickers in a pack, and explain where the product is visible.
   The shop header shows the coin balance; hovering or focusing this balance or the
   global header's coins explains the 10-coin reward per completed game.
-  Purchase and coin rules: [storage](storage.md#avatar-borders).
-- Buying opens a confirmation dialog with the chosen border, price, and remaining
-  balance. Cancel leaves coins unchanged; confirmation is disabled for owned borders
+  Purchase and coin rules: [storage](storage.md#cosmetic-inventory).
+- Buying opens a confirmation dialog with the chosen product, price, and remaining
+  balance. Cancel leaves coins unchanged; confirmation is disabled for owned products
   or insufficient coins, and the dialog cannot be dismissed during a purchase.
 - Decorations (cat, rabbit, frog, bear, dog, antlers, tentacles) scale with the avatar.
   The original single-color ring has the same outer extent as shop borders.
 - The account page selects an owned border or the original avatar. Equipped borders show
   in the lobby, profiles, friends, chat, and rooms without covering the avatar.
+- Owned appearance products can be equipped from the shop or account editor. Account
+  equipment selectors save immediately; removing an official image style restores the
+  retained upload or theme. Nameplates show fixed cosmetic titles, separate from earned
+  achievements. Table backgrounds and card backs are private; seat backgrounds show
+  in the waiting room. Existing uploads, themes, and emoji remain free.
+- Purchased packs appear in the sticker picker for room chat and private messages;
+  no equipment step is required. Receiving a sticker does not require ownership.

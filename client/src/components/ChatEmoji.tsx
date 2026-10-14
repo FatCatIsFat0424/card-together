@@ -3,13 +3,16 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { EmojiRecord, ProvidedEmoji } from '@shared/types';
 import type { MessageContent } from '@shared/types/direct-message';
-import { splitEmojiText } from '@shared/constants';
+import { SHOP_STICKERS, STICKER_PACKS, splitEmojiText } from '@shared/constants';
+import type { ShopStickerId } from '@shared/types';
+import { useAccountStore } from '../stores/account-store';
+import { ShopSticker } from './ShopSticker';
 import { mediaUrl } from '../media';
 import { providedEmojiUrl } from '../provided-emoji';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './ChatPanel.module.css';
 
-export type StickerPayload = { stickerId: string } | { providedSticker: string };
+export type StickerPayload = { stickerId: string } | { providedSticker: string } | { shopSticker: ShopStickerId };
 
 /** `src` is null when the reference cannot be turned into a trusted URL. */
 export function StickerImage({ name, src, small = false }: {
@@ -25,6 +28,7 @@ export function StickerImage({ name, src, small = false }: {
 
 /** Text stays text; only emoji the server attached to this message become images. */
 export function ChatMessageBody({ message }: { message: MessageContent }): ReactNode {
+  if (message.shopSticker) return <ShopSticker id={message.shopSticker} />;
   if (message.sticker) {
     return <StickerImage name={message.sticker.name} src={mediaUrl(message.sticker.mediaId)} />;
   }
@@ -56,6 +60,8 @@ export function EmojiPickerSections({
   mode, query, personal, provided, busy, onInsert, onSendSticker,
 }: EmojiPickerSectionsProps): ReactNode {
   const { t } = useI18nStore();
+  const inventory = useAccountStore((state) => state.account?.ownedShopItems);
+  const ownedPacks = STICKER_PACKS.filter((pack) => inventory?.includes(pack.id));
   const owned = new Set(personal.map((emoji) => emoji.name));
   // Names are case-sensitive, but search is not.
   const matches = (name: string): boolean => name.toLowerCase().includes(query);
@@ -66,7 +72,27 @@ export function EmojiPickerSections({
   const grouped = provided.length > 0;
   return (
     <div className={styles.pickerBody}>
-      {grouped && <h3 className={styles.pickerHeading}>{t('emoji.personal')}</h3>}
+      {mode === 'sticker' && <>
+        <h3 className={styles.pickerHeading}>{t('shop.stickerPacks')}</h3>
+        {ownedPacks.length === 0 ? <p className={styles.pickerEmpty}>
+          <Link to="/shop?type=stickerPack">{t('shop.browseStickers')}</Link>
+        </p> : ownedPacks.map((pack) => {
+          const stickers = SHOP_STICKERS.filter((sticker) => sticker.packId === pack.id &&
+            (matches(sticker.id) || matches(t(`shop.sticker.${sticker.id}`))));
+          return <div key={pack.id}>
+            <h4 className={styles.pickerHeading}>{t(`shop.item.${pack.id}.name`)}</h4>
+            {stickers.length === 0 ? <p className={styles.pickerEmpty}>{t('emoji.noMatch')}</p> :
+              <div className={styles.shopStickerGrid} role="group" aria-label={t(`shop.item.${pack.id}.name`)}>
+                {stickers.map((sticker) => <button key={sticker.id} type="button"
+                  className={styles.pickerItem} title={t(`shop.sticker.${sticker.id}`)} disabled={busy}
+                  onClick={() => onSendSticker({ shopSticker: sticker.id })}>
+                  <ShopSticker id={sticker.id} small />
+                </button>)}
+              </div>}
+          </div>;
+        })}
+      </>}
+      {(grouped || mode === 'sticker') && <h3 className={styles.pickerHeading}>{t('emoji.personal')}</h3>}
       {personalMatches.length === 0 ? (
         <p className={styles.pickerEmpty}>
           {personal.length === 0 ? t('emoji.empty') : t('emoji.noMatch')}{' '}

@@ -6,6 +6,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ChatMessage, EmojiRecord, ProvidedEmoji } from '@shared/types';
 
 // The real module reads window.location at import time for API URLs.
+vi.mock('../../../client/src/stores/account-store', async () => {
+  const { create } = await import('zustand');
+  return { useAccountStore: create(() => ({ account: null })) };
+});
+
 vi.mock('../../../client/src/media', () => ({
   mediaUrl: (id: string): string => `/api/media/${id}`,
 }));

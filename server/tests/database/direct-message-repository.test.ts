@@ -247,6 +247,7 @@ describe('durable friend messages', () => {
       { content: ':wave: :cat:', emojis: { cat: MEDIA }, providedEmojis: { wave: PROVIDED } },
       { content: '', sticker: { id: 'personal-1', name: 'cat', mediaId: MEDIA } },
       { content: '', providedSticker: { name: 'wave', file: PROVIDED } },
+      { content: '', shopSticker: 'table-thanks' as const },
     ];
     for (const [index, content] of contents.entries()) {
       const record = message(`media-${index}`, content);
@@ -254,13 +255,16 @@ describe('durable friend messages', () => {
     }
     await repository.close();
     repository = await createJsonRepository(path, { now: () => now });
-    expect(await repository.listDirectMessages('bob')).toHaveLength(4);
+    expect(await repository.listDirectMessages('bob')).toHaveLength(5);
   });
 
   it('rejects malformed content and media with the strict room-chat invariants', async () => {
     await friends();
     const sticker = { id: 'personal-1', name: 'cat', mediaId: MEDIA };
     const invalid: unknown[] = [
+      { content: '', shopSticker: 'unknown' }, { content: '', shopSticker: '../outside.svg' },
+      { content: 'text', shopSticker: 'table-hello' }, { content: '', shopSticker: 'table-hello', sticker },
+      { content: '', shopSticker: 'table-hello', emojis: {} },
       { content: '' }, { content: ' ' }, { content: ' untrimmed ' }, { content: 'a'.repeat(501) },
       { senderId: 'bob', recipientId: 'bob' }, { clientId: '' }, { clientId: 'a'.repeat(129) },
       { timestamp: now + 1 }, { timestamp: now - SOCIAL_HISTORY_RETENTION_MS },

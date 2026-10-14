@@ -54,6 +54,17 @@ Avatars, seat backgrounds, table backgrounds, card backs, and emoji are uploaded
 - Image opacity is 20–100% (default 100%) and fades the image toward the theme's solid
   table or card color. It saves after a short pause or on slider release.
 
+## Official cosmetic artwork
+
+- The shop bundles original static SVG artwork under `client/src/assets/shop/`.
+  Vite resolves asset URLs for the configured application base; these files are not
+  uploaded media or site-emoji importer output and consume no upload quota.
+- Official card backs, table backgrounds, and seat backgrounds take precedence over
+  retained uploads only while equipped. Image opacity also applies to official table
+  and card artwork. Unequip to restore the upload or theme; uploads remain free.
+- Product ownership, equipment, and rollback rules:
+  [storage](storage.md#cosmetic-inventory). Presentation: [interface](interface.md#cosmetic-shop).
+
 ## Personal emoji library
 
 | Rule | Behavior |
@@ -73,11 +84,14 @@ Avatars, seat backgrounds, table backgrounds, card backs, and emoji are uploaded
 
 - Text is trimmed to 1–500 characters. `:name:` resolves from the sender's library, then
   [site emoji](#site-provided-emoji), up to 20 names per message.
-- A sticker message is one owned sticker ID or one site emoji name. Clients cannot send
-  URLs or another account's image.
+- A sticker message is one personal sticker ID, one site emoji name, or one official
+  shop sticker ID. The server checks the sender owns a shop sticker's pack on each
+  send; room chat and private messages use the same rule. Clients cannot send URLs
+  or another account's image. Recipients need no purchase to see received stickers.
 - Sending a sticker keeps the text draft and blocks duplicate pending sends. Missing
   images show an unavailable label.
-- Stickers reuse emoji images and may look softer at their larger size.
+- Personal and site stickers reuse emoji images and may look softer at their larger
+  size. Shop stickers use bundled vector artwork and translated accessible names.
 - Chat works regardless of voice. Payloads: [API](api.md#socket-actions); observer
   channels: [games](games.md#spectators-and-god-view).
 

@@ -4,7 +4,7 @@ import {
 } from '../runtime/validate';
 import {
   FLEXIBLE_SEAT_GAMES, GAME_TYPES, MAX_EMOJIS_PER_ACCOUNT, MAX_MESSAGE_EMOJIS, NICKNAME_MAX_LENGTH, isEmojiName, isImageOpacity, isMediaId,
-  isUsername, isAvatarBorderId, isProvidedEmojiFile, getShopItem,
+  isUsername, isAvatarBorderId, isProvidedEmojiFile, getShopItem, isShopStickerId,
 } from '@shared/constants';
 import type { GameType } from '@shared/types';
 import type { RuntimeSnapshot } from '../runtime/types';
@@ -181,8 +181,12 @@ export function validDirectMessage(value: unknown): value is DirectMessageRecord
     !timestamp(value.timestamp) || typeof value.content !== 'string' ||
     Object.keys(value).some((key) => ![
       'id', 'clientId', 'senderId', 'recipientId', 'timestamp', 'content',
-      'sticker', 'providedSticker', 'emojis', 'providedEmojis',
+      'sticker', 'providedSticker', 'shopSticker', 'emojis', 'providedEmojis',
     ].includes(key))) return false;
+  if (value.shopSticker !== undefined) {
+    return isShopStickerId(value.shopSticker) && value.content === '' && value.sticker === undefined &&
+      value.providedSticker === undefined && value.emojis === undefined && value.providedEmojis === undefined;
+  }
   const sticker = value.sticker;
   const providedSticker = value.providedSticker;
   if (sticker !== undefined || providedSticker !== undefined) {

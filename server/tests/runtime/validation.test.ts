@@ -126,6 +126,24 @@ function scoringSnapshot(): RuntimeSnapshot {
 }
 
 describe('persisted runtime validation', () => {
+  it('should retain official sticker IDs and reject mixed or untrusted persisted sticker content', () => {
+    const snapshot = biddingSnapshot();
+    const message = { id: 'official-sticker', sender: player('north'), content: '', timestamp: 101,
+      shopSticker: 'table-hello' as const };
+    snapshot.chat[0].messages = [message];
+    expect(isRuntimeSnapshot(snapshot)).toBe(true);
+    for (const patch of [
+      { shopSticker: 'unknown' }, { shopSticker: '../outside.svg' }, { shopSticker: { id: 'table-hello' } },
+      { content: 'mixed' }, { emojis: {} }, { providedEmojis: {} }, { system: true },
+      { providedSticker: { name: 'wave', file: `wave-${'a'.repeat(24)}.png` } },
+      { sticker: { id: 'x', name: 'wave', mediaId: `${'a'.repeat(64)}.png` } },
+      { url: 'https://example.com/a.svg' },
+    ]) {
+      snapshot.chat[0].messages = [{ ...message, ...patch } as unknown as typeof message];
+      expect(isRuntimeSnapshot(snapshot)).toBe(false);
+    }
+  });
+
   it('should accept empty, bidding, playing, and finished snapshots produced by the game lifecycle', () => {
     expect(isRuntimeSnapshot({ players: [], rooms: [], games: [], chat: [] })).toBe(true);
     expect(isRuntimeSnapshot(biddingSnapshot())).toBe(true);

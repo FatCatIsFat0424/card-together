@@ -18,6 +18,7 @@ backend-relative; production Nginx serves them below `/card-together/`.
 | `GET /api/auth/me` | — | Current account |
 | `PATCH /api/auth/profile` | [Profile fields](#profile-fields) | Updated account; synchronizes connected players |
 | `POST /api/auth/shop/avatar-borders` | `border` (catalog ID) | Updated account after purchase |
+| `POST /api/auth/shop/items` | `item` (catalog ID) | Updated account after permanent purchase; does not equip |
 | `POST /api/auth/password` | `currentPassword, newPassword` | Revokes all sessions |
 | `POST /api/auth/logout` | `{}` | Revokes presented sessions, clears cookies |
 | `POST /api/auth/logout-all` | `{}` | Revokes every session of the account |
@@ -32,7 +33,7 @@ backend-relative; production Nginx serves them below `/card-together/`.
 | `DELETE /api/friends/:accountId` | `{}` | Removes the friendship |
 | `GET /api/messages` | — | Incoming invitations, accepted-request notices, conversations with unread counts |
 | `GET /api/messages/:accountId` | Optional `before` message ID | Latest 50 messages before the cursor, chronological; account, `hasMore`, `canSend` |
-| `POST /api/messages/:accountId` | `clientId` plus `message`, `stickerId`, or `providedSticker` | 201, message; accepted friends only |
+| `POST /api/messages/:accountId` | `clientId` plus one [message input](../shared/src/types/direct-message.ts), including `shopSticker` | 201, message; accepted friends only |
 | `POST /api/messages/:accountId/read` | `messageId` | Advances the reader's incoming-message cursor |
 | `POST /api/messages/notifications/read` | `ids`: 1–100 unique notice IDs | Dismisses only the authenticated account's accepted-request notices |
 | `POST /api/media` | `data` (base64), `purpose`: `avatar`, `emoji`, `background`, `cardBack` | Image ID |
@@ -52,7 +53,8 @@ backend-relative; production Nginx serves them below `/card-together/`.
 | `avatarImage`, `seatBackground`, `tableBackground`, `cardBack` | Uploaded media ID or null; `seatBackground` uses the `background` purpose and is shared in room `PlayerInfo` |
 | `tableBackgroundOpacity`, `cardBackOpacity` | Integer percent 20–100 |
 | `avatarBorder` | Null (original) or an owned catalog ID; unowned returns 403 |
-| `coins`, `coinRevision`, `ownedAvatarBorders` | Server-owned; never set by register or profile requests |
+| `cardBackStyle`, `tableBackgroundStyle`, `seatBackgroundStyle`, `nameplate` | Null or owned catalog ID of the matching type; unowned returns 403, wrong type 400 |
+| `coins`, `coinRevision`, `ownedAvatarBorders`, `ownedShopItems` | Server-owned; never set by register or profile requests |
 
 Omitted fields keep their values; invalid values return 400.
 
@@ -67,8 +69,8 @@ Omitted fields keep their values; invalid values return 400.
 
 ### Response contents
 
-- `AccountProfile` (owner only): preferences, timestamps, coins, owned borders.
-- `PublicAccount`: ID, username, nickname, color, avatar, avatar image, equipped border.
+- `AccountProfile` (owner only): preferences, timestamps, coins, inventories, equipment.
+- `PublicAccount`: ID, username, nickname, color, avatar, avatar image, equipped border and nameplate.
   No balance or inventory.
 - No response contains password hashes or session digests.
 - History endpoints return every eligible record without pagination; participant maps
@@ -78,7 +80,8 @@ Omitted fields keep their values; invalid values return 400.
   [storage](storage.md#game-coins).
 - Direct-message contracts: [`direct-message.ts`](../shared/src/types/direct-message.ts).
   Reads require an accepted friendship or retained participant history. Sending allows
-  1–500 trimmed characters or one owned/site sticker. `clientId` uses 8–64 ASCII letters,
+  1–500 trimmed characters or one personal/site/shop sticker. Shop sends require pack
+  ownership; only the catalog ID is accepted. `clientId` uses 8–64 ASCII letters,
   digits, underscores, or hyphens; retry the same ID and content after an uncertain result.
   Non-friends return 403, conflicting retries 409, inaccessible conversations 404,
   malformed or expired cursors 400. Retention and removal: [storage](storage.md#identity-and-sessions).
@@ -148,7 +151,7 @@ Omitted fields keep their values; invalid values return 400.
 | `game:holdem:action` | `{ action }` | `{ type: 'fold' \| 'check' \| 'call' }` or `{ type: 'raise', to }`, where `to` is the street total |
 | `game:continue` | — | Leaves the result for the waiting room; others keep it |
 | `game:abortVote:start` / `cast` | — / `{ agree }` | Starts or votes on an abort ([rules](games.md#shared-room-lifecycle)) |
-| `chat:send` | `{ message }`, `{ stickerId }`, or `{ providedSticker }` | Text, an owned sticker, or a site emoji sticker by name |
+| `chat:send` | One [chat input](../shared/src/types/socket-events.ts), including `{ shopSticker }` | Text or one personal/site/shop sticker; shop sends require pack ownership |
 
 **Authority**
 
@@ -180,8 +183,9 @@ Omitted fields keep their values; invalid values return 400.
   only when the recipient's room changed.
 - [`ChatMessage`](../shared/src/types/chat.ts) images are resolved by the server:
   `emojis` (personal media IDs) and `providedEmojis` (site files), at most 20 names
-  combined with no overlap. Sticker messages have empty content and one `sticker` or
-  `providedSticker: { name, file }`, served from `<base>/provided-emoji/<file>`.
+  combined with no overlap. Sticker messages have empty content and exactly one
+  sticker reference: personal `sticker`, `providedSticker: { name, file }` served from
+  `<base>/provided-emoji/<file>`, or `shopSticker` resolved against the bundled catalog.
 
 ## Voice signaling
 

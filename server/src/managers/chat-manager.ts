@@ -1,7 +1,7 @@
 // ─── Chat Manager ───
 
 import type {
-  RoomCode, ChatMessage, EmojiRecord, PlayerInfo, ProvidedEmoji,
+  RoomCode, ChatMessage, EmojiRecord, PlayerInfo, ProvidedEmoji, ShopStickerId,
 } from '@shared/types';
 
 /** `observers` limits a message to spectators and eliminated players during a match. */
@@ -115,6 +115,18 @@ export function addProvidedSticker(
   const message: ChatMessage = {
     id: generateMessageId(), sender, content: '', timestamp: Date.now(),
     providedSticker: { name: asset.name, file: asset.file },
+    ...(audience && { audience }),
+  };
+  append(roomCode, message);
+  return message;
+}
+
+/** Ownership is checked against the durable account before appending. */
+export function addShopSticker(
+  roomCode: RoomCode, sender: PlayerInfo, shopSticker: ShopStickerId, audience?: ChatAudience,
+): ChatMessage {
+  const message: ChatMessage = {
+    id: generateMessageId(), sender, content: '', timestamp: Date.now(), shopSticker,
     ...(audience && { audience }),
   };
   append(roomCode, message);

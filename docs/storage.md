@@ -72,9 +72,28 @@
 
 ## Avatar borders
 
-- `purchaseAvatarBorder` checks the price, debits coins, and grants ownership in one
-  atomic write. Repeat purchases are free no-ops; failed writes change nothing.
-- The Repository validates catalog IDs, unique inventory, and that the equipped border is owned.
+- Legacy border inventory and purchase routes remain supported by the
+  [cosmetic inventory](#cosmetic-inventory).
+
+## Cosmetic inventory
+
+- `Repository.purchaseShopItem` uses the shared [catalog](../shared/src/constants/shop.ts),
+  debits coins, increments `coinRevision`, and grants permanent ownership in one atomic
+  write. Repeat purchases are no-ops; failed writes change neither inventory nor balance.
+  Purchases do not equip items.
+- Product and sticker IDs are durable references. Renaming or removing them requires
+  a compatible data migration and retained artwork for owned products and history.
+- Borders retain `ownedAvatarBorders`; other products use private `ownedShopItems`.
+  Equipment fields are defined in [AccountProfile](../shared/src/types/account.ts).
+  Both the service and Repository validate the item type and ownership before equipping.
+  The database rejects unknown IDs, duplicate inventories, and unowned equipment.
+- Official image styles override retained uploads while equipped. Null restores the
+  upload or theme without losing media. Public profiles contain the cosmetic nameplate;
+  room identities also contain the seat style. Inventories and card/table styles remain
+  owner-only. Purchases and equipment changes refresh every connected owner tab.
+- Sticker messages store stable catalog IDs. Sending requires the containing pack;
+  recipients can render them without ownership. Existing emoji and uploaded stickers
+  keep their separate, free behavior.
 
 ## Data compatibility
 
@@ -85,6 +104,8 @@ Optional fields added without a schema change; absent values use the default:
 | `coins`, `coinRevision` | 0 | Keep the fields; award nothing |
 | `rewardedGameIds` | Empty | Keep the field |
 | `ownedAvatarBorders`, `avatarBorder` | Empty / original avatar | Keep the fields; cannot show or manage borders |
+| `ownedShopItems`, official image style fields, `nameplate` | Empty inventory / uploaded image or theme / no nameplate | Cannot show or manage products; older profile writes may drop equipment |
+| `shopSticker` in room/private messages | Absent | Unsupported: restore a compatible complete backup before rollback |
 | `seatBackground` | Theme artwork | Ignore it; data and media stay |
 | `RoomInfo.additionalSeats` (Ninety-Nine, Blackjack, Hold'em) | Four seats; up to four human-only extras | Unsupported: have players leave extra seats and the host remove them first |
 

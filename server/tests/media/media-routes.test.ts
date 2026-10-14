@@ -185,7 +185,7 @@ describe('media HTTP routes', () => {
     const player = await fetch(`${baseUrl}/api/players/alice`, { headers: { Cookie: COOKIE } });
     expect((await player.json()).account).toEqual({
       id: 'alice', username: 'alice', nickname: 'Alice', color: '#2563eb', avatar: 'cat',
-      avatarImage: id, avatarBorder: null,
+      avatarImage: id, avatarBorder: null, nameplate: null,
     });
     expect(await (await patch({ avatarImage: null })).json()).toMatchObject({
       account: { avatarImage: null, tableBackground: id },

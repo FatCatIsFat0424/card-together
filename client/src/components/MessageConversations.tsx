@@ -48,7 +48,7 @@ export function MessageConversations({ selectedId, split = false }: {
           image={conversation.account.avatarImage} border={conversation.account.avatarBorder}
           color={conversation.account.color} size="medium" /></span>}
         <strong>{conversation.account.nickname}</strong><span className={styles.username}>@{conversation.account.username}</span>
-        <span className={styles.preview}>{conversation.lastMessage.sticker || conversation.lastMessage.providedSticker
+        <span className={styles.preview}>{conversation.lastMessage.sticker || conversation.lastMessage.providedSticker || conversation.lastMessage.shopSticker
           ? t('messages.sticker') : conversation.lastMessage.content}</span>
         <time dateTime={new Date(conversation.lastMessage.timestamp).toISOString()}>
           {new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(conversation.lastMessage.timestamp)}</time>

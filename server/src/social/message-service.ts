@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { DirectMessage, MessageHistory, SocialOverview } from '@shared/types/direct-message';
 import type { PublicAccount } from '@shared/types';
-import { isEmojiName } from '@shared/constants';
+import { SHOP_STICKERS, isEmojiName, isShopStickerId } from '@shared/constants';
 import type { DirectMessageRecord, Repository } from '../database/repository';
 import type { ProvidedEmojiCatalog } from '../media/provided-emoji';
 import { resolveMessageEmojis } from '../media/message-content';
@@ -51,10 +51,11 @@ export function createMessageService(
       entry.senderId === accountId && entry.clientId === body.clientId);
     if (!existing) return null;
     const sameContent = 'message' in body
-      ? typeof body.message === 'string' && !existing.sticker && !existing.providedSticker
+      ? typeof body.message === 'string' && !existing.sticker && !existing.providedSticker && !existing.shopSticker
         && existing.content === body.message.trim()
       : 'stickerId' in body ? existing.sticker?.id === body.stickerId
-        : 'providedSticker' in body && existing.providedSticker?.name === body.providedSticker;
+        : 'providedSticker' in body ? existing.providedSticker?.name === body.providedSticker
+          : 'shopSticker' in body && existing.shopSticker === body.shopSticker;
     if (existing.recipientId !== otherId || !sameContent) {
       throw messageError(409, 'This message ID was already used for another message.');
     }
@@ -119,11 +120,19 @@ export function createMessageService(
       const body = payload as Record<string, unknown>;
       if (typeof body.clientId !== 'string' || !/^[a-zA-Z0-9_-]{8,64}$/.test(body.clientId)
         || Object.keys(body).length !== 2) throw messageError(400, 'Invalid message payload.');
+      if ('shopSticker' in body) {
+        if (!isShopStickerId(body.shopSticker)) throw messageError(400, 'Invalid sticker payload.');
+        const sticker = SHOP_STICKERS.find((entry) => entry.id === body.shopSticker);
+        const account = await repository.getAccountById(accountId);
+        if (!sticker || !account?.ownedShopItems?.includes(sticker.packId)) {
+          throw messageError(403, 'Purchase this sticker pack before sending it.');
+        }
+      }
       // A retry confirms the original intent even if its emoji library has since changed.
       const retry = await retainedRetry(accountId, otherId, body);
       if (retry) return retry;
       const library = await repository.listEmojis(accountId);
-      let content: Pick<DirectMessageRecord, 'content' | 'emojis' | 'providedEmojis' | 'sticker' | 'providedSticker'>;
+      let content: Pick<DirectMessageRecord, 'content' | 'emojis' | 'providedEmojis' | 'sticker' | 'providedSticker' | 'shopSticker'>;
       if ('message' in body) {
         if (typeof body.message !== 'string' || !body.message.trim() || body.message.trim().length > 500) {
           throw messageError(400, 'Messages must contain 1–500 characters.');
@@ -133,6 +142,8 @@ export function createMessageService(
         content = { content: text,
           ...(Object.keys(resolved.emojis).length > 0 && { emojis: resolved.emojis }),
           ...(Object.keys(resolved.providedEmojis).length > 0 && { providedEmojis: resolved.providedEmojis }) };
+      } else if ('shopSticker' in body && isShopStickerId(body.shopSticker)) {
+        content = { content: '', shopSticker: body.shopSticker };
       } else if ('stickerId' in body) {
         const asset = library.find((entry) => entry.id === body.stickerId && entry.accountId === accountId);
         if (!asset) throw messageError(400, 'Sticker is not in your library.');

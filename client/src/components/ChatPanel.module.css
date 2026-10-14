@@ -253,3 +253,6 @@
 .stickerImage.smallImage { --sticker-size: 28px; font-size: var(--text-xs); }
 .stickerPicker { max-height: calc(100% - 48px); overflow-y: auto; }
 .stickerPicker .pickerGrid { min-height: 36px; flex-shrink: 0; }
+
+.shopStickerGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; padding: 4px 0 12px; }
+.shopStickerGrid .pickerItem { width: 100%; height: auto; padding: 2px; }

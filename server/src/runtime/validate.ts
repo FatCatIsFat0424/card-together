@@ -3,7 +3,7 @@ import { GAME_SEAT_ORDER, MAX_SPECTATORS } from '@shared/constants';
 import { gameSeatMap, roomSeatInfo } from '@shared/rules/seats';
 import { isTimeControl } from '@shared/time-control';
 import { isEquipmentStyle } from '../database/shop-equipment';
-import { isAvatarBorderId } from '@shared/constants';
+import { isAvatarBorderId, isShopStickerId } from '@shared/constants';
 import { isSevensOptions } from '@shared/sevens-options';
 import { isNinetyNineOptions } from '@shared/ninetynine-options';
 import { isBlackjackOptions } from '@shared/blackjack-options';
@@ -106,10 +106,10 @@ function inlineEmojiTotal(message: ObjectValue): boolean {
 }
 
 /** A sticker message carries exactly one image and no text, inline emoji, or system flag. */
-function stickerOnly(message: ObjectValue, field: 'sticker' | 'providedSticker'): boolean {
+function stickerOnly(message: ObjectValue, field: 'sticker' | 'providedSticker' | 'shopSticker'): boolean {
   return message.content === '' && message.system === undefined &&
     message.emojis === undefined && message.providedEmojis === undefined &&
-    message[field === 'sticker' ? 'providedSticker' : 'sticker'] === undefined;
+    ['sticker', 'providedSticker', 'shopSticker'].every((key) => key === field || message[key] === undefined);
 }
 
 function card(value: unknown): boolean {
@@ -1487,6 +1487,10 @@ export function isRuntimeSnapshot(value: unknown): value is RuntimeSnapshot {
             player(message.sender) &&
             typeof message.content === 'string' &&
             number(message.timestamp) &&
+            (message.shopSticker === undefined || (
+              isShopStickerId(message.shopSticker) && stickerOnly(message, 'shopSticker') &&
+              Object.keys(message).every((key) => ['id', 'sender', 'content', 'timestamp', 'shopSticker', 'audience'].includes(key))
+            )) &&
             (message.sticker === undefined || (
               object(message.sticker) && text(message.sticker.id) &&
               isEmojiName(message.sticker.name) && isMediaId(message.sticker.mediaId) &&

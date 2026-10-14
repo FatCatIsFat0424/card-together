@@ -45,7 +45,7 @@ export function EquipmentSettings({ account }: { readonly account: AccountProfil
 
   return <section className={styles.equipment} aria-labelledby="profile-equipment-heading">
     <h2 id="profile-equipment-heading">{t('shop.equipment')}</h2>
-    <p>{t('shop.equippedNotice')}</p>
+    <p>{t('shop.equipmentHelp')}</p>
     <div className={styles.equipmentGrid}>
       {EQUIPMENT.map(({ field, type, items }) => <div key={field}>
         <label htmlFor={`equipment-${field}`}>{t(`shop.type.${type}`)}</label>
