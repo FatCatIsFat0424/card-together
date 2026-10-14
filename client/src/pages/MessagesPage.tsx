@@ -6,6 +6,7 @@ import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useRoomStore } from '../stores/room-store';
 import { useSocialStore } from '../stores/social-store';
+import { useMessageFriends } from '../hooks/use-message-friends';
 import { DirectConversation } from '../components/DirectConversation';
 import { MessageConversations } from '../components/MessageConversations';
 import { AppIcon } from '../components/AppIcon';
@@ -18,6 +19,7 @@ export function MessagesPage(): ReactNode {
   const inGame = useRoomStore((state) => state.roomInfo?.status === 'playing');
   const status = useSocialStore((state) => state.status);
   const error = useSocialStore((state) => state.error);
+  const { friends, error: friendsError } = useMessageFriends(accountId);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [conversationError, setConversationError] = useState<{ otherId: string; message: string } | null>(null);
@@ -26,6 +28,8 @@ export function MessagesPage(): ReactNode {
       ? previous : { otherId, message });
   }, []);
   const loadError = conversationError && conversationError.otherId === otherId ? conversationError.message : '';
+  // Matching list, friend, and conversation errors appear only once.
+  const errors = [...new Set([error, friendsError, loadError].filter(Boolean))];
   const mobile = useMediaQuery('(max-width: 52rem)');
   const { t } = useI18nStore();
   if (!accountId) return null;
@@ -54,8 +58,7 @@ export function MessagesPage(): ReactNode {
           </button>
           <p className={styles.retention}>{t('messages.retention')}</p>
           {status === 'loading' && <p className={styles.status} role="status">{t('common.loading')}</p>}
-          {error && <p className={styles.error} role="alert">{error}</p>}
-          {loadError && loadError !== error && <p className={styles.error} role="alert">{loadError}</p>}
+          {errors.map((message) => <p key={message} className={styles.error} role="alert">{message}</p>)}
         </div>
         <Link className={styles.closeButton} to={roomCode ? `/${inGame ? 'game' : 'room'}/${roomCode}` : '/'}
           aria-label={t('table.close')} title={t('table.close')}>
@@ -64,7 +67,7 @@ export function MessagesPage(): ReactNode {
       </header>
       <div className={styles.panels}>
         <aside className={`${styles.sidebar} ${otherId ? styles.hideOnMobile : ''}`} aria-label={t('messages.back')}>
-          {(!mobile || !otherId) && <MessageConversations selectedId={otherId} split={!mobile} />}
+          {(!mobile || !otherId) && <MessageConversations selectedId={otherId} split={!mobile} friends={friends} />}
         </aside>
         <div className={`${styles.detail} ${!otherId ? styles.hideOnMobile : ''}`}>
           {otherId

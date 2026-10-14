@@ -47,6 +47,12 @@ Frontend page behavior and layout. Client architecture and connection handling:
   shrink to the displayed sticker size regardless of the image's pixel size. Mobile keeps separate list
   and conversation views. Both layouts keep the header and composer visible within
   the available viewport; conversation lists and message history scroll independently.
+- The conversation list includes every current friend: conversations (including
+  read-only former friends) newest first, then friends without retained history by
+  nickname in the current locale. Selecting one of those opens an empty conversation.
+  New messages reorder it live; the friend list reloads on friendship changes,
+  reconnects, and refocus, but not when a conversation is marked read. With no friends or conversations, the list
+  shows "No friends yet".
 - Private chat supports the existing emoji/sticker libraries, older-history pagination,
   and retry after a failed send. Only a visible conversation marks incoming messages read.
   Former-friend conversations are read-only; the latest 90 days are available.
