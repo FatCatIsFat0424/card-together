@@ -314,7 +314,7 @@
   cursor: default;
 }
 
-.draggableSeat { cursor: grab; }
+.draggableSeat { cursor: grab; touch-action: none; user-select: none; }
 .movingSeat { opacity: 0.55; }
 .dropTarget.dropTarget { outline: 3px solid var(--color-primary); outline-offset: -3px; }
 .dragHandle {

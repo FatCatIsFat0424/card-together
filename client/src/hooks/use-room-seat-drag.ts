@@ -59,12 +59,10 @@ export function useRoomSeatDrag(
   const start = (event: PointerEvent<HTMLElement>, player: PlayerInfo): void => {
     if (!enabled || player.isBot || !event.isPrimary || event.button !== 0) return;
     const element = event.target instanceof Element ? event.target : null;
-    const handle = element?.closest('[data-seat-drag-handle]');
-    if (!handle && (event.pointerType === 'touch' || element?.closest('a, button, input'))) return;
     suppressClick.current = false;
     pending.current = { player, pointerId: event.pointerId, x: event.clientX, y: event.clientY, started: false };
-    // Capturing the handle itself preserves a normal click while tracking release outside the card.
-    (handle instanceof HTMLElement ? handle : event.currentTarget).setPointerCapture(event.pointerId);
+    // Keep taps/clicks on links and buttons intact until movement starts a drag.
+    (element?.closest('a, button') ?? element ?? event.currentTarget).setPointerCapture(event.pointerId);
   };
 
   const move = (event: PointerEvent<HTMLElement>): void => {

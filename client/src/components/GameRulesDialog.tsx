@@ -7,6 +7,7 @@ import type { GameType } from '@shared/types';
 import { getGameRules } from '../game-rules-i18n';
 import type { GameRulesContext } from '../game-rules-context';
 import { useI18nStore } from '../stores/i18n-store';
+import { useMotionStore } from '../stores/motion-store';
 import { AppIcon } from './AppIcon';
 import styles from './GameRulesDialog.module.css';
 
@@ -48,8 +49,10 @@ export function GameRulesDialog({ gameType, context, onClose }: {
 }): ReactNode {
   const { t } = useI18nStore();
   const titleId = useId();
+  const reducedMotion = useMotionStore((state) => state.reducedMotion);
   return <Dialog open fullWidth maxWidth="md" onClose={onClose} aria-labelledby={titleId}
-    transitionDuration={0} slotProps={{ paper: { className: styles.dialog }, backdrop: { className: styles.backdrop } }}>
+    transitionDuration={0} slotProps={{ paper: { className: `${styles.dialog} ${reducedMotion ? styles.still : ''}` },
+      backdrop: { className: styles.backdrop } }}>
     <DialogTitle component="div" id={`${titleId}-header`} className={styles.header}>
       <h2 id={titleId}>{t('lobby.rulesTitle', { game: t(`gameType.${gameType}`) })}</h2>
       <button type="button" className={`btn btn-secondary ${styles.close}`} onClick={onClose} aria-label={t('table.close')}>

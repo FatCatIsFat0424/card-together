@@ -78,6 +78,9 @@ Frontend page behavior and layout. Client architecture and connection handling:
 
 - Empty seats are full-card buttons; bot controls stay separate.
 - The seated host has a dark, gold-lettered badge in the top-left corner of their seat card.
+- While waiting, the host can drag human players from anywhere on their seat card or
+  spectator item, including the avatar and name, using mouse or touch. Movement beyond
+  the drag threshold starts placement; ordinary taps still open profiles or activate controls.
 - Bot identities show Easy or Hard. Waiting-room hosts edit each bot's difficulty
   beside its remove control, both 44px tall; guests see the selected difficulty. Defaults and strategy
   behavior are documented in [games](games.md#bots).
@@ -146,6 +149,9 @@ Frontend page behavior and layout. Client architecture and connection handling:
 Per-game controls: [games](games.md#card-controls).
 
 ## Rules dialog
+
+The dialog opens from its center with a 200ms scale animation (70% to 105% to 100%).
+Saved and system reduced-motion preferences disable this animation.
 
 - Opened from the lobby Rules link, the waiting-room Game rules button, the desktop match
   information rail, or compact table tools; available to players and spectators.

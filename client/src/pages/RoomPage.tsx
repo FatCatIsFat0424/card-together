@@ -388,6 +388,7 @@ export function RoomPage(): ReactNode {
       </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={`${styles.tableArea} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}
+        onDragStart={(event) => { if (canMovePlayers) event.preventDefault(); }}
         onClickCapture={seatDrag.choose} onPointerMove={seatDrag.move} onPointerUp={seatDrag.finish}
         onPointerCancel={seatDrag.cancel}>
       <div className={styles.seatStrip}>
@@ -476,7 +477,7 @@ export function RoomPage(): ReactNode {
         }}>{t('room.dropSpectator')}</button>}
         {spectators.length === 0 ? <span className={styles.spectatorsEmpty}>{t('room.noSpectators')}</span>
           : <ul className={styles.spectatorList}>{spectators.map((spectator) => (
-            <li key={spectator.id} className={`${styles.spectator} ${movingPlayer?.id === spectator.id ? styles.movingSeat : ''}`}
+            <li key={spectator.id} className={`${styles.spectator} ${canMovePlayers && !spectator.isBot ? styles.draggableSeat : ''} ${movingPlayer?.id === spectator.id ? styles.movingSeat : ''}`}
               onPointerDown={(event) => seatDrag.start(event, spectator)}>
               {dragHandle(spectator)}
               <PlayerLink player={spectator} size="small" showTitle={false} />
