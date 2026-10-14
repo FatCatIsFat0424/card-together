@@ -79,7 +79,9 @@ describe('spectators', () => {
     const app = await (harness = await createSocketHarness(2));
     const { players, visitor } = await watchedMatch(app);
     const received: string[] = [];
-    players[1].on('chat:message', (event: ChatMessageEvent) => { received.push(event.message.content); });
+    players[1].on('chat:message', (event: ChatMessageEvent) => {
+      if (!event.message.system) received.push(event.message.content);
+    });
 
     expect(await visitor.timeout(5_000).emitWithAck('chat:send', { message: 'north holds the ace' }))
       .toEqual({ success: true });
@@ -91,16 +93,17 @@ describe('spectators', () => {
     await expect.poll(() => received).toContain('thanks');
     expect(received).toEqual(['good luck', 'thanks']);
 
-    const playerChat = (await resume(players[2])).chatHistory?.map((message) => message.content);
+    const playerChat = (await resume(players[2])).chatHistory?.filter((message) => !message.system)
+      .map((message) => message.content);
     expect(playerChat).toEqual(['good luck', 'thanks']);
     const spectatorChat = (await resume(visitor)).chatHistory ?? [];
-    expect(spectatorChat.map((message) => [message.content, message.audience])).toEqual([
+    expect(spectatorChat.filter((message) => !message.system).map((message) => [message.content, message.audience])).toEqual([
       ['north holds the ace', 'observers'], ['good luck', undefined], ['thanks', undefined],
     ]);
 
     // Leaving aborts the match; afterwards everyone reads the whole history.
     expect(await players[3].timeout(5_000).emitWithAck('room:leave')).toEqual({ success: true });
-    expect((await resume(players[2])).chatHistory?.map((message) => message.content))
+    expect((await resume(players[2])).chatHistory?.filter((message) => !message.system).map((message) => message.content))
       .toEqual(['north holds the ace', 'good luck', 'thanks']);
   }, 20_000);
 });

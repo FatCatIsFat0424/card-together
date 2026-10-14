@@ -251,5 +251,8 @@ export function leaveCurrentRoom(accountId: string): void {
   if (roomEmpty) {
     gameManager.removeGame(code);
     chatManager.clearRoomChat(code);
+  } else {
+    const player = playerManager.getPlayerInfo(accountId);
+    if (player) chatManager.addSystemMessage(code, player, 'chat.playerLeft');
   }
 }

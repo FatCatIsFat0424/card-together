@@ -48,6 +48,21 @@ function requireSeatTarget(target: unknown): RoomSeatTarget {
   throw actionError('Invalid seat.');
 }
 
+function announceRoomJoin(code: RoomCode, accountId: string): void {
+  const player = playerManager.getPlayerInfo(accountId);
+  if (player) chatManager.addSystemMessage(code, player, 'chat.playerJoined');
+}
+
+function joinRoom(code: RoomCode, accountId: string): void {
+  const alreadyJoined = roomManager.getRoomMemberIds(code).includes(accountId);
+  // Check admission before leaving; both membership changes commit or roll back together.
+  requireSuccess(roomManager.joinRoom(code, accountId));
+  const current = playerManager.getPlayerState(accountId)?.currentRoomCode;
+  if (current && current !== code) leaveCurrentRoom(accountId);
+  playerManager.setPlayerRoom(accountId, code);
+  if (!alreadyJoined) announceRoomJoin(code, accountId);
+}
+
 export function registerRoomHandlers(context: SocketContext, socket: TypedSocket): void {
   socket.on('room:create', (payload, callback) => runAction(context, socket, callback, () => {
     if (!payload || !GAME_TYPES.includes(payload.gameType)) throw actionError('Unsupported game type.');
@@ -56,6 +71,7 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
     const roomCode = roomManager.createRoom(payload.gameType, accountId);
     chatManager.initRoomChat(roomCode);
     playerManager.setPlayerRoom(accountId, roomCode);
+    announceRoomJoin(roomCode, accountId);
     return { success: true, roomCode };
   }));
 
@@ -65,8 +81,7 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
     const accountId = socket.data.accountId;
     const currentRoom = playerManager.getPlayerState(accountId)?.currentRoomCode;
     if (currentRoom && currentRoom !== roomCode) throw actionError('Leave your current room first.');
-    requireSuccess(roomManager.joinRoom(roomCode, accountId));
-    playerManager.setPlayerRoom(accountId, roomCode);
+    joinRoom(roomCode, accountId);
     return { success: true, room: roomManager.getRoomInfo(roomCode) ?? undefined };
   }));
 
@@ -86,11 +101,7 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
       || room?.hostId !== payload.accountId) {
       throw actionError('This friend is no longer hosting this room. Refresh your friends list.');
     }
-    // Check admission before leaving; both membership changes commit or roll back together.
-    requireSuccess(roomManager.joinRoom(code, accountId));
-    const current = playerManager.getPlayerState(accountId)?.currentRoomCode;
-    if (current && current !== code) leaveCurrentRoom(accountId);
-    playerManager.setPlayerRoom(accountId, code);
+    joinRoom(code, accountId);
     return { success: true, room: roomManager.getRoomInfo(code) ?? undefined };
   }));
 

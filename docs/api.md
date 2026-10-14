@@ -181,6 +181,10 @@ Omitted fields keep their values; invalid values return 400.
   recipient-filtered ([spectators](games.md#spectators-and-god-view)).
 - Resume always includes chat history, replacing the client copy; broadcasts include it
   only when the recipient's room changed.
+- Human room joins (including creation) and departures append localized system chat
+  messages, broadcast after persistence succeeds. Departures include kicks, friend-room switches,
+  and disconnect expiry; reconnects, extra tabs, and repeated joins add no messages.
+  The last human's departure removes the room and its chat history.
 - [`ChatMessage`](../shared/src/types/chat.ts) images are resolved by the server:
   `emojis` (personal media IDs) and `providedEmojis` (site files), at most 20 names
   combined with no overlap. Sticker messages have empty content and exactly one

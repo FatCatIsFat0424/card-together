@@ -47,29 +47,32 @@ describe('authoritative paid sticker messaging', () => {
     expect(snapshot?.chat[0].messages.at(-1)).toMatchObject({ shopSticker: 'table-hello' });
     owned = [];
     expect((await sendRoom({ shopSticker: 'table-nice' })).success).toBe(false);
-    expect((await app.clients[0][1].timeout(5000).emitWithAck('player:resume')).chatHistory).toHaveLength(1);
+    expect((await app.clients[0][1].timeout(5000).emitWithAck('player:resume')).chatHistory)
+      .toEqual(other.chatHistory);
   });
 
   it('rolls back room stickers and broadcasts nothing when runtime persistence fails', async () => {
     owned = ['stickers-table-talk'];
+    const before = (await app.clients[0][1].timeout(5000).emitWithAck('player:resume')).chatHistory;
     app.resetMetrics();
     vi.spyOn(app.repository, 'saveRuntime').mockRejectedValueOnce(new Error('Disk full'));
     vi.spyOn(console, 'error').mockImplementation(() => {});
     expect((await sendRoom({ shopSticker: 'table-thanks' })).success).toBe(false);
     expect(app.metrics.chatMessages).toBe(0);
-    expect((await app.clients[0][1].timeout(5000).emitWithAck('player:resume')).chatHistory).toEqual([]);
+    expect((await app.clients[0][1].timeout(5000).emitWithAck('player:resume')).chatHistory).toEqual(before);
     expect((await sendRoom({ shopSticker: 'table-thanks' })).success).toBe(true);
   });
 
   it('rejects unknown, mixed, URL, and malformed room sticker payloads without committing chat', async () => {
     owned = ['stickers-table-talk'];
+    const before = (await app.clients[0][1].timeout(5000).emitWithAck('player:resume')).chatHistory;
     for (const payload of [
       { shopSticker: 'forest-cheer' }, { shopSticker: 'unknown' }, { shopSticker: null },
       { shopSticker: { id: 'table-hello' } }, { shopSticker: 'https://example.com/a.svg' },
       { shopSticker: 'table-hello', message: 'mixed' }, { shopSticker: 'table-hello', stickerId: 'foreign' },
       { shopSticker: 'table-hello', url: 'https://example.com/a.svg' },
     ]) expect((await sendRoom(payload)).success).toBe(false);
-    expect((await app.clients[0][1].timeout(5000).emitWithAck('player:resume')).chatHistory).toEqual([]);
+    expect((await app.clients[0][1].timeout(5000).emitWithAck('player:resume')).chatHistory).toEqual(before);
   });
 
   it('authorizes DM ownership per send and retry while recipients retain ID-based history', async () => {

@@ -4,6 +4,7 @@ import type { FriendsData } from '@shared/types';
 import { MAX_SPECTATORS } from '@shared/constants';
 import * as rooms from '../../src/managers/room-manager';
 import * as players from '../../src/managers/player-manager';
+import { getChatHistory } from '../../src/managers/chat-manager';
 import { createSocketHarness, TEST_ORIGIN } from '../performance/socket-harness';
 import type { SocketHarness } from '../performance/socket-harness';
 
@@ -51,7 +52,15 @@ describe('joining a room hosted by a friend', () => {
     const stored = await app.repository.loadRuntime();
     expect(stored?.players.find((entry) => entry.info.id === app.accountIds[1][0])?.currentRoomCode)
       .toBe(app.roomCodes[0]);
+    expect(getChatHistory(app.roomCodes[1]).at(-1)).toMatchObject({
+      system: true, content: 'chat.playerLeft', sender: { id: app.accountIds[1][0] },
+    });
+    expect(getChatHistory(app.roomCodes[0]).at(-1)).toMatchObject({
+      system: true, content: 'chat.playerJoined', sender: { id: app.accountIds[1][0] },
+    });
+    const messages = structuredClone(getChatHistory(app.roomCodes[0]));
     expect(await join()).toMatchObject({ success: true });
+    expect(getChatHistory(app.roomCodes[0])).toEqual(messages);
     expect(rooms.getRoomMemberIds(app.roomCodes[0]).filter((id) => id === app.accountIds[1][0])).toHaveLength(1);
   });
 
@@ -65,6 +74,9 @@ describe('joining a room hosted by a friend', () => {
     expect(spectator.gameState).toHaveProperty('observedHands');
     const seated = await app.clients[0][0].timeout(5_000).emitWithAck('player:resume');
     expect(seated.gameState).not.toHaveProperty('observedHands');
+    for (const snapshot of [spectator, seated]) expect(snapshot.chatHistory?.at(-1)).toMatchObject({
+      system: true, content: 'chat.playerJoined', sender: { id: app.accountIds[1][0] },
+    });
   });
 
   it('rejects non-friends, pending requests and removed friendships without leaving the original room', async () => {
@@ -109,6 +121,9 @@ describe('joining a room hosted by a friend', () => {
     expect(players.getPlayerState(app.accountIds[1][0])?.currentRoomCode).toBe(app.roomCodes[1]);
     expect(rooms.getRoomMemberIds(app.roomCodes[0])).not.toContain(app.accountIds[1][0]);
     expect(rooms.getRoomInfo(app.roomCodes[1])?.hostId).toBe(app.accountIds[1][0]);
+    expect(getChatHistory(app.roomCodes[0])).toEqual(before?.chat.find((room) => room.roomCode === app.roomCodes[0])?.messages);
+    expect(getChatHistory(app.roomCodes[1])).toEqual(before?.chat.find((room) => room.roomCode === app.roomCodes[1])?.messages);
+    expect(app.metrics.chatMessages).toBe(0);
     persisted.mockRestore();
     // Admission fails before any write, so temporary in-process spectators need no accounts.
     for (let index = 0; index < MAX_SPECTATORS; index++) rooms.joinRoom(app.roomCodes[0], `watcher-${index}`);

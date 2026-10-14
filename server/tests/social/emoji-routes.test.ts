@@ -5,7 +5,7 @@ import { io as connectSocket } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
-  AccountProfile, ClientToServerEvents, EmojiRecord, ServerToClientEvents,
+  AccountProfile, ChatMessage, ClientToServerEvents, EmojiRecord, ServerToClientEvents,
 } from '@shared/types';
 import { isRuntimeSnapshot } from '../../src/runtime/validate';
 import { restoreChat, getChatHistory } from '../../src/managers/chat-manager';
@@ -193,9 +193,9 @@ describe('custom emoji routes and chat', () => {
     expect(await bobClient.timeout(5_000).emitWithAck('chat:send', { message: 'plain text' }))
       .toEqual({ success: true });
     const { chatHistory } = await bobClient.timeout(5_000).emitWithAck('player:resume');
-    expect(chatHistory?.[0].emojis).toEqual({ wave: aliceMedia });
-    expect(chatHistory?.[1]).not.toHaveProperty('emojis');
-    expect((await repository.loadRuntime())?.chat[0].messages[0].emojis).toEqual({ wave: aliceMedia });
+    expect(chatHistory?.at(-2)?.emojis).toEqual({ wave: aliceMedia });
+    expect(chatHistory?.at(-1)).not.toHaveProperty('emojis');
+    expect((await repository.loadRuntime())?.chat[0].messages.at(-2)?.emojis).toEqual({ wave: aliceMedia });
   }, 15_000);
   it('should send owned stickers, reject forged payloads and restore durable history', async () => {
     let now = Date.now();
@@ -278,27 +278,28 @@ describe('custom emoji routes and chat', () => {
     expect(await bobClient.timeout(5_000).emitWithAck('chat:send', { providedSticker: 'cheer' }))
       .toEqual({ success: true });
 
-    const history = (await aliceClient.timeout(5_000).emitWithAck('player:resume')).chatHistory!;
-    expect(history).toHaveLength(3);
-    expect(history[0]).toMatchObject({
+    const history: ChatMessage[] = (await aliceClient.timeout(5_000).emitWithAck('player:resume')).chatHistory!;
+    const messages = history.filter((message) => !message.system);
+    expect(messages).toHaveLength(3);
+    expect(messages[0]).toMatchObject({
       emojis: { wave: aliceMedia },
       providedEmojis: { cheer: PROVIDED_CHEER.file, [PROVIDED_NEKO.name]: PROVIDED_NEKO.file },
     });
-    expect(history[1]).toMatchObject({ providedEmojis: { wave: PROVIDED_WAVE.file } });
-    expect(history[1]).not.toHaveProperty('emojis');
-    expect(history[2]).toMatchObject({ content: '', providedSticker: PROVIDED_CHEER });
-    expect(history[2]).not.toHaveProperty('sticker');
+    expect(messages[1]).toMatchObject({ providedEmojis: { wave: PROVIDED_WAVE.file } });
+    expect(messages[1]).not.toHaveProperty('emojis');
+    expect(messages[2]).toMatchObject({ content: '', providedSticker: PROVIDED_CHEER });
+    expect(messages[2]).not.toHaveProperty('sticker');
 
     const snapshot = (await repository.loadRuntime())!;
     expect(isRuntimeSnapshot(snapshot)).toBe(true);
     expect(snapshot.chat[0].messages).toEqual(history);
     const forged = structuredClone(snapshot);
     for (const message of [
-      { ...history[2], providedSticker: { name: 'cheer', file: 'https://example.com/image.png' } },
-      { ...history[2], content: 'text' },
-      { ...history[1], providedEmojis: { wave: '../wave.png' } },
-      { ...history[0], providedEmojis: { wave: PROVIDED_WAVE.file } },
-      { ...history[1], providedEmojis: Object.fromEntries(Array.from({ length: 21 },
+      { ...messages[2], providedSticker: { name: 'cheer', file: 'https://example.com/image.png' } },
+      { ...messages[2], content: 'text' },
+      { ...messages[1], providedEmojis: { wave: '../wave.png' } },
+      { ...messages[0], providedEmojis: { wave: PROVIDED_WAVE.file } },
+      { ...messages[1], providedEmojis: Object.fromEntries(Array.from({ length: 21 },
         (_, index) => [`e${index}`, PROVIDED_WAVE.file])) },
     ]) {
       forged.chat[0].messages = [message];

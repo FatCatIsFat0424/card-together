@@ -316,7 +316,9 @@ describe('persistent authenticated application', () => {
       null as unknown as (response: { success: boolean }) => void);
     const snapshot = await resume(client);
     expect(snapshot.room?.code).toBe(created.roomCode);
-    expect(snapshot.chatHistory).toEqual([]);
+    expect(snapshot.chatHistory).toMatchObject([
+      { system: true, content: 'chat.playerJoined', sender: { id: registered.account.id } },
+    ]);
   }, 15_000);
 
   it('should roll back a failed durable write and allow the same connection to retry', async () => {
@@ -784,7 +786,7 @@ describe('persistent authenticated application', () => {
     expect(aborted.gameState).toBeUndefined();
     expect(aborted.room).toMatchObject({ status: 'waiting', abortVote: null, abortVoteCooldownUntil: null });
     expect(Object.values(aborted.room!.seats).every((seat) => !seat.isReady)).toBe(true);
-    expect(aborted.chatHistory?.map((message) => [message.system, message.content])).toEqual([
+    expect(aborted.chatHistory?.slice(-2).map((message) => [message.system, message.content])).toEqual([
       [true, 'abortVote.started'], [true, 'abortVote.passed'],
     ]);
     expect(await repository.listMatches(accounts[0].account.id)).toEqual([]);

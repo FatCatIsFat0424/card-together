@@ -88,6 +88,8 @@ type TranslationKeys = Record<
   'chat.title': string;
   'chat.placeholder': string;
   'chat.send': string;
+  'chat.playerJoined': string;
+  'chat.playerLeft': string;
   // Seats
   'seat.N': string;
   'seat.E': string;
@@ -167,6 +169,8 @@ const translations: Record<Locale, TranslationKeys> = {
     'chat.title': '聊天',
     'chat.placeholder': '輸入訊息...',
     'chat.send': '送出',
+    'chat.playerJoined': '{name} 加入了房間',
+    'chat.playerLeft': '{name} 離開了房間',
     'seat.N': '北',
     'seat.E': '東',
     'seat.S': '南',
@@ -241,6 +245,8 @@ const translations: Record<Locale, TranslationKeys> = {
     'chat.title': 'Chat',
     'chat.placeholder': 'Type a message...',
     'chat.send': 'Send',
+    'chat.playerJoined': '{name} joined the room',
+    'chat.playerLeft': '{name} left the room',
     'seat.N': 'North',
     'seat.E': 'East',
     'seat.S': 'South',

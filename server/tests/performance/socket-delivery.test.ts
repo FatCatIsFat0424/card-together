@@ -95,9 +95,11 @@ describe('socket delivery scope and read-only resume', () => {
       .toMatchObject({ success: true });
     expect(harness.metrics.latestSnapshots.get(harness.accountIds[0][0])?.chatHistory)
       .toEqual((await resume(harness.clients[1][0])).chatHistory);
-    expect(harness.metrics.chatMessages).toBe(0);
+    expect(harness.metrics.chatMessages).toBe(6);
     const restored = await resume(other);
-    expect(restored.chatHistory?.at(-1)?.content).toBe('Before leaving');
+    expect(restored.chatHistory?.at(-2)?.content).toBe('Before leaving');
+    expect(restored.chatHistory?.at(-1)).toMatchObject({ system: true, content: 'chat.playerLeft',
+      sender: { id: harness.accountIds[0][0] } });
   });
 
   it('should send a played card only to the four affected players', async () => {
