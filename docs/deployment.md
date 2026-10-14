@@ -99,6 +99,103 @@ After repeated startup failures, check logs, configuration, schema, port, and
 permissions, then `sudo systemctl reset-failed card-together.service` if needed.
 **Never delete data as a fix.**
 
+### Automatic deployment after CI
+
+Install from a reviewed checkout as the workstation operator (replace the username
+and checkout paths):
+
+```sh
+sudo bash deploy/install-auto-deploy.sh acaccel \
+  /home/acaccel/card-together /home/acaccel/card-together-release
+```
+
+Prerequisites: the deployment user can fetch `origin` without prompts, `gh auth login`
+is configured for that user with repository Actions read access, and both
+`local-music/` and `local-emoji/` exist. An empty directory is allowed only when the
+empty catalog is intentional. No webhook endpoint is needed.
+
+The installer provisions:
+
+| Path | Purpose |
+| --- | --- |
+| `/usr/local/lib/card-together-auto-deploy/auto-deploy.py` | Stable controller, independent of edits in the development checkout |
+| `/home/acaccel/card-together-release` | Detached linked worktree used only for release builds |
+| `/etc/card-together-auto-deploy.json` | Non-secret configuration: repository, source/checkout/state/input paths, optional frontend environment path, required workflow filenames |
+| `/var/lib/card-together-auto-deploy/inputs/` | Independent owner music, emoji, and optional `frontend.env` snapshots |
+| `/var/lib/card-together-auto-deploy/state.json` | Successful SHA, failed-build SHA, and unfinished-install marker |
+| `/etc/sudoers.d/card-together-auto-deploy` | Allows the deployment user to run only `/usr/bin/bash <release-checkout>/deploy/deploy.sh` without a password |
+
+The service runs as the deployment user, with a timer one minute after boot and one
+minute after each cycle finishes. It fetches only remote `main`, without changing the
+development branch, index, or files. For a new SHA, it queries GitHub Actions `push`
+runs for that exact `main` SHA. The latest run/attempt of every returned workflow must
+be `completed` with `success`; the configured required workflows (initially `ci.yml`)
+must also be present. Missing, queued, failed, cancelled, skipped, malformed, or
+unavailable results never authorize deployment. Add newly required workflows to
+`workflows` in the configuration so their absence also blocks deployment.
+
+The controller snapshots inputs into the clean detached worktree, runs `build.sh`
+with the revision's pinned Node.js and release gate, then rechecks CI before invoking
+the existing `deploy.sh`. Only a successful install, including its local/public health
+checks, records `last_success_sha`. A newer commit arriving during a build waits for
+the next cycle. The first eligible SHA is deployed even if the existing manual
+installation happens to use it. Full deployment still briefly disconnects players.
+
+Development changes, including local commits not pushed to `main`, are excluded.
+The worktrees share Git objects and refs, not working files or dependencies. Do not
+edit or manually deploy from the release worktree while the timer is active. API
+credentials remain in the user's existing `gh` credential storage; do not put tokens
+in the configuration, repository, or command arguments.
+
+**Trust boundary:** CI-approved code and deployment scripts from `main` are executed
+on this workstation, and the deployment script runs as root. Only trusted maintainers
+should be able to merge into `main`; protect that branch with review and required CI.
+The deployment user must also be trusted as a host administrator: the allowed script
+is in that user's writable worktree, so the command restriction is not a security
+boundary against that user modifying it. Do not grant this rule to untrusted users.
+
+Inspect or pause:
+
+```sh
+systemctl status card-together-auto-deploy.timer --no-pager
+sudo journalctl -u card-together-auto-deploy.service -n 100 --no-pager
+python3 -B /usr/local/lib/card-together-auto-deploy/auto-deploy.py --inspect
+sudo systemctl stop card-together-auto-deploy.timer card-together-auto-deploy.service
+```
+
+`--inspect` checks credentials, CI, inputs, and an existing release worktree without
+building or installing. It updates remote-tracking refs only. A whole-cycle lock
+serializes polling, input copying, building, installation, inspection, and recovery.
+Existing deployment/Nginx locks still serialize privileged installation.
+
+Failure and recovery:
+
+- Fetch/API errors wait for the next cycle and leave the installation untouched.
+- A checkout/input/build error records `failed_build_sha`, blocking that SHA rather
+  than rebuilding every minute. After fixing the cause, run the controller as the
+  deployment user with `--retry-build`; a newer SHA is automatically eligible.
+- Before installation, the controller durably writes `installing_sha`. An install
+  error, interruption, timeout, or reboot leaves it in place and halts **all** further
+  automatic deployments. Follow [failure handling](#failure-handling) and
+  [rollback](#rollback), verify application/data compatibility and service health,
+  then run the controller as the deployment user with `--resume`. Recovery commands
+  clear a block but do not perform a deployment.
+- Resume the timer with `sudo systemctl start card-together-auto-deploy.timer` after
+  manual recovery. Use `disable --now` instead of `stop` to keep it disabled across boots.
+
+Re-run the installer to update the stable controller and units; it pauses the timer
+and preserves existing configuration, input snapshots, and receipts. It refuses to
+interrupt a running cycle: wait for that cycle to finish and rerun the installer.
+If reinstallation fails after pausing the timer, it stays stopped until the operator
+fixes the failure and restarts it. The installer itself does not deploy the application.
+To publish changed owner inputs, stop the timer/service, update the corresponding
+snapshot under `inputs/`, and use the existing manual build/deploy process from the
+release worktree. Input changes alone do not trigger automatic deployment; the
+controller watches Git revisions. Never copy development database files into it.
+
+For simultaneous development, use a separate backend port and database, and point
+Vite's development proxy at it: [development](development.md#configuration).
+
 ### Failure handling
 
 - `deploy.sh` locks against concurrent deploys (including legacy ones) and shared Nginx

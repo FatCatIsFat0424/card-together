@@ -34,9 +34,27 @@ Client `predev` and `prebuild` import owner music and site emoji from the ignore
 | `VITE_BASE_PATH` | Default `/`; must start and end with `/` |
 | `VITE_SERVER_URL` | Optional external API/Socket origin; empty uses the app origin and base |
 | `VITE_SOCKET_PATH` | Optional Socket.IO path |
+| `VITE_DEV_PROXY_TARGET` | Development proxy HTTP(S) origin; default `http://localhost:3001`. No credentials, path, query, or fragment |
 | `VITE_WEBRTC_ICE_SERVERS` | Public JSON ICE configuration; see [voice](media.md#voice) |
 
 Production values: [deployment](deployment.md#runtime-settings).
+
+When the workstation also hosts production on port `3001`, keep development on a
+separate backend port and database:
+
+```sh
+PORT=3002 HOST=127.0.0.1 npm run dev:server
+```
+
+Set `VITE_DEV_PROXY_TARGET=http://127.0.0.1:3002` in `client/.env.local`, then start
+`npm run dev:client`. The default development database remains `server/data/database.json`;
+never override it with `/var/lib/card-together/database.json`. API and Socket.IO proxy
+requests both use the configured development target. The variable is for Vite's dev
+server only and does not change the production Nginx upstream.
+
+The optional [automatic deployment service](deployment.md#automatic-deployment-after-ci)
+uses a separate detached worktree and owner-input snapshots. Your current branch,
+uncommitted changes, and local-only commits do not enter its production builds.
 
 ## UI conventions
 
