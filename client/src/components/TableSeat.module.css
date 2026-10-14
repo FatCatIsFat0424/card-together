@@ -46,7 +46,7 @@
 
 .bottom .plate { width: auto; flex: 0 1 auto; min-width: 0; max-width: 280px; }
 
-/* Opposite seat (Bridge, Sevens, Liar's Deck): hand beside the plate, so the centre gets the height. */
+/* Opposite seat in the games listed in TableSeat: hand beside the plate, so the centre gets the height. */
 .handBeside {
   flex-direction: row;
   justify-content: center;

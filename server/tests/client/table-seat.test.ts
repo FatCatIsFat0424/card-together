@@ -268,11 +268,11 @@ describe('table seat plate', () => {
     expect(render({ seat: 'N', position: 'top' })).not.toContain('Latest call');
   });
 
-  it("puts the opposite hand beside its plate at the top in Bridge, Sevens and Liar's Deck only", () => {
+  it("puts the opposite hand beside its plate at the top only in games whose centre fills the table", () => {
     const game = (gameType: string): Record<string, unknown> => ({
       ...baseGame(), phase: 'playing', visible: { gameType, clock: clock(null), log: [] },
     });
-    for (const gameType of ['bridge', 'sevens', 'liarsdeck']) {
+    for (const gameType of ['bridge', 'sevens', 'liarsdeck', 'ninetynine']) {
       state.game = game(gameType);
       expect(render({ seat: 'N', position: 'top' })).toContain('handBeside');
       expect(render({ seat: 'W', position: 'left' })).not.toContain('handBeside');

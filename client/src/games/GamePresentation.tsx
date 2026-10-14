@@ -61,7 +61,8 @@ export function GamePresentation({
     return <ChinesePokerReveal key={frame.key} row={frame.row} bottomSeat={bottomSeat as Seat} />;
   }
   return <div ref={rootRef} key={frame.key}
-    className={[styles.presentation, styles[position], reducedMotion && styles.reducedMotion,
+    className={[styles.presentation, styles[position], gameType === 'ninetynine' && styles.large,
+      reducedMotion && styles.reducedMotion,
       (frame.kind === 'eliminated' || frame.survived === false) && styles.eliminated].filter(Boolean).join(' ')}
     role="status" aria-live="polite" aria-atomic="true" data-presentation-kind={frame.kind}>
     <div className={styles.heading}>

@@ -104,6 +104,21 @@
 }
 
 .effect, .summary { font-size: 0.8rem; }
+
+/* Ninety-Nine: the play box grows with the table like the rest of its centre (the centre column is the
+   size container), so the card, the running total and the effect stay readable. */
+.large {
+  --presentation-card-width: max(3.5rem, min(calc(96px * var(--playing-card-scale)), 11cqh, 7cqw));
+  width: min(25rem, 90vw);
+  min-height: 9.5rem;
+  padding: var(--spacing-sm) var(--spacing-md);
+  gap: var(--spacing-sm);
+}
+
+.large .heading { font-size: clamp(0.85rem, 2.1cqh, 1.1rem); }
+.large .total { font-size: clamp(0.75rem, 1.7cqh, 0.95rem); }
+.large .total strong { font-size: clamp(1.7rem, 5cqh, 2.6rem); }
+.large .effect, .large .summary { font-size: clamp(0.8rem, 2cqh, 1rem); }
 .eliminated .heading { color: var(--color-danger); }
 .arriving { animation: arrive 300ms ease-out var(--enter-delay, 0ms) both; }
 .collecting { animation: collect 300ms ease-in var(--collect-delay, 1600ms) both; }

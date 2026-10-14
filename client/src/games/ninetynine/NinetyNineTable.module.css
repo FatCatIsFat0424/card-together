@@ -2,7 +2,9 @@
 
 /* ─── Table center ─── */
 .centre {
-  --card-w: calc((clamp(44px, 8dvh, 68px)) * var(--playing-card-scale));
+  /* Grow with the table (the centre column is the size container): the running total, the direction
+     and the piles share the centre cell between the side seats. */
+  --card-w: max(44px, min(calc(132px * var(--playing-card-scale)), 15cqh, 9cqw));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -28,7 +30,7 @@
 
 .total {
   font-family: var(--font-display);
-  font-size: clamp(3rem, 12dvh, 6rem);
+  font-size: clamp(3rem, 13cqh, 9rem);
   font-weight: 900;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -48,7 +50,7 @@
 }
 
 .direction {
-  font-size: clamp(1.8rem, 6dvh, 2.8rem);
+  font-size: clamp(1.8rem, 6.5cqh, 4.2rem);
   font-weight: 700;
   line-height: 1;
 }

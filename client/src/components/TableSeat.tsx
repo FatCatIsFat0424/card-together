@@ -32,7 +32,7 @@ import styles from './TableSeat.module.css';
 
 const MAX_BACKS = 6;
 /** Games whose centre sizes itself to the table, so a shorter top row makes it larger. */
-const HAND_BESIDE_GAMES: readonly GameType[] = ['bridge', 'sevens', 'liarsdeck'];
+const HAND_BESIDE_GAMES: readonly GameType[] = ['bridge', 'sevens', 'liarsdeck', 'ninetynine'];
 const MAX_PILE = 6;
 
 /** Opens a complete card pile without expanding the seat plate or overlapping the table. */
