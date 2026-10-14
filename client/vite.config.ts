@@ -6,6 +6,20 @@ import path from 'path';
 export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
   const environment = loadEnv(mode, process.cwd(), 'VITE_');
   const basePath = environment.VITE_BASE_PATH ?? '/';
+  const proxyTarget = environment.VITE_DEV_PROXY_TARGET ?? 'http://localhost:3001';
+  let proxyUrl: URL;
+  try {
+    proxyUrl = new URL(proxyTarget);
+  } catch {
+    throw new Error('VITE_DEV_PROXY_TARGET must be an HTTP(S) origin.');
+  }
+  if (
+    !['http:', 'https:'].includes(proxyUrl.protocol) ||
+    proxyUrl.username || proxyUrl.password ||
+    proxyUrl.pathname !== '/' || proxyUrl.search || proxyUrl.hash
+  ) {
+    throw new Error('VITE_DEV_PROXY_TARGET must be an HTTP(S) origin without credentials or a path.');
+  }
   if (
     !/^\/(?:[A-Za-z0-9._~-]+\/)*$/.test(basePath) ||
     basePath.split('/').some((segment) => segment === '.' || segment === '..')
@@ -28,11 +42,11 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
       port: 5173,
       proxy: {
         [`${basePath}api`]: {
-          target: 'http://localhost:3001',
+          target: proxyUrl.origin,
           rewrite: rewriteProxyPath,
         },
         [`${basePath}socket.io`]: {
-          target: 'http://localhost:3001',
+          target: proxyUrl.origin,
           ws: true,
           rewrite: rewriteProxyPath,
         },

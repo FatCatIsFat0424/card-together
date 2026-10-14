@@ -1,0 +1,23 @@
+[Unit]
+Description=Deploy Card Together main after successful GitHub CI
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=@DEPLOY_USER@
+Group=@DEPLOY_GROUP@
+WorkingDirectory=@DEPLOY_HOME@
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/python3 -B /usr/local/lib/card-together-auto-deploy/auto-deploy.py
+TimeoutStartSec=30min
+KillMode=control-group
+UMask=0077
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+# The release installer needs the one command authorized by its sudoers rule.
+# NoNewPrivileges and filesystem namespace restrictions would prevent that command.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=card-together-auto-deploy

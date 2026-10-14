@@ -102,7 +102,7 @@ Sources: [server/tests](../server/tests), [deploy/tests](../deploy/tests).
 | Media | Real animated GIF upload and served bytes; write, rename, and ownership failures; quota; queue recovery |
 | Imports and artifacts | Each importer's inputs, outputs, flags, lock, and security; real GIF and animated WebP compression including no-fit inputs; invalidation; symlink and FIFO rejection; SIGKILL recovery; build hash and base validation |
 | Client | Account-generation races, API failures and 401 epochs, canvas cropping and cleanup, zero geometry, bilingual rules, friend ordering |
-| Deployment | Backup locks and ownership, guarded install and publish, catalog guards, failure and signal recovery, timer ordering, Nginx parsing, migration and configuration |
+| Deployment | Backup locks and ownership, guarded install and publish, exact-SHA CI gating, development/worktree isolation, durable automatic-deployment halts, catalog guards, failure and signal recovery, timer ordering, Nginx parsing, migration and configuration |
 
 - Server startup reads the generated [emoji catalog](media.md#site-provided-emoji);
   tests inject catalogs instead of requiring owner originals.
