@@ -24,5 +24,10 @@
 .nameplate-planetary-devastation { --title-line: #d79bff80; --title-bg: radial-gradient(ellipse at right, #774133, #33243f 70%); --title-ink: #efceff; }
 .nameplate-einstein { --title-line: #77dce780; --title-bg: linear-gradient(120deg, #203553, #20484b); --title-ink: #bdf6ff; }
 .nameplate-lucky { --title-line: #92d3a880; --title-bg: linear-gradient(120deg, #204b3d, #325133); --title-ink: #dcf4b8; }
-.nameplate-table-traveler { --title-line: #edc27590; --title-bg: linear-gradient(120deg, #332a19, #5a4121); --title-ink: #ffe4ac; }
-.nameplate-daily-collector { --title-line: #b5a7ed90; --title-bg: linear-gradient(120deg, #292c4e, #4e3961); --title-ink: #e9dcff; }
+.nameplate-table-traveler,
+.nameplate-daily-collector {
+  --title-line: #edc27590;
+  --title-bg: linear-gradient(120deg, #332a19, #5a4121);
+  --title-ink: #ffe4ac;
+  border-width: 2px;
+}

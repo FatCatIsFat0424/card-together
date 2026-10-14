@@ -22,6 +22,8 @@ Frontend page behavior and layout. Client architecture and connection handling:
 - The top bar provides in-app notifications for incoming friend requests, accepted
   requests, and unread private messages. Opening the panel does not mark messages read.
 - The chat icon beside top-bar notifications opens the independent `/messages` page.
+  The notification panel keeps links to individual conversations without a separate
+  button to the message inbox.
   Friends retain only friend and invitation management. The message list and individual
   chats preserve room membership and provide
   a return-to-room link when applicable. The panel's top-right Close control returns
@@ -186,6 +188,8 @@ Per-game controls: [games](games.md#card-controls).
   cannot be purchased, do not cost coins, and can be equipped in account settings.
   Claiming preserves the current equipped title. Progress refreshes on account changes
   and window focus; repeated claims cannot duplicate inventory.
+- Achievement titles share Table traveler's gold palette and a thicker 2px border
+  in both previews and equipped displays.
 - Game and daily-task counters begin when this feature is deployed. Historical
   check-in dates count immediately. Game eligibility follows daily rewards: complete
   participant games including bots, no spectators, ties are not wins, and Bridge

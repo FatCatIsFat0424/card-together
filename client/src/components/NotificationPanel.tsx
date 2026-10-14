@@ -37,6 +37,5 @@ export function NotificationPanel(): ReactNode {
         </Link>
       </li>)}
     </ul>
-    <Link className="btn btn-outline" to="/messages">{t('messages.title')}</Link>
   </section>;
 }
