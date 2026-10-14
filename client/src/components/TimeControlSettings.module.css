@@ -1,26 +1,11 @@
-.settings { position: relative; margin-left: auto; }
-.settings summary { cursor: pointer; color: var(--text-secondary); font-size: var(--text-sm); padding: 4px 0; }
-.panel {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  z-index: 30;
-  width: min(440px, calc(100vw - 32px));
-  max-height: min(420px, calc(100dvh - var(--topbar-height) - 120px));
-  overflow: auto;
-  overscroll-behavior: contain;
-  padding: 12px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-}
-.settings fieldset { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; }
-.settings legend { color: var(--text-primary); font-weight: 600; padding: 0 4px; }
-.fields { display: flex; flex-wrap: wrap; align-items: end; gap: var(--spacing-sm); }
-.fields label { display: flex; flex-direction: column; gap: 4px; font-size: var(--text-sm); color: var(--text-secondary); }
-.fields input { width: 100px; padding: 6px 8px; }
-.fields button { margin-left: auto; }
-.plus { align-self: center; color: var(--text-muted); }
-.hint { color: var(--text-muted); font-size: var(--text-xs); margin-top: 6px; }
+.settings { width: 320px; max-width: 100%; }
+.settings > fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.settings > fieldset > legend { padding: 0; margin-bottom: var(--spacing-md); color: var(--text-primary); font-weight: 600; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--spacing-sm); }
+.fields :global(.MuiInputBase-root) { color: var(--text-primary); background: var(--bg-surface); }
+.fields :global(.MuiInputLabel-root) { color: var(--text-secondary); }
+.fields :global(.MuiOutlinedInput-notchedOutline) { border-color: var(--border-color); }
+.fields :global(.MuiInputBase-input.Mui-disabled) { -webkit-text-fill-color: var(--text-muted); }
+.apply { display: flex; margin-top: var(--spacing-sm); margin-left: auto; }
+.hint { color: var(--text-muted); font-size: var(--text-xs); margin-top: var(--spacing-sm); }
 .error { color: var(--color-danger); font-size: var(--text-sm); }

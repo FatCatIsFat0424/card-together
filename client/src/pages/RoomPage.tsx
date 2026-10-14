@@ -289,20 +289,6 @@ export function RoomPage(): ReactNode {
           <span className={styles.srOnly} role="status">{copied ? t('room.copied') : ''}</span>
         </div>
         <div className={styles.headerActions}>
-          <TimeControlSettings
-            key={`${roomInfo.code}:${roomInfo.hostId}:${roomInfo.timeControl?.baseSeconds}:${roomInfo.timeControl?.bankSeconds}`}
-            value={roomInfo.timeControl ?? DEFAULT_TIME_CONTROL}
-            disabled={!isHost || blocked || roomInfo.status !== 'waiting'} onSave={setTimeControl} />
-          <button type="button" className={`btn btn-outline touch-target ${styles.chatToggle}`}
-            aria-pressed={chatOpen} aria-controls="room-chat" onClick={toggleChat}>
-            <AppIcon name="chat" /> {t('chat.title')}
-            {unread > 0 && <span className={styles.unread} aria-label={t('room.unread', { n: String(unread) })}>
-              {unread}</span>}
-          </button>
-          <button type="button" className="btn btn-outline touch-target" aria-haspopup="dialog"
-            onClick={() => setRulesOpen(true)}>
-            <AppIcon name="rules" /> {t('rules.open')}
-          </button>
           <InviteFriends />
           <button type="button" className="btn btn-outline touch-target" onClick={leave} disabled={blocked}>{t('room.leave')}</button>
         </div>
@@ -321,16 +307,32 @@ export function RoomPage(): ReactNode {
               ))}
             </div>
           </div>
+          <div className={styles.gameActions}>
           <button type="button" className={`btn btn-outline touch-target ${styles.gameSettingsButton}`} aria-haspopup="dialog"
             aria-expanded={Boolean(settingsAnchor)} aria-controls={settingsAnchor ? 'room-game-settings' : undefined}
             onClick={(event) => setSettingsAnchor(event.currentTarget)}>
             <AppIcon name="settings" /> {t('room.gameSettings')}
           </button>
+          <button type="button" className="btn btn-outline touch-target" aria-haspopup="dialog"
+            onClick={() => setRulesOpen(true)}>
+            <AppIcon name="rules" /> {t('rules.open')}
+          </button>
+          <button type="button" className={`btn btn-outline touch-target ${styles.chatToggle}`}
+            aria-pressed={chatOpen} aria-controls="room-chat" onClick={toggleChat}>
+            <AppIcon name="chat" /> {t('chat.title')}
+            {unread > 0 && <span className={styles.unread} aria-label={t('room.unread', { n: String(unread) })}>
+              {unread}</span>}
+          </button>
+          </div>
           <Popover open={Boolean(settingsAnchor)} anchorEl={settingsAnchor} onClose={() => setSettingsAnchor(null)}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             slotProps={{ paper: { className: styles.settingsPanel, id: 'room-game-settings', role: 'dialog',
               'aria-label': t('room.gameSettings') } }}>
+          <TimeControlSettings
+            key={`${roomInfo.code}:${roomInfo.hostId}:${roomInfo.timeControl?.baseSeconds}:${roomInfo.timeControl?.bankSeconds}`}
+            value={roomInfo.timeControl ?? DEFAULT_TIME_CONTROL}
+            disabled={!isHost || blocked || roomInfo.status !== 'waiting'} onSave={setTimeControl} />
           <label className={styles.ruleOption}>
             <AppCheckbox checked={roomInfo.shuffleSeats ?? false}
               disabled={!isHost || blocked || roomInfo.status !== 'waiting'}
@@ -409,12 +411,12 @@ export function RoomPage(): ReactNode {
           if (player) return (
             <div key={seatCard.key} className={`${className} ${seatStyle ? styles.customSeat : ''}`} style={seatStyle}
               data-room-drop={seatCard.key} onPointerDown={(event) => seatDrag.start(event, player)}>
-              <div className={styles.seatLabel}>{seatCard.label}</div>
+              <div className={`${styles.seatLabel} ${player.id === roomInfo.hostId ? styles.hostSeatLabel : ''}`}>{seatCard.label}</div>
+              {player.id === roomInfo.hostId &&
+                <span className={styles.seatHostBadge} title={t('room.host')}>{t('room.host')}</span>}
               {dragHandle(player)}
               <PlayerLink player={player} size="medium" />
               <div className={styles.seatStatus}>
-                {player.id === roomInfo.hostId &&
-                  <span className={styles.hostBadge} title={t('room.host')}>👑 {t('room.host')}</span>}
                 {player.id === playerId && <span>{t('common.me')}</span>}
                 <span className={seatInfo.isReady ? styles.seatReadyBadge : styles.seatNotReadyBadge}>
                   {t(player.isBot ? 'room.botReady' : seatInfo.isReady ? 'room.ready.status' : 'room.seatTaken')}</span>

@@ -105,6 +105,7 @@
 }
 
 .gameSettingsButton { min-height: var(--game-control-height); }
+.gameActions { display: flex; align-items: center; gap: var(--spacing-md); }
 
 @media (prefers-reduced-motion: reduce) {
   .segment, .segmentActive { transition: none; }
@@ -181,6 +182,35 @@
 .hostBadge {
   font-size: var(--text-xs);
   color: var(--text-secondary);
+}
+
+.seatHostBadge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border: 2px solid #d5b16a;
+  border-radius: 47% 53% 49% 51%;
+  background: #11100f;
+  color: #f6d88e;
+  box-shadow: 0 2px 8px #0006, inset 0 0 0 3px #11100f, inset 0 0 0 4px #d5b16a70;
+  font-family: 'Noto Serif TC', Georgia, serif;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.hostSeatLabel { margin-left: 56px; }
+
+@media (max-width: 767px) {
+  .seatHostBadge { top: 6px; left: 6px; width: 44px; height: 44px; font-size: 14px; }
+  .hostSeatLabel { margin-left: 48px; }
 }
 
 .seatStrip {
@@ -415,7 +445,8 @@
   font-size: var(--text-xs);
 }
 
-.botDifficulty .ruleSelect { min-height: 44px; }
+.botDifficulty .ruleSelect,
+.botControls .botAction { height: 44px; min-height: 44px; }
 
 .botControls {
   display: flex;
@@ -564,6 +595,8 @@
 .chatToggle { display: none; }
 
 @media (max-width: 1023px), (max-height: 700px) {
+  .gameActions { gap: var(--spacing-sm); }
+  .gameActions > button { min-height: var(--game-control-height); padding-inline: 10px; font-size: var(--text-sm); }
   .roomContainer { padding: 8px; }
   .roomLayout {
     grid-template-columns: minmax(0, 1fr);

@@ -376,7 +376,7 @@ export function GameShell({
       <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}>
         <div className={`${styles.table} ${tableSeats.some((seat) => !['N', 'E', 'S', 'W'].includes(seat)) ? styles.expandedTable : ''}`} data-card-table>
           <div className={styles.tableTools}>
-            {visibleGame && <button type="button" className={`${styles.toolBtn} ${styles.rulesToolButton}`}
+            {visibleGame && <button type="button" className={styles.toolBtn}
               onClick={openRules} aria-haspopup="dialog" aria-label={t('rules.open')} title={t('rules.open')}>
               <AppIcon name="rules" />
             </button>}

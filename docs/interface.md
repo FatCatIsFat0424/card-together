@@ -77,8 +77,9 @@ Frontend page behavior and layout. Client architecture and connection handling:
 | Compact | Two columns, smaller controls, up to four rows, vertical scrolling when needed |
 
 - Empty seats are full-card buttons; bot controls stay separate.
+- The seated host has a dark, gold-lettered badge in the top-left corner of their seat card.
 - Bot identities show Easy or Hard. Waiting-room hosts edit each bot's difficulty
-  beside its remove control; guests see the selected difficulty. Defaults and strategy
+  beside its remove control, both 44px tall; guests see the selected difficulty. Defaults and strategy
   behavior are documented in [games](games.md#bots).
 - In Ninety-Nine, Blackjack, and Hold'em the host sees a plus cell after the last seat to
   add human seats up to eight; only the last empty extra seat can be removed. Start
@@ -90,9 +91,11 @@ Frontend page behavior and layout. Client architecture and connection handling:
   count is met. The host's separate Start button enables only when the game has enough
   players and every occupied seat is ready. Spectators are asked to sit first.
 - The host can enable automatic seat shuffling for any game; it starts off.
-  The Settings button beside the game picker opens seat shuffling and the selected
-  game's options. Guests can inspect these settings; only the waiting-room host can
-  change them. Game rules sits immediately before Invite friends in the room header actions.
+  The Settings button beside the game picker opens the turn timer, seat shuffling and
+  the selected game's options. The timer shows two MUI number fields directly, with
+  an Apply button and no nested disclosure. Guests can inspect these settings; only the waiting-room host can
+  change them. Game rules sits immediately to the right of Settings beside the game picker.
+  Compact layouts place the chat toggle to the right of Game rules in the same action group.
   The game picker row matches the Settings button height; selection colors transition
   over 180ms, respecting the system reduced-motion preference.
 - Ready and Cancel ready use the same button sizing as the other footer actions.
@@ -136,6 +139,7 @@ Frontend page behavior and layout. Client architecture and connection handling:
   capture highlights, and enlarges sparse tables.
 - Below 768px, Sevens shows suit end cards and next open positions instead of all thirteen.
 - On phones and short landscape windows, abort voting sits at the table bottom.
+- Compact table toolbars use matching 44px square buttons for rules, info, and chat.
 - The result dialog stays below the top bar, focuses Back to room, and reports a pending return.
 - Actions require a ready connection; local sorting still works while reconnecting.
 
