@@ -97,16 +97,24 @@ describe('shop categories and inventory', () => {
     expect(html).toMatch(/disabled=""[^>]*aria-label="Aurora weave \(equipped\)"[^>]*>Equipped<\/button>/);
     expect(html).toContain('aria-label="Equip Quiet lagoon"');
     expect(html).toMatch(/disabled=""[^>]*aria-label="Table talk \(owned\)"[^>]*>Owned<\/button>/);
-    expect(html).toContain('Only you see this card back.');
-    expect(html).toContain('Use in room chat and private messages.');
+  });
+
+  it('explains visibility once beside the selected category heading, not on product cards', () => {
+    expect(render()).not.toContain('Only you see this card back.');
+    const cardBacks = render('?type=cardBack');
+    expect(cardBacks.match(/Only you see this card back\./g)).toHaveLength(1);
+    expect(cardBacks).toMatch(/<h2 id="shop-catalog-title">Card backs<\/h2><p[^>]*>Only you see this card back\./);
+    expect(render('?type=stickerPack')).toContain('Use in room chat and private messages.');
+    expect(render('?type=avatarBorder')).not.toMatch(/<h2 id="shop-catalog-title">[^<]*<\/h2><p/);
   });
 
   it.each(['en', 'zh-TW'] as const)('translates every product and its visibility (%s)', (locale) => {
     useI18nStore.getState().setLocale(locale);
     const html = render();
     for (const prefix of ['shop.item.', 'shop.visibility.', 'shop.type.']) expect(html).not.toContain(prefix);
-    // Borders already preview on the avatar, so only other products explain where they show.
-    expect(html.match(/<p class="[^"]*visibility[^"]*"/g)).toHaveLength(SHOP_ITEMS.filter((item) => item.type !== 'avatarBorder').length);
+    for (const type of ['cardBack', 'tableBackground', 'seatBackground', 'nameplate', 'stickerPack']) {
+      expect(render(`?type=${type}`)).not.toContain('shop.visibility.');
+    }
     if (locale === 'zh-TW') {
       for (const text of ['商品種類', '牌背', '稱號與名牌', '貼圖包', '櫻花花冠', '30 項商品']) expect(html).toContain(text);
     }

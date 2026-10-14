@@ -160,7 +160,8 @@ Per-game controls: [games](games.md#card-controls).
   unknown filters show all products. At ≤52rem categories become a horizontally
   scrollable row above products.
 - Product cards preview the actual artwork, border on the player's avatar, title,
-  or all stickers in a pack. Non-border cards also explain where the product is visible.
+  or all stickers in a pack. Selecting a non-border category shows where its products
+  are visible as a subtitle under the category heading.
   The shop header shows the coin balance; hovering or focusing this balance or the
   global header's coins explains the 10-coin reward per completed game.
   Purchase and coin rules: [storage](storage.md#cosmetic-inventory).

@@ -149,8 +149,13 @@ export function ShopPage(): ReactNode {
       </nav>
       <section id="shop-catalog" className={styles.catalog} aria-labelledby="shop-catalog-title">
         <div className={styles.catalogHeader} aria-live="polite" aria-atomic="true">
-          <h2 id="shop-catalog-title">{t(selectedType === 'all' ? 'shop.allProducts'
-            : selectedType === 'avatarBorder' && selectedSeries !== 'all' ? `shop.category.${selectedSeries}` : `shop.type.${selectedType}`)}</h2>
+          <div>
+            <h2 id="shop-catalog-title">{t(selectedType === 'all' ? 'shop.allProducts'
+              : selectedType === 'avatarBorder' && selectedSeries !== 'all' ? `shop.category.${selectedSeries}` : `shop.type.${selectedType}`)}</h2>
+            {/* Borders preview on the avatar itself, so they need no visibility note. */}
+            {selectedType !== 'all' && selectedType !== 'avatarBorder'
+              && <p className={styles.catalogSubtitle}>{t(`shop.visibility.${selectedType}`)}</p>}
+          </div>
           <span>{t('shop.itemCount', { n: format(products.length) })}</span></div>
         {selectedType === 'avatarBorder' && <div className={styles.seriesFilters} role="group" aria-label={t('shop.allSeries')}>
           {(['all', ...BORDER_SERIES] as const).map((series) => <button key={series} type="button"
@@ -173,7 +178,6 @@ export function ShopPage(): ReactNode {
             <div className={styles.productBody}>
               <h3>{productName}</h3>
               <p className={styles.description}>{t(`shop.item.${item.id}.description`)}</p>
-              {item.type !== 'avatarBorder' && <p className={styles.visibility}>{t(`shop.visibility.${item.type}`)}</p>}
               <div className={styles.productFooter}>
                 <span className={styles.price} aria-label={t('shop.price', { n: format(item.price) })}>
                   <AppIcon name="coins" />{format(item.price)}</span>
