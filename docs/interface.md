@@ -174,9 +174,11 @@ Per-game controls: [games](games.md#card-controls).
   in the lobby, profiles, friends, chat, and rooms without covering the avatar.
 - Owned appearance products can be equipped from the shop or account editor. Account
   equipment selectors save immediately; removing an official image style restores the
-  retained upload or theme. Nameplates show fixed cosmetic titles, separate from earned
-  achievements. Table backgrounds and card backs are private; seat backgrounds show
-  in the waiting room. Existing uploads, themes, and emoji remain free.
+  retained upload or theme. Nameplates pair a fixed localized cosmetic title with its
+  own mark and color treatment, separate from earned achievements. The shop preview
+  uses the same title styling as the equipped nameplate. Table backgrounds and card
+  backs are private; seat backgrounds show in the waiting room. Existing uploads,
+  themes, and emoji remain free.
 - Purchased packs appear in the sticker picker for room chat and private messages;
   no equipment step is required. Receiving a sticker does not require ownership.
 - The emoji/sticker picker shows one horizontal tab row (owned packs, My emoji, Site

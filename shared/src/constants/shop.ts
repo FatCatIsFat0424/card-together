@@ -47,6 +47,12 @@ export const NAMEPLATES = [
   { id: 'nameplate-aurora', type: 'nameplate', price: 140, design: 'aurora' },
   { id: 'nameplate-tide', type: 'nameplate', price: 140, design: 'tide' },
   { id: 'nameplate-sakura', type: 'nameplate', price: 140, design: 'sakura' },
+  { id: 'nameplate-muckborn', type: 'nameplate', price: 140, design: 'muckborn' },
+  { id: 'nameplate-bark-lord', type: 'nameplate', price: 160, design: 'bark-lord' },
+  { id: 'nameplate-renewal', type: 'nameplate', price: 180, design: 'renewal' },
+  { id: 'nameplate-rainbow-pony', type: 'nameplate', price: 200, design: 'rainbow-pony' },
+  { id: 'nameplate-planetary-devastation', type: 'nameplate', price: 240, design: 'planetary-devastation' },
+  { id: 'nameplate-einstein', type: 'nameplate', price: 200, design: 'einstein' },
 ] as const;
 
 export const STICKER_PACKS = [

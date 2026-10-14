@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ShopItemId } from '@shared/types';
-import { SHOP_ITEMS } from '@shared/constants';
+import { NAMEPLATES, SHOP_ITEMS } from '@shared/constants';
 import { createJsonRepository } from '../../src/database/json-repository';
 import type { AccountRecord, Repository } from '../../src/database/repository';
 import { emptyDocument } from '../../src/database/schema';
@@ -51,6 +51,22 @@ describe('permanent shop item transactions', () => {
     expect(updated?.cardBackStyle).toBeUndefined();
     expect(updated?.nameplate).toBeUndefined();
     expect(await repository.purchaseShopItem(account.id, item.id, 3)).toEqual(updated);
+  });
+
+  it.each(NAMEPLATES)('requires ownership to equip $id and restores it after reopening', async (item) => {
+    await repository.createAccount(account);
+    await expect(repository.updateProfile(account.id, { nameplate: item.id }, 2))
+      .rejects.toMatchObject({ code: 'SHOP_ITEM_NOT_OWNED' });
+    await repository.purchaseShopItem(account.id, item.id, 3);
+    await repository.updateProfile(account.id, { nameplate: item.id }, 4);
+    await repository.close();
+    repository = await createJsonRepository(path);
+    expect(await repository.getAccountById(account.id)).toMatchObject({
+      nameplate: item.id, ownedShopItems: [item.id], coins: 1000 - item.price,
+    });
+    expect(await repository.updateProfile(account.id, { nameplate: null }, 5)).toMatchObject({
+      nameplate: null, ownedShopItems: [item.id], coins: 1000 - item.price,
+    });
   });
 
   it('serializes concurrent retries and competing purchases, then retains ownership after reopening', async () => {

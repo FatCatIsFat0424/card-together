@@ -31,8 +31,8 @@ describe('shop categories and inventory', () => {
     const html = render();
     expect(html).toContain('id="shop-categories-title">Product categories</h2>');
     expect(html).toContain('aria-labelledby="shop-categories-title"');
-    expect(html).toContain('30 products');
-    expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(30);
+    expect(html).toContain(`${SHOP_ITEMS.length} products`);
+    expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(SHOP_ITEMS.length);
     expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
     expect(html).toMatch(/aria-pressed="true" aria-controls="shop-catalog"[^>]*><span>All products<\/span>/);
     expect(html).toContain('aria-label="Equip Brushed copper"');
@@ -55,7 +55,7 @@ describe('shop categories and inventory', () => {
 
   it.each(['?series=unknown', '?type=unknown', '?series=', '?unrelated=metal'])('falls back to all products for %s', (query) => {
     const html = render(query);
-    expect(html).toContain('30 products');
+    expect(html).toContain(`${SHOP_ITEMS.length} products`);
     expect(html).toContain('id="shop-catalog-title">All products</h2>');
   });
 
@@ -73,7 +73,7 @@ describe('shop categories and inventory', () => {
     ['cardBack', 'Card backs', 3, 'Aurora weave', 'Cat ears'],
     ['tableBackground', 'Table backgrounds', 3, 'Midnight aurora', 'Aurora weave'],
     ['seatBackground', 'Seat backgrounds', 3, 'Aurora window', 'Midnight aurora'],
-    ['nameplate', 'Titles &amp; nameplates', 3, 'Night voyager nameplate', 'Cat ears'],
+    ['nameplate', 'Titles &amp; nameplates', 9, 'Night voyager nameplate', 'Cat ears'],
     ['stickerPack', 'Sticker packs', 2, 'Table talk', 'Cat ears'],
   ] as const)('restores the %s product type from the URL', (type, label, count, included, excluded) => {
     const html = render(`?type=${type}`);
@@ -116,7 +116,7 @@ describe('shop categories and inventory', () => {
       expect(render(`?type=${type}`)).not.toContain('shop.visibility.');
     }
     if (locale === 'zh-TW') {
-      for (const text of ['商品種類', '牌背', '稱號與名牌', '貼圖包', '櫻花花冠', '30 項商品']) expect(html).toContain(text);
+      for (const text of ['商品種類', '牌背', '稱號與名牌', '貼圖包', '櫻花花冠', '36 項商品']) expect(html).toContain(text);
     }
   });
 

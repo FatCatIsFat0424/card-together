@@ -17,3 +17,9 @@
 .nameplate-aurora { --title-line: #61d9c070; --title-bg: #163c40; --title-ink: #b1f5df; }
 .nameplate-tide { --title-line: #7dc5ee70; --title-bg: #173b50; --title-ink: #b6eaff; }
 .nameplate-sakura { --title-line: #edafc270; --title-bg: #513347; --title-ink: #ffdae5; }
+.nameplate-muckborn { --title-line: #ce9b6970; --title-bg: #473124; --title-ink: #f6d6ac; }
+.nameplate-bark-lord { --title-line: #edba5370; --title-bg: #49371b; --title-ink: #ffe1a0; }
+.nameplate-renewal { --title-line: #8dde8870; --title-bg: linear-gradient(120deg, #193e32, #304320); --title-ink: #d4f8b9; }
+.nameplate-rainbow-pony { --title-line: #eab5f490; --title-bg: linear-gradient(110deg, #63354c, #534321, #205146, #294868, #533764); --title-ink: #fff0fc; }
+.nameplate-planetary-devastation { --title-line: #d79bff80; --title-bg: radial-gradient(ellipse at right, #774133, #33243f 70%); --title-ink: #efceff; }
+.nameplate-einstein { --title-line: #77dce780; --title-bg: linear-gradient(120deg, #203553, #20484b); --title-ink: #bdf6ff; }
