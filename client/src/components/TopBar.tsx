@@ -10,6 +10,7 @@ import { clearAccount, useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useMusicStore } from '../stores/music-store';
 import { useRoomStore } from '../stores/room-store';
+import { useGameStore } from '../stores/game-store';
 import { useVoiceStore } from '../stores/voice-store';
 import { useTurnSound } from '../hooks/use-turn-sound';
 import { LanguageSwitch } from './LanguageSwitch';
@@ -49,6 +50,7 @@ export function TopBar(): ReactNode {
   const notificationCount = useSocialStore(socialUnreadCount);
   const coins = useAccountStore((state) => state.account?.coins ?? 0);
   const roomCode = useRoomStore((state) => state.currentRoomCode);
+  const gamePhase = useGameStore((state) => state.phase);
   const inActiveGame = useRoomStore((state) => state.roomInfo?.status === 'playing' && state.mySeat !== null);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const voiceStatus = useVoiceStore((state) => state.status);
@@ -59,6 +61,11 @@ export function TopBar(): ReactNode {
   const inGame = pathname.startsWith('/game/');
   const showLinks = Boolean(accountId);
   const showVoice = Boolean(accountId && roomCode);
+  // Away from the room, offer the way back, to the table once a match is under way.
+  // The lobby has its own banner for this.
+  const roomPath = roomCode ? `/${gamePhase ? 'game' : 'room'}/${roomCode}` : null;
+  const onRoomPage = pathname === `/room/${roomCode}` || pathname === `/game/${roomCode}`;
+  const showBackToRoom = Boolean(accountId && roomPath && !onRoomPage && pathname !== '/');
 
   useEffect(() => { setOpen(null); }, [pathname, search]);
 
@@ -122,6 +129,10 @@ export function TopBar(): ReactNode {
         <span aria-hidden="true">♠</span><span className={inGame ? styles.brandTextGame : undefined}> Card Together</span>
       </NavLink>
       {showLinks && <nav className={styles.links}>{links}</nav>}
+      {showBackToRoom && roomPath && <Link to={roomPath} className={styles.backToRoom}
+        aria-label={t('nav.backToRoom')} title={t('nav.backToRoom')}>
+        <AppIcon name="previousPage" /><span className={styles.backToRoomText}>{t('nav.backToRoom')}</span>
+      </Link>}
       {inGame && <RoomCodeButton />}
       <div className={styles.actions}>
         {accountId && <Tooltip title={t('shop.earn', { n: String(GAME_COIN_REWARD) })} describeChild arrow>
