@@ -65,14 +65,15 @@ export interface Repository {
   getAccountByUsername(usernameNormalized: string): Promise<AccountRecord | null>;
   searchAccounts(query: string, excludeId: string, limit?: number): Promise<AccountProfile[]>;
   createAccount(account: AccountRecord): Promise<AccountRecord>;
+  /** Apply only supplied editable fields, preserving other committed profile changes. */
   updateProfile(
     id: string,
-    profile: Pick<
+    profile: Partial<Pick<
       AccountProfile,
       | 'nickname' | 'color' | 'avatar' | 'avatarImage' | 'seatBackground' | 'tableBackground'
       | 'tableBackgroundOpacity' | 'cardBack' | 'cardBackOpacity' | 'matchesPublic'
       | 'avatarBorder' | 'cardBackStyle' | 'tableBackgroundStyle' | 'seatBackgroundStyle' | 'nameplate'
-    >,
+    >>,
     now: number,
   ): Promise<AccountRecord | null>;
   /** Atomically debit the catalog price and grant ownership; repeats do not debit again. */

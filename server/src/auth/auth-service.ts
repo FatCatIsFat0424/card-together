@@ -301,7 +301,14 @@ export function createAuthService(
         throw authError(403, 'BORDER_NOT_OWNED', 'Purchase this avatar border first.');
       }
       requireOwnedEquipment(profile, account);
-      const updated = await repository.updateProfile(accountId, profile, now());
+      const changes: Partial<EditableProfile> = {};
+      for (const field of Object.keys(profile) as (keyof EditableProfile)[]) {
+        // Preserve unrelated changes committed since the fallback profile was read.
+        if (Object.hasOwn(body, field) && body[field] !== undefined) {
+          Object.assign(changes, { [field]: profile[field] });
+        }
+      }
+      const updated = await repository.updateProfile(accountId, changes, now());
       if (!updated) throw authError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
       return publicAccount(updated);
     },

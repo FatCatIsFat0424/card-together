@@ -72,6 +72,36 @@ describe('account authentication', () => {
     expect((await service.resolveToken(registered.token))?.account.matchesPublic).toBe(false);
   });
 
+  it('preserves independent simultaneous profile patches and ignores omitted and server-owned fields', async () => {
+    const image = `${'a'.repeat(64)}.png`;
+    const first = await seedAuthenticatedAccount(repository, 'cosmetic_owner', {
+      coins: 1000, ownedAvatarBorders: ['cat'],
+      ownedShopItems: ['nameplate-aurora', 'card-back-aurora', 'table-tide', 'seat-sakura'],
+    }, { now: time, sessionTtlMs: 10000 });
+    service = createAuthService(repository, { now: () => time, sessionTtlMs: 10000, mediaExists: () => true });
+    const expected = {
+      nameplate: 'nameplate-aurora', cardBackStyle: 'card-back-aurora', tableBackgroundStyle: 'table-tide',
+      seatBackgroundStyle: 'seat-sakura', nickname: 'Updated nickname', avatar: 'fox', color: '#abcdef',
+      cardBack: image, tableBackground: image, seatBackground: image, avatarImage: image,
+      cardBackOpacity: 60, tableBackgroundOpacity: 40, matchesPublic: false, avatarBorder: 'cat',
+    } as const;
+    await Promise.all(Object.entries(expected).map(([field, value]) =>
+      service.updateProfile(first.account.id, { [field]: value })));
+    const beforeIgnored = await repository.getAccountById(first.account.id);
+    expect(beforeIgnored).toMatchObject({ ...expected, coins: 1000,
+      ownedShopItems: ['nameplate-aurora', 'card-back-aurora', 'table-tide', 'seat-sakura'] });
+    await service.updateProfile(first.account.id, { nickname: undefined, cardBackStyle: undefined,
+      id: 'forged', username: 'forged', passwordHash: 'forged', coins: 999999, coinRevision: 999,
+      ownedShopItems: ['nameplate-tide'], ownedAvatarBorders: ['gold'] });
+    expect(await repository.getAccountById(first.account.id)).toEqual({
+      ...beforeIgnored, updatedAt: beforeIgnored!.updatedAt + 1,
+    });
+    await repository.close();
+    repository = await createJsonRepository(path);
+    service = createAuthService(repository, { now: () => time });
+    expect((await service.resolveToken(first.token))?.account).toMatchObject({ ...expected, coins: 1000 });
+  });
+
   it('should prefer the new session cookie and preserve legacy authentication', async () => {
     const current = await seedAccount('alice');
     const legacy = await seedAccount('bob');

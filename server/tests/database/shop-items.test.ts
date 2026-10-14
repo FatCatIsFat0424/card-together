@@ -104,6 +104,23 @@ describe('permanent shop item transactions', () => {
     expect(await repository.getAccountById(account.id)).toEqual(owned);
   });
 
+  it('atomically preserves omitted equipment slots across partial profile transactions', async () => {
+    await repository.createAccount({ ...account, ownedShopItems: ['nameplate-aurora', 'card-back-aurora'] });
+    await Promise.all([
+      repository.updateProfile(account.id, { nameplate: 'nameplate-aurora' }, 2),
+      repository.updateProfile(account.id, { cardBackStyle: 'card-back-aurora' }, 3),
+    ]);
+    expect(await repository.getAccountById(account.id)).toMatchObject({
+      nameplate: 'nameplate-aurora', cardBackStyle: 'card-back-aurora', coins: 1000,
+      ownedShopItems: ['nameplate-aurora', 'card-back-aurora'],
+    });
+    await expect(repository.updateProfile(account.id, { tableBackgroundStyle: 'table-tide' }, 4))
+      .rejects.toMatchObject({ code: 'SHOP_ITEM_NOT_OWNED' });
+    expect(await repository.updateProfile(account.id, { nameplate: null }, 5)).toMatchObject({
+      nameplate: null, cardBackStyle: 'card-back-aurora', coins: 1000,
+    });
+  });
+
   it('keeps older accounts readable and rejects purchases without coins', async () => {
     const { coins: _coins, ...legacy } = account;
     await repository.createAccount(legacy);
