@@ -3,6 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
+import Popover from '@mui/material/Popover';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { EXPANDABLE_ROOM_GAMES, GAME_TYPES, MAX_ROOM_SEATS, MAX_SPECTATORS, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import type {
@@ -58,6 +61,7 @@ export function RoomPage(): ReactNode {
   const [chatOpen, setChatOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [settingsAnchor, setSettingsAnchor] = useState<HTMLButtonElement | null>(null);
   const [readyNotice, setReadyNotice] = useState<{ id: number; message: string } | null>(null);
   const messageCount = useChatStore((state) => state.messages.length);
   const [seenMessages, setSeenMessages] = useState(messageCount);
@@ -285,12 +289,6 @@ export function RoomPage(): ReactNode {
           <span className={styles.srOnly} role="status">{copied ? t('room.copied') : ''}</span>
         </div>
         <div className={styles.headerActions}>
-          <label className={styles.ruleOption}>
-            <AppCheckbox checked={roomInfo.shuffleSeats ?? false}
-              disabled={!isHost || blocked || roomInfo.status !== 'waiting'}
-              onChange={(event) => setShuffleSeats(event.target.checked)} />
-            {t('room.shuffleSeats')}
-          </label>
           <TimeControlSettings
             key={`${roomInfo.code}:${roomInfo.hostId}:${roomInfo.timeControl?.baseSeconds}:${roomInfo.timeControl?.bankSeconds}`}
             value={roomInfo.timeControl ?? DEFAULT_TIME_CONTROL}
@@ -300,6 +298,10 @@ export function RoomPage(): ReactNode {
             <AppIcon name="chat" /> {t('chat.title')}
             {unread > 0 && <span className={styles.unread} aria-label={t('room.unread', { n: String(unread) })}>
               {unread}</span>}
+          </button>
+          <button type="button" className="btn btn-outline touch-target" aria-haspopup="dialog"
+            onClick={() => setRulesOpen(true)}>
+            <AppIcon name="rules" /> {t('rules.open')}
           </button>
           <InviteFriends />
           <button type="button" className="btn btn-outline touch-target" onClick={leave} disabled={blocked}>{t('room.leave')}</button>
@@ -319,7 +321,22 @@ export function RoomPage(): ReactNode {
               ))}
             </div>
           </div>
-          {/* Rule options sit beside the game they modify; the hint moves to a tooltip to save a row. */}
+          <button type="button" className={`btn btn-outline touch-target ${styles.gameSettingsButton}`} aria-haspopup="dialog"
+            aria-expanded={Boolean(settingsAnchor)} aria-controls={settingsAnchor ? 'room-game-settings' : undefined}
+            onClick={(event) => setSettingsAnchor(event.currentTarget)}>
+            <AppIcon name="settings" /> {t('room.gameSettings')}
+          </button>
+          <Popover open={Boolean(settingsAnchor)} anchorEl={settingsAnchor} onClose={() => setSettingsAnchor(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            slotProps={{ paper: { className: styles.settingsPanel, id: 'room-game-settings', role: 'dialog',
+              'aria-label': t('room.gameSettings') } }}>
+          <label className={styles.ruleOption}>
+            <AppCheckbox checked={roomInfo.shuffleSeats ?? false}
+              disabled={!isHost || blocked || roomInfo.status !== 'waiting'}
+              onChange={(event) => setShuffleSeats(event.target.checked)} />
+            {t('room.shuffleSeats')}
+          </label>
           {roomInfo.gameType === 'sevens' && <label className={styles.ruleOption} title={t('sevens.closeOnEndHint')}>
             <AppCheckbox checked={roomInfo.sevensOptions?.closeOnEnd ?? false}
               disabled={!isHost || blocked || roomInfo.status !== 'waiting'}
@@ -334,39 +351,37 @@ export function RoomPage(): ReactNode {
           {roomInfo.gameType === 'sevens' && roomInfo.sevensOptions?.closeOnEnd
             && <label className={styles.ruleOption} title={t('sevens.slayEffectHint')}>
               {t('sevens.slayEffect')}
-              <select className={styles.ruleSelect} value={sevensSlayEffect(roomInfo.sevensOptions)}
+              <Select size="small" className={styles.ruleSelect} value={sevensSlayEffect(roomInfo.sevensOptions)}
                 disabled={!isHost || blocked || roomInfo.status !== 'waiting'}
-                aria-describedby="sevens-slay-effect-hint"
+                inputProps={{ 'aria-label': t('sevens.slayEffect'), 'aria-describedby': 'sevens-slay-effect-hint' }}
+                MenuProps={{ slotProps: { paper: { className: styles.selectMenu } } }}
                 onChange={(event) => {
                   const slayEffect = SEVENS_SLAY_EFFECTS.find((effect) => effect === event.target.value);
                   if (slayEffect && roomInfo.sevensOptions) setSevensOptions({ ...roomInfo.sevensOptions, slayEffect });
                 }}>
                 {SEVENS_SLAY_EFFECTS.map((effect) => (
-                  <option key={effect} value={effect}>{t(`sevens.slayEffect.${effect}`)}</option>
+                  <MenuItem key={effect} value={effect}>{t(`sevens.slayEffect.${effect}`)}</MenuItem>
                 ))}
-              </select>
+              </Select>
               <span id="sevens-slay-effect-hint" className={styles.srOnly}>{t('sevens.slayEffectHint')}</span>
             </label>}
           {roomInfo.gameType === 'ninetynine' && <label className={styles.ruleOption} title={t('ninetynine.twoDecksHint')}>
-            <input type="checkbox" checked={roomInfo.ninetyNineOptions?.twoDecks ?? false}
+            <AppCheckbox checked={roomInfo.ninetyNineOptions?.twoDecks ?? false}
               disabled={!isHost || blocked || roomInfo.status !== 'waiting'}
-              aria-describedby="ninetynine-two-decks-hint"
+              slotProps={{ input: { 'aria-describedby': 'ninetynine-two-decks-hint' } }}
               onChange={(event) => setNinetyNineOptions({ twoDecks: event.target.checked })} />
             {t('ninetynine.twoDecks')}
             <span id="ninetynine-two-decks-hint" className={styles.srOnly}>{t('ninetynine.twoDecksHint')}</span>
           </label>}
           {roomInfo.gameType === 'blackjack' && <label className={styles.ruleOption} title={t('blackjack.playerDealerHint')}>
-            <input type="checkbox" checked={roomInfo.blackjackOptions?.playerDealer ?? false}
+            <AppCheckbox checked={roomInfo.blackjackOptions?.playerDealer ?? false}
               disabled={!isHost || blocked || roomInfo.status !== 'waiting'}
-              aria-describedby="blackjack-player-dealer-hint"
+              slotProps={{ input: { 'aria-describedby': 'blackjack-player-dealer-hint' } }}
               onChange={(event) => setBlackjackOptions({ playerDealer: event.target.checked })} />
             {t('blackjack.playerDealer')}
             <span id="blackjack-player-dealer-hint" className={styles.srOnly}>{t('blackjack.playerDealerHint')}</span>
           </label>}
-          <button type="button" className="btn btn-outline touch-target" aria-haspopup="dialog"
-            onClick={() => setRulesOpen(true)}>
-            <AppIcon name="rules" /> {t('rules.open')}
-          </button>
+          </Popover>
         </div>
       </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
@@ -407,17 +422,18 @@ export function RoomPage(): ReactNode {
               {isHost && player.isBot && seatCard.seat && <div className={styles.botControls}>
                 <label className={styles.botDifficulty}>
                   <span className={styles.srOnly}>{t('room.botDifficulty')}</span>
-                  <select className={styles.ruleSelect} value={player.botDifficulty ?? 'hard'}
-                    aria-label={t('room.botDifficultyFor', { nickname: player.nickname })}
+                  <Select size="small" className={styles.ruleSelect} value={player.botDifficulty ?? 'hard'}
+                    inputProps={{ 'aria-label': t('room.botDifficultyFor', { nickname: player.nickname }) }}
+                    MenuProps={{ slotProps: { paper: { className: styles.selectMenu } } }}
                     disabled={blocked || roomInfo.status !== 'waiting'} onChange={(event) => {
                       if (seatCard.seat && isBotDifficulty(event.target.value)) {
                         setBotDifficulty(seatCard.seat, event.target.value);
                       }
                     }}>
-                    {BOT_DIFFICULTIES.map((difficulty) => <option key={difficulty} value={difficulty}>
+                    {BOT_DIFFICULTIES.map((difficulty) => <MenuItem key={difficulty} value={difficulty}>
                       {t(`room.botDifficulty.${difficulty}`)}
-                    </option>)}
-                  </select>
+                    </MenuItem>)}
+                  </Select>
                 </label>
                 <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
                   disabled={blocked} onClick={() => { if (seatCard.seat) removeBot(seatCard.seat); }}>{t('room.removeBot')}</button>

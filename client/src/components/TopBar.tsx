@@ -16,6 +16,7 @@ import { LanguageSwitch } from './LanguageSwitch';
 import { MusicControl } from './MusicControl';
 import { ThemeSwitch } from './ThemeSwitch';
 import { AppIcon } from './AppIcon';
+import { RoomCodeButton } from './RoomCodeButton';
 import { NotificationPanel } from './NotificationPanel';
 import { socialUnreadCount, useSocialStore } from '../stores/social-store';
 import styles from './TopBar.module.css';
@@ -26,20 +27,6 @@ const VoicePanel = lazy(() => import('./VoicePanel')
 type Popover = 'notifications' | 'menu' | 'voice' | 'music' | 'signOut';
 
 const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-function RoomCodeButton(): ReactNode {
-  const code = useRoomStore((state) => state.currentRoomCode);
-  const { t } = useI18nStore();
-  const [copied, setCopied] = useState(false);
-  if (!code) return null;
-  const copy = async (): Promise<void> => {
-    try { await navigator.clipboard.writeText(code); setCopied(true); } catch { setCopied(false); }
-  };
-  return <button type="button" className={styles.roomCodeButton} onClick={() => void copy()}
-    aria-label={t('room.copyCode', { code })} title={t(copied ? 'room.copied' : 'room.copyCode', { code })}>
-    <AppIcon name={copied ? 'check' : 'copy'} />{code}
-  </button>;
-}
 
 export function TopBar(): ReactNode {
   useTurnSound();
@@ -122,7 +109,7 @@ export function TopBar(): ReactNode {
         <span aria-hidden="true">♠</span><span className={inGame ? styles.brandTextGame : undefined}> Card Together</span>
       </NavLink>
       {showLinks && <nav className={styles.links}>{links}</nav>}
-      {inGame && <RoomCodeButton />}
+      {inGame && roomCode && <RoomCodeButton key={roomCode} code={roomCode} compact />}
       <div className={styles.actions}>
         {accountId && <Tooltip title={t('shop.earn', { n: String(GAME_COIN_REWARD) })} describeChild arrow>
           <span className={styles.coinBalance} role="status" tabIndex={0}

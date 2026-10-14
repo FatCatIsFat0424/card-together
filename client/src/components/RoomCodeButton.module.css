@@ -1,0 +1,13 @@
+.button { display: inline-flex; align-items: center; gap: var(--spacing-sm); padding: 6px 10px;
+  color: var(--text-primary); background: var(--bg-card); border: 1px solid var(--border-color);
+  border-radius: var(--radius-md); font-size: var(--text-sm); font-variant-numeric: tabular-nums; cursor: pointer; }
+.button:hover { background: var(--bg-card-hover); }
+.panel { display: flex; width: 100%; min-height: 44px; padding: 8px 10px; }
+.label { font-size: var(--text-xs); color: var(--text-secondary); }
+.code { margin-left: auto; font-family: var(--font-mono); letter-spacing: .05em; }
+.compact { display: none; }
+/* Match the game info rail: compact layouts retain the original header control. */
+@media (max-width: 1023px), (max-height: 500px) and (min-width: 600px) {
+  .compact { display: inline-flex; }
+  .panel { display: none; }
+}

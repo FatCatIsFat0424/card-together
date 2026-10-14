@@ -55,6 +55,7 @@
 
 /* Rule options wrap below as a unit; the picker keeps its label and wraps games internally. */
 .gameTypeRow {
+  --game-control-height: 42px;
   grid-area: games;
   display: flex;
   flex-wrap: wrap;
@@ -83,6 +84,7 @@
   display: inline-flex;
   flex-wrap: wrap;
   max-width: 100%;
+  min-height: var(--game-control-height);
   padding: 3px;
   gap: 3px;
   border: 1px solid var(--border-color);
@@ -93,11 +95,19 @@
 .segment,
 .segmentActive {
   flex-shrink: 0;
+  min-height: calc(var(--game-control-height) - 8px);
   white-space: nowrap;
   padding: var(--spacing-xs) var(--spacing-md);
   border-radius: var(--radius-pill);
   font-size: var(--text-sm);
   font-weight: 600;
+  transition: background-color 180ms ease, color 180ms ease, opacity 180ms ease;
+}
+
+.gameSettingsButton { min-height: var(--game-control-height); }
+
+@media (prefers-reduced-motion: reduce) {
+  .segment, .segmentActive { transition: none; }
 }
 
 .segment { color: var(--text-secondary); }
@@ -128,18 +138,36 @@
 .ruleOption:has(input:checked) { border-color: var(--color-primary); color: var(--text-primary); }
 .ruleOption:has(input:disabled) { cursor: default; }
 
-.ruleSelect {
+.settingsPanel.settingsPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  max-width: calc(100vw - 32px);
+  padding: var(--spacing-md);
+  margin-top: var(--spacing-xs);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+.settingsPanel .ruleOption {
+  min-height: 44px;
+  white-space: normal;
+}
+.settingsPanel .ruleOption :global(.MuiCheckbox-root) { margin-block: 0; }
+
+.ruleSelect.ruleSelect {
   min-height: 32px;
-  padding: 0 var(--spacing-xs);
-  border: none;
   border-radius: var(--radius-sm);
-  background: transparent;
+  background: var(--bg-surface);
   color: var(--text-primary);
   font: inherit;
-  cursor: pointer;
 }
-
-.ruleSelect:disabled { cursor: default; }
+.ruleSelect :global(.MuiOutlinedInput-notchedOutline) { border-color: var(--border-color); }
+.ruleSelect :global(.MuiSelect-icon) { color: var(--text-secondary); }
+.ruleSelect :global(.MuiSelect-select.Mui-disabled) { -webkit-text-fill-color: var(--text-muted); }
+.selectMenu.selectMenu { background: var(--bg-surface); color: var(--text-primary); }
 
 /* Current game: non-hosts see this badge too */
 .segmentActive,

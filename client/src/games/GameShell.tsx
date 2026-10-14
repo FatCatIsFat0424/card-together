@@ -23,6 +23,7 @@ import type { TablePosition } from '../game-view';
 import { AbortVoteBanner, AbortVoteButton } from './AbortVote';
 import { SpectatorLeaveButton } from './SpectatorLeave';
 import { AppIcon } from '../components/AppIcon';
+import { RoomCodeButton } from '../components/RoomCodeButton';
 import { GameRulesDialog } from '../components/GameRulesDialog';
 import { matchRulesContext } from '../game-rules-context';
 import styles from './GameShell.module.css';
@@ -39,6 +40,8 @@ import { useTablePerspectiveStore } from '../stores/table-perspective-store';
 const DESKTOP_QUERY = '(min-width: 1024px)';
 const SHEET_QUERY = '(max-width: 767px), (max-height: 500px) and (min-width: 600px)';
 const OUT_BANNER_MS = 3500;
+// Keep the setting available in code while its UI is temporarily hidden.
+const SHOW_REDUCED_MOTION_CONTROL = false;
 /** The played card flies to the center from that seat's direction */
 const FLY_FROM: Record<TablePosition, CSSProperties> = {
   topLeft: { '--fly-x': '-24vw', '--fly-y': '-28vh' } as CSSProperties,
@@ -352,17 +355,18 @@ export function GameShell({
           <button type="button" className={styles.sheetClose} onClick={() => setInfoOpen(false)}
             aria-label={t('table.close')} title={t('table.close')}><AppIcon name="close" /></button>
         </div>
+        {room && <RoomCodeButton key={room.code} code={room.code} />}
         <AbortVoteButton />
         <SpectatorLeaveButton />
         {visibleGame && <button type="button" className={`btn btn-outline ${styles.rulesRailButton}`}
           aria-haspopup="dialog" onClick={openRules}>
           <AppIcon name="rules" /> {t('rules.open')}
         </button>}
-        <label className={styles.motionSetting}>
+        {SHOW_REDUCED_MOTION_CONTROL && <label className={styles.motionSetting}>
           <AppCheckbox checked={reducedMotion}
             onChange={(event) => setReducedMotion(event.target.checked)} />
           {t('table.reduceMotion')}
-        </label>
+        </label>}
         <div className={styles.infoContent}>
           {info}
           {visibleGame && <RoundHistory game={visibleGame} />}
@@ -414,7 +418,7 @@ export function GameShell({
           <AbortVoteBanner />
         </div>
 
-        <div className={`${styles.handZone} ${myTurn ? styles.handMyTurn : ''}`} data-hand-zone>
+        <div className={styles.handZone} data-hand-zone>
           <div className={styles.handHeader}>
             {tableSeats.includes(bottomSeat) && <TableSeat seat={bottomSeat} position="bottom" suppressTurn={presentation.locked}
               onObserve={watching ? () => observeSeat(bottomSeat) : undefined}

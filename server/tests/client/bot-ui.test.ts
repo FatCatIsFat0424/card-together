@@ -113,15 +113,14 @@ describe('bot player interface', () => {
   it('shows per-bot difficulty, defaults legacy bots to hard, and restricts editing to connected hosts', () => {
     const html = render(createElement(RoomPage));
     expect(html).toContain('aria-label="Difficulty for Bot East"');
-    expect(html).toContain('<option value="hard" selected="">Hard</option>');
-    expect(html).toContain('<option value="easy">Easy</option>');
+    expect(html).toMatch(/role="combobox"[^>]*>Hard<\/div>/);
     state.room!.seats.E = { player: { ...bot, botDifficulty: 'easy' }, isReady: true };
-    expect(render(createElement(RoomPage))).toContain('<option value="easy" selected="">Easy</option>');
+    expect(render(createElement(RoomPage))).toMatch(/role="combobox"[^>]*>Easy<\/div>/);
     state.connection = 'connecting';
-    expect(render(createElement(RoomPage))).toMatch(/<select[^>]*aria-label="Difficulty for Bot East"[^>]*disabled/);
+    expect(render(createElement(RoomPage))).toMatch(/role="combobox"[^>]*aria-disabled="true"[^>]*aria-label="Difficulty for Bot East"/);
     state.connection = 'ready';
     state.room = { ...state.room!, status: 'playing' };
-    expect(render(createElement(RoomPage))).toMatch(/<select[^>]*aria-label="Difficulty for Bot East"[^>]*disabled/);
+    expect(render(createElement(RoomPage))).toMatch(/role="combobox"[^>]*aria-disabled="true"[^>]*aria-label="Difficulty for Bot East"/);
     state.playerId = 'visitor';
     const visitorHtml = render(createElement(RoomPage));
     expect(visitorHtml).not.toContain('aria-label="Difficulty for');

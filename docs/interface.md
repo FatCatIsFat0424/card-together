@@ -90,6 +90,11 @@ Frontend page behavior and layout. Client architecture and connection handling:
   count is met. The host's separate Start button enables only when the game has enough
   players and every occupied seat is ready. Spectators are asked to sit first.
 - The host can enable automatic seat shuffling for any game; it starts off.
+  The Settings button beside the game picker opens seat shuffling and the selected
+  game's options. Guests can inspect these settings; only the waiting-room host can
+  change them. Game rules sits immediately before Invite friends in the room header actions.
+  The game picker row matches the Settings button height; selection colors transition
+  over 180ms, respecting the system reduced-motion preference.
 - Ready and Cancel ready use the same button sizing as the other footer actions.
 - A live start shows a skippable 2.9-second intro: the game's lobby artwork and name
   fade in, all occupied seats appear together with avatars and names, then the table
@@ -119,9 +124,14 @@ Frontend page behavior and layout. Client architecture and connection handling:
   at the top, so the top row stays one plate tall and the centre gets the height; below 600px wide
   they stack again. Their centre cards size from the table, and Sevens rows may exceed the usual centre width
   cap.
-- The top-left header shows a copyable room code instead of repeated game-status tags.
+- On desktop, the game info panel shows a copyable room code directly above the
+  abort-vote button, and the global header omits it. Compact layouts retain the original
+  header room code and omit it from the info drawer.
 - The local hand header holds identity, score, captured-card preview, status, errors,
   and the base + reserve clock at its right edge. Other seats show only the active allowance.
+- The local turn retains its text hint without a glowing frame around the hand area.
+  The reduced-motion control is temporarily not rendered; saved preferences and motion
+  handling remain active.
 - Red Points measures the card area, paginates in card order, keeps the page during
   capture highlights, and enlarges sparse tables.
 - Below 768px, Sevens shows suit end cards and next open positions instead of all thirteen.

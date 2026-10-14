@@ -144,7 +144,3 @@
   .brand { font-size: var(--text-sm); }
   .brand span:last-child { display: none; }
 }
-
-.roomCodeButton { display: inline-flex; align-items: center; gap: var(--spacing-sm); padding: 6px 10px;
-  color: var(--text-primary); background: var(--bg-card); border: 1px solid var(--border-color);
-  border-radius: var(--radius-md); font-size: var(--text-sm); font-variant-numeric: tabular-nums; cursor: pointer; }
