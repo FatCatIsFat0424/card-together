@@ -264,6 +264,15 @@ export function RoomPage(): ReactNode {
   const spectators = roomInfo.spectators ?? [];
   const expandableSeats = EXPANDABLE_ROOM_GAMES.includes(roomInfo.gameType);
   const movingPlayer = seatDrag.drag?.player ?? seatDrag.selected;
+  const hostTag = (
+    <span className={styles.hostTag}>
+      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+        <path d="M2 12.5 1 4.5l3.6 3L8 2.5l3.4 5 3.6-3-1 8z" fill="currentColor" />
+        <rect x="2" y="13.5" width="12" height="1.5" rx=".75" fill="currentColor" />
+      </svg>
+      {t('room.host')}
+    </span>
+  );
   const dragHandle = (player: PlayerInfo): ReactNode => canMovePlayers && !player.isBot &&
     <button type="button" className={styles.dragHandle} data-seat-drag-handle="true"
       aria-label={t('room.movePlayer', { nickname: player.nickname })}
@@ -419,12 +428,11 @@ export function RoomPage(): ReactNode {
           if (player) return (
             <div key={seatCard.key} className={`${className} ${seatStyle ? styles.customSeat : ''}`} style={seatStyle}
               data-room-drop={seatCard.key} onPointerDown={(event) => seatDrag.start(event, player)}>
-              <div className={`${styles.seatLabel} ${player.id === roomInfo.hostId ? styles.hostSeatLabel : ''}`}>{seatCard.label}</div>
-              {player.id === roomInfo.hostId &&
-                <span className={styles.seatHostBadge} title={t('room.host')}>{t('room.host')}</span>}
               {dragHandle(player)}
               <PlayerLink player={player} size="medium" />
               <div className={styles.seatStatus}>
+                <span className={styles.seatDirection}>{seatCard.label}</span>
+                {player.id === roomInfo.hostId && hostTag}
                 {player.id === playerId && <span>{t('common.me')}</span>}
                 <span className={seatInfo.isReady || player.isBot ? styles.seatReadyBadge : styles.seatNotReadyBadge}>
                   {t(seatInfo.isReady || player.isBot ? 'room.ready.status' : 'room.notReady')}</span>
@@ -457,9 +465,9 @@ export function RoomPage(): ReactNode {
             <div key={seatCard.key} className={`${className} ${styles.emptySlot}`} data-room-drop={seatCard.key}>
               <button type="button" disabled={blocked || roomInfo.status !== 'waiting'} className={styles.seatChoice}
                 onClick={sit}>
-                <span className={styles.seatLabel}>{seatCard.label}</span>
                 <AppIcon name="person" className={styles.emptyIcon} />
                 <span className={styles.seatEmpty}>{t('room.seatEmpty')}</span>
+                <span className={styles.seatDirection}>{seatCard.label}</span>
               </button>
               {isHost && seatCard.seat && <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
                 disabled={blocked} onClick={() => { if (seatCard.seat) addBot(seatCard.seat); }}>{t('room.addBot')}</button>}
@@ -487,7 +495,7 @@ export function RoomPage(): ReactNode {
             onPointerDown={(event) => seatDrag.start(event, spectator)}>
             {dragHandle(spectator)}
             <PlayerLink player={spectator} size="small" showTitle={false} />
-            {spectator.id === roomInfo.hostId && <span className={styles.hostBadge} title={t('room.host')}>👑</span>}
+            {spectator.id === roomInfo.hostId && hostTag}
             {spectator.id === playerId && <span>{t('common.me')}</span>}
             {isHost && spectator.id !== playerId && <button type="button"
               className={`btn btn-outline touch-target ${styles.botAction}`} disabled={blocked}
