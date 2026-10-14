@@ -183,6 +183,11 @@ describe('personal account appearance', () => {
       expect(html).toContain(useI18nStore.getState().t('shop.title.nameplate-tide'));
       expect(html).not.toContain('shop.title.nameplate-tide');
     }
+    // Compact lists such as the room's spectator area leave the title out.
+    const compact = renderToStaticMarkup(createElement(MemoryRouter, null,
+      createElement(PlayerLink, { player: { ...alice, nameplate: 'nameplate-tide' }, showTitle: false })));
+    expect(compact).toContain(alice.nickname);
+    expect(compact).not.toContain('data-nameplate');
   });
 
   it('should apply the owner card back and table opacity to the game table', () => {

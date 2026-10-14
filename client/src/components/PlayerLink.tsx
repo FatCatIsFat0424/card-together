@@ -11,9 +11,13 @@ interface PlayerLinkProps {
   showUsername?: boolean;
   size?: 'small' | 'medium';
   linked?: boolean;
+  /** Equipped nameplate title; compact lists such as the spectator area leave it out. */
+  showTitle?: boolean;
 }
 
-export function PlayerLink({ player, showUsername = false, size = 'small', linked = true }: PlayerLinkProps): ReactNode {
+export function PlayerLink({
+  player, showUsername = false, size = 'small', linked = true, showTitle = true,
+}: PlayerLinkProps): ReactNode {
   const { t } = useI18nStore();
   const identity = <>
     <Avatar avatar={player.avatar} image={player.avatarImage} border={player.avatarBorder} color={player.color} size={size} />
@@ -21,7 +25,7 @@ export function PlayerLink({ player, showUsername = false, size = 'small', linke
       <span className={styles.nickname}>{player.nickname}</span>
       {player.isBot && <span className={styles.botBadge}>{t('player.bot')}</span>}
       {player.isBot && <span className={styles.botBadge}>{t(`room.botDifficulty.${player.botDifficulty ?? 'hard'}`)}</span>}
-      <span data-cosmetic-title className={styles.title}><Nameplate id={player.nameplate} /></span>
+      {showTitle && <span data-cosmetic-title className={styles.title}><Nameplate id={player.nameplate} /></span>}
       {showUsername && !player.isBot && <span className={styles.username}>@{player.username}</span>}
     </span>
   </>;

@@ -461,7 +461,7 @@ export function RoomPage(): ReactNode {
             <li key={spectator.id} className={`${styles.spectator} ${movingPlayer?.id === spectator.id ? styles.movingSeat : ''}`}
               onPointerDown={(event) => seatDrag.start(event, spectator)}>
               {dragHandle(spectator)}
-              <PlayerLink player={spectator} size="small" />
+              <PlayerLink player={spectator} size="small" showTitle={false} />
               {spectator.id === roomInfo.hostId && <span className={styles.hostBadge} title={t('room.host')}>👑</span>}
               {spectator.id === playerId && <span>{t('common.me')}</span>}
               {isHost && spectator.id !== playerId && <button type="button"
