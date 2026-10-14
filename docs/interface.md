@@ -168,7 +168,8 @@ Frontend page behavior and layout. Client architecture and connection handling:
 - On phones and short landscape windows, a matching icon-only abort-vote button sits
   at the left of the table toolbar; the info drawer omits its duplicate. Starting an
   abort vote requires confirmation on all layouts. The confirmation uses the same
-  200ms opening animation as the rules dialog. Cancelling does not start a vote.
+  200ms opening and shrinking fade-out animations as the rules dialog, respecting
+  reduced motion. Cancelling does not start a vote; confirmation is disabled during exit.
 - The result dialog stays below the top bar, focuses Back to room, and reports a pending return.
 - Actions require a ready connection; local sorting still works while reconnecting.
 
@@ -177,6 +178,8 @@ Per-game controls: [games](games.md#card-controls).
 ## Rules dialog
 
 The dialog opens from its center with a 200ms scale animation (70% to 105% to 100%).
+Closing via its button, Escape or the backdrop shrinks it to 70% and fades it out
+over 200ms; it remains mounted until the exit finishes. Reduced motion skips the exit.
 Saved and system reduced-motion preferences disable this animation.
 
 - Opened from the lobby Rules link, the waiting-room Game rules button, the desktop match

@@ -7,6 +7,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { ABORT_VOTE_THRESHOLD } from '@shared/constants';
 import type { PlayerInfo, RoomInfo } from '@shared/types';
 import { socket } from '../socket';
@@ -69,6 +70,8 @@ export function AbortVoteButton({ iconOnly = false, className = '', buttonClassN
   const [busy, error, run] = useVoteAction();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
+  const systemReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const still = reducedMotion || systemReducedMotion;
   const titleId = useId();
   const cooldownUntil = room?.abortVoteCooldownUntil ?? 0;
   const now = useNow(cooldownUntil > Date.now());
@@ -77,7 +80,7 @@ export function AbortVoteButton({ iconOnly = false, className = '', buttonClassN
   const disabled = busy || !connectionReady || cooling || room.abortVote !== null;
   const label = cooling ? t('abortVote.cooldown', { time: formatCountdown(cooldownUntil - now) }) : t('abortVote.button');
   const confirm = (): void => {
-    if (disabled) return;
+    if (disabled || !confirmOpen) return;
     setConfirmOpen(false);
     run((done) => socket.timeout(10000).emit('game:abortVote:start', done));
   };
@@ -91,15 +94,15 @@ export function AbortVoteButton({ iconOnly = false, className = '', buttonClassN
       </button>
       {error && <p className={styles.error} role="alert">{error}</p>}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} fullWidth maxWidth="xs"
-        transitionDuration={0}
+        transitionDuration={{ enter: 0, exit: still ? 0 : 200 }}
         aria-labelledby={titleId} aria-describedby={`${titleId}-description`}
-        slotProps={{ paper: { className: `${styles.confirmDialog} ${motionStyles.enter} ${reducedMotion ? motionStyles.still : ''}` } }}>
+        slotProps={{ paper: { className: `${styles.confirmDialog} ${confirmOpen ? motionStyles.enter : motionStyles.exit} ${still ? motionStyles.still : ''}` } }}>
         <DialogTitle id={titleId}>{t('abortVote.confirmTitle')}</DialogTitle>
         <DialogContent id={`${titleId}-description`}>{t('abortVote.confirmDescription')}</DialogContent>
         <DialogActions>
           <button type="button" className="btn btn-outline" autoFocus onClick={() => setConfirmOpen(false)}>
             {t('common.cancel')}</button>
-          <button type="button" className="btn btn-danger" disabled={disabled} onClick={confirm}>
+          <button type="button" className="btn btn-danger" disabled={disabled || !confirmOpen} onClick={confirm}>
             {t('abortVote.confirmStart')}</button>
         </DialogActions>
       </Dialog>

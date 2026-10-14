@@ -1,8 +1,9 @@
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import type { GameType } from '@shared/types';
 import { getGameRules } from '../game-rules-i18n';
 import type { GameRulesContext } from '../game-rules-context';
@@ -57,12 +58,18 @@ export function GameRulesDialog({ gameType, context, onClose }: {
   const { t } = useI18nStore();
   const titleId = useId();
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
-  return <Dialog open fullWidth maxWidth="md" onClose={onClose} aria-labelledby={titleId}
-    transitionDuration={0} slotProps={{ paper: { className: `${styles.dialog} ${motionStyles.enter} ${reducedMotion ? motionStyles.still : ''}` },
+  const systemReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const [closing, setClosing] = useState(false);
+  const still = reducedMotion || systemReducedMotion;
+  const close = (): void => setClosing(true);
+  return <Dialog open={!closing} fullWidth maxWidth="md" onClose={close} aria-labelledby={titleId}
+    transitionDuration={{ enter: 0, exit: still ? 0 : 200 }}
+    slotProps={{ transition: { onExited: onClose },
+      paper: { className: `${styles.dialog} ${closing ? motionStyles.exit : motionStyles.enter} ${still ? motionStyles.still : ''}` },
       backdrop: { className: styles.backdrop } }}>
     <DialogTitle component="div" id={`${titleId}-header`} className={styles.header}>
       <h2 id={titleId}>{t('lobby.rulesTitle', { game: t(`gameType.${gameType}`) })}</h2>
-      <button type="button" className={`btn btn-secondary ${styles.close}`} onClick={onClose} aria-label={t('table.close')}>
+      <button type="button" className={`btn btn-secondary ${styles.close}`} onClick={close} aria-label={t('table.close')}>
         <AppIcon name="close" />
       </button>
     </DialogTitle>
