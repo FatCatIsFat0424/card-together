@@ -1,5 +1,5 @@
 import { DEFAULT_TIME_CONTROL, isTimeControl } from '@shared/time-control';
-import { DEFAULT_SEVENS_OPTIONS, isSevensOptions } from '@shared/sevens-options';
+import { DEFAULT_SEVENS_OPTIONS, isSevensOptions, LEGACY_SEVENS_OPTIONS } from '@shared/sevens-options';
 import { DEFAULT_NINETYNINE_OPTIONS, isNinetyNineOptions } from '@shared/ninetynine-options';
 import { DEFAULT_BLACKJACK_OPTIONS, isBlackjackOptions } from '@shared/blackjack-options';
 import { isDeepStrictEqual } from 'node:util';
@@ -412,7 +412,7 @@ export function setSevensOptions(code: RoomCode, playerId: string, sevensOptions
   if (room.info.status !== 'waiting') return { success: false, reason: 'Game is in progress' };
   if (room.info.gameType !== 'sevens') return { success: false, reason: 'Not a Sevens room.' };
   if (!isSevensOptions(sevensOptions)) return { success: false, reason: 'Invalid Sevens options.' };
-  const previous = room.info.sevensOptions ?? DEFAULT_SEVENS_OPTIONS;
+  const previous = room.info.sevensOptions ?? LEGACY_SEVENS_OPTIONS;
   if (isDeepStrictEqual(previous, sevensOptions)) return { success: true };
   room.info = { ...room.info, sevensOptions: { ...sevensOptions } };
   // The slaying effect is only a presentation choice; readiness resets only when the rules change.
@@ -572,7 +572,7 @@ export function restoreRooms(records: PersistedRoom[]): void {
   for (const room of records) rooms.set(room.info.code, {
     ...room, info: {
       ...room.info, timeControl: room.info.timeControl ?? { ...DEFAULT_TIME_CONTROL },
-      sevensOptions: room.info.sevensOptions ?? { ...DEFAULT_SEVENS_OPTIONS },
+      sevensOptions: room.info.sevensOptions ?? { ...LEGACY_SEVENS_OPTIONS },
       ninetyNineOptions: room.info.ninetyNineOptions ?? { ...DEFAULT_NINETYNINE_OPTIONS },
       blackjackOptions: room.info.blackjackOptions ?? { ...DEFAULT_BLACKJACK_OPTIONS },
     },

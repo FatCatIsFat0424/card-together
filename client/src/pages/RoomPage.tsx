@@ -9,7 +9,7 @@ import type {
   BlackjackOptions, GameType, NinetyNineOptions, PlayerInfo, RoomSeatTarget, Seat, SeatInfo, SevensOptions, TimeControl,
 } from '@shared/types';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
-import { DEFAULT_SEVENS_OPTIONS, SEVENS_SLAY_EFFECTS, sevensSlayEffect } from '@shared/sevens-options';
+import { LEGACY_SEVENS_OPTIONS, SEVENS_SLAY_EFFECTS, sevensSlayEffect } from '@shared/sevens-options';
 import { socket } from '../socket';
 import { seatBackgroundStyle, tableBackgroundStyle } from '../account-appearance';
 import { useAccountStore } from '../stores/account-store';
@@ -319,7 +319,7 @@ export function RoomPage(): ReactNode {
               disabled={!isHost || blocked || roomInfo.status !== 'waiting'}
               slotProps={{ input: { 'aria-describedby': 'sevens-close-on-end-hint' } }}
               onChange={(event) => setSevensOptions({
-                ...(roomInfo.sevensOptions ?? DEFAULT_SEVENS_OPTIONS), closeOnEnd: event.target.checked,
+                ...(roomInfo.sevensOptions ?? LEGACY_SEVENS_OPTIONS), closeOnEnd: event.target.checked,
               })} />
             {t('sevens.closeOnEnd')}
             <span id="sevens-close-on-end-hint" className={styles.srOnly}>{t('sevens.closeOnEndHint')}</span>

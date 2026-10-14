@@ -1,6 +1,9 @@
 import type { SevensOptions, SevensSlayEffect } from './types/room';
 
-export const DEFAULT_SEVENS_OPTIONS: SevensOptions = { closeOnEnd: false };
+/** New Sevens rooms start with Dragon Slaying on. */
+export const DEFAULT_SEVENS_OPTIONS: SevensOptions = { closeOnEnd: true };
+/** Rooms and games saved before the options existed played standard rules, so a missing value means off. */
+export const LEGACY_SEVENS_OPTIONS: SevensOptions = { closeOnEnd: false };
 
 export const SEVENS_SLAY_EFFECTS: readonly SevensSlayEffect[] = ['dragon', 'fire'];
 

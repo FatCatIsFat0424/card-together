@@ -432,28 +432,31 @@ describe('persistent authenticated application', () => {
     await guest.timeout(5_000).emitWithAck('room:join', { roomCode: roomCode! });
     await guest.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'E' });
     await guest.timeout(5_000).emitWithAck('room:ready');
-    expect((await resume(host)).room?.sevensOptions).toEqual({ closeOnEnd: false });
-    expect(await guest.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: true }))
+    // New Sevens rooms start with Dragon Slaying on.
+    expect((await resume(host)).room?.sevensOptions).toEqual({ closeOnEnd: true });
+    expect(await guest.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: false }))
       .toMatchObject({ success: false });
     for (const payload of [null, {}, [], true, { closeOnEnd: 'true' }, { closeOnEnd: 1 },
       { closeOnEnd: true, extra: true }, { closeOnEnd: true, slayEffect: 'smoke' }, { slayEffect: 'fire' }]) {
       expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', payload as SevensOptions))
         .toMatchObject({ success: false });
     }
-    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: false }))
+    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: true }))
       .toEqual({ success: true });
     const before = (await resume(host)).room!;
     expect(before.seats.E.isReady).toBe(true);
     vi.spyOn(repository, 'saveRuntime').mockRejectedValueOnce(new Error('Disk full'));
-    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: true }))
+    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: false }))
       .toMatchObject({ success: false });
     expect((await resume(host)).room).toEqual(before);
-    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: true }))
+    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: false }))
       .toEqual({ success: true });
     const changed = (await resume(guest)).room!;
-    expect(changed.sevensOptions).toEqual({ closeOnEnd: true });
+    expect(changed.sevensOptions).toEqual({ closeOnEnd: false });
     expect(changed.seats.E.isReady).toBe(false);
-    expect((await repository.loadRuntime())?.rooms[0].info.sevensOptions).toEqual({ closeOnEnd: true });
+    expect((await repository.loadRuntime())?.rooms[0].info.sevensOptions).toEqual({ closeOnEnd: false });
+    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: true }))
+      .toEqual({ success: true });
     // The slaying effect is a host choice saved with the rules and fixed for the match; being only a
     // presentation choice, it leaves everyone ready.
     await guest.timeout(5_000).emitWithAck('room:ready');

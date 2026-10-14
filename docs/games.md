@@ -292,7 +292,8 @@ Hovering or focusing a card highlights its legal captures without selecting anyt
 
 **Dragon Slaying (斬龍)**
 
-- Off by default; host option while waiting, fixed for the match, kept across restarts.
+- On by default for new rooms; host option while waiting, fixed for the match, kept across restarts.
+  Rooms and games saved before the option existed keep standard rules.
 - Playing a suit's A or K closes the whole suit at both ends; other suits stay open. The
   row stays darkened afterwards and the next turn waits for the effect.
 - Effects: **Dragon** (default, 2.2 s overhead dragon, fire, and blade) or **Fire only**

@@ -12,7 +12,7 @@ import type {
   SevensVisibleState,
 } from '@shared/types';
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
-import { DEFAULT_SEVENS_OPTIONS } from '@shared/sevens-options';
+import { LEGACY_SEVENS_OPTIONS } from '@shared/sevens-options';
 import { nextSeatCounterClockwise } from '@shared/rules/seats';
 import {
   svAllClosed,
@@ -96,7 +96,8 @@ export function startGame(
   roomCode: RoomCode,
   players: Record<Seat, PlayerInfo>,
   deck?: readonly Card[],
-  options: SevensOptions = DEFAULT_SEVENS_OPTIONS,
+  // Rooms always pass their options; a direct call without them plays standard rules.
+  options: SevensOptions = LEGACY_SEVENS_OPTIONS,
 ): void {
   const preset = deck === undefined && devPreset ? nearSlayPreset() : null;
   const dealt = dealCards(preset?.deck ?? deck ?? shuffleDeck(createDeck()));
@@ -194,7 +195,7 @@ export function getPlayerVisibleState(roomCode: RoomCode, seat: Seat): SevensVis
   return {
     gameType: 'sevens',
     phase: game.phase,
-    options: game.options ?? DEFAULT_SEVENS_OPTIONS,
+    options: game.options ?? LEGACY_SEVENS_OPTIONS,
     mySeat: seat,
     myHand: game.hands[seat],
     myCovered: game.covered[seat],
