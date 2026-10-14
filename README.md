@@ -44,7 +44,7 @@ which creates the Git-ignored `server/data/database.json`.
 | [Development](docs/development.md) | Environment, configuration, benchmarks, browser checks |
 | [Testing](docs/testing.md) | Check runner, gates, caches, coverage |
 | [Deployment](docs/deployment.md) | Build, install, Nginx, backups, rollback |
-| [Roadmap](docs/roadmap.md) | Public launch gates, monetization, operations, and development priorities |
+| [Roadmap](docs/roadmap.md) | Public launch gates, monetization, operations, and development priorities (Traditional Chinese) |
 
 ## License
 
