@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AccountProfile, PlayerInfo, RoomInfo } from '@shared/types';
+import { CARD_BACKS, NAMEPLATES, SEAT_BACKGROUNDS, TABLE_BACKGROUNDS } from '@shared/constants';
 
 const BACKGROUND = `${'a'.repeat(64)}.webp`;
 const CARD_BACK = `${'b'.repeat(64)}.png`;
@@ -148,6 +149,34 @@ describe('personal account appearance', () => {
     expect(cardBackStyle({ cardBackStyle: null, cardBack: null })).toBeUndefined();
     expect(tableBackgroundStyle({ tableBackgroundStyle: null })).toBeUndefined();
     expect(seatBackgroundStyle({ seatBackgroundStyle: null })).toBeUndefined();
+  });
+
+  it('resolves every series to distinct artwork in the correct equipment slot', () => {
+    const cosmetics = [...CARD_BACKS, ...TABLE_BACKGROUNDS, ...SEAT_BACKGROUNDS];
+    expect(new Set(cosmetics.map(({ id }) => shopArtworkUrl(id))).size).toBe(cosmetics.length);
+    for (const item of cosmetics) {
+      const url = shopArtworkUrl(item.id);
+      expect(url).toMatch(/^(?:data:image\/svg\+xml,|.*\.svg$)/);
+      if (item.type === 'cardBack') {
+        expect(cardBackStyle({ cardBackStyle: item.id })).toMatchObject({ '--card-back-image': `url("${url}")` });
+      } else if (item.type === 'tableBackground') {
+        expect(tableBackgroundStyle({ tableBackgroundStyle: item.id })).toMatchObject({ '--table-image': `url("${url}")` });
+      } else {
+        expect(seatBackgroundStyle({ seatBackgroundStyle: item.id })).toEqual({ '--seat-image': `url("${url}")` });
+      }
+    }
+  });
+
+  it.each(['en', 'zh-TW'] as const)('renders every localized nameplate with its own mark and style (%s)', (locale) => {
+    useI18nStore.getState().setLocale(locale);
+    for (const { id } of NAMEPLATES) {
+      const html = renderToStaticMarkup(createElement(Nameplate, { id }));
+      expect(html).toContain(`data-nameplate="${id}"`);
+      expect(html).toContain(useI18nStore.getState().t(`shop.title.${id}`));
+      expect(html).not.toContain('undefined');
+      expect(html).not.toContain('shop.title.');
+      expect(html).toMatch(/aria-hidden="true">[^<]+<\/span>/);
+    }
   });
 
   it('should render official styles in the game and other players waiting seats', () => {

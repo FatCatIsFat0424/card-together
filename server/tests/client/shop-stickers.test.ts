@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AccountProfile, ChatMessage } from '@shared/types';
-import { SHOP_STICKERS } from '@shared/constants';
+import { SHOP_STICKERS, STICKER_PACKS } from '@shared/constants';
 
 const accountFixture = vi.hoisted(() => ({ account: null as AccountProfile | null }));
 vi.mock('../../../client/src/stores/account-store', () => ({
@@ -32,7 +32,7 @@ afterEach(() => {
 
 describe('official shop sticker UI', () => {
   it('uses one trusted bundled vector URL per stable catalog identifier', () => {
-    expect(new Set(SHOP_STICKERS.map(({ id }) => shopStickerUrl(id))).size).toBe(8);
+    expect(new Set(SHOP_STICKERS.map(({ id }) => shopStickerUrl(id))).size).toBe(SHOP_STICKERS.length);
     for (const { id } of SHOP_STICKERS) expect(shopStickerUrl(id)).toMatch(/\.svg(?:\?no-inline)?$/);
   });
 
@@ -44,6 +44,20 @@ describe('official shop sticker UI', () => {
     const html = renderToStaticMarkup(createElement(ChatMessageBody, { message }));
     expect(html).toContain(shopStickerUrl('forest-cheer'));
     expect(html).toContain('alt="');
+  });
+
+  it.each(['en', 'zh-TW'] as const)('offers all four localized stickers from every owned pack (%s)', (locale) => {
+    useI18nStore.setState({ locale });
+    for (const { id } of STICKER_PACKS) {
+      inventory([id]);
+      const html = picker();
+      for (const sticker of SHOP_STICKERS) {
+        if (sticker.packId === id) expect(html).toContain(shopStickerUrl(sticker.id));
+        else expect(html).not.toContain(shopStickerUrl(sticker.id));
+      }
+      expect(html).not.toContain('shop.sticker.');
+      expect(html).not.toContain('shop.item.');
+    }
   });
 
   it('only exposes owned packs in sticker mode and updates when account inventory changes', () => {

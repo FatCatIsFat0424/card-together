@@ -17,6 +17,7 @@ const MARKS: Readonly<Record<NameplateId, string>> = {
   'nameplate-rainbow-pony': '🦄',
   'nameplate-planetary-devastation': '◉',
   'nameplate-einstein': '⚛',
+  'nameplate-lucky': '🍀',
 };
 
 /** Cosmetic titles never imply a verified rank or earned achievement. */

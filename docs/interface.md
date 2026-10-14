@@ -158,7 +158,8 @@ Per-game controls: [games](games.md#card-controls).
 
 - `/shop` sells permanent, cosmetic-only products from the
   [catalog](../shared/src/constants/shop.ts): avatar borders, card backs, table and
-  seat backgrounds, title/nameplates, and sticker packs. Prices are in game coins.
+  seat backgrounds, title/nameplates, and sticker packs. Each type offers at least
+  ten products; each sticker pack includes four original stickers. Prices are in game coins.
 - The category sidebar shows catalog counts; `type` selects a product type and
   `series` filters avatar borders into Playful, Metal, or Glow. Legacy series-only
   URLs still select borders. Reload and browser Back/Forward retain filters;

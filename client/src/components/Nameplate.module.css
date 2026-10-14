@@ -23,3 +23,4 @@
 .nameplate-rainbow-pony { --title-line: #eab5f490; --title-bg: linear-gradient(110deg, #63354c, #534321, #205146, #294868, #533764); --title-ink: #fff0fc; }
 .nameplate-planetary-devastation { --title-line: #d79bff80; --title-bg: radial-gradient(ellipse at right, #774133, #33243f 70%); --title-ink: #efceff; }
 .nameplate-einstein { --title-line: #77dce780; --title-bg: linear-gradient(120deg, #203553, #20484b); --title-ink: #bdf6ff; }
+.nameplate-lucky { --title-line: #92d3a880; --title-bg: linear-gradient(120deg, #204b3d, #325133); --title-ink: #dcf4b8; }

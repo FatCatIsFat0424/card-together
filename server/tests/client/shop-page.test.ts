@@ -70,11 +70,11 @@ describe('shop categories and inventory', () => {
 
   it.each([
     ['avatarBorder', 'Avatar borders', 16, 'Sakura wreath', 'Aurora weave'],
-    ['cardBack', 'Card backs', 3, 'Aurora weave', 'Cat ears'],
-    ['tableBackground', 'Table backgrounds', 3, 'Midnight aurora', 'Aurora weave'],
-    ['seatBackground', 'Seat backgrounds', 3, 'Aurora window', 'Midnight aurora'],
-    ['nameplate', 'Titles &amp; nameplates', 9, 'Night voyager nameplate', 'Cat ears'],
-    ['stickerPack', 'Sticker packs', 2, 'Table talk', 'Cat ears'],
+    ['cardBack', 'Card backs', 10, 'Aurora weave', 'Cat ears'],
+    ['tableBackground', 'Table backgrounds', 10, 'Midnight aurora', 'Aurora weave'],
+    ['seatBackground', 'Seat backgrounds', 10, 'Aurora window', 'Midnight aurora'],
+    ['nameplate', 'Titles &amp; nameplates', 10, 'Night voyager nameplate', 'Cat ears'],
+    ['stickerPack', 'Sticker packs', 10, 'Table talk', 'Cat ears'],
   ] as const)('restores the %s product type from the URL', (type, label, count, included, excluded) => {
     const html = render(`?type=${type}`);
     expect(html).toContain(`id="shop-catalog-title">${label}</h2>`);
@@ -86,7 +86,7 @@ describe('shop categories and inventory', () => {
 
   it('ignores border series when browsing a different product type', () => {
     const html = render('?type=cardBack&series=ears');
-    expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(3);
+    expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(10);
     expect(html).toContain('Aurora weave');
   });
 
@@ -116,7 +116,7 @@ describe('shop categories and inventory', () => {
       expect(render(`?type=${type}`)).not.toContain('shop.visibility.');
     }
     if (locale === 'zh-TW') {
-      for (const text of ['商品種類', '牌背', '稱號與名牌', '貼圖包', '櫻花花冠', '36 項商品']) expect(html).toContain(text);
+      for (const text of ['商品種類', '牌背', '稱號與名牌', '貼圖包', '櫻花花冠', `${SHOP_ITEMS.length} 項商品`]) expect(html).toContain(text);
     }
   });
 
@@ -132,7 +132,7 @@ describe('shop categories and inventory', () => {
   it('defines unique products and four distinct stickers per pack', () => {
     expect(new Set(SHOP_ITEMS.map(({ id }) => id)).size).toBe(SHOP_ITEMS.length);
     expect(SHOP_ITEMS.every(({ price }) => Number.isSafeInteger(price) && price > 0)).toBe(true);
-    expect(new Set(SHOP_STICKERS.map(({ id }) => id)).size).toBe(8);
+    expect(new Set(SHOP_STICKERS.map(({ id }) => id)).size).toBe(SHOP_STICKERS.length);
     for (const pack of SHOP_ITEMS.filter((item) => item.type === 'stickerPack')) {
       expect(SHOP_STICKERS.filter((sticker) => sticker.packId === pack.id)).toHaveLength(4);
     }
