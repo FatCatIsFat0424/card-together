@@ -60,8 +60,6 @@ export function AuthPage({ mode }: AuthPageProps): ReactNode {
       <div className={styles.authCard}>
         <Link to="/" className={styles.username}>♠ Card Together</Link>
         <h1 className={styles.title}>{t('auth.welcome')}</h1>
-        <p className={styles.subtitle}>{t('auth.description')}</p>
-        <h2 className={styles.title}>{t(register ? 'auth.register' : 'auth.login')}</h2>
         {locationState?.passwordChanged && (
           <p className={styles.success} role="status">{t('auth.passwordChanged')}</p>
         )}

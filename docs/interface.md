@@ -47,6 +47,12 @@ Frontend page behavior and layout. Client architecture and connection handling:
   shrink to the displayed sticker size regardless of the image's pixel size. Mobile keeps separate list
   and conversation views. Both layouts keep the header and composer visible within
   the available viewport; conversation lists and message history scroll independently.
+- The conversation list includes every current friend: conversations (including
+  read-only former friends) newest first, then friends without retained history by
+  nickname in the current locale. Selecting one of those opens an empty conversation.
+  New messages reorder it live; the friend list reloads on friendship changes,
+  reconnects, and refocus, but not when a conversation is marked read. With no friends or conversations, the list
+  shows "No friends yet".
 - Private chat supports the existing emoji/sticker libraries, older-history pagination,
   and retry after a failed send. Only a visible conversation marks incoming messages read.
   Former-friend conversations are read-only; the latest 90 days are available.
@@ -64,8 +70,9 @@ Frontend page behavior and layout. Client architecture and connection handling:
 - Creating or joining by code requires leaving the current room. Joining a friend's
   room asks for confirmation, then switches rooms in one commit.
 - Friends page: above 52rem, tabs for friends, sent requests, and incoming requests,
-  with live counts. Smaller screens stack these three sections. Private messages
-  have their own page.
+  with live counts, and the tab names serve as section headings. Smaller screens
+  stack these three sections with their own headings. Private messages have their
+  own page.
 - Public profiles: avatar, colored nickname, username, and actions on the left; history
   and statistics on the right; stacked on small screens.
 
@@ -166,8 +173,11 @@ Saved and system reduced-motion preferences disable this animation.
 
 - Opened from the lobby Rules link, the waiting-room Game rules button, the desktop match
   information rail, or compact table tools; available to players and spectators.
-- Shows active options above the full rules: Sevens Dragon Slaying, Ninety-Nine two
-  decks, Blackjack player dealer. Waiting rooms follow host changes; matches use game state.
+- Opens with a short summary (every game except Bridge), then active options, then the
+  full rules: Sevens Dragon Slaying, Ninety-Nine two decks, Blackjack player dealer.
+  Summary lines and Blackjack match length follow the same options; waiting rooms follow
+  host changes, matches use game state, and the lobby shows defaults. Tables have no
+  separate rules summary in the information rail.
 - Reading does not pause play or timers; settlement closes the dialog.
 
 ## Account editor
@@ -239,7 +249,8 @@ Saved and system reduced-motion preferences disable this animation.
   [catalog](../shared/src/constants/shop.ts): avatar borders, card backs, table and
   seat backgrounds, title/nameplates, and sticker packs. Each type offers at least
   ten products; each sticker pack includes four original stickers. Prices are in game coins.
-- The category sidebar shows catalog counts; `type` selects a product type and
+- The category sidebar shows catalog counts; the catalog header repeats a count only
+  for a border series filter. `type` selects a product type and
   `series` filters avatar borders into Playful, Metal, or Glow. Legacy series-only
   URLs still select borders. Reload and browser Back/Forward retain filters;
   unknown filters show all products. At ≤52rem categories become a horizontally

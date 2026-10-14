@@ -102,7 +102,6 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
   const disabled = busy || loading;
 
   return <main className={styles.page}>
-    <p className={styles.eyebrow}>{t('player.title')}</p>
     <div className={styles.layout}>
       <section className={`${styles.card} ${styles.profile}`}>
         <div className={styles.identity}>
@@ -117,8 +116,8 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
           <Link className="btn btn-primary" to="/account">{t('player.edit')}</Link>
         </div> : <>
           {friends && <>
-            <p className={styles.description}>{t(isFriend ? 'player.friends'
-              : incoming ? 'player.incoming' : outgoing ? 'player.outgoing' : 'player.connect')}</p>
+            {(isFriend || incoming || outgoing) && <p className={styles.description}>{t(isFriend ? 'player.friends'
+              : incoming ? 'player.incoming' : 'player.outgoing')}</p>}
             <div className={styles.actions}>
               {isFriend ? confirmRemove ? <>
                 <span>{t('friends.confirmRemove')}</span>

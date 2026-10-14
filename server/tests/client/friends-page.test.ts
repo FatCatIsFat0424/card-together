@@ -3,8 +3,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Conversation } from '@shared/types/direct-message';
+import type { FriendEntry, PublicAccount } from '@shared/types/social';
 
 const state = vi.hoisted(() => ({ mobile: false, conversations: [] as Conversation[],
+  friends: null as FriendEntry[] | null, friendsError: '',
   roomCode: null as string | null, roomStatus: 'waiting' as 'waiting' | 'playing',
   socialStatus: 'ready' as 'ready' | 'loading' | 'error', socialError: '' }));
 vi.mock('../../../client/src/socket', () => ({ socket: {} }));
@@ -18,6 +20,9 @@ vi.mock('../../../client/src/stores/social-store', () => ({
   useSocialStore: (select: (value: { conversations: Conversation[]; status: 'ready' | 'loading' | 'error'; error: string }) => unknown) =>
     select({ conversations: state.conversations, status: state.socialStatus, error: state.socialError }),
 }));
+vi.mock('../../../client/src/hooks/use-message-friends', () => ({
+  useMessageFriends: () => ({ friends: state.friends, error: state.friendsError }),
+}));
 vi.mock('../../../client/src/stores/room-store', () => ({
   useRoomStore: (select: (value: { currentRoomCode: string | null; roomInfo: { status: 'waiting' | 'playing' } | null }) => unknown) =>
     select({ currentRoomCode: state.roomCode, roomInfo: state.roomCode ? { status: state.roomStatus } : null }),
@@ -25,7 +30,20 @@ vi.mock('../../../client/src/stores/room-store', () => ({
 
 import { FriendsPage } from '../../../client/src/pages/FriendsPage';
 import { MessagesPage } from '../../../client/src/pages/MessagesPage';
-import { listTime } from '../../../client/src/components/MessageConversations';
+import { listTime, messageListEntries } from '../../../client/src/components/MessageConversations';
+
+function account(id: string, nickname: string): PublicAccount {
+  return { id, username: id, nickname, color: '#2563eb', avatar: 'cat', avatarImage: null, avatarBorder: null };
+}
+
+function friend(id: string, nickname: string): FriendEntry {
+  return { ...account(id, nickname), online: false, inRoom: false, hostedRoomCode: null };
+}
+
+function conversation(other: PublicAccount, timestamp: number, canSend = true): Conversation {
+  return { account: other, canSend, unreadCount: 0, lastMessage: { id: `message-${other.id}`,
+    clientId: `request-${other.id}`, sender: other, recipientId: 'alice', content: `From ${other.nickname}`, timestamp } };
+}
 
 function render(path: string): string {
   return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [path] },
@@ -43,6 +61,8 @@ describe('independent private messages', () => {
     state.roomStatus = 'waiting';
     state.socialStatus = 'ready';
     state.socialError = '';
+    state.friends = null;
+    state.friendsError = '';
     const bob = { id: 'bob', username: 'bob', nickname: 'Bob', color: '#2563eb',
       avatar: 'cat' as const, avatarImage: null, avatarBorder: null };
     state.conversations = [{ account: bob, canSend: true, unreadCount: 3,
@@ -153,5 +173,62 @@ describe('independent private messages', () => {
     expect(html).toContain('role="log"');
     expect(html).toContain('href="/messages"');
     expect(html).not.toContain('Hello Alice');
+  });
+
+  it('orders conversations newest first, then friends without history by nickname', () => {
+    const bob = account('bob', 'Bob');
+    const former = account('erin', 'Erin');
+    const entries = messageListEntries(
+      [conversation(bob, 1_000), conversation(former, 3_000, false), conversation(account('dan', 'Dan'), 2_000)],
+      [friend('zoe', 'Zoe'), friend('bob', 'Bob'), friend('emile', 'Émile'), friend('adam', 'adam')], 'en');
+    expect(entries.map((entry) => entry.account.id)).toEqual(['erin', 'dan', 'bob', 'adam', 'emile', 'zoe']);
+    expect(entries.slice(0, 3).every((entry) => entry.conversation)).toBe(true);
+    expect(entries.find((entry) => entry.account.id === 'erin')?.conversation?.canSend).toBe(false);
+    expect(entries.slice(3).every((entry) => entry.conversation === null)).toBe(true);
+  });
+
+  it('breaks nickname ties by username so the friend order is stable', () => {
+    const entries = messageListEntries([], [friend('sam-b', 'Sam'), friend('sam-a', 'Sam')], 'zh-TW');
+    expect(entries.map((entry) => entry.account.id)).toEqual(['sam-a', 'sam-b']);
+  });
+
+  it.each([false, true])('lists friends without history after conversations (mobile: %s)', (mobile) => {
+    state.mobile = mobile;
+    state.friends = [friend('carol', 'Carol'), friend('bob', 'Bob')];
+    const html = render('/messages');
+    expect(html.match(/href="\/messages\/bob"/g)).toHaveLength(1);
+    expect(html.indexOf('href="/messages/bob"')).toBeLessThan(html.indexOf('href="/messages/carol"'));
+    const carol = html.match(/<a[^>]*href="\/messages\/carol"[\s\S]*?<\/a>/)?.[0];
+    expect(carol).toContain('Carol');
+    expect(carol).not.toContain('<time');
+    // The hidden spacer keeps the row as tall as rows with a preview.
+    expect(carol).toMatch(/<span class="[^"]*preview[^"]*" aria-hidden="true">\u00a0<\/span>/);
+    expect(carol).not.toContain('則未讀訊息');
+    expect(html).not.toContain('還沒有好友');
+  });
+
+  it('selects a friend without history in the desktop list', () => {
+    state.friends = [friend('carol', 'Carol')];
+    const selected = render('/messages/carol').match(/<a[^>]*href="\/messages\/carol"[^>]*>/)?.[0];
+    expect(selected).toContain('aria-current="page"');
+  });
+
+  it('shows the empty state only after friends load and none exist', () => {
+    state.conversations = [];
+    expect(render('/messages')).not.toContain('還沒有好友');
+    state.friends = [];
+    expect(render('/messages')).toContain('還沒有好友');
+    state.friends = [friend('carol', 'Carol')];
+    expect(render('/messages')).not.toContain('還沒有好友');
+  });
+
+  it('reports a friend-list error once in the title bar', () => {
+    state.socialError = 'Unable to reach the server. Please try again.';
+    state.friendsError = state.socialError;
+    expect(render('/messages').match(/Unable to reach the server/g)).toHaveLength(1);
+    state.friendsError = 'Friends unavailable.';
+    const toolbar = render('/messages').match(/<header\b[\s\S]*?<\/header>/)?.[0];
+    expect(toolbar).toContain('Friends unavailable.');
+    expect(toolbar).toContain(state.socialError);
   });
 });

@@ -218,7 +218,6 @@ export function AccountPage(): ReactNode {
           <AccountProfilePreview account={{ ...account, avatarBorder: selectedBorder }} nickname={nickname} avatar={avatar} color={color}
             appearance={appearance} />
           <div className={editorStyles.controls}>
-            <div className={editorStyles.sectionHeading}><h2>{t('profile.identity')}</h2></div>
             <form className={styles.form} onSubmit={(event) => void saveProfile(event)}>
               <div className={editorStyles.identityFields}>
                 <div className={styles.field}>
@@ -353,7 +352,6 @@ export function AccountPage(): ReactNode {
       </div>
       <section id="account-panel-history" role="tabpanel" aria-labelledby="account-tab-history"
         className={editorStyles.managementPanel} hidden={activeTab !== 'history'}>
-        <h2>{t('history.title')}</h2>
         <p className={styles.hint}>{t('history.humanOnly')}</p>
         <label className={`${styles.row} ${editorStyles.historyVisibility}`}>
           <AppCheckbox checked={account.matchesPublic} disabled={mediaBusy !== null}
@@ -370,12 +368,10 @@ export function AccountPage(): ReactNode {
       </section>
       <section id="account-panel-emoji" role="tabpanel" aria-labelledby="account-tab-emoji"
         className={editorStyles.managementPanel} hidden={activeTab !== 'emoji'}>
-        <h2>{t('emoji.title')}</h2>
         <EmojiLibrary />
       </section>
       <section id="account-panel-password" role="tabpanel" aria-labelledby="account-tab-password"
         className={editorStyles.managementPanel} hidden={activeTab !== 'password'}>
-        <h2>{t('profile.security')}</h2>
         <form className={`${styles.form} ${editorStyles.securityForm}`} onSubmit={(event) => void changePassword(event)}>
           <div className={styles.field}>
             <label htmlFor="current-password">{t('profile.currentPassword')}</label>

@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GAME_TYPES } from '@shared/constants';
 import type {
-  BlackjackVisibleState, GameType, NinetyNineVisibleState, RoomInfo, SevensVisibleState,
+  BlackjackVisibleState, GameType, NinetyNineVisibleState, RoomInfo, SeatInfo, SevensVisibleState,
 } from '@shared/types';
 import { GameRulesContent } from '../../../client/src/components/GameRulesDialog';
 import { matchRulesContext, roomRulesContext } from '../../../client/src/game-rules-context';
@@ -152,5 +152,29 @@ describe('contextual game rules', () => {
       expect(html).toContain(t('rules.playContinues'));
       expect(render('blackjack', { ...context, active: false })).not.toContain(t('rules.playContinues'));
     }
+  });
+
+  it('opens with a summary that follows the room or match options', () => {
+    const { t } = useI18nStore.getState();
+    const lobby = render('blackjack');
+    expect(lobby.indexOf(`<h3>${t('rules.summary')}</h3>`)).toBeLessThan(lobby.indexOf('<h3>Betting and deal</h3>'));
+    expect(lobby).toContain(t('blackjack.rulesBet', { hands: '8' }));
+    expect(lobby).toContain(t('blackjack.rulesDealer'));
+
+    const players: SeatInfo = { player: { id: 'p', username: 'p', nickname: 'P', color: '#fff', avatar: 'cat',
+      avatarImage: null }, isReady: false };
+    const playerDealer = render('blackjack', roomRulesContext(room('blackjack', {
+      blackjackOptions: { playerDealer: true },
+      seats: { N: players, E: players, S: players, W: { player: null, isReady: false } },
+    })));
+    expect(playerDealer).toContain(t('blackjack.rulesPlayerDealer'));
+    expect(playerDealer).toContain(t('blackjack.rulesBet', { hands: '6' }));
+    expect(render('blackjack', matchRulesContext({ ...blackjack, totalHands: 4 })))
+      .toContain(t('blackjack.rulesPay', { hands: '4' }));
+
+    expect(render('sevens')).not.toContain(t('sevens.rulesCloseOnEnd'));
+    expect(render('sevens', matchRulesContext({ ...sevens, options: { closeOnEnd: true } })))
+      .toContain(t('sevens.rulesCloseOnEnd'));
+    expect(render('bridge')).not.toContain(`<h3>${t('rules.summary')}</h3>`);
   });
 });

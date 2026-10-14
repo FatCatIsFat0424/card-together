@@ -32,6 +32,8 @@ export interface VoiceClientState {
   participants: VoiceParticipant[];
   muted: boolean;
   deafened: boolean;
+  /** Microphone mute state to restore when deafen ends; only meaningful while deafened */
+  mutedBeforeDeafen: boolean;
   error: VoiceErrorCode | null;
   autoplayBlocked: boolean;
   peerErrors: Record<string, VoicePeerError>;
@@ -92,6 +94,7 @@ export function initialVoiceState(): VoiceClientState {
     participants: [],
     muted: false,
     deafened: false,
+    mutedBeforeDeafen: false,
     error: null,
     autoplayBlocked: false,
     peerErrors: {},
@@ -101,6 +104,29 @@ export function initialVoiceState(): VoiceClientState {
     peerPrefs: {},
     silenced: [],
   };
+}
+
+export type VoiceAudioSettings = Pick<VoiceClientState, 'muted' | 'deafened' | 'mutedBeforeDeafen'>;
+
+/** Deafening also mutes the microphone; ending it restores the mute state from just before. */
+export function deafenSettings(
+  current: Readonly<VoiceAudioSettings>,
+  deafened: boolean,
+): VoiceAudioSettings {
+  if (deafened === current.deafened)
+    return { muted: current.muted, deafened, mutedBeforeDeafen: current.mutedBeforeDeafen };
+  return deafened
+    ? { muted: true, deafened: true, mutedBeforeDeafen: current.muted }
+    : { muted: current.mutedBeforeDeafen, deafened: false, mutedBeforeDeafen: false };
+}
+
+/** As in common voice apps, unmuting while deafened also ends deafen. */
+export function muteSettings(
+  current: Readonly<VoiceAudioSettings>,
+  muted: boolean,
+): VoiceAudioSettings {
+  if (muted && current.deafened) return { muted: true, deafened: true, mutedBeforeDeafen: true };
+  return { muted, deafened: false, mutedBeforeDeafen: false };
 }
 
 export const DEFAULT_PEER_PREFERENCE: PeerPreference = { muted: false, volume: 1 };
@@ -164,16 +190,20 @@ export function createVoiceSession(
     iceServers?: () => RTCIceServer[];
     muted?: boolean;
     deafened?: boolean;
+    mutedBeforeDeafen?: boolean;
     inputDeviceId?: string | null;
     outputDeviceId?: string | null;
     peerPrefs?: Record<string, PeerPreference>;
     silenced?: readonly string[];
   } = {},
 ): VoiceSession {
+  const initialDeafened = options.deafened ?? false;
   let state = {
     ...initialVoiceState(),
-    muted: options.muted ?? false,
-    deafened: options.deafened ?? false,
+    // Deafen always implies a muted microphone.
+    muted: (options.muted ?? false) || initialDeafened,
+    deafened: initialDeafened,
+    mutedBeforeDeafen: initialDeafened && (options.mutedBeforeDeafen ?? options.muted ?? false),
     inputDeviceId: options.inputDeviceId ?? null,
     outputDeviceId: options.outputDeviceId ?? null,
     peerPrefs: { ...options.peerPrefs },
@@ -563,6 +593,21 @@ export function createVoiceSession(
     if (state.status === 'joined' || state.status === 'joining') release('join-failed', false);
   }
 
+  function applySettings(next: VoiceAudioSettings): void {
+    const changed = next.muted !== state.muted || next.deafened !== state.deafened;
+    const deafenChanged = next.deafened !== state.deafened;
+    localStream?.getAudioTracks().forEach((track) => {
+      track.enabled = !next.muted;
+    });
+    publish(next);
+    if (deafenChanged)
+      for (const peer of peers.values()) {
+        applyPeerAudio(peer);
+        if (!next.deafened) void playAudio(peer);
+      }
+    if (changed) sendSettings();
+  }
+
   function sendSettings(): void {
     if (state.status !== 'joined') return;
     const currentGeneration = generation;
@@ -718,19 +763,10 @@ export function createVoiceSession(
     },
     leave: () => release(),
     setMuted(muted): void {
-      localStream?.getAudioTracks().forEach((track) => {
-        track.enabled = !muted;
-      });
-      publish({ muted });
-      sendSettings();
+      applySettings(muteSettings(state, muted));
     },
     setDeafened(deafened): void {
-      publish({ deafened });
-      for (const peer of peers.values()) {
-        applyPeerAudio(peer);
-        if (!deafened) void playAudio(peer);
-      }
-      sendSettings();
+      applySettings(deafenSettings(state, deafened));
     },
     async resumeAudio(): Promise<void> {
       await Promise.all([...peers.values()].map(playAudio));

@@ -45,4 +45,21 @@ describe('voice preference storage', () => {
     setVoiceOutputDevice('headphones');
     expect(storage.writes).toEqual([['voice.output', 'headphones']]);
   });
+
+  it('should apply deafen microphone rules before a voice session exists', async () => {
+    const { setVoiceDeafened, setVoiceMuted, useVoiceStore } =
+      await import('../../../client/src/stores/voice-store');
+    setVoiceDeafened(true);
+    expect(useVoiceStore.getState()).toMatchObject({ muted: true, deafened: true });
+    setVoiceDeafened(false);
+    expect(useVoiceStore.getState()).toMatchObject({ muted: false, deafened: false });
+    setVoiceMuted(true);
+    setVoiceDeafened(true);
+    setVoiceDeafened(false);
+    expect(useVoiceStore.getState()).toMatchObject({ muted: true, deafened: false });
+    setVoiceDeafened(true);
+    setVoiceMuted(false);
+    expect(useVoiceStore.getState()).toMatchObject({ muted: false, deafened: false });
+    expect(storage.writes).toEqual([]);
+  });
 });

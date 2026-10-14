@@ -39,8 +39,6 @@ type TranslationKeys = Record<
     | LiarsDeckTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey, string
 > & {
   // Lobby
-  'lobby.title': string;
-  'lobby.subtitle': string;
   'lobby.nickname': string;
   'lobby.nicknamePlaceholder': string;
   'lobby.color': string;
@@ -55,14 +53,12 @@ type TranslationKeys = Record<
   'room.leave': string;
   'room.ready': string;
   'room.unready': string;
-  'room.waiting': string;
   'room.seatEmpty': string;
-  'room.seatTaken': string;
+  'room.notReady': string;
   'room.ready.status': string;
   'room.addBot': string;
   'room.removeBot': string;
   'room.fillBots': string;
-  'room.botReady': string;
   'room.botDifficulty': string;
   'room.botDifficultyFor': string;
   'room.botDifficulty.easy': string;
@@ -70,15 +66,10 @@ type TranslationKeys = Record<
   'player.bot': string;
   'player.botSeat': string;
   // Game
-  'game.dealing': string;
   'game.redealPending': string;
-  'game.bidding': string;
   'game.playing': string;
   'game.scoring': string;
   'game.contract': string;
-  'game.mySeat': string;
-  'game.myTurn': string;
-  'game.waitingFor': string;
   'game.pass': string;
   // Redeal
   'redeal.title': string;
@@ -131,8 +122,6 @@ const translations: Record<Locale, TranslationKeys> = {
     ...shopTranslations['zh-TW'],
     ...dailyRewardsTranslations['zh-TW'],
     ...achievementsTranslations['zh-TW'],
-    'lobby.title': 'Card Together',
-    'lobby.subtitle': '橋牌、大老二、撿紅點、99、牌七、十三支、騙子酒館、21 點、德州撲克，線上同桌一起玩',
     'lobby.nickname': '暱稱',
     'lobby.nicknamePlaceholder': '輸入暱稱...',
     'lobby.color': '顏色',
@@ -146,29 +135,22 @@ const translations: Record<Locale, TranslationKeys> = {
     'room.leave': '離開房間',
     'room.ready': '準備',
     'room.unready': '取消準備',
-    'room.waiting': '等待玩家就座並準備...',
     'room.seatEmpty': '空位',
-    'room.seatTaken': '已就座',
+    'room.notReady': '未準備',
     'room.ready.status': '已準備',
     'room.addBot': '加入 bot',
     'room.removeBot': '移除 bot',
     'room.fillBots': '用 bot 補滿空位',
-    'room.botReady': 'bot 已自動準備',
     'room.botDifficulty': '難度',
     'room.botDifficultyFor': '{nickname} 的難度',
     'room.botDifficulty.easy': '簡單',
     'room.botDifficulty.hard': '困難',
     'player.bot': 'bot',
     'player.botSeat': 'bot（{seat}）',
-    'game.dealing': '發牌中',
     'game.redealPending': '倒牌確認',
-    'game.bidding': '叫牌',
     'game.playing': '出牌',
     'game.scoring': '結算',
     'game.contract': '合約',
-    'game.mySeat': '我的座位',
-    'game.myTurn': '🎯 輪到你出牌！',
-    'game.waitingFor': '等待 {seat} 出牌',
     'game.pass': 'Pass',
     'redeal.title': '倒牌重洗',
     'redeal.description': '你的手牌符合倒牌重洗條件（無 A 且點數 ≤ 4），是否要求重新發牌？',
@@ -213,8 +195,6 @@ const translations: Record<Locale, TranslationKeys> = {
     ...shopTranslations.en,
     ...dailyRewardsTranslations.en,
     ...achievementsTranslations.en,
-    'lobby.title': 'Card Together',
-    'lobby.subtitle': "Bridge, Big Two, Red Points, Ninety-Nine, Sevens, Chinese Poker, Liar's Deck, Blackjack, and Texas Hold'em with friends online",
     'lobby.nickname': 'Nickname',
     'lobby.nicknamePlaceholder': 'Enter nickname...',
     'lobby.color': 'Color',
@@ -228,29 +208,22 @@ const translations: Record<Locale, TranslationKeys> = {
     'room.leave': 'Leave Room',
     'room.ready': 'Ready',
     'room.unready': 'Unready',
-    'room.waiting': 'Waiting for players...',
     'room.seatEmpty': 'Empty',
-    'room.seatTaken': 'Seated',
+    'room.notReady': 'Not ready',
     'room.ready.status': 'Ready',
     'room.addBot': 'Add bot',
     'room.removeBot': 'Remove bot',
     'room.fillBots': 'Fill empty seats with bots',
-    'room.botReady': 'Bot is automatically ready',
     'room.botDifficulty': 'Difficulty',
     'room.botDifficultyFor': 'Difficulty for {nickname}',
     'room.botDifficulty.easy': 'Easy',
     'room.botDifficulty.hard': 'Hard',
     'player.bot': 'Bot',
     'player.botSeat': 'Bot ({seat})',
-    'game.dealing': 'Dealing',
     'game.redealPending': 'Redeal Check',
-    'game.bidding': 'Bidding',
     'game.playing': 'Playing',
     'game.scoring': 'Scoring',
     'game.contract': 'Contract',
-    'game.mySeat': 'My Seat',
-    'game.myTurn': '🎯 Your turn!',
-    'game.waitingFor': 'Waiting for {seat}',
     'game.pass': 'Pass',
     'redeal.title': 'Redeal',
     'redeal.description': 'Your hand qualifies for a redeal (no Aces, HCP ≤ 4). Request a redeal?',

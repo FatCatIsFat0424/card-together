@@ -1,3 +1,4 @@
+import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import { PROVIDED_MUSIC_TRACKS, groupProvidedMusicTracks } from '../audio/provided-music-catalog';
 import type { ProvidedMusicTrack } from '../audio/provided-music-catalog';
@@ -14,12 +15,16 @@ import styles from './MusicControl.module.css';
 const MODE_ICONS: Record<MusicMode, AppIconName> = { 'loop-one': 'repeatOne', sequential: 'repeat', shuffle: 'shuffle' };
 const NEXT_MODE: Record<MusicMode, MusicMode> = { 'loop-one': 'sequential', sequential: 'shuffle', shuffle: 'loop-one' };
 const TRACK_GROUPS = groupProvidedMusicTracks(PROVIDED_MUSIC_TRACKS);
+const HAS_UNGROUPED_TRACKS = TRACK_GROUPS.some((group) => group.name === undefined);
 
 export function MusicControl(): ReactNode {
   const turnSoundEnabled = useTurnSoundStore((state) => state.enabled);
   const setTurnSoundEnabled = useTurnSoundStore((state) => state.setEnabled);
   const { t } = useI18nStore();
-  const { providedTrackId, playing, busy, error, volume, mode, toggle, play, next, prev, setMode, setVolume } = useMusicStore(
+  const {
+    providedTrackId, playing, busy, error, volume, mode, disabledGroups,
+    toggle, play, next, prev, setMode, setVolume, setGroupEnabled,
+  } = useMusicStore(
     useShallow((state) => ({
       providedTrackId: state.providedTrackId,
       playing: state.playing,
@@ -27,16 +32,30 @@ export function MusicControl(): ReactNode {
       error: state.error,
       volume: state.volume,
       mode: state.mode,
+      disabledGroups: state.disabledGroups,
       toggle: state.toggle,
       play: state.play,
       next: state.next,
       prev: state.prev,
       setMode: state.setMode,
       setVolume: state.setVolume,
+      setGroupEnabled: state.setGroupEnabled,
     })),
   );
+  const groupId = useId();
   const providedTrack = PROVIDED_MUSIC_TRACKS.find((track) => track.id === providedTrackId);
+  // Open only the current group so a long catalog starts at what is playing.
+  const [expandedGroups, setExpandedGroups] = useState<ReadonlySet<string>>(
+    () => new Set(providedTrack?.group === undefined ? [] : [providedTrack.group]),
+  );
   const hasTracks = PROVIDED_MUSIC_TRACKS.length > 0;
+  const enabledGroupCount = TRACK_GROUPS.filter((group) =>
+    group.name !== undefined && !disabledGroups.includes(group.name)).length;
+  const toggleExpanded = (name: string): void => setExpandedGroups((current) => {
+    const expanded = new Set(current);
+    if (!expanded.delete(name)) expanded.add(name);
+    return expanded;
+  });
   const renderTrack = (track: ProvidedMusicTrack): ReactNode => (
     <button type="button" data-music-transport className={styles.track} aria-current={track.id === providedTrackId}
       onClick={() => void play(track.id)}>
@@ -48,7 +67,10 @@ export function MusicControl(): ReactNode {
     <section className={styles.panel} aria-label={t('music.title')}>
       <span className={styles.title}><AppIcon name="music" /> {t('music.title')}</span>
       <p className={styles.nowPlaying} aria-live="polite">
-        {busy ? t('music.loading') : providedTrack?.title ?? t('music.noTracks')}
+        {busy ? t('music.loading') : providedTrack ? <>
+          {providedTrack.group !== undefined && <span className={styles.nowPlayingGroup}>{providedTrack.group} · </span>}
+          {providedTrack.title}
+        </> : t('music.noTracks')}
       </p>
       <div className={styles.controls}>
         <button type="button" data-music-transport className={styles.control} aria-label={t('music.prev')} title={t('music.prev')}
@@ -67,14 +89,29 @@ export function MusicControl(): ReactNode {
         <output htmlFor="music-volume">{Math.round(volume * 100)}%</output>
       </label>
       <ul className={styles.tracks} aria-label={t('music.tracks')}>
-        {TRACK_GROUPS.map((group) => group.name === undefined
-          ? group.tracks.map((track) => <li key={track.id}>{renderTrack(track)}</li>)
-          : <li key={`group:${group.name}`} className={styles.group}>
-            <span className={styles.groupName}>{group.name}</span>
-            <ul aria-label={group.name}>
+        {TRACK_GROUPS.map((group, index) => {
+          if (group.name === undefined) return group.tracks.map((track) => <li key={track.id}>{renderTrack(track)}</li>);
+          const name = group.name;
+          const enabled = !disabledGroups.includes(name);
+          const expanded = expandedGroups.has(name);
+          const listId = `${groupId}-${index}`;
+          return <li key={`group:${name}`} className={styles.group} data-enabled={enabled}>
+            <div className={styles.groupHeader}>
+              <AppCheckbox checked={enabled} disabled={enabled && enabledGroupCount === 1 && !HAS_UNGROUPED_TRACKS}
+                slotProps={{ input: { 'aria-label': t('music.includeGroup', { group: name }) } }}
+                onChange={(event) => setGroupEnabled(name, event.target.checked)} />
+              <button type="button" className={styles.groupToggle} aria-expanded={expanded} aria-controls={listId}
+                onClick={() => toggleExpanded(name)}>
+                <AppIcon name="nextPage" className={styles.chevron} />
+                <span className={styles.groupName}>{name}</span>
+                <span className={styles.groupCount}>{group.tracks.length}</span>
+              </button>
+            </div>
+            {expanded && <ul id={listId} aria-label={name}>
               {group.tracks.map((track) => <li key={track.id}>{renderTrack(track)}</li>)}
-            </ul>
-          </li>)}
+            </ul>}
+          </li>;
+        })}
       </ul>
       <div className={styles.soundSetting}>
         <label className={styles.soundToggle}>

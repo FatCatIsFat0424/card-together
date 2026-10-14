@@ -54,9 +54,8 @@ export function FloatingRoomCard(): ReactNode {
         </li>)}
       </ul> : <p className={styles.empty}>{t('roomCard.empty')}</p>}
       <div className={styles.footer}>
-        <span>{!playing && connection === 'ready'
-          ? t('roomCard.prepared', { ready: String(occupied.filter((seat) => seat.isReady).length), total: String(occupied.length) })
-          : t('roomCard.openHint')}</span>
+        {!playing && connection === 'ready' && <span>
+          {t('roomCard.prepared', { ready: String(occupied.filter((seat) => seat.isReady).length), total: String(occupied.length) })}</span>}
         {(room.spectators?.length ?? 0) > 0 && <span>{t('roomCard.spectators', { count: String(room.spectators!.length) })}</span>}
       </div>
     </Link>

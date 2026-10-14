@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { VoiceIncomingSignal, VoiceJoinResult, VoiceRoomState } from '@shared/types/voice';
 import {
   createVoiceSession,
+  deafenSettings,
   initialVoiceState,
+  muteSettings,
   parsePeerPrefs,
 } from '../../../client/src/voice/voice-session';
 import type {
@@ -594,12 +596,14 @@ describe('voice session lifecycle', () => {
     expect(peerConnections[0].close).toHaveBeenCalledOnce();
   });
 
-  it('should mute only microphone tracks and deafen existing and future remote audio independently', async () => {
-    session.setMuted(true);
+  it('should deafen existing and future remote audio and mute the microphone with it', async () => {
     session.setDeafened(true);
+    expect(state).toMatchObject({ muted: true, deafened: true });
     joinResult = { success: true, peerId: 'self', state: room('self', ['remote']) };
     await session.join('ABC123', 'alice');
+    expect(emit).toHaveBeenCalledWith('voice:join', { muted: true, deafened: true });
     expect(microphone.enabled).toBe(false);
+    expect(state.participants[0]).toMatchObject({ muted: true, deafened: true });
     incomingTrack();
     expect(audios[0].muted).toBe(true);
     receive('voice:state', room('self', ['remote', 'remote2']));
@@ -607,12 +611,73 @@ describe('voice session lifecycle', () => {
     expect(audios[1].muted).toBe(true);
     session.setDeafened(false);
     expect(audios.every((audio) => !audio.muted)).toBe(true);
-    expect(microphone.enabled).toBe(false);
-    session.setMuted(false);
     expect(microphone.enabled).toBe(true);
-    expect(audios.every((audio) => !audio.muted)).toBe(true);
+    expect(state).toMatchObject({ muted: false, deafened: false });
     await flush();
-    expect(emit).toHaveBeenCalledWith('voice:settings', { muted: false, deafened: false });
+    expect(emit).toHaveBeenLastCalledWith('voice:settings', { muted: false, deafened: false });
+  });
+
+  it('should keep a microphone muted before deafen muted after deafen ends', async () => {
+    joinResult = { success: true, peerId: 'self', state: room('self', ['remote']) };
+    await session.join('ABC123', 'alice');
+    session.setMuted(true);
+    session.setDeafened(true);
+    session.setDeafened(false);
+    expect(state).toMatchObject({ muted: true, deafened: false });
+    expect(microphone.enabled).toBe(false);
+    await flush();
+    expect(emit).toHaveBeenLastCalledWith('voice:settings', { muted: true, deafened: false });
+  });
+
+  it('should end deafen when the microphone is unmuted while deafened', async () => {
+    joinResult = { success: true, peerId: 'self', state: room('self', ['remote']) };
+    await session.join('ABC123', 'alice');
+    incomingTrack();
+    session.setMuted(true);
+    session.setDeafened(true);
+    session.setMuted(true);
+    expect(state).toMatchObject({ muted: true, deafened: true });
+    session.setMuted(false);
+    expect(state).toMatchObject({ muted: false, deafened: false });
+    expect(microphone.enabled).toBe(true);
+    expect(audios[0].muted).toBe(false);
+    await flush();
+    expect(emit).toHaveBeenLastCalledWith('voice:settings', { muted: false, deafened: false });
+    session.setDeafened(true);
+    session.setDeafened(false);
+    expect(state).toMatchObject({ muted: false, deafened: false });
+  });
+
+  it('should keep the deafen microphone mute across a device switch and rejoin', async () => {
+    joinResult = { success: true, peerId: 'self', state: room('self', ['remote']) };
+    await session.join('ABC123', 'alice');
+    session.setDeafened(true);
+    const usb = makeTrack();
+    media.mockResolvedValueOnce(makeStream([usb]));
+    await session.setInputDevice('usb-mic');
+    expect(usb.enabled).toBe(false);
+    session.leave();
+    const fresh = makeTrack();
+    media.mockResolvedValueOnce(makeStream([fresh]));
+    await session.join('ABC123', 'alice');
+    expect(fresh.enabled).toBe(false);
+    session.setDeafened(false);
+    expect(fresh.enabled).toBe(true);
+  });
+
+  it('should start a deafened session with the microphone muted and restore its earlier state', async () => {
+    session.dispose();
+    session = createVoiceSession(
+      transport as unknown as VoiceSocket,
+      (next) => {
+        state = next;
+      },
+      { muted: false, deafened: true, mutedBeforeDeafen: false },
+    );
+    await session.join('ABC123', 'alice');
+    expect(microphone.enabled).toBe(false);
+    session.setDeafened(false);
+    expect(microphone.enabled).toBe(true);
   });
 
   it('should switch the microphone on every sender, stop the old track and keep mute state', async () => {
@@ -851,6 +916,26 @@ describe('voice session lifecycle', () => {
     expect([...listeners.values()].every((handlers) => handlers.size === 0)).toBe(true);
     expect(microphone.stop).toHaveBeenCalledOnce();
     expect(peerConnections).toHaveLength(0);
+  });
+});
+
+describe('mute and deafen settings', () => {
+  const open = { muted: false, deafened: false, mutedBeforeDeafen: false };
+
+  it('should mute with deafen and restore the previous microphone state', () => {
+    const deafened = deafenSettings(open, true);
+    expect(deafened).toEqual({ muted: true, deafened: true, mutedBeforeDeafen: false });
+    expect(deafenSettings(deafened, false)).toEqual(open);
+    const mutedFirst = deafenSettings({ ...open, muted: true }, true);
+    expect(deafenSettings(mutedFirst, false)).toEqual({ ...open, muted: true });
+    expect(deafenSettings(deafened, true)).toEqual(deafened);
+  });
+
+  it('should end deafen on unmute and keep an explicit mute after deafen', () => {
+    const deafened = deafenSettings(open, true);
+    expect(muteSettings(deafened, false)).toEqual(open);
+    const kept = muteSettings(deafened, true);
+    expect(deafenSettings(kept, false)).toEqual({ ...open, muted: true });
   });
 });
 

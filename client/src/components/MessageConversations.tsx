@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import type { Conversation } from '@shared/types/direct-message';
+import type { PublicAccount } from '@shared/types/social';
 import { useI18nStore } from '../stores/i18n-store';
 import { useSocialStore } from '../stores/social-store';
 import { Avatar } from './Avatar';
@@ -12,29 +14,63 @@ export function listTime(timestamp: number, locale: string, now = Date.now()): s
     .format(timestamp);
 }
 
-export function MessageConversations({ selectedId, split = false }: {
+export interface MessageListEntry {
+  readonly account: PublicAccount;
+  /** Null for a current friend without retained history. */
+  readonly conversation: Conversation | null;
+}
+
+/**
+ * Conversations (including read-only former friends) newest first, then current friends
+ * without retained history by nickname.
+ */
+export function messageListEntries(conversations: readonly Conversation[],
+  friends: readonly PublicAccount[], locale: string): MessageListEntry[] {
+  const listed = new Set(conversations.map((conversation) => conversation.account.id));
+  const collator = new Intl.Collator(locale);
+  return [
+    ...[...conversations].sort((first, second) => second.lastMessage.timestamp - first.lastMessage.timestamp)
+      .map((conversation): MessageListEntry => ({ account: conversation.account, conversation })),
+    ...friends.filter((friend) => !listed.has(friend.id))
+      .sort((first, second) => collator.compare(first.nickname, second.nickname)
+        || collator.compare(first.username, second.username))
+      .map((account): MessageListEntry => ({ account, conversation: null })),
+  ];
+}
+
+export function MessageConversations({ selectedId, split = false, friends }: {
   readonly selectedId?: string;
   readonly split?: boolean;
+  /** Null until friends load; conversations still show meanwhile. */
+  readonly friends: readonly PublicAccount[] | null;
 }): ReactNode {
   const conversations = useSocialStore((state) => state.conversations);
   const status = useSocialStore((state) => state.status);
   const { locale, t } = useI18nStore();
+  const entries = messageListEntries(conversations, friends ?? [], locale);
+  const fullTime = (timestamp: number): string =>
+    new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(timestamp);
   return <>
-    {status === 'ready' && conversations.length === 0 && <p className={styles.empty}>{t('messages.empty')}</p>}
-    <ul className={`${styles.conversations} ${split ? styles.splitList : ''}`}>{conversations.map((conversation) => <li key={conversation.account.id}>
-      <Link to={`/messages/${encodeURIComponent(conversation.account.id)}`}
-        aria-current={selectedId === conversation.account.id ? 'page' : undefined}>
-        {split && <span className={styles.conversationAvatar}><Avatar avatar={conversation.account.avatar}
-          image={conversation.account.avatarImage} border={conversation.account.avatarBorder}
-          color={conversation.account.color} size="medium" /></span>}
-        <strong>{conversation.account.nickname}</strong><span className={styles.username}>@{conversation.account.username}</span>
-        <span className={styles.preview}>{conversation.lastMessage.sticker || conversation.lastMessage.providedSticker || conversation.lastMessage.shopSticker
-          ? t('messages.sticker') : conversation.lastMessage.content}</span>
-        <time dateTime={new Date(conversation.lastMessage.timestamp).toISOString()}
-          title={new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(conversation.lastMessage.timestamp)}>
-          {split ? listTime(conversation.lastMessage.timestamp, locale)
-            : new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(conversation.lastMessage.timestamp)}</time>
-        {conversation.unreadCount > 0 && <span className={styles.unread}>{t('social.unread', { n: String(conversation.unreadCount) })}</span>}
+    {status === 'ready' && friends && entries.length === 0 && <p className={styles.empty}>{t('messages.empty')}</p>}
+    <ul className={`${styles.conversations} ${split ? styles.splitList : ''}`}>{entries.map(({ account, conversation }) => <li key={account.id}>
+      <Link to={`/messages/${encodeURIComponent(account.id)}`}
+        aria-current={selectedId === account.id ? 'page' : undefined}>
+        {split && <span className={styles.conversationAvatar}><Avatar avatar={account.avatar}
+          image={account.avatarImage} border={account.avatarBorder}
+          color={account.color} size="medium" /></span>}
+        <strong>{account.nickname}</strong><span className={styles.username}>@{account.username}</span>
+        {!conversation && (
+          // Keeps the row as tall as rows with a preview line.
+          <span className={styles.preview} aria-hidden="true">{'\u00a0'}</span>
+        )}
+        {conversation && <>
+          <span className={styles.preview}>{conversation.lastMessage.sticker || conversation.lastMessage.providedSticker
+            || conversation.lastMessage.shopSticker ? t('messages.sticker') : conversation.lastMessage.content}</span>
+          <time dateTime={new Date(conversation.lastMessage.timestamp).toISOString()}
+            title={fullTime(conversation.lastMessage.timestamp)}>
+            {split ? listTime(conversation.lastMessage.timestamp, locale) : fullTime(conversation.lastMessage.timestamp)}</time>
+          {conversation.unreadCount > 0 && <span className={styles.unread}>{t('social.unread', { n: String(conversation.unreadCount) })}</span>}
+        </>}
       </Link>
     </li>)}</ul>
   </>;

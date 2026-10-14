@@ -17,7 +17,7 @@ import { tablePosition } from '../../game-view';
 import { GameShell } from '../GameShell';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
-import { infoStyles, RulesBox, TurnBox } from '../TableInfo';
+import { infoStyles, TurnBox } from '../TableInfo';
 import { joinNames, useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
 import { projectedServerNow } from '../turn-clock';
@@ -173,10 +173,6 @@ function Info({ game, locked }: { game: ChinesePokerVisibleState; locked: boolea
         {game.autoArranged.includes(seat) && <span className={infoStyles.note}>{t('chinesepoker.autoTag')}</span>}
       </li>)}</ul>
     </section>
-
-    <RulesBox title={t('chinesepoker.rules')} lines={[
-      t('chinesepoker.rulesRows'), t('chinesepoker.rulesFoul'), t('chinesepoker.rulesValues'), t('chinesepoker.rulesSweep'),
-    ]} />
   </aside>;
 }
 

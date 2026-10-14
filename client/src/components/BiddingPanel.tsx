@@ -142,7 +142,7 @@ export function BiddingPanel({ disabled = false }: { disabled?: boolean }): Reac
           {t('bidding.confirm')}{choice && <> <CallLabel action={choice} /></>}
         </button>
       </div>
-      <p className={styles.hint} aria-live="polite">{choice ? t('bidding.confirmHint') : t('bidding.chooseHint')}</p>
+      <p className={styles.hint} aria-live="polite">{choice && t('bidding.confirmHint')}</p>
       {error && <p className={styles.error} role="alert">{error}</p>}
     </section>
   );
