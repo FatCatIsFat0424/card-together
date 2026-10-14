@@ -230,6 +230,8 @@
 .infoContent > * { flex-shrink: 0; }
 .rulesRailButton { width: 100%; flex-shrink: 0; }
 .tableTools .toolBtn { width: 44px; height: 44px; flex-shrink: 0; }
+.abortTool.abortTool { display: none; }
+.toolBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .sheetHeader,
 .tableTools,
@@ -328,6 +330,8 @@
 
 /* ─── Mobile (< 768px): single column; info and chat are bottom drawers ─── */
 @media (max-width: 767px) {
+  .abortRail.abortRail { display: none; }
+  .abortTool.abortTool { display: flex; margin-right: auto; }
   .gameContainer,
   .chatCollapsed {
     grid-template-columns: minmax(0, 1fr);
@@ -386,6 +390,8 @@
 
 /* A short landscape viewport puts the hand beside the table instead of below it. */
 @media (max-height: 500px) and (min-width: 600px) {
+  .abortRail.abortRail { display: none; }
+  .abortTool.abortTool { display: flex; margin-right: auto; }
   .rulesRailButton { display: none; }
   .gameContainer, .chatCollapsed { grid-template-columns: minmax(0, 1fr); padding: 4px; }
   .infoPanel { display: none; }
@@ -412,8 +418,8 @@
   .handZone { flex: none; min-width: 0; }
   .table {
     grid-template-columns: minmax(64px, 18%) minmax(0, 1fr) minmax(64px, 18%);
-    grid-template-rows: auto minmax(0, 1fr);
-    grid-template-areas: 'tools top .' 'left centre right';
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas: 'tools tools tools' '. top .' 'left centre right';
   }
   .tableTools { display: flex; justify-content: flex-start; gap: 2px; }
   .chatFab { display: inline-flex; }

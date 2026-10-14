@@ -356,7 +356,7 @@ export function GameShell({
             aria-label={t('table.close')} title={t('table.close')}><AppIcon name="close" /></button>
         </div>
         {room && <RoomCodeButton key={room.code} code={room.code} />}
-        <AbortVoteButton />
+        <AbortVoteButton className={styles.abortRail} />
         <SpectatorLeaveButton />
         {visibleGame && <button type="button" className={`btn btn-outline ${styles.rulesRailButton}`}
           aria-haspopup="dialog" onClick={openRules}>
@@ -376,6 +376,7 @@ export function GameShell({
       <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}>
         <div className={`${styles.table} ${tableSeats.some((seat) => !['N', 'E', 'S', 'W'].includes(seat)) ? styles.expandedTable : ''}`} data-card-table>
           <div className={styles.tableTools}>
+            <AbortVoteButton iconOnly className={styles.abortTool} buttonClassName={styles.toolBtn} />
             {visibleGame && <button type="button" className={styles.toolBtn}
               onClick={openRules} aria-haspopup="dialog" aria-label={t('rules.open')} title={t('rules.open')}>
               <AppIcon name="rules" />

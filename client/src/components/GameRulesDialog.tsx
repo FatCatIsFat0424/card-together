@@ -10,6 +10,7 @@ import { useI18nStore } from '../stores/i18n-store';
 import { useMotionStore } from '../stores/motion-store';
 import { AppIcon } from './AppIcon';
 import styles from './GameRulesDialog.module.css';
+import motionStyles from '../styles/dialog-motion.module.css';
 
 export function GameRulesContent({ gameType, context }: {
   readonly gameType: GameType;
@@ -51,7 +52,7 @@ export function GameRulesDialog({ gameType, context, onClose }: {
   const titleId = useId();
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
   return <Dialog open fullWidth maxWidth="md" onClose={onClose} aria-labelledby={titleId}
-    transitionDuration={0} slotProps={{ paper: { className: `${styles.dialog} ${reducedMotion ? styles.still : ''}` },
+    transitionDuration={0} slotProps={{ paper: { className: `${styles.dialog} ${motionStyles.enter} ${reducedMotion ? motionStyles.still : ''}` },
       backdrop: { className: styles.backdrop } }}>
     <DialogTitle component="div" id={`${titleId}-header`} className={styles.header}>
       <h2 id={titleId}>{t('lobby.rulesTitle', { game: t(`gameType.${gameType}`) })}</h2>

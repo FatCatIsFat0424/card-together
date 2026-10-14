@@ -143,6 +143,10 @@ Frontend page behavior and layout. Client architecture and connection handling:
 - Below 768px, Sevens shows suit end cards and next open positions instead of all thirteen.
 - On phones and short landscape windows, abort voting sits at the table bottom.
 - Compact table toolbars use matching 44px square buttons for rules, info, and chat.
+- On phones and short landscape windows, a matching icon-only abort-vote button sits
+  at the left of the table toolbar; the info drawer omits its duplicate. Starting an
+  abort vote requires confirmation on all layouts. The confirmation uses the same
+  200ms opening animation as the rules dialog. Cancelling does not start a vote.
 - The result dialog stays below the top bar, focuses Back to room, and reports a pending return.
 - Actions require a ready connection; local sorting still works while reconnecting.
 

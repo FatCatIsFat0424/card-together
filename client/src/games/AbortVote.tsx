@@ -3,16 +3,22 @@ import { roomSeatInfo } from '@shared/rules/seats';
 
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import { ABORT_VOTE_THRESHOLD } from '@shared/constants';
 import type { PlayerInfo, RoomInfo } from '@shared/types';
 import { socket } from '../socket';
 import { useChatStore } from '../stores/chat-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useRoomStore } from '../stores/room-store';
+import { useMotionStore } from '../stores/motion-store';
 import { Avatar } from '../components/Avatar';
 import { formatCountdown } from '../game-view';
 import { AppIcon } from '../components/AppIcon';
 import styles from './AbortVote.module.css';
+import motionStyles from '../styles/dialog-motion.module.css';
 import { useConnectionReady } from './use-connection-ready';
 
 /** Current time, ticking every second while `active`. */
@@ -51,25 +57,52 @@ function useVoteAction(): [boolean, string, (send: (done: Done) => void) => void
   return [busy, error, run];
 }
 
-export function AbortVoteButton(): ReactNode {
+export function AbortVoteButton({ iconOnly = false, className = '', buttonClassName = '' }: {
+  readonly iconOnly?: boolean;
+  readonly className?: string;
+  readonly buttonClassName?: string;
+}): ReactNode {
   const { t } = useI18nStore();
   const connectionReady = useConnectionReady();
   const room = useRoomStore((state) => state.roomInfo);
   const mySeat = useRoomStore((state) => state.mySeat);
   const [busy, error, run] = useVoteAction();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const reducedMotion = useMotionStore((state) => state.reducedMotion);
+  const titleId = useId();
   const cooldownUntil = room?.abortVoteCooldownUntil ?? 0;
   const now = useNow(cooldownUntil > Date.now());
   if (!room || room.status !== 'playing' || !mySeat) return null;
   const cooling = cooldownUntil > now;
+  const disabled = busy || !connectionReady || cooling || room.abortVote !== null;
+  const label = cooling ? t('abortVote.cooldown', { time: formatCountdown(cooldownUntil - now) }) : t('abortVote.button');
+  const confirm = (): void => {
+    if (disabled) return;
+    setConfirmOpen(false);
+    run((done) => socket.timeout(10000).emit('game:abortVote:start', done));
+  };
   return (
-    <div className={styles.rail}>
-      <button type="button" className={`btn btn-outline ${styles.railBtn}`}
-        disabled={busy || !connectionReady || cooling || room.abortVote !== null}
-        onClick={() => run((done) => socket.timeout(10000).emit('game:abortVote:start', done))}>
-        <AppIcon name="flag" />{' '}
-        {cooling ? t('abortVote.cooldown', { time: formatCountdown(cooldownUntil - now) }) : t('abortVote.button')}
+    <div className={`${styles.rail} ${className}`}>
+      <button type="button" className={iconOnly ? buttonClassName : `btn btn-outline ${styles.railBtn}`}
+        disabled={disabled} aria-label={label} title={label} aria-haspopup="dialog"
+        onClick={() => setConfirmOpen(true)}>
+        <AppIcon name="flag" />
+        {!iconOnly && <> {label}</>}
       </button>
       {error && <p className={styles.error} role="alert">{error}</p>}
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} fullWidth maxWidth="xs"
+        transitionDuration={0}
+        aria-labelledby={titleId} aria-describedby={`${titleId}-description`}
+        slotProps={{ paper: { className: `${styles.confirmDialog} ${motionStyles.enter} ${reducedMotion ? motionStyles.still : ''}` } }}>
+        <DialogTitle id={titleId}>{t('abortVote.confirmTitle')}</DialogTitle>
+        <DialogContent id={`${titleId}-description`}>{t('abortVote.confirmDescription')}</DialogContent>
+        <DialogActions>
+          <button type="button" className="btn btn-outline" autoFocus onClick={() => setConfirmOpen(false)}>
+            {t('common.cancel')}</button>
+          <button type="button" className="btn btn-danger" disabled={disabled} onClick={confirm}>
+            {t('abortVote.confirmStart')}</button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }
