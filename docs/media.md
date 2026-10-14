@@ -97,8 +97,8 @@ Avatars, seat backgrounds, table backgrounds, card backs, and emoji are uploaded
 
 ## Site-provided emoji
 
-Owner-supplied emoji available to every account as `:name:` text or stickers, listed in
-the picker after the personal library. Personal emoji win same-name text matches (the
+Owner-supplied emoji available to every account as `:name:` text or stickers, in the
+picker tab after the personal library. Personal emoji win same-name text matches (the
 picker hides the shadowed site emoji); both remain usable as stickers.
 
 1. Put images in the Git-ignored `local-emoji/` (subfolders allowed).

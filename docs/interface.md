@@ -32,8 +32,10 @@ Frontend page behavior and layout. Client architecture and connection handling:
 - On desktop, messages use a divided layout: an independently scrolling conversation
   list with avatars, names, last messages, and timestamps on the left, and the selected
   chat on the right. The desktop panel fills the available viewport with 32px outer
-  padding; the conversation list uses 28% of the width, bounded to 15–20rem. Avatars
-  align beside the name, last-message, and timestamp text. Mobile keeps separate list
+  padding; the conversation list uses 28% of the width, bounded to 15–20rem. Each row
+  shows the avatar, the name with the time on the right (today: time only; earlier:
+  month/day; full timestamp on hover), and the last message below. Sticker bubbles
+  shrink to the displayed sticker size regardless of the image's pixel size. Mobile keeps separate list
   and conversation views. Both layouts keep the header and composer visible within
   the available viewport; conversation lists and message history scroll independently.
 - Private chat supports the existing emoji/sticker libraries, older-history pagination,
@@ -176,3 +178,6 @@ Per-game controls: [games](games.md#card-controls).
   in the waiting room. Existing uploads, themes, and emoji remain free.
 - Purchased packs appear in the sticker picker for room chat and private messages;
   no equipment step is required. Receiving a sticker does not require ownership.
+- The emoji/sticker picker shows one horizontal tab row (owned packs, My emoji, Site
+  emoji) with a Browse sticker packs link; it opens the first tab with content, and a
+  search with no hits in the chosen tab switches to the first tab that has matches.

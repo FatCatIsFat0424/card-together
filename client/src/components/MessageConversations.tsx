@@ -5,6 +5,13 @@ import { useSocialStore } from '../stores/social-store';
 import { Avatar } from './Avatar';
 import styles from './DirectMessages.module.css';
 
+/** Today's messages show only the time so the split list fits it beside the name. */
+export function listTime(timestamp: number, locale: string, now = Date.now()): string {
+  const sameDay = new Date(timestamp).toDateString() === new Date(now).toDateString();
+  return new Intl.DateTimeFormat(locale, sameDay ? { timeStyle: 'short' } : { month: 'numeric', day: 'numeric' })
+    .format(timestamp);
+}
+
 export function MessageConversations({ selectedId, split = false }: {
   readonly selectedId?: string;
   readonly split?: boolean;
@@ -23,8 +30,10 @@ export function MessageConversations({ selectedId, split = false }: {
         <strong>{conversation.account.nickname}</strong><span className={styles.username}>@{conversation.account.username}</span>
         <span className={styles.preview}>{conversation.lastMessage.sticker || conversation.lastMessage.providedSticker || conversation.lastMessage.shopSticker
           ? t('messages.sticker') : conversation.lastMessage.content}</span>
-        <time dateTime={new Date(conversation.lastMessage.timestamp).toISOString()}>
-          {new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(conversation.lastMessage.timestamp)}</time>
+        <time dateTime={new Date(conversation.lastMessage.timestamp).toISOString()}
+          title={new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(conversation.lastMessage.timestamp)}>
+          {split ? listTime(conversation.lastMessage.timestamp, locale)
+            : new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(conversation.lastMessage.timestamp)}</time>
         {conversation.unreadCount > 0 && <span className={styles.unread}>{t('social.unread', { n: String(conversation.unreadCount) })}</span>}
       </Link>
     </li>)}</ul>

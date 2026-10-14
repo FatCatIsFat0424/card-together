@@ -54,7 +54,12 @@ describe('official shop sticker UI', () => {
     expect(picker()).not.toContain(shopStickerUrl('forest-cheer'));
     expect(picker('emoji')).not.toContain(shopStickerUrl('table-hello'));
     inventory(['stickers-table-talk', 'stickers-forest-friends']);
-    expect(picker()).toContain(shopStickerUrl('forest-cheer'));
+    useI18nStore.setState({ locale: 'en' });
+    // Each pack is a tab; the first owned pack opens, and searching reaches the others.
+    expect(picker()).toMatch(/aria-selected="true">Table talk<\/button>/);
+    expect(picker()).toMatch(/aria-selected="false">Forest friends<\/button>/);
+    expect(picker()).not.toContain(shopStickerUrl('forest-cheer'));
+    expect(picker('sticker', 'forest-cheer')).toContain(shopStickerUrl('forest-cheer'));
   });
 
   it('searches translated names and IDs and disables sending while busy', () => {

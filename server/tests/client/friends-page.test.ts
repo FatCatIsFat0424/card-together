@@ -25,6 +25,7 @@ vi.mock('../../../client/src/stores/room-store', () => ({
 
 import { FriendsPage } from '../../../client/src/pages/FriendsPage';
 import { MessagesPage } from '../../../client/src/pages/MessagesPage';
+import { listTime } from '../../../client/src/components/MessageConversations';
 
 function render(path: string): string {
   return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [path] },
@@ -135,6 +136,14 @@ describe('independent private messages', () => {
     expect(html).not.toContain('href="/messages"');
     expect(html).not.toContain('friend-username');
     expect(html).not.toContain('friends-tab-');
+  });
+
+  it('shortens desktop list times to fit beside the name and keeps the full time as a title', () => {
+    const today = new Date(2026, 9, 14, 13, 45).getTime();
+    expect(listTime(today, 'en', new Date(2026, 9, 14, 20, 0).getTime())).toBe('1:45 PM');
+    expect(listTime(today, 'en', new Date(2026, 9, 15, 9, 0).getTime())).toBe('10/14');
+    const time = render('/messages/bob').match(/<time[^>]*>[^<]*<\/time>/)?.[0];
+    expect(time).toMatch(/title="[^"]*\d{4}[^"]*"/);
   });
 
   it('keeps mobile chats separate with a return link to the list', () => {

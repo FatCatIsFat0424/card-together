@@ -55,11 +55,22 @@ interface EmojiPickerSectionsProps {
   onSendSticker: (payload: StickerPayload) => void;
 }
 
-/** The personal library, then site-provided emoji when the build includes any. */
+interface PickerSection {
+  readonly id: string;
+  readonly label: string;
+  readonly matches: number;
+  readonly content: ReactNode;
+}
+
+/**
+ * Owned sticker packs, the personal library, and site-provided emoji as tabs. Searching
+ * jumps to the first tab with matches when the chosen one has none.
+ */
 export function EmojiPickerSections({
   mode, query, personal, provided, busy, onInsert, onSendSticker,
 }: EmojiPickerSectionsProps): ReactNode {
   const { t } = useI18nStore();
+  const [selected, setSelected] = useState<string | null>(null);
   const inventory = useAccountStore((state) => state.account?.ownedShopItems);
   const ownedPacks = STICKER_PACKS.filter((pack) => inventory?.includes(pack.id));
   const owned = new Set(personal.map((emoji) => emoji.name));
@@ -69,50 +80,44 @@ export function EmojiPickerSections({
   // A personal emoji wins a name clash in text, so inserting the provided one would mislead.
   const providedMatches = provided.filter((emoji) => matches(emoji.name) &&
     (mode === 'sticker' || !owned.has(emoji.name)));
-  const grouped = provided.length > 0;
-  return (
-    <div className={styles.pickerBody}>
-      {mode === 'sticker' && <>
-        <h3 className={styles.pickerHeading}>{t('shop.stickerPacks')}</h3>
-        {ownedPacks.length === 0 ? <p className={styles.pickerEmpty}>
-          <Link to="/shop?type=stickerPack">{t('shop.browseStickers')}</Link>
-        </p> : ownedPacks.map((pack) => {
-          const stickers = SHOP_STICKERS.filter((sticker) => sticker.packId === pack.id &&
-            (matches(sticker.id) || matches(t(`shop.sticker.${sticker.id}`))));
-          return <div key={pack.id}>
-            <h4 className={styles.pickerHeading}>{t(`shop.item.${pack.id}.name`)}</h4>
-            {stickers.length === 0 ? <p className={styles.pickerEmpty}>{t('emoji.noMatch')}</p> :
-              <div className={styles.shopStickerGrid} role="group" aria-label={t(`shop.item.${pack.id}.name`)}>
-                {stickers.map((sticker) => <button key={sticker.id} type="button"
-                  className={styles.pickerItem} title={t(`shop.sticker.${sticker.id}`)} disabled={busy}
-                  onClick={() => onSendSticker({ shopSticker: sticker.id })}>
-                  <ShopSticker id={sticker.id} small />
-                </button>)}
-              </div>}
-          </div>;
-        })}
-      </>}
-      {(grouped || mode === 'sticker') && <h3 className={styles.pickerHeading}>{t('emoji.personal')}</h3>}
-      {personalMatches.length === 0 ? (
-        <p className={styles.pickerEmpty}>
-          {personal.length === 0 ? t('emoji.empty') : t('emoji.noMatch')}{' '}
-          <Link to="/account">{t('emoji.manage')}</Link>
-        </p>
-      ) : (
-        <div className={styles.pickerGrid} role="group" aria-label={t('emoji.personal')}>
-          {personalMatches.map((emoji) => (
-            <button key={emoji.id} type="button" className={styles.pickerItem}
-              title={`:${emoji.name}:`} disabled={mode === 'sticker' && busy}
-              onClick={() => mode === 'emoji' ? onInsert(emoji.name) : onSendSticker({ stickerId: emoji.id })}>
-              <StickerImage name={emoji.name} src={mediaUrl(emoji.mediaId)} small />
-            </button>
-          ))}
-        </div>
-      )}
-      {grouped && <h3 className={styles.pickerHeading}>{t('emoji.provided')}</h3>}
-      {grouped && (providedMatches.length === 0 ? (
-        <p className={styles.pickerEmpty}>{t('emoji.noMatch')}</p>
-      ) : (
+  const noMatch = <p className={styles.pickerEmpty}>{t('emoji.noMatch')}</p>;
+
+  const sections: PickerSection[] = [];
+  if (mode === 'sticker') {
+    for (const pack of ownedPacks) {
+      const label = t(`shop.item.${pack.id}.name`);
+      const stickers = SHOP_STICKERS.filter((sticker) => sticker.packId === pack.id &&
+        (matches(sticker.id) || matches(t(`shop.sticker.${sticker.id}`))));
+      sections.push({ id: pack.id, label, matches: stickers.length, content: stickers.length === 0 ? noMatch :
+        <div className={styles.shopStickerGrid} role="group" aria-label={label}>
+          {stickers.map((sticker) => <button key={sticker.id} type="button"
+            className={styles.pickerItem} title={t(`shop.sticker.${sticker.id}`)} disabled={busy}
+            onClick={() => onSendSticker({ shopSticker: sticker.id })}>
+            <ShopSticker id={sticker.id} small />
+          </button>)}
+        </div> });
+    }
+  }
+  sections.push({ id: 'personal', label: t('emoji.personal'), matches: personalMatches.length,
+    content: personalMatches.length === 0 ? (
+      <p className={styles.pickerEmpty}>
+        {personal.length === 0 ? t('emoji.empty') : t('emoji.noMatch')}{' '}
+        <Link to="/account">{t('emoji.manage')}</Link>
+      </p>
+    ) : (
+      <div className={styles.pickerGrid} role="group" aria-label={t('emoji.personal')}>
+        {personalMatches.map((emoji) => (
+          <button key={emoji.id} type="button" className={styles.pickerItem}
+            title={`:${emoji.name}:`} disabled={mode === 'sticker' && busy}
+            onClick={() => mode === 'emoji' ? onInsert(emoji.name) : onSendSticker({ stickerId: emoji.id })}>
+            <StickerImage name={emoji.name} src={mediaUrl(emoji.mediaId)} small />
+          </button>
+        ))}
+      </div>
+    ) });
+  if (provided.length > 0) {
+    sections.push({ id: 'provided', label: t('emoji.provided'), matches: providedMatches.length,
+      content: providedMatches.length === 0 ? noMatch : (
         <div className={styles.pickerGrid} role="group" aria-label={t('emoji.provided')}>
           {providedMatches.map((emoji) => (
             <button key={emoji.name} type="button" className={styles.pickerItem}
@@ -123,7 +128,21 @@ export function EmojiPickerSections({
             </button>
           ))}
         </div>
-      ))}
-    </div>
-  );
+      ) });
+  }
+
+  const firstWithMatches = sections.find((section) => section.matches > 0);
+  const chosen = sections.find((section) => section.id === selected);
+  const active = (chosen && (chosen.matches > 0 || !query) ? chosen : firstWithMatches) ?? chosen ?? sections[0];
+  const showTabs = sections.length > 1 || mode === 'sticker';
+  return <>
+    {showTabs && <div className={styles.sectionTabs} role="tablist" aria-label={t(mode === 'sticker' ? 'sticker.mode' : 'emoji.title')}>
+      {sections.map((section) => <button key={section.id} type="button" role="tab"
+        aria-selected={section.id === active.id} onClick={() => setSelected(section.id)}>
+        {section.label}
+      </button>)}
+      {mode === 'sticker' && <Link className={styles.sectionLink} to="/shop?type=stickerPack">{t('shop.browseStickers')}</Link>}
+    </div>}
+    <div className={styles.pickerBody} role={showTabs ? 'tabpanel' : undefined}>{active.content}</div>
+  </>;
 }
