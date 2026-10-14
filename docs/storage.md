@@ -94,6 +94,22 @@
 - All check-in receipts are retained. The owner API returns only this month's dates;
   private progress and receipts are omitted from public account/profile responses.
 
+## Achievements
+
+- Optional private `AccountRecord.achievements` stores cumulative completed games,
+  unique variants, wins, and claimed daily-task counts, capped at catalog targets.
+  See the [record and validation](../server/src/database/achievements.ts).
+  Missing counters start at zero; existing history is not replayed. Check-in progress
+  uses all retained daily check-in receipts, including those from before this feature.
+- Game progress commits atomically with coins and `rewardedGameIds`. Daily task counts
+  increment only in the first successful task-claim transaction and survive daily resets.
+  Retries or failed persistence cannot inflate either counter.
+- `Repository.claimAchievement` checks every catalog milestone inside the serialized
+  transaction and grants the exclusive title to `ownedAchievementNameplates` once.
+  This permanent owner-only inventory is separate from `ownedShopItems` and cannot be
+  purchased. Claims preserve coins and equipped cosmetics, advance `updatedAt`, and
+  publish owner updates only after persistence. Private counters never enter profiles.
+
 ## Avatar borders
 
 - Legacy border inventory and purchase routes remain supported by the
@@ -128,6 +144,7 @@ Optional fields added without a schema change; absent values use the default:
 | `coins`, `coinRevision` | 0 | Keep the fields; award nothing |
 | `rewardedGameIds` | Empty | Keep the field |
 | `AccountRecord.dailyRewards` | No progress or claims | Keep the field; games completed on older servers do not advance daily tasks |
+| `AccountRecord.achievements`, `ownedAchievementNameplates` | Zero counters / empty earned inventory | Counters do not advance; equipped earned titles in accounts or runtime are unsupported. Restore a compatible complete backup before rollback |
 | `ownedAvatarBorders`, `avatarBorder` | Empty / original avatar | Keep the fields; cannot show or manage borders |
 | `ownedShopItems`, official image style fields, `nameplate` | Empty inventory / uploaded image or theme / no nameplate | Cannot show or manage products; older profile writes may drop equipment |
 | `shopSticker` in room/private messages | Absent | Unsupported: restore a compatible complete backup before rollback |

@@ -141,6 +141,10 @@ export function TopBar(): ReactNode {
             <AppIcon name="coins" /><span>{coins.toLocaleString()}</span>
           </span>
         </Tooltip>}
+        {accountId && <Link to="/achievements" className={`${styles.iconBtn} touch-target`}
+          aria-label={t('achievements.title')} title={t('achievements.title')} onClick={() => setOpen(null)}>
+          <AppIcon name="trophy" />
+        </Link>}
         {accountId && <div className={styles.group} data-popover="notifications">
           <button type="button" className={`${styles.iconBtn} touch-target`} onClick={() => toggle('notifications')}
             aria-expanded={open === 'notifications'} aria-controls="social-notifications"

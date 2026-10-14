@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { AccountProfile, ShopItemId } from '@shared/types';
+import { ACHIEVEMENT_NAMEPLATES, isAchievementNameplateId } from '@shared/constants/shop';
+import type { AchievementNameplateId } from '@shared/constants/shop';
 import { CARD_BACKS, TABLE_BACKGROUNDS, SEAT_BACKGROUNDS, NAMEPLATES, ownsShopItem } from '@shared/constants';
 import { apiRequest } from '../api';
 import { useAccountStore } from '../stores/account-store';
@@ -27,7 +29,7 @@ export function EquipmentSettings({ account }: { readonly account: AccountProfil
     return () => { active.current = false; };
   }, []);
 
-  const equip = async (field: EquipmentField, id: ShopItemId | null): Promise<void> => {
+  const equip = async (field: EquipmentField, id: ShopItemId | AchievementNameplateId | null): Promise<void> => {
     if (pending.current) return;
     pending.current = true;
     setBusy(true);
@@ -51,10 +53,17 @@ export function EquipmentSettings({ account }: { readonly account: AccountProfil
         <label htmlFor={`equipment-${field}`}>{t(`shop.type.${type}`)}</label>
         <select id={`equipment-${field}`} value={account[field] ?? ''} disabled={busy}
           onChange={(event) => {
+            if (field === 'nameplate' && isAchievementNameplateId(event.target.value)
+              && account.ownedAchievementNameplates?.includes(event.target.value)) {
+              void equip(field, event.target.value);
+              return;
+            }
             const owned = items.find((item) => item.id === event.target.value && ownsShopItem(account, item));
             void equip(field, owned?.id ?? null);
           }}>
           <option value="">{type === 'nameplate' ? t('shop.noNameplate') : t('shop.useUpload')}</option>
+          {field === 'nameplate' && ACHIEVEMENT_NAMEPLATES.filter((item) => account.ownedAchievementNameplates?.includes(item.id))
+            .map((item) => <option key={item.id} value={item.id}>{t(`shop.title.${item.id}`)}</option>)}
           {items.filter((item) => ownsShopItem(account, item)).map((item) =>
             <option key={item.id} value={item.id}>{t(`shop.item.${item.id}.name`)}</option>)}
         </select>

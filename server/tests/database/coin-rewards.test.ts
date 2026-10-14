@@ -87,6 +87,8 @@ describe('compound completed-game writes', () => {
       const result = snapshot.games[0].result!;
       const won = 'winners' in result && result.winners.length === 1 && result.winners[0] === account.id;
       expect(await repository.getDailyRewards(account.id)).toMatchObject({ gameTypes: ['chinesepoker'], wins: Number(won) });
+      expect((await repository.getAccountById(account.id))!.achievements).toEqual({ games: 1, wins: Number(won),
+        gameTypes: ['chinesepoker'], dailyTasks: 0 });
       expect(await repository.listMatches(account.id)).toEqual([match]);
     }
     expect(JSON.parse(await readFile(path, 'utf8')).rewardedGameIds).toEqual([id]);

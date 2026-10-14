@@ -174,6 +174,23 @@ Per-game controls: [games](games.md#card-controls).
   account updates, and midnight refresh them. Claim failures offer a retry; balances
   and claims synchronize across the owner's connected sessions after durable storage.
 
+## Achievements
+
+- The trophy icon immediately left of notifications opens `/achievements`. Desktop
+  uses a category sidebar and milestone list; mobile places the two categories above
+  the list. Each category shows completed-item progress and its exclusive title reward.
+- The [catalog](../shared/src/constants/achievements.ts) defines two categories with
+  four milestones each: completed games, game variety and wins; cumulative check-ins
+  and claimed daily tasks. Progress never resets. Check-in days need not be consecutive.
+- Finish all four milestones to claim a category's permanent title. Earned titles
+  cannot be purchased, do not cost coins, and can be equipped in account settings.
+  Claiming preserves the current equipped title. Progress refreshes on account changes
+  and window focus; repeated claims cannot duplicate inventory.
+- Game and daily-task counters begin when this feature is deployed. Historical
+  check-in dates count immediately. Game eligibility follows daily rewards: complete
+  participant games including bots, no spectators, ties are not wins, and Bridge
+  partners win together. Blackjack and Hold'em count complete matches, not hands.
+
 ## Cosmetic shop
 
 - `/shop` sells permanent, cosmetic-only products from the

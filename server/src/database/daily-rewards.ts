@@ -67,20 +67,24 @@ export function dailyStatus(record: DailyRewardsRecord | undefined, now: number,
 }
 
 /** Mirror history outcomes: Bridge partnerships win together; tied leaders are not wins. */
+export function gameWonByAccount(game: Pick<AnyGameState, 'players' | 'result'>, accountId: string): boolean {
+  const seat = Object.entries(game.players).find(([, player]) => player.id === accountId && !player.isBot)?.[0];
+  if (!seat || !game.result) return false;
+  const result = game.result;
+  return 'declarerTeamWins' in result
+    ? (['N', 'S'].includes(seat) === ['N', 'S'].includes(result.contract.declarer)) === result.declarerTeamWins
+    : 'winnerSeat' in result ? result.winnerSeat === seat
+    : result.winners.length === 1 && result.winners[0] === seat;
+}
+
 export function dailyGameProgress(
   record: DailyRewardsRecord | undefined, game: Pick<AnyGameState, 'players' | 'gameType' | 'result'>, accountId: string, now: number,
 ): DailyRewardsRecord {
   const state = dailyState(record, now, accountId);
-  const seat = Object.entries(game.players).find(([, player]) => player.id === accountId && !player.isBot)?.[0];
-  if (!seat || !game.result) return state;
-  const result = game.result;
-  const won = 'declarerTeamWins' in result
-    ? (['N', 'S'].includes(seat) === ['N', 'S'].includes(result.contract.declarer)) === result.declarerTeamWins
-    : 'winnerSeat' in result ? result.winnerSeat === seat
-    : result.winners.length === 1 && result.winners[0] === seat;
+  if (!game.result || !Object.values(game.players).some((player) => player.id === accountId && !player.isBot)) return state;
   return { ...state, gameTypes: [...new Set([...state.gameTypes, game.gameType])],
     gameCounts: { ...state.gameCounts, [game.gameType]: Math.min(2, (state.gameCounts[game.gameType] ?? 0) + 1) },
-    wins: Math.min(2, state.wins + Number(won)) };
+    wins: Math.min(2, state.wins + Number(gameWonByAccount(game, accountId))) };
 }
 
 function validDate(value: unknown): value is string {

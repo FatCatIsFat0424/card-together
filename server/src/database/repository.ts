@@ -1,5 +1,8 @@
 import type { AccountProfile, AvatarBorderId, DailyRewardId, DailyRewardsStatus, DailyTaskId, EmojiRecord, MatchResult, MediaId, MessageContent, ShopItemId } from '@shared/types';
 import type { DailyRewardsRecord } from './daily-rewards';
+import type { AchievementsRecord } from './achievements';
+import type { AchievementsStatus } from '@shared/types';
+import type { AchievementCategoryId } from '@shared/constants/achievements';
 
 export type { EmojiRecord };
 import type { RuntimeSnapshot } from '../runtime/types';
@@ -9,6 +12,7 @@ export type JsonValue =
 
 export interface AccountRecord extends AccountProfile {
   readonly dailyRewards?: DailyRewardsRecord;
+  readonly achievements?: AchievementsRecord;
   readonly usernameNormalized: string;
   readonly passwordHash: string;
 }
@@ -83,6 +87,11 @@ export interface Repository {
   /** Atomically debit the catalog price and grant permanent ownership, once per item. */
   purchaseShopItem(id: string, item: ShopItemId, now: number): Promise<AccountRecord | null>;
   getDailyRewards(id: string): Promise<DailyRewardsStatus | null>;
+  getAchievements(id: string): Promise<AchievementsStatus | null>;
+  /** Validate every item and grant the exclusive title once, in a single durable write. */
+  claimAchievement(id: string, category: AchievementCategoryId): Promise<{
+    account: AccountRecord; achievements: AchievementsStatus;
+  } | null>;
   /** Once per server day; retrying the same replacement returns the saved assignment. */
   replaceDailyTask(id: string, task: DailyTaskId, day: string): Promise<{
     account: AccountRecord; dailyRewards: DailyRewardsStatus;
@@ -151,6 +160,7 @@ export function publicAccount(account: AccountRecord): AccountProfile {
     ownedAvatarBorders: account.ownedAvatarBorders ?? [],
     avatarBorder: account.avatarBorder ?? null,
     ownedShopItems: account.ownedShopItems ?? [],
+    ownedAchievementNameplates: account.ownedAchievementNameplates ?? [],
     cardBackStyle: account.cardBackStyle ?? null,
     tableBackgroundStyle: account.tableBackgroundStyle ?? null,
     seatBackgroundStyle: account.seatBackgroundStyle ?? null,

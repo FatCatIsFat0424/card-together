@@ -1,6 +1,8 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { AccountProfile, AvatarPreset, DailyRewardsStatus, MediaId } from '@shared/types';
 import { isDailyTaskId } from '@shared/constants/daily-rewards';
+import { isAchievementCategoryId } from '@shared/constants/achievements';
+import type { AchievementsStatus } from '@shared/types';
 import {
   IMAGE_OPACITY_MAX, IMAGE_OPACITY_MIN, NICKNAME_MAX_LENGTH, PASSWORD_MAX_LENGTH,
   USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, isImageOpacity, isMediaId,
@@ -38,6 +40,8 @@ export interface AuthService {
   purchaseAvatarBorder(accountId: string, input: unknown): Promise<AccountProfile>;
   purchaseShopItem(accountId: string, input: unknown): Promise<AccountProfile>;
   getDailyRewards(accountId: string): Promise<DailyRewardsStatus>;
+  getAchievements(accountId: string): Promise<AchievementsStatus>;
+  claimAchievement(accountId: string, input: unknown): Promise<{ account: AccountProfile; achievements: AchievementsStatus }>;
   replaceDailyTask(accountId: string, input: unknown): Promise<{ account: AccountProfile; dailyRewards: DailyRewardsStatus }>;
   claimDailyReward(accountId: string, input: unknown): Promise<{ account: AccountProfile; dailyRewards: DailyRewardsStatus }>;
   changePassword(accountId: string, input: unknown): Promise<void>;
@@ -344,6 +348,25 @@ export function createAuthService(
       } catch (error) {
         if (isObject(error) && error.code === 'INSUFFICIENT_COINS') {
           throw authError(409, 'INSUFFICIENT_COINS', 'Not enough coins. Play more games to earn coins.');
+        }
+        throw error;
+      }
+    },
+    getAchievements: async (accountId) => {
+      const status = await repository.getAchievements(accountId);
+      if (!status) throw authError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
+      return status;
+    },
+    claimAchievement: async (accountId, input) => {
+      const body = requiredObject(input);
+      if (!isAchievementCategoryId(body.category)) throw authError(400, 'INVALID_ACHIEVEMENT', 'Choose an achievement category.');
+      try {
+        const result = await repository.claimAchievement(accountId, body.category);
+        if (!result) throw authError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
+        return { account: publicAccount(result.account), achievements: result.achievements };
+      } catch (error) {
+        if (isObject(error) && error.code === 'ACHIEVEMENT_INCOMPLETE') {
+          throw authError(409, error.code, 'Complete every achievement in this category first.');
         }
         throw error;
       }

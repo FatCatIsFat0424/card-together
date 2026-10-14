@@ -1,5 +1,5 @@
 import type {
-  AvatarBorderId, CardBackStyleId, NameplateId, SeatBackgroundStyleId, ShopItemId, TableBackgroundStyleId,
+  AchievementNameplateId, AvatarBorderId, CardBackStyleId, NameplateId, SeatBackgroundStyleId, ShopItemId, TableBackgroundStyleId,
 } from '../constants/shop';
 export type AvatarPreset = 'cat' | 'fox' | 'owl' | 'bear' | 'rabbit' | 'panda';
 export type AvatarId = AvatarPreset;
@@ -19,6 +19,8 @@ export interface AccountProfile {
   readonly avatarBorder?: AvatarBorderId | null;
   /** Private permanent inventory for products other than legacy avatar borders. */
   readonly ownedShopItems?: readonly ShopItemId[];
+  /** Earned through achievements only; never purchasable. */
+  readonly ownedAchievementNameplates?: readonly AchievementNameplateId[];
   /** Official styles take precedence over uploaded images; null restores the uploaded image/theme. */
   readonly cardBackStyle?: CardBackStyleId | null;
   readonly tableBackgroundStyle?: TableBackgroundStyleId | null;

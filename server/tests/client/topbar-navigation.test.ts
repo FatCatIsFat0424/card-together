@@ -42,12 +42,14 @@ describe('topbar navigation', () => {
     useI18nStore.getState().setLocale('zh-TW');
   });
 
-  it.each(['/game/ABC123', '/room/ABC123', '/friends', '/messages', '/messages/bob', '/account', '/shop'])('keeps account navigation on %s', (path) => {
+  it.each(['/game/ABC123', '/room/ABC123', '/friends', '/messages', '/messages/bob', '/account', '/shop', '/achievements'])('keeps account navigation on %s', (path) => {
     const html = render(path);
     for (const label of ['大廳', '好友', '我的個人頁面', '我的帳號']) expect(html).toContain(label);
     expect(html).toContain('href="/players/alice"');
     expect(html).toContain('href="/shop"');
     expect(html).toContain('href="/messages"');
+    expect(html).toContain('href="/achievements"');
+    expect(html.indexOf('aria-label="成就"')).toBeLessThan(html.indexOf('data-popover="notifications"'));
     expect(html).toContain('aria-label="私人訊息"');
     expect(html).not.toContain('>私人訊息<');
     if (path.startsWith('/game/')) expect(html).toContain('ABC123');
@@ -75,6 +77,7 @@ describe('topbar navigation', () => {
     expect(html).not.toContain('href="/friends"');
     expect(html).not.toContain('href="/shop"');
     expect(html).not.toContain('href="/messages"');
+    expect(html).not.toContain('href="/achievements"');
     expect(html).not.toContain('枚金幣');
   });
 

@@ -28,13 +28,15 @@ import { shopTranslations } from './shop-i18n';
 import type { ShopTranslationKey } from './shop-i18n';
 import { dailyRewardsTranslations } from './daily-rewards-i18n';
 import type { DailyRewardsTranslationKey } from './daily-rewards-i18n';
+import { achievementsTranslations } from './achievements-i18n';
+import type { AchievementsTranslationKey } from './achievements-i18n';
 
 export type Locale = 'zh-TW' | 'en';
 
 type TranslationKeys = Record<
   SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | VoiceTranslationKey | UiTranslationKey
     | EmojiTranslationKey | GameTranslationKey | SevensTranslationKey | ChinesePokerTranslationKey
-    | LiarsDeckTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey, string
+    | LiarsDeckTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey, string
 > & {
   // Lobby
   'lobby.title': string;
@@ -128,6 +130,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...holdemTranslations['zh-TW'],
     ...shopTranslations['zh-TW'],
     ...dailyRewardsTranslations['zh-TW'],
+    ...achievementsTranslations['zh-TW'],
     'lobby.title': 'Card Together',
     'lobby.subtitle': '橋牌、大老二、撿紅點、99、牌七、十三支、騙子酒館、21 點、德州撲克，線上同桌一起玩',
     'lobby.nickname': '暱稱',
@@ -209,6 +212,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...holdemTranslations.en,
     ...shopTranslations.en,
     ...dailyRewardsTranslations.en,
+    ...achievementsTranslations.en,
     'lobby.title': 'Card Together',
     'lobby.subtitle': "Bridge, Big Two, Red Points, Ninety-Nine, Sevens, Chinese Poker, Liar's Deck, Blackjack, and Texas Hold'em with friends online",
     'lobby.nickname': 'Nickname',

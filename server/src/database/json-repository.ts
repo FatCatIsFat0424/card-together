@@ -14,6 +14,8 @@ import type { RuntimeSnapshot } from '../runtime/types';
 import { createDatabaseIndexes, friendshipPair } from './indexes';
 import { DAILY_TASKS, DAILY_CHECK_IN_COINS } from '@shared/constants/daily-rewards';
 import { dailyGameProgress, dailyState, dailyStatus, replacementTask, taskProgress } from './daily-rewards';
+import { ACHIEVEMENT_CATEGORIES } from '@shared/constants/achievements';
+import { achievementGameProgress, achievementState, achievementsStatus } from './achievements';
 
 const activePaths = new Set<string>();
 
@@ -144,6 +146,7 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
           const coins = (account.coins ?? 0) + GAME_COIN_REWARD;
           if (!Number.isSafeInteger(coins)) throw new Error('Coin balance exceeds the supported limit.');
           data.accounts[index] = { ...account, coins, coinRevision: (account.coinRevision ?? 0) + 1,
+            achievements: achievementGameProgress(account.achievements, game, accountId),
             dailyRewards: dailyGameProgress(account.dailyRewards, game, accountId, rewardedAt) };
         }
         rewarded.add(id);
@@ -226,6 +229,28 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
         return purchaseShopItem(id, border, now);
       },
       purchaseShopItem,
+      getAchievements: (id) => read((data) => {
+        const account = indexes.accounts(data.accounts).byId.get(id);
+        return account ? achievementsStatus(account) : null;
+      }),
+      claimAchievement: (id, categoryId) => write(['accounts'], (data) => {
+        const index = indexes.accounts(document.accounts).positions.get(id);
+        if (index === undefined) return null;
+        const account = data.accounts[index];
+        const category = ACHIEVEMENT_CATEGORIES.find((entry) => entry.id === categoryId);
+        if (!category) throw repositoryError('INVALID_ACHIEVEMENT', 'Choose an achievement category.');
+        const status = achievementsStatus(account);
+        const progress = status.categories.find((entry) => entry.id === categoryId)!;
+        if (progress.claimed) return { account, achievements: status };
+        if (!category.items.every((item) => progress.items.some((entry) => entry.id === item.id && entry.progress >= item.target))) {
+          throw repositoryError('ACHIEVEMENT_INCOMPLETE', 'Complete every achievement in this category first.');
+        }
+        const updated: AccountRecord = { ...account,
+          ownedAchievementNameplates: [...(account.ownedAchievementNameplates ?? []), category.reward],
+          updatedAt: Math.max(now(), account.updatedAt + 1) };
+        data.accounts[index] = updated;
+        return { account: updated, achievements: achievementsStatus(updated) };
+      }),
       getDailyRewards: (id) => read((data) => {
         const account = indexes.accounts(data.accounts).byId.get(id);
         return account ? dailyStatus(account.dailyRewards, now(), id) : null;
@@ -253,6 +278,9 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
           claimedTasks: reward === 'check-in' ? state.claimedTasks : [...state.claimedTasks, reward],
         };
         const updated: AccountRecord = { ...account, dailyRewards, coins,
+          achievements: reward === 'check-in' ? account.achievements : {
+            ...achievementState(account.achievements), dailyTasks: Math.min(15, (account.achievements?.dailyTasks ?? 0) + 1),
+          },
           coinRevision: (account.coinRevision ?? 0) + 1, updatedAt: Math.max(timestamp, account.updatedAt + 1) };
         data.accounts[index] = updated;
         return { account: updated, dailyRewards: dailyStatus(dailyRewards, timestamp, id) };

@@ -19,6 +19,8 @@ backend-relative; production Nginx serves them below `/card-together/`.
 | `PATCH /api/auth/profile` | [Profile fields](#profile-fields) | Updated account; synchronizes connected players |
 | `POST /api/auth/shop/avatar-borders` | `border` (catalog ID) | Updated account after purchase |
 | `POST /api/auth/shop/items` | `item` (catalog ID) | Updated account after permanent purchase; does not equip |
+| `GET /api/auth/achievements` | — | Owner's [achievement status](../shared/src/types/achievements.ts), milestone progress and category claim state |
+| `POST /api/auth/achievements/claim` | `category`: ID from the [catalog](../shared/src/constants/achievements.ts) | Updated account and achievement status; all milestones required, repeat claims idempotent, no coin charge |
 | `GET /api/auth/daily-rewards` | — | Owner's [daily status](../shared/src/types/daily-rewards.ts), server date/time, current month's check-ins |
 | `POST /api/auth/daily-rewards` | `reward`: assigned [task ID](../shared/src/constants/daily-rewards.ts) or `check-in`; `day`: server's YYYY-MM-DD | Updated account and daily status; repeat claims are idempotent |
 | `POST /api/auth/daily-rewards/replace` | `task`: assigned, unclaimed task ID; `day`: server's YYYY-MM-DD | Updated account and daily status; one replacement per day, retrying the same original task is idempotent |
@@ -57,7 +59,12 @@ backend-relative; production Nginx serves them below `/card-together/`.
 | `tableBackgroundOpacity`, `cardBackOpacity` | Integer percent 20–100 |
 | `avatarBorder` | Null (original) or an owned catalog ID; unowned returns 403 |
 | `cardBackStyle`, `tableBackgroundStyle`, `seatBackgroundStyle`, `nameplate` | Null or owned catalog ID of the matching type; unowned returns 403, wrong type 400 |
-| `coins`, `coinRevision`, `ownedAvatarBorders`, `ownedShopItems` | Server-owned; never set by register or profile requests |
+| `coins`, `coinRevision`, `ownedAvatarBorders`, `ownedShopItems`, `ownedAchievementNameplates` | Server-owned; never set by register or profile requests |
+
+Achievement routes require a session and mutation Origin/JSON protection. Unknown category
+IDs return 400; incomplete categories return 409. The server grants the catalog's title,
+ignoring client counters, inventory, account IDs and reward IDs. Earned titles are accepted
+by the `nameplate` equipment field only when owned; the shop rejects them as unknown products.
 
 Omitted fields keep their values; invalid values return 400.
 

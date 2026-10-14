@@ -87,6 +87,49 @@ describe('account HTTP routes', () => {
     return { cookie: seeded.cookie, id: seeded.account.id };
   }
 
+  it('authenticates achievement progress and claims, rejects forged ownership and purchases, and equips earned titles', async () => {
+    expect((await fetch(`${baseUrl}/achievements`)).status).toBe(401);
+    expect((await fetch(`${baseUrl}/achievements/claim`, { method: 'POST', headers: HEADERS,
+      body: JSON.stringify({ category: 'table' }) })).status).toBe(401);
+    const { cookie, id } = await seedAccount();
+    const headers = { ...HEADERS, Cookie: cookie };
+    const progress = await fetch(`${baseUrl}/achievements`, { headers });
+    expect(progress.status).toBe(200);
+    expect(progress.headers.get('cache-control')).toBe('no-store');
+    expect(await progress.json()).toMatchObject({ achievements: { categories: [{ id: 'table', claimed: false }, { id: 'daily' }] } });
+    const claim = (body: unknown) => fetch(`${baseUrl}/achievements/claim`, { method: 'POST', headers, body: JSON.stringify(body) });
+    expect((await claim({ category: 'unknown' })).status).toBe(400);
+    expect((await claim({ category: 'table', games: 100, wins: 100, claimed: true })).status).toBe(409);
+    expect((await fetch(`${baseUrl}/achievements/claim`, { method: 'POST', headers: { ...headers, Origin: 'https://evil.example' },
+      body: JSON.stringify({ category: 'table' }) })).status).toBe(403);
+    expect((await fetch(`${baseUrl}/shop/items`, { method: 'POST', headers,
+      body: JSON.stringify({ item: 'nameplate-table-traveler', price: 0 }) })).status).toBe(400);
+    expect((await fetch(`${baseUrl}/profile`, { method: 'PATCH', headers, body: JSON.stringify({
+      nameplate: 'nameplate-table-traveler', ownedAchievementNameplates: ['nameplate-table-traveler'],
+    }) })).status).toBe(403);
+    expect(onAccountUpdated).not.toHaveBeenCalled();
+    expect((await repository.getAccountById(id))!.ownedAchievementNameplates).toBeUndefined();
+
+    const earned = await seedAuthenticatedAccount(repository, 'earner', { achievements: { games: 20, wins: 5,
+      gameTypes: ['bridge', 'bigtwo', 'sevens', 'holdem', 'blackjack'], dailyTasks: 0 } });
+    const earnedHeaders = { ...HEADERS, Cookie: earned.cookie };
+    onAccountUpdated.mockImplementation(async (account) => {
+      expect((await repository.getAccountById(account.id))!.ownedAchievementNameplates).toContain('nameplate-table-traveler');
+    });
+    const claimed = await fetch(`${baseUrl}/achievements/claim`, { method: 'POST', headers: earnedHeaders,
+      body: JSON.stringify({ category: 'table' }) });
+    expect(claimed.status).toBe(200);
+    const body = await claimed.json();
+    expect(body.account.ownedAchievementNameplates).toEqual(['nameplate-table-traveler']);
+    expect(body.account).not.toHaveProperty('achievements');
+    expect(body.account).not.toHaveProperty('passwordHash');
+    expect(onAccountUpdated).toHaveBeenCalledTimes(1);
+    const equipped = await fetch(`${baseUrl}/profile`, { method: 'PATCH', headers: earnedHeaders,
+      body: JSON.stringify({ nameplate: 'nameplate-table-traveler' }) });
+    expect(equipped.status).toBe(200);
+    expect(await equipped.json()).toMatchObject({ account: { nameplate: 'nameplate-table-traveler' } });
+  });
+
   it('authenticates daily rewards, validates claims, and publishes only durable owner updates', async () => {
     expect((await fetch(`${baseUrl}/daily-rewards`)).status).toBe(401);
     const { cookie, id } = await seedAccount();

@@ -8,6 +8,8 @@ interface NameplateProps {
 }
 
 const MARKS: Readonly<Record<NameplateId, string>> = {
+  'nameplate-table-traveler': '♠',
+  'nameplate-daily-collector': '✦',
   'nameplate-aurora': '✧',
   'nameplate-tide': '≈',
   'nameplate-sakura': '❀',
@@ -20,7 +22,7 @@ const MARKS: Readonly<Record<NameplateId, string>> = {
   'nameplate-lucky': '🍀',
 };
 
-/** Cosmetic titles never imply a verified rank or earned achievement. */
+/** Both shop cosmetics and exclusive earned titles share the same equipped presentation. */
 export function Nameplate({ id }: NameplateProps): ReactNode {
   const { t } = useI18nStore();
   if (!id) return null;

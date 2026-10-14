@@ -142,3 +142,4 @@ export type {
   VoiceSettings, VoiceParticipant, VoiceRoomState, VoiceJoinResult,
   VoiceDescription, VoiceCandidate, VoiceSignal, VoiceIncomingSignal,
 } from './voice';
+export type { AchievementsStatus } from './achievements';

@@ -173,6 +173,19 @@ export function createAuthRouter(service: AuthService, config: AuthRouterConfig)
     }
     response.json({ success: true, account });
   }));
+  router.get('/achievements', auth, route(async (_request, response) => {
+    const achievements = await service.getAchievements(getRequestSession(response).account.id);
+    response.json({ success: true, achievements });
+  }));
+  router.post('/achievements/claim', auth, route(async (request, response) => {
+    const result = await service.claimAchievement(getRequestSession(response).account.id, request.body);
+    try {
+      await config.onAccountUpdated?.(result.account);
+    } catch (error) {
+      console.error('[auth] Unable to sync the achievement reward:', error);
+    }
+    response.json({ success: true, ...result });
+  }));
   router.get('/daily-rewards', auth, route(async (_request, response) => {
     const dailyRewards = await service.getDailyRewards(getRequestSession(response).account.id);
     response.json({ success: true, dailyRewards });

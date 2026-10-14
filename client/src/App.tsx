@@ -29,6 +29,7 @@ const AccountPage = lazy(() => import('./pages/AccountPage').then((page) => ({ d
 const FriendsPage = lazy(() => import('./pages/FriendsPage').then((page) => ({ default: page.FriendsPage })));
 const MessagesPage = lazy(() => import('./pages/MessagesPage').then((page) => ({ default: page.MessagesPage })));
 const ShopPage = lazy(() => import('./pages/ShopPage').then((page) => ({ default: page.ShopPage })));
+const AchievementsPage = lazy(() => import('./pages/AchievementsPage').then((page) => ({ default: page.AchievementsPage })));
 const PlayerProfilePage = lazy(() => import('./pages/PlayerProfilePage')
   .then((page) => ({ default: page.PlayerProfilePage })));
 
@@ -87,6 +88,7 @@ function AppRoutes(): ReactNode {
         <Route path="/messages" element={<MessagesPage />} />
         <Route path="/messages/:accountId" element={<MessagesPage />} />
         <Route path="/shop" element={<ShopPage />} />
+        <Route path="/achievements" element={<AchievementsPage />} />
         <Route path="/players/:accountId" element={<PlayerProfilePage />} />
         <Route path="/room/:roomCode" element={<RoomPage />} />
         <Route path="/game/:roomCode" element={<GamePage />} />

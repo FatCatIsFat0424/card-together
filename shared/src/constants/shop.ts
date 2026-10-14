@@ -146,7 +146,17 @@ export type ShopItemType = ShopItem['type'];
 export type CardBackStyleId = typeof CARD_BACKS[number]['id'];
 export type TableBackgroundStyleId = typeof TABLE_BACKGROUNDS[number]['id'];
 export type SeatBackgroundStyleId = typeof SEAT_BACKGROUNDS[number]['id'];
-export type NameplateId = typeof NAMEPLATES[number]['id'];
+/** Earned titles are deliberately absent from SHOP_ITEMS and all purchase endpoints. */
+export const ACHIEVEMENT_NAMEPLATES = [
+  { id: 'nameplate-table-traveler' },
+  { id: 'nameplate-daily-collector' },
+] as const;
+export type AchievementNameplateId = typeof ACHIEVEMENT_NAMEPLATES[number]['id'];
+export type NameplateId = typeof NAMEPLATES[number]['id'] | AchievementNameplateId;
+
+export function isAchievementNameplateId(value: unknown): value is AchievementNameplateId {
+  return ACHIEVEMENT_NAMEPLATES.some((item) => item.id === value);
+}
 export type ShopStickerId = typeof SHOP_STICKERS[number]['id'];
 
 export function getShopItem(value: unknown): ShopItem | undefined {

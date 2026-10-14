@@ -15,6 +15,9 @@ import { equipmentError } from './shop-equipment';
 import type { ShopItemId } from '@shared/types';
 import { CURRENT_SCHEMA_VERSION } from './migrations';
 import { validDailyRewards } from './daily-rewards';
+import { validAchievements } from './achievements';
+import { isAchievementNameplateId } from '@shared/constants/shop';
+import type { AchievementNameplateId } from '@shared/constants/shop';
 
 export interface DatabaseDocument {
   schemaVersion: typeof CURRENT_SCHEMA_VERSION;
@@ -56,6 +59,10 @@ function validAccount(value: unknown): value is AccountRecord {
     (value.coins === undefined || timestamp(value.coins)) &&
     (value.coinRevision === undefined || timestamp(value.coinRevision)) &&
     (value.dailyRewards === undefined || validDailyRewards(value.dailyRewards)) &&
+    (value.achievements === undefined || validAchievements(value.achievements)) &&
+    (value.ownedAchievementNameplates === undefined || (Array.isArray(value.ownedAchievementNameplates)
+      && value.ownedAchievementNameplates.every(isAchievementNameplateId)
+      && new Set(value.ownedAchievementNameplates).size === value.ownedAchievementNameplates.length)) &&
     (value.ownedAvatarBorders === undefined || (Array.isArray(value.ownedAvatarBorders)
       && value.ownedAvatarBorders.every(isAvatarBorderId)
       && new Set(value.ownedAvatarBorders).size === value.ownedAvatarBorders.length)) &&
@@ -68,7 +75,8 @@ function validAccount(value: unknown): value is AccountRecord {
         return item !== undefined && item.type !== 'avatarBorder';
       })
       && new Set(value.ownedShopItems).size === value.ownedShopItems.length)) &&
-    equipmentError(value, { ownedShopItems: value.ownedShopItems as readonly ShopItemId[] | undefined }) === null &&
+    equipmentError(value, { ownedShopItems: value.ownedShopItems as readonly ShopItemId[] | undefined,
+      ownedAchievementNameplates: value.ownedAchievementNameplates as readonly AchievementNameplateId[] | undefined }) === null &&
     value.usernameNormalized === value.username.toLowerCase() &&
     typeof value.nickname === 'string' &&
     value.nickname.trim().length > 0 &&
