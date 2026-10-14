@@ -247,17 +247,31 @@ Saved and system reduced-motion preferences disable this animation.
 - The trophy icon immediately left of notifications opens `/achievements`. Desktop
   uses a category sidebar and milestone list; mobile places the two categories above
   the list. Each category shows completed-item progress and its exclusive title reward.
-- The [catalog](../shared/src/constants/achievements.ts) defines two categories with
-  four milestones each: completed games, game variety and wins; cumulative check-ins
-  and claimed daily tasks. Progress never resets. Check-in days need not be consecutive.
-- Finish all four milestones to claim a category's permanent title. Earned titles
+- Newly completed milestones show the same card at the top of any page: slide down
+  for 200ms, remain for 3 seconds, then slide up for 200ms. Simultaneous completions
+  queue individually. Notifications ignore pointer input and respect reduced motion.
+  Initial sign-in establishes a silent baseline; account revisions, reconnects and
+  refocus refresh progress without repeating completed notices. Signing out or
+  changing accounts clears the queue. This does not automatically claim title rewards.
+- The [catalog](../shared/src/constants/achievements.ts) defines two categories:
+  Master of the Card Seas (牌海縱橫), with 11 milestones for games, variety and wins;
+  and Drops Carve Stone (水滴石穿), with 12 milestones for check-ins and claimed daily tasks.
+  Game milestones include 100/200/500/1,000 completions and 50/100/250 wins.
+  Daily milestones add cumulative 30/60/90/180 check-in days and 45/90/135/270 claimed
+  tasks. The month labels are cumulative goals, not deadlines or consecutive streaks.
+  Progress never resets. Check-in days need not be consecutive.
+- Finish every milestone to claim a category's permanent title. Earned titles
   cannot be purchased, do not cost coins, and can be equipped in account settings.
   Claiming preserves the current equipped title. Progress refreshes on account changes
   and window focus; repeated claims cannot duplicate inventory.
-- Achievement titles share Table traveler's gold palette and a thicker 2px border
+- Achievement titles share the gold palette and a thicker 2px border
   in both previews and equipped displays.
-- Game and daily-task counters begin when this feature is deployed. Historical
-  check-in dates count immediately. Game eligibility follows daily rewards: complete
+- The table category and its title both display 牌海縱橫 (Master of the Card Seas).
+  The daily category and its title both display 水滴石穿 (Drops Carve Stone).
+  Already claimed titles remain owned and equipped after the rename and expansion.
+- Retained game history is backfilled once on upgrade; see [storage](storage.md#achievements)
+  for limits on recovering old bot games. Historical check-in dates count immediately.
+  Game eligibility follows daily rewards: complete
   participant games including bots, no spectators, ties are not wins, and Bridge
   partners win together. Blackjack and Hold'em count complete matches, not hands.
 

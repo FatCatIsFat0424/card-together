@@ -17,7 +17,7 @@ vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>();
   return { ...actual, rename: vi.fn(actual.rename) };
 });
-const complete: AchievementsRecord = { games: 20, wins: 5,
+const complete: AchievementsRecord = { games: 1000, wins: 250,
   gameTypes: ['bridge', 'bigtwo', 'sevens', 'holdem', 'blackjack'], dailyTasks: 15 };
 
 describe('achievement ownership and progress', () => {
@@ -45,7 +45,7 @@ describe('achievement ownership and progress', () => {
     const before = await readFile(path, 'utf8');
     const status = (await repository.getAchievements(id))!;
     expect(status.categories).toHaveLength(2);
-    expect(status.categories.flatMap((category) => category.items)).toHaveLength(8);
+    expect(status.categories.flatMap((category) => category.items)).toHaveLength(23);
     expect(status.categories.every((category) => !category.claimed && category.items.every((item) => item.progress === 0))).toBe(true);
     expect(await readFile(path, 'utf8')).toBe(before);
     expect(await repository.getAchievements('missing')).toBeNull();
@@ -88,25 +88,31 @@ describe('achievement ownership and progress', () => {
   });
 
   it('keeps cumulative task claims across midnight, counts retries once, and includes old nonconsecutive check-ins', async () => {
-    const id = await seed({ achievements: { ...complete, dailyTasks: 14 }, dailyRewards: {
+    const id = await seed({ achievements: { ...complete, dailyTasks: 269 }, dailyRewards: {
       day: '2026-10-15', gameTypes: ['bridge'], wins: 0, gameCounts: { bridge: 1 }, claimedTasks: [],
       taskIds: ['play-bridge', 'win-two', 'play-variety'],
-      checkInDays: ['2026-09-01', '2026-09-03', '2026-09-05', '2026-09-07', '2026-09-09', '2026-09-11'],
+      checkInDays: Array.from({ length: 179 }, (_, index) =>
+        new Date(Date.UTC(2025, 0, 1 + index * 2)).toISOString().slice(0, 10)),
     } });
     vi.mocked(rename).mockRejectedValueOnce(new Error('task write failed'));
     await expect(repository.claimDailyReward(id, 'play-bridge', '2026-10-15')).rejects.toThrow('task write failed');
-    expect((await repository.getAccountById(id))!.achievements?.dailyTasks).toBe(14);
+    expect((await repository.getAccountById(id))!.achievements?.dailyTasks).toBe(269);
     await Promise.all(Array.from({ length: 4 }, () => repository.claimDailyReward(id, 'play-bridge', '2026-10-15')));
     await expect(repository.claimAchievement(id, 'daily')).rejects.toMatchObject({ code: 'ACHIEVEMENT_INCOMPLETE' });
     now += 1000;
     await Promise.all(Array.from({ length: 3 }, () => repository.claimDailyReward(id, 'check-in', '2026-10-16')));
-    expect((await repository.getAccountById(id))!.achievements?.dailyTasks).toBe(15);
+    expect((await repository.getAccountById(id))!.achievements?.dailyTasks).toBe(270);
     expect((await repository.claimAchievement(id, 'daily'))!.account).toMatchObject({ coins: 1025,
       ownedAchievementNameplates: ['nameplate-daily-collector'] });
+    await repository.close();
+    repository = await createJsonRepository(path, { now: () => now });
+    expect((await repository.getAchievements(id))!.categories[1]).toMatchObject({ claimed: true,
+      items: expect.arrayContaining([{ id: 'half-year-check-ins', progress: 180 }, { id: 'two-seventy-tasks', progress: 270 }]) });
   });
 
   it('validates stored counters and inventory', async () => {
-    for (const value of [{ ...complete, games: -1 }, { ...complete, wins: 6 }, { ...complete, dailyTasks: 1.5 },
+    for (const value of [{ ...complete, games: -1 }, { ...complete, wins: 1001 },
+      { ...complete, games: Number.MAX_SAFE_INTEGER + 1 }, { ...complete, dailyTasks: 1.5 },
       { ...complete, gameTypes: ['bridge', 'bridge'] }, { ...complete, gameTypes: ['fake'] }]) {
       expect(validAchievements(value)).toBe(false);
     }
@@ -120,12 +126,15 @@ describe('achievement game counting', () => {
     gameType: 'bigtwo', players: { N: player }, result: { gameType: 'bigtwo', winnerSeat: 'N', dragon: false,
       cardsLeft: { N: 0, E: 1, S: 2, W: 3 }, twosLeft: { N: 0, E: 0, S: 0, W: 0 }, scores: { N: 0, E: 1, S: 2, W: 3 } },
   };
-  it('counts completed participant games including bots, excludes spectators and incomplete games, and caps counters', () => {
+  it('counts completed participant games including bots, excludes spectators and incomplete games, and retains totals beyond targets', () => {
     expect(achievementGameProgress(undefined, game, 'alice')).toEqual({ games: 1, wins: 1, gameTypes: ['bigtwo'], dailyTasks: 0 });
     expect(achievementGameProgress(undefined, game, 'spectator').games).toBe(0);
     expect(achievementGameProgress(undefined, { ...game, result: null }, 'alice').games).toBe(0);
     expect(achievementGameProgress(undefined, { ...game, players: { N: { ...player, isBot: true } } }, 'alice').games).toBe(0);
-    expect(achievementGameProgress(complete, game, 'alice')).toEqual(complete);
+    expect(achievementGameProgress(complete, game, 'alice')).toEqual({ ...complete, games: 1001, wins: 251 });
+    const withBot = { ...game, players: { ...game.players, E: { ...player, id: 'bot:opponent', isBot: true } } };
+    expect(achievementGameProgress({ ...complete, games: 99, wins: 49 }, withBot, 'alice'))
+      .toMatchObject({ games: 100, wins: 50 });
   });
   it('does not count tied leaders as wins', () => {
     const tied = { ...game, gameType: 'holdem', result: { winners: ['N', 'E'] } } as unknown as typeof game;

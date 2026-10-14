@@ -279,7 +279,7 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
         };
         const updated: AccountRecord = { ...account, dailyRewards, coins,
           achievements: reward === 'check-in' ? account.achievements : {
-            ...achievementState(account.achievements), dailyTasks: Math.min(15, (account.achievements?.dailyTasks ?? 0) + 1),
+            ...achievementState(account.achievements), dailyTasks: (account.achievements?.dailyTasks ?? 0) + 1,
           },
           coinRevision: (account.coinRevision ?? 0) + 1, updatedAt: Math.max(timestamp, account.updatedAt + 1) };
         data.accounts[index] = updated;

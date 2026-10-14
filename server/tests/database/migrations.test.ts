@@ -64,6 +64,36 @@ function version1Runtime(): unknown {
 }
 
 describe('database migrations', () => {
+  it('backs up v6, recovers historical achievements once, and preserves balances and titles on reopen', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'achievement-migration-'));
+    const path = join(directory, 'database.json');
+    let repository: Awaited<ReturnType<typeof createJsonRepository>> | undefined;
+    try {
+      const current = migrateDocument(version2()) as ReturnType<typeof emptyDocument>;
+      const legacy = { ...current, schemaVersion: 6,
+        accounts: current.accounts.map(({ achievements: _old, ...account }) => ({ ...account, coins: 45,
+          ownedAchievementNameplates: ['nameplate-table-traveler'], nameplate: 'nameplate-table-traveler' })),
+        matches: Array.from({ length: 110 }, (_, index) => ({ ...current.matches[0], id: `old-${index}` })),
+      };
+      const original = JSON.stringify(legacy);
+      await writeFile(path, original);
+      repository = await createJsonRepository(path);
+      expect(await readFile(`${path}.v6.bak`, 'utf8')).toBe(original);
+      const account = await repository.getAccountById('account-2');
+      expect(account).toMatchObject({ coins: 45, achievements: { games: 110, wins: 110 },
+        nameplate: 'nameplate-table-traveler', ownedAchievementNameplates: ['nameplate-table-traveler'] });
+      expect((await repository.getAchievements('account-2'))!.categories[0]).toMatchObject({ claimed: true,
+        items: expect.arrayContaining([{ id: 'hundred-wins', progress: 100 }, { id: 'two-fifty-wins', progress: 110 }]) });
+      await repository.close();
+      repository = await createJsonRepository(path);
+      expect(await repository.getAccountById('account-2')).toEqual(account);
+      expect(await readFile(`${path}.v6.bak`, 'utf8')).toBe(original);
+    } finally {
+      await repository?.close();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it('should upgrade a v1 document to current defaults without mutating the input', () => {
     const input = version1();
     const before = structuredClone(input);

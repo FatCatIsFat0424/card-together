@@ -8,6 +8,7 @@ import type { AccountProfile, AchievementsStatus } from '@shared/types';
 import { apiRequest } from '../api';
 import { AppIcon } from '../components/AppIcon';
 import { Nameplate } from '../components/Nameplate';
+import { AchievementItem } from '../components/AchievementItem';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './AchievementsPage.module.css';
@@ -41,23 +42,8 @@ export function AchievementDetails({ categoryId, status, pending, onClaim }: {
         {state?.claimed && <Link to="/account">{t('achievements.equip')}<AppIcon name="nextPage" /></Link>}
       </div>
     </div>
-    <ul className={styles.items}>{category.items.map((item, index) => {
-      const value = progress(item.id);
-      const complete = value >= item.target;
-      return <li key={item.id} className={`${styles.item} ${complete ? styles.completed : ''}`}>
-        <div className={`${styles.medal} ${styles[`tier${index}`]}`} aria-hidden="true"><AppIcon name={complete ? 'agree' : 'trophy'} /></div>
-        <div className={styles.itemBody}>
-          <h2>{t(`achievements.${item.id}.name`)}</h2>
-          <p>{t(`achievements.${item.id}.description`)}</p>
-          <div className={styles.itemProgress}>
-            <progress value={value} max={item.target} aria-label={t(`achievements.${item.id}.name`)} />
-            <span>{value} / {item.target}</span>
-          </div>
-        </div>
-        <span className={styles.itemStatus}><AppIcon name={complete ? 'check' : 'circle'} />
-          {t(complete ? 'achievements.complete' : 'achievements.inProgress')}</span>
-      </li>;
-    })}</ul>
+    <ul className={styles.items}>{category.items.map((item) =>
+      <AchievementItem key={item.id} id={item.id} progress={progress(item.id)} />)}</ul>
   </section>;
 }
 

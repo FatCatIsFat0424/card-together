@@ -12,6 +12,8 @@ import { useVoiceSilencing } from './hooks/use-voice-silencing';
 import { useAccountConnection } from './hooks/use-account-connection';
 import { useSocialNotifications } from './hooks/use-social-notifications';
 import { SocialToast } from './components/SocialToast';
+import { AchievementToast } from './components/AchievementToast';
+import { useAchievementNotifications } from './hooks/use-achievement-notifications';
 import { restoreAccount, useAccountStore } from './stores/account-store';
 import { useI18nStore } from './stores/i18n-store';
 import { startMusicAutoplay } from './stores/music-store';
@@ -67,6 +69,7 @@ function ProtectedRoute(): ReactNode {
 function AppRoutes(): ReactNode {
   useAccountConnection();
   useSocialNotifications();
+  useAchievementNotifications();
   useVoiceSilencing();
   const status = useAccountStore((state) => state.status);
   const error = useAccountStore((state) => state.error);
@@ -115,6 +118,7 @@ export function App(): ReactNode {
       <FloatingRoomCard />
       {signedIn && <InviteToast />}
       {signedIn && <SocialToast />}
+      {signedIn && <AchievementToast />}
       {signedIn && <AbortVoteToast />}
       {signedIn && <GameStartTransition />}
       <div className={appStyles.viewport}>

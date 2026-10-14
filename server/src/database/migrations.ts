@@ -1,4 +1,6 @@
-export const CURRENT_SCHEMA_VERSION = 6;
+import { backfillAchievementCounts } from './migrate-achievements';
+
+export const CURRENT_SCHEMA_VERSION = 7;
 
 type JsonObject = Record<string, unknown>;
 
@@ -141,6 +143,7 @@ function toVersion6(document: JsonObject): JsonObject {
 /** Index i upgrades version i + 1 to i + 2. Append new steps; never edit shipped ones. */
 const STEPS: readonly ((document: JsonObject) => JsonObject)[] = [
   toVersion2, toVersion3, toVersion4, toVersion5, toVersion6,
+  (document) => ({ ...backfillAchievementCounts(document), schemaVersion: 7 }),
 ];
 
 /**

@@ -19,8 +19,8 @@ export function achievementGameProgress(record: AchievementsRecord | undefined,
   game: Pick<AnyGameState, 'players' | 'gameType' | 'result'>, accountId: string): AchievementsRecord {
   const state = achievementState(record);
   if (!game.result || !Object.values(game.players).some((player) => player.id === accountId && !player.isBot)) return state;
-  return { ...state, games: Math.min(20, state.games + 1),
-    wins: Math.min(5, state.wins + Number(gameWonByAccount(game, accountId))),
+  return { ...state, games: state.games + 1,
+    wins: state.wins + Number(gameWonByAccount(game, accountId)),
     gameTypes: [...new Set([...state.gameTypes, game.gameType])] };
 }
 
@@ -37,8 +37,9 @@ export function validAchievements(value: unknown): value is AchievementsRecord {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const state = value as Record<string, unknown>;
   const count = (value: unknown, max: number): boolean => typeof value === 'number'
-    && Number.isInteger(value) && value >= 0 && value <= max;
-  return count(state.games, 20) && count(state.wins, 5) && count(state.dailyTasks, 15)
+    && Number.isSafeInteger(value) && value >= 0 && value <= max;
+  return count(state.games, Number.MAX_SAFE_INTEGER) && count(state.wins, Number.MAX_SAFE_INTEGER)
+    && count(state.dailyTasks, Number.MAX_SAFE_INTEGER)
     && Number(state.wins) <= Number(state.games)
     && Array.isArray(state.gameTypes) && state.gameTypes.length <= Number(state.games)
     && state.gameTypes.every((type: unknown) => GAME_TYPES.some((game) => game === type))

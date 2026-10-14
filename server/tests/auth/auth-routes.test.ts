@@ -110,7 +110,7 @@ describe('account HTTP routes', () => {
     expect(onAccountUpdated).not.toHaveBeenCalled();
     expect((await repository.getAccountById(id))!.ownedAchievementNameplates).toBeUndefined();
 
-    const earned = await seedAuthenticatedAccount(repository, 'earner', { achievements: { games: 20, wins: 5,
+    const earned = await seedAuthenticatedAccount(repository, 'earner', { achievements: { games: 1000, wins: 250,
       gameTypes: ['bridge', 'bigtwo', 'sevens', 'holdem', 'blackjack'], dailyTasks: 0 } });
     const earnedHeaders = { ...HEADERS, Cookie: earned.cookie };
     onAccountUpdated.mockImplementation(async (account) => {

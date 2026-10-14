@@ -97,10 +97,20 @@
 ## Achievements
 
 - Optional private `AccountRecord.achievements` stores cumulative completed games,
-  unique variants, wins, and claimed daily-task counts, capped at catalog targets.
+  unique variants, wins, and claimed daily-task counts. All counters retain full
+  safe-integer totals beyond catalog targets.
   See the [record and validation](../server/src/database/achievements.ts).
-  Missing counters start at zero; existing history is not replayed. Check-in progress
-  uses all retained daily check-in receipts, including those from before this feature.
+  Schema v7 backfills retained matches and rewarded completed runtime games once,
+  including any retained bot games. It deduplicates game IDs across both sources and
+  takes the maximum of recovered totals and legacy counters to avoid double counting
+  overlapping history. Variant sets are combined; task progress, coins, receipts and
+  title ownership are preserved. Historical bot games absent from both sources cannot
+  be reconstructed: legacy counters stopped at 20 games / 5 wins. The recovered value
+  is a lower bound when those records are missing, not an estimate from coin balances.
+  Check-in progress uses all retained daily check-in receipts.
+  Legacy task counters stopped at 15; that saved progress is preserved and new claims
+  continue beyond it. Older task claims lost at the cap cannot be reconstructed,
+  since daily task receipts reset each day.
 - Game progress commits atomically with coins and `rewardedGameIds`. Daily task counts
   increment only in the first successful task-claim transaction and survive daily resets.
   Retries or failed persistence cannot inflate either counter.
@@ -164,13 +174,14 @@ Contracts: [`Repository`](../server/src/database/repository.ts),
 
 | Schema version | Change |
 | --- | --- |
-| 6 (current) | Adds direct messages, private read cursors, and accepted-request notices |
+| 7 (current) | Backfills retained achievement history and removes achievement counter caps |
+| 6 | Adds direct messages, private read cursors, and accepted-request notices |
 | 5 | Makes existing match history public once |
 | 4 | Card back and image opacity defaults that keep the previous look |
 | 1–3 | Migrated at startup |
 
 - Startup migrates older versions, validates the result, and saves the original as
-  `database.json.v<version>.bak` first. Earlier servers reject v6 files; rollback requires
+  `database.json.v<version>.bak` first. Earlier servers reject v7 files; rollback requires
   a compatible complete backup and loses writes made after that backup.
 - Invalid JSON, versions, duplicates, or references stop startup without touching the file.
 
