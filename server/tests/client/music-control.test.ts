@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MusicControl } from '../../../client/src/components/MusicControl';
 import { PROVIDED_MUSIC_TRACKS } from '../../../client/src/audio/provided-music-catalog';
 
@@ -18,5 +18,33 @@ describe('game music menu', () => {
     const current = html.match(/aria-current="true"/g) ?? [];
     expect(current).toHaveLength(PROVIDED_MUSIC_TRACKS.length ? 1 : 0);
     if (!PROVIDED_MUSIC_TRACKS.length) expect(html).toContain('尚未加入音樂檔案');
+  });
+});
+
+describe('grouped music menu', () => {
+  afterEach(() => {
+    vi.doUnmock('../../../client/src/audio/provided-music-catalog');
+    vi.resetModules();
+    vi.restoreAllMocks();
+  });
+
+  it('labels the current track with its group and opens only that group', async () => {
+    vi.resetModules();
+    vi.doMock('../../../client/src/audio/provided-music-catalog', async (importOriginal) => ({
+      ...await importOriginal<typeof import('../../../client/src/audio/provided-music-catalog')>(),
+      PROVIDED_MUSIC_TRACKS: [
+        { id: 'a-one', title: 'Morning', file: 'a1.mp3', group: 'Composer A' },
+        { id: 'b-one', title: 'Evening', file: 'b1.mp3', group: 'Composer B' },
+      ],
+    }));
+    // Server rendering reads the store's initial state, so steer the random first track.
+    vi.spyOn(Math, 'random').mockReturnValue(0.9);
+    const { MusicControl: GroupedControl } = await import('../../../client/src/components/MusicControl');
+    const html = renderToStaticMarkup(createElement(GroupedControl));
+    expect(html).toContain('Composer B · </span>Evening');
+    expect(html.match(/aria-expanded="true"/g)).toHaveLength(1);
+    expect(html.match(/aria-expanded="false"/g)).toHaveLength(1);
+    expect(html).not.toContain('Morning');
+    expect(html).toContain('播放「Composer A」的曲目');
   });
 });

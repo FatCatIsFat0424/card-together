@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   file: { play: vi.fn(), pause: vi.fn(), setVolume: vi.fn(), dispose: vi.fn() },
   createFile: vi.fn(),
-  tracks: [] as { id: string; title: string; file: string }[],
+  tracks: [] as { id: string; title: string; file: string; group?: string }[],
 }));
 vi.mock('../../../client/src/audio/file-music-player', () => ({
   createFileMusicPlayer: mocks.createFile,
@@ -346,6 +346,60 @@ describe('provided music store', () => {
     callbacks().ended();
     expect(store.getState().providedTrackId).toBe('owner-two');
   });
+
+  it('should play only selected groups while keeping deselected tracks directly playable', async () => {
+    mocks.tracks.splice(0, mocks.tracks.length,
+      { id: 'root', title: 'Root', file: 'root.mp3' },
+      { id: 'a-one', title: 'A1', file: 'a1.mp3', group: 'A' },
+      { id: 'a-two', title: 'A2', file: 'a2.mp3', group: 'A' },
+      { id: 'b-one', title: 'B1', file: 'b1.mp3', group: 'B' });
+    const store = await state();
+    store.getState().setMode('sequential');
+    store.getState().setGroupEnabled('A', false);
+    expect(store.getState().disabledGroups).toEqual(['A']);
+    expect(storage.get('card-together.music.disabledGroups')).toBe('["A"]');
+    await store.getState().play('root');
+    await store.getState().next();
+    expect(store.getState().providedTrackId).toBe('b-one');
+    await store.getState().play('a-one');
+    expect(store.getState().providedTrackId).toBe('a-one');
+    callbacks().ended();
+    expect(store.getState().providedTrackId).toBe('b-one');
+    store.getState().setGroupEnabled('A', true);
+    expect(store.getState().disabledGroups).toEqual([]);
+    expect(storage.has('card-together.music.disabledGroups')).toBe(false);
+  });
+
+  it('should keep at least one group playable and ignore unknown groups', async () => {
+    mocks.tracks.splice(0, mocks.tracks.length,
+      { id: 'a-one', title: 'A1', file: 'a1.mp3', group: 'A' },
+      { id: 'b-one', title: 'B1', file: 'b1.mp3', group: 'B' });
+    const store = await state();
+    store.getState().setGroupEnabled('missing', false);
+    store.getState().setGroupEnabled('A', false);
+    store.getState().setGroupEnabled('B', false);
+    expect(store.getState().disabledGroups).toEqual(['A']);
+  });
+
+  it('should restore saved group selection and start from a selected group', async () => {
+    mocks.tracks.splice(0, mocks.tracks.length,
+      { id: 'a-one', title: 'A1', file: 'a1.mp3', group: 'A' },
+      { id: 'b-one', title: 'B1', file: 'b1.mp3', group: 'B' });
+    storage.set('card-together.music.disabledGroups', '["A","removed",3]');
+    storage.set('card-together.music.provided.track', 'a-one');
+    const store = await state();
+    expect(store.getState()).toMatchObject({ disabledGroups: ['A'], providedTrackId: 'b-one' });
+  });
+
+  it.each(['not json', '{"A":true}', '["A","B"]'])(
+    'should ignore an unusable saved group selection %s', async (saved) => {
+      mocks.tracks.splice(0, mocks.tracks.length,
+        { id: 'a-one', title: 'A1', file: 'a1.mp3', group: 'A' },
+        { id: 'b-one', title: 'B1', file: 'b1.mp3', group: 'B' });
+      storage.set('card-together.music.disabledGroups', saved);
+      const store = await state();
+      expect(store.getState().disabledGroups).toEqual([]);
+    });
 
   it('should clamp volume and ignore invalid volume or mode changes', async () => {
     const store = await state();

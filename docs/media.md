@@ -23,7 +23,11 @@ Only the site owner supplies music; players cannot upload tracks or enter URLs.
   and `client/public/provided-music/imported-*`. A fresh checkout has an empty playlist.
 - Player controls: play/pause, previous/next, repeat-one, sequential or shuffle, volume
   (default 50%). New visitors start with shuffle and a random track; saved volume,
-  track, and mode are restored locally.
+  track, mode, and group selection are restored locally.
+- The current track shows its group before the title. Groups collapse (only the
+  current one opens with the panel) and each has a checkbox: deselected groups are
+  skipped by previous/next, shuffle, and auto-advance but stay playable by click. At
+  least one playable group or root track always remains selected.
 - Opening the site in a new tab starts playback. A reload keeps a pause made in that
   tab (session storage) until the player presses play again. If the browser blocks
   autoplay, playback waits for a trusted user gesture; pausing cancels this retry.

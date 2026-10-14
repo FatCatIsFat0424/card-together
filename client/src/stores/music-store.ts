@@ -5,11 +5,13 @@ import type { FileMusicPlayer } from '../audio/file-music-player';
 import { nextTrackIndex } from '../audio/music-playlist';
 import type { MusicMode } from '../audio/music-playlist';
 import { PROVIDED_MUSIC_TRACKS, providedMusicUrl } from '../audio/provided-music-catalog';
+import type { ProvidedMusicTrack } from '../audio/provided-music-catalog';
 import { readPreference, writePreference } from '../utils/preference-storage';
 
 const VOLUME_KEY = 'music.volume';
 const PROVIDED_TRACK_KEY = 'music.provided.track';
 const MODE_KEY = 'music.mode';
+const DISABLED_GROUPS_KEY = 'music.disabledGroups';
 // Tab-scoped so a reload keeps the player's pause while a new tab autoplays again.
 const SESSION_PAUSED_KEY = 'card-together.music.paused';
 const DEFAULT_VOLUME = 0.5;
@@ -22,6 +24,8 @@ interface MusicState {
   volume: number;
   providedTrackId: string | null;
   mode: MusicMode;
+  /** Groups left out of automatic and previous/next selection; tracks stay directly playable. */
+  disabledGroups: readonly string[];
   toggle: () => Promise<void>;
   pause: () => Promise<void>;
   play: (trackId?: string) => Promise<void>;
@@ -29,6 +33,7 @@ interface MusicState {
   prev: () => Promise<void>;
   setMode: (mode: MusicMode) => void;
   setVolume: (volume: number) => void;
+  setGroupEnabled: (group: string, enabled: boolean) => void;
 }
 
 let player: FileMusicPlayer | null = null;
@@ -61,6 +66,25 @@ function sessionPaused(): boolean {
   }
 }
 
+function isPlayable(track: ProvidedMusicTrack, disabledGroups: readonly string[]): boolean {
+  return track.group === undefined || !disabledGroups.includes(track.group);
+}
+
+/** Saved exclusions for current groups, ignored when they would leave nothing to play. */
+function savedDisabledGroups(): string[] {
+  let saved: unknown;
+  try {
+    saved = JSON.parse(readPreference(DISABLED_GROUPS_KEY) ?? '[]');
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(saved)) return [];
+  const groups = new Set(PROVIDED_MUSIC_TRACKS.map((track) => track.group));
+  const disabled = [...new Set(saved.filter((group): group is string =>
+    typeof group === 'string' && groups.has(group)))];
+  return PROVIDED_MUSIC_TRACKS.some((track) => isPlayable(track, disabled)) ? disabled : [];
+}
+
 function providedIndex(trackId: string | null): number {
   return Math.max(0, PROVIDED_MUSIC_TRACKS.findIndex((track) => track.id === trackId));
 }
@@ -78,16 +102,18 @@ function releasePlayer(): void {
 export const useMusicStore = create<MusicState>((set, get) => {
   const mode = MODES.find((candidate) => candidate === readPreference(MODE_KEY)) ?? 'shuffle';
   const savedTrackId = readPreference(PROVIDED_TRACK_KEY);
-  const savedTrack = PROVIDED_MUSIC_TRACKS.find((track) => track.id === savedTrackId);
-  const initialTrack = savedTrack ?? PROVIDED_MUSIC_TRACKS[
-    mode === 'shuffle' ? Math.floor(Math.random() * PROVIDED_MUSIC_TRACKS.length) : 0
+  const disabledGroups = savedDisabledGroups();
+  const playableTracks = PROVIDED_MUSIC_TRACKS.filter((track) => isPlayable(track, disabledGroups));
+  const savedTrack = playableTracks.find((track) => track.id === savedTrackId);
+  const initialTrack = savedTrack ?? playableTracks[
+    mode === 'shuffle' ? Math.floor(Math.random() * playableTracks.length) : 0
   ];
   const step = (direction: 1 | -1, automatic = false): Promise<void> => {
     if (!PROVIDED_MUSIC_TRACKS.length) return Promise.resolve();
-    const { providedTrackId, mode } = get();
+    const { providedTrackId, mode, disabledGroups } = get();
     const index = nextTrackIndex(
       providedIndex(providedTrackId),
-      PROVIDED_MUSIC_TRACKS.length,
+      PROVIDED_MUSIC_TRACKS.map((track) => isPlayable(track, disabledGroups)),
       !automatic && mode === 'loop-one' ? 'sequential' : mode,
       Math.random,
       direction,
@@ -107,6 +133,7 @@ export const useMusicStore = create<MusicState>((set, get) => {
     volume: savedVolume(),
     providedTrackId: initialTrack?.id ?? null,
     mode,
+    disabledGroups,
     toggle: async () => get().playing || get().busy ? get().pause() : get().play(),
     pause: async () => {
       awaitingAutoplayUnlock = false;
@@ -169,6 +196,15 @@ export const useMusicStore = create<MusicState>((set, get) => {
       set({ volume });
       player?.setVolume(volume);
       writePreference(VOLUME_KEY, String(volume));
+    },
+    setGroupEnabled: (group, enabled) => {
+      if (!PROVIDED_MUSIC_TRACKS.some((track) => track.group === group)) return;
+      const current = get().disabledGroups;
+      if (enabled !== current.includes(group)) return;
+      const disabledGroups = enabled ? current.filter((candidate) => candidate !== group) : [...current, group];
+      if (!PROVIDED_MUSIC_TRACKS.some((track) => isPlayable(track, disabledGroups))) return;
+      set({ disabledGroups });
+      writePreference(DISABLED_GROUPS_KEY, disabledGroups.length ? JSON.stringify(disabledGroups) : null);
     },
   };
 });
