@@ -35,6 +35,49 @@
 .createButton { width: 100%; min-height: 44px; }
 .error { color: var(--color-danger); padding: var(--spacing-md); margin-bottom: var(--spacing-lg); border: 1px solid var(--color-danger); border-radius: var(--radius-md); }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Animate stable sections on mount so live friend/reward updates do not replay. */
+.welcome,
+.header > aside,
+.mobileRoomActions,
+.desktopRoomActions,
+.rulesTitle,
+.sidebar > [aria-labelledby='lobby-friends-title'] {
+  animation: lobbySectionEnter 200ms ease-out backwards;
+}
+.header > aside { animation-delay: 30ms; }
+.mobileRoomActions, .desktopRoomActions { animation-delay: 60ms; }
+.rulesTitle { animation-delay: 80ms; }
+.gameChoice { animation: lobbyGameEnter 200ms ease-out 100ms backwards; }
+.gameChoice:nth-child(2) { animation-delay: 125ms; }
+.gameChoice:nth-child(3) { animation-delay: 150ms; }
+.gameChoice:nth-child(4) { animation-delay: 175ms; }
+.gameChoice:nth-child(5) { animation-delay: 200ms; }
+.gameChoice:nth-child(6) { animation-delay: 225ms; }
+.gameChoice:nth-child(7) { animation-delay: 250ms; }
+.gameChoice:nth-child(8) { animation-delay: 275ms; }
+.gameChoice:nth-child(9) { animation-delay: 300ms; }
+.sidebar > [aria-labelledby='lobby-friends-title'] { animation-delay: 320ms; }
+
+@keyframes lobbySectionEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes lobbyGameEnter {
+  0% { opacity: 0; transform: translateY(10px) scale(0.97); }
+  70% { opacity: 1; transform: translateY(-1px) scale(1.01); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.page[data-reduced-motion] :is(.welcome, .header > aside, .mobileRoomActions,
+  .desktopRoomActions, .rulesTitle, .gameChoice, .sidebar > [aria-labelledby='lobby-friends-title']) {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome, .header > aside, .mobileRoomActions, .desktopRoomActions,
+  .rulesTitle, .gameChoice, .sidebar > [aria-labelledby='lobby-friends-title'] { animation: none; }
+}
+
 @media (max-width: 64rem) {
   .gameChoices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .layout { grid-template-columns: minmax(0, 1fr) 18rem; }

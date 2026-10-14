@@ -63,6 +63,10 @@ Frontend page behavior and layout. Client architecture and connection handling:
 | ≤52rem | Join-by-code, an "Or" divider, then a full-width Create that always creates Bridge; no selected-game panel; friends below the rules list |
 
 - Lobby backgrounds preload, then crossfade over 600ms.
+- Lobby entry starts with the player greeting and daily rewards, then room actions,
+  staggered game choices, and online friends. Each reveal lasts 200ms and the full
+  sequence finishes in 520ms. Friend/reward refreshes and game selection do not
+  replay it. System and in-app reduced-motion preferences skip these reveals.
 - The rules list opens game details without selecting a mode or changing the background.
 - Online friends: hosts first, at most three visible rows with vertical scrolling,
   truncated names, and Join buttons for hosts. The list refreshes on focus and every
@@ -84,6 +88,10 @@ Frontend page behavior and layout. Client architecture and connection handling:
 | Compact | Two columns, smaller controls, up to four rows, vertical scrolling when needed |
 
 - Empty seats are full-card buttons; bot controls stay separate.
+- On entry, room controls fade upward first, seats follow with a small staggered
+  bounce, then spectators, footer actions and desktop chat appear. Each animation
+  lasts 200ms; the full sequence finishes in 480ms. It runs once per room visit,
+  skips reduced motion, and does not replay for readiness or seat changes.
 - The seated host has a dark, gold-lettered badge in the top-left corner of their seat card.
 - While waiting, the host can drag human players from anywhere on their seat card or
   spectator item, including the avatar and name, using mouse or touch. Movement beyond

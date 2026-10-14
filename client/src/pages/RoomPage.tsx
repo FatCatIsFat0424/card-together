@@ -63,6 +63,8 @@ export function RoomPage(): ReactNode {
   const [chatOpen, setChatOpen] = useState(false);
   const compactLayout = useMediaQuery('(max-width: 1023px), (max-height: 700px)');
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
+  const systemReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const [enteredRoom, setEnteredRoom] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState<HTMLButtonElement | null>(null);
@@ -256,6 +258,7 @@ export function RoomPage(): ReactNode {
   </main>;
 
   const additionalSeats = roomInfo.additionalSeats ?? [];
+  const entering = enteredRoom !== roomInfo.code && !reducedMotion && !systemReducedMotion;
   const seatCards: RoomSeatCard[] = [
     ...SEAT_ORDER_CLOCKWISE.map((seat) => ({ key: seat, label: t(`seat.${seat}`), info: roomInfo.seats[seat], seat })),
     ...additionalSeats.map((info, index) => ({ key: `additional-${index}`,
@@ -279,7 +282,7 @@ export function RoomPage(): ReactNode {
 
   return (
     <main data-reduced-motion={reducedMotion || undefined}
-      className={`${styles.roomContainer} ${styles.roomLayout} ${chatOpen ? styles.chatOpen : ''}`}>
+      className={`${styles.roomContainer} ${styles.roomLayout} ${chatOpen ? styles.chatOpen : ''} ${entering ? styles.entering : ''}`}>
       <div className={styles.roomHeader}>
         <div className={styles.codeBlock}>
           <span className={styles.roomCodeLabel}>{t('room.code')}</span>
@@ -496,7 +499,9 @@ export function RoomPage(): ReactNode {
         ))}</ul>}
         {seatDrag.selected && <p className={styles.moveHint} role="status">{t('room.placePlayer', { nickname: seatDrag.selected.nickname })}</p>}
       </section>
-      <div className={styles.roomFooter}>
+      <div className={styles.roomFooter} onAnimationEnd={(event) => {
+        if (event.target === event.currentTarget) setEnteredRoom(roomInfo.code);
+      }}>
         {(mySeat || myAdditionalSeat >= 0) && <button type="button" className="btn btn-outline" onClick={standUp}
           disabled={blocked || roomInfo.status !== 'waiting'}>{t('room.standUp')}</button>}
         {isHost && <button type="button" className="btn btn-outline" onClick={fillBots}

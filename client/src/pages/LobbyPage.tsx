@@ -9,6 +9,7 @@ import { useAccountStore } from '../stores/account-store';
 import { useRoomStore } from '../stores/room-store';
 import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
+import { useMotionStore } from '../stores/motion-store';
 import { useConnectionReady } from '../games/use-connection-ready';
 import type { AppIconName } from '../components/AppIcon';
 import { Avatar } from '../components/Avatar';
@@ -43,6 +44,7 @@ export function LobbyPage(): ReactNode {
   const connectionReady = useConnectionReady();
   const { t } = useI18nStore();
   const mobileLayout = useMediaQuery('(max-width: 52rem)');
+  const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const [selectedGame, setSelectedGame] = useState<GameType>('bridge');
   const [rulesGame, setRulesGame] = useState<GameType | null>(null);
   const [roomCodeInput, setRoomCodeInput] = useState('');
@@ -113,7 +115,7 @@ export function LobbyPage(): ReactNode {
   };
 
   if (!account) return null;
-  return <main className={styles.page}>
+  return <main className={styles.page} data-reduced-motion={reducedMotion || undefined}>
     <LobbyBackground gameType={mobileLayout ? 'bridge' : selectedGame} />
     <header className={styles.header}>
       <div className={styles.welcome}>
