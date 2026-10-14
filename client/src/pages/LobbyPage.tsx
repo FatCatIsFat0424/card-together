@@ -16,6 +16,7 @@ import { AppIcon } from '../components/AppIcon';
 import { LobbyFriends } from '../components/LobbyFriends';
 import { LobbyBackground } from '../components/LobbyBackground';
 import { GameRulesDialog } from '../components/GameRulesDialog';
+import { DailyRewards } from '../components/DailyRewards';
 import styles from './LobbyPage.module.css';
 
 const GAME_ICONS: Record<GameType, string> = {
@@ -123,6 +124,7 @@ export function LobbyPage(): ReactNode {
           <h1>{t('lobby.welcome', { nickname: account.nickname })}</h1>
         </div>
       </div>
+      <DailyRewards key={account.id} />
     </header>
 
     {currentRoomCode && <section className={styles.resume} aria-labelledby="lobby-current-room-title">

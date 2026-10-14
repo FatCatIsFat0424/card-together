@@ -132,6 +132,7 @@ export type {
 } from './socket-events';
 
 export type { MatchSummary } from './game';
+export type { DailyTaskId, DailyRewardId, DailyRewardsStatus } from './daily-rewards';
 export type {
   PublicAccount, FriendEntry, FriendRequest, FriendsData, FriendsResponse, CreateFriendRequestResponse,
   MatchHistory,

@@ -19,6 +19,9 @@ backend-relative; production Nginx serves them below `/card-together/`.
 | `PATCH /api/auth/profile` | [Profile fields](#profile-fields) | Updated account; synchronizes connected players |
 | `POST /api/auth/shop/avatar-borders` | `border` (catalog ID) | Updated account after purchase |
 | `POST /api/auth/shop/items` | `item` (catalog ID) | Updated account after permanent purchase; does not equip |
+| `GET /api/auth/daily-rewards` | — | Owner's [daily status](../shared/src/types/daily-rewards.ts), server date/time, current month's check-ins |
+| `POST /api/auth/daily-rewards` | `reward`: assigned [task ID](../shared/src/constants/daily-rewards.ts) or `check-in`; `day`: server's YYYY-MM-DD | Updated account and daily status; repeat claims are idempotent |
+| `POST /api/auth/daily-rewards/replace` | `task`: assigned, unclaimed task ID; `day`: server's YYYY-MM-DD | Updated account and daily status; one replacement per day, retrying the same original task is idempotent |
 | `POST /api/auth/password` | `currentPassword, newPassword` | Revokes all sessions |
 | `POST /api/auth/logout` | `{}` | Revokes presented sessions, clears cookies |
 | `POST /api/auth/logout-all` | `{}` | Revokes every session of the account |
@@ -64,6 +67,7 @@ Omitted fields keep their values; invalid values return 400.
 | --- | --- |
 | Invalid player ID / unknown player / private history | 400 / 404 / 403 |
 | Unknown border / insufficient coins | 400 / 409 |
+| Invalid daily reward / stale date, incomplete or unassigned task, or unavailable replacement | 400 / 409 |
 | Oversized image or quota exceeded ([limits](media.md#uploads)) | 413 |
 | Image storage unavailable | 503 |
 

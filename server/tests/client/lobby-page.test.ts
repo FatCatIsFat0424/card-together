@@ -63,6 +63,8 @@ describe('lobby page', () => {
     expect(html).toContain('aria-haspopup="dialog"');
     expect(html).not.toMatch(/disabled=""[^>]*>Create Room/);
     expect(html).toContain('Friends online');
+    expect(html).toContain('Daily tasks');
+    expect(html).toContain('Daily check-in');
   });
 
   it('keeps the lobby available and links back to the current room or game', () => {

@@ -154,6 +154,26 @@ Per-game controls: [games](games.md#card-controls).
 - Donut chart: each game's share of matches, total in the center; the legend lists all games.
 - Statistics ignore search and filters. Private or unavailable history shows no statistics.
 
+## Daily rewards
+
+- The lobby has two compact controls at the upper right of its welcome area, separate
+  from the global navigation: daily tasks and daily check-in. Both open dialogs.
+- Each account receives three distinct tasks from the ten-task [pool](../shared/src/constants/daily-rewards.ts),
+  fixed for the Taiwan calendar day across refreshes and restarts. Task rows show a coin
+  reward tile, description/progress, and replace/claim controls; the heading counts down
+  to the next reset. The same game can advance multiple tasks.
+- One free replacement per day is shared across all tasks and sessions. Only assigned,
+  unclaimed tasks can be replaced, including completed tasks. The replacement is absent
+  from the original three; today's previous activity counts toward it. Claimed tasks
+  stay visible until reset. Claim each completed task in its dialog. Progress resets at 00:00 Asia/Taipei;
+  unclaimed rewards expire. Bot games count, unfinished/aborted games do not, and tied
+  winners do not count as wins. Bridge wins follow partnerships.
+- Check-in opens the current month's calendar. Today is highlighted; only today's date
+  can be clicked for +10 coins. Claimed dates show a checkmark and cannot be claimed again.
+- The server supplies the date and progress. Opening a dialog, returning to the page,
+  account updates, and midnight refresh them. Claim failures offer a retry; balances
+  and claims synchronize across the owner's connected sessions after durable storage.
+
 ## Cosmetic shop
 
 - `/shop` sells permanent, cosmetic-only products from the

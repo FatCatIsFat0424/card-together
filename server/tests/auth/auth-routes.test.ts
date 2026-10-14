@@ -87,6 +87,51 @@ describe('account HTTP routes', () => {
     return { cookie: seeded.cookie, id: seeded.account.id };
   }
 
+  it('authenticates daily rewards, validates claims, and publishes only durable owner updates', async () => {
+    expect((await fetch(`${baseUrl}/daily-rewards`)).status).toBe(401);
+    const { cookie, id } = await seedAccount();
+    const headers = { ...HEADERS, Cookie: cookie };
+    const status = await (await fetch(`${baseUrl}/daily-rewards`, { headers })).json();
+    expect(status).toMatchObject({ success: true, dailyRewards: { wins: 0, gameTypes: [] } });
+    const day = status.dailyRewards.day as string;
+    const claim = (body: object, origin = ORIGIN) => fetch(`${baseUrl}/daily-rewards`, {
+      method: 'POST', headers: { ...headers, Origin: origin }, body: JSON.stringify(body),
+    });
+    expect((await claim({ reward: 'check-in', day }, 'https://evil.invalid')).status).toBe(403);
+    expect((await claim({ reward: 'coins', day })).status).toBe(400);
+    expect((await claim({ reward: 'check-in', day: 123 })).status).toBe(400);
+    expect((await claim({ reward: 'win-two', day })).status).toBe(409);
+    expect((await claim({ reward: 'check-in', day: '2000-01-01' })).status).toBe(409);
+    expect(onAccountUpdated).not.toHaveBeenCalled();
+    const response = await (await claim({ reward: 'check-in', day, coins: 9999, accountId: 'other' })).json();
+    expect(response).toMatchObject({ success: true, account: { id, coins: 10, coinRevision: 1 },
+      dailyRewards: { checkInDays: [day] } });
+    expect(response.account).not.toHaveProperty('dailyRewards');
+    expect(response.account).not.toHaveProperty('passwordHash');
+    expect(onAccountUpdated).toHaveBeenCalledWith(expect.objectContaining({ id, coins: 10 }));
+    await claim({ reward: 'check-in', day });
+    expect(await repository.getAccountById(id)).toMatchObject({ coins: 10, coinRevision: 1 });
+  });
+
+  it('authenticates task replacement and returns a durable idempotent assignment', async () => {
+    const path = `${baseUrl}/daily-rewards/replace`;
+    expect((await fetch(path, { method: 'POST', headers: HEADERS, body: '{}' })).status).toBe(401);
+    const { cookie, id } = await seedAccount();
+    const headers = { ...HEADERS, Cookie: cookie };
+    const initial = await (await fetch(`${baseUrl}/daily-rewards`, { headers })).json();
+    const { day, tasks } = initial.dailyRewards;
+    const replace = (task: string, date = day) => fetch(path, { method: 'POST', headers, body: JSON.stringify({ task, day: date }) });
+    expect((await replace('fake')).status).toBe(400);
+    expect((await replace(tasks[0].id, '2000-01-01')).status).toBe(409);
+    const response = await (await replace(tasks[0].id)).json();
+    expect(response).toMatchObject({ success: true, account: { id, coins: 0 }, dailyRewards: { swapsRemaining: 0 } });
+    expect(response.dailyRewards.tasks).toHaveLength(3);
+    expect(response.dailyRewards.tasks[0].id).not.toBe(tasks[0].id);
+    expect(onAccountUpdated).toHaveBeenCalledWith(expect.objectContaining({ id, coins: 0 }));
+    expect((await (await replace(tasks[0].id)).json()).dailyRewards.tasks).toEqual(response.dailyRewards.tasks);
+    expect((await replace(tasks[1].id)).status).toBe(409);
+  });
+
   it('should issue secure cookies, protect profile identity and invalidate the session on logout', async () => {
     const { cookie, id } = await register();
     const me = await fetch(`${baseUrl}/me`, { headers: { Cookie: cookie } });

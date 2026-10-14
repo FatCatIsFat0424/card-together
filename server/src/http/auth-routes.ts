@@ -173,6 +173,28 @@ export function createAuthRouter(service: AuthService, config: AuthRouterConfig)
     }
     response.json({ success: true, account });
   }));
+  router.get('/daily-rewards', auth, route(async (_request, response) => {
+    const dailyRewards = await service.getDailyRewards(getRequestSession(response).account.id);
+    response.json({ success: true, dailyRewards });
+  }));
+  router.post('/daily-rewards/replace', auth, route(async (request, response) => {
+    const result = await service.replaceDailyTask(getRequestSession(response).account.id, request.body);
+    try {
+      await config.onAccountUpdated?.(result.account);
+    } catch (error) {
+      console.error('[auth] Unable to sync the daily task replacement:', error);
+    }
+    response.json({ success: true, ...result });
+  }));
+  router.post('/daily-rewards', auth, route(async (request, response) => {
+    const result = await service.claimDailyReward(getRequestSession(response).account.id, request.body);
+    try {
+      await config.onAccountUpdated?.(result.account);
+    } catch (error) {
+      console.error('[auth] Unable to sync the daily reward:', error);
+    }
+    response.json({ success: true, ...result });
+  }));
   router.use(
     (error: unknown, _request: Request, response: Response, _next: (error?: unknown) => void) => {
       if (

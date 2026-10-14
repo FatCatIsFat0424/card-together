@@ -5,6 +5,7 @@ import ArrowUpward from '@mui/icons-material/ArrowUpward';
 import AssignmentOutlined from '@mui/icons-material/AssignmentOutlined';
 import ChatBubbleOutline from '@mui/icons-material/ChatBubbleOutlined';
 import Check from '@mui/icons-material/Check';
+import CalendarMonthOutlined from '@mui/icons-material/CalendarMonthOutlined';
 import CheckCircleOutline from '@mui/icons-material/CheckCircleOutlined';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import ChevronRight from '@mui/icons-material/ChevronRight';
@@ -45,6 +46,7 @@ import styles from './AppIcon.module.css';
 
 const ICONS = {
   add: Add, person: PersonOutline,
+  calendar: CalendarMonthOutlined,
   shop: StorefrontOutlined,
   drag: DragIndicator,
   coins: MonetizationOnOutlined,

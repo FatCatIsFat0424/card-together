@@ -1,5 +1,5 @@
 .page { position: relative; isolation: isolate; width: 100%; max-width: 74rem; margin: 0 auto; padding: var(--spacing-xl); }
-.header { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: var(--spacing-lg); margin-bottom: var(--spacing-xl); }
+.header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--spacing-lg); margin-bottom: var(--spacing-xl); }
 .welcome { display: flex; align-items: center; gap: var(--spacing-md); min-width: 0; }
 .identity { min-width: 0; overflow-wrap: anywhere; }
 .identity h1 { font-size: var(--text-2xl); line-height: 1.3; }

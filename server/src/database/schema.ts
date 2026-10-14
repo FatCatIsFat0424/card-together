@@ -14,6 +14,7 @@ import type {
 import { equipmentError } from './shop-equipment';
 import type { ShopItemId } from '@shared/types';
 import { CURRENT_SCHEMA_VERSION } from './migrations';
+import { validDailyRewards } from './daily-rewards';
 
 export interface DatabaseDocument {
   schemaVersion: typeof CURRENT_SCHEMA_VERSION;
@@ -54,6 +55,7 @@ function validAccount(value: unknown): value is AccountRecord {
     isUsername(value.username) &&
     (value.coins === undefined || timestamp(value.coins)) &&
     (value.coinRevision === undefined || timestamp(value.coinRevision)) &&
+    (value.dailyRewards === undefined || validDailyRewards(value.dailyRewards)) &&
     (value.ownedAvatarBorders === undefined || (Array.isArray(value.ownedAvatarBorders)
       && value.ownedAvatarBorders.every(isAvatarBorderId)
       && new Set(value.ownedAvatarBorders).size === value.ownedAvatarBorders.length)) &&

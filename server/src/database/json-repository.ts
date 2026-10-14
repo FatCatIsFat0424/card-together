@@ -12,6 +12,8 @@ import type { ShopItemId } from '@shared/types';
 import { equipmentError } from './shop-equipment';
 import type { RuntimeSnapshot } from '../runtime/types';
 import { createDatabaseIndexes, friendshipPair } from './indexes';
+import { DAILY_TASKS, DAILY_CHECK_IN_COINS } from '@shared/constants/daily-rewards';
+import { dailyGameProgress, dailyState, dailyStatus, replacementTask, taskProgress } from './daily-rewards';
 
 const activePaths = new Set<string>();
 
@@ -127,6 +129,7 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
     function awardGameCoins(data: DatabaseDocument, snapshot: RuntimeSnapshot, completedGameIds: readonly string[]): void {
       if (completedGameIds.length === 0) return;
       const rewarded = new Set(data.rewardedGameIds ?? []);
+      const rewardedAt = now();
       const positions = indexes.accounts(document.accounts).positions;
       data.accounts = data.accounts.slice();
       for (const id of completedGameIds) {
@@ -140,7 +143,8 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
           const account = data.accounts[index];
           const coins = (account.coins ?? 0) + GAME_COIN_REWARD;
           if (!Number.isSafeInteger(coins)) throw new Error('Coin balance exceeds the supported limit.');
-          data.accounts[index] = { ...account, coins, coinRevision: (account.coinRevision ?? 0) + 1 };
+          data.accounts[index] = { ...account, coins, coinRevision: (account.coinRevision ?? 0) + 1,
+            dailyRewards: dailyGameProgress(account.dailyRewards, game, accountId, rewardedAt) };
         }
         rewarded.add(id);
       }
@@ -222,6 +226,55 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
         return purchaseShopItem(id, border, now);
       },
       purchaseShopItem,
+      getDailyRewards: (id) => read((data) => {
+        const account = indexes.accounts(data.accounts).byId.get(id);
+        return account ? dailyStatus(account.dailyRewards, now(), id) : null;
+      }),
+      claimDailyReward: (id, reward, day) => write(['accounts'], (data) => {
+        const index = indexes.accounts(document.accounts).positions.get(id);
+        if (index === undefined) return null;
+        const account = data.accounts[index];
+        const timestamp = now();
+        const state = dailyState(account.dailyRewards, timestamp, id);
+        if (day !== state.day) throw repositoryError('DAILY_DATE_CHANGED', 'Refresh today’s rewards.');
+        const task = DAILY_TASKS.find((entry) => entry.id === reward);
+        if (!task && reward !== 'check-in') throw repositoryError('INVALID_DAILY_REWARD', 'Choose an available daily reward.');
+        const alreadyClaimed = reward === 'check-in' ? state.checkInDays.includes(day)
+          : state.claimedTasks.includes(reward);
+        if (task && !state.taskIds.includes(task.id)) throw repositoryError('DAILY_TASK_UNASSIGNED', 'This task is not assigned today.');
+        if (alreadyClaimed) return { account, dailyRewards: dailyStatus(account.dailyRewards, timestamp, id) };
+        if (task && taskProgress(state, task.id) < task.target) {
+          throw repositoryError('DAILY_TASK_INCOMPLETE', 'Complete the daily task before claiming.');
+        }
+        const coins = (account.coins ?? 0) + (task?.coins ?? DAILY_CHECK_IN_COINS);
+        if (!Number.isSafeInteger(coins)) throw new Error('Coin balance exceeds the supported limit.');
+        const dailyRewards = { ...state,
+          checkInDays: reward === 'check-in' ? [...state.checkInDays, day] : state.checkInDays,
+          claimedTasks: reward === 'check-in' ? state.claimedTasks : [...state.claimedTasks, reward],
+        };
+        const updated: AccountRecord = { ...account, dailyRewards, coins,
+          coinRevision: (account.coinRevision ?? 0) + 1, updatedAt: Math.max(timestamp, account.updatedAt + 1) };
+        data.accounts[index] = updated;
+        return { account: updated, dailyRewards: dailyStatus(dailyRewards, timestamp, id) };
+      }),
+      replaceDailyTask: (id, task, day) => write(['accounts'], (data) => {
+        const index = indexes.accounts(document.accounts).positions.get(id);
+        if (index === undefined) return null;
+        const account = data.accounts[index];
+        const timestamp = now();
+        const state = dailyState(account.dailyRewards, timestamp, id);
+        if (day !== state.day) throw repositoryError('DAILY_DATE_CHANGED', 'Refresh today’s rewards.');
+        if (state.replacement?.from === task) return { account, dailyRewards: dailyStatus(state, timestamp, id) };
+        if (state.replacement) throw repositoryError('DAILY_REPLACE_USED', 'Today’s replacement has been used.');
+        if (!state.taskIds.includes(task) || state.claimedTasks.includes(task)) {
+          throw repositoryError('DAILY_TASK_UNAVAILABLE', 'Choose an assigned, unclaimed task.');
+        }
+        const to = replacementTask(state, id);
+        const dailyRewards = { ...state, taskIds: state.taskIds.map((entry) => entry === task ? to : entry), replacement: { from: task, to } };
+        const updated: AccountRecord = { ...account, dailyRewards, updatedAt: Math.max(timestamp, account.updatedAt + 1) };
+        data.accounts[index] = updated;
+        return { account: updated, dailyRewards: dailyStatus(dailyRewards, timestamp, id) };
+      }),
       changePassword: (id, expectedHash, passwordHash, now) =>
         write(['accounts'], (data) => {
           const index = indexes.accounts(document.accounts).positions.get(id);

@@ -70,6 +70,30 @@
   discard stale responses. Updates reach the owner through `account:coins`, `account:updated`,
   and resume ([API](api.md#socket-actions)).
 
+## Daily rewards
+
+- Private optional `AccountRecord.dailyRewards` stores the active Taiwan date, distinct
+  completed game types, per-game counts and wins (capped at two), three assigned task IDs,
+  the once-per-day replacement receipt, task claim receipts, and check-in dates.
+  The [record and date rules](../server/src/database/daily-rewards.ts) are validated on
+  every write. Older accounts start empty; historical matches are not backfilled.
+- Daily progress is committed with game coins under the existing `rewardedGameIds`
+  receipt. Retries and restarts cannot increment progress twice. Read-time reset at
+  00:00 Asia/Taipei requires no scheduler or database write; the next mutation persists it.
+- Initial assignments use a deterministic SHA-256 shuffle of account ID, Taiwan date,
+  and pool IDs. Read-only refreshes do not change them. Existing same-day claim receipts
+  are preserved when upgrading from fixed tasks; known played types seed a count of one.
+- `Repository.replaceDailyTask` serializes the allowance check and assignment change.
+  It excludes the original three tasks, retains today's counters, and never changes coins.
+  Retries for the original task return the saved replacement; competing swaps cannot
+  consume more than one allowance. Claiming requires a currently assigned task.
+- `Repository.claimDailyReward` checks the date and eligibility inside the serialized
+  transaction, then updates the receipt, coins, and `coinRevision` together. Repeated
+  claims return the saved state; failed writes leave the reward available. No client
+  progress, amount, account ID, or past/future check-in date is trusted.
+- All check-in receipts are retained. The owner API returns only this month's dates;
+  private progress and receipts are omitted from public account/profile responses.
+
 ## Avatar borders
 
 - Legacy border inventory and purchase routes remain supported by the
@@ -103,6 +127,7 @@ Optional fields added without a schema change; absent values use the default:
 | --- | --- | --- |
 | `coins`, `coinRevision` | 0 | Keep the fields; award nothing |
 | `rewardedGameIds` | Empty | Keep the field |
+| `AccountRecord.dailyRewards` | No progress or claims | Keep the field; games completed on older servers do not advance daily tasks |
 | `ownedAvatarBorders`, `avatarBorder` | Empty / original avatar | Keep the fields; cannot show or manage borders |
 | `ownedShopItems`, official image style fields, `nameplate` | Empty inventory / uploaded image or theme / no nameplate | Cannot show or manage products; older profile writes may drop equipment |
 | `shopSticker` in room/private messages | Absent | Unsupported: restore a compatible complete backup before rollback |

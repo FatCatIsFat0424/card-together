@@ -1,4 +1,5 @@
-import type { AccountProfile, AvatarBorderId, EmojiRecord, MatchResult, MediaId, MessageContent, ShopItemId } from '@shared/types';
+import type { AccountProfile, AvatarBorderId, DailyRewardId, DailyRewardsStatus, DailyTaskId, EmojiRecord, MatchResult, MediaId, MessageContent, ShopItemId } from '@shared/types';
+import type { DailyRewardsRecord } from './daily-rewards';
 
 export type { EmojiRecord };
 import type { RuntimeSnapshot } from '../runtime/types';
@@ -7,6 +8,7 @@ export type JsonValue =
   null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
 export interface AccountRecord extends AccountProfile {
+  readonly dailyRewards?: DailyRewardsRecord;
   readonly usernameNormalized: string;
   readonly passwordHash: string;
 }
@@ -80,6 +82,15 @@ export interface Repository {
   purchaseAvatarBorder(id: string, border: AvatarBorderId, now: number): Promise<AccountRecord | null>;
   /** Atomically debit the catalog price and grant permanent ownership, once per item. */
   purchaseShopItem(id: string, item: ShopItemId, now: number): Promise<AccountRecord | null>;
+  getDailyRewards(id: string): Promise<DailyRewardsStatus | null>;
+  /** Once per server day; retrying the same replacement returns the saved assignment. */
+  replaceDailyTask(id: string, task: DailyTaskId, day: string): Promise<{
+    account: AccountRecord; dailyRewards: DailyRewardsStatus;
+  } | null>;
+  /** Validate server date/eligibility and credit once, atomically with the receipt. */
+  claimDailyReward(id: string, reward: DailyRewardId, day: string): Promise<{
+    account: AccountRecord; dailyRewards: DailyRewardsStatus;
+  } | null>;
   changePassword(
     id: string,
     expectedHash: string,

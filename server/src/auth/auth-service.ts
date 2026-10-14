@@ -1,5 +1,6 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import type { AccountProfile, AvatarPreset, MediaId } from '@shared/types';
+import type { AccountProfile, AvatarPreset, DailyRewardsStatus, MediaId } from '@shared/types';
+import { isDailyTaskId } from '@shared/constants/daily-rewards';
 import {
   IMAGE_OPACITY_MAX, IMAGE_OPACITY_MIN, NICKNAME_MAX_LENGTH, PASSWORD_MAX_LENGTH,
   USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, isImageOpacity, isMediaId,
@@ -36,6 +37,9 @@ export interface AuthService {
   updateProfile(accountId: string, input: unknown): Promise<AccountProfile>;
   purchaseAvatarBorder(accountId: string, input: unknown): Promise<AccountProfile>;
   purchaseShopItem(accountId: string, input: unknown): Promise<AccountProfile>;
+  getDailyRewards(accountId: string): Promise<DailyRewardsStatus>;
+  replaceDailyTask(accountId: string, input: unknown): Promise<{ account: AccountProfile; dailyRewards: DailyRewardsStatus }>;
+  claimDailyReward(accountId: string, input: unknown): Promise<{ account: AccountProfile; dailyRewards: DailyRewardsStatus }>;
   changePassword(accountId: string, input: unknown): Promise<void>;
 }
 
@@ -340,6 +344,45 @@ export function createAuthService(
       } catch (error) {
         if (isObject(error) && error.code === 'INSUFFICIENT_COINS') {
           throw authError(409, 'INSUFFICIENT_COINS', 'Not enough coins. Play more games to earn coins.');
+        }
+        throw error;
+      }
+    },
+    getDailyRewards: async (accountId) => {
+      const status = await repository.getDailyRewards(accountId);
+      if (!status) throw authError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
+      return status;
+    },
+    claimDailyReward: async (accountId, input) => {
+      const body = requiredObject(input);
+      const reward = body.reward;
+      if ((reward !== 'check-in' && !isDailyTaskId(reward))
+        || typeof body.day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.day)) {
+        throw authError(400, 'INVALID_DAILY_REWARD', 'Choose today’s daily reward.');
+      }
+      try {
+        const result = await repository.claimDailyReward(accountId, reward, body.day);
+        if (!result) throw authError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
+        return { account: publicAccount(result.account), dailyRewards: result.dailyRewards };
+      } catch (error) {
+        if (isObject(error) && (error.code === 'DAILY_DATE_CHANGED' || error.code === 'DAILY_TASK_INCOMPLETE' || error.code === 'DAILY_TASK_UNASSIGNED')) {
+          throw authError(409, error.code, 'Refresh today’s rewards and check your progress.');
+        }
+        throw error;
+      }
+    },
+    replaceDailyTask: async (accountId, input) => {
+      const body = requiredObject(input);
+      if (!isDailyTaskId(body.task) || typeof body.day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.day)) {
+        throw authError(400, 'INVALID_DAILY_TASK', 'Choose an assigned daily task.');
+      }
+      try {
+        const result = await repository.replaceDailyTask(accountId, body.task, body.day);
+        if (!result) throw authError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
+        return { account: publicAccount(result.account), dailyRewards: result.dailyRewards };
+      } catch (error) {
+        if (isObject(error) && typeof error.code === 'string' && error.code.startsWith('DAILY_')) {
+          throw authError(409, error.code, 'Refresh today’s tasks and check your replacement allowance.');
         }
         throw error;
       }
