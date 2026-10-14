@@ -2,7 +2,9 @@
 
 /* ─── Table center: four aligned A…K rows so every 7 sits in the same column ─── */
 .centre {
-  --chip-w: calc((clamp(24px, 4.4dvh, 32px)) * var(--playing-card-scale));
+  /* Grow with the table (the centre column is the size container): thirteen columns must fit the centre
+     cell between the side seats, four rows its height. */
+  --chip-w: max(24px, min(calc(52px * var(--playing-card-scale)), 8cqh, 3.2cqw));
   --slot-gap: 3px;
   display: flex;
   flex-direction: column;

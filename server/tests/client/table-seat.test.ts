@@ -268,12 +268,16 @@ describe('table seat plate', () => {
     expect(render({ seat: 'N', position: 'top' })).not.toContain('Latest call');
   });
 
-  it("puts only the Bridge partner's hand beside its plate at the top", () => {
-    const bridge = { ...baseGame(), phase: 'playing', visible: { gameType: 'bridge', clock: clock(null), log: [] } };
-    state.game = bridge;
-    expect(render({ seat: 'N', position: 'top' })).toContain('handBeside');
-    expect(render({ seat: 'W', position: 'left' })).not.toContain('handBeside');
-    state.game = { ...bridge, visible: { gameType: 'bigtwo', clock: clock(null), log: [] } };
+  it("puts the opposite hand beside its plate at the top in Bridge and Sevens only", () => {
+    const game = (gameType: string): Record<string, unknown> => ({
+      ...baseGame(), phase: 'playing', visible: { gameType, clock: clock(null), log: [] },
+    });
+    for (const gameType of ['bridge', 'sevens']) {
+      state.game = game(gameType);
+      expect(render({ seat: 'N', position: 'top' })).toContain('handBeside');
+      expect(render({ seat: 'W', position: 'left' })).not.toContain('handBeside');
+    }
+    state.game = game('bigtwo');
     expect(render({ seat: 'N', position: 'top' })).not.toContain('handBeside');
   });
 

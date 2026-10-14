@@ -138,8 +138,9 @@ interface GameShellProps {
   turnReady?: boolean;
 }
 
-function FittedCentre({ children, style, responsive }: {
-  children: ReactNode; style?: CSSProperties; responsive: boolean;
+/** `wide` lifts the usual width cap for centres that size themselves to the table, such as the Sevens rows. */
+function FittedCentre({ children, style, responsive, wide }: {
+  children: ReactNode; style?: CSSProperties; responsive: boolean; wide: boolean;
 }): ReactNode {
   const viewportRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -164,7 +165,7 @@ function FittedCentre({ children, style, responsive }: {
     return () => observer.disconnect();
   }, [responsive]);
 
-  return <div className={`${styles.tableCentre} ${responsive ? styles.responsiveCentre : ''}`}
+  return <div className={`${styles.tableCentre} ${responsive ? styles.responsiveCentre : ''} ${wide ? styles.wideCentre : ''}`}
     ref={viewportRef} style={style} data-table-centre>
     <div className={styles.centreContent} ref={contentRef}>{children}</div>
   </div>;
@@ -396,6 +397,7 @@ export function GameShell({
               onPick={onPickSeat && pickableSeats?.includes(seat) ? () => onPickSeat(seat) : undefined} />
           ))}
           <FittedCentre responsive={visibleGame?.gameType === 'redpoints' && !presentation.frame}
+            wide={visibleGame?.gameType === 'sevens'}
             style={move ? FLY_FROM[tablePosition(move.seat, bottomSeat, tableSeats)] : undefined}>
             {presentation.frame && visibleGame && !centreVisible ? (
               <GamePresentation key={presentation.frame.key} frame={presentation.frame}

@@ -90,6 +90,8 @@
   pointer-events: auto;
 }
 
+.wideCentre .centreContent { max-width: none; }
+
 .responsiveCentre .centreContent,
 .responsiveCentre .centreBody {
   width: 100%;

@@ -226,8 +226,9 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const callIndex = useGameStore((state) => (state.phase === 'bidding' && state.bidding
     ? latestCallIndex(state.bidding.bids, seat) : -1));
   const call = useGameStore((state) => (callIndex >= 0 ? state.bidding?.bids[callIndex]?.action ?? null : null));
-  // Bridge: the partner's hand sits beside its plate so the top row stays short and the trick area grows.
-  const handBeside = useGameStore((state) => position === 'top' && state.visible?.gameType === 'bridge');
+  // Bridge and Sevens: the opposite hand sits beside its plate so the top row stays short and the centre grows.
+  const handBeside = useGameStore((state) => position === 'top'
+    && (state.visible?.gameType === 'bridge' || state.visible?.gameType === 'sevens'));
   const active = !suppressTurn && turn && (phase === 'bidding' || phase === 'playing');
   const autoPlayed = autoArranged || showsAutoPlayed(clock, seat, lastActionAt);
   const status = seatStatus({

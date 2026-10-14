@@ -46,7 +46,7 @@
 
 .bottom .plate { width: auto; flex: 0 1 auto; min-width: 0; max-width: 280px; }
 
-/* Bridge partner at the top: hand beside the plate instead of below it, so the trick area gets the height. */
+/* Bridge and Sevens opposite seat: hand beside the plate instead of below it, so the centre gets the height. */
 .handBeside {
   flex-direction: row;
   justify-content: center;

@@ -103,8 +103,10 @@ Frontend page behavior and layout. Client architecture and connection handling:
 
 - Seats and play area use separate grid cells: local player below, opposite seat above,
   others around the table, with corner positions for additional seats.
-- In Bridge the partner's hand sits to the right of its plate at the top, so the top row stays
-  one plate tall and the trick area gets the height; below 600px wide they stack again.
+- In Bridge and Sevens the opposite hand sits to the right of its plate at the top, so the top row
+  stays one plate tall and the centre gets the height; below 600px wide they stack again. Bridge
+  trick cards and Sevens row cards size from the table, and Sevens rows may exceed the usual
+  centre width cap.
 - The top-left header shows a copyable room code instead of repeated game-status tags.
 - The local hand header holds identity, score, captured-card preview, status, errors,
   and the base + reserve clock at its right edge. Other seats show only the active allowance.
