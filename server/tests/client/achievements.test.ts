@@ -19,11 +19,12 @@ function render(categoryId: AchievementCategoryId, complete = false, claimed = f
 }
 
 describe('achievement categories', () => {
-  it.each(['en', 'zh-TW'] as const)('renders four localized milestones and the exclusive title for each category in %s', (locale) => {
+  it.each(['en', 'zh-TW'] as const)('renders every localized milestone and the exclusive title for each category in %s', (locale) => {
     useI18nStore.getState().setLocale(locale);
     for (const category of ACHIEVEMENT_CATEGORIES) {
       const html = render(category.id);
-      expect(html.match(/<li /g)).toHaveLength(4);
+      expect(html.match(/<li /g)).toHaveLength(category.items.length);
+      for (const item of category.items) expect(html).toContain(`data-achievement-id="${item.id}"`);
       expect(html).toContain(`data-nameplate="${category.reward}"`);
       expect(html).toContain('0%');
       expect(html).not.toMatch(/achievements\.|shop\.title\./);
