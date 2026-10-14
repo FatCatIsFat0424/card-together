@@ -413,6 +413,9 @@
   gap: var(--spacing-lg);
 }
 .seatChoice:disabled { opacity: 0.6; cursor: not-allowed; }
+/* Brief request locks prevent repeat clicks without flashing every empty seat. */
+.tableArea[aria-busy='true'] .seatChoice:disabled,
+.tableArea[aria-busy='true'] .addSeatSlot:disabled { opacity: 1; }
 .seatChoice:focus-visible { outline-offset: -4px; }
 .seatChoice .seatDirection { position: absolute; bottom: var(--spacing-md); left: 50%; transform: translateX(-50%); }
 .emptySlot:has(.botAction) .seatChoice .seatDirection { bottom: 3.75rem; }

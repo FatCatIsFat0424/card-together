@@ -88,6 +88,11 @@ Frontend page behavior and layout. Client architecture and connection handling:
 | Compact | Two columns, smaller controls, up to four rows, vertical scrolling when needed |
 
 - Empty seats are full-card buttons; bot controls stay separate.
+  Pending room actions lock seat input without dimming empty seats or the add-seat button.
+- When a server update fills an empty seat with a human player, their artwork and
+  identity fade upward 8px and settle from 96% through 102% to 100% over 300ms.
+  The frame stays still. Initial loading, readiness updates and occupied-seat swaps
+  do not trigger this animation; reduced motion disables it.
 - On entry, room controls fade upward first, seats follow with a small staggered
   bounce, then spectators, footer actions and desktop chat appear. Each animation
   lasts 200ms; the full sequence finishes in 480ms. It runs once per room visit,
@@ -219,6 +224,8 @@ Saved and system reduced-motion preferences disable this animation.
 
 - The lobby has two compact controls at the upper right of its welcome area, separate
   from the global navigation: daily tasks and daily check-in. Both open dialogs.
+  Closing preserves the selected content and dialog width through the exit animation;
+  reward controls become inactive as closing starts.
 - Each account receives three distinct tasks from the ten-task [pool](../shared/src/constants/daily-rewards.ts),
   fixed for the Taiwan calendar day across refreshes and restarts. Task rows show a coin
   reward tile, description/progress, and replace/claim controls; the heading counts down

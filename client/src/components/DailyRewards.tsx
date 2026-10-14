@@ -95,7 +95,8 @@ export function DailyRewards(): ReactNode {
   const accountId = useAccountStore((state) => state.account?.id);
   const coinRevision = useAccountStore((state) => state.account?.coinRevision);
   const accountUpdatedAt = useAccountStore((state) => state.account?.updatedAt);
-  const [dialog, setDialog] = useState<'tasks' | 'check-in' | null>(null);
+  const [dialog, setDialog] = useState<'tasks' | 'check-in'>('tasks');
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [status, setStatus] = useState<DailyRewardsStatus | null>(null);
   const [error, setError] = useState(false);
   const [refresh, setRefresh] = useState(0);
@@ -113,7 +114,7 @@ export function DailyRewards(): ReactNode {
       if (result.success) setStatus(result.dailyRewards);
     });
     return () => { active = false; };
-  }, [accountId, coinRevision, accountUpdatedAt, dialog, refresh]);
+  }, [accountId, coinRevision, accountUpdatedAt, dialog, dialogOpen, refresh]);
 
   useEffect(() => {
     if (!status) return;
@@ -152,17 +153,22 @@ export function DailyRewards(): ReactNode {
     }
   };
   const checkedIn = status?.checkInDays.includes(status.day);
-  const close = (): void => { if (!pending) setDialog(null); };
+  const open = (kind: 'tasks' | 'check-in'): void => {
+    setDialog(kind);
+    setDialogOpen(true);
+  };
+  // Keep the selected content and width through MUI's exit transition.
+  const close = (): void => { if (!pending) setDialogOpen(false); };
   return <aside className={styles.widgets}>
-    <button type="button" className={styles.widget} onClick={() => setDialog('tasks')} aria-haspopup="dialog">
+    <button type="button" className={styles.widget} onClick={() => open('tasks')} aria-haspopup="dialog">
       <AppIcon name="info" /><span><strong>{t('daily.tasks')}</strong>
         <small>{status ? t('daily.progress', { count: String(status.claimedTasks.length), target: String(DAILY_TASK_COUNT) }) : '—'}</small></span>
     </button>
-    <button type="button" className={styles.widget} onClick={() => setDialog('check-in')} aria-haspopup="dialog">
+    <button type="button" className={styles.widget} onClick={() => open('check-in')} aria-haspopup="dialog">
       <AppIcon name="calendar" /><span><strong>{t('daily.checkIn')}</strong>
         <small>{t(checkedIn ? 'daily.signedIn' : 'daily.reward', { coins: String(DAILY_CHECK_IN_COINS) })}</small></span>
     </button>
-    <Dialog open={dialog !== null} onClose={close} fullWidth maxWidth={dialog === 'tasks' ? 'md' : 'sm'} aria-labelledby="daily-rewards-title"
+    <Dialog open={dialogOpen} onClose={close} fullWidth maxWidth={dialog === 'tasks' ? 'md' : 'sm'} aria-labelledby="daily-rewards-title"
       slotProps={{ paper: { className: styles.dialog } }}>
       <DialogTitle component="div" className={styles.dialogHeader}>
         <div className={styles.dialogHeading}><h2 id="daily-rewards-title"><AppIcon name={dialog === 'tasks' ? 'info' : 'calendar'} />{t(dialog === 'tasks' ? 'daily.tasks' : 'daily.checkIn')}</h2>
@@ -170,7 +176,7 @@ export function DailyRewards(): ReactNode {
             {status && <DailyTaskCountdown key={status.serverTime} status={status} />}</div>}</div>
         <button type="button" className="btn btn-secondary" onClick={close} disabled={pending} aria-label={t('table.close')}><AppIcon name="close" /></button>
       </DialogTitle>
-      <DialogContent dividers className={styles.content}>
+      <DialogContent dividers className={styles.content} inert={!dialogOpen}>
         {error ? <p role="alert">{t('daily.error')} <button type="button" className="btn btn-secondary" onClick={() => setRefresh((value) => value + 1)}>{t('daily.retry')}</button></p>
           : !status ? <p role="status">{t('common.loading')}</p>
           : dialog === 'tasks' ? <DailyTaskList status={status} pending={pending}

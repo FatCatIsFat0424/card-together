@@ -1,5 +1,5 @@
 import { roomCanStart, roomSeatInfo } from '@shared/rules/seats';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
@@ -10,7 +10,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { EXPANDABLE_ROOM_GAMES, GAME_TYPES, MAX_ROOM_SEATS, MAX_SPECTATORS, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import type {
-  BlackjackOptions, BotDifficulty, GameType, NinetyNineOptions, PlayerInfo, RoomSeatTarget, Seat, SeatInfo, SevensOptions, TimeControl,
+  BlackjackOptions, BotDifficulty, GameType, NinetyNineOptions, PlayerInfo, RoomInfo, RoomSeatTarget, Seat, SeatInfo, SevensOptions, TimeControl,
 } from '@shared/types';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import { BOT_DIFFICULTIES, isBotDifficulty } from '@shared/bot-difficulty';
@@ -75,6 +75,8 @@ export function RoomPage(): ReactNode {
   const attemptedRoom = useRef<string | null>(null);
   const hadRoom = useRef(false);
   const leaving = useRef(false);
+  const tableAreaRef = useRef<HTMLDivElement>(null);
+  const previousSeats = useRef<RoomInfo | null>(roomInfo);
   const myAdditionalSeat = roomInfo?.additionalSeats?.findIndex((entry) => entry.player?.id === playerId) ?? -1;
   const connectionReady = useConnectionReady();
   const blocked = busy || !connectionReady;
@@ -97,6 +99,38 @@ export function RoomPage(): ReactNode {
     socket.timeout(10000).emit('room:movePlayer', { accountId: player.id, target }, handleResult);
   };
   const seatDrag = useRoomSeatDrag(canMovePlayers, movePlayer);
+
+  useLayoutEffect(() => {
+    const previous = previousSeats.current;
+    previousSeats.current = roomInfo;
+    if (!roomInfo || previous?.code !== roomInfo.code || roomInfo.status !== 'waiting'
+      || reducedMotion || systemReducedMotion) return;
+
+    const arrivals = [
+      ...SEAT_ORDER_CLOCKWISE.map((seat) => ({ key: seat, before: previous.seats[seat], after: roomInfo.seats[seat] })),
+      ...(roomInfo.additionalSeats ?? []).map((after, index) => ({
+        key: `additional-${index}`, before: previous.additionalSeats?.[index], after,
+      })),
+    ];
+    const animations: Animation[] = [];
+    const reveal: Keyframe[] = [
+      { opacity: 0, transform: 'translateY(8px) scale(0.96)', offset: 0 },
+      { opacity: 1, transform: 'translateY(0) scale(1.02)', offset: 0.65 },
+      { opacity: 1, transform: 'translateY(0) scale(1)', offset: 1 },
+    ];
+    for (const { key, before, after } of arrivals) {
+      if (before?.player || !after.player || after.player.isBot) continue;
+      const card = tableAreaRef.current?.querySelector<HTMLElement>(`[data-room-drop="${key}"]`);
+      if (!card) continue;
+      for (const content of card.querySelectorAll<HTMLElement>(
+        `:scope > [data-player-identity], :scope > .${styles.seatStatus}, :scope > .${styles.botAction}`,
+      )) animations.push(content.animate(reveal, { duration: 300, easing: 'ease-out' }));
+      if (card.classList.contains(styles.customSeat)) {
+        animations.push(card.animate(reveal, { duration: 300, easing: 'ease-out', pseudoElement: '::before' }));
+      }
+    }
+    return () => { animations.forEach((animation) => animation.cancel()); };
+  }, [roomInfo, reducedMotion, systemReducedMotion]);
 
   useEffect(() => {
     if (leaving.current) return;
@@ -405,7 +439,8 @@ export function RoomPage(): ReactNode {
         </div>
       </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
-      <div className={`${styles.tableArea} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}
+      <div ref={tableAreaRef} className={`${styles.tableArea} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}
+        aria-busy={busy}
         inert={compactLayout && chatOpen}
         onDragStart={(event) => { if (canMovePlayers) event.preventDefault(); }}
         onClickCapture={seatDrag.choose} onPointerMove={seatDrag.move} onPointerUp={seatDrag.finish}
