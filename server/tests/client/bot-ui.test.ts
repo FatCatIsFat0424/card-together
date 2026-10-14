@@ -110,6 +110,26 @@ describe('bot player interface', () => {
     }
   });
 
+  it('shows per-bot difficulty, defaults legacy bots to hard, and restricts editing to connected hosts', () => {
+    const html = render(createElement(RoomPage));
+    expect(html).toContain('aria-label="Difficulty for Bot East"');
+    expect(html).toContain('<option value="hard" selected="">Hard</option>');
+    expect(html).toContain('<option value="easy">Easy</option>');
+    state.room!.seats.E = { player: { ...bot, botDifficulty: 'easy' }, isReady: true };
+    expect(render(createElement(RoomPage))).toContain('<option value="easy" selected="">Easy</option>');
+    state.connection = 'connecting';
+    expect(render(createElement(RoomPage))).toMatch(/<select[^>]*aria-label="Difficulty for Bot East"[^>]*disabled/);
+    state.connection = 'ready';
+    state.room = { ...state.room!, status: 'playing' };
+    expect(render(createElement(RoomPage))).toMatch(/<select[^>]*aria-label="Difficulty for Bot East"[^>]*disabled/);
+    state.playerId = 'visitor';
+    const visitorHtml = render(createElement(RoomPage));
+    expect(visitorHtml).not.toContain('aria-label="Difficulty for');
+    expect(visitorHtml).toContain('Easy</span>');
+    useI18nStore.getState().setLocale('zh-TW');
+    expect(render(createElement(RoomPage))).toContain('簡單</span>');
+  });
+
   it('disables room actions until the connection is ready', () => {
     state.room = { ...room(), seats: { ...room().seats,
       S: { player: { ...bot, id: 'bot:south' }, isReady: true },

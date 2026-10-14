@@ -1,6 +1,6 @@
 import type {
   BidAction, BlackjackAction, BlackjackDealerAction, Card, ChinesePokerArrangement, HoldemAction, PlayerVisibleGameState,
-  GameSeat,
+  BotDifficulty, GameSeat,
 } from '@shared/types';
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { getBridgeBotAction } from './bridge-strategy';
@@ -12,6 +12,7 @@ import { getChinesePokerBotAction } from './chinesepoker-strategy';
 import { getLiarsDeckBotAction } from './liarsdeck-strategy';
 import { getBlackjackBotAction } from './blackjack-strategy';
 import { getHoldemBotAction } from './holdem-strategy';
+import { getEasyBotAction } from './easy-strategy';
 
 export type BotAction =
   | { readonly type: 'bridge-redeal'; readonly accept: boolean }
@@ -35,8 +36,10 @@ export type BotAction =
 /** Decisions receive only filtered player information and injectable randomness. */
 export function getBotAction(
   visible: PlayerVisibleGameState, random: () => number = Math.random,
+  difficulty: BotDifficulty = 'hard',
 ): BotAction | null {
   if (visible.phase === 'scoring') return null;
+  if (difficulty === 'easy') return getEasyBotAction(visible, random);
   switch (visible.gameType) {
     case 'bridge': return getBridgeBotAction(visible, random);
     case 'bigtwo': return getBigTwoBotAction(visible, random);

@@ -113,15 +113,24 @@ Runtime mechanics: [architecture](architecture.md#turn-clocks).
   empty seat stays open, because a human must be able to end the match.
 - Bots play every game, are always ready, and stay for the next match. Only humans host;
   the room closes when the last human leaves.
-- Bots use only their own hand and public state. Injectable randomness picks among
+- Each bot has an independent **Easy** or **Hard** difficulty. New bots and legacy
+  snapshots default to Hard. The host changes difficulty while waiting; changes reset
+  human readiness and persist across matches and restarts.
+- Both levels use only their own hand and public state. Hard retains the existing
+  strategies below. Injectable randomness picks among
   weighted near-best moves; an immediate Big Two win always plays.
-- They are heuristic practice opponents: no difficulty levels, hidden-hand search, or
+- They are heuristic practice opponents: no hidden-hand search or
   optimal play.
+- Easy uses basic bidding and random legal plays, captures, covers, and Ninety-Nine
+  choices without opponent inference or planning. Chinese Poker uses a greedy valid
+  arrangement; Liar's Deck uses fixed challenge odds; Blackjack uses minimum bets and
+  a 17-point stand threshold; Hold'em uses free checks and simple randomized betting
+  ([easy strategies](../server/src/bots/easy-strategy.ts)).
 - Bots wait for presentation plus a short thinking delay, save before broadcast, and
   resume after restart. Matches with bots never enter history. Bots have no profile,
   friends, or voice.
 
-| Game | Strategy |
+| Game | Hard strategy |
 | --- | --- |
 | Bridge | Natural bidding ([agreements](#bot-bidding-agreements)) that competes by estimated make chances and stops at the lowest winning level; declines redeals. Play uses the auction model: leads partner's bid suit, avoids the opponents' suits, and judges trump drawing from partner's shown length and public voids ([code](../server/src/bots/bridge-strategy.ts)) |
 | Big Two | Fewest remaining groups; prefers ordinary replies and saves bombs and 2s; never passes voluntarily when an opponent has ≤5 cards; blocks one-card opponents ([code](../server/src/bots/bigtwo-strategy.ts)) |

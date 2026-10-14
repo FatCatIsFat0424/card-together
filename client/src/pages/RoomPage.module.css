@@ -185,6 +185,9 @@
 .expandedSeats .seatChoice { gap: var(--spacing-xs); }
 .expandedSeats .emptyIcon.emptyIcon { font-size: 2.5rem; }
 .expandedSeats .botAction { margin-top: var(--spacing-xs); padding: 3px 6px; min-height: 28px; }
+.expandedSeats .seatSlot:has(.botControls) > [data-player-identity] > [role='img'] {
+  width: clamp(1.5rem, 16cqh, 2rem);
+}
 
 .addSeatSlot {
   justify-content: center;
@@ -376,6 +379,27 @@
 
 .hostBadge { color: var(--table-ink); }
 
+.botDifficulty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  font-size: var(--text-xs);
+}
+
+.botDifficulty .ruleSelect { min-height: 44px; }
+
+.botControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+}
+
+.botControls .botAction { margin-top: 0; }
+
 .seatLabel {
   align-self: flex-start;
   font-size: var(--text-xs);
@@ -536,6 +560,7 @@
     overflow-x: hidden;
     overflow-y: auto;
   }
+  .roomLayout .seatLayout:has(.botDifficulty) { grid-auto-rows: minmax(13rem, 1fr); }
   .seatStrip { gap: 6px; }
   .seatSlot, .expandedSeats .seatSlot { padding: 6px; }
   .seatSlot > * { flex-shrink: 0; }

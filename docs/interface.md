@@ -68,6 +68,9 @@ Frontend page behavior and layout. Client architecture and connection handling:
 | Compact | Two columns, smaller controls, up to four rows, vertical scrolling when needed |
 
 - Empty seats are full-card buttons; bot controls stay separate.
+- Bot identities show Easy or Hard. Waiting-room hosts edit each bot's difficulty
+  beside its remove control; guests see the selected difficulty. Defaults and strategy
+  behavior are documented in [games](games.md#bots).
 - In Ninety-Nine, Blackjack, and Hold'em the host sees a plus cell after the last seat to
   add human seats up to eight; only the last empty extra seat can be removed. Start
   conditions: [games](games.md#shared-room-lifecycle).

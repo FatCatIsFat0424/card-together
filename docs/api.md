@@ -114,7 +114,9 @@ Omitted fields keep their values; invalid values return 400.
 | `room:standUp` | — | Becomes a spectator while waiting |
 | `room:movePlayer` | `{ accountId, target }` | Host moves a human while waiting; `target` is a [`RoomSeatTarget`](../shared/src/types/room.ts) |
 | `room:addSeat`, `room:removeSeat` | — | Host adds an extra seat (eight total) or removes the last empty one; waiting Ninety-Nine, Blackjack, Hold'em only |
-| `room:addBot`, `room:removeBot` | `{ seat }` | Host adds or removes a bot while waiting |
+| `room:addBot` | `{ seat, difficulty? }` | Host adds a bot while waiting; omitted difficulty means hard |
+| `room:removeBot` | `{ seat }` | Host removes a bot while waiting |
+| `room:setBotDifficulty` | `{ seat, difficulty }` | Host changes one waiting-room bot to easy or hard; resets human readiness |
 | `room:fillBots` | — | Host fills empty seats with ready bots |
 | `room:ready`, `room:unready` | — | Sets a seated player's readiness while waiting, regardless of current player count; never starts a match |
 | `room:start` | — | Host starts only when all occupied seats are ready and the game's player count is valid |

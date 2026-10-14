@@ -14,6 +14,8 @@ export type GameSeat = Seat | AdditionalSeat;
 /** Player color (hex code) */
 export type PlayerColor = string;
 
+export type BotDifficulty = 'easy' | 'hard';
+
 /** Player info */
 export interface PlayerInfo {
   readonly id: PlayerId;
@@ -28,6 +30,8 @@ export interface PlayerInfo {
   /** Public waiting-room seat artwork; omitted/null keeps the theme background. */
   readonly seatBackground?: MediaId | null;
   readonly isBot?: boolean;
+  /** Bot-only; missing on legacy snapshots means hard. */
+  readonly botDifficulty?: BotDifficulty;
 }
 
 /** Player connection status */

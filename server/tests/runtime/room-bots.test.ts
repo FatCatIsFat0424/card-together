@@ -37,7 +37,7 @@ describe('room bots', () => {
     expect(roomManager.addBot(code, 'host', 'N').success).toBe(false);
     expect(roomManager.addBot(code, 'host', 'E').success).toBe(true);
     const bot = roomManager.getRoomInfo(code)!.seats.E.player!;
-    expect(bot).toMatchObject({ isBot: true, nickname: 'Bot E' });
+    expect(bot).toMatchObject({ isBot: true, nickname: 'Bot E', botDifficulty: 'hard' });
     expect(bot.id).toMatch(/^bot:[0-9a-f-]{36}$/);
     expect(roomManager.getRoomMemberIds(code)).toContain(bot.id);
     expect(roomManager.getRoomInfo(code)!.seats.E.isReady).toBe(true);
@@ -64,6 +64,28 @@ describe('room bots', () => {
     expect(roomManager.removeBot(code, 'host', 'W').success).toBe(true);
     expect(roomManager.changeSeat(code, player('guest'), 'W').success).toBe(true);
     expect(roomManager.getSpectatorIds(code)).toEqual([]);
+  });
+
+  it('sets independent difficulties only for waiting-room bots and clears human readiness', () => {
+    const code = room();
+    expect(roomManager.addBot(code, 'host', 'E', 'easy').success).toBe(true);
+    roomManager.fillBots(code, 'host');
+    roomManager.setReady(code, 'host', true);
+    const botId = roomManager.getRoomInfo(code)!.seats.E.player!.id;
+    expect(roomManager.setBotDifficulty(code, 'guest', 'E', 'hard').success).toBe(false);
+    expect(roomManager.setBotDifficulty(code, 'host', 'N', 'easy').success).toBe(false);
+    expect(roomManager.setBotDifficulty(code, 'host', 'E', 'easy').success).toBe(true);
+    expect(roomManager.getRoomInfo(code)!.seats.N.isReady).toBe(true);
+    expect(roomManager.setBotDifficulty(code, 'host', 'S', 'easy').success).toBe(true);
+    const info = roomManager.getRoomInfo(code)!;
+    expect(info.seats.E.player).toMatchObject({ id: botId, botDifficulty: 'easy' });
+    expect(info.seats.S.player?.botDifficulty).toBe('easy');
+    expect(info.seats.W.player?.botDifficulty).toBe('hard');
+    expect(info.seats.N.isReady).toBe(false);
+    expect(SEATS.slice(1).every((seat) => info.seats[seat].isReady)).toBe(true);
+    roomManager.setRoomStatus(code, 'playing');
+    expect(roomManager.setBotDifficulty(code, 'host', 'E', 'hard').success).toBe(false);
+    expect(roomManager.getRoomInfo(code)!.seats.E.player?.botDifficulty).toBe('easy');
   });
 
   it('should cap spectators, admit them during a match, and let seated players stand up', () => {
@@ -164,6 +186,36 @@ describe('persisted bot identities', () => {
     const active = snapshot(code);
     active.games = structuredClone(gameManager.exportGames());
     expect(isRuntimeSnapshot(active)).toBe(true);
+  });
+
+  it('preserves mixed difficulties and accepts legacy bots while rejecting invalid difficulty data', () => {
+    const code = room();
+    roomManager.fillBots(code, 'host');
+    roomManager.setBotDifficulty(code, 'host', 'E', 'easy');
+    const original = snapshot(code);
+    expect(isRuntimeSnapshot(original)).toBe(true);
+    roomManager.restoreRooms(structuredClone(original.rooms));
+    expect(roomManager.getRoomInfo(code)!.seats.E.player?.botDifficulty).toBe('easy');
+    const legacy = structuredClone(original);
+    delete (legacy.rooms[0].info.seats.E.player as { botDifficulty?: string }).botDifficulty;
+    expect(isRuntimeSnapshot(legacy)).toBe(true);
+    for (const difficulty of ['medium', null, 1]) {
+      const invalid = structuredClone(original);
+      (invalid.rooms[0].info.seats.E.player as unknown as { botDifficulty: unknown }).botDifficulty = difficulty;
+      expect(isRuntimeSnapshot(invalid)).toBe(false);
+    }
+    const humanDifficulty = structuredClone(original);
+    humanDifficulty.players[0].info = { ...humanDifficulty.players[0].info, botDifficulty: 'easy' };
+    expect(isRuntimeSnapshot(humanDifficulty)).toBe(false);
+    roomManager.setRoomStatus(code, 'playing');
+    gameManager.startGame(code, 'bridge', roomManager.getSeatPlayers(code)!);
+    const active = snapshot(code);
+    active.games = structuredClone(gameManager.exportGames());
+    expect(isRuntimeSnapshot(active)).toBe(true);
+    active.rooms[0].info.seats.E = { ...active.rooms[0].info.seats.E,
+      player: { ...active.rooms[0].info.seats.E.player!, botDifficulty: 'hard' },
+    };
+    expect(isRuntimeSnapshot(active)).toBe(false);
   });
 
   it('should persist full spectator areas, spectator returns, and observer chat', () => {

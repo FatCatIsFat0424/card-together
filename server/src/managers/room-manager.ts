@@ -2,10 +2,11 @@ import { DEFAULT_TIME_CONTROL, isTimeControl } from '@shared/time-control';
 import { DEFAULT_SEVENS_OPTIONS, isSevensOptions, LEGACY_SEVENS_OPTIONS } from '@shared/sevens-options';
 import { DEFAULT_NINETYNINE_OPTIONS, isNinetyNineOptions } from '@shared/ninetynine-options';
 import { DEFAULT_BLACKJACK_OPTIONS, isBlackjackOptions } from '@shared/blackjack-options';
+import { isBotDifficulty } from '@shared/bot-difficulty';
 import { isDeepStrictEqual } from 'node:util';
 import { randomInt, randomUUID } from 'node:crypto';
 import type {
-  BlackjackOptions, GameType, NinetyNineOptions, PlayerInfo, RoomCode, RoomInfo, RoomSeatTarget, RoomStatus, Seat, SeatMap, SevensOptions, TimeControl,
+  BlackjackOptions, BotDifficulty, GameType, NinetyNineOptions, PlayerInfo, RoomCode, RoomInfo, RoomSeatTarget, RoomStatus, Seat, SeatMap, SevensOptions, TimeControl,
 } from '@shared/types';
 import {
   ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD, EXPANDABLE_ROOM_GAMES,
@@ -114,9 +115,10 @@ function tableChanged(room: PersistedRoom): void {
   if (room.info.status === 'waiting' && FLEXIBLE_SEAT_GAMES.includes(room.info.gameType)) resetAllReady(room.info.code);
 }
 
-export function addBot(code: RoomCode, playerId: string, seat: Seat): Result {
+export function addBot(code: RoomCode, playerId: string, seat: Seat, difficulty: BotDifficulty = 'hard'): Result {
   const allowed = requireBotManagement(code, playerId);
   if (!allowed.success) return allowed;
+  if (!isBotDifficulty(difficulty)) return { success: false, reason: 'Invalid bot difficulty.' };
   const room = rooms.get(code)!;
   if (room.info.seats[seat].player) return { success: false, reason: 'Seat is occupied' };
   if (!hasSeatedHuman(room) && emptySeatCount(room) === 1) {
@@ -124,11 +126,26 @@ export function addBot(code: RoomCode, playerId: string, seat: Seat): Result {
   }
   const bot: PlayerInfo = {
     id: `bot:${randomUUID()}`, username: `bot-${seat.toLowerCase()}`, nickname: `Bot ${seat}`,
-    color: '#64748b', avatar: 'owl', avatarImage: null, isBot: true,
+    color: '#64748b', avatar: 'owl', avatarImage: null, isBot: true, botDifficulty: difficulty,
   };
   room.memberIds.push(bot.id);
   room.info = { ...room.info, seats: { ...room.info.seats, [seat]: { player: bot, isReady: true } } };
   tableChanged(room);
+  return { success: true };
+}
+
+export function setBotDifficulty(code: RoomCode, playerId: string, seat: Seat, difficulty: BotDifficulty): Result {
+  const allowed = requireBotManagement(code, playerId);
+  if (!allowed.success) return allowed;
+  if (!isBotDifficulty(difficulty)) return { success: false, reason: 'Invalid bot difficulty.' };
+  const room = rooms.get(code)!;
+  const bot = room.info.seats[seat].player;
+  if (!bot?.isBot) return { success: false, reason: 'No bot in this seat.' };
+  if ((bot.botDifficulty ?? 'hard') === difficulty) return { success: true };
+  room.info = { ...room.info, seats: { ...room.info.seats,
+    [seat]: { player: { ...bot, botDifficulty: difficulty }, isReady: true },
+  } };
+  resetAllReady(code);
   return { success: true };
 }
 

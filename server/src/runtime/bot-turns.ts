@@ -64,7 +64,9 @@ export function startBotTurns(runtime: RuntimeCoordinator, publish: (code: RoomC
           if (stopped) return;
           const current = gameManager.getGameState(code);
           if (!current || pendingTurn(current)?.key !== turn.key || gameManager.isPresentationActive(code)) return;
-          performAutomatedTurn(code, turn.seat, failures.count(code, turn.key), (visible) => getBotAction(visible));
+          const difficulty = gamePlayer(current, turn.seat)?.botDifficulty ?? 'hard';
+          performAutomatedTurn(code, turn.seat, failures.count(code, turn.key),
+            (visible) => getBotAction(visible, Math.random, difficulty));
           changed = true;
         }, { skipUnchanged: true, afterCommit: () => {
           failures.clear(code);

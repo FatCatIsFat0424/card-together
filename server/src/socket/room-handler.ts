@@ -2,6 +2,7 @@ import { isTimeControl } from '@shared/time-control';
 import { isSevensOptions } from '@shared/sevens-options';
 import { isNinetyNineOptions } from '@shared/ninetynine-options';
 import { isBlackjackOptions } from '@shared/blackjack-options';
+import { isBotDifficulty } from '@shared/bot-difficulty';
 import { GAME_TYPES } from '@shared/constants';
 import type { RoomCode, RoomInvite, RoomSeatTarget, Seat } from '@shared/types';
 import type { SocketContext, TypedSocket } from './context';
@@ -259,8 +260,16 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
 
   socket.on('room:addBot', (payload, callback) => runAction(context, socket, callback, () => {
     const seat = requireSeat(payload);
+    if (payload.difficulty !== undefined && !isBotDifficulty(payload.difficulty)) throw actionError('Invalid bot difficulty.');
     const code = requireRoom(socket);
-    requireSuccess(roomManager.addBot(code, socket.data.accountId, seat));
+    requireSuccess(roomManager.addBot(code, socket.data.accountId, seat, payload.difficulty));
+    return { success: true };
+  }));
+
+  socket.on('room:setBotDifficulty', (payload, callback) => runAction(context, socket, callback, () => {
+    const seat = requireSeat(payload);
+    if (!isBotDifficulty(payload.difficulty)) throw actionError('Invalid bot difficulty.');
+    requireSuccess(roomManager.setBotDifficulty(requireRoom(socket), socket.data.accountId, seat, payload.difficulty));
     return { success: true };
   }));
 

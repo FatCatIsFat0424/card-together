@@ -6,9 +6,10 @@ import Snackbar from '@mui/material/Snackbar';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { EXPANDABLE_ROOM_GAMES, GAME_TYPES, MAX_ROOM_SEATS, MAX_SPECTATORS, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import type {
-  BlackjackOptions, GameType, NinetyNineOptions, PlayerInfo, RoomSeatTarget, Seat, SeatInfo, SevensOptions, TimeControl,
+  BlackjackOptions, BotDifficulty, GameType, NinetyNineOptions, PlayerInfo, RoomSeatTarget, Seat, SeatInfo, SevensOptions, TimeControl,
 } from '@shared/types';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
+import { BOT_DIFFICULTIES, isBotDifficulty } from '@shared/bot-difficulty';
 import { LEGACY_SEVENS_OPTIONS, SEVENS_SLAY_EFFECTS, sevensSlayEffect } from '@shared/sevens-options';
 import { socket } from '../socket';
 import { seatBackgroundStyle, tableBackgroundStyle } from '../account-appearance';
@@ -206,6 +207,11 @@ export function RoomPage(): ReactNode {
     setError('');
     socket.timeout(10000).emit('room:removeBot', { seat }, handleResult);
   };
+  const setBotDifficulty = (seat: Seat, difficulty: BotDifficulty): void => {
+    setBusy(true);
+    setError('');
+    socket.timeout(10000).emit('room:setBotDifficulty', { seat, difficulty }, handleResult);
+  };
   const kick = (player: PlayerInfo): void => {
     if (!window.confirm(t('room.kickConfirm', { nickname: player.nickname }))) return;
     setBusy(true);
@@ -398,8 +404,24 @@ export function RoomPage(): ReactNode {
                 <span className={seatInfo.isReady ? styles.seatReadyBadge : styles.seatNotReadyBadge}>
                   {t(player.isBot ? 'room.botReady' : seatInfo.isReady ? 'room.ready.status' : 'room.seatTaken')}</span>
               </div>
-              {isHost && player.isBot && seatCard.seat && <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
-                disabled={blocked} onClick={() => { if (seatCard.seat) removeBot(seatCard.seat); }}>{t('room.removeBot')}</button>}
+              {isHost && player.isBot && seatCard.seat && <div className={styles.botControls}>
+                <label className={styles.botDifficulty}>
+                  <span className={styles.srOnly}>{t('room.botDifficulty')}</span>
+                  <select className={styles.ruleSelect} value={player.botDifficulty ?? 'hard'}
+                    aria-label={t('room.botDifficultyFor', { nickname: player.nickname })}
+                    disabled={blocked || roomInfo.status !== 'waiting'} onChange={(event) => {
+                      if (seatCard.seat && isBotDifficulty(event.target.value)) {
+                        setBotDifficulty(seatCard.seat, event.target.value);
+                      }
+                    }}>
+                    {BOT_DIFFICULTIES.map((difficulty) => <option key={difficulty} value={difficulty}>
+                      {t(`room.botDifficulty.${difficulty}`)}
+                    </option>)}
+                  </select>
+                </label>
+                <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
+                  disabled={blocked} onClick={() => { if (seatCard.seat) removeBot(seatCard.seat); }}>{t('room.removeBot')}</button>
+              </div>}
               {isHost && !player.isBot && player.id !== playerId && roomInfo.status === 'waiting' &&
                 <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
                   disabled={blocked} onClick={() => kick(player)}>{t('room.kick')}</button>}
