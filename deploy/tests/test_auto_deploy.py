@@ -440,6 +440,104 @@ class AutoDeployTests(unittest.TestCase):
                 cycle[0].assert_not_called()
                 cycle[2].assert_not_called()
 
+    def notified(self):
+        key_file = self.root / 'notify.key'
+        key_file.write_text('k' * 40 + '\n')
+        self.raw_config['notification'] = {
+            'url': 'http://127.0.0.1:4100/notifications/card-together-deploy', 'key_file': str(key_file)}
+        self.config_path.write_text(json.dumps(self.raw_config))
+        return AUTO.load_config(self.config_path)
+
+    @contextmanager
+    def fake_relay(self, failure=None):
+        requests = []
+
+        def urlopen(request, timeout):
+            requests.append((request.get_method(), request.full_url, request.get_header('Authorization'),
+                             json.loads(request.data)))
+            if failure:
+                raise failure
+            return io.BytesIO(b'{}')
+
+        with patch.object(AUTO, 'urlopen', side_effect=urlopen):
+            yield requests
+
+    @staticmethod
+    def states(body):
+        return [(stage['label'], stage['state']) for stage in body['stages']]
+
+    def test_notification_configuration_is_optional_and_validated(self):
+        self.assertIsNone(self.config.notification)
+        self.assertEqual(self.notified().notification.url, 'http://127.0.0.1:4100/notifications/card-together-deploy')
+        for change in ({'url': 'http://relay.example/notifications/deploy'},
+                       {'url': 'https://user:pass@relay.example/notifications/deploy'},
+                       {'url': 'https://relay.example/notifications/Deploy'},
+                       {'url': 'https://relay.example/notifications/deploy?key=1'},
+                       {'key_file': 'relative.key'}, {'extra': True}):
+            with self.subTest(change=change):
+                self.raw_config['notification'] = {**self.raw_config['notification'], **change}
+                self.config_path.write_text(json.dumps(self.raw_config))
+                with self.assertRaises(ValueError):
+                    AUTO.load_config(self.config_path)
+                self.notified()
+
+    def test_successful_deployment_updates_one_relay_notification(self):
+        config = self.notified()
+        with self.fake_cycle(), self.fake_relay() as requests:
+            AUTO.poll(config)
+        self.assertEqual(len(requests), 4)
+        self.assertEqual({method for method, *_ in requests}, {'PUT'})
+        self.assertEqual(len({url for _, url, *_ in requests}), 1)
+        self.assertRegex(requests[0][1], r'/notifications/card-together-deploy/[0-9a-f]{12}-[0-9]+$')
+        self.assertTrue(all(auth == 'Bearer ' + 'k' * 40 for _, _, auth, _ in requests))
+        first, installing, done = requests[0][3], requests[2][3], requests[3][3]
+        self.assertEqual(first['description'], '- Initial fixture')
+        self.assertEqual(first['url'], f'https://github.com/example/cards/commit/{self.sha}')
+        self.assertEqual(first['status'], 'running')
+        self.assertEqual(self.states(first)[1], ('建置與發布檢查', 'running'))
+        self.assertEqual(self.states(installing)[3], ('安裝與健康檢查', 'running'))
+        self.assertEqual(done['status'], 'succeeded')
+        self.assertEqual({state for _, state in self.states(done)}, {'done'})
+        self.assertIn('部署成功', done['summary'])
+
+    def test_failure_notification_matches_the_failed_stage(self):
+        config = self.notified()
+        with self.fake_cycle(build=RuntimeError('fixture build failed')), self.fake_relay() as requests:
+            with self.assertRaises(RuntimeError):
+                AUTO.poll(config)
+        self.assertEqual(requests[-1][3]['status'], 'failed')
+        self.assertEqual(self.states(requests[-1][3])[1:], [
+            ('建置與發布檢查', 'failed'), ('重新確認 CI', 'pending'), ('安裝與健康檢查', 'pending')])
+        self.assertIn('--retry-build', requests[-1][3]['summary'])
+        self.new_commit()
+        with self.fake_cycle(install=subprocess.CalledProcessError(1, ['fixture-install'])), \
+                self.fake_relay() as requests:
+            with self.assertRaises(subprocess.CalledProcessError):
+                AUTO.poll(config)
+        self.assertEqual(self.states(requests[-1][3])[3], ('安裝與健康檢查', 'failed'))
+        self.assertIn('--resume', requests[-1][3]['summary'])
+
+    def test_ci_rerun_during_build_cancels_the_notification(self):
+        config = self.notified()
+        revoked = self.api_response([self.workflow_run(run_attempt=2, status='in_progress', conclusion=None)])
+        with self.fake_cycle(ci_results=[self.api_response(), revoked]), self.fake_relay() as requests:
+            AUTO.poll(config)
+        self.assertEqual(requests[-1][3]['status'], 'cancelled')
+        self.assertEqual(self.states(requests[-1][3])[2], ('重新確認 CI', 'skipped'))
+
+    def test_notification_failures_never_change_deployment_or_leak_the_key(self):
+        config = self.notified()
+        stderr = io.StringIO()
+        with self.fake_cycle() as cycle, self.fake_relay(OSError('k' * 40)) as requests, redirect_stderr(stderr):
+            AUTO.poll(config)
+            cycle[2].assert_called_once()
+        self.assertEqual(len(requests), 4)
+        self.assertEqual(AUTO.read_state(config), {'last_success_sha': self.sha})
+        self.assertIn('Deployment notification failed: OSError.', stderr.getvalue())
+        self.assertNotIn('k' * 40, stderr.getvalue())
+        config.notification.key_file.write_text('short\n')
+        with self.assertRaises(ValueError):
+            AUTO.read_key(config.notification)
 
 if __name__ == '__main__':
     unittest.main()

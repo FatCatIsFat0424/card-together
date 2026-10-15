@@ -120,7 +120,7 @@ The installer provisions:
 | --- | --- |
 | `/usr/local/lib/card-together-auto-deploy/auto-deploy.py` | Stable controller, independent of edits in the development checkout |
 | `/home/acaccel/card-together-release` | Detached linked worktree used only for release builds |
-| `/etc/card-together-auto-deploy.json` | Non-secret configuration: repository, source/checkout/state/input paths, optional frontend environment path, required workflow filenames |
+| `/etc/card-together-auto-deploy.json` | Non-secret configuration: repository, source/checkout/state/input paths, optional frontend environment path, required workflow filenames, optional [Discord notification](#deployment-notifications) |
 | `/var/lib/card-together-auto-deploy/inputs/` | Independent owner music, emoji, and optional `frontend.env` snapshots |
 | `/var/lib/card-together-auto-deploy/state.json` | Successful SHA, failed-build SHA, and unfinished-install marker |
 | `/etc/sudoers.d/card-together-auto-deploy` | Allows the deployment user to run only `/usr/bin/bash <release-checkout>/deploy/deploy.sh` without a password |
@@ -195,6 +195,33 @@ controller watches Git revisions. Never copy development database files into it.
 
 For simultaneous development, use a separate backend port and database, and point
 Vite's development proxy at it: [development](development.md#configuration).
+
+#### Deployment notifications
+
+Optionally, each deployment attempt sends structured progress to the BotFleet konata
+notification relay, which posts one Discord message and edits it as stages progress:
+target SHA and pending commit subjects, CI approval, build, CI recheck, install with
+health checks, then the result (duration, or the failure's recovery step). Waiting for
+CI and blocked or halted cycles send nothing. The relay owns rendering and the route's
+Discord channel; see its documentation in BotFleet `docs/configuration.md`.
+
+The installer does not add this setting. After updating the controller, add it to the
+existing configuration:
+
+```json
+"notification": {
+  "url": "http://127.0.0.1:4100/notifications/card-together-deploy",
+  "key_file": "/var/lib/card-together-auto-deploy/notify.key"
+}
+```
+
+- `url` is the relay route; plain HTTP is accepted only for loopback hosts. Each attempt
+  appends its own key (`<SHA prefix>-<epoch>`) and sends `PUT` requests.
+- `key_file` holds the relay's bearer key (the same value as konata's
+  `NOTIFY_API_KEY`), readable only by the deployment user (`0600`). It is read at each
+  update and never stored in this configuration.
+- Notification failures are logged without the key and never change deployment results
+  or receipts. Omit the key or set it to `null` to disable notifications.
 
 ### Failure handling
 

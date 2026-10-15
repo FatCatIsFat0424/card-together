@@ -3,7 +3,8 @@
 
 import argparse
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime
 import fcntl
 import json
 import os
@@ -13,12 +14,24 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from urllib.parse import urlencode
+import time
+from urllib.error import HTTPError
+from urllib.parse import urlencode, urlsplit
+from urllib.request import Request, urlopen
 
 
 SHA = re.compile(r"[0-9a-f]{40}")
 REPOSITORY = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 WORKFLOW = re.compile(r"[A-Za-z0-9_-]+\.ya?ml")
+RELAY_PATH = re.compile(r"/notifications/[a-z0-9][a-z0-9-]{0,63}")
+LOOPBACK = {"127.0.0.1", "::1", "localhost"}
+LISTED_COMMITS = 10
+
+
+@dataclass(frozen=True)
+class Notification:
+    url: str
+    key_file: Path
 
 
 @dataclass(frozen=True)
@@ -31,13 +44,31 @@ class Config:
     emoji_dir: Path
     frontend_env: Path | None
     workflows: tuple[str, ...]
+    notification: Notification | None = None
+
+
+def load_notification(raw: object) -> Notification | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, dict) or set(raw) != {"url", "key_file"}:
+        raise ValueError("notification must be null or contain url and key_file.")
+    url = raw["url"]
+    parts = urlsplit(url) if isinstance(url, str) else None
+    if (not parts or not RELAY_PATH.fullmatch(parts.path) or parts.query or parts.fragment
+            or parts.username or parts.password
+            or not (parts.scheme == "https" or (parts.scheme == "http" and parts.hostname in LOOPBACK))):
+        raise ValueError("notification.url must be a relay route URL; plain HTTP is allowed only on loopback.")
+    key_file = raw["key_file"]
+    if not isinstance(key_file, str) or not Path(key_file).is_absolute() or Path(key_file).resolve() != Path(key_file):
+        raise ValueError("notification.key_file must be a canonical absolute path.")
+    return Notification(url, Path(key_file))
 
 
 def load_config(path: Path) -> Config:
     raw = json.loads(path.read_text())
     required = {"repository", "source", "checkout", "state_dir", "music_dir",
                 "emoji_dir", "frontend_env", "workflows"}
-    if not isinstance(raw, dict) or set(raw) != required:
+    if not isinstance(raw, dict) or not required <= set(raw) <= required | {"notification"}:
         raise ValueError("Configuration must contain exactly the documented keys.")
     if not isinstance(raw["repository"], str) or not REPOSITORY.fullmatch(raw["repository"]):
         raise ValueError("repository must be a GitHub owner/repository name.")
@@ -65,7 +96,8 @@ def load_config(path: Path) -> Config:
             or any(not isinstance(value, str) or not WORKFLOW.fullmatch(value) for value in workflows)
             or len(set(workflows)) != len(workflows)):
         raise ValueError("workflows must be a nonempty list of unique workflow filenames.")
-    return Config(repository=raw["repository"], workflows=tuple(workflows), **paths)
+    return Config(repository=raw["repository"], workflows=tuple(workflows),
+                  notification=load_notification(raw.get("notification")), **paths)
 
 
 def output(args: list[str], *, cwd: Path | None = None) -> str:
@@ -127,6 +159,110 @@ def ci_success(config: Config, sha: str) -> bool:
             print(f"Waiting for {workflow}: latest run is not successful for {sha}.", flush=True)
             return False
     return True
+
+
+def read_key(notification: Notification) -> str:
+    key = notification.key_file.read_text().strip()
+    if len(key) < 32 or any(character.isspace() for character in key):
+        raise ValueError("Notification key must be one token of at least 32 characters.")
+    return key
+
+
+def relay_request(notification: Notification, key: str, body: dict) -> None:
+    request = Request(f"{notification.url}/{key}", data=json.dumps(body).encode(), method="PUT", headers={
+        "Authorization": f"Bearer {read_key(notification)}",
+        "Content-Type": "application/json",
+    })
+    with urlopen(request, timeout=10):
+        pass
+
+
+STAGES = (("build", "建置與發布檢查"), ("verify", "重新確認 CI"), ("install", "安裝與健康檢查"))
+FAILURES = {
+    "build": "建置失敗，此版本已封鎖。修正後執行 `--retry-build`，或等待新的 commit。",
+    "verify": "無法確認 CI 結果，下一輪會重新檢查。",
+    "install": "安裝失敗，自動部署已暫停。依部署文件復原後執行 `--resume`。",
+}
+
+
+@dataclass
+class DeployReport:
+    """One relay notification per deployment attempt, updated as stages progress."""
+    notification: Notification | None
+    repository: str
+    sha: str
+    commits: list[str]
+    key: str = ""
+    started: float = field(default_factory=time.monotonic)
+    started_at: str = field(default_factory=lambda: datetime.now().strftime("%H:%M"))
+    stage: str = "build"
+    status: str = "running"
+    outcome: str | None = None
+
+    def __post_init__(self) -> None:
+        self.key = self.key or f"{self.sha[:12]}-{int(time.time())}"
+
+    def payload(self) -> dict:
+        current = [key for key, _ in STAGES].index(self.stage)
+        stages = [{"label": "CI 通過", "state": "done"}]
+        for index, (_, label) in enumerate(STAGES):
+            if index < current or (index == current and self.status == "succeeded"):
+                state = "done"
+            elif index == current:
+                state = {"running": "running", "cancelled": "skipped"}.get(self.status, "failed")
+            else:
+                state = "pending"
+            stages.append({"label": label, "state": state})
+        body = {
+            "title": f"Card Together 自動部署 {self.sha[:7]}",
+            "url": f"https://github.com/{self.repository}/commit/{self.sha}",
+            "stages": stages,
+            "status": self.status,
+            "summary": self.outcome or f"{self.started_at} 開始",
+        }
+        if self.commits:
+            body["description"] = "\n".join(f"- {subject}" for subject in self.commits)[:3000]
+        return body
+
+    def advance(self, stage: str) -> None:
+        self.stage = stage
+        self.publish()
+
+    def finish(self, status: str, outcome: str) -> None:
+        self.status, self.outcome = status, outcome
+        self.publish()
+
+    def succeed(self) -> None:
+        minutes, seconds = divmod(round(time.monotonic() - self.started), 60)
+        self.finish("succeeded", f"部署成功，耗時 {minutes} 分 {seconds} 秒。")
+
+    def fail(self) -> None:
+        self.finish("failed", FAILURES[self.stage])
+
+    def publish(self) -> None:
+        """Best effort: a notification problem must never change deployment results."""
+        if not self.notification:
+            return
+        try:
+            relay_request(self.notification, self.key, self.payload())
+        except (OSError, ValueError) as error:
+            # Errors never contain the key; keep only the error class and status.
+            detail = f" (HTTP {error.code})" if isinstance(error, HTTPError) else ""
+            print(f"Deployment notification failed: {type(error).__name__}{detail}.", file=sys.stderr, flush=True)
+
+
+def pending_commits(config: Config, state: dict, sha: str) -> list[str]:
+    try:
+        if state.get("last_success_sha"):
+            subjects = git(config.source, "log", "--format=%s", f"-{LISTED_COMMITS + 1}",
+                           f"{state['last_success_sha']}..{sha}").splitlines()
+        else:
+            subjects = [git(config.source, "log", "--format=%s", "-1", sha)]
+    except (RuntimeError, subprocess.SubprocessError):
+        return []
+    if len(subjects) > LISTED_COMMITS:
+        subjects = [*subjects[:LISTED_COMMITS], "…以及更早的 commit"]
+    return subjects
 
 
 def read_state(config: Config) -> dict:
@@ -251,6 +387,16 @@ def poll(config: Config, *, inspect: bool = False) -> None:
     if inspect:
         print(f"Eligible commit: {sha}. Inspection does not build or install.", flush=True)
         return
+    report = DeployReport(config.notification, config.repository, sha, pending_commits(config, state, sha))
+    report.publish()
+    try:
+        deploy(config, state, sha, report)
+    except BaseException:
+        report.fail()
+        raise
+
+
+def deploy(config: Config, state: dict, sha: str, report: DeployReport) -> None:
     try:
         prepare_checkout(config, sha)
         print(f"Building approved commit {sha}.", flush=True)
@@ -262,17 +408,21 @@ def poll(config: Config, *, inspect: bool = False) -> None:
         state["failed_build_sha"] = sha
         save_state(config, state)
         raise
+    report.advance("verify")
     # CI may have been rerun while building; API failures must remain retryable.
     if not ci_success(config, sha):
+        report.finish("cancelled", "CI 在建置期間有變動，下一輪會重新檢查。")
         return
     state.pop("failed_build_sha", None)
     state["installing_sha"] = sha
     save_state(config, state)
+    report.advance("install")
     install_checkout(config)
     state.pop("installing_sha")
     state["last_success_sha"] = sha
     save_state(config, state)
     print(f"Successfully deployed {sha}.", flush=True)
+    report.succeed()
 
 
 def main() -> int:
