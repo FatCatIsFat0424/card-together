@@ -19,11 +19,11 @@ Frontend page behavior and layout. Client architecture and connection handling:
 
 ## Lobby and friends
 
-- The top bar provides in-app notifications for incoming friend requests, accepted
-  requests, and unread private messages. Opening the panel does not mark messages read.
-- The chat icon beside top-bar notifications opens the independent `/messages` page.
-  The notification panel keeps links to individual conversations without a separate
-  button to the message inbox.
+- The top-bar notification button and panel cover incoming friend requests and
+  accepted requests; private messages do not contribute to their count or list.
+- The chat icon beside top-bar notifications opens the independent `/messages` page
+  and shows the total unread private-message count. Both top-bar badges hide at zero
+  and display `99+` above 99, with exact counts in their accessible names.
   Friends retain only friend and invitation management. The message list and individual
   chats preserve room membership. Game results retain their return-to-room button;
   the top bar, message toolbar, and player profiles omit separate return buttons.

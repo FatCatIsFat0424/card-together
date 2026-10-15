@@ -27,9 +27,12 @@ let generation = 0;
 let refreshSequence = 0;
 const emptyOverview: SocialOverview = { incoming: [], accepted: [], conversations: [] };
 
-export function socialUnreadCount(overview: SocialOverview): number {
-  return overview.incoming.length + overview.accepted.length
-    + overview.conversations.reduce((total, conversation) => total + conversation.unreadCount, 0);
+export function notificationUnreadCount(overview: SocialOverview): number {
+  return overview.incoming.length + overview.accepted.length;
+}
+
+export function messageUnreadCount(overview: SocialOverview): number {
+  return overview.conversations.reduce((total, conversation) => total + conversation.unreadCount, 0);
 }
 
 function newNotices(previous: SocialOverview, next: SocialOverview): SocialNotice[] {

@@ -8,16 +8,14 @@ export function NotificationPanel(): ReactNode {
   const { t } = useI18nStore();
   const incoming = useSocialStore((state) => state.incoming);
   const accepted = useSocialStore((state) => state.accepted);
-  const conversations = useSocialStore((state) => state.conversations);
   const status = useSocialStore((state) => state.status);
   const error = useSocialStore((state) => state.error);
-  const unread = conversations.filter((conversation) => conversation.unreadCount > 0);
   return <section className={styles.panel} aria-labelledby="notifications-heading">
     <h2 id="notifications-heading">{t('social.notifications')}</h2>
     {status === 'loading' && <p role="status">{t('common.loading')}</p>}
     {error && <div role="alert"><p>{error}</p><button type="button" className="btn btn-outline"
       onClick={() => void useSocialStore.getState().refresh()}>{t('common.retry')}</button></div>}
-    {incoming.length + accepted.length + unread.length === 0 && status === 'ready'
+    {incoming.length + accepted.length === 0 && status === 'ready'
       && <p className={styles.empty}>{t('social.noNotifications')}</p>}
     <ul className={styles.list}>
       {incoming.map((request) => <li key={request.id}>
@@ -29,12 +27,6 @@ export function NotificationPanel(): ReactNode {
         <button type="button" className={styles.dismiss}
           aria-label={t('social.dismiss')}
           onClick={() => void useSocialStore.getState().dismissAccepted([notice.id])}>×</button>
-      </li>)}
-      {unread.map((conversation) => <li key={conversation.account.id}>
-        <Link to={`/messages/${encodeURIComponent(conversation.account.id)}`}>
-          {t('social.message', { nickname: conversation.account.nickname })}
-          <small>{t('social.unread', { n: String(conversation.unreadCount) })}</small>
-        </Link>
       </li>)}
     </ul>
   </section>;

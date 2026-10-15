@@ -18,7 +18,7 @@ import { ThemeSwitch } from './ThemeSwitch';
 import { AppIcon } from './AppIcon';
 import { RoomCodeButton } from './RoomCodeButton';
 import { NotificationPanel } from './NotificationPanel';
-import { socialUnreadCount, useSocialStore } from '../stores/social-store';
+import { messageUnreadCount, notificationUnreadCount, useSocialStore } from '../stores/social-store';
 import styles from './TopBar.module.css';
 
 const VoicePanel = lazy(() => import('./VoicePanel')
@@ -33,7 +33,8 @@ export function TopBar(): ReactNode {
   const { t } = useI18nStore();
   const { pathname, search } = useLocation();
   const accountId = useAccountStore((state) => state.account?.id);
-  const notificationCount = useSocialStore(socialUnreadCount);
+  const notificationCount = useSocialStore(notificationUnreadCount);
+  const messageCount = useSocialStore(messageUnreadCount);
   const coins = useAccountStore((state) => state.account?.coins ?? 0);
   const roomCode = useRoomStore((state) => state.currentRoomCode);
   const inActiveGame = useRoomStore((state) => state.roomInfo?.status === 'playing' && state.mySeat !== null);
@@ -133,8 +134,10 @@ export function TopBar(): ReactNode {
           </div>}
         </div>}
         {accountId && <Link to="/messages" className={`${styles.iconBtn} touch-target`}
-          aria-label={t('messages.title')} title={t('messages.title')} onClick={() => setOpen(null)}>
+          aria-label={messageCount > 0 ? t('messages.unreadCount', { n: String(messageCount) }) : t('messages.title')}
+          title={t('messages.title')} onClick={() => setOpen(null)}>
           <AppIcon name="chat" />
+          {messageCount > 0 && <span className={styles.badge} aria-hidden="true">{messageCount > 99 ? '99+' : messageCount}</span>}
         </Link>}
         {showVoice && <div className={styles.group} data-popover="voice">
           <button type="button" className={`${styles.iconBtn} touch-target`} onClick={() => toggle('voice')}

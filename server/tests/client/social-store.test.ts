@@ -4,7 +4,7 @@ import type { SocialOverview } from '@shared/types/direct-message';
 const request = vi.hoisted(() => vi.fn());
 vi.mock('../../../client/src/api', () => ({ apiRequest: request }));
 
-import { socialUnreadCount, useSocialStore } from '../../../client/src/stores/social-store';
+import { messageUnreadCount, notificationUnreadCount, useSocialStore } from '../../../client/src/stores/social-store';
 
 function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   let resolve!: (value: T) => void;
@@ -69,7 +69,7 @@ describe('social overview state', () => {
     await newer;
     first.resolve(overview(8, 'old-message'));
     await older;
-    expect(socialUnreadCount(useSocialStore.getState())).toBe(0);
+    expect(messageUnreadCount(useSocialStore.getState())).toBe(0);
     expect(useSocialStore.getState().conversations[0].lastMessage.id).toBe('read-message');
   });
 
@@ -78,12 +78,12 @@ describe('social overview state', () => {
       .mockResolvedValueOnce(overview(0)).mockResolvedValueOnce(overview(1, 'message-2'));
     await useSocialStore.getState().refresh();
     expect(useSocialStore.getState().notices).toEqual([]);
-    expect(socialUnreadCount(useSocialStore.getState())).toBe(2);
+    expect(messageUnreadCount(useSocialStore.getState())).toBe(2);
     expect(await useSocialStore.getState().markRead('alice', 'message-1')).toBe(true);
     expect(request).toHaveBeenNthCalledWith(2, '/api/messages/alice/read', 'POST', { messageId: 'message-1' });
-    expect(socialUnreadCount(useSocialStore.getState())).toBe(0);
+    expect(messageUnreadCount(useSocialStore.getState())).toBe(0);
     await useSocialStore.getState().refresh();
-    expect(socialUnreadCount(useSocialStore.getState())).toBe(1);
+    expect(messageUnreadCount(useSocialStore.getState())).toBe(1);
     expect(useSocialStore.getState().notices).toMatchObject([{ kind: 'message', accountId: 'alice' }]);
     request.mockResolvedValueOnce(overview(1, 'message-2'));
     await useSocialStore.getState().refresh();
@@ -107,18 +107,23 @@ describe('social overview state', () => {
     await useSocialStore.getState().refresh();
     await useSocialStore.getState().refresh();
     expect(useSocialStore.getState()).toMatchObject({ status: 'error', error: 'Offline' });
-    expect(socialUnreadCount(useSocialStore.getState())).toBe(2);
+    expect(messageUnreadCount(useSocialStore.getState())).toBe(2);
     await useSocialStore.getState().refresh();
     expect(useSocialStore.getState()).toMatchObject({ status: 'ready', error: '' });
-    expect(socialUnreadCount(useSocialStore.getState())).toBe(0);
+    expect(messageUnreadCount(useSocialStore.getState())).toBe(0);
   });
 
-  it('counts requests, accepted notices and individual unread messages together', () => {
-    expect(socialUnreadCount({
+  it('counts requests and accepted notices separately from unread messages', () => {
+    const mixed: SocialOverview = {
       ...overview(3),
       incoming: [{ id: 'request-1', requester: ALICE, recipient: { ...ALICE, id: 'bob' }, createdAt: 1 }],
       accepted: [{ id: 'accepted-1', account: ALICE, createdAt: 1 }],
-    })).toBe(5);
+      conversations: [...overview(3).conversations, ...overview(4, 'message-2').conversations],
+    };
+    expect(notificationUnreadCount(mixed)).toBe(2);
+    expect(messageUnreadCount(mixed)).toBe(7);
+    expect(notificationUnreadCount(overview(3))).toBe(0);
+    expect(messageUnreadCount({ ...mixed, conversations: [] })).toBe(0);
   });
 
   it('dismisses accepted notices through persistence and reloads the overview', async () => {
