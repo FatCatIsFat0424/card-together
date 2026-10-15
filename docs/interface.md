@@ -68,8 +68,9 @@ Frontend page behavior and layout. Client architecture and connection handling:
   sequence finishes in 520ms. Friend/reward refreshes and game selection do not
   replay it. System and in-app reduced-motion preferences skip these reveals.
 - The rules list opens game details without selecting a mode or changing the background.
-- Online friends: hosts first, at most three visible rows with vertical scrolling,
-  truncated names, and Join buttons for hosts. The list refreshes on focus and every
+- Online friends: hosts first, up to three complete rows sized for nickname, title,
+  and username; additional friends scroll vertically. Names truncate and hosts have
+  Join buttons. The list refreshes on focus and every
   30 seconds while visible.
 - Creating or joining by code requires leaving the current room. Joining a friend's
   room asks for confirmation, then switches rooms in one commit.
