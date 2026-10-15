@@ -13,7 +13,13 @@ import { ChatMessageBody, EmojiPickerSections } from './ChatEmoji';
 import type { StickerPayload } from './ChatEmoji';
 import { AppIcon } from './AppIcon';
 import { Nameplate } from './Nameplate';
+import { formatChatTime } from './chat-time';
 import styles from './ChatPanel.module.css';
+
+function ChatTime({ timestamp }: { readonly timestamp: number }): ReactNode {
+  return <time className={styles.chatTime} dateTime={new Date(timestamp).toISOString()}>
+    {formatChatTime(timestamp)}</time>;
+}
 
 interface ChatPanelProps {
   /** When provided: the panel fills the container height and the header shows a collapse button */
@@ -116,6 +122,7 @@ export function ChatPanel({ onCollapse }: ChatPanelProps): ReactNode {
       <div ref={messagesRef} className={styles.chatMessages} role="log" aria-live="polite">
         {messages.map((message) => message.system ? (
           <p key={message.id} className={styles.systemMessage}>
+            <ChatTime timestamp={message.timestamp} />{' '}
             {t(message.content as TranslationKey, { name: message.sender.nickname })}
           </p>
         ) : (
@@ -129,6 +136,7 @@ export function ChatPanel({ onCollapse }: ChatPanelProps): ReactNode {
                 <Nameplate id={message.sender.nameplate} />
                 {message.audience === 'observers' && <span className={styles.observerTag}
                   title={t('chat.observerTitle')}>{t('chat.observerTag')}</span>}
+                <ChatTime timestamp={message.timestamp} />
               </div>
               <div className={styles.chatContent}><ChatMessageBody message={message} /></div>
             </div>

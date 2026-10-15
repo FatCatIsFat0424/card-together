@@ -109,6 +109,14 @@
   font-weight: 600;
 }
 
+.chatTime {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .observerTag {
   padding: 0 6px;
   border: 1px dashed var(--border-color);
