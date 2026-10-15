@@ -236,8 +236,10 @@ Saved and system reduced-motion preferences disable this animation.
   stay visible until reset. Claim each completed task in its dialog. Progress resets at 00:00 Asia/Taipei;
   unclaimed rewards expire. Bot games count, unfinished/aborted games do not, and tied
   winners do not count as wins. Bridge wins follow partnerships.
-- Check-in opens the current month's calendar. Today is highlighted; only today's date
-  can be clicked for +10 coins. Claimed dates show a checkmark and cannot be claimed again.
+- The first time the lobby loads an unchecked Taiwan date, it opens the check-in dialog
+  and then claims today's +10 coins automatically; later visits that day do not.
+  The dialog shows the current month's calendar with today highlighted and claimed dates
+  checked. If the automatic claim fails, today's date remains clickable as a fallback.
 - The server supplies the date and progress. Opening a dialog, returning to the page,
   account updates, and midnight refresh them. Claim failures offer a retry; balances
   and claims synchronize across the owner's connected sessions after durable storage.

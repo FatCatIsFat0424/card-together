@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -12,8 +12,10 @@ import { useI18nStore } from '../stores/i18n-store';
 import { AppIcon } from './AppIcon';
 import styles from './DailyRewards.module.css';
 
-export function CheckInCalendar({ status, pending, onCheckIn }: {
+export function CheckInCalendar({ status, pending, onCheckIn, celebrate = false }: {
   readonly status: DailyRewardsStatus; readonly pending: boolean; readonly onCheckIn: () => void;
+  /** Plays the claim animation on today's date; set only right after this session's claim. */
+  readonly celebrate?: boolean;
 }): ReactNode {
   const { locale, t } = useI18nStore();
   const [year, month] = status.day.split('-').map(Number);
@@ -31,11 +33,13 @@ export function CheckInCalendar({ status, pending, onCheckIn }: {
         const date = `${status.day.slice(0, 7)}-${String(index + 1).padStart(2, '0')}`;
         const today = date === status.day;
         const checked = status.checkInDays.includes(date);
-        return <button type="button" key={date} className={`${styles.day} ${today ? styles.today : ''} ${checked ? styles.checked : ''}`}
+        const stamped = celebrate && today && checked;
+        return <button type="button" key={date} className={`${styles.day} ${today ? styles.today : ''} ${checked ? styles.checked : ''} ${stamped ? styles.stamped : ''}`}
           disabled={!today || checked || pending} onClick={onCheckIn} aria-current={today ? 'date' : undefined}
           aria-label={`${t('daily.checkInDate', { date })}${checked ? ` · ${t('daily.signedIn')}` : ''}`}>
           <span>{index + 1}</span>
           {checked ? <AppIcon name="check" /> : today ? <small>{t('daily.today')}</small> : <span aria-hidden="true">·</span>}
+          {stamped && <span className={styles.coinBurst} aria-hidden="true"><AppIcon name="coins" />+{DAILY_CHECK_IN_COINS}</span>}
         </button>;
       })}
     </div>
@@ -90,6 +94,14 @@ export function DailyTaskList({ status, pending, onClaim, onReplace }: {
   </>;
 }
 
+/** Lets the opened calendar render unchecked before today's automatic claim marks it. */
+const AUTO_CHECK_IN_DELAY_MS = 700;
+
+/** Whether the lobby should claim today's check-in itself; one attempt per server day. */
+export function needsAutoCheckIn(status: DailyRewardsStatus, attemptedDay: string): boolean {
+  return status.day !== attemptedDay && !status.checkInDays.includes(status.day);
+}
+
 export function DailyRewards(): ReactNode {
   const { t } = useI18nStore();
   const accountId = useAccountStore((state) => state.account?.id);
@@ -102,8 +114,11 @@ export function DailyRewards(): ReactNode {
   const [refresh, setRefresh] = useState(0);
   const [pending, setPending] = useState(false);
   const [notice, setNotice] = useState('');
+  const [celebrateDay, setCelebrateDay] = useState('');
   const claiming = useRef(false);
   const requestVersion = useRef(0);
+  const autoCheckInDay = useRef('');
+  const autoCheckInTimer = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -128,8 +143,8 @@ export function DailyRewards(): ReactNode {
     return () => window.removeEventListener('focus', refreshOnFocus);
   }, []);
 
-  const mutate = async (reward: DailyRewardId, replacing = false): Promise<void> => {
-    if (!status || claiming.current || !accountId) return;
+  const mutate = async (reward: DailyRewardId, replacing = false): Promise<boolean> => {
+    if (!status || claiming.current || !accountId) return false;
     claiming.current = true;
     setPending(true);
     ++requestVersion.current;
@@ -137,7 +152,7 @@ export function DailyRewards(): ReactNode {
       replacing ? '/api/auth/daily-rewards/replace' : '/api/auth/daily-rewards', 'POST',
       replacing ? { task: reward, day: status.day } : { reward, day: status.day },
     );
-    if (useAccountStore.getState().account?.id !== accountId) return;
+    if (useAccountStore.getState().account?.id !== accountId) return false;
     ++requestVersion.current;
     claiming.current = false;
     setPending(false);
@@ -145,20 +160,31 @@ export function DailyRewards(): ReactNode {
       setStatus(result.dailyRewards);
       setError(false);
       useAccountStore.getState().setAccount(result.account);
+      if (reward === 'check-in') setCelebrateDay(result.dailyRewards.day);
       const coins = DAILY_TASKS.find((task) => task.id === reward)?.coins ?? DAILY_CHECK_IN_COINS;
       setNotice(replacing ? t('daily.replaced') : t('daily.success', { coins: String(coins) }));
     } else {
       setNotice(t(replacing ? 'daily.replaceError' : 'daily.claimError'));
       setRefresh((value) => value + 1);
     }
+    return result.success;
   };
+  const autoCheckIn = useEffectEvent((loaded: DailyRewardsStatus): void => {
+    if (claiming.current || !needsAutoCheckIn(loaded, autoCheckInDay.current)) return;
+    autoCheckInDay.current = loaded.day;
+    setDialog('check-in');
+    setDialogOpen(true);
+    autoCheckInTimer.current = window.setTimeout(() => { void mutate('check-in'); }, AUTO_CHECK_IN_DELAY_MS);
+  });
+  useEffect(() => { if (status) autoCheckIn(status); }, [status]);
+  useEffect(() => () => window.clearTimeout(autoCheckInTimer.current), []);
   const checkedIn = status?.checkInDays.includes(status.day);
   const open = (kind: 'tasks' | 'check-in'): void => {
     setDialog(kind);
     setDialogOpen(true);
   };
   // Keep the selected content and width through MUI's exit transition.
-  const close = (): void => { if (!pending) setDialogOpen(false); };
+  const close = (): void => { if (!pending) { setDialogOpen(false); setCelebrateDay(''); } };
   return <aside className={styles.widgets}>
     <button type="button" className={styles.widget} onClick={() => open('tasks')} aria-haspopup="dialog">
       <AppIcon name="info" /><span><strong>{t('daily.tasks')}</strong>
@@ -182,7 +208,8 @@ export function DailyRewards(): ReactNode {
           : dialog === 'tasks' ? <DailyTaskList status={status} pending={pending}
             onClaim={(id) => { void mutate(id); }} onReplace={(id) => { void mutate(id, true); }} /> : <>
             <p className={styles.checkInReward}><AppIcon name="coins" />{t('daily.reward', { coins: String(DAILY_CHECK_IN_COINS) })}</p>
-            <CheckInCalendar status={status} pending={pending} onCheckIn={() => { void mutate('check-in'); }} />
+            <CheckInCalendar status={status} pending={pending} celebrate={celebrateDay === status.day}
+              onCheckIn={() => { void mutate('check-in'); }} />
           </>}
       </DialogContent>
     </Dialog>

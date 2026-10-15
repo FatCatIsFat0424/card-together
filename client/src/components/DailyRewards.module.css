@@ -46,6 +46,27 @@
 .today:not(:disabled):hover { background: color-mix(in srgb, var(--color-primary) 22%, var(--bg-surface)); }
 .checked { color: var(--color-primary); }
 .widget:focus-visible, .day:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+.stamped { position: relative; animation: stamp-glow 700ms ease-out; }
+.stamped > svg { animation: stamp-pop 450ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+.coinBurst { position: absolute; left: 50%; bottom: 70%; display: inline-flex; align-items: center; gap: 2px; color: #e6b761; font-size: var(--text-sm); font-weight: 700; white-space: nowrap; pointer-events: none; opacity: 0; transform: translateX(-50%); animation: coin-rise 1100ms ease-out; }
+@keyframes stamp-glow {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 70%, transparent); transform: scale(1); }
+  35% { transform: scale(1.08); }
+  100% { box-shadow: 0 0 0 14px transparent; transform: scale(1); }
+}
+@keyframes stamp-pop {
+  0% { opacity: 0; transform: scale(0); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes coin-rise {
+  0% { opacity: 0; transform: translate(-50%, 8px); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -28px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stamped, .stamped > svg { animation: none; }
+  .coinBurst { display: none; }
+}
 @media (max-width: 36rem) {
   .widgets { width: 100%; }
   .widget { flex: 1; min-width: 0; }

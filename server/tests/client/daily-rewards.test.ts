@@ -4,13 +4,13 @@ import { describe, expect, it, vi } from 'vitest';
 import type { DailyRewardsStatus } from '@shared/types';
 vi.mock('../../../client/src/api', () => ({ apiRequest: vi.fn() }));
 vi.mock('../../../client/src/socket', () => ({ socket: {} }));
-import { CheckInCalendar, DailyTaskList } from '../../../client/src/components/DailyRewards';
+import { CheckInCalendar, DailyTaskList, needsAutoCheckIn } from '../../../client/src/components/DailyRewards';
 import { DAILY_TASKS } from '@shared/constants/daily-rewards';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
 
-function render(day: string, checkInDays: readonly string[] = [], pending = false): string {
+function render(day: string, checkInDays: readonly string[] = [], pending = false, celebrate = false): string {
   const status: DailyRewardsStatus = { day, serverTime: 0, resetsAt: 1, gameTypes: [], wins: 0, claimedTasks: [], checkInDays, tasks: [], swapsRemaining: 1 };
-  return renderToStaticMarkup(createElement(CheckInCalendar, { status, pending, onCheckIn: () => undefined }));
+  return renderToStaticMarkup(createElement(CheckInCalendar, { status, pending, onCheckIn: () => undefined, celebrate }));
 }
 
 describe('check-in calendar', () => {
@@ -30,8 +30,25 @@ describe('check-in calendar', () => {
       expect(html).toContain('aria-current="date"');
     }
   });
+  it('animates only today after a claim in this session', () => {
+    const burst = /<span class="[^"]*coinBurst[^"]*" aria-hidden="true">/g;
+    expect(render('2026-10-15', ['2026-10-14', '2026-10-15'], false, true).match(burst)).toHaveLength(1);
+    expect(render('2026-10-15', ['2026-10-14', '2026-10-15'])).not.toMatch(burst);
+    expect(render('2026-10-15', ['2026-10-14'], false, true)).not.toMatch(burst);
+  });
   it.each([['2028-02-29', 29], ['2026-02-28', 28], ['2026-04-01', 30]] as const)('renders the exact month length for %s', (day, count) => {
     expect(render(day).match(/<button/g)).toHaveLength(count);
+  });
+});
+
+describe('automatic check-in', () => {
+  const status = (checkInDays: readonly string[]): DailyRewardsStatus => ({ day: '2026-10-15', serverTime: 0, resetsAt: 1,
+    gameTypes: [], wins: 0, claimedTasks: [], checkInDays, tasks: [], swapsRemaining: 1 });
+  it('claims only the first time an unchecked day loads', () => {
+    expect(needsAutoCheckIn(status([]), '')).toBe(true);
+    expect(needsAutoCheckIn(status([]), '2026-10-14')).toBe(true);
+    expect(needsAutoCheckIn(status([]), '2026-10-15')).toBe(false);
+    expect(needsAutoCheckIn(status(['2026-10-15']), '')).toBe(false);
   });
 });
 
