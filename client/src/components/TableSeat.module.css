@@ -45,6 +45,8 @@
 }
 
 .bottom .plate { width: auto; flex: 0 1 auto; min-width: 0; max-width: 280px; }
+/* Side plates hug their content instead of filling the column, leaving no empty band beside the name. */
+.left .plate, .right .plate { width: auto; max-width: min(100%, 230px); }
 
 /* Opposite seat in the games listed in TableSeat: hand beside the plate, so the centre gets the height. */
 .handBeside {
@@ -421,6 +423,8 @@
     padding: var(--pad) 4px calc(var(--pad) + 3px);
     text-align: center;
   }
+
+  .left .plate, .right .plate { width: 100%; }
 
   .plate [data-player-identity] > :first-child,
   .emptyAvatar { position: relative; top: auto; left: auto; }
