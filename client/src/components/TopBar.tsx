@@ -11,6 +11,7 @@ import { useI18nStore } from '../stores/i18n-store';
 import { useMusicStore } from '../stores/music-store';
 import { useRoomStore } from '../stores/room-store';
 import { useVoiceStore } from '../stores/voice-store';
+import { useJoinSound } from '../hooks/use-join-sound';
 import { useTurnSound } from '../hooks/use-turn-sound';
 import { LanguageSwitch } from './LanguageSwitch';
 import { MusicControl } from './MusicControl';
@@ -30,6 +31,7 @@ const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select
 
 export function TopBar(): ReactNode {
   useTurnSound();
+  useJoinSound();
   const { t } = useI18nStore();
   const { pathname, search } = useLocation();
   const accountId = useAccountStore((state) => state.account?.id);

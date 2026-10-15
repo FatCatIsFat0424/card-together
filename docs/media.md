@@ -36,6 +36,9 @@ Only the site owner supplies music; players cannot upload tracks or enter URLs.
 - Turn reminders are separate synthesized chimes, on by default and unaffected by music
   pause or volume. They wait for the presentation deadline and are dropped, not queued,
   when audio is blocked.
+- Other room members hear a separate rising chime when someone joins; the joining
+  player does not. It follows the turn-reminder toggle and is dropped while audio is
+  blocked.
 - A user gesture (click, or touchend on iOS) unlocks audio.
 
 ## Uploads

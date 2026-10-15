@@ -6,8 +6,15 @@ export interface TurnSound {
   dispose: () => void;
 }
 
-/** A short original two-note cue, independent of the music player. */
-export function createTurnSound(): TurnSound {
+/** Seconds from the cue start and frequency in Hz for each tone. */
+export type ToneNotes = readonly (readonly [offset: number, frequency: number])[];
+
+const TURN_NOTES: ToneNotes = [[0, 660], [0.12, 880]];
+/** A rising three-note cue, distinct from the turn reminder, for a player joining the room. */
+export const JOIN_NOTES: ToneNotes = [[0, 523], [0.1, 659], [0.2, 784]];
+
+/** A short original tone cue, independent of the music player. */
+export function createTurnSound(notes: ToneNotes = TURN_NOTES): TurnSound {
   let context: AudioContext | null = null;
   let disposed = false;
   const voices = new Set<() => void>();
@@ -27,7 +34,7 @@ export function createTurnSound(): TurnSound {
       if (disposed || context?.state !== 'running') return;
       stop();
       try {
-        for (const [offset, frequency] of [[0, 660], [0.12, 880]]) {
+        for (const [offset, frequency] of notes) {
           const oscillator = context.createOscillator();
           const gain = context.createGain();
           const release = (): void => {
