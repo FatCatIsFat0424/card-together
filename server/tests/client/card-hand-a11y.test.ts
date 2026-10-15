@@ -31,4 +31,19 @@ describe('card hand accessibility', () => {
     }));
     expect(html.match(/aria-disabled="true"/g)).toHaveLength(2);
   });
+
+  it('should glow playable cards in selection mode except the selected one', () => {
+    const html = renderToStaticMarkup(createElement(CardHand, {
+      cards: [ace, two], playableCards: [ace, two], selectedCards: [two], onCardClick: () => undefined,
+    }));
+    expect(html.match(/cardPlayable/g)).toHaveLength(1);
+    expect(html.match(/cardSelected/g)).toHaveLength(1);
+  });
+
+  it('should not glow selection-mode cards without playable cards', () => {
+    const html = renderToStaticMarkup(createElement(CardHand, {
+      cards: [ace, two], selectedCards: [], onCardClick: () => undefined,
+    }));
+    expect(html).not.toContain('cardPlayable');
+  });
 });

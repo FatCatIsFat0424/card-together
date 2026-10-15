@@ -235,8 +235,8 @@ export function RedPointsTable(): ReactNode {
           : options.length > 0 ? t('redpoints.pickCapture') : null;
 
   const handZone = <div className={styles.handArea}>
-    <CardHand cards={game.myHand} selectedCards={selected ? [selected] : []} disabled={!canPlay}
-      onCardClick={onCardClick} onCardPreview={setPreview} confirmTouch />
+    <CardHand cards={game.myHand} playableCards={game.myHand} selectedCards={selected ? [selected] : []}
+      disabled={!canPlay} onCardClick={onCardClick} onCardPreview={setPreview} confirmTouch />
     {playing && <div className={styles.controls}>
       {prompt && <span className={`${styles.prompt} ${isMyTurn ? styles.promptActive : ''}`}>{prompt}</span>}
     </div>}

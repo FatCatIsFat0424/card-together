@@ -17,7 +17,7 @@ interface CardHandProps {
   disabled?: boolean;
   onReorder?: (cards: readonly Card[]) => void;
   onCardPreview?: (card: Card | null) => void;
-  /** Multi-select mode: every card toggles on click and selected cards rise (replaces the playableCards marking) */
+  /** Multi-select mode: every card toggles on click and selected cards rise; playableCards, if given, still glows */
   selectedCards?: readonly Card[];
   /** Extra marked cards (Ninety-Nine: playing them would exceed 99) */
   markedCards?: readonly Card[];
@@ -87,9 +87,10 @@ export function CardHand({
         const playable = selectMode || containsCard(card, playableCards);
         const selected = containsCard(card, selectedCards);
         const marked = containsCard(card, markedCards);
+        const hinted = !disabled && !selected && containsCard(card, playableCards);
         const cardClasses = [
           styles.card,
-          playable && !disabled && !selectMode ? styles.cardPlayable : '',
+          hinted ? styles.cardPlayable : '',
           selected ? styles.cardSelected : '',
           marked ? styles.cardMarked : '',
           armed && containsCard(card, [armed]) ? styles.cardArmed : '',
