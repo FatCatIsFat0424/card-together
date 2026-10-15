@@ -9,7 +9,7 @@ import styles from './PlayerLink.module.css';
 interface PlayerLinkProps {
   player: PlayerInfo;
   showUsername?: boolean;
-  size?: 'small' | 'medium';
+  size?: 'small' | 'compact' | 'medium';
   linked?: boolean;
   /** Equipped nameplate title; compact lists such as the spectator area leave it out. */
   showTitle?: boolean;

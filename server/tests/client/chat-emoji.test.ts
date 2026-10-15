@@ -15,7 +15,17 @@ vi.mock('../../../client/src/media', () => ({
   mediaUrl: (id: string): string => `/api/media/${id}`,
 }));
 
+vi.mock('../../../client/src/socket', () => ({ socket: {} }));
+vi.mock('../../../client/src/api', () => ({ apiRequest: vi.fn() }));
+
+// Server rendering reads a Zustand store's initial state, so messages come from this stub.
+const chat = vi.hoisted(() => ({ messages: [] as unknown[] }));
+vi.mock('../../../client/src/stores/chat-store', () => ({
+  useChatStore: (select: (value: typeof chat) => unknown) => select(chat),
+}));
+
 import { ChatMessageBody, EmojiPickerSections } from '../../../client/src/components/ChatEmoji';
+import { ChatPanel } from '../../../client/src/components/ChatPanel';
 import { PROVIDED_EMOJIS, providedEmojiUrl } from '../../../client/src/provided-emoji';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
 
@@ -43,6 +53,7 @@ function message(fields: Partial<ChatMessage>): ChatMessage {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  chat.messages = [];
   useI18nStore.setState({ locale: 'zh-TW' });
 });
 
@@ -112,5 +123,21 @@ describe('site-provided chat emoji UI', () => {
     }) }));
     expect(forged).not.toContain('example.com');
     expect(forged).toContain('Image unavailable: cheer');
+  });
+});
+
+describe('chat panel', () => {
+  it('should show the sender nameplate beside the nickname', () => {
+    useI18nStore.setState({ locale: 'en' });
+    chat.messages = [
+      message({ id: 'm1', content: 'hi', sender: { ...SENDER, nameplate: 'nameplate-tide' } }),
+      message({ id: 'm2', content: 'plain', sender: { ...SENDER, id: 'bob', nickname: 'Bob' } }),
+    ];
+    const html = render(createElement(ChatPanel));
+    expect(html).toContain('Alice');
+    expect(html).toContain('Bob');
+    expect(html.match(/data-nameplate=/g)).toHaveLength(1);
+    expect(html).toContain('data-nameplate="nameplate-tide"');
+    expect(html).toContain(useI18nStore.getState().t('shop.title.nameplate-tide'));
   });
 });

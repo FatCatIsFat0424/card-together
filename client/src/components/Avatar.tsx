@@ -19,7 +19,7 @@ interface AvatarProps {
   image?: MediaId | null;
   color?: string;
   border?: AvatarBorderId | null;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'small' | 'compact' | 'medium' | 'large';
 }
 
 export function Avatar({ avatar, image, color, border, size = 'medium' }: AvatarProps): ReactNode {

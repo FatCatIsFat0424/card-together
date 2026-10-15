@@ -305,8 +305,9 @@ Saved and system reduced-motion preferences disable this animation.
 - Owned appearance products can be equipped from the shop or account editor. Account
   equipment selectors save immediately; removing an official image style restores the
   retained upload or theme. Nameplates pair a fixed localized cosmetic title with its
-  own mark and color treatment, separate from earned achievements. The shop preview
-  uses the same title styling as the equipped nameplate. Table backgrounds and card
+  own mark and color treatment, separate from earned achievements. Equipped nameplates
+  appear beside the nickname in player identities and room chat, but not in the compact
+  spectator list. The shop preview uses the same title styling as the equipped nameplate. Table backgrounds and card
   backs are private; seat backgrounds show in the waiting room. Existing uploads,
   themes, and emoji remain free.
 - Purchased packs appear in the sticker picker for room chat and private messages;

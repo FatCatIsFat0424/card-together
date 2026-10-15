@@ -532,7 +532,7 @@ export function RoomPage(): ReactNode {
           <li key={spectator.id} className={`${styles.spectator} ${canMovePlayers && !spectator.isBot ? styles.draggableSeat : ''} ${movingPlayer?.id === spectator.id ? styles.movingSeat : ''}`}
             onPointerDown={(event) => seatDrag.start(event, spectator)}>
             {dragHandle(spectator)}
-            <PlayerLink player={spectator} size="small" showTitle={false} />
+            <PlayerLink player={spectator} size="compact" showTitle={false} />
             {spectator.id === roomInfo.hostId && hostTag}
             {spectator.id === playerId && <span>{t('common.me')}</span>}
             {isHost && spectator.id !== playerId && <button type="button"

@@ -12,6 +12,7 @@ import { Avatar } from './Avatar';
 import { ChatMessageBody, EmojiPickerSections } from './ChatEmoji';
 import type { StickerPayload } from './ChatEmoji';
 import { AppIcon } from './AppIcon';
+import { Nameplate } from './Nameplate';
 import styles from './ChatPanel.module.css';
 
 interface ChatPanelProps {
@@ -120,11 +121,12 @@ export function ChatPanel({ onCollapse }: ChatPanelProps): ReactNode {
         ) : (
           <div key={message.id} className={styles.chatMessage}>
             <span className={styles.chatAvatar}>
-              <Avatar avatar={message.sender.avatar} image={message.sender.avatarImage} border={message.sender.avatarBorder} color={message.sender.color} size="small" />
+              <Avatar avatar={message.sender.avatar} image={message.sender.avatarImage} border={message.sender.avatarBorder} color={message.sender.color} size="compact" />
             </span>
             <div className={styles.chatBody}>
               <div className={styles.chatHeading}>
                 <span className={styles.chatSender}>{message.sender.nickname}</span>
+                <Nameplate id={message.sender.nameplate} />
                 {message.audience === 'observers' && <span className={styles.observerTag}
                   title={t('chat.observerTitle')}>{t('chat.observerTag')}</span>}
               </div>
