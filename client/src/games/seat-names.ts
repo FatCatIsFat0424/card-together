@@ -22,6 +22,14 @@ export function seatLabel(t: Translate, gameType: GameType | undefined, seat: Ga
   return t(short ? `seat.short.${seat}` : `seat.${seat}`);
 }
 
+/**
+ * Seat name for one-column-per-seat grids (auction, trick history): numbered games show the bare number, like
+ * their seat badges, so six columns fit the info rail; compass games keep their full, already short, names.
+ */
+export function compactSeatLabel(t: Translate, gameType: GameType | undefined, seat: GameSeat): string {
+  return seatLabel(t, gameType, seat, Boolean(gameType && isNumberedSeatGame(gameType)));
+}
+
 /** Player nickname for a seat, falling back to the localized seat name. */
 export function seatDisplayName(
   seats: RoomInfo['seats'] | undefined, seat: GameSeat, seatLabel: (seat: GameSeat) => string,

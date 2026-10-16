@@ -5,6 +5,8 @@ import type { BidSuit, GameSeat } from '@shared/types';
 import { SUIT_SYMBOLS } from '@shared/constants';
 import { AUCTION_COLUMNS, auctionRows, auctionWaitIndex } from '../game-view';
 import type { AuctionCall } from '../game-view';
+import { compactSeatLabel, seatLabel } from '../games/seat-names';
+import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './AuctionTable.module.css';
 
@@ -23,6 +25,7 @@ interface AuctionTableProps {
 
 export function AuctionTable({ calls, toAct, mySeat, columns = AUCTION_COLUMNS }: AuctionTableProps): ReactNode {
   const { t } = useI18nStore();
+  const gameType = useGameStore((state) => state.visible?.gameType);
   const rows = auctionRows(calls, columns);
   const waitIndex = auctionWaitIndex(calls, toAct, columns);
   if (waitIndex >= rows.length * columns.length) rows.push(columns.map(() => null));
@@ -31,7 +34,8 @@ export function AuctionTable({ calls, toAct, mySeat, columns = AUCTION_COLUMNS }
     <table className={styles.table}>
       <thead>
         <tr>{columns.map((seat) => (
-          <th key={seat} className={seat === mySeat ? styles.me : undefined}>{t(`seat.${seat}`)}</th>
+          <th key={seat} className={seat === mySeat ? styles.me : undefined} title={seatLabel(t, gameType, seat)}
+            aria-label={seatLabel(t, gameType, seat)}>{compactSeatLabel(t, gameType, seat)}</th>
         ))}</tr>
       </thead>
       <tbody>

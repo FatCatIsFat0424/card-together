@@ -8,6 +8,7 @@ import { socket } from '../socket';
 import { useGameStore } from '../stores/game-store';
 import { useRoomStore } from '../stores/room-store';
 import { useI18nStore } from '../stores/i18n-store';
+import { seatLabel } from '../games/seat-names';
 import { BidLabel } from './AuctionTable';
 import {
   BID_LEVELS, BID_SUITS, currentCall, isBidHigher, isLevelAvailable, lowestAvailableLevel, recentCalls,
@@ -31,11 +32,12 @@ function CallLabel({ action }: { action: AuctionAction<number> }): ReactNode {
 /** Last few calls; shown only where the auction table lives in a closed drawer. */
 function RecentCalls({ bids }: { bids: readonly AuctionCallEntry<number>[] }): ReactNode {
   const { t } = useI18nStore();
+  const gameType = useGameStore((state) => state.visible?.gameType);
   const calls = recentCalls(bids, RECENT_CALLS);
   if (calls.length === 0) return null;
   return <ol className={styles.recent} aria-label={t('bidding.recent')}>
     {calls.map((call, index) => <li key={`${bids.length}-${index}`} className={styles.recentCall}>
-      <span className={styles.recentSeat}>{t(`seat.${call.seat}`)}</span>
+      <span className={styles.recentSeat}>{seatLabel(t, gameType, call.seat)}</span>
       <span className={call.action.type === 'pass' ? styles.recentPass : undefined}>
         <CallLabel action={call.action} />
       </span>
@@ -50,9 +52,10 @@ export function BiddingWaiting({ seat, bids }: {
 }): ReactNode {
   const { t } = useI18nStore();
   const storeBids = useGameStore((state) => state.bidding?.bids);
+  const gameType = useGameStore((state) => state.visible?.gameType);
   return <div className={styles.waiting}>
     <div className={styles.waitingPill} role="status">
-      {t('table.waitingBid', { seat: seat ? t(`seat.${seat}`) : '...' })}
+      {t('table.waitingBid', { seat: seat ? seatLabel(t, gameType, seat) : '...' })}
     </div>
     <RecentCalls bids={bids ?? storeBids ?? []} />
   </div>;

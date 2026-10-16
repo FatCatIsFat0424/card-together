@@ -28,7 +28,11 @@ vi.mock('../../../client/src/stores/god-view-store', () => ({
   useGodViewStore: (select: (value: Record<string, unknown>) => unknown) => select(state.godView),
 }));
 
+vi.mock('../../../client/src/socket', () => ({ socket: { emit: vi.fn() } }));
+
 import { TableSeat } from '../../../client/src/components/TableSeat';
+import { AuctionTable } from '../../../client/src/components/AuctionTable';
+import { BiddingWaiting } from '../../../client/src/components/BiddingPanel';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
 import { seatLabel } from '../../../client/src/games/seat-names';
 import { botNickname } from '@shared/rules/seats';
@@ -300,6 +304,23 @@ describe('table seat plate', () => {
     expect(seatLabel(useI18nStore.getState().t, 'napoleon', 'P5')).toBe('玩家 5');
     expect(botNickname('napoleon', 'P6')).toBe('Bot 6');
     expect(botNickname('bridge', 'W')).toBe('Bot W');
+  });
+
+  it('numbers Napoleon auction columns, recent calls, and the waiting bidder', () => {
+    state.game = { ...baseGame(), visible: { gameType: 'napoleon', clock: clock(null), log: [] } };
+    const calls = [{ seat: 'N', action: { type: 'pass' } }, { seat: 'E', action: { type: 'bid', level: 12, suit: 'spades' } }] as const;
+    // Six columns share the narrow rail, so headers show the number and keep the full name as their label.
+    const table = renderToStaticMarkup(createElement(AuctionTable,
+      { calls, toAct: 'S', mySeat: 'N', columns: ['N', 'E', 'S', 'W', 'P5', 'P6'] }));
+    expect(table.match(/<th[^>]*>([^<]*)<\/th>/g)?.map((cell) => cell.replace(/<[^>]+>/g, '')))
+      .toEqual(['1', '2', '3', '4', '5', '6']);
+    expect(table).toContain('aria-label="Player 6">6</th>');
+    const waiting = renderToStaticMarkup(createElement(BiddingWaiting, { seat: 'P5', bids: calls }));
+    expect(waiting).toContain('Player 5');
+    expect(waiting).toContain('Player 2');
+    expect(waiting).not.toMatch(/North|East/);
+    state.game = { ...baseGame(), visible: { gameType: 'bridge', clock: clock(null), log: [] } };
+    expect(renderToStaticMarkup(createElement(AuctionTable, { calls: [], toAct: null, mySeat: null }))).toContain('North');
   });
 
   it('prefers a bust over a thinking bot and keeps the pickable seat label', () => {

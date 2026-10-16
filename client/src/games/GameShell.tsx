@@ -1,4 +1,3 @@
-import { roomSeatInfo } from '@shared/rules/seats';
 // ─── GameShell: table frame shared by all games (info rail + table + chat + abort vote) ───
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -15,6 +14,7 @@ import { useGodViewStore } from '../stores/god-view-store';
 import { useChatStore } from '../stores/chat-store';
 import { useRoomStore } from '../stores/room-store';
 import { useI18nStore } from '../stores/i18n-store';
+import { useSeatName } from './seat-names';
 import { ChatPanel } from '../components/ChatPanel';
 import { TableSeat } from '../components/TableSeat';
 import { AppCheckbox } from '../components/AppCheckbox';
@@ -207,7 +207,8 @@ export function GameShell({
   const out = lastElimination(log);
   const [outBanner, setOutBanner] = useState<{ seat: GameSeat; index: number } | null>(null);
   const { t } = useI18nStore();
-  const turnName = turnSeat ? (room ? roomSeatInfo(room, turnSeat)?.player?.nickname : null) ?? t(`seat.${turnSeat}`) : '';
+  const seatName = useSeatName();
+  const turnName = turnSeat ? seatName(turnSeat) : '';
   const turnAnnouncement = presentation.locked || !turnSeat ? ''
     : turnSeat === mySeat ? (myTurn ? t('table.yourTurn') : '') : t('table.turnOf', { name: turnName });
   // Chat is collapsed by default on tablet; on mobile it is a bottom drawer, closed by default
@@ -423,7 +424,7 @@ export function GameShell({
           </FittedCentre>
           {tableEffect}
           {outBanner && <p key={outBanner.index} className={styles.outBanner} role="status">
-            <AppIcon name="burst" /> {t('table.eliminated', { name: (room ? roomSeatInfo(room, outBanner.seat)?.player?.nickname : null) ?? t(`seat.${outBanner.seat}`) })}
+            <AppIcon name="burst" /> {t('table.eliminated', { name: seatName(outBanner.seat) })}
           </p>}
           {panel && !presentation.locked && <div className={styles.actionPanel}>{panel}</div>}
           <AbortVoteBanner />

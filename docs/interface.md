@@ -212,6 +212,8 @@ remain visible.
   dashes cards the Napoleon holds or discarded and warns that they mean no secretary. The
   secretary's confirmation is stored per room and announcement in local storage, so a reload
   shows it once. Seat labels and notices follow [Napoleon visibility](games.md#napoleon).
+  The auction table has one column per player and labels it with the seat number (the full
+  name is the tooltip and accessible label) so six players fit the info rail.
 - Actions require a ready connection; local sorting still works while reconnecting.
 
 Per-game controls: [games](games.md#card-controls).
