@@ -287,19 +287,6 @@
 }
 
 /* Result */
-.scoreDetails {
-  display: grid;
-  grid-template-columns: auto auto;
-  justify-content: center;
-  gap: 4px var(--spacing-md);
-  margin: 0 0 var(--spacing-lg);
-  font-size: var(--text-base);
-  color: var(--text-secondary);
-  text-align: left;
-}
-
-.scoreDetails dd { margin: 0; color: var(--text-primary); font-weight: 700; }
-
 .resultDiscards h3 {
   margin: 0 0 var(--spacing-xs);
   font-size: var(--text-sm);

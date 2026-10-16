@@ -11,7 +11,6 @@ import { socket } from '../../socket';
 import { useGameStore } from '../../stores/game-store';
 import { useRoomStore } from '../../stores/room-store';
 import { useI18nStore } from '../../stores/i18n-store';
-import { BidLabel } from '../../components/AuctionTable';
 import { AuctionPanel, BiddingWaiting } from '../../components/BiddingPanel';
 import type { AuctionAction } from '../../components/bidding-choice';
 import { CardHand } from '../../components/CardHand';
@@ -53,23 +52,10 @@ function CardStrip({ cards, label }: { cards: readonly NapoleonCard[]; label: st
 function NapoleonResult({ result, name, t }: {
   result: NapoleonMatchResult; name: (seat: GameSeat) => string; t: Translate;
 }): ReactNode {
-  const jokerName = (joker: 'big' | 'small'): string => t(`napoleon.joker.${joker}`);
   const { contract, secretarySeat } = result;
   const side = (seat: GameSeat): string => seat === contract.napoleon ? t('napoleon.napoleon')
     : seat === secretarySeat ? t('napoleon.secretary') : t('napoleon.defender');
   return <>
-    <dl className={styles.scoreDetails}>
-      <dt>{t('game.contract')}</dt>
-      <dd><BidLabel level={contract.level} suit={contract.suit} /> · {name(contract.napoleon)}</dd>
-      <dt>{t('napoleon.secretaryCard')}</dt>
-      <dd>{napoleonCardText(result.secretaryCard, jokerName)}</dd>
-      <dt>{t('napoleon.secretary')}</dt>
-      <dd>{secretarySeat && secretarySeat !== contract.napoleon ? name(secretarySeat) : t('napoleon.noSecretary')}</dd>
-      <dt>{t('napoleon.napoleonSide')}</dt>
-      <dd>{t('napoleon.sidePoints', { n: String(result.napoleonPoints) })} / {contract.level}</dd>
-      <dt>{t('napoleon.defenders')}</dt>
-      <dd>{t('napoleon.sidePoints', { n: String(result.defenderPoints) })}</dd>
-    </dl>
     <table className={resultStyles.table}>
       <thead><tr>
         <th scope="col">{t('napoleon.player')}</th>
