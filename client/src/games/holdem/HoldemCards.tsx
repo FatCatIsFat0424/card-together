@@ -3,6 +3,7 @@ import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import type { Card, GameSeat } from '@shared/types';
 import { useCardFaceUrl } from '../../cosmetics/card-faces/use-card-face';
 import { useI18nStore } from '../../stores/i18n-store';
+import { useSortedHand } from '../use-hand-sort';
 import { ChipIcon } from '../ChipIcon';
 import { HE_BOARD_SLOTS } from './holdem-view';
 import type { HoldemBlindSeats } from './holdem-view';
@@ -18,11 +19,13 @@ export function cardName(card: Card): string {
  * A row of face-up cards, plus `backs` face-down cards. Cards from `freshFrom` on animate in so a
  * presentation can show which cards just arrived.
  */
-export function HeCards({ cards, backs = 0, size = 'md', freshFrom, overlap = false, label, peek = false }: {
+export function HeCards({ cards: incoming, backs = 0, size = 'md', freshFrom, overlap = false, label, peek = false, sortable = false }: {
   cards: readonly Card[]; backs?: number; size?: CardSize; freshFrom?: number; overlap?: boolean; label?: string;
   /** God view: cards the players cannot see, drawn face up but marked as hidden */
   peek?: boolean;
+  sortable?: boolean;
 }): ReactNode {
+  const cards = useSortedHand(incoming, 'holdem', sortable);
   const cardImageUrl = useCardFaceUrl();
   const { t } = useI18nStore();
   return <span className={`${styles.cards} ${styles[size]} ${overlap ? styles.overlap : ''}`}

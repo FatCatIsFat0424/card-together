@@ -108,6 +108,14 @@ export function systemLine(code: string, accountId: string, key: string): void {
 }
 
 export function registerGameHandlers(context: SocketContext, socket: TypedSocket): void {
+  socket.on('game:autoPlay', (payload, callback) => runAction(context, socket, callback, () => {
+    if (!payload || typeof payload.enabled !== 'boolean') throw actionError('Invalid auto-play setting.');
+    const code = requireRoom(socket);
+    if (roomManager.getRoomInfo(code)?.status !== 'playing') throw actionError('No active game.');
+    requireSuccess(gameManager.setAutoPlay(code, playerGameSeat(socket, code), payload.enabled));
+    return { success: true };
+  }));
+
   socket.on('game:redealResponse', (payload, callback) => runAction(context, socket, callback, () => {
     if (!payload || typeof payload.accept !== 'boolean') throw actionError('Invalid redeal response.');
     const code = requireRoom(socket);

@@ -40,6 +40,7 @@ export interface ActionResult {
 }
 
 export interface ClientToServerEvents {
+  'game:autoPlay': (payload: { enabled: boolean }, callback: (response: ActionResult) => void) => void;
   'voice:join': (payload: VoiceSettings, callback: (response: VoiceJoinResult) => void) => void;
   'voice:leave': (callback: (response: ActionResult) => void) => void;
   'voice:settings': (payload: VoiceSettings, callback: (response: ActionResult) => void) => void;

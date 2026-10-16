@@ -165,6 +165,7 @@ Omitted fields keep their values; invalid values return 400.
 | `game:blackjack:dealerAction` | `{ action }` | Player dealer `hit` or `stand`; standing below 17 is rejected |
 | `game:holdem:action` | `{ action }` | `{ type: 'fold' \| 'check' \| 'call' }` or `{ type: 'raise', to }`, where `to` is the street total |
 | `game:napoleon:action` | `{ action }` | One [`NapoleonAction`](../shared/src/types/game.ts): `bid`, `discard`, `review` (four-player discard confirmation), `call` (secretary card), or `play` with `leadSuit` when leading the secretary card or a joker and an optional `summon` |
+| `game:autoPlay` | `{ enabled }` | Toggles persistent bot control of the caller's active human seat for this match; authenticated, committed before acknowledgment and broadcast |
 | `game:continue` | — | Leaves the result for the waiting room; others keep it |
 | `game:abortVote:start` / `cast` | — / `{ agree }` | Starts or votes on an abort ([rules](games.md#shared-room-lifecycle)) |
 | `chat:send` | One [chat input](../shared/src/types/socket-events.ts), including `{ shopSticker }` | Text or one personal/site/shop sticker; shop sends require pack ownership |

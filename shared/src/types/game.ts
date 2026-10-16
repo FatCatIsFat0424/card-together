@@ -1119,7 +1119,12 @@ export interface NapoleonVisibleState extends ObserverView<NapoleonCard> {
 
 // ─── Cross-game ───
 
-export type AnyGameState =
+/** Match-scoped opt-in automation; omitted in older snapshots. */
+export interface GameAutomation {
+  autoPlaySeats?: GameSeat[];
+}
+
+export type AnyGameState = GameAutomation & (
   | BridgeGameState
   | BigTwoGameState
   | RedPointsGameState
@@ -1129,9 +1134,9 @@ export type AnyGameState =
   | LiarsDeckGameState
   | BlackjackGameState
   | HoldemGameState
-  | NapoleonGameState;
+  | NapoleonGameState);
 
-export type PlayerVisibleGameState =
+export type PlayerVisibleGameState = { readonly autoPlay?: boolean } & (
   | BridgeVisibleState
   | BigTwoVisibleState
   | RedPointsVisibleState
@@ -1141,7 +1146,7 @@ export type PlayerVisibleGameState =
   | LiarsDeckVisibleState
   | BlackjackVisibleState
   | HoldemVisibleState
-  | NapoleonVisibleState;
+  | NapoleonVisibleState);
 
 export type MatchResult =
   | ({ readonly gameType: 'bridge' } & GameResult)

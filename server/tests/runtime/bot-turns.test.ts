@@ -52,6 +52,62 @@ describe('server bot turn scheduling', () => {
   beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(10000); });
   afterEach(() => { stops.splice(0).forEach((stop) => stop()); vi.restoreAllMocks(); vi.useRealTimers(); });
 
+  it('persists human auto-play, uses a private bot view, and cancels the scheduled move when disabled', async () => {
+    const { code, runtime, saved } = await fixture();
+    await runtime.mutate(() => {
+      const game = games.getGameState(code)!;
+      if (game.gameType === 'redpoints') game.currentTurnSeat = 'N';
+      delete game.clock;
+      games.initializeClock(code);
+      expect(games.setAutoPlay(code, 'N', true)).toEqual({ success: true });
+    });
+    expect(saved().games[0].autoPlaySeats).toEqual(['N']);
+    games.restoreGames(structuredClone(saved().games));
+    expect(games.getPlayerVisibleState(code, 'N')?.autoPlay).toBe(true);
+    expect(games.getPlayerVisibleState(code, 'E')?.autoPlay).toBe(false);
+    const view = games.getPlayerVisibleState(code, 'N')!;
+    if (view.gameType !== 'redpoints') throw new Error('Expected Red Points');
+    expect(games.handleRedPointsPlay(code, 'N', view.myHand[0]).success).toBe(false);
+    const strategy = vi.spyOn(decisions, 'getBotAction');
+    const publish = vi.fn();
+    stops.push(startBotTurns(runtime, publish));
+    await runtime.mutate(() => { games.setAutoPlay(code, 'N', false); });
+    await vi.advanceTimersByTimeAsync(BOT_ACTION_DELAY_MS);
+    expect(strategy).not.toHaveBeenCalled();
+    await runtime.mutate(() => { games.setAutoPlay(code, 'N', true); });
+    await vi.advanceTimersByTimeAsync(BOT_ACTION_DELAY_MS);
+    await runtime.idle();
+    expect(strategy).toHaveBeenCalledTimes(1);
+    expect(strategy.mock.calls[0][0]).toMatchObject({ mySeat: 'N', autoPlay: true });
+    expect(strategy.mock.calls[0][0]).not.toHaveProperty('observedHands');
+    expect(publish).toHaveBeenCalledTimes(1);
+    expect(games.getGameState(code)?.players.N?.isBot).not.toBe(true);
+    expect(games.getGameState(code)?.autoPlaySeats).toEqual(['N']);
+  });
+
+  it('rolls back a failed auto-play toggle without scheduling or publishing a move', async () => {
+    const { code, runtime, repository } = await fixture();
+    const publish = vi.fn();
+    stops.push(startBotTurns(runtime, publish));
+    repository.saveRuntime.mockRejectedValueOnce(new Error('disk unavailable'));
+    await expect(runtime.mutate(() => { games.setAutoPlay(code, 'N', true); }))
+      .rejects.toThrow('disk unavailable');
+    expect(games.getPlayerVisibleState(code, 'N')?.autoPlay).toBe(false);
+    expect(publish).not.toHaveBeenCalled();
+    expect(games.setAutoPlay(code, 'E', true).success).toBe(false);
+    expect(games.setAutoPlay(code, 'P5', true).success).toBe(false);
+  });
+
+  it('accepts legacy snapshots and rejects malformed or bot automation seats', async () => {
+    const { saved } = await fixture();
+    expect(isRuntimeSnapshot(saved())).toBe(true);
+    for (const invalid of [['N', 'N'], ['P9'], ['S'], 'N', [null]]) {
+      const snapshot = structuredClone(saved());
+      Object.assign(snapshot.games[0], { autoPlaySeats: invalid });
+      expect(isRuntimeSnapshot(snapshot)).toBe(false);
+    }
+  });
+
   it('commits before publishing and waits for presentations before another action', async () => {
     const { code, runtime, repository, saved } = await fixture();
     const publish = vi.fn(() => {

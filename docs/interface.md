@@ -161,6 +161,17 @@ Frontend page behavior and layout. Client architecture and connection handling:
 
 ## Game table
 
+- A compact vertical action bar inside the table's lower-left corner offers computer auto-play, sort by suit,
+  and sort by rank. Active choices are highlighted and each button has a full accessible
+  label and tooltip. Spectators, eliminated players, and settlement screens hide the bar.
+- Auto-play is an on/off switch for the current match. The server uses its existing bot
+  strategy with only that seat's private view; manual hand controls pause until switched
+  off. Reconnects preserve the choice; a new match starts with auto-play off.
+- Sorting changes only the local hand display, preserving selected cards and game rules
+  (including Big Two rank order and Napoleon jokers). Sort again to reset a dragged hand.
+  Liar's Deck has rank sorting only because its cards have no suits. Blackjack sorts
+  each player hand separately; Hold'em sorts only the player's hole cards.
+
 Special-card feedback plays for up to one second inside the existing presentation
 frame, without extending turn deadlines or intercepting input. Everyone, including
 spectators, sees the same public trigger; private hands never influence it.

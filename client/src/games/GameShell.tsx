@@ -37,6 +37,7 @@ import { isSpectator } from './observer-view';
 import { useTablePerspective } from './use-table-perspective';
 import { useTablePerspectiveStore } from '../stores/table-perspective-store';
 import { VictoryEffects } from '../cosmetics/victory-effects/VictoryEffects';
+import { GameActionBar } from './GameActionBar';
 
 const DESKTOP_QUERY = '(min-width: 1024px)';
 const SHEET_QUERY = '(max-width: 767px), (max-height: 500px) and (min-width: 600px)';
@@ -391,7 +392,8 @@ export function GameShell({
         </div>
       </div>
 
-      <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}>
+      <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''} ${!visibleGame?.observer && visibleGame?.phase !== 'scoring' ? styles.withActions : ''}`} style={tableStyle}>
+        <GameActionBar />
         <div className={`${styles.table} ${expandedTable ? styles.expandedTable : ''} ${cornersSpan ? styles.cornersSpan : ''} ${centreUp ? styles.centreUp : ''}`}
           data-card-table>
           <div className={styles.tableTools}>
@@ -434,7 +436,7 @@ export function GameShell({
           {outBanner && <p key={outBanner.index} className={styles.outBanner} role="status">
             <AppIcon name="burst" /> {t('table.eliminated', { name: seatName(outBanner.seat) })}
           </p>}
-          {panel && !presentation.locked && <div className={styles.actionPanel}>{panel}</div>}
+          {panel && !presentation.locked && <div className={styles.actionPanel} inert={visibleGame?.autoPlay}>{panel}</div>}
           <AbortVoteBanner />
         </div>
 
@@ -454,7 +456,7 @@ export function GameShell({
             {myTurn && <p className={styles.yourTurn}>{t('table.yourTurn')}</p>}
             {error && <p className={styles.actionError} role="alert">{error}</p>}
           </div>
-          {hand}
+          <div inert={visibleGame?.autoPlay}>{hand}</div>
         </div>
       </main>
 

@@ -6,6 +6,7 @@ import { ldIsTruth } from '@shared/rules/liarsdeck';
 import type { LiarCard, LiarsDeckLogEntry, LiarsDeckMatchResult, LiarsDeckVisibleState } from '@shared/types';
 import { socket } from '../../socket';
 import { useGameStore } from '../../stores/game-store';
+import { useHandSortStore } from '../../stores/hand-sort-store';
 import { useI18nStore } from '../../stores/i18n-store';
 import { GameShell } from '../GameShell';
 import { useViewedGame } from '../use-table-perspective';
@@ -149,6 +150,7 @@ export function LiarsDeckTable(): ReactNode {
   const { locked, frame } = useGamePresentation();
   const connectionReady = useConnectionReady();
   const game = useViewedGame(useGameStore((state) => state.liarsDeck));
+  const sorting = useHandSortStore();
   const { t } = useI18nStore();
   const seatName = useSeatName();
   const [selected, setSelected] = useState<number[]>([]);
@@ -209,7 +211,9 @@ export function LiarsDeckTable(): ReactNode {
 
   const handZone = <div className={styles.handArea}>
     {showHand && game.myHand.length > 0 && <div className={styles.hand} role="group" aria-label={t('liarsdeck.hand')}>
-      {game.myHand.map((card) => <HandCard key={card.id} card={card} variant={card.id}
+      {(sorting.gameType === 'liarsdeck' && sorting.order === 'rank'
+        ? [...game.myHand].sort((a, b) => ['joker', 'A', 'K', 'Q'].indexOf(a.face) - ['joker', 'A', 'K', 'Q'].indexOf(b.face))
+        : game.myHand).map((card) => <HandCard key={card.id} card={card} variant={card.id}
         selected={chosen.includes(card.id)} truth={ldIsTruth(card.face, game.tableFace)} disabled={!selectable}
         onToggle={() => setSelected(toggleSelection(chosen, card.id, game.myHand))} />)}
     </div>}

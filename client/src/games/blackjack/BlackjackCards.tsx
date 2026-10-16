@@ -5,6 +5,7 @@ import type { BlackjackHand, BlackjackOutcome, Card } from '@shared/types';
 import { useCardFaceUrl } from '../../cosmetics/card-faces/use-card-face';
 import type { TranslationKey } from '../../i18n';
 import { useI18nStore } from '../../stores/i18n-store';
+import { useSortedHand } from '../use-hand-sort';
 import { ChipIcon } from '../ChipIcon';
 import { handNet, signedChips } from './blackjack-view';
 import styles from './BlackjackCards.module.css';
@@ -28,11 +29,13 @@ export function totalLabel(cards: readonly Card[], split: boolean, t: Translate)
  * Overlapping face-up cards; `hole` adds the dealer's face-down card. `freshFrom` marks cards from
  * that index on as newly arrived so the presentation can animate them.
  */
-export function BjCards({ cards, hole = false, size = 'md', freshFrom, peek }: {
+export function BjCards({ cards: incoming, hole = false, size = 'md', freshFrom, peek, sortable = false }: {
   cards: readonly Card[]; hole?: boolean; size?: 'sm' | 'md' | 'lg'; freshFrom?: number;
   /** God view: the face-down hole card, drawn face up but marked as still hidden */
   peek?: Card;
+  sortable?: boolean;
 }): ReactNode {
+  const cards = useSortedHand(incoming, 'blackjack', sortable);
   const cardImageUrl = useCardFaceUrl();
   const { t } = useI18nStore();
   return <span className={`${styles.cards} ${styles[size]}`}>
@@ -56,9 +59,10 @@ export function OutcomeBadge({ hand, outcome }: { hand: BlackjackHand; outcome: 
 }
 
 /** One player hand: cards, total, stake markers, and the outcome once settled. */
-export function BjHand({ hand, outcome, active = false, size = 'md', label, freshFrom }: {
+export function BjHand({ hand, outcome, active = false, size = 'md', label, freshFrom, sortable = false }: {
   hand: BlackjackHand; outcome?: BlackjackOutcome; active?: boolean; size?: 'sm' | 'md' | 'lg';
   label?: string; freshFrom?: number;
+  sortable?: boolean;
 }): ReactNode {
   const { t } = useI18nStore();
   const total = totalLabel(hand.cards, hand.split, t);
@@ -66,7 +70,7 @@ export function BjHand({ hand, outcome, active = false, size = 'md', label, fres
   return <div className={`${styles.hand} ${active ? styles.active : ''} ${hand.done && !active ? styles.done : ''}`}
     aria-current={active || undefined}>
     {label && <span className={styles.handLabel}>{label}</span>}
-    <BjCards cards={hand.cards} size={size} freshFrom={freshFrom} />
+    <BjCards cards={hand.cards} size={size} freshFrom={freshFrom} sortable={sortable} />
     <span className={styles.meta}>
       <span className={`${styles.total} ${bust ? styles.bustTotal : ''}`}>{total}</span>
       <span className={styles.bet} title={t('blackjack.bet', { n: String(hand.bet) })}>

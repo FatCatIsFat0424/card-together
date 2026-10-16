@@ -132,7 +132,7 @@ export function BigTwoTable(): ReactNode {
   const { t } = useI18nStore();
   const [selection, setSelection] = useState<Card[]>([]);
   const [manualOrder, setManualOrder] = useState<readonly Card[]>([]);
-  const [sortBy, setSortBy] = useState<'rank' | 'suit'>('rank');
+  const sortBy = 'rank';
   const [actionError, setActionError] = useState('');
   const [actionPending, setActionPending] = useState(false);
   const actionInFlight = useRef(false);
@@ -189,13 +189,6 @@ export function BigTwoTable(): ReactNode {
       onCardClick={(card) => setSelection(toggleCard(selected, card))}
       onReorder={setManualOrder} />
     {playing && !watching && <div className={styles.controls}>
-      <button type="button" className={`btn btn-outline ${styles.ctrl}`}
-        onClick={() => {
-          setSortBy(sortBy === 'rank' ? 'suit' : 'rank');
-          setManualOrder([]);
-        }}>
-        {t(sortBy === 'rank' ? 'bigtwo.sortSuit' : 'bigtwo.sortRank')}
-      </button>
       <button type="button" className={`btn btn-outline ${styles.ctrl}`} onClick={() => setSelection([])}
         disabled={selected.length === 0}>{t('bigtwo.clear')}</button>
       <button type="button" className={`btn btn-outline ${styles.ctrl}`} onClick={pass}

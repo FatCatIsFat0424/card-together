@@ -373,7 +373,7 @@ export function HoldemTable(): ReactNode {
 
   const handZone = <div className={styles.handArea}>
     {(hole.cards.length > 0 || hole.hidden) && <div className={`${styles.myHand} ${myState === 'folded' ? styles.folded : ''}`}>
-      <HeCards cards={hole.cards} backs={hole.hidden ? 2 : 0} size="lg" label={t('holdem.hole')} />
+      <HeCards cards={hole.cards} backs={hole.hidden ? 2 : 0} size="lg" label={t('holdem.hole')} sortable />
       <div className={styles.myMeta}>
         {category && <span className={styles.bestHand}>{t('holdem.bestHand', { category: t(`holdem.category.${category}`) })}</span>}
         {won > 0 && <strong className={styles.won}><AppIcon name="trophy" /> {t('holdem.wonAmount', { n: String(won) })}</strong>}

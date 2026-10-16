@@ -85,6 +85,9 @@ function autoPassMaxDelay(game: AnyGameState): number {
 
 function timedAction(roomCode: RoomCode, seat: GameSeat, operation: () => Result, automatic: boolean): Result {
   const game = getGameState(roomCode);
+  if (!automatic && game?.autoPlaySeats?.includes(seat)) {
+    return { success: false, reason: 'Turn off auto-play before playing manually.' };
+  }
   const clock = game?.clock;
   const now = Date.now();
   if (!automatic && clock?.turn?.seat === seat && now >= clock.turn.deadline) {
@@ -176,6 +179,17 @@ export function startGame(
   return { success: true };
 }
 
+/** Called inside a runtime mutation; automation belongs to this match and preserves human identity. */
+export function setAutoPlay(roomCode: RoomCode, seat: GameSeat, enabled: boolean): { success: boolean; reason?: string } {
+  const game = getGameState(roomCode);
+  const player = game && gamePlayer(game, seat);
+  if (!game || game.phase === 'scoring' || !player || player.isBot || eliminationIndex(game, seat) >= 0) {
+    return { success: false, reason: 'No active player seat.' };
+  }
+  game.autoPlaySeats = [...(game.autoPlaySeats ?? []).filter((entry) => entry !== seat), ...(enabled ? [seat] : [])];
+  return { success: true };
+}
+
 export function getPlayerVisibleState(roomCode: RoomCode, seat: GameSeat): PlayerVisibleGameState | null {
   if (!isCompassSeat(seat) && !FLEXIBLE_SEAT_GAMES.includes(getGameState(roomCode)?.gameType ?? 'bridge')) return null;
   const compass = isCompassSeat(seat) ? seat : 'N';
@@ -188,6 +202,7 @@ export function getPlayerVisibleState(roomCode: RoomCode, seat: GameSeat): Playe
   const game = getGameState(roomCode);
   const serverNow = Date.now();
   return { ...visible,
+    autoPlay: game?.autoPlaySeats?.includes(seat) ?? false,
     ...(game?.presentation ? { presentation: { ...game.presentation, serverNow } } : {}),
     ...(game?.clock ? { clock: { ...game.clock, serverNow } } : {}),
   };
@@ -425,6 +440,9 @@ export function overdueNapoleonReviewSeats(roomCode: RoomCode, gameId: string, n
  * refills every reserve and starts the first player's turn after the deal presentation.
  */
 export function handleBlackjackBet(roomCode: RoomCode, seat: GameSeat, amount: number, automatic = false): Result {
+  if (!automatic && getGameState(roomCode)?.autoPlaySeats?.includes(seat)) {
+    return { success: false, reason: 'Turn off auto-play before playing manually.' };
+  }
   if (!isGame(roomCode, 'blackjack')) return WRONG_GAME;
   const before = blackjack.getGameState(roomCode)?.hand;
   const result = presentAction(roomCode, () => blackjack.bet(roomCode, seat, amount, automatic));
@@ -447,6 +465,9 @@ export function overdueBlackjackSeats(roomCode: RoomCode, gameId: string, now = 
 export function handleChinesePokerArrange(
   roomCode: RoomCode, seat: Seat, arrangement: ChinesePokerArrangement, automatic = false,
 ): Result {
+  if (!automatic && getGameState(roomCode)?.autoPlaySeats?.includes(seat)) {
+    return { success: false, reason: 'Turn off auto-play before playing manually.' };
+  }
   if (!isGame(roomCode, 'chinesepoker')) return WRONG_GAME;
   return presentAction(roomCode, () => chinesepoker.arrange(roomCode, seat, arrangement, automatic));
 }

@@ -245,7 +245,7 @@ export function ChinesePokerTable(): ReactNode {
   const [local, setLocal] = useState<{ key: string; rows: CpRowCards; selection: readonly Card[] }>(
     { key: '', rows: EMPTY_ROWS, selection: [] });
   const [manualOrder, setManualOrder] = useState<readonly Card[]>([]);
-  const [sortBy, setSortBy] = useState<'rank' | 'suit'>('rank');
+  const sortBy = 'rank';
   const [foulWarnedFor, setFoulWarnedFor] = useState<string | null>(null);
   // The acknowledgement can arrive before the updated state; keep the hand locked in between.
   const [sentFor, setSentFor] = useState<string | null>(null);
@@ -336,13 +336,6 @@ export function ChinesePokerTable(): ReactNode {
         onReorder={setManualOrder} />
       {foulWarned && <p className={styles.foulWarning} role="alert">{t('chinesepoker.foulWarning')}</p>}
       <div className={styles.controls}>
-        <button type="button" className={`btn btn-outline ${styles.ctrl}`} disabled={!editable}
-          onClick={() => {
-            setSortBy(sortBy === 'rank' ? 'suit' : 'rank');
-            setManualOrder([]);
-          }}>
-          {t(sortBy === 'rank' ? 'chinesepoker.sortSuit' : 'chinesepoker.sortRank')}
-        </button>
         <button type="button" className={`btn btn-outline ${styles.ctrl}`} disabled={!editable}
           onClick={() => update({ rows: rowsFromArrangement(cpBestArrangement(myHand)), selection: [] })}>
           {t('chinesepoker.autoArrange')}

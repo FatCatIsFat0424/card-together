@@ -5,7 +5,10 @@ import type { CSSProperties, PointerEvent, ReactNode } from 'react';
 import type { NapoleonCard } from '@shared/types';
 import { SUIT_SYMBOLS, RANK_DISPLAY } from '@shared/constants';
 import { isNapoleonJoker, sameNapoleonCard } from '@shared/rules/napoleon';
-import { moveHandCard } from './card-hand-order';
+import { moveHandCard, reconcileHandOrder } from './card-hand-order';
+import { useGameStore } from '../stores/game-store';
+import { useHandSortStore } from '../stores/hand-sort-store';
+import { sortHand } from '../games/hand-sort';
 import { cardInput, cardTap, validArmedCard } from './card-hand-touch';
 import { useNapoleonCardImageUrl } from '../games/napoleon/napoleon-card-art';
 import { useI18nStore } from '../stores/i18n-store';
@@ -49,9 +52,19 @@ function coarsePointer(): boolean {
 }
 
 export function CardHand<T extends NapoleonCard>({
-  cards, playableCards, onCardClick, disabled, selectedCards, markedCards, markedLabel, highlightedCards,
-  highlightedLabel, onCardPreview, onReorder, confirmTouch,
+  cards: incoming, playableCards, onCardClick, disabled, selectedCards, markedCards, markedLabel, highlightedCards,
+  highlightedLabel, onCardPreview, onReorder: reorder, confirmTouch,
 }: CardHandProps<T>): ReactNode {
+  const gameType = useGameStore((state) => state.gameType);
+  const sorting = useHandSortStore();
+  const [manual, setManual] = useState<{ revision: number; cards: readonly T[] }>({ revision: -1, cards: [] });
+  const sorted = gameType && sorting.gameType === gameType && sorting.order
+    ? sortHand(incoming, sorting.order, gameType) : incoming;
+  const cards = reconcileHandOrder(sorted, manual.revision === sorting.revision ? manual.cards : []);
+  const onReorder = reorder ? (next: readonly T[]): void => {
+    setManual({ revision: sorting.revision, cards: next });
+    reorder(next);
+  } : undefined;
   const napoleonCardImageUrl = useNapoleonCardImageUrl();
   const gesture = useRef<{
     pointerId: number; card: T; startX: number; startY: number;

@@ -1,11 +1,11 @@
-import { gamePlayer } from '@shared/rules/seats';
-import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import { gamePlayer, occupiedSeats } from '@shared/rules/seats';
 import { getPresentationEndsAt } from '@shared/game-presentation';
 import { bjSitsIn } from '@shared/rules/blackjack';
 import type { AnyGameState, RoomCode, GameSeat } from '@shared/types';
 import { getBotAction } from '../bots/bot-decisions';
 import * as gameManager from '../managers/game-manager';
 import * as roomManager from '../managers/room-manager';
+import { getTurnSeat } from '../managers/game-clock';
 import { createFailureTracker, performAutomatedTurn } from './automated-action';
 import type { RuntimeCoordinator } from './coordinator';
 
@@ -21,17 +21,18 @@ function pendingTurn(game: AnyGameState): BotTurn | null {
   // The existing durable forced-pass scheduler owns these turns, including bot seats.
   if (game.gameType === 'bigtwo' && game.pendingAutoPass) return null;
   // Simultaneous arrangements are submitted one bot at a time, each after its own thinking delay.
+  const automated = (seat: GameSeat): boolean => Boolean(gamePlayer(game, seat)?.isBot || game.autoPlaySeats?.includes(seat));
+  const seats = occupiedSeats(game.players);
   const seat = game.gameType === 'chinesepoker'
-    ? SEAT_ORDER_CLOCKWISE.find((pending) => game.arrangements[pending] === null && gamePlayer(game, pending)?.isBot)
+    ? seats.find((pending) => game.arrangements[pending as keyof typeof game.arrangements] === null && automated(pending))
     // Blackjack bets work the same way, while playing turns pass from seat to seat.
     : game.gameType === 'blackjack' && game.phase === 'betting'
-      ? SEAT_ORDER_CLOCKWISE.find((pending) => game.bets[pending] === null && pending !== game.dealerSeat
-        && bjSitsIn(game.chips[pending]) && gamePlayer(game, pending)?.isBot)
-    : game.gameType !== 'bridge' ? game.currentTurnSeat
-    : game.phase === 'redeal_pending' ? game.redealPendingSeat
-    : game.phase === 'bidding' ? game.bidding?.currentBidderSeat
-    : game.phase === 'playing' ? game.playing?.currentTurnSeat : null;
-  if (!seat || !gamePlayer(game, seat)?.isBot) return null;
+      ? seats.find((pending) => game.bets[pending] === null && pending !== game.dealerSeat
+        && bjSitsIn(game.chips[pending]) && automated(pending))
+    : game.gameType === 'napoleon' && game.phase === 'reviewing'
+      ? seats.find((pending) => pending !== game.contract?.napoleon && !game.reviewed.includes(pending) && automated(pending))
+    : getTurnSeat(game);
+  if (!seat || !automated(seat)) return null;
   return { seat, key: `${game.id}:${game.phase}:${game.log.length}:${seat}` };
 }
 

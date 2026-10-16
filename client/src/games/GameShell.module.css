@@ -12,6 +12,8 @@
 
 .gameContainer > * { min-height: 0; min-width: 0; }
 
+.centreColumn.withActions { padding-left: 48px; }
+
 .chatCollapsed { grid-template-columns: minmax(200px, 220px) minmax(0, 1fr) 48px; }
 
 .actionError {
@@ -25,6 +27,7 @@
 
 /* ─── Center: table + hand ─── */
 .centreColumn {
+  position: relative;
   background: var(--table-surface);
   container-type: size;
   overflow: clip;

@@ -365,7 +365,7 @@ export function BlackjackTable(): ReactNode {
       </div>
       : <>
         {myHands.length > 0 ? <div className={styles.myHands} role="group" aria-label={t('blackjack.hand')}>
-          {myHands.map((hand, handIndex) => <BjHand key={handIndex} hand={hand} size="lg"
+          {myHands.map((hand, handIndex) => <BjHand key={handIndex} hand={hand} size="lg" sortable
             outcome={settlement?.outcomes[game.mySeat][handIndex]}
             active={view.turn?.seat === game.mySeat && view.turn.handIndex === handIndex}
             label={myHands.length > 1 ? t('blackjack.handIndex', { n: String(handIndex + 1) }) : undefined} />)}
