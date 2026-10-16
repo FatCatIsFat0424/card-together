@@ -165,6 +165,9 @@ Frontend page behavior and layout. Client architecture and connection handling:
   computer will play the rest of the match. Only a successful persisted auto-play request
   returns the player to the lobby; cancelling leaves play unchanged and errors stay in
   the dialog. Room membership is retained so the player can return and stop auto-play.
+  Every player and spectator sees a persistent **Leave early** tab above that seat,
+  using the same placement as PASS. Other game statuses remain in the seat's details.
+  Stopping auto-play clears the departure marker; enabling auto-play alone does not set it.
 
 - A compact vertical action bar inside the table's lower-left corner offers computer auto-play, sort by suit,
   and sort by rank. Active choices are highlighted and each button has a full accessible

@@ -218,6 +218,9 @@ Contracts: [`Repository`](../server/src/database/repository.ts),
   voluntary computer control without changing human player identities. Missing fields
   in older snapshots mean off. Toggles use the same commit/rollback path as game actions;
   scheduler jobs are rebuilt only from committed state and canceled when control is taken back.
+- Optional `earlyLeaveSeats` records the subset of automated seats that confirmed an early
+  departure. It is public to every match recipient, survives reconnects and restarts, and
+  clears for that seat when auto-play stops. Older snapshots without it have no away markers.
 - Restart keeps private hands, clocks, and deadlines, and gives disconnected players a
   fresh 60-second window ([architecture](architecture.md#state-commits)).
 - Removing an empty room deletes its game and chat, not history. Chat keeps 200 messages

@@ -40,7 +40,7 @@ export function EarlyLeaveButton({ iconOnly = false, className = '', buttonClass
     inFlight.current = true;
     setBusy(true);
     setError('');
-    socket.timeout(10000).emit('game:autoPlay', { enabled: true }, (timeout, result) => {
+    socket.timeout(10000).emit('game:leaveEarly', (timeout, result) => {
       inFlight.current = false;
       setBusy(false);
       if (timeout) setError(t('auth.connectionError'));

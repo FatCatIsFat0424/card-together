@@ -108,6 +108,19 @@ describe('server bot turn scheduling', () => {
     }
   });
 
+  it('restores departure markers and rejects markers without a matching automated seat', async () => {
+    const { code, runtime, repository, saved } = await fixture();
+    await runtime.mutate(() => { expect(games.leaveEarly(code, 'N').success).toBe(true); });
+    expect(isRuntimeSnapshot(saved())).toBe(true);
+    await createRuntimeCoordinator(repository);
+    expect(games.getRecipientVisibleState(code, null)?.earlyLeaveSeats).toEqual(['N']);
+    for (const invalid of [['N', 'N'], ['E'], ['P9'], [null], 'N']) {
+      const snapshot = structuredClone(saved());
+      Object.assign(snapshot.games[0], { earlyLeaveSeats: invalid });
+      expect(isRuntimeSnapshot(snapshot)).toBe(false);
+    }
+  });
+
   it('commits before publishing and waits for presentations before another action', async () => {
     const { code, runtime, repository, saved } = await fixture();
     const publish = vi.fn(() => {

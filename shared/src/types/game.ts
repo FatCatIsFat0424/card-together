@@ -1122,6 +1122,7 @@ export interface NapoleonVisibleState extends ObserverView<NapoleonCard> {
 /** Match-scoped opt-in automation; omitted in older snapshots. */
 export interface GameAutomation {
   autoPlaySeats?: GameSeat[];
+  earlyLeaveSeats?: GameSeat[];
 }
 
 export type AnyGameState = GameAutomation & (
@@ -1136,7 +1137,10 @@ export type AnyGameState = GameAutomation & (
   | HoldemGameState
   | NapoleonGameState);
 
-export type PlayerVisibleGameState = { readonly autoPlay?: boolean } & (
+export type PlayerVisibleGameState = {
+  readonly autoPlay?: boolean;
+  readonly earlyLeaveSeats?: readonly GameSeat[];
+} & (
   | BridgeVisibleState
   | BigTwoVisibleState
   | RedPointsVisibleState

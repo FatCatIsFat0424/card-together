@@ -92,6 +92,22 @@ describe('table seat plate', () => {
     vi.useFakeTimers({ now: 0 });
   });
 
+  it('shows early departure to other players and spectators while retaining PASS', () => {
+    state.game = { ...baseGame(),
+      bigTwo: { phase: 'playing', handCounts: counts(7), lockedSeats: ['E'] },
+      visible: { earlyLeaveSeats: ['E'], log: [] },
+    };
+    for (const mySeat of ['S', null]) {
+      state.mySeat = mySeat;
+      const html = render({ seat: 'E', position: 'right' });
+      expect(html).toContain('Leave early');
+      expect(html).toContain('PASS');
+      expect(render({ seat: 'N', position: 'top' })).not.toContain('Leave early');
+    }
+    state.game.visible = { earlyLeaveSeats: [], log: [] };
+    expect(render({ seat: 'E', position: 'right' })).not.toContain('Leave early');
+  });
+
   afterEach(() => vi.useRealTimers());
 
   it('makes the whole spectator plate selectable without a profile navigation link', () => {

@@ -238,6 +238,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
     && napoleon.reviewed.includes(seat);
   const observedCovered = useGodViewStore((state) => state.role === 'spectator' ? state.covered?.[seat] : undefined);
   const clock = useGameStore((state) => state.visible?.clock);
+  const leftEarly = useGameStore((state) => state.visible?.earlyLeaveSeats?.includes(seat) ?? false);
   const receivedAt = useGameStore((state) => state.presentationReceivedAt);
   const lastActionAt = useGameStore((state) => latestSeatAction(state.visible?.log ?? [], seat));
   // Bridge: each seat's latest call sits beside its name while the auction runs.
@@ -267,6 +268,12 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
     : heLocked && status === 'locked' ? heState === 'folded' ? 'holdem.folded' : 'holdem.allIn' : null;
   const statusIcon = heStatusLabel ? heState === 'folded' && autoPlayed ? STATUS_ICON.autoPlayed : ''
     : dead && status === 'busted' ? '💀' : status ? STATUS_ICON[status] : '';
+  const statusContent = status && <>
+    {statusIcon && <span className={styles.statusIcon} aria-hidden="true">{statusIcon === '💀' ? statusIcon : <AppIcon name={statusIcon} />} </span>}
+    {t(heStatusLabel ?? (dead && status === 'busted' ? 'liarsdeck.dead'
+      : bj && status === 'arranged' ? 'blackjack.betPlaced'
+        : napoleonReviewed && status === 'arranged' ? 'napoleon.reviewed' : STATUS_LABEL[status]))}
+  </>;
   const seatName = seatLabel(t, gameType, seat);
   const name = player?.nickname ?? seatName;
   const bottom = position === 'bottom';
@@ -351,13 +358,13 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
           {declarer && <span className={`${styles.chip} ${styles.declarer}`}>{t('table.declarer')}</span>}
           {dealer && phase === 'bidding' && <span className={styles.chip}>{t('table.dealer')}</span>}
           <TurnClock seat={seat} showBank={isMe} />
+          {leftEarly && status && <span className={`${styles.chip} ${styles[status]}`}>{statusContent}</span>}
         </div>
-        {status && <span className={`${styles.status} ${styles[status]}`}
+        {leftEarly && <span className={`${styles.status} ${styles.earlyLeave}`} title={t('actions.autoPlay')}>
+          {t('earlyLeave.button')}</span>}
+        {!leftEarly && status && <span className={`${styles.status} ${styles[status]}`}
           title={status === 'autoPlayed' || (heState === 'folded' && autoPlayed) ? t('clock.autoPlayed') : undefined}>
-          {statusIcon && <span className={styles.statusIcon} aria-hidden="true">{statusIcon === '💀' ? statusIcon : <AppIcon name={statusIcon} />} </span>}
-          {t(heStatusLabel ?? (dead && status === 'busted' ? 'liarsdeck.dead'
-            : bj && status === 'arranged' ? 'blackjack.betPlaced'
-              : napoleonReviewed && status === 'arranged' ? 'napoleon.reviewed' : STATUS_LABEL[status]))}
+          {statusContent}
         </span>}
         {sittingOut && <span className={styles.srOnly}>{t('blackjack.sittingOut')}</span>}
         {active && <span className={styles.srOnly}>{isMe ? t('table.yourTurn') : t('table.turn')}</span>}

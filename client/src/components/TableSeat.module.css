@@ -260,6 +260,13 @@
 }
 
 .autoPlayed { background: var(--color-warning); color: var(--text-inverse); }
+.earlyLeave {
+  background: var(--color-warning);
+  color: var(--text-inverse);
+  padding-inline: 4px;
+  right: 2px;
+  max-width: calc(100% - 4px);
+}
 .locked { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); }
 .busted { background: var(--color-danger); color: var(--text-on-danger); }
 .arranged { background: var(--color-success); color: var(--text-inverse); }

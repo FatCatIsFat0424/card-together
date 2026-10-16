@@ -1060,11 +1060,18 @@ function autoPlaySeats(value: ObjectValue): boolean {
       && object(players[seat]) && players[seat].isBot !== true);
 }
 
+function earlyLeaveSeats(value: ObjectValue): boolean {
+  if (value.earlyLeaveSeats === undefined) return true;
+  const automatic = value.autoPlaySeats;
+  return Array.isArray(value.earlyLeaveSeats) && new Set(value.earlyLeaveSeats).size === value.earlyLeaveSeats.length
+    && value.earlyLeaveSeats.every((seat: unknown) => Array.isArray(automatic) && automatic.includes(seat));
+}
+
 function game(value: unknown): boolean {
   if (object(value) && typeof value.gameType === 'string') value = normalizeFlexibleGame({ ...value, gameType: value.gameType });
   return object(value) && oneOf(value.gameType, [...GAME_TYPES]) &&
     gameValidators[value.gameType as GameType](value) && presentation(value) && gameClock(value)
-    && returnedSeats(value) && returnedViewers(value) && autoPlaySeats(value);
+    && returnedSeats(value) && returnedViewers(value) && autoPlaySeats(value) && earlyLeaveSeats(value);
 }
 
 function bridgeGame(value: ObjectValue): boolean {

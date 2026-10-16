@@ -108,6 +108,13 @@ export function systemLine(code: string, accountId: string, key: string): void {
 }
 
 export function registerGameHandlers(context: SocketContext, socket: TypedSocket): void {
+  socket.on('game:leaveEarly', (callback) => runAction(context, socket, callback, () => {
+    const code = requireRoom(socket);
+    if (roomManager.getRoomInfo(code)?.status !== 'playing') throw actionError('No active game.');
+    requireSuccess(gameManager.leaveEarly(code, playerGameSeat(socket, code)));
+    return { success: true };
+  }));
+
   socket.on('game:autoPlay', (payload, callback) => runAction(context, socket, callback, () => {
     if (!payload || typeof payload.enabled !== 'boolean') throw actionError('Invalid auto-play setting.');
     const code = requireRoom(socket);

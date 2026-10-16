@@ -187,7 +187,16 @@ export function setAutoPlay(roomCode: RoomCode, seat: GameSeat, enabled: boolean
     return { success: false, reason: 'No active player seat.' };
   }
   game.autoPlaySeats = [...(game.autoPlaySeats ?? []).filter((entry) => entry !== seat), ...(enabled ? [seat] : [])];
+  if (!enabled && game.earlyLeaveSeats) game.earlyLeaveSeats = game.earlyLeaveSeats.filter((entry) => entry !== seat);
   return { success: true };
+}
+
+/** Enable automation and publish the caller's early departure in the same runtime commit. */
+export function leaveEarly(roomCode: RoomCode, seat: GameSeat): { success: boolean; reason?: string } {
+  const result = setAutoPlay(roomCode, seat, true);
+  const game = getGameState(roomCode);
+  if (result.success && game) game.earlyLeaveSeats = [...new Set([...(game.earlyLeaveSeats ?? []), seat])];
+  return result;
 }
 
 export function getPlayerVisibleState(roomCode: RoomCode, seat: GameSeat): PlayerVisibleGameState | null {
@@ -203,6 +212,7 @@ export function getPlayerVisibleState(roomCode: RoomCode, seat: GameSeat): Playe
   const serverNow = Date.now();
   return { ...visible,
     autoPlay: game?.autoPlaySeats?.includes(seat) ?? false,
+    earlyLeaveSeats: [...game?.earlyLeaveSeats ?? []],
     ...(game?.presentation ? { presentation: { ...game.presentation, serverNow } } : {}),
     ...(game?.clock ? { clock: { ...game.clock, serverNow } } : {}),
   };
