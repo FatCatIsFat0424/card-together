@@ -37,7 +37,7 @@ export function useMessageFriends(accountId: string | undefined): MessageFriends
     socket.on('connect', load);
     socket.on('social:changed', load);
     window.addEventListener('focus', loadVisible);
-    const interval = window.setInterval(loadVisible, 60_000);
+    const interval = window.setInterval(loadVisible, 30_000);
     return () => {
       active = false;
       socket.off('connect', load);

@@ -20,7 +20,10 @@ export function MessagesPage(): ReactNode {
   const inGame = useRoomStore((state) => state.roomInfo?.status === 'playing');
   const status = useSocialStore((state) => state.status);
   const error = useSocialStore((state) => state.error);
+  const conversations = useSocialStore((state) => state.conversations);
   const { friends, error: friendsError } = useMessageFriends(accountId);
+  const selectedAccount = friends?.find((friend) => friend.id === otherId)
+    ?? conversations.find((conversation) => conversation.account.id === otherId)?.account;
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [conversationError, setConversationError] = useState<{ otherId: string; message: string } | null>(null);
@@ -78,6 +81,7 @@ export function MessagesPage(): ReactNode {
         <div className={`${styles.detail} ${!otherId ? styles.hideOnMobile : ''}`}>
           {otherId
             ? <DirectConversation key={`${accountId}:${otherId}`} ownId={accountId} otherId={otherId}
+              initialAccount={selectedAccount}
               embedded={!mobile} onLoadError={handleLoadError} refreshVersion={refreshVersion} />
             : <div className={styles.empty}><AppIcon name="chat" /><p>{t('messages.selectConversation')}</p></div>}
         </div>

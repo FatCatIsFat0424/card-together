@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { DirectMessage, MessageHistory, MessageInput } from '@shared/types/direct-message';
+import type { PublicAccount } from '@shared/types/social';
 import { apiRequest } from '../api';
 import { createMessageClientId } from '../messages/message-client-id';
 import { latestIncomingMessageId, mergeDirectMessages } from '../messages/message-history';
@@ -15,17 +16,20 @@ import { useAccountStore } from '../stores/account-store';
 import { useEmojiStore } from '../stores/emoji-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useSocialStore } from '../stores/social-store';
+import { useMotionStore } from '../stores/motion-store';
 import chatStyles from './ChatPanel.module.css';
 import styles from './DirectMessages.module.css';
 
-export function DirectConversation({ ownId, otherId, embedded = false, onLoadError, refreshVersion = 0 }: {
+export function DirectConversation({ ownId, otherId, initialAccount, embedded = false, onLoadError, refreshVersion = 0 }: {
   readonly ownId: string; readonly otherId: string;
+  readonly initialAccount?: PublicAccount;
   readonly embedded?: boolean;
   readonly onLoadError: (otherId: string, error: string) => void;
   readonly refreshVersion?: number;
 }): ReactNode {
   const { locale, t } = useI18nStore();
   const revision = useSocialStore((state) => state.revision);
+  const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const emojis = useEmojiStore((state) => state.emojis);
   const [history, setHistory] = useState<MessageHistory | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,6 +54,7 @@ export function DirectConversation({ ownId, otherId, embedded = false, onLoadErr
   const scrollBefore = useRef<{ height: number; top: number } | null>(null);
   const latestMessage = history?.messages.at(-1)?.id;
   const latestIncoming = latestIncomingMessageId(history?.messages ?? [], ownId, otherId);
+  const displayedAccount = history?.account ?? (initialAccount?.id === otherId ? initialAccount : undefined);
   const current = (): boolean => mounted.current && useAccountStore.getState().account?.id === ownId;
 
   useEffect(() => { onLoadError(otherId, error); }, [error, onLoadError, otherId]);
@@ -192,13 +197,14 @@ export function DirectConversation({ ownId, otherId, embedded = false, onLoadErr
   };
 
   return <>
-    <section className={`${styles.conversation} ${embedded ? styles.embedded : ''}`} aria-label={t('messages.title')}>
+    <section className={`${styles.conversation} ${embedded ? styles.embedded : ''}`} aria-label={t('messages.title')}
+      data-reduced-motion={reducedMotion || undefined}>
     <header className={styles.header}>
       {!embedded && <Link to="/messages"><AppIcon name="previousPage" /> {t('messages.back')}</Link>}
-      {history && <PlayerLink player={history.account} showUsername size="medium" />}
+      {displayedAccount && <PlayerLink player={displayedAccount} showUsername size="medium" />}
     </header>
-    {loading && <p className={styles.notice} role="status">{t('common.loading')}</p>}
-    <div ref={messagesRef} className={styles.messages} role="log" aria-live="polite" aria-relevant="additions" aria-busy={loading || paging}>
+    <div ref={messagesRef} className={`${styles.messages} ${history ? styles.messagesReady : ''}`} role="log" aria-live="polite" aria-relevant="additions" aria-busy={loading || paging}>
+      {loading && <p className={styles.loadingNotice} role="status">{t('common.loading')}</p>}
       {history?.hasMore && <button type="button" className="btn btn-outline" disabled={paging}
         onClick={() => void load(history.messages[0]?.id)}>
         {paging ? t('common.loading') : t('messages.older')}</button>}
@@ -218,7 +224,7 @@ export function DirectConversation({ ownId, otherId, embedded = false, onLoadErr
       <button type="button" className="btn btn-outline" disabled={busy || !history?.canSend}
         onClick={() => { if (pending.current) void send(pending.current.payload, true); }}>{t('messages.retrySend')}</button></p>}
     {history && !history.canSend && <p className={styles.notice}>{t('messages.formerFriend')}</p>}
-    {history?.canSend && <div className={styles.composer}>
+    {(loading || history?.canSend) && <div className={styles.composer}>
       {pickerOpen && <div className={`${chatStyles.picker} ${mode === 'sticker' ? chatStyles.stickerPicker : ''}`}
         data-direct-picker>
         <div className={chatStyles.pickerTabs}>
@@ -232,12 +238,12 @@ export function DirectConversation({ ownId, otherId, embedded = false, onLoadErr
           onSendSticker={(payload: StickerPayload) => void send(payload)} />
       </div>}
       <form className={chatStyles.chatInputRow} onSubmit={submit}>
-        <button type="button" className={chatStyles.pickerBtn} data-direct-picker disabled={busy}
+        <button type="button" className={chatStyles.pickerBtn} data-direct-picker disabled={busy || loading}
           aria-label={t('emoji.picker')} aria-expanded={pickerOpen} onClick={() => setPickerOpen((open) => !open)}>
           <AppIcon name="emoji" /></button>
-        <input ref={inputRef} type="text" className={chatStyles.chatInput} maxLength={500} value={input} disabled={busy}
+        <input ref={inputRef} type="text" className={chatStyles.chatInput} maxLength={500} value={input} disabled={busy || loading}
           aria-label={t('chat.placeholder')} placeholder={t('chat.placeholder')} onChange={(event) => setInput(event.target.value)} />
-        <button type="submit" className={chatStyles.chatSendBtn} disabled={busy || !input.trim()}>{t('chat.send')}</button>
+        <button type="submit" className={chatStyles.chatSendBtn} disabled={busy || loading || !input.trim()}>{t('chat.send')}</button>
       </form>
     </div>}
     </section>

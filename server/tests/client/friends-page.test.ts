@@ -81,6 +81,20 @@ describe('independent private messages', () => {
     }
   });
 
+  it('keeps the known recipient and a disabled composer visible while history loads', () => {
+    const section = render('/messages/bob').match(/<section[^>]*aria-label="私人訊息"[\s\S]*?<\/section>/)?.[0];
+    expect(section).toContain('href="/players/bob"');
+    expect(section).toContain('<form');
+    expect(section).toMatch(/<input[^>]*type="text"[^>]*disabled=""/);
+    expect(section).toMatch(/<button[^>]*type="submit"[^>]*disabled=""/);
+  });
+
+  it('does not show a different conversation recipient while an unknown profile loads', () => {
+    const section = render('/messages/carol').match(/<section[^>]*aria-label="私人訊息"[\s\S]*?<\/section>/)?.[0];
+    expect(section).toBeDefined();
+    expect(section).not.toContain('href="/players/bob"');
+  });
+
   it.each(['waiting', 'playing'] as const)('closes messages back to the %s room', (status) => {
     state.roomCode = 'ABC123';
     state.roomStatus = status;
@@ -136,6 +150,21 @@ describe('independent private messages', () => {
     expect(html).not.toContain('friends-tab-messages');
     expect(html).not.toContain('friends-panel-messages');
     expect(html).not.toContain('Hello Alice');
+  });
+
+  it.each([false, true])('shows current friend presence without guessing former-friend status (mobile: %s)', (mobile) => {
+    state.mobile = mobile;
+    state.friends = [{ ...friend('bob', 'Bob'), online: true }, friend('carol', 'Carol')];
+    state.conversations.push(conversation(account('erin', 'Erin'), 1_000, false));
+    const html = render('/messages');
+    const row = (id: string): string | undefined => html.match(new RegExp(`<a[^>]*href="/messages/${id}"[\\s\\S]*?</a>`))?.[0];
+    expect(row('bob')).toContain('data-online="true"');
+    expect(row('bob')).toContain('aria-label="在線上"');
+    expect(row('carol')).toContain('data-online="false"');
+    expect(row('carol')).toContain('aria-label="離線"');
+    expect(row('erin')).not.toContain('data-online');
+    state.friends = null;
+    expect(render('/messages')).not.toContain('data-online');
   });
 
   it('removes the message section from the stacked mobile friends page', () => {

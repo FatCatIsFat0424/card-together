@@ -57,16 +57,24 @@ Frontend page behavior and layout. Client architecture and connection handling:
   list with avatars, names, last messages, and timestamps on the left, and the selected
   chat on the right. The desktop panel fills the available viewport with 32px outer
   padding; the conversation list uses 28% of the width, bounded to 15–20rem. Each row
+  acts as a borderless vertical navigation tab, with a tinted background for the selected friend, and
   shows the avatar, the name with the time on the right (today: time only; earlier:
   month/day; full timestamp on hover), and the last message below. Sticker bubbles
   shrink to the displayed sticker size regardless of the image's pixel size. Mobile keeps separate list
   and conversation views. Both layouts keep the header and composer visible within
   the available viewport; conversation lists and message history scroll independently.
+  Opening the desktop list reveals its rows from top to bottom with a short stagger;
+  selecting another conversation keeps the existing list mounted without replaying it.
+  Switching conversations keeps the known recipient header and a disabled composer
+  visible while loading. Loading text waits 180ms to avoid flashing on fast requests;
+  the loaded content enters over 160ms, respecting reduced-motion preferences.
 - The conversation list includes every current friend: conversations (including
   read-only former friends) newest first, then friends without retained history by
   nickname in the current locale. Selecting one of those opens an empty conversation.
+  Current friends show a green online or gray offline dot beside their names, with a
+  translated status tooltip; former friends and unloaded presence show no status.
   New messages reorder it live; the friend list reloads on friendship changes,
-  reconnects, and refocus, but not when a conversation is marked read. With no friends or conversations, the list
+  reconnects, refocus, and every 30 seconds while visible, but not when a conversation is marked read. With no friends or conversations, the list
   shows "No friends yet".
 - Private chat supports the existing emoji/sticker libraries, older-history pagination,
   and retry after a failed send. Only a visible conversation marks incoming messages read.
@@ -333,6 +341,8 @@ Saved and system reduced-motion preferences disable this animation.
   information rail, or compact table tools; available to players and spectators.
 - Waiting rooms open a game rules library with vertical game tabs on the left and
   independently scrolling rules on the right, initially selecting the room's game.
+  On wide screens the library allows 1044px total width, preserving the original
+  900px rules pane alongside the 144px game tabs; smaller screens fit the viewport.
   Browsing does not change the room's game; only its current game shows room options.
   Lobby and in-game dialogs continue to show only the game they were opened for.
 - Opens with a short summary (every game except Bridge), then active options, then the

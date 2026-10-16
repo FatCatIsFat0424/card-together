@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { Conversation } from '@shared/types/direct-message';
-import type { PublicAccount } from '@shared/types/social';
+import type { FriendEntry, PublicAccount } from '@shared/types/social';
 import { useI18nStore } from '../stores/i18n-store';
 import { useSocialStore } from '../stores/social-store';
+import { useMotionStore } from '../stores/motion-store';
 import { Avatar } from './Avatar';
 import styles from './DirectMessages.module.css';
 
@@ -42,23 +43,32 @@ export function MessageConversations({ selectedId, split = false, friends }: {
   readonly selectedId?: string;
   readonly split?: boolean;
   /** Null until friends load; conversations still show meanwhile. */
-  readonly friends: readonly PublicAccount[] | null;
+  readonly friends: readonly FriendEntry[] | null;
 }): ReactNode {
   const conversations = useSocialStore((state) => state.conversations);
   const status = useSocialStore((state) => state.status);
+  const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const { locale, t } = useI18nStore();
   const entries = messageListEntries(conversations, friends ?? [], locale);
+  const presence = new Map(friends?.map((friend) => [friend.id, friend.online]));
   const fullTime = (timestamp: number): string =>
     new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(timestamp);
   return <>
     {status === 'ready' && friends && entries.length === 0 && <p className={styles.empty}>{t('messages.empty')}</p>}
-    <ul className={`${styles.conversations} ${split ? styles.splitList : ''}`}>{entries.map(({ account, conversation }) => <li key={account.id}>
+    <ul className={`${styles.conversations} ${split ? styles.splitList : ''}`} data-reduced-motion={reducedMotion || undefined}>
+      {entries.map(({ account, conversation }, index) => <li key={account.id}
+        style={split ? { '--entry-index': Math.min(index, 12) } as CSSProperties : undefined}>
       <Link to={`/messages/${encodeURIComponent(account.id)}`}
         aria-current={selectedId === account.id ? 'page' : undefined}>
         {split && <span className={styles.conversationAvatar}><Avatar avatar={account.avatar}
           image={account.avatarImage} border={account.avatarBorder}
           color={account.color} size="medium" /></span>}
-        <strong>{account.nickname}</strong><span className={styles.username}>@{account.username}</span>
+        <strong className={styles.conversationName}><span>{account.nickname}</span>
+          {presence.has(account.id) && <span className={styles.presenceDot} role="img"
+            data-online={presence.get(account.id)}
+            aria-label={t(presence.get(account.id) ? 'friends.online' : 'friends.offline')}
+            title={t(presence.get(account.id) ? 'friends.online' : 'friends.offline')} />}
+        </strong><span className={styles.username}>@{account.username}</span>
         {!conversation && (
           // Keeps the row as tall as rows with a preview line.
           <span className={styles.preview} aria-hidden="true">{'\u00a0'}</span>
