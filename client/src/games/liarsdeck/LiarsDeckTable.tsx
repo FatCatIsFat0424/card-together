@@ -1,12 +1,13 @@
 // ─── LiarsDeckTable: Liar's Deck table (table card, face-down pile, hand, calls, info rail, settlement) ───
 
 import { useState } from 'react';
-import type { ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import { ldIsTruth } from '@shared/rules/liarsdeck';
 import type { LiarCard, LiarsDeckLogEntry, LiarsDeckMatchResult, LiarsDeckVisibleState } from '@shared/types';
 import { socket } from '../../socket';
 import { useGameStore } from '../../stores/game-store';
-import { useHandSortStore } from '../../stores/hand-sort-store';
+import { useSortedHand } from '../use-hand-sort';
+import { useHandReorder } from '../use-hand-reorder';
 import { useI18nStore } from '../../stores/i18n-store';
 import { GameShell } from '../GameShell';
 import { useViewedGame } from '../use-table-perspective';
@@ -134,12 +135,13 @@ function ResultOverlay({ result, pending, error, disabled, onBack }: {
   </ResultDialog>;
 }
 
-function HandCard({ card, variant, selected, truth, disabled, onToggle }: {
+function HandCard({ card, variant, selected, truth, disabled, onToggle, dragProps }: {
   card: LiarCard; variant: number; selected: boolean; truth: boolean; disabled: boolean; onToggle: () => void;
+  dragProps: HTMLAttributes<HTMLElement>;
 }): ReactNode {
   const { t } = useI18nStore();
   const label = `${t(`liarsdeck.face.${card.face}`)}${truth ? ` · ${t('liarsdeck.matches')}` : ''}`;
-  return <button type="button" className={`${styles.handCard} ${selected ? styles.selected : ''} ${truth ? styles.truth : ''}`}
+  return <button type="button" {...dragProps} className={`${styles.handCard} ${selected ? styles.selected : ''} ${truth ? styles.truth : ''}`}
     aria-pressed={selected} aria-label={label} aria-disabled={disabled} title={label}
     onClick={() => { if (!disabled) onToggle(); }}>
     <LiarCardFace face={card.face} variant={variant} className={styles.handFace} label="" />
@@ -150,7 +152,8 @@ export function LiarsDeckTable(): ReactNode {
   const { locked, frame } = useGamePresentation();
   const connectionReady = useConnectionReady();
   const game = useViewedGame(useGameStore((state) => state.liarsDeck));
-  const sorting = useHandSortStore();
+  const { cards: sortedHand, canReorder, reorder } = useSortedHand(game?.myHand ?? [], 'liarsdeck', !game?.observer);
+  const dragProps = useHandReorder(sortedHand, canReorder, reorder);
   const { t } = useI18nStore();
   const seatName = useSeatName();
   const [selected, setSelected] = useState<number[]>([]);
@@ -211,9 +214,7 @@ export function LiarsDeckTable(): ReactNode {
 
   const handZone = <div className={styles.handArea}>
     {showHand && game.myHand.length > 0 && <div className={styles.hand} role="group" aria-label={t('liarsdeck.hand')}>
-      {(sorting.gameType === 'liarsdeck' && sorting.order === 'rank'
-        ? [...game.myHand].sort((a, b) => ['joker', 'A', 'K', 'Q'].indexOf(a.face) - ['joker', 'A', 'K', 'Q'].indexOf(b.face))
-        : game.myHand).map((card) => <HandCard key={card.id} card={card} variant={card.id}
+      {sortedHand.map((card, index) => <HandCard key={card.id} card={card} variant={card.id} dragProps={dragProps(index)}
         selected={chosen.includes(card.id)} truth={ldIsTruth(card.face, game.tableFace)} disabled={!selectable}
         onToggle={() => setSelected(toggleSelection(chosen, card.id, game.myHand))} />)}
     </div>}

@@ -4,6 +4,7 @@ import type { Card, GameSeat } from '@shared/types';
 import { useCardFaceUrl } from '../../cosmetics/card-faces/use-card-face';
 import { useI18nStore } from '../../stores/i18n-store';
 import { useSortedHand } from '../use-hand-sort';
+import { useHandReorder } from '../use-hand-reorder';
 import { ChipIcon } from '../ChipIcon';
 import { HE_BOARD_SLOTS } from './holdem-view';
 import type { HoldemBlindSeats } from './holdem-view';
@@ -25,14 +26,15 @@ export function HeCards({ cards: incoming, backs = 0, size = 'md', freshFrom, ov
   peek?: boolean;
   sortable?: boolean;
 }): ReactNode {
-  const cards = useSortedHand(incoming, 'holdem', sortable);
+  const { cards, canReorder, reorder } = useSortedHand(incoming, 'holdem', sortable);
+  const dragProps = useHandReorder(cards, canReorder, reorder);
   const cardImageUrl = useCardFaceUrl();
   const { t } = useI18nStore();
   return <span className={`${styles.cards} ${styles[size]} ${overlap ? styles.overlap : ''}`}
     role={label ? 'group' : undefined} aria-label={label}>
-    {cards.map((card, index) => <img key={`${card.suit}-${card.rank}`}
+    {cards.map((card, index) => <img key={`${card.suit}-${card.rank}`} {...dragProps(index)}
       className={`${styles.card} ${peek ? styles.peek : ''} ${freshFrom !== undefined && index >= freshFrom ? styles.fresh : ''}`}
-      style={{ '--card-index': index - (freshFrom ?? 0) } as CSSProperties}
+      style={{ ...dragProps(index).style, '--card-index': index - (freshFrom ?? 0) } as CSSProperties}
       src={cardImageUrl(card)} alt={cardName(card)} draggable={false} />)}
     {Array.from({ length: backs }, (_, index) => <span key={`back-${index}`} className={`${styles.card} ${styles.back}`}
       role="img" aria-label={t('holdem.hiddenCard')} />)}

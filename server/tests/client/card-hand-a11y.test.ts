@@ -9,12 +9,16 @@ vi.mock('../../../client/src/cosmetics/card-faces/use-card-face', () => ({
 
 import { CardHand } from '../../../client/src/components/CardHand';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
+import { useHandSortStore } from '../../../client/src/stores/hand-sort-store';
 
 const ace: Card = { suit: 'spades', rank: 14 };
 const two: Card = { suit: 'hearts', rank: 2 };
 
 describe('card hand accessibility', () => {
-  beforeEach(() => useI18nStore.setState({ locale: 'en' }));
+  beforeEach(() => {
+    useI18nStore.setState({ locale: 'en' });
+    useHandSortStore.setState({ gameType: null, order: null, revision: 0 });
+  });
 
   it('should label the hand and keep unplayable cards focusable', () => {
     const html = renderToStaticMarkup(createElement(CardHand, {
@@ -32,6 +36,7 @@ describe('card hand accessibility', () => {
       cards: [ace, two], playableCards: [ace], disabled: true,
     }));
     expect(html.match(/aria-disabled="true"/g)).toHaveLength(2);
+    expect(html.match(/cardReorderable/g)).toHaveLength(2);
   });
 
   it('should glow playable cards in selection mode except the selected one', () => {

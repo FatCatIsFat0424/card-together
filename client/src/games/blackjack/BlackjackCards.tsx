@@ -6,6 +6,7 @@ import { useCardFaceUrl } from '../../cosmetics/card-faces/use-card-face';
 import type { TranslationKey } from '../../i18n';
 import { useI18nStore } from '../../stores/i18n-store';
 import { useSortedHand } from '../use-hand-sort';
+import { useHandReorder } from '../use-hand-reorder';
 import { ChipIcon } from '../ChipIcon';
 import { handNet, signedChips } from './blackjack-view';
 import styles from './BlackjackCards.module.css';
@@ -35,13 +36,14 @@ export function BjCards({ cards: incoming, hole = false, size = 'md', freshFrom,
   peek?: Card;
   sortable?: boolean;
 }): ReactNode {
-  const cards = useSortedHand(incoming, 'blackjack', sortable);
+  const { cards, canReorder, reorder } = useSortedHand(incoming, 'blackjack', sortable);
+  const dragProps = useHandReorder(cards, canReorder, reorder);
   const cardImageUrl = useCardFaceUrl();
   const { t } = useI18nStore();
   return <span className={`${styles.cards} ${styles[size]}`}>
-    {cards.map((card, index) => <img key={`${card.suit}-${card.rank}-${index}`}
+    {cards.map((card, index) => <img key={`${card.suit}-${card.rank}-${index}`} {...dragProps(index)}
       className={`${styles.card} ${freshFrom !== undefined && index >= freshFrom ? styles.fresh : ''}`}
-      style={{ '--card-index': index - (freshFrom ?? 0) } as CSSProperties}
+      style={{ ...dragProps(index).style, '--card-index': index - (freshFrom ?? 0) } as CSSProperties}
       src={cardImageUrl(card)} alt={cardName(card)} draggable={false} />)}
     {hole && (peek ? <img className={`${styles.card} ${styles.peek}`} src={cardImageUrl(peek)} draggable={false}
       alt={`${t('blackjack.holeCard')} ${cardName(peek)}`} />

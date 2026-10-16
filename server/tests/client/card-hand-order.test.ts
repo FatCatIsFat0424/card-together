@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Card } from '@shared/types';
-import { moveHandCard, reconcileHandOrder } from '../../../client/src/components/card-hand-order';
+import { moveHandCard, moveHandCardAt, reconcileHandOrder } from '../../../client/src/components/card-hand-order';
 
 const cards: readonly Card[] = Object.freeze([
   { rank: 3, suit: 'clubs' },
@@ -10,6 +10,12 @@ const cards: readonly Card[] = Object.freeze([
 ]);
 
 describe('moveHandCard', () => {
+  it('moves the chosen copy of a repeated card by its displayed index', () => {
+    const duplicate = { ...cards[0] };
+    const hand = [cards[0], cards[1], duplicate, cards[2]];
+    expect(moveHandCardAt(hand, 2, 3)).toEqual([cards[0], cards[1], cards[2], duplicate]);
+    expect(moveHandCardAt(hand, 2, 3)[3]).toBe(duplicate);
+  });
   it('moves cards in either direction, including both ends of the hand', () => {
     expect(moveHandCard(cards, cards[0], 3)).toEqual([cards[1], cards[2], cards[3], cards[0]]);
     expect(moveHandCard(cards, cards[3], 0)).toEqual([cards[3], cards[0], cards[1], cards[2]]);

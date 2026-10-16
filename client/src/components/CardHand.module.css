@@ -131,7 +131,7 @@
   .card.cardArmed { --lift: -18px; }
 }
 
-.cardReorderable {
+.card.cardReorderable {
   touch-action: none;
   cursor: grab;
 }

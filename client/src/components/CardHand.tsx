@@ -5,10 +5,9 @@ import type { CSSProperties, PointerEvent, ReactNode } from 'react';
 import type { NapoleonCard } from '@shared/types';
 import { SUIT_SYMBOLS, RANK_DISPLAY } from '@shared/constants';
 import { isNapoleonJoker, sameNapoleonCard } from '@shared/rules/napoleon';
-import { moveHandCard, reconcileHandOrder } from './card-hand-order';
+import { moveHandCardAt } from './card-hand-order';
 import { useGameStore } from '../stores/game-store';
-import { useHandSortStore } from '../stores/hand-sort-store';
-import { sortHand } from '../games/hand-sort';
+import { useSortedHand } from '../games/use-hand-sort';
 import { cardInput, cardTap, validArmedCard } from './card-hand-touch';
 import { useNapoleonCardImageUrl } from '../games/napoleon/napoleon-card-art';
 import { useI18nStore } from '../stores/i18n-store';
@@ -56,14 +55,12 @@ export function CardHand<T extends NapoleonCard>({
   highlightedLabel, onCardPreview, onReorder: reorder, confirmTouch,
 }: CardHandProps<T>): ReactNode {
   const gameType = useGameStore((state) => state.gameType);
-  const sorting = useHandSortStore();
-  const [manual, setManual] = useState<{ revision: number; cards: readonly T[] }>({ revision: -1, cards: [] });
-  const sorted = gameType && sorting.gameType === gameType && sorting.order
-    ? sortHand(incoming, sorting.order, gameType) : incoming;
-  const cards = reconcileHandOrder(sorted, manual.revision === sorting.revision ? manual.cards : []);
-  const onReorder = reorder ? (next: readonly T[]): void => {
-    setManual({ revision: sorting.revision, cards: next });
-    reorder(next);
+  const observer = useGameStore((state) => state.visible?.observer);
+  const sorting = useSortedHand(incoming, gameType, !observer);
+  const { cards } = sorting;
+  const onReorder = sorting.canReorder ? (next: readonly T[]): void => {
+    sorting.reorder(next);
+    reorder?.(next);
   } : undefined;
   const napoleonCardImageUrl = useNapoleonCardImageUrl();
   const gesture = useRef<{
@@ -100,8 +97,8 @@ export function CardHand<T extends NapoleonCard>({
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
-    if (!cancelled && current.moved && !disabled) {
-      onReorder?.(moveHandCard(cards, current.card, current.target));
+    if (!cancelled && current.moved) {
+      onReorder?.(moveHandCardAt(cards, current.source, current.target));
     }
   };
 
@@ -123,7 +120,7 @@ export function CardHand<T extends NapoleonCard>({
           marked ? styles.cardMarked : '',
           highlighted ? styles.cardHighlighted : '',
           armed && containsCard(card, [armed]) ? styles.cardArmed : '',
-          onReorder && !disabled ? styles.cardReorderable : '',
+          onReorder ? styles.cardReorderable : '',
           drag && containsCard(card, [drag.card]) ? styles.cardDragging : '',
           drag?.target === index ? styles.cardDropTarget : '',
         ].filter(Boolean).join(' ');
@@ -140,7 +137,7 @@ export function CardHand<T extends NapoleonCard>({
             } as CSSProperties}
             onPointerDown={(event) => {
               lastPointer.current = event.pointerType;
-              if (!onReorder || disabled || !event.isPrimary || event.button !== 0) return;
+              if (!onReorder || !event.isPrimary || event.button !== 0) return;
               suppressClick.current = false;
               const buttons = event.currentTarget.parentElement?.querySelectorAll('button');
               if (!buttons) return;
@@ -156,7 +153,7 @@ export function CardHand<T extends NapoleonCard>({
             }}
             onPointerMove={(event) => {
               const current = gesture.current;
-              if (!current || current.pointerId !== event.pointerId || disabled) return;
+              if (!current || current.pointerId !== event.pointerId || !onReorder) return;
               const offset = event.clientX - current.startX;
               if (!current.moved && Math.hypot(offset, event.clientY - current.startY) < 8) return;
               current.moved = true;
@@ -170,9 +167,9 @@ export function CardHand<T extends NapoleonCard>({
             onPointerCancel={(event) => finishDrag(event, true)}
             onLostPointerCapture={(event) => finishDrag(event, true)}
             onKeyDown={(event) => {
-              if (!onReorder || disabled || !event.altKey || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+              if (!onReorder || !event.altKey || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
               event.preventDefault();
-              onReorder(moveHandCard(cards, card, index + (event.key === 'ArrowLeft' ? -1 : 1)));
+              onReorder(moveHandCardAt(cards, index, index + (event.key === 'ArrowLeft' ? -1 : 1)));
             }}
             onClick={(event) => {
               if (suppressClick.current && event.detail !== 0) {

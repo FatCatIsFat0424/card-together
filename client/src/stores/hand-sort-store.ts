@@ -12,5 +12,8 @@ interface HandSortState {
 
 export const useHandSortStore = create<HandSortState>((set) => ({
   gameType: null, order: null, revision: 0,
-  sort: (gameType, order) => set((state) => ({ gameType, order, revision: state.revision + 1 })),
+  sort: (gameType, order) => set((state) => ({
+    gameType, order: state.gameType === gameType && state.order === order ? null : order,
+    revision: state.revision + 1,
+  })),
 }));
