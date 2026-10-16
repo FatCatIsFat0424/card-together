@@ -161,6 +161,11 @@ Frontend page behavior and layout. Client architecture and connection handling:
 
 ## Game table
 
+- **Leave early** sits below the abort-vote control. Its confirmation explains that the
+  computer will play the rest of the match. Only a successful persisted auto-play request
+  returns the player to the lobby; cancelling leaves play unchanged and errors stay in
+  the dialog. Room membership is retained so the player can return and stop auto-play.
+
 - A compact vertical action bar inside the table's lower-left corner offers computer auto-play, sort by suit,
   and sort by rank. Active choices are highlighted and each button has a full accessible
   label and tooltip. Spectators, eliminated players, and settlement screens hide the bar.

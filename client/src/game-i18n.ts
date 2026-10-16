@@ -1,4 +1,8 @@
 const english = {
+  'earlyLeave.button': 'Leave early',
+  'earlyLeave.confirmTitle': 'Let the computer take over?',
+  'earlyLeave.confirmDescription': 'You will return to the lobby while the computer continues playing for you. Your seat stays reserved until this match ends. You can return to the table and turn off auto-play at any time.',
+  'earlyLeave.confirm': 'Enable auto-play and leave',
   'actions.label': 'Game actions',
   'actions.autoPlay': 'Computer auto-play',
   'actions.stopAutoPlay': 'Stop auto-play',
@@ -247,6 +251,10 @@ export type GameTranslationKey = keyof typeof english;
 export const gameTranslations: Record<'en' | 'zh-TW', Record<GameTranslationKey, string>> = {
   en: english,
   'zh-TW': {
+    'earlyLeave.button': '先行離席',
+    'earlyLeave.confirmTitle': '要交給電腦自動代打嗎？',
+    'earlyLeave.confirmDescription': '離席後會返回大廳，電腦將持續幫你操作直到本局結束。你的座位會保留，可隨時返回牌桌並關閉電腦代打。',
+    'earlyLeave.confirm': '開始代打並離席',
     'actions.label': '遊戲操作',
     'actions.autoPlay': '電腦代打',
     'actions.stopAutoPlay': '停止電腦代打',

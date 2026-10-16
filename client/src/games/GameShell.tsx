@@ -22,6 +22,7 @@ import { lastElimination, lastMove, matchSeats, tablePosition } from '../game-vi
 import type { TablePosition } from '../game-view';
 import { AbortVoteBanner, AbortVoteButton } from './AbortVote';
 import { SpectatorLeaveButton } from './SpectatorLeave';
+import { EarlyLeaveButton } from './EarlyLeave';
 import { AppIcon } from '../components/AppIcon';
 import { RoomCodeButton } from '../components/RoomCodeButton';
 import { GameRulesDialog } from '../components/GameRulesDialog';
@@ -376,6 +377,7 @@ export function GameShell({
         </div>
         {room && <RoomCodeButton key={room.code} code={room.code} />}
         <AbortVoteButton className={styles.abortRail} />
+        <EarlyLeaveButton className={styles.abortRail} />
         <SpectatorLeaveButton />
         {visibleGame && <button type="button" className={`btn btn-outline ${styles.rulesRailButton}`}
           aria-haspopup="dialog" onClick={openRules}>
@@ -397,7 +399,10 @@ export function GameShell({
         <div className={`${styles.table} ${expandedTable ? styles.expandedTable : ''} ${cornersSpan ? styles.cornersSpan : ''} ${centreUp ? styles.centreUp : ''}`}
           data-card-table>
           <div className={styles.tableTools}>
-            <AbortVoteButton iconOnly className={styles.abortTool} buttonClassName={styles.toolBtn} />
+            <div className={styles.tableExitTools}>
+              <AbortVoteButton iconOnly buttonClassName={styles.toolBtn} />
+              <EarlyLeaveButton iconOnly buttonClassName={styles.toolBtn} />
+            </div>
             {visibleGame && <button type="button" className={styles.toolBtn}
               onClick={openRules} aria-haspopup="dialog" aria-label={t('rules.open')} title={t('rules.open')}>
               <AppIcon name="rules" />
