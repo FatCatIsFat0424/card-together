@@ -3,3 +3,5 @@
 .red { color: var(--suit-red-ui); }
 .bigJoker { color: var(--suit-red-ui); }
 .smallJoker { color: var(--text-secondary); }
+/* Hook for compact layouts that shrink the suit symbol beside the rank. */
+.suit { font-size: var(--card-label-suit-size, 1em); }

@@ -19,5 +19,5 @@ export function CardLabel({ card, className }: { card: NapoleonCard; className?:
       {t(`napoleon.jokerShort.${card.joker}`)}</span>;
   }
   return <span className={`${suitClass(card.suit) ?? ''} ${className ?? ''}`}>
-    {SUIT_SYMBOLS[card.suit]}{RANK_DISPLAY[card.rank]}</span>;
+    <span className={styles.suit}>{SUIT_SYMBOLS[card.suit]}</span>{RANK_DISPLAY[card.rank]}</span>;
 }

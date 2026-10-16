@@ -1,5 +1,8 @@
 /* ─── TrickHistoryTable styles ─── */
 
+/* Card text sizes from the panel's width, so it is as large as each player's column allows. */
+.history { container-type: inline-size; }
+
 .history summary {
   cursor: pointer;
 }
@@ -40,7 +43,7 @@
 }
 
 .table .number {
-  width: 1.4rem;
+  width: 1rem;
   color: var(--text-muted);
   font-weight: 600;
 }
@@ -48,10 +51,17 @@
 .trick { border-top: 1px solid var(--rail-border); }
 
 .trick td {
-  font-family: var(--font-mono);
-  font-weight: 600;
+  /* A card such as ♠10 (suit at 0.85em) is about 1.5em wide; with ~0.45em between columns each column
+     fits ~1.95em: 16px with four columns in the rail, about 15px with six. Jokers, two CJK characters
+     wide, shrink to fit. */
+  --card-label-suit-size: 0.85em;
+  font-size: clamp(var(--text-xs), calc((100cqi - 1rem) / var(--columns, 4) / 1.95), var(--text-base));
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
   color: var(--suit-black);
 }
+
+.trick td .joker { font-size: 0.82em; }
 
 .empty { color: var(--text-muted); }
 

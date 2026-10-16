@@ -1,7 +1,8 @@
 // ─── TrickHistoryTable: one row per trick, one fixed column per player ───
 
 import { useState } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
+import { isNapoleonJoker } from '@shared/rules/napoleon';
 import type { GameSeat, NapoleonCard } from '@shared/types';
 import { useI18nStore } from '../stores/i18n-store';
 import { CardLabel } from './CardLabel';
@@ -60,7 +61,7 @@ export function TrickHistoryTable({
       onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary className={summaryClassName}>{t('table.trickHistory')} ({rows.length})</summary>
       {open && <>
-        <table className={styles.table}>
+        <table className={styles.table} style={{ '--columns': columns.length } as CSSProperties}>
           <thead>
             <tr>
               <th scope="col" className={styles.number}>#</th>
@@ -81,7 +82,7 @@ export function TrickHistoryTable({
                 const title = [name(seat), card ? cardText(card) : null,
                   lead ? t('table.lead') : null, won ? t('table.winner') : null].filter(Boolean).join(' · ');
                 return <td key={seat} title={title} className={`${lead ? styles.lead : ''} ${won ? styles.won : ''}`}>
-                  {card ? <CardLabel card={card} /> : <span className={styles.empty}>·</span>}
+                  {card ? <CardLabel card={card} className={isNapoleonJoker(card) ? styles.joker : undefined} /> : <span className={styles.empty}>·</span>}
                 </td>;
               })}
             </tr>
