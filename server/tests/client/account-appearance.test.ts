@@ -89,7 +89,8 @@ function renderRoom(): string {
 }
 
 function renderShell(): string {
-  return renderToStaticMarkup(createElement(GameShell, { info: null, centre: null, hand: null }));
+  return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/game/ABC123'] },
+    createElement(GameShell, { info: null, centre: null, hand: null })));
 }
 
 describe('personal account appearance', () => {
