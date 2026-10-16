@@ -17,9 +17,9 @@
 .emptyMix { display: grid; place-items: center; height: 100%; color: var(--text-secondary); font-size: var(--text-sm); }
 .visualization { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--spacing-md); padding: var(--spacing-md); border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--bg-card); }
 .metrics { width: 100%; border-collapse: collapse; text-align: left; font-variant-numeric: tabular-nums; }
-.metrics thead { height: 32px; color: var(--text-secondary); font-size: var(--text-xs); }
+.metrics thead { height: var(--axis-height); color: var(--text-secondary); font-size: var(--text-xs); }
 .metrics thead th { font-weight: 500; }
-.metrics tbody tr { height: 52px; border-top: 1px solid var(--border-color); }
+.metrics tbody tr { height: var(--row-height); border-top: 1px solid var(--border-color); }
 .metrics tbody th { font-size: var(--text-sm); font-weight: 500; }
 .metrics small { display: block; font-size: var(--text-xs); color: var(--text-secondary); font-weight: 400; }
 .metrics th, .metrics td { padding: 0 var(--spacing-sm); }

@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { MatchSummary } from '@shared/types';
 import { BarChart } from '@mui/x-charts/BarChart';
 import { PieChart } from '@mui/x-charts/PieChart';
@@ -13,7 +13,10 @@ interface MatchHistoryStatisticsProps {
 }
 
 const GAME_COLORS = ['#60a5fa', '#a78bfa', '#f472b6', '#fb923c', '#4ade80',
-  '#facc15', '#22d3ee', '#f87171', '#a3e635'] as const;
+  '#facc15', '#22d3ee', '#f87171', '#a3e635', '#e879f9'] as const;
+/** Each bar lines up with its table row: the axis matches the table head and every band one row. */
+const AXIS_HEIGHT = 32;
+const ROW_HEIGHT = 52;
 
 export function MatchHistoryStatistics({ matches, accountId }: MatchHistoryStatisticsProps): ReactNode {
   const { t, locale } = useI18nStore();
@@ -24,7 +27,7 @@ export function MatchHistoryStatistics({ matches, accountId }: MatchHistoryStati
   const total = statistics.reduce((count, game) => count + game.played, 0);
   const distribution = statistics.map((game, index) => ({
     id: game.gameType, label: t(`gameType.${game.gameType}`), value: game.played,
-    color: GAME_COLORS[index],
+    color: GAME_COLORS[index % GAME_COLORS.length],
   }));
   return <section className={styles.statistics} aria-labelledby={headingId}>
     <h3 id={headingId}>{t('history.statistics')}</h3>
@@ -55,7 +58,8 @@ export function MatchHistoryStatistics({ matches, accountId }: MatchHistoryStati
         </ul>
       </div>
     </div>
-    <div className={styles.visualization}>
+    <div className={styles.visualization}
+      style={{ '--axis-height': `${AXIS_HEIGHT}px`, '--row-height': `${ROW_HEIGHT}px` } as CSSProperties}>
       <table className={styles.metrics} aria-labelledby={headingId}>
         <thead><tr><th scope="col">{t('history.game')}</th>
           <th scope="col">{t('history.played')}</th><th scope="col">{t('history.winRate')}</th></tr></thead>
@@ -71,13 +75,14 @@ export function MatchHistoryStatistics({ matches, accountId }: MatchHistoryStati
         </tr>)}</tbody>
       </table>
       <div className={styles.chart}>
-        <BarChart layout="horizontal" height={500} margin={{ top: 0, bottom: 0, left: 14, right: 22 }}
+        <BarChart layout="horizontal" height={AXIS_HEIGHT + statistics.length * ROW_HEIGHT}
+          margin={{ top: 0, bottom: 0, left: 14, right: 22 }}
           series={[{ data: statistics.map((game) => game.winRate), label: t('history.winRate'),
             color: 'var(--color-success)', valueFormatter: (value) => value === null
               ? t('history.notPlayed') : percent.format(value) }]}
           yAxis={[{ scaleType: 'band', data: statistics.map((game) => t(`gameType.${game.gameType}`)),
             position: 'none', categoryGapRatio: 0.5 }]}
-          xAxis={[{ min: 0, max: 1, position: 'top', height: 32, tickInterval: [0, 0.5, 1],
+          xAxis={[{ min: 0, max: 1, position: 'top', height: AXIS_HEIGHT, tickInterval: [0, 0.5, 1],
             tickLabelInterval: () => true,
             tickLabelStyle: { fill: 'var(--text-secondary)', fontFamily: 'var(--font-primary)' },
             valueFormatter: (value: number) => percent.format(value) }]}
