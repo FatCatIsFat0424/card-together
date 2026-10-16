@@ -8,7 +8,7 @@ export const COLLAPSE_MS = SEVENS_COLLAPSE_MS;
 /** Cracks run out from the impact to the edges, then the shards part and the middle falls in. */
 export const CRACK_GROW_MS = 450;
 export const CRACK_OPEN_MS = [400, 1100] as const;
-export const SHAKE_MS = 900;
+export const SHAKE_MS = COLLAPSE_MS;
 export const FLASH_MS = 250;
 /** Each crack takes this long to split from its end nearer the impact to the other. */
 const EDGE_SPLIT_MS = 70;
@@ -169,7 +169,7 @@ export function crackWidth(crack: Crack, ms: number): number {
 
 /** The table jolts hardest at the impact and settles by `SHAKE_MS`. */
 export function collapseShake(ms: number): Point {
-  if (ms < 0 || ms > SHAKE_MS) return { x: 0, y: 0 };
+  if (ms < 0 || ms >= SHAKE_MS) return { x: 0, y: 0 };
   const strength = 7 * (1 - ms / SHAKE_MS) ** 1.5;
   return { x: Math.sin(ms * 0.09) * strength, y: Math.cos(ms * 0.13) * strength };
 }

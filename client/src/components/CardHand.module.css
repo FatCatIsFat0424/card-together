@@ -2,7 +2,7 @@
 
 .handContainer {
   /* Reserve room for every card plus the fan edges inside the table column. */
-  --card-w: min(calc(96px * var(--playing-card-scale)), 12cqh, calc((100cqw - 32px) / (1.8 + (var(--hand-card-count) - 1) * (1 - var(--overlap)))));
+  --card-w: min(calc(96px * var(--playing-card-scale)), var(--hand-height-limit, 12cqh), calc((100cqw - 32px) / (1.8 + (var(--hand-card-count) - 1) * (1 - var(--overlap)))));
   --overlap: 0.42;
   --fan-step: 0.6deg;
   display: flex;
@@ -13,6 +13,10 @@
 }
 
 .handContainer:empty { padding: 0; }
+
+@media (max-height: 500px) and (min-width: 600px) {
+  .handContainer { --hand-height-limit: 14cqh; }
+}
 
 @container (max-height: 420px) {
   .handContainer { padding-block: 18px 4px; }

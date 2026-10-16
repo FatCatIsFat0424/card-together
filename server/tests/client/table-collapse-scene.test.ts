@@ -45,7 +45,7 @@ describe('table collapse scene', () => {
   it('shares the frame length and finishes opening before the frame ends', () => {
     expect(COLLAPSE_MS).toBe(SEVENS_COLLAPSE_MS);
     expect(CRACK_OPEN_MS[1]).toBeLessThan(COLLAPSE_MS);
-    expect(SHAKE_MS).toBeLessThan(COLLAPSE_MS);
+    expect(SHAKE_MS).toBe(COLLAPSE_MS);
   });
 
   it('breaks the same way for every viewer into shards that are small near the impact and large far from it', () => {
@@ -91,9 +91,13 @@ describe('table collapse scene', () => {
     expect(openProgress(CRACK_OPEN_MS[1])).toBe(1);
   });
 
-  it('jolts only early and leaves a lasting shade', () => {
-    expect(Math.hypot(collapseShake(50).x, collapseShake(50).y)).toBeGreaterThan(0);
-    expect(collapseShake(SHAKE_MS + 1)).toEqual({ x: 0, y: 0 });
+  it('keeps jolting through the collapse, settles at its end and leaves a lasting shade', () => {
+    expect(collapseShake(-1)).toEqual({ x: 0, y: 0 });
+    for (const ms of [50, 950, CRACK_OPEN_MS[1], COLLAPSE_MS - 50]) {
+      expect(Math.hypot(collapseShake(ms).x, collapseShake(ms).y)).toBeGreaterThan(0);
+    }
+    expect(collapseShake(COLLAPSE_MS)).toEqual({ x: 0, y: 0 });
+    expect(collapseShake(COLLAPSE_MS + 1)).toEqual({ x: 0, y: 0 });
     expect(collapseShade(0)).toBe(0);
     expect(collapseShade(COLLAPSE_MS)).toBeCloseTo(0.3);
   });

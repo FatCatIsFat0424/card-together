@@ -197,6 +197,9 @@
 
 /* Short landscape tables keep the three button rows and drop secondary text. */
 @media (max-height: 500px) and (min-width: 600px) {
-  .panel { padding: 4px 8px 6px; gap: 3px; }
+  .panel { max-width: 352px; margin-inline: auto; padding: 4px 6px; gap: 2px; }
+  .title { font-size: var(--text-sm); }
+  .highest, .recent { font-size: var(--text-xs); }
+  .levels, .suits, .actions { gap: 3px; }
   .hint { display: none; }
 }

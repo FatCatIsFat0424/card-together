@@ -317,6 +317,8 @@ When all four suits are closed:
 1. All remaining hands are covered at once in turn order, with normal penalties. These
    log entries are marked `auto`.
 2. After the last closing effect, the table collapses (1.8 s) and holds (2 s).
+   The effect covers the full table surface, including the hand area; its shake
+   fades throughout the collapse and stops when the broken-table hold begins.
 3. The result dialog opens over the broken table.
 
 ## Chinese Poker

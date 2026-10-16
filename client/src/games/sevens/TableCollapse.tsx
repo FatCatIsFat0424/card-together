@@ -54,13 +54,13 @@ export function TableCollapse({ startedAt, settled }: { startedAt: number; settl
     let previous = performance.now();
     let request = 0;
     const tick = (now: number): void => {
-      const layer = root.getBoundingClientRect();
       const ms = Date.now() - startedAt;
       const step = Math.min(MAX_STEP_SECONDS, Math.max(0, (now - previous) / 1000));
       previous = now;
       // The whole table jolts with the blow, overlay included.
       const jolt = still ? { x: 0, y: 0 } : collapseShake(ms);
       table.style.transform = jolt.x || jolt.y ? `translate(${jolt.x}px, ${jolt.y}px)` : '';
+      const layer = root.getBoundingClientRect();
       renderer.draw({ width: layer.width, height: layer.height, impact: impactPoint(root, layer) }, ms, step, still);
       request = requestAnimationFrame(tick);
     };

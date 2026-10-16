@@ -43,3 +43,8 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
 }
+
+/* Keep the vertical rail compact while retaining phone-sized touch targets. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .action { min-height: 44px; }
+}

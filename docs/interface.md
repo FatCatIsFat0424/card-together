@@ -172,6 +172,15 @@ Frontend page behavior and layout. Client architecture and connection handling:
 - A compact vertical action bar inside the table's lower-left corner offers computer auto-play, sort by suit,
   and sort by rank. Active choices are highlighted and each button has a full accessible
   label and tooltip. Spectators, eliminated players, and settlement screens hide the bar.
+  In short landscape view, the hand and adjacent left seat leave space beside the
+  vertical controls while the central playing table keeps its full width. The table's
+  upper edge sits flush against the header;
+  four-seat tables float their corner buttons so the opposite seat also moves up,
+  without an empty toolbar row above it.
+  Landscape hand cards use a larger height allowance and fit against their own hand
+  area's width, increasing overlap when needed to keep every card within reach.
+  The landscape Bridge bidding panel is capped at 352px with tighter spacing; touch
+  buttons retain their 44px height.
 - Auto-play is an on/off switch for the current match. The server uses its existing bot
   strategy with only that seat's private view; manual hand controls pause until switched
   off. Reconnects preserve the choice; a new match starts with auto-play off.

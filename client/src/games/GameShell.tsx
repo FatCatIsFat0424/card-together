@@ -437,7 +437,6 @@ export function GameShell({
                 summary={presentationSummary(visibleGame, t)} />
             ) : <div className={`${styles.centreBody} ${visibleGame?.presentation ? styles.settledCentre : ''}`}>{centre}</div>}
           </FittedCentre>
-          {tableEffect}
           {outBanner && <p key={outBanner.index} className={styles.outBanner} role="status">
             <AppIcon name="burst" /> {t('table.eliminated', { name: seatName(outBanner.seat) })}
           </p>}
@@ -463,6 +462,7 @@ export function GameShell({
           </div>
           <div inert={visibleGame?.autoPlay}>{hand}</div>
         </div>
+        {tableEffect}
       </main>
 
       <aside className={styles.chatRail} ref={chatRailRef} tabIndex={-1} aria-label={t('chat.title')}>
