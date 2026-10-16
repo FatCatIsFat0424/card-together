@@ -31,7 +31,7 @@ export function AuctionTable({ calls, toAct, mySeat, columns = AUCTION_COLUMNS }
   if (waitIndex >= rows.length * columns.length) rows.push(columns.map(() => null));
 
   return (
-    <table className={styles.table}>
+    <table className={`${styles.table} ${columns.length > 5 ? styles.dense : ''}`}>
       <thead>
         <tr>{columns.map((seat) => (
           <th key={seat} className={seat === mySeat ? styles.me : undefined} title={seatLabel(t, gameType, seat)}

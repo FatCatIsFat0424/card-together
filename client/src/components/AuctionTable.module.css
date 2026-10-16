@@ -17,6 +17,9 @@
 
 .table th.me { color: var(--turn-glow); }
 
+/* Six players share the narrow info rail: a slightly smaller, tighter call keeps 10NT inside its column. */
+.dense td { font-size: 0.78rem; letter-spacing: -0.03em; }
+
 .table td {
   text-align: center;
   padding: 4px 0;
