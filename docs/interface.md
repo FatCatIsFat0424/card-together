@@ -188,7 +188,9 @@ remain visible.
   usual centre width cap. Top-row plates line up at their top edge. When the side cells are empty
   (six players), the top corner seats reach down into them with their hands below their plates, so
   the top row is one plate tall. Napoleon trick cards and its play boxes size from the table too; a
-  finished trick's box widens and shrinks its four to six cards to fit.
+  finished trick's box widens and shrinks its four to six cards to fit. Napoleon's trick lays its
+  cards around a rounded rectangle, so seats between the axes join the top and bottom rows (six
+  players form two rows of three) and the cards can be large.
 - On desktop, the game info panel shows a copyable room code directly above the
   abort-vote button, and the global header omits it. Compact layouts retain the original
   header room code and omit it from the info drawer.

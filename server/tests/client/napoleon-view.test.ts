@@ -216,16 +216,17 @@ describe('Napoleon exchange and review', () => {
 describe('Napoleon table helpers', () => {
   it('places trick cards around the table with the viewer at the bottom', () => {
     const compass = ['N', 'E', 'S', 'W'] as const;
-    expect(napoleonTrickSlot('S', 'S', compass)).toMatchObject({ left: 50, top: 84 });
-    expect(napoleonTrickSlot('W', 'S', compass)).toMatchObject({ left: 14, top: 50 });
-    expect(napoleonTrickSlot('N', 'S', compass)).toMatchObject({ left: 50, top: 16 });
-    expect(napoleonTrickSlot('E', 'S', compass)).toMatchObject({ left: 86, top: 50 });
+    expect(napoleonTrickSlot('S', 'S', compass)).toMatchObject({ left: 50, top: 79 });
+    expect(napoleonTrickSlot('W', 'S', compass)).toMatchObject({ left: 17, top: 50 });
+    expect(napoleonTrickSlot('N', 'S', compass)).toMatchObject({ left: 50, top: 21 });
+    expect(napoleonTrickSlot('E', 'S', compass)).toMatchObject({ left: 83, top: 50 });
     const six = ['N', 'E', 'S', 'W', 'P5', 'P6'] as const;
     const slots = six.map((seat) => napoleonTrickSlot(seat, 'P5', six));
     expect(new Set(slots.map((slot) => `${slot.left}:${slot.top}`)).size).toBe(6);
-    expect(slots[4]).toMatchObject({ left: 50, top: 84 });
-    // The two seats on each side sit a full card height (plus its name) apart vertically.
-    expect(slots[5].top - slots[0].top).toBeCloseTo(34, 0);
+    expect(slots[4]).toMatchObject({ left: 50, top: 79 });
+    // Six seats form two rows of three: the side seats join the top and bottom rows, a card height apart.
+    expect(slots.map((slot) => slot.top).sort((a, b) => a - b)).toEqual([21, 27.2, 27.2, 72.8, 72.8, 79]);
+    expect(slots[5].top - slots[0].top).toBeCloseTo(45.6, 1);
   });
 
   it('groups plays into tricks for the trick history, keeping each card under its seat', () => {

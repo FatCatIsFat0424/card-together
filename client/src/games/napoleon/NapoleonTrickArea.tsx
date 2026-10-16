@@ -9,7 +9,18 @@ import { useNapoleonCardImageUrl } from './napoleon-card-art';
 import { napoleonCardText } from './napoleon-view';
 import styles from './NapoleonTrickArea.module.css';
 
-/** Where a seat's card lies: around an ellipse, the viewer at the bottom and clockwise seats to their left. */
+/** Pulls a circle coordinate toward ±1, turning the ellipse into a rounded rectangle. */
+const SQUARENESS = 0.35;
+
+function squared(value: number): number {
+  return Math.sign(value) * Math.abs(value) ** SQUARENESS;
+}
+
+/**
+ * Where a seat's card lies: around a rounded rectangle, the viewer at the bottom and clockwise seats to their
+ * left. Seats between the axes join the top and bottom rows (six players form two rows of three), so the trick
+ * needs little height and its cards can be large.
+ */
 export function napoleonTrickSlot(
   seat: GameSeat, bottomSeat: GameSeat, seats: readonly GameSeat[],
 ): { readonly left: number; readonly top: number; readonly angle: number } {
@@ -17,8 +28,7 @@ export function napoleonTrickSlot(
   const relative = (seats.indexOf(seat) - from + seats.length) % seats.length;
   const angle = (relative / seats.length) * 2 * Math.PI;
   const round = (value: number): number => Math.round(value * 10) / 10;
-  // The taller vertical radius keeps the two cards on one side of a six-player table (and their names) apart.
-  return { left: round(50 - Math.sin(angle) * 36), top: round(50 + Math.cos(angle) * 34), angle };
+  return { left: round(50 - squared(Math.sin(angle)) * 33), top: round(50 + squared(Math.cos(angle)) * 29), angle };
 }
 
 export function NapoleonTrickArea({ trick, seats, bottomSeat, myTurn }: {
