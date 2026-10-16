@@ -89,7 +89,7 @@ Runtime mechanics: [architecture](architecture.md#turn-clocks).
 | Game | Interaction |
 | --- | --- |
 | Bridge calls | Pick level and suit, or Pass, then Confirm or pick the same call again; Cancel clears |
-| Napoleon | Bridge-style calls at levels 9–16; select the exact discard count, then confirm; pick the secretary card from all 54; leading the secretary card or a joker asks for the suit; an allowed summon is a toggle before playing |
+| Napoleon | Bridge-style calls at levels 9–16; select the exact discard count, then confirm; pick the secretary card from all 54; leading the secretary card or a joker asks for the suit; the secretary summon is a toggle before playing, and joker summons are stated, not offered |
 | Bridge, Ninety-Nine, Red Points | Click or keyboard activation plays. On touch, the first tap lifts and the second plays; tapping another card switches, tapping outside clears |
 | Ninety-Nine | Explicit plus/minus and next-player choices |
 | Red Points | Zero or one capture target plays immediately; several require choosing a highlighted table card |
@@ -495,9 +495,9 @@ ends after the last hand, or when fewer than two seats can cover the minimum.
   tricks jokers become the weakest cards: secretary card > trump > led suit > other suits >
   big joker > small joker, except that a led joker counts as rank 1 (big) or 0 (small) of the
   named suit.
-- With joker summoning on and a trump contract, a led trump 2 or 3 may summon the big or small
-  joker, which its holder must play. Not possible when that joker is the secretary card, already
-  played, or in the leader's hand. A secretary card that is a trump 2 or 3 keeps this power when led.
+- With joker summoning on and a trump contract, a led trump 2 or 3 summons the big or small
+  joker, which its holder must play. The summon is automatic: the server adds it to the lead. It does
+  not apply when that joker is the secretary card, already played, or in the leader's hand. A secretary card that is a trump 2 or 3 keeps this power when led.
 - The leading Napoleon may summon the secretary card, which its holder must play, but not
   together with a trump 2 or 3 lead while joker summoning applies.
 - No claim. After the last trick, the Napoleon and the secretary win if their point cards reach

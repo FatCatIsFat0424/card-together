@@ -252,12 +252,17 @@ export function NapoleonTable(): ReactNode {
     } else if (summons.length > 0) {
       panel = <fieldset className={`${styles.panel} ${styles.summons}`}>
         <legend className={styles.panelTitle}>{t('napoleon.summonTitle')}</legend>
-        {summons.map((option) => <label key={option.summon} className={styles.summonOption}>
-          <input type="checkbox" checked={summon === option.summon} disabled={blocked}
-            onChange={(event) => setSummonPick({ trick: trickIndex, summon: event.target.checked ? option.summon : null })} />
-          {t(`napoleon.summonToggle.${option.summon}`, {
-            card: option.cards.map((card) => napoleonCardText(card, jokerName)).join(' / ') })}
-        </label>)}
+        {summons.map((option) => {
+          const label = t(`napoleon.summonToggle.${option.summon}`, {
+            card: option.cards.map((card) => napoleonCardText(card, jokerName)).join(' / ') });
+          // Joker summons follow from the led card, so they are stated rather than offered.
+          return option.automatic ? <p key={option.summon} className={styles.summonOption}>{label}</p>
+            : <label key={option.summon} className={styles.summonOption}>
+              <input type="checkbox" checked={summon === option.summon} disabled={blocked}
+                onChange={(event) => setSummonPick({ trick: trickIndex, summon: event.target.checked ? option.summon : null })} />
+              {label}
+            </label>;
+        })}
         <p className={styles.panelHint}>{t('napoleon.summonHint')}</p>
       </fieldset>;
     }

@@ -40,6 +40,7 @@ import {
   removeNapoleonCards,
   sameNapoleonCard,
   sortNapoleonHand,
+  withNapoleonJokerSummon,
 } from '@shared/rules/napoleon';
 import { shuffleDeck } from '../../engine/deck';
 
@@ -243,11 +244,12 @@ function play(
   if (game.phase !== 'playing' || !game.trick || !game.contract) return fail('Not in playing phase');
   if (game.currentTurnSeat !== seat) return fail('Not your turn');
   const hand = game.hands[seat] ?? [];
-  const move = {
+  // A led trump 2 or 3 summons its joker whether or not the client asked for it.
+  const move = withNapoleonJokerSummon(game, hand, {
     card: copyCard(action.card),
     ...(action.leadSuit !== undefined ? { leadSuit: action.leadSuit } : {}),
     ...(action.summon !== undefined ? { summon: action.summon } : {}),
-  };
+  });
   const error = napoleonPlayError(game, seat, hand, move, game.kitty);
   if (error) return fail(error);
   game.hands[seat] = removeNapoleonCards(hand, [move.card]);

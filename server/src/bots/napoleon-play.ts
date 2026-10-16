@@ -1,7 +1,7 @@
 import type { GameSeat, NapoleonCard, NapoleonSummon, NapoleonTrick, NapoleonVisibleState, Suit } from '@shared/types';
 import {
   applyNapoleonPlay, isNapoleonFreeCard, isNapoleonPointCard, napoleonPlayError, napoleonPoints,
-  napoleonSummonOptions, napoleonSummonedCard, sameNapoleonCard,
+  napoleonJokerSummon, napoleonSummonOptions, napoleonSummonedCard, sameNapoleonCard,
 } from '@shared/rules/napoleon';
 import {
   allyOf, cardPoints, holdChance, holdValue, pointsPerTrick, readTable, secretaryKeepValue, seatsAfter, sideWinChance,
@@ -38,9 +38,11 @@ export function legalNapoleonPlays(visible: NapoleonVisibleState): NapoleonPlayC
       continue;
     }
     const suits: readonly (Suit | undefined)[] = isNapoleonFreeCard(visible, card) ? SUITS : [undefined];
-    const summons = napoleonSummonOptions(visible, seat, hand, card, discards);
+    // A joker summon is automatic, so such a lead has no plain variant; only the secretary summon is a choice.
+    const automatic = napoleonJokerSummon(visible, hand, card);
+    const summons = automatic ? [automatic] : [undefined, ...napoleonSummonOptions(visible, seat, hand, card, discards)];
     for (const leadSuit of suits) {
-      for (const summon of [undefined, ...summons]) {
+      for (const summon of summons) {
         choices.push({ card, ...(leadSuit ? { leadSuit } : {}), ...(summon ? { summon } : {}) });
       }
     }

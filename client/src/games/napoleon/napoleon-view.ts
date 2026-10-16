@@ -206,6 +206,8 @@ export interface NapoleonLeadSummon {
   readonly summon: NapoleonSummon;
   /** Playable cards that may make this summon when led */
   readonly cards: readonly NapoleonCard[];
+  /** Joker summons happen whenever those cards are led; only the secretary summon is a choice */
+  readonly automatic: boolean;
 }
 
 const SUMMON_ORDER: readonly NapoleonSummon[] = ['secretary', 'bigJoker', 'smallJoker'];
@@ -221,7 +223,7 @@ export function napoleonLeadSummons(game: NapoleonVisibleState): NapoleonLeadSum
   }
   return SUMMON_ORDER.flatMap((summon) => {
     const cards = bySummon.get(summon);
-    return cards ? [{ summon, cards }] : [];
+    return cards ? [{ summon, cards, automatic: summon !== 'secretary' }] : [];
   });
 }
 
@@ -237,7 +239,8 @@ export function napoleonPlayableCards(
 
 /** A summon choice survives only while it is still available for this lead. */
 export function napoleonActiveSummon(game: NapoleonVisibleState, summon: NapoleonSummon | null): NapoleonSummon | null {
-  return summon && napoleonLeadSummons(game).some((entry) => entry.summon === summon) ? summon : null;
+  return summon && napoleonLeadSummons(game).some((entry) => entry.summon === summon && !entry.automatic)
+    ? summon : null;
 }
 
 /** Leading the secretary card or a joker requires naming the suit to follow. */

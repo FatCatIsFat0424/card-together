@@ -105,12 +105,15 @@ describe('Napoleon notices', () => {
 });
 
 describe('Napoleon lead controls', () => {
-  it('offers the secretary summon to the Napoleon and joker summons for a led trump 2 or 3', () => {
+  it('offers the secretary summon to the Napoleon and states the automatic joker summon of a led trump 3', () => {
     const summons = napoleonLeadSummons(game());
     expect(summons).toEqual([
-      { summon: 'secretary', cards: [card(13, 'clubs'), BIG] },
-      { summon: 'smallJoker', cards: [card(3, 'spades')] },
+      { summon: 'secretary', cards: [card(13, 'clubs'), BIG], automatic: false },
+      { summon: 'smallJoker', cards: [card(3, 'spades')], automatic: true },
     ]);
+    // Only the secretary summon is a choice; a joker summon cannot be picked or left out.
+    expect(napoleonActiveSummon(game(), 'secretary')).toBe('secretary');
+    expect(napoleonActiveSummon(game(), 'smallJoker')).toBeNull();
     expect(napoleonPlayableCards(game(), 'smallJoker')).toEqual([card(3, 'spades')]);
     expect(napoleonPlayableCards(game(), 'secretary')).toEqual([card(13, 'clubs'), BIG]);
     expect(napoleonPlayableCards(game(), null)).toEqual(game().validCards);

@@ -251,8 +251,34 @@ function jokerSummonOf(view: NapoleonPlayView, card: NapoleonCard): NapoleonSumm
 }
 
 /**
- * Summons available when `seat` leads `card`. `discards` are the Napoleon's own discards, known
- * only to the Napoleon, who alone may call the secretary and only while another seat holds its card.
+ * The joker a led trump 2 or 3 summons. The summon is automatic, not a choice: whoever else holds that
+ * joker must play it. Null when the rule is off, the card cannot summon, or the joker is the secretary
+ * card, already played, or in the leader's own hand (one seat cannot play two cards to a trick).
+ */
+export function napoleonJokerSummon(
+  view: NapoleonPlayView, hand: readonly NapoleonCard[], card: NapoleonCard,
+): NapoleonSummon | null {
+  if (!view.contract || !view.secretaryCard || (view.trick?.plays.length ?? 0) > 0) return null;
+  const summon = jokerSummonOf(view, card);
+  if (!summon) return null;
+  const joker = napoleonSummonedCard(view, summon)!;
+  return isNapoleonSecretaryCard(view, joker) || hasNapoleonCard(hand, joker)
+    || hasNapoleonCard(napoleonPlayedCards(view), joker) ? null : summon;
+}
+
+/** A lead with its automatic joker summon filled in; any other play is returned unchanged. */
+export function withNapoleonJokerSummon<P extends { readonly card: NapoleonCard; readonly summon?: NapoleonSummon }>(
+  view: NapoleonPlayView, hand: readonly NapoleonCard[], play: P,
+): P {
+  if (play.summon !== undefined) return play;
+  const summon = napoleonJokerSummon(view, hand, play.card);
+  return summon ? { ...play, summon } : play;
+}
+
+/**
+ * Summons a lead of `card` by `seat` makes or may make: the automatic joker summon, or the secretary
+ * summon. `discards` are the Napoleon's own discards, known only to the Napoleon, who alone may call
+ * the secretary and only while another seat holds its card.
  */
 export function napoleonSummonOptions(
   view: NapoleonPlayView, seat: GameSeat, hand: readonly NapoleonCard[], card: NapoleonCard,
@@ -261,15 +287,10 @@ export function napoleonSummonOptions(
   if (!view.contract || !view.secretaryCard || (view.trick?.plays.length ?? 0) > 0) return [];
   const played = napoleonPlayedCards(view);
   const options: NapoleonSummon[] = [];
-  const jokerSummon = jokerSummonOf(view, card);
-  if (jokerSummon) {
-    const joker = napoleonSummonedCard(view, jokerSummon)!;
-    if (!isNapoleonSecretaryCard(view, joker) && !hasNapoleonCard(hand, joker) && !hasNapoleonCard(played, joker)) {
-      options.push(jokerSummon);
-    }
-  }
+  const jokerSummon = napoleonJokerSummon(view, hand, card);
+  if (jokerSummon) options.push(jokerSummon);
   const secretary = view.secretaryCard;
-  if (seat === view.contract.napoleon && !jokerSummon && !hasNapoleonCard(hand, secretary)
+  if (seat === view.contract.napoleon && !jokerSummonOf(view, card) && !hasNapoleonCard(hand, secretary)
     && !hasNapoleonCard(discards ?? [], secretary) && !hasNapoleonCard(played, secretary)) {
     options.push('secretary');
   }

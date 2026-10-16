@@ -334,6 +334,27 @@ describe('Napoleon summons and tricks', () => {
     expectValid();
   });
 
+  it('summons the joker whenever a trump 2 or 3 is led, even when the play does not ask for it', () => {
+    setUp();
+    // Hearts are trump and S holds the small joker: leading the heart 3 forces it out.
+    expectOk('N', { type: 'play', card: card(3, 'hearts') });
+    expect(game().log.at(-1)).toEqual({ type: 'play', seat: 'N', card: card(3, 'hearts'), summon: 'smallJoker', timestamp: 1_000 });
+    expect(game().trick).toMatchObject({ summon: 'smallJoker' });
+    expectOk('E', { type: 'play', card: card(14, 'clubs') });
+    expect(view('S').validCards).toEqual([SMALL]);
+    expect(act('S', { type: 'play', card: card(6, 'hearts') }).success).toBe(false);
+    expectOk('S', { type: 'play', card: SMALL });
+    expectValid();
+  });
+
+  it('leaves a trump 2 lead plain when the leader holds the big joker', () => {
+    setUp(true, { N: [card(2, 'hearts'), card(3, 'hearts'), card(4, 'clubs'), card(5, 'clubs'), BIG],
+      E: [card(14, 'clubs'), card(5, 'hearts')] });
+    expectOk('N', { type: 'play', card: card(2, 'hearts') });
+    expect(game().log.at(-1)).toEqual({ type: 'play', seat: 'N', card: card(2, 'hearts'), timestamp: 1_000 });
+    expect(game().trick).toMatchObject({ summon: null });
+  });
+
   it('rejects joker summons when the option is off, the joker is the leader\'s, or the contract has no trump', () => {
     setUp(false);
     expect(act('N', { type: 'play', card: card(2, 'hearts'), summon: 'bigJoker' }).success).toBe(false);
