@@ -281,7 +281,7 @@ describe('table seat plate', () => {
     const game = (gameType: string): Record<string, unknown> => ({
       ...baseGame(), phase: 'playing', visible: { gameType, clock: clock(null), log: [] },
     });
-    for (const gameType of ['bridge', 'sevens', 'liarsdeck', 'ninetynine']) {
+    for (const gameType of ['bridge', 'sevens', 'liarsdeck', 'ninetynine', 'napoleon']) {
       state.game = game(gameType);
       expect(render({ seat: 'N', position: 'top' })).toContain('handBeside');
       expect(render({ seat: 'W', position: 'left' })).not.toContain('handBeside');

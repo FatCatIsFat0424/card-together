@@ -182,10 +182,13 @@ remain visible.
 
 - Seats and play area use separate grid cells: local player below, opposite seat above,
   others around the table, with corner positions for additional seats.
-- In Bridge, Sevens, Liar's Deck and Ninety-Nine the opposite hand sits to the right of its plate
-  at the top, so the top row stays one plate tall and the centre gets the height; below 600px wide
-  they stack again. Their centre cards size from the table, and Sevens rows may exceed the usual centre width
-  cap.
+- In Bridge, Sevens, Liar's Deck, Ninety-Nine and Napoleon the opposite hand sits to the right of
+  its plate at the top, so the top row stays one plate tall and the centre gets the height; below
+  600px wide they stack again. Their centre cards size from the table, and Sevens rows may exceed the
+  usual centre width cap. Top-row plates line up at their top edge. When the side cells are empty
+  (six players), the top corner seats reach down into them with their hands below their plates, so
+  the top row is one plate tall. Napoleon trick cards and its play boxes size from the table too; a
+  finished trick's box widens and shrinks its four to six cards to fit.
 - On desktop, the game info panel shows a copyable room code directly above the
   abort-vote button, and the global header omits it. Compact layouts retain the original
   header room code and omit it from the info drawer.

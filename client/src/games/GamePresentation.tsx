@@ -59,7 +59,9 @@ export function GamePresentation({
     return <ChinesePokerReveal key={frame.key} row={frame.row} bottomSeat={bottomSeat as Seat} />;
   }
   return <div ref={rootRef} key={frame.key}
-    className={[styles.presentation, styles[position], gameType === 'ninetynine' && styles.large,
+    className={[styles.presentation, styles[position],
+      (gameType === 'ninetynine' || gameType === 'napoleon') && styles.large,
+      gameType === 'napoleon' && styles.napoleon, gameType === 'napoleon' && frame.kind === 'trick' && styles.wide,
       reducedMotion && styles.reducedMotion,
       (frame.kind === 'eliminated' || frame.survived === false) && styles.eliminated].filter(Boolean).join(' ')}
     role="status" aria-live="polite" aria-atomic="true" data-presentation-kind={frame.kind}>

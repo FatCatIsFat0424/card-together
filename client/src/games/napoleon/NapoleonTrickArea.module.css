@@ -1,10 +1,12 @@
 /* ─── NapoleonTrickArea styles: cards placed around an ellipse for four to six seats ─── */
 
 .trickContainer {
-  --trick-w: max(40px, min(calc(104px * var(--playing-card-scale)), 11cqh, 9cqw));
+  /* Grows with the table (the centre column is the size container) and fills the centre cell, which the
+     opposite hand beside its plate, and with six players the corner seats reaching down, leave tall. */
+  --trick-w: max(40px, min(calc(120px * var(--playing-card-scale)), 11cqh, 9cqw));
   position: relative;
   width: calc(var(--trick-w) * 5.4);
-  height: calc(var(--trick-w) * 4.8);
+  height: calc(var(--trick-w) * 5);
 }
 
 .slot {

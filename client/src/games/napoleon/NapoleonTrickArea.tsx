@@ -17,7 +17,8 @@ export function napoleonTrickSlot(
   const relative = (seats.indexOf(seat) - from + seats.length) % seats.length;
   const angle = (relative / seats.length) * 2 * Math.PI;
   const round = (value: number): number => Math.round(value * 10) / 10;
-  return { left: round(50 - Math.sin(angle) * 36), top: round(50 + Math.cos(angle) * 31), angle };
+  // The taller vertical radius keeps the two cards on one side of a six-player table (and their names) apart.
+  return { left: round(50 - Math.sin(angle) * 36), top: round(50 + Math.cos(angle) * 34), angle };
 }
 
 export function NapoleonTrickArea({ trick, seats, bottomSeat, myTurn }: {

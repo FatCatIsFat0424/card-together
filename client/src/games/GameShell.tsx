@@ -237,6 +237,11 @@ export function GameShell({
   };
   // Seats left empty in a Blackjack or Hold'em match get no plate.
   const tableSeats = matchSeats(visibleGame);
+  const expandedTable = tableSeats.some((seat) => !['N', 'E', 'S', 'W'].includes(seat));
+  // With no side seats (six players), the top corner seats can reach down beside the centre.
+  const sidePositions = tableSeats.filter((seat) => seat !== bottomSeat)
+    .map((seat) => tablePosition(seat, bottomSeat, tableSeats));
+  const cornersSpan = expandedTable && !sidePositions.includes('left') && !sidePositions.includes('right');
   const unread = chatOpen ? 0 : Math.max(0, messageCount - seenMessages);
   const godView = useGodViewStore((state) => state.role);
 
@@ -385,7 +390,8 @@ export function GameShell({
       </div>
 
       <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}>
-        <div className={`${styles.table} ${tableSeats.some((seat) => !['N', 'E', 'S', 'W'].includes(seat)) ? styles.expandedTable : ''}`} data-card-table>
+        <div className={`${styles.table} ${expandedTable ? styles.expandedTable : ''} ${cornersSpan ? styles.cornersSpan : ''}`}
+          data-card-table>
           <div className={styles.tableTools}>
             <AbortVoteButton iconOnly className={styles.abortTool} buttonClassName={styles.toolBtn} />
             {visibleGame && <button type="button" className={styles.toolBtn}

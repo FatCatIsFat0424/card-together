@@ -51,6 +51,8 @@
 /* Opposite seat in the games listed in TableSeat: hand beside the plate, so the centre gets the height. */
 .handBeside {
   flex-direction: row;
+  /* Top edges line up, so the plate sits level with the corner plates beside it. */
+  align-items: flex-start;
   justify-content: center;
   gap: 10px;
 }
@@ -595,5 +597,7 @@
 /* Non-scoring captures stay visible but recede behind the red cards. */
 .capturedPlain { opacity: 0.55; }
 
-.topLeft { grid-area: topLeft; } .topRight { grid-area: topRight; }
+/* Top-row plates line up at the top edge, whichever seats keep their hands below the plate. */
+.topLeft { grid-area: topLeft; padding-top: 6px; } .topRight { grid-area: topRight; padding-top: 6px; }
+.top, .topLeft, .topRight { align-self: start; }
 .bottomLeft { grid-area: bottomLeft; } .bottomRight { grid-area: bottomRight; }
