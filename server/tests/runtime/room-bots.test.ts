@@ -278,6 +278,27 @@ describe('persisted bot identities', () => {
     }
   });
 
+  it('names bots after their current seat, numbering them in Napoleon', () => {
+    const code = room();
+    roomManager.joinRoom(code, 'guest');
+    roomManager.changeSeat(code, player('guest'), 'S');
+    expect(roomManager.addBot(code, 'host', 'E').success).toBe(true);
+    const name = (seat: Seat): string | undefined => roomManager.getRoomInfo(code)!.seats[seat].player?.nickname;
+    expect(name('E')).toBe('Bot E');
+    // A host move that trades the bot's seat renames it after its new seat.
+    expect(roomManager.movePlayer(code, 'host', player('guest'), { type: 'seat', seat: 'E' }).success).toBe(true);
+    expect(name('S')).toBe('Bot S');
+    expect(roomManager.setGameType(code, 'host', 'napoleon').success).toBe(true);
+    expect(name('S')).toBe('Bot 3');
+    expect(roomManager.setGameType(code, 'host', 'bigtwo').success).toBe(true);
+    expect(name('S')).toBe('Bot S');
+    // Rooms restored from older saves pick up the current names too.
+    const saved = structuredClone(roomManager.exportRooms());
+    saved[0].info = { ...saved[0].info, gameType: 'napoleon' };
+    roomManager.restoreRooms(saved);
+    expect(name('S')).toBe('Bot 3');
+  });
+
   it('places, tunes, and removes bots in additional seats', () => {
     const code = room();
     expect(roomManager.setGameType(code, 'host', 'napoleon').success).toBe(true);
@@ -286,7 +307,7 @@ describe('persisted bot identities', () => {
     expect(roomManager.addBot(code, 'host', 'P6').success).toBe(false);
     expect(roomManager.addBot(code, 'host', 'P5', 'easy').success).toBe(true);
     const bot = roomManager.getRoomInfo(code)!.additionalSeats![0];
-    expect(bot).toMatchObject({ isReady: true, player: { isBot: true, nickname: 'Bot P5', botDifficulty: 'easy' } });
+    expect(bot).toMatchObject({ isReady: true, player: { isBot: true, nickname: 'Bot 5', botDifficulty: 'easy' } });
     expect(roomManager.addBot(code, 'host', 'P5').success).toBe(false);
     expect(roomManager.setBotDifficulty(code, 'host', 'P5', 'hard').success).toBe(true);
     expect(roomManager.getRoomInfo(code)!.additionalSeats![0].player?.botDifficulty).toBe('hard');

@@ -114,6 +114,10 @@ Frontend page behavior and layout. Client architecture and connection handling:
 - In Ninety-Nine, Blackjack, Hold'em, and Napoleon the host sees a plus cell after the last seat to
   add human seats up to eight (six for Napoleon); only the last empty extra seat can be removed. Start
   conditions: [games](games.md#shared-room-lifecycle).
+- Napoleon names every seat "Player 1"–"Player 6" in play order (seat badges show the number) instead
+  of compass names and "Seat 5"; the waiting room, table, presentation, and match history agree.
+  Bots are named after their current seat ("Bot 3" in Napoleon, "Bot S" elsewhere) and renamed when
+  the host moves them, the game changes, or the room is restored.
 - Seat artwork: the player's uploaded seat background, the
   [bot dealer artwork](../client/src/assets/room-backgrounds/README.md) for bots, or the
   theme surface.

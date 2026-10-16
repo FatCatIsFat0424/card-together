@@ -1,6 +1,6 @@
-import { isCompassSeat, roomSeatInfo } from '@shared/rules/seats';
-import type { Locale } from '../i18n';
-import type { RoomInfo, GameSeat } from '@shared/types';
+import { isCompassSeat, isNumberedSeatGame, roomSeatInfo, seatNumber } from '@shared/rules/seats';
+import type { Locale, TranslationKey } from '../i18n';
+import type { RoomInfo, GameSeat, GameType } from '@shared/types';
 import { useI18nStore } from '../stores/i18n-store';
 import { useRoomStore } from '../stores/room-store';
 
@@ -9,6 +9,17 @@ const LIST_SEPARATOR: Record<Locale, string> = { 'zh-TW': '、', en: ', ' };
 /** Join display names with the locale's list separator. */
 export function joinNames(names: readonly string[], locale: Locale): string {
   return names.join(LIST_SEPARATOR[locale]);
+}
+
+type Translate = (key: TranslationKey, params?: Record<string, string>) => string;
+
+/** Localized seat name (or its badge text when `short`); numbered games say "Player n" for every seat. */
+export function seatLabel(t: Translate, gameType: GameType | undefined, seat: GameSeat, short = false): string {
+  if (gameType && isNumberedSeatGame(gameType)) {
+    const n = String(seatNumber(seat));
+    return short ? n : t('seat.numbered', { n });
+  }
+  return t(short ? `seat.short.${seat}` : `seat.${seat}`);
 }
 
 /** Player nickname for a seat, falling back to the localized seat name. */
@@ -21,5 +32,6 @@ export function seatDisplayName(
 export function useSeatName(): (seat: GameSeat) => string {
   const room = useRoomStore((state) => state.roomInfo);
   const { t } = useI18nStore();
-  return (seat: GameSeat): string => (room ? roomSeatInfo(room, seat)?.player?.nickname : null) ?? t(`seat.${seat}`);
+  return (seat: GameSeat): string => (room ? roomSeatInfo(room, seat)?.player?.nickname : null)
+    ?? seatLabel(t, room?.gameType, seat);
 }

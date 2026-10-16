@@ -9,6 +9,21 @@ export function nextGameSeat(seat: GameSeat, reverse = false): GameSeat {
   return GAME_SEAT_ORDER[(GAME_SEAT_ORDER.indexOf(seat) + step + 8) % 8];
 }
 
+/** Games that number every seat in play order (Player 1, Player 2, ...) instead of naming compass seats. */
+export function isNumberedSeatGame(gameType: GameType): boolean {
+  return gameType === 'napoleon';
+}
+
+/** A seat's number in play order, starting at 1. */
+export function seatNumber(seat: GameSeat): number {
+  return GAME_SEAT_ORDER.indexOf(seat) + 1;
+}
+
+/** Bots are named after the seat they sit in: its number in numbered games, otherwise its code. */
+export function botNickname(gameType: GameType, seat: GameSeat): string {
+  return `Bot ${isNumberedSeatGame(gameType) ? seatNumber(seat) : seat}`;
+}
+
 export function isCompassSeat(seat: GameSeat): seat is Seat {
   return (SEAT_ORDER_CLOCKWISE as readonly GameSeat[]).includes(seat);
 }

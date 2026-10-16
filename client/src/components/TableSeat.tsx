@@ -20,6 +20,7 @@ import { useGamePresentation } from '../games/use-game-presentation';
 import { useGameStore } from '../stores/game-store';
 import { useGodViewStore } from '../stores/god-view-store';
 import { useI18nStore } from '../stores/i18n-store';
+import { seatLabel } from '../games/seat-names';
 import { useRoomStore } from '../stores/room-store';
 import { napoleonPresentedPoints, napoleonSeatLabels } from '../games/napoleon/napoleon-view';
 import { ObservedCards, ObservedLiarCards, ObservedNapoleonCards } from './ObservedHand';
@@ -228,6 +229,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const observedLiars = useGodViewStore((state) => state.liarHands?.[seat]);
   const observedNapoleon = useGodViewStore((state) => state.napoleonHands?.[seat]);
   const napoleon = useGameStore((state) => state.napoleon);
+  const gameType = useGameStore((state) => state.visible?.gameType);
   // Napoleon roles and won points follow the presentation, so a secretary is not unmasked early.
   const napoleonLabels = napoleon && napoleonSeatLabels(napoleon, frame);
   const napoleonPoints = napoleon && (napoleon.phase === 'playing' || napoleon.phase === 'scoring')
@@ -265,7 +267,8 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
     : heLocked && status === 'locked' ? heState === 'folded' ? 'holdem.folded' : 'holdem.allIn' : null;
   const statusIcon = heStatusLabel ? heState === 'folded' && autoPlayed ? STATUS_ICON.autoPlayed : ''
     : dead && status === 'busted' ? '💀' : status ? STATUS_ICON[status] : '';
-  const name = player?.nickname ?? t(`seat.${seat}`);
+  const seatName = seatLabel(t, gameType, seat);
+  const name = player?.nickname ?? seatName;
   const bottom = position === 'bottom';
   const select = onObserve ?? onPick;
   const redCards = captured?.filter((card) => rpCardPoints(card) > 0).slice(-MAX_PILE) ?? [];
@@ -311,9 +314,9 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
             {call.type === 'pass' ? t('game.pass') : <BidLabel level={call.level} suit={call.suit} />}
           </span>}
         </div>
-        <span className={styles.seatBadge} title={t(`seat.${seat}`)}>
-          <span aria-hidden="true">{t(`seat.short.${seat}`)}</span>
-          <span className={styles.srOnly}>{t(`seat.${seat}`)}</span>
+        <span className={styles.seatBadge} title={seatName}>
+          <span aria-hidden="true">{seatLabel(t, gameType, seat, true)}</span>
+          <span className={styles.srOnly}>{seatName}</span>
         </span>
         <div className={styles.chips}>
           {captured && <CardPileDetails cards={captured} owner={name} />}

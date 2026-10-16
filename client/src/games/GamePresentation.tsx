@@ -9,6 +9,7 @@ import { tablePosition } from '../game-view';
 import { useI18nStore } from '../stores/i18n-store';
 import { useMotionStore } from '../stores/motion-store';
 import { useRoomStore } from '../stores/room-store';
+import { seatLabel } from './seat-names';
 import styles from './GamePresentation.module.css';
 import { ChinesePokerReveal } from './chinesepoker/ChinesePokerReveal';
 import { LiarsDeckFrame } from './liarsdeck/LiarsDeckFrame';
@@ -39,7 +40,8 @@ export function GamePresentation({
   const { t } = useI18nStore();
   const room = useRoomStore((state) => state.roomInfo);
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
-  const name = (seat: GameSeat): string => (room ? roomSeatInfo(room, seat)?.player?.nickname : null) ?? t(`seat.${seat}`);
+  const name = (seat: GameSeat): string => (room ? roomSeatInfo(room, seat)?.player?.nickname : null)
+    ?? seatLabel(t, gameType, seat);
   const position = frame.seat ? tablePosition(frame.seat, bottomSeat, room ? occupiedSeats(roomPlayers(room)) : undefined) : 'bottom';
   const collecting = frame.kind === 'trick' || frame.kind === 'capture';
   // Napoleon frames carry their cards separately because they may include jokers.

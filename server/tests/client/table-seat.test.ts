@@ -30,6 +30,8 @@ vi.mock('../../../client/src/stores/god-view-store', () => ({
 
 import { TableSeat } from '../../../client/src/components/TableSeat';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
+import { seatLabel } from '../../../client/src/games/seat-names';
+import { botNickname } from '@shared/rules/seats';
 
 const human: PlayerInfo = {
   id: 'alice', username: 'alice', nickname: 'Alice', color: '#4a9eff', avatar: 'cat', avatarImage: null,
@@ -282,6 +284,22 @@ describe('table seat plate', () => {
     }
     state.game = game('bigtwo');
     expect(render({ seat: 'N', position: 'top' })).not.toContain('handBeside');
+  });
+
+  it('numbers every Napoleon seat in play order instead of naming the compass seats', () => {
+    state.game = { ...baseGame(), visible: { gameType: 'napoleon', clock: clock(null), log: [] } };
+    const html = render({ seat: 'W', position: 'left' });
+    expect(html).toContain('title="Player 4"');
+    expect(html).toContain('<span aria-hidden="true">4</span>');
+    state.game = { ...baseGame(), visible: { gameType: 'bigtwo', clock: clock(null), log: [] } };
+    expect(render({ seat: 'W', position: 'left' })).toContain('title="West"');
+    const { t } = useI18nStore.getState();
+    expect(seatLabel(t, 'napoleon', 'N')).toBe('Player 1');
+    expect(seatLabel(t, 'napoleon', 'P6', true)).toBe('6');
+    useI18nStore.getState().setLocale('zh-TW');
+    expect(seatLabel(useI18nStore.getState().t, 'napoleon', 'P5')).toBe('玩家 5');
+    expect(botNickname('napoleon', 'P6')).toBe('Bot 6');
+    expect(botNickname('bridge', 'W')).toBe('Bot W');
   });
 
   it('prefers a bust over a thinking bot and keeps the pickable seat label', () => {

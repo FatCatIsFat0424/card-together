@@ -1,4 +1,4 @@
-import { maxPlayers, roomCanStart, roomSeatInfo } from '@shared/rules/seats';
+import { isNumberedSeatGame, maxPlayers, roomCanStart, roomSeatInfo } from '@shared/rules/seats';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import Alert from '@mui/material/Alert';
@@ -25,6 +25,7 @@ import { useRoomStore } from '../stores/room-store';
 import { useChatStore } from '../stores/chat-store';
 import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
+import { seatLabel } from '../games/seat-names';
 import { useMotionStore } from '../stores/motion-store';
 import { PlayerLink } from '../components/PlayerLink';
 import { ChatPanel } from '../components/ChatPanel';
@@ -304,10 +305,11 @@ export function RoomPage(): ReactNode {
   const additionalSeats = roomInfo.additionalSeats ?? [];
   const entering = enteredRoom !== roomInfo.code && !reducedMotion && !systemReducedMotion;
   const seatCards: RoomSeatCard[] = [
-    ...SEAT_ORDER_CLOCKWISE.map((seat) => ({ key: seat, label: t(`seat.${seat}`), info: roomInfo.seats[seat], seat,
-      gameSeat: seat })),
+    ...SEAT_ORDER_CLOCKWISE.map((seat) => ({ key: seat, label: seatLabel(t, roomInfo.gameType, seat),
+      info: roomInfo.seats[seat], seat, gameSeat: seat })),
     ...additionalSeats.map((info, index) => ({ key: `additional-${index}`,
-      label: t('room.additionalSeat', { n: String(index + 5) }), info, additionalIndex: index,
+      label: isNumberedSeatGame(roomInfo.gameType) ? seatLabel(t, roomInfo.gameType, GAME_SEAT_ORDER[index + 4])
+        : t('room.additionalSeat', { n: String(index + 5) }), info, additionalIndex: index,
       gameSeat: GAME_SEAT_ORDER[index + 4] })),
   ];
   const spectators = roomInfo.spectators ?? [];

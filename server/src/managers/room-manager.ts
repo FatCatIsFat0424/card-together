@@ -15,7 +15,7 @@ import {
 } from '@shared/constants';
 import type { PersistedRoom } from '../runtime/types';
 import { generateRoomCode } from '../utils/id-generator';
-import { isCompassSeat, maxPlayers, roomPlayers, roomCanStart, roomSeatInfo } from '@shared/rules/seats';
+import { botNickname, isCompassSeat, maxPlayers, roomPlayers, roomCanStart, roomSeatInfo } from '@shared/rules/seats';
 import type { GameSeat } from '@shared/types';
 
 const rooms = new Map<RoomCode, PersistedRoom>();
@@ -31,6 +31,15 @@ function withSeat(info: RoomInfo, seat: GameSeat, entry: SeatInfo): RoomInfo {
   if (isCompassSeat(seat)) return { ...info, seats: { ...info.seats, [seat]: entry } };
   const index = Number(seat.slice(1)) - 5;
   return { ...info, additionalSeats: (info.additionalSeats ?? []).map((current, position) => position === index ? entry : current) };
+}
+
+/** Renames every bot after the seat it now sits in, so moves and game changes keep its name accurate. */
+function withBotNames(info: RoomInfo): RoomInfo {
+  const rename = (entry: SeatInfo, seat: GameSeat): SeatInfo => entry.player?.isBot
+    ? { ...entry, player: { ...entry.player, nickname: botNickname(info.gameType, seat) } } : entry;
+  const named = Object.fromEntries(seats.map((seat) => [seat, rename(info.seats[seat], seat)])) as SeatMap;
+  return { ...info, seats: named, ...(info.additionalSeats
+    ? { additionalSeats: info.additionalSeats.map((entry, index) => rename(entry, roomSeats(info)[index + 4])) } : {}) };
 }
 
 function emptySeats(): SeatMap {
@@ -139,7 +148,7 @@ export function addBot(code: RoomCode, playerId: string, seat: GameSeat, difficu
     return { success: false, reason: 'Leave a seat for a player.' };
   }
   const bot: PlayerInfo = {
-    id: `bot:${randomUUID()}`, username: `bot-${seat.toLowerCase()}`, nickname: `Bot ${seat}`,
+    id: `bot:${randomUUID()}`, username: `bot-${seat.toLowerCase()}`, nickname: botNickname(room.info.gameType, seat),
     color: '#64748b', avatar: 'owl', avatarImage: null, isBot: true, botDifficulty: difficulty,
   };
   room.memberIds.push(bot.id);
@@ -248,9 +257,9 @@ export function movePlayer(code: RoomCode, hostId: string, player: PlayerInfo, t
   if (destination >= 0) positions[destination] = { player, isReady: false };
   const next = { ...room.info.seats };
   seats.forEach((seat, index) => { next[seat] = positions[index]; });
-  room.info = { ...room.info, seats: next,
+  room.info = withBotNames({ ...room.info, seats: next,
     ...(room.info.additionalSeats ? { additionalSeats: positions.slice(4) } : {}),
-  };
+  });
   resetAllReady(code);
   return { success: true };
 }
@@ -421,10 +430,10 @@ export function setGameType(code: RoomCode, playerId: string, gameType: GameType
   }
   const removedBots = new Set(removed.flatMap((entry) => entry.player ? [entry.player.id] : []));
   room.memberIds = room.memberIds.filter((id) => !removedBots.has(id));
-  room.info = { ...room.info, gameType,
+  room.info = withBotNames({ ...room.info, gameType,
     napoleonOptions: room.info.napoleonOptions ?? { ...DEFAULT_NAPOLEON_OPTIONS },
     ...(room.info.additionalSeats ? { additionalSeats: room.info.additionalSeats.slice(0, additionalLimit) } : {}),
-  };
+  });
   resetAllReady(code);
   return { success: true };
 }
@@ -621,12 +630,12 @@ export function exportRooms(): PersistedRoom[] {
 export function restoreRooms(records: PersistedRoom[]): void {
   rooms.clear();
   for (const room of records) rooms.set(room.info.code, {
-    ...room, info: {
+    ...room, info: withBotNames({
       ...room.info, timeControl: room.info.timeControl ?? { ...DEFAULT_TIME_CONTROL },
       sevensOptions: room.info.sevensOptions ?? { ...LEGACY_SEVENS_OPTIONS },
       ninetyNineOptions: room.info.ninetyNineOptions ?? { ...DEFAULT_NINETYNINE_OPTIONS },
       blackjackOptions: room.info.blackjackOptions ?? { ...DEFAULT_BLACKJACK_OPTIONS },
       napoleonOptions: room.info.napoleonOptions ?? { ...DEFAULT_NAPOLEON_OPTIONS },
-    },
+    }),
   });
 }

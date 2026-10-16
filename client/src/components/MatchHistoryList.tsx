@@ -10,6 +10,7 @@ import { GAME_TYPES, SUIT_SYMBOLS } from '@shared/constants';
 import { matchOutcome, selectHistoryMatches } from '../match-history';
 import type { HistorySortKey, MatchOutcome, SortDirection } from '../match-history';
 import { resultSeats } from '../game-view';
+import { seatLabel } from '../games/seat-names';
 import { nnRank, nnWinners } from '@shared/rules/ninetynine';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
@@ -33,8 +34,8 @@ function MatchResultLabel({ match, players, accountId }: {
   const mySeat = seats[match.accountIds.indexOf(accountId ?? '')];
   const seatName = (seat: GameSeat): string => {
     const id = match.accountIds[seats.indexOf(seat)];
-    return id?.startsWith('bot:') ? t('player.botSeat', { seat: t(`seat.${seat}`) })
-      : players[id]?.nickname ?? t(`seat.${seat}`);
+    const label = seatLabel(t, result.gameType, seat);
+    return id?.startsWith('bot:') ? t('player.botSeat', { seat: label }) : players[id]?.nickname ?? label;
   };
   if (result.gameType === 'redpoints') {
     return <span><AppIcon name="trophy" /> {joinNames(result.winners.map(seatName), locale)}
@@ -191,7 +192,8 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
             </div></td>
             <td><div className={styles.players}>
               {match.accountIds.map((id, index) => id.startsWith('bot:')
-                ? <span key={id} className={styles.bot}>{t('player.botSeat', { seat: t(`seat.${resultSeats(match.result)[index]}`) })}</span>
+                ? <span key={id} className={styles.bot}>{t('player.botSeat', {
+                  seat: seatLabel(t, match.result.gameType, resultSeats(match.result)[index]) })}</span>
                 : players[id] && <PlayerLink key={id} player={players[id]} />)}
             </div></td>
           </tr>;
