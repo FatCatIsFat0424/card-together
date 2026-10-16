@@ -73,6 +73,7 @@ type TranslationKeys = Record<
   'game.scoring': string;
   'game.contract': string;
   'game.pass': string;
+  'game.passShort': string;
   // Redeal
   'redeal.title': string;
   'redeal.description': string;
@@ -155,6 +156,7 @@ const translations: Record<Locale, TranslationKeys> = {
     'game.scoring': '結算',
     'game.contract': '合約',
     'game.pass': 'Pass',
+    'game.passShort': 'P',
     'redeal.title': '倒牌重洗',
     'redeal.description': '你的手牌符合倒牌重洗條件（無 A 且點數 ≤ 4），是否要求重新發牌？',
     'redeal.accept': '重洗',
@@ -229,6 +231,7 @@ const translations: Record<Locale, TranslationKeys> = {
     'game.scoring': 'Scoring',
     'game.contract': 'Contract',
     'game.pass': 'Pass',
+    'game.passShort': 'P',
     'redeal.title': 'Redeal',
     'redeal.description': 'Your hand qualifies for a redeal (no Aces, HCP ≤ 4). Request a redeal?',
     'redeal.accept': 'Redeal',

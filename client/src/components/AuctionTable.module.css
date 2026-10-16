@@ -29,6 +29,8 @@
   font-weight: 500;
 }
 
+.table td.pass abbr { text-decoration: none; }
+
 .wait {
   display: inline-block;
   min-width: 2rem;

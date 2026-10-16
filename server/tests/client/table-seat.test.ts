@@ -315,6 +315,9 @@ describe('table seat plate', () => {
     expect(table.match(/<th[^>]*>([^<]*)<\/th>/g)?.map((cell) => cell.replace(/<[^>]+>/g, '')))
       .toEqual(['1', '2', '3', '4', '5', '6']);
     expect(table).toContain('aria-label="Player 6">6</th>');
+    // Passes read as a single letter, with the full word as the abbreviation's title.
+    expect(table).toContain('<abbr title="Pass">P</abbr>');
+    expect(table).not.toContain('>Pass<');
     const waiting = renderToStaticMarkup(createElement(BiddingWaiting, { seat: 'P5', bids: calls }));
     expect(waiting).toContain('Player 5');
     expect(waiting).toContain('Player 2');

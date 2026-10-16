@@ -42,7 +42,8 @@ export function AuctionTable({ calls, toAct, mySeat, columns = AUCTION_COLUMNS }
         {rows.map((row, r) => (
           <tr key={r}>{row.map((call, c) => (
             <td key={c} className={call?.action.type === 'pass' ? styles.pass : undefined}>
-              {call ? (call.action.type === 'pass' ? t('game.pass')
+              {/* A one-letter pass keeps six columns readable in the narrow info rail. */}
+              {call ? (call.action.type === 'pass' ? <abbr title={t('game.pass')}>{t('game.passShort')}</abbr>
                 : <BidLabel level={call.action.level} suit={call.action.suit} />)
                 : r * columns.length + c === waitIndex ? <span className={styles.wait}>?</span> : null}
             </td>
