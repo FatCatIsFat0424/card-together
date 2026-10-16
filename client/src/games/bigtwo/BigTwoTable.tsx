@@ -12,6 +12,7 @@ import { useI18nStore } from '../../stores/i18n-store';
 import { CardHand } from '../../components/CardHand';
 import { reconcileHandOrder } from '../../components/card-hand-order';
 import { GameShell } from '../GameShell';
+import { HandActions } from '../HandActions';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
@@ -188,7 +189,7 @@ export function BigTwoTable(): ReactNode {
     <CardHand cards={hand} selectedCards={selected} disabled={!playing || actionPending || watching}
       onCardClick={(card) => setSelection(toggleCard(selected, card))}
       onReorder={setManualOrder} />
-    {playing && !watching && <div className={styles.controls}>
+    {playing && !watching && <HandActions className={styles.controls} layout="bigtwo">
       <button type="button" className={`btn btn-outline ${styles.ctrl}`} onClick={() => setSelection([])}
         disabled={selected.length === 0}>{t('bigtwo.clear')}</button>
       <button type="button" className={`btn btn-outline ${styles.ctrl}`} onClick={pass}
@@ -200,7 +201,7 @@ export function BigTwoTable(): ReactNode {
           {selectedCombo ? t(comboLabelKey(selectedCombo.type)) : t('bigtwo.invalid')}
         </span>}
       </button>
-    </div>}
+    </HandActions>}
   </div>;
 
   return (

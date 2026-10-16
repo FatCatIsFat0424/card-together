@@ -3,7 +3,10 @@ import type { ReactNode } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import { GAME_TYPES } from '@shared/constants';
 import type { GameType } from '@shared/types';
 import { getGameRules } from '../game-rules-i18n';
 import type { GameRulesContext } from '../game-rules-context';
@@ -50,13 +53,16 @@ export function GameRulesContent({ gameType, context }: {
   </article>;
 }
 
-export function GameRulesDialog({ gameType, context, onClose }: {
+export function GameRulesDialog({ gameType, context, browseGames = false, onClose }: {
   readonly gameType: GameType;
   readonly context?: GameRulesContext;
+  readonly browseGames?: boolean;
   readonly onClose: () => void;
 }): ReactNode {
   const { t } = useI18nStore();
   const titleId = useId();
+  const [selectedGame, setSelectedGame] = useState(gameType);
+  const visibleGame = browseGames ? selectedGame : gameType;
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const systemReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const [closing, setClosing] = useState(false);
@@ -68,13 +74,25 @@ export function GameRulesDialog({ gameType, context, onClose }: {
       paper: { className: `${styles.dialog} ${closing ? motionStyles.exit : motionStyles.enter} ${still ? motionStyles.still : ''}` },
       backdrop: { className: styles.backdrop } }}>
     <DialogTitle component="div" id={`${titleId}-header`} className={styles.header}>
-      <h2 id={titleId}>{t('lobby.rulesTitle', { game: t(`gameType.${gameType}`) })}</h2>
+      <h2 id={titleId}>{browseGames ? t('rules.browseTitle') : t('lobby.rulesTitle', { game: t(`gameType.${gameType}`) })}</h2>
       <button type="button" className={`btn btn-secondary ${styles.close}`} onClick={close} aria-label={t('table.close')}>
         <AppIcon name="close" />
       </button>
     </DialogTitle>
-    <DialogContent dividers className={styles.content}>
-      <GameRulesContent gameType={gameType} context={context} />
+    <DialogContent dividers className={`${styles.content} ${browseGames ? styles.browser : ''}`}>
+      {browseGames ? <>
+        <Tabs orientation="vertical" variant="scrollable" scrollButtons={false}
+          className={styles.gameTabs} value={selectedGame} aria-label={t('gameType.label')}
+          onChange={(_, value: GameType) => setSelectedGame(value)}>
+          {GAME_TYPES.map((game) => <Tab key={game} value={game} label={t(`gameType.${game}`)}
+            id={`${titleId}-tab-${game}`} aria-controls={`${titleId}-panel-${game}`} />)}
+        </Tabs>
+        <div key={visibleGame} className={styles.gamePanel} role="tabpanel" tabIndex={0}
+          id={`${titleId}-panel-${visibleGame}`} aria-labelledby={`${titleId}-tab-${visibleGame}`}>
+          <h3 className={styles.gameTitle}>{t('lobby.rulesTitle', { game: t(`gameType.${visibleGame}`) })}</h3>
+          <GameRulesContent gameType={visibleGame} context={visibleGame === gameType ? context : undefined} />
+        </div>
+      </> : <GameRulesContent gameType={gameType} context={context} />}
     </DialogContent>
   </Dialog>;
 }

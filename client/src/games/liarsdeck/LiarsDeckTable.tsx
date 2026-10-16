@@ -10,6 +10,7 @@ import { useSortedHand } from '../use-hand-sort';
 import { useHandReorder } from '../use-hand-reorder';
 import { useI18nStore } from '../../stores/i18n-store';
 import { GameShell } from '../GameShell';
+import { HandActions } from '../HandActions';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
@@ -228,7 +229,7 @@ export function LiarsDeckTable(): ReactNode {
       {game.myPlayed.map((card) => <LiarCardFace key={card.id} face={card.face} variant={card.id}
         className={styles.mini} label={t(`liarsdeck.face.${card.face}`)} />)}
     </div>}
-    {playing && <div className={styles.controls}>
+    {playing && <HandActions className={styles.controls}>
       {prompt && <span className={`${styles.prompt} ${mode !== 'wait' ? styles.promptActive : ''}`}>{prompt}</span>}
       {showHand && (mode === 'play' || mode === 'playOrCall') && <button type="button"
         className={`btn btn-primary ${styles.ctrl}`} disabled={!canAct || chosen.length === 0}
@@ -240,7 +241,7 @@ export function LiarsDeckTable(): ReactNode {
         title={t('liarsdeck.callOn', { name: seatName(game.lastPlay.seat) })}>
         {t('liarsdeck.call')}
       </button>}
-    </div>}
+    </HandActions>}
   </div>;
 
   return (

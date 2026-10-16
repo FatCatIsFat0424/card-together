@@ -15,6 +15,7 @@ import { CardHand } from '../../components/CardHand';
 import { reconcileHandOrder } from '../../components/card-hand-order';
 import { tablePosition } from '../../game-view';
 import { GameShell } from '../GameShell';
+import { HandActions } from '../HandActions';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { infoStyles, TurnBox } from '../TableInfo';
@@ -335,7 +336,7 @@ export function ChinesePokerTable(): ReactNode {
         onCardClick={(card) => update({ selection: toggleCard(selection, card) })}
         onReorder={setManualOrder} />
       {foulWarned && <p className={styles.foulWarning} role="alert">{t('chinesepoker.foulWarning')}</p>}
-      <div className={styles.controls}>
+      <HandActions className={styles.controls}>
         <button type="button" className={`btn btn-outline ${styles.ctrl}`} disabled={!editable}
           onClick={() => update({ rows: rowsFromArrangement(cpBestArrangement(myHand)), selection: [] })}>
           {t('chinesepoker.autoArrange')}
@@ -349,7 +350,7 @@ export function ChinesePokerTable(): ReactNode {
           disabled={!arrangement || !editable || !connectionReady} onClick={confirm}>
           {t(foulWarned ? 'chinesepoker.confirmFoul' : 'chinesepoker.confirm')}
         </button>
-      </div>
+      </HandActions>
     </> : arranging && <p className={styles.submittedNote}>{t('chinesepoker.submitted')}</p>}
   </div>;
 

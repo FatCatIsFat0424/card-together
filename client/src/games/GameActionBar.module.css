@@ -7,10 +7,10 @@
   z-index: 8;
   width: 44px;
   padding: 4px 0;
-  background: var(--bg-surface);
-  border: 1px solid var(--color-warning);
+  background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
+  border: 1px solid var(--rail-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
 }
 
 .action {
@@ -29,7 +29,7 @@
   border-radius: var(--radius-md);
 }
 .action + .action { border-top: 1px solid var(--border-color); }
-.action:hover:not(:disabled), .action:focus-visible { color: var(--color-warning); background: var(--bg-card-hover); }
+.action:hover:not(:disabled), .action:focus-visible { color: var(--text-primary); background: var(--bg-card-hover); }
 .action:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -3px; }
 .action[aria-pressed='true'] { color: var(--color-success); background: var(--bg-card-hover); }
 .action:disabled { opacity: 0.4; cursor: default; }
@@ -44,20 +44,15 @@
   box-shadow: var(--shadow-md);
 }
 
-/* Match the surrounding table controls on phones. */
+/* Raise the controls above the hand on portrait phones. */
 @media (max-width: 767px) and (orientation: portrait) {
   .bar {
     grid-column: 1;
     grid-row: 2;
     top: -64px;
     bottom: auto;
-    background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
-    border-color: var(--rail-border);
-    box-shadow: var(--shadow-sm);
   }
   .action { min-height: 44px; }
-  .action:hover:not(:disabled), .action:focus-visible { color: var(--text-primary); }
-  .action[aria-pressed='true'] { color: var(--color-success); }
 }
 
 /* Keep the vertical rail compact while retaining phone-sized touch targets. */
@@ -67,12 +62,5 @@
 
 /* Keep the vertical rail compact while retaining phone-sized touch targets. */
 @media (max-height: 500px) and (min-width: 600px) {
-  .bar {
-    background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
-    border-color: var(--rail-border);
-    box-shadow: var(--shadow-sm);
-  }
   .action { min-height: 44px; }
-  .action:hover:not(:disabled), .action:focus-visible { color: var(--text-primary); }
-  .action[aria-pressed='true'] { color: var(--color-success); }
 }

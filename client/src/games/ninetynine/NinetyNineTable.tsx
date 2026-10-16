@@ -12,6 +12,7 @@ import { useGameStore } from '../../stores/game-store';
 import { useI18nStore } from '../../stores/i18n-store';
 import { CardHand } from '../../components/CardHand';
 import { GameShell } from '../GameShell';
+import { HandActions } from '../HandActions';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
@@ -187,7 +188,7 @@ export function NinetyNineTable(): ReactNode {
   const handZone = <div className={styles.handArea}>
     <CardHand cards={game.myHand} playableCards={playable} disabled={!canPlay} onCardClick={onCardClick}
       markedCards={unplayable} markedLabel={t('ninetynine.unplayable')} />
-    {playing && <div className={styles.controls}>
+    {playing && <HandActions className={styles.controls}>
       {prompt && <span className={`${styles.prompt} ${isMyTurn ? styles.promptActive : ''}`}>{prompt}</span>}
       {chosen && nnRequiresChoice(chosen) && <div className={styles.choice} role="group" aria-label={cardLabel(chosen)}>
         <CardImage card={chosen} className={styles.mini} />
@@ -201,7 +202,7 @@ export function NinetyNineTable(): ReactNode {
       </div>}
       {chosen && <button type="button" className={`btn btn-outline ${styles.ctrl}`}
         onClick={() => setPendingCard(null)}>{t('ninetynine.cancel')}</button>}
-    </div>}
+    </HandActions>}
   </div>;
 
   return (

@@ -117,8 +117,9 @@ Seated players click the spectator area's heading or empty space to stand up;
 there is no separate footer action. Player links and host controls remain independent,
 and the area can also be activated by keyboard through its heading.
 The avatar stays beside two text rows: an ellipsized name above host/self tags.
-The landscape header uses a prominent game dropdown and icon-only settings, rules,
-and chat buttons with accessible labels. Its action buttons share a 44px height.
+The landscape header uses a prominent game dropdown with the settings icon beside it.
+The rules button includes its text label; chat uses an icon with an accessible label.
+Its action buttons share a 44px height.
 Bot controls use a vertical ellipsis.
 
 - Empty seats are full-card buttons; bot controls stay separate.
@@ -209,7 +210,7 @@ Bot controls use a vertical ellipsis.
   label and tooltip. Spectators, eliminated players, and settlement screens hide the bar.
   In short landscape view, the hand and adjacent left seat leave space beside the
   vertical controls while the central playing table keeps its full width. The table's
-  landscape action bar uses the same subdued border and surface as its corner buttons.
+  action bar uses the same subdued border and surface as its corner buttons at every viewport size.
   The upper edge sits flush against the header;
   four-seat tables float their corner buttons so the opposite seat also moves up,
   without an empty toolbar row above it.
@@ -219,6 +220,10 @@ Bot controls use a vertical ellipsis.
   whose bottom edge clips their lower half. Raising a card reveals more of it.
   The own-seat plate and turn prompt float above the hand toward the left of the table,
   leaving the lower row's full width beside the action bar available for cards.
+  Explicit hand actions (play/pass, arrange, cover, card-effect choices and betting
+  actions) sit at the lower right in phone landscape. Hand position and available
+  width stay unchanged, with longer action panels scrolling independently; other layouts retain
+  their controls below the hand.
   The landscape bidding panel is centered on the playing table and capped at 352px with tighter spacing; touch
   buttons retain their 44px height.
   Dialogs, including Bridge redeal confirmations, layer above player plates at every
@@ -230,7 +235,7 @@ Bot controls use a vertical ellipsis.
   Phone portrait tables and hands keep their full width, with the action bar raised
   beside the own-seat plate above the cards. Four-seat tables float the corner controls and leave one button
   row above the opposite seat. Hand sizing follows its available width, and redeal
-  prompts layer above the own-seat plate. The action bar uses subdued borders here too.
+  prompts layer above the own-seat plate.
   On short portrait phones, side seats retain their card counts but omit decorative
   card-back trays, and extra space above the hand keeps the raised action bar clear.
   Portrait bidding panels sit at the playing surface's center, capped at 336px wide
@@ -326,6 +331,10 @@ Saved and system reduced-motion preferences disable this animation.
 
 - Opened from the lobby Rules link, the waiting-room Game rules button, the desktop match
   information rail, or compact table tools; available to players and spectators.
+- Waiting rooms open a game rules library with vertical game tabs on the left and
+  independently scrolling rules on the right, initially selecting the room's game.
+  Browsing does not change the room's game; only its current game shows room options.
+  Lobby and in-game dialogs continue to show only the game they were opened for.
 - Opens with a short summary (every game except Bridge), then active options, then the
   full rules: Sevens Dragon Slaying, Ninety-Nine two decks, Blackjack player dealer.
   Summary lines and Blackjack match length follow the same options; waiting rooms follow

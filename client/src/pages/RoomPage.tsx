@@ -461,7 +461,7 @@ export function RoomPage(): ReactNode {
             onClick={(event) => setSettingsAnchor(event.currentTarget)}>
             <AppIcon name="settings" /> <span className={styles.actionText}>{t('room.gameSettings')}</span>
           </button>
-          <button type="button" className="btn btn-outline touch-target" aria-haspopup="dialog"
+          <button type="button" className={`btn btn-outline touch-target ${styles.gameRulesButton}`} aria-haspopup="dialog"
             aria-label={t('rules.open')} title={t('rules.open')}
             onClick={() => setRulesOpen(true)}>
             <AppIcon name="rules" /> <span className={styles.actionText}>{t('rules.open')}</span>
@@ -682,7 +682,7 @@ export function RoomPage(): ReactNode {
           {error || readyNotice?.message}
         </Alert>
       </Snackbar>
-      {rulesOpen && <GameRulesDialog gameType={roomInfo.gameType} context={roomRulesContext(roomInfo)}
+      {rulesOpen && <GameRulesDialog browseGames gameType={roomInfo.gameType} context={roomRulesContext(roomInfo)}
         onClose={() => setRulesOpen(false)} />}
     </main>
   );

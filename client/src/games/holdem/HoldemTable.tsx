@@ -11,6 +11,7 @@ import { useGameStore } from '../../stores/game-store';
 import { useI18nStore } from '../../stores/i18n-store';
 import { ChipIcon } from '../ChipIcon';
 import { GameShell } from '../GameShell';
+import { HandActions } from '../HandActions';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
@@ -300,7 +301,7 @@ function Controls({ game, options, enabled, onAction }: {
   const disabled = !enabled || !options;
   const callLabel = !options || options.check ? t('holdem.action.check')
     : t(options.callAllIn ? 'holdem.action.callAllIn' : 'holdem.action.call', { n: String(options.call) });
-  return <div className={styles.controls}>
+  return <HandActions className={styles.controls} layout="wide">
     <div className={styles.mainButtons}>
       <button type="button" className={`btn btn-outline ${styles.ctrl} ${styles.foldButton}`} disabled={disabled}
         onClick={() => onAction({ type: 'fold' })}>{t('holdem.action.fold')}</button>
@@ -309,7 +310,7 @@ function Controls({ game, options, enabled, onAction }: {
     </div>
     {options?.raise && <RaiseInput key={`${options.raise.min}-${options.raise.max}`} game={game} control={options.raise}
       disabled={disabled} onRaise={(to) => onAction({ type: 'raise', to })} />}
-  </div>;
+  </HandActions>;
 }
 
 export function HoldemTable(): ReactNode {

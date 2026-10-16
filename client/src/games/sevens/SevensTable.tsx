@@ -13,6 +13,7 @@ import { useGodViewStore } from '../../stores/god-view-store';
 import { useI18nStore } from '../../stores/i18n-store';
 import { CardHand } from '../../components/CardHand';
 import { GameShell } from '../GameShell';
+import { HandActions } from '../HandActions';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
@@ -295,14 +296,14 @@ export function SevensTable(): ReactNode {
       {game.myCovered.length > 0 && <ChipList cards={game.myCovered} label={t('sevens.myCovered')} />}
       {prompt && <span className={`${styles.prompt} ${isMyTurn ? styles.promptActive : ''} ${
         mode === 'cover' ? styles.promptCover : ''}`} role={mode === 'cover' ? 'status' : undefined}>{prompt}</span>}
-      {selected && cost && <>
+      {selected && cost && <HandActions layout="group">
         <button type="button" className={`btn btn-danger ${styles.ctrl}`} disabled={!canAct}
           onClick={() => cover(selected)}>
           {t('sevens.coverConfirm', { card: cardLabel(selected), n: String(cost.penalty) })}
         </button>
         <button type="button" className={`btn btn-outline ${styles.ctrl}`}
           onClick={() => setCoverPick(null)}>{t('sevens.cancel')}</button>
-      </>}
+      </HandActions>}
     </div>}
   </div>;
 

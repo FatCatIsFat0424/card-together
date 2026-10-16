@@ -749,11 +749,13 @@
 @media (max-height: 500px) and (min-width: 600px) {
   .headerActions button { height: 44px; min-height: 44px; }
   .gameTypeRow { flex-wrap: nowrap; gap: 8px; }
-  .gameTypePicker { flex: 1; }
-  .gameSelect { width: min(240px, 100%); }
-  .gameActions { gap: 4px; }
-  .gameActions > button { position: relative; width: 44px; height: 44px; padding: 0; }
+  .gameTypePicker { flex: 0 1 240px; }
+  .gameSelect { width: 100%; }
+  .gameActions { display: contents; }
+  .gameActions > button { position: relative; flex-shrink: 0; width: 44px; height: 44px; padding: 0; }
   .gameActions .actionText { display: none; }
+  .gameActions .gameRulesButton { width: auto; padding-inline: 10px; margin-left: auto; white-space: nowrap; }
+  .gameRulesButton .actionText { display: inline; }
   .gameActions .unread { position: absolute; top: -4px; right: -4px; }
   .roomLayout .tableArea {
     grid-template-columns: clamp(144px, 19vw, 180px) minmax(0, 1fr);
