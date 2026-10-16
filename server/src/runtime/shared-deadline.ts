@@ -23,26 +23,35 @@ function pendingDeadline(code: RoomCode): PendingDeadline | null {
   if (game.gameType === 'blackjack' && game.phase === 'betting' && game.betDeadline !== null) {
     return { key: `${game.id}:bet:${game.hand}`, gameId: game.id, deadline: game.betDeadline };
   }
+  if (game.gameType === 'napoleon' && game.phase === 'reviewing' && game.reviewDeadline !== null) {
+    return { key: `${game.id}:review`, gameId: game.id, deadline: game.reviewDeadline };
+  }
   return null;
 }
 
 function overdueSeats(code: RoomCode, gameId: string): GameSeat[] {
-  return gameManager.getGameState(code)?.gameType === 'blackjack'
-    ? gameManager.overdueBlackjackSeats(code, gameId)
-    : gameManager.overdueChinesePokerSeats(code, gameId);
+  const gameType = gameManager.getGameState(code)?.gameType;
+  return gameType === 'blackjack' ? gameManager.overdueBlackjackSeats(code, gameId)
+    : gameType === 'napoleon' ? gameManager.overdueNapoleonReviewSeats(code, gameId)
+      : gameManager.overdueChinesePokerSeats(code, gameId);
 }
 
-/** Bots keep their own decision; a human who missed the betting window stakes the minimum. */
+/**
+ * Bots keep their own decision; a human who missed the betting window stakes the minimum, and one
+ * who left the Napoleon discards open acknowledges them.
+ */
 function expiredAction(code: RoomCode, seat: GameSeat, visible: PlayerVisibleGameState): BotAction | null {
   if (visible.gameType === 'blackjack' && !roomManager.getSeatPlayers(code)?.[seat]?.isBot) {
     return { type: 'blackjack-bet', amount: BJ_MIN_BET };
   }
+  if (visible.gameType === 'napoleon') return { type: 'napoleon-action', action: { type: 'review' } };
   return getBotAction(visible);
 }
 
 /**
- * Chinese Poker arrangements and Blackjack bets share one durable deadline per window; at expiry
- * every missing decision is made from that seat's own filtered view in a single committed change.
+ * Chinese Poker arrangements, Blackjack bets, and Napoleon discard reviews share one durable
+ * deadline per window; at expiry every missing decision is made from that seat's own filtered view
+ * in a single committed change.
  */
 export function startSharedDeadlines(
   runtime: RuntimeCoordinator, publish: (code: RoomCode) => void,

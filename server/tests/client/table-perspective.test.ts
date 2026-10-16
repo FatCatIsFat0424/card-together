@@ -47,6 +47,7 @@ import { useI18nStore } from '../../../client/src/stores/i18n-store';
 import { useTablePerspectiveStore } from '../../../client/src/stores/table-perspective-store';
 import { blackjackActions, blackjackNeedsBet } from '../../../client/src/games/blackjack/blackjack-view';
 import { holdemControls } from '../../../client/src/games/holdem/holdem-view';
+import { napoleonOwnTurn } from '../../../client/src/games/napoleon/napoleon-view';
 
 const code = 'VIEW01';
 const seats: readonly Seat[] = ['N', 'E', 'S', 'W'];
@@ -113,6 +114,8 @@ describe('spectator table perspective', () => {
         expect(blackjackActions(projected, true)).toEqual([]);
       } else if (projected.gameType === 'holdem') {
         expect(holdemControls(projected, true)).toBeNull();
+      } else if (projected.gameType === 'napoleon') {
+        expect(napoleonOwnTurn(projected)).toBe(false);
       } else if (projected.gameType !== 'bridge' && projected.gameType !== 'chinesepoker') {
         expect(isOwnTurn(projected)).toBe(false);
       }

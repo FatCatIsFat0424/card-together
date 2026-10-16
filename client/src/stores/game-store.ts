@@ -20,6 +20,7 @@ import type {
   LiarsDeckVisibleState,
   BlackjackVisibleState,
   HoldemVisibleState,
+  NapoleonVisibleState,
 } from '@shared/types';
 import { nextHeldHoleCards } from '../games/holdem/holdem-view';
 import type { HeldHoleCards } from '../games/holdem/holdem-view';
@@ -39,6 +40,7 @@ interface GameStoreState {
   holdem: HoldemVisibleState | null;
   /** Hold'em: my hole cards from the previous hand while its presentation may still be playing */
   holdemHeld: HeldHoleCards | null;
+  napoleon: NapoleonVisibleState | null;
   gameType: GameType | null;
   phase: GamePhase | null;
   myHand: Card[];
@@ -70,6 +72,7 @@ const initialState: GameStoreState = {
   blackjack: null,
   holdem: null,
   holdemHeld: null,
+  napoleon: null,
   gameType: null,
   phase: null,
   myHand: [],
@@ -138,6 +141,15 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       currentTurnSeat: game.phase === 'playing' ? game.currentTurnSeat : null,
       holdem: retainSnapshotValue(state.holdem, game),
       holdemHeld: nextHeldHoleCards(state.holdem, game, state.holdemHeld),
+    } : game.gameType === 'napoleon' ? {
+      ...initialState,
+      gameType: 'napoleon',
+      // Exchanging, reviewing, and calling run inside the active match; reviewing has no single turn.
+      phase: game.phase === 'bidding' || game.phase === 'scoring' ? game.phase : 'playing',
+      dealerSeat: game.dealerSeat,
+      currentTurnSeat: game.currentTurnSeat
+        ?? (game.phase === 'bidding' ? game.bidding?.currentBidderSeat ?? null : null),
+      napoleon: retainSnapshotValue(state.napoleon, game),
     } : {
       visible: null,
       presentationReceivedAt: 0,
@@ -150,6 +162,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       blackjack: null,
       holdem: null,
       holdemHeld: null,
+      napoleon: null,
       gameType: 'bridge',
       phase: game.phase,
       dealerSeat: game.dealerSeat,

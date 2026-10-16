@@ -3,9 +3,12 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { RANK_DISPLAY, RANK_ORDER_DESC, SUIT_DISPLAY_ORDER, SUIT_SYMBOLS } from '@shared/constants';
 import { ldIsTruth, ldSortHand } from '@shared/rules/liarsdeck';
-import type { Card, LiarCard, LiarTableFace } from '@shared/types';
+import { sortNapoleonHand } from '@shared/rules/napoleon';
+import type { BidSuit, Card, LiarCard, LiarTableFace, NapoleonCard } from '@shared/types';
 import { cardImageUrl } from '../cards';
 import { LiarCardFace } from '../games/liarsdeck/LiarCardFace';
+import { napoleonCardImageUrl } from '../games/napoleon/napoleon-card-art';
+import { napoleonCardText } from '../games/napoleon/napoleon-view';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './ObservedHand.module.css';
 
@@ -53,4 +56,14 @@ export function ObservedLiarCards({ cards, owner, tableFace }: {
   return <CardRows cards={ldSortHand(cards)} label={t('table.observedHand', { name: owner })}
     render={(card) => <LiarCardFace face={card.face} variant={card.id} label={t(`liarsdeck.face.${card.face}`)}
       className={`${styles.card} ${ldIsTruth(card.face, tableFace) ? styles.truth : ''}`} />} />;
+}
+
+/** Napoleon hands, jokers first and trump leading like the player's own hand. */
+export function ObservedNapoleonCards({ cards, owner, trump }: {
+  cards: readonly NapoleonCard[]; owner: string; trump: BidSuit | null;
+}): ReactNode {
+  const { t } = useI18nStore();
+  return <CardRows cards={sortNapoleonHand(cards, trump)} label={t('table.observedHand', { name: owner })}
+    render={(card) => <img className={styles.card} src={napoleonCardImageUrl(card)} draggable={false}
+      alt={napoleonCardText(card, (joker) => t(`napoleon.joker.${joker}`))} />} />;
 }

@@ -1,5 +1,6 @@
 import type {
-  BlackjackOutcome, Card, ChinesePokerCategory, HoldemStreet, LiarFace, LiarTableFace, PlayerVisibleGameState, GameSeat,
+  BlackjackOutcome, Card, ChinesePokerCategory, HoldemStreet, LiarFace, LiarTableFace, NapoleonCard, NapoleonSummon,
+  PlayerVisibleGameState, GameSeat, Suit,
 } from '@shared/types';
 import type { BigTwoComboType } from '@shared/rules/bigtwo';
 import { bjApplyEntry, bjEmptyTable, bjTotal } from '@shared/rules/blackjack';
@@ -10,7 +11,8 @@ import { rpScore } from '@shared/rules/redpoints';
 export interface HistoryAction {
   kind: 'play' | 'pass' | 'round_end' | 'dragon' | 'flip' | 'eliminated' | 'cover' | 'challenge' | 'shot'
     | 'deal' | 'hit' | 'stand' | 'double' | 'split' | 'dealerReveal' | 'dealerHit' | 'dealerStand' | 'settle'
-    | 'button' | 'blind' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street' | 'showdown' | 'award';
+    | 'button' | 'blind' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street' | 'showdown' | 'award'
+    | 'trickWon';
   /** Null for the Blackjack dealer and Hold'em board cards */
   seat: GameSeat | null;
   cards: readonly Card[];
@@ -48,6 +50,11 @@ export interface HistoryAction {
   category?: ChinesePokerCategory;
   /** Hold'em: the hand's blinds, on the button entry */
   blinds?: { readonly small: number; readonly big: number };
+  /** Napoleon: the played card, which may be a joker */
+  napoleonCards?: readonly NapoleonCard[];
+  /** Napoleon: the suit a led joker or secretary card named */
+  leadSuit?: Suit;
+  summon?: NapoleonSummon;
 }
 
 export interface HistoryRound {
@@ -225,6 +232,21 @@ export function deriveRoundHistory(game: HistoryInput): HistoryRound[] {
       }
       heApplyEntry(table, entry);
     });
+  } else if (game.gameType === 'napoleon') {
+    // Each trick is one round; the auction and the secretary card have their own panels.
+    for (const entry of game.log) {
+      if (entry.type === 'play') {
+        const card = entry.card;
+        const named = entry.leadSuit && ('joker' in card || entry.leadSuit !== card.suit) ? entry.leadSuit : undefined;
+        (current ?? start()).actions.push({ kind: 'play', seat: entry.seat, cards: [], napoleonCards: [card],
+          ...(named ? { leadSuit: named } : {}), ...(entry.summon ? { summon: entry.summon } : {}) });
+      } else if (entry.type === 'trick_end') {
+        const round = current ?? start();
+        round.actions.push({ kind: 'trickWon', seat: entry.winnerSeat, cards: [] });
+        round.complete = true;
+        current = undefined;
+      }
+    }
   } else {
     let previousTotal = 0;
     for (const entry of game.log) {

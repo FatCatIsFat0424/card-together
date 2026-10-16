@@ -14,6 +14,7 @@ import { ChinesePokerTable } from '../games/chinesepoker/ChinesePokerTable';
 import { LiarsDeckTable } from '../games/liarsdeck/LiarsDeckTable';
 import { BlackjackTable } from '../games/blackjack/BlackjackTable';
 import { HoldemTable } from '../games/holdem/HoldemTable';
+import { NapoleonTable } from '../games/napoleon/NapoleonTable';
 
 export function GamePage(): ReactNode {
   const { roomCode } = useParams<{ roomCode: string }>();
@@ -36,5 +37,8 @@ export function GamePage(): ReactNode {
   if (gameType === 'liarsdeck') return <LiarsDeckTable />;
   if (gameType === 'blackjack') return <BlackjackTable />;
   if (gameType === 'holdem') return <HoldemTable />;
-  return gameType === 'redpoints' ? <RedPointsTable /> : <BridgeTable />;
+  if (gameType === 'napoleon') return <NapoleonTable />;
+  if (gameType === 'redpoints') return <RedPointsTable />;
+  // Only Bridge is left; an unknown future game must not render as Bridge.
+  return gameType === 'bridge' ? <BridgeTable /> : null;
 }

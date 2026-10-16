@@ -345,4 +345,45 @@ describe('table seat plate', () => {
     expect(waiting).toMatch(/role="timer"[^>]*aria-label="Turn 15s, Reserve 60s"/);
     expect(waiting).not.toContain('Your turn!');
   });
+
+  it('shows Napoleon roles, won point cards, and auction calls only when the viewer may know them', () => {
+    const napoleon = {
+      gameType: 'napoleon', phase: 'playing', options: { jokerSummon: true }, mySeat: 'S', seats: ['N', 'E', 'S', 'W'],
+      dealerSeat: 'W', myHand: [], handCounts: { N: 12, E: 12, S: 12, W: 12 }, pickedUp: null, discards: null,
+      bidding: null, contract: { level: 12, suit: 'spades', napoleon: 'N' }, reviewed: [], reviewDeadline: null,
+      secretaryCard: card(14, 'hearts'), secretarySeat: null, trick: { leadSeat: 'W', plays: [], leadSuit: null, summon: null },
+      tricks: [{ leadSeat: 'N', leadSuit: 'clubs', summon: null, winnerSeat: 'W', plays: [
+        { seat: 'N', card: card(13, 'clubs') }, { seat: 'E', card: card(2, 'clubs') },
+        { seat: 'S', card: card(3, 'clubs') }, { seat: 'W', card: card(14, 'clubs') }] }],
+      currentTurnSeat: 'W', validCards: [], result: null,
+      log: [{ type: 'trick_end', winnerSeat: 'W', trickIndex: 1, timestamp: 1 }],
+    };
+    state.game = { ...baseGame(), currentTurnSeat: 'W', napoleon, visible: { clock: clock(null), log: [] } };
+    const north = render({ seat: 'N', position: 'top' });
+    expect(north).toContain('napoleonRole');
+    expect(north).toContain('>Napoleon');
+    expect(north).toContain('12 cards');
+    expect(north).toContain('0 pts');
+    expect(render({ seat: 'W', position: 'left' })).toContain('2 pts');
+    expect(render({ seat: 'E', position: 'right' })).not.toContain('secretaryRole');
+
+    state.mySeat = 'E';
+    state.game = { ...state.game, napoleon: { ...napoleon, mySeat: 'E', secretarySeat: 'E' } };
+    expect(render({ seat: 'E', position: 'bottom' })).toContain('secretaryRole');
+
+    state.mySeat = 'S';
+    state.game = { ...baseGame(), phase: 'bidding', currentTurnSeat: 'E', visible: { clock: clock(null), log: [] },
+      napoleon: { ...napoleon, phase: 'bidding', contract: null, secretaryCard: null, tricks: [], log: [],
+        bidding: { bids: [{ seat: 'N', action: { type: 'bid', level: 12, suit: 'hearts' } }],
+          currentBidderSeat: 'E', highestBid: { level: 12, suit: 'hearts', seat: 'N' }, consecutivePassCount: 0 } } };
+    const bidding = render({ seat: 'N', position: 'top' });
+    expect(bidding).toMatch(/title="Latest call">12<span[^>]*>♥/);
+    expect(bidding).not.toContain('pts');
+    expect(bidding).not.toContain('napoleonRole');
+
+    state.game = { ...baseGame(), phase: 'playing', currentTurnSeat: null, visible: { clock: clock(null), log: [] },
+      napoleon: { ...napoleon, phase: 'reviewing', currentTurnSeat: null, reviewDeadline: 30_000, reviewed: ['E'] } };
+    expect(render({ seat: 'S', position: 'bottom' })).toMatch(/role="timer"[^>]*aria-label="Turn 30s"/);
+    expect(render({ seat: 'N', position: 'top' })).not.toContain('role="timer"');
+  });
 });

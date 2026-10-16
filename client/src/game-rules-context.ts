@@ -1,8 +1,9 @@
 import { bjMatchHands } from '@shared/rules/blackjack';
+import { DEFAULT_NAPOLEON_OPTIONS } from '@shared/napoleon-options';
 import type { GameType, PlayerVisibleGameState, RoomInfo } from '@shared/types';
 
 interface GameRulesOption {
-  readonly label: 'sevens.closeOnEnd' | 'ninetynine.twoDecks' | 'blackjack.playerDealer';
+  readonly label: 'sevens.closeOnEnd' | 'ninetynine.twoDecks' | 'blackjack.playerDealer' | 'napoleon.jokerSummon';
   readonly enabled: boolean;
 }
 
@@ -21,7 +22,10 @@ export function roomRulesContext(room: RoomInfo): GameRulesContext {
       ? { label: 'ninetynine.twoDecks', enabled: room.ninetyNineOptions?.twoDecks ?? false }
       : room.gameType === 'blackjack'
         ? { label: 'blackjack.playerDealer', enabled: room.blackjackOptions?.playerDealer ?? false }
-        : null;
+        : room.gameType === 'napoleon'
+          ? { label: 'napoleon.jokerSummon',
+            enabled: (room.napoleonOptions ?? DEFAULT_NAPOLEON_OPTIONS).jokerSummon }
+          : null;
   if (room.gameType !== 'blackjack') return { gameType: room.gameType, option, active: false };
   const seated = [...Object.values(room.seats), ...(room.additionalSeats ?? [])].filter((seat) => seat.player).length;
   return { gameType: room.gameType, option, active: false,
@@ -35,7 +39,9 @@ export function matchRulesContext(game: PlayerVisibleGameState): GameRulesContex
       ? { label: 'ninetynine.twoDecks', enabled: game.options?.twoDecks ?? false }
       : game.gameType === 'blackjack'
         ? { label: 'blackjack.playerDealer', enabled: game.options?.playerDealer ?? false }
-        : null;
+        : game.gameType === 'napoleon'
+          ? { label: 'napoleon.jokerSummon', enabled: game.options.jokerSummon }
+          : null;
   return { gameType: game.gameType, option, active: game.phase !== 'scoring',
     ...(game.gameType === 'blackjack' && { blackjackHands: game.totalHands }) };
 }

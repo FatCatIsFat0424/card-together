@@ -99,6 +99,25 @@
   line-height: 1;
 }
 
+/* Newly received cards keep a badge in the visible lower-left corner, clear of the rank index. */
+.cardHighlighted::before {
+  content: '★';
+  position: absolute;
+  bottom: 3px;
+  left: 3px;
+  display: grid;
+  place-items: center;
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 50%;
+  background: var(--color-warning);
+  color: var(--text-inverse);
+  font-size: calc(var(--card-w) * 0.16);
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: var(--shadow-sm);
+}
+
 /* Narrow table columns overlap cards more while keeping every card reachable. */
 @container (max-width: 600px) {
   .handContainer {

@@ -24,6 +24,8 @@ import { blackjackTranslations } from './blackjack-i18n';
 import type { BlackjackTranslationKey } from './blackjack-i18n';
 import { holdemTranslations } from './holdem-i18n';
 import type { HoldemTranslationKey } from './holdem-i18n';
+import { napoleonTranslations } from './napoleon-i18n';
+import type { NapoleonTranslationKey } from './napoleon-i18n';
 import { shopTranslations } from './shop-i18n';
 import type { ShopTranslationKey } from './shop-i18n';
 import { dailyRewardsTranslations } from './daily-rewards-i18n';
@@ -36,7 +38,7 @@ export type Locale = 'zh-TW' | 'en';
 type TranslationKeys = Record<
   SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | VoiceTranslationKey | UiTranslationKey
     | EmojiTranslationKey | GameTranslationKey | SevensTranslationKey | ChinesePokerTranslationKey
-    | LiarsDeckTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey, string
+    | LiarsDeckTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey, string
 > & {
   // Lobby
   'lobby.nickname': string;
@@ -119,6 +121,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...liarsDeckTranslations['zh-TW'],
     ...blackjackTranslations['zh-TW'],
     ...holdemTranslations['zh-TW'],
+    ...napoleonTranslations['zh-TW'],
     ...shopTranslations['zh-TW'],
     ...dailyRewardsTranslations['zh-TW'],
     ...achievementsTranslations['zh-TW'],
@@ -192,6 +195,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...liarsDeckTranslations.en,
     ...blackjackTranslations.en,
     ...holdemTranslations.en,
+    ...napoleonTranslations.en,
     ...shopTranslations.en,
     ...dailyRewardsTranslations.en,
     ...achievementsTranslations.en,

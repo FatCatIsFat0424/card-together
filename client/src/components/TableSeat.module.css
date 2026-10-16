@@ -151,6 +151,20 @@
   line-height: 1.5;
 }
 
+/* Napoleon roles beside the name: red Napoleon, orange secretary. */
+.role {
+  flex: none;
+  padding: 0 5px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.napoleonRole { background: var(--badge-napoleon); color: var(--badge-napoleon-ink); }
+.secretaryRole { background: var(--badge-secretary); color: var(--badge-secretary-ink); }
+
 /* Seat direction badge on the avatar's bottom-left corner. */
 .seatBadge {
   position: absolute;

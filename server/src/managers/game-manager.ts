@@ -3,7 +3,7 @@
 import { advanceGameClock, initializeGameClock } from './game-clock';
 import { randomUUID } from 'node:crypto';
 import { getPresentationEndsAt, PRESENTATION_TIMING_VERSION } from '@shared/game-presentation';
-import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import { FLEXIBLE_SEAT_GAMES, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import type {
   AnyGameState,
@@ -21,6 +21,9 @@ import type {
   HoldemAction,
   HoldemGameState,
   LiarsDeckGameState,
+  NapoleonAction,
+  NapoleonGameState,
+  NapoleonOptions,
   NinetyNineGameState,
   NinetyNineOptions,
   ObserverRole,
@@ -36,7 +39,8 @@ import type {
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { cpArrangeSeconds } from '@shared/rules/chinesepoker';
 import { bjBetSeconds, bjSitsIn } from '@shared/rules/blackjack';
-import { gamePlayer, isCompassSeat, minPlayers, occupiedSeats } from '@shared/rules/seats';
+import { napoleonReviewSeconds } from '@shared/rules/napoleon';
+import { gamePlayer, isCompassSeat, maxPlayers, minPlayers, occupiedSeats } from '@shared/rules/seats';
 import { normalizeFlexibleGame } from '@shared/game-seat-compat';
 import * as bridge from './games/bridge-game';
 import * as bigtwo from './games/bigtwo-game';
@@ -47,6 +51,7 @@ import * as chinesepoker from './games/chinesepoker-game';
 import * as liarsdeck from './games/liarsdeck-game';
 import * as blackjack from './games/blackjack-game';
 import * as holdem from './games/holdem-game';
+import * as napoleon from './games/napoleon-game';
 
 type Result = { success: true } | { success: false; reason: string };
 
@@ -86,17 +91,23 @@ function timedAction(roomCode: RoomCode, seat: GameSeat, operation: () => Result
     return { success: false, reason: 'Your turn has timed out. Please wait for the automatic action.' };
   }
   const hands = game?.hands;
+  const deals = game?.gameType === 'napoleon' ? napoleonDeals(game) : 0;
   const redPointsPlay = game?.gameType === 'redpoints' && game.step === 'play';
   const forced = game?.gameType === 'bigtwo' && game.pendingAutoPass?.seat === seat;
   const result = operation();
   if (result.success && game && clock) {
     const sameTurn = redPointsPlay && game.gameType === 'redpoints' && game.step === 'flip-choose';
     // Each Bridge redeal, Liar's Deck round, and Hold'em hand is a new deal, which refills reserves.
-    const redealt = (game.gameType === 'bridge' || game.gameType === 'liarsdeck' || game.gameType === 'holdem')
-      && game.hands !== hands;
+    const redealt = ((game.gameType === 'bridge' || game.gameType === 'liarsdeck' || game.gameType === 'holdem')
+      && game.hands !== hands) || (game.gameType === 'napoleon' && napoleonDeals(game) !== deals);
     advanceGameClock(game, clock, sameTurn, redealt, now, forced);
   }
   return result;
+}
+
+/** A Napoleon all-pass auction redeals, which refills reserves like a Bridge redeal. */
+function napoleonDeals(game: NapoleonGameState): number {
+  return game.log.filter((entry) => entry.type === 'deal').length;
 }
 
 export function initializeClock(roomCode: RoomCode, settings?: TimeControl): void {
@@ -127,17 +138,22 @@ export function startGame(
   sevensOptions?: SevensOptions,
   ninetyNineOptions?: NinetyNineOptions,
   blackjackOptions?: BlackjackOptions,
+  napoleonOptions?: NapoleonOptions,
 ): Result {
   if (occupiedSeats(players).length < minPlayers(gameType)) {
     return { success: false, reason: 'Not enough players to start this game.' };
   }
-  if (!['ninetynine', 'blackjack', 'holdem'].includes(gameType)
+  if (!FLEXIBLE_SEAT_GAMES.includes(gameType)
     && (!isFullTable(players) || occupiedSeats(players).length !== 4)) {
     return { success: false, reason: 'All four seats must be filled.' };
+  }
+  if (occupiedSeats(players).length > maxPlayers(gameType)) {
+    return { success: false, reason: 'Too many players for this game.' };
   }
   // A finished board of another game type may still be waiting for game:continue.
   removeGame(roomCode);
   if (gameType === 'holdem') holdem.startGame(roomCode, players);
+  else if (gameType === 'napoleon') napoleon.startGame(roomCode, players, napoleonOptions);
   else if (gameType === 'blackjack') {
     blackjack.startGame(roomCode, players, bjBetSeconds((settings ?? DEFAULT_TIME_CONTROL).baseSeconds) * 1000,
       undefined, blackjackOptions);
@@ -161,13 +177,13 @@ export function startGame(
 }
 
 export function getPlayerVisibleState(roomCode: RoomCode, seat: GameSeat): PlayerVisibleGameState | null {
-  if (!isCompassSeat(seat) && !['ninetynine', 'blackjack', 'holdem'].includes(getGameState(roomCode)?.gameType ?? '')) return null;
+  if (!isCompassSeat(seat) && !FLEXIBLE_SEAT_GAMES.includes(getGameState(roomCode)?.gameType ?? 'bridge')) return null;
   const compass = isCompassSeat(seat) ? seat : 'N';
   const visible = bridge.getPlayerVisibleState(roomCode, compass) ?? bigtwo.getPlayerVisibleState(roomCode, compass)
     ?? redpoints.getPlayerVisibleState(roomCode, compass) ?? ninetynine.getPlayerVisibleState(roomCode, seat)
     ?? sevens.getPlayerVisibleState(roomCode, compass) ?? chinesepoker.getPlayerVisibleState(roomCode, compass)
     ?? liarsdeck.getPlayerVisibleState(roomCode, compass) ?? blackjack.getPlayerVisibleState(roomCode, seat)
-    ?? holdem.getPlayerVisibleState(roomCode, seat);
+    ?? holdem.getPlayerVisibleState(roomCode, seat) ?? napoleon.getPlayerVisibleState(roomCode, seat);
   if (!visible) return null;
   const game = getGameState(roomCode);
   const serverNow = Date.now();
@@ -192,6 +208,10 @@ function withGodView(
     return { ...visible, observer, observedHands: game.hands };
   }
   if (visible.gameType === 'liarsdeck' || game.gameType === 'liarsdeck') return { ...visible, observer };
+  if (visible.gameType === 'napoleon' && game.gameType === 'napoleon') {
+    return { ...visible, observer, ...napoleon.getObserverView(game) };
+  }
+  if (visible.gameType === 'napoleon' || game.gameType === 'napoleon') return { ...visible, observer };
   return { ...visible, observer, observedHands: game.hands };
 }
 
@@ -240,7 +260,7 @@ export function getGameState(roomCode: RoomCode): AnyGameState | null {
   return bridge.getGameState(roomCode) ?? bigtwo.getGameState(roomCode) ?? redpoints.getGameState(roomCode)
     ?? ninetynine.getGameState(roomCode) ?? sevens.getGameState(roomCode) ?? chinesepoker.getGameState(roomCode)
     ?? liarsdeck.getGameState(roomCode) ?? blackjack.getGameState(roomCode)
-    ?? holdem.getGameState(roomCode);
+    ?? holdem.getGameState(roomCode) ?? napoleon.getGameState(roomCode);
 }
 
 /** Ends a game without a match record. */
@@ -254,6 +274,7 @@ export function abortGame(roomCode: RoomCode): void {
   liarsdeck.abortGame(roomCode);
   blackjack.abortGame(roomCode);
   holdem.abortGame(roomCode);
+  napoleon.abortGame(roomCode);
 }
 
 export function removeGame(roomCode: RoomCode): void {
@@ -300,7 +321,7 @@ export function hasActiveGame(roomCode: RoomCode): boolean {
 export function exportGames(): AnyGameState[] {
   return [...bridge.exportGames(), ...bigtwo.exportGames(), ...redpoints.exportGames(),
     ...ninetynine.exportGames(), ...sevens.exportGames(), ...chinesepoker.exportGames(), ...liarsdeck.exportGames(),
-    ...blackjack.exportGames(), ...holdem.exportGames()];
+    ...blackjack.exportGames(), ...holdem.exportGames(), ...napoleon.exportGames()];
 }
 
 export function restoreGames(records: AnyGameState[]): void {
@@ -314,6 +335,7 @@ export function restoreGames(records: AnyGameState[]): void {
   liarsdeck.restoreGames(records.filter((game): game is LiarsDeckGameState => game.gameType === 'liarsdeck'));
   blackjack.restoreGames(records.filter((game): game is BlackjackGameState => game.gameType === 'blackjack'));
   holdem.restoreGames(records.filter((game): game is HoldemGameState => game.gameType === 'holdem'));
+  napoleon.restoreGames(records.filter((game): game is NapoleonGameState => game.gameType === 'napoleon'));
 }
 
 export function handleRedealResponse(roomCode: RoomCode, seat: Seat, accept: boolean, automatic = false): Result {
@@ -378,6 +400,24 @@ export function handleBlackjackDealerAction(
 
 export function handleHoldemAction(roomCode: RoomCode, seat: GameSeat, action: HoldemAction, automatic = false): Result {
   return timedAction(roomCode, seat, () => isGame(roomCode, 'holdem') ? presentAction(roomCode, () => holdem.act(roomCode, seat, action)) : WRONG_GAME, automatic);
+}
+
+/**
+ * Every Napoleon decision. Acknowledging public discards belongs to no single turn; the last
+ * acknowledgment hands the Napoleon the call, and a redeal refills every reserve.
+ */
+export function handleNapoleonAction(roomCode: RoomCode, seat: GameSeat, action: NapoleonAction, automatic = false): Result {
+  const settings = getGameState(roomCode)?.clock?.settings ?? DEFAULT_TIME_CONTROL;
+  const reviewMs = napoleonReviewSeconds(settings.baseSeconds) * 1000;
+  return timedAction(roomCode, seat, () => isGame(roomCode, 'napoleon')
+    ? presentAction(roomCode, () => napoleon.act(roomCode, seat, action, reviewMs)) : WRONG_GAME, automatic);
+}
+
+/** Seats that still owe an acknowledgment of the public discards once the shared deadline has passed. */
+export function overdueNapoleonReviewSeats(roomCode: RoomCode, gameId: string, now = Date.now()): GameSeat[] {
+  const game = napoleon.getGameState(roomCode);
+  if (!game || game.id !== gameId || game.reviewDeadline === null || now < game.reviewDeadline) return [];
+  return napoleon.pendingReviewSeats(game);
 }
 
 /**

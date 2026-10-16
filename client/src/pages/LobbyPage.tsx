@@ -22,7 +22,7 @@ import styles from './LobbyPage.module.css';
 
 const GAME_ICONS: Record<GameType, string> = {
   bridge: '♠', bigtwo: '🃏', redpoints: '🔴', ninetynine: '💯', sevens: '7️⃣', chinesepoker: '🀄', liarsdeck: '🍺',
-  blackjack: '🎰', holdem: '♦️',
+  blackjack: '🎰', holdem: '♦️', napoleon: '👑',
 };
 
 const MATERIAL_GAME_ICONS: Partial<Record<GameType, AppIconName>> = {

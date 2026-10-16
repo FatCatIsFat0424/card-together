@@ -1,9 +1,10 @@
 import type { BotDifficulty, GameSeat, PlayerInfo, Seat } from './player';
 import type {
-  BlackjackOptions, RoomCode, RoomInfo, RoomSeatTarget, GameType, NinetyNineOptions, SevensOptions, TimeControl,
+  BlackjackOptions, NapoleonOptions, RoomCode, RoomInfo, RoomSeatTarget, GameType, NinetyNineOptions, SevensOptions, TimeControl,
 } from './room';
 import type {
-  Card, BidAction, BlackjackAction, BlackjackDealerAction, ChinesePokerArrangement, HoldemAction, PlayerVisibleGameState,
+  Card, BidAction, BlackjackAction, BlackjackDealerAction, ChinesePokerArrangement, HoldemAction, NapoleonAction,
+  PlayerVisibleGameState,
 } from './game';
 import type { ChatMessage } from './chat';
 import type { PublicAccount } from './social';
@@ -94,6 +95,9 @@ export interface ClientToServerEvents {
   'room:setBlackjackOptions': (
     payload: BlackjackOptions, callback: (response: ActionResult) => void,
   ) => void;
+  'room:setNapoleonOptions': (
+    payload: NapoleonOptions, callback: (response: ActionResult) => void,
+  ) => void;
   'room:ready': (callback: (response: ActionResult) => void) => void;
   'room:start': (callback: (response: ActionResult) => void) => void;
   'room:setShuffleSeats': (payload: { enabled: boolean }, callback: (response: ActionResult) => void) => void;
@@ -155,6 +159,9 @@ export interface ClientToServerEvents {
   ) => void;
   'game:holdem:action': (
     payload: { action: HoldemAction }, callback: (response: ActionResult) => void,
+  ) => void;
+  'game:napoleon:action': (
+    payload: { action: NapoleonAction }, callback: (response: ActionResult) => void,
   ) => void;
   'game:continue':(callback: (response: ActionResult) => void) => void;
   'game:abortVote:start': (callback: (response: ActionResult) => void) => void;

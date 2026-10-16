@@ -106,7 +106,7 @@ Omitted fields keep their values; invalid values return 400.
 - Failures return `{ success: false, error }`. Success is acknowledged after persistence,
   except for ephemeral signaling and unchanged state.
 - Game types: `bridge`, `bigtwo`, `redpoints`, `ninetynine`, `sevens`, `chinesepoker`,
-  `liarsdeck`, `blackjack`, `holdem`. Standard seats: `N`, `E`, `S`, `W`.
+  `liarsdeck`, `blackjack`, `holdem`, `napoleon`. Standard seats: `N`, `E`, `S`, `W`.
 - Exact payloads and results: [`socket-events.ts`](../shared/src/types/socket-events.ts).
 
 **Rooms**
@@ -124,7 +124,7 @@ Omitted fields keep their values; invalid values return 400.
 | `room:changeAdditionalSeat` | `{ index }` | Takes an extra seat; zero-based index into `RoomInfo.additionalSeats` |
 | `room:standUp` | — | Becomes a spectator while waiting |
 | `room:movePlayer` | `{ accountId, target }` | Host moves a human while waiting; `target` is a [`RoomSeatTarget`](../shared/src/types/room.ts) |
-| `room:addSeat`, `room:removeSeat` | — | Host adds an extra seat (eight total) or removes the last empty one; waiting Ninety-Nine, Blackjack, Hold'em only |
+| `room:addSeat`, `room:removeSeat` | — | Host adds an extra seat (eight total, six for Napoleon) or removes the last empty one; waiting Ninety-Nine, Blackjack, Hold'em, Napoleon only |
 | `room:addBot` | `{ seat, difficulty? }` | Host adds a bot while waiting; omitted difficulty means hard |
 | `room:removeBot` | `{ seat }` | Host removes a bot while waiting |
 | `room:setBotDifficulty` | `{ seat, difficulty }` | Host changes one waiting-room bot to easy or hard; resets human readiness |
@@ -142,6 +142,7 @@ Omitted fields keep their values; invalid values return 400.
 | `room:setSevensOptions` | `SevensOptions`; `slayEffect` is `dragon` (default) or `fire`. Changing only the effect keeps readiness |
 | `room:setNinetyNineOptions` | `NinetyNineOptions` |
 | `room:setBlackjackOptions` | `BlackjackOptions` (player dealer) |
+| `room:setNapoleonOptions` | `NapoleonOptions` (joker summoning) |
 
 **Games**
 
@@ -162,6 +163,7 @@ Omitted fields keep their values; invalid values return 400.
 | `game:blackjack:action` | `{ action }` | `hit`, `stand`, `double`, or `split` |
 | `game:blackjack:dealerAction` | `{ action }` | Player dealer `hit` or `stand`; standing below 17 is rejected |
 | `game:holdem:action` | `{ action }` | `{ type: 'fold' \| 'check' \| 'call' }` or `{ type: 'raise', to }`, where `to` is the street total |
+| `game:napoleon:action` | `{ action }` | One [`NapoleonAction`](../shared/src/types/game.ts): `bid`, `discard`, `review` (four-player discard confirmation), `call` (secretary card), or `play` with `leadSuit` when leading the secretary card or a joker and an optional `summon` |
 | `game:continue` | — | Leaves the result for the waiting room; others keep it |
 | `game:abortVote:start` / `cast` | — / `{ agree }` | Starts or votes on an abort ([rules](games.md#shared-room-lifecycle)) |
 | `chat:send` | One [chat input](../shared/src/types/socket-events.ts), including `{ shopSticker }` | Text or one personal/site/shop sticker; shop sends require pack ownership |

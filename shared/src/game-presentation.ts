@@ -1,5 +1,6 @@
 import type {
-  AnyGameState, Card, ChinesePokerRow, LiarFace, LiarTableFace, PlayerVisibleGameState, SevensLogEntry,
+  AnyGameState, Card, ChinesePokerRow, LiarFace, LiarTableFace, NapoleonCard, NapoleonSummon, PlayerVisibleGameState,
+  SevensLogEntry,
 } from './types/game';
 import type { GameSeat, Seat } from './types/player';
 import { rpScore } from './rules/redpoints';
@@ -17,7 +18,7 @@ export interface PresentationFrame {
   readonly kind: 'play' | 'pass' | 'trick' | 'round' | 'capture' | 'eliminated' | 'cover' | 'reveal' | 'shoot'
     | 'homerun' | 'deal' | 'challenge' | 'roulette' | 'shot' | 'hit' | 'stand' | 'double' | 'split'
     | 'dealerReveal' | 'dealerHit' | 'dealerStand' | 'settle' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street'
-    | 'showdown' | 'award' | 'slay' | 'collapse' | 'finish';
+    | 'showdown' | 'award' | 'slay' | 'collapse' | 'summon' | 'finish';
   readonly durationMs: number;
   readonly seat?: GameSeat;
   readonly cards: readonly Card[];
@@ -47,7 +48,14 @@ export interface PresentationFrame {
   readonly handIndex?: number;
   /** Hold'em: the seat's street stake after a call, bet, or raise */
   readonly amount?: number;
+  /** Napoleon: cards shown, which may include jokers; `cards` stays empty */
+  readonly napoleonCards?: readonly NapoleonCard[];
+  /** Napoleon: what the lead summoned */
+  readonly summon?: NapoleonSummon;
 }
+
+/** Napoleon secretary-card announcement and summon notices. */
+export const NAPOLEON_NOTICE_MS = 2000;
 
 function isAutoCover(entry: SevensLogEntry | undefined): boolean {
   return entry?.type === 'cover' && entry.auto === true;
@@ -160,6 +168,22 @@ export function getPresentationFrames(
       } else if (entry.type === 'settle') {
         frames.push({ key, kind: 'settle', durationMs: 2500, cards: [] });
       }
+    } else if (game.gameType === 'napoleon') {
+      const entry = game.log[index];
+      if (entry.type === 'call') {
+        frames.push({ key, kind: 'call', durationMs: NAPOLEON_NOTICE_MS, seat: entry.seat, cards: [],
+          napoleonCards: [entry.card] });
+      } else if (entry.type === 'play') {
+        frames.push({ key, kind: 'play', durationMs: playDuration, seat: entry.seat, cards: [], napoleonCards: [entry.card] });
+        if (entry.summon) {
+          frames.push({ key: `${key}:summon`, kind: 'summon', durationMs: NAPOLEON_NOTICE_MS, seat: entry.seat, cards: [],
+            napoleonCards: [entry.card], summon: entry.summon });
+        }
+      } else if (entry.type === 'trick_end') {
+        const trick = game.tricks[entry.trickIndex - 1];
+        frames.push({ key, kind: 'trick', durationMs: 2000, seat: entry.winnerSeat, cards: [],
+          napoleonCards: trick?.plays.map((play) => play.card) ?? [], cardSeats: trick?.plays.map((play) => play.seat) ?? [] });
+      }
     } else if (game.gameType === 'holdem') {
       const entry = game.log[index];
       if (entry.type === 'hand') {
@@ -189,16 +213,17 @@ export function getPresentationFrames(
   }
   if (game.phase === 'scoring') {
     const winners = (game.gameType === 'sevens' || game.gameType === 'chinesepoker' || game.gameType === 'blackjack'
-      || game.gameType === 'holdem') && game.result
+      || game.gameType === 'holdem' || game.gameType === 'napoleon') && game.result
       ? game.result.winners
       : game.gameType === 'ninetynine' && game.result ? nnWinners(game.result) : [];
     const seat = game.gameType === 'bigtwo' || game.gameType === 'liarsdeck'
       ? game.result?.winnerSeat : winners.length === 1 ? winners[0] : undefined;
-    const lastCards = [...frames].reverse().find((frame) => frame.cards.length > 0);
+    const lastCards = [...frames].reverse().find((frame) => frame.cards.length > 0 || (frame.napoleonCards?.length ?? 0) > 0);
     // After a collapse the broken table holds briefly instead of showing the usual closing frame.
     const collapsed = game.gameType === 'sevens' && game.log.some(isAutoCover);
     frames.push({ key: `${id}:finish`, kind: 'finish', durationMs: collapsed ? SEVENS_COLLAPSE_SETTLE_MS : 3000,
       cards: lastCards?.cards ?? [],
+      ...(lastCards?.napoleonCards ? { napoleonCards: lastCards.napoleonCards } : {}),
       ...(lastCards?.cardSeats ? { cardSeats: lastCards.cardSeats } : {}),
       ...(seat ? { seat } : {}) });
   }

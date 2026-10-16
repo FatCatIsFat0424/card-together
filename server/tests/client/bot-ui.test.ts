@@ -172,10 +172,11 @@ describe('bot player interface', () => {
     expect(render(createElement(RoomPage))).not.toMatch(/disabled="">Ready<\/button>/);
   });
 
-  it('shows the seat expansion control only to hosts of Ninety-Nine, Blackjack, and Hold\'em', () => {
+  it('shows the seat expansion control only to hosts of Ninety-Nine, Blackjack, Hold\'em, and Napoleon', () => {
     for (const gameType of GAME_TYPES) {
       state.room = { ...room(), gameType };
-      const expandable = gameType === 'ninetynine' || gameType === 'blackjack' || gameType === 'holdem';
+      const expandable = gameType === 'ninetynine' || gameType === 'blackjack' || gameType === 'holdem'
+        || gameType === 'napoleon';
       const html = render(createElement(RoomPage));
       expect(html.includes('aria-label="Add seat"')).toBe(expandable);
       expect(html.includes('expandedSeats')).toBe(expandable);
@@ -199,6 +200,13 @@ describe('bot player interface', () => {
       .match(/<button[^>]*aria-label="Add seat"[^>]*>/)?.[0];
     expect(addButton()).toBeDefined();
     expect(addButton()).not.toContain('disabled');
+    state.room = { ...state.room, additionalSeats: [
+      ...state.room.additionalSeats!, { player: null, isReady: false },
+    ] };
+    expect(addButton()).toBeUndefined();
+    // Napoleon stops at six seats.
+    state.room = { ...room(), gameType: 'napoleon', additionalSeats: [{ player: null, isReady: false }] };
+    expect(addButton()).toBeDefined();
     state.room = { ...state.room, additionalSeats: [
       ...state.room.additionalSeats!, { player: null, isReady: false },
     ] };

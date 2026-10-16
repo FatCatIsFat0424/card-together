@@ -26,6 +26,7 @@ import * as chinesepoker from '../../src/managers/games/chinesepoker-game';
 import * as liarsdeck from '../../src/managers/games/liarsdeck-game';
 import * as blackjack from '../../src/managers/games/blackjack-game';
 import * as holdem from '../../src/managers/games/holdem-game';
+import * as napoleon from '../../src/managers/games/napoleon-game';
 
 const CODE = 'BOT123';
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
@@ -63,6 +64,7 @@ function execute(seat: Seat, action: BotAction): { success: boolean } {
     case 'blackjack-action': return blackjack.act(CODE, seat, action.action);
     case 'blackjack-dealer': return blackjack.dealerAct(CODE, seat, action.action);
     case 'holdem-action': return holdem.act(CODE, seat, action.action, Date.now(), Math.random);
+    case 'napoleon-action': return napoleon.act(CODE, seat, action.action, 60_000);
   }
 }
 

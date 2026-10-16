@@ -18,7 +18,7 @@ export interface HistoryFilters {
   readonly outcomeName: (outcome: MatchOutcome) => string;
 }
 
-/** Bridge outcomes follow partnerships; tied winners count as ties, not losses. */
+/** Bridge and Napoleon outcomes follow sides; tied winners count as ties, not losses. */
 export function matchOutcome(match: MatchSummary, accountId?: string): MatchOutcome {
   const index = accountId ? match.accountIds.indexOf(accountId) : -1;
   // accountIds follow the recorded seats; Blackjack and Hold'em may record fewer than four
@@ -30,6 +30,8 @@ export function matchOutcome(match: MatchSummary, accountId?: string): MatchOutc
     return (index % 2 === declarerIndex % 2) === result.declarerTeamWins ? 'win' : 'loss';
   }
   if ('winnerSeat' in result) return result.winnerSeat === seat ? 'win' : 'loss';
+  // A Napoleon side wins together, so several winners are a team win rather than a tie.
+  if (result.gameType === 'napoleon') return result.winners.includes(seat) ? 'win' : 'loss';
   if (!new Set<GameSeat>(result.winners).has(seat)) return 'loss';
   return result.winners.length > 1 ? 'tie' : 'win';
 }

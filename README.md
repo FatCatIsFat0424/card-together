@@ -2,10 +2,10 @@
 
 Browser-based multiplayer card games with server-authoritative rules: Bridge,
 Taiwanese Big Two, Red Points, Ninety-Nine, Sevens, Chinese Poker, Liar's Deck,
-Blackjack, and Texas Hold'em.
+Blackjack, Texas Hold'em, and Napoleon.
 
 - Rooms with up to eight spectators, chat, bots, and turn timers; Ninety-Nine,
-  Blackjack, and Hold'em support 2–8 occupied seats, while other games use four.
+  Blackjack, and Hold'em support 2–8 occupied seats, Napoleon 4–6, while other games use four.
 - Accounts, friends, match history, rooms, and unfinished games survive restarts.
 - Traditional Chinese and English, themes, uploaded avatars and table artwork,
   custom and site-provided emoji, optional WebRTC voice, and owner-provided music.

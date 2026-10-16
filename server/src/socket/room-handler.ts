@@ -2,6 +2,7 @@ import { isTimeControl } from '@shared/time-control';
 import { isSevensOptions } from '@shared/sevens-options';
 import { isNinetyNineOptions } from '@shared/ninetynine-options';
 import { isBlackjackOptions } from '@shared/blackjack-options';
+import { isNapoleonOptions } from '@shared/napoleon-options';
 import { isBotDifficulty } from '@shared/bot-difficulty';
 import { GAME_TYPES } from '@shared/constants';
 import type { RoomCode, RoomInvite, RoomSeatTarget, Seat } from '@shared/types';
@@ -24,6 +25,7 @@ function startPreparedRoom(code: RoomCode, hostId: string): void {
   roomManager.setRoomStatus(code, 'playing');
   requireSuccess(gameManager.startGame(
     code, room.gameType, players, room.timeControl, room.sevensOptions, room.ninetyNineOptions, room.blackjackOptions,
+    room.napoleonOptions,
   ));
 }
 
@@ -238,6 +240,12 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
   socket.on('room:setBlackjackOptions', (payload, callback) => runAction(context, socket, callback, () => {
     if (!isBlackjackOptions(payload)) throw actionError('Invalid Blackjack options.');
     requireSuccess(roomManager.setBlackjackOptions(requireRoom(socket), socket.data.accountId, payload));
+    return { success: true };
+  }));
+
+  socket.on('room:setNapoleonOptions', (payload, callback) => runAction(context, socket, callback, () => {
+    if (!isNapoleonOptions(payload)) throw actionError('Invalid Napoleon options.');
+    requireSuccess(roomManager.setNapoleonOptions(requireRoom(socket), socket.data.accountId, payload));
     return { success: true };
   }));
 

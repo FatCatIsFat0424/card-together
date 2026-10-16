@@ -8,6 +8,7 @@ import { cpGreedyArrangement } from '@shared/rules/chinesepoker-arrange';
 import { ldMustChallenge } from '@shared/rules/liarsdeck';
 import { BJ_MIN_BET, bjDealerHits, bjSitsIn } from '@shared/rules/blackjack';
 import { heLegalActions } from '@shared/rules/holdem';
+import { createNapoleonDeck, hasNapoleonCard, isNapoleonFreeCard, napoleonDealSize } from '@shared/rules/napoleon';
 import type { PlayerInfo, PlayerVisibleGameState, RoomCode, GameSeat, Seat } from '@shared/types';
 import type { BotAction } from '../bots/bot-decisions';
 import * as chatManager from '../managers/chat-manager';
@@ -21,7 +22,8 @@ export const MAX_AUTOMATED_FAILURES = 3;
 export const AUTOMATED_ABORT_MESSAGE = 'game.automatedAborted';
 
 export function applyAutomatedAction(code: RoomCode, seat: GameSeat, action: BotAction): { success: boolean; reason?: string } {
-  if (!isCompassSeat(seat) && !['ninetynine-play', 'blackjack-bet', 'blackjack-action', 'blackjack-dealer', 'holdem-action'].includes(action.type)) {
+  if (!isCompassSeat(seat) && !['ninetynine-play', 'blackjack-bet', 'blackjack-action', 'blackjack-dealer', 'holdem-action',
+    'napoleon-action'].includes(action.type)) {
     return { success: false, reason: 'This action requires a compass seat.' };
   }
   const compass = seat as Seat;
@@ -43,6 +45,7 @@ export function applyAutomatedAction(code: RoomCode, seat: GameSeat, action: Bot
     case 'blackjack-action': return gameManager.handleBlackjackAction(code, seat, action.action, true);
     case 'blackjack-dealer': return gameManager.handleBlackjackDealerAction(code, seat, action.action, true);
     case 'holdem-action': return gameManager.handleHoldemAction(code, seat, action.action, true);
+    case 'napoleon-action': return gameManager.handleNapoleonAction(code, seat, action.action, true);
   }
 }
 
@@ -74,6 +77,33 @@ export function blackjackDealerDefault(
   if (visible.phase !== 'playing' || visible.dealerSeat !== visible.mySeat || visible.currentTurnSeat !== visible.mySeat
     || visible.holeHidden) return null;
   return { type: 'blackjack-dealer', action: bjDealerHits(visible.dealer) ? 'hit' : 'stand' };
+}
+
+/** Pass, discard the last cards, acknowledge, call the first card outside the hand, or play the first legal card. */
+function napoleonFirstLegalAction(visible: Extract<PlayerVisibleGameState, { gameType: 'napoleon' }>): BotAction | null {
+  const seat = visible.mySeat;
+  const napoleon = visible.contract?.napoleon;
+  switch (visible.phase) {
+    case 'bidding':
+      return visible.bidding?.currentBidderSeat === seat ? { type: 'napoleon-action', action: { type: 'bid', action: { type: 'pass' } } } : null;
+    case 'exchanging':
+      return napoleon === seat ? { type: 'napoleon-action',
+        action: { type: 'discard', cards: visible.myHand.slice(-napoleonDealSize(visible.seats.length).kitty) } } : null;
+    case 'reviewing':
+      return napoleon !== seat && !visible.reviewed.includes(seat) ? { type: 'napoleon-action', action: { type: 'review' } } : null;
+    case 'calling': {
+      const card = createNapoleonDeck().find((candidate) => !hasNapoleonCard(visible.myHand, candidate));
+      return napoleon === seat && card ? { type: 'napoleon-action', action: { type: 'call', card } } : null;
+    }
+    case 'playing': {
+      const card = visible.currentTurnSeat === seat ? visible.validCards[0] : undefined;
+      if (!card) return null;
+      const leading = (visible.trick?.plays.length ?? 0) === 0;
+      return { type: 'napoleon-action',
+        action: leading && isNapoleonFreeCard(visible, card) ? { type: 'play', card, leadSuit: 'spades' } : { type: 'play', card } };
+    }
+    default: return null;
+  }
 }
 
 /** A deliberately simple legal move used only after the strategy repeatedly fails. */
@@ -118,6 +148,7 @@ export function firstLegalAction(visible: PlayerVisibleGameState): BotAction | n
       if (visible.dealerSeat === visible.mySeat) return blackjackDealerDefault(visible);
       return visible.currentTurnSeat === visible.mySeat ? { type: 'blackjack-action', action: 'stand' } : null;
     case 'holdem': return holdemPassiveAction(visible);
+    case 'napoleon': return napoleonFirstLegalAction(visible);
   }
 }
 

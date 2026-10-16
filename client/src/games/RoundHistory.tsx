@@ -12,6 +12,7 @@ import type { HistoryRound } from './round-history';
 import styles from './RoundHistory.module.css';
 import { useSeatName } from './seat-names';
 import { useGamePresentation } from './use-game-presentation';
+import { napoleonCardText } from './napoleon/napoleon-view';
 
 function cardLabel(card: Card): string {
   return `${SUIT_SYMBOLS[card.suit]}${RANK_DISPLAY[card.rank]}`;
@@ -21,6 +22,7 @@ function Round({ round }: { round: HistoryRound }): ReactNode {
   const [open, setOpen] = useState(false);
   const { t } = useI18nStore();
   const name = useSeatName();
+  const jokerName = (joker: 'big' | 'small'): string => t(`napoleon.joker.${joker}`);
   return <details className={styles.round} onToggle={(event) => setOpen(event.currentTarget.open)}>
     <summary>{t('history.round', { n: String(round.number),
       status: t(round.complete ? 'history.complete' : 'history.ongoing') })}
@@ -32,6 +34,11 @@ function Round({ round }: { round: HistoryRound }): ReactNode {
       {action.kind !== 'street' && <> {t(`history.${action.kind}`)}</>}
       {action.handIndex !== undefined && <span> ({t('blackjack.handIndex', { n: String(action.handIndex + 1) })})</span>}
       {action.cards.length > 0 && <span className={styles.cards}> {action.cards.map(cardLabel).join(' ')}</span>}
+      {action.napoleonCards && <span className={styles.cards}>
+        {' '}{action.napoleonCards.map((card) => napoleonCardText(card, jokerName)).join(' ')}</span>}
+      {action.leadSuit && <span> · {t('napoleon.historyLead', { suit: SUIT_SYMBOLS[action.leadSuit] })}</span>}
+      {action.summon && <span> · {t('napoleon.historySummon', { target: t(action.summon === 'secretary'
+        ? 'napoleon.secretary' : action.summon === 'bigJoker' ? 'napoleon.joker.big' : 'napoleon.joker.small') })}</span>}
       {action.comboType && <span> · {t(comboLabelKey(action.comboType))}</span>}
       {action.captured !== undefined && <span> · {action.captured
         ? t('history.captured', { card: cardLabel(action.captured) }) : t('history.stay')}</span>}
@@ -63,12 +70,13 @@ export function RoundHistory({ game }: { game: PlayerVisibleGameState }): ReactN
   const { t } = useI18nStore();
   const { frame } = useGamePresentation();
   // Blackjack and Hold'em history follows the presentation so results are not listed before their frames.
-  const follows = game.gameType === 'blackjack' || game.gameType === 'holdem';
+  const follows = game.gameType === 'blackjack' || game.gameType === 'holdem' || game.gameType === 'napoleon';
   const index = follows && frame ? frameLogIndex(frame) : null;
   const end = index === null ? game.log.length : index + 1;
   const rounds = useMemo(() => deriveRoundHistory(game.gameType === 'blackjack'
     ? { ...game, log: game.log.slice(0, end) }
-    : game.gameType === 'holdem' ? { ...game, log: game.log.slice(0, end) } : game), [game, end]);
+    : game.gameType === 'holdem' ? { ...game, log: game.log.slice(0, end) }
+      : game.gameType === 'napoleon' ? { ...game, log: game.log.slice(0, end) } : game), [game, end]);
   if (game.gameType === 'bridge' || game.gameType === 'chinesepoker') return null;
   return <details className={styles.history} onToggle={(event) => {
     if (event.target === event.currentTarget) setOpen(event.currentTarget.open);

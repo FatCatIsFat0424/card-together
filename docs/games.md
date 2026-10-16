@@ -11,8 +11,8 @@ turns, and results.
 | Stage | Behavior |
 | --- | --- |
 | Waiting | Everyone seated, including the host, can prepare at any player count. Readiness never starts a match; the host separately presses Start after all occupied seats are ready and the player count is valid |
-| Player counts | Ninety-Nine, Blackjack, and Hold'em support 2–8 occupied seats; other games require N/E/S/W. At least one seated human is required. Empty configured seats do not block a flexible game |
-| Extra seats | Flexible rooms can add P5/P6/P7/P8. Turn order continues after W and skips unoccupied seats; empty seats receive no cards, chips, turns, results, or history entries |
+| Player counts | Ninety-Nine, Blackjack, and Hold'em support 2–8 occupied seats, Napoleon 4–6; other games require N/E/S/W. At least one seated human is required. Empty configured seats do not block a flexible game |
+| Extra seats | Flexible rooms can add P5/P6/P7/P8 (Napoleon P5/P6). Turn order continues after W and skips unoccupied seats; empty seats receive no cards, chips, turns, results, or history entries |
 | Shuffle seats | Available for every game, off by default. At start, shuffle humans among their occupied positions; bots keep their standard seats and empty seats remain empty. Seat changes and the game commit together |
 | Readiness | Sitting, standing, leaving, adding or removing bots, and option changes clear human readiness; changing only the Sevens effect keeps it |
 | Finished | Each human returns with Continue; others keep the result until everyone returns or the next match starts |
@@ -67,8 +67,9 @@ turns, and results.
 
 | Game or stage | On timeout |
 | --- | --- |
-| Ordinary turns, Bridge bidding | A legal action chosen from the player's own view |
+| Ordinary turns, Bridge and Napoleon bidding, Napoleon exchange and secretary call | A legal action chosen from the player's own view |
 | Bridge redeal offer | Decline |
+| Napoleon discard review (four players) | Everyone confirms at once within twice the allowance, at least 15 seconds ([`napoleonReviewSeconds`](../shared/src/rules/napoleon.ts)); missing confirmations happen automatically |
 | Red Points | Hand play and flipped-card choice share one allowance |
 | Chinese Poker | Everyone arranges at once within allowance + reserve, at least 60 seconds ([`cpArrangeSeconds`](../shared/src/rules/chinesepoker.ts)); missing hands use the bot's non-fouled search |
 | Blackjack betting | Everyone bets at once within twice the allowance, at least 15 seconds ([`bjBetSeconds`](../shared/src/rules/blackjack.ts)); missing human bets become the minimum 10 |
@@ -88,6 +89,7 @@ Runtime mechanics: [architecture](architecture.md#turn-clocks).
 | Game | Interaction |
 | --- | --- |
 | Bridge calls | Pick level and suit, or Pass, then Confirm or pick the same call again; Cancel clears |
+| Napoleon | Bridge-style calls at levels 9–16; select the exact discard count, then confirm; pick the secretary card from all 54; leading the secretary card or a joker asks for the suit; an allowed summon is a toggle before playing |
 | Bridge, Ninety-Nine, Red Points | Click or keyboard activation plays. On touch, the first tap lifts and the second plays; tapping another card switches, tapping outside clears |
 | Ninety-Nine | Explicit plus/minus and next-player choices |
 | Red Points | Zero or one capture target plays immediately; several require choosing a highlighted table card |
@@ -121,7 +123,7 @@ Runtime mechanics: [architecture](architecture.md#turn-clocks).
   weighted near-best moves; an immediate Big Two win always plays.
 - They are heuristic practice opponents: no hidden-hand search or
   optimal play.
-- Easy uses basic bidding and random legal plays, captures, covers, and Ninety-Nine
+- Easy uses basic bidding (Napoleon: level 9 only with enough jokers and point cards) and random legal plays, captures, covers, and Ninety-Nine
   choices without opponent inference or planning. Chinese Poker uses a greedy valid
   arrangement; Liar's Deck uses fixed challenge odds; Blackjack uses minimum bets and
   a 17-point stand threshold; Hold'em uses free checks and simple randomized betting
@@ -141,6 +143,7 @@ Runtime mechanics: [architecture](architecture.md#turn-clocks).
 | Liar's Deck | Balances death risk, estimated honesty, and challenge odds; sheds cards, prefers non-joker truths; bluffs one card a quarter of the time while holding a truth ([code](../server/src/bots/liarsdeck-strategy.ts)) |
 | Blackjack | Basic strategy for stand-on-soft-17 with peek, double after split, no surrender; bets 3–8% at random, but in the last two hands chases the leader when behind and protects a lead; player dealers compare standing with expected draws ([code](../server/src/bots/blackjack-strategy.ts)) |
 | Hold'em | Preflop by position, depth in big blinds, and pot price against raisers' ranges inferred from each seat's raise and shove rates this match; at most two re-raises per seat and four per hand. Postflop equity against ranges that narrow when opponents bet, mixing slowplays, check-raises, and semi-bluffs, with sizes unrelated to strength; widens when trailing and tightens when leading in the last hands ([code](../server/src/bots/holdem-strategy.ts)) |
+| Napoleon | Bids a self-play-fitted estimate of its side's point cards at the lowest winning level, choosing trump or NT; discards to void short side suits while keeping jokers, trumps, and aces; calls the strongest card it lacks. Plays score win chance × points − the card's keep value; defenders infer the secretary from public feeding and overtaking; draws trumps when long, uses summons, and dumps jokers before the final three tricks ([code](../server/src/bots/napoleon-strategy.ts)) |
 
 **Strategy limits**
 
@@ -456,3 +459,55 @@ ends after the last hand, or when fewer than two seats can cover the minimum.
   and all-in shortcuts.
 - Board, pots, stakes, button, blinds, and showdown categories appear with their
   presentation frames; next-hand cards never appear early.
+
+## Napoleon
+
+| Item | Rule |
+| --- | --- |
+| Players | Four to six occupied seats; the host adds P5 and P6 |
+| Deck | 52 cards plus a big (colored) and small (monochrome) joker |
+| Deal | 13 / 10 / 8 cards each with 4 / 5 / 6 players; 2 / 4 / 6 stay face down ([sizes](../shared/src/rules/napoleon.ts)) |
+| Point cards | A, K, Q, J of every suit: 16 in total |
+| Host option | Joker summoning, on by default |
+
+**Auction and exchange**
+
+1. A random dealer; the auction starts at the next seat and runs clockwise as in [Bridge](#bridge),
+   with levels 9–16 in ♣ ♦ ♥ ♠ NT. The level is the number of point cards to win.
+2. If every seat passes without a bid, the cards are redealt with the same dealer. Otherwise the
+   auction ends when everyone else passes the highest bid, or at once on 16 NT.
+3. The highest bidder is the **Napoleon** and the bid suit is trump. No weak-hand redeal offer.
+4. The Napoleon privately adds the face-down cards to their hand, then discards as many.
+   With four players the discards are shown to the other three, and play continues once all
+   of them confirm (bots at once; missing confirmations happen automatically at the
+   [deadline](#turn-timer)). With five or six players the discards stay hidden until settlement.
+5. The Napoleon names any of the 54 cards as the **secretary card**. Its holder is the secretary,
+   who stays anonymous. Naming a card the Napoleon holds or discarded means no secretary;
+   nobody is told.
+
+**Play**
+
+- The Napoleon leads first; play goes clockwise and each trick's winner leads the next.
+- Follow the led suit when possible. The secretary card and jokers may be played at any time;
+  leading one names the suit to follow.
+- Trick order: secretary card > big joker > small joker > trump > led suit. In the final three
+  tricks jokers become the weakest cards: secretary card > trump > led suit > other suits >
+  big joker > small joker, except that a led joker counts as rank 1 (big) or 0 (small) of the
+  named suit.
+- With joker summoning on and a trump contract, a led trump 2 or 3 may summon the big or small
+  joker, which its holder must play. Not possible when that joker is the secretary card, already
+  played, or in the leader's hand. A secretary card that is a trump 2 or 3 keeps this power when led.
+- The leading Napoleon may summon the secretary card, which its holder must play, but not
+  together with a trump 2 or 3 lead while joker summoning applies.
+- No claim. After the last trick, the Napoleon and the secretary win if their point cards reach
+  the bid; otherwise the defenders win. Point cards among the discards count for the defenders.
+
+**Visibility**
+
+- Everyone sees the red Napoleon label after the auction and the secretary card's identity.
+- Only the secretary sees their own orange Secretary label until the secretary card is played;
+  then everyone does. Observers see it from the start.
+- The call shows a two-second notice: the secretary's notice stays until they confirm, which
+  blocks only their own actions and never pauses the table. Summons show a two-second notice to
+  everyone except the leader.
+- Each plate shows that seat's won point cards; side totals appear only in the result.

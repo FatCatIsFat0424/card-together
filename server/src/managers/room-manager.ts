@@ -2,19 +2,20 @@ import { DEFAULT_TIME_CONTROL, isTimeControl } from '@shared/time-control';
 import { DEFAULT_SEVENS_OPTIONS, isSevensOptions, LEGACY_SEVENS_OPTIONS } from '@shared/sevens-options';
 import { DEFAULT_NINETYNINE_OPTIONS, isNinetyNineOptions } from '@shared/ninetynine-options';
 import { DEFAULT_BLACKJACK_OPTIONS, isBlackjackOptions } from '@shared/blackjack-options';
+import { DEFAULT_NAPOLEON_OPTIONS, isNapoleonOptions } from '@shared/napoleon-options';
 import { isBotDifficulty } from '@shared/bot-difficulty';
 import { isDeepStrictEqual } from 'node:util';
 import { randomInt, randomUUID } from 'node:crypto';
 import type {
-  BlackjackOptions, BotDifficulty, GameType, NinetyNineOptions, PlayerInfo, RoomCode, RoomInfo, RoomSeatTarget, RoomStatus, Seat, SeatMap, SevensOptions, TimeControl,
+  BlackjackOptions, BotDifficulty, GameType, NapoleonOptions, NinetyNineOptions, PlayerInfo, RoomCode, RoomInfo, RoomSeatTarget, RoomStatus, Seat, SeatMap, SevensOptions, TimeControl,
 } from '@shared/types';
 import {
   ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD, EXPANDABLE_ROOM_GAMES,
-  FLEXIBLE_SEAT_GAMES, MAX_ROOM_MEMBERS, MAX_ROOM_SEATS, MAX_SPECTATORS,
+  FLEXIBLE_SEAT_GAMES, MAX_ROOM_MEMBERS, MAX_SPECTATORS,
 } from '@shared/constants';
 import type { PersistedRoom } from '../runtime/types';
 import { generateRoomCode } from '../utils/id-generator';
-import { roomPlayers, roomCanStart } from '@shared/rules/seats';
+import { maxPlayers, roomPlayers, roomCanStart } from '@shared/rules/seats';
 import type { GameSeat } from '@shared/types';
 
 const rooms = new Map<RoomCode, PersistedRoom>();
@@ -36,7 +37,7 @@ export function createRoom(gameType: GameType, creatorId: string): RoomCode {
       code, gameType, status: 'waiting', seats: emptySeats(), createdAt: Date.now(),
       timeControl: { ...DEFAULT_TIME_CONTROL }, hostId: creatorId, abortVote: null, abortVoteCooldownUntil: null,
       sevensOptions: { ...DEFAULT_SEVENS_OPTIONS }, blackjackOptions: { ...DEFAULT_BLACKJACK_OPTIONS },
-      ninetyNineOptions: { ...DEFAULT_NINETYNINE_OPTIONS },
+      ninetyNineOptions: { ...DEFAULT_NINETYNINE_OPTIONS }, napoleonOptions: { ...DEFAULT_NAPOLEON_OPTIONS },
     },
     memberIds: [creatorId],
   });
@@ -335,7 +336,7 @@ export function addSeat(code: RoomCode, playerId: string): Result {
   if (!allowed.success) return allowed;
   const room = rooms.get(code)!;
   const additional = room.info.additionalSeats ?? [];
-  if (additional.length >= MAX_ROOM_SEATS - 4) return { success: false, reason: 'Seat limit reached.' };
+  if (additional.length >= maxPlayers(room.info.gameType) - 4) return { success: false, reason: 'Seat limit reached.' };
   room.info = { ...room.info, additionalSeats: [...additional, { player: null, isReady: false }] };
   resetAllReady(code);
   return { success: true };
@@ -403,8 +404,14 @@ export function setGameType(code: RoomCode, playerId: string, gameType: GameType
   if (!EXPANDABLE_ROOM_GAMES.includes(gameType) && room.info.additionalSeats?.some((entry) => entry.player)) {
     return { success: false, reason: 'Empty the additional seats before changing to a four-seat game.' };
   }
+  // Empty seats beyond the new game's player limit are removed; occupied ones must be vacated first.
+  const additionalLimit = Math.max(0, maxPlayers(gameType) - 4);
+  if (room.info.additionalSeats?.slice(additionalLimit).some((entry) => entry.player)) {
+    return { success: false, reason: 'Empty the seats beyond this game\'s player limit first.' };
+  }
   room.info = { ...room.info, gameType,
-    ...(room.info.additionalSeats && !EXPANDABLE_ROOM_GAMES.includes(gameType) ? { additionalSeats: [] } : {}),
+    napoleonOptions: room.info.napoleonOptions ?? { ...DEFAULT_NAPOLEON_OPTIONS },
+    ...(room.info.additionalSeats ? { additionalSeats: room.info.additionalSeats.slice(0, additionalLimit) } : {}),
   };
   resetAllReady(code);
   return { success: true };
@@ -463,6 +470,21 @@ export function setBlackjackOptions(code: RoomCode, playerId: string, blackjackO
     return { success: true };
   }
   room.info = { ...room.info, blackjackOptions: { ...blackjackOptions } };
+  resetAllReady(code);
+  return { success: true };
+}
+
+export function setNapoleonOptions(code: RoomCode, playerId: string, napoleonOptions: NapoleonOptions): Result {
+  const room = rooms.get(code);
+  if (!room) return { success: false, reason: 'Room not found' };
+  if (room.info.hostId !== playerId) return { success: false, reason: 'Only the host can change the rules.' };
+  if (room.info.status !== 'waiting') return { success: false, reason: 'Game is in progress' };
+  if (room.info.gameType !== 'napoleon') return { success: false, reason: 'Not a Napoleon room.' };
+  if (!isNapoleonOptions(napoleonOptions)) return { success: false, reason: 'Invalid Napoleon options.' };
+  if (isDeepStrictEqual(room.info.napoleonOptions ?? DEFAULT_NAPOLEON_OPTIONS, napoleonOptions)) {
+    return { success: true };
+  }
+  room.info = { ...room.info, napoleonOptions: { ...napoleonOptions } };
   resetAllReady(code);
   return { success: true };
 }
@@ -592,6 +614,7 @@ export function restoreRooms(records: PersistedRoom[]): void {
       sevensOptions: room.info.sevensOptions ?? { ...LEGACY_SEVENS_OPTIONS },
       ninetyNineOptions: room.info.ninetyNineOptions ?? { ...DEFAULT_NINETYNINE_OPTIONS },
       blackjackOptions: room.info.blackjackOptions ?? { ...DEFAULT_BLACKJACK_OPTIONS },
+      napoleonOptions: room.info.napoleonOptions ?? { ...DEFAULT_NAPOLEON_OPTIONS },
     },
   });
 }

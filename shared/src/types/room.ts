@@ -6,7 +6,7 @@ import type { PlayerInfo, Seat } from './player';
 export type RoomCode = string;
 
 /** Game type */
-export type GameType = 'bridge' | 'bigtwo' | 'redpoints' | 'ninetynine' | 'sevens' | 'chinesepoker' | 'liarsdeck' | 'blackjack' | 'holdem';
+export type GameType = 'bridge' | 'bigtwo' | 'redpoints' | 'ninetynine' | 'sevens' | 'chinesepoker' | 'liarsdeck' | 'blackjack' | 'holdem' | 'napoleon';
 
 /** Room status */
 export type RoomStatus = 'waiting' | 'playing';
@@ -58,6 +58,11 @@ export interface BlackjackOptions {
   readonly playerDealer: boolean;
 }
 
+export interface NapoleonOptions {
+  /** The led trump 2 and 3 may summon the big and small joker */
+  readonly jokerSummon: boolean;
+}
+
 /** Room info (public) */
 export interface RoomInfo {
   /** Randomize occupied seats when the host starts; missing defaults to false. */
@@ -66,6 +71,8 @@ export interface RoomInfo {
   readonly sevensOptions?: SevensOptions;
   /** Missing on legacy snapshots; defaults to the house dealer. */
   readonly blackjackOptions?: BlackjackOptions;
+  /** Missing on legacy snapshots; defaults to joker summoning on. */
+  readonly napoleonOptions?: NapoleonOptions;
   /** Missing only on legacy snapshots. */
   readonly timeControl?: TimeControl;
   /** Missing on legacy snapshots; defaults to standard Ninety-Nine rules. */

@@ -1,11 +1,15 @@
 import { roomSeatInfo } from '@shared/rules/seats';
 import { isCompassSeat } from '@shared/rules/seats';
-import { GAME_SEAT_ORDER } from '@shared/constants';
+import { BID_SUIT_ORDER, GAME_SEAT_ORDER, NAPOLEON_MAX_PLAYERS } from '@shared/constants';
 import type {
-  BidAction, BlackjackAction, BlackjackDealerAction, Card, ChinesePokerArrangement, HoldemAction, GameSeat, Seat,
+  BidAction, BidSuit, BlackjackAction, BlackjackDealerAction, Card, ChinesePokerArrangement, HoldemAction, GameSeat,
+  NapoleonAction, NapoleonBidLevel, NapoleonCard, NapoleonSummon, Seat, Suit,
 } from '@shared/types';
 import { LD_DECK, LD_MAX_PLAY } from '@shared/rules/liarsdeck';
 import { BJ_ACTIONS, BJ_DEALER_ACTIONS, BJ_MAX_BET, BJ_MIN_BET } from '@shared/rules/blackjack';
+import {
+  NAPOLEON_BID_LEVELS, isNapoleonCard, isNapoleonJoker, napoleonCardKey, napoleonDealSize,
+} from '@shared/rules/napoleon';
 import type { SocketContext, TypedSocket } from './context';
 import { actionError, requireRoom, requireSuccess, runAction } from './context';
 import * as roomManager from '../managers/room-manager';
@@ -39,6 +43,47 @@ function parseHoldemAction(value: unknown): HoldemAction | null {
   const { type, to } = value as { type?: unknown; to?: unknown };
   if (type === 'fold' || type === 'check' || type === 'call') return { type };
   return type === 'raise' && typeof to === 'number' && Number.isSafeInteger(to) && to > 0 ? { type, to } : null;
+}
+
+const NAPOLEON_SUITS: readonly unknown[] = ['clubs', 'diamonds', 'hearts', 'spades'];
+const NAPOLEON_SUMMONS: readonly unknown[] = ['secretary', 'bigJoker', 'smallJoker'];
+/** The most cards any Napoleon exchange returns: the six-player table. */
+const NAPOLEON_MAX_DISCARDS = napoleonDealSize(NAPOLEON_MAX_PLAYERS).kitty;
+
+function parseNapoleonCard(value: unknown): NapoleonCard | null {
+  if (!isNapoleonCard(value)) return null;
+  return isNapoleonJoker(value) ? { joker: value.joker } : { suit: value.suit, rank: value.rank };
+}
+
+/** Rebuilds a Napoleon action so client-supplied extra keys never reach saved state. */
+function parseNapoleonAction(value: unknown): NapoleonAction | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const { type, action, cards, card, leadSuit, summon } = value as Record<string, unknown>;
+  if (type === 'review') return { type };
+  if (type === 'bid') {
+    if (typeof action !== 'object' || action === null) return null;
+    const bid = action as Record<string, unknown>;
+    if (bid.type === 'pass') return { type, action: { type: 'pass' } };
+    return bid.type === 'bid' && NAPOLEON_BID_LEVELS.includes(bid.level as NapoleonBidLevel)
+      && (BID_SUIT_ORDER as readonly unknown[]).includes(bid.suit)
+      ? { type, action: { type: 'bid', level: bid.level as NapoleonBidLevel, suit: bid.suit as BidSuit } }
+      : null;
+  }
+  if (type === 'discard') {
+    if (!Array.isArray(cards) || cards.length < 1 || cards.length > NAPOLEON_MAX_DISCARDS) return null;
+    const parsed = cards.map(parseNapoleonCard);
+    if (!parsed.every((entry): entry is NapoleonCard => entry !== null)
+      || new Set(parsed.map(napoleonCardKey)).size !== parsed.length) return null;
+    return { type, cards: parsed };
+  }
+  const parsed = parseNapoleonCard(card);
+  if (!parsed) return null;
+  if (type === 'call') return { type, card: parsed };
+  if (type !== 'play' || (leadSuit !== undefined && !NAPOLEON_SUITS.includes(leadSuit))
+    || (summon !== undefined && !NAPOLEON_SUMMONS.includes(summon))) return null;
+  return { type, card: parsed,
+    ...(leadSuit !== undefined ? { leadSuit: leadSuit as Suit } : {}),
+    ...(summon !== undefined ? { summon: summon as NapoleonSummon } : {}) };
 }
 
 /** Rebuilds a 3/5/5 arrangement so client-supplied extra keys never reach saved state. */
@@ -216,6 +261,14 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
     if (!action) throw actionError('Invalid action.');
     const code = requireRoom(socket);
     requireSuccess(gameManager.handleHoldemAction(code, playerGameSeat(socket, code), action));
+    return { success: true };
+  }));
+
+  socket.on('game:napoleon:action', (payload, callback) => runAction(context, socket, callback, () => {
+    const action = parseNapoleonAction(payload?.action);
+    if (!action) throw actionError('Invalid action.');
+    const code = requireRoom(socket);
+    requireSuccess(gameManager.handleNapoleonAction(code, playerGameSeat(socket, code), action));
     return { success: true };
   }));
 

@@ -10,6 +10,8 @@ export function getTurnSeat(game: AnyGameState): GameSeat | null {
   if (game.gameType === 'chinesepoker') return null;
   // Blackjack bets share a deadline; only playing turns belong to one seat.
   if (game.gameType === 'blackjack') return game.phase === 'playing' ? game.currentTurnSeat : null;
+  // Napoleon discards are acknowledged against a shared deadline, not one seat's turn.
+  if (game.gameType === 'napoleon') return game.phase === 'reviewing' ? null : game.currentTurnSeat;
   if (game.gameType !== 'bridge') return game.currentTurnSeat;
   if (game.phase === 'redeal_pending') return game.redealPendingSeat;
   if (game.phase === 'bidding') return game.bidding?.currentBidderSeat ?? null;

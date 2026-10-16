@@ -31,6 +31,10 @@ export function gameRulesSummary(gameType: GameType, context: GameRulesContext |
     }
     case 'holdem':
       return [t('holdem.rulesChips'), t('holdem.rulesDeal'), t('holdem.rulesAction'), t('holdem.rulesShowdown')];
+    case 'napoleon':
+      // Joker summoning is on by default, so the lobby lists it too.
+      return [t('napoleon.rulesDeal'), t('napoleon.rulesBid'), t('napoleon.rulesSecretary'), t('napoleon.rulesPlay'),
+        ...(context?.option?.enabled ?? true ? [t('napoleon.rulesSummon')] : []), t('napoleon.rulesWin')];
     case 'chinesepoker':
       return [t('chinesepoker.rulesRows'), t('chinesepoker.rulesFoul'), t('chinesepoker.rulesValues'),
         t('chinesepoker.rulesSweep')];

@@ -9,6 +9,7 @@ import { useRoomStore } from '../stores/room-store';
 import { useTurnSoundStore } from '../stores/turn-sound-store';
 import { presentationMoment } from '../games/presentation-state';
 import { blackjackNeedsBet } from '../games/blackjack/blackjack-view';
+import { napoleonReviewState } from '../games/napoleon/napoleon-view';
 
 export function getTurnSoundSnapshot(): TurnSoundSnapshot {
   const game = useGameStore.getState();
@@ -19,17 +20,21 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
   const arranging = game.chinesePoker?.phase === 'arranging' && !game.chinesePoker.submitted[game.chinesePoker.mySeat];
   // Blackjack betting is simultaneous too: every seat that can still bet is prompted.
   const betting = game.blackjack ? blackjackNeedsBet(game.blackjack) : false;
+  // The four-player Napoleon discard review is also owed by every seat at once.
+  const reviewing = game.napoleon ? napoleonReviewState(game.napoleon) === 'review' : false;
   const owned = !held.locked && room.currentRoomCode && room.mySeat &&
     account.status === 'authenticated' && account.connection === 'ready' &&
     (game.phase === 'bidding' || game.phase === 'playing') &&
-    (game.currentTurnSeat === room.mySeat || arranging || betting);
-  const completedTricks = game.playing?.completedTricks.length ?? 0;
+    (game.currentTurnSeat === room.mySeat || arranging || betting || reviewing);
+  const completedTricks = game.playing?.completedTricks.length ?? game.napoleon?.tricks.length ?? 0;
   const actionCount = game.bigTwo?.log.filter((entry) =>
     'seat' in entry && entry.seat === room.mySeat).length ??
     game.ninetyNine?.log.filter((entry) => entry.seat === room.mySeat).length ??
     game.sevens?.log.filter((entry) => entry.seat === room.mySeat).length ??
     game.liarsDeck?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
     game.holdem?.log.filter((entry) => entry.type === 'action' && entry.seat === room.mySeat).length ??
+    (game.napoleon ? `${game.napoleon.phase}-${game.napoleon.log.filter((entry) =>
+      'seat' in entry && entry.seat === room.mySeat).length}` : undefined) ??
     // One Blackjack turn spans several actions; prompt once per hand played, not on every hit.
     (game.blackjack ? `${game.blackjack.phase}-${game.blackjack.hand}-${game.blackjack.activeHand}` : 0);
   return {

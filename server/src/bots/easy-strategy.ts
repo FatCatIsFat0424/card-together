@@ -12,6 +12,7 @@ import { NN_MAX, nnApply, nnRequiresChoice } from '@shared/rules/ninetynine';
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { rpPairOptions } from '@shared/rules/redpoints';
 import type { BotAction } from './bot-decisions';
+import { getNapoleonBotAction } from './napoleon-strategy';
 
 function pick<T>(options: readonly T[], random: () => number): T | null {
   return options.length === 0 ? null : options[Math.min(options.length - 1, Math.floor(random() * options.length))];
@@ -144,6 +145,10 @@ export function getEasyBotAction(
       const choice = random();
       if (legal.raise && choice < 0.1) return { type: 'holdem-action', action: { type: 'raise', to: legal.raise.min } };
       return { type: 'holdem-action', action: { type: legal.call > 0 && choice < 0.8 ? 'call' : 'fold' } };
+    }
+    case 'napoleon': {
+      const action = getNapoleonBotAction(visible, random, 'easy');
+      return action ? { type: 'napoleon-action', action } : null;
     }
   }
 }

@@ -71,6 +71,11 @@ function MatchResultLabel({ match, players, accountId }: {
       {result.dragon && ' 🐉'}
       {mySeat && <> · {t('history.penalty', { n: String((gameSeatValue(result.scores, mySeat) ?? 0)) })}</>}</span>;
   }
+  if (result.gameType === 'napoleon') {
+    return <span>{result.contract.level}{result.contract.suit === 'nt' ? 'NT' : SUIT_SYMBOLS[result.contract.suit]}
+      {' '}· {result.napoleonPoints}/{result.contract.level} · {t(result.napoleonWins
+        ? 'napoleon.napoleonWins' : 'napoleon.defendersWin')}</span>;
+  }
   return <span>{result.contract.level}{result.contract.suit === 'nt' ? 'NT'
     : SUIT_SYMBOLS[result.contract.suit]} · {result.declarerTeamTricks}
     /{result.requiredTricks} · {t(result.declarerTeamWins

@@ -66,7 +66,10 @@ export function dailyStatus(record: DailyRewardsRecord | undefined, now: number,
   };
 }
 
-/** Mirror history outcomes: Bridge partnerships win together; tied leaders are not wins. */
+/**
+ * Mirror history outcomes: Bridge partnerships and the Napoleon's side win together; tied leaders
+ * are not wins.
+ */
 export function gameWonByAccount(game: Pick<AnyGameState, 'players' | 'result'>, accountId: string): boolean {
   const seat = Object.entries(game.players).find(([, player]) => player.id === accountId && !player.isBot)?.[0];
   if (!seat || !game.result) return false;
@@ -74,6 +77,7 @@ export function gameWonByAccount(game: Pick<AnyGameState, 'players' | 'result'>,
   return 'declarerTeamWins' in result
     ? (['N', 'S'].includes(seat) === ['N', 'S'].includes(result.contract.declarer)) === result.declarerTeamWins
     : 'winnerSeat' in result ? result.winnerSeat === seat
+    : result.gameType === 'napoleon' ? (result.winners as readonly string[]).includes(seat)
     : result.winners.length === 1 && result.winners[0] === seat;
 }
 

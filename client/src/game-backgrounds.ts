@@ -9,6 +9,7 @@ import liarsdeck from './assets/lobby-backgrounds/liarsdeck.webp';
 import blackjack from './assets/lobby-backgrounds/blackjack.webp';
 import holdem from './assets/lobby-backgrounds/holdem.webp';
 
+// Napoleon shares the Bridge artwork until it has its own.
 export const GAME_BACKGROUNDS: Readonly<Record<GameType, string>> = {
-  bridge, bigtwo, redpoints, ninetynine, sevens, chinesepoker, liarsdeck, blackjack, holdem,
+  bridge, bigtwo, redpoints, ninetynine, sevens, chinesepoker, liarsdeck, blackjack, holdem, napoleon: bridge,
 };

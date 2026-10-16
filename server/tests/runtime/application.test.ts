@@ -5,7 +5,7 @@ import { io as connectSocket } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
-  AccountProfile, BridgeVisibleState, Card, ClientToServerEvents, LiarCard, NinetyNineOptions, Seat, ServerToClientEvents,
+  AccountProfile, BridgeVisibleState, Card, ClientToServerEvents, LiarCard, NapoleonCard, NinetyNineOptions, Seat, ServerToClientEvents,
   SevensOptions, TimeControl,
 } from '@shared/types';
 import type { PlayerSnapshot } from '@shared/types/socket-events';
@@ -25,10 +25,11 @@ import { seedAuthenticatedAccount } from '../auth/account-fixture';
 
 const ORIGIN = 'http://localhost:5173';
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
-const cardKey = (card: Card | LiarCard): string => ('suit' in card ? `${card.suit}:${card.rank}` : `liar:${card.id}`);
+const cardKey = (card: Card | LiarCard | NapoleonCard): string => ('suit' in card ? `${card.suit}:${card.rank}`
+  : 'joker' in card ? `joker:${card.joker}` : `liar:${card.id}`);
 
 /** Every game except Blackjack, whose cards are public, has a private hand. */
-function handOf(state: PlayerSnapshot): readonly (Card | LiarCard)[] {
+function handOf(state: PlayerSnapshot): readonly (Card | LiarCard | NapoleonCard)[] {
   const game = state.gameState;
   if (!game || !('myHand' in game)) throw new Error('Expected a private hand');
   return game.myHand;

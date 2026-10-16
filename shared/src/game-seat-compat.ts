@@ -1,4 +1,7 @@
-import { GAME_SEAT_ORDER, FLEXIBLE_SEAT_GAMES } from './constants';
+import { GAME_SEAT_ORDER } from './constants';
+
+/** Flexible games whose snapshots predate additional seats; newer games always store full seat maps. */
+const LEGACY_FOUR_SEAT_GAMES: readonly string[] = ['ninetynine', 'blackjack', 'holdem'];
 
 /** Expand legacy four-seat value maps without changing players or caller inputs. */
 export function normalizeGameSeatMaps<T>(value: T): T {
@@ -26,5 +29,5 @@ export function normalizeGameSeatMaps<T>(value: T): T {
 export function normalizeFlexibleGame<T extends { readonly gameType: string }>(game: T): T {
   if ('players' in game && game.players && typeof game.players === 'object'
     && Object.keys(game.players).some((seat) => seat.startsWith('P'))) return game;
-  return (FLEXIBLE_SEAT_GAMES as readonly string[]).includes(game.gameType) ? normalizeGameSeatMaps(game) : game;
+  return LEGACY_FOUR_SEAT_GAMES.includes(game.gameType) ? normalizeGameSeatMaps(game) : game;
 }

@@ -16,6 +16,9 @@ export function spectatorGame<T extends PlayerVisibleGameState>(game: T, seat: G
   if (game.gameType === 'liarsdeck') return {
     ...game, mySeat: seat, myHand: [...view.liarHands?.[seat] ?? []], myPlayed: [],
   };
+  if (game.gameType === 'napoleon') return {
+    ...game, mySeat: seat, myHand: [...view.napoleonHands?.[seat] ?? []], validCards: [],
+  };
   return {
     ...game, mySeat: seat, myHand: [...view.hands?.[seat] ?? []],
     ...(game.gameType === 'sevens' ? { myCovered: [...view.covered?.[seat] ?? []] } : {}),

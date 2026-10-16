@@ -2,11 +2,9 @@ import { occupiedSeats, roomPlayers, roomSeatInfo } from '@shared/rules/seats';
 import type { Seat } from '@shared/types';
 import { useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import type { PresentationFrame } from '@shared/game-presentation';
 import { NN_MAX } from '@shared/rules/ninetynine';
-import type { Card, GameType, GameSeat } from '@shared/types';
-import { cardImageUrl } from '../cards';
+import type { Card, GameType, GameSeat, NapoleonCard } from '@shared/types';
 import { tablePosition } from '../game-view';
 import type { TranslationKey } from '../i18n';
 import { useI18nStore } from '../stores/i18n-store';
@@ -17,6 +15,9 @@ import { ChinesePokerReveal } from './chinesepoker/ChinesePokerReveal';
 import { LiarsDeckFrame } from './liarsdeck/LiarsDeckFrame';
 import { BlackjackFrame } from './blackjack/BlackjackFrame';
 import { HoldemFrame } from './holdem/HoldemFrame';
+import { NapoleonFrame } from './napoleon/NapoleonFrame';
+import { napoleonCardImageUrl } from './napoleon/napoleon-card-art';
+import { napoleonCardText } from './napoleon/napoleon-view';
 
 interface GamePresentationProps {
   frame: PresentationFrame;
@@ -48,6 +49,8 @@ export function GamePresentation({
   const name = (seat: GameSeat): string => (room ? roomSeatInfo(room, seat)?.player?.nickname : null) ?? t(`seat.${seat}`);
   const position = frame.seat ? tablePosition(frame.seat, bottomSeat, room ? occupiedSeats(roomPlayers(room)) : undefined) : 'bottom';
   const collecting = frame.kind === 'trick' || frame.kind === 'capture';
+  // Napoleon frames carry their cards separately because they may include jokers.
+  const frameCards: readonly NapoleonCard[] = frame.napoleonCards ?? frame.cards;
   const effect = gameType === 'ninetynine' ? specialEffect(frame.cards[0], t) : '';
 
   useLayoutEffect(() => {
@@ -69,19 +72,22 @@ export function GamePresentation({
       {frame.seat && <strong className={styles.playerName}>{name(frame.seat)}</strong>}
       <span>{t(frame.kind === 'finish' && frame.seat ? 'presentation.winner'
         : gameType === 'blackjack' && frame.kind === 'deal' ? 'blackjack.presentationDeal'
-          : gameType === 'holdem' && frame.kind === 'deal' ? 'holdem.presentationDeal' : `presentation.${frame.kind}`)}</span>
+          : gameType === 'holdem' && frame.kind === 'deal' ? 'holdem.presentationDeal'
+            : gameType === 'napoleon' && frame.kind === 'call' ? 'napoleon.presentation.call' : `presentation.${frame.kind}`)}</span>
     </div>
     {gameType === 'liarsdeck' && <LiarsDeckFrame frame={frame} name={name} />}
     {gameType === 'blackjack' && <BlackjackFrame frame={frame} name={name} />}
     {gameType === 'holdem' && <HoldemFrame frame={frame} name={name} />}
+    {gameType === 'napoleon' && <NapoleonFrame frame={frame} name={name} />}
     {/* Blackjack and Hold'em frames draw whole hands and the board themselves rather than the new cards. */}
-    {frame.cards.length > 0 && gameType !== 'blackjack' && gameType !== 'holdem' && <div className={collecting ? styles.collecting : undefined}>
+    {frameCards.length > 0 && gameType !== 'blackjack' && gameType !== 'holdem' && <div className={collecting ? styles.collecting : undefined}>
       <div className={[styles.cards, (frame.kind === 'play' || frame.kind === 'capture') && styles.arriving,
         frame.kind === 'trick' && styles.trickCards].filter(Boolean).join(' ')}>
-        {frame.cards.map((card, index) => <div className={styles.cardSlot}
-          key={`${card.suit}-${card.rank}-${index}`}>
-          <img className={[styles.card, frame.flipped && index === 0 && styles.flipped].filter(Boolean).join(' ')} src={cardImageUrl(card)}
-            alt={`${SUIT_SYMBOLS[card.suit]}${RANK_DISPLAY[card.rank]}`} draggable={false} />
+        {frameCards.map((card, index) => <div className={styles.cardSlot}
+          key={`${'joker' in card ? `joker-${card.joker}` : `${card.suit}-${card.rank}`}-${index}`}>
+          <img className={[styles.card, frame.flipped && index === 0 && styles.flipped].filter(Boolean).join(' ')}
+            src={napoleonCardImageUrl(card)}
+            alt={napoleonCardText(card, (joker) => t(`napoleon.joker.${joker}`))} draggable={false} />
           {frame.cardSeats?.[index] && <span className={styles.cardSeat}>
             {name(frame.cardSeats[index])}
           </span>}

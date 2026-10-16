@@ -1,6 +1,6 @@
 import {
-  isBigTwoResult, isBlackjackResult, isChinesePokerResult, isHoldemResult, isLiarsDeckResult, isNinetyNineResult,
-  isRedPointsResult, isRuntimeSnapshot, isSevensResult,
+  isBigTwoResult, isBlackjackResult, isChinesePokerResult, isHoldemResult, isLiarsDeckResult, isNapoleonResult,
+  isNinetyNineResult, isRedPointsResult, isRuntimeSnapshot, isSevensResult,
 } from '../runtime/validate';
 import {
   FLEXIBLE_SEAT_GAMES, GAME_TYPES, MAX_EMOJIS_PER_ACCOUNT, MAX_MESSAGE_EMOJIS, NICKNAME_MAX_LENGTH, isEmojiName, isImageOpacity, isMediaId,
@@ -136,7 +136,7 @@ function validMatch(value: unknown): value is MatchRecord {
     !isObject(value.result)
   )
     return false;
-  // Blackjack and Hold'em results list the seats that took part; every other match had four.
+  // Flexible-seat results list the seats that took part; every other match had four.
   const participants = FLEXIBLE_SEAT_GAMES.includes(value.result.gameType as GameType) ? value.result.seats : undefined;
   if (value.accountIds.length !== (Array.isArray(participants) ? participants.length : 4)) return false;
   const validators: Record<GameType, (result: Record<string, unknown>) => boolean> = {
@@ -149,6 +149,7 @@ function validMatch(value: unknown): value is MatchRecord {
     liarsdeck: isLiarsDeckResult,
     blackjack: isBlackjackResult,
     holdem: isHoldemResult,
+    napoleon: isNapoleonResult,
   };
   const gameType = value.result.gameType;
   return typeof gameType === 'string' && GAME_TYPES.includes(gameType as GameType) &&

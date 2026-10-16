@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { blackjackTranslations } from '../../../client/src/blackjack-i18n';
 import { holdemTranslations } from '../../../client/src/holdem-i18n';
 import { liarsDeckTranslations } from '../../../client/src/liarsdeck-i18n';
+import { napoleonTranslations } from '../../../client/src/napoleon-i18n';
 import { sevensTranslations } from '../../../client/src/sevens-i18n';
 
 function placeholders(value: string): string[] {
@@ -10,7 +11,7 @@ function placeholders(value: string): string[] {
 
 const dictionaries: readonly [string, { en: Record<string, string>; 'zh-TW': Record<string, string> }][] = [
   ['blackjack', blackjackTranslations], ['holdem', holdemTranslations],
-  ['liarsdeck', liarsDeckTranslations], ['sevens', sevensTranslations],
+  ['liarsdeck', liarsDeckTranslations], ['napoleon', napoleonTranslations], ['sevens', sevensTranslations],
 ];
 
 describe('game translation contracts', () => {

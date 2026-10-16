@@ -23,8 +23,8 @@
 
 - Bots are `bot:<UUID>` with `isBot: true` and have no account, session, or profile.
 - Any match with a bot is practice: it stays resumable but adds no history.
-- History lists participants in N/E/S/W/P5/P6/P7/P8 order. Ninety-Nine, Blackjack, and
-  Hold'em list occupied seats only; legacy results without `seats` list four.
+- History lists participants in N/E/S/W/P5/P6/P7/P8 order. Ninety-Nine, Blackjack,
+  Hold'em, and Napoleon list occupied seats only; legacy results without `seats` list four.
 - Flexible game snapshots restore legacy four-seat value maps with empty additional
   values. New matches persist up to eight seats; missing `shuffleSeats` means false.
   These extended snapshots/results require this version or newer: when rolling back
@@ -159,11 +159,12 @@ Optional fields added without a schema change; absent values use the default:
 | `ownedShopItems`, official image style fields, `nameplate` | Empty inventory / uploaded image or theme / no nameplate | Cannot show or manage products; older profile writes may drop equipment |
 | `shopSticker` in room/private messages | Absent | Unsupported: restore a compatible complete backup before rollback |
 | `seatBackground` | Theme artwork | Ignore it; data and media stay |
-| `RoomInfo.additionalSeats` (Ninety-Nine, Blackjack, Hold'em) | Four seats; up to four human-only extras | Unsupported: have players leave extra seats and the host remove them first |
+| `RoomInfo.napoleonOptions` | Joker summoning on | Unsupported with Napoleon state; see below |
+| `RoomInfo.additionalSeats` (Ninety-Nine, Blackjack, Hold'em, Napoleon) | Four seats; up to four human-only extras | Unsupported: have players leave extra seats and the host remove them first |
 
 - Ninety-Nine tied results (`winners`) cannot be read by earlier releases.
-- Revisions before Sevens, Chinese Poker, Liar's Deck, Blackjack, or Texas Hold'em reject
-  state containing those games.
+- Revisions before Sevens, Chinese Poker, Liar's Deck, Blackjack, Texas Hold'em, or Napoleon
+  reject state or history containing those games.
 - Never run two server versions against one database. Rollback steps:
   [deployment](deployment.md#rollback).
 

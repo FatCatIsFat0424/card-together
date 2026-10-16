@@ -118,6 +118,7 @@ recipient's `serverNow`; frames never include opponents' hands or unrevealed sto
 | Blackjack deal / hit / double / stand / split | 1,800 / 1,000 / 1,300 / 700 / 1,300 |
 | Blackjack dealer reveal / dealer draw / settlement | 1,300 / 1,000 / 2,500 |
 | Hold'em new hand / action / street / showdown / award | 1,500 / 900 / 1,300 / 2,500 / 2,500 |
+| Napoleon secretary call / play / summon notice / completed trick | 2,000 / 1,300 / 2,000 / 2,000 |
 | Final result before score overlay | 3,000 (2,000 after a Sevens table collapse) |
 
 **Timing versions**
@@ -147,7 +148,7 @@ Rules and per-game timeouts: [games](games.md#turn-timer). Limits:
 - Legacy rooms and games without timing data get defaults and fresh clocks.
 - Clients project from server timestamps and never decrement stored reserves.
 
-**Shared deadlines** (Chinese Poker arrangement, Blackjack betting):
+**Shared deadlines** (Chinese Poker arrangement, Blackjack betting, Napoleon four-player discard review):
 
 - No single active seat; one deadline per window.
 - At expiry, one commit fills every missing decision from each seat's filtered view.

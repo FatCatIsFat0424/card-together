@@ -20,7 +20,8 @@ import { useGameStore } from '../stores/game-store';
 import { useGodViewStore } from '../stores/god-view-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useRoomStore } from '../stores/room-store';
-import { ObservedCards, ObservedLiarCards } from './ObservedHand';
+import { napoleonPresentedPoints, napoleonSeatLabels } from '../games/napoleon/napoleon-view';
+import { ObservedCards, ObservedLiarCards, ObservedNapoleonCards } from './ObservedHand';
 import { PlayerLink } from './PlayerLink';
 import { latestSeatAction, seatStatus, showsAutoPlayed } from './seat-status';
 import type { SeatStatus } from './seat-status';
@@ -177,12 +178,14 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const {
     phase, turn, declarer, dealer, playing, bigTwoCards, redPointsCards, ninetyNineCards, locked, captured, busted,
     sevensCards, sevensCovered, chinesePokerCards, arranging, arranged, autoArranged, blackjackCards, holdemCards,
+    napoleonCards,
   } = useGameStore(useShallow((state) => ({
     sevensCards: gameSeatValue(state.sevens?.handCounts, seat) ?? null,
     // Blackjack hands are drawn face up on the table, so the plate shows no card backs.
     blackjackCards: state.blackjack ? 0 : null,
     // Hold'em hole cards are drawn on the felt, so the plate shows no card backs either.
     holdemCards: state.holdem ? 0 : null,
+    napoleonCards: state.napoleon ? gameSeatValue(state.napoleon.handCounts, seat) ?? 0 : null,
     sevensCovered: gameSeatValue(state.sevens?.coveredCounts, seat) ?? null,
     chinesePokerCards: state.chinesePoker ? state.chinesePoker.phase === 'arranging' ? 13 : 0 : null,
     arranging: state.chinesePoker?.phase === 'arranging' && !gameSeatValue(state.chinesePoker.submitted, seat),
@@ -220,14 +223,25 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const heLocked = heState === 'folded' || heState === 'allIn';
   const observedCards = useGodViewStore((state) => state.hands?.[seat]);
   const observedLiars = useGodViewStore((state) => state.liarHands?.[seat]);
+  const observedNapoleon = useGodViewStore((state) => state.napoleonHands?.[seat]);
+  const napoleon = useGameStore((state) => state.napoleon);
+  // Napoleon roles and won points follow the presentation, so a secretary is not unmasked early.
+  const napoleonLabels = napoleon && napoleonSeatLabels(napoleon, frame);
+  const napoleonPoints = napoleon && (napoleon.phase === 'playing' || napoleon.phase === 'scoring')
+    ? napoleonPresentedPoints(napoleon, frame)[seat] ?? 0 : null;
+  const napoleonReviewed = napoleon?.phase === 'reviewing' && napoleon.contract?.napoleon !== seat
+    && napoleon.reviewed.includes(seat);
   const observedCovered = useGodViewStore((state) => state.role === 'spectator' ? state.covered?.[seat] : undefined);
   const clock = useGameStore((state) => state.visible?.clock);
   const receivedAt = useGameStore((state) => state.presentationReceivedAt);
   const lastActionAt = useGameStore((state) => latestSeatAction(state.visible?.log ?? [], seat));
   // Bridge: each seat's latest call sits beside its name while the auction runs.
-  const callIndex = useGameStore((state) => (state.phase === 'bidding' && state.bidding
-    ? latestCallIndex(state.bidding.bids, seat) : -1));
-  const call = useGameStore((state) => (callIndex >= 0 ? state.bidding?.bids[callIndex]?.action ?? null : null));
+  const callIndex = useGameStore((state) => {
+    const bids = state.phase === 'bidding' ? state.bidding?.bids ?? state.napoleon?.bidding?.bids : undefined;
+    return bids ? latestCallIndex(bids, seat) : -1;
+  });
+  const call = useGameStore((state) => (callIndex >= 0
+    ? (state.bidding?.bids ?? state.napoleon?.bidding?.bids)?.[callIndex]?.action ?? null : null));
   // The opposite hand sits beside its plate so the top row stays short and the centre grows.
   const handBeside = useGameStore((state) => position === 'top' && state.visible !== null
     && HAND_BESIDE_GAMES.includes(state.visible.gameType));
@@ -238,10 +252,11 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
     locked: locked || heLocked,
     thinking: (active || arranging || (bettingOpen && !betPlaced)) && Boolean(player?.isBot),
     autoPlayed,
-    arranged: arranged || betPlaced,
+    arranged: arranged || betPlaced || napoleonReviewed,
   });
   const cards = bigTwoCards ?? redPointsCards ?? ninetyNineCards ?? sevensCards ?? chinesePokerCards
-    ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? remainingCards(seat, playing);
+    ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? napoleonCards
+    ?? remainingCards(seat, playing);
   // A Hold'em fold outranks a timeout in the status slot, so a timed-out fold keeps the timeout icon.
   const heStatusLabel: TranslationKey | null = heOut && status === 'busted' ? 'holdem.out'
     : heLocked && status === 'locked' ? heState === 'folded' ? 'holdem.folded' : 'holdem.allIn' : null;
@@ -256,7 +271,9 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const observed = bottom || cards === 0 ? null
     : liarsDeck && observedLiars?.length ? <ObservedLiarCards cards={observedLiars} owner={name}
       tableFace={liarsDeck.tableFace} />
-      : observedCards?.length ? <ObservedCards cards={observedCards} owner={name} /> : null;
+      : napoleon && observedNapoleon?.length ? <ObservedNapoleonCards cards={observedNapoleon} owner={name}
+        trump={napoleon.contract?.suit ?? null} />
+        : observedCards?.length ? <ObservedCards cards={observedCards} owner={name} /> : null;
   // Red Points shows captured red cards instead of card backs; the hand size stays a chip.
   const tray = captured ? redCards.length > 0 && <CardTray count={redCards.length} render={(index) => (
     <img className={styles.pileCard} src={cardImageUrl(redCards[index])} alt="" draggable={false} />
@@ -280,6 +297,10 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
           {player ? <PlayerLink player={player} size="medium" linked={!onObserve} />
             : <><span className={styles.emptyAvatar} aria-hidden="true" /><span className={styles.empty}>—</span></>}
           {isMe && <span className={styles.meTag}>{t('seat.meTag')}</span>}
+          {napoleonLabels?.napoleon === seat && <span className={`${styles.role} ${styles.napoleonRole}`}>
+            {t('napoleon.napoleon')}</span>}
+          {napoleonLabels?.secretary === seat && <span className={`${styles.role} ${styles.secretaryRole}`}>
+            {t('napoleon.secretary')}</span>}
           {call && <span key={callIndex} className={`${styles.call} ${call.type === 'pass' ? styles.callPass : ''}`}
             title={t('table.lastCall')}>
             {call.type === 'pass' ? t('game.pass') : <BidLabel level={call.level} suit={call.suit} />}
@@ -315,6 +336,10 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
           </span>}
           {heBlinds?.small === seat && <span className={styles.chip} title={t('holdem.sbTitle')}>{t('holdem.sb')}</span>}
           {heBlinds?.big === seat && <span className={styles.chip} title={t('holdem.bbTitle')}>{t('holdem.bb')}</span>}
+          {napoleonPoints !== null && <span className={styles.chip}
+            title={t('napoleon.pointsTitle', { n: String(napoleonPoints) })}>
+            {t('napoleon.pointsChip', { n: String(napoleonPoints) })}
+          </span>}
           {declarer && <span className={`${styles.chip} ${styles.declarer}`}>{t('table.declarer')}</span>}
           {dealer && phase === 'bidding' && <span className={styles.chip}>{t('table.dealer')}</span>}
           <TurnClock seat={seat} showBank={isMe} />
@@ -323,7 +348,8 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
           title={status === 'autoPlayed' || (heState === 'folded' && autoPlayed) ? t('clock.autoPlayed') : undefined}>
           {statusIcon && <span className={styles.statusIcon} aria-hidden="true">{statusIcon === '💀' ? statusIcon : <AppIcon name={statusIcon} />} </span>}
           {t(heStatusLabel ?? (dead && status === 'busted' ? 'liarsdeck.dead'
-            : bj && status === 'arranged' ? 'blackjack.betPlaced' : STATUS_LABEL[status]))}
+            : bj && status === 'arranged' ? 'blackjack.betPlaced'
+              : napoleonReviewed && status === 'arranged' ? 'napoleon.reviewed' : STATUS_LABEL[status]))}
         </span>}
         {sittingOut && <span className={styles.srOnly}>{t('blackjack.sittingOut')}</span>}
         {active && <span className={styles.srOnly}>{isMe ? t('table.yourTurn') : t('table.turn')}</span>}

@@ -1,4 +1,4 @@
-import { roomCanStart, roomSeatInfo } from '@shared/rules/seats';
+import { maxPlayers, roomCanStart, roomSeatInfo } from '@shared/rules/seats';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import Alert from '@mui/material/Alert';
@@ -8,13 +8,14 @@ import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { EXPANDABLE_ROOM_GAMES, GAME_TYPES, MAX_ROOM_SEATS, MAX_SPECTATORS, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import { EXPANDABLE_ROOM_GAMES, GAME_TYPES, MAX_SPECTATORS, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import type {
-  BlackjackOptions, BotDifficulty, GameType, NinetyNineOptions, PlayerInfo, RoomInfo, RoomSeatTarget, Seat, SeatInfo, SevensOptions, TimeControl,
+  BlackjackOptions, BotDifficulty, NapoleonOptions, GameType, NinetyNineOptions, PlayerInfo, RoomInfo, RoomSeatTarget, Seat, SeatInfo, SevensOptions, TimeControl,
 } from '@shared/types';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import { BOT_DIFFICULTIES, isBotDifficulty } from '@shared/bot-difficulty';
 import { LEGACY_SEVENS_OPTIONS, SEVENS_SLAY_EFFECTS, sevensSlayEffect } from '@shared/sevens-options';
+import { DEFAULT_NAPOLEON_OPTIONS } from '@shared/napoleon-options';
 import { socket } from '../socket';
 import { seatBackgroundStyle, tableBackgroundStyle } from '../account-appearance';
 import { useAccountStore } from '../stores/account-store';
@@ -241,6 +242,11 @@ export function RoomPage(): ReactNode {
     setError('');
     socket.timeout(10000).emit('room:setBlackjackOptions', options, handleResult);
   };
+  const setNapoleonOptions = (options: NapoleonOptions): void => {
+    setBusy(true);
+    setError('');
+    socket.timeout(10000).emit('room:setNapoleonOptions', options, handleResult);
+  };
   const addBot = (seat: Seat): void => {
     setBusy(true);
     setError('');
@@ -316,7 +322,7 @@ export function RoomPage(): ReactNode {
       aria-pressed={movingPlayer?.id === player.id} title={t('room.dragHint')}
       onClick={() => seatDrag.select(player)}><AppIcon name="drag" /></button>;
   const addSeatButton = isHost && expandableSeats
-    && seatCards.length < MAX_ROOM_SEATS && <button type="button"
+    && seatCards.length < maxPlayers(roomInfo.gameType) && <button type="button"
       className={`${styles.seatSlot} ${styles.addSeatSlot}`}
       disabled={blocked || roomInfo.status !== 'waiting'}
       aria-label={t('room.addSeat')} title={t('room.addSeat')} onClick={addSeat}>
@@ -434,6 +440,14 @@ export function RoomPage(): ReactNode {
               onChange={(event) => setBlackjackOptions({ playerDealer: event.target.checked })} />
             {t('blackjack.playerDealer')}
             <span id="blackjack-player-dealer-hint" className={styles.srOnly}>{t('blackjack.playerDealerHint')}</span>
+          </label>}
+          {roomInfo.gameType === 'napoleon' && <label className={styles.ruleOption} title={t('napoleon.jokerSummonHint')}>
+            <AppCheckbox checked={(roomInfo.napoleonOptions ?? DEFAULT_NAPOLEON_OPTIONS).jokerSummon}
+              disabled={!isHost || blocked || roomInfo.status !== 'waiting'}
+              slotProps={{ input: { 'aria-describedby': 'napoleon-joker-summon-hint' } }}
+              onChange={(event) => setNapoleonOptions({ jokerSummon: event.target.checked })} />
+            {t('napoleon.jokerSummon')}
+            <span id="napoleon-joker-summon-hint" className={styles.srOnly}>{t('napoleon.jokerSummonHint')}</span>
           </label>}
           </Popover>
         </div>

@@ -1,7 +1,7 @@
 // ─── God View Store: other seats' hands for spectators and eliminated players ───
 
 import { create } from 'zustand';
-import type { Card, LiarCard, ObserverRole, PlayerVisibleGameState, GameSeat } from '@shared/types';
+import type { Card, LiarCard, NapoleonCard, ObserverRole, PlayerVisibleGameState, GameSeat } from '@shared/types';
 import { retainSnapshotValue } from './snapshot-equality';
 
 export interface GodView {
@@ -10,15 +10,20 @@ export interface GodView {
   readonly hands: Partial<Record<GameSeat, readonly Card[]>> | null;
   readonly covered: Partial<Record<GameSeat, readonly Card[]>> | null;
   readonly liarHands: Partial<Record<GameSeat, readonly LiarCard[]>> | null;
+  /** Napoleon hands, which may hold jokers */
+  readonly napoleonHands: Partial<Record<GameSeat, readonly NapoleonCard[]>> | null;
   /** Blackjack's face-down dealer card */
   readonly hole: Card | null;
 }
 
-export const HIDDEN_GOD_VIEW: GodView = { role: null, hands: null, covered: null, liarHands: null, hole: null };
+export const HIDDEN_GOD_VIEW: GodView = {
+  role: null, hands: null, covered: null, liarHands: null, napoleonHands: null, hole: null,
+};
 
 function godViewOf(visible: PlayerVisibleGameState, role: ObserverRole): GodView {
   if (visible.gameType === 'blackjack') return { ...HIDDEN_GOD_VIEW, role, hole: visible.observedHole ?? null };
   if (visible.gameType === 'liarsdeck') return { ...HIDDEN_GOD_VIEW, role, liarHands: visible.observedHands ?? null };
+  if (visible.gameType === 'napoleon') return { ...HIDDEN_GOD_VIEW, role, napoleonHands: visible.observedHands ?? null };
   if (visible.gameType === 'sevens') return { ...HIDDEN_GOD_VIEW, role,
     hands: visible.observedHands ?? null, covered: visible.observedCovered ?? null };
   return { ...HIDDEN_GOD_VIEW, role, hands: visible.observedHands ?? null };
@@ -45,7 +50,7 @@ export const useGodViewStore = create<GodViewStore>((set) => ({
   ...HIDDEN_GOD_VIEW,
   update: (visible, locked) => set((state) => {
     const current: GodView = { role: state.role, hands: state.hands, covered: state.covered,
-      liarHands: state.liarHands, hole: state.hole };
+      liarHands: state.liarHands, napoleonHands: state.napoleonHands, hole: state.hole };
     const next = nextGodView(current, visible, locked);
     return next === current ? state : next;
   }),

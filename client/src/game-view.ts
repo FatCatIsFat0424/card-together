@@ -1,19 +1,25 @@
 import { isCompassSeat } from '@shared/rules/seats';
 // ─── Pure table-view helpers (no React) ───
 
-import type { BidAction, MatchResult, PlayerVisibleGameState, PlayingState, GameSeat } from '@shared/types';
+import type { BidSuit, MatchResult, PlayerVisibleGameState, PlayingState, GameSeat } from '@shared/types';
 
 export const AUCTION_COLUMNS: readonly GameSeat[] = ['W', 'N', 'E', 'S'];
 
-export interface AuctionCall { readonly seat: GameSeat; readonly action: BidAction }
+/** A Bridge (levels 1–7) or Napoleon (levels 9–16) call. */
+export interface AuctionCall {
+  readonly seat: GameSeat;
+  readonly action: { readonly type: 'bid'; readonly level: number; readonly suit: BidSuit } | { readonly type: 'pass' };
+}
 
 /** Place calls under their actual seat, preserving chronological row order. */
-export function auctionRows(calls: readonly AuctionCall[]): (AuctionCall | null)[][] {
-  const rows: (AuctionCall | null)[][] = [];
+export function auctionRows<T extends AuctionCall>(
+  calls: readonly T[], columns: readonly GameSeat[] = AUCTION_COLUMNS,
+): (T | null)[][] {
+  const rows: (T | null)[][] = [];
   let previousColumn = -1;
   for (const call of calls) {
-    const column = AUCTION_COLUMNS.indexOf(call.seat);
-    if (rows.length === 0 || column <= previousColumn) rows.push([null, null, null, null]);
+    const column = columns.indexOf(call.seat);
+    if (rows.length === 0 || column <= previousColumn) rows.push(columns.map(() => null));
     rows[rows.length - 1][column] = call;
     previousColumn = column;
   }
@@ -27,27 +33,31 @@ export function latestCallIndex(calls: readonly AuctionCall[], seat: GameSeat): 
 }
 
 /** Locate the next bidder after the last call, including an empty auction. */
-export function auctionWaitIndex(calls: readonly AuctionCall[], toAct: GameSeat | null): number {
+export function auctionWaitIndex(
+  calls: readonly AuctionCall[], toAct: GameSeat | null, columns: readonly GameSeat[] = AUCTION_COLUMNS,
+): number {
   if (!toAct) return -1;
-  const column = AUCTION_COLUMNS.indexOf(toAct);
+  const column = columns.indexOf(toAct);
   if (calls.length === 0) return column;
-  const row = auctionRows(calls).length - 1;
-  const lastColumn = AUCTION_COLUMNS.indexOf(calls[calls.length - 1].seat);
-  return (row + (column <= lastColumn ? 1 : 0)) * AUCTION_COLUMNS.length + column;
+  const row = auctionRows(calls, columns).length - 1;
+  const lastColumn = columns.indexOf(calls[calls.length - 1].seat);
+  return (row + (column <= lastColumn ? 1 : 0)) * columns.length + column;
 }
 
 export type TablePosition = 'bottom' | 'left' | 'top' | 'right' | 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight';
 const CLOCKWISE: readonly GameSeat[] = ['N', 'E', 'S', 'W'];
 const POSITIONS: readonly TablePosition[] = ['bottom', 'left', 'top', 'right'];
 
-/** Seats taking part in the shown match; Blackjack and Hold'em may leave seats empty. */
+/** Seats taking part in the shown match; flexible games may leave seats empty or add P5–P8. */
 export function matchSeats(game: PlayerVisibleGameState | null): readonly GameSeat[] {
-  return game?.gameType === 'blackjack' || game?.gameType === 'holdem' || game?.gameType === 'ninetynine' ? game.seats ?? CLOCKWISE : CLOCKWISE;
+  return game?.gameType === 'blackjack' || game?.gameType === 'holdem' || game?.gameType === 'ninetynine'
+    || game?.gameType === 'napoleon' ? game.seats ?? CLOCKWISE : CLOCKWISE;
 }
 
 /** Seats a finished match recorded, in the order of its account ids; legacy results had all four. */
 export function resultSeats(result: MatchResult): readonly GameSeat[] {
-  return (result.gameType === 'blackjack' || result.gameType === 'holdem' || result.gameType === 'ninetynine') && result.seats ? result.seats : CLOCKWISE;
+  return (result.gameType === 'blackjack' || result.gameType === 'holdem' || result.gameType === 'ninetynine'
+    || result.gameType === 'napoleon') && result.seats ? result.seats : CLOCKWISE;
 }
 
 /** Screen position of a seat when `bottomSeat` (me) sits at the bottom of the table. */

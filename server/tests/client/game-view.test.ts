@@ -46,6 +46,20 @@ describe('auction seat alignment', () => {
   it.each(AUCTION_COLUMNS)('should show the initial wait marker under %s', (seat) => {
     expect(auctionWaitIndex([], seat)).toBe(AUCTION_COLUMNS.indexOf(seat));
   });
+  it('should lay out a Napoleon auction under its own four to six seat columns', () => {
+    const columns = ['N', 'E', 'S', 'W', 'P5', 'P6'] as const;
+    const napoleon: AuctionCall[] = [
+      { seat: 'P5', action: { type: 'bid', level: 9, suit: 'clubs' } },
+      { seat: 'P6', action: pass },
+      { seat: 'N', action: { type: 'bid', level: 10, suit: 'nt' } },
+    ];
+    expect(auctionRows(napoleon, columns)).toEqual([
+      [null, null, null, null, napoleon[0], napoleon[1]],
+      [napoleon[2], null, null, null, null, null],
+    ]);
+    expect(auctionWaitIndex(napoleon, 'E', columns)).toBe(7);
+    expect(auctionWaitIndex([], 'P6', columns)).toBe(5);
+  });
   it('should wrap the next bidder to the next row after south', () => {
     expect(auctionWaitIndex(calls.slice(0, 3), 'W')).toBe(4);
     expect(auctionWaitIndex(calls, 'N')).toBe(5);
@@ -126,5 +140,9 @@ describe('seats taking part', () => {
     const blackjack = { gameType: 'blackjack', chips: { N: 900, E: 0, S: 1100, W: 0 }, hands: 8, winners: ['S'] };
     expect(resultSeats({ ...blackjack, seats: ['N', 'S'] } as MatchResult)).toEqual(['N', 'S']);
     expect(resultSeats(blackjack as MatchResult)).toEqual(['N', 'E', 'S', 'W']);
+    expect(matchSeats({ gameType: 'napoleon', seats: ['N', 'E', 'S', 'W', 'P5'] } as unknown as PlayerVisibleGameState))
+      .toEqual(['N', 'E', 'S', 'W', 'P5']);
+    expect(resultSeats({ gameType: 'napoleon', seats: ['N', 'E', 'S', 'W', 'P5', 'P6'] } as unknown as MatchResult))
+      .toEqual(['N', 'E', 'S', 'W', 'P5', 'P6']);
   });
 });

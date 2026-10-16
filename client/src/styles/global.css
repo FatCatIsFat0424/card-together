@@ -42,6 +42,11 @@
   --table-ink: #e2e8f0;
   --turn-glow: #4a9eff;
   --badge-declarer: #f5b942;
+  /* Napoleon role labels: red Napoleon, orange secretary */
+  --badge-napoleon: #dc2626;
+  --badge-napoleon-ink: #ffffff;
+  --badge-secretary: #f97316;
+  --badge-secretary-ink: #0f172a;
 
   /* Sidebar */
   --rail-bg: rgba(22, 31, 52, 0.72);
@@ -259,6 +264,8 @@
   --shadow-inset: inset 0 1px 6px rgba(60, 40, 20, 0.08);
 
   --font-display: 'Noto Serif TC', Georgia, serif;
+  --badge-secretary: #c2410c;
+  --badge-secretary-ink: #ffffff;
 }
 
 /* ─── Reset ─── */

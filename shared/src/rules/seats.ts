@@ -1,6 +1,8 @@
 import type { GameSeat, GameType, PlayerInfo, RoomInfo, Seat, SeatInfo } from '../types';
-import { FLEXIBLE_SEAT_GAMES, MIN_FLEXIBLE_PLAYERS, SEAT_ORDER_CLOCKWISE } from '../constants';
-import { GAME_SEAT_ORDER } from '../constants';
+import {
+  FLEXIBLE_SEAT_GAMES, GAME_SEAT_ORDER, MAX_ROOM_SEATS, MIN_FLEXIBLE_PLAYERS, NAPOLEON_MAX_PLAYERS, NAPOLEON_MIN_PLAYERS,
+  SEAT_ORDER_CLOCKWISE,
+} from '../constants';
 
 export function nextGameSeat(seat: GameSeat, reverse = false): GameSeat {
   const step = reverse ? -1 : 1;
@@ -40,7 +42,7 @@ export function roomCanStart(room: RoomInfo): boolean {
     return entry?.player ? [entry] : [];
   });
   return room.status === 'waiting' && occupied.length >= minPlayers(room.gameType)
-    && occupied.length <= (FLEXIBLE_SEAT_GAMES.includes(room.gameType) ? 8 : 4)
+    && occupied.length <= maxPlayers(room.gameType)
     && occupied.some((entry) => !entry.player?.isBot)
     && occupied.every((entry) => entry.isReady);
 }
@@ -58,7 +60,14 @@ export function nextSeatCounterClockwise(seat: Seat): Seat {
 
 /** Occupied seats a match of this game needs before it can start. */
 export function minPlayers(gameType: GameType): number {
+  if (gameType === 'napoleon') return NAPOLEON_MIN_PLAYERS;
   return FLEXIBLE_SEAT_GAMES.includes(gameType) ? MIN_FLEXIBLE_PLAYERS : SEAT_ORDER_CLOCKWISE.length;
+}
+
+/** Occupied seats a match of this game accepts at most; also caps its waiting-room seats. */
+export function maxPlayers(gameType: GameType): number {
+  if (gameType === 'napoleon') return NAPOLEON_MAX_PLAYERS;
+  return FLEXIBLE_SEAT_GAMES.includes(gameType) ? MAX_ROOM_SEATS : SEAT_ORDER_CLOCKWISE.length;
 }
 
 /** Seats with a player, ordered N, E, S, W; empty seats take no part in the match. */

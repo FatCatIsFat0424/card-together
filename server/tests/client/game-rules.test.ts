@@ -62,6 +62,7 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
   liarsdeck: { en: 'Calling LIAR and the next round', 'zh-TW': '質疑、開槍與下一輪' },
   blackjack: { en: 'Betting and deal', 'zh-TW': '下注與發牌' },
   holdem: { en: 'Main pot, side pots, and ties', 'zh-TW': '主池、邊池與平手' },
+  napoleon: { en: 'Secretary card', 'zh-TW': '秘書牌' },
 };
 
 describe('contextual game rules', () => {
@@ -107,9 +108,14 @@ describe('contextual game rules', () => {
       expect(render(gameType, context)).toContain('<dd>Off</dd>');
       expect(context.active).toBe(false);
     }
-    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack'].includes(type))) {
+    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon'].includes(type))) {
       expect(roomRulesContext(room(gameType, { sevensOptions: { closeOnEnd: true } })).option).toBeNull();
     }
+    // Joker summoning is the one option that defaults to on.
+    const napoleon = roomRulesContext(room('napoleon'));
+    expect(napoleon.option).toEqual({ label: 'napoleon.jokerSummon', enabled: true });
+    expect(render('napoleon', napoleon)).toContain('<dd>On</dd>');
+    expect(roomRulesContext(room('napoleon', { napoleonOptions: { jokerSummon: false } })).option?.enabled).toBe(false);
   });
 
   it('reflects current room mode and option changes without modifying room data', () => {

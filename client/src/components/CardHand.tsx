@@ -2,52 +2,65 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent, ReactNode } from 'react';
-import type { Card } from '@shared/types';
+import type { NapoleonCard } from '@shared/types';
 import { SUIT_SYMBOLS, RANK_DISPLAY } from '@shared/constants';
+import { isNapoleonJoker, sameNapoleonCard } from '@shared/rules/napoleon';
 import { moveHandCard } from './card-hand-order';
 import { cardInput, cardTap, validArmedCard } from './card-hand-touch';
-import { cardImageUrl } from '../cards';
+import { napoleonCardImageUrl } from '../games/napoleon/napoleon-card-art';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './CardHand.module.css';
 
-interface CardHandProps {
-  cards: readonly Card[];
-  playableCards?: readonly Card[];
-  onCardClick?: (card: Card) => void;
+/** Suit cards for every game; Napoleon hands may also hold jokers. */
+interface CardHandProps<T extends NapoleonCard> {
+  cards: readonly T[];
+  playableCards?: readonly T[];
+  onCardClick?: (card: T) => void;
   disabled?: boolean;
-  onReorder?: (cards: readonly Card[]) => void;
-  onCardPreview?: (card: Card | null) => void;
+  onReorder?: (cards: readonly T[]) => void;
+  onCardPreview?: (card: T | null) => void;
   /** Multi-select mode: every card toggles on click and selected cards rise; playableCards, if given, still glows */
-  selectedCards?: readonly Card[];
+  selectedCards?: readonly T[];
   /** Extra marked cards (Ninety-Nine: playing them would exceed 99) */
-  markedCards?: readonly Card[];
+  markedCards?: readonly T[];
   markedLabel?: string;
+  /** Newly received cards with a corner badge (Napoleon: the picked-up table cards) */
+  highlightedCards?: readonly T[];
+  highlightedLabel?: string;
   /** Touch taps lift a card first and play it on the second tap; defaults to on outside selection mode. */
   confirmTouch?: boolean;
 }
 
-function containsCard(card: Card, list?: readonly Card[]): boolean {
+function containsCard(card: NapoleonCard, list?: readonly NapoleonCard[]): boolean {
   if (!list) return false;
-  return list.some((c) => c.suit === card.suit && c.rank === card.rank);
+  return list.some((c) => sameNapoleonCard(c, card));
+}
+
+function cardName(card: NapoleonCard, jokerName: (joker: 'big' | 'small') => string): string {
+  return isNapoleonJoker(card) ? jokerName(card.joker) : `${RANK_DISPLAY[card.rank]}${SUIT_SYMBOLS[card.suit]}`;
+}
+
+function cardKey(card: NapoleonCard): string {
+  return isNapoleonJoker(card) ? `joker-${card.joker}` : `${card.suit}-${card.rank}`;
 }
 
 function coarsePointer(): boolean {
   return typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 }
 
-export function CardHand({
-  cards, playableCards, onCardClick, disabled, selectedCards, markedCards, markedLabel, onCardPreview, onReorder,
-  confirmTouch,
-}: CardHandProps): ReactNode {
+export function CardHand<T extends NapoleonCard>({
+  cards, playableCards, onCardClick, disabled, selectedCards, markedCards, markedLabel, highlightedCards,
+  highlightedLabel, onCardPreview, onReorder, confirmTouch,
+}: CardHandProps<T>): ReactNode {
   const gesture = useRef<{
-    pointerId: number; card: Card; startX: number; startY: number;
+    pointerId: number; card: T; startX: number; startY: number;
     source: number; centers: number[]; target: number; moved: boolean;
   } | null>(null);
   const suppressClick = useRef(false);
   const lastPointer = useRef<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [drag, setDrag] = useState<{ card: Card; offset: number; target: number } | null>(null);
-  const [armedCard, setArmedCard] = useState<Card | null>(null);
+  const [drag, setDrag] = useState<{ card: T; offset: number; target: number } | null>(null);
+  const [armedCard, setArmedCard] = useState<T | null>(null);
   const { t } = useI18nStore();
   const selectMode = selectedCards !== undefined;
   // Big Two keeps its own toggle selection; two-step touch play applies to immediate-play hands.
@@ -87,12 +100,14 @@ export function CardHand({
         const playable = selectMode || containsCard(card, playableCards);
         const selected = containsCard(card, selectedCards);
         const marked = containsCard(card, markedCards);
+        const highlighted = containsCard(card, highlightedCards);
         const hinted = !disabled && !selected && containsCard(card, playableCards);
         const cardClasses = [
           styles.card,
           hinted ? styles.cardPlayable : '',
           selected ? styles.cardSelected : '',
           marked ? styles.cardMarked : '',
+          highlighted ? styles.cardHighlighted : '',
           armed && containsCard(card, [armed]) ? styles.cardArmed : '',
           onReorder && !disabled ? styles.cardReorderable : '',
           drag && containsCard(card, [drag.card]) ? styles.cardDragging : '',
@@ -103,7 +118,7 @@ export function CardHand({
 
         return (
           <button
-            key={`${card.suit}-${card.rank}-${copy}`}
+            key={`${cardKey(card)}-${copy}`}
             className={cardClasses}
             style={{
               '--fan': index - middle,
@@ -180,11 +195,12 @@ export function CardHand({
             // aria-disabled keeps every card focusable and readable; activation is still blocked above.
             aria-disabled={disabled || !playable}
             aria-pressed={selectMode ? selected : undefined}
-            aria-label={`${RANK_DISPLAY[card.rank]}${SUIT_SYMBOLS[card.suit]}${marked && markedLabel ? ` (${markedLabel})` : ''}${
+            aria-label={`${cardName(card, (joker) => t(`napoleon.joker.${joker}`))}${marked && markedLabel ? ` (${markedLabel})` : ''}${
+              highlighted && highlightedLabel ? ` (${highlightedLabel})` : ''}${
               armed && containsCard(card, [armed]) ? ` — ${t('hand.tapAgain')}` : ''}`}
-            title={marked ? markedLabel : undefined}
+            title={marked ? markedLabel : highlighted ? highlightedLabel : undefined}
           >
-            <img src={cardImageUrl(card)} alt="" draggable={false} />
+            <img src={napoleonCardImageUrl(card)} alt="" draggable={false} />
           </button>
         );
       })}

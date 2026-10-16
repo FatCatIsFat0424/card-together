@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AccountProfile, FriendEntry } from '@shared/types';
+import { GAME_TYPES } from '@shared/constants';
 
 const state = vi.hoisted(() => ({
   currentRoomCode: null as string | null,
@@ -56,7 +57,7 @@ describe('lobby page', () => {
     expect(selectedPanel).toMatch(/<label[^>]*for="room-code-input-desktop">Room Code<\/label>/);
     expect(html).not.toContain('id="lobby-games-title"');
     expect(html).not.toContain('Choose a game to preview the rules, then create your table.');
-    expect(html.match(/aria-controls="lobby-selected-game"/g)).toHaveLength(9);
+    expect(html.match(/aria-controls="lobby-selected-game"/g)).toHaveLength(GAME_TYPES.length);
     expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
     expect(html).not.toContain('id="lobby-create-title"');
     expect(html).toContain('id="lobby-selected-game-title">Bridge</h2>');
@@ -83,7 +84,7 @@ describe('lobby page', () => {
     const html = render();
     expect(html).toMatch(/disabled=""[^>]*>Create Room/);
     const choices = html.match(/<button[^>]*aria-controls="lobby-selected-game"[^>]*>/g) ?? [];
-    expect(choices).toHaveLength(9);
+    expect(choices).toHaveLength(GAME_TYPES.length);
     expect(choices.every((choice) => !choice.includes('disabled'))).toBe(true);
   });
 

@@ -105,8 +105,8 @@ Frontend page behavior and layout. Client architecture and connection handling:
 - Bot identities show Easy or Hard. Waiting-room hosts edit each bot's difficulty
   beside its remove control, both 44px tall; guests see the selected difficulty. Defaults and strategy
   behavior are documented in [games](games.md#bots).
-- In Ninety-Nine, Blackjack, and Hold'em the host sees a plus cell after the last seat to
-  add human seats up to eight; only the last empty extra seat can be removed. Start
+- In Ninety-Nine, Blackjack, Hold'em, and Napoleon the host sees a plus cell after the last seat to
+  add human seats up to eight (six for Napoleon); only the last empty extra seat can be removed. Start
   conditions: [games](games.md#shared-room-lifecycle).
 - Seat artwork: the player's uploaded seat background, the
   [bot dealer artwork](../client/src/assets/room-backgrounds/README.md) for bots, or the
@@ -177,6 +177,11 @@ Frontend page behavior and layout. Client architecture and connection handling:
   200ms opening and shrinking fade-out animations as the rules dialog, respecting
   reduced motion. Cancelling does not start a vote; confirmation is disabled during exit.
 - The result dialog stays below the top bar, focuses Back to room, and reports a pending return.
+- Napoleon: the picked-up cards are starred while exchanging; exchange, follow-suit, and
+  summon controls sit in the overlay panel to keep 44px touch targets. The secretary picker
+  dashes cards the Napoleon holds or discarded and warns that they mean no secretary. The
+  secretary's confirmation is stored per room and announcement in local storage, so a reload
+  shows it once. Seat labels and notices follow [Napoleon visibility](games.md#napoleon).
 - Actions require a ready connection; local sorting still works while reconnecting.
 
 Per-game controls: [games](games.md#card-controls).

@@ -1,5 +1,6 @@
 import type {
-  BidAction, BlackjackAction, BlackjackDealerAction, Card, ChinesePokerArrangement, HoldemAction, PlayerVisibleGameState,
+  BidAction, BlackjackAction, BlackjackDealerAction, Card, ChinesePokerArrangement, HoldemAction, NapoleonAction,
+  PlayerVisibleGameState,
   BotDifficulty, GameSeat,
 } from '@shared/types';
 import type { NnChoice } from '@shared/rules/ninetynine';
@@ -12,6 +13,7 @@ import { getChinesePokerBotAction } from './chinesepoker-strategy';
 import { getLiarsDeckBotAction } from './liarsdeck-strategy';
 import { getBlackjackBotAction } from './blackjack-strategy';
 import { getHoldemBotAction } from './holdem-strategy';
+import { getNapoleonBotAction } from './napoleon-strategy';
 import { getEasyBotAction } from './easy-strategy';
 
 export type BotAction =
@@ -31,7 +33,8 @@ export type BotAction =
   | { readonly type: 'blackjack-bet'; readonly amount: number }
   | { readonly type: 'blackjack-action'; readonly action: BlackjackAction }
   | { readonly type: 'blackjack-dealer'; readonly action: BlackjackDealerAction }
-  | { readonly type: 'holdem-action'; readonly action: HoldemAction };
+  | { readonly type: 'holdem-action'; readonly action: HoldemAction }
+  | { readonly type: 'napoleon-action'; readonly action: NapoleonAction };
 
 /** Decisions receive only filtered player information and injectable randomness. */
 export function getBotAction(
@@ -39,6 +42,11 @@ export function getBotAction(
   difficulty: BotDifficulty = 'hard',
 ): BotAction | null {
   if (visible.phase === 'scoring') return null;
+  // The Napoleon strategy implements both difficulties itself.
+  if (visible.gameType === 'napoleon') {
+    const action = getNapoleonBotAction(visible, random, difficulty);
+    return action ? { type: 'napoleon-action', action } : null;
+  }
   if (difficulty === 'easy') return getEasyBotAction(visible, random);
   switch (visible.gameType) {
     case 'bridge': return getBridgeBotAction(visible, random);

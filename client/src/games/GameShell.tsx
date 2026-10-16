@@ -94,6 +94,14 @@ function presentationSummary(
       scores: winners.map((seat) => `${t(`seat.${seat}`)} ${chips[seat]}`).join(' · '),
     });
   }
+  if (game.gameType === 'napoleon') {
+    // Side totals stay hidden until settlement so they never point at the secretary.
+    if (!game.result) return '';
+    return `${t(game.result.napoleonWins ? 'napoleon.napoleonWins' : 'napoleon.defendersWin')} · ${t('presentation.napoleonResult', {
+      napoleon: t('napoleon.napoleonSide'), n: String(game.result.napoleonPoints),
+      defenders: t('napoleon.defenders'), m: String(game.result.defenderPoints),
+    })}`;
+  }
   if (game.gameType === 'ninetynine' && game.result && 'winners' in game.result) {
     return t('presentation.ninetyNineTied', {
       seats: game.result.winners.map((seat) => t(`seat.${seat}`)).join(' · '),
@@ -187,7 +195,8 @@ export function GameShell({
   const messageCount = useChatStore((state) => state.messages.length);
   const room = useRoomStore((state) => state.roomInfo);
   const log = useGameStore((state) => state.bigTwo?.log ?? state.redPoints?.log ?? state.ninetyNine?.log
-    ?? state.sevens?.log ?? state.chinesePoker?.log ?? state.liarsDeck?.log ?? state.blackjack?.log ?? state.holdem?.log ?? state.log);
+    ?? state.sevens?.log ?? state.chinesePoker?.log ?? state.liarsDeck?.log ?? state.blackjack?.log ?? state.holdem?.log
+    ?? state.napoleon?.log ?? state.log);
   const ownedTurn = useGameStore((state) => mySeat !== null && state.currentTurnSeat === mySeat
     && (state.phase === 'bidding' || state.phase === 'playing'));
   const myTurn = (turnReady ?? ownedTurn) && !presentation.locked;
