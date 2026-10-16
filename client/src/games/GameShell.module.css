@@ -527,8 +527,19 @@
   grid-template-areas: 'tools tools tools tools' 'topLeft top top topRight' 'topLeft centre centre topRight' 'bottomLeft centre centre bottomRight';
 }
 
+/* No opposite seat (five players): the centre rises between the top corner seats, which then only set the
+   height of their own row instead of pushing the centre down. */
+.table.expandedTable.centreUp {
+  grid-template-areas: 'tools tools tools tools' 'topLeft centre centre topRight' 'left centre centre right' 'bottomLeft centre centre bottomRight';
+}
+
+.table.expandedTable.cornersSpan.centreUp {
+  grid-template-areas: 'tools tools tools tools' 'topLeft centre centre topRight' 'topLeft centre centre topRight' 'bottomLeft centre centre bottomRight';
+}
+
 @media (max-width: 767px) and (min-height: 501px) {
-  .table.expandedTable, .table.expandedTable.cornersSpan {
+  .table.expandedTable, .table.expandedTable.cornersSpan, .table.expandedTable.centreUp,
+  .table.expandedTable.cornersSpan.centreUp {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-rows: auto repeat(4, auto) minmax(0, 1fr);
     grid-template-areas: 'tools tools' 'topLeft topRight' 'left right' 'bottomLeft bottomRight' 'top top' 'centre centre';

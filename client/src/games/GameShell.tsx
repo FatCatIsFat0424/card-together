@@ -238,10 +238,12 @@ export function GameShell({
   // Seats left empty in a Blackjack or Hold'em match get no plate.
   const tableSeats = matchSeats(visibleGame);
   const expandedTable = tableSeats.some((seat) => !['N', 'E', 'S', 'W'].includes(seat));
-  // With no side seats (six players), the top corner seats can reach down beside the centre.
+  // Empty cells go to their neighbours: with no side seats (six players) the top corner seats reach down beside
+  // the centre, and with no opposite seat (five players) the centre rises between the top corner seats.
   const sidePositions = tableSeats.filter((seat) => seat !== bottomSeat)
     .map((seat) => tablePosition(seat, bottomSeat, tableSeats));
   const cornersSpan = expandedTable && !sidePositions.includes('left') && !sidePositions.includes('right');
+  const centreUp = expandedTable && !sidePositions.includes('top');
   const unread = chatOpen ? 0 : Math.max(0, messageCount - seenMessages);
   const godView = useGodViewStore((state) => state.role);
 
@@ -390,7 +392,7 @@ export function GameShell({
       </div>
 
       <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}>
-        <div className={`${styles.table} ${expandedTable ? styles.expandedTable : ''} ${cornersSpan ? styles.cornersSpan : ''}`}
+        <div className={`${styles.table} ${expandedTable ? styles.expandedTable : ''} ${cornersSpan ? styles.cornersSpan : ''} ${centreUp ? styles.centreUp : ''}`}
           data-card-table>
           <div className={styles.tableTools}>
             <AbortVoteButton iconOnly className={styles.abortTool} buttonClassName={styles.toolBtn} />
@@ -419,7 +421,7 @@ export function GameShell({
               onPick={onPickSeat && pickableSeats?.includes(seat) ? () => onPickSeat(seat) : undefined} />
           ))}
           <FittedCentre responsive={visibleGame?.gameType === 'redpoints' && !presentation.frame}
-            wide={visibleGame?.gameType === 'sevens'}
+            wide={visibleGame?.gameType === 'sevens' || visibleGame?.gameType === 'napoleon'}
             style={move ? FLY_FROM[tablePosition(move.seat, bottomSeat, tableSeats)] : undefined}>
             {presentation.frame && visibleGame && !centreVisible ? (
               <GamePresentation key={presentation.frame.key} frame={presentation.frame}

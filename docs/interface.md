@@ -187,7 +187,9 @@ remain visible.
   600px wide they stack again. Their centre cards size from the table, and Sevens rows may exceed the
   usual centre width cap. Top-row plates line up at their top edge. When the side cells are empty
   (six players), the top corner seats reach down into them with their hands below their plates, so
-  the top row is one plate tall. Napoleon trick cards and its play boxes size from the table too; a
+  the top row is one plate tall; when there is no opposite seat (five players), the centre rises
+  between the top corner seats. Neither layout applies below 768px wide. Napoleon lifts the usual centre
+  width cap like Sevens. Napoleon trick cards and its play boxes size from the table too; a
   finished trick's box widens and shrinks its four to six cards to fit. Napoleon's trick lays its
   cards around a rounded rectangle, so seats between the axes join the top and bottom rows (six
   players form two rows of three) and the cards can be large.
