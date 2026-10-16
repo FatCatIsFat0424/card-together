@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import type { Card, CardFaceStyleId } from '@shared/types';
 import { useAccountStore } from '../../stores/account-store';
-import { cardFaceUrl, jokerFaceUrl } from './card-faces';
+import { cardFaceUrl, jokerFaceUrl, napoleonJokerFaceUrls } from './card-faces';
 import { fourColorResolver, loadFourColorDeck, subscribeFourColorDeck } from './four-color';
 
 export function useCardFaceStyle(): CardFaceStyleId | null {
@@ -26,4 +26,9 @@ export function useCardFaceUrl(): (card: Card) => string {
 /** Joker image for the signed-in player's deck; null keeps the built-in classic joker. */
 export function useJokerFaceUrl(): string | null {
   return jokerFaceUrl(useCardFaceStyle());
+}
+
+/** Napoleon's big and small jokers for the signed-in player's deck; null keeps the bundled pair. */
+export function useNapoleonJokerFaceUrls(): { readonly big: string; readonly small: string } | null {
+  return napoleonJokerFaceUrls(useCardFaceStyle());
 }

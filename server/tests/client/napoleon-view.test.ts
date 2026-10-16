@@ -16,7 +16,7 @@ import { matchOutcome } from '../../../client/src/match-history';
 import { useGameStore } from '../../../client/src/stores/game-store';
 
 vi.mock('../../../client/src/cosmetics/card-faces/use-card-face', () => ({
-  useCardFaceUrl: () => () => '/card.svg', useJokerFaceUrl: () => null,
+  useCardFaceUrl: () => () => '/card.svg', useJokerFaceUrl: () => null, useNapoleonJokerFaceUrls: () => null,
 }));
 
 const card = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit });

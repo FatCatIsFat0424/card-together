@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest';
 import type { Card, CardFaceStyleId, Rank, Suit } from '../../../shared/src/types';
 import { CARD_FACES } from '../../../shared/src/constants';
 import { cardImageUrl } from '../../../client/src/cards';
-import { cardFaceUrl, jokerFaceUrl } from '../../../client/src/cosmetics/card-faces/card-faces';
+import {
+  cardFaceUrl, grayscaleSvg, jokerFaceUrl, napoleonJokerFaceUrls,
+} from '../../../client/src/cosmetics/card-faces/card-faces';
 import {
   FOUR_COLOR_INKS, fourColorFaceUrl, fourColorResolver, loadFourColorDeck, recolorClassicFace,
 } from '../../../client/src/cosmetics/card-faces/four-color';
@@ -119,5 +121,26 @@ describe('four-colour deck', () => {
     const joker = jokerFaceUrl(style);
     expectWellFormed(decodeSvg(joker ?? ''));
     expect(urls.has(joker ?? '')).toBe(false);
+  });
+
+  it('derives Napoleon jokers from every deck: its own joker as big, a greyscale copy as small', () => {
+    expect(napoleonJokerFaceUrls(null)).toBeNull();
+    expect(napoleonJokerFaceUrls(undefined)).toBeNull();
+    for (const style of CARD_FACES.map((item) => item.id)) {
+      const jokers = napoleonJokerFaceUrls(style)!;
+      expect(jokers.big).toBe(jokerFaceUrl(style));
+      expect(jokers.small).not.toBe(jokers.big);
+      const small = decodeSvg(jokers.small);
+      expectWellFormed(small);
+      expect(small).toContain('<feColorMatrix type="saturate" values="0"/>');
+      expect(small).toContain('<g filter="url(#napoleon-grayscale)">');
+      expect(napoleonJokerFaceUrls(style)!.small).toBe(jokers.small);
+    }
+  });
+
+  it('keeps the root element when filtering a document to greyscale', () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 224 313"><rect fill="#f00"/></svg>';
+    expect(grayscaleSvg(svg)).toBe('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 224 313"><defs><filter id="napoleon-grayscale">'
+      + '<feColorMatrix type="saturate" values="0"/></filter></defs><g filter="url(#napoleon-grayscale)"><rect fill="#f00"/></g></svg>');
   });
 });

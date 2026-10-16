@@ -75,10 +75,15 @@ let joker: string | null = null;
 
 /** The classic joker, with its wings and bells in the four suit colours. */
 export function fourColorJokerUrl(): string {
-  if (joker) return joker;
+  joker ??= svgDataUrl(fourColorJokerSvg());
+  return joker;
+}
+
+/** Complete SVG document for the four-colour joker. */
+export function fourColorJokerSvg(): string {
   const letters = ['J', 'O', 'K', 'E', 'R'].map((letter, index) => `<text x="24" y="${40 + index * 24}">${letter}</text>`).join('');
   const corner = `<g fill="#b3261e" font-family="Georgia, serif" font-size="24" font-weight="700" text-anchor="middle">${letters}</g>`;
-  joker = svgDataUrl('<svg xmlns="http://www.w3.org/2000/svg" width="224" height="313" viewBox="0 0 224 313">'
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="224" height="313" viewBox="0 0 224 313">'
     + '<rect x="1" y="1" width="222" height="311" rx="14" fill="#fffdf7" stroke="#8a8a8a" stroke-width="2"/>'
     + `${corner}<g transform="rotate(180 112 156.5)">${corner}</g>`
     + '<g transform="translate(112 168)">'
@@ -88,6 +93,5 @@ export function fourColorJokerUrl(): string {
     + `<circle cx="-74" cy="-58" r="10" fill="${FOUR_COLOR_INKS.clubs}"/>`
     + '<circle cx="0" cy="-74" r="10" fill="#1a1a1a"/>'
     + `<circle cx="74" cy="-58" r="10" fill="${FOUR_COLOR_INKS.clubs}"/>`
-    + '</g></svg>');
-  return joker;
+    + '</g></svg>';
 }

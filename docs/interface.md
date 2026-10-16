@@ -328,7 +328,7 @@ Saved and system reduced-motion preferences disable this animation.
 
   | Type | Who sees it | Where |
   | --- | --- | --- |
-  | Card faces | Owner | Every face-up card, including Liar's Deck jokers (Napoleon keeps its own big and small jokers); the four-color deck loads its recolored faces on demand and shows classic faces until then |
+  | Card faces | Owner | Every face-up card, including Liar's Deck jokers and Napoleon's big joker, whose greyscale copy is the small joker (the classic deck uses bundled Napoleon jokers); the four-color deck loads its recolored faces on demand and shows classic faces until then |
   | Sound packs | Owner | Turn, join, card, pass, elimination, start, Sevens slash and collapse cues; the sound toggle still applies, shop previews play on click |
   | Chip styles | Owner | Every chip icon (Hold'em, Blackjack, round history, seats) |
   | Seat frames | Everyone | In-game seat plates and waiting-room seats; the frame's glow replaces the theme turn glow |

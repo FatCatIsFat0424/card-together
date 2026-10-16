@@ -466,7 +466,7 @@ ends after the last hand, or when fewer than two seats can cover the minimum.
 | Item | Rule |
 | --- | --- |
 | Players | Four to six occupied seats; the host adds P5 and P6 |
-| Deck | 52 cards plus a big (colored) and small (monochrome) joker |
+| Deck | 52 cards plus a big (colored) and small (greyscale) joker; equipped card faces supply both ([art](../client/src/games/napoleon/napoleon-card-art.ts)) |
 | Deal | 13 / 10 / 8 cards each with 4 / 5 / 6 players; 2 / 4 / 6 stay face down ([sizes](../shared/src/rules/napoleon.ts)) |
 | Point cards | A, K, Q, J of every suit: 16 in total |
 | Host option | Joker summoning, on by default |

@@ -3,7 +3,7 @@ import { CARD_FACES } from '@shared/constants';
 import { cardImageUrl } from '../../cards';
 import { renderDeckCard, renderDeckJoker, svgDataUrl } from './deck-art';
 import { deckTheme, type DeckSeries } from './deck-themes';
-import { fourColorFaceUrl, fourColorJokerUrl } from './four-color';
+import { fourColorFaceUrl, fourColorJokerSvg, fourColorJokerUrl } from './four-color';
 
 const FOUR_COLOR: CardFaceStyleId = 'card-face-four-color';
 
@@ -40,4 +40,31 @@ export function jokerFaceUrl(style: CardFaceStyleId | null | undefined): string 
   const series = deckSeries(style);
   if (!series) return null;
   return cached(`${series}:joker`, () => renderDeckJoker(deckTheme(series)));
+}
+
+/** Removes all colour from an SVG document by filtering everything inside its root element. */
+export function grayscaleSvg(svg: string): string {
+  const start = svg.indexOf('>', svg.indexOf('<svg')) + 1;
+  const end = svg.lastIndexOf('</svg>');
+  return `${svg.slice(0, start)}<defs><filter id="napoleon-grayscale"><feColorMatrix type="saturate" values="0"/></filter></defs>`
+    + `<g filter="url(#napoleon-grayscale)">${svg.slice(start, end)}</g></svg>`;
+}
+
+/**
+ * Napoleon needs two distinguishable jokers: the deck's own joker is the big joker and a greyscale copy
+ * is the small one. Null means the built-in classic deck, whose Napoleon jokers are bundled art.
+ */
+export function napoleonJokerFaceUrls(
+  style: CardFaceStyleId | null | undefined,
+): { readonly big: string; readonly small: string } | null {
+  if (!style) return null;
+  if (style === FOUR_COLOR) {
+    return { big: fourColorJokerUrl(), small: cached('four-color:small-joker', () => grayscaleSvg(fourColorJokerSvg())) };
+  }
+  const series = deckSeries(style);
+  if (!series) return null;
+  return {
+    big: jokerFaceUrl(style)!,
+    small: cached(`${series}:small-joker`, () => grayscaleSvg(renderDeckJoker(deckTheme(series)))),
+  };
 }

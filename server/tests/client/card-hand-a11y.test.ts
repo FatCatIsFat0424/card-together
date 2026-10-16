@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Card } from '@shared/types';
 
 vi.mock('../../../client/src/cosmetics/card-faces/use-card-face', () => ({
-  useCardFaceUrl: () => () => '/card.svg', useJokerFaceUrl: () => null,
+  useCardFaceUrl: () => () => '/card.svg', useJokerFaceUrl: () => null, useNapoleonJokerFaceUrls: () => null,
 }));
 
 import { CardHand } from '../../../client/src/components/CardHand';
