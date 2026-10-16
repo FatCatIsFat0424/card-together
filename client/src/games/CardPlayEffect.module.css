@@ -1,0 +1,90 @@
+.effect {
+  --effect-color: #efc36d;
+  --effect-delay: 0ms;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  color: var(--effect-color);
+  pointer-events: none;
+}
+
+.scene { position: absolute; inset: -8%; pointer-events: none; }
+.aura {
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, transparent 35%, currentColor 100%);
+  opacity: 0;
+  animation: glow 1000ms ease-out var(--effect-delay) both;
+}
+
+.rings { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.ring, .echo {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  transform-origin: center;
+  animation: ripple 1000ms cubic-bezier(0.16, 1, 0.3, 1) var(--effect-delay) both;
+}
+.echo { stroke-width: 1; stroke-dasharray: 5 11; animation-name: echo; }
+
+.spark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 9px;
+  border-radius: 3px;
+  background: currentColor;
+  opacity: 0;
+  animation: scatter 1000ms ease-out var(--effect-delay) both;
+}
+
+.effect[data-card-play-effect='bomb'] { --effect-color: #fb9b60; }
+.effect[data-card-play-effect='straightFlush'],
+.effect[data-card-play-effect='secretary'] { --effect-color: #f1d48a; }
+.effect[data-card-play-effect='bigJoker'] { --effect-color: #cfadff; }
+.effect[data-card-play-effect='smallJoker'] { --effect-color: #b1c8ed; }
+.effect[data-card-play-effect='reset'] { --effect-color: #8fddc5; }
+.effect[data-card-play-effect='redAce'] { --effect-color: #ff9cae; }
+
+.effect[data-card-play-effect='bomb'] .ring,
+.effect[data-card-play-effect='straightFlush'] .ring { stroke-width: 4; }
+.effect[data-card-play-effect='straightFlush'] .echo { stroke-dasharray: 16 6; stroke-width: 3; }
+.effect[data-card-play-effect='secretary'] .echo { stroke-dasharray: 2 8; stroke-width: 5; }
+.effect[data-card-play-effect='reset'] .ring { animation-name: dissolve; }
+
+@keyframes glow {
+  0%, 100% { opacity: 0; transform: scale(0.8); }
+  25% { opacity: 0.15; transform: scale(1); }
+}
+@keyframes ripple {
+  0% { opacity: 0; transform: scale(0.65); }
+  20% { opacity: 0.85; }
+  100% { opacity: 0; transform: scale(1.08); }
+}
+@keyframes echo {
+  0% { opacity: 0; transform: scale(0.6); }
+  35% { opacity: 0.6; }
+  100% { opacity: 0; transform: scale(1.12); }
+}
+@keyframes scatter {
+  0% { opacity: 0; transform: rotate(var(--angle)) translateY(-35px) scale(0.5); }
+  25% { opacity: 0.8; }
+  100% { opacity: 0; transform: rotate(var(--angle)) translateY(-110px) scale(0.2); }
+}
+@keyframes dissolve {
+  0% { opacity: 0; transform: scale(1.1); }
+  20% { opacity: 0.6; }
+  100% { opacity: 0; transform: scale(0.45); }
+}
+
+.still .scene > *, .still .ring, .still .echo { animation: none !important; }
+.still .ring { opacity: 0.4; transform: none; }
+.still .echo, .still .spark, .still .aura { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .scene > *, .ring, .echo { animation: none !important; }
+  .ring { opacity: 0.4; transform: none; }
+  .echo, .spark, .aura { display: none !important; }
+}

@@ -156,6 +156,26 @@ Frontend page behavior and layout. Client architecture and connection handling:
 
 ## Game table
 
+Special-card feedback plays for up to one second inside the existing presentation
+frame, without extending turn deadlines or intercepting input. Everyone, including
+spectators, sees the same public trigger; private hands never influence it.
+
+- Big Two: only four of a kind and straight flushes. Singles, pairs, ordinary straights,
+  and full houses have no decorative effect, including plays containing 2s.
+- Napoleon: the secretary card, then big and small jokers before the final three tricks.
+  A weakened joker has no effect unless it is the secretary card; ordinary trumps have none.
+- Ninety-Nine: only the spade ace. The presentation keeps the total change, direction
+  symbol, and selected player's name, without effect descriptions.
+- Red Points: only a successful capture containing a red ace, in either card position.
+  Other captures and unmatched red aces have no effect.
+- Bridge and standard Sevens: no decorative card effects. Sevens Dragon Slaying keeps
+  its existing slay effect after the play frame; ordinary 7s and A/K endpoints have none.
+
+Effects resume at the current frame's elapsed time after refresh, and expired effects
+are skipped. Effects contain no text, labels, or floating card symbols. Saved or system
+reduced motion replaces animation with a static ring. Card faces, names, and scores
+remain visible.
+
 - Seats and play area use separate grid cells: local player below, opposite seat above,
   others around the table, with corner positions for additional seats.
 - In Bridge, Sevens, Liar's Deck and Ninety-Nine the opposite hand sits to the right of its plate

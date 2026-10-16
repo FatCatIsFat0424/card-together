@@ -416,7 +416,7 @@ export function GameShell({
             style={move ? FLY_FROM[tablePosition(move.seat, bottomSeat, tableSeats)] : undefined}>
             {presentation.frame && visibleGame && !centreVisible ? (
               <GamePresentation key={presentation.frame.key} frame={presentation.frame}
-                bottomSeat={bottomSeat} gameType={visibleGame.gameType}
+                bottomSeat={bottomSeat} game={visibleGame}
                 elapsedMs={Math.max(0, Date.now() - presentation.frameStartedAt)}
                 summary={presentationSummary(visibleGame, t)} />
             ) : <div className={`${styles.centreBody} ${visibleGame?.presentation ? styles.settledCentre : ''}`}>{centre}</div>}

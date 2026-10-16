@@ -4,9 +4,8 @@ import { useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { PresentationFrame } from '@shared/game-presentation';
 import { NN_MAX } from '@shared/rules/ninetynine';
-import type { Card, GameType, GameSeat, NapoleonCard } from '@shared/types';
+import type { GameSeat, NapoleonCard, PlayerVisibleGameState } from '@shared/types';
 import { tablePosition } from '../game-view';
-import type { TranslationKey } from '../i18n';
 import { useI18nStore } from '../stores/i18n-store';
 import { useMotionStore } from '../stores/motion-store';
 import { useRoomStore } from '../stores/room-store';
@@ -18,28 +17,21 @@ import { HoldemFrame } from './holdem/HoldemFrame';
 import { NapoleonFrame } from './napoleon/NapoleonFrame';
 import { useNapoleonCardImageUrl } from './napoleon/napoleon-card-art';
 import { napoleonCardText } from './napoleon/napoleon-view';
+import { CardPlayEffect } from './CardPlayEffect';
+import { cardPlayEffect } from './card-play-effect';
 
 interface GamePresentationProps {
   frame: PresentationFrame;
   bottomSeat: GameSeat;
-  gameType: GameType;
+  game: PlayerVisibleGameState;
   summary?: string;
   elapsedMs?: number;
 }
 
-function specialEffect(card: Card | undefined, t: (key: TranslationKey, params?: Record<string, string>) => string): string {
-  if (!card) return '';
-  if (card.rank === 4) return t('presentation.reverse');
-  if (card.rank === 5) return t('presentation.designate');
-  if (card.rank === 11) return t('presentation.unchanged');
-  if (card.rank === 13) return t('presentation.maximum', { n: String(NN_MAX) });
-  if (card.rank === 14 && card.suit === 'spades') return t('presentation.reset');
-  return '';
-}
-
 export function GamePresentation({
-  frame, bottomSeat, gameType, summary, elapsedMs = 0,
+  frame, bottomSeat, game, summary, elapsedMs = 0,
 }: GamePresentationProps): ReactNode {
+  const gameType = game.gameType;
   const napoleonCardImageUrl = useNapoleonCardImageUrl();
   const rootRef = useRef<HTMLDivElement>(null);
   const timingRef = useRef({ key: frame.key, elapsedMs });
@@ -52,7 +44,7 @@ export function GamePresentation({
   const collecting = frame.kind === 'trick' || frame.kind === 'capture';
   // Napoleon frames carry their cards separately because they may include jokers.
   const frameCards: readonly NapoleonCard[] = frame.napoleonCards ?? frame.cards;
-  const effect = gameType === 'ninetynine' ? specialEffect(frame.cards[0], t) : '';
+  const playEffect = cardPlayEffect(game, frame);
 
   useLayoutEffect(() => {
     const elapsed = timingRef.current.elapsedMs;
@@ -69,6 +61,8 @@ export function GamePresentation({
       reducedMotion && styles.reducedMotion,
       (frame.kind === 'eliminated' || frame.survived === false) && styles.eliminated].filter(Boolean).join(' ')}
     role="status" aria-live="polite" aria-atomic="true" data-presentation-kind={frame.kind}>
+    {playEffect && <CardPlayEffect effect={playEffect} elapsedMs={elapsedMs}
+      durationMs={frame.durationMs} reducedMotion={reducedMotion} />}
     <div className={styles.heading}>
       {frame.seat && <strong className={styles.playerName}>{name(frame.seat)}</strong>}
       <span>{t(frame.kind === 'finish' && frame.seat ? 'presentation.winner'
@@ -100,12 +94,14 @@ export function GamePresentation({
       {frame.previousTotal !== undefined && <span>{frame.previousTotal} →</span>}
       <strong>{frame.total}</strong><span>/ {NN_MAX}</span>
     </div>}
-    {effect && <div className={styles.effect}>{effect}
-      {frame.target && <strong> · {name(frame.target)}</strong>}
-    </div>}
     {gameType === 'ninetynine' && frame.direction && <div className={styles.effect}>
-      {frame.direction === 'cw' ? `↻ ${t('presentation.clockwise')}` : `↺ ${t('presentation.counterclockwise')}`}
+      <span aria-label={t(frame.direction === 'cw' ? 'presentation.clockwise' : 'presentation.counterclockwise')}>
+        {frame.direction === 'cw' ? '↻' : '↺'}
+      </span>
       {frame.choice && ` ${frame.choice === 'plus' ? '+' : '−'}${frame.cards[0]?.rank === 12 ? 20 : 10}`}
+    </div>}
+    {gameType === 'ninetynine' && frame.target && <div className={styles.effect}>
+      → <strong>{name(frame.target)}</strong>
     </div>}
     {frame.kind === 'shoot' && frame.target && <div className={styles.effect}>
       → <strong>{name(frame.target)}</strong> ×2
