@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import type { Card, GameSeat } from '@shared/types';
-import { cardImageUrl } from '../../cards';
+import { useCardFaceUrl } from '../../cosmetics/card-faces/use-card-face';
 import { useI18nStore } from '../../stores/i18n-store';
 import { ChipIcon } from '../ChipIcon';
 import { HE_BOARD_SLOTS } from './holdem-view';
@@ -23,6 +23,7 @@ export function HeCards({ cards, backs = 0, size = 'md', freshFrom, overlap = fa
   /** God view: cards the players cannot see, drawn face up but marked as hidden */
   peek?: boolean;
 }): ReactNode {
+  const cardImageUrl = useCardFaceUrl();
   const { t } = useI18nStore();
   return <span className={`${styles.cards} ${styles[size]} ${overlap ? styles.overlap : ''}`}
     role={label ? 'group' : undefined} aria-label={label}>
@@ -39,6 +40,7 @@ export function HeCards({ cards, backs = 0, size = 'md', freshFrom, overlap = fa
 export function Board({ cards, size = 'md', freshFrom }: {
   cards: readonly Card[]; size?: CardSize; freshFrom?: number;
 }): ReactNode {
+  const cardImageUrl = useCardFaceUrl();
   const { t } = useI18nStore();
   const empty = Math.max(0, HE_BOARD_SLOTS - cards.length);
   return <span className={`${styles.cards} ${styles.board} ${styles[size]}`} role="group" aria-label={t('holdem.board')}>

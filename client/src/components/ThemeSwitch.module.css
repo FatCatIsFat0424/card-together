@@ -1,6 +1,7 @@
 /* ─── ThemeSwitch styles ─── */
 
 .themeSwitch {
+  position: relative;
   display: inline-flex;
   gap: 2px;
   background: var(--bg-surface);
@@ -9,21 +10,48 @@
   padding: 2px;
 }
 
+/* Sliding highlight; geometry comes from useActiveIndicator. */
+.indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--indicator-width, 0);
+  height: var(--indicator-height, 0);
+  transform: translate(var(--indicator-x, 0), var(--indicator-y, 0));
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--transition-normal),
+    width var(--transition-normal),
+    opacity var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
 .themeBtn {
+  position: relative;
   padding: 4px 10px;
   font-size: var(--text-xs);
   font-weight: 600;
   white-space: nowrap;
   border-radius: var(--radius-pill);
   color: var(--text-muted);
-  transition: all var(--transition-fast);
+  transition: color var(--transition-normal);
 }
 
 .themeBtn:hover {
   color: var(--text-primary);
 }
 
-.themeBtnActive {
-  background: var(--color-primary);
+.themeBtnActive,
+.themeBtnActive:hover {
   color: var(--text-on-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .indicator,
+  .themeBtn {
+    transition: none;
+  }
 }

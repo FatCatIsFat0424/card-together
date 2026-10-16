@@ -6,7 +6,7 @@ import { NN_MAX, nnApply, nnIsPlayable, nnRank, nnRequiresChoice, nnWinners } fr
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import type { Card, NinetyNineMatchResult, NinetyNineVisibleState, GameSeat } from '@shared/types';
-import { cardImageUrl } from '../../cards';
+import { useCardFaceUrl } from '../../cosmetics/card-faces/use-card-face';
 import { socket } from '../../socket';
 import { useGameStore } from '../../stores/game-store';
 import { useI18nStore } from '../../stores/i18n-store';
@@ -39,6 +39,7 @@ function totalTone(total: number): string {
 }
 
 function CardImage({ card, className }: { card: Card; className?: string }): ReactNode {
+  const cardImageUrl = useCardFaceUrl();
   return <img className={`${styles.card} ${className ?? ''}`} src={cardImageUrl(card)} alt={cardLabel(card)} draggable={false} />;
 }
 

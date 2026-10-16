@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import type { ChatMessageEvent } from '@shared/types';
 import { AUDIO_UNLOCK_EVENTS } from '../audio/audio-unlock';
 import { isJoinCue } from '../audio/join-cue';
-import { JOIN_NOTES, createTurnSound } from '../audio/turn-sound';
+import { createTurnSound } from '../audio/turn-sound';
 import { socket } from '../socket';
 import { useAccountStore } from '../stores/account-store';
 import { useRoomStore } from '../stores/room-store';
@@ -11,7 +11,7 @@ import { useTurnSoundStore } from '../stores/turn-sound-store';
 /** Mount once in the persistent application shell. */
 export function useJoinSound(): void {
   useEffect(() => {
-    const audio = createTurnSound(JOIN_NOTES);
+    const audio = createTurnSound('join');
     const handle = (event: ChatMessageEvent): void => {
       const roomCode = useRoomStore.getState().currentRoomCode;
       if (!isJoinCue(event, roomCode, useAccountStore.getState().account?.id ?? null)) return;

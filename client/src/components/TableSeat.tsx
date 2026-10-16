@@ -7,7 +7,8 @@ import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import { useShallow } from 'zustand/react/shallow';
 import type { Card, GameClock, GameSeat, GameType } from '@shared/types';
 import { rpCardPoints, rpScore } from '@shared/rules/redpoints';
-import { cardImageUrl } from '../cards';
+import { useCardFaceUrl } from '../cosmetics/card-faces/use-card-face';
+import { SeatFrame, seatFrameHostClass } from '../cosmetics/seat-frames/SeatFrame';
 import type { TranslationKey } from '../i18n';
 import { latestCallIndex, remainingCards } from '../game-view';
 import type { TablePosition } from '../game-view';
@@ -40,6 +41,7 @@ const MAX_PILE = 6;
 function CardPileDetails({ cards, owner, covered = false }: {
   cards: readonly Card[]; owner: string; covered?: boolean;
 }): ReactNode {
+  const cardImageUrl = useCardFaceUrl();
   const { t } = useI18nStore();
   const [open, setOpen] = useState(false);
   const titleId = useId();
@@ -172,6 +174,7 @@ interface TableSeatProps {
 }
 
 export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppressTurn }: TableSeatProps): ReactNode {
+  const cardImageUrl = useCardFaceUrl();
   const { t } = useI18nStore();
   const player = useRoomStore((state) => state.roomInfo ? roomSeatInfo(state.roomInfo, seat)?.player ?? null : null);
   const isMe = useRoomStore((state) => state.mySeat === seat);
@@ -267,6 +270,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const select = onObserve ?? onPick;
   const redCards = captured?.filter((card) => rpCardPoints(card) > 0).slice(-MAX_PILE) ?? [];
   const clockTurn = active && clock?.turn?.seat === seat ? clock.turn : null;
+  const frameClass = seatFrameHostClass(player?.seatFrame);
   // God view shows the hand face up instead of card backs; Blackjack and Hold'em draw it on the felt.
   const observed = bottom || cards === 0 ? null
     : liarsDeck && observedLiars?.length ? <ObservedLiarCards cards={observedLiars} owner={name}
@@ -282,7 +286,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
 
   return (
     <div data-table-seat={position}
-      className={`${styles.seat} ${styles[position]} ${handBeside ? styles.handBeside : ''} ${active ? styles.turn : ''} ${busted || dead || sittingOut || heOut || heState === 'folded' ? styles.out : ''} ${onObserve ? styles.observable : onPick ? styles.pickable : ''}`}
+      className={`${styles.seat} ${styles[position]} ${handBeside ? styles.handBeside : ''} ${active ? styles.turn : ''} ${frameClass ? `${styles.framed} ${frameClass}` : ''} ${busted || dead || sittingOut || heOut || heState === 'folded' ? styles.out : ''} ${onObserve ? styles.observable : onPick ? styles.pickable : ''}`}
       role={select ? 'button' : undefined} tabIndex={select ? 0 : undefined} onClick={select}
       aria-label={onObserve ? t('table.observePlayer', { name }) : onPick ? t('seat.pickNext', { name }) : undefined}
       title={onObserve ? t('table.observePlayer', { name }) : undefined}
@@ -293,6 +297,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
         select();
       } : undefined}>
       <div className={styles.plate} data-seat-plate>
+        <SeatFrame frame={player?.seatFrame} turn={Boolean(active)} />
         <div className={styles.name}>
           {player ? <PlayerLink player={player} size="medium" linked={!onObserve} />
             : <><span className={styles.emptyAvatar} aria-hidden="true" /><span className={styles.empty}>—</span></>}

@@ -1,0 +1,27 @@
+/* Five sample cards in a shallow fan; sized from the art area so narrow shop columns still fit. */
+.fan {
+  container-type: inline-size;
+  width: min(100%, 230px);
+}
+
+.row {
+  --card-w: min(58px, 34cqw);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding-bottom: calc(var(--card-w) * 0.12);
+}
+
+.card {
+  display: block;
+  flex: none;
+  width: var(--card-w);
+  aspect-ratio: 224 / 313;
+  margin-left: calc(var(--card-w) * -0.55);
+  border-radius: calc(var(--card-w) * 0.05);
+  box-shadow: var(--shadow-md);
+  transform-origin: 50% 130%;
+  transform: rotate(var(--tilt)) translateY(var(--drop));
+}
+
+.card:first-child { margin-left: 0; }

@@ -12,7 +12,10 @@ const state = vi.hoisted(() => ({
   godView: { role: null, covered: null } as Record<string, unknown>,
 }));
 
-vi.mock('../../../client/src/cards', () => ({ cardImageUrl: () => '/card.svg' }));
+vi.mock('../../../client/src/cosmetics/chip-styles/use-chip-style', () => ({ useChipStyle: () => null }));
+vi.mock('../../../client/src/cosmetics/card-faces/use-card-face', () => ({
+  useCardFaceUrl: () => () => '/card.svg', useJokerFaceUrl: () => null,
+}));
 vi.mock('../../../client/src/media', () => ({ mediaUrl: (id: string) => `/api/media/${id}` }));
 vi.mock('../../../client/src/stores/room-store', () => ({
   useRoomStore: (select: (value: { roomInfo: unknown; mySeat: string | null }) => unknown) =>

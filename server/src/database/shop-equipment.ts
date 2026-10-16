@@ -1,15 +1,10 @@
 import type { AccountProfile } from '@shared/types';
-import { getShopItem } from '@shared/constants';
+import { EQUIPMENT_SLOTS, getShopItem } from '@shared/constants';
 import { isAchievementNameplateId } from '@shared/constants/shop';
+import type { EquipmentSlot } from '@shared/constants/shop';
 
-export const EQUIPMENT_SLOTS = {
-  cardBackStyle: 'cardBack',
-  tableBackgroundStyle: 'tableBackground',
-  seatBackgroundStyle: 'seatBackground',
-  nameplate: 'nameplate',
-} as const;
-
-export type EquipmentSlot = keyof typeof EQUIPMENT_SLOTS;
+export { EQUIPMENT_SLOTS };
+export type { EquipmentSlot };
 
 type EquipmentInput = { readonly [Slot in EquipmentSlot]?: unknown };
 

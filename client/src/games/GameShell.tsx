@@ -36,6 +36,7 @@ import { AUDIO_UNLOCK_EVENTS } from '../audio/audio-unlock';
 import { isSpectator } from './observer-view';
 import { useTablePerspective } from './use-table-perspective';
 import { useTablePerspectiveStore } from '../stores/table-perspective-store';
+import { VictoryEffects } from '../cosmetics/victory-effects/VictoryEffects';
 
 const DESKTOP_QUERY = '(min-width: 1024px)';
 const SHEET_QUERY = '(max-width: 767px), (max-height: 500px) and (min-width: 600px)';
@@ -465,6 +466,8 @@ export function GameShell({
         {turnAnnouncement}
       </p>
       {!presentation.locked && overlay}
+      {settlementVisible && visibleGame && room && <VictoryEffects game={visibleGame} room={room}
+        bottomSeat={bottomSeat} seats={tableSeats} />}
       {rulesVisible && visibleGame && <GameRulesDialog gameType={visibleGame.gameType}
         context={matchRulesContext(visibleGame)} onClose={() => setRulesOpen(false)} />}
     </div>

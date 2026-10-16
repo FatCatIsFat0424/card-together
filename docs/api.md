@@ -58,7 +58,7 @@ backend-relative; production Nginx serves them below `/card-together/`.
 | `avatarImage`, `seatBackground`, `tableBackground`, `cardBack` | Uploaded media ID or null; `seatBackground` uses the `background` purpose and is shared in room `PlayerInfo` |
 | `tableBackgroundOpacity`, `cardBackOpacity` | Integer percent 20–100 |
 | `avatarBorder` | Null (original) or an owned catalog ID; unowned returns 403 |
-| `cardBackStyle`, `tableBackgroundStyle`, `seatBackgroundStyle`, `nameplate` | Null or owned catalog ID of the matching type; unowned returns 403, wrong type 400 |
+| Equipment fields in [`EQUIPMENT_SLOTS`](../shared/src/constants/shop.ts) (`cardBackStyle`, `nameplate`, `cardFaceStyle`, `soundPack`, `seatFrame`, `victoryEffect`, `chipStyle`, `chatFrame`, …) | Null or owned catalog ID of the matching type; unowned returns 403, wrong type 400 |
 | `coins`, `coinRevision`, `ownedAvatarBorders`, `ownedShopItems`, `ownedAchievementNameplates` | Server-owned; never set by register or profile requests |
 
 Achievement routes require a session and mutation Origin/JSON protection. Unknown category
@@ -81,7 +81,8 @@ Omitted fields keep their values; invalid values return 400.
 ### Response contents
 
 - `AccountProfile` (owner only): preferences, timestamps, coins, inventories, equipment.
-- `PublicAccount`: ID, username, nickname, color, avatar, avatar image, equipped border and nameplate.
+- `PublicAccount`: ID, username, nickname, color, avatar, avatar image, equipped border, nameplate,
+  and chat frame.
   No balance or inventory.
 - No response contains password hashes or session digests.
 - History endpoints return every eligible record without pagination; participant maps

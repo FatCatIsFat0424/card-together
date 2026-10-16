@@ -47,7 +47,8 @@ export { IMAGE_OPACITY_MAX, IMAGE_OPACITY_MIN, isImageOpacity, isMediaId } from 
 export {
   AVATAR_BORDERS, isAvatarBorderId, CARD_BACKS, TABLE_BACKGROUNDS, SEAT_BACKGROUNDS,
   NAMEPLATES, STICKER_PACKS, SHOP_STICKERS, SHOP_ITEMS, getShopItem, isShopItemId,
-  isShopStickerId, ownsShopItem,
+  isShopStickerId, ownsShopItem, CARD_FACES, SOUND_PACKS, SEAT_FRAMES, VICTORY_EFFECTS, CHIP_STYLES,
+  CHAT_FRAMES, EQUIPMENT_SLOTS, equipmentSlotFor,
 } from './shop';
 export {
   EMOJI_MAX_BYTES,

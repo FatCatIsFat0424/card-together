@@ -1,0 +1,10 @@
+/* Above the result backdrop (80) so the dimming does not mute the effect, below toasts (85)
+   and the top bar (90). The runner keeps the dialog's own rectangle clear. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 81;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}

@@ -16,6 +16,9 @@ export function toPlayerInfo(account: AccountProfile): PlayerInfo {
     avatarBorder: account.avatarBorder ?? null,
     nameplate: account.nameplate ?? null,
     seatBackgroundStyle: account.seatBackgroundStyle ?? null,
+    seatFrame: account.seatFrame ?? null,
+    victoryEffect: account.victoryEffect ?? null,
+    chatFrame: account.chatFrame ?? null,
     ...(account.seatBackground ? { seatBackground: account.seatBackground } : {}),
   };
 }

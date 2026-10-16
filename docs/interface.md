@@ -8,7 +8,7 @@ Frontend page behavior and layout. Client architecture and connection handling:
 
 - The app fills one dynamic viewport below a fixed top bar. Rooms and games never
   scroll the document; long account pages, chat, and history scroll internally.
-- Navigation stays available during matches: top-bar links on desktop, a menu below 1024px.
+- Navigation stays available during matches: top-bar links on desktop, a menu below 1280px.
   Account, friend, profile, and lobby pages keep room membership and offer a return link.
 - Sign-out shows icon and label at ≥768px; on narrower screens it is the last menu item, in red.
 - The owner's coin balance appears with a hint about the [completion reward](storage.md#game-coins).
@@ -24,6 +24,12 @@ Frontend page behavior and layout. Client architecture and connection handling:
 - The chat icon beside top-bar notifications opens the independent `/messages` page
   and shows the total unread private-message count. Both top-bar badges hide at zero
   and display `99+` above 99, with exact counts in their accessible names.
+- On `/messages` or `/achievements`, the matching top-bar button is marked current and
+  returns to the last page outside those sections (the lobby if none).
+  The messages window animates open and, when closed from its close button or the
+  top-bar button, animates out before leaving.
+- Top-bar switches and the active nav link use a sliding highlight; popovers animate
+  open and closed. Reduced motion makes these instant.
   Friends retain only friend and invitation management. The message list and individual
   chats preserve room membership. Game results retain their return-to-room button;
   the top bar, message toolbar, and player profiles omit separate return buttons.
@@ -206,7 +212,7 @@ Saved and system reduced-motion preferences disable this animation.
 
 | Tab | Contents |
 | --- | --- |
-| Profile | Identity and table appearance with one live table preview (stacked on small screens) |
+| Profile | Identity and appearance with a live preview of every equippable type, each labeled private or public (stacked on small screens) |
 | History | Match table, statistics, visibility setting |
 | Emoji | Personal [emoji library](media.md#personal-emoji-library) |
 | Password | Password change and sign-out options |
@@ -286,8 +292,9 @@ Saved and system reduced-motion preferences disable this animation.
 ## Cosmetic shop
 
 - `/shop` sells permanent, cosmetic-only products from the
-  [catalog](../shared/src/constants/shop.ts): avatar borders, card backs, table and
-  seat backgrounds, title/nameplates, and sticker packs. Each type offers at least
+  [catalog](../shared/src/constants/shop.ts): avatar borders, titles/nameplates, chat
+  frames, sticker packs, card backs, card faces, table backgrounds, chip styles, seat
+  backgrounds, seat frames, victory effects, and sound packs. Each type offers at least
   ten products; each sticker pack includes four original stickers. Prices are in game coins.
 - The category sidebar shows catalog counts; the catalog header repeats a count only
   for a border series filter. `type` selects a product type and
@@ -314,8 +321,20 @@ Saved and system reduced-motion preferences disable this animation.
   own mark and color treatment, separate from earned achievements. Equipped nameplates
   appear beside the nickname in player identities and room chat, but not in the compact
   spectator list. The shop preview uses the same title styling as the equipped nameplate. Table backgrounds and card
-  backs are private; seat backgrounds show in the waiting room. Existing uploads,
+  backs are private; seat backgrounds show in the waiting room. Account selectors offer "Default" for
+  the types below. Existing uploads,
   themes, and emoji remain free.
+- Newer equipment falls back to the built-in design when unequipped or unknown:
+
+  | Type | Who sees it | Where |
+  | --- | --- | --- |
+  | Card faces | Owner | Every face-up card, including Liar's Deck jokers (Napoleon keeps its own big and small jokers); the four-color deck loads its recolored faces on demand and shows classic faces until then |
+  | Sound packs | Owner | Turn, join, card, pass, elimination, start, Sevens slash and collapse cues; the sound toggle still applies, shop previews play on click |
+  | Chip styles | Owner | Every chip icon (Hold'em, Blackjack, round history, seats) |
+  | Seat frames | Everyone | In-game seat plates and waiting-room seats; the frame's glow replaces the theme turn glow |
+  | Victory effects | Everyone, including spectators | About 3 s from each winning human seat when settlement appears, once per settlement; never covers or blocks the result dialog. Reduced motion shows a static glow |
+  | Chat frames | Everyone | Sender's room chat and private messages; system lines are never framed |
+
 - Purchased packs appear in the sticker picker for room chat and private messages;
   no equipment step is required. Receiving a sticker does not require ownership.
 - The emoji/sticker picker shows one horizontal tab row (owned packs, My emoji, Site

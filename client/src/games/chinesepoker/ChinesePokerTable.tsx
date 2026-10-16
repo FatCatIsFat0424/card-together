@@ -7,7 +7,7 @@ import { cpBestArrangement } from '@shared/rules/chinesepoker-arrange';
 import type {
   Card, ChinesePokerArrangement, ChinesePokerMatchResult, ChinesePokerRow, ChinesePokerVisibleState, Seat,
 } from '@shared/types';
-import { cardImageUrl } from '../../cards';
+import { useCardFaceUrl } from '../../cosmetics/card-faces/use-card-face';
 import { socket } from '../../socket';
 import { useGameStore } from '../../stores/game-store';
 import { useI18nStore } from '../../stores/i18n-store';
@@ -57,6 +57,7 @@ interface RowSlotProps {
 }
 
 function RowSlot({ row, cards, rows, selection, editable, onPlace, onReturn }: RowSlotProps): ReactNode {
+  const cardImageUrl = useCardFaceUrl();
   const { t } = useI18nStore();
   const hint = rowHints(rows)[row];
   const space = rowSpace(rows, row);

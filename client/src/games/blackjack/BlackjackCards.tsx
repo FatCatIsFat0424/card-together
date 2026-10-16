@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import { bjIsNatural, bjTotal } from '@shared/rules/blackjack';
 import type { BlackjackHand, BlackjackOutcome, Card } from '@shared/types';
-import { cardImageUrl } from '../../cards';
+import { useCardFaceUrl } from '../../cosmetics/card-faces/use-card-face';
 import type { TranslationKey } from '../../i18n';
 import { useI18nStore } from '../../stores/i18n-store';
 import { ChipIcon } from '../ChipIcon';
@@ -33,6 +33,7 @@ export function BjCards({ cards, hole = false, size = 'md', freshFrom, peek }: {
   /** God view: the face-down hole card, drawn face up but marked as still hidden */
   peek?: Card;
 }): ReactNode {
+  const cardImageUrl = useCardFaceUrl();
   const { t } = useI18nStore();
   return <span className={`${styles.cards} ${styles[size]}`}>
     {cards.map((card, index) => <img key={`${card.suit}-${card.rank}-${index}`}

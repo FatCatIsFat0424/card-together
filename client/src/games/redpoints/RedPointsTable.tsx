@@ -5,7 +5,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { rpCardPoints, rpPairOptions } from '@shared/rules/redpoints';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import type { Card, RedPointsMatchResult, RedPointsVisibleState, Seat } from '@shared/types';
-import { cardImageUrl } from '../../cards';
+import { useCardFaceUrl } from '../../cosmetics/card-faces/use-card-face';
 import { socket } from '../../socket';
 import { useGameStore } from '../../stores/game-store';
 import { useI18nStore } from '../../stores/i18n-store';
@@ -32,6 +32,7 @@ const sameCard = (a: Card, b: Card): boolean => a.suit === b.suit && a.rank === 
 const cardLabel = (card: Card): string => `${SUIT_SYMBOLS[card.suit]}${RANK_DISPLAY[card.rank]}`;
 
 function CardImage({ card, className }: { card: Card; className?: string }): ReactNode {
+  const cardImageUrl = useCardFaceUrl();
   return <img className={`${styles.card} ${className ?? ''}`} src={cardImageUrl(card)} alt={cardLabel(card)} draggable={false} />;
 }
 

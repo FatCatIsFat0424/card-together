@@ -1,6 +1,7 @@
 /* ─── LanguageSwitch styles ─── */
 
 .languageSwitch {
+  position: relative;
   display: inline-flex;
   gap: 2px;
   background: var(--bg-surface);
@@ -9,7 +10,27 @@
   padding: 2px;
 }
 
+/* Sliding highlight; geometry comes from useActiveIndicator. */
+.indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--indicator-width, 0);
+  height: var(--indicator-height, 0);
+  transform: translate(var(--indicator-x, 0), var(--indicator-y, 0));
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--transition-normal),
+    width var(--transition-normal),
+    opacity var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
 .langBtn {
+  position: relative;
   padding: 4px 12px;
   font-size: var(--text-xs);
   font-weight: 600;
@@ -18,14 +39,21 @@
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: color var(--transition-normal);
 }
 
 .langBtn:hover {
   color: var(--text-primary);
 }
 
-.langBtnActive {
-  background: var(--color-primary);
+.langBtnActive,
+.langBtnActive:hover {
   color: var(--text-on-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .indicator,
+  .langBtn {
+    transition: none;
+  }
 }

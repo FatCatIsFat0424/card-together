@@ -21,6 +21,7 @@ Authoritative project rule set; `CLAUDE.md` references it.
 | `server/src/auth/`, `social/`, `http/`, `socket/` | Services and transport adapters |
 | `server/src/database/`, `media/` | Repository and uploaded-image storage |
 | `client/src/pages/`, `components/`, `hooks/`, `stores/` | UI and client state |
+| `client/src/cosmetics/` | Shop product renderers, previews, and translations per equippable type |
 | `client/src/audio/`, `voice/` | Music playback, turn reminders, WebRTC |
 | `server/tests/`, `deploy/tests/` | Vitest and Python standard-library tests |
 | `scripts/` | Check runner and asset importers |

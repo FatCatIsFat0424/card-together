@@ -1,0 +1,737 @@
+/*
+ * Seat frames: a decorative layer over a seat plate. Each design is a class that carries its palette
+ * (--frame-a/b/c), its turn-glow colours (--frame-glow, --frame-bar) and styles for the shared layers:
+ * ring, fx and fx2 (design-specific extras), four corner ornaments, and the glow on ::before / ::after.
+ * Layers sit on or just outside the plate border, so the plate content keeps its full area.
+ * The host sets --frame-scale (compact seats), --frame-out (negative draws inside the host) and may
+ * override --frame-radius.
+ */
+
+.frame {
+  --fs: var(--frame-scale, 1);
+  --out: calc(var(--frame-out, 4px) * var(--fs));
+  --rad: var(--frame-radius, calc(var(--radius-lg) + var(--out)));
+  position: absolute;
+  inset: calc(var(--out) * -1);
+  border-radius: var(--rad);
+  pointer-events: none;
+}
+
+.frame::before,
+.frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Turn glow: shown only on the seat that is on turn. */
+.frame::before {
+  opacity: 0;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--frame-glow) 55%, transparent),
+    0 0 12px 2px color-mix(in srgb, var(--frame-glow) 55%, transparent),
+    0 0 26px 4px color-mix(in srgb, var(--frame-glow) 24%, transparent);
+}
+
+.frame[data-turn]::before { opacity: 1; }
+.frame::after { display: none; }
+
+.ring {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  padding: calc(var(--frame-ring, 2px) * var(--fs));
+  border-radius: inherit;
+  /* Keep only the padding band, so the ring is a border that never covers the plate. */
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+.fx,
+.fx2 {
+  position: absolute;
+  display: none;
+  pointer-events: none;
+}
+
+.corner {
+  position: absolute;
+  width: calc(18px * var(--fs));
+  height: calc(18px * var(--fs));
+  overflow: visible;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.3));
+}
+
+.tl { top: calc(-5px * var(--fs)); left: calc(-5px * var(--fs)); }
+.tr { top: calc(-5px * var(--fs)); right: calc(-5px * var(--fs)); transform: scaleX(-1); }
+.bl { bottom: calc(-5px * var(--fs)); left: calc(-5px * var(--fs)); transform: scaleY(-1); }
+.br { bottom: calc(-5px * var(--fs)); right: calc(-5px * var(--fs)); transform: scale(-1, -1); }
+
+.line1,
+.line2 {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.line1 { stroke: var(--frame-a); stroke-width: 1.9; }
+.line2 { stroke: var(--frame-b); stroke-width: 1.3; }
+.fill1,
+.fill2,
+.fill3 {
+  stroke: var(--frame-stroke, none);
+  stroke-width: 0.6;
+  stroke-linejoin: round;
+}
+
+.fill1 { fill: var(--frame-a); }
+.fill2 { fill: var(--frame-b); }
+.fill3 { fill: var(--frame-c); }
+
+/* ─── Aurora: a flowing ribbon edge under curtains of light ─── */
+.aurora {
+  --frame-a: #3fd6b0;
+  --frame-b: #9a86ee;
+  --frame-c: #e6fff6;
+  --frame-glow: #58e7c2;
+  --frame-glow-2: #ab9cf2;
+  --frame-bar: #1fb08f;
+}
+
+.aurora .ring {
+  background: linear-gradient(100deg, #3fd6b0, #6fb7ff 25%, #9a86ee 50%, #e08ae0 72%, #3fd6b0) 0 0 / 200% 100%;
+}
+
+.aurora .fx,
+.aurora .fx2 {
+  display: block;
+  left: 12%;
+  right: 12%;
+  height: calc(7px * var(--fs));
+  background: linear-gradient(90deg, #3fd6b0, #6fb7ff, #9a86ee, #e08ae0, #3fd6b0) 0 0 / 200% 100%;
+  opacity: 0.5;
+  -webkit-mask-image: linear-gradient(to top, #000, transparent),
+    repeating-linear-gradient(90deg, #000 0 5px, rgb(0 0 0 / 0.3) 5px 8px);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to top, #000, transparent),
+    repeating-linear-gradient(90deg, #000 0 5px, rgb(0 0 0 / 0.3) 5px 8px);
+  mask-composite: intersect;
+}
+
+.aurora .fx { top: calc(-5px * var(--fs)); transform-origin: bottom; }
+
+.aurora .fx2 {
+  bottom: calc(-5px * var(--fs));
+  transform-origin: top;
+  opacity: 0.32;
+  -webkit-mask-image: linear-gradient(to bottom, #000, transparent),
+    repeating-linear-gradient(90deg, #000 0 7px, rgb(0 0 0 / 0.3) 7px 10px);
+  mask-image: linear-gradient(to bottom, #000, transparent),
+    repeating-linear-gradient(90deg, #000 0 7px, rgb(0 0 0 / 0.3) 7px 10px);
+}
+
+.aurora[data-turn] .ring { animation: auroraFlow 5s linear infinite; }
+.aurora[data-turn] .fx { opacity: 0.95; animation: auroraFlow 4s linear infinite, auroraCurtain 2.4s ease-in-out infinite; }
+.aurora[data-turn] .fx2 { opacity: 0.6; animation: auroraFlow 6s linear infinite reverse, auroraCurtain 3.1s ease-in-out infinite; }
+.aurora[data-turn]::before { animation: auroraHalo 4s ease-in-out infinite; }
+
+@keyframes auroraFlow { to { background-position: 200% 0; } }
+
+@keyframes auroraCurtain {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(1.45); }
+}
+
+@keyframes auroraHalo {
+  0%, 100% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--frame-glow) 55%, transparent),
+      0 0 12px 2px color-mix(in srgb, var(--frame-glow) 55%, transparent),
+      0 0 26px 4px color-mix(in srgb, var(--frame-glow-2) 28%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--frame-glow-2) 55%, transparent),
+      0 0 12px 2px color-mix(in srgb, var(--frame-glow-2) 55%, transparent),
+      0 0 26px 4px color-mix(in srgb, var(--frame-glow) 28%, transparent);
+  }
+}
+
+/* ─── Tide: a scalloped wave edge and rippling rings ─── */
+.tide {
+  --frame-a: #5fd0dc;
+  --frame-b: #2a8fab;
+  --frame-c: #e1fbfb;
+  --frame-glow: #4fcfe0;
+  --frame-bar: #1b97b3;
+}
+
+.tide .ring { background: linear-gradient(180deg, #8fe6ea, #2a8fab); }
+
+.tide .fx {
+  display: block;
+  left: 10%;
+  right: 10%;
+  bottom: calc(-6px * var(--fs));
+  height: 8px;
+  background:
+    radial-gradient(circle at 50% -2px, transparent 5px, var(--frame-a) 5.5px 6.5px, transparent 7px) 0 0 / 12px 8px repeat-x,
+    radial-gradient(circle at 50% -2px, transparent 5px, var(--frame-b) 5.5px 6.5px, transparent 7px) 6px 3px / 12px 8px repeat-x;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+}
+
+.tide[data-turn] .fx { animation: tideWave 1.6s linear infinite; }
+
+.tide[data-turn] .fx2,
+.tide[data-turn]::after {
+  display: block;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--frame-glow) 70%, transparent);
+  animation: tideRipple 2.4s ease-out infinite;
+}
+
+.tide[data-turn]::after { animation-delay: 1.2s; }
+
+@keyframes tideWave {
+  to { background-position: 12px 0, 18px 3px; }
+}
+
+@keyframes tideRipple {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--frame-glow) 70%, transparent); }
+  100% { box-shadow: 0 0 0 11px color-mix(in srgb, var(--frame-glow) 0%, transparent); }
+}
+
+/* ─── Sakura: blossoms on the corners, petals drifting down the sides ─── */
+.sakura {
+  --frame-a: #f08cb0;
+  --frame-b: #f8c3d3;
+  --frame-c: #f2b94e;
+  --frame-stroke: rgb(176 52 102 / 0.55);
+  --frame-glow: #f48fb1;
+  --frame-bar: #d9558a;
+}
+
+.sakura .ring { background: linear-gradient(135deg, #f8c3d3, #ee8fb0 50%, #f8c3d3); }
+
+.sakura .fx,
+.sakura .fx2,
+.sakura::after {
+  display: block;
+  inset: auto;
+  width: calc(7px * var(--fs));
+  height: calc(7px * var(--fs));
+  border-radius: 100% 0 100% 0;
+  background: linear-gradient(135deg, #fbd0dd, #ee8fb0);
+  box-shadow: 0 0 0 0.5px rgb(176 52 102 / 0.45);
+}
+
+.sakura .fx { right: calc(-7px * var(--fs)); top: 55%; rotate: 35deg; }
+.sakura .fx2 { left: calc(-7px * var(--fs)); top: 22%; rotate: -50deg; }
+.sakura::after { right: calc(-4px * var(--fs)); top: 12%; rotate: 70deg; opacity: 0.85; }
+
+.sakura[data-turn] .fx { animation: sakuraFall 3.4s ease-in infinite; }
+.sakura[data-turn] .fx2 { animation: sakuraFallLeft 3.9s ease-in 1.1s infinite; }
+.sakura[data-turn]::after { animation: sakuraFall 3.1s ease-in 2s infinite; }
+.sakura[data-turn]::before { animation: sakuraHalo 3.2s ease-in-out infinite; }
+
+@keyframes sakuraFall {
+  0% { translate: 0 calc(-14px * var(--fs)); opacity: 0; }
+  15% { opacity: 1; }
+  45% { translate: calc(-3px * var(--fs)) calc(10px * var(--fs)); }
+  75% { translate: calc(2px * var(--fs)) calc(30px * var(--fs)); }
+  100% { translate: calc(-2px * var(--fs)) calc(48px * var(--fs)); rotate: 250deg; opacity: 0; }
+}
+
+@keyframes sakuraFallLeft {
+  0% { translate: 0 calc(-14px * var(--fs)); opacity: 0; }
+  15% { opacity: 1; }
+  45% { translate: calc(3px * var(--fs)) calc(10px * var(--fs)); }
+  75% { translate: calc(-2px * var(--fs)) calc(30px * var(--fs)); }
+  100% { translate: calc(2px * var(--fs)) calc(48px * var(--fs)); rotate: -230deg; opacity: 0; }
+}
+
+@keyframes sakuraHalo {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* ─── Constellation: a star chart border with a comet circling it ─── */
+.constellation {
+  --frame-a: #ead5a2;
+  --frame-b: #93b5eb;
+  --frame-c: #fff7d6;
+  --frame-glow: #8fb1f0;
+  --frame-bar: #5b82d6;
+  --frame-ring: 1.5px;
+}
+
+.constellation .ring { background: linear-gradient(180deg, #f3e2b4, #93b5eb); }
+
+.constellation .fx {
+  display: block;
+  inset: calc(-3px * var(--fs));
+  border: 1px dotted color-mix(in srgb, var(--frame-b) 80%, transparent);
+  border-radius: calc(var(--rad) + 3px * var(--fs));
+}
+
+.constellation[data-turn] .fx2 {
+  display: block;
+  inset: auto;
+  top: 0;
+  left: 0;
+  width: calc(24px * var(--fs));
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #fff7d6);
+  box-shadow: 0 0 6px 1px var(--frame-b);
+  offset-path: inset(0 round var(--rad));
+  offset-rotate: auto;
+  offset-distance: 12%;
+  animation: constellationComet 3.4s linear infinite;
+}
+
+.constellation[data-turn] .corner .fill1,
+.constellation[data-turn] .corner .fill3 {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: constellationTwinkle 2.4s ease-in-out infinite;
+}
+
+.constellation[data-turn] .corner .fill2 {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: constellationTwinkle 2.4s ease-in-out -1.2s infinite;
+}
+
+.constellation[data-turn] .tr .fill1,
+.constellation[data-turn] .tr .fill3 { animation-delay: -0.6s; }
+.constellation[data-turn] .bl .fill1,
+.constellation[data-turn] .bl .fill3 { animation-delay: -1.2s; }
+.constellation[data-turn] .br .fill1,
+.constellation[data-turn] .br .fill3 { animation-delay: -1.8s; }
+
+@keyframes constellationComet { to { offset-distance: 112%; } }
+
+@keyframes constellationTwinkle {
+  0%, 100% { opacity: 1; scale: 1; }
+  50% { opacity: 0.5; scale: 0.75; }
+}
+
+/* ─── Bamboo: a jade stalk border with joints and swaying leaves ─── */
+.bamboo {
+  --frame-a: #6fc79a;
+  --frame-b: #b9e2c8;
+  --frame-c: #f3e4b0;
+  --frame-stroke: rgb(22 80 52 / 0.55);
+  --frame-glow: #5fbf8a;
+  --frame-bar: #2e9a64;
+}
+
+.bamboo .ring { background: linear-gradient(180deg, #b9e2c8, #4f9774); }
+
+.bamboo .fx,
+.bamboo .fx2 {
+  display: block;
+  inset: 0;
+}
+
+.bamboo .fx::before,
+.bamboo .fx::after,
+.bamboo .fx2::before,
+.bamboo .fx2::after {
+  content: '';
+  position: absolute;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgb(20 70 45 / 0.45);
+}
+
+.bamboo .fx::before,
+.bamboo .fx::after {
+  left: 50%;
+  width: calc(16px * var(--fs));
+  height: calc(5px * var(--fs));
+  translate: -50% 0;
+  background: linear-gradient(180deg, #d8f1e2, #5aa57e 55%, #3f8a62);
+}
+
+.bamboo .fx::before { top: calc(-1.5px * var(--fs)); }
+.bamboo .fx::after { bottom: calc(-1.5px * var(--fs)); }
+
+.bamboo .fx2::before,
+.bamboo .fx2::after {
+  top: 50%;
+  width: calc(5px * var(--fs));
+  height: calc(16px * var(--fs));
+  translate: 0 -50%;
+  background: linear-gradient(90deg, #d8f1e2, #5aa57e 55%, #3f8a62);
+}
+
+.bamboo .fx2::before { left: calc(-1.5px * var(--fs)); }
+.bamboo .fx2::after { right: calc(-1.5px * var(--fs)); }
+
+.bamboo[data-turn] .corner { transform-origin: 55% 55%; animation: bambooSway 3s ease-in-out infinite; }
+.bamboo[data-turn] .tr,
+.bamboo[data-turn] .bl { animation-delay: -1.5s; }
+.bamboo[data-turn] .ring { animation: bambooGrow 3s ease-in-out infinite; }
+.bamboo[data-turn]::before { animation: bambooGrow 3s ease-in-out infinite; }
+
+@keyframes bambooSway {
+  0%, 100% { rotate: -5deg; }
+  50% { rotate: 6deg; }
+}
+
+@keyframes bambooGrow {
+  0%, 100% { opacity: 0.8; filter: brightness(1); }
+  50% { opacity: 1; filter: brightness(1.25); }
+}
+
+/* ─── Gilded: a double gold border with a jewel, diamonds, and a travelling shine ─── */
+.gilded {
+  --frame-a: #e9c97c;
+  --frame-b: #b98a3e;
+  --frame-c: #fff2c4;
+  --frame-glow: #f2c75c;
+  --frame-bar: #c0892f;
+}
+
+.gilded .ring {
+  background:
+    linear-gradient(105deg, transparent 40%, rgb(255 248 220 / 0.95) 50%, transparent 60%) 0 0 / 250% 100% no-repeat,
+    linear-gradient(135deg, #f7e2ae, #c79a4a 30%, #f2d79c 55%, #a9772e 80%, #f7e2ae);
+}
+
+.gilded .fx {
+  display: block;
+  inset: calc(-3px * var(--fs));
+  border: 1px solid color-mix(in srgb, var(--frame-a) 75%, transparent);
+  border-radius: calc(var(--rad) + 3px * var(--fs));
+}
+
+.gilded .fx2 {
+  display: block;
+  inset: 0;
+}
+
+.gilded .fx2::before,
+.gilded .fx2::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: calc(6px * var(--fs));
+  height: calc(6px * var(--fs));
+  translate: -50% -50%;
+  rotate: 45deg;
+  background: linear-gradient(135deg, #fff2c4, #c79a4a);
+  box-shadow: 0 0 0 1px rgb(90 60 15 / 0.55);
+}
+
+.gilded .fx2::before { top: 0; }
+.gilded .fx2::after { top: 100%; }
+
+.gilded[data-turn] .ring { animation: gildedSweep 2.6s ease-in-out infinite; }
+.gilded[data-turn] .fx2::before,
+.gilded[data-turn] .fx2::after { animation: gildedJewel 2.6s ease-in-out infinite; }
+.gilded[data-turn]::before { animation: gildedHalo 2.6s ease-in-out infinite; }
+
+@keyframes gildedSweep {
+  from { background-position: 0% 0, 0 0; }
+  to { background-position: 100% 0, 0 0; }
+}
+
+@keyframes gildedJewel {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.45) drop-shadow(0 0 3px #ffe9a3); }
+}
+
+@keyframes gildedHalo {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
+}
+
+/* ─── Ember: an obsidian and ember border that flickers and throws sparks ─── */
+.ember {
+  --frame-a: #ec8256;
+  --frame-b: #3a2029;
+  --frame-c: #ffd1a0;
+  --frame-glow: #ff7a3d;
+  --frame-bar: #e0561f;
+}
+
+.ember .ring { background: linear-gradient(160deg, #ffd1a0, #ec8256 30%, #9c3a2c 65%, #ec8256 90%, #ffd1a0); }
+
+.ember .fx,
+.ember .fx2 {
+  display: block;
+  inset: 0;
+}
+
+.ember .fx::before,
+.ember .fx::after,
+.ember .fx2::before,
+.ember .fx2::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: calc(3px * var(--fs));
+  height: calc(3px * var(--fs));
+  border-radius: 50%;
+  background: #ffd1a0;
+  box-shadow: 0 0 4px 1px #ff9a55;
+  opacity: 0;
+}
+
+.ember .fx::before { left: 22%; }
+.ember .fx::after { left: 61%; }
+.ember .fx2::before { left: 40%; }
+.ember .fx2::after { left: 82%; }
+
+.ember[data-turn] .fx::before,
+.ember[data-turn] .fx::after,
+.ember[data-turn] .fx2::before,
+.ember[data-turn] .fx2::after {
+  opacity: 0.9;
+  animation: emberSpark 1.7s ease-out infinite;
+}
+
+.ember[data-turn] .fx::after { animation-delay: -0.4s; animation-duration: 2.1s; }
+.ember[data-turn] .fx2::before { animation-delay: -0.9s; animation-duration: 1.5s; }
+.ember[data-turn] .fx2::after { animation-delay: -1.3s; animation-duration: 1.9s; }
+.ember[data-turn] .ring { animation: emberFlicker 1.3s steps(1, end) infinite; }
+.ember[data-turn]::before { animation: emberHalo 1.3s steps(1, end) infinite; }
+
+@keyframes emberSpark {
+  0% { opacity: 0; translate: 0 calc(2px * var(--fs)); scale: 1; }
+  15% { opacity: 1; }
+  100% { opacity: 0; translate: calc(3px * var(--fs)) calc(-16px * var(--fs)); scale: 0.4; }
+}
+
+@keyframes emberFlicker {
+  0% { filter: brightness(1); }
+  18% { filter: brightness(1.3); }
+  31% { filter: brightness(0.9); }
+  52% { filter: brightness(1.2); }
+  70% { filter: brightness(1.02); }
+  86% { filter: brightness(1.35); }
+}
+
+@keyframes emberHalo {
+  0% { opacity: 0.85; }
+  18% { opacity: 1; }
+  31% { opacity: 0.7; }
+  52% { opacity: 0.95; }
+  70% { opacity: 0.78; }
+  86% { opacity: 1; }
+}
+
+/* ─── Lotus: a pink and cream border over a pond ripple, petals that bloom on turn ─── */
+.lotus {
+  --frame-a: #ec9fb9;
+  --frame-b: #8ccdc6;
+  --frame-c: #f2e6bd;
+  --frame-stroke: rgb(150 50 90 / 0.5);
+  --frame-glow: #ee9ab8;
+  --frame-bar: #c9577f;
+}
+
+.lotus .ring { background: linear-gradient(90deg, #ec9fb9, #f2e6bd 50%, #ec9fb9); }
+
+.lotus .fx {
+  display: block;
+  inset: calc(-3px * var(--fs));
+  border: 1px solid color-mix(in srgb, var(--frame-b) 75%, transparent);
+  border-radius: calc(var(--rad) + 3px * var(--fs));
+}
+
+.lotus[data-turn] .fx2 {
+  display: block;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--frame-b) 80%, transparent);
+  animation: lotusRipple 2.8s ease-out infinite;
+}
+
+.lotus[data-turn] .corner { transform-origin: 55% 55%; animation: lotusBloom 3s ease-in-out infinite; }
+.lotus[data-turn] .tr,
+.lotus[data-turn] .bl { animation-delay: -1.5s; }
+.lotus[data-turn]::before { animation: lotusHalo 3s ease-in-out infinite; }
+
+@keyframes lotusRipple {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--frame-b) 80%, transparent); }
+  100% { box-shadow: 0 0 0 13px color-mix(in srgb, var(--frame-b) 0%, transparent); }
+}
+
+@keyframes lotusBloom {
+  0%, 100% { scale: 0.92; }
+  50% { scale: 1.12; }
+}
+
+@keyframes lotusHalo {
+  0%, 100% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--frame-glow) 55%, transparent),
+      0 0 12px 2px color-mix(in srgb, var(--frame-glow) 55%, transparent),
+      0 0 26px 4px color-mix(in srgb, var(--frame-glow) 24%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--frame-c) 60%, transparent),
+      0 0 14px 3px color-mix(in srgb, var(--frame-c) 45%, transparent),
+      0 0 28px 5px color-mix(in srgb, var(--frame-glow) 30%, transparent);
+  }
+}
+
+/* ─── Frost: a crisp icy border with crystal shards and twinkling glints ─── */
+.frost {
+  --frame-a: #a9deee;
+  --frame-b: #6fb8d2;
+  --frame-c: #ffffff;
+  --frame-stroke: rgb(40 110 150 / 0.6);
+  --frame-glow: #7fd6f0;
+  --frame-bar: #3b9fc6;
+}
+
+.frost.frame { --rad: 6px; }
+.frost .ring { background: linear-gradient(135deg, #ffffff, #a9deee 30%, #6fb8d2 55%, #e4f4fa 80%, #8fcde0); }
+
+.frost .fx,
+.frost .fx2 {
+  display: block;
+  inset: 0;
+  filter: drop-shadow(0 0 2px #bfefff);
+}
+
+.frost .fx::before,
+.frost .fx::after,
+.frost .fx2::before,
+.frost .fx2::after {
+  content: '';
+  position: absolute;
+  width: calc(9px * var(--fs));
+  height: calc(9px * var(--fs));
+  background: #fff;
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  scale: 0.65;
+  opacity: 0.85;
+}
+
+.frost .fx::before { top: calc(-4.5px * var(--fs)); left: 30%; }
+.frost .fx::after { bottom: calc(-4.5px * var(--fs)); left: 68%; }
+.frost .fx2::before { right: calc(-4.5px * var(--fs)); top: 38%; }
+.frost .fx2::after { left: calc(-4.5px * var(--fs)); top: 62%; }
+
+.frost[data-turn] .fx::before,
+.frost[data-turn] .fx::after,
+.frost[data-turn] .fx2::before,
+.frost[data-turn] .fx2::after {
+  scale: 1;
+  animation: frostGlint 2.2s ease-in-out infinite;
+}
+
+.frost[data-turn] .fx::after { animation-delay: -0.55s; }
+.frost[data-turn] .fx2::before { animation-delay: -1.1s; }
+.frost[data-turn] .fx2::after { animation-delay: -1.65s; }
+.frost[data-turn]::before { animation: frostHalo 2.2s ease-in-out infinite; }
+
+@keyframes frostGlint {
+  0%, 100% { scale: 0; rotate: 0deg; opacity: 0; }
+  45% { scale: 1.15; rotate: 45deg; opacity: 1; }
+  70% { scale: 0.7; rotate: 60deg; opacity: 0.8; }
+}
+
+@keyframes frostHalo {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; filter: brightness(1.2); }
+}
+
+/* ─── Dune: a sand and copper border with rolling dune lines and a rising sun ─── */
+.dune {
+  --frame-a: #f0cf8d;
+  --frame-b: #c98f5f;
+  --frame-c: #ffc857;
+  --frame-glow: #f0b45c;
+  --frame-bar: #c9822a;
+}
+
+.dune .ring { background: linear-gradient(90deg, #c98f5f, #f6dba3 50%, #c98f5f); }
+
+.dune .fx {
+  display: block;
+  left: 8%;
+  right: 8%;
+  bottom: calc(-5px * var(--fs));
+  height: 8px;
+  background:
+    radial-gradient(ellipse 18px 6px at 50% 100%, transparent 70%, var(--frame-b) 74% 86%, transparent 90%) 0 0 / 36px 100% repeat-x,
+    radial-gradient(ellipse 14px 4px at 50% 100%, transparent 65%, var(--frame-a) 72% 88%, transparent 92%) 14px 0 / 28px 100% repeat-x;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+}
+
+.dune[data-turn] .fx { animation: duneRoll 6s linear infinite; }
+.dune[data-turn] .corner path { transform-box: fill-box; transform-origin: center; }
+.dune[data-turn] .corner path:nth-of-type(1) { animation: duneRipple 2.4s ease-in-out infinite; }
+.dune[data-turn] .corner path:nth-of-type(2) { animation: duneRipple 2.4s ease-in-out 0.4s infinite; }
+.dune[data-turn] .corner path:nth-of-type(3) { animation: duneRipple 2.4s ease-in-out 0.8s infinite; }
+.dune[data-turn] .corner path:nth-of-type(4) { animation: duneSun 2.4s ease-in-out infinite; }
+.dune[data-turn]::before { animation: duneHalo 2.4s ease-in-out infinite; }
+
+@keyframes duneRoll {
+  to { background-position: 36px 0, 42px 0; }
+}
+
+@keyframes duneRipple {
+  0%, 100% { opacity: 0.35; }
+  40% { opacity: 1; }
+}
+
+@keyframes duneSun {
+  0%, 100% { scale: 1; }
+  50% { scale: 1.3; }
+}
+
+@keyframes duneHalo {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
+}
+
+/* ─── Paper theme: pale metals and ice vanish on cream, so these three use deeper tones ─── */
+:global([data-theme='paper']) .constellation {
+  --frame-a: #b8923a;
+  --frame-b: #4f74c4;
+  --frame-c: #d9a93a;
+}
+
+:global([data-theme='paper']) .constellation .ring { background: linear-gradient(180deg, #c9a24a, #4f74c4); }
+
+:global([data-theme='paper']) .frost {
+  --frame-a: #6fb6d4;
+  --frame-b: #3f8fb4;
+  --frame-c: #ffffff;
+}
+
+:global([data-theme='paper']) .frost .ring { background: linear-gradient(135deg, #a9deee, #5aa9c9 30%, #3f8fb4 55%, #8fcde0 80%, #4f9fc2); }
+
+:global([data-theme='paper']) .dune {
+  --frame-a: #c9964f;
+  --frame-b: #a8693c;
+}
+
+:global([data-theme='paper']) .dune .ring { background: linear-gradient(90deg, #a8693c, #d9a95a 50%, #a8693c); }
+
+/* ─── Reduced motion: keep the static frame and glow, stop every animation ─── */
+@media (prefers-reduced-motion: reduce) {
+  .frame,
+  .frame::before,
+  .frame::after,
+  .frame *,
+  .frame *::before,
+  .frame *::after { animation: none !important; }
+}
+
+:global([data-reduced-motion]) .frame,
+:global([data-reduced-motion]) .frame::before,
+:global([data-reduced-motion]) .frame::after,
+:global([data-reduced-motion]) .frame *,
+:global([data-reduced-motion]) .frame *::before,
+:global([data-reduced-motion]) .frame *::after { animation: none !important; }

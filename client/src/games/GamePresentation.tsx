@@ -16,7 +16,7 @@ import { LiarsDeckFrame } from './liarsdeck/LiarsDeckFrame';
 import { BlackjackFrame } from './blackjack/BlackjackFrame';
 import { HoldemFrame } from './holdem/HoldemFrame';
 import { NapoleonFrame } from './napoleon/NapoleonFrame';
-import { napoleonCardImageUrl } from './napoleon/napoleon-card-art';
+import { useNapoleonCardImageUrl } from './napoleon/napoleon-card-art';
 import { napoleonCardText } from './napoleon/napoleon-view';
 
 interface GamePresentationProps {
@@ -40,6 +40,7 @@ function specialEffect(card: Card | undefined, t: (key: TranslationKey, params?:
 export function GamePresentation({
   frame, bottomSeat, gameType, summary, elapsedMs = 0,
 }: GamePresentationProps): ReactNode {
+  const napoleonCardImageUrl = useNapoleonCardImageUrl();
   const rootRef = useRef<HTMLDivElement>(null);
   const timingRef = useRef({ key: frame.key, elapsedMs });
   if (timingRef.current.key !== frame.key) timingRef.current = { key: frame.key, elapsedMs };

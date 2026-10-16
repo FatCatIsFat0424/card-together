@@ -90,6 +90,7 @@ type EditableProfile = Pick<
   | 'nickname' | 'color' | 'avatar' | 'avatarImage' | 'seatBackground' | 'tableBackground'
   | 'tableBackgroundOpacity' | 'cardBack' | 'cardBackOpacity' | 'matchesPublic'
   | 'avatarBorder' | 'cardBackStyle' | 'tableBackgroundStyle' | 'seatBackgroundStyle' | 'nameplate'
+  | 'cardFaceStyle' | 'soundPack' | 'chipStyle' | 'seatFrame' | 'victoryEffect' | 'chatFrame'
 >;
 
 function mediaValue(
@@ -179,6 +180,12 @@ function profileValues(
     tableBackgroundStyle: equipmentValue('tableBackgroundStyle', input.tableBackgroundStyle, fallback.tableBackgroundStyle),
     seatBackgroundStyle: equipmentValue('seatBackgroundStyle', input.seatBackgroundStyle, fallback.seatBackgroundStyle),
     nameplate: equipmentValue('nameplate', input.nameplate, fallback.nameplate),
+    cardFaceStyle: equipmentValue('cardFaceStyle', input.cardFaceStyle, fallback.cardFaceStyle),
+    soundPack: equipmentValue('soundPack', input.soundPack, fallback.soundPack),
+    chipStyle: equipmentValue('chipStyle', input.chipStyle, fallback.chipStyle),
+    seatFrame: equipmentValue('seatFrame', input.seatFrame, fallback.seatFrame),
+    victoryEffect: equipmentValue('victoryEffect', input.victoryEffect, fallback.victoryEffect),
+    chatFrame: equipmentValue('chatFrame', input.chatFrame, fallback.chatFrame),
     avatarImage: mediaValue(input.avatarImage, fallback.avatarImage, mediaExists),
     seatBackground: mediaValue(input.seatBackground, fallback.seatBackground ?? null, mediaExists),
     tableBackground: mediaValue(input.tableBackground, fallback.tableBackground, mediaExists),

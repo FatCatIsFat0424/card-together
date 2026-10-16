@@ -137,7 +137,8 @@ export type { EmojiRecord, ProvidedEmoji } from './emoji';
 export type { AccountProfile, AvatarPreset, AvatarId, MediaId } from './account';
 export type {
   AvatarBorderId, ShopItem, ShopItemId, ShopItemType, CardBackStyleId, TableBackgroundStyleId,
-  SeatBackgroundStyleId, NameplateId, ShopStickerId,
+  SeatBackgroundStyleId, NameplateId, ShopStickerId, CardFaceStyleId, SoundPackId, SeatFrameId, VictoryEffectId,
+  ChipStyleId, ChatFrameId, EquipmentSlot,
 } from '../constants/shop';
 
 export type {

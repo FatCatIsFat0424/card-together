@@ -7,11 +7,12 @@ import { AuctionTable, BidLabel } from '../../components/AuctionTable';
 import railStyles from '../../components/GameInfoRail.module.css';
 import { useI18nStore } from '../../stores/i18n-store';
 import { useSeatName } from '../seat-names';
-import { napoleonCardImageUrl } from './napoleon-card-art';
+import { useNapoleonCardImageUrl } from './napoleon-card-art';
 import { napoleonAuctionColumns, napoleonCardText, napoleonFinalTricks } from './napoleon-view';
 import styles from './NapoleonTable.module.css';
 
 export function NapoleonInfoRail({ game }: { game: NapoleonVisibleState }): ReactNode {
+  const napoleonCardImageUrl = useNapoleonCardImageUrl();
   const { t } = useI18nStore();
   const name = useSeatName();
   const jokerName = (joker: 'big' | 'small'): string => t(`napoleon.joker.${joker}`);

@@ -3,6 +3,11 @@ import { createTurnSound } from '../../../client/src/audio/turn-sound';
 import { createTurnSoundController } from '../../../client/src/audio/turn-sound-controller';
 import { TRICK_HOLD_MS } from '../../../client/src/games/bridge/trick-presentation';
 
+vi.mock('../../../client/src/stores/account-store', async () => {
+  const { create } = await import('zustand');
+  return { useAccountStore: create(() => ({ account: null })) };
+});
+
 function mockAudio() {
   return { ready: vi.fn(() => true), unlock: vi.fn(), play: vi.fn(), stop: vi.fn(), dispose: vi.fn() };
 }

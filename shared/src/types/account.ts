@@ -1,5 +1,6 @@
 import type {
-  AchievementNameplateId, AvatarBorderId, CardBackStyleId, NameplateId, SeatBackgroundStyleId, ShopItemId, TableBackgroundStyleId,
+  AchievementNameplateId, AvatarBorderId, CardBackStyleId, CardFaceStyleId, ChatFrameId, ChipStyleId, NameplateId,
+  SeatBackgroundStyleId, SeatFrameId, ShopItemId, SoundPackId, TableBackgroundStyleId, VictoryEffectId,
 } from '../constants/shop';
 export type AvatarPreset = 'cat' | 'fox' | 'owl' | 'bear' | 'rabbit' | 'panda';
 export type AvatarId = AvatarPreset;
@@ -26,6 +27,14 @@ export interface AccountProfile {
   readonly tableBackgroundStyle?: TableBackgroundStyleId | null;
   readonly seatBackgroundStyle?: SeatBackgroundStyleId | null;
   readonly nameplate?: NameplateId | null;
+  /** Private equipment: null or missing keeps the classic deck, tones, and chips. */
+  readonly cardFaceStyle?: CardFaceStyleId | null;
+  readonly soundPack?: SoundPackId | null;
+  readonly chipStyle?: ChipStyleId | null;
+  /** Public equipment shared with tables and chat; null or missing keeps the theme design. */
+  readonly seatFrame?: SeatFrameId | null;
+  readonly victoryEffect?: VictoryEffectId | null;
+  readonly chatFrame?: ChatFrameId | null;
   readonly nickname: string;
   readonly color: string;
   readonly avatar: AvatarPreset;

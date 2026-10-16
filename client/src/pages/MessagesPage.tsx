@@ -1,11 +1,12 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useRoomStore } from '../stores/room-store';
 import { useSocialStore } from '../stores/social-store';
+import { closeMessagesWindow, useMessagesWindowStore } from '../stores/messages-window-store';
 import { useMessageFriends } from '../hooks/use-message-friends';
 import { DirectConversation } from '../components/DirectConversation';
 import { MessageConversations } from '../components/MessageConversations';
@@ -32,6 +33,10 @@ export function MessagesPage(): ReactNode {
   const errors = [...new Set([error, friendsError, loadError].filter(Boolean))];
   const mobile = useMediaQuery('(max-width: 52rem)');
   const { t } = useI18nStore();
+  const navigate = useNavigate();
+  const closingTo = useMessagesWindowStore((state) => state.closingTo);
+  useEffect(() => () => useMessagesWindowStore.getState().reset(), []);
+  const closeTo = roomCode ? `/${inGame ? 'game' : 'room'}/${roomCode}` : '/';
   if (!accountId) return null;
 
   const refresh = async (): Promise<void> => {
@@ -47,7 +52,8 @@ export function MessagesPage(): ReactNode {
   };
 
   return <main className={styles.page}>
-    <div className={styles.layout}>
+    <div className={`${styles.layout} ${closingTo ? styles.closing : ''}`} inert={closingTo !== null || undefined}
+      onAnimationEnd={(event) => { if (event.target === event.currentTarget && closingTo) navigate(closingTo); }}>
       <header className={styles.toolbar}>
         <div className={styles.toolbarContent}>
           <h1>{t('messages.title')}</h1>
@@ -60,7 +66,7 @@ export function MessagesPage(): ReactNode {
           {status === 'loading' && <p className={styles.status} role="status">{t('common.loading')}</p>}
           {errors.map((message) => <p key={message} className={styles.error} role="alert">{message}</p>)}
         </div>
-        <Link className={styles.closeButton} to={roomCode ? `/${inGame ? 'game' : 'room'}/${roomCode}` : '/'}
+        <Link className={styles.closeButton} to={closeTo} onClick={(event) => closeMessagesWindow(event, closeTo)}
           aria-label={t('table.close')} title={t('table.close')}>
           <AppIcon name="close" />
         </Link>

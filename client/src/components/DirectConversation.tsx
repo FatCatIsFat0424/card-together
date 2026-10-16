@@ -9,6 +9,7 @@ import { AppIcon } from './AppIcon';
 import { ChatMessageBody, EmojiPickerSections } from './ChatEmoji';
 import type { StickerPayload } from './ChatEmoji';
 import { PlayerLink } from './PlayerLink';
+import { ChatFrame } from '../cosmetics/chat-frames/ChatFrame';
 import { PROVIDED_EMOJIS } from '../provided-emoji';
 import { useAccountStore } from '../stores/account-store';
 import { useEmojiStore } from '../stores/emoji-store';
@@ -202,14 +203,14 @@ export function DirectConversation({ ownId, otherId, embedded = false, onLoadErr
         onClick={() => void load(history.messages[0]?.id)}>
         {paging ? t('common.loading') : t('messages.older')}</button>}
       {history?.messages.length === 0 && <p className={styles.empty}>{t('messages.emptyConversation')}</p>}
-      {history?.messages.map((message) => <article key={message.id}
+      {history?.messages.map((message) => <ChatFrame key={message.id} as="article" id={message.sender.chatFrame}
         className={`${styles.message} ${message.sender.id === ownId ? styles.ownMessage : ''}`}>
         <div className={styles.messageMeta}><span>{message.sender.nickname}</span>
           <time dateTime={new Date(message.timestamp).toISOString()}>
             {new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(message.timestamp)}</time>
         </div>
         <div className={styles.messageContent}><ChatMessageBody message={message} /></div>
-      </article>)}
+      </ChatFrame>)}
     </div>
     {readError && <p className={styles.notice} role="alert">{t('common.error')}{' '}
       <button type="button" className="btn btn-outline" onClick={() => void markVisible()}>{t('common.retry')}</button></p>}

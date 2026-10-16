@@ -23,7 +23,7 @@ import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
 import { useTablePerspective, useViewedGame } from '../use-table-perspective';
 import { joinNames, useSeatName } from '../seat-names';
-import { napoleonCardImageUrl } from './napoleon-card-art';
+import { useNapoleonCardImageUrl } from './napoleon-card-art';
 import { NapoleonInfoRail } from './NapoleonInfoRail';
 import { NapoleonTrickArea } from './NapoleonTrickArea';
 import { SecretaryPicker } from './SecretaryPicker';
@@ -40,6 +40,7 @@ const ACK_PREFERENCE = 'napoleon-secretary-ack';
 type Translate = ReturnType<typeof useI18nStore.getState>['t'];
 
 function CardStrip({ cards, label }: { cards: readonly NapoleonCard[]; label: string }): ReactNode {
+  const napoleonCardImageUrl = useNapoleonCardImageUrl();
   const { t } = useI18nStore();
   const jokerName = (joker: 'big' | 'small'): string => t(`napoleon.joker.${joker}`);
   return <ul className={styles.cardRow} aria-label={label}>
@@ -92,6 +93,7 @@ function NapoleonResult({ result, name, t }: {
 
 /** The secretary's private notice; it blocks only their own actions until confirmed. */
 function SecretaryNotice({ card, onConfirm }: { card: NapoleonCard; onConfirm: () => void }): ReactNode {
+  const napoleonCardImageUrl = useNapoleonCardImageUrl();
   const { t } = useI18nStore();
   const jokerName = (joker: 'big' | 'small'): string => t(`napoleon.joker.${joker}`);
   return <section className={styles.panel} role="alertdialog" aria-labelledby="napoleon-ack-title"

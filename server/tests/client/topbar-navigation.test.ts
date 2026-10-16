@@ -77,8 +77,9 @@ describe('topbar navigation', () => {
     for (const label of ['大廳', '好友', '我的個人頁面', '我的帳號']) expect(html).toContain(label);
     expect(html).toContain('href="/players/alice"');
     expect(html).toContain('href="/shop"');
-    expect(html).toContain('href="/messages"');
-    expect(html).toContain('href="/achievements"');
+    // The open page's button links back instead; without history that is the lobby.
+    if (!path.startsWith('/messages')) expect(html).toContain('href="/messages"');
+    if (path !== '/achievements') expect(html).toContain('href="/achievements"');
     expect(html.indexOf('aria-label="成就"')).toBeLessThan(html.indexOf('data-popover="notifications"'));
     expect(html).toContain('aria-label="私人訊息"');
     expect(html).not.toContain('>私人訊息<');
@@ -97,6 +98,26 @@ describe('topbar navigation', () => {
     expect(render('/game/ABC123')).not.toContain(back);
     state.roomCode = null;
     expect(render('/friends')).not.toContain(back);
+  });
+
+  it.each([
+    ['/messages', '私人訊息'],
+    ['/messages/bob', '私人訊息'],
+    ['/achievements', '成就'],
+  ])('marks the %s button as current and links it back out', (path, label) => {
+    const html = render(path);
+    const button = html.match(new RegExp(`<a[^>]*aria-label="${label}"[^>]*>`))?.[0];
+    expect(button).toContain('href="/"');
+    expect(button).toContain('aria-current="page"');
+    const other = path === '/achievements' ? '私人訊息' : '成就';
+    const otherButton = html.match(new RegExp(`<a[^>]*aria-label="${other}"[^>]*>`))?.[0];
+    expect(otherButton).not.toContain('aria-current');
+  });
+
+  it('leaves the message and achievement buttons unpressed elsewhere', () => {
+    const html = render('/shop');
+    expect(html.match(/<a[^>]*aria-label="私人訊息"[^>]*>/)?.[0]).not.toContain('aria-current');
+    expect(html.match(/<a[^>]*aria-label="成就"[^>]*>/)?.[0]).not.toContain('aria-current');
   });
 
   it('hides account links before sign-in', () => {

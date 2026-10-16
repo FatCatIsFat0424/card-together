@@ -1,5 +1,10 @@
+import { getActiveSoundPack } from '../cosmetics/sound-packs/active-sound-pack';
+import { cueDuration } from './sound-pack';
+import type { Cue, SlashTiming, SoundPack } from './sound-pack';
+import { createVoiceTracker, renderCue } from './sound-synth';
+
 let context: AudioContext | null = null;
-const active = new Set<() => void>();
+const voices = createVoiceTracker();
 
 /** Call only from a trusted user gesture; missed sounds are never queued. */
 export function unlockCardSounds(): void {
@@ -11,8 +16,13 @@ export function unlockCardSounds(): void {
   }
 }
 
+/** Cuts off every sound still playing without closing the audio context. */
+export function stopCardSounds(): void {
+  voices.stopAll();
+}
+
 export function disposeCardSounds(): void {
-  for (const stop of active) stop();
+  voices.stopAll();
   const audio = context;
   context = null;
   if (audio) {
@@ -20,139 +30,69 @@ export function disposeCardSounds(): void {
   }
 }
 
-function track(source: AudioScheduledSourceNode, nodes: AudioNode[]): void {
-  const release = (): void => {
-    source.onended = null;
-    for (const node of [source, ...nodes]) {
-      try { node.disconnect(); } catch { /* Cleanup must not interrupt other voices. */ }
-    }
-    active.delete(stop);
-  };
-  const stop = (): void => {
-    try { source.stop(); } catch { /* A source may already have ended. */ }
-    release();
-  };
-  source.onended = release;
-  active.add(stop);
-}
-
-/** Falling three-note tone: a player is eliminated. */
-export function playOutSound(): void {
+/** Plays a cue from the equipped pack; locked audio drops it rather than replaying it after the next gesture. */
+function play(pick: (pack: SoundPack) => Cue): void {
   const audio = context;
   if (!audio || audio.state !== 'running') return;
   try {
-    for (const [frequency, start, length] of [[523, 0, 0.2], [392, 0.16, 0.2], [262, 0.32, 0.45]]) {
-      const at = audio.currentTime + start;
-      const osc = audio.createOscillator();
-      const gain = audio.createGain();
-      track(osc, [gain]);
-      osc.frequency.value = frequency;
-      gain.gain.setValueAtTime(0.0001, at);
-      gain.gain.exponentialRampToValueAtTime(0.3, at + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, at + length);
-      osc.connect(gain);
-      gain.connect(audio.destination);
-      osc.start(at);
-      osc.stop(at + length);
-    }
+    renderCue(audio, pick(getActiveSoundPack()), voices.track);
   } catch {
     disposeCardSounds();
   }
+}
+
+/** Falling cue: a player is eliminated. */
+export function playOutSound(): void {
+  play((pack) => pack.out);
 }
 
 /** Card snap for a play; a softer, lower knock for a pass. */
 export function playCardSound(pass = false): void {
-  const audio = context;
-  if (!audio || audio.state !== 'running') return;
-  try {
-    const duration = pass ? 0.12 : 0.08;
-    const buffer = audio.createBuffer(1, Math.ceil(audio.sampleRate * duration), audio.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length) ** 3;
-    const source = audio.createBufferSource();
-    const filter = audio.createBiquadFilter();
-    const gain = audio.createGain();
-    track(source, [filter, gain]);
-    source.buffer = buffer;
-    filter.type = 'bandpass';
-    filter.frequency.value = pass ? 700 : 2400;
-    filter.Q.value = 0.9;
-    gain.gain.value = pass ? 0.35 : 0.6;
-    source.connect(filter);
-    filter.connect(gain);
-    gain.connect(audio.destination);
-    source.start();
-  } catch {
-    disposeCardSounds();
-  }
-}
-
-/** Noise burst shaped by `envelope` (0 at the start, 1 at the end of the buffer). */
-function noiseVoice(
-  audio: AudioContext, seconds: number, at: number, type: BiquadFilterType, frequency: number, level: number,
-  envelope: (position: number) => number,
-): void {
-  const buffer = audio.createBuffer(1, Math.ceil(audio.sampleRate * seconds), audio.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * envelope(i / data.length);
-  const source = audio.createBufferSource();
-  const filter = audio.createBiquadFilter();
-  const gain = audio.createGain();
-  track(source, [filter, gain]);
-  source.buffer = buffer;
-  filter.type = type;
-  filter.frequency.value = frequency;
-  filter.Q.value = 0.7;
-  gain.gain.value = level;
-  source.connect(filter);
-  filter.connect(gain);
-  gain.connect(audio.destination);
-  source.start(at);
+  play((pack) => (pass ? pack.pass : pack.card));
 }
 
 /**
  * Dragon Slaying: a fire roar while the fire burns, a whoosh rising across the blade's sweep, and an impact as
  * it reaches the far end. Times are seconds from the start of the presentation.
  */
-export function playSlashSound(timing: {
-  readonly fireStart: number; readonly fireEnd: number; readonly strike: number; readonly cut: number;
-}): void {
-  const audio = context;
-  if (!audio || audio.state !== 'running') return;
-  try {
-    const now = audio.currentTime;
-    noiseVoice(audio, timing.fireEnd - timing.fireStart, now + timing.fireStart, 'lowpass', 750, 0.35, (position) => {
-      const crackle = Math.random() < 0.004 ? 3 : 1;
-      return Math.min(1, position * 6) * (1 - position ** 6) * crackle;
-    });
-    noiseVoice(audio, timing.cut + 0.02, now + timing.strike - 0.02, 'bandpass', 4200, 0.6, (position) => position ** 2);
-    noiseVoice(audio, 0.5, now + timing.strike + timing.cut, 'lowpass', 280, 0.9, (position) => (1 - position) ** 3);
-  } catch {
-    disposeCardSounds();
-  }
+export function playSlashSound(timing: SlashTiming): void {
+  play((pack) => pack.slash(timing));
 }
 
 /** Table collapse: a sharp crack, splintering as the cracks run, and a deep rumble as the table gives way. */
 export function playCollapseSound(): void {
-  const audio = context;
-  if (!audio || audio.state !== 'running') return;
-  try {
-    const now = audio.currentTime;
-    for (const at of [0, 0.08, 0.17, 0.29, 0.43]) {
-      noiseVoice(audio, 0.07, now + at, 'bandpass', 2600, 0.7, (position) => (1 - position) ** 4);
-    }
-    noiseVoice(audio, 1.6, now + 0.35, 'lowpass', 140, 1, (position) => Math.min(1, position * 10) * (1 - position) ** 2);
-  } catch {
-    disposeCardSounds();
-  }
+  play((pack) => pack.collapse);
 }
 
 /** A single low impact with a crisp attack for the simultaneous player reveal. */
 export function playStartSound(): void {
+  play((pack) => pack.start);
+}
+
+/** Gap between the previewed turn cue and the card sound that follows it. */
+const PREVIEW_GAP_SECONDS = 0.2;
+
+/**
+ * Shop preview of `pack`: its turn cue, then a card play. Call from a user gesture. Unlike in-game cues this
+ * waits for the context to resume, because the click that asks for it is also what unlocks audio.
+ * Returns the preview's length in seconds.
+ */
+export function playSoundPackPreview(pack: SoundPack): number {
+  unlockCardSounds();
   const audio = context;
-  if (!audio || audio.state !== 'running') return;
-  try {
-    noiseVoice(audio, 0.55, audio.currentTime, 'lowpass', 180, 0.85, (position) => (1 - position) ** 3);
-    noiseVoice(audio, 0.1, audio.currentTime, 'bandpass', 1800, 0.35, (position) => (1 - position) ** 4);
-  } catch { disposeCardSounds(); }
+  const cardAt = cueDuration(pack.turn) + PREVIEW_GAP_SECONDS;
+  if (!audio) return 0;
+  const run = (): void => {
+    if (context !== audio || audio.state !== 'running') return;
+    try {
+      stopCardSounds();
+      renderCue(audio, pack.turn, voices.track);
+      renderCue(audio, pack.card, voices.track, cardAt);
+    } catch {
+      disposeCardSounds();
+    }
+  };
+  if (audio.state === 'running') run();
+  else void audio.resume().then(run).catch(() => undefined);
+  return cardAt + cueDuration(pack.card);
 }

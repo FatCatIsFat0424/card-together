@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import type { Card, Seat } from '@shared/types';
 import { SUIT_SYMBOLS, RANK_DISPLAY } from '@shared/constants';
-import { cardImageUrl } from '../cards';
+import { useCardFaceUrl } from '../cosmetics/card-faces/use-card-face';
 import { tablePosition } from '../game-view';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './TrickArea.module.css';
@@ -18,6 +18,7 @@ interface TrickAreaProps {
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 
 export function TrickArea({ currentTrick, leadSeat, bottomSeat, myTurn }: TrickAreaProps): ReactNode {
+  const cardImageUrl = useCardFaceUrl();
   const { t } = useI18nStore();
 
   return (

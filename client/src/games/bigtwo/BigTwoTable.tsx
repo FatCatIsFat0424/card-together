@@ -5,7 +5,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { canPlay, identifyCombo, isBomb, sortBigTwoHand } from '@shared/rules/bigtwo';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import type { BigTwoMatchResult, BigTwoVisibleState, Card, Seat } from '@shared/types';
-import { cardImageUrl } from '../../cards';
+import { useCardFaceUrl } from '../../cosmetics/card-faces/use-card-face';
 import { socket } from '../../socket';
 import { useGameStore } from '../../stores/game-store';
 import { useI18nStore } from '../../stores/i18n-store';
@@ -31,6 +31,7 @@ const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 type ActionCallback = (timeout: Error | null, response?: { success: boolean; error?: string }) => void;
 
 function CardFan({ cards, small }: { cards: readonly Card[]; small?: boolean }): ReactNode {
+  const cardImageUrl = useCardFaceUrl();
   const middle = (cards.length - 1) / 2;
   return <span className={`${styles.fan} ${small ? styles.fanSmall : ''}`}>
     {cards.map((card, index) => (

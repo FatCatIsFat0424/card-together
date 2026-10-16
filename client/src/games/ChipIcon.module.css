@@ -9,3 +9,13 @@
   vertical-align: -0.1em;
   box-sizing: border-box;
 }
+
+/* Same footprint as the default chip so amounts do not shift. */
+.chipDisc {
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: 0.3em;
+  vertical-align: -0.1em;
+  flex: none;
+}

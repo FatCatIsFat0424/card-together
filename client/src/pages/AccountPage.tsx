@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, KeyboardEvent, ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
@@ -45,7 +45,7 @@ const PURPOSE: Record<MediaField, MediaPurpose> = {
 export function AccountPage(): ReactNode {
   const account = useAccountStore((state) => state.account);
   const setAccount = useAccountStore((state) => state.setAccount);
-  const { t } = useI18nStore();
+  const { t, locale } = useI18nStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<AccountTab>('profile');
   const [nickname, setNickname] = useState(account?.nickname ?? '');
@@ -211,6 +211,9 @@ export function AccountPage(): ReactNode {
             </button>
           ))}
         </div>
+        <p className={editorStyles.joined}>
+          {t('profile.joined')} {new Date(account.createdAt).toLocaleDateString(locale)}
+        </p>
       </header>
       <div id="account-panel-profile" role="tabpanel" aria-labelledby="account-tab-profile"
         hidden={activeTab !== 'profile'}>
@@ -235,51 +238,52 @@ export function AccountPage(): ReactNode {
               </div>
               <fieldset className={styles.avatarField}>
                 <legend className={styles.legend}>{t('profile.avatar')}</legend>
-                <div className={editorStyles.avatarChoices}>
-                  {AVATARS.map((option) => (
-                    <button key={option} type="button" className={editorStyles.avatarChoice}
-                      aria-pressed={avatar === option} aria-label={t(`avatar.${option}`)}
-                      onClick={() => { setAvatar(option); setSaved(false); }}>
-                      <Avatar avatar={option} size="small" />
+                <div className={editorStyles.avatarRow}>
+                  <div className={editorStyles.avatarChoices}>
+                    {AVATARS.map((option) => (
+                      <button key={option} type="button" className={editorStyles.avatarChoice}
+                        aria-pressed={avatar === option} aria-label={t(`avatar.${option}`)}
+                        onClick={() => { setAvatar(option); setSaved(false); }}>
+                        <Avatar avatar={option} size="small" />
+                      </button>
+                    ))}
+                  </div>
+                  <div className={editorStyles.compactActions}>
+                    <input ref={avatarInput} type="file" accept="image/*" hidden
+                      onChange={chooseImage('avatarImage')} />
+                    <button type="button" className="btn btn-outline" disabled={mediaBusy !== null}
+                      onClick={() => avatarInput.current?.click()}>
+                      {mediaBusy === 'avatarImage' ? t('profile.uploading') : t('profile.uploadAvatar')}
                     </button>
-                  ))}
-                </div>
-                <div className={editorStyles.compactActions}>
-                  <input ref={avatarInput} type="file" accept="image/*" hidden
-                    onChange={chooseImage('avatarImage')} />
-                  <button type="button" className="btn btn-outline" disabled={mediaBusy !== null}
-                    onClick={() => avatarInput.current?.click()}>
-                    {mediaBusy === 'avatarImage' ? t('profile.uploading') : t('profile.uploadAvatar')}
-                  </button>
-                  {account.avatarImage && <button type="button" className="btn btn-outline"
-                    disabled={mediaBusy !== null}
-                    onClick={() => void patchSetting('avatarImage', async () => null)}>
-                    {t('profile.removeAvatar')}</button>}
+                    {account.avatarImage && <button type="button" className="btn btn-outline"
+                      disabled={mediaBusy !== null}
+                      onClick={() => void patchSetting('avatarImage', async () => null)}>
+                      {t('profile.removeAvatar')}</button>}
+                  </div>
                 </div>
                 {mediaFeedback('avatarImage')}
               </fieldset>
-              <FormControl fullWidth size="small" className={editorStyles.borderSelect}>
-                <InputLabel id="profile-border-label" shrink>{t('shop.catalog')}</InputLabel>
-                <Select id="profile-border" labelId="profile-border-label" label={t('shop.catalog')}
-                  value={selectedBorder ?? ''} displayEmpty
-                  MenuProps={{ disableScrollLock: true, slotProps: { paper: { className: editorStyles.borderMenu } } }}
-                  onChange={(event) => {
-                    const border = account.ownedAvatarBorders?.find((id) => id === event.target.value) ?? null;
-                    setAvatarBorder(border); setBorderDirty(true); setSaved(false);
-                  }}>
-                  <MenuItem value="">{t('shop.original')}</MenuItem>
-                  {(account.ownedAvatarBorders ?? []).map((id) =>
-                    <MenuItem key={id} value={id}>{t(`shop.item.${id}.name`)}</MenuItem>)}
-                </Select>
-              </FormControl>
-              <Link to="/shop">{t('shop.visit')}</Link>
-              {profileError && <p role="alert" className={styles.error}>{profileError}</p>}
-              <div className={editorStyles.saveRow}>
+              <div className={editorStyles.borderRow}>
+                <FormControl fullWidth size="small" className={editorStyles.selectField}>
+                  <InputLabel id="profile-border-label" shrink>{t('shop.catalog')}</InputLabel>
+                  <Select id="profile-border" labelId="profile-border-label" label={t('shop.catalog')}
+                    value={selectedBorder ?? ''} displayEmpty
+                    MenuProps={{ disableScrollLock: true, slotProps: { paper: { className: editorStyles.selectMenu } } }}
+                    onChange={(event) => {
+                      const border = account.ownedAvatarBorders?.find((id) => id === event.target.value) ?? null;
+                      setAvatarBorder(border); setBorderDirty(true); setSaved(false);
+                    }}>
+                    <MenuItem value="">{t('shop.original')}</MenuItem>
+                    {(account.ownedAvatarBorders ?? []).map((id) =>
+                      <MenuItem key={id} value={id}>{t(`shop.item.${id}.name`)}</MenuItem>)}
+                  </Select>
+                </FormControl>
                 <button type="submit" className="btn btn-primary" disabled={profileBusy || !nickname.trim()}>
                   {profileBusy ? t('common.loading') : t('common.save')}
                 </button>
-                {saved && <p role="status" className={styles.success}>{t('profile.saved')}</p>}
               </div>
+              {profileError && <p role="alert" className={styles.error}>{profileError}</p>}
+              {saved && <p role="status" className={styles.success}>{t('profile.saved')}</p>}
             </form>
             <EquipmentSettings key={account.id} account={account} />
             <section className={editorStyles.appearance} aria-labelledby="profile-appearance-heading">

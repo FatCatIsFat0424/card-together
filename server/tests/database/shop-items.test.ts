@@ -3,7 +3,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ShopItemId } from '@shared/types';
-import { NAMEPLATES, SHOP_ITEMS } from '@shared/constants';
+import { EQUIPMENT_SLOTS, NAMEPLATES, SHOP_ITEMS } from '@shared/constants';
+import type { EquipmentSlot } from '@shared/constants/shop';
+import { toPlayerInfo } from '../../src/managers/player-manager';
+import { publicAccount } from '../../src/database/repository';
+import { publicProfile } from '../../src/social/friend-service';
+import { isRuntimeSnapshot } from '../../src/runtime/validate';
 import { createJsonRepository } from '../../src/database/json-repository';
 import type { AccountRecord, Repository } from '../../src/database/repository';
 import { emptyDocument } from '../../src/database/schema';
@@ -67,6 +72,54 @@ describe('permanent shop item transactions', () => {
     expect(await repository.updateProfile(account.id, { nameplate: null }, 5)).toMatchObject({
       nameplate: null, ownedShopItems: [item.id], coins: 1000 - item.price,
     });
+  });
+
+  const NEW_SLOTS = ['cardFaceStyle', 'soundPack', 'chipStyle', 'seatFrame', 'victoryEffect', 'chatFrame'] as const;
+  it.each(NEW_SLOTS)('equips every owned %s product of its type only, and persists it', async (slot) => {
+    const items = SHOP_ITEMS.filter((item) => item.type === EQUIPMENT_SLOTS[slot]);
+    expect(items.length).toBeGreaterThanOrEqual(10);
+    await repository.createAccount({ ...account, coins: 10_000 });
+    for (const item of items) {
+      await expect(repository.updateProfile(account.id, { [slot]: item.id }, 2))
+        .rejects.toMatchObject({ code: 'SHOP_ITEM_NOT_OWNED' });
+      await repository.purchaseShopItem(account.id, item.id, 3);
+      await repository.updateProfile(account.id, { [slot]: item.id }, 4);
+    }
+    const other = (Object.keys(EQUIPMENT_SLOTS) as EquipmentSlot[]).find((candidate) => candidate !== slot)!;
+    await expect(repository.updateProfile(account.id, { [other]: items[0].id }, 5))
+      .rejects.toMatchObject({ code: 'INVALID_SHOP_ITEM' });
+    await repository.close();
+    repository = await createJsonRepository(path);
+    const saved = (await repository.getAccountById(account.id))!;
+    expect(saved[slot]).toBe(items.at(-1)!.id);
+    expect(publicAccount(saved)[slot]).toBe(items.at(-1)!.id);
+  });
+
+  it('shares only public equipment with tables and other players', () => {
+    const equipped = { ...account, cardFaceStyle: 'card-face-aurora', soundPack: 'sound-tide', chipStyle: 'chips-dune',
+      seatFrame: 'seat-frame-frost', victoryEffect: 'victory-ember', chatFrame: 'chat-frame-lotus' } as const;
+    const info = toPlayerInfo(publicAccount(equipped));
+    expect(info).toMatchObject({ seatFrame: 'seat-frame-frost', victoryEffect: 'victory-ember', chatFrame: 'chat-frame-lotus' });
+    expect(publicProfile(equipped)).toMatchObject({ chatFrame: 'chat-frame-lotus' });
+    for (const shared of [info, publicProfile(equipped)]) {
+      expect(shared).not.toHaveProperty('cardFaceStyle');
+      expect(shared).not.toHaveProperty('soundPack');
+      expect(shared).not.toHaveProperty('chipStyle');
+    }
+    expect(publicProfile(equipped)).not.toHaveProperty('victoryEffect');
+  });
+
+  it('accepts public equipment in persisted room identities only for the matching type', () => {
+    const snapshot = (player: Record<string, unknown>): unknown => ({
+      players: [{ info: { id: 'p1', username: 'p1', nickname: 'P1', color: '#123456', avatar: 'cat', avatarImage: null,
+        ...player }, currentRoomCode: null, disconnectedAt: null }],
+      rooms: [], games: [], chat: [],
+    });
+    expect(isRuntimeSnapshot(snapshot({}))).toBe(true);
+    expect(isRuntimeSnapshot(snapshot({ seatFrame: 'seat-frame-tide', victoryEffect: 'victory-tide', chatFrame: null })))
+      .toBe(true);
+    expect(isRuntimeSnapshot(snapshot({ seatFrame: 'victory-tide' }))).toBe(false);
+    expect(isRuntimeSnapshot(snapshot({ chatFrame: 'unknown' }))).toBe(false);
   });
 
   it('serializes concurrent retries and competing purchases, then retains ownership after reopening', async () => {

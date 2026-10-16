@@ -1,0 +1,42 @@
+.preview {
+  display: grid;
+  justify-items: center;
+  gap: var(--spacing-md);
+  max-width: 100%;
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 140px;
+  height: 64px;
+}
+
+.chip {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.35));
+}
+
+.left { transform: translateX(-38px) rotate(-18deg); }
+.right { transform: translateX(38px) rotate(14deg); }
+.front { z-index: 1; width: 68px; height: 68px; }
+
+.amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: var(--text-base);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.inline {
+  width: 0.9em;
+  height: 0.9em;
+  flex: none;
+}

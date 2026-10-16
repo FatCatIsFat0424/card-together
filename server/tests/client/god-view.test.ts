@@ -1,9 +1,13 @@
 import { gameSeatValues } from '../helpers/game-seat-values';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Card, NinetyNineVisibleState, PlayerVisibleGameState, Seat, SevensVisibleState } from '@shared/types';
 import { HIDDEN_GOD_VIEW, nextGodView, useGodViewStore } from '../../../client/src/stores/god-view-store';
 import { isOwnTurn, isSpectator } from '../../../client/src/games/observer-view';
 import { observedRows, sortObserved } from '../../../client/src/components/ObservedHand';
+
+vi.mock('../../../client/src/cosmetics/card-faces/use-card-face', () => ({
+  useCardFaceUrl: () => () => '/card.svg', useJokerFaceUrl: () => null,
+}));
 
 const c = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit });
 const seats = <T>(value: T): Record<Seat, T> => ({ N: value, E: value, S: value, W: value });

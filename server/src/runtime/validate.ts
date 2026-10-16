@@ -92,6 +92,8 @@ function player(value: unknown): boolean {
     (value.avatarBorder === undefined || value.avatarBorder === null || isAvatarBorderId(value.avatarBorder)) &&
     (value.nameplate === undefined || value.nameplate === null || isEquipmentStyle('nameplate', value.nameplate)) &&
     (value.seatBackgroundStyle === undefined || value.seatBackgroundStyle === null || isEquipmentStyle('seatBackgroundStyle', value.seatBackgroundStyle)) &&
+    (['seatFrame', 'victoryEffect', 'chatFrame'] as const).every((slot) =>
+      value[slot] === undefined || value[slot] === null || isEquipmentStyle(slot, value[slot])) &&
     (value.seatBackground === undefined || value.seatBackground === null || isMediaId(value.seatBackground))
   );
 }

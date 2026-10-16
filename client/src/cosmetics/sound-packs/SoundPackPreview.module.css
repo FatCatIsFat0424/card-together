@@ -1,0 +1,35 @@
+.preview { display: grid; justify-items: center; gap: var(--spacing-sm); width: 100%; }
+
+/* A dark plate keeps the pastel bars readable on every theme, as the dark card-back artwork does. */
+.plate {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  width: min(100%, 168px); height: 64px; padding: 0 var(--spacing-md);
+  border: 1px solid color-mix(in srgb, var(--sound-a) 40%, transparent);
+  border-radius: var(--radius-md);
+  background: radial-gradient(ellipse at 50% 120%, color-mix(in srgb, var(--sound-a) 24%, #0d1522), #0d1522 75%);
+}
+
+.bar {
+  flex: 0 0 5px; height: calc(var(--height) * 100%); min-height: 4px; border-radius: 3px;
+  background: linear-gradient(to top, var(--sound-a), var(--sound-b));
+  opacity: 0.78; transform-origin: 50% 50%;
+  transition: opacity var(--transition-fast);
+}
+
+.playing .bar { opacity: 1; animation: pulse 520ms ease-in-out var(--delay) infinite alternate; }
+.playing.still .bar { animation: none; }
+
+@keyframes pulse {
+  from { transform: scaleY(0.4); }
+  to { transform: scaleY(1); }
+}
+
+.play {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; padding: 0 var(--spacing-md);
+  border: 1px solid var(--border-color); border-radius: var(--radius-pill);
+  background: var(--bg-card); color: var(--text-primary);
+  font-size: var(--text-sm); cursor: pointer;
+}
+.play:hover { background: var(--bg-card-hover); border-color: var(--border-color-hover); }
+.play:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }

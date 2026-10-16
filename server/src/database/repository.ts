@@ -79,6 +79,7 @@ export interface Repository {
       | 'nickname' | 'color' | 'avatar' | 'avatarImage' | 'seatBackground' | 'tableBackground'
       | 'tableBackgroundOpacity' | 'cardBack' | 'cardBackOpacity' | 'matchesPublic'
       | 'avatarBorder' | 'cardBackStyle' | 'tableBackgroundStyle' | 'seatBackgroundStyle' | 'nameplate'
+      | 'cardFaceStyle' | 'soundPack' | 'chipStyle' | 'seatFrame' | 'victoryEffect' | 'chatFrame'
     >>,
     now: number,
   ): Promise<AccountRecord | null>;
@@ -165,6 +166,12 @@ export function publicAccount(account: AccountRecord): AccountProfile {
     tableBackgroundStyle: account.tableBackgroundStyle ?? null,
     seatBackgroundStyle: account.seatBackgroundStyle ?? null,
     nameplate: account.nameplate ?? null,
+    cardFaceStyle: account.cardFaceStyle ?? null,
+    soundPack: account.soundPack ?? null,
+    chipStyle: account.chipStyle ?? null,
+    seatFrame: account.seatFrame ?? null,
+    victoryEffect: account.victoryEffect ?? null,
+    chatFrame: account.chatFrame ?? null,
     nickname: account.nickname,
     color: account.color,
     avatar: account.avatar,

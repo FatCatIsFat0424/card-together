@@ -3,7 +3,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Card } from '@shared/types';
 
-vi.mock('../../../client/src/cards', () => ({ cardImageUrl: () => '/card.svg' }));
+vi.mock('../../../client/src/cosmetics/card-faces/use-card-face', () => ({
+  useCardFaceUrl: () => () => '/card.svg', useJokerFaceUrl: () => null,
+}));
 
 import { CardHand } from '../../../client/src/components/CardHand';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';

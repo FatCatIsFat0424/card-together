@@ -7,7 +7,7 @@ import { SUIT_SYMBOLS, RANK_DISPLAY } from '@shared/constants';
 import { isNapoleonJoker, sameNapoleonCard } from '@shared/rules/napoleon';
 import { moveHandCard } from './card-hand-order';
 import { cardInput, cardTap, validArmedCard } from './card-hand-touch';
-import { napoleonCardImageUrl } from '../games/napoleon/napoleon-card-art';
+import { useNapoleonCardImageUrl } from '../games/napoleon/napoleon-card-art';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './CardHand.module.css';
 
@@ -52,6 +52,7 @@ export function CardHand<T extends NapoleonCard>({
   cards, playableCards, onCardClick, disabled, selectedCards, markedCards, markedLabel, highlightedCards,
   highlightedLabel, onCardPreview, onReorder, confirmTouch,
 }: CardHandProps<T>): ReactNode {
+  const napoleonCardImageUrl = useNapoleonCardImageUrl();
   const gesture = useRef<{
     pointerId: number; card: T; startX: number; startY: number;
     source: number; centers: number[]; target: number; moved: boolean;

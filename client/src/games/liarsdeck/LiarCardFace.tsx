@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 import type { LiarFace } from '@shared/types';
-import { cardImageUrl } from '../../cards';
+import { useCardFaceUrl, useJokerFaceUrl } from '../../cosmetics/card-faces/use-card-face';
 import { liarFaceCard } from './liarsdeck-view';
 
 const JOKER_LETTERS = ['J', 'O', 'K', 'E', 'R'];
 
-/** The card graphics library has no joker, so it is drawn here in the same card proportions. */
+/** The classic card graphics have no joker, so the default deck's joker is drawn here in the same proportions. */
 function JokerArt({ className, label }: { className?: string; label: string }): ReactNode {
   const corner = <g fill="#b3261e" fontFamily="Georgia, serif" fontSize="24" fontWeight="700" textAnchor="middle">
     {JOKER_LETTERS.map((letter, index) => <text key={letter} x="24" y={40 + index * 24}>{letter}</text>)}
@@ -30,6 +30,12 @@ function JokerArt({ className, label }: { className?: string; label: string }): 
 export function LiarCardFace({ face, variant, label, className }: {
   face: LiarFace; variant: number; label: string; className?: string;
 }): ReactNode {
-  if (face === 'joker') return <JokerArt className={className} label={label} />;
+  const cardImageUrl = useCardFaceUrl();
+  const jokerUrl = useJokerFaceUrl();
+  if (face === 'joker') {
+    return jokerUrl
+      ? <img className={className} src={jokerUrl} alt={label} draggable={false} />
+      : <JokerArt className={className} label={label} />;
+  }
   return <img className={className} src={cardImageUrl(liarFaceCard(face, variant))} alt={label} draggable={false} />;
 }

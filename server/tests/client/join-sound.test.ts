@@ -3,6 +3,11 @@ import type { ChatMessageEvent } from '../../../shared/src/types';
 import { JOIN_NOTES, createTurnSound } from '../../../client/src/audio/turn-sound';
 import { isJoinCue } from '../../../client/src/audio/join-cue';
 
+vi.mock('../../../client/src/stores/account-store', async () => {
+  const { create } = await import('zustand');
+  return { useAccountStore: create(() => ({ account: null })) };
+});
+
 function joinEvent(overrides: Partial<ChatMessageEvent['message']> = {}, roomCode = 'ROOM'): ChatMessageEvent {
   return {
     roomCode,

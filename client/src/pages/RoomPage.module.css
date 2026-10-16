@@ -214,7 +214,7 @@
 }
 
 .expandedSeats { grid-template-rows: repeat(2, minmax(0, 1fr)); }
-.expandedSeats .seatSlot { padding: var(--spacing-sm); container-type: size; }
+.expandedSeats .seatSlot { padding: var(--spacing-sm); container-type: size; --frame-scale: 0.9; }
 .expandedSeats .seatSlot > [data-player-identity] { gap: var(--spacing-xs); padding: var(--spacing-xs) 0; }
 .expandedSeats .seatSlot > [data-player-identity] > [role='img'] {
   width: clamp(1.5rem, 25cqh, 3rem);
@@ -284,6 +284,9 @@
   box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--color-primary) 8%, transparent);
   transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
   position: relative;
+  /* The equipped seat frame is drawn just inside the slot border, so the grid never clips it. */
+  --frame-out: -3px;
+  --frame-scale: 1.25;
 }
 
 .seatSlot:hover {
@@ -651,7 +654,7 @@
   }
   .roomLayout .seatLayout:has(.botDifficulty) { grid-auto-rows: minmax(13rem, 1fr); }
   .seatStrip { gap: 6px; }
-  .seatSlot, .expandedSeats .seatSlot { padding: 6px; }
+  .seatSlot, .expandedSeats .seatSlot { padding: 6px; --frame-scale: 0.7; }
   .seatSlot > * { flex-shrink: 0; }
   .seatSlot > [data-player-identity] { padding: 4px 0; gap: 6px; }
   .seatSlot > [data-player-identity] > [role='img'],

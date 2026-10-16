@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AccountProfile, PlayerInfo, RoomInfo } from '@shared/types';
-import { CARD_BACKS, NAMEPLATES, SEAT_BACKGROUNDS, TABLE_BACKGROUNDS } from '@shared/constants';
+import { CARD_BACKS, EQUIPMENT_SLOTS, NAMEPLATES, SEAT_BACKGROUNDS, TABLE_BACKGROUNDS } from '@shared/constants';
 
 const BACKGROUND = `${'a'.repeat(64)}.webp`;
 const CARD_BACK = `${'b'.repeat(64)}.png`;
@@ -57,7 +57,9 @@ import { cardBackStyle, seatBackgroundStyle, tableBackgroundStyle } from '../../
 import { shopArtworkUrl } from '../../../client/src/shop-art';
 import { Nameplate } from '../../../client/src/components/Nameplate';
 import { PlayerLink } from '../../../client/src/components/PlayerLink';
-import { EquipmentSettings } from '../../../client/src/components/EquipmentSettings';
+import { EquipmentSettings, equipmentChoices } from '../../../client/src/components/EquipmentSettings';
+import { AccountProfilePreview } from '../../../client/src/components/AccountProfilePreview';
+import borderStyles from '../../../client/src/components/AvatarBorder.module.css';
 import { GameShell } from '../../../client/src/games/GameShell';
 import { RoomPage } from '../../../client/src/pages/RoomPage';
 import roomStyles from '../../../client/src/pages/RoomPage.module.css';
@@ -190,16 +192,56 @@ describe('personal account appearance', () => {
   });
 
   it('should show only owned equipment and keep uploaded images available', () => {
-    const html = renderToStaticMarkup(createElement(EquipmentSettings, { account: {
+    useI18nStore.getState().setLocale('en');
+    const account = {
       ...state.account, ownedShopItems: ['card-back-aurora', 'table-tide', 'nameplate-sakura'],
-      cardBackStyle: 'card-back-aurora',
-    } as AccountProfile }));
-    expect(html).toContain('value="card-back-aurora" selected=""');
-    expect(html).toContain('value="table-tide"');
-    expect(html).toContain('value="nameplate-sakura"');
-    expect(html).not.toContain('value="card-back-tide"');
-    expect(html).not.toContain('value="seat-sakura"');
-    expect(html.match(/<option value=""/g)).toHaveLength(4);
+      ownedAchievementNameplates: ['nameplate-table-traveler'], cardBackStyle: 'card-back-aurora', chipStyle: 'chips-tide',
+    } as AccountProfile;
+    const choices = equipmentChoices(account);
+    expect(choices.map((choice) => choice.field).sort()).toEqual(Object.keys(EQUIPMENT_SLOTS).sort());
+    const values = Object.fromEntries(choices.map((choice) => [choice.field, choice.options.map((option) => option.value)]));
+    expect(values.cardBackStyle).toEqual(['', 'card-back-aurora']);
+    expect(values.tableBackgroundStyle).toEqual(['', 'table-tide']);
+    expect(values.nameplate).toEqual(['', 'nameplate-table-traveler', 'nameplate-sakura']);
+    expect(values.seatBackgroundStyle).toEqual(['']);
+    // An equipped but unowned value is shown as unequipped instead of an invalid selection.
+    expect(choices.find((choice) => choice.field === 'chipStyle')?.value).toBe('');
+    expect(choices.find((choice) => choice.field === 'cardBackStyle')?.value).toBe('card-back-aurora');
+    const empty = Object.fromEntries(choices.map((choice) => [choice.field, choice.options[0].label]));
+    expect(empty).toMatchObject({ cardBackStyle: 'shop.useUpload', nameplate: 'shop.noNameplate', soundPack: 'shop.useDefault' });
+    expect(Object.values(empty).filter((label) => label === 'shop.useDefault')).toHaveLength(6);
+    const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(EquipmentSettings, { account })));
+    expect(html).toContain('value="card-back-aurora"');
+    expect(html.match(/role="combobox"/g)).toHaveLength(choices.length);
+    expect(html).toContain('href="/shop"');
+  });
+
+  it('should preview every equippable type with its visibility', () => {
+    useI18nStore.getState().setLocale('en');
+    const render = (equipment: Partial<AccountProfile>): string => renderToStaticMarkup(createElement(MemoryRouter, null,
+      createElement(AccountProfilePreview, {
+        account: { ...state.account, ...equipment } as AccountProfile, nickname: 'Alice', avatar: 'cat', color: '#123456',
+        appearance: {},
+      })));
+    const equipped = render({ seatFrame: 'seat-frame-tide', chatFrame: 'chat-frame-lotus', victoryEffect: 'victory-frost',
+      nameplate: 'nameplate-tide' });
+    for (const heading of ['Your table', 'Waiting-room seat', 'Chat message', 'Victory effect', 'Sounds']) {
+      expect(equipped).toContain(`<h3>${heading}</h3>`);
+    }
+    expect(equipped.match(/>Public</g)).toHaveLength(3);
+    expect(equipped.match(/>Private</g)).toHaveLength(2);
+    expect(equipped.match(/data-seat-frame="tide"/g)).toHaveLength(2);
+    expect(equipped).toContain('data-chat-frame="chat-frame-lotus"');
+    expect(equipped).not.toContain('No victory effect equipped');
+    const plain = render({});
+    expect(plain).not.toContain('data-seat-frame');
+    expect(plain).not.toContain('data-chat-frame');
+    expect(plain).toContain('No victory effect equipped');
+    expect(plain).toContain('href="/shop?type=victoryEffect"');    // Every avatar in the preview wears the equipped border, as it does at the table and in chat.
+    const bordered = render({ avatarBorder: 'gold', victoryEffect: 'victory-frost' });
+    const avatars = bordered.match(/data-avatar-size=/g)?.length ?? 0;
+    expect(avatars).toBe(4);
+    expect(bordered.split(` ${borderStyles.equipped} `)).toHaveLength(avatars + 1);
   });
 
   it('should display cosmetic titles beside public player identities and hide unequipped titles', () => {

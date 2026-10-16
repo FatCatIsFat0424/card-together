@@ -1,3 +1,14 @@
+import { getActiveSoundPack } from '../cosmetics/sound-packs/active-sound-pack';
+import { notesToCue } from './sound-pack';
+import type { ToneNotes } from './sound-pack';
+import { createVoiceTracker, renderCue } from './sound-synth';
+
+export type { ToneNotes } from './sound-pack';
+export { JOIN_NOTES } from './classic-sound-pack';
+
+/** Which cue of the equipped sound pack a `TurnSound` plays. */
+export type TurnCue = 'turn' | 'join';
+
 export interface TurnSound {
   ready: () => boolean;
   unlock: () => void;
@@ -6,21 +17,15 @@ export interface TurnSound {
   dispose: () => void;
 }
 
-/** Seconds from the cue start and frequency in Hz for each tone. */
-export type ToneNotes = readonly (readonly [offset: number, frequency: number])[];
-
-const TURN_NOTES: ToneNotes = [[0, 660], [0.12, 880]];
-/** A rising three-note cue, distinct from the turn reminder, for a player joining the room. */
-export const JOIN_NOTES: ToneNotes = [[0, 523], [0.1, 659], [0.2, 784]];
-
-/** A short original tone cue, independent of the music player. */
-export function createTurnSound(notes: ToneNotes = TURN_NOTES): TurnSound {
+/**
+ * A short original tone cue, independent of the music player. A named cue follows the equipped sound pack at play
+ * time; explicit notes always play as plain classic tones.
+ */
+export function createTurnSound(cue: TurnCue | ToneNotes = 'turn'): TurnSound {
   let context: AudioContext | null = null;
   let disposed = false;
-  const voices = new Set<() => void>();
-  const stop = (): void => {
-    for (const release of voices) release();
-  };
+  const voices = createVoiceTracker();
+  const stop = voices.stopAll;
   return {
     ready: () => !disposed && context?.state === 'running',
     unlock: () => {
@@ -34,29 +39,7 @@ export function createTurnSound(notes: ToneNotes = TURN_NOTES): TurnSound {
       if (disposed || context?.state !== 'running') return;
       stop();
       try {
-        for (const [offset, frequency] of notes) {
-          const oscillator = context.createOscillator();
-          const gain = context.createGain();
-          const release = (): void => {
-            oscillator.onended = null;
-            try { oscillator.stop(); } catch { /* The voice may have already ended. */ }
-            oscillator.disconnect();
-            gain.disconnect();
-            voices.delete(release);
-          };
-          voices.add(release);
-          oscillator.onended = release;
-          oscillator.type = 'sine';
-          oscillator.frequency.value = frequency;
-          const start = context.currentTime + offset;
-          gain.gain.setValueAtTime(0, start);
-          gain.gain.linearRampToValueAtTime(0.18, start + 0.015);
-          gain.gain.exponentialRampToValueAtTime(0.001, start + 0.17);
-          oscillator.connect(gain);
-          gain.connect(context.destination);
-          oscillator.start(start);
-          oscillator.stop(start + 0.18);
-        }
+        renderCue(context, typeof cue === 'string' ? getActiveSoundPack()[cue] : notesToCue(cue), voices.track);
       } catch { stop(); }
     },
     stop,

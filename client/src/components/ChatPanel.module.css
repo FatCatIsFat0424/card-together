@@ -137,6 +137,13 @@
   line-height: 1.55;
 }
 
+/* A frame hugs its message instead of stretching across the whole column. */
+.chatBody > .chatContent[data-chat-frame] {
+  align-self: flex-start;
+  max-width: 100%;
+  margin: 6px 0 4px;
+}
+
 .chatInputRow {
   display: flex;
   min-height: 44px;

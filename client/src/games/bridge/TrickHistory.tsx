@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import type { Seat, TrickRecord } from '@shared/types';
-import { cardImageUrl } from '../../cards';
+import { useCardFaceUrl } from '../../cosmetics/card-faces/use-card-face';
 import { useI18nStore } from '../../stores/i18n-store';
 import styles from './TrickHistory.module.css';
 
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 
 export function TrickHistory({ tricks }: { tricks: readonly TrickRecord[] }): ReactNode {
+  const cardImageUrl = useCardFaceUrl();
   const { t } = useI18nStore();
   if (tricks.length === 0) return null;
   return (

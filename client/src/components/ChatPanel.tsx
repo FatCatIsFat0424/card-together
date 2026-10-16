@@ -13,6 +13,7 @@ import { ChatMessageBody, EmojiPickerSections } from './ChatEmoji';
 import type { StickerPayload } from './ChatEmoji';
 import { AppIcon } from './AppIcon';
 import { Nameplate } from './Nameplate';
+import { ChatFrame } from '../cosmetics/chat-frames/ChatFrame';
 import { formatChatTime } from './chat-time';
 import styles from './ChatPanel.module.css';
 
@@ -138,7 +139,9 @@ export function ChatPanel({ onCollapse }: ChatPanelProps): ReactNode {
                   title={t('chat.observerTitle')}>{t('chat.observerTag')}</span>}
                 <ChatTime timestamp={message.timestamp} />
               </div>
-              <div className={styles.chatContent}><ChatMessageBody message={message} /></div>
+              <ChatFrame id={message.sender.chatFrame} className={styles.chatContent}>
+                <ChatMessageBody message={message} />
+              </ChatFrame>
             </div>
           </div>
         ))}

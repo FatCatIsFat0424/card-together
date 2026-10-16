@@ -6,7 +6,7 @@ import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import { isNapoleonJoker, sameNapoleonCard } from '@shared/rules/napoleon';
 import type { NapoleonCard, NapoleonVisibleState } from '@shared/types';
 import { useI18nStore } from '../../stores/i18n-store';
-import { napoleonCardImageUrl } from './napoleon-card-art';
+import { useNapoleonCardImageUrl } from './napoleon-card-art';
 import {
   NAPOLEON_PICKER_GROUPS, napoleonCardText, napoleonPickerCards, napoleonPickerGroup, napoleonPickerNote, napoleonTrump,
 } from './napoleon-view';
@@ -19,6 +19,7 @@ export function SecretaryPicker({ game, disabled, onConfirm }: {
   disabled: boolean;
   onConfirm: (card: NapoleonCard) => void;
 }): ReactNode {
+  const napoleonCardImageUrl = useNapoleonCardImageUrl();
   const { t } = useI18nStore();
   const [picked, setPicked] = useState<NapoleonCard | null>(null);
   const [groupPick, setGroupPick] = useState<NapoleonPickerGroup | null>(null);

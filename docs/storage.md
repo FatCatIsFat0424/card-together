@@ -138,8 +138,9 @@
   Both the service and Repository validate the item type and ownership before equipping.
   The database rejects unknown IDs, duplicate inventories, and unowned equipment.
 - Official image styles override retained uploads while equipped. Null restores the
-  upload or theme without losing media. Public profiles contain the cosmetic nameplate;
-  room identities also contain the seat style. Inventories and card/table styles remain
+  upload or theme without losing media. Public profiles contain the cosmetic nameplate and
+  chat frame; room identities also contain the seat style, seat frame, and victory effect.
+  Inventories, card backs and faces, table styles, sound packs, and chip styles remain
   owner-only. Purchases and equipment changes refresh every connected owner tab.
 - Sticker messages store stable catalog IDs. Sending requires the containing pack;
   recipients can render them without ownership. Existing emoji and uploaded stickers
@@ -157,6 +158,7 @@ Optional fields added without a schema change; absent values use the default:
 | `AccountRecord.achievements`, `ownedAchievementNameplates` | Zero counters / empty earned inventory | Counters do not advance; equipped earned titles in accounts or runtime are unsupported. Restore a compatible complete backup before rollback |
 | `ownedAvatarBorders`, `avatarBorder` | Empty / original avatar | Keep the fields; cannot show or manage borders |
 | `ownedShopItems`, official image style fields, `nameplate` | Empty inventory / uploaded image or theme / no nameplate | Cannot show or manage products; older profile writes may drop equipment |
+| `cardFaceStyle`, `soundPack`, `chipStyle`, `seatFrame`, `victoryEffect`, `chatFrame` (accounts, runtime `PlayerInfo`) | Built-in design | Unsupported: equipped values fail older validation. Restore a compatible complete backup before rollback |
 | `shopSticker` in room/private messages | Absent | Unsupported: restore a compatible complete backup before rollback |
 | `seatBackground` | Theme artwork | Ignore it; data and media stay |
 | `RoomInfo.napoleonOptions` | Joker summoning on | Unsupported with Napoleon state; see below |

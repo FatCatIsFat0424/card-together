@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { getPresentationFrames } from '@shared/game-presentation';
 import type { PresentationFrame } from '@shared/game-presentation';
 import type {
@@ -14,6 +14,10 @@ import { napoleonTrickSlot } from '../../../client/src/games/napoleon/NapoleonTr
 import { deriveRoundHistory } from '../../../client/src/games/round-history';
 import { matchOutcome } from '../../../client/src/match-history';
 import { useGameStore } from '../../../client/src/stores/game-store';
+
+vi.mock('../../../client/src/cosmetics/card-faces/use-card-face', () => ({
+  useCardFaceUrl: () => () => '/card.svg', useJokerFaceUrl: () => null,
+}));
 
 const card = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit });
 const BIG: NapoleonCard = { joker: 'big' };

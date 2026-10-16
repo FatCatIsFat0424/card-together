@@ -55,3 +55,6 @@ Licensed under LGPL 3 - www.gnu.org/copyleft/lesser.html
 Source: https://github.com/richardschneider/cardsJS (cards/ directory), unmodified.
 These SVG files are LGPL-3.0-or-later (see COPYING.LESSER.txt and COPYING.txt);
 the rest of Card Together remains under its MIT license.
+The optional "Four-color classic" deck (client/src/cosmetics/card-faces/four-color.ts)
+recolors these files at runtime (diamonds blue, clubs green). Those modified faces are
+derivative works of this library and remain under LGPL-3.0-or-later.

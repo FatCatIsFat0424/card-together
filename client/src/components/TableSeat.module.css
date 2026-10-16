@@ -276,6 +276,17 @@
   animation: turnRing 1.6s ease-out infinite;
 }
 
+/* An equipped seat frame replaces the theme turn glow: the frame layer draws the halo, the plate keeps a flat tint. */
+.framed.turn .plate {
+  border-color: var(--frame-bar);
+  background: color-mix(in srgb, var(--frame-bar) 14%, var(--bg-surface));
+  box-shadow: inset 0 0 0 1px var(--frame-bar), var(--shadow-md);
+  animation: none;
+}
+
+.framed .turnBar { background: color-mix(in srgb, var(--frame-bar) 25%, transparent); }
+.framed .turnBase { background: var(--frame-bar); }
+
 @keyframes turnRing {
   0% {
     box-shadow: inset 0 0 0 1px var(--turn-glow),
@@ -432,6 +443,7 @@
   .plate {
     --avatar: 32px;
     --pad: 5px;
+    --frame-scale: 0.85;
     align-items: center;
     gap: 2px;
     padding: var(--pad) 4px calc(var(--pad) + 3px);
@@ -480,7 +492,7 @@
     --seat-card-width: calc(28px * var(--playing-card-scale));
     --card-peek: calc(var(--seat-card-width) * 0.34);
   }
-  .plate { --avatar: 26px; --pad: 4px; padding-inline: 3px; }
+  .plate { --avatar: 26px; --pad: 4px; --frame-scale: 0.7; padding-inline: 3px; }
   .name { font-size: var(--text-xs); }
   .chip { padding: 0 4px; }
   .bigCount { font-size: var(--text-sm); }
@@ -496,7 +508,7 @@
     --card-peek: calc(var(--seat-card-width) * 0.34);
   }
   .top { padding-top: 5px; }
-  .plate { --avatar: 26px; --pad: 3px; gap: 1px; padding-right: 6px; }
+  .plate { --avatar: 26px; --pad: 3px; --frame-scale: 0.75; gap: 1px; padding-right: 6px; }
   .name { font-size: var(--text-xs); line-height: 1.3; }
   .chip { padding: 0 4px; line-height: 1.4; }
   .bigCount { font-size: var(--text-sm); line-height: 1.3; }

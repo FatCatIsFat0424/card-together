@@ -18,6 +18,7 @@ import { LEGACY_SEVENS_OPTIONS, SEVENS_SLAY_EFFECTS, sevensSlayEffect } from '@s
 import { DEFAULT_NAPOLEON_OPTIONS } from '@shared/napoleon-options';
 import { socket } from '../socket';
 import { seatBackgroundStyle, tableBackgroundStyle } from '../account-appearance';
+import { SeatFrame, seatFrameHostClass } from '../cosmetics/seat-frames/SeatFrame';
 import { useAccountStore } from '../stores/account-store';
 import { usePlayerStore } from '../stores/player-store';
 import { useRoomStore } from '../stores/room-store';
@@ -478,8 +479,9 @@ export function RoomPage(): ReactNode {
             seatDrag.drag?.targetKey === seatCard.key ? styles.dropTarget : '',
             player?.id === playerId ? styles.seatSlotMine : ''].filter(Boolean).join(' ');
           if (player) return (
-            <div key={seatCard.key} className={`${className} ${seatStyle ? styles.customSeat : ''}`} style={seatStyle}
-              data-room-drop={seatCard.key} onPointerDown={(event) => seatDrag.start(event, player)}>
+            <div key={seatCard.key} className={`${className} ${seatStyle ? styles.customSeat : ''} ${seatFrameHostClass(player.seatFrame)}`}
+              style={seatStyle} data-room-drop={seatCard.key} onPointerDown={(event) => seatDrag.start(event, player)}>
+              <SeatFrame frame={player.seatFrame} />
               {dragHandle(player)}
               <PlayerLink player={player} size="medium" />
               <div className={styles.seatStatus}>

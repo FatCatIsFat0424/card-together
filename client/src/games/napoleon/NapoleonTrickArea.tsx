@@ -5,7 +5,7 @@ import type { GameSeat, NapoleonTrick } from '@shared/types';
 import { SUIT_SYMBOLS } from '@shared/constants';
 import { useI18nStore } from '../../stores/i18n-store';
 import { useSeatName } from '../seat-names';
-import { napoleonCardImageUrl } from './napoleon-card-art';
+import { useNapoleonCardImageUrl } from './napoleon-card-art';
 import { napoleonCardText } from './napoleon-view';
 import styles from './NapoleonTrickArea.module.css';
 
@@ -26,6 +26,7 @@ export function NapoleonTrickArea({ trick, seats, bottomSeat, myTurn }: {
   bottomSeat: GameSeat;
   myTurn: boolean;
 }): ReactNode {
+  const napoleonCardImageUrl = useNapoleonCardImageUrl();
   const { t } = useI18nStore();
   const name = useSeatName();
   const jokerName = (joker: 'big' | 'small'): string => t(`napoleon.joker.${joker}`);

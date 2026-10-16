@@ -1,7 +1,7 @@
 // ─── TopBar: global top bar (navigation, game info, voice, music, theme, locale) ───
 
 import { lazy, Suspense, useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { AnimationEvent, ReactNode } from 'react';
 import Tooltip from '@mui/material/Tooltip';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { GAME_COIN_REWARD } from '@shared/constants';
@@ -11,6 +11,8 @@ import { useI18nStore } from '../stores/i18n-store';
 import { useMusicStore } from '../stores/music-store';
 import { useRoomStore } from '../stores/room-store';
 import { useVoiceStore } from '../stores/voice-store';
+import { useActiveIndicator } from '../hooks/use-active-indicator';
+import { useExitPresence } from '../hooks/use-exit-presence';
 import { useJoinSound } from '../hooks/use-join-sound';
 import { useTurnSound } from '../hooks/use-turn-sound';
 import { LanguageSwitch } from './LanguageSwitch';
@@ -19,7 +21,9 @@ import { ThemeSwitch } from './ThemeSwitch';
 import { AppIcon } from './AppIcon';
 import { RoomCodeButton } from './RoomCodeButton';
 import { NotificationPanel } from './NotificationPanel';
+import { nextReturnLocation, togglePageHref, togglePageOf } from './topbar-toggle-page';
 import { messageUnreadCount, notificationUnreadCount, useSocialStore } from '../stores/social-store';
+import { closeMessagesWindow } from '../stores/messages-window-store';
 import styles from './TopBar.module.css';
 
 const VoicePanel = lazy(() => import('./VoicePanel')
@@ -46,11 +50,22 @@ export function TopBar(): ReactNode {
   const [open, setOpen] = useState<Popover | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const here = `${pathname}${search}`;
+  const [lastLocation, setLastLocation] = useState(here);
+  const [returnTo, setReturnTo] = useState(() => nextReturnLocation('/', pathname, search));
+  const { exiting, finishExit } = useExitPresence(open);
+  const { containerRef: navRef, indicatorRef: navIndicatorRef } =
+    useActiveIndicator<HTMLElement, HTMLSpanElement>('a[aria-current="page"]', pathname);
+  const togglePage = togglePageOf(pathname);
   const inGame = pathname.startsWith('/game/');
   const showLinks = Boolean(accountId);
   const showVoice = Boolean(accountId && roomCode);
 
-  useEffect(() => { setOpen(null); }, [pathname, search]);
+  if (lastLocation !== here) {
+    setLastLocation(here);
+    setReturnTo((previous) => nextReturnLocation(previous, pathname, search));
+    setOpen(null);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -80,21 +95,38 @@ export function TopBar(): ReactNode {
 
   const toggle = (popover: Popover): void => setOpen((current) => current === popover ? null : popover);
 
+  const shown = (popover: Popover): boolean => open === popover || exiting === popover;
+
+  // Closed panels stay mounted, inert, until their exit animation ends.
+  const panelProps = (popover: Popover, className: string): {
+    className: string; inert?: boolean; onAnimationEnd: (event: AnimationEvent<HTMLElement>) => void;
+  } => ({
+    className: `${className} ${exiting === popover ? styles.popoverExit : ''}`,
+    inert: exiting === popover || undefined,
+    onAnimationEnd: (event) => { if (event.target === event.currentTarget) finishExit(popover); },
+  });
+
   const requestSignOut = (): void => {
+    setConfirmSignOut(inActiveGame);
     if (inActiveGame) {
       setError('');
-      setConfirmSignOut(true);
       setOpen('signOut');
     } else void signOut();
   };
 
   const signOut = async (): Promise<void> => {
-    setConfirmSignOut(false);
+    // Close the confirmation through its exit animation while the request runs.
+    setOpen((current) => current === 'signOut' ? null : current);
     setBusy(true);
     setError('');
     const result = await apiRequest('/api/auth/logout', 'POST');
-    if (result.success) clearAccount();
-    else { setError(result.error); setOpen('signOut'); }
+    if (result.success) {
+      setConfirmSignOut(false);
+      clearAccount();
+    } else {
+      setError(result.error);
+      setOpen('signOut');
+    }
     setBusy(false);
   };
 
@@ -111,7 +143,10 @@ export function TopBar(): ReactNode {
       <NavLink to="/" className={styles.brand}>
         <span aria-hidden="true">♠</span><span className={inGame ? styles.brandTextGame : undefined}> Card Together</span>
       </NavLink>
-      {showLinks && <nav className={styles.links}>{links}</nav>}
+      {showLinks && <nav ref={navRef} className={styles.links}>
+        <span ref={navIndicatorRef} className={styles.linkIndicator} aria-hidden="true" />
+        {links}
+      </nav>}
       {inGame && roomCode && <RoomCodeButton key={roomCode} code={roomCode} compact />}
       <div className={styles.actions}>
         {accountId && <Tooltip title={t('shop.earn', { n: String(GAME_COIN_REWARD) })} describeChild arrow>
@@ -120,7 +155,9 @@ export function TopBar(): ReactNode {
             <AppIcon name="coins" /><span>{coins.toLocaleString()}</span>
           </span>
         </Tooltip>}
-        {accountId && <Link to="/achievements" className={`${styles.iconBtn} touch-target`}
+        {accountId && <Link to={togglePageHref('achievements', togglePage, returnTo)}
+          className={`${styles.iconBtn} touch-target ${togglePage === 'achievements' ? styles.iconCurrent : ''}`}
+          aria-current={togglePage === 'achievements' ? 'page' : undefined}
           aria-label={t('achievements.title')} title={t('achievements.title')} onClick={() => setOpen(null)}>
           <AppIcon name="trophy" />
         </Link>}
@@ -131,13 +168,19 @@ export function TopBar(): ReactNode {
             <AppIcon name="notifications" />
             {notificationCount > 0 && <span className={styles.badge} aria-hidden="true">{notificationCount > 99 ? '99+' : notificationCount}</span>}
           </button>
-          {open === 'notifications' && <div id="social-notifications" className={styles.popover} data-popover-panel tabIndex={-1}>
+          {shown('notifications') && <div id="social-notifications" {...panelProps('notifications', styles.popover)}
+            data-popover-panel tabIndex={-1}>
             <NotificationPanel />
           </div>}
         </div>}
-        {accountId && <Link to="/messages" className={`${styles.iconBtn} touch-target`}
+        {accountId && <Link to={togglePageHref('messages', togglePage, returnTo)}
+          className={`${styles.iconBtn} touch-target ${togglePage === 'messages' ? styles.iconCurrent : ''}`}
+          aria-current={togglePage === 'messages' ? 'page' : undefined}
           aria-label={messageCount > 0 ? t('messages.unreadCount', { n: String(messageCount) }) : t('messages.title')}
-          title={t('messages.title')} onClick={() => setOpen(null)}>
+          title={t('messages.title')} onClick={(event) => {
+            setOpen(null);
+            if (togglePage === 'messages') closeMessagesWindow(event, returnTo);
+          }}>
           <AppIcon name="chat" />
           {messageCount > 0 && <span className={styles.badge} aria-hidden="true">{messageCount > 99 ? '99+' : messageCount}</span>}
         </Link>}
@@ -148,7 +191,8 @@ export function TopBar(): ReactNode {
             {(voiceStatus === 'joined' || voiceStatus === 'joining') &&
               <span className={voiceStatus === 'joined' ? styles.dotJoined : styles.dotJoining} />}
           </button>
-          <div className={`${styles.popover} ${open === 'voice' ? '' : styles.hidden}`} data-popover-panel tabIndex={-1}>
+          <div {...panelProps('voice', `${styles.popover} ${shown('voice') ? '' : styles.hidden}`)}
+            data-popover-panel tabIndex={-1}>
             <Suspense fallback={null}><VoicePanel /></Suspense>
           </div>
         </div>}
@@ -158,7 +202,9 @@ export function TopBar(): ReactNode {
             aria-label={t('topbar.music')} title={t('topbar.music')}>
             <AppIcon name="music" />
           </button>
-          {open === 'music' && <div className={styles.popover} data-popover-panel tabIndex={-1}><MusicControl /></div>}
+          {shown('music') && <div {...panelProps('music', styles.popover)} data-popover-panel tabIndex={-1}>
+            <MusicControl />
+          </div>}
         </div>
         <div className={styles.prefs}>
           <ThemeSwitch />
@@ -169,7 +215,7 @@ export function TopBar(): ReactNode {
             aria-expanded={open === 'menu'} aria-label={t('topbar.menu')} title={t('topbar.menu')}>
             <AppIcon name="menu" />
           </button>
-          {open === 'menu' && <div className={`${styles.popover} ${styles.menu}`} data-popover-panel tabIndex={-1}>
+          {shown('menu') && <div {...panelProps('menu', `${styles.popover} ${styles.menu}`)} data-popover-panel tabIndex={-1}>
             {showLinks && <nav className={styles.menuLinks}>{links}</nav>}
             <ThemeSwitch />
             <LanguageSwitch />
@@ -180,13 +226,15 @@ export function TopBar(): ReactNode {
         </div>
         {accountId && <div className={styles.group} data-popover="signOut">
           <button type="button" className={`${styles.iconBtn} ${styles.signOutBtn} touch-target`} onClick={requestSignOut} disabled={busy}
-            aria-expanded={open === 'signOut' && confirmSignOut}
+            aria-expanded={open === 'signOut' && confirmSignOut && !error}
             aria-label={t('topbar.signOut')} title={t('topbar.signOut')}>
             <AppIcon name="logout" />
             <span className={styles.signOutLabel}>{t('topbar.signOut')}</span>
           </button>
-          {open === 'signOut' && error && <p className={`${styles.popover} ${styles.error}`} role="alert">{error}</p>}
-          {open === 'signOut' && !error && confirmSignOut && <div className={`${styles.popover} ${styles.confirm}`}
+          {shown('signOut') && error && <p {...panelProps('signOut', `${styles.popover} ${styles.error}`)} role="alert">
+            {error}
+          </p>}
+          {shown('signOut') && !error && confirmSignOut && <div {...panelProps('signOut', `${styles.popover} ${styles.confirm}`)}
             data-popover-panel tabIndex={-1} role="alertdialog" aria-labelledby="sign-out-confirm">
             <p id="sign-out-confirm">{t('topbar.signOutConfirm')}</p>
             <div className={styles.confirmActions}>

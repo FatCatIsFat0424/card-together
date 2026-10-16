@@ -3,6 +3,11 @@ import {
   disposeCardSounds, playCardSound, playOutSound, playSlashSound, playStartSound, unlockCardSounds,
 } from '../../../client/src/audio/card-sound';
 
+vi.mock('../../../client/src/stores/account-store', async () => {
+  const { create } = await import('zustand');
+  return { useAccountStore: create(() => ({ account: null })) };
+});
+
 interface FakeNode {
   connect: ReturnType<typeof vi.fn>;
   disconnect: ReturnType<typeof vi.fn>;

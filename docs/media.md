@@ -63,7 +63,9 @@ Avatars, seat backgrounds, table backgrounds, card backs, and emoji are uploaded
 
 ## Official cosmetic artwork
 
-- The shop bundles original static SVG artwork under `client/src/assets/shop/`.
+- The shop bundles original static SVG artwork under `client/src/assets/shop/`; card face
+  decks, seat and chat frames, chips, victory effects, and synthesized sound packs are
+  generated in code under `client/src/cosmetics/`.
   Vite resolves asset URLs for the configured application base; these files are not
   uploaded media or site-emoji importer output and consume no upload quota.
 - Official card backs, table backgrounds, and seat backgrounds take precedence over

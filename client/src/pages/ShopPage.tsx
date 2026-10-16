@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { AccountProfile, ShopItem, ShopItemId, ShopItemType } from '@shared/types';
+import type { AccountProfile, EquipmentSlot, ShopItem, ShopItemId, ShopItemType } from '@shared/types';
 import Tooltip from '@mui/material/Tooltip';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
@@ -10,7 +10,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import { apiRequest } from '../api';
-import { GAME_COIN_REWARD } from '@shared/constants';
+import { GAME_COIN_REWARD, equipmentSlotFor } from '@shared/constants';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { SHOP_ITEMS, getShopItem, ownsShopItem } from '../shop-catalog';
@@ -19,30 +19,21 @@ import { AppIcon } from '../components/AppIcon';
 import styles from './ShopPage.module.css';
 
 const BORDER_SERIES = ['ears', 'metal', 'special'] as const;
-const PRODUCT_TYPES = ['avatarBorder', 'cardBack', 'tableBackground', 'seatBackground', 'nameplate', 'stickerPack'] as const;
+const PRODUCT_TYPES = [
+  'avatarBorder', 'nameplate', 'chatFrame', 'stickerPack', 'cardBack', 'cardFace', 'tableBackground', 'chipStyle',
+  'seatBackground', 'seatFrame', 'victoryEffect', 'soundPack',
+] as const satisfies readonly ShopItemType[];
 
-function equipmentPatch(item: ShopItem): Partial<Pick<AccountProfile,
-  'avatarBorder' | 'cardBackStyle' | 'tableBackgroundStyle' | 'seatBackgroundStyle' | 'nameplate'
->> | null {
-  switch (item.type) {
-    case 'avatarBorder': return { avatarBorder: item.id };
-    case 'cardBack': return { cardBackStyle: item.id };
-    case 'tableBackground': return { tableBackgroundStyle: item.id };
-    case 'seatBackground': return { seatBackgroundStyle: item.id };
-    case 'nameplate': return { nameplate: item.id };
-    case 'stickerPack': return null;
-  }
+function equipmentPatch(item: ShopItem): Partial<Pick<AccountProfile, 'avatarBorder' | EquipmentSlot>> | null {
+  if (item.type === 'avatarBorder') return { avatarBorder: item.id };
+  const slot = equipmentSlotFor(item.type);
+  return slot ? { [slot]: item.id } : null;
 }
 
 function equipped(account: AccountProfile, item: ShopItem): boolean {
-  switch (item.type) {
-    case 'avatarBorder': return account.avatarBorder === item.id;
-    case 'cardBack': return account.cardBackStyle === item.id;
-    case 'tableBackground': return account.tableBackgroundStyle === item.id;
-    case 'seatBackground': return account.seatBackgroundStyle === item.id;
-    case 'nameplate': return account.nameplate === item.id;
-    case 'stickerPack': return false;
-  }
+  if (item.type === 'avatarBorder') return account.avatarBorder === item.id;
+  const slot = equipmentSlotFor(item.type);
+  return slot !== null && account[slot] === item.id;
 }
 
 export function ShopPage(): ReactNode {
