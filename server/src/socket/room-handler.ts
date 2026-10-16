@@ -4,8 +4,8 @@ import { isNinetyNineOptions } from '@shared/ninetynine-options';
 import { isBlackjackOptions } from '@shared/blackjack-options';
 import { isNapoleonOptions } from '@shared/napoleon-options';
 import { isBotDifficulty } from '@shared/bot-difficulty';
-import { GAME_TYPES } from '@shared/constants';
-import type { RoomCode, RoomInvite, RoomSeatTarget, Seat } from '@shared/types';
+import { GAME_SEAT_ORDER, GAME_TYPES } from '@shared/constants';
+import type { GameSeat, RoomCode, RoomInvite, RoomSeatTarget, Seat } from '@shared/types';
 import type { SocketContext, TypedSocket } from './context';
 import { actionError, requireRoom, requireSuccess, runAction, leaveCurrentRoom } from './context';
 import * as playerManager from '../managers/player-manager';
@@ -29,10 +29,9 @@ function startPreparedRoom(code: RoomCode, hostId: string): void {
   ));
 }
 
-function requireSeat(payload: { seat: Seat }): Seat {
-  if (!payload || !(['N', 'E', 'S', 'W'] as Seat[]).includes(payload.seat)) {
-    throw actionError('Invalid seat.');
-  }
+/** Any standard or additional seat; the room manager checks that it exists. */
+function requireGameSeat(payload: { seat: GameSeat }): GameSeat {
+  if (!payload || !(GAME_SEAT_ORDER as readonly unknown[]).includes(payload.seat)) throw actionError('Invalid seat.');
   return payload.seat;
 }
 
@@ -267,7 +266,7 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
   }));
 
   socket.on('room:addBot', (payload, callback) => runAction(context, socket, callback, () => {
-    const seat = requireSeat(payload);
+    const seat = requireGameSeat(payload);
     if (payload.difficulty !== undefined && !isBotDifficulty(payload.difficulty)) throw actionError('Invalid bot difficulty.');
     const code = requireRoom(socket);
     requireSuccess(roomManager.addBot(code, socket.data.accountId, seat, payload.difficulty));
@@ -275,14 +274,14 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
   }));
 
   socket.on('room:setBotDifficulty', (payload, callback) => runAction(context, socket, callback, () => {
-    const seat = requireSeat(payload);
+    const seat = requireGameSeat(payload);
     if (!isBotDifficulty(payload.difficulty)) throw actionError('Invalid bot difficulty.');
     requireSuccess(roomManager.setBotDifficulty(requireRoom(socket), socket.data.accountId, seat, payload.difficulty));
     return { success: true };
   }));
 
   socket.on('room:removeBot', (payload, callback) => runAction(context, socket, callback, () => {
-    const seat = requireSeat(payload);
+    const seat = requireGameSeat(payload);
     requireSuccess(roomManager.removeBot(requireRoom(socket), socket.data.accountId, seat));
     return { success: true };
   }));

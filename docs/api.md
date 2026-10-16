@@ -126,10 +126,10 @@ Omitted fields keep their values; invalid values return 400.
 | `room:standUp` | — | Becomes a spectator while waiting |
 | `room:movePlayer` | `{ accountId, target }` | Host moves a human while waiting; `target` is a [`RoomSeatTarget`](../shared/src/types/room.ts) |
 | `room:addSeat`, `room:removeSeat` | — | Host adds an extra seat (eight total, six for Napoleon) or removes the last empty one; waiting Ninety-Nine, Blackjack, Hold'em, Napoleon only |
-| `room:addBot` | `{ seat, difficulty? }` | Host adds a bot while waiting; omitted difficulty means hard |
+| `room:addBot` | `{ seat, difficulty? }` | Host adds a bot to any configured seat (`N`–`W`, or `P5`–`P8` once added) while waiting; omitted difficulty means hard |
 | `room:removeBot` | `{ seat }` | Host removes a bot while waiting |
 | `room:setBotDifficulty` | `{ seat, difficulty }` | Host changes one waiting-room bot to easy or hard; resets human readiness |
-| `room:fillBots` | — | Host fills empty seats with ready bots |
+| `room:fillBots` | — | Host fills every empty seat, additional ones included, with ready bots |
 | `room:ready`, `room:unready` | — | Sets a seated player's readiness while waiting, regardless of current player count; never starts a match |
 | `room:start` | — | Host starts only when all occupied seats are ready and the game's player count is valid |
 | `room:setShuffleSeats` | `{ enabled }` | Host changes automatic seat shuffling while waiting; defaults to false and resets human readiness |

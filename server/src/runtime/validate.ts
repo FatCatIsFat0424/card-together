@@ -1128,7 +1128,7 @@ function room(value: unknown): boolean {
     || (info.additionalSeats.length > 0 && !oneOf(info.gameType, [...EXPANDABLE_ROOM_GAMES]))
     || !info.additionalSeats.every((entry: unknown) => object(entry) && typeof entry.isReady === 'boolean'
       && ((entry.player === null && !entry.isReady) || (player(entry.player) && object(entry.player)
-        && entry.player.isBot !== true && members.includes(String(entry.player.id))))))) return false;
+        && (entry.player.isBot !== true || entry.isReady) && members.includes(String(entry.player.id))))))) return false;
   // Only seated humans vote; spectators are members without a seat.
   const voters = object(info.seats) ? [...Object.values(info.seats),
     ...Array.isArray(info.additionalSeats) ? info.additionalSeats : []].flatMap((entry: unknown) => {
@@ -1787,7 +1787,8 @@ export function isRuntimeSnapshot(value: unknown): value is RuntimeSnapshot {
     const vote = entry.info.abortVote;
     if (vote && ![...vote.yes, ...vote.no].every((id) => occupants.includes(id))) return false;
     for (const id of entry.memberIds) {
-      const bot = seats.map((seat) => entry.info.seats[seat].player).find((player) => player?.id === id && player.isBot);
+      const bot = [...seats.map((seat) => entry.info.seats[seat].player),
+        ...(entry.info.additionalSeats ?? []).map((seat) => seat.player)].find((player) => player?.id === id && player.isBot);
       if (bot) {
         if (players.has(id) || memberships.has(id)) return false;
         memberships.set(id, entry.info.code);

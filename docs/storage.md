@@ -162,7 +162,7 @@ Optional fields added without a schema change; absent values use the default:
 | `shopSticker` in room/private messages | Absent | Unsupported: restore a compatible complete backup before rollback |
 | `seatBackground` | Theme artwork | Ignore it; data and media stay |
 | `RoomInfo.napoleonOptions` | Joker summoning on | Unsupported with Napoleon state; see below |
-| `RoomInfo.additionalSeats` (Ninety-Nine, Blackjack, Hold'em, Napoleon) | Four seats; up to four human-only extras | Unsupported: have players leave extra seats and the host remove them first |
+| `RoomInfo.additionalSeats` (Ninety-Nine, Blackjack, Hold'em, Napoleon) | Four seats; up to four extras holding humans or bots | Unsupported: have players leave extra seats and the host remove them first |
 
 - Ninety-Nine tied results (`winners`) cannot be read by earlier releases.
 - Revisions before Sevens, Chinese Poker, Liar's Deck, Blackjack, Texas Hold'em, or Napoleon

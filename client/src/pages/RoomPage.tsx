@@ -8,9 +8,9 @@ import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { EXPANDABLE_ROOM_GAMES, GAME_TYPES, MAX_SPECTATORS, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import { EXPANDABLE_ROOM_GAMES, GAME_SEAT_ORDER, GAME_TYPES, MAX_SPECTATORS, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import type {
-  BlackjackOptions, BotDifficulty, NapoleonOptions, GameType, NinetyNineOptions, PlayerInfo, RoomInfo, RoomSeatTarget, Seat, SeatInfo, SevensOptions, TimeControl,
+  BlackjackOptions, BotDifficulty, GameSeat, NapoleonOptions, GameType, NinetyNineOptions, PlayerInfo, RoomInfo, RoomSeatTarget, Seat, SeatInfo, SevensOptions, TimeControl,
 } from '@shared/types';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import { BOT_DIFFICULTIES, isBotDifficulty } from '@shared/bot-difficulty';
@@ -48,6 +48,8 @@ interface RoomSeatCard {
   readonly info: SeatInfo;
   readonly seat?: Seat;
   readonly additionalIndex?: number;
+  /** Seat a bot is added to or managed in */
+  readonly gameSeat: GameSeat;
 }
 
 export function RoomPage(): ReactNode {
@@ -84,7 +86,8 @@ export function RoomPage(): ReactNode {
   const blocked = busy || !connectionReady;
   const isReady = mySeat ? (roomInfo ? roomSeatInfo(roomInfo, mySeat)?.isReady : false) ?? false : false;
   const isHost = Boolean(playerId) && roomInfo?.hostId === playerId;
-  const hasEmptySeat = roomInfo ? Object.values(roomInfo.seats).some(({ player }) => !player) : false;
+  const hasEmptySeat = roomInfo
+    ? [...Object.values(roomInfo.seats), ...roomInfo.additionalSeats ?? []].some(({ player }) => !player) : false;
   const canMovePlayers = isHost && !blocked && roomInfo?.status === 'waiting';
   const handleResult = (timeout: Error | null, result?: { success: boolean; error?: string }): void => {
     setBusy(false);
@@ -248,17 +251,17 @@ export function RoomPage(): ReactNode {
     setError('');
     socket.timeout(10000).emit('room:setNapoleonOptions', options, handleResult);
   };
-  const addBot = (seat: Seat): void => {
+  const addBot = (seat: GameSeat): void => {
     setBusy(true);
     setError('');
     socket.timeout(10000).emit('room:addBot', { seat }, handleResult);
   };
-  const removeBot = (seat: Seat): void => {
+  const removeBot = (seat: GameSeat): void => {
     setBusy(true);
     setError('');
     socket.timeout(10000).emit('room:removeBot', { seat }, handleResult);
   };
-  const setBotDifficulty = (seat: Seat, difficulty: BotDifficulty): void => {
+  const setBotDifficulty = (seat: GameSeat, difficulty: BotDifficulty): void => {
     setBusy(true);
     setError('');
     socket.timeout(10000).emit('room:setBotDifficulty', { seat, difficulty }, handleResult);
@@ -301,9 +304,11 @@ export function RoomPage(): ReactNode {
   const additionalSeats = roomInfo.additionalSeats ?? [];
   const entering = enteredRoom !== roomInfo.code && !reducedMotion && !systemReducedMotion;
   const seatCards: RoomSeatCard[] = [
-    ...SEAT_ORDER_CLOCKWISE.map((seat) => ({ key: seat, label: t(`seat.${seat}`), info: roomInfo.seats[seat], seat })),
+    ...SEAT_ORDER_CLOCKWISE.map((seat) => ({ key: seat, label: t(`seat.${seat}`), info: roomInfo.seats[seat], seat,
+      gameSeat: seat })),
     ...additionalSeats.map((info, index) => ({ key: `additional-${index}`,
-      label: t('room.additionalSeat', { n: String(index + 5) }), info, additionalIndex: index })),
+      label: t('room.additionalSeat', { n: String(index + 5) }), info, additionalIndex: index,
+      gameSeat: GAME_SEAT_ORDER[index + 4] })),
   ];
   const spectators = roomInfo.spectators ?? [];
   const expandableSeats = EXPANDABLE_ROOM_GAMES.includes(roomInfo.gameType);
@@ -491,16 +496,14 @@ export function RoomPage(): ReactNode {
                 <span className={seatInfo.isReady || player.isBot ? styles.seatReadyBadge : styles.seatNotReadyBadge}>
                   {t(seatInfo.isReady || player.isBot ? 'room.ready.status' : 'room.notReady')}</span>
               </div>
-              {isHost && player.isBot && seatCard.seat && <div className={styles.botControls}>
+              {isHost && player.isBot && <div className={styles.botControls}>
                 <label className={styles.botDifficulty}>
                   <span className={styles.srOnly}>{t('room.botDifficulty')}</span>
                   <Select size="small" className={styles.ruleSelect} value={player.botDifficulty ?? 'hard'}
                     inputProps={{ 'aria-label': t('room.botDifficultyFor', { nickname: player.nickname }) }}
                     MenuProps={{ slotProps: { paper: { className: styles.selectMenu } } }}
                     disabled={blocked || roomInfo.status !== 'waiting'} onChange={(event) => {
-                      if (seatCard.seat && isBotDifficulty(event.target.value)) {
-                        setBotDifficulty(seatCard.seat, event.target.value);
-                      }
+                      if (isBotDifficulty(event.target.value)) setBotDifficulty(seatCard.gameSeat, event.target.value);
                     }}>
                     {BOT_DIFFICULTIES.map((difficulty) => <MenuItem key={difficulty} value={difficulty}>
                       {t(`room.botDifficulty.${difficulty}`)}
@@ -508,7 +511,7 @@ export function RoomPage(): ReactNode {
                   </Select>
                 </label>
                 <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
-                  disabled={blocked} onClick={() => { if (seatCard.seat) removeBot(seatCard.seat); }}>{t('room.removeBot')}</button>
+                  disabled={blocked} onClick={() => removeBot(seatCard.gameSeat)}>{t('room.removeBot')}</button>
               </div>}
               {isHost && !player.isBot && player.id !== playerId && roomInfo.status === 'waiting' &&
                 <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
@@ -523,8 +526,8 @@ export function RoomPage(): ReactNode {
                 <span className={styles.seatEmpty}>{t('room.seatEmpty')}</span>
                 <span className={styles.seatDirection}>{seatCard.label}</span>
               </button>
-              {isHost && seatCard.seat && <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
-                disabled={blocked} onClick={() => { if (seatCard.seat) addBot(seatCard.seat); }}>{t('room.addBot')}</button>}
+              {isHost && <button type="button" className={`btn btn-outline touch-target ${styles.botAction}`}
+                disabled={blocked} onClick={() => addBot(seatCard.gameSeat)}>{t('room.addBot')}</button>}
               {isHost && seatCard.additionalIndex === additionalSeats.length - 1 && <button type="button"
                 className={styles.removeSeatButton} disabled={blocked || roomInfo.status !== 'waiting'}
                 aria-label={t('room.removeSeat')} title={t('room.removeSeat')} onClick={removeSeat}>

@@ -213,6 +213,22 @@ describe('bot player interface', () => {
     expect(addButton()).toBeUndefined();
   });
 
+  it('manages bots in additional seats and counts them for filling', () => {
+    state.room = {
+      ...room(), gameType: 'holdem',
+      seats: { ...room().seats, S: { player: bot, isReady: true }, W: { player: bot, isReady: true } },
+      additionalSeats: [{ player: null, isReady: false }],
+    };
+    let html = render(createElement(RoomPage));
+    expect(html.match(/>Add bot</g)).toHaveLength(1);
+    expect(html).not.toMatch(/disabled="">Fill empty seats with bots<\/button>/);
+    state.room = { ...state.room, additionalSeats: [{ player: { ...bot, nickname: 'Bot P5' }, isReady: true }] };
+    html = render(createElement(RoomPage));
+    expect(html).toContain('aria-label="Difficulty for Bot P5"');
+    expect(html.match(/>Remove bot</g)).toHaveLength(4);
+    expect(html).toMatch(/disabled="">Fill empty seats with bots<\/button>/);
+  });
+
   it('keeps bot participants and bot winners visible in match history without profile links', () => {
     const match: MatchSummary = {
       id: 'match', roomCode: 'ABC123', accountIds: [human.id, bot.id, 'bot:south', 'bot:west'], finishedAt: 123,

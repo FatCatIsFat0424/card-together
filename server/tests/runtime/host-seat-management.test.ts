@@ -76,7 +76,7 @@ describe('host seat management', () => {
     expect(rooms.getPlayerSeat(app.roomCodes[0], guestId)).toBe('E');
   });
 
-  it('swaps additional human seats and standard bots without allowing bots outside standard seats', async () => {
+  it('swaps humans and bots across standard and additional seats but never makes a bot a spectator', async () => {
     const app = await (harness = await createSocketHarness(1));
     const [host, guest] = app.clients[0];
     const [hostId, guestId] = app.accountIds[0];
@@ -88,16 +88,14 @@ describe('host seat management', () => {
     expect(await host.emitWithAck('room:addBot', { seat: 'E' })).toEqual({ success: true });
     const botId = rooms.getRoomInfo(code)!.seats.E.player!.id;
     expect(await host.emitWithAck('room:movePlayer', { accountId: guestId, target: { type: 'seat', seat: 'E' } }))
-      .toMatchObject({ success: false });
-    expect(await host.emitWithAck('room:movePlayer', { accountId: botId, target: { type: 'spectator' } }))
-      .toMatchObject({ success: false });
-    expect(await host.emitWithAck('room:movePlayer', { accountId: hostId, target: { type: 'seat', seat: 'E' } }))
-      .toEqual({ success: true });
-    expect(rooms.getRoomInfo(code)?.seats.N.player?.id).toBe(botId);
-    expect(rooms.getRoomInfo(code)?.seats.N.isReady).toBe(true);
-    expect(await host.emitWithAck('room:movePlayer', { accountId: hostId, target: { type: 'additional', index: 0 } }))
       .toEqual({ success: true });
     expect(rooms.getRoomInfo(code)?.seats.E.player?.id).toBe(guestId);
+    expect(rooms.getRoomInfo(code)?.additionalSeats?.[0]).toMatchObject({ player: { id: botId }, isReady: true });
+    expect(await host.emitWithAck('room:movePlayer', { accountId: botId, target: { type: 'spectator' } }))
+      .toMatchObject({ success: false });
+    expect(await host.emitWithAck('room:movePlayer', { accountId: hostId, target: { type: 'additional', index: 0 } }))
+      .toEqual({ success: true });
+    expect(rooms.getRoomInfo(code)?.seats.N).toMatchObject({ player: { id: botId }, isReady: true });
     expect(rooms.getRoomInfo(code)?.additionalSeats?.[0].player?.id).toBe(hostId);
     expect(await guest.emitWithAck('room:standUp')).toEqual({ success: true });
     expect(await host.emitWithAck('room:movePlayer', { accountId: guestId, target: { type: 'seat', seat: 'N' } }))

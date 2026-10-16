@@ -277,4 +277,72 @@ describe('persisted bot identities', () => {
       expect(isRuntimeSnapshot(modified)).toBe(false);
     }
   });
+
+  it('places, tunes, and removes bots in additional seats', () => {
+    const code = room();
+    expect(roomManager.setGameType(code, 'host', 'napoleon').success).toBe(true);
+    expect(roomManager.addBot(code, 'host', 'P5').success).toBe(false);
+    expect(roomManager.addSeat(code, 'host').success).toBe(true);
+    expect(roomManager.addBot(code, 'host', 'P6').success).toBe(false);
+    expect(roomManager.addBot(code, 'host', 'P5', 'easy').success).toBe(true);
+    const bot = roomManager.getRoomInfo(code)!.additionalSeats![0];
+    expect(bot).toMatchObject({ isReady: true, player: { isBot: true, nickname: 'Bot P5', botDifficulty: 'easy' } });
+    expect(roomManager.addBot(code, 'host', 'P5').success).toBe(false);
+    expect(roomManager.setBotDifficulty(code, 'host', 'P5', 'hard').success).toBe(true);
+    expect(roomManager.getRoomInfo(code)!.additionalSeats![0].player?.botDifficulty).toBe('hard');
+    expect(roomManager.getSpectatorIds(code)).not.toContain(bot.player!.id);
+    expect(roomManager.canKick(code, 'host', bot.player!.id).success).toBe(false);
+    expect(isRuntimeSnapshot(snapshot(code))).toBe(true);
+    expect(roomManager.removeBot(code, 'host', 'P5').success).toBe(true);
+    expect(roomManager.getRoomInfo(code)!.additionalSeats![0]).toEqual({ player: null, isReady: false });
+    expect(roomManager.getRoomMemberIds(code)).not.toContain(bot.player!.id);
+  });
+
+  it('fills additional seats too and starts a six-seat match with bots', () => {
+    const code = room();
+    expect(roomManager.setGameType(code, 'host', 'napoleon').success).toBe(true);
+    expect(roomManager.addSeat(code, 'host').success).toBe(true);
+    expect(roomManager.addSeat(code, 'host').success).toBe(true);
+    expect(roomManager.fillBots(code, 'host').success).toBe(true);
+    const info = roomManager.getRoomInfo(code)!;
+    expect(info.additionalSeats?.every((entry) => entry.player?.isBot && entry.isReady)).toBe(true);
+    expect(Object.keys(roomManager.getSeatPlayers(code)!)).toHaveLength(6);
+    expect(roomManager.setReady(code, 'host', true).success).toBe(true);
+    expect(roomManager.isAllReady(code)).toBe(true);
+    expect(isRuntimeSnapshot(snapshot(code))).toBe(true);
+    expect(gameManager.startGame(code, 'napoleon', roomManager.getSeatPlayers(code)!).success).toBe(true);
+    const game = gameManager.getGameState(code);
+    expect(game?.gameType === 'napoleon' && game.players.P6?.isBot).toBe(true);
+  });
+
+  it('keeps the last configured seat open for a human when nobody is seated', () => {
+    const code = roomManager.createRoom('holdem', 'host');
+    expect(roomManager.addSeat(code, 'host').success).toBe(true);
+    expect(roomManager.fillBots(code, 'host').success).toBe(true);
+    const info = roomManager.getRoomInfo(code)!;
+    expect(SEATS.every((seat) => info.seats[seat].player?.isBot)).toBe(true);
+    expect(info.additionalSeats?.[0].player).toBeNull();
+    expect(roomManager.addBot(code, 'host', 'P5').success).toBe(false);
+  });
+
+  it('drops bots from additional seats a new game cannot use but keeps humans in place', () => {
+    const code = room();
+    expect(roomManager.setGameType(code, 'host', 'holdem').success).toBe(true);
+    for (let index = 0; index < 4; index++) expect(roomManager.addSeat(code, 'host').success).toBe(true);
+    expect(roomManager.fillBots(code, 'host').success).toBe(true);
+    const botIds = roomManager.getRoomInfo(code)!.additionalSeats!.map((entry) => entry.player!.id);
+    expect(roomManager.setGameType(code, 'host', 'napoleon').success).toBe(true);
+    expect(roomManager.getRoomInfo(code)!.additionalSeats?.map((entry) => entry.player?.id)).toEqual(botIds.slice(0, 2));
+    expect(roomManager.getRoomMemberIds(code)).not.toContain(botIds[2]);
+    expect(roomManager.setGameType(code, 'host', 'bridge').success).toBe(true);
+    expect(roomManager.getRoomInfo(code)!.additionalSeats).toEqual([]);
+    expect(roomManager.getRoomMemberIds(code).filter((id) => botIds.includes(id))).toEqual([]);
+    expect(isRuntimeSnapshot(snapshot(code))).toBe(true);
+
+    expect(roomManager.setGameType(code, 'host', 'holdem').success).toBe(true);
+    expect(roomManager.addSeat(code, 'host').success).toBe(true);
+    roomManager.joinRoom(code, 'guest');
+    expect(roomManager.changeAdditionalSeat(code, player('guest'), 0).success).toBe(true);
+    expect(roomManager.setGameType(code, 'host', 'bridge').success).toBe(false);
+  });
 });

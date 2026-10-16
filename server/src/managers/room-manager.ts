@@ -7,7 +7,7 @@ import { isBotDifficulty } from '@shared/bot-difficulty';
 import { isDeepStrictEqual } from 'node:util';
 import { randomInt, randomUUID } from 'node:crypto';
 import type {
-  BlackjackOptions, BotDifficulty, GameType, NapoleonOptions, NinetyNineOptions, PlayerInfo, RoomCode, RoomInfo, RoomSeatTarget, RoomStatus, Seat, SeatMap, SevensOptions, TimeControl,
+  BlackjackOptions, BotDifficulty, GameType, NapoleonOptions, NinetyNineOptions, PlayerInfo, RoomCode, RoomInfo, RoomSeatTarget, RoomStatus, Seat, SeatInfo, SeatMap, SevensOptions, TimeControl,
 } from '@shared/types';
 import {
   ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD, EXPANDABLE_ROOM_GAMES,
@@ -15,12 +15,23 @@ import {
 } from '@shared/constants';
 import type { PersistedRoom } from '../runtime/types';
 import { generateRoomCode } from '../utils/id-generator';
-import { maxPlayers, roomPlayers, roomCanStart } from '@shared/rules/seats';
+import { isCompassSeat, maxPlayers, roomPlayers, roomCanStart, roomSeatInfo } from '@shared/rules/seats';
 import type { GameSeat } from '@shared/types';
 
 const rooms = new Map<RoomCode, PersistedRoom>();
 const seats: Seat[] = ['N', 'E', 'S', 'W'];
 type Result = { success: true } | { success: false; reason: string };
+
+/** Configured seats in order: the four standard seats, then P5 onwards for each additional seat. */
+function roomSeats(info: RoomInfo): GameSeat[] {
+  return [...seats, ...(info.additionalSeats ?? []).map((_, index) => `P${index + 5}` as GameSeat)];
+}
+
+function withSeat(info: RoomInfo, seat: GameSeat, entry: SeatInfo): RoomInfo {
+  if (isCompassSeat(seat)) return { ...info, seats: { ...info.seats, [seat]: entry } };
+  const index = Number(seat.slice(1)) - 5;
+  return { ...info, additionalSeats: (info.additionalSeats ?? []).map((current, position) => position === index ? entry : current) };
+}
 
 function emptySeats(): SeatMap {
   return {
@@ -84,8 +95,8 @@ export function leaveRoom(code: RoomCode, playerId: string): { seat: Seat | null
   }
   clearAdditionalSeat(room, playerId);
   room.memberIds = room.memberIds.filter((id) => id !== playerId);
-  const humans = room.memberIds.filter((id) => !seats.some((seat) =>
-    room.info.seats[seat].player?.id === id && room.info.seats[seat].player?.isBot));
+  const humans = room.memberIds.filter((id) => !Object.values(roomPlayers(room.info))
+    .some((player) => player.id === id && player.isBot));
   const roomEmpty = humans.length === 0;
   if (roomEmpty) rooms.delete(code);
   else if (room.info.hostId === playerId) room.info = { ...room.info, hostId: humans[0] };
@@ -106,7 +117,7 @@ function hasSeatedHuman(room: PersistedRoom): boolean {
 }
 
 function emptySeatCount(room: PersistedRoom): number {
-  return seats.filter((seat) => !room.info.seats[seat].player).length;
+  return roomSeats(room.info).filter((seat) => !roomSeatInfo(room.info, seat)?.player).length;
 }
 
 /**
@@ -116,12 +127,14 @@ function tableChanged(room: PersistedRoom): void {
   if (room.info.status === 'waiting' && FLEXIBLE_SEAT_GAMES.includes(room.info.gameType)) resetAllReady(room.info.code);
 }
 
-export function addBot(code: RoomCode, playerId: string, seat: Seat, difficulty: BotDifficulty = 'hard'): Result {
+export function addBot(code: RoomCode, playerId: string, seat: GameSeat, difficulty: BotDifficulty = 'hard'): Result {
   const allowed = requireBotManagement(code, playerId);
   if (!allowed.success) return allowed;
   if (!isBotDifficulty(difficulty)) return { success: false, reason: 'Invalid bot difficulty.' };
   const room = rooms.get(code)!;
-  if (room.info.seats[seat].player) return { success: false, reason: 'Seat is occupied' };
+  const entry = roomSeatInfo(room.info, seat);
+  if (!entry) return { success: false, reason: 'Invalid seat.' };
+  if (entry.player) return { success: false, reason: 'Seat is occupied' };
   if (!hasSeatedHuman(room) && emptySeatCount(room) === 1) {
     return { success: false, reason: 'Leave a seat for a player.' };
   }
@@ -130,34 +143,32 @@ export function addBot(code: RoomCode, playerId: string, seat: Seat, difficulty:
     color: '#64748b', avatar: 'owl', avatarImage: null, isBot: true, botDifficulty: difficulty,
   };
   room.memberIds.push(bot.id);
-  room.info = { ...room.info, seats: { ...room.info.seats, [seat]: { player: bot, isReady: true } } };
+  room.info = withSeat(room.info, seat, { player: bot, isReady: true });
   tableChanged(room);
   return { success: true };
 }
 
-export function setBotDifficulty(code: RoomCode, playerId: string, seat: Seat, difficulty: BotDifficulty): Result {
+export function setBotDifficulty(code: RoomCode, playerId: string, seat: GameSeat, difficulty: BotDifficulty): Result {
   const allowed = requireBotManagement(code, playerId);
   if (!allowed.success) return allowed;
   if (!isBotDifficulty(difficulty)) return { success: false, reason: 'Invalid bot difficulty.' };
   const room = rooms.get(code)!;
-  const bot = room.info.seats[seat].player;
+  const bot = roomSeatInfo(room.info, seat)?.player;
   if (!bot?.isBot) return { success: false, reason: 'No bot in this seat.' };
   if ((bot.botDifficulty ?? 'hard') === difficulty) return { success: true };
-  room.info = { ...room.info, seats: { ...room.info.seats,
-    [seat]: { player: { ...bot, botDifficulty: difficulty }, isReady: true },
-  } };
+  room.info = withSeat(room.info, seat, { player: { ...bot, botDifficulty: difficulty }, isReady: true });
   resetAllReady(code);
   return { success: true };
 }
 
-export function removeBot(code: RoomCode, playerId: string, seat: Seat): Result {
+export function removeBot(code: RoomCode, playerId: string, seat: GameSeat): Result {
   const allowed = requireBotManagement(code, playerId);
   if (!allowed.success) return allowed;
   const room = rooms.get(code)!;
-  const bot = room.info.seats[seat].player;
+  const bot = roomSeatInfo(room.info, seat)?.player;
   if (!bot?.isBot) return { success: false, reason: 'No bot in this seat.' };
   room.memberIds = room.memberIds.filter((id) => id !== bot.id);
-  room.info = { ...room.info, seats: { ...room.info.seats, [seat]: { player: null, isReady: false } } };
+  room.info = withSeat(room.info, seat, { player: null, isReady: false });
   tableChanged(room);
   return { success: true };
 }
@@ -166,11 +177,11 @@ export function fillBots(code: RoomCode, playerId: string): Result {
   const allowed = requireBotManagement(code, playerId);
   if (!allowed.success) return allowed;
   const room = rooms.get(code)!;
-  // Spectators do not reserve seats; every empty seat receives a bot, except the last one
-  // while no human is seated.
-  for (const seat of seats) {
+  // Spectators do not reserve seats; every configured empty seat, additional ones included,
+  // receives a bot, except the last one while no human is seated.
+  for (const seat of roomSeats(room.info)) {
     if (!hasSeatedHuman(room) && emptySeatCount(room) === 1) break;
-    if (!room.info.seats[seat].player) {
+    if (!roomSeatInfo(room.info, seat)?.player) {
       const result = addBot(code, playerId, seat);
       if (!result.success) return result;
     }
@@ -190,8 +201,7 @@ export function canKick(code: RoomCode, hostId: string, targetId: string): Resul
     return { success: false, reason: 'Cannot remove players during game.' };
   }
   if (targetId === hostId) return { success: false, reason: 'You cannot remove yourself.' };
-  const isBot = seats.some((seat) => room.info.seats[seat].player?.id === targetId
-    && room.info.seats[seat].player?.isBot);
+  const isBot = Object.values(roomPlayers(room.info)).some((player) => player.id === targetId && player.isBot);
   if (!room.memberIds.includes(targetId) || isBot) return { success: false, reason: 'Player is not in this room.' };
   return { success: true };
 }
@@ -232,9 +242,8 @@ export function movePlayer(code: RoomCode, hostId: string, player: PlayerInfo, t
     return { success: false, reason: 'The spectator area is full.' };
   }
   const occupant = destination >= 0 ? positions[destination].player : null;
-  if (occupant?.isBot && (previous < 0 || previous >= 4)) {
-    return { success: false, reason: 'Bots must stay in a standard seat.' };
-  }
+  // A bot can trade seats with a seated human but never becomes a spectator.
+  if (occupant?.isBot && previous < 0) return { success: false, reason: 'Seat is occupied' };
   if (previous >= 0) positions[previous] = { player: occupant, isReady: occupant?.isBot === true };
   if (destination >= 0) positions[destination] = { player, isReady: false };
   const next = { ...room.info.seats };
@@ -401,14 +410,17 @@ export function setGameType(code: RoomCode, playerId: string, gameType: GameType
   if (!room) return { success: false, reason: 'Room not found' };
   if (room.info.hostId !== playerId) return { success: false, reason: 'Only the host can change the game.' };
   if (room.info.status !== 'waiting') return { success: false, reason: 'Game is in progress' };
-  if (!EXPANDABLE_ROOM_GAMES.includes(gameType) && room.info.additionalSeats?.some((entry) => entry.player)) {
-    return { success: false, reason: 'Empty the additional seats before changing to a four-seat game.' };
+  // Seats beyond the new game's player limit are removed together with their bots; humans must
+  // vacate them first.
+  const additionalLimit = EXPANDABLE_ROOM_GAMES.includes(gameType) ? Math.max(0, maxPlayers(gameType) - 4) : 0;
+  const removed = room.info.additionalSeats?.slice(additionalLimit) ?? [];
+  if (removed.some((entry) => entry.player && !entry.player.isBot)) {
+    return { success: false, reason: additionalLimit === 0
+      ? 'Empty the additional seats before changing to a four-seat game.'
+      : 'Empty the seats beyond this game\'s player limit first.' };
   }
-  // Empty seats beyond the new game's player limit are removed; occupied ones must be vacated first.
-  const additionalLimit = Math.max(0, maxPlayers(gameType) - 4);
-  if (room.info.additionalSeats?.slice(additionalLimit).some((entry) => entry.player)) {
-    return { success: false, reason: 'Empty the seats beyond this game\'s player limit first.' };
-  }
+  const removedBots = new Set(removed.flatMap((entry) => entry.player ? [entry.player.id] : []));
+  room.memberIds = room.memberIds.filter((id) => !removedBots.has(id));
   room.info = { ...room.info, gameType,
     napoleonOptions: room.info.napoleonOptions ?? { ...DEFAULT_NAPOLEON_OPTIONS },
     ...(room.info.additionalSeats ? { additionalSeats: room.info.additionalSeats.slice(0, additionalLimit) } : {}),

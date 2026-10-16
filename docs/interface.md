@@ -151,7 +151,7 @@ Frontend page behavior and layout. Client architecture and connection handling:
   keyboard-focused drag handle to select a player then a destination; Escape cancels.
   The six-dot handle stays visually hidden unless focused by keyboard.
 - Occupied seats swap. A spectator placed on a human's seat sends that player to spectators.
-  Bots can swap with humans but stay in standard seats.
+  Bots can swap seats with humans but never move to spectators.
 - Changes clear human readiness and persist before broadcast; a failed save restores the arrangement.
 
 ## Game table

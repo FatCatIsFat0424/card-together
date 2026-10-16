@@ -13,7 +13,7 @@ turns, and results.
 | Waiting | Everyone seated, including the host, can prepare at any player count. Readiness never starts a match; the host separately presses Start after all occupied seats are ready and the player count is valid |
 | Player counts | Ninety-Nine, Blackjack, and Hold'em support 2–8 occupied seats, Napoleon 4–6; other games require N/E/S/W. At least one seated human is required. Empty configured seats do not block a flexible game |
 | Extra seats | Flexible rooms can add P5/P6/P7/P8 (Napoleon P5/P6). Turn order continues after W and skips unoccupied seats; empty seats receive no cards, chips, turns, results, or history entries |
-| Shuffle seats | Available for every game, off by default. At start, shuffle humans among their occupied positions; bots keep their standard seats and empty seats remain empty. Seat changes and the game commit together |
+| Shuffle seats | Available for every game, off by default. At start, shuffle humans among their occupied positions; bots keep their seats and empty seats remain empty. Seat changes and the game commit together |
 | Readiness | Sitting, standing, leaving, adding or removing bots, and option changes clear human readiness; changing only the Sevens effect keeps it |
 | Finished | Each human returns with Continue; others keep the result until everyone returns or the next match starts |
 | Leave or reconnect expiry | Leaving, or not reconnecting within 60 seconds, aborts an unfinished match |
@@ -111,7 +111,8 @@ Runtime mechanics: [architecture](architecture.md#turn-clocks).
 
 ## Bots
 
-- While waiting, the host adds, removes, or fills bots. With no seated human the last
+- While waiting, the host adds, removes, or fills bots in any configured seat, additional
+  seats included; filling covers every empty seat. With no seated human the last
   empty seat stays open, because a human must be able to end the match.
 - Bots play every game, are always ready, and stay for the next match. Only humans host;
   the room closes when the last human leaves.

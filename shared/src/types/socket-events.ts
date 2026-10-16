@@ -102,13 +102,13 @@ export interface ClientToServerEvents {
   'room:start': (callback: (response: ActionResult) => void) => void;
   'room:setShuffleSeats': (payload: { enabled: boolean }, callback: (response: ActionResult) => void) => void;
   'room:addBot': (
-    payload: { seat: Seat; difficulty?: BotDifficulty }, callback: (response: ActionResult) => void,
+    payload: { seat: GameSeat; difficulty?: BotDifficulty }, callback: (response: ActionResult) => void,
   ) => void;
   'room:setBotDifficulty': (
-    payload: { seat: Seat; difficulty: BotDifficulty }, callback: (response: ActionResult) => void,
+    payload: { seat: GameSeat; difficulty: BotDifficulty }, callback: (response: ActionResult) => void,
   ) => void;
   'room:removeBot': (
-    payload: { seat: Seat }, callback: (response: ActionResult) => void,
+    payload: { seat: GameSeat }, callback: (response: ActionResult) => void,
   ) => void;
   'room:fillBots': (callback: (response: ActionResult) => void) => void;
   'room:unready': (callback: (response: ActionResult) => void) => void;
