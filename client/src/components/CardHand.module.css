@@ -15,7 +15,7 @@
 .handContainer:empty { padding: 0; }
 
 @media (max-height: 500px) and (min-width: 600px) {
-  .handContainer { --hand-height-limit: 14cqh; }
+  .handContainer { --hand-height-limit: 16cqh; }
 }
 
 @container (max-height: 420px) {
