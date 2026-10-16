@@ -1,0 +1,5 @@
+/* ─── CardLabel styles ─── */
+
+.red { color: var(--suit-red-ui); }
+.bigJoker { color: var(--suit-red-ui); }
+.smallJoker { color: var(--text-secondary); }

@@ -1,55 +1,32 @@
+// ─── TrickHistory: Bridge's completed tricks with the declarer marked ───
+
 import type { ReactNode } from 'react';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
+import { isNapoleonJoker } from '@shared/rules/napoleon';
 import type { Seat, TrickRecord } from '@shared/types';
-import { useCardFaceUrl } from '../../cosmetics/card-faces/use-card-face';
 import { useI18nStore } from '../../stores/i18n-store';
-import styles from './TrickHistory.module.css';
+import { TrickHistoryTable, trickHistoryColumns } from '../TrickHistoryTable';
+import type { TrickHistoryRow } from '../TrickHistoryTable';
 
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 
-export function TrickHistory({ tricks }: { tricks: readonly TrickRecord[] }): ReactNode {
-  const cardImageUrl = useCardFaceUrl();
+export function bridgeTrickRows(tricks: readonly TrickRecord[]): TrickHistoryRow[] {
+  return tricks.map((trick, index) => ({ number: index + 1, leadSeat: trick.leadSeat, cards: trick.cards,
+    winnerSeat: trick.winnerSeat }));
+}
+
+export function TrickHistory({ tricks, mySeat, declarer, className, summaryClassName, defaultOpen }: {
+  tricks: readonly TrickRecord[];
+  mySeat: Seat | null;
+  declarer: Seat | null;
+  className?: string;
+  summaryClassName?: string;
+  defaultOpen?: boolean;
+}): ReactNode {
   const { t } = useI18nStore();
-  if (tricks.length === 0) return null;
-  return (
-    <details className={styles.history}>
-      <summary>
-        {t('table.trickHistory')} ({tricks.length})
-      </summary>
-      <ol className={styles.list}>
-        {tricks.map((trick, index) => (
-          <li key={index} className={styles.trick}>
-            <p>
-              {t('table.trickNumber', { n: String(index + 1) })} ·{' '}
-              {t('table.trickWinner', { seat: t(`seat.${trick.winnerSeat}`) })}
-            </p>
-            <div className={styles.cards}>
-              {Array.from(
-                { length: 4 },
-                (_, offset) => SEATS[(SEATS.indexOf(trick.leadSeat) + offset) % 4],
-              ).map((seat) => {
-                const card = trick.cards[seat];
-                return (
-                  <div key={seat} className={styles.card}>
-                    <span>
-                      {t(`seat.${seat}`)}
-                      {seat === trick.leadSeat && ` · ${t('table.lead')}`}
-                    </span>
-                    <img
-                      src={cardImageUrl(card)}
-                      alt={`${RANK_DISPLAY[card.rank]}${SUIT_SYMBOLS[card.suit]}`}
-                      draggable={false}
-                    />
-                    {seat === trick.winnerSeat && (
-                      <span className={styles.winner}>{t('table.winner')}</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </li>
-        ))}
-      </ol>
-    </details>
-  );
+  return <TrickHistoryTable rows={bridgeTrickRows(tricks)} columns={trickHistoryColumns(SEATS, mySeat)} mySeat={mySeat}
+    roles={declarer ? [{ seat: declarer, label: t('table.declarer'),
+      color: 'var(--badge-declarer)', ink: 'var(--text-inverse)' }] : []}
+    cardText={(card) => isNapoleonJoker(card) ? '' : `${SUIT_SYMBOLS[card.suit]}${RANK_DISPLAY[card.rank]}`}
+    className={className} summaryClassName={summaryClassName} defaultOpen={defaultOpen} />;
 }

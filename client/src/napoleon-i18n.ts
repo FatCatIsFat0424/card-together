@@ -6,6 +6,8 @@ const english = {
   'napoleon.pointsTitle': 'Point cards won: {n}',
   'napoleon.joker.big': 'Big joker',
   'napoleon.joker.small': 'Small joker',
+  'napoleon.jokerShort.big': 'BJ',
+  'napoleon.jokerShort.small': 'SJ',
   'napoleon.jokers': 'Jokers',
   'napoleon.noTrump': 'No trump',
   'napoleon.target': 'Needs {n} of 16 point cards',
@@ -75,10 +77,9 @@ const english = {
   'napoleon.rulesPlay': 'Secretary card > big joker > small joker > trump > led suit; jokers become the weakest in the final three tricks.',
   'napoleon.rulesSummon': 'Leading trump 2 or 3 can summon the big or small joker.',
   'napoleon.rulesWin': 'The Napoleon side wins with at least as many point cards as the bid.',
-  'napoleon.historyLead': 'names {suit}',
+  'napoleon.historyLead': 'Names',
   'napoleon.historySummon': 'summons: {target}',
   'presentation.napoleonResult': '{napoleon} {n} · {defenders} {m}',
-  'history.trickWon': 'Won the trick',
 } as const;
 
 export type NapoleonTranslationKey = keyof typeof english;
@@ -93,6 +94,8 @@ export const napoleonTranslations: Record<'en' | 'zh-TW', Record<NapoleonTransla
     'napoleon.pointsTitle': '已吃到 {n} 張點數牌',
     'napoleon.joker.big': '大鬼',
     'napoleon.joker.small': '小鬼',
+    'napoleon.jokerShort.big': '大鬼',
+    'napoleon.jokerShort.small': '小鬼',
     'napoleon.jokers': '鬼牌',
     'napoleon.noTrump': '無王',
     'napoleon.target': '16 張點數牌中需吃到 {n} 張',
@@ -162,9 +165,8 @@ export const napoleonTranslations: Record<'en' | 'zh-TW', Record<NapoleonTransla
     'napoleon.rulesPlay': '秘書牌 > 大鬼 > 小鬼 > 王牌 > 首引花色；末三輪鬼牌變成最小。',
     'napoleon.rulesSummon': '首引王牌 2 或 3 時，可以召喚大鬼或小鬼。',
     'napoleon.rulesWin': '拿破崙方吃到的點數牌不少於叫牌數字就獲勝。',
-    'napoleon.historyLead': '指定 {suit}',
+    'napoleon.historyLead': '指定',
     'napoleon.historySummon': '召喚：{target}',
     'presentation.napoleonResult': '{napoleon} {n} · {defenders} {m}',
-    'history.trickWon': '贏得此墩',
   },
 };

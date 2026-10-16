@@ -6,9 +6,10 @@ import type {
 } from '@shared/types';
 import {
   NAPOLEON_PICKER_GROUPS, napoleonAckKey, napoleonActiveSummon, napoleonCardText, napoleonExchange,
-  napoleonFinalTricks, napoleonForcedPlay, napoleonLeadSummons, napoleonNeedsAck, napoleonNeedsLeadSuit,
-  napoleonNotice, napoleonOwnTurn, napoleonPickerCards, napoleonPickerNote, napoleonPlayableCards,
-  napoleonPresentedPoints, napoleonReviewState, napoleonSeatLabels, toggleNapoleonDiscard,
+  napoleonFinalTricks, napoleonForcedPlay, napoleonLeadSummons, napoleonNeedsAck,
+  napoleonNeedsLeadSuit, napoleonNotice, napoleonOwnTurn, napoleonPickerCards, napoleonPickerNote,
+  napoleonPlayableCards, napoleonPresentedPoints, napoleonReviewState, napoleonSeatLabels, napoleonTrickHistory,
+  toggleNapoleonDiscard,
 } from '../../../client/src/games/napoleon/napoleon-view';
 import { napoleonTrickSlot } from '../../../client/src/games/napoleon/NapoleonTrickArea';
 import { deriveRoundHistory } from '../../../client/src/games/round-history';
@@ -225,7 +226,7 @@ describe('Napoleon table helpers', () => {
     expect(slots[4]).toMatchObject({ left: 50, top: 81 });
   });
 
-  it('groups plays into tricks for the round history', () => {
+  it('groups plays into tricks for the trick history, keeping each card under its seat', () => {
     const log: NapoleonLogEntry[] = [
       { type: 'deal', dealerSeat: 'W', timestamp: 1 },
       { type: 'bid', seat: 'N', action: { type: 'pass' }, timestamp: 2 },
@@ -236,14 +237,17 @@ describe('Napoleon table helpers', () => {
       { type: 'play', seat: 'W', card: card(6, 'hearts'), timestamp: 6 },
       { type: 'trick_end', winnerSeat: 'E', trickIndex: 1, timestamp: 7 },
       { type: 'play', seat: 'E', card: card(13, 'spades'), leadSuit: 'spades', timestamp: 8 },
+      { type: 'play', seat: 'S', card: card(2, 'clubs'), timestamp: 9 },
     ];
-    const rounds = deriveRoundHistory({ gameType: 'napoleon', phase: 'playing', seats: ['N', 'E', 'S', 'W'], log });
-    expect(rounds.map((round) => round.complete)).toEqual([true, false]);
-    expect(rounds[0].actions[0]).toEqual({ kind: 'play', seat: 'N', cards: [], napoleonCards: [BIG],
-      leadSuit: 'hearts', summon: 'secretary' });
-    expect(rounds[0].actions[4]).toEqual({ kind: 'trickWon', seat: 'E', cards: [] });
-    // A suit card leading its own suit names nothing new.
-    expect(rounds[1].actions[0]).not.toHaveProperty('leadSuit');
+    const tricks = napoleonTrickHistory(log);
+    expect(tricks).toEqual([
+      { number: 1, leadSeat: 'N', winnerSeat: 'E', namedSuit: 'hearts', summon: 'secretary',
+        cards: { N: BIG, E: secretaryCard, S: card(5, 'hearts'), W: card(6, 'hearts') } },
+      // A suit card leading its own suit names nothing new; the trick in progress has no winner yet.
+      { number: 2, leadSeat: 'E', winnerSeat: null, namedSuit: null, summon: null,
+        cards: { E: card(13, 'spades'), S: card(2, 'clubs') } },
+    ]);
+    expect(deriveRoundHistory({ gameType: 'napoleon', phase: 'playing', seats: ['N', 'E', 'S', 'W'], log })).toEqual([]);
   });
 
   it('counts both members of the winning side as winners, not a tie', () => {

@@ -1,5 +1,5 @@
 import { isCompassSeat } from '@shared/rules/seats';
-// ─── GameInfoRail: left info rail (contract, tricks, auction) ───
+// ─── GameInfoRail: left info rail (contract, tricks, trick history, auction) ───
 
 import type { ReactNode } from 'react';
 import { useShallow } from 'zustand/react/shallow';
@@ -79,6 +79,9 @@ export function GameInfoRail(): ReactNode {
         </p>
       </section>}
 
+      <TrickHistory tricks={playing?.completedTricks ?? []} mySeat={mySeat} declarer={contract?.declarer ?? null}
+        className={styles.box} summaryClassName={styles.caption} />
+
       <section className={`${styles.box} ${styles.auction}`}>
         <h2 className={styles.caption}>{t('table.auction')}</h2>
         <div className={styles.scroll}>
@@ -86,7 +89,6 @@ export function GameInfoRail(): ReactNode {
             toAct={phase === 'bidding' && currentTurnSeat && isCompassSeat(currentTurnSeat) ? currentTurnSeat : null} />
         </div>
       </section>
-      <TrickHistory tricks={playing?.completedTricks ?? []} />
     </aside>
   );
 }

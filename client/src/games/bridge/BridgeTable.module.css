@@ -51,6 +51,15 @@
 
 .scoreDetails dd { color: var(--text-primary); font-weight: 700; }
 
+.resultHistory {
+  max-height: 40dvh;
+  overflow-y: auto;
+  font-size: var(--text-sm);
+  text-align: left;
+}
+
+.resultHistory summary { padding: var(--spacing-sm); font-weight: 600; }
+
 .completedTrick {
   position: relative;
 }

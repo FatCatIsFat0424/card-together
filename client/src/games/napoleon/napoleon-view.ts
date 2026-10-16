@@ -96,6 +96,40 @@ export function napoleonSeatLabels(
   return { napoleon, secretary: shown ? seat : null };
 }
 
+export interface NapoleonHistoryTrick {
+  /** One-based trick number */
+  readonly number: number;
+  readonly leadSeat: GameSeat;
+  readonly cards: Readonly<Partial<Record<GameSeat, NapoleonCard>>>;
+  /** Null while the trick is still being played */
+  readonly winnerSeat: GameSeat | null;
+  /** The suit a led joker or a led card of another suit named; null when the lead card's own suit applies */
+  readonly namedSuit: Suit | null;
+  readonly summon: NapoleonSummon | null;
+}
+
+/** Tricks rebuilt from the public log, including the one in progress. */
+export function napoleonTrickHistory(log: readonly NapoleonLogEntry[]): NapoleonHistoryTrick[] {
+  const tricks: NapoleonHistoryTrick[] = [];
+  let current: { -readonly [K in keyof NapoleonHistoryTrick]: NapoleonHistoryTrick[K] } | null = null;
+  for (const entry of log) {
+    if (entry.type === 'play') {
+      if (!current) {
+        const card = entry.card;
+        const named = entry.leadSuit && (isNapoleonJoker(card) || entry.leadSuit !== card.suit) ? entry.leadSuit : null;
+        current = { number: tricks.length + 1, leadSeat: entry.seat, cards: {}, winnerSeat: null,
+          namedSuit: named, summon: entry.summon ?? null };
+        tricks.push(current);
+      }
+      current.cards = { ...current.cards, [entry.seat]: entry.card };
+    } else if (entry.type === 'trick_end' && current) {
+      current.winnerSeat = entry.winnerSeat;
+      current = null;
+    }
+  }
+  return tricks;
+}
+
 /** Point cards each participant has won in tricks already presented. */
 export function napoleonPresentedPoints(
   game: Pick<NapoleonVisibleState, 'seats' | 'tricks' | 'log'>, frame: PresentationFrame | null,

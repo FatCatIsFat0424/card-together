@@ -1,0 +1,98 @@
+/* ─── TrickHistoryTable styles ─── */
+
+.history summary {
+  cursor: pointer;
+}
+
+.history summary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.table {
+  width: 100%;
+  margin-top: 6px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+.table th,
+.table td {
+  padding: 3px 1px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.table thead th {
+  border-top: 3px solid transparent;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.table thead th.mine { color: var(--turn-glow); }
+
+.name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.table .number {
+  width: 1.4rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.trick { border-top: 1px solid var(--rail-border); }
+
+.trick td {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--suit-black);
+}
+
+.empty { color: var(--text-muted); }
+
+.lead span:first-child,
+.legendLead {
+  text-decoration: underline 2px var(--color-primary);
+  text-underline-offset: 3px;
+}
+
+.won,
+.legendWon {
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-success) 22%, transparent);
+  font-weight: 800;
+}
+
+.note td {
+  padding-top: 0;
+  font-family: inherit;
+  font-weight: 400;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: normal;
+  text-align: left;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin: 6px 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.legendWon { padding: 0 4px; }
+
+.badge {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  font-weight: 800;
+}

@@ -1,4 +1,4 @@
-// ─── NapoleonInfoRail: contract, secretary card, discards, and the auction ───
+// ─── NapoleonInfoRail: contract, secretary card, discards, tricks, and the auction ───
 
 import type { ReactNode } from 'react';
 import { NAPOLEON_MIN_LEVEL, NAPOLEON_POINT_CARDS } from '@shared/rules/napoleon';
@@ -6,9 +6,11 @@ import type { NapoleonVisibleState } from '@shared/types';
 import { AuctionTable, BidLabel } from '../../components/AuctionTable';
 import railStyles from '../../components/GameInfoRail.module.css';
 import { useI18nStore } from '../../stores/i18n-store';
+import { CardLabel } from '../CardLabel';
 import { useSeatName } from '../seat-names';
 import { useNapoleonCardImageUrl } from './napoleon-card-art';
 import { napoleonAuctionColumns, napoleonCardText, napoleonFinalTricks } from './napoleon-view';
+import { NapoleonTrickHistory } from './NapoleonTrickHistory';
 import styles from './NapoleonTable.module.css';
 
 export function NapoleonInfoRail({ game }: { game: NapoleonVisibleState }): ReactNode {
@@ -46,7 +48,7 @@ export function NapoleonInfoRail({ game }: { game: NapoleonVisibleState }): Reac
         <h2 className={railStyles.caption}>{t('napoleon.secretaryCard')}</h2>
         {game.secretaryCard ? <div className={styles.railCard}>
           <img src={napoleonCardImageUrl(game.secretaryCard)} alt="" draggable={false} />
-          <span>{napoleonCardText(game.secretaryCard, jokerName)}</span>
+          <CardLabel card={game.secretaryCard} />
         </div> : <p className={railStyles.kv}>{t('napoleon.notCalled')}</p>}
       </section>}
 
@@ -58,6 +60,8 @@ export function NapoleonInfoRail({ game }: { game: NapoleonVisibleState }): Reac
           </li>)}
         </ul>
       </section>}
+
+      <NapoleonTrickHistory game={game} />
 
       <section className={`${railStyles.box} ${railStyles.auction}`}>
         <h2 className={railStyles.caption}>{t('table.auction')}</h2>

@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import { isCompassSeat } from '@shared/rules/seats';
 import type { Card, Seat } from '@shared/types';
 import { socket } from '../../socket';
 import { useGameStore } from '../../stores/game-store';
@@ -154,7 +155,8 @@ export function BridgeTable(): ReactNode {
         <dt>{t('score.declarerTricks')}</dt><dd>{result.declarerTeamTricks}</dd>
         <dt>{t('score.defenderTricks')}</dt><dd>{result.defenderTeamTricks}</dd>
       </dl>
-      <TrickHistory tricks={playing?.completedTricks ?? []} />
+      <TrickHistory tricks={playing?.completedTricks ?? []} mySeat={mySeat && isCompassSeat(mySeat) ? mySeat : null}
+        declarer={result.contract.declarer} className={styles.resultHistory} defaultOpen={false} />
     </ResultDialog>
   );
 
