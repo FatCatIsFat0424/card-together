@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   disposeCardSounds, playCardSound, playOutSound, playSlashSound, playStartSound, unlockCardSounds,
 } from '../../../client/src/audio/card-sound';
+import { useSoundEffectsStore } from '../../../client/src/stores/sound-effects-store';
 
 vi.mock('../../../client/src/stores/account-store', async () => {
   const { create } = await import('zustand');
@@ -52,7 +53,7 @@ function installAudio() {
   return { context, construct, sources, nodes };
 }
 
-afterEach(() => { disposeCardSounds(); vi.unstubAllGlobals(); });
+afterEach(() => { disposeCardSounds(); vi.unstubAllGlobals(); useSoundEffectsStore.setState({ enabled: true }); });
 
 describe('card sounds', () => {
   it('should skip locked sounds without creating audio or replaying after unlock', async () => {
@@ -66,6 +67,21 @@ describe('card sounds', () => {
     context.state = 'running';
     await Promise.resolve();
     expect(sources).toHaveLength(0);
+    playCardSound();
+    expect(sources).toHaveLength(1);
+  });
+
+  it('should stay silent while game sound effects are switched off', () => {
+    const { context, sources } = installAudio();
+    unlockCardSounds();
+    context.state = 'running';
+    useSoundEffectsStore.setState({ enabled: false });
+    playCardSound();
+    playOutSound();
+    playStartSound();
+    playSlashSound({ fireStart: 0.3, fireEnd: 1.85, strike: 1.85, cut: 0.12 });
+    expect(sources).toHaveLength(0);
+    useSoundEffectsStore.setState({ enabled: true });
     playCardSound();
     expect(sources).toHaveLength(1);
   });

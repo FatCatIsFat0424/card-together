@@ -9,7 +9,6 @@ import { useRoomStore } from '../stores/room-store';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useMotionStore } from '../stores/motion-store';
-import { useTurnSoundStore } from '../stores/turn-sound-store';
 import { AUDIO_UNLOCK_EVENTS } from '../audio/audio-unlock';
 import { disposeCardSounds, playStartSound, unlockCardSounds } from '../audio/card-sound';
 import { GAME_BACKGROUNDS } from '../game-backgrounds';
@@ -31,7 +30,7 @@ function IntroScreen({ intro, finish }: { readonly intro: Intro; readonly finish
   useEffect(() => scheduleGameIntro(intro.startedAt, reduced, {
     stage: setStage, finish,
     impact: () => {
-      if (document.visibilityState === 'visible' && useTurnSoundStore.getState().enabled) playStartSound();
+      if (document.visibilityState === 'visible') playStartSound();
     },
   }), [intro.startedAt, reduced, finish]);
   // Escape closes the dialog; Enter and Space skip too, matching a click anywhere on the scene.

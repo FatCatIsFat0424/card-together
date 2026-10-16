@@ -12,6 +12,7 @@ const VOLUME_KEY = 'music.volume';
 const PROVIDED_TRACK_KEY = 'music.provided.track';
 const MODE_KEY = 'music.mode';
 const DISABLED_GROUPS_KEY = 'music.disabledGroups';
+const ENABLED_KEY = 'music.enabled';
 // Tab-scoped so a reload keeps the player's pause while a new tab autoplays again.
 const SESSION_PAUSED_KEY = 'card-together.music.paused';
 const DEFAULT_VOLUME = 0.5;
@@ -26,6 +27,8 @@ interface MusicState {
   mode: MusicMode;
   /** Groups left out of automatic and previous/next selection; tracks stay directly playable. */
   disabledGroups: readonly string[];
+  /** Device-wide music switch: off never autoplays; pressing play turns it back on. */
+  enabled: boolean;
   toggle: () => Promise<void>;
   pause: () => Promise<void>;
   play: (trackId?: string) => Promise<void>;
@@ -34,6 +37,7 @@ interface MusicState {
   setMode: (mode: MusicMode) => void;
   setVolume: (volume: number) => void;
   setGroupEnabled: (group: string, enabled: boolean) => void;
+  setEnabled: (enabled: boolean) => void;
 }
 
 let player: FileMusicPlayer | null = null;
@@ -134,6 +138,7 @@ export const useMusicStore = create<MusicState>((set, get) => {
     providedTrackId: initialTrack?.id ?? null,
     mode,
     disabledGroups,
+    enabled: readPreference(ENABLED_KEY) !== 'false',
     toggle: async () => get().playing || get().busy ? get().pause() : get().play(),
     pause: async () => {
       awaitingAutoplayUnlock = false;
@@ -159,6 +164,10 @@ export const useMusicStore = create<MusicState>((set, get) => {
       const request = ++playRequest;
       wantsPlayback = true;
       setSessionPaused(false);
+      if (!get().enabled) {
+        set({ enabled: true });
+        writePreference(ENABLED_KEY, null);
+      }
       set({ providedTrackId: track.id, busy: true, error: false });
       writePreference(PROVIDED_TRACK_KEY, track.id);
       try {
@@ -206,11 +215,21 @@ export const useMusicStore = create<MusicState>((set, get) => {
       set({ disabledGroups });
       writePreference(DISABLED_GROUPS_KEY, disabledGroups.length ? JSON.stringify(disabledGroups) : null);
     },
+    setEnabled: (enabled) => {
+      if (enabled === get().enabled) return;
+      if (enabled) {
+        void get().play();
+        return;
+      }
+      set({ enabled: false });
+      writePreference(ENABLED_KEY, 'false');
+      void get().pause();
+    },
   };
 });
 
 /**
- * Autoplay unless the player paused earlier in this tab, and retry browser-blocked
+ * Autoplay unless music is switched off or the player paused earlier in this tab, and retry browser-blocked
  * playback in a trusted gesture without restarting paused music.
  */
 export function startMusicAutoplay(target: Document = document): () => void {
@@ -224,7 +243,7 @@ export function startMusicAutoplay(target: Document = document): () => void {
   // The player outlives React effects, including StrictMode's setup/cleanup cycle.
   if (!autoplayStarted) {
     autoplayStarted = true;
-    if (!sessionPaused()) void useMusicStore.getState().play();
+    if (!sessionPaused() && useMusicStore.getState().enabled) void useMusicStore.getState().play();
   }
   return (): void => {
     for (const event of AUDIO_UNLOCK_EVENTS) target.removeEventListener(event, unlock);

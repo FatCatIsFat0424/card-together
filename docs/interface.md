@@ -140,7 +140,7 @@ Frontend page behavior and layout. Client architecture and connection handling:
 - A live start shows a skippable 2.9-second intro: the game's lobby artwork and name
   fade in, all occupied seats appear together with avatars and names, then the table
   is revealed. Reduced motion uses a one-second static reveal. The impact sound uses
-  gesture-unlocked effects audio and follows the turn-sound toggle. Reconnects, page
+  gesture-unlocked effects audio and follows the game sound effects switch. Reconnects, page
   reloads, and starts received in background tabs do not replay the intro. Server play
   and clocks continue during this client presentation. A click or tap anywhere on the intro,
   Escape, Enter, or Space reveals the table; a quiet line at the bottom says so.
@@ -353,7 +353,7 @@ Saved and system reduced-motion preferences disable this animation.
   | Type | Who sees it | Where |
   | --- | --- | --- |
   | Card faces | Owner | Every face-up card, including Liar's Deck jokers and Napoleon's big joker, whose greyscale copy is the small joker (the classic deck uses bundled Napoleon jokers); the four-color deck loads its recolored faces on demand and shows classic faces until then |
-  | Sound packs | Owner | Turn, join, card, pass, elimination, start, Sevens slash and collapse cues; the sound toggle still applies, shop previews play on click |
+  | Sound packs | Owner | Turn, join, card, pass, elimination, start, Sevens slash and collapse cues; the sound switches still apply, shop previews play on click |
   | Chip styles | Owner | Every chip icon (Hold'em, Blackjack, round history, seats) |
   | Seat frames | Everyone | In-game seat plates and waiting-room seats; the frame's glow replaces the theme turn glow |
   | Victory effects | Everyone, including spectators | About 3 s from each winning human seat when settlement appears, once per settlement; never covers or blocks the result dialog. Reduced motion shows a static glow |

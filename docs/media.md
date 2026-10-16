@@ -33,6 +33,10 @@ Only the site owner supplies music; players cannot upload tracks or enter URLs.
   autoplay, playback waits for a trusted user gesture; pausing cancels this retry.
   Playback continues across routes and when the panel closes.
   One audio element is reused so the browser unlock carries across tracks.
+- The account page's Sound tab holds three device-local switches, all on by default:
+  game sound effects (card, pass, elimination, start, and Sevens slash and collapse cues),
+  game music, and the turn reminder. Music switched off pauses and never autoplays; pressing
+  play in the music panel turns it back on. Shop sound-pack previews always play on click.
 - Turn reminders are separate synthesized chimes, on by default and unaffected by music
   pause or volume. They wait for the presentation deadline and are dropped, not queued,
   when audio is blocked.

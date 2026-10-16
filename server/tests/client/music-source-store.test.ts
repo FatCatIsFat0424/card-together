@@ -496,6 +496,33 @@ describe('provided music store', () => {
     expect(store.getState().error).toBe(false);
   });
 
+  it('should pause and stop autoplaying while music is switched off until play turns it back on', async () => {
+    const store = await state();
+    await store.getState().play();
+    callbacks().playing(true);
+    store.getState().setEnabled(false);
+    expect(store.getState()).toMatchObject({ enabled: false, playing: false });
+    expect(mocks.file.pause).toHaveBeenCalledOnce();
+    expect(storage.get('card-together.music.enabled')).toBe('false');
+    // A new tab carries no pause of its own, yet the switch still keeps it quiet.
+    session.clear();
+    vi.resetModules();
+    let module = await import('../../../client/src/stores/music-store');
+    const cleanup = module.startMusicAutoplay(autoplayTarget().target);
+    expect(mocks.file.play).toHaveBeenCalledOnce();
+    expect(module.useMusicStore.getState().enabled).toBe(false);
+    cleanup();
+    await module.useMusicStore.getState().play();
+    expect(module.useMusicStore.getState().enabled).toBe(true);
+    expect(storage.has('card-together.music.enabled')).toBe(false);
+    module.useMusicStore.getState().setEnabled(false);
+    module.useMusicStore.getState().setEnabled(true);
+    expect(mocks.file.play).toHaveBeenCalledTimes(3);
+    vi.resetModules();
+    module = await import('../../../client/src/stores/music-store');
+    expect(module.useMusicStore.getState().enabled).toBe(true);
+  });
+
   it('should remain usable when browser storage is unavailable', async () => {
     for (const name of ['localStorage', 'sessionStorage']) {
       vi.stubGlobal(name, {

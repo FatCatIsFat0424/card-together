@@ -1,4 +1,5 @@
 import { getActiveSoundPack } from '../cosmetics/sound-packs/active-sound-pack';
+import { useSoundEffectsStore } from '../stores/sound-effects-store';
 import { cueDuration } from './sound-pack';
 import type { Cue, SlashTiming, SoundPack } from './sound-pack';
 import { createVoiceTracker, renderCue } from './sound-synth';
@@ -30,8 +31,12 @@ export function disposeCardSounds(): void {
   }
 }
 
-/** Plays a cue from the equipped pack; locked audio drops it rather than replaying it after the next gesture. */
+/**
+ * Plays a cue from the equipped pack unless game sound effects are off; locked audio drops it rather than
+ * replaying it after the next gesture.
+ */
 function play(pick: (pack: SoundPack) => Cue): void {
+  if (!useSoundEffectsStore.getState().enabled) return;
   const audio = context;
   if (!audio || audio.state !== 'running') return;
   try {

@@ -20,6 +20,7 @@ import { EmojiLibrary } from '../components/EmojiLibrary';
 import { OpacitySlider } from '../components/OpacitySlider';
 import { AccountProfilePreview } from '../components/AccountProfilePreview';
 import { AppCheckbox } from '../components/AppCheckbox';
+import { SoundSettings } from '../components/SoundSettings';
 import styles from './AccountPages.module.css';
 import editorStyles from './AccountPage.module.css';
 
@@ -27,7 +28,7 @@ type MediaField = 'avatarImage' | 'seatBackground' | 'tableBackground' | 'cardBa
 type OpacityField = 'tableBackgroundOpacity' | 'cardBackOpacity';
 type SettingField = MediaField | OpacityField | 'matchesPublic';
 
-const ACCOUNT_TABS = ['profile', 'history', 'emoji', 'password'] as const;
+const ACCOUNT_TABS = ['profile', 'history', 'emoji', 'sound', 'password'] as const;
 type AccountTab = typeof ACCOUNT_TABS[number];
 
 const RESIZE = {
@@ -373,6 +374,10 @@ export function AccountPage(): ReactNode {
       <section id="account-panel-emoji" role="tabpanel" aria-labelledby="account-tab-emoji"
         className={editorStyles.managementPanel} hidden={activeTab !== 'emoji'}>
         <EmojiLibrary />
+      </section>
+      <section id="account-panel-sound" role="tabpanel" aria-labelledby="account-tab-sound"
+        className={editorStyles.managementPanel} hidden={activeTab !== 'sound'}>
+        <SoundSettings />
       </section>
       <section id="account-panel-password" role="tabpanel" aria-labelledby="account-tab-password"
         className={editorStyles.managementPanel} hidden={activeTab !== 'password'}>
