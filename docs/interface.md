@@ -68,7 +68,8 @@ Frontend page behavior and layout. Client architecture and connection handling:
 | Desktop | Game picker beside a sidebar: selected game, Create, then join-by-code below a divider; online friends below the room actions |
 | ≤52rem | Join-by-code, an "Or" divider, then a full-width Create that always creates Bridge; no selected-game panel; friends below the rules list |
 
-- Lobby backgrounds preload, then crossfade over 600ms.
+- Each game has its own [lobby artwork](../client/src/assets/lobby-backgrounds/README.md),
+  also used for its game-start intro. Backgrounds preload, then crossfade over 600ms.
 - Lobby entry starts with the player greeting and daily rewards, then room actions,
   staggered game choices, and online friends. Each reveal lasts 200ms and the full
   sequence finishes in 520ms. Friend/reward refreshes and game selection do not
