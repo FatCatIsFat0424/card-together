@@ -24,6 +24,7 @@ import { AbortVoteBanner, AbortVoteButton } from './AbortVote';
 import { SpectatorLeaveButton } from './SpectatorLeave';
 import { EarlyLeaveButton } from './EarlyLeave';
 import { AppIcon } from '../components/AppIcon';
+import { VoiceButton } from '../components/VoiceControls';
 import { RoomCodeButton } from '../components/RoomCodeButton';
 import { GameRulesDialog } from '../components/GameRulesDialog';
 import { matchRulesContext } from '../game-rules-context';
@@ -400,6 +401,7 @@ export function GameShell({
         <GameActionBar />
         <div className={`${styles.table} ${expandedTable ? styles.expandedTable : ''} ${cornersSpan ? styles.cornersSpan : ''} ${centreUp ? styles.centreUp : ''}`}
           data-card-table>
+          <div className={styles.desktopVoice}><VoiceButton /></div>
           <div className={styles.tableTools}>
             <div className={styles.tableExitTools}>
               <AbortVoteButton iconOnly buttonClassName={styles.toolBtn} />
@@ -409,6 +411,7 @@ export function GameShell({
               onClick={openRules} aria-haspopup="dialog" aria-label={t('rules.open')} title={t('rules.open')}>
               <AppIcon name="rules" />
             </button>}
+            <VoiceButton className={styles.toolBtn} />
             <button type="button" className={styles.toolBtn} onClick={openInfo} ref={infoButtonRef}
               aria-label={t('table.info')} title={t('table.info')}
               aria-expanded={infoOpen} aria-controls="game-info-panel">

@@ -1,6 +1,6 @@
-// ─── TopBar: global top bar (navigation, game info, voice, music, theme, locale) ───
+// ─── TopBar: global top bar (navigation, game info, music, theme, locale) ───
 
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AnimationEvent, ReactNode } from 'react';
 import Tooltip from '@mui/material/Tooltip';
 import { Link, NavLink, useLocation } from 'react-router-dom';
@@ -10,7 +10,6 @@ import { clearAccount, useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useMusicStore } from '../stores/music-store';
 import { useRoomStore } from '../stores/room-store';
-import { useVoiceStore } from '../stores/voice-store';
 import { useActiveIndicator } from '../hooks/use-active-indicator';
 import { useExitPresence } from '../hooks/use-exit-presence';
 import { useJoinSound } from '../hooks/use-join-sound';
@@ -26,10 +25,7 @@ import { messageUnreadCount, notificationUnreadCount, useSocialStore } from '../
 import { closeMessagesWindow } from '../stores/messages-window-store';
 import styles from './TopBar.module.css';
 
-const VoicePanel = lazy(() => import('./VoicePanel')
-  .then((module) => ({ default: module.VoicePanel })));
-
-type Popover = 'notifications' | 'menu' | 'voice' | 'music' | 'signOut';
+type Popover = 'notifications' | 'menu' | 'music' | 'signOut';
 
 const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -45,7 +41,6 @@ export function TopBar(): ReactNode {
   const roomCode = useRoomStore((state) => state.currentRoomCode);
   const inActiveGame = useRoomStore((state) => state.roomInfo?.status === 'playing' && state.mySeat !== null);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
-  const voiceStatus = useVoiceStore((state) => state.status);
   const musicPlaying = useMusicStore((state) => state.playing);
   const [open, setOpen] = useState<Popover | null>(null);
   const [busy, setBusy] = useState(false);
@@ -59,7 +54,6 @@ export function TopBar(): ReactNode {
   const togglePage = togglePageOf(pathname);
   const inGame = pathname.startsWith('/game/');
   const showLinks = Boolean(accountId);
-  const showVoice = Boolean(accountId && roomCode);
 
   if (lastLocation !== here) {
     setLastLocation(here);
@@ -184,18 +178,6 @@ export function TopBar(): ReactNode {
           <AppIcon name="chat" />
           {messageCount > 0 && <span className={styles.badge} aria-hidden="true">{messageCount > 99 ? '99+' : messageCount}</span>}
         </Link>}
-        {showVoice && <div className={styles.group} data-popover="voice">
-          <button type="button" className={`${styles.iconBtn} touch-target`} onClick={() => toggle('voice')}
-            aria-expanded={open === 'voice'} aria-label={t('topbar.voice')} title={t('topbar.voice')}>
-            <AppIcon name="microphone" />
-            {(voiceStatus === 'joined' || voiceStatus === 'joining') &&
-              <span className={voiceStatus === 'joined' ? styles.dotJoined : styles.dotJoining} />}
-          </button>
-          <div {...panelProps('voice', `${styles.popover} ${shown('voice') ? '' : styles.hidden}`)}
-            data-popover-panel tabIndex={-1}>
-            <Suspense fallback={null}><VoicePanel /></Suspense>
-          </div>
-        </div>}
         <div className={styles.group} data-popover="music">
           <button type="button" className={`${styles.iconBtn} touch-target ${musicPlaying ? styles.iconActive : ''}`}
             onClick={() => toggle('music')} aria-expanded={open === 'music'}

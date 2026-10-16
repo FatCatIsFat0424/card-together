@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import { TopBar } from './components/TopBar';
+import { VoiceControls } from './components/VoiceControls';
 import { FloatingRoomCard } from './components/FloatingRoomCard';
 import { GameStartTransition } from './components/GameStartTransition';
 import { InviteToast } from './components/InviteToast';
@@ -114,6 +115,7 @@ export function App(): ReactNode {
   const signedIn = useAccountStore((state) => Boolean(state.account));
   return (
     <BrowserRouter basename={APP_BASE_PATH}>
+      <VoiceControls>
       <TopBar />
       <FloatingRoomCard />
       {signedIn && <InviteToast />}
@@ -124,6 +126,7 @@ export function App(): ReactNode {
       <div className={appStyles.viewport}>
         <RouteErrorBoundary><AppRoutes /></RouteErrorBoundary>
       </div>
+      </VoiceControls>
     </BrowserRouter>
   );
 }

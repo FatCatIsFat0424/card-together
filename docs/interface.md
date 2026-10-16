@@ -13,6 +13,9 @@ Frontend page behavior and layout. Client architecture and connection handling:
 - Sign-out is the last menu item, in red, on narrow screens and phone landscape
   (width below 1280px and height at most 500px). Other layouts show its icon and label in the top bar.
 - The owner's coin balance appears with a hint about the [completion reward](storage.md#game-coins).
+- Voice uses a 44px microphone button in the room controls and at the top right of
+  the game table. Its anchored panel stays within the viewport; closing it or moving
+  between room and game does not end the call. The global header has no voice button.
 - Info and chat sheets and top-bar popovers move focus inside on open and back to the
   trigger on close. Escape closes only the topmost layer.
 - Route errors offer a reload. After a deployment, missing lazy chunks trigger at most

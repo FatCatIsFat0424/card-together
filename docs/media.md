@@ -141,6 +141,11 @@ picker hides the shadowed site emoji); both remain usable as stickers.
 
 ## Voice
 
+Open voice controls with the small microphone button beside the waiting room's
+rules/chat controls or at the top right of the game table. It is not in the global
+header. Closing the panel or switching between room and game keeps the voice session;
+the button's green/amber dot indicates joined/joining status.
+
 | Action | Behavior |
 | --- | --- |
 | Join | Explicit; requires microphone permission |

@@ -37,6 +37,7 @@ import { useConnectionReady } from '../games/use-connection-ready';
 import { AppIcon } from '../components/AppIcon';
 import { GameRulesDialog } from '../components/GameRulesDialog';
 import { roomRulesContext } from '../game-rules-context';
+import { VoiceButton } from '../components/VoiceControls';
 import styles from './RoomPage.module.css';
 import botSeatBackground from '../assets/room-backgrounds/bot-seat.webp';
 import { unreadCount } from './room-progress';
@@ -466,6 +467,7 @@ export function RoomPage(): ReactNode {
             onClick={() => setRulesOpen(true)}>
             <AppIcon name="rules" /> <span className={styles.actionText}>{t('rules.open')}</span>
           </button>
+          <VoiceButton />
           <button type="button" className={`btn btn-outline touch-target ${styles.chatToggle}`}
             ref={chatToggleRef}
             aria-label={t('chat.title')} title={t('chat.title')}

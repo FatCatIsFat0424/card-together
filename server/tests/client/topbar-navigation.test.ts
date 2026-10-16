@@ -40,6 +40,7 @@ vi.mock('../../../client/src/stores/game-store', () => ({
 vi.mock('../../../client/src/components/VoicePanel', () => ({ VoicePanel: () => null }));
 
 import { TopBar } from '../../../client/src/components/TopBar';
+import { VoiceButton, VoiceControls } from '../../../client/src/components/VoiceControls';
 import { NotificationPanel } from '../../../client/src/components/NotificationPanel';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
 import { useSocialStore } from '../../../client/src/stores/social-store';
@@ -70,6 +71,17 @@ describe('topbar navigation', () => {
     state.roomCode = 'ABC123';
     useI18nStore.getState().setLocale('zh-TW');
     useSocialStore.getState().reset();
+  });
+
+  it.each(['/room/ABC123', '/game/ABC123'])('puts voice controls outside the header on %s', (path) => {
+    expect(render(path)).not.toContain('data-popover="voice"');
+    expect(render(path)).not.toContain('data-testid="MicNoneIcon"');
+    const button = (): string => renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [path] },
+      createElement(VoiceControls, null, createElement(VoiceButton))));
+    expect(button()).toContain('data-voice-control');
+    expect(button()).toContain('aria-controls="table-voice-controls"');
+    state.roomCode = null;
+    expect(button()).not.toContain('data-voice-control');
   });
 
   it.each(['/game/ABC123', '/room/ABC123', '/friends', '/messages', '/messages/bob', '/account', '/shop', '/achievements'])('keeps account navigation on %s', (path) => {
