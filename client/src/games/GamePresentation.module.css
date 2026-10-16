@@ -106,8 +106,8 @@
 
 .effect, .summary { font-size: 0.8rem; }
 
-/* Ninety-Nine and Napoleon: the play box grows with the table like the rest of its centre (the centre column
-   is the size container), so the card, the running total and the effect stay readable. */
+/* Ninety-Nine, Napoleon and Sevens: the play box grows with the table like the rest of its centre (the centre
+   column is the size container), so the card, the running total and the effect stay readable. */
 .large {
   --presentation-card-width: max(3.5rem, min(calc(96px * var(--playing-card-scale)), 11cqh, 7cqw));
   width: min(25rem, 90vw);
@@ -116,9 +116,9 @@
   gap: var(--spacing-sm);
 }
 
-/* Napoleon shows one card per play, so it can be larger; its finished trick shows four to six cards in a row
-   in a wider box whose cards shrink to fit it. */
-.large.napoleon { --presentation-card-width: max(3.5rem, min(calc(120px * var(--playing-card-scale)), 14cqh, 10cqw)); }
+/* Napoleon and Sevens show one card per play, so it can be larger. Napoleon's finished trick shows four to six
+   cards in a row in a wider box whose cards shrink to fit it. */
+.large.bigCard { --presentation-card-width: max(3.5rem, min(calc(120px * var(--playing-card-scale)), 14cqh, 10cqw)); }
 .large.wide { width: min(36rem, 100%); }
 .wide .trickCards { max-width: 100%; box-sizing: border-box; }
 .wide .trickCards .cardSlot { flex: 0 1 var(--presentation-card-width); min-width: 0; }

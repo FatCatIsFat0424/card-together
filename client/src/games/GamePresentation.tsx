@@ -60,8 +60,9 @@ export function GamePresentation({
   }
   return <div ref={rootRef} key={frame.key}
     className={[styles.presentation, styles[position],
-      (gameType === 'ninetynine' || gameType === 'napoleon') && styles.large,
-      gameType === 'napoleon' && styles.napoleon, gameType === 'napoleon' && frame.kind === 'trick' && styles.wide,
+      (gameType === 'ninetynine' || gameType === 'napoleon' || gameType === 'sevens') && styles.large,
+      (gameType === 'napoleon' || gameType === 'sevens') && styles.bigCard,
+      gameType === 'napoleon' && frame.kind === 'trick' && styles.wide,
       reducedMotion && styles.reducedMotion,
       (frame.kind === 'eliminated' || frame.survived === false) && styles.eliminated].filter(Boolean).join(' ')}
     role="status" aria-live="polite" aria-atomic="true" data-presentation-kind={frame.kind}>
