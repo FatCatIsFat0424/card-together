@@ -186,11 +186,13 @@ export function DailyRewards(): ReactNode {
   // Keep the selected content and width through MUI's exit transition.
   const close = (): void => { if (!pending) { setDialogOpen(false); setCelebrateDay(''); } };
   return <aside className={styles.widgets}>
-    <button type="button" className={styles.widget} onClick={() => open('tasks')} aria-haspopup="dialog">
+    <button type="button" className={styles.widget} onClick={() => open('tasks')} aria-haspopup="dialog"
+      aria-label={t('daily.tasks')} title={t('daily.tasks')}>
       <AppIcon name="info" /><span><strong>{t('daily.tasks')}</strong>
         <small>{status ? t('daily.progress', { count: String(status.claimedTasks.length), target: String(DAILY_TASK_COUNT) }) : '—'}</small></span>
     </button>
-    <button type="button" className={styles.widget} onClick={() => open('check-in')} aria-haspopup="dialog">
+    <button type="button" className={styles.widget} onClick={() => open('check-in')} aria-haspopup="dialog"
+      aria-label={t('daily.checkIn')} title={t('daily.checkIn')}>
       <AppIcon name="calendar" /><span><strong>{t('daily.checkIn')}</strong>
         <small>{t(checkedIn ? 'daily.signedIn' : 'daily.reward', { coins: String(DAILY_CHECK_IN_COINS) })}</small></span>
     </button>

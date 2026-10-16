@@ -84,6 +84,8 @@
   pointer-events: none;
 }
 
+.centreForeground, .tableCentre:has([role='dialog']) { z-index: 6; }
+
 .centreContent {
   flex: none;
   width: max-content;
@@ -378,6 +380,29 @@
   .chatFab { display: inline-flex; }
 }
 
+/* Keep phone portrait tables centered while controls float in their corners. */
+@media (max-width: 767px) and (orientation: portrait) {
+  .centreColumn { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .table { grid-column: 1; grid-row: 1; }
+  .centreColumn.withActions { padding-left: 0; }
+  .handZone { grid-column: 1; grid-row: 2; }
+  .handZone > :last-child { container-type: inline-size; }
+
+  .table:not(.expandedTable) {
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: '. top .' 'left centre right';
+  }
+  .table:not(.expandedTable) > .tableTools {
+    position: absolute;
+    inset: 4px 4px auto;
+    grid-area: auto;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .table:not(.expandedTable) > .tableTools > * { pointer-events: auto; }
+  .table:not(.expandedTable) > [data-table-seat='top'] { padding-top: 52px; }
+}
+
 /* Short landscape viewports prioritize the playable centre over seat decoration. */
 @container (max-height: 420px) {
   .table { gap: 2px; padding: 2px; }
@@ -476,10 +501,11 @@
 }
 
 @media (max-height: 500px) and (min-width: 600px) {
-  .handZone { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; }
-  .handHeader { grid-column: 1; grid-row: 1; }
-  .handStatus { grid-column: 1; grid-row: 2; }
-  .handZone > :last-child { grid-column: 2; grid-row: 1 / 3; container-type: inline-size; }
+  .handZone { display: block; }
+  .handHeader, .handStatus { position: absolute; left: 20%; width: 180px; }
+  .handHeader { bottom: calc(100% + 28px); }
+  .handStatus { bottom: calc(100% + 4px); }
+  .handZone > :last-child { container-type: inline-size; }
 }
 
 /* Wide enough for 44px touch targets on phones; it never passes through FittedCentre scaling. */
@@ -497,6 +523,24 @@
 
 @media (min-width: 1024px) and (min-height: 501px) {
   .actionPanel { top: 50%; bottom: auto; transform: translate(-50%, -50%); }
+}
+
+@media (max-height: 500px) and (min-width: 600px) {
+  .actionPanel:has([aria-labelledby='bidding-panel-title']) {
+    top: 50%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@media (max-width: 767px) and (orientation: portrait) {
+  .actionPanel:has([aria-labelledby='bidding-panel-title']) {
+    top: 50cqh;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    width: min(336px, calc(100% - 16px));
+    max-height: calc(100cqh - 24px);
+  }
 }
 
 @media (max-height: 500px) and (min-width: 600px) and (pointer: coarse) {

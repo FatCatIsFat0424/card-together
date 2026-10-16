@@ -43,7 +43,9 @@ export function LobbyPage(): ReactNode {
   const phase = useGameStore((state) => state.phase);
   const connectionReady = useConnectionReady();
   const { t } = useI18nStore();
-  const mobileLayout = useMediaQuery('(max-width: 52rem)');
+  const narrowLayout = useMediaQuery('(max-width: 52rem)');
+  const landscapeLayout = useMediaQuery('(max-height: 500px) and (min-width: 600px)');
+  const mobileLayout = narrowLayout && !landscapeLayout;
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const [selectedGame, setSelectedGame] = useState<GameType>('bridge');
   const [rulesGame, setRulesGame] = useState<GameType | null>(null);

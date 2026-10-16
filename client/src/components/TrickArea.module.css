@@ -83,3 +83,18 @@
 @media (max-width: 767px) {
   .trickContainer { --trick-w: calc((clamp(34px, 10vw, 42px)) * var(--playing-card-scale)); }
 }
+
+/* Align the seats across the short landscape table, leaving room for larger cards. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .trickContainer {
+    --trick-w: max(44px, min(calc(112px * var(--playing-card-scale)), 18cqh, 11cqw));
+    width: calc(var(--trick-w) * 5.2);
+    height: calc(var(--trick-w) * 313 / 224 + 22px);
+  }
+
+  .slot { transform: translateX(-50%); }
+  .left { left: 12.5%; top: 0; }
+  .top { left: 37.5%; top: 0; }
+  .bottom { left: 62.5%; top: 0; }
+  .right { left: 87.5%; top: 0; }
+}

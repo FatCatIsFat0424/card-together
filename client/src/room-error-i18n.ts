@@ -1,0 +1,92 @@
+const english = {
+  'room.error.leaveSeat': 'Leave a seat for a player.',
+  'room.error.notFound': 'Room not found.',
+  'room.error.full': 'Room is full.',
+  'room.error.spectatorsFull': 'The spectator area is full.',
+  'room.error.occupied': 'Seat is occupied.',
+  'room.error.notSeated': 'Not seated.',
+  'room.error.notInRoom': 'Not in room.',
+  'room.error.playerNotInRoom': 'Player is not in this room.',
+  'room.error.invalidSeat': 'Invalid seat.',
+  'room.error.noBot': 'No bot in this seat.',
+  'room.error.hostOnly': 'Only the host can manage bots.',
+  'room.error.playing': 'Game is in progress.',
+  'room.error.fourSeats': 'This game uses four seats.',
+  'room.error.seatLimit': 'Seat limit reached.',
+  'room.error.noExtraSeat': 'No additional seat to remove.',
+  'room.error.removeSelf': 'You cannot remove yourself.',
+  'room.error.invalidSettings': 'Invalid bot difficulty.',
+  'room.error.wrongGame': 'Not a Sevens room.',
+  'room.error.notReady': 'Meet the player count requirement and prepare every seated player first.',
+  'room.error.emptyExtraSeats': 'Empty the additional seats before changing to a four-seat game.',
+  'room.error.emptyExcessSeats': 'Empty the seats beyond this game\'s player limit first.',
+  'room.error.leaveCurrent': 'Leave your current room first.',
+  'room.error.expired': 'Your session has expired. Please sign in again.',
+  'room.error.playerNotFound': 'Player not found.',
+} as const;
+
+export type RoomErrorTranslationKey = keyof typeof english;
+
+export const roomErrorTranslations: Record<'en' | 'zh-TW', Record<RoomErrorTranslationKey, string>> = {
+  en: english,
+  'zh-TW': {
+    'room.error.leaveSeat': '請至少留一個座位給真人玩家。',
+    'room.error.notFound': '找不到房間。',
+    'room.error.full': '房間已滿。',
+    'room.error.spectatorsFull': '旁觀者席已滿。',
+    'room.error.occupied': '這個座位已有人。',
+    'room.error.notSeated': '請先入座。',
+    'room.error.notInRoom': '請先加入房間。',
+    'room.error.playerNotInRoom': '這位玩家已不在房間內。',
+    'room.error.invalidSeat': '這個座位無效。',
+    'room.error.noBot': '這個座位沒有電腦玩家。',
+    'room.error.hostOnly': '只有房主可以執行此操作。',
+    'room.error.playing': '遊戲進行中，暫時無法變更。',
+    'room.error.fourSeats': '這個遊戲固定使用四個座位。',
+    'room.error.seatLimit': '座位數量已達上限。',
+    'room.error.noExtraSeat': '沒有可移除的額外座位。',
+    'room.error.removeSelf': '無法將自己移出房間。',
+    'room.error.invalidSettings': '設定無效，請重新選擇。',
+    'room.error.wrongGame': '目前的遊戲不適用這項設定。',
+    'room.error.notReady': '請確認人數符合需求，且所有入座玩家都已準備。',
+    'room.error.emptyExtraSeats': '切換成四人遊戲前，請先清空額外座位。',
+    'room.error.emptyExcessSeats': '請先清空超過此遊戲人數上限的座位。',
+    'room.error.leaveCurrent': '請先離開目前的房間。',
+    'room.error.expired': '登入已逾期，請重新登入。',
+    'room.error.playerNotFound': '找不到玩家，請重新登入。',
+  },
+};
+
+// Existing room acknowledgements send English text; normalize punctuation at the UI boundary.
+const errorKeys = new Map<string, RoomErrorTranslationKey>([
+  ...Object.entries(english).map(([key, message]): [string, RoomErrorTranslationKey] =>
+    [message.replace(/\.$/, ''), key as RoomErrorTranslationKey]),
+  ['Only the host can manage seats', 'room.error.hostOnly'],
+  ['Only the host can remove players', 'room.error.hostOnly'],
+  ['Only the host can change seat shuffling', 'room.error.hostOnly'],
+  ['Only the host can change the game', 'room.error.hostOnly'],
+  ['Only the host can change the timer', 'room.error.hostOnly'],
+  ['Only the host can change the rules', 'room.error.hostOnly'],
+  ['Only the host can start the game', 'room.error.hostOnly'],
+  ['Cannot change seat during game', 'room.error.playing'],
+  ['Cannot change seats during game', 'room.error.playing'],
+  ['Cannot manage bots during game', 'room.error.playing'],
+  ['Cannot manage seats during game', 'room.error.playing'],
+  ['Cannot remove players during game', 'room.error.playing'],
+  ['Invalid time control', 'room.error.invalidSettings'],
+  ['Invalid Sevens options', 'room.error.invalidSettings'],
+  ['Invalid Ninety-Nine options', 'room.error.invalidSettings'],
+  ['Invalid Blackjack options', 'room.error.invalidSettings'],
+  ['Invalid Napoleon options', 'room.error.invalidSettings'],
+  ['Invalid seat shuffle setting', 'room.error.invalidSettings'],
+  ['Unsupported game type', 'room.error.invalidSettings'],
+  ['Invalid player', 'room.error.invalidSettings'],
+  ['Not a Ninety-Nine room', 'room.error.wrongGame'],
+  ['Not a Blackjack room', 'room.error.wrongGame'],
+  ['Not a Napoleon room', 'room.error.wrongGame'],
+  ['Join a room first', 'room.error.notInRoom'],
+]);
+
+export function roomErrorKey(message: string | undefined): RoomErrorTranslationKey | 'common.error' {
+  return errorKeys.get(message?.trim().replace(/\.$/, '') ?? '') ?? 'common.error';
+}

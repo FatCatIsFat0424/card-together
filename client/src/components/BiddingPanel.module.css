@@ -195,6 +195,13 @@
   .waitingPill { white-space: normal; text-align: center; }
 }
 
+/* Portrait bidding keeps the same controls in a narrower centered panel. */
+@media (max-width: 767px) and (orientation: portrait) {
+  .title { font-size: var(--text-sm); }
+  .highest, .recent { font-size: var(--text-xs); }
+  .hint { display: none; }
+}
+
 /* Short landscape tables keep the three button rows and drop secondary text. */
 @media (max-height: 500px) and (min-width: 600px) {
   .panel { max-width: 352px; margin-inline: auto; padding: 4px 6px; gap: 2px; }

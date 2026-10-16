@@ -15,6 +15,12 @@
 }
 
 .top { grid-area: top; padding-top: 6px; }
+
+/* Card-count chips suffice when a short phone has no room for decorative side trays. */
+@media (max-width: 767px) and (orientation: portrait) and (max-height: 700px) {
+  .left, .right { transform: translateY(-48px); }
+  .left > .tray, .right > .tray { display: none; }
+}
 .left { grid-area: left; }
 .right { grid-area: right; }
 .bottom {

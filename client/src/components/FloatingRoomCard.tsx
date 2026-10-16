@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties, PointerEvent, ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { GAME_SEAT_ORDER } from '@shared/constants';
 import { roomCanStart, roomSeatInfo } from '@shared/rules/seats';
@@ -19,6 +20,45 @@ export function FloatingRoomCard(): ReactNode {
   const roomCode = useRoomStore((state) => state.currentRoomCode);
   const room = useRoomStore((state) => state.roomInfo);
   const phase = useGameStore((state) => state.phase);
+  const [corner, setCorner] = useState<'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'>('bottom-left');
+  const [offset, setOffset] = useState<{ x: number; y: number } | null>(null);
+  const drag = useRef<{ id: number; x: number; y: number; rect: DOMRect; dx: number; dy: number; moved: boolean } | null>(null);
+  const suppressClick = useRef(false);
+
+  useEffect(() => {
+    const cancel = (): void => { drag.current = null; setOffset(null); };
+    window.addEventListener('resize', cancel);
+    window.addEventListener('blur', cancel);
+    return () => { window.removeEventListener('resize', cancel); window.removeEventListener('blur', cancel); };
+  }, []);
+
+  const move = (event: PointerEvent<HTMLAnchorElement>): void => {
+    const current = drag.current;
+    if (!current || current.id !== event.pointerId) return;
+    const dx = event.clientX - current.x;
+    const dy = event.clientY - current.y;
+    if (!current.moved && Math.hypot(dx, dy) < 6) return;
+    current.moved = true;
+    suppressClick.current = true;
+    const top = (Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topbar-height')) || 52) + 8;
+    current.dx = Math.max(8, Math.min(innerWidth - current.rect.width - 8, current.rect.left + dx)) - current.rect.left;
+    current.dy = Math.max(top, Math.min(innerHeight - current.rect.height - 8, current.rect.top + dy)) - current.rect.top;
+    setOffset({ x: current.dx, y: current.dy });
+    event.preventDefault();
+  };
+
+  const finish = (event: PointerEvent<HTMLAnchorElement>): void => {
+    const current = drag.current;
+    if (!current || current.id !== event.pointerId) return;
+    drag.current = null;
+    setOffset(null);
+    if (current.moved && event.type === 'pointerup') {
+      const vertical = current.rect.top + current.dy + current.rect.height / 2 < innerHeight / 2 ? 'top' : 'bottom';
+      const horizontal = current.rect.left + current.dx + current.rect.width / 2 < innerWidth / 2 ? 'left' : 'right';
+      setCorner(`${vertical}-${horizontal}`);
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
 
   if (!accountId || !roomCode || !room || room.code !== roomCode
     || pathname.startsWith('/room/') || pathname.startsWith('/game/')
@@ -37,10 +77,30 @@ export function FloatingRoomCard(): ReactNode {
     : roomCanStart(room) ? 'roomCard.ready' : 'roomCard.waiting';
   const gameName = t(`gameType.${room.gameType}`);
 
-  return <aside className={styles.card} aria-label={t('roomCard.title')}>
-    <Link className={styles.link} to={path} aria-label={t('roomCard.open', { game: gameName, code: roomCode })}>
+  return <aside className={styles.card} aria-label={t('roomCard.title')} data-corner={corner}
+    data-dragging={offset ? true : undefined}
+    style={offset ? { '--drag-x': `${offset.x}px`, '--drag-y': `${offset.y}px` } as CSSProperties : undefined}>
+    <Link className={styles.link} to={path} aria-label={t('roomCard.open', { game: gameName, code: roomCode })}
+      onDragStart={(event) => { if (drag.current) event.preventDefault(); }}
+      onPointerDown={(event) => {
+        suppressClick.current = false;
+        if (!event.isPrimary || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey
+          || !window.matchMedia('(max-height: 500px) and (min-width: 600px)').matches) return;
+        const rect = event.currentTarget.parentElement!.getBoundingClientRect();
+        drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, rect, dx: 0, dy: 0, moved: false };
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }}
+      onPointerMove={move} onPointerUp={finish} onPointerCancel={finish} onLostPointerCapture={finish}
+      onKeyDown={(event) => { if (event.key === 'Enter') suppressClick.current = false; }}
+      onClick={(event) => {
+        if (suppressClick.current) { event.preventDefault(); suppressClick.current = false; }
+      }}>
       <div className={styles.heading}>
-        <strong>{gameName}</strong><span className={styles.code}>{roomCode}</span><AppIcon name="nextPage" />
+        <span className={`${styles.compactDot} ${styles.dot} ${connection !== 'ready' ? styles.disconnected : playing ? styles.playing : ''}`}
+          role="status" aria-label={t(status)} title={t(status)} />
+        <strong>{gameName}</strong>
+        <span className={styles.compactCount}>({occupied.length}/{seats.length})</span>
+        <span className={styles.code}>{roomCode}</span><AppIcon name="nextPage" />
       </div>
       <div className={styles.status}>
         <span className={`${styles.dot} ${connection !== 'ready' ? styles.disconnected : playing ? styles.playing : ''}`} aria-hidden="true" />

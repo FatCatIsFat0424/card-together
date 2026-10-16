@@ -5,6 +5,11 @@
 .widget strong, .widget small { display: block; }
 .widget strong { font-size: var(--text-sm); }
 .widget small { color: var(--text-secondary); font-size: var(--text-xs); margin-top: var(--spacing-xs); }
+@media (max-height: 500px) and (min-width: 600px) {
+  .widget { justify-content: center; min-height: 44px; padding: 0 12px; }
+  .widget strong { white-space: nowrap; }
+  .widget small { display: none; }
+}
 .dialog.dialog { background: var(--bg-surface); background-image: none; color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--radius-xl); }
 .dialogHeader.dialogHeader { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-md); }
 .dialogHeader h2 { display: flex; align-items: center; gap: var(--spacing-sm); font-size: var(--text-xl); }

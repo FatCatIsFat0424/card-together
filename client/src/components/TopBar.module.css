@@ -169,6 +169,9 @@
   .brandTextGame { display: none; }
   .actions { gap: var(--spacing-xs); }
   .iconBtn { width: 32px; height: 32px; }
+}
+
+@media (max-width: 767px), (max-width: 1279px) and (max-height: 500px) {
   .iconBtn.signOutBtn { display: none; }
   .menuSignOut { display: flex; align-items: center; gap: var(--spacing-sm); width: 100%; min-height: 44px; padding-top: var(--spacing-sm); border-top: 1px solid var(--border-color); color: var(--color-danger); font-size: var(--text-sm); text-align: left; }
   .menuSignOut:disabled { opacity: 0.6; cursor: wait; }

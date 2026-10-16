@@ -44,12 +44,17 @@ export function NapoleonTrickArea({ trick, seats, bottomSeat, myTurn }: {
   const plays = trick?.plays ?? [];
   const slotStyle = (seat: GameSeat): CSSProperties => {
     const slot = napoleonTrickSlot(seat, bottomSeat, seats);
-    return { left: `${slot.left}%`, top: `${slot.top}%`,
+    const from = seats.includes(bottomSeat) ? seats.indexOf(bottomSeat) : 0;
+    const relative = (seats.indexOf(seat) - from + seats.length) % seats.length;
+    const middle = Math.floor(seats.length / 2);
+    const column = relative === 0 ? middle : relative <= middle ? relative - 1 : relative;
+    return { '--slot-left': `${slot.left}%`, '--slot-top': `${slot.top}%`,
+      '--landscape-left': `${((column + 0.5) / seats.length) * 100}%`,
       '--fly-x': `${Math.round(-Math.sin(slot.angle) * 30)}vw`, '--fly-y': `${Math.round(Math.cos(slot.angle) * 28)}vh` } as CSSProperties;
   };
 
   return (
-    <div className={styles.trickContainer}>
+    <div className={styles.trickContainer} style={{ '--seat-count': seats.length } as CSSProperties}>
       {plays.map(({ seat, card }) => (
         <div key={seat} className={styles.slot} style={slotStyle(seat)}>
           <div key={napoleonCardText(card, jokerName)} className={styles.trickCard} role="img"

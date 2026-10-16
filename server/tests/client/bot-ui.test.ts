@@ -103,8 +103,9 @@ describe('bot player interface', () => {
         state.playerId = playerId;
         state.mySeat = null;
         state.connection = 'connecting';
-        const trigger = render(createElement(RoomPage)).match(/<button[^>]*aria-haspopup="dialog"[^>]*>[\s\S]*?Game rules<\/button>/)?.[0];
+        const trigger = render(createElement(RoomPage)).match(/<button[^>]*aria-label="Game rules"[^>]*>[\s\S]*?<\/button>/)?.[0];
         expect(trigger).toBeDefined();
+        expect(trigger).toContain('aria-haspopup="dialog"');
         expect(trigger).not.toContain('disabled');
       }
     }

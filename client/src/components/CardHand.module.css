@@ -14,10 +14,6 @@
 
 .handContainer:empty { padding: 0; }
 
-@media (max-height: 500px) and (min-width: 600px) {
-  .handContainer { --hand-height-limit: 16cqh; }
-}
-
 @container (max-height: 420px) {
   .handContainer { padding-block: 18px 4px; }
 }
@@ -133,6 +129,33 @@
   .cardPlayable:focus-visible { --lift: -14px; }
   .cardSelected { --lift: -16px; }
   .card.cardArmed { --lift: -18px; }
+}
+
+/* Larger portrait cards keep their rank corners exposed while the table clips their bottoms. */
+@media (max-width: 767px) and (orientation: portrait) {
+  .handContainer {
+    --card-w: min(calc(120px * var(--playing-card-scale)), 18cqh, calc((100cqw - 32px) / (1.8 + (var(--hand-card-count) - 1) * (1 - var(--overlap)))));
+    --overlap: 0.72;
+  }
+  .handContainer:not(:empty) {
+    height: calc(var(--card-w) * 313 / 280 + 60px);
+    padding-block: 56px 4px;
+    align-items: flex-start;
+  }
+  .cardHighlighted::before { bottom: 25%; }
+}
+
+/* Full cards extend below the landscape table; its bottom edge clips the lower half. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .handContainer {
+    --card-w: min(calc(144px * var(--playing-card-scale)), 27cqh, calc((100cqw - 32px) / (1.8 + (var(--hand-card-count) - 1) * (1 - var(--overlap)))));
+    --overlap: 0.62;
+  }
+  .handContainer:not(:empty) {
+    height: calc(var(--card-w) * 313 / 448 + 22px);
+    padding-block: 18px 4px;
+    align-items: flex-start;
+  }
 }
 
 .card.cardReorderable {

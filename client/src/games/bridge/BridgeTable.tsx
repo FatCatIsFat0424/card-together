@@ -165,6 +165,7 @@ export function BridgeTable(): ReactNode {
       turnReady={isMyTurn}
       info={<GameInfoRail />}
       centre={centre}
+      centreForeground={phase === 'redeal_pending' && mySeat !== null && redealPendingSeat === mySeat}
       hand={
         <CardHand
           cards={viewed?.gameType === 'bridge' ? viewed.myHand : myHand}

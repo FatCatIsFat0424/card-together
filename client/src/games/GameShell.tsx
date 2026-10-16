@@ -134,6 +134,8 @@ interface GameShellProps {
   info: ReactNode;
   /** Table center */
   centre: ReactNode;
+  /** Keep an interactive centre prompt above the floating own-seat plate. */
+  centreForeground?: boolean;
   /** Hand area below the table */
   hand: ReactNode;
   /** Full-screen overlay (settlement) */
@@ -153,8 +155,8 @@ interface GameShellProps {
 }
 
 /** `wide` lifts the usual width cap for centres that size themselves to the table, such as the Sevens rows. */
-function FittedCentre({ children, style, responsive, wide }: {
-  children: ReactNode; style?: CSSProperties; responsive: boolean; wide: boolean;
+function FittedCentre({ children, style, responsive, wide, foreground }: {
+  children: ReactNode; style?: CSSProperties; responsive: boolean; wide: boolean; foreground?: boolean;
 }): ReactNode {
   const viewportRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -179,14 +181,14 @@ function FittedCentre({ children, style, responsive, wide }: {
     return () => observer.disconnect();
   }, [responsive]);
 
-  return <div className={`${styles.tableCentre} ${responsive ? styles.responsiveCentre : ''} ${wide ? styles.wideCentre : ''}`}
+  return <div className={`${styles.tableCentre} ${responsive ? styles.responsiveCentre : ''} ${wide ? styles.wideCentre : ''} ${foreground ? styles.centreForeground : ''}`}
     ref={viewportRef} style={style} data-table-centre>
     <div className={styles.centreContent} ref={contentRef}>{children}</div>
   </div>;
 }
 
 export function GameShell({
-  info, centre, hand, overlay, panel, tableEffect, centreVisible, error, pickableSeats, onPickSeat, turnReady,
+  info, centre, centreForeground, hand, overlay, panel, tableEffect, centreVisible, error, pickableSeats, onPickSeat, turnReady,
 }: GameShellProps): ReactNode {
   const presentation = useGamePresentation();
   const visibleGame = useGameStore((state) => state.visible);
@@ -427,7 +429,7 @@ export function GameShell({
                 : move?.seat === seat ? move.index : undefined}
               onPick={onPickSeat && pickableSeats?.includes(seat) ? () => onPickSeat(seat) : undefined} />
           ))}
-          <FittedCentre responsive={visibleGame?.gameType === 'redpoints' && !presentation.frame}
+          <FittedCentre foreground={centreForeground} responsive={visibleGame?.gameType === 'redpoints' && !presentation.frame}
             wide={visibleGame?.gameType === 'sevens' || visibleGame?.gameType === 'napoleon'}
             style={move ? FLY_FROM[tablePosition(move.seat, bottomSeat, tableSeats)] : undefined}>
             {presentation.frame && visibleGame && !centreVisible ? (

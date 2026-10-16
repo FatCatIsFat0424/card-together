@@ -44,7 +44,35 @@
   box-shadow: var(--shadow-md);
 }
 
+/* Match the surrounding table controls on phones. */
+@media (max-width: 767px) and (orientation: portrait) {
+  .bar {
+    grid-column: 1;
+    grid-row: 2;
+    top: -64px;
+    bottom: auto;
+    background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
+    border-color: var(--rail-border);
+    box-shadow: var(--shadow-sm);
+  }
+  .action { min-height: 44px; }
+  .action:hover:not(:disabled), .action:focus-visible { color: var(--text-primary); }
+  .action[aria-pressed='true'] { color: var(--color-success); }
+}
+
+/* Keep the vertical rail compact while retaining phone-sized touch targets. */
+@media (max-width: 767px) and (orientation: portrait) and (max-height: 700px) {
+  .bar { top: -8px; }
+}
+
 /* Keep the vertical rail compact while retaining phone-sized touch targets. */
 @media (max-height: 500px) and (min-width: 600px) {
+  .bar {
+    background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
+    border-color: var(--rail-border);
+    box-shadow: var(--shadow-sm);
+  }
   .action { min-height: 44px; }
+  .action:hover:not(:disabled), .action:focus-visible { color: var(--text-primary); }
+  .action[aria-pressed='true'] { color: var(--color-success); }
 }

@@ -11,6 +11,8 @@
 
 .slot {
   position: absolute;
+  left: var(--slot-left);
+  top: var(--slot-top);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -97,4 +99,20 @@
 
 @media (max-width: 767px) {
   .trickContainer { --trick-w: calc((clamp(32px, 9vw, 40px)) * var(--playing-card-scale)); }
+}
+
+@media (max-height: 500px) and (min-width: 600px) {
+  .trickContainer {
+    --trick-w: max(40px, min(calc(130px * var(--playing-card-scale)), 18cqh, 11cqw));
+    width: calc(var(--trick-w) * 1.3 * var(--seat-count));
+    height: calc(var(--trick-w) * 313 / 224 + 50px);
+  }
+
+  .slot {
+    left: var(--landscape-left);
+    top: 0;
+    transform: translateX(-50%);
+  }
+
+  .leadSuit { top: auto; bottom: 0; transform: translateX(-50%); }
 }

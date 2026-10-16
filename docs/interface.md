@@ -10,12 +10,16 @@ Frontend page behavior and layout. Client architecture and connection handling:
   scroll the document; long account pages, chat, and history scroll internally.
 - Navigation stays available during matches: top-bar links on desktop, a menu below 1280px.
   Account, friend, profile, and lobby pages keep room membership and offer a return link.
-- Sign-out shows icon and label at ≥768px; on narrower screens it is the last menu item, in red.
+- Sign-out is the last menu item, in red, on narrow screens and phone landscape
+  (width below 1280px and height at most 500px). Other layouts show its icon and label in the top bar.
 - The owner's coin balance appears with a hint about the [completion reward](storage.md#game-coins).
 - Info and chat sheets and top-bar popovers move focus inside on open and back to the
   trigger on close. Escape closes only the topmost layer.
 - Route errors offer a reload. After a deployment, missing lazy chunks trigger at most
   one automatic reload per 30 seconds.
+- Shared buttons transition only colors, borders, shadows and press/hover movement,
+  not dimensions or disabled opacity. Temporary request locks can use
+  `data-pending-disabled` to preserve the enabled appearance without allowing input.
 
 ## Lobby and friends
 
@@ -39,6 +43,11 @@ Frontend page behavior and layout. Client architecture and connection handling:
   returns to the waiting room or active/result table. It hides on room/game pages,
   after leaving the room, and on authentication pages; reconnecting is marked explicitly.
   The lobby uses this card instead of a separate current-room banner.
+  Phone landscape uses a single-line return link: status light, game name, occupied/total seats,
+  room code and a chevron, with a 44px touch target.
+  Dragging this compact link glides it to the nearest corner below the top bar over
+  200ms after release (instant with reduced motion);
+  tapping still returns to the room. Its corner is retained while navigating the app.
   The panel's top-right Close control returns
   to the current room or game, or the lobby when no room is joined.
   Refresh, retention information, and loading errors share
@@ -66,6 +75,7 @@ Frontend page behavior and layout. Client architecture and connection handling:
 | Width | Lobby layout |
 | --- | --- |
 | Desktop | Game picker beside a sidebar: selected game, Create, then join-by-code below a divider; online friends below the room actions |
+| Phone landscape | Four game choices per row (4/4/2), with creation and joining beside them; a compact greeting shares a 44px row with daily tasks/check-in buttons, using icons beside their labels |
 | ≤52rem | Join-by-code, an "Or" divider, then a full-width Create that always creates Bridge; no selected-game panel; friends below the rules list |
 
 - Each game has its own [lobby artwork](../client/src/assets/lobby-backgrounds/README.md),
@@ -94,9 +104,32 @@ Frontend page behavior and layout. Client architecture and connection handling:
 | --- | --- |
 | Desktop | Equal-width portrait cards N/E/S/W without horizontal scrolling; Ninety-Nine, Blackjack, and Hold'em always use two rows of four |
 | Compact | Two columns, smaller controls, up to four rows, vertical scrolling when needed |
+| Phone landscape | One row filling the height above the footer buttons; extra seats scroll horizontally |
+
+Phone landscape places spectators in a separate left column with a vertically
+scrollable list. Touch gestures on spectator names scroll the list; hosts drag the
+avatar to move a spectator to a seat. Drag handles stay hidden until keyboard focus.
+Room chat has the same header collapse button as in-game chat. Reopen it through
+the room header's chat button; collapsing desktop chat frees its column for seats.
+Draft text is retained while collapsed, and the chat button shows unread messages.
+Seat and spectator lists hide their scrollbars while remaining scrollable.
+Seated players click the spectator area's heading or empty space to stand up;
+there is no separate footer action. Player links and host controls remain independent,
+and the area can also be activated by keyboard through its heading.
+The avatar stays beside two text rows: an ellipsized name above host/self tags.
+The landscape header uses a prominent game dropdown and icon-only settings, rules,
+and chat buttons with accessible labels. Its action buttons share a 44px height.
+Bot controls use a vertical ellipsis.
 
 - Empty seats are full-card buttons; bot controls stay separate.
-  Pending room actions lock seat input without dimming empty seats or the add-seat button.
+  Pending room actions lock input without dimming otherwise available controls or
+  recreating drag handles. Controls that were already unavailable retain their disabled appearance.
+  Vacated seats show their empty state immediately, with no border/button transition;
+  the add-bot button never reuses a hidden player-drag control.
+- Room action failures and readiness warnings appear in dismissible five-second
+  toasts on desktop and mobile, without inserting messages into the room layout.
+  Room acknowledgement errors use the selected language; unknown errors use the
+  localized generic error message rather than exposing raw server text.
 - When a server update fills an empty seat with a human player, their artwork and
   identity fade upward 8px and settle from 96% through 102% to 100% over 300ms.
   The frame stays still. Initial loading, readiness updates and occupied-seat swaps
@@ -112,6 +145,8 @@ Frontend page behavior and layout. Client architecture and connection handling:
 - Bot identities show Easy or Hard. Waiting-room hosts edit each bot's difficulty
   beside its remove control, both 44px tall; guests see the selected difficulty. Defaults and strategy
   behavior are documented in [games](games.md#bots).
+  In phone landscape, each bot's top-right ellipsis opens its difficulty and remove
+  controls in a floating panel, keeping the seat card compact and controls unclipped.
 - In Ninety-Nine, Blackjack, Hold'em, and Napoleon the host sees a plus cell after the last seat to
   add human seats up to eight (six for Napoleon); only the last empty extra seat can be removed. Start
   conditions: [games](games.md#shared-room-lifecycle).
@@ -174,13 +209,35 @@ Frontend page behavior and layout. Client architecture and connection handling:
   label and tooltip. Spectators, eliminated players, and settlement screens hide the bar.
   In short landscape view, the hand and adjacent left seat leave space beside the
   vertical controls while the central playing table keeps its full width. The table's
-  upper edge sits flush against the header;
+  landscape action bar uses the same subdued border and surface as its corner buttons.
+  The upper edge sits flush against the header;
   four-seat tables float their corner buttons so the opposite seat also moves up,
   without an empty toolbar row above it.
   Landscape hand cards use a larger height allowance and fit against their own hand
   area's width, increasing overlap when needed to keep every card within reach.
-  The landscape Bridge bidding panel is capped at 352px with tighter spacing; touch
+  Landscape hand cards render at full height and extend below the table viewport,
+  whose bottom edge clips their lower half. Raising a card reveals more of it.
+  The own-seat plate and turn prompt float above the hand toward the left of the table,
+  leaving the lower row's full width beside the action bar available for cards.
+  The landscape bidding panel is centered on the playing table and capped at 352px with tighter spacing; touch
   buttons retain their 44px height.
+  Dialogs, including Bridge redeal confirmations, layer above player plates at every
+  viewport size, keeping prompts and their buttons unobscured.
+  Bridge and Napoleon tricks use larger cards aligned in a single horizontal row in
+  short landscape view, retaining seat labels and directional arrival animations.
+  Fixed seat slots prevent cards from shifting as the trick fills; Napoleon's lead-suit
+  label sits below the row.
+  Phone portrait tables and hands keep their full width, with the action bar raised
+  beside the own-seat plate above the cards. Four-seat tables float the corner controls and leave one button
+  row above the opposite seat. Hand sizing follows its available width, and redeal
+  prompts layer above the own-seat plate. The action bar uses subdued borders here too.
+  On short portrait phones, side seats retain their card counts but omit decorative
+  card-back trays, and extra space above the hand keeps the raised action bar clear.
+  Portrait bidding panels sit at the playing surface's center, capped at 336px wide
+  with compact headings and full-height touch buttons.
+  Portrait hand cards are enlarged with closer overlap, keeping their rank corners
+  exposed. Full cards extend below the table's bottom edge, which clips their lower
+  portion; selection lifts them to reveal more, and new-card markers stay visible.
 - Auto-play is an on/off switch for the current match. The server uses its existing bot
   strategy with only that seat's private view; manual hand controls pause until switched
   off. Reconnects preserve the choice; a new match starts with auto-play off.

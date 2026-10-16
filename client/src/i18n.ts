@@ -1,6 +1,8 @@
 // ─── i18n system ───
 
 import { socialTranslations } from './social-i18n';
+import { roomErrorTranslations } from './room-error-i18n';
+import type { RoomErrorTranslationKey } from './room-error-i18n';
 import type { SocialTranslationKey } from './social-i18n';
 import { accountTranslations } from './account-i18n';
 import type { AccountTranslationKey } from './account-i18n';
@@ -36,7 +38,7 @@ import type { AchievementsTranslationKey } from './achievements-i18n';
 export type Locale = 'zh-TW' | 'en';
 
 type TranslationKeys = Record<
-  SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | VoiceTranslationKey | UiTranslationKey
+  RoomErrorTranslationKey | SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | VoiceTranslationKey | UiTranslationKey
     | EmojiTranslationKey | GameTranslationKey | SevensTranslationKey | ChinesePokerTranslationKey
     | LiarsDeckTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey, string
 > & {
@@ -63,6 +65,7 @@ type TranslationKeys = Record<
   'room.fillBots': string;
   'room.botDifficulty': string;
   'room.botDifficultyFor': string;
+  'room.botControlsFor': string;
   'room.botDifficulty.easy': string;
   'room.botDifficulty.hard': string;
   'player.bot': string;
@@ -117,6 +120,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...uiTranslations['zh-TW'],
     ...emojiTranslations['zh-TW'],
     ...gameTranslations['zh-TW'],
+    ...roomErrorTranslations['zh-TW'],
     ...sevensTranslations['zh-TW'],
     ...chinesePokerTranslations['zh-TW'],
     ...liarsDeckTranslations['zh-TW'],
@@ -147,6 +151,7 @@ const translations: Record<Locale, TranslationKeys> = {
     'room.fillBots': '用 bot 補滿空位',
     'room.botDifficulty': '難度',
     'room.botDifficultyFor': '{nickname} 的難度',
+    'room.botControlsFor': '管理 {nickname}',
     'room.botDifficulty.easy': '簡單',
     'room.botDifficulty.hard': '困難',
     'player.bot': 'bot',
@@ -192,6 +197,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...uiTranslations.en,
     ...emojiTranslations.en,
     ...gameTranslations.en,
+    ...roomErrorTranslations.en,
     ...sevensTranslations.en,
     ...chinesePokerTranslations.en,
     ...liarsDeckTranslations.en,
@@ -222,6 +228,7 @@ const translations: Record<Locale, TranslationKeys> = {
     'room.fillBots': 'Fill empty seats with bots',
     'room.botDifficulty': 'Difficulty',
     'room.botDifficultyFor': 'Difficulty for {nickname}',
+    'room.botControlsFor': 'Manage {nickname}',
     'room.botDifficulty.easy': 'Easy',
     'room.botDifficulty.hard': 'Hard',
     'player.bot': 'Bot',
