@@ -35,7 +35,7 @@ export function trickHistoryColumns(seats: readonly GameSeat[], viewer: GameSeat
 }
 
 export function TrickHistoryTable({
-  rows, columns, mySeat, roles = [], cardText, className, summaryClassName, defaultOpen = true,
+  rows, columns, mySeat, roles = [], cardText, columnLabel, className, summaryClassName, defaultOpen = true,
 }: {
   rows: readonly TrickHistoryRow[];
   columns: readonly GameSeat[];
@@ -43,6 +43,8 @@ export function TrickHistoryTable({
   roles?: readonly TrickHistoryRole[];
   /** Plain card name for hover titles */
   cardText: (card: NapoleonCard) => string;
+  /** Column heading for a seat; the player's name by default, which stays the heading's hover title */
+  columnLabel?: (seat: GameSeat) => string;
   className?: string;
   summaryClassName?: string;
   defaultOpen?: boolean;
@@ -65,7 +67,7 @@ export function TrickHistoryTable({
               {columns.map((seat) => <th key={seat} scope="col" title={name(seat)}
                 className={seat === mySeat ? styles.mine : undefined}
                 style={{ borderTopColor: roleOf(seat)?.color }}>
-                <span className={styles.name}>{name(seat)}</span>
+                <span className={styles.name}>{columnLabel ? columnLabel(seat) : name(seat)}</span>
               </th>)}
             </tr>
           </thead>

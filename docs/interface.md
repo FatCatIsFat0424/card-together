@@ -221,7 +221,8 @@ remain visible.
   shows it once. Seat labels and notices follow [Napoleon visibility](games.md#napoleon).
   The auction table has one column per player and labels it with the seat number (the full
   name is the tooltip and accessible label) so six players fit the info rail.
-  Auction tables (Bridge too) write a pass as "P", with "Pass" as its tooltip.
+  Auction tables (Bridge too) write a pass as "P", with "Pass" as its tooltip. The trick history
+  heads its columns with seat numbers too, keeping player names as their tooltips.
 - Actions require a ready connection; local sorting still works while reconnecting.
 
 Per-game controls: [games](games.md#card-controls).

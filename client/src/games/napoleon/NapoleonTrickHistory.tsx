@@ -7,6 +7,7 @@ import type { NapoleonSummon, NapoleonVisibleState } from '@shared/types';
 import railStyles from '../../components/GameInfoRail.module.css';
 import { useI18nStore } from '../../stores/i18n-store';
 import { suitClass } from '../CardLabel';
+import { compactSeatLabel } from '../seat-names';
 import { TrickHistoryTable, trickHistoryColumns } from '../TrickHistoryTable';
 import type { TrickHistoryRole, TrickHistoryRow } from '../TrickHistoryTable';
 import { useGamePresentation } from '../use-game-presentation';
@@ -42,5 +43,7 @@ export function NapoleonTrickHistory({ game }: { game: NapoleonVisibleState }): 
 
   return <TrickHistoryTable rows={rows} columns={trickHistoryColumns(game.seats, game.mySeat)} mySeat={game.mySeat}
     roles={roles} cardText={(card) => napoleonCardText(card, (joker) => t(`napoleon.joker.${joker}`))}
+    // Seat numbers, like the seat badges and the auction, so six columns fit the rail.
+    columnLabel={(seat) => compactSeatLabel(t, 'napoleon', seat)}
     className={railStyles.box} summaryClassName={railStyles.caption} />;
 }
