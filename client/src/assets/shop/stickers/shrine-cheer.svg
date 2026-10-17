@@ -1,0 +1,35 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Joyful fox leaps among festival lanterns</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#123e43"/>
+  <circle cx="110" cy="108" r="82" fill="#226064"/>
+  <g stroke="#fff1da" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M26 46Q110 76 194 46" fill="none" stroke="#ffce78"/>
+    <g class="sway" fill="#e96e53" stroke="#ffce78">
+      <path d="M41 54v13m138-12v13"/>
+      <rect x="29" y="69" width="26" height="34" rx="10"/><rect x="166" y="69" width="26" height="34" rx="10"/>
+      <path d="M42 77v18m137-18v18M42 104v11m137-11v11"/>
+    </g>
+    <g class="float">
+      <path d="M133 146Q193 123 180 167Q170 188 136 168" fill="#e98c58"/>
+      <path d="m170 148 11 3q7 24-17 25l-7-12Z" fill="#fff1da"/>
+      <path d="m78 134-19-14-9 13 27 24-7 20 17 2 18-18 23 12 14-5-14-34Z" fill="#e98c58"/>
+      <path d="m74 98 1-33 29 21 27-21 15 34-12 33-35 10-27-17Z" fill="#fff1da"/>
+      <path d="m81 76 5 24 14-11m31-12-4 25-15-11" fill="#e96e53" stroke="none"/>
+      <path d="m87 111 7-6 7 5m14-1 7-6 7 5m-27 10q12 20 22-3" fill="none" stroke="#713b38"/>
+      <path d="m77 130 26 15 31-13" fill="#e96e53"/>
+      <circle cx="105" cy="145" r="6" fill="#ffce78" stroke="#713b38"/>
+      <path d="m133 135 20-16 9 11-23 22" fill="#fff1da"/>
+    </g>
+    <path class="glow" d="m41 158 4 9 9 4-9 3-4 10-3-10-10-3 10-4Z" fill="#ffce78" stroke="none"/>
+  </g>
+</svg>

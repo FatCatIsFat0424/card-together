@@ -1,3 +1,4 @@
+import { CAMPAIGN_SOUND_PACKS } from './designs/campaign';
 import type { SoundPackId } from '@shared/types';
 import { CLASSIC_SOUND_PACK } from '../../audio/classic-sound-pack';
 import type { SoundPack } from '../../audio/sound-pack';
@@ -13,6 +14,7 @@ import { SAKURA_SOUND_PACK } from './designs/sakura';
 import { TIDE_SOUND_PACK } from './designs/tide';
 
 export const SOUND_PACK_DEFINITIONS: Readonly<Record<SoundPackId, SoundPack>> = {
+  ...CAMPAIGN_SOUND_PACKS,
   'sound-aurora': AURORA_SOUND_PACK,
   'sound-tide': TIDE_SOUND_PACK,
   'sound-sakura': SAKURA_SOUND_PACK,

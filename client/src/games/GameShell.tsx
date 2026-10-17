@@ -197,7 +197,7 @@ export function GameShell({
   const setReducedMotion = useMotionStore((state) => state.setReducedMotion);
   const mySeat = useRoomStore((state) => state.mySeat);
   const account = useAccountStore((state) => state.account);
-  const tableStyle = tableBackgroundStyle(account);
+  const tableStyle = tableBackgroundStyle(account, reducedMotion);
   const messageCount = useChatStore((state) => state.messages.length);
   const room = useRoomStore((state) => state.roomInfo);
   const log = useGameStore((state) => state.bigTwo?.log ?? state.redPoints?.log ?? state.ninetyNine?.log
@@ -368,7 +368,7 @@ export function GameShell({
 
   return (
     <div data-reduced-motion={reducedMotion || undefined} className={`${styles.gameContainer} ${chatOpen ? '' : styles.chatCollapsed} ${infoOpen ? styles.infoOpen : ''}`}
-      style={cardBackStyle(account)}>
+      style={cardBackStyle(account, reducedMotion)}>
       {(infoOpen || chatOpen) && <button type="button" className={styles.backdrop} tabIndex={-1}
         aria-label={t('table.close')} onClick={closeSheets} />}
 

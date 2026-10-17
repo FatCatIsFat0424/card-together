@@ -1,4 +1,15 @@
 const en = {
+  'shop.item.chat-frame-starfleet.name': 'Astral Armada chat frame',
+  'shop.item.chat-frame-starfleet.description': 'A spacecraft docks at the corner of an illuminated communications panel with moving warp rails.',
+  'shop.item.chat-frame-shrine.name': 'Thousand Lanterns chat frame',
+  'shop.item.chat-frame-shrine.description': 'Lanterns hang from a torii message border while a small foxfire glows beside your words.',
+  'shop.item.chat-frame-ironfront.name': 'Iron Front chat frame',
+  'shop.item.chat-frame-ironfront.description': 'A riveted field-radio panel with a tank corner and a slowly sweeping amber radar.',
+  'shop.item.chat-frame-neoncity.name': 'Neon Overdrive chat frame',
+  'shop.item.chat-frame-neoncity.description': 'A cut-corner hologram terminal carries animated edge signals and tiny circuit nodes.',
+  'shop.item.chat-frame-crownrealm.name': 'Lioncrown Dynasty chat frame',
+  'shop.item.chat-frame-crownrealm.description': 'A royal-blue illuminated letter frame with a crowned lion shield and glinting gold trim.',
+
   'shop.item.chat-frame-aurora.name': 'Aurora chat frame',
   'shop.item.chat-frame-aurora.description': 'A rim shifting from green to violet under drifting curtains of light.',
   'shop.item.chat-frame-tide.name': 'Tide chat frame',
@@ -25,6 +36,17 @@ const en = {
 export const chatFramesTranslations: { readonly en: typeof en; readonly 'zh-TW': Record<keyof typeof en, string> } = {
   en,
   'zh-TW': {
+    'shop.item.chat-frame-starfleet.name': '星穹遠征聊天框',
+    'shop.item.chat-frame-starfleet.description': '太空艦停靠在通訊面板角落，躍遷光軌沿著亮起的邊緣流動。',
+    'shop.item.chat-frame-shrine.name': '千燈神域聊天框',
+    'shop.item.chat-frame-shrine.description': '燈籠垂掛在鳥居訊息框上，一簇狐火在文字旁柔和閃耀。',
+    'shop.item.chat-frame-ironfront.name': '鋼鐵戰線聊天框',
+    'shop.item.chat-frame-ironfront.description': '鉚釘野戰無線電面板搭配戰車框角，琥珀雷達緩緩掃動。',
+    'shop.item.chat-frame-neoncity.name': '霓虹失控聊天框',
+    'shop.item.chat-frame-neoncity.description': '切角全息終端機以流動邊緣訊號與微型電路節點包圍訊息。',
+    'shop.item.chat-frame-crownrealm.name': '獅冠王朝聊天框',
+    'shop.item.chat-frame-crownrealm.description': '皇家藍彩飾書信框，配上戴冠雄獅盾徽與閃耀金邊。',
+
     'shop.item.chat-frame-aurora.name': '極光聊天框',
     'shop.item.chat-frame-aurora.description': '邊框由綠漸變為紫，頂端垂落柔和的光幕。',
     'shop.item.chat-frame-tide.name': '潮汐聊天框',

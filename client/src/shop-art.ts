@@ -30,6 +30,22 @@ import cardBackDune from './assets/shop/card-back-dune.svg';
 import tableDune from './assets/shop/table-dune.svg';
 import seatDune from './assets/shop/seat-dune.svg';
 
+import cardBackStarfleet from './assets/shop/card-back-starfleet.svg';
+import tableStarfleet from './assets/shop/table-starfleet.svg';
+import seatStarfleet from './assets/shop/seat-starfleet.svg';
+import cardBackShrine from './assets/shop/card-back-shrine.svg';
+import tableShrine from './assets/shop/table-shrine.svg';
+import seatShrine from './assets/shop/seat-shrine.svg';
+import cardBackIronfront from './assets/shop/card-back-ironfront.svg';
+import tableIronfront from './assets/shop/table-ironfront.svg';
+import seatIronfront from './assets/shop/seat-ironfront.svg';
+import cardBackNeoncity from './assets/shop/card-back-neoncity.svg';
+import tableNeoncity from './assets/shop/table-neoncity.svg';
+import seatNeoncity from './assets/shop/seat-neoncity.svg';
+import cardBackCrownrealm from './assets/shop/card-back-crownrealm.svg';
+import tableCrownrealm from './assets/shop/table-crownrealm.svg';
+import seatCrownrealm from './assets/shop/seat-crownrealm.svg';
+
 const ARTWORK: Partial<Record<ShopItemId, string>> = {
   'card-back-aurora': cardBackAurora,
   'card-back-tide': cardBackTide,
@@ -61,9 +77,25 @@ const ARTWORK: Partial<Record<ShopItemId, string>> = {
   'card-back-dune': cardBackDune,
   'table-dune': tableDune,
   'seat-dune': seatDune,
+  'card-back-starfleet': cardBackStarfleet,
+  'table-starfleet': tableStarfleet,
+  'seat-starfleet': seatStarfleet,
+  'card-back-shrine': cardBackShrine,
+  'table-shrine': tableShrine,
+  'seat-shrine': seatShrine,
+  'card-back-ironfront': cardBackIronfront,
+  'table-ironfront': tableIronfront,
+  'seat-ironfront': seatIronfront,
+  'card-back-neoncity': cardBackNeoncity,
+  'table-neoncity': tableNeoncity,
+  'seat-neoncity': seatNeoncity,
+  'card-back-crownrealm': cardBackCrownrealm,
+  'table-crownrealm': tableCrownrealm,
+  'seat-crownrealm': seatCrownrealm,
 } satisfies Record<CardBackStyleId | TableBackgroundStyleId | SeatBackgroundStyleId, string>;
 
 /** Bundled original artwork follows Vite's asset base for subpath deployments. */
-export function shopArtworkUrl(id: ShopItemId): string | undefined {
-  return ARTWORK[id];
+export function shopArtworkUrl(id: ShopItemId, reducedMotion = false): string | undefined {
+  const url = ARTWORK[id];
+  return url && reducedMotion ? `${url}#still` : url;
 }

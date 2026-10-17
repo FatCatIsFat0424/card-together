@@ -1,4 +1,15 @@
 const en = {
+  'shop.item.card-face-starfleet.name': 'Astral Armada deck',
+  'shop.item.card-face-starfleet.description': 'Warp charts, miniature spacecraft and engine-blue courts surround crisp red and ivory suits.',
+  'shop.item.card-face-shrine.name': 'Thousand Lanterns deck',
+  'shop.item.card-face-shrine.description': 'Vermilion torii, lantern chains and teal foxfire frame warm paper with traditional suit marks.',
+  'shop.item.card-face-ironfront.name': 'Iron Front deck',
+  'shop.item.card-face-ironfront.description': 'Riveted armor, tank silhouettes and propeller dials on olive field charts with clear suit indices.',
+  'shop.item.card-face-neoncity.name': 'Neon Overdrive deck',
+  'shop.item.card-face-neoncity.description': 'Holographic circuitry, angular city skylines and magenta terminals on midnight-blue cards.',
+  'shop.item.card-face-crownrealm.name': 'Lioncrown Dynasty deck',
+  'shop.item.card-face-crownrealm.description': 'Royal-blue shields, heraldic lions and illuminated gold crowns on ivory parchment.',
+
   'shop.item.card-face-four-color.name': 'Four-color classic',
   'shop.item.card-face-four-color.description': 'The classic deck with blue diamonds and green clubs, so every suit stands apart at a glance.',
   'shop.item.card-face-aurora.name': 'Aurora deck',
@@ -26,6 +37,17 @@ const en = {
 export const cardFacesTranslations: { readonly en: typeof en; readonly 'zh-TW': Record<keyof typeof en, string> } = {
   en,
   'zh-TW': {
+    'shop.item.card-face-starfleet.name': '星穹遠征牌面',
+    'shop.item.card-face-starfleet.description': '躍遷航圖、微型太空艦與引擎藍人頭牌，襯托清晰的紅白花色。',
+    'shop.item.card-face-shrine.name': '千燈神域牌面',
+    'shop.item.card-face-shrine.description': '朱紅鳥居、燈籠繩與青綠狐火環繞暖色和紙，保留清楚的傳統花色。',
+    'shop.item.card-face-ironfront.name': '鋼鐵戰線牌面',
+    'shop.item.card-face-ironfront.description': '鉚釘裝甲、戰車剪影與螺旋槳儀表印在橄欖色戰術圖上，點數與花色清楚易讀。',
+    'shop.item.card-face-neoncity.name': '霓虹失控牌面',
+    'shop.item.card-face-neoncity.description': '全息電路、稜角天際線與洋紅終端機，映在午夜藍牌面上。',
+    'shop.item.card-face-crownrealm.name': '獅冠王朝牌面',
+    'shop.item.card-face-crownrealm.description': '皇家藍盾徽、紋章雄獅與金色王冠，襯在象牙白羊皮紙上。',
+
     'shop.item.card-face-four-color.name': '經典四色牌',
     'shop.item.card-face-four-color.description': '經典牌面改為藍色方塊與綠色梅花，四種花色一眼就能分辨。',
     'shop.item.card-face-aurora.name': '極光牌面',

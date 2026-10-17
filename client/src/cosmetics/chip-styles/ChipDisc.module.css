@@ -1,0 +1,13 @@
+.disc { pointer-events: none; }
+.warp { transform-origin: 32px 32px; animation: orbit 8s linear infinite; }
+.engine { animation: pulse 1.8s ease-in-out infinite; }
+.foxfire { animation: pulse 3s ease-in-out infinite; }
+.propeller { transform-origin: 32px 22px; animation: orbit 3s linear infinite; }
+.processor { animation: pulse 2.2s ease-in-out infinite; }
+.crown { animation: gild 4s ease-in-out infinite; }
+@keyframes orbit { to { rotate: 360deg; } }
+@keyframes pulse { 50% { opacity: 0.5; } }
+@keyframes gild { 50% { filter: brightness(1.3); } }
+@media (prefers-reduced-motion: reduce) { .disc * { animation: none !important; } }
+:global([data-reduced-motion]) .disc * { animation: none !important; }
+.disc[data-reduced-motion] * { animation: none !important; }

@@ -1,0 +1,32 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Lion knight stands ready with shield and sword</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#152b55"/>
+  <circle cx="110" cy="108" r="82" fill="#254879"/>
+  <g stroke="#fff2cf" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m83 111-29 69 56-13 43 15-15-73" fill="#3a67ab" stroke="#f4c86d"/>
+    <g class="sway">
+      <path d="M88 139v40h17l7-26 6 26h18v-40" fill="#b7cde0"/>
+      <path d="m79 109 14-7h33l15 11-7 36H86Z" fill="#b7cde0"/>
+      <path d="m139 114 18-7 6 10-17 15" fill="#b7cde0"/>
+      <path d="m166 100 8-48 7 11-7 39" fill="#eaf5ff"/>
+      <path d="m158 103 25 5m-14-2-2 16" stroke="#f4c86d"/>
+      <path d="m77 69 10-24 21 5 18-5 17 23-4 25-18 22-24-3-24-23Z" fill="#bd823a" stroke="#f4c86d"/>
+      <circle cx="91" cy="70" r="8" fill="#e0a44f"/><circle cx="128" cy="70" r="8" fill="#e0a44f"/>
+      <path d="M91 74Q110 59 129 74V91Q111 111 91 91Z" fill="#f4c86d" stroke="#bd823a"/>
+      <path d="m96 79 5-2m18 0 5 2m-19 8 5 4 5-4m-5 5v6" stroke="#44342d" fill="none" stroke-width="3"/>
+      <path d="m43 118 23-10 23 10-3 35-20 18-20-18Z" fill="#254879" stroke="#f4c86d"/>
+      <path d="m66 122 5 11 12 2-9 8 2 12-10-6-10 6 2-12-9-8 12-2Z" fill="#f4c86d" stroke="none"/>
+    </g>
+    <path class="glow" d="m43 46 4 10 11 4-11 4-4 10-3-10-11-4 11-4Z" fill="#f4c86d" stroke="none"/>
+  </g>
+</svg>

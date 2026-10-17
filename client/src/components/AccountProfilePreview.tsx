@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import type { AccountProfile, AvatarId, Card } from '@shared/types';
 import { Link } from 'react-router-dom';
 import type { AccountAppearance } from '../account-appearance';
+import { useMotionStore } from '../stores/motion-store';
 import { cardBackStyle, seatBackgroundStyle, tableBackgroundStyle } from '../account-appearance';
 import { useI18nStore } from '../stores/i18n-store';
 import { useCardFaceUrl } from '../cosmetics/card-faces/use-card-face';
@@ -57,8 +58,9 @@ export function AccountProfilePreview({
 }: AccountProfilePreviewProps): ReactNode {
   const { t } = useI18nStore();
   const cardFaceUrl = useCardFaceUrl();
-  const background = tableBackgroundStyle(appearance);
-  const seatBackground = seatBackgroundStyle(appearance);
+  const reducedMotion = useMotionStore((state) => state.reducedMotion);
+  const background = tableBackgroundStyle(appearance, reducedMotion);
+  const seatBackground = seatBackgroundStyle(appearance, reducedMotion);
   const name = nickname.trim() || account.username;
   const previewAccount = { avatar, avatarImage: account.avatarImage, avatarBorder: account.avatarBorder, color, nickname: name };
   const identity = (size: 'compact' | 'large'): ReactNode =>
@@ -71,7 +73,7 @@ export function AccountProfilePreview({
     <div className={styles.previewSections}>
       <PreviewSection title={t('profile.preview.table')} shared={false} wide>
         <div className={`${styles.previewTable} ${background ? styles.customTable : ''}`}
-          style={{ ...background, ...cardBackStyle(appearance) }}>
+          style={{ ...background, ...cardBackStyle(appearance, reducedMotion) }}>
           <div className={styles.tableMark} aria-hidden="true">♠</div>
           <div className={styles.previewCards} aria-hidden="true">
             <span className={styles.previewBack} />

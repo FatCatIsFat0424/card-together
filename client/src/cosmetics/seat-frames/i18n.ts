@@ -1,4 +1,15 @@
 const en = {
+  'shop.item.seat-frame-starfleet.name': 'Astral Armada seat frame',
+  'shop.item.seat-frame-starfleet.description': 'Interceptor corners and twin warp rails ignite around the seat when your turn begins.',
+  'shop.item.seat-frame-shrine.name': 'Thousand Lanterns seat frame',
+  'shop.item.seat-frame-shrine.description': 'Torii crossbeams, hanging lanterns and gently rising foxfire welcome each turn.',
+  'shop.item.seat-frame-ironfront.name': 'Iron Front seat frame',
+  'shop.item.seat-frame-ironfront.description': 'Riveted armor corners and tracked rails light a rotating amber radar on your turn.',
+  'shop.item.seat-frame-neoncity.name': 'Neon Overdrive seat frame',
+  'shop.item.seat-frame-neoncity.description': 'Hologram brackets and circuit nodes send a magenta-cyan data pulse around your seat.',
+  'shop.item.seat-frame-crownrealm.name': 'Lioncrown Dynasty seat frame',
+  'shop.item.seat-frame-crownrealm.description': 'Crowned shields, lion crests and royal-blue ribbons gleam gold during your turn.',
+
   'shop.item.seat-frame-aurora.name': 'Aurora ribbons',
   'shop.item.seat-frame-aurora.description': 'Ribbon-edged frame; on your turn the ribbons flow and curtains of light ripple above and below.',
   'shop.item.seat-frame-tide.name': 'Tidal scrolls',
@@ -24,6 +35,17 @@ const en = {
 export const seatFramesTranslations: { readonly en: typeof en; readonly 'zh-TW': Record<keyof typeof en, string> } = {
   en,
   'zh-TW': {
+    'shop.item.seat-frame-starfleet.name': '星穹遠征座位框',
+    'shop.item.seat-frame-starfleet.description': '攔截艦盤踞框角，輪到你時雙軌躍遷光流沿座位邊緣啟動。',
+    'shop.item.seat-frame-shrine.name': '千燈神域座位框',
+    'shop.item.seat-frame-shrine.description': '鳥居橫樑與垂掛燈籠守護座位，輪到你時狐火緩緩升起。',
+    'shop.item.seat-frame-ironfront.name': '鋼鐵戰線座位框',
+    'shop.item.seat-frame-ironfront.description': '鉚釘裝甲框角與履帶邊軌，在你的回合亮起琥珀色旋轉雷達。',
+    'shop.item.seat-frame-neoncity.name': '霓虹失控座位框',
+    'shop.item.seat-frame-neoncity.description': '全息支架與電路節點沿座位傳送洋紅與青色資料脈衝。',
+    'shop.item.seat-frame-crownrealm.name': '獅冠王朝座位框',
+    'shop.item.seat-frame-crownrealm.description': '王冠盾徽、雄獅紋章與皇家藍緞帶，在你的回合泛起金光。',
+
     'shop.item.seat-frame-aurora.name': '極光流帶',
     'shop.item.seat-frame-aurora.description': '絲帶邊框，輪到你時流光滑動，上下方升起如極光帷幕的光幕。',
     'shop.item.seat-frame-tide.name': '潮汐捲浪',

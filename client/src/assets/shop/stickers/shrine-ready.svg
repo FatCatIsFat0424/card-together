@@ -1,0 +1,30 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Fox guardian welcomes visitors beneath a torii</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#123e43"/>
+  <circle cx="110" cy="108" r="82" fill="#226064"/>
+  <g stroke="#fff1da" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 54Q110 70 188 54L183 70H37ZM42 86H178M58 71v91m104-91v91" fill="#e96e53" stroke="#f6b477"/>
+    <g class="sway">
+      <path d="M124 156Q185 115 180 169Q172 197 129 181" fill="#e98c58"/>
+      <path d="M170 150Q188 170 165 183L155 175Z" fill="#fff1da"/>
+      <path d="M77 178 82 135H132L143 178Q109 194 77 178Z" fill="#e98c58"/>
+      <path d="m74 110 2-36 29 21 25-20 16 36-18 36H91Z" fill="#fff1da"/>
+      <path d="m80 85 7 26 13-13m33-12-4 25-16-12" fill="#e96e53" stroke="none"/>
+      <path d="m89 120 10 3m22 0 10-3m-25 7 4 3 4-3m-4 4v7" fill="none" stroke="#713b38"/>
+      <path d="m82 145 28 14 23-14" fill="#e96e53"/>
+      <circle cx="110" cy="163" r="8" fill="#ffce78" stroke="#713b38"/>
+      <path d="m86 155-19 9m67-11 16-8"/>
+    </g>
+    <path class="glow" d="m177 102 4 10 10 3-10 4-4 10-3-10-10-4 10-3Z" fill="#ffce78" stroke="none"/>
+  </g>
+</svg>

@@ -1,0 +1,32 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Curled fox sleeps beside a sanctuary lantern</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#123e43"/>
+  <circle cx="110" cy="108" r="82" fill="#226064"/>
+  <g stroke="#fff1da" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M28 180Q110 158 193 180" fill="none" stroke="#62b6ad"/>
+    <g class="glow" fill="#ffce78" stroke="#e96e53">
+      <path d="M150 84h40l-8-12h-24ZM158 86v35h24V86m-31 38h39m-20 0v46"/>
+      <path d="M169 94v17" stroke="#fff1da"/>
+    </g>
+    <g class="sway">
+      <path d="M47 154Q43 112 88 114Q141 108 152 153Q156 185 98 184Q51 185 47 154Z" fill="#e98c58"/>
+      <path d="m51 129 3-30 24 18 26-17 7 33-18 20-28-1Z" fill="#fff1da"/>
+      <path d="m60 111 5 20 11-10m24-9-10 18-9-8" fill="#e96e53" stroke="none"/>
+      <path d="m65 139 8 3 8-3m10-3 6 2m-17 9 5 2" stroke="#713b38" fill="none"/>
+      <path d="M144 143Q179 180 119 187Q80 188 88 164Q100 150 119 166" fill="#e98c58"/>
+      <path d="M88 164Q100 151 119 166L125 185Q82 190 88 164Z" fill="#fff1da"/>
+    </g>
+    <path class="float" d="M71 45Q48 48 48 66Q68 68 71 45Z" fill="#62b6ad" stroke="none"/>
+    <circle cx="104" cy="77" r="4" fill="#ffce78" stroke="none"/>
+  </g>
+</svg>

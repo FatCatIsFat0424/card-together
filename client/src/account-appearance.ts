@@ -17,8 +17,9 @@ function opacity(percent: number | undefined): string {
 /** Variables for a seat artwork layer; undefined keeps the theme background. */
 export function seatBackgroundStyle(
   appearance: Partial<Pick<AccountProfile, 'seatBackground' | 'seatBackgroundStyle'>> | null | undefined,
+  reducedMotion = false,
 ): CSSProperties | undefined {
-  const image = appearance?.seatBackgroundStyle ? shopArtworkUrl(appearance.seatBackgroundStyle)
+  const image = appearance?.seatBackgroundStyle ? shopArtworkUrl(appearance.seatBackgroundStyle, reducedMotion)
     : appearance?.seatBackground ? mediaUrl(appearance.seatBackground) : undefined;
   if (!image) return undefined;
   return { '--seat-image': `url("${image}")` } as CSSProperties;
@@ -27,8 +28,9 @@ export function seatBackgroundStyle(
 /** Variables for a `customTable` surface; undefined keeps the theme surface. */
 export function tableBackgroundStyle(
   appearance: AccountAppearance | null | undefined,
+  reducedMotion = false,
 ): CSSProperties | undefined {
-  const image = appearance?.tableBackgroundStyle ? shopArtworkUrl(appearance.tableBackgroundStyle)
+  const image = appearance?.tableBackgroundStyle ? shopArtworkUrl(appearance.tableBackgroundStyle, reducedMotion)
     : appearance?.tableBackground ? mediaUrl(appearance.tableBackground) : undefined;
   if (!image) return undefined;
   return {
@@ -40,8 +42,9 @@ export function tableBackgroundStyle(
 /** Overrides the theme card back for every descendant; undefined keeps the theme default. */
 export function cardBackStyle(
   appearance: AccountAppearance | null | undefined,
+  reducedMotion = false,
 ): CSSProperties | undefined {
-  const image = appearance?.cardBackStyle ? shopArtworkUrl(appearance.cardBackStyle)
+  const image = appearance?.cardBackStyle ? shopArtworkUrl(appearance.cardBackStyle, reducedMotion)
     : appearance?.cardBack ? mediaUrl(appearance.cardBack) : undefined;
   if (!image) return undefined;
   return {

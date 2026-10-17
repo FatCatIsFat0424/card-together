@@ -1,6 +1,8 @@
+import { CAMPAIGN_CHAT_ORNAMENTS } from './campaign-ornaments';
 import type { ReactNode } from 'react';
 import { CHAT_FRAMES } from '@shared/constants';
 import type { ChatFrameId } from '@shared/types';
+import { useMotionStore } from '../../stores/motion-store';
 import styles from './ChatFrame.module.css';
 
 type Corner = 'tl' | 'tr' | 'bl' | 'br';
@@ -58,6 +60,7 @@ function FrostSpokes(): ReactNode {
 }
 
 const ORNAMENTS: Readonly<Record<ChatFrameId, ReactNode>> = {
+  ...CAMPAIGN_CHAT_ORNAMENTS,
   'chat-frame-aurora': <>
     <Ornament corner="tr" width={40} height={26}>
       <g fill="none" strokeWidth="2.2" strokeLinecap="round">
@@ -196,9 +199,10 @@ interface ChatFrameProps {
  * element and class are exactly what the caller would have rendered.
  */
 export function ChatFrame({ id, as: Tag = 'div', className, children }: ChatFrameProps): ReactNode {
+  const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const frame = resolveChatFrame(id);
   if (!frame) return <Tag className={className}>{children}</Tag>;
-  return <Tag className={[className, styles.frame, styles[frame]].filter(Boolean).join(' ')} data-chat-frame={frame}>
+  return <Tag className={[className, styles.frame, styles[frame]].filter(Boolean).join(' ')} data-chat-frame={frame} data-reduced-motion={reducedMotion || undefined}>
     <span className={styles.bed} aria-hidden="true" />
     {ORNAMENTS[frame]}
     <div className={styles.content}>{children}</div>

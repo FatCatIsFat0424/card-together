@@ -10,15 +10,18 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import { apiRequest } from '../api';
-import { GAME_COIN_REWARD, equipmentSlotFor } from '@shared/constants';
+import { GAME_COIN_REWARD, equipmentSlotFor, SHOP_SERIES, shopItemSeries } from '@shared/constants';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { SHOP_ITEMS, getShopItem, ownsShopItem } from '../shop-catalog';
+import { useMotionStore } from '../stores/motion-store';
+import { BORDER_SERIES, shopSeriesQuery } from '../shop-filters';
+import type { ShopSeriesFilter } from '../shop-filters';
+import { shopSeriesEmblem } from '../shop-series';
 import { ShopProductArt } from '../components/ShopProductArt';
 import { AppIcon } from '../components/AppIcon';
 import styles from './ShopPage.module.css';
 
-const BORDER_SERIES = ['ears', 'metal', 'special'] as const;
 const PRODUCT_TYPES = [
   'avatarBorder', 'nameplate', 'chatFrame', 'stickerPack', 'cardBack', 'cardFace', 'tableBackground', 'chipStyle',
   'seatBackground', 'seatFrame', 'victoryEffect', 'soundPack',
@@ -39,14 +42,17 @@ function equipped(account: AccountProfile, item: ShopItem): boolean {
 export function ShopPage(): ReactNode {
   const account = useAccountStore((state) => state.account);
   const { t, locale } = useI18nStore();
+  const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const [searchParams, setSearchParams] = useSearchParams();
   const [pendingPurchase, setPendingPurchase] = useState<ShopItemId | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
   const categoryList = useRef<HTMLUListElement>(null);
-  const selectedSeries = BORDER_SERIES.find((series) => series === searchParams.get('series')) ?? 'all';
+  const collection = SHOP_SERIES.find((series) => series === searchParams.get('series')) ?? null;
+  const borderSeries = BORDER_SERIES.find((series) => series === searchParams.get('series'));
+  const selectedSeries = collection ?? borderSeries ?? 'all';
   const selectedType = PRODUCT_TYPES.find((type) => type === searchParams.get('type'))
-    ?? (selectedSeries !== 'all' ? 'avatarBorder' : 'all');
+    ?? (selectedSeries !== 'all' && !collection ? 'avatarBorder' : 'all');
   useEffect(() => {
     const list = categoryList.current;
     if (!list) return;
@@ -65,21 +71,17 @@ export function ShopPage(): ReactNode {
     return () => observer.disconnect();
   }, [selectedType]);
   const products = SHOP_ITEMS.filter((item) => (selectedType === 'all' || item.type === selectedType)
-    && (selectedType !== 'avatarBorder' || selectedSeries === 'all'
+    && (collection ? shopItemSeries(item) === collection : selectedType !== 'avatarBorder' || selectedSeries === 'all'
       || (item.type === 'avatarBorder' && item.category === selectedSeries)));
   const selectType = (type: ShopItemType | 'all'): void => {
     const next = new URLSearchParams(searchParams);
     if (type === 'all') next.delete('type');
     else next.set('type', type);
-    next.delete('series');
+    if (!collection) next.delete('series');
     setSearchParams(next, { preventScrollReset: true });
   };
-  const selectSeries = (series: typeof selectedSeries): void => {
-    const next = new URLSearchParams(searchParams);
-    next.set('type', 'avatarBorder');
-    if (series === 'all') next.delete('series');
-    else next.set('series', series);
-    setSearchParams(next, { preventScrollReset: true });
+  const selectSeries = (series: ShopSeriesFilter): void => {
+    setSearchParams(shopSeriesQuery(searchParams, selectedType, series), { preventScrollReset: true });
   };
   if (!account) return null;
   const format = (value: number): string => value.toLocaleString(locale);
@@ -111,7 +113,7 @@ export function ShopPage(): ReactNode {
     } else setNotice({ message: result.error, severity: 'error' });
   };
 
-  return <main className={styles.page}>
+  return <main className={styles.page} data-reduced-motion={reducedMotion || undefined}>
     <header className={styles.header}>
       <div className={styles.heading}>
         <span className={styles.shopIcon}><AppIcon name="shop" /></span>
@@ -127,7 +129,8 @@ export function ShopPage(): ReactNode {
     <div className={styles.shopLayout}>
       <nav className={styles.sidebar} aria-label={t('shop.categories')}>
         <ul ref={categoryList} className={styles.filters}>{(['all', ...PRODUCT_TYPES] as const).map((type) => {
-          const count = type === 'all' ? SHOP_ITEMS.length : SHOP_ITEMS.filter((item) => item.type === type).length;
+          const count = SHOP_ITEMS.filter((item) => (type === 'all' || item.type === type)
+            && (!collection || shopItemSeries(item) === collection)).length;
           return <li key={type}><button type="button" className={styles.filter}
             aria-pressed={selectedType === type} aria-controls="shop-catalog"
             onClick={() => selectType(type)}>
@@ -140,15 +143,25 @@ export function ShopPage(): ReactNode {
         <div className={styles.catalogHeader} aria-live="polite" aria-atomic="true">
           <div>
             <h2 id="shop-catalog-title">{t(selectedType === 'all' ? 'shop.allProducts'
-              : selectedType === 'avatarBorder' && selectedSeries !== 'all' ? `shop.category.${selectedSeries}` : `shop.type.${selectedType}`)}</h2>
+              : selectedType === 'avatarBorder' && borderSeries ? `shop.category.${borderSeries}` : `shop.type.${selectedType}`)}</h2>
             {/* Borders preview on the avatar itself, so they need no visibility note. */}
             {selectedType !== 'all' && selectedType !== 'avatarBorder'
               && <p className={styles.catalogSubtitle}>{t(`shop.visibility.${selectedType}`)}</p>}
           </div>
           {/* Category buttons already show totals; only a series filter changes the count. */}
-          {selectedType === 'avatarBorder' && selectedSeries !== 'all'
+          {(collection || selectedType === 'avatarBorder' && selectedSeries !== 'all')
             && <span>{t('shop.itemCount', { n: format(products.length) })}</span>}</div>
-        {selectedType === 'avatarBorder' && <div className={styles.seriesFilters} role="group" aria-label={t('shop.allSeries')}>
+        <div className={styles.collectionFilters} role="group" aria-label={t('shop.collections')}>
+          <button type="button" className={styles.collectionFilter} aria-pressed={!collection}
+            aria-controls="shop-catalog" onClick={() => selectSeries('all')}>{t('shop.allCollections')}</button>
+          {SHOP_SERIES.map((series) => <button key={series} type="button"
+            className={styles.collectionFilter} data-series={series} aria-pressed={collection === series}
+            aria-controls="shop-catalog" onClick={() => selectSeries(series)}>
+            <img src={shopSeriesEmblem(series, reducedMotion)} alt="" />{t(`shop.series.${series}.name`)}
+          </button>)}
+        </div>
+        {collection && <p className={styles.collectionDescription}>{t(`shop.series.${collection}.description`)}</p>}
+        {selectedType === 'avatarBorder' && !collection && <div className={styles.seriesFilters} role="group" aria-label={t('shop.allSeries')}>
           {(['all', ...BORDER_SERIES] as const).map((series) => <button key={series} type="button"
             className={styles.filter} aria-pressed={selectedSeries === series} aria-controls="shop-catalog"
             onClick={() => selectSeries(series)}>
@@ -160,9 +173,11 @@ export function ShopPage(): ReactNode {
           const owned = ownsShopItem(account, item);
           const active = equipped(account, item);
           const canEquip = owned && item.type !== 'stickerPack';
-          return <li key={item.id} className={styles.product}>
+          const series = shopItemSeries(item);
+          return <li key={item.id} className={styles.product} data-shop-series={series ?? undefined}>
             <div className={`${styles.productArt} ${item.type === 'avatarBorder' ? styles[item.category] : styles[item.type]}`}>
-              <span className={styles.category}>{t(item.type === 'avatarBorder' ? `shop.category.${item.category}` : `shop.type.${item.type}`)}</span>
+              <span className={styles.category}>{series && `${t(`shop.series.${series}.name`)} · `}
+                {t(item.type === 'avatarBorder' ? `shop.category.${item.category}` : `shop.type.${item.type}`)}</span>
               {owned && <span className={styles.ownedTag}>{t(active ? 'shop.equipped' : 'shop.owned')}</span>}
               <ShopProductArt item={item} account={account} />
             </div>

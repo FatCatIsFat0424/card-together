@@ -1,3 +1,4 @@
+import { CAMPAIGN_SEAT_MOTIFS } from './campaign-motifs';
 import { SEAT_FRAMES } from '@shared/constants';
 
 export type SeatFrameDesign = typeof SEAT_FRAMES[number]['design'];
@@ -39,6 +40,7 @@ const BLOSSOM = [0, 72, 144, 216, 288].map((angle): MotifPart => ({
 }));
 
 export const SEAT_FRAME_MOTIFS: Record<SeatFrameDesign, SeatFrameMotif> = {
+  ...CAMPAIGN_SEAT_MOTIFS,
   // Four ribbons leaving the outer corner, like curtains of light.
   aurora: {
     main: [

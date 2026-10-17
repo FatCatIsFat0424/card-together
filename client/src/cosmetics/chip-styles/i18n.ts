@@ -1,4 +1,15 @@
 const en = {
+  'shop.item.chips-starfleet.name': 'Astral Armada chips',
+  'shop.item.chips-starfleet.description': 'A spacecraft over a turning warp ring, with cyan engine ports and a gold segmented rim.',
+  'shop.item.chips-shrine.name': 'Thousand Lanterns chips',
+  'shop.item.chips-shrine.description': 'A vermilion torii shelters twin foxfire flames inside a lantern-dotted jade rim.',
+  'shop.item.chips-ironfront.name': 'Iron Front chips',
+  'shop.item.chips-ironfront.description': 'An armored vehicle and spinning propeller hub set in riveted olive and radar amber.',
+  'shop.item.chips-neoncity.name': 'Neon Overdrive chips',
+  'shop.item.chips-neoncity.description': 'A holographic processor pulses between asymmetric cyan and magenta circuit traces.',
+  'shop.item.chips-crownrealm.name': 'Lioncrown Dynasty chips',
+  'shop.item.chips-crownrealm.description': 'A crowned lion on a royal-blue shield, ringed by gold heraldic studs and a passing gleam.',
+
   'shop.item.chips-aurora.name': 'Aurora ribbons',
   'shop.item.chips-aurora.description': 'Drifting green and violet light ribbons on a deep teal chip.',
   'shop.item.chips-tide.name': 'Tide ripples',
@@ -24,6 +35,17 @@ const en = {
 export const chipStylesTranslations: { readonly en: typeof en; readonly 'zh-TW': Record<keyof typeof en, string> } = {
   en,
   'zh-TW': {
+    'shop.item.chips-starfleet.name': '星穹遠征籌碼',
+    'shop.item.chips-starfleet.description': '太空艦飛越旋轉躍遷環，青色引擎口搭配金色分段外緣。',
+    'shop.item.chips-shrine.name': '千燈神域籌碼',
+    'shop.item.chips-shrine.description': '朱紅鳥居庇護雙狐火，外圈以燈籠光點點綴青玉環。',
+    'shop.item.chips-ironfront.name': '鋼鐵戰線籌碼',
+    'shop.item.chips-ironfront.description': '裝甲戰車與旋轉螺旋槳輪軸，鑲在橄欖綠鉚釘與雷達琥珀色之中。',
+    'shop.item.chips-neoncity.name': '霓虹失控籌碼',
+    'shop.item.chips-neoncity.description': '全息處理器在不對稱的青色與洋紅電路之間傳遞脈衝。',
+    'shop.item.chips-crownrealm.name': '獅冠王朝籌碼',
+    'shop.item.chips-crownrealm.description': '戴冠雄獅立於皇家藍盾徽上，金色紋章鉚飾與流動光澤環繞外圈。',
+
     'shop.item.chips-aurora.name': '極光絲帶',
     'shop.item.chips-aurora.description': '深青色籌碼上流動的綠紫極光絲帶。',
     'shop.item.chips-tide.name': '潮汐漣漪',

@@ -1,0 +1,30 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Field radio ponders a route across the map</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#29392d"/>
+  <circle cx="110" cy="108" r="82" fill="#46533a"/>
+  <g stroke="#fff2cb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m28 153 43-16 47 12 49-15 25 48-50 12-49-13-48 12Z" fill="#d0bc83" stroke="#f4c46b"/>
+    <path d="m71 138 22 43m25-31 24 44m-76-26 27-4 39 14 26-19" fill="none" stroke="#7b8055"/>
+    <g class="sway">
+      <rect x="56" y="69" width="106" height="85" rx="12" fill="#748255"/>
+      <path d="M71 68V56h75v12M145 55l19-24" fill="none" stroke="#a8b883"/>
+      <rect x="69" y="84" width="57" height="32" rx="5" fill="#202a24"/>
+      <path d="m77 97 8-3m19 0 11 4m-23 9h7" stroke="#f4c46b" fill="none"/>
+      <circle cx="143" cy="100" r="9" fill="#d0bc83" stroke="#202a24"/>
+      <path d="m141 98 3-3m-70 32h42m-42 9h42" stroke="#29392d"/>
+      <path d="M148 124q27 4 21 24t-20 19" fill="none" stroke="#202a24"/>
+      <rect x="138" y="149" width="15" height="28" rx="6" fill="#748255"/>
+    </g>
+    <g class="glow" fill="#f4c46b" stroke="none"><circle cx="40" cy="82" r="4"/><circle cx="39" cy="65" r="6"/><circle cx="48" cy="44" r="9"/></g>
+  </g>
+</svg>

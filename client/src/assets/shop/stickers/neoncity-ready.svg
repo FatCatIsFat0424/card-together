@@ -1,0 +1,30 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Street runner robot charges up for the next round</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#191737"/>
+  <circle cx="110" cy="108" r="82" fill="#322552"/>
+  <g stroke="#fb73d3" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <g class="glow" stroke="#fb73d3" fill="none"><path d="M29 77V48h27m108 125h27v-29M27 151h22m-14 11h22"/><path d="m169 41-13 22h16l-12 22" stroke="#62f2f3"/></g>
+    <g class="float">
+      <path d="m83 143-19 29 16 8 27-28m16-10 22 21 17-5-23-31" fill="#343b68"/>
+      <path d="m70 172-6 13h29v-9m58-14 12 7 12-16-13-4" fill="#fb73d3"/>
+      <path d="m83 107-9 34 42 17 27-26-17-32" fill="#476486"/>
+      <path d="m86 118 31 11-9 15-28-10" fill="#62f2f3" stroke="#191737"/>
+      <path d="m78 117-20-3-11 13-10-11 16-20 28 5m48 7 18-13 10 10-18 23" fill="#476486"/>
+      <rect x="71" y="56" width="72" height="57" rx="17" fill="#476486"/>
+      <path d="M80 73h54v25H80Z" fill="#191737"/>
+      <path d="m90 84 10-3m16 0 8 3m-21 9h11" stroke="#62f2f3"/>
+      <path d="m105 55 4-14m-4-2h9" stroke="#fb73d3"/>
+      <path d="m60 139-7 6m101-22 9 3" stroke="#fb73d3"/>
+    </g>
+  </g>
+</svg>

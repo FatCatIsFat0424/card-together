@@ -108,7 +108,6 @@ export function RoomPage(): ReactNode {
   const { roomCode } = useParams<{ roomCode: string }>();
   const navigate = useNavigate();
   const account = useAccountStore((state) => state.account);
-  const tableStyle = tableBackgroundStyle(account);
   const playerId = usePlayerStore((state) => state.playerId);
   const roomInfo = useRoomStore((state) => state.roomInfo);
   const mySeat = useRoomStore((state) => state.mySeat);
@@ -124,6 +123,7 @@ export function RoomPage(): ReactNode {
   const landscapeRoom = useMediaQuery('(max-height: 500px) and (min-width: 600px)');
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const systemReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const tableStyle = tableBackgroundStyle(account, reducedMotion || systemReducedMotion);
   const [enteredRoom, setEnteredRoom] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -561,7 +561,7 @@ export function RoomPage(): ReactNode {
           const player = seatInfo.player;
           const seatStyle = player?.isBot
             ? { '--seat-image': `url("${botSeatBackground}")` } as CSSProperties
-            : seatBackgroundStyle(player);
+            : seatBackgroundStyle(player, reducedMotion || systemReducedMotion);
           const sit = (): void => {
             if (seatCard.seat) changeSeat(seatCard.seat);
             else if (seatCard.additionalIndex !== undefined) changeAdditionalSeat(seatCard.additionalIndex);

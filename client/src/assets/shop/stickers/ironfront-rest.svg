@@ -1,0 +1,32 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Sleepy armored vehicle pauses at a quiet campsite</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#29392d"/>
+  <circle cx="110" cy="108" r="82" fill="#46533a"/>
+  <g stroke="#fff2cb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M27 184h166" stroke="#7e8c58"/>
+    <path d="m160 148 18-32 18 32Z" fill="#7e8c58" stroke="#a8b883"/>
+    <g class="sway">
+      <rect x="35" y="145" width="129" height="33" rx="16" fill="#202a24"/>
+      <g fill="#6c7954" stroke="#a8b883"><circle cx="56" cy="161" r="8"/><circle cx="84" cy="161" r="8"/><circle cx="112" cy="161" r="8"/><circle cx="140" cy="161" r="8"/></g>
+      <path d="m35 144 14-24h99l20 24-9 9H44Z" fill="#7e8c58"/>
+      <path d="m61 119 8-29h57l13 29" fill="#929b65"/>
+      <path d="m127 104 40 5-2 12-33-3" fill="#6c7954"/>
+      <path d="M55 93q30-30 75-2l-6 13-21-8-21 9-25-3Z" fill="#bdad7d"/>
+      <path d="m73 110 9 3 8-3m14 0 8 3 8-3" stroke="#202a24" fill="none"/>
+      <path d="M48 130h20" stroke="#f4c46b"/>
+    </g>
+    <path d="M73 77V63h18v14Zm18-11q12 0 7 8h-7" fill="#f4c46b" stroke="#29392d" stroke-width="3"/>
+    <path class="float" d="M81 52q-6-5 0-11m11 10q-5-5 0-10" stroke="#f4c46b" opacity=".7" fill="none"/>
+    <path d="M161 38q-10 21 10 26-21 8-28-10-4-18 18-16Z" fill="#f4c46b" stroke="none"/>
+  </g>
+</svg>

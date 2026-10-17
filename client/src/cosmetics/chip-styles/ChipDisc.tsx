@@ -1,5 +1,7 @@
+import styles from './ChipDisc.module.css';
 import type { ReactNode } from 'react';
 import type { ChipStyleId } from '@shared/types';
+import { useMotionStore } from '../../stores/motion-store';
 import {
   CHIP_CENTER, CHIP_DESIGNS, CHIP_FACE_RADIUS, CHIP_RIM_RADIUS, CHIP_RIM_WIDTH,
 } from './chip-designs';
@@ -11,10 +13,11 @@ export function ChipDisc({ style, className }: {
   readonly style: ChipStyleId;
   readonly className?: string;
 }): ReactNode {
+  const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const { palette, spots, emblem } = CHIP_DESIGNS[style];
   const step = 360 / spots.count;
   return (
-    <svg className={className} viewBox="0 0 64 64" aria-hidden="true" focusable="false" data-chip-style={style}>
+    <svg className={[styles.disc, className].filter(Boolean).join(' ')} viewBox="0 0 64 64" aria-hidden="true" focusable="false" data-chip-style={style} data-reduced-motion={reducedMotion || undefined}>
       <circle cx={CHIP_CENTER} cy={CHIP_CENTER} r="31" fill={palette.rim} />
       {spots.shape === 'bar' ? (
         <circle

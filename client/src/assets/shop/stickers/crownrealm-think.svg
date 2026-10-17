@@ -1,0 +1,29 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Lion scholar studies a royal scroll</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#152b55"/>
+  <circle cx="110" cy="108" r="82" fill="#254879"/>
+  <g stroke="#fff2cf" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m53 184 18-65 62-7 32 72" fill="#3a67ab" stroke="#f4c86d"/>
+    <g class="sway">
+      <path d="m54 81 12-29 27 1 23 20-3 33-22 16-28-10Z" fill="#bd823a" stroke="#f4c86d"/>
+      <circle cx="72" cy="75" r="8" fill="#e0a44f"/>
+      <path d="M70 81q20-19 36 1v17q-17 18-34-2Z" fill="#f4c86d" stroke="#bd823a"/>
+      <path d="m77 86 7-2m13 1 6 4m-16 7 4 3 5-2" stroke="#44342d" fill="none" stroke-width="3"/>
+      <path d="m66 57-4-17 14 7 8-15 9 15 14-7-3 18Z" fill="#f4c86d" stroke="#bd823a"/>
+      <path d="m119 141 4-20 15 1 3 22" fill="#b7cde0"/>
+      <path d="M53 144q0-11 12-11h72q-9 13 0 27H71q9 18-6 23-12-1-12-12Z" fill="#fff2cf" stroke="#bd823a"/>
+      <path d="M66 133v21m7-8h40m-35 10h33m-33 9h17" stroke="#bd823a" stroke-width="3"/>
+    </g>
+    <g class="float" stroke="#f4c86d" fill="none"><path d="M151 70q-2-17 13-18 20 3 4 17l-6 6v6"/><circle cx="162" cy="94" r="2" fill="#f4c86d"/></g>
+  </g>
+</svg>

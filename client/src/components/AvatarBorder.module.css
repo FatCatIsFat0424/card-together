@@ -124,3 +124,22 @@
 .flowerArt { z-index: 1; fill: #ffcddd; stroke: #b76d94; stroke-width: 0.8; }
 .flowerArt circle { fill: #ffeac1; stroke: none; }
 .waveArt { z-index: 1; fill: none; stroke: #dcfff4; stroke-width: 3; stroke-linecap: round; }
+
+.starfleet { --border-paint: conic-gradient(#4eeaff, #17395e 20%, #d2faff 23%, #217ead 38%, #ffe0a0 50%, #17395e 70%, #4eeaff); --series-light: #56e8ff; }
+.shrine { --border-paint: conic-gradient(#ffe7a8, #c3473c, #ffad78, #9d303b, #65e9d0, #ffe7a8); --series-light: #ff9476; }
+.ironfront { --border-paint: repeating-conic-gradient(#c4cf9c 0 3deg, #485e47 3deg 42deg, #ffcb76 42deg 45deg); --series-light: #bdd490; }
+.neoncity { --border-paint: repeating-conic-gradient(#64ffef 0 35deg, #1c254b 35deg 45deg, #ff62d5 45deg 80deg, #1c254b 80deg 90deg); --series-light: #e67bff; }
+.crownrealm { --border-paint: conic-gradient(#fce8a8, #b78239 18%, #e7c67b 30%, #344a80 48%, #f7d987 58%, #b18438 75%, #fce8a8); --series-light: #f3d284; }
+:is(.starfleet, .shrine, .ironfront, .neoncity, .crownrealm) .rim { box-shadow: inset 0 0 0 1px #ffefce80, 0 0 9px color-mix(in srgb, var(--series-light) 35%, transparent); }
+:is(.starfleet, .shrine, .ironfront, .neoncity, .crownrealm) .rim::after { inset: 1%; border: 1px dashed var(--series-light); animation: seriesOrbit 18s linear infinite; }
+.shrine .rim::after { border-style: dotted; animation: seriesBreathe 4s ease-in-out infinite; }
+.ironfront .rim::after { border-width: 2px; border-style: dashed; animation-duration: 30s; }
+.neoncity .rim::after { border-radius: 36%; animation: seriesBreathe 3s ease-in-out infinite; }
+.crownrealm .rim::after { border-width: 2px; animation: seriesBreathe 5s ease-in-out infinite; }
+.seriesEmblem { position: absolute; z-index: 2; top: -11%; left: 34%; width: 32%; height: 32%; pointer-events: none; filter: drop-shadow(0 1px 2px #0009); }
+@keyframes seriesOrbit { to { transform: rotate(360deg); } }
+@keyframes seriesBreathe { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) {
+  :is(.starfleet, .shrine, .ironfront, .neoncity, .crownrealm) .rim::after { animation: none; }
+}
+:is(.starfleet, .shrine, .ironfront, .neoncity, .crownrealm)[data-reduced-motion] .rim::after { animation: none; }

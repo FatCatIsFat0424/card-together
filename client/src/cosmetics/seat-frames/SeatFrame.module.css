@@ -735,3 +735,55 @@
 :global([data-reduced-motion]) .frame *,
 :global([data-reduced-motion]) .frame *::before,
 :global([data-reduced-motion]) .frame *::after { animation: none !important; }
+
+/* Campaign ornaments leave the plate interior free for names and turn timers. */
+.starfleet { --frame-a: #65dff5; --frame-b: #285ca6; --frame-c: #f6cd6c; --frame-glow: #36cce9; --frame-bar: #219dbf; }
+.shrine { --frame-a: #d84b30; --frame-b: #39b6a6; --frame-c: #f8cf7a; --frame-glow: #27b3a1; --frame-bar: #c4462e; }
+.ironfront { --frame-a: #a2b57b; --frame-b: #48583d; --frame-c: #eac06a; --frame-glow: #d2a24c; --frame-bar: #8b9c54; }
+.neoncity { --frame-a: #ea5bdc; --frame-b: #35cbd7; --frame-c: #c5fcff; --frame-glow: #c24bd7; --frame-bar: #bb40b9; }
+.crownrealm { --frame-a: #e3bf64; --frame-b: #2b59a5; --frame-c: #ffedb2; --frame-glow: #d9ae4d; --frame-bar: #b68a32; }
+
+.starfleet .ring { background: repeating-linear-gradient(90deg, #65dff5 0 12px, #17365c 12px 17px, #f6cd6c 17px 19px); }
+.starfleet .fx, .starfleet .fx2 {
+  display: block; left: 18%; right: 18%; height: calc(3px * var(--fs));
+  background: linear-gradient(90deg, transparent, #65dff5, #fff, transparent) 0 0 / 200% 100%;
+}
+.starfleet .fx { top: calc(-4px * var(--fs)); }
+.starfleet .fx2 { bottom: calc(-4px * var(--fs)); }
+.starfleet[data-turn] .fx, .starfleet[data-turn] .fx2 { animation: warpRail 1.8s linear infinite; }
+.starfleet[data-turn] .fx2 { animation-direction: reverse; }
+.starfleet[data-turn] .corner .line2 { animation: enginePulse 1.4s ease-in-out infinite; }
+
+.shrine .ring { background: linear-gradient(90deg, #8e3023, #ed8660 45%, #b53c27); }
+.shrine .fx { display: block; left: 8%; right: 8%; top: calc(-5px * var(--fs)); height: calc(4px * var(--fs)); border-top: 1px solid #d5ad58; border-radius: 50%; }
+.shrine .fx2 { display: block; left: calc(-5px * var(--fs)); top: 35%; width: calc(6px * var(--fs)); height: calc(11px * var(--fs)); border-radius: 80% 15% 70% 40%; background: #54c8b5; box-shadow: 0 0 5px #35b8a3; }
+.shrine[data-turn] .fx2 { animation: foxfireRise 2.8s ease-in-out infinite; }
+.shrine[data-turn] .corner .fill3 { animation: lanternGlow 2.6s ease-in-out infinite; }
+
+.ironfront .ring { background: repeating-linear-gradient(135deg, #78865b 0 7px, #344230 7px 10px); }
+.ironfront .fx { display: block; inset: calc(-3px * var(--fs)); border: 1px dashed #88966b; border-radius: inherit; }
+.ironfront .fx2 { display: block; right: calc(-9px * var(--fs)); top: calc(-9px * var(--fs)); width: calc(20px * var(--fs)); height: calc(20px * var(--fs)); border: 1px solid #ddb65b; border-radius: 50%; overflow: hidden; }
+.ironfront .fx2::before { content: ''; position: absolute; inset: 0; background: conic-gradient(from 0deg, transparent 65%, rgb(234 192 106 / 0.7)); }
+.ironfront[data-turn] .fx2::before { animation: radarSweep 4s linear infinite; }
+.ironfront[data-turn] .ring { animation: trackRoll 4s linear infinite; }
+
+.neoncity .ring { background: repeating-linear-gradient(90deg, #ea5bdc 0 16px, #142c49 16px 20px, #35cbd7 20px 36px); }
+.neoncity .fx { display: block; inset: calc(-4px * var(--fs)); border: 1px solid #35cbd7; border-radius: inherit; clip-path: polygon(0 0, 32% 0, 32% 5%, 5% 5%, 5% 32%, 0 32%, 0 0, 100% 100%, 68% 100%, 68% 95%, 95% 95%, 95% 68%, 100% 68%, 100% 100%); }
+.neoncity .fx2 { display: block; width: calc(6px * var(--fs)); height: calc(3px * var(--fs)); background: #c5fcff; box-shadow: 0 0 5px #35cbd7; offset-path: inset(0 round var(--rad)); offset-distance: 15%; }
+.neoncity[data-turn] .fx2 { animation: packetOrbit 2.5s linear infinite; }
+.neoncity[data-turn] .corner .fill3 { animation: enginePulse 2s ease-in-out infinite; }
+
+.crownrealm .ring { background: linear-gradient(120deg, #b68a32, #ffedb2 25%, #a87926 50%, #e3bf64 75%, #b68a32) 0 0 / 200% 100%; }
+.crownrealm .fx { display: block; inset: calc(-3px * var(--fs)); border: 1px solid #a8863c; border-radius: inherit; }
+.crownrealm .fx2 { display: block; left: 30%; right: 30%; bottom: calc(-7px * var(--fs)); height: calc(8px * var(--fs)); background: #2b59a5; border-bottom: 1px solid #e3bf64; clip-path: polygon(0 0, 100% 0, 90% 100%, 50% 70%, 10% 100%); transform-origin: top; }
+.crownrealm[data-turn] .ring { animation: warpRail 4s ease-in-out infinite; }
+.crownrealm[data-turn] .fx2 { animation: royalBanner 3s ease-in-out infinite; }
+
+@keyframes warpRail { to { background-position: 200% 0; } }
+@keyframes enginePulse { 50% { opacity: 0.4; } }
+@keyframes foxfireRise { 50% { translate: 0 calc(-8px * var(--fs)); opacity: 0.5; } }
+@keyframes lanternGlow { 50% { filter: brightness(1.25); } }
+@keyframes radarSweep { to { rotate: 360deg; } }
+@keyframes trackRoll { to { background-position: 28px 0; } }
+@keyframes packetOrbit { to { offset-distance: 115%; } }
+@keyframes royalBanner { 50% { scale: 1 0.7; } }

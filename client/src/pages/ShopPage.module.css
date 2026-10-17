@@ -82,3 +82,18 @@
 .purchaseArt { display: grid; place-items: center; min-height: 176px; padding-top: 30px; }
 .purchaseBalance { color: var(--text-secondary); font-size: var(--text-sm); }
 .purchaseActions.purchaseActions { gap: var(--spacing-sm); padding: var(--spacing-lg); flex-wrap: wrap; }
+
+.collectionFilters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: var(--spacing-md); }
+.collectionFilter { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; max-width: 100%; padding: 6px 11px; border: 1px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-secondary); font-size: var(--text-xs); text-align: left; }
+.collectionFilter img { width: 25px; height: 25px; flex-shrink: 0; }
+.collectionFilter:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.collectionFilter[aria-pressed='true'] { color: var(--text-primary); border-color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 12%, var(--bg-surface)); }
+.collectionDescription { margin-bottom: var(--spacing-md); color: var(--text-secondary); font-size: var(--text-sm); line-height: 1.6; }
+.product[data-shop-series='starfleet'] { --art-color: #43e5ff; }
+.product[data-shop-series='shrine'] { --art-color: #ff795e; }
+.product[data-shop-series='ironfront'] { --art-color: #b3ce8d; }
+.product[data-shop-series='neoncity'] { --art-color: #ff60d5; }
+.product[data-shop-series='crownrealm'] { --art-color: #f3c970; }
+.product[data-shop-series] .productArt { --art-color: inherit; }
+.product[data-shop-series] { border-top: 2px solid color-mix(in srgb, var(--art-color) 55%, var(--border-color)); }
+.product[data-shop-series] .category { color: color-mix(in srgb, var(--art-color) 40%, var(--text-primary)); }

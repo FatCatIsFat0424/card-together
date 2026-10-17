@@ -1,3 +1,7 @@
+/** Complete themed collections across every shop category. */
+export const SHOP_SERIES = ['starfleet', 'shrine', 'ironfront', 'neoncity', 'crownrealm'] as const;
+export type ShopSeries = typeof SHOP_SERIES[number];
+
 /** Server-authoritative prices for permanent avatar borders. */
 export const AVATAR_BORDERS = [
   { id: 'cat', price: 150, category: 'ears' },
@@ -16,6 +20,11 @@ export const AVATAR_BORDERS = [
   { id: 'sakura', price: 180, category: 'special' },
   { id: 'tide', price: 180, category: 'special' },
   { id: 'eclipse', price: 240, category: 'special' },
+  { id: 'starfleet', price: 150, category: 'special' },
+  { id: 'shrine', price: 150, category: 'special' },
+  { id: 'ironfront', price: 150, category: 'special' },
+  { id: 'neoncity', price: 150, category: 'special' },
+  { id: 'crownrealm', price: 150, category: 'special' },
 ] as const;
 
 export type AvatarBorderId = typeof AVATAR_BORDERS[number]['id'];
@@ -35,6 +44,11 @@ export const CARD_BACKS = [
   { id: 'card-back-lotus', type: 'cardBack', price: 120, design: 'lotus' },
   { id: 'card-back-frost', type: 'cardBack', price: 120, design: 'frost' },
   { id: 'card-back-dune', type: 'cardBack', price: 120, design: 'dune' },
+  { id: 'card-back-starfleet', type: 'cardBack', price: 120, design: 'starfleet' },
+  { id: 'card-back-shrine', type: 'cardBack', price: 120, design: 'shrine' },
+  { id: 'card-back-ironfront', type: 'cardBack', price: 120, design: 'ironfront' },
+  { id: 'card-back-neoncity', type: 'cardBack', price: 120, design: 'neoncity' },
+  { id: 'card-back-crownrealm', type: 'cardBack', price: 120, design: 'crownrealm' },
 ] as const;
 
 export const TABLE_BACKGROUNDS = [
@@ -48,6 +62,11 @@ export const TABLE_BACKGROUNDS = [
   { id: 'table-lotus', type: 'tableBackground', price: 160, design: 'lotus' },
   { id: 'table-frost', type: 'tableBackground', price: 160, design: 'frost' },
   { id: 'table-dune', type: 'tableBackground', price: 160, design: 'dune' },
+  { id: 'table-starfleet', type: 'tableBackground', price: 160, design: 'starfleet' },
+  { id: 'table-shrine', type: 'tableBackground', price: 160, design: 'shrine' },
+  { id: 'table-ironfront', type: 'tableBackground', price: 160, design: 'ironfront' },
+  { id: 'table-neoncity', type: 'tableBackground', price: 160, design: 'neoncity' },
+  { id: 'table-crownrealm', type: 'tableBackground', price: 160, design: 'crownrealm' },
 ] as const;
 
 export const SEAT_BACKGROUNDS = [
@@ -61,6 +80,11 @@ export const SEAT_BACKGROUNDS = [
   { id: 'seat-lotus', type: 'seatBackground', price: 100, design: 'lotus' },
   { id: 'seat-frost', type: 'seatBackground', price: 100, design: 'frost' },
   { id: 'seat-dune', type: 'seatBackground', price: 100, design: 'dune' },
+  { id: 'seat-starfleet', type: 'seatBackground', price: 100, design: 'starfleet' },
+  { id: 'seat-shrine', type: 'seatBackground', price: 100, design: 'shrine' },
+  { id: 'seat-ironfront', type: 'seatBackground', price: 100, design: 'ironfront' },
+  { id: 'seat-neoncity', type: 'seatBackground', price: 100, design: 'neoncity' },
+  { id: 'seat-crownrealm', type: 'seatBackground', price: 100, design: 'crownrealm' },
 ] as const;
 
 /** Fixed cosmetic titles, distinct from earned achievements. */
@@ -75,6 +99,11 @@ export const NAMEPLATES = [
   { id: 'nameplate-planetary-devastation', type: 'nameplate', price: 240, design: 'planetary-devastation' },
   { id: 'nameplate-einstein', type: 'nameplate', price: 200, design: 'einstein' },
   { id: 'nameplate-lucky', type: 'nameplate', price: 160, design: 'lucky' },
+  { id: 'nameplate-starfleet', type: 'nameplate', price: 140, design: 'starfleet' },
+  { id: 'nameplate-shrine', type: 'nameplate', price: 140, design: 'shrine' },
+  { id: 'nameplate-ironfront', type: 'nameplate', price: 140, design: 'ironfront' },
+  { id: 'nameplate-neoncity', type: 'nameplate', price: 140, design: 'neoncity' },
+  { id: 'nameplate-crownrealm', type: 'nameplate', price: 140, design: 'crownrealm' },
 ] as const;
 
 export const STICKER_PACKS = [
@@ -88,6 +117,11 @@ export const STICKER_PACKS = [
   { id: 'stickers-garden', type: 'stickerPack', price: 120 },
   { id: 'stickers-arcade', type: 'stickerPack', price: 120 },
   { id: 'stickers-dragons', type: 'stickerPack', price: 120 },
+  { id: 'stickers-starfleet', type: 'stickerPack', price: 120 },
+  { id: 'stickers-shrine', type: 'stickerPack', price: 120 },
+  { id: 'stickers-ironfront', type: 'stickerPack', price: 120 },
+  { id: 'stickers-neoncity', type: 'stickerPack', price: 120 },
+  { id: 'stickers-crownrealm', type: 'stickerPack', price: 120 },
 ] as const;
 
 /** Stable identifiers are the only sticker references accepted from clients or stored in messages. */
@@ -132,6 +166,26 @@ export const SHOP_STICKERS = [
   { id: 'dragons-ponder', packId: 'stickers-dragons' },
   { id: 'dragons-fire', packId: 'stickers-dragons' },
   { id: 'dragons-sleep', packId: 'stickers-dragons' },
+  { id: 'starfleet-ready', packId: 'stickers-starfleet' },
+  { id: 'starfleet-think', packId: 'stickers-starfleet' },
+  { id: 'starfleet-cheer', packId: 'stickers-starfleet' },
+  { id: 'starfleet-rest', packId: 'stickers-starfleet' },
+  { id: 'shrine-ready', packId: 'stickers-shrine' },
+  { id: 'shrine-think', packId: 'stickers-shrine' },
+  { id: 'shrine-cheer', packId: 'stickers-shrine' },
+  { id: 'shrine-rest', packId: 'stickers-shrine' },
+  { id: 'ironfront-ready', packId: 'stickers-ironfront' },
+  { id: 'ironfront-think', packId: 'stickers-ironfront' },
+  { id: 'ironfront-cheer', packId: 'stickers-ironfront' },
+  { id: 'ironfront-rest', packId: 'stickers-ironfront' },
+  { id: 'neoncity-ready', packId: 'stickers-neoncity' },
+  { id: 'neoncity-think', packId: 'stickers-neoncity' },
+  { id: 'neoncity-cheer', packId: 'stickers-neoncity' },
+  { id: 'neoncity-rest', packId: 'stickers-neoncity' },
+  { id: 'crownrealm-ready', packId: 'stickers-crownrealm' },
+  { id: 'crownrealm-think', packId: 'stickers-crownrealm' },
+  { id: 'crownrealm-cheer', packId: 'stickers-crownrealm' },
+  { id: 'crownrealm-rest', packId: 'stickers-crownrealm' },
 ] as const;
 
 /** Private card face decks; unequipped players see the bundled classic deck. */
@@ -147,6 +201,11 @@ export const CARD_FACES = [
   { id: 'card-face-lotus', type: 'cardFace', price: 160, design: 'lotus' },
   { id: 'card-face-frost', type: 'cardFace', price: 160, design: 'frost' },
   { id: 'card-face-dune', type: 'cardFace', price: 160, design: 'dune' },
+  { id: 'card-face-starfleet', type: 'cardFace', price: 160, design: 'starfleet' },
+  { id: 'card-face-shrine', type: 'cardFace', price: 160, design: 'shrine' },
+  { id: 'card-face-ironfront', type: 'cardFace', price: 160, design: 'ironfront' },
+  { id: 'card-face-neoncity', type: 'cardFace', price: 160, design: 'neoncity' },
+  { id: 'card-face-crownrealm', type: 'cardFace', price: 160, design: 'crownrealm' },
 ] as const;
 
 /** Private synthesized sound packs; unequipped players hear the classic tones. */
@@ -161,6 +220,11 @@ export const SOUND_PACKS = [
   { id: 'sound-lotus', type: 'soundPack', price: 120, design: 'lotus' },
   { id: 'sound-frost', type: 'soundPack', price: 120, design: 'frost' },
   { id: 'sound-dune', type: 'soundPack', price: 120, design: 'dune' },
+  { id: 'sound-starfleet', type: 'soundPack', price: 120, design: 'starfleet' },
+  { id: 'sound-shrine', type: 'soundPack', price: 120, design: 'shrine' },
+  { id: 'sound-ironfront', type: 'soundPack', price: 120, design: 'ironfront' },
+  { id: 'sound-neoncity', type: 'soundPack', price: 120, design: 'neoncity' },
+  { id: 'sound-crownrealm', type: 'soundPack', price: 120, design: 'crownrealm' },
 ] as const;
 
 /** Public seat frames and turn glow shown to everyone at the table. */
@@ -175,6 +239,11 @@ export const SEAT_FRAMES = [
   { id: 'seat-frame-lotus', type: 'seatFrame', price: 140, design: 'lotus' },
   { id: 'seat-frame-frost', type: 'seatFrame', price: 140, design: 'frost' },
   { id: 'seat-frame-dune', type: 'seatFrame', price: 140, design: 'dune' },
+  { id: 'seat-frame-starfleet', type: 'seatFrame', price: 140, design: 'starfleet' },
+  { id: 'seat-frame-shrine', type: 'seatFrame', price: 140, design: 'shrine' },
+  { id: 'seat-frame-ironfront', type: 'seatFrame', price: 140, design: 'ironfront' },
+  { id: 'seat-frame-neoncity', type: 'seatFrame', price: 140, design: 'neoncity' },
+  { id: 'seat-frame-crownrealm', type: 'seatFrame', price: 140, design: 'crownrealm' },
 ] as const;
 
 /** Public celebrations played over the table for a winner's seat. */
@@ -189,6 +258,11 @@ export const VICTORY_EFFECTS = [
   { id: 'victory-lotus', type: 'victoryEffect', price: 220, design: 'lotus' },
   { id: 'victory-frost', type: 'victoryEffect', price: 220, design: 'frost' },
   { id: 'victory-dune', type: 'victoryEffect', price: 220, design: 'dune' },
+  { id: 'victory-starfleet', type: 'victoryEffect', price: 220, design: 'starfleet' },
+  { id: 'victory-shrine', type: 'victoryEffect', price: 220, design: 'shrine' },
+  { id: 'victory-ironfront', type: 'victoryEffect', price: 220, design: 'ironfront' },
+  { id: 'victory-neoncity', type: 'victoryEffect', price: 220, design: 'neoncity' },
+  { id: 'victory-crownrealm', type: 'victoryEffect', price: 220, design: 'crownrealm' },
 ] as const;
 
 /** Private chip artwork for match-only chip amounts. */
@@ -203,6 +277,11 @@ export const CHIP_STYLES = [
   { id: 'chips-lotus', type: 'chipStyle', price: 80, design: 'lotus' },
   { id: 'chips-frost', type: 'chipStyle', price: 80, design: 'frost' },
   { id: 'chips-dune', type: 'chipStyle', price: 80, design: 'dune' },
+  { id: 'chips-starfleet', type: 'chipStyle', price: 80, design: 'starfleet' },
+  { id: 'chips-shrine', type: 'chipStyle', price: 80, design: 'shrine' },
+  { id: 'chips-ironfront', type: 'chipStyle', price: 80, design: 'ironfront' },
+  { id: 'chips-neoncity', type: 'chipStyle', price: 80, design: 'neoncity' },
+  { id: 'chips-crownrealm', type: 'chipStyle', price: 80, design: 'crownrealm' },
 ] as const;
 
 /** Public message frames around the sender's room chat and private messages. */
@@ -217,6 +296,11 @@ export const CHAT_FRAMES = [
   { id: 'chat-frame-lotus', type: 'chatFrame', price: 120, design: 'lotus' },
   { id: 'chat-frame-frost', type: 'chatFrame', price: 120, design: 'frost' },
   { id: 'chat-frame-dune', type: 'chatFrame', price: 120, design: 'dune' },
+  { id: 'chat-frame-starfleet', type: 'chatFrame', price: 120, design: 'starfleet' },
+  { id: 'chat-frame-shrine', type: 'chatFrame', price: 120, design: 'shrine' },
+  { id: 'chat-frame-ironfront', type: 'chatFrame', price: 120, design: 'ironfront' },
+  { id: 'chat-frame-neoncity', type: 'chatFrame', price: 120, design: 'neoncity' },
+  { id: 'chat-frame-crownrealm', type: 'chatFrame', price: 120, design: 'crownrealm' },
 ] as const;
 
 /** Server-authoritative prices for every permanent shop product, including legacy borders. */
@@ -227,6 +311,11 @@ export const SHOP_ITEMS = [
 ] as const;
 
 export type ShopItem = typeof SHOP_ITEMS[number];
+/** Collection membership does not change product identity or ownership. */
+export function shopItemSeries(item: ShopItem): ShopSeries | null {
+  return SHOP_SERIES.find((series) => item.id === series || item.id.endsWith(`-${series}`)) ?? null;
+}
+
 export type ShopItemId = ShopItem['id'];
 export type ShopItemType = ShopItem['type'];
 export type CardBackStyleId = typeof CARD_BACKS[number]['id'];

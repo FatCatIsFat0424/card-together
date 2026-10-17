@@ -1,4 +1,15 @@
 const en = {
+  'shop.item.sound-starfleet.name': 'Astral Armada cues',
+  'shop.item.sound-starfleet.description': 'Two navigation pings, a warp-lock greeting and short synthesized engine sweeps for table actions.',
+  'shop.item.sound-shrine.name': 'Thousand Lanterns cues',
+  'shop.item.sound-shrine.description': 'Clear shrine bells, resonant foxfire chimes and soft paper snaps synthesized for every table cue.',
+  'shop.item.sound-ironfront.name': 'Iron Front cues',
+  'shop.item.sound-ironfront.description': 'Radar pips, damped metal clicks and low propeller pulses form compact tactical UI cues.',
+  'shop.item.sound-neoncity.name': 'Neon Overdrive cues',
+  'shop.item.sound-neoncity.description': 'Digital handshake blips, circuit zaps and gated hologram sweeps mark each table action.',
+  'shop.item.sound-crownrealm.name': 'Lioncrown Dynasty cues',
+  'shop.item.sound-crownrealm.description': 'Bright heraldic signals, shield taps and rounded royal chimes synthesized as short UI cues.',
+
   'shop.soundPreview.play': 'Preview sound',
   'shop.item.sound-aurora.name': 'Aurora shimmer',
   'shop.item.sound-aurora.description': 'Airy glass pads and sparkling arpeggios, like light drifting across a night sky.',
@@ -25,6 +36,17 @@ const en = {
 export const soundPacksTranslations: { readonly en: typeof en; readonly 'zh-TW': Record<keyof typeof en, string> } = {
   en,
   'zh-TW': {
+    'shop.item.sound-starfleet.name': '星穹遠征音效',
+    'shop.item.sound-starfleet.description': '雙聲導航提示、躍遷鎖定迎賓聲與短促引擎掃頻，為牌桌操作增添太空感。',
+    'shop.item.sound-shrine.name': '千燈神域音效',
+    'shop.item.sound-shrine.description': '以合成神社鈴聲、狐火餘音與輕柔紙響，提示牌桌上的每個動作。',
+    'shop.item.sound-ironfront.name': '鋼鐵戰線音效',
+    'shop.item.sound-ironfront.description': '雷達短音、沉穩金屬扣響與低頻螺旋槳脈衝，組成精簡戰術提示。',
+    'shop.item.sound-neoncity.name': '霓虹失控音效',
+    'shop.item.sound-neoncity.description': '數位握手短音、電路脈衝與全息掃頻，為每次牌桌操作帶來節奏。',
+    'shop.item.sound-crownrealm.name': '獅冠王朝音效',
+    'shop.item.sound-crownrealm.description': '明亮紋章號訊、盾牌輕敲與圓潤皇家鐘音，合成短促的操作提示。',
+
     'shop.soundPreview.play': '試聽音效',
     'shop.item.sound-aurora.name': '極光微光',
     'shop.item.sound-aurora.description': '輕盈的玻璃質音色與閃爍的琶音，像極光在夜空中流動。',

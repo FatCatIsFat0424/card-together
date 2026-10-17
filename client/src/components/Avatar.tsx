@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 import type { AvatarBorderId, AvatarId, MediaId } from '@shared/types';
+import { SHOP_SERIES } from '@shared/constants';
+import { shopSeriesEmblem } from '../shop-series';
 import { mediaUrl } from '../media';
+import { useMotionStore } from '../stores/motion-store';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './Avatar.module.css';
 import borderStyles from './AvatarBorder.module.css';
@@ -24,8 +27,9 @@ interface AvatarProps {
 
 export function Avatar({ avatar, image, color, border, size = 'medium' }: AvatarProps): ReactNode {
   const { t } = useI18nStore();
+  const reducedMotion = useMotionStore((state) => state.reducedMotion);
   if (border) return <span className={`${styles.avatar} ${styles[size]} ${borderStyles.equipped} ${borderStyles[border]}`}
-    data-avatar-size={size} role="img" aria-label={t(`avatar.${avatar}`)}>
+    data-reduced-motion={reducedMotion || undefined} data-avatar-size={size} role="img" aria-label={t(`avatar.${avatar}`)}>
     <span className={borderStyles.rim} aria-hidden="true" />
     {['cat', 'rabbit', 'frog', 'bear', 'dog'].includes(border) && <>
       <span className={`${borderStyles.ear} ${borderStyles.leftEar}`} aria-hidden="true" />
@@ -49,6 +53,8 @@ export function Avatar({ avatar, image, color, border, size = 'medium' }: Avatar
     {border === 'tide' && <svg className={borderStyles.waveArt} viewBox="0 0 100 100" aria-hidden="true">
       <path d="M3 70 Q15 58 28 70 T53 70 M50 97 Q64 82 78 93 T105 89" />
     </svg>}
+    {SHOP_SERIES.map((series) => border === series
+      ? <img key={series} className={borderStyles.seriesEmblem} src={shopSeriesEmblem(series, reducedMotion)} alt="" aria-hidden="true" /> : null)}
     <span className={borderStyles.face} aria-hidden="true"><Avatar avatar={avatar} image={image} size={size} /></span>
     {border === 'starlight' && <>
       <span className={`${borderStyles.star} ${borderStyles.firstStar}`} aria-hidden="true"><AppIcon name="burst" /></span>

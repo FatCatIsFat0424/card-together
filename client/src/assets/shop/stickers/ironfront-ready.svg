@@ -1,0 +1,31 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Friendly armored scout rolls into position</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#29392d"/>
+  <circle cx="110" cy="108" r="82" fill="#46533a"/>
+  <g stroke="#fff2cb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M25 174H193m-161 9h20m118 0h19" stroke="#f4c46b" opacity=".6"/>
+    <g class="sway">
+      <rect x="40" y="137" width="140" height="40" rx="20" fill="#202a24"/>
+      <g fill="#6c7954" stroke="#a8b883"><circle cx="63" cy="157" r="10"/><circle cx="94" cy="157" r="10"/><circle cx="125" cy="157" r="10"/><circle cx="156" cy="157" r="10"/></g>
+      <path d="m38 137 18-23h105l22 23-8 12H46Z" fill="#7e8c58"/>
+      <path d="m68 113 10-35h59l13 35" fill="#929b65"/>
+      <path d="m134 91 47-8 3 13-45 11" fill="#6c7954"/>
+      <path d="M82 76Q105 58 128 76" fill="#6c7954"/>
+      <path d="M84 79v-9m13-10 4-23m2 6 10 4" stroke="#f4c46b"/>
+      <path d="m85 97 7-3m20 0 7 3m-24 7q8 7 16 0" fill="none" stroke="#202a24"/>
+      <rect x="67" y="122" width="18" height="10" rx="3" fill="#f4c46b" stroke="#202a24"/>
+      <path d="M133 125h22m-18 6h15" stroke="#29392d"/>
+    </g>
+    <path class="glow" d="m47 60 8 9 14-20" fill="none" stroke="#f4c46b" stroke-width="6"/>
+  </g>
+</svg>

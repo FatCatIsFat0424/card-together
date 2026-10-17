@@ -1,0 +1,30 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Party robot throws both arms up inside neon rings</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#191737"/>
+  <circle cx="110" cy="108" r="82" fill="#322552"/>
+  <g stroke="#fb73d3" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <g class="glow" fill="none"><ellipse cx="110" cy="153" rx="84" ry="24" stroke="#fb73d3"/><path d="M34 54 24 43m163 12 10-12M40 105l-14 4m155 9 14 6" stroke="#62f2f3"/></g>
+    <g class="sway">
+      <path d="m84 146-9 36h23l10-24m15-12 18 36h-23l-9-24" fill="#476486"/>
+      <path d="m76 102-21-18-5-23-15 4 4 32 35 30m68-25 21-18 5-23 15 4-4 32-35 30" fill="#476486"/>
+      <path d="m36 64-3-11 12-7 8 14m114 0 8-14 12 7-3 11" fill="#fb73d3"/>
+      <rect x="72" y="99" width="76" height="58" rx="17" fill="#476486"/>
+      <path d="m110 111 5 10 12 2-9 8 2 12-10-6-11 6 2-12-9-8 13-2Z" fill="#fb73d3" stroke="#191737"/>
+      <rect x="74" y="51" width="72" height="53" rx="17" fill="#476486"/>
+      <rect x="82" y="64" width="56" height="28" rx="9" fill="#191737"/>
+      <path d="m91 76 5-5 5 5m18 0 5-5 5 5m-27 7q8 7 16 0" stroke="#62f2f3" fill="none" stroke-width="3"/>
+      <path d="M110 50V36m-5-3h10" stroke="#fb73d3"/>
+    </g>
+    <path d="m64 33 3 8 8 3-8 3-3 9-3-9-9-3 9-3Z" fill="#62f2f3" stroke="none"/>
+  </g>
+</svg>

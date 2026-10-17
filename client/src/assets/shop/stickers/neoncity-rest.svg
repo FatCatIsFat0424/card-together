@@ -1,0 +1,33 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Sleepy robot recharges beside a neon power station</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#191737"/>
+  <circle cx="110" cy="108" r="82" fill="#322552"/>
+  <g stroke="#fb73d3" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <g class="glow" fill="#322552" stroke="#fb73d3">
+      <rect x="151" y="64" width="34" height="66" rx="8"/>
+      <path d="m170 76-10 19h12l-9 20" stroke="#62f2f3" fill="none"/>
+      <path d="M168 130v24q0 15-20 15h-14" fill="none"/>
+    </g>
+    <path d="M35 179h149l-17 13H48Z" fill="#322552" stroke="#62f2f3"/>
+    <g class="sway">
+      <path d="M59 141q-11 28 15 37h58l10-17-20-20Z" fill="#476486"/>
+      <path d="M66 159h28m16 9h22" stroke="#fb73d3"/>
+      <path d="m49 104 11-33 57 9 17 31-14 42-59-8Z" fill="#476486"/>
+      <path d="m63 94 54 9-4 28-54-8Z" fill="#191737"/>
+      <path d="m69 110 7 4 8-1m13 2 7 4 8-1" fill="none" stroke="#62f2f3"/>
+      <path d="m80 76 3-16m-3-3h10" stroke="#fb73d3"/>
+      <path d="m60 145-11 10 10 15 21-19m40-4 14 9-9 14-17-16" fill="#476486"/>
+    </g>
+    <g class="float" fill="#62f2f3" stroke="none"><circle cx="112" cy="61" r="4"/><circle cx="119" cy="44" r="6"/></g>
+  </g>
+</svg>

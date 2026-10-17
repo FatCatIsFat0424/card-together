@@ -26,6 +26,8 @@ export interface DeckTheme {
   readonly panelPattern: string;
   /** Emblem behind the ace pip and the joker, centred on the origin. */
   readonly halo: string;
+  /** Series emblem above the court rank, centred on the origin. */
+  readonly courtCrest?: string;
 }
 
 export const CARD_WIDTH = 224;
@@ -125,7 +127,7 @@ function courtBody(theme: DeckTheme, rank: Rank, suit: Suit): string {
     + `<g clip-path="url(#panelClip)">${theme.panelPattern}</g>`
     + `<rect ${panelShape} fill="none" stroke="${theme.panelEdge}" stroke-width="1.6"/>`
     + `<rect x="${x + 4}" y="${y + 4}" width="${width - 8}" height="${height - 8}" rx="7" fill="none" stroke="${theme.panelEdge}" stroke-width=".8" opacity=".55"/>`
-    + `<g transform="translate(${CENTRE_X} 86)">${crown(rank, ink)}</g>`
+    + `<g transform="translate(${CENTRE_X} 86)">${theme.courtCrest ?? crown(rank, ink)}</g>`
     + `<circle cx="${CENTRE_X}" cy="160" r="44" fill="${theme.medallion}" stroke="url(#metalEdge)" stroke-width="2.4"/>`
     + `<circle cx="${CENTRE_X}" cy="160" r="38.5" fill="none" stroke="${theme.panelEdge}" stroke-width=".9" opacity=".7"/>`
     + `<text x="${CENTRE_X}" y="181" fill="${ink}" font-family="${theme.font}" font-size="60" font-weight="700" text-anchor="middle">${RANK_LABELS[rank]}</text>`

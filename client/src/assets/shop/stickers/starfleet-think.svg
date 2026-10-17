@@ -1,0 +1,35 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Fleet navigator studies a holographic star chart</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#0b1835"/>
+  <circle cx="110" cy="108" r="82" fill="#173757"/>
+  <g stroke="#e6faff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M36 165 53 144H159L184 176H36Z" fill="#245175"/>
+    <g class="glow" stroke="#63e8f5" fill="none">
+      <path d="m120 63 37-18 28 25-37 20Z"/>
+      <path d="m126 65 19 5 13-17m-13 17 6 13m-6-13 28-1"/>
+      <circle cx="145" cy="70" r="5" fill="#63e8f5"/>
+      <path d="m124 98-8 22m44-24-4 27" stroke-dasharray="4 7"/>
+    </g>
+    <g class="sway">
+      <path d="M54 152 58 117Q86 100 110 124L124 153" fill="#377ca0"/>
+      <path d="M49 82Q48 46 82 43Q120 44 119 82L115 112Q79 132 50 108Z" fill="#c5f5fc"/>
+      <path d="M58 75Q85 61 111 75V101Q84 115 58 100Z" fill="#0b1835"/>
+      <path d="m68 88 9-3m18 1 8 4m-23 10h9" stroke="#63e8f5"/>
+      <path d="m56 55 26-13 28 12-27 10Z" fill="#377ca0"/>
+      <path d="m105 136 20-15 10 10-17 19" fill="#c5f5fc"/>
+      <path d="M65 149h20" stroke="#63e8f5"/>
+    </g>
+    <path d="m150 155 16 9m-35-5 9 5" stroke="#63e8f5"/>
+    <circle cx="45" cy="34" r="3" fill="#63e8f5" stroke="none"/>
+  </g>
+</svg>

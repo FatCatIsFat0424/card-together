@@ -1,0 +1,32 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Lion knight naps behind a shield with helmet nearby</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#152b55"/>
+  <circle cx="110" cy="108" r="82" fill="#254879"/>
+  <g stroke="#fff2cf" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M30 183h160" stroke="#3a67ab"/>
+    <path d="m43 169 16-41 65-8 37 51-37 17H67Z" fill="#3a67ab" stroke="#f4c86d"/>
+    <g class="sway">
+      <path d="M68 123q36-30 70 8l-1 40H74Z" fill="#bd823a" stroke="#f4c86d"/>
+      <path d="m54 116 8-30 29-9 25 19 7 27-26 20-29-4Z" fill="#bd823a" stroke="#f4c86d"/>
+      <circle cx="71" cy="103" r="7" fill="#e0a44f"/>
+      <path d="M70 112q16-22 35-5l2 18q-17 18-32 1Z" fill="#f4c86d" stroke="#bd823a"/>
+      <path d="m77 116 7 3 7-3m8-3 5 1m-16 11 5 3" stroke="#44342d" fill="none" stroke-width="3"/>
+      <path d="m98 150 26-10 27 10-5 30-22 12-23-12Z" fill="#254879" stroke="#f4c86d"/>
+      <path d="m124 153 4 9 10 2-8 6 2 10-8-5-9 5 2-10-7-6 10-2Z" fill="#f4c86d" stroke="none"/>
+    </g>
+    <path d="M38 170v-25q13-19 28 0v25Z" fill="#b7cde0" stroke="#eaf5ff"/>
+    <path d="M43 149h18m-13 7h12m-9-13v24" stroke="#254879" stroke-width="3"/>
+    <path class="glow" d="M162 49q-10 20 10 25-22 8-28-10-4-17 18-15Z" fill="#f4c86d" stroke="none"/>
+    <circle cx="128" cy="58" r="3" fill="#f4c86d" stroke="none"/>
+  </g>
+</svg>

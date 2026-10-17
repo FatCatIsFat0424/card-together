@@ -154,6 +154,25 @@ describe('personal account appearance', () => {
     expect(seatBackgroundStyle({ seatBackgroundStyle: null })).toBeUndefined();
   });
 
+  it('selects still artwork without changing uploads or opacity', () => {
+    const appearance = { cardBackStyle: 'card-back-starfleet', tableBackgroundStyle: 'table-shrine',
+      seatBackgroundStyle: 'seat-neoncity', tableBackgroundOpacity: 45, cardBackOpacity: 70 } as const;
+    expect(cardBackStyle(appearance, true)).toMatchObject({
+      '--card-back-image': `url("${shopArtworkUrl('card-back-starfleet')}#still")`, '--card-back-opacity': '0.7',
+    });
+    expect(tableBackgroundStyle(appearance, true)).toEqual({
+      '--table-image': `url("${shopArtworkUrl('table-shrine')}#still")`, '--table-image-opacity': '0.45',
+    });
+    expect(seatBackgroundStyle(appearance, true)).toEqual({
+      '--seat-image': `url("${shopArtworkUrl('seat-neoncity')}#still")`,
+    });
+    expect(cardBackStyle({ cardBack: CARD_BACK }, true)).toEqual(cardBackStyle({ cardBack: CARD_BACK }));
+    expect(tableBackgroundStyle({ tableBackground: BACKGROUND }, true))
+      .toEqual(tableBackgroundStyle({ tableBackground: BACKGROUND }));
+    expect(seatBackgroundStyle({ seatBackground: BACKGROUND }, true))
+      .toEqual(seatBackgroundStyle({ seatBackground: BACKGROUND }));
+  });
+
   it('resolves every series to distinct artwork in the correct equipment slot', () => {
     const cosmetics = [...CARD_BACKS, ...TABLE_BACKGROUNDS, ...SEAT_BACKGROUNDS];
     expect(new Set(cosmetics.map(({ id }) => shopArtworkUrl(id))).size).toBe(cosmetics.length);
@@ -178,7 +197,7 @@ describe('personal account appearance', () => {
       expect(html).toContain(useI18nStore.getState().t(`shop.title.${id}`));
       expect(html).not.toContain('undefined');
       expect(html).not.toContain('shop.title.');
-      expect(html).toMatch(/aria-hidden="true">[^<]+<\/span>/);
+      expect(html).toMatch(/aria-hidden="true">(?:[^<]+|<img[^>]+\/>?)<\/span>/);
     }
   });
 

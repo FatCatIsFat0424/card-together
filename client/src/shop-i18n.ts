@@ -1,3 +1,5 @@
+import { shopSeriesTranslations } from './shop-series-i18n';
+import { shopSeriesStickerTranslations } from './shop-series-sticker-i18n';
 import { cardFacesTranslations } from './cosmetics/card-faces/i18n';
 import { soundPacksTranslations } from './cosmetics/sound-packs/i18n';
 import { seatFramesTranslations } from './cosmetics/seat-frames/i18n';
@@ -6,6 +8,8 @@ import { chipStylesTranslations } from './cosmetics/chip-styles/i18n';
 import { chatFramesTranslations } from './cosmetics/chat-frames/i18n';
 
 const en = {
+  ...shopSeriesTranslations.en,
+  ...shopSeriesStickerTranslations.en,
   ...cardFacesTranslations.en,
   ...soundPacksTranslations.en,
   ...seatFramesTranslations.en,
@@ -261,6 +265,8 @@ export type ShopTranslationKey = keyof typeof en;
 export const shopTranslations: Record<'en' | 'zh-TW', Record<ShopTranslationKey, string>> = {
   en,
   'zh-TW': {
+    ...shopSeriesTranslations['zh-TW'],
+    ...shopSeriesStickerTranslations['zh-TW'],
     ...cardFacesTranslations['zh-TW'],
     ...soundPacksTranslations['zh-TW'],
     ...seatFramesTranslations['zh-TW'],

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { ShopItem } from '@shared/types';
 import { SHOP_STICKERS } from '@shared/constants';
+import { useMotionStore } from '../stores/motion-store';
 import { shopArtworkUrl } from '../shop-art';
 import { Avatar } from './Avatar';
 import { AvatarBorder } from './AvatarBorder';
@@ -20,6 +21,7 @@ export function ShopProductArt({ item, account }: {
   readonly item: ShopItem;
   readonly account: PreviewAccount;
 }): ReactNode {
+  const reducedMotion = useMotionStore((state) => state.reducedMotion);
   switch (item.type) {
     case 'cardFace': return <CardFacePreview id={item.id} account={account} />;
     case 'soundPack': return <SoundPackPreview id={item.id} account={account} />;
@@ -41,7 +43,7 @@ export function ShopProductArt({ item, account }: {
       <Nameplate id={item.id} />
     </div>;
   }
-  const artwork = shopArtworkUrl(item.id);
+  const artwork = shopArtworkUrl(item.id, reducedMotion);
   if (item.type === 'cardBack') return <img className={styles.cardBackArt} src={artwork} alt="" />;
   return <div className={item.type === 'seatBackground' ? styles.seatArt : styles.tableArt}>
     <img src={artwork} alt="" />

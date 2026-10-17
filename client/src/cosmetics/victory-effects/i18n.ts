@@ -1,4 +1,15 @@
 const en = {
+  'shop.item.victory-starfleet.name': 'Astral Armada celebration',
+  'shop.item.victory-starfleet.description': 'A squadron of tiny spacecraft fans out through expanding warp gates and engine trails.',
+  'shop.item.victory-shrine.name': 'Thousand Lanterns celebration',
+  'shop.item.victory-shrine.description': 'Warm lanterns rise through torii gates while teal foxfire spirals around the winner.',
+  'shop.item.victory-ironfront.name': 'Iron Front celebration',
+  'shop.item.victory-ironfront.description': 'Propeller aircraft fly above armored tracks as amber radar rings sweep the winning seat.',
+  'shop.item.victory-neoncity.name': 'Neon Overdrive celebration',
+  'shop.item.victory-neoncity.description': 'Holographic towers rise between branching data trails and bright circuit fragments.',
+  'shop.item.victory-crownrealm.name': 'Lioncrown Dynasty celebration',
+  'shop.item.victory-crownrealm.description': 'Crowned lion shields unfurl among blue pennants and falling gold heraldic sparks.',
+
   'shop.item.victory-aurora.name': 'Aurora encore',
   'shop.item.victory-aurora.description': 'Ribbons of northern light curl up from your seat among twinkling motes.',
   'shop.item.victory-tide.name': 'High tide',
@@ -24,6 +35,17 @@ const en = {
 export const victoryEffectsTranslations: { readonly en: typeof en; readonly 'zh-TW': Record<keyof typeof en, string> } = {
   en,
   'zh-TW': {
+    'shop.item.victory-starfleet.name': '星穹遠征勝利特效',
+    'shop.item.victory-starfleet.description': '微型太空艦編隊穿越擴張的躍遷環，拖曳引擎光軌向外展開。',
+    'shop.item.victory-shrine.name': '千燈神域勝利特效',
+    'shop.item.victory-shrine.description': '暖色燈籠穿過鳥居緩緩升空，青綠狐火繞著勝者盤旋。',
+    'shop.item.victory-ironfront.name': '鋼鐵戰線勝利特效',
+    'shop.item.victory-ironfront.description': '螺旋槳飛機掠過裝甲履帶，琥珀色雷達環掃過勝利座位。',
+    'shop.item.victory-neoncity.name': '霓虹失控勝利特效',
+    'shop.item.victory-neoncity.description': '全息高塔在分岔資料光軌與明亮電路碎片之間升起。',
+    'shop.item.victory-crownrealm.name': '獅冠王朝勝利特效',
+    'shop.item.victory-crownrealm.description': '戴冠雄獅盾徽在藍色旌旗與飄落的金色紋章光點間展開。',
+
     'shop.item.victory-aurora.name': '極光謝幕',
     'shop.item.victory-aurora.description': '北極光彩帶從你的座位捲起，點點微光在其間閃爍。',
     'shop.item.victory-tide.name': '滿潮慶典',

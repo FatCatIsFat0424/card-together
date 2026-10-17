@@ -1,0 +1,31 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Sleepy shuttle rests at a crescent dock</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#0b1835"/>
+  <circle cx="110" cy="108" r="82" fill="#173757"/>
+  <g stroke="#e6faff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M170 49Q210 127 138 173Q70 207 35 144Q89 182 135 141Q176 104 170 49Z" fill="#37738d"/>
+    <path d="M44 162Q103 191 156 142" fill="none" stroke="#63e8f5"/>
+    <g class="sway">
+      <path d="m60 114 15-35h62l20 35-13 32H77Z" fill="#c5f5fc"/>
+      <path d="m72 85 26-20 39 14" fill="#34718f"/>
+      <path d="M73 105Q111 92 147 106L138 127H81Z" fill="#0b1835"/>
+      <path d="m86 113 10 3 9-3m16 0 9 3 9-3" fill="none" stroke="#63e8f5"/>
+      <path d="m62 118-15 13 28 7m77-20 15 13-23 7" fill="#34718f"/>
+      <path d="M96 140h26" stroke="#34718f"/>
+    </g>
+    <g class="glow" fill="#63e8f5" stroke="none">
+      <circle cx="139" cy="57" r="4"/><circle cx="146" cy="41" r="6"/>
+      <path d="m76 34 4 10 11 4-11 4-4 11-4-11-11-4 11-4Z"/>
+    </g>
+  </g>
+</svg>

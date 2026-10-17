@@ -1,3 +1,4 @@
+import { CAMPAIGN_VICTORIES } from './campaign-victories';
 // Per-series particle designs. Coordinates are unscaled pixels around the emitting seat
 // (negative y is up); the runner scales them to the screen. Every shape is drawn with a
 // thin dark "ink" edge so light particles stay visible on the paper theme.
@@ -755,6 +756,11 @@ function withinWindow(design: VictoryDesign): VictoryDesign {
 }
 
 export const VICTORY_DESIGNS: Readonly<Record<VictorySeries, VictoryDesign>> = {
+  starfleet: withinWindow(CAMPAIGN_VICTORIES.starfleet),
+  shrine: withinWindow(CAMPAIGN_VICTORIES.shrine),
+  ironfront: withinWindow(CAMPAIGN_VICTORIES.ironfront),
+  neoncity: withinWindow(CAMPAIGN_VICTORIES.neoncity),
+  crownrealm: withinWindow(CAMPAIGN_VICTORIES.crownrealm),
   aurora: withinWindow(aurora),
   tide: withinWindow(tide),
   sakura: withinWindow(sakura),

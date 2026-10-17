@@ -1,0 +1,31 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Smiling flagship celebrates with stellar flares</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#0b1835"/>
+  <circle cx="110" cy="108" r="82" fill="#173757"/>
+  <g stroke="#e6faff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <g class="glow" stroke="#63e8f5">
+      <path d="m41 48 9-12m-18 25-11-1m144-7 7-15m8 31 14 1M49 179l-9 8m123-3 12 6"/>
+      <path d="m110 27 4 11 11 4-11 4-4 11-4-11-11-4 11-4Z" fill="#63e8f5" stroke="none"/>
+    </g>
+    <g class="float">
+      <path d="m74 114-38-31-10 37 43 23m77-29 38-31 10 37-43 23" fill="#34718f"/>
+      <path d="m48 101-7 18 24 10m107-28 7 18-24 10" fill="none" stroke="#63e8f5"/>
+      <path d="M65 109 82 78H138L155 109 143 160H77Z" fill="#c5f5fc"/>
+      <path d="m82 78 28-20 28 20m-28-20v20" fill="#34718f"/>
+      <path d="M76 110Q110 92 144 110L137 139H83Z" fill="#0b1835"/>
+      <path d="m86 120 6-5 6 5m24 0 6-5 6 5m-32 8q8 12 16 0" fill="none" stroke="#63e8f5"/>
+      <path d="m83 161 5 16h12l4-16m12 0 4 16h12l5-16" fill="#63e8f5" stroke="#34718f"/>
+    </g>
+    <path d="m61 64 3 8 8 3-8 3-3 8-3-8-8-3 8-3Z" fill="#e6faff" stroke="none"/>
+  </g>
+</svg>

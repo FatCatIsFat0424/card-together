@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AccountProfile } from '@shared/types';
-import { SHOP_ITEMS, SHOP_STICKERS, ownsShopItem } from '@shared/constants';
+import { SHOP_ITEMS, SHOP_STICKERS, SHOP_SERIES, shopItemSeries, ownsShopItem } from '@shared/constants';
 
 const state = vi.hoisted(() => ({ account: {} as Partial<AccountProfile> }));
 vi.mock('../../../client/src/api', () => ({ apiRequest: vi.fn() }));
@@ -12,6 +12,7 @@ vi.mock('../../../client/src/stores/account-store', () => ({
 }));
 vi.mock('../../../client/src/components/ShopProductArt', () => ({ ShopProductArt: () => null }));
 
+import { shopSeriesQuery } from '../../../client/src/shop-filters';
 import { ShopPage } from '../../../client/src/pages/ShopPage';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
 
@@ -34,7 +35,7 @@ describe('shop categories and inventory', () => {
     // Category buttons carry the totals, so the catalog header repeats a count only for series filters.
     expect(html).not.toContain(`${SHOP_ITEMS.length} products`);
     expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(SHOP_ITEMS.length);
-    expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
+    expect(html.match(/aria-pressed="true"/g)).toHaveLength(2);
     expect(html).toMatch(/aria-pressed="true" aria-controls="shop-catalog"[^>]*><span>All products<\/span>/);
     expect(html).toContain('aria-label="Equip Brushed copper"');
     expect(html).toContain('aria-label="Buy Golden hour"');
@@ -43,7 +44,7 @@ describe('shop categories and inventory', () => {
   it.each([
     ['ears', 'Playful', 6, 'Cat ears', 'Brushed copper'],
     ['metal', 'Metal', 3, 'Brushed copper', 'Cat ears'],
-    ['special', 'Glow', 7, 'Lunar eclipse', 'Cat ears'],
+    ['special', 'Glow', 12, 'Lunar eclipse', 'Cat ears'],
   ] as const)('restores the %s series from the URL', (series, label, count, included, excluded) => {
     const html = render(`?series=${series}`);
     expect(html).toContain(`id="shop-catalog-title">${label}</h2>`);
@@ -51,7 +52,7 @@ describe('shop categories and inventory', () => {
     expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(count);
     expect(html).toContain(`<h3>${included}</h3>`);
     expect(html).not.toContain(`<h3>${excluded}</h3>`);
-    expect(html.match(/aria-pressed="true"/g)).toHaveLength(2);
+    expect(html.match(/aria-pressed="true"/g)).toHaveLength(3);
   });
 
   it.each(['?series=unknown', '?type=unknown', '?series=', '?unrelated=metal'])('falls back to all products for %s', (query) => {
@@ -70,12 +71,12 @@ describe('shop categories and inventory', () => {
   });
 
   it.each([
-    ['avatarBorder', 'Avatar borders', 16, 'Sakura wreath', 'Aurora weave'],
-    ['cardBack', 'Card backs', 10, 'Aurora weave', 'Cat ears'],
-    ['tableBackground', 'Table backgrounds', 10, 'Midnight aurora', 'Aurora weave'],
-    ['seatBackground', 'Seat backgrounds', 10, 'Aurora window', 'Midnight aurora'],
-    ['nameplate', 'Titles &amp; nameplates', 10, 'Night voyager nameplate', 'Cat ears'],
-    ['stickerPack', 'Sticker packs', 10, 'Table talk', 'Cat ears'],
+    ['avatarBorder', 'Avatar borders', 21, 'Sakura wreath', 'Aurora weave'],
+    ['cardBack', 'Card backs', 15, 'Aurora weave', 'Cat ears'],
+    ['tableBackground', 'Table backgrounds', 15, 'Midnight aurora', 'Aurora weave'],
+    ['seatBackground', 'Seat backgrounds', 15, 'Aurora window', 'Midnight aurora'],
+    ['nameplate', 'Titles &amp; nameplates', 15, 'Night voyager nameplate', 'Cat ears'],
+    ['stickerPack', 'Sticker packs', 15, 'Table talk', 'Cat ears'],
   ] as const)('restores the %s product type from the URL', (type, label, count, included, excluded) => {
     const html = render(`?type=${type}`);
     expect(html).toContain(`id="shop-catalog-title">${label}</h2>`);
@@ -87,8 +88,35 @@ describe('shop categories and inventory', () => {
 
   it('ignores border series when browsing a different product type', () => {
     const html = render('?type=cardBack&series=ears');
-    expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(10);
+    expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(15);
     expect(html).toContain('Aurora weave');
+  });
+
+  it.each(SHOP_SERIES)('restores the complete %s collection across categories', (series) => {
+    const html = render(`?series=${series}`);
+    expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(12);
+    expect(html).toContain('12 products');
+    expect(html).toContain(`data-series="${series}" aria-pressed="true"`);
+    expect(html).not.toContain('shop.series.');
+    for (const item of SHOP_ITEMS.filter((product) => shopItemSeries(product) === series)) {
+      const selected = render(`?series=${series}&type=${item.type}`);
+      expect(selected.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(1);
+      expect(selected).toContain(`data-shop-series="${series}"`);
+      expect(selected).toContain('1 products');
+    }
+  });
+
+  it('retains the visible border category when clearing or changing a legacy series-only URL', () => {
+    const current = new URLSearchParams('series=ears&unrelated=keep');
+    for (const series of ['all', ...SHOP_SERIES] as const) {
+      const next = shopSeriesQuery(current, 'avatarBorder', series);
+      expect(next.get('type')).toBe('avatarBorder');
+      expect(next.get('unrelated')).toBe('keep');
+      expect(current.toString()).toBe('series=ears&unrelated=keep');
+      const html = render(`?${next}`);
+      expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(series === 'all' ? 21 : 1);
+      expect(html).toContain('id="shop-catalog-title">Avatar borders</h2>');
+    }
   });
 
   it('offers equipment for owned cosmetics and disables equipped products or owned packs', () => {

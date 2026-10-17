@@ -40,7 +40,52 @@ import dragonsPonder from './assets/shop/stickers/dragons-ponder.svg?no-inline';
 import dragonsFire from './assets/shop/stickers/dragons-fire.svg?no-inline';
 import dragonsSleep from './assets/shop/stickers/dragons-sleep.svg?no-inline';
 
+import starfleetReady from './assets/shop/stickers/starfleet-ready.svg?no-inline';
+import starfleetThink from './assets/shop/stickers/starfleet-think.svg?no-inline';
+import starfleetCheer from './assets/shop/stickers/starfleet-cheer.svg?no-inline';
+import starfleetRest from './assets/shop/stickers/starfleet-rest.svg?no-inline';
+import shrineReady from './assets/shop/stickers/shrine-ready.svg?no-inline';
+import shrineThink from './assets/shop/stickers/shrine-think.svg?no-inline';
+import shrineCheer from './assets/shop/stickers/shrine-cheer.svg?no-inline';
+import shrineRest from './assets/shop/stickers/shrine-rest.svg?no-inline';
+import ironfrontReady from './assets/shop/stickers/ironfront-ready.svg?no-inline';
+import ironfrontThink from './assets/shop/stickers/ironfront-think.svg?no-inline';
+import ironfrontCheer from './assets/shop/stickers/ironfront-cheer.svg?no-inline';
+import ironfrontRest from './assets/shop/stickers/ironfront-rest.svg?no-inline';
+import neoncityReady from './assets/shop/stickers/neoncity-ready.svg?no-inline';
+import neoncityThink from './assets/shop/stickers/neoncity-think.svg?no-inline';
+import neoncityCheer from './assets/shop/stickers/neoncity-cheer.svg?no-inline';
+import neoncityRest from './assets/shop/stickers/neoncity-rest.svg?no-inline';
+import crownrealmReady from './assets/shop/stickers/crownrealm-ready.svg?no-inline';
+import crownrealmThink from './assets/shop/stickers/crownrealm-think.svg?no-inline';
+import crownrealmCheer from './assets/shop/stickers/crownrealm-cheer.svg?no-inline';
+import crownrealmRest from './assets/shop/stickers/crownrealm-rest.svg?no-inline';
+
+const seriesUrls = {
+  'starfleet-ready': starfleetReady,
+  'starfleet-think': starfleetThink,
+  'starfleet-cheer': starfleetCheer,
+  'starfleet-rest': starfleetRest,
+  'shrine-ready': shrineReady,
+  'shrine-think': shrineThink,
+  'shrine-cheer': shrineCheer,
+  'shrine-rest': shrineRest,
+  'ironfront-ready': ironfrontReady,
+  'ironfront-think': ironfrontThink,
+  'ironfront-cheer': ironfrontCheer,
+  'ironfront-rest': ironfrontRest,
+  'neoncity-ready': neoncityReady,
+  'neoncity-think': neoncityThink,
+  'neoncity-cheer': neoncityCheer,
+  'neoncity-rest': neoncityRest,
+  'crownrealm-ready': crownrealmReady,
+  'crownrealm-think': crownrealmThink,
+  'crownrealm-cheer': crownrealmCheer,
+  'crownrealm-rest': crownrealmRest,
+};
+
 const urls: Record<ShopStickerId, string> = {
+  ...seriesUrls,
   'table-hello': tableHello,
   'table-nice': tableNice,
   'table-thanks': tableThanks,
@@ -83,6 +128,6 @@ const urls: Record<ShopStickerId, string> = {
   'dragons-sleep': dragonsSleep,
 };
 
-export function shopStickerUrl(id: ShopStickerId): string {
-  return urls[id];
+export function shopStickerUrl(id: ShopStickerId, reducedMotion = false): string {
+  return `${urls[id]}${reducedMotion ? '#still' : ''}`;
 }

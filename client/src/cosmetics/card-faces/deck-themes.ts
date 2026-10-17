@@ -1,3 +1,4 @@
+import { crownrealmDeck, ironfrontDeck, neoncityDeck, shrineDeck, starfleetDeck } from './campaign-decks';
 import type { DeckTheme } from './deck-art';
 import {
   bambooLeaf, bambooStalk, blossom, flame, lotus, num, petal, seededRandom, snowflake, sparkle, sunburst,
@@ -5,7 +6,8 @@ import {
 
 export type DeckSeries =
   | 'aurora' | 'tide' | 'sakura' | 'constellation' | 'bamboo'
-  | 'gilded' | 'ember' | 'lotus' | 'frost' | 'dune';
+  | 'gilded' | 'ember' | 'lotus' | 'frost' | 'dune'
+  | 'starfleet' | 'shrine' | 'ironfront' | 'neoncity' | 'crownrealm';
 
 // Card images cannot load web fonts, so each deck names widely installed families.
 const SANS = 'Avenir Next, Segoe UI, Helvetica Neue, Arial, sans-serif';
@@ -301,6 +303,7 @@ function dune(): DeckTheme {
 
 const BUILDERS: Readonly<Record<DeckSeries, () => DeckTheme>> = {
   aurora, tide, sakura, constellation, bamboo, gilded, ember, lotus: lotusDeck, frost, dune,
+  starfleet: starfleetDeck, shrine: shrineDeck, ironfront: ironfrontDeck, neoncity: neoncityDeck, crownrealm: crownrealmDeck,
 };
 
 const themes = new Map<DeckSeries, DeckTheme>();

@@ -444,13 +444,18 @@ Saved and system reduced-motion preferences disable this animation.
   backgrounds, seat frames, victory effects, and sound packs. Each type offers at least
   ten products; each sticker pack includes four original stickers. Prices are in game coins.
 - The category sidebar shows catalog counts; the catalog header repeats a count only
-  for a border series filter. `type` selects a product type and
-  `series` filters avatar borders into Playful, Metal, or Glow. Legacy series-only
-  URLs still select borders. Reload and browser Back/Forward retain filters;
+  for a series filter. `type` selects a product type; `series` selects one of the
+  complete themed collections in [the catalog](../shared/src/constants/shop.ts).
+  Each collection includes all twelve product types; category changes retain the
+  selected collection and counts reflect its products. The legacy `ears`, `metal`,
+  and `special` series filters still select Playful, Metal, and Glow avatar borders. Reload and browser Back/Forward retain filters;
   unknown filters show all products. At ≤52rem categories become a horizontally
   scrollable row above products.
 - Product cards preview the actual artwork, border on the player's avatar, title,
-  or all stickers in a pack. Selecting a non-border category shows where its products
+  or all stickers in a pack. Astral Armada, Thousand Lanterns, Iron Front, Neon
+  Overdrive, and Lioncrown Dynasty add original animated vector scenes, emblems,
+  and four expressive stickers each. Scene decoration stays near the edges, preserving
+  the play surface; animation respects reduced-motion preferences. Selecting a non-border category shows where its products
   are visible as a subtitle under the category heading.
   The shop header shows the coin balance; hovering or focusing this balance or the
   global header's coins explains the 10-coin reward per completed game.

@@ -1,0 +1,30 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Triumphant lion raises a golden crown</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#152b55"/>
+  <circle cx="110" cy="108" r="82" fill="#254879"/>
+  <g stroke="#fff2cf" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m77 111-35 62 45-9 22 20 48-15 24 3-45-66" fill="#3a67ab" stroke="#f4c86d"/>
+    <g class="float">
+      <path d="m83 136-12 40h23l14-25 13 25h23l-12-40" fill="#b7cde0"/>
+      <path d="M79 101h54l12 44H76Z" fill="#b7cde0"/>
+      <path d="m82 111-29-13-8-20-12 7 10 27 35 17m53-15 26-17 1-23 15 1 1 31-34 26" fill="#b7cde0"/>
+      <path d="m65 69 13-24 24 1 24 3 17 23-10 26-27 16-29-14Z" fill="#bd823a" stroke="#f4c86d"/>
+      <circle cx="83" cy="69" r="8" fill="#e0a44f"/><circle cx="125" cy="71" r="8" fill="#e0a44f"/>
+      <path d="M84 75q21-18 40 2v18q-23 16-40-5Z" fill="#f4c86d" stroke="#bd823a"/>
+      <path d="m88 80 5-5 5 5m12 0 5-5 5 5m-23 7q8 17 17 0" fill="none" stroke="#44342d" stroke-width="3"/>
+      <path d="m146 65-5-25 15 10 10-22 10 22 15-10-5 25Z" fill="#f4c86d" stroke="#bd823a"/>
+      <path d="M103 122h13l-7 15Z" fill="#254879" stroke="#f4c86d"/>
+    </g>
+    <g class="glow" stroke="#f4c86d"><path d="m35 55-7-8m98-14 3-10m57 115 11 4m-31 37 6 10m-126-38-11 6"/></g>
+  </g>
+</svg>

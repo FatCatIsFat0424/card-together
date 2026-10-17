@@ -1,0 +1,32 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Thoughtful fox considers a glowing fortune charm</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#123e43"/>
+  <circle cx="110" cy="108" r="82" fill="#226064"/>
+  <g stroke="#fff1da" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M36 164Q51 121 80 139L83 183Q43 195 36 164Z" fill="#e98c58"/>
+    <path d="M39 154 52 160 48 179 38 169Z" fill="#fff1da"/>
+    <g class="sway">
+      <path d="M69 183 77 137 129 130 146 181Z" fill="#e98c58"/>
+      <path d="m67 103 5-41 32 26 33-18 4 42-20 30-37-4Z" fill="#fff1da"/>
+      <path d="m77 76 9 29 15-12m32-11-12 24-11-14" fill="#e96e53" stroke="none"/>
+      <path d="m86 115 11-2m18 0 10 5m-24 7 5 4 5-3" fill="none" stroke="#713b38"/>
+      <path d="m115 157-3-18 14-6 9 17" fill="#fff1da"/>
+      <path d="m87 157 5 17" stroke="#713b38"/>
+    </g>
+    <g class="float">
+      <path d="M154 91V57l14-12 14 12V91Z" fill="#fff1da" stroke="#ffce78"/>
+      <path d="M168 45V32m-9 29h18m-15 9h12m-6-8v17" stroke="#e96e53"/>
+    </g>
+    <g class="glow" fill="#ffce78" stroke="none"><circle cx="147" cy="117" r="4"/><circle cx="156" cy="103" r="6"/></g>
+  </g>
+</svg>

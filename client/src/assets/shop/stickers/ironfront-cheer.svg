@@ -1,0 +1,32 @@
+<svg id="still" xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-labelledby="title">
+  <title id="title">Cheerful propeller plane makes a celebratory flypast</title>
+  <style>
+    svg:target * { animation: none !important; }
+    .float { animation: hover 3.6s ease-in-out infinite; }
+    .sway { transform-origin: 110px 160px; animation: sway 4.4s ease-in-out infinite; }
+    .glow { animation: glow 3.2s ease-in-out infinite; }
+    @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .float, .sway, .glow { animation: none; } }
+  </style>
+  <rect x="9" y="9" width="202" height="202" rx="60" fill="#29392d"/>
+  <circle cx="110" cy="108" r="82" fill="#46533a"/>
+  <g stroke="#fff2cb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <g class="glow" fill="none" stroke="#f4c46b">
+      <path d="M26 159q26 30 63 26M29 146q21 27 49 28m98-114 10-8m-29-2 1-11m24 37 11 3"/>
+    </g>
+    <g class="sway">
+      <path d="m80 112-38-9-7-20 17-5 59 20 29-42 22 2-17 58" fill="#7e8c58"/>
+      <path d="m70 132-21 22-17-3 10-15-8-15 17-7Z" fill="#929b65"/>
+      <path d="M49 127Q99 81 160 100L181 119Q131 151 65 146Z" fill="#a4aa75"/>
+      <path d="M101 107Q107 83 129 89Q145 92 143 103" fill="#75a7a5" stroke="#202a24"/>
+      <path d="m103 139 19 29 25-3-15-30" fill="#7e8c58"/>
+      <path d="m146 114 6-5 6 5m-16 7q10 10 18-2" fill="none" stroke="#29392d"/>
+      <path d="m174 102 8 33" stroke="#202a24" stroke-width="7"/>
+      <path class="glow" d="m176 103-6-18m13 50 5 15" stroke="#f4c46b" stroke-width="7"/>
+      <circle cx="179" cy="119" r="6" fill="#f4c46b" stroke="#29392d"/>
+    </g>
+    <path d="m69 49 4 10 11 3-11 4-4 10-3-10-11-4 11-3Z" fill="#f4c46b" stroke="none"/>
+  </g>
+</svg>

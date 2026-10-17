@@ -1,3 +1,4 @@
+import { CAMPAIGN_CHIPS } from './campaign-chips';
 import type { ReactNode } from 'react';
 import type { ChipStyleId } from '@shared/types';
 
@@ -170,6 +171,7 @@ const dune: ChipDesign = {
 };
 
 export const CHIP_DESIGNS: Readonly<Record<ChipStyleId, ChipDesign>> = {
+  ...CAMPAIGN_CHIPS,
   'chips-aurora': aurora,
   'chips-tide': tide,
   'chips-sakura': sakura,
