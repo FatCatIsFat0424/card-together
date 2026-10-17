@@ -58,6 +58,7 @@ function validAccount(value: unknown): value is AccountRecord {
     isUsername(value.username) &&
     (value.coins === undefined || timestamp(value.coins)) &&
     (value.coinRevision === undefined || timestamp(value.coinRevision)) &&
+    (value.lastSeenAt === undefined || timestamp(value.lastSeenAt)) &&
     (value.dailyRewards === undefined || validDailyRewards(value.dailyRewards)) &&
     (value.achievements === undefined || validAchievements(value.achievements)) &&
     (value.ownedAchievementNameplates === undefined || (Array.isArray(value.ownedAchievementNameplates)

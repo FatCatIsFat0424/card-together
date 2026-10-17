@@ -34,6 +34,23 @@ describe('account connection lifecycle', () => {
     expect(players.getExpiredPlayers(60_000).map((player) => player.info.id)).toEqual([profile.id]);
   });
 
+  it('preserves existing disconnect times on restart and starts a grace period only for connected players', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(10_000);
+    players.attachPlayer('tab-one', profile);
+    players.restorePlayers([
+      { info: profile, currentRoomCode: null, disconnectedAt: 100 },
+      { info: { ...profile, id: 'previously-connected' }, currentRoomCode: null, disconnectedAt: null },
+    ], true);
+    expect(players.getPlayerIdBySocketId('tab-one')).toBeNull();
+    expect(players.getPlayerState(profile.id)).toMatchObject({
+      connectionStatus: 'disconnected', disconnectedAt: 100,
+    });
+    expect(players.getPlayerState('previously-connected')).toMatchObject({
+      connectionStatus: 'disconnected', disconnectedAt: 10_000,
+    });
+    expect(players.getExpiredPlayers(500).map((player) => player.info.id)).toEqual([profile.id]);
+  });
+
   it('should remove a socket mapping created by an uncommitted first action', () => {
     players.attachPlayer('tab-one', profile);
     players.restorePlayers([]);

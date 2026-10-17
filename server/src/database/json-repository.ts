@@ -128,6 +128,26 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       }
     }
 
+    function recordLastSeen(data: DatabaseDocument, snapshot: RuntimeSnapshot): void {
+      const timestamp = now();
+      const positions = indexes.accounts(document.accounts).positions;
+      let copied = false;
+      for (const player of snapshot.players) {
+        const index = positions.get(player.info.id);
+        if (index === undefined) continue;
+        const account = data.accounts[index];
+        const lastSeenAt = player.disconnectedAt === null ? timestamp
+          : player.lastSeenAt === undefined ? player.disconnectedAt : player.lastSeenAt;
+        if (lastSeenAt === null) continue;
+        if (account.lastSeenAt !== undefined && account.lastSeenAt >= lastSeenAt) continue;
+        if (!copied) {
+          data.accounts = data.accounts.slice();
+          copied = true;
+        }
+        data.accounts[index] = { ...account, lastSeenAt };
+      }
+    }
+
     function awardGameCoins(data: DatabaseDocument, snapshot: RuntimeSnapshot, completedGameIds: readonly string[]): void {
       if (completedGameIds.length === 0) return;
       const rewarded = new Set(data.rewardedGameIds ?? []);
@@ -472,6 +492,7 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
           data.runtime = structuredClone(snapshot);
           upsertMatches(data, matches);
           awardGameCoins(data, snapshot, completedGameIds);
+          recordLastSeen(data, snapshot);
         }),
       saveMatch: (match) =>
         write([], (data) => {

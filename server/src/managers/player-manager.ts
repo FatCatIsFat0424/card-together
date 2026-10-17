@@ -68,6 +68,7 @@ export function markDisconnected(socketId: string): void {
   if (!remaining) {
     player.connectionStatus = 'disconnected';
     player.disconnectedAt = Date.now();
+    player.lastSeenAt = player.disconnectedAt;
   }
 }
 
@@ -87,8 +88,9 @@ export function removePlayer(playerId: PlayerId): void {
 }
 
 export function exportPlayers(): PersistedPlayer[] {
-  return [...players.values()].map(({ info, currentRoomCode, disconnectedAt }) => ({
+  return [...players.values()].map(({ info, currentRoomCode, disconnectedAt, lastSeenAt }) => ({
     info, currentRoomCode, disconnectedAt,
+    ...(lastSeenAt === undefined ? {} : { lastSeenAt }),
   }));
 }
 
@@ -105,8 +107,9 @@ export function restorePlayers(records: PersistedPlayer[], restarting = false): 
       ...record,
       socketId,
       connectionStatus: socketId ? 'connected' : 'disconnected',
-      disconnectedAt: socketId ? null : (restarting || record.disconnectedAt === null
-        ? Date.now() : record.disconnectedAt),
+      disconnectedAt: socketId ? null : (record.disconnectedAt ?? Date.now()),
+      // Restoring an interrupted connection starts a grace period, not new activity.
+      ...(!socketId && record.disconnectedAt === null ? { lastSeenAt: null } : {}),
     });
   }
 }

@@ -30,7 +30,7 @@ backend-relative; production Nginx serves them below `/card-together/`.
 | `GET /api/account/history` | — | Own human-only matches, newest first |
 | `GET /api/players/:accountId` | — | Public profile |
 | `GET /api/players/:accountId/history` | — | Matches and participant map, if owner or public |
-| `GET /api/friends` | — | `friends, incoming, outgoing`; friends include presence and nullable `hostedRoomCode` |
+| `GET /api/friends` | — | `friends, incoming, outgoing`; accepted friends include presence, nullable `hostedRoomCode`, and `lastSeenAt` |
 | `GET /api/friends/search?username=` | Exact username | Public account or null |
 | `POST /api/friends/requests` | `username` | 201, request |
 | `POST /api/friends/requests/:id/accept` | `{}` | Recipient accepts |
@@ -84,6 +84,10 @@ Omitted fields keep their values; invalid values return 400.
 - `PublicAccount`: ID, username, nickname, color, avatar, avatar image, equipped border, nameplate,
   and chat frame.
   No balance or inventory.
+- Only accepted entries in `GET /api/friends` include required `lastSeenAt`: a Unix epoch
+  millisecond timestamp, or `null` when no historical activity is known. It survives player
+  cleanup and server restarts. Public profiles, search results, and pending requests omit it.
+  Display behavior: [friends interface](interface.md#lobby-and-friends).
 - No response contains password hashes or session digests.
 - History endpoints return every eligible record without pagination; participant maps
   include accounts from older matches. Search, filters, and statistics run in the client.

@@ -5,3 +5,4 @@
 .indicator.indicator { background-color: var(--color-primary); }
 .label { display: flex; align-items: center; gap: var(--spacing-sm); white-space: nowrap; }
 .count { min-width: 1.5rem; padding: 2px var(--spacing-xs); border-radius: var(--radius-pill); background: var(--bg-card); color: var(--text-secondary); font-size: var(--text-xs); }
+.friendIdentity { display: flex; flex-direction: column; align-items: flex-start; gap: var(--spacing-xs); min-width: 0; max-width: 100%; }

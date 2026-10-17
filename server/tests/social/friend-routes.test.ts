@@ -45,6 +45,7 @@ describe('friend HTTP routes', () => {
         matchesPublic: false,
         createdAt: now,
         updatedAt: now,
+        ...(username === 'bob' ? { lastSeenAt: 123 } : {}),
       });
       const token = tokenCharacter.repeat(43);
       await repository.createSession({
@@ -112,6 +113,9 @@ describe('friend HTTP routes', () => {
       success: true, request: { requester: { id: 'alice' }, recipient: { id: 'bob' } },
     });
     expect(JSON.stringify(body)).not.toContain('passwordHash');
+    expect(body.request.recipient).not.toHaveProperty('lastSeenAt');
+    const pending = await fetch(baseUrl, { headers: headers('alice') });
+    expect(JSON.stringify(await pending.json())).not.toContain('lastSeenAt');
     const requestId = body.request.id as string;
     for (const username of ['alice', 'carol']) {
       const rejected = await fetch(`${baseUrl}/requests/${requestId}/accept`, {
@@ -125,12 +129,14 @@ describe('friend HTTP routes', () => {
     expect(await accepted.json()).toEqual({ success: true });
     const listed = await fetch(baseUrl, { headers: headers('alice') });
     expect(await listed.json()).toMatchObject({
-      success: true, friends: [{ id: 'bob', online: false, inRoom: false }], incoming: [], outgoing: [],
+      success: true, friends: [{ id: 'bob', lastSeenAt: 123, online: false, inRoom: false }], incoming: [], outgoing: [],
     });
+    const reciprocal = await fetch(baseUrl, { headers: headers('bob') });
+    expect(await reciprocal.json()).toMatchObject({ friends: [{ id: 'alice', lastSeenAt: null }] });
     presence.set('bob', { online: true, inRoom: true, hostedRoomCode: 'ABC123' });
     const present = await fetch(baseUrl, { headers: headers('alice') });
     expect(await present.json()).toMatchObject({
-      friends: [{ id: 'bob', online: true, inRoom: true, hostedRoomCode: 'ABC123' }],
+      friends: [{ id: 'bob', lastSeenAt: 123, online: true, inRoom: true, hostedRoomCode: 'ABC123' }],
     });
     const removed = await fetch(`${baseUrl}/bob`, { method: 'DELETE', headers: headers('alice') });
     expect(await removed.json()).toEqual({ success: true });

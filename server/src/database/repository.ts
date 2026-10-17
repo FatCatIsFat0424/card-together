@@ -11,6 +11,8 @@ export type JsonValue =
   null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
 export interface AccountRecord extends AccountProfile {
+  /** Historical activity survives ephemeral player cleanup; omitted for unknown history. */
+  readonly lastSeenAt?: number;
   readonly dailyRewards?: DailyRewardsRecord;
   readonly achievements?: AchievementsRecord;
   readonly usernameNormalized: string;
@@ -132,7 +134,12 @@ export interface Repository {
   /** Durably remove expired messages, notifications, and their orphaned read cursors. */
   pruneSocialHistory(now: number): Promise<void>;
   loadRuntime(): Promise<RuntimeSnapshot | null>;
-  /** Completed game IDs award coins atomically with runtime/history, once per game. */
+  /**
+   * Atomically commit runtime/history, once-per-game rewards, and monotonic account last-seen
+   * times: commit time for connected players, observed disconnect time for offline players.
+   * Restore-only reconnection grace periods do not imply activity.
+   * Missing players retain their historical last-seen times.
+   */
   saveRuntime(snapshot: RuntimeSnapshot, matches?: readonly MatchRecord[], completedGameIds?: readonly string[]): Promise<void>;
   saveMatch(match: MatchRecord): Promise<void>;
   /** All human-only matches, newest first; an explicit limit requests a bounded subset. */

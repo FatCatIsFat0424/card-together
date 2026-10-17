@@ -91,7 +91,7 @@ describe('lobby page', () => {
   it('shows online hosts first without mutating the supplied friend list', () => {
     const friend = (id: string, online: boolean, hostedRoomCode: string | null): FriendEntry => ({
       id, username: id, nickname: id, avatar: 'cat', avatarImage: null, color: '#4a9eff',
-      online, hostedRoomCode, inRoom: Boolean(hostedRoomCode),
+      online, hostedRoomCode, inRoom: Boolean(hostedRoomCode), lastSeenAt: null,
     });
     const friends = Object.freeze([
       friend('available', true, null), friend('offline', false, 'OLD123'),

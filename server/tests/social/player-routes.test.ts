@@ -45,6 +45,7 @@ describe('public player profile HTTP routes', () => {
         createdAt: now,
         updatedAt: now,
         passwordHash: PASSWORD_HASH,
+        lastSeenAt: 123,
       };
       await repository.createAccount(account);
       accounts[username] = account;

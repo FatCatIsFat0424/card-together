@@ -106,6 +106,10 @@ Frontend page behavior and layout. Client architecture and connection handling:
   with live counts, and the tab names serve as section headings. Smaller screens
   stack these three sections with their own headings. Private messages have their
   own page.
+- Accepted friends show an online indicator while connected. Offline rows show the
+  last online time in elapsed minutes, hours, or days; less than a minute is "just now",
+  and more than 30 days is "30+ days" ("30 天以上"). Unknown legacy times are labeled
+  unknown. The page refreshes on focus, social changes, and every 30 seconds while visible.
 - Public profiles: avatar, colored nickname, username, and actions on the left; history
   and statistics on the right; stacked on small screens.
 

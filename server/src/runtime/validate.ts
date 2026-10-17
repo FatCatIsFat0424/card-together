@@ -1741,7 +1741,9 @@ export function isRuntimeSnapshot(value: unknown): value is RuntimeSnapshot {
         player(entry.info) &&
         (entry.info as ObjectValue).isBot !== true &&
         (entry.currentRoomCode === null || text(entry.currentRoomCode)) &&
-        (entry.disconnectedAt === null || number(entry.disconnectedAt)),
+        (entry.disconnectedAt === null || number(entry.disconnectedAt)) &&
+        (entry.lastSeenAt === undefined || entry.lastSeenAt === null
+          || (Number.isSafeInteger(entry.lastSeenAt) && (entry.lastSeenAt as number) >= 0)),
     ) ||
     !value.rooms.every(room) ||
     !value.games.every(game) ||

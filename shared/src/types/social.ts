@@ -21,8 +21,10 @@ export interface FriendRequest {
   readonly createdAt: number;
 }
 
-/** A friend plus live presence, computed per request and never persisted. */
+/** An accepted friend with durable activity history and live presence. */
 export type FriendEntry = PublicAccount & {
+  /** Last committed online time in Unix epoch milliseconds; null for unknown history. */
+  readonly lastSeenAt: number | null;
   readonly online: boolean;
   readonly inRoom: boolean;
   /** Online friend's current room when they are its host; null otherwise. */

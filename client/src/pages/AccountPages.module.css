@@ -29,8 +29,6 @@
 .list { list-style: none; }
 .person { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--spacing-md); padding: var(--spacing-md) 0; border-top: 1px solid var(--border-color); }
 .person .identity { margin-bottom: 0; }
-.presence { display: inline-flex; align-items: center; gap: var(--spacing-sm); }
-.onlineDot { width: 10px; height: 10px; border-radius: 50%; background: var(--color-success); flex-shrink: 0; }
 .empty { color: var(--text-secondary); font-size: var(--text-sm); }
 .section { margin-top: var(--spacing-lg); }
 .status { display: grid; place-content: center; min-height: 50vh; padding: var(--spacing-xl); gap: var(--spacing-md); text-align: center; }

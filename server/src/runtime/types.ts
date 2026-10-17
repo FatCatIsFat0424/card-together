@@ -4,6 +4,8 @@ export interface PersistedPlayer {
   info: PlayerInfo;
   currentRoomCode: string | null;
   disconnectedAt: number | null;
+  /** Overrides activity inferred from disconnectedAt; null marks a restore-only grace period. */
+  lastSeenAt?: number | null;
 }
 
 export interface PersistedRoom {

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { FriendRequest, FriendsData, PublicAccount } from '@shared/types/social';
+import type { FriendEntry, FriendRequest, FriendsData, PublicAccount } from '@shared/types/social';
 import type { AccountRecord, FriendshipRecord, Repository } from '../database/repository';
 
 interface FriendError {
@@ -10,8 +10,10 @@ interface FriendError {
 
 type FriendResult<T> = { readonly success: true; readonly data: T } | FriendError;
 
-/** Presence is added by the HTTP route, so the service lists plain profiles. */
-export type FriendList = Omit<FriendsData, 'friends'> & { readonly friends: PublicAccount[] };
+/** Live presence is added by the HTTP route after reading accepted-friend metadata. */
+export type FriendList = Omit<FriendsData, 'friends'> & {
+  readonly friends: Omit<FriendEntry, 'online' | 'inRoom' | 'hostedRoomCode'>[];
+};
 
 export interface FriendService {
   list(accountId: string): Promise<FriendList>;
@@ -88,7 +90,7 @@ export function createFriendService(repository: Repository): FriendService {
         const account = await repository.getAccountById(id);
         if (account) accounts.set(id, account);
       }));
-      const friends: PublicAccount[] = [];
+      const friends: FriendList['friends'] = [];
       const incoming: FriendRequest[] = [];
       const outgoing: FriendRequest[] = [];
       for (const relationship of relationships) {
@@ -96,7 +98,8 @@ export function createFriendService(repository: Repository): FriendService {
         const recipient = accounts.get(relationship.recipientId);
         if (!requester || !recipient) continue;
         if (relationship.status === 'accepted') {
-          friends.push(publicProfile(requester.id === accountId ? recipient : requester));
+          const friend = requester.id === accountId ? recipient : requester;
+          friends.push({ ...publicProfile(friend), lastSeenAt: friend.lastSeenAt ?? null });
         } else if (relationship.recipientId === accountId) {
           incoming.push(requestProfile(relationship, requester, recipient));
         } else {

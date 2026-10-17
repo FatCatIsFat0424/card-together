@@ -37,7 +37,7 @@ function account(id: string, nickname: string): PublicAccount {
 }
 
 function friend(id: string, nickname: string): FriendEntry {
-  return { ...account(id, nickname), online: false, inRoom: false, hostedRoomCode: null };
+  return { ...account(id, nickname), online: false, inRoom: false, hostedRoomCode: null, lastSeenAt: null };
 }
 
 function conversation(other: PublicAccount, timestamp: number, canSend = true): Conversation {

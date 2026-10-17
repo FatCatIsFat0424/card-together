@@ -36,7 +36,19 @@
 **Friends**
 
 - Requests are unique per unordered pair, with sender and recipient permissions.
-- Accepted friends see each other's online presence and hosted room code.
+- Accepted friends see each other's online presence, hosted room code, and historical
+  last-seen time. Public profiles, search, and pending requests omit last-seen metadata.
+- Optional internal `AccountRecord.lastSeenAt` is a nonnegative safe-integer Unix epoch
+  millisecond timestamp. Missing legacy values remain unknown (`null` in accepted-friend
+  responses); account creation and profile edits do not infer historical activity.
+- `Repository.saveRuntime` advances last-seen times atomically with the committed snapshot:
+  connected players use the repository clock; disconnected players use their observed
+  disconnect time. Runtime players can carry a separate activity timestamp; `null` prevents
+  a restore-only reconnection grace period from advancing account history.
+  Values never decrease, failed writes publish neither change, and removing ephemeral
+  players retains account history. Multiple tabs stay online until their final disconnect.
+  Restart preserves existing disconnect times; only previously connected players begin a
+  new disconnect grace period, without implying that they returned online.
 - Joining a friend's room rechecks friendship, host, and capacity. Invitations are
   ephemeral and limited to accepted friends.
 
@@ -64,8 +76,8 @@
   including games with bots. Spectators and aborted games earn nothing. Blackjack and
   Hold'em reward the whole match, not individual hands. Past matches were not rewarded.
 - `rewardedGameIds` receipts prevent repeat awards, including after restarts.
-- `Repository.saveRuntime` commits rewards, receipts, runtime, and completed history in one
-  atomic write; `saveMatch` never awards coins.
+- `Repository.saveRuntime` commits rewards, receipts, runtime, last-seen times, and completed
+  history in one atomic write; `saveMatch` never awards coins.
 - `coinRevision` increases on every balance change, including purchases, so clients can
   discard stale responses. Updates reach the owner through `account:coins`, `account:updated`,
   and resume ([API](api.md#socket-actions)).
@@ -152,6 +164,7 @@ Optional fields added without a schema change; absent values use the default:
 
 | Field | Default | Earlier servers |
 | --- | --- | --- |
+| `AccountRecord.lastSeenAt` | Unknown | Keep the field; do not advance historical activity |
 | `coins`, `coinRevision` | 0 | Keep the fields; award nothing |
 | `rewardedGameIds` | Empty | Keep the field |
 | `AccountRecord.dailyRewards` | No progress or claims | Keep the field; games completed on older servers do not advance daily tasks |
@@ -190,7 +203,7 @@ Contracts: [`Repository`](../server/src/database/repository.ts),
 
 | Collection | Contents |
 | --- | --- |
-| `accounts` | Identity, normalized username, password hash, profile, coins, timestamps |
+| `accounts` | Identity, normalized username, password hash, profile, coins, timestamps, optional last-seen history |
 | `sessions` | Token digest, account, creation and expiry |
 | `friendships` | Account pair, status, timestamps |
 | `matches` | Game ID, result, participants, completion time |

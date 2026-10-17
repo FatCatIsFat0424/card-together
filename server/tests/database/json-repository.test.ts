@@ -7,6 +7,8 @@ import { createJsonRepository } from '../../src/database/json-repository';
 import type { AccountRecord, MatchRecord, Repository } from '../../src/database/repository';
 import { emptyDocument } from '../../src/database/schema';
 import { CURRENT_SCHEMA_VERSION } from '../../src/database/migrations';
+import * as players from '../../src/managers/player-manager';
+import { createRuntimeCoordinator } from '../../src/runtime/coordinator';
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const original = await importOriginal<typeof import('node:fs/promises')>();
@@ -199,6 +201,152 @@ describe('JSON repository', () => {
     expect(await repository.getSession(session.tokenHash)).toBeNull();
     expect(await repository.createSession(session, PASSWORD_HASH)).toBe(false);
     expect(await repository.changePassword(alice.id, PASSWORD_HASH, newHash, 201)).toBe(false);
+  });
+
+  it('retains last-seen history through multiple tabs, restart, cleanup and reopening without refreshing offline players', async () => {
+    let now = 1_000;
+    vi.spyOn(Date, 'now').mockImplementation(() => now);
+    try {
+      repository = await createJsonRepository(path, { now: () => now });
+      const alice = await repository.createAccount(account('alice'));
+      const legacy = await repository.createAccount(account('legacy'));
+      let runtime = await createRuntimeCoordinator(repository);
+      await runtime.mutate(() => {
+        players.attachPlayer('tab-one', players.toPlayerInfo(alice));
+        players.attachPlayer('tab-two', players.toPlayerInfo(alice));
+      });
+      expect((await repository.getAccountById(alice.id))?.lastSeenAt).toBe(1_000);
+      now = 2_000;
+      await runtime.mutate(() => players.markDisconnected('tab-one'));
+      expect(players.getPlayerState(alice.id)?.connectionStatus).toBe('connected');
+      expect((await repository.getAccountById(alice.id))?.lastSeenAt).toBe(2_000);
+      now = 3_000;
+      await runtime.mutate(() => players.markDisconnected('tab-two'));
+      expect((await repository.getAccountById(alice.id))?.lastSeenAt).toBe(3_000);
+      now = 30_000;
+      await runtime.mutate(() => {});
+      expect((await repository.getAccountById(alice.id))?.lastSeenAt).toBe(3_000);
+      await repository.close();
+      repository = await createJsonRepository(path, { now: () => now });
+      runtime = await createRuntimeCoordinator(repository);
+      expect(players.getPlayerState(alice.id)?.disconnectedAt).toBe(3_000);
+      await runtime.mutate(() => {});
+      expect((await repository.getAccountById(alice.id))?.lastSeenAt).toBe(3_000);
+      await runtime.mutate(() => players.removePlayer(alice.id));
+      await repository.close();
+      repository = await createJsonRepository(path, { now: () => now });
+      expect((await repository.loadRuntime())?.players).toEqual([]);
+      expect((await repository.getAccountById(alice.id))?.lastSeenAt).toBe(3_000);
+      expect(await repository.getAccountById(legacy.id)).not.toHaveProperty('lastSeenAt');
+      expect((await repository.searchAccounts('alice', ''))[0]).not.toHaveProperty('lastSeenAt');
+    } finally {
+      vi.restoreAllMocks();
+      players.restorePlayers([], true);
+    }
+  });
+
+  it('preserves activity across a long outage while granting a fresh reconnection grace period', async () => {
+    let now = 1_000;
+    vi.spyOn(Date, 'now').mockImplementation(() => now);
+    try {
+      repository = await createJsonRepository(path, { now: () => now });
+      const alice = await repository.createAccount(account('alice'));
+      let runtime = await createRuntimeCoordinator(repository);
+      await runtime.mutate(() => players.attachPlayer('tab-one', players.toPlayerInfo(alice)));
+      expect((await repository.getAccountById(alice.id))?.lastSeenAt).toBe(1_000);
+      await repository.close();
+      now = 31 * 86_400_000;
+      repository = await createJsonRepository(path, { now: () => now });
+      runtime = await createRuntimeCoordinator(repository);
+      expect(players.getPlayerState(alice.id)?.disconnectedAt).toBe(now);
+      expect(players.getExpiredPlayers(60_000)).toEqual([]);
+      await runtime.mutate(() => {});
+      expect((await repository.getAccountById(alice.id))?.lastSeenAt).toBe(1_000);
+      await repository.close();
+      repository = await createJsonRepository(path, { now: () => now });
+      runtime = await createRuntimeCoordinator(repository);
+      await runtime.mutate(() => players.removePlayer(alice.id));
+      expect((await repository.getAccountById(alice.id))?.lastSeenAt).toBe(1_000);
+      now += 1_000;
+      await runtime.mutate(() => players.attachPlayer('tab-two', players.toPlayerInfo(alice)));
+      expect((await repository.getAccountById(alice.id))?.lastSeenAt).toBe(now);
+      now += 1_000;
+      await runtime.mutate(() => players.markDisconnected('tab-two'));
+      expect((await repository.getAccountById(alice.id))?.lastSeenAt).toBe(now);
+    } finally {
+      vi.restoreAllMocks();
+      players.restorePlayers([], true);
+    }
+  });
+
+  it('never decreases last-seen time when a clock moves backwards or an older disconnected snapshot is saved', async () => {
+    let now = 1_000;
+    repository = await createJsonRepository(path, { now: () => now });
+    const alice = await repository.createAccount(account('alice'));
+    const snapshot = { players: [{ info: players.toPlayerInfo(alice), currentRoomCode: null,
+      disconnectedAt: null as number | null }], rooms: [], games: [], chat: [] };
+    await repository.saveRuntime(snapshot);
+    now = 500;
+    await repository.saveRuntime(snapshot);
+    snapshot.players[0].disconnectedAt = 200;
+    await repository.saveRuntime(snapshot);
+    expect((await repository.getAccountById(alice.id))?.lastSeenAt).toBe(1_000);
+    snapshot.players[0].disconnectedAt = 1_100;
+    await repository.saveRuntime(snapshot);
+    expect((await repository.getAccountById(alice.id))?.lastSeenAt).toBe(1_100);
+  });
+
+  it('rolls back runtime, history and last-seen together after a durable write failure and recovers on retry', async () => {
+    let now = 1_000;
+    try {
+      repository = await createJsonRepository(path, { now: () => now });
+      const accounts = ['alice', 'bravo', 'charlie', 'delta'].map(account);
+      for (const entry of accounts) await repository.createAccount(entry);
+      const runtime = await createRuntimeCoordinator(repository);
+      const alice = accounts[0];
+      await runtime.mutate(() => players.attachPlayer('tab-one', players.toPlayerInfo(alice)));
+      const before = await repository.loadRuntime();
+      const saved = await readFile(path, 'utf8');
+      now = 2_000;
+      vi.mocked(rename).mockRejectedValueOnce(new Error('Disk full'));
+      await expect(runtime.mutate(() => players.updatePlayerInfo({ ...players.toPlayerInfo(alice), nickname: 'Uncommitted' })))
+        .rejects.toThrow('Disk full');
+      expect(runtime.snapshot()).toEqual(before);
+      expect(await repository.loadRuntime()).toEqual(before);
+      expect((await repository.getAccountById(alice.id))?.lastSeenAt).toBe(1_000);
+      expect(await readFile(path, 'utf8')).toBe(saved);
+      const completed = match('last-seen-match', accounts, 2_000);
+      vi.mocked(rename).mockRejectedValueOnce(new Error('Disk full'));
+      await expect(repository.saveRuntime(runtime.snapshot(), [completed])).rejects.toThrow('Disk full');
+      expect(await repository.listMatches(alice.id)).toEqual([]);
+      expect((await repository.getAccountById(alice.id))?.lastSeenAt).toBe(1_000);
+      await repository.saveRuntime(runtime.snapshot(), [completed]);
+      expect((await repository.getAccountById(alice.id))?.lastSeenAt).toBe(2_000);
+      expect(await repository.listMatches(alice.id)).toEqual([completed]);
+      expect(await readdir(directory)).toEqual(['database.json']);
+    } finally {
+      players.restorePlayers([], true);
+    }
+  });
+
+  it.each([null, -1, 0.5, Number.MAX_SAFE_INTEGER + 1])('rejects invalid persisted last-seen timestamps: %s', async (lastSeenAt) => {
+    repository = await createJsonRepository(path);
+    await expect(repository.createAccount({ ...account('alice'), lastSeenAt } as AccountRecord)).rejects.toThrow();
+    expect(await repository.getAccountByUsername('alice')).toBeNull();
+    await repository.close();
+    await writeFile(path, JSON.stringify({ ...emptyDocument(), accounts: [{ ...account('alice'), lastSeenAt }] }));
+    await expect(createJsonRepository(path)).rejects.toThrow();
+  });
+
+  it.each([-1, 0.5, Number.MAX_SAFE_INTEGER + 1])('rejects invalid runtime activity overrides without publishing history: %s', async (lastSeenAt) => {
+    repository = await createJsonRepository(path);
+    const alice = await repository.createAccount(account('alice'));
+    await expect(repository.saveRuntime({
+      players: [{ info: players.toPlayerInfo(alice), currentRoomCode: null, disconnectedAt: 100, lastSeenAt }],
+      rooms: [], games: [], chat: [],
+    })).rejects.toThrow();
+    expect(await repository.loadRuntime()).toBeNull();
+    expect(await repository.getAccountById(alice.id)).not.toHaveProperty('lastSeenAt');
   });
 
   it('should persist runtime and deduplicated match history in the same write', async () => {

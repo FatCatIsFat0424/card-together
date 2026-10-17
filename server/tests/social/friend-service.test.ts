@@ -64,16 +64,16 @@ describe('friend service', () => {
     });
     expect(await friends.accept('bob-id', request.id)).toEqual({ success: true, data: null });
     expect(await friends.list('alice-id')).toEqual({
-      friends: [request.recipient], incoming: [], outgoing: [],
+      friends: [{ ...request.recipient, lastSeenAt: null }], incoming: [], outgoing: [],
     });
     expect(await friends.list('bob-id')).toEqual({
-      friends: [request.requester], incoming: [], outgoing: [],
+      friends: [{ ...request.requester, lastSeenAt: null }], incoming: [], outgoing: [],
     });
 
     await repository.close();
     repository = await createJsonRepository(filePath);
     friends = createFriendService(repository);
-    expect((await friends.list('alice-id')).friends).toEqual([request.recipient]);
+    expect((await friends.list('alice-id')).friends).toEqual([{ ...request.recipient, lastSeenAt: null }]);
     expect(await friends.remove('bob-id', 'alice-id')).toEqual({ success: true, data: null });
     expect((await friends.list('alice-id')).friends).toEqual([]);
     expect((await friends.list('bob-id')).friends).toEqual([]);
@@ -93,10 +93,37 @@ describe('friend service', () => {
     });
     await friends.accept('bob-id', requested.data.id);
     const accepted = await friends.list('alice-id');
-    expect(accepted.friends).toEqual([pending.outgoing[0].recipient]);
+    expect(accepted.friends).toEqual([{ ...pending.outgoing[0].recipient, lastSeenAt: null }]);
     expect(JSON.stringify({ requested, pending, accepted })).not.toContain('passwordHash');
     expect(JSON.stringify({ requested, pending, accepted })).not.toContain(STORED_PASSWORD_HASH);
     expect(JSON.stringify({ requested, pending, accepted })).not.toContain('usernameNormalized');
+  });
+
+  it('exposes known last-seen history only after acceptance, never in lookup or request profiles', async () => {
+    const bob = await repository.getAccountById('bob-id');
+    if (!bob) throw new Error('Expected Bob account');
+    await repository.saveRuntime({
+      players: [{ info: { id: bob.id, username: bob.username, nickname: bob.nickname,
+        color: bob.color, avatar: bob.avatar, avatarImage: null },
+      currentRoomCode: null, disconnectedAt: 123 }],
+      rooms: [], games: [], chat: [],
+    });
+    const requested = await friends.request('alice-id', 'bob');
+    if (!requested.success) throw new Error('Expected friend request');
+    expect(requested.data.recipient).not.toHaveProperty('lastSeenAt');
+    const outgoing = await friends.list('alice-id');
+    const incoming = await friends.list('bob-id');
+    expect(outgoing.outgoing[0].recipient).not.toHaveProperty('lastSeenAt');
+    expect(incoming.incoming[0].requester).not.toHaveProperty('lastSeenAt');
+    expect(incoming.incoming[0].recipient).not.toHaveProperty('lastSeenAt');
+    const found = await friends.findByUsername('bob');
+    expect(found.success && found.data).not.toHaveProperty('lastSeenAt');
+    await friends.accept('bob-id', requested.data.id);
+    expect((await friends.list('alice-id')).friends[0]).toMatchObject({ id: 'bob-id', lastSeenAt: 123 });
+    expect((await friends.list('bob-id')).friends[0]).toMatchObject({ id: 'alice-id', lastSeenAt: null });
+    await friends.remove('alice-id', 'bob-id');
+    expect((await friends.list('alice-id')).friends).toEqual([]);
+    expect(await friends.findByUsername('bob')).toEqual(found);
   });
 
   it('should let the requester cancel and the recipient decline pending requests', async () => {

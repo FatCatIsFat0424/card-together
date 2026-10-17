@@ -13,6 +13,7 @@ import { useAccountStore } from '../stores/account-store';
 import { useRoomStore } from '../stores/room-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { PlayerLink } from '../components/PlayerLink';
+import { FriendStatus } from '../components/FriendStatus';
 import styles from './AccountPages.module.css';
 import tabStyles from './FriendsPage.module.css';
 
@@ -143,10 +144,9 @@ export function FriendsPage(): ReactNode {
             const unread = conversations.find((conversation) => conversation.account.id === person.id)?.unreadCount ?? 0;
             return (
               <li key={person.id} className={styles.person}>
-              <span className={styles.presence}>
+              <span className={tabStyles.friendIdentity}>
                 <FriendIdentity person={person} />
-                {person.online && <span className={styles.onlineDot} role="img"
-                  aria-label={t('friends.online')} title={t('friends.online')} />}
+                <FriendStatus friend={person} />
               </span>
               {removeId === person.id ? <div className={styles.actions}>
                 <span>{t('friends.confirmRemove')}</span>
