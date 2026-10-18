@@ -92,17 +92,19 @@ describe('shop categories and inventory', () => {
     expect(html).toContain('Aurora weave');
   });
 
-  it.each(SHOP_SERIES)('restores the complete %s collection across categories', (series) => {
+  it.each(SHOP_SERIES)('restores the %s collection across categories', (series) => {
     const html = render(`?series=${series}`);
-    expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(12);
-    expect(html).toContain('12 products');
+    const products = SHOP_ITEMS.filter((product) => shopItemSeries(product) === series);
+    expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(products.length);
+    expect(html).toContain(`${products.length} products`);
     expect(html).toContain(`data-series="${series}" aria-pressed="true"`);
     expect(html).not.toContain('shop.series.');
-    for (const item of SHOP_ITEMS.filter((product) => shopItemSeries(product) === series)) {
-      const selected = render(`?series=${series}&type=${item.type}`);
-      expect(selected.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(1);
+    for (const type of new Set(products.map((item) => item.type))) {
+      const selected = render(`?series=${series}&type=${type}`);
+      const count = products.filter((item) => item.type === type).length;
+      expect(selected.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(count);
       expect(selected).toContain(`data-shop-series="${series}"`);
-      expect(selected).toContain('1 products');
+      expect(selected).toContain(`${count} products`);
     }
   });
 
@@ -114,9 +116,22 @@ describe('shop categories and inventory', () => {
       expect(next.get('unrelated')).toBe('keep');
       expect(current.toString()).toBe('series=ears&unrelated=keep');
       const html = render(`?${next}`);
-      expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(series === 'all' ? 21 : 1);
+      const expected = SHOP_ITEMS.filter((item) => item.type === 'avatarBorder'
+        && (series === 'all' || shopItemSeries(item) === series)).length;
+      expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g) ?? []).toHaveLength(expected);
       expect(html).toContain('id="shop-catalog-title">Avatar borders</h2>');
     }
+  });
+
+  it.each(['en', 'zh-TW'] as const)('explains an empty category without losing the selected collection (%s)', (locale) => {
+    useI18nStore.getState().setLocale(locale);
+    const html = render('?series=cats&type=cardBack');
+    expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g) ?? []).toHaveLength(0);
+    expect(html).toContain('data-series="cats" aria-pressed="true"');
+    expect(html).toContain(`role="status">${useI18nStore.getState().t('shop.emptyCollection')}</p>`);
+    expect(html).toContain(locale === 'en' ? '0 products' : '0 項商品');
+    expect(html).toContain(locale === 'en' ? 'Cat Cafe' : '貓咪茶屋');
+    expect(html).not.toContain('shop.series.');
   });
 
   it('offers equipment for owned cosmetics and disables equipped products or owned packs', () => {

@@ -17,7 +17,7 @@ import { SHOP_ITEMS, getShopItem, ownsShopItem } from '../shop-catalog';
 import { useMotionStore } from '../stores/motion-store';
 import { BORDER_SERIES, shopSeriesQuery } from '../shop-filters';
 import type { ShopSeriesFilter } from '../shop-filters';
-import { shopSeriesEmblem } from '../shop-series';
+import { shopSeriesArtwork } from '../shop-series';
 import { ShopProductArt } from '../components/ShopProductArt';
 import { AppIcon } from '../components/AppIcon';
 import styles from './ShopPage.module.css';
@@ -48,28 +48,30 @@ export function ShopPage(): ReactNode {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
   const categoryList = useRef<HTMLUListElement>(null);
+  const collectionList = useRef<HTMLDivElement>(null);
   const collection = SHOP_SERIES.find((series) => series === searchParams.get('series')) ?? null;
   const borderSeries = BORDER_SERIES.find((series) => series === searchParams.get('series'));
   const selectedSeries = collection ?? borderSeries ?? 'all';
   const selectedType = PRODUCT_TYPES.find((type) => type === searchParams.get('type'))
     ?? (selectedSeries !== 'all' && !collection ? 'avatarBorder' : 'all');
   useEffect(() => {
-    const list = categoryList.current;
-    if (!list) return;
+    const lists = [categoryList.current, collectionList.current];
     const revealSelection = (): void => {
-      const selected = list.querySelector<HTMLButtonElement>('[aria-pressed="true"]');
-      if (!selected || list.scrollWidth <= list.clientWidth) return;
-      const container = list.getBoundingClientRect();
-      const button = selected.getBoundingClientRect();
-      if (button.left < container.left || button.right > container.right) {
-        list.scrollLeft += button.left - container.left - (list.clientWidth - button.width) / 2;
+      for (const list of lists) {
+        const selected = list?.querySelector<HTMLButtonElement>('[aria-pressed="true"]');
+        if (!list || !selected || list.scrollWidth <= list.clientWidth) continue;
+        const container = list.getBoundingClientRect();
+        const button = selected.getBoundingClientRect();
+        if (button.left < container.left || button.right > container.right) {
+          list.scrollLeft += button.left - container.left - (list.clientWidth - button.width) / 2;
+        }
       }
     };
     revealSelection();
     const observer = new ResizeObserver(revealSelection);
-    observer.observe(list);
+    for (const list of lists) if (list) observer.observe(list);
     return () => observer.disconnect();
-  }, [selectedType]);
+  }, [selectedType, collection]);
   const products = SHOP_ITEMS.filter((item) => (selectedType === 'all' || item.type === selectedType)
     && (collection ? shopItemSeries(item) === collection : selectedType !== 'avatarBorder' || selectedSeries === 'all'
       || (item.type === 'avatarBorder' && item.category === selectedSeries)));
@@ -151,13 +153,13 @@ export function ShopPage(): ReactNode {
           {/* Category buttons already show totals; only a series filter changes the count. */}
           {(collection || selectedType === 'avatarBorder' && selectedSeries !== 'all')
             && <span>{t('shop.itemCount', { n: format(products.length) })}</span>}</div>
-        <div className={styles.collectionFilters} role="group" aria-label={t('shop.collections')}>
+        <div ref={collectionList} className={styles.collectionFilters} role="group" aria-label={t('shop.collections')}>
           <button type="button" className={styles.collectionFilter} aria-pressed={!collection}
             aria-controls="shop-catalog" onClick={() => selectSeries('all')}>{t('shop.allCollections')}</button>
           {SHOP_SERIES.map((series) => <button key={series} type="button"
             className={styles.collectionFilter} data-series={series} aria-pressed={collection === series}
             aria-controls="shop-catalog" onClick={() => selectSeries(series)}>
-            <img src={shopSeriesEmblem(series, reducedMotion)} alt="" />{t(`shop.series.${series}.name`)}
+            <img src={shopSeriesArtwork(series, reducedMotion)} alt="" />{t(`shop.series.${series}.name`)}
           </button>)}
         </div>
         {collection && <p className={styles.collectionDescription}>{t(`shop.series.${collection}.description`)}</p>}
@@ -168,6 +170,7 @@ export function ShopPage(): ReactNode {
             {t(series === 'all' ? 'shop.allSeries' : `shop.category.${series}`)}
           </button>)}
         </div>}
+        {products.length === 0 && <p className={styles.emptyCollection} role="status">{t('shop.emptyCollection')}</p>}
         <ul className={styles.products}>{products.map((item) => {
           const productName = t(`shop.item.${item.id}.name`);
           const owned = ownsShopItem(account, item);

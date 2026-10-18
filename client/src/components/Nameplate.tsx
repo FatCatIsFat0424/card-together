@@ -36,9 +36,10 @@ export function Nameplate({ id }: NameplateProps): ReactNode {
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
   if (!id) return null;
   const series = SHOP_SERIES.find((key) => id === `nameplate-${key}`);
+  const emblem = series ? shopSeriesEmblem(series, reducedMotion) : null;
   return <span data-reduced-motion={reducedMotion || undefined} data-nameplate={id} className={`${styles.title} ${styles[id]}`}>
-    <span className={styles.mark} aria-hidden="true">{series
-      ? <img className={styles.seriesMark} src={shopSeriesEmblem(series, reducedMotion)} alt="" /> : MARKS[id]}</span>
+    <span className={styles.mark} aria-hidden="true">{emblem
+      ? <img className={styles.seriesMark} src={emblem} alt="" /> : MARKS[id]}</span>
     {t(`shop.title.${id}`)}
   </span>;
 }

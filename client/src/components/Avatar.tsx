@@ -28,6 +28,8 @@ interface AvatarProps {
 export function Avatar({ avatar, image, color, border, size = 'medium' }: AvatarProps): ReactNode {
   const { t } = useI18nStore();
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
+  const series = SHOP_SERIES.find((key) => border === key);
+  const emblem = series ? shopSeriesEmblem(series, reducedMotion) : null;
   if (border) return <span className={`${styles.avatar} ${styles[size]} ${borderStyles.equipped} ${borderStyles[border]}`}
     data-reduced-motion={reducedMotion || undefined} data-avatar-size={size} role="img" aria-label={t(`avatar.${avatar}`)}>
     <span className={borderStyles.rim} aria-hidden="true" />
@@ -53,8 +55,7 @@ export function Avatar({ avatar, image, color, border, size = 'medium' }: Avatar
     {border === 'tide' && <svg className={borderStyles.waveArt} viewBox="0 0 100 100" aria-hidden="true">
       <path d="M3 70 Q15 58 28 70 T53 70 M50 97 Q64 82 78 93 T105 89" />
     </svg>}
-    {SHOP_SERIES.map((series) => border === series
-      ? <img key={series} className={borderStyles.seriesEmblem} src={shopSeriesEmblem(series, reducedMotion)} alt="" aria-hidden="true" /> : null)}
+    {emblem && <img className={borderStyles.seriesEmblem} src={emblem} alt="" aria-hidden="true" />}
     <span className={borderStyles.face} aria-hidden="true"><Avatar avatar={avatar} image={image} size={size} /></span>
     {border === 'starlight' && <>
       <span className={`${borderStyles.star} ${borderStyles.firstStar}`} aria-hidden="true"><AppIcon name="burst" /></span>

@@ -1,5 +1,9 @@
-/** Complete themed collections across every shop category. */
-export const SHOP_SERIES = ['starfleet', 'shrine', 'ironfront', 'neoncity', 'crownrealm'] as const;
+/** Themed collections may span different product types and quantities. */
+export const SHOP_SERIES = [
+  'aurora', 'tide', 'sakura', 'constellation', 'bamboo', 'gilded', 'ember', 'lotus', 'frost', 'dune',
+  'cats', 'forest', 'dog', 'rainbow', 'garden',
+  'starfleet', 'shrine', 'ironfront', 'neoncity', 'crownrealm',
+] as const;
 export type ShopSeries = typeof SHOP_SERIES[number];
 
 /** Server-authoritative prices for permanent avatar borders. */
@@ -311,12 +315,37 @@ export const SHOP_ITEMS = [
 ] as const;
 
 export type ShopItem = typeof SHOP_ITEMS[number];
+export type ShopItemId = ShopItem['id'];
+
+const LEGACY_ITEM_SERIES: Readonly<Partial<Record<ShopItemId, ShopSeries>>> = {
+  cat: 'cats',
+  rabbit: 'forest',
+  bear: 'forest',
+  antlers: 'forest',
+  dog: 'dog',
+  frog: 'lotus',
+  gold: 'gilded',
+  starlight: 'constellation',
+  eclipse: 'constellation',
+  neon: 'neoncity',
+  'nameplate-bark-lord': 'dog',
+  'nameplate-rainbow-pony': 'rainbow',
+  'nameplate-renewal': 'garden',
+  'nameplate-lucky': 'garden',
+  'stickers-forest-friends': 'forest',
+  'stickers-space': 'constellation',
+  'stickers-ocean': 'tide',
+  'stickers-weather': 'rainbow',
+  'stickers-arcade': 'neoncity',
+  'stickers-dragons': 'ember',
+};
+
 /** Collection membership does not change product identity or ownership. */
 export function shopItemSeries(item: ShopItem): ShopSeries | null {
-  return SHOP_SERIES.find((series) => item.id === series || item.id.endsWith(`-${series}`)) ?? null;
+  return LEGACY_ITEM_SERIES[item.id]
+    ?? SHOP_SERIES.find((series) => item.id === series || item.id.endsWith(`-${series}`)) ?? null;
 }
 
-export type ShopItemId = ShopItem['id'];
 export type ShopItemType = ShopItem['type'];
 export type CardBackStyleId = typeof CARD_BACKS[number]['id'];
 export type TableBackgroundStyleId = typeof TABLE_BACKGROUNDS[number]['id'];
