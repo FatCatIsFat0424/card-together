@@ -4,9 +4,10 @@ import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import { frameLogIndex } from '@shared/game-presentation';
 import type { Card, PlayerVisibleGameState } from '@shared/types';
 import { useI18nStore } from '../stores/i18n-store';
-import { comboLabelKey } from './bigtwo/bigtwo-view';
+import { BigTwoRounds } from './bigtwo/BigTwoHistory';
 import { signedChips } from './blackjack/blackjack-view';
 import { ChipIcon } from './ChipIcon';
+import { isSpectator } from './observer-view';
 import { deriveRoundHistory } from './round-history';
 import type { HistoryRound } from './round-history';
 import styles from './RoundHistory.module.css';
@@ -32,7 +33,6 @@ function Round({ round }: { round: HistoryRound }): ReactNode {
       {action.kind !== 'street' && <> {t(`history.${action.kind}`)}</>}
       {action.handIndex !== undefined && <span> ({t('blackjack.handIndex', { n: String(action.handIndex + 1) })})</span>}
       {action.cards.length > 0 && <span className={styles.cards}> {action.cards.map(cardLabel).join(' ')}</span>}
-      {action.comboType && <span> · {t(comboLabelKey(action.comboType))}</span>}
       {action.captured !== undefined && <span> · {action.captured
         ? t('history.captured', { card: cardLabel(action.captured) }) : t('history.stay')}</span>}
       {action.points !== undefined && <span> · {t('history.points', { n: String(action.points) })}</span>}
@@ -76,7 +76,9 @@ export function RoundHistory({ game }: { game: PlayerVisibleGameState }): ReactN
     <summary>{t('history.title')} ({rounds.length})</summary>
     {open && <div className={styles.scroll}>
       {rounds.length === 0 ? <p>{t('history.empty')}</p>
-        : rounds.map((round) => <Round key={round.number} round={round} />)}
+        : game.gameType === 'bigtwo'
+          ? <BigTwoRounds rounds={rounds} mySeat={isSpectator(game) ? null : game.mySeat} />
+          : rounds.map((round) => <Round key={round.number} round={round} />)}
     </div>}
   </details>;
 }

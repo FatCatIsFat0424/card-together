@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { BigTwoComboType } from '@shared/rules/bigtwo';
-import type { BigTwoLogEntry, BigTwoVisibleState, Card } from '@shared/types';
+import type { BigTwoLogEntry, BigTwoVisibleState, Card, Seat } from '@shared/types';
 import {
-  comboLabelKey, currentRoundEntries, penaltyFormula, toggleCard,
+  comboLabelKey, currentRoundEntries, penaltyFormula, summarizeBigTwoRound, toggleCard,
 } from '../../../client/src/games/bigtwo/bigtwo-view';
+import { deriveRoundHistory } from '../../../client/src/games/round-history';
 import { gameTranslations } from '../../../client/src/game-i18n';
 import { useGameStore } from '../../../client/src/stores/game-store';
 
@@ -66,5 +67,32 @@ describe('game store bigtwo restore', () => {
     expect(first.bigTwo).toEqual(state);
     useGameStore.getState().restore(structuredClone(state));
     expect(useGameStore.getState()).toBe(first);
+  });
+});
+
+describe('summarizeBigTwoRound', () => {
+  const rounds = (log: BigTwoLogEntry[], phase: 'playing' | 'scoring' = 'playing') =>
+    deriveRoundHistory({ gameType: 'bigtwo', phase, log });
+  const play = (seat: Seat, cards: Card[], comboType: BigTwoComboType): BigTwoLogEntry =>
+    ({ type: 'play', seat, cards, comboType, timestamp: 0 });
+
+  it('names the lead combo and the winning play once the round ends', () => {
+    const [done, ongoing] = rounds([
+      play('N', [c(3, 'clubs')], 'single'),
+      play('E', [c(13, 'spades')], 'single'),
+      { type: 'pass', seat: 'S', timestamp: 0 },
+      { type: 'pass', seat: 'N', timestamp: 0 },
+      { type: 'round_end', leaderSeat: 'E', timestamp: 0 },
+      play('E', [c(5, 'hearts'), c(5, 'spades')], 'pair'),
+    ]);
+    expect(summarizeBigTwoRound(done)).toEqual({ leadCombo: 'single', winnerSeat: 'E', winningIndex: 1 });
+    expect(summarizeBigTwoRound(ongoing)).toEqual({ leadCombo: 'pair', winnerSeat: null, winningIndex: -1 });
+  });
+
+  it('credits the last play when the match ends mid-round, and dragons', () => {
+    const [last] = rounds([play('N', [c(4, 'clubs')], 'single'), play('W', [c(2, 'spades')], 'single')], 'scoring');
+    expect(summarizeBigTwoRound(last)).toEqual({ leadCombo: 'single', winnerSeat: 'W', winningIndex: 1 });
+    const [dragon] = rounds([{ type: 'dragon', seat: 'S', timestamp: 0 }], 'scoring');
+    expect(summarizeBigTwoRound(dragon)).toEqual({ leadCombo: null, winnerSeat: 'S', winningIndex: 0 });
   });
 });
