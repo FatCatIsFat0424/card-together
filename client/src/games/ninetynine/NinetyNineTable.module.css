@@ -188,3 +188,8 @@
   .mini { --card-w: calc((20px) * var(--playing-card-scale)); }
   .ctrl { min-height: 40px; padding: 4px 10px; }
 }
+
+/* Short landscape: the running total sits beside the piles so the low centre keeps its text unscaled. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .centre { flex-direction: row; gap: var(--spacing-md); }
+}

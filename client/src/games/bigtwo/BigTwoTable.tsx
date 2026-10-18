@@ -189,7 +189,7 @@ export function BigTwoTable(): ReactNode {
     <CardHand cards={hand} selectedCards={selected} disabled={!playing || actionPending || watching}
       onCardClick={(card) => setSelection(toggleCard(selected, card))}
       onReorder={setManualOrder} />
-    {playing && !watching && <HandActions className={styles.controls} layout="bigtwo">
+    {playing && !watching && <HandActions className={styles.controls} layout="grid">
       <button type="button" className={`btn btn-outline ${styles.ctrl}`} onClick={() => setSelection([])}
         disabled={selected.length === 0}>{t('bigtwo.clear')}</button>
       <button type="button" className={`btn btn-outline ${styles.ctrl}`} onClick={pass}

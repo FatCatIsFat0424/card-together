@@ -164,3 +164,19 @@
 @media (prefers-reduced-motion: reduce) {
   .flipped { animation: none; }
 }
+
+/* Short landscape centres are wide and low, so frames spread sideways: the cards sit beside the total,
+   effects and summary instead of above them. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .presentation {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: center;
+    align-items: center;
+    gap: 2px var(--spacing-md);
+    width: min(30rem, 48vw);
+    min-height: 0;
+  }
+  .heading { grid-column: 1 / -1; }
+  .cards { grid-column: 1; grid-row: 2 / span 4; }
+}

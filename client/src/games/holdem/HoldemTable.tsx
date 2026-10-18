@@ -11,7 +11,6 @@ import { useGameStore } from '../../stores/game-store';
 import { useI18nStore } from '../../stores/i18n-store';
 import { ChipIcon } from '../ChipIcon';
 import { GameShell } from '../GameShell';
-import { HandActions } from '../HandActions';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
@@ -56,7 +55,7 @@ function SeatSpot({ seat, view, position, isMe, action, blinds }: {
   const classes = [styles.spot, styles[position], state === 'folded' && styles.folded, won > 0 && styles.winner];
   return <section className={classes.filter(Boolean).join(' ')} aria-label={seatName(seat)}>
     <header className={styles.spotHeader}>
-      <SeatMarkers seat={seat} blinds={blinds} />
+      <span className={styles.spotMarkers}><SeatMarkers seat={seat} blinds={blinds} /></span>
       {!isMe && <span className={styles.spotName}>{seatName(seat)}</span>}
       {state === 'folded' ? <span className={styles.tag}>{t('holdem.folded')}</span>
         : state === 'allIn' ? <span className={`${styles.tag} ${styles.allInTag}`}>{t('holdem.allIn')}</span>
@@ -65,7 +64,7 @@ function SeatSpot({ seat, view, position, isMe, action, blinds }: {
     {!isMe && (revealed.length > 0
       ? <HeCards cards={revealed} size="sm" overlap label={seatName(seat)} />
       : observed?.length ? <HeCards cards={observed} size="xs" overlap peek label={seatName(seat)} />
-        : <HeCards cards={[]} backs={2} size="xs" overlap />)}
+        : <span className={styles.spotBacks}><HeCards cards={[]} backs={2} size="xs" overlap /></span>)}
     {category && <span className={styles.category}>{t(`holdem.category.${category}`)}</span>}
     {won > 0 && <strong className={styles.won}><AppIcon name="trophy" /> {t('holdem.wonAmount', { n: String(won) })}</strong>}
     {bet > 0 && <BetStack amount={bet} title={t('holdem.betTitle', { n: String(bet) })} />}
@@ -301,7 +300,8 @@ function Controls({ game, options, enabled, onAction }: {
   const disabled = !enabled || !options;
   const callLabel = !options || options.check ? t('holdem.action.check')
     : t(options.callAllIn ? 'holdem.action.callAllIn' : 'holdem.action.call', { n: String(options.call) });
-  return <HandActions className={styles.controls} layout="wide">
+  // Phone landscape keeps these beside the hole cards rather than floating them over the table.
+  return <div className={styles.controls}>
     <div className={styles.mainButtons}>
       <button type="button" className={`btn btn-outline ${styles.ctrl} ${styles.foldButton}`} disabled={disabled}
         onClick={() => onAction({ type: 'fold' })}>{t('holdem.action.fold')}</button>
@@ -310,7 +310,7 @@ function Controls({ game, options, enabled, onAction }: {
     </div>
     {options?.raise && <RaiseInput key={`${options.raise.min}-${options.raise.max}`} game={game} control={options.raise}
       disabled={disabled} onRaise={(to) => onAction({ type: 'raise', to })} />}
-  </HandActions>;
+  </div>;
 }
 
 export function HoldemTable(): ReactNode {

@@ -235,12 +235,24 @@ Bot controls use a vertical ellipsis.
   area's width, increasing overlap when needed to keep every card within reach.
   Landscape hand cards render at full height and extend below the table viewport,
   whose bottom edge clips their lower half. Raising a card reveals more of it.
-  The own-seat plate and turn prompt float above the hand toward the left of the table,
-  leaving the lower row's full width beside the action bar available for cards.
-  Explicit hand actions (play/pass, arrange, cover, card-effect choices and betting
-  actions) sit at the lower right in phone landscape. Hand position and available
-  width stay unchanged, with longer action panels scrolling independently; other layouts retain
-  their controls below the hand.
+  In Bridge, Big Two, Napoleon and Red Points the own-seat plate and turn prompt float above the
+  hand toward the left of the table, leaving the lower row's full width beside the action bar
+  available for cards. Games with wide centres (Sevens, Chinese Poker, Liar's Deck, Ninety-Nine,
+  Blackjack, Hold'em) put the plate and prompt at the left of the hand row instead, keeping the
+  centre clear; their side and corner seats omit decorative card-back trays.
+  Explicit hand actions (play/pass, arrange, cover and card-effect choices) sit at the lower
+  right in phone landscape, with longer action panels scrolling independently; other layouts
+  retain their controls below the hand. Blackjack and Hold'em keep betting and play controls in
+  the hand row beside their cards.
+  Short landscape keeps centre text at about 11px or larger at 760×340 and above (the Android
+  app's minimum target), mostly by rearranging rather than scaling:
+  - Sevens shows each row's ends and next slots, two suits per line.
+  - Liar's Deck, Ninety-Nine and presentation frames place text beside their cards.
+  - Hold'em and Blackjack lay stakes and hands in flat rows around the board or dealer and omit
+    what the plates already show (names, blinds, folded backs, bet status). Settled Blackjack hands
+    show their result instead of their stake.
+  - Tables with more than four seats float their toolbar into the top corners and show each
+    plate's counts beside its name. Eight seats on phones below about 360px tall remain crowded.
   The landscape bidding panel is centered on the playing table and capped at 352px with tighter spacing; touch
   buttons retain their 44px height.
   Dialogs, including Bridge redeal confirmations, layer above player plates at every

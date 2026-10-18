@@ -68,6 +68,8 @@
   transition: opacity var(--transition-fast), border-color var(--transition-fast);
 }
 
+.spotBacks, .spotMarkers { display: contents; }
+
 .top { grid-area: top; }
 .centre.expandedCentre {
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -346,6 +348,71 @@
   .ctrl { min-width: 64px; padding: 4px 12px; }
   .controls { gap: 6px; }
   .slider { width: clamp(110px, 40vw, 200px); }
+}
+
+/* Short landscape: the felt keeps stakes in flat rows around a board with the pot beside it, and the
+   hole cards share one low row with the betting controls. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .centre {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas:
+      'left top right'
+      'left middle right'
+      'left bottom right';
+    gap: 2px var(--spacing-sm);
+  }
+  .centre.expandedCentre {
+    grid-template-columns: repeat(3, auto);
+    grid-template-areas:
+      'topLeft top topRight'
+      'left middle right'
+      'bottomLeft bottom bottomRight';
+  }
+  /* Plates show folds and blinds, so stakes drop the backs and markers along with the names. */
+  .spotName, .spotBacks, .spotMarkers { display: none; }
+  .top, .bottom, .topLeft, .topRight, .bottomLeft, .bottomRight { flex-direction: row; padding: 1px 6px; }
+  .middle {
+    display: grid;
+    grid-template-columns: auto auto;
+    align-items: center;
+    gap: 2px var(--spacing-sm);
+    padding: 4px 8px;
+  }
+  .handLine { grid-column: 1 / -1; }
+  .pots { align-items: flex-start; }
+  .potLines { flex-direction: column; align-items: flex-start; }
+
+  .handArea {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: 'cards controls' 'prompt controls';
+    align-items: center;
+    column-gap: var(--spacing-sm);
+  }
+  .myHand { grid-area: cards; flex-wrap: nowrap; padding: 4px 0 0; }
+  .handArea > .prompt { grid-area: prompt; padding: 2px 0 0; }
+  .controls {
+    grid-area: controls;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 4px;
+    padding: 4px 0;
+  }
+  .raise { display: contents; }
+  .quickRow { justify-content: flex-start; flex-wrap: nowrap; }
+  .sliderRow { grid-column: 1 / -1; flex-wrap: nowrap; justify-content: flex-start; }
+  .slider { flex: 1; width: auto; min-width: 80px; }
+  .ctrl { min-width: 64px; padding: 4px 10px; }
+  .quick { min-width: 0; padding: 2px 8px; }
+  .raise > .limits:last-child { display: none; }
+}
+
+/* The smallest phones and crowded tables trade board card size for unscaled text. */
+@media (max-height: 360px) and (min-width: 600px) {
+  .middle > [role='group'] { --card-w: calc(34px * var(--playing-card-scale)); }
+}
+@media (max-height: 500px) and (min-width: 600px) {
+  .expandedCentre .middle > [role='group'] { --card-w: calc(34px * var(--playing-card-scale)); }
 }
 
 @media (prefers-reduced-motion: reduce) {

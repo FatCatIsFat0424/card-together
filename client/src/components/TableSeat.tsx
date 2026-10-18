@@ -147,7 +147,7 @@ function TurnBar({ turn, bankMs, serverNow, receivedAt }: {
  * shrinks before the row could overflow, so narrow seats overlap more instead of clipping.
  */
 function CardTray({ count, render }: { count: number; render: (index: number) => ReactNode }): ReactNode {
-  return <div className={styles.tray} style={{ '--tray-cards': count } as CSSProperties} aria-hidden="true">
+  return <div className={styles.tray} style={{ '--tray-cards': count } as CSSProperties} aria-hidden="true" data-seat-tray>
     {Array.from({ length: count }, (_, index) => <span key={index} className={styles.cardSlot}>{render(index)}</span>)}
   </div>;
 }

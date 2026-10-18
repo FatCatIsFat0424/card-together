@@ -240,3 +240,19 @@
   .centre { --card-w: calc((clamp(40px, 12vw, 58px)) * var(--playing-card-scale)); gap: 6px; }
   .piles { gap: var(--spacing-md); }
 }
+
+/* Short landscape: the claim sits beside the piles, and the cards size from the height left between the
+   top seat and the hand (about 280px of the viewport), so the low centre keeps its text unscaled. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .centre {
+    --card-w: clamp(40px, calc((100dvh - 280px) * 0.7), calc(72px * var(--playing-card-scale)));
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-areas: 'piles claim' 'piles round';
+    align-items: end;
+    gap: 2px var(--spacing-md);
+  }
+  .piles { grid-area: piles; gap: var(--spacing-md); }
+  .claim { grid-area: claim; max-width: 14em; text-align: left; }
+  .round { grid-area: round; align-self: start; }
+}

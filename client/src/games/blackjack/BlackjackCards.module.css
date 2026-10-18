@@ -6,8 +6,9 @@
   align-items: flex-end;
 }
 
-.sm { --card-w: calc(34px * var(--playing-card-scale)); }
-.md { --card-w: calc(52px * var(--playing-card-scale)); }
+/* Containers may shrink small and medium cards through --sm-card-w and --md-card-w. */
+.sm { --card-w: var(--sm-card-w, calc(34px * var(--playing-card-scale))); }
+.md { --card-w: var(--md-card-w, calc(52px * var(--playing-card-scale))); }
 .lg { --card-w: min(calc(84px * var(--playing-card-scale)), 13cqh, calc((100cqw - 56px) / 6)); }
 
 .card {
@@ -58,7 +59,9 @@
 /* ─── Hand plate ─── */
 .hand {
   display: flex;
-  flex-direction: column;
+  /* Containers may lay hands out sideways through --hand-direction and stack their totals
+     through --hand-meta-direction. */
+  flex-direction: var(--hand-direction, column);
   align-items: center;
   gap: 4px;
   padding: 4px 6px;
@@ -82,6 +85,7 @@
 
 .meta {
   display: flex;
+  flex-direction: var(--hand-meta-direction, row);
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
@@ -133,4 +137,9 @@
   background: transparent;
   border: 2px dashed color-mix(in srgb, var(--table-ink) 40%, transparent);
   box-shadow: none;
+}
+
+/* Short landscape keeps settled hands low: the result badge already carries the amount. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .meta:has(.badge) > .bet { display: none; }
 }

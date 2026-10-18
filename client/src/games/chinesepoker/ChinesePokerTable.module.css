@@ -253,7 +253,7 @@ button.dropZone:disabled { cursor: default; }
 
 @media (max-height: 500px) and (min-width: 600px) {
   .controls { gap: 4px; padding-block: 2px; }
-  .ctrl { padding: 2px 8px; font-size: var(--text-xs); }
+  .ctrl { padding: 2px 4px; font-size: var(--text-xs); }
 }
 
 /* ─── Info rail ─── */

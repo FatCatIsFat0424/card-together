@@ -5,7 +5,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 export function HandActions({ children, className, layout = 'stack' }: {
   readonly children: ReactNode;
   readonly className?: string;
-  readonly layout?: 'stack' | 'bigtwo' | 'wide' | 'group';
+  readonly layout?: 'stack' | 'grid' | 'wide' | 'group';
 }): ReactNode {
   const landscape = useMediaQuery('(max-height: 500px) and (min-width: 600px)');
   return <>

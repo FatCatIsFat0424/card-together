@@ -13,7 +13,6 @@ import { socket } from '../../socket';
 import { useGameStore } from '../../stores/game-store';
 import { useI18nStore } from '../../stores/i18n-store';
 import { GameShell } from '../GameShell';
-import { HandActions } from '../HandActions';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
 import { RoundHistory } from '../RoundHistory';
@@ -352,7 +351,8 @@ export function BlackjackTable(): ReactNode {
       : watching && view.dealerSeat === game.mySeat ? <DealerHand cards={view.dealer}
         holeHidden={view.holeHidden} size="lg" peek={observedHole ?? undefined}
         label={t('blackjack.dealerOf', { name: seatName(game.mySeat) })} />
-      : dealing ? <HandActions className={styles.controls}>
+      // Phone landscape keeps controls beside the hand rather than floating them over the table.
+      : dealing ? <div className={styles.controls}>
         {settlement ? <strong className={`${styles.myNet} ${toneClass(settlement.net[game.mySeat]) ?? ''}`}>
           {signedChips(settlement.net[game.mySeat])}
         </strong> : <span className={`${styles.prompt} ${view.dealerTurn ? styles.promptActive : ''}`}>
@@ -363,7 +363,7 @@ export function BlackjackTable(): ReactNode {
           disabled={!dealerLegal.includes(action)} title={dealerHint(action)} onClick={() => sendDealerAction(action)}>
           {t(`blackjack.action.${action}`)}
         </button>)}
-      </HandActions>
+      </div>
       : <>
         {myHands.length > 0 ? <div className={styles.myHands} role="group" aria-label={t('blackjack.hand')}>
           {myHands.map((hand, handIndex) => <BjHand key={handIndex} hand={hand} size="lg" sortable={!watching}
@@ -376,7 +376,7 @@ export function BlackjackTable(): ReactNode {
         </div> : game.phase === 'playing' && view.hand > 0 && <p className={styles.prompt}>
           {t(bjSitsIn(view.chips[game.mySeat]) ? 'blackjack.notInHand' : 'blackjack.sittingOut')}
         </p>}
-        {game.phase === 'playing' && myHands.length > 0 && <HandActions className={styles.controls} layout="wide">
+        {game.phase === 'playing' && myHands.length > 0 && <div className={styles.controls}>
           {prompt && <span className={`${styles.prompt} ${isMyTurn ? styles.promptActive : ''}`}>{prompt}</span>}
           {!watching && BJ_ACTIONS.map((action) => <button key={action} type="button"
             className={`btn ${action === 'hit' ? 'btn-primary' : 'btn-outline'} ${styles.ctrl}`}
@@ -385,7 +385,7 @@ export function BlackjackTable(): ReactNode {
             onClick={() => sendAction(action)}>
             {t(`blackjack.action.${action}`)}
           </button>)}
-        </HandActions>}
+        </div>}
       </>}
   </div>;
 

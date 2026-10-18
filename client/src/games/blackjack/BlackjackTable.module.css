@@ -276,3 +276,70 @@
 @media (prefers-reduced-motion: reduce) {
   .chipButton { transition: none; }
 }
+
+/* Short landscape: the felt keeps hands in flat rows around the dealer, and the own hand or bet shares
+   one low row with its controls. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .centre {
+    grid-template-areas:
+      'notice top .'
+      'left dealer right'
+      '. bottom .';
+    gap: 2px var(--spacing-sm);
+  }
+  .centre.expandedCentre {
+    grid-template-columns: repeat(3, auto);
+    grid-template-areas:
+      'topLeft top topRight'
+      'left dealer right'
+      'bottomLeft bottom bottomRight'
+      'notice notice notice';
+  }
+  .centre { --hand-direction: row; --hand-meta-direction: column; }
+  /* Plates show names and bet status; settled hands show their result instead of the stake. */
+  .seatName, .net, .pill { display: none; }
+  /* Without side seats (six players), the lower corner hands rise beside the dealer. */
+  .centre.expandedCentre:not(:has(> .left, > .right)) {
+    grid-template-areas:
+      'topLeft top topRight'
+      'bottomLeft dealer bottomRight'
+      '. bottom .'
+      'notice notice notice';
+  }
+  .top, .bottom, .topLeft, .topRight, .bottomLeft, .bottomRight { flex-direction: row; gap: 4px; }
+  .dealerArea { padding: 2px 8px; }
+  .notice { font-size: var(--text-xs); }
+  .centre:not(.expandedCentre) .notice { align-self: start; max-width: 8em; }
+
+  .handArea { flex-direction: row; justify-content: flex-start; align-items: center; gap: var(--spacing-sm); }
+  .myHands { flex-wrap: nowrap; padding: 4px 0 0; }
+  .handArea > .prompt { padding: 4px 0; text-align: left; }
+  .controls { justify-content: flex-start; min-height: 0; padding: 4px 0; }
+  .ctrl { min-width: 64px; padding: 4px 12px; }
+  .betting {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: 'chips limits' 'controls controls';
+    align-items: center;
+    gap: 4px var(--spacing-sm);
+    padding-top: 4px;
+  }
+  .chipRow { grid-area: chips; padding: 0; }
+  .chipButton { width: 44px; height: 44px; font-size: var(--text-sm); }
+  .betting > .controls { grid-area: controls; padding: 0; }
+  .limits { grid-area: limits; padding: 0; }
+}
+
+/* Crowded tables and the smallest phones trade card size for unscaled text. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .centre.expandedCentre {
+    --sm-card-w: calc(26px * var(--playing-card-scale));
+    --md-card-w: calc(40px * var(--playing-card-scale));
+  }
+}
+@media (max-height: 360px) and (min-width: 600px) {
+  .centre {
+    --sm-card-w: calc(26px * var(--playing-card-scale));
+    --md-card-w: calc(34px * var(--playing-card-scale));
+  }
+}

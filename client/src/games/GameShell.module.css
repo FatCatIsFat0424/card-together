@@ -515,9 +515,28 @@
   .handHeader { bottom: calc(100% + 28px); }
   .handStatus { bottom: calc(100% + 4px); }
   .handZone > :last-child { container-type: inline-size; }
+  /* Wide centres have no room for the floating plate, so it leads the hand row instead. */
+  .handZone.platedHand {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    column-gap: 8px;
+    align-content: center;
+    align-items: start;
+  }
+  .platedHand > .handHeader, .platedHand > .handStatus { position: static; width: auto; grid-column: 1; }
+  .platedHand > .handStatus { justify-content: flex-start; }
+  .platedHand > :last-child { grid-column: 2; grid-row: 1 / span 2; }
   /* Keep explicit hand actions above the viewport edge, beside the cards. */
   .handZone:has([data-hand-actions] button) { --hand-actions-width: 120px; }
   .handZone:has([data-hand-actions='wide'] button) { --hand-actions-width: 208px; }
+  /* A plated hand row is narrower: its cards fit left of the floating actions instead of keeping a row below. */
+  .platedHand:has([data-hand-actions]:not([data-hand-actions='group']) button) > :last-child {
+    padding-right: calc(var(--hand-actions-width) + 4px);
+  }
+  .platedHand [data-hand-actions-placeholder]:not([data-hand-actions-placeholder='group']) { display: none; }
+  /* Plates already count side hands; their decorative trays would meet the plate and actions. */
+  .platedTable > :not([data-table-seat='top']) [data-seat-tray] { display: none; }
   .handZone [data-hand-actions]:has(button) {
     position: absolute;
     right: 4px;
@@ -543,8 +562,8 @@
   }
   .handZone [data-hand-actions] > div { flex-wrap: wrap; justify-content: center; max-width: 100%; }
   .handZone [data-hand-actions] input { max-width: 100%; }
-  .handZone [data-hand-actions='bigtwo']:has(button) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .handZone [data-hand-actions='bigtwo'] > :last-child { grid-column: 1 / -1; }
+  .handZone [data-hand-actions='grid']:has(button) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .handZone [data-hand-actions='grid'] > :last-child { grid-column: 1 / -1; }
 }
 
 /* Wide enough for 44px touch targets on phones; it never passes through FittedCentre scaling. */
@@ -645,4 +664,31 @@
     grid-template-areas: 'tools tools' 'topLeft topRight' 'left right' 'bottomLeft bottomRight' 'top top' 'centre centre';
     gap: 4px;
   }
+}
+
+/* Short landscape: the toolbar floats in the top corners, so corner seats start one button row lower
+   while the opposite seat and a rising centre use the top edge. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .table.expandedTable {
+    grid-template-rows: minmax(46px, auto) auto minmax(0, 1fr) auto;
+    grid-template-areas: '. top top .' 'topLeft centre centre topRight' 'left centre centre right' 'bottomLeft centre centre bottomRight';
+  }
+  .table.expandedTable.cornersSpan {
+    grid-template-areas: '. top top .' 'topLeft centre centre topRight' 'topLeft centre centre topRight' 'bottomLeft centre centre bottomRight';
+  }
+  .table.expandedTable.centreUp {
+    grid-template-areas: '. centre centre .' 'topLeft centre centre topRight' 'left centre centre right' 'bottomLeft centre centre bottomRight';
+  }
+  .table.expandedTable.cornersSpan.centreUp {
+    grid-template-areas: '. centre centre .' 'topLeft centre centre topRight' 'topLeft centre centre topRight' 'bottomLeft centre centre bottomRight';
+  }
+  .table.expandedTable > .tableTools {
+    position: absolute;
+    inset: 2px 2px auto;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .expandedTable .tableExitTools { flex-direction: row; }
+  /* Three plates share each side column, so each keeps its counts beside the name on one line. */
+  .expandedTable [data-seat-plate] { flex-flow: row wrap; align-items: center; column-gap: 6px; }
 }

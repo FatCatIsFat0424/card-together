@@ -271,3 +271,27 @@
   .controls { gap: 4px; padding-top: 4px; }
   .ctrl { min-height: 40px; padding: 4px 10px; }
 }
+
+/* Short landscape: four rows of thirteen cannot stay readable in the low centre, so each row shows its
+   ends and next slots as on phones, and the rows pair up in two columns. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .centre {
+    --chip-w: calc(clamp(28px, calc((100dvh - 280px) / 2.7), 36px) * var(--playing-card-scale));
+    --slot-gap: 2px;
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    gap: 6px var(--spacing-md);
+    padding: 4px;
+  }
+  .slots { display: flex; align-items: center; }
+  .inner, .empty { display: none; }
+  .ellipsis {
+    display: block;
+    width: calc(var(--chip-w) * 0.6);
+    text-align: center;
+    font-weight: 800;
+    color: var(--table-ink);
+  }
+  .row { gap: 4px; }
+  .rowSuit { width: auto; min-width: calc(var(--chip-w) * 0.9); }
+}
