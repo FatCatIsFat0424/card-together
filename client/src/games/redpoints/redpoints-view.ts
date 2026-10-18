@@ -1,5 +1,6 @@
 import type { Card } from '@shared/types';
 import { rpPairOptions } from '@shared/rules/redpoints';
+import type { HistoryRound } from '../round-history';
 
 export type RedPointsCardAction = { type: 'choose' } | { type: 'play'; capture: Card | null };
 
@@ -44,4 +45,9 @@ export function redPointsTablePage(
   const pageCount = Math.max(1, Math.ceil(table.length / size));
   const page = Math.min(pageCount - 1, Math.max(0, Math.floor(requestedPage)));
   return { cards: table.slice(page * size, (page + 1) * size), page, pageCount };
+}
+
+/** Points the round's player captured with the play and the stock flip together. */
+export function redPointsRoundPoints(round: HistoryRound): number {
+  return round.actions.reduce((sum, action) => sum + (action.points ?? 0), 0);
 }

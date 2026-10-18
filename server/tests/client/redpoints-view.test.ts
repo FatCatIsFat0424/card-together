@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Card } from '@shared/types';
-import { redPointsCardAction, redPointsTableLayout, redPointsTablePage } from '../../../client/src/games/redpoints/redpoints-view';
+import { redPointsCardAction, redPointsRoundPoints, redPointsTableLayout, redPointsTablePage } from '../../../client/src/games/redpoints/redpoints-view';
+import { deriveRoundHistory } from '../../../client/src/games/round-history';
 
 const c = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit });
 
@@ -110,5 +111,18 @@ describe('redPointsTablePage', () => {
     expect(redPointsTablePage(table.slice(0, 5), 6, 4))
       .toEqual({ cards: table.slice(4, 5), page: 1, pageCount: 2 });
     expect(redPointsTablePage([], 6, 4)).toEqual({ cards: [], page: 0, pageCount: 1 });
+  });
+});
+
+describe('redPointsRoundPoints', () => {
+  it('adds what the play and the stock flip captured in one turn', () => {
+    const [turn, next] = deriveRoundHistory({ gameType: 'redpoints', phase: 'playing', pendingFlip: null, currentTurnSeat: 'E',
+      log: [
+        { type: 'play', seat: 'N', card: c(4, 'hearts'), captured: c(6, 'diamonds'), timestamp: 0 },
+        { type: 'flip', seat: 'N', card: c(14, 'hearts'), captured: c(9, 'clubs'), timestamp: 0 },
+        { type: 'play', seat: 'E', card: c(3, 'clubs'), captured: null, timestamp: 0 },
+      ] });
+    expect(redPointsRoundPoints(turn)).toBe(30);
+    expect(redPointsRoundPoints(next)).toBe(0);
   });
 });

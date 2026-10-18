@@ -10,6 +10,7 @@ import type {
   BlackjackVisibleState, Card, GameSeat,
 } from '@shared/types';
 import { isOwnTurn } from '../observer-view';
+import type { HistoryRound } from '../round-history';
 
 export const BJ_SEATS: readonly GameSeat[] = GAME_SEAT_ORDER;
 /** Quick-pick chip values in the betting controls */
@@ -212,4 +213,24 @@ export function rankBlackjack(result: BlackjackMatchResult): BlackjackRanking[] 
     net: result.chips[seat] - BJ_STARTING_CHIPS,
     winner: result.winners.includes(seat),
   }));
+}
+
+export interface BlackjackRoundSummary {
+  /** The dealer's latest total once the hole card is revealed; null before that */
+  readonly dealerTotal: number | null;
+  /** The viewer's settled net, or null when they did not play the hand or it is unsettled */
+  readonly myNet: number | null;
+}
+
+export function summarizeBlackjackRound(round: HistoryRound, mySeat: GameSeat | null): BlackjackRoundSummary {
+  let dealerTotal: number | null = null;
+  let myNet: number | null = null;
+  for (const action of round.actions) {
+    if (action.kind === 'dealerReveal' || action.kind === 'dealerHit' || action.kind === 'dealerStand') {
+      dealerTotal = action.handTotal ?? dealerTotal;
+    } else if (action.kind === 'settle' && action.seat === mySeat && action.net !== undefined) {
+      myNet = (myNet ?? 0) + action.net;
+    }
+  }
+  return { dealerTotal, myNet };
 }

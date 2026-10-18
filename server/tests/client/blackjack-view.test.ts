@@ -5,7 +5,7 @@ import { bjReplay } from '@shared/rules/blackjack';
 import type { BlackjackLogEntry, BlackjackVisibleState, Card, Seat } from '@shared/types';
 import {
   autoBetSeats, betChips, blackjackActions, blackjackDealerActions, blackjackHandNumber, blackjackNeedsBet, blackjackSeatOut, blackjackView,
-  clampBet, handNet, rankBlackjack, recentBlackjackMoves, replayBlackjack, signedChips, stepBet,
+  clampBet, handNet, rankBlackjack, recentBlackjackMoves, replayBlackjack, signedChips, stepBet, summarizeBlackjackRound,
 } from '../../../client/src/games/blackjack/blackjack-view';
 import { deriveRoundHistory } from '../../../client/src/games/round-history';
 
@@ -223,6 +223,14 @@ describe('Blackjack table view', () => {
     expect(first.actions.filter((action) => action.kind === 'settle').map((action) => action.net)).toEqual([50, 30, 10, 0]);
     expect(deriveRoundHistory(structuredClone({ gameType: 'blackjack' as const, phase: 'playing' as const, seats: ALL, log })))
       .toEqual(rounds);
+  });
+
+  it('should summarize the dealer total and the viewer net for history headers', () => {
+    const [first, second] = deriveRoundHistory({ gameType: 'blackjack', phase: 'playing', seats: ALL, log });
+    expect(summarizeBlackjackRound(first, 'N')).toEqual({ dealerTotal: 20, myNet: 50 });
+    expect(summarizeBlackjackRound(first, 'W')).toEqual({ dealerTotal: 20, myNet: 0 });
+    expect(summarizeBlackjackRound(first, null)).toEqual({ dealerTotal: 20, myNet: null });
+    expect(summarizeBlackjackRound(second, 'N')).toEqual({ dealerTotal: null, myNet: null });
   });
 
 });

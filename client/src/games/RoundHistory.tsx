@@ -1,62 +1,32 @@
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import { frameLogIndex } from '@shared/game-presentation';
-import type { Card, PlayerVisibleGameState } from '@shared/types';
+import type { GameSeat, PlayerVisibleGameState } from '@shared/types';
 import { useI18nStore } from '../stores/i18n-store';
 import { BigTwoRounds } from './bigtwo/BigTwoHistory';
-import { signedChips } from './blackjack/blackjack-view';
-import { ChipIcon } from './ChipIcon';
+import { BlackjackRounds } from './blackjack/BlackjackHistory';
+import { HoldemRounds } from './holdem/HoldemHistory';
+import { LiarsDeckRounds } from './liarsdeck/LiarsDeckHistory';
+import { NinetyNineRounds } from './ninetynine/NinetyNineHistory';
 import { isSpectator } from './observer-view';
+import { RedPointsRounds } from './redpoints/RedPointsHistory';
 import { deriveRoundHistory } from './round-history';
 import type { HistoryRound } from './round-history';
 import styles from './RoundHistory.module.css';
-import { useSeatName } from './seat-names';
+import { SevensRounds } from './sevens/SevensHistory';
 import { useGamePresentation } from './use-game-presentation';
 
-function cardLabel(card: Card): string {
-  return `${SUIT_SYMBOLS[card.suit]}${RANK_DISPLAY[card.rank]}`;
-}
+type RoundsView = (props: { rounds: readonly HistoryRound[]; mySeat: GameSeat | null }) => ReactNode;
 
-function Round({ round }: { round: HistoryRound }): ReactNode {
-  const [open, setOpen] = useState(false);
-  const { t } = useI18nStore();
-  const name = useSeatName();
-  return <details className={styles.round} onToggle={(event) => setOpen(event.currentTarget.open)}>
-    <summary>{t('history.round', { n: String(round.number),
-      status: t(round.complete ? 'history.complete' : 'history.ongoing') })}
-    {round.tableFace && <> · {t('liarsdeck.tableCard')} {t(`liarsdeck.face.${round.tableFace}`)}</>}</summary>
-    {open && <ol className={styles.actions}>{round.actions.map((action, index) => <li key={index}>
-      <strong>{action.seat ? name(action.seat)
-        : action.street ? t(`holdem.street.${action.street}`) : t('blackjack.dealer')}</strong>
-      {action.dealer && <span> ({t('blackjack.dealerTag')})</span>}
-      {action.kind !== 'street' && <> {t(`history.${action.kind}`)}</>}
-      {action.handIndex !== undefined && <span> ({t('blackjack.handIndex', { n: String(action.handIndex + 1) })})</span>}
-      {action.cards.length > 0 && <span className={styles.cards}> {action.cards.map(cardLabel).join(' ')}</span>}
-      {action.captured !== undefined && <span> · {action.captured
-        ? t('history.captured', { card: cardLabel(action.captured) }) : t('history.stay')}</span>}
-      {action.points !== undefined && <span> · {t('history.points', { n: String(action.points) })}</span>}
-      {action.total !== undefined && <span> · {action.previousTotal} → {action.total}</span>}
-      {action.choice && <span> ({action.choice === 'plus' ? '+' : '−'}{action.cards[0]?.rank === 12 ? 20 : 10})</span>}
-      {action.count !== undefined && <span> · {t('liarsdeck.logPlay', { n: String(action.count) })}</span>}
-      {action.faces && <span> · {t('liarsdeck.logCall', { name: action.target ? name(action.target) : action.seat ? name(action.seat) : '' })}:
-        {' '}{action.faces.map((face) => t(`liarsdeck.face.${face}`)).join(' ')}
-        {' '}({t(action.lied ? 'liarsdeck.logLied' : 'liarsdeck.logHonest')})</span>}
-      {action.shot !== undefined && <span> · {t(action.survived ? 'liarsdeck.logSurvived' : 'liarsdeck.logKilled',
-        { n: String(action.shot) })}</span>}
-      {action.target && !action.faces && <span> · {t('history.target', { name: name(action.target) })}</span>}
-      {action.handTotal !== undefined && <span> · {t('blackjack.totalShort', { n: String(action.handTotal) })}</span>}
-      {action.bet !== undefined && <span> · {t('blackjack.bet', { n: String(action.bet) })}
-        {action.auto && ` (${t('blackjack.auto')})`}</span>}
-      {action.outcomes && <span> · {action.outcomes.map((outcome) => t(`blackjack.outcome.${outcome}`)).join(' / ')}</span>}
-      {action.net !== undefined && <strong> {signedChips(action.net)}</strong>}
-      {action.blinds && <span> · {t('holdem.blinds', { sb: String(action.blinds.small), bb: String(action.blinds.big) })}</span>}
-      {action.amount !== undefined && <span> <ChipIcon />{action.amount}</span>}
-      {action.category && <span> · {t(`holdem.category.${action.category}`)}</span>}
-      {action.pending && <span> · {t('history.pending')}</span>}
-    </li>)}</ol>}
-  </details>;
-}
+const ROUND_VIEWS: Partial<Record<PlayerVisibleGameState['gameType'], RoundsView>> = {
+  bigtwo: BigTwoRounds,
+  redpoints: RedPointsRounds,
+  ninetynine: NinetyNineRounds,
+  sevens: SevensRounds,
+  liarsdeck: LiarsDeckRounds,
+  blackjack: BlackjackRounds,
+  holdem: HoldemRounds,
+};
 
 export function RoundHistory({ game }: { game: PlayerVisibleGameState }): ReactNode {
   const [open, setOpen] = useState(false);
@@ -69,16 +39,16 @@ export function RoundHistory({ game }: { game: PlayerVisibleGameState }): ReactN
   const rounds = useMemo(() => deriveRoundHistory(game.gameType === 'blackjack'
     ? { ...game, log: game.log.slice(0, end) }
     : game.gameType === 'holdem' ? { ...game, log: game.log.slice(0, end) } : game), [game, end]);
-  if (game.gameType === 'bridge' || game.gameType === 'chinesepoker' || game.gameType === 'napoleon') return null;
+  // Bridge and Napoleon list tricks in their own panels; Chinese Poker shows its showdown in the result.
+  const Rounds = ROUND_VIEWS[game.gameType];
+  if (!Rounds) return null;
   return <details className={styles.history} onToggle={(event) => {
     if (event.target === event.currentTarget) setOpen(event.currentTarget.open);
   }}>
     <summary>{t('history.title')} ({rounds.length})</summary>
     {open && <div className={styles.scroll}>
       {rounds.length === 0 ? <p>{t('history.empty')}</p>
-        : game.gameType === 'bigtwo'
-          ? <BigTwoRounds rounds={rounds} mySeat={isSpectator(game) ? null : game.mySeat} />
-          : rounds.map((round) => <Round key={round.number} round={round} />)}
+        : <Rounds rounds={rounds} mySeat={isSpectator(game) ? null : game.mySeat} />}
     </div>}
   </details>;
 }

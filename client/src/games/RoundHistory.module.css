@@ -23,19 +23,3 @@
   overflow: auto;
   overscroll-behavior: contain;
 }
-
-.round {
-  padding-block: var(--spacing-xs);
-}
-
-.actions {
-  margin: var(--spacing-xs) 0;
-  padding-inline-start: var(--spacing-lg);
-  display: grid;
-  gap: var(--spacing-sm);
-  overflow-wrap: anywhere;
-}
-
-.cards {
-  font-family: var(--font-mono);
-}

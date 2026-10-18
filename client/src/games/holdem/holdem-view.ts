@@ -7,6 +7,7 @@ import type {
   Card, ChinesePokerCategory, HoldemLogEntry, HoldemMatchResult, HoldemPot, HoldemVisibleState, GameSeat,
 } from '@shared/types';
 import { isOwnTurn } from '../observer-view';
+import type { HistoryRound } from '../round-history';
 
 export const HE_SEATS: readonly GameSeat[] = GAME_SEAT_ORDER;
 /** Board slots, including streets not dealt yet */
@@ -284,4 +285,12 @@ export function rankHoldem(result: HoldemMatchResult): HoldemRanking[] {
 
 export function signedChips(value: number): string {
   return value > 0 ? `+${value}` : value < 0 ? `−${Math.abs(value)}` : '±0';
+}
+
+export interface HoldemRoundWinner { readonly seat: GameSeat; readonly amount: number }
+
+/** Seats paid from the hand's pots, in award order; empty until the hand is settled. */
+export function holdemRoundWinners(round: HistoryRound): HoldemRoundWinner[] {
+  return round.actions.flatMap((action) => action.kind === 'award' && action.seat
+    ? [{ seat: action.seat, amount: action.amount ?? 0 }] : []);
 }

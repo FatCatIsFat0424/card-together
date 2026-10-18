@@ -4,7 +4,7 @@ import { getPresentationFrames } from '@shared/game-presentation';
 import { heAward, heEliminations, heReplay } from '@shared/rules/holdem';
 import type { Card, HoldemLogEntry, HoldemMatchResult, HoldemVisibleState, Seat } from '@shared/types';
 import {
-  chipsAdded, clampRaise, holdemBlindSeats, holdemCategory, holdemControls, holdemView, nextHeldHoleCards, potLines,
+  chipsAdded, clampRaise, holdemBlindSeats, holdemCategory, holdemControls, holdemRoundWinners, holdemView, nextHeldHoleCards, potLines,
   potTotal, quickRaise, raiseKind, rankHoldem, recentHoldemMoves, replayHoldem, seatState, shownHoleCards,
   signedChips, streetActions,
 } from '../../../client/src/games/holdem/holdem-view';
@@ -275,6 +275,8 @@ describe("Texas Hold'em table view", () => {
     expect(first.actions.at(-1)).toEqual({ kind: 'award', seat: 'N', cards: [], amount: 790 });
     expect(second).toMatchObject({ number: 2, complete: false });
     expect(second.actions.map((action) => action.kind)).toEqual(['button', 'blind', 'blind']);
+    expect(holdemRoundWinners(first)).toEqual([{ seat: 'N', amount: 790 }]);
+    expect(holdemRoundWinners(second)).toEqual([]);
   });
 
   it('should list eliminations after the winnings in history', () => {

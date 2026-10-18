@@ -333,6 +333,9 @@ remain visible.
   name is the tooltip and accessible label) so six players fit the info rail.
   Auction tables (Bridge too) write a pass as "P", with "Pass" as its tooltip. The trick history
   heads its columns with seat numbers too, keeping player names as their tooltips.
+- Round history (every game without a trick table or Chinese Poker) lists rounds newest first,
+  keeps the latest open until the viewer toggles it, and puts each round's outcome at the end of
+  its header. Rows align player, cards, and end marks; Ninety-Nine lists one numbered row per play.
 - Actions require a ready connection; local sorting still works while reconnecting.
 
 Per-game controls: [games](games.md#card-controls).
