@@ -489,7 +489,7 @@ export function overdueChinesePokerSeats(roomCode: RoomCode, gameId: string, now
   return chinesepoker.pendingSeats(game);
 }
 
-/** Initializes legacy snapshots without changing an already sampled deadline. */
+/** Initializes legacy turns and removes random waits from restored bot passes. */
 export function preparePendingAutoPasses(): void {
   for (const game of bigtwo.exportGames()) {
     bigtwo.prepareAutoPass(game.roomCode, getPresentationEndsAt(game), autoPassMaxDelay(game));

@@ -233,11 +233,13 @@ balance, and passed hand; it never treats them as hand disclosure.
 
 **Forced passes**
 
-- With no legal reply, including bombs, the seat passes automatically after the
-  presentation plus a random 0–5,000 ms, capped below the turn allowance so it never
-  looks like a timeout. The player can still pass manually; free leads never auto-pass.
-- Nothing changes before the commit. Each pending pass saves its deadline, so restarts
-  keep the same delay and overdue passes resolve without a browser.
+- With no legal reply, including bombs, bots pass as soon as the presentation ends.
+  Human seats wait a random 0–5,000 ms after the presentation, capped below the turn
+  allowance so it never looks like a timeout. They can still pass manually; free leads
+  never auto-pass.
+- Nothing changes before the commit. Each pending pass saves its deadline. Restarts
+  preserve human delays, remove any old random bot delay, and resolve overdue passes
+  without a browser.
 
 **Settlement**
 

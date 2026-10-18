@@ -5,6 +5,7 @@ import * as manager from '../../src/managers/game-manager';
 import { createRuntimeCoordinator } from '../../src/runtime/coordinator';
 import { startTurnTimers } from '../../src/runtime/turn-timers';
 import { startBigTwoAutoPass } from '../../src/runtime/bigtwo-auto-pass';
+import { startBotTurns } from '../../src/runtime/bot-turns';
 import { isRuntimeSnapshot } from '../../src/runtime/validate';
 import type { RuntimeSnapshot } from '../../src/runtime/types';
 import type { BigTwoGameState, Card, PlayerInfo, Seat } from '@shared/types';
@@ -64,7 +65,8 @@ function singleHands(): Record<Seat, Card[]> {
 function snapshot(): RuntimeSnapshot {
   const state = structuredClone(game());
   return {
-    players: SEATS.map((seat) => ({ info: state.players[seat], currentRoomCode: CODE, disconnectedAt: null })),
+    players: SEATS.filter((seat) => !state.players[seat].isBot)
+      .map((seat) => ({ info: state.players[seat], currentRoomCode: CODE, disconnectedAt: null })),
     rooms: [{ info: { code: CODE, gameType: 'bigtwo', status: 'playing', createdAt: 1,
       hostId: state.players.N.id, abortVote: null, abortVoteCooldownUntil: null,
       seats: { N: { player: state.players.N, isReady: true }, E: { player: state.players.E, isReady: true },
@@ -86,8 +88,13 @@ describe('Big Two delayed automatic passing', () => {
   beforeEach(() => { vi.mocked(crypto.randomInt).mockReset().mockReturnValue(1500); vi.useFakeTimers(); vi.setSystemTime(10000); manager.restoreGames([]); });
   afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); manager.restoreGames([]); });
 
-  it('lets forced passes own their turns without spending the thinking bank or duplicating actions', async () => {
+  it.each([undefined, 'easy', 'hard'] as const)(
+    'lets forced passes own %s turns without spending the thinking bank or duplicating actions', async (difficulty) => {
     restoreHands(singleHands());
+    if (difficulty) {
+      game().players.W = { ...game().players.W, id: 'bot:00000000-0000-4000-8000-000000000001',
+        isBot: true, botDifficulty: difficulty };
+    }
     let saved = snapshot();
     const runtime = await createRuntimeCoordinator({
       loadRuntime: async () => structuredClone(saved),
@@ -100,13 +107,18 @@ describe('Big Two delayed automatic passing', () => {
     const forced = vi.fn();
     const stopTimers = await startTurnTimers(runtime, timed);
     const stopPasses = await startBigTwoAutoPass(runtime, forced);
+    const stopBots = startBotTurns(runtime, vi.fn());
     try {
       await runtime.mutate(() => expect(manager.handleBigTwoPlay(CODE, 'N', [card('spades', 2)]).success).toBe(true));
       const turn = game().clock!.turn!;
       expect(turn.seat).toBe('W');
       const deadline = game().pendingAutoPass!.executeAt;
+      expect(deadline).toBe(turn.startsAt + (difficulty ? 0 : 1500));
+      expect(crypto.randomInt).toHaveBeenCalledTimes(difficulty ? 0 : 1);
       expect(deadline).toBeLessThanOrEqual(turn.startsAt + turn.baseRemainingMs);
-      await vi.advanceTimersByTimeAsync(deadline - Date.now());
+      await vi.advanceTimersByTimeAsync(deadline - Date.now() - 1);
+      expect(forced).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
       await runtime.idle();
       expect(forced).toHaveBeenCalledTimes(1);
       expect(timed).not.toHaveBeenCalled();
@@ -115,6 +127,43 @@ describe('Big Two delayed automatic passing', () => {
     } finally {
       stopTimers();
       stopPasses();
+      stopBots();
+    }
+  });
+
+  it.each([0, 2000, 7000])('removes a restored bot random wait after %i ms without delaying overdue passes', async (elapsed) => {
+    vi.mocked(crypto.randomInt).mockReturnValue(5000);
+    restoreHands(singleHands());
+    manager.handleBigTwoPlay(CODE, 'N', [card('spades', 2)]);
+    game().players.W = { ...game().players.W, id: 'bot:00000000-0000-4000-8000-000000000001', isBot: true };
+    const previous = game().pendingAutoPass!;
+    vi.setSystemTime(Date.now() + elapsed);
+    const executeAt = Math.min(previous.executeAt, Math.max(Date.now(), getPresentationEndsAt(game())));
+    let saved = snapshot();
+    expect(isRuntimeSnapshot(saved)).toBe(true);
+    const repository = {
+      loadRuntime: async (): Promise<RuntimeSnapshot> => structuredClone(saved),
+      saveRuntime: vi.fn(async (state: RuntimeSnapshot): Promise<void> => {
+        expect(isRuntimeSnapshot(state)).toBe(true);
+        saved = structuredClone(state);
+      }),
+    };
+    const runtime = await createRuntimeCoordinator(repository);
+    vi.mocked(crypto.randomInt).mockClear();
+    const publish = vi.fn(() => {
+      expect((saved.games[0] as BigTwoGameState).lockedSeats).toEqual(['W']);
+    });
+    const stop = await startBigTwoAutoPass(runtime, publish);
+    try {
+      expect(game().pendingAutoPass).toEqual({ ...previous, executeAt });
+      expect((saved.games[0] as BigTwoGameState).pendingAutoPass).toEqual({ ...previous, executeAt });
+      expect(crypto.randomInt).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(Math.max(0, executeAt - Date.now()));
+      await runtime.idle();
+      expect(publish).toHaveBeenCalledTimes(1);
+      expect(game().log.filter((entry) => entry.type === 'pass' && entry.seat === 'W')).toHaveLength(1);
+    } finally {
+      stop();
     }
   });
 

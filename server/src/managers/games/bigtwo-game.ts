@@ -103,13 +103,23 @@ export function needsAutoPass(game: BigTwoGameState): boolean {
 
 export const AUTO_PASS_MAX_DELAY_MS = 5000;
 
-/** Sample once per eligible turn, after the preceding public presentation finishes. */
+/** Only human seats wait a random interval after the preceding presentation. */
 export function prepareAutoPass(roomCode: RoomCode, earliestAt: number, maxDelayMs = AUTO_PASS_MAX_DELAY_MS): void {
   const game = games.get(roomCode);
-  if (!game || game.pendingAutoPass || !needsAutoPass(game)) return;
+  if (!game) return;
+  const isBot = game.players[game.currentTurnSeat].isBot === true;
+  const startsAt = Math.max(Date.now(), earliestAt);
+  if (game.pendingAutoPass) {
+    // Restored bot turns may still carry a previously sampled human delay.
+    if (isBot && game.pendingAutoPass.executeAt > startsAt) {
+      game.pendingAutoPass = { ...game.pendingAutoPass, executeAt: startsAt };
+    }
+    return;
+  }
+  if (!needsAutoPass(game)) return;
   const limit = Math.max(0, Math.min(AUTO_PASS_MAX_DELAY_MS, Math.floor(maxDelayMs)));
   game.pendingAutoPass = { id: randomUUID(), seat: game.currentTurnSeat,
-    executeAt: Math.max(Date.now(), earliestAt) + randomInt(limit + 1) };
+    executeAt: startsAt + (isBot ? 0 : randomInt(limit + 1)) };
 }
 
 export function play(roomCode: RoomCode, seat: Seat, cards: readonly Card[]): Result {
