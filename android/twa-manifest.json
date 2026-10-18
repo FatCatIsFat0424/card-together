@@ -1,0 +1,47 @@
+{
+  "packageId": "org.csie.acserver.cardtogether",
+  "host": "acserver.csie.org",
+  "name": "Card Together",
+  "launcherName": "Card Together",
+  "display": "standalone",
+  "themeColor": "#0A0E17",
+  "themeColorDark": "#0A0E17",
+  "navigationColor": "#0A0E17",
+  "navigationColorDark": "#0A0E17",
+  "navigationDividerColor": "#0A0E17",
+  "navigationDividerColorDark": "#0A0E17",
+  "backgroundColor": "#0A0E17",
+  "enableNotifications": false,
+  "startUrl": "/card-together/",
+  "iconUrl": "https://acserver.csie.org/card-together/app-icons/icon-512.png",
+  "maskableIconUrl": "https://acserver.csie.org/card-together/app-icons/maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "release.keystore",
+    "alias": "card-together"
+  },
+  "appVersionCode": 1,
+  "appVersion": "1.0.0",
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://acserver.csie.org/card-together/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://acserver.csie.org/card-together/",
+  "minSdkVersion": 24,
+  "orientation": "default",
+  "fingerprints": [
+    {
+      "name": "release",
+      "value": "AA:90:FA:8A:A0:27:B1:E1:72:70:B6:56:32:8A:C7:89:83:7E:77:8C:A3:7E:CE:82:5C:50:77:3A:43:13:21:37"
+    }
+  ],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": []
+}

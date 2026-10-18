@@ -50,6 +50,10 @@ type TranslationKeys = Record<
   'lobby.joinRoom': string;
   'lobby.roomCodePlaceholder': string;
   'lobby.join': string;
+  'lobby.androidAppTitle': string;
+  'lobby.androidAppDescription': string;
+  'lobby.androidAppDownload': string;
+  'lobby.androidAppDismiss': string;
   // Room
   'room.title': string;
   'room.code': string;
@@ -137,6 +141,10 @@ const translations: Record<Locale, TranslationKeys> = {
     'lobby.joinRoom': '加入房間',
     'lobby.roomCodePlaceholder': '輸入房間代碼',
     'lobby.join': '加入',
+    'lobby.androidAppTitle': 'Android App',
+    'lobby.androidAppDescription': '安裝後可從主畫面全螢幕開啟。安裝時若出現「未知來源」提示，請允許後繼續。',
+    'lobby.androidAppDownload': '下載 APK',
+    'lobby.androidAppDismiss': '不再顯示 Android App 提示',
     'room.title': '房間',
     'room.code': '房間代碼',
     'room.copyCode': '複製',
@@ -214,6 +222,10 @@ const translations: Record<Locale, TranslationKeys> = {
     'lobby.joinRoom': 'Join Room',
     'lobby.roomCodePlaceholder': 'Enter room code',
     'lobby.join': 'Join',
+    'lobby.androidAppTitle': 'Android app',
+    'lobby.androidAppDescription': 'Open the game full screen from your home screen. If Android warns about unknown apps, allow it to continue.',
+    'lobby.androidAppDownload': 'Download APK',
+    'lobby.androidAppDismiss': 'Hide the Android app notice',
     'room.title': 'Room',
     'room.code': 'Room Code',
     'room.copyCode': 'Copy',

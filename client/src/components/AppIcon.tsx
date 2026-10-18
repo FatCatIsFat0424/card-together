@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import Add from '@mui/icons-material/Add';
+import Android from '@mui/icons-material/Android';
 import ArrowDownward from '@mui/icons-material/ArrowDownward';
 import ArrowUpward from '@mui/icons-material/ArrowUpward';
 import AssignmentOutlined from '@mui/icons-material/AssignmentOutlined';
@@ -46,7 +47,7 @@ import WarningAmber from '@mui/icons-material/WarningAmber';
 import styles from './AppIcon.module.css';
 
 const ICONS = {
-  add: Add, person: PersonOutline,
+  add: Add, android: Android, person: PersonOutline,
   calendar: CalendarMonthOutlined,
   shop: StorefrontOutlined,
   drag: DragIndicator,

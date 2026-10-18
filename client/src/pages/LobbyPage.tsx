@@ -18,6 +18,7 @@ import { LobbyFriends } from '../components/LobbyFriends';
 import { LobbyBackground } from '../components/LobbyBackground';
 import { GameRulesDialog } from '../components/GameRulesDialog';
 import { DailyRewards } from '../components/DailyRewards';
+import { AndroidAppBanner } from '../components/AndroidAppBanner';
 import styles from './LobbyPage.module.css';
 
 const GAME_ICONS: Record<GameType, string> = {
@@ -130,6 +131,7 @@ export function LobbyPage(): ReactNode {
     </header>
 
     {error && <p className={styles.error} role="alert">{error}</p>}
+    <AndroidAppBanner />
 
     <div className={styles.layout}>
       <section className={styles.games} aria-label={t('gameType.choose')}>

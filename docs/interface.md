@@ -96,6 +96,8 @@ Frontend page behavior and layout. Client architecture and connection handling:
   sequence finishes in 520ms. Friend/reward refreshes and game selection do not
   replay it. System and in-app reduced-motion preferences skip these reveals.
 - The rules list opens game details without selecting a mode or changing the background.
+- Android browsers see a dismissible [Android app](android.md) download notice above
+  the lobby layout; it is hidden inside the installed app and on other platforms.
 - Online friends: hosts first, up to three complete rows sized for nickname, title,
   and username; additional friends scroll vertically. Names truncate and hosts have
   Join buttons. The list refreshes on focus and every

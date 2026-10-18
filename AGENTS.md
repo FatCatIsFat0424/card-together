@@ -26,6 +26,7 @@ Authoritative project rule set; `CLAUDE.md` references it.
 | `server/tests/`, `deploy/tests/` | Vitest and Python standard-library tests |
 | `scripts/` | Check runner and asset importers |
 | `deploy/` | Production build, install, and operation scripts |
+| `android/` | Android APK wrapper settings and build script ([Android app](docs/android.md)) |
 | `docs/` | Authoritative guides (index in [README](README.md#documentation)) |
 
 ## Implementation rules

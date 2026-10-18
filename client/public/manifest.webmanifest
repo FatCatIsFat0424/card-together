@@ -1,0 +1,17 @@
+{
+  "id": "/card-together/",
+  "name": "Card Together",
+  "short_name": "Card Together",
+  "description": "與好友一起玩線上牌類遊戲",
+  "lang": "zh-TW",
+  "start_url": "/card-together/",
+  "scope": "/card-together/",
+  "display": "standalone",
+  "background_color": "#0a0e17",
+  "theme_color": "#0a0e17",
+  "icons": [
+    { "src": "app-icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "app-icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "app-icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

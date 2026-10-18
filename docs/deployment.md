@@ -24,6 +24,9 @@ bash deploy/deploy.sh
 | Install | `deploy.sh` | Stop the service (brief outage), install artifacts including the generated emoji catalog, start the new service |
 | Proxy and health | `deploy.sh` | Install Nginx snippets, update managed includes in `/etc/nginx/sites-enabled/acserver.csie.org`, test and reload Nginx, poll local and public health |
 
+The snippet also serves the domain-wide `/.well-known/assetlinks.json` and the APK
+download for the [Android app](android.md).
+
 Earlier hashed assets and site emoji stay published until `prune-assets.sh` removes them
 after the grace period.
 

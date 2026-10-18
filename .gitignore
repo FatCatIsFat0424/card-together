@@ -15,6 +15,10 @@ logs
 *.log
 npm-debug.log*
 
+# Android signing keys live outside the repository
+*.keystore
+*.jks
+
 # Environment files (secrets); the example stays tracked
 .env
 .env.*

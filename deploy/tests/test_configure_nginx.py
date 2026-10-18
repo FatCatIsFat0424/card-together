@@ -1,6 +1,7 @@
 """Regression tests for safe, repeatable nginx site candidate generation."""
 
 import importlib.util
+import json
 from pathlib import Path
 import sys
 import unittest
@@ -120,6 +121,26 @@ class ConfigureTests(unittest.TestCase):
             types = directives(locations[path], 'gzip_types')[0][1:]
             for mime in ('image/svg+xml', 'text/css', 'application/javascript'):
                 self.assertIn(mime, types)
+
+    def test_asset_links_trust_the_android_release_key(self):
+        manifest = json.loads((Path(__file__).resolve().parents[2] / 'android/twa-manifest.json').read_text())
+        location = self.snippet_locations()['/.well-known/assetlinks.json']
+        self.assertEqual(location.words[:2], ['location', '='])
+        self.assertEqual(directives(location, 'default_type'), [['default_type', 'application/json']])
+        status, body = directives(location, 'return')[0][1:]
+        self.assertEqual(status, '200')
+        target = json.loads(body)[0]['target']
+        self.assertEqual(target['package_name'], manifest['packageId'])
+        self.assertEqual(target['sha256_cert_fingerprints'],
+                         [fingerprint['value'] for fingerprint in manifest['fingerprints']])
+
+    def test_apk_downloads_as_an_android_package(self):
+        location = self.snippet_locations()['/card-together/download/card-together.apk']
+        self.assertEqual(location.words[:2], ['location', '='])
+        self.assertEqual(directives(location, 'try_files'), [['try_files', '$uri', '=404']])
+        self.assertEqual(directives(location, 'default_type'),
+                         [['default_type', 'application/vnd.android.package-archive']])
+        self.assertIn(['add_header', 'Cache-Control', 'no-cache'], directives(location, 'add_header'))
 
     def snippet_locations(self):
         snippet = (Path(__file__).resolve().parents[1] / 'nginx/card-together.conf').read_text()

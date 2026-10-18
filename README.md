@@ -44,6 +44,7 @@ which creates the Git-ignored `server/data/database.json`.
 | [Development](docs/development.md) | Environment, configuration, benchmarks, browser checks |
 | [Testing](docs/testing.md) | Check runner, gates, caches, coverage |
 | [Deployment](docs/deployment.md) | Build, install, Nginx, backups, rollback |
+| [Android app](docs/android.md) | APK wrapper, signing key, release steps |
 | [Roadmap](docs/roadmap.md) | Public launch gates, monetization, operations, and development priorities (Traditional Chinese) |
 
 ## License
