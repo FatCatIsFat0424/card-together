@@ -102,8 +102,8 @@ full matches, authorization, persistence failure, and restart recovery.
 | Change | Browser scope |
 | --- | --- |
 | Rules or server logic without UI changes | None, unless integration remains uncertain |
-| Localized UI or game option | One real client/server flow plus affected visuals at 1366×768 and 360×640; add 844×390 and 760×340 for short landscape |
-| Shared layout, navigation, breakpoints | Affected pages at 2560×1440, 1920×1080, 1366×768, 390×844, 375×667, 360×640, 844×390, 760×340, and around changed breakpoints |
+| Localized UI or game option | One real client/server flow plus affected visuals at 1366×768 and 360×640; add 844×390, 780×360, and 706×336 for short landscape |
+| Shared layout, navigation, breakpoints | Affected pages at 2560×1440, 1920×1080, 1366×768, 390×844, 375×667, 360×640, 844×390, 780×360, 706×336, and around changed breakpoints |
 | Authentication, membership, transport, private data, deployment | Login/logout, room create/join/chat, refresh/reconnect, and affected game flows with separate accounts; follow [deployment](deployment.md) for migrations |
 
 | Affected area | Also check |

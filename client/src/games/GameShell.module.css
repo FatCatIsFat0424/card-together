@@ -446,7 +446,7 @@
     background: var(--bg-surface);
     box-shadow: var(--shadow-lg);
   }
-  .infoPanel { left: 4px; right: auto; }
+  .infoPanel { left: calc(var(--rail-width) + 4px); right: auto; }
   .chatRail { right: 4px; left: auto; }
   .sheetHeader { display: flex; }
   .gameContainer:not(.chatCollapsed) > .backdrop { display: block; }
@@ -518,7 +518,7 @@
   /* Wide centres have no room for the floating plate, so it leads the hand row instead. */
   .handZone.platedHand {
     display: grid;
-    grid-template-columns: 180px minmax(0, 1fr);
+    grid-template-columns: clamp(144px, 22vw, 180px) minmax(0, 1fr);
     grid-template-rows: auto 1fr;
     column-gap: 8px;
     align-content: center;
@@ -529,12 +529,12 @@
   .platedHand > :last-child { grid-column: 2; grid-row: 1 / span 2; }
   /* Keep explicit hand actions above the viewport edge, beside the cards. */
   .handZone:has([data-hand-actions] button) { --hand-actions-width: 120px; }
-  .handZone:has([data-hand-actions='wide'] button) { --hand-actions-width: 208px; }
-  /* A plated hand row is narrower: its cards fit left of the floating actions instead of keeping a row below. */
-  .platedHand:has([data-hand-actions]:not([data-hand-actions='group']) button) > :last-child {
+  .handZone:has([data-hand-actions='wide'] button) { --hand-actions-width: clamp(160px, 26vw, 208px); }
+  /* Cards fit left of the floating actions instead of keeping a row below, so no card sits under a button. */
+  .handZone:has([data-hand-actions]:not([data-hand-actions='group']) button) > :last-child {
     padding-right: calc(var(--hand-actions-width) + 4px);
   }
-  .platedHand [data-hand-actions-placeholder]:not([data-hand-actions-placeholder='group']) { display: none; }
+  .handZone [data-hand-actions-placeholder]:not([data-hand-actions-placeholder='group']) { display: none; }
   /* Plates already count side hands; their decorative trays would meet the plate and actions. */
   .platedTable > :not([data-table-seat='top']) [data-seat-tray] { display: none; }
   .handZone [data-hand-actions]:has(button) {

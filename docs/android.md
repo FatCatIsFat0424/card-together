@@ -9,6 +9,7 @@ distributed only from the site, not Google Play.
 | Package | `org.csie.acserver.cardtogether` (permanent; changing it creates a different app) |
 | Minimum Android | 7.0 (API 24) |
 | Orientation | Landscape (either direction) in the APK and the installed web app; a test keeps both manifests equal. Layout targets: [interface](interface.md#game-table) |
+| Display | Full screen; the status and navigation bars appear briefly when swiped in. The site treats `display-mode: fullscreen` or an `android-app://` referrer as the installed app |
 | Host browser | Chrome when installed, otherwise the default browser; `build-apk.sh` patches the launcher because Samsung Internet ignores the orientation. Signing in again is needed when the host changes |
 | Download | `/card-together/download/card-together.apk`, committed in `client/public/download/` |
 | Wrapper settings | [`android/twa-manifest.json`](../android/twa-manifest.json) |

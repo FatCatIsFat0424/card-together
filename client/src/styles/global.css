@@ -108,6 +108,7 @@
 
   /* Layout */
   --topbar-height: 52px;
+  --rail-width: 0px;
 
   /* Font sizes */
   --text-xs: 0.75rem;
@@ -303,6 +304,15 @@ body {
 }
 
 #root > header { flex: 0 0 var(--topbar-height); }
+
+/* Short landscape: the top bar becomes a left rail so pages keep the full screen height. */
+@media (max-height: 500px) and (min-width: 600px) {
+  :root { --topbar-height: 0px; --rail-width: 56px; }
+  #root { flex-direction: row; }
+  #root > header { flex: 0 0 var(--rail-width); }
+  /* Dialogs keep a thin margin so short screens show more of their scrolling content. */
+  .MuiDialog-container .MuiDialog-paper:not(.MuiDialog-paperFullScreen) { margin: 8px; max-height: calc(100% - 16px); }
+}
 
 /* ─── Global base styles ─── */
 a {

@@ -27,6 +27,10 @@ describe('Android app offer', () => {
     expect(ANDROID_APP_URL).toMatch(/\/download\/card-together\.apk$/);
   });
 
+  it('opens the APK full screen with system bars hidden until swiped in', () => {
+    expect(readJson('android/twa-manifest.json').display).toBe('fullscreen-sticky');
+  });
+
   it('opens in landscape both as the APK and as an installed web app', () => {
     expect(readJson('android/twa-manifest.json').orientation).toBe('landscape');
     expect(readJson('client/public/manifest.webmanifest').orientation).toBe('landscape');

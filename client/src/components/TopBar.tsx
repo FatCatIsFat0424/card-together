@@ -141,7 +141,7 @@ export function TopBar(): ReactNode {
         <span ref={navIndicatorRef} className={styles.linkIndicator} aria-hidden="true" />
         {links}
       </nav>}
-      {inGame && roomCode && <RoomCodeButton key={roomCode} code={roomCode} compact />}
+      {inGame && roomCode && <RoomCodeButton key={roomCode} code={roomCode} compact className={styles.barRoomCode} />}
       <div className={styles.actions}>
         {accountId && <Tooltip title={t('shop.earn', { n: String(GAME_COIN_REWARD) })} describeChild arrow>
           <span className={styles.coinBalance} role="status" tabIndex={0}
@@ -198,6 +198,7 @@ export function TopBar(): ReactNode {
             <AppIcon name="menu" />
           </button>
           {shown('menu') && <div {...panelProps('menu', `${styles.popover} ${styles.menu}`)} data-popover-panel tabIndex={-1}>
+            {inGame && roomCode && <RoomCodeButton key={roomCode} code={roomCode} compact className={styles.menuRoomCode} />}
             {showLinks && <nav className={styles.menuLinks}>{links}</nav>}
             <ThemeSwitch />
             <LanguageSwitch />

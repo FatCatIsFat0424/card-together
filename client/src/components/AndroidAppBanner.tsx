@@ -9,9 +9,11 @@ import styles from './AndroidAppBanner.module.css';
 
 export function AndroidAppBanner(): ReactNode {
   const { t } = useI18nStore();
-  const standalone = useMediaQuery('(display-mode: standalone)');
+  // The APK runs full screen and opens with an android-app:// referrer; an installed web app is standalone.
+  const installedDisplay = useMediaQuery('(display-mode: standalone), (display-mode: fullscreen)');
+  const installed = installedDisplay || (typeof document !== 'undefined' && document.referrer.startsWith('android-app://'));
   const [dismissed, setDismissed] = useState(() => readPreference(ANDROID_APP_DISMISSED_PREFERENCE) === 'true');
-  if (!shouldOfferAndroidApp(navigator.userAgent, standalone, dismissed)) return null;
+  if (!shouldOfferAndroidApp(navigator.userAgent, installed, dismissed)) return null;
   const dismiss = (): void => {
     writePreference(ANDROID_APP_DISMISSED_PREFERENCE, 'true');
     setDismissed(true);

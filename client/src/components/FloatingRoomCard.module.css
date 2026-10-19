@@ -40,13 +40,13 @@
     --corner-x: 0px;
     --corner-y: calc(100dvh - 100% - var(--topbar-height) - 8px - max(8px, env(safe-area-inset-bottom)));
     width: max-content;
-    left: max(8px, env(safe-area-inset-left));
+    left: calc(var(--rail-width) + max(8px, env(safe-area-inset-left)));
     top: calc(var(--topbar-height) + 8px);
     bottom: auto;
     transform: translate(calc(var(--corner-x) + var(--drag-x, 0px)), calc(var(--corner-y) + var(--drag-y, 0px)));
     transition: transform 200ms ease-out;
   }
-  .card[data-corner$='right'] { --corner-x: calc(100vw - 100% - max(8px, env(safe-area-inset-left)) - max(8px, env(safe-area-inset-right))); }
+  .card[data-corner$='right'] { --corner-x: calc(100vw - 100% - var(--rail-width) - max(8px, env(safe-area-inset-left)) - max(8px, env(safe-area-inset-right))); }
   .card[data-corner^='top'] { --corner-y: 0px; }
   .card[data-dragging] { transition: none; }
   .link { display: flex; align-items: center; min-height: 44px; padding: 0 10px; touch-action: none; user-select: none; cursor: grab; }

@@ -2,7 +2,7 @@
 .anchor {
   position: fixed;
   top: calc(var(--topbar-height) + var(--spacing-sm));
-  left: 0;
+  left: var(--rail-width);
   right: 0;
   z-index: 86;
   display: flex;

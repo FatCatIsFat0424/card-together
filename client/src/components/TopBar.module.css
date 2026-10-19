@@ -159,7 +159,7 @@
   .iconBtn { width: 32px; height: 32px; }
 }
 
-@media (max-width: 767px), (max-width: 1279px) and (max-height: 500px) {
+@media (max-width: 767px), (max-height: 500px) {
   .iconBtn.signOutBtn { display: none; }
   .menuSignOut { display: flex; align-items: center; gap: var(--spacing-sm); width: 100%; min-height: 44px; padding-top: var(--spacing-sm); border-top: 1px solid var(--border-color); color: var(--color-danger); font-size: var(--text-sm); text-align: left; }
   .menuSignOut:disabled { opacity: 0.6; cursor: wait; }
@@ -186,4 +186,38 @@
   .iconBtn, .iconBtn > svg, .links a, .menuLinks a, .linkIndicator { transition: none; }
   .iconBtn:active:not(:disabled), .iconBtn[aria-expanded='true'] > svg, .iconCurrent > svg { transform: none; }
   .popover, .popoverExit { animation-duration: 1ms; }
+}
+
+.menu .menuRoomCode { display: none; }
+
+/* Short landscape: a left rail of icon buttons whose panels open beside it; the room code moves into the menu. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .bar {
+    flex-direction: column;
+    gap: 4px;
+    width: var(--rail-width);
+    height: 100%;
+    padding: 6px 0;
+    border-bottom: 0;
+    border-right: 1px solid var(--border-color);
+  }
+  .brand { font-size: var(--text-xl); line-height: 1.5; }
+  .brand > span:last-child, .links, .prefs, .bar .barRoomCode, .iconBtn.signOutBtn { display: none; }
+  .actions { flex: 1; flex-direction: column; gap: 4px; margin-left: 0; }
+  .coinBalance { flex-direction: column; gap: 0; font-size: var(--text-xs); line-height: 1.2; }
+  .coinBalance > svg { font-size: var(--text-base); }
+  .iconBtn { width: 36px; height: 36px; }
+  .menuGroup { display: block; margin-top: auto; }
+  .menuLinks { display: flex; }
+  .menu .menuRoomCode { display: inline-flex; }
+  .popover {
+    top: var(--spacing-sm);
+    right: auto;
+    left: calc(var(--rail-width) + var(--spacing-xs));
+    max-width: calc(100vw - var(--rail-width) - 2 * var(--spacing-sm));
+    max-height: calc(100dvh - 2 * var(--spacing-sm));
+    transform-origin: top left;
+  }
+  .menu { top: auto; bottom: var(--spacing-sm); transform-origin: bottom left; }
+  .badge { top: -4px; right: -6px; }
 }

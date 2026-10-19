@@ -8,10 +8,14 @@ Frontend page behavior and layout. Client architecture and connection handling:
 
 - The app fills one dynamic viewport below a fixed top bar. Rooms and games never
   scroll the document; long account pages, chat, and history scroll internally.
+- Short landscape (height at most 500px, width at least 600px) turns the top bar into a
+  56px left rail: brand icon, coins, icon buttons, and the menu at the bottom. Its
+  popovers open beside the rail, and during matches the room code moves into the menu.
+  Pages, sheets, and floating cards start right of the rail.
 - Navigation stays available during matches: top-bar links on desktop, a menu below 1280px.
   Account, friend, profile, and lobby pages keep room membership and offer a return link.
-- Sign-out is the last menu item, in red, on narrow screens and phone landscape
-  (width below 1280px and height at most 500px). Other layouts show its icon and label in the top bar.
+- Sign-out is the last menu item, in red, on narrow screens and short landscape
+  (height at most 500px). Other layouts show its icon and label in the top bar.
 - The owner's coin balance appears with a hint about the [completion reward](storage.md#game-coins).
 - Voice uses a 44px microphone button in the room controls and at the top right of
   the game table. Its anchored panel stays within the viewport; closing it or moving
@@ -86,7 +90,7 @@ Frontend page behavior and layout. Client architecture and connection handling:
 | Width | Lobby layout |
 | --- | --- |
 | Desktop | Game picker beside a sidebar: selected game, Create, then join-by-code below a divider; online friends below the room actions |
-| Phone landscape | Four game choices per row (4/4/2), with creation and joining beside them; a compact greeting shares a 44px row with daily tasks/check-in buttons, using icons beside their labels |
+| Phone landscape | Five game choices per row (5/5), with creation and joining beside them; a compact greeting shares a 44px row with daily tasks/check-in buttons, using icons beside their labels |
 | ≤52rem | Join-by-code, an "Or" divider, then a full-width Create that always creates Bridge; no selected-game panel; friends below the rules list |
 
 - Each game has its own [lobby artwork](../client/src/assets/lobby-backgrounds/README.md),
@@ -98,6 +102,7 @@ Frontend page behavior and layout. Client architecture and connection handling:
 - The rules list opens game details without selecting a mode or changing the background.
 - Android browsers see a dismissible [Android app](android.md) download notice above
   the lobby layout; it is hidden inside the installed app and on other platforms.
+  Short landscape shows only its title and buttons.
 - Online friends: hosts first, up to three complete rows sized for nickname, title,
   and username; additional friends scroll vertically. Names truncate and hosts have
   Join buttons. The list refreshes on focus and every
@@ -121,7 +126,7 @@ Frontend page behavior and layout. Client architecture and connection handling:
 | --- | --- |
 | Desktop | Equal-width portrait cards N/E/S/W without horizontal scrolling; Ninety-Nine, Blackjack, and Hold'em always use two rows of four |
 | Compact | Two columns, smaller controls, up to four rows, vertical scrolling when needed |
-| Phone landscape | One row filling the height above the footer buttons; extra seats scroll horizontally |
+| Phone landscape | Rows of up to four seats filling the height above the footer buttons; five or more seats take two rows and drop the empty-seat icon. Empty seats show their direction in the top-left corner |
 
 Phone landscape places spectators in a separate left column with a vertically
 scrollable list. Touch gestures on spectator names scroll the list; hosts drag the
@@ -134,8 +139,9 @@ Seated players click the spectator area's heading or empty space to stand up;
 there is no separate footer action. Player links and host controls remain independent,
 and the area can also be activated by keyboard through its heading.
 The avatar stays beside two text rows: an ellipsized name above host/self tags.
-The landscape header uses a prominent game dropdown with the settings icon beside it.
-The rules button includes its text label; chat uses an icon with an accessible label.
+The landscape header is one row: room code, a prominent game dropdown with the settings icon
+beside it, then invite and leave. The rules button includes its text label from 860px wide
+and is icon-only below; chat uses an icon with an accessible label.
 Its action buttons share a 44px height.
 Bot controls use a vertical ellipsis.
 
@@ -241,18 +247,23 @@ Bot controls use a vertical ellipsis.
   Blackjack, Hold'em) put the plate and prompt at the left of the hand row instead, keeping the
   centre clear; their side and corner seats omit decorative card-back trays.
   Explicit hand actions (play/pass, arrange, cover and card-effect choices) sit at the lower
-  right in phone landscape, with longer action panels scrolling independently; other layouts
+  right in phone landscape, with longer action panels scrolling independently; the hand row
+  leaves their width free so no card sits under a button. Plated hand rows give the plate
+  144–180px, and wide action panels narrow to 160px on small phones. Other layouts
   retain their controls below the hand. Blackjack and Hold'em keep betting and play controls in
   the hand row beside their cards.
-  Short landscape keeps centre text at about 11px or larger at 760×340 and above (the Android
-  app's minimum target), mostly by rearranging rather than scaling:
+  Short landscape keeps centre text at about 11px or larger at 706×336 and above (Chrome with
+  system bars on a 360px-tall phone; the full-screen Android app gets about 780×360), mostly by
+  rearranging rather than scaling:
   - Sevens shows each row's ends and next slots, two suits per line.
   - Liar's Deck, Ninety-Nine and presentation frames place text beside their cards.
+  - Chinese Poker puts its back row under the front and middle rows below 860px wide.
   - Hold'em and Blackjack lay stakes and hands in flat rows around the board or dealer and omit
     what the plates already show (names, blinds, folded backs, bet status). Settled Blackjack hands
     show their result instead of their stake.
   - Tables with more than four seats float their toolbar into the top corners and show each
-    plate's counts beside its name. Eight seats on phones below about 360px tall remain crowded.
+    plate's counts beside its name. Eight seats fit at 780×360; below about 360px tall
+    (a phone browser with system bars) Ninety-Nine and Blackjack side plates still overlap.
   The landscape bidding panel is centered on the playing table and capped at 352px with tighter spacing; touch
   buttons retain their 44px height.
   Dialogs, including Bridge redeal confirmations, layer above player plates at every
@@ -337,7 +348,8 @@ remain visible.
   abort vote requires confirmation on all layouts. The confirmation uses the same
   200ms opening and shrinking fade-out animations as the rules dialog, respecting
   reduced motion. Cancelling does not start a vote; confirmation is disabled during exit.
-- The result dialog stays below the top bar, focuses Back to room, and reports a pending return.
+- The result dialog stays below the top bar (beside the rail in short landscape), focuses Back
+  to room, and reports a pending return.
 - Napoleon: the picked-up cards are starred while exchanging; exchange, follow-suit, and
   summon controls sit in the overlay panel to keep 44px touch targets. The secretary picker
   dashes cards the Napoleon holds or discarded and warns that they mean no secretary. The

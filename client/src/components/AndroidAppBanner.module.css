@@ -20,3 +20,8 @@
   .download { grid-column: 1 / -1; justify-content: center; }
   .dismiss { grid-row: 1; grid-column: 3; }
 }
+@media (max-height: 500px) and (min-width: 600px) {
+  .banner { padding: 4px 4px 4px var(--spacing-md); margin-bottom: 8px; }
+  .text p { display: none; }
+  .download { min-height: 36px; }
+}

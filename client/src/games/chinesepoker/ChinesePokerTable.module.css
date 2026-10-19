@@ -141,6 +141,11 @@ button.dropZone:disabled { cursor: default; }
   .centre { --slot-w: 32px; }
   .rows { flex-direction: row; align-items: flex-start; }
 }
+/* Narrower phones put the back row under the front and middle rows rather than shrinking the text. */
+@media (max-height: 500px) and (min-width: 600px) and (max-width: 859px) {
+  .rows { display: grid; grid-template-columns: auto auto; justify-content: center; }
+  .rows > :nth-child(3) { grid-column: 1 / -1; justify-self: center; }
+}
 
 /* ─── Settled centre: every arrangement at its seat position ─── */
 .settled {

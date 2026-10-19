@@ -40,8 +40,10 @@ export function FloatingRoomCard(): ReactNode {
     if (!current.moved && Math.hypot(dx, dy) < 6) return;
     current.moved = true;
     suppressClick.current = true;
-    const top = (Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topbar-height')) || 52) + 8;
-    current.dx = Math.max(8, Math.min(innerWidth - current.rect.width - 8, current.rect.left + dx)) - current.rect.left;
+    const rootStyle = getComputedStyle(document.documentElement);
+    const top = (Number.parseFloat(rootStyle.getPropertyValue('--topbar-height')) || 0) + 8;
+    const left = (Number.parseFloat(rootStyle.getPropertyValue('--rail-width')) || 0) + 8;
+    current.dx = Math.max(left, Math.min(innerWidth - current.rect.width - 8, current.rect.left + dx)) - current.rect.left;
     current.dy = Math.max(top, Math.min(innerHeight - current.rect.height - 8, current.rect.top + dy)) - current.rect.top;
     setOffset({ x: current.dx, y: current.dy });
     event.preventDefault();
