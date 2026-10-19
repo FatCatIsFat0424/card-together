@@ -9,7 +9,7 @@ import { useRoomStore } from '../stores/room-store';
 import { useConnectionReady } from './use-connection-ready';
 import styles from './SpectatorLeave.module.css';
 
-export function SpectatorLeaveButton(): ReactNode {
+export function SpectatorLeaveButton({ className = '' }: { readonly className?: string }): ReactNode {
   const { t } = useI18nStore();
   const navigate = useNavigate();
   const connectionReady = useConnectionReady();
@@ -34,7 +34,7 @@ export function SpectatorLeaveButton(): ReactNode {
     });
   };
 
-  return <div className={styles.rail}>
+  return <div className={`${styles.rail} ${className}`}>
     <button type="button" className={`btn btn-outline ${styles.button}`} disabled={busy || !connectionReady}
       onClick={leave}>{t('room.leave')}</button>
     {error && <p className={styles.error} role="alert">{error}</p>}

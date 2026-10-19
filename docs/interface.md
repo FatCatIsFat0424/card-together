@@ -228,12 +228,14 @@ get a cleaner table; desktop and tablet layouts are unchanged.
 
 - The app bar or rail is hidden. The table info button becomes a menu at the top left, badged with
   unread notifications and messages; voice and chat stay at the top right.
-- The menu sheet holds the room code, rules, game info and round history, notifications, music,
-  links to messages, achievements, lobby, friends, shop and profile, then abort vote and leave last.
+- The menu sheet lists the room code, rules, abort vote and leave early (or a spectator's leave),
+  then game info and round history, notifications, music, and links to messages, achievements,
+  lobby, friends, shop and profile.
 - The action bar shrinks to auto-play and one sort toggle (suit, then rank; Liar's Deck sorts by rank).
 - Plates omit nameplate titles, bot difficulty, and decorative card backs; Red Points keeps its
   captured cards. Disabled secondary hand actions (outline buttons) are hidden; primary ones stay.
-- Corner button badges stay inside the button so the screen edge never clips them.
+- Corner buttons keep 8px from the screen edge and their badges stay inside the button, so rounded
+  full-screen corners never clip them. Crowded portrait tables shift the opposite plate clear of them.
 - Portrait cards run past the hand row and the table clips their bottoms; prompts and actions below
   them sit on a translucent bar above those edges.
 - Portrait phones show a rotate tip for 8 seconds per game; closing it hides it for good

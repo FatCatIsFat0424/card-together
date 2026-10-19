@@ -386,9 +386,9 @@ export function GameShell({
             aria-label={t('table.close')} title={t('table.close')}><AppIcon name="close" /></button>
         </div>
         {room && <RoomCodeButton key={room.code} code={room.code} compact={phoneMenu} className={styles.menuRoomCode} />}
-        <AbortVoteButton className={styles.abortRail} />
-        <EarlyLeaveButton className={styles.abortRail} />
-        <SpectatorLeaveButton />
+        <AbortVoteButton className={`${styles.abortRail} ${styles.menuExit}`} />
+        <EarlyLeaveButton className={`${styles.abortRail} ${styles.menuExit}`} />
+        <SpectatorLeaveButton className={styles.menuExit} />
         {visibleGame && <button type="button" className={`btn btn-outline ${styles.rulesRailButton}`}
           aria-haspopup="dialog" onClick={openRules}>
           <AppIcon name="rules" /> {t('rules.open')}

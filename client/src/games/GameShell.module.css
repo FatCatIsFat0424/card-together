@@ -680,6 +680,8 @@
   .table.expandedTable > .tableTools > * { pointer-events: auto; }
   /* Short phones lift four-seat side plates toward the top; stacked columns keep their own rows. */
   .table.expandedTable > [data-table-seat] { transform: none; }
+  /* The opposite plate shares the first row with the voice and chat buttons, so it leans away from them. */
+  .table.expandedTable > [data-table-seat='top'] { margin-right: 14px; }
 }
 
 /* Short landscape: the toolbar floats in the top corners, so corner seats start one button row lower
@@ -710,17 +712,32 @@
 }
 
 /* Phone game menu: the info button leads the toolbar as the menu; rules, abort, and leave move into its
-   sheet, which scrolls as one list with the exits last. */
+   sheet, which scrolls as one list: room code, rules, then the exits before the game details. */
 @media (max-width: 767px), (max-height: 500px) and (min-width: 600px) {
   .tableExitTools, .tableTools .rulesTool { display: none; }
   .tableTools .menuTool { order: -1; margin-right: auto; }
-  /* Corner buttons sit near the screen edge, so their badges stay inside the button bounds. */
-  .tableTools .fabBadge { top: -2px; right: -2px; }
+  /* Rounded screen corners clip the edges of full-screen apps: corner buttons keep a margin and their
+     badges stay inside the button. */
+  .table > .tableTools.tableTools { inset: 8px 8px auto; }
+  .tableTools .fabBadge {
+    top: 2px;
+    right: 2px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: 10px;
+    line-height: 16px;
+  }
   .menuRoomCode { align-self: flex-start; min-height: 40px; }
   .infoPanel { overflow-y: auto; overscroll-behavior: contain; }
   .infoContent { flex: none; overflow: visible; }
   .rulesRailButton { display: inline-flex; justify-content: center; }
-  .abortRail.abortRail { display: flex; order: 10; }
+  .abortRail.abortRail { display: flex; }
+  .infoPanel > * { order: 4; }
+  .infoPanel > .sheetHeader { order: 0; }
+  .infoPanel > .menuRoomCode { order: 1; }
+  .infoPanel > .rulesRailButton { order: 2; }
+  .infoPanel > .menuExit { order: 3; }
   /* Unavailable secondary actions leave the corner instead of greying out; primary actions stay. */
   .handZone [data-hand-actions] :global(.btn-outline):disabled { display: none; }
 }
