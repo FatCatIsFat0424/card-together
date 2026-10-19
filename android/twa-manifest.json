@@ -20,8 +20,8 @@
     "path": "release.keystore",
     "alias": "card-together"
   },
-  "appVersionCode": 2,
-  "appVersion": "1.1.0",
+  "appVersionCode": 3,
+  "appVersion": "1.1.1",
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://acserver.csie.org/card-together/manifest.webmanifest",

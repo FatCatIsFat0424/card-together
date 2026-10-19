@@ -55,6 +55,40 @@ EOF
 
 cd "$work_dir"
 "$bubblewrap" update --skipVersionUpgrade --manifest="$work_dir/twa-manifest.json" --directory="$work_dir"
+
+# Samsung Internet can host the app as the default browser but ignores the requested orientation, so the
+# launcher opens Chrome whenever Chrome can host it and leaves other phones to their default browser.
+launcher=$(find "$work_dir/app/src/main/java" -name LauncherActivity.java)
+python3 - "$launcher" <<'PATCH'
+import sys
+
+path = sys.argv[1]
+source = open(path).read().rstrip()
+if not source.endswith('}') or 'createTwaLauncher' in source:
+    sys.exit(f'Unexpected LauncherActivity source: {path}')
+override = '''
+    private static final String CHROME_PACKAGE = "com.android.chrome";
+    private static final String TWA_CATEGORY = "androidx.browser.trusted.category.TrustedWebActivities";
+
+    @Override
+    protected com.google.androidbrowserhelper.trusted.TwaLauncher createTwaLauncher() {
+        if (!hostsTrustedWebActivities(CHROME_PACKAGE)) return super.createTwaLauncher();
+        return new com.google.androidbrowserhelper.trusted.TwaLauncher(this, CHROME_PACKAGE, getTaskId());
+    }
+
+    private boolean hostsTrustedWebActivities(String packageName) {
+        android.content.Intent service = new android.content.Intent(
+                androidx.browser.customtabs.CustomTabsService.ACTION_CUSTOM_TABS_CONNECTION).setPackage(packageName);
+        for (android.content.pm.ResolveInfo info : getPackageManager().queryIntentServices(
+                service, android.content.pm.PackageManager.GET_RESOLVED_FILTER)) {
+            if (info.filter != null && info.filter.hasCategory(TWA_CATEGORY)) return true;
+        }
+        return false;
+    }
+}
+'''
+open(path, 'w').write(source[:-1] + override)
+PATCH
 BUBBLEWRAP_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD BUBBLEWRAP_KEY_PASSWORD=$ANDROID_KEY_PASSWORD \
   "$bubblewrap" build --skipPwaValidation --manifest="$work_dir/twa-manifest.json" --directory="$work_dir"
 
