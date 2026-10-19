@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -538,6 +539,48 @@ class AutoDeployTests(unittest.TestCase):
         config.notification.key_file.write_text('short\n')
         with self.assertRaises(ValueError):
             AUTO.read_key(config.notification)
+
+    def test_undelivered_updates_are_resent_next_cycle_then_cleared(self):
+        config = self.notified()
+        with self.fake_cycle(), self.fake_relay(OSError('relay restarting')), redirect_stderr(io.StringIO()):
+            AUTO.poll(config)
+        pending = AUTO.read_pending(config.state_dir)
+        self.assertEqual(len(pending), 1)
+        key, entry = next(iter(pending.items()))
+        self.assertEqual(entry['body']['status'], 'succeeded')
+        with self.fake_relay() as requests, redirect_stdout(io.StringIO()):
+            AUTO.flush_pending(config)
+        self.assertEqual(len(requests), 1)
+        self.assertTrue(requests[0][1].endswith('/' + key))
+        self.assertEqual(requests[0][3]['status'], 'succeeded')
+        self.assertFalse((config.state_dir / AUTO.PENDING_NOTIFICATIONS).exists())
+
+    def test_relay_recovery_mid_deployment_clears_the_pending_update(self):
+        config = self.notified()
+        calls = []
+
+        def urlopen(request, timeout):
+            calls.append(request.full_url)
+            if len(calls) < 3:
+                raise OSError('relay restarting')
+            return io.BytesIO(b'{}')
+
+        with self.fake_cycle(), patch.object(AUTO, 'urlopen', side_effect=urlopen), redirect_stderr(io.StringIO()):
+            AUTO.poll(config)
+        self.assertEqual(AUTO.read_pending(config.state_dir), {})
+
+    def test_stale_or_damaged_pending_updates_are_dropped_without_requests(self):
+        config = self.notified()
+        AUTO.write_json(config.state_dir, AUTO.PENDING_NOTIFICATIONS, {
+            'abc-1': {'body': {'status': 'running'}, 'since': time.time() - AUTO.PENDING_TTL_SECONDS - 1},
+            'bad key': {'body': {}, 'since': 0}})
+        with self.fake_relay() as requests, redirect_stderr(io.StringIO()):
+            AUTO.flush_pending(config)
+        self.assertEqual(requests, [])
+        self.assertFalse((config.state_dir / AUTO.PENDING_NOTIFICATIONS).exists())
+        (config.state_dir / AUTO.PENDING_NOTIFICATIONS).write_text('{not json')
+        with redirect_stderr(io.StringIO()):
+            self.assertEqual(AUTO.read_pending(config.state_dir), {})
 
 if __name__ == '__main__':
     unittest.main()

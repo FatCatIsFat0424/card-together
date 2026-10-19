@@ -126,6 +126,7 @@ The installer provisions:
 | `/etc/card-together-auto-deploy.json` | Non-secret configuration: repository, source/checkout/state/input paths, optional frontend environment path, required workflow filenames, optional [Discord notification](#deployment-notifications) |
 | `/var/lib/card-together-auto-deploy/inputs/` | Independent owner music, emoji, and optional `frontend.env` snapshots |
 | `/var/lib/card-together-auto-deploy/state.json` | Successful SHA, failed-build SHA, and unfinished-install marker |
+| `/var/lib/card-together-auto-deploy/notifications.json` | Undelivered [notification](#deployment-notifications) updates awaiting resend; absent when none |
 | `/etc/sudoers.d/card-together-auto-deploy` | Allows the deployment user to run only `/usr/bin/bash <release-checkout>/deploy/deploy.sh` without a password |
 
 The service runs as the deployment user, with a timer one minute after boot and one
@@ -225,6 +226,10 @@ existing configuration:
   update and never stored in this configuration.
 - Notification failures are logged without the key and never change deployment results
   or receipts. Omit the key or set it to `null` to disable notifications.
+- The latest undelivered update per attempt is kept in
+  `/var/lib/card-together-auto-deploy/notifications.json` and resent at the start of each
+  non-inspecting cycle, so a konata restart mid-deployment leaves no stale message. Updates
+  older than an hour are dropped; a damaged file only loses those retries.
 
 ### Failure handling
 

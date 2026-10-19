@@ -26,6 +26,10 @@ WORKFLOW = re.compile(r"[A-Za-z0-9_-]+\.ya?ml")
 RELAY_PATH = re.compile(r"/notifications/[a-z0-9][a-z0-9-]{0,63}")
 LOOPBACK = {"127.0.0.1", "::1", "localhost"}
 LISTED_COMMITS = 10
+THREAD_KEY = re.compile(r"[A-Za-z0-9._-]{1,100}")
+PENDING_NOTIFICATIONS = "notifications.json"
+# Undelivered updates are resent each cycle until the relay accepts them or they go stale.
+PENDING_TTL_SECONDS = 3600
 
 
 @dataclass(frozen=True)
@@ -177,6 +181,63 @@ def relay_request(notification: Notification, key: str, body: dict) -> None:
         pass
 
 
+def deliver(notification: Notification, key: str, body: dict) -> bool:
+    try:
+        relay_request(notification, key, body)
+        return True
+    except (OSError, ValueError) as error:
+        # Errors never contain the key; keep only the error class and status.
+        detail = f" (HTTP {error.code})" if isinstance(error, HTTPError) else ""
+        print(f"Deployment notification failed: {type(error).__name__}{detail}.", file=sys.stderr, flush=True)
+        return False
+
+
+def read_pending(state_dir: Path) -> dict[str, dict]:
+    """Latest undelivered body per notification thread; a damaged file only loses retries."""
+    path = state_dir / PENDING_NOTIFICATIONS
+    try:
+        raw = json.loads(path.read_text())
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError):
+        print("Ignoring unreadable pending notifications.", file=sys.stderr, flush=True)
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    return {key: entry for key, entry in raw.items()
+            if isinstance(key, str) and THREAD_KEY.fullmatch(key) and isinstance(entry, dict)
+            and set(entry) == {"body", "since"} and isinstance(entry["body"], dict)
+            and isinstance(entry["since"], (int, float))}
+
+
+def write_pending(state_dir: Path, pending: dict[str, dict]) -> None:
+    if pending:
+        write_json(state_dir, PENDING_NOTIFICATIONS, pending)
+    else:
+        (state_dir / PENDING_NOTIFICATIONS).unlink(missing_ok=True)
+
+
+def flush_pending(config: Config) -> None:
+    """Resend updates the relay missed, such as while konata restarted mid-deployment."""
+    if not config.notification:
+        return
+    pending = read_pending(config.state_dir)
+    if not pending:
+        return
+    now = time.time()
+    for key, entry in sorted(pending.items(), key=lambda item: item[1]["since"]):
+        if now - entry["since"] > PENDING_TTL_SECONDS:
+            print(f"Dropped stale deployment notification {key}.", file=sys.stderr, flush=True)
+            del pending[key]
+        elif deliver(config.notification, key, entry["body"]):
+            print(f"Resent deployment notification {key}.", flush=True)
+            del pending[key]
+    try:
+        write_pending(config.state_dir, pending)
+    except OSError as error:
+        print(f"Pending notifications not saved: {type(error).__name__}.", file=sys.stderr, flush=True)
+
+
 STAGES = (("build", "建置與發布檢查"), ("verify", "重新確認 CI"), ("install", "安裝與健康檢查"))
 FAILURES = {
     "build": "建置失敗，此版本已封鎖。修正後執行 `--retry-build`，或等待新的 commit。",
@@ -198,6 +259,7 @@ class DeployReport:
     stage: str = "build"
     status: str = "running"
     outcome: str | None = None
+    pending_dir: Path | None = None
 
     def __post_init__(self) -> None:
         self.key = self.key or f"{self.sha[:12]}-{int(time.time())}"
@@ -243,12 +305,21 @@ class DeployReport:
         """Best effort: a notification problem must never change deployment results."""
         if not self.notification:
             return
+        body = self.payload()
+        delivered = deliver(self.notification, self.key, body)
+        if not self.pending_dir:
+            return
         try:
-            relay_request(self.notification, self.key, self.payload())
-        except (OSError, ValueError) as error:
-            # Errors never contain the key; keep only the error class and status.
-            detail = f" (HTTP {error.code})" if isinstance(error, HTTPError) else ""
-            print(f"Deployment notification failed: {type(error).__name__}{detail}.", file=sys.stderr, flush=True)
+            pending = read_pending(self.pending_dir)
+            if delivered:
+                if pending.pop(self.key, None) is None:
+                    return
+            else:
+                since = pending.get(self.key, {}).get("since", time.time())
+                pending[self.key] = {"body": body, "since": since}
+            write_pending(self.pending_dir, pending)
+        except OSError as error:
+            print(f"Pending notifications not saved: {type(error).__name__}.", file=sys.stderr, flush=True)
 
 
 def pending_commits(config: Config, state: dict, sha: str) -> list[str]:
@@ -276,15 +347,19 @@ def read_state(config: Config) -> dict:
 
 
 def save_state(config: Config, state: dict) -> None:
-    descriptor, temporary = tempfile.mkstemp(prefix=".state-", dir=config.state_dir)
+    write_json(config.state_dir, "state.json", state)
+
+
+def write_json(directory: Path, name: str, value: dict) -> None:
+    descriptor, temporary = tempfile.mkstemp(prefix=".state-", dir=directory)
     try:
         with os.fdopen(descriptor, "w") as stream:
-            json.dump(state, stream, sort_keys=True)
+            json.dump(value, stream, sort_keys=True)
             stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary, config.state_dir / "state.json")
-        descriptor = os.open(config.state_dir, os.O_RDONLY | os.O_DIRECTORY)
+        os.replace(temporary, directory / name)
+        descriptor = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
         try:
             os.fsync(descriptor)
         finally:
@@ -387,7 +462,8 @@ def poll(config: Config, *, inspect: bool = False) -> None:
     if inspect:
         print(f"Eligible commit: {sha}. Inspection does not build or install.", flush=True)
         return
-    report = DeployReport(config.notification, config.repository, sha, pending_commits(config, state, sha))
+    report = DeployReport(config.notification, config.repository, sha, pending_commits(config, state, sha),
+                          pending_dir=config.state_dir)
     report.publish()
     try:
         deploy(config, state, sha, report)
@@ -440,6 +516,8 @@ def main() -> int:
             if not acquired:
                 print("Another automatic deployment cycle is running.", flush=True)
                 return 0
+            if not args.inspect:
+                flush_pending(config)
             if args.retry_build or args.resume:
                 state = read_state(config)
                 state.pop("failed_build_sha" if args.retry_build else "installing_sha", None)
