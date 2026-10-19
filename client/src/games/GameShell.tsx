@@ -1,5 +1,6 @@
 // ─── GameShell: table frame shared by all games (info rail + table + chat + abort vote) ───
 
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { frameLogIndex } from '@shared/game-presentation';
@@ -40,6 +41,8 @@ import { useTablePerspective } from './use-table-perspective';
 import { useTablePerspectiveStore } from '../stores/table-perspective-store';
 import { VictoryEffects } from '../cosmetics/victory-effects/VictoryEffects';
 import { GameActionBar } from './GameActionBar';
+import { GameMenuLinks, useGameMenuUnread } from './GameMenuLinks';
+import { RotateHint } from './RotateHint';
 
 const DESKTOP_QUERY = '(min-width: 1024px)';
 const SHEET_QUERY = '(max-width: 767px), (max-height: 500px) and (min-width: 600px)';
@@ -257,6 +260,9 @@ export function GameShell({
   const centreUp = expandedTable && !sidePositions.includes('top');
   const platedHand = visibleGame ? PLATED_HAND_GAMES.includes(visibleGame.gameType) : false;
   const unread = chatOpen ? 0 : Math.max(0, messageCount - seenMessages);
+  // Phones hide the app bar during games, so this sheet becomes the menu for everything it held.
+  const phoneMenu = useMediaQuery(SHEET_QUERY);
+  const menuUnread = useGameMenuUnread();
   const godView = useGodViewStore((state) => state.role);
 
   useEffect(() => {
@@ -374,18 +380,18 @@ export function GameShell({
   }, [closeSheets, rulesVisible]);
 
   return (
-    <div data-reduced-motion={reducedMotion || undefined} className={`${styles.gameContainer} ${chatOpen ? '' : styles.chatCollapsed} ${infoOpen ? styles.infoOpen : ''}`}
+    <div data-game-shell data-reduced-motion={reducedMotion || undefined} className={`${styles.gameContainer} ${chatOpen ? '' : styles.chatCollapsed} ${infoOpen ? styles.infoOpen : ''}`}
       style={cardBackStyle(account, reducedMotion)}>
       {(infoOpen || chatOpen) && <button type="button" className={styles.backdrop} tabIndex={-1}
         aria-label={t('table.close')} onClick={closeSheets} />}
 
       <div className={styles.infoPanel} id="game-info-panel" ref={infoPanelRef}>
         <div className={styles.sheetHeader}>
-          <span>{t('table.info')}</span>
+          <span>{t(phoneMenu ? 'topbar.menu' : 'table.info')}</span>
           <button type="button" className={styles.sheetClose} onClick={() => setInfoOpen(false)}
             aria-label={t('table.close')} title={t('table.close')}><AppIcon name="close" /></button>
         </div>
-        {room && <RoomCodeButton key={room.code} code={room.code} />}
+        {room && <RoomCodeButton key={room.code} code={room.code} compact={phoneMenu} className={styles.menuRoomCode} />}
         <AbortVoteButton className={styles.abortRail} />
         <EarlyLeaveButton className={styles.abortRail} />
         <SpectatorLeaveButton />
@@ -402,6 +408,7 @@ export function GameShell({
           {info}
           {visibleGame && <RoundHistory game={visibleGame} />}
         </div>
+        {phoneMenu && <GameMenuLinks />}
       </div>
 
       <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''} ${!visibleGame?.observer && visibleGame?.phase !== 'scoring' ? styles.withActions : ''}`} style={tableStyle}>
@@ -414,15 +421,17 @@ export function GameShell({
               <AbortVoteButton iconOnly buttonClassName={styles.toolBtn} />
               <EarlyLeaveButton iconOnly buttonClassName={styles.toolBtn} />
             </div>
-            {visibleGame && <button type="button" className={styles.toolBtn}
+            {visibleGame && <button type="button" className={`${styles.toolBtn} ${styles.rulesTool}`}
               onClick={openRules} aria-haspopup="dialog" aria-label={t('rules.open')} title={t('rules.open')}>
               <AppIcon name="rules" />
             </button>}
             <VoiceButton className={styles.toolBtn} />
-            <button type="button" className={styles.toolBtn} onClick={openInfo} ref={infoButtonRef}
-              aria-label={t('table.info')} title={t('table.info')}
+            <button type="button" className={`${styles.toolBtn} ${styles.menuTool}`} onClick={openInfo} ref={infoButtonRef}
+              aria-label={t(phoneMenu ? 'topbar.menu' : 'table.info')} title={t(phoneMenu ? 'topbar.menu' : 'table.info')}
               aria-expanded={infoOpen} aria-controls="game-info-panel">
-              <AppIcon name="info" />
+              <AppIcon name={phoneMenu ? 'menu' : 'info'} />
+              {phoneMenu && menuUnread > 0 && <span className={`${styles.unread} ${styles.fabBadge}`}>
+                {menuUnread > 99 ? '99+' : menuUnread}</span>}
             </button>
             <button type="button" className={`${styles.toolBtn} ${styles.chatFab}`} onClick={openChat} ref={chatButtonRef}
               aria-label={t('table.chatExpand')} title={t('table.chatExpand')} aria-expanded={chatOpen}>
@@ -454,6 +463,7 @@ export function GameShell({
           </p>}
           {panel && !presentation.locked && <div className={styles.actionPanel} inert={visibleGame?.autoPlay}>{panel}</div>}
           <AbortVoteBanner />
+          <RotateHint />
         </div>
 
         <div className={`${styles.handZone} ${platedHand ? styles.platedHand : ''}`} data-hand-zone>

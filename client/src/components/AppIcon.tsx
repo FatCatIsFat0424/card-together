@@ -6,6 +6,8 @@ import ArrowUpward from '@mui/icons-material/ArrowUpward';
 import AssignmentOutlined from '@mui/icons-material/AssignmentOutlined';
 import ChatBubbleOutline from '@mui/icons-material/ChatBubbleOutlined';
 import Check from '@mui/icons-material/Check';
+import HomeOutlined from '@mui/icons-material/HomeOutlined';
+import PeopleOutline from '@mui/icons-material/PeopleOutlined';
 import CalendarMonthOutlined from '@mui/icons-material/CalendarMonthOutlined';
 import CheckCircleOutline from '@mui/icons-material/CheckCircleOutlined';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
@@ -47,7 +49,7 @@ import WarningAmber from '@mui/icons-material/WarningAmber';
 import styles from './AppIcon.module.css';
 
 const ICONS = {
-  add: Add, android: Android, person: PersonOutline,
+  add: Add, android: Android, person: PersonOutline, home: HomeOutlined, friends: PeopleOutline,
   calendar: CalendarMonthOutlined,
   shop: StorefrontOutlined,
   drag: DragIndicator,

@@ -110,12 +110,15 @@ describe('table seat plate', () => {
 
   afterEach(() => vi.useRealTimers());
 
-  it('makes the whole spectator plate selectable without a profile navigation link', () => {
+  it('makes the whole spectator plate selectable while seated plates open the player card', () => {
     const html = render({ seat: 'S', position: 'bottom', onObserve: () => undefined });
     expect(html).toContain('role="button" tabindex="0"');
     expect(html).toContain('aria-label="View Alice at the bottom"');
     expect(html).not.toContain('/players/alice');
-    expect(render({ seat: 'S', position: 'bottom' })).toContain('/players/alice');
+    expect(html).not.toContain('player card');
+    const plain = render({ seat: 'S', position: 'bottom' });
+    expect(plain).toContain('aria-label="Open Alice’s player card"');
+    expect(plain).not.toContain('/players/alice');
     expect(render({ seat: 'N', position: 'top', onPick: () => undefined }))
       .toContain('aria-label="Choose Bot North to play next"');
     useI18nStore.getState().setLocale('zh-TW');
@@ -135,11 +138,11 @@ describe('table seat plate', () => {
       expect(html).toContain('>Covered 1</button>');
     }
     state.godView = { role: null, covered: null };
-    expect(render({ seat: 'N', position: 'top' })).not.toContain('aria-haspopup="dialog"');
+    expect(render({ seat: 'N', position: 'top' })).not.toMatch(/aria-label="Show .+’s covered cards"/);
     expect(render({ seat: 'N', position: 'top' })).toContain('Covered 1</span>');
     state.godView = { role: 'spectator', covered: { ...covered, N: [] } };
     state.game = { ...state.game, sevens: { handCounts: counts(2), coveredCounts: { ...counts(1), N: 0 } } };
-    expect(render({ seat: 'N', position: 'top' })).not.toContain('aria-haspopup="dialog"');
+    expect(render({ seat: 'N', position: 'top' })).not.toMatch(/aria-label="Show .+’s covered cards"/);
   });
 
   it('keeps the Red Points score as the captured-cards button and shows only red cards in the tray', () => {

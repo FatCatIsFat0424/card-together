@@ -25,7 +25,8 @@ export function PlayerLink({
     <span className={styles.identity}>
       <span className={styles.nickname}>{player.nickname}</span>
       {player.isBot && <span className={styles.botBadge}>{t('player.bot')}</span>}
-      {player.isBot && <span className={styles.botBadge}>{t(`room.botDifficulty.${player.botDifficulty ?? 'hard'}`)}</span>}
+      {player.isBot && <span className={styles.botBadge} data-bot-difficulty>
+        {t(`room.botDifficulty.${player.botDifficulty ?? 'hard'}`)}</span>}
       {showTitle && <span data-cosmetic-title className={styles.title}><Nameplate id={player.nameplate} /></span>}
       {showUsername && !player.isBot && <span className={styles.username}>@{player.username}</span>}
       {details && <span className={styles.details}>{details}</span>}

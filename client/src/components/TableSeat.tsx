@@ -1,7 +1,7 @@
 import { gameSeatValue, isCompassSeat, roomSeatInfo } from '@shared/rules/seats';
 // ─── TableSeat: compact seat info plate (avatar, name, key numbers, status) and card tray ───
 
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import { useShallow } from 'zustand/react/shallow';
@@ -32,6 +32,9 @@ import { TurnClock } from './TurnClock';
 import { BidLabel } from './AuctionTable';
 import { AppIcon } from './AppIcon';
 import styles from './TableSeat.module.css';
+
+// Loaded on first open: the card fetches history and friends, which plates never need.
+const PlayerCard = lazy(() => import('./PlayerCard').then((module) => ({ default: module.PlayerCard })));
 
 const MAX_BACKS = 6;
 /** Games whose centre sizes itself to the table, so a shorter top row makes it larger. */
@@ -146,8 +149,10 @@ function TurnBar({ turn, bankMs, serverNow, receivedAt }: {
  * Overlapping cards that always fit their tray: each card but the last sits in a slot that
  * shrinks before the row could overflow, so narrow seats overlap more instead of clipping.
  */
-function CardTray({ count, render }: { count: number; render: (index: number) => ReactNode }): ReactNode {
-  return <div className={styles.tray} style={{ '--tray-cards': count } as CSSProperties} aria-hidden="true" data-seat-tray>
+function CardTray({ count, kind, render }: {
+  count: number; kind: 'backs' | 'captured'; render: (index: number) => ReactNode;
+}): ReactNode {
+  return <div className={styles.tray} style={{ '--tray-cards': count } as CSSProperties} aria-hidden="true" data-seat-tray={kind}>
     {Array.from({ length: count }, (_, index) => <span key={index} className={styles.cardSlot}>{render(index)}</span>)}
   </div>;
 }
@@ -179,6 +184,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const { t } = useI18nStore();
   const player = useRoomStore((state) => state.roomInfo ? roomSeatInfo(state.roomInfo, seat)?.player ?? null : null);
   const isMe = useRoomStore((state) => state.mySeat === seat);
+  const [cardAnchor, setCardAnchor] = useState<HTMLElement | null>(null);
   const {
     phase, turn, declarer, dealer, playing, bigTwoCards, redPointsCards, ninetyNineCards, locked, captured, busted,
     sevensCards, sevensCovered, chinesePokerCards, arranging, arranged, autoArranged, blackjackCards, holdemCards,
@@ -289,9 +295,9 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
         trump={napoleon.contract?.suit ?? null} />
         : observedCards?.length ? <ObservedCards cards={observedCards} owner={name} /> : null;
   // Red Points shows captured red cards instead of card backs; the hand size stays a chip.
-  const tray = captured ? redCards.length > 0 && <CardTray count={redCards.length} render={(index) => (
+  const tray = captured ? redCards.length > 0 && <CardTray count={redCards.length} kind="captured" render={(index) => (
     <img className={styles.pileCard} src={cardImageUrl(redCards[index])} alt="" draggable={false} />
-  )} /> : !bottom && cards > 0 && !observed && <CardTray count={Math.min(cards, MAX_BACKS)}
+  )} /> : !bottom && cards > 0 && !observed && <CardTray count={Math.min(cards, MAX_BACKS)} kind="backs"
     render={() => <span className={styles.back} />} />;
 
   return (
@@ -309,7 +315,12 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
       <div className={styles.plate} data-seat-plate>
         <SeatFrame frame={player?.seatFrame} turn={Boolean(active)} />
         <div className={styles.name}>
-          {player ? <PlayerLink player={player} size="medium" linked={!onObserve} />
+          {player ? select ? <PlayerLink player={player} size="medium" linked={false} />
+            : <button type="button" className={styles.identityButton} aria-haspopup="dialog"
+              aria-label={t('playerCard.open', { nickname: player.nickname })}
+              onClick={(event) => setCardAnchor(event.currentTarget)}>
+              <PlayerLink player={player} size="medium" linked={false} />
+            </button>
             : <><span className={styles.emptyAvatar} aria-hidden="true" /><span className={styles.empty}>—</span></>}
           {isMe && <span className={styles.meTag}>{t('seat.meTag')}</span>}
           {napoleonLabels?.napoleon === seat && <span className={`${styles.role} ${styles.napoleonRole}`}>
@@ -374,6 +385,9 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
       </div>
       {tray}
       {observed}
+      {cardAnchor && player && gameType && <Suspense fallback={null}>
+        <PlayerCard player={player} gameType={gameType} anchor={cardAnchor} onClose={() => setCardAnchor(null)} />
+      </Suspense>}
     </div>
   );
 }

@@ -314,6 +314,12 @@ body {
   .MuiDialog-container .MuiDialog-paper:not(.MuiDialog-paperFullScreen) { margin: 8px; max-height: calc(100% - 16px); }
 }
 
+/* Phone games keep the whole screen for the table; the game menu carries the app bar's controls. */
+@media (max-width: 767px), (max-height: 500px) and (min-width: 600px) {
+  :root:has([data-game-shell]) { --topbar-height: 0px; --rail-width: 0px; }
+  #root:has([data-game-shell]) > header { display: none; }
+}
+
 /* ─── Global base styles ─── */
 a {
   color: var(--color-primary);

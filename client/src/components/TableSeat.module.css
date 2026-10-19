@@ -614,3 +614,25 @@
 .topLeft { grid-area: topLeft; padding-top: 6px; } .topRight { grid-area: topRight; padding-top: 6px; }
 .top, .topLeft, .topRight { align-self: start; }
 .bottomLeft { grid-area: bottomLeft; } .bottomRight { grid-area: bottomRight; }
+
+/* Phone tables keep plates to identity and counts: titles and bot difficulty live in the player card,
+   and plate counts replace the decorative card backs. */
+@media (max-width: 767px), (max-height: 500px) and (min-width: 600px) {
+  .seat [data-cosmetic-title], .seat [data-bot-difficulty], .seat [data-seat-tray='backs'] { display: none; }
+}
+
+/* The identity opens the player card while keeping the plate's own layout. */
+.identityButton {
+  display: flex;
+  justify-content: inherit;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+.identityButton:focus-visible > [data-player-identity] { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: var(--radius-sm); }

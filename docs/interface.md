@@ -12,7 +12,8 @@ Frontend page behavior and layout. Client architecture and connection handling:
   56px left rail: brand icon, coins, icon buttons, and the menu at the bottom. Its
   popovers open beside the rail, and during matches the room code moves into the menu.
   Pages, sheets, and floating cards start right of the rail.
-- Navigation stays available during matches: top-bar links on desktop, a menu below 1280px.
+- Navigation stays available during matches: top-bar links on desktop, a menu below 1280px,
+  and the [game menu](#phones) on phones.
   Account, friend, profile, and lobby pages keep room membership and offer a return link.
 - Sign-out is the last menu item, in red, on narrow screens and short landscape
   (height at most 500px). Other layouts show its icon and label in the top bar.
@@ -219,6 +220,31 @@ Bot controls use a vertical ellipsis.
 - Changes clear human readiness and persist before broadcast; a failed save restores the arrangement.
 
 ## Game table
+
+### Phones
+
+Phones in either orientation (width below 768px, or height at most 500px and width at least 600px)
+get a cleaner table; desktop and tablet layouts are unchanged.
+
+- The app bar or rail is hidden. The table info button becomes a menu at the top left, badged with
+  unread notifications and messages; voice and chat stay at the top right.
+- The menu sheet holds the room code, rules, game info and round history, notifications, music,
+  links to messages, achievements, lobby, friends, shop and profile, then abort vote and leave last.
+- The action bar shrinks to auto-play and one sort toggle (suit, then rank; Liar's Deck sorts by rank).
+- Plates omit nameplate titles, bot difficulty, and decorative card backs; Red Points keeps its
+  captured cards. Disabled secondary hand actions (outline buttons) are hidden; primary ones stay.
+- Portrait phones show a rotate tip for 8 seconds per game; closing it hides it for good
+  (`card-together.rotateHintDismissed`).
+
+### Player card
+
+Selecting a seated player's identity opens a player card at every size, without leaving the table:
+avatar, nickname, nameplate title, username (bots: difficulty), this game's games played and win
+rate plus the total (or "match history is private"), friend status or a friend-request button, and a
+profile link. Spectator plates that switch perspective, and plates picked as the next player, keep
+their whole-plate action instead.
+
+### Common
 
 - **Leave early** sits below the abort-vote control. Its confirmation explains that the
   computer will play the rest of the match. Only a successful persisted auto-play request

@@ -410,6 +410,8 @@
   }
   .table:not(.expandedTable) > .tableTools > * { pointer-events: auto; }
   .table:not(.expandedTable) > [data-table-seat='top'] { padding-top: 52px; }
+  /* Portrait hands run to the bottom edge; their actions stay above the cards and remain tappable. */
+  .handZone [data-hand-actions] { position: relative; z-index: 9; }
 }
 
 /* Short landscape viewports prioritize the playable centre over seat decoration. */
@@ -691,4 +693,18 @@
   .expandedTable .tableExitTools { flex-direction: row; }
   /* Three plates share each side column, so each keeps its counts beside the name on one line. */
   .expandedTable [data-seat-plate] { flex-flow: row wrap; align-items: center; column-gap: 6px; }
+}
+
+/* Phone game menu: the info button leads the toolbar as the menu; rules, abort, and leave move into its
+   sheet, which scrolls as one list with the exits last. */
+@media (max-width: 767px), (max-height: 500px) and (min-width: 600px) {
+  .tableExitTools, .tableTools .rulesTool { display: none; }
+  .tableTools .menuTool { order: -1; margin-right: auto; }
+  .menuRoomCode { align-self: flex-start; min-height: 40px; }
+  .infoPanel { overflow-y: auto; overscroll-behavior: contain; }
+  .infoContent { flex: none; overflow: visible; }
+  .rulesRailButton { display: inline-flex; justify-content: center; }
+  .abortRail.abortRail { display: flex; order: 10; }
+  /* Unavailable secondary actions leave the corner instead of greying out; primary actions stay. */
+  .handZone [data-hand-actions] :global(.btn-outline):disabled { display: none; }
 }
