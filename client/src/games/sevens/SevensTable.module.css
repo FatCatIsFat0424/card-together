@@ -112,18 +112,31 @@
 .next .chipRank { font-size: calc(var(--chip-w) * 0.4); }
 
 .target {
+  position: relative;
   border: 2px solid var(--turn-glow);
   background: color-mix(in srgb, var(--turn-glow) 18%, transparent);
-  box-shadow: 0 0 10px 2px color-mix(in srgb, var(--turn-glow) 55%, transparent);
+  box-shadow: 0 0 6px 1px color-mix(in srgb, var(--turn-glow) 45%, transparent);
   opacity: 1;
+}
+
+/* The stronger glow fades in and out on its own layer: animating box-shadow repaints every frame. */
+.target::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  box-shadow: 0 0 14px 4px color-mix(in srgb, var(--turn-glow) 70%, transparent);
+  opacity: 0;
+  pointer-events: none;
   animation: pulse 1.6s ease-in-out infinite;
 }
 
 .previewed {
   background: color-mix(in srgb, var(--turn-glow) 45%, transparent);
   transform: scale(1.08);
-  animation: none;
 }
+
+.previewed::after { animation: none; }
 
 .empty {
   color: var(--table-ink);
@@ -155,12 +168,12 @@
 }
 
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 6px 1px color-mix(in srgb, var(--turn-glow) 45%, transparent); }
-  50% { box-shadow: 0 0 14px 4px color-mix(in srgb, var(--turn-glow) 70%, transparent); }
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .last, .target { animation: none; }
+  .last, .target::after { animation: none; }
   .previewed { transform: none; }
 }
 

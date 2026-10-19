@@ -214,7 +214,8 @@ describe('table seat plate', () => {
       ...baseGame(),
       currentTurnSeat: 'S',
       holdem: {
-        gameType: 'holdem', phase: 'playing', mySeat: 'S', myHand: [card(14, 'spades'), card(13, 'spades')], hand: 6,
+        gameType: 'holdem', phase: 'playing', mySeat: 'S', seats: ['N', 'E', 'S', 'W'],
+        myHand: [card(14, 'spades'), card(13, 'spades')], hand: 6,
         button: 'W', smallBlind: 15, bigBlind: 30, chips: { N: 0, E: 0, S: 940, W: 1200 },
         streetBets: { N: 0, E: 0, S: 30, W: 30 }, totalBets: { N: 0, E: 500, S: 30, W: 30 },
         dealt: ['E', 'S', 'W'], folded: ['W'], street: 'preflop', board: [], currentBet: 30, minRaise: 30,

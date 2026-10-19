@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { HE_HANDS, heReplay } from '@shared/rules/holdem';
+import { HE_HANDS } from '@shared/rules/holdem';
 import type { HoldemAction, HoldemLogEntry, HoldemMatchResult, HoldemVisibleState, GameSeat } from '@shared/types';
 import { tablePosition } from '../../game-view';
 import type { TablePosition } from '../../game-view';
@@ -21,7 +21,7 @@ import { useGamePresentation } from '../use-game-presentation';
 import { BetStack, Board, ChipAmount, HeCards, SeatMarkers, cardName } from './HoldemCards';
 import { usePotLabel } from './HoldemFrame';
 import {
-  HE_SEATS, QUICK_SIZES, chipsAdded, clampRaise, holdemBlindSeats, holdemCategory, holdemControls, holdemView,
+  HE_SEATS, QUICK_SIZES, chipsAdded, clampRaise, holdemBlindSeats, holdemCategory, holdemControls, holdemTableAt, holdemView,
   potLines, potTotal, quickRaise, raiseKind, rankHoldem, recentHoldemMoves, seatState, shownAward, shownHoleCards,
   signedChips, streetActions,
 } from './holdem-view';
@@ -135,7 +135,7 @@ function MoveLine({ log, seats, index }: {
     </>;
   }
   if (entry.type === 'showdown') {
-    const { board } = heReplay(log, seats, index);
+    const { board } = holdemTableAt(log, seats, index);
     return <div className={styles.moveBlock}>
       <span className={styles.handTitle}>{t('holdem.log.showdown')}</span>
       <span className={styles.moveDetail}>{HE_SEATS.filter((seat) => entry.cards[seat].length > 0).map((seat) => {

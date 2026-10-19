@@ -312,15 +312,14 @@ export function heApplyEntry(table: HeTable, entry: HoldemLogEntry): void {
     case 'showdown':
       table.revealed = seatMap((seat) => [...entry.cards[seat]]);
       return;
-    case 'award': {
-      const { payouts } = heAward(table);
-      const chips = seatMap((seat) => table.chips[seat] + payouts[seat]);
-      table.eliminated = [...table.eliminated, ...heEliminations(table, chips)];
-      table.chips = chips;
+    case 'award':
+      // The entry already holds the evaluated showdown: the server derives it from heAward and
+      // log validation recomputes it, so replays skip re-ranking every hand.
+      table.eliminated = [...table.eliminated, ...entry.eliminated];
+      table.chips = seatMap((seat) => entry.chips[seat]);
       table.streetBets = seatMap(() => 0);
       table.totalBets = seatMap(() => 0);
       table.currentBet = 0;
-    }
   }
 }
 

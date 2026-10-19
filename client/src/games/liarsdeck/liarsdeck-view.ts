@@ -4,6 +4,7 @@ import { LD_HAND_SIZE, LD_MAX_PLAY, ldCanChallenge, ldIsTruth, ldMustChallenge }
 import type {
   Card, LiarCard, LiarFace, LiarsDeckLastPlay, LiarsDeckLogEntry, LiarsDeckVisibleState, LiarTableFace, Seat, Suit,
 } from '@shared/types';
+import { createLogViewCache } from '../log-view-cache';
 
 /** Public table state as of one point in the log. */
 export interface LiarsDeckTableView {
@@ -60,6 +61,8 @@ export function replayLiarsDeck(
   return { round, tableFace, handCounts, pileCount, lastPlay, shots, eliminated };
 }
 
+const views = createLogViewCache<LiarsDeckVisibleState, LiarsDeckTableView>();
+
 /**
  * The table as the presentation currently shows it: a trigger pull stays unresolved during its
  * suspense frame, and the next round's cards stay hidden until its deal frame.
@@ -74,11 +77,11 @@ export function liarsDeckView(game: LiarsDeckVisibleState, frame: PresentationFr
     };
   }
   const end = frame?.kind === 'roulette' ? index : index + 1;
-  return {
+  return views.get(game, end, () => ({
     ...replayLiarsDeck(game.log, end),
     handHidden: game.log.slice(end).some((entry) => entry.type === 'round'),
     logEnd: end,
-  };
+  }));
 }
 
 export function liarsDeckHandMode(game: LiarsDeckVisibleState, isMyTurn: boolean): LiarsDeckHandMode {

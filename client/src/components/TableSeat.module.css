@@ -288,6 +288,17 @@
   background: color-mix(in srgb, var(--turn-glow) 16%, var(--bg-surface));
   box-shadow: inset 0 0 0 1px var(--turn-glow),
     0 0 0 3px color-mix(in srgb, var(--turn-glow) 35%, transparent), var(--shadow-md);
+}
+
+/* The pulsing ring fades on its own layer: animating the plate's box-shadow repaints the whole plate every frame. */
+.turn .plate::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--turn-glow) 55%, transparent),
+    0 0 10px 6px color-mix(in srgb, var(--turn-glow) 25%, transparent);
+  pointer-events: none;
   animation: turnRing 1.6s ease-out infinite;
 }
 
@@ -296,21 +307,16 @@
   border-color: var(--frame-bar);
   background: color-mix(in srgb, var(--frame-bar) 14%, var(--bg-surface));
   box-shadow: inset 0 0 0 1px var(--frame-bar), var(--shadow-md);
-  animation: none;
 }
+
+.framed.turn .plate::after { content: none; }
 
 .framed .turnBar { background: color-mix(in srgb, var(--frame-bar) 25%, transparent); }
 .framed .turnBase { background: var(--frame-bar); }
 
 @keyframes turnRing {
-  0% {
-    box-shadow: inset 0 0 0 1px var(--turn-glow),
-      0 0 0 0 color-mix(in srgb, var(--turn-glow) 60%, transparent), var(--shadow-md);
-  }
-  100% {
-    box-shadow: inset 0 0 0 1px var(--turn-glow),
-      0 0 0 10px color-mix(in srgb, var(--turn-glow) 0%, transparent), var(--shadow-md);
-  }
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
 .turnBar {
@@ -360,12 +366,17 @@
   inset: -2px;
   border-radius: inherit;
   pointer-events: none;
+  background: color-mix(in srgb, var(--turn-glow) 35%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--turn-glow) 45%, transparent),
+    0 0 14px 8px color-mix(in srgb, var(--turn-glow) 20%, transparent);
+  opacity: 0;
   animation: movedFlash 0.9s ease-out forwards;
 }
 
+/* Opacity and scale only, so the flash after every move stays on the compositor. */
 @keyframes movedFlash {
-  0% { box-shadow: 0 0 0 0 var(--turn-glow); background: color-mix(in srgb, var(--turn-glow) 35%, transparent); }
-  100% { box-shadow: 0 0 0 18px transparent; background: transparent; }
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.06); }
 }
 
 /* A frozen bar would misreport the time; the clock chip still shows it. */
@@ -375,9 +386,9 @@
   .moved, .thinking { animation: none; }
   .turnBar { display: none; }
   .turn .plate {
-    animation: none;
     box-shadow: inset 0 0 0 1px var(--turn-glow), 0 0 0 2px var(--turn-glow), var(--shadow-md);
   }
+  .turn .plate::after { content: none; }
 }
 
 /* Ninety-Nine bust: the whole seat turns gray */

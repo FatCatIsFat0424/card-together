@@ -51,6 +51,17 @@ export function TableCollapse({ startedAt, settled }: { startedAt: number; settl
     if (!root || !canvas || !table) return;
     const still = settled || reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const renderer = createCollapseRenderer(canvas);
+    if (still) {
+      // The broken table only changes with its size, so it is not redrawn every frame under the result.
+      const paint = (): void => {
+        const layer = root.getBoundingClientRect();
+        renderer.draw({ width: layer.width, height: layer.height, impact: impactPoint(root, layer) }, 0, 0, true);
+      };
+      paint();
+      const observer = new ResizeObserver(paint);
+      observer.observe(root);
+      return () => observer.disconnect();
+    }
     let previous = performance.now();
     let request = 0;
     const tick = (now: number): void => {
@@ -58,10 +69,10 @@ export function TableCollapse({ startedAt, settled }: { startedAt: number; settl
       const step = Math.min(MAX_STEP_SECONDS, Math.max(0, (now - previous) / 1000));
       previous = now;
       // The whole table jolts with the blow, overlay included.
-      const jolt = still ? { x: 0, y: 0 } : collapseShake(ms);
+      const jolt = collapseShake(ms);
       table.style.transform = jolt.x || jolt.y ? `translate(${jolt.x}px, ${jolt.y}px)` : '';
       const layer = root.getBoundingClientRect();
-      renderer.draw({ width: layer.width, height: layer.height, impact: impactPoint(root, layer) }, ms, step, still);
+      renderer.draw({ width: layer.width, height: layer.height, impact: impactPoint(root, layer) }, ms, step, false);
       request = requestAnimationFrame(tick);
     };
     tick(previous);

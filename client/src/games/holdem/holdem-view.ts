@@ -6,6 +6,7 @@ import type { HeTableView } from '@shared/rules/holdem';
 import type {
   Card, ChinesePokerCategory, HoldemLogEntry, HoldemMatchResult, HoldemPot, HoldemVisibleState, GameSeat,
 } from '@shared/types';
+import { createLogViewCache } from '../log-view-cache';
 import { isOwnTurn } from '../observer-view';
 import type { HistoryRound } from '../round-history';
 
@@ -41,25 +42,42 @@ function handStart(log: readonly HoldemLogEntry[], end: number): number {
   return -1;
 }
 
+const tables = createLogViewCache<readonly HoldemLogEntry[], HeTableView>();
+const awards = createLogViewCache<readonly HoldemLogEntry[], HoldemAwardView | null>();
+const replays = createLogViewCache<readonly HoldemLogEntry[], HoldemTableView>();
+const views = createLogViewCache<HoldemVisibleState, HoldemTableView>();
+
+const replayKey = (seats: readonly GameSeat[], end: number): string => `${seats.join('')}:${end}`;
+
+/** The public table after the first `end` entries; shared between callers, so treat it as read-only. */
+export function holdemTableAt(log: readonly HoldemLogEntry[], seats: readonly GameSeat[], end: number): HeTableView {
+  return tables.get(log, replayKey(seats, end), () => heReplay(log, seats, end));
+}
+
 /** The award of the hand shown after the first `end` entries, if it has been reached. */
 export function shownAward(log: readonly HoldemLogEntry[], seats: readonly GameSeat[], end: number): HoldemAwardView | null {
   const stop = Math.min(end, log.length);
-  for (let index = stop - 1; index > handStart(log, stop); index--) {
-    const entry = log[index];
-    if (entry.type !== 'award') continue;
-    const before = heReplay(log, seats, index).chips;
-    return {
-      pots: entry.pots,
-      payouts: seatMap((seat) => Math.max(0, entry.chips[seat] - before[seat])),
-      eliminated: entry.eliminated,
-    };
-  }
-  return null;
+  return awards.get(log, replayKey(seats, stop), () => {
+    const start = handStart(log, stop);
+    for (let index = stop - 1; index > start; index--) {
+      const entry = log[index];
+      if (entry.type !== 'award') continue;
+      const before = holdemTableAt(log, seats, index).chips;
+      return {
+        pots: entry.pots,
+        payouts: seatMap((seat) => Math.max(0, entry.chips[seat] - before[seat])),
+        eliminated: entry.eliminated,
+      };
+    }
+    return null;
+  });
 }
 
 /** The table of a match between `seats` rebuilt from the public log before `end`. */
 export function replayHoldem(log: readonly HoldemLogEntry[], seats: readonly GameSeat[], end: number): HoldemTableView {
-  return { ...heReplay(log, seats, end), award: shownAward(log, seats, end), logEnd: Math.min(end, log.length) };
+  return replays.get(log, replayKey(seats, end), () => ({
+    ...holdemTableAt(log, seats, end), award: shownAward(log, seats, end), logEnd: Math.min(end, log.length),
+  }));
 }
 
 /**
@@ -69,7 +87,9 @@ export function replayHoldem(log: readonly HoldemLogEntry[], seats: readonly Gam
 export function holdemView(game: HoldemVisibleState, frame: PresentationFrame | null): HoldemTableView {
   const index = frame ? frameLogIndex(frame) : null;
   if (index !== null) return replayHoldem(game.log, game.seats, index + 1);
-  return { ...game, award: shownAward(game.log, game.seats, game.log.length), logEnd: game.log.length };
+  return views.get(game, 'live', () => ({
+    ...game, award: shownAward(game.log, game.seats, game.log.length), logEnd: game.log.length,
+  }));
 }
 
 /** Hole cards from an earlier hand, kept so a hand still being presented keeps showing them. */

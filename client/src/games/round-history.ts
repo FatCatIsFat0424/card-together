@@ -4,7 +4,7 @@ import type {
 } from '@shared/types';
 import type { BigTwoComboType } from '@shared/rules/bigtwo';
 import { bjApplyEntry, bjEmptyTable, bjTotal } from '@shared/rules/blackjack';
-import { heApplyEntry, heAward, heBestHand, heEmptyTable } from '@shared/rules/holdem';
+import { heApplyEntry, heBestHand, heEmptyTable } from '@shared/rules/holdem';
 import { chipsAdded } from './holdem/holdem-view';
 import { rpScore } from '@shared/rules/redpoints';
 
@@ -218,9 +218,9 @@ export function deriveRoundHistory(game: HistoryInput): HistoryRound[] {
         }
       } else {
         const round = current ?? start();
-        const { payouts } = heAward(table);
         for (const seat of SEATS) {
-          if (payouts[seat] > 0) round.actions.push({ kind: 'award', seat, cards: [], amount: payouts[seat] });
+          const payout = entry.chips[seat] - table.chips[seat];
+          if (payout > 0) round.actions.push({ kind: 'award', seat, cards: [], amount: payout });
         }
         for (const seat of entry.eliminated) round.actions.push({ kind: 'eliminated', seat, cards: [] });
         round.complete = true;

@@ -110,6 +110,19 @@ describe("Texas Hold'em table view", () => {
     expect(replayHoldem(log, ALL, log.length - 1).award?.eliminated).toEqual([]);
   });
 
+  it('should share one replay per snapshot and frame across callers', () => {
+    const state = visible(log.length);
+    const awarded = getPresentationFrames(state).find((frame) => frame.kind === 'award') ?? null;
+    // Every seat and the table ask for the same view; only the first call replays the log.
+    expect(holdemView(state, awarded)).toBe(holdemView(state, awarded));
+    expect(holdemView(state, null)).toBe(holdemView(state, null));
+    expect(replayHoldem(state.log, ALL, 5)).toBe(replayHoldem(state.log, ALL, 5));
+    // A new snapshot is a new object and is replayed afresh.
+    const next = visible(log.length);
+    expect(holdemView(next, awarded)).not.toBe(holdemView(state, awarded));
+    expect(holdemView(next, awarded)).toEqual(holdemView(state, awarded));
+  });
+
   it('should keep the next hand hole cards hidden until its deal frame', () => {
     const state = visible(log.length);
     const [bet, , , awarded, deal] = getPresentationFrames(state);

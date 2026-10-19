@@ -9,6 +9,7 @@ import type {
   BlackjackAction, BlackjackDealerAction, BlackjackHand, BlackjackLogEntry, BlackjackMatchResult, BlackjackOutcome,
   BlackjackVisibleState, Card, GameSeat,
 } from '@shared/types';
+import { createLogViewCache } from '../log-view-cache';
 import { isOwnTurn } from '../observer-view';
 import type { HistoryRound } from '../round-history';
 
@@ -71,10 +72,17 @@ function lastDealer(log: readonly BlackjackLogEntry[]): GameSeat | null {
   return deal?.type === 'deal' ? deal.dealer ?? null : null;
 }
 
+const replays = createLogViewCache<readonly BlackjackLogEntry[], BlackjackTableView>();
+const views = createLogViewCache<BlackjackVisibleState, BlackjackTableView>();
+
 /** The table of a match between `seats` replayed from the public log before `end`. */
 export function replayBlackjack(
   log: readonly BlackjackLogEntry[], seats: readonly GameSeat[], end: number,
 ): BlackjackTableView {
+  return replays.get(log, `${seats.join('')}:${end}`, () => buildReplay(log, seats, end));
+}
+
+function buildReplay(log: readonly BlackjackLogEntry[], seats: readonly GameSeat[], end: number): BlackjackTableView {
   const table = bjReplay(log, seats, end);
   const { holeHidden, settlement } = scanHand(log, end);
   return {
@@ -100,7 +108,7 @@ export function replayBlackjack(
 export function blackjackView(game: BlackjackVisibleState, frame: PresentationFrame | null): BlackjackTableView {
   const index = frame ? frameLogIndex(frame) : null;
   if (index !== null) return replayBlackjack(game.log, game.seats, index + 1);
-  return {
+  return views.get(game, 'live', () => ({
     hand: game.hand,
     chips: game.chips,
     hands: game.hands,
@@ -114,7 +122,7 @@ export function blackjackView(game: BlackjackVisibleState, frame: PresentationFr
     dealerTurn: game.phase === 'playing' && !game.holeHidden,
     betting: game.phase === 'betting',
     logEnd: game.log.length,
-  };
+  }));
 }
 
 /** Hand number shown to players: betting is already for the next hand. */

@@ -90,56 +90,59 @@ const initialState: GameStoreState = {
 export const useGameStore = create<GameStoreState & GameStoreActions>((set) => ({
   ...initialState,
   restore: (game) => set((state) => {
+    // One deep comparison per snapshot: a game's own field always holds the same object as `visible`.
+    const unchanged = equalSnapshotValue(state.visible, game);
+    const retain = <T>(previous: T | null, next: T): T => unchanged && previous ? previous : next;
     const nextState: GameStoreState = game.gameType === 'bigtwo' ? {
       ...initialState,
       gameType: 'bigtwo',
       phase: game.phase,
       currentTurnSeat: game.phase === 'playing' ? game.currentTurnSeat : null,
-      bigTwo: retainSnapshotValue(state.bigTwo, game),
+      bigTwo: retain(state.bigTwo, game),
     } : game.gameType === 'redpoints' ? {
       ...initialState,
       gameType: 'redpoints',
       phase: game.phase,
       currentTurnSeat: game.phase === 'playing' ? game.currentTurnSeat : null,
-      redPoints: retainSnapshotValue(state.redPoints, game),
+      redPoints: retain(state.redPoints, game),
     } : game.gameType === 'ninetynine' ? {
       ...initialState,
       gameType: 'ninetynine',
       phase: game.phase,
       currentTurnSeat: game.phase === 'playing' ? game.currentTurnSeat : null,
-      ninetyNine: retainSnapshotValue(state.ninetyNine, game),
+      ninetyNine: retain(state.ninetyNine, game),
     } : game.gameType === 'sevens' ? {
       ...initialState,
       gameType: 'sevens',
       phase: game.phase,
       currentTurnSeat: game.phase === 'playing' ? game.currentTurnSeat : null,
-      sevens: retainSnapshotValue(state.sevens, game),
+      sevens: retain(state.sevens, game),
     } : game.gameType === 'chinesepoker' ? {
       ...initialState,
       gameType: 'chinesepoker',
       // The store phase only separates an active game from scoring; arranging is simultaneous,
       // so no single seat holds the turn.
       phase: game.phase === 'arranging' ? 'playing' : game.phase,
-      chinesePoker: retainSnapshotValue(state.chinesePoker, game),
+      chinesePoker: retain(state.chinesePoker, game),
     } : game.gameType === 'liarsdeck' ? {
       ...initialState,
       gameType: 'liarsdeck',
       phase: game.phase,
       currentTurnSeat: game.phase === 'playing' ? game.currentTurnSeat : null,
-      liarsDeck: retainSnapshotValue(state.liarsDeck, game),
+      liarsDeck: retain(state.liarsDeck, game),
     } : game.gameType === 'blackjack' ? {
       ...initialState,
       gameType: 'blackjack',
       // Betting is simultaneous, so no single seat holds the turn.
       phase: game.phase === 'betting' ? 'playing' : game.phase,
       currentTurnSeat: game.phase === 'playing' ? game.currentTurnSeat : null,
-      blackjack: retainSnapshotValue(state.blackjack, game),
+      blackjack: retain(state.blackjack, game),
     } : game.gameType === 'holdem' ? {
       ...initialState,
       gameType: 'holdem',
       phase: game.phase,
       currentTurnSeat: game.phase === 'playing' ? game.currentTurnSeat : null,
-      holdem: retainSnapshotValue(state.holdem, game),
+      holdem: retain(state.holdem, game),
       holdemHeld: nextHeldHoleCards(state.holdem, game, state.holdemHeld),
     } : game.gameType === 'napoleon' ? {
       ...initialState,
@@ -149,7 +152,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       dealerSeat: game.dealerSeat,
       currentTurnSeat: game.currentTurnSeat
         ?? (game.phase === 'bidding' ? game.bidding?.currentBidderSeat ?? null : null),
-      napoleon: retainSnapshotValue(state.napoleon, game),
+      napoleon: retain(state.napoleon, game),
     } : {
       visible: null,
       presentationReceivedAt: 0,
@@ -177,7 +180,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       result: retainSnapshotValue(state.result, game.result),
       redealPendingSeat: game.redealPendingSeat,
     };
-    nextState.visible = retainSnapshotValue(state.visible, game);
+    nextState.visible = unchanged ? state.visible : game;
     nextState.presentationReceivedAt = nextState.visible === state.visible
       ? state.presentationReceivedAt : Date.now();
     return (Object.keys(nextState) as (keyof GameStoreState)[])
