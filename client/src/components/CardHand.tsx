@@ -104,7 +104,7 @@ export function CardHand<T extends NapoleonCard>({
 
   const middle = (cards.length - 1) / 2;
   return (
-    <div className={styles.handContainer} ref={containerRef} role="group"
+    <div className={styles.handContainer} ref={containerRef} role="group" data-card-hand
       aria-label={t('hand.label', { n: String(cards.length) })}
       style={{ '--hand-card-count': Math.max(cards.length, 1) } as CSSProperties}>
       {cards.map((card, index) => {

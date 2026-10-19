@@ -5,7 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import type { CSSProperties, ReactNode } from 'react';
 import { frameLogIndex } from '@shared/game-presentation';
 import type { PresentationFrame } from '@shared/game-presentation';
-import type { PlayerVisibleGameState, GameSeat, GameType } from '@shared/types';
+import type { PlayerVisibleGameState, GameSeat } from '@shared/types';
 import type { TranslationKey } from '../i18n';
 import { playCardSound, playOutSound, unlockCardSounds, disposeCardSounds } from '../audio/card-sound';
 import { cardBackStyle, tableBackgroundStyle } from '../account-appearance';
@@ -158,11 +158,6 @@ interface GameShellProps {
   turnReady?: boolean;
 }
 
-/**
- * Short landscape: games whose centre spreads wide put the own-seat plate in the hand row. Games with
- * compact centres keep it floating above the hand, leaving thirteen-card hands their full width.
- */
-const PLATED_HAND_GAMES: readonly GameType[] = ['holdem', 'blackjack', 'liarsdeck', 'ninetynine', 'sevens', 'chinesepoker'];
 
 /** `wide` lifts the usual width cap for centres that size themselves to the table, such as the Sevens rows. */
 function FittedCentre({ children, style, responsive, wide, foreground }: {
@@ -258,7 +253,6 @@ export function GameShell({
     .map((seat) => tablePosition(seat, bottomSeat, tableSeats));
   const cornersSpan = expandedTable && !sidePositions.includes('left') && !sidePositions.includes('right');
   const centreUp = expandedTable && !sidePositions.includes('top');
-  const platedHand = visibleGame ? PLATED_HAND_GAMES.includes(visibleGame.gameType) : false;
   const unread = chatOpen ? 0 : Math.max(0, messageCount - seenMessages);
   // Phones hide the app bar during games, so this sheet becomes the menu for everything it held.
   const phoneMenu = useMediaQuery(SHEET_QUERY);
@@ -413,7 +407,7 @@ export function GameShell({
 
       <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''} ${!visibleGame?.observer && visibleGame?.phase !== 'scoring' ? styles.withActions : ''}`} style={tableStyle}>
         <GameActionBar />
-        <div className={`${styles.table} ${expandedTable ? styles.expandedTable : ''} ${cornersSpan ? styles.cornersSpan : ''} ${centreUp ? styles.centreUp : ''} ${platedHand ? styles.platedTable : ''}`}
+        <div className={`${styles.table} ${expandedTable ? styles.expandedTable : ''} ${cornersSpan ? styles.cornersSpan : ''} ${centreUp ? styles.centreUp : ''}`}
           data-card-table>
           <div className={styles.desktopVoice}><VoiceButton /></div>
           <div className={styles.tableTools}>
@@ -466,7 +460,7 @@ export function GameShell({
           <RotateHint />
         </div>
 
-        <div className={`${styles.handZone} ${platedHand ? styles.platedHand : ''}`} data-hand-zone>
+        <div className={styles.handZone} data-hand-zone>
           <div className={styles.handHeader}>
             {tableSeats.includes(bottomSeat) && <TableSeat seat={bottomSeat} position="bottom" suppressTurn={presentation.locked}
               onObserve={watching ? () => observeSeat(bottomSeat) : undefined}

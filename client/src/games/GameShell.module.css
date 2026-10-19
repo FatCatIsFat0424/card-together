@@ -410,8 +410,14 @@
   }
   .table:not(.expandedTable) > .tableTools > * { pointer-events: auto; }
   .table:not(.expandedTable) > [data-table-seat='top'] { padding-top: 52px; }
-  /* Portrait hands run to the bottom edge; their actions stay above the cards and remain tappable. */
-  .handZone [data-hand-actions] { position: relative; z-index: 9; }
+  /* Portrait cards run past the hand row so the table clips their bottoms; prompts and actions below
+     them form a bar over those clipped edges, staying readable and tappable. */
+  .handZone [data-card-hand] ~ * {
+    position: relative;
+    z-index: 9;
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--bg-surface) 85%, transparent);
+  }
 }
 
 /* Short landscape viewports prioritize the playable centre over seat decoration. */
@@ -512,23 +518,18 @@
 }
 
 @media (max-height: 500px) and (min-width: 600px) {
-  .handZone { display: block; }
-  .handHeader, .handStatus { position: absolute; left: 20%; width: 180px; }
-  .handHeader { bottom: calc(100% + 28px); }
-  .handStatus { bottom: calc(100% + 4px); }
-  .handZone > :last-child { container-type: inline-size; }
-  /* Wide centres have no room for the floating plate, so it leads the hand row instead. */
-  .handZone.platedHand {
+  /* The own plate and turn prompt lead the hand row, keeping the centre and its presentations clear. */
+  .handZone {
     display: grid;
-    grid-template-columns: clamp(144px, 22vw, 180px) minmax(0, 1fr);
+    grid-template-columns: clamp(150px, 21vw, 180px) minmax(0, 1fr);
     grid-template-rows: auto 1fr;
     column-gap: 8px;
     align-content: center;
     align-items: start;
   }
-  .platedHand > .handHeader, .platedHand > .handStatus { position: static; width: auto; grid-column: 1; }
-  .platedHand > .handStatus { justify-content: flex-start; }
-  .platedHand > :last-child { grid-column: 2; grid-row: 1 / span 2; }
+  .handZone > .handHeader, .handZone > .handStatus { grid-column: 1; }
+  .handZone > .handStatus { justify-content: flex-start; }
+  .handZone > :last-child { grid-column: 2; grid-row: 1 / span 2; container-type: inline-size; }
   /* Keep explicit hand actions above the viewport edge, beside the cards. */
   .handZone:has([data-hand-actions] button) { --hand-actions-width: 120px; }
   .handZone:has([data-hand-actions='wide'] button) { --hand-actions-width: clamp(160px, 26vw, 208px); }
@@ -537,8 +538,8 @@
     padding-right: calc(var(--hand-actions-width) + 4px);
   }
   .handZone [data-hand-actions-placeholder]:not([data-hand-actions-placeholder='group']) { display: none; }
-  /* Plates already count side hands; their decorative trays would meet the plate and actions. */
-  .platedTable > :not([data-table-seat='top']) [data-seat-tray] { display: none; }
+  /* Plates already count side hands; their card backs would meet the own plate and actions. */
+  .table > :not([data-table-seat='top']) [data-seat-tray='backs'] { display: none; }
   .handZone [data-hand-actions]:has(button) {
     position: absolute;
     right: 4px;
@@ -700,6 +701,8 @@
 @media (max-width: 767px), (max-height: 500px) and (min-width: 600px) {
   .tableExitTools, .tableTools .rulesTool { display: none; }
   .tableTools .menuTool { order: -1; margin-right: auto; }
+  /* Corner buttons sit near the screen edge, so their badges stay inside the button bounds. */
+  .tableTools .fabBadge { top: -2px; right: -2px; }
   .menuRoomCode { align-self: flex-start; min-height: 40px; }
   .infoPanel { overflow-y: auto; overscroll-behavior: contain; }
   .infoContent { flex: none; overflow: visible; }

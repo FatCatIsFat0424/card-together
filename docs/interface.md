@@ -233,6 +233,9 @@ get a cleaner table; desktop and tablet layouts are unchanged.
 - The action bar shrinks to auto-play and one sort toggle (suit, then rank; Liar's Deck sorts by rank).
 - Plates omit nameplate titles, bot difficulty, and decorative card backs; Red Points keeps its
   captured cards. Disabled secondary hand actions (outline buttons) are hidden; primary ones stay.
+- Corner button badges stay inside the button so the screen edge never clips them.
+- Portrait cards run past the hand row and the table clips their bottoms; prompts and actions below
+  them sit on a translucent bar above those edges.
 - Portrait phones show a rotate tip for 8 seconds per game; closing it hides it for good
   (`card-together.rotateHintDismissed`).
 
@@ -267,15 +270,13 @@ their whole-plate action instead.
   area's width, increasing overlap when needed to keep every card within reach.
   Landscape hand cards render at full height and extend below the table viewport,
   whose bottom edge clips their lower half. Raising a card reveals more of it.
-  In Bridge, Big Two, Napoleon and Red Points the own-seat plate and turn prompt float above the
-  hand toward the left of the table, leaving the lower row's full width beside the action bar
-  available for cards. Games with wide centres (Sevens, Chinese Poker, Liar's Deck, Ninety-Nine,
-  Blackjack, Hold'em) put the plate and prompt at the left of the hand row instead, keeping the
-  centre clear; their side and corner seats omit decorative card-back trays.
+  Every game puts the own-seat plate and turn prompt at the left of the hand row, so the centre and
+  its play presentations stay clear; side and corner seats omit decorative card-back trays, while
+  Red Points keeps its captured cards.
   Explicit hand actions (play/pass, arrange, cover and card-effect choices) sit at the lower
   right in phone landscape, with longer action panels scrolling independently; the hand row
-  leaves their width free so no card sits under a button. Plated hand rows give the plate
-  144–180px, and wide action panels narrow to 160px on small phones. Other layouts
+  leaves their width free so no card sits under a button. The hand row gives the plate
+  150–180px, and wide action panels narrow to 160px on small phones. Other layouts
   retain their controls below the hand. Blackjack and Hold'em keep betting and play controls in
   the hand row beside their cards.
   Short landscape keeps centre text at about 11px or larger at 706×336 and above (Chrome with
