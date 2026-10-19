@@ -27,7 +27,7 @@ export function RotateHint(): ReactNode {
     writePreference(DISMISSED_PREFERENCE, 'true');
     setDismissed(true);
   };
-  return <p className={styles.hint} role="status">
+  return <p className={styles.hint} role="status" data-rotate-hint>
     <span>{t('table.rotateHint')}</span>
     <button type="button" className={styles.dismiss} onClick={dismiss} aria-label={t('table.rotateDismiss')}
       title={t('table.rotateDismiss')}><AppIcon name="close" /></button>

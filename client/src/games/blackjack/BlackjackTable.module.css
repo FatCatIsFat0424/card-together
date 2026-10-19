@@ -277,6 +277,30 @@
   .chipButton { transition: none; }
 }
 
+/* Portrait phones have height to spare but a narrow felt, so side hands move below the dealer. */
+@media (max-width: 767px) and (orientation: portrait) {
+  .centre:not(.expandedCentre) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'top top'
+      'dealer dealer'
+      'left right'
+      'bottom bottom'
+      'notice notice';
+  }
+  .centre.expandedCentre {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'top top'
+      'dealer dealer'
+      'topLeft topRight'
+      'left right'
+      'bottomLeft bottomRight'
+      'bottom bottom'
+      'notice notice';
+  }
+}
+
 /* Short landscape: the felt keeps hands in flat rows around the dealer, and the own hand or bet shares
    one low row with its controls. */
 @media (max-height: 500px) and (min-width: 600px) {

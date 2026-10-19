@@ -586,23 +586,17 @@
   .actionPanel { top: 50%; bottom: auto; transform: translate(-50%, -50%); }
 }
 
-@media (max-height: 500px) and (min-width: 600px) {
-  .actionPanel:has([aria-labelledby='bidding-panel-title']) {
-    top: 50%;
-    bottom: auto;
-    transform: translate(-50%, -50%);
-  }
-}
-
+/* Phone bidding sits at the bottom of the felt, below the opposite and side seats rather than over them. */
 @media (max-width: 767px) and (orientation: portrait) {
-  .actionPanel:has([aria-labelledby='bidding-panel-title']) {
-    top: 50cqh;
-    bottom: auto;
-    transform: translate(-50%, -50%);
-    width: min(336px, calc(100% - 16px));
-    max-height: calc(100cqh - 24px);
-  }
+  .actionPanel:has([aria-labelledby='bidding-panel-title']) { width: min(336px, calc(100% - 16px)); }
 }
+/* Short portrait phones raise the side seats further while bidding, keeping them above the panel. */
+@media (max-width: 767px) and (orientation: portrait) and (max-height: 700px) {
+  .table:not(.expandedTable):has(> .actionPanel [aria-labelledby='bidding-panel-title']) >
+    :is([data-table-seat='left'], [data-table-seat='right']) { transform: translateY(-88px); }
+}
+/* Action panels own the lower felt while open; the rotate tip waits until they close. */
+.table:has(> .actionPanel) > [data-rotate-hint] { display: none; }
 
 @media (max-height: 500px) and (min-width: 600px) and (pointer: coarse) {
   .toolBtn { width: 44px; height: 44px; }
@@ -659,14 +653,33 @@
   grid-template-areas: 'tools tools tools tools' 'topLeft centre centre topRight' 'topLeft centre centre topRight' 'bottomLeft centre centre bottomRight';
 }
 
+/* Portrait phones: side seats stack in narrow columns beside the centre and the toolbar floats in the top
+   corners, so up to eight seats leave the centre most of the felt. */
 @media (max-width: 767px) and (min-height: 501px) {
-  .table.expandedTable, .table.expandedTable.cornersSpan, .table.expandedTable.centreUp,
-  .table.expandedTable.cornersSpan.centreUp {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: auto repeat(4, auto) minmax(0, 1fr);
-    grid-template-areas: 'tools tools' 'topLeft topRight' 'left right' 'bottomLeft bottomRight' 'top top' 'centre centre';
+  .table.expandedTable {
+    grid-template-columns: minmax(72px, 24%) minmax(0, 1fr) minmax(72px, 24%);
+    grid-template-rows: minmax(48px, auto) auto auto minmax(0, 1fr);
+    grid-template-areas: '. top .' 'topLeft centre topRight' 'left centre right' 'bottomLeft centre bottomRight';
     gap: 4px;
   }
+  .table.expandedTable.cornersSpan {
+    grid-template-areas: '. top .' 'topLeft centre topRight' 'topLeft centre topRight' 'bottomLeft centre bottomRight';
+  }
+  .table.expandedTable.centreUp {
+    grid-template-areas: '. centre .' 'topLeft centre topRight' 'left centre right' 'bottomLeft centre bottomRight';
+  }
+  .table.expandedTable.cornersSpan.centreUp {
+    grid-template-areas: '. centre .' 'topLeft centre topRight' 'topLeft centre topRight' 'bottomLeft centre bottomRight';
+  }
+  .table.expandedTable > .tableTools {
+    position: absolute;
+    inset: 4px 4px auto;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .table.expandedTable > .tableTools > * { pointer-events: auto; }
+  /* Short phones lift four-seat side plates toward the top; stacked columns keep their own rows. */
+  .table.expandedTable > [data-table-seat] { transform: none; }
 }
 
 /* Short landscape: the toolbar floats in the top corners, so corner seats start one button row lower

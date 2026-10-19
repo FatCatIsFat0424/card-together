@@ -292,7 +292,8 @@ their whole-plate action instead.
     plate's counts beside its name. Eight seats fit at 780×360; below about 360px tall
     (a phone browser with system bars) Ninety-Nine and Blackjack side plates still overlap.
   The landscape bidding panel is centered on the playing table and capped at 352px with tighter spacing; touch
-  buttons retain their 44px height.
+  buttons retain their 44px height. Phone panels put the title, highest bid, and recent calls on one
+  line so the opposite seat stays visible.
   Dialogs, including Bridge redeal confirmations, layer above player plates at every
   viewport size, keeping prompts and their buttons unobscured.
   Bridge and Napoleon tricks use larger cards aligned in a single horizontal row in
@@ -305,8 +306,14 @@ their whole-plate action instead.
   prompts layer above the own-seat plate.
   On short portrait phones, side seats retain their card counts but omit decorative
   card-back trays, and extra space above the hand keeps the raised action bar clear.
-  Portrait bidding panels sit at the playing surface's center, capped at 336px wide
-  with compact headings and full-height touch buttons.
+  Portrait bidding panels sit at the bottom of the playing surface, capped at 336px wide
+  with compact headings and full-height touch buttons; they omit recent calls, which the plates
+  already show, and short phones raise the side seats further while bidding. The rotate tip
+  hides while any action panel is open.
+  Portrait tables with more than four seats stack side seats in narrow columns beside the centre
+  and float the toolbar into the top corners. Blackjack moves side hands below the dealer, and
+  Hold'em stacks stakes under the board, keeps hole cards beside the prompt, and folds its
+  controls into three rows (fold, call, raise; quick sizes; slider and amount).
   Portrait hand cards are enlarged with closer overlap, keeping their rank corners
   exposed. Full cards extend below the table's bottom edge, which clips their lower
   portion; selection lifts them to reveal more, and new-card markers stay visible.
