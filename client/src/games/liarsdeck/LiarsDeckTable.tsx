@@ -24,6 +24,7 @@ import type { LiarsDeckTableView } from './liarsdeck-view';
 import { AppIcon } from '../../components/AppIcon';
 import styles from './LiarsDeckTable.module.css';
 import { isOwnTurn, isSpectator } from '../observer-view';
+import { CardBackArt } from '../../cosmetics/art-layers/CardBackArt';
 
 const RECENT_MOVES = 8;
 const MAX_PILE_BACKS = 6;
@@ -43,7 +44,7 @@ function Centre({ view }: { view: LiarsDeckTableView }): ReactNode {
       <div className={styles.pile}>
         <div className={styles.stack} aria-hidden="true">
           {Array.from({ length: Math.min(view.pileCount, MAX_PILE_BACKS) }, (_, index) => (
-            <span key={index} className={`${styles.card} ${styles.back}`} />
+            <span key={index} className={`${styles.card} ${styles.back}`}><CardBackArt /></span>
           ))}
           {view.pileCount === 0 && <span className={`${styles.card} ${styles.empty}`} />}
         </div>
@@ -221,7 +222,7 @@ export function LiarsDeckTable(): ReactNode {
     </div>}
     {view.handHidden && <div className={styles.hand} aria-hidden="true">
       {Array.from({ length: game.myHand.length }, (_, index) => (
-        <span key={index} className={`${styles.handCard} ${styles.back}`} />
+        <span key={index} className={`${styles.handCard} ${styles.back}`}><CardBackArt /></span>
       ))}
     </div>}
     {showHand && game.myPlayed.length > 0 && <div className={styles.played}>

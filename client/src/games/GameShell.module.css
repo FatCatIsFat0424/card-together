@@ -73,6 +73,9 @@
   opacity: var(--table-image-opacity, 1);
 }
 
+/* `TableArt` draws animated artwork and its tint instead. */
+.layeredTable::before { content: none; }
+
 .tableCentre {
   position: relative;
   grid-area: centre;

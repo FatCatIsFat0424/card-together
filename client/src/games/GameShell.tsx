@@ -40,6 +40,10 @@ import { isSpectator } from './observer-view';
 import { useTablePerspective } from './use-table-perspective';
 import { useTablePerspectiveStore } from '../stores/table-perspective-store';
 import { VictoryEffects } from '../cosmetics/victory-effects/VictoryEffects';
+import { useStillArt } from '../cosmetics/art-layers/art-layers';
+import { layeredShopArt } from '../cosmetics/art-layers/shop-art-layers';
+import { CardBackArtContext } from '../cosmetics/art-layers/CardBackArt';
+import { TableArt } from '../cosmetics/art-layers/TableArt';
 import { GameActionBar } from './GameActionBar';
 import { GameMenuLinks, useGameMenuUnread } from './GameMenuLinks';
 import { RotateHint } from './RotateHint';
@@ -201,7 +205,10 @@ export function GameShell({
   const setReducedMotion = useMotionStore((state) => state.setReducedMotion);
   const mySeat = useRoomStore((state) => state.mySeat);
   const account = useAccountStore((state) => state.account);
-  const tableStyle = tableBackgroundStyle(account, reducedMotion);
+  const stillArt = useStillArt();
+  const tableArt = stillArt ? null : layeredShopArt(account?.tableBackgroundStyle);
+  const cardBackArt = stillArt ? null : layeredShopArt(account?.cardBackStyle);
+  const tableStyle = tableBackgroundStyle(account, reducedMotion, !!tableArt);
   const messageCount = useChatStore((state) => state.messages.length);
   const room = useRoomStore((state) => state.roomInfo);
   const log = useGameStore((state) => state.bigTwo?.log ?? state.redPoints?.log ?? state.ninetyNine?.log
@@ -373,9 +380,9 @@ export function GameShell({
     return () => window.removeEventListener('keydown', onKey);
   }, [closeSheets, rulesVisible]);
 
-  return (
+  const shell = (
     <div data-game-shell data-reduced-motion={reducedMotion || undefined} className={`${styles.gameContainer} ${chatOpen ? '' : styles.chatCollapsed} ${infoOpen ? styles.infoOpen : ''}`}
-      style={cardBackStyle(account, reducedMotion)}>
+      style={cardBackStyle(account, reducedMotion, !!cardBackArt)}>
       {(infoOpen || chatOpen) && <button type="button" className={styles.backdrop} tabIndex={-1}
         aria-label={t('table.close')} onClick={closeSheets} />}
 
@@ -405,7 +412,8 @@ export function GameShell({
         {phoneMenu && <GameMenuLinks />}
       </div>
 
-      <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''} ${!visibleGame?.observer && visibleGame?.phase !== 'scoring' ? styles.withActions : ''}`} style={tableStyle}>
+      <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''} ${tableArt ? styles.layeredTable : ''} ${!visibleGame?.observer && visibleGame?.phase !== 'scoring' ? styles.withActions : ''}`} style={tableStyle}>
+        {tableArt && <TableArt art={tableArt} />}
         <GameActionBar />
         <div className={`${styles.table} ${expandedTable ? styles.expandedTable : ''} ${cornersSpan ? styles.cornersSpan : ''} ${centreUp ? styles.centreUp : ''}`}
           data-card-table>
@@ -504,4 +512,5 @@ export function GameShell({
         context={matchRulesContext(visibleGame)} onClose={() => setRulesOpen(false)} />}
     </div>
   );
+  return <CardBackArtContext value={cardBackArt}>{shell}</CardBackArtContext>;
 }

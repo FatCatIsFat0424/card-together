@@ -1,0 +1,7 @@
+/* Mirrors the card back `::before` image layer. */
+.back {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: var(--card-back-opacity, 1);
+}

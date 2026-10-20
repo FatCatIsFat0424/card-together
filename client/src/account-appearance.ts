@@ -25,24 +25,32 @@ export function seatBackgroundStyle(
   return { '--seat-image': `url("${image}")` } as CSSProperties;
 }
 
-/** Variables for a `customTable` surface; undefined keeps the theme surface. */
+/**
+ * Variables for a `customTable` surface; undefined keeps the theme surface. `layered` leaves the CSS
+ * image empty because `TableArt` draws the artwork.
+ */
 export function tableBackgroundStyle(
   appearance: AccountAppearance | null | undefined,
   reducedMotion = false,
+  layered = false,
 ): CSSProperties | undefined {
   const image = appearance?.tableBackgroundStyle ? shopArtworkUrl(appearance.tableBackgroundStyle, reducedMotion)
     : appearance?.tableBackground ? mediaUrl(appearance.tableBackground) : undefined;
   if (!image) return undefined;
   return {
-    '--table-image': `url("${image}")`,
+    '--table-image': layered ? 'none' : `url("${image}")`,
     '--table-image-opacity': opacity(appearance?.tableBackgroundOpacity),
   } as CSSProperties;
 }
 
-/** Overrides the theme card back for every descendant; undefined keeps the theme default. */
+/**
+ * Overrides the theme card back for every descendant; undefined keeps the theme default. `layered`
+ * leaves the CSS image empty because each card back renders `CardBackArt`.
+ */
 export function cardBackStyle(
   appearance: AccountAppearance | null | undefined,
   reducedMotion = false,
+  layered = false,
 ): CSSProperties | undefined {
   const image = appearance?.cardBackStyle ? shopArtworkUrl(appearance.cardBackStyle, reducedMotion)
     : appearance?.cardBack ? mediaUrl(appearance.cardBack) : undefined;
@@ -50,7 +58,7 @@ export function cardBackStyle(
   return {
     // Plain card stock under the image so fading lightens it instead of exposing the theme pattern.
     '--card-back': 'var(--card-face)',
-    '--card-back-image': `url("${image}")`,
+    '--card-back-image': layered ? 'none' : `url("${image}")`,
     '--card-back-size': 'cover',
     '--card-back-opacity': opacity(appearance?.cardBackOpacity),
     // Keeps the card edge visible when the image is faded or matches the table.

@@ -5,6 +5,7 @@ import { useI18nStore } from '../../stores/i18n-store';
 import { LiarCardFace } from './LiarCardFace';
 import { AppIcon } from '../../components/AppIcon';
 import styles from './LiarsDeckFrame.module.css';
+import { CardBackArt } from '../../cosmetics/art-layers/CardBackArt';
 
 /** Body of a Liar's Deck presentation frame; the shared frame supplies the heading and timing. */
 export function LiarsDeckFrame({ frame, name }: { frame: PresentationFrame; name: (seat: GameSeat) => string }): ReactNode {
@@ -21,7 +22,7 @@ export function LiarsDeckFrame({ frame, name }: { frame: PresentationFrame; name
   if (frame.kind === 'play' && frame.count) {
     return <div className={`${styles.body} ${styles.row}`}>
       <div className={`${styles.cards} ${styles.arrive}`} aria-hidden="true">
-        {Array.from({ length: frame.count }, (_, index) => <span key={index} className={`${styles.card} ${styles.back}`} />)}
+        {Array.from({ length: frame.count }, (_, index) => <span key={index} className={`${styles.card} ${styles.back}`}><CardBackArt /></span>)}
       </div>
       <strong className={styles.count}>×{frame.count}</strong>
     </div>;

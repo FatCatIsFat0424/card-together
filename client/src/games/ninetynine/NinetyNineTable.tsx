@@ -23,6 +23,7 @@ import { useGamePresentation } from '../use-game-presentation';
 import { AppIcon } from '../../components/AppIcon';
 import styles from './NinetyNineTable.module.css';
 import { isOwnTurn } from '../observer-view';
+import { CardBackArt } from '../../cosmetics/art-layers/CardBackArt';
 
 const SEATS: readonly GameSeat[] = ['N', 'E', 'S', 'W'];
 const RECENT_MOVES = 8;
@@ -61,7 +62,7 @@ function Centre({ game }: { game: NinetyNineVisibleState }): ReactNode {
     </div>
     <div className={styles.pileRow}>
       <div className={styles.pile} title={stockLabel}>
-        {game.stockCount > 0 && <span className={styles.back} aria-hidden="true" />}
+        {game.stockCount > 0 && <span className={styles.back} aria-hidden="true"><CardBackArt /></span>}
         <span className={styles.pill}>{stockLabel}</span>
       </div>
       {game.lastPlayed && <div className={styles.pile}>

@@ -1,0 +1,33 @@
+/* ─── Layered animated artwork: images stacked inside a clipping box ─── */
+
+.art {
+  display: block;
+  overflow: hidden;
+  pointer-events: none;
+  /* Sizes the cover box from this element in either orientation. */
+  container-type: size;
+}
+
+/* Centered box with the artwork's aspect ratio, covering the element like `background-size: cover`. */
+.cover {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100cqw, 100cqh * var(--art-aspect));
+  height: max(100cqh, 100cqw / var(--art-aspect));
+  translate: -50% -50%;
+  overflow: hidden;
+}
+
+.fill {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.layer {
+  position: absolute;
+  display: block;
+}

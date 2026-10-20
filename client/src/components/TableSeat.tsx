@@ -32,6 +32,7 @@ import { TurnClock } from './TurnClock';
 import { BidLabel } from './AuctionTable';
 import { AppIcon } from './AppIcon';
 import styles from './TableSeat.module.css';
+import { CardBackArt } from '../cosmetics/art-layers/CardBackArt';
 
 // Loaded on first open: the card fetches history and friends, which plates never need.
 const PlayerCard = lazy(() => import('./PlayerCard').then((module) => ({ default: module.PlayerCard })));
@@ -298,7 +299,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const tray = captured ? redCards.length > 0 && <CardTray count={redCards.length} kind="captured" render={(index) => (
     <img className={styles.pileCard} src={cardImageUrl(redCards[index])} alt="" draggable={false} />
   )} /> : !bottom && cards > 0 && !observed && <CardTray count={Math.min(cards, MAX_BACKS)} kind="backs"
-    render={() => <span className={styles.back} />} />;
+    render={() => <span className={styles.back}><CardBackArt /></span>} />;
 
   return (
     <div data-table-seat={position}

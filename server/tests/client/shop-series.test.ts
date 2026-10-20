@@ -9,6 +9,7 @@ import { Nameplate } from '../../../client/src/components/Nameplate';
 import { shopArtworkUrl } from '../../../client/src/shop-art';
 import { shopSeriesArtwork, shopSeriesEmblem } from '../../../client/src/shop-series';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
+import { layeredSeriesEmblem } from '../../../client/src/cosmetics/art-layers/emblem-art-layers';
 
 vi.mock('../../../client/src/media', () => ({ mediaUrl: (id: string): string => `/api/media/${id}` }));
 
@@ -117,13 +118,16 @@ describe('complete themed shop collections', () => {
     try {
       for (const series of ANIMATED_SERIES) {
         const avatar = renderToStaticMarkup(createElement(Avatar, { avatar: 'fox', border: series }));
-        const source = shopSeriesEmblem(series)!.replaceAll('&', '&amp;').replaceAll("'", '&#x27;').replaceAll('"', '&quot;');
-        expect(avatar).toContain(source);
+        // Emblems that animate are drawn as composited layers; static ones keep the original image.
+        const layers = layeredSeriesEmblem(series)?.layers.flatMap((layer) => 'image' in layer ? [layer.image] : []);
+        const sources = (layers ?? [shopSeriesEmblem(series)!])
+          .map((source) => source.replaceAll('&', '&amp;').replaceAll("'", '&#x27;').replaceAll('"', '&quot;'));
+        for (const source of sources) expect(avatar).toContain(source);
         expect(avatar).toContain('aria-hidden="true"');
         const title = SHOP_ITEMS.find((item) => item.type === 'nameplate' && shopItemSeries(item) === series)!;
         if (title.type !== 'nameplate') throw new Error('Missing collection nameplate');
         const nameplate = renderToStaticMarkup(createElement(Nameplate, { id: title.id }));
-        expect(nameplate).toContain(source);
+        for (const source of sources) expect(nameplate).toContain(source);
         expect(nameplate).not.toContain('shop.title.');
       }
     } finally {

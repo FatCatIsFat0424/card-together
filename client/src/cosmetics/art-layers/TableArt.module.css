@@ -1,0 +1,21 @@
+/* Mirrors the `customTable::before` layer: the tint over the image, faded together. */
+.table {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: var(--table-image-opacity, 1);
+}
+
+.art,
+.tint {
+  position: absolute;
+  inset: 0;
+}
+
+.tint {
+  background: linear-gradient(color-mix(in srgb, var(--bg-surface) 35%, transparent),
+    color-mix(in srgb, var(--bg-surface) 35%, transparent));
+}

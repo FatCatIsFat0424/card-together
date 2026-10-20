@@ -11,6 +11,12 @@ const CARD_BACK = `${'b'.repeat(64)}.png`;
 const state = vi.hoisted(() => ({
   account: null as Partial<AccountProfile> | null,
   room: null as RoomInfo | null,
+  systemReducedMotion: false,
+}));
+
+// Server rendering otherwise reports every media query as unmatched.
+vi.mock('@mui/material/useMediaQuery', () => ({
+  default: (query: string): boolean => query.includes('prefers-reduced-motion') && state.systemReducedMotion,
 }));
 
 vi.mock('../../../client/src/api', () => ({ apiRequest: vi.fn() }));
@@ -65,6 +71,7 @@ import { RoomPage } from '../../../client/src/pages/RoomPage';
 import roomStyles from '../../../client/src/pages/RoomPage.module.css';
 import botSeatBackground from '../../../client/src/assets/room-backgrounds/bot-seat.webp';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
+import { layeredShopArt } from '../../../client/src/cosmetics/art-layers/shop-art-layers';
 
 const alice: PlayerInfo = {
   id: 'alice', username: 'alice', nickname: 'Alice', color: '#4a9eff', avatar: 'cat', avatarImage: null,
@@ -197,7 +204,30 @@ describe('personal account appearance', () => {
       expect(html).toContain(useI18nStore.getState().t(`shop.title.${id}`));
       expect(html).not.toContain('undefined');
       expect(html).not.toContain('shop.title.');
-      expect(html).toMatch(/aria-hidden="true">(?:[^<]+|<img[^>]+\/>?)<\/span>/);
+      // A glyph or one image; animated collection emblems are a stack of image layers.
+      expect(html).toMatch(/aria-hidden="true">(?:[^<]+|<img[^>]+\/>?|<span class="[^"]*seriesMark[^"]*" aria-hidden="true">(?:<span[^>]*>|<img[^>]*\/>|<\/span>)+)<\/span>/);
+    }
+  });
+
+  it('draws animated tables and card backs as layers unless motion is reduced', () => {
+    state.account = { ...state.account, cardBackStyle: 'card-back-starfleet', tableBackgroundStyle: 'table-neoncity' };
+    const layers = (id: 'table-neoncity'): number => JSON.stringify(layeredShopArt(id)).match(/"image"/g)!.length;
+    for (const html of [renderShell(), renderRoom()]) {
+      expect(html).toContain('--table-image:none');
+      expect(html).not.toContain(shopArtworkUrl('table-neoncity')!.replaceAll("'", '&#x27;'));
+      expect(html.match(/<img [^>]*src="data:image\/svg\+xml,%3Csvg/g)).toHaveLength(layers('table-neoncity'));
+    }
+    expect(renderShell()).toContain('--card-back-image:none');
+    state.systemReducedMotion = true;
+    try {
+      // The original files stop their own animation under the system setting.
+      const still = renderShell().replaceAll('&#x27;', "'");
+      expect(still).toContain(shopArtworkUrl('table-neoncity'));
+      expect(still).toContain(shopArtworkUrl('card-back-starfleet'));
+      expect(still).not.toContain('%3Csvg');
+      expect(renderRoom().replaceAll('&#x27;', "'")).toContain(`${shopArtworkUrl('table-neoncity')}#still`);
+    } finally {
+      state.systemReducedMotion = false;
     }
   });
 

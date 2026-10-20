@@ -528,7 +528,12 @@ Saved and system reduced-motion preferences disable this animation.
   or all stickers in a pack. Astral Armada, Thousand Lanterns, Iron Front, Neon
   Overdrive, and Lioncrown Dynasty add original animated vector scenes, emblems,
   and four expressive stickers each. Scene decoration stays near the edges, preserving
-  the play surface; animation respects reduced-motion preferences. Selecting a non-border category shows where its products
+  the play surface; animation respects reduced-motion preferences. Game and
+  waiting-room tables, card backs, and avatar and title emblems draw these scenes as
+  build-time image layers that the browser moves without repainting
+  (`client/src/cosmetics/art-layers/`); new animated artwork that the splitter cannot
+  reproduce fails the build. Shop and account previews show the original files. With either reduced-motion setting they show the original still frame, and
+  hidden or off-screen layers pause. Selecting a non-border category shows where its products
   are visible as a subtitle under the category heading.
   The shop header shows the coin balance; hovering or focusing this balance or the
   global header's coins explains the 10-coin reward per completed game.

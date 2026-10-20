@@ -42,6 +42,8 @@ import styles from './RoomPage.module.css';
 import botSeatBackground from '../assets/room-backgrounds/bot-seat.webp';
 import { unreadCount } from './room-progress';
 import { useRoomSeatDrag } from '../hooks/use-room-seat-drag';
+import { layeredShopArt } from '../cosmetics/art-layers/shop-art-layers';
+import { TableArt } from '../cosmetics/art-layers/TableArt';
 
 const COPIED_MS = 2000;
 
@@ -123,7 +125,8 @@ export function RoomPage(): ReactNode {
   const landscapeRoom = useMediaQuery('(max-height: 500px) and (min-width: 600px)');
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const systemReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
-  const tableStyle = tableBackgroundStyle(account, reducedMotion || systemReducedMotion);
+  const tableArt = reducedMotion || systemReducedMotion ? null : layeredShopArt(account?.tableBackgroundStyle);
+  const tableStyle = tableBackgroundStyle(account, reducedMotion || systemReducedMotion, !!tableArt);
   const [enteredRoom, setEnteredRoom] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -548,12 +551,13 @@ export function RoomPage(): ReactNode {
           </Popover>
         </div>
       </div>
-      <div ref={tableAreaRef} className={`${styles.tableArea} ${tableStyle ? styles.customTable : ''}`} style={tableStyle}
+      <div ref={tableAreaRef} className={`${styles.tableArea} ${tableStyle ? styles.customTable : ''} ${tableArt ? styles.layeredTable : ''}`} style={tableStyle}
         aria-busy={busy}
         inert={compactLayout && chatVisible}
         onDragStart={(event) => { if (canMovePlayers) event.preventDefault(); }}
         onClickCapture={seatDrag.choose} onPointerMove={seatDrag.move} onPointerUp={seatDrag.finish}
         onPointerCancel={seatDrag.cancel}>
+      {tableArt && <TableArt art={tableArt} />}
       <div className={styles.seatStrip}>
       <div className={`${styles.seatLayout} ${expandableSeats ? styles.expandedSeats : ''}`}>
         {seatCards.map((seatCard) => {

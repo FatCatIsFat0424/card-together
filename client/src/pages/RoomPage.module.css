@@ -283,6 +283,9 @@
   opacity: var(--table-image-opacity, 1);
 }
 
+/* `TableArt` draws animated artwork and its tint instead. */
+.layeredTable::before { content: none; }
+
 .seatSlot {
   min-width: 0;
   min-height: 0;

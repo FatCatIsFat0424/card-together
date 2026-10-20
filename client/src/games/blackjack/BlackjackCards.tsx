@@ -10,6 +10,7 @@ import { useHandReorder } from '../use-hand-reorder';
 import { ChipIcon } from '../ChipIcon';
 import { handNet, signedChips } from './blackjack-view';
 import styles from './BlackjackCards.module.css';
+import { CardBackArt } from '../../cosmetics/art-layers/CardBackArt';
 
 export function cardName(card: Card): string {
   return `${SUIT_SYMBOLS[card.suit]}${RANK_DISPLAY[card.rank]}`;
@@ -47,7 +48,7 @@ export function BjCards({ cards: incoming, hole = false, size = 'md', freshFrom,
       src={cardImageUrl(card)} alt={cardName(card)} draggable={false} />)}
     {hole && (peek ? <img className={`${styles.card} ${styles.peek}`} src={cardImageUrl(peek)} draggable={false}
       alt={`${t('blackjack.holeCard')} ${cardName(peek)}`} />
-      : <span className={`${styles.card} ${styles.back}`} role="img" aria-label={t('blackjack.holeCard')} />)}
+      : <span className={`${styles.card} ${styles.back}`} role="img" aria-label={t('blackjack.holeCard')}><CardBackArt /></span>)}
   </span>;
 }
 

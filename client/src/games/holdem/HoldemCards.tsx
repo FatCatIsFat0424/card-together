@@ -9,6 +9,7 @@ import { ChipIcon } from '../ChipIcon';
 import { HE_BOARD_SLOTS } from './holdem-view';
 import type { HoldemBlindSeats } from './holdem-view';
 import styles from './HoldemCards.module.css';
+import { CardBackArt } from '../../cosmetics/art-layers/CardBackArt';
 
 export type CardSize = 'xs' | 'sm' | 'md' | 'lg';
 
@@ -37,7 +38,7 @@ export function HeCards({ cards: incoming, backs = 0, size = 'md', freshFrom, ov
       style={{ ...dragProps(index).style, '--card-index': index - (freshFrom ?? 0) } as CSSProperties}
       src={cardImageUrl(card)} alt={cardName(card)} draggable={false} />)}
     {Array.from({ length: backs }, (_, index) => <span key={`back-${index}`} className={`${styles.card} ${styles.back}`}
-      role="img" aria-label={t('holdem.hiddenCard')} />)}
+      role="img" aria-label={t('holdem.hiddenCard')}><CardBackArt /></span>)}
   </span>;
 }
 

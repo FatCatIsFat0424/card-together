@@ -24,7 +24,7 @@ Authoritative project rule set; `CLAUDE.md` references it.
 | `client/src/cosmetics/` | Shop product renderers, previews, and translations per equippable type |
 | `client/src/audio/`, `voice/` | Music playback, turn reminders, WebRTC |
 | `server/tests/`, `deploy/tests/` | Vitest and Python standard-library tests |
-| `scripts/` | Check runner and asset importers |
+| `scripts/` | Check runner, asset importers, and the Vite artwork-layer plugin |
 | `deploy/` | Production build, install, and operation scripts |
 | `android/` | Android APK wrapper settings and build script ([Android app](docs/android.md)) |
 | `docs/` | Authoritative guides (index in [README](README.md#documentation)) |
