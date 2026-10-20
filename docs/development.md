@@ -83,6 +83,7 @@ Opt-in; not part of any check gate.
 npm run bench:database   # indexed queries and persistent writes
 npm run bench:socket     # snapshot/chat payload bytes and runtime writes across rooms
 npm run bench:arrange    # Chinese Poker arrangement search: seed 23, 1 warmup, 20 samples
+npm run bench:render     # phone render cost of bot games with each cosmetic collection
 ```
 
 - Each benchmark creates and removes its own temporary JSON database. Never point one
@@ -91,6 +92,13 @@ npm run bench:arrange    # Chinese Poker arrangement search: seed 23, 1 warmup, 
   `chatPayloadBytes` counts chat. Validate acknowledgments, recipients, and workload
   before accepting results.
 - The arrange timing budget is opt-in; its correctness corpus stays in Vitest.
+- Render: builds the client, starts a temporary server, and traces 5 s of the player's turn
+  at 706x336 (DPR 3) with 4x CPU throttling, once per game and equipment set. Options:
+  `-- --games liarsdeck,holdem --sets plain,starfleet,neoncity --samples 1`. Needs a
+  Chromium: `npx playwright install chromium-headless-shell`, or set `CHROME` (and
+  `LD_LIBRARY_PATH` when system libraries are missing). Compare `mainTaskMs` and `paints`
+  with `plain` in the same run: absolute times follow machine load, and the compositor
+  (`VizCompositorThread`) runs on the CPU in headless mode, unlike a phone GPU.
 - Compare only identical workloads and runtime versions. Frontend startup size includes
   the entry chunk **and** preloaded chunks.
 

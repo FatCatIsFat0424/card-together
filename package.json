@@ -20,6 +20,7 @@
     "bench:database": "cd server && npx tsx tests/database/repository-benchmark.ts",
     "bench:socket": "cd server && npx tsx benchmarks/socket-benchmark.ts",
     "bench:arrange": "cd server && npx tsx benchmarks/arrange-benchmark.ts",
+    "bench:render": "npm run music:import && npm run emoji:import && cd server && npx tsx benchmarks/render-benchmark.ts",
     "lint": "eslint \"shared/src/**/*.ts\" \"server/src/**/*.ts\" \"server/tests/**/*.ts\" \"server/benchmarks/**/*.ts\" \"client/src/**/*.{ts,tsx}\" \"scripts/**/*.{ts,mjs}\" client/vite.config.ts server/vitest.config.ts",
     "typecheck": "npm run typecheck:shared && npm run typecheck:server && npm run typecheck:client",
     "typecheck:shared": "cd shared && npx tsc --noEmit",
@@ -35,6 +36,7 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.11.0",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "playwright-core": "~1.63.0",
     "sharp": "^0.35.5",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.71.0"
