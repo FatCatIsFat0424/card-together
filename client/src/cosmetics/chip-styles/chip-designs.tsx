@@ -1,4 +1,5 @@
 import { CAMPAIGN_CHIPS } from './campaign-chips';
+import { Fragment } from 'react';
 import type { ReactNode } from 'react';
 import type { ChipStyleId } from '@shared/types';
 
@@ -17,10 +18,29 @@ interface ChipPalette {
   readonly detail: string;
 }
 
+/** Emblem parts that move; ChipDisc animates each on its own wrapper so the browser can composite it. */
+export type ChipMotion = 'warp' | 'engine' | 'foxfire' | 'propeller' | 'processor' | 'crown';
+
+/** One emblem part in paint order; `motion` marks the parts that animate. */
+export interface ChipLayer {
+  readonly motion?: ChipMotion;
+  readonly draw: (palette: ChipPalette) => ReactNode;
+}
+
 export interface ChipDesign {
   readonly palette: ChipPalette;
   readonly spots: { readonly shape: 'bar' | 'dot'; readonly count: number; readonly size: number };
   readonly emblem: (palette: ChipPalette) => ReactNode;
+  /** Animated emblems, split into parts; `emblem` draws the same parts still. */
+  readonly layers?: readonly ChipLayer[];
+}
+
+/** An animated design whose still emblem is its parts drawn in order. */
+export function layeredChip(design: Omit<ChipDesign, 'emblem'> & { readonly layers: readonly ChipLayer[] }): ChipDesign {
+  return {
+    ...design,
+    emblem: (palette) => <>{design.layers.map((layer, index) => <Fragment key={index}>{layer.draw(palette)}</Fragment>)}</>,
+  };
 }
 
 const ROUND = { strokeLinecap: 'round', strokeLinejoin: 'round' } as const;

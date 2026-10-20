@@ -10,6 +10,7 @@ import { CardBackArt, CardBackArtContext } from '../../../client/src/cosmetics/a
 import { layeredShopArt } from '../../../client/src/cosmetics/art-layers/shop-art-layers';
 import { layeredSeriesEmblem } from '../../../client/src/cosmetics/art-layers/emblem-art-layers';
 import { svgDataUrl } from '../../../scripts/assets/vite-svg-layers';
+import { borderOrbitKeyframes } from '../../../client/src/cosmetics/seat-frames/border-orbit';
 
 const STYLE = '<style>svg:target *{animation:none!important}'
   + '.orbit{transform-box:fill-box;transform-origin:center;animation:orbit 24s linear infinite}'
@@ -61,11 +62,12 @@ describe('animated SVG layer splitting', () => {
     }
     // The animation replaces the element's own opacity, as CSS animations override the attribute.
     expect(pulse.image).not.toContain('opacity');
+    // Moving layers span at least 30% of the artwork each way, centred on their content.
     const [left, top, width, height] = pulse.box;
-    expect(left).toBeGreaterThan(18);
-    expect(left + width).toBeLessThan(32);
-    expect(top).toBeGreaterThan(35);
-    expect(top + height).toBeLessThan(65);
+    expect(width).toBe(30);
+    expect(height).toBe(30);
+    expect(left + width / 2).toBeCloseTo(25, 0);
+    expect(top + height / 2).toBeCloseTo(50, 0);
     expect(pulse.image).toMatch(/viewBox="\d+ \d+ \d+ \d+"/);
   });
 
@@ -154,7 +156,7 @@ describe('layered artwork rendering', () => {
     expect(html).toContain('aria-hidden="true"');
     expect(html).toContain(`--art-aspect:${art.width / art.height}`);
     // The lantern glow pulses inside its drifting lantern: a span carries the outer drift origin.
-    expect(html).toMatch(/<span class="[^"]+" style="transform-origin:50% 50%"><img /);
+    expect(html).toMatch(/<span class="[^"]+" style="transform-origin:50% 50%;will-change:transform"><img /);
   });
 
   it('draws the viewer card back only inside a game that provides layered artwork', () => {
@@ -162,5 +164,18 @@ describe('layered artwork rendering', () => {
     const back = layeredShopArt('card-back-neoncity')!;
     const html = renderToStaticMarkup(createElement(CardBackArtContext, { value: back }, createElement(CardBackArt)));
     expect(html.match(/<img /g)).toHaveLength(images(back.layers).length);
+  });
+});
+
+describe('border orbit keyframes', () => {
+  it('moves the mark centre clockwise around the rounded frame, turning with the edge', () => {
+    const frames = borderOrbitKeyframes({ width: 100, height: 40, radius: 10 }, { width: 6, height: 2 }, 0, 1);
+    expect(frames[0]).toMatchObject({ offset: 0, transform: 'translate(7px, -1px) rotate(0deg)' });
+    expect(frames.at(-1)).toMatchObject({ offset: 1, transform: 'translate(7px, -1px) rotate(360deg)' });
+    const right = frames.find((frame) => String(frame.transform).includes('rotate(90deg)'));
+    expect(right?.transform).toBe('translate(97px, 9px) rotate(90deg)');
+    expect(frames.every((frame, index) => index === 0 || Number(frame.offset) >= Number(frames[index - 1].offset))).toBe(true);
+    const shifted = borderOrbitKeyframes({ width: 100, height: 40, radius: 10 }, { width: 6, height: 2 }, 0.5, 1.5);
+    expect(shifted.at(-1)?.transform).toBe(shifted[0].transform?.toString().replace(/rotate\(([\d.]+)deg\)/, (_, angle) => `rotate(${Number(angle) + 360}deg)`));
   });
 });

@@ -118,7 +118,7 @@ function CardPileDetails({ cards, owner, covered = false }: {
 type ActiveTurn = NonNullable<GameClock['turn']>;
 
 /**
- * Turn time drawn as CSS animations: the turn allowance drains first, then the reserve
+ * Turn time as compositor animations: the turn allowance drains first, then the reserve
  * (own seat only; players see no other reserve).
  * Timing is fixed when the turn first renders (the parent keys it by turn id), because
  * changing animation delays later would jump the running animation.
@@ -128,6 +128,7 @@ function TurnBar({ turn, bankMs, serverNow, receivedAt }: {
 }): ReactNode {
   const [initial] = useState(() => ({ turn, bankMs, serverNow, receivedAt }));
   const ref = useRef<HTMLSpanElement>(null);
+  const bankRef = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
     const bar = ref.current;
     if (!bar) return;
@@ -135,13 +136,25 @@ function TurnBar({ turn, bankMs, serverNow, receivedAt }: {
     const projectedNow = initial.serverNow === undefined ? now
       : initial.serverNow + Math.max(0, now - initial.receivedAt);
     const startsIn = initial.turn.startsAt - projectedNow;
-    bar.style.setProperty('--base-ms', `${initial.turn.baseRemainingMs}ms`);
+    const baseMs = initial.turn.baseRemainingMs;
+    bar.style.setProperty('--base-ms', `${baseMs}ms`);
     bar.style.setProperty('--base-delay', `${startsIn}ms`);
-    bar.style.setProperty('--bank-ms', `${initial.bankMs}ms`);
-    bar.style.setProperty('--bank-delay', `${startsIn + initial.turn.baseRemainingMs}ms`);
+    const bank = bankRef.current;
+    // Reduced motion hides the bar; an animation nobody can see would run on the main thread.
+    if (!bank || typeof bank.animate !== 'function' || getComputedStyle(bar).display === 'none') return;
+    // One transform animation keeps the reserve hidden until the allowance runs out, then drains it.
+    // An invisible element waiting to appear could not run on the compositor.
+    const split = baseMs / (baseMs + initial.bankMs);
+    const animation = bank.animate([
+      { offset: 0, transform: 'scaleX(0)' },
+      { offset: split, transform: 'scaleX(0)' },
+      { offset: split, transform: 'scaleX(1)' },
+      { offset: 1, transform: 'scaleX(0)' },
+    ], { duration: baseMs + initial.bankMs, delay: startsIn, fill: 'both' });
+    return () => animation.cancel();
   }, [initial]);
   return <span ref={ref} className={styles.turnBar} aria-hidden="true">
-    {initial.bankMs > 0 && <span className={styles.turnBank} />}
+    {initial.bankMs > 0 && <span ref={bankRef} className={styles.turnBank} />}
     <span className={styles.turnBase} />
   </span>;
 }

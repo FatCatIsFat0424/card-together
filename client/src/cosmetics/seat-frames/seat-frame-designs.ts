@@ -10,7 +10,12 @@ export interface MotifPart {
   readonly d: string;
   readonly kind: MotifKind;
   readonly transform?: string;
+  /** Centre in the 24x24 box for parts that scale on turn. */
+  readonly origin?: readonly [number, number];
 }
+
+/** Corner parts that animate on turn; each is drawn as its own image so it can move without repainting. */
+export type MotifMotion = 'pulse' | 'glow' | 'twinkle' | 'twinkleLate' | 'ripple1' | 'ripple2' | 'ripple3' | 'sun';
 
 /**
  * Corner ornament drawn in a 24x24 box with the frame ring's corner at about (13, 13), so the
@@ -29,6 +34,24 @@ export function seatFrameDesign(id: string | null | undefined): SeatFrameDesign 
 
 function dot(cx: number, cy: number, r: number): string {
   return `M${cx - r} ${cy}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0Z`;
+}
+
+/** A dot that keeps its centre, for parts that scale around it. */
+function dotPart(cx: number, cy: number, r: number, kind: MotifKind): MotifPart {
+  return { d: dot(cx, cy, r), kind, origin: [cx, cy] };
+}
+
+/** How a corner part animates while its seat is on turn, or null when it stays still. */
+export function motifMotion(design: SeatFrameDesign, part: MotifPart, index: number): MotifMotion | null {
+  switch (design) {
+    case 'starfleet': return part.kind === 'line2' ? 'pulse' : null;
+    case 'neoncity': return part.kind === 'fill3' ? 'pulse' : null;
+    case 'shrine': return part.kind === 'fill3' ? 'glow' : null;
+    case 'constellation':
+      return part.kind === 'fill2' ? 'twinkleLate' : part.kind === 'fill1' || part.kind === 'fill3' ? 'twinkle' : null;
+    case 'dune': return (['ripple1', 'ripple2', 'ripple3', 'sun'] as const)[index] ?? null;
+    default: return null;
+  }
 }
 
 const PETAL = 'M0 0C-3.6-2-4.6-6.4-1.5-8.8L0-7.4L1.5-8.8C4.6-6.4 3.6-2 0 0Z';
@@ -85,13 +108,13 @@ export const SEAT_FRAME_MOTIFS: Record<SeatFrameDesign, SeatFrameMotif> = {
     main: [
       { d: 'M15 9L21 11', kind: 'line2' },
       { d: 'M9 15L11 21', kind: 'line2' },
-      { d: 'M9 3L10.2 7.8L15 9L10.2 10.2L9 15L7.8 10.2L3 9L7.8 7.8Z', kind: 'fill1' },
-      { d: dot(21, 11, 1.4), kind: 'fill2' },
-      { d: dot(11, 21, 1.4), kind: 'fill2' },
-      { d: dot(17.5, 4.5, 0.9), kind: 'fill3' },
-      { d: dot(4.5, 17.5, 0.9), kind: 'fill3' },
-      { d: dot(21.5, 17, 0.7), kind: 'fill3' },
-      { d: dot(17, 21.5, 0.7), kind: 'fill3' },
+      { d: 'M9 3L10.2 7.8L15 9L10.2 10.2L9 15L7.8 10.2L3 9L7.8 7.8Z', kind: 'fill1', origin: [9, 9] },
+      dotPart(21, 11, 1.4, 'fill2'),
+      dotPart(11, 21, 1.4, 'fill2'),
+      dotPart(17.5, 4.5, 0.9, 'fill3'),
+      dotPart(4.5, 17.5, 0.9, 'fill3'),
+      dotPart(21.5, 17, 0.7, 'fill3'),
+      dotPart(17, 21.5, 0.7, 'fill3'),
     ],
   },
   // Two leaves growing along the edges from a bamboo node.
@@ -158,7 +181,7 @@ export const SEAT_FRAME_MOTIFS: Record<SeatFrameDesign, SeatFrameMotif> = {
       { d: 'M8 13A5 5 0 0 1 13 8', kind: 'line1' },
       { d: 'M5 13A8 8 0 0 1 13 5', kind: 'line2' },
       { d: 'M2.5 13A10.5 10.5 0 0 1 13 2.5', kind: 'line1' },
-      { d: dot(13, 13, 3), kind: 'fill3' },
+      dotPart(13, 13, 3, 'fill3'),
       { d: dot(19, 6, 0.8), kind: 'fill2' },
       { d: dot(6, 19, 0.8), kind: 'fill2' },
       { d: dot(21, 10, 0.7), kind: 'fill2' },

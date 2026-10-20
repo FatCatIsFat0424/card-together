@@ -1196,13 +1196,31 @@ function renderLayers(root: SvgElement, layers: readonly Layer[], view: Box, pad
   });
 }
 
+/**
+ * Chrome keeps animating a layer only a few pixels across on the main thread, repainting what lies
+ * under it, so moving layers span at least this share of the artwork in each direction.
+ */
+const MIN_MOVING_SPAN = 0.3;
+
+/** Grows [start, end] around its centre to `span`, kept inside [min, max]. */
+function widen(start: number, end: number, span: number, min: number, max: number): [number, number] {
+  if (end - start >= span) return [start, end];
+  const from = Math.max(min, Math.min(max - span, Math.floor((start + end - span) / 2)));
+  return [from, Math.min(max, from + Math.ceil(span))];
+}
+
 function cropBox(layer: Layer, pad: number, view: Box): Box {
   const area = pointBounds(layer.units.flatMap((unit) => unit.rest.flatMap((piece) => corners(bounds(piece)))), pad);
-  const box = {
+  let box = {
     x0: Math.max(view.x0, Math.floor(area.x0)), y0: Math.max(view.y0, Math.floor(area.y0)),
     x1: Math.min(view.x1, Math.ceil(area.x1)), y1: Math.min(view.y1, Math.ceil(area.y1)),
   };
   if (box.x0 >= box.x1 || box.y0 >= box.y1) throw new Error('A layer lies outside the viewBox.');
+  if (layer.units[0].chain.length) {
+    const [x0, x1] = widen(box.x0, box.x1, (view.x1 - view.x0) * MIN_MOVING_SPAN, view.x0, view.x1);
+    const [y0, y1] = widen(box.y0, box.y1, (view.y1 - view.y0) * MIN_MOVING_SPAN, view.y0, view.y1);
+    box = { x0, y0, x1, y1 };
+  }
   return box;
 }
 

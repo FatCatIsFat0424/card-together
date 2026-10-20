@@ -47,6 +47,11 @@ Authoritative project rule set; `CLAUDE.md` references it.
   component files and types, camelCase functions and CSS classes.
 - Styling uses CSS Modules and the variables in `client/src/styles/global.css`.
   User-visible strings live in the typed English and Traditional Chinese dictionaries.
+- Looping decorative animations change only `transform`, `opacity`, or brightness on HTML
+  elements, so the compositor runs them: never SVG children, backgrounds, shadows, offset paths,
+  or elements that stay invisible while animating. Ancestors of moving parts draw edges with
+  borders, not `outline`, which Chrome repaints whenever anything inside moves. Anything else
+  repaints every frame on phones.
 - Background music is owner-provided audio only. Do not add sampled instruments, score
   rendering, or composition tooling; those live in `~/daw-tmp`.
 

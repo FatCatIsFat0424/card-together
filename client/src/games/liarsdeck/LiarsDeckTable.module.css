@@ -38,8 +38,16 @@
 
 .back {
   background: var(--card-back);
-  outline: var(--card-back-outline, none);
-  outline-offset: -1px;
+}
+
+/* The edge sits above the image. An outline would be repainted whenever the animated image moves. */
+.back::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: var(--card-back-outline, none);
+  pointer-events: none;
 }
 
 /* Image on its own layer so a custom back can fade over the theme card base. */

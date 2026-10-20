@@ -343,21 +343,15 @@
   animation: drain var(--base-ms, 0ms) linear var(--base-delay, 0ms) both;
 }
 
-/* The reserve appears only once the turn allowance has run out. */
+/* The reserve appears only once the turn allowance has run out; TurnBar animates it. */
 .turnBank {
   background: var(--color-danger);
-  animation: drain var(--bank-ms, 0ms) linear var(--bank-delay, 0ms) both,
-    reveal 0s linear var(--bank-delay, 0ms) both;
+  transform: scaleX(0);
 }
 
 @keyframes drain {
   from { transform: scaleX(1); }
   to { transform: scaleX(0); }
-}
-
-@keyframes reveal {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 /* Seat that just played: glow ring around the plate */
@@ -439,8 +433,16 @@
 
 .back {
   background: var(--card-back);
-  outline: var(--card-back-outline, none);
-  outline-offset: -1px;
+}
+
+/* The edge sits above the image. An outline would be repainted whenever the animated image moves. */
+.back::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: var(--card-back-outline, none);
+  pointer-events: none;
 }
 
 /* Image on its own layer so a custom back can fade over the theme card base. */

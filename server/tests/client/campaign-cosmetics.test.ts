@@ -66,11 +66,14 @@ describe.each(SERIES)('%s campaign cosmetics', (series) => {
     expect(html.match(/focusable="false"/g)).toHaveLength(2);
     expect(html.replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, '')).toBe('Readable message');
     const seat = renderToStaticMarkup(createElement(SeatFrame, { frame: `seat-frame-${series}`, turn: true }));
-    expect(seat.match(/<svg/g)).toHaveLength(4);
+    expect(seat.match(/_corner_/g)).toHaveLength(4);
     expect(seat).toContain('data-turn="true"');
     const chip = renderToStaticMarkup(createElement(ChipDisc, { style: `chips-${series}` }));
     expect(chip).not.toMatch(/\sid="|url\(#|<animate/);
     expect(chip).toContain('focusable="false"');
+    // Moving emblem parts are separate images so the browser can animate them without repainting the chip.
+    expect(chip.match(/<svg/g)!.length).toBeGreaterThan(1);
+    expect(chip).toMatch(/<span class="[^"]*_part_[^"]*_(?:warp|engine|foxfire|propeller|processor|crown)_/);
   });
 
   it('registers the effect for an equipped winning player', () => {

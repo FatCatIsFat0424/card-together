@@ -51,7 +51,7 @@ describe('SeatFrame layer', () => {
       const html = markup(item.id);
       expect(html).toContain(`data-seat-frame="${item.design}"`);
       expect(html).toContain('aria-hidden="true"');
-      expect(html.match(/<svg/g)).toHaveLength(4);
+      expect(html.match(/_corner_/g)).toHaveLength(4);
       expect(html).not.toContain('data-turn');
       expect(seatFrameHostClass(item.id)).not.toBe('');
     }
@@ -60,6 +60,15 @@ describe('SeatFrame layer', () => {
   it('marks the turn state without changing the design', () => {
     expect(markup('seat-frame-ember', true)).toContain('data-turn="true"');
     expect(markup('seat-frame-ember', true)).toContain('data-seat-frame="ember"');
+  });
+
+  it('draws each animated corner part as its own wrapped image, in paint order', () => {
+    const starfleet = markup('seat-frame-starfleet', true);
+    // Two engine lines per corner pulse; the HTML wrapper carries the animation for the compositor.
+    expect(starfleet.match(/<span class="[^"]*_part_[^"]*_pulse_[^"]*"><svg/g)).toHaveLength(8);
+    const constellation = markup('seat-frame-constellation', true);
+    expect(constellation).toContain('style="transform-origin:37.5% 37.5%"');
+    expect(markup('seat-frame-aurora', true).match(/<svg/g)).toHaveLength(4);
   });
 
   it('mirrors the main motif on the corners that have no alternate', () => {

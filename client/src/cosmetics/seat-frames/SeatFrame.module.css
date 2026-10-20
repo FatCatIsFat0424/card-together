@@ -5,6 +5,10 @@
  * Layers sit on or just outside the plate border, so the plate content keeps its full area.
  * The host sets --frame-scale (compact seats), --frame-out (negative draws inside the host) and may
  * override --frame-radius.
+ *
+ * Turn animations change only transform, opacity, and brightness, so the compositor runs them without
+ * repainting the table: moving textures slide a wider strip, glows cross-fade, and animated corner
+ * parts are separate images (see SeatFrame.tsx).
  */
 
 .frame {
@@ -15,6 +19,17 @@
   inset: calc(var(--out) * -1);
   border-radius: var(--rad);
   pointer-events: none;
+  /* Ripples grow by a fixed distance on every side, so their scale depends on the frame size. */
+  container-type: size;
+  --ripple-x: 1.15;
+  --ripple-y: 1.4;
+}
+
+@supports (scale: calc(2px / 1px)) {
+  .frame {
+    --ripple-x: calc(1 + 2 * var(--ripple-grow, 11px) / 100cqw);
+    --ripple-y: calc(1 + 2 * var(--ripple-grow, 11px) / 100cqh);
+  }
 }
 
 .frame::before,
@@ -61,9 +76,19 @@
   position: absolute;
   width: calc(18px * var(--fs));
   height: calc(18px * var(--fs));
-  overflow: visible;
   filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.3));
 }
+
+.part {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* While a script moves the mark around the frame, the idle motion path would add a second offset. */
+.frame[data-turn] .fx2[data-orbit] { offset-path: none; }
 
 .tl { top: calc(-5px * var(--fs)); left: calc(-5px * var(--fs)); }
 .tr { top: calc(-5px * var(--fs)); right: calc(-5px * var(--fs)); transform: scaleX(-1); }
@@ -101,8 +126,26 @@
   --frame-bar: #1fb08f;
 }
 
-.aurora .ring {
-  background: linear-gradient(100deg, #3fd6b0, #6fb7ff 25%, #9a86ee 50%, #e08ae0 72%, #3fd6b0) 0 0 / 200% 100%;
+/* Moving textures are strips 4x the box wide holding two tiles; sliding half the strip is one cycle. */
+.aurora .ring::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 400%;
+  background: linear-gradient(100deg, #3fd6b0, #6fb7ff 25%, #9a86ee 50%, #e08ae0 72%, #3fd6b0) 0 0 / 50% 100%;
+}
+
+.aurora .fx::before,
+.aurora .fx2::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 400%;
+  background: linear-gradient(90deg, #3fd6b0, #6fb7ff, #9a86ee, #e08ae0, #3fd6b0) 0 0 / 50% 100%;
 }
 
 .aurora .fx,
@@ -111,7 +154,6 @@
   left: 12%;
   right: 12%;
   height: calc(7px * var(--fs));
-  background: linear-gradient(90deg, #3fd6b0, #6fb7ff, #9a86ee, #e08ae0, #3fd6b0) 0 0 / 200% 100%;
   opacity: 0.5;
   -webkit-mask-image: linear-gradient(to top, #000, transparent),
     repeating-linear-gradient(90deg, #000 0 5px, rgb(0 0 0 / 0.3) 5px 8px);
@@ -133,29 +175,32 @@
     repeating-linear-gradient(90deg, #000 0 7px, rgb(0 0 0 / 0.3) 7px 10px);
 }
 
-.aurora[data-turn] .ring { animation: auroraFlow 5s linear infinite; }
-.aurora[data-turn] .fx { opacity: 0.95; animation: auroraFlow 4s linear infinite, auroraCurtain 2.4s ease-in-out infinite; }
-.aurora[data-turn] .fx2 { opacity: 0.6; animation: auroraFlow 6s linear infinite reverse, auroraCurtain 3.1s ease-in-out infinite; }
-.aurora[data-turn]::before { animation: auroraHalo 4s ease-in-out infinite; }
+.aurora[data-turn] .ring::before { animation: flowStrip 5s linear infinite; }
+.aurora[data-turn] .fx { opacity: 0.95; animation: auroraCurtain 2.4s ease-in-out infinite; }
+.aurora[data-turn] .fx::before { animation: flowStrip 4s linear infinite; }
+.aurora[data-turn] .fx2 { opacity: 0.6; animation: auroraCurtain 3.1s ease-in-out infinite; }
+.aurora[data-turn] .fx2::before { animation: flowStrip 6s linear infinite reverse; }
 
-@keyframes auroraFlow { to { background-position: 200% 0; } }
+/* The halo shifts between its two colours by cross-fading two still glows. */
+.aurora[data-turn]::before { animation: haloOut 4s ease-in-out infinite; }
+
+.aurora[data-turn]::after {
+  display: block;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--frame-glow-2) 55%, transparent),
+    0 0 12px 2px color-mix(in srgb, var(--frame-glow-2) 55%, transparent),
+    0 0 26px 4px color-mix(in srgb, var(--frame-glow) 28%, transparent);
+  animation: haloIn 4s ease-in-out infinite;
+}
 
 @keyframes auroraCurtain {
   0%, 100% { transform: scaleY(1); }
   50% { transform: scaleY(1.45); }
 }
 
-@keyframes auroraHalo {
-  0%, 100% {
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--frame-glow) 55%, transparent),
-      0 0 12px 2px color-mix(in srgb, var(--frame-glow) 55%, transparent),
-      0 0 26px 4px color-mix(in srgb, var(--frame-glow-2) 28%, transparent);
-  }
-  50% {
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--frame-glow-2) 55%, transparent),
-      0 0 12px 2px color-mix(in srgb, var(--frame-glow-2) 55%, transparent),
-      0 0 26px 4px color-mix(in srgb, var(--frame-glow) 28%, transparent);
-  }
+.aurora::before {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--frame-glow) 55%, transparent),
+    0 0 12px 2px color-mix(in srgb, var(--frame-glow) 55%, transparent),
+    0 0 26px 4px color-mix(in srgb, var(--frame-glow-2) 28%, transparent);
 }
 
 /* ─── Tide: a scalloped wave edge and rippling rings ─── */
@@ -169,40 +214,43 @@
 
 .tide .ring { background: linear-gradient(180deg, #8fe6ea, #2a8fab); }
 
+.tide .fx::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -12px;
+  width: calc(100% + 12px);
+  background:
+    radial-gradient(circle at 50% -2px, transparent 5px, var(--frame-a) 5.5px 6.5px, transparent 7px) 0 0 / 12px 8px repeat-x,
+    radial-gradient(circle at 50% -2px, transparent 5px, var(--frame-b) 5.5px 6.5px, transparent 7px) 6px 3px / 12px 8px repeat-x;
+}
+
 .tide .fx {
   display: block;
   left: 10%;
   right: 10%;
   bottom: calc(-6px * var(--fs));
   height: 8px;
-  background:
-    radial-gradient(circle at 50% -2px, transparent 5px, var(--frame-a) 5.5px 6.5px, transparent 7px) 0 0 / 12px 8px repeat-x,
-    radial-gradient(circle at 50% -2px, transparent 5px, var(--frame-b) 5.5px 6.5px, transparent 7px) 6px 3px / 12px 8px repeat-x;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
 }
 
-.tide[data-turn] .fx { animation: tideWave 1.6s linear infinite; }
+.tide[data-turn] .fx::before { animation: tideWave 1.6s linear infinite; }
 
+/* Rings that grow 11px past the frame and fade, like spreading ripples. */
 .tide[data-turn] .fx2,
 .tide[data-turn]::after {
   display: block;
   inset: 0;
   border-radius: inherit;
-  box-shadow: 0 0 0 0 color-mix(in srgb, var(--frame-glow) 70%, transparent);
-  animation: tideRipple 2.4s ease-out infinite;
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--frame-glow) 70%, transparent);
+  animation: ripple 2.4s ease-out infinite;
 }
 
 .tide[data-turn]::after { animation-delay: 1.2s; }
 
-@keyframes tideWave {
-  to { background-position: 12px 0, 18px 3px; }
-}
-
-@keyframes tideRipple {
-  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--frame-glow) 70%, transparent); }
-  100% { box-shadow: 0 0 0 11px color-mix(in srgb, var(--frame-glow) 0%, transparent); }
-}
+@keyframes tideWave { to { translate: 12px 0; } }
 
 /* ─── Sakura: blossoms on the corners, petals drifting down the sides ─── */
 .sakura {
@@ -287,33 +335,17 @@
   border-radius: 2px;
   background: linear-gradient(90deg, transparent, #fff7d6);
   box-shadow: 0 0 6px 1px var(--frame-b);
+  /* Idle and reduced-motion position; a script runs the comet's lap (SeatFrame.tsx). */
   offset-path: inset(0 round var(--rad));
   offset-rotate: auto;
   offset-distance: 12%;
-  animation: constellationComet 3.4s linear infinite;
 }
 
-.constellation[data-turn] .corner .fill1,
-.constellation[data-turn] .corner .fill3 {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: constellationTwinkle 2.4s ease-in-out infinite;
-}
-
-.constellation[data-turn] .corner .fill2 {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: constellationTwinkle 2.4s ease-in-out -1.2s infinite;
-}
-
-.constellation[data-turn] .tr .fill1,
-.constellation[data-turn] .tr .fill3 { animation-delay: -0.6s; }
-.constellation[data-turn] .bl .fill1,
-.constellation[data-turn] .bl .fill3 { animation-delay: -1.2s; }
-.constellation[data-turn] .br .fill1,
-.constellation[data-turn] .br .fill3 { animation-delay: -1.8s; }
-
-@keyframes constellationComet { to { offset-distance: 112%; } }
+.constellation[data-turn] .twinkle { animation: constellationTwinkle 2.4s ease-in-out infinite; }
+.constellation[data-turn] .twinkleLate { animation: constellationTwinkle 2.4s ease-in-out -1.2s infinite; }
+.constellation[data-turn] .tr .twinkle { animation-delay: -0.6s; }
+.constellation[data-turn] .bl .twinkle { animation-delay: -1.2s; }
+.constellation[data-turn] .br .twinkle { animation-delay: -1.8s; }
 
 @keyframes constellationTwinkle {
   0%, 100% { opacity: 1; scale: 1; }
@@ -397,10 +429,17 @@
   --frame-bar: #c0892f;
 }
 
-.gilded .ring {
-  background:
-    linear-gradient(105deg, transparent 40%, rgb(255 248 220 / 0.95) 50%, transparent 60%) 0 0 / 250% 100% no-repeat,
-    linear-gradient(135deg, #f7e2ae, #c79a4a 30%, #f2d79c 55%, #a9772e 80%, #f7e2ae);
+.gilded .ring { background: linear-gradient(135deg, #f7e2ae, #c79a4a 30%, #f2d79c 55%, #a9772e 80%, #f7e2ae); }
+
+/* The travelling shine is a strip 2.5 frames wide that slides across the ring. */
+.gilded .ring::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 250%;
+  background: linear-gradient(105deg, transparent 40%, rgb(255 248 220 / 0.95) 50%, transparent 60%);
 }
 
 .gilded .fx {
@@ -431,19 +470,34 @@
 .gilded .fx2::before { top: 0; }
 .gilded .fx2::after { top: 100%; }
 
-.gilded[data-turn] .ring { animation: gildedSweep 2.6s ease-in-out infinite; }
+/* Soft glows behind the two diamonds; fx sits 3px outside the frame inside a 1px border. */
+.gilded .fx::before,
+.gilded .fx::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: calc(6px * var(--fs));
+  height: calc(6px * var(--fs));
+  rotate: 45deg;
+  box-shadow: 0 0 3px #ffe9a3;
+  opacity: 0;
+}
+
+.gilded .fx::before { top: calc(3px * var(--fs) - 1px); translate: -50% -50%; }
+.gilded .fx::after { bottom: calc(3px * var(--fs) - 1px); translate: -50% 50%; }
+
+.gilded[data-turn] .ring::before { animation: gildedSweep 2.6s ease-in-out infinite; }
 .gilded[data-turn] .fx2::before,
 .gilded[data-turn] .fx2::after { animation: gildedJewel 2.6s ease-in-out infinite; }
+.gilded[data-turn] .fx::before,
+.gilded[data-turn] .fx::after { animation: haloIn 2.6s ease-in-out infinite; }
 .gilded[data-turn]::before { animation: gildedHalo 2.6s ease-in-out infinite; }
 
-@keyframes gildedSweep {
-  from { background-position: 0% 0, 0 0; }
-  to { background-position: 100% 0, 0 0; }
-}
+@keyframes gildedSweep { to { translate: -60% 0; } }
 
 @keyframes gildedJewel {
   0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.45) drop-shadow(0 0 3px #ffe9a3); }
+  50% { filter: brightness(1.45); }
 }
 
 @keyframes gildedHalo {
@@ -545,22 +599,27 @@
   border-radius: calc(var(--rad) + 3px * var(--fs));
 }
 
+.lotus { --ripple-grow: 13px; }
+
 .lotus[data-turn] .fx2 {
   display: block;
   inset: 0;
   border-radius: inherit;
-  box-shadow: 0 0 0 0 color-mix(in srgb, var(--frame-b) 80%, transparent);
-  animation: lotusRipple 2.8s ease-out infinite;
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--frame-b) 80%, transparent);
+  animation: ripple 2.8s ease-out infinite;
 }
 
 .lotus[data-turn] .corner { transform-origin: 55% 55%; animation: lotusBloom 3s ease-in-out infinite; }
 .lotus[data-turn] .tr,
 .lotus[data-turn] .bl { animation-delay: -1.5s; }
-.lotus[data-turn]::before { animation: lotusHalo 3s ease-in-out infinite; }
+.lotus[data-turn]::before { animation: haloOut 3s ease-in-out infinite; }
 
-@keyframes lotusRipple {
-  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--frame-b) 80%, transparent); }
-  100% { box-shadow: 0 0 0 13px color-mix(in srgb, var(--frame-b) 0%, transparent); }
+.lotus[data-turn]::after {
+  display: block;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--frame-c) 60%, transparent),
+    0 0 14px 3px color-mix(in srgb, var(--frame-c) 45%, transparent),
+    0 0 28px 5px color-mix(in srgb, var(--frame-glow) 30%, transparent);
+  animation: haloIn 3s ease-in-out infinite;
 }
 
 @keyframes lotusBloom {
@@ -568,18 +627,6 @@
   50% { scale: 1.12; }
 }
 
-@keyframes lotusHalo {
-  0%, 100% {
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--frame-glow) 55%, transparent),
-      0 0 12px 2px color-mix(in srgb, var(--frame-glow) 55%, transparent),
-      0 0 26px 4px color-mix(in srgb, var(--frame-glow) 24%, transparent);
-  }
-  50% {
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--frame-c) 60%, transparent),
-      0 0 14px 3px color-mix(in srgb, var(--frame-c) 45%, transparent),
-      0 0 28px 5px color-mix(in srgb, var(--frame-glow) 30%, transparent);
-  }
-}
 
 /* ─── Frost: a crisp icy border with crystal shards and twinkling glints ─── */
 .frost {
@@ -661,24 +708,41 @@
   right: 8%;
   bottom: calc(-5px * var(--fs));
   height: 8px;
-  background:
-    radial-gradient(ellipse 18px 6px at 50% 100%, transparent 70%, var(--frame-b) 74% 86%, transparent 90%) 0 0 / 36px 100% repeat-x,
-    radial-gradient(ellipse 14px 4px at 50% 100%, transparent 65%, var(--frame-a) 72% 88%, transparent 92%) 14px 0 / 28px 100% repeat-x;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
 }
 
-.dune[data-turn] .fx { animation: duneRoll 6s linear infinite; }
-.dune[data-turn] .corner path { transform-box: fill-box; transform-origin: center; }
-.dune[data-turn] .corner path:nth-of-type(1) { animation: duneRipple 2.4s ease-in-out infinite; }
-.dune[data-turn] .corner path:nth-of-type(2) { animation: duneRipple 2.4s ease-in-out 0.4s infinite; }
-.dune[data-turn] .corner path:nth-of-type(3) { animation: duneRipple 2.4s ease-in-out 0.8s infinite; }
-.dune[data-turn] .corner path:nth-of-type(4) { animation: duneSun 2.4s ease-in-out infinite; }
+/* Two dune lines rolling at their own pace; the wider one draws on top. */
+.dune .fx::before,
+.dune .fx::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.dune .fx::after {
+  left: -36px;
+  width: calc(100% + 36px);
+  background: radial-gradient(ellipse 18px 6px at 50% 100%, transparent 70%, var(--frame-b) 74% 86%, transparent 90%) 0 0 / 36px 100% repeat-x;
+}
+
+.dune .fx::before {
+  left: -28px;
+  width: calc(100% + 28px);
+  background: radial-gradient(ellipse 14px 4px at 50% 100%, transparent 65%, var(--frame-a) 72% 88%, transparent 92%) 14px 0 / 28px 100% repeat-x;
+}
+
+.dune[data-turn] .fx::after { animation: duneRollWide 6s linear infinite; }
+.dune[data-turn] .fx::before { animation: duneRollNarrow 6s linear infinite; }
+.dune[data-turn] .ripple1 { animation: duneRipple 2.4s ease-in-out infinite; }
+.dune[data-turn] .ripple2 { animation: duneRipple 2.4s ease-in-out 0.4s infinite; }
+.dune[data-turn] .ripple3 { animation: duneRipple 2.4s ease-in-out 0.8s infinite; }
+.dune[data-turn] .sun { animation: duneSun 2.4s ease-in-out infinite; }
 .dune[data-turn]::before { animation: duneHalo 2.4s ease-in-out infinite; }
 
-@keyframes duneRoll {
-  to { background-position: 36px 0, 42px 0; }
-}
+@keyframes duneRollWide { to { translate: 36px 0; } }
+@keyframes duneRollNarrow { to { translate: 28px 0; } }
 
 @keyframes duneRipple {
   0%, 100% { opacity: 0.35; }
@@ -744,46 +808,69 @@
 .crownrealm { --frame-a: #e3bf64; --frame-b: #2b59a5; --frame-c: #ffedb2; --frame-glow: #d9ae4d; --frame-bar: #b68a32; }
 
 .starfleet .ring { background: repeating-linear-gradient(90deg, #65dff5 0 12px, #17365c 12px 17px, #f6cd6c 17px 19px); }
-.starfleet .fx, .starfleet .fx2 {
-  display: block; left: 18%; right: 18%; height: calc(3px * var(--fs));
-  background: linear-gradient(90deg, transparent, #65dff5, #fff, transparent) 0 0 / 200% 100%;
+.starfleet .fx, .starfleet .fx2 { display: block; left: 18%; right: 18%; height: calc(3px * var(--fs)); overflow: hidden; }
+.starfleet .fx::before, .starfleet .fx2::before {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 400%;
+  background: linear-gradient(90deg, transparent, #65dff5, #fff, transparent) 0 0 / 50% 100%;
 }
 .starfleet .fx { top: calc(-4px * var(--fs)); }
 .starfleet .fx2 { bottom: calc(-4px * var(--fs)); }
-.starfleet[data-turn] .fx, .starfleet[data-turn] .fx2 { animation: warpRail 1.8s linear infinite; }
-.starfleet[data-turn] .fx2 { animation-direction: reverse; }
-.starfleet[data-turn] .corner .line2 { animation: enginePulse 1.4s ease-in-out infinite; }
+.starfleet[data-turn] .fx::before { animation: flowStrip 1.8s linear infinite; }
+.starfleet[data-turn] .fx2::before { animation: flowStrip 1.8s linear infinite reverse; }
+.starfleet[data-turn] .pulse { animation: enginePulse 1.4s ease-in-out infinite; }
 
 .shrine .ring { background: linear-gradient(90deg, #8e3023, #ed8660 45%, #b53c27); }
 .shrine .fx { display: block; left: 8%; right: 8%; top: calc(-5px * var(--fs)); height: calc(4px * var(--fs)); border-top: 1px solid #d5ad58; border-radius: 50%; }
 .shrine .fx2 { display: block; left: calc(-5px * var(--fs)); top: 35%; width: calc(6px * var(--fs)); height: calc(11px * var(--fs)); border-radius: 80% 15% 70% 40%; background: #54c8b5; box-shadow: 0 0 5px #35b8a3; }
 .shrine[data-turn] .fx2 { animation: foxfireRise 2.8s ease-in-out infinite; }
-.shrine[data-turn] .corner .fill3 { animation: lanternGlow 2.6s ease-in-out infinite; }
+.shrine[data-turn] .glow { animation: lanternGlow 2.6s ease-in-out infinite; }
 
-.ironfront .ring { background: repeating-linear-gradient(135deg, #78865b 0 7px, #344230 7px 10px); }
+.ironfront .ring::before {
+  content: ''; position: absolute; top: 0; bottom: 0; left: -28px; width: calc(100% + 28px);
+  background: repeating-linear-gradient(135deg, #78865b 0 7px, #344230 7px 10px);
+}
 .ironfront .fx { display: block; inset: calc(-3px * var(--fs)); border: 1px dashed #88966b; border-radius: inherit; }
 .ironfront .fx2 { display: block; right: calc(-9px * var(--fs)); top: calc(-9px * var(--fs)); width: calc(20px * var(--fs)); height: calc(20px * var(--fs)); border: 1px solid #ddb65b; border-radius: 50%; overflow: hidden; }
 .ironfront .fx2::before { content: ''; position: absolute; inset: 0; background: conic-gradient(from 0deg, transparent 65%, rgb(234 192 106 / 0.7)); }
 .ironfront[data-turn] .fx2::before { animation: radarSweep 4s linear infinite; }
-.ironfront[data-turn] .ring { animation: trackRoll 4s linear infinite; }
+.ironfront[data-turn] .ring::before { animation: trackRoll 4s linear infinite; }
 
 .neoncity .ring { background: repeating-linear-gradient(90deg, #ea5bdc 0 16px, #142c49 16px 20px, #35cbd7 20px 36px); }
 .neoncity .fx { display: block; inset: calc(-4px * var(--fs)); border: 1px solid #35cbd7; border-radius: inherit; clip-path: polygon(0 0, 32% 0, 32% 5%, 5% 5%, 5% 32%, 0 32%, 0 0, 100% 100%, 68% 100%, 68% 95%, 95% 95%, 95% 68%, 100% 68%, 100% 100%); }
-.neoncity .fx2 { display: block; width: calc(6px * var(--fs)); height: calc(3px * var(--fs)); background: #c5fcff; box-shadow: 0 0 5px #35cbd7; offset-path: inset(0 round var(--rad)); offset-distance: 15%; }
-.neoncity[data-turn] .fx2 { animation: packetOrbit 2.5s linear infinite; }
-.neoncity[data-turn] .corner .fill3 { animation: enginePulse 2s ease-in-out infinite; }
+/* A script runs the packet's lap on turn (SeatFrame.tsx); the motion path places it otherwise. */
+.neoncity .fx2 { display: block; top: 0; left: 0; width: calc(6px * var(--fs)); height: calc(3px * var(--fs)); background: #c5fcff; box-shadow: 0 0 5px #35cbd7; offset-path: inset(0 round var(--rad)); offset-distance: 15%; }
+.neoncity[data-turn] .pulse { animation: enginePulse 2s ease-in-out infinite; }
 
-.crownrealm .ring { background: linear-gradient(120deg, #b68a32, #ffedb2 25%, #a87926 50%, #e3bf64 75%, #b68a32) 0 0 / 200% 100%; }
+.crownrealm .ring::before {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 400%;
+  background: linear-gradient(120deg, #b68a32, #ffedb2 25%, #a87926 50%, #e3bf64 75%, #b68a32) 0 0 / 50% 100%;
+}
 .crownrealm .fx { display: block; inset: calc(-3px * var(--fs)); border: 1px solid #a8863c; border-radius: inherit; }
 .crownrealm .fx2 { display: block; left: 30%; right: 30%; bottom: calc(-7px * var(--fs)); height: calc(8px * var(--fs)); background: #2b59a5; border-bottom: 1px solid #e3bf64; clip-path: polygon(0 0, 100% 0, 90% 100%, 50% 70%, 10% 100%); transform-origin: top; }
-.crownrealm[data-turn] .ring { animation: warpRail 4s ease-in-out infinite; }
+.crownrealm[data-turn] .ring::before { animation: flowStrip 4s ease-in-out infinite; }
 .crownrealm[data-turn] .fx2 { animation: royalBanner 3s ease-in-out infinite; }
 
-@keyframes warpRail { to { background-position: 200% 0; } }
 @keyframes enginePulse { 50% { opacity: 0.4; } }
 @keyframes foxfireRise { 50% { translate: 0 calc(-8px * var(--fs)); opacity: 0.5; } }
 @keyframes lanternGlow { 50% { filter: brightness(1.25); } }
 @keyframes radarSweep { to { rotate: 360deg; } }
-@keyframes trackRoll { to { background-position: 28px 0; } }
-@keyframes packetOrbit { to { offset-distance: 115%; } }
+@keyframes trackRoll { to { translate: 28px 0; } }
 @keyframes royalBanner { 50% { scale: 1 0.7; } }
+
+/* ─── Shared turn motions ─── */
+@keyframes flowStrip { to { translate: -50% 0; } }
+
+@keyframes haloIn {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+@keyframes haloOut {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes ripple {
+  from { scale: 1; opacity: 1; }
+  to { scale: var(--ripple-x) var(--ripple-y); opacity: 0; }
+}
