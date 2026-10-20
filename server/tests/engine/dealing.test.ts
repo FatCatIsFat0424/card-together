@@ -86,7 +86,8 @@ describe('dealing engine', () => {
     it.each([
       { name: 'four points without an ace', honors: [13, 11], eligible: true },
       { name: 'five points without an ace', honors: [13, 12], eligible: false },
-      { name: 'four points with an ace', honors: [14], eligible: false },
+      { name: 'four points with an ace', honors: [14], eligible: true },
+      { name: 'five points with an ace', honors: [14, 11], eligible: false },
       { name: 'zero points without an ace', honors: [], eligible: true },
     ])('checks $name', ({ honors, eligible }) => {
       const low: Card[] = [

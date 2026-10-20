@@ -170,7 +170,7 @@ Runtime mechanics: [architecture](architecture.md#turn-clocks).
 | Deal | 52 cards, 13 each |
 | Display | Suits ♠ ♥ ♣ ♦; ranks A down to 2 |
 | HCP | A=4, K=3, Q=2, J=1 |
-| Redeal offer | A hand with no ace and HCP ≤ 4 |
+| Redeal offer | A hand with HCP ≤ 4, including a lone ace with no other points |
 
 1. Redeal offers go clockwise from a random auction starter. Accepting redeals all hands;
    declining passes the offer to the next eligible seat, for that deal only.

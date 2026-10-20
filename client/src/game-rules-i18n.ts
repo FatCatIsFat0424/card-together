@@ -46,7 +46,7 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
   bridge: [
     section('Goal and teams', 'North–South play East–West with 13 cards each. Ranks run A high to 2 low.', 'Declarer’s side needs 6 + contract level tricks (level 1 needs 7, level 7 all 13); otherwise the defenders win.', 'No doubles, vulnerability, bonus scoring, or exposed dummy.'),
     section('Auction', 'Clockwise. Bid level 1–7 with ♣, ♦, ♥, ♠, or no trump (NT), or pass.', 'Each bid must be higher: level first, then ♣ < ♦ < ♥ < ♠ < NT (1NT beats 1♠; 2♣ beats 1NT).', 'After a bid, three passes in a row end the auction. The last bidder declares and that suit is trump; NT has none. Four opening passes redeal.'),
-    section('Weak-hand redeal', 'High-card points (HCP): A 4, K 3, Q 2, J 1. A hand with no ace and at most 4 HCP may ask for a redeal.', 'Eligible seats are asked clockwise from the auction starter. Accepting redeals every hand; a seat that declines is not asked again that deal.'),
+    section('Weak-hand redeal', 'High-card points (HCP): A 4, K 3, Q 2, J 1. A hand with at most 4 HCP may ask for a redeal, including a lone ace with no other points.', 'Eligible seats are asked clockwise from the auction starter. Accepting redeals every hand; a seat that declines is not asked again that deal.'),
     section('Playing a trick', 'The seat counterclockwise from declarer leads first; play goes clockwise and each trick winner leads the next.', 'Follow the led suit if you can; otherwise play anything, including trump.', 'The highest trump wins; with no trump played, the highest card of the led suit wins.'),
     section('Controls', 'Pick a level and strain or Pass, then confirm; picking the same call again also confirms.', 'Touch: tap a card to lift it and tap it again to play.'),
     table('Bot bidding agreements', ['Call', 'Bots read it as'], [
@@ -169,7 +169,7 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
   bridge: [
     section('目標與分隊', '南北對東西，每人 13 張。點數 A 最大、2 最小。', '莊家隊需取得「6＋合約線位」墩（1 線 7 墩、7 線全部 13 墩），未達標則防守隊獲勝。', '沒有賭倍、身價、超墩加分，也不攤明手。'),
     section('叫牌', '順時針叫牌：1～7 線搭配 ♣、♦、♥、♠ 或無王 NT，或 Pass。', '叫牌必須更高：先比線位，再比 ♣ < ♦ < ♥ < ♠ < NT（1NT 高於 1♠，2♣ 高於 1NT）。', '有人叫牌後連續三家 Pass 即結束，最後叫牌者當莊家，該花色為王牌，NT 無王牌。開場四家 Pass 就重發。'),
-    section('弱牌重發', '大牌點 HCP：A 4、K 3、Q 2、J 1。沒有 A 且 HCP ≤ 4 可要求重發。', '從叫牌起始座位順時針詢問符合者；接受則全部重發，拒絕者本副牌不再被問。'),
+    section('弱牌重發', '大牌點 HCP：A 4、K 3、Q 2、J 1。HCP ≤ 4 可要求重發，包含一張 A 且其餘牌沒有點數的手牌。', '從叫牌起始座位順時針詢問符合者；接受則全部重發，拒絕者本副牌不再被問。'),
     section('出牌與牌墩', '莊家逆時針鄰座首攻，之後順時針出牌，贏墩者先出下一墩。', '有首攻花色必須跟；沒有才可出其他牌，包括王牌。', '最大王牌贏墩；沒人出王牌時，首攻花色最大者贏。'),
     section('操作方式', '選線位與花色或 Pass 後按確認；再選一次相同叫牌也算確認。', '觸控：點一下抬起牌，再點一次出牌。'),
     table('Bot 叫牌約定', ['叫牌', 'Bot 的解讀'], [

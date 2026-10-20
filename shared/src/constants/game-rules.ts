@@ -61,7 +61,7 @@ export const TEAM_SEATS: Record<Team, readonly [Seat, Seat]> = {
 /** Bid suit ranking (low to high) */
 export const BID_SUIT_ORDER: readonly BidSuit[] = ['clubs', 'diamonds', 'hearts', 'spades', 'nt'];
 
-/** Redeal condition: no ace and total HCP at or below this value */
+/** Redeal condition: total HCP at or below this value */
 export const REDEAL_MAX_POINTS = 4;
 
 /** Reconnect timeout after disconnect (ms) */

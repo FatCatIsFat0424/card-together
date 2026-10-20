@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { PlayerInfo, Seat } from '@shared/types';
 import { createDeck } from '../../src/engine/deck';
-import { dealCards, sortHand } from '../../src/engine/dealing';
+import { calculateHandPoints, dealCards, sortHand } from '../../src/engine/dealing';
 import * as bridge from '../../src/managers/games/bridge-game';
 
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
@@ -24,5 +24,30 @@ describe('Bridge deal randomness', () => {
     // The auction (or redeal offer) starts from the dealer's clockwise neighbour.
     if (game.phase === 'bidding') expect(game.bidding?.currentBidderSeat).toBe('W');
     else expect(game.phase).toBe('redeal_pending');
+  });
+
+  it('should offer a redeal for a lone ace and start bidding when declined', () => {
+    const deck = createDeck();
+    const weakHand = [
+      ...deck.filter((card) => card.rank <= 10).slice(0, 12),
+      ...deck.filter((card) => card.suit === 'spades' && card.rank === 14),
+    ];
+    const remaining = deck.filter((card) => !weakHand.includes(card));
+    const hands = {
+      N: remaining.slice(0, 13), E: weakHand,
+      S: remaining.slice(13, 26), W: remaining.slice(26),
+    };
+    const dealOrder = Array.from({ length: 13 }, (_, index) =>
+      SEATS.map((seat) => hands[seat][index])).flat();
+
+    bridge.startGame('DEAL02', PLAYERS, dealOrder, 'W');
+    const game = bridge.getGameState('DEAL02')!;
+    expect(calculateHandPoints(game.hands.E)).toBe(4);
+    expect(game).toMatchObject({ phase: 'redeal_pending', redealPendingSeat: 'E' });
+    expect(bridge.handleRedealResponse('DEAL02', 'E', false)).toEqual({ success: true });
+    expect(game).toMatchObject({
+      phase: 'bidding', redealPendingSeat: null,
+      bidding: { currentBidderSeat: 'N' },
+    });
   });
 });

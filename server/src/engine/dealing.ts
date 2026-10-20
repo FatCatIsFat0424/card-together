@@ -52,18 +52,10 @@ export function calculateHandPoints(hand: readonly Card[]): number {
 }
 
 /**
- * Check whether a hand contains an ace
- */
-function hasAce(hand: readonly Card[]): boolean {
-  return hand.some((card) => card.rank === 14);
-}
-
-/**
  * Check whether a player qualifies for a redeal
- * Condition: no aces and total HCP at most 4
+ * Condition: total HCP at most 4, including a lone ace
  */
 export function isRedealEligible(hand: readonly Card[]): boolean {
-  if (hasAce(hand)) return false;
   return calculateHandPoints(hand) <= REDEAL_MAX_POINTS;
 }
 
