@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { DirectMessage, MessageHistory, MessageInput } from '@shared/types/direct-message';
@@ -20,6 +20,19 @@ import { useMotionStore } from '../stores/motion-store';
 import chatStyles from './ChatPanel.module.css';
 import styles from './DirectMessages.module.css';
 
+const DirectMessageRow = memo(function DirectMessageRow({ message, ownId, dateTimeFormat }: {
+  readonly message: DirectMessage; readonly ownId: string; readonly dateTimeFormat: Intl.DateTimeFormat;
+}): ReactNode {
+  return <ChatFrame as="article" id={message.sender.chatFrame}
+    className={`${styles.message} ${message.sender.id === ownId ? styles.ownMessage : ''}`}>
+    <div className={styles.messageMeta}><span>{message.sender.nickname}</span>
+      <time dateTime={new Date(message.timestamp).toISOString()}>
+        {dateTimeFormat.format(message.timestamp)}</time>
+    </div>
+    <div className={styles.messageContent}><ChatMessageBody message={message} /></div>
+  </ChatFrame>;
+});
+
 export function DirectConversation({ ownId, otherId, initialAccount, embedded = false, onLoadError, refreshVersion = 0 }: {
   readonly ownId: string; readonly otherId: string;
   readonly initialAccount?: PublicAccount;
@@ -28,6 +41,9 @@ export function DirectConversation({ ownId, otherId, initialAccount, embedded = 
   readonly refreshVersion?: number;
 }): ReactNode {
   const { locale, t } = useI18nStore();
+  const dateTimeFormat = useMemo(() => new Intl.DateTimeFormat(locale, {
+    dateStyle: 'short', timeStyle: 'short',
+  }), [locale]);
   const revision = useSocialStore((state) => state.revision);
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const emojis = useEmojiStore((state) => state.emojis);
@@ -209,14 +225,8 @@ export function DirectConversation({ ownId, otherId, initialAccount, embedded = 
         onClick={() => void load(history.messages[0]?.id)}>
         {paging ? t('common.loading') : t('messages.older')}</button>}
       {history?.messages.length === 0 && <p className={styles.empty}>{t('messages.emptyConversation')}</p>}
-      {history?.messages.map((message) => <ChatFrame key={message.id} as="article" id={message.sender.chatFrame}
-        className={`${styles.message} ${message.sender.id === ownId ? styles.ownMessage : ''}`}>
-        <div className={styles.messageMeta}><span>{message.sender.nickname}</span>
-          <time dateTime={new Date(message.timestamp).toISOString()}>
-            {new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(message.timestamp)}</time>
-        </div>
-        <div className={styles.messageContent}><ChatMessageBody message={message} /></div>
-      </ChatFrame>)}
+      {history?.messages.map((message) => <DirectMessageRow key={message.id} message={message}
+        ownId={ownId} dateTimeFormat={dateTimeFormat} />)}
     </div>
     {readError && <p className={styles.notice} role="alert">{t('common.error')}{' '}
       <button type="button" className="btn btn-outline" onClick={() => void markVisible()}>{t('common.retry')}</button></p>}

@@ -46,7 +46,7 @@ export function startBotTurns(runtime: RuntimeCoordinator, publish: (code: RoomC
     if (stopped) return;
     const games = gameManager.exportGames();
     for (const [code, job] of scheduled) {
-      const game = games.find((entry) => entry.roomCode === code);
+      const game = gameManager.getGameState(code);
       if (!game || pendingTurn(game)?.key !== job.key) {
         clearTimeout(job.timer);
         scheduled.delete(code);

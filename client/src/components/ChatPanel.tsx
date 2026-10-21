@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { memo, useState, useEffect, useRef } from 'react';
 import type { FormEvent, ReactNode } from 'react';
+import type { ChatMessage } from '@shared/types';
 import { socket } from '../socket';
 import { PROVIDED_EMOJIS } from '../provided-emoji';
 import { useChatStore } from '../stores/chat-store';
@@ -21,6 +22,32 @@ function ChatTime({ timestamp }: { readonly timestamp: number }): ReactNode {
   return <time className={styles.chatTime} dateTime={new Date(timestamp).toISOString()}>
     {formatChatTime(timestamp)}</time>;
 }
+
+// Composer edits leave existing message artwork and emoji text unchanged.
+const ChatMessageRow = memo(function ChatMessageRow({ message }: { readonly message: ChatMessage }): ReactNode {
+  const { t } = useI18nStore();
+  if (message.system) return <p className={styles.systemMessage}>
+    <ChatTime timestamp={message.timestamp} />{' '}
+    {t(message.content as TranslationKey, { name: message.sender.nickname })}
+  </p>;
+  return <div className={styles.chatMessage}>
+    <span className={styles.chatAvatar}>
+      <Avatar avatar={message.sender.avatar} image={message.sender.avatarImage} border={message.sender.avatarBorder} color={message.sender.color} size="compact" />
+    </span>
+    <div className={styles.chatBody}>
+      <div className={styles.chatHeading}>
+        <span className={styles.chatSender}>{message.sender.nickname}</span>
+        <Nameplate id={message.sender.nameplate} />
+        {message.audience === 'observers' && <span className={styles.observerTag}
+          title={t('chat.observerTitle')}>{t('chat.observerTag')}</span>}
+        <ChatTime timestamp={message.timestamp} />
+      </div>
+      <ChatFrame id={message.sender.chatFrame} className={styles.chatContent}>
+        <ChatMessageBody message={message} />
+      </ChatFrame>
+    </div>
+  </div>;
+});
 
 interface ChatPanelProps {
   /** When provided: the panel fills the container height and the header shows a collapse button */
@@ -121,30 +148,7 @@ export function ChatPanel({ onCollapse }: ChatPanelProps): ReactNode {
           aria-label={t('table.chatCollapse')} title={t('table.chatCollapse')}><AppIcon name="nextPage" /></button>}
       </div>
       <div ref={messagesRef} className={styles.chatMessages} role="log" aria-live="polite">
-        {messages.map((message) => message.system ? (
-          <p key={message.id} className={styles.systemMessage}>
-            <ChatTime timestamp={message.timestamp} />{' '}
-            {t(message.content as TranslationKey, { name: message.sender.nickname })}
-          </p>
-        ) : (
-          <div key={message.id} className={styles.chatMessage}>
-            <span className={styles.chatAvatar}>
-              <Avatar avatar={message.sender.avatar} image={message.sender.avatarImage} border={message.sender.avatarBorder} color={message.sender.color} size="compact" />
-            </span>
-            <div className={styles.chatBody}>
-              <div className={styles.chatHeading}>
-                <span className={styles.chatSender}>{message.sender.nickname}</span>
-                <Nameplate id={message.sender.nameplate} />
-                {message.audience === 'observers' && <span className={styles.observerTag}
-                  title={t('chat.observerTitle')}>{t('chat.observerTag')}</span>}
-                <ChatTime timestamp={message.timestamp} />
-              </div>
-              <ChatFrame id={message.sender.chatFrame} className={styles.chatContent}>
-                <ChatMessageBody message={message} />
-              </ChatFrame>
-            </div>
-          </div>
-        ))}
+        {messages.map((message) => <ChatMessageRow key={message.id} message={message} />)}
       </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
       {observing && <p className={styles.observerNotice}>{t('chat.observerNotice')}</p>}

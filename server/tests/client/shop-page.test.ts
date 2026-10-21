@@ -1,4 +1,5 @@
 import { createElement } from 'react';
+import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -10,7 +11,10 @@ vi.mock('../../../client/src/api', () => ({ apiRequest: vi.fn() }));
 vi.mock('../../../client/src/stores/account-store', () => ({
   useAccountStore: (select: (value: { account: Partial<AccountProfile> }) => unknown) => select(state),
 }));
-vi.mock('../../../client/src/components/ShopProductArt', () => ({ ShopProductArt: () => null }));
+vi.mock('../../../client/src/components/ShopProductArt', () => ({
+  ShopProductArt: () => null,
+  ShopProductPreview: ({ children }: { children: ReactNode }) => children,
+}));
 
 import { shopSeriesQuery } from '../../../client/src/shop-filters';
 import { ShopPage } from '../../../client/src/pages/ShopPage';

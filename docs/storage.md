@@ -221,6 +221,8 @@ Contracts: [`Repository`](../server/src/database/repository.ts),
 
 **Write and recovery behavior**
 
+- Saves use compact JSON to reduce serialization and disk-write work. Indented JSON
+  remains readable; the schema, backup, and restore procedures are unchanged.
 - One process owns each JSON file. The duplicate-path guard is in-process only, not a
   cross-process lock.
 - Each write serializes and validates, writes and fsyncs a temporary file in the same

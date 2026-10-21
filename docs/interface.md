@@ -507,6 +507,11 @@ Saved and system reduced-motion preferences disable this animation.
 
 ## Cosmetic shop
 
+- Decorative previews mount shortly before scrolling into view and release their
+  animated artwork when far outside the viewport. Descriptions, prices, purchase
+  controls, text-driven previews, and keyboard-operated sound previews remain
+  available. Reserved preview space keeps the product grid stable. Supported animated
+  artwork uses the same compositor layers as equipped cosmetics.
 - `/shop` sells permanent, cosmetic-only products from the
   [catalog](../shared/src/constants/shop.ts): avatar borders, titles/nameplates, chat
   frames, sticker packs, card backs, card faces, table backgrounds, chip styles, seat

@@ -202,7 +202,7 @@ async function main(): Promise<void> {
       boundedSearch: await measure(500, () => repository.searchAccounts('player', '', 20)),
       cloneDocument: await measure(5, async () => structuredClone(fixture)),
       validateDocument: await measure(5, async () => validateDocument(fixture)),
-      serializeDocument: await measure(5, async () => JSON.stringify(fixture, null, 2)),
+      serializeDocument: await measure(5, async () => JSON.stringify(fixture)),
       durableRuntimeWrites: await measure(5, (index) => {
         fixture.runtime!.chat[0].messages[0] = {
           ...fixture.runtime!.chat[0].messages[0],

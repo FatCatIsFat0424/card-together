@@ -1,0 +1,108 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { getShopItem } from '@shared/constants';
+import { observeShopPreview } from '../../../client/src/components/shop-preview-visibility';
+import { ShopProductArt, ShopProductPreview } from '../../../client/src/components/ShopProductArt';
+import { layeredShopArt } from '../../../client/src/cosmetics/art-layers/shop-art-layers';
+import { layeredSeatPreview } from '../../../client/src/cosmetics/art-layers/seat-preview-art-layers';
+import { shopArtworkUrl } from '../../../client/src/shop-art';
+import { useMotionStore } from '../../../client/src/stores/motion-store';
+
+const motion = vi.hoisted(() => ({ reducedMotion: false }));
+vi.mock('../../../client/src/media', () => ({ mediaUrl: (id: string): string => `/api/media/${id}` }));
+vi.mock('../../../client/src/stores/account-store', () => ({
+  useAccountStore: (select: (state: { account: null }) => unknown) => select({ account: null }),
+}));
+vi.mock('../../../client/src/stores/motion-store', () => ({
+  useMotionStore: Object.assign((select: (state: typeof motion) => unknown) => select(motion), {
+    getState: () => ({ setReducedMotion: (value: boolean) => { motion.reducedMotion = value; } }),
+  }),
+}));
+
+const account = { avatar: 'cat', color: '#4a9eff', nickname: 'Shopper', avatarImage: null } as const;
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  useMotionStore.getState().setReducedMotion(false);
+});
+
+describe('shop preview visibility', () => {
+  it('shares observation, unloads distant previews, and ignores removed targets', () => {
+    let notify: IntersectionObserverCallback | undefined;
+    const observe = vi.fn();
+    const unobserve = vi.fn();
+    const disconnect = vi.fn();
+    const observer = { observe, unobserve, disconnect } as unknown as IntersectionObserver;
+    const createObserver = vi.fn(function (callback: IntersectionObserverCallback) {
+      notify = callback;
+      return observer;
+    });
+    vi.stubGlobal('IntersectionObserver', createObserver);
+    const first = {} as Element;
+    const second = {} as Element;
+    const firstVisible = vi.fn();
+    const secondVisible = vi.fn();
+    const removeFirst = observeShopPreview(first, firstVisible);
+    const removeSecond = observeShopPreview(second, secondVisible);
+    const update = (target: Element, isIntersecting: boolean): void => {
+      notify?.([{ target, isIntersecting } as IntersectionObserverEntry], observer);
+    };
+    try {
+      expect(createObserver).toHaveBeenCalledTimes(1);
+      expect(createObserver).toHaveBeenCalledWith(expect.any(Function), { root: null, rootMargin: '400px 0px' });
+      expect(observe).toHaveBeenCalledTimes(2);
+      expect(firstVisible).not.toHaveBeenCalled();
+      update(first, true);
+      update(first, false);
+      expect(firstVisible.mock.calls).toEqual([[true], [false]]);
+      removeFirst();
+      update(first, true);
+      update(second, true);
+      expect(firstVisible).toHaveBeenCalledTimes(2);
+      expect(secondVisible).toHaveBeenCalledWith(true);
+      expect(disconnect).not.toHaveBeenCalled();
+    } finally {
+      removeFirst();
+      removeSecond();
+    }
+    expect(disconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps descriptive content and sound controls mounted while deferring decorative assets', () => {
+    vi.stubGlobal('IntersectionObserver', vi.fn());
+    const render = (id: string): string => renderToStaticMarkup(createElement(ShopProductPreview, {
+      item: getShopItem(id)!, account, className: 'preview', children: 'Product category',
+    }));
+    const distant = render('card-face-four-color');
+    expect(distant).toContain('Product category');
+    expect(distant).not.toContain('<img');
+    expect(render('sound-starfleet')).toContain('<button');
+  });
+
+  it('renders artwork when observation is unavailable', () => {
+    vi.stubGlobal('IntersectionObserver', undefined);
+    const update = vi.fn();
+    observeShopPreview({} as Element, update)();
+    expect(update).toHaveBeenCalledWith(true);
+    const html = renderToStaticMarkup(createElement(ShopProductPreview, {
+      item: getShopItem('card-back-aurora')!, account, className: 'preview', children: null,
+    }));
+    expect(html).toContain('<img');
+  });
+});
+
+describe('shop animated background previews', () => {
+  it.each(['card-back', 'table', 'seat'])('uses composited layers for %s and preserves the reduced-motion still image', (prefix) => {
+    const item = getShopItem(`${prefix}-neoncity`)!;
+    const layers = layeredShopArt(item.id) ?? layeredSeatPreview(item.id);
+    expect(layers).not.toBeNull();
+    const animated = renderToStaticMarkup(createElement(ShopProductArt, { item, account }));
+    expect(animated).toContain('decoding="async"');
+    expect(animated).not.toContain(shopArtworkUrl(item.id));
+    useMotionStore.getState().setReducedMotion(true);
+    const still = renderToStaticMarkup(createElement(ShopProductArt, { item, account }));
+    expect(still).toContain(`${shopArtworkUrl(item.id)}#still`.replaceAll('&', '&amp;').replaceAll("'", '&#x27;').replaceAll('"', '&quot;'));
+    expect(still).not.toContain('decoding="async"');
+  });
+});

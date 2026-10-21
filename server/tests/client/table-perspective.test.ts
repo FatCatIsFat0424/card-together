@@ -1,7 +1,7 @@
 import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
+import { renderToReadableStream } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GAME_TYPES } from '@shared/constants';
 import type { Card, GameType, PlayerInfo, PlayerVisibleGameState, RoomInfo, Seat } from '@shared/types';
 import * as games from '../../src/managers/game-manager';
@@ -64,7 +64,7 @@ function snapshot(type: GameType, seat: Seat | null = null): PlayerVisibleGameSt
   return games.getRecipientVisibleState(code, seat)!;
 }
 
-function render(game: PlayerVisibleGameState, locked = false): string {
+async function render(game: PlayerVisibleGameState, locked = false): Promise<string> {
   const room: RoomInfo = {
     code, gameType: game.gameType, status: 'playing', hostId: players.N.id, createdAt: 1,
     abortVote: null, abortVoteCooldownUntil: null,
@@ -76,10 +76,27 @@ function render(game: PlayerVisibleGameState, locked = false): string {
   useRoomStore.getState().setRoom(code, room);
   useGameStore.getState().restore(game);
   useGodViewStore.getState().update(game, locked);
-  return renderToStaticMarkup(createElement(MemoryRouter, null, createElement(GamePage)));
+  const stream = await renderToReadableStream(createElement(MemoryRouter, null, createElement(GamePage)));
+  await stream.allReady;
+  return new Response(stream).text();
 }
 
 describe('spectator table perspective', () => {
+  // Module transforms belong to fixture setup, not a timed game-state assertion.
+  beforeAll(async () => {
+    await Promise.all([
+      import('../../../client/src/games/bridge/BridgeTable'),
+      import('../../../client/src/games/bigtwo/BigTwoTable'),
+      import('../../../client/src/games/redpoints/RedPointsTable'),
+      import('../../../client/src/games/ninetynine/NinetyNineTable'),
+      import('../../../client/src/games/sevens/SevensTable'),
+      import('../../../client/src/games/chinesepoker/ChinesePokerTable'),
+      import('../../../client/src/games/liarsdeck/LiarsDeckTable'),
+      import('../../../client/src/games/blackjack/BlackjackTable'),
+      import('../../../client/src/games/holdem/HoldemTable'),
+      import('../../../client/src/games/napoleon/NapoleonTable'),
+    ]);
+  }, 60_000);
   beforeEach(() => {
     useI18nStore.getState().setLocale('en');
     useRoomStore.getState().setMySeat(null);
@@ -94,13 +111,13 @@ describe('spectator table perspective', () => {
     useTablePerspectiveStore.getState().reset();
   });
 
-  it.each(GAME_TYPES)('rotates %s plates and the selected hand without granting a turn', (type) => {
+  it.each(GAME_TYPES)('rotates %s plates and the selected hand without granting a turn', async (type) => {
     const game = snapshot(type);
     const original = structuredClone(game);
     const view = nextGodView(HIDDEN_GOD_VIEW, game, false);
     for (const seat of seats) {
       useTablePerspectiveStore.getState().selectSeat(seat);
-      const html = render(game);
+      const html = await render(game);
       const bottom = html.split('data-table-seat="bottom"')[1]?.split('data-hand-zone')[0];
       expect(bottom).toContain(`Player ${seat}`);
       expect(html).toContain(`aria-label="View Player ${seat} at the bottom"`);
@@ -157,12 +174,12 @@ describe('spectator table perspective', () => {
     expect(perspectiveSeat({ ...game, seats: ['N', 'E'] }, 'S', null)).toBe('N');
   });
 
-  it('keeps submitted Chinese Poker hands visible without copying another seat arrangement', () => {
+  it('keeps submitted Chinese Poker hands visible without copying another seat arrangement', async () => {
     const game = snapshot('chinesepoker');
     if (game.gameType !== 'chinesepoker') throw new Error('Expected Chinese Poker');
     const next = { ...game, submitted: { ...game.submitted, N: true } };
     useTablePerspectiveStore.getState().selectSeat('N');
-    const html = render(next);
+    const html = await render(next);
     expect(html.split('data-hand-zone')[1]).toContain('aria-label="Your hand, 13 cards"');
     expect(spectatorGame(next, 'N', nextGodView(HIDDEN_GOD_VIEW, next, false)).myArrangement).toBeNull();
   });
@@ -174,7 +191,7 @@ describe('spectator table perspective', () => {
     expect(spectatorGame(next, 'N', nextGodView(HIDDEN_GOD_VIEW, next, false)).myPlayed).toEqual([]);
   });
 
-  it('enlarges a player dealer hand without offering dealer actions to spectators', () => {
+  it('enlarges a player dealer hand without offering dealer actions to spectators', async () => {
     blackjack.startGame(code, players, 10_000, Date.now(), { playerDealer: true }, () => 0);
     const game = blackjack.getGameState(code)!;
     for (const seat of blackjack.pendingBetSeats(game)) {
@@ -184,13 +201,13 @@ describe('spectator table perspective', () => {
     if (visible.gameType !== 'blackjack') throw new Error('Expected Blackjack');
     expect(visible.phase).toBe('playing');
     useTablePerspectiveStore.getState().selectSeat(visible.dealerSeat!);
-    const handZone = render(visible).split('data-hand-zone')[1]?.split('</main>')[0];
+    const handZone = (await render(visible)).split('data-hand-zone')[1]?.split('</main>')[0];
     expect(handZone).toContain(`Dealer · Player ${visible.dealerSeat}`);
     expect(handZone?.match(/<img /g)).toHaveLength(2);
     expect(handZone).not.toMatch(/<button/);
   });
 
-  it('shows the selected frozen Hold\'em hand rather than the original seat previous hand', () => {
+  it('shows the selected frozen Hold\'em hand rather than the original seat previous hand', async () => {
     const game = snapshot('holdem');
     if (game.gameType !== 'holdem') throw new Error('Expected Hold\'em');
     const opening = game.log[0];
@@ -206,7 +223,7 @@ describe('spectator table perspective', () => {
       presentation: { id: 'pending-next-hand', startedAt: Date.now(), logStart: 0, timingVersion: 2 as const },
     };
     useTablePerspectiveStore.getState().selectSeat('N');
-    const handZone = render(later, true).split('data-hand-zone')[1];
+    const handZone = (await render(later, true)).split('data-hand-zone')[1];
     expect(handZone).toContain('alt="♥K"');
     expect(handZone).not.toContain('alt="♣2"');
     expect(handZone).not.toContain('alt="♠A"');

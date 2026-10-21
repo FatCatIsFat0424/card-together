@@ -55,7 +55,7 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       try {
         const handle = await open(temporaryPath, 'wx', 0o600);
         try {
-          await handle.writeFile(`${JSON.stringify(next, null, 2)}\n`, 'utf8');
+          await handle.writeFile(`${JSON.stringify(next)}\n`, 'utf8');
           await handle.sync();
         } finally {
           await handle.close();

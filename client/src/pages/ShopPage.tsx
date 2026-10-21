@@ -18,7 +18,10 @@ import { useMotionStore } from '../stores/motion-store';
 import { BORDER_SERIES, shopSeriesQuery } from '../shop-filters';
 import type { ShopSeriesFilter } from '../shop-filters';
 import { shopSeriesArtwork } from '../shop-series';
-import { ShopProductArt } from '../components/ShopProductArt';
+import { ShopProductArt, ShopProductPreview } from '../components/ShopProductArt';
+import { useStillArt } from '../cosmetics/art-layers/art-layers';
+import { layeredSeriesEmblem } from '../cosmetics/art-layers/emblem-art-layers';
+import { LayeredArt } from '../cosmetics/art-layers/LayeredArt';
 import { AppIcon } from '../components/AppIcon';
 import styles from './ShopPage.module.css';
 
@@ -43,6 +46,7 @@ export function ShopPage(): ReactNode {
   const account = useAccountStore((state) => state.account);
   const { t, locale } = useI18nStore();
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
+  const stillArt = useStillArt();
   const [searchParams, setSearchParams] = useSearchParams();
   const [pendingPurchase, setPendingPurchase] = useState<ShopItemId | null>(null);
   const [busy, setBusy] = useState(false);
@@ -156,11 +160,15 @@ export function ShopPage(): ReactNode {
         <div ref={collectionList} className={styles.collectionFilters} role="group" aria-label={t('shop.collections')}>
           <button type="button" className={styles.collectionFilter} aria-pressed={!collection}
             aria-controls="shop-catalog" onClick={() => selectSeries('all')}>{t('shop.allCollections')}</button>
-          {SHOP_SERIES.map((series) => <button key={series} type="button"
+          {SHOP_SERIES.map((series) => {
+            const emblem = !stillArt ? layeredSeriesEmblem(series) : null;
+            return <button key={series} type="button"
             className={styles.collectionFilter} data-series={series} aria-pressed={collection === series}
             aria-controls="shop-catalog" onClick={() => selectSeries(series)}>
-            <img src={shopSeriesArtwork(series, reducedMotion)} alt="" />{t(`shop.series.${series}.name`)}
-          </button>)}
+            {emblem ? <LayeredArt art={emblem} fit="fill" className={styles.collectionArt} />
+              : <img src={shopSeriesArtwork(series, reducedMotion)} alt="" />}{t(`shop.series.${series}.name`)}
+          </button>;
+          })}
         </div>
         {collection && <p className={styles.collectionDescription}>{t(`shop.series.${collection}.description`)}</p>}
         {selectedType === 'avatarBorder' && !collection && <div className={styles.seriesFilters} role="group" aria-label={t('shop.allSeries')}>
@@ -178,12 +186,12 @@ export function ShopPage(): ReactNode {
           const canEquip = owned && item.type !== 'stickerPack';
           const series = shopItemSeries(item);
           return <li key={item.id} className={styles.product} data-shop-series={series ?? undefined}>
-            <div className={`${styles.productArt} ${item.type === 'avatarBorder' ? styles[item.category] : styles[item.type]}`}>
+            <ShopProductPreview item={item} account={account}
+              className={`${styles.productArt} ${item.type === 'avatarBorder' ? styles[item.category] : styles[item.type]}`}>
               <span className={styles.category}>{series && `${t(`shop.series.${series}.name`)} · `}
                 {t(item.type === 'avatarBorder' ? `shop.category.${item.category}` : `shop.type.${item.type}`)}</span>
               {owned && <span className={styles.ownedTag}>{t(active ? 'shop.equipped' : 'shop.owned')}</span>}
-              <ShopProductArt item={item} account={account} />
-            </div>
+            </ShopProductPreview>
             <div className={styles.productBody}>
               <h3>{productName}</h3>
               <p className={styles.description}>{t(`shop.item.${item.id}.description`)}</p>

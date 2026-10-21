@@ -77,6 +77,13 @@ Every runtime mutation:
   `socket.ts` handles realtime.
 - Account hooks replace store state from server snapshots, clear a missing room or
   game, and keep references for unchanged fields.
+- Game tables load separately on demand; entering one game does not load the other
+  nine table implementations. Shared controls stay in reusable chunks, and route
+  error recovery also covers failed table imports.
+- Chat message rows retain their renders while the composer changes. New or replaced
+  messages, locale changes, and cosmetic preferences still update the affected rows.
+- Font stylesheets are discovered in the document head alongside application assets,
+  with connection hints for the font hosts, rather than through a CSS import chain.
 - Theme, motion, music, and voice preferences are browser-local; profile, images, and
   history visibility are server-side.
 

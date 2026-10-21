@@ -29,7 +29,7 @@ export async function startTurnTimers(
     if (stopped) return;
     const games = gameManager.exportGames();
     for (const [code, job] of scheduled) {
-      const game = games.find((entry) => entry.roomCode === code);
+      const game = gameManager.getGameState(code);
       if (!game || game.id !== job.gameId || pendingTurn(game)?.id !== job.turnId) {
         clearTimeout(job.timer);
         scheduled.delete(code);

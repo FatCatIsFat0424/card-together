@@ -127,6 +127,25 @@ describe('site-provided chat emoji UI', () => {
 });
 
 describe('chat panel', () => {
+  it('keeps localized system and observer labels alongside the original message timestamp', () => {
+    const timestamp = new Date(2026, 9, 14, 16, 47).getTime();
+    chat.messages = [
+      message({ id: 'joined', content: 'chat.playerJoined', system: true, timestamp }),
+      message({ id: 'observer', content: 'hello :wave:', audience: 'observers', emojis: { wave: MEDIA }, timestamp }),
+    ];
+    for (const locale of ['en', 'zh-TW'] as const) {
+      useI18nStore.setState({ locale });
+      const html = render(createElement(ChatPanel));
+      const { t } = useI18nStore.getState();
+      expect(html).toContain(t('chat.playerJoined', { name: 'Alice' }));
+      expect(html).toContain(t('chat.observerTag'));
+      expect(html).toContain(t('chat.observerTitle'));
+      expect(html).toContain(`dateTime="${new Date(timestamp).toISOString()}"`);
+      expect(html).toContain('2026/10/14 16:47');
+      expect(html).toContain(`src="/api/media/${MEDIA}" alt=":wave:"`);
+    }
+  });
+
   it('should show the sender nameplate beside the nickname', () => {
     useI18nStore.setState({ locale: 'en' });
     chat.messages = [
