@@ -136,9 +136,11 @@ Room chat has the same header collapse button as in-game chat. Reopen it through
 the room header's chat button; collapsing desktop chat frees its column for seats.
 Draft text is retained while collapsed, and the chat button shows unread messages.
 Seat and spectator lists hide their scrollbars while remaining scrollable.
-Seated players click the spectator area's heading or empty space to stand up;
-there is no separate footer action. Player links and host controls remain independent,
-and the area can also be activated by keyboard through its heading.
+Seated players use the explicit "Enter spectator area" button beside the spectator
+count to stand up while waiting. In phone landscape, the full-width button stays
+above the scrolling spectator list in the left column, with a minimum 44px height.
+It is disabled while disconnected, processing an action, or outside the waiting state;
+spectators return to play by selecting an empty seat.
 The avatar stays beside two text rows: an ellipsized name above host/self tags.
 The landscape header is one row: room code, a prominent game dropdown with the settings icon
 beside it, then invite and leave. The rules button includes its text label from 860px wide

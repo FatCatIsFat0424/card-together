@@ -621,18 +621,15 @@ export function RoomPage(): ReactNode {
         {addSeatButton}
       </div>
       </div>
-      <section className={`${styles.spectators} ${canSpectate ? styles.spectatorsClickable : ''} ${seatDrag.drag?.targetKey === 'spectator' ? styles.dropTarget : ''}`}
-        data-room-drop="spectator" aria-labelledby="room-spectators-label"
-        onClick={(event) => {
-          if (event.target instanceof Element && !event.target.closest('a, button, li')) standUp();
-        }}>
-        {(mySeat || myAdditionalSeat >= 0) ? <button type="button"
-          className={`${styles.spectatorsLabel} ${styles.spectatorsEntry}`} id="room-spectators-label"
-          disabled={!canSpectate} aria-label={t('room.enterSpectators')} onClick={standUp}>
+      <section className={`${styles.spectators} ${seatDrag.drag?.targetKey === 'spectator' ? styles.dropTarget : ''}`}
+        data-room-drop="spectator" aria-labelledby="room-spectators-label">
+        <span className={styles.spectatorsLabel} id="room-spectators-label">
           {t('room.spectators', { n: String(spectators.length), max: String(MAX_SPECTATORS) })}
-        </button> : <span className={styles.spectatorsLabel} id="room-spectators-label">
-          {t('room.spectators', { n: String(spectators.length), max: String(MAX_SPECTATORS) })}
-        </span>}
+        </span>
+        {(mySeat || myAdditionalSeat >= 0) && <button type="button"
+          className={`btn btn-outline ${styles.spectatorsEntry}`}
+          disabled={!canSpectate} data-pending-disabled={pendingDisabled(roomInfo.status !== 'waiting')}
+          onClick={standUp}>{t('room.enterSpectators')}</button>}
         {movingPlayer && <button type="button" className="btn btn-outline" onClick={() => {
           movePlayer(movingPlayer, { type: 'spectator' }); seatDrag.cancel();
         }}>{t('room.dropSpectator')}</button>}

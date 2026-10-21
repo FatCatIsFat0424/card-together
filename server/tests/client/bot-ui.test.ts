@@ -173,6 +173,35 @@ describe('bot player interface', () => {
     expect(render(createElement(RoomPage))).not.toMatch(/disabled="">Ready<\/button>/);
   });
 
+  it('shows an explicit spectator entry for standard and additional seated players', () => {
+    const entry = (): string | undefined => render(createElement(RoomPage))
+      .match(/<button[^>]*>Enter spectator area<\/button>/)?.[0];
+    expect(entry()).toBeDefined();
+    expect(entry()).not.toContain('disabled');
+    state.room = { ...room(), hostId: 'another-host' };
+    expect(entry()).not.toContain('disabled');
+    state.mySeat = null;
+    state.room = { ...room(), gameType: 'holdem',
+      seats: { ...room().seats, N: { player: null, isReady: false } },
+      additionalSeats: [{ player: human, isReady: false }],
+    };
+    expect(entry()).toBeDefined();
+    expect(entry()).not.toContain('disabled');
+    state.room = { ...state.room, additionalSeats: [], spectators: [human] };
+    expect(entry()).toBeUndefined();
+  });
+
+  it('disables spectator entry when disconnected or no longer waiting and translates its visible label', () => {
+    state.connection = 'connecting';
+    expect(render(createElement(RoomPage))).toMatch(/<button[^>]*disabled=""[^>]*>Enter spectator area<\/button>/);
+    state.connection = 'ready';
+    state.room = { ...room(), status: 'playing' };
+    expect(render(createElement(RoomPage))).toMatch(/<button[^>]*disabled=""[^>]*>Enter spectator area<\/button>/);
+    state.room = room();
+    useI18nStore.getState().setLocale('zh-TW');
+    expect(render(createElement(RoomPage))).toMatch(/<button[^>]*>進入旁觀區<\/button>/);
+  });
+
   it('shows the seat expansion control only to hosts of Ninety-Nine, Blackjack, Hold\'em, and Napoleon', () => {
     for (const gameType of GAME_TYPES) {
       state.room = { ...room(), gameType };
