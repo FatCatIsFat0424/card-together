@@ -12,6 +12,14 @@ Project rules: [AGENTS.md](../AGENTS.md). Check commands: [testing](testing.md).
 Client `predev` and `prebuild` import owner music and site emoji from the ignored
 `local-music/` and `local-emoji/` folders; see [media](media.md).
 
+The project uses Node.js and npm without requiring Conda. `npm ci` installs locked
+dependencies into this checkout's `node_modules/`; a separate checkout has separate
+dependencies. Node.js version managers are optional. On supported Linux hosts,
+the [official Node.js bootstrap](deployment.md#build-and-deploy) can also run development
+commands with the pinned version and bundled npm without changing the system runtime.
+Production uses a copied Node binary and a dedicated systemd account; application,
+configuration, and state paths are documented in [deployment](deployment.md).
+
 ## Configuration
 
 - The server reads process environment variables only. `server/.env.example` is a

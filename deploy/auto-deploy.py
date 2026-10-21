@@ -432,8 +432,8 @@ def build_checkout(config: Config) -> None:
     version = (config.checkout / ".node-version").read_text().strip()
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
         raise ValueError("Invalid pinned Node.js version.")
-    subprocess.run(["npm", "exec", "--yes", f"--package=node@{version}", "--",
-                    "bash", "deploy/build.sh"], cwd=config.checkout, stdin=subprocess.DEVNULL, check=True)
+    subprocess.run([sys.executable, "-B", "deploy/with-node.py", "--", "bash", "deploy/build.sh"],
+                   cwd=config.checkout, stdin=subprocess.DEVNULL, check=True)
 
 
 def install_checkout(config: Config) -> None:

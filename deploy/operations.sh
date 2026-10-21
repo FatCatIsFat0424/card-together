@@ -39,7 +39,7 @@ validate_install_artifacts() {
   }
   command -v rsync >/dev/null
   if [[ ! -f $repo_dir/node_modules/tsx/package.json || ! -f $repo_dir/client/dist/index.html ]]; then
-    echo 'Build first: npm exec --yes --package="node@$(cat .node-version)" -- bash deploy/build.sh' >&2
+    echo 'Build first: python3 -B deploy/with-node.py -- bash deploy/build.sh' >&2
     return 1
   fi
   grep -qF '/card-together/assets/' "$repo_dir/client/dist/index.html" || {

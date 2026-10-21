@@ -4,7 +4,7 @@
 
 - The exact Node.js version in [`.node-version`](../.node-version) and `npm ci`.
 - Linux `flock` (util-linux) for asset imports; Bash and GNU `realpath` for deployment
-  fixtures, as in CI.
+  fixtures, as in CI. Deployment bootstrap tests require Python 3.12+.
 
 ## Check runner
 

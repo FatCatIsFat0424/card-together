@@ -85,6 +85,22 @@ class AutoDeployTests(unittest.TestCase):
         selected = runs if runs is not None else [self.workflow_run()]
         return json.dumps([{'total_count': len(selected), 'workflow_runs': selected}])
 
+    def test_build_uses_revision_official_node_bootstrap(self):
+        AUTO.prepare_checkout(self.config, self.sha)
+        with patch.object(AUTO.subprocess, 'run') as run:
+            AUTO.build_checkout(self.config)
+        run.assert_called_once_with(
+            [sys.executable, '-B', 'deploy/with-node.py', '--', 'bash', 'deploy/build.sh'],
+            cwd=self.checkout, stdin=subprocess.DEVNULL, check=True)
+
+    def test_invalid_pinned_version_never_starts_bootstrap(self):
+        AUTO.prepare_checkout(self.config, self.sha)
+        (self.checkout / '.node-version').write_text('../invalid\n')
+        with patch.object(AUTO.subprocess, 'run') as run:
+            with self.assertRaises(ValueError):
+                AUTO.build_checkout(self.config)
+        run.assert_not_called()
+
     @contextmanager
     def fake_cycle(self, *, ci_results=None, build=None, install=None, sha=None):
         responses = iter(ci_results) if ci_results is not None else None

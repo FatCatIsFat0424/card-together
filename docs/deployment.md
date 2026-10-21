@@ -5,17 +5,27 @@ Target: **https://acserver.csie.org/card-together/** on the existing acserver ho
 **Prerequisites**
 
 - Run from the repository root as the deployment user, on the target OS and architecture.
-- npm, the Node.js version in `.node-version`, Python 3, rsync, util-linux (`flock`),
-  sudo, systemd, and Nginx.
+- Python 3.12+ (including HTTPS certificates and xz support), rsync, util-linux
+  (`flock`), sudo, systemd, and Nginx. The Node.js bootstrap supports Linux x64 and arm64.
 - DNS, TLS certificates, and the HTTPS virtual host must already work; these scripts do
   not provision them.
 
 ## Build and deploy
 
 ```sh
-npm exec --yes --package="node@$(cat .node-version)" -- bash deploy/build.sh &&
+python3 -B deploy/with-node.py -- bash deploy/build.sh &&
 bash deploy/deploy.sh
 ```
+
+[`with-node.py`](../deploy/with-node.py) downloads the exact [pinned version](../.node-version)
+from `https://nodejs.org/dist/`, verifies the archive against the official
+`SHASUMS256.txt` over HTTPS, and safely extracts it into a private temporary directory.
+It runs the command with the distribution's Node.js and bundled npm first in `PATH`,
+then removes the temporary distribution. Redirects outside the official HTTPS origin,
+checksum failures, unsupported platforms, and root execution are rejected before the
+build. Downloads are not cached. This verifies the HTTPS-published checksum, not a GPG
+signature. The build copies the verified Node binary to `.deploy/node` before cleanup.
+Project dependencies still come from the npm registry through `npm ci`.
 
 | Stage | Script | Actions |
 | --- | --- | --- |
@@ -139,7 +149,8 @@ unavailable results never authorize deployment. Add newly required workflows to
 `workflows` in the configuration so their absence also blocks deployment.
 
 The controller snapshots inputs into the clean detached worktree, runs `build.sh`
-with the revision's pinned Node.js and release gate, then rechecks CI before invoking
+through that revision's official [Node.js bootstrap](#build-and-deploy) and release gate,
+then rechecks CI before invoking
 the existing `deploy.sh`. Only a successful install, including its local/public health
 checks, records `last_success_sha`. A newer commit arriving during a build waits for
 the next cycle. The first eligible SHA is deployed even if the existing manual
@@ -192,6 +203,9 @@ and preserves existing configuration, input snapshots, and receipts. It refuses 
 interrupt a running cycle: wait for that cycle to finish and rerun the installer.
 If reinstallation fails after pausing the timer, it stays stopped until the operator
 fixes the failure and restarts it. The installer itself does not deploy the application.
+When upgrading from the npm-based Node.js bootstrap, re-run this installer before
+pushing the first revision that requires the official downloader; the installed stable
+controller does not update itself when application code changes.
 To publish changed owner inputs, stop the timer/service, update the corresponding
 snapshot under `inputs/`, and use the existing manual build/deploy process from the
 release worktree. Input changes alone do not trigger automatic deployment; the

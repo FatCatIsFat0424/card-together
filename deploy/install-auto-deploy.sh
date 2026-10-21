@@ -9,7 +9,8 @@ fi
 deploy_user=$1
 source_checkout=$2
 release_checkout=$3
-for tool in python3 git gh npm visudo systemctl runuser flock; do command -v "$tool" >/dev/null; done
+for tool in python3 git gh visudo systemctl runuser flock; do command -v "$tool" >/dev/null; done
+python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 12) else "Python 3.12 or newer is required.")'
 
 # Validate all paths and stage configuration before changing host permissions or units.
 staging=$(mktemp -d)

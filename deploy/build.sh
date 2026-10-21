@@ -9,7 +9,7 @@ if [[ $EUID -eq 0 ]]; then
 fi
 expected_node=$(tr -d '[:space:]' < .node-version)
 [[ $(node -p 'process.versions.node') == "$expected_node" ]] || {
-  echo "Use Node.js $expected_node: npm exec --yes --package=node@$expected_node -- bash deploy/build.sh" >&2
+  echo "Use Node.js $expected_node: python3 -B deploy/with-node.py -- bash deploy/build.sh" >&2
   exit 1
 }
 npm ci --include=dev
