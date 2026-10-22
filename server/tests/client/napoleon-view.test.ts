@@ -8,7 +8,7 @@ import {
   NAPOLEON_PICKER_GROUPS, napoleonAckKey, napoleonActiveSummon, napoleonCardText, napoleonExchange,
   napoleonFinalTricks, napoleonForcedPlay, napoleonLeadSummons, napoleonNeedsAck,
   napoleonNeedsLeadSuit, napoleonNotice, napoleonOwnTurn, napoleonPickerCards, napoleonPickerNote,
-  napoleonPlayableCards, napoleonPresentedPoints, napoleonReviewState, napoleonSeatLabels, napoleonTrickHistory,
+  napoleonPlayableCards, napoleonPresentedPoints, napoleonPresentedSidePoints, napoleonReviewState, napoleonSeatLabels, napoleonTrickHistory,
   toggleNapoleonDiscard,
 } from '../../../client/src/games/napoleon/napoleon-view';
 import { napoleonTrickSlot } from '../../../client/src/games/napoleon/NapoleonTrickArea';
@@ -77,6 +77,68 @@ describe('Napoleon seat labels', () => {
     const frames = framesOf(played, 1);
     expect(napoleonPresentedPoints(played, frames[0])).toEqual({ N: 0, E: 0, S: 0, W: 0 });
     expect(napoleonPresentedPoints(played, frames.find((frame) => frame.kind === 'trick') ?? null).S).toBe(3);
+  });
+});
+
+describe('Napoleon side progress', () => {
+  const trick: NapoleonTrickRecord = { leadSeat: 'N', leadSuit: 'hearts', summon: null, winnerSeat: 'E',
+    plays: [{ seat: 'N', card: card(13, 'hearts') }, { seat: 'E', card: secretaryCard },
+      { seat: 'S', card: card(12, 'hearts') }, { seat: 'W', card: card(5, 'hearts') }] };
+  const log: NapoleonLogEntry[] = [game().log[0],
+    ...trick.plays.map((play, index): NapoleonLogEntry => ({ type: 'play', ...play, timestamp: 60 + index })),
+    { type: 'trick_end', winnerSeat: 'E', trickIndex: 1, timestamp: 70 }];
+
+  it('keeps both totals pending even for the secretary and observers before public play', () => {
+    for (const overrides of [{}, { mySeat: 'E' as const, secretarySeat: 'E' as const },
+      { observer: 'spectator' as const, secretarySeat: 'E' as const }]) {
+      expect(napoleonPresentedSidePoints(game(overrides), null)).toBeNull();
+    }
+    expect(napoleonPresentedSidePoints(game({ contract: null }), null)).toBeNull();
+  });
+
+  it('reveals the side only at the card frame and counts the trick only at its winner frame', () => {
+    const played = game({ secretarySeat: 'E', tricks: [trick], log });
+    const frames = framesOf(played, 1);
+    expect(napoleonPresentedSidePoints(played, frames[0])).toBeNull();
+    expect(napoleonPresentedSidePoints(played, frames[1])).toEqual({ napoleon: 0, defenders: 1, pendingDiscards: false });
+    expect(napoleonPresentedSidePoints(played, frames.find((frame) => frame.kind === 'trick') ?? null))
+      .toEqual({ napoleon: 3, defenders: 1, pendingDiscards: false });
+    expect(napoleonPresentedSidePoints(played, null)).toEqual({ napoleon: 3, defenders: 1, pendingDiscards: false });
+  });
+
+  it('uses the public card holder for a solo contract without treating every redacted seat as solo', () => {
+    const soloTrick: NapoleonTrickRecord = { ...trick, winnerSeat: 'N',
+      plays: [{ seat: 'N', card: secretaryCard }, { seat: 'E', card: card(13, 'hearts') }, ...trick.plays.slice(2)] };
+    const solo = game({ secretarySeat: null, tricks: [soloTrick],
+      log: [...soloTrick.plays.map((play, index): NapoleonLogEntry => ({ type: 'play', ...play, timestamp: 60 + index })),
+        { type: 'trick_end', winnerSeat: 'N', trickIndex: 1, timestamp: 70 }] });
+    expect(napoleonPresentedSidePoints(solo, null)).toEqual({ napoleon: 3, defenders: 1, pendingDiscards: false });
+  });
+
+  it.each([5, 6])('defers private discard points for every viewer at a %i-player table', (count) => {
+    const seats = (['N', 'E', 'S', 'W', 'P5', 'P6'] as const).slice(0, count);
+    const fullTrick: NapoleonTrickRecord = { ...trick, plays: [...trick.plays,
+      ...seats.slice(4).map((seat, index) => ({ seat, card: card(index === 0 ? 2 : 3, 'hearts') }))] };
+    const fullLog: NapoleonLogEntry[] = [game().log[0],
+      ...fullTrick.plays.map((play, index): NapoleonLogEntry => ({ type: 'play', ...play, timestamp: 60 + index })),
+      { type: 'trick_end', winnerSeat: 'E', trickIndex: 1, timestamp: 70 }];
+    for (const overrides of [{}, { mySeat: 'E' as const, discards: null }, { observer: 'spectator' as const }]) {
+      expect(napoleonPresentedSidePoints(game({ seats, secretarySeat: 'E', tricks: [fullTrick], log: fullLog, ...overrides }), null))
+        .toEqual({ napoleon: 3, defenders: 0, pendingDiscards: true });
+    }
+  });
+
+  it('waits for settlement before using final totals or revealing a secretary card left in discards', () => {
+    const settled = game({ phase: 'scoring', secretaryCard: card(12, 'diamonds'), tricks: [trick], log,
+      result: { gameType: 'napoleon', seats: ['N', 'E', 'S', 'W'], contract: game().contract!,
+        secretaryCard: card(12, 'diamonds'), secretarySeat: null,
+        points: { N: 0, E: 3, S: 0, W: 0, P5: 0, P6: 0, P7: 0, P8: 0 }, discards: [...game().discards!],
+        discardPoints: 1, napoleonPoints: 0, defenderPoints: 4, napoleonWins: false, winners: ['E', 'S', 'W'] } });
+    expect(napoleonPresentedSidePoints(settled, framesOf(settled, 1)[0])).toBeNull();
+    expect(napoleonPresentedSidePoints(settled, null)).toEqual({ napoleon: 0, defenders: 4, pendingDiscards: false });
+    const revealed = { ...settled, secretaryCard, secretarySeat: 'E' as const, seats: ['N', 'E', 'S', 'W', 'P5'] as const };
+    expect(napoleonPresentedSidePoints(revealed, framesOf(revealed, 1)[1]))
+      .toEqual({ napoleon: 0, defenders: 0, pendingDiscards: true });
   });
 });
 

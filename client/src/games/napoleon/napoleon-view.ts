@@ -6,7 +6,7 @@ import type { PresentationFrame } from '@shared/game-presentation';
 import {
   hasNapoleonCard, isNapoleonFinalTrick, isNapoleonFreeCard, isNapoleonJoker, napoleonCardKey, napoleonDealSize,
   napoleonForcedCard, napoleonJoker, napoleonSeatPoints, napoleonSummonOptions, napoleonSummonedCard,
-  sameNapoleonCard, sortNapoleonHand,
+  napoleonPoints, napoleonSide, sameNapoleonCard, sortNapoleonHand,
 } from '@shared/rules/napoleon';
 import type {
   BidSuit, GameSeat, NapoleonCard, NapoleonJoker, NapoleonLogEntry, NapoleonSummon, NapoleonVisibleState, Suit,
@@ -138,6 +138,36 @@ export function napoleonPresentedPoints(
   const shown = game.log.slice(0, end).filter((entry) => entry.type === 'trick_end').length;
   const points = napoleonSeatPoints(game.seats, game.tricks.slice(0, shown));
   return Object.fromEntries(game.seats.map((seat) => [seat, points[seat]]));
+}
+
+export interface NapoleonSidePoints {
+  readonly napoleon: number;
+  readonly defenders: number;
+  readonly pendingDiscards: boolean;
+}
+
+/** Public side totals follow the revealed card and completed trick frames, never private role data. */
+export function napoleonPresentedSidePoints(
+  game: NapoleonVisibleState, frame: PresentationFrame | null,
+): NapoleonSidePoints | null {
+  if (!game.contract) return null;
+  if (game.result && frame === null) {
+    return { napoleon: game.result.napoleonPoints, defenders: game.result.defenderPoints, pendingDiscards: false };
+  }
+  const end = napoleonPresentedEnd(game.log, frame);
+  const reveal = game.log.slice(0, end).find((entry) => entry.type === 'play'
+    && game.secretaryCard && sameNapoleonCard(entry.card, game.secretaryCard));
+  if (reveal?.type !== 'play') return null;
+  const side = napoleonSide(game.contract, reveal.seat);
+  const points = napoleonPresentedPoints(game, frame);
+  // Larger tables keep discards private even when the viewer is the Napoleon or an observer.
+  const publicDiscards = game.seats.length === 4 ? game.discards : null;
+  return {
+    napoleon: side.reduce((total, seat) => total + (points[seat] ?? 0), 0),
+    defenders: game.seats.filter((seat) => !side.includes(seat))
+      .reduce((total, seat) => total + (points[seat] ?? 0), napoleonPoints(publicDiscards ?? [])),
+    pendingDiscards: publicDiscards === null,
+  };
 }
 
 export type NapoleonNotice =

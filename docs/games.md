@@ -515,4 +515,8 @@ ends after the last hand, or when fewer than two seats can cover the minimum.
 - The call shows a two-second notice: the secretary's notice stays until they confirm, which
   blocks only their own actions and never pauses the table. Summons show a two-second notice to
   everyone except the leader.
-- Each plate shows that seat's won point cards; side totals appear only in the result.
+- Each plate shows that seat's won point cards. The info rail shows side progress only
+  after the secretary card's play has been presented, or after settlement when it was
+  never played. Private knowledge of the secretary does not reveal these totals early.
+  Public four-player discards count for the defenders immediately; five- and six-player
+  totals exclude discards until settlement and mark the defender count with `+`.

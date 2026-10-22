@@ -2,9 +2,10 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getPresentationFrames } from '@shared/game-presentation';
+import type { PresentationFrame } from '@shared/game-presentation';
 import type { Card, NapoleonCard, NapoleonVisibleState } from '@shared/types';
 
-const state = vi.hoisted(() => ({ napoleon: null as unknown }));
+const state = vi.hoisted(() => ({ napoleon: null as unknown, frame: null as PresentationFrame | null }));
 
 vi.mock('../../../client/src/cosmetics/card-faces/use-card-face', () => ({
   useCardFaceUrl: () => () => '/card.svg', useJokerFaceUrl: () => null, useNapoleonJokerFaceUrls: () => null,
@@ -13,9 +14,13 @@ vi.mock('../../../client/src/cosmetics/card-faces/use-card-face', () => ({
 vi.mock('../../../client/src/stores/game-store', () => ({
   useGameStore: (select: (value: { napoleon: unknown }) => unknown) => select(state),
 }));
+vi.mock('../../../client/src/games/use-game-presentation', () => ({
+  useGamePresentation: () => ({ frame: state.frame, locked: false }),
+}));
 
 import { CardHand } from '../../../client/src/components/CardHand';
 import { NapoleonFrame } from '../../../client/src/games/napoleon/NapoleonFrame';
+import { NapoleonInfoRail } from '../../../client/src/games/napoleon/NapoleonInfoRail';
 import { SecretaryPicker } from '../../../client/src/games/napoleon/SecretaryPicker';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
 
@@ -36,7 +41,37 @@ function game(overrides: Partial<NapoleonVisibleState> = {}): NapoleonVisibleSta
 
 describe('Napoleon controls', () => {
   beforeEach(() => useI18nStore.setState({ locale: 'en' }));
-  afterEach(() => { state.napoleon = null; });
+  afterEach(() => { state.napoleon = null; state.frame = null; });
+
+  it('keeps the secretary and pending side progress in the contract card', () => {
+    const html = renderToStaticMarkup(createElement(NapoleonInfoRail, { game: game({ phase: 'playing', secretaryCard }) }));
+    const contractCard = html.slice(0, html.indexOf('</section>'));
+    expect(contractCard).toContain('Secretary card');
+    expect(contractCard).toContain('♥');
+    expect(contractCard.match(/role="progressbar"/g)).toHaveLength(2);
+    expect(contractCard).toContain('aria-valuemax="12"');
+    expect(contractCard).toContain('aria-valuemax="5"');
+    expect(contractCard).toContain('Waiting for the secretary to be revealed');
+    expect(contractCard).not.toContain('aria-valuenow');
+  });
+
+  it.each([9, 16] as const)('shows the winning thresholds for level %i and marks unknown discard points', (level) => {
+    const html = renderToStaticMarkup(createElement(NapoleonInfoRail, { game: game({ phase: 'playing',
+      seats: ['N', 'E', 'S', 'W', 'P5'], discards: null, contract: { level, suit: 'nt', napoleon: 'N' },
+      secretaryCard, secretarySeat: 'E', log: [{ type: 'play', seat: 'E', card: secretaryCard, timestamp: 1 }] }) }));
+    expect(html).toContain(`aria-valuemax="${level}"`);
+    expect(html).toContain(`aria-valuemax="${17 - level}"`);
+    expect(html).toContain(`aria-valuetext="0+ / ${17 - level}"`);
+    expect(html).toContain('+ Discard points are added at settlement');
+    expect(html).not.toContain('Waiting for the secretary to be revealed');
+  });
+
+  it('does not show play progress before the secretary call', () => {
+    const html = renderToStaticMarkup(createElement(NapoleonInfoRail, { game: game() }));
+    expect(html).toContain('Not named yet');
+    expect(html).toContain('Needs 12 of 16 point cards');
+    expect(html).not.toContain('role="progressbar"');
+  });
 
   it('opens the secretary picker on the trump suit and marks cards that would leave no secretary', () => {
     const html = renderToStaticMarkup(createElement(SecretaryPicker, { game: game(), disabled: false, onConfirm: () => undefined }));

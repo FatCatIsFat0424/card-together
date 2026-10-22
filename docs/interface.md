@@ -393,6 +393,9 @@ remain visible.
   dashes cards the Napoleon holds or discarded and warns that they mean no secretary. The
   secretary's confirmation is stored per room and announcement in local storage, so a reload
   shows it once. Seat labels and notices follow [Napoleon visibility](games.md#napoleon).
+  The contract card includes a compact secretary-card row and two segmented side-progress
+  rows during play. Counts show won point cards against each side's winning threshold
+  (the bid for Napoleon, 17 minus the bid for defenders); pending totals stay unfilled.
   The auction table has one column per player and labels it with the seat number (the full
   name is the tooltip and accessible label) so six players fit the info rail.
   Auction tables (Bridge too) write a pass as "P", with "Pass" as its tooltip. The trick history

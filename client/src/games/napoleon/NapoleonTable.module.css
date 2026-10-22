@@ -184,21 +184,6 @@
   box-shadow: var(--shadow-sm);
 }
 
-.railCard {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  margin-top: 6px;
-  font-weight: 700;
-}
-
-.railCard img {
-  width: 36px;
-  aspect-ratio: 224 / 313;
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-sm);
-}
-
 .finalNote {
   margin: 6px 0 0;
   font-size: var(--text-xs);
