@@ -393,7 +393,7 @@ describe('persistent authenticated application', () => {
     await guest.timeout(5_000).emitWithAck('room:join', { roomCode: roomCode! });
     await guest.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'E' });
     await guest.timeout(5_000).emitWithAck('room:ready');
-    expect((await resume(host)).room?.timeControl).toEqual({ baseSeconds: 5, bankSeconds: 20 });
+    expect((await resume(host)).room?.timeControl).toEqual({ baseSeconds: 300, bankSeconds: 300 });
     expect(await guest.timeout(5_000).emitWithAck('room:setTimeControl', { baseSeconds: 8, bankSeconds: 0 }))
       .toMatchObject({ success: false });
     for (const payload of [null, {}, { baseSeconds: 0, bankSeconds: 20 },

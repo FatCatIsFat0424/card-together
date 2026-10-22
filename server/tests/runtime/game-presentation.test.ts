@@ -224,7 +224,7 @@ describe('authoritative game presentation', () => {
     const bet = blackjack.bet;
     vi.spyOn(blackjack, 'bet').mockImplementation((code, seat, amount, automatic, now) =>
       bet(code, seat, amount, automatic, now, random));
-    games.startGame(CODE, 'blackjack', players);
+    games.startGame(CODE, 'blackjack', players, { baseSeconds: 5, bankSeconds: 20 });
     const state = games.getGameState(CODE)!;
     if (state.gameType !== 'blackjack') throw new Error('Expected Blackjack');
     expect(state.clock?.turn).toBeNull();

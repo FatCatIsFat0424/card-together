@@ -18,7 +18,7 @@ const SEATS: Seat[] = ['N', 'E', 'S', 'W'];
 const PLAYERS = Object.fromEntries(SEATS.map((seat) => [seat, {
   id: seat, username: seat, nickname: seat, color: '#123456', avatar: 'cat', avatarImage: null,
 }])) as Record<Seat, PlayerInfo>;
-/** Default 5 + 20 second clocks are raised to the 60-second arrangement minimum. */
+/** Short 5 + 20 second clocks are raised to the 60-second arrangement minimum. */
 const ARRANGE_MS = 60_000;
 
 async function fixture(withBots = false, gameType: GameType = 'chinesepoker') {
@@ -43,7 +43,7 @@ async function fixture(withBots = false, gameType: GameType = 'chinesepoker') {
     }
     if (withBots) rooms.fillBots(code, 'N');
     rooms.setRoomStatus(code, 'playing');
-    games.startGame(code, gameType, rooms.getSeatPlayers(code)!);
+    games.startGame(code, gameType, rooms.getSeatPlayers(code)!, { baseSeconds: 5, bankSeconds: 20 });
   });
   repository.saveRuntime.mockClear();
   const game = (): ChinesePokerGameState => {
@@ -141,7 +141,7 @@ describe('Chinese Poker simultaneous arrangement', () => {
 
 describe('Blackjack simultaneous betting', () => {
   const stops: (() => void)[] = [];
-  /** Default 5 + 20 second clocks use the 15-second betting minimum. */
+  /** Short 5 + 20 second clocks use the 15-second betting minimum. */
   const BET_MS = 15_000;
   beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(10000); });
   afterEach(() => {

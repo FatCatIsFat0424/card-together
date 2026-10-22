@@ -57,7 +57,7 @@ turns, and results.
 
 | Clock | Rule |
 | --- | --- |
-| Default | A fresh 5 seconds per turn, then the player's 20-second reserve for the deal |
+| Default | A fresh 300 seconds per turn, then the player's 300-second reserve for the deal |
 | Unused allowance | Never added to the reserve |
 | Settings | Host only, while waiting: 1–300 seconds allowance plus 0–300 seconds reserve ([shared limits](../shared/src/time-control.ts)) |
 | Display | Own plate shows allowance and reserve; others show allowance only while acting |

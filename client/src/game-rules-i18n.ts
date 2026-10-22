@@ -292,7 +292,7 @@ const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> =
       ['Seat shuffle', 'Optional, off by default; shuffles humans at the start'],
     ], 'Changing settings clears readiness. Matches with bots are practice and are not recorded. Chips and scores last one match.'),
     table('Turn timer', ['Item', 'Rule'], [
-      ['Default', '5 seconds per turn, then a 20-second reserve per deal'],
+      ['Default', '300 seconds per turn, then a 300-second reserve per deal'],
       ['Host range', '1–300 seconds per turn, 0–300 reserve'],
       ['Timeout', 'A legal move is made for you; Bridge redeal offers are declined'],
     ], 'Unused turn time is not saved; animations are free. Disconnecting does not pause the clock; leaving or 60 seconds offline aborts the match.'),
@@ -308,7 +308,7 @@ const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> =
       ['自動換位', '可選，預設關閉；開局時打亂真人座位'],
     ], '變更設定會清除準備狀態。有 Bot 的對局是練習局，不列入紀錄。籌碼與分數只限本場。'),
     table('回合計時', ['項目', '規則'], [
-      ['預設', '每回合 5 秒，用完再扣每副牌 20 秒保留時間'],
+      ['預設', '每回合 300 秒，用完再扣每副牌 300 秒保留時間'],
       ['房主可調', '每回合 1～300 秒，保留 0～300 秒'],
       ['逾時', '系統代出合法行動；橋牌重發詢問視為拒絕'],
     ], '沒用完的回合時間不累積，動畫不計時。斷線不暫停；離開或斷線超過 60 秒會中止對局。'),

@@ -38,7 +38,7 @@ async function fixture(gameType: GameType = 'ninetynine') {
       rooms.changeSeat(code, PLAYERS[seat], seat);
     }
     rooms.setRoomStatus(code, 'playing');
-    games.startGame(code, gameType, PLAYERS);
+    games.startGame(code, gameType, PLAYERS, { baseSeconds: 5, bankSeconds: 20 });
   });
   return { code, runtime, repository, saved: () => saved!,
     game: () => games.getGameState(code)!,
@@ -136,7 +136,7 @@ describe('durable turn clocks', () => {
     const { code, runtime, game } = await fixture('redpoints');
     await runtime.mutate(() => {
       redpoints.startGame(code, PLAYERS, multiChoiceDeck(), 'N');
-      games.initializeClock(code);
+      games.initializeClock(code, { baseSeconds: 5, bankSeconds: 20 });
     });
     vi.setSystemTime(13000);
     await runtime.mutate(() => expect(games.handleRedPointsPlay(code, 'N', { suit: 'spades', rank: 6 }).success).toBe(true));
@@ -238,7 +238,7 @@ describe('durable turn clocks', () => {
       current.bidding = null;
       current.redealPendingSeat = 'N';
       delete current.clock;
-      games.initializeClock(code);
+      games.initializeClock(code, { baseSeconds: 5, bankSeconds: 20 });
     });
     await vi.advanceTimersByTimeAsync(7000);
     await runtime.mutate(() => expect(games.handleRedealResponse(code, 'N', true).success).toBe(true));
@@ -265,7 +265,7 @@ describe('durable turn clocks', () => {
     const stop = await startTurnTimers(runtime, publish);
     stops.push(stop);
     await vi.advanceTimersByTimeAsync(24000);
-    await runtime.mutate(() => games.startGame(code, 'ninetynine', PLAYERS));
+    await runtime.mutate(() => games.startGame(code, 'ninetynine', PLAYERS, { baseSeconds: 5, bankSeconds: 20 }));
     const replacement = game().id;
     await vi.advanceTimersByTimeAsync(1000);
     expect(game().id).toBe(replacement);
@@ -283,7 +283,9 @@ describe('durable turn clocks', () => {
     setSaved(legacy);
     const restarted = await createRuntimeCoordinator(repository);
     stops.push(await startTurnTimers(restarted, vi.fn()));
-    expect(saved().rooms[0].info.timeControl).toEqual({ baseSeconds: 5, bankSeconds: 20 });
+    expect(saved().rooms[0].info.timeControl).toEqual({ baseSeconds: 300, bankSeconds: 300 });
+    expect(game().clock?.settings).toEqual({ baseSeconds: 300, bankSeconds: 300 });
+    expect(game().clock!.turn!.deadline - game().clock!.turn!.startsAt).toBe(600_000);
     expect(saved().games[0].clock).toEqual(game().clock);
     expect(isRuntimeSnapshot(saved())).toBe(true);
     const invalid = structuredClone(saved());

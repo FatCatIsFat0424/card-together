@@ -122,7 +122,7 @@ describe('Big Two delayed automatic passing', () => {
       await runtime.idle();
       expect(forced).toHaveBeenCalledTimes(1);
       expect(timed).not.toHaveBeenCalled();
-      expect(game().clock!.bankRemainingMs.W).toBe(20000);
+      expect(game().clock!.bankRemainingMs.W).toBe(300_000);
       expect(game().log.filter((entry) => entry.type === 'pass' && entry.seat === 'W')).toHaveLength(1);
     } finally {
       stopTimers();

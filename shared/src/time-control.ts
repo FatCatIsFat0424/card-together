@@ -1,6 +1,6 @@
 import type { TimeControl } from './types/room';
 
-export const DEFAULT_TIME_CONTROL: TimeControl = { baseSeconds: 5, bankSeconds: 20 };
+export const DEFAULT_TIME_CONTROL: TimeControl = { baseSeconds: 300, bankSeconds: 300 };
 export const TIME_CONTROL_LIMITS = {
   baseSeconds: { min: 1, max: 300 },
   bankSeconds: { min: 0, max: 300 },
