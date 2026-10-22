@@ -244,6 +244,8 @@ existing configuration:
   `/var/lib/card-together-auto-deploy/notifications.json` and resent at the start of each
   non-inspecting cycle, so a konata restart mid-deployment leaves no stale message. Updates
   older than an hour are dropped; a damaged file only loses those retries.
+- Each update carries `occurredAt` (UTC), and resends keep it, so the relay shows when a late
+  update actually happened. This requires a konata release that accepts the field.
 
 ### Failure handling
 

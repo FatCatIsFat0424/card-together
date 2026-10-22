@@ -4,7 +4,7 @@
 import argparse
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 import fcntl
 import json
 import os
@@ -281,6 +281,8 @@ class DeployReport:
             "stages": stages,
             "status": self.status,
             "summary": self.outcome or f"{self.started_at} 開始",
+            # Resends keep this time so the relay can mark late deliveries.
+            "occurredAt": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
         }
         if self.commits:
             body["description"] = "\n".join(f"- {subject}" for subject in self.commits)[:3000]

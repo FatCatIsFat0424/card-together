@@ -1,6 +1,7 @@
 """Exercise automatic deployment using isolated Git trees and fake CI/install steps."""
 
 from contextlib import ExitStack, contextmanager, redirect_stdout, redirect_stderr
+from datetime import datetime
 import importlib.util
 import io
 import json
@@ -516,6 +517,10 @@ class AutoDeployTests(unittest.TestCase):
         self.assertEqual(done['status'], 'succeeded')
         self.assertEqual({state for _, state in self.states(done)}, {'done'})
         self.assertIn('部署成功', done['summary'])
+        for *_, body in requests:
+            occurred = datetime.fromisoformat(body['occurredAt'].replace('Z', '+00:00'))
+            self.assertTrue(body['occurredAt'].endswith('Z'))
+            self.assertLess(abs(time.time() - occurred.timestamp()), 60)
 
     def test_failure_notification_matches_the_failed_stage(self):
         config = self.notified()
@@ -569,6 +574,7 @@ class AutoDeployTests(unittest.TestCase):
         self.assertEqual(len(requests), 1)
         self.assertTrue(requests[0][1].endswith('/' + key))
         self.assertEqual(requests[0][3]['status'], 'succeeded')
+        self.assertEqual(requests[0][3]['occurredAt'], entry['body']['occurredAt'])
         self.assertFalse((config.state_dir / AUTO.PENDING_NOTIFICATIONS).exists())
 
     def test_relay_recovery_mid_deployment_clears_the_pending_update(self):
