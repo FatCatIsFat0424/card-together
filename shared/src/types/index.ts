@@ -23,6 +23,7 @@ export type {
   SeatMap,
   RoomSeatTarget,
   RoomInfo,
+  RoomReplaySession,
   AbortVoteInfo,
   NinetyNineOptions,
   NapoleonOptions,
@@ -147,9 +148,12 @@ export type {
   PlayerSnapshot,
   ChatMessageEvent,
   RoomInvite,
+  RoomReplayArchive,
+  RoomReplayPlayback,
 } from './socket-events';
 
 export type { MatchSummary } from './game';
+export type { MatchReplay, ReplayPatchOp, ReplayPath, ReplayRecording, ReplaySnapshot } from './replay';
 export type { DailyTaskId, DailyRewardId, DailyRewardsStatus } from './daily-rewards';
 export type {
   PublicAccount, FriendEntry, FriendRequest, FriendsData, FriendsResponse, CreateFriendRequestResponse,

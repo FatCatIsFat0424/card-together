@@ -7,6 +7,8 @@ import type {
   PlayerVisibleGameState,
 } from './game';
 import type { ChatMessage } from './chat';
+import type { MatchSummary } from './game';
+import type { MatchReplay } from './replay';
 import type { PublicAccount } from './social';
 import type { AccountProfile } from './account';
 import type { ShopStickerId } from '../constants/shop';
@@ -26,6 +28,24 @@ export interface PlayerSnapshot {
    * history. Broadcasts omit it while the room is unchanged and send `chat:message` instead.
    */
   chatHistory?: ChatMessage[];
+  /** Server clock when sent, present while the room has a replay session to derive its position. */
+  serverNow?: number;
+}
+
+/** Playback the host requests; the server anchors it at its own clock. */
+export interface RoomReplayPlayback {
+  /** Step to show now, from 0 to the session's `lastStep`. */
+  step: number;
+  playing: boolean;
+  speed: number;
+}
+
+/** The shared session's archive with the participants needed to render it. */
+export interface RoomReplayArchive {
+  match: MatchSummary;
+  replay: MatchReplay;
+  /** Public profiles of the match's accounts that still exist. */
+  players: Record<string, PublicAccount>;
 }
 
 /** One new message appended to the recipient's current room history. */
@@ -114,6 +134,20 @@ export interface ClientToServerEvents {
   ) => void;
   'room:fillBots': (callback: (response: ActionResult) => void) => void;
   'room:unready': (callback: (response: ActionResult) => void) => void;
+  /** Host only, from the waiting room: a match the host may view in the subject's history. */
+  'room:replay:start': (
+    payload: { subjectId: string; matchId: string }, callback: (response: ActionResult) => void,
+  ) => void;
+  /** Host only: play, pause, seek, or change speed by replacing the playback anchor. */
+  'room:replay:control': (
+    payload: RoomReplayPlayback, callback: (response: ActionResult) => void,
+  ) => void;
+  /** Host only: returns every member to the waiting room. */
+  'room:replay:end': (callback: (response: ActionResult) => void) => void;
+  /** Current room members only, while the room's replay session is active. */
+  'room:replay:load': (
+    callback: (response: ActionResult & { archive?: RoomReplayArchive }) => void,
+  ) => void;
   'game:redealResponse': (
     payload: { accept: boolean }, callback: (response: ActionResult) => void,
   ) => void;

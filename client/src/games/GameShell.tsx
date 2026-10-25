@@ -47,6 +47,8 @@ import { TableArt } from '../cosmetics/art-layers/TableArt';
 import { GameActionBar } from './GameActionBar';
 import { GameMenuLinks, useGameMenuUnread } from './GameMenuLinks';
 import { RotateHint } from './RotateHint';
+import { godViewSource, useReplayMode } from './replay-mode';
+import { TableStoreScope } from './TableStoreScope';
 
 const DESKTOP_QUERY = '(min-width: 1024px)';
 const SHEET_QUERY = '(max-width: 767px), (max-height: 500px) and (min-width: 600px)';
@@ -200,6 +202,9 @@ export function GameShell({
   info, centre, centreForeground, hand, overlay, panel, tableEffect, centreVisible, error, pickableSeats, onPickSeat, turnReady,
 }: GameShellProps): ReactNode {
   const presentation = useGamePresentation();
+  // Playback has no seat, clocks, or room controls; personal playback has no chat either.
+  const replay = useReplayMode();
+  const chatVisible = !replay || replay.chat;
   const visibleGame = useGameStore((state) => state.visible);
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const setReducedMotion = useMotionStore((state) => state.setReducedMotion);
@@ -228,7 +233,7 @@ export function GameShell({
   const turnAnnouncement = presentation.locked || !turnSeat ? ''
     : turnSeat === mySeat ? (myTurn ? t('table.yourTurn') : '') : t('table.turnOf', { name: turnName });
   // Chat is collapsed by default on tablet; on mobile it is a bottom drawer, closed by default
-  const [chatOpen, setChatOpen] = useState(() => matches(DESKTOP_QUERY) && !matches(SHEET_QUERY));
+  const [chatOpen, setChatOpen] = useState(() => chatVisible && matches(DESKTOP_QUERY) && !matches(SHEET_QUERY));
   const [infoOpen, setInfoOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const settlementVisible = Boolean(overlay) && !presentation.locked;
@@ -262,17 +267,22 @@ export function GameShell({
   const centreUp = expandedTable && !sidePositions.includes('top');
   const unread = chatOpen ? 0 : Math.max(0, messageCount - seenMessages);
   // Phones hide the app bar during games, so this sheet becomes the menu for everything it held.
-  const phoneMenu = useMediaQuery(SHEET_QUERY);
+  const phoneMenu = useMediaQuery(SHEET_QUERY) && !replay;
   const menuUnread = useGameMenuUnread();
   const godView = useGodViewStore((state) => state.role);
+  const godViewStore = useGodViewStore.useApi();
+  const perspectiveStore = useTablePerspectiveStore.useApi();
 
+  const replaying = replay !== null;
   useEffect(() => {
-    useGodViewStore.getState().update(visibleGame, presentation.locked);
-  }, [visibleGame, presentation.locked]);
+    const source = godViewSource(visibleGame, presentation.locked, replay);
+    godViewStore.getState().update(source.visible, source.locked);
+  }, [godViewStore, visibleGame, presentation.locked, replay]);
   useEffect(() => () => {
-    useGodViewStore.getState().update(null, false);
-    useTablePerspectiveStore.getState().reset();
-  }, []);
+    godViewStore.getState().update(null, false);
+    // Replay stores belong to one viewer and are discarded with it; keep its chosen viewpoint.
+    if (!replaying) perspectiveStore.getState().reset();
+  }, [godViewStore, perspectiveStore, replaying]);
 
   // Play sounds only for actions after joining the table, not for the existing log on join or reconnect
   const heardMove = useRef(move?.index);
@@ -381,7 +391,7 @@ export function GameShell({
   }, [closeSheets, rulesVisible]);
 
   const shell = (
-    <div data-game-shell data-reduced-motion={reducedMotion || undefined} className={`${styles.gameContainer} ${chatOpen ? '' : styles.chatCollapsed} ${infoOpen ? styles.infoOpen : ''}`}
+    <div data-game-shell data-reduced-motion={reducedMotion || undefined} className={`${styles.gameContainer} ${chatOpen ? '' : styles.chatCollapsed} ${infoOpen ? styles.infoOpen : ''} ${replay ? styles.replayMode : ''} ${chatVisible ? '' : styles.noChat}`}
       style={cardBackStyle(account, reducedMotion, !!cardBackArt)}>
       {(infoOpen || chatOpen) && <button type="button" className={styles.backdrop} tabIndex={-1}
         aria-label={t('table.close')} onClick={closeSheets} />}
@@ -392,10 +402,12 @@ export function GameShell({
           <button type="button" className={styles.sheetClose} onClick={() => setInfoOpen(false)}
             aria-label={t('table.close')} title={t('table.close')}><AppIcon name="close" /></button>
         </div>
-        {room && <RoomCodeButton key={room.code} code={room.code} compact={phoneMenu} className={styles.menuRoomCode} />}
-        <AbortVoteButton className={`${styles.abortRail} ${styles.menuExit}`} />
-        <EarlyLeaveButton className={`${styles.abortRail} ${styles.menuExit}`} />
-        <SpectatorLeaveButton className={styles.menuExit} />
+        {!replay && <>
+          {room && <RoomCodeButton key={room.code} code={room.code} compact={phoneMenu} className={styles.menuRoomCode} />}
+          <AbortVoteButton className={`${styles.abortRail} ${styles.menuExit}`} />
+          <EarlyLeaveButton className={`${styles.abortRail} ${styles.menuExit}`} />
+          <SpectatorLeaveButton className={styles.menuExit} />
+        </>}
         {visibleGame && <button type="button" className={`btn btn-outline ${styles.rulesRailButton}`}
           aria-haspopup="dialog" onClick={openRules}>
           <AppIcon name="rules" /> {t('rules.open')}
@@ -417,17 +429,17 @@ export function GameShell({
         <GameActionBar />
         <div className={`${styles.table} ${expandedTable ? styles.expandedTable : ''} ${cornersSpan ? styles.cornersSpan : ''} ${centreUp ? styles.centreUp : ''}`}
           data-card-table>
-          <div className={styles.desktopVoice}><VoiceButton /></div>
+          {!replay && <div className={styles.desktopVoice}><VoiceButton /></div>}
           <div className={styles.tableTools}>
-            <div className={styles.tableExitTools}>
+            {!replay && <div className={styles.tableExitTools}>
               <AbortVoteButton iconOnly buttonClassName={styles.toolBtn} />
               <EarlyLeaveButton iconOnly buttonClassName={styles.toolBtn} />
-            </div>
+            </div>}
             {visibleGame && <button type="button" className={`${styles.toolBtn} ${styles.rulesTool}`}
               onClick={openRules} aria-haspopup="dialog" aria-label={t('rules.open')} title={t('rules.open')}>
               <AppIcon name="rules" />
             </button>}
-            <VoiceButton className={styles.toolBtn} />
+            {!replay && <VoiceButton className={styles.toolBtn} />}
             <button type="button" className={`${styles.toolBtn} ${styles.menuTool}`} onClick={openInfo} ref={infoButtonRef}
               aria-label={t(phoneMenu ? 'topbar.menu' : 'table.info')} title={t(phoneMenu ? 'topbar.menu' : 'table.info')}
               aria-expanded={infoOpen} aria-controls="game-info-panel">
@@ -435,11 +447,11 @@ export function GameShell({
               {phoneMenu && menuUnread > 0 && <span className={`${styles.unread} ${styles.fabBadge}`}>
                 {menuUnread > 99 ? '99+' : menuUnread}</span>}
             </button>
-            <button type="button" className={`${styles.toolBtn} ${styles.chatFab}`} onClick={openChat} ref={chatButtonRef}
+            {chatVisible && <button type="button" className={`${styles.toolBtn} ${styles.chatFab}`} onClick={openChat} ref={chatButtonRef}
               aria-label={t('table.chatExpand')} title={t('table.chatExpand')} aria-expanded={chatOpen}>
               <AppIcon name="chat" />
               {unread > 0 && <span className={`${styles.unread} ${styles.fabBadge}`}>{unread}</span>}
-            </button>
+            </button>}
           </div>
           {tableSeats.filter((seat) => seat !== bottomSeat && tableSeats.includes(seat)).map((seat) => (
             <TableSeat key={seat} seat={seat} position={tablePosition(seat, bottomSeat, tableSeats)}
@@ -464,7 +476,7 @@ export function GameShell({
             <AppIcon name="burst" /> {t('table.eliminated', { name: seatName(outBanner.seat) })}
           </p>}
           {panel && !presentation.locked && <div className={styles.actionPanel} inert={visibleGame?.autoPlay}>{panel}</div>}
-          <AbortVoteBanner />
+          {!replay && <AbortVoteBanner />}
           <RotateHint />
         </div>
 
@@ -489,7 +501,7 @@ export function GameShell({
         {tableEffect}
       </main>
 
-      <aside className={styles.chatRail} ref={chatRailRef} tabIndex={-1} aria-label={t('chat.title')}>
+      {chatVisible && <aside className={styles.chatRail} ref={chatRailRef} tabIndex={-1} aria-label={t('chat.title')}>
         {!chatOpen && (
           <button type="button" className={styles.chatStrip} onClick={() => setChatOpen(true)}
             aria-label={t('table.chatExpand')} title={t('table.chatExpand')}>
@@ -498,9 +510,11 @@ export function GameShell({
           </button>
         )}
         <div className={`${styles.chatBody} ${chatOpen ? '' : styles.hidden}`} inert={!chatOpen}>
-          <ChatPanel onCollapse={collapseChat} />
+          {/* Shared playback chats in the live room, not the recorded one. */}
+          {replay ? <TableStoreScope stores={null}><ChatPanel onCollapse={collapseChat} /></TableStoreScope>
+            : <ChatPanel onCollapse={collapseChat} />}
         </div>
-      </aside>
+      </aside>}
 
       <p className={styles.srOnly} aria-live="polite" aria-atomic="true">
         {turnAnnouncement}

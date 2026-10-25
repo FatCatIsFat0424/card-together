@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Snapshot the database and uploaded media while the service keeps running.
+# Snapshot the database, uploaded media, and match replays while the service keeps running.
 # The database is replaced by atomic rename, so one read sees a complete file. Media files are
 # content-addressed and never rewritten, so copying them after the database yields a superset
-# of everything the copied database references. Unchanged media is hard-linked to the previous
-# snapshot to keep daily copies small.
+# of everything the copied database references. Replay files are written once per match, but
+# retention may delete one between the copies; that match then has no replay in this snapshot,
+# and files without a flagged match are swept at startup. Unchanged files are hard-linked to the
+# previous snapshot to keep daily copies small.
 state_dir=${STATE_DIR:-/var/lib/card-together}
 backup_root=${BACKUP_DIR:-/var/backups/card-together/data}
 keep=${KEEP:-14}
@@ -36,12 +38,14 @@ python3 -c 'import json, sys; json.load(open(sys.argv[1], encoding="utf-8"))' "$
   exit 1
 }
 
-mkdir "$staging/media"
-if [[ -d $state_dir/media ]]; then
-  link_option=()
-  if [[ -n $previous && -d $previous/media ]]; then link_option=(--link-dest="$previous/media"); fi
-  rsync -rlt --no-owner --no-group ${link_option[@]+"${link_option[@]}"} "$state_dir/media/" "$staging/media/"
-fi
+for directory in media replays; do
+  mkdir "$staging/$directory"
+  if [[ -d $state_dir/$directory ]]; then
+    link_option=()
+    if [[ -n $previous && -d $previous/$directory ]]; then link_option=(--link-dest="$previous/$directory"); fi
+    rsync -rlt --no-owner --no-group ${link_option[@]+"${link_option[@]}"} "$state_dir/$directory/" "$staging/$directory/"
+  fi
+done
 
 if [[ -e $target ]]; then
   echo "Snapshot already exists: $target" >&2

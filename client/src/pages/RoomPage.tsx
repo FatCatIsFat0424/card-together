@@ -1,5 +1,5 @@
 import { isNumberedSeatGame, maxPlayers, roomCanStart, roomSeatInfo } from '@shared/rules/seats';
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
@@ -18,6 +18,7 @@ import { LEGACY_SEVENS_OPTIONS, SEVENS_SLAY_EFFECTS, sevensSlayEffect } from '@s
 import { DEFAULT_NAPOLEON_OPTIONS } from '@shared/napoleon-options';
 import { socket } from '../socket';
 import { roomErrorKey } from '../room-error-i18n';
+import { roomReplayErrorKey, roomReplayMembers } from '../room-replay';
 import { seatBackgroundStyle, tableBackgroundStyle } from '../account-appearance';
 import { SeatFrame, seatFrameHostClass } from '../cosmetics/seat-frames/SeatFrame';
 import { useAccountStore } from '../stores/account-store';
@@ -46,6 +47,8 @@ import { layeredShopArt } from '../cosmetics/art-layers/shop-art-layers';
 import { TableArt } from '../cosmetics/art-layers/TableArt';
 
 const COPIED_MS = 2000;
+const RoomReplayPicker = lazy(() => import('../components/RoomReplayPicker')
+  .then((module) => ({ default: module.RoomReplayPicker })));
 
 interface RoomSeatCard {
   readonly key: string;
@@ -130,6 +133,7 @@ export function RoomPage(): ReactNode {
   const [enteredRoom, setEnteredRoom] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [replayPickerOpen, setReplayPickerOpen] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState<HTMLButtonElement | null>(null);
   const [readyNotice, setReadyNotice] = useState<{ id: number; message: string } | null>(null);
   const messageCount = useChatStore((state) => state.messages.length);
@@ -155,7 +159,7 @@ export function RoomPage(): ReactNode {
   const handleResult = (timeout: Error | null, result?: { success: boolean; error?: string }): void => {
     setBusy(false);
     if (timeout) setError(t('auth.connectionError'));
-    else if (!result?.success) setError(t(roomErrorKey(result?.error)));
+    else if (!result?.success) setError(t(roomReplayErrorKey(result?.error)));
   };
   const movePlayer = (player: PlayerInfo, target: RoomSeatTarget): void => {
     if (!canMovePlayers || !roomInfo) return;
@@ -207,6 +211,7 @@ export function RoomPage(): ReactNode {
       hadRoom.current = true;
       attemptedRoom.current = roomInfo.code;
       if (phase) navigate(`/game/${roomInfo.code}`, { replace: true });
+      else if (roomInfo.status === 'replaying') navigate(`/room/${roomInfo.code}/replay`, { replace: true });
       else if (roomInfo.code !== roomCode) navigate(`/room/${roomInfo.code}`, { replace: true });
     } else if (attemptedRoom.current !== roomCode) {
       attemptedRoom.current = roomCode;
@@ -269,6 +274,18 @@ export function RoomPage(): ReactNode {
     setBusy(true);
     setError('');
     socket.timeout(10000).emit('room:start', handleResult);
+  };
+  const startReplay = (subjectId: string, matchId: string): void => {
+    if (blocked || !isHost) return;
+    setBusy(true);
+    setError('');
+    socket.timeout(10000).emit('room:replay:start', { subjectId, matchId }, (timeout, result) => {
+      setBusy(false);
+      if (timeout) setError(t('auth.connectionError'));
+      // The subject's account is the only player this request looks up.
+      else if (!result.success) setError(t(result.error === 'Player not found.' ? 'replay.sharedErrorNotFound' : roomReplayErrorKey(result.error)));
+      else setReplayPickerOpen(false);
+    });
   };
   const setShuffleSeats = (enabled: boolean): void => {
     setBusy(true);
@@ -667,6 +684,9 @@ export function RoomPage(): ReactNode {
         <button className={`btn ${isReady ? 'btn-danger' : 'btn-success'}`}
           data-pending-disabled={pendingDisabled(roomInfo.status !== 'waiting')}
           onClick={ready} disabled={blocked || roomInfo.status !== 'waiting'}>{t(isReady ? 'room.unready' : 'room.ready')}</button>
+        {isHost && <button type="button" className="btn btn-outline" onClick={() => setReplayPickerOpen(true)}
+          data-pending-disabled={pendingDisabled(roomInfo.status !== 'waiting')}
+          disabled={blocked || roomInfo.status !== 'waiting'}>{t('replay.sharedOpen')}</button>}
         {isHost && <button type="button" className="btn btn-primary" onClick={start}
           data-pending-disabled={pendingDisabled(!roomCanStart(roomInfo))}
           disabled={blocked || !roomCanStart(roomInfo)}>{t('room.start')}</button>}
@@ -685,6 +705,10 @@ export function RoomPage(): ReactNode {
           {error || readyNotice?.message}
         </Alert>
       </Snackbar>
+      {replayPickerOpen && isHost && playerId && <Suspense fallback={null}>
+        <RoomReplayPicker members={roomReplayMembers(roomInfo)} selfId={playerId}
+          busy={blocked} onWatch={startReplay} onClose={() => setReplayPickerOpen(false)} />
+      </Suspense>}
       {rulesOpen && <GameRulesDialog browseGames gameType={roomInfo.gameType} context={roomRulesContext(roomInfo)}
         onClose={() => setRulesOpen(false)} />}
     </main>

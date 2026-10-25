@@ -28,6 +28,7 @@ import appStyles from './App.module.css';
 const LobbyPage = lazy(() => import('./pages/LobbyPage').then((page) => ({ default: page.LobbyPage })));
 const RoomPage = lazy(() => import('./pages/RoomPage').then((page) => ({ default: page.RoomPage })));
 const GamePage = lazy(() => import('./pages/GamePage').then((page) => ({ default: page.GamePage })));
+const RoomReplayPage = lazy(() => import('./pages/RoomReplayPage').then((page) => ({ default: page.RoomReplayPage })));
 const AuthPage = lazy(() => import('./pages/AuthPage').then((page) => ({ default: page.AuthPage })));
 const AccountPage = lazy(() => import('./pages/AccountPage').then((page) => ({ default: page.AccountPage })));
 const FriendsPage = lazy(() => import('./pages/FriendsPage').then((page) => ({ default: page.FriendsPage })));
@@ -96,6 +97,7 @@ function AppRoutes(): ReactNode {
         <Route path="/achievements" element={<AchievementsPage />} />
         <Route path="/players/:accountId" element={<PlayerProfilePage />} />
         <Route path="/room/:roomCode" element={<RoomPage />} />
+        <Route path="/room/:roomCode/replay" element={<RoomReplayPage />} />
         <Route path="/game/:roomCode" element={<GamePage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

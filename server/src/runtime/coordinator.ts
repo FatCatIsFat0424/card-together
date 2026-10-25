@@ -1,8 +1,10 @@
 import { gamePlayer } from '@shared/rules/seats';
 import { isDeepStrictEqual } from 'node:util';
 import { GAME_SEAT_ORDER } from '@shared/constants';
-import type { Repository, MatchRecord } from '../database/repository';
+import type { Repository, NewMatchRecord } from '../database/repository';
 import type { RuntimeSnapshot } from './types';
+import { captureMatchReplay } from './match-replay';
+import { recordReplayStep } from './replay-recording';
 import * as playerManager from '../managers/player-manager';
 import * as roomManager from '../managers/room-manager';
 import * as gameManager from '../managers/game-manager';
@@ -64,9 +66,12 @@ export async function createRuntimeCoordinator(repository: Pick<Repository, 'loa
       const rewardedAccountIds = new Set<string>();
       try {
         value = await operation();
-        const matches: MatchRecord[] = [];
+        const previousGames = new Map(before.games.map((game) => [game.id, game]));
+        const matches: NewMatchRecord[] = [];
         const completedGameIds: string[] = [];
         for (const game of gameManager.exportGames()) {
+          // The final step is recorded before a completed match is archived below.
+          recordReplayStep(game, previousGames.get(game.id));
           if (game.result && roomManager.getRoomInfo(game.roomCode)?.status === 'playing') {
             roomManager.setRoomStatus(game.roomCode, 'waiting');
             roomManager.resetAllReady(game.roomCode);
@@ -76,12 +81,14 @@ export async function createRuntimeCoordinator(repository: Pick<Repository, 'loa
             }
             // Bot games are practice; retain their runtime result without recording match history.
             if (GAME_SEAT_ORDER.some((seat) => gamePlayer(game, seat)?.isBot)) continue;
+            const replay = captureMatchReplay(game);
             matches.push({
               id: game.id, roomCode: game.roomCode,
               // Empty seats of a Blackjack or Hold'em match are left out, matching the result's `seats`.
               accountIds: GAME_SEAT_ORDER.flatMap((seat) => gamePlayer(game, seat)?.id ?? []),
               result: game.gameType === 'bridge' ? { ...game.result, gameType: 'bridge' } : game.result,
               finishedAt: Date.now(),
+              ...(replay ? { replay } : {}),
             });
           }
         }

@@ -51,6 +51,9 @@
 .empty, .noResults { color: var(--text-secondary); font-size: var(--text-sm); }
 .table td.noResults { text-align: center; padding: var(--spacing-xl); }
 .bot { display: inline-flex; align-items: center; color: var(--text-secondary); font-weight: 600; }
+.replayButton { min-height: 44px; white-space: nowrap; }
+.unavailable { display: block; min-width: 7rem; color: var(--text-secondary); font-size: var(--text-xs); }
+.table th:nth-child(5) { padding: var(--spacing-md); }
 @media (max-width: 40rem) {
   .field, .selectField:global(.MuiFormControl-root) { flex: 1; min-width: 7rem; }
   .search { flex-basis: 100%; }

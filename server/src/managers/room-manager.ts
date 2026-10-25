@@ -4,10 +4,12 @@ import { DEFAULT_NINETYNINE_OPTIONS, isNinetyNineOptions } from '@shared/ninetyn
 import { DEFAULT_BLACKJACK_OPTIONS, isBlackjackOptions } from '@shared/blackjack-options';
 import { DEFAULT_NAPOLEON_OPTIONS, isNapoleonOptions } from '@shared/napoleon-options';
 import { isBotDifficulty } from '@shared/bot-difficulty';
+import { isRoomReplayPlayback } from '@shared/replay-session';
 import { isDeepStrictEqual } from 'node:util';
 import { randomInt, randomUUID } from 'node:crypto';
 import type {
-  BlackjackOptions, BotDifficulty, GameType, NapoleonOptions, NinetyNineOptions, PlayerInfo, RoomCode, RoomInfo, RoomSeatTarget, RoomStatus, Seat, SeatInfo, SeatMap, SevensOptions, TimeControl,
+  BlackjackOptions, BotDifficulty, GameType, NapoleonOptions, NinetyNineOptions, PlayerInfo, RoomCode, RoomInfo,
+  RoomReplaySession, RoomSeatTarget, RoomStatus, Seat, SeatInfo, SeatMap, SevensOptions, TimeControl,
 } from '@shared/types';
 import {
   ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD, EXPANDABLE_ROOM_GAMES,
@@ -130,10 +132,11 @@ function emptySeatCount(room: PersistedRoom): number {
 }
 
 /**
- * A flexible-seat roster change asks humans to confirm the new table before the host starts it.
+ * A flexible-seat roster change asks humans to confirm the new table before the host starts it,
+ * including members leaving during a shared replay.
  */
 function tableChanged(room: PersistedRoom): void {
-  if (room.info.status === 'waiting' && FLEXIBLE_SEAT_GAMES.includes(room.info.gameType)) resetAllReady(room.info.code);
+  if (room.info.status !== 'playing' && FLEXIBLE_SEAT_GAMES.includes(room.info.gameType)) resetAllReady(room.info.code);
 }
 
 export function addBot(code: RoomCode, playerId: string, seat: GameSeat, difficulty: BotDifficulty = 'hard'): Result {
@@ -218,7 +221,7 @@ export function canKick(code: RoomCode, hostId: string, targetId: string): Resul
 export function changeSeat(code: RoomCode, player: PlayerInfo, target: Seat): Result {
   const room = rooms.get(code);
   if (!room || !room.memberIds.includes(player.id)) return { success: false, reason: 'Not in room' };
-  if (room.info.status === 'playing') return { success: false, reason: 'Cannot change seat during game' };
+  if (room.info.status !== 'waiting') return { success: false, reason: 'Cannot change seat during game' };
   const occupant = room.info.seats[target].player;
   if (occupant && occupant.id !== player.id) return { success: false, reason: 'Seat is occupied' };
   const previous = getPlayerSeat(code, player.id);
@@ -271,7 +274,7 @@ export function standUp(code: RoomCode, playerId: string): Result {
   if (!room || (!seat && !(room.info.additionalSeats ?? []).some((entry) => entry.player?.id === playerId))) {
     return { success: false, reason: 'Not seated' };
   }
-  if (room.info.status === 'playing') return { success: false, reason: 'Cannot change seat during game' };
+  if (room.info.status !== 'waiting') return { success: false, reason: 'Cannot change seat during game' };
   if (getSpectatorIds(code).length >= MAX_SPECTATORS) return { success: false, reason: 'The spectator area is full.' };
   if (seat) room.info = { ...room.info, seats: { ...room.info.seats, [seat]: { player: null, isReady: false } } };
   clearAdditionalSeat(room, playerId);
@@ -283,7 +286,7 @@ export function setReady(code: RoomCode, playerId: string, ready: boolean): Resu
   const room = rooms.get(code);
   const seat = getPlayerSeat(code, playerId);
   if (!room) return { success: false, reason: 'Room not found' };
-  if (room.info.status === 'playing') return { success: false, reason: 'Game is in progress' };
+  if (room.info.status !== 'waiting') return { success: false, reason: 'Game is in progress' };
   if (!seat) {
     if (!room.info.additionalSeats?.some((entry) => entry.player?.id === playerId)) {
       return { success: false, reason: 'Not seated' };
@@ -408,10 +411,62 @@ export function getSeatPlayers(code: RoomCode): Partial<Record<GameSeat, PlayerI
   return roomPlayers(room.info);
 }
 
-/** Any status change ends an abort vote; the cooldown stays. */
-export function setRoomStatus(code: RoomCode, status: RoomStatus): void {
+/** Any status change ends an abort vote and a replay session; the cooldown stays. */
+export function setRoomStatus(code: RoomCode, status: Exclude<RoomStatus, 'replaying'>): void {
   const room = rooms.get(code);
-  if (room) room.info = { ...room.info, status, abortVote: null };
+  if (!room) return;
+  const { replay: _replay, ...info } = room.info;
+  room.info = { ...info, status, abortVote: null };
+}
+
+/** The archive facts a session needs; the caller has checked the host may view the match. */
+export interface ReplaySource {
+  readonly matchId: string;
+  readonly subjectId: string;
+  readonly gameType: GameType;
+  readonly lastStep: number;
+}
+
+/** Locks the waiting room like a match and starts playback from the first step. */
+export function startReplay(code: RoomCode, hostId: string, source: ReplaySource, now: number): Result {
+  const room = rooms.get(code);
+  if (!room) return { success: false, reason: 'Room not found' };
+  if (room.info.hostId !== hostId) return { success: false, reason: 'Only the host can control the replay.' };
+  if (room.info.status !== 'waiting') return { success: false, reason: 'Replays start from the waiting room.' };
+  const replay: RoomReplaySession = {
+    matchId: source.matchId, subjectId: source.subjectId, gameType: source.gameType, startedBy: hostId,
+    lastStep: source.lastStep, anchorStep: 0, anchorAt: now, playing: true, speed: 1,
+  };
+  room.info = { ...room.info, status: 'replaying', abortVote: null, replay };
+  return { success: true };
+}
+
+function requireReplayHost(room: PersistedRoom | undefined, hostId: string): Result {
+  if (!room) return { success: false, reason: 'Room not found' };
+  if (room.info.status !== 'replaying' || !room.info.replay) return { success: false, reason: 'No replay in progress.' };
+  if (room.info.hostId !== hostId) return { success: false, reason: 'Only the host can control the replay.' };
+  return { success: true };
+}
+
+/** Re-anchors playback at `now`; `playback` is an untrusted payload checked against the session. */
+export function controlReplay(code: RoomCode, hostId: string, playback: unknown, now: number): Result {
+  const room = rooms.get(code);
+  const allowed = requireReplayHost(room, hostId);
+  if (!allowed.success) return allowed;
+  const replay = room!.info.replay!;
+  if (!isRoomReplayPlayback(playback, replay.lastStep)) return { success: false, reason: 'Invalid replay position.' };
+  room!.info = { ...room!.info, replay: {
+    ...replay, anchorStep: playback.step, anchorAt: now, playing: playback.playing, speed: playback.speed,
+  } };
+  return { success: true };
+}
+
+/** Returns every member to the waiting room. */
+export function endReplay(code: RoomCode, hostId: string): Result {
+  const allowed = requireReplayHost(rooms.get(code), hostId);
+  if (!allowed.success) return allowed;
+  setRoomStatus(code, 'waiting');
+  return { success: true };
 }
 
 export function setGameType(code: RoomCode, playerId: string, gameType: GameType): Result {

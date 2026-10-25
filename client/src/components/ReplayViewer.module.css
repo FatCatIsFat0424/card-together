@@ -1,0 +1,148 @@
+/* The viewer fills its dialog; fixed table overlays measure from the dialog edge, not the app bar. */
+.viewer {
+  --topbar-height: 0px;
+  --rail-width: 0px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg-page);
+}
+
+.loading {
+  flex: 1;
+  margin: 0;
+  padding: var(--spacing-lg);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.transport {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: var(--spacing-sm);
+  min-width: 0;
+  min-height: 52px;
+  padding: 4px max(var(--spacing-md), env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom))
+    max(var(--spacing-md), env(safe-area-inset-left));
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.title {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 14rem;
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.buttons { display: flex; align-items: center; flex-shrink: 0; gap: 4px; }
+
+.buttons button,
+.close {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px;
+}
+
+.buttons .play { min-width: 56px; }
+
+.timeline {
+  display: flex;
+  align-items: center;
+  flex: 1 1 8rem;
+  gap: var(--spacing-xs);
+  min-width: 0;
+}
+
+.timeline input {
+  flex: 1;
+  min-width: 4rem;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--color-primary);
+}
+
+.timeline output {
+  min-width: 6.5rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.speed {
+  flex-shrink: 0;
+  min-width: 3.5rem;
+  min-height: 44px;
+  padding: 4px;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: var(--text-sm);
+}
+
+.note {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.close { flex-shrink: 0; margin-left: auto; }
+
+.actions { display: flex; flex-shrink: 0; gap: 4px; margin-left: auto; }
+.actions + .close { margin-left: 0; }
+.actions :global(.btn) { min-height: 44px; white-space: nowrap; }
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Tablets and phones drop the title; the table keeps the height. */
+@media (max-width: 1023px) {
+  .title { display: none; }
+}
+
+/* Short landscape phones: one compact row so the table keeps most of the height. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .transport { gap: 4px; min-height: 40px; padding-top: 2px; padding-bottom: max(2px, env(safe-area-inset-bottom)); }
+  .buttons { gap: 2px; }
+  .buttons button,
+  .close,
+  .speed { min-width: 36px; min-height: 36px; }
+  .actions :global(.btn) { min-height: 36px; padding: 2px var(--spacing-sm); }
+  .buttons .play { min-width: 44px; }
+  .timeline input { min-height: 36px; }
+  .timeline output { min-width: 4.5rem; font-size: 10px; }
+  .note { display: none; }
+}
+
+/* Portrait phones wrap the timeline onto its own row. */
+@media (max-width: 599px) {
+  .transport { flex-wrap: wrap; row-gap: 0; padding-left: var(--spacing-sm); padding-right: var(--spacing-sm); }
+  .timeline { order: 1; flex-basis: 100%; }
+  .timeline output { min-width: 5.5rem; }
+  .note { display: none; }
+}

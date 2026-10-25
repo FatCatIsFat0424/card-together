@@ -221,6 +221,18 @@ Bot controls use a vertical ellipsis.
   Bots can swap seats with humans but never move to spectators.
 - Changes clear human readiness and persist before broadcast; a failed save restores the arrangement.
 
+**Shared replay**
+
+- The host's "Watch a replay" footer button opens a picker of recorded matches grouped by
+  member: the host's own history first, then each human member's while it is public;
+  private histories say so. Choosing a match starts it for the whole room.
+- While the room replays, every member (and anyone who joins) moves to
+  `/room/:code/replay`: the same full-screen [match replay](#account-editor) table, with the
+  room chat, who started it, Leave, and for the host the playback controls and End replay.
+  Everyone derives the step from the host's server-anchored playback, so tables stay in step.
+- Ending returns everyone to the waiting room; seats and readiness carry over. Chat
+  announces the start and end.
+
 ## Game table
 
 ### Phones
@@ -444,7 +456,7 @@ Saved and system reduced-motion preferences disable this animation.
 
 **History and statistics** use all records from the [history API](api.md#http):
 
-- Columns: date, room, game, result, players; the table scrolls within its container.
+- Columns: date, room, game, result, players, recording; the table scrolls within its container.
 - Search (room code, nicknames, usernames, game, result), filters, and sorting run
   locally. Reset restores newest-first order.
 - Results follow the viewed account, including Bridge partnerships and tied winners.
@@ -452,6 +464,28 @@ Saved and system reduced-motion preferences disable this animation.
   no percentage without matches), with a horizontal chart on larger screens.
 - Donut chart: each game's share of matches, total in the center; the legend lists all games.
 - Statistics ignore search and filters. Private or unavailable history shows no statistics.
+- Newly completed human-only matches offer a recording, loaded when opened. Recording
+  visibility follows the viewed player's history setting. Matches without a recording keep
+  their results and show that no recording exists.
+
+**Match replay** plays a recording full screen on the game's own live table, watched as an
+unseated spectator with every hand visible:
+
+- The full-hand view follows the match's owner/public-history permission. Undealt decks,
+  Liar's Deck bullet positions, chat, and clocks are never recorded.
+- Playback opens playing from the start. The bottom transport replaces the action bar:
+  play/pause, previous/next, start/end, timeline, 0.5×–4× speed, step counter, and close.
+- Moving forward one step plays that step's table presentation with its sounds; seeking or
+  stepping back shows the settled table at once. Auto-play waits for the step's new
+  presentation frames, at least 900 ms, divided by the speed, and pauses on the last step
+  ([timing](../client/src/replay-playback.ts)).
+- The viewed player starts at the bottom; select any seat to rotate the view. Round history
+  and rules stay available. Chat, voice, room code, exit controls, and clocks are hidden, and
+  the final result has no return-to-room action.
+- Seat names and appearance come from the recorded accounts, not the current room. The
+  table renders in its own scoped stores, so an open replay never changes the live room or game.
+- The viewer is controlled by step, play state, and speed, so a host-controlled shared
+  session can drive it with the controls disabled for other members and keep room chat.
 
 ## Daily rewards
 

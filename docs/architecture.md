@@ -23,7 +23,7 @@ application tree ([deployment](deployment.md)).
 | `bots/` | Per-game heuristics using only the bot's filtered view |
 | `managers/`, `managers/games/` | Player, room, game, chat, voice state; game adapters |
 | `engine/` | Pure Bridge deck, bidding, play, scoring |
-| `database/`, `media/` | Async Repository, JSON adapter, migrations, indexes; content-addressed images |
+| `database/`, `media/` | Async Repository, JSON adapter, migrations, indexes, per-match replay files; content-addressed images |
 | `client/src/pages/`, `components/` | Lazy routes and CSS Modules UI |
 | `client/src/hooks/`, `stores/` | Account and Socket lifecycle; Zustand snapshots and preferences |
 | `client/src/audio/`, `voice/` | Music, turn reminders, WebRTC |

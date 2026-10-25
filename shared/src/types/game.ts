@@ -2,6 +2,7 @@
 
 import type { BlackjackOptions, NapoleonOptions, NinetyNineOptions, RoomCode, SevensOptions, TimeControl } from './room';
 import type { GameSeat, PlayerInfo, Seat } from './player';
+import type { ReplayRecording } from './replay';
 import type { BigTwoComboType } from '../rules/bigtwo';
 
 export interface GameClock {
@@ -127,6 +128,8 @@ export interface BiddingState {
 
 /** Full Bridge game state (server internal) */
 export interface BridgeGameState {
+  /** Server-only recording, absent on legacy and bot-practice games. */
+  replayRecording?: ReplayRecording;
   clock?: GameClock;
   presentation?: GamePresentation;
   /** Seats whose players already left the finished board for the room. */
@@ -195,6 +198,8 @@ export interface BigTwoMatchResult {
 export type BigTwoPhase = 'playing' | 'scoring';
 
 export interface BigTwoGameState {
+  /** Server-only recording, absent on legacy and bot-practice games. */
+  replayRecording?: ReplayRecording;
   /** Private persisted deadline; never included in player-visible state. */
   pendingAutoPass?: { readonly id: string; readonly seat: Seat; readonly executeAt: number };
   clock?: GameClock;
@@ -261,6 +266,8 @@ export type RedPointsPhase = 'playing' | 'scoring';
 export type RedPointsStep = 'play' | 'flip-choose';
 
 export interface RedPointsGameState {
+  /** Server-only recording, absent on legacy and bot-practice games. */
+  replayRecording?: ReplayRecording;
   clock?: GameClock;
   presentation?: GamePresentation;
   returnedSeats?: Seat[];
@@ -334,6 +341,8 @@ export type NinetyNineMatchResult = {
 export type NinetyNinePhase = 'playing' | 'scoring';
 
 export interface NinetyNineGameState {
+  /** Server-only recording, absent on legacy and bot-practice games. */
+  replayRecording?: ReplayRecording;
   /** Missing on legacy snapshots; defaults to standard Ninety-Nine rules. */
   readonly options?: NinetyNineOptions;
   clock?: GameClock;
@@ -406,6 +415,8 @@ export interface SevensMatchResult {
 }
 
 export interface SevensGameState {
+  /** Server-only recording, absent on legacy and bot-practice games. */
+  replayRecording?: ReplayRecording;
   /** Missing on legacy snapshots; defaults to standard Sevens rules. */
   readonly options?: SevensOptions;
   clock?: GameClock;
@@ -502,6 +513,8 @@ export type ChinesePokerLogEntry =
   | { readonly type: 'homerun'; readonly seat: Seat; readonly timestamp: number };
 
 export interface ChinesePokerGameState {
+  /** Server-only recording, absent on legacy and bot-practice games. */
+  replayRecording?: ReplayRecording;
   clock?: GameClock;
   presentation?: GamePresentation;
   returnedSeats?: Seat[];
@@ -590,6 +603,8 @@ export interface LiarsDeckLastPlay {
 }
 
 export interface LiarsDeckGameState {
+  /** Server-only recording, absent on legacy and bot-practice games. */
+  replayRecording?: ReplayRecording;
   clock?: GameClock;
   presentation?: GamePresentation;
   returnedSeats?: Seat[];
@@ -715,6 +730,8 @@ export interface BlackjackMatchResult {
 export type BlackjackPhase = 'betting' | 'playing' | 'scoring';
 
 export interface BlackjackGameState {
+  /** Server-only recording, absent on legacy and bot-practice games. */
+  replayRecording?: ReplayRecording;
   /** Missing on legacy snapshots; defaults to the house dealer. */
   readonly options?: BlackjackOptions;
   /**
@@ -862,6 +879,8 @@ export interface HoldemMatchResult {
 export type HoldemPhase = 'playing' | 'scoring';
 
 export interface HoldemGameState {
+  /** Server-only recording, absent on legacy and bot-practice games. */
+  replayRecording?: ReplayRecording;
   clock?: GameClock;
   presentation?: GamePresentation;
   returnedSeats?: GameSeat[];
@@ -1043,6 +1062,8 @@ export interface NapoleonMatchResult {
 }
 
 export interface NapoleonGameState {
+  /** Server-only recording, absent on legacy and bot-practice games. */
+  replayRecording?: ReplayRecording;
   clock?: GameClock;
   presentation?: GamePresentation;
   returnedSeats?: GameSeat[];
@@ -1171,4 +1192,5 @@ export interface MatchSummary {
   readonly accountIds: readonly string[];
   readonly result: MatchResult;
   readonly finishedAt: number;
+  readonly hasReplay?: boolean;
 }

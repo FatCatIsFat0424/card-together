@@ -6,6 +6,7 @@ import { gameSeatValue } from '@shared/rules/seats';
 import { clockTickDelay, countingMs, projectedServerNow, seatClock } from '../games/turn-clock';
 import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
+import { useReplayMode } from '../games/replay-mode';
 import styles from './TurnClock.module.css';
 
 interface TurnClockProps {
@@ -16,6 +17,11 @@ interface TurnClockProps {
 
 /** A shared deadline for simultaneous choices (Chinese Poker arrangements, Blackjack bets). */
 export function DeadlineClock({ deadline }: { deadline: number }): ReactNode {
+  // Recorded deadlines passed long ago; playback has no clocks.
+  return useReplayMode() ? null : <LiveDeadlineClock deadline={deadline} />;
+}
+
+function LiveDeadlineClock({ deadline }: { deadline: number }): ReactNode {
   const clock = useGameStore((state) => state.visible?.clock);
   const receivedAt = useGameStore((state) => state.presentationReceivedAt);
   const { t } = useI18nStore();

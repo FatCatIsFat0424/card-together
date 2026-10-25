@@ -1,0 +1,38 @@
+.dialog.dialog {
+  background: var(--bg-surface);
+  background-image: none;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+}
+.backdrop.backdrop { background: var(--bg-overlay); }
+.header.header { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-md); padding: var(--spacing-lg); }
+.header h2 { font-size: var(--text-xl); line-height: 1.4; }
+.close { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 44px; height: 44px; padding: 0; }
+.content.content { padding: var(--spacing-lg); border-color: var(--border-color); overscroll-behavior: contain; }
+.hint { color: var(--text-secondary); font-size: var(--text-sm); margin-bottom: var(--spacing-md); }
+.member + .member { margin-top: var(--spacing-lg); }
+.member h3 { font-size: var(--text-base); margin-bottom: var(--spacing-sm); overflow-wrap: anywhere; }
+.note { color: var(--text-secondary); font-size: var(--text-sm); }
+.matches { list-style: none; }
+.match {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'game action' 'meta action' 'players action';
+  align-items: center;
+  column-gap: var(--spacing-md);
+  padding: var(--spacing-sm) 0;
+}
+.match + .match { border-top: 1px solid var(--border-color); }
+.matchGame { grid-area: game; font-weight: 600; }
+.matchMeta { grid-area: meta; color: var(--text-secondary); font-size: var(--text-xs); }
+.matchPlayers {
+  grid-area: players;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.match button { grid-area: action; }

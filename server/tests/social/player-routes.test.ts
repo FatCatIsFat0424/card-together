@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ReplaySnapshot } from '@shared/types';
 import { createApplication } from '../../src/app';
 import { SESSION_COOKIE_NAME, tokenHash } from '../../src/auth/auth-service';
 import { createJsonRepository } from '../../src/database/json-repository';
-import type { AccountRecord, MatchRecord, Repository } from '../../src/database/repository';
+import type { AccountRecord, MatchRecord, NewMatchRecord, Repository } from '../../src/database/repository';
 
 const ORIGIN = 'http://localhost:5173';
 const PASSWORD_HASH = `scrypt$131072$8$1$${'a'.repeat(32)}$${'b'.repeat(128)}`;
@@ -251,6 +252,70 @@ describe('public player profile HTTP routes', () => {
     expect((await repository.getAccountById(account.id))?.matchesPublic).toBe(false);
     expect((await fetch(history, { headers: headers() })).status).toBe(403);
     expect((await fetch(history, { headers: ownerHeaders })).status).toBe(200);
+  });
+
+  it('serves only retained subject replays under current history permissions and projects both lists', async () => {
+    const others = ['charlie', 'delta', 'echo'].map((username) => ({
+      ...accounts.alice, id: randomUUID(), username, usernameNormalized: username,
+    }));
+    for (const account of others) await repository.createAccount(account);
+    const match: NewMatchRecord = {
+      id: randomUUID(), roomCode: 'ABC123', finishedAt: 100,
+      accountIds: [accounts.alice.id, ...others.map((account) => account.id)],
+      result: { gameType: 'bridge', contract: { level: 1, suit: 'nt', declarer: 'N' },
+        declarerTeamTricks: 7, defenderTeamTricks: 6, requiredTricks: 7, declarerTeamWins: true },
+      replay: { version: 1, gameType: 'bridge', startedAt: 1,
+        // A minimal snapshot: archives are validated structurally, not against game rules.
+        initial: { gameType: 'bridge', observedHands: { N: [{ suit: 'clubs', rank: 2 }] }, log: [] } as unknown as ReplaySnapshot,
+        steps: [[{ op: 'append', path: ['log'], values: [{ type: 'play', seat: 'N', card: { suit: 'clubs', rank: 2 }, timestamp: 10 }] },
+          { op: 'set', path: ['observedHands', 'N'], value: [] }]] },
+    };
+    const legacy = { ...match, id: randomUUID(), finishedAt: 90, replay: undefined };
+    const unrelated = { ...match, id: randomUUID(), accountIds: [accounts.bravo.id, ...others.map((account) => account.id)] };
+    const botPractice = { ...match, id: randomUUID(),
+      accountIds: [accounts.alice.id, ...Array.from({ length: 3 }, () => `bot:${randomUUID()}`)] };
+    await repository.saveRuntime({ players: [], rooms: [], games: [], chat: [] }, [match, legacy, unrelated, botPractice]);
+    const subject = `${baseUrl}/api/players/${accounts.alice.id}/history`;
+    const replayUrl = `${subject}/${match.id}/replay`;
+    expect((await fetch(replayUrl)).status).toBe(401);
+    expect((await fetch(replayUrl, { headers: headers('bravo') })).status).toBe(403);
+    const own = await fetch(replayUrl, { headers: headers() });
+    expect(own.status).toBe(200);
+    expect(own.headers.get('cache-control')).toBe('no-store');
+    expect(await own.json()).toEqual({ success: true, replay: match.replay });
+    for (const id of [legacy.id, unrelated.id, botPractice.id, randomUUID()]) {
+      const missing = await fetch(`${subject}/${id}/replay`, { headers: headers() });
+      expect(missing.status).toBe(404);
+      expect(await missing.json()).toEqual({ success: false, error: 'Match replay not found.' });
+    }
+    for (const url of [`${baseUrl}/api/account/history`, subject]) {
+      const response = await fetch(url, { headers: headers() });
+      const body = await response.json();
+      expect(body.matches).toEqual([
+        { id: match.id, roomCode: match.roomCode, finishedAt: 100,
+          accountIds: match.accountIds, result: match.result, hasReplay: true },
+        { id: legacy.id, roomCode: legacy.roomCode, finishedAt: 90,
+          accountIds: legacy.accountIds, result: legacy.result },
+      ]);
+      expect(body.matches.every((entry: Record<string, unknown>) => !('replay' in entry) && !('log' in entry))).toBe(true);
+    }
+    await repository.updateProfile(accounts.alice.id, { matchesPublic: true }, Date.now());
+    const publicReplay = await fetch(replayUrl, { headers: headers('bravo') });
+    expect(publicReplay.status).toBe(200);
+    expect(await publicReplay.json()).toEqual({ success: true, replay: match.replay });
+    expect((await fetch(`${subject}/${unrelated.id}/replay`, { headers: headers('bravo') })).status).toBe(404);
+    await repository.updateProfile(accounts.alice.id, { matchesPublic: false }, Date.now());
+    expect((await fetch(replayUrl, { headers: headers('bravo') })).status).toBe(403);
+    expect((await fetch(`${baseUrl}/api/players/${randomUUID()}/history/${match.id}/replay`, { headers: headers() })).status).toBe(404);
+    for (const url of [`${subject}/invalid%20id/replay`, `${baseUrl}/api/players/invalid%20id/history/${match.id}/replay`]) {
+      expect((await fetch(url, { headers: headers() })).status).toBe(400);
+    }
+    // Archives are read from the replay store on demand; a lost file reads as unavailable.
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await unlink(join(directory, 'replays', `${match.id}.json`));
+    expect((await fetch(replayUrl, { headers: headers() })).status).toBe(404);
+    await repository.deleteAccountSessions(accounts.alice.id);
+    expect((await fetch(replayUrl, { headers: headers() })).status).toBe(401);
   });
 
   it('should use the application error handler without exposing repository details', async () => {

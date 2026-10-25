@@ -82,6 +82,8 @@ class BackupDataTests(unittest.TestCase):
         marker.parent.mkdir(parents=True)
         marker.write_bytes(b"")
         marker.chmod(0o600)
+        (state / "replays").mkdir()
+        (state / "replays" / "match-a.json").write_text('{"version": 1}')
         return state
 
     def snapshots(self, backups):
@@ -106,6 +108,37 @@ class BackupDataTests(unittest.TestCase):
             self.assertEqual(marker.read_bytes(), b"")
             self.assertEqual(marker.stat().st_mode & 0o777, 0o600)
             self.assertEqual([path.name for path in backups.iterdir() if path.name.startswith(".staging")], [])
+
+    def test_snapshot_copies_current_replays_even_when_the_directory_is_gone(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state, backups = self.make_state(root), root / "backups"
+            self.assertEqual(self.run_backup(state, backups).returncode, 0)
+            (state / "replays" / "match-a.json").unlink()
+            (state / "replays" / "match-b.json").write_text('{"version": 1, "id": "b"}')
+            self.assertEqual(self.run_backup(state, backups, stamp="20261012T000001Z").returncode, 0)
+            (state / "replays" / "match-b.json").unlink()
+            (state / "replays").rmdir()
+            result = self.run_backup(state, backups, stamp="20261012T000002Z")
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            first, second, third = self.snapshots(backups)
+            self.assertEqual(sorted(path.name for path in (first / "replays").iterdir()), ["match-a.json"])
+            self.assertEqual(sorted(path.name for path in (second / "replays").iterdir()), ["match-b.json"])
+            self.assertEqual((second / "replays" / "match-b.json").read_text(), '{"version": 1, "id": "b"}')
+            self.assertEqual(list((third / "replays").iterdir()), [])
+            self.assertEqual((first / "media" / "a.png").stat().st_ino, (third / "media" / "a.png").stat().st_ino)
+
+    def test_unchanged_replays_are_hard_linked(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state, backups = self.make_state(root), root / "backups"
+            self.assertEqual(self.run_backup(state, backups).returncode, 0)
+            self.assertEqual(self.run_backup(state, backups, stamp="20261012T000001Z").returncode, 0)
+            first, second = self.snapshots(backups)
+            self.assertEqual((first / "replays" / "match-a.json").stat().st_ino,
+                             (second / "replays" / "match-a.json").stat().st_ino)
+            self.assertEqual((second / "replays" / "match-a.json").stat().st_mode & 0o777, 0o600)
 
     def test_retention_keeps_newest_snapshots(self):
         with tempfile.TemporaryDirectory() as directory:

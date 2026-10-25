@@ -76,6 +76,6 @@ npm run check -- full
   keep component inventories, measurement logs, or task histories.
 - Temporary task plans go in the Git-ignored `.plan/`.
 - Data changes follow [deployment](docs/deployment.md) and [storage](docs/storage.md):
-  stop writers, keep complete database and media backups, and confirm schema
+  stop writers, keep complete database, media, and replay backups, and confirm schema
   compatibility before restoring.
 - Keep the card graphics' notices and license texts.

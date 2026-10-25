@@ -30,6 +30,7 @@ backend-relative; production Nginx serves them below `/card-together/`.
 | `GET /api/account/history` | — | Own human-only matches, newest first |
 | `GET /api/players/:accountId` | — | Public profile |
 | `GET /api/players/:accountId/history` | — | Matches and participant map, if owner or public |
+| `GET /api/players/:accountId/history/:matchId/replay` | — | `{ success: true, replay: MatchReplay }`, if owner or subject's history is public |
 | `GET /api/friends` | — | `friends, incoming, outgoing`; accepted friends include presence, nullable `hostedRoomCode`, and `lastSeenAt` |
 | `GET /api/friends/search?username=` | Exact username | Public account or null |
 | `POST /api/friends/requests` | `username` | 201, request |
@@ -73,6 +74,7 @@ Omitted fields keep their values; invalid values return 400.
 | Case | Status |
 | --- | --- |
 | Invalid player ID / unknown player / private history | 400 / 404 / 403 |
+| Invalid replay match ID / absent, unrelated, bot-practice, legacy, or pruned replay | 400 / 404 |
 | Unknown border / insufficient coins | 400 / 409 |
 | Invalid daily reward / stale date, incomplete or unassigned task, or unavailable replacement | 400 / 409 |
 | Oversized image or quota exceeded ([limits](media.md#uploads)) | 413 |
@@ -89,8 +91,22 @@ Omitted fields keep their values; invalid values return 400.
   cleanup and server restarts. Public profiles, search results, and pending requests omit it.
   Display behavior: [friends interface](interface.md#lobby-and-friends).
 - No response contains password hashes or session digests.
-- History endpoints return every eligible record without pagination; participant maps
-  include accounts from older matches. Search, filters, and statistics run in the client.
+- History list endpoints return every eligible [MatchSummary](../shared/src/types/game.ts)
+  without pagination; participant maps include accounts from older matches. Summaries add
+  optional `hasReplay: true` while a match's archive is retained and never contain replay/log
+  payloads.
+  Existing list envelopes stay `{ success: true, matches }` for account history and
+  `{ success: true, matches, players }` for player history. Search, filters, and statistics
+  run in the client.
+- Replay requires an active session and the same subject-owner/public-history permission
+  as the player history list. Lookup is limited to that subject's retained human matches;
+  knowing an unrelated match ID grants no access. Missing accounts return 404, private
+  subjects return 403, and missing, legacy, pruned, or unreadable archives return 404
+  ([retention](storage.md#replay-archives)). The response's
+  [MatchReplay](../shared/src/types/replay.ts) holds the initial spectator snapshot and
+  one patch per recorded step, revealing every dealt hand under those same permissions.
+  Matches without a recording return 404. See [recording and privacy](storage.md#identity-and-sessions).
+  Playback creates no room and requires neither original players nor a seed.
 - Shop prices come from [`shop.ts`](../shared/src/constants/shop.ts), never from the
   client. Repeat purchases do not charge again and do not equip. Coin rules:
   [storage](storage.md#game-coins).
@@ -149,6 +165,23 @@ Omitted fields keep their values; invalid values return 400.
 | `room:setBlackjackOptions` | `BlackjackOptions` (player dealer) |
 | `room:setNapoleonOptions` | `NapoleonOptions` (joker summoning) |
 
+**Shared replays** (session: [`RoomReplaySession`](../shared/src/types/room.ts); timing:
+[`replay-session.ts`](../shared/src/replay-session.ts))
+
+| Action | Payload | Effect |
+| --- | --- | --- |
+| `room:replay:start` | `{ subjectId, matchId }` | Host only, while waiting: a recorded match in the subject's history the host may view (own, or public). Sets status `replaying` and plays from step 0 at 1x; removes a finished board still on screen |
+| `room:replay:control` | `{ step, playing, speed }` | Current host only: re-anchors playback at server time (play, pause, seek, speed 0.5–4) |
+| `room:replay:end` | — | Current host only: returns the room to `waiting` |
+| `room:replay:load` | — | Current members only, while the session is active: returns `{ archive: { match, replay, players } }`. Members need no history permission of their own; the host's was checked at start |
+
+- `replaying` locks the room like a match: no start, settings, seat, readiness, or bot
+  changes, and seated members cannot be kicked. Joining, leaving, spectator kicks, and chat
+  stay available. Host transfer keeps the session; the new host controls it.
+- Clients derive the current step from the anchor, `PlayerSnapshot.serverNow`, and the
+  viewer's step durations, so the server keeps no timer. The session persists with the
+  runtime and ends with the room. Archives never enter room broadcasts.
+
 **Games**
 
 | Action | Payload | Effect |
@@ -191,7 +224,7 @@ Omitted fields keep their values; invalid values return 400.
 
 | Event | Contents |
 | --- | --- |
-| `player:state` | `PlayerSnapshot` as from resume: optional player, room, game state, chat, error. Missing room or game clears client state |
+| `player:state` | `PlayerSnapshot` as from resume: optional player, room, game state, chat, error, and `serverNow` while the room replays. Missing room or game clears client state |
 | `chat:message` | `{ roomCode, message }`; clients append once per ID |
 | `room:invited` | Ephemeral invitation: room, game, sender, seat availability |
 | `room:kicked` | `{ roomCode }`, after the removed member's room-less snapshot |

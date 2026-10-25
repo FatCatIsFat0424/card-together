@@ -1,5 +1,5 @@
 [Unit]
-Description=Card Together database and media backup
+Description=Card Together database, media, and replay backup
 ConditionPathExists=/var/lib/card-together/database.json
 
 [Service]

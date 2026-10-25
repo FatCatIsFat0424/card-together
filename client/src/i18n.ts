@@ -1,6 +1,8 @@
 // ─── i18n system ───
 
 import { socialTranslations } from './social-i18n';
+import { replayTranslations } from './replay-i18n';
+import type { ReplayTranslationKey } from './replay-i18n';
 import { roomErrorTranslations } from './room-error-i18n';
 import type { RoomErrorTranslationKey } from './room-error-i18n';
 import type { SocialTranslationKey } from './social-i18n';
@@ -38,7 +40,7 @@ import type { AchievementsTranslationKey } from './achievements-i18n';
 export type Locale = 'zh-TW' | 'en';
 
 type TranslationKeys = Record<
-  RoomErrorTranslationKey | SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | VoiceTranslationKey | UiTranslationKey
+  ReplayTranslationKey | RoomErrorTranslationKey | SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | VoiceTranslationKey | UiTranslationKey
     | EmojiTranslationKey | GameTranslationKey | SevensTranslationKey | ChinesePokerTranslationKey
     | LiarsDeckTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey, string
 > & {
@@ -119,6 +121,7 @@ const translations: Record<Locale, TranslationKeys> = {
   'zh-TW': {
     ...socialTranslations['zh-TW'],
     ...accountTranslations['zh-TW'],
+    ...replayTranslations['zh-TW'],
     ...playerTranslations['zh-TW'],
     ...voiceTranslations['zh-TW'],
     ...uiTranslations['zh-TW'],
@@ -200,6 +203,7 @@ const translations: Record<Locale, TranslationKeys> = {
   en: {
     ...socialTranslations.en,
     ...accountTranslations.en,
+    ...replayTranslations.en,
     ...playerTranslations.en,
     ...voiceTranslations.en,
     ...uiTranslations.en,

@@ -23,6 +23,29 @@
 
 - Bots are `bot:<UUID>` with `isBot: true` and have no account, session, or profile.
 - Any match with a bot is practice: it stays resumable but adds no history.
+- Newly started human-only matches in all ten games keep a server-only recording in
+  runtime ([`ReplayRecording`](../shared/src/types/replay.ts),
+  [recorder](../server/src/runtime/replay-recording.ts)). After each committed operation
+  it records what an unseated spectator receives (every dealt hand), minus the clock and
+  the presentation's `serverNow`, as a path patch when that view changed. Automatic stages
+  (Hold'em runout and showdown, Liar's Deck challenge and shot, Blackjack dealer play)
+  replay through the recorded presentation frames.
+- Undealt decks and stock, Liar's Deck bullets, clocks, chat, and the recording itself
+  never enter a snapshot. Live snapshots and room listings never include the recording.
+  Bot practice never records; in-progress games started without a recording stay
+  unrecorded, and their results have no replay.
+- Completed recordings become version 1 [MatchReplay](../shared/src/types/replay.ts)
+  archives in the [replay store](#replay-archives); anyone the history permission allows to
+  view the match sees every dealt hand. Steps, results, and runtime commit atomically; a failed
+  write restores all three. Recordings survive restart; archives survive room deletion, follow
+  the owner/public-history policy, and are kept for each player's latest recorded matches.
+- The [archive validator](../server/src/database/match-replay.ts) checks the envelope,
+  patch operations, size limits, and unsafe keys (`__proto__`, `constructor`,
+  `prototype`), and requires every step to apply to a snapshot of the same game without a
+  clock or server time. Archives are checked when read. Runtime recordings are checked fully
+  at startup, where one that no longer applies is dropped with a warning and its match
+  continues unrecorded; each write checks only their structure. Snapshots are not checked against current
+  game rules.
 - History lists participants in N/E/S/W/P5/P6/P7/P8 order. Ninety-Nine, Blackjack,
   Hold'em, and Napoleon list occupied seats only; legacy results without `seats` list four.
 - Flexible game snapshots restore legacy four-seat value maps with empty additional
@@ -164,6 +187,7 @@ Optional fields added without a schema change; absent values use the default:
 
 | Field | Default | Earlier servers |
 | --- | --- | --- |
+| `MatchRecord.hasReplay` | No replay; legacy results remain readable | Keep the flag and ignore `replays/`; cannot serve replays or advertise `hasReplay` |
 | `AccountRecord.lastSeenAt` | Unknown | Keep the field; do not advance historical activity |
 | `coins`, `coinRevision` | 0 | Keep the fields; award nothing |
 | `rewardedGameIds` | Empty | Keep the field |
@@ -206,7 +230,7 @@ Contracts: [`Repository`](../server/src/database/repository.ts),
 | `accounts` | Identity, normalized username, password hash, profile, coins, timestamps, optional last-seen history |
 | `sessions` | Token digest, account, creation and expiry |
 | `friendships` | Account pair, status, timestamps |
-| `matches` | Game ID, result, participants, completion time |
+| `matches` | Game ID, result, participants, completion time, optional `hasReplay` flag |
 | `emojis` | Owner, unique name, media reference |
 | `directMessages` | Sender, recipient, client ID, resolved content, timestamp |
 | `messageReads` | Account, conversation peer, last incoming message read |
@@ -218,6 +242,7 @@ Contracts: [`Repository`](../server/src/database/repository.ts),
 | Development | `server/data/database.json` (override: [`DATABASE_PATH`](development.md#configuration)) |
 | Production | `/var/lib/card-together/database.json` |
 | Images | `media/` beside the database: content-addressed files plus `media/owners/` quota markers |
+| Replays | `replays/` beside the database: one `<match ID>.json` archive per recorded match |
 
 **Write and recovery behavior**
 
@@ -243,10 +268,31 @@ Contracts: [`Repository`](../server/src/database/repository.ts),
 - Development state is Git-ignored and never served statically; images go through the
   media endpoint.
 
+### Replay archives
+
+Contracts: [`MatchReplay`](../shared/src/types/replay.ts), [store](../server/src/database/replay-store.ts),
+[`MAX_REPLAYS_PER_PLAYER`](../server/src/database/repository.ts).
+
+- Archives live outside `database.json`, so a write never reads, validates, or rewrites them.
+  The match record keeps only `hasReplay: true`. Databases holding an inline `replay` (unreleased
+  development format) are rejected at startup.
+- File names are validated match IDs (`[A-Za-z0-9_-]`, up to 128 characters). Each file is
+  written once, before the commit that flags its match, as a `0600` temporary file that is
+  fsynced and renamed; the directory is `0700`.
+- Retention: an archive stays while it is among the latest 50 recorded matches of any of its
+  participants. Matches without a recording take no slot. The commit that records new matches
+  applies retention for their participants only and clears pruned flags; the files are deleted
+  after that commit succeeds. Results stay forever and show "no recording".
+- Reads validate the whole archive. A missing, unreadable, or invalid file reads as no replay
+  and is logged once.
+- A failed commit deletes the files it wrote. Startup deletes leftover temporary files and
+  archives without a flagged match, and logs how many flagged matches have no file; it never
+  edits the database. Unknown files are left alone.
+
 ## Backup and restore
 
-**Backup:** stop writers, then copy the whole state directory (`database.json` and
-`media/`). Backups hold password hashes and private hands: keep them private and keep an
+**Backup:** stop writers, then copy the whole state directory (`database.json`, `media/`, and
+`replays/`). Backups hold password hashes and private hands: keep them private and keep an
 off-host copy. Production snapshots: [deployment](deployment.md#backups).
 
 **Restore:**
@@ -256,13 +302,14 @@ off-host copy. Production snapshots: [deployment](deployment.md#backups).
 3. Start one service; verify login, history, media, and game resume.
 
 Restoring loses newer writes. Never edit live JSON, delete data to fix startup, or
-restore a database with mismatched media.
+restore a database with mismatched media or replays. Replays missing from a snapshot only show
+"no recording"; extra replay files are swept at startup.
 
 ## Maintenance tools
 
 Both tools are offline and share these requirements:
 
-- Stop **all database writers** first and keep complete database and media backups.
+- Stop **all database writers** first and keep complete database, media, and replay backups.
   This disconnects players. `--writers-stopped` only confirms this; it neither stops
   nor detects services.
 - Pass the configured database path explicitly. The file must use the current schema

@@ -1,6 +1,8 @@
 import { roomSeatInfo } from '@shared/rules/seats';
 import type { Server, Socket } from 'socket.io';
-import type { AccountProfile, ChatMessage, ClientToServerEvents, EmojiRecord, ServerToClientEvents } from '@shared/types';
+import type {
+  AccountProfile, ChatMessage, ClientToServerEvents, EmojiRecord, PublicAccount, ServerToClientEvents,
+} from '@shared/types';
 import type { PlayerSnapshot } from '@shared/types/socket-events';
 import { GAME_SEAT_ORDER } from '@shared/constants';
 import type { AuthService } from '../auth/auth-service';
@@ -9,6 +11,8 @@ import type { VoiceManager } from '../managers/voice-manager';
 import type { FriendService } from '../social/friend-service';
 import type { ProvidedEmojiCatalog } from '../media/provided-emoji';
 import type { FriendPresence } from '../http/friend-routes';
+import type { MatchRecord } from '../database/repository';
+import type { MatchReplayLookup } from '../social/match-history-access';
 import { reconcileVoiceMembership } from './voice-handler';
 import * as playerManager from '../managers/player-manager';
 import * as roomManager from '../managers/room-manager';
@@ -39,6 +43,11 @@ export interface SocketContext {
   /** Site-provided emoji every sender may use; the sender's library wins on name clashes. */
   providedEmojis: ProvidedEmojiCatalog;
   friends: FriendService;
+  /** Recorded matches for shared room replays; see `findMatchReplay` and `matchPlayers`. */
+  matchReplays: {
+    find: (viewerId: string | null, subjectId: string, matchId: string) => Promise<MatchReplayLookup>;
+    players: (matches: readonly Pick<MatchRecord, 'accountIds'>[]) => Promise<Record<string, PublicAccount>>;
+  };
 }
 
 export function actionError(message: string): Error & { publicMessage: string } {
@@ -93,6 +102,7 @@ export function playerSnapshot(accountId: string, includeChat = true): PlayerSna
   return {
     success: true, player: state.info, room: room ?? undefined,
     gameState: gameState ?? undefined,
+    ...(room?.replay ? { serverNow: Date.now() } : {}),
     ...(includeChat ? { chatHistory: room ? visibleChatHistory(room.code, accountId) : [] } : {}),
   };
 }

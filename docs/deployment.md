@@ -45,7 +45,7 @@ after the grace period.
 | `/opt/card-together` | Root-owned application, dependencies, copied Node binary |
 | `/opt/card-together/www/card-together` | Served frontend |
 | `/etc/card-together/server.env` | Root-only runtime configuration |
-| `/var/lib/card-together/` | `database.json` and `media/` |
+| `/var/lib/card-together/` | `database.json`, `media/`, and `replays/` |
 | `/var/backups/card-together/` | `deploy-*`, `frontend-*`, and daily `data/` snapshots |
 
 **systemd unit** (`card-together.service`)
@@ -264,11 +264,15 @@ existing configuration:
 | --- | --- | --- |
 | `deploy-*` (each deployment) | Site and snippets, runtime configuration, units and enabled states; `application/` without `node_modules/`, `node`, and duplicate `provided-music/`; full `card-together-data/` and `bridge-online-data/` | Newest 5, pruned after success |
 | `frontend-*` (each publication) | Previous frontend entry points | Newest 5 |
-| `data/data-<UTC stamp>/` (daily, about 04:15) | JSON-validated `database.json` and `media/` | Newest 14 (`KEEP`) |
+| `data/data-<UTC stamp>/` (daily, about 04:15) | JSON-validated `database.json`, `media/`, and `replays/` | Newest 14 (`KEEP`) |
 
 - Rebuild files omitted from `application/` by running `deploy/build.sh` at the matching revision.
 - The daily backup runs with the backend online: the database is replaced by atomic
-  rename and media is content-addressed. Unchanged media is hard-linked to the previous snapshot.
+  rename, media is content-addressed, and each replay file is written once. Unchanged files are
+  hard-linked to the previous snapshot.
+- The database is copied first. A replay pruned by retention before its copy shows "no
+  recording" in that snapshot; one written after the database copy is swept when the
+  snapshot is started ([replay archives](storage.md#replay-archives)).
 - `install.sh` installs `backup-data.sh` and `card-together-backup.service`/`.timer`;
   `deploy.sh` enables the timer and warns if that fails. To enable it alone:
 
@@ -294,8 +298,8 @@ existing configuration:
    application, dependencies, unit, configuration, and Nginx setup.
 2. Keep current state only if the older revision supports its schema and fields
    ([compatibility](storage.md#data-compatibility)).
-3. Otherwise restore a snapshot, accepting the loss of newer writes. Restore **database
-   and media together**, with state directories `0700`, private files `0600`, and
+3. Otherwise restore a snapshot, accepting the loss of newer writes. Restore **database,
+   media, and replays together**, with state directories `0700`, private files `0600`, and
    ownership matching the chosen service user.
 4. Run `sudo systemctl daemon-reload`, test and reload Nginx, and start only the chosen service.
 
@@ -390,7 +394,7 @@ bash deploy/deploy.sh
 ```
 
 `migrate-state.py` rejects symlinks and partly populated destinations, keeps the source,
-and copies **database and media together**.
+and copies the whole state directory (**database, media, and replays together**).
 
 **Rename compatibility**
 

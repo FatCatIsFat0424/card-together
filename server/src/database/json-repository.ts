@@ -1,14 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { copyFile, mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { getShopItem, isAvatarBorderId, ownsShopItem, GAME_COIN_REWARD, MAX_EMOJIS_PER_ACCOUNT } from '@shared/constants';
-import type { Repository, AccountRecord, MatchRecord } from './repository';
-import { publicAccount, repositoryError, SOCIAL_HISTORY_RETENTION_MS } from './repository';
+import { isReplayRecordId } from '@shared/replay-session';
+import type { Repository, AccountRecord, MatchRecord, NewMatchRecord } from './repository';
+import { MAX_REPLAYS_PER_PLAYER, publicAccount, repositoryError, SOCIAL_HISTORY_RETENTION_MS } from './repository';
 import { emptyDocument, isObject, validDirectMessage, validateDocument } from './schema';
 import { migrateDocument } from './migrations';
 import type { DatabaseDocument } from './schema';
-import type { ShopItemId } from '@shared/types';
+import type { MatchReplay, ShopItemId } from '@shared/types';
+import { dropUnplayableRecordings, isMatchReplay } from './match-replay';
+import { createReplayStore } from './replay-store';
 import { equipmentError } from './shop-equipment';
 import type { RuntimeSnapshot } from '../runtime/types';
 import { createDatabaseIndexes, friendshipPair } from './indexes';
@@ -29,6 +32,32 @@ function boundedLimit(limit: number, maximum: number): number {
 
 export interface JsonRepositoryOptions {
   readonly now?: () => number;
+  /** Match replay archives; defaults to `replays/` beside the database file. */
+  readonly replayDirectory?: string;
+}
+
+type CopiedTable = 'accounts' | 'sessions' | 'friendships' | 'matches' | 'emojis' | 'directMessages' | 'messageReads'
+  | 'friendNotifications';
+
+/** Splits incoming matches into stored records and the archives to write; later duplicates win. */
+function storedMatches(matches: readonly NewMatchRecord[]): { records: MatchRecord[]; archives: Map<string, MatchReplay> } {
+  const records: MatchRecord[] = [];
+  const archives = new Map<string, MatchReplay>();
+  for (const match of matches) {
+    // Only a stored archive sets the flag, whatever the caller passed.
+    const { replay, hasReplay: _hasReplay, ...fields } = structuredClone(match) as NewMatchRecord & { readonly hasReplay?: unknown };
+    if (replay === undefined) {
+      archives.delete(fields.id);
+      records.push(fields);
+      continue;
+    }
+    if (!isReplayRecordId(fields.id) || !isObject(fields.result) || !isMatchReplay(replay, fields.result, fields.finishedAt)) {
+      throw repositoryError('INVALID_REPLAY', 'Invalid match replay archive.');
+    }
+    archives.set(fields.id, replay);
+    records.push({ ...fields, hasReplay: true });
+  }
+  return { records, archives };
 }
 
 /** A single server process owns a JSON file. A SQL adapter can implement Repository unchanged. */
@@ -48,9 +77,13 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
     let queue: Promise<void> = Promise.resolve();
     let closed = false;
     const indexes = createDatabaseIndexes();
+    const replays = createReplayStore(options.replayDirectory ?? join(dirname(path), 'replays'));
+    /** Matches whose unavailable archive was already reported. */
+    const reportedReplays = new Set<string>();
 
     async function persist(next: DatabaseDocument): Promise<void> {
-      validateDocument(next);
+      // Loading applies every runtime recording step; frequent writes check their structure.
+      validateDocument(next, { applyReplaySteps: false });
       const temporaryPath = `${path}.${randomUUID()}.tmp`;
       try {
         const handle = await open(temporaryPath, 'wx', 0o600);
@@ -78,6 +111,9 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       await persist(document);
     } else {
       const migrated = migrateDocument(parsed);
+      for (const gameId of dropUnplayableRecordings(migrated)) {
+        console.warn(`[database] Dropped an unplayable replay recording; game ${gameId} continues unrecorded.`);
+      }
       validateDocument(migrated);
       document = migrated;
       if (migrated !== parsed) {
@@ -86,37 +122,88 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
         await persist(document);
       }
     }
+    // Archives written before a failed commit or left by a crash have no flagged match.
+    const unavailable = await replays.sweep(new Set(document.matches.flatMap((match) => match.hasReplay ? [match.id] : [])));
+    for (const matchId of unavailable) reportedReplays.add(matchId);
+    if (unavailable.length > 0) {
+      console.warn(`[replays] ${unavailable.length} recorded matches have no archive file; they show no replay.`);
+    }
 
     async function read<T>(select: (data: DatabaseDocument) => T): Promise<T> {
       await queue;
       return structuredClone(select(document));
     }
 
-    function write<T>(
-      copiedTables: readonly ('accounts' | 'sessions' | 'friendships' | 'matches' | 'emojis' | 'directMessages' | 'messageReads' | 'friendNotifications')[],
-      update: (data: DatabaseDocument) => T,
-    ): Promise<T> {
+    function enqueue<T>(operation: () => Promise<T>): Promise<T> {
       if (closed) return Promise.reject(new Error('Repository is closed.'));
-      const operation = queue.then(async () => {
-        // Copy only arrays this operation mutates. Existing records remain immutable;
-        // replacements and external input are copied before a successful publication.
-        const next = { ...document };
-        for (const table of copiedTables) Object.assign(next, { [table]: document[table].slice() });
-        const result = update(next);
-        await persist(next);
-        document = next;
-        return structuredClone(result);
-      });
-      queue = operation.then(
+      const result = queue.then(operation);
+      queue = result.then(
         () => undefined,
         () => undefined,
       );
-      return operation;
+      return result;
     }
 
-    function upsertMatches(data: DatabaseDocument, matches: readonly MatchRecord[]): void {
-      if (matches.length === 0) return;
+    /** Runs inside the queue: validates, persists, then publishes the next document. */
+    async function commit<T>(copiedTables: readonly CopiedTable[], update: (data: DatabaseDocument) => T): Promise<T> {
+      // Copy only arrays this operation mutates. Existing records remain immutable;
+      // replacements and external input are copied before a successful publication.
+      const next = { ...document };
+      for (const table of copiedTables) Object.assign(next, { [table]: document[table].slice() });
+      const result = update(next);
+      await persist(next);
+      document = next;
+      return structuredClone(result);
+    }
+
+    function write<T>(copiedTables: readonly CopiedTable[], update: (data: DatabaseDocument) => T): Promise<T> {
+      return enqueue(() => commit(copiedTables, update));
+    }
+
+    function flaggedIds(matches: readonly MatchRecord[], ids: Iterable<string>): Set<string> {
+      const positions = indexes.matches(matches).positions;
+      const flagged = new Set<string>();
+      for (const id of ids) {
+        const position = positions.get(id);
+        if (position !== undefined && matches[position].hasReplay) flagged.add(id);
+      }
+      return flagged;
+    }
+
+    /**
+     * Archives are written before the commit that flags their matches, and archives the commit
+     * unflags are deleted only after it succeeds, so a flag never points to a file deleted early.
+     */
+    function saveMatches(matches: readonly NewMatchRecord[], update: (data: DatabaseDocument) => void): Promise<void> {
+      return enqueue(async () => {
+        const { records, archives } = storedMatches(matches);
+        const written: string[] = [];
+        let unflagged: string[];
+        try {
+          for (const [matchId, replay] of archives) {
+            await replays.write(matchId, replay);
+            written.push(matchId);
+          }
+          unflagged = await commit([], (data) => {
+            update(data);
+            return upsertMatches(data, records);
+          });
+        } catch (error) {
+          // Keep files that a committed match still flags; startup sweeps anything left.
+          const committed = flaggedIds(document.matches, written);
+          await replays.remove(written.filter((matchId) => !committed.has(matchId)));
+          throw error;
+        }
+        await replays.remove(unflagged);
+      });
+    }
+
+    /** Upserts matches and applies replay retention; resolves the IDs whose archive was unflagged. */
+    function upsertMatches(data: DatabaseDocument, matches: readonly MatchRecord[]): string[] {
+      if (matches.length === 0) return [];
       data.matches = data.matches.slice();
+      const batchIds = new Set(matches.map((match) => match.id));
+      const previouslyFlagged = flaggedIds(document.matches, batchIds);
       // The local positions also see earlier entries in this batch, including duplicate IDs.
       const positions = new Map(indexes.matches(document.matches).positions);
       for (const match of matches) {
@@ -126,6 +213,46 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
           data.matches.push(structuredClone(match));
         } else data.matches[position] = structuredClone(match);
       }
+      const unflagged = [...previouslyFlagged].filter((id) => !data.matches[positions.get(id)!].hasReplay);
+      for (const id of pruneReplays(data, batchIds, positions)) {
+        const position = positions.get(id)!;
+        const { hasReplay: _pruned, ...record } = data.matches[position];
+        data.matches[position] = record;
+        unflagged.push(id);
+      }
+      return unflagged;
+    }
+
+    /**
+     * Retention for the participants of this batch only: an archive stays while it is within
+     * MAX_REPLAYS_PER_PLAYER of the newest recorded matches of any of its participants.
+     */
+    function pruneReplays(data: DatabaseDocument, batchIds: ReadonlySet<string>, positions: ReadonlyMap<string, number>): string[] {
+      const batch = [...batchIds].map((id) => data.matches[positions.get(id)!]).filter((match) => match.hasReplay);
+      if (batch.length === 0) return [];
+      const previous = indexes.matches(document.matches).byAccount;
+      const rankings = new Map<string, readonly MatchRecord[]>();
+      function recordedNewestFirst(accountId: string): readonly MatchRecord[] {
+        let ranking = rankings.get(accountId);
+        if (ranking) return ranking;
+        const unchanged = (previous.get(accountId) ?? []).filter((match) => !batchIds.has(match.id) && match.hasReplay);
+        ranking = [...unchanged, ...batch.filter((match) => match.accountIds.includes(accountId))]
+          .sort((first, second) => second.finishedAt - first.finishedAt
+            || positions.get(second.id)! - positions.get(first.id)!);
+        rankings.set(accountId, ranking);
+        return ranking;
+      }
+      const retainedBy = (match: MatchRecord, accountId: string): boolean => {
+        const rank = recordedNewestFirst(accountId).indexOf(match);
+        return rank !== -1 && rank < MAX_REPLAYS_PER_PLAYER;
+      };
+      const pruned = new Set<string>();
+      for (const accountId of new Set(batch.flatMap((match) => match.accountIds))) {
+        for (const candidate of recordedNewestFirst(accountId).slice(MAX_REPLAYS_PER_PLAYER)) {
+          if (!candidate.accountIds.some((participant) => retainedBy(candidate, participant))) pruned.add(candidate.id);
+        }
+      }
+      return [...pruned];
     }
 
     function recordLastSeen(data: DatabaseDocument, snapshot: RuntimeSnapshot): void {
@@ -488,22 +615,45 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       }),
       loadRuntime: () => read((data) => data.runtime),
       saveRuntime: (snapshot, matches = [], completedGameIds = []) =>
-        write([], (data) => {
+        saveMatches(matches, (data) => {
           data.runtime = structuredClone(snapshot);
-          upsertMatches(data, matches);
           awardGameCoins(data, snapshot, completedGameIds);
           recordLastSeen(data, snapshot);
         }),
-      saveMatch: (match) =>
-        write([], (data) => {
-          upsertMatches(data, [match]);
-        }),
+      saveMatch: (match) => saveMatches([match], () => undefined),
       listMatches: (accountId, limit) =>
         read((data) => {
           const matches = (indexes.matches(data.matches).byAccount.get(accountId) ?? [])
             .filter((match) => !match.accountIds.some((id) => id.startsWith('bot:')));
           return limit === undefined ? matches : matches.slice(0, boundedLimit(limit, 100));
         }),
+      getMatchReplay: async (matchId) => {
+        if (!isReplayRecordId(matchId)) return undefined;
+        const flaggedMatch = (): Promise<MatchRecord | undefined> => read((data) => {
+          const position = indexes.matches(data.matches).positions.get(matchId);
+          return position !== undefined && data.matches[position].hasReplay ? data.matches[position] : undefined;
+        });
+        const match = await flaggedMatch();
+        if (!match) return undefined;
+        let replay: unknown;
+        let problem: string | undefined;
+        try {
+          replay = await replays.read(matchId);
+          if (replay === undefined) {
+            // Retention may have deleted it after this match was read; that is not damage.
+            if (!(await flaggedMatch())) return undefined;
+            problem = 'is missing';
+          } else if (!isMatchReplay(replay, match.result, match.finishedAt)) problem = 'is invalid';
+        } catch (error) {
+          problem = `cannot be read (${error instanceof Error ? error.message : String(error)})`;
+        }
+        if (problem === undefined) return replay as MatchReplay;
+        if (!reportedReplays.has(matchId)) {
+          reportedReplays.add(matchId);
+          console.error(`[replays] The archive of match ${matchId} ${problem}; it shows no replay.`);
+        }
+        return undefined;
+      },
       listEmojis: (accountId) =>
         read((data) => data.emojis.filter((emoji) => emoji.accountId === accountId)),
       createEmojis: (accountId, items, now) =>

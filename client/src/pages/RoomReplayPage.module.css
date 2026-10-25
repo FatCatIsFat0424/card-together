@@ -1,0 +1,30 @@
+.page {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: var(--bg-page);
+}
+.header { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-md); }
+.code { font-family: var(--font-mono); font-size: var(--text-lg); font-weight: 700; letter-spacing: 0.1em; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); }
+.error { align-self: center; color: var(--color-danger); font-size: var(--text-sm); }
+.body { flex: 1; min-height: 0; display: flex; gap: var(--spacing-md); }
+.stage {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  text-align: center;
+}
+.meta { overflow: hidden; color: var(--text-secondary); font-size: var(--text-xs); white-space: nowrap; text-overflow: ellipsis; align-self: center; }
+.dialog:global(.MuiPaper-root) { width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; overflow: hidden; color: var(--text-primary); background: var(--bg-page); background-image: none; border: 0; border-radius: 0; }
+
+@media (max-width: 1023px), (max-height: 500px) {
+  .page { padding: var(--spacing-sm); }
+}

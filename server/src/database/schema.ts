@@ -7,7 +7,9 @@ import {
   isUsername, isAvatarBorderId, isProvidedEmojiFile, getShopItem, isShopStickerId,
 } from '@shared/constants';
 import type { GameType } from '@shared/types';
+import { isReplayRecordId } from '@shared/replay-session';
 import type { RuntimeSnapshot } from '../runtime/types';
+import type { RuntimeValidationOptions } from '../runtime/validate';
 import type {
   AccountRecord, DirectMessageRecord, EmojiRecord, FriendNotificationRecord, FriendshipRecord, MatchRecord, MessageReadRecord, SessionRecord,
 } from './repository';
@@ -153,8 +155,10 @@ function validMatch(value: unknown): value is MatchRecord {
     napoleon: isNapoleonResult,
   };
   const gameType = value.result.gameType;
+  // Archives live in the replay store, named by match ID; records carry only the flag.
   return typeof gameType === 'string' && GAME_TYPES.includes(gameType as GameType) &&
-    validators[gameType as GameType](value.result);
+    validators[gameType as GameType](value.result) && !Object.hasOwn(value, 'replay') &&
+    (value.hasReplay === undefined || (value.hasReplay === true && isReplayRecordId(value.id)));
 }
 
 function validBridgeResult(result: Record<string, unknown>): boolean {
@@ -235,8 +239,11 @@ function unique(values: readonly string[]): boolean {
   return new Set(values).size === values.length;
 }
 
-/** Reject incompatible or corrupt data instead of replacing a user's database. */
-export function validateDocument(value: unknown): asserts value is DatabaseDocument {
+/**
+ * Reject incompatible or corrupt data instead of replacing a user's database. Writes may skip
+ * re-applying runtime recording steps, which loading always checks.
+ */
+export function validateDocument(value: unknown, options: RuntimeValidationOptions = {}): asserts value is DatabaseDocument {
   if (
     !isObject(value) ||
     value.schemaVersion !== CURRENT_SCHEMA_VERSION ||
@@ -255,7 +262,7 @@ export function validateDocument(value: unknown): asserts value is DatabaseDocum
     !Array.isArray(value.friendNotifications) || !value.friendNotifications.every(validFriendNotification) ||
     (value.rewardedGameIds !== undefined && (!Array.isArray(value.rewardedGameIds)
       || !value.rewardedGameIds.every(nonEmpty) || !unique(value.rewardedGameIds))) ||
-    !(value.runtime === null || isRuntimeSnapshot(value.runtime))
+    !(value.runtime === null || isRuntimeSnapshot(value.runtime, options))
   ) {
     throw new Error(
       'Invalid or unsupported database schema. Restore a valid backup; the original file was preserved.',

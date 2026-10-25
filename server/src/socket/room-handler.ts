@@ -18,6 +18,7 @@ function startPreparedRoom(code: RoomCode, hostId: string): void {
   const room = roomManager.getRoomInfo(code);
   if (!room) throw actionError('Room not found.');
   if (room.hostId !== hostId) throw actionError('Only the host can start the game.');
+  if (room.status === 'replaying') throw actionError('A replay is in progress.');
   if (!roomManager.isAllReady(code)) throw actionError('Meet the player count requirement and prepare every seated player first.');
   roomManager.shuffleReadySeats(code);
   const players = roomManager.getSeatPlayers(code);

@@ -1,6 +1,6 @@
 // ─── Game Store ───
 
-import { create } from 'zustand';
+import { scopedStore } from './scoped-store';
 import type {
   Card,
   GameSeat,
@@ -87,7 +87,7 @@ const initialState: GameStoreState = {
   redealPendingSeat: null,
 };
 
-export const useGameStore = create<GameStoreState & GameStoreActions>((set) => ({
+export const useGameStore = scopedStore<GameStoreState & GameStoreActions>((set) => ({
   ...initialState,
   restore: (game) => set((state) => {
     // One deep comparison per snapshot: a game's own field always holds the same object as `visible`.

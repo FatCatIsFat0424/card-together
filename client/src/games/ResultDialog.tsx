@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { useI18nStore } from '../stores/i18n-store';
+import { useReplayMode } from './replay-mode';
 import styles from './ResultDialog.module.css';
 
 export const resultStyles = {
@@ -34,6 +35,8 @@ export function ResultDialog({
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const primaryRef = useRef<HTMLButtonElement>(null);
+  // Playback shows the recorded result without acting on any live room.
+  const replay = useReplayMode();
 
   useEffect(() => {
     primaryRef.current?.focus({ preventScroll: true });
@@ -55,16 +58,19 @@ export function ResultDialog({
     }
   };
 
-  return <div className={styles.backdrop}>
-    <div ref={dialogRef} className={`${styles.dialog} ${wide ? styles.wide : ''}`} role="dialog" aria-modal="true"
+  // During playback it covers only the table, so the transport below stays usable.
+  return <div className={`${styles.backdrop} ${replay ? styles.contained : ''}`}>
+    <div ref={dialogRef} className={`${styles.dialog} ${wide ? styles.wide : ''}`} role="dialog" aria-modal={!replay}
       aria-labelledby={titleId} onKeyDown={trapFocus}>
       {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}
       <h2 id={titleId} className={`${styles.title} ${tone === 'lose' ? styles.lose : styles.win}`}>{title}</h2>
       {children}
-      {pending && <p className={styles.readiness} role="status">{t('result.returning')}</p>}
-      {error && <p className={styles.error} role="alert">{error}</p>}
-      <button ref={primaryRef} type="button" className={`btn btn-primary ${styles.primary}`}
-        disabled={pending || disabled} onClick={onBack}>{t('score.backToRoom')}</button>
+      {!replay && <>
+        {pending && <p className={styles.readiness} role="status">{t('result.returning')}</p>}
+        {error && <p className={styles.error} role="alert">{error}</p>}
+        <button ref={primaryRef} type="button" className={`btn btn-primary ${styles.primary}`}
+          disabled={pending || disabled} onClick={onBack}>{t('score.backToRoom')}</button>
+      </>}
     </div>
   </div>;
 }

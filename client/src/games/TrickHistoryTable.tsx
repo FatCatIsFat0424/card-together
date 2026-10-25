@@ -36,7 +36,7 @@ export function trickHistoryColumns(seats: readonly GameSeat[], viewer: GameSeat
 }
 
 export function TrickHistoryTable({
-  rows, columns, mySeat, roles = [], cardText, columnLabel, className, summaryClassName, defaultOpen = true,
+  rows, columns, mySeat, roles = [], cardText, columnLabel, seatName, className, summaryClassName, defaultOpen = true,
 }: {
   rows: readonly TrickHistoryRow[];
   columns: readonly GameSeat[];
@@ -46,13 +46,16 @@ export function TrickHistoryTable({
   cardText: (card: NapoleonCard) => string;
   /** Column heading for a seat; the player's name by default, which stays the heading's hover title */
   columnLabel?: (seat: GameSeat) => string;
+  /** Historical views resolve seats from their recorded participants instead of the live room. */
+  seatName?: (seat: GameSeat) => string;
   className?: string;
   summaryClassName?: string;
   defaultOpen?: boolean;
 }): ReactNode {
   const [open, setOpen] = useState(defaultOpen);
   const { t } = useI18nStore();
-  const name = useSeatName();
+  const liveName = useSeatName();
+  const name = seatName ?? liveName;
   if (rows.length === 0) return null;
   const roleOf = (seat: GameSeat): TrickHistoryRole | undefined => roles.find((role) => role.seat === seat);
 

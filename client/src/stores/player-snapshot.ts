@@ -21,6 +21,9 @@ export function applyPlayerSnapshot(snapshot: PlayerSnapshot): void {
       (value) => (snapshot.room ? roomSeatInfo(snapshot.room, value)?.player?.id : null) === snapshot.player?.id,
     );
     useRoomStore.getState().setMySeat(seat ?? null);
+    if (snapshot.serverNow !== undefined) {
+      useRoomStore.getState().setReplayClockOffset(snapshot.serverNow - Date.now());
+    }
   } else {
     useRoomStore.getState().leaveRoom();
   }

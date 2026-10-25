@@ -20,7 +20,10 @@ export function normalizeGameSeatMaps<T>(value: T): T {
         record[seat] = Array.isArray(sample) ? [] : sample === null || nullableNumber ? null : typeof sample === 'boolean' ? false : 0;
       }
     }
-    for (const [key, child] of Object.entries(record)) if (key !== 'clock') visit(child);
+    // Replay patches record exact snapshots; expanding them would change what was recorded.
+    for (const [key, child] of Object.entries(record)) {
+      if (key !== 'clock' && key !== 'replayRecording' && key !== 'replay') visit(child);
+    }
   }
   visit(copy);
   return copy;

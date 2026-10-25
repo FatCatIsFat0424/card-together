@@ -73,9 +73,11 @@ export function FloatingRoomCard(): ReactNode {
   const occupied = seats.filter((seat) => seat.player !== null);
   const playing = Boolean(phase) || room.status === 'playing';
   const path = `/${playing ? 'game' : 'room'}/${encodeURIComponent(roomCode)}`;
+  const replaying = !playing && room.status === 'replaying';
   const status = connection !== 'ready' ? 'roomCard.reconnecting'
     : phase === 'scoring' ? 'roomCard.finished'
     : playing ? 'roomCard.playing'
+    : replaying ? 'replay.sharedInProgress'
     : roomCanStart(room) ? 'roomCard.ready' : 'roomCard.waiting';
   const gameName = t(`gameType.${room.gameType}`);
 
@@ -116,7 +118,7 @@ export function FloatingRoomCard(): ReactNode {
         </li>)}
       </ul> : <p className={styles.empty}>{t('roomCard.empty')}</p>}
       <div className={styles.footer}>
-        {!playing && connection === 'ready' && <span>
+        {!playing && !replaying && connection === 'ready' && <span>
           {t('roomCard.prepared', { ready: String(occupied.filter((seat) => seat.isReady).length), total: String(occupied.length) })}</span>}
         {(room.spectators?.length ?? 0) > 0 && <span>{t('roomCard.spectators', { count: String(room.spectators!.length) })}</span>}
       </div>

@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { scopedStore } from './scoped-store';
 import type { GameSeat } from '@shared/types';
 
 interface TablePerspectiveStore {
@@ -7,7 +7,7 @@ interface TablePerspectiveStore {
   reset: () => void;
 }
 
-export const useTablePerspectiveStore = create<TablePerspectiveStore>((set) => ({
+export const useTablePerspectiveStore = scopedStore<TablePerspectiveStore>((set) => ({
   seat: 'S',
   selectSeat: (seat) => set({ seat }),
   reset: () => set({ seat: 'S' }),

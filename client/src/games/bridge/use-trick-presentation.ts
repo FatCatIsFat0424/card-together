@@ -4,20 +4,25 @@ import { useRoomStore } from '../../stores/room-store';
 import { createTrickPresentation } from './trick-presentation';
 import type { TrickPresentation, TrickSnapshot } from './trick-presentation';
 
-function currentSnapshot(): TrickSnapshot {
-  const { phase, playing } = useGameStore.getState();
-  return { roomCode: useRoomStore.getState().currentRoomCode, phase, playing };
+type GameStoreApi = ReturnType<typeof useGameStore.useApi>;
+type RoomStoreApi = ReturnType<typeof useRoomStore.useApi>;
+
+function currentSnapshot(gameStore: GameStoreApi, roomStore: RoomStoreApi): TrickSnapshot {
+  const { phase, playing } = gameStore.getState();
+  return { roomCode: roomStore.getState().currentRoomCode, phase, playing };
 }
 
 /** Subscribe before React batches successive trick and scoring snapshots. */
 export function useTrickPresentation(): TrickPresentation | null {
-  const [presentation] = useState(() => createTrickPresentation(currentSnapshot()));
+  const gameStore = useGameStore.useApi();
+  const roomStore = useRoomStore.useApi();
+  const [presentation] = useState(() => createTrickPresentation(currentSnapshot(gameStore, roomStore)));
   const subscribe = useCallback(
     (listener: () => void): (() => void) => {
       const unsubscribe = presentation.subscribe(listener);
-      const update = (): void => presentation.update(currentSnapshot());
-      const unsubscribeGame = useGameStore.subscribe(update);
-      const unsubscribeRoom = useRoomStore.subscribe(update);
+      const update = (): void => presentation.update(currentSnapshot(gameStore, roomStore));
+      const unsubscribeGame = gameStore.subscribe(update);
+      const unsubscribeRoom = roomStore.subscribe(update);
       update();
       return () => {
         unsubscribe();
@@ -26,7 +31,7 @@ export function useTrickPresentation(): TrickPresentation | null {
         presentation.dispose();
       };
     },
-    [presentation],
+    [presentation, gameStore, roomStore],
   );
   return useSyncExternalStore(subscribe, presentation.getSnapshot);
 }

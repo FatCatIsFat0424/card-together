@@ -1,5 +1,5 @@
 [Unit]
-Description=Daily Card Together database and media backup
+Description=Daily Card Together database, media, and replay backup
 
 [Timer]
 OnCalendar=*-*-* 04:15:00

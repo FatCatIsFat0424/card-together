@@ -9,6 +9,7 @@ import { isNinetyNineOptions } from '@shared/ninetynine-options';
 import { isBlackjackOptions } from '@shared/blackjack-options';
 import { isNapoleonOptions } from '@shared/napoleon-options';
 import { isBotDifficulty } from '@shared/bot-difficulty';
+import { isRoomReplaySession } from '@shared/replay-session';
 import { getTurnSeat } from '../managers/game-clock';
 import {
   ABORT_VOTE_THRESHOLD, EXPANDABLE_ROOM_GAMES, GAME_TYPES, MAX_MESSAGE_EMOJIS, MIN_FLEXIBLE_PLAYERS, MAX_ROOM_MEMBERS, MAX_ROOM_SEATS,
@@ -52,6 +53,7 @@ import type {
   SevensGameState, SevensTable,
 } from '@shared/types';
 import type { RuntimeSnapshot } from './types';
+import { isReplayRecording } from '../database/match-replay';
 
 type ObjectValue = Record<string, unknown>;
 const seats: Seat[] = ['N', 'E', 'S', 'W'];
@@ -1067,11 +1069,18 @@ function earlyLeaveSeats(value: ObjectValue): boolean {
     && value.earlyLeaveSeats.every((seat: unknown) => Array.isArray(automatic) && automatic.includes(seat));
 }
 
-function game(value: unknown): boolean {
+function replayRecording(game: AnyGameState, applySteps: boolean): boolean {
+  if (game.replayRecording === undefined) return true;
+  return !Object.values(game.players).some((player) => player.isBot)
+    && isReplayRecording(game.replayRecording, game.gameType, applySteps);
+}
+
+function game(value: unknown, applyReplaySteps: boolean): boolean {
   if (object(value) && typeof value.gameType === 'string') value = normalizeFlexibleGame({ ...value, gameType: value.gameType });
   return object(value) && oneOf(value.gameType, [...GAME_TYPES]) &&
     gameValidators[value.gameType as GameType](value) && presentation(value) && gameClock(value)
-    && returnedSeats(value) && returnedViewers(value) && autoPlaySeats(value) && earlyLeaveSeats(value);
+    && returnedSeats(value) && returnedViewers(value) && autoPlaySeats(value) && earlyLeaveSeats(value)
+    && replayRecording(value as unknown as AnyGameState, applyReplaySteps);
 }
 
 function bridgeGame(value: ObjectValue): boolean {
@@ -1160,7 +1169,8 @@ function room(value: unknown): boolean {
     (info.blackjackOptions === undefined || isBlackjackOptions(info.blackjackOptions)) &&
     (info.napoleonOptions === undefined || isNapoleonOptions(info.napoleonOptions)) &&
     oneOf(info.gameType, [...GAME_TYPES]) &&
-    oneOf(info.status, ['waiting', 'playing']) &&
+    oneOf(info.status, ['waiting', 'playing', 'replaying']) &&
+    (info.status === 'replaying' ? isRoomReplaySession(info.replay) : info.replay === undefined) &&
     number(info.createdAt) &&
     oneOf(info.hostId, humans) &&
     (info.abortVoteCooldownUntil === null || number(info.abortVoteCooldownUntil)) &&
@@ -1725,7 +1735,13 @@ function coherentBridgeGame(state: BridgeGameState): boolean {
   );
 }
 
-export function isRuntimeSnapshot(value: unknown): value is RuntimeSnapshot {
+export interface RuntimeValidationOptions {
+  /** False checks recording structure only; every load and restore applies each step. */
+  readonly applyReplaySteps?: boolean;
+}
+
+export function isRuntimeSnapshot(value: unknown, options: RuntimeValidationOptions = {}): value is RuntimeSnapshot {
+  const applyReplaySteps = options.applyReplaySteps ?? true;
   if (
     !object(value) ||
     !Array.isArray(value.players) ||
@@ -1746,7 +1762,7 @@ export function isRuntimeSnapshot(value: unknown): value is RuntimeSnapshot {
           || (Number.isSafeInteger(entry.lastSeenAt) && (entry.lastSeenAt as number) >= 0)),
     ) ||
     !value.rooms.every(room) ||
-    !value.games.every(game) ||
+    !value.games.every((entry: unknown) => game(entry, applyReplaySteps)) ||
     !value.chat.every(
       (entry: unknown) =>
         object(entry) &&

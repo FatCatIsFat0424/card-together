@@ -1,9 +1,11 @@
 import { Router } from 'express';
-import type { MatchHistory, PublicAccount } from '@shared/types';
+import type { MatchHistory } from '@shared/types';
 import type { AuthService } from '../auth/auth-service';
 import { getRequestSession, requireSession } from '../auth/http-middleware';
 import type { Repository } from '../database/repository';
 import { publicProfile } from '../social/friend-service';
+import { canViewMatchHistory, findMatchReplay, MATCH_REPLAY_ERRORS, matchPlayers } from '../social/match-history-access';
+import { matchSummary } from './match-summary';
 
 function isAccountId(value: unknown): value is string {
   return typeof value === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(value);
@@ -45,18 +47,34 @@ export function createPlayerRouter(repository: Repository, authService: AuthServ
         response.status(404).json({ success: false, error: 'Player not found.' });
         return;
       }
-      if (account.id !== getRequestSession(response).account.id && !account.matchesPublic) {
-        response.status(403).json({ success: false, error: 'Match history is private.' });
+      if (!canViewMatchHistory(getRequestSession(response).account.id, account)) {
+        response.status(403).json({ success: false, error: MATCH_REPLAY_ERRORS.private });
         return;
       }
       const matches = await repository.listMatches(account.id);
-      const players: Record<string, PublicAccount> = {};
-      for (const id of new Set(matches.flatMap((match) => match.accountIds))) {
-        const player = await repository.getAccountById(id);
-        if (player) players[id] = publicProfile(player);
-      }
-      const history: MatchHistory = { matches, players };
+      const history: MatchHistory = { matches: matches.map(matchSummary), players: await matchPlayers(repository, matches) };
       response.json({ success: true, ...history });
+    })().catch(next);
+  });
+
+  router.get('/:accountId/history/:matchId/replay', (request, response, next) => {
+    const { accountId, matchId } = request.params;
+    if (!isAccountId(accountId)) {
+      response.status(400).json({ success: false, error: 'Invalid player ID.' });
+      return;
+    }
+    if (!isAccountId(matchId)) {
+      response.status(400).json({ success: false, error: 'Invalid match ID.' });
+      return;
+    }
+    void (async (): Promise<void> => {
+      const lookup = await findMatchReplay(repository, getRequestSession(response).account.id, accountId, matchId);
+      if (lookup.status !== 'found') {
+        response.status(lookup.status === 'private' ? 403 : 404)
+          .json({ success: false, error: MATCH_REPLAY_ERRORS[lookup.status] });
+        return;
+      }
+      response.json({ success: true, replay: lookup.replay });
     })().catch(next);
   });
 

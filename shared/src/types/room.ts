@@ -8,8 +8,8 @@ export type RoomCode = string;
 /** Game type */
 export type GameType = 'bridge' | 'bigtwo' | 'redpoints' | 'ninetynine' | 'sevens' | 'chinesepoker' | 'liarsdeck' | 'blackjack' | 'holdem' | 'napoleon';
 
-/** Room status */
-export type RoomStatus = 'waiting' | 'playing';
+/** Room status; a shared replay locks the room like a match until the host ends it. */
+export type RoomStatus = 'waiting' | 'playing' | 'replaying';
 
 /** Seat info */
 export interface SeatInfo {
@@ -63,6 +63,24 @@ export interface NapoleonOptions {
   readonly jokerSummon: boolean;
 }
 
+/** Host-controlled playback of a recorded match that every room member watches. */
+export interface RoomReplaySession {
+  readonly matchId: string;
+  /** Account whose match history the host shared it from; its permission is checked at start. */
+  readonly subjectId: string;
+  readonly gameType: GameType;
+  /** Host who started the session; control follows the current host. */
+  readonly startedBy: string;
+  /** Index of the final step; step 0 is the initial snapshot. */
+  readonly lastStep: number;
+  /** Step shown at `anchorAt` (server time); playback advances from there while `playing`. */
+  readonly anchorStep: number;
+  readonly anchorAt: number;
+  readonly playing: boolean;
+  /** Playback rate between `REPLAY_SPEED_MIN` and `REPLAY_SPEED_MAX`. */
+  readonly speed: number;
+}
+
 /** Room info (public) */
 export interface RoomInfo {
   /** Randomize occupied seats when the host starts; missing defaults to false. */
@@ -88,6 +106,8 @@ export interface RoomInfo {
   readonly hostId: string;
   readonly abortVote: AbortVoteInfo | null;
   readonly abortVoteCooldownUntil: number | null;
+  /** Present exactly while the status is `replaying`. */
+  readonly replay?: RoomReplaySession;
   /** Unseated human members in join order; added to snapshots only. */
   readonly spectators?: readonly PlayerInfo[];
   /**

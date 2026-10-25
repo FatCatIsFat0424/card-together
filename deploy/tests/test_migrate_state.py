@@ -1,4 +1,4 @@
-"""Verify that databases and account media move together without overwriting data."""
+"""Verify that databases, account media, and replays move together without overwriting data."""
 
 import importlib.util
 from pathlib import Path
@@ -12,13 +12,15 @@ SPEC.loader.exec_module(MODULE)
 
 
 class MigrateStateTests(unittest.TestCase):
-    def test_database_and_uploaded_media_are_copied_together(self):
+    def test_database_uploaded_media_and_replays_are_copied_together(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             legacy, current = root / 'legacy', root / 'current'
             (legacy / 'media/avatars').mkdir(parents=True)
             (legacy / 'database.json').write_text('{"accounts": []}')
             (legacy / 'media/avatars/account.png').write_bytes(b'avatar-content')
+            (legacy / 'replays').mkdir()
+            (legacy / 'replays/match.json').write_text('{"version": 1}')
             (legacy / '.metadata').write_text('metadata')
             self.assertTrue(MODULE.migrate(legacy, current))
             self.assertEqual((current / 'database.json').read_bytes(),
@@ -27,6 +29,9 @@ class MigrateStateTests(unittest.TestCase):
             self.assertTrue((current / '.metadata').exists())
             self.assertEqual(current.stat().st_mode & 0o777, 0o700)
             self.assertEqual((current / 'media/avatars/account.png').stat().st_mode & 0o777, 0o600)
+            self.assertEqual((current / 'replays/match.json').read_text(), '{"version": 1}')
+            self.assertEqual((current / 'replays').stat().st_mode & 0o777, 0o700)
+            self.assertEqual((current / 'replays/match.json').stat().st_mode & 0o777, 0o600)
             self.assertEqual(list(root.glob('.card-together-state-*')), [])
 
     def test_current_database_and_media_are_never_overwritten(self):

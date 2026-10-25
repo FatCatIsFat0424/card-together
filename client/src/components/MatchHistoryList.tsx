@@ -1,5 +1,5 @@
 import { gameSeatValue } from '@shared/rules/seats';
-import { useId, useState } from 'react';
+import { lazy, Suspense, useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
@@ -19,6 +19,8 @@ import { PlayerLink } from './PlayerLink';
 import { MatchHistoryStatistics } from './MatchHistoryStatistics';
 import { AppIcon } from './AppIcon';
 import styles from './MatchHistoryList.module.css';
+
+const MatchReplayDialog = lazy(() => import('./MatchReplayDialog').then((module) => ({ default: module.MatchReplayDialog })));
 
 function signed(value: number): string {
   return value > 0 ? `+${value}` : String(value);
@@ -94,6 +96,7 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
   const [outcome, setOutcome] = useState<MatchOutcome | 'all'>('all');
   const [sortKey, setSortKey] = useState<HistorySortKey>('date');
   const [direction, setDirection] = useState<SortDirection>('desc');
+  const [replayMatch, setReplayMatch] = useState<MatchSummary | null>(null);
   const subjectId = accountId ?? viewerId;
   const visibleMatches = selectHistoryMatches(matches, players, {
     accountId: subjectId, query, gameType, outcome, sortKey, direction, locale,
@@ -176,6 +179,7 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
           {sortColumn('game', t('history.game'))}
           {sortColumn('result', t('history.result'))}
           <th scope="col">{t('history.players')}</th>
+          <th scope="col">{t('replay.actions')}</th>
         </tr></thead>
         <tbody>{visibleMatches.map((match) => {
           const value = matchOutcome(match, subjectId);
@@ -196,13 +200,21 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
                   seat: seatLabel(t, match.result.gameType, resultSeats(match.result)[index]) })}</span>
                 : players[id] && <PlayerLink key={id} player={players[id]} />)}
             </div></td>
+            <td>{match.hasReplay && subjectId
+              ? <button type="button" className={`btn btn-outline ${styles.replayButton}`}
+                onClick={() => setReplayMatch(match)}>{t('replay.open')}</button>
+              : <span className={styles.unavailable}>{t('replay.unavailable')}</span>}</td>
           </tr>;
         })}
-          {visibleMatches.length === 0 && <tr><td colSpan={5} className={styles.noResults}>
+          {visibleMatches.length === 0 && <tr><td colSpan={6} className={styles.noResults}>
             {t('history.noResults')}
           </td></tr>}
         </tbody>
       </table>
     </div>
+    {replayMatch && subjectId && <Suspense fallback={<p role="status">{t('replay.loading')}</p>}>
+      <MatchReplayDialog key={replayMatch.id} match={replayMatch} players={players}
+        accountId={subjectId} onClose={() => setReplayMatch(null)} />
+    </Suspense>}
   </div>;
 }

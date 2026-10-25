@@ -9,6 +9,7 @@ import { createAuthRouter } from './http/auth-routes';
 import { createFriendRouter } from './http/friend-routes';
 import { createMessageRouter } from './http/message-routes';
 import { createPlayerRouter } from './http/player-routes';
+import { matchSummary } from './http/match-summary';
 import { createMediaRouter } from './http/media-routes';
 import { createEmojiRouter } from './http/emoji-routes';
 import { createMediaStore } from './media/media-store';
@@ -23,6 +24,7 @@ import { getRoomMemberIds } from './managers/room-manager';
 import { setSevensDevPreset } from './managers/game-manager';
 import { createVoiceManager } from './managers/voice-manager';
 import { createFriendService } from './social/friend-service';
+import { findMatchReplay, matchPlayers } from './social/match-history-access';
 import type { TypedServer } from './socket/context';
 import { setupConnectionHandler, updateConnectedProfile } from './socket/connection';
 
@@ -79,6 +81,11 @@ export async function createApplication(repository: Repository, options: Applica
     io, auth, runtime, voice: createVoiceManager(), friends: createFriendService(repository),
     listEmojis: (accountId: string) => repository.listEmojis(accountId),
     providedEmojis: options.providedEmojis ?? new Map(),
+    matchReplays: {
+      find: (viewerId: string | null, subjectId: string, matchId: string) =>
+        findMatchReplay(repository, viewerId, subjectId, matchId),
+      players: (matches: Parameters<typeof matchPlayers>[1]) => matchPlayers(repository, matches),
+    },
   };
   const stopConnections = setupConnectionHandler(context);
   const stopCoinUpdates = runtime.subscribeCoinRewards((accountIds) => {
@@ -114,7 +121,7 @@ export async function createApplication(repository: Repository, options: Applica
   app.use('/api/emojis', createEmojiRouter(repository, auth, mediaExists));
   app.get('/api/account/history', requireSession(auth), (_request, response, next) => {
     void repository.listMatches(getRequestSession(response).account.id)
-      .then((matches) => response.json({ success: true, matches })).catch(next);
+      .then((matches) => response.json({ success: true, matches: matches.map(matchSummary) })).catch(next);
   });
   app.use('/api', (_request, response) => response.status(404).json({ success: false, error: 'Not found.' }));
   app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {

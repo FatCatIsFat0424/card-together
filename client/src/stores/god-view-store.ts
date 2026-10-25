@@ -1,6 +1,6 @@
 // ─── God View Store: other seats' hands for spectators and eliminated players ───
 
-import { create } from 'zustand';
+import { scopedStore } from './scoped-store';
 import type { Card, LiarCard, NapoleonCard, ObserverRole, PlayerVisibleGameState, GameSeat } from '@shared/types';
 import { retainSnapshotValue } from './snapshot-equality';
 
@@ -46,7 +46,7 @@ interface GodViewStore extends GodView {
   update: (visible: PlayerVisibleGameState | null, locked: boolean) => void;
 }
 
-export const useGodViewStore = create<GodViewStore>((set) => ({
+export const useGodViewStore = scopedStore<GodViewStore>((set) => ({
   ...HIDDEN_GOD_VIEW,
   update: (visible, locked) => set((state) => {
     const current: GodView = { role: state.role, hands: state.hands, covered: state.covered,

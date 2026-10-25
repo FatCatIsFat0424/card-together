@@ -9,6 +9,7 @@ import * as roomManager from '../managers/room-manager';
 import { registerRoomHandlers } from './room-handler';
 import { registerGameHandlers, systemLine } from './game-handler';
 import { registerChatHandlers } from './chat-handler';
+import { registerReplayHandlers } from './replay-handler';
 import { leaveVoice, reconcileVoiceMembership, registerVoiceHandlers } from './voice-handler';
 
 interface RateWindow {
@@ -77,6 +78,7 @@ export function setupConnectionHandler(context: SocketContext): () => void {
     });
 
     registerRoomHandlers(context, socket);
+    registerReplayHandlers(context, socket);
     registerGameHandlers(context, socket);
     registerChatHandlers(context, socket);
     registerVoiceHandlers(context, socket);
