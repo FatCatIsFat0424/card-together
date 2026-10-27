@@ -107,7 +107,7 @@
 
 ## 資料庫
 
-介面：[`Repository`](../server/src/database/repository.ts)、[schema](../server/src/database/schema.ts)、[migration](../server/src/database/migrations.ts)。
+介面：[`Repository`](../server/src/database/repository.ts)、[schema](../server/src/database/schema.ts)、[migration](../server/src/database/migrations.ts)。兩種[儲存引擎](#儲存引擎)實作同一個介面，並共用相同的版本號碼與資料規則。
 
 | Schema 版本 | 變更 |
 | --- | --- |
@@ -117,7 +117,8 @@
 | 4 | 牌背與圖片透明度的預設值，維持原本的外觀 |
 | 1–3 | 啟動時 migration |
 
-- 啟動時會 migration 較舊的版本、驗證結果，並先把原檔另存為 `database.json.v<version>.bak`。較早的伺服器會拒絕 v7 檔案；回復需要完整且相容的備份，並會遺失該備份之後的寫入。
+- JSON：啟動時會 migration 較舊的版本、驗證結果，並先把原檔另存為 `database.json.v<version>.bak`。較早的伺服器會拒絕 v7 檔案；回復需要完整且相容的備份，並會遺失該備份之後的寫入。
+- SQLite：版本記錄在 `PRAGMA user_version`，從 v7 開始。schema 版本變更時，[SQLite migration](../server/src/database/sqlite-schema.ts) 必須同時加入一個步驟；啟動時先以 `VACUUM INTO` 另存 `database.sqlite.v<version>.bak`，再在一個 transaction 內套用。較舊的 JSON 文件先經過 JSON migration 才匯入。
 - 無效的 JSON、版本、重複資料或參照會讓啟動停止，且不會動到檔案。
 
 | Collection | 內容 |
@@ -134,16 +135,15 @@
 
 | 位置 | 路徑 |
 | --- | --- |
-| 開發 | `server/data/database.json`（覆寫：[`DATABASE_PATH`](development.md#設定)） |
-| 正式環境 | `/var/lib/card-together/database.json` |
+| 開發 | `server/data/database.json`；SQLite 為 `server/data/database.sqlite`（覆寫：[`DATABASE_ENGINE`、`DATABASE_PATH`](development.md#設定)） |
+| 正式環境 | `/var/lib/card-together/database.json`（仍使用 JSON，見 [SQLite 切換](#sqlite-切換)） |
 | 圖片 | 資料庫旁的 `media/`：以內容定址的檔案，加上 `media/owners/` 配額標記 |
 | 回放 | 資料庫旁的 `replays/`：每場已錄製對局一個 `<match ID>.json` 封存 |
 
 **寫入與復原行為**
 
-- 儲存時使用精簡的 JSON，以減少序列化與寫入磁碟的工作。縮排過的 JSON 仍可讀取；schema、備份與還原程序不變。
-- 每個 JSON 檔由一個程序獨占。重複路徑的防護只在同一程序內有效，不是跨程序的鎖。
-- 每次寫入都會序列化並驗證，在同一個目錄寫入暫存檔並 fsync，再重新命名。成功後才更新記憶體；斷電時的持久性也取決於檔案系統。
+- 每個資料庫檔由一個程序獨占。重複路徑的防護只在同一程序內有效，不是跨程序的鎖。
+- 兩種引擎都在寫入持久化之後才完成 Promise；失敗時資料與記憶體都維持原狀。細節見[儲存引擎](#儲存引擎)。
 - runtime 與已完成的對局在回覆與廣播前一起 commit。
 - [`AnyGameState`](../shared/src/types/game.ts) 中以對局為範圍的 `autoPlaySeats` 會保存自願的電腦代打，不改變真人玩家的身分。舊快照缺少此欄位代表關閉。切換使用和遊戲操作相同的 commit／回復流程；排程工作只從已 commit 的狀態重建，並在取回控制權時取消。
 - 選填的 `earlyLeaveSeats` 記錄自動代打座位中，已確認提早離開的那些座位。所有對局接收者都看得到，重新連線與重新啟動後仍保留，該座位停止代打時清除。沒有這個欄位的舊快照沒有離開標記。
@@ -151,11 +151,57 @@
 - 移除空房間會刪除它的遊戲與聊天，但不刪除歷史紀錄。每個房間的聊天保留 200 則訊息。語音從不儲存。
 - 開發用的狀態檔被 Git 忽略，也從不以靜態檔案提供；圖片透過媒體 endpoint 取得。
 
+### 儲存引擎
+
+`DATABASE_ENGINE` 選擇引擎，預設 `json`；`DATABASE_PATH` 的副檔名必須相符（`.json` 或 `.sqlite`），否則啟動會停止（[設定](development.md#設定)）。
+
+| | JSON（[adapter](../server/src/database/json-repository.ts)） | SQLite（[adapter](../server/src/database/sqlite-repository.ts)） |
+| --- | --- | --- |
+| 儲存 | 一份精簡的 JSON 文件，常駐記憶體 | Node.js 內建 `node:sqlite`，資料留在檔案中，以索引查詢 |
+| 每次寫入 | 驗證並序列化整份文件，寫入暫存檔、fsync、重新命名 | 一個 `BEGIN IMMEDIATE` transaction，只寫入變更的列 |
+| 寫入時的驗證 | 整份文件（runtime 錄製只檢查結構） | 只檢查要寫入的紀錄與它們的參照 |
+| 持久性 | fsync 後才完成 | WAL 搭配 `synchronous=FULL`：每次 commit 都 fsync WAL 後才完成 |
+| 附屬檔案 | 寫入中的 `.tmp` 暫存檔 | 開啟期間的 `database.sqlite-wal` 與 `-shm` |
+
+兩種引擎共用同一套帳號規則、保留規則與回放儲存區，回放封存與媒體都維持在資料庫旁的檔案。
+
+**SQLite schema**（[DDL](../server/src/database/sqlite-schema.ts)、[讀寫](../server/src/database/sqlite-store.ts)）
+
+| 資料表 | 內容 |
+| --- | --- |
+| `accounts` | 唯一的帳號 ID 與正規化使用者名稱、搜尋用的小寫暱稱、密碼雜湊，以及其餘欄位（金幣、每日獎勵、成就、物品欄、裝備）的 JSON 紀錄 |
+| `account_activity` | 最後上線時間；與帳號紀錄分開，runtime commit 不必重寫帳號 |
+| `sessions`、`friendships`、`emojis` | 欄位化的紀錄；好友配對、權杖摘要、每個帳號的表情符號名稱都是唯一鍵 |
+| `matches`、`match_participants` | 每場對局一列 JSON 結果與回放旗標；參與者依帳號與完成時間建立索引 |
+| `direct_messages`、`message_reads`、`friend_notifications` | 私訊 JSON 紀錄與寄件者／用戶端 ID 唯一鍵；刪除訊息時已讀游標一併刪除 |
+| `rewarded_games` | 已發放獎勵的遊戲 ID |
+| `runtime_state`、`runtime_players`、`runtime_rooms`、`runtime_games`、`runtime_chat` | 每位玩家、每個房間、每場遊戲與每個房間聊天各一列 JSON，加上一列記錄順序 |
+
+- 帳號以外的參照使用外鍵；bot 參與者沒有帳號，所以參與者表不設外鍵，改在寫入時檢查。
+- `seq` 欄保留插入順序，查詢結果的排序與 JSON 陣列相同。檔案標頭的 `application_id` 標記這是 Card Together 的資料庫；其他 SQLite 檔或較新版本會被拒絕，且不會被修改。新檔案的權限為 `0600`。
+
+**SQLite transaction 與驗證**
+
+- 所有操作依呼叫順序排隊，讀取會等待先前的寫入。每次寫入都是一個 `BEGIN IMMEDIATE` transaction；任何錯誤（包括 commit 失敗）都會 `ROLLBACK`。
+- `saveRuntime` 在同一個 transaction 中發放獎勵與收據、推進最後上線時間、寫入對局並套用保留規則，最後驗證並寫入 runtime。runtime 先轉成各列 JSON，只寫入和上次 commit 不同的列；這份「已 commit 列」的紀錄只在 commit 成功後更新。
+- 寫入時只驗證這次寫入的紀錄，沿用 JSON 的單筆驗證函式；runtime 會完整檢查結構，但帳號參照只檢查有變化的列。唯一性與參照由 schema 的限制保證。
+- 啟動時讀出整份文件，執行和 JSON 相同的完整驗證（包括套用 runtime 錄製步驟）、丟棄無法套用的錄製、套用對局保留規則（先以 `VACUUM INTO` 備份到 `.match-history-<UUID>.bak/`），並清理回放目錄。
+- 連線設定：`foreign_keys=ON`、`busy_timeout` 5 秒、預先編譯並重複使用的 statement。
+
+**從 JSON 匯入**
+
+[`importJsonDocument`](../server/src/database/sqlite-import.ts) 是程式庫函式，尚未提供 CLI：
+
+- 先執行 JSON migration 與完整驗證，再於一個 transaction 中寫入所有 collection，保留 ID、雜湊、到期時間、媒體參照與順序。
+- 從不覆寫：重複的鍵、好友配對或已存在的 runtime 會以 `IMPORT_CONFLICT` 拒絕整次匯入，目標不變。
+- 寫入後比對數量、外鍵、合併後的唯一性與參照，並確認每一筆匯入的紀錄讀回時完全相同。
+- 呼叫前必須停止兩個資料庫的所有寫入者。回放封存與媒體不會複製；它們必須位在 SQLite 檔旁的 `replays/` 與 `media/`。
+
 ### 回放封存
 
 介面：[`MatchReplay`](../shared/src/types/replay.ts)、[儲存區](../server/src/database/replay-store.ts)、[`MAX_MATCHES_PER_ACCOUNT`](../server/src/database/repository.ts)。
 
-- 封存存放在 `database.json` 之外，所以寫入時從不讀取、驗證或重寫它們。對局紀錄只保留 `hasReplay: true`。含有內嵌 `replay`（未發布的開發格式）的資料庫會在啟動時被拒絕。
+- 封存存放在資料庫之外，所以寫入時從不讀取、驗證或重寫它們。對局紀錄只保留 `hasReplay: true`。含有內嵌 `replay`（未發布的開發格式）的資料庫會在啟動時被拒絕。
 - 檔名是經過驗證的對局 ID（`[A-Za-z0-9_-]`，最多 128 個字元）。每個檔案只寫入一次，在標記該對局的 commit 之前，以 `0600` 暫存檔寫入、fsync 並重新命名；目錄權限為 `0700`。
 - 每個帳號只能列出並回放自己最近 100 場已完成的對局，包括有 bot 與未錄製的遊戲。只要還有任何真人參與者保留該對局，共用的結果與封存就會繼續保存；bot 身分從不延長保留期限。完成時間相同時保留資料庫的寫入順序。對局 commit 會以原子操作刪除過期的結果，並在資料寫入成功後才移除對應的封存檔。
 - 啟動時對既有資料套用相同的保留規則，並在替換前把資料庫、旁邊的媒體與回放封存備份到私人的 `.match-history-<UUID>.bak/`。備份失敗時會中止啟動，不清除任何結果或封存。
@@ -164,7 +210,7 @@
 
 ## 備份與還原
 
-**備份**：停止所有寫入者，再複製整個狀態目錄（`database.json`、`media/` 與 `replays/`）。備份包含密碼雜湊與私人手牌：請妥善保密，並在另一台主機保留一份副本。正式環境快照：[部署](deployment.md#備份)。
+**備份**：停止所有寫入者，再複製整個狀態目錄（`database.json` 或 `database.sqlite`，連同存在時的 `-wal`、`-shm`，以及 `media/` 與 `replays/`）。備份包含密碼雜湊與私人手牌：請妥善保密，並在另一台主機保留一份副本。正式環境快照：[部署](deployment.md#備份)。
 
 **還原**：
 
@@ -176,7 +222,7 @@
 
 ## 維護工具
 
-兩個工具都是離線執行，並有相同的需求：
+兩個工具都是離線執行，目前只支援 JSON 資料庫，並有相同的需求：
 
 - 先停止**所有資料庫寫入者**，並保留完整的資料庫、媒體與回放備份。這會讓玩家斷線。`--writers-stopped` 只是確認這件事；它不會停止也不會偵測服務。
 - 明確傳入設定的資料庫路徑。檔案必須使用目前的 schema，且必須是一般檔案，不能有符號連結或硬連結；較舊的資料請先透過一次有備份的正常啟動升級。
@@ -228,20 +274,10 @@ npm run cleanup:match-history -- /absolute/path/database.json --apply --writers-
 - 套用時會建立私人的 `.match-history-<UUID>.bak/` 目錄，內含 `database.json`，以及旁邊 `media/` 與 `replays/`（若存在）的副本。備份失敗時資料庫不會被動到。接著以原子操作替換 `matches`，並只移除過期的回放檔。
 - 帳號、工作階段、獎勵、好友、訊息、媒體與可恢復的 runtime 都不變。第二次執行不會有任何效果。重新啟動後，確認登入、歷史紀錄、回放與遊戲恢復都正常。
 
-## 未來的 SQL adapter
+## SQLite 切換
 
-尚未實作。adapter 必須保留：
+第一階段已完成：SQLite adapter、匯入函式，以及在兩種引擎上執行的 repository、auth、social、runtime、持久化與金幣測試。正式環境的切換屬於第二階段，**尚未進行**；在那之前正式環境繼續使用 JSON。遷移 CLI、部署腳本的備份與還原、維護工具的 SQLite 支援與切換程序都還沒有實作，請不要自行在正式環境設定 `DATABASE_ENGINE=sqlite`。
 
-- 非同步 Repository 介面、公開 DTO，以及使用者名稱與好友配對的原子限制。
-- 以 compare-and-swap 更新密碼、撤銷工作階段，以及 runtime 與歷史紀錄的原子寫入。
-- 帶版本的 JSON/JSONB runtime 沒有問題；多程序的房間協調需要另外設計。
-
-Migration：
-
-1. 讓 repository、auth、social 與 runtime 測試在 adapter 上通過。
-2. 停止寫入；備份並驗證 JSON。
-3. 在一個 transaction 中匯入所有 collection，保留 ID、雜湊、到期時間與媒體參照；遇到衝突時拒絕，而不是覆寫。
-4. 比對數量、唯一性與參照；確認登入、歷史紀錄、好友、媒體與恢復功能。
-5. 驗證完成後才切換 repository 並恢復流量。
-
-SQL 開始接受寫入後，JSON 備份就已過時：回復時必須匯出較新的資料。沒有 transaction 設計前，不要加入雙重寫入。
+- 切換仍須遵守原則：停止寫入、備份並驗證 JSON、匯入、比對數量與參照，並確認登入、歷史紀錄、好友、媒體與恢復功能後，才恢復流量。
+- SQLite 開始接受寫入後，JSON 備份就已過時：回復時必須匯出較新的資料。不要加入雙重寫入。
+- 多程序的房間協調需要另外設計。

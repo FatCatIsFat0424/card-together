@@ -23,7 +23,7 @@
 | `bots/` | 各遊戲的啟發式策略，只使用 bot 自己過濾後的視角；各遊戲的 bot registry（困難、簡單、第一個合法動作、逾時與共用截止時間的預設動作） |
 | `managers/`、`managers/games/` | 玩家、房間、遊戲、聊天、語音狀態；各遊戲模組、adapter 與 adapter registry |
 | `engine/` | 純函式的橋牌牌組、叫牌、出牌、計分 |
-| `database/`、`media/` | 非同步 Repository、JSON adapter、migration、索引、每場對局的回放檔；以內容定址的圖片 |
+| `database/`、`media/` | 非同步 Repository、JSON 與 SQLite adapter、共用的帳號規則、migration、索引、每場對局的回放檔；以內容定址的圖片 |
 | `client/src/pages/`、`components/` | 延遲載入的路由與 CSS Modules UI |
 | `client/src/hooks/`、`stores/` | 帳號與 Socket 生命週期；Zustand 快照與偏好設定 |
 | `client/src/games/` | 共用牌桌外框，以及各遊戲資料夾；`registry.ts`（輕量的純資料與函式）與 `ui-registry.ts`（元件、牌桌）依遊戲型別查詢 |
@@ -46,7 +46,7 @@
 - 儲存失敗會還原快照。沒有變化的 resume 可以跳過寫入，但仍會驗證身分並同步。
 - `getRecipientVisibleState` 依接收者過濾手牌與合法選項。觀戰者另外會收到 `observedHands`（21 點還有 `observedHole`）；見[旁觀者](games/common.md#旁觀者與上帝視角)。bot 和自動操作只看得到自己過濾後的視角。
 - 聊天紀錄依接收者過濾。
-- 每次寫入仍會驗證並序列化整份 JSON 文件。記憶體索引、限定範圍的廣播與未變更狀態檢查可以減少工作量，但**不**支援多個伺服器程序。
+- 寫入成本取決於[儲存引擎](storage.md#儲存引擎)：JSON adapter 每次寫入都會驗證並序列化整份文件；SQLite adapter 只驗證並寫入這次變更的紀錄，以及內容有變化的玩家、房間、遊戲與聊天列。兩者都**不**支援多個伺服器程序。
 - 私訊和好友通知直接使用 Repository transaction，與房間快照無關。HTTP 在資料寫入後對受影響的帳號送出 `social:changed`；用戶端再透過需驗證的 endpoint 重新載入。保留期限與權限：[儲存](storage.md#身分與工作階段)。
 
 | 生命週期 | 行為 |

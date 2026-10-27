@@ -91,7 +91,7 @@ python3 -B -m unittest discover -s deploy/tests
 | --- | --- |
 | 規則與 bot | 精確的合法動作、輸入不被修改、依接收者的隱私；650 手排牌與 163 場固定種子的完整對局；加權選擇 |
 | 登入憑證 | 真實的雜湊與驗證、長度上限、對不存在的使用者執行假雜湊、2 個執行中／16 個等待中的佇列、在金鑰推導前套用速率限制 |
-| 持久化與金幣 | 延後 commit、回復與重試、不提早廣播、過時的工作、重新開啟與重播、同時進行的購買／獎勵版本、原子批次 |
+| 持久化與金幣 | 延後 commit、回復與重試、不提早廣播、過時的工作、重新開啟與重播、同時進行的購買／獎勵版本、原子批次。Repository、auth、social、金幣、回放與 runtime 持久化套件透過 [`tests/helpers/repository-adapters.ts`](../server/tests/helpers/repository-adapters.ts) 在 JSON 與 SQLite 上各執行一次；SQLite 另測 pragma、transaction 回復、匯入往返與衝突 |
 | 媒體 | 真實的動態 GIF 上傳與提供的位元組；寫入、重新命名與擁有權失敗；配額；佇列復原 |
 | 匯入與建置產物 | 各匯入工具的輸入、輸出、旗標、鎖與安全性；真實的 GIF 與動態 WebP 壓縮，包括無法壓進上限的輸入；失效處理；拒絕符號連結與 FIFO；SIGKILL 後復原；建置雜湊與 base 驗證 |
 | 用戶端 | 帳號 generation 競態、API 失敗與 401 epoch、canvas 裁切與清理、零尺寸幾何、雙語規則、好友排序 |
@@ -108,6 +108,6 @@ python3 -B -m unittest discover -s deploy/tests
 - 冷啟動與熱啟動分開回報，最好以三次樣本的中位數與範圍呈現。
 - Vitest 各檔案的時間彼此重疊；不要加總成整個測試套件的時間。
 - 正確性測試從不斷言效能期限。
-- Load（`bench:load`）：受測伺服器在獨立程序中執行，用戶端的工作不會影響它的量測。報告包含各事件的 acknowledgement 延遲 p50/p95/p99、超出 10 ms 取樣間隔的 event loop 延遲、Repository 寫入次數、服務時間、佇列等待、每次寫入的位元組數與忙碌比例、RSS、heap，以及量測期間的 CPU 時間。量測結束後，會在無負載下對最終資料庫計時一次完整文件寫入（驗證、stringify、編碼、寫入＋fsync＋rename）。
+- Load（`bench:load`）：受測伺服器在獨立程序中執行，用戶端的工作不會影響它的量測。報告包含各事件的 acknowledgement 延遲 p50/p95/p99、超出 10 ms 取樣間隔的 event loop 延遲、Repository 寫入次數、服務時間、佇列等待、每次寫入的位元組數（JSON 為檔案大小；SQLite 為 `/proc/self/io` 的 `write_bytes` 增量）與忙碌比例、RSS、heap，以及量測期間的 CPU 時間。量測結束後，會在無負載下計時一次寫入：JSON 為完整文件寫入（驗證、stringify、編碼、寫入＋fsync＋rename）；SQLite 為量測結束時的 runtime（驗證、序列化、只改一場遊戲的 commit、重寫整個 runtime 的 commit）。
 - 100 人、10 分鐘的目標：ack p95 ≤ 150 ms、p99 ≤ 500 ms、event loop 延遲 p99 ≤ 50 ms、RSS < 768 MiB、沒有錯誤或非預期斷線。基準測試會回報這些目標，但從不為了達標調整工作負載。
 - 請求逾時為 30 秒；報告另外計算超過瀏覽器 10 秒逾時的 ack。只比較選項、資料庫大小與主機負載都相同的執行結果。

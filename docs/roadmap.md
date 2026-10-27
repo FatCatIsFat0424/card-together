@@ -27,7 +27,7 @@
 | 維運 | 部署鎖、回復程序、systemd 安全限制、健康檢查端點與每日同機快照（[部署](deployment.md)） | 異地副本與還原證據、告警／就緒檢查、事故與客服值勤、實測容量與持續成本 |
 | 媒體 | 上傳額度、以內容雜湊定址的檔案、官方原創 SVG 外觀、可選 WebRTC（[媒體](media.md)） | 授權清冊、安全解碼、審核／下架、保存／清理、跨網路語音驗證與中繼成本控制 |
 
-JSON 已提供整份檔案的原子提交，但沒有通用 SQL transaction 或跨 process 的房間協調能力。有人數上限的免費試營運，不必一開始就遷移 SQL。付費帳務需要經過審查、能可靠保存資料的交易設計，建議優先考慮 [SQL adapter](storage.md#未來的-sql-adapter)。僅換成 SQL，仍不足以讓有狀態的遊戲伺服器安全地跨多個 process 運作。
+JSON 已提供整份檔案的原子提交，但沒有通用 SQL transaction 或跨 process 的房間協調能力。已實作的 [SQLite adapter](storage.md#儲存引擎) 提供逐列寫入的 transaction，正式環境切換尚待進行（[SQLite 切換](storage.md#sqlite-切換)）。付費帳務需要經過審查、能可靠保存資料的交易設計。僅換成 SQL，仍不足以讓有狀態的遊戲伺服器安全地跨多個 process 運作。
 
 ## 產品與盈利原則
 

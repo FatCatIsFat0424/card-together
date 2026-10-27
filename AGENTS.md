@@ -40,8 +40,9 @@ Authoritative project rule set; `CLAUDE.md` references it.
   cross-manager changes go through the Socket context or runtime coordinator.
 - Socket handlers validate payloads, authenticate every action, and require callbacks.
   Mutations acknowledge and broadcast only after persistence succeeds; failures restore state.
-- Keep the asynchronous Repository contract and its atomic constraints. One process
-  owns each JSON database. Voice and presence signaling stay ephemeral.
+- Keep the asynchronous Repository contract and its atomic constraints on every storage
+  engine (JSON, SQLite). One process owns each database. Voice and presence signaling stay
+  ephemeral.
 - TypeScript style: module functions rather than custom classes, named exports, typed
   parameters and returns, `unknown` with narrowing instead of `any`, readonly inputs
   where callers must not be mutated.
