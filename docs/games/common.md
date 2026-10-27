@@ -1,131 +1,100 @@
-# Shared game rules
+# 共通規則
 
-- Standard seats N/E/S/W. Clockwise is N → E → S → W; counterclockwise is N → W → S → E.
-- Seated players see only their own hand; [observers](#spectators-and-god-view) see more.
+- 標準座位為 N/E/S/W。順時針是 N → E → S → W；逆時針是 N → W → S → E。
+- 入座玩家只看得到自己的手牌；[觀戰者](#旁觀者與上帝視角)看得到更多。
 
-## Shared room lifecycle
+## 房間流程
 
-| Stage | Behavior |
+| 階段 | 行為 |
 | --- | --- |
-| Waiting | Everyone seated, including the host, can prepare at any player count. Readiness never starts a match; the host separately presses Start after all occupied seats are ready and the player count is valid |
-| Player counts | Ninety-Nine, Blackjack, and Hold'em support 2–8 occupied seats, Napoleon 4–6; other games require N/E/S/W. At least one seated human is required. Empty configured seats do not block a flexible game |
-| Extra seats | Flexible rooms can add P5/P6/P7/P8 (Napoleon P5/P6). Turn order continues after W and skips unoccupied seats; empty seats receive no cards, chips, turns, results, or history entries |
-| Shuffle seats | Available for every game, off by default. At start, shuffle humans among their occupied positions; bots keep their seats and empty seats remain empty. Seat changes and the game commit together |
-| Readiness | Sitting, standing, leaving, adding or removing bots, and option changes clear human readiness; changing only the Sevens effect keeps it |
-| Finished | Each human returns with Continue; others keep the result until everyone returns or the next match starts |
-| Leave or reconnect expiry | Leaving, or not reconnecting within 60 seconds, aborts an unfinished match |
-| History | Completed results persist under the [history retention policy](../storage.md#replay-archives) |
+| 等待中 | 所有入座者（包括房主）在任何人數下都可以準備。準備不會自動開始對局；所有有人的座位都準備好且人數合法後，房主要另外按「開始」 |
+| 人數 | 99、21 點與德州撲克支援 2–8 個有人座位，拿破崙 4–6 個；其他遊戲需要坐滿 N/E/S/W。至少要有一位真人入座。人數彈性的遊戲不會因為已設定的空位而無法開始 |
+| 額外座位 | 人數彈性的房間可以加開 P5/P6/P7/P8（拿破崙為 P5/P6）。出牌順序在 W 之後接續，並跳過沒人的座位；空位不會拿到牌、籌碼、回合、結果或歷史紀錄 |
+| 隨機座位 | 每款遊戲都可使用，預設關閉。開始時，真人玩家會在各自占用的位置之間洗牌；bot 留在原座位，空位仍是空位。座位變動和遊戲一起 commit |
+| 準備狀態 | 入座、起身、離開、新增或移除 bot、變更選項都會清除真人的準備狀態；只改牌七的特效則不會 |
+| 對局結束 | 每位真人按「繼續」回到房間；其他人會繼續看到結果，直到所有人都返回或下一局開始 |
+| 離開或重新連線逾時 | 離開，或 60 秒內沒有重新連線，會中止未結束的對局 |
+| 歷史紀錄 | 已完成的結果依照[歷史保留規則](../storage.md#回放封存)保存 |
 
-**Abort votes**
+**投票終止**
 
-- Seated humans propose and vote; the proposer votes yes automatically. Bots never vote.
-- Passing needs `min(3, seated humans)` votes, including humans in additional seats;
-  a lone human ends the match immediately.
-- A vote lasts 60 seconds. Starting one sets a three-minute cooldown that remains after
-  failure or expiry. Success returns the room to waiting and clears the cooldown.
+- 入座的真人可以發起與投票；發起者自動投同意。bot 從不投票。
+- 通過需要 `min(3, 入座真人數)` 票，額外座位上的真人也算在內；只有一位真人時，發起即直接結束對局。
+- 投票持續 60 秒。發起後進入三分鐘冷卻，投票失敗或到期後冷卻仍會保留。投票通過時房間回到等待中，並清除冷卻。
 
-## Spectators and god view
+## 旁觀者與上帝視角
 
-- Up to [eight spectators](../../shared/src/constants/game-rules.ts) besides the seats. Any
-  member without a seat is a spectator; joining and invitations work during a match.
-- While waiting, spectators may take an empty seat and seated humans may stand up.
-- Spectators have no play or vote controls and leave via game info. Their departure never
-  aborts a match; Continue dismisses their finished board.
-- Observers choose which seat sits at the bottom (click a plate, avatar, or name, or focus
-  it and press Enter or Space). This rotates only their view until they leave.
+- 除了座位以外，最多可有[八位旁觀者](../../shared/src/constants/game-rules.ts)。沒有座位的成員就是旁觀者；對局進行中也能加入與邀請。
+- 等待中，旁觀者可以坐到空位，入座的真人也可以起身。
+- 旁觀者沒有出牌或投票控制項，從遊戲資訊離開。旁觀者離開從不會中止對局；按「繼續」會關閉他們的結算畫面。
+- 觀戰者可以選擇哪個座位顯示在畫面下方（點擊名牌、頭像或名稱，或聚焦後按 Enter 或空白鍵）。這只會旋轉自己的視角，直到離開為止。
 
-| Observer | God view |
+| 觀戰者 | 上帝視角 |
 | --- | --- |
-| Spectator | All hands |
-| Permanently eliminated player | All hands: Ninety-Nine bust, Liar's Deck death, Hold'em out of chips, house-dealer Blackjack unable to cover the minimum |
-| Hold'em folded player | None |
+| 旁觀者 | 所有手牌 |
+| 永久淘汰的玩家 | 所有手牌：99 爆掉、騙子酒館中彈、德州撲克輸光籌碼、由系統當莊的 21 點無法支付最低下注 |
+| 德州撲克已棄牌的玩家 | 無 |
 
-- Observed hands appear face up beside each plate, in two overlapping rows when long.
-  Blackjack dealer and Hold'em hole cards use dashed outlines.
-- Stock order, bullet position, and undealt cards stay hidden from everyone.
-- Sevens observers see every covered pile and penalty; seated players see only their own
-  covers until settlement.
-- Elimination grants god view, and switches chat and voice channels, only after its
-  presentation frame ([timeline](../architecture.md#presentation-timeline)).
-- Observer chat (`audience: 'observers'`) reaches observers only. Seated players have
-  their own channel and do not hear observers in voice; all chat becomes visible after settlement.
+- 觀戰時，手牌會正面朝上顯示在各名牌旁，牌多時分成兩列重疊排列。21 點莊家的底牌與德州撲克的底牌以虛線外框標示。
+- 牌堆順序、子彈位置與尚未發出的牌對所有人都保持隱藏。
+- 牌七的觀戰者看得到每一疊蓋牌與罰分；入座玩家在結算前只看得到自己的蓋牌。
+- 淘汰後要等該淘汰的呈現畫格播完，才會取得上帝視角並切換聊天與語音頻道（[時間軸](../architecture.md#呈現時間軸)）。
+- 觀戰者聊天（`audience: 'observers'`）只有觀戰者收得到。入座玩家有自己的頻道，語音中也聽不到觀戰者；結算後所有聊天內容都會公開。
 
-## Turn timer
+## 出牌計時
 
-| Clock | Rule |
+| 計時 | 規則 |
 | --- | --- |
-| Default | A fresh 300 seconds per turn, then the player's 300-second reserve for the deal |
-| Unused allowance | Never added to the reserve |
-| Settings | Host only, while waiting: 1–300 seconds allowance plus 0–300 seconds reserve ([shared limits](../../shared/src/time-control.ts)) |
-| Display | Own plate shows allowance and reserve; others show allowance only while acting |
-| Animations | Consume no time |
-| Disconnect | Neither pauses clocks nor extends the reconnect window |
-| New deal | Refills reserves, including each Liar's Deck round and each Blackjack or Hold'em hand |
+| 預設 | 每回合重新給 300 秒，用完後扣該玩家這一局的 300 秒時間庫 |
+| 未用完的回合時間 | 從不加進時間庫 |
+| 設定 | 僅限房主在等待中設定：每回合 1–300 秒，時間庫 0–300 秒（[共用上限](../../shared/src/time-control.ts)） |
+| 顯示 | 自己的名牌顯示回合時間與時間庫；其他人只在行動時顯示回合時間 |
+| 動畫 | 不消耗時間 |
+| 斷線 | 既不暫停計時，也不延長重新連線時限 |
+| 新的一局 | 補滿時間庫，包括騙子酒館的每一回合，以及 21 點與德州撲克的每一手 |
 
-| Game or stage | On timeout |
+| 遊戲或階段 | 逾時處理 |
 | --- | --- |
-| Ordinary turns, Bridge and Napoleon bidding, Napoleon exchange and secretary call | A legal action chosen from the player's own view |
-| Bridge redeal offer | Decline |
-| Napoleon discard review (four players) | Everyone confirms at once within twice the allowance, at least 15 seconds ([`napoleonReviewSeconds`](../../shared/src/rules/napoleon.ts)); missing confirmations happen automatically |
-| Red Points | Hand play and flipped-card choice share one allowance |
-| Chinese Poker | Everyone arranges at once within allowance + reserve, at least 60 seconds ([`cpArrangeSeconds`](../../shared/src/rules/chinesepoker.ts)); missing hands use the bot's non-fouled search |
-| Blackjack betting | Everyone bets at once within twice the allowance, at least 15 seconds ([`bjBetSeconds`](../../shared/src/rules/blackjack.ts)); missing human bets become the minimum 10 |
-| Hold'em | Check if nothing is owed, otherwise fold; never stakes a timed-out human's chips |
-| Big Two forced passes | Separate scheduler that uses no decision time; the clock still looks ordinary |
+| 一般回合、橋牌與拿破崙叫牌、拿破崙換牌與指定秘書牌 | 從該玩家自己的視角選一個合法動作 |
+| 橋牌重新發牌提議 | 拒絕 |
+| 拿破崙棄牌確認（四人） | 所有人在兩倍回合時間內同時確認，至少 15 秒（[`napoleonReviewSeconds`](../../shared/src/rules/napoleon.ts)）；未確認者自動確認 |
+| 撿紅點 | 出手牌與翻開牌的選擇共用一份回合時間 |
+| 十三支 | 所有人在回合時間 + 時間庫內同時排牌，至少 60 秒（[`cpArrangeSeconds`](../../shared/src/rules/chinesepoker.ts)）；未完成的手牌改用 bot 的不倒水搜尋 |
+| 21 點下注 | 所有人在兩倍回合時間內同時下注，至少 15 秒（[`bjBetSeconds`](../../shared/src/rules/blackjack.ts)）；未下注的真人改為最低注 10 |
+| 德州撲克 | 不需跟注時過牌，否則棄牌；從不替逾時的真人押上籌碼 |
+| 大老二強制 pass | 獨立的排程器，不消耗決策時間；計時顯示仍和一般回合相同 |
 
-- Shared-deadline countdowns show only on the owner's seat until submission.
-- Timed-out humans keep control on later turns. "Auto-played" stays until their next turn;
-  missing Blackjack bets show "Auto"; bots show "Thinking".
-- Each plate shows one status, highest first: eliminated → passed/Folded/All-in →
-  Thinking → Auto-played → Arranged/Bet placed.
+- 共用截止時間的倒數只顯示在本人座位上，直到提交為止。
+- 逾時的真人在之後的回合仍保有控制權。「超時代打」會顯示到他下一個回合；未下注的 21 點座位顯示「自動」；bot 顯示「思考中」。
+- 每個名牌只顯示一個狀態，優先順序由高到低：已淘汰 → 已 pass／已棄牌／全下 → 思考中 → 超時代打 → 已擺好／已下注。
 
-Runtime mechanics: [architecture](../architecture.md#turn-clocks).
+執行機制：[架構](../architecture.md#回合計時)。
 
-## Card controls
+## 卡牌操作
 
-| Game | Interaction |
+| 遊戲 | 操作方式 |
 | --- | --- |
-| Bridge calls | Pick level and suit, or Pass, then Confirm or pick the same call again; Cancel clears |
-| Napoleon | Bridge-style calls at levels 9–16; select the exact discard count, then confirm; pick the secretary card from all 54; leading the secretary card or a joker asks for the suit; the secretary summon is a toggle before playing, and joker summons are stated, not offered |
-| Bridge, Ninety-Nine, Red Points | Click or keyboard activation plays. On touch, the first tap lifts and the second plays; tapping another card switches, tapping outside clears |
-| Ninety-Nine | Explicit plus/minus and next-player choices |
-| Red Points | Zero or one capture target plays immediately; several require choosing a highlighted table card |
-| Sevens | Legal cards play directly; when blocked, select a card and press the irreversible Cover button, which shows its penalty |
-| Chinese Poker | Place cards into front, middle, back; full rows show hand types; fouls need double confirmation |
-| Blackjack | Chip buttons 10/20/50/100/200 and −/+ steps, then Bet; Hit, Stand, Double, Split follow legality |
-| Big Two | Select cards, then Play or Pass. No suggestions, double-click play, or Enter shortcut |
+| 橋牌叫牌 | 選擇線位與花色，或選 Pass，然後按確認或再點一次同一個叫品；取消會清除選擇 |
+| 拿破崙 | 橋牌式叫牌，線位 9–16；選取剛好數量的棄牌後確認；從全部 54 張中選出秘書牌；首攻秘書牌或鬼牌時會詢問要指定的花色；召喚秘書是出牌前的開關，鬼牌召喚只會說明，不會提供選項 |
+| 橋牌、99、撿紅點 | 點擊或用鍵盤觸發即出牌。觸控時第一次點擊會抬起牌，第二次點擊出牌；點另一張牌會切換，點外面會取消 |
+| 99 | 明確選擇加或減，以及下一位玩家 |
+| 撿紅點 | 沒有或只有一個可吃目標時直接出牌；有多個目標時要選擇一張高亮的桌面牌 |
+| 牌七 | 合法的牌直接出；無牌可出時，選一張牌再按無法復原的「蓋牌」按鈕，按鈕上會顯示該牌的罰分 |
+| 十三支 | 把牌放進頭墩、中墩、尾墩；放滿的墩會顯示牌型；倒水需要確認兩次 |
+| 21 點 | 籌碼按鈕 10/20/50/100/200 與 −/+ 調整，再按下注；要牌、停牌、加倍、分牌依合法性開放 |
+| 大老二 | 選牌後按出牌或 Pass。沒有出牌建議、雙擊出牌或 Enter 快捷鍵 |
 
-- Bridge bidding overlays the table with touch targets at least 44px tall; recent calls
-  stay visible with the info drawer closed. During the auction each plate shows that seat's
-  latest call (a bid with its suit, NT, or Pass) beside the name, updated as calls arrive.
-- Red Points uses up to two table rows (one when short) and paginates crowded tables.
-  Score buttons list all captures; seat trays show the latest red cards.
-- Blackjack plates show Bet placed or Thinking while betting; the previous hand stays
-  visible. Cards, chips, and results appear only at their presentation frame.
-- Big Two hands reorder by drag or focused Alt + Left/Right; the order survives turns.
-  Rank or suit sort replaces it. Cards stay focusable with `aria-disabled`, and turn
-  changes are announced politely.
+- 橋牌叫牌時會在牌桌上方顯示操作面板，觸控目標至少 44px 高；關閉資訊抽屜時仍看得到最近的叫品。叫牌期間，每個名牌會在名稱旁顯示該座位最新的叫品（含花色的叫牌、NT 或 Pass），並隨叫牌即時更新。
+- 撿紅點最多使用兩列桌面牌（牌少時一列），桌面太擠時會分頁。分數按鈕列出所有吃到的牌；座位牌匣顯示最近吃到的紅色牌。
+- 21 點下注期間，名牌顯示「已下注」或「思考中」；上一手的牌保持可見。牌、籌碼與結果只在各自的呈現畫格出現。
+- 大老二手牌可以拖曳，或聚焦後按 Alt + 左／右鍵調整順序；順序會跨回合保留。依數字或花色理牌會取代自訂順序。牌以 `aria-disabled` 保持可聚焦，回合變更會以 polite 方式通知螢幕閱讀器。
 
-## Bots
+## Bot
 
-- While waiting, the host adds, removes, or fills bots in any configured seat, additional
-  seats included; filling covers every empty seat. With no seated human the last
-  empty seat stays open, because a human must be able to end the match.
-- Bots play every game, are always ready, and stay for the next match. Only humans host;
-  the room closes when the last human leaves.
-- Each bot has an independent **Easy** or **Hard** difficulty. New bots and legacy
-  snapshots default to Hard. The host changes difficulty while waiting; changes reset
-  human readiness and persist across matches and restarts.
-- Both levels use only their own hand and public state. Hard retains the existing
-  [card game strategies](cards.md#bot-strategies). Injectable randomness picks among
-  weighted near-best moves; an immediate Big Two win always plays.
-- They are heuristic practice opponents: no hidden-hand search or
-  optimal play.
-- Easy uses basic bidding (Napoleon: level 9 only with enough jokers and point cards) and random legal plays, captures, covers, and Ninety-Nine
-  choices without opponent inference or planning. Chinese Poker uses a greedy valid
-  arrangement; Liar's Deck uses fixed challenge odds; Blackjack uses minimum bets and
-  a 17-point stand threshold; Hold'em uses free checks and simple randomized betting
-  ([easy strategies](../../server/src/bots/easy-strategy.ts)).
-- Bots wait for presentation plus a short thinking delay, save before broadcast, and
-  resume after restart. Matches with bots follow the [history and replay policy](../storage.md#identity-and-sessions). Bots have no profile,
-  friends, or voice.
+- 等待中，房主可以在任何已設定的座位（包括額外座位）新增、移除 bot，或一次補滿；補滿會填入所有空位。沒有真人入座時，最後一個空位會保留，因為必須有真人能結束對局。
+- bot 可以玩所有遊戲，永遠處於準備狀態，並留到下一局。只有真人可以當房主；最後一位真人離開時房間會關閉。
+- 每個 bot 都有獨立的 **簡單** 或 **困難** 難度。新的 bot 與舊版快照預設為困難。房主在等待中變更難度；變更會重設真人的準備狀態，並在對局之間與重新啟動後保留。
+- 兩種難度都只使用自己的手牌與公開狀態。困難沿用既有的[撲克牌遊戲策略](cards.md#bot-策略)。可注入的亂數會在加權後接近最佳的走法中挑選；大老二能直接獲勝時一定會出。
+- bot 是以啟發式規則運作的練習對手：不搜尋隱藏手牌，也不追求最佳解。
+- 簡單難度使用基本叫牌（拿破崙：只有在鬼牌與分數牌足夠時才叫 9），並隨機選擇合法的出牌、吃牌、蓋牌與 99 的選項，不推測對手，也不做規劃。十三支使用貪婪法找出合法排法；騙子酒館使用固定的抓謊機率；21 點下最低注，並在 17 點停牌；德州撲克能免費過牌就過牌，下注採簡單的隨機方式（[簡單策略](../../server/src/bots/easy-strategy.ts)）。
+- bot 會等呈現結束再加上短暫的思考延遲，在廣播前儲存，重新啟動後繼續。有 bot 的對局依照[歷史與回放規則](../storage.md#身分與工作階段)處理。bot 沒有個人檔案、好友或語音。

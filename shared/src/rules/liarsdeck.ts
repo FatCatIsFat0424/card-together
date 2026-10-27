@@ -1,5 +1,5 @@
 // ─── Liar's Deck rules engine (pure functions, shared by client and server) ───
-// Rules: docs/games/cards.md#liars-deck
+// Rules: docs/games/cards.md#騙子酒館
 
 import type { LiarCard, LiarFace, LiarsDeckLastPlay, LiarTableFace, Seat } from '../types';
 import { SEAT_ORDER_CLOCKWISE } from '../constants';

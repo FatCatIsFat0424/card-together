@@ -1,394 +1,310 @@
-# Card games
+# 撲克牌遊戲
 
-Rules for the ten card games. Shared lifecycle, spectators, timers, controls, and bots:
-[shared rules](common.md).
+十款撲克牌遊戲的規則。房間流程、旁觀、計時、操作與 bot：[共通規則](common.md)。
 
-## Bridge
+## 橋牌
 
-| Setup | Rule |
+| 設定 | 規則 |
 | --- | --- |
-| Deal | 52 cards, 13 each |
-| Display | Suits ♠ ♥ ♣ ♦; ranks A down to 2 |
-| HCP | A=4, K=3, Q=2, J=1 |
-| Redeal offer | A hand with HCP ≤ 4, including a lone ace with no other points |
+| 發牌 | 52 張，每人 13 張 |
+| 顯示 | 花色 ♠ ♥ ♣ ♦；點數由 A 排到 2 |
+| HCP | A=4、K=3、Q=2、J=1 |
+| 重新發牌提議 | HCP ≤ 4 的手牌，包括只有一張 A、沒有其他大牌點的手牌 |
 
-1. Redeal offers go clockwise from a random auction starter. Accepting redeals all hands;
-   declining passes the offer to the next eligible seat, for that deal only.
-2. The auction runs clockwise: levels 1–7 in ♣ ♦ ♥ ♠ NT, or Pass. Each bid must be higher;
-   at equal level NT > ♠ > ♥ > ♦ > ♣. Four opening passes redeal; three passes after a bid end it.
-3. The **last non-pass bidder** is declarer and sets trump or NT. No double, redouble, or dummy.
-4. Declarer's counterclockwise neighbor leads; play goes clockwise, following suit when
-   possible. Highest trump wins, else highest card of the led suit; the winner leads next.
-5. After 13 tricks, declarer's side wins with at least `6 + level` tricks; otherwise
-   defenders win. No vulnerability or bonus scoring.
+1. 重新發牌提議從隨機的叫牌起始者開始順時針詢問。接受就全部重新發牌；拒絕則把提議交給下一個符合資格的座位，只在這一副有效。
+2. 叫牌順時針進行：線位 1–7，花色 ♣ ♦ ♥ ♠ NT，或 Pass。每個叫品都必須更高；同線位時 NT > ♠ > ♥ > ♦ > ♣。開局連續四個 Pass 就重新發牌；叫牌後連續三個 Pass 結束叫牌。
+3. **最後一位非 Pass 的叫牌者**成為莊家，並決定王牌花色或 NT。沒有賭倍、再賭倍或夢家。
+4. 莊家逆時針方向的鄰座首攻；出牌順時針進行，有該花色就必須跟出。最大的王牌獲勝，沒有王牌時由首攻花色的最大牌獲勝；贏家下一墩首攻。
+5. 打完 13 墩後，莊家方拿到至少 `6 + 線位` 墩就獲勝，否則防守方獲勝。沒有身價或獎分計分。
 
-### Bot bidding agreements
+### Bot 叫牌約定
 
-A simplified natural [system](../../server/src/bots/bridge-bidding.ts) used by bots only, with no
-artificial conventions. A shared [auction model](../../server/src/bots/bridge-auction.ts) reads every
-call, human calls included, with these agreements as estimates of HCP range, suit lengths,
-balance, and passed hand; it never treats them as hand disclosure.
+bot 專用的簡化自然[制度](../../server/src/bots/bridge-bidding.ts)，沒有人為約定叫。共用的[叫牌模型](../../server/src/bots/bridge-auction.ts)會讀取每個叫品（包括真人的叫品），依這些約定估計 HCP 範圍、各花色長度、牌型是否平均，以及是否為已 pass 過的牌；從不把它們當成手牌的揭露。
 
-| Agreement | Meaning |
+| 約定 | 意義 |
 | --- | --- |
-| Opening | 1 of a suit with 12+ HCP (11 with Rule of 20); a major shows 5 cards, otherwise the longer minor (4-4 opens ♦, 3-3 opens ♣); strong unbalanced hands also open at 1 |
-| Balanced | 4333, 4432, 5332 |
-| 1NT / 2NT opening | 15–17 / 20–21 balanced |
-| Weak opening | 5–10 HCP with a good suit: 6 cards at the 2 level, 7 at the 3 level; never in fourth seat |
-| Fourth seat | After three passes, opens the longest suit at the 1 level even when weak, to keep practice moving |
-| Passed hand | An opening-round pass shows at most 11 HCP; its new-suit responses are not forcing |
-| Raise | Simple raise with 5–12 support points and 3+ for a major (4+ ♦, 5+ ♣); jump raise with 10+ HCP only when safe |
-| New-suit response | 1 level: 4+ cards, 6+ HCP; 2 level: 10+ HCP, 4+ cards (5+ ♥); forcing one round unless responder passed |
-| 1NT / 2NT response | 1NT: 6–12, no fit and no 1-level suit (8+ with a stopper when contested); 2NT: 13+ balanced |
-| Over partner's NT | A 5+ card suit at the 2 level (3 over 2NT) is a sign-off at any strength; otherwise pass |
-| Opener's rebid | 1NT 11–14 balanced; minimum raise, 6-card rebid, or lower new suit 11–18; reverse 16+; jumps 18+ only when safe |
-| Overcall | Good 5+ suit: 1 level 8–18, 2 level 10–18; 1NT 15–19 balanced with a stopper; weak jump 5–10 with a good 6–7 cards |
-| Advance | Raise with 3+ only to the 2 level; new good 5+ suit with 10+; 1NT 8–12 with a stopper |
-| Competition | Only with a shown 8+ card fit or a 6-card suit, at most total trumps − 6, and when the estimated make chance beats the opponents' fail chance by 15 points |
-| Level | No game or slam bonus: stop at the lowest winning level; a descriptive bid may raise the level only if the combined minimum still makes it at least 60% of the time |
+| 開叫 | 12+ HCP 開叫一線花色（符合二十法則時 11 點）；高花表示 5 張，否則開較長的低花（4-4 開 ♦，3-3 開 ♣）；強的不平均牌也開一線 |
+| 平均牌型 | 4333、4432、5332 |
+| 1NT / 2NT 開叫 | 15–17 / 20–21 平均牌型 |
+| 弱開叫 | 5–10 HCP 且有好的長套：二線 6 張、三線 7 張；第四家從不弱開叫 |
+| 第四家 | 前三家都 pass 時，即使牌弱也以一線開叫最長花色，讓練習繼續進行 |
+| 已 pass 過的牌 | 第一輪 pass 表示最多 11 HCP；之後的新花色應叫不是逼叫 |
+| 加叫 | 5–12 支持點，高花 3+ 張支持（♦ 4+、♣ 5+）時單加叫；10+ HCP 且安全時才跳加叫 |
+| 新花色應叫 | 一線：4+ 張、6+ HCP；二線：10+ HCP、4+ 張（♥ 5+）；除非應叫者先前 pass 過，否則逼叫一輪 |
+| 1NT / 2NT 應叫 | 1NT：6–12，沒有配合也沒有可在一線叫出的花色（有人競叫時需 8+ 且有擋張）；2NT：13+ 平均牌型 |
+| 同伴開 NT 之後 | 二線（2NT 之後為三線）叫出 5+ 張花色，不論牌力都是止叫；否則 pass |
+| 開叫者再叫 | 1NT 為 11–14 平均牌型；低限加叫、再叫 6 張套或較低的新花色為 11–18；逆叫 16+；跳叫需 18+ 且安全 |
+| 爭叫 | 好的 5+ 張套：一線 8–18、二線 10–18；1NT 為 15–19 平均牌型且有擋張；弱跳爭叫 5–10 且有好的 6–7 張套 |
+| 爭叫者同伴 | 有 3+ 張支持時最多加叫到二線；10+ 且有新的好 5+ 張套時叫出；1NT 為 8–12 且有擋張 |
+| 競叫 | 只在已顯示 8+ 張配合或 6 張套時，最多叫到總王牌數 − 6 線，且估計的做成機率比對手的失敗機率高 15 個百分點 |
+| 線位 | 沒有成局或滿貫獎分：停在能贏的最低線位；描述性叫品只有在雙方最低牌力合計仍有至少 60% 機率做成時，才可以提高線位 |
 
-## Big Two
+## 大老二
 
-- 13 cards each. Rank 2 > A > K > Q > J > 10 > … > 3; suit ♠ > ♥ > ♦ > ♣.
-- The ♣3 holder leads each deal with a play containing ♣3; turns go counterclockwise.
-- A reply must match size and type and beat the previous play, except bombs.
-- Passing locks the seat for the round. When the three other seats have passed, the last
-  player leads freely and locks clear.
-- No last-card call or forced highest single.
+- 每人 13 張。點數 2 > A > K > Q > J > 10 > … > 3；花色 ♠ > ♥ > ♦ > ♣。
+- 每一副由持有 ♣3 的玩家首出，出牌必須包含 ♣3；出牌順序為逆時針。
+- 跟牌必須張數和牌型相同，且大過上一手，炸彈除外。
+- pass 後該座位在這一輪就被鎖住。其他三個座位都 pass 後，最後出牌的玩家可以自由出牌，鎖定也會解除。
+- 沒有報單規則，也不強制出最大的單張。
 
-| Cards | Type | Compared by |
+| 張數 | 牌型 | 比較方式 |
 | --- | --- | --- |
-| 1 | Single | Rank, then suit |
-| 2 | Pair | Higher card |
-| 5 | Straight | Top card rank, then its suit |
-| 5 | Full house | Triple rank |
-| 5 | Four of a kind + kicker | Quad rank |
-| 5 | Straight flush | As straights |
+| 1 | 單張 | 先比點數，再比花色 |
+| 2 | 對子 | 比較大的那張 |
+| 5 | 順子 | 最大牌的點數，再比該牌花色 |
+| 5 | 葫蘆 | 三條的點數 |
+| 5 | 鐵支 + 一張 | 四條的點數 |
+| 5 | 同花順 | 同順子 |
 
-- Triples alone, plain flushes, and four-card plays are illegal.
-- Straights rank A2345 < 23456 < … < 10JQKA by top card (5, 6, … A). JQKA2, QKA23, and
-  KA234 are invalid.
-- Straights and full houses beat only their own type. Bombs (four of a kind, straight
-  flush) beat any ordinary play including singles and pairs; straight flush beats four of a kind.
+- 單出三條、一般同花，以及四張的出牌都不合法。
+- 順子依最大牌（5、6、… A）排序：A2345 < 23456 < … < 10JQKA。JQKA2、QKA23 與 KA234 不合法。
+- 順子與葫蘆只能壓同牌型。炸彈（鐵支、同花順）可以壓任何一般出牌，包括單張與對子；同花順大於鐵支。
 
-**Forced passes**
+**強制 pass**
 
-- With no legal reply, including bombs, bots pass as soon as the presentation ends.
-  Human seats wait a random 0–5,000 ms after the presentation, capped below the turn
-  allowance so it never looks like a timeout. They can still pass manually; free leads
-  never auto-pass.
-- Nothing changes before the commit. Each pending pass saves its deadline. Restarts
-  preserve human delays, remove any old random bot delay, and resolve overdue passes
-  without a browser.
+- 沒有任何合法的跟牌（包括炸彈）時，bot 在呈現結束後立刻 pass。真人座位會在呈現結束後隨機等待 0–5,000 ms，上限低於回合時間，避免看起來像逾時。真人仍可手動 pass；自由出牌時從不自動 pass。
+- commit 之前不會有任何變化。每個待處理的 pass 都會保存截止時間。重新啟動時保留真人的延遲，移除舊有的 bot 隨機延遲，並在沒有瀏覽器的情況下處理已逾時的 pass。
 
-**Settlement**
+**結算**
 
-- A hand with one card of every rank from 3 to 2 wins immediately (dragon); otherwise the
-  first empty hand wins.
-- Each loser scores `remaining cards × 2^(remaining 2s)`; against a dragon, losers count
-  their full original hands. Scores do not carry between matches.
+- 手上 3 到 2 每個點數各一張時立刻獲勝（一條龍）；否則最先出完手牌的人獲勝。
+- 每位輸家的分數為 `剩餘張數 × 2^(剩餘 2 的張數)`；輸給一條龍時，輸家以完整的原始手牌計算。分數不會延續到下一局。
 
-## Red Points
+## 撿紅點
 
-| Item | Rule |
+| 項目 | 規則 |
 | --- | --- |
-| Deal | Six each, four on the table, 24 in stock; redeal if three or more table cards share a rank |
-| Turns | Random starter, counterclockwise |
-| A–9 capture | Sum to 10 (ace = 1) |
-| 10, J, Q, K capture | Same rank only |
-| Scoring | Captured hearts and diamonds only: ace 20, 2–9 face value, 10–K 10; deck total 208 |
-| Winner | Highest score, ties shared |
+| 發牌 | 每人 6 張，桌面 4 張，牌堆 24 張；桌面有三張以上同點數時重新發牌 |
+| 回合 | 隨機起始，逆時針 |
+| A–9 吃牌 | 點數合計 10（A = 1） |
+| 10、J、Q、K 吃牌 | 只能吃同點數 |
+| 計分 | 只計吃到的紅心與方塊：A 20 分，2–9 依點數，10–K 10 分；整副合計 208 分 |
+| 贏家 | 分數最高者，同分並列 |
 
-1. Play a hand card, then flip the top stock card.
-2. Each card must capture a matching table card if one exists (choose when several match).
-   Unmatched cards stay on the table; captured pairs go to the player's pile.
-3. When stock and hands are empty, score the piles. Table cards score nothing.
+1. 打出一張手牌，再翻開牌堆最上面的牌。
+2. 每張牌只要桌面有可配對的牌就必須吃（有多張可配對時自行選擇）。沒有配對的牌留在桌面；吃到的成對牌放進玩家的牌堆。
+3. 牌堆和手牌都用完時，計算各玩家牌堆的分數。桌面上的牌不計分。
 
-Hovering or focusing a card highlights its legal captures without selecting anything.
+滑鼠移到牌上或聚焦時，會高亮它可以吃的牌，但不會選取任何東西。
 
-## Ninety-Nine
+## 99
 
-- Five cards each, the rest as stock, running total 0. Random starter, initially counterclockwise.
-- Play a legal card, then draw one. The total may never exceed 99.
-- An empty stock reshuffles all discards except the top card (unless two decks are used).
+- 每人 5 張，其餘作為牌堆，累計點數從 0 開始。隨機起始，一開始為逆時針。
+- 出一張合法的牌，再抽一張。累計點數不能超過 99。
+- 牌堆用完時，把最上面那張以外的所有棄牌重洗（使用兩副牌時除外）。
 
-| Card | Effect |
+| 牌 | 效果 |
 | --- | --- |
-| A | +1; ♠A resets the total to 0 |
-| 2, 3, 6, 7, 8, 9 | Add face value |
-| 4 | Reverse direction |
-| 5 | Choose any surviving seat to go next |
-| 10 | Choose +10 or −10 (floored at 0) |
+| A | +1；♠A 把累計點數歸 0 |
+| 2、3、6、7、8、9 | 加上牌面點數 |
+| 4 | 迴轉 |
+| 5 | 指定任何一位存活的玩家出下一手 |
+| 10 | 選擇 +10 或 −10（最低為 0） |
 | J | Pass |
-| Q | Choose +20 or −20 (floored at 0) |
-| K | Set the total to 99 |
+| Q | 選擇 +20 或 −20（最低為 0） |
+| K | 把累計點數設為 99 |
 
-- A seat with no legal card is eliminated and discards its hand; the next survivor plays
-  on the same total. The last survivor wins; others rank in reverse elimination order.
+- 沒有合法牌可出的座位被淘汰，並棄掉手牌；下一位存活者以同樣的累計點數繼續。最後的存活者獲勝；其他人依淘汰順序反向排名。
 
-**Two decks, no reshuffle (雙副牌不重洗)**
+**雙副牌不重洗**
 
-- Off by default; legacy snapshots use one deck. Fixed for the match and kept across restarts.
-- Two shuffled 52-card decks, so duplicates are possible; everything else is unchanged.
-- The stock never reshuffles. Drawing the last stock card ends the match: survivors tie
-  for first and eliminated seats keep their ranks.
-- The stock is labelled as no-reshuffle. Ties use `winners`, single wins `winnerSeat`
-  ([result type](../../shared/src/types/game.ts)).
+- 預設關閉；舊版快照使用一副牌。整局固定，重新啟動後保留。
+- 使用兩副洗好的 52 張牌，所以可能出現重複的牌；其他規則不變。
+- 牌堆從不重洗。抽走牌堆最後一張牌時對局結束：存活者並列第一，已淘汰的座位保留原本名次。
+- 牌堆會標示為不重洗。並列時使用 `winners`，單一贏家使用 `winnerSeat`（[結果型別](../../shared/src/types/game.ts)）。
 
-## Sevens
+## 牌七
 
-- 13 cards each. The ♠7 holder starts with ♠7; play goes counterclockwise.
-- Each suit grows from its 7: down to A, up to K, no wrap-around. A legal play is any 7,
-  or a card next to a row's current low or high end.
-- A player who can play must. Otherwise they cover one chosen card face down; others see
-  only the count.
-- At settlement, covers are revealed and penalties summed: A=1, 2–10 face value, J=11,
-  Q=12, K=13. Lowest total wins, ties shared.
+- 每人 13 張。持有 ♠7 的人先出 ♠7；出牌順序為逆時針。
+- 每個花色從 7 開始延伸：往下到 A，往上到 K，不能循環。合法的出牌是任何一張 7，或與某一列目前最小端或最大端相鄰的牌。
+- 有牌可出就必須出。否則要選一張牌蓋牌；其他人只看得到蓋牌張數。
+- 結算時翻開蓋牌並加總罰分：A=1、2–10 依點數、J=11、Q=12、K=13。總分最低者獲勝，同分並列。
 
-**Dragon Slaying (斬龍)**
+**斬龍**
 
-- On by default for new rooms; host option while waiting, fixed for the match, kept across restarts.
-  Rooms and games saved before the option existed keep standard rules.
-- Playing a suit's A or K closes the whole suit at both ends; other suits stay open. The
-  row stays darkened afterwards and the next turn waits for the effect.
-- Effects: **Dragon** (default, 2.2 s overhead dragon, fire, and blade) or **Fire only**
-  (火焰, 1.7 s). Neither shows text; reduced motion shows a still frame.
+- 新房間預設開啟；房主可在等待中切換，整局固定，重新啟動後保留。在這個選項出現之前保存的房間與遊戲維持標準規則。
+- 打出某花色的 A 或 K 時，該花色兩端都會關閉；其他花色仍然開放。該列之後保持變暗，下一個回合會等特效播完。
+- 特效：**龍**（預設，2.2 秒，上方的龍、火焰與刀光）或**僅火焰**（1.7 秒）。兩者都不顯示文字；減少動態效果時顯示靜態畫面。
 
-When all four suits are closed:
+四個花色都關閉時：
 
-1. All remaining hands are covered at once in turn order, with normal penalties. These
-   log entries are marked `auto`.
-2. After the last closing effect, the table collapses (1.8 s) and holds (2 s).
-   The effect covers the full table surface, including the hand area; its shake
-   fades throughout the collapse and stops when the broken-table hold begins.
-3. The result dialog opens over the broken table.
+1. 依出牌順序一次蓋掉所有剩餘手牌，照一般規則計算罰分。這些紀錄會標示為 `auto`。
+2. 最後一個關閉特效播完後，牌桌崩塌（1.8 秒）並停留（2 秒）。特效涵蓋整個牌桌表面，包括手牌區；震動在崩塌過程中逐漸減弱，進入破桌停留時停止。
+3. 結果對話框在破掉的牌桌上開啟。
 
-## Chinese Poker
+## 十三支
 
-- 13 cards each. Everyone arranges at once into front 3, middle 5, back 5, by hand, by
-  sorting, or with Auto arrange (the bot search).
-- Submissions are final and hidden until all four are in.
-- Rank A > K > … > 2; suits never break ties. A2345 is the lowest straight and 10JQKA the
-  highest; no wrap-around.
-- A back weaker than the middle, or a middle weaker than the front, is a foul (倒水). The
-  server accepts it; the client asks twice.
+- 每人 13 張。所有人同時把牌排成頭墩 3 張、中墩 5 張、尾墩 5 張，可以手動排、用理牌排，或用「自動排牌」（bot 的搜尋）。
+- 提交後無法更改，四人都提交前不會公開。
+- 點數 A > K > … > 2；花色從不決定勝負。A2345 是最小的順子，10JQKA 最大；不能循環。
+- 尾墩比中墩小，或中墩比頭墩小，就是倒水。伺服器接受倒水；用戶端會詢問兩次。
 
-| Row | Hands, high to low |
+| 墩 | 牌型，由大到小 |
 | --- | --- |
-| Middle, back | Straight flush, four of a kind, full house, flush, straight, three of a kind, two pair, pair, high card |
-| Front | Three of a kind, pair, high card |
+| 中墩、尾墩 | 同花順、鐵支、葫蘆、同花、順子、三條、兩對、一對、散牌 |
+| 頭墩 | 三條、一對、散牌 |
 
-**Scoring** (pairwise against each opponent)
+**計分**（與每位對手兩兩比較）
 
-| Winning row hand | Points (otherwise 1) |
+| 贏墩的牌型 | 分數（其他為 1） |
 | --- | --- |
-| Front three of a kind | 3 |
-| Middle full house / four of a kind / straight flush | 2 / 8 / 10 |
-| Back four of a kind / straight flush | 4 / 5 |
+| 頭墩三條 | 3 |
+| 中墩葫蘆／鐵支／同花順 | 2 / 8 / 10 |
+| 尾墩鐵支／同花順 | 4 / 5 |
 
-- Per row, the winner gains and the loser loses the winning hand's points.
-- A fouled hand loses every row to a clean opponent at the opponent's values; two fouls score 0.
-- Sweep (打槍): winning all three rows against one opponent doubles that pairing.
-  Home run (全壘打): sweeping all three opponents doubles those pairings again.
-- Zero-sum; highest total wins, ties shared. No special declared hands (報到).
+- 每一墩由贏家得分、輸家失分，分數依贏方牌型計算。
+- 倒水的手牌對上沒倒水的對手時每墩都輸，以對手的分數計算；雙方都倒水則計 0 分。
+- 打槍：對同一位對手三墩全贏時，這組對戰的分數加倍。全壘打：對三位對手都打槍時，這些對戰的分數再加倍。
+- 零和；總分最高者獲勝，同分並列。沒有特殊報到牌型。
 
-## Liar's Deck
+## 騙子酒館
 
-Based on the Liar's Deck mode of *Liar's Bar*; Devil and Chaos variants are not implemented.
+以 *Liar's Bar* 的 Liar's Deck 模式為基礎；沒有實作 Devil 與 Chaos 變體。
 
-| Item | Rule |
+| 項目 | 規則 |
 | --- | --- |
-| Deck | 20 cards: six each of K, Q, A, plus two jokers |
-| Revolver | One bullet in six chambers, fixed at random for the whole game |
-| Trigger odds | The n-th pull fires with probability `1/(7 − n)`; the sixth always fires |
-| Visibility | Pull counts are public; bullet positions stay on the server |
-| Round | Five cards per survivor and a random table face (K, Q, or A); matching cards and jokers are truthful |
+| 牌組 | 20 張：K、Q、A 各 6 張，加上 2 張鬼牌 |
+| 左輪手槍 | 六個彈膛中有一發子彈，整場遊戲開始時隨機決定後固定 |
+| 擊發機率 | 第 n 次扣扳機的擊發機率為 `1/(7 − n)`；第六次一定擊發 |
+| 可見度 | 扣扳機次數公開；子彈位置只存在伺服器上 |
+| 回合 | 每位存活者 5 張，並隨機翻出指定牌（K、Q 或 A）；符合指定牌的牌與鬼牌都算誠實 |
 
-1. A random seat starts the first round; turns go counterclockwise, skipping empty hands.
-2. On a turn, play 1–3 cards face down claiming the table face, or call LIAR on the
-   previous play. The round's first play cannot be called; the only seat with cards left must call.
-3. Only the challenged play is revealed. Any lie makes its player pull the trigger;
-   otherwise the caller pulls. The round then ends. Unchallenged cards are never revealed.
-4. The shooter opens the next round, or the next survivor if the shooter died.
-5. The last survivor wins; earlier deaths rank lower.
+1. 第一回合由隨機座位開始；出牌順序為逆時針，跳過沒有手牌的玩家。
+2. 輪到自己時，可以蓋著打出 1–3 張並宣稱都是指定牌，或對上一手喊 LIAR。回合的第一手不能被質疑；只剩自己有牌時必須喊 LIAR。
+3. 只翻開被質疑的那一手。只要有一張是謊報，出牌者就要扣扳機；否則由喊 LIAR 的人扣扳機。接著該回合結束。沒有被質疑的牌從不公開。
+4. 開槍者開始下一回合；若開槍者死亡，則由下一位存活者開始。
+5. 最後的存活者獲勝；越早死亡排名越低。
 
-The table shows Play and LIAR buttons, matching-card checks, the player's own played cards,
-hand sizes, and pull counts. Outcomes wait for their presentation frames.
+牌桌顯示出牌與 LIAR 按鈕、符合指定牌的勾選標記、玩家自己打出的牌、手牌張數與扣扳機次數。結果會等各自的呈現畫格出現。
 
-## Blackjack
+## 21 點
 
-| Item | Rule |
+| 項目 | 規則 |
 | --- | --- |
-| Opponent | House dealer by default; each seat plays only against it |
-| Chips | 1,000 per seat, reset every match |
-| Match | Eight hands; a freshly shuffled 52-card deck for 2–4 players, two decks for 5–8 players |
-| Bet | Simultaneous, 10–200 in steps of 10 within chips, hidden until the deal ([timer](common.md#turn-timer)) |
-| Under 10 chips | Watches only |
+| 對手 | 預設由系統當莊；每個座位只和莊家對賭 |
+| 籌碼 | 每個座位 1,000，每局重設 |
+| 對局 | 八手；2–4 人時每手使用一副新洗的 52 張牌，5–8 人時使用兩副 |
+| 下注 | 同時下注，10–200，以 10 為單位且不超過持有籌碼，發牌前隱藏（[計時](common.md#出牌計時)） |
+| 籌碼不足 10 | 只能觀看 |
 
-1. Bettors get two face-up cards; the dealer gets an up card and a hidden hole card.
-2. With an ace or ten-value up card the dealer peeks; a dealer blackjack ends the hand,
-   and only player blackjacks push.
-3. Bettors act in occupied-seat order N, E, S, W, P5, P6, P7, P8. Reaching 21, busting, or a natural ends a hand automatically.
-4. The dealer reveals and hits below 17, standing on every 17 including soft 17. No draws
-   if every hand busted or is a blackjack.
-5. Settle. After hand eight, or when no seat can cover the minimum, most chips wins (ties shared).
+1. 下注者拿到兩張明牌；莊家拿到一張明牌和一張蓋著的底牌。
+2. 莊家明牌是 A 或 10 點牌時會偷看底牌；莊家是黑傑克時這一手立即結束，只有同樣拿到黑傑克的玩家算平手。
+3. 下注者依有人座位的順序 N、E、S、W、P5、P6、P7、P8 行動。達到 21 點、爆牌或拿到黑傑克時，這一手會自動結束。
+4. 莊家翻開底牌，低於 17 點時補牌，任何 17 點都停牌，包括軟 17。所有手牌都爆牌或都是黑傑克時，莊家不補牌。
+5. 結算。第八手結束後，或沒有任何座位能支付最低下注時，籌碼最多者獲勝（同分並列）。
 
-| Action | Rule |
+| 動作 | 規則 |
 | --- | --- |
-| Hit, Stand | Draw a card, or finish |
-| Double | First two cards only; stake again and draw exactly one |
-| Split | Equal-value pair, once per seat; stake again and play two hands in order, each first dealt a second card |
-| Split aces | One card each; a split 21 is not blackjack |
-| Payout | Blackjack 3:2, win 1:1, push returns the stake |
-| Not supported | Insurance, surrender |
+| 要牌、停牌 | 再拿一張牌，或結束 |
+| 加倍 | 只限前兩張牌；再押一倍並剛好拿一張牌 |
+| 分牌 | 同點數的對子，每個座位一次；再押一倍並依序打兩手，每手先補發第二張牌 |
+| 分 A | 每手只拿一張；分牌後的 21 點不算黑傑克 |
+| 賠率 | 黑傑克 3:2，贏 1:1，平手退還注碼 |
+| 不支援 | 保險、投降 |
 
-### Player dealer
+### 玩家當莊
 
-- Host option while waiting (off by default).
-- A random seat deals first, then the deal rotates clockwise over occupied seats for two
-  full rotations (`2 × occupied seats` hands).
-- The dealer does not bet. Its hole card is hidden from other seats until the reveal
-  (observers see it). House peek, payout, double, and split rules still apply.
-- After players finish, the dealer acts unless it has blackjack or every player hand busted
-  or is blackjack. Below 17 it must hit; from 17 it may hit or stand; 21 or bust ends the
-  turn. Timeouts follow house strategy.
+- 房主可在等待中開啟（預設關閉）。
+- 由隨機座位先當莊，之後莊家在有人座位之間順時針輪替，共輪兩圈（`2 × 有人座位數` 手）。
+- 莊家不下注。莊家的底牌在翻開前對其他座位隱藏（觀戰者看得到）。系統莊家的偷看、賠率、加倍與分牌規則照常適用。
+- 玩家都行動完後，除非莊家是黑傑克，或所有玩家的手牌都爆牌或都是黑傑克，否則輪到莊家行動。低於 17 點必須要牌；17 點以上可以要牌或停牌；21 點或爆牌時結束回合。逾時依系統莊家策略處理。
 
-**Settlement**
+**結算**
 
-1. Net losses go to the dealer's pool; pushes return stakes.
-2. Net wins (1:1, blackjack 3:2) are paid from the dealer's chips plus the pool.
-3. If that is not enough, winnings are prorated and rounded down, leftovers go clockwise
-   from the dealer's left, and the dealer ends at 0 ([payout rule](../../shared/src/rules/blackjack.ts)).
+1. 淨輸的注碼進入莊家的彩池；平手退還注碼。
+2. 淨贏（1:1，黑傑克 3:2）由莊家的籌碼加上彩池支付。
+3. 若不足以支付，獎金按比例分配並無條件捨去，剩餘的零頭從莊家左手邊開始順時針分配，莊家籌碼歸 0（[賠付規則](../../shared/src/rules/blackjack.ts)）。
 
-Seats under 10 chips cannot bet but still deal, even at 0; nobody is eliminated. The match
-ends after the last hand, or when fewer than two seats can cover the minimum.
+籌碼不足 10 的座位不能下注，但仍會當莊，即使籌碼為 0；沒有人會被淘汰。最後一手結束，或能支付最低下注的座位少於兩個時，對局結束。
 
-## Texas Hold'em
+## 德州撲克
 
-| Item | Rule |
+| 項目 | 規則 |
 | --- | --- |
-| Format | No-limit, two to eight occupied seats, 1,000 chips each, reset every match |
-| Blinds | 10/20 → 15/30 → 25/50 → 40/80 → 60/120, rising every four hands ([levels](../../shared/src/rules/holdem.ts)) |
-| End | One seat holds all chips, or hand 20 finishes; most chips wins, ties shared |
-| Ranking | Eliminated seats rank by the order they lost all chips |
+| 形式 | 無限注，2 到 8 個有人座位，每人 1,000 籌碼，每局重設 |
+| 盲注 | 10/20 → 15/30 → 25/50 → 40/80 → 60/120，每四手提高一次（[級別](../../shared/src/rules/holdem.ts)） |
+| 結束 | 某個座位拿到所有籌碼，或打完第 20 手；籌碼最多者獲勝，同分並列 |
+| 排名 | 已淘汰的座位依輸光籌碼的順序排名 |
 
-**Deal and betting**
+**發牌與下注**
 
-- A random occupied seat gets the button, which then moves clockwise to seats with chips.
-- Each hand uses a fresh deck: two private cards per funded seat, dealt from the button's left.
-- The next two seats post blinds; heads-up, the button posts the small blind. A short
-  blind is all-in. No antes or burn cards.
-- Action goes clockwise. Preflop starts after the big blind, who may raise when everyone
-  calls. The flop (3 cards), turn, and river (1 each) start from the first unfolded seat
-  after the button.
+- 隨機一個有人座位拿到莊家按鈕，之後按鈕順時針移到還有籌碼的座位。
+- 每一手使用新的一副牌：每個有籌碼的座位拿兩張私人底牌，從按鈕左手邊開始發。
+- 接下來的兩個座位下盲注；單挑時由按鈕下小盲。盲注不足時視為全下。沒有前注，也不燒牌。
+- 行動順時針進行。翻牌前從大盲的下一位開始，所有人都跟注時大盲可以加注。翻牌（3 張）、轉牌與河牌（各 1 張）從按鈕之後第一個沒棄牌的座位開始。
 
-| Action | Rule |
+| 動作 | 規則 |
 | --- | --- |
-| Fold | Leave the hand |
-| Check | Only when nothing is owed |
-| Call | Match the bet; all-in when short |
-| Bet or raise | To at least the current bet plus the last full raise (initially the big blind), up to all chips |
-| Short all-in raise | Must be called, but does not reopen raising for seats that already acted |
-| Everyone else all-in | No raising |
-| Street ends | Every actionable seat has acted since the last full raise and matched the bet |
+| 棄牌 | 退出這一手 |
+| 過牌 | 只有不需跟注時可用 |
+| 跟注 | 補足到目前的注額；不足時全下 |
+| 下注或加注 | 至少加到目前注額加上最後一次完整加注的幅度（一開始為大盲），最多押上全部籌碼 |
+| 不足完整加注的全下 | 必須跟注，但已經行動過的座位不會因此重新取得加注權 |
+| 其他人都已全下 | 不能加注 |
+| 該輪結束 | 每個還能行動的座位在最後一次完整加注後都已行動，且已補足注額 |
 
-**Showdown**
+**攤牌**
 
-- If one seat remains, it wins without showdown. If at most one seat can still act, the
-  rest of the board is dealt at once.
-- Showdown uses the best five of seven cards with [Chinese Poker ranking](#chinese-poker):
-  no suit ties, A2345 lowest straight.
-- Contribution levels form main and side pots; the best eligible hands split each pot, odd
-  chips going clockwise from the button. Uncalled chips return to their owner.
-- Controls: Fold, Check/Call, Bet/Raise with slider or amount, and minimum, half-pot, pot,
-  and all-in shortcuts.
-- Board, pots, stakes, button, blinds, and showdown categories appear with their
-  presentation frames; next-hand cards never appear early.
+- 只剩一個座位時，該座位不需攤牌直接獲勝。最多只剩一個座位能行動時，剩下的公牌一次發完。
+- 攤牌時從七張牌中取最好的五張，牌型大小依[十三支的排序](#十三支)：花色不分大小，A2345 是最小的順子。
+- 依投入金額的層級分成主池與邊池；每個池由有資格的最佳牌型平分，無法整除的零頭從按鈕開始順時針分配。沒有人跟的籌碼退還給原本的主人。
+- 控制項：棄牌、過牌／跟注、以滑桿或金額下注／加注，以及最小、半池、一池與全下的快捷鍵。
+- 公牌、彩池、注額、按鈕、盲注與攤牌牌型都會隨各自的呈現畫格出現；下一手的牌從不提早出現。
 
-## Napoleon
+## 拿破崙
 
-| Item | Rule |
+| 項目 | 規則 |
 | --- | --- |
-| Players | Four to six occupied seats; the host adds P5 and P6 |
-| Deck | 52 cards plus a big (colored) and small (greyscale) joker; equipped card faces supply both ([art](../../client/src/games/napoleon/napoleon-card-art.ts)) |
-| Deal | 13 / 10 / 8 cards each with 4 / 5 / 6 players; 2 / 4 / 6 stay face down ([sizes](../../shared/src/rules/napoleon.ts)) |
-| Point cards | A, K, Q, J of every suit: 16 in total |
-| Host option | Joker summoning, on by default |
+| 玩家 | 4 到 6 個有人座位；房主加開 P5 與 P6 |
+| 牌組 | 52 張加上大鬼（彩色）與小鬼（灰階）；兩張鬼牌都由裝備中的牌面提供（[圖案](../../client/src/games/napoleon/napoleon-card-art.ts)） |
+| 發牌 | 4 / 5 / 6 人時每人 13 / 10 / 8 張；2 / 4 / 6 張蓋著保留（[張數](../../shared/src/rules/napoleon.ts)） |
+| 分數牌 | 每個花色的 A、K、Q、J：共 16 張 |
+| 房主選項 | 鬼牌召喚，預設開啟 |
 
-**Auction and exchange**
+**叫牌與換牌**
 
-1. A random dealer; the auction starts at the next seat and runs clockwise as in [Bridge](#bridge),
-   with levels 9–16 in ♣ ♦ ♥ ♠ NT. The level is the number of point cards to win.
-2. If every seat passes without a bid, the cards are redealt with the same dealer. Otherwise the
-   auction ends when everyone else passes the highest bid, or at once on 16 NT.
-3. The highest bidder is the **Napoleon** and the bid suit is trump. No weak-hand redeal offer.
-4. The Napoleon privately adds the face-down cards to their hand, then discards as many.
-   With four players the discards are shown to the other three, and play continues once all
-   of them confirm (bots at once; missing confirmations happen automatically at the
-   [deadline](common.md#turn-timer)). With five or six players the discards stay hidden until settlement.
-5. The Napoleon names any of the 54 cards as the **secretary card**. Its holder is the secretary,
-   who stays anonymous. Naming a card the Napoleon holds or discarded means no secretary;
-   nobody is told.
+1. 隨機決定發牌者；叫牌從下一個座位開始，和[橋牌](#橋牌)一樣順時針進行，線位 9–16，花色 ♣ ♦ ♥ ♠ NT。線位是要拿到的分數牌張數。
+2. 所有座位都 pass 而沒有人叫牌時，由同一位發牌者重新發牌。否則當其他人都對最高叫品 pass，或有人叫出 16 NT 時，叫牌立即結束。
+3. 最高叫牌者成為**拿破崙**，叫品的花色就是王牌。沒有弱牌重新發牌的提議。
+4. 拿破崙私下把蓋著的牌加入手牌，再棄掉相同張數。四人時棄牌會公開給其他三人，所有人確認後才繼續（bot 立即確認；未確認者在[截止時間](common.md#出牌計時)自動確認）。五或六人時棄牌在結算前保持隱藏。
+5. 拿破崙從 54 張中任選一張作為**秘書牌**。持有者就是小秘書，身分保持匿名。若指定的牌在拿破崙手上或已被棄掉，就沒有小秘書；不會通知任何人。
 
-**Play**
+**出牌**
 
-- The Napoleon leads first; play goes clockwise and each trick's winner leads the next.
-- Follow the led suit when possible. The secretary card and jokers may be played at any time;
-  leading one names the suit to follow.
-- Trick order: secretary card > big joker > small joker > trump > led suit. In the final three
-  tricks jokers become the weakest cards: secretary card > trump > led suit > other suits >
-  big joker > small joker, except that a led joker counts as rank 1 (big) or 0 (small) of the
-  named suit.
-- With joker summoning on and a trump contract, a led trump 2 or 3 summons the big or small
-  joker, which its holder must play. The summon is automatic: the server adds it to the lead. It does
-  not apply when that joker is the secretary card, already played, or in the leader's hand. A secretary card that is a trump 2 or 3 keeps this power when led.
-- The leading Napoleon may summon the secretary card, which its holder must play, but not
-  together with a trump 2 or 3 lead while joker summoning applies.
-- No claim. After the last trick, the Napoleon and the secretary win if their point cards reach
-  the bid; otherwise the defenders win. Point cards among the discards count for the defenders.
+- 拿破崙先首攻；出牌順時針進行，每墩的贏家下一墩首攻。
+- 有首攻花色就必須跟出。秘書牌與鬼牌隨時都可以出；首攻這些牌時要指定跟牌的花色。
+- 一墩的大小：秘書牌 > 大鬼 > 小鬼 > 王牌 > 首攻花色。最後三墩時鬼牌變成最小的牌：秘書牌 > 王牌 > 首攻花色 > 其他花色 > 大鬼 > 小鬼；但首攻的鬼牌視為指定花色的點數 1（大鬼）或 0（小鬼）。
+- 開啟鬼牌召喚且有王牌的合約中，首攻王牌 2 或 3 會召喚大鬼或小鬼，持有者必須打出。召喚是自動的：伺服器會把它加到首攻中。當該鬼牌就是秘書牌、已經打出，或在首攻者手上時不適用。若秘書牌本身是王牌 2 或 3，首攻時仍保有召喚能力。
+- 首攻的拿破崙可以召喚秘書牌，持有者必須打出；但在鬼牌召喚適用時，不能同時搭配首攻王牌 2 或 3。
+- 沒有 claim（宣告拿下剩餘的墩）。最後一墩結束後，若拿破崙與小秘書的分數牌達到叫品線位，他們獲勝；否則防守方獲勝。棄牌中的分數牌算給防守方。
 
-**Visibility**
+**可見度**
 
-- Everyone sees the red Napoleon label after the auction and the secretary card's identity.
-- Only the secretary sees their own orange Secretary label until the secretary card is played;
-  then everyone does. Observers see it from the start.
-- The call shows a two-second notice: the secretary's notice stays until they confirm, which
-  blocks only their own actions and never pauses the table. Summons show a two-second notice to
-  everyone except the leader.
-- Each plate shows that seat's won point cards. The info rail shows side progress only
-  after the secretary card's play has been presented, or after settlement when it was
-  never played. Private knowledge of the secretary does not reveal these totals early.
-  Public four-player discards count for the defenders immediately; five- and six-player
-  totals exclude discards until settlement and mark the defender count with `+`.
+- 叫牌結束後，所有人都看得到紅色的拿破崙標籤與秘書牌是哪一張。
+- 秘書牌打出前，只有小秘書本人看得到自己的橘色小秘書標籤；打出後所有人都看得到。觀戰者從一開始就看得到。
+- 指定秘書牌時顯示兩秒的通知：小秘書的通知會停留到本人確認，只擋住他自己的操作，從不暫停牌桌。召喚會對首攻者以外的所有人顯示兩秒通知。
+- 每個名牌顯示該座位贏得的分數牌。資訊欄只在秘書牌的出牌呈現完畢後，或秘書牌從未打出時在結算後，才顯示雙方進度。私下知道小秘書是誰也不會提早揭露這些總數。四人時公開的棄牌會立刻算給防守方；五人與六人時總數在結算前不含棄牌，並以 `+` 標示防守方的數字。
 
-## Bot strategies
+## Bot 策略
 
-| Game | Hard strategy |
+| 遊戲 | 困難難度策略 |
 | --- | --- |
-| Bridge | Natural bidding ([agreements](#bot-bidding-agreements)) that competes by estimated make chances and stops at the lowest winning level; declines redeals. Play uses the auction model: leads partner's bid suit, avoids the opponents' suits, and judges trump drawing from partner's shown length and public voids ([code](../../server/src/bots/bridge-strategy.ts)) |
-| Big Two | Fewest remaining groups; prefers ordinary replies and saves bombs and 2s; never passes voluntarily when an opponent has ≤5 cards; blocks one-card opponents ([code](../../server/src/bots/bigtwo-strategy.ts)) |
-| Red Points | Weighs immediate red points, future hand matches, and exposure to unseen cards; a discarded card also costs its own points, so black discards come first ([code](../../server/src/bots/redpoints-strategy.ts)) |
-| Ninety-Nine | Keeps rescue cards, spends larger safe numbers; weighs return risk, next-seat risk, direction, and public evidence ([code](../../server/src/bots/ninetynine-strategy.ts)) |
-| Sevens | Saves reachable penalties, keeps follow-ups, weighs dead-card covers, blocking, and A/K closure ([code](../../server/src/bots/sevens-strategy.ts), [knowledge](../../server/src/bots/sevens-knowledge.ts)) |
-| Chinese Poker | Searches all non-fouled 3/5/5 splits by estimated row wins, values, and sweep risk; also used by Auto arrange and timeouts ([code](../../server/src/bots/chinesepoker-strategy.ts)) |
-| Liar's Deck | Balances death risk, estimated honesty, and challenge odds; sheds cards, prefers non-joker truths; bluffs one card a quarter of the time while holding a truth ([code](../../server/src/bots/liarsdeck-strategy.ts)) |
-| Blackjack | Basic strategy for stand-on-soft-17 with peek, double after split, no surrender; bets 3–8% at random, but in the last two hands chases the leader when behind and protects a lead; player dealers compare standing with expected draws ([code](../../server/src/bots/blackjack-strategy.ts)) |
-| Hold'em | Preflop by position, depth in big blinds, and pot price against raisers' ranges inferred from each seat's raise and shove rates this match; at most two re-raises per seat and four per hand. Postflop equity against ranges that narrow when opponents bet, mixing slowplays, check-raises, and semi-bluffs, with sizes unrelated to strength; widens when trailing and tightens when leading in the last hands ([code](../../server/src/bots/holdem-strategy.ts)) |
-| Napoleon | Bids a self-play-fitted estimate of its side's point cards at the lowest winning level, choosing trump or NT; discards to void short side suits while keeping jokers, trumps, and aces; calls the strongest card it lacks. Plays score win chance × points − the card's keep value; defenders infer the secretary from public feeding and overtaking; draws trumps when long, uses summons, and dumps jokers before the final three tricks ([code](../../server/src/bots/napoleon-strategy.ts)) |
+| 橋牌 | 自然制叫牌（[約定](#bot-叫牌約定)），依估計的做成機率競叫，停在能贏的最低線位；拒絕重新發牌。出牌使用叫牌模型：首攻同伴叫過的花色，避開對手的花色，並根據同伴顯示的長度與公開的缺門判斷是否清王牌（[程式碼](../../server/src/bots/bridge-strategy.ts)） |
+| 大老二 | 讓剩下的牌組數最少；優先用一般牌型跟牌，保留炸彈與 2；對手剩 ≤5 張時從不主動 pass；阻擋只剩一張牌的對手（[程式碼](../../server/src/bots/bigtwo-strategy.ts)） |
+| 撿紅點 | 權衡立即可得的紅點、手牌未來的配對機會，以及未見牌帶來的風險；棄到桌面的牌也會損失它自己的分數，所以優先棄黑色牌（[程式碼](../../server/src/bots/redpoints-strategy.ts)） |
+| 99 | 保留救命牌，優先打出安全範圍內較大的數字；權衡被打回的風險、下一家的風險、方向與公開資訊（[程式碼](../../server/src/bots/ninetynine-strategy.ts)） |
+| 牌七 | 保住還能接到的罰分牌，保留後續可接的牌；權衡蓋死牌、卡牌與 A/K 關閉（[程式碼](../../server/src/bots/sevens-strategy.ts)、[推論](../../server/src/bots/sevens-knowledge.ts)） |
+| 十三支 | 搜尋所有不倒水的 3/5/5 分法，依估計的贏墩數、分數與被打槍風險評估；「自動排牌」與逾時也使用這個搜尋（[程式碼](../../server/src/bots/chinesepoker-strategy.ts)） |
+| 騙子酒館 | 平衡死亡風險、估計的誠實度與抓謊機率；盡量出掉手牌，偏好用非鬼牌說實話；手上有真牌時，有四分之一的機率只出一張牌唬人（[程式碼](../../server/src/bots/liarsdeck-strategy.ts)） |
+| 21 點 | 採用軟 17 停牌、莊家偷看、可分牌後加倍、不可投降的基本策略；隨機下注 3–8%，但最後兩手落後時會追趕領先者，領先時則保住優勢；玩家當莊時比較停牌與補牌的期望值（[程式碼](../../server/src/bots/blackjack-strategy.ts)） |
+| 德州撲克 | 翻牌前依位置、以大盲計算的籌碼深度，以及對加注者範圍的底池賠率決定；加注者範圍由各座位在本局的加注與全下頻率推估；每個座位最多再加注兩次，每手最多四次。翻牌後依對手範圍計算勝率，對手下注時範圍會縮小；混用慢打、過牌加注與半詐唬，下注大小與牌力無關；最後幾手落後時放寬、領先時收緊（[程式碼](../../server/src/bots/holdem-strategy.ts)） |
+| 拿破崙 | 以自我對局擬合的模型估計己方分數牌數，在能贏的最低線位叫牌，選擇王牌或 NT；棄牌時清空短的副牌花色，同時保留鬼牌、王牌與 A；指定自己沒有的最強牌。出牌以「贏墩機率 × 分數 − 該牌的保留價值」評分；防守方從公開的送分與超越推測小秘書；王牌長時清王牌，會使用召喚，並在最後三墩前丟掉鬼牌（[程式碼](../../server/src/bots/napoleon-strategy.ts)） |
 
-**Strategy limits**
+**策略限制**
 
-- Big Two passes only when replying would spend bombs or 2s or break the plan. Leads always
-  play. Human timeouts use the same strategy.
-- Ninety-Nine rescue cards are 4, 5, 10, J, Q, K, and ♠A. Risk near 99 counts unseen cards
-  and plays since the last reshuffle (per copy with two decks); once the stock can run out,
-  risks beyond the match end are ignored. Two-deck matches pressure the next seat less.
-- Sevens estimates are approximate. Absence is inferred only from forced covers, never from
-  a voluntary play. Closure exposure assumes each opponent gets at most one gate play per
-  rotation. Spectator views and settlement results are never used.
-- Liar's Deck: a call reveals only the previous play. Honesty estimates exclude the bot's
-  own cards and partly trust earlier claims. Emptying a hand against one remaining
-  opponent guarantees a call. Voluntary bluffs stop after two pulls.
-- Blackjack player-dealer estimates ignore prorated payouts when the dealer is short.
-- Hold'em opponent rates read only the public log and start from priors that dominate the
-  first hands of a match. Position matters only preflop.
+- 大老二只有在跟牌會用掉炸彈或 2，或打亂出牌規劃時才 pass。首出時一定出牌。真人逾時也使用相同的策略。
+- 99 的救命牌是 4、5、10、J、Q、K 與 ♠A。接近 99 的風險會計算未見的牌，以及上次重洗以來的出牌（兩副牌時逐張計算）；牌堆可能用完之後，忽略對局結束後的風險。雙副牌對局對下一家施加的壓力較小。
+- 牌七的估計是近似值。只從被迫蓋牌推論某人沒有某張牌，從不根據主動出牌推論。關閉風險假設每位對手每一圈最多只有一次 gate play。從不使用旁觀視角與結算結果。
+- 騙子酒館：喊 LIAR 只會揭露上一手。誠實度估計排除 bot 自己的牌，並部分相信先前的宣稱。只剩一位對手時出完手牌，一定會被喊 LIAR。扣過兩次扳機後就不再主動唬人。
+- 21 點玩家當莊的估計會忽略莊家籌碼不足時的按比例賠付。
+- 德州撲克的對手頻率只讀取公開紀錄，並從先驗值開始，先驗值主導一局的前幾手。位置只在翻牌前有影響。

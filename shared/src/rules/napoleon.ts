@@ -1,5 +1,5 @@
 // ─── Napoleon rules engine (pure functions, shared by client and server) ───
-// Rules: docs/games/cards.md#napoleon
+// Rules: docs/games/cards.md#拿破崙
 
 import type {
   BidSuit, Card, GameSeat, NapoleonBidAction, NapoleonBidLevel, NapoleonBiddingState, NapoleonCard,

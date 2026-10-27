@@ -1,9 +1,8 @@
-# Game rules
+# 遊戲規則
 
-Implemented house rules; tournament rules may differ. The server decides legality,
-turns, and results.
+這裡記錄實際採用的家規；正式比賽規則可能不同。合法性、回合與結果都由伺服器判定。
 
-| Document | Contents |
+| 文件 | 內容 |
 | --- | --- |
-| [Shared rules](common.md) | Seats, room lifecycle, spectators, turn timer, card controls, bots |
-| [Card games](cards.md) | Bridge, Big Two, Red Points, Ninety-Nine, Sevens, Chinese Poker, Liar's Deck, Blackjack, Texas Hold'em, Napoleon; Hard bot strategies |
+| [共通規則](common.md) | 座位、房間流程、旁觀、出牌計時、卡牌操作、bot |
+| [撲克牌遊戲](cards.md) | 橋牌、大老二、撿紅點、99、牌七、十三支、騙子酒館、21 點、德州撲克、拿破崙；困難難度的 bot 策略 |

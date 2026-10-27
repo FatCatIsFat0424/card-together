@@ -1,181 +1,138 @@
-# Architecture
+# 架構
 
-Server-authoritative TypeScript monorepo.
+由伺服器作主的 TypeScript monorepo。
 
-| Channel | Carries |
+| 通道 | 傳送內容 |
 | --- | --- |
-| HTTP | Accounts, profiles, friends, private messages, history, media |
-| Socket.IO | Authenticated room, game, chat actions; voice signaling |
-| WebRTC | Voice audio between browsers |
+| HTTP | 帳號、個人檔案、好友、私訊、歷史紀錄、媒體 |
+| Socket.IO | 經過驗證的房間、遊戲、聊天操作；語音 signaling |
+| WebRTC | 瀏覽器之間的語音音訊 |
 
-Production runs one systemd backend behind local Nginx, with state outside the
-application tree ([deployment](deployment.md)).
+正式環境在本機 Nginx 後方執行一個 systemd 後端，狀態存放在應用程式目錄之外（[部署](deployment.md)）。
 
-## Modules
+## 模組
 
-| Location | Responsibility |
+| 位置 | 職責 |
 | --- | --- |
-| `shared/src/` | Types, constants, pure game rules, presentation frames |
-| `server/src/app.ts`, `index.ts` | Configuration, service composition, start and shutdown |
-| `auth/`, `social/` | Password, session, profile, friendship, and private-message services |
-| `http/`, `socket/` | Validate and authenticate requests; translate results |
-| `runtime/` | Serialize changes, snapshot and restore, commit, schedule bots and timeouts |
-| `bots/` | Per-game heuristics using only the bot's filtered view |
-| `managers/`, `managers/games/` | Player, room, game, chat, voice state; game adapters |
-| `engine/` | Pure Bridge deck, bidding, play, scoring |
-| `database/`, `media/` | Async Repository, JSON adapter, migrations, indexes, per-match replay files; content-addressed images |
-| `client/src/pages/`, `components/` | Lazy routes and CSS Modules UI |
-| `client/src/hooks/`, `stores/` | Account and Socket lifecycle; Zustand snapshots and preferences |
-| `client/src/audio/`, `voice/` | Music, turn reminders, WebRTC |
-| `deploy/` | Runtime preparation, install, backup, migration, publication |
+| `shared/src/` | 型別、常數、純遊戲規則、呈現畫格 |
+| `server/src/app.ts`、`index.ts` | 設定、組合服務、啟動與關閉 |
+| `auth/`、`social/` | 密碼、工作階段、個人檔案、好友關係與私訊服務 |
+| `http/`、`socket/` | 驗證請求與身分；轉換結果 |
+| `runtime/` | 序列化變更、建立快照與還原、commit、排程 bot 與逾時 |
+| `bots/` | 各遊戲的啟發式策略，只使用 bot 自己過濾後的視角 |
+| `managers/`、`managers/games/` | 玩家、房間、遊戲、聊天、語音狀態；遊戲 adapter |
+| `engine/` | 純函式的橋牌牌組、叫牌、出牌、計分 |
+| `database/`、`media/` | 非同步 Repository、JSON adapter、migration、索引、每場對局的回放檔；以內容定址的圖片 |
+| `client/src/pages/`、`components/` | 延遲載入的路由與 CSS Modules UI |
+| `client/src/hooks/`、`stores/` | 帳號與 Socket 生命週期；Zustand 快照與偏好設定 |
+| `client/src/audio/`、`voice/` | 音樂、輪到提醒、WebRTC |
+| `deploy/` | 執行環境準備、安裝、備份、migration、發布 |
 
-- Dependencies flow **transport → runtime/managers → pure engine and shared rules**.
-- The engine has no manager, storage, or network access.
-- The Socket context and runtime coordinate managers; managers never call each other.
-- HTTP services use the Repository contract ([storage](storage.md)).
+- 相依方向是 **transport → runtime/managers → 純 engine 與 shared 規則**。
+- engine 不存取 manager、儲存或網路。
+- 由 Socket context 和 runtime 協調 manager；manager 之間從不互相呼叫。
+- HTTP 服務使用 Repository 介面（[儲存](storage.md)）。
 
-## State commits
+## 狀態 commit
 
-Every runtime mutation:
+每次 runtime 變更都會：
 
-1. Validates session, room, and turn authority, then snapshots state.
-2. Applies manager changes and atomically saves runtime plus any completed match.
-3. Acknowledges, then broadcasts `player:state` to the actor's tabs and affected
-   old and new room members.
+1. 驗證工作階段、房間與回合權限，再建立狀態快照。
+2. 套用 manager 變更，並以原子操作儲存 runtime 與已完成的對局。
+3. 先回覆 acknowledgement，再把 `player:state` 廣播給操作者的所有分頁，以及受影響的新舊房間成員。
 
-- A failed save restores the snapshot. Unchanged resumes may skip the write but still
-  authenticate and synchronize.
-- `getRecipientVisibleState` filters hands and legal choices per recipient. Observers
-  additionally receive `observedHands` (and Blackjack `observedHole`); see
-  [spectators](games/common.md#spectators-and-god-view). Bots and automatic actions see only
-  their own filtered view.
-- Chat history is filtered per recipient.
-- Each write still validates and serializes the full JSON document. In-memory indexes,
-  scoped broadcasts, and unchanged-state checks reduce work but do **not** allow
-  multiple server processes.
-- Private messages and friend notifications use Repository transactions directly,
-  independently of room snapshots. HTTP emits `social:changed` to affected accounts
-  after persistence; clients reload through authenticated endpoints. Retention and
-  permissions: [storage](storage.md#identity-and-sessions).
+- 儲存失敗會還原快照。沒有變化的 resume 可以跳過寫入，但仍會驗證身分並同步。
+- `getRecipientVisibleState` 依接收者過濾手牌與合法選項。觀戰者另外會收到 `observedHands`（21 點還有 `observedHole`）；見[旁觀者](games/common.md#旁觀者與上帝視角)。bot 和自動操作只看得到自己過濾後的視角。
+- 聊天紀錄依接收者過濾。
+- 每次寫入仍會驗證並序列化整份 JSON 文件。記憶體索引、限定範圍的廣播與未變更狀態檢查可以減少工作量，但**不**支援多個伺服器程序。
+- 私訊和好友通知直接使用 Repository transaction，與房間快照無關。HTTP 在資料寫入後對受影響的帳號送出 `social:changed`；用戶端再透過需驗證的 endpoint 重新載入。保留期限與權限：[儲存](storage.md#身分與工作階段)。
 
-| Lifecycle | Behavior |
+| 生命週期 | 行為 |
 | --- | --- |
-| Multiple tabs | Share one account identity and seat |
-| Last tab disconnects | Starts a 60-second reconnect window |
-| Server restart | Restores rooms, games, chat; disconnected players get a fresh window |
-| Reconnect expiry or leaving | Aborts an unfinished match; completed history remains |
-| Last human leaves | Removes the room, game, and chat; periodic cleanup also removes orphaned rooms |
-| Socket IDs, voice membership | Never persisted |
+| 多個分頁 | 共用同一個帳號身分與座位 |
+| 最後一個分頁斷線 | 開始 60 秒的重新連線時限 |
+| 伺服器重新啟動 | 還原房間、遊戲、聊天；斷線玩家重新取得完整時限 |
+| 重新連線逾時或離開 | 中止未結束的對局；已完成的歷史紀錄保留 |
+| 最後一位真人離開 | 移除房間、遊戲與聊天；定期清理也會移除孤立的房間 |
+| Socket ID、語音成員 | 永不保存 |
 
-## Frontend
+## 前端
 
-- Public routes: `/login`, `/register`. Authenticated: `/`, `/account`, `/friends`,
-  `/messages`, `/messages/:accountId`, `/shop`, `/players/:accountId`, `/room/:roomCode`,
-  `/game/:roomCode`, all below the configured base path. Legacy `/friends?tab=messages`
-  and `/friends/messages/:accountId` links redirect to the independent messages page.
-- `api.ts` handles HTTP with cookies (15-second timeout, 120 seconds for uploads);
-  `socket.ts` handles realtime.
-- Account hooks replace store state from server snapshots, clear a missing room or
-  game, and keep references for unchanged fields.
-- Game tables load separately on demand; entering one game does not load the other
-  nine table implementations. Shared controls stay in reusable chunks, and route
-  error recovery also covers failed table imports.
-- Chat message rows retain their renders while the composer changes. New or replaced
-  messages, locale changes, and cosmetic preferences still update the affected rows.
-- Font stylesheets are discovered in the document head alongside application assets,
-  with connection hints for the font hosts, rather than through a CSS import chain.
-- Theme, motion, music, and voice preferences are browser-local; profile, images, and
-  history visibility are server-side.
+- 公開路由：`/login`、`/register`。需登入：`/`、`/account`、`/friends`、`/messages`、`/messages/:accountId`、`/shop`、`/players/:accountId`、`/room/:roomCode`、`/game/:roomCode`，都位於設定的 base path 之下。舊版 `/friends?tab=messages` 和 `/friends/messages/:accountId` 連結會轉址到獨立的訊息頁面。
+- `api.ts` 以 cookie 處理 HTTP（逾時 15 秒，上傳為 120 秒）；`socket.ts` 處理即時通訊。
+- 帳號 hook 以伺服器快照取代 store 狀態，清除已不存在的房間或遊戲，並讓未變更的欄位保留原本的參照。
+- 牌桌依需求個別載入；進入一款遊戲不會載入其他九款牌桌實作。共用控制項放在可重用的 chunk 中，路由的錯誤復原也涵蓋牌桌載入失敗。
+- 輸入框內容改變時，聊天訊息列會保留既有的渲染結果。新的或被取代的訊息、語系變更與外觀偏好仍會更新受影響的列。
+- 字型樣式表與應用程式資源一起在文件 head 中宣告，並對字型主機加上連線提示，而不是透過 CSS import 鏈載入。
+- 主題、動態效果、音樂與語音偏好存在瀏覽器本機；個人檔案、圖片與歷史紀錄可見度存在伺服器端。
 
-**Connection recovery**
+**連線復原**
 
-- Socket.IO retries forever with 1–5 s backoff and a polling fallback. Network return or
-  page visibility reconnects immediately; after more than 10 seconds hidden, the page
-  re-sends `player:resume` and reconnects if it gets no answer.
-- Before the first snapshot, protected routes show a full-page connecting state. Later
-  disconnects keep pages mounted under a reconnect banner.
-- Actions check `selectConnectionReady`; game, room, and host controls stay disabled
-  until ready.
+- Socket.IO 會無限次重試，退避間隔 1–5 秒，並可退回 polling。網路恢復或頁面重新可見時立即重新連線；頁面隱藏超過 10 秒後，會重送 `player:resume`，沒有回應就重新連線。
+- 收到第一份快照前，受保護的路由會顯示全頁的連線中狀態。之後斷線時，頁面保持掛載，並顯示重新連線橫幅。
+- 操作前會檢查 `selectConnectionReady`；就緒前，遊戲、房間與房主控制項都保持停用。
 
-Page behavior: [interface](interface.md).
+頁面行為：[介面](interface.md)。
 
-## Presentation timeline
+## 呈現時間軸
 
-[`game-presentation.ts`](../shared/src/game-presentation.ts) derives public frames
-from committed logs. Metadata carries `id`, `startedAt`, `logStart`, and the
-recipient's `serverNow`; frames never include opponents' hands or unrevealed stock.
+[`game-presentation.ts`](../shared/src/game-presentation.ts) 從已 commit 的紀錄推導出公開畫格。中繼資料包含 `id`、`startedAt`、`logStart` 與接收者的 `serverNow`；畫格從不包含對手的手牌或尚未翻開的牌堆。
 
-- Frames run in sequence. Controls, turn highlights, reminders, bots, and auto-pass all
-  wait for the shared deadline.
-- The server rejects play, pass, capture, and continue before the deadline (continue also
-  requires scoring). Clients disable controls and delay the score overlay.
-- Refresh skips expired frames. Reduced motion keeps information and deadlines.
-- Legacy Bridge snapshots without metadata keep the local completed-trick queue.
+- 畫格依序播放。控制項、輪到的高亮、提醒、bot 與自動 pass 都會等待共用的截止時間。
+- 截止時間前，伺服器會拒絕出牌、pass、吃牌與繼續（繼續還需要已完成計分）。用戶端會停用控制項，並延後顯示分數面板。
+- 重新整理會跳過已過期的畫格。減少動態效果時仍保留資訊與截止時間。
+- 沒有中繼資料的舊版橋牌快照會沿用本機的已完成墩佇列。
 
-| Frame | Duration (ms) |
+| 畫格 | 時長（ms） |
 | --- | --- |
-| Bridge play / completed trick | 1,300 / 2,000 |
-| Big Two play / pass / round winner | 1,300 / 1,000 / 2,000 |
-| Red Points play or flip/capture | 1,900 per log entry |
-| Ninety-Nine play / elimination | 1,900 / 2,500 |
-| Sevens play / cover / Dragon Slaying (dragon / fire only) | 1,300 / 1,000 / 2,200 / 1,700 |
-| Sevens table collapse / broken table hold | 1,800 / 2,000 |
-| Chinese Poker row reveal / sweep / home run | 2,500 / 1,500 / 2,500 |
-| Liar's Deck new round / play / LIAR call / trigger suspense / pull result | 2,000 / 1,300 / 2,500 / 2,500 / 1,500 |
-| Blackjack deal / hit / double / stand / split | 1,800 / 1,000 / 1,300 / 700 / 1,300 |
-| Blackjack dealer reveal / dealer draw / settlement | 1,300 / 1,000 / 2,500 |
-| Hold'em new hand / action / street / showdown / award | 1,500 / 900 / 1,300 / 2,500 / 2,500 |
-| Napoleon secretary call / play / summon notice / completed trick | 2,000 / 1,300 / 2,000 / 2,000 |
-| Final result before score overlay | 3,000 (2,000 after a Sevens table collapse) |
+| 橋牌出牌／完成一墩 | 1,300 / 2,000 |
+| 大老二出牌／pass／該輪贏家 | 1,300 / 1,000 / 2,000 |
+| 撿紅點出牌或翻牌／吃牌 | 每筆紀錄 1,900 |
+| 99 出牌／淘汰 | 1,900 / 2,500 |
+| 牌七出牌／蓋牌／斬龍（龍／僅火焰） | 1,300 / 1,000 / 2,200 / 1,700 |
+| 牌七翻桌／破桌停留 | 1,800 / 2,000 |
+| 十三支逐墩開牌／打槍／全壘打 | 2,500 / 1,500 / 2,500 |
+| 騙子酒館新回合／出牌／喊 LIAR／扣扳機懸念／開槍結果 | 2,000 / 1,300 / 2,500 / 2,500 / 1,500 |
+| 21 點發牌／要牌／加倍／停牌／分牌 | 1,800 / 1,000 / 1,300 / 700 / 1,300 |
+| 21 點莊家開牌／莊家補牌／結算 | 1,300 / 1,000 / 2,500 |
+| 德州撲克新的一手／動作／新一輪公牌／攤牌／派彩 | 1,500 / 900 / 1,300 / 2,500 / 2,500 |
+| 拿破崙指定秘書牌／出牌／召喚通知／完成一墩 | 2,000 / 1,300 / 2,000 / 2,000 |
+| 分數面板前的最終結果 | 3,000（牌七翻桌後為 2,000） |
 
-**Timing versions**
+**時序版本**
 
-| Version | Behavior |
+| 版本 | 行為 |
 | --- | --- |
-| 3 (current) | Bridge and Big Two plays: 300 ms arrival + 1,000 ms reading |
-| 2 (restored) | Keeps the 2,400 ms Sevens Dragon Slaying close |
-| Missing (restored) | Keeps shorter legacy play and pass frames |
+| 3（目前） | 橋牌與大老二出牌：300 ms 進場 + 1,000 ms 閱讀 |
+| 2（還原時） | 保留 2,400 ms 的牌七斬龍收尾 |
+| 無版本（還原時） | 保留較短的舊版出牌與 pass 畫格 |
 
-Restored presentations keep their version and deadlines; the next action uses current
-timing. **Any duration change that can delay a saved turn needs a new timing version.**
+還原的呈現會保留原本的版本與截止時間；下一個動作改用目前的時序。**任何可能延後已保存回合的時長變更，都需要新的時序版本。**
 
-## Turn clocks
+## 回合計時
 
-Rules and per-game timeouts: [games](games/common.md#turn-timer). Limits:
-[`time-control.ts`](../shared/src/time-control.ts).
+規則與各遊戲的逾時處理：[遊戲](games/common.md#出牌計時)。上限：[`time-control.ts`](../shared/src/time-control.ts)。
 
-- Room timer settings and per-game reserves and deadlines are persisted.
-- Actions settle elapsed time before advancing. Red Points carries unused allowance
-  across its two decision stages. Presentation deadlines delay clock starts.
-- Timeout work rechecks game and turn inside the runtime queue, applies one legal action
-  from the player's filtered view, and publishes after saving. A failed write restores
-  clock and game together; manual actions also check expiry.
-- Startup keeps deadlines; overdue turns resolve without a browser. Later turns start
-  from the new commit and never replay missed turns.
-- Legacy rooms and games without timing data get defaults and fresh clocks.
-- Clients project from server timestamps and never decrement stored reserves.
+- 房間計時設定，以及各遊戲的時間庫與截止時間都會保存。
+- 動作在推進前先結算已用時間。撿紅點的兩個決策階段之間會延續未用完的回合時間。呈現截止時間會延後計時開始。
+- 逾時處理會在 runtime 佇列內重新檢查遊戲與回合，從該玩家過濾後的視角套用一個合法動作，儲存後再發布。寫入失敗時，計時與遊戲會一起還原；手動操作也會檢查是否逾時。
+- 啟動時保留截止時間；已逾時的回合不需瀏覽器就會處理。之後的回合從新的 commit 開始計時，不會補跑錯過的回合。
+- 沒有計時資料的舊版房間與遊戲會套用預設值並重新計時。
+- 用戶端依伺服器時間戳推算，從不自行扣減已保存的時間庫。
 
-**Shared deadlines** (Chinese Poker arrangement, Blackjack betting, Napoleon four-player discard review):
+**共用截止時間**（十三支排牌、21 點下注、拿破崙四人棄牌確認）：
 
-- No single active seat; one deadline per window.
-- At expiry, one commit fills every missing decision from each seat's filtered view.
-- Bots submit individually. Submissions have no frames; the last one starts the showdown
-  or deal. Blackjack betting opens after the previous settlement presentation.
+- 沒有單一的行動座位；每個時段一個截止時間。
+- 到期時，以一次 commit 依各座位過濾後的視角補齊所有缺少的決定。
+- bot 各自提交。提交沒有畫格；最後一份提交會開始比牌或發牌。21 點下注在上一手結算呈現結束後開放。
 
-**Big Two forced passes** use a separate scheduler with saved per-seat deadlines; see
-[Big Two](games/cards.md#big-two).
+**大老二強制 pass** 使用獨立的排程器，並保存各座位的截止時間；見[大老二](games/cards.md#大老二)。
 
-## Bots
+## Bot
 
-- Bot timers are rebuilt from committed turns at startup and after each mutation. Each
-  run rechecks game and turn in the runtime queue and waits for the presentation deadline.
-- Results publish after saving. Failed saves roll back and retry; abort, replacement,
-  and shutdown cancel stale work.
-- After three consecutive failures on one turn, the bot or timeout tries the first legal
-  action from the same view. If that fails three more commits, or none exists, the match
-  aborts with a system chat line. Chat senders must be accounts, so a stuck bot turn is
-  reported under the first human seat. Every failure is logged.
-- Bot matches use the same durable history and replay path as human matches; history
-  statistics exclude them. See [storage and retention](storage.md#replay-archives).
+- 啟動時與每次變更後，都會從已 commit 的回合重建 bot 計時器。每次執行都在 runtime 佇列內重新檢查遊戲與回合，並等待呈現截止時間。
+- 結果在儲存後發布。儲存失敗會回復並重試；中止、取代與關閉會取消過時的工作。
+- 同一回合連續失敗三次後，bot 或逾時處理會從相同視角改用第一個合法動作。若再失敗三次 commit，或根本沒有合法動作，對局就會中止，並發出一則系統聊天訊息。聊天發送者必須是帳號，所以卡住的 bot 回合會記在第一個真人座位名下。每次失敗都會寫入 log。
+- 有 bot 的對局和真人對局走相同的持久歷史紀錄與回放流程；歷史統計不計入這些對局。見[儲存與保留期限](storage.md#回放封存)。
 
-Strategies: [games](games/cards.md#bot-strategies).
+策略：[遊戲](games/cards.md#bot-策略)。

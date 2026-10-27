@@ -1,5 +1,5 @@
 // ─── Ninety-Nine rules engine (pure functions, shared by client and server) ───
-// Rules: docs/games/cards.md#ninety-nine
+// Rules: docs/games/cards.md#99
 
 import type { Card, NinetyNineMatchResult, NinetyNineOptions, GameSeat } from '../types';
 

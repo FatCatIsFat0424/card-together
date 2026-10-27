@@ -32,6 +32,8 @@ which creates the Git-ignored `server/data/database.json`.
 
 ## Documentation
 
+Guides in `docs/` are written in Traditional Chinese.
+
 | Document | Contents |
 | --- | --- |
 | [Agent instructions](AGENTS.md) | Project rules, directory map, required checks |
@@ -45,7 +47,7 @@ which creates the Git-ignored `server/data/database.json`.
 | [Testing](docs/testing.md) | Check runner, gates, caches, coverage |
 | [Deployment](docs/deployment.md) | Build, install, Nginx, backups, rollback |
 | [Android app](docs/android.md) | APK wrapper, signing key, release steps |
-| [Roadmap](docs/roadmap.md) | Public launch gates, monetization, operations, and development priorities (Traditional Chinese) |
+| [Roadmap](docs/roadmap.md) | Public launch gates, monetization, operations, and development priorities |
 
 ## License
 

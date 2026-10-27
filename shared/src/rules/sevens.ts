@@ -1,5 +1,5 @@
 // ─── Sevens (排七) rules engine (pure functions, shared by client and server) ───
-// Rules: docs/games/cards.md#sevens
+// Rules: docs/games/cards.md#牌七
 
 import type { Card, Seat, SevensTable, Suit } from '../types';
 import { SEAT_ORDER_CLOCKWISE, SUIT_DISPLAY_ORDER } from '../constants';

@@ -1,182 +1,129 @@
-# Music, images, and voice
+# 音樂、圖片與語音
 
-## Background music
+## 背景音樂
 
-Only the site owner supplies music; players cannot upload tracks or enter URLs.
+只有站長可以提供音樂；玩家不能上傳曲目或輸入網址。
 
-1. Put audio files in the Git-ignored `local-music/` at the repository root.
-2. Run `npm run music:import` (client `predev` and `prebuild` also run it). There is no
-   watcher: rerun and refresh after changes.
-3. To publish, build and use the [frontend publisher](deployment.md#frontend-only-publication).
+1. 把音訊檔放進 repository 根目錄下、被 Git 忽略的 `local-music/`。
+2. 執行 `npm run music:import`（client 的 `predev` 與 `prebuild` 也會執行）。沒有監看機制：變更後請重新執行並重新整理。
+3. 要發布時，建置後使用[前端發布工具](deployment.md#只發布前端)。
 
-| Import rule | Behavior |
+| 匯入規則 | 行為 |
 | --- | --- |
-| Formats | MP3, OGG, OPUS, WAV, M4A, AAC, FLAC; recursive, case-insensitive; other files ignored |
-| Title and order | Filename without extension; root files first, then folders, each in natural path order; prefix numbers to set order |
-| Groups | Each first-level folder is a player list section; deeper folders join it |
-| Track ID | Relative path, so moves and renames change identity; hashed output names refresh caches |
-| Audio | Original bytes, no transcoding; browser codec support varies (MP3 is safest) |
-| Validation | Structure, paths, and nonempty files; not decodability |
-| Safety | Symlinks or empty files fail before the catalog changes; only stale importer output is removed |
+| 格式 | MP3、OGG、OPUS、WAV、M4A、AAC、FLAC；遞迴搜尋，不分大小寫；其他檔案忽略 |
+| 標題與順序 | 去掉副檔名的檔名；先放根目錄的檔案，再放各資料夾，各自依自然路徑順序排列；在檔名前加數字可以指定順序 |
+| 分組 | 每個第一層資料夾是播放器清單中的一個分組；更深的資料夾併入該分組 |
+| 曲目 ID | 相對路徑，所以搬移或重新命名會改變身分；輸出檔名含雜湊，可更新快取 |
+| 音訊 | 保留原始位元組，不轉檔；各瀏覽器支援的編碼不同（MP3 最保險） |
+| 驗證 | 結構、路徑與非空檔案；不檢查能否解碼 |
+| 安全性 | 符號連結或空檔案會在目錄變更前就失敗；只移除匯入工具產生的過時輸出 |
 
-- Generated, Git-ignored, **do not edit:** `client/src/audio/provided-music.generated.json`
-  and `client/public/provided-music/imported-*`. A fresh checkout has an empty playlist.
-- Player controls: play/pause, previous/next, repeat-one, sequential or shuffle, volume
-  (default 50%). New visitors start with shuffle and a random track; saved volume,
-  track, mode, and group selection are restored locally.
-- The current track shows its group before the title. Groups collapse (only the
-  current one opens with the panel) and each has a checkbox: deselected groups are
-  skipped by previous/next, shuffle, and auto-advance but stay playable by click. At
-  least one playable group or root track always remains selected.
-- Opening the site in a new tab starts playback. A reload keeps a pause made in that
-  tab (session storage) until the player presses play again. If the browser blocks
-  autoplay, playback waits for a trusted user gesture; pausing cancels this retry.
-  Playback continues across routes and when the panel closes.
-  One audio element is reused so the browser unlock carries across tracks.
-- The account page's Sound tab holds three device-local switches, all on by default:
-  game sound effects (card, pass, elimination, start, and Sevens slash and collapse cues),
-  game music, and the turn reminder. Music switched off pauses and never autoplays; pressing
-  play in the music panel turns it back on. Shop sound-pack previews always play on click.
-- Turn reminders are separate synthesized chimes, on by default and unaffected by music
-  pause or volume. They wait for the presentation deadline and are dropped, not queued,
-  when audio is blocked.
-- Other room members hear a separate rising chime when someone joins; the joining
-  player does not. It follows the turn-reminder toggle and is dropped while audio is
-  blocked.
-- A user gesture (click, or touchend on iOS) unlocks audio.
+- 自動產生且被 Git 忽略，**請勿編輯**：`client/src/audio/provided-music.generated.json` 與 `client/public/provided-music/imported-*`。全新的 checkout 播放清單是空的。
+- 播放器控制：播放／暫停、上一首／下一首、單曲重複、依序或隨機播放、音量（預設 50%）。新訪客以隨機模式與隨機曲目開始；儲存的音量、曲目、模式與分組選擇會在本機還原。
+- 目前的曲目會在標題前顯示分組。分組可以收合（打開面板時只展開目前的分組），且每個分組都有核取方塊：取消勾選的分組會被上一首／下一首、隨機與自動播放下一首跳過，但仍可點擊播放。至少會保留一個可播放的分組或根目錄曲目處於勾選狀態。
+- 在新分頁開啟網站會開始播放。重新載入時，會保留該分頁中的暫停狀態（session storage），直到玩家再次按下播放。若瀏覽器阻擋自動播放，會等待可信任的使用者操作再播放；暫停會取消這次重試。切換路由或關閉面板時都會持續播放。重複使用同一個 audio 元素，讓瀏覽器的解鎖狀態延續到之後的曲目。
+- 帳號頁面的「聲音」分頁有三個只存在本機裝置的開關，預設都開啟：遊戲音效（出牌、pass、淘汰、開始，以及牌七的斬擊與翻桌音效）、遊戲音樂，以及輪到提醒。關閉音樂會暫停播放，也從不自動播放；在音樂面板按下播放會重新開啟。商店的音效包試聽點擊後一定會播放。
+- 輪到提醒是另外合成的提示音，預設開啟，不受音樂暫停或音量影響。提醒會等到呈現截止時間，音訊被阻擋時直接丟棄，不會排隊。
+- 有人加入時，其他房間成員會聽到另一個上升的提示音；加入者本人聽不到。它跟隨輪到提醒的開關，音訊被阻擋時直接丟棄。
+- 使用者操作（點擊，iOS 上為 touchend）會解鎖音訊。
 
-## Uploads
+## 上傳
 
-Avatars, seat backgrounds, table backgrounds, card backs, and emoji are uploaded as images.
+頭像、座位背景、牌桌背景、牌背與表情符號都以圖片上傳。
 
-| Property | Rule |
+| 屬性 | 規則 |
 | --- | --- |
-| Formats | PNG, JPEG, GIF, WebP |
-| Decoded size | Avatars and card backs 512 KiB; emoji and backgrounds 2 MiB |
-| Request size | 3 MiB JSON body (proxy and server), enough for a base64 2 MiB image |
-| Quota | 100 MiB of distinct images per account ([`MEDIA_QUOTA_BYTES`](../server/src/media/media-store.ts)). Re-uploading an owned image is free; replaced images still count |
-| Storage | Immutable SHA-256 content-addressed IDs, read through the media endpoint |
-| GIF | Original bytes and animation kept, within the same limits |
-| Static resize (client) | Backgrounds to a 1920-pixel long edge, card backs to 512, emoji to 128; WebP with JPEG (PNG for emoji) fallback |
+| 格式 | PNG、JPEG、GIF、WebP |
+| 解碼後大小 | 頭像與牌背 512 KiB；表情符號與背景 2 MiB |
+| 請求大小 | 3 MiB 的 JSON 本文（proxy 與伺服器），足以容納 base64 編碼的 2 MiB 圖片 |
+| 配額 | 每個帳號 100 MiB 的不重複圖片（[`MEDIA_QUOTA_BYTES`](../server/src/media/media-store.ts)）。重新上傳已擁有的圖片不另計；被替換的圖片仍會計入 |
+| 儲存 | 不可變、以 SHA-256 內容定址的 ID，透過媒體 endpoint 讀取 |
+| GIF | 在相同上限內保留原始位元組與動畫 |
+| 靜態縮放（用戶端） | 背景縮到長邊 1920 像素，牌背 512，表情符號 128；輸出 WebP，並以 JPEG（表情符號為 PNG）作為備援 |
 
-- Uploads check Origin, session, and rate limits before parsing the body. Errors: [API](api.md#status-codes).
-- Table backgrounds and card backs are visible only to their owner and never broadcast.
-- A custom card back covers every face-down card (centered and cropped).
-- Image opacity is 20–100% (default 100%) and fades the image toward the theme's solid
-  table or card color. It saves after a short pause or on slider release.
+- 上傳會在解析本文前檢查 Origin、工作階段與速率限制。錯誤：[API](api.md#狀態碼)。
+- 牌桌背景與牌背只有擁有者看得到，從不廣播。
+- 自訂牌背會覆蓋每一張背面朝上的牌（置中並裁切）。
+- 圖片透明度為 20–100%（預設 100%），會讓圖片淡向主題的純色牌桌或牌面顏色。停止拖曳一小段時間後或放開滑桿時儲存。
 
-## Official cosmetic artwork
+## 官方外觀圖案
 
-- The shop bundles original static SVG artwork under `client/src/assets/shop/`; card face
-  decks, seat and chat frames, chips, victory effects, and synthesized sound packs are
-  generated in code under `client/src/cosmetics/`.
-  Vite resolves asset URLs for the configured application base; these files are not
-  uploaded media or site-emoji importer output and consume no upload quota.
-- Official card backs, table backgrounds, and seat backgrounds take precedence over
-  retained uploads only while equipped. Image opacity also applies to official table
-  and card artwork. Unequip to restore the upload or theme; uploads remain free.
-- Product ownership, equipment, and rollback rules:
-  [storage](storage.md#cosmetic-inventory). Presentation: [interface](interface.md#cosmetic-shop).
+- 商店把原創的靜態 SVG 圖案打包在 `client/src/assets/shop/`；牌面組、座位框與聊天框、籌碼、勝利特效與合成音效包則由 `client/src/cosmetics/` 下的程式碼產生。Vite 依設定的應用程式 base 解析資源網址；這些檔案不是上傳的媒體，也不是站方表情符號匯入工具的輸出，不佔用上傳配額。
+- 官方牌背、牌桌背景與座位背景只在裝備時優先於仍保留的上傳圖片。圖片透明度也適用於官方的牌桌與牌面圖案。取消裝備即可恢復上傳圖片或主題；上傳圖片仍不另計。
+- 商品擁有權、裝備與回復規則：[儲存](storage.md#外觀物品欄)。呈現方式：[介面](interface.md#外觀商店)。
 
-## Personal emoji library
+## 個人表情符號庫
 
-| Rule | Behavior |
+| 規則 | 行為 |
 | --- | --- |
-| Names | 2–64 ASCII letters, digits, `_`, `-`, `.`; must start with a letter, digit, or `_` ([`EMOJI_NAME_PATTERN`](../shared/src/constants/emoji.ts)) |
-| Case | Case-sensitive; older lowercase 2–32 character names stay valid |
-| Limits | 300 entries per account, up to 50 per import; large animated emoji may hit the quota first |
-| Import naming | Valid filenames are kept. Otherwise invalid characters become `_`, repeats collapse, leading separators and trailing `_` are stripped, and too-short names become `emoji`. Duplicates get `_2`, `_3`, … |
+| 名稱 | 2–64 個 ASCII 英文字母、數字、`_`、`-`、`.`；必須以字母、數字或 `_` 開頭（[`EMOJI_NAME_PATTERN`](../shared/src/constants/emoji.ts)） |
+| 大小寫 | 區分大小寫；較舊的 2–32 個字元小寫名稱仍然有效 |
+| 上限 | 每個帳號 300 個項目，每次匯入最多 50 個；大型動態表情符號可能先用完配額 |
+| 匯入命名 | 合法的檔名直接保留。否則把不合法的字元換成 `_`、合併連續重複、去掉開頭的分隔符號與結尾的 `_`，太短的名稱改為 `emoji`。重複時加上 `_2`、`_3`、… |
 
-- File and folder pickers, drag and drop, and paste (while the library has focus) share
-  one import pipeline.
-- A name filter narrows the grid. Select mode adds checkboxes with Shift-click ranges;
-  Select all uses the filtered list and one confirmation deletes the selection in one request.
-- Deleting entries does not delete uploaded images.
+- 檔案與資料夾選擇器、拖放，以及貼上（表情符號庫取得焦點時）共用同一套匯入流程。
+- 名稱篩選可以縮小格狀列表。選取模式會加上核取方塊，可用 Shift 點擊選取範圍；「全選」使用篩選後的列表，確認一次即可在一個請求中刪除所選項目。
+- 刪除項目不會刪除已上傳的圖片。
 
-## Room chat
+## 房間聊天
 
-- Text is trimmed to 1–500 characters. `:name:` resolves from the sender's library, then
-  [site emoji](#site-provided-emoji), up to 20 names per message.
-- A sticker message is one personal sticker ID, one site emoji name, or one official
-  shop sticker ID. The server checks the sender owns a shop sticker's pack on each
-  send; room chat and private messages use the same rule. Clients cannot send URLs
-  or another account's image. Recipients need no purchase to see received stickers.
-- Sending a sticker keeps the text draft and blocks duplicate pending sends. Missing
-  images show an unavailable label.
-- Personal and site stickers reuse emoji images and may look softer at their larger
-  size. Shop stickers use bundled vector artwork and translated accessible names.
-- Chat works regardless of voice. Payloads: [API](api.md#socket-actions); observer
-  channels: [games](games/common.md#spectators-and-god-view).
+- 文字去除前後空白後須為 1–500 個字元。`:name:` 先從寄件者的表情符號庫解析，再從[站方表情符號](#站方表情符號)解析，每則訊息最多 20 個名稱。
+- 貼圖訊息是一個個人貼圖 ID、一個站方表情符號名稱，或一個官方商店貼圖 ID。每次傳送時，伺服器都會檢查寄件者是否擁有商店貼圖所屬的貼圖包；房間聊天與私訊使用相同的規則。用戶端不能傳送網址或其他帳號的圖片。收件者不需購買也能看到收到的貼圖。
+- 傳送貼圖會保留文字草稿，並阻擋尚未完成的重複傳送。缺少的圖片會顯示無法使用的標示。
+- 個人與站方貼圖重複使用表情符號圖片，放大顯示時可能比較模糊。商店貼圖使用打包的向量圖案與已翻譯的無障礙名稱。
+- 不論語音狀態，聊天都可以使用。Payload：[API](api.md#socket-操作)；觀戰者頻道：[遊戲](games/common.md#旁觀者與上帝視角)。
 
-## Site-provided emoji
+## 站方表情符號
 
-Owner-supplied emoji available to every account as `:name:` text or stickers, in the
-picker tab after the personal library. Personal emoji win same-name text matches (the
-picker hides the shadowed site emoji); both remain usable as stickers.
+站長提供的表情符號，所有帳號都能以 `:name:` 文字或貼圖使用，顯示在選擇器中個人表情符號庫之後的分頁。文字中名稱相同時以個人表情符號優先（選擇器會隱藏被遮蔽的站方表情符號）；兩者都仍可作為貼圖使用。
 
-1. Put images in the Git-ignored `local-emoji/` (subfolders allowed).
-2. Run `npm run emoji:import` (also run by client `predev` and `prebuild`, after music).
-   An empty or missing folder gives an empty catalog and a successful build.
-3. Restart the development server. In production, run the
-   [full deployment](deployment.md#build-and-deploy): the backend must reload the catalog,
-   and the frontend publisher refuses a changed catalog.
+1. 把圖片放進被 Git 忽略的 `local-emoji/`（可以有子資料夾）。
+2. 執行 `npm run emoji:import`（client 的 `predev` 與 `prebuild` 也會在音樂之後執行）。資料夾為空或不存在時，會產生空的目錄，建置仍會成功。
+3. 重新啟動開發伺服器。正式環境請執行[完整部署](deployment.md#建置與部署)：後端必須重新載入目錄，前端發布工具會拒絕已變更的目錄。
 
-| Import rule | Behavior |
+| 匯入規則 | 行為 |
 | --- | --- |
-| Formats | `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp` (case-insensitive); output type follows the file's magic bytes; other or unreadable files are skipped |
-| Names | Filename without extension, normalized like personal imports and capped at 64 characters; under 2 characters becomes `emoji_<6 hex of path hash>` |
-| Uniqueness | Case-sensitive across folders and extensions; valid original names win, then sorted path order assigns `_2`, `_3`, … |
-| ≤ 2 MiB | Published unchanged |
-| > 2 MiB | `sharp` compresses to WebP at up to 256 pixels (never enlarging), keeping every animation frame; retries smaller and lower quality down to 96 pixels, else skips |
-| Output names | `<name>-<content hash>.<type>`, so changed bytes get new URLs |
-| Safety | Symlinks fail before anything is replaced; only stale importer output is removed |
+| 格式 | `.png`、`.jpg`、`.jpeg`、`.gif`、`.webp`（不分大小寫）；輸出類型依檔案的 magic bytes 決定；其他或無法讀取的檔案會跳過 |
+| 名稱 | 去掉副檔名的檔名，比照個人匯入正規化，上限 64 個字元；不到 2 個字元時改為 `emoji_<路徑雜湊的 6 個十六進位字元>` |
+| 唯一性 | 跨資料夾與副檔名區分大小寫；合法的原始名稱優先，其餘依排序後的路徑順序加上 `_2`、`_3`、… |
+| ≤ 2 MiB | 原樣發布 |
+| > 2 MiB | 以 `sharp` 壓縮成最大 256 像素的 WebP（從不放大），保留每一個動畫影格；以更小的尺寸與更低的品質重試，最小到 96 像素，仍不行就跳過 |
+| 輸出檔名 | `<name>-<content hash>.<type>`，內容改變時就會有新的網址 |
+| 安全性 | 符號連結會在任何檔案被替換前就失敗；只移除匯入工具產生的過時輸出 |
 
-- The import prints compressed sizes and rename or skip warnings.
-- Generated, Git-ignored, **do not edit:** `shared/src/provided-emoji.generated.json`
-  (bundled by the client, read by the server at startup) and `client/public/provided-emoji/`.
-- The server accepts only listed names. A missing catalog means no site emoji; an invalid
-  one stops startup.
-- Chat history keeps the original file. Removed images stay published for the asset
-  grace period, then show as unavailable.
+- 匯入會印出壓縮後的大小，以及重新命名或跳過的警告。
+- 自動產生且被 Git 忽略，**請勿編輯**：`shared/src/provided-emoji.generated.json`（由用戶端打包，伺服器啟動時讀取）與 `client/public/provided-emoji/`。
+- 伺服器只接受列出的名稱。缺少目錄代表沒有站方表情符號；目錄無效時會停止啟動。
+- 聊天紀錄保留原本的檔案。已移除的圖片會在資源寬限期內繼續發布，之後顯示為無法使用。
 
-## Voice
+## 語音
 
-Open voice controls with the small microphone button beside the waiting room's
-rules/chat controls or at the top right of the game table. It is not in the global
-header. Closing the panel or switching between room and game keeps the voice session;
-the button's green/amber dot indicates joined/joining status.
+在等待房間的規則／聊天控制項旁，或牌桌右上角，點小麥克風按鈕開啟語音控制。全域頁首沒有這個按鈕。關閉面板或在房間與遊戲之間切換時，語音工作階段會保留；按鈕上的綠點／琥珀色點代表已加入／加入中。
 
-| Action | Behavior |
+| 操作 | 行為 |
 | --- | --- |
-| Join | Explicit; requires microphone permission |
-| Mute | Stops sending; unmuting while deafened also ends deafen |
-| Deafen | Stops remote playback and mutes the microphone; ending it restores the previous mute (music unaffected) |
-| Controls | Per-player volume and listening; input and output device selection |
-| Navigation | Follows room membership across room, game, and profile pages |
-| Leave, logout, disconnect, removal | Releases microphone and peer connections |
-| Refresh, multiple tabs | Requires rejoining; one tab per account |
+| 加入 | 需要明確操作；需要麥克風權限 |
+| 靜音 | 停止傳送；在拒聽狀態下取消靜音也會結束拒聽 |
+| 拒聽 | 停止播放遠端聲音並將麥克風靜音；結束拒聽會恢復先前的靜音狀態（不影響音樂） |
+| 控制項 | 每位玩家各自的音量與收聽開關；輸入與輸出裝置選擇 |
+| 頁面切換 | 依房間成員資格延續到房間、遊戲與個人檔案頁面 |
+| 離開、登出、斷線、被移除 | 釋放麥克風與 peer 連線 |
+| 重新整理、多個分頁 | 需要重新加入；每個帳號一個分頁 |
 
-- Peer-to-peer WebRTC audio for up to twelve room members. During matches, seated
-  players do not hear observers ([games](games/common.md#spectators-and-god-view)).
-- Socket.IO relays only validated signaling ([API](api.md#voice-signaling)).
-  **Voice is never recorded or stored.**
-- Microphones need HTTPS or localhost. Permissions, autoplay, or missing devices can
-  block audio even when connected.
-- Each join gets a fresh peer ID, so stale signals cannot reach a new call. Peer errors
-  are isolated; rejoining replaces failed links and keeps preferences.
-- After a refresh, the client may retry for up to 45 seconds without taking over
-  another active tab. Waits, message sizes, and queues are bounded.
+- 點對點的 WebRTC 音訊，最多支援十二位房間成員。對局中入座玩家聽不到觀戰者（[遊戲](games/common.md#旁觀者與上帝視角)）。
+- Socket.IO 只轉送經過驗證的 signaling（[API](api.md#語音-signaling)）。**語音從不錄音或儲存。**
+- 麥克風需要 HTTPS 或 localhost。即使已連線，權限、自動播放限制或缺少裝置都可能阻擋音訊。
+- 每次加入都會取得新的 peer ID，所以過時的 signal 不會進入新的通話。peer 錯誤彼此隔離；重新加入會取代失敗的連線並保留偏好設定。
+- 重新整理後，用戶端最多重試 45 秒，且不會搶走其他使用中分頁的語音。等待時間、訊息大小與佇列都有上限。
 
-**ICE configuration**
+**ICE 設定**
 
-The default is `stun:stun.l.google.com:19302`. Restrictive NATs and firewalls need a
-TURN relay. Set `VITE_WEBRTC_ICE_SERVERS` in `client/.env.local`, then rebuild and deploy:
+預設為 `stun:stun.l.google.com:19302`。限制較嚴的 NAT 與防火牆需要 TURN relay。在 `client/.env.local` 設定 `VITE_WEBRTC_ICE_SERVERS`，再重新建置並部署：
 
 ```dotenv
 VITE_WEBRTC_ICE_SERVERS=[{"urls":"stun:stun.example.com:3478"},{"urls":"turn:turn.example.com:3478","username":"browser-user","credential":"browser-credential"}]
 ```
 
-- This value is **public**. Use short-lived or restricted TURN credentials, never private keys.
-- Up to eight servers and sixteen URLs; schemes `stun:`, `stuns:`, `turn:`, `turns:`.
-  Invalid configuration shows an error.
-- Synthetic local streams verify neither real microphones nor cross-network routing.
+- 這個值是**公開的**。請使用短期或受限制的 TURN 憑證，絕對不要放私密金鑰。
+- 最多八個伺服器、十六個網址；scheme 為 `stun:`、`stuns:`、`turn:`、`turns:`。設定無效時會顯示錯誤。
+- 合成的本機串流無法驗證真實的麥克風，也無法驗證跨網路的路由。

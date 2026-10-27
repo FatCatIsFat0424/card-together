@@ -74,6 +74,8 @@ npm run check -- full
 - Update the affected guide in `docs/` when behavior, contracts, configuration, or
   operations change. Link to contracts in code instead of copying interfaces; do not
   keep component inventories, measurement logs, or task histories.
+- `docs/` is written in Taiwan Traditional Chinese; keep code identifiers, paths, and
+  commands in English. `AGENTS.md` and `README.md` stay in English.
 - Temporary task plans go in the Git-ignored `.plan/`.
 - Data changes follow [deployment](docs/deployment.md) and [storage](docs/storage.md):
   stop writers, keep complete database, media, and replay backups, and confirm schema

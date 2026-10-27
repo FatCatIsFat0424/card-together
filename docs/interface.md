@@ -1,617 +1,223 @@
-# Interface
+# 介面
 
-Frontend page behavior and layout. Client architecture and connection handling:
-[architecture](architecture.md#frontend). Component conventions:
-[development](development.md#ui-conventions).
+前端頁面的行為與版面。用戶端架構與連線處理：[架構](architecture.md#前端)。元件慣例：[開發](development.md#ui-慣例)。
 
-## Navigation and layout
+## 導覽與版面
 
-- The app fills one dynamic viewport below a fixed top bar. Rooms and games never
-  scroll the document; long account pages, chat, and history scroll internally.
-- Short landscape (height at most 500px, width at least 600px) turns the top bar into a
-  56px left rail: brand icon, coins, icon buttons, and the menu at the bottom. Its
-  popovers open beside the rail, and during matches the room code moves into the menu.
-  Pages, sheets, and floating cards start right of the rail.
-- Navigation stays available during matches: top-bar links on desktop, a menu below 1280px,
-  and the [game menu](#phones) on phones.
-  Account, friend, profile, and lobby pages keep room membership and offer a return link.
-- Sign-out is the last menu item, in red, on narrow screens and short landscape
-  (height at most 500px). Other layouts show its icon and label in the top bar.
-- The owner's coin balance appears with a hint about the [completion reward](storage.md#game-coins).
-- Voice uses a 44px microphone button in the room controls and at the top right of
-  the game table. Its anchored panel stays within the viewport; closing it or moving
-  between room and game does not end the call. The global header has no voice button.
-- Info and chat sheets and top-bar popovers move focus inside on open and back to the
-  trigger on close. Escape closes only the topmost layer.
-- Route errors offer a reload. After a deployment, missing lazy chunks trigger at most
-  one automatic reload per 30 seconds.
-- Shared buttons transition only colors, borders, shadows and press/hover movement,
-  not dimensions or disabled opacity. Temporary request locks can use
-  `data-pending-disabled` to preserve the enabled appearance without allowing input.
+- 應用程式在固定的頂端列下方填滿一個動態 viewport。房間與遊戲頁面從不捲動整份文件；較長的帳號頁面、聊天與歷史紀錄在內部捲動。
+- 矮的橫向畫面（高度最多 500px、寬度至少 600px）會把頂端列改成 56px 的左側欄：品牌圖示、金幣、圖示按鈕，選單放在底部。它的彈出面板在側欄旁開啟，對局中房號會移進選單。頁面、底部面板與浮動卡片都從側欄右邊開始。
+- 對局中仍可使用導覽：桌機為頂端列連結，寬度低於 1280px 時為選單，手機上則是[遊戲選單](#手機)。帳號、好友、個人檔案與大廳頁面會保留房間成員資格，並提供返回連結。
+- 在窄螢幕與矮的橫向畫面（高度最多 500px）上，登出是選單的最後一項，以紅色顯示。其他版面在頂端列顯示它的圖示與文字。
+- 本人的金幣餘額會搭配[完成獎勵](storage.md#金幣)的提示顯示。
+- 語音使用房間控制項中與牌桌右上角的 44px 麥克風按鈕。它錨定的面板保持在 viewport 內；關閉面板或在房間與遊戲之間移動都不會結束通話。全域頁首沒有語音按鈕。
+- 資訊與聊天底部面板，以及頂端列的彈出面板，開啟時會把焦點移入，關閉時把焦點移回觸發按鈕。Escape 只關閉最上層。
+- 路由錯誤會提供重新載入。部署後若缺少延遲載入的 chunk，每 30 秒最多自動重新載入一次。
+- 共用按鈕只對顏色、邊框、陰影與按下／滑過的位移做轉場，不對尺寸或停用時的透明度做轉場。暫時性的請求鎖可以使用 `data-pending-disabled`，保留啟用的外觀但不接受輸入。
 
-## Lobby and friends
+## 大廳與好友
 
-- The top-bar notification button and panel cover incoming friend requests and
-  accepted requests; private messages do not contribute to their count or list.
-- The chat icon beside top-bar notifications opens the independent `/messages` page
-  and shows the total unread private-message count. Both top-bar badges hide at zero
-  and display `99+` above 99, with exact counts in their accessible names.
-- On `/messages` or `/achievements`, the matching top-bar button is marked current and
-  returns to the last page outside those sections (the lobby if none).
-  The messages window animates open and, when closed from its close button or the
-  top-bar button, animates out before leaving.
-- Top-bar switches and the active nav link use a sliding highlight; popovers animate
-  open and closed. Reduced motion makes these instant.
-  Friends retain only friend and invitation management. The message list and individual
-  chats preserve room membership. Game results retain their return-to-room button;
-  the top bar, message toolbar, and player profiles omit separate return buttons.
-  While still in a room, other pages (including the lobby) show a compact floating
-  room card at bottom left. It shows the variant, room code, seated players, ready
-  counts or match status, and spectator count from live room snapshots. Clicking it
-  returns to the waiting room or active/result table. It hides on room/game pages,
-  after leaving the room, and on authentication pages; reconnecting is marked explicitly.
-  The lobby uses this card instead of a separate current-room banner.
-  Phone landscape uses a single-line return link: status light, game name, occupied/total seats,
-  room code and a chevron, with a 44px touch target.
-  Dragging this compact link glides it to the nearest corner below the top bar over
-  200ms after release (instant with reduced motion);
-  tapping still returns to the room. Its corner is retained while navigating the app.
-  The panel's top-right Close control returns
-  to the current room or game, or the lobby when no room is joined.
-  Refresh, retention information, and loading errors share
-  the panel's title bar and wrap on narrow screens. Refresh updates both the list and
-  the selected conversation; matching list and conversation errors appear only once.
-- On desktop, messages use a divided layout: an independently scrolling conversation
-  list with avatars, names, last messages, and timestamps on the left, and the selected
-  chat on the right. The desktop panel fills the available viewport with 32px outer
-  padding; the conversation list uses 28% of the width, bounded to 15–20rem. Each row
-  acts as a borderless vertical navigation tab, with a tinted background for the selected friend, and
-  shows the avatar, the name with the time on the right (today: time only; earlier:
-  month/day; full timestamp on hover), and the last message below. Sticker bubbles
-  shrink to the displayed sticker size regardless of the image's pixel size. Mobile keeps separate list
-  and conversation views. Both layouts keep the header and composer visible within
-  the available viewport; conversation lists and message history scroll independently.
-  Opening the desktop list reveals its rows from top to bottom with a short stagger;
-  selecting another conversation keeps the existing list mounted without replaying it.
-  Switching conversations keeps the known recipient header and a disabled composer
-  visible while loading. Loading text waits 180ms to avoid flashing on fast requests;
-  the loaded content enters over 160ms, respecting reduced-motion preferences.
-- The conversation list includes every current friend: conversations (including
-  read-only former friends) newest first, then friends without retained history by
-  nickname in the current locale. Selecting one of those opens an empty conversation.
-  Current friends show a green online or gray offline dot beside their names, with a
-  translated status tooltip; former friends and unloaded presence show no status.
-  New messages reorder it live; the friend list reloads on friendship changes,
-  reconnects, refocus, and every 30 seconds while visible, but not when a conversation is marked read. With no friends or conversations, the list
-  shows "No friends yet".
-- Private chat supports the existing emoji/sticker libraries, older-history pagination,
-  and retry after a failed send. Only a visible conversation marks incoming messages read.
-  Former-friend conversations are read-only; the latest 90 days are available.
+- 頂端列的通知按鈕與面板涵蓋收到的好友邀請與已被接受的邀請；私訊不計入它的數量或列表。
+- 頂端列通知旁的聊天圖示會開啟獨立的 `/messages` 頁面，並顯示私訊未讀總數。兩個頂端列徽章在數量為零時隱藏，超過 99 時顯示 `99+`，無障礙名稱中則有精確數字。
+- 在 `/messages` 或 `/achievements` 時，對應的頂端列按鈕會標示為目前位置，點擊後回到這些區塊之外的上一個頁面（沒有時回到大廳）。訊息視窗以動畫開啟；從它的關閉按鈕或頂端列按鈕關閉時，會先播放離場動畫再離開。
+- 頂端列的切換與目前的導覽連結使用滑動的高亮；彈出面板開關時有動畫。減少動態效果時這些都會立即完成。好友頁面只保留好友與邀請管理。訊息列表與個別聊天會保留房間成員資格。遊戲結果保留返回房間按鈕；頂端列、訊息工具列與玩家個人檔案則不另設返回按鈕。仍在房間中時，其他頁面（包括大廳）會在左下角顯示精簡的浮動房間卡片。它依即時房間快照顯示遊戲種類、房號、入座玩家、準備人數或對局狀態，以及旁觀人數。點擊它會回到等待房間或進行中／結算的牌桌。它在房間／遊戲頁面、離開房間後與驗證頁面上隱藏；重新連線中會明確標示。大廳使用這張卡片，不另外顯示目前房間的橫幅。手機橫向使用單行的返回連結：狀態燈、遊戲名稱、有人座位／總座位數、房號與 chevron 箭頭，觸控目標為 44px。拖曳這個精簡連結並放開後，它會在 200ms 內滑到頂端列下方最近的角落（減少動態效果時立即完成）；點一下仍會回到房間。在應用程式內切換頁面時，它停留的角落會保留。面板右上角的「關閉」會回到目前的房間或遊戲，沒有加入房間時回到大廳。重新整理、保留期限說明與載入錯誤共用面板的標題列，窄螢幕上會換行。重新整理會同時更新列表與選取的對話；列表與對話相同的錯誤只顯示一次。
+- 桌機上，訊息使用分割版面：左側是可獨立捲動的對話列表，含頭像、名稱、最後一則訊息與時間戳；右側是選取的聊天。桌機面板填滿可用的 viewport，外距 32px；對話列表佔寬度的 28%，範圍限制在 15–20rem。每一列都像無邊框的垂直導覽分頁，選取的好友有著色背景，並顯示頭像、名稱與右側的時間（今天：只顯示時間；更早：月／日；滑過時顯示完整時間戳），下方是最後一則訊息。貼圖泡泡會縮到顯示的貼圖大小，不論圖片的像素大小。手機維持分開的列表與對話畫面。兩種版面都讓標題與輸入框保持在可用的 viewport 內；對話列表與訊息紀錄各自獨立捲動。開啟桌機列表時，各列會由上而下以短暫的錯開時間出現；選取其他對話時保留已掛載的列表，不重播動畫。切換對話時，載入期間仍顯示已知的收件者標題與停用的輸入框。載入文字會等待 180ms，避免快速請求時閃爍；載入的內容在 160ms 內進場，並遵守減少動態效果的偏好。
+- 對話列表包含所有目前的好友：先依新到舊列出對話（包括唯讀的前好友），再依目前語系的暱稱順序列出沒有保留紀錄的好友。選取後者會開啟空的對話。目前的好友在名稱旁顯示綠色上線或灰色離線的圓點，並有已翻譯的狀態提示；前好友與尚未載入上線狀態時不顯示狀態。新訊息會即時重新排序列表；好友列表在好友關係變動、重新連線、重新取得焦點時，以及可見期間每 30 秒重新載入，但對話標示已讀時不會。沒有好友也沒有對話時，列表顯示「No friends yet」。
+- 私訊支援既有的表情符號／貼圖庫、較舊紀錄的分頁載入，以及傳送失敗後重試。只有可見的對話會把收到的訊息標示為已讀。前好友的對話是唯讀的；可查看最近 90 天。
 
-| Width | Lobby layout |
+| 寬度 | 大廳版面 |
 | --- | --- |
-| Desktop | Game picker beside a sidebar: selected game, Create, then join-by-code below a divider; online friends below the room actions |
-| Phone landscape | Five game choices per row (5/5), with creation and joining beside them; a compact greeting shares a 44px row with daily tasks/check-in buttons, using icons beside their labels |
-| ≤52rem | Join-by-code, an "Or" divider, then a full-width Create that always creates Bridge; no selected-game panel; friends below the rules list |
+| 桌機 | 遊戲選擇器旁有側欄：選取的遊戲、建立，分隔線下方是以房號加入；房間操作下方是線上好友 |
+| 手機橫向 | 每列五個遊戲選項（5/5），建立與加入放在旁邊；精簡的問候語與每日任務／簽到按鈕共用一列 44px，按鈕在文字旁加上圖示 |
+| ≤52rem | 以房號加入、「或」分隔線，然後是一律建立橋牌的全寬「建立」；沒有選取遊戲的面板；好友在規則列表下方 |
 
-- Each game has its own [lobby artwork](../client/src/assets/lobby-backgrounds/README.md),
-  also used for its game-start intro. Backgrounds preload, then crossfade over 600ms.
-- Lobby entry starts with the player greeting and daily rewards, then room actions,
-  staggered game choices, and online friends. Each reveal lasts 200ms and the full
-  sequence finishes in 520ms. Friend/reward refreshes and game selection do not
-  replay it. System and in-app reduced-motion preferences skip these reveals.
-- The rules list opens game details without selecting a mode or changing the background.
-- Android browsers see a dismissible [Android app](android.md) download notice above
-  the lobby layout; it is hidden inside the installed app and on other platforms.
-  Short landscape shows only its title and buttons.
-- Online friends: hosts first, up to three complete rows sized for nickname, title,
-  and username; additional friends scroll vertically. Names truncate and hosts have
-  Join buttons. The list refreshes on focus and every
-  30 seconds while visible.
-- Creating or joining by code requires leaving the current room. Joining a friend's
-  room asks for confirmation, then switches rooms in one commit.
-- Friends page: above 52rem, tabs for friends, sent requests, and incoming requests,
-  with live counts, and the tab names serve as section headings. Smaller screens
-  stack these three sections with their own headings. Private messages have their
-  own page.
-- Accepted friends show an online indicator while connected. Offline rows show the
-  last online time in elapsed minutes, hours, or days; less than a minute is "just now",
-  and more than 30 days is "30+ days" ("30 天以上"). Unknown legacy times are labeled
-  unknown. The page refreshes on focus, social changes, and every 30 seconds while visible.
-- Public profiles: avatar, colored nickname, username, and actions on the left; history
-  and statistics on the right; stacked on small screens.
+- 每款遊戲都有自己的[大廳圖案](../client/src/assets/lobby-backgrounds/README.md)，也用在遊戲開場動畫。背景會預先載入，再以 600ms 交叉淡入。
+- 進入大廳時，先出現玩家問候語與每日獎勵，接著是房間操作、錯開出現的遊戲選項與線上好友。每段出現動畫 200ms，整個序列在 520ms 內完成。好友／獎勵重新整理與選擇遊戲不會重播。系統與應用程式內的減少動態效果偏好會略過這些動畫。
+- 規則列表會開啟遊戲說明，不會選取模式或變更背景。
+- Android 瀏覽器會在大廳版面上方看到可關閉的 [Android app](android.md) 下載提示；在已安裝的 app 內與其他平台上隱藏。矮的橫向畫面只顯示它的標題與按鈕。
+- 線上好友：主持房間者優先，最多三列完整顯示暱稱、稱號與使用者名稱；其餘好友垂直捲動。名稱過長會截斷，主持房間者有「加入」按鈕。列表在取得焦點時與可見期間每 30 秒重新整理。
+- 建立房間或以房號加入需要先離開目前的房間。加入好友的房間會先要求確認，再以一次 commit 切換房間。
+- 好友頁面：寬度超過 52rem 時，以分頁呈現好友、已送出的邀請與收到的邀請，並即時顯示數量，分頁名稱就是區塊標題。較小的螢幕會把這三個區塊各自加上標題後堆疊顯示。私訊有自己的頁面。
+- 已接受的好友在連線時顯示上線指示。離線的列以經過的分鐘、小時或天數顯示最後上線時間；不到一分鐘顯示「剛剛」，超過 30 天顯示「30 天以上」（"30+ days"）。不明的舊時間標示為未知。頁面在取得焦點、社交變動時，以及可見期間每 30 秒重新整理。
+- 公開個人檔案：左側為頭像、彩色暱稱、使用者名稱與操作；右側為歷史紀錄與統計；小螢幕上改為上下堆疊。
 
-## Waiting room
+## 等待房間
 
-| Width | Seats |
+| 寬度 | 座位 |
 | --- | --- |
-| Desktop | Equal-width portrait cards N/E/S/W without horizontal scrolling; Ninety-Nine, Blackjack, and Hold'em always use two rows of four |
-| Compact | Two columns, smaller controls, up to four rows, vertical scrolling when needed |
-| Phone landscape | Rows of up to four seats filling the height above the footer buttons; five or more seats take two rows and drop the empty-seat icon. Empty seats show their direction in the top-left corner |
+| 桌機 | 等寬的直式卡片 N/E/S/W，不需水平捲動；99、21 點與德州撲克一律使用兩列、每列四個 |
+| 精簡 | 兩欄、較小的控制項、最多四列，必要時垂直捲動 |
+| 手機橫向 | 每列最多四個座位，填滿底部按鈕上方的高度；五個以上的座位分成兩列，並拿掉空位圖示。空位在左上角顯示方位 |
 
-Phone landscape places spectators in a separate left column with a vertically
-scrollable list. Touch gestures on spectator names scroll the list; hosts drag the
-avatar to move a spectator to a seat. Drag handles stay hidden until keyboard focus.
-Room chat has the same header collapse button as in-game chat. Reopen it through
-the room header's chat button; collapsing desktop chat frees its column for seats.
-Draft text is retained while collapsed, and the chat button shows unread messages.
-Seat and spectator lists hide their scrollbars while remaining scrollable.
-Seated players use the explicit "Enter spectator area" button beside the spectator
-count to stand up while waiting. In phone landscape, the full-width button stays
-above the scrolling spectator list in the left column, with a minimum 44px height.
-It is disabled while disconnected, processing an action, or outside the waiting state;
-spectators return to play by selecting an empty seat.
-The avatar stays beside two text rows: an ellipsized name above host/self tags.
-The landscape header is one row: room code, a prominent game dropdown with the settings icon
-beside it, then invite and leave. The rules button includes its text label from 860px wide
-and is icon-only below; chat uses an icon with an accessible label.
-Its action buttons share a 44px height.
-Bot controls use a vertical ellipsis.
+手機橫向把旁觀者放在獨立的左欄，列表可以垂直捲動。在旁觀者名稱上的觸控手勢會捲動列表；房主拖曳頭像即可把旁觀者移到座位上。拖曳把手在取得鍵盤焦點前保持隱藏。房間聊天有和遊戲內聊天相同的標題收合按鈕。透過房間標題的聊天按鈕重新開啟；收合桌機聊天會把它的欄位讓給座位。收合期間保留草稿文字，聊天按鈕會顯示未讀訊息。座位與旁觀者列表隱藏捲軸，但仍可捲動。等待中，入座玩家透過旁觀人數旁明確的「進入旁觀區」按鈕起身。手機橫向時，這個全寬按鈕固定在左欄中可捲動的旁觀者列表上方，最小高度 44px。斷線時、處理操作中或不在等待狀態時，按鈕會停用；旁觀者選擇空位即可回到牌局。頭像旁保持兩行文字：上方是過長時以省略號截斷的名稱，下方是房主／本人標籤。橫向標題是一列：房號、醒目的遊戲下拉選單（旁邊是設定圖示），接著是邀請與離開。寬度 860px 以上時規則按鈕包含文字標籤，更窄時只顯示圖示；聊天使用帶有無障礙標籤的圖示。它的操作按鈕高度一致為 44px。bot 控制項使用垂直的省略號圖示。
 
-- Empty seats are full-card buttons; bot controls stay separate.
-  Pending room actions lock input without dimming otherwise available controls or
-  recreating drag handles. Controls that were already unavailable retain their disabled appearance.
-  Vacated seats show their empty state immediately, with no border/button transition;
-  the add-bot button never reuses a hidden player-drag control.
-- Room action failures and readiness warnings appear in dismissible five-second
-  toasts on desktop and mobile, without inserting messages into the room layout.
-  Room acknowledgement errors use the selected language; unknown errors use the
-  localized generic error message rather than exposing raw server text.
-- When a server update fills an empty seat with a human player, their artwork and
-  identity fade upward 8px and settle from 96% through 102% to 100% over 300ms.
-  The frame stays still. Initial loading, readiness updates and occupied-seat swaps
-  do not trigger this animation; reduced motion disables it.
-- On entry, room controls fade upward first, seats follow with a small staggered
-  bounce, then spectators, footer actions and desktop chat appear. Each animation
-  lasts 200ms; the full sequence finishes in 480ms. It runs once per room visit,
-  skips reduced motion, and does not replay for readiness or seat changes.
-- The seated host has a dark, gold-lettered badge in the top-left corner of their seat card.
-- While waiting, the host can drag human players from anywhere on their seat card or
-  spectator item, including the avatar and name, using mouse or touch. Movement beyond
-  the drag threshold starts placement; ordinary taps still open profiles or activate controls.
-- Bot identities show Easy or Hard. Waiting-room hosts edit each bot's difficulty
-  beside its remove control, both 44px tall; guests see the selected difficulty. Defaults and strategy
-  behavior are documented in [games](games/common.md#bots).
-  In phone landscape, each bot's top-right ellipsis opens its difficulty and remove
-  controls in a floating panel, keeping the seat card compact and controls unclipped.
-- In Ninety-Nine, Blackjack, Hold'em, and Napoleon the host sees a plus cell after the last seat to
-  add human seats up to eight (six for Napoleon); only the last empty extra seat can be removed. Start
-  conditions: [games](games/common.md#shared-room-lifecycle).
-- Napoleon names every seat "Player 1"–"Player 6" in play order (seat badges show the number) instead
-  of compass names and "Seat 5"; the waiting room, table, presentation, and match history agree.
-  Bots are named after their current seat ("Bot 3" in Napoleon, "Bot S" elsewhere) and renamed when
-  the host moves them, the game changes, or the room is restored.
-- Seat artwork: the player's uploaded seat background, the
-  [bot dealer artwork](../client/src/assets/room-backgrounds/README.md) for bots, or the
-  theme surface.
-- Readiness has its own row. Connected seated players can prepare before the player
-  count is met. The host's separate Start button enables only when the game has enough
-  players and every occupied seat is ready. Spectators are asked to sit first.
-- The host can enable automatic seat shuffling for any game; it starts off.
-  The Settings button beside the game picker opens the turn timer, seat shuffling and
-  the selected game's options. The timer shows two MUI number fields directly, with
-  an Apply button and no nested disclosure. Guests can inspect these settings; only the waiting-room host can
-  change them. Game rules sits immediately to the right of Settings beside the game picker.
-  Compact layouts place the chat toggle to the right of Game rules in the same action group.
-  The waiting-room chat slides up to open and down to close over 200ms, respecting
-  reduced-motion preferences. The seats remain visible behind the sliding chat;
-  covered seat controls and closed chat controls cannot receive input.
-  The Settings popover uses a 200ms transition.
-  The game picker row matches the Settings button height; selection colors transition
-  over 180ms, respecting the system reduced-motion preference.
-- Ready and Cancel ready use the same button sizing as the other footer actions.
-- A live start shows a skippable 2.9-second intro: the game's lobby artwork and name
-  fade in, all occupied seats appear together with avatars and names, then the table
-  is revealed. Reduced motion uses a one-second static reveal. The impact sound uses
-  gesture-unlocked effects audio and follows the game sound effects switch. Reconnects, page
-  reloads, and starts received in background tabs do not replay the intro. Server play
-  and clocks continue during this client presentation. A click or tap anywhere on the intro,
-  Escape, Enter, or Space reveals the table; a quiet line at the bottom says so.
-- Room codes have a copy button. Timer settings expand inside a bounded panel; the
-  Sevens Dragon Slaying option matches one game-picker row in height.
-- Phones and short landscape windows use two-by-two seats and a chat toggle with an
-  unread count.
+- 空位是整張卡片的按鈕；bot 控制項保持獨立。進行中的房間操作會鎖住輸入，但不會讓原本可用的控制項變暗，也不會重新建立拖曳把手。原本就無法使用的控制項保留停用外觀。空出的座位立即顯示空位狀態，沒有邊框／按鈕轉場；新增 bot 按鈕從不重複使用隱藏的玩家拖曳控制項。
+- 房間操作失敗與準備狀態警告，在桌機與手機上都以可關閉、五秒的 toast 顯示，不會把訊息插入房間版面。房間 acknowledgement 錯誤使用選取的語言；未知錯誤使用在地化的通用錯誤訊息，不直接顯示伺服器的原始文字。
+- 伺服器更新讓真人玩家坐進空位時，他的圖案與身分會往上淡入 8px，並在 300ms 內從 96% 經 102% 縮放到 100%。外框保持不動。初次載入、準備狀態更新與有人座位之間的交換不會觸發這個動畫；減少動態效果時停用。
+- 進入房間時，房間控制項先往上淡入，座位接著以小幅錯開的彈跳出現，然後是旁觀者、底部操作與桌機聊天。每段動畫 200ms，整個序列在 480ms 內完成。每次進入房間只播放一次，減少動態效果時略過，準備狀態或座位變更不會重播。
+- 入座的房主在座位卡左上角有深色、金色文字的徽章。
+- 等待中，房主可以用滑鼠或觸控，從座位卡或旁觀者項目的任何位置（包括頭像與名稱）拖曳真人玩家。移動超過拖曳門檻才開始放置；一般的點擊仍會開啟個人檔案或觸發控制項。
+- bot 身分顯示「簡單」或「困難」。等待房間的房主在每個 bot 的移除控制項旁編輯它的難度，兩者都是 44px 高；其他人看到選取的難度。預設值與策略行為記錄在[遊戲](games/common.md#bot)。手機橫向時，每個 bot 右上角的省略號會在浮動面板中開啟難度與移除控制項，讓座位卡保持精簡，控制項也不會被裁切。
+- 在 99、21 點、德州撲克與拿破崙中，房主會在最後一個座位後看到加號格，可以加開真人座位到八個（拿破崙為六個）；只能移除最後一個空的額外座位。開始條件：[遊戲](games/common.md#房間流程)。
+- 拿破崙依出牌順序把每個座位命名為「Player 1」–「Player 6」（座位徽章顯示號碼），而不是方位名稱與「Seat 5」；等待房間、牌桌、呈現與對局歷史都一致。bot 以目前的座位命名（拿破崙為「Bot 3」，其他遊戲為「Bot S」），並在房主移動它、變更遊戲或還原房間時重新命名。
+- 座位圖案：玩家上傳的座位背景、bot 使用的 [bot 荷官圖案](../client/src/assets/room-backgrounds/README.md)，或主題表面。
+- 準備狀態有獨立的一列。已連線的入座玩家在人數未滿時就可以準備。房主另外的「開始」按鈕只在遊戲人數足夠且所有有人的座位都已準備時才啟用。旁觀者會被要求先入座。
+- 房主可以為任何遊戲啟用自動隨機座位；預設關閉。遊戲選擇器旁的「設定」按鈕會開啟出牌計時、隨機座位與所選遊戲的選項。計時器直接顯示兩個 MUI 數字欄位，搭配「套用」按鈕，沒有巢狀的展開區塊。其他人可以查看這些設定；只有等待房間的房主可以變更。「遊戲規則」緊接在遊戲選擇器旁「設定」的右邊。精簡版面把聊天切換放在同一組操作中「遊戲規則」的右邊。等待房間的聊天在 200ms 內往上滑出開啟、往下滑入關閉，並遵守減少動態效果的偏好。聊天滑動時座位仍在後方可見；被遮住的座位控制項與已關閉的聊天控制項無法接收輸入。「設定」彈出面板使用 200ms 的轉場。遊戲選擇器那一列與「設定」按鈕同高；選取顏色在 180ms 內轉場，並遵守系統的減少動態效果偏好。
+- 「準備」與「取消準備」使用和其他底部操作相同的按鈕尺寸。
+- 即時開始的對局會顯示可略過的 2.9 秒開場：遊戲的大廳圖案與名稱淡入，所有有人的座位連同頭像與名稱一起出現，最後才顯示牌桌。減少動態效果時改用一秒的靜態顯示。撞擊音效使用經使用者操作解鎖的音效音訊，並跟隨遊戲音效開關。重新連線、重新載入頁面，以及在背景分頁收到的開始都不會重播開場。這段用戶端呈現期間，伺服器的出牌與計時照常進行。點擊或觸碰開場的任何位置，或按 Escape、Enter、空白鍵都會顯示牌桌；底部有一行低調的文字說明這點。
+- 房號旁有複製按鈕。計時設定在有高度上限的面板內展開；牌七的斬龍選項與遊戲選擇器的一列同高。
+- 手機與矮的橫向視窗使用二乘二的座位，以及顯示未讀數的聊天切換。
 
-**Host placement**
+**房主安排座位**
 
-- The host drags humans between seats or into spectators, using mouse, touch, or a
-  keyboard-focused drag handle to select a player then a destination; Escape cancels.
-  The six-dot handle stays visually hidden unless focused by keyboard.
-- Occupied seats swap. A spectator placed on a human's seat sends that player to spectators.
-  Bots can swap seats with humans but never move to spectators.
-- Changes clear human readiness and persist before broadcast; a failed save restores the arrangement.
+- 房主可以用滑鼠、觸控，或以鍵盤聚焦的拖曳把手選擇玩家再選擇目的地，把真人在座位之間移動或移到旁觀區；Escape 取消。六點拖曳把手除非以鍵盤聚焦，否則保持視覺上隱藏。
+- 移到有人的座位時兩人交換。把旁觀者放到真人的座位上，會讓該玩家移到旁觀區。bot 可以和真人交換座位，但從不移到旁觀區。
+- 變更會清除真人的準備狀態，並在廣播前保存；儲存失敗會還原原本的安排。
 
-**Shared replay**
+**共同觀看回放**
 
-- The host's "Watch a replay" footer button opens a picker of recorded matches grouped by
-  member: the host's own history first, then each human member's while it is public;
-  private histories say so. Choosing a match starts it for the whole room.
-- While the room replays, every member (and anyone who joins) moves to
-  `/room/:code/replay`: the same full-screen [match replay](#account-editor) table, with the
-  room chat, who started it, Leave, and for the host the playback controls and End replay.
-  Everyone derives the step from the host's server-anchored playback, so tables stay in step.
-- Ending returns everyone to the waiting room; seats and readiness carry over. Chat
-  announces the start and end.
+- 房主底部的「觀看回放」按鈕會開啟依成員分組的已錄製對局選擇器：先列房主自己的歷史紀錄，再列每位公開歷史紀錄的真人成員；不公開的歷史會註明。選擇一場對局就會為整個房間開始播放。
+- 房間回放期間，每位成員（以及之後加入的人）都會移到 `/room/:code/replay`：與[對局回放](#帳號編輯器)相同的全螢幕牌桌，加上房間聊天、由誰開始播放、「離開」，房主另外有播放控制與「結束回放」。所有人都從房主以伺服器時間為基準的播放推算目前步驟，所以各牌桌保持同步。
+- 結束後所有人回到等待房間；座位與準備狀態延續。聊天會公告開始與結束。
 
-## Game table
+## 牌桌
 
-### Phones
+### 手機
 
-Phones in either orientation (width below 768px, or height at most 500px and width at least 600px)
-get a cleaner table; desktop and tablet layouts are unchanged.
+任一方向的手機（寬度低於 768px，或高度最多 500px 且寬度至少 600px）會使用較簡潔的牌桌；桌機與平板版面不變。
 
-- The app bar or rail is hidden. The table info button becomes a menu at the top left, badged with
-  unread notifications and messages; voice and chat stay at the top right.
-- The menu sheet lists the room code, rules, abort vote and leave early (or a spectator's leave),
-  then game info and round history, notifications, music, and links to messages, achievements,
-  lobby, friends, shop and profile.
-- The action bar shrinks to auto-play and one sort toggle (suit, then rank; Liar's Deck sorts by rank).
-- Plates omit nameplate titles, bot difficulty, and decorative card backs; Red Points keeps its
-  captured cards. Disabled secondary hand actions (outline buttons) are hidden; primary ones stay.
-- Corner buttons keep 8px from the screen edge and their badges stay inside the button, so rounded
-  full-screen corners never clip them. Crowded portrait tables shift the opposite plate clear of them.
-- Portrait cards run past the hand row and the table clips their bottoms; prompts and actions below
-  them sit on a translucent bar above those edges.
-- Portrait phones show a rotate tip for 8 seconds per game; closing it hides it for good
-  (`card-together.rotateHintDismissed`).
+- 隱藏應用程式列或側欄。牌桌的資訊按鈕變成左上角的選單，並以徽章標示未讀通知與訊息；語音與聊天留在右上角。
+- 選單面板列出房號、規則、投票終止與提早離開（旁觀者則是離開），接著是遊戲資訊與回合紀錄、通知、音樂，以及訊息、成就、大廳、好友、商店與個人檔案的連結。
+- 操作列縮減為電腦代打與一個理牌切換（先花色、再數字；騙子酒館依數字理牌）。
+- 名牌省略稱號、bot 難度與裝飾用的牌背；撿紅點保留吃到的牌。停用的次要手牌操作（外框按鈕）會隱藏；主要操作保留。
+- 角落按鈕與螢幕邊緣保持 8px 距離，徽章也留在按鈕內，所以全螢幕的圓角從不會裁到它們。擁擠的直向牌桌會把對面的名牌移開，避免與它們重疊。
+- 直向時牌會延伸超出手牌列，由牌桌裁掉底部；牌下方的提示與操作放在這些邊緣上方的半透明列上。
+- 直向手機每場遊戲會顯示 8 秒的旋轉提示；關閉後就永久隱藏（`card-together.rotateHintDismissed`）。
 
-### Player card
+### 玩家卡片
 
-Selecting a seated player's identity opens a player card at every size, without leaving the table:
-avatar, nickname, nameplate title, username (bots: difficulty), this game's games played and win
-rate plus the total (or "match history is private"), friend status or a friend-request button, and a
-profile link. Spectator plates that switch perspective, and plates picked as the next player, keep
-their whole-plate action instead.
+在任何尺寸下，選取入座玩家的身分都會開啟玩家卡片，不需離開牌桌：頭像、暱稱、稱號、使用者名稱（bot 則為難度）、這款遊戲的對局數與勝率加上總計（或「match history is private」）、好友狀態或好友邀請按鈕，以及個人檔案連結。用來切換視角的旁觀者名牌，以及被選為下一位玩家的名牌，則維持整個名牌的原本動作。
 
-### Common
+### 共通
 
-- **Leave early** sits below the abort-vote control. Its confirmation explains that the
-  computer will play the rest of the match. Only a successful persisted auto-play request
-  returns the player to the lobby; cancelling leaves play unchanged and errors stay in
-  the dialog. Room membership is retained so the player can return and stop auto-play.
-  Every player and spectator sees a persistent **Leave early** tab above that seat,
-  using the same placement as PASS. Other game statuses remain in the seat's details.
-  Stopping auto-play clears the departure marker; enabling auto-play alone does not set it.
+- **提早離開**位於投票終止控制項下方。它的確認對話框會說明電腦將代打本局剩下的部分。只有成功保存的代打請求才會讓玩家回到大廳；取消時不改變牌局，錯誤則留在對話框中。房間成員資格會保留，讓玩家可以回來停止代打。每位玩家與旁觀者都會在該座位上方看到持續顯示的**提早離開**標籤，位置和 PASS 相同。其他遊戲狀態保留在座位的詳細資訊中。停止代打會清除離開標記；只開啟代打不會設定它。
 
-- A compact vertical action bar inside the table's lower-left corner offers computer auto-play, sort by suit,
-  and sort by rank. Active choices are highlighted and each button has a full accessible
-  label and tooltip. Spectators, eliminated players, and settlement screens hide the bar.
-  In short landscape view, the hand and adjacent left seat leave space beside the
-  vertical controls while the central playing table keeps its full width. The table's
-  action bar uses the same subdued border and surface as its corner buttons at every viewport size.
-  The upper edge sits flush against the header;
-  four-seat tables float their corner buttons so the opposite seat also moves up,
-  without an empty toolbar row above it.
-  Landscape hand cards use a larger height allowance and fit against their own hand
-  area's width, increasing overlap when needed to keep every card within reach.
-  Landscape hand cards render at full height and extend below the table viewport,
-  whose bottom edge clips their lower half. Raising a card reveals more of it.
-  Every game puts the own-seat plate and turn prompt at the left of the hand row, so the centre and
-  its play presentations stay clear; side and corner seats omit decorative card-back trays, while
-  Red Points keeps its captured cards.
-  Explicit hand actions (play/pass, arrange, cover and card-effect choices) sit at the lower
-  right in phone landscape, with longer action panels scrolling independently; the hand row
-  leaves their width free so no card sits under a button. The hand row gives the plate
-  150–180px, and wide action panels narrow to 160px on small phones. Other layouts
-  retain their controls below the hand. Blackjack and Hold'em keep betting and play controls in
-  the hand row beside their cards.
-  Short landscape keeps centre text at about 11px or larger at 706×336 and above (Chrome with
-  system bars on a 360px-tall phone; the full-screen Android app gets about 780×360), mostly by
-  rearranging rather than scaling:
-  - Sevens shows each row's ends and next slots, two suits per line.
-  - Liar's Deck, Ninety-Nine and presentation frames place text beside their cards.
-  - Chinese Poker puts its back row under the front and middle rows below 860px wide.
-  - Hold'em and Blackjack lay stakes and hands in flat rows around the board or dealer and omit
-    what the plates already show (names, blinds, folded backs, bet status). Settled Blackjack hands
-    show their result instead of their stake.
-  - Tables with more than four seats float their toolbar into the top corners and show each
-    plate's counts beside its name. Eight seats fit at 780×360; below about 360px tall
-    (a phone browser with system bars) Ninety-Nine and Blackjack side plates still overlap.
-  The landscape bidding panel is centered on the playing table and capped at 352px with tighter spacing; touch
-  buttons retain their 44px height. Phone panels put the title, highest bid, and recent calls on one
-  line so the opposite seat stays visible.
-  Dialogs, including Bridge redeal confirmations, layer above player plates at every
-  viewport size, keeping prompts and their buttons unobscured.
-  Bridge and Napoleon tricks use larger cards aligned in a single horizontal row in
-  short landscape view, retaining seat labels and directional arrival animations.
-  Fixed seat slots prevent cards from shifting as the trick fills; Napoleon's lead-suit
-  label sits below the row.
-  Phone portrait tables and hands keep their full width, with the action bar raised
-  beside the own-seat plate above the cards. Four-seat tables float the corner controls and leave one button
-  row above the opposite seat. Hand sizing follows its available width, and redeal
-  prompts layer above the own-seat plate.
-  On short portrait phones, side seats retain their card counts but omit decorative
-  card-back trays, and extra space above the hand keeps the raised action bar clear.
-  Portrait bidding panels sit at the bottom of the playing surface, capped at 336px wide
-  with compact headings and full-height touch buttons; they omit recent calls, which the plates
-  already show, and short phones raise the side seats further while bidding. The rotate tip
-  hides while any action panel is open.
-  Portrait tables with more than four seats stack side seats in narrow columns beside the centre
-  and float the toolbar into the top corners. Blackjack moves side hands below the dealer, and
-  Hold'em stacks stakes under the board, keeps hole cards beside the prompt, and folds its
-  controls into three rows (fold, call, raise; quick sizes; slider and amount).
-  Portrait hand cards are enlarged with closer overlap, keeping their rank corners
-  exposed. Full cards extend below the table's bottom edge, which clips their lower
-  portion; selection lifts them to reveal more, and new-card markers stay visible.
-- Auto-play is an on/off switch for the current match. The server uses its existing bot
-  strategy with only that seat's private view; manual hand controls pause until switched
-  off. Reconnects preserve the choice; a new match starts with auto-play off.
-- Sorting changes only the local hand display, preserving selected cards and game rules.
-  Ranks run from low on the left to high on the right (including Big Two rank order;
-  Napoleon's small and big jokers follow the suit cards). Click the active sorting button
-  again to turn it off and keep the displayed order. With sorting off, drag cards or use
-  Alt+Left/Right to arrange them manually, even while waiting for a turn. Played cards
-  disappear without disturbing the remaining order; new cards append to the hand.
-  Liar's Deck has rank sorting only because its cards have no suits. Blackjack sorts
-  each player hand separately; Hold'em sorts only the player's hole cards.
+- 牌桌左下角內側的精簡垂直操作列提供電腦代打、依花色理牌與依數字理牌。啟用中的選項會高亮，每個按鈕都有完整的無障礙標籤與提示。旁觀者、已淘汰的玩家與結算畫面會隱藏這個操作列。矮的橫向畫面中，手牌與左側相鄰的座位會在垂直控制項旁留出空間，中央的出牌區則維持完整寬度。在所有 viewport 尺寸下，牌桌的操作列都使用和角落按鈕相同的低調邊框與表面。上緣緊貼標題；四人牌桌讓角落按鈕浮動，所以對面的座位也會往上移，上方不會留下空的工具列。橫向的手牌使用較大的高度額度，並依自己手牌區的寬度調整，必要時增加重疊，讓每張牌都點得到。橫向手牌以完整高度渲染並延伸到牌桌 viewport 下方，由底邊裁掉下半部。抬起一張牌會露出更多。每款遊戲都把本人座位的名牌與輪到提示放在手牌列左側，讓中央與出牌呈現保持淨空；側邊與角落的座位省略裝飾用的牌背匣，撿紅點則保留吃到的牌。明確的手牌操作（出牌／pass、排牌、蓋牌與牌效果的選擇）在手機橫向時位於右下角，較長的操作面板可獨立捲動；手牌列會留出它們的寬度，所以不會有牌被按鈕蓋住。手牌列給名牌 150–180px，寬的操作面板在小手機上縮窄到 160px。其他版面把控制項保留在手牌下方。21 點與德州撲克把下注與出牌控制項放在手牌列中、牌的旁邊。在 706×336 以上（360px 高的手機上、有系統列的 Chrome；全螢幕的 Android app 約為 780×360），矮的橫向畫面讓中央文字維持約 11px 以上，主要靠重新排列而不是縮放：
+  - 牌七顯示每一列的兩端與下一個空位，每行兩個花色。
+  - 騙子酒館、99 與呈現畫格把文字放在牌的旁邊。
+  - 寬度低於 860px 時，十三支把尾墩放在頭墩與中墩下方。
+  - 德州撲克與 21 點把注額與手牌平鋪成列，圍繞公牌或莊家，並省略名牌已顯示的資訊（名稱、盲注、棄牌的牌背、下注狀態）。已結算的 21 點手牌顯示結果而不是注額。
+  - 超過四個座位的牌桌把工具列浮動到上方兩角，並在名稱旁顯示各名牌的數量。八個座位在 780×360 下放得下；高度低於約 360px 時（有系統列的手機瀏覽器），99 與 21 點的側邊名牌仍會重疊。
 
-Special-card feedback plays for up to one second inside the existing presentation
-frame, without extending turn deadlines or intercepting input. Everyone, including
-spectators, sees the same public trigger; private hands never influence it.
+  橫向的叫牌面板置中於出牌區，寬度上限 352px，間距較緊湊；觸控按鈕維持 44px 高。手機面板把標題、最高叫品與最近的叫品放在同一行，讓對面的座位保持可見。在所有 viewport 尺寸下，對話框（包括橋牌重新發牌確認）都疊在玩家名牌上方，讓提示與按鈕不被遮住。矮的橫向畫面中，橋牌與拿破崙的墩使用較大的牌，排成單一水平列，並保留座位標籤與依方向進場的動畫。固定的座位格位讓牌在一墩逐漸出齊時不會移動；拿破崙的首攻花色標籤位於該列下方。手機直向的牌桌與手牌維持完整寬度，操作列抬高到牌上方、本人座位名牌的旁邊。四人牌桌讓角落控制項浮動，並在對面座位上方留一列按鈕。手牌大小依可用寬度決定，重新發牌提示疊在本人座位名牌上方。矮的直向手機上，側邊座位保留張數，但省略裝飾用的牌背匣，手牌上方的額外空間讓抬高的操作列不被擋住。直向的叫牌面板位於出牌區底部，寬度上限 336px，使用精簡的標題與全高的觸控按鈕；它省略名牌上已顯示的最近叫品，矮的手機在叫牌時會把側邊座位再往上移。任何操作面板開啟時都會隱藏旋轉提示。超過四個座位的直向牌桌把側邊座位堆成中央兩旁的窄欄，並把工具列浮動到上方兩角。21 點把側邊的手牌移到莊家下方；德州撲克把注額堆在公牌下方，把底牌放在提示旁，並把控制項摺成三列（棄牌、跟注、加注；快速金額；滑桿與金額）。直向的手牌放大且重疊更緊，但保持點數角落外露。完整的牌延伸到牌桌底邊以下，由底邊裁掉下半部；選取時會抬起露出更多，新牌標記仍保持可見。
+- 電腦代打是本局的開關。伺服器使用既有的 bot 策略，只依該座位的私人視角行動；在關閉前，手動的手牌控制項會暫停。重新連線會保留這個選擇；新的對局從代打關閉開始。
+- 理牌只改變本機的手牌顯示，保留已選取的牌與遊戲規則。點數從左邊的小排到右邊的大（大老二也依它的點數順序；拿破崙的小鬼與大鬼排在花色牌之後）。再點一次啟用中的理牌按鈕可以關閉理牌，並保留目前顯示的順序。關閉理牌時，可以拖曳牌或用 Alt+左／右鍵手動排列，即使還沒輪到自己也可以。打出的牌消失時不會打亂剩下的順序；新拿到的牌接在手牌後面。騙子酒館的牌沒有花色，所以只能依數字理牌。21 點分別整理每一手玩家的牌；德州撲克只整理玩家的底牌。
 
-- Big Two: only four of a kind and straight flushes. Singles, pairs, ordinary straights,
-  and full houses have no decorative effect, including plays containing 2s.
-- Napoleon: the secretary card, then big and small jokers before the final three tricks.
-  A weakened joker has no effect unless it is the secretary card; ordinary trumps have none.
-- Ninety-Nine: only the spade ace. The presentation keeps the total change, direction
-  symbol, and selected player's name, without effect descriptions.
-- Red Points: only a successful capture containing a red ace, in either card position.
-  Other captures and unmatched red aces have no effect.
-- Bridge and standard Sevens: no decorative card effects. Sevens Dragon Slaying keeps
-  its existing slay effect after the play frame; ordinary 7s and A/K endpoints have none.
+特殊牌的回饋效果在既有的呈現畫格內最多播放一秒，不延長回合截止時間，也不攔截輸入。包括旁觀者在內，所有人看到的都是相同的公開觸發；私人手牌從不影響它。
 
-Effects resume at the current frame's elapsed time after refresh, and expired effects
-are skipped. Effects contain no text, labels, or floating card symbols. Saved or system
-reduced motion replaces animation with a static ring. Card faces, names, and scores
-remain visible.
+- 大老二：只有鐵支與同花順。單張、對子、一般順子與葫蘆沒有裝飾效果，包含 2 的出牌也一樣。
+- 拿破崙：秘書牌，以及最後三墩之前的大鬼與小鬼。變弱的鬼牌除非是秘書牌，否則沒有效果；一般王牌也沒有。
+- 99：只有黑桃 A。呈現保留總數變化、方向符號與被選玩家的名稱，不顯示效果說明。
+- 撿紅點：只有成功吃牌且包含紅色 A 時，不論它在哪個位置。其他吃牌與沒有配對的紅色 A 沒有效果。
+- 橋牌與標準牌七：沒有裝飾性的牌效果。牌七斬龍在出牌畫格之後保留既有的斬龍特效；一般的 7 與 A/K 端點沒有效果。
 
-- Seats and play area use separate grid cells: local player below, opposite seat above,
-  others around the table, with corner positions for additional seats.
-- In Bridge, Sevens, Liar's Deck, Ninety-Nine and Napoleon the opposite hand sits to the right of
-  its plate at the top, so the top row stays one plate tall and the centre gets the height; below
-  600px wide they stack again. Their centre cards size from the table, and Sevens rows may exceed the
-  usual centre width cap. Top-row plates line up at their top edge. When the side cells are empty
-  (six players), the top corner seats reach down into them with their hands below their plates, so
-  the top row is one plate tall; when there is no opposite seat (five players), the centre rises
-  between the top corner seats. Neither layout applies below 768px wide. Napoleon lifts the usual centre
-  width cap like Sevens. Napoleon trick cards and its play boxes size from the table too; a
-  finished trick's box widens and shrinks its four to six cards to fit. Napoleon's trick lays its
-  cards around a rounded rectangle, so seats between the axes join the top and bottom rows (six
-  players form two rows of three) and the cards can be large.
-- On desktop, the game info panel shows a copyable room code directly above the
-  abort-vote button, and the global header omits it. Compact layouts retain the original
-  header room code and omit it from the info drawer.
-- The local hand header holds identity, score, captured-card preview, status, errors,
-  and the base + reserve clock at its right edge. Other seats show only the active allowance.
-- The local turn retains its text hint without a glowing frame around the hand area.
-  The reduced-motion control is temporarily not rendered; saved preferences and motion
-  handling remain active.
-- Red Points measures the card area, paginates in card order, keeps the page during
-  capture highlights, and enlarges sparse tables.
-- Below 768px, Sevens shows suit end cards and next open positions instead of all thirteen.
-- On phones and short landscape windows, abort voting sits at the table bottom.
-- Compact table toolbars use matching 44px square buttons for rules, info, and chat.
-- The mobile game chat slides up to open and down to close over 200ms, respecting
-  reduced-motion preferences. Its controls become inactive as soon as it closes.
-- On phones and short landscape windows, a matching icon-only abort-vote button sits
-  at the left of the table toolbar; the info drawer omits its duplicate. Starting an
-  abort vote requires confirmation on all layouts. The confirmation uses the same
-  200ms opening and shrinking fade-out animations as the rules dialog, respecting
-  reduced motion. Cancelling does not start a vote; confirmation is disabled during exit.
-- The result dialog stays below the top bar (beside the rail in short landscape), focuses Back
-  to room, and reports a pending return.
-- Napoleon: the picked-up cards are starred while exchanging; exchange, follow-suit, and
-  summon controls sit in the overlay panel to keep 44px touch targets. The secretary picker
-  dashes cards the Napoleon holds or discarded and warns that they mean no secretary. The
-  secretary's confirmation is stored per room and announcement in local storage, so a reload
-  shows it once. Seat labels and notices follow [Napoleon visibility](games/cards.md#napoleon).
-  The contract card includes a compact secretary-card row and two segmented side-progress
-  rows during play. Counts show won point cards against each side's winning threshold
-  (the bid for Napoleon, 17 minus the bid for defenders); pending totals stay unfilled.
-  The auction table has one column per player and labels it with the seat number (the full
-  name is the tooltip and accessible label) so six players fit the info rail.
-  Auction tables (Bridge too) write a pass as "P", with "Pass" as its tooltip. The trick history
-  heads its columns with seat numbers too, keeping player names as their tooltips.
-- Round history (every game without a trick table or Chinese Poker) lists rounds newest first,
-  keeps the latest open until the viewer toggles it, and puts each round's outcome at the end of
-  its header. Rows align player, cards, and end marks; Ninety-Nine lists one numbered row per play.
-- Actions require a ready connection; local sorting still works while reconnecting.
+重新整理後，效果會從目前畫格已經過的時間繼續播放，已過期的效果會被略過。效果不包含文字、標籤或漂浮的牌面符號。已儲存或系統的減少動態效果偏好會以靜態光環取代動畫。牌面、名稱與分數保持可見。
 
-Per-game controls: [games](games/common.md#card-controls).
+- 座位與出牌區使用不同的 grid 格：本人在下方，對面座位在上方，其他人圍繞牌桌，額外座位使用角落位置。
+- 在橋牌、牌七、騙子酒館、99 與拿破崙中，對面的手牌位於上方名牌的右側，讓上方那一列只有一個名牌高，把高度留給中央；寬度低於 600px 時又改回堆疊。它們中央的牌依牌桌決定大小，牌七的各列可以超過一般的中央寬度上限。上方那一列的名牌對齊上緣。側邊格是空的時候（六人），上方角落的座位會往下延伸進去，手牌放在名牌下方，讓上方那一列只有一個名牌高；沒有對面座位時（五人），中央會升到上方兩個角落座位之間。寬度低於 768px 時兩種版面都不適用。拿破崙和牌七一樣取消一般的中央寬度上限。拿破崙的墩牌與出牌框也依牌桌決定大小；完成一墩時，出牌框會變寬並縮小其中的四到六張牌以放得下。拿破崙的墩把牌排在圓角矩形周圍，所以位於兩軸之間的座位會併入上下兩列（六人形成兩列各三張），牌也可以很大。
+- 桌機上，遊戲資訊面板在投票終止按鈕正上方顯示可複製的房號，全域頁首則省略房號。精簡版面保留原本頁首的房號，並在資訊抽屜中省略。
+- 本人手牌的標題包含身分、分數、吃到的牌預覽、狀態、錯誤，以及最右邊的「回合時間 + 時間庫」計時。其他座位只顯示進行中的回合時間。
+- 輪到自己時保留文字提示，手牌區周圍沒有發光的外框。減少動態效果的控制項暫時不渲染；已儲存的偏好與動態處理仍然有效。
+- 撿紅點會量測牌區，依牌的順序分頁，在高亮吃牌時保持同一頁，並放大牌少的桌面。
+- 寬度低於 768px 時，牌七顯示各花色的端點牌與下一個空位，而不是全部十三張。
+- 手機與矮的橫向視窗上，投票終止位於牌桌底部。
+- 精簡的牌桌工具列為規則、資訊與聊天使用一致的 44px 正方形按鈕。
+- 手機的遊戲聊天在 200ms 內往上滑出開啟、往下滑入關閉，並遵守減少動態效果的偏好。一關閉，它的控制項就會失效。
+- 手機與矮的橫向視窗上，牌桌工具列左側有一個一致的純圖示投票終止按鈕；資訊抽屜省略重複的按鈕。所有版面上發起投票終止都需要確認。確認框使用和規則對話框相同的 200ms 開啟動畫與縮小淡出動畫，並遵守減少動態效果。取消不會發起投票；離場動畫期間確認按鈕會停用。
+- 結果對話框保持在頂端列下方（矮的橫向畫面中則在側欄旁），聚焦在「回到房間」，並顯示返回處理中的狀態。
+- 拿破崙：換牌時，拿起的牌會加上星號；換牌、跟牌花色與召喚控制項放在浮層面板中，以維持 44px 的觸控目標。秘書牌選擇器會以虛線標示拿破崙手上或已棄掉的牌，並警告選它們代表沒有小秘書。小秘書的確認依房間與公告存在 local storage，所以重新載入只會顯示一次。座位標籤與通知遵循[拿破崙的可見度規則](games/cards.md#拿破崙)。出牌期間，合約卡包含精簡的秘書牌列與兩列分段的雙方進度。數字顯示已贏得的分數牌，對比各方的獲勝門檻（拿破崙方為叫品，防守方為 17 減叫品）；尚未確定的總數保持未填滿。叫牌表每位玩家一欄，以座位號碼標示（完整名稱在提示與無障礙標籤中），讓六位玩家都放得進資訊欄。叫牌表（橋牌也一樣）把 pass 寫成「P」，提示為「Pass」。墩的紀錄同樣以座位號碼作為欄位標題，玩家名稱放在提示中。
+- 回合紀錄（有墩表的遊戲與十三支以外的所有遊戲）依新到舊列出各回合，最新一回合保持展開，直到觀看者自行切換，並把每回合的結果放在標題最後。每一列對齊玩家、牌與結束標記；99 每次出牌各一列並編號。
+- 操作需要連線就緒；重新連線期間仍可在本機理牌。
 
-## Rules dialog
+各遊戲的操作方式：[遊戲](games/common.md#卡牌操作)。
 
-The dialog opens from its center with a 200ms scale animation (70% to 105% to 100%).
-Closing via its button, Escape or the backdrop shrinks it to 70% and fades it out
-over 200ms; it remains mounted until the exit finishes. Reduced motion skips the exit.
-Saved and system reduced-motion preferences disable this animation.
+## 規則對話框
 
-- Opened from the lobby Rules link, the waiting-room Game rules button, the desktop match
-  information rail, or compact table tools; available to players and spectators.
-- Waiting rooms open a game rules library with vertical game tabs on the left and
-  independently scrolling rules on the right, initially selecting the room's game.
-  On wide screens the library allows 1044px total width, preserving the original
-  900px rules pane alongside the 144px game tabs; smaller screens fit the viewport.
-  Browsing does not change the room's game; only its current game shows room options.
-  Lobby and in-game dialogs continue to show only the game they were opened for.
-- Opens with a short summary (every game except Bridge), then active options, then the
-  full rules: Sevens Dragon Slaying, Ninety-Nine two decks, Blackjack player dealer.
-  Summary lines and Blackjack match length follow the same options; waiting rooms follow
-  host changes, matches use game state, and the lobby shows defaults. Tables have no
-  separate rules summary in the information rail.
-- Reading does not pause play or timers; settlement closes the dialog.
+對話框從中心以 200ms 的縮放動畫開啟（70% 到 105% 再到 100%）。透過按鈕、Escape 或背景關閉時，會在 200ms 內縮小到 70% 並淡出；離場動畫結束前保持掛載。減少動態效果時略過離場動畫。已儲存與系統的減少動態效果偏好都會停用這個動畫。
 
-## Account editor
+- 可從大廳的「規則」連結、等待房間的「遊戲規則」按鈕、桌機對局資訊欄或精簡的牌桌工具開啟；玩家與旁觀者都可以使用。
+- 等待房間會開啟遊戲規則庫：左側是垂直的遊戲分頁，右側是可獨立捲動的規則，一開始選取房間目前的遊戲。寬螢幕上規則庫總寬度可達 1044px，在 144px 的遊戲分頁旁保留原本 900px 的規則窗格；較小的螢幕則配合 viewport。瀏覽不會改變房間的遊戲；只有目前的遊戲會顯示房間選項。大廳與遊戲內的對話框仍只顯示開啟時對應的那款遊戲。
+- 開啟時先顯示簡短摘要（橋牌以外的每款遊戲），接著是啟用中的選項，最後是完整規則：牌七斬龍、99 雙副牌、21 點玩家當莊。摘要內容與 21 點的對局長度也依照相同的選項；等待房間跟隨房主的變更，對局中使用遊戲狀態，大廳顯示預設值。牌桌的資訊欄沒有另外的規則摘要。
+- 閱讀規則不會暫停牌局或計時；結算時會關閉對話框。
 
-| Tab | Contents |
+## 帳號編輯器
+
+| 分頁 | 內容 |
 | --- | --- |
-| Profile | Identity and appearance with a live preview of every equippable type, each labeled private or public (stacked on small screens) |
-| History | Match table, statistics, visibility setting |
-| Emoji | Personal [emoji library](media.md#personal-emoji-library) |
-| Password | Password change and sign-out options |
+| 個人檔案 | 身分與外觀，並即時預覽每一種可裝備的類型，各自標示為私人或公開（小螢幕上堆疊） |
+| 歷史紀錄 | 對局表、統計、可見度設定 |
+| 表情符號 | 個人[表情符號庫](media.md#個人表情符號庫) |
+| 密碼 | 變更密碼與登出選項 |
 
-- Nickname, preset avatar, color, and opacity preview immediately. Nickname, preset,
-  color, and avatar border save with **Save changes**; image settings save automatically.
-- Switching tabs keeps unsaved profile edits.
+- 暱稱、預設頭像、顏色與透明度會立即預覽。暱稱、預設頭像、顏色與頭像外框透過**儲存變更**儲存；圖片設定會自動儲存。
+- 切換分頁會保留尚未儲存的個人檔案編輯。
 
-**History and statistics** use the latest 100 records from the [history API](api.md#http):
+**歷史紀錄與統計**使用[歷史紀錄 API](api.md#http) 的最近 100 筆紀錄：
 
-- Columns: date, room, game, result, players, recording; the table scrolls within its container.
-- Search (room code, nicknames, usernames, game, result), filters, and sorting run
-  locally. Reset restores newest-first order.
-- Results follow the viewed account, including Bridge partnerships and tied winners.
-- Per-game summary: match count and win rate (wins / matches; ties counted separately;
-  no percentage without matches), with a horizontal chart on larger screens.
-- Donut chart: each game's share of matches, total in the center; the legend lists all games.
-- Statistics exclude every match containing a bot and ignore search and filters.
-  Private or unavailable history shows no statistics.
-- Newly completed matches, including bot games, offer a recording, loaded when opened. Recording
-  visibility follows the viewed player's history setting. Matches without a recording keep
-  their results and show that no recording exists.
+- 欄位：日期、房間、遊戲、結果、玩家、錄製；表格在自己的容器內捲動。
+- 搜尋（房號、暱稱、使用者名稱、遊戲、結果）、篩選與排序都在本機進行。「重設」會恢復由新到舊的順序。
+- 結果以被查看的帳號為準，包括橋牌的搭檔關係與並列的贏家。
+- 各遊戲摘要：對局數與勝率（勝場／對局數；平手另外計算；沒有對局時不顯示百分比），較大的螢幕上另有水平圖表。
+- 甜甜圈圖：各遊戲佔對局數的比例，中央顯示總數；圖例列出所有遊戲。
+- 統計排除所有包含 bot 的對局，並忽略搜尋與篩選。不公開或無法取得的歷史紀錄不顯示統計。
+- 新完成的對局（包括 bot 遊戲）提供錄製，開啟時才載入。錄製的可見度依照被查看玩家的歷史紀錄設定。沒有錄製的對局保留結果，並顯示沒有錄製。
 
-**Match replay** plays a recording full screen on the game's own live table, watched as an
-unseated spectator with every hand visible:
+**對局回放**在該遊戲自己的即時牌桌上全螢幕播放錄製，以未入座旁觀者的身分觀看，所有手牌都可見：
 
-- The full-hand view follows the match's owner/public-history permission. Undealt decks,
-  Liar's Deck bullet positions, chat, and clocks are never recorded.
-- Playback opens playing from the start. The bottom transport replaces the action bar:
-  play/pause, previous/next, start/end, timeline, 0.5×–4× speed, step counter, and close.
-- Moving forward one step plays that step's table presentation with its sounds; seeking or
-  stepping back shows the settled table at once. Auto-play waits for the step's new
-  presentation frames, at least 900 ms, divided by the speed, and pauses on the last step
-  ([timing](../client/src/replay-playback.ts)).
-- The viewed player starts at the bottom; select any seat to rotate the view. Round history
-  and rules stay available. Chat, voice, room code, exit controls, and clocks are hidden, and
-  the final result has no return-to-room action.
-- Seat names and appearance come from the recorded accounts, not the current room. The
-  table renders in its own scoped stores, so an open replay never changes the live room or game.
-- The viewer is controlled by step, play state, and speed, so a host-controlled shared
-  session can drive it with the controls disabled for other members and keep room chat.
+- 完整手牌的檢視遵循該對局的本人／公開歷史紀錄權限。未發出的牌組、騙子酒館的子彈位置、聊天與計時從不錄製。
+- 開啟時從頭開始播放。底部的播放控制列取代操作列：播放／暫停、上一步／下一步、開頭／結尾、時間軸、0.5×–4× 速度、步驟計數器與關閉。
+- 往前一步會播放該步驟的牌桌呈現與音效；跳轉或往回一步則立即顯示已結算的牌桌。自動播放會等待該步驟新的呈現畫格，至少 900 ms，再除以速度，並在最後一步暫停（[時序](../client/src/replay-playback.ts)）。
+- 被查看的玩家一開始位於下方；選擇任何座位即可旋轉視角。回合紀錄與規則仍可使用。聊天、語音、房號、離開控制項與計時都會隱藏，最終結果也沒有回到房間的動作。
+- 座位名稱與外觀來自錄製時的帳號，而不是目前的房間。牌桌在自己範圍內的 store 中渲染，所以開著的回放從不改變即時的房間或遊戲。
+- 檢視器由步驟、播放狀態與速度控制，所以由房主控制的共同觀看工作階段可以驅動它，同時為其他成員停用控制項，並保留房間聊天。
 
-## Daily rewards
+## 每日獎勵
 
-- The lobby has two compact controls at the upper right of its welcome area, separate
-  from the global navigation: daily tasks and daily check-in. Both open dialogs.
-  Closing preserves the selected content and dialog width through the exit animation;
-  reward controls become inactive as closing starts.
-- Each account receives three distinct tasks from the ten-task [pool](../shared/src/constants/daily-rewards.ts),
-  fixed for the Taiwan calendar day across refreshes and restarts. Task rows show a coin
-  reward tile, description/progress, and replace/claim controls; the heading counts down
-  to the next reset. The same game can advance multiple tasks.
-- One free replacement per day is shared across all tasks and sessions. Only assigned,
-  unclaimed tasks can be replaced, including completed tasks. The replacement is absent
-  from the original three; today's previous activity counts toward it. Claimed tasks
-  stay visible until reset. Claim each completed task in its dialog. Progress resets at 00:00 Asia/Taipei;
-  unclaimed rewards expire. Bot games count, unfinished/aborted games do not, and tied
-  winners do not count as wins. Bridge wins follow partnerships.
-- The first time the lobby loads an unchecked Taiwan date, it opens the check-in dialog
-  and then claims today's +10 coins automatically; later visits that day do not.
-  The dialog shows the current month's calendar with today highlighted and claimed dates
-  checked. If the automatic claim fails, today's date remains clickable as a fallback.
-- The server supplies the date and progress. Opening a dialog, returning to the page,
-  account updates, and midnight refresh them. Claim failures offer a retry; balances
-  and claims synchronize across the owner's connected sessions after durable storage.
+- 大廳在歡迎區的右上方有兩個精簡的控制項，與全域導覽分開：每日任務與每日簽到。兩者都會開啟對話框。關閉時，離場動畫期間會保留選取的內容與對話框寬度；開始關閉時，獎勵控制項就會失效。
+- 每個帳號從十個任務的[任務池](../shared/src/constants/daily-rewards.ts)中取得三個不同的任務，在同一個台灣日曆日內固定，重新整理與重新啟動都不變。任務列顯示金幣獎勵圖塊、說明／進度，以及替換／領取控制項；標題會倒數到下一次重設。同一場遊戲可以推進多個任務。
+- 每天有一次免費替換，所有任務與工作階段共用。只有已指派且未領取的任務可以替換，包括已完成的任務。替換後的任務不會是原本三個之一；今天先前的活動會計入它的進度。已領取的任務在重設前保持顯示。每個完成的任務都要在對話框中領取。進度在 Asia/Taipei 00:00 重設；未領取的獎勵會失效。bot 遊戲會計入，未完成或被中止的遊戲不計入，並列的贏家不算勝場。橋牌的勝場依搭檔關係計算。
+- 大廳第一次載入尚未簽到的台灣日期時，會開啟簽到對話框，並自動領取今天的 +10 金幣；同一天之後的造訪不會。對話框顯示本月的日曆，今天會高亮，已領取的日期會打勾。若自動領取失敗，今天的日期仍可點擊作為備援。
+- 日期與進度由伺服器提供。開啟對話框、回到頁面、帳號更新與午夜都會重新整理。領取失敗時提供重試；餘額與領取紀錄在持久儲存後，同步到本人所有已連線的工作階段。
 
-## Achievements
+## 成就
 
-- The trophy icon immediately left of notifications opens `/achievements`. Desktop
-  uses a category sidebar and milestone list; mobile places the two categories above
-  the list. Each category shows completed-item progress and its exclusive title reward.
-- Newly completed milestones show the same card at the top of any page: slide down
-  for 200ms, remain for 3 seconds, then slide up for 200ms. Simultaneous completions
-  queue individually. Notifications ignore pointer input and respect reduced motion.
-  Initial sign-in establishes a silent baseline; account revisions, reconnects and
-  refocus refresh progress without repeating completed notices. Signing out or
-  changing accounts clears the queue. This does not automatically claim title rewards.
-- The [catalog](../shared/src/constants/achievements.ts) defines two categories:
-  Master of the Card Seas (牌海縱橫), with 11 milestones for games, variety and wins;
-  and Drops Carve Stone (水滴石穿), with 12 milestones for check-ins and claimed daily tasks.
-  Game milestones include 100/200/500/1,000 completions and 50/100/250 wins.
-  Daily milestones add cumulative 30/60/90/180 check-in days and 45/90/135/270 claimed
-  tasks. The month labels are cumulative goals, not deadlines or consecutive streaks.
-  Progress never resets. Check-in days need not be consecutive.
-- Finish every milestone to claim a category's permanent title. Earned titles
-  cannot be purchased, do not cost coins, and can be equipped in account settings.
-  Claiming preserves the current equipped title. Progress refreshes on account changes
-  and window focus; repeated claims cannot duplicate inventory.
-- Achievement titles share the gold palette and a thicker 2px border
-  in both previews and equipped displays.
-- The table category and its title both display 牌海縱橫 (Master of the Card Seas).
-  The daily category and its title both display 水滴石穿 (Drops Carve Stone).
-  Already claimed titles remain owned and equipped after the rename and expansion.
-- Retained game history is backfilled once on upgrade; see [storage](storage.md#achievements)
-  for limits on recovering old bot games. Historical check-in dates count immediately.
-  Game eligibility follows daily rewards: complete
-  participant games including bots, no spectators, ties are not wins, and Bridge
-  partners win together. Blackjack and Hold'em count complete matches, not hands.
+- 通知按鈕左邊緊鄰的獎盃圖示會開啟 `/achievements`。桌機使用類別側欄與里程碑列表；手機把兩個類別放在列表上方。每個類別都顯示已完成項目的進度與專屬稱號獎勵。
+- 新完成的里程碑會在任何頁面頂端顯示相同的卡片：往下滑入 200ms、停留 3 秒，再往上滑出 200ms。同時完成的里程碑會逐一排隊顯示。通知不接收指標輸入，並遵守減少動態效果。首次登入時會安靜地建立基準；帳號版本更新、重新連線與重新取得焦點會更新進度，但不會重複顯示已完成的通知。登出或切換帳號會清空佇列。這不會自動領取稱號獎勵。
+- [目錄](../shared/src/constants/achievements.ts)定義兩個類別：牌海縱橫（Master of the Card Seas），有 11 個關於對局數、遊戲種類與勝場的里程碑；水滴石穿（Drops Carve Stone），有 12 個關於簽到與已領取每日任務的里程碑。對局里程碑包括完成 100/200/500/1,000 場與獲勝 50/100/250 場。每日里程碑另有累計簽到 30/60/90/180 天與領取 45/90/135/270 個任務。以月份命名的標籤是累計目標，不是期限，也不要求連續。進度從不重設。簽到日不需要連續。
+- 完成所有里程碑才能領取該類別的永久稱號。取得的稱號無法購買、不花金幣，可以在帳號設定中裝備。領取時保留目前裝備的稱號。帳號變更與視窗取得焦點時會更新進度；重複領取不會讓物品欄出現重複項目。
+- 成就稱號在預覽與裝備後的顯示中，都使用相同的金色配色與較粗的 2px 邊框。
+- 牌桌類別與它的稱號都顯示「牌海縱橫」（Master of the Card Seas）。每日類別與它的稱號都顯示「水滴石穿」（Drops Carve Stone）。已領取的稱號在改名與擴充後仍保有並維持裝備。
+- 升級時會一次回補仍保留的對局歷史；舊 bot 遊戲的回補限制見[儲存](storage.md#成就)。歷史簽到日期會立即計入。對局資格與每日獎勵相同：參與者完成的遊戲（包括有 bot 的遊戲）才算，旁觀不算，平手不算勝場，橋牌搭檔一起獲勝。21 點與德州撲克以完整對局計算，不是每一手。
 
-## Cosmetic shop
+## 外觀商店
 
-- Decorative previews mount shortly before scrolling into view and release their
-  animated artwork when far outside the viewport. Descriptions, prices, purchase
-  controls, text-driven previews, and keyboard-operated sound previews remain
-  available. Reserved preview space keeps the product grid stable. Supported animated
-  artwork uses the same compositor layers as equipped cosmetics.
-- `/shop` sells permanent, cosmetic-only products from the
-  [catalog](../shared/src/constants/shop.ts): avatar borders, titles/nameplates, chat
-  frames, sticker packs, card backs, card faces, table backgrounds, chip styles, seat
-  backgrounds, seat frames, victory effects, and sound packs. Each type offers at least
-  ten products; each sticker pack includes four original stickers. Prices are in game coins.
-- The category sidebar shows catalog counts; the catalog header repeats a count only
-  for a series filter. `type` selects a product type; `series` selects one of the
-  themed collections in [the catalog](../shared/src/constants/shop.ts).
-  Matching existing designs, borders, titles, and sticker packs share a collection;
-  product IDs, prices, ownership, and equipped artwork stay unchanged. Collections
-  may contain different product types and quantities; an empty category explains
-  how to choose another category or collection. Category changes retain the selected
-  collection and counts reflect its products. The legacy `ears`, `metal`,
-  and `special` series filters still select Playful, Metal, and Glow avatar borders. Reload and browser Back/Forward retain filters;
-  unknown filters show all products. At ≤52rem categories become a horizontally
-  scrollable row above products; collection filters also scroll horizontally and
-  reveal the selected collection automatically.
-- Product cards preview the actual artwork, border on the player's avatar, title,
-  or all stickers in a pack. Astral Armada, Thousand Lanterns, Iron Front, Neon
-  Overdrive, and Lioncrown Dynasty add original animated vector scenes, emblems,
-  and four expressive stickers each. Scene decoration stays near the edges, preserving
-  the play surface; animation respects reduced-motion preferences. Game and
-  waiting-room tables, card backs, and avatar and title emblems draw these scenes as
-  build-time image layers that the browser moves without repainting
-  (`client/src/cosmetics/art-layers/`); new animated artwork that the splitter cannot
-  reproduce fails the build. Shop and account previews show the original files. With either reduced-motion setting they show the original still frame, and
-  hidden or off-screen layers pause. Selecting a non-border category shows where its products
-  are visible as a subtitle under the category heading.
-  The shop header shows the coin balance; hovering or focusing this balance or the
-  global header's coins explains the 10-coin reward per completed game.
-  Purchase and coin rules: [storage](storage.md#cosmetic-inventory).
-- Buying opens a confirmation dialog with the chosen product, price, and remaining
-  balance. Cancel leaves coins unchanged; confirmation is disabled for owned products
-  or insufficient coins, and the dialog cannot be dismissed during a purchase.
-- Decorations (cat, rabbit, frog, bear, dog, antlers, tentacles) scale with the avatar.
-  The original single-color ring has the same outer extent as shop borders.
-- The account page selects an owned border or the original avatar. Equipped borders show
-  in the lobby, profiles, friends, chat, and rooms without covering the avatar.
-- Owned appearance products can be equipped from the shop or account editor. Account
-  equipment selectors save immediately; removing an official image style restores the
-  retained upload or theme. Nameplates pair a fixed localized cosmetic title with its
-  own mark and color treatment, separate from earned achievements. Equipped nameplates
-  appear beside the nickname in player identities and room chat, but not in the compact
-  spectator list. The shop preview uses the same title styling as the equipped nameplate. Table backgrounds and card
-  backs are private; seat backgrounds show in the waiting room. Account selectors offer "Default" for
-  the types below. Existing uploads,
-  themes, and emoji remain free.
-- Newer equipment falls back to the built-in design when unequipped or unknown:
+- 裝飾性的預覽在捲動到可見範圍前不久才掛載，遠離 viewport 時會釋放動態圖案。說明、價格、購買控制項、以文字驅動的預覽，以及可用鍵盤操作的音效試聽都保持可用。預留的預覽空間讓商品格狀版面保持穩定。支援的動態圖案使用和已裝備外觀相同的 compositor 圖層。
+- `/shop` 販售[目錄](../shared/src/constants/shop.ts)中永久、純外觀的商品：頭像外框、稱號／名牌、聊天框、貼圖包、牌背、牌面、牌桌背景、籌碼樣式、座位背景、座位框、勝利特效與音效包。每種類型至少提供十項商品；每個貼圖包包含四張原創貼圖。價格以金幣計算。
+- 類別側欄顯示目錄中的數量；目錄標題只在使用系列篩選時才重複顯示數量。`type` 選擇商品類型；`series` 選擇[目錄](../shared/src/constants/shop.ts)中的主題系列之一。風格相符的既有設計、外框、稱號與貼圖包歸在同一個系列；商品 ID、價格、擁有權與已裝備的圖案都不變。系列可以包含不同類型與數量的商品；空的類別會說明如何選擇其他類別或系列。切換類別時保留選取的系列，數量也反映該系列的商品。舊版的 `ears`、`metal` 與 `special` 系列篩選仍會選取「俏皮造型」、「金屬系列」與「光環系列」頭像外框。重新載入與瀏覽器的上一頁／下一頁會保留篩選；不認得的篩選會顯示所有商品。寬度 ≤52rem 時，類別變成商品上方可水平捲動的一列；系列篩選也可水平捲動，並自動捲到選取的系列。
+- 商品卡片預覽實際的圖案、套在玩家頭像上的外框、稱號，或貼圖包中的所有貼圖。星穹遠征、千燈神域、鋼鐵戰線、霓虹失控與獅冠王朝各自加入原創的動態向量場景、徽記，以及四張表情豐富的貼圖。場景裝飾集中在邊緣附近，保留出牌區；動畫遵守減少動態效果的偏好。遊戲與等待房間的牌桌、牌背，以及頭像與稱號徽記，會把這些場景畫成建置時產生的圖片圖層，由瀏覽器移動而不重新繪製（`client/src/cosmetics/art-layers/`）；分割工具無法重現的新動態圖案會讓建置失敗。商店與帳號預覽顯示原始檔案。任一個減少動態效果設定開啟時，顯示原始的靜態畫面，隱藏或在畫面外的圖層會暫停。選擇外框以外的類別時，類別標題下方會以副標題說明該類商品會在哪裡顯示。商店標題顯示金幣餘額；滑過或聚焦這個餘額或全域頁首的金幣時，會說明每完成一場遊戲可得 10 金幣。購買與金幣規則：[儲存](storage.md#外觀物品欄)。
+- 購買會開啟確認對話框，顯示所選商品、價格與剩餘餘額。取消不會改變金幣；已擁有的商品或金幣不足時確認按鈕會停用，購買進行中無法關閉對話框。
+- 裝飾（貓、兔子、青蛙、熊、狗、鹿角、觸手）會隨頭像縮放。原本的單色外圈與商店外框有相同的外側範圍。
+- 帳號頁面可以選擇已擁有的外框或原始頭像。已裝備的外框會顯示在大廳、個人檔案、好友、聊天與房間中，且不會遮住頭像。
+- 已擁有的外觀商品可以從商店或帳號編輯器裝備。帳號的裝備選擇器會立即儲存；移除官方圖片樣式會恢復仍保留的上傳圖片或主題。名牌把固定且已在地化的外觀稱號，搭配自己的標記與配色，與取得的成就分開。已裝備的名牌會顯示在玩家身分與房間聊天中的暱稱旁，但不會出現在精簡的旁觀者列表中。商店預覽使用和已裝備名牌相同的稱號樣式。牌桌背景與牌背是私人的；座位背景會顯示在等待房間中。帳號選擇器為下列類型提供「預設」。既有的上傳圖片、主題與表情符號仍然免費。
+- 較新的裝備類型在未裝備或無法辨識時，會退回內建設計：
 
-  | Type | Who sees it | Where |
+  | 類型 | 誰看得到 | 位置 |
   | --- | --- | --- |
-  | Card faces | Owner | Every face-up card, including Liar's Deck jokers and Napoleon's big joker, whose greyscale copy is the small joker (the classic deck uses bundled Napoleon jokers); the four-color deck loads its recolored faces on demand and shows classic faces until then |
-  | Sound packs | Owner | Turn, join, card, pass, elimination, start, Sevens slash and collapse cues; the sound switches still apply, shop previews play on click |
-  | Chip styles | Owner | Every chip icon (Hold'em, Blackjack, round history, seats) |
-  | Seat frames | Everyone | In-game seat plates and waiting-room seats; the frame's glow replaces the theme turn glow |
-  | Victory effects | Everyone, including spectators | About 3 s from each winning human seat when settlement appears, once per settlement; never covers or blocks the result dialog. Reduced motion shows a static glow |
-  | Chat frames | Everyone | Sender's room chat and private messages; system lines are never framed |
+  | 牌面 | 本人 | 每一張正面朝上的牌，包括騙子酒館的鬼牌與拿破崙的大鬼，其灰階版本就是小鬼（經典牌組使用內建的拿破崙鬼牌）；四色牌組依需求載入重新上色的牌面，載入前先顯示經典牌面 |
+  | 音效包 | 本人 | 輪到、加入、出牌、pass、淘汰、開始、牌七斬擊與翻桌音效；聲音開關仍然適用，商店試聽點擊後播放 |
+  | 籌碼樣式 | 本人 | 每一個籌碼圖示（德州撲克、21 點、回合紀錄、座位） |
+  | 座位框 | 所有人 | 遊戲中的座位名牌與等待房間的座位；外框的光暈取代主題的輪到光暈 |
+  | 勝利特效 | 所有人，包括旁觀者 | 結算出現時，從每個獲勝的真人座位播放約 3 秒，每次結算一次；從不遮住或擋住結果對話框。減少動態效果時顯示靜態光暈 |
+  | 聊天框 | 所有人 | 寄件者在房間聊天與私訊中的訊息；系統訊息從不加框 |
 
-- Purchased packs appear in the sticker picker for room chat and private messages;
-  no equipment step is required. Receiving a sticker does not require ownership.
-- The emoji/sticker picker shows one horizontal tab row (owned packs, My emoji, Site
-  emoji) with a Browse sticker packs link; it opens the first tab with content, and a
-  search with no hits in the chosen tab switches to the first tab that has matches.
+- 購買的貼圖包會出現在房間聊天與私訊的貼圖選擇器中；不需要裝備步驟。收到貼圖不需要擁有它。
+- 表情符號／貼圖選擇器顯示一列水平分頁（已擁有的貼圖包、我的表情符號、站方表情符號），並附上「瀏覽貼圖包」連結；它會開啟第一個有內容的分頁，在選取的分頁中搜尋不到結果時，會切換到第一個有符合項目的分頁。

@@ -1,287 +1,225 @@
-# HTTP and Socket API
+# HTTP 與 Socket API
 
-Authoritative types: [`shared/src/types/`](../shared/src/types). Paths are
-backend-relative; production Nginx serves them below `/card-together/`.
+權威型別：[`shared/src/types/`](../shared/src/types)。路徑以後端為基準；正式環境的 Nginx 在 `/card-together/` 之下提供這些路徑。
 
 ## HTTP
 
-- JSON bodies: `{ success: true, ... }` or `{ success: false, error }` with a matching status.
-- Mutations require an allowed Origin and JSON Content-Type; send `{}` for an empty body.
-- Session cookies authenticate. No session is needed for register, login, logout
-  (which revokes any presented valid sessions), image reads, and health.
-- Only immutable image reads are cached.
+- JSON 本文：`{ success: true, ... }` 或 `{ success: false, error }`，並搭配對應的狀態碼。
+- 變更類請求需要允許的 Origin 與 JSON Content-Type；本文為空時送 `{}`。
+- 以工作階段 cookie 驗證身分。註冊、登入、登出（會撤銷請求中帶有的有效工作階段）、讀取圖片與健康檢查不需要工作階段。
+- 只有不可變的圖片讀取會被快取。
 
-| Method and path | Input | Result |
+| 方法與路徑 | 輸入 | 結果 |
 | --- | --- | --- |
-| `POST /api/auth/register` | `username, password, nickname?, color?, avatar?` | 201, account, session cookie |
-| `POST /api/auth/login` | `username, password` | Account, session cookie |
-| `GET /api/auth/me` | — | Current account |
-| `PATCH /api/auth/profile` | [Profile fields](#profile-fields) | Updated account; synchronizes connected players |
-| `POST /api/auth/shop/avatar-borders` | `border` (catalog ID) | Updated account after purchase |
-| `POST /api/auth/shop/items` | `item` (catalog ID) | Updated account after permanent purchase; does not equip |
-| `GET /api/auth/achievements` | — | Owner's [achievement status](../shared/src/types/achievements.ts), milestone progress and category claim state |
-| `POST /api/auth/achievements/claim` | `category`: ID from the [catalog](../shared/src/constants/achievements.ts) | Updated account and achievement status; all milestones required, repeat claims idempotent, no coin charge |
-| `GET /api/auth/daily-rewards` | — | Owner's [daily status](../shared/src/types/daily-rewards.ts), server date/time, current month's check-ins |
-| `POST /api/auth/daily-rewards` | `reward`: assigned [task ID](../shared/src/constants/daily-rewards.ts) or `check-in`; `day`: server's YYYY-MM-DD | Updated account and daily status; repeat claims are idempotent |
-| `POST /api/auth/daily-rewards/replace` | `task`: assigned, unclaimed task ID; `day`: server's YYYY-MM-DD | Updated account and daily status; one replacement per day, retrying the same original task is idempotent |
-| `POST /api/auth/password` | `currentPassword, newPassword` | Revokes all sessions |
-| `POST /api/auth/logout` | `{}` | Revokes presented sessions, clears cookies |
-| `POST /api/auth/logout-all` | `{}` | Revokes every session of the account |
-| `GET /api/account/history` | — | Own latest 100 matches including bots, newest first |
-| `GET /api/players/:accountId` | — | Public profile |
-| `GET /api/players/:accountId/history` | — | Matches and participant map, if owner or public |
-| `GET /api/players/:accountId/history/:matchId/replay` | — | `{ success: true, replay: MatchReplay }`, if owner or subject's history is public |
-| `GET /api/friends` | — | `friends, incoming, outgoing`; accepted friends include presence, nullable `hostedRoomCode`, and `lastSeenAt` |
-| `GET /api/friends/search?username=` | Exact username | Public account or null |
-| `POST /api/friends/requests` | `username` | 201, request |
-| `POST /api/friends/requests/:id/accept` | `{}` | Recipient accepts |
-| `DELETE /api/friends/requests/:id` | `{}` | Recipient declines or sender cancels |
-| `DELETE /api/friends/:accountId` | `{}` | Removes the friendship |
-| `GET /api/messages` | — | Incoming invitations, accepted-request notices, conversations with unread counts |
-| `GET /api/messages/:accountId` | Optional `before` message ID | Latest 50 messages before the cursor, chronological; account, `hasMore`, `canSend` |
-| `POST /api/messages/:accountId` | `clientId` plus one [message input](../shared/src/types/direct-message.ts), including `shopSticker` | 201, message; accepted friends only |
-| `POST /api/messages/:accountId/read` | `messageId` | Advances the reader's incoming-message cursor |
-| `POST /api/messages/notifications/read` | `ids`: 1–100 unique notice IDs | Dismisses only the authenticated account's accepted-request notices |
-| `POST /api/media` | `data` (base64), `purpose`: `avatar`, `emoji`, `background`, `cardBack` | Image ID |
-| `GET /api/media/:id` | — | Immutable image bytes |
-| `GET /api/emojis` | — | Own emoji entries |
-| `POST /api/emojis` | `items: [{ name, mediaId }]`, 1–50 unique names | 201, created entries |
-| `PATCH /api/emojis/:id` | `name` | Renames an owned entry |
-| `DELETE /api/emojis/:id` | `{}` | Deletes an owned entry |
-| `POST /api/emojis/delete` | `ids`: 1–300 unique IDs | `deleted` IDs, in one atomic write; unknown or foreign IDs are ignored |
+| `POST /api/auth/register` | `username, password, nickname?, color?, avatar?` | 201、帳號、工作階段 cookie |
+| `POST /api/auth/login` | `username, password` | 帳號、工作階段 cookie |
+| `GET /api/auth/me` | — | 目前的帳號 |
+| `PATCH /api/auth/profile` | [個人檔案欄位](#個人檔案欄位) | 更新後的帳號；同步給已連線的玩家 |
+| `POST /api/auth/shop/avatar-borders` | `border`（目錄 ID） | 購買後更新的帳號 |
+| `POST /api/auth/shop/items` | `item`（目錄 ID） | 永久購買後更新的帳號；不會自動裝備 |
+| `GET /api/auth/achievements` | — | 本人的[成就狀態](../shared/src/types/achievements.ts)、里程碑進度與各類別的領取狀態 |
+| `POST /api/auth/achievements/claim` | `category`：[目錄](../shared/src/constants/achievements.ts)中的 ID | 更新後的帳號與成就狀態；必須完成所有里程碑，重複領取具冪等性，不扣金幣 |
+| `GET /api/auth/daily-rewards` | — | 本人的[每日狀態](../shared/src/types/daily-rewards.ts)、伺服器日期與時間、本月的簽到紀錄 |
+| `POST /api/auth/daily-rewards` | `reward`：已指派的[任務 ID](../shared/src/constants/daily-rewards.ts) 或 `check-in`；`day`：伺服器的 YYYY-MM-DD | 更新後的帳號與每日狀態；重複領取具冪等性 |
+| `POST /api/auth/daily-rewards/replace` | `task`：已指派且未領取的任務 ID；`day`：伺服器的 YYYY-MM-DD | 更新後的帳號與每日狀態；每天可替換一次，以同一個原始任務重試具冪等性 |
+| `POST /api/auth/password` | `currentPassword, newPassword` | 撤銷所有工作階段 |
+| `POST /api/auth/logout` | `{}` | 撤銷請求中帶有的工作階段，清除 cookie |
+| `POST /api/auth/logout-all` | `{}` | 撤銷該帳號的所有工作階段 |
+| `GET /api/account/history` | — | 自己最近 100 場對局（包括有 bot 的對局），由新到舊 |
+| `GET /api/players/:accountId` | — | 公開個人檔案 |
+| `GET /api/players/:accountId/history` | — | 對局與參與者對照表；限本人或歷史紀錄公開時 |
+| `GET /api/players/:accountId/history/:matchId/replay` | — | `{ success: true, replay: MatchReplay }`；限本人或對象的歷史紀錄公開時 |
+| `GET /api/friends` | — | `friends, incoming, outgoing`；已接受的好友包含上線狀態、可為 null 的 `hostedRoomCode` 與 `lastSeenAt` |
+| `GET /api/friends/search?username=` | 完全相符的使用者名稱 | 公開帳號或 null |
+| `POST /api/friends/requests` | `username` | 201、好友邀請 |
+| `POST /api/friends/requests/:id/accept` | `{}` | 收件者接受 |
+| `DELETE /api/friends/requests/:id` | `{}` | 收件者拒絕或寄件者取消 |
+| `DELETE /api/friends/:accountId` | `{}` | 解除好友關係 |
+| `GET /api/messages` | — | 收到的邀請、邀請已接受的通知、含未讀數的對話 |
+| `GET /api/messages/:accountId` | 選填的 `before` 訊息 ID | 游標之前最近的 50 則訊息，依時間排序；帳號、`hasMore`、`canSend` |
+| `POST /api/messages/:accountId` | `clientId` 加上一個[訊息輸入](../shared/src/types/direct-message.ts)，包括 `shopSticker` | 201、訊息；只限已接受的好友 |
+| `POST /api/messages/:accountId/read` | `messageId` | 推進讀者的收件訊息游標 |
+| `POST /api/messages/notifications/read` | `ids`：1–100 個不重複的通知 ID | 只關閉已驗證帳號自己的「邀請已接受」通知 |
+| `POST /api/media` | `data`（base64）、`purpose`：`avatar`、`emoji`、`background`、`cardBack` | 圖片 ID |
+| `GET /api/media/:id` | — | 不可變的圖片位元組 |
+| `GET /api/emojis` | — | 自己的表情符號項目 |
+| `POST /api/emojis` | `items: [{ name, mediaId }]`，1–50 個不重複的名稱 | 201、建立的項目 |
+| `PATCH /api/emojis/:id` | `name` | 重新命名自己的項目 |
+| `DELETE /api/emojis/:id` | `{}` | 刪除自己的項目 |
+| `POST /api/emojis/delete` | `ids`：1–300 個不重複的 ID | `deleted` ID，以一次原子寫入完成；不存在或屬於他人的 ID 會被忽略 |
 | `GET /health` | — | `{ status: 'ok' }` |
 
-### Profile fields
+### 個人檔案欄位
 
-| Field | Accepted values |
+| 欄位 | 接受的值 |
 | --- | --- |
-| `nickname`, `color`, `avatar`, history visibility | Validated profile values ([storage](storage.md#identity-and-sessions)) |
-| `avatarImage`, `seatBackground`, `tableBackground`, `cardBack` | Uploaded media ID or null; `seatBackground` uses the `background` purpose and is shared in room `PlayerInfo` |
-| `tableBackgroundOpacity`, `cardBackOpacity` | Integer percent 20–100 |
-| `avatarBorder` | Null (original) or an owned catalog ID; unowned returns 403 |
-| Equipment fields in [`EQUIPMENT_SLOTS`](../shared/src/constants/shop.ts) (`cardBackStyle`, `nameplate`, `cardFaceStyle`, `soundPack`, `seatFrame`, `victoryEffect`, `chipStyle`, `chatFrame`, …) | Null or owned catalog ID of the matching type; unowned returns 403, wrong type 400 |
-| `coins`, `coinRevision`, `ownedAvatarBorders`, `ownedShopItems`, `ownedAchievementNameplates` | Server-owned; never set by register or profile requests |
+| `nickname`、`color`、`avatar`、歷史紀錄可見度 | 經過驗證的個人檔案值（[儲存](storage.md#身分與工作階段)） |
+| `avatarImage`、`seatBackground`、`tableBackground`、`cardBack` | 已上傳的媒體 ID 或 null；`seatBackground` 使用 `background` 用途，並在房間的 `PlayerInfo` 中共享 |
+| `tableBackgroundOpacity`、`cardBackOpacity` | 整數百分比 20–100 |
+| `avatarBorder` | null（原始外框）或已擁有的目錄 ID；未擁有時回傳 403 |
+| [`EQUIPMENT_SLOTS`](../shared/src/constants/shop.ts) 中的裝備欄位（`cardBackStyle`、`nameplate`、`cardFaceStyle`、`soundPack`、`seatFrame`、`victoryEffect`、`chipStyle`、`chatFrame`、…） | null 或已擁有且類型相符的目錄 ID；未擁有回傳 403，類型錯誤回傳 400 |
+| `coins`、`coinRevision`、`ownedAvatarBorders`、`ownedShopItems`、`ownedAchievementNameplates` | 由伺服器管理；註冊或個人檔案請求從不能設定 |
 
-Achievement routes require a session and mutation Origin/JSON protection. Unknown category
-IDs return 400; incomplete categories return 409. The server grants the catalog's title,
-ignoring client counters, inventory, account IDs and reward IDs. Earned titles are accepted
-by the `nameplate` equipment field only when owned; the shop rejects them as unknown products.
+成就路由需要工作階段，以及變更請求的 Origin／JSON 保護。不存在的類別 ID 回傳 400；未完成的類別回傳 409。伺服器依目錄授予稱號，忽略用戶端送來的計數、物品欄、帳號 ID 與獎勵 ID。取得的稱號只有在已擁有時，才能透過 `nameplate` 裝備欄位使用；商店會把它們當成不存在的商品而拒絕。
 
-Omitted fields keep their values; invalid values return 400.
+省略的欄位保留原值；無效的值回傳 400。
 
-### Status codes
+### 狀態碼
 
-| Case | Status |
+| 情況 | 狀態碼 |
 | --- | --- |
-| Invalid player ID / unknown player / private history | 400 / 404 / 403 |
-| Invalid replay match ID / absent, unrelated, legacy, or pruned replay | 400 / 404 |
-| Unknown border / insufficient coins | 400 / 409 |
-| Invalid daily reward / stale date, incomplete or unassigned task, or unavailable replacement | 400 / 409 |
-| Oversized image or quota exceeded ([limits](media.md#uploads)) | 413 |
-| Image storage unavailable | 503 |
+| 無效的玩家 ID／不存在的玩家／歷史紀錄不公開 | 400 / 404 / 403 |
+| 無效的回放對局 ID／回放不存在、無關、舊版或已清除 | 400 / 404 |
+| 不存在的外框／金幣不足 | 400 / 409 |
+| 無效的每日獎勵／日期過期、任務未完成或未指派，或無法替換 | 400 / 409 |
+| 圖片過大或超過配額（[上限](media.md#上傳)） | 413 |
+| 圖片儲存空間無法使用 | 503 |
 
-### Response contents
+### 回應內容
 
-- `AccountProfile` (owner only): preferences, timestamps, coins, inventories, equipment.
-- `PublicAccount`: ID, username, nickname, color, avatar, avatar image, equipped border, nameplate,
-  and chat frame.
-  No balance or inventory.
-- Only accepted entries in `GET /api/friends` include required `lastSeenAt`: a Unix epoch
-  millisecond timestamp, or `null` when no historical activity is known. It survives player
-  cleanup and server restarts. Public profiles, search results, and pending requests omit it.
-  Display behavior: [friends interface](interface.md#lobby-and-friends).
-- No response contains password hashes or session digests.
-- History list endpoints return the latest 100 eligible [MatchSummary](../shared/src/types/game.ts)
-  without pagination, including bot matches; participant maps include retained human accounts. Summaries add
-  optional `hasReplay: true` while a match's archive is retained and never contain replay/log
-  payloads.
-  Existing list envelopes stay `{ success: true, matches }` for account history and
-  `{ success: true, matches, players }` for player history. Search, filters, and statistics
-  run in the client; statistics exclude any match containing a bot.
-- Replay requires an active session and the same subject-owner/public-history permission
-  as the player history list. Lookup is limited to that subject's retained matches;
-  knowing an unrelated match ID grants no access. Missing accounts return 404, private
-  subjects return 403, and missing, legacy, pruned, or unreadable archives return 404
-  ([retention](storage.md#replay-archives)). The response's
-  [MatchReplay](../shared/src/types/replay.ts) holds the initial spectator snapshot and
-  one patch per recorded step, revealing every dealt hand under those same permissions.
-  Matches without a recording return 404. See [recording and privacy](storage.md#identity-and-sessions).
-  Playback creates no room and requires neither original players nor a seed.
-- Shop prices come from [`shop.ts`](../shared/src/constants/shop.ts), never from the
-  client. Repeat purchases do not charge again and do not equip. Coin rules:
-  [storage](storage.md#game-coins).
-- Direct-message contracts: [`direct-message.ts`](../shared/src/types/direct-message.ts).
-  Reads require an accepted friendship or retained participant history. Sending allows
-  1–500 trimmed characters or one personal/site/shop sticker. Shop sends require pack
-  ownership; only the catalog ID is accepted. `clientId` uses 8–64 ASCII letters,
-  digits, underscores, or hyphens; retry the same ID and content after an uncertain result.
-  Non-friends return 403, conflicting retries 409, inaccessible conversations 404,
-  malformed or expired cursors 400. Retention and removal: [storage](storage.md#identity-and-sessions).
+- `AccountProfile`（只給本人）：偏好設定、時間戳、金幣、物品欄、裝備。
+- `PublicAccount`：ID、使用者名稱、暱稱、顏色、頭像、頭像圖片、裝備中的外框、名牌與聊天框。不含餘額或物品欄。
+- 只有 `GET /api/friends` 中已接受的項目包含必填的 `lastSeenAt`：Unix epoch 毫秒時間戳，或在沒有任何歷史活動紀錄時為 `null`。這個值在玩家清理與伺服器重新啟動後仍會保留。公開個人檔案、搜尋結果與待處理的邀請不包含它。顯示方式：[好友介面](interface.md#大廳與好友)。
+- 任何回應都不包含密碼雜湊或工作階段摘要。
+- 歷史列表 endpoint 回傳最近 100 場符合條件的 [MatchSummary](../shared/src/types/game.ts)，不分頁，包括有 bot 的對局；參與者對照表包含仍保留的真人帳號。對局的封存仍保留時，摘要會加上選填的 `hasReplay: true`，且從不包含回放或紀錄內容。既有的列表外層格式維持不變：帳號歷史為 `{ success: true, matches }`，玩家歷史為 `{ success: true, matches, players }`。搜尋、篩選與統計在用戶端進行；統計會排除任何有 bot 的對局。
+- 回放需要有效的工作階段，以及和玩家歷史列表相同的權限（對象本人或歷史紀錄公開）。查詢只限該對象仍保留的對局；知道無關對局的 ID 也無法存取。帳號不存在回傳 404，對象不公開回傳 403，封存不存在、舊版、已清除或無法讀取時回傳 404（[保留規則](storage.md#回放封存)）。回應中的 [MatchReplay](../shared/src/types/replay.ts) 包含初始的旁觀快照，以及每個已記錄步驟的一份 patch，在相同權限下揭露每一份發出的手牌。沒有錄製資料的對局回傳 404。見[錄製與隱私](storage.md#身分與工作階段)。播放不會建立房間，也不需要原本的玩家或亂數種子。
+- 商店價格來自 [`shop.ts`](../shared/src/constants/shop.ts)，從不採用用戶端的值。重複購買不會再次扣款，也不會自動裝備。金幣規則：[儲存](storage.md#金幣)。
+- 私訊介面：[`direct-message.ts`](../shared/src/types/direct-message.ts)。讀取需要已接受的好友關係，或仍保留的共同參與紀錄。發送允許去除前後空白後 1–500 個字元，或一張個人／站方／商店貼圖。發送商店貼圖需要擁有該貼圖包；只接受目錄 ID。`clientId` 使用 8–64 個 ASCII 英文字母、數字、底線或連字號；結果不確定時，以相同的 ID 與內容重試。非好友回傳 403，衝突的重試回傳 409，無法存取的對話回傳 404，格式錯誤或已過期的游標回傳 400。保留期限與移除：[儲存](storage.md#身分與工作階段)。
 
-## Socket actions
+## Socket 操作
 
-- The handshake and every action require a valid session and allowed Origin. The actor
-  comes from the session, never from the payload.
-- The last argument must be a callback, or the action is ignored. Actions without a
-  payload take only the callback.
-- Failures return `{ success: false, error }`. Success is acknowledged after persistence,
-  except for ephemeral signaling and unchanged state.
-- Game types: `bridge`, `bigtwo`, `redpoints`, `ninetynine`, `sevens`, `chinesepoker`,
-  `liarsdeck`, `blackjack`, `holdem`, `napoleon`. Standard seats: `N`, `E`, `S`, `W`.
-- Exact payloads and results: [`socket-events.ts`](../shared/src/types/socket-events.ts).
+- 握手與每個操作都需要有效的工作階段與允許的 Origin。操作者由工作階段決定，從不取自 payload。
+- 最後一個參數必須是 callback，否則操作會被忽略。沒有 payload 的操作只接收 callback。
+- 失敗回傳 `{ success: false, error }`。成功會在資料寫入後才回覆，但暫時性的 signaling 與狀態未變更時除外。
+- 遊戲類型：`bridge`、`bigtwo`、`redpoints`、`ninetynine`、`sevens`、`chinesepoker`、`liarsdeck`、`blackjack`、`holdem`、`napoleon`。標準座位：`N`、`E`、`S`、`W`。
+- 確切的 payload 與結果：[`socket-events.ts`](../shared/src/types/socket-events.ts)。
 
-**Rooms**
+**房間**
 
-| Action | Payload | Effect |
+| 操作 | Payload | 效果 |
 | --- | --- | --- |
-| `player:resume` | — | Returns `PlayerSnapshot`; attaches or restores the account |
-| `room:create` | `{ gameType }` | Returns `roomCode` |
-| `room:join` | `{ roomCode }` | Joins as a spectator, also during a match |
-| `room:joinFriend` | `{ accountId, roomCode }` | Joins an online friend's hosted room as a spectator, leaving the previous room atomically |
-| `room:invite` | `{ accountId }` | Invites an accepted friend while spectator space remains |
-| `room:leave` | — | Leaves; a seated player's leave aborts an unfinished game |
-| `room:kick` | `{ accountId }` | Host removes another human (spectators also during a match); they may rejoin by code |
-| `room:changeSeat` | `{ seat }` | Takes an available standard seat |
-| `room:changeAdditionalSeat` | `{ index }` | Takes an extra seat; zero-based index into `RoomInfo.additionalSeats` |
-| `room:standUp` | — | Becomes a spectator while waiting |
-| `room:movePlayer` | `{ accountId, target }` | Host moves a human while waiting; `target` is a [`RoomSeatTarget`](../shared/src/types/room.ts) |
-| `room:addSeat`, `room:removeSeat` | — | Host adds an extra seat (eight total, six for Napoleon) or removes the last empty one; waiting Ninety-Nine, Blackjack, Hold'em, Napoleon only |
-| `room:addBot` | `{ seat, difficulty? }` | Host adds a bot to any configured seat (`N`–`W`, or `P5`–`P8` once added) while waiting; omitted difficulty means hard |
-| `room:removeBot` | `{ seat }` | Host removes a bot while waiting |
-| `room:setBotDifficulty` | `{ seat, difficulty }` | Host changes one waiting-room bot to easy or hard; resets human readiness |
-| `room:fillBots` | — | Host fills every empty seat, additional ones included, with ready bots |
-| `room:ready`, `room:unready` | — | Sets a seated player's readiness while waiting, regardless of current player count; never starts a match |
-| `room:start` | — | Host starts only when all occupied seats are ready and the game's player count is valid |
-| `room:setShuffleSeats` | `{ enabled }` | Host changes automatic seat shuffling while waiting; defaults to false and resets human readiness |
+| `player:resume` | — | 回傳 `PlayerSnapshot`；連結或還原帳號 |
+| `room:create` | `{ gameType }` | 回傳 `roomCode` |
+| `room:join` | `{ roomCode }` | 以旁觀者身分加入，對局進行中也可以 |
+| `room:joinFriend` | `{ accountId, roomCode }` | 以旁觀者身分加入線上好友主持的房間，並以原子操作離開原本的房間 |
+| `room:invite` | `{ accountId }` | 在旁觀區還有空間時邀請已接受的好友 |
+| `room:leave` | — | 離開；入座玩家離開會中止未結束的遊戲 |
+| `room:kick` | `{ accountId }` | 房主移除另一位真人（對局中也可以移除旁觀者）；對方可以用房號重新加入 |
+| `room:changeSeat` | `{ seat }` | 坐到一個空的標準座位 |
+| `room:changeAdditionalSeat` | `{ index }` | 坐到一個額外座位；`RoomInfo.additionalSeats` 的索引，從 0 開始 |
+| `room:standUp` | — | 等待中起身成為旁觀者 |
+| `room:movePlayer` | `{ accountId, target }` | 房主在等待中移動一位真人；`target` 是 [`RoomSeatTarget`](../shared/src/types/room.ts) |
+| `room:addSeat`、`room:removeSeat` | — | 房主加開一個額外座位（總共八個，拿破崙為六個），或移除最後一個空的額外座位；只限等待中的 99、21 點、德州撲克與拿破崙 |
+| `room:addBot` | `{ seat, difficulty? }` | 房主在等待中把 bot 加到任何已設定的座位（`N`–`W`，或已加開的 `P5`–`P8`）；省略難度時為困難 |
+| `room:removeBot` | `{ seat }` | 房主在等待中移除 bot |
+| `room:setBotDifficulty` | `{ seat, difficulty }` | 房主把等待中房間的一個 bot 改為簡單或困難；重設真人的準備狀態 |
+| `room:fillBots` | — | 房主以已準備的 bot 補滿所有空位，包括額外座位 |
+| `room:ready`、`room:unready` | — | 等待中設定入座玩家的準備狀態，不論目前人數；從不會開始對局 |
+| `room:start` | — | 只有在所有有人的座位都已準備，且人數符合該遊戲時，房主才能開始 |
+| `room:setShuffleSeats` | `{ enabled }` | 房主在等待中切換自動隨機座位；預設為 false，並重設真人的準備狀態 |
 
-**Waiting-room settings** (host only; each clears human readiness unless noted)
+**等待中的房間設定**（只限房主；除非另有註明，都會清除真人的準備狀態）
 
-| Action | Payload |
+| 操作 | Payload |
 | --- | --- |
 | `room:setGameType` | `{ gameType }` |
 | `room:setTimeControl` | [`TimeControl`](../shared/src/types/room.ts) |
-| `room:setSevensOptions` | `SevensOptions`; `slayEffect` is `dragon` (default) or `fire`. Changing only the effect keeps readiness |
+| `room:setSevensOptions` | `SevensOptions`；`slayEffect` 為 `dragon`（預設）或 `fire`。只改特效時保留準備狀態 |
 | `room:setNinetyNineOptions` | `NinetyNineOptions` |
-| `room:setBlackjackOptions` | `BlackjackOptions` (player dealer) |
-| `room:setNapoleonOptions` | `NapoleonOptions` (joker summoning) |
+| `room:setBlackjackOptions` | `BlackjackOptions`（玩家當莊） |
+| `room:setNapoleonOptions` | `NapoleonOptions`（鬼牌召喚） |
 
-**Shared replays** (session: [`RoomReplaySession`](../shared/src/types/room.ts); timing:
-[`replay-session.ts`](../shared/src/replay-session.ts))
+**共同觀看回放**（工作階段：[`RoomReplaySession`](../shared/src/types/room.ts)；時序：[`replay-session.ts`](../shared/src/replay-session.ts)）
 
-| Action | Payload | Effect |
+| 操作 | Payload | 效果 |
 | --- | --- | --- |
-| `room:replay:start` | `{ subjectId, matchId }` | Host only, while waiting: a recorded match in the subject's history the host may view (own, or public). Sets status `replaying` and plays from step 0 at 1x; removes a finished board still on screen |
-| `room:replay:control` | `{ step, playing, speed }` | Current host only: re-anchors playback at server time (play, pause, seek, speed 0.5–4) |
-| `room:replay:end` | — | Current host only: returns the room to `waiting` |
-| `room:replay:load` | — | Current members only, while the session is active: returns `{ archive: { match, replay, players } }`. Members need no history permission of their own; the host's was checked at start |
+| `room:replay:start` | `{ subjectId, matchId }` | 只限房主在等待中使用：選擇對象歷史紀錄中、房主有權觀看（本人或公開）的已錄製對局。把狀態設為 `replaying`，從第 0 步以 1x 播放；移除畫面上仍留著的結算畫面 |
+| `room:replay:control` | `{ step, playing, speed }` | 只限目前的房主：以伺服器時間重新設定播放基準（播放、暫停、跳轉、速度 0.5–4） |
+| `room:replay:end` | — | 只限目前的房主：讓房間回到 `waiting` |
+| `room:replay:load` | — | 只限目前的成員，且工作階段仍有效時：回傳 `{ archive: { match, replay, players } }`。成員不需要自己的歷史紀錄權限；開始時已檢查過房主的權限 |
 
-- `replaying` locks the room like a match: no start, settings, seat, readiness, or bot
-  changes, and seated members cannot be kicked. Joining, leaving, spectator kicks, and chat
-  stay available. Host transfer keeps the session; the new host controls it.
-- Clients derive the current step from the anchor, `PlayerSnapshot.serverNow`, and the
-  viewer's step durations, so the server keeps no timer. The session persists with the
-  runtime and ends with the room. Archives never enter room broadcasts.
+- `replaying` 和對局一樣會鎖住房間：不能開始、變更設定、座位、準備狀態或 bot，也不能踢出入座的成員。加入、離開、踢出旁觀者與聊天仍可使用。房主轉移時保留工作階段；由新的房主控制。
+- 用戶端從播放基準、`PlayerSnapshot.serverNow` 與觀看者端的步驟時長推算目前的步驟，所以伺服器不需要計時器。工作階段隨 runtime 保存，並隨房間結束。封存內容從不進入房間廣播。
 
-**Games**
+**遊戲**
 
-| Action | Payload | Effect |
+| 操作 | Payload | 效果 |
 | --- | --- | --- |
-| `game:redealResponse` | `{ accept }` | Bridge redeal decision |
-| `game:bid` | `{ bid }` | Bridge bid or pass |
-| `game:playCard` | `{ card }` | Bridge card |
-| `game:bigtwo:play` / `pass` | `{ cards }` / — | Big Two group or pass |
-| `game:redpoints:play` | `{ card, capture? }` | Play with an optional chosen capture |
-| `game:redpoints:chooseFlip` | `{ capture }` | Chooses the flipped card's capture |
-| `game:ninetynine:play` | `{ card, choice?, target? }` | Plus/minus choice or target seat |
-| `game:sevens:play` / `cover` | `{ card }` | Plays a legal card, or covers one when blocked |
-| `game:chinesepoker:arrange` | `{ arrangement: { front, middle, back } }` | Final 3/5/5 arrangement |
-| `game:liarsdeck:play` | `{ cardIds }` | One to three distinct card IDs (0–19), face down |
-| `game:liarsdeck:challenge` | — | Calls LIAR on the previous play |
-| `game:blackjack:bet` | `{ amount }` | 10–200 in steps of 10, within chips |
-| `game:blackjack:action` | `{ action }` | `hit`, `stand`, `double`, or `split` |
-| `game:blackjack:dealerAction` | `{ action }` | Player dealer `hit` or `stand`; standing below 17 is rejected |
-| `game:holdem:action` | `{ action }` | `{ type: 'fold' \| 'check' \| 'call' }` or `{ type: 'raise', to }`, where `to` is the street total |
-| `game:napoleon:action` | `{ action }` | One [`NapoleonAction`](../shared/src/types/game.ts): `bid`, `discard`, `review` (four-player discard confirmation), `call` (secretary card), or `play` with `leadSuit` when leading the secretary card or a joker and an optional `summon` |
-| `game:autoPlay` | `{ enabled }` | Toggles persistent bot control of the caller's active human seat for this match; authenticated, committed before acknowledgment and broadcast |
-| `game:leaveEarly` | — | Enables auto-play and marks the caller as away for every player and spectator in one commit; turning auto-play off clears the marker |
-| `game:continue` | — | Leaves the result for the waiting room; others keep it |
-| `game:abortVote:start` / `cast` | — / `{ agree }` | Starts or votes on an abort ([rules](games/common.md#shared-room-lifecycle)) |
-| `chat:send` | One [chat input](../shared/src/types/socket-events.ts), including `{ shopSticker }` | Text or one personal/site/shop sticker; shop sends require pack ownership |
+| `game:redealResponse` | `{ accept }` | 橋牌是否重新發牌 |
+| `game:bid` | `{ bid }` | 橋牌叫牌或 pass |
+| `game:playCard` | `{ card }` | 橋牌出牌 |
+| `game:bigtwo:play` / `pass` | `{ cards }` / — | 大老二出一組牌或 pass |
+| `game:redpoints:play` | `{ card, capture? }` | 出牌，可選擇要吃的牌 |
+| `game:redpoints:chooseFlip` | `{ capture }` | 選擇翻開的牌要吃哪一張 |
+| `game:ninetynine:play` | `{ card, choice?, target? }` | 加減選擇或指定座位 |
+| `game:sevens:play` / `cover` | `{ card }` | 出一張合法的牌，或在無牌可出時蓋一張牌 |
+| `game:chinesepoker:arrange` | `{ arrangement: { front, middle, back } }` | 最終的 3/5/5 排法 |
+| `game:liarsdeck:play` | `{ cardIds }` | 一到三個不重複的牌 ID（0–19），蓋著打出 |
+| `game:liarsdeck:challenge` | — | 對上一手喊 LIAR |
+| `game:blackjack:bet` | `{ amount }` | 10–200，以 10 為單位，且不超過持有籌碼 |
+| `game:blackjack:action` | `{ action }` | `hit`、`stand`、`double` 或 `split` |
+| `game:blackjack:dealerAction` | `{ action }` | 玩家莊家的 `hit` 或 `stand`；低於 17 點停牌會被拒絕 |
+| `game:holdem:action` | `{ action }` | `{ type: 'fold' \| 'check' \| 'call' }` 或 `{ type: 'raise', to }`，其中 `to` 是該輪的總注額 |
+| `game:napoleon:action` | `{ action }` | 一個 [`NapoleonAction`](../shared/src/types/game.ts)：`bid`、`discard`、`review`（四人棄牌確認）、`call`（秘書牌），或 `play`；首攻秘書牌或鬼牌時帶 `leadSuit`，並可選擇帶 `summon` |
+| `game:autoPlay` | `{ enabled }` | 切換本局中由 bot 持續代打呼叫者的真人座位；需驗證身分，先 commit 再回覆與廣播 |
+| `game:leaveEarly` | — | 開啟代打，並在一次 commit 中對所有玩家與旁觀者標示呼叫者已離開；關閉代打會清除這個標示 |
+| `game:continue` | — | 離開結果畫面回到等待中的房間；其他人仍會看到結果 |
+| `game:abortVote:start` / `cast` | — / `{ agree }` | 發起或投票終止對局（[規則](games/common.md#房間流程)） |
+| `chat:send` | 一個[聊天輸入](../shared/src/types/socket-events.ts)，包括 `{ shopSticker }` | 文字，或一張個人／站方／商店貼圖；發送商店貼圖需要擁有該貼圖包 |
 
-**Authority**
+**權限**
 
-- The server checks turn, card, and room authority and waits for the
-  [presentation deadline](architecture.md#presentation-timeline). Rules: [games](games/README.md).
-- [`GameClock`](../shared/src/types/game.ts) exposes the active seat, deadlines, reserves,
-  and server time. Only the server enforces expiry.
-- `isBot` absent or false means human. `bot:<UUID>` identities cannot authenticate or
-  receive snapshots.
-- `room:movePlayer`: occupied destinations swap occupants; a spectator taking a human's
-  seat swaps spectator status. Bots never move into spectators or extra seats. Moves
-  respect spectator capacity, reset human readiness, and keep bots ready.
+- 伺服器檢查回合、牌與房間權限，並等待[呈現截止時間](architecture.md#呈現時間軸)。規則：[遊戲](games/README.md)。
+- [`GameClock`](../shared/src/types/game.ts) 提供行動中的座位、截止時間、時間庫與伺服器時間。只有伺服器會強制執行逾時。
+- `isBot` 不存在或為 false 代表真人。`bot:<UUID>` 身分無法驗證，也不會收到快照。
+- `room:movePlayer`：目標位置有人時會交換兩人的位置；旁觀者坐到真人的座位時，兩人交換旁觀身分。bot 從不移到旁觀區或額外座位。移動會遵守旁觀區容量、重設真人的準備狀態，並讓 bot 保持準備。
 
-**Server events**
+**伺服器事件**
 
-| Event | Contents |
+| 事件 | 內容 |
 | --- | --- |
-| `player:state` | `PlayerSnapshot` as from resume: optional player, room, game state, chat, error, and `serverNow` while the room replays. Missing room or game clears client state |
-| `chat:message` | `{ roomCode, message }`; clients append once per ID |
-| `room:invited` | Ephemeral invitation: room, game, sender, seat availability |
-| `room:kicked` | `{ roomCode }`, after the removed member's room-less snapshot |
-| `account:coins` | Private balance and `coinRevision` after rewards |
-| `account:updated` | Private account after purchases or saved profile changes, to all owner tabs |
-| `social:changed` | No payload; affected accounts reload invitations, conversations, and unread counts |
+| `player:state` | 與 resume 相同的 `PlayerSnapshot`：選填的玩家、房間、遊戲狀態、聊天、錯誤，以及房間回放時的 `serverNow`。缺少房間或遊戲時會清除用戶端狀態 |
+| `chat:message` | `{ roomCode, message }`；用戶端依 ID 只附加一次 |
+| `room:invited` | 暫時性的邀請：房間、遊戲、寄件者、座位是否有空 |
+| `room:kicked` | `{ roomCode }`，在被移除成員收到沒有房間的快照之後送出 |
+| `account:coins` | 領取獎勵後的私人餘額與 `coinRevision` |
+| `account:updated` | 購買或儲存個人檔案變更後的私人帳號，送到本人的所有分頁 |
+| `social:changed` | 沒有 payload；受影響的帳號重新載入邀請、對話與未讀數 |
 
-- Snapshots go to the actor's tabs and affected room members only. Game state is
-  recipient-filtered ([spectators](games/common.md#spectators-and-god-view)).
-- Resume always includes chat history, replacing the client copy; broadcasts include it
-  only when the recipient's room changed.
-- Human room joins (including creation) and departures append localized system chat
-  messages, broadcast after persistence succeeds. Departures include kicks, friend-room switches,
-  and disconnect expiry; reconnects, extra tabs, and repeated joins add no messages.
-  The last human's departure removes the room and its chat history.
-- [`ChatMessage`](../shared/src/types/chat.ts) images are resolved by the server:
-  `emojis` (personal media IDs) and `providedEmojis` (site files), at most 20 names
-  combined with no overlap. Sticker messages have empty content and exactly one
-  sticker reference: personal `sticker`, `providedSticker: { name, file }` served from
-  `<base>/provided-emoji/<file>`, or `shopSticker` resolved against the bundled catalog.
+- 快照只送到操作者的分頁與受影響的房間成員。遊戲狀態依接收者過濾（[旁觀者](games/common.md#旁觀者與上帝視角)）。
+- resume 一定包含聊天紀錄，並取代用戶端的副本；廣播只在接收者的房間改變時才包含聊天紀錄。
+- 真人加入房間（包括建立房間）與離開時，會附加在地化的系統聊天訊息，並在資料寫入成功後廣播。離開包括被踢出、切換到好友的房間，以及斷線逾時；重新連線、額外分頁與重複加入不會產生訊息。最後一位真人離開時，會移除房間與聊天紀錄。
+- [`ChatMessage`](../shared/src/types/chat.ts) 的圖片由伺服器解析：`emojis`（個人媒體 ID）與 `providedEmojis`（站方檔案），兩者合計最多 20 個名稱且不能重複。貼圖訊息的內容為空，且剛好有一個貼圖參照：個人的 `sticker`、從 `<base>/provided-emoji/<file>` 提供的 `providedSticker: { name, file }`，或依內建目錄解析的 `shopSticker`。
 
-## Voice signaling
+## 語音 signaling
 
-Voice membership is ephemeral and checked against committed room membership.
-Socket.IO carries negotiation; audio flows over WebRTC without database writes.
-Operation and configuration: [media](media.md#voice).
+語音成員是暫時性的，並以已 commit 的房間成員資格檢查。Socket.IO 負責協商；音訊經由 WebRTC 傳送，不寫入資料庫。運作與設定：[媒體](media.md#語音)。
 
-| Client action | Payload | Success |
+| 用戶端操作 | Payload | 成功時 |
 | --- | --- | --- |
 | `voice:join` | `{ muted, deafened }` | `{ success, peerId, state }` |
 | `voice:leave` | — | `{ success }` |
 | `voice:settings` | `{ muted, deafened }` | `{ success }` |
 | `voice:signal` | `{ targetPeerId, description?, candidate? }` | `{ success }` |
 
-| Server event | Payload |
+| 伺服器事件 | Payload |
 | --- | --- |
-| `voice:state` | `{ roomCode, participants }` with peer ID, account ID, muted, deafened |
+| `voice:state` | `{ roomCode, participants }`，包含 peer ID、帳號 ID、muted、deafened |
 | `voice:signal` | `{ fromPeerId, description?, candidate? }` |
 | `voice:left` | `{ reason }` |
 
-- Join, leave, and settings run in the runtime queue. `voice:signal` relays immediately,
-  checking connection, session expiry, and that the target is a current same-room peer.
-- Each signal has exactly one description (SDP ≤ 12,000 characters) or candidate
-  (≤ 2,048 characters). The server assigns the source.
-- One voice tab per account; every join gets a fresh peer ID.
+- 加入、離開與設定在 runtime 佇列中執行。`voice:signal` 立即轉送，並檢查連線、工作階段是否過期，以及目標是否為目前同一房間的 peer。
+- 每個 signal 剛好包含一個 description（SDP ≤ 12,000 個字元）或 candidate（≤ 2,048 個字元）。來源由伺服器指定。
+- 每個帳號只能有一個語音分頁；每次加入都會取得新的 peer ID。
 
-## Rate limits
+## 速率限制
 
-Per account, shared across tabs:
+依帳號計算，所有分頁共用：
 
-| Actions | Limit |
+| 操作 | 上限 |
 | --- | --- |
-| Voice | 1,200 per minute |
-| All other Socket actions | 240 per minute |
-| `chat:send` | Also 5 per 5 seconds |
+| 語音 | 每分鐘 1,200 次 |
+| 其他所有 Socket 操作 | 每分鐘 240 次 |
+| `chat:send` | 另外限制每 5 秒 5 次 |
 
-HTTP credential and upload routes have their own limits ([storage](storage.md#identity-and-sessions)).
-Direct-message sends allow 5 requests per 5 seconds per account across tabs, including
-retries. HTTP 429 includes `Retry-After`; reading history and marking read do not consume
-the sending budget.
+HTTP 登入憑證與上傳路由有各自的上限（[儲存](storage.md#身分與工作階段)）。私訊發送限制為每個帳號每 5 秒 5 次請求，跨分頁計算且包括重試。HTTP 429 會附上 `Retry-After`；讀取紀錄與標示已讀不會消耗發送額度。

@@ -1,399 +1,247 @@
-# Accounts and storage
+# 帳號與儲存
 
-## Identity and sessions
+## 身分與工作階段
 
-| Item | Rule |
+| 項目 | 規則 |
 | --- | --- |
-| Username | 3–24 ASCII letters, digits, underscores, optionally separated by single dots or hyphens; unique ignoring case |
-| New password | 6–128 characters, no leading or trailing whitespace, not a listed common password |
-| Existing passwords | Only the maximum length is enforced, so older passwords keep working |
-| Password hashing | Salted async scrypt (`N=131072`, `r=8`, `p=1`) with bounded concurrency and HTTP rate limits |
-| Identity | The account UUID is the player ID; nickname changes keep identity |
-| Profile | Nickname (1–20 characters), six-digit color, avatar, optional images and opacity, seat background, history visibility |
+| 使用者名稱 | 3–24 個 ASCII 英文字母、數字、底線，可用單一的點或連字號分隔；不分大小寫且不可重複 |
+| 新密碼 | 6–128 個字元，開頭與結尾不能是空白，不能是清單中的常見密碼 |
+| 既有密碼 | 只檢查長度上限，讓舊密碼仍可使用 |
+| 密碼雜湊 | 加鹽的非同步 scrypt（`N=131072`、`r=8`、`p=1`），限制並行數量並搭配 HTTP 速率限制 |
+| 身分 | 帳號 UUID 就是玩家 ID；變更暱稱不影響身分 |
+| 個人檔案 | 暱稱（1–20 個字元）、六位數顏色、頭像、選填的圖片與透明度、座位背景、歷史紀錄可見度 |
 
-- Login creates a seven-day opaque session; only its SHA-256 digest is stored.
-- Cookies are HttpOnly and SameSite=Lax, plus Secure in production. Socket handshakes
-  and actions revalidate the session.
-- Logout revokes one session. Logout-all and password changes revoke every session and
-  disconnect affected sockets.
-- Password changes require the current password. There is no email or self-service
-  recovery; administrators use the [offline reset](#administrator-password-reset).
+- 登入會建立一個七天的不透明工作階段；只儲存它的 SHA-256 摘要。
+- cookie 設為 HttpOnly 與 SameSite=Lax，正式環境另加 Secure。Socket 握手與每個操作都會重新驗證工作階段。
+- 登出會撤銷一個工作階段。全部登出與變更密碼會撤銷所有工作階段，並中斷受影響的 socket。
+- 變更密碼需要目前的密碼。沒有電子郵件或自助找回機制；管理者使用[離線重設](#管理者重設密碼)。
 
-**Players and privacy**
+**玩家與隱私**
 
-- Bots are `bot:<UUID>` with `isBot: true` and have no account, session, or profile.
-- Completed matches with bots appear in history and have replays, but are excluded from
-  history game counts, game distribution, and win rates.
-- Newly started matches in all ten games keep a server-only recording in
-  runtime ([`ReplayRecording`](../shared/src/types/replay.ts),
-  [recorder](../server/src/runtime/replay-recording.ts)). After each committed operation
-  it records what an unseated spectator receives (every dealt hand), minus the clock and
-  the presentation's `serverNow`, as a path patch when that view changed. Automatic stages
-  (Hold'em runout and showdown, Liar's Deck challenge and shot, Blackjack dealer play)
-  replay through the recorded presentation frames.
-- Undealt decks and stock, Liar's Deck bullets, clocks, chat, and the recording itself
-  never enter a snapshot. Live snapshots and room listings never include the recording.
-  In-progress games started without a recording stay
-  unrecorded, and their results have no replay.
-- Completed recordings become version 1 [MatchReplay](../shared/src/types/replay.ts)
-  archives in the [replay store](#replay-archives); anyone the history permission allows to
-  view the match sees every dealt hand. Steps, results, and runtime commit atomically; a failed
-  write restores all three. Recordings survive restart; archives survive room deletion, follow
-  the owner/public-history policy and [match retention](#replay-archives).
-- The [archive validator](../server/src/database/match-replay.ts) checks the envelope,
-  patch operations, size limits, and unsafe keys (`__proto__`, `constructor`,
-  `prototype`), and requires every step to apply to a snapshot of the same game without a
-  clock or server time. Archives are checked when read. Runtime recordings are checked fully
-  at startup, where one that no longer applies is dropped with a warning and its match
-  continues unrecorded; each write checks only their structure. Snapshots are not checked against current
-  game rules.
-- History lists participants in N/E/S/W/P5/P6/P7/P8 order. Ninety-Nine, Blackjack,
-  Hold'em, and Napoleon list occupied seats only; legacy results without `seats` list four.
-- Flexible game snapshots restore legacy four-seat value maps with empty additional
-  values. New matches persist up to eight seats; missing `shuffleSeats` means false.
-  These extended snapshots/results require this version or newer: when rolling back
-  to an older server, restore the complete compatible backup following the deployment guide.
-- History is public by default and owners can hide it. Schema v5 made every existing
-  account public once; later choices persist.
-- Seat backgrounds are shared with the room. Table backgrounds and card backs are private.
+- bot 的身分是 `bot:<UUID>`，帶有 `isBot: true`，沒有帳號、工作階段或個人檔案。
+- 有 bot 的已完成對局會出現在歷史紀錄中，也有回放，但不計入歷史紀錄的對局數、遊戲分布與勝率。
+- 十款遊戲新開始的對局都會在 runtime 中保留只存在伺服器端的錄製資料（[`ReplayRecording`](../shared/src/types/replay.ts)、[錄製器](../server/src/runtime/replay-recording.ts)）。每次 commit 操作後，它會記錄未入座旁觀者收到的內容（每一份發出的手牌），扣除計時與呈現的 `serverNow`；畫面有變化時以路徑 patch 記錄。自動階段（德州撲克發完公牌與攤牌、騙子酒館質疑與開槍、21 點莊家行動）透過錄下的呈現畫格重播。
+- 未發出的牌組與牌堆、騙子酒館的子彈、計時、聊天，以及錄製資料本身從不進入快照。即時快照與房間列表從不包含錄製資料。沒有錄製就開始的進行中遊戲維持不錄製，結果也沒有回放。
+- 完成的錄製會成為第 1 版的 [MatchReplay](../shared/src/types/replay.ts) 封存，存放在[回放儲存區](#回放封存)；凡是歷史紀錄權限允許觀看該對局的人，都看得到每一份發出的手牌。步驟、結果與 runtime 以原子操作一起 commit；寫入失敗時三者一起還原。錄製資料在重新啟動後保留；封存在房間刪除後仍保留，並遵守本人／公開歷史紀錄規則與[對局保留規則](#回放封存)。
+- [封存驗證器](../server/src/database/match-replay.ts)會檢查外層格式、patch 操作、大小上限與不安全的鍵（`__proto__`、`constructor`、`prototype`），並要求每個步驟都能套用到同一款遊戲、不含計時或伺服器時間的快照上。封存在讀取時檢查。runtime 錄製資料在啟動時完整檢查，已無法套用的會被丟棄並發出警告，該對局改為不錄製繼續進行；每次寫入只檢查結構。快照不會依照目前的遊戲規則檢查。
+- 歷史紀錄依 N/E/S/W/P5/P6/P7/P8 的順序列出參與者。99、21 點、德州撲克與拿破崙只列出有人的座位；沒有 `seats` 的舊版結果列出四個座位。
+- 人數彈性遊戲的快照在還原舊版四座位的值對照表時，額外座位的值為空。新的對局最多保存八個座位；缺少 `shuffleSeats` 代表 false。這些擴充過的快照與結果需要這個版本或更新的版本：回復到較舊的伺服器時，請依部署指南還原完整且相容的備份。
+- 歷史紀錄預設公開，本人可以隱藏。Schema v5 曾一次把所有既有帳號設為公開；之後的選擇會保留。
+- 座位背景會分享給房間。牌桌背景與牌背只有自己看得到。
 
-**Friends**
+**好友**
 
-- Requests are unique per unordered pair, with sender and recipient permissions.
-- Accepted friends see each other's online presence, hosted room code, and historical
-  last-seen time. Public profiles, search, and pending requests omit last-seen metadata.
-- Optional internal `AccountRecord.lastSeenAt` is a nonnegative safe-integer Unix epoch
-  millisecond timestamp. Missing legacy values remain unknown (`null` in accepted-friend
-  responses); account creation and profile edits do not infer historical activity.
-- `Repository.saveRuntime` advances last-seen times atomically with the committed snapshot:
-  connected players use the repository clock; disconnected players use their observed
-  disconnect time. Runtime players can carry a separate activity timestamp; `null` prevents
-  a restore-only reconnection grace period from advancing account history.
-  Values never decrease, failed writes publish neither change, and removing ephemeral
-  players retains account history. Multiple tabs stay online until their final disconnect.
-  Restart preserves existing disconnect times; only previously connected players begin a
-  new disconnect grace period, without implying that they returned online.
-- Joining a friend's room rechecks friendship, host, and capacity. Invitations are
-  ephemeral and limited to accepted friends.
+- 每一對帳號（不分順序）只能有一筆邀請，並區分寄件者與收件者權限。
+- 已接受的好友可以看到彼此的上線狀態、主持中的房號與歷史上的最後上線時間。公開個人檔案、搜尋與待處理的邀請不包含最後上線資訊。
+- 選填的內部欄位 `AccountRecord.lastSeenAt` 是非負的 safe integer Unix epoch 毫秒時間戳。舊資料缺少此值時維持未知（已接受好友的回應中為 `null`）；建立帳號與編輯個人檔案不會推測歷史活動。
+- `Repository.saveRuntime` 以原子操作，隨已 commit 的快照一起推進最後上線時間：已連線的玩家使用 repository 時鐘；已斷線的玩家使用觀察到的斷線時間。runtime 玩家可以帶有獨立的活動時間戳；`null` 可避免只為還原而給的重新連線寬限期推進帳號歷史。這些值從不倒退，寫入失敗時兩邊都不會發布，移除暫時性玩家時仍保留帳號歷史。多個分頁會保持上線，直到最後一個斷線。重新啟動會保留既有的斷線時間；只有先前已連線的玩家會開始新的斷線寬限期，但不代表他們已重新上線。
+- 加入好友的房間時會重新檢查好友關係、房主與容量。邀請是暫時性的，且只限已接受的好友。
 
-**Direct messages and notifications**
+**私訊與通知**
 
-- Only accepted friends can send private text, emoji, and stickers; the repository
-  rechecks friendship atomically when storing a message. Only participants can read it.
-- Messages support offline delivery and survive restart. Former friends retain read-only
-  access to their existing conversation. Message records expire after 90 days, are hidden
-  on every read, and are removed durably at startup and hourly while the server runs.
-- Read cursors advance only to an incoming message in that conversation; older updates
-  cannot make a message unread again. Read status is private to the reader.
-- Sender-scoped client IDs deduplicate retries. Reusing an ID for another recipient or
-  message returns a conflict. Media references preserve the original resolved content.
-- Pending invitations come from friendships. Accepting an invitation creates a durable
-  notice for its requester, dismissed only by that account or after 90 days.
-- Notifications remain inside the site. Socket events invalidate participant data after
-  persistence; reconnect reloads unread counts and history through authenticated HTTP.
-- Retention applies to the active database. Backups retain their original contents and
-  uploaded media follow the separate [media](media.md) lifecycle.
+- 只有已接受的好友可以傳送私人文字、表情符號與貼圖；repository 儲存訊息時會以原子操作重新檢查好友關係。只有對話參與者可以讀取。
+- 訊息支援離線送達，重新啟動後仍保留。已不是好友的雙方仍能以唯讀方式存取既有對話。訊息紀錄 90 天後到期，每次讀取時都會隱藏，並在啟動時與伺服器執行期間每小時持久移除。
+- 已讀游標只能推進到該對話中的一則收件訊息；較舊的更新不能讓訊息重新變成未讀。已讀狀態只有讀者本人知道。
+- 以寄件者為範圍的用戶端 ID 用來去除重複的重試。同一個 ID 用在其他收件者或其他訊息時會回傳衝突。媒體參照保留原本解析出的內容。
+- 待處理的邀請來自好友關係。接受邀請會為發出邀請的人建立持久的通知，只有該帳號自己關閉或 90 天後才會消失。
+- 通知只在站內。資料寫入後，Socket 事件會讓參與者的資料失效；重新連線時透過需驗證的 HTTP 重新載入未讀數與紀錄。
+- 保留期限適用於目前使用中的資料庫。備份保留原本的內容，上傳的媒體則遵循另外的[媒體](media.md)生命週期。
 
-## Game coins
+## 金幣
 
-- Each human in a completed game earns `GAME_COIN_REWARD` (10) regardless of result,
-  including games with bots. Spectators and aborted games earn nothing. Blackjack and
-  Hold'em reward the whole match, not individual hands. Past matches were not rewarded.
-- `rewardedGameIds` receipts prevent repeat awards, including after restarts.
-- `Repository.saveRuntime` commits rewards, receipts, runtime, last-seen times, and completed
-  history in one atomic write; `saveMatch` never awards coins.
-- `coinRevision` increases on every balance change, including purchases, so clients can
-  discard stale responses. Updates reach the owner through `account:coins`, `account:updated`,
-  and resume ([API](api.md#socket-actions)).
+- 每位完成遊戲的真人不論輸贏都會得到 `GAME_COIN_REWARD`（10），有 bot 的遊戲也一樣。旁觀者與被中止的遊戲沒有獎勵。21 點與德州撲克以整場對局發放，不是每一手。過去的對局不補發。
+- `rewardedGameIds` 收據可防止重複發放，重新啟動後也一樣。
+- `Repository.saveRuntime` 以一次原子寫入 commit 獎勵、收據、runtime、最後上線時間與已完成的歷史紀錄；`saveMatch` 從不發放金幣。
+- 每次餘額變動（包括購買）都會增加 `coinRevision`，讓用戶端可以丟棄過時的回應。更新透過 `account:coins`、`account:updated` 與 resume 送達本人（[API](api.md#socket-操作)）。
 
-## Daily rewards
+## 每日獎勵
 
-- Private optional `AccountRecord.dailyRewards` stores the active Taiwan date, distinct
-  completed game types, per-game counts and wins (capped at two), three assigned task IDs,
-  the once-per-day replacement receipt, task claim receipts, and check-in dates.
-  The [record and date rules](../server/src/database/daily-rewards.ts) are validated on
-  every write. Older accounts start empty; historical matches are not backfilled.
-- Daily progress is committed with game coins under the existing `rewardedGameIds`
-  receipt. Retries and restarts cannot increment progress twice. Read-time reset at
-  00:00 Asia/Taipei requires no scheduler or database write; the next mutation persists it.
-- Initial assignments use a deterministic SHA-256 shuffle of account ID, Taiwan date,
-  and pool IDs. Read-only refreshes do not change them. Existing same-day claim receipts
-  are preserved when upgrading from fixed tasks; known played types seed a count of one.
-- `Repository.replaceDailyTask` serializes the allowance check and assignment change.
-  It excludes the original three tasks, retains today's counters, and never changes coins.
-  Retries for the original task return the saved replacement; competing swaps cannot
-  consume more than one allowance. Claiming requires a currently assigned task.
-- `Repository.claimDailyReward` checks the date and eligibility inside the serialized
-  transaction, then updates the receipt, coins, and `coinRevision` together. Repeated
-  claims return the saved state; failed writes leave the reward available. No client
-  progress, amount, account ID, or past/future check-in date is trusted.
-- All check-in receipts are retained. The owner API returns only this month's dates;
-  private progress and receipts are omitted from public account/profile responses.
+- 私人的選填欄位 `AccountRecord.dailyRewards` 儲存目前的台灣日期、已完成的不同遊戲類型、各遊戲的次數與勝場（上限兩次）、三個已指派的任務 ID、每天一次的替換收據、任務領取收據與簽到日期。每次寫入都會驗證[紀錄與日期規則](../server/src/database/daily-rewards.ts)。較舊的帳號從空白開始；歷史對局不會回補。
+- 每日進度和金幣一起 commit，共用既有的 `rewardedGameIds` 收據。重試與重新啟動不會讓進度重複增加。讀取時在 Asia/Taipei 00:00 重設，不需要排程器或寫入資料庫；下一次變更時才會寫入。
+- 初始指派使用帳號 ID、台灣日期與任務池 ID 的確定性 SHA-256 洗牌。唯讀的重新整理不會改變指派。從固定任務升級時保留同一天既有的領取收據；已知玩過的類型會以次數 1 起算。
+- `Repository.replaceDailyTask` 把替換額度檢查與指派變更序列化處理。它會排除原本的三個任務，保留今天的計數，且從不變動金幣。對原始任務的重試會回傳已保存的替換結果；同時進行的替換最多只會消耗一次額度。領取需要目前已指派的任務。
+- `Repository.claimDailyReward` 在序列化的 transaction 內檢查日期與資格，再一起更新收據、金幣與 `coinRevision`。重複領取回傳已保存的狀態；寫入失敗時獎勵仍可領取。從不信任用戶端送來的進度、金額、帳號 ID，或過去／未來的簽到日期。
+- 所有簽到收據都會保留。本人 API 只回傳本月的日期；私人進度與收據不會出現在公開的帳號或個人檔案回應中。
 
-## Achievements
+## 成就
 
-- Optional private `AccountRecord.achievements` stores cumulative completed games,
-  unique variants, wins, and claimed daily-task counts. All counters retain full
-  safe-integer totals beyond catalog targets.
-  See the [record and validation](../server/src/database/achievements.ts).
-  Schema v7 backfills retained matches and rewarded completed runtime games once,
-  including any retained bot games. It deduplicates game IDs across both sources and
-  takes the maximum of recovered totals and legacy counters to avoid double counting
-  overlapping history. Variant sets are combined; task progress, coins, receipts and
-  title ownership are preserved. Historical bot games absent from both sources cannot
-  be reconstructed: legacy counters stopped at 20 games / 5 wins. The recovered value
-  is a lower bound when those records are missing, not an estimate from coin balances.
-  Check-in progress uses all retained daily check-in receipts.
-  Legacy task counters stopped at 15; that saved progress is preserved and new claims
-  continue beyond it. Older task claims lost at the cap cannot be reconstructed,
-  since daily task receipts reset each day.
-- Game progress commits atomically with coins and `rewardedGameIds`. Daily task counts
-  increment only in the first successful task-claim transaction and survive daily resets.
-  Retries or failed persistence cannot inflate either counter.
-- `Repository.claimAchievement` checks every catalog milestone inside the serialized
-  transaction and grants the exclusive title to `ownedAchievementNameplates` once.
-  This permanent owner-only inventory is separate from `ownedShopItems` and cannot be
-  purchased. Claims preserve coins and equipped cosmetics, advance `updatedAt`, and
-  publish owner updates only after persistence. Private counters never enter profiles.
+- 私人的選填欄位 `AccountRecord.achievements` 儲存累計的完成遊戲數、不同變體、勝場，以及已領取的每日任務數。所有計數器都保留完整的 safe integer 總數，不受目錄目標值限制。見[紀錄與驗證](../server/src/database/achievements.ts)。Schema v7 會一次回補仍保留的對局，以及已發放獎勵的已完成 runtime 遊戲，包括任何仍保留的 bot 遊戲。它會跨兩個來源去除重複的遊戲 ID，並取回補總數與舊計數器的最大值，避免重疊的歷史被重複計算。變體集合會合併；任務進度、金幣、收據與稱號擁有權都保留。兩個來源都沒有的歷史 bot 遊戲無法重建：舊計數器在 20 場／5 勝時就停止。缺少這些紀錄時，回補值是下限，而不是由金幣餘額推估的數字。簽到進度使用所有仍保留的每日簽到收據。舊的任務計數器在 15 時停止；已保存的進度會保留，新的領取會從這裡繼續累加。在上限時遺失的舊任務領取無法重建，因為每日任務收據每天都會重設。
+- 遊戲進度和金幣與 `rewardedGameIds` 以原子操作一起 commit。每日任務數只在第一次成功的任務領取 transaction 中增加，並在每日重設後保留。重試或寫入失敗都不會讓任一計數器灌水。
+- `Repository.claimAchievement` 在序列化的 transaction 內檢查目錄中的每個里程碑，並把專屬稱號一次授予 `ownedAchievementNameplates`。這個永久且只有本人可見的物品欄與 `ownedShopItems` 分開，無法購買。領取會保留金幣與裝備中的外觀，推進 `updatedAt`，並在資料寫入後才發布給本人。私人計數器從不進入個人檔案。
 
-## Avatar borders
+## 頭像外框
 
-- Legacy border inventory and purchase routes remain supported by the
-  [cosmetic inventory](#cosmetic-inventory).
+- 舊版的外框物品欄與購買路由仍由[外觀物品欄](#外觀物品欄)支援。
 
-## Cosmetic inventory
+## 外觀物品欄
 
-- `Repository.purchaseShopItem` uses the shared [catalog](../shared/src/constants/shop.ts),
-  debits coins, increments `coinRevision`, and grants permanent ownership in one atomic
-  write. Repeat purchases are no-ops; failed writes change neither inventory nor balance.
-  Purchases do not equip items.
-- Product and sticker IDs are durable references. Renaming or removing them requires
-  a compatible data migration and retained artwork for owned products and history.
-- Borders retain `ownedAvatarBorders`; other products use private `ownedShopItems`.
-  Equipment fields are defined in [AccountProfile](../shared/src/types/account.ts).
-  Both the service and Repository validate the item type and ownership before equipping.
-  The database rejects unknown IDs, duplicate inventories, and unowned equipment.
-- Official image styles override retained uploads while equipped. Null restores the
-  upload or theme without losing media. Public profiles contain the cosmetic nameplate and
-  chat frame; room identities also contain the seat style, seat frame, and victory effect.
-  Inventories, card backs and faces, table styles, sound packs, and chip styles remain
-  owner-only. Purchases and equipment changes refresh every connected owner tab.
-- Sticker messages store stable catalog IDs. Sending requires the containing pack;
-  recipients can render them without ownership. Existing emoji and uploaded stickers
-  keep their separate, free behavior.
+- `Repository.purchaseShopItem` 使用共用的[目錄](../shared/src/constants/shop.ts)，以一次原子寫入扣除金幣、增加 `coinRevision`，並授予永久擁有權。重複購買不會有任何效果；寫入失敗時物品欄與餘額都不變。購買不會自動裝備。
+- 商品與貼圖 ID 是持久的參照。重新命名或移除它們需要相容的資料 migration，並為已擁有的商品與歷史紀錄保留圖案。
+- 外框保留在 `ownedAvatarBorders`；其他商品使用私人的 `ownedShopItems`。裝備欄位定義在 [AccountProfile](../shared/src/types/account.ts)。服務層與 Repository 在裝備前都會驗證物品類型與擁有權。資料庫會拒絕不存在的 ID、重複的物品欄與未擁有的裝備。
+- 裝備官方圖片樣式時，會覆蓋仍保留的上傳圖片。設為 null 會恢復上傳圖片或主題，不會遺失媒體。公開個人檔案包含外觀名牌與聊天框；房間中的身分另外包含座位樣式、座位框與勝利特效。物品欄、牌背與牌面、牌桌樣式、音效包與籌碼樣式只有本人看得到。購買與變更裝備會更新本人所有已連線的分頁。
+- 貼圖訊息儲存穩定的目錄 ID。傳送需要擁有包含該貼圖的貼圖包；收件者不需擁有也能顯示。既有的表情符號與上傳貼圖維持各自獨立且免費的行為。
 
-## Data compatibility
+## 資料相容性
 
-Optional fields added without a schema change; absent values use the default:
+不變更 schema 就加入的選填欄位；缺少時使用預設值：
 
-| Field | Default | Earlier servers |
+| 欄位 | 預設值 | 較早的伺服器 |
 | --- | --- | --- |
-| `MatchRecord.hasReplay` | No replay; legacy results remain readable | Keep the flag and ignore `replays/`; cannot serve replays or advertise `hasReplay` |
-| `AccountRecord.lastSeenAt` | Unknown | Keep the field; do not advance historical activity |
-| `coins`, `coinRevision` | 0 | Keep the fields; award nothing |
-| `rewardedGameIds` | Empty | Keep the field |
-| `AccountRecord.dailyRewards` | No progress or claims | Keep the field; games completed on older servers do not advance daily tasks |
-| `AccountRecord.achievements`, `ownedAchievementNameplates` | Zero counters / empty earned inventory | Counters do not advance; equipped earned titles in accounts or runtime are unsupported. Restore a compatible complete backup before rollback |
-| `ownedAvatarBorders`, `avatarBorder` | Empty / original avatar | Keep the fields; cannot show or manage borders |
-| `ownedShopItems`, official image style fields, `nameplate` | Empty inventory / uploaded image or theme / no nameplate | Cannot show or manage products; older profile writes may drop equipment |
-| `cardFaceStyle`, `soundPack`, `chipStyle`, `seatFrame`, `victoryEffect`, `chatFrame` (accounts, runtime `PlayerInfo`) | Built-in design | Unsupported: equipped values fail older validation. Restore a compatible complete backup before rollback |
-| `shopSticker` in room/private messages | Absent | Unsupported: restore a compatible complete backup before rollback |
-| `seatBackground` | Theme artwork | Ignore it; data and media stay |
-| `RoomInfo.napoleonOptions` | Joker summoning on | Unsupported with Napoleon state; see below |
-| `RoomInfo.additionalSeats` (Ninety-Nine, Blackjack, Hold'em, Napoleon) | Four seats; up to four extras holding humans or bots | Unsupported: have players leave extra seats and the host remove them first |
+| `MatchRecord.hasReplay` | 沒有回放；舊版結果仍可讀取 | 保留旗標並忽略 `replays/`；無法提供回放，也不會標示 `hasReplay` |
+| `AccountRecord.lastSeenAt` | 未知 | 保留欄位；不推進歷史活動 |
+| `coins`、`coinRevision` | 0 | 保留欄位；不發放任何獎勵 |
+| `rewardedGameIds` | 空 | 保留欄位 |
+| `AccountRecord.dailyRewards` | 沒有進度或領取紀錄 | 保留欄位；在較早伺服器上完成的遊戲不會推進每日任務 |
+| `AccountRecord.achievements`、`ownedAchievementNameplates` | 計數器為零／已取得的物品欄為空 | 計數器不會推進；不支援帳號或 runtime 中裝備的已取得稱號。回復前請還原完整且相容的備份 |
+| `ownedAvatarBorders`、`avatarBorder` | 空／原始頭像 | 保留欄位；無法顯示或管理外框 |
+| `ownedShopItems`、官方圖片樣式欄位、`nameplate` | 物品欄為空／上傳圖片或主題／沒有名牌 | 無法顯示或管理商品；較舊的個人檔案寫入可能會丟失裝備 |
+| `cardFaceStyle`、`soundPack`、`chipStyle`、`seatFrame`、`victoryEffect`、`chatFrame`（帳號、runtime 的 `PlayerInfo`） | 內建設計 | 不支援：裝備中的值無法通過較舊的驗證。回復前請還原完整且相容的備份 |
+| 房間訊息與私訊中的 `shopSticker` | 不存在 | 不支援：回復前請還原完整且相容的備份 |
+| `seatBackground` | 主題圖案 | 忽略；資料與媒體保留 |
+| `RoomInfo.napoleonOptions` | 鬼牌召喚開啟 | 有拿破崙狀態時不支援；見下方 |
+| `RoomInfo.additionalSeats`（99、21 點、德州撲克、拿破崙） | 四個座位；最多四個額外座位，可坐真人或 bot | 不支援：先請玩家離開額外座位，並由房主移除這些座位 |
 
-- Ninety-Nine tied results (`winners`) cannot be read by earlier releases.
-- Revisions before Sevens, Chinese Poker, Liar's Deck, Blackjack, Texas Hold'em, or Napoleon
-  reject state or history containing those games.
-- Never run two server versions against one database. Rollback steps:
-  [deployment](deployment.md#rollback).
+- 較早的版本無法讀取 99 的並列結果（`winners`）。
+- 加入牌七、十三支、騙子酒館、21 點、德州撲克或拿破崙之前的版本，會拒絕包含這些遊戲的狀態或歷史紀錄。
+- 絕對不要讓兩個伺服器版本使用同一個資料庫。回復步驟：[部署](deployment.md#回復版本)。
 
-## Database
+## 資料庫
 
-Contracts: [`Repository`](../server/src/database/repository.ts),
-[schema](../server/src/database/schema.ts), [migrations](../server/src/database/migrations.ts).
+介面：[`Repository`](../server/src/database/repository.ts)、[schema](../server/src/database/schema.ts)、[migration](../server/src/database/migrations.ts)。
 
-| Schema version | Change |
+| Schema 版本 | 變更 |
 | --- | --- |
-| 7 (current) | Backfills retained achievement history and removes achievement counter caps |
-| 6 | Adds direct messages, private read cursors, and accepted-request notices |
-| 5 | Makes existing match history public once |
-| 4 | Card back and image opacity defaults that keep the previous look |
-| 1–3 | Migrated at startup |
+| 7（目前） | 回補仍保留的成就歷史，並移除成就計數器上限 |
+| 6 | 加入私訊、私人已讀游標與「邀請已接受」通知 |
+| 5 | 一次把既有的對局歷史設為公開 |
+| 4 | 牌背與圖片透明度的預設值，維持原本的外觀 |
+| 1–3 | 啟動時 migration |
 
-- Startup migrates older versions, validates the result, and saves the original as
-  `database.json.v<version>.bak` first. Earlier servers reject v7 files; rollback requires
-  a compatible complete backup and loses writes made after that backup.
-- Invalid JSON, versions, duplicates, or references stop startup without touching the file.
+- 啟動時會 migration 較舊的版本、驗證結果，並先把原檔另存為 `database.json.v<version>.bak`。較早的伺服器會拒絕 v7 檔案；回復需要完整且相容的備份，並會遺失該備份之後的寫入。
+- 無效的 JSON、版本、重複資料或參照會讓啟動停止，且不會動到檔案。
 
-| Collection | Contents |
+| Collection | 內容 |
 | --- | --- |
-| `accounts` | Identity, normalized username, password hash, profile, coins, timestamps, optional last-seen history |
-| `sessions` | Token digest, account, creation and expiry |
-| `friendships` | Account pair, status, timestamps |
-| `matches` | Game ID, result, participants, completion time, optional `hasReplay` flag |
-| `emojis` | Owner, unique name, media reference |
-| `directMessages` | Sender, recipient, client ID, resolved content, timestamp |
-| `messageReads` | Account, conversation peer, last incoming message read |
-| `friendNotifications` | Requester, accepting account, timestamp |
-| `runtime` | Players, rooms, readiness, games with private hands and logs, recent chat, clocks |
+| `accounts` | 身分、正規化的使用者名稱、密碼雜湊、個人檔案、金幣、時間戳、選填的最後上線歷史 |
+| `sessions` | token 摘要、帳號、建立與到期時間 |
+| `friendships` | 帳號配對、狀態、時間戳 |
+| `matches` | 遊戲 ID、結果、參與者、完成時間、選填的 `hasReplay` 旗標 |
+| `emojis` | 擁有者、不重複的名稱、媒體參照 |
+| `directMessages` | 寄件者、收件者、用戶端 ID、解析後的內容、時間戳 |
+| `messageReads` | 帳號、對話對象、最後讀取的收件訊息 |
+| `friendNotifications` | 發出邀請者、接受的帳號、時間戳 |
+| `runtime` | 玩家、房間、準備狀態、含私人手牌與紀錄的遊戲、最近的聊天、計時 |
 
-| Location | Path |
+| 位置 | 路徑 |
 | --- | --- |
-| Development | `server/data/database.json` (override: [`DATABASE_PATH`](development.md#configuration)) |
-| Production | `/var/lib/card-together/database.json` |
-| Images | `media/` beside the database: content-addressed files plus `media/owners/` quota markers |
-| Replays | `replays/` beside the database: one `<match ID>.json` archive per recorded match |
+| 開發 | `server/data/database.json`（覆寫：[`DATABASE_PATH`](development.md#設定)） |
+| 正式環境 | `/var/lib/card-together/database.json` |
+| 圖片 | 資料庫旁的 `media/`：以內容定址的檔案，加上 `media/owners/` 配額標記 |
+| 回放 | 資料庫旁的 `replays/`：每場已錄製對局一個 `<match ID>.json` 封存 |
 
-**Write and recovery behavior**
+**寫入與復原行為**
 
-- Saves use compact JSON to reduce serialization and disk-write work. Indented JSON
-  remains readable; the schema, backup, and restore procedures are unchanged.
-- One process owns each JSON file. The duplicate-path guard is in-process only, not a
-  cross-process lock.
-- Each write serializes and validates, writes and fsyncs a temporary file in the same
-  directory, then renames it. Memory updates only after success; power-loss durability
-  also depends on the filesystem.
-- Runtime and completed matches commit together before acknowledgment and broadcast.
-- Match-scoped `autoPlaySeats` in [`AnyGameState`](../shared/src/types/game.ts) persists
-  voluntary computer control without changing human player identities. Missing fields
-  in older snapshots mean off. Toggles use the same commit/rollback path as game actions;
-  scheduler jobs are rebuilt only from committed state and canceled when control is taken back.
-- Optional `earlyLeaveSeats` records the subset of automated seats that confirmed an early
-  departure. It is public to every match recipient, survives reconnects and restarts, and
-  clears for that seat when auto-play stops. Older snapshots without it have no away markers.
-- Restart keeps private hands, clocks, and deadlines, and gives disconnected players a
-  fresh 60-second window ([architecture](architecture.md#state-commits)).
-- Removing an empty room deletes its game and chat, not history. Chat keeps 200 messages
-  per room. Voice is never stored.
-- Development state is Git-ignored and never served statically; images go through the
-  media endpoint.
+- 儲存時使用精簡的 JSON，以減少序列化與寫入磁碟的工作。縮排過的 JSON 仍可讀取；schema、備份與還原程序不變。
+- 每個 JSON 檔由一個程序獨占。重複路徑的防護只在同一程序內有效，不是跨程序的鎖。
+- 每次寫入都會序列化並驗證，在同一個目錄寫入暫存檔並 fsync，再重新命名。成功後才更新記憶體；斷電時的持久性也取決於檔案系統。
+- runtime 與已完成的對局在回覆與廣播前一起 commit。
+- [`AnyGameState`](../shared/src/types/game.ts) 中以對局為範圍的 `autoPlaySeats` 會保存自願的電腦代打，不改變真人玩家的身分。舊快照缺少此欄位代表關閉。切換使用和遊戲操作相同的 commit／回復流程；排程工作只從已 commit 的狀態重建，並在取回控制權時取消。
+- 選填的 `earlyLeaveSeats` 記錄自動代打座位中，已確認提早離開的那些座位。所有對局接收者都看得到，重新連線與重新啟動後仍保留，該座位停止代打時清除。沒有這個欄位的舊快照沒有離開標記。
+- 重新啟動會保留私人手牌、計時與截止時間，並給斷線玩家重新計算 60 秒的時限（[架構](architecture.md#狀態-commit)）。
+- 移除空房間會刪除它的遊戲與聊天，但不刪除歷史紀錄。每個房間的聊天保留 200 則訊息。語音從不儲存。
+- 開發用的狀態檔被 Git 忽略，也從不以靜態檔案提供；圖片透過媒體 endpoint 取得。
 
-### Replay archives
+### 回放封存
 
-Contracts: [`MatchReplay`](../shared/src/types/replay.ts), [store](../server/src/database/replay-store.ts),
-[`MAX_MATCHES_PER_ACCOUNT`](../server/src/database/repository.ts).
+介面：[`MatchReplay`](../shared/src/types/replay.ts)、[儲存區](../server/src/database/replay-store.ts)、[`MAX_MATCHES_PER_ACCOUNT`](../server/src/database/repository.ts)。
 
-- Archives live outside `database.json`, so a write never reads, validates, or rewrites them.
-  The match record keeps only `hasReplay: true`. Databases holding an inline `replay` (unreleased
-  development format) are rejected at startup.
-- File names are validated match IDs (`[A-Za-z0-9_-]`, up to 128 characters). Each file is
-  written once, before the commit that flags its match, as a `0600` temporary file that is
-  fsynced and renamed; the directory is `0700`.
-- Each account can list and replay only its latest 100 completed matches, including bot and
-  unrecorded games. A shared result and archive remain stored while any human participant
-  retains the match; bot identities never extend retention. Equal completion times preserve
-  database insertion order. The match commit deletes expired results atomically and removes
-  their archive files only after persistence succeeds.
-- Startup applies the same retention to existing data, saving a private `.match-history-<UUID>.bak/`
-  backup of the database, adjacent media, and replay archives before replacement. Backup failure
-  aborts startup without pruning results or archives.
-- Reads validate the whole archive. A missing, unreadable, or invalid file reads as no replay
-  and is logged once.
-- A failed commit deletes the files it wrote. Startup deletes leftover temporary files and
-  archives without a flagged match, and logs how many flagged matches have no file.
-  Unknown files are left alone.
+- 封存存放在 `database.json` 之外，所以寫入時從不讀取、驗證或重寫它們。對局紀錄只保留 `hasReplay: true`。含有內嵌 `replay`（未發布的開發格式）的資料庫會在啟動時被拒絕。
+- 檔名是經過驗證的對局 ID（`[A-Za-z0-9_-]`，最多 128 個字元）。每個檔案只寫入一次，在標記該對局的 commit 之前，以 `0600` 暫存檔寫入、fsync 並重新命名；目錄權限為 `0700`。
+- 每個帳號只能列出並回放自己最近 100 場已完成的對局，包括有 bot 與未錄製的遊戲。只要還有任何真人參與者保留該對局，共用的結果與封存就會繼續保存；bot 身分從不延長保留期限。完成時間相同時保留資料庫的寫入順序。對局 commit 會以原子操作刪除過期的結果，並在資料寫入成功後才移除對應的封存檔。
+- 啟動時對既有資料套用相同的保留規則，並在替換前把資料庫、旁邊的媒體與回放封存備份到私人的 `.match-history-<UUID>.bak/`。備份失敗時會中止啟動，不清除任何結果或封存。
+- 讀取時驗證整份封存。檔案不存在、無法讀取或無效時視為沒有回放，並只記錄一次 log。
+- commit 失敗時會刪除它寫入的檔案。啟動時會刪除殘留的暫存檔，以及沒有對應已標記對局的封存，並記錄有多少已標記的對局沒有檔案。不認得的檔案不會被動到。
 
-## Backup and restore
+## 備份與還原
 
-**Backup:** stop writers, then copy the whole state directory (`database.json`, `media/`, and
-`replays/`). Backups hold password hashes and private hands: keep them private and keep an
-off-host copy. Production snapshots: [deployment](deployment.md#backups).
+**備份**：停止所有寫入者，再複製整個狀態目錄（`database.json`、`media/` 與 `replays/`）。備份包含密碼雜湊與私人手牌：請妥善保密，並在另一台主機保留一份副本。正式環境快照：[部署](deployment.md#備份)。
 
-**Restore:**
+**還原**：
 
-1. Stop every possible writer and save the current complete state separately.
-2. Restore a compatible complete snapshot with restrictive permissions and correct ownership.
-3. Start one service; verify login, history, media, and game resume.
+1. 停止所有可能的寫入者，並另外保存目前的完整狀態。
+2. 以嚴格的權限與正確的擁有者還原完整且相容的快照。
+3. 啟動一個服務；確認登入、歷史紀錄、媒體與遊戲恢復都正常。
 
-Restoring loses newer writes. Never edit live JSON, delete data to fix startup, or
-restore a database with mismatched media or replays. Replays missing from a snapshot only show
-"no recording"; extra replay files are swept at startup.
+還原會遺失較新的寫入。絕對不要編輯使用中的 JSON、為了修好啟動而刪除資料，或還原與媒體、回放不相符的資料庫。快照中缺少的回放只會顯示「沒有錄製」；多出來的回放檔會在啟動時清除。
 
-## Maintenance tools
+## 維護工具
 
-Both tools are offline and share these requirements:
+兩個工具都是離線執行，並有相同的需求：
 
-- Stop **all database writers** first and keep complete database, media, and replay backups.
-  This disconnects players. `--writers-stopped` only confirms this; it neither stops
-  nor detects services.
-- Pass the configured database path explicitly. The file must use the current schema
-  and be a regular file without symbolic or hard links; upgrade older data through a
-  normal backed-up startup first.
-- Run with the pinned Node.js version as the database file owner.
-- Preview first (no writes), then apply. Keep the printed backup path private.
-- Restart a single instance afterwards.
+- 先停止**所有資料庫寫入者**，並保留完整的資料庫、媒體與回放備份。這會讓玩家斷線。`--writers-stopped` 只是確認這件事；它不會停止也不會偵測服務。
+- 明確傳入設定的資料庫路徑。檔案必須使用目前的 schema，且必須是一般檔案，不能有符號連結或硬連結；較舊的資料請先透過一次有備份的正常啟動升級。
+- 以固定的 Node.js 版本、以資料庫檔案擁有者的身分執行。
+- 先預覽（不寫入），再套用。印出的備份路徑請保密。
+- 完成後重新啟動單一實例。
 
-### Administrator password reset
+### 管理者重設密碼
 
-Resets a password without the old one. There is no web admin role or recovery endpoint.
+不需要舊密碼即可重設密碼。沒有網頁版的管理者角色或找回 endpoint。
 
-1. Confirm the requester owns the account through a trusted channel; username,
-   nickname, or history alone is not proof.
-2. Preview, then apply (replace the path and the login username):
+1. 透過可信任的管道確認請求者擁有該帳號；只憑使用者名稱、暱稱或歷史紀錄不足以證明。
+2. 先預覽再套用（替換路徑與登入用的使用者名稱）：
 
    ```sh
    npm run admin:reset-password -- /absolute/path/database.json alice
    npm run admin:reset-password -- /absolute/path/database.json alice --apply --writers-stopped
    ```
 
-   Production, from the installed tree:
+   正式環境，從已安裝的目錄執行：
 
    ```sh
    sudo -u card-together sh -c 'cd /opt/card-together/server && ../node --import tsx src/auth/reset-password-cli.ts /var/lib/card-together/database.json alice'
    sudo -u card-together sh -c 'cd /opt/card-together/server && ../node --import tsx src/auth/reset-password-cli.ts /var/lib/card-together/database.json alice --apply --writers-stopped'
    ```
 
-3. Enter the new password twice at the hidden prompts. Passwords are never accepted as
-   arguments, environment variables, or redirected input.
-4. Send the password through a trusted private channel and ask the owner to change it.
-5. Restart and verify the new password works and old sessions are revoked.
+3. 在隱藏輸入的提示中輸入新密碼兩次。密碼從不接受以參數、環境變數或重新導向的輸入傳入。
+4. 透過可信任的私人管道傳送密碼，並請帳號擁有者變更密碼。
+5. 重新啟動，確認新密碼可以使用，且舊的工作階段已被撤銷。
 
-- The username match ignores case; nicknames and account IDs are not accepted.
-- Preview reports path, account ID, saved username, and session count.
-- Apply writes a 0600 backup `.password-reset-<UUID>.bak`, uses the registration
-  password policy and hashing, and changes only the target's password, timestamp, and sessions.
-- Rejected input, wrong file owner, a concurrent source change, or a write failure leaves
-  the database unchanged. "Applied with cleanup warnings" means the password **did**
-  change; clean up the reported temporary or lock files.
-- `.password-reset.lock` serializes reset tools only, not the application. Remove a stale
-  lock only after confirming no reset is running.
-- Restoring the backup restores the old password and sessions and loses newer writes.
+- 使用者名稱比對不分大小寫；不接受暱稱或帳號 ID。
+- 預覽會回報路徑、帳號 ID、儲存的使用者名稱與工作階段數量。
+- 套用時會寫入 0600 的備份 `.password-reset-<UUID>.bak`，使用註冊時的密碼規則與雜湊方式，並只變更目標帳號的密碼、時間戳與工作階段。
+- 輸入被拒絕、檔案擁有者錯誤、來源在過程中被同時修改，或寫入失敗時，資料庫維持不變。「Applied with cleanup warnings」代表密碼**已經**變更；請清理回報的暫存檔或鎖定檔。
+- `.password-reset.lock` 只讓重設工具彼此序列化，不影響應用程式。確認沒有重設正在執行後，才能移除過時的鎖定檔。
+- 還原備份會恢復舊密碼與工作階段，並遺失較新的寫入。
 
-### Match history cleanup
+### 對局紀錄清理
 
-Use this offline tool to preview or apply [match retention](#replay-archives) before startup:
+在啟動前，用這個離線工具預覽或套用[對局保留規則](#回放封存)：
 
 ```sh
 npm run cleanup:match-history -- /absolute/path/database.json
 npm run cleanup:match-history -- /absolute/path/database.json --apply --writers-stopped
 ```
 
-- Run as the database owner after stopping all writers, following the [offline requirements](#maintenance-tools).
-- Dry run reports globally expired records and remaining records without writing files.
-  Shared matches needed by another human remain stored; each account still sees at most 100.
-- Apply creates a private `.match-history-<UUID>.bak/` directory containing `database.json`
-  and copies of adjacent `media/` and `replays/` when present. Backup failure leaves the database
-  untouched. It then atomically replaces `matches` and removes only expired replay files.
-- Accounts, sessions, rewards, friends, messages, media, and resumable runtime stay unchanged.
-  A second run is a no-op. After restart, verify login, history, replays, and game resume.
+- 依照[離線需求](#維護工具)，停止所有寫入者後以資料庫擁有者的身分執行。
+- 試跑會回報全域已過期的紀錄與剩下的紀錄，不寫入任何檔案。其他真人仍需要的共用對局會繼續保存；每個帳號仍最多看到 100 場。
+- 套用時會建立私人的 `.match-history-<UUID>.bak/` 目錄，內含 `database.json`，以及旁邊 `media/` 與 `replays/`（若存在）的副本。備份失敗時資料庫不會被動到。接著以原子操作替換 `matches`，並只移除過期的回放檔。
+- 帳號、工作階段、獎勵、好友、訊息、媒體與可恢復的 runtime 都不變。第二次執行不會有任何效果。重新啟動後，確認登入、歷史紀錄、回放與遊戲恢復都正常。
 
-## Future SQL adapter
+## 未來的 SQL adapter
 
-Not implemented. An adapter must keep:
+尚未實作。adapter 必須保留：
 
-- The async Repository contract, public DTOs, and atomic username and friend-pair constraints.
-- Compare-and-swap password updates, session revocation, and atomic runtime plus history writes.
-- Versioned JSON/JSONB runtime is fine; multi-process room coordination needs a separate design.
+- 非同步 Repository 介面、公開 DTO，以及使用者名稱與好友配對的原子限制。
+- 以 compare-and-swap 更新密碼、撤銷工作階段，以及 runtime 與歷史紀錄的原子寫入。
+- 帶版本的 JSON/JSONB runtime 沒有問題；多程序的房間協調需要另外設計。
 
-Migration:
+Migration：
 
-1. Pass the repository, auth, social, and runtime tests against the adapter.
-2. Stop writes; back up and validate the JSON.
-3. Import all collections in one transaction, keeping IDs, hashes, expiry, and media
-   references; reject conflicts instead of overwriting.
-4. Compare counts, uniqueness, and references; verify login, history, friends, media, and resume.
-5. Switch the repository and resume traffic only after validation.
+1. 讓 repository、auth、social 與 runtime 測試在 adapter 上通過。
+2. 停止寫入；備份並驗證 JSON。
+3. 在一個 transaction 中匯入所有 collection，保留 ID、雜湊、到期時間與媒體參照；遇到衝突時拒絕，而不是覆寫。
+4. 比對數量、唯一性與參照；確認登入、歷史紀錄、好友、媒體與恢復功能。
+5. 驗證完成後才切換 repository 並恢復流量。
 
-Once SQL accepts writes, the JSON backup is stale: rollback must export newer data. Do
-not add dual writes without a transactional design.
+SQL 開始接受寫入後，JSON 備份就已過時：回復時必須匯出較新的資料。沒有 transaction 設計前，不要加入雙重寫入。

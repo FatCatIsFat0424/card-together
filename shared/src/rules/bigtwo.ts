@@ -1,5 +1,5 @@
 // ─── Taiwanese Big Two rules engine (pure functions, shared by client and server) ───
-// Rules: docs/games/cards.md#big-two
+// Rules: docs/games/cards.md#大老二
 
 import type { Card, Rank, Seat, Suit } from '../types';
 import { SEAT_ORDER_CLOCKWISE } from '../constants';
