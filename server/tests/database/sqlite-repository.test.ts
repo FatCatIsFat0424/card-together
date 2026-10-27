@@ -318,6 +318,33 @@ describe('SQLite repository', () => {
     expect(await repository.loadRuntime()).toEqual(runtime.snapshot());
   });
 
+  it('re-validates changed games and the links of unchanged ones on every runtime write', async () => {
+    repository = await createSqliteRepository(path);
+    const alice = await repository.createAccount(account('alice'));
+    const runtime = await createRuntimeCoordinator(repository);
+    let code = '';
+    await runtime.mutate(() => {
+      const human = players.toPlayerInfo(alice);
+      players.attachPlayer('alice-socket', human);
+      code = rooms.createRoom('redpoints', alice.id);
+      players.setPlayerRoom(alice.id, code);
+      rooms.changeSeat(code, human, 'N');
+      rooms.fillBots(code, alice.id);
+      rooms.setReady(code, alice.id, true);
+      rooms.setRoomStatus(code, 'playing');
+      games.startGame(code, 'redpoints', rooms.getSeatPlayers(code)!);
+    });
+    const committed = runtime.snapshot();
+    const changedGame = structuredClone(committed);
+    Object.assign(changedGame.games[0], { currentTurnSeat: 'X' });
+    await expect(repository.saveRuntime(changedGame)).rejects.toThrow('schema');
+    // The game row is unchanged, but a playing game in a waiting room is still inconsistent.
+    const changedRoom = structuredClone(committed);
+    changedRoom.rooms[0].info = { ...changedRoom.rooms[0].info, status: 'waiting' };
+    await expect(repository.saveRuntime(changedRoom)).rejects.toThrow('schema');
+    expect(await repository.loadRuntime()).toEqual(committed);
+  });
+
   it('prunes history at startup only after backing up the database, media, and replays', async () => {
     const accounts = ['alice', 'bravo', 'charlie', 'delta'].map(account);
     const ids = accounts.map((entry) => entry.id);

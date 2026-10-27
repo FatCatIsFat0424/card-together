@@ -21,7 +21,7 @@ import { createReplayStore } from './replay-store';
 import type { AccountRecord, DirectMessageRecord, MatchRecord, NewMatchRecord, Repository, RepositoryOptions } from './repository';
 import { MAX_MATCHES_PER_ACCOUNT, publicAccount, repositoryError, SOCIAL_HISTORY_RETENTION_MS } from './repository';
 import {
-  botId, validDirectMessage, validEmoji, validFriendNotification, validFriendship, validMatch, validMessageRead, validSession,
+  botId, isObject, validDirectMessage, validEmoji, validFriendNotification, validFriendship, validMatch, validMessageRead, validSession,
   validateDocument,
 } from './schema';
 import { claimSqlitePath, copySqliteDatabase, inTransaction, openSqliteDatabase } from './sqlite-schema';
@@ -109,6 +109,8 @@ export async function createSqliteRepository(filePath: string, options: Reposito
     const reportedReplays = new Set<string>();
     let queue: Promise<void> = Promise.resolve();
     let closed = false;
+    /** Reads queued before close still complete; only the closed connection refuses them. */
+    let disconnected = false;
 
     // Startup applies the same whole-document checks as the JSON adapter; writes check only their records.
     const document = readDocument(sql);
@@ -143,7 +145,7 @@ export async function createSqliteRepository(filePath: string, options: Reposito
 
     async function read<T>(select: () => T): Promise<T> {
       await queue;
-      if (closed) throw new Error('Repository is closed.');
+      if (disconnected) throw new Error('Repository is closed.');
       return select();
     }
 
@@ -167,11 +169,22 @@ export async function createSqliteRepository(filePath: string, options: Reposito
       return new Set(ids.filter((id) => sql('SELECT has_replay FROM matches WHERE id = ?').get(id)?.has_replay === 1));
     }
 
-    /** Validates and serializes a runtime snapshot; reference checks cover only rows that changed. */
+    /**
+     * Serializes and validates a runtime snapshot. Games whose row is unchanged were validated when
+     * they were committed, so only their links to players and rooms are checked again; account
+     * references are checked only for rows that changed.
+     */
     function stageRuntime(snapshot: RuntimeSnapshot): RuntimeRows {
-      if (!isRuntimeSnapshot(snapshot, { applyReplaySteps: false })) throw invalidSchemaError();
-      const next = serializeRuntime(snapshot);
+      let next: RuntimeRows;
+      try {
+        next = serializeRuntime(snapshot);
+      } catch {
+        throw invalidSchemaError();
+      }
       const previous = committedRuntime;
+      const validatedGame = (game: unknown): boolean => isObject(game) && typeof game.roomCode === 'string'
+        && previous !== null && previous.games.get(game.roomCode) === next.games.get(game.roomCode);
+      if (!isRuntimeSnapshot(snapshot, { applyReplaySteps: false, validatedGame })) throw invalidSchemaError();
       // Accounts are never deleted, so unchanged rows keep the references they were checked with.
       const changed = <T>(name: 'players' | 'games' | 'chat', key: string, value: T): T[] =>
         previous?.[name].get(key) === next[name].get(key) ? [] : [value];
@@ -553,6 +566,7 @@ export async function createSqliteRepository(filePath: string, options: Reposito
         }
         closed = true;
         await queue;
+        disconnected = true;
         db.close();
         release();
       },

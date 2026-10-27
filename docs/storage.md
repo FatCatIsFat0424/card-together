@@ -184,7 +184,7 @@
 
 - 所有操作依呼叫順序排隊，讀取會等待先前的寫入。每次寫入都是一個 `BEGIN IMMEDIATE` transaction；任何錯誤（包括 commit 失敗）都會 `ROLLBACK`。
 - `saveRuntime` 在同一個 transaction 中發放獎勵與收據、推進最後上線時間、寫入對局並套用保留規則，最後驗證並寫入 runtime。runtime 先轉成各列 JSON，只寫入和上次 commit 不同的列；這份「已 commit 列」的紀錄只在 commit 成功後更新。
-- 寫入時只驗證這次寫入的紀錄，沿用 JSON 的單筆驗證函式；runtime 會完整檢查結構，但帳號參照只檢查有變化的列。唯一性與參照由 schema 的限制保證。
+- 寫入時只驗證這次寫入的紀錄，沿用 JSON 的單筆驗證函式。runtime 的玩家、房間與聊天每次都檢查；內容沒變的遊戲列在 commit 時已驗證過，只重新檢查它和玩家、房間的關聯；帳號參照只檢查有變化的列。唯一性與參照由 schema 的限制保證。
 - 啟動時讀出整份文件，執行和 JSON 相同的完整驗證（包括套用 runtime 錄製步驟）、丟棄無法套用的錄製、套用對局保留規則（先以 `VACUUM INTO` 備份到 `.match-history-<UUID>.bak/`），並清理回放目錄。
 - 連線設定：`foreign_keys=ON`、`busy_timeout` 5 秒、預先編譯並重複使用的 statement。
 

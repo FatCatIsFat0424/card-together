@@ -1742,6 +1742,11 @@ function coherentBridgeGame(state: BridgeGameState): boolean {
 export interface RuntimeValidationOptions {
   /** False checks recording structure only; every load and restore applies each step. */
   readonly applyReplaySteps?: boolean;
+  /**
+   * True for a game already validated in identical form, such as an unchanged stored row: its own
+   * checks are skipped, while checks against players and rooms still run.
+   */
+  readonly validatedGame?: (game: unknown) => boolean;
 }
 
 export function isRuntimeSnapshot(value: unknown, options: RuntimeValidationOptions = {}): value is RuntimeSnapshot {
@@ -1766,7 +1771,7 @@ export function isRuntimeSnapshot(value: unknown, options: RuntimeValidationOpti
           || (Number.isSafeInteger(entry.lastSeenAt) && (entry.lastSeenAt as number) >= 0)),
     ) ||
     !value.rooms.every(room) ||
-    !value.games.every((entry: unknown) => game(entry, applyReplaySteps)) ||
+    !value.games.every((entry: unknown) => options.validatedGame?.(entry) || game(entry, applyReplaySteps)) ||
     !value.chat.every(
       (entry: unknown) =>
         object(entry) &&
@@ -1854,7 +1859,7 @@ export function isRuntimeSnapshot(value: unknown, options: RuntimeValidationOpti
     return false;
   for (const entry of snapshot.games) {
     const currentRoom = rooms.get(entry.roomCode);
-    if (!currentRoom || !coherentGame(normalizeFlexibleGame(entry))) return false;
+    if (!currentRoom || !(options.validatedGame?.(entry) || coherentGame(normalizeFlexibleGame(entry)))) return false;
     if (entry.phase === 'scoring') {
       // The completed board is historical: seats and members may have changed already.
       if (currentRoom.info.status !== 'waiting') return false;
