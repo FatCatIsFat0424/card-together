@@ -11,10 +11,13 @@ import { isNapoleonOptions } from '@shared/napoleon-options';
 import { isBotDifficulty } from '@shared/bot-difficulty';
 import { isRoomReplaySession } from '@shared/replay-session';
 import { getTurnSeat } from '../managers/game-clock';
+import { gameAdapter } from '../managers/games/registry';
 import {
-  ABORT_VOTE_THRESHOLD, EXPANDABLE_ROOM_GAMES, GAME_TYPES, MAX_MESSAGE_EMOJIS, MIN_FLEXIBLE_PLAYERS, MAX_ROOM_MEMBERS, MAX_ROOM_SEATS,
-  NAPOLEON_MAX_PLAYERS, NAPOLEON_MIN_PLAYERS, isEmojiName, isMediaId, isProvidedEmojiFile,
+  ABORT_VOTE_THRESHOLD, MAX_MESSAGE_EMOJIS, MIN_FLEXIBLE_PLAYERS, MAX_ROOM_MEMBERS, MAX_ROOM_SEATS,
+  isEmojiName, isMediaId, isProvidedEmojiFile,
 } from '@shared/constants';
+import { GAME_DEFINITIONS, gameDefinition, isGameType } from '@shared/games/registry';
+import type { GameStateOf } from '@shared/games/game-definition';
 import { isDeepStrictEqual } from 'node:util';
 import { getPresentationEndsAt } from '@shared/game-presentation';
 import { bigTwoPenalty, identifyCombo, isDragon, legalPlays } from '@shared/rules/bigtwo';
@@ -59,6 +62,7 @@ type ObjectValue = Record<string, unknown>;
 const seats: Seat[] = ['N', 'E', 'S', 'W'];
 const gameSeats: GameSeat[] = [...GAME_SEAT_ORDER];
 const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
+const napoleonSeats = GAME_DEFINITIONS.napoleon.seats;
 
 function object(value: unknown): value is ObjectValue {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -819,7 +823,7 @@ function distinctNapoleonCards(cards: readonly NapoleonCard[]): boolean {
 export function isNapoleonResult(value: unknown): boolean {
   if (!object(value) || value.gameType !== 'napoleon' || !gameSeatList(value.seats)) return false;
   const participants = value.seats;
-  if (participants.length < NAPOLEON_MIN_PLAYERS || participants.length > NAPOLEON_MAX_PLAYERS
+  if (participants.length < napoleonSeats.minPlayers || participants.length > napoleonSeats.maxPlayers
     || !sameJson(participants, gameSeats.filter((seat) => participants.includes(seat)))) return false;
   const contract = value.contract;
   const secretarySeat = value.secretarySeat;
@@ -851,7 +855,7 @@ function napoleonGame(value: ObjectValue): boolean {
   const keys = Object.keys(players);
   if (!keys.every((key) => oneOf(key, gameSeats) && player(players[key]))) return false;
   const participants = gameSeats.filter((seat) => keys.includes(seat));
-  if (participants.length < NAPOLEON_MIN_PLAYERS || participants.length > NAPOLEON_MAX_PLAYERS) return false;
+  if (participants.length < napoleonSeats.minPlayers || participants.length > napoleonSeats.maxPlayers) return false;
   const { hand, kitty } = napoleonDealSize(participants.length);
   const hands = value.hands;
   return isNapoleonOptions(value.options) && sameJson(value.seats, participants)
@@ -988,18 +992,30 @@ function coherentNapoleonGame(state: NapoleonGameState): boolean {
   }
 }
 
-const gameValidators: Record<GameType, (value: ObjectValue) => boolean> = {
-  bridge: bridgeGame,
-  bigtwo: bigTwoGame,
-  redpoints: redPointsGame,
-  ninetynine: ninetyNineGame,
-  sevens: sevensGame,
-  chinesepoker: chinesePokerGame,
-  liarsdeck: liarsDeckGame,
-  blackjack: blackjackGame,
-  holdem: holdemGame,
-  napoleon: napoleonGame,
+interface GameStateValidator<K extends GameType> {
+  /** Field types and bounds of a stored game of this type */
+  readonly shape: (value: ObjectValue) => boolean;
+  /** Replaying the stored public log reproduces the stored state and result */
+  readonly coherent: (state: GameStateOf<K>) => boolean;
+}
+
+const gameValidators: { readonly [K in GameType]: GameStateValidator<K> } = {
+  bridge: { shape: bridgeGame, coherent: coherentBridgeGame },
+  bigtwo: { shape: bigTwoGame, coherent: coherentBigTwoGame },
+  redpoints: { shape: redPointsGame, coherent: coherentRedPointsGame },
+  ninetynine: { shape: ninetyNineGame, coherent: coherentNinetyNineGame },
+  sevens: { shape: sevensGame, coherent: coherentSevensGame },
+  chinesepoker: { shape: chinesePokerGame, coherent: coherentChinesePokerGame },
+  liarsdeck: { shape: liarsDeckGame, coherent: coherentLiarsDeckGame },
+  blackjack: { shape: blackjackGame, coherent: coherentBlackjackGame },
+  holdem: { shape: holdemGame, coherent: coherentHoldemGame },
+  napoleon: { shape: napoleonGame, coherent: coherentNapoleonGame },
 };
+
+/** Called with a game's own type, the validator accepts that game even when TypeScript only knows the union. */
+function gameValidator<K extends GameType>(gameType: K): GameStateValidator<K> {
+  return gameValidators[gameType];
+}
 
 function presentation(value: ObjectValue): boolean {
   if (value.presentation === undefined) return true;
@@ -1019,7 +1035,7 @@ function gameClock(value: ObjectValue): boolean {
     || !object(clock.bankRemainingMs) || !object(value.players)) return false;
   const banks = clock.bankRemainingMs;
   const bankLimit = clock.settings.bankSeconds * 1000;
-  const allowedSeats = oneOf(value.gameType, [...EXPANDABLE_ROOM_GAMES]) ? gameSeats : seats;
+  const allowedSeats = isGameType(value.gameType) && gameDefinition(value.gameType).seats.expandable ? gameSeats : seats;
   const required = new Set([...seats, ...Object.keys(value.players)]);
   if (![...required].every((seat) => number(banks[seat]) && banks[seat] <= bankLimit)
     || !Object.entries(banks).every(([seat, bank]) => (allowedSeats as readonly string[]).includes(seat)
@@ -1030,7 +1046,7 @@ function gameClock(value: ObjectValue): boolean {
   const expectedSeat = getTurnSeat(state);
   if (!expectedSeat) return clock.turn === null;
   // Legacy forced passes were saved without a public turn.
-  if (state.gameType === 'bigtwo' && state.pendingAutoPass && clock.turn === null) return true;
+  if (gameAdapter(state.gameType).forcedActionPending?.(state) && clock.turn === null) return true;
   const turn = clock.turn;
   return object(turn) && text(turn.id) && turn.id.length <= 128 && turn.seat === expectedSeat
     && number(turn.startsAt) && turn.startsAt >= getPresentationEndsAt(state)
@@ -1076,8 +1092,8 @@ function replayRecording(game: AnyGameState, applySteps: boolean): boolean {
 
 function game(value: unknown, applyReplaySteps: boolean): boolean {
   if (object(value) && typeof value.gameType === 'string') value = normalizeFlexibleGame({ ...value, gameType: value.gameType });
-  return object(value) && oneOf(value.gameType, [...GAME_TYPES]) &&
-    gameValidators[value.gameType as GameType](value) && presentation(value) && gameClock(value)
+  return object(value) && isGameType(value.gameType) &&
+    gameValidator(value.gameType).shape(value) && presentation(value) && gameClock(value)
     && returnedSeats(value) && returnedViewers(value) && autoPlaySeats(value) && earlyLeaveSeats(value)
     && replayRecording(value as unknown as AnyGameState, applyReplaySteps);
 }
@@ -1148,8 +1164,8 @@ function room(value: unknown): boolean {
   const humans = members.filter((id) => !id.startsWith('bot:'));
   if (info.additionalSeats !== undefined && (!Array.isArray(info.additionalSeats)
     || info.additionalSeats.length > MAX_ROOM_SEATS - 4
-    || (oneOf(info.gameType, [...GAME_TYPES]) && info.additionalSeats.length > maxPlayers(info.gameType as GameType) - 4)
-    || (info.additionalSeats.length > 0 && !oneOf(info.gameType, [...EXPANDABLE_ROOM_GAMES]))
+    || (isGameType(info.gameType) && info.additionalSeats.length > maxPlayers(info.gameType) - 4)
+    || (info.additionalSeats.length > 0 && !(isGameType(info.gameType) && gameDefinition(info.gameType).seats.expandable))
     || !info.additionalSeats.every((entry: unknown) => object(entry) && typeof entry.isReady === 'boolean'
       && ((entry.player === null && !entry.isReady) || (player(entry.player) && object(entry.player)
         && (entry.player.isBot !== true || entry.isReady) && members.includes(String(entry.player.id))))))) return false;
@@ -1167,7 +1183,7 @@ function room(value: unknown): boolean {
     (info.ninetyNineOptions === undefined || isNinetyNineOptions(info.ninetyNineOptions)) &&
     (info.blackjackOptions === undefined || isBlackjackOptions(info.blackjackOptions)) &&
     (info.napoleonOptions === undefined || isNapoleonOptions(info.napoleonOptions)) &&
-    oneOf(info.gameType, [...GAME_TYPES]) &&
+    isGameType(info.gameType) &&
     oneOf(info.status, ['waiting', 'playing', 'replaying']) &&
     (info.status === 'replaying' ? isRoomReplaySession(info.replay) : info.replay === undefined) &&
     number(info.createdAt) &&
@@ -1191,18 +1207,7 @@ function room(value: unknown): boolean {
 }
 
 function coherentGame(state: AnyGameState): boolean {
-  switch (state.gameType) {
-    case 'bridge': return coherentBridgeGame(state);
-    case 'bigtwo': return coherentBigTwoGame(state);
-    case 'redpoints': return coherentRedPointsGame(state);
-    case 'ninetynine': return coherentNinetyNineGame(state);
-    case 'sevens': return coherentSevensGame(state);
-    case 'chinesepoker': return coherentChinesePokerGame(state);
-    case 'liarsdeck': return coherentLiarsDeckGame(state);
-    case 'blackjack': return coherentBlackjackGame(state);
-    case 'holdem': return coherentHoldemGame(state);
-    case 'napoleon': return coherentNapoleonGame(state);
-  }
+  return gameValidator(state.gameType).coherent(state);
 }
 
 const cardId = (entry: Card): string => `${entry.suit}-${entry.rank}`;

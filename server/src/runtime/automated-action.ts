@@ -1,16 +1,8 @@
 import { isCompassSeat } from '@shared/rules/seats';
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
-import { legalPlays } from '@shared/rules/bigtwo';
-import { NN_MAX, nnApply, nnIsPlayable, nnRequiresChoice } from '@shared/rules/ninetynine';
-import type { NnChoice } from '@shared/rules/ninetynine';
-import { rpPairOptions } from '@shared/rules/redpoints';
-import { cpGreedyArrangement } from '@shared/rules/chinesepoker-arrange';
-import { ldMustChallenge } from '@shared/rules/liarsdeck';
-import { BJ_MIN_BET, bjDealerHits, bjSitsIn } from '@shared/rules/blackjack';
-import { heLegalActions } from '@shared/rules/holdem';
-import { createNapoleonDeck, hasNapoleonCard, isNapoleonFreeCard, napoleonDealSize } from '@shared/rules/napoleon';
 import type { PlayerInfo, PlayerVisibleGameState, RoomCode, GameSeat, Seat } from '@shared/types';
 import type { BotAction } from '../bots/bot-decisions';
+import { gameBot } from '../bots/bot-registry';
 import * as chatManager from '../managers/chat-manager';
 import * as gameManager from '../managers/game-manager';
 import * as roomManager from '../managers/room-manager';
@@ -49,107 +41,9 @@ export function applyAutomatedAction(code: RoomCode, seat: GameSeat, action: Bot
   }
 }
 
-function ninetyNineAction(visible: Extract<PlayerVisibleGameState, { gameType: 'ninetynine' }>): BotAction | null {
-  const card = visible.myHand.find((own) => nnIsPlayable(visible.total, own));
-  if (!card) return null;
-  const choice = nnRequiresChoice(card)
-    ? (['minus', 'plus'] as const).find((option: NnChoice) => nnApply(visible.total, card, option).total <= NN_MAX)
-    : undefined;
-  const effect = nnApply(visible.total, card, choice);
-  const target = effect.designate
-    ? (visible.seats ?? SEAT_ORDER_CLOCKWISE).find((seat) => seat !== visible.mySeat && !visible.eliminated.includes(seat))
-    : undefined;
-  return { type: 'ninetynine-play', card, ...(choice ? { choice } : {}), ...(target ? { target } : {}) };
-}
-
-/** Check when free, otherwise fold: the conventional poker default for a player who does not act. */
-export function holdemPassiveAction(visible: Extract<PlayerVisibleGameState, { gameType: 'holdem' }>): BotAction | null {
-  if (visible.currentTurnSeat !== visible.mySeat) return null;
-  const legal = heLegalActions(visible, visible.mySeat);
-  if (!legal) return null;
-  return { type: 'holdem-action', action: legal.check ? { type: 'check' } : { type: 'fold' } };
-}
-
-/** A player dealer who runs out of time follows the house rule: hit below 17, otherwise stand. */
-export function blackjackDealerDefault(
-  visible: Extract<PlayerVisibleGameState, { gameType: 'blackjack' }>,
-): BotAction | null {
-  if (visible.phase !== 'playing' || visible.dealerSeat !== visible.mySeat || visible.currentTurnSeat !== visible.mySeat
-    || visible.holeHidden) return null;
-  return { type: 'blackjack-dealer', action: bjDealerHits(visible.dealer) ? 'hit' : 'stand' };
-}
-
-/** Pass, discard the last cards, acknowledge, call the first card outside the hand, or play the first legal card. */
-function napoleonFirstLegalAction(visible: Extract<PlayerVisibleGameState, { gameType: 'napoleon' }>): BotAction | null {
-  const seat = visible.mySeat;
-  const napoleon = visible.contract?.napoleon;
-  switch (visible.phase) {
-    case 'bidding':
-      return visible.bidding?.currentBidderSeat === seat ? { type: 'napoleon-action', action: { type: 'bid', action: { type: 'pass' } } } : null;
-    case 'exchanging':
-      return napoleon === seat ? { type: 'napoleon-action',
-        action: { type: 'discard', cards: visible.myHand.slice(-napoleonDealSize(visible.seats.length).kitty) } } : null;
-    case 'reviewing':
-      return napoleon !== seat && !visible.reviewed.includes(seat) ? { type: 'napoleon-action', action: { type: 'review' } } : null;
-    case 'calling': {
-      const card = createNapoleonDeck().find((candidate) => !hasNapoleonCard(visible.myHand, candidate));
-      return napoleon === seat && card ? { type: 'napoleon-action', action: { type: 'call', card } } : null;
-    }
-    case 'playing': {
-      const card = visible.currentTurnSeat === seat ? visible.validCards[0] : undefined;
-      if (!card) return null;
-      const leading = (visible.trick?.plays.length ?? 0) === 0;
-      return { type: 'napoleon-action',
-        action: leading && isNapoleonFreeCard(visible, card) ? { type: 'play', card, leadSuit: 'spades' } : { type: 'play', card } };
-    }
-    default: return null;
-  }
-}
-
 /** A deliberately simple legal move used only after the strategy repeatedly fails. */
 export function firstLegalAction(visible: PlayerVisibleGameState): BotAction | null {
-  if (visible.phase === 'scoring') return null;
-  switch (visible.gameType) {
-    case 'bridge':
-      if (visible.phase === 'redeal_pending') return { type: 'bridge-redeal', accept: false };
-      if (visible.phase === 'bidding') return { type: 'bridge-bid', action: { type: 'pass' } };
-      return visible.validCards[0] ? { type: 'bridge-play', card: visible.validCards[0] } : null;
-    case 'bigtwo': {
-      if (visible.lastPlay) return { type: 'bigtwo-pass' };
-      const lead = legalPlays(visible.myHand, null, visible.firstPlay)[0];
-      return lead ? { type: 'bigtwo-play', cards: lead.cards } : null;
-    }
-    case 'redpoints': {
-      if (visible.step === 'flip-choose') {
-        const capture = visible.pendingFlip && rpPairOptions(visible.pendingFlip, visible.table)[0];
-        return capture ? { type: 'redpoints-flip', capture } : null;
-      }
-      const card = visible.myHand[0];
-      if (!card) return null;
-      const capture = rpPairOptions(card, visible.table)[0];
-      return { type: 'redpoints-play', card, ...(capture ? { capture } : {}) };
-    }
-    case 'ninetynine': return ninetyNineAction(visible);
-    case 'sevens': {
-      if (visible.validCards[0]) return { type: 'sevens-play', card: visible.validCards[0] };
-      return visible.myHand[0] ? { type: 'sevens-cover', card: visible.myHand[0] } : null;
-    }
-    case 'chinesepoker':
-      return visible.myArrangement || visible.submitted[visible.mySeat] ? null
-        : { type: 'chinesepoker-arrange', arrangement: cpGreedyArrangement(visible.myHand) };
-    case 'liarsdeck':
-      if (ldMustChallenge(visible.mySeat, visible.handCounts, visible.lastPlay)) return { type: 'liarsdeck-challenge' };
-      return visible.myHand[0] ? { type: 'liarsdeck-play', cardIds: [visible.myHand[0].id] } : null;
-    case 'blackjack':
-      if (visible.phase === 'betting') {
-        return visible.myBet === null && visible.dealerSeat !== visible.mySeat && bjSitsIn(visible.chips[visible.mySeat])
-          ? { type: 'blackjack-bet', amount: BJ_MIN_BET } : null;
-      }
-      if (visible.dealerSeat === visible.mySeat) return blackjackDealerDefault(visible);
-      return visible.currentTurnSeat === visible.mySeat ? { type: 'blackjack-action', action: 'stand' } : null;
-    case 'holdem': return holdemPassiveAction(visible);
-    case 'napoleon': return napoleonFirstLegalAction(visible);
-  }
+  return visible.phase === 'scoring' ? null : gameBot(visible.gameType).firstLegal(visible);
 }
 
 /** Ends a game that cannot progress so the table is not retried forever. */

@@ -14,10 +14,11 @@ Authoritative project rule set; `CLAUDE.md` references it.
 | Path | Contents |
 | --- | --- |
 | `shared/src/types/`, `constants/`, `rules/` | Browser/server contracts and pure game rules |
+| `shared/src/games/` | Per-game definitions and the typed game registry |
 | `server/src/engine/` | Pure Bridge functions |
-| `server/src/managers/`, `managers/games/` | Runtime state and game adapters |
+| `server/src/managers/`, `managers/games/` | Runtime state; per-game modules, adapters, and adapter registry |
 | `server/src/runtime/` | Serialized persistence, rollback, bot and timeout scheduling |
-| `server/src/bots/` | Bot strategies |
+| `server/src/bots/` | Bot strategies and the per-game bot registry |
 | `server/src/auth/`, `social/`, `http/`, `socket/` | Services and transport adapters |
 | `server/src/database/`, `media/` | Repository and uploaded-image storage |
 | `client/src/pages/`, `components/`, `hooks/`, `stores/` | UI and client state |

@@ -1,7 +1,7 @@
-import { BJ_MIN_BET } from '@shared/rules/blackjack';
-import type { PlayerVisibleGameState, RoomCode, GameSeat } from '@shared/types';
+import type { PlayerVisibleGameState, RoomCode } from '@shared/types';
 import { getBotAction } from '../bots/bot-decisions';
 import type { BotAction } from '../bots/bot-decisions';
+import { gameBot } from '../bots/bot-registry';
 import * as gameManager from '../managers/game-manager';
 import * as roomManager from '../managers/room-manager';
 import { createFailureTracker, performAutomatedTurn } from './automated-action';
@@ -17,35 +17,15 @@ interface PendingDeadline {
 function pendingDeadline(code: RoomCode): PendingDeadline | null {
   const game = gameManager.getGameState(code);
   if (!game || roomManager.getRoomInfo(code)?.status !== 'playing') return null;
-  if (game.gameType === 'chinesepoker' && game.phase === 'arranging') {
-    return { key: `${game.id}:arrange`, gameId: game.id, deadline: game.arrangeDeadline };
-  }
-  if (game.gameType === 'blackjack' && game.phase === 'betting' && game.betDeadline !== null) {
-    return { key: `${game.id}:bet:${game.hand}`, gameId: game.id, deadline: game.betDeadline };
-  }
-  if (game.gameType === 'napoleon' && game.phase === 'reviewing' && game.reviewDeadline !== null) {
-    return { key: `${game.id}:review`, gameId: game.id, deadline: game.reviewDeadline };
-  }
-  return null;
+  const window = gameManager.getSharedDeadlineWindow(game);
+  return window && { key: window.key, gameId: game.id, deadline: window.deadline };
 }
 
-function overdueSeats(code: RoomCode, gameId: string): GameSeat[] {
-  const gameType = gameManager.getGameState(code)?.gameType;
-  return gameType === 'blackjack' ? gameManager.overdueBlackjackSeats(code, gameId)
-    : gameType === 'napoleon' ? gameManager.overdueNapoleonReviewSeats(code, gameId)
-      : gameManager.overdueChinesePokerSeats(code, gameId);
-}
-
-/**
- * Bots keep their own decision; a human who missed the betting window stakes the minimum, and one
- * who left the Napoleon discards open acknowledges them.
- */
-function expiredAction(code: RoomCode, seat: GameSeat, visible: PlayerVisibleGameState): BotAction | null {
-  if (visible.gameType === 'blackjack' && !roomManager.getSeatPlayers(code)?.[seat]?.isBot) {
-    return { type: 'blackjack-bet', amount: BJ_MIN_BET };
-  }
-  if (visible.gameType === 'napoleon') return { type: 'napoleon-action', action: { type: 'review' } };
-  return getBotAction(visible);
+/** A seat that missed the deadline gets the game's expiry default, or else the hard strategy. */
+function expiredAction(visible: PlayerVisibleGameState, isBot: boolean): BotAction | null {
+  const strategy = (): BotAction | null => getBotAction(visible);
+  const expired = gameBot(visible.gameType).deadlineExpired;
+  return expired ? expired(visible, { isBot, strategy }) : strategy();
 }
 
 /**
@@ -78,10 +58,11 @@ export function startSharedDeadlines(
         void runtime.mutate(() => {
           if (scheduled.get(code)?.key === pending.key) scheduled.delete(code);
           if (stopped || pendingDeadline(code)?.key !== pending.key) return;
-          for (const seat of overdueSeats(code, pending.gameId)) {
+          for (const seat of gameManager.overdueSharedDeadlineSeats(code, pending.gameId)) {
             // A stuck seat may abort the game; later seats must then stop.
             if (pendingDeadline(code)?.key !== pending.key) break;
-            performAutomatedTurn(code, seat, failures.count(code, key), (visible) => expiredAction(code, seat, visible));
+            const isBot = Boolean(roomManager.getSeatPlayers(code)?.[seat]?.isBot);
+            performAutomatedTurn(code, seat, failures.count(code, key), (visible) => expiredAction(visible, isBot));
             changed = true;
           }
         }, { skipUnchanged: true, afterCommit: () => {

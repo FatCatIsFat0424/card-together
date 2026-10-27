@@ -191,7 +191,7 @@ describe('Napoleon runtime', () => {
     expect(game().reviewed).toEqual(ALL_SEATS.slice(0, 4).filter((seat) => seat !== napoleonSeat));
     expect(game().clock?.turn?.seat).toBe(napoleonSeat);
     expect(choose).not.toHaveBeenCalled();
-    expect(games.overdueNapoleonReviewSeats(code, game().id)).toEqual([]);
+    expect(games.overdueSharedDeadlineSeats(code, game().id)).toEqual([]);
   });
 
   it('resumes an overdue review deadline after a restart', async () => {

@@ -3,19 +3,10 @@ import { getPresentationEndsAt } from '@shared/game-presentation';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import type { AnyGameState, GameClock, GameSeat, TimeControl } from '@shared/types';
 import { occupiedSeats, isCompassSeat } from '@shared/rules/seats';
+import { gameAdapter } from './games/registry';
 
 export function getTurnSeat(game: AnyGameState): GameSeat | null {
-  if (game.phase === 'scoring') return null;
-  // Chinese Poker seats arrange simultaneously against the game's own shared deadline.
-  if (game.gameType === 'chinesepoker') return null;
-  // Blackjack bets share a deadline; only playing turns belong to one seat.
-  if (game.gameType === 'blackjack') return game.phase === 'playing' ? game.currentTurnSeat : null;
-  // Napoleon discards are acknowledged against a shared deadline, not one seat's turn.
-  if (game.gameType === 'napoleon') return game.phase === 'reviewing' ? null : game.currentTurnSeat;
-  if (game.gameType !== 'bridge') return game.currentTurnSeat;
-  if (game.phase === 'redeal_pending') return game.redealPendingSeat;
-  if (game.phase === 'bidding') return game.bidding?.currentBidderSeat ?? null;
-  return game.phase === 'playing' ? game.playing?.currentTurnSeat ?? null : null;
+  return game.phase === 'scoring' ? null : gameAdapter(game.gameType).turnSeat(game);
 }
 
 function createTurn(game: AnyGameState, clock: GameClock, baseRemainingMs: number, now: number): GameClock['turn'] {

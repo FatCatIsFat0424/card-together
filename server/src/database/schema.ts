@@ -3,9 +3,10 @@ import {
   isNinetyNineResult, isRedPointsResult, isRuntimeSnapshot, isSevensResult,
 } from '../runtime/validate';
 import {
-  FLEXIBLE_SEAT_GAMES, GAME_TYPES, MAX_EMOJIS_PER_ACCOUNT, MAX_MESSAGE_EMOJIS, NICKNAME_MAX_LENGTH, isEmojiName, isImageOpacity, isMediaId,
+  MAX_EMOJIS_PER_ACCOUNT, MAX_MESSAGE_EMOJIS, NICKNAME_MAX_LENGTH, isEmojiName, isImageOpacity, isMediaId,
   isUsername, isAvatarBorderId, isProvidedEmojiFile, getShopItem, isShopStickerId,
 } from '@shared/constants';
+import { gameDefinition, isGameType } from '@shared/games/registry';
 import type { GameType } from '@shared/types';
 import { isReplayRecordId } from '@shared/replay-session';
 import type { RuntimeSnapshot } from '../runtime/types';
@@ -140,7 +141,8 @@ function validMatch(value: unknown): value is MatchRecord {
   )
     return false;
   // Flexible-seat results list the seats that took part; every other match had four.
-  const participants = FLEXIBLE_SEAT_GAMES.includes(value.result.gameType as GameType) ? value.result.seats : undefined;
+  const gameType = value.result.gameType;
+  const participants = isGameType(gameType) && gameDefinition(gameType).seats.flexible ? value.result.seats : undefined;
   if (value.accountIds.length !== (Array.isArray(participants) ? participants.length : 4)) return false;
   const validators: Record<GameType, (result: Record<string, unknown>) => boolean> = {
     bridge: validBridgeResult,
@@ -154,10 +156,8 @@ function validMatch(value: unknown): value is MatchRecord {
     holdem: isHoldemResult,
     napoleon: isNapoleonResult,
   };
-  const gameType = value.result.gameType;
   // Archives live in the replay store, named by match ID; records carry only the flag.
-  return typeof gameType === 'string' && GAME_TYPES.includes(gameType as GameType) &&
-    validators[gameType as GameType](value.result) && !Object.hasOwn(value, 'replay') &&
+  return isGameType(gameType) && validators[gameType](value.result) && !Object.hasOwn(value, 'replay') &&
     (value.hasReplay === undefined || (value.hasReplay === true && isReplayRecordId(value.id)));
 }
 

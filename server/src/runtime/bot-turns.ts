@@ -1,6 +1,5 @@
-import { gamePlayer, occupiedSeats } from '@shared/rules/seats';
+import { gamePlayer } from '@shared/rules/seats';
 import { getPresentationEndsAt } from '@shared/game-presentation';
-import { bjSitsIn } from '@shared/rules/blackjack';
 import type { AnyGameState, RoomCode, GameSeat } from '@shared/types';
 import { getBotAction } from '../bots/bot-decisions';
 import * as gameManager from '../managers/game-manager';
@@ -18,20 +17,12 @@ interface BotTurn {
 
 function pendingTurn(game: AnyGameState): BotTurn | null {
   if (roomManager.getRoomInfo(game.roomCode)?.status !== 'playing' || game.phase === 'scoring') return null;
-  // The existing durable forced-pass scheduler owns these turns, including bot seats.
-  if (game.gameType === 'bigtwo' && game.pendingAutoPass) return null;
-  // Simultaneous arrangements are submitted one bot at a time, each after its own thinking delay.
+  // A separate durable scheduler owns forced turns, including bot seats.
+  if (gameManager.isForcedActionPending(game)) return null;
   const automated = (seat: GameSeat): boolean => Boolean(gamePlayer(game, seat)?.isBot || game.autoPlaySeats?.includes(seat));
-  const seats = occupiedSeats(game.players);
-  const seat = game.gameType === 'chinesepoker'
-    ? seats.find((pending) => game.arrangements[pending as keyof typeof game.arrangements] === null && automated(pending))
-    // Blackjack bets work the same way, while playing turns pass from seat to seat.
-    : game.gameType === 'blackjack' && game.phase === 'betting'
-      ? seats.find((pending) => game.bets[pending] === null && pending !== game.dealerSeat
-        && bjSitsIn(game.chips[pending]) && automated(pending))
-    : game.gameType === 'napoleon' && game.phase === 'reviewing'
-      ? seats.find((pending) => pending !== game.contract?.napoleon && !game.reviewed.includes(pending) && automated(pending))
-    : getTurnSeat(game);
+  // Simultaneous decisions are submitted one bot at a time, each after its own thinking delay.
+  const owing = gameManager.getOwingSeats(game);
+  const seat = owing ? owing.find(automated) : getTurnSeat(game);
   if (!seat || !automated(seat)) return null;
   return { seat, key: `${game.id}:${game.phase}:${game.log.length}:${seat}` };
 }

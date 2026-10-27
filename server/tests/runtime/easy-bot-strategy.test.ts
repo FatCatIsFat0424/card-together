@@ -17,8 +17,7 @@ import type {
 import { createDeck, shuffleDeck } from '../../src/engine/deck';
 import { createBiddingState } from '../../src/engine/bidding';
 import { createPlayingState } from '../../src/engine/playing';
-import { getEasyBotAction } from '../../src/bots/easy-strategy';
-import { getBotAction } from '../../src/bots/bot-decisions';
+import { getBotAction, getEasyBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import * as bridge from '../../src/managers/games/bridge-game';
 import * as bigtwo from '../../src/managers/games/bigtwo-game';

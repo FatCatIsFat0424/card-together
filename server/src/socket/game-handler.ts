@@ -1,6 +1,7 @@
 import { roomSeatInfo } from '@shared/rules/seats';
 import { isCompassSeat } from '@shared/rules/seats';
-import { BID_SUIT_ORDER, GAME_SEAT_ORDER, NAPOLEON_MAX_PLAYERS } from '@shared/constants';
+import { BID_SUIT_ORDER, GAME_SEAT_ORDER } from '@shared/constants';
+import { GAME_DEFINITIONS } from '@shared/games/registry';
 import type {
   BidAction, BidSuit, BlackjackAction, BlackjackDealerAction, Card, ChinesePokerArrangement, HoldemAction, GameSeat,
   NapoleonAction, NapoleonBidLevel, NapoleonCard, NapoleonSummon, Seat, Suit,
@@ -48,7 +49,7 @@ function parseHoldemAction(value: unknown): HoldemAction | null {
 const NAPOLEON_SUITS: readonly unknown[] = ['clubs', 'diamonds', 'hearts', 'spades'];
 const NAPOLEON_SUMMONS: readonly unknown[] = ['secretary', 'bigJoker', 'smallJoker'];
 /** The most cards any Napoleon exchange returns: the six-player table. */
-const NAPOLEON_MAX_DISCARDS = napoleonDealSize(NAPOLEON_MAX_PLAYERS).kitty;
+const NAPOLEON_MAX_DISCARDS = napoleonDealSize(GAME_DEFINITIONS.napoleon.seats.maxPlayers).kitty;
 
 function parseNapoleonCard(value: unknown): NapoleonCard | null {
   if (!isNapoleonCard(value)) return null;

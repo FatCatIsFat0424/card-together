@@ -10,7 +10,7 @@ import { createDeck } from '../../src/engine/deck';
 import * as blackjack from '../../src/managers/games/blackjack-game';
 import * as gameManager from '../../src/managers/game-manager';
 import * as roomManager from '../../src/managers/room-manager';
-import { blackjackDealerDefault } from '../../src/runtime/automated-action';
+import { blackjackDealerDefault } from '../../src/bots/fallback-actions';
 import { isRuntimeSnapshot } from '../../src/runtime/validate';
 import type { RuntimeSnapshot } from '../../src/runtime/types';
 

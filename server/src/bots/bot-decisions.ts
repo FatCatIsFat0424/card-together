@@ -4,17 +4,7 @@ import type {
   BotDifficulty, GameSeat,
 } from '@shared/types';
 import type { NnChoice } from '@shared/rules/ninetynine';
-import { getBridgeBotAction } from './bridge-strategy';
-import { getBigTwoBotAction } from './bigtwo-strategy';
-import { getRedPointsBotAction } from './redpoints-strategy';
-import { getNinetyNineBotAction } from './ninetynine-strategy';
-import { getSevensBotAction } from './sevens-strategy';
-import { getChinesePokerBotAction } from './chinesepoker-strategy';
-import { getLiarsDeckBotAction } from './liarsdeck-strategy';
-import { getBlackjackBotAction } from './blackjack-strategy';
-import { getHoldemBotAction } from './holdem-strategy';
-import { getNapoleonBotAction } from './napoleon-strategy';
-import { getEasyBotAction } from './easy-strategy';
+import { gameBot } from './bot-registry';
 
 export type BotAction =
   | { readonly type: 'bridge-redeal'; readonly accept: boolean }
@@ -42,21 +32,13 @@ export function getBotAction(
   difficulty: BotDifficulty = 'hard',
 ): BotAction | null {
   if (visible.phase === 'scoring') return null;
-  // The Napoleon strategy implements both difficulties itself.
-  if (visible.gameType === 'napoleon') {
-    const action = getNapoleonBotAction(visible, random, difficulty);
-    return action ? { type: 'napoleon-action', action } : null;
-  }
-  if (difficulty === 'easy') return getEasyBotAction(visible, random);
-  switch (visible.gameType) {
-    case 'bridge': return getBridgeBotAction(visible, random);
-    case 'bigtwo': return getBigTwoBotAction(visible, random);
-    case 'redpoints': return getRedPointsBotAction(visible, random);
-    case 'ninetynine': return getNinetyNineBotAction(visible, random);
-    case 'sevens': return getSevensBotAction(visible, random);
-    case 'chinesepoker': return getChinesePokerBotAction(visible, random);
-    case 'liarsdeck': return getLiarsDeckBotAction(visible, random);
-    case 'blackjack': return getBlackjackBotAction(visible, random);
-    case 'holdem': return getHoldemBotAction(visible, random);
-  }
+  const bot = gameBot(visible.gameType);
+  return difficulty === 'easy' ? bot.easy(visible, random) : bot.hard(visible, random);
+}
+
+/** Basic decisions use only the current legal choices, without opponent inference or lookahead. */
+export function getEasyBotAction(
+  visible: PlayerVisibleGameState, random: () => number = Math.random,
+): BotAction | null {
+  return getBotAction(visible, random, 'easy');
 }

@@ -1,11 +1,11 @@
 import { gamePlayer } from '@shared/rules/seats';
-import type { AnyGameState, GameClock, RoomCode } from '@shared/types';
+import type { AnyGameState, GameClock, PlayerVisibleGameState, RoomCode } from '@shared/types';
 import { getBotAction } from '../bots/bot-decisions';
+import type { BotAction } from '../bots/bot-decisions';
+import { gameBot } from '../bots/bot-registry';
 import * as gameManager from '../managers/game-manager';
 import * as roomManager from '../managers/room-manager';
-import {
-  blackjackDealerDefault, createFailureTracker, holdemPassiveAction, performAutomatedTurn,
-} from './automated-action';
+import { createFailureTracker, performAutomatedTurn } from './automated-action';
 import type { RuntimeCoordinator } from './coordinator';
 
 type Turn = NonNullable<GameClock['turn']>;
@@ -14,7 +14,14 @@ function pendingTurn(game: AnyGameState): Turn | null {
   const turn = game.clock?.turn;
   return turn && game.phase !== 'scoring' && !gamePlayer(game, turn.seat)?.isBot
     && roomManager.getRoomInfo(game.roomCode)?.status === 'playing'
-    && !(game.gameType === 'bigtwo' && game.pendingAutoPass) ? turn : null;
+    && !gameManager.isForcedActionPending(game) ? turn : null;
+}
+
+/** A human whose turn clock expired gets the game's timeout default, or else the hard strategy. */
+function timeoutAction(visible: PlayerVisibleGameState): BotAction | null {
+  const strategy = (): BotAction | null => getBotAction(visible);
+  const timeout = gameBot(visible.gameType).turnTimeout;
+  return timeout ? timeout(visible, { isBot: false, strategy }) : strategy();
 }
 
 /** Restore durable deadlines; each expiry performs only the currently committed decision. */
@@ -48,12 +55,7 @@ export async function startTurnTimers(
           const pending = current && pendingTurn(current);
           if (!current || current.id !== game.id || pending?.id !== turn.id
             || Date.now() < pending.deadline || gameManager.isPresentationActive(code)) return;
-          // A Hold'em player who runs out of time checks or folds rather than letting a bot stake their chips,
-          // and a Blackjack player dealer plays the house rule rather than the bot's judgement.
-          performAutomatedTurn(code, turn.seat, failures.count(code, turn.id), (visible) => visible.gameType === 'holdem'
-            ? holdemPassiveAction(visible)
-            : visible.gameType === 'blackjack' && visible.dealerSeat === turn.seat ? blackjackDealerDefault(visible)
-              : getBotAction(visible));
+          performAutomatedTurn(code, turn.seat, failures.count(code, turn.id), timeoutAction);
           if (current.clock && gameManager.getGameState(code) === current) current.clock = { ...current.clock,
             lastTimeout: { seat: turn.seat, at: Date.now() } };
           changed = true;

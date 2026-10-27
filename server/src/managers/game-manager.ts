@@ -3,45 +3,38 @@
 import { advanceGameClock, initializeGameClock } from './game-clock';
 import { randomUUID } from 'node:crypto';
 import { getPresentationEndsAt, PRESENTATION_TIMING_VERSION } from '@shared/game-presentation';
-import { FLEXIBLE_SEAT_GAMES, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
+import { gameDefinition } from '@shared/games/registry';
 import type {
   AnyGameState,
   BidAction,
-  BigTwoGameState,
   BlackjackAction,
   BlackjackDealerAction,
-  BlackjackGameState,
   BlackjackOptions,
-  BridgeGameState,
   Card,
   ChinesePokerArrangement,
-  ChinesePokerGameState,
   GameType,
   HoldemAction,
-  HoldemGameState,
-  LiarsDeckGameState,
+  MatchResult,
   NapoleonAction,
-  NapoleonGameState,
   NapoleonOptions,
-  NinetyNineGameState,
   NinetyNineOptions,
   ObserverRole,
   PlayerInfo,
   PlayerVisibleGameState,
-  RedPointsGameState,
   RoomCode,
   GameSeat, Seat,
-  SevensGameState,
   SevensOptions,
   TimeControl,
 } from '@shared/types';
 import type { NnChoice } from '@shared/rules/ninetynine';
-import { cpArrangeSeconds } from '@shared/rules/chinesepoker';
-import { bjBetSeconds, bjSitsIn } from '@shared/rules/blackjack';
 import { napoleonReviewSeconds } from '@shared/rules/napoleon';
-import { gamePlayer, isCompassSeat, maxPlayers, minPlayers, occupiedSeats } from '@shared/rules/seats';
+import { gamePlayer, isCompassSeat, occupiedSeats } from '@shared/rules/seats';
 import { normalizeFlexibleGame } from '@shared/game-seat-compat';
+import { isFullTable } from './games/game-adapter';
+import type { SharedDeadlineWindow } from './games/game-adapter';
+import { prepareAutoPass } from './games/bigtwo-adapter';
+import { allGameAdapters, gameAdapter } from './games/registry';
 import * as bridge from './games/bridge-game';
 import * as bigtwo from './games/bigtwo-game';
 import * as redpoints from './games/redpoints-game';
@@ -71,16 +64,9 @@ function presentAction(roomCode: RoomCode, operation: () => Result): Result {
   const game = getGameState(roomCode);
   if (result.success && game) {
     game.presentation = { id: randomUUID(), startedAt: Date.now(), logStart, timingVersion: PRESENTATION_TIMING_VERSION };
-    if (game.gameType === 'bigtwo') bigtwo.prepareAutoPass(roomCode, getPresentationEndsAt(game), autoPassMaxDelay(game));
-    // The next hand's betting window starts only after the settlement has been shown.
-    if (game.gameType === 'blackjack') blackjack.openBetting(roomCode, getPresentationEndsAt(game));
+    gameAdapter(game.gameType).afterPresentation?.(game, getPresentationEndsAt(game));
   }
   return result;
-}
-
-/** Keeps a forced pass inside the public turn allowance so it never looks like a timeout. */
-function autoPassMaxDelay(game: AnyGameState): number {
-  return Math.min(bigtwo.AUTO_PASS_MAX_DELAY_MS, (game.clock?.settings ?? DEFAULT_TIME_CONTROL).baseSeconds * 1000);
 }
 
 function timedAction(roomCode: RoomCode, seat: GameSeat, operation: () => Result, automatic: boolean): Result {
@@ -93,24 +79,13 @@ function timedAction(roomCode: RoomCode, seat: GameSeat, operation: () => Result
   if (!automatic && clock?.turn?.seat === seat && now >= clock.turn.deadline) {
     return { success: false, reason: 'Your turn has timed out. Please wait for the automatic action.' };
   }
-  const hands = game?.hands;
-  const deals = game?.gameType === 'napoleon' ? napoleonDeals(game) : 0;
-  const redPointsPlay = game?.gameType === 'redpoints' && game.step === 'play';
-  const forced = game?.gameType === 'bigtwo' && game.pendingAutoPass?.seat === seat;
+  const clockAdvance = game && gameAdapter(game.gameType).clockBeforeAction?.(game, seat);
   const result = operation();
   if (result.success && game && clock) {
-    const sameTurn = redPointsPlay && game.gameType === 'redpoints' && game.step === 'flip-choose';
-    // Each Bridge redeal, Liar's Deck round, and Hold'em hand is a new deal, which refills reserves.
-    const redealt = ((game.gameType === 'bridge' || game.gameType === 'liarsdeck' || game.gameType === 'holdem')
-      && game.hands !== hands) || (game.gameType === 'napoleon' && napoleonDeals(game) !== deals);
+    const { sameTurn = false, redealt = false, forced = false } = clockAdvance?.(game) ?? {};
     advanceGameClock(game, clock, sameTurn, redealt, now, forced);
   }
   return result;
-}
-
-/** A Napoleon all-pass auction redeals, which refills reserves like a Bridge redeal. */
-function napoleonDeals(game: NapoleonGameState): number {
-  return game.log.filter((entry) => entry.type === 'deal').length;
 }
 
 export function initializeClock(roomCode: RoomCode, settings?: TimeControl): void {
@@ -121,10 +96,6 @@ export function initializeClock(roomCode: RoomCode, settings?: TimeControl): voi
 /** Missing games fall through to the game handlers, which report them. */
 function isGame(roomCode: RoomCode, gameType: GameType): boolean {
   return (getGameState(roomCode)?.gameType ?? gameType) === gameType;
-}
-
-function isFullTable(players: Partial<Record<Seat, PlayerInfo>>): players is Record<Seat, PlayerInfo> {
-  return SEAT_ORDER_CLOCKWISE.every((seat) => players[seat] !== undefined);
 }
 
 /** Developer-only Sevens deal chosen at startup; normal games otherwise. */
@@ -143,36 +114,24 @@ export function startGame(
   blackjackOptions?: BlackjackOptions,
   napoleonOptions?: NapoleonOptions,
 ): Result {
-  if (occupiedSeats(players).length < minPlayers(gameType)) {
+  const seats = gameDefinition(gameType).seats;
+  if (occupiedSeats(players).length < seats.minPlayers) {
     return { success: false, reason: 'Not enough players to start this game.' };
   }
-  if (!FLEXIBLE_SEAT_GAMES.includes(gameType)
-    && (!isFullTable(players) || occupiedSeats(players).length !== 4)) {
+  if (!seats.flexible && (!isFullTable(players) || occupiedSeats(players).length !== 4)) {
     return { success: false, reason: 'All four seats must be filled.' };
   }
-  if (occupiedSeats(players).length > maxPlayers(gameType)) {
+  if (occupiedSeats(players).length > seats.maxPlayers) {
     return { success: false, reason: 'Too many players for this game.' };
   }
   // A finished board of another game type may still be waiting for game:continue.
   removeGame(roomCode);
-  if (gameType === 'holdem') holdem.startGame(roomCode, players);
-  else if (gameType === 'napoleon') napoleon.startGame(roomCode, players, napoleonOptions);
-  else if (gameType === 'blackjack') {
-    blackjack.startGame(roomCode, players, bjBetSeconds((settings ?? DEFAULT_TIME_CONTROL).baseSeconds) * 1000,
-      undefined, blackjackOptions);
-  } else if (gameType === 'ninetynine') ninetynine.startGame(roomCode, players, undefined, undefined, ninetyNineOptions);
-  else if (!isFullTable(players)) return { success: false, reason: 'All four seats must be filled.' };
-  else if (gameType === 'bigtwo') bigtwo.startGame(roomCode, players);
-  else if (gameType === 'redpoints') redpoints.startGame(roomCode, players);
-  else if (gameType === 'sevens') sevens.startGame(roomCode, players, undefined, sevensOptions);
-  else if (gameType === 'liarsdeck') liarsdeck.startGame(roomCode, players);
-  else if (gameType === 'chinesepoker') {
-    const { baseSeconds, bankSeconds } = settings ?? DEFAULT_TIME_CONTROL;
-    chinesepoker.startGame(roomCode, players, cpArrangeSeconds(baseSeconds, bankSeconds) * 1000);
-  } else bridge.startGame(roomCode, players);
+  const adapter = gameAdapter(gameType);
+  const started = adapter.start({ roomCode, players, settings: settings ?? DEFAULT_TIME_CONTROL,
+    options: { sevensOptions, ninetyNineOptions, blackjackOptions, napoleonOptions } });
+  if (!started.success) return started;
   const game = getGameState(roomCode);
-  // Liar's Deck opens by revealing the first round's table card, Hold'em by dealing the first hand.
-  if (game?.phase === 'scoring' || game?.gameType === 'liarsdeck' || game?.gameType === 'holdem') {
+  if (game?.phase === 'scoring' || (game && adapter.presentsOpening)) {
     game.presentation = { id: randomUUID(), startedAt: Date.now(), logStart: 0, timingVersion: PRESENTATION_TIMING_VERSION };
   }
   if (game) initializeGameClock(game, settings);
@@ -200,21 +159,16 @@ export function leaveEarly(roomCode: RoomCode, seat: GameSeat): { success: boole
 }
 
 export function getPlayerVisibleState(roomCode: RoomCode, seat: GameSeat): PlayerVisibleGameState | null {
-  if (!isCompassSeat(seat) && !FLEXIBLE_SEAT_GAMES.includes(getGameState(roomCode)?.gameType ?? 'bridge')) return null;
-  const compass = isCompassSeat(seat) ? seat : 'N';
-  const visible = bridge.getPlayerVisibleState(roomCode, compass) ?? bigtwo.getPlayerVisibleState(roomCode, compass)
-    ?? redpoints.getPlayerVisibleState(roomCode, compass) ?? ninetynine.getPlayerVisibleState(roomCode, seat)
-    ?? sevens.getPlayerVisibleState(roomCode, compass) ?? chinesepoker.getPlayerVisibleState(roomCode, compass)
-    ?? liarsdeck.getPlayerVisibleState(roomCode, compass) ?? blackjack.getPlayerVisibleState(roomCode, seat)
-    ?? holdem.getPlayerVisibleState(roomCode, seat) ?? napoleon.getPlayerVisibleState(roomCode, seat);
-  if (!visible) return null;
   const game = getGameState(roomCode);
+  if (!game || (!isCompassSeat(seat) && !gameDefinition(game.gameType).seats.flexible)) return null;
+  const visible = gameAdapter(game.gameType).getPlayerVisibleState(roomCode, seat);
+  if (!visible) return null;
   const serverNow = Date.now();
   return { ...visible,
-    autoPlay: game?.autoPlaySeats?.includes(seat) ?? false,
-    earlyLeaveSeats: [...game?.earlyLeaveSeats ?? []],
-    ...(game?.presentation ? { presentation: { ...game.presentation, serverNow } } : {}),
-    ...(game?.clock ? { clock: { ...game.clock, serverNow } } : {}),
+    autoPlay: game.autoPlaySeats?.includes(seat) ?? false,
+    earlyLeaveSeats: [...game.earlyLeaveSeats ?? []],
+    ...(game.presentation ? { presentation: { ...game.presentation, serverNow } } : {}),
+    ...(game.clock ? { clock: { ...game.clock, serverNow } } : {}),
   };
 }
 
@@ -222,22 +176,9 @@ export function getPlayerVisibleState(roomCode: RoomCode, seat: GameSeat): Playe
 function withGodView(
   visible: PlayerVisibleGameState, game: AnyGameState, observer: ObserverRole,
 ): PlayerVisibleGameState {
-  if (visible.gameType === 'blackjack' && game.gameType === 'blackjack') {
-    return game.hole ? { ...visible, observer, observedHole: game.hole } : { ...visible, observer };
-  }
-  if (visible.gameType === 'blackjack' || game.gameType === 'blackjack') return { ...visible, observer };
-  if (visible.gameType === 'sevens' && game.gameType === 'sevens') {
-    return { ...visible, observer, observedHands: game.hands, observedCovered: game.covered };
-  }
-  if (visible.gameType === 'liarsdeck' && game.gameType === 'liarsdeck') {
-    return { ...visible, observer, observedHands: game.hands };
-  }
-  if (visible.gameType === 'liarsdeck' || game.gameType === 'liarsdeck') return { ...visible, observer };
-  if (visible.gameType === 'napoleon' && game.gameType === 'napoleon') {
-    return { ...visible, observer, ...napoleon.getObserverView(game) };
-  }
-  if (visible.gameType === 'napoleon' || game.gameType === 'napoleon') return { ...visible, observer };
-  return { ...visible, observer, observedHands: game.hands };
+  // Both come from the same room, so the view belongs to the game's own type.
+  return visible.gameType === game.gameType
+    ? gameAdapter(game.gameType).withObserverView(visible, game, observer) : { ...visible, observer };
 }
 
 /**
@@ -255,17 +196,7 @@ export function getRecipientVisibleState(roomCode: RoomCode, seat: GameSeat | nu
 
 /** Log index of the entry that knocked the seat out of the match for good, or -1. */
 function eliminationIndex(game: AnyGameState, seat: GameSeat): number {
-  switch (game.gameType) {
-    case 'ninetynine': return game.log.findIndex((entry) => entry.type === 'eliminated' && entry.seat === seat);
-    case 'liarsdeck': return game.log.findIndex((entry) => entry.type === 'shot' && entry.seat === seat
-      && !entry.survived);
-    case 'holdem': return game.log.findIndex((entry) => entry.type === 'award' && entry.eliminated.includes(seat));
-    // Chips only grow by betting, so a seat that cannot cover the minimum never plays again. A
-    // player dealer can still win chips back when its deal comes round, so nobody is out for good.
-    case 'blackjack': return !game.players[seat] || game.dealerSeat ? -1
-      : game.log.findIndex((entry) => entry.type === 'settle' && !bjSitsIn(entry.chips[seat]));
-    default: return -1;
-  }
+  return gameAdapter(game.gameType).eliminationIndex?.(game, seat) ?? -1;
 }
 
 /**
@@ -282,24 +213,16 @@ export function isEliminationShown(roomCode: RoomCode, seat: GameSeat): boolean 
 }
 
 export function getGameState(roomCode: RoomCode): AnyGameState | null {
-  return bridge.getGameState(roomCode) ?? bigtwo.getGameState(roomCode) ?? redpoints.getGameState(roomCode)
-    ?? ninetynine.getGameState(roomCode) ?? sevens.getGameState(roomCode) ?? chinesepoker.getGameState(roomCode)
-    ?? liarsdeck.getGameState(roomCode) ?? blackjack.getGameState(roomCode)
-    ?? holdem.getGameState(roomCode) ?? napoleon.getGameState(roomCode);
+  for (const adapter of allGameAdapters()) {
+    const game = adapter.getGameState(roomCode);
+    if (game) return game;
+  }
+  return null;
 }
 
 /** Ends a game without a match record. */
 export function abortGame(roomCode: RoomCode): void {
-  bridge.abortGame(roomCode);
-  bigtwo.abortGame(roomCode);
-  redpoints.abortGame(roomCode);
-  ninetynine.abortGame(roomCode);
-  sevens.abortGame(roomCode);
-  chinesepoker.abortGame(roomCode);
-  liarsdeck.abortGame(roomCode);
-  blackjack.abortGame(roomCode);
-  holdem.abortGame(roomCode);
-  napoleon.abortGame(roomCode);
+  for (const adapter of allGameAdapters()) adapter.abortGame(roomCode);
 }
 
 export function removeGame(roomCode: RoomCode): void {
@@ -344,23 +267,19 @@ export function hasActiveGame(roomCode: RoomCode): boolean {
 }
 
 export function exportGames(): AnyGameState[] {
-  return [...bridge.exportGames(), ...bigtwo.exportGames(), ...redpoints.exportGames(),
-    ...ninetynine.exportGames(), ...sevens.exportGames(), ...chinesepoker.exportGames(), ...liarsdeck.exportGames(),
-    ...blackjack.exportGames(), ...holdem.exportGames(), ...napoleon.exportGames()];
+  return allGameAdapters().flatMap((adapter) => adapter.exportGames());
 }
 
 export function restoreGames(records: AnyGameState[]): void {
   records = records.map(normalizeFlexibleGame);
-  bridge.restoreGames(records.filter((game): game is BridgeGameState => game.gameType === 'bridge'));
-  bigtwo.restoreGames(records.filter((game): game is BigTwoGameState => game.gameType === 'bigtwo'));
-  redpoints.restoreGames(records.filter((game): game is RedPointsGameState => game.gameType === 'redpoints'));
-  ninetynine.restoreGames(records.filter((game): game is NinetyNineGameState => game.gameType === 'ninetynine'));
-  sevens.restoreGames(records.filter((game): game is SevensGameState => game.gameType === 'sevens'));
-  chinesepoker.restoreGames(records.filter((game): game is ChinesePokerGameState => game.gameType === 'chinesepoker'));
-  liarsdeck.restoreGames(records.filter((game): game is LiarsDeckGameState => game.gameType === 'liarsdeck'));
-  blackjack.restoreGames(records.filter((game): game is BlackjackGameState => game.gameType === 'blackjack'));
-  holdem.restoreGames(records.filter((game): game is HoldemGameState => game.gameType === 'holdem'));
-  napoleon.restoreGames(records.filter((game): game is NapoleonGameState => game.gameType === 'napoleon'));
+  for (const adapter of allGameAdapters()) {
+    adapter.restoreGames(records.filter((game) => game.gameType === adapter.gameType));
+  }
+}
+
+/** The durable history record of a finished match, or null while it is still being played. */
+export function getMatchResult(game: AnyGameState): MatchResult | null {
+  return gameAdapter(game.gameType).matchResult(game);
 }
 
 export function handleRedealResponse(roomCode: RoomCode, seat: Seat, accept: boolean, automatic = false): Result {
@@ -438,13 +357,6 @@ export function handleNapoleonAction(roomCode: RoomCode, seat: GameSeat, action:
     ? presentAction(roomCode, () => napoleon.act(roomCode, seat, action, reviewMs)) : WRONG_GAME, automatic);
 }
 
-/** Seats that still owe an acknowledgment of the public discards once the shared deadline has passed. */
-export function overdueNapoleonReviewSeats(roomCode: RoomCode, gameId: string, now = Date.now()): GameSeat[] {
-  const game = napoleon.getGameState(roomCode);
-  if (!game || game.id !== gameId || game.reviewDeadline === null || now < game.reviewDeadline) return [];
-  return napoleon.pendingReviewSeats(game);
-}
-
 /**
  * Seats bet simultaneously against one shared deadline. The final bet deals a new hand, which
  * refills every reserve and starts the first player's turn after the deal presentation.
@@ -461,13 +373,6 @@ export function handleBlackjackBet(roomCode: RoomCode, seat: GameSeat, amount: n
   return result;
 }
 
-/** Seats that still owe a bet once the shared betting deadline has passed. */
-export function overdueBlackjackSeats(roomCode: RoomCode, gameId: string, now = Date.now()): GameSeat[] {
-  const game = blackjack.getGameState(roomCode);
-  if (!game || game.id !== gameId || game.betDeadline === null || now < game.betDeadline) return [];
-  return blackjack.pendingBetSeats(game);
-}
-
 /**
  * Seats arrange simultaneously against one shared deadline, so the single-seat turn clock
  * does not apply; the final submission starts the showdown presentation.
@@ -482,18 +387,36 @@ export function handleChinesePokerArrange(
   return presentAction(roomCode, () => chinesepoker.arrange(roomCode, seat, arrangement, automatic));
 }
 
-/** Seats that still owe an arrangement once the shared deadline has passed. */
-export function overdueChinesePokerSeats(roomCode: RoomCode, gameId: string, now = Date.now()): Seat[] {
-  const game = chinesepoker.getGameState(roomCode);
-  if (!game || game.id !== gameId || game.phase !== 'arranging' || now < game.arrangeDeadline) return [];
-  return chinesepoker.pendingSeats(game);
+/**
+ * Seats that still owe a simultaneous decision once the game's shared deadline has passed:
+ * Chinese Poker arrangements, Blackjack bets, and Napoleon discard reviews.
+ */
+export function overdueSharedDeadlineSeats(roomCode: RoomCode, gameId: string, now = Date.now()): GameSeat[] {
+  const game = getGameState(roomCode);
+  if (!game || game.id !== gameId) return [];
+  const rules = gameAdapter(game.gameType).sharedDeadline;
+  const window = rules?.window(game);
+  return rules && window && now >= window.deadline ? [...rules.pendingSeats(game)] : [];
+}
+
+/** The game's open shared-deadline window, or null while turns pass from seat to seat. */
+export function getSharedDeadlineWindow(game: AnyGameState): SharedDeadlineWindow | null {
+  return gameAdapter(game.gameType).sharedDeadline?.window(game) ?? null;
+}
+
+/** Seats that owe a simultaneous decision now in seat order, or null while one seat holds the turn. */
+export function getOwingSeats(game: AnyGameState): readonly GameSeat[] | null {
+  return gameAdapter(game.gameType).sharedDeadline?.owingSeats(game) ?? null;
+}
+
+/** A separate durable scheduler (the Big Two forced pass) owns the current turn. */
+export function isForcedActionPending(game: AnyGameState): boolean {
+  return gameAdapter(game.gameType).forcedActionPending?.(game) ?? false;
 }
 
 /** Initializes legacy turns and removes random waits from restored bot passes. */
 export function preparePendingAutoPasses(): void {
-  for (const game of bigtwo.exportGames()) {
-    bigtwo.prepareAutoPass(game.roomCode, getPresentationEndsAt(game), autoPassMaxDelay(game));
-  }
+  for (const game of bigtwo.exportGames()) prepareAutoPass(game, getPresentationEndsAt(game));
 }
 
 export function handlePendingAutoPass(roomCode: RoomCode, gameId: string, pendingId: string): Result {

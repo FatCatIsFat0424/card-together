@@ -12,12 +12,12 @@ import type {
   RoomReplaySession, RoomSeatTarget, RoomStatus, Seat, SeatInfo, SeatMap, SevensOptions, TimeControl,
 } from '@shared/types';
 import {
-  ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD, EXPANDABLE_ROOM_GAMES,
-  FLEXIBLE_SEAT_GAMES, MAX_ROOM_MEMBERS, MAX_SPECTATORS,
+  ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD, MAX_ROOM_MEMBERS, MAX_SPECTATORS,
 } from '@shared/constants';
 import type { PersistedRoom } from '../runtime/types';
 import { generateRoomCode } from '../utils/id-generator';
 import { botNickname, isCompassSeat, maxPlayers, roomPlayers, roomCanStart, roomSeatInfo } from '@shared/rules/seats';
+import { gameDefinition } from '@shared/games/registry';
 import type { GameSeat } from '@shared/types';
 
 const rooms = new Map<RoomCode, PersistedRoom>();
@@ -136,7 +136,7 @@ function emptySeatCount(room: PersistedRoom): number {
  * including members leaving during a shared replay.
  */
 function tableChanged(room: PersistedRoom): void {
-  if (room.info.status !== 'playing' && FLEXIBLE_SEAT_GAMES.includes(room.info.gameType)) resetAllReady(room.info.code);
+  if (room.info.status !== 'playing' && gameDefinition(room.info.gameType).seats.flexible) resetAllReady(room.info.code);
 }
 
 export function addBot(code: RoomCode, playerId: string, seat: GameSeat, difficulty: BotDifficulty = 'hard'): Result {
@@ -348,7 +348,7 @@ function requireSeatManagement(code: RoomCode, playerId: string): Result {
   if (!room) return { success: false, reason: 'Room not found' };
   if (room.info.hostId !== playerId) return { success: false, reason: 'Only the host can manage seats.' };
   if (room.info.status !== 'waiting') return { success: false, reason: 'Cannot manage seats during game.' };
-  if (!EXPANDABLE_ROOM_GAMES.includes(room.info.gameType)) return { success: false, reason: 'This game uses four seats.' };
+  if (!gameDefinition(room.info.gameType).seats.expandable) return { success: false, reason: 'This game uses four seats.' };
   return { success: true };
 }
 
@@ -476,7 +476,7 @@ export function setGameType(code: RoomCode, playerId: string, gameType: GameType
   if (room.info.status !== 'waiting') return { success: false, reason: 'Game is in progress' };
   // Seats beyond the new game's player limit are removed together with their bots; humans must
   // vacate them first.
-  const additionalLimit = EXPANDABLE_ROOM_GAMES.includes(gameType) ? Math.max(0, maxPlayers(gameType) - 4) : 0;
+  const additionalLimit = gameDefinition(gameType).seats.expandable ? Math.max(0, maxPlayers(gameType) - 4) : 0;
   const removed = room.info.additionalSeats?.slice(additionalLimit) ?? [];
   if (removed.some((entry) => entry.player && !entry.player.isBot)) {
     return { success: false, reason: additionalLimit === 0

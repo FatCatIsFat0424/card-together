@@ -1,6 +1,8 @@
+// Easy bots decide from the current legal choices only, without opponent inference or lookahead.
+
 import type {
-  BlackjackVisibleState, BridgeVisibleState, Card, LiarsDeckVisibleState, NinetyNineVisibleState,
-  PlayerVisibleGameState,
+  BigTwoVisibleState, BlackjackVisibleState, BridgeVisibleState, Card, ChinesePokerVisibleState, HoldemVisibleState,
+  LiarsDeckVisibleState, NinetyNineVisibleState, RedPointsVisibleState, SevensVisibleState,
 } from '@shared/types';
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { identifyCombo, legalPlays } from '@shared/rules/bigtwo';
@@ -12,13 +14,12 @@ import { NN_MAX, nnApply, nnRequiresChoice } from '@shared/rules/ninetynine';
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { rpPairOptions } from '@shared/rules/redpoints';
 import type { BotAction } from './bot-decisions';
-import { getNapoleonBotAction } from './napoleon-strategy';
 
 function pick<T>(options: readonly T[], random: () => number): T | null {
   return options.length === 0 ? null : options[Math.min(options.length - 1, Math.floor(random() * options.length))];
 }
 
-function bridgeAction(visible: BridgeVisibleState, random: () => number): BotAction | null {
+export function easyBridgeAction(visible: BridgeVisibleState, random: () => number): BotAction | null {
   if (visible.phase === 'redeal_pending' && visible.redealPendingSeat === visible.mySeat) {
     return { type: 'bridge-redeal', accept: false };
   }
@@ -39,7 +40,7 @@ function bridgeAction(visible: BridgeVisibleState, random: () => number): BotAct
   return card ? { type: 'bridge-play', card } : null;
 }
 
-function ninetyNineAction(visible: NinetyNineVisibleState, random: () => number): BotAction | null {
+export function easyNinetyNineAction(visible: NinetyNineVisibleState, random: () => number): BotAction | null {
   if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat
     || visible.eliminated.includes(visible.mySeat)) return null;
   const opponents = (visible.seats ?? SEAT_ORDER_CLOCKWISE)
@@ -62,7 +63,7 @@ function ninetyNineAction(visible: NinetyNineVisibleState, random: () => number)
   return pick(options, random);
 }
 
-function liarsDeckAction(visible: LiarsDeckVisibleState, random: () => number): BotAction | null {
+export function easyLiarsDeckAction(visible: LiarsDeckVisibleState, random: () => number): BotAction | null {
   if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat
     || visible.eliminated.includes(visible.mySeat)) return null;
   if (ldMustChallenge(visible.mySeat, visible.handCounts, visible.lastPlay)
@@ -81,7 +82,7 @@ function liarsDeckAction(visible: LiarsDeckVisibleState, random: () => number): 
   return { type: 'liarsdeck-play', cardIds };
 }
 
-function blackjackAction(visible: BlackjackVisibleState): BotAction | null {
+export function easyBlackjackAction(visible: BlackjackVisibleState): BotAction | null {
   const dealing = visible.dealerSeat === visible.mySeat;
   if (visible.phase === 'betting') {
     return !dealing && visible.myBet === null && bjSitsIn(visible.chips[visible.mySeat])
@@ -100,55 +101,43 @@ function blackjackAction(visible: BlackjackVisibleState): BotAction | null {
   return { type: 'blackjack-action', action };
 }
 
-/** Basic decisions use only the current legal choices, without opponent inference or lookahead. */
-export function getEasyBotAction(
-  visible: PlayerVisibleGameState, random: () => number = Math.random,
-): BotAction | null {
-  if (visible.phase === 'scoring') return null;
-  switch (visible.gameType) {
-    case 'bridge': return bridgeAction(visible, random);
-    case 'bigtwo': {
-      if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat
-        || visible.lockedSeats.includes(visible.mySeat)) return null;
-      const previous = visible.lastPlay ? identifyCombo(visible.lastPlay.cards) : null;
-      const play = pick(legalPlays(visible.myHand, previous, visible.firstPlay), random);
-      return play ? { type: 'bigtwo-play', cards: play.cards } : previous ? { type: 'bigtwo-pass' } : null;
-    }
-    case 'redpoints': {
-      if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat) return null;
-      if (visible.step === 'flip-choose') {
-        const capture = visible.pendingFlip ? pick(rpPairOptions(visible.pendingFlip, visible.table), random) : null;
-        return capture ? { type: 'redpoints-flip', capture } : null;
-      }
-      const card = pick(visible.myHand, random);
-      if (!card) return null;
-      const capture = pick(rpPairOptions(card, visible.table), random);
-      return { type: 'redpoints-play', card, ...(capture ? { capture } : {}) };
-    }
-    case 'ninetynine': return ninetyNineAction(visible, random);
-    case 'sevens': {
-      if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat) return null;
-      const card = pick(visible.validCards.length > 0 ? visible.validCards : visible.myHand, random);
-      return card ? { type: visible.validCards.length > 0 ? 'sevens-play' : 'sevens-cover', card } : null;
-    }
-    case 'chinesepoker': {
-      if (visible.phase !== 'arranging' || visible.submitted[visible.mySeat] || visible.myArrangement) return null;
-      return { type: 'chinesepoker-arrange', arrangement: cpGreedyArrangement(visible.myHand) };
-    }
-    case 'liarsdeck': return liarsDeckAction(visible, random);
-    case 'blackjack': return blackjackAction(visible);
-    case 'holdem': {
-      if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat) return null;
-      const legal = heLegalActions(visible, visible.mySeat);
-      if (!legal) return null;
-      if (legal.check) return { type: 'holdem-action', action: { type: 'check' } };
-      const choice = random();
-      if (legal.raise && choice < 0.1) return { type: 'holdem-action', action: { type: 'raise', to: legal.raise.min } };
-      return { type: 'holdem-action', action: { type: legal.call > 0 && choice < 0.8 ? 'call' : 'fold' } };
-    }
-    case 'napoleon': {
-      const action = getNapoleonBotAction(visible, random, 'easy');
-      return action ? { type: 'napoleon-action', action } : null;
-    }
+export function easyBigTwoAction(visible: BigTwoVisibleState, random: () => number): BotAction | null {
+  if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat
+    || visible.lockedSeats.includes(visible.mySeat)) return null;
+  const previous = visible.lastPlay ? identifyCombo(visible.lastPlay.cards) : null;
+  const play = pick(legalPlays(visible.myHand, previous, visible.firstPlay), random);
+  return play ? { type: 'bigtwo-play', cards: play.cards } : previous ? { type: 'bigtwo-pass' } : null;
+}
+
+export function easyRedPointsAction(visible: RedPointsVisibleState, random: () => number): BotAction | null {
+  if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat) return null;
+  if (visible.step === 'flip-choose') {
+    const capture = visible.pendingFlip ? pick(rpPairOptions(visible.pendingFlip, visible.table), random) : null;
+    return capture ? { type: 'redpoints-flip', capture } : null;
   }
+  const card = pick(visible.myHand, random);
+  if (!card) return null;
+  const capture = pick(rpPairOptions(card, visible.table), random);
+  return { type: 'redpoints-play', card, ...(capture ? { capture } : {}) };
+}
+
+export function easySevensAction(visible: SevensVisibleState, random: () => number): BotAction | null {
+  if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat) return null;
+  const card = pick(visible.validCards.length > 0 ? visible.validCards : visible.myHand, random);
+  return card ? { type: visible.validCards.length > 0 ? 'sevens-play' : 'sevens-cover', card } : null;
+}
+
+export function easyChinesePokerAction(visible: ChinesePokerVisibleState): BotAction | null {
+  if (visible.phase !== 'arranging' || visible.submitted[visible.mySeat] || visible.myArrangement) return null;
+  return { type: 'chinesepoker-arrange', arrangement: cpGreedyArrangement(visible.myHand) };
+}
+
+export function easyHoldemAction(visible: HoldemVisibleState, random: () => number): BotAction | null {
+  if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat) return null;
+  const legal = heLegalActions(visible, visible.mySeat);
+  if (!legal) return null;
+  if (legal.check) return { type: 'holdem-action', action: { type: 'check' } };
+  const choice = random();
+  if (legal.raise && choice < 0.1) return { type: 'holdem-action', action: { type: 'raise', to: legal.raise.min } };
+  return { type: 'holdem-action', action: { type: legal.call > 0 && choice < 0.8 ? 'call' : 'fold' } };
 }

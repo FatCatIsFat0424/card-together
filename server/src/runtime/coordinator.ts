@@ -72,7 +72,8 @@ export async function createRuntimeCoordinator(repository: Pick<Repository, 'loa
         for (const game of gameManager.exportGames()) {
           // The final step is recorded before a completed match is archived below.
           recordReplayStep(game, previousGames.get(game.id));
-          if (game.result && roomManager.getRoomInfo(game.roomCode)?.status === 'playing') {
+          const result = gameManager.getMatchResult(game);
+          if (result && roomManager.getRoomInfo(game.roomCode)?.status === 'playing') {
             roomManager.setRoomStatus(game.roomCode, 'waiting');
             roomManager.resetAllReady(game.roomCode);
             completedGameIds.push(game.id);
@@ -85,7 +86,7 @@ export async function createRuntimeCoordinator(repository: Pick<Repository, 'loa
               id: game.id, roomCode: game.roomCode,
               // Empty seats of a Blackjack or Hold'em match are left out, matching the result's `seats`.
               accountIds: GAME_SEAT_ORDER.flatMap((seat) => gamePlayer(game, seat)?.id ?? []),
-              result: game.gameType === 'bridge' ? { ...game.result, gameType: 'bridge' } : game.result,
+              result,
               finishedAt: Date.now(),
               ...(replay ? { replay } : {}),
             });
