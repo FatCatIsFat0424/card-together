@@ -53,6 +53,7 @@ PORT=3002 HOST=127.0.0.1 npm run dev:server
 
 - **核取方塊**：使用 [AppCheckbox](../client/src/components/AppCheckbox.tsx)（MUI、主題變數、44px 點擊範圍）。標籤要與原生 input 關聯，並透過 `slotProps.input` 傳入 input 的無障礙屬性。
 - **字級與控制項**：token 定義在 [global.css](../client/src/styles/global.css)；內文 13–15 px，次要標籤最小 12 px。`px`／`rem` 的字級字面值小於 12 px 會讓檢查失敗；單一字元的徽章（如莊家 `D`）若確實放不下，可在同一行或上一行加註解 `single-glyph` 與理由。按鈕使用 [Button](../client/src/components/Button.tsx)（主要操作為 34 px 膠囊）、[IconButton](../client/src/components/IconButton.tsx)（20 px 圖示、40 px 點擊範圍）、[Tabs](../client/src/components/Tabs.tsx) 與 [Chip](../client/src/components/Chip.tsx)。
+- **密度與邊距**：頁面內容的外距一律用 `--page-inset`（桌機 24px，≤52rem 為 16px，手機與矮的橫向畫面為 12px），四邊相等，內距 12–16px。列表列約 44–52px：頭像 32px（`Avatar` 的 `row`）、名稱 14px、一行 12px 的次要文字；寬度允許時排成多欄（`repeat(auto-fill, minmax(…, 1fr))`），動作緊貼內容，超過兩個次要動作時收進 [OverflowMenu](../client/src/components/OverflowMenu.tsx)。置中對話框使用 [dialog.ts](../client/src/styles/dialog.ts)：`dialogPaperClass(size)` 與 `dialogParts` 讓四邊外距都是 `--dialog-inset`（16px，手機與矮橫向 12px）、高度上限為 `100dvh` 減去兩倍外距、寬度上限為 `100vw` 減去兩倍外距，標題與頁尾固定，內容在對話框內捲動；矮橫向時寬度撐滿到外距。用到 MUI `Dialog` 的非全螢幕元件都必須使用它（測試會檢查）。
 - **圖示**：使用 [AppIcon](../client/src/components/AppIcon.tsx)，搭配個別匯入的 `@mui/icons-material` SVG；圖示繼承文字大小與顏色。裝飾性圖示需要搭配控制項的無障礙名稱與已翻譯的狀態文字。
 - **自訂圖案**：在 Material Icons 沒有合適替代時，保留既有的花色、頭像、皇冠、骷髏、龍與左輪手槍圖案。
 - **動態效果**：尊重減少動態效果的偏好；沒有動畫時，呈現仍必須保留資訊與截止時間。

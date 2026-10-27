@@ -11,7 +11,7 @@
 
 | 方法與路徑 | 輸入 | 結果 |
 | --- | --- | --- |
-| `POST /api/auth/register` | `username, password, nickname?, color?, avatar?` | 201、帳號、工作階段 cookie |
+| `POST /api/auth/register` | `username, password, nickname?, color?` | 201、帳號、工作階段 cookie |
 | `POST /api/auth/login` | `username, password` | 帳號、工作階段 cookie |
 | `GET /api/auth/me` | — | 目前的帳號 |
 | `PATCH /api/auth/profile` | [個人檔案欄位](#個人檔案欄位) | 更新後的帳號；同步給已連線的玩家 |
@@ -53,7 +53,8 @@
 
 | 欄位 | 接受的值 |
 | --- | --- |
-| `nickname`、`color`、`avatar`、歷史紀錄可見度 | 經過驗證的個人檔案值（[儲存](storage.md#身分與工作階段)） |
+| `nickname`、`color`、歷史紀錄可見度 | 經過驗證的個人檔案值（[儲存](storage.md#身分與工作階段)） |
+| `avatar`（已停用） | 預設頭像預設值（`cat`、`fox`、`owl`、`bear`、`rabbit`、`panda`）已停用：用戶端不再傳送也不再顯示。伺服器仍接受這些值並保留已儲存的欄位，以相容既有帳號與舊用戶端；省略時保留原值，其他值（包括只供 bot 座位使用的 `bot`）回傳 400。沒有 `avatarImage` 的帳號一律顯示同一張預設頭像 |
 | `avatarImage`、`seatBackground`、`tableBackground`、`cardBack` | 已上傳的媒體 ID 或 null；`seatBackground` 使用 `background` 用途，並在房間的 `PlayerInfo` 中共享 |
 | `tableBackgroundOpacity`、`cardBackOpacity` | 整數百分比 20–100 |
 | `avatarBorder` | null（原始外框）或已擁有的目錄 ID；未擁有時回傳 403 |
