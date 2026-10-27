@@ -33,7 +33,7 @@ bash deploy/deploy.sh
 | `/opt/card-together` | 由 root 擁有的應用程式、相依套件、複製的 Node 執行檔 |
 | `/opt/card-together/www/card-together` | 對外提供的前端 |
 | `/etc/card-together/server.env` | 只有 root 可讀的執行環境設定 |
-| `/var/lib/card-together/` | `database.json`（切換到 SQLite 後為 `database.sqlite`）、`media/` 與 `replays/` |
+| `/var/lib/card-together/` | `database.json`（[切換到 SQLite](#切換到-sqlite)後為 `database.sqlite`）、`media/` 與 `replays/` |
 | `/var/backups/card-together/` | `deploy-*`、`frontend-*` 與每日的 `data/` 快照 |
 
 **systemd unit**（`card-together.service`）
@@ -224,6 +224,181 @@ sudo systemctl start card-together.service card-together-backup.timer
 4. 執行 `sudo systemctl daemon-reload`，測試並重新載入 Nginx，然後只啟動選定的服務。
 
 回復到改名前的應用程式時：它未被動過的資料庫只是 migration 前的快照，所以要先整合較新的狀態。
+
+已切換到 SQLite 時，要回到不支援 SQLite 的版本，先[回復到 JSON](#回復到-json)。
+
+## 切換到 SQLite
+
+正式環境目前使用 JSON。以下步驟把它切換到 SQLite（[儲存引擎](storage.md#儲存引擎)），**必須經過核准後才執行**。過程中服務會停止，玩家會斷線；請選在離峰時段並事先公告。
+
+**前置條件**
+
+- 包含[擁有者鎖定檔](storage.md#單一擁有者鎖定)、遷移與匯出工具的版本已經部署並健康運作；Node.js 為 24 以上（`.node-version`）。
+- 空間：SQLite 檔約為 JSON 的 **2.2 倍**。遷移工具要求狀態目錄的可用空間至少是 JSON 的 5 倍（匯入 transaction 會先寫入 WAL），完整備份需要再一份狀態目錄的大小；切換後每份每日快照都是完整的 SQLite 副本，14 份約為 14 × 2.2 × JSON 大小，加上媒體與回放的差異。先確認：
+
+  ```sh
+  sudo du -sh /var/lib/card-together /var/lib/card-together/database.json /var/backups/card-together
+  df -h /var/lib/card-together /var/backups/card-together
+  ```
+
+- 暫停自動部署與每日備份，避免途中重新啟動服務或複製到一半的狀態：
+
+  ```sh
+  sudo systemctl stop card-together-auto-deploy.timer card-together-backup.timer
+  systemctl is-active card-together-auto-deploy.service card-together-backup.service
+  ```
+
+  兩者都必須是 `inactive`；正在執行就等它結束。
+
+**步驟**
+
+1. 停止服務，並確認沒有寫入者：
+
+   ```sh
+   sudo systemctl stop card-together.service
+   systemctl is-active card-together.service
+   sudo ls -la /var/lib/card-together
+   ```
+
+   服務必須是 `inactive`，而且沒有 `database.json.lock`。
+
+2. 完整備份資料庫、媒體與回放（整個狀態目錄），並另外保存執行環境設定：
+
+   ```sh
+   stamp=$(date -u +%Y%m%dT%H%M%SZ)
+   sudo install -d -m 0700 /var/backups/card-together
+   sudo cp -a /var/lib/card-together "/var/backups/card-together/pre-sqlite-$stamp"
+   sudo cp -p /etc/card-together/server.env "/var/backups/card-together/pre-sqlite-$stamp.server.env"
+   sudo du -sh /var/lib/card-together "/var/backups/card-together/pre-sqlite-$stamp"
+   ```
+
+   同一顆磁碟上的備份不足以防範硬體故障；請再複製一份到另一台主機。
+
+3. 驗證 JSON（完整的啟動驗證，不寫入任何檔案）：
+
+   ```sh
+   sudo -u card-together sh -c 'cd /opt/card-together/server && ../node --import tsx src/database/sqlite-snapshot-cli.ts verify /var/lib/card-together/database.json'
+   ```
+
+   必須成功，`droppedRecordings` 應為空。記下 `collections`。
+
+4. 預覽遷移（不寫入）：
+
+   ```sh
+   sudo -u card-together sh -c 'cd /opt/card-together/server && ../node --import tsx src/database/migrate-sqlite-cli.ts /var/lib/card-together/database.json /var/lib/card-together/database.sqlite'
+   ```
+
+   確認 `collections` 與第 3 步相同、`availableBytes` 大於 `requiredBytes`，且 `droppedRecordings` 為空。
+
+5. 套用遷移：
+
+   ```sh
+   sudo -u card-together sh -c 'cd /opt/card-together/server && ../node --import tsx src/database/migrate-sqlite-cli.ts /var/lib/card-together/database.json /var/lib/card-together/database.sqlite --apply --writers-stopped'
+   ```
+
+   輸出必須是 `"mode": "applied"`，`verification` 包含 `"quickCheck": "ok"`、`"foreignKeyViolations": 0`、`"countsMatch": true`、`"readBack": true`。失敗時工具會刪除部分寫入的 SQLite 檔，JSON 不變；排除原因後從第 4 步重來，或直接回到第 8 步以 JSON 啟動。
+
+6. 比對數量：以同一個驗證器分別讀取兩個資料庫，兩行輸出必須完全相同；再確認大小約為 2.2 倍：
+
+   ```sh
+   for db in database.json database.sqlite; do
+     sudo -u card-together sh -c "cd /opt/card-together/server && ../node --import tsx src/database/sqlite-snapshot-cli.ts verify /var/lib/card-together/$db" \
+       | python3 -c 'import json, sys; print(json.dumps(json.load(sys.stdin)["collections"], sort_keys=True))'
+   done
+   sudo ls -l /var/lib/card-together/database.json /var/lib/card-together/database.sqlite
+   ```
+
+   第 5 步輸出的 `verification.tables` 也應與這些數量一致（`direct_messages`、`message_reads`、`friend_notifications`、`rewarded_games` 對應各自的 collection）。
+
+7. 切換執行環境設定：
+
+   ```sh
+   sudoedit /etc/card-together/server.env
+   sudo grep '^DATABASE_' /etc/card-together/server.env
+   ```
+
+   只保留這兩行（沒有 `DATABASE_ENGINE` 就加上）：
+
+   ```dotenv
+   DATABASE_ENGINE=sqlite
+   DATABASE_PATH=/var/lib/card-together/database.sqlite
+   ```
+
+8. 啟動服務：
+
+   ```sh
+   sudo systemctl start card-together.service
+   sudo journalctl -u card-together.service -n 50 --no-pager
+   curl --fail --show-error http://127.0.0.1:3001/health
+   curl --fail --show-error https://acserver.csie.org/card-together/health
+   sudo ls -l /var/lib/card-together
+   ```
+
+   log 不能有啟動錯誤；狀態目錄應出現 `database.sqlite-wal`、`database.sqlite-shm` 與 `database.sqlite.lock`。
+
+9. 在瀏覽器中，以至少兩個帳號驗證：
+   - 登入與登出；既有的工作階段仍有效。
+   - 歷史紀錄：自己的與公開的對局、統計。
+   - 回放：開啟一場有錄製的對局並播放。
+   - 好友：清單、上線狀態、私訊與未讀狀態、好友通知。
+   - 媒體：頭像、上傳的圖片與表情符號。
+   - 恢復：切換前進行中的遊戲可以繼續，重新整理與重新連線後狀態正確。
+
+   接著執行 `sudo systemctl restart card-together.service`，確認上述資料在重新啟動後仍在。
+
+10. 把 JSON 檔保留為唯讀的備援，恢復 timer，並立即做一次 SQLite 備份：
+
+    ```sh
+    sudo chmod 0400 /var/lib/card-together/database.json
+    sudo systemctl start card-together-backup.service
+    sudo journalctl -u card-together-backup.service -n 20 --no-pager
+    sudo ls -l /var/backups/card-together/data
+    sudo systemctl start card-together-backup.timer card-together-auto-deploy.timer
+    ```
+
+    備份 log 必須包含 `"quickCheck":"ok"` 與 `Backup written`。SQLite 一開始接受寫入，這份 JSON 就已過時：它只用於第 8–9 步失敗、還沒有玩家寫入時的立即回復；之後的回復一律使用[匯出](#回復到-json)。不要讓兩個引擎同時寫入。
+
+### 回復到 JSON
+
+第 8–9 步就失敗、服務沒有接受任何寫入時，可以直接切回：停止服務，把 `server.env` 改回 `DATABASE_ENGINE=json` 與 `DATABASE_PATH=/var/lib/card-together/database.json`，再啟動服務並驗證。把 `database.sqlite` 移到備份目錄保存（第 2 步的備份中沒有它），讓日後重新切換時目標不存在。
+
+SQLite 已經接受寫入後，用[匯出工具](storage.md#匯出-sqlite-為-json)把目前的資料寫成新的 JSON：
+
+1. 暫停 timer、停止服務，並確認沒有 `database.sqlite.lock`：
+
+   ```sh
+   sudo systemctl stop card-together-auto-deploy.timer card-together-backup.timer
+   sudo systemctl stop card-together.service
+   sudo ls -la /var/lib/card-together
+   ```
+
+2. 完整備份目前的狀態與設定：
+
+   ```sh
+   stamp=$(date -u +%Y%m%dT%H%M%SZ)
+   sudo cp -a /var/lib/card-together "/var/backups/card-together/pre-json-$stamp"
+   sudo cp -p /etc/card-together/server.env "/var/backups/card-together/pre-json-$stamp.server.env"
+   ```
+
+3. 預覽，再匯出到新檔（從不覆寫）：
+
+   ```sh
+   sudo -u card-together sh -c 'cd /opt/card-together/server && ../node --import tsx src/database/export-sqlite-cli.ts /var/lib/card-together/database.sqlite /var/lib/card-together/database.export.json'
+   sudo -u card-together sh -c 'cd /opt/card-together/server && ../node --import tsx src/database/export-sqlite-cli.ts /var/lib/card-together/database.sqlite /var/lib/card-together/database.export.json --apply --writers-stopped'
+   ```
+
+   輸出必須有 `"validated": true`，`collections` 與預覽相同。
+
+4. 以匯出檔取代過時的 JSON，並把 SQLite 檔移出狀態目錄（兩者都已在第 2 步的備份中；正常停止後不會有 `-wal` 或 `-shm`）：
+
+   ```sh
+   sudo -u card-together mv -f /var/lib/card-together/database.export.json /var/lib/card-together/database.json
+   sudo mv /var/lib/card-together/database.sqlite "/var/backups/card-together/pre-json-$stamp.database.sqlite"
+   ```
+
+5. 把 `server.env` 改回 `DATABASE_ENGINE=json` 與 `DATABASE_PATH=/var/lib/card-together/database.json`，啟動服務，依第 8–9 步驗證，最後恢復 timer。
+
+要回到不支援 SQLite 的舊版本時，先依上述步驟回到 JSON，再依[回復版本](#回復版本)處理。
 
 ## 只發布前端
 

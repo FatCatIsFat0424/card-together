@@ -45,7 +45,7 @@ client 的 `predev` 與 `prebuild` 會從被忽略的 `local-music/` 與 `local-
 PORT=3002 HOST=127.0.0.1 npm run dev:server
 ```
 
-在 `client/.env.local` 設定 `VITE_DEV_PROXY_TARGET=http://127.0.0.1:3002`，再啟動 `npm run dev:client`。預設的開發資料庫仍是 `server/data/database.json`；絕對不要用 `/var/lib/card-together/database.json` 覆寫。API 與 Socket.IO 的 proxy 請求都使用設定的開發目標。這個變數只用於 Vite 的開發伺服器，不會改變正式環境的 Nginx upstream。
+在 `client/.env.local` 設定 `VITE_DEV_PROXY_TARGET=http://127.0.0.1:3002`，再啟動 `npm run dev:client`。預設的開發資料庫仍是 `server/data/database.json`；絕對不要指向 `/var/lib/card-together/` 中的資料庫。同一個資料庫只能由一個程序開啟，第二個開發伺服器或工具會因[擁有者鎖定檔](storage.md#單一擁有者鎖定)立即失敗；程序結束後留下的鎖定檔，會在確認該 PID 已不存在後自動取代，所以 `tsx watch` 重新啟動不受影響。API 與 Socket.IO 的 proxy 請求都使用設定的開發目標。這個變數只用於 Vite 的開發伺服器，不會改變正式環境的 Nginx upstream。
 
 選用的[自動部署服務](deployment.md#ci-通過後自動部署)使用獨立的 detached worktree 與站長輸入快照。你目前的分支、尚未 commit 的變更與只存在本機的 commit 都不會進入它的正式環境建置。
 

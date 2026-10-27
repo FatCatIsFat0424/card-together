@@ -136,7 +136,7 @@
 | 位置 | 路徑 |
 | --- | --- |
 | 開發 | `server/data/database.json`；SQLite 為 `server/data/database.sqlite`（覆寫：[`DATABASE_ENGINE`、`DATABASE_PATH`](development.md#設定)） |
-| 正式環境 | `/var/lib/card-together/database.json`（仍使用 JSON，見 [SQLite 切換](#sqlite-切換)） |
+| 正式環境 | `/var/lib/card-together/database.json`；[切換](#sqlite-切換)後為 `database.sqlite`，JSON 保留為唯讀備援 |
 | 圖片 | 資料庫旁的 `media/`：以內容定址的檔案，加上 `media/owners/` 配額標記 |
 | 回放 | 資料庫旁的 `replays/`：每場已錄製對局一個 `<match ID>.json` 封存 |
 
@@ -257,7 +257,7 @@
    npm run admin:reset-password -- /absolute/path/database.json alice --apply --writers-stopped
    ```
 
-   正式環境，從已安裝的目錄執行（[切換到 SQLite](#sqlite-切換)後改用 `database.sqlite`）：
+   正式環境，從已安裝的目錄執行（[切換到 SQLite](deployment.md#切換到-sqlite)後改用 `database.sqlite`）：
 
    ```sh
    sudo -u card-together sh -c 'cd /opt/card-together/server && ../node --import tsx src/auth/reset-password-cli.ts /var/lib/card-together/database.json alice'
@@ -290,7 +290,7 @@ npm run cleanup:match-history -- /absolute/path/database.json --apply --writers-
 
 ### 遷移到 SQLite
 
-[`migrate-sqlite.ts`](../server/src/database/migrate-sqlite.ts) 把 JSON 資料庫匯入同一目錄中的新 SQLite 檔。正式環境的步驟：[SQLite 切換](#sqlite-切換)。
+[`migrate-sqlite.ts`](../server/src/database/migrate-sqlite.ts) 把 JSON 資料庫匯入同一目錄中的新 SQLite 檔。正式環境的步驟：[切換到 SQLite](deployment.md#切換到-sqlite)。
 
 ```sh
 npm run admin:migrate-sqlite -- /absolute/path/database.json /absolute/path/database.sqlite
@@ -306,7 +306,7 @@ npm run admin:migrate-sqlite -- /absolute/path/database.json /absolute/path/data
 
 ### 匯出 SQLite 為 JSON
 
-[`export-sqlite.ts`](../server/src/database/export-sqlite.ts) 把 SQLite 資料庫寫成新的 JSON 資料庫檔，用於回復到 JSON；內容包含切換後的所有寫入。步驟：[SQLite 切換](#sqlite-切換)。
+[`export-sqlite.ts`](../server/src/database/export-sqlite.ts) 把 SQLite 資料庫寫成新的 JSON 資料庫檔，用於回復到 JSON；內容包含切換後的所有寫入。步驟：[回復到 JSON](deployment.md#回復到-json)。
 
 ```sh
 npm run admin:export-json -- /absolute/path/database.sqlite /absolute/path/database.export.json
@@ -321,8 +321,9 @@ npm run admin:export-json -- /absolute/path/database.sqlite /absolute/path/datab
 
 ## SQLite 切換
 
-第一階段已完成：SQLite adapter、匯入函式，以及在兩種引擎上執行的 repository、auth、social、runtime、持久化與金幣測試。正式環境的切換屬於第二階段，**尚未進行**；在那之前正式環境繼續使用 JSON。遷移 CLI、部署腳本的備份與還原、維護工具的 SQLite 支援與切換程序都還沒有實作，請不要自行在正式環境設定 `DATABASE_ENGINE=sqlite`。
-
-- 切換仍須遵守原則：停止寫入、備份並驗證 JSON、匯入、比對數量與參照，並確認登入、歷史紀錄、好友、媒體與恢復功能後，才恢復流量。
-- SQLite 開始接受寫入後，JSON 備份就已過時：回復時必須匯出較新的資料。不要加入雙重寫入。
+- 第一階段：SQLite adapter、匯入函式，以及在兩種引擎上執行的 repository、auth、social、runtime、持久化與金幣測試。
+- 第二階段：[擁有者鎖定檔](#單一擁有者鎖定)、[遷移](#遷移到-sqlite)與[匯出](#匯出-sqlite-為-json)工具、兩種引擎的維護工具、SQLite 線上備份與[還原](deployment.md#還原資料)，以及[切換 runbook](deployment.md#切換到-sqlite)。
+- 正式環境的切換**尚未執行**，需經核准後依 runbook 進行；在那之前繼續使用 JSON（`server.env.example` 的預設值）。不要只修改 `DATABASE_ENGINE` 而跳過遷移。
+- JSON adapter 至少再保留一個版本，作為回復與開發用的引擎。
+- SQLite 開始接受寫入後，JSON 檔就已過時：回復時必須用匯出工具帶出較新的資料。不要加入雙重寫入。
 - 多程序的房間協調需要另外設計。
