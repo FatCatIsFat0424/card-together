@@ -105,6 +105,7 @@ install_application() (
     install -m 0600 "$repo_dir/deploy/systemd/server.env.example" "$configuration_dir/server.env"
   fi
   install -m 0755 "$repo_dir/deploy/backup-data.sh" "$application_dir/backup-data.sh"
+  install -m 0755 "$repo_dir/deploy/restore-data.sh" "$application_dir/restore-data.sh"
   install -m 0644 "$repo_dir/deploy/systemd/card-together.service" "$unit_dir/card-together.service"
   install -m 0644 "$repo_dir/deploy/systemd/card-together-backup.service" "$unit_dir/card-together-backup.service"
   install -m 0644 "$repo_dir/deploy/systemd/card-together-backup.timer" "$unit_dir/card-together-backup.timer"

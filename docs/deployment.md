@@ -174,10 +174,13 @@ sudo systemctl stop card-together-auto-deploy.timer card-together-auto-deploy.se
 | --- | --- | --- |
 | `deploy-*`（每次部署） | 網站與 snippet、執行環境設定、unit 與啟用狀態；不含 `node_modules/`、`node` 與重複 `provided-music/` 的 `application/`；完整的 `card-together-data/` 與 `bridge-online-data/` | 最新 5 份，成功後清除較舊的 |
 | `frontend-*`（每次發布） | 先前的前端進入點 | 最新 5 份 |
-| `data/data-<UTC stamp>/`（每日約 04:15） | 經過 JSON 驗證的 `database.json`、`media/` 與 `replays/` | 最新 14 份（`KEEP`） |
+| `data/data-<UTC stamp>/`（每日約 04:15） | 經過驗證的資料庫（`database.json`，或 `database.sqlite`）、`media/` 與 `replays/` | 最新 14 份（`KEEP`），成功寫入新快照後才清除較舊的 |
 
 - `application/` 中省略的檔案，可以在相符的版本執行 `deploy/build.sh` 重建。
-- 每日備份在後端上線時執行：資料庫以原子 rename 替換，媒體以內容定址，每個回放檔只寫入一次。未變更的檔案以硬連結指向上一份快照。
+- 每日備份在後端上線時執行，依 `server.env` 的 `DATABASE_ENGINE` 選擇資料庫；`DATABASE_PATH` 不在狀態目錄時會拒絕。媒體以內容定址，每個回放檔只寫入一次，未變更的媒體與回放以硬連結指向上一份快照。
+- JSON：資料庫以原子 rename 替換，所以複製一次就得到完整檔案，並檢查是否為有效 JSON。
+- SQLite：[`sqlite-snapshot-cli.ts`](../server/src/database/sqlite-snapshot-cli.ts) 以 `VACUUM INTO` 在一個讀取 transaction 中複製出單一檔案（rollback journal 模式，沒有 `-wal`），再執行 `PRAGMA quick_check`、`foreign_key_check` 與應用程式的啟動驗證；失敗時捨棄該快照，較舊的快照保留。複製以資料庫擁有者的身分（`setpriv`）執行，和服務共用 WAL 索引，建立的 `-shm` 也維持服務的擁有者；複本先放在狀態目錄的 `.backup-*`，再移入快照。中斷留下的 `.backup-*` 會在下一次備份時刪除。因此 backup unit 對狀態目錄有寫入權限。
+- SQLite 快照每份都是完整的資料庫副本（無法硬連結），約需 `KEEP` × 資料庫大小，加上媒體與回放的差異。狀態目錄與備份目錄的可用空間都必須至少是資料庫加 `-wal` 的大小，否則跳過該次備份並記錄錯誤。
 - 資料庫最先複製。在複製前就因保留規則被清除的回放，在該快照中會顯示「沒有錄製」；在資料庫複製後才寫入的回放，會在以該快照啟動時被清除（[回放封存](storage.md#回放封存)）。
 - `install.sh` 會安裝 `backup-data.sh` 與 `card-together-backup.service`/`.timer`；`deploy.sh` 會啟用 timer，失敗時發出警告。若要單獨啟用：
 
@@ -194,7 +197,24 @@ sudo systemctl stop card-together-auto-deploy.timer card-together-auto-deploy.se
   sudo ls /var/backups/card-together/data
   ```
 
-- 同一顆磁碟上的快照只能防範資料損毀與操作失誤；請在另一台主機保留副本。還原步驟：[儲存](storage.md#備份與還原)。
+- 同一顆磁碟上的快照只能防範資料損毀與操作失誤；請在另一台主機保留副本。還原規則：[儲存](storage.md#備份與還原)。
+
+### 還原資料
+
+`install.sh` 會把 [`restore-data.sh`](../deploy/restore-data.sh) 安裝到 `/opt/card-together/restore-data.sh`。它把一份快照目錄（`data-*`，或 `deploy-*` 中的 `card-together-data/`）的資料庫、媒體與回放一起還原到狀態目錄：
+
+```sh
+sudo systemctl stop card-together.service card-together-backup.timer
+sudo /opt/card-together/restore-data.sh /var/backups/card-together/data/data-<UTC stamp>
+sudo systemctl start card-together.service card-together-backup.timer
+```
+
+- 服務仍在執行、或狀態目錄有 `database.*.lock` 時拒絕（[擁有者鎖定檔](storage.md#單一擁有者鎖定)）。
+- 依 `server.env` 的 `DATABASE_ENGINE` 選擇要還原的檔案；快照必須包含該引擎的資料庫、`media/` 與 `replays/`，且不能有符號連結。引擎不符時拒絕。
+- 以 `sqlite-snapshot-cli.ts verify` 檢查快照（SQLite 另做 `quick_check`），必須是這個版本能啟動的 schema；檢查從不修改快照。失敗時什麼都不還原。
+- 寫入前把目前整個狀態目錄複製到 `/var/backups/card-together/pre-restore-<UTC stamp>-*`，請確認有足夠空間。
+- 移除被取代資料庫的 `-wal`、`-shm`，以 `0600` 與狀態目錄的擁有者寫入資料庫，並以 `rsync --delete` 同步 `media/` 與 `replays/`。另一個引擎的檔案（例如保留的 JSON）不變。
+- 服務保持停止。啟動後確認登入、歷史紀錄、回放、好友、媒體與恢復。
 
 ### 回復版本
 

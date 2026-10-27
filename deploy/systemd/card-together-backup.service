@@ -1,10 +1,13 @@
 [Unit]
 Description=Card Together database, media, and replay backup
-ConditionPathExists=/var/lib/card-together/database.json
+# Runs when either engine's database exists; DATABASE_ENGINE in server.env selects which one.
+ConditionPathExists=|/var/lib/card-together/database.json
+ConditionPathExists=|/var/lib/card-together/database.sqlite
 
 [Service]
 Type=oneshot
 # Root is needed to read the 0700 state directory owned by the service user.
+EnvironmentFile=-/etc/card-together/server.env
 ExecStart=/opt/card-together/backup-data.sh
 Nice=10
 IOSchedulingClass=idle
@@ -13,8 +16,9 @@ PrivateTmp=true
 PrivateDevices=true
 ProtectSystem=strict
 ProtectHome=true
-ReadOnlyPaths=/var/lib/card-together
-ReadWritePaths=/var/backups/card-together
+# SQLite readers update the shared -shm index, and the copy is staged in the state directory as
+# the database owner before it moves into the snapshot, so the state directory stays writable.
+ReadWritePaths=/var/lib/card-together /var/backups/card-together
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true

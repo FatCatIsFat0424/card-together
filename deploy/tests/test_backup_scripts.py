@@ -1,15 +1,81 @@
 """Exercise backup and frontend retention scripts in temporary directories."""
 
 import fcntl
+import json
 import os
 from pathlib import Path
+import shutil
+import sqlite3
 import subprocess
 import tempfile
 import time
 import unittest
 
 DEPLOY = Path(__file__).resolve().parents[1]
+ROOT = DEPLOY.parent
 DAY = 24 * 60 * 60
+PASSWORD_HASH = 'scrypt$131072$8$1$' + 'ab' * 16 + '$' + 'cd' * 64
+
+
+def find_node():
+    """Node.js 24 with installed dependencies runs the application's SQLite checks."""
+    candidate = os.environ.get('CARD_TOGETHER_NODE') or shutil.which('node')
+    if not candidate or not (ROOT / 'node_modules/tsx/package.json').exists():
+        return None
+    check = subprocess.run([candidate, '-e', 'process.exit(Number(process.versions.node.split(".")[0]) >= 24 ? 0 : 1)'],
+                           capture_output=True)
+    return candidate if check.returncode == 0 else None
+
+
+NODE = find_node()
+
+
+def json_database(usernames=('alice',)):
+    accounts = [{'id': f'account-{name}', 'username': name, 'usernameNormalized': name, 'nickname': name,
+                 'color': '#123456', 'avatar': 'cat', 'avatarImage': None, 'tableBackground': None,
+                 'tableBackgroundOpacity': 100, 'cardBack': None, 'cardBackOpacity': 100,
+                 'matchesPublic': True, 'passwordHash': PASSWORD_HASH, 'createdAt': 1, 'updatedAt': 1}
+                for name in usernames]
+    return {'schemaVersion': 7, 'accounts': accounts, 'sessions': [], 'friendships': [], 'matches': [],
+            'emojis': [], 'directMessages': [], 'messageReads': [], 'friendNotifications': [],
+            'runtime': None}
+
+
+def make_sqlite_database(path, names=('alice',)):
+    """Builds a Card Together SQLite database with the application's own migration tool."""
+    source = path.with_name('database.json')
+    source.write_text(json.dumps(json_database(names)))
+    result = subprocess.run([NODE, '--import', 'tsx', 'src/database/migrate-sqlite-cli.ts', str(source), str(path),
+                             '--apply', '--writers-stopped'], cwd=ROOT / 'server', capture_output=True, text=True)
+    source.unlink()
+    if result.returncode != 0:
+        raise AssertionError(result.stderr)
+
+
+def usernames(path):
+    connection = sqlite3.connect(f'file:{path}?mode=ro', uri=True)
+    try:
+        return [row[0] for row in connection.execute('SELECT username_normalized FROM accounts ORDER BY seq')]
+    finally:
+        connection.close()
+
+
+def damage(path):
+    """Overwrites every page after the header, so the file opens but its tables are unreadable."""
+    with path.open('r+b') as database:
+        size = database.seek(0, 2)
+        database.seek(4096)
+        database.write(b'\xab' * (size - 4096))
+
+
+def fake_commands(directory, active=False):
+    """Fixed timestamps and a systemctl that reports the service as stopped (or running)."""
+    commands = Path(directory)
+    (commands / 'date').write_text('#!/bin/sh\nprintf "%s\\n" "$FIXTURE_STAMP"\n')
+    (commands / 'systemctl').write_text(f'#!/bin/sh\nexit {0 if active else 3}\n')
+    for name in ('date', 'systemctl'):
+        (commands / name).chmod(0o755)
+    return commands
 
 
 def age(path, days):
@@ -212,6 +278,203 @@ class BackupDataTests(unittest.TestCase):
             self.assertIn("Snapshot already exists", result.stderr)
             self.assertEqual((original / "database.json").read_bytes(), saved)
             self.assertEqual(list(backups.glob(".staging-*")), [])
+
+
+@unittest.skipUnless(NODE, 'SQLite backups need Node.js 24 and installed dependencies')
+class SqliteBackupDataTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.template_directory = tempfile.TemporaryDirectory()
+        cls.template = Path(cls.template_directory.name) / 'database.sqlite'
+        make_sqlite_database(cls.template, ('alice', 'bravo'))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.template_directory.cleanup()
+
+    def make_state(self, root):
+        state = root / 'state'
+        (state / 'media').mkdir(parents=True)
+        (state / 'replays').mkdir()
+        shutil.copy(self.template, state / 'database.sqlite')
+        (state / 'media' / 'a.png').write_bytes(b'image-a')
+        (state / 'replays' / 'match-a.json').write_text('{"version": 1}')
+        return state
+
+    def run_backup(self, state, backups, stamp='20261012T000000Z', **overrides):
+        with tempfile.TemporaryDirectory(prefix='backup-command-test-') as directory:
+            environment = {**os.environ, 'STATE_DIR': str(state), 'BACKUP_DIR': str(backups), 'KEEP': '2',
+                           'FIXTURE_STAMP': stamp, 'DATABASE_ENGINE': 'sqlite', 'APP_DIR': str(ROOT),
+                           'NODE_BINARY': NODE, 'PATH': f"{fake_commands(directory)}:{os.environ['PATH']}",
+                           'DATABASE_PATH': str(state / 'database.sqlite'), **overrides}
+            return subprocess.run(['bash', str(DEPLOY / 'backup-data.sh')], env=environment,
+                                  capture_output=True, text=True, timeout=60)
+
+    def test_online_snapshot_is_a_verified_copy_with_media_and_replays(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state, backups = self.make_state(root), root / 'backups'
+            # A writer holds the database in WAL mode with an uncommitted change, like a busy server.
+            writer = sqlite3.connect(state / 'database.sqlite', isolation_level=None)
+            try:
+                writer.execute('PRAGMA journal_mode = WAL')
+                writer.execute('BEGIN IMMEDIATE')
+                writer.execute("UPDATE accounts SET nickname_search = 'uncommitted'")
+                result = self.run_backup(state, backups)
+            finally:
+                writer.execute('ROLLBACK')
+                writer.close()
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('"quickCheck":"ok"', result.stdout)
+            snapshot = backups / 'data-20261012T000000Z'
+            copy = snapshot / 'database.sqlite'
+            self.assertEqual(usernames(copy), ['alice', 'bravo'])
+            connection = sqlite3.connect(f'file:{copy}?mode=ro', uri=True)
+            try:
+                self.assertEqual(connection.execute('PRAGMA quick_check').fetchone()[0], 'ok')
+                self.assertEqual(connection.execute('PRAGMA journal_mode').fetchone()[0], 'delete')
+                self.assertEqual(connection.execute(
+                    "SELECT COUNT(*) FROM accounts WHERE nickname_search = 'uncommitted'").fetchone()[0], 0)
+            finally:
+                connection.close()
+            self.assertEqual(copy.stat().st_mode & 0o777, 0o600)
+            self.assertEqual((snapshot / 'media' / 'a.png').read_bytes(), b'image-a')
+            self.assertEqual((snapshot / 'replays' / 'match-a.json').read_text(), '{"version": 1}')
+            self.assertEqual(sorted(path.name for path in state.iterdir()), ['database.sqlite', 'media', 'replays'])
+            self.assertEqual(list(backups.glob('.staging-*')), [])
+
+    def test_damaged_database_is_discarded_and_older_snapshots_remain(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state, backups = self.make_state(root), root / 'backups'
+            self.assertEqual(self.run_backup(state, backups).returncode, 0)
+            damage(state / 'database.sqlite')
+            result = self.run_backup(state, backups, stamp='20261012T000001Z')
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('snapshot discarded', result.stderr)
+            self.assertEqual([path.name for path in backups.iterdir() if path.name.startswith('data-')],
+                             ['data-20261012T000000Z'])
+            self.assertEqual(list(backups.glob('.staging-*')), [])
+            self.assertEqual(list(state.glob('.backup-*')), [])
+
+    def test_engine_and_path_must_match_the_state_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state, backups = self.make_state(root), root / 'backups'
+            for overrides, message in (({'DATABASE_ENGINE': 'postgres'}, 'DATABASE_ENGINE'),
+                                       ({'DATABASE_PATH': str(root / 'database.sqlite')}, 'DATABASE_PATH'),
+                                       ({'DATABASE_ENGINE': 'json'}, 'DATABASE_PATH')):
+                with self.subTest(overrides=overrides):
+                    result = self.run_backup(state, backups, **overrides)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(message, result.stderr)
+            self.assertFalse(backups.exists())
+
+    def test_stale_copies_from_an_interrupted_run_are_removed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state, backups = self.make_state(root), root / 'backups'
+            stale = state / '.backup-20261011T000000Z-abcdef'
+            stale.mkdir()
+            (stale / 'database.sqlite').write_bytes(b'partial')
+            self.assertEqual(self.run_backup(state, backups).returncode, 0)
+            self.assertEqual(list(state.glob('.backup-*')), [])
+
+
+@unittest.skipUnless(NODE, 'Restore checks need Node.js 24 and installed dependencies')
+class RestoreDataTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.template_directory = tempfile.TemporaryDirectory()
+        cls.template = Path(cls.template_directory.name) / 'database.sqlite'
+        make_sqlite_database(cls.template, ('alice', 'bravo'))
+        cls.current = Path(cls.template_directory.name) / 'current' / 'database.sqlite'
+        cls.current.parent.mkdir()
+        make_sqlite_database(cls.current, ('current',))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.template_directory.cleanup()
+
+    def fixture(self, root, engine='sqlite'):
+        state, snapshot, config = root / 'state', root / 'snapshot', root / 'server.env'
+        for directory in (state / 'media', state / 'replays', snapshot / 'media', snapshot / 'replays'):
+            directory.mkdir(parents=True)
+        config.write_text(f'NODE_ENV=production\nDATABASE_ENGINE={engine}\n')
+        shutil.copy(self.current, state / 'database.sqlite')
+        (state / 'database.sqlite-wal').write_bytes(b'stale journal')
+        (state / 'database.json').write_text(json.dumps(json_database(('fallback',))))
+        (state / 'media' / 'new.png').write_bytes(b'newer upload')
+        (state / 'replays' / 'match-new.json').write_text('{"version": 1, "id": "new"}')
+        shutil.copy(self.template, snapshot / 'database.sqlite')
+        (snapshot / 'media' / 'a.png').write_bytes(b'image-a')
+        (snapshot / 'replays' / 'match-a.json').write_text('{"version": 1}')
+        return state, snapshot, config
+
+    def run_restore(self, root, snapshot, config, active=False):
+        with tempfile.TemporaryDirectory(prefix='restore-command-test-') as directory:
+            environment = {**os.environ, 'STATE_DIR': str(root / 'state'), 'BACKUP_DIR': str(root / 'backups'),
+                           'CONFIG_FILE': str(config), 'APP_DIR': str(ROOT), 'NODE_BINARY': NODE,
+                           'FIXTURE_STAMP': '20261012T000000Z',
+                           'PATH': f"{fake_commands(directory, active)}:{os.environ['PATH']}"}
+            return subprocess.run(['bash', str(DEPLOY / 'restore-data.sh'), str(snapshot)], env=environment,
+                                  capture_output=True, text=True, timeout=60)
+
+    def test_restores_database_media_and_replays_after_copying_the_current_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state, snapshot, config = self.fixture(root)
+            result = self.run_restore(root, snapshot, config)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse((state / 'database.sqlite-wal').exists())
+            self.assertEqual(usernames(state / 'database.sqlite'), ['alice', 'bravo'])
+            self.assertEqual((state / 'database.sqlite').stat().st_mode & 0o777, 0o600)
+            self.assertEqual(sorted(path.name for path in (state / 'media').iterdir()), ['a.png'])
+            self.assertEqual(sorted(path.name for path in (state / 'replays').iterdir()), ['match-a.json'])
+            # The other engine's file, such as the JSON fallback, is left alone.
+            self.assertIn('fallback', (state / 'database.json').read_text())
+            [previous] = (root / 'backups').glob('pre-restore-20261012T000000Z-*')
+            self.assertEqual((previous / 'database.sqlite').read_bytes(), self.current.read_bytes())
+            self.assertEqual((previous / 'database.sqlite-wal').read_bytes(), b'stale journal')
+            self.assertEqual((previous / 'media' / 'new.png').read_bytes(), b'newer upload')
+            self.assertTrue((previous / 'replays' / 'match-new.json').exists())
+
+    def test_refuses_running_services_locks_mismatched_engines_and_invalid_snapshots(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state, snapshot, config = self.fixture(root)
+            before = (state / 'database.sqlite').read_bytes()
+            self.assertIn('Stop the service first', self.run_restore(root, snapshot, config, active=True).stderr)
+            (state / 'database.sqlite.lock').write_text('{}')
+            self.assertIn('may still own the database', self.run_restore(root, snapshot, config).stderr)
+            (state / 'database.sqlite.lock').unlink()
+            json_config = root / 'json.env'
+            json_config.write_text('DATABASE_ENGINE=json\n')
+            self.assertIn('selects database.json', self.run_restore(root, snapshot, json_config).stderr)
+            shutil.rmtree(snapshot / 'replays')
+            self.assertIn('no replays/', self.run_restore(root, snapshot, config).stderr)
+            (snapshot / 'replays').mkdir()
+            (snapshot / 'database.sqlite-wal').write_bytes(b'uncheckpointed')
+            self.assertIn('not a complete single-file copy', self.run_restore(root, snapshot, config).stderr)
+            (snapshot / 'database.sqlite-wal').unlink()
+            damage(snapshot / 'database.sqlite')
+            result = self.run_restore(root, snapshot, config)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('nothing was restored', result.stderr)
+            self.assertEqual((state / 'database.sqlite').read_bytes(), before)
+            self.assertEqual((state / 'database.sqlite-wal').read_bytes(), b'stale journal')
+            self.assertFalse((root / 'backups').exists())
+
+    def test_restores_json_snapshots_for_the_json_engine(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state, snapshot, config = self.fixture(root, engine='json')
+            (snapshot / 'database.sqlite').unlink()
+            (snapshot / 'database.json').write_text(json.dumps(json_database(('restored',))))
+            result = self.run_restore(root, snapshot, config)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('restored', (state / 'database.json').read_text())
+            self.assertEqual((state / 'database.sqlite').read_bytes(), self.current.read_bytes())
 
 
 class DeployScriptContractTests(unittest.TestCase):
