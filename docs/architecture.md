@@ -15,12 +15,13 @@
 | 位置 | 職責 |
 | --- | --- |
 | `shared/src/` | 型別、常數、純遊戲規則、呈現畫格 |
+| `shared/src/games/` | 各遊戲定義（座位規則、類別、桌面配備、呈現畫格）與型別化的 registry |
 | `server/src/app.ts`、`index.ts` | 設定、組合服務、啟動與關閉 |
 | `auth/`、`social/` | 密碼、工作階段、個人檔案、好友關係與私訊服務 |
 | `http/`、`socket/` | 驗證請求與身分；轉換結果 |
 | `runtime/` | 序列化變更、建立快照與還原、commit、排程 bot 與逾時 |
-| `bots/` | 各遊戲的啟發式策略，只使用 bot 自己過濾後的視角 |
-| `managers/`、`managers/games/` | 玩家、房間、遊戲、聊天、語音狀態；遊戲 adapter |
+| `bots/` | 各遊戲的啟發式策略，只使用 bot 自己過濾後的視角；各遊戲的 bot registry（困難、簡單、第一個合法動作、逾時與共用截止時間的預設動作） |
+| `managers/`、`managers/games/` | 玩家、房間、遊戲、聊天、語音狀態；各遊戲模組、adapter 與 adapter registry |
 | `engine/` | 純函式的橋牌牌組、叫牌、出牌、計分 |
 | `database/`、`media/` | 非同步 Repository、JSON adapter、migration、索引、每場對局的回放檔；以內容定址的圖片 |
 | `client/src/pages/`、`components/` | 延遲載入的路由與 CSS Modules UI |
@@ -76,7 +77,7 @@
 
 ## 呈現時間軸
 
-[`game-presentation.ts`](../shared/src/game-presentation.ts) 從已 commit 的紀錄推導出公開畫格。中繼資料包含 `id`、`startedAt`、`logStart` 與接收者的 `serverNow`；畫格從不包含對手的手牌或尚未翻開的牌堆。
+[`game-presentation.ts`](../shared/src/game-presentation.ts) 從已 commit 的紀錄推導出公開畫格；它只負責通用流程，各遊戲的畫格由 `shared/src/games/<遊戲>/definition.ts` 定義。中繼資料包含 `id`、`startedAt`、`logStart` 與接收者的 `serverNow`；畫格從不包含對手的手牌或尚未翻開的牌堆。
 
 - 畫格依序播放。控制項、輪到的高亮、提醒、bot 與自動 pass 都會等待共用的截止時間。
 - 截止時間前，伺服器會拒絕出牌、pass、吃牌與繼續（繼續還需要已完成計分）。用戶端會停用控制項，並延後顯示分數面板。
@@ -118,6 +119,7 @@
 - 逾時處理會在 runtime 佇列內重新檢查遊戲與回合，從該玩家過濾後的視角套用一個合法動作，儲存後再發布。寫入失敗時，計時與遊戲會一起還原；手動操作也會檢查是否逾時。
 - 啟動時保留截止時間；已逾時的回合不需瀏覽器就會處理。之後的回合從新的 commit 開始計時，不會補跑錯過的回合。
 - 沒有計時資料的舊版房間與遊戲會套用預設值並重新計時。
+- 各遊戲對計時的影響（重新發牌、同一回合、強制 pass）與共用截止時間的時段，都是 `server/src/managers/games/<遊戲>-adapter.ts` 中的 adapter hook。
 - 用戶端依伺服器時間戳推算，從不自行扣減已保存的時間庫。
 
 **共用截止時間**（十三支排牌、21 點下注、拿破崙四人棄牌確認）：
