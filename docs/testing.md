@@ -37,7 +37,7 @@ VITE_BASE_PATH=/card-together/ VITE_SERVER_URL='' \
 | Widens to full | Shared contracts, `AGENTS.md`, dependencies or configuration, deleted or unknown paths, unresolved or dynamic imports |
 | Deployment files | Run related Python modules; unmapped helpers and templates run all modules |
 | Client assets | Require build and artifact validation |
-| Documentation only | `docs/*.md`, `README.md`: whitespace and local link targets only; reported as `documentation`, not runtime verification |
+| Documentation only | `docs/**/*.md`, `README.md`: whitespace, local link targets, and heading anchors in all repository Markdown only; reported as `documentation`, not runtime verification |
 | Recommendations | UI changes list [browser checks](development.md#browser-verification); database, Socket, and arrange changes list [benchmarks](development.md#benchmarks) |
 
 **Reporting**
@@ -53,6 +53,7 @@ VITE_BASE_PATH=/card-together/ VITE_SERVER_URL='' \
 2. Typecheck shared, server, server tests, client app, and client Node configs.
 3. Typed lint, all Vitest tests, Vite build, and artifact validation.
 4. Syntax-check every deployment shell script and run Python unittest discovery.
+5. Check Markdown whitespace, relative link targets, and `#anchor` targets with GitHub heading slugs.
 
 `release` adds explicit production base and Socket paths and validates index links,
 catalogs, content hashes, and source-to-build bytes. It does not install, publish, or

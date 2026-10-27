@@ -1,11 +1,12 @@
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { lstatSync, readFileSync, readlinkSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, readlinkSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
 import { buildEnvironment, validateArtifacts } from './artifacts';
+import { DOCUMENTATION_ROOTS, documentationErrors, documentationPaths } from './documentation';
 import { collectFiles, parseOptions, selectChecks } from './selection';
 import type { CheckOptions, Selection } from './selection';
 
@@ -67,6 +68,7 @@ export function planGates(root: string, selection: Selection, options: CheckOpti
       ...(full || selection.python.includes('*') ? ['discover', '-s', 'deploy/tests'] : selection.python)],
     cwd: full || selection.python.includes('*') ? '.' : 'deploy/tests' });
   }
+  if (full) gates.push({ id: 'documentation', internal: 'documentation' });
   return gates;
 }
 
@@ -100,6 +102,7 @@ export function inputFingerprint(root: string, selection: Selection, cache = new
     'node_modules/tsx/package.json', 'node_modules/vite/package.json', 'node_modules/sharp/package.json',
     ...collectFiles(root, ['client']).filter((path) => /^client\/\.env(?:\.|$)/.test(path))];
   if (selection.build) roots.push('local-music', 'local-emoji', 'client/public');
+  if (selection.scope !== 'focused') roots.push(...DOCUMENTATION_ROOTS);
   if (selection.scope === 'documentation') roots.push(...selection.paths);
   return fingerprintFiles(root, roots, cache, excludeGenerated);
 }
@@ -143,16 +146,11 @@ export async function runGates(
   return { results, exitCode };
 }
 
-async function documentation(root: string, paths: readonly string[]): Promise<void> {
-  for (const path of paths) {
-    const text = readFileSync(join(root, path), 'utf8');
-    if (/^(?:<<<<<<< |>>>>>>> )/m.test(text) || /[\t ]+$/m.test(text)) throw new Error(`Whitespace or conflict markers in ${path}`);
-    for (const match of text.matchAll(/\[[^\]]*\]\(([^)\s]+)\)/g)) {
-      const target = match[1].split('#')[0];
-      if (!target || /^(?:[a-z]+:|\/)/i.test(target)) continue;
-      lstatSync(resolve(root, dirname(path), target));
-    }
-  }
+function documentation(root: string, selected: readonly string[]): number {
+  const paths = [...new Set([...selected.filter((path) => existsSync(join(root, path))), ...documentationPaths(root)])].sort();
+  const errors = documentationErrors(root, paths);
+  for (const error of errors) console.error(error);
+  return errors.length ? 1 : 0;
 }
 
 async function main(): Promise<number> {
@@ -171,7 +169,7 @@ async function main(): Promise<number> {
   if (options.dryRun) return 0;
   const started = performance.now();
   const execute = async (gate: Gate): Promise<number> => {
-    if (gate.internal === 'documentation') { await documentation(root, selection.paths); return 0; }
+    if (gate.internal === 'documentation') return documentation(root, selection.paths);
     if (gate.internal === 'clear-types') {
       for (const type of selection.types) await rm(join(root, TYPE_CACHE[type]), { force: true });
       return 0;
