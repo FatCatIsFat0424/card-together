@@ -579,7 +579,8 @@ export async function createSqliteRepository(filePath: string, options: Reposito
     };
   } catch (error) {
     database?.close();
-    await lock?.release();
+    // The startup error matters more; a lock left behind is replaced once this process ends.
+    await lock?.release().catch(() => undefined);
     release();
     throw error;
   }

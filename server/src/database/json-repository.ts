@@ -597,7 +597,8 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       },
     };
   } catch (error) {
-    await lock?.release();
+    // The startup error matters more; a lock left behind is replaced once this process ends.
+    await lock?.release().catch(() => undefined);
     activePaths.delete(pathKey);
     throw error;
   }

@@ -97,7 +97,7 @@ export async function importJsonDocument(source: unknown, databasePath: string):
     });
   } finally {
     database?.close();
-    await lock?.release();
+    await lock?.release().catch((error: unknown) => console.warn('[database] Unable to release the import lock:', error));
     release();
   }
 }
