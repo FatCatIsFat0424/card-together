@@ -15,7 +15,7 @@ import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { SHOP_ITEMS, getShopItem, ownsShopItem } from '../shop-catalog';
 import { useMotionStore } from '../stores/motion-store';
-import { BORDER_SERIES, shopSeriesQuery } from '../shop-filters';
+import { BORDER_SERIES, OTHER_SERIES, shopSeriesQuery } from '../shop-filters';
 import type { ShopSeriesFilter } from '../shop-filters';
 import { shopSeriesArtwork } from '../shop-series';
 import { ShopProductArt, ShopProductPreview } from '../components/ShopProductArt';
@@ -55,9 +55,10 @@ export function ShopPage(): ReactNode {
   const collectionList = useRef<HTMLDivElement>(null);
   const collection = SHOP_SERIES.find((series) => series === searchParams.get('series')) ?? null;
   const borderSeries = BORDER_SERIES.find((series) => series === searchParams.get('series'));
-  const selectedSeries = collection ?? borderSeries ?? 'all';
+  const other = !collection && searchParams.get('series') === OTHER_SERIES;
+  const selectedSeries = collection ?? borderSeries ?? (other ? OTHER_SERIES : 'all');
   const selectedType = PRODUCT_TYPES.find((type) => type === searchParams.get('type'))
-    ?? (selectedSeries !== 'all' && !collection ? 'avatarBorder' : 'all');
+    ?? (borderSeries ? 'avatarBorder' : 'all');
   useEffect(() => {
     const lists = [categoryList.current, collectionList.current];
     const revealSelection = (): void => {
@@ -75,15 +76,17 @@ export function ShopPage(): ReactNode {
     const observer = new ResizeObserver(revealSelection);
     for (const list of lists) if (list) observer.observe(list);
     return () => observer.disconnect();
-  }, [selectedType, collection]);
+  }, [selectedType, collection, other]);
+  const inCollection = (item: ShopItem): boolean => (collection ? shopItemSeries(item) === collection
+    : other ? shopItemSeries(item) === null : true);
   const products = SHOP_ITEMS.filter((item) => (selectedType === 'all' || item.type === selectedType)
-    && (collection ? shopItemSeries(item) === collection : selectedType !== 'avatarBorder' || selectedSeries === 'all'
+    && (collection || other ? inCollection(item) : selectedType !== 'avatarBorder' || selectedSeries === 'all'
       || (item.type === 'avatarBorder' && item.category === selectedSeries)));
   const selectType = (type: ShopItemType | 'all'): void => {
     const next = new URLSearchParams(searchParams);
     if (type === 'all') next.delete('type');
     else next.set('type', type);
-    if (!collection) next.delete('series');
+    if (!collection && !other) next.delete('series');
     setSearchParams(next, { preventScrollReset: true });
   };
   const selectSeries = (series: ShopSeriesFilter): void => {
@@ -135,8 +138,7 @@ export function ShopPage(): ReactNode {
     <div className={styles.shopLayout}>
       <nav className={styles.sidebar} aria-label={t('shop.categories')}>
         <ul ref={categoryList} className={styles.filters}>{(['all', ...PRODUCT_TYPES] as const).map((type) => {
-          const count = SHOP_ITEMS.filter((item) => (type === 'all' || item.type === type)
-            && (!collection || shopItemSeries(item) === collection)).length;
+          const count = SHOP_ITEMS.filter((item) => (type === 'all' || item.type === type) && inCollection(item)).length;
           return <li key={type}><button type="button" className={styles.filter}
             aria-pressed={selectedType === type} aria-controls="shop-catalog"
             onClick={() => selectType(type)}>
@@ -155,10 +157,10 @@ export function ShopPage(): ReactNode {
               && <p className={styles.catalogSubtitle}>{t(`shop.visibility.${selectedType}`)}</p>}
           </div>
           {/* Category buttons already show totals; only a series filter changes the count. */}
-          {(collection || selectedType === 'avatarBorder' && selectedSeries !== 'all')
+          {(collection || other || selectedType === 'avatarBorder' && selectedSeries !== 'all')
             && <span>{t('shop.itemCount', { n: format(products.length) })}</span>}</div>
         <div ref={collectionList} className={styles.collectionFilters} role="group" aria-label={t('shop.collections')}>
-          <button type="button" className={styles.collectionFilter} aria-pressed={!collection}
+          <button type="button" className={styles.collectionFilter} aria-pressed={!collection && !other}
             aria-controls="shop-catalog" onClick={() => selectSeries('all')}>{t('shop.allCollections')}</button>
           {SHOP_SERIES.map((series) => {
             const emblem = !stillArt ? layeredSeriesEmblem(series) : null;
@@ -169,8 +171,13 @@ export function ShopPage(): ReactNode {
               : <img src={shopSeriesArtwork(series, reducedMotion)} alt="" />}{t(`shop.series.${series}.name`)}
           </button>;
           })}
+          <button type="button" className={styles.collectionFilter} data-series={OTHER_SERIES}
+            aria-pressed={other} aria-controls="shop-catalog" onClick={() => selectSeries(OTHER_SERIES)}>
+            {t('shop.otherSeries.name')}
+          </button>
         </div>
         {collection && <p className={styles.collectionDescription}>{t(`shop.series.${collection}.description`)}</p>}
+        {other && <p className={styles.collectionDescription}>{t('shop.otherSeries.description')}</p>}
         {selectedType === 'avatarBorder' && !collection && <div className={styles.seriesFilters} role="group" aria-label={t('shop.allSeries')}>
           {(['all', ...BORDER_SERIES] as const).map((series) => <button key={series} type="button"
             className={styles.filter} aria-pressed={selectedSeries === series} aria-controls="shop-catalog"

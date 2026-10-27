@@ -59,7 +59,8 @@ describe('shop categories and inventory', () => {
     expect(html.match(/aria-pressed="true"/g)).toHaveLength(3);
   });
 
-  it.each(['?series=unknown', '?type=unknown', '?series=', '?unrelated=metal'])('falls back to all products for %s', (query) => {
+  it.each(['?series=unknown', '?series=cats', '?series=forest', '?series=dog', '?series=rainbow', '?series=garden',
+    '?type=unknown', '?series=', '?unrelated=metal'])('falls back to all products for %s', (query) => {
     const html = render(query);
     expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(SHOP_ITEMS.length);
     expect(html).toContain('id="shop-catalog-title">All products</h2>');
@@ -114,27 +115,81 @@ describe('shop categories and inventory', () => {
 
   it('retains the visible border category when clearing or changing a legacy series-only URL', () => {
     const current = new URLSearchParams('series=ears&unrelated=keep');
-    for (const series of ['all', ...SHOP_SERIES] as const) {
+    for (const series of ['all', 'other', ...SHOP_SERIES] as const) {
       const next = shopSeriesQuery(current, 'avatarBorder', series);
       expect(next.get('type')).toBe('avatarBorder');
       expect(next.get('unrelated')).toBe('keep');
       expect(current.toString()).toBe('series=ears&unrelated=keep');
       const html = render(`?${next}`);
       const expected = SHOP_ITEMS.filter((item) => item.type === 'avatarBorder'
-        && (series === 'all' || shopItemSeries(item) === series)).length;
+        && (series === 'all' || shopItemSeries(item) === (series === 'other' ? null : series))).length;
       expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g) ?? []).toHaveLength(expected);
       expect(html).toContain('id="shop-catalog-title">Avatar borders</h2>');
     }
   });
 
+  it('ignores a removed series alongside a product type', () => {
+    const html = render('?series=cats&type=cardBack');
+    expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(15);
+    expect(html).toContain('id="shop-catalog-title">Card backs</h2>');
+    expect(html).not.toContain('role="status"');
+  });
+
+  it('lists every product without a series under the other filter', () => {
+    const products = SHOP_ITEMS.filter((item) => shopItemSeries(item) === null);
+    const html = render('?series=other');
+    expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(products.length);
+    expect(html).toContain(`${products.length} products`);
+    expect(html).toContain('data-series="other" aria-pressed="true"');
+    expect(html).toMatch(/aria-pressed="false" aria-controls="shop-catalog"[^>]*>All collections</);
+    expect(html).not.toContain('data-shop-series=');
+    expect(html).toContain('<h3>Puppy ears</h3>');
+    expect(html).toContain('<h3>Brushed copper</h3>');
+    expect(html).not.toContain('<h3>Aurora weave</h3>');
+    // The filter button follows every themed series.
+    expect(html.indexOf('data-series="crownrealm"')).toBeLessThan(html.indexOf('data-series="other"'));
+  });
+
+  it.each(['avatarBorder', 'nameplate', 'stickerPack', 'cardFace'] as const)(
+    'combines the other filter with the %s product type', (type) => {
+      const products = SHOP_ITEMS.filter((item) => item.type === type && shopItemSeries(item) === null);
+      const html = render(`?series=other&type=${type}`);
+      expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g)).toHaveLength(products.length);
+      expect(html).toContain(`${products.length} products`);
+      expect(html).toContain('data-series="other" aria-pressed="true"');
+      // The category buttons count only products without a series.
+      expect(html).toMatch(new RegExp(`<span>All products</span><span[^>]*>${SHOP_ITEMS.filter((item) => shopItemSeries(item) === null).length}</span>`));
+    });
+
+  it('shows the empty state when no unseried product matches the product type', () => {
+    const html = render('?series=other&type=cardBack');
+    expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g) ?? []).toHaveLength(0);
+    expect(html).toContain('data-series="other" aria-pressed="true"');
+    expect(html).toContain('role="status"');
+  });
+
+  it('keeps the other filter when switching product type and builds its query', () => {
+    const next = shopSeriesQuery(new URLSearchParams('unrelated=keep'), 'nameplate', 'other');
+    expect(next.get('series')).toBe('other');
+    expect(next.get('type')).toBe('nameplate');
+    expect(next.get('unrelated')).toBe('keep');
+  });
+
+  it('translates the other filter into Traditional Chinese', () => {
+    useI18nStore.getState().setLocale('zh-TW');
+    const html = render('?series=other');
+    expect(html).toContain('其他');
+    expect(html).not.toContain('shop.otherSeries');
+  });
+
   it.each(['en', 'zh-TW'] as const)('explains an empty category without losing the selected collection (%s)', (locale) => {
     useI18nStore.getState().setLocale(locale);
-    const html = render('?series=cats&type=cardBack');
+    const html = render('?series=aurora&type=avatarBorder');
     expect(html.match(/<li[^>]*class="[^"]*product[^"]*"/g) ?? []).toHaveLength(0);
-    expect(html).toContain('data-series="cats" aria-pressed="true"');
+    expect(html).toContain('data-series="aurora" aria-pressed="true"');
     expect(html).toContain(`role="status">${useI18nStore.getState().t('shop.emptyCollection')}</p>`);
     expect(html).toContain(locale === 'en' ? '0 products' : '0 項商品');
-    expect(html).toContain(locale === 'en' ? 'Cat Cafe' : '貓咪茶屋');
+    expect(html).toContain(locale === 'en' ? 'Northern Lights' : '極光夜旅');
     expect(html).not.toContain('shop.series.');
   });
 

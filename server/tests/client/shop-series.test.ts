@@ -19,21 +19,16 @@ const ANIMATED_SERIES = ['starfleet', 'shrine', 'ironfront', 'neoncity', 'crownr
 describe('existing products grouped by theme', () => {
   it.each([
     ['aurora', ['card-back-aurora', 'nameplate-aurora', 'victory-aurora']],
-    ['tide', ['tide', 'card-back-tide', 'nameplate-tide', 'stickers-ocean']],
+    ['tide', ['tide', 'card-back-tide', 'nameplate-tide']],
     ['sakura', ['sakura', 'card-back-sakura', 'nameplate-sakura']],
-    ['constellation', ['starlight', 'eclipse', 'card-back-constellation', 'stickers-space']],
+    ['constellation', ['card-back-constellation', 'table-constellation']],
     ['bamboo', ['card-back-bamboo', 'sound-bamboo']],
-    ['gilded', ['gold', 'card-back-gilded']],
-    ['ember', ['card-back-ember', 'stickers-dragons']],
-    ['lotus', ['frog', 'card-back-lotus']],
+    ['gilded', ['card-back-gilded', 'seat-frame-gilded']],
+    ['ember', ['card-back-ember', 'victory-ember']],
+    ['lotus', ['card-back-lotus', 'chat-frame-lotus']],
     ['frost', ['card-back-frost', 'seat-frame-frost']],
     ['dune', ['card-back-dune', 'chips-dune']],
-    ['cats', ['cat', 'stickers-cats']],
-    ['forest', ['rabbit', 'bear', 'antlers', 'stickers-forest-friends']],
-    ['dog', ['dog', 'nameplate-bark-lord']],
-    ['rainbow', ['rainbow', 'nameplate-rainbow-pony', 'stickers-weather']],
-    ['garden', ['nameplate-renewal', 'nameplate-lucky', 'stickers-garden']],
-    ['neoncity', ['neon', 'stickers-arcade']],
+    ['neoncity', ['neoncity', 'stickers-neoncity']],
   ] as const)('groups matching products under %s without changing their identity', (series, ids) => {
     expect(SHOP_SERIES).toContain(series);
     for (const id of ids) {
@@ -43,11 +38,30 @@ describe('existing products grouped by theme', () => {
     }
   });
 
-  it('keeps unrelated standalone products outside collections', () => {
+  it('keeps the original series list free of individually designed collections', () => {
+    expect([...SHOP_SERIES]).toEqual(['aurora', 'tide', 'sakura', 'constellation', 'bamboo', 'gilded', 'ember',
+      'lotus', 'frost', 'dune', 'starfleet', 'shrine', 'ironfront', 'neoncity', 'crownrealm']);
+  });
+
+  it('keeps individually designed products outside collections', () => {
     for (const id of ['copper', 'silver', 'cthulhu', 'card-face-four-color', 'stickers-snacks',
-      'stickers-table-talk', 'nameplate-muckborn', 'nameplate-einstein', 'nameplate-planetary-devastation']) {
-      expect(shopItemSeries(getShopItem(id)!)).toBeNull();
+      'stickers-table-talk', 'nameplate-muckborn', 'nameplate-einstein', 'nameplate-planetary-devastation',
+      'cat', 'rabbit', 'bear', 'antlers', 'dog', 'frog', 'gold', 'starlight', 'eclipse', 'neon', 'rainbow',
+      'nameplate-bark-lord', 'nameplate-rainbow-pony', 'nameplate-renewal', 'nameplate-lucky',
+      'stickers-forest-friends', 'stickers-space', 'stickers-cats', 'stickers-ocean', 'stickers-weather',
+      'stickers-garden', 'stickers-arcade', 'stickers-dragons']) {
+      expect(getShopItem(id), id).toBeDefined();
+      expect(shopItemSeries(getShopItem(id)!), id).toBeNull();
     }
+  });
+
+  it('matches a series only by its exact product id, never by a shared suffix', () => {
+    const expected = { aurora: 10, tide: 11, sakura: 11, constellation: 9, bamboo: 9, gilded: 9, ember: 9, lotus: 9,
+      frost: 9, dune: 9, starfleet: 12, shrine: 12, ironfront: 12, neoncity: 12, crownrealm: 12 };
+    for (const series of SHOP_SERIES) {
+      expect(SHOP_ITEMS.filter((item) => shopItemSeries(item) === series), series).toHaveLength(expected[series]);
+    }
+    expect(SHOP_ITEMS.filter((item) => shopItemSeries(item) === null)).toHaveLength(32);
   });
 
   it.each(SHOP_SERIES)('provides representative artwork and localized text for %s', (series) => {

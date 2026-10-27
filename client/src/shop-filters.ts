@@ -1,7 +1,9 @@
 import type { ShopItemType, ShopSeries } from '@shared/types';
 
 export const BORDER_SERIES = ['ears', 'metal', 'special'] as const;
-export type ShopSeriesFilter = typeof BORDER_SERIES[number] | ShopSeries | 'all';
+/** URL value for products that belong to no themed series. */
+export const OTHER_SERIES = 'other';
+export type ShopSeriesFilter = typeof BORDER_SERIES[number] | ShopSeries | typeof OTHER_SERIES | 'all';
 
 /** Preserve the visible category when a legacy series-only URL changes collection. */
 export function shopSeriesQuery(

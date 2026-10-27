@@ -1,5 +1,4 @@
 import type { ShopSeries } from '@shared/types';
-import { shopStickerUrl } from './shop-stickers';
 import auroraArtwork from './assets/shop/card-back-aurora.svg';
 import tideArtwork from './assets/shop/card-back-tide.svg';
 import sakuraArtwork from './assets/shop/card-back-sakura.svg';
@@ -10,7 +9,6 @@ import emberArtwork from './assets/shop/card-back-ember.svg';
 import lotusArtwork from './assets/shop/card-back-lotus.svg';
 import frostArtwork from './assets/shop/card-back-frost.svg';
 import duneArtwork from './assets/shop/card-back-dune.svg';
-import dogArtwork from './assets/shop/series-dog-mark.svg';
 import starfleetEmblem from './assets/shop/series-starfleet-emblem.svg';
 import shrineEmblem from './assets/shop/series-shrine-emblem.svg';
 import ironfrontEmblem from './assets/shop/series-ironfront-emblem.svg';
@@ -37,11 +35,6 @@ const ARTWORK: Readonly<Record<ShopSeries, string>> = {
   lotus: lotusArtwork,
   frost: frostArtwork,
   dune: duneArtwork,
-  cats: shopStickerUrl('cats-hello'),
-  forest: shopStickerUrl('forest-cheer'),
-  dog: dogArtwork,
-  rainbow: shopStickerUrl('weather-rainbow'),
-  garden: shopStickerUrl('garden-hello'),
 };
 
 export function shopSeriesArtwork(series: ShopSeries, reducedMotion = false): string {
