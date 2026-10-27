@@ -153,7 +153,8 @@ export function LobbyPage(): ReactNode {
       </section>
 
       <aside className={styles.sidebar}>
-        <section id="lobby-selected-game" className={styles.actions} aria-labelledby="lobby-selected-game-title">
+        <section id="lobby-selected-game" className={styles.actions} aria-labelledby="lobby-selected-game-title"
+          data-in-room={currentRoomCode ? true : undefined}>
           <div className={styles.selectedInfo}>
             <h2 id="lobby-selected-game-title">{t(`gameType.${selectedGame}`)}</h2>
             <div className={styles.description}>

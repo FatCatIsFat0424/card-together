@@ -147,6 +147,8 @@
     background: var(--bg-surface);
     box-shadow: 0 -8px 16px -10px rgba(0, 0, 0, 0.45);
   }
+  /* Room actions are disabled in a room, so the bar stops pinning and leaves the floating room card uncovered. */
+  .actions[data-in-room] { position: static; }
   .selectedInfo { grid-column: 1 / -1; }
   .description { flex-wrap: nowrap; }
   .description > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
