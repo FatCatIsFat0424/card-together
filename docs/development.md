@@ -68,12 +68,14 @@ npm run bench:database   # indexed queries and persistent writes
 npm run bench:socket     # snapshot/chat payload bytes and runtime writes across rooms
 npm run bench:arrange    # Chinese Poker arrangement search: seed 23, 1 warmup, 20 samples
 npm run bench:render     # phone render cost of bot games with each cosmetic collection
+npm run bench:load       # 100 scripted players against a separate server process (10 min; -- --smoke for 30 s)
 ```
 
 - 每個基準測試都會建立並移除自己的暫存 JSON 資料庫。絕對不要讓它指向正式環境的 `DATABASE_PATH`。
 - Socket 結果：`payloadBytes` 與 `snapshotPayloadBytes` 計算快照，`chatPayloadBytes` 計算聊天。接受結果前，先確認 acknowledgement、接收者與工作負載都正確。
 - 排牌的時間預算需手動執行；它的正確性測資留在 Vitest 中。
 - Render：建置用戶端、啟動暫時的伺服器，並在 706x336（DPR 3）、4 倍 CPU 降速下，對每款遊戲與每組裝備各錄一次玩家回合的 5 秒 trace。選項：`-- --games liarsdeck,holdem --sets plain,starfleet,neoncity --samples 1`。需要 Chromium：`npx playwright install chromium-headless-shell`，或設定 `CHROME`（缺少系統函式庫時另設 `LD_LIBRARY_PATH`）。在同一次執行中拿 `mainTaskMs` 與 `paints` 和 `plain` 比較：絕對時間會隨機器負載變動，而且 headless 模式下 compositor（`VizCompositorThread`）在 CPU 上執行，和手機的 GPU 不同。
+- Load：產生達到保留上限的模擬資料庫（2,000 個帳號、每人 100 場對局、回放封存），在獨立程序中以空閒連接埠與暫存狀態目錄啟動伺服器，再驅動 100 個已登入的用戶端：20 個房間涵蓋每款遊戲，包含腳本化的真人與 bot、旁觀者、房間聊天、大廳 HTTP、私訊，以及定期重新連線。選項：`-- --duration 600 --clients 100 --rooms 20 --accounts 2000 --matches 100 --replays 1000 --output report.json`。JSON 輸出到 stdout，摘要輸出到 stderr；請用 `npm run --silent`。執行前先確認主機負載，並和結果一起回報。
 - 只比較完全相同的工作負載與執行環境版本。前端啟動大小包括進入點 chunk **以及**預先載入的 chunk。
 
 ## 瀏覽器驗證
