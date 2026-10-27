@@ -49,11 +49,11 @@ function nonEmpty(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0;
 }
 
-function botId(id: string): boolean {
+export function botId(id: string): boolean {
   return /^bot:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 }
 
-function validAccount(value: unknown): value is AccountRecord {
+export function validAccount(value: unknown): value is AccountRecord {
   return (
     isObject(value) &&
     nonEmpty(value.id) &&
@@ -103,7 +103,7 @@ function validAccount(value: unknown): value is AccountRecord {
   );
 }
 
-function validSession(value: unknown): value is SessionRecord {
+export function validSession(value: unknown): value is SessionRecord {
   return (
     isObject(value) &&
     typeof value.tokenHash === 'string' &&
@@ -115,7 +115,7 @@ function validSession(value: unknown): value is SessionRecord {
   );
 }
 
-function validFriendship(value: unknown): value is FriendshipRecord {
+export function validFriendship(value: unknown): value is FriendshipRecord {
   return (
     isObject(value) &&
     nonEmpty(value.id) &&
@@ -128,7 +128,7 @@ function validFriendship(value: unknown): value is FriendshipRecord {
   );
 }
 
-function validMatch(value: unknown): value is MatchRecord {
+export function validMatch(value: unknown): value is MatchRecord {
   if (
     !isObject(value) ||
     !nonEmpty(value.id) ||
@@ -180,7 +180,7 @@ function validBridgeResult(result: Record<string, unknown>): boolean {
   );
 }
 
-function validEmoji(value: unknown): value is EmojiRecord {
+export function validEmoji(value: unknown): value is EmojiRecord {
   return (
     isObject(value) &&
     nonEmpty(value.id) &&
@@ -225,12 +225,12 @@ export function validDirectMessage(value: unknown): value is DirectMessageRecord
     !provided.some((name) => personal.includes(name));
 }
 
-function validMessageRead(value: unknown): value is MessageReadRecord {
+export function validMessageRead(value: unknown): value is MessageReadRecord {
   return isObject(value) && nonEmpty(value.accountId) && nonEmpty(value.otherId) &&
     value.accountId !== value.otherId && nonEmpty(value.messageId);
 }
 
-function validFriendNotification(value: unknown): value is FriendNotificationRecord {
+export function validFriendNotification(value: unknown): value is FriendNotificationRecord {
   return isObject(value) && nonEmpty(value.id) && nonEmpty(value.accountId) && nonEmpty(value.actorId) &&
     value.accountId !== value.actorId && timestamp(value.createdAt);
 }

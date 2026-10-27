@@ -2,18 +2,25 @@ import { randomUUID } from 'node:crypto';
 import { cp, mkdir, open, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
+/** JSON text written as `database.json`, or a callback that copies the database into the backup directory. */
+export type DatabaseBackupSource = string | ((backupPath: string) => Promise<void> | void);
+
 /** Call only with exclusive database ownership, before pruning results or archive files. */
 export async function backupMatchHistoryState(
-  databasePath: string, original: string, replayDirectory = join(dirname(databasePath), 'replays'),
+  databasePath: string, original: DatabaseBackupSource, replayDirectory = join(dirname(databasePath), 'replays'),
 ): Promise<string> {
   const backupPath = `${databasePath}.match-history-${randomUUID()}.bak`;
   await mkdir(backupPath, { mode: 0o700 });
-  const handle = await open(join(backupPath, 'database.json'), 'wx', 0o600);
-  try {
-    await handle.writeFile(original, 'utf8');
-    await handle.sync();
-  } finally {
-    await handle.close();
+  if (typeof original === 'string') {
+    const handle = await open(join(backupPath, 'database.json'), 'wx', 0o600);
+    try {
+      await handle.writeFile(original, 'utf8');
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+  } else {
+    await original(backupPath);
   }
   for (const [name, source] of [['media', join(dirname(databasePath), 'media')], ['replays', replayDirectory]]) {
     try {
