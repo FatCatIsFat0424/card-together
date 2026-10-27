@@ -1,274 +1,113 @@
-/* ─── RoomPage styles ─── */
+/* ─── Waiting room: slim bar, seats on an oval, one footer row ─── */
 
 .roomContainer {
   height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: var(--spacing-md) var(--spacing-xl);
   background: var(--bg-page);
 }
 
-/* Actions stay on the code's row; the timer summary leads so its panel opens over the table. */
-.headerActions {
-  grid-area: actions;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--spacing-sm);
-}
-.chat { width: 100%; max-width: 50rem; margin-top: var(--spacing-md); }
-
-.roomHeader {
+.roomLayout {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 28vw, 440px);
   grid-template-areas:
-    'code actions'
-    'games games';
-  align-items: center;
-  column-gap: var(--spacing-lg);
-  row-gap: var(--spacing-sm);
-  width: 100%;
-  max-width: 800px;
-  margin-bottom: var(--spacing-xl);
+    'bar bar'
+    'table chat';
+  grid-template-rows: auto minmax(0, 1fr);
+  column-gap: var(--space-4);
+  padding: 0 var(--space-3) var(--space-3);
 }
+.roomLayout > * { min-width: 0; }
 
-.roomCode {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xl);
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: 4px;
-  color: var(--color-primary);
-}
-
-.roomCodeLabel {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-/* Rule options wrap below as a unit; the picker keeps its label and wraps games internally. */
-.gameTypeRow {
-  --game-control-height: 42px;
-  grid-area: games;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--spacing-sm) var(--spacing-md);
-  min-width: 0;
-  margin: 0;
-}
-
-.gameTypePicker {
+/* ─── Top bar ─── */
+.bar {
+  grid-area: bar;
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  min-width: 0;
-}
-
-.gameTypeLabel {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-/* Options wrap rather than scroll, so every game stays visible on narrow screens. */
-.segmented {
-  display: inline-flex;
-  flex-wrap: wrap;
-  max-width: 100%;
-  min-height: var(--game-control-height);
-  padding: 3px;
-  gap: 3px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  background: var(--bg-surface);
-}
-
-.segment,
-.segmentActive {
-  flex-shrink: 0;
-  min-height: calc(var(--game-control-height) - 8px);
-  white-space: nowrap;
-  padding: var(--spacing-xs) var(--spacing-md);
-  border-radius: var(--radius-pill);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  transition: background-color 180ms ease, color 180ms ease, opacity 180ms ease;
-}
-
-.gameSettingsButton { min-height: var(--game-control-height); }
-.gameActions { display: flex; align-items: center; gap: var(--spacing-md); }
-
-.gameSelect.gameSelect {
-  min-width: 160px;
+  gap: 0;
   min-height: 44px;
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-primary) 16%, var(--bg-surface));
-  color: var(--text-primary);
-  font-size: var(--text-base);
-  font-weight: 800;
+  /* The 40px hit areas of the first and last icons reach past the margin, so their glyphs line up with the footer. */
+  margin-inline: calc((var(--icon-size) - var(--hit-size)) / 2);
+  padding-top: var(--space-1);
 }
-.gameSelect :global(.MuiOutlinedInput-notchedOutline) { border: 2px solid var(--color-primary); }
-.gameSelect :global(.MuiSelect-icon) { color: var(--color-primary); }
-.gameSelect :global(.MuiSelect-select) { padding: 10px 36px 10px 14px; }
-.gameSelect :global(.MuiSelect-select.Mui-disabled) { -webkit-text-fill-color: var(--text-primary); }
-
-@media (prefers-reduced-motion: reduce) {
-  .segment, .segmentActive { transition: none; }
+.title {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-md);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+.grow { flex: 1; }
 
-.segment { color: var(--text-secondary); }
-.segment:hover:not(:disabled) { background: var(--bg-card-hover); color: var(--text-primary); }
-.segment:disabled { cursor: not-allowed; opacity: 0.6; }
-
-.ruleOption {
+/* The room code is a small chip; the pseudo-element extends its hit area to 40px. */
+.codeChip {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  padding: 0 var(--spacing-sm);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  background: var(--bg-surface);
+  gap: var(--space-1);
+  flex-shrink: 0;
+  height: 22px;
+  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
   color: var(--text-secondary);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 1px;
 }
-/* Match one picker row while the checkbox keeps its larger hit area. */
-.ruleOption:has(:global(.MuiCheckbox-root)) {
-  padding-block: calc(var(--spacing-xs) + 3px);
-  line-height: normal;
-}
-.ruleOption :global(.MuiCheckbox-root) { margin-block: -16px; }
-.ruleOption:has(input:checked) { border-color: var(--color-primary); color: var(--text-primary); }
-.ruleOption:has(input:disabled) { cursor: default; }
+.codeChip::after { content: ''; position: absolute; inset: -9px -4px; }
+.codeChip:hover { background: var(--surface-3); color: var(--text-primary); }
+.codeChip svg { color: var(--color-success); }
 
-.settingsPanel.settingsPanel {
+.menu.menu {
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
-  max-width: calc(100vw - 32px);
-  padding: var(--spacing-md);
-  margin-top: var(--spacing-xs);
+  align-items: stretch;
+  gap: var(--space-1);
+  min-width: 180px;
+  padding: var(--space-2);
   background: var(--bg-surface);
+  background-image: none;
   color: var(--text-primary);
-  border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
 }
-.settingsPanel .ruleOption {
-  min-height: 44px;
-  white-space: normal;
-}
-.settingsPanel .ruleOption :global(.MuiCheckbox-root) { margin-block: 0; }
+.menu > button { justify-content: flex-start; min-height: var(--hit-size); }
 
-.ruleSelect.ruleSelect {
-  min-height: 32px;
-  border-radius: var(--radius-sm);
+.popover.popover {
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
   background: var(--bg-surface);
+  background-image: none;
   color: var(--text-primary);
-  font: inherit;
-}
-.ruleSelect :global(.MuiOutlinedInput-notchedOutline) { border-color: var(--border-color); }
-.ruleSelect :global(.MuiSelect-icon) { color: var(--text-secondary); }
-.ruleSelect :global(.MuiSelect-select.Mui-disabled) { -webkit-text-fill-color: var(--text-muted); }
-.selectMenu.selectMenu { background: var(--bg-surface); color: var(--text-primary); }
-
-/* Current game: non-hosts see this badge too */
-.segmentActive,
-.segmentActive:disabled {
-  background: var(--color-primary);
-  color: var(--text-on-primary);
-  cursor: default;
-  opacity: 1;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
 }
 
-.hostTag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border: 1px solid color-mix(in srgb, var(--color-warning) 55%, transparent);
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--color-warning) 18%, transparent);
-  color: var(--color-warning);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  line-height: 1.4;
-  white-space: nowrap;
-}
-.hostTag svg { width: 12px; height: 12px; flex-shrink: 0; }
-
-.seatStrip {
-  display: flex;
-  align-items: stretch;
-  gap: var(--spacing-md);
-  min-width: 0;
-  min-height: 0;
-}
-
-.seatLayout {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-rows: minmax(0, 1fr);
-  flex: 1;
-  gap: var(--spacing-md);
-  min-height: 0;
-  min-width: 0;
-  padding: var(--spacing-xs) var(--spacing-xs) var(--spacing-sm);
-}
-
-.expandedSeats { grid-template-rows: repeat(2, minmax(0, 1fr)); }
-.expandedSeats .seatSlot { padding: var(--spacing-sm); container-type: size; --frame-scale: 0.9; }
-.expandedSeats .seatSlot > [data-player-identity] { gap: var(--spacing-xs); padding: var(--spacing-xs) 0; }
-.expandedSeats .seatSlot > [data-player-identity] > [role='img'] {
-  width: clamp(1.5rem, 25cqh, 3rem);
-  font-size: clamp(1rem, 15cqh, 1.75rem);
-}
-.expandedSeats .seatChoice { gap: var(--spacing-xs); }
-.expandedSeats .emptyIcon.emptyIcon { font-size: 2.5rem; }
-.expandedSeats .botAction { margin-top: var(--spacing-xs); padding: 3px 6px; min-height: 28px; }
-.expandedSeats .seatSlot:has(.botControls) > [data-player-identity] > [role='img'] {
-  width: clamp(1.5rem, 16cqh, 2rem);
-}
-
-.addSeatSlot {
-  justify-content: center;
-  color: var(--color-primary);
-  font-size: var(--text-3xl);
-}
-.addSeatSlot:disabled { opacity: 0.4; cursor: not-allowed; }
-.addSeatSlot:focus-visible { outline-offset: -4px; }
-.removeSeatButton { position: absolute; z-index: 1; top: 6px; right: 6px; display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--radius-md); background: var(--bg-card); color: var(--text-secondary); }
-.removeSeatButton:hover:not(:disabled) { color: var(--color-danger); }
-
+/* ─── Table area: the oval stage above one footer row ─── */
 .tableArea {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto auto;
+  grid-area: table;
+  position: relative;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
-  background: var(--table-surface);
   border-radius: var(--radius-xl);
-  min-width: 0;
 }
 
 .customTable {
-  position: relative;
   isolation: isolate;
-  /* Solid base so a faded image blends toward one color, not the theme felt pattern. */
   background: var(--bg-surface);
 }
-
-/* Image on its own layer so opacity fades only the image, not the table contents. */
+/* Image on its own layer so opacity fades only the image, not the seats. */
 .customTable::before {
   content: '';
   position: absolute;
@@ -282,49 +121,108 @@
     var(--table-image) center / cover no-repeat;
   opacity: var(--table-image-opacity, 1);
 }
-
 /* `TableArt` draws animated artwork and its tint instead. */
 .layeredTable::before { content: none; }
 
-.seatSlot {
-  min-width: 0;
+.stage {
+  --seat-w: 80px;
+  --seat-h: 86px;
+  position: relative;
+  flex: 1;
   min-height: 0;
+  width: 100%;
+  max-width: 920px;
+  max-height: 560px;
+  margin: auto;
+}
+
+/* The oval runs through the seat centres, so every seat sits on its rim. */
+.oval {
+  position: absolute;
+  inset: calc(var(--seat-h) / 2) calc(var(--seat-w) / 2);
+  border-radius: 50%;
+  background: var(--table-surface);
+  box-shadow: inset 0 0 0 1px var(--table-rim, rgb(255 255 255 / 0.06)), var(--shadow-inset);
+  opacity: 0.9;
+}
+.customTable .oval { background: color-mix(in srgb, var(--bg-surface) 40%, transparent); }
+
+.seats { position: absolute; inset: 0; }
+
+.summary {
+  position: absolute;
+  left: 50%;
+  top: 49%;
+  translate: -50% -50%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: var(--spacing-md);
-  background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 12%, var(--bg-surface)), var(--bg-surface));
-  border: 2px solid color-mix(in srgb, var(--color-primary) 60%, var(--border-color));
-  border-radius: var(--radius-lg);
-  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--color-primary) 8%, transparent);
-  transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
+  gap: 0;
+  max-width: 46%;
+  color: var(--table-ink);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+.summary strong { font-size: var(--text-md); font-weight: 700; }
+.summary span { color: color-mix(in srgb, var(--table-ink) 70%, transparent); }
+
+.settingsLink {
   position: relative;
-  /* The equipped seat frame is drawn just inside the slot border, so the grid never clips it. */
-  --frame-out: -3px;
-  --frame-scale: 1.25;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  color: var(--color-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.settingsLink::after { content: ''; position: absolute; inset: -11px -8px; }
+.settingsLink:hover { color: var(--color-primary-hover); }
+
+.moveHint {
+  position: absolute;
+  left: 50%;
+  bottom: 52px;
+  translate: -50% 0;
+  max-width: 60%;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  text-align: center;
 }
 
-.seatSlot:hover {
-  border-color: var(--color-primary);
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  padding: var(--space-1) var(--space-1) 0;
 }
 
-.seatSlotOccupied {
-  cursor: default;
+/* A text control with a 40px hit area, opened as the spectator list. */
+.spectatorEntry {
+  position: relative;
+  min-height: var(--hit-size);
+  padding: 0;
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
 }
+.spectatorEntry:hover { color: var(--text-primary); }
+.dropTarget.dropTarget { outline: 2px solid var(--color-primary); outline-offset: -2px; color: var(--text-primary); }
 
-.draggableSeat { cursor: grab; touch-action: none; user-select: none; }
-.movingSeat { opacity: 0.55; }
-.dropTarget.dropTarget { outline: 3px solid var(--color-primary); outline-offset: -3px; }
+/* Keyboard-only handle for moving a player; hidden until it has focus. */
 .dragHandle {
   position: absolute;
-  z-index: 2;
-  top: 4px;
-  right: 4px;
-  width: 44px;
-  height: 44px;
+  z-index: 3;
+  top: 0;
+  left: 0;
   display: grid;
   place-items: center;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--bg-surface) 85%, transparent);
   color: var(--text-secondary);
@@ -333,9 +231,7 @@
 }
 .dragHandle:active { cursor: grabbing; }
 .dragHandle:hover, .dragHandle[aria-pressed='true'] { color: var(--color-primary); }
-.spectator .dragHandle { position: static; flex-shrink: 0; }
 .dragHandle:not(:focus-visible) {
-  position: absolute;
   width: 1px;
   height: 1px;
   padding: 0;
@@ -348,285 +244,74 @@
   z-index: 1400;
   transform: translate(-50%, calc(-100% - 16px));
   pointer-events: none;
-  padding: var(--spacing-sm) var(--spacing-md);
-  border: 2px solid var(--color-primary);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-lg);
-  background: var(--bg-card);
+  background: var(--surface-3);
+  backdrop-filter: blur(6px);
   color: var(--text-primary);
   box-shadow: var(--shadow-md);
   max-width: min(240px, 70vw);
   overflow-wrap: anywhere;
 }
-.moveHint { width: 100%; margin: 0; color: var(--table-ink); font-size: var(--text-xs); text-align: center; }
 
-.seatSlotOccupied:hover {
-  border-color: color-mix(in srgb, var(--color-primary) 60%, var(--border-color));
-}
-
-.seatSlotMine {
-  color: var(--color-primary);
-  border-color: var(--color-primary);
-  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
-}
-
-.customSeat { isolation: isolate; }
-.customSeat::before {
-  content: '';
+.srOnly {
   position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  border-radius: inherit;
-  background:
-    linear-gradient(color-mix(in srgb, var(--bg-surface) 35%, transparent),
-      color-mix(in srgb, var(--bg-surface) 85%, transparent)),
-    var(--seat-image) center / cover no-repeat;
-}
-.seatSlotMine:hover { border-color: var(--color-primary); }
-
-.seatSlot > [data-player-identity] {
-  flex: 1;
-  width: 100%;
-  min-height: 0;
-  flex-direction: column;
-  justify-content: center;
-  gap: var(--spacing-lg);
-  padding: var(--spacing-md) 0;
-  text-align: center;
-}
-
-.seatSlot > [data-player-identity] > [role='img'] {
-  width: clamp(2rem, 5vw, 7rem);
-  max-width: 100%;
-  height: auto;
-  aspect-ratio: 1;
-  flex-shrink: 0;
-  font-size: clamp(1.2rem, 3vw, 4rem);
-}
-
-.seatStatus {
-  display: flex;
-  max-width: 100%;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-xs) var(--spacing-sm);
-  margin-top: var(--spacing-xs);
-  font-size: var(--text-xs);
-}
-
-.seatStatus > * { max-width: 100%; overflow-wrap: anywhere; text-align: center; }
-
-.emptySlot { justify-content: flex-end; transition: none; }
-.emptySlot .botAction { transition: none; }
-.seatChoice {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  padding: var(--spacing-md);
-  border-radius: inherit;
-  gap: var(--spacing-lg);
-}
-.seatChoice:disabled { opacity: 0.6; cursor: not-allowed; }
-/* Brief request locks prevent repeat clicks without flashing every empty seat. */
-.roomContainer [data-pending-disabled] :global(.MuiSelect-select.Mui-disabled),
-.botMenu [data-pending-disabled] :global(.MuiSelect-select.Mui-disabled) { -webkit-text-fill-color: var(--text-primary); }
-.roomContainer [data-pending-disabled] :global(.MuiSelect-icon.Mui-disabled),
-.botMenu [data-pending-disabled] :global(.MuiSelect-icon.Mui-disabled) { color: var(--color-primary); }
-.gameSelect[data-pending-disabled]:global(.Mui-disabled) :global(.MuiOutlinedInput-notchedOutline) { border-color: var(--color-primary); }
-.ruleSelect[data-pending-disabled]:global(.Mui-disabled) :global(.MuiOutlinedInput-notchedOutline) { border-color: var(--border-color); }
-.seatChoice:focus-visible { outline-offset: -4px; }
-.seatChoice .seatDirection { position: absolute; bottom: var(--spacing-md); left: 50%; transform: translateX(-50%); }
-.emptySlot:has(.botAction) .seatChoice .seatDirection { bottom: 3.75rem; }
-.emptyIcon.emptyIcon { font-size: 5rem; color: var(--text-muted); }
-.emptySlot .botAction { position: relative; z-index: 1; }
-.emptySlot:has(.botAction) .seatChoice { padding-bottom: 3rem; }
-.botAction {
-  margin-top: var(--spacing-sm);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: var(--text-xs);
-}
-
-.botDifficulty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-xs);
-  font-size: var(--text-xs);
-}
-
-.botDifficulty .ruleSelect,
-.botControls .botAction { height: 44px; min-height: 44px; }
-
-.botControls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-xs);
-  margin-top: var(--spacing-xs);
-}
-
-.botControls .botAction { margin-top: 0; }
-
-.botMenuButton {
-  position: absolute;
-  z-index: 2;
-  top: 2px;
-  right: 2px;
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: var(--text-lg);
-  line-height: 1;
-}
-.botMenuButton:hover:not(:disabled) { background: var(--bg-card-hover); color: var(--text-primary); }
-.botMenuButton:disabled { opacity: 0.5; }
-.botMenu.botMenu {
-  padding: 12px;
-  min-width: 170px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-}
-.botMenu .botControls { flex-direction: column; align-items: stretch; gap: 8px; margin: 0; }
-.botMenu .botDifficulty, .botMenu .ruleSelect { width: 100%; }
-
-.seatDirection {
-  padding: 2px 8px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-pill);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  line-height: 1.4;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
   white-space: nowrap;
 }
 
-.seatEmpty {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
+/* ─── Chat: a column beside the table on large screens, a sheet over it elsewhere ─── */
+.chat { grid-area: chat; position: relative; height: 100%; min-height: 0; }
+/* Chat scrolls independently without making the table's intrinsic height grow. */
+.roomLayout .chat > * { position: absolute; inset: 0; height: 100%; }
+
+@media (min-width: 1024px) and (min-height: 701px) {
+  .roomLayout:not(.chatOpen) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'bar' 'table';
+  }
+  .roomLayout:not(.chatOpen) .chat { display: none; }
 }
 
-.seatPlayerName {
-  overflow-wrap: anywhere;
-  max-width: 100%;
-  font-size: var(--text-base);
-  font-weight: 600;
-  margin-bottom: var(--spacing-xs);
+@media (max-width: 1023px), (max-height: 700px) {
+  .roomLayout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'bar' 'table';
+    padding-inline: var(--space-3);
+  }
+  .chat {
+    grid-area: table;
+    z-index: 3;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+    transition: visibility 0s linear 200ms;
+  }
+  .chat > * {
+    transform: translateY(calc(100% + 8px));
+    transition: transform 200ms ease-in;
+  }
+  .chatOpen .chat { visibility: visible; pointer-events: auto; transition-delay: 0s; }
+  .chatOpen .chat > * { transform: translateY(0); transition-timing-function: ease-out; }
 }
 
-.seatReadyBadge {
-  font-size: var(--text-xs);
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  background: var(--color-success);
-  color: var(--text-inverse);
-  font-weight: 600;
-}
+/* ─── Entrance: controls rise first, seats follow, the footer finishes the sequence ─── */
+.entering .bar,
+.entering .summary,
+.entering .footer { animation: roomControlEnter 200ms ease-out backwards; }
+.entering .seats > * { animation: roomSeatEnter 200ms ease-out 80ms backwards; }
+.entering .seats > :nth-child(2) { animation-delay: 105ms; }
+.entering .seats > :nth-child(3) { animation-delay: 130ms; }
+.entering .seats > :nth-child(4) { animation-delay: 155ms; }
+.entering .seats > :nth-child(5) { animation-delay: 180ms; }
+.entering .seats > :nth-child(6) { animation-delay: 205ms; }
+.entering .seats > :nth-child(7) { animation-delay: 230ms; }
+.entering .seats > :nth-child(8) { animation-delay: 255ms; }
+.entering .footer { animation-delay: 280ms; }
 
-.seatNotReadyBadge {
-  font-size: var(--text-xs);
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  background: var(--border-color);
-  color: var(--text-secondary);
-}
-
-.seatColorDot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-pill);
-  position: absolute;
-  top: var(--spacing-sm);
-  right: var(--spacing-sm);
-}
-
-/* ─── Spectators: unseated members, listed in one wrapping row below the table ─── */
-.spectators {
-  position: relative;
-  isolation: isolate;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-xs) var(--spacing-md);
-  font-size: var(--text-sm);
-  color: var(--table-ink);
-}
-
-.spectatorsLabel { font-weight: 700; white-space: nowrap; }
-.spectatorsEntry {
-  flex-shrink: 0;
-  min-height: 44px;
-  padding: 6px 12px;
-  border-color: var(--color-primary);
-  background: var(--bg-surface);
-  color: var(--color-primary);
-  font-size: var(--text-sm);
-}
-
-.spectatorList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs) var(--spacing-md);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.spectator {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-}
-
-.spectator .botAction { margin-top: 0; }
-
-.roomFooter {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-xl);
-}
-
-.roomHeader { flex-wrap: wrap; row-gap: var(--spacing-sm); }
-.roomHeader button, .gameTypeLabel { white-space: nowrap; }
-
-/* One entrance sequence per visit; the footer finishes after every seat. */
-.entering .codeBlock,
-.entering .headerActions,
-.entering .gameTypeRow,
-.entering .spectators,
-.entering .roomFooter {
-  animation: roomControlEnter 200ms ease-out backwards;
-}
-.entering .headerActions { animation-delay: 20ms; }
-.entering .gameTypeRow { animation-delay: 40ms; }
-.entering .seatSlot { animation: roomSeatEnter 200ms ease-out 80ms backwards; }
-.entering .seatSlot:nth-child(2) { animation-delay: 105ms; }
-.entering .seatSlot:nth-child(3) { animation-delay: 130ms; }
-.entering .seatSlot:nth-child(4) { animation-delay: 155ms; }
-.entering .seatSlot:nth-child(5) { animation-delay: 180ms; }
-.entering .seatSlot:nth-child(6) { animation-delay: 205ms; }
-.entering .seatSlot:nth-child(7) { animation-delay: 230ms; }
-.entering .seatSlot:nth-child(8) { animation-delay: 255ms; }
-.entering .spectators { animation-delay: 260ms; }
-.entering .roomFooter { animation-delay: 280ms; }
-
-/* Compact chat keeps its separate slide animation when opened. */
 @media (min-width: 1024px) and (min-height: 701px) {
   .entering .chat { animation: roomControlEnter 200ms ease-out 260ms backwards; }
 }
@@ -642,303 +327,15 @@
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Keep the waiting table and readiness controls beside the conversation. */
-.roomLayout {
-  display: grid;
-  height: 100%;
-  min-height: 0;
-  grid-template-columns: minmax(0, 1fr) clamp(300px, 28vw, 440px);
-  grid-template-areas:
-    'header header'
-    'table chat';
-  grid-template-rows: auto minmax(0, 1fr);
-  align-items: stretch;
-  justify-content: center;
-  column-gap: var(--spacing-xl);
-  row-gap: var(--spacing-md);
-}
-
-.roomLayout > * { min-width: 0; }
-.roomLayout .roomHeader { grid-area: header; max-width: none; margin-bottom: 0; }
-.roomLayout .tableArea { grid-area: table; }
-.roomLayout .seatLayout {
-  width: 100%;
-  min-width: 0;
-  aspect-ratio: auto;
-}
-.roomLayout .roomFooter { align-self: end; justify-self: center; margin-top: 0; }
-
-.roomLayout .chat {
-  grid-area: chat;
-  margin-top: 0;
-  height: 100%;
-  max-width: none;
-  min-height: 0;
-  position: relative;
-}
-
-/* Chat scrolls independently without making the table's intrinsic height grow. */
-.roomLayout .chat > * { position: absolute; inset: 0; height: 100%; }
-
-/* Narrow or short viewports reserve the table height by switching to chat separately. */
-.chatToggle { display: inline-flex; }
-
-@media (min-width: 1024px) and (min-height: 701px) {
-  .roomLayout:not(.chatOpen) {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'header' 'table';
-  }
-  .roomLayout:not(.chatOpen) .chat { display: none; }
-}
-
-@media (max-width: 1023px), (max-height: 700px) {
-  .gameActions { gap: var(--spacing-sm); }
-  .gameActions > button { min-height: var(--game-control-height); padding-inline: 10px; font-size: var(--text-sm); }
-  .roomContainer { padding: 8px; }
-  .roomLayout {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'header' 'table';
-    grid-template-rows: auto minmax(0, 1fr);
-    gap: 6px;
-  }
-  .roomLayout .roomHeader { gap: 6px; }
-  .roomCode { font-size: var(--text-lg); letter-spacing: 2px; }
-  .roomCodeLabel { display: none; }
-  .headerActions { gap: 4px; margin-left: auto; }
-  .headerActions button { font-size: var(--text-xs); padding: 5px 7px; min-height: 32px; }
-  .gameTypeLabel { display: none; }
-  .segment, .segmentActive { padding: 4px 8px; font-size: var(--text-xs); }
-  .ruleOption { padding: 0 4px; font-size: var(--text-xs); }
-  .roomLayout .tableArea { gap: 6px; padding: 6px; }
-  .roomLayout .seatLayout {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: none;
-    grid-auto-rows: minmax(10rem, 1fr);
-    gap: 6px;
-    overflow-x: hidden;
-    overflow-y: auto;
-  }
-  .roomLayout .seatLayout:has(.botDifficulty) { grid-auto-rows: minmax(13rem, 1fr); }
-  .seatStrip { gap: 6px; }
-  .seatSlot, .expandedSeats .seatSlot { padding: 6px; --frame-scale: 0.7; }
-  .seatSlot > * { flex-shrink: 0; }
-  .seatSlot > [data-player-identity] { padding: 4px 0; gap: 6px; }
-  .seatSlot > [data-player-identity] > [role='img'],
-  .expandedSeats .seatSlot > [data-player-identity] > [role='img'] { width: 32px; font-size: 1.2rem; }
-  .seatSlot > [data-player-identity] { font-size: var(--text-xs); }
-  .seatStatus { gap: 3px; margin-top: 3px; }
-  .seatChoice { min-height: 48px; padding: 4px; }
-  .seatChoice .seatDirection { bottom: 6px; }
-  .emptySlot:has(.botAction) .seatChoice .seatDirection { bottom: 44px; }
-  .emptyIcon.emptyIcon, .expandedSeats .emptyIcon.emptyIcon { font-size: 2rem; }
-  .emptySlot { justify-content: flex-end; }
-  .botAction { margin-top: 4px; padding: 3px 6px; min-height: 28px; }
-  .removeSeatButton { width: 32px; height: 32px; top: 3px; right: 3px; }
-  .roomFooter { gap: 8px; }
-  .chatToggle { display: inline-flex; }
-  .roomLayout .chat {
-    grid-area: table;
-    z-index: 3;
-    overflow: hidden;
-    visibility: hidden;
-    pointer-events: none;
-    transition: visibility 0s linear 200ms;
-  }
-  .roomLayout .chat > * {
-    transform: translateY(calc(100% + 8px));
-    transition: transform 200ms ease-in;
-  }
-  .chatOpen .chat { visibility: visible; pointer-events: auto; transition-delay: 0s; }
-  .chatOpen .chat > * { transform: translateY(0); transition-timing-function: ease-out; }
-}
-
-/* Phone landscape seats form one compact row; extra seats remain reachable by swiping. */
-@media (max-height: 500px) and (min-width: 600px) {
-  .headerActions button { height: 44px; min-height: 44px; }
-  .gameTypeRow { flex-wrap: nowrap; gap: 8px; }
-  .gameTypePicker { flex: 0 1 240px; }
-  .gameSelect { width: 100%; }
-  .gameActions { display: contents; }
-  .gameActions > button { position: relative; flex-shrink: 0; width: 44px; height: 44px; padding: 0; }
-  .gameActions .actionText { display: none; }
-  .gameActions .gameRulesButton { width: auto; padding-inline: 10px; margin-left: auto; white-space: nowrap; }
-  .gameRulesButton .actionText { display: inline; }
-  .gameActions .unread { position: absolute; top: -4px; right: -4px; }
-  .roomLayout .tableArea {
-    grid-template-columns: clamp(144px, 19vw, 180px) minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
-    grid-template-areas: 'spectators seats' 'spectators footer';
-  }
-  .seatStrip { grid-area: seats; }
-  .roomLayout .roomFooter { grid-area: footer; }
-  .spectators {
-    grid-area: spectators;
-    min-height: 0;
-    min-width: 0;
-    flex-direction: column;
-    flex-wrap: nowrap;
-    align-items: stretch;
-    justify-content: flex-start;
-    gap: 8px;
-    padding: 8px;
-    border-radius: var(--radius-md);
-    background: color-mix(in srgb, var(--bg-surface) 65%, transparent);
-  }
-  .spectatorsLabel { flex: none; font-size: var(--text-xs); }
-  .spectatorsEntry { width: 100%; white-space: normal; }
-  .spectatorList {
-    flex: 1;
-    min-height: 0;
-    flex-direction: column;
-    flex-wrap: nowrap;
-    overflow-y: auto;
-    overflow-x: hidden;
-    overscroll-behavior: contain;
-    scrollbar-width: none;
-  }
-  .spectator {
-    position: relative;
-    flex: none;
-    flex-wrap: wrap;
-    min-height: 44px;
-    padding: 4px;
-    border-bottom: 1px solid var(--rail-border);
-  }
-  .spectator.draggableSeat { touch-action: pan-y; }
-  .spectator.draggableSeat [data-player-identity] > [role='img'] { touch-action: none; }
-  .spectator > [data-player-identity] { flex: 1 1 100%; min-width: 0; gap: 8px; }
-  .spectator > [data-player-identity] > :last-child { flex: 1; min-width: 0; }
-  .spectator > [data-player-identity] > :last-child > :first-child {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  /* Seats fill rows of up to four, so every seat stays on screen; five or more seats take two rows. */
-  .roomLayout .seatLayout, .roomLayout .seatLayout:has(.botDifficulty) {
-    --seat-columns: 4;
-    grid-template-columns: repeat(var(--seat-columns), minmax(0, 1fr));
-    grid-template-rows: none;
-    grid-auto-flow: row;
-    grid-auto-rows: minmax(0, 1fr);
-    align-content: stretch;
-    padding-block: 2px;
-    overflow-x: hidden;
-    overflow-y: auto;
-    scrollbar-width: none;
-    gap: 6px;
-  }
-  .roomLayout .seatLayout:not(:has(> :nth-child(4))) { --seat-columns: 3; }
-  .roomLayout .seatLayout:not(:has(> :nth-child(3))) { --seat-columns: 2; }
-  .roomLayout .seatLayout:has(> :nth-child(5)) { grid-auto-rows: minmax(88px, 1fr); }
-  .seatLayout:has(> :nth-child(5)) .emptyIcon { display: none; }
-  .seatLayout:has(> :nth-child(5)) .seatSlot > [data-player-identity] > [role='img'] { width: 28px; font-size: 1rem; }
-  .seatChoice { gap: 4px; padding: 6px; }
-  .seatChoice .seatDirection, .emptySlot:has(.botAction) .seatChoice .seatDirection {
-    top: 6px; bottom: auto; left: 6px; transform: none;
-  }
-  .emptySlot:has(.botAction) .seatChoice { padding-bottom: 36px; }
-  .seatLayout::-webkit-scrollbar, .spectatorList::-webkit-scrollbar { display: none; }
-  .seatSlot, .expandedSeats .seatSlot { padding: 6px; container-type: normal; }
-  .seatSlot:has(.botMenuButton) > [data-player-identity] { padding-top: 32px; }
-  .seatSlot > [data-player-identity], .expandedSeats .seatSlot > [data-player-identity] {
-    gap: 4px;
-    font-size: var(--text-xs);
-  }
-  .seatStatus { gap: 3px; }
-  .seatReadyBadge, .seatNotReadyBadge, .seatDirection { padding: 1px 5px; }
-}
-
-/* One header row: the rules button keeps its label only where the row has room for it. */
-@media (max-height: 500px) and (min-width: 600px) {
-  .roomLayout .roomHeader {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-areas: 'code games actions';
-    column-gap: 8px;
-  }
-  .roomCode { font-size: var(--text-base); letter-spacing: 1px; }
-  .gameTypePicker { flex: 0 1 180px; min-width: 96px; }
-}
-@media (max-height: 500px) and (min-width: 600px) and (max-width: 859px) {
-  .gameActions .gameRulesButton { width: 44px; padding-inline: 0; }
-  .gameRulesButton .actionText { display: none; }
-}
-
 .roomContainer[data-reduced-motion] .chat,
 .roomContainer[data-reduced-motion] .chat > * { transition: none; }
 @media (prefers-reduced-motion: reduce) {
-  .roomLayout .chat, .roomLayout .chat > * { transition: none; }
+  .chat, .chat > * { transition: none; }
 }
 
-.codeBlock {
-  grid-area: code;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-}
-
-.codePill {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: 4px 6px 4px 14px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  cursor: pointer;
-  transition: border-color var(--transition-fast), background var(--transition-fast);
-}
-
-.codePill:hover {
-  border-color: var(--color-primary);
-  background: var(--bg-card-hover);
-}
-
-.copyState {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-width: 30px;
-  height: 30px;
-  padding: 0 6px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-card);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  font-weight: 600;
-}
-
-.codePill:hover .copyState { color: var(--text-primary); }
-.copiedState, .codePill:hover .copiedState { color: var(--color-success); }
-
-.chatToggle { position: relative; }
-
-.unread {
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: var(--radius-pill);
-  background: var(--color-danger);
-  color: var(--text-on-danger);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  line-height: 18px;
-  text-align: center;
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-@media (max-width: 1023px), (max-height: 700px) {
-  .codePill { padding: 2px 4px 2px 10px; }
-  .copyState { min-width: 26px; height: 26px; }
-  .copyText { display: none; }
+/* Phone landscape: the bar and footer shrink to give the oval the height. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .roomLayout { padding: 0 var(--space-3) var(--space-2); }
+  .bar { min-height: 40px; padding-top: 0; }
+  .footer { min-height: 44px; padding-top: 0; }
 }

@@ -1,21 +1,22 @@
-/* ─── PlayerCard: identity, record, and friendship in a compact popover ─── */
+/* ─── PlayerCard: avatar, title, record and actions on one flat surface ─── */
 .card.card {
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
   display: grid;
-  gap: var(--spacing-sm);
+  gap: var(--space-3);
   width: min(280px, calc(100vw - 16px));
-  padding: var(--spacing-md);
+  padding: var(--space-4);
   background: var(--bg-surface);
+  background-image: none;
   color: var(--text-primary);
-  border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
 }
-.identity { display: flex; align-items: center; gap: var(--spacing-sm); min-width: 0; }
+.identity { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
 .names { display: grid; gap: 2px; min-width: 0; }
-.names strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-base); }
+.names strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-lg); }
 .muted { color: var(--text-secondary); font-size: var(--text-xs); }
-.record { display: grid; gap: 2px; padding-top: var(--spacing-sm); border-top: 1px solid var(--border-color); font-size: var(--text-sm); }
-.friendship { display: grid; gap: 4px; }
-.friendship button { min-height: 40px; }
+.record { display: grid; gap: 2px; padding-top: var(--space-3); border-top: 1px solid var(--separator); font-size: var(--text-sm); }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.profile { margin-left: auto; }
 .error { color: var(--color-danger); font-size: var(--text-xs); }
-.profile { justify-self: start; font-size: var(--text-sm); }

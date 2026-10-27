@@ -1,5 +1,5 @@
 import { gameSeatValue, isCompassSeat, roomSeatInfo } from '@shared/rules/seats';
-// ─── TableSeat: compact seat info plate (avatar, name, key numbers, status) and card tray ───
+// ─── TableSeat: avatar-first seat (avatar, seat-framed name pill, key numbers, status) and card tray ───
 
 import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
@@ -8,6 +8,7 @@ import { useShallow } from 'zustand/react/shallow';
 import type { Card, GameClock, GameSeat } from '@shared/types';
 import { rpCardPoints, rpScore } from '@shared/rules/redpoints';
 import { useCardFaceUrl } from '../cosmetics/card-faces/use-card-face';
+import { seatBackgroundStyle } from '../account-appearance';
 import { SeatFrame, seatFrameHostClass } from '../cosmetics/seat-frames/SeatFrame';
 import type { TranslationKey } from '../i18n';
 import { latestCallIndex, remainingCards } from '../game-view';
@@ -25,7 +26,7 @@ import { seatLabel } from '../games/seat-names';
 import { useRoomStore } from '../stores/room-store';
 import { napoleonPresentedPoints, napoleonSeatLabels } from '../games/napoleon/napoleon-view';
 import { ObservedCards, ObservedLiarCards, ObservedNapoleonCards } from './ObservedHand';
-import { PlayerLink } from './PlayerLink';
+import { Avatar } from './Avatar';
 import { latestSeatAction, seatStatus, showsAutoPlayed } from './seat-status';
 import type { SeatStatus } from './seat-status';
 import type { AppIconName } from './AppIcon';
@@ -77,7 +78,7 @@ function CardPileDetails({ cards, owner, covered = false }: {
   }, [open]);
 
   return <>
-    <button ref={buttonRef} type="button" className={`${styles.chip} ${covered ? styles.covered : styles.points} touch-target`}
+    <button ref={buttonRef} type="button" className={`${styles.stat} ${covered ? styles.covered : styles.points} touch-target`}
       aria-expanded={open} aria-haspopup="dialog"
       aria-label={covered ? t('sevens.showCovered', { name: owner }) : undefined}
       title={covered ? t('sevens.showCovered', { name: owner }) : t('redpoints.showCaptured')}
@@ -117,44 +118,69 @@ function CardPileDetails({ cards, owner, covered = false }: {
 type ActiveTurn = NonNullable<GameClock['turn']>;
 
 /**
- * Turn time as compositor animations: the turn allowance drains first, then the reserve
- * (own seat only; players see no other reserve).
+ * Turn time as a ring around the avatar, drawn with compositor animations: the turn allowance drains
+ * first, then the reserve (own seat only; players see no other reserve). Each half of the ring is a
+ * semicircular arc that rotates out of its clipped half, so only `transform` and `opacity` change.
  * Timing is fixed when the turn first renders (the parent keys it by turn id), because
  * changing animation delays later would jump the running animation.
  */
-function TurnBar({ turn, bankMs, serverNow, receivedAt }: {
+const ARC_START = 'rotate(45deg)';
+const ARC_END = 'rotate(-135deg)';
+
+function TurnRing({ turn, bankMs, serverNow, receivedAt }: {
   turn: ActiveTurn; bankMs: number; serverNow: number | undefined; receivedAt: number;
 }): ReactNode {
   const [initial] = useState(() => ({ turn, bankMs, serverNow, receivedAt }));
   const ref = useRef<HTMLSpanElement>(null);
-  const bankRef = useRef<HTMLSpanElement>(null);
+  const bankLeft = useRef<HTMLSpanElement>(null);
+  const bankRight = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
-    const bar = ref.current;
-    if (!bar) return;
+    const ring = ref.current;
+    if (!ring) return;
     const now = Date.now();
     const projectedNow = initial.serverNow === undefined ? now
       : initial.serverNow + Math.max(0, now - initial.receivedAt);
     const startsIn = initial.turn.startsAt - projectedNow;
     const baseMs = initial.turn.baseRemainingMs;
-    bar.style.setProperty('--base-ms', `${baseMs}ms`);
-    bar.style.setProperty('--base-delay', `${startsIn}ms`);
-    const bank = bankRef.current;
-    // Reduced motion hides the bar; an animation nobody can see would run on the main thread.
-    if (!bank || typeof bank.animate !== 'function' || getComputedStyle(bar).display === 'none') return;
-    // One transform animation keeps the reserve hidden until the allowance runs out, then drains it.
-    // An invisible element waiting to appear could not run on the compositor.
-    const split = baseMs / (baseMs + initial.bankMs);
-    const animation = bank.animate([
-      { offset: 0, transform: 'scaleX(0)' },
-      { offset: split, transform: 'scaleX(0)' },
-      { offset: split, transform: 'scaleX(1)' },
-      { offset: 1, transform: 'scaleX(0)' },
-    ], { duration: baseMs + initial.bankMs, delay: startsIn, fill: 'both' });
-    return () => animation.cancel();
+    ring.style.setProperty('--base-ms', `${baseMs}ms`);
+    ring.style.setProperty('--base-delay', `${startsIn}ms`);
+    const left = bankLeft.current;
+    const right = bankRight.current;
+    // Reduced motion hides the ring; an animation nobody can see would run on the main thread.
+    if (!left || !right || typeof left.animate !== 'function' || getComputedStyle(ring).display === 'none') return;
+    // The reserve stays hidden until the allowance runs out, then drains over the two halves in turn.
+    // An invisible element waiting to appear could not run on the compositor, so opacity switches with the keyframes.
+    const total = baseMs + initial.bankMs;
+    const split = baseMs / total;
+    const middle = split + (1 - split) / 2;
+    const options = { duration: total, delay: startsIn, fill: 'both' } as const;
+    const animations = [
+      left.animate([
+        { offset: 0, opacity: 0, transform: ARC_START },
+        { offset: split, opacity: 0, transform: ARC_START },
+        { offset: split, opacity: 1, transform: ARC_START },
+        { offset: middle, opacity: 1, transform: ARC_END },
+        { offset: 1, opacity: 1, transform: ARC_END },
+      ], options),
+      right.animate([
+        { offset: 0, opacity: 0, transform: ARC_START },
+        { offset: split, opacity: 0, transform: ARC_START },
+        { offset: split, opacity: 1, transform: ARC_START },
+        { offset: middle, opacity: 1, transform: ARC_START },
+        { offset: 1, opacity: 1, transform: ARC_END },
+      ], options),
+    ];
+    return () => animations.forEach((animation) => animation.cancel());
   }, [initial]);
-  return <span ref={ref} className={styles.turnBar} aria-hidden="true">
-    {initial.bankMs > 0 && <span ref={bankRef} className={styles.turnBank} />}
-    <span className={styles.turnBase} />
+  return <span ref={ref} className={styles.timer} aria-hidden="true">
+    <span className={`${styles.half} ${styles.leftHalf}`}><span className={`${styles.arc} ${styles.baseArc}`} /></span>
+    <span className={`${styles.half} ${styles.rightHalf}`}><span className={`${styles.arc} ${styles.baseArc}`} /></span>
+    {initial.bankMs > 0 && <>
+      <span className={`${styles.half} ${styles.leftHalf}`}>
+        <span ref={bankLeft} className={`${styles.arc} ${styles.bankArc}`} /></span>
+      <span className={`${styles.half} ${styles.rightHalf}`}>
+        <span ref={bankRight} className={`${styles.arc} ${styles.bankArc}`} /></span>
+    </>}
   </span>;
 }
 
@@ -190,6 +216,13 @@ interface TableSeatProps {
   /** Card this seat just played (a change replays the flash) */
   moveKey?: number | string;
   suppressTurn?: boolean;
+}
+
+interface RoleLabel {
+  readonly key: string;
+  readonly label: string;
+  readonly tone: string;
+  readonly title?: string;
 }
 
 export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppressTurn }: TableSeatProps): ReactNode {
@@ -284,14 +317,16 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   // A Hold'em fold outranks a timeout in the status slot, so a timed-out fold keeps the timeout icon.
   const heStatusLabel: TranslationKey | null = heOut && status === 'busted' ? 'holdem.out'
     : heLocked && status === 'locked' ? heState === 'folded' ? 'holdem.folded' : 'holdem.allIn' : null;
-  const statusIcon = heStatusLabel ? heState === 'folded' && autoPlayed ? STATUS_ICON.autoPlayed : ''
-    : dead && status === 'busted' ? '💀' : status ? STATUS_ICON[status] : '';
-  const statusContent = status && <>
-    {statusIcon && <span className={styles.statusIcon} aria-hidden="true">{statusIcon === '💀' ? statusIcon : <AppIcon name={statusIcon} />} </span>}
-    {t(heStatusLabel ?? (dead && status === 'busted' ? 'liarsdeck.dead'
-      : bj && status === 'arranged' ? 'blackjack.betPlaced'
-        : napoleonReviewed && status === 'arranged' ? 'napoleon.reviewed' : STATUS_LABEL[status]))}
-  </>;
+  // Lasting states (folded, out, busted) dim the whole seat instead of adding a badge on top of it.
+  const dimmed = busted || dead || sittingOut || heOut || heState === 'folded';
+  const statusText = heStatusLabel ?? (dead && status === 'busted' ? 'liarsdeck.dead'
+    : bj && status === 'arranged' ? 'blackjack.betPlaced'
+      : napoleonReviewed && status === 'arranged' ? 'napoleon.reviewed' : status ? STATUS_LABEL[status] : null);
+  // The turn ring already shows that a bot is thinking, so that status stays a screen-reader label only.
+  const statusChip = status && status !== 'thinking' && !(dimmed && (status === 'busted' || status === 'locked')) ? status : null;
+  // A fold that came from a timeout keeps a quiet timer mark on the dimmed seat.
+  const timedOutFold = heState === 'folded' && autoPlayed && statusChip === null;
+  const statusIcon = statusChip ? STATUS_ICON[statusChip] : '';
   const seatName = seatLabel(t, gameType, seat);
   const name = player?.nickname ?? seatName;
   const bottom = position === 'bottom';
@@ -312,9 +347,54 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   )} /> : !bottom && cards > 0 && !observed && <CardTray count={Math.min(cards, MAX_BACKS)} kind="backs"
     render={() => <span className={styles.back}><CardBackArt /></span>} />;
 
+  const roleLabels = [
+    declarer && { key: 'declarer', label: t('table.declarer'), tone: styles.gold },
+    dealer && phase === 'bidding' && { key: 'dealer', label: t('table.dealer'), tone: styles.light },
+    bj?.currentDealer === seat && { key: 'bjDealer', label: t('blackjack.dealerTag'), tone: styles.gold },
+    heBlinds?.button === seat && { key: 'button', label: t('holdem.button'), tone: styles.gold, title: t('holdem.buttonTitle') },
+    heBlinds?.small === seat && { key: 'sb', label: t('holdem.sb'), tone: styles.light, title: t('holdem.sbTitle') },
+    heBlinds?.big === seat && { key: 'bb', label: t('holdem.bb'), tone: styles.light, title: t('holdem.bbTitle') },
+    napoleonLabels?.napoleon === seat && { key: 'napoleon', label: t('napoleon.napoleon'), tone: styles.napoleonRole },
+    napoleonLabels?.secretary === seat && { key: 'secretary', label: t('napoleon.secretary'), tone: styles.secretaryRole },
+  ].filter((role): role is RoleLabel => role !== false);
+  // A single character fits a badge on the avatar's corner; longer labels join the stats line.
+  const cornerRoles = roleLabels.filter((role) => [...role.label].length === 1);
+  const lineRoles = roleLabels.filter((role) => [...role.label].length > 1);
+  // An animated picture behind every seat would repaint the table each frame, so seats show its still frame.
+  const seatArt = seatBackgroundStyle(player, true);
+  const seatDirection = seatLabel(t, gameType, seat, true);
+
+  const avatarBox = <span className={styles.avatarBox} data-seat-avatar>
+    {player ? <Avatar avatar={player.avatar} image={player.avatarImage} border={player.avatarBorder}
+      color={player.color} size="compact" /> : <span className={styles.emptyAvatar} aria-hidden="true" />}
+    <span className={`${styles.ring} ${clockTurn ? styles.timed : ''}`} aria-hidden="true" />
+    {clockTurn && clock && <TurnRing key={clockTurn.id} turn={clockTurn} bankMs={isMe ? clock.bankRemainingMs[seat] ?? 0 : 0}
+      serverNow={clock.serverNow} receivedAt={receivedAt} />}
+    <span className={`${styles.corner} ${styles.direction}`} title={seatName}>
+      <span aria-hidden="true">{seatDirection}</span>
+      <span className={styles.srOnly}>{seatName}</span>
+    </span>
+    {cornerRoles.length > 0 && <span className={`${styles.corner} ${styles.roles}`}>
+      {cornerRoles.map((role) => <span key={role.key} className={`${styles.glyph} ${role.tone}`} title={role.title}>
+        {role.label}</span>)}
+    </span>}
+    {moveKey !== undefined && <span key={moveKey} className={styles.moved} aria-hidden="true" />}
+  </span>;
+  const namePill = <span className={styles.namePill}>
+    <SeatFrame frame={player?.seatFrame} turn={Boolean(active)} />
+    <span className={styles.nickname}>{player ? player.nickname : '—'}</span>
+  </span>;
+  const identity = <>{avatarBox}{namePill}{isMe && <span className={styles.srOnly}>{t('seat.meTag')}</span>}</>;
+  const statusLine = statusChip ? <span className={`${styles.statusChip} ${styles[statusChip]}`}
+    title={statusChip === 'autoPlayed' ? t('clock.autoPlayed') : undefined}>
+    {statusIcon && <AppIcon name={statusIcon} />}{statusText && t(statusText)}
+  </span> : timedOutFold && <span className={`${styles.statusChip} ${styles.autoPlayed}`} title={t('clock.autoPlayed')}>
+    <AppIcon name="timer" />
+  </span>;
+
   return (
     <div data-table-seat={position}
-      className={`${styles.seat} ${styles[position]} ${handBeside ? styles.handBeside : ''} ${active ? styles.turn : ''} ${frameClass ? `${styles.framed} ${frameClass}` : ''} ${busted || dead || sittingOut || heOut || heState === 'folded' ? styles.out : ''} ${onObserve ? styles.observable : onPick ? styles.pickable : ''}`}
+      className={`${styles.seat} ${styles[position]} ${handBeside ? styles.handBeside : ''} ${active ? styles.turn : ''} ${isMe ? styles.mine : ''} ${frameClass ? `${styles.framed} ${frameClass}` : ''} ${dimmed ? styles.out : ''} ${onObserve ? styles.observable : onPick ? styles.pickable : ''}`}
       role={select ? 'button' : undefined} tabIndex={select ? 0 : undefined} onClick={select}
       aria-label={onObserve ? t('table.observePlayer', { name }) : onPick ? t('seat.pickNext', { name }) : undefined}
       title={onObserve ? t('table.observePlayer', { name }) : undefined}
@@ -324,76 +404,50 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
         event.preventDefault();
         select();
       } : undefined}>
-      <div className={styles.plate} data-seat-plate>
-        <SeatFrame frame={player?.seatFrame} turn={Boolean(active)} />
-        <div className={styles.name}>
-          {player ? select ? <PlayerLink player={player} size="medium" linked={false} />
-            : <button type="button" className={styles.identityButton} aria-haspopup="dialog"
-              aria-label={t('playerCard.open', { nickname: player.nickname })}
-              onClick={(event) => setCardAnchor(event.currentTarget)}>
-              <PlayerLink player={player} size="medium" linked={false} />
-            </button>
-            : <><span className={styles.emptyAvatar} aria-hidden="true" /><span className={styles.empty}>—</span></>}
-          {isMe && <span className={styles.meTag}>{t('seat.meTag')}</span>}
-          {napoleonLabels?.napoleon === seat && <span className={`${styles.role} ${styles.napoleonRole}`}>
-            {t('napoleon.napoleon')}</span>}
-          {napoleonLabels?.secretary === seat && <span className={`${styles.role} ${styles.secretaryRole}`}>
-            {t('napoleon.secretary')}</span>}
-          {call && <span key={callIndex} className={`${styles.call} ${call.type === 'pass' ? styles.callPass : ''}`}
-            title={t('table.lastCall')}>
-            {call.type === 'pass' ? t('game.pass') : <BidLabel level={call.level} suit={call.suit} />}
-          </span>}
-        </div>
-        <span className={styles.seatBadge} title={seatName}>
-          <span aria-hidden="true">{seatLabel(t, gameType, seat, true)}</span>
-          <span className={styles.srOnly}>{seatName}</span>
-        </span>
-        <div className={styles.chips}>
+      <div className={`${styles.plate} ${seatArt ? styles.hasArt : ''}`} style={seatArt} data-seat-plate>
+        {player && !select
+          ? <button type="button" className={styles.identity} aria-haspopup="dialog"
+            aria-label={t('playerCard.open', { nickname: player.nickname })}
+            onClick={(event) => setCardAnchor(event.currentTarget)}>{identity}</button>
+          : <div className={styles.identity}>{identity}</div>}
+        <div className={styles.stats}>
           {captured && <CardPileDetails cards={captured} owner={name} />}
-          {!bottom && cards > 0 && <span className={`${styles.chip} ${bigTwoCards !== null ? styles.bigCount : ''}`}>
+          {!bottom && cards > 0 && <span className={`${styles.stat} ${bigTwoCards !== null ? styles.bigCount : ''}`}>
             {t('table.cards', { n: String(cards) })}
           </span>}
           {sevensCovered !== null && (observedCovered?.length
             ? <CardPileDetails cards={observedCovered} owner={name} covered />
-            : sevensCovered > 0 && <span className={styles.chip}>
+            : sevensCovered > 0 && <span className={styles.stat}>
               {t('sevens.covered', { n: String(sevensCovered) })}
             </span>)}
-          {liars && <span className={`${styles.chip} ${(gameSeatValue(liars.shots, seat) ?? 0) >= 4 ? styles.danger : ''}`}
+          {liars && <span className={`${styles.stat} ${(gameSeatValue(liars.shots, seat) ?? 0) >= 4 ? styles.danger : ''}`}
             title={t('liarsdeck.shotsTitle', { n: String((gameSeatValue(liars.shots, seat) ?? 0)) })}>
             {t('liarsdeck.shots', { n: String((gameSeatValue(liars.shots, seat) ?? 0)) })}
           </span>}
-          {bj && <span className={styles.chip} title={t('blackjack.chipsTitle', { n: String(bj.chips[seat]) })}>
+          {bj && <span className={`${styles.stat} ${styles.chips}`} title={t('blackjack.chipsTitle', { n: String(bj.chips[seat]) })}>
             <ChipIcon />{bj.chips[seat]}
           </span>}
-          {bj?.currentDealer === seat && <span className={`${styles.chip} ${styles.declarer}`}>{t('blackjack.dealerTag')}</span>}
-          {he && <span className={styles.chip} title={t('holdem.chipsTitle', { n: String(he.chips[seat]) })}>
+          {he && <span className={`${styles.stat} ${styles.chips}`} title={t('holdem.chipsTitle', { n: String(he.chips[seat]) })}>
             <ChipIcon />{he.chips[seat]}
           </span>}
-          {heBlinds?.button === seat && <span className={`${styles.chip} ${styles.declarer}`} title={t('holdem.buttonTitle')}>
-            {t('holdem.button')}
-          </span>}
-          {heBlinds?.small === seat && <span className={styles.chip} title={t('holdem.sbTitle')}>{t('holdem.sb')}</span>}
-          {heBlinds?.big === seat && <span className={styles.chip} title={t('holdem.bbTitle')}>{t('holdem.bb')}</span>}
-          {napoleonPoints !== null && <span className={styles.chip}
+          {napoleonPoints !== null && <span className={styles.stat}
             title={t('napoleon.pointsTitle', { n: String(napoleonPoints) })}>
             {t('napoleon.pointsChip', { n: String(napoleonPoints) })}
           </span>}
-          {declarer && <span className={`${styles.chip} ${styles.declarer}`}>{t('table.declarer')}</span>}
-          {dealer && phase === 'bidding' && <span className={styles.chip}>{t('table.dealer')}</span>}
+          {lineRoles.map((role) => <span key={role.key} className={`${styles.stat} ${role.tone}`} title={role.title}>
+            {role.label}</span>)}
+          {call && <span key={callIndex} className={`${styles.stat} ${styles.call} ${call.type === 'pass' ? styles.callPass : ''}`}
+            title={t('table.lastCall')}>
+            {call.type === 'pass' ? t('game.pass') : <BidLabel level={call.level} suit={call.suit} />}
+          </span>}
           <TurnClock seat={seat} showBank={isMe} />
-          {leftEarly && status && <span className={`${styles.chip} ${styles[status]}`}>{statusContent}</span>}
+          {leftEarly && <span className={`${styles.statusChip} ${styles.earlyLeave}`} title={t('actions.autoPlay')}>
+            {t('earlyLeave.button')}</span>}
+          {statusLine}
         </div>
-        {leftEarly && <span className={`${styles.status} ${styles.earlyLeave}`} title={t('actions.autoPlay')}>
-          {t('earlyLeave.button')}</span>}
-        {!leftEarly && status && <span className={`${styles.status} ${styles[status]}`}
-          title={status === 'autoPlayed' || (heState === 'folded' && autoPlayed) ? t('clock.autoPlayed') : undefined}>
-          {statusContent}
-        </span>}
+        {(dimmed || status === 'thinking') && statusText && <span className={styles.srOnly}>{t(statusText)}</span>}
         {sittingOut && <span className={styles.srOnly}>{t('blackjack.sittingOut')}</span>}
         {active && <span className={styles.srOnly}>{isMe ? t('table.yourTurn') : t('table.turn')}</span>}
-        {clockTurn && clock && <TurnBar key={clockTurn.id} turn={clockTurn} bankMs={isMe ? clock.bankRemainingMs[seat] ?? 0 : 0}
-          serverNow={clock.serverNow} receivedAt={receivedAt} />}
-        {moveKey !== undefined && <span key={moveKey} className={styles.moved} aria-hidden="true" />}
       </div>
       {tray}
       {observed}

@@ -6,7 +6,7 @@ import { useAccountStore } from '../stores/account-store';
 import { useRoomStore } from '../stores/room-store';
 import { useVoiceStore } from '../stores/voice-store';
 import { useI18nStore } from '../stores/i18n-store';
-import { AppIcon } from './AppIcon';
+import { IconButton } from './IconButton';
 import styles from './VoiceControls.module.css';
 
 const VoicePanel = lazy(() => import('./VoicePanel').then((module) => ({ default: module.VoicePanel })));
@@ -46,12 +46,8 @@ export function VoiceButton({ className = '' }: { readonly className?: string })
   const accountId = useAccountStore((state) => state.account?.id);
   const roomCode = useRoomStore((state) => state.currentRoomCode);
   if (!controls || !accountId || !roomCode) return null;
-  return <button type="button" className={`${styles.button} ${className}`} data-voice-control
-    aria-label={t('topbar.voice')} title={t('topbar.voice')} aria-haspopup="dialog"
-    aria-expanded={Boolean(controls.anchor)} aria-controls="table-voice-controls"
-    onClick={(event) => controls.toggle(event.currentTarget)}>
-    <AppIcon name="microphone" />
-    {(status === 'joined' || status === 'joining') && <span className={styles.dot}
-      data-joined={status === 'joined'} aria-hidden="true" />}
-  </button>;
+  return <IconButton className={className} icon="microphone" label={t('topbar.voice')} data-voice-control
+    badge={status === 'joined' ? 'dot' : undefined} badgeTone="success"
+    aria-haspopup="dialog" aria-expanded={Boolean(controls.anchor)} aria-controls="table-voice-controls"
+    onClick={(event) => controls.toggle(event.currentTarget)} />;
 }

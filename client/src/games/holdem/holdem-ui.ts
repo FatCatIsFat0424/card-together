@@ -2,6 +2,7 @@ import { lazy } from 'react';
 import { frameLogIndex } from '@shared/game-presentation';
 import type { GameUi } from '../game-ui';
 import { HoldemFrame } from './HoldemFrame';
+import { HoldemHud } from './HoldemHud';
 import { HoldemRounds } from './HoldemHistory';
 
 export const holdemUi: GameUi<'holdem'> = {
@@ -28,4 +29,5 @@ export const holdemUi: GameUi<'holdem'> = {
     },
   },
   roundsView: HoldemRounds,
+  hudInfo: HoldemHud,
 };

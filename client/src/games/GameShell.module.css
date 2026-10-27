@@ -12,8 +12,6 @@
 
 .gameContainer > * { min-height: 0; min-width: 0; }
 
-.centreColumn.withActions { padding-left: 48px; }
-
 .chatCollapsed { grid-template-columns: minmax(200px, 220px) minmax(0, 1fr) 48px; }
 
 .actionError {
@@ -243,15 +241,46 @@
 .infoContent > * { flex-shrink: 0; }
 .rulesRailButton { width: 100%; flex-shrink: 0; }
 .desktopVoice { position: absolute; top: 4px; right: 4px; z-index: 6; }
+
+/* Top bar: menu glyph on the left, an optional info line in the middle, voice and chat on the right. */
+.tableTools {
+  position: absolute;
+  z-index: 10;
+  top: 4px;
+  left: 12px;
+  right: 56px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+.tableTools > * { pointer-events: auto; }
+.hudButton.hudButton { color: var(--table-ink); }
+.hudButton.hudButton:hover:not(:disabled) { color: var(--text-primary); }
+.hudInfo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--table-ink);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow: var(--shadow-sm);
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* Desktop keeps the info rail and chat column; only the info line stays on the felt. */
+@media (min-width: 1024px) and (min-height: 501px) {
+  .tableTools :is(.menuTool, .rulesTool, .voiceTool, .chatFab) { display: none; }
+}
+/* An info line takes the top edge, so the opposite seat sits below it. */
+.table[data-hud-info] > [data-table-seat='top'] { margin-top: 24px; }
+
 @media (max-width: 1023px), (max-height: 500px) and (min-width: 600px) {
   .desktopVoice { display: none; }
 }
-.tableTools .toolBtn { width: 44px; height: 44px; flex-shrink: 0; }
-.tableExitTools { display: none; flex-direction: column; gap: 4px; align-self: flex-start; }
-.toolBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .sheetHeader,
-.tableTools,
 .backdrop { display: none; }
 
 .sheetHeader {
@@ -263,8 +292,7 @@
   color: var(--text-primary);
 }
 
-.sheetClose,
-.toolBtn {
+.sheetClose {
   position: relative;
   width: 36px;
   height: 36px;
@@ -277,22 +305,8 @@
 .sheetClose { color: var(--text-muted); }
 .sheetClose:hover { background: var(--bg-card-hover); color: var(--text-primary); }
 
-.toolBtn {
-  background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
-  border: 1px solid var(--rail-border);
-  box-shadow: var(--shadow-sm);
-  font-size: var(--text-lg);
-}
-
-.fabBadge {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-}
-
 @media (pointer: coarse) {
-  .sheetClose,
-  .toolBtn { width: 44px; height: 44px; }
+  .sheetClose { width: 44px; height: 44px; }
 }
 
 .backdrop {
@@ -327,16 +341,11 @@
 
   .infoOpen > .infoPanel { display: flex; }
   .infoOpen > .backdrop,
-  .sheetHeader,
-  .tableTools { display: flex; }
+  .sheetHeader { display: flex; }
 
-  .tableTools {
-    grid-area: tools;
-    justify-content: flex-end;
-    gap: var(--spacing-sm);
-  }
+  .tableTools { position: static; grid-area: tools; }
 
-  .chatFab { display: none; }
+  .chatFab.chatFab { display: none; }
 
   /* Compact seat plates need a smaller reserved lane on tablets. */
   .table {
@@ -348,7 +357,6 @@
 /* ─── Mobile (< 768px): single column; info and chat are bottom drawers ─── */
 @media (max-width: 767px) {
   .abortRail.abortRail { display: none; }
-  .tableExitTools { display: flex; margin-right: auto; }
   .gameContainer,
   .chatCollapsed {
     grid-template-columns: minmax(0, 1fr);
@@ -389,14 +397,13 @@
 
   .gameContainer:not(.chatCollapsed) > .backdrop { display: block; }
 
-  .chatFab { display: inline-flex; }
+  .chatFab.chatFab { display: inline-grid; }
 }
 
 /* Keep phone portrait tables centered while controls float in their corners. */
 @media (max-width: 767px) and (orientation: portrait) {
   .centreColumn { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
   .table { grid-column: 1; grid-row: 1; }
-  .centreColumn.withActions { padding-left: 0; }
   .handZone { grid-column: 1; grid-row: 2; }
   .handZone > :last-child { container-type: inline-size; }
 
@@ -439,7 +446,6 @@
 /* A short landscape viewport puts the hand beside the table instead of below it. */
 @media (max-height: 500px) and (min-width: 600px) {
   .abortRail.abortRail { display: none; }
-  .tableExitTools { display: flex; margin-right: auto; }
   .rulesRailButton { display: none; }
   .gameContainer, .chatCollapsed { grid-template-columns: minmax(0, 1fr); padding: 0 4px 4px; }
   .infoPanel { display: none; }
@@ -463,18 +469,12 @@
   .gameContainer:not(.chatCollapsed) > .backdrop { display: block; }
   .chatStrip { display: none; }
   .centreColumn { flex-direction: column; }
-  .centreColumn.withActions { padding-left: 0; }
-  /* Only the hand leaves room for the floating controls; the playing table stays full width. */
-  .withActions .handZone { padding-left: 48px; }
   .handZone { flex: none; min-width: 0; }
-  /* The tall rail reaches above the short hand zone; keep the adjacent seat clear of it. */
-  .withActions [data-table-seat='left'], .withActions [data-table-seat='bottomLeft'] { margin-left: 48px; }
   .table {
     grid-template-columns: minmax(64px, 18%) minmax(0, 1fr) minmax(64px, 18%);
     grid-template-rows: auto minmax(0, 1fr);
     grid-template-areas: '. top .' 'left centre right';
   }
-  .tableTools { display: flex; justify-content: flex-start; gap: 2px; }
   /* Four-seat tables have empty top corners, so the tools need no separate row. */
   .table:not(.expandedTable) > .tableTools {
     position: absolute;
@@ -484,8 +484,7 @@
     pointer-events: none;
   }
   .tableTools > * { pointer-events: auto; }
-  .chatFab { display: inline-flex; }
-  .toolBtn { width: 30px; height: 30px; }
+  .chatFab.chatFab { display: inline-grid; }
   .yourTurn { font-size: var(--text-xs); }
 }
 
@@ -601,10 +600,6 @@
 /* Action panels own the lower felt while open; the rotate tip waits until they close. */
 .table:has(> .actionPanel) > [data-rotate-hint] { display: none; }
 
-@media (max-height: 500px) and (min-width: 600px) and (pointer: coarse) {
-  .toolBtn { width: 44px; height: 44px; }
-}
-
 .srOnly {
   position: absolute;
   width: 1px;
@@ -709,7 +704,6 @@
     z-index: 10;
     pointer-events: none;
   }
-  .expandedTable .tableExitTools { flex-direction: row; }
   /* Three plates share each side column, so each keeps its counts beside the name on one line. */
   .expandedTable [data-seat-plate] { flex-flow: row wrap; align-items: center; column-gap: 6px; }
 }
@@ -717,20 +711,10 @@
 /* Phone game menu: the info button leads the toolbar as the menu; rules, abort, and leave move into its
    sheet, which scrolls as one list: room code, rules, then the exits before the game details. */
 @media (max-width: 767px), (max-height: 500px) and (min-width: 600px) {
-  .tableExitTools, .tableTools .rulesTool { display: none; }
-  .tableTools .menuTool { order: -1; margin-right: auto; }
+  .tableTools .rulesTool { display: none; }
   /* Rounded screen corners clip the edges of full-screen apps: corner buttons keep a margin and their
      badges stay inside the button. */
-  .table > .tableTools.tableTools { inset: 8px 8px auto; }
-  .tableTools .fabBadge {
-    top: 2px;
-    right: 2px;
-    min-width: 16px;
-    height: 16px;
-    padding: 0 4px;
-    font-size: var(--text-xs);
-    line-height: 16px;
-  }
+  .table > .tableTools.tableTools { inset: 4px 2px auto; }
   .menuRoomCode { align-self: flex-start; min-height: 40px; }
   .infoPanel { overflow-y: auto; overscroll-behavior: contain; }
   .infoContent { flex: none; overflow: visible; }

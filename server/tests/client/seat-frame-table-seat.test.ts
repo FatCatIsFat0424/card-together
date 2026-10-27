@@ -55,18 +55,18 @@ const render = (seat: Seat): string => renderToStaticMarkup(
 describe('table seat frame', () => {
   beforeEach(() => { state.turnSeat = null; });
 
-  it('keeps the plain plate for players without a frame', () => {
+  it('keeps the plain name pill for players without a frame', () => {
     state.room = room(player('alice'));
     const html = render('S');
     expect(html).not.toContain('data-seat-frame');
-    expect(html).toMatch(/<div class="[^"]*" data-seat-plate="true"><div/);
+    expect(html).toMatch(/class="[^"]*namePill[^"]*"><span class="[^"]*nickname/);
   });
 
-  it('draws the equipped frame inside the plate and marks the host', () => {
+  it('draws the equipped frame on the name pill and marks the host', () => {
     state.room = room(player('alice', { seatFrame: 'seat-frame-gilded' }));
     const html = render('S');
     expect(html).toContain('data-seat-frame="gilded"');
-    expect(html).toMatch(/data-seat-plate="true"><span[^>]*data-seat-frame="gilded"/);
+    expect(html).toMatch(/class="[^"]*namePill[^"]*"><span[^>]*data-seat-frame="gilded"/);
     expect(html).toContain(seatFrameHostClass('seat-frame-gilded'));
     expect(html).not.toContain('data-turn');
   });
@@ -82,5 +82,15 @@ describe('table seat frame', () => {
   it('ignores an unknown frame id sent by an older or newer server', () => {
     state.room = room(player('alice', { seatFrame: 'seat-frame-retired' as never }));
     expect(render('S')).not.toContain('data-seat-frame');
+  });
+
+  it('puts the player\'s seat background behind the avatar and none behind plain seats', () => {
+    const background = `${'a'.repeat(64)}.jpg`;
+    state.room = room(player('alice', { seatBackground: background }));
+    const html = render('S');
+    expect(html).toContain(`--seat-image:url(&quot;/api/media/${background}&quot;)`);
+    expect(html).toMatch(/class="[^"]*hasArt[^"]*" style=/);
+    state.room = room(player('alice'));
+    expect(render('S')).not.toContain('--seat-image');
   });
 });

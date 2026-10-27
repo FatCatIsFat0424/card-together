@@ -36,8 +36,11 @@ vi.mock('../../../client/src/stores/game-store', () => ({
 import { PlayerLink } from '../../../client/src/components/PlayerLink';
 import { MatchHistoryList } from '../../../client/src/components/MatchHistoryList';
 import { RoomPage } from '../../../client/src/pages/RoomPage';
+import { BotControls, EmptySeatActions } from '../../../client/src/components/RoomSeat';
+import { RoomSpectators } from '../../../client/src/components/RoomSpectators';
 import { AbortVoteBanner } from '../../../client/src/games/AbortVote';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
+
 
 const human: PlayerInfo = {
   id: 'alice', username: 'alice', nickname: 'Alice', color: '#4a9eff', avatar: 'cat', avatarImage: null,
@@ -60,6 +63,16 @@ function render(element: ReturnType<typeof createElement>): string {
     createElement(Routes, null, createElement(Route, { path: '/room/:roomCode', element }))));
 }
 
+/** The opening tag of the first button whose attributes include `marker`. */
+const buttonTag = (html: string, marker: string): string | undefined =>
+  [...html.matchAll(/<button[^>]*>/g)].map((match) => match[0]).find((tag) => tag.includes(marker));
+
+const FILL = 'aria-label="Fill empty seats with bots"';
+const noop = (): void => undefined;
+const botControls = (extra: Partial<Parameters<typeof BotControls>[0]> = {}): string => render(createElement(BotControls, {
+  player: bot, disabled: false, blocked: false, pending: false, onDifficulty: noop, onRemove: noop, ...extra,
+}));
+
 describe('bot player interface', () => {
   beforeEach(() => {
     state.room = room();
@@ -81,18 +94,25 @@ describe('bot player interface', () => {
 
   it('offers only the host add, remove, and fill controls while preserving seat selection', () => {
     const hostHtml = render(createElement(RoomPage));
-    expect(hostHtml.match(/>Add bot</g)).toHaveLength(2);
-    expect(hostHtml).toContain('Remove bot');
-    expect(hostHtml).toContain('Fill empty seats with bots');
+    // Empty seats open a sit-or-add-bot menu for the host; the bot seat opens its management panel.
+    expect(buttonTag(hostHtml, 'aria-label="Empty seat South"')).toContain('aria-haspopup="menu"');
+    expect(buttonTag(hostHtml, 'aria-label="Manage Bot East"')).toContain('aria-haspopup="dialog"');
+    expect(hostHtml).toContain(FILL);
     expect(hostHtml.match(/>Empty</g)).toHaveLength(2);
-    expect(hostHtml).toMatch(/>Ready<\/span>/);
+    expect(hostHtml).toContain('>Not ready<');
     expect(hostHtml).not.toContain('/players/bot');
+    const menu = render(createElement(EmptySeatActions, { removable: true, onSit: noop, onAddBot: noop, onRemoveSeat: noop }));
+    expect(menu).toContain('>Sit here<');
+    expect(menu).toContain('>Add bot<');
+    expect(menu).toContain('>Remove last empty seat<');
+    expect(botControls()).toContain('>Remove bot<');
 
     state.playerId = 'visitor';
     const visitorHtml = render(createElement(RoomPage));
-    expect(visitorHtml).not.toContain('Add bot');
-    expect(visitorHtml).not.toContain('Remove bot');
-    expect(visitorHtml).not.toContain('Fill empty seats with bots');
+    expect(buttonTag(visitorHtml, 'aria-label="Empty seat South"')).toBeDefined();
+    expect(buttonTag(visitorHtml, 'aria-label="Empty seat South"')).not.toContain('aria-haspopup');
+    expect(visitorHtml).not.toContain('Manage Bot East');
+    expect(visitorHtml).not.toContain(FILL);
     expect(visitorHtml.match(/>Empty</g)).toHaveLength(2);
   });
 
@@ -113,21 +133,26 @@ describe('bot player interface', () => {
 
   it('shows per-bot difficulty, defaults legacy bots to hard, and restricts editing to connected hosts', () => {
     const html = render(createElement(RoomPage));
-    expect(html).toContain('aria-label="Difficulty for Bot East"');
-    expect(html).toMatch(/role="combobox"[^>]*>Hard<\/div>/);
-    state.room!.seats.E = { player: { ...bot, botDifficulty: 'easy' }, isReady: true };
-    expect(render(createElement(RoomPage))).toMatch(/role="combobox"[^>]*>Easy<\/div>/);
+    expect(html).toMatch(/>Hard<\/span>/);
+    expect(botControls()).toContain('aria-label="Difficulty for Bot East"');
+    expect(botControls()).toMatch(/role="combobox"[^>]*>Hard<\/div>/);
+    expect(botControls({ player: { ...bot, botDifficulty: 'easy' } })).toMatch(/role="combobox"[^>]*>Easy<\/div>/);
+    // A lost connection or a room that no longer waits locks the select.
+    expect(botControls({ disabled: true, blocked: true })).toMatch(/role="combobox"[^>]*aria-disabled="true"[^>]*aria-label="Difficulty for Bot East"/);
+    expect(botControls({ disabled: true })).toMatch(/role="combobox"[^>]*aria-disabled="true"/);
     state.connection = 'connecting';
-    expect(render(createElement(RoomPage))).toMatch(/role="combobox"[^>]*aria-disabled="true"[^>]*aria-label="Difficulty for Bot East"/);
+    expect(buttonTag(render(createElement(RoomPage)), 'aria-label="Manage Bot East"')).toBeDefined();
     state.connection = 'ready';
     state.room = { ...state.room!, status: 'playing' };
-    expect(render(createElement(RoomPage))).toMatch(/role="combobox"[^>]*aria-disabled="true"[^>]*aria-label="Difficulty for Bot East"/);
+    expect(buttonTag(render(createElement(RoomPage)), 'aria-label="Manage Bot East"')).toContain('disabled=""');
+    state.room = { ...state.room, status: 'waiting' };
+    state.room!.seats.E = { player: { ...bot, botDifficulty: 'easy' }, isReady: true };
     state.playerId = 'visitor';
     const visitorHtml = render(createElement(RoomPage));
-    expect(visitorHtml).not.toContain('aria-label="Difficulty for');
-    expect(visitorHtml).toContain('Easy</span>');
+    expect(visitorHtml).not.toContain('Manage Bot East');
+    expect(visitorHtml).toMatch(/>Easy<\/span>/);
     useI18nStore.getState().setLocale('zh-TW');
-    expect(render(createElement(RoomPage))).toContain('簡單</span>');
+    expect(render(createElement(RoomPage))).toMatch(/>簡單<\/span>/);
   });
 
   it('disables room actions until the connection is ready', () => {
@@ -138,18 +163,23 @@ describe('bot player interface', () => {
     expect(render(createElement(RoomPage))).not.toMatch(/disabled="">Ready<\/button>/);
     state.connection = 'connecting';
     const html = render(createElement(RoomPage));
-    expect(html).toMatch(/disabled="">Ready<\/button>/);
-    expect(html).toMatch(/disabled="">Fill empty seats with bots<\/button>/);
-    expect(html).toMatch(/disabled="">Leave Room<\/button>/);
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Ready<\/button>/);
+    expect(buttonTag(html, FILL)).toContain('disabled=""');
   });
 
   it('exposes placement handles only for humans managed by a connected waiting-room host', () => {
     state.room = { ...room(), spectators: [{ ...human, id: 'spectator', nickname: 'Visitor' }] };
     const html = render(createElement(RoomPage));
     expect(html).toContain('aria-label="Move Alice"');
-    expect(html).toContain('aria-label="Move Visitor"');
     expect(html).not.toContain('aria-label="Move Bot East"');
     expect(html).toContain('data-room-drop="spectator"');
+    const panel = (canManage: boolean): string => render(createElement(RoomSpectators, {
+      spectators: [{ ...human, id: 'spectator', nickname: 'Visitor' }], hostId: human.id, playerId: human.id,
+      seated: true, canSpectate: true, canManage, isHost: true, blocked: false, pending: false,
+      onStandUp: noop, onKick: noop, onMove: noop,
+    }));
+    expect(panel(true)).toContain('aria-label="Move Visitor"');
+    expect(panel(false)).not.toContain('aria-label="Move Visitor"');
     state.playerId = 'visitor';
     expect(render(createElement(RoomPage))).not.toContain('data-seat-drag-handle');
     state.playerId = human.id;
@@ -173,33 +203,48 @@ describe('bot player interface', () => {
     expect(render(createElement(RoomPage))).not.toMatch(/disabled="">Ready<\/button>/);
   });
 
+  it('shows the primary action as ready, unready, or start', () => {
+    expect(render(createElement(RoomPage))).toMatch(/>Ready<\/button>/);
+    state.room = { ...room(), seats: { ...room().seats,
+      N: { player: human, isReady: true },
+      S: { player: { ...bot, id: 'bot:south' }, isReady: true }, W: { player: { ...bot, id: 'bot:west' }, isReady: true },
+    } };
+    // Everyone is ready: the host starts the game.
+    let html = render(createElement(RoomPage));
+    expect(html).toMatch(/>Start game<\/button>/);
+    expect(html).not.toMatch(/>Unready<\/button>/);
+    state.playerId = 'visitor';
+    html = render(createElement(RoomPage));
+    expect(html).not.toMatch(/>Start game<\/button>/);
+    state.room = { ...state.room!, seats: { ...state.room!.seats, W: { player: null, isReady: false } } };
+    state.playerId = human.id;
+    expect(render(createElement(RoomPage))).toMatch(/>Unready<\/button>/);
+  });
+
   it('shows an explicit spectator entry for standard and additional seated players', () => {
-    const entry = (): string | undefined => render(createElement(RoomPage))
-      .match(/<button[^>]*>Enter spectator area<\/button>/)?.[0];
-    expect(entry()).toBeDefined();
-    expect(entry()).not.toContain('disabled');
-    state.room = { ...room(), hostId: 'another-host' };
-    expect(entry()).not.toContain('disabled');
-    state.mySeat = null;
-    state.room = { ...room(), gameType: 'holdem',
-      seats: { ...room().seats, N: { player: null, isReady: false } },
-      additionalSeats: [{ player: human, isReady: false }],
-    };
-    expect(entry()).toBeDefined();
-    expect(entry()).not.toContain('disabled');
-    state.room = { ...state.room, additionalSeats: [], spectators: [human] };
-    expect(entry()).toBeUndefined();
+    const panel = (props: Partial<Parameters<typeof RoomSpectators>[0]> = {}): string => render(createElement(RoomSpectators, {
+      spectators: [], hostId: human.id, playerId: human.id, seated: true, canSpectate: true, canManage: true,
+      isHost: true, blocked: false, pending: false, onStandUp: noop, onKick: noop, onMove: noop, ...props,
+    }));
+    const entry = (html: string): string | undefined => html.match(/<button[^>]*>Enter spectator area<\/button>/)?.[0];
+    expect(entry(panel())).toBeDefined();
+    expect(entry(panel())).not.toContain('disabled');
+    expect(entry(panel({ isHost: false, canManage: false }))).not.toContain('disabled');
+    expect(entry(panel({ seated: false }))).toBeUndefined();
+    // The room shows how many watch and opens the list from one footer control.
+    state.room = { ...room(), spectators: [human] };
+    expect(render(createElement(RoomPage))).toMatch(/aria-haspopup="dialog"[^>]*>Spectators 1\/8<\/button>/);
   });
 
   it('disables spectator entry when disconnected or no longer waiting and translates its visible label', () => {
-    state.connection = 'connecting';
-    expect(render(createElement(RoomPage))).toMatch(/<button[^>]*disabled=""[^>]*>Enter spectator area<\/button>/);
-    state.connection = 'ready';
-    state.room = { ...room(), status: 'playing' };
-    expect(render(createElement(RoomPage))).toMatch(/<button[^>]*disabled=""[^>]*>Enter spectator area<\/button>/);
-    state.room = room();
+    const panel = (canSpectate: boolean): string => render(createElement(RoomSpectators, {
+      spectators: [], hostId: human.id, playerId: human.id, seated: true, canSpectate, canManage: true,
+      isHost: true, blocked: false, pending: false, onStandUp: noop, onKick: noop, onMove: noop,
+    }));
+    expect(panel(false)).toMatch(/<button[^>]*disabled=""[^>]*>Enter spectator area<\/button>/);
     useI18nStore.getState().setLocale('zh-TW');
-    expect(render(createElement(RoomPage))).toMatch(/<button[^>]*>進入旁觀區<\/button>/);
+    expect(panel(true)).toMatch(/<button[^>]*>進入旁觀區<\/button>/);
+    expect(render(createElement(RoomPage))).toContain('旁觀 0/8');
   });
 
   it('shows the seat expansion control only to hosts of Ninety-Nine, Blackjack, Hold\'em, and Napoleon', () => {
@@ -209,7 +254,6 @@ describe('bot player interface', () => {
         || gameType === 'napoleon';
       const html = render(createElement(RoomPage));
       expect(html.includes('aria-label="Add seat"')).toBe(expandable);
-      expect(html.includes('expandedSeats')).toBe(expandable);
     }
     state.room = { ...room(), gameType: 'holdem', hostId: 'another-player' };
     expect(render(createElement(RoomPage))).not.toContain('aria-label="Add seat"');
@@ -219,7 +263,7 @@ describe('bot player interface', () => {
     state.room = {
       ...room(), seats: { ...room().seats, S: { player: bot, isReady: true }, W: { player: bot, isReady: true } },
     };
-    expect(render(createElement(RoomPage))).toMatch(/disabled="">Fill empty seats with bots<\/button>/);
+    expect(buttonTag(render(createElement(RoomPage)), FILL)).toContain('disabled=""');
   });
 
   it('offers the eighth seat and hides the add control at eight seats', () => {
@@ -250,13 +294,13 @@ describe('bot player interface', () => {
       additionalSeats: [{ player: null, isReady: false }],
     };
     let html = render(createElement(RoomPage));
-    expect(html.match(/>Add bot</g)).toHaveLength(1);
-    expect(html).not.toMatch(/disabled="">Fill empty seats with bots<\/button>/);
+    expect(html.match(/aria-label="Empty seat/g)).toHaveLength(1);
+    expect(buttonTag(html, FILL)).not.toContain('disabled=""');
     state.room = { ...state.room, additionalSeats: [{ player: { ...bot, nickname: 'Bot P5' }, isReady: true }] };
     html = render(createElement(RoomPage));
-    expect(html).toContain('aria-label="Difficulty for Bot P5"');
-    expect(html.match(/>Remove bot</g)).toHaveLength(4);
-    expect(html).toMatch(/disabled="">Fill empty seats with bots<\/button>/);
+    expect(html).toContain('aria-label="Manage Bot P5"');
+    expect(html.match(/aria-label="Manage Bot/g)).toHaveLength(4);
+    expect(buttonTag(html, FILL)).toContain('disabled=""');
   });
 
   it('keeps bot participants and bot winners visible in match history without profile links', () => {
@@ -292,9 +336,11 @@ describe('bot player interface', () => {
   it('renders the bot controls and labels in Traditional Chinese', () => {
     useI18nStore.getState().setLocale('zh-TW');
     const html = render(createElement(RoomPage));
-    expect(html).toContain('加入 bot');
-    expect(html).toContain('移除 bot');
     expect(html).toContain('用 bot 補滿空位');
-    expect(html).toMatch(/>已準備<\/span>/);
+    expect(html).toContain('>bot 補滿<');
+    expect(html).toMatch(/>困難<\/span>/);
+    expect(botControls()).toContain('移除 bot');
+    expect(render(createElement(EmptySeatActions, { removable: false, onSit: noop, onAddBot: noop, onRemoveSeat: noop })))
+      .toContain('加入 bot');
   });
 });

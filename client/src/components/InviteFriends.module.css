@@ -13,14 +13,13 @@
   overflow-y: auto;
   padding: var(--spacing-md);
   background: var(--bg-surface);
-  border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
 }
 
 .list { list-style: none; }
 .row { display: flex; align-items: center; gap: var(--spacing-sm); padding: var(--spacing-sm) 0; }
-.row + .row { border-top: 1px solid var(--border-color); }
+.row + .row { border-top: 1px solid var(--separator); }
 .offline { opacity: 0.55; }
 .name { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
 .note { color: var(--text-secondary); font-size: var(--text-xs); }

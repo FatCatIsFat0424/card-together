@@ -7,6 +7,8 @@ import { apiRequest } from '../api';
 import { socket } from '../socket';
 import { useI18nStore } from '../stores/i18n-store';
 import { Avatar } from './Avatar';
+import { Button } from './Button';
+import { IconButton } from './IconButton';
 import styles from './InviteFriends.module.css';
 
 const INVITED_MS = 15_000;
@@ -58,8 +60,8 @@ export function InviteFriends(): ReactNode {
 
   return (
     <div className={styles.group} data-invite-popover>
-      <button type="button" className="btn btn-outline touch-target" aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}>{t('invite.open')}</button>
+      <IconButton icon="personAdd" label={t('invite.open')} aria-expanded={open}
+        onClick={() => setOpen((current) => !current)} />
       {open && <div className={styles.popover}>
         {error && <p className={styles.error} role="alert">{error}</p>}
         {!friends && !error && <p role="status">{t('common.loading')}</p>}
@@ -69,10 +71,10 @@ export function InviteFriends(): ReactNode {
             <Avatar avatar={friend.avatar} image={friend.avatarImage} border={friend.avatarBorder} color={friend.color} size="small" />
             <span className={styles.name}>{friend.nickname}
               {friend.inRoom && <span className={styles.note}>{t('invite.inRoom')}</span>}</span>
-            <button type="button" className="btn btn-primary"
+            <Button size="small" variant={friend.online && !invited.has(friend.id) ? 'primary' : 'ghost'}
               disabled={!friend.online || invited.has(friend.id)} onClick={() => invite(friend.id)}>
               {!friend.online ? t('invite.offline')
-                : invited.has(friend.id) ? t('invite.sent') : t('invite.send')}</button>
+                : invited.has(friend.id) ? t('invite.sent') : t('invite.send')}</Button>
           </li>
         ))}</ul>
       </div>}

@@ -40,7 +40,7 @@ interface VictoryEffectsProps {
   readonly seats: readonly GameSeat[];
 }
 
-/** Plays each winner's equipped effect once per settlement, from their seat, around the result dialog. */
+/** Plays each winner's equipped effect once per settlement, from their avatar, around the result dialog. */
 export function VictoryEffects({ game, room, bottomSeat, seats }: VictoryEffectsProps): ReactNode {
   const reduced = useMotionStore((state) => state.reducedMotion);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -54,7 +54,9 @@ export function VictoryEffects({ game, room, bottomSeat, seats }: VictoryEffects
   // Seat plates can move while the effect runs, e.g. when a spectator changes perspective.
   const seatOrigin = useEffectEvent((seat: GameSeat): Point | null => {
     const position = seats.includes(seat) ? tablePosition(seat, bottomSeat, seats) : null;
-    return (position && centre(document.querySelector(`[data-table-seat="${position}"]`)))
+    // Effects burst from the winner's avatar; the seat's own box is the fallback.
+    const seatElement = position ? document.querySelector(`[data-table-seat="${position}"]`) : null;
+    return (centre(seatElement?.querySelector('[data-seat-avatar]') ?? seatElement))
       ?? centre(document.querySelector('[data-table-centre]'))
       ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 };
   });

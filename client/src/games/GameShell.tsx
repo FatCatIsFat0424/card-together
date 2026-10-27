@@ -23,6 +23,7 @@ import { AbortVoteBanner, AbortVoteButton } from './AbortVote';
 import { SpectatorLeaveButton } from './SpectatorLeave';
 import { EarlyLeaveButton } from './EarlyLeave';
 import { AppIcon } from '../components/AppIcon';
+import { IconButton } from '../components/IconButton';
 import { VoiceButton } from '../components/VoiceControls';
 import { RoomCodeButton } from '../components/RoomCodeButton';
 import { GameRulesDialog } from '../components/GameRulesDialog';
@@ -43,7 +44,7 @@ import { useStillArt } from '../cosmetics/art-layers/art-layers';
 import { layeredShopArt } from '../cosmetics/art-layers/shop-art-layers';
 import { CardBackArtContext } from '../cosmetics/art-layers/CardBackArt';
 import { TableArt } from '../cosmetics/art-layers/TableArt';
-import { GameActionBar } from './GameActionBar';
+import { AutoPlayBanner, GameActionBar } from './GameActionBar';
 import { GameMenuLinks, useGameMenuUnread } from './GameMenuLinks';
 import { RotateHint } from './RotateHint';
 import { godViewSource, useReplayMode } from './replay-mode';
@@ -150,6 +151,7 @@ export function GameShell({
   const chatVisible = !replay || replay.chat;
   const visibleGame = useGameStore((state) => state.visible);
   const centreLayout = visibleGame ? gameUi(visibleGame.gameType).centre : undefined;
+  const HudInfo = visibleGame ? gameUi(visibleGame.gameType).hudInfo : undefined;
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const setReducedMotion = useMotionStore((state) => state.setReducedMotion);
   const mySeat = useRoomStore((state) => state.mySeat);
@@ -347,6 +349,7 @@ export function GameShell({
           <EarlyLeaveButton className={`${styles.abortRail} ${styles.menuExit}`} />
           <SpectatorLeaveButton className={styles.menuExit} />
         </>}
+        {!replay && <GameActionBar className={styles.menuTools} />}
         {visibleGame && <button type="button" className={`btn btn-outline ${styles.rulesRailButton}`}
           aria-haspopup="dialog" onClick={openRules}>
           <AppIcon name="rules" /> {t('rules.open')}
@@ -363,34 +366,24 @@ export function GameShell({
         {phoneMenu && <GameMenuLinks />}
       </div>
 
-      <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''} ${tableArt ? styles.layeredTable : ''} ${!visibleGame?.observer && visibleGame?.phase !== 'scoring' ? styles.withActions : ''}`} style={tableStyle}>
+      <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''} ${tableArt ? styles.layeredTable : ''}`} style={tableStyle}>
         {tableArt && <TableArt art={tableArt} />}
-        <GameActionBar />
         <div className={`${styles.table} ${expandedTable ? styles.expandedTable : ''} ${cornersSpan ? styles.cornersSpan : ''} ${centreUp ? styles.centreUp : ''}`}
-          data-card-table>
-          {!replay && <div className={styles.desktopVoice}><VoiceButton /></div>}
+          data-card-table data-hud-info={HudInfo ? '' : undefined}
+          data-expanded-table={expandedTable ? '' : undefined}>
+          {!replay && <div className={styles.desktopVoice}><VoiceButton className={styles.hudButton} /></div>}
           <div className={styles.tableTools}>
-            {!replay && <div className={styles.tableExitTools}>
-              <AbortVoteButton iconOnly buttonClassName={styles.toolBtn} />
-              <EarlyLeaveButton iconOnly buttonClassName={styles.toolBtn} />
-            </div>}
-            {visibleGame && <button type="button" className={`${styles.toolBtn} ${styles.rulesTool}`}
-              onClick={openRules} aria-haspopup="dialog" aria-label={t('rules.open')} title={t('rules.open')}>
-              <AppIcon name="rules" />
-            </button>}
-            {!replay && <VoiceButton className={styles.toolBtn} />}
-            <button type="button" className={`${styles.toolBtn} ${styles.menuTool}`} onClick={openInfo} ref={infoButtonRef}
-              aria-label={t(phoneMenu ? 'topbar.menu' : 'table.info')} title={t(phoneMenu ? 'topbar.menu' : 'table.info')}
-              aria-expanded={infoOpen} aria-controls="game-info-panel">
-              <AppIcon name={phoneMenu ? 'menu' : 'info'} />
-              {phoneMenu && menuUnread > 0 && <span className={`${styles.unread} ${styles.fabBadge}`}>
-                {menuUnread > 99 ? '99+' : menuUnread}</span>}
-            </button>
-            {chatVisible && <button type="button" className={`${styles.toolBtn} ${styles.chatFab}`} onClick={openChat} ref={chatButtonRef}
-              aria-label={t('table.chatExpand')} title={t('table.chatExpand')} aria-expanded={chatOpen}>
-              <AppIcon name="chat" />
-              {unread > 0 && <span className={`${styles.unread} ${styles.fabBadge}`}>{unread}</span>}
-            </button>}
+            <IconButton className={`${styles.hudButton} ${styles.menuTool}`} icon={phoneMenu ? 'menu' : 'info'}
+              label={t(phoneMenu ? 'topbar.menu' : 'table.info')} onClick={openInfo} ref={infoButtonRef}
+              badge={phoneMenu ? menuUnread : undefined}
+              aria-expanded={infoOpen} aria-controls="game-info-panel" />
+            {visibleGame && <IconButton className={`${styles.hudButton} ${styles.rulesTool}`} icon="rules"
+              label={t('rules.open')} onClick={openRules} aria-haspopup="dialog" />}
+            <span className={styles.hudInfo}>{HudInfo && <HudInfo />}</span>
+            {!replay && <VoiceButton className={`${styles.hudButton} ${styles.voiceTool}`} />}
+            {chatVisible && <IconButton className={`${styles.hudButton} ${styles.chatFab}`} icon="chat"
+              label={t('table.chatExpand')} onClick={openChat} ref={chatButtonRef}
+              badge={unread} aria-expanded={chatOpen} />}
           </div>
           {tableSeats.filter((seat) => seat !== bottomSeat && tableSeats.includes(seat)).map((seat) => (
             <TableSeat key={seat} seat={seat} position={tablePosition(seat, bottomSeat, tableSeats)}
@@ -416,6 +409,7 @@ export function GameShell({
           </p>}
           {panel && !presentation.locked && <div className={styles.actionPanel} inert={visibleGame?.autoPlay}>{panel}</div>}
           {!replay && <AbortVoteBanner />}
+          {!replay && <AutoPlayBanner />}
           <RotateHint />
         </div>
 

@@ -1,0 +1,50 @@
+/* Flat settings panel: labelled rows on one surface, no boxes around the options. */
+.panel {
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  padding: var(--space-3);
+}
+
+.field,
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--hit-size);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+}
+.option { cursor: pointer; }
+.option:has(input:disabled) { cursor: default; }
+.label { color: var(--text-secondary); font-size: var(--text-sm); }
+.note { color: var(--text-muted); font-size: var(--text-xs); }
+
+.select.select {
+  min-width: 140px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--text-base);
+}
+.select :global(.MuiOutlinedInput-notchedOutline) { border: 0; }
+.select :global(.MuiSelect-icon) { color: var(--text-secondary); }
+.select :global(.MuiSelect-select.Mui-disabled) { -webkit-text-fill-color: var(--text-secondary); }
+/* A brief request lock keeps the enabled look. */
+.select[data-pending-disabled] :global(.MuiSelect-select.Mui-disabled) { -webkit-text-fill-color: var(--text-primary); }
+.menu.menu { background: var(--bg-surface); color: var(--text-primary); }
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

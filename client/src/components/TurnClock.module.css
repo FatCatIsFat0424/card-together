@@ -1,13 +1,14 @@
-/* Seat plate chip; it sits in the plate's chip row next to the card counts. */
+/* Seat clock chip; it sits in the seat's stats line next to the card counts. */
 .clock {
+  height: 18px;
   padding: 0 6px;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--text-primary) 12%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--bg-surface) 55%, transparent);
   color: var(--text-secondary);
   font-size: var(--text-xs);
-  font-weight: 800;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  line-height: 1.6;
+  line-height: 18px;
   white-space: nowrap;
 }
 .active { background: var(--turn-glow); color: var(--text-inverse); }

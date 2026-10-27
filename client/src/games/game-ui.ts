@@ -54,6 +54,8 @@ export interface GameUi<K extends GameType> {
   readonly table: LazyExoticComponent<() => ReactNode>;
   /** How the table centre is laid out around the shared presentation */
   readonly centre?: { readonly responsive?: boolean; readonly wide?: boolean };
+  /** Short line centred in the table's top bar, such as the hand number; renders nothing when it has no content */
+  readonly hudInfo?: ComponentType;
   readonly presentation?: GamePresentationUi<K>;
   /** Round list drawn from the rounds the client module derives; absent for games that list tricks elsewhere */
   readonly roundsView?: (props: RoundsViewProps) => ReactNode;

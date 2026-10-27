@@ -68,7 +68,7 @@ import { AccountProfilePreview } from '../../../client/src/components/AccountPro
 import borderStyles from '../../../client/src/components/AvatarBorder.module.css';
 import { GameShell } from '../../../client/src/games/GameShell';
 import { RoomPage } from '../../../client/src/pages/RoomPage';
-import roomStyles from '../../../client/src/pages/RoomPage.module.css';
+import seatStyles from '../../../client/src/components/RoomSeat.module.css';
 import botSeatBackground from '../../../client/src/assets/room-backgrounds/bot-seat.webp';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
 import { layeredShopArt } from '../../../client/src/cosmetics/art-layers/shop-art-layers';
@@ -340,7 +340,7 @@ describe('personal account appearance', () => {
     } };
     const html = renderRoom();
     expect(html.split(`--seat-image:url(&quot;${botSeatBackground}&quot;)`)).toHaveLength(3);
-    expect(html.split(roomStyles.customSeat)).toHaveLength(4);
+    expect(html.split(seatStyles.hasArt)).toHaveLength(4);
     expect(html.match(/--seat-image:/g)).toHaveLength(3);
     expect(html).toContain(`--seat-image:url(&quot;/api/media/${CARD_BACK}&quot;)`);
     expect(html).not.toContain(BACKGROUND);

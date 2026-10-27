@@ -10,6 +10,7 @@ import { gameHistoryStatistics } from '../match-history';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { Avatar } from './Avatar';
+import { Button, buttonClassName } from './Button';
 import { Nameplate } from './Nameplate';
 import styles from './PlayerCard.module.css';
 
@@ -86,14 +87,13 @@ export function PlayerCard({ player, gameType, anchor, onClose }: {
               <span className={styles.muted}>{t('playerCard.total', { n: String(total) })}</span>
             </>}
     </div>}
-    {!player.isBot && !self && friends && <div className={styles.friendship}>
-      {isFriend || incoming || outgoing
+    {!player.isBot && <div className={styles.actions}>
+      {!self && friends && (isFriend || incoming || outgoing
         ? <span className={styles.muted}>{t(isFriend ? 'player.friends' : incoming ? 'player.incoming' : 'player.outgoing')}</span>
-        : <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void addFriend()}>
-          {t('friends.add')}</button>}
-      {error && <p className={styles.error} role="alert">{error}</p>}
+        : <Button size="small" variant="primary" disabled={busy} onClick={() => void addFriend()}>{t('friends.add')}</Button>)}
+      <Link className={buttonClassName('ghost', 'small', styles.profile)} to={`/players/${encodeURIComponent(player.id)}`}
+        onClick={onClose}>{t('playerCard.viewProfile')}</Link>
     </div>}
-    {!player.isBot && <Link className={styles.profile} to={`/players/${encodeURIComponent(player.id)}`} onClick={onClose}>
-      {t('playerCard.viewProfile')}</Link>}
+    {error && <p className={styles.error} role="alert">{error}</p>}
   </Popover>;
 }

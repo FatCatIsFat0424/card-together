@@ -87,18 +87,12 @@ function PotList({ view }: { view: HoldemTableView }): ReactNode {
 }
 
 function Centre({ game, view }: { game: HoldemVisibleState; view: HoldemTableView }): ReactNode {
-  const { t } = useI18nStore();
   const blinds = holdemBlindSeats(view);
   const actions = streetActions(game.log, view.logEnd);
   return <div className={[styles.centre, game.seats.some((seat) => seat.startsWith('P')) && styles.expandedCentre].filter(Boolean).join(' ')}>
     {game.seats.map((seat) => <SeatSpot key={seat} seat={seat} view={view} position={tablePosition(seat, game.mySeat, game.seats)}
       isMe={seat === game.mySeat} action={actions[seat]} blinds={blinds} />)}
     <div className={styles.middle}>
-      {view.hand > 0 && <p className={styles.handLine}>
-        {t('holdem.handOf', { n: String(view.hand), total: String(HE_HANDS) })} ·
-        {' '}{t('holdem.blinds', { sb: String(view.smallBlind), bb: String(view.bigBlind) })} ·
-        {' '}{t(`holdem.street.${view.street}`)}
-      </p>}
       <Board cards={view.board} size="md" />
       {view.hand > 0 && <PotList view={view} />}
     </div>

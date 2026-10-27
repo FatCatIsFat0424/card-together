@@ -3,8 +3,7 @@
 .chatContainer {
   display: flex;
   flex-direction: column;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  background: var(--surface-1);
   border-radius: var(--radius-lg);
   overflow: hidden;
   height: 300px;
@@ -15,38 +14,36 @@
 
 .fill {
   height: 100%;
-  background: var(--rail-bg);
-  border-color: var(--rail-border);
+  background: var(--bg-surface);
 }
 
 .chatHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-surface);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--separator);
 }
 
 .chatTitle {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
+/* A 20px glyph in a 40px hit area, like the shared icon buttons. */
 .collapseBtn {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-md);
-  color: var(--text-muted);
-  font-size: var(--text-lg);
+  display: grid;
+  place-items: center;
+  width: var(--hit-size);
+  height: var(--hit-size);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-size: var(--icon-size);
   line-height: 1;
 }
 
-.collapseBtn:hover {
-  background: var(--bg-card-hover);
-  color: var(--text-primary);
-}
+.collapseBtn:hover { color: var(--text-primary); }
 
 /* Mobile drawer: the collapse button becomes a down arrow */
 @media (max-width: 767px) {
@@ -105,7 +102,7 @@
 
 .chatSender {
   color: var(--text-secondary);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   font-weight: 600;
 }
 
@@ -119,7 +116,7 @@
 
 .observerTag {
   padding: 0 6px;
-  border: 1px dashed var(--border-color);
+  background: var(--surface-2);
   border-radius: var(--radius-pill);
   font-size: var(--text-xs);
   color: var(--text-muted);
@@ -146,22 +143,26 @@
 
 .chatInputRow {
   display: flex;
-  min-height: 44px;
-  border-top: 1px solid var(--border-color);
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 48px;
+  padding: var(--space-1) var(--space-2);
+  border-top: 1px solid var(--separator);
 }
 
 .chatInput {
   min-width: 0;
   flex: 1;
+  height: var(--control-height);
   border: none;
-  border-radius: 0;
-  background: var(--bg-surface);
-  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  padding: 0 var(--space-3);
   font-size: var(--text-sm);
 }
 
 .chatInput:focus {
-  background: var(--bg-input-focus);
+  background: var(--surface-3);
 }
 
 /* Below 16px, iOS Safari zooms the page when the input gains focus. */
@@ -170,19 +171,19 @@
 }
 
 .chatSendBtn {
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-size: var(--text-sm);
+  height: var(--control-height);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-base);
   font-weight: 600;
-  color: var(--color-primary);
-  background: var(--bg-surface);
-  border: none;
-  border-left: 1px solid var(--border-color);
+  color: var(--text-on-primary);
+  background: var(--color-primary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast);
 }
 
-.chatSendBtn:hover {
-  background: var(--bg-card-hover);
+.chatSendBtn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
 }
 
 .chatSendBtn:disabled {
@@ -200,16 +201,18 @@
 }
 
 .pickerBtn {
-  padding: 0 var(--spacing-sm);
-  font-size: var(--text-lg);
+  display: grid;
+  place-items: center;
+  width: var(--hit-size);
+  height: var(--hit-size);
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+  font-size: var(--icon-size);
   color: var(--text-secondary);
-  background: var(--bg-surface);
-  border-right: 1px solid var(--border-color);
 }
 
 .pickerBtn:hover,
 .pickerBtn[aria-expanded='true'] {
-  background: var(--bg-card-hover);
   color: var(--text-primary);
 }
 
@@ -218,16 +221,15 @@
   position: absolute;
   left: var(--spacing-sm);
   right: var(--spacing-sm);
-  bottom: 44px;
+  bottom: 52px;
   max-height: 60%;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
   padding: var(--spacing-sm);
   background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   z-index: 1;
 }
 
@@ -238,7 +240,7 @@
 
 .pickerGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
   gap: var(--spacing-xs);
   overflow-y: auto;
 }
@@ -286,11 +288,12 @@
   align-items: center;
   gap: var(--spacing-xs);
   overflow-x: auto;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--separator);
   white-space: nowrap;
 }
 .sectionTabs button {
   flex-shrink: 0;
+  min-height: var(--hit-size);
   padding: var(--spacing-xs) var(--spacing-sm);
   font-size: var(--text-xs);
   color: var(--text-secondary);
@@ -298,7 +301,7 @@
 }
 .sectionTabs button:hover { color: var(--text-primary); }
 .sectionTabs button[aria-selected='true'] { color: var(--color-primary); border-bottom-color: var(--color-primary); }
-.sectionLink { flex-shrink: 0; margin-left: auto; padding: var(--spacing-xs) var(--spacing-sm); font-size: var(--text-xs); }
+.sectionLink { display: inline-flex; align-items: center; min-height: var(--hit-size); flex-shrink: 0; margin-left: auto; padding: 0 var(--space-2); font-size: var(--text-xs); }
 
 .stickerImage {
   --sticker-size: 160px;
@@ -312,11 +315,11 @@
 }
 .stickerImage img { width: 100%; height: 100%; object-fit: contain; }
 .pickerTabs { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); }
-.pickerTabs button { padding: var(--spacing-xs); color: var(--text-secondary); }
-.pickerTabs button[aria-pressed='true'] { color: var(--color-primary); background: var(--bg-card-hover); }
+.pickerTabs button { min-height: var(--hit-size); padding: 0 var(--space-3); color: var(--text-secondary); font-size: var(--text-sm); }
+.pickerTabs button[aria-pressed='true'] { color: var(--color-primary); background: var(--color-primary-soft); border-radius: var(--radius-pill); }
 
 .stickerImage.smallImage { --sticker-size: 28px; font-size: var(--text-xs); }
-.stickerPicker { max-height: calc(100% - 48px); overflow-y: auto; }
+.stickerPicker { max-height: calc(100% - 56px); overflow-y: auto; }
 .stickerPicker .pickerGrid { min-height: 36px; flex-shrink: 0; }
 
 .shopStickerGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; padding: 4px 0 12px; }

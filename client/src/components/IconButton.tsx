@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, MouseEvent, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, MouseEvent, ReactNode, Ref } from 'react';
 import { Link } from 'react-router-dom';
 import { AppIcon } from './AppIcon';
 import type { AppIconName } from './AppIcon';
@@ -37,7 +37,9 @@ function Content({ icon, badge }: Pick<IconButtonLook, 'icon' | 'badge'>): React
 }
 
 export interface IconButtonProps extends IconButtonLook,
-  Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'className' | 'aria-label'> {}
+  Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'className' | 'aria-label'> {
+  readonly ref?: Ref<HTMLButtonElement>;
+}
 
 /** A 20px glyph in a 40px hit area, without a background or border. */
 export function IconButton({ icon, label, badge, badgeTone, current, className, type = 'button', title, ...props }: IconButtonProps): ReactNode {

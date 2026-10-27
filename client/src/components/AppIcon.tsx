@@ -35,6 +35,8 @@ import MicOff from '@mui/icons-material/MicOff';
 import MusicNote from '@mui/icons-material/MusicNote';
 import NotificationsNone from '@mui/icons-material/NotificationsNone';
 import Pause from '@mui/icons-material/Pause';
+import MoreHoriz from '@mui/icons-material/MoreHoriz';
+import PersonAddOutlined from '@mui/icons-material/PersonAddOutlined';
 import PersonOutline from '@mui/icons-material/PersonOutlineOutlined';
 import PlayArrow from '@mui/icons-material/PlayArrow';
 import Repeat from '@mui/icons-material/Repeat';
@@ -55,7 +57,7 @@ import WarningAmber from '@mui/icons-material/WarningAmber';
 import styles from './AppIcon.module.css';
 
 const ICONS = {
-  add: Add, android: Android, person: PersonOutline, home: HomeOutlined, friends: PeopleOutline,
+  add: Add, android: Android, person: PersonOutline, personAdd: PersonAddOutlined, more: MoreHoriz, home: HomeOutlined, friends: PeopleOutline,
   calendar: CalendarMonthOutlined,
   shop: StorefrontOutlined,
   drag: DragIndicator,
