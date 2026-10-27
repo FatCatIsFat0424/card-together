@@ -128,7 +128,7 @@ export interface BiddingState {
 
 /** Full Bridge game state (server internal) */
 export interface BridgeGameState {
-  /** Server-only recording, absent on legacy and bot-practice games. */
+  /** Server-only recording, absent on games started without recording. */
   replayRecording?: ReplayRecording;
   clock?: GameClock;
   presentation?: GamePresentation;
@@ -198,7 +198,7 @@ export interface BigTwoMatchResult {
 export type BigTwoPhase = 'playing' | 'scoring';
 
 export interface BigTwoGameState {
-  /** Server-only recording, absent on legacy and bot-practice games. */
+  /** Server-only recording, absent on games started without recording. */
   replayRecording?: ReplayRecording;
   /** Private persisted deadline; never included in player-visible state. */
   pendingAutoPass?: { readonly id: string; readonly seat: Seat; readonly executeAt: number };
@@ -266,7 +266,7 @@ export type RedPointsPhase = 'playing' | 'scoring';
 export type RedPointsStep = 'play' | 'flip-choose';
 
 export interface RedPointsGameState {
-  /** Server-only recording, absent on legacy and bot-practice games. */
+  /** Server-only recording, absent on games started without recording. */
   replayRecording?: ReplayRecording;
   clock?: GameClock;
   presentation?: GamePresentation;
@@ -341,7 +341,7 @@ export type NinetyNineMatchResult = {
 export type NinetyNinePhase = 'playing' | 'scoring';
 
 export interface NinetyNineGameState {
-  /** Server-only recording, absent on legacy and bot-practice games. */
+  /** Server-only recording, absent on games started without recording. */
   replayRecording?: ReplayRecording;
   /** Missing on legacy snapshots; defaults to standard Ninety-Nine rules. */
   readonly options?: NinetyNineOptions;
@@ -415,7 +415,7 @@ export interface SevensMatchResult {
 }
 
 export interface SevensGameState {
-  /** Server-only recording, absent on legacy and bot-practice games. */
+  /** Server-only recording, absent on games started without recording. */
   replayRecording?: ReplayRecording;
   /** Missing on legacy snapshots; defaults to standard Sevens rules. */
   readonly options?: SevensOptions;
@@ -513,7 +513,7 @@ export type ChinesePokerLogEntry =
   | { readonly type: 'homerun'; readonly seat: Seat; readonly timestamp: number };
 
 export interface ChinesePokerGameState {
-  /** Server-only recording, absent on legacy and bot-practice games. */
+  /** Server-only recording, absent on games started without recording. */
   replayRecording?: ReplayRecording;
   clock?: GameClock;
   presentation?: GamePresentation;
@@ -603,7 +603,7 @@ export interface LiarsDeckLastPlay {
 }
 
 export interface LiarsDeckGameState {
-  /** Server-only recording, absent on legacy and bot-practice games. */
+  /** Server-only recording, absent on games started without recording. */
   replayRecording?: ReplayRecording;
   clock?: GameClock;
   presentation?: GamePresentation;
@@ -730,7 +730,7 @@ export interface BlackjackMatchResult {
 export type BlackjackPhase = 'betting' | 'playing' | 'scoring';
 
 export interface BlackjackGameState {
-  /** Server-only recording, absent on legacy and bot-practice games. */
+  /** Server-only recording, absent on games started without recording. */
   replayRecording?: ReplayRecording;
   /** Missing on legacy snapshots; defaults to the house dealer. */
   readonly options?: BlackjackOptions;
@@ -879,7 +879,7 @@ export interface HoldemMatchResult {
 export type HoldemPhase = 'playing' | 'scoring';
 
 export interface HoldemGameState {
-  /** Server-only recording, absent on legacy and bot-practice games. */
+  /** Server-only recording, absent on games started without recording. */
   replayRecording?: ReplayRecording;
   clock?: GameClock;
   presentation?: GamePresentation;
@@ -1062,7 +1062,7 @@ export interface NapoleonMatchResult {
 }
 
 export interface NapoleonGameState {
-  /** Server-only recording, absent on legacy and bot-practice games. */
+  /** Server-only recording, absent on games started without recording. */
   replayRecording?: ReplayRecording;
   clock?: GameClock;
   presentation?: GamePresentation;

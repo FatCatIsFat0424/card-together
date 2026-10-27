@@ -5,13 +5,15 @@ import { dirname, join, resolve } from 'node:path';
 import { getShopItem, isAvatarBorderId, ownsShopItem, GAME_COIN_REWARD, MAX_EMOJIS_PER_ACCOUNT } from '@shared/constants';
 import { isReplayRecordId } from '@shared/replay-session';
 import type { Repository, AccountRecord, MatchRecord, NewMatchRecord } from './repository';
-import { MAX_REPLAYS_PER_PLAYER, publicAccount, repositoryError, SOCIAL_HISTORY_RETENTION_MS } from './repository';
+import { MAX_MATCHES_PER_ACCOUNT, publicAccount, repositoryError, SOCIAL_HISTORY_RETENTION_MS } from './repository';
 import { emptyDocument, isObject, validDirectMessage, validateDocument } from './schema';
 import { migrateDocument } from './migrations';
 import type { DatabaseDocument } from './schema';
 import type { MatchReplay, ShopItemId } from '@shared/types';
 import { dropUnplayableRecordings, isMatchReplay } from './match-replay';
 import { createReplayStore } from './replay-store';
+import { retainMatches } from './match-retention';
+import { backupMatchHistoryState } from './state-backup';
 import { equipmentError } from './shop-equipment';
 import type { RuntimeSnapshot } from '../runtime/types';
 import { createDatabaseIndexes, friendshipPair } from './indexes';
@@ -122,6 +124,13 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
         await persist(document);
       }
     }
+    const retained = retainMatches(document.matches);
+    if (retained.length !== document.matches.length) {
+      await backupMatchHistoryState(path, await readFile(path, 'utf8'), options.replayDirectory);
+      const next = { ...document, matches: retained };
+      await persist(next);
+      document = next;
+    }
     // Archives written before a failed commit or left by a crash have no flagged match.
     const unavailable = await replays.sweep(new Set(document.matches.flatMap((match) => match.hasReplay ? [match.id] : [])));
     for (const matchId of unavailable) reportedReplays.add(matchId);
@@ -198,12 +207,11 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       });
     }
 
-    /** Upserts matches and applies replay retention; resolves the IDs whose archive was unflagged. */
+    /** Upserts results and prunes history atomically; archive deletion follows a successful commit. */
     function upsertMatches(data: DatabaseDocument, matches: readonly MatchRecord[]): string[] {
       if (matches.length === 0) return [];
+      const previous = new Map(data.matches.filter((match) => match.hasReplay).map((match) => [match.id, match]));
       data.matches = data.matches.slice();
-      const batchIds = new Set(matches.map((match) => match.id));
-      const previouslyFlagged = flaggedIds(document.matches, batchIds);
       // The local positions also see earlier entries in this batch, including duplicate IDs.
       const positions = new Map(indexes.matches(document.matches).positions);
       for (const match of matches) {
@@ -212,47 +220,11 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
           positions.set(match.id, data.matches.length);
           data.matches.push(structuredClone(match));
         } else data.matches[position] = structuredClone(match);
+        if (match.hasReplay) previous.set(match.id, match);
       }
-      const unflagged = [...previouslyFlagged].filter((id) => !data.matches[positions.get(id)!].hasReplay);
-      for (const id of pruneReplays(data, batchIds, positions)) {
-        const position = positions.get(id)!;
-        const { hasReplay: _pruned, ...record } = data.matches[position];
-        data.matches[position] = record;
-        unflagged.push(id);
-      }
-      return unflagged;
-    }
-
-    /**
-     * Retention for the participants of this batch only: an archive stays while it is within
-     * MAX_REPLAYS_PER_PLAYER of the newest recorded matches of any of its participants.
-     */
-    function pruneReplays(data: DatabaseDocument, batchIds: ReadonlySet<string>, positions: ReadonlyMap<string, number>): string[] {
-      const batch = [...batchIds].map((id) => data.matches[positions.get(id)!]).filter((match) => match.hasReplay);
-      if (batch.length === 0) return [];
-      const previous = indexes.matches(document.matches).byAccount;
-      const rankings = new Map<string, readonly MatchRecord[]>();
-      function recordedNewestFirst(accountId: string): readonly MatchRecord[] {
-        let ranking = rankings.get(accountId);
-        if (ranking) return ranking;
-        const unchanged = (previous.get(accountId) ?? []).filter((match) => !batchIds.has(match.id) && match.hasReplay);
-        ranking = [...unchanged, ...batch.filter((match) => match.accountIds.includes(accountId))]
-          .sort((first, second) => second.finishedAt - first.finishedAt
-            || positions.get(second.id)! - positions.get(first.id)!);
-        rankings.set(accountId, ranking);
-        return ranking;
-      }
-      const retainedBy = (match: MatchRecord, accountId: string): boolean => {
-        const rank = recordedNewestFirst(accountId).indexOf(match);
-        return rank !== -1 && rank < MAX_REPLAYS_PER_PLAYER;
-      };
-      const pruned = new Set<string>();
-      for (const accountId of new Set(batch.flatMap((match) => match.accountIds))) {
-        for (const candidate of recordedNewestFirst(accountId).slice(MAX_REPLAYS_PER_PLAYER)) {
-          if (!candidate.accountIds.some((participant) => retainedBy(candidate, participant))) pruned.add(candidate.id);
-        }
-      }
-      return [...pruned];
+      data.matches = retainMatches(data.matches);
+      const flagged = new Set(data.matches.filter((match) => match.hasReplay).map((match) => match.id));
+      return [...previous.keys()].filter((id) => !flagged.has(id));
     }
 
     function recordLastSeen(data: DatabaseDocument, snapshot: RuntimeSnapshot): void {
@@ -623,9 +595,8 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       saveMatch: (match) => saveMatches([match], () => undefined),
       listMatches: (accountId, limit) =>
         read((data) => {
-          const matches = (indexes.matches(data.matches).byAccount.get(accountId) ?? [])
-            .filter((match) => !match.accountIds.some((id) => id.startsWith('bot:')));
-          return limit === undefined ? matches : matches.slice(0, boundedLimit(limit, 100));
+          const matches = indexes.matches(data.matches).byAccount.get(accountId) ?? [];
+          return matches.slice(0, limit === undefined ? MAX_MATCHES_PER_ACCOUNT : boundedLimit(limit, MAX_MATCHES_PER_ACCOUNT));
         }),
       getMatchReplay: async (matchId) => {
         if (!isReplayRecordId(matchId)) return undefined;

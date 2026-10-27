@@ -166,7 +166,7 @@ describe('public player profile HTTP routes', () => {
     });
   });
 
-  it('should return the complete history beyond 100 records to its owner and public viewers', async () => {
+  it('should return the latest 100 human and bot matches to owners and public viewers', async () => {
     const extra = ['charlie', 'delta'].map((username) => ({
       ...accounts.alice, id: randomUUID(), username, usernameNormalized: username,
     }));
@@ -189,22 +189,23 @@ describe('public player profile HTTP routes', () => {
       },
     }));
     await repository.saveRuntime({ players: [], rooms: [], games: [], chat: [] }, matches);
-    const expected = matches.slice().reverse();
     const history = `${baseUrl}/api/players/${accounts.bravo.id}/history`;
-    // Simulate history written by an older release; it must not enter either history endpoint.
-    await repository.saveMatch({
+    const botMatch: MatchRecord = {
       id: randomUUID(), roomCode: 'OLD123', finishedAt: 1000,
       accountIds: [accounts.bravo.id, ...Array.from({ length: 3 }, () => `bot:${randomUUID()}`)],
       result: { gameType: 'bridge', contract: { level: 1, suit: 'nt', declarer: 'N' },
         declarerTeamTricks: 7, defenderTeamTricks: 6, requiredTricks: 7, declarerTeamWins: true },
-    });
+    };
+    await repository.saveMatch(botMatch);
+    const expected = [botMatch, ...matches.slice().reverse()].slice(0, 100);
     const accountHistory = await fetch(`${baseUrl}/api/account/history`, { headers: headers('bravo') });
     expect((await accountHistory.json()).matches).toEqual(expected);
     const own = await fetch(history, { headers: headers('bravo') });
     expect(own.status).toBe(200);
     const body = await own.json();
     expect(body.matches).toEqual(expected);
-    expect(body.players[oldestParticipant.id]).toMatchObject({ username: 'echo' });
+    expect(body.players[oldestParticipant.id]).toBeUndefined();
+    expect((await repository.listMatches(oldestParticipant.id)).map((match) => match.id)).toEqual([matches[0].id]);
     expect(body.players[accounts.alice.id]).toMatchObject({ username: 'alice', avatarImage: null });
     expect(body.players[accounts.alice.id]).not.toHaveProperty('passwordHash');
 
@@ -222,7 +223,7 @@ describe('public player profile HTTP routes', () => {
     expect(visible.status).toBe(200);
     const publicHistory = await visible.json();
     expect(publicHistory.matches).toEqual(expected);
-    expect(publicHistory.players[oldestParticipant.id]).toMatchObject({ username: 'echo' });
+    expect(publicHistory.players[oldestParticipant.id]).toBeUndefined();
 
     const missing = await fetch(`${baseUrl}/api/players/${randomUUID()}/history`, { headers: headers() });
     expect(missing.status).toBe(404);
@@ -283,17 +284,22 @@ describe('public player profile HTTP routes', () => {
     expect(own.status).toBe(200);
     expect(own.headers.get('cache-control')).toBe('no-store');
     expect(await own.json()).toEqual({ success: true, replay: match.replay });
-    for (const id of [legacy.id, unrelated.id, botPractice.id, randomUUID()]) {
+    for (const id of [legacy.id, unrelated.id, randomUUID()]) {
       const missing = await fetch(`${subject}/${id}/replay`, { headers: headers() });
       expect(missing.status).toBe(404);
       expect(await missing.json()).toEqual({ success: false, error: 'Match replay not found.' });
     }
+    const botReplay = await fetch(`${subject}/${botPractice.id}/replay`, { headers: headers() });
+    expect(botReplay.status).toBe(200);
+    expect(await botReplay.json()).toEqual({ success: true, replay: botPractice.replay });
     for (const url of [`${baseUrl}/api/account/history`, subject]) {
       const response = await fetch(url, { headers: headers() });
       const body = await response.json();
       expect(body.matches).toEqual([
         { id: match.id, roomCode: match.roomCode, finishedAt: 100,
           accountIds: match.accountIds, result: match.result, hasReplay: true },
+        { id: botPractice.id, roomCode: botPractice.roomCode, finishedAt: 100,
+          accountIds: botPractice.accountIds, result: botPractice.result, hasReplay: true },
         { id: legacy.id, roomCode: legacy.roomCode, finishedAt: 90,
           accountIds: legacy.accountIds, result: legacy.result },
       ]);

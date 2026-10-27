@@ -175,6 +175,7 @@ Rules and per-game timeouts: [games](games.md#turn-timer). Limits:
   action from the same view. If that fails three more commits, or none exists, the match
   aborts with a system chat line. Chat senders must be accounts, so a stuck bot turn is
   reported under the first human seat. Every failure is logged.
-- Matches with any bot are excluded from match history but keep runtime results for resume.
+- Bot matches use the same durable history and replay path as human matches; history
+  statistics exclude them. See [storage and retention](storage.md#replay-archives).
 
 Strategies: [games](games.md#bots).

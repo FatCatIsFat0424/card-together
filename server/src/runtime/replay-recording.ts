@@ -34,11 +34,6 @@ function latestSnapshot(recording: ReplayRecording): ReplaySnapshot {
  * `previous` is the game as committed before the mutation, absent for a newly started game.
  */
 export function recordReplayStep(game: AnyGameState, previous: AnyGameState | undefined): void {
-  // Bot games are practice and never archived.
-  if (Object.values(game.players).some((player) => player?.isBot)) {
-    delete game.replayRecording;
-    return;
-  }
   // Old in-progress games cannot recover their initial deal, and finished ones are archived.
   if (previous && (!game.replayRecording || previous.result)) return;
   const snapshot = captureReplaySnapshot(game);

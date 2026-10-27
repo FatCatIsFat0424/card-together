@@ -19,7 +19,7 @@ export const MATCH_REPLAY_ERRORS = {
 } as const satisfies Record<Exclude<MatchReplayLookup['status'], 'found'>, string>;
 
 /**
- * Finds a recorded match in the subject's filtered history, so unrelated and legacy bot IDs stay
+ * Finds a recorded match in the subject's retained history, so unrelated and expired match IDs stay
  * inaccessible. A null viewer skips the history permission, for callers that already checked it.
  * Pruned, missing, or corrupt archives read as not found.
  */

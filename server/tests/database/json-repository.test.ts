@@ -377,18 +377,19 @@ describe('JSON repository', () => {
     expect(await repository.listMatches('unrelated')).toEqual([]);
   });
 
-  it('should return all matches by default while preserving explicit subset limits', async () => {
+  it('should retain only the latest 100 matches while preserving smaller limits', async () => {
     repository = await createJsonRepository(path);
     const players = ['alice', 'bravo', 'charlie', 'delta'].map(account);
     for (const player of players) await repository.createAccount(player);
     const matches = Array.from({ length: 125 }, (_, index) => match(`history-${index}`, players, index));
     await repository.saveRuntime({ players: [], rooms: [], games: [], chat: [] }, matches);
-    const expected = matches.slice().reverse();
+    const expected = matches.slice(-100).reverse();
     expect(await repository.listMatches(players[0].id)).toEqual(expected);
     expect(await repository.listMatches(players[0].id, 1)).toEqual(expected.slice(0, 1));
     expect(await repository.listMatches(players[0].id, 100)).toEqual(expected.slice(0, 100));
     expect(await repository.listMatches(players[0].id, 0)).toEqual([]);
     expect(await repository.listMatches('unrelated')).toEqual([]);
+    expect(JSON.parse(await readFile(path, 'utf8')).matches).toHaveLength(100);
   });
 
   it('should reject runtime player identities that have no durable account', async () => {

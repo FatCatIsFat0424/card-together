@@ -79,8 +79,7 @@ export async function createRuntimeCoordinator(repository: Pick<Repository, 'loa
             for (const player of Object.values(game.players)) {
               if (!player.isBot) rewardedAccountIds.add(player.id);
             }
-            // Bot games are practice; retain their runtime result without recording match history.
-            if (GAME_SEAT_ORDER.some((seat) => gamePlayer(game, seat)?.isBot)) continue;
+            if (Object.values(game.players).every((player) => player.isBot)) continue;
             const replay = captureMatchReplay(game);
             matches.push({
               id: game.id, roomCode: game.roomCode,

@@ -1071,8 +1071,7 @@ function earlyLeaveSeats(value: ObjectValue): boolean {
 
 function replayRecording(game: AnyGameState, applySteps: boolean): boolean {
   if (game.replayRecording === undefined) return true;
-  return !Object.values(game.players).some((player) => player.isBot)
-    && isReplayRecording(game.replayRecording, game.gameType, applySteps);
+  return isReplayRecording(game.replayRecording, game.gameType, applySteps);
 }
 
 function game(value: unknown, applyReplaySteps: boolean): boolean {

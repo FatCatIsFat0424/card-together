@@ -27,7 +27,7 @@ backend-relative; production Nginx serves them below `/card-together/`.
 | `POST /api/auth/password` | `currentPassword, newPassword` | Revokes all sessions |
 | `POST /api/auth/logout` | `{}` | Revokes presented sessions, clears cookies |
 | `POST /api/auth/logout-all` | `{}` | Revokes every session of the account |
-| `GET /api/account/history` | — | Own human-only matches, newest first |
+| `GET /api/account/history` | — | Own latest 100 matches including bots, newest first |
 | `GET /api/players/:accountId` | — | Public profile |
 | `GET /api/players/:accountId/history` | — | Matches and participant map, if owner or public |
 | `GET /api/players/:accountId/history/:matchId/replay` | — | `{ success: true, replay: MatchReplay }`, if owner or subject's history is public |
@@ -74,7 +74,7 @@ Omitted fields keep their values; invalid values return 400.
 | Case | Status |
 | --- | --- |
 | Invalid player ID / unknown player / private history | 400 / 404 / 403 |
-| Invalid replay match ID / absent, unrelated, bot-practice, legacy, or pruned replay | 400 / 404 |
+| Invalid replay match ID / absent, unrelated, legacy, or pruned replay | 400 / 404 |
 | Unknown border / insufficient coins | 400 / 409 |
 | Invalid daily reward / stale date, incomplete or unassigned task, or unavailable replacement | 400 / 409 |
 | Oversized image or quota exceeded ([limits](media.md#uploads)) | 413 |
@@ -91,15 +91,15 @@ Omitted fields keep their values; invalid values return 400.
   cleanup and server restarts. Public profiles, search results, and pending requests omit it.
   Display behavior: [friends interface](interface.md#lobby-and-friends).
 - No response contains password hashes or session digests.
-- History list endpoints return every eligible [MatchSummary](../shared/src/types/game.ts)
-  without pagination; participant maps include accounts from older matches. Summaries add
+- History list endpoints return the latest 100 eligible [MatchSummary](../shared/src/types/game.ts)
+  without pagination, including bot matches; participant maps include retained human accounts. Summaries add
   optional `hasReplay: true` while a match's archive is retained and never contain replay/log
   payloads.
   Existing list envelopes stay `{ success: true, matches }` for account history and
   `{ success: true, matches, players }` for player history. Search, filters, and statistics
-  run in the client.
+  run in the client; statistics exclude any match containing a bot.
 - Replay requires an active session and the same subject-owner/public-history permission
-  as the player history list. Lookup is limited to that subject's retained human matches;
+  as the player history list. Lookup is limited to that subject's retained matches;
   knowing an unrelated match ID grants no access. Missing accounts return 404, private
   subjects return 403, and missing, legacy, pruned, or unreadable archives return 404
   ([retention](storage.md#replay-archives)). The response's

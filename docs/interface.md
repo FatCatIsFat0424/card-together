@@ -454,7 +454,7 @@ Saved and system reduced-motion preferences disable this animation.
   color, and avatar border save with **Save changes**; image settings save automatically.
 - Switching tabs keeps unsaved profile edits.
 
-**History and statistics** use all records from the [history API](api.md#http):
+**History and statistics** use the latest 100 records from the [history API](api.md#http):
 
 - Columns: date, room, game, result, players, recording; the table scrolls within its container.
 - Search (room code, nicknames, usernames, game, result), filters, and sorting run
@@ -463,8 +463,9 @@ Saved and system reduced-motion preferences disable this animation.
 - Per-game summary: match count and win rate (wins / matches; ties counted separately;
   no percentage without matches), with a horizontal chart on larger screens.
 - Donut chart: each game's share of matches, total in the center; the legend lists all games.
-- Statistics ignore search and filters. Private or unavailable history shows no statistics.
-- Newly completed human-only matches offer a recording, loaded when opened. Recording
+- Statistics exclude every match containing a bot and ignore search and filters.
+  Private or unavailable history shows no statistics.
+- Newly completed matches, including bot games, offer a recording, loaded when opened. Recording
   visibility follows the viewed player's history setting. Matches without a recording keep
   their results and show that no recording exists.
 

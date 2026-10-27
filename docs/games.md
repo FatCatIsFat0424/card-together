@@ -17,7 +17,7 @@ turns, and results.
 | Readiness | Sitting, standing, leaving, adding or removing bots, and option changes clear human readiness; changing only the Sevens effect keeps it |
 | Finished | Each human returns with Continue; others keep the result until everyone returns or the next match starts |
 | Leave or reconnect expiry | Leaving, or not reconnecting within 60 seconds, aborts an unfinished match |
-| History | Completed human-only results persist separately from room state |
+| History | Completed results persist under the [history retention policy](storage.md#replay-archives) |
 
 **Abort votes**
 
@@ -130,7 +130,7 @@ Runtime mechanics: [architecture](architecture.md#turn-clocks).
   a 17-point stand threshold; Hold'em uses free checks and simple randomized betting
   ([easy strategies](../server/src/bots/easy-strategy.ts)).
 - Bots wait for presentation plus a short thinking delay, save before broadcast, and
-  resume after restart. Matches with bots never enter history. Bots have no profile,
+  resume after restart. Matches with bots follow the [history and replay policy](storage.md#identity-and-sessions). Bots have no profile,
   friends, or voice.
 
 | Game | Hard strategy |

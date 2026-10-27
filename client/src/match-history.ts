@@ -49,7 +49,7 @@ export interface GameHistoryStatistics {
   readonly winRate: number | null;
 }
 
-/** Summarize the subject's loaded matches, independently of table filters. */
+/** Summarize human-only matches, independently of table filters. */
 export function gameHistoryStatistics(
   matches: readonly MatchSummary[], accountId?: string,
 ): GameHistoryStatistics[] {
@@ -58,7 +58,7 @@ export function gameHistoryStatistics(
     let wins = 0;
     let ties = 0;
     for (const match of matches) {
-      if (match.result.gameType !== gameType) continue;
+      if (match.result.gameType !== gameType || match.accountIds.some((id) => id.startsWith('bot:'))) continue;
       const outcome = matchOutcome(match, accountId);
       if (outcome === 'completed') continue;
       played += 1;

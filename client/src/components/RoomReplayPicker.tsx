@@ -5,6 +5,8 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import type { MatchHistory, MatchSummary, PlayerInfo, PublicAccount } from '@shared/types';
 import { apiRequest } from '../api';
+import { resultSeats } from '../game-view';
+import { seatLabel } from '../games/seat-names';
 import { replayableHistory } from '../room-replay';
 import type { MemberReplayHistory } from '../room-replay';
 import { useI18nStore } from '../stores/i18n-store';
@@ -18,7 +20,11 @@ function MatchRow({ match, players, busy, onWatch }: {
   readonly onWatch: () => void;
 }): ReactNode {
   const { t, locale } = useI18nStore();
-  const names = match.accountIds.map((id) => players[id]?.nickname ?? '?').join(', ');
+  const seats = resultSeats(match.result);
+  const names = match.accountIds.map((id, index) => {
+    const label = seatLabel(t, match.result.gameType, seats[index]);
+    return id.startsWith('bot:') ? t('player.botSeat', { seat: label }) : players[id]?.nickname ?? label;
+  }).join(', ');
   return <li className={styles.match}>
     <span className={styles.matchGame}>{t(`gameType.${match.result.gameType}`)}</span>
     <span className={styles.matchMeta}>

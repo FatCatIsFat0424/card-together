@@ -146,7 +146,8 @@ describe('live-table match recordings', () => {
     players.restorePlayers([]);
   });
 
-  it.each<GameType>(GAME_TYPES)('records %s spectator snapshots across restart, rollback and room removal', async (gameType) => {
+  it.each(GAME_TYPES.flatMap((gameType) => [false, true].map((bots) => ({ gameType, bots }))))(
+    'records $gameType (bots: $bots) across restart, rollback and room removal', async ({ gameType, bots }) => {
     let seed = 17;
     vi.spyOn(Math, 'random').mockImplementation(() => {
       seed = (seed * 1664525 + 1013904223) >>> 0;
@@ -156,7 +157,7 @@ describe('live-table match recordings', () => {
     const path = join(directory, 'database.json');
     let repository = await createJsonRepository(path);
     try {
-      const { runtime, code } = await startMatch(repository, gameType);
+      const { runtime, code } = await startMatch(repository, gameType, bots);
       const initial = games.getGameState(code)!;
       expect(initial.replayRecording).toEqual({ initial: spectatorSnapshot(code), steps: [] });
       const unseen = undealt(initial).map((card) => `${card.suit}${card.rank}`);
@@ -255,7 +256,8 @@ describe('live-table match recordings', () => {
       // Finished boards are archived once and stop recording.
       const steps = completed.replayRecording!.steps.length;
       await resumed.mutate(() => games.returnFromResult(code, 'N'));
-      expect(games.getGameState(code)!.replayRecording!.steps).toHaveLength(steps);
+      if (bots) expect(games.getGameState(code)).toBeNull();
+      else expect(games.getGameState(code)!.replayRecording!.steps).toHaveLength(steps);
 
       // Retained history does not depend on runtime rooms, private hands, or connected players.
       await repository.saveRuntime({ players: [], rooms: [], games: [], chat: [] });
@@ -276,7 +278,7 @@ describe('live-table match recordings', () => {
     let repository = await createJsonRepository(path);
     try {
       const { runtime, code } = await startMatch(repository, 'bridge', mode === 'bots');
-      expect(games.getGameState(code)!.replayRecording === undefined).toBe(mode === 'bots');
+      expect(games.getGameState(code)!.replayRecording).toBeDefined();
       const old = runtime.snapshot();
       delete old.games[0].replayRecording;
       await repository.saveRuntime(old);
@@ -287,19 +289,16 @@ describe('live-table match recordings', () => {
       await finish(code, resumed);
       expect(games.getGameState(code)!.replayRecording).toBeUndefined();
       const history = await repository.listMatches('N');
-      if (mode === 'bots') expect(history).toEqual([]);
-      else {
-        expect(history).toHaveLength(1);
-        expect(history[0]).not.toHaveProperty('replay');
-        expect(history[0]).not.toHaveProperty('hasReplay');
-      }
+      expect(history).toHaveLength(1);
+      expect(history[0]).not.toHaveProperty('replay');
+      expect(history[0]).not.toHaveProperty('hasReplay');
     } finally {
       await repository.close();
       await rm(directory, { recursive: true, force: true });
     }
   });
 
-  it('rejects a recording on a bot game at restore', async () => {
+  it('accepts a recording on a bot game at restore', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'card-replay-bot-'));
     const repository = await createJsonRepository(join(directory, 'database.json'));
     try {
@@ -307,7 +306,7 @@ describe('live-table match recordings', () => {
       const snapshot = runtime.snapshot();
       expect(isRuntimeSnapshot(snapshot)).toBe(true);
       snapshot.games[0].replayRecording = { initial: spectatorSnapshot(code), steps: [] };
-      expect(isRuntimeSnapshot(snapshot)).toBe(false);
+      expect(isRuntimeSnapshot(snapshot)).toBe(true);
     } finally {
       await repository.close();
       await rm(directory, { recursive: true, force: true });

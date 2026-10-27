@@ -22,8 +22,9 @@
 **Players and privacy**
 
 - Bots are `bot:<UUID>` with `isBot: true` and have no account, session, or profile.
-- Any match with a bot is practice: it stays resumable but adds no history.
-- Newly started human-only matches in all ten games keep a server-only recording in
+- Completed matches with bots appear in history and have replays, but are excluded from
+  history game counts, game distribution, and win rates.
+- Newly started matches in all ten games keep a server-only recording in
   runtime ([`ReplayRecording`](../shared/src/types/replay.ts),
   [recorder](../server/src/runtime/replay-recording.ts)). After each committed operation
   it records what an unseated spectator receives (every dealt hand), minus the clock and
@@ -32,13 +33,13 @@
   replay through the recorded presentation frames.
 - Undealt decks and stock, Liar's Deck bullets, clocks, chat, and the recording itself
   never enter a snapshot. Live snapshots and room listings never include the recording.
-  Bot practice never records; in-progress games started without a recording stay
+  In-progress games started without a recording stay
   unrecorded, and their results have no replay.
 - Completed recordings become version 1 [MatchReplay](../shared/src/types/replay.ts)
   archives in the [replay store](#replay-archives); anyone the history permission allows to
   view the match sees every dealt hand. Steps, results, and runtime commit atomically; a failed
   write restores all three. Recordings survive restart; archives survive room deletion, follow
-  the owner/public-history policy, and are kept for each player's latest recorded matches.
+  the owner/public-history policy and [match retention](#replay-archives).
 - The [archive validator](../server/src/database/match-replay.ts) checks the envelope,
   patch operations, size limits, and unsafe keys (`__proto__`, `constructor`,
   `prototype`), and requires every step to apply to a snapshot of the same game without a
@@ -271,7 +272,7 @@ Contracts: [`Repository`](../server/src/database/repository.ts),
 ### Replay archives
 
 Contracts: [`MatchReplay`](../shared/src/types/replay.ts), [store](../server/src/database/replay-store.ts),
-[`MAX_REPLAYS_PER_PLAYER`](../server/src/database/repository.ts).
+[`MAX_MATCHES_PER_ACCOUNT`](../server/src/database/repository.ts).
 
 - Archives live outside `database.json`, so a write never reads, validates, or rewrites them.
   The match record keeps only `hasReplay: true`. Databases holding an inline `replay` (unreleased
@@ -279,15 +280,19 @@ Contracts: [`MatchReplay`](../shared/src/types/replay.ts), [store](../server/src
 - File names are validated match IDs (`[A-Za-z0-9_-]`, up to 128 characters). Each file is
   written once, before the commit that flags its match, as a `0600` temporary file that is
   fsynced and renamed; the directory is `0700`.
-- Retention: an archive stays while it is among the latest 50 recorded matches of any of its
-  participants. Matches without a recording take no slot. The commit that records new matches
-  applies retention for their participants only and clears pruned flags; the files are deleted
-  after that commit succeeds. Results stay forever and show "no recording".
+- Each account can list and replay only its latest 100 completed matches, including bot and
+  unrecorded games. A shared result and archive remain stored while any human participant
+  retains the match; bot identities never extend retention. Equal completion times preserve
+  database insertion order. The match commit deletes expired results atomically and removes
+  their archive files only after persistence succeeds.
+- Startup applies the same retention to existing data, saving a private `.match-history-<UUID>.bak/`
+  backup of the database, adjacent media, and replay archives before replacement. Backup failure
+  aborts startup without pruning results or archives.
 - Reads validate the whole archive. A missing, unreadable, or invalid file reads as no replay
   and is logged once.
 - A failed commit deletes the files it wrote. Startup deletes leftover temporary files and
-  archives without a flagged match, and logs how many flagged matches have no file; it never
-  edits the database. Unknown files are left alone.
+  archives without a flagged match, and logs how many flagged matches have no file.
+  Unknown files are left alone.
 
 ## Backup and restore
 
@@ -316,7 +321,7 @@ Both tools are offline and share these requirements:
   and be a regular file without symbolic or hard links; upgrade older data through a
   normal backed-up startup first.
 - Run with the pinned Node.js version as the database file owner.
-- Preview first (no writes), then apply. Keep the printed `.bak` file private.
+- Preview first (no writes), then apply. Keep the printed backup path private.
 - Restart a single instance afterwards.
 
 ### Administrator password reset
@@ -355,20 +360,23 @@ Resets a password without the old one. There is no web admin role or recovery en
   lock only after confirming no reset is running.
 - Restoring the backup restores the old password and sessions and loses newer writes.
 
-### Legacy bot history cleanup
+### Match history cleanup
 
-Older versions recorded bot matches in history. They are hidden at load time; this tool
-removes them from disk. It never runs automatically.
+Use this offline tool to preview or apply [match retention](#replay-archives) before startup:
 
 ```sh
-npm run cleanup:bot-history -- /absolute/path/database.json
-npm run cleanup:bot-history -- /absolute/path/database.json --apply --writers-stopped
+npm run cleanup:match-history -- /absolute/path/database.json
+npm run cleanup:match-history -- /absolute/path/database.json --apply --writers-stopped
 ```
 
-- Writes a 0600 backup `.bot-history-<UUID>.bak`, then atomically replaces only `matches`.
-- Keeps human history, accounts, sessions, friends, emoji, media, and runtime.
-- Changed or invalid input aborts; a repeat run changes nothing.
-- After restart, verify login, human history, and game resume.
+- Run as the database owner after stopping all writers, following the [offline requirements](#maintenance-tools).
+- Dry run reports globally expired records and remaining records without writing files.
+  Shared matches needed by another human remain stored; each account still sees at most 100.
+- Apply creates a private `.match-history-<UUID>.bak/` directory containing `database.json`
+  and copies of adjacent `media/` and `replays/` when present. Backup failure leaves the database
+  untouched. It then atomically replaces `matches` and removes only expired replay files.
+- Accounts, sessions, rewards, friends, messages, media, and resumable runtime stay unchanged.
+  A second run is a no-op. After restart, verify login, history, replays, and game resume.
 
 ## Future SQL adapter
 

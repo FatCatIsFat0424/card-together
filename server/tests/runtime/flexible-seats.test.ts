@@ -330,9 +330,8 @@ it.each([false, true])('awards a completed Hold\'em match once with bot=%s, pres
     expect(rewards).toHaveBeenCalledWith(withBot ? [accounts[0].id] : accounts.map((account) => account.id));
     expect((await repository.getAccountById(accounts[0].id))?.coins).toBe(10);
     expect((await repository.getAccountById(accounts[1].id))?.coins ?? 0).toBe(withBot ? 0 : 10);
-    const records = await repository.listMatches(accounts[1].id);
-    if (withBot) expect(records).toEqual([]);
-    else expect(records[0].accountIds).toEqual(accounts.map((account) => account.id));
+    const records = await repository.listMatches(accounts[0].id);
+    expect(records[0].accountIds).toEqual(finished.result.seats!.map((seat) => finished.players[seat]!.id));
     const persisted = await repository.loadRuntime();
     expect(persisted).not.toBeNull();
     await Promise.all([
@@ -343,7 +342,7 @@ it.each([false, true])('awards a completed Hold\'em match once with bot=%s, pres
     await repository.close();
     repository = await createJsonRepository(path);
     expect((await repository.getAccountById(accounts[0].id))?.coins).toBe(10);
-    expect((await repository.listMatches(accounts[0].id)).map((match) => match.id)).toEqual(withBot ? [] : [records[0].id]);
+    expect((await repository.listMatches(accounts[0].id)).map((match) => match.id)).toEqual([records[0].id]);
   } finally {
     vi.useRealTimers();
     await repository.close();

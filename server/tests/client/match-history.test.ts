@@ -118,6 +118,17 @@ describe('per-game history statistics', () => {
       .toEqual({ gameType: 'redpoints', played: 2, wins: 1, ties: 1, winRate: 0.5 });
   });
 
+  it('excludes bot wins, losses and ties from all statistics while leaving them in history', () => {
+    const botMatches = [bridge, loss, tie].map((match) => ({ ...match, id: `bot-${match.id}`,
+      accountIds: ['north', 'bot:opponent', 'south', 'west'] }));
+    expect(gameHistoryStatistics([...botMatches, bridge, loss, tie], 'north'))
+      .toEqual(gameHistoryStatistics([bridge, loss, tie], 'north'));
+    expect(gameHistoryStatistics(botMatches, 'north').every((game) => game.played === 0
+      && game.wins === 0 && game.ties === 0 && game.winRate === null)).toBe(true);
+    expect(selectHistoryMatches(botMatches, players, filters)).toHaveLength(3);
+    expect(botMatches.map((match) => matchOutcome(match, 'north'))).toEqual(['win', 'loss', 'tie']);
+  });
+
   it('lists every game and leaves unplayed or unrelated records without a win rate', () => {
     for (const statistics of [gameHistoryStatistics([], 'north'),
       gameHistoryStatistics([bridge, tie, loss], 'visitor'), gameHistoryStatistics([bridge])]) {

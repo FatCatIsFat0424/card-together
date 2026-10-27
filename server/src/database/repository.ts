@@ -51,11 +51,8 @@ export interface NewMatchRecord extends Omit<MatchRecord, 'hasReplay'> {
   readonly replay?: MatchReplay;
 }
 
-/**
- * Each player keeps the archives of their latest recorded matches; an archive is retained while
- * it is within this many of any participant's newest recorded matches. Results stay forever.
- */
-export const MAX_REPLAYS_PER_PLAYER = 50;
+/** Results and archives stay while any human participant retains the match in their history. */
+export const MAX_MATCHES_PER_ACCOUNT = 100;
 
 export { SOCIAL_HISTORY_RETENTION_MS } from '@shared/constants';
 
@@ -152,12 +149,12 @@ export interface Repository {
    * times: commit time for connected players, observed disconnect time for offline players.
    * Restore-only reconnection grace periods do not imply activity.
    * Missing players retain their historical last-seen times.
-   * New archives are stored before the commit, which also applies replay retention for the
-   * new matches' participants; archives it prunes are deleted after the commit succeeds.
+   * New archives are stored before the commit, which also applies match retention;
+   * archives it prunes are deleted after the commit succeeds.
    */
   saveRuntime(snapshot: RuntimeSnapshot, matches?: readonly NewMatchRecord[], completedGameIds?: readonly string[]): Promise<void>;
   saveMatch(match: NewMatchRecord): Promise<void>;
-  /** All human-only matches, newest first; an explicit limit requests a bounded subset. */
+  /** Latest 100 participant matches, including bots, newest first; limit can request fewer. */
   listMatches(accountId: string, limit?: number): Promise<MatchRecord[]>;
   /** The validated archive of a flagged match; undefined when unrecorded, pruned, missing, or corrupt. */
   getMatchReplay(matchId: string): Promise<MatchReplay | undefined>;

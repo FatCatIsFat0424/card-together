@@ -13,7 +13,7 @@ import * as rooms from '../../src/managers/room-manager';
 import * as players from '../../src/managers/player-manager';
 import { getBotAction } from '../../src/bots/bot-decisions';
 
-it('retains mixed bot results for resume without storing them in match history', async () => {
+it('stores mixed bot results and replays while preserving resume', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'card-bot-history-'));
   const path = join(directory, 'database.json');
   let repository = await createJsonRepository(path);
@@ -55,8 +55,11 @@ it('retains mixed bot results for resume without storing them in match history',
       });
     }
     expect(games.getGameState(code)?.phase).toBe('scoring');
-    expect(await repository.listMatches(account.id)).toEqual([]);
-    expect(JSON.parse(await readFile(path, 'utf8')).matches).toEqual([]);
+    const history = await repository.listMatches(account.id);
+    expect(history).toHaveLength(1);
+    expect(history[0].hasReplay).toBe(true);
+    expect(await repository.getMatchReplay(history[0].id)).toBeDefined();
+    expect(JSON.parse(await readFile(path, 'utf8')).matches).toEqual(history);
     expect(rooms.getRoomInfo(code)?.status).toBe('waiting');
     expect(rooms.getRoomInfo(code)?.seats.N.isReady).toBe(false);
     const finished = games.getGameState(code)!;
@@ -68,7 +71,8 @@ it('retains mixed bot results for resume without storing them in match history',
     await runtime.mutate(() => { rooms.removeBot(code, account.id, 'E'); });
     await repository.close();
     repository = await createJsonRepository(path);
-    expect(await repository.listMatches(account.id)).toEqual([]);
+    expect(await repository.listMatches(account.id)).toEqual(history);
+    expect(await repository.getMatchReplay(history[0].id)).toBeDefined();
     expect((await repository.loadRuntime())?.games[0].phase).toBe('scoring');
     expect((await repository.loadRuntime())?.games[0].result).toEqual(finished.result);
     await expect(repository.saveMatch({ ...historical, id: randomUUID(),

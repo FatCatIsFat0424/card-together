@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -6,7 +7,7 @@ import { applyReplayPatch } from '@shared/replay-patch';
 import type { MatchReplay, ReplaySnapshot } from '@shared/types';
 import { createJsonRepository } from '../../src/database/json-repository';
 import { createReplayStore } from '../../src/database/replay-store';
-import { MAX_REPLAYS_PER_PLAYER } from '../../src/database/repository';
+import { MAX_MATCHES_PER_ACCOUNT } from '../../src/database/repository';
 import type { AccountRecord, MatchRecord, NewMatchRecord, Repository } from '../../src/database/repository';
 import { emptyDocument, validateDocument } from '../../src/database/schema';
 import type { RuntimeSnapshot } from '../../src/runtime/types';
@@ -179,36 +180,74 @@ describe('replay archive storage', () => {
     expect(await reopened.listMatches('a')).toHaveLength(3);
   });
 
-  it(`keeps each player's latest ${MAX_REPLAYS_PER_PLAYER} recorded matches while any participant retains them`, async () => {
+  it('keeps each account\'s latest 100 matches and shared archives needed by other humans', async () => {
     const saved = await reopen();
     await saved.saveMatch(match('shared', ['a', 'b', 'c', 'd'], 101));
     await saved.saveMatch(match('oldest', ['a', 'e', 'f', 'g'], 102));
-    for (let index = 0; index < MAX_REPLAYS_PER_PLAYER - 1; index += 1) {
+    for (let index = 0; index < MAX_MATCHES_PER_ACCOUNT - 1; index += 1) {
       await saved.saveMatch(match(`m${index}`, ['a', 'e', 'f', 'g'], 103 + index));
     }
-    // Fifty-one recorded matches for `a`: the oldest stays because b, c and d retain it.
     expect(await saved.getMatchReplay('shared')).toEqual(archive());
     expect(await saved.getMatchReplay('oldest')).toEqual(archive());
-    // Unrecorded results never take a slot.
-    await saved.saveMatch(match('unrecorded', ['a', 'e', 'f', 'g'], 500, null));
-    expect(await saved.getMatchReplay('oldest')).toEqual(archive());
+    expect((await saved.listMatches('a')).some((entry) => entry.id === 'shared')).toBe(false);
+    expect((await saved.listMatches('b')).map((entry) => entry.id)).toEqual(['shared']);
 
-    await saved.saveRuntime({ players: [], rooms: [], games: [], chat: [] }, [match('newest', ['a', 'e', 'f', 'g'], 501)]);
+    // Unrecorded games share the same history slots as recorded games.
+    await saved.saveMatch(match('unrecorded', ['a', 'e', 'f', 'g'], 500, null));
     expect(await saved.getMatchReplay('oldest')).toBeUndefined();
+    await saved.saveRuntime({ players: [], rooms: [], games: [], chat: [] }, [match('newest', ['a', 'e', 'f', 'g'], 501)]);
     expect(await saved.getMatchReplay('shared')).toEqual(archive());
     const files = await storedFiles();
     expect(files).not.toContain('oldest.json');
-    expect(files).toHaveLength(MAX_REPLAYS_PER_PLAYER + 1);
+    expect(files).not.toContain('m0.json');
+    expect(files).toHaveLength(MAX_MATCHES_PER_ACCOUNT);
     const history = await saved.listMatches('a');
-    expect(history).toHaveLength(MAX_REPLAYS_PER_PLAYER + 3);
-    expect(history.find((entry) => entry.id === 'oldest')).not.toHaveProperty('hasReplay');
-    expect(history.filter((entry) => entry.hasReplay)).toHaveLength(MAX_REPLAYS_PER_PLAYER + 1);
-    expect((await saved.listMatches('e')).filter((entry) => entry.hasReplay)).toHaveLength(MAX_REPLAYS_PER_PLAYER);
-
-    // Results stay forever, and retention survives restart.
+    expect(history).toHaveLength(MAX_MATCHES_PER_ACCOUNT);
+    expect(history.filter((entry) => entry.hasReplay)).toHaveLength(MAX_MATCHES_PER_ACCOUNT - 1);
+    expect(JSON.parse(await readFile(path, 'utf8')).matches).toHaveLength(MAX_MATCHES_PER_ACCOUNT + 1);
     const reopened = await reopen();
     expect(await reopened.listMatches('a')).toEqual(history);
     expect(await storedFiles()).toEqual(files);
+  });
+
+  it('does not let unique bot IDs retain expired history or delete archives before a successful commit', async () => {
+    const saved = await reopen();
+    const botIds = (): string[] => ['a', ...Array.from({ length: 3 }, () => `bot:${randomUUID()}`)];
+    await saved.saveRuntime({ players: [], rooms: [], games: [], chat: [] },
+      Array.from({ length: 100 }, (_, index) => match(`bot-${index}`, botIds(), 100 + index)));
+    const original = vi.mocked(rename).getMockImplementation()!;
+    vi.mocked(rename).mockImplementation(async (from, to) => {
+      if (to === path) throw new Error('Disk full');
+      return original(from, to);
+    });
+    const next = match('next-bot', botIds(), 200);
+    await expect(saved.saveMatch(next)).rejects.toThrow('Disk full');
+    expect(await saved.getMatchReplay('bot-0')).toEqual(archive());
+    expect(await saved.getMatchReplay('next-bot')).toBeUndefined();
+    expect(await storedFiles()).toHaveLength(100);
+    vi.mocked(rename).mockImplementation(original);
+    await saved.saveMatch(next);
+    expect(await saved.getMatchReplay('bot-0')).toBeUndefined();
+    expect(await storedFiles()).toHaveLength(100);
+    expect(JSON.parse(await readFile(path, 'utf8')).matches).toHaveLength(100);
+    expect((await saved.listMatches('a'))[0].id).toBe('next-bot');
+  });
+
+  it('uses stable completion order for ties and prunes old inserts and replacement participants', async () => {
+    const saved = await reopen();
+    await saved.saveRuntime({ players: [], rooms: [], games: [], chat: [] },
+      Array.from({ length: 101 }, (_, index) => match(`tie-${index}`, ['a', 'b', 'c', 'd'], 200)));
+    expect((await saved.listMatches('a')).map((entry) => entry.id))
+      .toEqual(Array.from({ length: 100 }, (_, index) => `tie-${index}`));
+    expect(await saved.getMatchReplay('tie-100')).toBeUndefined();
+    await saved.saveMatch(match('old-insert', ['a', 'b', 'c', 'd'], 100));
+    expect(await saved.getMatchReplay('old-insert')).toBeUndefined();
+    await saved.saveMatch(match('shared', ['a', 'e', 'f', 'g'], 100));
+    expect(await saved.getMatchReplay('shared')).toEqual(archive());
+    await saved.saveMatch(match('shared', ['a', 'b', 'c', 'd'], 100));
+    expect(await saved.getMatchReplay('shared')).toBeUndefined();
+    expect(await saved.listMatches('e')).toEqual([]);
+    expect(await storedFiles()).toHaveLength(100);
   });
 
   it('validates flagged matches without reading or applying archives; reads apply every step', async () => {
