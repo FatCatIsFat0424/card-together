@@ -15,7 +15,8 @@ def migrate(legacy: Path, current: Path) -> bool:
     old_path, new_path = legacy.resolve(), current.resolve()
     if old_path == new_path or old_path in new_path.parents or new_path in old_path.parents:
         raise ValueError('Legacy and current state directories must be separate')
-    if (current / 'database.json').exists() or not (legacy / 'database.json').exists():
+    current_databases = ('database.json', 'database.sqlite')
+    if any((current / name).exists() for name in current_databases) or not (legacy / 'database.json').exists():
         return False
     if current.exists() and any(current.iterdir()):
         raise ValueError('Current state contains files without a database; reconcile it before migration')

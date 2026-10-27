@@ -48,6 +48,18 @@ class MigrateStateTests(unittest.TestCase):
             self.assertEqual((current / 'database.json').read_text(), 'current')
             self.assertEqual((current / 'media/avatar').read_text(), 'current avatar')
 
+    def test_current_sqlite_database_is_never_overwritten(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            legacy, current = root / 'legacy', root / 'current'
+            legacy.mkdir()
+            current.mkdir()
+            (legacy / 'database.json').write_text('old')
+            (current / 'database.sqlite').write_bytes(b'current')
+            self.assertFalse(MODULE.migrate(legacy, current))
+            self.assertEqual(sorted(path.name for path in current.iterdir()), ['database.sqlite'])
+            self.assertEqual((current / 'database.sqlite').read_bytes(), b'current')
+
     def test_partial_destination_requires_review(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

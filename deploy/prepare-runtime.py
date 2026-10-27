@@ -8,6 +8,11 @@ import sys
 
 LEGACY_DATABASE = '/var/lib/bridge-online/database.json'
 DATABASE = '/var/lib/card-together/database.json'
+# DATABASE_ENGINE selects the file; json stays the default until the SQLite cutover.
+DATABASES = {
+    'json': DATABASE,
+    'sqlite': '/var/lib/card-together/database.sqlite',
+}
 REQUIRED = {
     'NODE_ENV': 'production',
     'HOST': '127.0.0.1',
@@ -31,7 +36,10 @@ def prepare(source: str, legacy: bool) -> str:
         if key == 'DATABASE_PATH' and legacy and value == LEGACY_DATABASE:
             lines[index] = f'DATABASE_PATH={DATABASE}\n'
             values[key] = DATABASE
-    for key, value in {**REQUIRED, 'DATABASE_PATH': DATABASE}.items():
+    engine = values.get('DATABASE_ENGINE', 'json')
+    if engine not in DATABASES:
+        raise ValueError('Review DATABASE_ENGINE before automated deployment')
+    for key, value in {**REQUIRED, 'DATABASE_PATH': DATABASES[engine]}.items():
         if values.get(key) != value:
             raise ValueError(f'Review {key} before automated deployment')
     return ''.join(lines)

@@ -189,7 +189,8 @@ with socket.socket() as listener:
         raise SystemExit('Port 3001 is occupied. Resolve the conflict before deploying.')
 PY
   fi
-  if [[ -f $repo_dir/server/data/database.json && ! -f $state_dir/database.json && ! -f $legacy_state_dir/database.json ]]; then
+  if [[ -f $repo_dir/server/data/database.json && ! -f $state_dir/database.json && ! -f $state_dir/database.sqlite \
+    && ! -f $legacy_state_dir/database.json ]]; then
     echo 'Repository data found. Stop its writer and migrate it using docs/deployment.md first.' >&2
     exit 1
   fi

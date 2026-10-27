@@ -30,6 +30,21 @@ class PrepareRuntimeTests(unittest.TestCase):
             with self.subTest(source=source), self.assertRaises(ValueError):
                 MODULE.prepare(source, False)
 
+    def test_engine_selects_the_matching_database_path(self):
+        sqlite = EXAMPLE.replace('DATABASE_ENGINE=json', 'DATABASE_ENGINE=sqlite').replace(
+            MODULE.DATABASE, MODULE.DATABASES['sqlite'])
+        self.assertIn('DATABASE_ENGINE=json\n', EXAMPLE)
+        self.assertEqual(MODULE.prepare(sqlite, False), sqlite)
+        # Configurations written before DATABASE_ENGINE existed keep the JSON default.
+        legacy_style = EXAMPLE.replace('DATABASE_ENGINE=json\n', '')
+        self.assertEqual(MODULE.prepare(legacy_style, False), legacy_style)
+        for source in (sqlite.replace(MODULE.DATABASES['sqlite'], MODULE.DATABASE),
+                       EXAMPLE.replace(MODULE.DATABASE, MODULE.DATABASES['sqlite']),
+                       EXAMPLE.replace('DATABASE_ENGINE=json', 'DATABASE_ENGINE=postgres'),
+                       EXAMPLE.replace('DATABASE_ENGINE=json', 'DATABASE_ENGINE=')):
+            with self.subTest(source=source), self.assertRaises(ValueError):
+                MODULE.prepare(source, False)
+
     def test_duplicate_and_invalid_entries_fail(self):
         for suffix in ('PORT=3001\n', 'export PORT=3001\n', 'INVALID\n'):
             with self.subTest(suffix=suffix), self.assertRaises(ValueError):
