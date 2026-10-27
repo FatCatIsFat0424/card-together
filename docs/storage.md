@@ -304,6 +304,21 @@ npm run admin:migrate-sqlite -- /absolute/path/database.json /absolute/path/data
 - 套用時以[匯入函式](#儲存引擎)在一個 transaction 中寫入，接著執行 `PRAGMA quick_check`、`foreign_key_check`，比對每個 collection 的筆數，並逐筆確認讀回內容相同。輸出的 `verification.tables` 列出每個資料表的列數。
 - 任何失敗都會刪除部分寫入的目標與它的日誌檔（原本是空白檔則清回空白），JSON 維持不變。
 
+### 匯出 SQLite 為 JSON
+
+[`export-sqlite.ts`](../server/src/database/export-sqlite.ts) 把 SQLite 資料庫寫成新的 JSON 資料庫檔，用於回復到 JSON；內容包含切換後的所有寫入。步驟：[SQLite 切換](#sqlite-切換)。
+
+```sh
+npm run admin:export-json -- /absolute/path/database.sqlite /absolute/path/database.export.json
+npm run admin:export-json -- /absolute/path/database.sqlite /absolute/path/database.export.json --apply --writers-stopped
+```
+
+- 來源必須是目前 schema 的 Card Together SQLite 檔（一般檔案，沒有連結，由執行者擁有）；套用時持有它的鎖定檔。
+- 在一個 read transaction 中讀出整份資料，套用和啟動相同的完整驗證；無法套用的錄製會被丟棄並回報，該對局繼續但不錄製。
+- 從不覆寫：目標已存在時拒絕。以 `0600` 暫存檔寫入、fsync，再以 `link()` 發布到目標名稱。
+- 寫入後重新讀取，以正式環境的 JSON 驗證器檢查，並確認內容與筆數相同；失敗時刪除輸出檔。
+- 匯出檔不含媒體與回放：它們仍留在資料庫旁的 `media/` 與 `replays/`。
+
 ## SQLite 切換
 
 第一階段已完成：SQLite adapter、匯入函式，以及在兩種引擎上執行的 repository、auth、social、runtime、持久化與金幣測試。正式環境的切換屬於第二階段，**尚未進行**；在那之前正式環境繼續使用 JSON。遷移 CLI、部署腳本的備份與還原、維護工具的 SQLite 支援與切換程序都還沒有實作，請不要自行在正式環境設定 `DATABASE_ENGINE=sqlite`。

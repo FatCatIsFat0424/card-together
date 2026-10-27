@@ -2,8 +2,10 @@ import { execFile } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { exportSqliteToJson, previewJsonExport } from '../../src/database/export-sqlite';
 import { createJsonRepository } from '../../src/database/json-repository';
 import { migrateJsonToSqlite, previewSqliteMigration } from '../../src/database/migrate-sqlite';
 import type { AccountRecord } from '../../src/database/repository';
@@ -156,6 +158,67 @@ describe('SQLite cutover tools', () => {
       const applied = JSON.parse((await cli('migrate-sqlite-cli.ts', jsonPath, sqlitePath, '--apply', '--writers-stopped')).stdout) as Record<string, unknown>;
       expect(applied).toMatchObject({ mode: 'applied', verification: { quickCheck: 'ok', countsMatch: true } });
       await expectSourceUntouched();
+    });
+  });
+
+  describe('rollback export', () => {
+    let exportPath: string;
+
+    beforeEach(async () => {
+      await migrateJsonToSqlite(jsonPath, sqlitePath, { writersStopped: true });
+      exportPath = join(directory, 'database.export.json');
+    });
+
+    it('previews, then writes a validated JSON database the JSON adapter serves identically', async () => {
+      // The SQLite database moves on after the cutover; the export must carry the newer writes.
+      const sqlite = await createSqliteRepository(sqlitePath);
+      try {
+        await sqlite.updateProfile(accounts[2].id, { nickname: 'Renamed' }, Date.now());
+      } finally { await sqlite.close(); }
+      const expected = await SQLITE_ADAPTER.readDocument(sqlitePath);
+      const preview = await previewJsonExport(sqlitePath, exportPath);
+      expect(preview).toMatchObject({ source: sqlitePath, target: exportPath, collections: COLLECTIONS, runtime: true });
+      expect(await files()).not.toContain('database.export.json');
+      await expect(exportSqliteToJson(sqlitePath, exportPath, { writersStopped: false })).rejects.toThrow('Stop all database writers');
+
+      const result = await exportSqliteToJson(sqlitePath, exportPath, { writersStopped: true });
+      expect(result).toMatchObject({ validated: true, collections: COLLECTIONS, targetBytes: (await stat(exportPath)).size });
+      expect((await stat(exportPath)).mode & 0o777).toBe(0o600);
+      expect(JSON.parse(await readFile(exportPath, 'utf8'))).toEqual(expected);
+      expect((await files()).filter((name) => name.includes('.lock') || name.endsWith('.tmp'))).toEqual([]);
+      const exported = await createJsonRepository(exportPath);
+      try {
+        const reopened = await createSqliteRepository(sqlitePath);
+        try {
+          expect(await dtos(exported, accounts)).toEqual(await dtos(reopened, accounts));
+          expect((await exported.getAccountById(accounts[2].id))?.nickname).toBe('Renamed');
+        } finally { await reopened.close(); }
+      } finally { await exported.close(); }
+    });
+
+    it('never overwrites, and refuses while the SQLite database is owned', async () => {
+      await expect(previewJsonExport(sqlitePath, jsonPath)).rejects.toThrow('already exists');
+      await expect(exportSqliteToJson(sqlitePath, jsonPath, { writersStopped: true })).rejects.toThrow('already exists');
+      await expectSourceUntouched();
+      const repository = await createSqliteRepository(sqlitePath);
+      try {
+        await expect(exportSqliteToJson(sqlitePath, exportPath, { writersStopped: true })).rejects.toMatchObject({ code: 'DATABASE_IN_USE' });
+      } finally { await repository.close(); }
+      const foreign = join(directory, 'foreign.sqlite');
+      const other = new DatabaseSync(foreign);
+      other.exec('CREATE TABLE notes (text TEXT)');
+      other.close();
+      await expect(previewJsonExport(foreign, exportPath)).rejects.toThrow('not a Card Together database');
+      expect(await files()).toEqual(['database.json', 'database.sqlite', 'foreign.sqlite']);
+    });
+
+    it('exports through the command line', async () => {
+      const preview = JSON.parse((await cli('export-sqlite-cli.ts', sqlitePath, exportPath)).stdout) as Record<string, unknown>;
+      expect(preview).toMatchObject({ mode: 'dry-run', collections: COLLECTIONS });
+      await expect(cli('export-sqlite-cli.ts', sqlitePath, exportPath, '--apply')).rejects.toMatchObject({ code: 1 });
+      const applied = JSON.parse((await cli('export-sqlite-cli.ts', sqlitePath, exportPath, '--apply', '--writers-stopped')).stdout) as Record<string, unknown>;
+      expect(applied).toMatchObject({ mode: 'applied', validated: true });
+      expect(JSON.parse(await readFile(exportPath, 'utf8'))).toEqual(await SQLITE_ADAPTER.readDocument(sqlitePath));
     });
   });
 });
