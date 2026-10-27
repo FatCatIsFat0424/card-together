@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getPresentationEndsAt } from '@shared/game-presentation';
 import { heLegalActions } from '@shared/rules/holdem';
 import type { BlackjackGameState, BlackjackMatchResult, Card, HoldemGameState, PlayerInfo, Seat } from '@shared/types';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import type { AccountRecord } from '../../src/database/repository';
 import { createDeck } from '../../src/engine/deck';
 import * as blackjack from '../../src/managers/games/blackjack-game';
@@ -260,10 +260,10 @@ describe('two to four seat tables', () => {
   });
 });
 
-it.each([false, true])('awards a completed Hold\'em match once with bot=%s, preserving history and spectators', async (withBot) => {
+it.each(REPOSITORY_ADAPTERS.flatMap((adapter) => [false, true].map((withBot) => ({ adapter, withBot }))))('awards a completed Hold\'em match once with bot=$withBot on $adapter.name, preserving history and spectators', async ({ adapter, withBot }) => {
   const directory = await mkdtemp(join(tmpdir(), 'card-flexible-history-'));
-  const path = join(directory, 'database.json');
-  let repository = await createJsonRepository(path);
+  const path = join(directory, adapter.fileName);
+  let repository = await adapter.open(path);
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(10000);
   try {
@@ -340,7 +340,7 @@ it.each([false, true])('awards a completed Hold\'em match once with bot=%s, pres
     ]);
     expect((await repository.getAccountById(accounts[0].id))?.coins).toBe(10);
     await repository.close();
-    repository = await createJsonRepository(path);
+    repository = await adapter.open(path);
     expect((await repository.getAccountById(accounts[0].id))?.coins).toBe(10);
     expect((await repository.listMatches(accounts[0].id)).map((match) => match.id)).toEqual([records[0].id]);
   } finally {

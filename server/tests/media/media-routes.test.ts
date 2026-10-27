@@ -8,7 +8,7 @@ import type { ClientToServerEvents, ServerToClientEvents } from '@shared/types';
 import { isRuntimeSnapshot } from '../../src/runtime/validate';
 import { createApplication } from '../../src/app';
 import { SESSION_COOKIE_NAME, tokenHash } from '../../src/auth/auth-service';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import type { Repository } from '../../src/database/repository';
 import { createMediaStore, sniffImage } from '../../src/media/media-store';
 
@@ -25,7 +25,7 @@ const ANIMATED_GIF = Buffer.from(
 const COOKIE = `${SESSION_COOKIE_NAME}=${'a'.repeat(43)}`;
 const HEADERS = { Cookie: COOKIE, Origin: ORIGIN, 'Content-Type': 'application/json' };
 
-describe('media HTTP routes', () => {
+describe.each(REPOSITORY_ADAPTERS)('media HTTP routes ($name)', (adapter) => {
   let directory: string;
   let repository: Repository;
   let application: Awaited<ReturnType<typeof createApplication>>;
@@ -51,7 +51,7 @@ describe('media HTTP routes', () => {
 
   beforeEach(async () => {
     directory = await mkdtemp(join(tmpdir(), 'bridge-media-'));
-    repository = await createJsonRepository(join(directory, 'database.json'));
+    repository = await adapter.open(join(directory, adapter.fileName));
     const now = Date.now();
     await repository.createAccount({
       id: 'alice', username: 'alice', usernameNormalized: 'alice', nickname: 'Alice',

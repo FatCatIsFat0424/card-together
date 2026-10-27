@@ -1,9 +1,9 @@
-import { mkdtemp, readFile, rename, rm } from 'node:fs/promises';
+import { mkdtemp, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnyGameState, DailyRewardId, PlayerInfo, Seat } from '@shared/types';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import { dailyDate, dailyGameProgress, dailyState, taskProgress, validDailyRewards } from '../../src/database/daily-rewards';
 import { DAILY_TASKS } from '@shared/constants/daily-rewards';
 import { GAME_TYPES } from '@shared/constants';
@@ -16,16 +16,16 @@ vi.mock('node:fs/promises', async (importOriginal) => {
   return { ...actual, rename: vi.fn(actual.rename) };
 });
 
-describe('daily reward transactions', () => {
+describe.each(REPOSITORY_ADAPTERS)('daily reward transactions ($name)', (adapter) => {
   let directory: string;
   let path: string;
   let repository: Repository;
   let now: number;
   beforeEach(async () => {
     directory = await mkdtemp(join(tmpdir(), 'daily-rewards-'));
-    path = join(directory, 'database.json');
+    path = join(directory, adapter.fileName);
     now = Date.parse('2026-10-15T15:59:59Z');
-    repository = await createJsonRepository(path, { now: () => now });
+    repository = await adapter.open(path, { now: () => now });
   });
   afterEach(async () => {
     vi.mocked(rename).mockClear();
@@ -38,10 +38,10 @@ describe('daily reward transactions', () => {
 
   it('reads old accounts without rewriting them and uses the Taiwan day boundary', async () => {
     const id = await seed();
-    const before = await readFile(path, 'utf8');
+    const before = await adapter.persisted(path);
     expect(await repository.getDailyRewards(id)).toMatchObject({ day: '2026-10-15',
       resetsAt: Date.parse('2026-10-15T16:00:00Z'), gameTypes: [], wins: 0, claimedTasks: [], checkInDays: [] });
-    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(await adapter.persisted(path)).toBe(before);
     expect(await repository.getDailyRewards('missing')).toBeNull();
     now += 1000;
     expect(await repository.getDailyRewards(id)).toMatchObject({ day: '2026-10-16' });
@@ -52,7 +52,7 @@ describe('daily reward transactions', () => {
     await Promise.all(Array.from({ length: 8 }, () => repository.claimDailyReward(id, 'check-in', '2026-10-15')));
     expect(await repository.getAccountById(id)).toMatchObject({ coins: 10, coinRevision: 1 });
     await repository.close();
-    repository = await createJsonRepository(path, { now: () => now });
+    repository = await adapter.open(path, { now: () => now });
     expect(await repository.claimDailyReward(id, 'check-in', '2026-10-15')).toMatchObject({
       account: { coins: 10, coinRevision: 1 }, dailyRewards: { checkInDays: ['2026-10-15'] },
     });
@@ -95,10 +95,10 @@ describe('daily reward transactions', () => {
 
   it('rolls back receipts and balances if persistence fails, allowing a safe retry', async () => {
     const id = await seed();
-    const before = await readFile(path, 'utf8');
-    vi.mocked(rename).mockRejectedValueOnce(new Error('disk full'));
+    const before = await adapter.persisted(path);
+    adapter.failNextCommit(new Error('disk full'));
     await expect(repository.claimDailyReward(id, 'check-in', '2026-10-15')).rejects.toThrow('disk full');
-    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(await adapter.persisted(path)).toBe(before);
     expect(await repository.getDailyRewards(id)).toMatchObject({ checkInDays: [] });
     expect(await repository.claimDailyReward(id, 'check-in', '2026-10-15')).toMatchObject({ account: { coins: 10 } });
   });
@@ -110,7 +110,7 @@ describe('daily reward transactions', () => {
     expect(new Set(first.tasks.map((task) => task.id)).size).toBe(3);
     expect((await repository.getDailyRewards(id))!.tasks).toEqual(first.tasks);
     await repository.close();
-    repository = await createJsonRepository(path, { now: () => now });
+    repository = await adapter.open(path, { now: () => now });
     expect((await repository.getDailyRewards(id))!.tasks).toEqual(first.tasks);
     const unseen = DAILY_TASKS.find((task) => !first.tasks.some((selected) => selected.id === task.id))!;
     await expect(repository.claimDailyReward(id, unseen.id, first.day)).rejects.toMatchObject({ code: 'DAILY_TASK_UNASSIGNED' });
@@ -134,7 +134,7 @@ describe('daily reward transactions', () => {
     expect(new Set(changed.tasks.map((task) => task.id)).size).toBe(3);
     expect(changed.tasks.slice(1)).toEqual(first.tasks.slice(1));
     await repository.close();
-    repository = await createJsonRepository(path, { now: () => now });
+    repository = await adapter.open(path, { now: () => now });
     expect((await repository.replaceDailyTask(id, from, first.day))!.dailyRewards.tasks).toEqual(changed.tasks);
     await expect(repository.claimDailyReward(id, from, first.day)).rejects.toMatchObject({ code: 'DAILY_TASK_UNASSIGNED' });
     expect(await repository.getAccountById(id)).toMatchObject({ coins: 0 });
@@ -155,10 +155,10 @@ describe('daily reward transactions', () => {
   it('rolls back a failed replacement without spending the allowance or changing assignments', async () => {
     const id = await seed();
     const first = (await repository.getDailyRewards(id))!;
-    const before = await readFile(path, 'utf8');
-    vi.mocked(rename).mockRejectedValueOnce(new Error('disk full'));
+    const before = await adapter.persisted(path);
+    adapter.failNextCommit(new Error('disk full'));
     await expect(repository.replaceDailyTask(id, first.tasks[0].id, first.day)).rejects.toThrow('disk full');
-    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(await adapter.persisted(path)).toBe(before);
     expect(await repository.getDailyRewards(id)).toMatchObject({ tasks: first.tasks, swapsRemaining: 1 });
     expect((await repository.replaceDailyTask(id, first.tasks[0].id, first.day))!.dailyRewards.swapsRemaining).toBe(0);
   });

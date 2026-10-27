@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -9,7 +9,7 @@ import { toPlayerInfo } from '../../src/managers/player-manager';
 import { publicAccount } from '../../src/database/repository';
 import { publicProfile } from '../../src/social/friend-service';
 import { isRuntimeSnapshot } from '../../src/runtime/validate';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import type { AccountRecord, Repository } from '../../src/database/repository';
 import { emptyDocument } from '../../src/database/schema';
 
@@ -26,14 +26,14 @@ const account: AccountRecord = {
   passwordHash: `scrypt$131072$8$1$${'a'.repeat(32)}$${'b'.repeat(128)}`,
 };
 
-describe('permanent shop item transactions', () => {
+describe.each(REPOSITORY_ADAPTERS)('permanent shop item transactions ($name)', (adapter) => {
   let directory: string;
   let path: string;
   let repository: Repository;
   beforeEach(async () => {
     directory = await mkdtemp(join(tmpdir(), 'shop-items-'));
-    path = join(directory, 'database.json');
-    repository = await createJsonRepository(path);
+    path = join(directory, adapter.fileName);
+    repository = await adapter.open(path);
   });
   afterEach(async () => {
     vi.mocked(rename).mockClear();
@@ -65,7 +65,7 @@ describe('permanent shop item transactions', () => {
     await repository.purchaseShopItem(account.id, item.id, 3);
     await repository.updateProfile(account.id, { nameplate: item.id }, 4);
     await repository.close();
-    repository = await createJsonRepository(path);
+    repository = await adapter.open(path);
     expect(await repository.getAccountById(account.id)).toMatchObject({
       nameplate: item.id, ownedShopItems: [item.id], coins: 1000 - item.price,
     });
@@ -89,7 +89,7 @@ describe('permanent shop item transactions', () => {
     await expect(repository.updateProfile(account.id, { [other]: items[0].id }, 5))
       .rejects.toMatchObject({ code: 'INVALID_SHOP_ITEM' });
     await repository.close();
-    repository = await createJsonRepository(path);
+    repository = await adapter.open(path);
     const saved = (await repository.getAccountById(account.id))!;
     expect(saved[slot]).toBe(items.at(-1)!.id);
     expect(publicAccount(saved)[slot]).toBe(items.at(-1)!.id);
@@ -135,7 +135,7 @@ describe('permanent shop item transactions', () => {
     expect(results.map((result) => result.status)).toEqual(['fulfilled', 'rejected']);
     expect(results[1]).toMatchObject({ reason: { code: 'INSUFFICIENT_COINS' } });
     await repository.close();
-    repository = await createJsonRepository(path);
+    repository = await adapter.open(path);
     const restored = await repository.getAccountById(account.id);
     expect(restored).toMatchObject({ coins: 30, coinRevision: 2,
       ownedAvatarBorders: ['copper'], ownedShopItems: ['card-back-aurora'] });
@@ -146,13 +146,13 @@ describe('permanent shop item transactions', () => {
     const image = `${'a'.repeat(64)}.png`;
     const initial = { ...account, cardBack: image, tableBackground: image, seatBackground: image };
     await repository.createAccount(initial);
-    const saved = await readFile(path, 'utf8');
-    vi.mocked(rename).mockRejectedValueOnce(new Error('Disk full'));
+    const saved = await adapter.persisted(path);
+    adapter.failNextCommit(new Error('Disk full'));
     await expect(repository.purchaseShopItem(account.id, 'card-back-aurora', 2)).rejects.toThrow('Disk full');
-    expect(await readFile(path, 'utf8')).toBe(saved);
+    expect(await adapter.persisted(path)).toBe(saved);
     expect(await repository.getAccountById(account.id)).toEqual(initial);
     const purchased = (await repository.purchaseShopItem(account.id, 'card-back-aurora', 3))!;
-    vi.mocked(rename).mockRejectedValueOnce(new Error('Equipment save failed'));
+    adapter.failNextCommit(new Error('Equipment save failed'));
     await expect(repository.updateProfile(account.id, { ...purchased, cardBackStyle: 'card-back-aurora' }, 4))
       .rejects.toThrow('Equipment save failed');
     expect(await repository.getAccountById(account.id)).toEqual(purchased);
@@ -199,7 +199,7 @@ describe('permanent shop item transactions', () => {
       .rejects.toMatchObject({ code: 'INVALID_SHOP_ITEM' });
     expect(await repository.purchaseShopItem('missing-account', 'card-back-aurora', 2)).toBeNull();
     await repository.close();
-    repository = await createJsonRepository(path);
+    repository = await adapter.open(path);
     expect(await repository.getAccountById(account.id)).toEqual(legacy);
   });
 
@@ -214,7 +214,7 @@ describe('permanent shop item transactions', () => {
     { ownedShopItems: ['nameplate-aurora'], cardBackStyle: 'nameplate-aurora' },
   ])('rejects malformed account fields at startup: %j', async (invalid) => {
     await repository.close();
-    await writeFile(path, JSON.stringify({ ...emptyDocument(), accounts: [{ ...account, ...invalid }] }));
-    await expect(createJsonRepository(path)).rejects.toThrow();
+    await adapter.writeUnchecked(path, { ...emptyDocument(), accounts: [{ ...account, ...invalid }] });
+    await expect(adapter.open(path)).rejects.toThrow();
   });
 });

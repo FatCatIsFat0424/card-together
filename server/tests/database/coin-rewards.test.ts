@@ -1,10 +1,10 @@
-import { mkdtemp, readFile, rename, rm } from 'node:fs/promises';
+import { mkdtemp, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PlayerInfo, Seat } from '@shared/types';
 import { cpGreedyArrangement } from '@shared/rules/chinesepoker-arrange';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import type { AccountRecord, MatchRecord, Repository } from '../../src/database/repository';
 import { createDeck } from '../../src/engine/deck';
 import * as chinesepoker from '../../src/managers/games/chinesepoker-game';
@@ -17,14 +17,14 @@ vi.mock('node:fs/promises', async (importOriginal) => {
 });
 const SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 
-describe('compound completed-game writes', () => {
+describe.each(REPOSITORY_ADAPTERS)('compound completed-game writes ($name)', (adapter) => {
   let directory: string;
   let path: string;
   let repository: Repository;
   beforeEach(async () => {
     directory = await mkdtemp(join(tmpdir(), 'coin-rewards-'));
-    path = join(directory, 'database.json');
-    repository = await createJsonRepository(path);
+    path = join(directory, adapter.fileName);
+    repository = await adapter.open(path);
   });
   afterEach(async () => {
     vi.mocked(rename).mockClear();
@@ -66,10 +66,10 @@ describe('compound completed-game writes', () => {
 
   it('commits runtime, history, balances, revisions and receipts together; replay remains idempotent after reopening', async () => {
     const { accounts, snapshot, match, id } = await fixture();
-    const before = await readFile(path, 'utf8');
-    vi.mocked(rename).mockRejectedValueOnce(new Error('compound save failed'));
+    const before = await adapter.persisted(path);
+    adapter.failNextCommit(new Error('compound save failed'));
     await expect(repository.saveRuntime(snapshot, [match], [id])).rejects.toThrow('compound save failed');
-    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(await adapter.persisted(path)).toBe(before);
     expect(await repository.loadRuntime()).toBeNull();
     for (const account of accounts) {
       expect(await repository.getAccountById(account.id)).toEqual(account);
@@ -77,7 +77,7 @@ describe('compound completed-game writes', () => {
     }
     await repository.saveRuntime(snapshot, [match], [id, id]);
     await repository.close();
-    repository = await createJsonRepository(path);
+    repository = await adapter.open(path);
     await Promise.all([
       repository.saveRuntime(snapshot, [match], [id]), repository.saveRuntime(snapshot, [match], [id, id]),
     ]);
@@ -91,7 +91,7 @@ describe('compound completed-game writes', () => {
         gameTypes: ['chinesepoker'], dailyTasks: 0 });
       expect(await repository.listMatches(account.id)).toEqual([match]);
     }
-    expect(JSON.parse(await readFile(path, 'utf8')).rewardedGameIds).toEqual([id]);
+    expect((await adapter.readDocument(path)).rewardedGameIds).toEqual([id]);
   });
 
   it('serializes a reward and purchase without losing either revision', async () => {
@@ -102,7 +102,7 @@ describe('compound completed-game writes', () => {
     expect(await repository.getAccountById('N')).toMatchObject({ coins: 10, coinRevision: 4, ownedAvatarBorders: ['copper'] });
     for (const seat of ['E', 'S', 'W']) expect(await repository.getAccountById(seat)).toMatchObject({ coins: 60, coinRevision: 3 });
     await repository.close();
-    repository = await createJsonRepository(path);
+    repository = await adapter.open(path);
     expect(await repository.getAccountById('N')).toMatchObject({ coins: 10, coinRevision: 4, ownedAvatarBorders: ['copper'] });
     expect(await repository.listMatches('N')).toEqual([match]);
   });
@@ -110,7 +110,7 @@ describe('compound completed-game writes', () => {
   it.each([false, true])('handles distinct completed IDs atomically when the second reward overflows=%s', async (overflow) => {
     const { snapshot, match, id } = await fixture();
     const other = await fixture(overflow ? { coins: Number.MAX_SAFE_INTEGER - 5 } : {}, '02');
-    const before = await readFile(path, 'utf8');
+    const before = await adapter.persisted(path);
     snapshot.players.push(...other.snapshot.players);
     snapshot.rooms.push(...other.snapshot.rooms);
     snapshot.games.push(...other.snapshot.games);
@@ -118,7 +118,7 @@ describe('compound completed-game writes', () => {
     expect(isRuntimeSnapshot(snapshot)).toBe(true);
     if (overflow) {
       await expect(repository.saveRuntime(snapshot, [match, other.match], [id, other.id, id])).rejects.toThrow('Coin balance exceeds');
-      expect(await readFile(path, 'utf8')).toBe(before);
+      expect(await adapter.persisted(path)).toBe(before);
       expect(await repository.loadRuntime()).toBeNull();
       for (const account of other.accounts) expect(await repository.getAccountById(account.id)).toEqual(account);
       for (const seat of SEATS) expect(await repository.getAccountById(seat)).toMatchObject({ coins: 50, coinRevision: 2 });
@@ -133,7 +133,7 @@ describe('compound completed-game writes', () => {
     }
     expect(await repository.listMatches('N')).toEqual([match]);
     expect(await repository.listMatches('N02')).toEqual([other.match]);
-    expect(JSON.parse(await readFile(path, 'utf8')).rewardedGameIds).toEqual([id, other.id]);
+    expect((await adapter.readDocument(path)).rewardedGameIds).toEqual([id, other.id]);
   });
 
   it.each([
@@ -141,14 +141,14 @@ describe('compound completed-game writes', () => {
     { name: 'coin revision', overrides: { coinRevision: Number.MAX_SAFE_INTEGER } },
   ])('rejects overflowing $name atomically', async ({ overrides }) => {
     const { accounts, snapshot, match, id } = await fixture(overrides);
-    const before = await readFile(path, 'utf8');
+    const before = await adapter.persisted(path);
     await expect(repository.saveRuntime(snapshot, [match], [id])).rejects.toThrow();
-    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(await adapter.persisted(path)).toBe(before);
     expect(await repository.loadRuntime()).toBeNull();
     for (const account of accounts) expect(await repository.getAccountById(account.id)).toEqual(account);
     expect(await repository.listMatches('N')).toEqual([]);
     await repository.close();
-    repository = await createJsonRepository(path);
+    repository = await adapter.open(path);
     expect(await repository.getAccountById('N')).toEqual(accounts[0]);
   });
 
@@ -169,11 +169,11 @@ describe('compound completed-game writes', () => {
       snapshot.rooms[0].memberIds[0] = 'missing-account';
     }
     expect(isRuntimeSnapshot(snapshot)).toBe(true);
-    const before = await readFile(path, 'utf8');
+    const before = await adapter.persisted(path);
     await expect(repository.saveRuntime(snapshot, [match], [completedId])).rejects.toThrow(
       failure === 'missing-account' ? 'Coin reward account does not exist' : 'Coin rewards require a completed game',
     );
-    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(await adapter.persisted(path)).toBe(before);
     expect(await repository.loadRuntime()).toBeNull();
     expect(await repository.listMatches('N')).toEqual([]);
     for (const account of accounts) expect(await repository.getAccountById(account.id)).toEqual(account);

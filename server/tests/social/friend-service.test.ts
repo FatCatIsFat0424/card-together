@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import type { AccountRecord, Repository } from '../../src/database/repository';
 import { createFriendService } from '../../src/social/friend-service';
 import type { FriendService } from '../../src/social/friend-service';
@@ -29,7 +29,7 @@ function account(id: string, username: string): AccountRecord {
   };
 }
 
-describe('friend service', () => {
+describe.each(REPOSITORY_ADAPTERS)('friend service ($name)', (adapter) => {
   let directory: string;
   let filePath: string;
   let repository: Repository;
@@ -37,8 +37,8 @@ describe('friend service', () => {
 
   beforeEach(async (): Promise<void> => {
     directory = await mkdtemp(join(tmpdir(), 'bridge-friends-'));
-    filePath = join(directory, 'database.json');
-    repository = await createJsonRepository(filePath);
+    filePath = join(directory, adapter.fileName);
+    repository = await adapter.open(filePath);
     await repository.createAccount(account('alice-id', 'Alice'));
     await repository.createAccount(account('bob-id', 'Bob'));
     await repository.createAccount(account('carol-id', 'Carol'));
@@ -71,7 +71,7 @@ describe('friend service', () => {
     });
 
     await repository.close();
-    repository = await createJsonRepository(filePath);
+    repository = await adapter.open(filePath);
     friends = createFriendService(repository);
     expect((await friends.list('alice-id')).friends).toEqual([{ ...request.recipient, lastSeenAt: null }]);
     expect(await friends.remove('bob-id', 'alice-id')).toEqual({ success: true, data: null });

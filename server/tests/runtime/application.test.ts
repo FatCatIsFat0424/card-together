@@ -18,7 +18,7 @@ import { ldCanChallenge, ldMustChallenge } from '@shared/rules/liarsdeck';
 import { bjTotal } from '@shared/rules/blackjack';
 import { heLegalActions } from '@shared/rules/holdem';
 import { createApplication } from '../../src/app';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import type { Repository } from '../../src/database/repository';
 import { isRuntimeSnapshot } from '../../src/runtime/validate';
 import { seedAuthenticatedAccount } from '../auth/account-fixture';
@@ -46,7 +46,7 @@ function bridgeView(snapshot: PlayerSnapshot): BridgeVisibleState | undefined {
   return snapshot.gameState?.gameType === 'bridge' ? snapshot.gameState : undefined;
 }
 
-describe('persistent authenticated application', () => {
+describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)', (adapter) => {
   let now: number;
   function finishPresentation(game: PlayerSnapshot['gameState']): void {
     if (game) now = Math.max(now, getPresentationEndsAt(game));
@@ -60,7 +60,7 @@ describe('persistent authenticated application', () => {
   const clients: Client[] = [];
 
   async function start(trustProxyLoopback: boolean = false): Promise<void> {
-    repository = await createJsonRepository(filePath);
+    repository = await adapter.open(filePath);
     application = await createApplication(repository, {
       allowedOrigins: [ORIGIN], trustProxyLoopback,
     });
@@ -86,7 +86,7 @@ describe('persistent authenticated application', () => {
     now = Date.now();
     vi.spyOn(Date, 'now').mockImplementation(() => now);
     directory = await mkdtemp(join(tmpdir(), 'bridge-application-'));
-    filePath = join(directory, 'database.json');
+    filePath = join(directory, adapter.fileName);
     await start();
   });
 

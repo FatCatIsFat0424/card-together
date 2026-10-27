@@ -5,15 +5,16 @@ import { MAX_SPECTATORS } from '@shared/constants';
 import * as rooms from '../../src/managers/room-manager';
 import * as players from '../../src/managers/player-manager';
 import { getChatHistory } from '../../src/managers/chat-manager';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import { createSocketHarness, TEST_ORIGIN } from '../performance/socket-harness';
 import type { SocketHarness } from '../performance/socket-harness';
 
-describe('joining a room hosted by a friend', () => {
+describe.each(REPOSITORY_ADAPTERS)('joining a room hosted by a friend ($name)', (adapter) => {
   let app: SocketHarness;
   let friendshipId: string;
 
   beforeEach(async () => {
-    app = await createSocketHarness(2);
+    app = await createSocketHarness(2, adapter);
     friendshipId = randomUUID();
     await app.repository.createFriendship({
       id: friendshipId, requesterId: app.accountIds[0][0], recipientId: app.accountIds[1][0],

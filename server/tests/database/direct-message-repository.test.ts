@@ -1,8 +1,8 @@
-import { mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import type { AccountRecord, DirectMessageRecord, Repository } from '../../src/database/repository';
 import { SOCIAL_HISTORY_RETENTION_MS } from '../../src/database/repository';
 import { validateDocument } from '../../src/database/schema';
@@ -25,7 +25,7 @@ function account(id: string): AccountRecord {
   };
 }
 
-describe('durable friend messages', () => {
+describe.each(REPOSITORY_ADAPTERS)('durable friend messages ($name)', (adapter) => {
   let directory: string;
   let path: string;
   let repository: Repository;
@@ -48,8 +48,8 @@ describe('durable friend messages', () => {
   beforeEach(async () => {
     now = SOCIAL_HISTORY_RETENTION_MS * 10;
     directory = await mkdtemp(join(tmpdir(), 'direct-message-db-'));
-    path = join(directory, 'database.json');
-    repository = await createJsonRepository(path, { now: () => now });
+    path = join(directory, adapter.fileName);
+    repository = await adapter.open(path, { now: () => now });
     for (const id of ['alice', 'bob', 'charlie']) await repository.createAccount(account(id));
   });
 
@@ -74,7 +74,7 @@ describe('durable friend messages', () => {
     await expect(repository.createDirectMessage(message('two'))).rejects.toMatchObject({ code: 'NOT_FRIENDS' });
     await repository.markDirectMessagesRead('bob', 'alice', 'one');
     await repository.close();
-    repository = await createJsonRepository(path, { now: () => now });
+    repository = await adapter.open(path, { now: () => now });
     expect(await repository.listDirectMessages('alice', 'bob')).toEqual([original]);
     expect(await repository.listMessageReads('bob')).toEqual([{ accountId: 'bob', otherId: 'alice', messageId: 'one' }]);
   });
@@ -149,7 +149,7 @@ describe('durable friend messages', () => {
     await repository.dismissFriendNotifications('charlie', [notifications[0].id]);
     expect(await repository.listFriendNotifications('alice')).toEqual(notifications);
     await repository.close();
-    repository = await createJsonRepository(path, { now: () => now });
+    repository = await adapter.open(path, { now: () => now });
     expect(await repository.listFriendNotifications('alice')).toEqual(notifications);
     await repository.dismissFriendNotifications('alice', [notifications[0].id]);
     expect(await repository.listFriendNotifications('alice')).toEqual([]);
@@ -169,15 +169,15 @@ describe('durable friend messages', () => {
       .rejects.toMatchObject({ code: 'INVALID_MESSAGE_READ' });
     await expect(repository.createDirectMessage(message('retry', { clientId: 'client-expires' })))
       .rejects.toMatchObject({ code: 'MESSAGE_EXPIRED' });
-    const before = JSON.parse(await readFile(path, 'utf8'));
+    const before = (await adapter.readDocument(path));
     expect(before.directMessages).toHaveLength(2);
     await repository.pruneSocialHistory(now);
-    const after = JSON.parse(await readFile(path, 'utf8'));
+    const after = (await adapter.readDocument(path));
     expect(after.directMessages.map((entry: DirectMessageRecord) => entry.id)).toEqual(['retained']);
     expect(after.messageReads).toEqual([]);
     expect(after.friendNotifications).toEqual([]);
     await repository.close();
-    repository = await createJsonRepository(path, { now: () => now });
+    repository = await adapter.open(path, { now: () => now });
     expect((await repository.listDirectMessages('bob')).map((entry) => entry.id)).toEqual(['retained']);
   });
 
@@ -185,19 +185,19 @@ describe('durable friend messages', () => {
     await friends();
     await repository.createDirectMessage(message('read'));
     await repository.markDirectMessagesRead('bob', 'alice', 'read');
-    const before = await readFile(path, 'utf8');
+    const before = await adapter.persisted(path);
     await expect(repository.pruneSocialHistory(NaN)).rejects.toThrow('Invalid social history pruning time');
-    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(await adapter.persisted(path)).toBe(before);
     await repository.pruneSocialHistory(now);
     expect(await repository.listMessageReads('bob')).toHaveLength(1);
   });
 
   it('rolls back acceptance and its notification together after a persistence failure', async () => {
     await request();
-    const before = await readFile(path, 'utf8');
-    vi.mocked(rename).mockRejectedValueOnce(new Error('Disk full'));
+    const before = await adapter.persisted(path);
+    adapter.failNextCommit(new Error('Disk full'));
     await expect(repository.acceptFriendship('friend-alice-bob', 'bob')).rejects.toThrow('Disk full');
-    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(await adapter.persisted(path)).toBe(before);
     expect(await repository.getFriendship('friend-alice-bob')).toMatchObject({ status: 'pending' });
     expect(await repository.listFriendNotifications('alice')).toEqual([]);
     await repository.acceptFriendship('friend-alice-bob', 'bob');
@@ -206,22 +206,22 @@ describe('durable friend messages', () => {
 
   it('publishes neither message, cursor nor dismissal when persistence fails and permits subsequent retries', async () => {
     await friends();
-    const before = await readFile(path, 'utf8');
-    vi.mocked(rename).mockRejectedValueOnce(new Error('Disk full'));
+    const before = await adapter.persisted(path);
+    adapter.failNextCommit(new Error('Disk full'));
     await expect(repository.createDirectMessage(message('one'))).rejects.toThrow('Disk full');
     expect(await repository.listDirectMessages('alice')).toEqual([]);
-    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(await adapter.persisted(path)).toBe(before);
     await repository.createDirectMessage(message('one'));
-    vi.mocked(rename).mockRejectedValueOnce(new Error('Disk full'));
+    adapter.failNextCommit(new Error('Disk full'));
     await expect(repository.markDirectMessagesRead('bob', 'alice', 'one')).rejects.toThrow('Disk full');
     expect(await repository.listMessageReads('bob')).toEqual([]);
     await repository.markDirectMessagesRead('bob', 'alice', 'one');
     const notifications = await repository.listFriendNotifications('alice');
-    vi.mocked(rename).mockRejectedValueOnce(new Error('Disk full'));
+    adapter.failNextCommit(new Error('Disk full'));
     await expect(repository.dismissFriendNotifications('alice', [notifications[0].id])).rejects.toThrow('Disk full');
     expect(await repository.listFriendNotifications('alice')).toEqual(notifications);
     await repository.close();
-    repository = await createJsonRepository(path, { now: () => now });
+    repository = await adapter.open(path, { now: () => now });
     expect(await repository.listDirectMessages('bob')).toHaveLength(1);
     expect(await repository.listMessageReads('bob')).toHaveLength(1);
   });
@@ -230,14 +230,14 @@ describe('durable friend messages', () => {
     await friends();
     await repository.createDirectMessage(message('expires'));
     await repository.markDirectMessagesRead('bob', 'alice', 'expires');
-    const before = await readFile(path, 'utf8');
+    const before = await adapter.persisted(path);
     now += SOCIAL_HISTORY_RETENTION_MS;
-    vi.mocked(rename).mockRejectedValueOnce(new Error('Disk full'));
+    adapter.failNextCommit(new Error('Disk full'));
     await expect(repository.pruneSocialHistory(now)).rejects.toThrow('Disk full');
-    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(await adapter.persisted(path)).toBe(before);
     expect(await repository.listDirectMessages('alice')).toEqual([]);
     await repository.pruneSocialHistory(now);
-    expect(JSON.parse(await readFile(path, 'utf8')).directMessages).toEqual([]);
+    expect((await adapter.readDocument(path)).directMessages).toEqual([]);
   });
 
   it('accepts Unicode text, resolved inline emoji, personal stickers and provided stickers', async () => {
@@ -254,7 +254,7 @@ describe('durable friend messages', () => {
       expect(await repository.createDirectMessage(record)).toEqual(record);
     }
     await repository.close();
-    repository = await createJsonRepository(path, { now: () => now });
+    repository = await adapter.open(path, { now: () => now });
     expect(await repository.listDirectMessages('bob')).toHaveLength(5);
   });
 
@@ -288,7 +288,7 @@ describe('durable friend messages', () => {
     await friends();
     await repository.createDirectMessage(message('one'));
     await repository.markDirectMessagesRead('bob', 'alice', 'one');
-    const saved = JSON.parse(await readFile(path, 'utf8'));
+    const saved = (await adapter.readDocument(path));
     for (const patch of [
       { directMessages: [{ ...saved.directMessages[0], senderId: 'unknown' }] },
       { directMessages: [saved.directMessages[0], { ...saved.directMessages[0], id: 'duplicate-client' }] },
@@ -299,9 +299,9 @@ describe('durable friend messages', () => {
       { friendNotifications: [saved.friendNotifications[0], saved.friendNotifications[0]] },
     ]) expect(() => validateDocument({ ...saved, ...patch })).toThrow();
     await repository.close();
-    const corrupted = JSON.stringify({ ...saved, messageReads: [{ accountId: 'bob', otherId: 'alice', messageId: 'missing' }] });
-    await writeFile(path, corrupted);
-    await expect(createJsonRepository(path, { now: () => now })).rejects.toThrow('invalid references');
-    expect(await readFile(path, 'utf8')).toBe(corrupted);
+    await adapter.writeUnchecked(path, { ...saved, messageReads: [{ accountId: 'bob', otherId: 'alice', messageId: 'missing' }] });
+    const corrupted = await adapter.persisted(path);
+    await expect(adapter.open(path, { now: () => now })).rejects.toThrow('invalid references');
+    expect(await adapter.persisted(path)).toBe(corrupted);
   });
 });

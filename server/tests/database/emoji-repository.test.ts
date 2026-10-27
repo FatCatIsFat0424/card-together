@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import type { AccountRecord, Repository } from '../../src/database/repository';
 
 const PASSWORD_HASH = `scrypt$131072$8$1$${'ab'.repeat(16)}$${'cd'.repeat(64)}`;
@@ -18,7 +18,7 @@ function account(username: string): AccountRecord {
   };
 }
 
-describe('emoji repository', () => {
+describe.each(REPOSITORY_ADAPTERS)('emoji repository ($name)', (adapter) => {
   let directory: string;
   let path: string;
   let repository: Repository;
@@ -27,8 +27,8 @@ describe('emoji repository', () => {
 
   beforeEach(async () => {
     directory = await mkdtemp(join(tmpdir(), 'bridge-emoji-db-'));
-    path = join(directory, 'database.json');
-    repository = await createJsonRepository(path);
+    path = join(directory, adapter.fileName);
+    repository = await adapter.open(path);
     alice = await repository.createAccount(account('alice'));
     bob = await repository.createAccount(account('bob'));
   });
@@ -53,14 +53,14 @@ describe('emoji repository', () => {
     expect(await repository.deleteEmoji(alice.id, cat.id)).toBe(true);
 
     await repository.close();
-    repository = await createJsonRepository(path);
+    repository = await adapter.open(path);
     expect((await repository.listEmojis(alice.id)).map((emoji) => emoji.name)).toEqual(['hello']);
     expect(await repository.listEmojis(bob.id)).toHaveLength(1);
   });
 
   it('should reject duplicate names and the per-account limit all-or-nothing', async () => {
     await repository.createEmojis(alice.id, [{ name: 'wave', mediaId: MEDIA }], 200);
-    const before = await readFile(path, 'utf8');
+    const before = await adapter.persisted(path);
     await expect(repository.createEmojis(alice.id,
       [{ name: 'new_one', mediaId: MEDIA }, { name: 'wave', mediaId: MEDIA }], 300))
       .rejects.toMatchObject({ code: 'EMOJI_EXISTS' });
@@ -70,7 +70,7 @@ describe('emoji repository', () => {
     const many = Array.from({ length: 300 }, (_, index) => ({ name: `e${index}`, mediaId: MEDIA }));
     await expect(repository.createEmojis(alice.id, many, 300))
       .rejects.toMatchObject({ code: 'EMOJI_LIMIT' });
-    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(await adapter.persisted(path)).toBe(before);
     expect(await repository.listEmojis(alice.id)).toHaveLength(1);
 
     await repository.createEmojis(alice.id, many.slice(0, 299), 300);
@@ -95,7 +95,7 @@ describe('emoji repository', () => {
     expect(await repository.deleteEmojis(alice.id, [mine[0].id])).toEqual([]);
     expect((await repository.listEmojis(alice.id)).map((emoji) => emoji.name)).toEqual(['a2']);
     expect(await repository.listEmojis(bob.id)).toEqual([theirs]);
-    const reopened = JSON.parse(await readFile(path, 'utf8')) as { emojis: { id: string }[] };
+    const reopened = (await adapter.readDocument(path)) as { emojis: { id: string }[] };
     expect(reopened.emojis.map((emoji) => emoji.id).sort()).toEqual([mine[1].id, theirs.id].sort());
   });
 

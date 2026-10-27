@@ -3,17 +3,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ClientToServerEvents, ShopItemId } from '@shared/types';
 import { createMessageService } from '../../src/social/message-service';
 import { isRuntimeSnapshot } from '../../src/runtime/validate';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import { createSocketHarness } from '../performance/socket-harness';
 import type { SocketHarness } from '../performance/socket-harness';
 
-describe('authoritative paid sticker messaging', () => {
+describe.each(REPOSITORY_ADAPTERS)('authoritative paid sticker messaging ($name)', (adapter) => {
   let app: SocketHarness;
   let owned: readonly ShopItemId[];
   let alice: string;
   let bob: string;
 
   beforeEach(async () => {
-    app = await createSocketHarness(1);
+    app = await createSocketHarness(1, adapter);
     [alice, bob] = app.accountIds[0];
     owned = [];
     const original = app.repository.getAccountById.bind(app.repository);

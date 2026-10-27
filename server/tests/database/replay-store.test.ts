@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyReplayPatch } from '@shared/replay-patch';
 import type { MatchReplay, ReplaySnapshot } from '@shared/types';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import { createReplayStore } from '../../src/database/replay-store';
 import { MAX_MATCHES_PER_ACCOUNT } from '../../src/database/repository';
 import type { AccountRecord, MatchRecord, NewMatchRecord, Repository } from '../../src/database/repository';
@@ -43,14 +44,14 @@ function match(id: string, accountIds: readonly string[], finishedAt: number, re
   return { id, roomCode: 'ABC123', accountIds, result: RESULT, finishedAt, ...(replay ? { replay } : {}) };
 }
 
-describe('replay archive storage', () => {
+describe.each(REPOSITORY_ADAPTERS)('replay archive storage ($name)', (adapter) => {
   let directory: string;
   let path: string;
   let replays: string;
   let repository: Repository | undefined;
 
   async function open(): Promise<Repository> {
-    repository = await createJsonRepository(path);
+    repository = await adapter.open(path);
     return repository;
   }
 
@@ -65,7 +66,7 @@ describe('replay archive storage', () => {
 
   beforeEach(async () => {
     directory = await mkdtemp(join(tmpdir(), 'card-replay-store-'));
-    path = join(directory, 'database.json');
+    path = join(directory, adapter.fileName);
     replays = join(directory, 'replays');
     const created = await open();
     for (const id of ['a', 'b', 'c', 'd', 'e', 'f', 'g']) await created.createAccount(account(id));
@@ -88,7 +89,7 @@ describe('replay archive storage', () => {
     expect((await stat(replays)).mode & 0o777).toBe(0o700);
     expect((await stat(join(replays, 'm1.json'))).mode & 0o777).toBe(0o600);
     expect(JSON.parse(await readFile(join(replays, 'm2.json'), 'utf8'))).toEqual(archive('bidding'));
-    const database = await readFile(path, 'utf8');
+    const database = await adapter.persisted(path);
     expect(database).not.toContain('"steps"');
     expect((await saved.listMatches('a')).map(({ id, hasReplay }) => [id, hasReplay])).toEqual([
       ['m3', undefined], ['m2', true], ['m1', true]]);
@@ -104,7 +105,7 @@ describe('replay archive storage', () => {
 
   it('rejects invalid archives and IDs that cannot name a file before writing anything', async () => {
     const saved = await reopen();
-    const before = await readFile(path, 'utf8');
+    const before = await adapter.persisted(path);
     for (const invalid of [
       match('../database', ['a', 'b', 'c', 'd'], 20), match('m.json', ['a', 'b', 'c', 'd'], 20),
       match('m1', ['a', 'b', 'c', 'd'], 5),
@@ -113,7 +114,7 @@ describe('replay archive storage', () => {
     ] as NewMatchRecord[]) {
       await expect(saved.saveMatch(invalid)).rejects.toMatchObject({ code: 'INVALID_REPLAY' });
     }
-    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(await adapter.persisted(path)).toBe(before);
     expect(await storedFiles()).toEqual([]);
     for (const id of ['../database', 'm1/../../x', '']) expect(await saved.getMatchReplay(id)).toBeUndefined();
     const store = createReplayStore(replays);
@@ -126,19 +127,15 @@ describe('replay archive storage', () => {
   it('writes files before the commit, and a failed commit leaves no flag or file behind', async () => {
     const saved = await reopen();
     await saved.saveMatch(match('kept', ['a', 'b', 'c', 'd'], 20));
-    const original = vi.mocked(rename).getMockImplementation()!;
-    const order: string[] = [];
-    vi.mocked(rename).mockImplementation(async (from, to) => {
-      order.push(String(to));
-      if (to === path) throw Object.assign(new Error('Disk full'), { code: 'ENOSPC' });
-      return original(from, to);
-    });
+    const archivedAtCommit: boolean[] = [];
+    const restore = adapter.failCommits(path, Object.assign(new Error('Disk full'), { code: 'ENOSPC' }),
+      () => archivedAtCommit.push(existsSync(join(replays, 'lost.json'))));
     await expect(saved.saveRuntime({ players: [], rooms: [], games: [], chat: [] }, [match('lost', ['a', 'b', 'c', 'd'], 21)]))
       .rejects.toThrow('Disk full');
-    expect(order).toEqual([join(replays, 'lost.json'), path]);
+    expect(archivedAtCommit).toEqual([true]);
     // Overwriting a committed match's archive in a failed commit keeps its file.
     await expect(saved.saveMatch(match('kept', ['a', 'b', 'c', 'd'], 20))).rejects.toThrow('Disk full');
-    vi.mocked(rename).mockImplementation(original);
+    restore();
     expect(await storedFiles()).toEqual(['kept.json']);
     expect((await saved.listMatches('a')).map((entry) => entry.id)).toEqual(['kept']);
     expect(await saved.getMatchReplay('lost')).toBeUndefined();
@@ -204,7 +201,7 @@ describe('replay archive storage', () => {
     const history = await saved.listMatches('a');
     expect(history).toHaveLength(MAX_MATCHES_PER_ACCOUNT);
     expect(history.filter((entry) => entry.hasReplay)).toHaveLength(MAX_MATCHES_PER_ACCOUNT - 1);
-    expect(JSON.parse(await readFile(path, 'utf8')).matches).toHaveLength(MAX_MATCHES_PER_ACCOUNT + 1);
+    expect((await adapter.readDocument(path)).matches).toHaveLength(MAX_MATCHES_PER_ACCOUNT + 1);
     const reopened = await reopen();
     expect(await reopened.listMatches('a')).toEqual(history);
     expect(await storedFiles()).toEqual(files);
@@ -215,21 +212,17 @@ describe('replay archive storage', () => {
     const botIds = (): string[] => ['a', ...Array.from({ length: 3 }, () => `bot:${randomUUID()}`)];
     await saved.saveRuntime({ players: [], rooms: [], games: [], chat: [] },
       Array.from({ length: 100 }, (_, index) => match(`bot-${index}`, botIds(), 100 + index)));
-    const original = vi.mocked(rename).getMockImplementation()!;
-    vi.mocked(rename).mockImplementation(async (from, to) => {
-      if (to === path) throw new Error('Disk full');
-      return original(from, to);
-    });
+    const restore = adapter.failCommits(path, new Error('Disk full'));
     const next = match('next-bot', botIds(), 200);
     await expect(saved.saveMatch(next)).rejects.toThrow('Disk full');
     expect(await saved.getMatchReplay('bot-0')).toEqual(archive());
     expect(await saved.getMatchReplay('next-bot')).toBeUndefined();
     expect(await storedFiles()).toHaveLength(100);
-    vi.mocked(rename).mockImplementation(original);
+    restore();
     await saved.saveMatch(next);
     expect(await saved.getMatchReplay('bot-0')).toBeUndefined();
     expect(await storedFiles()).toHaveLength(100);
-    expect(JSON.parse(await readFile(path, 'utf8')).matches).toHaveLength(100);
+    expect((await adapter.readDocument(path)).matches).toHaveLength(100);
     expect((await saved.listMatches('a'))[0].id).toBe('next-bot');
   });
 
@@ -253,7 +246,7 @@ describe('replay archive storage', () => {
   it('validates flagged matches without reading or applying archives; reads apply every step', async () => {
     const saved = await reopen();
     await saved.saveMatch(match('m1', ['a', 'b', 'c', 'd'], 20));
-    const document = JSON.parse(await readFile(path, 'utf8')) as { runtime: RuntimeSnapshot | null };
+    const document = (await adapter.readDocument(path)) as { runtime: RuntimeSnapshot | null };
     vi.mocked(applyReplayPatch).mockClear();
     // Flagged matches never cost archive validation on a write.
     const many = { ...document, matches: Array.from({ length: 1_000 }, (_, index) =>

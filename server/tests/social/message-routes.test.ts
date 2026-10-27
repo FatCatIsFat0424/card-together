@@ -3,17 +3,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DirectMessage, MessageHistory, SocialOverview } from '@shared/types/direct-message';
 import type { MediaId } from '@shared/types';
 import { createMessageService } from '../../src/social/message-service';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import { createSocketHarness, TEST_ORIGIN } from '../performance/socket-harness';
 import type { SocketHarness } from '../performance/socket-harness';
 
-describe('friend direct messages and notifications', () => {
+describe.each(REPOSITORY_ADAPTERS)('friend direct messages and notifications ($name)', (adapter) => {
   let app: SocketHarness;
   let alice: string;
   let bob: string;
   let carol: string;
 
   beforeEach(async () => {
-    app = await createSocketHarness(1);
+    app = await createSocketHarness(1, adapter);
     [alice, bob, carol] = app.accountIds[0];
     await app.repository.createFriendship({ id: 'alice-bob', requesterId: alice, recipientId: bob,
       status: 'accepted', createdAt: Date.now(), updatedAt: Date.now() });

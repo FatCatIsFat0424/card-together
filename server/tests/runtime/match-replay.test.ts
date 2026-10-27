@@ -1,11 +1,11 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GAME_TYPES } from '@shared/constants';
 import { applyReplayPatch } from '@shared/replay-patch';
 import type { AnyGameState, Card, GameType, ReplayRecording, ReplaySnapshot, Seat } from '@shared/types';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import { isMatchReplay } from '../../src/database/match-replay';
 import type { AccountRecord, Repository } from '../../src/database/repository';
 import * as games from '../../src/managers/game-manager';
@@ -138,7 +138,7 @@ function follower(code: string): { check: () => void; folded: () => ReplaySnapsh
   };
 }
 
-describe('live-table match recordings', () => {
+describe.each(REPOSITORY_ADAPTERS)('live-table match recordings ($name)', (adapter) => {
   afterEach(() => {
     vi.restoreAllMocks();
     rooms.restoreRooms([]);
@@ -154,8 +154,8 @@ describe('live-table match recordings', () => {
       return seed / 4294967296;
     });
     const directory = await mkdtemp(join(tmpdir(), 'card-replay-'));
-    const path = join(directory, 'database.json');
-    let repository = await createJsonRepository(path);
+    const path = join(directory, adapter.fileName);
+    let repository = await adapter.open(path);
     try {
       const { runtime, code } = await startMatch(repository, gameType, bots);
       const initial = games.getGameState(code)!;
@@ -180,33 +180,33 @@ describe('live-table match recordings', () => {
       expect(games.getGameState(code)!.replayRecording!.steps).toHaveLength(1);
       expect(isRuntimeSnapshot(runtime.snapshot())).toBe(true);
       const recording = structuredClone(games.getGameState(code)!.replayRecording);
-      const disk = await readFile(path, 'utf8');
       await repository.close();
+      const disk = await adapter.readDocument(path);
       if (gameType === 'bridge') {
-        const damaged = JSON.parse(disk) as { runtime: RuntimeSnapshot };
+        const damaged = structuredClone(disk) as { runtime: RuntimeSnapshot };
         Object.assign(damaged.runtime.games[0].replayRecording!.steps[0][0], { path: ['__proto__'] });
-        const corrupt = JSON.stringify(damaged);
-        await writeFile(path, corrupt);
-        await expect(createJsonRepository(path)).rejects.toThrow('schema');
-        expect(await readFile(path, 'utf8')).toBe(corrupt);
-        await writeFile(path, disk);
+        await adapter.writeUnchecked(path, damaged);
+        const corrupt = await adapter.persisted(path);
+        await expect(adapter.open(path)).rejects.toThrow('schema');
+        expect(await adapter.persisted(path)).toBe(corrupt);
+        await adapter.writeUnchecked(path, disk);
         // Frequent writes check recording structure only; loading applies every step and drops a
         // recording that no longer applies, so the match continues unrecorded.
-        const inapplicable = JSON.parse(disk) as { runtime: RuntimeSnapshot };
+        const inapplicable = structuredClone(disk) as { runtime: RuntimeSnapshot };
         const steps = inapplicable.runtime.games[0].replayRecording!.steps as unknown[][];
         steps.push([{ op: 'set', path: ['missing', 'child'], value: 0 }]);
-        repository = await createJsonRepository(path);
+        repository = await adapter.open(path);
         await repository.saveRuntime(inapplicable.runtime);
         await repository.close();
         const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-        repository = await createJsonRepository(path);
+        repository = await adapter.open(path);
         expect((await repository.loadRuntime())!.games[0].replayRecording).toBeUndefined();
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('unplayable replay recording'));
         warn.mockRestore();
         await repository.close();
-        await writeFile(path, disk);
+        await adapter.writeUnchecked(path, disk);
       }
-      repository = await createJsonRepository(path);
+      repository = await adapter.open(path);
       const resumed = await createRuntimeCoordinator(repository);
       expect(games.getGameState(code)!.replayRecording).toEqual(recording);
 
@@ -262,7 +262,7 @@ describe('live-table match recordings', () => {
       // Retained history does not depend on runtime rooms, private hands, or connected players.
       await repository.saveRuntime({ players: [], rooms: [], games: [], chat: [] });
       await repository.close();
-      repository = await createJsonRepository(path);
+      repository = await adapter.open(path);
       const restarted = await createRuntimeCoordinator(repository);
       expect(restarted.snapshot()).toEqual({ players: [], rooms: [], games: [], chat: [] });
       expect(await repository.listMatches('N')).toEqual(history);
@@ -274,8 +274,8 @@ describe('live-table match recordings', () => {
 
   it.each(['legacy', 'bots'] as const)('keeps %s games unrecorded after restart and completion', async (mode) => {
     const directory = await mkdtemp(join(tmpdir(), 'card-replay-legacy-'));
-    const path = join(directory, 'database.json');
-    let repository = await createJsonRepository(path);
+    const path = join(directory, adapter.fileName);
+    let repository = await adapter.open(path);
     try {
       const { runtime, code } = await startMatch(repository, 'bridge', mode === 'bots');
       expect(games.getGameState(code)!.replayRecording).toBeDefined();
@@ -283,7 +283,7 @@ describe('live-table match recordings', () => {
       delete old.games[0].replayRecording;
       await repository.saveRuntime(old);
       await repository.close();
-      repository = await createJsonRepository(path);
+      repository = await adapter.open(path);
       const resumed = await createRuntimeCoordinator(repository);
       expect(games.getGameState(code)!.replayRecording).toBeUndefined();
       await finish(code, resumed);
@@ -300,7 +300,7 @@ describe('live-table match recordings', () => {
 
   it('accepts a recording on a bot game at restore', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'card-replay-bot-'));
-    const repository = await createJsonRepository(join(directory, 'database.json'));
+    const repository = await adapter.open(join(directory, adapter.fileName));
     try {
       const { runtime, code } = await startMatch(repository, 'bridge', true);
       const snapshot = runtime.snapshot();

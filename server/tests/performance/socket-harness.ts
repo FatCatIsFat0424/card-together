@@ -63,8 +63,16 @@ export async function connectClient(
   return client;
 }
 
-/** Real HTTP/Socket transport and JSON storage; fixture sessions avoid password hashing. */
-export async function createSocketHarness(roomCount = 3): Promise<SocketHarness> {
+/** The storage engine under test; the repository adapters in `tests/helpers` satisfy it. */
+export interface HarnessStorage {
+  readonly fileName: string;
+  open(path: string): Promise<Repository>;
+}
+
+const JSON_STORAGE: HarnessStorage = { fileName: 'database.json', open: (path) => createJsonRepository(path) };
+
+/** Real HTTP/Socket transport and storage (JSON by default); fixture sessions avoid password hashing. */
+export async function createSocketHarness(roomCount = 3, storage: HarnessStorage = JSON_STORAGE): Promise<SocketHarness> {
   const directory = await mkdtemp(join(tmpdir(), 'bridge-socket-performance-'));
   const allClients: TestClient[] = [];
   let cleanupRepository: Repository | undefined;
@@ -84,7 +92,7 @@ export async function createSocketHarness(roomCount = 3): Promise<SocketHarness>
     return closing;
   }
   try {
-    const repository = await createJsonRepository(join(directory, 'database.json'));
+    const repository = await storage.open(join(directory, storage.fileName));
     cleanupRepository = repository;
     const metrics: SocketMetrics = {
       snapshots: 0, payloadBytes: 0, snapshotPayloadBytes: 0, chatPayloadBytes: 0, runtimeWrites: 0,

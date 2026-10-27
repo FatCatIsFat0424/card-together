@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rename, rm } from 'node:fs/promises';
+import { mkdtemp, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -6,7 +6,7 @@ import { ACHIEVEMENT_CATEGORIES } from '@shared/constants/achievements';
 import { isShopItemId } from '@shared/constants/shop';
 import type { AchievementCategoryId } from '@shared/constants/achievements';
 import type { AnyGameState, PlayerInfo, ShopItemId } from '@shared/types';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import { achievementGameProgress, validAchievements } from '../../src/database/achievements';
 import type { AchievementsRecord } from '../../src/database/achievements';
 import { publicAccount } from '../../src/database/repository';
@@ -20,16 +20,16 @@ vi.mock('node:fs/promises', async (importOriginal) => {
 const complete: AchievementsRecord = { games: 1000, wins: 250,
   gameTypes: ['bridge', 'bigtwo', 'sevens', 'holdem', 'blackjack'], dailyTasks: 15 };
 
-describe('achievement ownership and progress', () => {
+describe.each(REPOSITORY_ADAPTERS)('achievement ownership and progress ($name)', (adapter) => {
   let directory: string;
   let path: string;
   let repository: Repository;
   let now: number;
   beforeEach(async () => {
     directory = await mkdtemp(join(tmpdir(), 'achievements-'));
-    path = join(directory, 'database.json');
+    path = join(directory, adapter.fileName);
     now = Date.parse('2026-10-15T15:59:59Z');
-    repository = await createJsonRepository(path, { now: () => now });
+    repository = await adapter.open(path, { now: () => now });
   });
   afterEach(async () => {
     vi.mocked(rename).mockClear();
@@ -42,12 +42,12 @@ describe('achievement ownership and progress', () => {
 
   it('reads older accounts without writing and keeps private counters out of profile data', async () => {
     const id = await seed();
-    const before = await readFile(path, 'utf8');
+    const before = await adapter.persisted(path);
     const status = (await repository.getAchievements(id))!;
     expect(status.categories).toHaveLength(2);
     expect(status.categories.flatMap((category) => category.items)).toHaveLength(23);
     expect(status.categories.every((category) => !category.claimed && category.items.every((item) => item.progress === 0))).toBe(true);
-    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(await adapter.persisted(path)).toBe(before);
     expect(await repository.getAchievements('missing')).toBeNull();
     expect(publicAccount({ ...(await repository.getAccountById(id))!, achievements: complete })).not.toHaveProperty('achievements');
   });
@@ -71,7 +71,7 @@ describe('achievement ownership and progress', () => {
       ownedAchievementNameplates: ['nameplate-table-traveler'], ownedShopItems: ['nameplate-aurora'] });
     await repository.updateProfile(id, { nameplate: 'nameplate-table-traveler' }, now);
     await repository.close();
-    repository = await createJsonRepository(path, { now: () => now });
+    repository = await adapter.open(path, { now: () => now });
     expect(await repository.claimAchievement(id, 'table')).toMatchObject({ account: { nameplate: 'nameplate-table-traveler',
       ownedAchievementNameplates: ['nameplate-table-traveler'], coins: 1000 } });
     expect(await repository.updateProfile(id, { nameplate: null }, now)).toMatchObject({ nameplate: null });
@@ -79,10 +79,10 @@ describe('achievement ownership and progress', () => {
 
   it('rolls back failed claims and allows retry', async () => {
     const id = await seed({ achievements: complete });
-    const before = await readFile(path, 'utf8');
-    vi.mocked(rename).mockRejectedValueOnce(new Error('disk full'));
+    const before = await adapter.persisted(path);
+    adapter.failNextCommit(new Error('disk full'));
     await expect(repository.claimAchievement(id, 'table')).rejects.toThrow('disk full');
-    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(await adapter.persisted(path)).toBe(before);
     expect((await repository.getAchievements(id))!.categories[0].claimed).toBe(false);
     expect((await repository.claimAchievement(id, 'table'))!.achievements.categories[0].claimed).toBe(true);
   });
@@ -94,7 +94,7 @@ describe('achievement ownership and progress', () => {
       checkInDays: Array.from({ length: 179 }, (_, index) =>
         new Date(Date.UTC(2025, 0, 1 + index * 2)).toISOString().slice(0, 10)),
     } });
-    vi.mocked(rename).mockRejectedValueOnce(new Error('task write failed'));
+    adapter.failNextCommit(new Error('task write failed'));
     await expect(repository.claimDailyReward(id, 'play-bridge', '2026-10-15')).rejects.toThrow('task write failed');
     expect((await repository.getAccountById(id))!.achievements?.dailyTasks).toBe(269);
     await Promise.all(Array.from({ length: 4 }, () => repository.claimDailyReward(id, 'play-bridge', '2026-10-15')));
@@ -105,7 +105,7 @@ describe('achievement ownership and progress', () => {
     expect((await repository.claimAchievement(id, 'daily'))!.account).toMatchObject({ coins: 1025,
       ownedAchievementNameplates: ['nameplate-daily-collector'] });
     await repository.close();
-    repository = await createJsonRepository(path, { now: () => now });
+    repository = await adapter.open(path, { now: () => now });
     expect((await repository.getAchievements(id))!.categories[1]).toMatchObject({ claimed: true,
       items: expect.arrayContaining([{ id: 'half-year-check-ins', progress: 180 }, { id: 'two-seventy-tasks', progress: 270 }]) });
   });

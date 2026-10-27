@@ -7,7 +7,7 @@ import express from 'express';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createAuthService, SESSION_COOKIE_NAME, tokenHash } from '../../src/auth/auth-service';
 import { protectMutations } from '../../src/auth/http-middleware';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import type { Repository } from '../../src/database/repository';
 import { createFriendRouter } from '../../src/http/friend-routes';
 import type { FriendPresence } from '../../src/http/friend-routes';
@@ -15,7 +15,7 @@ import type { FriendPresence } from '../../src/http/friend-routes';
 const ORIGIN = 'http://localhost:5173';
 const PASSWORD_HASH = `scrypt$131072$8$1$${'a'.repeat(32)}$${'b'.repeat(128)}`;
 
-describe('friend HTTP routes', () => {
+describe.each(REPOSITORY_ADAPTERS)('friend HTTP routes ($name)', (adapter) => {
   let directory: string;
   let repository: Repository;
   let server: Server;
@@ -25,7 +25,7 @@ describe('friend HTTP routes', () => {
 
   beforeEach(async (): Promise<void> => {
     directory = await mkdtemp(join(tmpdir(), 'bridge-friend-routes-'));
-    repository = await createJsonRepository(join(directory, 'database.json'));
+    repository = await adapter.open(join(directory, adapter.fileName));
     cookies = {};
     const now = Date.now();
     for (const [username, tokenCharacter] of [['alice', 'a'], ['bob', 'b'], ['carol', 'c']]) {

@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApplication } from '../../src/app';
-import { parseAllowedOrigins, parseSevensDevPreset } from '../../src/config';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { parseAllowedOrigins, parseDatabaseConfig, parseSevensDevPreset } from '../../src/config';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import * as autoPass from '../../src/runtime/bigtwo-auto-pass';
 import * as turnTimers from '../../src/runtime/turn-timers';
 
@@ -31,13 +31,34 @@ describe('server startup', () => {
     }
   });
 
+  it('should select the database engine explicitly and reject mismatched paths', () => {
+    const data = join(tmpdir(), 'card-data');
+    expect(parseDatabaseConfig(undefined, undefined, data)).toEqual({ engine: 'json', path: join(data, 'database.json') });
+    expect(parseDatabaseConfig('', '', data)).toEqual({ engine: 'json', path: join(data, 'database.json') });
+    expect(parseDatabaseConfig('sqlite', undefined, data)).toEqual({ engine: 'sqlite', path: join(data, 'database.sqlite') });
+    expect(parseDatabaseConfig('sqlite', 'state/card.sqlite', data))
+      .toEqual({ engine: 'sqlite', path: join(process.cwd(), 'state/card.sqlite') });
+    expect(parseDatabaseConfig('json', '/var/lib/card-together/database.json', data).path).toBe('/var/lib/card-together/database.json');
+    for (const engine of ['SQLite', 'postgres', ' json']) {
+      expect(() => parseDatabaseConfig(engine, undefined, data)).toThrow(/DATABASE_ENGINE/);
+    }
+    for (const [engine, path] of [['sqlite', '/var/lib/card-together/database.json'], ['json', '/data/database.sqlite'],
+      [undefined, '/data/database.db'], ['sqlite', '/data/database']] as const) {
+      expect(() => parseDatabaseConfig(engine, path, data)).toThrow(/DATABASE_PATH/);
+    }
+  });
+});
+
+describe.each(REPOSITORY_ADAPTERS)('server startup with $name storage', (adapter) => {
+  afterEach(() => vi.restoreAllMocks());
+
   it('should fail before starting schedulers when the port is unavailable', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'card-startup-'));
     const occupied = createServer();
     await new Promise<void>((resolve) => occupied.listen(0, '127.0.0.1', resolve));
     const address = occupied.address();
     if (!address || typeof address === 'string') throw new Error('Expected TCP address');
-    const repository = await createJsonRepository(join(directory, 'database.json'));
+    const repository = await adapter.open(join(directory, adapter.fileName));
     const passes = vi.spyOn(autoPass, 'startBigTwoAutoPass');
     const timers = vi.spyOn(turnTimers, 'startTurnTimers');
     try {
@@ -55,7 +76,7 @@ describe('server startup', () => {
 
   it('should listen before starting schedulers when asked to bind', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'card-startup-'));
-    const repository = await createJsonRepository(join(directory, 'database.json'));
+    const repository = await adapter.open(join(directory, adapter.fileName));
     let application: Awaited<ReturnType<typeof createApplication>> | undefined;
     const timers = vi.spyOn(turnTimers, 'startTurnTimers');
     try {

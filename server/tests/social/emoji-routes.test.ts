@@ -1,4 +1,4 @@
-import { copyFile, mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { io as connectSocket } from 'socket.io-client';
@@ -11,7 +11,7 @@ import { isRuntimeSnapshot } from '../../src/runtime/validate';
 import { restoreChat, getChatHistory } from '../../src/managers/chat-manager';
 import { createApplication } from '../../src/app';
 import { SOCKET_RATE_LIMITS } from '../../src/socket/connection';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import type { Repository } from '../../src/database/repository';
 import { seedAuthenticatedAccount } from '../auth/account-fixture';
 
@@ -27,7 +27,7 @@ const PROVIDED_NEKO = { name: 'NEKO-3.v2', file: 'NEKO-3.v2-0123456789abcdef0123
 const PROVIDED_EMOJIS = new Map([PROVIDED_WAVE, PROVIDED_CHEER, PROVIDED_NEKO]
   .map((emoji) => [emoji.name, emoji]));
 
-describe('custom emoji routes and chat', () => {
+describe.each(REPOSITORY_ADAPTERS)('custom emoji routes and chat ($name)', (adapter) => {
   let directory: string;
   let repository: Repository;
   let application: Awaited<ReturnType<typeof createApplication>>;
@@ -36,7 +36,7 @@ describe('custom emoji routes and chat', () => {
 
   beforeEach(async () => {
     directory = await mkdtemp(join(tmpdir(), 'bridge-emoji-'));
-    repository = await createJsonRepository(join(directory, 'database.json'));
+    repository = await adapter.open(join(directory, adapter.fileName));
     application = await createApplication(repository, {
       allowedOrigins: [ORIGIN], mediaDirectory: join(directory, 'media'), providedEmojis: PROVIDED_EMOJIS,
     });
@@ -228,10 +228,7 @@ describe('custom emoji routes and chat', () => {
     const expected = { content: '', sticker: { id: asset.id, name: 'wave', mediaId } };
     const history = (await other.timeout(5_000).emitWithAck('player:resume')).chatHistory!;
     expect(history.at(-1)).toMatchObject(expected);
-    await copyFile(join(directory, 'database.json'), join(directory, 'restored.json'));
-    const reopened = await createJsonRepository(join(directory, 'restored.json'));
-    const snapshot = (await reopened.loadRuntime())!;
-    await reopened.close();
+    const snapshot = (await adapter.readDocument(join(directory, adapter.fileName))).runtime!;
     expect(isRuntimeSnapshot(snapshot)).toBe(true);
     expect(snapshot.chat[0].messages.at(-1)).toMatchObject(expected);
     restoreChat(snapshot.chat);

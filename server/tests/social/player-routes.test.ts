@@ -6,13 +6,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReplaySnapshot } from '@shared/types';
 import { createApplication } from '../../src/app';
 import { SESSION_COOKIE_NAME, tokenHash } from '../../src/auth/auth-service';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import type { AccountRecord, MatchRecord, NewMatchRecord, Repository } from '../../src/database/repository';
 
 const ORIGIN = 'http://localhost:5173';
 const PASSWORD_HASH = `scrypt$131072$8$1$${'a'.repeat(32)}$${'b'.repeat(128)}`;
 
-describe('public player profile HTTP routes', () => {
+describe.each(REPOSITORY_ADAPTERS)('public player profile HTTP routes ($name)', (adapter) => {
   let directory: string;
   let repository: Repository;
   let application: Awaited<ReturnType<typeof createApplication>>;
@@ -22,7 +22,7 @@ describe('public player profile HTTP routes', () => {
 
   beforeEach(async () => {
     directory = await mkdtemp(join(tmpdir(), 'bridge-player-profiles-'));
-    repository = await createJsonRepository(join(directory, 'database.json'));
+    repository = await adapter.open(join(directory, adapter.fileName));
     accounts = {};
     cookies = {};
     const now = Date.now();

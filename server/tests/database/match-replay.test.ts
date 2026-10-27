@@ -1,11 +1,11 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { GAME_TYPES } from '@shared/constants';
 import type { GameType, MatchReplay, MatchResult } from '@shared/types';
 import { dropUnplayableRecordings, isMatchReplay, isReplayRecording } from '../../src/database/match-replay';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import { emptyDocument } from '../../src/database/schema';
 import type { AccountRecord, MatchRecord, NewMatchRecord } from '../../src/database/repository';
 
@@ -114,11 +114,11 @@ describe('match replay validation', () => {
   });
 });
 
-describe('stored archive compatibility', () => {
+describe.each(REPOSITORY_ADAPTERS)('stored archive compatibility ($name)', (adapter) => {
   it('roundtrips replay flags, rejects invalid archives and refuses inline archives at startup without rewriting them', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'card-replay-schema-'));
-    const path = join(directory, 'database.json');
-    let repository = await createJsonRepository(path);
+    const path = join(directory, adapter.fileName);
+    let repository = await adapter.open(path);
     try {
       const accounts: AccountRecord[] = ['alice', 'bravo', 'charlie', 'delta'].map((username) => ({
         id: username, username, usernameNormalized: username, nickname: username, color: '#123456', avatar: 'cat',
@@ -131,29 +131,29 @@ describe('stored archive compatibility', () => {
           defenderTeamTricks: 6, requiredTricks: 7, declarerTeamWins: true },
       };
       await repository.close();
-      await writeFile(path, JSON.stringify({ ...emptyDocument(), accounts, matches: [legacy] }));
-      repository = await createJsonRepository(path);
+      await adapter.seed(path, ({ ...emptyDocument(), accounts, matches: [legacy] }));
+      repository = await adapter.open(path);
       await repository.saveMatch({ ...legacy, id: 'archived', finishedAt: 31, replay: archive() as unknown as MatchReplay });
       const completed: MatchRecord = { ...legacy, id: 'archived', finishedAt: 31, hasReplay: true };
       const expected = [completed, legacy];
       expect(await repository.listMatches('alice')).toEqual(expected);
-      const before = await readFile(path, 'utf8');
+      const before = await adapter.persisted(path);
       await expect(repository.saveMatch({ ...legacy, id: 'old-format',
         replay: { version: 2, gameType: 'bridge', startedAt: 10, log: [], table: { frames: [] } } } as unknown as NewMatchRecord))
         .rejects.toMatchObject({ code: 'INVALID_REPLAY' });
       expect(await repository.listMatches('alice')).toEqual(expected);
-      expect(await readFile(path, 'utf8')).toBe(before);
+      expect(await adapter.persisted(path)).toBe(before);
       await repository.close();
-      repository = await createJsonRepository(path);
+      repository = await adapter.open(path);
       expect(await repository.listMatches('alice')).toEqual(expected);
       expect(await repository.getMatchReplay('archived')).toEqual(archive());
       await repository.close();
       // Archives never shipped inside the database; an inline one is rejected rather than kept.
       for (const inline of [{ ...legacy, replay: archive() }, { ...legacy, hasReplay: false }]) {
-        const rejected = JSON.stringify({ ...emptyDocument(), accounts, matches: [inline] });
-        await writeFile(path, rejected);
-        await expect(createJsonRepository(path)).rejects.toThrow('schema');
-        expect(await readFile(path, 'utf8')).toBe(rejected);
+        await adapter.writeUnchecked(path, { ...emptyDocument(), accounts, matches: [inline] });
+        const rejected = await adapter.persisted(path);
+        await expect(adapter.open(path)).rejects.toThrow('schema');
+        expect(await adapter.persisted(path)).toBe(rejected);
       }
     } finally {
       await repository.close();

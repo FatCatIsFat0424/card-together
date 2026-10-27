@@ -11,7 +11,7 @@ import {
   SESSION_COOKIE_NAME,
   tokenHash,
 } from '../../src/auth/auth-service';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import type { Repository } from '../../src/database/repository';
 import * as passwords from '../../src/auth/password';
 import { createAuthRouter } from '../../src/http/auth-routes';
@@ -20,7 +20,7 @@ import { seedAuthenticatedAccount } from './account-fixture';
 const ORIGIN = 'http://localhost:5173';
 const HEADERS = { Origin: ORIGIN, 'Content-Type': 'application/json' };
 
-describe('account HTTP routes', () => {
+describe.each(REPOSITORY_ADAPTERS)('account HTTP routes ($name)', (adapter) => {
   let directory: string;
   let repository: Repository;
   let server: Server;
@@ -32,7 +32,7 @@ describe('account HTTP routes', () => {
     onAccountUpdated.mockReset();
     onSessionsRevoked.mockReset();
     directory = await mkdtemp(join(tmpdir(), 'bridge-auth-http-'));
-    repository = await createJsonRepository(join(directory, 'database.json'));
+    repository = await adapter.open(join(directory, adapter.fileName));
     const app = express();
     app.use(express.json({ limit: '16kb' }));
     server = createServer(app);

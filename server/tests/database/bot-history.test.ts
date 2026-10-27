@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { getPresentationEndsAt } from '@shared/game-presentation';
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import type { AccountRecord, MatchRecord } from '../../src/database/repository';
 import { createRuntimeCoordinator } from '../../src/runtime/coordinator';
 import * as games from '../../src/managers/game-manager';
@@ -13,10 +13,10 @@ import * as rooms from '../../src/managers/room-manager';
 import * as players from '../../src/managers/player-manager';
 import { getBotAction } from '../../src/bots/bot-decisions';
 
-it('stores mixed bot results and replays while preserving resume', async () => {
+describe.each(REPOSITORY_ADAPTERS)('bot match history ($name)', (adapter) => it('stores mixed bot results and replays while preserving resume', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'card-bot-history-'));
-  const path = join(directory, 'database.json');
-  let repository = await createJsonRepository(path);
+  const path = join(directory, adapter.fileName);
+  let repository = await adapter.open(path);
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(10000);
   try {
@@ -59,7 +59,7 @@ it('stores mixed bot results and replays while preserving resume', async () => {
     expect(history).toHaveLength(1);
     expect(history[0].hasReplay).toBe(true);
     expect(await repository.getMatchReplay(history[0].id)).toBeDefined();
-    expect(JSON.parse(await readFile(path, 'utf8')).matches).toEqual(history);
+    expect((await adapter.readDocument(path)).matches).toEqual(history);
     expect(rooms.getRoomInfo(code)?.status).toBe('waiting');
     expect(rooms.getRoomInfo(code)?.seats.N.isReady).toBe(false);
     const finished = games.getGameState(code)!;
@@ -70,7 +70,7 @@ it('stores mixed bot results and replays while preserving resume', async () => {
     };
     await runtime.mutate(() => { rooms.removeBot(code, account.id, 'E'); });
     await repository.close();
-    repository = await createJsonRepository(path);
+    repository = await adapter.open(path);
     expect(await repository.listMatches(account.id)).toEqual(history);
     expect(await repository.getMatchReplay(history[0].id)).toBeDefined();
     expect((await repository.loadRuntime())?.games[0].phase).toBe('scoring');
@@ -84,4 +84,4 @@ it('stores mixed bot results and replays while preserving resume', async () => {
     await repository.close();
     await rm(directory, { recursive: true, force: true });
   }
-});
+}));

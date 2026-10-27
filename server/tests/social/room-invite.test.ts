@@ -9,7 +9,7 @@ import type {
 } from '@shared/types';
 import { createApplication } from '../../src/app';
 import type { Repository } from '../../src/database/repository';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import * as roomManager from '../../src/managers/room-manager';
 import { MAX_SPECTATORS } from '@shared/constants';
 import { seedAuthenticatedAccount } from '../auth/account-fixture';
@@ -23,7 +23,7 @@ interface Registered {
   cookie: string;
 }
 
-describe('room invites and friend presence', () => {
+describe.each(REPOSITORY_ADAPTERS)('room invites and friend presence ($name)', (adapter) => {
   let directory: string;
   let application: Application;
   let repository: Repository;
@@ -32,7 +32,7 @@ describe('room invites and friend presence', () => {
 
   beforeEach(async (): Promise<void> => {
     directory = await mkdtemp(join(tmpdir(), 'bridge-invite-'));
-    repository = await createJsonRepository(join(directory, 'database.json'));
+    repository = await adapter.open(join(directory, adapter.fileName));
     application = await createApplication(repository, { allowedOrigins: [ORIGIN] });
     const server = application.httpServer;
     await new Promise<void>((resolve, reject): void => {

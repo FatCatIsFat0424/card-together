@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -10,11 +10,11 @@ import {
 } from '../../src/auth/auth-service';
 import type { AuthService } from '../../src/auth/auth-service';
 import { hashPassword } from '../../src/auth/password';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import type { Repository } from '../../src/database/repository';
 import { seedAuthenticatedAccount, seedAuthenticatedSession } from './account-fixture';
 
-describe('account authentication', () => {
+describe.each(REPOSITORY_ADAPTERS)('account authentication ($name)', (adapter) => {
   let directory: string;
   let path: string;
   let repository: Repository;
@@ -23,8 +23,8 @@ describe('account authentication', () => {
 
   beforeEach(async () => {
     directory = await mkdtemp(join(tmpdir(), 'bridge-auth-test-'));
-    path = join(directory, 'database.json');
-    repository = await createJsonRepository(path);
+    path = join(directory, adapter.fileName);
+    repository = await adapter.open(path);
     time = 1000;
     service = createAuthService(repository, { now: () => time, sessionTtlMs: 10000 });
   });
@@ -47,7 +47,7 @@ describe('account authentication', () => {
     expect(registered.account.matchesPublic).toBe(true);
     expect((await repository.getAccountById(registered.account.id))?.matchesPublic).toBe(true);
     expect(registered.account).not.toHaveProperty('passwordHash');
-    const text = await readFile(path, 'utf8');
+    const text = await adapter.persisted(path);
     expect(text).not.toContain('correct horse battery');
     expect(text).not.toContain(registered.token);
     expect(text).toContain('scrypt$131072$8$1$');
@@ -67,7 +67,7 @@ describe('account authentication', () => {
     const updated = await service.updateProfile(registered.account.id, { nickname: 'Alice' });
     expect(updated.matchesPublic).toBe(false);
     await repository.close();
-    repository = await createJsonRepository(path);
+    repository = await adapter.open(path);
     service = createAuthService(repository, { now: () => time, sessionTtlMs: 10000 });
     expect((await service.resolveToken(registered.token))?.account.matchesPublic).toBe(false);
   });
@@ -97,7 +97,7 @@ describe('account authentication', () => {
       ...beforeIgnored, updatedAt: beforeIgnored!.updatedAt + 1,
     });
     await repository.close();
-    repository = await createJsonRepository(path);
+    repository = await adapter.open(path);
     service = createAuthService(repository, { now: () => time });
     expect((await service.resolveToken(first.token))?.account).toMatchObject({ ...expected, coins: 1000 });
   });
@@ -127,7 +127,7 @@ describe('account authentication', () => {
     const first = await seedAccount('alice');
     const second = await seedAuthenticatedSession(repository, first.account.id, { now: time, sessionTtlMs: 10000 });
     await repository.close();
-    repository = await createJsonRepository(path);
+    repository = await adapter.open(path);
     service = createAuthService(repository, { now: () => time, sessionTtlMs: 10000 });
     expect(await service.resolveToken(first.token)).not.toBeNull();
     time = 11000;
