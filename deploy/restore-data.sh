@@ -63,7 +63,7 @@ for directory in media replays; do
     exit 1
   fi
 done
-if find "$snapshot/media" "$snapshot/replays" -type l | grep -q .; then
+if [[ -n $(find "$snapshot/media" "$snapshot/replays" -type l -print -quit) ]]; then
   echo 'The snapshot contains symbolic links; review it before restoring.' >&2
   exit 1
 fi
