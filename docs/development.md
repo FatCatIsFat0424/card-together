@@ -52,6 +52,7 @@ PORT=3002 HOST=127.0.0.1 npm run dev:server
 ## UI 慣例
 
 - **核取方塊**：使用 [AppCheckbox](../client/src/components/AppCheckbox.tsx)（MUI、主題變數、44px 點擊範圍）。標籤要與原生 input 關聯，並透過 `slotProps.input` 傳入 input 的無障礙屬性。
+- **字級與控制項**：token 定義在 [global.css](../client/src/styles/global.css)；內文 13–15 px，次要標籤最小 12 px。`px`／`rem` 的字級字面值小於 12 px 會讓檢查失敗；單一字元的徽章（如莊家 `D`）若確實放不下，可在同一行或上一行加註解 `single-glyph` 與理由。按鈕使用 [Button](../client/src/components/Button.tsx)（主要操作為 34 px 膠囊）、[IconButton](../client/src/components/IconButton.tsx)（20 px 圖示、40 px 點擊範圍）、[Tabs](../client/src/components/Tabs.tsx) 與 [Chip](../client/src/components/Chip.tsx)。
 - **圖示**：使用 [AppIcon](../client/src/components/AppIcon.tsx)，搭配個別匯入的 `@mui/icons-material` SVG；圖示繼承文字大小與顏色。裝飾性圖示需要搭配控制項的無障礙名稱與已翻譯的狀態文字。
 - **自訂圖案**：在 Material Icons 沒有合適替代時，保留既有的花色、頭像、皇冠、骷髏、龍與左輪手槍圖案。
 - **動態效果**：尊重減少動態效果的偏好；沒有動畫時，呈現仍必須保留資訊與截止時間。

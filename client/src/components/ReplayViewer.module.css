@@ -135,7 +135,7 @@
   .actions :global(.btn) { min-height: 36px; padding: 2px var(--spacing-sm); }
   .buttons .play { min-width: 44px; }
   .timeline input { min-height: 36px; }
-  .timeline output { min-width: 4.5rem; font-size: 10px; }
+  .timeline output { min-width: 4.5rem; font-size: var(--text-xs); }
   .note { display: none; }
 }
 

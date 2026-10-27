@@ -50,7 +50,7 @@ VITE_BASE_PATH=/card-together/ VITE_SERVER_URL='' \
 
 1. 準備音樂與表情符號匯入。
 2. 對 shared、server、server 測試、client app 與 client Node 設定做型別檢查。
-3. 具型別資訊的 lint、所有 Vitest 測試、Vite 建置與建置產物驗證。
+3. 具型別資訊的 lint、字級檢查（`client/src` 的 CSS 不得寫死小於 12 px 的 `font-size`）、所有 Vitest 測試、Vite 建置與建置產物驗證。
 4. 對每個部署 shell 腳本做語法檢查，並執行 Python unittest discovery。
 5. 檢查 Markdown 的空白、相對連結目標，以及依 GitHub 標題 slug 規則的 `#anchor` 目標。
 

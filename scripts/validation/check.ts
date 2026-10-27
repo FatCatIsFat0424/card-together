@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
 import { buildEnvironment, validateArtifacts } from './artifacts';
 import { DOCUMENTATION_ROOTS, documentationErrors, documentationPaths } from './documentation';
+import { fontSizeErrors } from './font-size';
 import { collectFiles, parseOptions, selectChecks } from './selection';
 import type { CheckOptions, Selection } from './selection';
 
@@ -15,7 +16,7 @@ export interface Gate {
   command?: string;
   args?: string[];
   cwd?: string;
-  internal?: 'artifacts' | 'documentation' | 'clear-types';
+  internal?: 'artifacts' | 'documentation' | 'font-size' | 'clear-types';
   preparation?: boolean;
 }
 
@@ -53,6 +54,7 @@ export function planGates(root: string, selection: Selection, options: CheckOpti
   if (options.noCache && selection.types.length) gates.push({ id: 'clear-type-cache', internal: 'clear-types', preparation: true });
   for (const type of selection.types) gates.push({ id: `type-${type}`, command: 'npx',
     args: ['tsc', ...TYPES[type]], cwd: type === 'shared' ? 'shared' : type.startsWith('client') ? 'client' : 'server' });
+  if (full || selection.types.includes('client')) gates.push({ id: 'font-size', internal: 'font-size' });
   if (full) gates.push({ id: 'lint', command: 'npm', args: ['run', 'lint'] });
   else if (selection.lint.length) gates.push({ id: 'lint', command: 'npx', args: ['eslint', ...selection.lint] });
   if (full || selection.tests.length) gates.push({ id: 'vitest', command: 'npx', cwd: 'server',
@@ -153,6 +155,12 @@ function documentation(root: string, selected: readonly string[]): number {
   return errors.length ? 1 : 0;
 }
 
+function fontSizes(root: string): number {
+  const errors = fontSizeErrors(root);
+  for (const error of errors) console.error(error);
+  return errors.length ? 1 : 0;
+}
+
 async function main(): Promise<number> {
   const root = fileURLToPath(new URL('../..', import.meta.url));
   const options = parseOptions(process.argv.slice(2));
@@ -170,6 +178,7 @@ async function main(): Promise<number> {
   const started = performance.now();
   const execute = async (gate: Gate): Promise<number> => {
     if (gate.internal === 'documentation') return documentation(root, selection.paths);
+    if (gate.internal === 'font-size') return fontSizes(root);
     if (gate.internal === 'clear-types') {
       for (const type of selection.types) await rm(join(root, TYPE_CACHE[type]), { force: true });
       return 0;
