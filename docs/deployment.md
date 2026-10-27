@@ -229,7 +229,7 @@ sudo systemctl start card-together.service card-together-backup.timer
 
 ## 切換到 SQLite
 
-正式環境目前使用 JSON。以下步驟把它切換到 SQLite（[儲存引擎](storage.md#儲存引擎)），**必須經過核准後才執行**。過程中服務會停止，玩家會斷線；請選在離峰時段並事先公告。
+正式環境已於 2026-10-27 切換到 SQLite，`database.json` 保留為唯讀檔，但已過時。以下步驟供新環境或重新切換使用（[儲存引擎](storage.md#儲存引擎)），**必須經過核准後才執行**。過程中服務會停止，玩家會斷線；請選在離峰時段並事先公告。
 
 **前置條件**
 
