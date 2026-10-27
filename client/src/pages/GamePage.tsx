@@ -6,7 +6,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useGameStore } from '../stores/game-store';
 import { useRoomStore } from '../stores/room-store';
 import { useI18nStore } from '../stores/i18n-store';
-import { GAME_TABLES } from '../games/game-tables';
+import { gameUi } from '../games/ui-registry';
 import styles from './AccountPages.module.css';
 
 export function GamePage(): ReactNode {
@@ -24,7 +24,7 @@ export function GamePage(): ReactNode {
   }, [roomInfo, phase, roomCode, navigate]);
 
   if (!phase) return null;
-  const Table = gameType ? GAME_TABLES[gameType] : null;
+  const Table = gameType ? gameUi(gameType).table : null;
   return Table ? <Suspense fallback={<main className={styles.status}><p role="status">{t('common.loading')}</p></main>}>
     <Table />
   </Suspense> : null;

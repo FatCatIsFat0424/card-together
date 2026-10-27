@@ -3,8 +3,6 @@
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { frameLogIndex } from '@shared/game-presentation';
-import type { PresentationFrame } from '@shared/game-presentation';
 import type { PlayerVisibleGameState, GameSeat } from '@shared/types';
 import type { TranslationKey } from '../i18n';
 import { playCardSound, playOutSound, unlockCardSounds, disposeCardSounds } from '../audio/card-sound';
@@ -31,6 +29,7 @@ import { GameRulesDialog } from '../components/GameRulesDialog';
 import { matchRulesContext } from '../game-rules-context';
 import styles from './GameShell.module.css';
 import { useGamePresentation } from './use-game-presentation';
+import { frameCue } from './frame-cue';
 import { GamePresentation } from './GamePresentation';
 import { RoundHistory } from './RoundHistory';
 import { useMotionStore } from '../stores/motion-store';
@@ -49,6 +48,7 @@ import { GameMenuLinks, useGameMenuUnread } from './GameMenuLinks';
 import { RotateHint } from './RotateHint';
 import { godViewSource, useReplayMode } from './replay-mode';
 import { TableStoreScope } from './TableStoreScope';
+import { gameUi } from './ui-registry';
 
 const DESKTOP_QUERY = '(min-width: 1024px)';
 const SHEET_QUERY = '(max-width: 767px), (max-height: 500px) and (min-width: 600px)';
@@ -71,64 +71,7 @@ function presentationSummary(
   game: PlayerVisibleGameState,
   t: (key: TranslationKey, params?: Record<string, string>) => string,
 ): string {
-  if (game.gameType === 'bridge') {
-    if (game.phase === 'scoring' && game.result) return t(game.result.declarerTeamWins
-      ? 'score.declarerWins' : 'score.defenderWins');
-    return game.playing ? `${t('seat.N')} / ${t('seat.S')}: ${game.playing.trickCountNS} · ` +
-      `${t('seat.E')} / ${t('seat.W')}: ${game.playing.trickCountEW}` : '';
-  }
-  if (game.gameType === 'redpoints' && game.result) {
-    const { points, winners } = game.result;
-    return t('presentation.redPointsWinners', {
-      scores: winners.map((seat) => `${t(`seat.${seat}`)} ${points[seat]}`).join(' · '),
-    });
-  }
-  if (game.gameType === 'sevens' && game.result) {
-    const { penalties, winners } = game.result;
-    return t('presentation.sevensWinners', {
-      scores: winners.map((seat) => `${t(`seat.${seat}`)} ${penalties[seat]}`).join(' · '),
-    });
-  }
-  if (game.gameType === 'chinesepoker' && game.result) {
-    const { scores, winners } = game.result;
-    return t('presentation.chinesePokerWinners', {
-      scores: winners.map((seat) => `${t(`seat.${seat}`)} ${scores[seat] > 0 ? '+' : ''}${scores[seat]}`).join(' · '),
-    });
-  }
-  if (game.gameType === 'blackjack' && game.result) {
-    const { chips, winners } = game.result;
-    return t('presentation.blackjackWinners', {
-      scores: winners.map((seat) => `${t(`seat.${seat}`)} ${chips[seat]}`).join(' · '),
-    });
-  }
-  if (game.gameType === 'holdem' && game.result) {
-    const { chips, winners } = game.result;
-    return t('presentation.holdemWinners', {
-      scores: winners.map((seat) => `${t(`seat.${seat}`)} ${chips[seat]}`).join(' · '),
-    });
-  }
-  if (game.gameType === 'napoleon') {
-    // Side totals stay hidden until settlement so they never point at the secretary.
-    if (!game.result) return '';
-    return `${t(game.result.napoleonWins ? 'napoleon.napoleonWins' : 'napoleon.defendersWin')} · ${t('presentation.napoleonResult', {
-      napoleon: t('napoleon.napoleonSide'), n: String(game.result.napoleonPoints),
-      defenders: t('napoleon.defenders'), m: String(game.result.defenderPoints),
-    })}`;
-  }
-  if (game.gameType === 'ninetynine' && game.result && 'winners' in game.result) {
-    return t('presentation.ninetyNineTied', {
-      seats: game.result.winners.map((seat) => t(`seat.${seat}`)).join(' · '),
-    });
-  }
-  return '';
-}
-
-/** A Hold'em award frame that knocks a seat out of the match. */
-function eliminatesSeat(game: PlayerVisibleGameState | null, frame: PresentationFrame): boolean {
-  if (game?.gameType !== 'holdem' || frame.kind !== 'award') return false;
-  const index = frameLogIndex(frame);
-  const entry = index === null ? undefined : game.log[index];
-  return entry?.type === 'award' && entry.eliminated.length > 0;
+  return gameUi(game.gameType).presentation?.summary?.(game, t) ?? '';
 }
 
 function matches(query: string): boolean {
@@ -206,6 +149,7 @@ export function GameShell({
   const replay = useReplayMode();
   const chatVisible = !replay || replay.chat;
   const visibleGame = useGameStore((state) => state.visible);
+  const centreLayout = visibleGame ? gameUi(visibleGame.gameType).centre : undefined;
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const setReducedMotion = useMotionStore((state) => state.setReducedMotion);
   const mySeat = useRoomStore((state) => state.mySeat);
@@ -328,15 +272,10 @@ export function GameShell({
     const frame = presentation.frame;
     if (!frame || heardFrame.current === frame.key) return;
     heardFrame.current = frame.key;
-    if (frame.kind === 'play' || frame.kind === 'capture') playCardSound();
-    else if (frame.kind === 'pass' || frame.kind === 'cover') playCardSound(true);
-    else if (frame.kind === 'reveal' || frame.kind === 'challenge') playCardSound();
-    else if (frame.kind === 'hit' || frame.kind === 'double' || frame.kind === 'split'
-      || frame.kind === 'dealerReveal' || frame.kind === 'dealerHit') playCardSound();
-    else if ((frame.kind === 'deal' && visibleGame?.gameType === 'holdem') || frame.kind === 'street'
-      || frame.kind === 'showdown') playCardSound();
-    else if (frame.kind === 'fold' || frame.kind === 'check') playCardSound(true);
-    else if (frame.kind === 'eliminated' || frame.survived === false || eliminatesSeat(visibleGame, frame)) playOutSound();
+    const cue = frameCue(visibleGame, frame);
+    if (cue === 'card') playCardSound();
+    else if (cue === 'soft') playCardSound(true);
+    else if (cue === 'out') playOutSound();
   }, [presentation.frame, visibleGame]);
 
   const collapseChat = useCallback((): void => {
@@ -462,8 +401,8 @@ export function GameShell({
                 : move?.seat === seat ? move.index : undefined}
               onPick={onPickSeat && pickableSeats?.includes(seat) ? () => onPickSeat(seat) : undefined} />
           ))}
-          <FittedCentre foreground={centreForeground} responsive={visibleGame?.gameType === 'redpoints' && !presentation.frame}
-            wide={visibleGame?.gameType === 'sevens' || visibleGame?.gameType === 'napoleon'}
+          <FittedCentre foreground={centreForeground} responsive={Boolean(centreLayout?.responsive) && !presentation.frame}
+            wide={Boolean(centreLayout?.wide)}
             style={move ? FLY_FROM[tablePosition(move.seat, bottomSeat, tableSeats)] : undefined}>
             {presentation.frame && visibleGame && !centreVisible ? (
               <GamePresentation key={presentation.frame.key} frame={presentation.frame}

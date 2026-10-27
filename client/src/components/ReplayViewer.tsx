@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { GameSeat, MatchReplay, MatchSummary, PublicAccount } from '@shared/types';
-import { GAME_TABLES } from '../games/game-tables';
+import { gameUi } from '../games/ui-registry';
 import { ReplayModeContext } from '../games/replay-mode';
 import type { ReplayMode } from '../games/replay-mode';
 import { seatLabel } from '../games/seat-names';
@@ -86,7 +86,7 @@ export function ReplayViewer({
   const mode = useMemo((): ReplayMode => ({
     chat, before: shown.animate && shown.step > 0 ? timeline.snapshot(shown.step - 1) : null,
   }), [chat, shown, timeline]);
-  const Table = GAME_TABLES[replay.gameType];
+  const Table = gameUi(replay.gameType).table;
   return <div className={styles.viewer} data-replay-viewer={replay.gameType}>
     <TableStoreScope stores={stores}>
       <ReplayModeContext value={mode}>
