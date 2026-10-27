@@ -142,7 +142,7 @@
 
 **寫入與復原行為**
 
-- 每個資料庫檔由一個程序獨占。重複路徑的防護只在同一程序內有效，不是跨程序的鎖。
+- 每個資料庫檔由一個程序獨占，由[擁有者鎖定檔](#單一擁有者鎖定)跨程序強制執行。
 - 兩種引擎都在寫入持久化之後才完成 Promise；失敗時資料與記憶體都維持原狀。細節見[儲存引擎](#儲存引擎)。
 - runtime 與已完成的對局在回覆與廣播前一起 commit。
 - [`AnyGameState`](../shared/src/types/game.ts) 中以對局為範圍的 `autoPlaySeats` 會保存自願的電腦代打，不改變真人玩家的身分。舊快照缺少此欄位代表關閉。切換使用和遊戲操作相同的 commit／回復流程；排程工作只從已 commit 的狀態重建，並在取回控制權時取消。
@@ -161,7 +161,7 @@
 | 每次寫入 | 驗證並序列化整份文件，寫入暫存檔、fsync、重新命名 | 一個 `BEGIN IMMEDIATE` transaction，只寫入變更的列 |
 | 寫入時的驗證 | 整份文件（runtime 錄製只檢查結構） | 只檢查要寫入的紀錄與它們的參照 |
 | 持久性 | fsync 後才完成 | WAL 搭配 `synchronous=FULL`：每次 commit 都 fsync WAL 後才完成 |
-| 附屬檔案 | 寫入中的 `.tmp` 暫存檔 | 開啟期間的 `database.sqlite-wal` 與 `-shm` |
+| 附屬檔案 | 寫入中的 `.tmp` 暫存檔；開啟期間的 `database.json.lock` | 開啟期間的 `database.sqlite-wal`、`-shm` 與 `database.sqlite.lock` |
 
 兩種引擎共用同一套帳號規則、保留規則與回放儲存區，回放封存與媒體都維持在資料庫旁的檔案。
 
@@ -196,6 +196,20 @@
 - 從不覆寫：重複的鍵、好友配對或已存在的 runtime 會以 `IMPORT_CONFLICT` 拒絕整次匯入，目標不變。
 - 寫入後比對數量、外鍵、合併後的唯一性與參照，並確認每一筆匯入的紀錄讀回時完全相同。
 - 呼叫前必須停止兩個資料庫的所有寫入者。回放封存與媒體不會複製；它們必須位在 SQLite 檔旁的 `replays/` 與 `media/`。
+
+### 單一擁有者鎖定
+
+[`owner-lock.ts`](../server/src/database/owner-lock.ts)：伺服器、匯入，以及維護工具的套用模式，都會在資料庫旁建立 `<資料庫檔名>.lock`（例如 `database.sqlite.lock`），兩種引擎相同。
+
+- 鎖定檔權限為 `0600`，一次完整寫入，記錄 PID、主機名稱、Linux boot ID、程序啟動時間與隨機 token。
+- 擁有者仍在執行時，第二個程序立即以 `DATABASE_IN_USE` 失敗並顯示擁有者的 PID；不會等待，也不會動到鎖定檔。
+- 正常關閉（`SIGTERM`、`SIGINT`、repository `close()`）會移除鎖定檔，而且只移除 token 仍屬於自己的檔案。
+- 只有能證明擁有者已結束時，才會自動取代過時的鎖定檔並記錄 log：boot ID 不同（重新開機前留下的）、該 PID 不存在，或該 PID 的啟動時間不同（PID 已被重複使用）。因此 `MemoryMax` 終止或斷電後，systemd 仍能自動重新啟動。
+- 其他主機留下的、或內容無法解析的鎖定檔永遠不會自動移除。手動處理：
+  1. 停止服務，並確認沒有程序使用資料庫：`systemctl status card-together.service`、`ps -p <PID> -o pid,lstart,cmd`（PID 取自鎖定檔）。
+  2. 確認後才移除，例如 `sudo -u card-together rm /var/lib/card-together/database.sqlite.lock`。
+- SQLite 不使用 exclusive locking mode，所以服務執行時仍可做[線上備份](deployment.md#備份)。
+- 鎖定檔只約束本專案的程式；直接用 `sqlite3` 或編輯器開啟檔案不受限制。
 
 ### 回放封存
 

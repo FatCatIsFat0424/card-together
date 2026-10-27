@@ -38,7 +38,7 @@ export interface RepositoryAdapter {
    * function runs. `beforeFailing` observes the moment each commit would have happened.
    */
   failCommits(path: string, error: Error, beforeFailing?: () => void): () => void;
-  /** Directory entries other than the database and its journal files. */
+  /** Directory entries other than the database, its journal files, and its owner lock. */
   otherFiles(directory: string): Promise<string[]>;
 }
 
@@ -69,7 +69,7 @@ export const JSON_ADAPTER: RepositoryAdapter = {
     });
     return () => { vi.mocked(rename).mockImplementation(original); };
   },
-  otherFiles: async (directory) => (await readdir(directory)).filter((name) => name !== 'database.json'),
+  otherFiles: async (directory) => (await readdir(directory)).filter((name) => name !== 'database.json' && name !== 'database.json.lock'),
 };
 
 export const SQLITE_ADAPTER: RepositoryAdapter = {
@@ -118,7 +118,7 @@ export const SQLITE_ADAPTER: RepositoryAdapter = {
     return () => { spy.mockRestore(); };
   },
   otherFiles: async (directory) => (await readdir(directory))
-    .filter((name) => !/^database\.sqlite(?:-wal|-shm|-journal)?$/.test(name)),
+    .filter((name) => !/^database\.sqlite(?:-wal|-shm|-journal|\.lock)?$/.test(name)),
 };
 
 export const REPOSITORY_ADAPTERS: readonly RepositoryAdapter[] = [JSON_ADAPTER, SQLITE_ADAPTER];

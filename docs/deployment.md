@@ -41,7 +41,7 @@ bash deploy/deploy.sh
 - 以 `card-together` 身分執行，應用程式檔案唯讀、狀態目錄可寫入、自動重新啟動，並有 60 秒的正常停止時間。
 - 限制裝置、kernel 介面、cgroup、namespace、personality 與 address family（Unix、IPv4、IPv6、netlink）。`MemoryDenyWriteExecute` 保持關閉，因為 V8 的 JIT 需要。
 - `MemoryHigh=768M` 會限流，`MemoryMax=1G` 會終止並重新啟動記憶體洩漏的後端，以保護共用主機。若 journal 顯示正常負載下發生記憶體終止，兩者都要調高。
-- **只能有一個後端擁有 JSON 資料庫。**
+- **只能有一個後端擁有資料庫。** 第二個程序會因[擁有者鎖定檔](storage.md#單一擁有者鎖定)而啟動失敗。
 
 ## 執行環境設定
 

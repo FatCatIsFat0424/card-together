@@ -17,6 +17,8 @@ import { retainMatches } from './match-retention';
 import { backupMatchHistoryState } from './state-backup';
 import type { RuntimeSnapshot } from '../runtime/types';
 import { createDatabaseIndexes, friendshipPair } from './indexes';
+import type { DatabaseLock } from './owner-lock';
+import { acquireDatabaseLock } from './owner-lock';
 import { dailyStatus } from './daily-rewards';
 import { achievementsStatus } from './achievements';
 import {
@@ -39,7 +41,7 @@ export type JsonRepositoryOptions = RepositoryOptions;
 type CopiedTable = 'accounts' | 'sessions' | 'friendships' | 'matches' | 'emojis' | 'directMessages' | 'messageReads'
   | 'friendNotifications';
 
-/** A single server process owns a JSON file. A SQL adapter can implement Repository unchanged. */
+/** A single server process owns a JSON file, enforced across processes by its lock file. */
 export async function createJsonRepository(filePath: string, options: JsonRepositoryOptions = {}): Promise<Repository> {
   const now = options.now ?? Date.now;
   const path = resolve(filePath);
@@ -50,8 +52,11 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       'This database is already open. Close its repository before opening another.',
     );
   activePaths.add(pathKey);
+  let lock: DatabaseLock | undefined;
   try {
     await mkdir(dirname(path), { recursive: true });
+    lock = await acquireDatabaseLock(path);
+    const ownerLock: DatabaseLock = lock;
     let document: DatabaseDocument;
     let queue: Promise<void> = Promise.resolve();
     let closed = false;
@@ -587,10 +592,12 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
         }
         closed = true;
         await queue;
+        await ownerLock.release();
         activePaths.delete(pathKey);
       },
     };
   } catch (error) {
+    await lock?.release();
     activePaths.delete(pathKey);
     throw error;
   }

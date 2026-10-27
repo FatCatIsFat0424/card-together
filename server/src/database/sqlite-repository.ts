@@ -17,6 +17,8 @@ import { dailyStatus } from './daily-rewards';
 import { friendshipPair } from './indexes';
 import { dropUnplayableRecordings, isMatchReplay } from './match-replay';
 import { retainMatches } from './match-retention';
+import type { DatabaseLock } from './owner-lock';
+import { acquireDatabaseLock } from './owner-lock';
 import { createReplayStore } from './replay-store';
 import type { AccountRecord, DirectMessageRecord, MatchRecord, NewMatchRecord, Repository, RepositoryOptions } from './repository';
 import { MAX_MATCHES_PER_ACCOUNT, publicAccount, repositoryError, SOCIAL_HISTORY_RETENTION_MS } from './repository';
@@ -92,14 +94,17 @@ function upsertMatches(sql: Statements, matches: readonly MatchRecord[]): string
   return [...watched].filter((id) => sql('SELECT has_replay FROM matches WHERE id = ?').get(id)?.has_replay !== 1);
 }
 
-/** A single server process owns the database file, like the JSON adapter. */
+/** A single server process owns the database file, enforced across processes by its lock file. */
 export async function createSqliteRepository(filePath: string, options: RepositoryOptions = {}): Promise<Repository> {
   const now = options.now ?? Date.now;
   const path = resolve(filePath);
   const release = claimSqlitePath(path);
+  let lock: DatabaseLock | undefined;
   let database: DatabaseSync | undefined;
   try {
     await mkdir(dirname(path), { recursive: true });
+    lock = await acquireDatabaseLock(path);
+    const ownerLock: DatabaseLock = lock;
     ({ database } = await openSqliteDatabase(path));
     const db: DatabaseSync = database;
     const sql = createStatements(db);
@@ -568,11 +573,13 @@ export async function createSqliteRepository(filePath: string, options: Reposito
         await queue;
         disconnected = true;
         db.close();
+        await ownerLock.release();
         release();
       },
     };
   } catch (error) {
     database?.close();
+    await lock?.release();
     release();
     throw error;
   }

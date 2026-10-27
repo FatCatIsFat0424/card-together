@@ -4,6 +4,8 @@ import { isDeepStrictEqual } from 'node:util';
 import type { DatabaseSync } from 'node:sqlite';
 import { dropUnplayableRecordings } from './match-replay';
 import { migrateDocument } from './migrations';
+import type { DatabaseLock } from './owner-lock';
+import { acquireDatabaseLock } from './owner-lock';
 import { repositoryError } from './repository';
 import type { DatabaseDocument } from './schema';
 import { validateDocument } from './schema';
@@ -63,8 +65,10 @@ export async function importJsonDocument(source: unknown, databasePath: string):
   const path = resolve(databasePath);
   await mkdir(dirname(path), { recursive: true });
   const release = claimSqlitePath(path);
+  let lock: DatabaseLock | undefined;
   let database: DatabaseSync | undefined;
   try {
+    lock = await acquireDatabaseLock(path);
     ({ database } = await openSqliteDatabase(path));
     const db: DatabaseSync = database;
     const sql = createStatements(db);
@@ -92,6 +96,7 @@ export async function importJsonDocument(source: unknown, databasePath: string):
     });
   } finally {
     database?.close();
+    await lock?.release();
     release();
   }
 }

@@ -153,7 +153,7 @@ const activePaths = new Set<string>();
 
 /**
  * Reserves a database path for this process until the returned release function runs. Like the JSON
- * adapter, this guards only within one process; one server process owns each database file.
+ * adapter, this guards within one process; the lock file (`owner-lock.ts`) guards across processes.
  */
 export function claimSqlitePath(path: string): () => void {
   const key = process.platform === 'win32' ? path.toLowerCase() : path;
