@@ -37,7 +37,8 @@ function counts(sql: Statements): ImportCounts {
   })) as ImportCounts;
 }
 
-function sourceCounts(document: DatabaseDocument): ImportCounts {
+/** Records per collection, keyed like the import result. */
+export function documentCounts(document: DatabaseDocument): ImportCounts {
   return {
     accounts: document.accounts.length, sessions: document.sessions.length, friendships: document.friendships.length,
     matches: document.matches.length, emojis: document.emojis.length, directMessages: document.directMessages.length,
@@ -83,7 +84,7 @@ export async function importJsonDocument(source: unknown, databasePath: string):
         throw error;
       }
       const after = counts(sql);
-      const imported = sourceCounts(document);
+      const imported = documentCounts(document);
       for (const name of Object.keys(COUNTED_TABLES) as (keyof ImportCounts)[]) {
         if (after[name] - before[name] !== imported[name]) throw new Error(`Imported ${name} count does not match the source.`);
       }

@@ -17,6 +17,7 @@
     "test:watch": "cd server && npx vitest",
     "cleanup:match-history": "cd server && tsx src/database/cleanup-match-history-cli.ts",
     "admin:reset-password": "cd server && tsx src/auth/reset-password-cli.ts",
+    "admin:migrate-sqlite": "cd server && tsx src/database/migrate-sqlite-cli.ts",
     "bench:database": "cd server && npx tsx tests/database/repository-benchmark.ts",
     "bench:socket": "cd server && npx tsx benchmarks/socket-benchmark.ts",
     "bench:arrange": "cd server && npx tsx benchmarks/arrange-benchmark.ts",

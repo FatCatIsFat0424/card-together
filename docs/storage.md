@@ -190,7 +190,7 @@
 
 **從 JSON 匯入**
 
-[`importJsonDocument`](../server/src/database/sqlite-import.ts) 是程式庫函式，尚未提供 CLI：
+[`importJsonDocument`](../server/src/database/sqlite-import.ts) 由[遷移工具](#遷移到-sqlite)呼叫：
 
 - 先執行 JSON migration 與完整驗證，再於一個 transaction 中寫入所有 collection，保留 ID、雜湊、到期時間、媒體參照與順序。
 - 從不覆寫：重複的鍵、好友配對或已存在的 runtime 會以 `IMPORT_CONFLICT` 拒絕整次匯入，目標不變。
@@ -287,6 +287,22 @@ npm run cleanup:match-history -- /absolute/path/database.json --apply --writers-
 - 試跑會回報全域已過期的紀錄與剩下的紀錄，不寫入任何檔案。其他真人仍需要的共用對局會繼續保存；每個帳號仍最多看到 100 場。
 - 套用時會建立私人的 `.match-history-<UUID>.bak/` 目錄，內含資料庫（`database.json`，或以 `VACUUM INTO` 複製的 `database.sqlite`），以及旁邊 `media/` 與 `replays/`（若存在）的副本。備份失敗時資料庫不會被動到。接著以原子操作替換 `matches`（SQLite 為一個 transaction），並只移除過期的回放檔。
 - 帳號、工作階段、獎勵、好友、訊息、媒體與可恢復的 runtime 都不變。第二次執行不會有任何效果。重新啟動後，確認登入、歷史紀錄、回放與遊戲恢復都正常。
+
+### 遷移到 SQLite
+
+[`migrate-sqlite.ts`](../server/src/database/migrate-sqlite.ts) 把 JSON 資料庫匯入同一目錄中的新 SQLite 檔。正式環境的步驟：[SQLite 切換](#sqlite-切換)。
+
+```sh
+npm run admin:migrate-sqlite -- /absolute/path/database.json /absolute/path/database.sqlite
+npm run admin:migrate-sqlite -- /absolute/path/database.json /absolute/path/database.sqlite --apply --writers-stopped
+```
+
+- 來源必須是 `.json`，目標必須是 `.sqlite`，兩者位在同一個目錄，讓 `media/` 與 `replays/` 繼續共用。
+- 來源：一般檔案，沒有符號連結或硬連結，由執行者擁有，並通過 JSON migration 與完整驗證。來源從不被修改；套用時持有它的鎖定檔，匯入後再確認位元組沒有變化。
+- 目標：不存在，或是執行者擁有的空白一般檔案；旁邊不能有 `-wal`、`-shm`、`-journal` 或 `.lock`。工具從不合併進既有的資料庫。
+- 預覽回報各 collection 的筆數、是否有 runtime、會被丟棄的錄製、來源大小、可用空間與所需空間（來源的 5 倍：SQLite 約為 JSON 的 2.2 倍，而且單一匯入 transaction 會先寫入 WAL）。空間不足時套用會拒絕。
+- 套用時以[匯入函式](#儲存引擎)在一個 transaction 中寫入，接著執行 `PRAGMA quick_check`、`foreign_key_check`，比對每個 collection 的筆數，並逐筆確認讀回內容相同。輸出的 `verification.tables` 列出每個資料表的列數。
+- 任何失敗都會刪除部分寫入的目標與它的日誌檔（原本是空白檔則清回空白），JSON 維持不變。
 
 ## SQLite 切換
 

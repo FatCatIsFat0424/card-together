@@ -1,6 +1,6 @@
 import { constants } from 'node:fs';
 import type { Stats } from 'node:fs';
-import { open, realpath } from 'node:fs/promises';
+import { lstat, open, realpath, statfs } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import type { DatabaseEngine } from '../config';
@@ -48,5 +48,33 @@ export function statDatabaseFile(path: string): Promise<Stats> {
 export function assertDatabaseOwner(stats: Stats, action: string): void {
   if (typeof process.getuid === 'function' && stats.uid !== process.getuid()) {
     throw new Error(`Run ${action} as the database file owner to preserve service access.`);
+  }
+}
+
+function hasCode(error: unknown, code: string): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
+}
+
+/** Whether a path exists, without following a final symbolic link. */
+export async function pathExists(path: string): Promise<boolean> {
+  try {
+    await lstat(path);
+    return true;
+  } catch (error) {
+    if (hasCode(error, 'ENOENT')) return false;
+    throw error;
+  }
+}
+
+/** Bytes an unprivileged process may still write in the directory's file system. */
+export async function availableBytes(directory: string): Promise<number> {
+  const stats = await statfs(directory);
+  return stats.bavail * stats.bsize;
+}
+
+/** Refuses to start a write that the target file system cannot hold. */
+export function assertSpace(available: number, required: number, directory: string): void {
+  if (available < required) {
+    throw new Error(`Not enough free space in ${directory}: ${required} bytes needed, ${available} available. Nothing was written.`);
   }
 }
