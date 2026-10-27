@@ -91,11 +91,11 @@ python3 -B -m unittest discover -s deploy/tests
 | --- | --- |
 | 規則與 bot | 精確的合法動作、輸入不被修改、依接收者的隱私；650 手排牌與 163 場固定種子的完整對局；加權選擇 |
 | 登入憑證 | 真實的雜湊與驗證、長度上限、對不存在的使用者執行假雜湊、2 個執行中／16 個等待中的佇列、在金鑰推導前套用速率限制 |
-| 持久化與金幣 | 延後 commit、回復與重試、不提早廣播、過時的工作、重新開啟與重播、同時進行的購買／獎勵版本、原子批次。Repository、auth、social、金幣、回放與 runtime 持久化套件透過 [`tests/helpers/repository-adapters.ts`](../server/tests/helpers/repository-adapters.ts) 在 JSON 與 SQLite 上各執行一次；SQLite 另測 pragma、transaction 回復、匯入往返與衝突 |
+| 持久化與金幣 | 延後 commit、回復與重試、不提早廣播、過時的工作、重新開啟與重播、同時進行的購買／獎勵版本、原子批次。Repository、auth、social、金幣、回放與 runtime 持久化套件透過 [`tests/helpers/repository-adapters.ts`](../server/tests/helpers/repository-adapters.ts) 在 JSON 與 SQLite 上各執行一次；SQLite 另測 pragma、transaction 回復、匯入往返與衝突。擁有者鎖定檔以真實的伺服器程序測試第二個程序失敗、正常關閉釋放，以及 SIGKILL 後的過時鎖定；遷移、匯出、快照與維護工具在兩種引擎上測試往返、拒絕條件與失敗時的清理 |
 | 媒體 | 真實的動態 GIF 上傳與提供的位元組；寫入、重新命名與擁有權失敗；配額；佇列復原 |
 | 匯入與建置產物 | 各匯入工具的輸入、輸出、旗標、鎖與安全性；真實的 GIF 與動態 WebP 壓縮，包括無法壓進上限的輸入；失效處理；拒絕符號連結與 FIFO；SIGKILL 後復原；建置雜湊與 base 驗證 |
 | 用戶端 | 帳號 generation 競態、API 失敗與 401 epoch、canvas 裁切與清理、零尺寸幾何、雙語規則、好友排序 |
-| 部署 | 備份鎖與擁有權、受保護的安裝與發布、精確 SHA 的 CI 把關、開發／worktree 隔離、持久的自動部署停止、目錄防護、失敗與訊號復原、timer 順序、Nginx 解析、migration 與設定 |
+| 部署 | 備份鎖與擁有權、受保護的安裝與發布、精確 SHA 的 CI 把關、開發／worktree 隔離、持久的自動部署停止、目錄防護、失敗與訊號復原、timer 順序、Nginx 解析、migration 與設定、unit 的寫入範圍。SQLite 線上備份與還原以真實的 Node.js 工具執行；`PATH` 上（或 `CARD_TOGETHER_NODE`）沒有 Node.js 24 與已安裝的相依套件時，這些測試會被略過 |
 
 - 伺服器啟動時會讀取產生的[表情符號目錄](media.md#站方表情符號)；測試會注入目錄，而不需要站長的原始檔。
 - 部署測試使用暫存路徑與允許清單內的指令替身；正式環境的進入點保留權限檢查。
