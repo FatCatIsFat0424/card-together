@@ -1,7 +1,7 @@
-.button { display: inline-flex; align-items: center; gap: var(--spacing-sm); padding: 6px 10px;
-  color: var(--text-primary); background: var(--bg-card); border: 1px solid var(--border-color);
-  border-radius: var(--radius-md); font-size: var(--text-sm); font-variant-numeric: tabular-nums; cursor: pointer; }
-.button:hover { background: var(--bg-card-hover); }
+.button { display: inline-flex; align-items: center; gap: var(--spacing-sm); padding: 6px 12px;
+  color: var(--text-primary); background: var(--surface-2);
+  border-radius: var(--radius-pill); font-size: var(--text-sm); font-variant-numeric: tabular-nums; cursor: pointer; }
+.button:hover { background: var(--surface-3); }
 .panel { display: flex; width: 100%; min-height: 44px; padding: 8px 10px; }
 .label { font-size: var(--text-xs); color: var(--text-secondary); }
 .code { margin-left: auto; font-family: var(--font-mono); letter-spacing: .05em; }

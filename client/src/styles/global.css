@@ -336,7 +336,7 @@ body {
 
 /* Short landscape: the top bar becomes a left rail so pages keep the full screen height. */
 @media (max-height: 500px) and (min-width: 600px) {
-  :root { --topbar-height: 0px; --rail-width: 56px; }
+  :root { --topbar-height: 0px; --rail-width: 48px; }
   #root { flex-direction: row; }
   #root > header { flex: 0 0 var(--rail-width); }
   /* Dialogs keep a thin margin so short screens show more of their scrolling content. */

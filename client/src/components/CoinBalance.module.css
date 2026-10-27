@@ -1,0 +1,14 @@
+.coins {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-gold);
+  font-size: var(--text-base);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-height: var(--hit-size);
+  padding: 0 var(--space-1);
+}
+
+.coins > svg { font-size: var(--icon-size); }

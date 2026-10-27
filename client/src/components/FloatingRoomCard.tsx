@@ -11,6 +11,8 @@ import { Avatar } from './Avatar';
 import { AppIcon } from './AppIcon';
 import styles from './FloatingRoomCard.module.css';
 
+const LANDSCAPE_QUERY = '(max-height: 500px) and (min-width: 600px)';
+
 /** Uses the existing room snapshots; navigating away never creates another room connection. */
 export function FloatingRoomCard(): ReactNode {
   const { pathname } = useLocation();
@@ -20,7 +22,9 @@ export function FloatingRoomCard(): ReactNode {
   const roomCode = useRoomStore((state) => state.currentRoomCode);
   const room = useRoomStore((state) => state.roomInfo);
   const phase = useGameStore((state) => state.phase);
-  const [corner, setCorner] = useState<'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'>('bottom-left');
+  // Short landscape screens start at the right edge so the lobby's room details stay uncovered.
+  const [corner, setCorner] = useState<'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'>(
+    () => typeof window !== 'undefined' && window.matchMedia?.(LANDSCAPE_QUERY).matches ? 'bottom-right' : 'bottom-left');
   const [offset, setOffset] = useState<{ x: number; y: number } | null>(null);
   const drag = useRef<{ id: number; x: number; y: number; rect: DOMRect; dx: number; dy: number; moved: boolean } | null>(null);
   const suppressClick = useRef(false);
@@ -89,7 +93,7 @@ export function FloatingRoomCard(): ReactNode {
       onPointerDown={(event) => {
         suppressClick.current = false;
         if (!event.isPrimary || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey
-          || !window.matchMedia('(max-height: 500px) and (min-width: 600px)').matches) return;
+          || !window.matchMedia(LANDSCAPE_QUERY).matches) return;
         const rect = event.currentTarget.parentElement!.getBoundingClientRect();
         drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, rect, dx: 0, dy: 0, moved: false };
         event.currentTarget.setPointerCapture(event.pointerId);

@@ -4,8 +4,7 @@
   position: relative;
   display: inline-flex;
   gap: 2px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
+  background: var(--surface-1);
   border-radius: var(--radius-pill);
   padding: 2px;
 }
@@ -31,13 +30,21 @@
 
 .themeBtn {
   position: relative;
-  padding: 4px 10px;
+  min-height: var(--control-height-small);
+  padding: 4px 12px;
   font-size: var(--text-xs);
   font-weight: 600;
   white-space: nowrap;
   border-radius: var(--radius-pill);
   color: var(--text-muted);
   transition: color var(--transition-normal);
+}
+
+/* The pill is 28px tall; the pseudo-element extends the hit area to 40px. */
+.themeBtn::after {
+  content: '';
+  position: absolute;
+  inset: calc((var(--control-height-small) - var(--hit-size)) / 2) 0;
 }
 
 .themeBtn:hover {

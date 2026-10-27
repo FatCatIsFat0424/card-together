@@ -126,6 +126,23 @@ describe('topbar navigation', () => {
     expect(otherButton).not.toContain('aria-current');
   });
 
+  it.each([['/', '大廳'], ['/friends', '好友'], ['/shop', '商店']])('marks the %s rail shortcut as the current page', (path, label) => {
+    const html = render(path);
+    const current = html.match(new RegExp(`<a[^>]*aria-label="${label}"[^>]*>`))?.[0];
+    expect(current).toContain('aria-current="page"');
+    for (const other of ['大廳', '好友', '商店'].filter((name) => name !== label)) {
+      expect(html.match(new RegExp(`<a[^>]*aria-label="${other}"[^>]*>`))?.[0]).not.toContain('aria-current');
+    }
+  });
+
+  it('keeps the menu, notification and music triggers that the rail layout reaches through the menu', () => {
+    const html = render('/shop');
+    expect(html).toContain('aria-label="選單"');
+    expect(html).toContain('data-popover-trigger="menu"');
+    expect(html).toContain('data-popover-trigger="notifications"');
+    expect(html).toContain('data-popover-trigger="music"');
+  });
+
   it('leaves the message and achievement buttons unpressed elsewhere', () => {
     const html = render('/shop');
     expect(html.match(/<a[^>]*aria-label="私人訊息"[^>]*>/)?.[0]).not.toContain('aria-current');
