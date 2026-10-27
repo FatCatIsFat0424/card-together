@@ -90,18 +90,22 @@ describe.each(SERIES)('%s campaign cosmetics', (series) => {
       expect(particles.length).toBeLessThanOrEqual(40);
       expect(new Set(particles.map((item) => item.kind)).size).toBeGreaterThanOrEqual(2);
       const { context, operations } = drawingContext();
+      // Collect violations and assert once: per-frame expect calls made this test time out on a busy host.
+      const violations: string[] = [];
       for (let frame = 0; frame < 180; frame++) {
         for (const item of particles) {
           const age = frame / 60 - item.delay;
           if (age < 0 || age >= item.life) continue;
           design.step(item, 1 / 60);
           if (frame % 30 === 0) design.draw(context, item, 0.8, age);
-          expect(Math.abs(item.x)).toBeLessThan(600);
-          expect(Math.abs(item.y)).toBeLessThan(600);
-          expect(item.trail?.length ?? 0).toBeLessThanOrEqual(32);
-          for (const value of Object.values(item)) if (typeof value === 'number') expect(Number.isFinite(value)).toBe(true);
+          if (Math.abs(item.x) >= 600 || Math.abs(item.y) >= 600) violations.push(`frame ${frame}: out of bounds`);
+          if ((item.trail?.length ?? 0) > 32) violations.push(`frame ${frame}: trail too long`);
+          for (const [key, value] of Object.entries(item)) {
+            if (typeof value === 'number' && !Number.isFinite(value)) violations.push(`frame ${frame}: ${key} is not finite`);
+          }
         }
       }
+      expect(violations).toEqual([]);
       const still = design.wreath();
       const before = structuredClone(still);
       expect(still.length).toBeLessThanOrEqual(12);
