@@ -1,5 +1,6 @@
 import { GAME_TYPES } from '@shared/constants';
 import type { GameType } from '@shared/types';
+import type { DatabaseEngine } from '../../src/config';
 
 export interface RoomPlan {
   readonly gameType: GameType;
@@ -42,6 +43,8 @@ export function planRooms(clients: number, rooms: number, gameTypes: readonly Ga
 }
 
 export interface LoadOptions {
+  /** Storage under test; a SQLite run imports the generated JSON document first. */
+  readonly engine: DatabaseEngine;
   readonly durationSeconds: number;
   readonly clients: number;
   readonly rooms: number;
@@ -62,7 +65,7 @@ export interface LoadOptions {
 }
 
 export const DEFAULT_LOAD_OPTIONS: LoadOptions = {
-  durationSeconds: 600, clients: 100, rooms: 20, accounts: 2_000, friendsPerAccount: 20, matchesPerAccount: 100,
+  engine: 'json', durationSeconds: 600, clients: 100, rooms: 20, accounts: 2_000, friendsPerAccount: 20, matchesPerAccount: 100,
   messagesPerAccount: 5, replays: 1_000, templatesPerGame: 3, thinkMs: [1_000, 3_000], chatEveryMs: [20_000, 60_000],
   lobbyEveryMs: [5_000, 15_000], socialEveryMs: [30_000, 90_000], reconnectEveryMs: 30_000, ackTimeoutMs: 30_000,
   writePhaseSamples: 5, output: null,
@@ -77,7 +80,8 @@ const INTEGER_FLAGS = {
   '--ack-timeout-ms': 'ackTimeoutMs',
 } as const satisfies Record<string, keyof LoadOptions>;
 
-const USAGE = `Options: --smoke (${SMOKE_DURATION_SECONDS} s), --output <file>, ${Object.keys(INTEGER_FLAGS).join(', ')} <integer>.`;
+const USAGE = `Options: --smoke (${SMOKE_DURATION_SECONDS} s), --engine json|sqlite, --output <file>, `
+  + `${Object.keys(INTEGER_FLAGS).join(', ')} <integer>.`;
 
 /** Parses `bench:load` flags; `--smoke` only shortens the duration unless `--duration` is also given. */
 export function parseLoadOptions(args: readonly string[]): LoadOptions {
@@ -91,6 +95,11 @@ export function parseLoadOptions(args: readonly string[]): LoadOptions {
     if (value === undefined) throw new Error(`${flag} needs a value. ${USAGE}`);
     index += 1;
     if (flag === '--output') { options.output = value; continue; }
+    if (flag === '--engine') {
+      if (value !== 'json' && value !== 'sqlite') throw new Error('--engine must be json or sqlite.');
+      options.engine = value;
+      continue;
+    }
     if (!Object.hasOwn(INTEGER_FLAGS, flag)) throw new Error(`Unknown option ${flag}. ${USAGE}`);
     const parsed = Number(value);
     if (!Number.isSafeInteger(parsed) || parsed < 0) throw new Error(`${flag} must be a non-negative integer.`);

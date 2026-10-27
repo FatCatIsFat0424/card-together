@@ -1,12 +1,15 @@
 import { randomBytes, randomUUID } from 'node:crypto';
-import { writeFile } from 'node:fs/promises';
+import { stat, unlink, writeFile } from 'node:fs/promises';
+import { performance } from 'node:perf_hooks';
 import { join } from 'node:path';
 import { getPresentationEndsAt } from '@shared/game-presentation';
 import { GAME_TYPES, SHOP_ITEMS } from '@shared/constants';
 import type { AnyGameState, GameSeat, GameType, MatchReplay, MatchResult, PlayerInfo, ShopItemId } from '@shared/types';
 import { SESSION_COOKIE_NAME, tokenHash } from '../../src/auth/auth-service';
 import { getBotAction } from '../../src/bots/bot-decisions';
+import type { DatabaseEngine } from '../../src/config';
 import { CURRENT_SCHEMA_VERSION } from '../../src/database/migrations';
+import { importJsonDocument } from '../../src/database/sqlite-import';
 import { createReplayStore } from '../../src/database/replay-store';
 import type {
   AccountRecord, DirectMessageRecord, FriendshipRecord, MatchRecord, SessionRecord,
@@ -71,7 +74,11 @@ export interface SyntheticDatabaseSummary {
   readonly directMessages: number;
   readonly replayArchives: number;
   readonly rewardedGameIds: number;
+  /** The generated JSON document; the same as `databaseBytes` for the JSON engine. */
+  readonly jsonBytes: number;
   readonly databaseBytes: number;
+  /** Milliseconds to import the JSON document into SQLite; null for the JSON engine. */
+  readonly importMs: number | null;
   readonly templateMatches: number;
 }
 
@@ -260,24 +267,36 @@ export function buildSyntheticDocument(options: SyntheticDatabaseOptions, templa
   return { document, loadAccounts, archives };
 }
 
-/** Writes the database and its replay archives; the server opens them with the production repository. */
-export async function writeSyntheticDatabase(directory: string, options: SyntheticDatabaseOptions): Promise<{
+/**
+ * Writes the database and its replay archives; the server opens them with the production repository.
+ * For SQLite the JSON document is imported with the production import, then removed.
+ */
+export async function writeSyntheticDatabase(directory: string, options: SyntheticDatabaseOptions, engine: DatabaseEngine = 'json'): Promise<{
   databasePath: string; loadAccounts: LoadAccount[]; summary: SyntheticDatabaseSummary;
 }> {
   const templates = options.matchesPerAccount > 0 ? playTemplateMatches(options.templatesPerGame) : [];
   const { document, loadAccounts, archives } = buildSyntheticDocument(options, templates);
-  const databasePath = join(directory, 'database.json');
+  const jsonPath = join(directory, 'database.json');
   const text = `${JSON.stringify(document)}\n`;
-  await writeFile(databasePath, text, { mode: 0o600 });
+  await writeFile(jsonPath, text, { mode: 0o600 });
   const store = createReplayStore(join(directory, 'replays'));
   for (const [matchId, replay] of archives) await store.write(matchId, replay);
+  let databasePath = jsonPath;
+  let importMs: number | null = null;
+  if (engine === 'sqlite') {
+    databasePath = join(directory, 'database.sqlite');
+    const started = performance.now();
+    await importJsonDocument(JSON.parse(text), databasePath);
+    importMs = Math.round(performance.now() - started);
+    await unlink(jsonPath);
+  }
   return {
     databasePath, loadAccounts,
     summary: {
       accounts: document.accounts.length, sessions: document.sessions.length, friendships: document.friendships.length,
       matches: document.matches.length, directMessages: document.directMessages.length, replayArchives: archives.size,
-      rewardedGameIds: document.rewardedGameIds?.length ?? 0, databaseBytes: Buffer.byteLength(text),
-      templateMatches: templates.length,
+      rewardedGameIds: document.rewardedGameIds?.length ?? 0, jsonBytes: Buffer.byteLength(text),
+      databaseBytes: (await stat(databasePath)).size, importMs, templateMatches: templates.length,
     },
   };
 }

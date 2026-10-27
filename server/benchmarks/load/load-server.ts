@@ -1,13 +1,19 @@
-import { statSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { open, readFile, rename, unlink } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { monitorEventLoopDelay, performance } from 'node:perf_hooks';
 import { createApplication } from '../../src/app';
-import { createJsonRepository } from '../../src/database/json-repository';
+import { parseDatabaseConfig } from '../../src/config';
+import { openRepository } from '../../src/database/open-repository';
 import type { Repository } from '../../src/database/repository';
 import { isObject, validateDocument } from '../../src/database/schema';
+import { inTransaction, openSqliteDatabase } from '../../src/database/sqlite-schema';
+import { createStatements, serializeRuntime, writeRuntimeRows } from '../../src/database/sqlite-store';
+import type { RuntimeSnapshot } from '../../src/runtime/types';
 import { isRuntimeSnapshot } from '../../src/runtime/validate';
-import type { ControlMessage, ServerMessage, ServerStats, WritePhases, WriteSample } from './load-metrics';
+import type {
+  ControlMessage, JsonWritePhases, ServerMessage, ServerStats, SqliteWritePhases, WritePhases, WriteSample,
+} from './load-metrics';
 import { loopDelay, summarizeWrites } from './load-metrics';
 
 // The server under test for `bench:load`: production composition plus passive instrumentation,
@@ -44,7 +50,7 @@ function median(values: readonly number[]): number {
  * Times each step of a full-document write on the database as it was when the load stopped,
  * after the measured window and without other work running.
  */
-async function measureWritePhases(databasePath: string, text: string, samples: number): Promise<WritePhases> {
+async function measureWritePhases(databasePath: string, text: string, samples: number): Promise<JsonWritePhases> {
   const document: unknown = JSON.parse(text);
   const runtime = isObject(document) ? document.runtime : null;
   const target = `${databasePath}.phases`;
@@ -80,10 +86,72 @@ async function measureWritePhases(databasePath: string, text: string, samples: n
     await unlink(target).catch(() => undefined);
   }
   return {
-    databaseBytes: Buffer.byteLength(text), runtimeBytes: Buffer.byteLength(JSON.stringify(runtime)), samples,
+    engine: 'json', databaseBytes: Buffer.byteLength(text), runtimeBytes: Buffer.byteLength(JSON.stringify(runtime)), samples,
     validateMs: median(timings.validate), validateRuntimeMs: median(timings.validateRuntime),
     stringifyMs: median(timings.stringify), encodeMs: median(timings.encode), writeSyncRenameMs: median(timings.write),
   };
+}
+
+/**
+ * Times a SQLite runtime write on the runtime as it was when the load stopped: validation,
+ * serialization, and synced transactions that rewrite the largest game or the whole runtime.
+ */
+async function measureSqlitePhases(databasePath: string, runtime: RuntimeSnapshot | null, samples: number): Promise<SqliteWritePhases> {
+  const snapshot = runtime ?? { players: [], rooms: [], games: [], chat: [] };
+  const { database } = await openSqliteDatabase(databasePath);
+  const timings = { validate: [] as number[], serialize: [] as number[], oneGame: [] as number[], whole: [] as number[] };
+  try {
+    const sql = createStatements(database);
+    const rows = serializeRuntime(snapshot);
+    const largest = [...rows.games].sort(([, first], [, second]) => second.length - first.length)[0]?.[0];
+    for (let sample = 0; sample < samples; sample += 1) {
+      let started = performance.now();
+      if (!isRuntimeSnapshot(snapshot, { applyReplaySteps: false })) throw new Error('Invalid runtime.');
+      timings.validate.push(performance.now() - started);
+      started = performance.now();
+      serializeRuntime(snapshot);
+      timings.serialize.push(performance.now() - started);
+      // One changed game row, as after a move. SQLite skips rewriting identical content, so the row
+      // gets trailing JSON whitespace; the whole-runtime step below restores it.
+      const games = new Map(rows.games);
+      if (largest !== undefined) games.set(largest, `${rows.games.get(largest)} `);
+      started = performance.now();
+      inTransaction(database, () => writeRuntimeRows(sql, { ...rows, games }, rows));
+      timings.oneGame.push(performance.now() - started);
+      started = performance.now();
+      inTransaction(database, () => {
+        for (const table of ['runtime_players', 'runtime_rooms', 'runtime_games', 'runtime_chat', 'runtime_state']) {
+          sql(`DELETE FROM ${table}`).run();
+        }
+        writeRuntimeRows(sql, rows, null);
+      });
+      timings.whole.push(performance.now() - started);
+    }
+  } finally {
+    database.close();
+  }
+  return {
+    engine: 'sqlite', databaseBytes: storedBytes(databasePath), runtimeBytes: Buffer.byteLength(JSON.stringify(snapshot)), samples,
+    validateRuntimeMs: median(timings.validate), serializeRuntimeMs: median(timings.serialize),
+    commitOneGameMs: median(timings.oneGame), commitWholeRuntimeMs: median(timings.whole),
+  };
+}
+
+/** The database file plus a SQLite write-ahead log, if any. */
+function storedBytes(databasePath: string): number {
+  let bytes = statSync(databasePath).size;
+  try {
+    bytes += statSync(`${databasePath}-wal`).size;
+  } catch {
+    // JSON databases and checkpointed SQLite databases have no log.
+  }
+  return bytes;
+}
+
+/** Bytes this process has sent to storage so far (Linux), counted when pages are dirtied. */
+function storageBytesWritten(): number {
+  const match = /^write_bytes: (\d+)$/m.exec(readFileSync('/proc/self/io', 'utf8'));
+  return match ? Number(match[1]) : 0;
 }
 
 async function main(): Promise<void> {
@@ -92,7 +160,8 @@ async function main(): Promise<void> {
   const port = Number(requiredEnvironment('LOAD_PORT'));
   if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error('LOAD_PORT must be a TCP port.');
 
-  const repository = await createJsonRepository(databasePath);
+  const config = parseDatabaseConfig(requiredEnvironment('LOAD_DATABASE_ENGINE'), databasePath, dirname(databasePath));
+  const repository = await openRepository(config);
   let writes: WriteSample[] = [];
   let lastWriteEnd = 0;
   const instrumented = repository as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>;
@@ -100,6 +169,7 @@ async function main(): Promise<void> {
     const original = instrumented[method].bind(repository);
     instrumented[method] = async (...args: unknown[]): Promise<unknown> => {
       const started = performance.now();
+      const storageBefore = config.engine === 'sqlite' ? storageBytesWritten() : 0;
       try {
         return await original(...args);
       } finally {
@@ -107,8 +177,9 @@ async function main(): Promise<void> {
         // Repository writes run one at a time in call order, so service starts when the previous one ends.
         const serviceStart = Math.max(started, lastWriteEnd);
         lastWriteEnd = ended;
-        // A synchronous stat sees this write's file: the next queued write cannot rename before this continuation.
-        const bytes = statSync(databasePath).size;
+        // JSON: a synchronous stat sees this write's file, since the next queued write cannot rename before this
+        // continuation. SQLite: bytes sent to storage during the call, which may include a queued write's commit.
+        const bytes = config.engine === 'sqlite' ? storageBytesWritten() - storageBefore : statSync(databasePath).size;
         writes.push({ method, durationMs: ended - started, serviceMs: ended - serviceStart, bytes });
       }
     };
@@ -126,6 +197,7 @@ async function main(): Promise<void> {
   let memorySampler: ReturnType<typeof setInterval> | undefined;
   const memory = { rssMax: 0, heapMax: 0 };
   let endOfLoad: Promise<string> | undefined;
+  let endOfLoadRuntime: Promise<RuntimeSnapshot | null> | undefined;
   function sampleMemory(): NodeJS.MemoryUsage {
     const usage = process.memoryUsage();
     memory.rssMax = Math.max(memory.rssMax, usage.rss);
@@ -144,7 +216,7 @@ async function main(): Promise<void> {
       memory: { rssMaxBytes: memory.rssMax, rssFinalBytes: usage.rss, heapUsedMaxBytes: memory.heapMax,
         heapUsedFinalBytes: usage.heapUsed },
       writes: summarizeWrites(writes, windowMs),
-      databaseBytes: statSync(databasePath).size,
+      databaseBytes: storedBytes(databasePath),
     };
   }
 
@@ -163,11 +235,13 @@ async function main(): Promise<void> {
       histogram.disable();
       clearInterval(memorySampler);
       send({ type: 'stats', stats: stats() });
-      // Keep the document as the load left it, before clients disconnect and rooms empty.
-      endOfLoad = readFile(databasePath, 'utf8');
+      // Keep the state as the load left it, before clients disconnect and rooms empty.
+      if (config.engine === 'sqlite') endOfLoadRuntime = repository.loadRuntime();
+      else endOfLoad = readFile(databasePath, 'utf8');
     } else if (message.type === 'phases') {
-      void application.close().then(async () => measureWritePhases(databasePath,
-        await (endOfLoad ?? readFile(databasePath, 'utf8')), message.samples))
+      void application.close().then(async (): Promise<WritePhases> => config.engine === 'sqlite'
+        ? measureSqlitePhases(databasePath, await (endOfLoadRuntime ?? null), message.samples)
+        : measureWritePhases(databasePath, await (endOfLoad ?? readFile(databasePath, 'utf8')), message.samples))
         .then((phases) => send({ type: 'phases', phases }))
         .catch((error: unknown) => {
           console.error('[load-server] Write phase measurement failed:', error);

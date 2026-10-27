@@ -65,29 +65,38 @@ describe('load benchmark targets and summary', () => {
       writes, databaseBytes: 2 * MIB,
     };
     const summary = formatSummary({
-      durationMs: 10_000, drainMs: 500, clients: 100, rooms: 20, databaseBytes: 2 * MIB, server,
+      engine: 'json', durationMs: 10_000, drainMs: 500, clients: 100, rooms: 20, databaseBytes: 2 * MIB, server,
       targets: evaluateTargets({ ...passing, ackP95Ms: 200 }),
       acks: {
         'chat:send': { ...summarize([5, 6]), failures: 0 },
         'game:playCard': { ...summarize([40, 300]), failures: 1 },
         'GET /api/friends': { ...summarize([]), failures: 0 },
       },
-      phases: { databaseBytes: 2 * MIB, runtimeBytes: MIB / 2, samples: 3, validateMs: 10, validateRuntimeMs: 6, stringifyMs: 8,
+      phases: { engine: 'json', databaseBytes: 2 * MIB, runtimeBytes: MIB / 2, samples: 3, validateMs: 10, validateRuntimeMs: 6, stringifyMs: 8,
         encodeMs: 1, writeSyncRenameMs: 4 },
       host: { loadAverage: [1, 0.5, 0.25], cpuUtilization: 0.125 },
     });
     const lines = summary.split('\n');
-    expect(lines[0]).toBe('Load benchmark: 10 s window (0.5 s drain), 100 clients, 20 rooms, database 2 MiB');
+    expect(lines[0]).toBe('Load benchmark: 10 s window (0.5 s drain), 100 clients, 20 rooms, json database 2 MiB');
     expect(lines[1]).toBe('Host: load average 1.00 0.50 0.25, CPU 12.5% of all cores during the window');
     expect(lines).toContain('Ack latency p95         <= 150 ms  200 ms   FAIL');
     const events = lines.filter((line) => /^(game|chat|GET)/.test(line));
     expect(events.map((line) => line.split(/\s+/)[0])).toEqual(['game:playCard', 'chat:send', 'GET']);
     expect(events[0]).toBe('game:playCard     2      1     40      300     300     300');
     expect(events[2]).toBe('GET /api/friends  0      0     -       -       -       -');
-    expect(summary).toContain('Writes: 1 (0.1/s), service p50/p95/p99 20/20/20 ms, queued p95 10 ms, mean 2 MiB, busy 0.2%');
+    expect(summary).toContain('Writes: 1 (0.1/s), service p50/p95/p99 20/20/20 ms, queued p95 10 ms, mean 2048 KiB, busy 0.2%');
     expect(summary).toContain('One write at 2 MiB without load: validate 10 ms (runtime 6 ms for 0.5 MiB), stringify 8 ms, '
       + 'encode 1 ms, write+fsync+rename 4 ms');
     expect(summary.endsWith('\n')).toBe(true);
+    const sqlite = formatSummary({
+      engine: 'sqlite', durationMs: 10_000, drainMs: 500, clients: 100, rooms: 20, databaseBytes: 2 * MIB, server,
+      targets: evaluateTargets(passing), acks: {}, host: { loadAverage: [1, 0.5, 0.25], cpuUtilization: 0.125 },
+      phases: { engine: 'sqlite', databaseBytes: 2 * MIB, runtimeBytes: MIB / 2, samples: 3, validateRuntimeMs: 3,
+        serializeRuntimeMs: 2, commitOneGameMs: 1.5, commitWholeRuntimeMs: 9 },
+    });
+    expect(sqlite.split('\n')[0]).toContain('sqlite database 2 MiB');
+    expect(sqlite).toContain('One runtime write at 2 MiB SQLite without load: validate 3 ms for 0.5 MiB, serialize 2 ms, '
+      + 'commit one game 1.5 ms, commit whole runtime 9 ms');
   });
 });
 
@@ -118,5 +127,7 @@ describe('load benchmark plan and options', () => {
     expect(() => parseLoadOptions(['--accounts', '10'])).toThrow('--accounts must be at least --clients.');
     expect(() => parseLoadOptions(['--unknown', '1'])).toThrow('Unknown option --unknown.');
     expect(() => parseLoadOptions(['--duration'])).toThrow('--duration needs a value.');
+    expect(parseLoadOptions(['--engine', 'sqlite', '--smoke'])).toMatchObject({ engine: 'sqlite', durationSeconds: SMOKE_DURATION_SECONDS });
+    expect(() => parseLoadOptions(['--engine', 'postgres'])).toThrow('--engine must be json or sqlite.');
   });
 });

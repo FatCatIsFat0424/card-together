@@ -1,3 +1,5 @@
+import type { DatabaseEngine } from '../../src/config';
+
 // Pure helpers and report contracts shared by the load benchmark and its server process.
 
 export interface LatencySummary {
@@ -100,7 +102,8 @@ export interface MemorySummary {
   readonly heapUsedFinalBytes: number;
 }
 
-export interface WritePhases {
+export interface JsonWritePhases {
+  readonly engine: 'json';
   readonly databaseBytes: number;
   /** The runtime snapshot (players, rooms, games, chat) inside the document. */
   readonly runtimeBytes: number;
@@ -113,6 +116,23 @@ export interface WritePhases {
   readonly encodeMs: number;
   readonly writeSyncRenameMs: number;
 }
+
+/** Median milliseconds of each step of a runtime write on SQLite, measured without load. */
+export interface SqliteWritePhases {
+  readonly engine: 'sqlite';
+  readonly databaseBytes: number;
+  readonly runtimeBytes: number;
+  readonly samples: number;
+  readonly validateRuntimeMs: number;
+  /** Serializing every runtime row to find the changed ones. */
+  readonly serializeRuntimeMs: number;
+  /** A transaction that rewrites the largest game row, including the synced commit. */
+  readonly commitOneGameMs: number;
+  /** A transaction that rewrites every runtime row, including the synced commit. */
+  readonly commitWholeRuntimeMs: number;
+}
+
+export type WritePhases = JsonWritePhases | SqliteWritePhases;
 
 /** What the server process reports for the measurement window. */
 export interface ServerStats {
@@ -181,6 +201,7 @@ function table(header: readonly string[], rows: readonly (readonly string[])[]):
 }
 
 export interface SummaryInputs {
+  readonly engine: DatabaseEngine;
   /** The whole measured window, including the drain of requests sent before the load stopped. */
   readonly durationMs: number;
   readonly drainMs: number;
@@ -200,7 +221,7 @@ export function formatSummary(inputs: SummaryInputs): string {
   const lines = [
     `Load benchmark: ${round(inputs.durationMs / 1000)} s window (${round(inputs.drainMs / 1000)} s drain), `
       + `${inputs.clients} clients, ${inputs.rooms} rooms, `
-      + `database ${round(inputs.databaseBytes / MIB)} MiB`,
+      + `${inputs.engine} database ${round(inputs.databaseBytes / MIB)} MiB`,
     `Host: load average ${inputs.host.loadAverage.map((value) => value.toFixed(2)).join(' ')}, `
       + `CPU ${round(inputs.host.cpuUtilization * 100)}% of all cores during the window`,
     '',
@@ -214,17 +235,21 @@ export function formatSummary(inputs: SummaryInputs): string {
     '',
     `Writes: ${server.writes.count} (${server.writes.perSecond}/s), service p50/p95/p99 `
       + `${cell(server.writes.serviceMs.p50)}/${cell(server.writes.serviceMs.p95)}/${cell(server.writes.serviceMs.p99)} ms, `
-      + `queued p95 ${cell(server.writes.queueWaitMs.p95)} ms, mean ${round((server.writes.bytes.mean ?? 0) / MIB)} MiB, `
+      + `queued p95 ${cell(server.writes.queueWaitMs.p95)} ms, mean ${round((server.writes.bytes.mean ?? 0) / 1024)} KiB, `
       + `busy ${round(server.writes.busyFraction * 100)}%`,
     `Event loop delay p50/p99/max: ${server.eventLoopDelayMs.p50}/${server.eventLoopDelayMs.p99}/${server.eventLoopDelayMs.max} ms`,
     `Server CPU: ${round(server.cpu.coreUtilization * 100)}% of one core; RSS max ${round(server.memory.rssMaxBytes / MIB)} MiB, `
       + `heap max ${round(server.memory.heapUsedMaxBytes / MIB)} MiB`,
   ];
-  if (inputs.phases) {
-    const { phases } = inputs;
+  const { phases } = inputs;
+  if (phases?.engine === 'json') {
     lines.push(`One write at ${round(phases.databaseBytes / MIB)} MiB without load: validate ${phases.validateMs} ms `
       + `(runtime ${phases.validateRuntimeMs} ms for ${round(phases.runtimeBytes / MIB)} MiB), stringify ${phases.stringifyMs} ms, `
       + `encode ${phases.encodeMs} ms, write+fsync+rename ${phases.writeSyncRenameMs} ms`);
+  } else if (phases?.engine === 'sqlite') {
+    lines.push(`One runtime write at ${round(phases.databaseBytes / MIB)} MiB SQLite without load: validate `
+      + `${phases.validateRuntimeMs} ms for ${round(phases.runtimeBytes / MIB)} MiB, serialize ${phases.serializeRuntimeMs} ms, `
+      + `commit one game ${phases.commitOneGameMs} ms, commit whole runtime ${phases.commitWholeRuntimeMs} ms`);
   }
   return `${lines.join('\n')}\n`;
 }

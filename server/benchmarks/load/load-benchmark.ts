@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { monitorEventLoopDelay, performance } from 'node:perf_hooks';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
+import type { DatabaseEngine } from '../../src/config';
 import { TEST_ORIGIN } from '../../tests/performance/socket-harness';
 import { createWorkload } from './load-clients';
 import type { Recorder } from './load-clients';
@@ -67,10 +68,11 @@ interface ServerProcess {
   stop(): Promise<void>;
 }
 
-async function startServer(serverDirectory: string, databasePath: string, port: number): Promise<ServerProcess> {
+async function startServer(serverDirectory: string, engine: DatabaseEngine, databasePath: string, port: number): Promise<ServerProcess> {
   const child = spawn(process.execPath, ['--import', 'tsx', fileURLToPath(new URL('./load-server.ts', import.meta.url))], {
     cwd: serverDirectory,
-    env: { ...process.env, NODE_ENV: 'production', LOAD_DATABASE_PATH: databasePath, LOAD_PORT: String(port), LOAD_ORIGIN: TEST_ORIGIN },
+    env: { ...process.env, NODE_ENV: 'production', LOAD_DATABASE_ENGINE: engine, LOAD_DATABASE_PATH: databasePath,
+      LOAD_PORT: String(port), LOAD_ORIGIN: TEST_ORIGIN },
     stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   });
   const server: ServerProcess = {
@@ -161,14 +163,15 @@ async function main(): Promise<void> {
       accounts: options.accounts, loadAccounts: options.clients, friendsPerAccount: options.friendsPerAccount,
       matchesPerAccount: options.matchesPerAccount, messagesPerAccount: options.messagesPerAccount, replays: options.replays,
       templatesPerGame: options.templatesPerGame,
-    });
+    }, options.engine);
     const generateMs = performance.now() - started;
-    log(`Synthetic database: ${(database.summary.databaseBytes / 1024 / 1024).toFixed(1)} MiB, `
-      + `${database.summary.matches} matches, ${database.summary.replayArchives} replays (${Math.round(generateMs)} ms)`);
+    log(`Synthetic ${options.engine} database: ${(database.summary.databaseBytes / 1024 / 1024).toFixed(1)} MiB, `
+      + `${database.summary.matches} matches, ${database.summary.replayArchives} replays (${Math.round(generateMs)} ms`
+      + `${database.summary.importMs === null ? '' : `, import ${database.summary.importMs} ms`})`);
 
     const port = await freePort();
     started = performance.now();
-    server = await startServer(serverDirectory, database.databasePath, port);
+    server = await startServer(serverDirectory, options.engine, database.databasePath, port);
     const serverStartMs = performance.now() - started;
     log(`Server ready on 127.0.0.1:${port} (pid ${server.child.pid}, ${Math.round(serverStartMs)} ms)`);
 
@@ -267,7 +270,8 @@ async function main(): Promise<void> {
     if (options.output) await writeFile(options.output, json);
     process.stdout.write(json);
     process.stderr.write(`\n${formatSummary({
-      durationMs: windowMs, drainMs, clients: options.clients, rooms: plan.rooms.length, databaseBytes: stats.databaseBytes,
+      engine: options.engine, durationMs: windowMs, drainMs, clients: options.clients, rooms: plan.rooms.length,
+      databaseBytes: stats.databaseBytes,
       targets, acks: ackSummaries(window, () => true), server: stats, phases,
       host: { loadAverage: host.loadAverageAfter, cpuUtilization: host.cpuUtilization },
     })}`);
