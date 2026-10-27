@@ -1,3 +1,5 @@
+import type { MusicRoute, MusicRouteFactory } from './music-route';
+
 const DEFAULT_LOAD_TIMEOUT_MS = 15_000;
 
 export interface FileMusicTrack {
@@ -9,13 +11,16 @@ export interface FileMusicTrack {
 export interface FileMusicPlayerOptions {
   readonly createAudio?: () => HTMLAudioElement;
   readonly loadTimeoutMs?: number;
+  /** Routes the shared element through gain nodes; without it, or when it yields null, element volume is used. */
+  readonly createRoute?: MusicRouteFactory;
 }
 
 export interface FileMusicPlayer {
   play: (track: FileMusicTrack) => Promise<void>;
   pause: () => void;
   seekBy: (seconds: number) => void;
-  setVolume: (volume: number) => void;
+  /** `volume` is the music channel level and `master` the overall level, both 0-1. */
+  setVolume: (volume: number, master?: number) => void;
   dispose: () => void;
 }
 
@@ -52,6 +57,9 @@ export function createFileMusicPlayer(
   let pending: PlayRequest | null = null;
   let pendingSeek: number | null = null;
   let volume = 0.5;
+  let master = 1;
+  /** Set once the shared element feeds Web Audio; an element can be captured only once. */
+  let route: MusicRoute | null = null;
   let wantsPlayback = false;
   let playing = false;
   let ended = false;
@@ -110,6 +118,23 @@ export function createFileMusicPlayer(
     }
   };
 
+  /** Applies the channel levels through gain nodes when routed, or on the element otherwise. */
+  const applyVolume = (): void => {
+    if (route) {
+      route.setLevels(master, volume);
+      if (media) media.volume = 1;
+    } else if (media) {
+      media.volume = master * volume;
+    }
+  };
+
+  /** Captures the element once Web Audio can run; until then, volume stays on the element. */
+  const attachRoute = (): void => {
+    if (route || !media || !options.createRoute) return;
+    route = options.createRoute(media);
+    if (route) applyVolume();
+  };
+
   const initialize = (track: FileMusicTrack): HTMLAudioElement => {
     releaseAudio(false);
     pendingSeek = null;
@@ -121,7 +146,8 @@ export function createFileMusicPlayer(
     failed = false;
     ended = false;
     element.preload = 'metadata';
-    element.volume = volume;
+    attachRoute();
+    applyVolume();
     const active = (): boolean => !disposed && audio === element && source === token;
     const listeners: ReadonlyArray<readonly [string, () => void]> = [
       ['playing', (): void => {
@@ -221,10 +247,12 @@ export function createFileMusicPlayer(
       pendingSeek = Math.max(0, position + seconds);
       applySeek();
     },
-    setVolume(value: number): void {
-      if (disposed || !Number.isFinite(value)) return;
+    setVolume(value: number, overall = master): void {
+      if (disposed || !Number.isFinite(value) || !Number.isFinite(overall)) return;
       volume = Math.max(0, Math.min(1, value));
-      if (audio) audio.volume = volume;
+      master = Math.max(0, Math.min(1, overall));
+      attachRoute();
+      applyVolume();
     },
     dispose(): void {
       if (disposed) return;
@@ -232,6 +260,8 @@ export function createFileMusicPlayer(
       wantsPlayback = false;
       finish();
       releaseAudio(true);
+      route?.dispose();
+      route = null;
       media = null;
       selected = null;
       pendingSeek = null;

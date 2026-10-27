@@ -10,6 +10,8 @@ import { accountTranslations } from './account-i18n';
 import type { AccountTranslationKey } from './account-i18n';
 import { playerTranslations } from './player-i18n';
 import type { PlayerTranslationKey } from './player-i18n';
+import { audioTranslations } from './audio-i18n';
+import type { AudioTranslationKey } from './audio-i18n';
 import { voiceTranslations } from './voice-i18n';
 import type { VoiceTranslationKey } from './voice-i18n';
 import { uiTranslations } from './ui-i18n';
@@ -40,7 +42,7 @@ import type { AchievementsTranslationKey } from './achievements-i18n';
 export type Locale = 'zh-TW' | 'en';
 
 type TranslationKeys = Record<
-  ReplayTranslationKey | RoomErrorTranslationKey | SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | VoiceTranslationKey | UiTranslationKey
+  ReplayTranslationKey | RoomErrorTranslationKey | SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | AudioTranslationKey | VoiceTranslationKey | UiTranslationKey
     | EmojiTranslationKey | GameTranslationKey | SevensTranslationKey | ChinesePokerTranslationKey
     | LiarsDeckTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey, string
 > & {
@@ -123,6 +125,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...accountTranslations['zh-TW'],
     ...replayTranslations['zh-TW'],
     ...playerTranslations['zh-TW'],
+    ...audioTranslations['zh-TW'],
     ...voiceTranslations['zh-TW'],
     ...uiTranslations['zh-TW'],
     ...emojiTranslations['zh-TW'],
@@ -205,6 +208,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...accountTranslations.en,
     ...replayTranslations.en,
     ...playerTranslations.en,
+    ...audioTranslations.en,
     ...voiceTranslations.en,
     ...uiTranslations.en,
     ...emojiTranslations.en,

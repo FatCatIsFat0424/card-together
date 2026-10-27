@@ -80,7 +80,7 @@ describe('provided music store', () => {
     const store = await state();
     expect(store.getState()).toMatchObject({ providedTrackId: 'owner-two', mode: 'shuffle', volume: 0.5 });
     await store.getState().play();
-    expect(mocks.file.setVolume).toHaveBeenLastCalledWith(0.5);
+    expect(mocks.file.setVolume).toHaveBeenLastCalledWith(0.5, 1);
     expect(mocks.file.play).toHaveBeenLastCalledWith({
       id: 'owner-two', title: 'Two', file: '/provided-music/two.mp3',
     });
@@ -270,7 +270,7 @@ describe('provided music store', () => {
     });
     expect(mocks.createFile).not.toHaveBeenCalled();
     await store.getState().play();
-    expect(mocks.file.setVolume).toHaveBeenLastCalledWith(0.6);
+    expect(mocks.file.setVolume).toHaveBeenLastCalledWith(0.6, 1);
   });
 
   it('should fall back safely when saved preferences are invalid', async () => {
@@ -406,13 +406,13 @@ describe('provided music store', () => {
     store.getState().setVolume(-1);
     expect(store.getState().volume).toBe(0);
     await store.getState().play();
-    expect(mocks.file.setVolume).toHaveBeenLastCalledWith(0);
+    expect(mocks.file.setVolume).toHaveBeenLastCalledWith(0, 1);
     store.getState().setVolume(2);
     store.getState().setVolume(NaN);
     store.getState().setVolume(Infinity);
     store.getState().setMode('invalid' as 'sequential');
     expect(store.getState()).toMatchObject({ volume: 1, mode: 'shuffle' });
-    expect(mocks.file.setVolume).toHaveBeenLastCalledWith(1);
+    expect(mocks.file.setVolume).toHaveBeenLastCalledWith(1, 1);
     expect(storage.get('card-together.music.volume')).toBe('1');
   });
 

@@ -5,7 +5,10 @@ import ArrowDownward from '@mui/icons-material/ArrowDownward';
 import ArrowUpward from '@mui/icons-material/ArrowUpward';
 import AssignmentOutlined from '@mui/icons-material/AssignmentOutlined';
 import ChatBubbleOutline from '@mui/icons-material/ChatBubbleOutlined';
+import CallEnd from '@mui/icons-material/CallEnd';
 import Check from '@mui/icons-material/Check';
+import Headset from '@mui/icons-material/Headset';
+import HeadsetOff from '@mui/icons-material/HeadsetOff';
 import HomeOutlined from '@mui/icons-material/HomeOutlined';
 import PeopleOutline from '@mui/icons-material/PeopleOutlined';
 import CalendarMonthOutlined from '@mui/icons-material/CalendarMonthOutlined';
@@ -28,6 +31,7 @@ import Logout from '@mui/icons-material/Logout';
 import Menu from '@mui/icons-material/Menu';
 import MenuBookOutlined from '@mui/icons-material/MenuBookOutlined';
 import MicNone from '@mui/icons-material/MicNone';
+import MicOff from '@mui/icons-material/MicOff';
 import MusicNote from '@mui/icons-material/MusicNote';
 import NotificationsNone from '@mui/icons-material/NotificationsNone';
 import Pause from '@mui/icons-material/Pause';
@@ -45,6 +49,8 @@ import SportsBar from '@mui/icons-material/SportsBar';
 import StorefrontOutlined from '@mui/icons-material/StorefrontOutlined';
 import TimerOutlined from '@mui/icons-material/TimerOutlined';
 import UnfoldMore from '@mui/icons-material/UnfoldMore';
+import VolumeOff from '@mui/icons-material/VolumeOff';
+import VolumeUp from '@mui/icons-material/VolumeUp';
 import WarningAmber from '@mui/icons-material/WarningAmber';
 import styles from './AppIcon.module.css';
 
@@ -66,6 +72,8 @@ const ICONS = {
   rules: MenuBookOutlined, settings: SettingsOutlined,
   beer: SportsBar, timer: TimerOutlined, sort: UnfoldMore, warning: WarningAmber,
   emoji: SentimentSatisfiedOutlined,
+  hangUp: CallEnd, headset: Headset, headsetOff: HeadsetOff, microphoneOff: MicOff,
+  volume: VolumeUp, volumeOff: VolumeOff,
 } as const;
 
 export type AppIconName = keyof typeof ICONS;

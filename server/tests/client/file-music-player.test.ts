@@ -97,6 +97,42 @@ describe('file music player', (): void => {
     player.dispose();
   });
 
+  it('should apply master and music levels to the element when no route is available', async () => {
+    const { player, elements } = setup();
+    await player.play(FIRST_TRACK);
+    player.setVolume(0.5, 0.5);
+    expect(elements[0].volume).toBe(0.25);
+    player.setVolume(0.5);
+    expect(elements[0].volume).toBe(0.25);
+    player.dispose();
+  });
+
+  it('should hand volume to gain nodes once the element is routed', async () => {
+    const route = { setLevels: vi.fn(), dispose: vi.fn() };
+    const createRoute = vi.fn()
+      .mockReturnValueOnce(null)
+      .mockReturnValue(route);
+    const elements: MockAudio[] = [];
+    const player = createFileMusicPlayer(vi.fn(), vi.fn(), vi.fn(), {
+      createAudio: () => {
+        elements.push(mockAudio());
+        return elements[0] as unknown as HTMLAudioElement;
+      },
+      createRoute,
+    });
+    await player.play(FIRST_TRACK);
+    player.setVolume(0.4, 0.5);
+    expect(createRoute).toHaveBeenCalledTimes(2);
+    expect(route.setLevels).toHaveBeenLastCalledWith(0.5, 0.4);
+    // A routed element must not also attenuate itself, or the level would apply twice.
+    expect(elements[0].volume).toBe(1);
+    player.setVolume(0.7, 1);
+    expect(route.setLevels).toHaveBeenLastCalledWith(1, 0.7);
+    expect(createRoute).toHaveBeenCalledTimes(2);
+    player.dispose();
+    expect(route.dispose).toHaveBeenCalledOnce();
+  });
+
   it('should preserve autoplay denial for the callback and rejected promise', async () => {
     const { player, elements, error } = setup();
     await player.play(FIRST_TRACK);

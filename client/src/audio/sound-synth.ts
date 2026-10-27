@@ -39,7 +39,7 @@ function createFilter(audio: AudioContext, spec: BiquadSpec): BiquadFilterNode {
   return filter;
 }
 
-function renderTone(audio: AudioContext, voice: ToneVoice, track: TrackVoice, base: number): void {
+function renderTone(audio: AudioContext, voice: ToneVoice, track: TrackVoice, base: number, output: AudioNode): void {
   const at = base + voice.at;
   const floor = voice.floor ?? 0.0001;
   const oscillator = audio.createOscillator();
@@ -66,12 +66,12 @@ function renderTone(audio: AudioContext, voice: ToneVoice, track: TrackVoice, ba
   } else {
     oscillator.connect(gain);
   }
-  gain.connect(audio.destination);
+  gain.connect(output);
   oscillator.start(at);
   oscillator.stop(at + voice.decay + (voice.tail ?? 0));
 }
 
-function renderNoise(audio: AudioContext, voice: NoiseVoice, track: TrackVoice, base: number): void {
+function renderNoise(audio: AudioContext, voice: NoiseVoice, track: TrackVoice, base: number, output: AudioNode): void {
   const at = base + voice.at;
   const buffer = audio.createBuffer(1, Math.ceil(audio.sampleRate * voice.length), audio.sampleRate);
   const data = buffer.getChannelData(0);
@@ -89,18 +89,19 @@ function renderNoise(audio: AudioContext, voice: NoiseVoice, track: TrackVoice, 
   gain.gain.value = voice.level;
   source.connect(filter);
   filter.connect(gain);
-  gain.connect(audio.destination);
+  gain.connect(output);
   source.start(at);
 }
 
 /**
- * Schedules every voice of a cue. `offset` seconds after the context's current time is the cue's start. Callers
- * own error handling so a failed cue can dispose of its own context.
+ * Schedules every voice of a cue into `output`, normally the context's effects bus. `offset` seconds after the
+ * context's current time is the cue's start. Callers own error handling so a failed cue can dispose of its own
+ * context.
  */
-export function renderCue(audio: AudioContext, cue: Cue, track: TrackVoice, offset = 0): void {
+export function renderCue(audio: AudioContext, cue: Cue, track: TrackVoice, output: AudioNode, offset = 0): void {
   const base = audio.currentTime + offset;
   for (const voice of cue) {
-    if (voice.kind === 'tone') renderTone(audio, voice, track, base);
-    else renderNoise(audio, voice, track, base);
+    if (voice.kind === 'tone') renderTone(audio, voice, track, base, output);
+    else renderNoise(audio, voice, track, base, output);
   }
 }

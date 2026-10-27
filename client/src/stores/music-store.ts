@@ -2,11 +2,14 @@ import { create } from 'zustand';
 import { AUDIO_UNLOCK_EVENTS } from '../audio/audio-unlock';
 import { createFileMusicPlayer } from '../audio/file-music-player';
 import type { FileMusicPlayer } from '../audio/file-music-player';
+import { createMusicRoute, resumeMusicRoute } from '../audio/music-route';
+import { clampVolume, parseVolume } from '../audio/mix';
 import { nextTrackIndex } from '../audio/music-playlist';
 import type { MusicMode } from '../audio/music-playlist';
 import { PROVIDED_MUSIC_TRACKS, providedMusicUrl } from '../audio/provided-music-catalog';
 import type { ProvidedMusicTrack } from '../audio/provided-music-catalog';
 import { readPreference, writePreference } from '../utils/preference-storage';
+import { currentMasterGain, useAudioSettingsStore } from './audio-settings-store';
 
 const VOLUME_KEY = 'music.volume';
 const PROVIDED_TRACK_KEY = 'music.provided.track';
@@ -48,8 +51,7 @@ let autoplayStarted = false;
 let awaitingAutoplayUnlock = false;
 
 function savedVolume(): number {
-  const value = Number(readPreference(VOLUME_KEY) ?? DEFAULT_VOLUME);
-  return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : DEFAULT_VOLUME;
+  return parseVolume(readPreference(VOLUME_KEY), DEFAULT_VOLUME);
 }
 
 function setSessionPaused(paused: boolean): void {
@@ -182,9 +184,9 @@ export const useMusicStore = create<MusicState>((set, get) => {
             if (current()) void step(1, true);
           }, (error) => {
             if (current()) fail(error);
-          });
+          }, { createRoute: createMusicRoute });
         }
-        player.setVolume(get().volume);
+        player.setVolume(get().volume, currentMasterGain());
         await player.play({ ...track, file: providedMusicUrl(track) });
       } catch (error: unknown) {
         if (request === playRequest) fail(error instanceof Error ? error : undefined);
@@ -201,9 +203,9 @@ export const useMusicStore = create<MusicState>((set, get) => {
     },
     setVolume: (value) => {
       if (!Number.isFinite(value)) return;
-      const volume = Math.max(0, Math.min(1, value));
+      const volume = clampVolume(value);
       set({ volume });
-      player?.setVolume(volume);
+      player?.setVolume(volume, currentMasterGain());
       writePreference(VOLUME_KEY, String(volume));
     },
     setGroupEnabled: (group, enabled) => {
@@ -228,12 +230,16 @@ export const useMusicStore = create<MusicState>((set, get) => {
   };
 });
 
+// The master slider moves music too; the player owns the gain nodes or element volume that apply it.
+useAudioSettingsStore.subscribe(() => player?.setVolume(useMusicStore.getState().volume, currentMasterGain()));
+
 /**
  * Autoplay unless music is switched off or the player paused earlier in this tab, and retry browser-blocked
  * playback in a trusted gesture without restarting paused music.
  */
 export function startMusicAutoplay(target: Document = document): () => void {
   const unlock = (event: Event): void => {
+    if (event.isTrusted) resumeMusicRoute();
     // Let transport buttons handle their own click, including clicks after touchend.
     if (event.composedPath().some((target) => target instanceof Element
       && target.closest('[data-music-transport]'))) return;

@@ -6,10 +6,10 @@ import { useShallow } from 'zustand/react/shallow';
 import type { MusicMode } from '../audio/music-playlist';
 import { useI18nStore } from '../stores/i18n-store';
 import { useMusicStore } from '../stores/music-store';
-import { useTurnSoundStore } from '../stores/turn-sound-store';
 import type { AppIconName } from './AppIcon';
 import { AppCheckbox } from './AppCheckbox';
 import { AppIcon } from './AppIcon';
+import { AudioSettingsButton } from './AudioSettings';
 import styles from './MusicControl.module.css';
 
 const MODE_ICONS: Record<MusicMode, AppIconName> = { 'loop-one': 'repeatOne', sequential: 'repeat', shuffle: 'shuffle' };
@@ -18,19 +18,16 @@ const TRACK_GROUPS = groupProvidedMusicTracks(PROVIDED_MUSIC_TRACKS);
 const HAS_UNGROUPED_TRACKS = TRACK_GROUPS.some((group) => group.name === undefined);
 
 export function MusicControl(): ReactNode {
-  const turnSoundEnabled = useTurnSoundStore((state) => state.enabled);
-  const setTurnSoundEnabled = useTurnSoundStore((state) => state.setEnabled);
   const { t } = useI18nStore();
   const {
-    providedTrackId, playing, busy, error, volume, mode, disabledGroups,
-    toggle, play, next, prev, setMode, setVolume, setGroupEnabled,
+    providedTrackId, playing, busy, error, mode, disabledGroups,
+    toggle, play, next, prev, setMode, setGroupEnabled,
   } = useMusicStore(
     useShallow((state) => ({
       providedTrackId: state.providedTrackId,
       playing: state.playing,
       busy: state.busy,
       error: state.error,
-      volume: state.volume,
       mode: state.mode,
       disabledGroups: state.disabledGroups,
       toggle: state.toggle,
@@ -38,7 +35,6 @@ export function MusicControl(): ReactNode {
       next: state.next,
       prev: state.prev,
       setMode: state.setMode,
-      setVolume: state.setVolume,
       setGroupEnabled: state.setGroupEnabled,
     })),
   );
@@ -82,12 +78,7 @@ export function MusicControl(): ReactNode {
         <button type="button" className={styles.control} aria-label={t(`music.${mode}`)} title={t(`music.${mode}`)}
           disabled={busy} onClick={() => setMode(NEXT_MODE[mode])}><AppIcon name={MODE_ICONS[mode]} /></button>
       </div>
-      <label htmlFor="music-volume" className={styles.volume}>
-        <span>{t('music.volume')}</span>
-        <input id="music-volume" type="range" min="0" max="100" step="1"
-          value={Math.round(volume * 100)} onChange={(event) => setVolume(Number(event.target.value) / 100)} />
-        <output htmlFor="music-volume">{Math.round(volume * 100)}%</output>
-      </label>
+      <AudioSettingsButton className={styles.audioSettings} />
       <ul className={styles.tracks} aria-label={t('music.tracks')}>
         {TRACK_GROUPS.map((group, index) => {
           if (group.name === undefined) return group.tracks.map((track) => <li key={track.id}>{renderTrack(track)}</li>);
@@ -113,14 +104,6 @@ export function MusicControl(): ReactNode {
           </li>;
         })}
       </ul>
-      <div className={styles.soundSetting}>
-        <label className={styles.soundToggle}>
-          <AppCheckbox checked={turnSoundEnabled}
-            onChange={(event) => setTurnSoundEnabled(event.target.checked)} />
-          <span>{t('music.turnSound')}</span>
-        </label>
-        <p className={styles.attributes}>{t('music.turnSoundHint')}</p>
-      </div>
       {error && <p className={styles.error} role="alert">{t('music.error')}</p>}
     </section>
   );

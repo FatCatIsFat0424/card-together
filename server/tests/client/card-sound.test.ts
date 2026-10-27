@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   disposeCardSounds, playCardSound, playOutSound, playSlashSound, playStartSound, unlockCardSounds,
 } from '../../../client/src/audio/card-sound';
+import { useAudioSettingsStore } from '../../../client/src/stores/audio-settings-store';
 import { useSoundEffectsStore } from '../../../client/src/stores/sound-effects-store';
 
 vi.mock('../../../client/src/stores/account-store', async () => {
@@ -26,6 +27,11 @@ function installAudio() {
   const node = (): FakeNode => ({ connect: vi.fn(), disconnect: vi.fn() });
   const sources: Array<ReturnType<typeof source>> = [];
   const nodes: Array<ReturnType<typeof node>> = [];
+  // The effects bus (master gain, then channel gain) is created with the first cue and lives until disposal.
+  const bus: Array<ReturnType<typeof gain>> = [];
+  function gain() {
+    return { ...node(), gain: { value: 0, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() } };
+  }
   function source(): FakeSource {
     const value = { ...node(), onended: null as (() => void) | null,
       start: vi.fn(), stop: vi.fn(), frequency: { value: 0 }, buffer: null };
@@ -38,8 +44,8 @@ function installAudio() {
     createBuffer: vi.fn((_channels: number, length: number) => ({ getChannelData: () => new Float32Array(length) })),
     createBufferSource: vi.fn(source), createOscillator: vi.fn(source),
     createGain: vi.fn(() => {
-      const value = { ...node(), gain: { value: 0, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() } };
-      nodes.push(value);
+      const value = gain();
+      (bus.length < 2 ? bus : nodes).push(value);
       return value;
     }),
     createBiquadFilter: vi.fn(() => {
@@ -50,10 +56,15 @@ function installAudio() {
   };
   const construct = vi.fn(function () { return context; });
   vi.stubGlobal('AudioContext', construct);
-  return { context, construct, sources, nodes };
+  return { context, construct, sources, nodes, bus };
 }
 
-afterEach(() => { disposeCardSounds(); vi.unstubAllGlobals(); useSoundEffectsStore.setState({ enabled: true }); });
+afterEach(() => {
+  disposeCardSounds();
+  vi.unstubAllGlobals();
+  useSoundEffectsStore.setState({ enabled: true, volume: 1 });
+  useAudioSettingsStore.setState({ masterEnabled: true, masterVolume: 1 });
+});
 
 describe('card sounds', () => {
   it('should skip locked sounds without creating audio or replaying after unlock', async () => {
@@ -131,6 +142,29 @@ describe('card sounds', () => {
     for (const source of sources) expect(source.start).toHaveBeenCalledWith(context.currentTime);
     for (const source of sources) source.onended?.();
     expect([...sources, ...nodes].every((node) => node.disconnect.mock.calls.length === 1)).toBe(true);
+  });
+
+  it('should route cues through the effects gain under the master gain and follow settings', () => {
+    const { context, sources, bus } = installAudio();
+    useSoundEffectsStore.setState({ enabled: true, volume: 0.5 });
+    useAudioSettingsStore.setState({ masterEnabled: true, masterVolume: 0.8 });
+    unlockCardSounds();
+    context.state = 'running';
+    playCardSound();
+    const [master, effects] = bus;
+    expect(sources).toHaveLength(1);
+    expect(effects.gain.value).toBe(0.5);
+    expect(master.gain.value).toBe(0.8);
+    expect(effects.connect).toHaveBeenCalledWith(master);
+    expect(master.connect).toHaveBeenCalledWith(context.destination);
+    useSoundEffectsStore.setState({ volume: 0.25 });
+    useAudioSettingsStore.setState({ masterEnabled: false });
+    expect(effects.gain.value).toBe(0.25);
+    expect(master.gain.value).toBe(0);
+    disposeCardSounds();
+    useSoundEffectsStore.setState({ volume: 1 });
+    expect(effects.gain.value).toBe(0.25);
+    expect(bus.every((node) => node.disconnect.mock.calls.length === 1)).toBe(true);
   });
 
   it('should stop pending tones on disposal and require another gesture to reopen', () => {

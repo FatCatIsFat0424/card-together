@@ -261,7 +261,7 @@ describe('synthesis', () => {
       const { context, oscillators, gains, filters } = installAudio();
       const tracker = createVoiceTracker();
       for (const cue of Object.values(allCues(pack))) {
-        renderCue(context as unknown as AudioContext, cue, tracker.track);
+        renderCue(context as unknown as AudioContext, cue, tracker.track, context.destination as unknown as AudioNode);
       }
       expect(oscillators.length).toBeGreaterThan(0);
       for (const { gain } of gains) {

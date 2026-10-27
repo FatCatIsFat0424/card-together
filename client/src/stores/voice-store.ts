@@ -12,6 +12,7 @@ import {
 } from '../voice/voice-session';
 import type { PeerPreference, VoiceClientState, VoiceSession } from '../voice/voice-session';
 import { readPreference, writePreference } from '../utils/preference-storage';
+import { currentVoiceGain, useAudioSettingsStore } from './audio-settings-store';
 
 export type { VoiceErrorCode } from '../voice/voice-session';
 
@@ -77,6 +78,9 @@ function update(state: Partial<VoiceClientState>): void {
   persist(useVoiceStore.getState());
 }
 
+// The voice channel and master sliders scale every player's playback while a session exists.
+useAudioSettingsStore.subscribe(() => session?.setOutputGain(currentVoiceGain()));
+
 function currentSession(): VoiceSession {
   if (!session) {
     const {
@@ -90,6 +94,7 @@ function currentSession(): VoiceSession {
       outputDeviceId,
       peerPrefs,
       silenced,
+      outputGain: currentVoiceGain(),
       iceServers: () => parseIceServers(import.meta.env.VITE_WEBRTC_ICE_SERVERS),
     });
   }

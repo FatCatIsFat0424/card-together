@@ -6,6 +6,7 @@ import type {
   VoiceRoomState,
   VoiceSignal,
 } from '@shared/types/voice';
+import { clampVolume, peerOutputVolume } from '../audio/mix';
 import { parseIceServers } from './ice-servers';
 
 export type VoiceErrorCode =
@@ -62,6 +63,8 @@ export interface VoiceSession {
   setPeerMuted(accountId: string, muted: boolean): void;
   setPeerVolume(accountId: string, volume: number): void;
   setSilenced(accountIds: readonly string[]): void;
+  /** Overall output gain (0-1) multiplied with every player's own volume. */
+  setOutputGain(gain: number): void;
   dispose(): void;
 }
 
@@ -195,6 +198,7 @@ export function createVoiceSession(
     outputDeviceId?: string | null;
     peerPrefs?: Record<string, PeerPreference>;
     silenced?: readonly string[];
+    outputGain?: number;
   } = {},
 ): VoiceSession {
   const initialDeafened = options.deafened ?? false;
@@ -209,6 +213,7 @@ export function createVoiceSession(
     peerPrefs: { ...options.peerPrefs },
     silenced: [...options.silenced ?? []],
   };
+  let outputGain = clampVolume(options.outputGain ?? 1);
   let inputSwitch = 0;
   let generation = 0;
   let disposed = false;
@@ -266,7 +271,7 @@ export function createVoiceSession(
     // An unknown peer stays silent while silencing applies, since it may be an observer.
     const silenced = state.silenced.length > 0 && (!accountId || state.silenced.includes(accountId));
     peer.audio.muted = state.deafened || preference.muted || silenced;
-    peer.audio.volume = preference.volume;
+    peer.audio.volume = peerOutputVolume(preference.volume, outputGain);
   }
 
   function applySink(peer: Peer): void {
@@ -825,6 +830,11 @@ export function createVoiceSession(
     },
     setPeerVolume(accountId, volume): void {
       setPeerPreference(accountId, { volume: Math.max(0, Math.min(1, volume)) });
+    },
+    setOutputGain(gain): void {
+      if (!Number.isFinite(gain)) return;
+      outputGain = clampVolume(gain);
+      for (const peer of peers.values()) applyPeerAudio(peer);
     },
     setSilenced(accountIds): void {
       if (accountIds.length === state.silenced.length && accountIds.every((id) => state.silenced.includes(id))) return;

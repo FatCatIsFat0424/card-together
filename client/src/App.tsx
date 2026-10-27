@@ -3,6 +3,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
+import { AudioSettingsDialog } from './components/AudioSettingsDialog';
 import { TopBar } from './components/TopBar';
 import { VoiceControls } from './components/VoiceControls';
 import { FloatingRoomCard } from './components/FloatingRoomCard';
@@ -119,6 +120,7 @@ export function App(): ReactNode {
     <BrowserRouter basename={APP_BASE_PATH}>
       <VoiceControls>
       <TopBar />
+      <AudioSettingsDialog />
       <FloatingRoomCard />
       {signedIn && <InviteToast />}
       {signedIn && <SocialToast />}

@@ -744,6 +744,20 @@ describe('voice session lifecycle', () => {
     });
   });
 
+  it('should multiply the overall voice output gain with each per-player volume', async () => {
+    joinResult = { success: true, peerId: 'self', state: room('self', ['remote', 'remote2']) };
+    await session.join('ABC123', 'alice');
+    session.setPeerVolume('account-remote2', 0.4);
+    session.setOutputGain(0.5);
+    expect(audios.map((audio) => audio.volume)).toEqual([0.5, 0.2]);
+    session.setOutputGain(0);
+    expect(audios.map((audio) => audio.volume)).toEqual([0, 0]);
+    session.setOutputGain(Number.NaN);
+    session.setOutputGain(7);
+    expect(audios.map((audio) => audio.volume)).toEqual([1, 0.4]);
+    expect(state.peerPrefs['account-remote2'].volume).toBe(0.4);
+  });
+
   it('should route remote audio to the chosen output only when the browser supports it', async () => {
     joinResult = { success: true, peerId: 'self', state: room('self', ['remote']) };
     await session.join('ABC123', 'alice');

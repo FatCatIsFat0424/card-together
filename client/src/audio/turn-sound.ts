@@ -1,6 +1,7 @@
 import { getActiveSoundPack } from '../cosmetics/sound-packs/active-sound-pack';
 import { notesToCue } from './sound-pack';
 import type { ToneNotes } from './sound-pack';
+import { effectsOutput, releaseEffectsBus } from './audio-bus';
 import { createVoiceTracker, renderCue } from './sound-synth';
 
 export type { ToneNotes } from './sound-pack';
@@ -39,13 +40,15 @@ export function createTurnSound(cue: TurnCue | ToneNotes = 'turn'): TurnSound {
       if (disposed || context?.state !== 'running') return;
       stop();
       try {
-        renderCue(context, typeof cue === 'string' ? getActiveSoundPack()[cue] : notesToCue(cue), voices.track);
+        renderCue(context, typeof cue === 'string' ? getActiveSoundPack()[cue] : notesToCue(cue), voices.track,
+          effectsOutput(context));
       } catch { stop(); }
     },
     stop,
     dispose: () => {
       disposed = true;
       stop();
+      if (context) releaseEffectsBus(context);
       try { void context?.close().catch(() => undefined); } catch { /* Already closed. */ }
       context = null;
     },

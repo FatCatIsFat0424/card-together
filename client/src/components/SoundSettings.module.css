@@ -1,7 +1,0 @@
-.settings { display: flex; flex-direction: column; gap: var(--spacing-lg); max-width: 36rem; }
-.list { display: flex; flex-direction: column; gap: var(--spacing-md); margin: 0; padding: 0; list-style: none; }
-.toggle { display: flex; align-items: center; gap: var(--spacing-xs); min-height: 44px; cursor: pointer; }
-.label { font-weight: 600; }
-/* Indent the hint under the label, past the checkbox. */
-.list .hint { padding-left: 42px; }
-.hint { margin: 0; font-size: var(--text-xs); color: var(--text-secondary); }

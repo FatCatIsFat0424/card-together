@@ -9,7 +9,6 @@
 .title { white-space: nowrap; font-weight: 600; color: var(--text-primary); }
 .nowPlaying { color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nowPlayingGroup { color: var(--text-muted); font-weight: 600; }
-.attributes { color: var(--text-muted); font-size: var(--text-xs); }
 .controls { display: flex; gap: var(--spacing-xs); }
 .control {
   flex: 1;
@@ -22,9 +21,6 @@
 }
 .control[aria-pressed='true'] { color: var(--color-primary); border-color: var(--color-primary); }
 .control:disabled { opacity: 0.6; cursor: wait; }
-.volume { display: flex; align-items: center; gap: var(--spacing-sm); }
-.volume input { flex: 1; min-width: 0; padding: 0; accent-color: var(--color-primary); }
-.volume output { width: 4ch; text-align: right; font-variant-numeric: tabular-nums; }
 .tracks {
   display: flex;
   flex-direction: column;
@@ -83,5 +79,4 @@
 .track[aria-current='true'] { color: var(--color-primary); font-weight: 600; background: var(--bg-card); }
 .track:disabled { cursor: wait; }
 .error { color: var(--color-danger); }
-.soundSetting { border-top: 1px solid var(--border-color); padding-top: var(--spacing-sm); }
-.soundToggle { display: flex; align-items: center; gap: var(--spacing-sm); color: var(--text-primary); }
+.audioSettings { align-self: flex-start; }

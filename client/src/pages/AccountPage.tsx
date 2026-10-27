@@ -20,7 +20,7 @@ import { EmojiLibrary } from '../components/EmojiLibrary';
 import { OpacitySlider } from '../components/OpacitySlider';
 import { AccountProfilePreview } from '../components/AccountProfilePreview';
 import { AppCheckbox } from '../components/AppCheckbox';
-import { SoundSettings } from '../components/SoundSettings';
+import { AudioSettings } from '../components/AudioSettings';
 import styles from './AccountPages.module.css';
 import editorStyles from './AccountPage.module.css';
 
@@ -377,7 +377,7 @@ export function AccountPage(): ReactNode {
       </section>
       <section id="account-panel-sound" role="tabpanel" aria-labelledby="account-tab-sound"
         className={editorStyles.managementPanel} hidden={activeTab !== 'sound'}>
-        <SoundSettings />
+        <AudioSettings showTitle={false} />
       </section>
       <section id="account-panel-password" role="tabpanel" aria-labelledby="account-tab-password"
         className={editorStyles.managementPanel} hidden={activeTab !== 'password'}>

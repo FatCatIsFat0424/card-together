@@ -1,4 +1,5 @@
 import { getActiveSoundPack } from '../cosmetics/sound-packs/active-sound-pack';
+import { effectsOutput, releaseEffectsBus } from './audio-bus';
 import { useSoundEffectsStore } from '../stores/sound-effects-store';
 import { cueDuration } from './sound-pack';
 import type { Cue, SlashTiming, SoundPack } from './sound-pack';
@@ -27,6 +28,7 @@ export function disposeCardSounds(): void {
   const audio = context;
   context = null;
   if (audio) {
+    releaseEffectsBus(audio);
     try { void audio.close().catch(() => undefined); } catch { /* Already closed. */ }
   }
 }
@@ -40,7 +42,7 @@ function play(pick: (pack: SoundPack) => Cue): void {
   const audio = context;
   if (!audio || audio.state !== 'running') return;
   try {
-    renderCue(audio, pick(getActiveSoundPack()), voices.track);
+    renderCue(audio, pick(getActiveSoundPack()), voices.track, effectsOutput(audio));
   } catch {
     disposeCardSounds();
   }
@@ -91,8 +93,9 @@ export function playSoundPackPreview(pack: SoundPack): number {
     if (context !== audio || audio.state !== 'running') return;
     try {
       stopCardSounds();
-      renderCue(audio, pack.turn, voices.track);
-      renderCue(audio, pack.card, voices.track, cardAt);
+      const output = effectsOutput(audio);
+      renderCue(audio, pack.turn, voices.track, output);
+      renderCue(audio, pack.card, voices.track, output, cardAt);
     } catch {
       disposeCardSounds();
     }
