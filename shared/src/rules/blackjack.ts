@@ -1,5 +1,5 @@
 // ─── Blackjack rules engine (pure functions, shared by client and server) ───
-// Rules: docs/games.md#blackjack
+// Rules: docs/games/cards.md#blackjack
 
 import type {
   BlackjackAction, BlackjackDealerAction, BlackjackHand, BlackjackLogEntry, BlackjackOutcome, Card, GameSeat,

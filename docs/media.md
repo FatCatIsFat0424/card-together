@@ -106,7 +106,7 @@ Avatars, seat backgrounds, table backgrounds, card backs, and emoji are uploaded
 - Personal and site stickers reuse emoji images and may look softer at their larger
   size. Shop stickers use bundled vector artwork and translated accessible names.
 - Chat works regardless of voice. Payloads: [API](api.md#socket-actions); observer
-  channels: [games](games.md#spectators-and-god-view).
+  channels: [games](games/common.md#spectators-and-god-view).
 
 ## Site-provided emoji
 
@@ -157,7 +157,7 @@ the button's green/amber dot indicates joined/joining status.
 | Refresh, multiple tabs | Requires rejoining; one tab per account |
 
 - Peer-to-peer WebRTC audio for up to twelve room members. During matches, seated
-  players do not hear observers ([games](games.md#spectators-and-god-view)).
+  players do not hear observers ([games](games/common.md#spectators-and-god-view)).
 - Socket.IO relays only validated signaling ([API](api.md#voice-signaling)).
   **Voice is never recorded or stored.**
 - Microphones need HTTPS or localhost. Permissions, autoplay, or missing devices can

@@ -171,12 +171,12 @@ Bot controls use a vertical ellipsis.
   the drag threshold starts placement; ordinary taps still open profiles or activate controls.
 - Bot identities show Easy or Hard. Waiting-room hosts edit each bot's difficulty
   beside its remove control, both 44px tall; guests see the selected difficulty. Defaults and strategy
-  behavior are documented in [games](games.md#bots).
+  behavior are documented in [games](games/common.md#bots).
   In phone landscape, each bot's top-right ellipsis opens its difficulty and remove
   controls in a floating panel, keeping the seat card compact and controls unclipped.
 - In Ninety-Nine, Blackjack, Hold'em, and Napoleon the host sees a plus cell after the last seat to
   add human seats up to eight (six for Napoleon); only the last empty extra seat can be removed. Start
-  conditions: [games](games.md#shared-room-lifecycle).
+  conditions: [games](games/common.md#shared-room-lifecycle).
 - Napoleon names every seat "Player 1"–"Player 6" in play order (seat badges show the number) instead
   of compass names and "Seat 5"; the waiting room, table, presentation, and match history agree.
   Bots are named after their current seat ("Bot 3" in Napoleon, "Bot S" elsewhere) and renamed when
@@ -404,7 +404,7 @@ remain visible.
   summon controls sit in the overlay panel to keep 44px touch targets. The secretary picker
   dashes cards the Napoleon holds or discarded and warns that they mean no secretary. The
   secretary's confirmation is stored per room and announcement in local storage, so a reload
-  shows it once. Seat labels and notices follow [Napoleon visibility](games.md#napoleon).
+  shows it once. Seat labels and notices follow [Napoleon visibility](games/cards.md#napoleon).
   The contract card includes a compact secretary-card row and two segmented side-progress
   rows during play. Counts show won point cards against each side's winning threshold
   (the bid for Napoleon, 17 minus the bid for defenders); pending totals stay unfilled.
@@ -417,7 +417,7 @@ remain visible.
   its header. Rows align player, cards, and end marks; Ninety-Nine lists one numbered row per play.
 - Actions require a ready connection; local sorting still works while reconnecting.
 
-Per-game controls: [games](games.md#card-controls).
+Per-game controls: [games](games/common.md#card-controls).
 
 ## Rules dialog
 

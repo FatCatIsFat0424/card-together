@@ -205,13 +205,13 @@ Omitted fields keep their values; invalid values return 400.
 | `game:autoPlay` | `{ enabled }` | Toggles persistent bot control of the caller's active human seat for this match; authenticated, committed before acknowledgment and broadcast |
 | `game:leaveEarly` | — | Enables auto-play and marks the caller as away for every player and spectator in one commit; turning auto-play off clears the marker |
 | `game:continue` | — | Leaves the result for the waiting room; others keep it |
-| `game:abortVote:start` / `cast` | — / `{ agree }` | Starts or votes on an abort ([rules](games.md#shared-room-lifecycle)) |
+| `game:abortVote:start` / `cast` | — / `{ agree }` | Starts or votes on an abort ([rules](games/common.md#shared-room-lifecycle)) |
 | `chat:send` | One [chat input](../shared/src/types/socket-events.ts), including `{ shopSticker }` | Text or one personal/site/shop sticker; shop sends require pack ownership |
 
 **Authority**
 
 - The server checks turn, card, and room authority and waits for the
-  [presentation deadline](architecture.md#presentation-timeline). Rules: [games](games.md).
+  [presentation deadline](architecture.md#presentation-timeline). Rules: [games](games/README.md).
 - [`GameClock`](../shared/src/types/game.ts) exposes the active seat, deadlines, reserves,
   and server time. Only the server enforces expiry.
 - `isBot` absent or false means human. `bot:<UUID>` identities cannot authenticate or
@@ -233,7 +233,7 @@ Omitted fields keep their values; invalid values return 400.
 | `social:changed` | No payload; affected accounts reload invitations, conversations, and unread counts |
 
 - Snapshots go to the actor's tabs and affected room members only. Game state is
-  recipient-filtered ([spectators](games.md#spectators-and-god-view)).
+  recipient-filtered ([spectators](games/common.md#spectators-and-god-view)).
 - Resume always includes chat history, replacing the client copy; broadcasts include it
   only when the recipient's room changed.
 - Human room joins (including creation) and departures append localized system chat

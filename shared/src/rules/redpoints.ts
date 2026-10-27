@@ -1,5 +1,5 @@
 // ─── Red Points rules engine (pure functions, shared by client and server) ───
-// Rules: docs/games.md#red-points
+// Rules: docs/games/cards.md#red-points
 
 import type { Card } from '../types';
 

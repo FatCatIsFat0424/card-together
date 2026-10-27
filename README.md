@@ -37,7 +37,7 @@ which creates the Git-ignored `server/data/database.json`.
 | [Agent instructions](AGENTS.md) | Project rules, directory map, required checks |
 | [Architecture](docs/architecture.md) | Module boundaries, state commits, timelines, clocks, bots |
 | [Interface](docs/interface.md) | Frontend layout and page behavior |
-| [Games](docs/games.md) | House rules for every game, spectators, timers, bots |
+| [Games](docs/games/README.md) | House rules for every game, spectators, timers, bots |
 | [API](docs/api.md) | HTTP, Socket, and voice signaling contracts |
 | [Storage](docs/storage.md) | Accounts, coins, JSON persistence, maintenance tools |
 | [Media](docs/media.md) | Music, uploads, emoji, chat, and voice |

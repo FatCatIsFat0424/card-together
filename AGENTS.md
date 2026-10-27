@@ -27,7 +27,7 @@ Authoritative project rule set; `CLAUDE.md` references it.
 | `scripts/` | Check runner, asset importers, and the Vite artwork-layer plugin |
 | `deploy/` | Production build, install, and operation scripts |
 | `android/` | Android APK wrapper settings and build script ([Android app](docs/android.md)) |
-| `docs/` | Authoritative guides (index in [README](README.md#documentation)) |
+| `docs/`, `docs/games/` | Authoritative guides (index in [README](README.md#documentation)); game rules split by category |
 
 ## Implementation rules
 

@@ -47,7 +47,7 @@ Every runtime mutation:
   authenticate and synchronize.
 - `getRecipientVisibleState` filters hands and legal choices per recipient. Observers
   additionally receive `observedHands` (and Blackjack `observedHole`); see
-  [spectators](games.md#spectators-and-god-view). Bots and automatic actions see only
+  [spectators](games/common.md#spectators-and-god-view). Bots and automatic actions see only
   their own filtered view.
 - Chat history is filtered per recipient.
 - Each write still validates and serializes the full JSON document. In-memory indexes,
@@ -141,7 +141,7 @@ timing. **Any duration change that can delay a saved turn needs a new timing ver
 
 ## Turn clocks
 
-Rules and per-game timeouts: [games](games.md#turn-timer). Limits:
+Rules and per-game timeouts: [games](games/common.md#turn-timer). Limits:
 [`time-control.ts`](../shared/src/time-control.ts).
 
 - Room timer settings and per-game reserves and deadlines are persisted.
@@ -163,7 +163,7 @@ Rules and per-game timeouts: [games](games.md#turn-timer). Limits:
   or deal. Blackjack betting opens after the previous settlement presentation.
 
 **Big Two forced passes** use a separate scheduler with saved per-seat deadlines; see
-[Big Two](games.md#big-two).
+[Big Two](games/cards.md#big-two).
 
 ## Bots
 
@@ -178,4 +178,4 @@ Rules and per-game timeouts: [games](games.md#turn-timer). Limits:
 - Bot matches use the same durable history and replay path as human matches; history
   statistics exclude them. See [storage and retention](storage.md#replay-archives).
 
-Strategies: [games](games.md#bots).
+Strategies: [games](games/cards.md#bot-strategies).

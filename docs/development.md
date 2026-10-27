@@ -77,7 +77,7 @@ uncommitted changes, and local-only commits do not enter its production builds.
 - **Motion:** respect reduced-motion preferences; presentation must keep its information
   and deadlines without animation.
 - **Rules text:** bilingual rules live in `client/src/game-rules-i18n.ts` and must match
-  [games](games.md) and the linked shared functions.
+  [games](games/README.md) and the linked shared functions.
 - **Preferences:** browser preferences use `card-together.*` keys. Legacy `bridge.*`
   values migrate without replacing existing keys.
 

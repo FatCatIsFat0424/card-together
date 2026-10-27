@@ -1,5 +1,5 @@
 // ─── Chinese Poker arrangement search (pure; shared by the server bot and the browser's auto arrange) ───
-// Rules: docs/games.md#chinese-poker
+// Rules: docs/games/cards.md#chinese-poker
 
 import type { Card, ChinesePokerArrangement, ChinesePokerCategory, ChinesePokerRow } from '../types';
 import { CP_CATEGORY_ORDER, CP_HAND_SIZE, cpEvaluate, cpRowValue, cpSortHand } from './chinesepoker';

@@ -1,5 +1,5 @@
 // ─── Texas Hold'em rules engine (pure functions, shared by client and server) ───
-// Rules: docs/games.md#texas-holdem
+// Rules: docs/games/cards.md#texas-holdem
 
 import type { Card, HoldemLogEntry, HoldemPot, HoldemStreet, GameSeat } from '../types';
 import { GAME_SEAT_ORDER } from '../constants';

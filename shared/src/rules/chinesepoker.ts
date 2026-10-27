@@ -1,5 +1,5 @@
 // ─── Chinese Poker (13 cards) rules engine (pure functions, shared by client and server) ───
-// Rules: docs/games.md#chinese-poker
+// Rules: docs/games/cards.md#chinese-poker
 
 import type {
   Card,
