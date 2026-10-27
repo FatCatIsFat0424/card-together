@@ -2,6 +2,7 @@
 
 import { scopedStore } from './scoped-store';
 import type { Card, LiarCard, NapoleonCard, ObserverRole, PlayerVisibleGameState, GameSeat } from '@shared/types';
+import { clientGame } from '../games/registry';
 import { retainSnapshotValue } from './snapshot-equality';
 
 export interface GodView {
@@ -21,12 +22,7 @@ export const HIDDEN_GOD_VIEW: GodView = {
 };
 
 function godViewOf(visible: PlayerVisibleGameState, role: ObserverRole): GodView {
-  if (visible.gameType === 'blackjack') return { ...HIDDEN_GOD_VIEW, role, hole: visible.observedHole ?? null };
-  if (visible.gameType === 'liarsdeck') return { ...HIDDEN_GOD_VIEW, role, liarHands: visible.observedHands ?? null };
-  if (visible.gameType === 'napoleon') return { ...HIDDEN_GOD_VIEW, role, napoleonHands: visible.observedHands ?? null };
-  if (visible.gameType === 'sevens') return { ...HIDDEN_GOD_VIEW, role,
-    hands: visible.observedHands ?? null, covered: visible.observedCovered ?? null };
-  return { ...HIDDEN_GOD_VIEW, role, hands: visible.observedHands ?? null };
+  return { ...HIDDEN_GOD_VIEW, role, ...clientGame(visible.gameType).observedView(visible) };
 }
 
 /**

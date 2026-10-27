@@ -1,3 +1,4 @@
+import { gameDefinition } from '@shared/games/registry';
 import { isCompassSeat } from '@shared/rules/seats';
 // ─── Pure table-view helpers (no React) ───
 
@@ -50,14 +51,12 @@ const POSITIONS: readonly TablePosition[] = ['bottom', 'left', 'top', 'right'];
 
 /** Seats taking part in the shown match; flexible games may leave seats empty or add P5–P8. */
 export function matchSeats(game: PlayerVisibleGameState | null): readonly GameSeat[] {
-  return game?.gameType === 'blackjack' || game?.gameType === 'holdem' || game?.gameType === 'ninetynine'
-    || game?.gameType === 'napoleon' ? game.seats ?? CLOCKWISE : CLOCKWISE;
+  return game && gameDefinition(game.gameType).seats.flexible && 'seats' in game ? game.seats ?? CLOCKWISE : CLOCKWISE;
 }
 
 /** Seats a finished match recorded, in the order of its account ids; legacy results had all four. */
 export function resultSeats(result: MatchResult): readonly GameSeat[] {
-  return (result.gameType === 'blackjack' || result.gameType === 'holdem' || result.gameType === 'ninetynine'
-    || result.gameType === 'napoleon') && result.seats ? result.seats : CLOCKWISE;
+  return gameDefinition(result.gameType).seats.flexible && 'seats' in result && result.seats ? result.seats : CLOCKWISE;
 }
 
 /** Screen position of a seat when `bottomSeat` (me) sits at the bottom of the table. */

@@ -10,8 +10,8 @@ import { useRoomStore } from '../stores/room-store';
 import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useMotionStore } from '../stores/motion-store';
+import { clientGame } from '../games/registry';
 import { useConnectionReady } from '../games/use-connection-ready';
-import type { AppIconName } from '../components/AppIcon';
 import { Avatar } from '../components/Avatar';
 import { AppIcon } from '../components/AppIcon';
 import { LobbyFriends } from '../components/LobbyFriends';
@@ -21,20 +21,11 @@ import { DailyRewards } from '../components/DailyRewards';
 import { AndroidAppBanner } from '../components/AndroidAppBanner';
 import styles from './LobbyPage.module.css';
 
-const GAME_ICONS: Record<GameType, string> = {
-  bridge: '♠', bigtwo: '🃏', redpoints: '🔴', ninetynine: '💯', sevens: '7️⃣', chinesepoker: '🀄', liarsdeck: '🍺',
-  blackjack: '🎰', holdem: '♦️', napoleon: '👑',
-};
-
-const MATERIAL_GAME_ICONS: Partial<Record<GameType, AppIconName>> = {
-  redpoints: 'circle', sevens: 'seven', liarsdeck: 'beer',
-};
-
 function GameIcon({ gameType }: { readonly gameType: GameType }): ReactNode {
-  const icon = MATERIAL_GAME_ICONS[gameType];
+  const { glyph, icon, red } = clientGame(gameType).lobbyIcon;
   return <span className={styles.gameIcon} aria-hidden="true">{icon
-    ? <AppIcon name={icon} className={gameType === 'redpoints' ? styles.redGameIcon : undefined} />
-    : GAME_ICONS[gameType]}</span>;
+    ? <AppIcon name={icon} className={red ? styles.redGameIcon : undefined} />
+    : glyph}</span>;
 }
 
 export function LobbyPage(): ReactNode {

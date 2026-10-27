@@ -2,6 +2,7 @@ import type { PlayerVisibleGameState, GameSeat } from '@shared/types';
 import { matchSeats } from '../game-view';
 import type { GodView } from '../stores/god-view-store';
 import { isSpectator } from './observer-view';
+import { clientGame } from './registry';
 
 export function perspectiveSeat(game: PlayerVisibleGameState | null, selected: GameSeat, own: GameSeat | null): GameSeat {
   if (!isSpectator(game)) return own ?? 'S';
@@ -12,16 +13,5 @@ export function perspectiveSeat(game: PlayerVisibleGameState | null, selected: G
 /** Project only display fields; the authoritative snapshot and observer permissions stay intact. */
 export function spectatorGame<T extends PlayerVisibleGameState>(game: T, seat: GameSeat, view: GodView): T {
   if (!isSpectator(game)) return game;
-  if (game.gameType === 'blackjack') return { ...game, mySeat: seat };
-  if (game.gameType === 'liarsdeck') return {
-    ...game, mySeat: seat, myHand: [...view.liarHands?.[seat] ?? []], myPlayed: [],
-  };
-  if (game.gameType === 'napoleon') return {
-    ...game, mySeat: seat, myHand: [...view.napoleonHands?.[seat] ?? []], validCards: [],
-  };
-  return {
-    ...game, mySeat: seat, myHand: [...view.hands?.[seat] ?? []],
-    ...(game.gameType === 'sevens' ? { myCovered: [...view.covered?.[seat] ?? []] } : {}),
-    ...(game.gameType === 'chinesepoker' ? { myArrangement: null } : {}),
-  };
+  return { ...game, mySeat: seat, ...clientGame(game.gameType).spectatorPatch(view, seat) };
 }

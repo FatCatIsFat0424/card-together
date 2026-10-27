@@ -1,4 +1,3 @@
-import { gameSeatValue } from '@shared/rules/seats';
 import { lazy, Suspense, useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import FormControl from '@mui/material/FormControl';
@@ -6,12 +5,12 @@ import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import type { GameType, MatchHistory, MatchSummary, PublicAccount, GameSeat } from '@shared/types';
-import { GAME_TYPES, SUIT_SYMBOLS } from '@shared/constants';
+import { GAME_TYPES } from '@shared/constants';
 import { matchOutcome, selectHistoryMatches } from '../match-history';
 import type { HistorySortKey, MatchOutcome, SortDirection } from '../match-history';
 import { resultSeats } from '../game-view';
+import { clientGame } from '../games/registry';
 import { seatLabel } from '../games/seat-names';
-import { nnRank, nnWinners } from '@shared/rules/ninetynine';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { joinNames } from '../games/seat-names';
@@ -21,10 +20,6 @@ import { AppIcon } from './AppIcon';
 import styles from './MatchHistoryList.module.css';
 
 const MatchReplayDialog = lazy(() => import('./MatchReplayDialog').then((module) => ({ default: module.MatchReplayDialog })));
-
-function signed(value: number): string {
-  return value > 0 ? `+${value}` : String(value);
-}
 
 function MatchResultLabel({ match, players, accountId }: {
   match: MatchSummary; players: Record<string, PublicAccount>; accountId?: string;
@@ -39,50 +34,10 @@ function MatchResultLabel({ match, players, accountId }: {
     const label = seatLabel(t, result.gameType, seat);
     return id?.startsWith('bot:') ? t('player.botSeat', { seat: label }) : players[id]?.nickname ?? label;
   };
-  if (result.gameType === 'redpoints') {
-    return <span><AppIcon name="trophy" /> {joinNames(result.winners.map(seatName), locale)}
-      {mySeat && <> · {t('history.matchPoints', { n: String((gameSeatValue(result.points, mySeat) ?? 0)) })}</>}</span>;
-  }
-  if (result.gameType === 'sevens') {
-    return <span><AppIcon name="trophy" /> {joinNames(result.winners.map(seatName), locale)}
-      {mySeat && <> · {t('history.penalty', { n: String((gameSeatValue(result.penalties, mySeat) ?? 0)) })}</>}</span>;
-  }
-  if (result.gameType === 'chinesepoker') {
-    return <span><AppIcon name="trophy" /> {joinNames(result.winners.map(seatName), locale)}
-      {mySeat && <> · {t('history.score', { n: signed((gameSeatValue(result.scores, mySeat) ?? 0)) })}</>}</span>;
-  }
-  if (result.gameType === 'blackjack') {
-    return <span><AppIcon name="trophy" /> {joinNames(result.winners.map(seatName), locale)}
-      {mySeat && <> · {t('history.chips', { n: String((gameSeatValue(result.chips, mySeat) ?? 0)) })}</>}</span>;
-  }
-  if (result.gameType === 'holdem') {
-    return <span><AppIcon name="trophy" /> {joinNames(result.winners.map(seatName), locale)}
-      {mySeat && <> · {t('history.chips', { n: String((gameSeatValue(result.chips, mySeat) ?? 0)) })}</>}</span>;
-  }
-  if (result.gameType === 'ninetynine') {
-    const myRank = mySeat && nnRank(result, mySeat);
-    return <span><AppIcon name="trophy" /> {joinNames(nnWinners(result).map(seatName), locale)}
-      {myRank && <> · {t('history.rank', { n: String(myRank) })}</>}</span>;
-  }
-  if (result.gameType === 'liarsdeck') {
-    const myRank = mySeat && (mySeat === result.winnerSeat ? 1 : 4 - result.eliminationOrder.findIndex((seat) => seat === mySeat));
-    return <span><AppIcon name="trophy" /> {seatName(result.winnerSeat)}
-      {myRank && <> · {t('history.rank', { n: String(myRank) })}</>}</span>;
-  }
-  if (result.gameType === 'bigtwo') {
-    return <span><AppIcon name="trophy" /> {seatName(result.winnerSeat)}
-      {result.dragon && ' 🐉'}
-      {mySeat && <> · {t('history.penalty', { n: String((gameSeatValue(result.scores, mySeat) ?? 0)) })}</>}</span>;
-  }
-  if (result.gameType === 'napoleon') {
-    return <span>{result.contract.level}{result.contract.suit === 'nt' ? 'NT' : SUIT_SYMBOLS[result.contract.suit]}
-      {' '}· {result.napoleonPoints}/{result.contract.level} · {t(result.napoleonWins
-        ? 'napoleon.napoleonWins' : 'napoleon.defendersWin')}</span>;
-  }
-  return <span>{result.contract.level}{result.contract.suit === 'nt' ? 'NT'
-    : SUIT_SYMBOLS[result.contract.suit]} · {result.declarerTeamTricks}
-    /{result.requiredTricks} · {t(result.declarerTeamWins
-      ? 'score.declarerWins' : 'score.defenderWins')}</span>;
+  const summary = clientGame(result.gameType).result.summary(result, mySeat, t);
+  if (summary.kind === 'text') return <span>{summary.text}</span>;
+  return <span><AppIcon name="trophy" /> {joinNames(summary.winners.map(seatName), locale)}{summary.suffix}
+    {summary.detail && <> · {t(summary.detail.key, { n: summary.detail.n })}</>}</span>;
 }
 
 export function MatchHistoryList({ matches, players, accountId }: MatchHistory & {

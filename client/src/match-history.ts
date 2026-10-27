@@ -1,6 +1,7 @@
 import type { GameSeat, GameType, MatchResult, MatchSummary, PublicAccount } from '@shared/types';
-import { GAME_TYPES, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import { GAME_TYPES } from '@shared/constants';
 import { resultSeats } from './game-view';
+import { clientGame } from './games/registry';
 
 export type MatchOutcome = 'win' | 'loss' | 'tie' | 'completed';
 export type HistorySortKey = 'date' | 'room' | 'game' | 'result';
@@ -20,12 +21,7 @@ export interface HistoryFilters {
 
 /** Seats that won a finished match: Bridge counts the whole winning partnership, ties list every tied seat. */
 export function resultWinnerSeats(result: MatchResult): readonly GameSeat[] {
-  if (result.gameType === 'bridge') {
-    const declarerParity = SEAT_ORDER_CLOCKWISE.indexOf(result.contract.declarer) % 2;
-    return SEAT_ORDER_CLOCKWISE.filter((_, index) => (index % 2 === declarerParity) === result.declarerTeamWins);
-  }
-  if ('winnerSeat' in result) return [result.winnerSeat];
-  return result.winners;
+  return clientGame(result.gameType).result.winners(result);
 }
 
 /** Bridge and Napoleon outcomes follow sides; tied winners count as ties, not losses. */
@@ -35,10 +31,10 @@ export function matchOutcome(match: MatchSummary, accountId?: string): MatchOutc
   const seat = resultSeats(match.result)[index];
   if (!seat) return 'completed';
   const { result } = match;
-  if (!resultWinnerSeats(result).includes(seat)) return 'loss';
+  const winners = resultWinnerSeats(result);
+  if (!winners.includes(seat)) return 'loss';
   // A Bridge or Napoleon side wins together, so several winners are a team win rather than a tie.
-  return result.gameType !== 'bridge' && result.gameType !== 'napoleon' && 'winners' in result
-    && result.winners.length > 1 ? 'tie' : 'win';
+  return !clientGame(result.gameType).result.sidesWin && winners.length > 1 ? 'tie' : 'win';
 }
 
 export interface GameHistoryStatistics {

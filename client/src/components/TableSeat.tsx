@@ -5,7 +5,7 @@ import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState } f
 import type { CSSProperties, ReactNode } from 'react';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import { useShallow } from 'zustand/react/shallow';
-import type { Card, GameClock, GameSeat, GameType } from '@shared/types';
+import type { Card, GameClock, GameSeat } from '@shared/types';
 import { rpCardPoints, rpScore } from '@shared/rules/redpoints';
 import { useCardFaceUrl } from '../cosmetics/card-faces/use-card-face';
 import { SeatFrame, seatFrameHostClass } from '../cosmetics/seat-frames/SeatFrame';
@@ -15,6 +15,7 @@ import type { TablePosition } from '../game-view';
 import { liarsDeckView } from '../games/liarsdeck/liarsdeck-view';
 import { blackjackSeatOut, blackjackView } from '../games/blackjack/blackjack-view';
 import { ChipIcon } from '../games/ChipIcon';
+import { clientGame } from '../games/registry';
 import { holdemBlindSeats, holdemView, seatState } from '../games/holdem/holdem-view';
 import { useGamePresentation } from '../games/use-game-presentation';
 import { useGameStore } from '../stores/game-store';
@@ -38,8 +39,6 @@ import { CardBackArt } from '../cosmetics/art-layers/CardBackArt';
 const PlayerCard = lazy(() => import('./PlayerCard').then((module) => ({ default: module.PlayerCard })));
 
 const MAX_BACKS = 6;
-/** Games whose centre sizes itself to the table, so a shorter top row makes it larger. */
-const HAND_BESIDE_GAMES: readonly GameType[] = ['bridge', 'sevens', 'liarsdeck', 'ninetynine', 'napoleon'];
 const MAX_PILE = 6;
 
 /** Opens a complete card pile without expanding the seat plate or overlapping the table. */
@@ -269,8 +268,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const call = useGameStore((state) => (callIndex >= 0
     ? (state.bidding?.bids ?? state.napoleon?.bidding?.bids)?.[callIndex]?.action ?? null : null));
   // The opposite hand sits beside its plate so the top row stays short and the centre grows.
-  const handBeside = useGameStore((state) => position === 'top' && state.visible !== null
-    && HAND_BESIDE_GAMES.includes(state.visible.gameType));
+  const handBeside = position === 'top' && gameType !== undefined && clientGame(gameType).handBeside;
   const active = !suppressTurn && turn && (phase === 'bidding' || phase === 'playing');
   const autoPlayed = autoArranged || showsAutoPlayed(clock, seat, lastActionAt);
   const status = seatStatus({

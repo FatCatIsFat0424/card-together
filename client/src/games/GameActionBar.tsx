@@ -7,6 +7,7 @@ import { useGameStore } from '../stores/game-store';
 import { useHandSortStore } from '../stores/hand-sort-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { AppIcon } from '../components/AppIcon';
+import { clientGame } from './registry';
 import { useConnectionReady } from './use-connection-ready';
 import styles from './GameActionBar.module.css';
 
@@ -22,6 +23,7 @@ export function GameActionBar(): ReactNode {
   const compact = useMediaQuery('(max-width: 767px), (max-height: 500px) and (min-width: 600px)');
   if (!game || game.observer || game.phase === 'scoring') return null;
   const automatic = game.autoPlay ?? false;
+  const suitSortable = clientGame(game.gameType).handSort.bySuit;
   const toggle = (): void => {
     if (!ready || inFlight.current) return;
     inFlight.current = true;
@@ -41,9 +43,9 @@ export function GameActionBar(): ReactNode {
       <span aria-hidden="true">{t('actions.autoShort')}</span>
     </button>
     {compact ? <SortToggle gameType={game.gameType} /> : (['suit', 'rank'] as const).map((order) => <button key={order} type="button" className={styles.action}
-      disabled={order === 'suit' && game.gameType === 'liarsdeck'} aria-pressed={sorting.gameType === game.gameType && sorting.order === order}
+      disabled={order === 'suit' && !suitSortable} aria-pressed={sorting.gameType === game.gameType && sorting.order === order}
       onClick={() => sorting.sort(game.gameType, order)}
-      title={t(order === 'suit' && game.gameType === 'liarsdeck' ? 'actions.sortUnavailable' : `actions.${order}`)} aria-label={t(`actions.${order}`)}>
+      title={t(order === 'suit' && !suitSortable ? 'actions.sortUnavailable' : `actions.${order}`)} aria-label={t(`actions.${order}`)}>
       <span aria-hidden="true">{t(`actions.${order}Short`)}</span>
     </button>)}
     {error && <p className={styles.error} role="alert">{error}</p>}
@@ -54,8 +56,8 @@ function SortToggle({ gameType }: { readonly gameType: GameType }): ReactNode {
   const sorting = useHandSortStore();
   const { t } = useI18nStore();
   const current = sorting.gameType === gameType ? sorting.order : null;
-  // Liar's Deck cards only differ by rank, so its toggle always sorts by rank.
-  const next = gameType === 'liarsdeck' || current === 'suit' ? 'rank' : 'suit';
+  // A game whose cards only differ by rank always sorts by rank.
+  const next = !clientGame(gameType).handSort.bySuit || current === 'suit' ? 'rank' : 'suit';
   return <button type="button" className={styles.action} aria-pressed={current !== null}
     onClick={() => sorting.sort(gameType, next)} title={t(`actions.${next}`)} aria-label={t(`actions.${next}`)}>
     {current ? <span aria-hidden="true">{t(`actions.${current}Short`)}</span> : <AppIcon name="sort" />}

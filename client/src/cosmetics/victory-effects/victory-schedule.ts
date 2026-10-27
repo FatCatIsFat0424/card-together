@@ -1,5 +1,6 @@
 import { VICTORY_EFFECTS } from '@shared/constants';
 import type { GameSeat, MatchResult, PlayerInfo, PlayerVisibleGameState, VictoryEffectId } from '@shared/types';
+import { clientGame } from '../../games/registry';
 
 export type VictorySeries = typeof VICTORY_EFFECTS[number]['design'];
 
@@ -36,8 +37,7 @@ export function victoryPlays(
 
 /** The visible game's settlement in the shape match history records; Bridge adds its game type. */
 export function visibleMatchResult(game: PlayerVisibleGameState): MatchResult | null {
-  if (game.gameType === 'bridge') return game.result ? { ...game.result, gameType: 'bridge' } : null;
-  return game.result;
+  return clientGame(game.gameType).settlement(game);
 }
 
 function hash(text: string): string {
