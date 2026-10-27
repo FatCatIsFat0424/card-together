@@ -2,21 +2,11 @@
 
 import type { GameSeat, Seat, BidSuit, Team, GameType } from '../types';
 
-/** All game types */
+/** All game types, in lobby order; per-game metadata lives in `games/registry`. */
 export const GAME_TYPES: readonly GameType[] = ['bridge', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'chinesepoker', 'liarsdeck', 'blackjack', 'holdem', 'napoleon'];
-
-/**
- * Games whose occupied seats may include P5–P8 and leave others empty; the counts allowed come from
- * `minPlayers` and `maxPlayers`. Every other game needs exactly N, E, S, W.
- */
-export const FLEXIBLE_SEAT_GAMES: readonly GameType[] = ['ninetynine', 'blackjack', 'holdem', 'napoleon'];
 
 /** Fewest occupied seats a flexible-seat match starts with */
 export const MIN_FLEXIBLE_PLAYERS = 2;
-
-/** Napoleon takes four to six players */
-export const NAPOLEON_MIN_PLAYERS = 4;
-export const NAPOLEON_MAX_PLAYERS = 6;
 
 /** Unseated human members a room accepts besides its four seats */
 export const MAX_SPECTATORS = 8;
@@ -26,9 +16,6 @@ export const MAX_ROOM_MEMBERS = 8 + MAX_SPECTATORS;
 
 /** Maximum configured waiting-room seats, including the four standard seats. */
 export const MAX_ROOM_SEATS = 8;
-
-/** Modes with additional waiting-room seats, up to `maxPlayers` in total. */
-export const EXPANDABLE_ROOM_GAMES: readonly GameType[] = ['ninetynine', 'blackjack', 'holdem', 'napoleon'];
 
 /** Abort vote: passes once this many yes votes are cast */
 export const ABORT_VOTE_THRESHOLD = 3;
