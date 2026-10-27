@@ -34,7 +34,7 @@
   .link { padding: 12px; }
 }
 
-@media (max-height: 500px) and (min-width: 600px) {
+@media (max-width: 767px), (max-height: 500px) and (min-width: 600px) {
   .card {
     --corner-x: 0px;
     --corner-y: calc(100dvh - 100% - var(--topbar-height) - 8px - max(8px, env(safe-area-inset-bottom)));

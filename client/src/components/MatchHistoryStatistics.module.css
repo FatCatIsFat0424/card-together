@@ -1,9 +1,10 @@
-.statistics { margin-bottom: var(--spacing-xl); }
-.statistics h3 { font-size: var(--text-lg); }
+.statistics { margin-bottom: var(--space-4); }
+.statistics h3 { font-size: var(--text-md); font-weight: 600; }
+.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .hint { margin: var(--spacing-sm) 0 var(--spacing-md); color: var(--text-secondary); font-size: var(--text-xs); }
-.mix { display: grid; grid-template-columns: 15rem minmax(0, 1fr); align-items: center; gap: var(--spacing-lg); margin-bottom: var(--spacing-lg); padding: var(--spacing-md); border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--bg-card); }
+.mix { display: grid; grid-template-columns: 15rem minmax(0, 1fr); align-items: center; gap: var(--spacing-lg); margin-bottom: var(--spacing-lg); padding: var(--space-3); border-radius: var(--radius-lg); background: var(--surface-1); }
 .donut { min-width: 0; position: relative; height: 240px; }
-.donut :global(.MuiPieChart-arc) { stroke: var(--bg-card); }
+.donut :global(.MuiPieChart-arc) { stroke: var(--bg-page); }
 .donutCenter { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--spacing-xs); pointer-events: none; }
 .donutCenter strong { font-size: var(--text-3xl); font-variant-numeric: tabular-nums; }
 .donutCenter span { font-size: var(--text-xs); color: var(--text-secondary); }
@@ -15,11 +16,11 @@
 .legendName { flex: 1; overflow-wrap: anywhere; }
 .share { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .emptyMix { display: grid; place-items: center; height: 100%; color: var(--text-secondary); font-size: var(--text-sm); }
-.visualization { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--spacing-md); padding: var(--spacing-md); border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--bg-card); }
+.visualization { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--spacing-md); padding: var(--space-3); border-radius: var(--radius-lg); background: var(--surface-1); }
 .metrics { width: 100%; border-collapse: collapse; text-align: left; font-variant-numeric: tabular-nums; }
 .metrics thead { height: var(--axis-height); color: var(--text-secondary); font-size: var(--text-xs); }
 .metrics thead th { font-weight: 500; }
-.metrics tbody tr { height: var(--row-height); border-top: 1px solid var(--border-color); }
+.metrics tbody tr { height: var(--row-height); border-top: 1px solid var(--separator); }
 .metrics tbody th { font-size: var(--text-sm); font-weight: 500; }
 .metrics small { display: block; font-size: var(--text-xs); color: var(--text-secondary); font-weight: 400; }
 .metrics th, .metrics td { padding: 0 var(--spacing-sm); }
@@ -30,11 +31,14 @@
 .unplayed { color: var(--text-secondary); }
 .chart { min-width: 0; }
 .chart :global(.MuiChartsAxis-tickLabel) { fill: var(--text-secondary); font-family: var(--font-primary); }
-.chart :global(.MuiChartsAxis-root) :global(.MuiChartsAxis-line), .chart :global(.MuiChartsAxis-root) :global(.MuiChartsAxis-tick), .chart :global(.MuiChartsGrid-line) { stroke: var(--border-color); }
+.chart :global(.MuiChartsAxis-root) :global(.MuiChartsAxis-line), .chart :global(.MuiChartsAxis-root) :global(.MuiChartsAxis-tick), .chart :global(.MuiChartsGrid-line) { stroke: var(--separator); }
 .chart :global(.MuiChartsAxisHighlight-root) { fill: var(--color-primary); opacity: 0.08; }
-.tooltip :global(.MuiPaper-root) { color: var(--text-primary); background: var(--bg-surface); border: 1px solid var(--border-color); font-family: var(--font-primary); }
+.tooltip :global(.MuiPaper-root) { color: var(--text-primary); background: var(--bg-card); font-family: var(--font-primary); }
 .tooltip :global(.MuiChartsTooltip-cell) { color: var(--text-primary); }
 .tooltip :global(.MuiTypography-root) { color: var(--text-primary); font-family: var(--font-primary); }
+@media (max-width: 52rem) {
+  .mix { grid-template-columns: 11rem minmax(0, 1fr); }
+}
 @media (max-width: 40rem) {
   .mix { grid-template-columns: minmax(0, 1fr); gap: var(--spacing-sm); }
   .visualization { grid-template-columns: minmax(0, 1fr); }

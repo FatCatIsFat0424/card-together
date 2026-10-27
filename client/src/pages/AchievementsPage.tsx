@@ -7,6 +7,8 @@ import type { AchievementCategoryId } from '@shared/constants/achievements';
 import type { AccountProfile, AchievementsStatus } from '@shared/types';
 import { apiRequest } from '../api';
 import { AppIcon } from '../components/AppIcon';
+import { Button } from '../components/Button';
+import { Tabs, tabElementId } from '../components/Tabs';
 import { Nameplate } from '../components/Nameplate';
 import { AchievementItem } from '../components/AchievementItem';
 import { useAccountStore } from '../stores/account-store';
@@ -26,7 +28,6 @@ export function AchievementDetails({ categoryId, status, pending, onClaim }: {
   const eligible = completed === category.items.length;
   return <section className={styles.details} aria-label={t(`achievements.${categoryId}`)}>
     <div className={styles.reward}>
-      <div className={styles.rewardArt} aria-hidden="true"><AppIcon name={categoryId === 'table' ? 'trophy' : 'calendar'} /></div>
       <div className={styles.rewardBody}>
         <span className={styles.eyebrow}>{t('achievements.exclusive')}</span>
         <Nameplate id={category.reward} />
@@ -34,11 +35,10 @@ export function AchievementDetails({ categoryId, status, pending, onClaim }: {
         <progress value={completed} max={category.items.length} aria-label={t('achievements.progress')} />
       </div>
       <div className={styles.rewardActions}>
-        <button type="button" className="btn btn-primary" disabled={pending || !eligible || state?.claimed}
-          onClick={() => onClaim(categoryId)}>
-          <AppIcon name={state?.claimed ? 'check' : eligible ? 'trophy' : 'lock'} />
+        <Button variant="primary" disabled={pending || !eligible || state?.claimed}
+          icon={state?.claimed ? 'check' : eligible ? 'trophy' : 'lock'} onClick={() => onClaim(categoryId)}>
           {t(state?.claimed ? 'achievements.claimed' : eligible ? 'achievements.claim' : 'achievements.locked')}
-        </button>
+        </Button>
         {state?.claimed && <Link to="/account">{t('achievements.equip')}<AppIcon name="nextPage" /></Link>}
       </div>
     </div>
@@ -115,21 +115,18 @@ export function AchievementsPage(): ReactNode {
       {status && <span className={styles.total}><AppIcon name="agree" />{t('achievements.total', { done: String(done), total: String(total) })}</span>}
     </header>
     {error && <div className={styles.error} role="alert">{t('achievements.error')}
-      <button type="button" className="btn btn-secondary" onClick={() => setRefresh((value) => value + 1)}>{t('achievements.retry')}</button></div>}
+      <Button onClick={() => setRefresh((value) => value + 1)}>{t('achievements.retry')}</Button></div>}
     {!status && !error && <p role="status">{t('common.loading')}</p>}
-    {status && <div className={styles.layout}>
-      <nav className={styles.categories} aria-label={t('achievements.categories')}>
-        {ACHIEVEMENT_CATEGORIES.map((category) => <button type="button" key={category.id}
-          className={`${styles.category} ${selected === category.id ? styles.active : ''}`}
-          aria-pressed={selected === category.id} onClick={() => setSelected(category.id)}>
-          <span className={styles.categoryArt}><AppIcon name={category.id === 'table' ? 'trophy' : 'calendar'} /></span>
-          <strong>{t(`achievements.${category.id}`)}</strong>
-          <progress value={completedCount(category.id)} max={category.items.length} aria-label={t(`achievements.${category.id}`)} />
-          <span>{completedCount(category.id)} / {category.items.length}</span>
-        </button>)}
-      </nav>
-      <AchievementDetails categoryId={selected} status={status} pending={pending} onClaim={(id) => { void claim(id); }} />
-    </div>}
+    {status && <>
+      <Tabs<AchievementCategoryId> idPrefix="achievement" controls="achievement-panel" label={t('achievements.categories')}
+        value={selected} onChange={setSelected} className={styles.categories}
+        tabs={ACHIEVEMENT_CATEGORIES.map((category) => ({ id: category.id, label: <>
+          {t(`achievements.${category.id}`)}
+          <span className={styles.categoryCount}>{completedCount(category.id)}/{category.items.length}</span></> }))} />
+      <div id="achievement-panel" role="tabpanel" aria-labelledby={tabElementId('achievement', selected)}>
+        <AchievementDetails categoryId={selected} status={status} pending={pending} onClaim={(id) => { void claim(id); }} />
+      </div>
+    </>}
     <p className={styles.note}>{t('achievements.tracking')}</p>
     <Snackbar open={Boolean(notice)} message={notice} autoHideDuration={4500} onClose={() => setNotice('')} />
   </main>;

@@ -5,6 +5,7 @@ import type { FriendsData, MatchHistory, PublicAccount } from '@shared/types';
 import { apiRequest } from '../api';
 import { Nameplate } from '../components/Nameplate';
 import { Avatar } from '../components/Avatar';
+import { Button, buttonClassName } from '../components/Button';
 import { MatchHistoryList } from '../components/MatchHistoryList';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
@@ -90,8 +91,8 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
       <h1>{t('player.title')}</h1>
       <p className={styles.error} role="alert">{notFound ? t('player.notFound') : profileError}</p>
       <div className={styles.actions}>
-        <button className="btn btn-primary" onClick={() => void refresh()}>{t('common.retry')}</button>
-        <Link className="btn btn-outline" to="/friends">{t('nav.friends')}</Link>
+        <Button variant="primary" onClick={() => void refresh()}>{t('common.retry')}</Button>
+        <Link className={buttonClassName()} to="/friends">{t('nav.friends')}</Link>
       </div>
     </section>
   </main>;
@@ -113,7 +114,7 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
           </div>
         </div>
         {isSelf ? <div className={styles.actions}>
-          <Link className="btn btn-primary" to="/account">{t('player.edit')}</Link>
+          <Link className={buttonClassName('primary')} to="/account">{t('player.edit')}</Link>
         </div> : <>
           {friends && <>
             {(isFriend || incoming || outgoing) && <p className={styles.description}>{t(isFriend ? 'player.friends'
@@ -121,32 +122,32 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
             <div className={styles.actions}>
               {isFriend ? confirmRemove ? <>
                 <span>{t('friends.confirmRemove')}</span>
-                <button className="btn btn-danger" disabled={disabled}
+                <Button variant="danger-text" disabled={disabled}
                   onClick={() => void act(`/api/friends/${encodeURIComponent(accountId)}`, 'DELETE')}>
-                  {t('friends.remove')}</button>
-                <button className="btn btn-outline" disabled={disabled}
-                  onClick={() => setConfirmRemove(false)}>{t('common.cancel')}</button>
-              </> : <button className="btn btn-outline" disabled={disabled}
-                onClick={() => setConfirmRemove(true)}>{t('friends.remove')}</button>
+                  {t('friends.remove')}</Button>
+                <Button disabled={disabled}
+                  onClick={() => setConfirmRemove(false)}>{t('common.cancel')}</Button>
+              </> : <Button disabled={disabled}
+                onClick={() => setConfirmRemove(true)}>{t('friends.remove')}</Button>
               : incoming ? <>
-                <button className="btn btn-primary" disabled={disabled}
+                <Button variant="primary" disabled={disabled}
                   onClick={() => void act(`/api/friends/requests/${incoming.id}/accept`, 'POST')}>
-                  {t('friends.accept')}</button>
-                <button className="btn btn-outline" disabled={disabled}
+                  {t('friends.accept')}</Button>
+                <Button disabled={disabled}
                   onClick={() => void act(`/api/friends/requests/${incoming.id}`, 'DELETE')}>
-                  {t('friends.decline')}</button>
-              </> : outgoing ? <button className="btn btn-outline" disabled={disabled}
+                  {t('friends.decline')}</Button>
+              </> : outgoing ? <Button disabled={disabled}
                 onClick={() => void act(`/api/friends/requests/${outgoing.id}`, 'DELETE')}>
-                {t('friends.cancel')}</button>
-              : <button className="btn btn-primary" disabled={disabled}
+                {t('friends.cancel')}</Button>
+              : <Button variant="primary" disabled={disabled}
                 onClick={() => void act('/api/friends/requests', 'POST', { username: player.username })}>
-                {t('friends.add')}</button>}
+                {t('friends.add')}</Button>}
             </div>
           </>}
           {friendError && <div className={styles.feedback}>
             <p className={styles.error} role="alert">{friendError}</p>
-            <button className="btn btn-outline" disabled={disabled}
-              onClick={() => void refresh()}>{t('common.retry')}</button>
+            <Button disabled={disabled}
+              onClick={() => void refresh()}>{t('common.retry')}</Button>
           </div>}
           {updated && <p className={styles.success} role="status">{t('player.updated')}</p>}
           <Link className={styles.friendsLink} to="/friends">{t('player.manageFriends')}</Link>

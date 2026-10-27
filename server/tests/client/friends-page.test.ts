@@ -167,10 +167,11 @@ describe('independent private messages', () => {
     expect(render('/messages')).not.toContain('data-online');
   });
 
-  it('removes the message section from the stacked mobile friends page', () => {
-    state.mobile = true;
+  it.each([false, true])('shows the same friend-management tabs and no message section on any width (mobile: %s)', (mobile) => {
+    state.mobile = mobile;
     const html = render('/friends');
-    expect(html).not.toContain('role="tablist"');
+    expect(html.match(/role="tab"/g)).toHaveLength(3);
+    expect(html).toContain('role="tabpanel"');
     expect(html).not.toContain('friends-panel-messages');
     expect(html).not.toContain('Hello Alice');
   });

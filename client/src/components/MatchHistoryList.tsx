@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import Select from '@mui/material/Select';
 import type { GameType, MatchHistory, MatchSummary, PublicAccount, GameSeat } from '@shared/types';
 import { GAME_TYPES } from '@shared/constants';
@@ -17,7 +18,11 @@ import { joinNames } from '../games/seat-names';
 import { PlayerLink } from './PlayerLink';
 import { MatchHistoryStatistics } from './MatchHistoryStatistics';
 import { AppIcon } from './AppIcon';
+import { Button } from './Button';
 import styles from './MatchHistoryList.module.css';
+
+/** Matches revealed per step on narrow screens. */
+const COMPACT_PAGE = 8;
 
 const MatchReplayDialog = lazy(() => import('./MatchReplayDialog').then((module) => ({ default: module.MatchReplayDialog })));
 
@@ -52,6 +57,8 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
   const [sortKey, setSortKey] = useState<HistorySortKey>('date');
   const [direction, setDirection] = useState<SortDirection>('desc');
   const [replayMatch, setReplayMatch] = useState<MatchSummary | null>(null);
+  const [pages, setPages] = useState(1);
+  const compact = useMediaQuery('(max-width: 52rem)', { noSsr: true });
   const subjectId = accountId ?? viewerId;
   const visibleMatches = selectHistoryMatches(matches, players, {
     accountId: subjectId, query, gameType, outcome, sortKey, direction, locale,
@@ -71,13 +78,22 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
   const reset = (): void => {
     setQuery(''); setGameType('all'); setOutcome('all'); setSortKey('date'); setDirection('desc');
   };
+  // Phones show the newest matches first and reveal the rest in steps, so the page stays short.
+  const shownMatches = compact ? visibleMatches.slice(0, pages * COMPACT_PAGE) : visibleMatches;
+  // Phones fold the charts so the match list is the first thing on the page.
+  const statistics = compact
+    ? <details className={styles.fold}>
+      <summary>{t('history.statistics')}</summary>
+      <div className={styles.foldBody}><MatchHistoryStatistics matches={matches} accountId={subjectId} hideTitle /></div>
+    </details>
+    : <MatchHistoryStatistics matches={matches} accountId={subjectId} />;
   if (matches.length === 0) return <div className={styles.history}>
-    <MatchHistoryStatistics matches={matches} accountId={subjectId} />
+    {statistics}
     <p className={styles.empty}>{t('history.noMatches')}</p>
   </div>;
   return <div className={styles.history}>
-    <MatchHistoryStatistics matches={matches} accountId={subjectId} />
-    <hr className={styles.divider} aria-hidden="true" />
+    {statistics}
+    {!compact && <hr className={styles.divider} aria-hidden="true" />}
     <div className={styles.toolbar}>
       <div className={`${styles.field} ${styles.search}`}>
         <label htmlFor={`${filterId}-search`}>{t('history.search')}</label>
@@ -117,10 +133,10 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
             <MenuItem key={value} value={value}>{t(`history.outcome.${value}`)}</MenuItem>)}
         </Select>
       </FormControl>
-      <button type="button" className="btn btn-outline" onClick={reset}
+      <Button onClick={reset}
         disabled={!query && gameType === 'all' && outcome === 'all' && sortKey === 'date' && direction === 'desc'}>
         {t('history.reset')}
-      </button>
+      </Button>
     </div>
     <p role="status" className={styles.count}>
       {t('history.count', { shown: String(visibleMatches.length), total: String(matches.length) })}
@@ -136,7 +152,7 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
           <th scope="col">{t('history.players')}</th>
           <th scope="col">{t('replay.actions')}</th>
         </tr></thead>
-        <tbody>{visibleMatches.map((match) => {
+        <tbody>{shownMatches.map((match) => {
           const value = matchOutcome(match, subjectId);
           return <tr key={match.id}>
             <td><time dateTime={new Date(match.finishedAt).toISOString()} className={styles.time}>
@@ -156,8 +172,8 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
                 : players[id] && <PlayerLink key={id} player={players[id]} />)}
             </div></td>
             <td>{match.hasReplay && subjectId
-              ? <button type="button" className={`btn btn-outline ${styles.replayButton}`}
-                onClick={() => setReplayMatch(match)}>{t('replay.open')}</button>
+              ? <Button size="small" className={styles.replayButton}
+                onClick={() => setReplayMatch(match)}>{t('replay.open')}</Button>
               : <span className={styles.unavailable}>{t('replay.unavailable')}</span>}</td>
           </tr>;
         })}
@@ -167,6 +183,8 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
         </tbody>
       </table>
     </div>
+    {shownMatches.length < visibleMatches.length && <Button className={styles.more} onClick={() => setPages(pages + 1)}>
+      {t('history.showMore', { n: String(visibleMatches.length - shownMatches.length) })}</Button>}
     {replayMatch && subjectId && <Suspense fallback={<p role="status">{t('replay.loading')}</p>}>
       <MatchReplayDialog key={replayMatch.id} match={replayMatch} players={players}
         accountId={subjectId} onClose={() => setReplayMatch(null)} />

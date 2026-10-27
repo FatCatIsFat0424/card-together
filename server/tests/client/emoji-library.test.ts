@@ -128,7 +128,7 @@ describe('emoji library UI', () => {
     expect(actions).toContain('Select all (3)');
     expect(actions).toContain('Clear selection');
     expect(actions).toContain('Delete selected (2)');
-    expect(bar(0)).toMatch(/disabled="">Delete selected \(0\)/);
+    expect(bar(0)).toMatch(/disabled=""[^>]*>Delete selected \(0\)/);
     expect(bar(2, true)).toContain('Delete 2 emoji? This cannot be undone.');
 
     useI18nStore.setState({ locale: 'zh-TW' });

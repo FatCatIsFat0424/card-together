@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18nStore } from '../stores/i18n-store';
 import { useSocialStore } from '../stores/social-store';
+import { Button } from './Button';
 import styles from './SocialNotifications.module.css';
 
 export function NotificationPanel(): ReactNode {
@@ -13,8 +14,8 @@ export function NotificationPanel(): ReactNode {
   return <section className={styles.panel} aria-labelledby="notifications-heading">
     <h2 id="notifications-heading">{t('social.notifications')}</h2>
     {status === 'loading' && <p role="status">{t('common.loading')}</p>}
-    {error && <div role="alert"><p>{error}</p><button type="button" className="btn btn-outline"
-      onClick={() => void useSocialStore.getState().refresh()}>{t('common.retry')}</button></div>}
+    {error && <div role="alert"><p>{error}</p><Button size="small"
+      onClick={() => void useSocialStore.getState().refresh()}>{t('common.retry')}</Button></div>}
     {incoming.length + accepted.length === 0 && status === 'ready'
       && <p className={styles.empty}>{t('social.noNotifications')}</p>}
     <ul className={styles.list}>

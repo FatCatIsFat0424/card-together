@@ -82,12 +82,13 @@ export function DailyTaskList({ status, pending, onClaim, onReplace }: {
           <div className={styles.progress}><progress value={progress} max={task.target} aria-label={t(`daily.${id}`)} /><span>{progress}/{task.target}</span></div>
         </div>
         <div className={styles.taskActions}>
-          {(complete || claimed) && <button type="button" className="btn btn-primary" disabled={pending || claimed}
+          {(complete || claimed) && <Button variant="primary" size="small" disabled={pending || claimed}
+            icon={claimed ? 'check' : undefined}
             aria-label={t('daily.claimTask', { task: t(`daily.${id}`) })} onClick={() => onClaim(id)}>
-            {claimed && <AppIcon name="check" />}{t(claimed ? 'daily.claimed' : 'daily.claim')}</button>}
-          {!claimed && <button type="button" className={complete ? styles.replaceLink : styles.replaceButton}
+            {t(claimed ? 'daily.claimed' : 'daily.claim')}</Button>}
+          {!claimed && <Button variant={complete ? 'text' : 'ghost'} size="small" icon="refresh"
             disabled={pending || status.swapsRemaining === 0} aria-label={t('daily.replaceTask', { task: t(`daily.${id}`) })}
-            onClick={() => onReplace(id)}><AppIcon name="refresh" />{t('daily.replace')}</button>}
+            onClick={() => onReplace(id)}>{t('daily.replace')}</Button>}
         </div>
       </li>;
     })}</ul>

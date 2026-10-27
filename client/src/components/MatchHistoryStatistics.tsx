@@ -10,6 +10,8 @@ import styles from './MatchHistoryStatistics.module.css';
 interface MatchHistoryStatisticsProps {
   readonly matches: readonly MatchSummary[];
   readonly accountId?: string;
+  /** The surrounding section already names the statistics. */
+  readonly hideTitle?: boolean;
 }
 
 const GAME_COLORS = ['#60a5fa', '#a78bfa', '#f472b6', '#fb923c', '#4ade80',
@@ -18,7 +20,7 @@ const GAME_COLORS = ['#60a5fa', '#a78bfa', '#f472b6', '#fb923c', '#4ade80',
 const AXIS_HEIGHT = 32;
 const ROW_HEIGHT = 52;
 
-export function MatchHistoryStatistics({ matches, accountId }: MatchHistoryStatisticsProps): ReactNode {
+export function MatchHistoryStatistics({ matches, accountId, hideTitle = false }: MatchHistoryStatisticsProps): ReactNode {
   const { t, locale } = useI18nStore();
   const headingId = useId();
   const percent = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 });
@@ -30,7 +32,7 @@ export function MatchHistoryStatistics({ matches, accountId }: MatchHistoryStati
     color: GAME_COLORS[index % GAME_COLORS.length],
   }));
   return <section className={styles.statistics} aria-labelledby={headingId}>
-    <h3 id={headingId}>{t('history.statistics')}</h3>
+    <h3 id={headingId} className={hideTitle ? styles.srOnly : undefined}>{t('history.statistics')}</h3>
     <p className={styles.hint}>{t('history.statisticsHint')}</p>
     <div className={styles.mix}>
       <div className={styles.donut}>

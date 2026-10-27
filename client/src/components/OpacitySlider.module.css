@@ -7,6 +7,6 @@
   color: var(--text-secondary);
 }
 
-.slider input { flex: 1; min-width: 0; padding: 0; accent-color: var(--color-primary); }
+.slider input { flex: 1; min-width: 0; min-height: var(--hit-size); padding: 0; accent-color: var(--color-primary); }
 .slider input:disabled { cursor: not-allowed; }
 .slider output { width: 4ch; text-align: right; font-variant-numeric: tabular-nums; }

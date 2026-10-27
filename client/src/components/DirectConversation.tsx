@@ -7,6 +7,7 @@ import { apiRequest } from '../api';
 import { createMessageClientId } from '../messages/message-client-id';
 import { latestIncomingMessageId, mergeDirectMessages } from '../messages/message-history';
 import { AppIcon } from './AppIcon';
+import { Button } from './Button';
 import { ChatMessageBody, EmojiPickerSections } from './ChatEmoji';
 import type { StickerPayload } from './ChatEmoji';
 import { PlayerLink } from './PlayerLink';
@@ -217,22 +218,22 @@ export function DirectConversation({ ownId, otherId, initialAccount, embedded = 
       data-reduced-motion={reducedMotion || undefined}>
     <header className={styles.header}>
       {!embedded && <Link to="/messages"><AppIcon name="previousPage" /> {t('messages.back')}</Link>}
-      {displayedAccount && <PlayerLink player={displayedAccount} showUsername size="medium" />}
+      {displayedAccount && <PlayerLink player={displayedAccount} showUsername size="compact" />}
     </header>
     <div ref={messagesRef} className={`${styles.messages} ${history ? styles.messagesReady : ''}`} role="log" aria-live="polite" aria-relevant="additions" aria-busy={loading || paging}>
       {loading && <p className={styles.loadingNotice} role="status">{t('common.loading')}</p>}
-      {history?.hasMore && <button type="button" className="btn btn-outline" disabled={paging}
+      {history?.hasMore && <Button type="button" disabled={paging}
         onClick={() => void load(history.messages[0]?.id)}>
-        {paging ? t('common.loading') : t('messages.older')}</button>}
+        {paging ? t('common.loading') : t('messages.older')}</Button>}
       {history?.messages.length === 0 && <p className={styles.empty}>{t('messages.emptyConversation')}</p>}
       {history?.messages.map((message) => <DirectMessageRow key={message.id} message={message}
         ownId={ownId} dateTimeFormat={dateTimeFormat} />)}
     </div>
     {readError && <p className={styles.notice} role="alert">{t('common.error')}{' '}
-      <button type="button" className="btn btn-outline" onClick={() => void markVisible()}>{t('common.retry')}</button></p>}
+      <Button type="button" onClick={() => void markVisible()}>{t('common.retry')}</Button></p>}
     {sendFailed && <p className={styles.notice} role="alert">{t('messages.sendFailed')}{' '}
-      <button type="button" className="btn btn-outline" disabled={busy || !history?.canSend}
-        onClick={() => { if (pending.current) void send(pending.current.payload, true); }}>{t('messages.retrySend')}</button></p>}
+      <Button type="button" disabled={busy || !history?.canSend}
+        onClick={() => { if (pending.current) void send(pending.current.payload, true); }}>{t('messages.retrySend')}</Button></p>}
     {history && !history.canSend && <p className={styles.notice}>{t('messages.formerFriend')}</p>}
     {(loading || history?.canSend) && <div className={styles.composer}>
       {pickerOpen && <div className={`${chatStyles.picker} ${mode === 'sticker' ? chatStyles.stickerPicker : ''}`}

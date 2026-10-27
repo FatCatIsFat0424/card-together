@@ -1,34 +1,27 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { AccountProfile, EquipmentSlot, ShopItem, ShopItemId, ShopItemType } from '@shared/types';
-import Tooltip from '@mui/material/Tooltip';
-import Alert from '@mui/material/Alert';
+import type { AccountProfile, EquipmentSlot, ShopItem, ShopItemId } from '@shared/types';
 import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
 import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
 import { apiRequest } from '../api';
-import { GAME_COIN_REWARD, equipmentSlotFor, SHOP_SERIES, shopItemSeries } from '@shared/constants';
+import { equipmentSlotFor, SHOP_SERIES, shopItemSeries } from '@shared/constants';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { SHOP_ITEMS, getShopItem, ownsShopItem } from '../shop-catalog';
 import { useMotionStore } from '../stores/motion-store';
-import { BORDER_SERIES, OTHER_SERIES, shopSeriesQuery } from '../shop-filters';
-import type { ShopSeriesFilter } from '../shop-filters';
-import { shopSeriesArtwork } from '../shop-series';
+import {
+  BORDER_SERIES, OTHER_SERIES, resolveShopView, shopGroupQuery, shopProducts, shopSeriesQuery, shopTypeCount, shopTypeQuery,
+} from '../shop-filters';
+import type { ShopGroupId, ShopSeriesFilter } from '../shop-filters';
 import { ShopProductArt, ShopProductPreview } from '../components/ShopProductArt';
-import { useStillArt } from '../cosmetics/art-layers/art-layers';
-import { layeredSeriesEmblem } from '../cosmetics/art-layers/emblem-art-layers';
-import { LayeredArt } from '../cosmetics/art-layers/LayeredArt';
 import { AppIcon } from '../components/AppIcon';
+import { Button } from '../components/Button';
+import { Chip } from '../components/Chip';
+import { CoinBalance } from '../components/CoinBalance';
+import { Tabs, tabElementId } from '../components/Tabs';
 import styles from './ShopPage.module.css';
-
-const PRODUCT_TYPES = [
-  'avatarBorder', 'nameplate', 'chatFrame', 'stickerPack', 'cardBack', 'cardFace', 'tableBackground', 'chipStyle',
-  'seatBackground', 'seatFrame', 'victoryEffect', 'soundPack',
-] as const satisfies readonly ShopItemType[];
 
 function equipmentPatch(item: ShopItem): Partial<Pick<AccountProfile, 'avatarBorder' | EquipmentSlot>> | null {
   if (item.type === 'avatarBorder') return { avatarBorder: item.id };
@@ -42,67 +35,35 @@ function equipped(account: AccountProfile, item: ShopItem): boolean {
   return slot !== null && account[slot] === item.id;
 }
 
+function seriesFilter(value: string): ShopSeriesFilter {
+  const options: readonly ShopSeriesFilter[] = [...BORDER_SERIES, ...SHOP_SERIES, OTHER_SERIES];
+  return options.find((entry) => entry === value) ?? 'all';
+}
+
 export function ShopPage(): ReactNode {
   const account = useAccountStore((state) => state.account);
   const { t, locale } = useI18nStore();
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
-  const stillArt = useStillArt();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [pendingPurchase, setPendingPurchase] = useState<ShopItemId | null>(null);
+  const [detailId, setDetailId] = useState<ShopItemId | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
-  const categoryList = useRef<HTMLUListElement>(null);
-  const collectionList = useRef<HTMLDivElement>(null);
-  const collection = SHOP_SERIES.find((series) => series === searchParams.get('series')) ?? null;
-  const borderSeries = BORDER_SERIES.find((series) => series === searchParams.get('series'));
-  const other = !collection && searchParams.get('series') === OTHER_SERIES;
-  const selectedSeries = collection ?? borderSeries ?? (other ? OTHER_SERIES : 'all');
-  const selectedType = PRODUCT_TYPES.find((type) => type === searchParams.get('type'))
-    ?? (borderSeries ? 'avatarBorder' : 'all');
-  useEffect(() => {
-    const lists = [categoryList.current, collectionList.current];
-    const revealSelection = (): void => {
-      for (const list of lists) {
-        const selected = list?.querySelector<HTMLButtonElement>('[aria-pressed="true"]');
-        if (!list || !selected || list.scrollWidth <= list.clientWidth) continue;
-        const container = list.getBoundingClientRect();
-        const button = selected.getBoundingClientRect();
-        if (button.left < container.left || button.right > container.right) {
-          list.scrollLeft += button.left - container.left - (list.clientWidth - button.width) / 2;
-        }
-      }
-    };
-    revealSelection();
-    const observer = new ResizeObserver(revealSelection);
-    for (const list of lists) if (list) observer.observe(list);
-    return () => observer.disconnect();
-  }, [selectedType, collection, other]);
-  const inCollection = (item: ShopItem): boolean => (collection ? shopItemSeries(item) === collection
-    : other ? shopItemSeries(item) === null : true);
-  const products = SHOP_ITEMS.filter((item) => (selectedType === 'all' || item.type === selectedType)
-    && (collection || other ? inCollection(item) : selectedType !== 'avatarBorder' || selectedSeries === 'all'
-      || (item.type === 'avatarBorder' && item.category === selectedSeries)));
-  const selectType = (type: ShopItemType | 'all'): void => {
-    const next = new URLSearchParams(searchParams);
-    if (type === 'all') next.delete('type');
-    else next.set('type', type);
-    if (!collection && !other) next.delete('series');
-    setSearchParams(next, { preventScrollReset: true });
-  };
-  const selectSeries = (series: ShopSeriesFilter): void => {
-    setSearchParams(shopSeriesQuery(searchParams, selectedType, series), { preventScrollReset: true });
-  };
+  const view = resolveShopView(searchParams, SHOP_ITEMS);
+  const products = shopProducts(SHOP_ITEMS, view);
+  const navigate = (next: URLSearchParams): void => setSearchParams(next, { preventScrollReset: true });
   if (!account) return null;
   const format = (value: number): string => value.toLocaleString(locale);
-  const purchaseItem = getShopItem(pendingPurchase);
-  const purchaseOwned = purchaseItem ? ownsShopItem(account, purchaseItem) : false;
-  const purchaseAffordable = purchaseItem ? (account.coins ?? 0) >= purchaseItem.price : false;
+  const detail = getShopItem(detailId);
+  const detailOwned = detail ? ownsShopItem(account, detail) : false;
+  const detailEquipped = detail ? equipped(account, detail) : false;
+  const detailCanEquip = detailOwned && detail?.type !== 'stickerPack';
+  const detailAffordable = detail ? (account.coins ?? 0) >= detail.price : false;
   const purchase = async (item: ShopItem): Promise<void> => {
     if (busy || ownsShopItem(account, item)) return;
     setBusy(true);
     const result = await apiRequest<{ account: AccountProfile }>('/api/auth/shop/items', 'POST', { item: item.id });
     setBusy(false);
-    setPendingPurchase(null);
+    setDetailId(null);
     if (useAccountStore.getState().account?.id !== account.id) return;
     if (result.success) {
       useAccountStore.getState().setAccount(result.account);
@@ -115,134 +76,114 @@ export function ShopPage(): ReactNode {
     setBusy(true);
     const result = await apiRequest<{ account: AccountProfile }>('/api/auth/profile', 'PATCH', patch);
     setBusy(false);
+    setDetailId(null);
     if (useAccountStore.getState().account?.id !== account.id) return;
     if (result.success) {
       useAccountStore.getState().setAccount(result.account);
       setNotice({ message: t('shop.equippedNotice'), severity: 'success' });
     } else setNotice({ message: result.error, severity: 'error' });
   };
+  const borderSeries = BORDER_SERIES.find((series) => series === view.series);
+  const themedSeries = SHOP_SERIES.find((series) => series === view.series);
+  const title = borderSeries ? t(`shop.category.${borderSeries}`)
+    : t(view.type === 'all' ? `shop.group.${view.group}` : `shop.type.${view.type}`);
+  const seriesDescription = themedSeries ? t(`shop.series.${themedSeries}.description`)
+    : view.series === OTHER_SERIES ? t('shop.otherSeries.description') : null;
 
   return <main className={styles.page} data-reduced-motion={reducedMotion || undefined}>
-    <header className={styles.header}>
-      <div className={styles.heading}>
-        <span className={styles.shopIcon}><AppIcon name="shop" /></span>
-        <h1>{t('shop.title')}</h1>
-      </div>
-      <Tooltip title={t('shop.earn', { n: String(GAME_COIN_REWARD) })} describeChild arrow>
-        <section className={styles.wallet} aria-labelledby="shop-wallet-title" tabIndex={0}>
-          <span id="shop-wallet-title">{t('shop.balance')}</span>
-          <strong><AppIcon name="coins" />{format(account.coins ?? 0)}</strong>
-        </section>
-      </Tooltip>
-    </header>
-    <div className={styles.shopLayout}>
-      <nav className={styles.sidebar} aria-label={t('shop.categories')}>
-        <ul ref={categoryList} className={styles.filters}>{(['all', ...PRODUCT_TYPES] as const).map((type) => {
-          const count = SHOP_ITEMS.filter((item) => (type === 'all' || item.type === type) && inCollection(item)).length;
-          return <li key={type}><button type="button" className={styles.filter}
-            aria-pressed={selectedType === type} aria-controls="shop-catalog"
-            onClick={() => selectType(type)}>
-            <span>{t(type === 'all' ? 'shop.allProducts' : `shop.type.${type}`)}</span>
-            <span className={styles.filterCount}>{format(count)}</span>
-          </button></li>;
-        })}</ul>
+    <h1 className={styles.srOnly}>{t('shop.title')}</h1>
+    <div className={styles.header}>
+      <header className={styles.bar}>
+        <Tabs<ShopGroupId> idPrefix="shop-group" controls="shop-catalog" label={t('shop.groups')} value={view.group}
+          className={styles.groups} onChange={(group) => navigate(shopGroupQuery(searchParams, group))}
+          tabs={view.groups.map((group) => ({ id: group, label: t(`shop.group.${group}`) }))} />
+        <label className={styles.series}>
+          <span>{t('shop.seriesFilter')}</span>
+          <select value={view.series} onChange={(event) =>
+            navigate(shopSeriesQuery(searchParams, view.type, seriesFilter(event.target.value)))}>
+            <option value="all">{t('shop.seriesAll')}</option>
+            {SHOP_SERIES.map((series) => <option key={series} value={series}>{t(`shop.series.${series}.name`)}</option>)}
+            <option value={OTHER_SERIES}>{t('shop.otherSeries.name')}</option>
+            {view.types.includes('avatarBorder') && <optgroup label={t('shop.type.avatarBorder')}>
+              {BORDER_SERIES.map((series) => <option key={series} value={series}>{t(`shop.category.${series}`)}</option>)}
+            </optgroup>}
+          </select>
+        </label>
+        <CoinBalance className={styles.coins} />
+      </header>
+      <nav className={styles.types} aria-label={t('shop.categories')}>
+        {(['all', ...view.types] as const).map((type) => <Chip key={type} selected={view.type === type}
+          count={shopTypeCount(SHOP_ITEMS, view, type)} aria-controls="shop-catalog"
+          onClick={() => navigate(shopTypeQuery(searchParams, type, view.group))}>
+          {t(type === 'all' ? 'shop.allProducts' : `shop.type.${type}`)}
+        </Chip>)}
+        {view.series !== 'all' && <span className={styles.total} aria-live="polite">
+          {t('shop.itemCount', { n: format(products.length) })}</span>}
       </nav>
-      <section id="shop-catalog" className={styles.catalog} aria-labelledby="shop-catalog-title">
-        <div className={styles.catalogHeader} aria-live="polite" aria-atomic="true">
-          <div>
-            <h2 id="shop-catalog-title">{t(selectedType === 'all' ? 'shop.allProducts'
-              : selectedType === 'avatarBorder' && borderSeries ? `shop.category.${borderSeries}` : `shop.type.${selectedType}`)}</h2>
-            {/* Borders preview on the avatar itself, so they need no visibility note. */}
-            {selectedType !== 'all' && selectedType !== 'avatarBorder'
-              && <p className={styles.catalogSubtitle}>{t(`shop.visibility.${selectedType}`)}</p>}
-          </div>
-          {/* Category buttons already show totals; only a series filter changes the count. */}
-          {(collection || other || selectedType === 'avatarBorder' && selectedSeries !== 'all')
-            && <span>{t('shop.itemCount', { n: format(products.length) })}</span>}</div>
-        <div ref={collectionList} className={styles.collectionFilters} role="group" aria-label={t('shop.collections')}>
-          <button type="button" className={styles.collectionFilter} aria-pressed={!collection && !other}
-            aria-controls="shop-catalog" onClick={() => selectSeries('all')}>{t('shop.allCollections')}</button>
-          {SHOP_SERIES.map((series) => {
-            const emblem = !stillArt ? layeredSeriesEmblem(series) : null;
-            return <button key={series} type="button"
-            className={styles.collectionFilter} data-series={series} aria-pressed={collection === series}
-            aria-controls="shop-catalog" onClick={() => selectSeries(series)}>
-            {emblem ? <LayeredArt art={emblem} fit="fill" className={styles.collectionArt} />
-              : <img src={shopSeriesArtwork(series, reducedMotion)} alt="" />}{t(`shop.series.${series}.name`)}
-          </button>;
-          })}
-          <button type="button" className={styles.collectionFilter} data-series={OTHER_SERIES}
-            aria-pressed={other} aria-controls="shop-catalog" onClick={() => selectSeries(OTHER_SERIES)}>
-            {t('shop.otherSeries.name')}
-          </button>
-        </div>
-        {collection && <p className={styles.collectionDescription}>{t(`shop.series.${collection}.description`)}</p>}
-        {other && <p className={styles.collectionDescription}>{t('shop.otherSeries.description')}</p>}
-        {selectedType === 'avatarBorder' && !collection && <div className={styles.seriesFilters} role="group" aria-label={t('shop.allSeries')}>
-          {(['all', ...BORDER_SERIES] as const).map((series) => <button key={series} type="button"
-            className={styles.filter} aria-pressed={selectedSeries === series} aria-controls="shop-catalog"
-            onClick={() => selectSeries(series)}>
-            {t(series === 'all' ? 'shop.allSeries' : `shop.category.${series}`)}
-          </button>)}
-        </div>}
-        {products.length === 0 && <p className={styles.emptyCollection} role="status">{t('shop.emptyCollection')}</p>}
-        <ul className={styles.products}>{products.map((item) => {
-          const productName = t(`shop.item.${item.id}.name`);
-          const owned = ownsShopItem(account, item);
-          const active = equipped(account, item);
-          const canEquip = owned && item.type !== 'stickerPack';
-          const series = shopItemSeries(item);
-          return <li key={item.id} className={styles.product} data-shop-series={series ?? undefined}>
-            <ShopProductPreview item={item} account={account}
-              className={`${styles.productArt} ${item.type === 'avatarBorder' ? styles[item.category] : styles[item.type]}`}>
-              <span className={styles.category}>{series && `${t(`shop.series.${series}.name`)} · `}
-                {t(item.type === 'avatarBorder' ? `shop.category.${item.category}` : `shop.type.${item.type}`)}</span>
-              {owned && <span className={styles.ownedTag}>{t(active ? 'shop.equipped' : 'shop.owned')}</span>}
-            </ShopProductPreview>
-            <div className={styles.productBody}>
-              <h3>{productName}</h3>
-              <p className={styles.description}>{t(`shop.item.${item.id}.description`)}</p>
-              <div className={styles.productFooter}>
-                <span className={styles.price} aria-label={t('shop.price', { n: format(item.price) })}>
-                  <AppIcon name="coins" />{format(item.price)}</span>
-              </div>
-              <button type="button" className={`btn btn-primary ${styles.buy}`} disabled={busy || active || (owned && !canEquip)}
-                aria-label={t(active ? 'shop.equippedNamed' : canEquip ? 'shop.equipNamed'
-                  : owned ? 'shop.ownedNamed' : 'shop.buyNamed', { name: productName })}
-                onClick={() => { if (canEquip) void equip(item); else setPendingPurchase(item.id); }}>
-                {t(busy ? 'common.loading' : active ? 'shop.equipped' : canEquip ? 'shop.equip' : owned ? 'shop.owned' : 'shop.buy')}
-              </button>
-            </div>
-          </li>;
-        })}</ul>
-      </section>
     </div>
-    {purchaseItem && <Dialog open fullWidth maxWidth="xs"
+    <section id="shop-catalog" className={styles.catalog} role="tabpanel"
+      aria-labelledby={tabElementId('shop-group', view.group)}>
+      <h2 id="shop-catalog-title" className={styles.srOnly}>{title}</h2>
+      {/* Borders preview on the avatar itself, so they need no visibility note. */}
+      {view.type !== 'all' && view.type !== 'avatarBorder'
+        && <p className={styles.note}>{t(`shop.visibility.${view.type}`)}</p>}
+      {seriesDescription && <p className={styles.note}>{seriesDescription}</p>}
+      {products.length === 0 && <p className={styles.empty} role="status">{t('shop.emptyCollection')}</p>}
+      <ul className={styles.products}>{products.map((item) => {
+        const productName = t(`shop.item.${item.id}.name`);
+        const owned = ownsShopItem(account, item);
+        const active = equipped(account, item);
+        const canEquip = owned && item.type !== 'stickerPack';
+        const series = shopItemSeries(item);
+        return <li key={item.id} className={styles.product} data-shop-series={series ?? undefined}
+          data-shop-type={item.type} data-equipped={active || undefined}>
+          <ShopProductPreview item={item} account={account} className={styles.productArt}>
+            {owned && <span className={styles.ownedMark} aria-hidden="true"><AppIcon name="check" /></span>}
+          </ShopProductPreview>
+          <h3 className={styles.name}>{productName}</h3>
+          <button type="button" className={styles.open} data-state={active ? 'equipped' : owned ? 'owned' : 'buy'}
+            aria-haspopup="dialog" disabled={busy}
+            aria-label={t(active ? 'shop.equippedNamed' : canEquip ? 'shop.equipNamed'
+              : owned ? 'shop.ownedNamed' : 'shop.buyNamed', { name: productName })}
+            onClick={() => setDetailId(item.id)}>
+            {owned ? <>{active && <AppIcon name="check" />}{t(active ? 'shop.equipped' : 'shop.owned')}</>
+              : <><AppIcon name="coins" />{format(item.price)}</>}
+          </button>
+        </li>;
+      })}</ul>
+    </section>
+    {detail && <Dialog open fullWidth maxWidth="xs"
       aria-labelledby="shop-purchase-title" aria-describedby="shop-purchase-description"
-      onClose={() => { if (!busy) setPendingPurchase(null); }}
-      slotProps={{ paper: { className: styles.purchaseDialog } }}>
-      <DialogTitle id="shop-purchase-title">{t('shop.confirmTitle')}</DialogTitle>
-      <DialogContent dividers className={styles.purchaseContent}>
-        <div className={styles.purchaseArt}><ShopProductArt item={purchaseItem} account={account} /></div>
-        <p id="shop-purchase-description">{t('shop.confirmDescription', {
-          name: t(`shop.item.${purchaseItem.id}.name`), n: format(purchaseItem.price),
-        })}</p>
-        <p className={styles.visibility}>{purchaseItem.type !== 'avatarBorder'
-          && `${t(`shop.visibility.${purchaseItem.type}`)} `}{t('shop.permanent')}</p>
-        {purchaseOwned ? <Alert severity="info">{t('shop.owned')}</Alert>
-          : purchaseAffordable ? <p className={styles.purchaseBalance}>{t('shop.balanceAfter', {
-            n: format((account.coins ?? 0) - purchaseItem.price),
-          })}</p>
-            : <Alert severity="warning">{t('shop.insufficient')}</Alert>}
-      </DialogContent>
-      <DialogActions disableSpacing className={styles.purchaseActions}>
-        <button type="button" className="btn btn-outline" disabled={busy}
-          onClick={() => setPendingPurchase(null)} autoFocus>{t('common.cancel')}</button>
-        <button type="button" className="btn btn-primary" disabled={busy || purchaseOwned || !purchaseAffordable}
-          onClick={() => void purchase(purchaseItem)}>
-          {t(busy ? 'common.loading' : 'shop.confirmBuy')}
-        </button>
-      </DialogActions>
+      onClose={() => { if (!busy) setDetailId(null); }}
+      slotProps={{ paper: { className: styles.dialog } }}>
+      <div className={styles.dialogBody}>
+        <div className={styles.dialogArt}><ShopProductArt item={detail} account={account} /></div>
+        <div className={styles.dialogText}>
+          <h2 id="shop-purchase-title">{t(`shop.item.${detail.id}.name`)}</h2>
+          <p className={styles.dialogMeta}>
+            {t(detail.type === 'avatarBorder' ? `shop.category.${detail.category}` : `shop.type.${detail.type}`)}</p>
+          <p id="shop-purchase-description" className={styles.dialogDescription}>
+            {t(`shop.item.${detail.id}.description`)}</p>
+          <p className={styles.dialogMeta}>{detail.type !== 'avatarBorder'
+            && `${t(`shop.visibility.${detail.type}`)} `}{t('shop.permanent')}</p>
+          {detailOwned ? <p className={styles.dialogStatus}>{t(detailEquipped ? 'shop.equipped' : 'shop.owned')}</p>
+            : <>
+              <p className={styles.dialogPrice} aria-label={t('shop.price', { n: format(detail.price) })}>
+                <AppIcon name="coins" />{format(detail.price)}</p>
+              {detailAffordable
+                ? <p className={styles.dialogMeta}>{t('shop.balanceAfter', { n: format((account.coins ?? 0) - detail.price) })}</p>
+                : <p className={styles.dialogWarning} role="alert">{t('shop.insufficient')}</p>}
+            </>}
+          <div className={styles.dialogActions}>
+            <Button disabled={busy} onClick={() => setDetailId(null)} autoFocus>
+              {t(detailOwned && !detailCanEquip || detailEquipped ? 'table.close' : 'common.cancel')}</Button>
+            {!detailOwned && <Button variant="primary" disabled={busy || !detailAffordable}
+              onClick={() => void purchase(detail)}>{t(busy ? 'common.loading' : 'shop.confirmBuy')}</Button>}
+            {detailCanEquip && !detailEquipped && <Button variant="primary" disabled={busy}
+              onClick={() => void equip(detail)}>{t(busy ? 'common.loading' : 'shop.equip')}</Button>}
+          </div>
+        </div>
+      </div>
     </Dialog>}
     <Snackbar open={notice !== null} autoHideDuration={5000} onClose={() => setNotice(null)}>
       <Alert severity={notice?.severity ?? 'success'} onClose={() => setNotice(null)} variant="filled">

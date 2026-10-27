@@ -591,3 +591,7 @@ textarea::placeholder {
   :root { --playing-card-scale: 1.4; }
   html { font-size: 18px; }
 }
+
+/* ─── UI v2 pages ─── */
+/* The floating room pill sits over the page; pages add this to their bottom padding so content can scroll clear of it. */
+:root[data-room-card] { --room-card-clearance: 56px; }

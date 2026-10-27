@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import Tabs from '@mui/material/Tabs';
-import Tab from '@mui/material/Tab';
-import useMediaQuery from '@mui/material/useMediaQuery';
 import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, USERNAME_PATTERN } from '@shared/constants';
 import type { FriendEntry, FriendsData, PublicAccount } from '@shared/types/social';
 import { apiRequest } from '../api';
@@ -14,6 +11,8 @@ import { useRoomStore } from '../stores/room-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { PlayerLink } from '../components/PlayerLink';
 import { FriendStatus } from '../components/FriendStatus';
+import { Button, buttonClassName } from '../components/Button';
+import { Tabs, tabElementId } from '../components/Tabs';
 import styles from './AccountPages.module.css';
 import tabStyles from './FriendsPage.module.css';
 
@@ -43,7 +42,6 @@ export function FriendsPage(): ReactNode {
     next.set('tab', tab);
     setSearchParams(next, { replace: true });
   };
-  const mobileLayout = useMediaQuery('(max-width: 52rem)');
 
   const refresh = useCallback(async (): Promise<void> => {
     const result = await apiRequest<FriendsData>('/api/friends');
@@ -107,7 +105,15 @@ export function FriendsPage(): ReactNode {
 
   return (
     <main className={styles.page}>
-      <h1 className={styles.title}>{t('friends.title')}</h1>
+      <h1 className={tabStyles.srOnly}>{t('friends.title')}</h1>
+      <div className={tabStyles.bar}>
+        <Tabs<FriendTab> idPrefix="friends" controls="friends-panel" label={t('nav.friends')} value={activeTab}
+          className={tabStyles.tabs} onChange={setActiveTab}
+          tabs={FRIEND_TABS.map((tab) => ({ id: tab, label: <>{t(`friends.${tab}`)}
+            {counts[tab] !== undefined && <span className={tabStyles.count}>{counts[tab]}</span>}</> }))} />
+        <Button size="small" disabled={busy || loading} icon="refresh"
+          onClick={() => { setError(''); setLoading(true); void refresh(); }}>{t('common.refresh')}</Button>
+      </div>
       <form className={styles.addForm} onSubmit={add}>
         <div className={styles.field}>
           <label htmlFor="friend-username">{t('friends.username')}</label>
@@ -115,30 +121,15 @@ export function FriendsPage(): ReactNode {
             onChange={(event) => setUsername(event.target.value)} required
             minLength={USERNAME_MIN_LENGTH} maxLength={USERNAME_MAX_LENGTH} pattern={USERNAME_PATTERN} />
         </div>
-        <button type="submit" className="btn btn-primary" disabled={busy}>
+        <Button type="submit" variant="primary" disabled={busy}>
           {busy ? t('common.loading') : t('friends.add')}
-        </button>
-        <button type="button" className="btn btn-outline" disabled={busy || loading}
-          onClick={() => { setError(''); setLoading(true); void refresh(); }}>{t('common.refresh')}</button>
+        </Button>
       </form>
       {error && <p className={styles.error} role="alert">{error}</p>}
       {sent && <p className={styles.success} role="status">{t('friends.sent')}</p>}
-      {!mobileLayout && <Tabs value={activeTab} onChange={(_event, tab: FriendTab) => setActiveTab(tab)}
-        variant="scrollable" scrollButtons="auto"
-        aria-label={t('nav.friends')} className={tabStyles.tabs}
-        slotProps={{ indicator: { className: tabStyles.indicator } }}>
-        {FRIEND_TABS.map((tab) => <Tab key={tab} value={tab} id={`friends-tab-${tab}`}
-          aria-controls={`friends-panel-${tab}`} className={tabStyles.tab}
-          label={<span className={tabStyles.label}>{t(`friends.${tab}`)}
-            {counts[tab] !== undefined && <span className={tabStyles.count}>{counts[tab]}</span>}
-          </span>} />)}
-      </Tabs>}
       {loading && <p role="status">{t('common.loading')}</p>}
-      <div className={`${styles.section} ${mobileLayout ? styles.grid : ''}`}>
-        {data && <section id="friends-panel-accepted" role={mobileLayout ? undefined : 'tabpanel'}
-          aria-labelledby={mobileLayout ? undefined : 'friends-tab-accepted'}
-          className={`${styles.card} ${styles.wide}`} hidden={!mobileLayout && activeTab !== 'accepted'}>
-          {mobileLayout && <h2>{t('friends.accepted')} ({data.friends.length})</h2>}
+      <div id="friends-panel" role="tabpanel" aria-labelledby={tabElementId('friends', activeTab)} className={styles.section}>
+        {data && <section id="friends-panel-accepted" hidden={activeTab !== 'accepted'}>
           {data.friends.length === 0 && <p className={styles.empty}>{t('friends.empty')}</p>}
           <ul className={styles.list}>{data.friends.map((person) => {
             const unread = conversations.find((conversation) => conversation.account.id === person.id)?.unreadCount ?? 0;
@@ -150,58 +141,51 @@ export function FriendsPage(): ReactNode {
               </span>
               {removeId === person.id ? <div className={styles.actions}>
                 <span>{t('friends.confirmRemove')}</span>
-                <button className="btn btn-danger" disabled={busy}
+                <Button variant="danger-text" disabled={busy}
                   onClick={() => void act(`/api/friends/${person.id}`, 'DELETE')}>
-                  {t('friends.remove')}</button>
-                <button className="btn btn-outline" disabled={busy}
-                  onClick={() => setRemoveId(null)}>{t('common.cancel')}</button>
+                  {t('friends.remove')}</Button>
+                <Button disabled={busy} onClick={() => setRemoveId(null)}>{t('common.cancel')}</Button>
               </div> : <div className={styles.actions}>
-                <Link className="btn btn-outline" to={`/messages/${encodeURIComponent(person.id)}`}
+                <Link className={buttonClassName('ghost')} to={`/messages/${encodeURIComponent(person.id)}`}
                   aria-label={t('messages.openFor', { nickname: person.nickname })}>
                   {t('messages.open')}
                   {unread > 0 && <span className={tabStyles.count}
                     aria-label={t('social.unread', { n: String(unread) })}>{unread}</span>}
                 </Link>
-                {person.hostedRoomCode && <button type="button" className="btn btn-primary" disabled={busy}
+                {person.hostedRoomCode && <Button variant="primary" disabled={busy}
                   aria-label={t('friends.joinRoomLabel', { nickname: person.nickname })}
-                  onClick={() => join(person)}>{t('friends.joinRoom')}</button>}
-                <button className="btn btn-outline" disabled={busy}
-                  onClick={() => setRemoveId(person.id)}>{t('friends.remove')}</button>
+                  onClick={() => join(person)}>{t('friends.joinRoom')}</Button>}
+                <Button variant="danger-text" disabled={busy}
+                  onClick={() => setRemoveId(person.id)}>{t('friends.remove')}</Button>
               </div>}
               </li>
             );
           })}</ul>
         </section>}
-        {data && <><section id="friends-panel-incoming" role={mobileLayout ? undefined : 'tabpanel'}
-          aria-labelledby={mobileLayout ? undefined : 'friends-tab-incoming'}
-          className={styles.card} hidden={!mobileLayout && activeTab !== 'incoming'}>
-          {mobileLayout && <h2>{t('friends.incoming')} ({data.incoming.length})</h2>}
+        {data && <><section id="friends-panel-incoming" hidden={activeTab !== 'incoming'}>
           {data.incoming.length === 0 && <p className={styles.empty}>{t('friends.noIncoming')}</p>}
           <ul className={styles.list}>{data.incoming.map((request) => (
             <li key={request.id} className={styles.person}>
               <FriendIdentity person={request.requester} />
               <div className={styles.actions}>
-                <button className="btn btn-primary" disabled={busy}
+                <Button variant="primary" disabled={busy}
                   onClick={() => void act(`/api/friends/requests/${request.id}/accept`, 'POST')}>
-                  {t('friends.accept')}</button>
-                <button className="btn btn-outline" disabled={busy}
+                  {t('friends.accept')}</Button>
+                <Button disabled={busy}
                   onClick={() => void act(`/api/friends/requests/${request.id}`, 'DELETE')}>
-                  {t('friends.decline')}</button>
+                  {t('friends.decline')}</Button>
               </div>
             </li>
           ))}</ul>
         </section>
-        <section id="friends-panel-outgoing" role={mobileLayout ? undefined : 'tabpanel'}
-          aria-labelledby={mobileLayout ? undefined : 'friends-tab-outgoing'}
-          className={styles.card} hidden={!mobileLayout && activeTab !== 'outgoing'}>
-          {mobileLayout && <h2>{t('friends.outgoing')} ({data.outgoing.length})</h2>}
+        <section id="friends-panel-outgoing" hidden={activeTab !== 'outgoing'}>
           {data.outgoing.length === 0 && <p className={styles.empty}>{t('friends.noOutgoing')}</p>}
           <ul className={styles.list}>{data.outgoing.map((request) => (
             <li key={request.id} className={styles.person}>
               <FriendIdentity person={request.recipient} />
-              <button className="btn btn-outline" disabled={busy}
+              <Button disabled={busy}
                 onClick={() => void act(`/api/friends/requests/${request.id}`, 'DELETE')}>
-                {t('friends.cancel')}</button>
+                {t('friends.cancel')}</Button>
             </li>
           ))}</ul>
         </section></>}

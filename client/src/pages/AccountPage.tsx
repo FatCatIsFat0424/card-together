@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ChangeEvent, FormEvent, KeyboardEvent, ReactNode } from 'react';
+import type { ChangeEvent, FormEvent, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@shared/constants';
 import type { AccountProfile, AvatarBorderId, AvatarId, MatchHistory } from '@shared/types';
 import { apiRequest } from '../api';
@@ -21,6 +22,8 @@ import { OpacitySlider } from '../components/OpacitySlider';
 import { AccountProfilePreview } from '../components/AccountProfilePreview';
 import { AppCheckbox } from '../components/AppCheckbox';
 import { AudioSettings } from '../components/AudioSettings';
+import { Button } from '../components/Button';
+import { Tabs, tabElementId } from '../components/Tabs';
 import styles from './AccountPages.module.css';
 import editorStyles from './AccountPage.module.css';
 
@@ -29,6 +32,8 @@ type OpacityField = 'tableBackgroundOpacity' | 'cardBackOpacity';
 type SettingField = MediaField | OpacityField | 'matchesPublic';
 
 const ACCOUNT_TABS = ['profile', 'history', 'emoji', 'sound', 'password'] as const;
+/** Phone and narrow layouts start the long profile sections folded. */
+const COMPACT_QUERY = '(max-width: 52rem), (max-height: 500px) and (min-width: 600px)';
 type AccountTab = typeof ACCOUNT_TABS[number];
 
 const RESIZE = {
@@ -48,6 +53,7 @@ export function AccountPage(): ReactNode {
   const setAccount = useAccountStore((state) => state.setAccount);
   const { t, locale } = useI18nStore();
   const navigate = useNavigate();
+  const compact = useMediaQuery(COMPACT_QUERY, { noSsr: true });
   const [activeTab, setActiveTab] = useState<AccountTab>('profile');
   const [nickname, setNickname] = useState(account?.nickname ?? '');
   const [color, setColor] = useState(account?.color ?? '#4a9eff');
@@ -86,19 +92,6 @@ export function AccountPage(): ReactNode {
 
   if (!account) return null;
   const selectedBorder = borderDirty ? avatarBorder : account.avatarBorder ?? null;
-
-  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number): void => {
-    let nextIndex: number;
-    if (event.key === 'ArrowRight') nextIndex = (index + 1) % ACCOUNT_TABS.length;
-    else if (event.key === 'ArrowLeft') nextIndex = (index + ACCOUNT_TABS.length - 1) % ACCOUNT_TABS.length;
-    else if (event.key === 'Home') nextIndex = 0;
-    else if (event.key === 'End') nextIndex = ACCOUNT_TABS.length - 1;
-    else return;
-    event.preventDefault();
-    const tab = ACCOUNT_TABS[nextIndex];
-    setActiveTab(tab);
-    document.getElementById(`account-tab-${tab}`)?.focus();
-  };
 
   /** Media and visibility settings save immediately, independent of the profile form. */
   const patchSetting = async (
@@ -202,25 +195,24 @@ export function AccountPage(): ReactNode {
   return (
     <main className={editorStyles.page}>
       <header className={editorStyles.header}>
-        <div className={editorStyles.tabs} role="tablist" aria-label={t('nav.account')}>
-          {ACCOUNT_TABS.map((tab, index) => (
-            <button key={tab} id={`account-tab-${tab}`} type="button" role="tab"
-              aria-selected={activeTab === tab} aria-controls={`account-panel-${tab}`}
-              tabIndex={activeTab === tab ? 0 : -1} onClick={() => setActiveTab(tab)}
-              onKeyDown={(event) => handleTabKeyDown(event, index)}>
-              {t(`profile.tab.${tab}`)}
-            </button>
-          ))}
-        </div>
+        <Tabs<AccountTab> idPrefix="account" controls="account-panel" label={t('nav.account')} value={activeTab}
+          className={editorStyles.tabs} onChange={setActiveTab}
+          tabs={ACCOUNT_TABS.map((tab) => ({ id: tab, label: t(`profile.tab.${tab}`) }))} />
         <p className={editorStyles.joined}>
           {t('profile.joined')} {new Date(account.createdAt).toLocaleDateString(locale)}
         </p>
       </header>
-      <div id="account-panel-profile" role="tabpanel" aria-labelledby="account-tab-profile"
-        hidden={activeTab !== 'profile'}>
+      <div id="account-panel" role="tabpanel" aria-labelledby={tabElementId('account', activeTab)}>
+      <div id="account-panel-profile" hidden={activeTab !== 'profile'}>
         <div className={editorStyles.editor}>
-          <AccountProfilePreview account={{ ...account, avatarBorder: selectedBorder }} nickname={nickname} avatar={avatar} color={color}
-            appearance={appearance} />
+          {compact ? <details className={editorStyles.fold}>
+            <summary>{t('profile.livePreview')}</summary>
+            <div className={editorStyles.foldBody}>
+              <AccountProfilePreview account={{ ...account, avatarBorder: selectedBorder }} nickname={nickname} avatar={avatar}
+                color={color} appearance={appearance} />
+            </div>
+          </details> : <AccountProfilePreview account={{ ...account, avatarBorder: selectedBorder }} nickname={nickname}
+            avatar={avatar} color={color} appearance={appearance} />}
           <div className={editorStyles.controls}>
             <form className={styles.form} onSubmit={(event) => void saveProfile(event)}>
               <div className={editorStyles.identityFields}>
@@ -252,14 +244,14 @@ export function AccountPage(): ReactNode {
                   <div className={editorStyles.compactActions}>
                     <input ref={avatarInput} type="file" accept="image/*" hidden
                       onChange={chooseImage('avatarImage')} />
-                    <button type="button" className="btn btn-outline" disabled={mediaBusy !== null}
+                    <Button type="button" disabled={mediaBusy !== null}
                       onClick={() => avatarInput.current?.click()}>
                       {mediaBusy === 'avatarImage' ? t('profile.uploading') : t('profile.uploadAvatar')}
-                    </button>
-                    {account.avatarImage && <button type="button" className="btn btn-outline"
+                    </Button>
+                    {account.avatarImage && <Button type="button"
                       disabled={mediaBusy !== null}
                       onClick={() => void patchSetting('avatarImage', async () => null)}>
-                      {t('profile.removeAvatar')}</button>}
+                      {t('profile.removeAvatar')}</Button>}
                   </div>
                 </div>
                 {mediaFeedback('avatarImage')}
@@ -279,14 +271,20 @@ export function AccountPage(): ReactNode {
                       <MenuItem key={id} value={id}>{t(`shop.item.${id}.name`)}</MenuItem>)}
                   </Select>
                 </FormControl>
-                <button type="submit" className="btn btn-primary" disabled={profileBusy || !nickname.trim()}>
+                <Button type="submit" variant="primary" disabled={profileBusy || !nickname.trim()}>
                   {profileBusy ? t('common.loading') : t('common.save')}
-                </button>
+                </Button>
               </div>
               {profileError && <p role="alert" className={styles.error}>{profileError}</p>}
               {saved && <p role="status" className={styles.success}>{t('profile.saved')}</p>}
             </form>
-            <EquipmentSettings key={account.id} account={account} />
+            <details className={editorStyles.fold} open={!compact}>
+              <summary>{t('shop.equipment')}</summary>
+              <div className={editorStyles.foldBody}><EquipmentSettings key={account.id} account={account} /></div>
+            </details>
+            <details className={editorStyles.fold} open={!compact}>
+              <summary>{t('profile.appearance')}</summary>
+              <div className={editorStyles.foldBody}>
             <section className={editorStyles.appearance} aria-labelledby="profile-appearance-heading">
               <h2 id="profile-appearance-heading">{t('profile.appearance')}</h2>
               <p className={styles.hint}>{t('profile.appearanceAutoSave')}</p>
@@ -296,14 +294,14 @@ export function AccountPage(): ReactNode {
                   <div className={editorStyles.compactActions}>
                     <input ref={seatBackgroundInput} type="file" accept="image/*" hidden
                       onChange={chooseImage('seatBackground')} />
-                    <button type="button" className="btn btn-outline" disabled={mediaBusy !== null}
+                    <Button type="button" disabled={mediaBusy !== null}
                       onClick={() => seatBackgroundInput.current?.click()}>
                       {mediaBusy === 'seatBackground' ? t('profile.uploading') : t('profile.uploadBackground')}
-                    </button>
-                    {account.seatBackground && <button type="button" className="btn btn-outline"
+                    </Button>
+                    {account.seatBackground && <Button type="button"
                       disabled={mediaBusy !== null}
                       onClick={() => void patchSetting('seatBackground', async () => null)}>
-                      {t('profile.removeBackground')}</button>}
+                      {t('profile.removeBackground')}</Button>}
                   </div>
                 </div>
                 <p className={styles.hint}>{t('profile.seatBackgroundHelp')}</p>
@@ -315,14 +313,14 @@ export function AccountPage(): ReactNode {
                   <div className={editorStyles.compactActions}>
                     <input ref={backgroundInput} type="file" accept="image/*" hidden
                       onChange={chooseImage('tableBackground')} />
-                    <button type="button" className="btn btn-outline" disabled={mediaBusy !== null}
+                    <Button type="button" disabled={mediaBusy !== null}
                       onClick={() => backgroundInput.current?.click()}>
                       {mediaBusy === 'tableBackground' ? t('profile.uploading') : t('profile.uploadBackground')}
-                    </button>
-                    {account.tableBackground && <button type="button" className="btn btn-outline"
+                    </Button>
+                    {account.tableBackground && <Button type="button"
                       disabled={mediaBusy !== null}
                       onClick={() => void patchSetting('tableBackground', async () => null)}>
-                      {t('profile.removeBackground')}</button>}
+                      {t('profile.removeBackground')}</Button>}
                   </div>
                 </div>
                 <p className={styles.hint}>{t('profile.backgroundHelp')}</p>
@@ -336,14 +334,14 @@ export function AccountPage(): ReactNode {
                   <div className={editorStyles.compactActions}>
                     <input ref={cardBackInput} type="file" accept="image/*" hidden
                       onChange={chooseImage('cardBack')} />
-                    <button type="button" className="btn btn-outline" disabled={mediaBusy !== null}
+                    <Button type="button" disabled={mediaBusy !== null}
                       onClick={() => cardBackInput.current?.click()}>
                       {mediaBusy === 'cardBack' ? t('profile.uploading') : t('profile.uploadCardBack')}
-                    </button>
-                    {account.cardBack && <button type="button" className="btn btn-outline"
+                    </Button>
+                    {account.cardBack && <Button type="button"
                       disabled={mediaBusy !== null}
                       onClick={() => void patchSetting('cardBack', async () => null)}>
-                      {t('profile.removeCardBack')}</button>}
+                      {t('profile.removeCardBack')}</Button>}
                   </div>
                 </div>
                 <p className={styles.hint}>{t('profile.cardBackHelp')}</p>
@@ -352,11 +350,12 @@ export function AccountPage(): ReactNode {
                 {mediaFeedback('cardBackOpacity')}
               </div>
             </section>
+              </div>
+            </details>
           </div>
         </div>
       </div>
-      <section id="account-panel-history" role="tabpanel" aria-labelledby="account-tab-history"
-        className={editorStyles.managementPanel} hidden={activeTab !== 'history'}>
+      <section id="account-panel-history" className={editorStyles.managementPanel} hidden={activeTab !== 'history'}>
         <p className={styles.hint}>{t('history.humanOnly')}</p>
         <label className={`${styles.row} ${editorStyles.historyVisibility}`}>
           <AppCheckbox checked={account.matchesPublic} disabled={mediaBusy !== null}
@@ -371,16 +370,13 @@ export function AccountPage(): ReactNode {
           : history === null ? <p role="status">{t('common.loading')}</p>
           : <MatchHistoryList matches={history.matches} players={history.players} />}
       </section>
-      <section id="account-panel-emoji" role="tabpanel" aria-labelledby="account-tab-emoji"
-        className={editorStyles.managementPanel} hidden={activeTab !== 'emoji'}>
+      <section id="account-panel-emoji" className={editorStyles.managementPanel} hidden={activeTab !== 'emoji'}>
         <EmojiLibrary />
       </section>
-      <section id="account-panel-sound" role="tabpanel" aria-labelledby="account-tab-sound"
-        className={editorStyles.managementPanel} hidden={activeTab !== 'sound'}>
+      <section id="account-panel-sound" className={editorStyles.managementPanel} hidden={activeTab !== 'sound'}>
         <AudioSettings showTitle={false} />
       </section>
-      <section id="account-panel-password" role="tabpanel" aria-labelledby="account-tab-password"
-        className={editorStyles.managementPanel} hidden={activeTab !== 'password'}>
+      <section id="account-panel-password" className={editorStyles.managementPanel} hidden={activeTab !== 'password'}>
         <form className={`${styles.form} ${editorStyles.securityForm}`} onSubmit={(event) => void changePassword(event)}>
           <div className={styles.field}>
             <label htmlFor="current-password">{t('profile.currentPassword')}</label>
@@ -404,13 +400,14 @@ export function AccountPage(): ReactNode {
           </div>
           <p className={styles.hint}>{t('profile.passwordNotice')}</p>
           {securityError && <p role="alert" className={styles.error}>{securityError}</p>}
-          <button type="submit" className="btn btn-primary" disabled={securityBusy}>
+          <Button type="submit" variant="primary" disabled={securityBusy}>
             {securityBusy ? t('common.loading') : t('profile.changePassword')}
-          </button>
-          <button type="button" className="btn btn-outline" disabled={securityBusy}
-            onClick={() => void signOutAll()}>{t('auth.signOutAll')}</button>
+          </Button>
+          <Button type="button" disabled={securityBusy}
+            onClick={() => void signOutAll()}>{t('auth.signOutAll')}</Button>
         </form>
       </section>
+      </div>
     </main>
   );
 }

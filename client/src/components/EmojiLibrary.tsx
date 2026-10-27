@@ -12,6 +12,7 @@ import { useEmojiStore } from '../stores/emoji-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { joinNames } from '../games/seat-names';
 import { AppCheckbox } from './AppCheckbox';
+import { Button } from './Button';
 import styles from './EmojiLibrary.module.css';
 
 const ACCEPT = 'image/png,image/gif,image/webp,image/jpeg';
@@ -73,17 +74,17 @@ export function EmojiGrid({
                 <input value={editing.name} aria-label={t('emoji.renamePrompt')} autoFocus
                   pattern={NAME_INPUT_PATTERN} maxLength={EMOJI_NAME_MAX_LENGTH} required
                   onChange={(event) => onEdit({ ...editing, name: event.target.value })} />
-                <button type="submit" className="btn btn-primary">{t('common.save')}</button>
-                <button type="button" className="btn btn-outline"
-                  onClick={() => onEdit(null)}>{t('common.cancel')}</button>
+                <Button type="submit" variant="primary">{t('common.save')}</Button>
+                <Button type="button"
+                  onClick={() => onEdit(null)}>{t('common.cancel')}</Button>
               </form>
             ) : editing?.id === emoji.id ? (
               <div className={styles.renameForm}>
                 <span>{t('emoji.confirmDelete', { name: emoji.name })}</span>
-                <button type="button" className="btn btn-danger"
-                  onClick={() => onRemove(emoji.id)}>{t('emoji.delete')}</button>
-                <button type="button" className="btn btn-outline"
-                  onClick={() => onEdit(null)}>{t('common.cancel')}</button>
+                <Button type="button" variant="danger-text"
+                  onClick={() => onRemove(emoji.id)}>{t('emoji.delete')}</Button>
+                <Button type="button"
+                  onClick={() => onEdit(null)}>{t('common.cancel')}</Button>
               </div>
             ) : (
               <>
@@ -127,22 +128,22 @@ export function EmojiSelectionBar({
     return (
       <div className={styles.selectionBar} role="alertdialog" aria-label={t('emoji.deleteSelected', { count })}>
         <span>{t('emoji.confirmDeleteSelected', { count })}</span>
-        <button type="button" className="btn btn-danger" disabled={busy} autoFocus
-          onClick={onConfirm}>{t('emoji.delete')}</button>
-        <button type="button" className="btn btn-outline" disabled={busy}
-          onClick={onCancel}>{t('common.cancel')}</button>
+        <Button type="button" variant="danger-text" disabled={busy} autoFocus
+          onClick={onConfirm}>{t('emoji.delete')}</Button>
+        <Button type="button" disabled={busy}
+          onClick={onCancel}>{t('common.cancel')}</Button>
       </div>
     );
   }
   return (
     <div className={styles.selectionBar}>
       <span role="status">{t('emoji.selectedCount', { count })}</span>
-      <button type="button" className="btn btn-outline" disabled={busy || visibleCount === 0}
-        onClick={onSelectAll}>{t('emoji.selectAll', { count: String(visibleCount) })}</button>
-      <button type="button" className="btn btn-outline" disabled={busy || selectedCount === 0}
-        onClick={onClear}>{t('emoji.clearSelection')}</button>
-      <button type="button" className="btn btn-danger" disabled={busy || selectedCount === 0}
-        onClick={onDelete}>{t('emoji.deleteSelected', { count })}</button>
+      <Button type="button" disabled={busy || visibleCount === 0}
+        onClick={onSelectAll}>{t('emoji.selectAll', { count: String(visibleCount) })}</Button>
+      <Button type="button" disabled={busy || selectedCount === 0}
+        onClick={onClear}>{t('emoji.clearSelection')}</Button>
+      <Button type="button" variant="danger-text" disabled={busy || selectedCount === 0}
+        onClick={onDelete}>{t('emoji.deleteSelected', { count })}</Button>
     </div>
   );
 }
@@ -313,13 +314,13 @@ export function EmojiLibrary(): ReactNode {
       <div className={styles.actions}>
         <input ref={filesInput} type="file" multiple accept={ACCEPT} hidden onChange={choose} />
         <input ref={folderInput} type="file" multiple hidden onChange={choose} />
-        <button type="button" className="btn btn-outline" disabled={busy}
-          onClick={() => filesInput.current?.click()}>{t('emoji.import')}</button>
-        <button type="button" className="btn btn-outline" disabled={busy}
-          onClick={() => folderInput.current?.click()}>{t('emoji.importFolder')}</button>
+        <Button type="button" disabled={busy}
+          onClick={() => filesInput.current?.click()}>{t('emoji.import')}</Button>
+        <Button type="button" disabled={busy}
+          onClick={() => folderInput.current?.click()}>{t('emoji.importFolder')}</Button>
         {emojis.length > 0 && (
-          <button type="button" className="btn btn-outline" aria-pressed={selecting} disabled={busy}
-            onClick={toggleSelecting}>{selecting ? t('emoji.doneSelecting') : t('emoji.select')}</button>
+          <Button type="button" aria-pressed={selecting} disabled={busy}
+            onClick={toggleSelecting}>{selecting ? t('emoji.doneSelecting') : t('emoji.select')}</Button>
         )}
       </div>
       {progress && <p role="status" className={styles.hint}>{progress}</p>}

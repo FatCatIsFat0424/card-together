@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { ShopItem } from '@shared/types';
 import { SHOP_STICKERS } from '@shared/constants';
@@ -27,6 +27,30 @@ interface ShopProductArtProps {
   readonly account: PreviewAccount;
 }
 
+/** Shrinks a preview that is larger than its tile; backgrounds fill the tile instead. */
+function FitArt({ fill, children }: { readonly fill: boolean; readonly children: ReactNode }): ReactNode {
+  const box = useRef<HTMLDivElement>(null);
+  const art = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const outer = box.current;
+    const inner = art.current;
+    if (fill || !outer || !inner) return;
+    const fit = (): void => {
+      inner.style.zoom = '';
+      const { offsetWidth: width, offsetHeight: height } = inner;
+      if (width > 0 && height > 0) inner.style.zoom = String(Math.min(1, 0.9 * outer.clientWidth / width, 0.9 * outer.clientHeight / height));
+    };
+    fit();
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(fit) : null;
+    observer?.observe(outer);
+    return () => observer?.disconnect();
+  }, [fill]);
+  // Tile previews are decorative; the dialog holds the interactive copy (such as the sound sample button).
+  return <div ref={box} className={styles.artScale} inert>
+    <div ref={art} className={fill ? styles.artFill : styles.artFit}>{children}</div>
+  </div>;
+}
+
 /** Keeps the product, description and purchase controls in place while distant artwork is unloaded. */
 export function ShopProductPreview({ item, account, className, children }: ShopProductArtProps & {
   readonly className: string;
@@ -43,7 +67,8 @@ export function ShopProductPreview({ item, account, className, children }: ShopP
   }, [persistent]);
   return <div ref={container} className={className}>
     {children}
-    {(persistent || visible) && <ShopProductArt item={item} account={account} />}
+    {(persistent || visible) && <FitArt fill={item.type === 'tableBackground' || item.type === 'seatBackground'}>
+      <ShopProductArt item={item} account={account} /></FitArt>}
   </div>;
 }
 

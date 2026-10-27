@@ -17,7 +17,7 @@ export function AchievementItem({ id, progress }: {
   return <li className={`${styles.item} ${complete ? styles.completed : ''}`} data-achievement-id={id}>
     <div className={`${styles.medal} ${styles[`tier${Math.min(tier, 3)}`]}`} aria-hidden="true"><AppIcon name={complete ? 'agree' : 'trophy'} /></div>
     <div className={styles.itemBody}>
-      <h2>{t(`achievements.${id}.name`)}</h2>
+      <h3>{t(`achievements.${id}.name`)}</h3>
       <p>{t(`achievements.${id}.description`)}</p>
       <div className={styles.itemProgress}>
         <progress value={progress} max={item.target} aria-label={t(`achievements.${id}.name`)} />
