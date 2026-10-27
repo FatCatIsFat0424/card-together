@@ -43,6 +43,26 @@ export interface SocketHarness {
   close(): Promise<void>;
 }
 
+/**
+ * One authenticated WebSocket-only client without automatic reconnection. `track` sees the client
+ * before it connects, so callers can still disconnect it when the handshake fails.
+ */
+export async function connectClient(
+  baseUrl: string, cookie: string, track: (client: TestClient) => void = () => {},
+): Promise<TestClient> {
+  const client: TestClient = connectSocket(baseUrl, {
+    autoConnect: false, forceNew: true, reconnection: false, transports: ['websocket'],
+    extraHeaders: { Origin: TEST_ORIGIN, Cookie: cookie },
+  });
+  track(client);
+  await new Promise<void>((resolve, reject): void => {
+    client.once('connect', (): void => resolve());
+    client.once('connect_error', reject);
+    client.connect();
+  });
+  return client;
+}
+
 /** Real HTTP/Socket transport and JSON storage; fixture sessions avoid password hashing. */
 export async function createSocketHarness(roomCount = 3): Promise<SocketHarness> {
   const directory = await mkdtemp(join(tmpdir(), 'bridge-socket-performance-'));
@@ -147,18 +167,8 @@ export async function createSocketHarness(roomCount = 3): Promise<SocketHarness>
     if (!address || typeof address === 'string') throw new Error('Expected server address');
     const baseUrl = `http://127.0.0.1:${address.port}`;
 
-    async function connect(cookie: string): Promise<TestClient> {
-      const client: TestClient = connectSocket(baseUrl, {
-        autoConnect: false, forceNew: true, reconnection: false, transports: ['websocket'],
-        extraHeaders: { Origin: TEST_ORIGIN, Cookie: cookie },
-      });
-      allClients.push(client);
-      await new Promise<void>((resolve, reject): void => {
-        client.once('connect', (): void => resolve());
-        client.once('connect_error', reject);
-        client.connect();
-      });
-      return client;
+    function connect(cookie: string): Promise<TestClient> {
+      return connectClient(baseUrl, cookie, (client) => allClients.push(client));
     }
 
     function requireSuccess(response: { success: boolean; error?: string }): void {
