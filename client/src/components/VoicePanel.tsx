@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { PublicAccount } from '@shared/types';
@@ -22,7 +22,12 @@ import {
   watchAudioDevices,
 } from '../stores/voice-store';
 import type { VoiceErrorCode } from '../stores/voice-store';
+import { summarizeVoice, toggleExpandedRow, visibleExpandedRow } from '../voice/voice-panel-state';
 import { DEFAULT_PEER_PREFERENCE, outputSelectionSupported } from '../voice/voice-session';
+import type { PeerPreference } from '../voice/voice-session';
+import { volumePercent } from '../audio/mix';
+import { AppIcon } from './AppIcon';
+import { AudioSettingsButton } from './AudioSettings';
 import { Avatar } from './Avatar';
 import styles from './VoicePanel.module.css';
 
@@ -40,7 +45,7 @@ const ERROR_TRANSLATIONS: Record<VoiceErrorCode, TranslationKey> = {
   disconnected: 'voice.disconnected',
 };
 
-function DeviceSettings(): ReactNode {
+function DeviceSettings({ id }: { readonly id: string }): ReactNode {
   const { t } = useI18nStore();
   const { status, inputs, outputs, inputDeviceId, outputDeviceId } = useVoiceStore(
     useShallow((state) => ({
@@ -62,7 +67,7 @@ function DeviceSettings(): ReactNode {
     </option>);
 
   return (
-    <div className={styles.devices}>
+    <div id={id} className={styles.devices}>
       <label className={styles.field}>
         <span>{t('voice.input')}</span>
         <select value={inputDeviceId ?? ''}
@@ -82,6 +87,7 @@ function DeviceSettings(): ReactNode {
       </label>
       {!outputSupported && <p id="table-voice-output-hint" className={styles.hint}>
         {t('voice.outputUnsupported')}</p>}
+      <AudioSettingsButton label={t('voice.volumeSettings')} className={styles.volumeSettings} />
     </div>
   );
 }
@@ -91,6 +97,64 @@ function leaveActiveVoice(): void {
   if (status === 'joined' || status === 'joining') leaveVoice();
 }
 
+interface ParticipantRowProps {
+  readonly person: PublicAccount | undefined;
+  readonly self: boolean;
+  readonly muted: boolean;
+  readonly deafened: boolean;
+  /** Remote connection state; undefined for the local player. */
+  readonly connection: 'connecting' | 'connected' | 'failed' | undefined;
+  readonly preference: PeerPreference;
+  readonly expanded: boolean;
+  readonly onToggle: () => void;
+  readonly onPeerMuted: (muted: boolean) => void;
+  readonly onPeerVolume: (volume: number) => void;
+}
+
+/** One person in the call. Remote rows are buttons that reveal that player's own mute and volume. */
+export function VoiceParticipantRow({
+  person, self, muted, deafened, connection, preference, expanded, onToggle, onPeerMuted, onPeerVolume,
+}: ParticipantRowProps): ReactNode {
+  const { t } = useI18nStore();
+  const detailsId = useId();
+  const name = person?.nickname ?? t('voice.player');
+  const content = <>
+    {person && <Avatar avatar={person.avatar} image={person.avatarImage} border={person.avatarBorder}
+      color={person.color} size="compact" />}
+    <span className={styles.name}>
+      {name}
+      {self && <span className={styles.me}>{` ${t('common.me')}`}</span>}
+    </span>
+    {muted && <span className={styles.stateIcon} role="img" aria-label={t('voice.muted')} title={t('voice.muted')}>
+      <AppIcon name="microphoneOff" /></span>}
+    {deafened && <span className={styles.stateIcon} role="img" aria-label={t('voice.deafened')}
+      title={t('voice.deafened')}><AppIcon name="headsetOff" /></span>}
+    {!self && preference.muted && <span className={styles.stateIcon} role="img" aria-label={t('voice.mutedByYou')}
+      title={t('voice.mutedByYou')}><AppIcon name="volumeOff" /></span>}
+    {connection === 'failed' && <span className={`${styles.connection} ${styles.error}`} role="alert">
+      {t('voice.peerFailed')}</span>}
+    {connection === 'connecting' && <span className={styles.connection} role="status">
+      {t('voice.peerConnecting')}</span>}
+    {!self && <AppIcon name="nextPage" className={styles.chevron} />}
+  </>;
+  return <li className={styles.participant} data-expanded={expanded}>
+    {self ? <div className={styles.row}>{content}</div>
+      : <button type="button" className={`${styles.row} ${styles.rowButton}`} aria-expanded={expanded}
+        aria-controls={detailsId} onClick={onToggle}>{content}</button>}
+    {!self && expanded && <div id={detailsId} className={styles.peerControls}>
+      <button type="button" className={styles.iconButton} aria-pressed={preference.muted}
+        aria-label={`${t('voice.peerMute')}: ${name}`} title={t('voice.peerMute')}
+        onClick={() => onPeerMuted(!preference.muted)}>
+        <AppIcon name={preference.muted ? 'volumeOff' : 'volume'} />
+      </button>
+      <input type="range" min={0} max={100} value={volumePercent(preference.volume)}
+        aria-label={`${t('voice.peerVolume')}: ${name}`}
+        onChange={(event) => onPeerVolume(Number(event.target.value) / 100)} />
+      <output className={styles.volumeValue}>{volumePercent(preference.volume)}</output>
+    </div>}
+  </li>;
+}
+
 export function VoicePanel(): ReactNode {
   const { t } = useI18nStore();
   const account = useAccountStore((state) => state.account);
@@ -98,9 +162,8 @@ export function VoicePanel(): ReactNode {
   const roomCode = useRoomStore((state) => state.currentRoomCode);
   const roomInfo = useRoomStore((state) => state.roomInfo);
   const accountId = account?.id;
-  const { status, participants, muted, deafened, error, autoplayBlocked, peerPrefs,
-    peerErrors, peerConnections, peerId, silenced } =
-    useVoiceStore(useShallow((state) => ({
+  const voice = useVoiceStore(
+    useShallow((state) => ({
       status: state.status,
       participants: state.participants,
       muted: state.muted,
@@ -113,8 +176,12 @@ export function VoicePanel(): ReactNode {
       peerId: state.peerId,
       silenced: state.silenced,
     })));
+  const { status, participants, muted, deafened, error, autoplayBlocked, peerPrefs,
+    peerErrors, peerConnections, peerId, silenced } = voice;
   const [profiles, setProfiles] = useState<Record<string, PublicAccount>>({});
   const [showDevices, setShowDevices] = useState(false);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const devicesId = useId();
 
   // Membership controls the media lifetime; navigating between pages does not.
   useEffect(() => {
@@ -148,102 +215,92 @@ export function VoicePanel(): ReactNode {
   const joined = status === 'joined';
   const joining = status === 'joining';
   const canJoin = connection === 'ready';
-  const remoteParticipants = participants.filter((participant) => participant.peerId !== peerId);
-  const hasPeerErrors = Object.keys(peerErrors).length > 0;
-  const allConnected = remoteParticipants.length > 0 && remoteParticipants.every(
-    (participant) => peerConnections[participant.peerId] === 'connected',
-  );
+  const summary = summarizeVoice(voice);
+  const expandedId = visibleExpandedRow(expandedRow, participants.map((participant) => participant.accountId));
+  const statusText = summary.kind === 'off' ? t('voice.off')
+    : summary.kind === 'error' ? t('voice.statusError')
+    : summary.kind === 'joining' ? t('voice.statusJoining')
+    : t(summary.kind === 'connected' ? 'voice.statusConnected'
+      : summary.kind === 'partial' ? 'voice.statusPartial' : 'voice.statusJoined', { n: String(summary.count) });
+  const observer = Boolean(roomInfo?.observerIds?.includes(account.id));
 
   return (
     <section className={styles.panel} aria-labelledby="table-voice-title">
-      <div className={styles.header}>
-        <div className={styles.heading}>
-          <h2 id="table-voice-title">{t('voice.title')}</h2>
-          <span className={styles.roomCode}>{roomCode}</span>
-          <span className={joined && allConnected ? styles.connected : styles.status} role="status">
-            {t(joined ? hasPeerErrors ? 'voice.partial' : allConnected ? 'voice.connected'
-              : 'voice.joined' : joining ? 'common.loading' : 'voice.off')}
-          </span>
-        </div>
-        <div className={styles.controls}>
-          {joined ? <>
-            <button type="button" className={`btn btn-outline ${styles.toggle}`}
-              aria-pressed={muted} onClick={() => setVoiceMuted(!muted)}>
-              {t('voice.mute')}
-            </button>
-            <button type="button" className={`btn btn-outline ${styles.toggle}`}
-              aria-pressed={deafened}
-              onClick={() => setVoiceDeafened(!deafened)}>
-              {t('voice.deafen')}
-            </button>
-            <button type="button" className="btn btn-outline" onClick={leaveVoice}>
-              {t('voice.leave')}
-            </button>
-            <button type="button" className="btn btn-outline" disabled={!canJoin}
-              onClick={() => { leaveVoice(); void joinVoice(roomCode, account.id); }}>
-              {t('voice.rejoin')}
-            </button>
-          </> : joining ? <button type="button" className="btn btn-outline" onClick={leaveVoice}>
-            {t('common.cancel')}
-          </button> : <button type="button" className="btn btn-primary" disabled={!canJoin}
-            onClick={() => void joinVoice(roomCode, account.id)}>
-            {t(error ? 'voice.retry' : 'voice.join')}
-          </button>}
-          <button type="button" className={`btn btn-outline ${styles.toggle}`}
-            aria-pressed={showDevices} aria-expanded={showDevices}
-            onClick={() => setShowDevices(!showDevices)}>
-            {t('voice.devices')}
+      <header className={styles.header}>
+        <span className={styles.dot} data-state={summary.dot} aria-hidden="true" />
+        <h2 id="table-voice-title" className={styles.title}>{t('voice.title')}</h2>
+        <span className={styles.statusText} role="status">{statusText}</span>
+        <button type="button" className={`${styles.iconButton} ${styles.headerFirst}`}
+          aria-expanded={showDevices} aria-controls={devicesId} aria-label={t('voice.devices')}
+          title={t('voice.devices')} onClick={() => setShowDevices(!showDevices)}>
+          <AppIcon name="settings" />
+        </button>
+        {joined && <button type="button" className={`${styles.iconButton} ${styles.danger}`}
+          aria-label={t('voice.leave')} title={t('voice.leave')} onClick={leaveVoice}>
+          <AppIcon name="hangUp" />
+        </button>}
+      </header>
+      {showDevices && <DeviceSettings id={devicesId} />}
+      {!joined && !joining && <>
+        {error && <p className={styles.banner} data-tone="error" role="alert">{t(ERROR_TRANSLATIONS[error])}</p>}
+        <button type="button" className={`btn btn-primary ${styles.primaryAction}`} disabled={!canJoin}
+          onClick={() => void joinVoice(roomCode, account.id)}>
+          {t(error ? 'voice.retry' : 'voice.join')}
+        </button>
+      </>}
+      {joining && <>
+        <p className={styles.banner} role="status">{t('voice.joining')}</p>
+        <button type="button" className={`btn btn-outline ${styles.primaryAction}`} onClick={leaveVoice}>
+          {t('common.cancel')}
+        </button>
+      </>}
+      {joined && <>
+        <div className={styles.toggles}>
+          <button type="button" className={styles.toggle} aria-pressed={muted} data-off={muted}
+            onClick={() => setVoiceMuted(!muted)}>
+            <AppIcon name={muted ? 'microphoneOff' : 'microphone'} />
+            <span>{t(muted ? 'voice.microphoneOff' : 'voice.microphone')}</span>
+          </button>
+          <button type="button" className={styles.toggle} aria-pressed={deafened} data-off={deafened}
+            onClick={() => setVoiceDeafened(!deafened)}>
+            <AppIcon name={deafened ? 'headsetOff' : 'headset'} />
+            <span>{t(deafened ? 'voice.soundOff' : 'voice.sound')}</span>
           </button>
         </div>
-      </div>
-      {showDevices && <DeviceSettings />}
-      {joining && <p className={styles.hint} role="status">{t('voice.joining')}</p>}
-      {error && <p className={styles.error} role="alert">{t(ERROR_TRANSLATIONS[error])}</p>}
-      {joined && <>
-        {roomInfo?.observerIds?.includes(account.id) && <p className={styles.hint}>{t('voice.observerMuted')}</p>}
-        {silenced.length > 0 && <p className={styles.hint}>{t('voice.observersSilenced')}</p>}
+        {error && <p className={styles.banner} data-tone="error" role="alert">{t(ERROR_TRANSLATIONS[error])}</p>}
+        {summary.needsRejoin && <div className={styles.banner} data-tone="error" role="alert">
+          <span className={styles.bannerText}>{t('voice.partial')}</span>
+          <button type="button" className={styles.bannerAction} disabled={!canJoin}
+            onClick={() => { leaveVoice(); void joinVoice(roomCode, account.id); }}>
+            {t('voice.rejoin')}
+          </button>
+        </div>}
+        {observer && <p className={styles.banner}>{t('voice.observerMuted')}</p>}
+        {silenced.length > 0 && <p className={styles.banner}>{t('voice.observersSilenced')}</p>}
+        {autoplayBlocked && !deafened && <div className={styles.banner} role="status">
+          <span className={styles.bannerText}>{t('voice.autoplay')}</span>
+          <button type="button" className={styles.bannerAction}
+            onClick={() => void resumeVoiceAudio()}>{t('voice.enableAudio')}</button>
+        </div>}
         <ul className={styles.participants} aria-label={t('voice.participants')}>
           {participants.map((participant) => {
-            const person = participant.accountId === account.id ? account
+            const self = participant.accountId === account.id;
+            const person = self ? account
               : Object.values(roomInfo?.seats ?? {})
                 .find((seat) => seat.player?.id === participant.accountId)?.player
                 ?? profiles[participant.accountId];
-            return <li key={participant.peerId} className={styles.participant}>
-              {person && <Avatar avatar={person.avatar} image={person.avatarImage} border={person.avatarBorder} color={person.color} size="small" />}
-              <span className={styles.name}>{person?.nickname ?? t('voice.player')}
-                {participant.accountId === account.id && ` ${t('common.me')}`}</span>
-              <span className={participant.muted ? styles.muted : styles.status}>
-                {t(participant.muted ? 'voice.muted' : 'voice.microphoneOn')}</span>
-              {participant.deafened && <span className={styles.muted}>{t('voice.deafened')}</span>}
-              {participant.peerId !== peerId && <span
-                className={`${styles.peerStatus} ${peerErrors[participant.peerId] ? styles.error : styles.status}`}
-                role={peerErrors[participant.peerId] ? 'alert' : 'status'}>
-                {t(peerErrors[participant.peerId] ? 'voice.peerFailed'
-                  : peerConnections[participant.peerId] === 'connected'
-                    ? 'voice.peerConnected' : 'voice.peerConnecting')}
-              </span>}
-              {participant.accountId !== account.id && (() => {
-                const preference = peerPrefs[participant.accountId] ?? DEFAULT_PEER_PREFERENCE;
-                return <div className={styles.peerControls}>
-                  <button type="button" className={`btn btn-outline ${styles.toggle}`}
-                    aria-pressed={preference.muted}
-                    onClick={() => setVoicePeerMuted(participant.accountId, !preference.muted)}>
-                    {t('voice.peerMute')}
-                  </button>
-                  <input type="range" min={0} max={100} value={Math.round(preference.volume * 100)}
-                    aria-label={`${t('voice.peerVolume')} ${person?.nickname ?? t('voice.player')}`}
-                    onChange={(event) =>
-                      setVoicePeerVolume(participant.accountId, Number(event.target.value) / 100)} />
-                </div>;
-              })()}
-            </li>;
+            return <VoiceParticipantRow key={participant.peerId} person={person} self={self}
+              muted={participant.muted} deafened={participant.deafened}
+              connection={participant.peerId === peerId ? undefined
+                : peerErrors[participant.peerId] ? 'failed'
+                  : peerConnections[participant.peerId] === 'connected' ? 'connected' : 'connecting'}
+              preference={peerPrefs[participant.accountId] ?? DEFAULT_PEER_PREFERENCE}
+              expanded={expandedId === participant.accountId}
+              onToggle={() => setExpandedRow(toggleExpandedRow(expandedId, participant.accountId))}
+              onPeerMuted={(value) => setVoicePeerMuted(participant.accountId, value)}
+              onPeerVolume={(value) => setVoicePeerVolume(participant.accountId, value)} />;
           })}
         </ul>
-        {autoplayBlocked && !deafened && <div className={styles.playback}>
-          <p role="status">{t('voice.autoplay')}</p>
-          <button type="button" className="btn btn-primary"
-            onClick={() => void resumeVoiceAudio()}>{t('voice.enableAudio')}</button>
-        </div>}
       </>}
     </section>
   );
