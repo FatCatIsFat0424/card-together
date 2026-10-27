@@ -6,7 +6,7 @@ Authoritative project rule set; `CLAUDE.md` references it.
 
 - TypeScript npm workspaces: `client/` (React 19, Vite, Zustand, CSS Modules),
   `server/` (Express, Socket.IO), `shared/` (contracts and pure rules).
-- Run checks with the Node.js version in `.node-version`; the app runs on 22.13+.
+- Run checks with the Node.js version in `.node-version`; the app requires Node.js 24+.
 - Setup and configuration: [development](docs/development.md).
 
 ## Directory map

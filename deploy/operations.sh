@@ -33,8 +33,8 @@ start_application_service() {
 # Checked before any service stops so a wrong or missing build cannot cause an outage.
 validate_install_artifacts() {
   local node_binary=$1
-  "$node_binary" -e 'const [major, minor] = process.versions.node.split(".").map(Number); if (major < 22 || (major === 22 && minor < 13)) process.exit(1)' || {
-    echo 'Node.js 22.13 or newer is required; use Node.js 24.' >&2
+  "$node_binary" -e 'if (Number(process.versions.node.split(".")[0]) < 24) process.exit(1)' || {
+    echo 'Node.js 24 or newer is required; use the version in .node-version.' >&2
     return 1
   }
   command -v rsync >/dev/null

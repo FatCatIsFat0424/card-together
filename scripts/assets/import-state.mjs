@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const SCHEMA = 1;
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
-/** Node 22.13 needs an explicit flag to load the shared TypeScript contracts. */
+/** Re-runs with type stripping when it was disabled, so the shared TypeScript contracts load. */
 export function ensureTypeScriptSupport(script, args) {
   const stripFlag = process.execArgv.findLast((arg) =>
     arg === '--experimental-strip-types' || arg === '--no-experimental-strip-types');

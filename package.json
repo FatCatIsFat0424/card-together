@@ -31,7 +31,7 @@
     "emoji:import": "node scripts/emoji/import-provided-emoji.mjs"
   },
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=24.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -4,7 +4,7 @@
 
 ## 環境建置
 
-1. 使用 [`.node-version`](../.node-version) 中完全相同的 Node.js 版本。應用程式可在 22.13+ 上執行，但檢查工具與部署會拒絕其他版本。
+1. 使用 [`.node-version`](../.node-version) 中完全相同的 Node.js 版本。應用程式需要 Node.js 24 以上（SQLite 引擎使用內建的 `node:sqlite`），檢查工具與部署則要求完全相同的版本。
 2. 在 repository 根目錄執行 `npm ci`。所有 workspace 共用根目錄的 TypeScript。
 3. 啟動 `npm run dev:server` 與 `npm run dev:client`，再開啟 <http://localhost:5173>。
 
