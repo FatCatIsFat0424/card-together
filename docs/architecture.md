@@ -26,6 +26,7 @@
 | `database/`、`media/` | 非同步 Repository、JSON adapter、migration、索引、每場對局的回放檔；以內容定址的圖片 |
 | `client/src/pages/`、`components/` | 延遲載入的路由與 CSS Modules UI |
 | `client/src/hooks/`、`stores/` | 帳號與 Socket 生命週期；Zustand 快照與偏好設定 |
+| `client/src/games/` | 共用牌桌外框，以及各遊戲資料夾；`registry.ts`（輕量的純資料與函式）與 `ui-registry.ts`（元件、牌桌）依遊戲型別查詢 |
 | `client/src/audio/`、`voice/` | 音樂、輪到提醒、WebRTC |
 | `deploy/` | 執行環境準備、安裝、備份、migration、發布 |
 
@@ -63,6 +64,10 @@
 - `api.ts` 以 cookie 處理 HTTP（逾時 15 秒，上傳為 120 秒）；`socket.ts` 處理即時通訊。
 - 帳號 hook 以伺服器快照取代 store 狀態，清除已不存在的房間或遊戲，並讓未變更的欄位保留原本的參照。
 - 牌桌依需求個別載入；進入一款遊戲不會載入其他九款牌桌實作。共用控制項放在可重用的 chunk 中，路由的錯誤復原也涵蓋牌桌載入失敗。
+- 各遊戲在自己的資料夾提供兩個模組，並各登記一筆 registry 項目，缺少項目會編譯失敗。共用外框、store 與頁面只查詢 registry，不再寫 `gameType === '<遊戲>'`：
+  - `<game>-client.ts` → `CLIENT_GAMES`（[`registry.ts`](../client/src/games/registry.ts)）：store 快照還原、觀戰視角、規則摘要與房規脈絡、手牌排序、歷史結果與勝負判定、大廳圖示。啟動時就載入，所以只放中繼資料與小型純函式，不放元件、CSS 或牌桌。
+  - `<game>-ui.ts` → `GAME_UIS`（[`ui-registry.ts`](../client/src/games/ui-registry.ts)）：延遲載入的牌桌、呈現畫格元件與樣式、出牌特效、音效提示、回合歷史畫面。只有牌桌外框與路由會匯入。
+- 類別（`cards`、`dice`、`board`）取自 shared 定義，由 `gamesInCategory` 提供給大廳分頁使用。
 - 輸入框內容改變時，聊天訊息列會保留既有的渲染結果。新的或被取代的訊息、語系變更與外觀偏好仍會更新受影響的列。
 - 字型樣式表與應用程式資源一起在文件 head 中宣告，並對字型主機加上連線提示，而不是透過 CSS import 鏈載入。
 - 主題、動態效果、音樂與語音偏好存在瀏覽器本機；個人檔案、圖片與歷史紀錄可見度存在伺服器端。
