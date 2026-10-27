@@ -1,0 +1,48 @@
+.button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  user-select: none;
+  transition: background-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+
+/* Pills are shorter than a finger; the pseudo-element extends the hit area to 40px. */
+.button::after {
+  content: '';
+  position: absolute;
+  inset: calc((var(--control-height) - var(--hit-size)) / 2) 0;
+}
+
+.regular { height: var(--control-height); padding: 0 var(--space-4); font-size: var(--text-base); }
+.small { height: var(--control-height-small); padding: 0 var(--space-3); font-size: var(--text-sm); }
+.small::after { inset: calc((var(--control-height-small) - var(--hit-size)) / 2) 0; }
+
+.button > svg { font-size: var(--icon-size); }
+.small > svg { font-size: 16px; }
+
+.button:active:not(:disabled) { transform: scale(0.97); }
+.button:disabled { opacity: 0.5; cursor: not-allowed; }
+:root .button[data-pending-disabled='true']:disabled { opacity: 1; }
+
+.primary { background: var(--color-primary); color: var(--text-on-primary); }
+.primary:hover:not(:disabled) { background: var(--color-primary-hover); }
+.success { background: var(--color-success); color: var(--text-inverse); }
+.success:hover:not(:disabled) { background: var(--color-success-hover); }
+.ghost { background: var(--surface-2); color: var(--text-primary); }
+.ghost:hover:not(:disabled) { background: var(--surface-3); }
+.text { padding-inline: var(--space-2); background: transparent; color: var(--color-primary); }
+.text:hover:not(:disabled) { background: var(--surface-1); }
+.dangerText { padding-inline: var(--space-2); background: transparent; color: var(--color-danger); }
+.dangerText:hover:not(:disabled) { background: var(--surface-1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .button { transition: none; }
+  .button:active:not(:disabled) { transform: none; }
+}

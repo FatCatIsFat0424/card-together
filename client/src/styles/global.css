@@ -76,20 +76,39 @@
   --border-color-hover: #475569;
   --border-color-focus: var(--color-primary);
 
-  /* Spacing */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
+  /* Spacing scale 4/8/12/16/24; the named aliases predate it and keep their values. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --spacing-xs: var(--space-1);
+  --spacing-sm: var(--space-2);
+  --spacing-md: var(--space-4);
+  --spacing-lg: var(--space-5);
   --spacing-xl: 32px;
   --spacing-2xl: 48px;
 
-  /* Radii */
+  /* Radii: cards and panels use lg, controls use pill. */
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
   --radius-pill: 999px;
+
+  /* Controls: one 34px primary pill, 28px small buttons and chips, 20px glyphs in 40px hit areas. */
+  --control-height: 34px;
+  --control-height-small: 28px;
+  --icon-size: 20px;
+  --hit-size: 40px;
+
+  /* Flat surfaces: tinted layers over the page instead of boxed borders. */
+  --surface-1: rgba(255, 255, 255, 0.04);
+  --surface-2: rgba(255, 255, 255, 0.07);
+  --surface-3: rgba(255, 255, 255, 0.11);
+  --separator: rgba(255, 255, 255, 0.08);
+  --color-gold: #f5c451;
+  --color-primary-soft: color-mix(in srgb, var(--color-primary) 18%, transparent);
 
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
@@ -107,14 +126,15 @@
   --topbar-height: 52px;
   --rail-width: 0px;
 
-  /* Font sizes */
+  /* Font sizes: nothing below 12px (xs); body 13-15px; titles 15-18px; use weight and color for hierarchy. */
   --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
-  --text-3xl: 2rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1rem;
+  --text-xl: 1.125rem;
+  --text-2xl: 1.375rem;
+  --text-3xl: 1.75rem;
 
   /* Transitions */
   --transition-fast: 150ms ease;
@@ -158,6 +178,12 @@
 
   --rail-bg: rgba(34, 24, 18, 0.88);
   --rail-border: rgba(227, 185, 100, 0.28);
+
+  --surface-1: rgba(243, 234, 216, 0.05);
+  --surface-2: rgba(243, 234, 216, 0.08);
+  --surface-3: rgba(243, 234, 216, 0.12);
+  --separator: rgba(227, 185, 100, 0.16);
+  --color-gold: #f0c35a;
 
   --page-texture: radial-gradient(ellipse at 50% 30%, #2a2019 0%, #15100c 60%, #0b0806 100%);
 
@@ -231,6 +257,12 @@
 
   --rail-bg: #fffdf8;
   --rail-border: #d9d0bd;
+
+  --surface-1: rgba(31, 42, 68, 0.04);
+  --surface-2: rgba(31, 42, 68, 0.07);
+  --surface-3: rgba(31, 42, 68, 0.1);
+  --separator: rgba(31, 42, 68, 0.1);
+  --color-gold: #8a5a0b;
 
   --page-texture: repeating-linear-gradient(0deg, rgba(60, 40, 20, 0.018) 0 1px, transparent 1px 3px);
 
@@ -377,27 +409,40 @@ textarea::placeholder {
   color: var(--text-muted);
 }
 
+/* iOS Safari zooms the page when a focused field is under 16px. */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
 /* ─── Shared button styles ─── */
+/* Legacy class names; new code uses the Button component, which draws the same pills. */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-lg);
-  border-radius: var(--radius-md);
-  font-weight: 500;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 6px var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-weight: 600;
   font-size: var(--text-base);
-  transition: background-color var(--transition-fast), border-color var(--transition-fast),
-    color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+  line-height: 1.2;
+  transition: background-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
   user-select: none;
 }
 
 .btn:hover {
-  transform: translateY(-1px);
+  background: var(--surface-3);
 }
 
 .btn:active {
-  transform: translateY(0);
+  transform: scale(0.97);
 }
 
 .btn:disabled {
@@ -417,7 +462,6 @@ textarea::placeholder {
 
 .btn-primary:hover {
   background: var(--color-primary-hover);
-  box-shadow: var(--shadow-md);
 }
 
 .btn-success {
@@ -427,7 +471,6 @@ textarea::placeholder {
 
 .btn-success:hover {
   background: var(--color-success-hover);
-  box-shadow: var(--shadow-md);
 }
 
 .btn-danger {
@@ -455,15 +498,13 @@ textarea::placeholder {
 }
 
 .btn-outline {
-  background: transparent;
-  border: 1px solid var(--border-color);
+  background: var(--surface-2);
   color: var(--text-secondary);
 }
 
 .btn-outline:hover {
-  border-color: var(--border-color-hover);
+  background: var(--surface-3);
   color: var(--text-primary);
-  background: var(--bg-card);
 }
 
 /* ─── Animations ─── */
