@@ -31,6 +31,8 @@ vi.mock('../../../client/src/stores/game-store', () => ({
 
 import { LobbyPage } from '../../../client/src/pages/LobbyPage';
 import { onlineLobbyFriends } from '../../../client/src/components/LobbyFriends';
+import { GAME_CARD_ART } from '../../../client/src/game-backgrounds';
+import { gamesInCategory, lobbyCategories } from '../../../client/src/games/registry';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
 
 function render(): string {
@@ -46,26 +48,34 @@ describe('lobby page', () => {
     useI18nStore.getState().setLocale('en');
   });
 
-  it('groups desktop room actions and keeps mobile code joining above game selection', () => {
+  it('lists the games of the selected category with one create and join area', () => {
     const html = render();
-    expect(html).toContain('Create Room');
-    expect(html).toContain('Join Room');
-    expect(html.indexOf('id="room-code-input-mobile"')).toBeLessThan(html.indexOf('role="group" aria-label="Choose a game"'));
-    const selectedPanel = html.slice(html.indexOf('id="lobby-selected-game"'));
-    expect(selectedPanel.indexOf('>Create Room</button>')).toBeLessThan(selectedPanel.indexOf('<hr'));
-    expect(selectedPanel.indexOf('<hr')).toBeLessThan(selectedPanel.indexOf('id="lobby-desktop-join-title"'));
-    expect(selectedPanel).toMatch(/<label[^>]*for="room-code-input-desktop">Room Code<\/label>/);
-    expect(html).not.toContain('id="lobby-games-title"');
-    expect(html).not.toContain('Choose a game to preview the rules, then create your table.');
-    expect(html.match(/aria-controls="lobby-selected-game"/g)).toHaveLength(GAME_TYPES.length);
+    expect(html).toContain('role="tablist"');
+    expect(html.match(/role="tab"/g)).toHaveLength(1);
+    expect(html).toContain('>Cards</button>');
+    expect(html).not.toContain('>Dice<');
+    expect(html).not.toContain('>Board games<');
+    expect(html).toContain('id="lobby-games" role="tabpanel"');
+    const choices = html.match(/<button[^>]*aria-controls="lobby-selected-game"[^>]*>/g) ?? [];
+    expect(choices).toHaveLength(GAME_TYPES.length);
     expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
-    expect(html).not.toContain('id="lobby-create-title"');
+    expect(html).toContain('4 players · Tricks');
+    expect(html).toContain('2–8 players · Betting');
     expect(html).toContain('id="lobby-selected-game-title">Bridge</h2>');
+    expect(html).toContain('Rules</button>');
     expect(html).toContain('aria-haspopup="dialog"');
+    expect(html).toContain('placeholder="Enter room code"');
+    expect(html.match(/>Create Room</g)).toHaveLength(1);
     expect(html).not.toMatch(/disabled=""[^>]*>Create Room/);
     expect(html).toContain('Friends online');
     expect(html).toContain('Daily tasks');
     expect(html).toContain('Daily check-in');
+  });
+
+  it('shows a tab only for categories that have games', () => {
+    expect(lobbyCategories()).toEqual(['cards']);
+    expect(gamesInCategory('dice')).toEqual([]);
+    for (const gameType of GAME_TYPES) expect(GAME_CARD_ART[gameType]).toBeTruthy();
   });
 
   it('keeps room actions disabled without duplicating the floating room card with a banner', () => {
@@ -74,6 +84,7 @@ describe('lobby page', () => {
     expect(waiting).not.toContain('href="/room/ABC123"');
     expect(waiting).toContain('Choose a game');
     expect(waiting).toMatch(/disabled=""[^>]*>Create Room/);
+    expect(waiting).toMatch(/<input[^>]*disabled=""/);
     expect(waiting).not.toContain('lobby-current-room');
     state.phase = 'playing';
     expect(render()).not.toContain('href="/game/ABC123"');

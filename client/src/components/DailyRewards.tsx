@@ -4,12 +4,14 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import Snackbar from '@mui/material/Snackbar';
-import { DAILY_TASKS, DAILY_CHECK_IN_COINS, DAILY_TASK_COUNT } from '@shared/constants/daily-rewards';
+import { DAILY_TASKS, DAILY_CHECK_IN_COINS } from '@shared/constants/daily-rewards';
 import type { AccountProfile, DailyRewardId, DailyRewardsStatus, DailyTaskId } from '@shared/types';
 import { apiRequest } from '../api';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { AppIcon } from './AppIcon';
+import { Button } from './Button';
+import { IconButton } from './IconButton';
 import styles from './DailyRewards.module.css';
 
 export function CheckInCalendar({ status, pending, onCheckIn, celebrate = false }: {
@@ -185,27 +187,23 @@ export function DailyRewards(): ReactNode {
   };
   // Keep the selected content and width through MUI's exit transition.
   const close = (): void => { if (!pending) { setDialogOpen(false); setCelebrateDay(''); } };
+  const claimable = status?.tasks.some(({ id, progress }) =>
+    progress >= DAILY_TASKS.find((task) => task.id === id)!.target && !status.claimedTasks.includes(id));
   return <aside className={styles.widgets}>
-    <button type="button" className={styles.widget} onClick={() => open('tasks')} aria-haspopup="dialog"
-      aria-label={t('daily.tasks')} title={t('daily.tasks')}>
-      <AppIcon name="info" /><span><strong>{t('daily.tasks')}</strong>
-        <small>{status ? t('daily.progress', { count: String(status.claimedTasks.length), target: String(DAILY_TASK_COUNT) }) : '—'}</small></span>
-    </button>
-    <button type="button" className={styles.widget} onClick={() => open('check-in')} aria-haspopup="dialog"
-      aria-label={t('daily.checkIn')} title={t('daily.checkIn')}>
-      <AppIcon name="calendar" /><span><strong>{t('daily.checkIn')}</strong>
-        <small>{t(checkedIn ? 'daily.signedIn' : 'daily.reward', { coins: String(DAILY_CHECK_IN_COINS) })}</small></span>
-    </button>
+    <IconButton icon="info" label={t('daily.tasks')} aria-haspopup="dialog" badge={claimable ? 'dot' : undefined}
+      onClick={() => open('tasks')} />
+    <IconButton icon="calendar" label={t('daily.checkIn')} aria-haspopup="dialog" badge={status && !checkedIn ? 'dot' : undefined}
+      onClick={() => open('check-in')} />
     <Dialog open={dialogOpen} onClose={close} fullWidth maxWidth={dialog === 'tasks' ? 'md' : 'sm'} aria-labelledby="daily-rewards-title"
       slotProps={{ paper: { className: styles.dialog } }}>
       <DialogTitle component="div" className={styles.dialogHeader}>
         <div className={styles.dialogHeading}><h2 id="daily-rewards-title"><AppIcon name={dialog === 'tasks' ? 'info' : 'calendar'} />{t(dialog === 'tasks' ? 'daily.tasks' : 'daily.checkIn')}</h2>
           {dialog === 'tasks' && <div className={styles.taskMeta}><span>{t('daily.poolHint')}</span>
             {status && <DailyTaskCountdown key={status.serverTime} status={status} />}</div>}</div>
-        <button type="button" className="btn btn-secondary" onClick={close} disabled={pending} aria-label={t('table.close')}><AppIcon name="close" /></button>
+        <IconButton icon="close" label={t('table.close')} onClick={close} disabled={pending} />
       </DialogTitle>
       <DialogContent dividers className={styles.content} inert={!dialogOpen}>
-        {error ? <p role="alert">{t('daily.error')} <button type="button" className="btn btn-secondary" onClick={() => setRefresh((value) => value + 1)}>{t('daily.retry')}</button></p>
+        {error ? <p role="alert">{t('daily.error')} <Button size="small" onClick={() => setRefresh((value) => value + 1)}>{t('daily.retry')}</Button></p>
           : !status ? <p role="status">{t('common.loading')}</p>
           : dialog === 'tasks' ? <DailyTaskList status={status} pending={pending}
             onClaim={(id) => { void mutate(id); }} onReplace={(id) => { void mutate(id, true); }} /> : <>

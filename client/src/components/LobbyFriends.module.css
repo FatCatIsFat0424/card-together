@@ -1,19 +1,18 @@
-.panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: var(--spacing-md); background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-xl); }
+.panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: var(--space-4); background: var(--surface-1); border-radius: var(--radius-lg); }
 .panel > :not(.list) { flex-shrink: 0; }
-.heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--spacing-sm); }
-.title { display: flex; align-items: center; gap: var(--spacing-sm); min-width: 0; }
-.heading h2 { font-size: var(--text-sm); white-space: nowrap; }
-.count { min-width: 1.5rem; padding: 2px var(--spacing-sm); text-align: center; color: var(--color-success); font-size: var(--text-xs); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--color-success) 12%, transparent); }
-.message { color: var(--text-secondary); font-size: var(--text-xs); line-height: 1.6; margin-top: var(--spacing-sm); }
-.message { padding: var(--spacing-md) 0; }
-.list { --friend-row-height: calc(max(44px, 4.75rem) + 2 * var(--spacing-sm) + 2px); display: flex; flex-direction: column; gap: var(--spacing-sm); min-height: 0; max-height: calc(3 * var(--friend-row-height) + 2 * var(--spacing-sm) + 2 * var(--spacing-xs)); padding: var(--spacing-xs); margin: var(--spacing-sm) 0 0; list-style: none; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; scrollbar-color: var(--border-color) transparent; }
-.friend { flex: 0 0 var(--friend-row-height); min-width: 0; display: flex; align-items: center; gap: var(--spacing-sm); padding: var(--spacing-sm); background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); line-height: 1.6; }
+.heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); }
+.title { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.heading h2 { font-size: var(--text-md); font-weight: 600; white-space: nowrap; }
+.count { min-width: 1.5rem; padding: 0 var(--space-2); text-align: center; color: var(--color-success); font-size: var(--text-xs); font-weight: 600; line-height: 1.6; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--color-success) 14%, transparent); }
+.message { padding: var(--space-3) 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: 1.6; }
+.list { display: flex; flex-direction: column; gap: var(--space-1); min-height: 0; max-height: 14rem; margin: var(--space-2) 0 0; padding: 0; list-style: none; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; scrollbar-color: var(--border-color) transparent; }
+.friend { flex: 0 0 auto; min-width: 0; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border-radius: var(--radius-md); line-height: 1.6; }
+.friend:hover { background: var(--surface-1); }
 .friendIdentity { flex: 1; min-width: 0; }
 .friendIdentity > [data-player-identity] { max-width: 100%; }
 .friendIdentity > [data-player-identity] > span:last-child > span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .friendIdentity > [data-player-identity] > span:last-child > span:last-child { font-size: var(--text-xs); }
-.joinButton { flex-shrink: 0; min-height: 44px; padding: var(--spacing-sm); font-size: var(--text-xs); }
-.actions { display: flex; align-items: center; gap: var(--spacing-sm); flex-shrink: 0; font-size: var(--text-xs); }
-.actions button { min-width: 44px; min-height: 44px; padding: var(--spacing-sm); font-size: var(--text-base); }
-.requests { display: block; margin-top: var(--spacing-sm); font-size: var(--text-xs); }
-.error { margin-top: var(--spacing-sm); color: var(--color-danger); font-size: var(--text-xs); overflow-wrap: anywhere; }
+.actions { display: flex; align-items: center; gap: var(--space-1); flex-shrink: 0; font-size: var(--text-sm); }
+.actions a { display: inline-flex; align-items: center; height: var(--hit-size); padding: 0 var(--space-1); }
+.requests { display: flex; align-items: center; min-height: var(--hit-size); font-size: var(--text-sm); }
+.error { margin-top: var(--space-2); color: var(--color-danger); font-size: var(--text-sm); overflow-wrap: anywhere; }

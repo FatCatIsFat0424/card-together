@@ -44,3 +44,10 @@ export function clientGame<K extends GameType>(gameType: K): ClientGame<K> {
 export function gamesInCategory(category: GameCategory): readonly GameType[] {
   return GAME_TYPES.filter((gameType) => gameDefinition(gameType).category === category);
 }
+
+const CATEGORY_ORDER: readonly GameCategory[] = ['cards', 'dice', 'board'];
+
+/** Lobby categories that have at least one game, in tab order. */
+export function lobbyCategories(): readonly GameCategory[] {
+  return CATEGORY_ORDER.filter((category) => gamesInCategory(category).length > 0);
+}

@@ -8,6 +8,10 @@ graphics.
   original dimensions and composition.
 - Each prompt is the common specification followed by the file's scene line.
 
+`cards/` holds 480x270 WebP renditions (quality 76, cover crop) of the same files for the lobby game
+cards, made with Sharp: `sharp(file).resize({ width: 480, height: 270, fit: 'cover' }).webp({ quality: 76 })`.
+Regenerate a rendition whenever its background changes.
+
 ## Common specification
 
 ```text
