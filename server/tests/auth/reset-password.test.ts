@@ -11,6 +11,8 @@ import { inspectPasswordReset, resetAccountPassword } from '../../src/auth/reset
 import * as passwords from '../../src/auth/password';
 import { validateNewPassword } from '../../src/auth/password-policy';
 import type { DatabaseDocument } from '../../src/database/schema';
+import { createSqliteRepository } from '../../src/database/sqlite-repository';
+import { SQLITE_ADAPTER } from '../helpers/repository-adapters';
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>();
@@ -131,10 +133,10 @@ describe('offline administrator password reset', () => {
   });
 
   it('rejects directories and named pipes without blocking on input', async () => {
-    const folder = join(directory, 'folder');
+    const folder = join(directory, 'folder.json');
     await fs.mkdir(folder);
     await expect(inspectPasswordReset(folder, 'alice')).rejects.toThrow('regular file');
-    const pipe = join(directory, 'pipe');
+    const pipe = join(directory, 'pipe.json');
     await run('mkfifo', [pipe]);
     await expect(inspectPasswordReset(pipe, 'alice')).rejects.toThrow('regular file');
   });
@@ -146,21 +148,28 @@ describe('offline administrator password reset', () => {
     expect(await fs.readdir(directory)).toEqual(['database.json']);
   });
 
-  it('refuses concurrent reset tools and never removes their lock', async () => {
-    const lockPath = `${path}.password-reset.lock`;
+  it('refuses while a server or another tool owns the database and never removes its lock', async () => {
+    const original = await fs.readFile(path);
+    const repository = await createJsonRepository(path);
+    try {
+      await expect(resetAccountPassword(path, 'alice', NEW_PASSWORD, { writersStopped: true }))
+        .rejects.toMatchObject({ code: 'DATABASE_IN_USE', message: expect.stringContaining(`PID ${process.pid}`) });
+    } finally { await repository.close(); }
+    const lockPath = `${path}.lock`;
     await fs.writeFile(lockPath, 'other reset');
-    await expect(resetAccountPassword(path, 'alice', NEW_PASSWORD, { writersStopped: true })).rejects.toThrow('reset lock exists');
+    await expect(resetAccountPassword(path, 'alice', NEW_PASSWORD, { writersStopped: true })).rejects.toMatchObject({ code: 'DATABASE_IN_USE' });
     expect(await fs.readFile(lockPath, 'utf8')).toBe('other reset');
+    expect((await fs.readFile(path)).equals(original)).toBe(true);
   });
 
-  it('uses the same reset lock through a parent-directory symlink', async () => {
+  it('uses the server database lock through a parent-directory symlink', async () => {
     const alias = `${directory}-alias`;
     await fs.symlink(directory, alias);
     try {
       expect((await inspectPasswordReset(join(alias, 'database.json'), 'alice')).databasePath).toBe(path);
-      await fs.writeFile(`${path}.password-reset.lock`, 'other reset');
-      await expect(resetAccountPassword(join(alias, 'database.json'), 'alice', NEW_PASSWORD, { writersStopped: true })).rejects.toThrow('reset lock exists');
-      expect(await fs.readFile(`${path}.password-reset.lock`, 'utf8')).toBe('other reset');
+      await fs.writeFile(`${path}.lock`, 'other reset');
+      await expect(resetAccountPassword(join(alias, 'database.json'), 'alice', NEW_PASSWORD, { writersStopped: true })).rejects.toMatchObject({ code: 'DATABASE_IN_USE' });
+      expect(await fs.readFile(`${path}.lock`, 'utf8')).toBe('other reset');
     } finally { await fs.unlink(alias); }
   });
 
@@ -217,11 +226,11 @@ describe('offline administrator password reset', () => {
     const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
     vi.spyOn(passwords, 'hashPassword').mockResolvedValueOnce(HASH);
     vi.spyOn(fs, 'unlink').mockImplementation(async (file) => {
-      if (file === `${path}.password-reset.lock`) throw new Error('Lock cleanup failed');
+      if (file === `${path}.lock`) throw new Error('Lock cleanup failed');
       await actual.unlink(file);
     });
     const result = await resetAccountPassword(path, 'alice', NEW_PASSWORD, { writersStopped: true });
-    expect(result.warnings).toEqual([`Unable to remove password reset lock: ${path}.password-reset.lock`]);
+    expect(result.warnings).toEqual([`Unable to remove the database lock: ${path}.lock`]);
     const saved = JSON.parse(await fs.readFile(path, 'utf8')) as DatabaseDocument;
     expect(saved.sessions.every((session) => session.accountId !== accountId)).toBe(true);
     expect(await fs.readFile(result.backupPath, 'utf8')).not.toBe(await fs.readFile(path, 'utf8'));
@@ -327,4 +336,133 @@ finally:
       }
     }, 25_000,
   );
+});
+
+describe('offline administrator password reset on SQLite', () => {
+  let directory: string;
+  let path: string;
+  let accountId: string;
+  let targetTokens: string[];
+  let otherToken: string;
+
+  beforeEach(async () => {
+    directory = await fs.mkdtemp(join(tmpdir(), 'card-admin-reset-sqlite-'));
+    path = join(directory, 'database.sqlite');
+    const repository = await createSqliteRepository(path);
+    try {
+      const first = await seedAuthenticatedAccount(repository, 'Alice',
+        { nickname: 'Another name', coins: 42, passwordHash: await passwords.hashPassword(OLD_PASSWORD) });
+      accountId = first.account.id;
+      const second = await seedAuthenticatedSession(repository, accountId);
+      targetTokens = [first.token, second.token];
+      const other = await seedAuthenticatedAccount(repository, 'bravo');
+      otherToken = other.token;
+      await repository.saveRuntime({ players: [], rooms: [], games: [], chat: [] });
+    } finally { await repository.close(); }
+  });
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await fs.rm(directory, { recursive: true, force: true });
+  });
+
+  /** Directory entries without the journal files that read-only test connections leave behind. */
+  async function files(): Promise<string[]> {
+    return (await fs.readdir(directory)).filter((name) => !/-(?:wal|shm)$/.test(name)).sort();
+  }
+
+  it('previews without writing, then backs up, changes login, and revokes only the target sessions', async () => {
+    const before = await SQLITE_ADAPTER.readDocument(path);
+    expect(await inspectPasswordReset(path, ' ALICE ')).toEqual({ databasePath: path, accountId, username: 'Alice', sessionsRevoked: 2 });
+    expect(await SQLITE_ADAPTER.readDocument(path)).toEqual(before);
+    expect(await files()).toEqual(['database.sqlite']);
+
+    const result = await resetAccountPassword(path, 'alice', NEW_PASSWORD, { writersStopped: true, now: () => 1 });
+    expect(result).toMatchObject({ accountId, username: 'Alice', sessionsRevoked: 2, warnings: [] });
+    expect((await fs.stat(result.backupPath)).mode & 0o777).toBe(0o600);
+    expect(await SQLITE_ADAPTER.readDocument(result.backupPath)).toEqual(before);
+    expect(await files()).toEqual(['database.sqlite', result.backupPath.slice(directory.length + 1)].sort());
+    const after = await SQLITE_ADAPTER.readDocument(path);
+    const changed = after.accounts.find((account) => account.id === accountId)!;
+    const original = before.accounts.find((account) => account.id === accountId)!;
+    expect(after).toEqual({ ...before,
+      accounts: before.accounts.map((account) => account.id === accountId
+        ? { ...original, passwordHash: changed.passwordHash, updatedAt: original.updatedAt + 1 } : account),
+      sessions: before.sessions.filter((session) => session.accountId !== accountId),
+    });
+    const repository = await createSqliteRepository(path);
+    try {
+      const auth = createAuthService(repository);
+      await expect(auth.login({ username: 'alice', password: OLD_PASSWORD })).rejects.toThrow('Invalid username or password');
+      expect((await auth.login({ username: 'alice', password: NEW_PASSWORD })).account.id).toBe(accountId);
+      for (const token of targetTokens) expect(await auth.resolveToken(token)).toBeNull();
+      expect((await auth.resolveToken(otherToken))?.account.username).toBe('bravo');
+    } finally { await repository.close(); }
+  });
+
+  it('refuses while the server owns the database', async () => {
+    const before = await SQLITE_ADAPTER.persisted(path);
+    const repository = await createSqliteRepository(path);
+    try {
+      await expect(resetAccountPassword(path, 'alice', NEW_PASSWORD, { writersStopped: true }))
+        .rejects.toMatchObject({ code: 'DATABASE_IN_USE' });
+    } finally { await repository.close(); }
+    expect(await SQLITE_ADAPTER.persisted(path)).toBe(before);
+    expect(await files()).toEqual(['database.sqlite']);
+  });
+
+  it('keeps a concurrent writer update and aborts before changing the password', async () => {
+    const before = await SQLITE_ADAPTER.readDocument(path);
+    vi.spyOn(passwords, 'hashPassword').mockImplementationOnce(async () => {
+      // A writer that ignores the lock file commits while the hash is computed.
+      const { DatabaseSync } = await import('node:sqlite');
+      const writer = new DatabaseSync(path);
+      try {
+        writer.prepare('DELETE FROM sessions WHERE account_id <> ?').run(accountId);
+      } finally { writer.close(); }
+      return HASH;
+    });
+    await expect(resetAccountPassword(path, 'alice', NEW_PASSWORD, { writersStopped: true })).rejects.toThrow('Database changed');
+    const after = await SQLITE_ADAPTER.readDocument(path);
+    expect(after.accounts).toEqual(before.accounts);
+    expect(after.sessions).toEqual(before.sessions.filter((session) => session.accountId === accountId));
+    expect((await files()).filter((name) => name.endsWith('.lock'))).toEqual([]);
+  });
+
+  it('refuses links, other owners, foreign files, and other schema versions without modifying them', async () => {
+    const before = await SQLITE_ADAPTER.persisted(path);
+    const alias = join(directory, 'alias.sqlite');
+    await fs.symlink(path, alias);
+    await expect(resetAccountPassword(alias, 'alice', NEW_PASSWORD, { writersStopped: true })).rejects.toThrow();
+    await fs.unlink(alias);
+    if (typeof process.getuid === 'function') {
+      const owner = (await fs.stat(path)).uid;
+      vi.spyOn(process, 'getuid').mockReturnValue(owner + 1);
+      await expect(resetAccountPassword(path, 'alice', NEW_PASSWORD, { writersStopped: true })).rejects.toThrow('database file owner');
+      vi.restoreAllMocks();
+    }
+    const { DatabaseSync } = await import('node:sqlite');
+    const versioned = new DatabaseSync(path);
+    versioned.exec('PRAGMA user_version = 99');
+    versioned.close();
+    await expect(inspectPasswordReset(path, 'alice')).rejects.toThrow('Unsupported database schema version: 99');
+    await expect(resetAccountPassword(path, 'alice', NEW_PASSWORD, { writersStopped: true })).rejects.toThrow('Unsupported database schema version: 99');
+    const restored = new DatabaseSync(path);
+    restored.exec('PRAGMA user_version = 7');
+    restored.close();
+    expect(await SQLITE_ADAPTER.persisted(path)).toBe(before);
+    const foreign = join(directory, 'foreign.sqlite');
+    const other = new DatabaseSync(foreign);
+    other.exec('CREATE TABLE notes (text TEXT)');
+    other.close();
+    await expect(inspectPasswordReset(foreign, 'alice')).rejects.toThrow('not a Card Together database');
+    await expect(inspectPasswordReset(join(directory, 'missing.sqlite'), 'alice')).rejects.toThrow();
+    expect(await files()).toEqual(['database.sqlite', 'foreign.sqlite']);
+  });
+
+  it('previews through the CLI', async () => {
+    const preview = await run(process.execPath, [resolve('../node_modules/tsx/dist/cli.mjs'), resolve('src/auth/reset-password-cli.ts'), path, 'alice']);
+    expect(JSON.parse(preview.stdout)).toMatchObject({ mode: 'dry-run', accountId, sessionsRevoked: 2 });
+    expect(await files()).toEqual(['database.sqlite']);
+  });
 });

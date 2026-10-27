@@ -236,10 +236,11 @@
 
 ## 維護工具
 
-兩個工具都是離線執行，目前只支援 JSON 資料庫，並有相同的需求：
+所有工具都離線執行，依副檔名支援 JSON（`.json`）與 SQLite（`.sqlite`）資料庫，並有相同的需求：
 
-- 先停止**所有資料庫寫入者**，並保留完整的資料庫、媒體與回放備份。這會讓玩家斷線。`--writers-stopped` 只是確認這件事；它不會停止也不會偵測服務。
-- 明確傳入設定的資料庫路徑。檔案必須使用目前的 schema，且必須是一般檔案，不能有符號連結或硬連結；較舊的資料請先透過一次有備份的正常啟動升級。
+- 先停止**所有資料庫寫入者**，並保留完整的資料庫、媒體與回放備份。這會讓玩家斷線。`--writers-stopped` 只是確認這件事，工具不會停止服務。
+- 套用時會取得[擁有者鎖定檔](#單一擁有者鎖定)：仍在執行的伺服器或另一個工具會讓它以 `DATABASE_IN_USE` 失敗，且不寫入任何東西。不使用鎖定檔的寫入者，由檔案內容（JSON）或 SQLite `data_version` 的變化偵測。
+- 明確傳入設定的資料庫路徑。檔案必須使用目前的 schema，且必須是一般檔案，不能有符號連結或硬連結；SQLite 檔還必須是 Card Together 資料庫。較舊的資料請先透過一次有備份的正常啟動升級。
 - 以固定的 Node.js 版本、以資料庫檔案擁有者的身分執行。
 - 先預覽（不寫入），再套用。印出的備份路徑請保密。
 - 完成後重新啟動單一實例。
@@ -256,7 +257,7 @@
    npm run admin:reset-password -- /absolute/path/database.json alice --apply --writers-stopped
    ```
 
-   正式環境，從已安裝的目錄執行：
+   正式環境，從已安裝的目錄執行（[切換到 SQLite](#sqlite-切換)後改用 `database.sqlite`）：
 
    ```sh
    sudo -u card-together sh -c 'cd /opt/card-together/server && ../node --import tsx src/auth/reset-password-cli.ts /var/lib/card-together/database.json alice'
@@ -269,9 +270,8 @@
 
 - 使用者名稱比對不分大小寫；不接受暱稱或帳號 ID。
 - 預覽會回報路徑、帳號 ID、儲存的使用者名稱與工作階段數量。
-- 套用時會寫入 0600 的備份 `.password-reset-<UUID>.bak`，使用註冊時的密碼規則與雜湊方式，並只變更目標帳號的密碼、時間戳與工作階段。
-- 輸入被拒絕、檔案擁有者錯誤、來源在過程中被同時修改，或寫入失敗時，資料庫維持不變。「Applied with cleanup warnings」代表密碼**已經**變更；請清理回報的暫存檔或鎖定檔。
-- `.password-reset.lock` 只讓重設工具彼此序列化，不影響應用程式。確認沒有重設正在執行後，才能移除過時的鎖定檔。
+- 套用時會寫入 0600 的備份 `<資料庫檔名>.password-reset-<UUID>.bak`（JSON 為原始位元組，SQLite 為 `VACUUM INTO` 產生的獨立資料庫），使用註冊時的密碼規則與雜湊方式，並只變更目標帳號的密碼、時間戳與工作階段。SQLite 在一個 transaction 中完成。
+- 輸入被拒絕、檔案擁有者錯誤、資料庫被占用、來源在過程中被同時修改，或寫入失敗時，資料庫維持不變。結果中有 `warnings` 代表密碼**已經**變更；請清理回報的暫存檔或鎖定檔。
 - 還原備份會恢復舊密碼與工作階段，並遺失較新的寫入。
 
 ### 對局紀錄清理
@@ -285,7 +285,7 @@ npm run cleanup:match-history -- /absolute/path/database.json --apply --writers-
 
 - 依照[離線需求](#維護工具)，停止所有寫入者後以資料庫擁有者的身分執行。
 - 試跑會回報全域已過期的紀錄與剩下的紀錄，不寫入任何檔案。其他真人仍需要的共用對局會繼續保存；每個帳號仍最多看到 100 場。
-- 套用時會建立私人的 `.match-history-<UUID>.bak/` 目錄，內含 `database.json`，以及旁邊 `media/` 與 `replays/`（若存在）的副本。備份失敗時資料庫不會被動到。接著以原子操作替換 `matches`，並只移除過期的回放檔。
+- 套用時會建立私人的 `.match-history-<UUID>.bak/` 目錄，內含資料庫（`database.json`，或以 `VACUUM INTO` 複製的 `database.sqlite`），以及旁邊 `media/` 與 `replays/`（若存在）的副本。備份失敗時資料庫不會被動到。接著以原子操作替換 `matches`（SQLite 為一個 transaction），並只移除過期的回放檔。
 - 帳號、工作階段、獎勵、好友、訊息、媒體與可恢復的 runtime 都不變。第二次執行不會有任何效果。重新啟動後，確認登入、歷史紀錄、回放與遊戲恢復都正常。
 
 ## SQLite 切換

@@ -1,5 +1,6 @@
 import { open } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
+import { pathToFileURL } from 'node:url';
 import { CURRENT_SCHEMA_VERSION } from './migrations';
 
 /** Marks Card Together databases in the SQLite header ('CTDB'); other SQLite files are refused untouched. */
@@ -277,4 +278,38 @@ export async function openSqliteDatabase(path: string): Promise<OpenedSqliteData
     database.close();
     throw error;
   }
+}
+
+/**
+ * Opens an existing Card Together database at the current schema for offline tools, without
+ * creating, converting, or migrating it. Read connections refuse data changes; write connections
+ * use the server's durability settings. Older versions must first upgrade through a normal start.
+ */
+export function openCurrentSqliteDatabase(path: string, options: { readonly write?: boolean } = {}): DatabaseSync {
+  const location = pathToFileURL(path);
+  // mode=rw never creates a missing file; a read-write connection still cleans up its WAL on close.
+  location.searchParams.set('mode', 'rw');
+  const database = new DatabaseSync(location);
+  try {
+    database.exec(`PRAGMA busy_timeout = ${SQLITE_BUSY_TIMEOUT_MS}`);
+    if (!options.write) database.exec('PRAGMA query_only = ON');
+    if (pragmaNumber(database, 'application_id') !== SQLITE_APPLICATION_ID) {
+      throw new Error('This SQLite file is not a Card Together database. It was not modified.');
+    }
+    const version = pragmaNumber(database, 'user_version');
+    if (version !== CURRENT_SCHEMA_VERSION) {
+      throw new Error(`Unsupported database schema version: ${version}. Upgrade it with a normal server start first; the file was not modified.`);
+    }
+    database.exec('PRAGMA foreign_keys = ON');
+    if (options.write) database.exec('PRAGMA synchronous = FULL');
+    return database;
+  } catch (error) {
+    database.close();
+    throw error;
+  }
+}
+
+/** Changes when another connection commits, which detects writers that ignore the lock file. */
+export function sqliteDataVersion(database: DatabaseSync): number {
+  return pragmaNumber(database, 'data_version');
 }

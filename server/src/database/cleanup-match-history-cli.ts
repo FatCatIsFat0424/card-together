@@ -3,7 +3,7 @@ import { cleanupMatchHistory } from './cleanup-match-history';
 async function main(): Promise<void> {
   const [path, ...flags] = process.argv.slice(2);
   if (!path || path.startsWith('--') || flags.some((flag) => !['--apply', '--writers-stopped'].includes(flag))) {
-    throw new Error('Usage: npm run cleanup:match-history -- <database.json> [--apply --writers-stopped]');
+    throw new Error('Usage: npm run cleanup:match-history -- <database.json|database.sqlite> [--apply --writers-stopped]');
   }
   const apply = flags.includes('--apply');
   if (apply && !flags.includes('--writers-stopped')) {

@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { inspectPasswordReset, resetAccountPassword } from './reset-password';
 import { readHiddenPassword } from './hidden-password-prompt';
 
-const USAGE = 'Usage: npm run admin:reset-password -- <database.json> <username> [--apply --writers-stopped]';
+const USAGE = 'Usage: npm run admin:reset-password -- <database.json|database.sqlite> <username> [--apply --writers-stopped]';
 
 export async function runPasswordResetCli(args: readonly string[]): Promise<void> {
   if (args.length === 1 && args[0] === '--help') {
