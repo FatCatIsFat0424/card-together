@@ -9,7 +9,7 @@
   max-width: 74rem;
   min-height: 100%;
   margin: 0 auto;
-  padding: var(--space-5) var(--space-5) calc(var(--space-5) + var(--room-card-clearance, 0px));
+  padding: var(--page-inset) var(--page-inset) calc(var(--page-inset) + var(--room-card-clearance, 0px));
 }
 
 .bar {
@@ -130,7 +130,7 @@
 
 /* Portrait phones and narrow windows: two card columns, the action area pinned to the bottom. */
 @media (max-width: 52rem) {
-  .page { padding: var(--space-3) var(--space-4) var(--room-card-clearance, 0px); }
+  .page { padding-bottom: var(--room-card-clearance, 0px); }
   .layout { display: flex; flex-direction: column; gap: var(--space-4); }
   .sidebar { display: contents; }
   .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
@@ -141,8 +141,8 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: var(--space-2);
-    margin: 0 calc(-1 * var(--space-4));
-    padding: var(--space-3) var(--space-4);
+    margin: 0 calc(-1 * var(--page-inset));
+    padding: var(--space-3) var(--page-inset);
     border-radius: 0;
     background: var(--bg-surface);
     box-shadow: 0 -8px 16px -10px rgba(0, 0, 0, 0.45);
@@ -157,20 +157,20 @@
 
 /* Short landscape phones: one scrolling row of cards, one bottom row of actions. */
 @media (max-height: 500px) and (min-width: 600px) {
-  .page { padding: 0 var(--space-3) calc(var(--space-3) + var(--room-card-clearance, 0px)); }
+  .page { padding-top: 0; }
   .bar { display: flex; height: 48px; margin-bottom: 0; gap: var(--space-3); }
   .tools { margin-left: auto; }
   .layout { display: flex; flex-direction: column; gap: var(--space-2); min-height: 0; }
-  .games { display: flex; flex: 1 1 auto; min-height: 9rem; margin: 0 calc(-1 * var(--space-3)); }
+  .games { display: flex; flex: 1 1 auto; min-height: 9rem; margin: 0 calc(-1 * var(--page-inset)); }
   .cards {
     --card-width: clamp(132px, calc((100dvh - 150px) * 0.8), 204px);
     flex: 1;
     display: flex;
     gap: var(--space-3);
-    padding: 2px var(--space-3) var(--space-1);
+    padding: 2px var(--page-inset) var(--space-1);
     overflow-x: auto;
     overscroll-behavior-x: contain;
-    scroll-padding-inline: var(--space-3);
+    scroll-padding-inline: var(--page-inset);
     scroll-snap-type: x proximity;
     scrollbar-width: none;
   }

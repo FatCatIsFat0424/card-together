@@ -12,6 +12,7 @@ import { useI18nStore } from '../stores/i18n-store';
 import { AppIcon } from './AppIcon';
 import { Button } from './Button';
 import { IconButton } from './IconButton';
+import { dialogParts, dialogPaperClass } from '../styles/dialog';
 import styles from './DailyRewards.module.css';
 
 export function CheckInCalendar({ status, pending, onCheckIn, celebrate = false }: {
@@ -195,15 +196,15 @@ export function DailyRewards(): ReactNode {
       onClick={() => open('tasks')} />
     <IconButton icon="calendar" label={t('daily.checkIn')} aria-haspopup="dialog" badge={status && !checkedIn ? 'dot' : undefined}
       onClick={() => open('check-in')} />
-    <Dialog open={dialogOpen} onClose={close} fullWidth maxWidth={dialog === 'tasks' ? 'md' : 'sm'} aria-labelledby="daily-rewards-title"
-      slotProps={{ paper: { className: styles.dialog } }}>
-      <DialogTitle component="div" className={styles.dialogHeader}>
+    <Dialog open={dialogOpen} onClose={close} aria-labelledby="daily-rewards-title"
+      slotProps={{ paper: { className: dialogPaperClass(dialog === 'tasks' ? 'wide' : 'medium') } }}>
+      <DialogTitle component="div" className={`${dialogParts.header} ${styles.dialogHeader}`}>
         <div className={styles.dialogHeading}><h2 id="daily-rewards-title"><AppIcon name={dialog === 'tasks' ? 'info' : 'calendar'} />{t(dialog === 'tasks' ? 'daily.tasks' : 'daily.checkIn')}</h2>
           {dialog === 'tasks' && <div className={styles.taskMeta}><span>{t('daily.poolHint')}</span>
             {status && <DailyTaskCountdown key={status.serverTime} status={status} />}</div>}</div>
         <IconButton icon="close" label={t('table.close')} onClick={close} disabled={pending} />
       </DialogTitle>
-      <DialogContent dividers className={styles.content} inert={!dialogOpen}>
+      <DialogContent className={`${dialogParts.body} ${styles.content}`} inert={!dialogOpen}>
         {error ? <p role="alert">{t('daily.error')} <Button size="small" onClick={() => setRefresh((value) => value + 1)}>{t('daily.retry')}</Button></p>
           : !status ? <p role="status">{t('common.loading')}</p>
           : dialog === 'tasks' ? <DailyTaskList status={status} pending={pending}

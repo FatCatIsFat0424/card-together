@@ -202,6 +202,17 @@ describe.each(REPOSITORY_ADAPTERS)('account authentication ($name)', (adapter) =
     ).rejects.toMatchObject({ status: 409 });
   });
 
+  it('should keep a stored legacy preset when the profile editor no longer sends one', async () => {
+    const first = await seedAccount('legacy');
+    await service.updateProfile(first.account.id, { avatar: 'panda' });
+    const profile = await service.updateProfile(first.account.id, { nickname: 'No preset', color: '#123456' });
+    expect(profile).toMatchObject({ nickname: 'No preset', avatar: 'panda' });
+    await expect(service.updateProfile(first.account.id, { avatar: 'bot' })).rejects
+      .toMatchObject({ status: 400, code: 'INVALID_AVATAR' });
+    const registered = await service.register({ username: 'newcomer', password: 'correct password' });
+    expect(registered.account.avatarImage).toBeNull();
+  });
+
   it('should accept single dot or hyphen separators in usernames and reject other symbols', async () => {
     for (const username of ['a.b', 'first-last', 'j.r_r-t', 'a_1.b-2.c']) {
       expect((await service.register({ username, password: 'correct password' })).account.username)

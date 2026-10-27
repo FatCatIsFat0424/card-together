@@ -21,6 +21,9 @@ import { AppIcon } from './AppIcon';
 import { Button } from './Button';
 import styles from './MatchHistoryList.module.css';
 
+/** Narrow windows and short landscape phones fold the charts and turn the table into cards. */
+const COMPACT_QUERY = '(max-width: 52rem), (max-height: 500px) and (min-width: 600px)';
+
 /** Matches revealed per step on narrow screens. */
 const COMPACT_PAGE = 8;
 
@@ -58,7 +61,7 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
   const [direction, setDirection] = useState<SortDirection>('desc');
   const [replayMatch, setReplayMatch] = useState<MatchSummary | null>(null);
   const [pages, setPages] = useState(1);
-  const compact = useMediaQuery('(max-width: 52rem)', { noSsr: true });
+  const compact = useMediaQuery(COMPACT_QUERY, { noSsr: true });
   const subjectId = accountId ?? viewerId;
   const visibleMatches = selectHistoryMatches(matches, players, {
     accountId: subjectId, query, gameType, outcome, sortKey, direction, locale,

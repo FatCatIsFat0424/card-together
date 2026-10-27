@@ -6,6 +6,8 @@ import type { PublicAccount } from '@shared/types/social';
 import { apiRequest } from '../api';
 import { createMessageClientId } from '../messages/message-client-id';
 import { latestIncomingMessageId, mergeDirectMessages } from '../messages/message-history';
+import { groupDirectMessages, groupTimeLabel } from '../messages/message-groups';
+import type { MessageGroup } from '../messages/message-groups';
 import { AppIcon } from './AppIcon';
 import { Button } from './Button';
 import { ChatMessageBody, EmojiPickerSections } from './ChatEmoji';
@@ -21,17 +23,20 @@ import { useMotionStore } from '../stores/motion-store';
 import chatStyles from './ChatPanel.module.css';
 import styles from './DirectMessages.module.css';
 
-const DirectMessageRow = memo(function DirectMessageRow({ message, ownId, dateTimeFormat }: {
-  readonly message: DirectMessage; readonly ownId: string; readonly dateTimeFormat: Intl.DateTimeFormat;
+const DirectMessageGroupRow = memo(function DirectMessageGroupRow({ group, locale, dateTimeFormat }: {
+  readonly group: MessageGroup; readonly locale: string; readonly dateTimeFormat: Intl.DateTimeFormat;
 }): ReactNode {
-  return <ChatFrame as="article" id={message.sender.chatFrame}
-    className={`${styles.message} ${message.sender.id === ownId ? styles.ownMessage : ''}`}>
-    <div className={styles.messageMeta}><span>{message.sender.nickname}</span>
-      <time dateTime={new Date(message.timestamp).toISOString()}>
-        {dateTimeFormat.format(message.timestamp)}</time>
+  const first = group.messages[0];
+  return <div className={`${styles.group} ${group.own ? styles.ownGroup : ''}`}>
+    <div className={styles.messageMeta}><span>{first.sender.nickname}</span>
+      <time dateTime={new Date(first.timestamp).toISOString()} title={dateTimeFormat.format(first.timestamp)}>
+        {groupTimeLabel(first.timestamp, locale)}</time>
     </div>
-    <div className={styles.messageContent}><ChatMessageBody message={message} /></div>
-  </ChatFrame>;
+    {group.messages.map((message) => <ChatFrame key={message.id} as="article" id={message.sender.chatFrame}
+      className={`${styles.message} ${group.own ? styles.ownMessage : ''}`}>
+      <div className={styles.messageContent}><ChatMessageBody message={message} /></div>
+    </ChatFrame>)}
+  </div>;
 });
 
 export function DirectConversation({ ownId, otherId, initialAccount, embedded = false, onLoadError, refreshVersion = 0 }: {
@@ -72,6 +77,7 @@ export function DirectConversation({ ownId, otherId, initialAccount, embedded = 
   const latestMessage = history?.messages.at(-1)?.id;
   const latestIncoming = latestIncomingMessageId(history?.messages ?? [], ownId, otherId);
   const displayedAccount = history?.account ?? (initialAccount?.id === otherId ? initialAccount : undefined);
+  const groups = useMemo(() => groupDirectMessages(history?.messages ?? [], ownId), [history?.messages, ownId]);
   const current = (): boolean => mounted.current && useAccountStore.getState().account?.id === ownId;
 
   useEffect(() => { onLoadError(otherId, error); }, [error, onLoadError, otherId]);
@@ -218,7 +224,7 @@ export function DirectConversation({ ownId, otherId, initialAccount, embedded = 
       data-reduced-motion={reducedMotion || undefined}>
     <header className={styles.header}>
       {!embedded && <Link to="/messages"><AppIcon name="previousPage" /> {t('messages.back')}</Link>}
-      {displayedAccount && <PlayerLink player={displayedAccount} showUsername size="compact" />}
+      {displayedAccount && <PlayerLink player={displayedAccount} showUsername showTitle={false} size="row" dense />}
     </header>
     <div ref={messagesRef} className={`${styles.messages} ${history ? styles.messagesReady : ''}`} role="log" aria-live="polite" aria-relevant="additions" aria-busy={loading || paging}>
       {loading && <p className={styles.loadingNotice} role="status">{t('common.loading')}</p>}
@@ -226,8 +232,7 @@ export function DirectConversation({ ownId, otherId, initialAccount, embedded = 
         onClick={() => void load(history.messages[0]?.id)}>
         {paging ? t('common.loading') : t('messages.older')}</Button>}
       {history?.messages.length === 0 && <p className={styles.empty}>{t('messages.emptyConversation')}</p>}
-      {history?.messages.map((message) => <DirectMessageRow key={message.id} message={message}
-        ownId={ownId} dateTimeFormat={dateTimeFormat} />)}
+      {groups.map((group) => <DirectMessageGroupRow key={group.key} group={group} locale={locale} dateTimeFormat={dateTimeFormat} />)}
     </div>
     {readError && <p className={styles.notice} role="alert">{t('common.error')}{' '}
       <Button type="button" onClick={() => void markVisible()}>{t('common.retry')}</Button></p>}

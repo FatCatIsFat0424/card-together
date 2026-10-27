@@ -7,7 +7,7 @@ import styles from './AvatarBorder.module.css';
 /** Shop-sized preview of the same avatar decoration used throughout the application. */
 export function AvatarBorder({ border, avatar, image, color, size = 'tile' }: {
   readonly border: AvatarBorderId | null;
-  readonly avatar: AvatarId;
+  readonly avatar?: AvatarId;
   readonly image?: MediaId | null;
   readonly color?: string;
   readonly size?: 'tile' | 'preview';

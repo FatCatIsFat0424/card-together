@@ -13,6 +13,9 @@ import { MessageConversations } from '../components/MessageConversations';
 import { AppIcon } from '../components/AppIcon';
 import styles from './MessagesPage.module.css';
 
+/** Below 700px, or up to 52rem on a tall screen, the list and the chat take turns on one screen. */
+const STACKED_QUERY = '(max-width: 43.75rem), (max-width: 52rem) and (min-height: 501px)';
+
 export function MessagesPage(): ReactNode {
   const { accountId: otherId } = useParams<{ accountId: string }>();
   const accountId = useAccountStore((state) => state.account?.id);
@@ -34,7 +37,7 @@ export function MessagesPage(): ReactNode {
   const loadError = conversationError && conversationError.otherId === otherId ? conversationError.message : '';
   // Matching list, friend, and conversation errors appear only once.
   const errors = [...new Set([error, friendsError, loadError].filter(Boolean))];
-  const mobile = useMediaQuery('(max-width: 52rem)');
+  const mobile = useMediaQuery(STACKED_QUERY);
   const { t } = useI18nStore();
   const navigate = useNavigate();
   const closingTo = useMessagesWindowStore((state) => state.closingTo);

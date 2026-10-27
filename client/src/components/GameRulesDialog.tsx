@@ -14,6 +14,7 @@ import { gameRulesSummary } from '../games/rules-summary';
 import { useI18nStore } from '../stores/i18n-store';
 import { useMotionStore } from '../stores/motion-store';
 import { AppIcon } from './AppIcon';
+import { dialogPaperClass, dialogParts } from '../styles/dialog';
 import styles from './GameRulesDialog.module.css';
 import motionStyles from '../styles/dialog-motion.module.css';
 
@@ -68,18 +69,18 @@ export function GameRulesDialog({ gameType, context, browseGames = false, onClos
   const [closing, setClosing] = useState(false);
   const still = reducedMotion || systemReducedMotion;
   const close = (): void => setClosing(true);
-  return <Dialog open={!closing} fullWidth maxWidth="md" onClose={close} aria-labelledby={titleId}
+  return <Dialog open={!closing} onClose={close} aria-labelledby={titleId}
     transitionDuration={{ enter: 0, exit: still ? 0 : 200 }}
     slotProps={{ transition: { onExited: onClose },
-      paper: { className: `${styles.dialog} ${closing ? motionStyles.exit : motionStyles.enter} ${still ? motionStyles.still : ''}` },
+      paper: { className: dialogPaperClass('wide', styles.dialog, closing ? motionStyles.exit : motionStyles.enter, still && motionStyles.still) },
       backdrop: { className: styles.backdrop } }}>
-    <DialogTitle component="div" id={`${titleId}-header`} className={styles.header}>
+    <DialogTitle component="div" id={`${titleId}-header`} className={`${dialogParts.header} ${styles.header}`}>
       <h2 id={titleId}>{browseGames ? t('rules.browseTitle') : t('lobby.rulesTitle', { game: t(`gameType.${gameType}`) })}</h2>
       <button type="button" className={`btn btn-secondary ${styles.close}`} onClick={close} aria-label={t('table.close')}>
         <AppIcon name="close" />
       </button>
     </DialogTitle>
-    <DialogContent dividers className={`${styles.content} ${browseGames ? styles.browser : ''}`}>
+    <DialogContent className={`${dialogParts.body} ${styles.content} ${browseGames ? styles.browser : ''}`}>
       {browseGames ? <>
         <Tabs orientation="vertical" variant="scrollable" scrollButtons={false}
           className={styles.gameTabs} value={selectedGame} aria-label={t('gameType.label')}

@@ -1,4 +1,4 @@
-.page { width: 100%; max-width: 74rem; padding: var(--space-4) var(--space-5) calc(var(--space-5) + var(--room-card-clearance, 0px)); margin: 0 auto; }
+.page { width: 100%; max-width: 74rem; padding: var(--page-inset) var(--page-inset) calc(var(--page-inset) + var(--room-card-clearance, 0px)); margin: 0 auto; }
 .layout { display: grid; grid-template-columns: minmax(0, 18rem) minmax(0, 1fr); align-items: start; gap: var(--space-5); }
 .card { background: var(--surface-1); border-radius: var(--radius-lg); padding: var(--space-4); }
 .profile { min-width: 0; }
@@ -15,14 +15,13 @@
 .error { color: var(--color-danger); margin: var(--space-3) 0; font-size: var(--text-sm); }
 .success { color: var(--color-success); margin-top: var(--space-3); font-size: var(--text-sm); }
 .status { text-align: center; padding: var(--space-5); }
-@media (max-width: 52rem) {
-  .page { padding: var(--space-3) var(--space-4) calc(var(--space-4) + var(--room-card-clearance, 0px)); }
+@media (max-width: 52rem), (max-height: 500px) and (min-width: 600px) {
   .layout { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
-  .identity { flex-direction: row; align-items: center; gap: var(--space-3); }
-}
-@media (max-width: 40rem) {
-  .page { padding: var(--space-3) var(--space-3) calc(var(--space-3) + var(--room-card-clearance, 0px)); }
-}
-@media (max-height: 500px) and (min-width: 600px) {
-  .page { padding: var(--space-1) var(--space-3) calc(var(--space-3) + var(--room-card-clearance, 0px)); }
+  /* One header row: avatar, name and handle, then the actions beside them. */
+  .profile { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-2) var(--space-3); }
+  .identity { flex: 1 1 auto; flex-direction: row; align-items: center; gap: var(--space-3); min-width: 0; }
+  .profile .actions, .profile .description, .profile .friendsLink, .profile .feedback, .profile .success { margin: 0; }
+  .profile .feedback { display: flex; align-items: center; gap: var(--space-2); }
+  .profile .error { margin: 0; }
+  .name, .name h1, .username { line-height: 1.3; }
 }

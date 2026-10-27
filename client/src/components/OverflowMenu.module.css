@@ -1,0 +1,5 @@
+.menu:global(.MuiPaper-root) { color: var(--text-primary); background: var(--bg-card); background-image: none; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
+.menu :global(.MuiList-root) { padding: var(--space-1); }
+.menu :global(.MuiMenuItem-root) { min-height: var(--hit-size); border-radius: var(--radius-md); font-family: var(--font-primary); font-size: var(--text-sm); }
+.menu :global(.MuiMenuItem-root:hover), .menu :global(.MuiMenuItem-root.Mui-focusVisible) { background: var(--surface-2); }
+.danger.danger { color: var(--color-danger); }

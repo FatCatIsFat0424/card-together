@@ -7,14 +7,13 @@ import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@shared/constants';
-import type { AccountProfile, AvatarBorderId, AvatarId, MatchHistory } from '@shared/types';
+import type { AccountProfile, AvatarBorderId, MatchHistory } from '@shared/types';
 import { apiRequest } from '../api';
 import { resizeImage } from '../image-resize';
 import { uploadImage } from '../media';
 import type { MediaPurpose } from '../media';
 import { clearAccount, useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
-import { Avatar, AVATARS } from '../components/Avatar';
 import { MatchHistoryList } from '../components/MatchHistoryList';
 import { EquipmentSettings } from '../components/EquipmentSettings';
 import { EmojiLibrary } from '../components/EmojiLibrary';
@@ -57,7 +56,6 @@ export function AccountPage(): ReactNode {
   const [activeTab, setActiveTab] = useState<AccountTab>('profile');
   const [nickname, setNickname] = useState(account?.nickname ?? '');
   const [color, setColor] = useState(account?.color ?? '#4a9eff');
-  const [avatar, setAvatar] = useState<AvatarId>(account?.avatar ?? 'cat');
   const [avatarBorder, setAvatarBorder] = useState<AvatarBorderId | null>(account?.avatarBorder ?? null);
   const [borderDirty, setBorderDirty] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -156,7 +154,7 @@ export function AccountPage(): ReactNode {
     setSaved(false);
     setProfileBusy(true);
     const result = await apiRequest<{ account: AccountProfile }>('/api/auth/profile', 'PATCH', {
-      nickname: nickname.trim(), color, avatar, avatarBorder: selectedBorder,
+      nickname: nickname.trim(), color, avatarBorder: selectedBorder,
     });
     setProfileBusy(false);
     if (result.success) {
@@ -208,13 +206,13 @@ export function AccountPage(): ReactNode {
           {compact ? <details className={editorStyles.fold}>
             <summary>{t('profile.livePreview')}</summary>
             <div className={editorStyles.foldBody}>
-              <AccountProfilePreview account={{ ...account, avatarBorder: selectedBorder }} nickname={nickname} avatar={avatar}
+              <AccountProfilePreview account={{ ...account, avatarBorder: selectedBorder }} nickname={nickname}
                 color={color} appearance={appearance} />
             </div>
           </details> : <AccountProfilePreview account={{ ...account, avatarBorder: selectedBorder }} nickname={nickname}
-            avatar={avatar} color={color} appearance={appearance} />}
+            color={color} appearance={appearance} />}
           <div className={editorStyles.controls}>
-            <form className={styles.form} onSubmit={(event) => void saveProfile(event)}>
+            <form className={`${styles.form} ${editorStyles.profileForm}`} onSubmit={(event) => void saveProfile(event)}>
               <div className={editorStyles.identityFields}>
                 <div className={styles.field}>
                   <label htmlFor="profile-nickname">{t('lobby.nickname')}</label>
@@ -232,15 +230,6 @@ export function AccountPage(): ReactNode {
               <fieldset className={styles.avatarField}>
                 <legend className={styles.legend}>{t('profile.avatar')}</legend>
                 <div className={editorStyles.avatarRow}>
-                  <div className={editorStyles.avatarChoices}>
-                    {AVATARS.map((option) => (
-                      <button key={option} type="button" className={editorStyles.avatarChoice}
-                        aria-pressed={avatar === option} aria-label={t(`avatar.${option}`)}
-                        onClick={() => { setAvatar(option); setSaved(false); }}>
-                        <Avatar avatar={option} size="small" />
-                      </button>
-                    ))}
-                  </div>
                   <div className={editorStyles.compactActions}>
                     <input ref={avatarInput} type="file" accept="image/*" hidden
                       onChange={chooseImage('avatarImage')} />

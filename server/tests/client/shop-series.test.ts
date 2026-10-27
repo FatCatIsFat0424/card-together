@@ -93,7 +93,8 @@ describe('existing products grouped by theme', () => {
     }
     for (const border of ['sakura', 'tide', 'dog', 'rainbow'] as const) {
       const avatar = renderToStaticMarkup(createElement(Avatar, { avatar: 'fox', border }));
-      expect(avatar).not.toContain('<img');
+      // The default avatar is the only picture; series emblems would add a second image.
+      expect(avatar.match(/<img /g)).toHaveLength(1);
       if (border === 'sakura' || border === 'tide') expect(avatar).toContain('<svg');
     }
   });

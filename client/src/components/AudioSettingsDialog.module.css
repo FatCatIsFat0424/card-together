@@ -1,16 +1,1 @@
-.dialog:global(.MuiPaper-root) {
-  width: 100%;
-  max-width: 444px;
-  padding: var(--spacing-md);
-  overflow-y: auto;
-  color: var(--text-primary);
-  background: var(--bg-surface);
-  background-image: none;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-}
-
-/* Short landscape phones: widen the panel so its channels sit in two columns instead of scrolling. */
-@media (max-height: 500px) {
-  .dialog:global(.MuiPaper-root) { max-width: min(640px, 100%); padding: var(--spacing-sm) var(--spacing-md); }
-}
+.dialog.dialog { padding: var(--dialog-padding); border: 1px solid var(--border-color); border-radius: var(--radius-lg); }

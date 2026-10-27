@@ -15,12 +15,13 @@ import {
   BORDER_SERIES, OTHER_SERIES, resolveShopView, shopGroupQuery, shopProducts, shopSeriesQuery, shopTypeCount, shopTypeQuery,
 } from '../shop-filters';
 import type { ShopGroupId, ShopSeriesFilter } from '../shop-filters';
-import { ShopProductArt, ShopProductPreview } from '../components/ShopProductArt';
+import { FitArt, ShopProductArt, ShopProductPreview } from '../components/ShopProductArt';
 import { AppIcon } from '../components/AppIcon';
 import { Button } from '../components/Button';
 import { Chip } from '../components/Chip';
 import { CoinBalance } from '../components/CoinBalance';
 import { Tabs, tabElementId } from '../components/Tabs';
+import { dialogPaperClass, dialogParts } from '../styles/dialog';
 import styles from './ShopPage.module.css';
 
 function equipmentPatch(item: ShopItem): Partial<Pick<AccountProfile, 'avatarBorder' | EquipmentSlot>> | null {
@@ -152,12 +153,14 @@ export function ShopPage(): ReactNode {
         </li>;
       })}</ul>
     </section>
-    {detail && <Dialog open fullWidth maxWidth="xs"
+    {detail && <Dialog open
       aria-labelledby="shop-purchase-title" aria-describedby="shop-purchase-description"
       onClose={() => { if (!busy) setDetailId(null); }}
-      slotProps={{ paper: { className: styles.dialog } }}>
-      <div className={styles.dialogBody}>
-        <div className={styles.dialogArt}><ShopProductArt item={detail} account={account} /></div>
+      slotProps={{ paper: { className: dialogPaperClass('narrow', styles.dialog) } }}>
+      <div className={`${dialogParts.body} ${styles.dialogBody}`}>
+        <div className={styles.dialogArt}>{detail.type === 'tableBackground' || detail.type === 'seatBackground'
+          ? <ShopProductArt item={detail} account={account} />
+          : <FitArt fill={false} interactive><ShopProductArt item={detail} account={account} /></FitArt>}</div>
         <div className={styles.dialogText}>
           <h2 id="shop-purchase-title">{t(`shop.item.${detail.id}.name`)}</h2>
           <p className={styles.dialogMeta}>
@@ -174,15 +177,15 @@ export function ShopPage(): ReactNode {
                 ? <p className={styles.dialogMeta}>{t('shop.balanceAfter', { n: format((account.coins ?? 0) - detail.price) })}</p>
                 : <p className={styles.dialogWarning} role="alert">{t('shop.insufficient')}</p>}
             </>}
-          <div className={styles.dialogActions}>
-            <Button disabled={busy} onClick={() => setDetailId(null)} autoFocus>
-              {t(detailOwned && !detailCanEquip || detailEquipped ? 'table.close' : 'common.cancel')}</Button>
-            {!detailOwned && <Button variant="primary" disabled={busy || !detailAffordable}
-              onClick={() => void purchase(detail)}>{t(busy ? 'common.loading' : 'shop.confirmBuy')}</Button>}
-            {detailCanEquip && !detailEquipped && <Button variant="primary" disabled={busy}
-              onClick={() => void equip(detail)}>{t(busy ? 'common.loading' : 'shop.equip')}</Button>}
-          </div>
         </div>
+      </div>
+      <div className={dialogParts.footer}>
+        <Button disabled={busy} onClick={() => setDetailId(null)} autoFocus>
+          {t(detailOwned && !detailCanEquip || detailEquipped ? 'table.close' : 'common.cancel')}</Button>
+        {!detailOwned && <Button variant="primary" disabled={busy || !detailAffordable}
+          onClick={() => void purchase(detail)}>{t(busy ? 'common.loading' : 'shop.confirmBuy')}</Button>}
+        {detailCanEquip && !detailEquipped && <Button variant="primary" disabled={busy}
+          onClick={() => void equip(detail)}>{t(busy ? 'common.loading' : 'shop.equip')}</Button>}
       </div>
     </Dialog>}
     <Snackbar open={notice !== null} autoHideDuration={5000} onClose={() => setNotice(null)}>

@@ -1,5 +1,5 @@
 .conversations { list-style: none; display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; gap: var(--spacing-sm); }
-.conversations a { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); padding: var(--space-3); border-radius: var(--radius-lg); background: var(--surface-1); overflow-wrap: anywhere; }
+.conversations a { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-lg); background: var(--surface-1); overflow-wrap: anywhere; }
 .conversations a:hover { background: var(--surface-2); }
 .username, .conversations time { color: var(--text-secondary); font-size: var(--text-sm); }
 .preview { flex-basis: 100%; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -8,7 +8,7 @@
 .splitList > li { animation: conversationTabIn 200ms ease-out backwards; animation-delay: calc(60ms + var(--entry-index, 0) * 45ms); }
 .splitList[data-reduced-motion] > li { animation: none; }
 @keyframes conversationTabIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
-.splitList a { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 2px var(--space-3); min-height: var(--hit-size); padding: var(--space-2) var(--space-3); border-radius: var(--radius-lg); background: transparent; transition: background-color 160ms ease, color 160ms ease; }
+.splitList a { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 0 var(--space-2); min-height: 48px; padding: var(--space-1) var(--space-2); border-radius: var(--radius-lg); background: transparent; transition: background-color 160ms ease, color 160ms ease; }
 .splitList a:hover { background: var(--surface-1); }
 .splitList a[aria-current='page'] { background: var(--surface-2); }
 .splitList a:focus-visible { outline-offset: -2px; }
@@ -25,10 +25,12 @@
 .empty { padding: var(--spacing-lg); color: var(--text-secondary); }
 .conversation { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; overflow: hidden; }
 .conversation.embedded { flex: 1; height: auto; min-height: 0; }
-.header { display: flex; align-items: center; flex-shrink: 0; gap: var(--space-3); min-height: 48px; padding: 0 var(--space-3); border-bottom: 1px solid var(--separator); font-size: var(--text-sm); }
+.header { display: flex; align-items: center; flex-shrink: 0; gap: var(--space-2); min-height: var(--hit-size); padding: 3px var(--space-2); border-bottom: 1px solid var(--separator); font-size: var(--text-sm); }
 .header > a:first-child:not([data-player-identity]) { display: inline-flex; align-items: center; min-height: var(--hit-size); }
-.messages { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: var(--space-3); }
-.messages > button { align-self: center; }
+.messages { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: var(--space-2); }
+.group { display: flex; flex-direction: column; align-items: flex-start; flex-shrink: 0; gap: 2px; width: 100%; }
+.ownGroup { align-items: flex-end; }
+.messages > button { align-self: center; flex-shrink: 0; }
 .messagesReady { animation: conversationIn 160ms ease-out; }
 .header [data-player-identity] { animation: conversationIn 160ms ease-out; }
 .loadingNotice { margin: 0; color: var(--text-secondary); font-size: var(--text-sm); visibility: hidden; animation: showLoading 0s 180ms forwards; }
@@ -41,19 +43,30 @@
   .messagesReady, .header [data-player-identity] { animation: none; }
   .splitList a { transition: none; }
 }
-.message { flex-shrink: 0; max-width: 90%; background: var(--surface-2); border-radius: var(--radius-lg); padding: var(--space-2) var(--space-3); overflow-wrap: anywhere; }
+.message { flex-shrink: 0; max-width: 70%; background: var(--surface-2); border-radius: var(--radius-lg); padding: 5px var(--space-2); overflow-wrap: anywhere; }
 .ownMessage { align-self: flex-end; background: var(--color-primary-soft); }
-.messageMeta { display: flex; flex-wrap: wrap; gap: var(--spacing-xs) var(--spacing-sm); color: var(--text-secondary); font-size: var(--text-xs); margin-bottom: var(--spacing-xs); }
-.messageContent { white-space: pre-wrap; font-size: var(--text-sm); }
+.messageMeta { display: flex; flex-wrap: wrap; gap: 0 var(--space-2); padding-inline: var(--space-1); color: var(--text-secondary); font-size: var(--text-xs); line-height: 1.4; }
+.messageContent { white-space: pre-wrap; font-size: var(--text-base); line-height: 1.4; }
 .notice { flex-shrink: 0; padding: var(--spacing-sm) var(--spacing-md); font-size: var(--text-sm); }
 .notice[role='alert'] { color: var(--color-danger); }
 .composer { flex-shrink: 0; }
 /* The input row is drawn by the chat panel stylesheet; here it becomes one flat pill. */
-.composer form { margin: var(--space-2) var(--space-3); overflow: hidden; border: 0; border-radius: var(--radius-pill); background: var(--surface-2); }
+.composer form { margin: var(--space-1) var(--space-2); overflow: hidden; border: 0; border-radius: var(--radius-pill); background: var(--surface-2); }
 .composer form button, .composer form input { min-height: var(--hit-size); border: 0; background: transparent; }
 .composer form button { min-width: var(--hit-size); }
 .composer form input { padding-inline: var(--space-3); }
 .composer > div { max-height: 70%; }
 @media (max-width: 40rem) {
-  .message { max-width: 95%; }
+  .message { max-width: 85%; }
+}
+
+/* Short landscape: the name and time sit beside the first bubble instead of above it, so each group costs one line less. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .group { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); align-items: start; gap: 2px var(--space-2); }
+  .ownGroup { grid-template-columns: minmax(0, 1fr) 5.5rem; }
+  .group .messageMeta { grid-column: 1; grid-row: 1; flex-direction: column; min-width: 0; padding-inline: 0; line-height: 1.25; }
+  .group .messageMeta > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .group > article { grid-column: 2; justify-self: start; max-width: 85%; }
+  .ownGroup .messageMeta { grid-column: 2; text-align: right; }
+  .ownGroup > article { grid-column: 1; justify-self: end; }
 }

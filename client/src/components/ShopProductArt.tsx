@@ -22,13 +22,41 @@ import { LayeredArt } from '../cosmetics/art-layers/LayeredArt';
 import { observeShopPreview } from './shop-preview-visibility';
 import styles from '../pages/ShopPage.module.css';
 
+/** Share of the tile's art box that a preview may use; the rest is breathing room. */
+const ART_FILL = 0.9;
+
 interface ShopProductArtProps {
   readonly item: ShopItem;
   readonly account: PreviewAccount;
 }
 
-/** Shrinks a preview that is larger than its tile; backgrounds fill the tile instead. */
-function FitArt({ fill, children }: { readonly fill: boolean; readonly children: ReactNode }): ReactNode {
+/**
+ * How far painted descendants reach beyond the element's own box, so ears, antlers, tentacles and
+ * emblems count toward the preview size. Elements running animations are skipped: they move in and
+ * out of the box and would change the size from one measurement to the next.
+ */
+export function paintedOverflow(element: HTMLElement): { top: number; right: number; bottom: number; left: number } {
+  const base = element.getBoundingClientRect();
+  const reach = { top: 0, right: 0, bottom: 0, left: 0 };
+  for (const child of element.querySelectorAll('*')) {
+    if (typeof child.getAnimations === 'function' && child.getAnimations().length > 0) continue;
+    const rect = child.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) continue;
+    reach.top = Math.max(reach.top, base.top - rect.top);
+    reach.left = Math.max(reach.left, base.left - rect.left);
+    reach.right = Math.max(reach.right, rect.right - base.right);
+    reach.bottom = Math.max(reach.bottom, rect.bottom - base.bottom);
+  }
+  return reach;
+}
+
+/** Shrinks a preview, with its overhanging decoration, to fit its tile; backgrounds fill the tile instead. */
+export function FitArt({ fill, interactive = false, children }: {
+  readonly fill: boolean;
+  /** The details dialog keeps the preview's own controls, such as the sound sample button. */
+  readonly interactive?: boolean;
+  readonly children: ReactNode;
+}): ReactNode {
   const box = useRef<HTMLDivElement>(null);
   const art = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -37,8 +65,11 @@ function FitArt({ fill, children }: { readonly fill: boolean; readonly children:
     if (fill || !outer || !inner) return;
     const fit = (): void => {
       inner.style.zoom = '';
+      inner.style.padding = '';
+      const reach = paintedOverflow(inner);
+      inner.style.padding = `${reach.top}px ${reach.right}px ${reach.bottom}px ${reach.left}px`;
       const { offsetWidth: width, offsetHeight: height } = inner;
-      if (width > 0 && height > 0) inner.style.zoom = String(Math.min(1, 0.9 * outer.clientWidth / width, 0.9 * outer.clientHeight / height));
+      if (width > 0 && height > 0) inner.style.zoom = String(Math.min(1, ART_FILL * outer.clientWidth / width, ART_FILL * outer.clientHeight / height));
     };
     fit();
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(fit) : null;
@@ -46,7 +77,7 @@ function FitArt({ fill, children }: { readonly fill: boolean; readonly children:
     return () => observer?.disconnect();
   }, [fill]);
   // Tile previews are decorative; the dialog holds the interactive copy (such as the sound sample button).
-  return <div ref={box} className={styles.artScale} inert>
+  return <div ref={box} className={styles.artScale} inert={!interactive}>
     <div ref={art} className={fill ? styles.artFill : styles.artFit}>{children}</div>
   </div>;
 }

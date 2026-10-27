@@ -2,7 +2,11 @@ import type {
   AchievementNameplateId, AvatarBorderId, CardBackStyleId, CardFaceStyleId, ChatFrameId, ChipStyleId, NameplateId,
   SeatBackgroundStyleId, SeatFrameId, ShopItemId, SoundPackId, TableBackgroundStyleId, VictoryEffectId,
 } from '../constants/shop';
-export type AvatarPreset = 'cat' | 'fox' | 'owl' | 'bear' | 'rabbit' | 'panda';
+/**
+ * Retired preset avatars: accounts keep the stored value but every client shows the single
+ * default image or the uploaded picture. `bot` marks seats filled by the server.
+ */
+export type AvatarPreset = 'cat' | 'fox' | 'owl' | 'bear' | 'rabbit' | 'panda' | 'bot';
 export type AvatarId = AvatarPreset;
 /** Uploaded image: 64 lowercase hex sha256 + `.png|.jpg|.gif|.webp`. */
 export type MediaId = string;

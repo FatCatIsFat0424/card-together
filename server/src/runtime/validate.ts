@@ -93,7 +93,7 @@ function player(value: unknown): boolean {
     text(value.nickname) &&
     typeof value.color === 'string' &&
     /^#[a-fA-F0-9]{6}$/.test(value.color) &&
-    oneOf(value.avatar, ['cat', 'fox', 'owl', 'bear', 'rabbit', 'panda']) &&
+    oneOf(value.avatar, ['cat', 'fox', 'owl', 'bear', 'rabbit', 'panda', 'bot']) &&
     (value.avatarImage === null || isMediaId(value.avatarImage)) &&
     (value.avatarBorder === undefined || value.avatarBorder === null || isAvatarBorderId(value.avatarBorder)) &&
     (value.nameplate === undefined || value.nameplate === null || isEquipmentStyle('nameplate', value.nameplate)) &&

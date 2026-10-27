@@ -75,6 +75,7 @@ export function AudioSettings({ showTitle = true, onClose }: {
       {onClose && <button type="button" className={styles.close} aria-label={t('audio.close')}
         title={t('audio.close')} onClick={onClose}><AppIcon name="close" /></button>}
     </div>}
+    <div className={styles.body}>
     <Channel name="audio.master" enabled={master.masterEnabled} volume={master.masterVolume}
       onEnabled={master.setMasterEnabled} onVolume={master.setMasterVolume} />
     <Channel name="audio.music" enabled={musicEnabled} volume={musicVolume}
@@ -91,6 +92,7 @@ export function AudioSettings({ showTitle = true, onClose }: {
     <p className={styles.note}>{t('audio.effectsNote')}</p>
     <p className={styles.note}>{t('audio.voiceNote')}</p>
     <p className={styles.note}>{t('audio.deviceNotice')}</p>
+    </div>
   </section>;
 }
 

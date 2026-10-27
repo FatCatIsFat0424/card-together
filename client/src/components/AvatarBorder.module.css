@@ -10,10 +10,9 @@
   flex-shrink: 0;
 }
 .preview { --frame-size: 132px; }
-.frame.antlers { margin-top: calc(var(--frame-size) * 0.26); }
-.frame.cthulhu { margin-bottom: calc(var(--frame-size) * 0.3); }
 .equipped { isolation: isolate; --frame-size: 3rem; }
 .equipped[data-avatar-size='small'] { --frame-size: 1.6rem; }
+.equipped[data-avatar-size='row'] { --frame-size: 2rem; }
 .equipped[data-avatar-size='compact'] { --frame-size: 2.25rem; }
 .equipped[data-avatar-size='large'] { --frame-size: 4.5rem; }
 .frame > span[data-avatar-size], .frame > span {

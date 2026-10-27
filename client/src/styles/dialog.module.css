@@ -1,0 +1,30 @@
+/*
+ * Shared sizing for centered dialogs: equal insets on every side, never taller or wider than the
+ * screen, fixed header and footer, and a body that scrolls inside. Sizes are caps, not widths.
+ */
+.paper.paper {
+  --dialog-width: 37.5rem;
+  display: flex;
+  flex-direction: column;
+  margin: var(--dialog-inset);
+  width: min(var(--dialog-width), calc(100vw - 2 * var(--dialog-inset)));
+  max-width: calc(100vw - 2 * var(--dialog-inset));
+  max-height: calc(100dvh - 2 * var(--dialog-inset));
+  overflow: hidden;
+  background: var(--bg-surface);
+  background-image: none;
+  color: var(--text-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+}
+.narrow.narrow { --dialog-width: 27.75rem; }
+.medium.medium { --dialog-width: 37.5rem; }
+.wide.wide { --dialog-width: 56.25rem; }
+.header.header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: var(--hit-size); padding: var(--space-2) var(--space-2) var(--space-2) var(--dialog-padding); border-bottom: 1px solid var(--separator); }
+.body.body.body { flex: 1 1 auto; min-height: 0; padding: var(--dialog-padding); overflow-y: auto; overscroll-behavior: contain; border: 0; }
+.footer { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-2); padding: var(--space-2) var(--dialog-padding); border-top: 1px solid var(--separator); }
+
+/* Short landscape: dialogs span the screen minus the inset, so every edge shows the same margin. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .paper.paper { width: min(56.25rem, calc(100vw - 2 * var(--dialog-inset))); }
+}

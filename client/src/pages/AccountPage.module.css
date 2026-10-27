@@ -1,4 +1,4 @@
-.page { width: 100%; max-width: 74rem; margin: 0 auto; padding: var(--space-4) var(--space-5) calc(var(--space-5) + var(--room-card-clearance, 0px)); }
+.page { width: 100%; max-width: 74rem; margin: 0 auto; padding: var(--page-inset) var(--page-inset) calc(var(--page-inset) + var(--room-card-clearance, 0px)); }
 .header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--space-4); margin-bottom: var(--space-3); border-bottom: 1px solid var(--separator); }
 .tabs { flex: 1 1 auto; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
@@ -48,13 +48,9 @@
 .colorInput { width: 100%; height: var(--hit-size); padding: var(--spacing-xs); cursor: pointer; }
 .avatarRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--spacing-sm); margin-top: var(--spacing-sm); }
 .avatarRow .compactActions { margin-top: 0; }
-.avatarChoices { display: flex; flex-wrap: wrap; gap: var(--spacing-xs); }
 .borderRow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-top: var(--space-5); }
 .borderRow .selectField { flex: 1 1 14rem; width: auto; }
 .borderRow > button { flex: none; }
-.avatarChoice { display: grid; place-items: center; min-width: var(--hit-size); min-height: var(--hit-size); border: 2px solid transparent; border-radius: var(--radius-pill); }
-.avatarChoice[aria-pressed='true'] { border-color: var(--color-primary); background: var(--surface-2); }
-.avatarChoice:hover { background: var(--surface-1); }
 .compactActions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--spacing-sm); margin-top: var(--spacing-md); }
 .appearance { margin-top: var(--space-3); }
 .appearance > p { margin-bottom: var(--space-3); }
@@ -64,9 +60,8 @@
 .imageHeading .compactActions { margin-top: 0; }
 .imageSetting > p { margin-top: var(--spacing-xs); }
 .securityForm { max-width: 30rem; }
-.historyVisibility { margin-block: var(--spacing-md); }
+.historyVisibility { margin: var(--space-1) 0 var(--space-1) -12px; }
 @media (max-width: 52rem) {
-  .page { padding: var(--space-3) var(--space-4) calc(var(--space-4) + var(--room-card-clearance, 0px)); }
   .editor { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
   .preview { position: static; max-height: none; overflow: visible; }
   .previewHeading { margin-bottom: var(--spacing-md); }
@@ -87,11 +82,7 @@
 .selectMenu :global(.MuiMenuItem-root:hover), .selectMenu :global(.MuiMenuItem-root.Mui-focusVisible) { background: var(--bg-card-hover); }
 .selectMenu :global(.MuiMenuItem-root.Mui-selected) { color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 14%, transparent); }
 @media (max-width: 40rem) {
-  .page { padding: var(--space-3) var(--space-3) calc(var(--space-3) + var(--room-card-clearance, 0px)); }
   .previewSections { grid-template-columns: minmax(0, 1fr); }
-}
-@media (max-height: 500px) and (min-width: 600px) {
-  .page { padding: var(--space-1) var(--space-3) calc(var(--space-3) + var(--room-card-clearance, 0px)); }
 }
 .equipment { margin-top: var(--space-3); }
 .equipmentHeader { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm); }
@@ -116,3 +107,13 @@
 /* The clickable select box is the 40px target, not just its text line. */
 .selectField :global(.MuiSelect-select) { display: flex; align-items: center; box-sizing: border-box; min-height: var(--hit-size); }
 .previewEmpty a { display: inline-flex; align-items: center; min-height: var(--hit-size); }
+
+/* Short landscape: identity fields and the avatar upload share a row; border and save stay below. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .profileForm { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-2) var(--space-4); align-items: start; }
+  .profileForm > :not(.identityFields, fieldset) { grid-column: 1 / -1; }
+  .borderRow { margin-top: var(--space-4); }
+  .avatarRow { margin-top: var(--space-1); }
+  .compactActions { margin-top: 0; }
+  .fold { margin-top: var(--space-2); }
+}

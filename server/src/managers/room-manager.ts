@@ -152,7 +152,7 @@ export function addBot(code: RoomCode, playerId: string, seat: GameSeat, difficu
   }
   const bot: PlayerInfo = {
     id: `bot:${randomUUID()}`, username: `bot-${seat.toLowerCase()}`, nickname: botNickname(room.info.gameType, seat),
-    color: '#64748b', avatar: 'owl', avatarImage: null, isBot: true, botDifficulty: difficulty,
+    color: '#64748b', avatar: 'bot', avatarImage: null, isBot: true, botDifficulty: difficulty,
   };
   room.memberIds.push(bot.id);
   room.info = withSeat(room.info, seat, { player: bot, isReady: true });

@@ -31,11 +31,13 @@ export function AchievementDetails({ categoryId, status, pending, onClaim }: {
       <div className={styles.rewardBody}>
         <span className={styles.eyebrow}>{t('achievements.exclusive')}</span>
         <Nameplate id={category.reward} />
-        <div className={styles.progressLabel}><span>{t('achievements.progress')}</span><strong>{percent}%</strong></div>
-        <progress value={completed} max={category.items.length} aria-label={t('achievements.progress')} />
+        <div className={styles.progressMeter}>
+          <div className={styles.progressLabel}><span>{t('achievements.progress')}</span><strong>{percent}%</strong></div>
+          <progress value={completed} max={category.items.length} aria-label={t('achievements.progress')} />
+        </div>
       </div>
       <div className={styles.rewardActions}>
-        <Button variant="primary" disabled={pending || !eligible || state?.claimed}
+        <Button variant="primary" size="small" disabled={pending || !eligible || state?.claimed}
           icon={state?.claimed ? 'check' : eligible ? 'trophy' : 'lock'} onClick={() => onClaim(categoryId)}>
           {t(state?.claimed ? 'achievements.claimed' : eligible ? 'achievements.claim' : 'achievements.locked')}
         </Button>

@@ -203,7 +203,7 @@ describe('spectator table perspective', () => {
     useTablePerspectiveStore.getState().selectSeat(visible.dealerSeat!);
     const handZone = (await render(visible)).split('data-hand-zone')[1]?.split('</main>')[0];
     expect(handZone).toContain(`Dealer · Player ${visible.dealerSeat}`);
-    expect(handZone?.match(/<img /g)).toHaveLength(2);
+    expect(handZone?.match(/<img [^>]*src="[^"]*\/cards\//g)).toHaveLength(2);
     expect(handZone).not.toMatch(/<button/);
   });
 

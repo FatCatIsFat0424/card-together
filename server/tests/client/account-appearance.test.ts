@@ -270,7 +270,7 @@ describe('personal account appearance', () => {
     useI18nStore.getState().setLocale('en');
     const render = (equipment: Partial<AccountProfile>): string => renderToStaticMarkup(createElement(MemoryRouter, null,
       createElement(AccountProfilePreview, {
-        account: { ...state.account, ...equipment } as AccountProfile, nickname: 'Alice', avatar: 'cat', color: '#123456',
+        account: { ...state.account, ...equipment } as AccountProfile, nickname: 'Alice', color: '#123456',
         appearance: {},
       })));
     const equipped = render({ seatFrame: 'seat-frame-tide', chatFrame: 'chat-frame-lotus', victoryEffect: 'victory-frost',

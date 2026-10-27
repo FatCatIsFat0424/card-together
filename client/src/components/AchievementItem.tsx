@@ -25,6 +25,6 @@ export function AchievementItem({ id, progress }: {
       </div>
     </div>
     <span className={styles.itemStatus}><AppIcon name={complete ? 'check' : 'circle'} />
-      {t(complete ? 'achievements.complete' : 'achievements.inProgress')}</span>
+      <span className={styles.statusText}>{t(complete ? 'achievements.complete' : 'achievements.inProgress')}</span></span>
   </li>;
 }

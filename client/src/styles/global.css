@@ -102,6 +102,11 @@
   --icon-size: 20px;
   --hit-size: 40px;
 
+  /* Equal outer margin of page content and of centered dialogs; dialogs pad their header, body and footer alike. */
+  --page-inset: 24px;
+  --dialog-inset: 16px;
+  --dialog-padding: 16px;
+
   /* Flat surfaces: tinted layers over the page instead of boxed borders. */
   --surface-1: rgba(255, 255, 255, 0.04);
   --surface-2: rgba(255, 255, 255, 0.07);
@@ -339,8 +344,7 @@ body {
   :root { --topbar-height: 0px; --rail-width: 48px; }
   #root { flex-direction: row; }
   #root > header { flex: 0 0 var(--rail-width); }
-  /* Dialogs keep a thin margin so short screens show more of their scrolling content. */
-  .MuiDialog-container .MuiDialog-paper:not(.MuiDialog-paperFullScreen) { margin: 8px; max-height: calc(100% - 16px); }
+  :root { --page-inset: 12px; --dialog-inset: 12px; --dialog-padding: 12px; }
 }
 
 /* Phone games keep the whole screen for the table; the game menu carries the app bar's controls. */
@@ -590,6 +594,20 @@ textarea::placeholder {
 @media (min-width: 2400px) and (min-height: 1300px) {
   :root { --playing-card-scale: 1.4; }
   html { font-size: 18px; }
+}
+
+/* Fallback for any centered dialog without the shared dialog classes: same inset and height cap. */
+.MuiDialog-container .MuiDialog-paper:not(.MuiDialog-paperFullScreen) {
+  margin: var(--dialog-inset);
+  max-height: calc(100dvh - 2 * var(--dialog-inset));
+}
+
+/* Phones and narrow windows tighten the shared insets; short landscape tightens them further above. */
+@media (max-width: 52rem) {
+  :root { --page-inset: 16px; }
+}
+@media (max-width: 40rem) {
+  :root { --page-inset: 12px; --dialog-inset: 12px; --dialog-padding: 12px; }
 }
 
 /* ─── UI v2 pages ─── */

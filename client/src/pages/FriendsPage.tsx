@@ -12,6 +12,7 @@ import { useI18nStore } from '../stores/i18n-store';
 import { PlayerLink } from '../components/PlayerLink';
 import { FriendStatus } from '../components/FriendStatus';
 import { Button, buttonClassName } from '../components/Button';
+import { OverflowMenu } from '../components/OverflowMenu';
 import { Tabs, tabElementId } from '../components/Tabs';
 import styles from './AccountPages.module.css';
 import tabStyles from './FriendsPage.module.css';
@@ -19,8 +20,10 @@ import tabStyles from './FriendsPage.module.css';
 const FRIEND_TABS = ['accepted', 'outgoing', 'incoming'] as const;
 type FriendTab = typeof FRIEND_TABS[number];
 
-function FriendIdentity({ person }: { person: PublicAccount }): ReactNode {
-  return <PlayerLink player={person} showUsername size="medium" />;
+function FriendIdentity({ person, status }: { person: PublicAccount; status?: ReactNode }): ReactNode {
+  return <span className={tabStyles.identity}>
+    <PlayerLink player={person} showUsername showTitle={false} size="row" dense details={status} />
+  </span>;
 }
 
 export function FriendsPage(): ReactNode {
@@ -114,13 +117,12 @@ export function FriendsPage(): ReactNode {
         <Button size="small" disabled={busy || loading} icon="refresh"
           onClick={() => { setError(''); setLoading(true); void refresh(); }}>{t('common.refresh')}</Button>
       </div>
-      <form className={styles.addForm} onSubmit={add}>
-        <div className={styles.field}>
-          <label htmlFor="friend-username">{t('friends.username')}</label>
-          <input id="friend-username" autoCapitalize="none" spellCheck={false} value={username}
-            onChange={(event) => setUsername(event.target.value)} required
-            minLength={USERNAME_MIN_LENGTH} maxLength={USERNAME_MAX_LENGTH} pattern={USERNAME_PATTERN} />
-        </div>
+      <form className={tabStyles.addForm} onSubmit={add}>
+        <label htmlFor="friend-username" className={tabStyles.srOnly}>{t('friends.username')}</label>
+        <input id="friend-username" autoCapitalize="none" spellCheck={false} value={username}
+          placeholder={t('friends.username')}
+          onChange={(event) => setUsername(event.target.value)} required
+          minLength={USERNAME_MIN_LENGTH} maxLength={USERNAME_MAX_LENGTH} pattern={USERNAME_PATTERN} />
         <Button type="submit" variant="primary" disabled={busy}>
           {busy ? t('common.loading') : t('friends.add')}
         </Button>
@@ -131,47 +133,45 @@ export function FriendsPage(): ReactNode {
       <div id="friends-panel" role="tabpanel" aria-labelledby={tabElementId('friends', activeTab)} className={styles.section}>
         {data && <section id="friends-panel-accepted" hidden={activeTab !== 'accepted'}>
           {data.friends.length === 0 && <p className={styles.empty}>{t('friends.empty')}</p>}
-          <ul className={styles.list}>{data.friends.map((person) => {
+          <ul className={tabStyles.list}>{data.friends.map((person) => {
             const unread = conversations.find((conversation) => conversation.account.id === person.id)?.unreadCount ?? 0;
+            const confirming = removeId === person.id;
             return (
-              <li key={person.id} className={styles.person}>
-              <span className={tabStyles.friendIdentity}>
-                <FriendIdentity person={person} />
-                <FriendStatus friend={person} />
-              </span>
-              {removeId === person.id ? <div className={styles.actions}>
-                <span>{t('friends.confirmRemove')}</span>
-                <Button variant="danger-text" disabled={busy}
-                  onClick={() => void act(`/api/friends/${person.id}`, 'DELETE')}>
-                  {t('friends.remove')}</Button>
-                <Button disabled={busy} onClick={() => setRemoveId(null)}>{t('common.cancel')}</Button>
-              </div> : <div className={styles.actions}>
-                <Link className={buttonClassName('ghost')} to={`/messages/${encodeURIComponent(person.id)}`}
-                  aria-label={t('messages.openFor', { nickname: person.nickname })}>
-                  {t('messages.open')}
-                  {unread > 0 && <span className={tabStyles.count}
-                    aria-label={t('social.unread', { n: String(unread) })}>{unread}</span>}
-                </Link>
-                {person.hostedRoomCode && <Button variant="primary" disabled={busy}
-                  aria-label={t('friends.joinRoomLabel', { nickname: person.nickname })}
-                  onClick={() => join(person)}>{t('friends.joinRoom')}</Button>}
-                <Button variant="danger-text" disabled={busy}
-                  onClick={() => setRemoveId(person.id)}>{t('friends.remove')}</Button>
-              </div>}
+              <li key={person.id} className={tabStyles.person} data-confirming={confirming || undefined}>
+                <FriendIdentity person={person} status={<FriendStatus friend={person} />} />
+                {confirming ? <div className={tabStyles.confirm}>
+                  <span>{t('friends.confirmRemove')}</span>
+                  <Button size="small" variant="danger-text" disabled={busy}
+                    onClick={() => void act(`/api/friends/${person.id}`, 'DELETE')}>
+                    {t('friends.remove')}</Button>
+                  <Button size="small" disabled={busy} onClick={() => setRemoveId(null)}>{t('common.cancel')}</Button>
+                </div> : <div className={tabStyles.actions}>
+                  <Link className={buttonClassName('ghost', 'small')} to={`/messages/${encodeURIComponent(person.id)}`}
+                    aria-label={t('messages.openFor', { nickname: person.nickname })}>
+                    {t('messages.open')}
+                    {unread > 0 && <span className={tabStyles.count}
+                      aria-label={t('social.unread', { n: String(unread) })}>{unread}</span>}
+                  </Link>
+                  {person.hostedRoomCode && <Button size="small" variant="primary" disabled={busy}
+                    aria-label={t('friends.joinRoomLabel', { nickname: person.nickname })}
+                    onClick={() => join(person)}>{t('friends.joinRoom')}</Button>}
+                  <OverflowMenu label={t('friends.moreFor', { nickname: person.nickname })} disabled={busy}
+                    items={[{ label: t('friends.remove'), danger: true, onSelect: () => setRemoveId(person.id) }]} />
+                </div>}
               </li>
             );
           })}</ul>
         </section>}
         {data && <><section id="friends-panel-incoming" hidden={activeTab !== 'incoming'}>
           {data.incoming.length === 0 && <p className={styles.empty}>{t('friends.noIncoming')}</p>}
-          <ul className={styles.list}>{data.incoming.map((request) => (
-            <li key={request.id} className={styles.person}>
+          <ul className={tabStyles.list}>{data.incoming.map((request) => (
+            <li key={request.id} className={tabStyles.person}>
               <FriendIdentity person={request.requester} />
-              <div className={styles.actions}>
-                <Button variant="primary" disabled={busy}
+              <div className={tabStyles.actions}>
+                <Button size="small" variant="primary" disabled={busy}
                   onClick={() => void act(`/api/friends/requests/${request.id}/accept`, 'POST')}>
                   {t('friends.accept')}</Button>
-                <Button disabled={busy}
+                <Button size="small" disabled={busy}
                   onClick={() => void act(`/api/friends/requests/${request.id}`, 'DELETE')}>
                   {t('friends.decline')}</Button>
               </div>
@@ -180,10 +180,10 @@ export function FriendsPage(): ReactNode {
         </section>
         <section id="friends-panel-outgoing" hidden={activeTab !== 'outgoing'}>
           {data.outgoing.length === 0 && <p className={styles.empty}>{t('friends.noOutgoing')}</p>}
-          <ul className={styles.list}>{data.outgoing.map((request) => (
-            <li key={request.id} className={styles.person}>
+          <ul className={tabStyles.list}>{data.outgoing.map((request) => (
+            <li key={request.id} className={tabStyles.person}>
               <FriendIdentity person={request.recipient} />
-              <Button disabled={busy}
+              <Button size="small" disabled={busy}
                 onClick={() => void act(`/api/friends/requests/${request.id}`, 'DELETE')}>
                 {t('friends.cancel')}</Button>
             </li>

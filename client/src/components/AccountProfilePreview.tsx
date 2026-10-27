@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
-import type { AccountProfile, AvatarId, Card } from '@shared/types';
+import type { AccountProfile, Card } from '@shared/types';
 import { Link } from 'react-router-dom';
 import type { AccountAppearance } from '../account-appearance';
 import { useMotionStore } from '../stores/motion-store';
@@ -20,7 +20,6 @@ import chatStyles from './ChatPanel.module.css';
 interface AccountProfilePreviewProps {
   readonly account: AccountProfile;
   readonly nickname: string;
-  readonly avatar: AvatarId;
   readonly color: string;
   readonly appearance: AccountAppearance;
 }
@@ -54,7 +53,7 @@ function PreviewSection({ title, shared, wide = false, children }: {
 
 /** Every equippable look in one place: the private table view first, then what others see. */
 export function AccountProfilePreview({
-  account, nickname, avatar, color, appearance,
+  account, nickname, color, appearance,
 }: AccountProfilePreviewProps): ReactNode {
   const { t } = useI18nStore();
   const cardFaceUrl = useCardFaceUrl();
@@ -62,9 +61,9 @@ export function AccountProfilePreview({
   const background = tableBackgroundStyle(appearance, reducedMotion);
   const seatBackground = seatBackgroundStyle(appearance, reducedMotion);
   const name = nickname.trim() || account.username;
-  const previewAccount = { avatar, avatarImage: account.avatarImage, avatarBorder: account.avatarBorder, color, nickname: name };
+  const previewAccount = { avatar: account.avatar, avatarImage: account.avatarImage, avatarBorder: account.avatarBorder, color, nickname: name };
   const identity = (size: 'compact' | 'large'): ReactNode =>
-    <Avatar avatar={avatar} image={account.avatarImage} border={account.avatarBorder} color={color} size={size} />;
+    <Avatar avatar={account.avatar} image={account.avatarImage} border={account.avatarBorder} color={color} size={size} />;
   const middle = (SAMPLE_CARDS.length - 1) / 2;
   return <aside className={styles.preview} aria-label={t('profile.livePreview')}>
     <div className={styles.previewHeading}>

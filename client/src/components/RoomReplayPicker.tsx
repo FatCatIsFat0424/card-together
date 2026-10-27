@@ -11,6 +11,7 @@ import { replayableHistory } from '../room-replay';
 import type { MemberReplayHistory } from '../room-replay';
 import { useI18nStore } from '../stores/i18n-store';
 import { AppIcon } from './AppIcon';
+import { dialogPaperClass, dialogParts } from '../styles/dialog';
 import styles from './RoomReplayPicker.module.css';
 
 function MatchRow({ match, players, busy, onWatch }: {
@@ -64,15 +65,15 @@ export function RoomReplayPicker({ members, selfId, busy, onWatch, onClose }: {
     return () => { active = false; };
   }, [memberKey]);
 
-  return <Dialog open fullWidth maxWidth="sm" onClose={onClose} aria-labelledby={titleId}
-    slotProps={{ paper: { className: styles.dialog }, backdrop: { className: styles.backdrop } }}>
-    <DialogTitle component="div" className={styles.header}>
+  return <Dialog open onClose={onClose} aria-labelledby={titleId}
+    slotProps={{ paper: { className: dialogPaperClass('medium') }, backdrop: { className: styles.backdrop } }}>
+    <DialogTitle component="div" className={`${dialogParts.header} ${styles.header}`}>
       <h2 id={titleId}>{t('replay.sharedPickerTitle')}</h2>
       <button type="button" className={`btn btn-secondary ${styles.close}`} onClick={onClose} aria-label={t('table.close')}>
         <AppIcon name="close" />
       </button>
     </DialogTitle>
-    <DialogContent dividers className={styles.content} aria-busy={busy}>
+    <DialogContent className={dialogParts.body} aria-busy={busy}>
       <p className={styles.hint}>{t('replay.sharedPickerHint')}</p>
       {members.map((member) => {
         const history = histories[member.id] ?? { status: 'loading' };

@@ -1,18 +1,9 @@
-.dialog.dialog {
-  background: var(--bg-surface);
-  background-image: none;
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-}
 .backdrop.backdrop { background: var(--bg-overlay); }
-.dialog.dialog:has(.browser) { max-width: 1044px; }
-.header.header { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-md); padding: var(--spacing-lg); }
+.dialog.dialog:has(.browser) { --dialog-width: 65.25rem; }
+.header h2 { min-width: 0; }
 .header h2 { font-size: var(--text-xl); line-height: 1.4; }
 .close { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 44px; height: 44px; padding: 0; }
-.content.content { padding: var(--spacing-lg); border-color: var(--border-color); overscroll-behavior: contain; }
-.content.browser {
+.content.content.browser {
   display: flex;
   padding: 0;
   height: min(640px, 70dvh);
@@ -54,13 +45,9 @@
 .rules th, .rules td { padding: var(--spacing-sm); border: 1px solid var(--border-color); vertical-align: top; }
 .rules th { font-weight: 600; color: var(--text-primary); background: var(--bg-card); }
 @media (max-height: 500px) and (min-width: 600px) {
-  .dialog:has(.browser) .header { padding: 2px 12px; }
   .dialog:has(.browser) .header h2 { font-size: var(--text-base); }
 }
 @media (max-width: 36rem) {
-  .dialog.dialog { margin: var(--spacing-sm); width: calc(100% - 2 * var(--spacing-sm)); max-height: calc(100% - 2 * var(--spacing-sm)); }
-  .header.header, .content.content { padding: var(--spacing-md); }
-  .content.browser { padding: 0; }
   .gameTabs.gameTabs { flex-basis: 96px; }
   .gameTabs :global(.MuiTab-root) { min-width: 0; padding: 10px 8px; font-size: var(--text-xs); }
   .gamePanel { padding: var(--spacing-md); }

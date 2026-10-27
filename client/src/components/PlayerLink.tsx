@@ -9,19 +9,21 @@ import styles from './PlayerLink.module.css';
 interface PlayerLinkProps {
   player: PlayerInfo;
   showUsername?: boolean;
-  size?: 'small' | 'compact' | 'medium';
+  size?: 'small' | 'row' | 'compact' | 'medium';
   linked?: boolean;
   /** Equipped nameplate title; compact lists such as the spectator area leave it out. */
   showTitle?: boolean;
   details?: ReactNode;
+  /** List-row layout: nickname and @username share a line, details sit on the next one. */
+  dense?: boolean;
 }
 
 export function PlayerLink({
-  player, showUsername = false, size = 'small', linked = true, showTitle = true, details,
+  player, showUsername = false, size = 'small', linked = true, showTitle = true, details, dense = false,
 }: PlayerLinkProps): ReactNode {
   const { t } = useI18nStore();
   const identity = <>
-    <Avatar avatar={player.avatar} image={player.avatarImage} border={player.avatarBorder} color={player.color} size={size} />
+    <Avatar avatar={player.isBot ? 'bot' : player.avatar} image={player.avatarImage} border={player.avatarBorder} color={player.color} size={size} />
     <span className={styles.identity}>
       <span className={styles.nickname}>{player.nickname}</span>
       {player.isBot && <span className={styles.botBadge}>{t('player.bot')}</span>}
@@ -32,9 +34,10 @@ export function PlayerLink({
       {details && <span className={styles.details}>{details}</span>}
     </span>
   </>;
-  if (player.isBot || !linked) return <span className={styles.link} data-player-identity>{identity}</span>;
+  const className = dense ? `${styles.link} ${styles.dense}` : styles.link;
+  if (player.isBot || !linked) return <span className={className} data-player-identity>{identity}</span>;
   return (
-    <Link className={styles.link} data-player-identity to={`/players/${encodeURIComponent(player.id)}`}
+    <Link className={className} data-player-identity to={`/players/${encodeURIComponent(player.id)}`}
       aria-label={t('player.view', { nickname: player.nickname })}>
       {identity}
     </Link>

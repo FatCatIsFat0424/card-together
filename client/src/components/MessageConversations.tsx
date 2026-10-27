@@ -62,7 +62,7 @@ export function MessageConversations({ selectedId, split = false, friends }: {
         aria-current={selectedId === account.id ? 'page' : undefined}>
         {split && <span className={styles.conversationAvatar}><Avatar avatar={account.avatar}
           image={account.avatarImage} border={account.avatarBorder}
-          color={account.color} size="medium" /></span>}
+          color={account.color} size="row" /></span>}
         <strong className={styles.conversationName}><span>{account.nickname}</span>
           {presence.has(account.id) && <span className={styles.presenceDot} role="img"
             data-online={presence.get(account.id)}

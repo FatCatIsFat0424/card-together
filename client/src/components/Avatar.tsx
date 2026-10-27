@@ -3,6 +3,7 @@ import type { AvatarBorderId, AvatarId, MediaId } from '@shared/types';
 import { SHOP_SERIES } from '@shared/constants';
 import { shopSeriesEmblem } from '../shop-series';
 import { mediaUrl } from '../media';
+import defaultAvatar from '../assets/avatars/default-avatar.svg';
 import { useMotionStore } from '../stores/motion-store';
 import { useStillArt } from '../cosmetics/art-layers/art-layers';
 import { layeredSeriesEmblem } from '../cosmetics/art-layers/emblem-art-layers';
@@ -12,31 +13,31 @@ import styles from './Avatar.module.css';
 import borderStyles from './AvatarBorder.module.css';
 import { AppIcon } from './AppIcon';
 
-export const AVATARS: readonly AvatarId[] = ['cat', 'fox', 'owl', 'bear', 'rabbit', 'panda'];
-const AVATAR_SYMBOLS: Record<AvatarId, string> = {
-  cat: '🐱', fox: '🦊', owl: '🦉', bear: '🐻', rabbit: '🐰', panda: '🐼',
-};
+/** The only picture shown for players without an upload; seats filled by bots keep their owl. */
+const BOT_SYMBOL = '🦉';
 const ANTLER_PATH = 'M18 16 C12 5 10 -10 12 -32 M12 -13 L2 -22 L0 -34 M12 -22 L22 -32 L23 -42 M10 -2 L-1 -9 L-4 -21';
 const TENTACLE_PATH = 'M0 61 C-18 70 -17 93 -4 98 C8 103 6 88 -2 89 M8 85 C-6 106 9 123 22 113 C29 108 21 99 17 107 M30 102 C25 122 43 130 46 116';
 
 interface AvatarProps {
-  avatar: AvatarId;
-  /** Uploaded picture; replaces the preset emoji when present. */
+  /** Legacy preset; only the server's bot marker changes the picture. */
+  avatar?: AvatarId;
+  /** Uploaded picture; replaces the default avatar when present. */
   image?: MediaId | null;
   color?: string;
   border?: AvatarBorderId | null;
-  size?: 'small' | 'compact' | 'medium' | 'large';
+  size?: 'small' | 'row' | 'compact' | 'medium' | 'large';
 }
 
 export function Avatar({ avatar, image, color, border, size = 'medium' }: AvatarProps): ReactNode {
   const { t } = useI18nStore();
+  const label = t('avatar.default');
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const stillArt = useStillArt();
   const series = SHOP_SERIES.find((key) => border === key);
   const emblem = series ? shopSeriesEmblem(series, reducedMotion) : null;
   const emblemArt = series && !stillArt ? layeredSeriesEmblem(series) : null;
   if (border) return <span className={`${styles.avatar} ${styles[size]} ${borderStyles.equipped} ${borderStyles[border]}`}
-    data-reduced-motion={reducedMotion || undefined} data-avatar-size={size} role="img" aria-label={t(`avatar.${avatar}`)}>
+    data-reduced-motion={reducedMotion || undefined} data-avatar-size={size} role="img" aria-label={label}>
     <span className={borderStyles.rim} aria-hidden="true" />
     {['cat', 'rabbit', 'frog', 'bear', 'dog'].includes(border) && <>
       <span className={`${borderStyles.ear} ${borderStyles.leftEar}`} aria-hidden="true" />
@@ -69,11 +70,12 @@ export function Avatar({ avatar, image, color, border, size = 'medium' }: Avatar
     </>}
   </span>;
   return (
-    <span className={`${styles.avatar} ${styles[size]}`} role="img" aria-label={t(`avatar.${avatar}`)}>
+    <span className={`${styles.avatar} ${styles[size]}`} role="img" aria-label={label}>
       {color && <svg className={styles.ring} viewBox="0 0 116 116" aria-hidden="true">
         <circle cx="58" cy="58" r="54" fill="none" stroke={color} strokeWidth="8" />
       </svg>}
-      {image ? <img className={styles.image} src={mediaUrl(image)} alt="" /> : AVATAR_SYMBOLS[avatar]}
+      {image ? <img className={styles.image} src={mediaUrl(image)} alt="" />
+        : avatar === 'bot' ? BOT_SYMBOL : <img className={styles.image} src={defaultAvatar} alt="" />}
     </span>
   );
 }

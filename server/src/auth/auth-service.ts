@@ -156,6 +156,7 @@ function profileValues(
   if (typeof color !== 'string' || !/^#[\da-f]{6}$/i.test(color)) {
     throw authError(400, 'INVALID_COLOR', 'Choose a valid six-digit color.');
   }
+  // Retired presets stay valid so stored accounts and older clients keep saving their profile.
   if (
     typeof avatar !== 'string' ||
     !['cat', 'fox', 'owl', 'bear', 'rabbit', 'panda'].includes(avatar)

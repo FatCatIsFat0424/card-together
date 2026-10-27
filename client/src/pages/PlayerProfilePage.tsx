@@ -106,7 +106,7 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
     <div className={styles.layout}>
       <section className={`${styles.card} ${styles.profile}`}>
         <div className={styles.identity}>
-          <Avatar avatar={player.avatar} image={player.avatarImage} border={player.avatarBorder} color={player.color} size="large" />
+          <Avatar avatar={player.avatar} image={player.avatarImage} border={player.avatarBorder} color={player.color} size="medium" />
           <div className={styles.name}>
             <h1 style={{ color: player.color }}>{player.nickname}</h1>
             <Nameplate id={player.nameplate} />
