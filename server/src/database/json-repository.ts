@@ -2,25 +2,27 @@ import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { copyFile, mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import { getShopItem, isAvatarBorderId, ownsShopItem, GAME_COIN_REWARD, MAX_EMOJIS_PER_ACCOUNT } from '@shared/constants';
+import { isAvatarBorderId, MAX_EMOJIS_PER_ACCOUNT } from '@shared/constants';
 import { isReplayRecordId } from '@shared/replay-session';
-import type { Repository, AccountRecord, MatchRecord, NewMatchRecord } from './repository';
+import type { Repository, RepositoryOptions, AccountRecord, MatchRecord, NewMatchRecord } from './repository';
 import { MAX_MATCHES_PER_ACCOUNT, publicAccount, repositoryError, SOCIAL_HISTORY_RETENTION_MS } from './repository';
 import { emptyDocument, isObject, validDirectMessage, validateDocument } from './schema';
 import { migrateDocument } from './migrations';
 import type { DatabaseDocument } from './schema';
 import type { MatchReplay, ShopItemId } from '@shared/types';
 import { dropUnplayableRecordings, isMatchReplay } from './match-replay';
+import { storedMatches } from './stored-matches';
 import { createReplayStore } from './replay-store';
 import { retainMatches } from './match-retention';
 import { backupMatchHistoryState } from './state-backup';
-import { equipmentError } from './shop-equipment';
 import type { RuntimeSnapshot } from '../runtime/types';
 import { createDatabaseIndexes, friendshipPair } from './indexes';
-import { DAILY_TASKS, DAILY_CHECK_IN_COINS } from '@shared/constants/daily-rewards';
-import { dailyGameProgress, dailyState, dailyStatus, replacementTask, taskProgress } from './daily-rewards';
-import { ACHIEVEMENT_CATEGORIES } from '@shared/constants/achievements';
-import { achievementGameProgress, achievementState, achievementsStatus } from './achievements';
+import { dailyStatus } from './daily-rewards';
+import { achievementsStatus } from './achievements';
+import {
+  achievementClaim, completedGame, dailyRewardClaim, dailyTaskReplacement, gameRewardedAccount, observedLastSeen,
+  profileUpdatedAccount, purchasedAccount, rewardedHumans,
+} from './account-operations';
 
 const activePaths = new Set<string>();
 
@@ -32,35 +34,10 @@ function boundedLimit(limit: number, maximum: number): number {
   return Math.trunc(Math.min(Math.max(limit, 0), maximum)) || 0;
 }
 
-export interface JsonRepositoryOptions {
-  readonly now?: () => number;
-  /** Match replay archives; defaults to `replays/` beside the database file. */
-  readonly replayDirectory?: string;
-}
+export type JsonRepositoryOptions = RepositoryOptions;
 
 type CopiedTable = 'accounts' | 'sessions' | 'friendships' | 'matches' | 'emojis' | 'directMessages' | 'messageReads'
   | 'friendNotifications';
-
-/** Splits incoming matches into stored records and the archives to write; later duplicates win. */
-function storedMatches(matches: readonly NewMatchRecord[]): { records: MatchRecord[]; archives: Map<string, MatchReplay> } {
-  const records: MatchRecord[] = [];
-  const archives = new Map<string, MatchReplay>();
-  for (const match of matches) {
-    // Only a stored archive sets the flag, whatever the caller passed.
-    const { replay, hasReplay: _hasReplay, ...fields } = structuredClone(match) as NewMatchRecord & { readonly hasReplay?: unknown };
-    if (replay === undefined) {
-      archives.delete(fields.id);
-      records.push(fields);
-      continue;
-    }
-    if (!isReplayRecordId(fields.id) || !isObject(fields.result) || !isMatchReplay(replay, fields.result, fields.finishedAt)) {
-      throw repositoryError('INVALID_REPLAY', 'Invalid match replay archive.');
-    }
-    archives.set(fields.id, replay);
-    records.push({ ...fields, hasReplay: true });
-  }
-  return { records, archives };
-}
 
 /** A single server process owns a JSON file. A SQL adapter can implement Repository unchanged. */
 export async function createJsonRepository(filePath: string, options: JsonRepositoryOptions = {}): Promise<Repository> {
@@ -235,8 +212,7 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
         const index = positions.get(player.info.id);
         if (index === undefined) continue;
         const account = data.accounts[index];
-        const lastSeenAt = player.disconnectedAt === null ? timestamp
-          : player.lastSeenAt === undefined ? player.disconnectedAt : player.lastSeenAt;
+        const lastSeenAt = observedLastSeen(player, timestamp);
         if (lastSeenAt === null) continue;
         if (account.lastSeenAt !== undefined && account.lastSeenAt >= lastSeenAt) continue;
         if (!copied) {
@@ -255,18 +231,11 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       data.accounts = data.accounts.slice();
       for (const id of completedGameIds) {
         if (rewarded.has(id)) continue;
-        const game = snapshot.games.find((entry) => entry.id === id);
-        if (!game?.result) throw new Error('Coin rewards require a completed game.');
-        const humans = new Set(Object.values(game.players).filter((player) => !player.isBot).map((player) => player.id));
-        for (const accountId of humans) {
+        const game = completedGame(snapshot.games, id);
+        for (const accountId of rewardedHumans(game)) {
           const index = positions.get(accountId);
           if (index === undefined) throw new Error('Coin reward account does not exist.');
-          const account = data.accounts[index];
-          const coins = (account.coins ?? 0) + GAME_COIN_REWARD;
-          if (!Number.isSafeInteger(coins)) throw new Error('Coin balance exceeds the supported limit.');
-          data.accounts[index] = { ...account, coins, coinRevision: (account.coinRevision ?? 0) + 1,
-            achievements: achievementGameProgress(account.achievements, game, accountId),
-            dailyRewards: dailyGameProgress(account.dailyRewards, game, accountId, rewardedAt) };
+          data.accounts[index] = gameRewardedAccount(data.accounts[index], game, rewardedAt);
         }
         rewarded.add(id);
       }
@@ -277,20 +246,7 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       return write(['accounts'], (data) => {
         const index = indexes.accounts(document.accounts).positions.get(id);
         if (index === undefined) return null;
-        const account = data.accounts[index];
-        const item = getShopItem(itemId);
-        if (!item) throw repositoryError('INVALID_SHOP_ITEM', 'Choose an available shop item.');
-        if (ownsShopItem(account, item)) return account;
-        if ((account.coins ?? 0) < item.price) {
-          throw repositoryError('INSUFFICIENT_COINS', 'Not enough coins. Play more games to earn coins.');
-        }
-        const inventory = item.type === 'avatarBorder'
-          ? { ownedAvatarBorders: [...(account.ownedAvatarBorders ?? []), item.id] }
-          : { ownedShopItems: [...(account.ownedShopItems ?? []), item.id] };
-        const updated: AccountRecord = { ...account, ...inventory,
-          coins: (account.coins ?? 0) - item.price,
-          coinRevision: (account.coinRevision ?? 0) + 1,
-          updatedAt: Math.max(now, account.updatedAt + 1) };
+        const updated = purchasedAccount(data.accounts[index], itemId, now);
         data.accounts[index] = updated;
         return updated;
       });
@@ -333,13 +289,7 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
         write(['accounts'], (data) => {
           const index = indexes.accounts(document.accounts).positions.get(id);
           if (index === undefined) return null;
-          if (profile.avatarBorder && !data.accounts[index].ownedAvatarBorders?.includes(profile.avatarBorder)) {
-            throw repositoryError('BORDER_NOT_OWNED', 'Purchase this avatar border first.');
-          }
-          const invalidEquipment = equipmentError(profile, data.accounts[index]);
-          if (invalidEquipment) throw repositoryError(invalidEquipment, 'Choose an owned item for this equipment slot.');
-          const account: AccountRecord = { ...data.accounts[index], ...profile,
-            updatedAt: Math.max(now, data.accounts[index].updatedAt + 1) };
+          const account = profileUpdatedAccount(data.accounts[index], profile, now);
           data.accounts[index] = account;
           return account;
         }),
@@ -355,20 +305,9 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       claimAchievement: (id, categoryId) => write(['accounts'], (data) => {
         const index = indexes.accounts(document.accounts).positions.get(id);
         if (index === undefined) return null;
-        const account = data.accounts[index];
-        const category = ACHIEVEMENT_CATEGORIES.find((entry) => entry.id === categoryId);
-        if (!category) throw repositoryError('INVALID_ACHIEVEMENT', 'Choose an achievement category.');
-        const status = achievementsStatus(account);
-        const progress = status.categories.find((entry) => entry.id === categoryId)!;
-        if (progress.claimed) return { account, achievements: status };
-        if (!category.items.every((item) => progress.items.some((entry) => entry.id === item.id && entry.progress >= item.target))) {
-          throw repositoryError('ACHIEVEMENT_INCOMPLETE', 'Complete every achievement in this category first.');
-        }
-        const updated: AccountRecord = { ...account,
-          ownedAchievementNameplates: [...(account.ownedAchievementNameplates ?? []), category.reward],
-          updatedAt: Math.max(now(), account.updatedAt + 1) };
-        data.accounts[index] = updated;
-        return { account: updated, achievements: achievementsStatus(updated) };
+        const claimed = achievementClaim(data.accounts[index], categoryId, now());
+        data.accounts[index] = claimed.account;
+        return claimed;
       }),
       getDailyRewards: (id) => read((data) => {
         const account = indexes.accounts(data.accounts).byId.get(id);
@@ -377,50 +316,16 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       claimDailyReward: (id, reward, day) => write(['accounts'], (data) => {
         const index = indexes.accounts(document.accounts).positions.get(id);
         if (index === undefined) return null;
-        const account = data.accounts[index];
-        const timestamp = now();
-        const state = dailyState(account.dailyRewards, timestamp, id);
-        if (day !== state.day) throw repositoryError('DAILY_DATE_CHANGED', 'Refresh today’s rewards.');
-        const task = DAILY_TASKS.find((entry) => entry.id === reward);
-        if (!task && reward !== 'check-in') throw repositoryError('INVALID_DAILY_REWARD', 'Choose an available daily reward.');
-        const alreadyClaimed = reward === 'check-in' ? state.checkInDays.includes(day)
-          : state.claimedTasks.includes(reward);
-        if (task && !state.taskIds.includes(task.id)) throw repositoryError('DAILY_TASK_UNASSIGNED', 'This task is not assigned today.');
-        if (alreadyClaimed) return { account, dailyRewards: dailyStatus(account.dailyRewards, timestamp, id) };
-        if (task && taskProgress(state, task.id) < task.target) {
-          throw repositoryError('DAILY_TASK_INCOMPLETE', 'Complete the daily task before claiming.');
-        }
-        const coins = (account.coins ?? 0) + (task?.coins ?? DAILY_CHECK_IN_COINS);
-        if (!Number.isSafeInteger(coins)) throw new Error('Coin balance exceeds the supported limit.');
-        const dailyRewards = { ...state,
-          checkInDays: reward === 'check-in' ? [...state.checkInDays, day] : state.checkInDays,
-          claimedTasks: reward === 'check-in' ? state.claimedTasks : [...state.claimedTasks, reward],
-        };
-        const updated: AccountRecord = { ...account, dailyRewards, coins,
-          achievements: reward === 'check-in' ? account.achievements : {
-            ...achievementState(account.achievements), dailyTasks: (account.achievements?.dailyTasks ?? 0) + 1,
-          },
-          coinRevision: (account.coinRevision ?? 0) + 1, updatedAt: Math.max(timestamp, account.updatedAt + 1) };
-        data.accounts[index] = updated;
-        return { account: updated, dailyRewards: dailyStatus(dailyRewards, timestamp, id) };
+        const claimed = dailyRewardClaim(data.accounts[index], reward, day, now());
+        data.accounts[index] = claimed.account;
+        return claimed;
       }),
       replaceDailyTask: (id, task, day) => write(['accounts'], (data) => {
         const index = indexes.accounts(document.accounts).positions.get(id);
         if (index === undefined) return null;
-        const account = data.accounts[index];
-        const timestamp = now();
-        const state = dailyState(account.dailyRewards, timestamp, id);
-        if (day !== state.day) throw repositoryError('DAILY_DATE_CHANGED', 'Refresh today’s rewards.');
-        if (state.replacement?.from === task) return { account, dailyRewards: dailyStatus(state, timestamp, id) };
-        if (state.replacement) throw repositoryError('DAILY_REPLACE_USED', 'Today’s replacement has been used.');
-        if (!state.taskIds.includes(task) || state.claimedTasks.includes(task)) {
-          throw repositoryError('DAILY_TASK_UNAVAILABLE', 'Choose an assigned, unclaimed task.');
-        }
-        const to = replacementTask(state, id);
-        const dailyRewards = { ...state, taskIds: state.taskIds.map((entry) => entry === task ? to : entry), replacement: { from: task, to } };
-        const updated: AccountRecord = { ...account, dailyRewards, updatedAt: Math.max(timestamp, account.updatedAt + 1) };
-        data.accounts[index] = updated;
-        return { account: updated, dailyRewards: dailyStatus(dailyRewards, timestamp, id) };
+        const replaced = dailyTaskReplacement(data.accounts[index], task, day, now());
+        data.accounts[index] = replaced.account;
+        return replaced;
       }),
       changePassword: (id, expectedHash, passwordHash, now) =>
         write(['accounts'], (data) => {

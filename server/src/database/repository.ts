@@ -77,6 +77,12 @@ export interface FriendNotificationRecord {
   readonly createdAt: number;
 }
 
+export interface RepositoryOptions {
+  readonly now?: () => number;
+  /** Match replay archives; defaults to `replays/` beside the database file. */
+  readonly replayDirectory?: string;
+}
+
 /** All writes resolve after durable storage. SQL adapters must preserve atomic checks. */
 export interface Repository {
   getAccountById(id: string): Promise<AccountRecord | null>;
