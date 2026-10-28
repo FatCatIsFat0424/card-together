@@ -32,7 +32,7 @@ VITE_BASE_PATH=/card-together/ VITE_SERVER_URL='' \
 | --- | --- |
 | 輸入 | `--base` 與 `--files` 只能擇一。`--base` 使用與 HEAD 的 merge base，加上已 stage、未 stage 與未追蹤的變更，包括 rename 的兩側 |
 | `--files` | 只檢查列出的檔案，其他一律不保證；無效、不安全或空的選擇會失敗 |
-| 相依關係 | 追蹤遞移的 import、export、字面的動態 import 與 shared alias。runtime、安全性與持久化的變更會加入對應的邊界測試 |
+| 相依關係 | 追蹤遞移的 import、export、字面的動態 import 與 shared alias；Vite 的 `?query` 匯入視為同一個檔案，來源目錄以外的既有檔案（資源、建置設定）不再展開。runtime、安全性與持久化的變更會加入對應的邊界測試 |
 | 擴大為 full | shared 介面、`AGENTS.md`、相依套件或設定、已刪除或未知的路徑、無法解析或動態的 import |
 | 部署檔案 | 執行相關的 Python 模組；未對應的輔助程式與範本會執行所有模組 |
 | 用戶端資源 | 需要建置與建置產物驗證 |

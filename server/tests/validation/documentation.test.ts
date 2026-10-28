@@ -1,9 +1,9 @@
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { planGates } from '../../../scripts/validation/check';
-import { documentationErrors, documentationPaths, githubSlug, headingAnchors } from '../../../scripts/validation/documentation';
+import { documentationErrors, documentationPaths, documentationTargets, githubSlug, headingAnchors } from '../../../scripts/validation/documentation';
 import { parseOptions, selectChecks } from '../../../scripts/validation/selection';
 
 const directories: string[] = [];
@@ -66,5 +66,11 @@ describe('documentation link validation', () => {
     expect(planGates(root, selectChecks(root, full), full).map((gate) => gate.id)).toContain('documentation');
     const focused = parseOptions(['focused', '--files', 'docs/games/cards.md']);
     expect(planGates(root, selectChecks(root, focused), focused)).toEqual([{ id: 'documentation', internal: 'documentation' }]);
+  });
+
+  it('validates only selected Markdown files, not code or directory symlinks', async () => {
+    const root = await fixture({ 'README.md': '# Card Together\n', 'notes.md': '# Notes\n', 'client/a.ts': '', 'deps/x': '' });
+    await symlink(join(root, 'deps'), join(root, 'node_modules'));
+    expect(documentationTargets(root, ['node_modules', 'client/a.ts', 'notes.md', 'gone.md'])).toEqual(['README.md', 'notes.md']);
   });
 });

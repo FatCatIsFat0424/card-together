@@ -1,4 +1,4 @@
-import { lstatSync, readFileSync } from 'node:fs';
+import { lstatSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { collectFiles } from './selection';
 
@@ -7,6 +7,15 @@ export const DOCUMENTATION_ROOTS = ['AGENTS.md', 'CLAUDE.md', 'README.md', 'CHAN
 
 export function documentationPaths(root: string): string[] {
   return collectFiles(root, DOCUMENTATION_ROOTS).filter((path) => path.endsWith('.md'));
+}
+
+/**
+ * Markdown to validate: every repository document plus selected Markdown outside the usual roots. Other selected
+ * paths (code, deleted files, or a worktree's `node_modules` symlink to a directory) are not documents.
+ */
+export function documentationTargets(root: string, selected: readonly string[]): string[] {
+  const extra = selected.filter((path) => path.endsWith('.md') && isFile(join(root, path)));
+  return [...new Set([...extra, ...documentationPaths(root)])].sort();
 }
 
 /** Matches the anchors GitHub generates for Markdown headings (github-slugger). */
@@ -64,6 +73,10 @@ export function documentationErrors(root: string, paths: readonly string[]): str
     }
   }
   return errors;
+}
+
+function isFile(path: string): boolean {
+  try { return statSync(path).isFile(); } catch { return false; }
 }
 
 function present(path: string): boolean {

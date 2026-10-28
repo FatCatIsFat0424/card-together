@@ -83,6 +83,17 @@ describe('dependency and risk selection', () => {
       expect(selectChecks(root, parseOptions(['focused', '--files', path])).scope).toBe('full');
     });
 
+  it('resolves Vite asset queries and files outside the source roots without broadening', async () => {
+    const root = await fixture({
+      'client/src/stickers.ts': "import hello from './assets/hello.svg?no-inline'; export { hello };",
+      'client/src/assets/hello.svg': '<svg/>',
+      'client/vite.config.ts': 'export default {};',
+      'server/tests/client/proxy.test.ts': "import config from '../../../client/vite.config'; void config;",
+    });
+    expect(selectChecks(root, parseOptions(['focused', '--files', 'client/src/stickers.ts'])).scope).toBe('focused');
+    expect(selectChecks(root, parseOptions(['focused', '--files', 'server/tests/client/proxy.test.ts'])).scope).toBe('focused');
+  });
+
   it('broadens deleted inputs and nonliteral dependency resolution', async () => {
     const root = await fixture({ 'server/src/engine/dynamic.ts': 'const name = "./other"; import(name);' });
     expect(selectChecks(root, parseOptions(['focused', '--files', 'server/src/engine/missing.ts'])).scope).toBe('full');

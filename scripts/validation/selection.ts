@@ -135,16 +135,18 @@ function relatedFiles(root: string, changed: readonly string[]): { files: Set<st
       ts.forEachChild(node, visit);
     }
     visit(source);
-    for (const imported of imports) {
-      if (!imported.startsWith('.') && !imported.startsWith('@shared/')) continue;
+    for (const specifier of imports) {
+      if (!specifier.startsWith('.') && !specifier.startsWith('@shared/')) continue;
+      // Vite queries such as `?no-inline` or `?url` name the same file.
+      const imported = specifier.replace(/[?#].*$/, '');
       const base = imported.startsWith('@shared/') ? `shared/src/${imported.slice(8)}` :
         relative(root, resolve(root, dirname(file), imported)).split(sep).join('/');
       const candidates = [base, ...['.ts', '.tsx', '.mts', '.mjs', '.js', '.json'].map((ext) => base + ext),
         ...['.ts', '.tsx', '.mjs', '.js'].map((ext) => `${base}/index${ext}`)];
       const dependency = candidates.find((path) => available.has(path));
       if (!dependency) {
-        // Assets outside the source graph still force a conservative client/build selection.
-        if (!existsSync(join(root, base))) incomplete = true;
+        // Files outside the source roots (assets, build configs) end the walk; their own changes select by path.
+        if (!candidates.some((path) => existsSync(join(root, path)))) incomplete = true;
         continue;
       }
       const users = dependents.get(dependency) ?? new Set<string>();

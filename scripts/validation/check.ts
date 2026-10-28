@@ -1,12 +1,12 @@
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, lstatSync, readFileSync, readlinkSync } from 'node:fs';
+import { lstatSync, readFileSync, readlinkSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
 import { buildEnvironment, validateArtifacts } from './artifacts';
-import { DOCUMENTATION_ROOTS, documentationErrors, documentationPaths } from './documentation';
+import { DOCUMENTATION_ROOTS, documentationErrors, documentationTargets } from './documentation';
 import { fontSizeErrors } from './font-size';
 import { collectFiles, parseOptions, selectChecks } from './selection';
 import type { CheckOptions, Selection } from './selection';
@@ -149,8 +149,7 @@ export async function runGates(
 }
 
 function documentation(root: string, selected: readonly string[]): number {
-  const paths = [...new Set([...selected.filter((path) => existsSync(join(root, path))), ...documentationPaths(root)])].sort();
-  const errors = documentationErrors(root, paths);
+  const errors = documentationErrors(root, documentationTargets(root, selected));
   for (const error of errors) console.error(error);
   return errors.length ? 1 : 0;
 }
