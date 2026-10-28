@@ -94,8 +94,8 @@ export async function digestFile(path) {
   } finally { await handle.close(); }
 }
 
-/** Unsupported files are not imported, but symlinks anywhere in the source tree are refused. */
-export async function scanSources(input, extensions, profile) {
+/** Unsupported files are not imported, but symlinks anywhere in the source tree are refused. `accept` narrows files by name. */
+export async function scanSources(input, extensions, profile, accept = () => true) {
   const paths = [];
   await profile.measure('scan', async () => {
     async function collect(directory) {
@@ -104,7 +104,7 @@ export async function scanSources(input, extensions, profile) {
         const path = join(directory, entry.name);
         if (entry.isSymbolicLink()) throw new Error(`Symlinks are not allowed: ${path}`);
         if (entry.isDirectory()) await collect(path);
-        else if (entry.isFile() && extensions.has(extname(entry.name).toLowerCase())) paths.push(path);
+        else if (entry.isFile() && extensions.has(extname(entry.name).toLowerCase()) && accept(entry.name)) paths.push(path);
       }
     }
     await collect(input);
@@ -125,9 +125,9 @@ export async function scanSources(input, extensions, profile) {
   });
 }
 
-export async function inputFingerprint(kind, sources, policy, script) {
+export async function inputFingerprint(kind, sources, policy, script, extraTools = []) {
   const tools = {};
-  for (const path of [script, fileURLToPath(import.meta.url), join(repository, 'package-lock.json'),
+  for (const path of [script, ...extraTools, fileURLToPath(import.meta.url), join(repository, 'package-lock.json'),
     join(repository, 'package.json'), join(repository, '.node-version'),
     join(repository, 'client/src/audio/validate-provided-music-catalog.ts'), join(repository, 'shared/src/constants/emoji.ts'),
     join(repository, 'node_modules/sharp/package.json'),
@@ -203,7 +203,10 @@ export async function cleanupInterrupted(output, catalog, state) {
   }
 }
 
-export async function reusableImport({ state, output, catalog, fingerprint, ownFile, validateCatalog }) {
+/** `catalogFiles` lists every output a catalog needs; importers with extra assets such as cover art override it. */
+export async function reusableImport({
+  state, output, catalog, fingerprint, ownFile, validateCatalog, catalogFiles = (records) => records.map((record) => record.file),
+}) {
   const manifestPath = join(state, 'manifest.json');
   await assertSafePath(manifestPath);
   await assertSafePath(catalog);
@@ -218,7 +221,7 @@ export async function reusableImport({ state, output, catalog, fingerprint, ownF
     if (sha256(bytes) !== manifest.catalogHash) return null;
     const records = JSON.parse(bytes);
     validateCatalog(records);
-    const files = records.map((record) => record.file);
+    const files = catalogFiles(records);
     if (new Set(files).size !== files.length || JSON.stringify([...files].sort()) !== JSON.stringify(manifest.outputs.map((entry) => entry.file).sort())) return null;
     const managed = entries.filter((entry) => ownFile.test(entry.name));
     if (managed.length !== files.length || managed.some((entry) => !entry.isFile() || !files.includes(entry.name))) return null;
@@ -237,7 +240,7 @@ export async function reusableImport({ state, output, catalog, fingerprint, ownF
   }
 }
 
-/** Content-addressed files publish first, then the catalog, then successful reuse metadata. */
+/** Content-addressed files publish first, then the catalog, then successful reuse metadata. Records without `catalog` are extra files. */
 export async function publishImport({ output, catalog, state, fingerprint, records, ownFile, report, verifyInputs }) {
   const token = `${process.pid}-${randomUUID()}`;
   const stage = join(output, `.import-stage-${token}`);
@@ -274,7 +277,7 @@ export async function publishImport({ output, catalog, state, fingerprint, recor
       outputs.push({ file: record.file, ...actual, ...(record.metadata ? { metadata: record.metadata } : {}) });
     }
     await verifyInputs();
-    const catalogBytes = JSON.stringify(records.map((record) => record.catalog), null, 2) + '\n';
+    const catalogBytes = JSON.stringify(records.filter((record) => record.catalog).map((record) => record.catalog), null, 2) + '\n';
     await writeFile(catalogTemp, catalogBytes, { flag: 'wx' });
     const content = { schema: SCHEMA, fingerprint, catalogHash: sha256(catalogBytes), outputs, report };
     await writeFile(manifestTemp, JSON.stringify({ ...content, integrity: sha256(JSON.stringify(content)) }, null, 2) + '\n', { flag: 'wx' });

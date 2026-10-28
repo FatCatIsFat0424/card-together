@@ -45,11 +45,17 @@ function parseMusic(value: unknown): ProvidedMusicTrack[] {
     if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('Invalid provided music record.');
     const record = item as Record<string, unknown>;
     const hasGroup = 'group' in record;
-    if (Object.keys(record).length !== (hasGroup ? 4 : 3) || typeof record.id !== 'string' ||
+    const hasCover = 'cover' in record;
+    if (Object.keys(record).length !== 3 + Number(hasGroup) + Number(hasCover) || typeof record.id !== 'string' ||
       typeof record.title !== 'string' || typeof record.file !== 'string' ||
-      (hasGroup && typeof record.group !== 'string')) throw new Error('Invalid provided music record.');
-    const track = { id: record.id, title: record.title, file: record.file };
-    return typeof record.group === 'string' ? { ...track, group: record.group } : track;
+      (hasGroup && typeof record.group !== 'string') || (hasCover && typeof record.cover !== 'string')) {
+      throw new Error('Invalid provided music record.');
+    }
+    return {
+      id: record.id, title: record.title, file: record.file,
+      ...typeof record.group === 'string' ? { group: record.group } : {},
+      ...typeof record.cover === 'string' ? { cover: record.cover } : {},
+    };
   });
   validateProvidedMusicCatalog(tracks);
   return tracks;
@@ -74,7 +80,8 @@ export async function validateArtifacts(root: string, base: string): Promise<{ a
   const emojiValue: unknown = JSON.parse((await regularFile(root, 'shared/src/provided-emoji.generated.json')).toString('utf8'));
   const music = parseMusic(musicValue);
   const emoji = parseProvidedEmojiCatalog(emojiValue);
-  for (const [directory, records] of [['provided-music', music], ['provided-emoji', emoji]] as const) {
+  const musicFiles = music.flatMap((track) => track.cover === undefined ? [{ file: track.file }] : [{ file: track.file }, { file: track.cover }]);
+  for (const [directory, records] of [['provided-music', musicFiles], ['provided-emoji', emoji]] as const) {
     for (const { file } of records) {
       const source = await regularFile(root, `client/public/${directory}/${file}`);
       const built = await regularFile(root, `client/dist/${directory}/${file}`);
