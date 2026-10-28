@@ -1,9 +1,8 @@
 .toasts { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(34rem, calc(100% - 24px)); z-index: 1500; pointer-events: none; }
 .notice { list-style: none; padding: 0; margin: 0; animation: achievementEnter 200ms ease-out both; filter: drop-shadow(0 6px 18px #0004); }
-.notice > li { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; padding: 14px 16px; }
+.notice > li { grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 14px 16px; }
 .notice > li > div:first-child { width: 44px; height: 52px; font-size: 24px; }
-.notice > li > span:last-child { grid-column: auto; }
-.notice h2 { font-size: var(--text-sm); }
+.notice h3 { font-size: var(--text-base); }
 .notice p { font-size: var(--text-xs); }
 .leaving { animation: achievementExit 200ms ease-in both; }
 .still { animation: none; }
@@ -18,7 +17,6 @@
 @media (max-width: 600px) {
   .notice > li { grid-template-columns: 36px minmax(0, 1fr); padding: 12px; gap: 8px; }
   .notice > li > div:first-child { width: 36px; height: 44px; font-size: 22px; }
-  .notice > li > span:last-child { grid-column: 2; }
 }
 @media (prefers-reduced-motion: reduce) {
   .notice { animation: none; }

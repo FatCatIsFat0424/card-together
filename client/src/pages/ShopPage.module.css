@@ -1,6 +1,6 @@
 /* Shop: group tabs, type chips and a compact product grid. Cards open one dialog for details, purchase and equip. */
 
-.page { width: 100%; max-width: 74rem; margin: 0 auto; padding: 0 var(--page-inset) calc(var(--page-inset) + var(--room-card-clearance, 0px)); }
+.page { width: 100%; max-width: var(--page-max); margin: 0; padding: 0 var(--page-inset) calc(var(--page-inset) + var(--room-card-clearance, 0px)); }
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 .header { position: sticky; top: 0; z-index: 5; padding-top: var(--space-2); background: var(--bg-page); }
@@ -71,6 +71,15 @@
 .dialogPrice > svg { font-size: var(--icon-size); }
 .dialogStatus { color: var(--color-success); font-size: var(--text-md); font-weight: 600; }
 .dialogWarning { color: var(--color-danger); font-size: var(--text-sm); }
+
+/* Desktop shell: larger product cards in as many columns as fit, and the same top inset as the other pages. */
+@media (min-width: 64rem) and (min-height: 501px) {
+  .page { padding-top: calc(var(--page-inset) - var(--space-2)); }
+  .products { grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); }
+  .productArt { height: 128px; }
+  .name { font-size: var(--text-base); }
+  .open { min-height: 24px; font-size: var(--text-base); }
+}
 
 @media (max-width: 52rem) {
   .products { grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr)); gap: var(--space-2); }

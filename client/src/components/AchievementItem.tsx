@@ -5,7 +5,10 @@ import { useI18nStore } from '../stores/i18n-store';
 import { AppIcon } from './AppIcon';
 import styles from './AchievementItem.module.css';
 
-/** The same milestone card is used in the achievement list and completion toast. */
+/**
+ * Milestone tile shared by the achievement list and the completion toast: medal, name and count on the first
+ * line, then the description once complete or the progress bar while in progress.
+ */
 export function AchievementItem({ id, progress }: {
   readonly id: AchievementId; readonly progress: number;
 }): ReactNode {
@@ -14,17 +17,24 @@ export function AchievementItem({ id, progress }: {
   const tier = category.items.findIndex((item) => item.id === id);
   const item = category.items[tier];
   const complete = progress >= item.target;
-  return <li className={`${styles.item} ${complete ? styles.completed : ''}`} data-achievement-id={id}>
+  const name = t(`achievements.${id}.name`);
+  const description = t(`achievements.${id}.description`);
+  return <li className={`${styles.item} ${complete ? styles.completed : ''}`} data-achievement-id={id}
+    title={complete ? undefined : description}>
     <div className={`${styles.medal} ${styles[`tier${Math.min(tier, 3)}`]}`} aria-hidden="true"><AppIcon name={complete ? 'agree' : 'trophy'} /></div>
     <div className={styles.itemBody}>
-      <h3>{t(`achievements.${id}.name`)}</h3>
-      <p>{t(`achievements.${id}.description`)}</p>
-      <div className={styles.itemProgress}>
-        <progress value={progress} max={item.target} aria-label={t(`achievements.${id}.name`)} />
-        <span>{progress} / {item.target}</span>
+      <div className={styles.head}>
+        <h3>{name}</h3>
+        <span className={styles.count}>
+          {complete && <AppIcon name="check" />}
+          <span className={styles.statusText}>{t(complete ? 'achievements.complete' : 'achievements.inProgress')}</span>
+          {Math.min(progress, item.target)}/{item.target}
+        </span>
       </div>
+      {complete ? <p>{description}</p> : <>
+        <progress value={progress} max={item.target} aria-label={name} />
+        <span className={styles.statusText}>{description}</span>
+      </>}
     </div>
-    <span className={styles.itemStatus}><AppIcon name={complete ? 'check' : 'circle'} />
-      <span className={styles.statusText}>{t(complete ? 'achievements.complete' : 'achievements.inProgress')}</span></span>
   </li>;
 }

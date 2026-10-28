@@ -1,5 +1,8 @@
 .statistics { margin-bottom: var(--space-4); }
 .statistics h3 { font-size: var(--text-md); font-weight: 600; }
+.wide { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: start; gap: 0 var(--space-4); }
+.wide > h3, .wide > .hint { grid-column: 1 / -1; }
+.wide .mix { grid-template-columns: minmax(0, 1fr); margin-bottom: 0; }
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .hint { margin: var(--spacing-sm) 0 var(--spacing-md); color: var(--text-secondary); font-size: var(--text-xs); }
 .mix { display: grid; grid-template-columns: 15rem minmax(0, 1fr); align-items: center; gap: var(--spacing-lg); margin-bottom: var(--spacing-lg); padding: var(--space-3); border-radius: var(--radius-lg); background: var(--surface-1); }
@@ -44,3 +47,10 @@
   .visualization { grid-template-columns: minmax(0, 1fr); }
   .chart { display: none; }
 }
+
+/* Compact: one line per game played, in as many columns as fit. */
+.gameList { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0 var(--space-5); margin: 0; padding: 0; list-style: none; }
+.gameList li { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); min-height: 32px; border-bottom: 1px solid var(--separator); font-size: var(--text-sm); }
+.gameName { font-weight: 600; }
+.gameMeta { color: var(--text-secondary); font-size: var(--text-xs); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.statistics > .hint:last-child { margin-bottom: 0; }

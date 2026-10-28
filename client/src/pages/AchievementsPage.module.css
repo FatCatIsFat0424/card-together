@@ -1,39 +1,51 @@
+/* Achievements: one header row (title, category tabs, total), one thin reward row, then a grid of compact tiles. */
 .page {
   --achievement-gold: var(--color-gold);
-  width: min(100%, 1240px);
-  margin: 0 auto;
+  width: 100%;
+  max-width: var(--page-max);
   padding: var(--page-inset) var(--page-inset) calc(var(--page-inset) + var(--room-card-clearance, 0px));
 }
-.header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: var(--hit-size); margin-bottom: var(--space-1); }
-.header h1 { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-xl); font-weight: 600; }
+.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.header { display: flex; align-items: center; flex-wrap: wrap; gap: 0 var(--space-4); min-height: 32px; margin-bottom: var(--space-2); }
+.header h1 { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-lg); font-weight: 600; }
 .header h1 > svg { color: var(--achievement-gold); }
-.total { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--text-secondary); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
-.total > svg { color: var(--achievement-gold); font-size: var(--icon-size); }
-.categories { margin-bottom: var(--space-2); border-bottom: 1px solid var(--separator); overflow-x: auto; scrollbar-width: none; }
+/* The 40px tab hit areas overlap the slim row so the header stays 32px tall. */
+.categories { margin-block: -4px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .categories::-webkit-scrollbar { display: none; }
 .categoryCount { margin-left: var(--space-2); color: var(--text-muted); font-size: var(--text-xs); font-weight: 400; font-variant-numeric: tabular-nums; }
+.total { display: inline-flex; align-items: center; gap: var(--space-1); margin-left: auto; color: var(--text-secondary); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+.total > svg { color: var(--achievement-gold); font-size: var(--icon-size); }
 .details { min-width: 0; }
-.reward { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-lg); background: var(--surface-1); }
-.rewardBody { display: flex; align-items: center; flex: 1; gap: var(--space-3); min-width: 0; }
-.eyebrow { flex-shrink: 0; font-size: var(--text-xs); color: var(--text-secondary); }
-.progressMeter { display: flex; align-items: center; flex: 1; gap: var(--space-2); min-width: 4rem; }
-.progressLabel { display: flex; gap: var(--space-2); font-size: var(--text-xs); color: var(--text-secondary); white-space: nowrap; }
-.progressLabel strong { color: var(--achievement-gold); font-variant-numeric: tabular-nums; }
-.rewardActions { display: flex; align-items: center; flex-shrink: 0; gap: var(--space-2); }
-.rewardActions > a { display: inline-flex; align-items: center; min-height: var(--hit-size); font-size: var(--text-sm); }
-.page progress { display: block; appearance: none; width: 100%; height: 4px; border: 0; border-radius: 8px; overflow: hidden; background: var(--surface-2); }
+.reward { display: flex; align-items: center; gap: var(--space-3); min-height: 28px; margin-bottom: var(--space-2); }
+.rewardTitle { display: inline-flex; flex-shrink: 0; font-size: var(--text-xs); }
+.reward progress { flex: 0 1 220px; min-width: 4rem; }
+.percent { color: var(--achievement-gold); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
+.hint { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; overflow: hidden; color: var(--text-muted); font-size: var(--text-xs); text-overflow: ellipsis; white-space: nowrap; }
+.hint > svg { color: var(--color-success); font-size: 14px; }
+.manage { display: inline-flex; align-items: center; min-height: 28px; font-size: var(--text-xs); white-space: nowrap; }
+.claim { flex-shrink: 0; }
+.page progress { display: block; appearance: none; height: 4px; border: 0; border-radius: 8px; overflow: hidden; background: var(--surface-2); }
 .page progress::-webkit-progress-bar { background: var(--surface-2); }
 .page progress::-webkit-progress-value { background: var(--achievement-gold); border-radius: 8px; }
 .page progress::-moz-progress-bar { background: var(--achievement-gold); border-radius: 8px; }
 .items { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); gap: var(--space-2); list-style: none; padding: 0; margin: 0; }
 .note { margin-top: var(--space-4); color: var(--text-secondary); font-size: var(--text-xs); line-height: 1.7; }
 .error { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding-bottom: var(--space-3); }
-/* Short landscape keeps the summary on one line; the exclusive-title caption moves to screen readers. */
-@media (max-height: 500px) and (min-width: 600px) {
-  .eyebrow { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Portrait phones: the unlock hint may wrap under the progress bar. */
+@media (max-width: 37.5rem) {
+  .reward { flex-wrap: wrap; gap: var(--space-1) var(--space-3); }
+  .reward progress { flex: 1 1 4rem; }
+  .hint { flex: 1 1 100%; overflow: visible; white-space: normal; }
 }
-@media (max-width: 40rem) {
-  .reward, .rewardBody { flex-wrap: wrap; }
-  .rewardActions { flex: 1 1 100%; }
-  .rewardActions > button { flex: 1; }
+
+/* Desktop: a roomier header and reward row; the grid fills three or four columns. */
+@media (min-width: 64rem) and (min-height: 501px) {
+  .header { min-height: 40px; gap: 0 var(--space-5); margin-bottom: var(--space-3); }
+  .header h1 { font-size: var(--text-2xl); }
+  .categories { margin-block: 0; }
+  .total { font-size: var(--text-base); }
+  .reward { min-height: 40px; margin-bottom: var(--space-3); }
+  .rewardTitle, .percent, .hint, .manage { font-size: var(--text-sm); }
+  .items { grid-template-columns: repeat(auto-fill, minmax(max(17rem, calc((100% - 3 * var(--space-3)) / 4)), 1fr)); gap: var(--space-3); }
 }

@@ -1,6 +1,7 @@
 const en = {
   'achievements.title': 'Achievements',
-  'achievements.total': '{done} / {total} completed',
+  'achievements.total': '{done}/{total} completed',
+  'achievements.unlockHint': 'Complete all {n} to unlock',
   'achievements.categories': 'Categories',
   'achievements.table': 'Master of the Card Seas',
   'achievements.daily': 'Drops Carve Stone',
@@ -70,7 +71,8 @@ const en = {
 export type AchievementsTranslationKey = keyof typeof en;
 const zhTW: Record<AchievementsTranslationKey, string> = {
   'achievements.title': '成就',
-  'achievements.total': '已完成 {done} / {total}',
+  'achievements.total': '已完成 {done}/{total}',
+  'achievements.unlockHint': '完成全部 {n} 項解鎖',
   'achievements.categories': '成就分類',
   'achievements.table': '牌海縱橫',
   'achievements.daily': '水滴石穿',

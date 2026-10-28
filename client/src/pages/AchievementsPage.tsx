@@ -28,21 +28,18 @@ export function AchievementDetails({ categoryId, status, pending, onClaim }: {
   const eligible = completed === category.items.length;
   return <section className={styles.details} aria-label={t(`achievements.${categoryId}`)}>
     <div className={styles.reward}>
-      <div className={styles.rewardBody}>
-        <span className={styles.eyebrow}>{t('achievements.exclusive')}</span>
+      <span className={styles.rewardTitle} title={t('achievements.exclusive')}>
         <Nameplate id={category.reward} />
-        <div className={styles.progressMeter}>
-          <div className={styles.progressLabel}><span>{t('achievements.progress')}</span><strong>{percent}%</strong></div>
-          <progress value={completed} max={category.items.length} aria-label={t('achievements.progress')} />
-        </div>
-      </div>
-      <div className={styles.rewardActions}>
-        <Button variant="primary" size="small" disabled={pending || !eligible || state?.claimed}
-          icon={state?.claimed ? 'check' : eligible ? 'trophy' : 'lock'} onClick={() => onClaim(categoryId)}>
-          {t(state?.claimed ? 'achievements.claimed' : eligible ? 'achievements.claim' : 'achievements.locked')}
-        </Button>
-        {state?.claimed && <Link to="/account">{t('achievements.equip')}<AppIcon name="nextPage" /></Link>}
-      </div>
+        <span className={styles.srOnly}>{t('achievements.exclusive')}</span>
+      </span>
+      <progress value={completed} max={category.items.length} aria-label={t('achievements.progress')} />
+      <strong className={styles.percent}>{percent}%</strong>
+      {state?.claimed ? <>
+        <span className={styles.hint}><AppIcon name="check" />{t('achievements.claimed')}</span>
+        <Link className={styles.manage} to="/account">{t('achievements.equip')}<AppIcon name="nextPage" /></Link>
+      </> : eligible ? <Button variant="primary" size="small" className={styles.claim} disabled={pending}
+        icon="trophy" onClick={() => onClaim(categoryId)}>{t('achievements.claim')}</Button>
+        : <span className={styles.hint}>{t('achievements.unlockHint', { n: String(category.items.length) })}</span>}
     </div>
     <ul className={styles.items}>{category.items.map((item) =>
       <AchievementItem key={item.id} id={item.id} progress={progress(item.id)} />)}</ul>
@@ -114,17 +111,17 @@ export function AchievementsPage(): ReactNode {
   return <main className={styles.page}>
     <header className={styles.header}>
       <h1><AppIcon name="trophy" />{t('achievements.title')}</h1>
+      {status && <Tabs<AchievementCategoryId> idPrefix="achievement" controls="achievement-panel" label={t('achievements.categories')}
+        value={selected} onChange={setSelected} className={styles.categories}
+        tabs={ACHIEVEMENT_CATEGORIES.map((category) => ({ id: category.id, label: <>
+          {t(`achievements.${category.id}`)}
+          <span className={styles.categoryCount}>{completedCount(category.id)}/{category.items.length}</span></> }))} />}
       {status && <span className={styles.total}><AppIcon name="agree" />{t('achievements.total', { done: String(done), total: String(total) })}</span>}
     </header>
     {error && <div className={styles.error} role="alert">{t('achievements.error')}
       <Button onClick={() => setRefresh((value) => value + 1)}>{t('achievements.retry')}</Button></div>}
     {!status && !error && <p role="status">{t('common.loading')}</p>}
     {status && <>
-      <Tabs<AchievementCategoryId> idPrefix="achievement" controls="achievement-panel" label={t('achievements.categories')}
-        value={selected} onChange={setSelected} className={styles.categories}
-        tabs={ACHIEVEMENT_CATEGORIES.map((category) => ({ id: category.id, label: <>
-          {t(`achievements.${category.id}`)}
-          <span className={styles.categoryCount}>{completedCount(category.id)}/{category.items.length}</span></> }))} />
       <div id="achievement-panel" role="tabpanel" aria-labelledby={tabElementId('achievement', selected)}>
         <AchievementDetails categoryId={selected} status={status} pending={pending} onClaim={(id) => { void claim(id); }} />
       </div>

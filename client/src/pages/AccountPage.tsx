@@ -345,15 +345,17 @@ export function AccountPage(): ReactNode {
         </div>
       </div>
       <section id="account-panel-history" className={editorStyles.managementPanel} hidden={activeTab !== 'history'}>
-        <p className={styles.hint}>{t('history.humanOnly')}</p>
-        <label className={`${styles.row} ${editorStyles.historyVisibility}`}>
-          <AppCheckbox checked={account.matchesPublic} disabled={mediaBusy !== null}
-            onChange={(event) => {
-              const value = event.target.checked;
-              void patchSetting('matchesPublic', async () => value);
-            }} />
-          {t('history.public')}
-        </label>
+        <div className={editorStyles.historyMeta}>
+          <p className={styles.hint}>{t('history.humanOnly')}</p>
+          <label className={`${styles.row} ${editorStyles.historyVisibility}`}>
+            <AppCheckbox checked={account.matchesPublic} disabled={mediaBusy !== null}
+              onChange={(event) => {
+                const value = event.target.checked;
+                void patchSetting('matchesPublic', async () => value);
+              }} />
+            {t('history.public')}
+          </label>
+        </div>
         {mediaFeedback('matchesPublic')}
         {historyError ? <p className={styles.error} role="alert">{historyError}</p>
           : history === null ? <p role="status">{t('common.loading')}</p>

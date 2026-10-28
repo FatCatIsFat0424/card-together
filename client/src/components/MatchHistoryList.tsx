@@ -5,48 +5,33 @@ import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Select from '@mui/material/Select';
-import type { GameType, MatchHistory, MatchSummary, PublicAccount, GameSeat } from '@shared/types';
+import type { GameType, MatchHistory, MatchSummary } from '@shared/types';
 import { GAME_TYPES } from '@shared/constants';
-import { matchOutcome, selectHistoryMatches } from '../match-history';
+import {
+  HISTORY_SORT_OPTIONS, matchOutcome, outcomeBadge, selectHistoryMatches, sortOptionFor,
+} from '../match-history';
 import type { HistorySortKey, MatchOutcome, SortDirection } from '../match-history';
 import { resultSeats } from '../game-view';
-import { clientGame } from '../games/registry';
 import { seatLabel } from '../games/seat-names';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
-import { joinNames } from '../games/seat-names';
 import { PlayerLink } from './PlayerLink';
+import { MatchDetailsDialog } from './MatchDetailsDialog';
 import { MatchHistoryStatistics } from './MatchHistoryStatistics';
+import { MatchResultLabel } from './MatchResultLabel';
 import { AppIcon } from './AppIcon';
 import { Button } from './Button';
 import styles from './MatchHistoryList.module.css';
 
-/** Narrow windows and short landscape phones fold the charts and turn the table into cards. */
+/** Narrow windows and short landscape phones fold the charts and turn the table into one-line rows. */
 const COMPACT_QUERY = '(max-width: 52rem), (max-height: 500px) and (min-width: 600px)';
+/** Desktop shell at full rail width: the statistics panel lays its two blocks side by side. */
+const WIDE_QUERY = '(min-width: 1024px) and (min-height: 501px)';
 
 /** Matches revealed per step on narrow screens. */
 const COMPACT_PAGE = 8;
 
 const MatchReplayDialog = lazy(() => import('./MatchReplayDialog').then((module) => ({ default: module.MatchReplayDialog })));
-
-function MatchResultLabel({ match, players, accountId }: {
-  match: MatchSummary; players: Record<string, PublicAccount>; accountId?: string;
-}): ReactNode {
-  const { locale, t } = useI18nStore();
-  const { result } = match;
-  // accountIds follow the recorded seats in N, E, S, W order
-  const seats = resultSeats(result);
-  const mySeat = seats[match.accountIds.indexOf(accountId ?? '')];
-  const seatName = (seat: GameSeat): string => {
-    const id = match.accountIds[seats.indexOf(seat)];
-    const label = seatLabel(t, result.gameType, seat);
-    return id?.startsWith('bot:') ? t('player.botSeat', { seat: label }) : players[id]?.nickname ?? label;
-  };
-  const summary = clientGame(result.gameType).result.summary(result, mySeat, t);
-  if (summary.kind === 'text') return <span>{summary.text}</span>;
-  return <span><AppIcon name="trophy" /> {joinNames(summary.winners.map(seatName), locale)}{summary.suffix}
-    {summary.detail && <> · {t(summary.detail.key, { n: summary.detail.n })}</>}</span>;
-}
 
 export function MatchHistoryList({ matches, players, accountId }: MatchHistory & {
   readonly accountId?: string;
@@ -60,8 +45,11 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
   const [sortKey, setSortKey] = useState<HistorySortKey>('date');
   const [direction, setDirection] = useState<SortDirection>('desc');
   const [replayMatch, setReplayMatch] = useState<MatchSummary | null>(null);
+  const [detailMatch, setDetailMatch] = useState<MatchSummary | null>(null);
+  const [statsOpen, setStatsOpen] = useState(false);
   const [pages, setPages] = useState(1);
   const compact = useMediaQuery(COMPACT_QUERY, { noSsr: true });
+  const wide = useMediaQuery(WIDE_QUERY, { noSsr: true }) && !compact;
   const subjectId = accountId ?? viewerId;
   const visibleMatches = selectHistoryMatches(matches, players, {
     accountId: subjectId, query, gameType, outcome, sortKey, direction, locale,
@@ -78,73 +66,95 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
       </button>
     </th>
   );
+  const filtered = Boolean(query) || gameType !== 'all' || outcome !== 'all' || sortKey !== 'date' || direction !== 'desc';
   const reset = (): void => {
     setQuery(''); setGameType('all'); setOutcome('all'); setSortKey('date'); setDirection('desc');
   };
   // Phones show the newest matches first and reveal the rest in steps, so the page stays short.
   const shownMatches = compact ? visibleMatches.slice(0, pages * COMPACT_PAGE) : visibleMatches;
-  // Phones fold the charts so the match list is the first thing on the page.
-  const statistics = compact
-    ? <details className={styles.fold}>
-      <summary>{t('history.statistics')}</summary>
-      <div className={styles.foldBody}><MatchHistoryStatistics matches={matches} accountId={subjectId} hideTitle /></div>
-    </details>
-    : <MatchHistoryStatistics matches={matches} accountId={subjectId} />;
+  const statisticsId = `${filterId}-statistics`;
   if (matches.length === 0) return <div className={styles.history}>
-    {statistics}
     <p className={styles.empty}>{t('history.noMatches')}</p>
   </div>;
-  return <div className={styles.history}>
-    {statistics}
-    {!compact && <hr className={styles.divider} aria-hidden="true" />}
-    <div className={styles.toolbar}>
-      <div className={`${styles.field} ${styles.search}`}>
-        <label htmlFor={`${filterId}-search`}>{t('history.search')}</label>
-        <input id={`${filterId}-search`} type="search" value={query}
-          placeholder={t('history.searchPlaceholder')} onChange={(event) => setQuery(event.target.value)} />
-      </div>
-      <FormControl className={`${styles.field} ${styles.selectField}`} size="small" variant="outlined">
-        <InputLabel id={`${filterId}-game-label`}>{t('history.game')}</InputLabel>
-        <Select id={`${filterId}-game`} labelId={`${filterId}-game-label`}
-          label={t('history.game')} value={gameType} className={styles.select}
-          MenuProps={{ disableScrollLock: true, slotProps: { paper: { className: styles.filterMenu } } }}
-          onChange={(event) => {
-            const value = event.target.value;
-            if (value === 'all') setGameType(value);
-            else {
-              const type = GAME_TYPES.find((option) => option === value);
-              if (type) setGameType(type);
-            }
-          }}>
-          <MenuItem value="all">{t('history.allGames')}</MenuItem>
-          {GAME_TYPES.map((type) => <MenuItem key={type} value={type}>{t(`gameType.${type}`)}</MenuItem>)}
-        </Select>
-      </FormControl>
-      <FormControl className={`${styles.field} ${styles.selectField}`} size="small" variant="outlined">
-        <InputLabel id={`${filterId}-outcome-label`}>{t('history.result')}</InputLabel>
-        <Select id={`${filterId}-outcome`} labelId={`${filterId}-outcome-label`}
-          label={t('history.result')} value={outcome} className={styles.select}
-          MenuProps={{ disableScrollLock: true, slotProps: { paper: { className: styles.filterMenu } } }}
-          onChange={(event) => {
-            const value = event.target.value;
-            if (value === 'all' || value === 'win' || value === 'loss' || value === 'tie' || value === 'completed') {
-              setOutcome(value);
-            }
-          }}>
-          <MenuItem value="all">{t('history.allResults')}</MenuItem>
-          {(['win', 'loss', 'tie', 'completed'] as const).map((value) =>
-            <MenuItem key={value} value={value}>{t(`history.outcome.${value}`)}</MenuItem>)}
-        </Select>
-      </FormControl>
-      <Button onClick={reset}
-        disabled={!query && gameType === 'all' && outcome === 'all' && sortKey === 'date' && direction === 'desc'}>
-        {t('history.reset')}
-      </Button>
+
+  const menuProps = { disableScrollLock: true, slotProps: { paper: { className: styles.filterMenu } } } as const;
+  const toolbar = <div className={styles.toolbar}>
+    <div className={`${styles.field} ${styles.search}`}>
+      <label htmlFor={`${filterId}-search`}>{t('history.search')}</label>
+      <input id={`${filterId}-search`} type="search" value={query}
+        placeholder={t('history.searchPlaceholder')} onChange={(event) => setQuery(event.target.value)} />
     </div>
-    <p role="status" className={styles.count}>
-      {t('history.count', { shown: String(visibleMatches.length), total: String(matches.length) })}
-    </p>
-    <div className={styles.tableViewport} role="region" aria-label={t('history.matches')} tabIndex={0}>
+    <FormControl className={`${styles.field} ${styles.selectField}`} size="small" variant="outlined">
+      <InputLabel id={`${filterId}-game-label`}>{t('history.game')}</InputLabel>
+      <Select id={`${filterId}-game`} labelId={`${filterId}-game-label`}
+        label={t('history.game')} value={gameType} className={styles.select} MenuProps={menuProps}
+        onChange={(event) => {
+          const value = event.target.value;
+          if (value === 'all') setGameType(value);
+          else {
+            const type = GAME_TYPES.find((option) => option === value);
+            if (type) setGameType(type);
+          }
+        }}>
+        <MenuItem value="all">{t('history.allGames')}</MenuItem>
+        {GAME_TYPES.map((type) => <MenuItem key={type} value={type}>{t(`gameType.${type}`)}</MenuItem>)}
+      </Select>
+    </FormControl>
+    <FormControl className={`${styles.field} ${styles.selectField}`} size="small" variant="outlined">
+      <InputLabel id={`${filterId}-outcome-label`}>{t('history.result')}</InputLabel>
+      <Select id={`${filterId}-outcome`} labelId={`${filterId}-outcome-label`}
+        label={t('history.result')} value={outcome} className={styles.select} MenuProps={menuProps}
+        onChange={(event) => {
+          const value = event.target.value;
+          if (value === 'all' || value === 'win' || value === 'loss' || value === 'tie' || value === 'completed') {
+            setOutcome(value);
+          }
+        }}>
+        <MenuItem value="all">{t('history.allResults')}</MenuItem>
+        {(['win', 'loss', 'tie', 'completed'] as const).map((value) =>
+          <MenuItem key={value} value={value}>{t(`history.outcome.${value}`)}</MenuItem>)}
+      </Select>
+    </FormControl>
+    {compact && <FormControl className={`${styles.field} ${styles.selectField}`} size="small" variant="outlined">
+      <InputLabel id={`${filterId}-sort-label`}>{t('history.sort')}</InputLabel>
+      <Select id={`${filterId}-sort`} labelId={`${filterId}-sort-label`}
+        label={t('history.sort')} value={sortOptionFor(sortKey, direction).id} className={styles.select}
+        MenuProps={menuProps}
+        onChange={(event) => {
+          const option = HISTORY_SORT_OPTIONS.find((entry) => entry.id === event.target.value);
+          if (option) { setSortKey(option.key); setDirection(option.direction); }
+        }}>
+        {HISTORY_SORT_OPTIONS.map((option) => <MenuItem key={option.id} value={option.id}>{t(option.label)}</MenuItem>)}
+      </Select>
+    </FormControl>}
+    {(!compact || filtered) && <Button onClick={reset} disabled={!filtered}>{t('history.reset')}</Button>}
+    <Button className={styles.statsToggle} data-stats-toggle aria-expanded={statsOpen}
+      aria-controls={statisticsId} icon="info" onClick={() => setStatsOpen(!statsOpen)}>
+      {t(compact ? 'history.statsShort' : 'history.statistics')}</Button>
+  </div>;
+
+  const list = compact
+    ? <ul className={styles.rows} aria-label={t('history.matches')}>{shownMatches.map((match) => {
+      const badge = outcomeBadge(matchOutcome(match, subjectId));
+      const finished = new Date(match.finishedAt);
+      return <li key={match.id} data-match-row>
+        <button type="button" className={styles.row} aria-haspopup="dialog"
+          aria-label={t('history.openDetails', { room: match.roomCode })}
+          onClick={() => setDetailMatch(match)}>
+          <span className={styles.rowGame}>{t(`gameType.${match.result.gameType}`)}</span>
+          <span className={styles.rowRoom}>{match.roomCode}</span>
+          <span className={`${styles.badge} ${styles[badge.tone]}`}>{t(badge.label)}</span>
+          <span className={styles.rowSummary}><MatchResultLabel match={match} players={players} accountId={subjectId} /></span>
+          <time className={styles.rowTime} dateTime={finished.toISOString()}>
+            {finished.toLocaleDateString(locale, { month: 'numeric', day: 'numeric' })}{' '}
+            {finished.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+          </time>
+        </button>
+      </li>;
+    })}
+      {visibleMatches.length === 0 && <li className={styles.noResults}>{t('history.noResults')}</li>}
+    </ul>
+    : <div className={styles.tableViewport} role="region" aria-label={t('history.matches')} tabIndex={0}>
       <table className={styles.table}>
         <caption className={styles.caption}>{t('history.tableCaption')}</caption>
         <thead><tr>
@@ -156,7 +166,7 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
           <th scope="col">{t('replay.actions')}</th>
         </tr></thead>
         <tbody>{shownMatches.map((match) => {
-          const value = matchOutcome(match, subjectId);
+          const badge = outcomeBadge(matchOutcome(match, subjectId));
           return <tr key={match.id}>
             <td><time dateTime={new Date(match.finishedAt).toISOString()} className={styles.time}>
               <span>{new Date(match.finishedAt).toLocaleDateString(locale)}</span>
@@ -165,7 +175,7 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
             <td className={styles.room}>{match.roomCode}</td>
             <td>{t(`gameType.${match.result.gameType}`)}</td>
             <td><div className={styles.result}>
-              <span className={`${styles.outcome} ${styles[value]}`}>{t(`history.outcome.${value}`)}</span>
+              <span className={`${styles.badge} ${styles[badge.tone]}`}>{t(badge.label)}</span>
               <span className={styles.details}><MatchResultLabel match={match} players={players} accountId={subjectId} /></span>
             </div></td>
             <td><div className={styles.players}>
@@ -185,9 +195,22 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
           </td></tr>}
         </tbody>
       </table>
-    </div>
+    </div>;
+
+  return <div className={styles.history}>
+    {toolbar}
+    {statsOpen && <div id={statisticsId} className={styles.statsPanel}>
+      <MatchHistoryStatistics matches={matches} accountId={subjectId} hideTitle layout={compact ? 'compact' : wide ? 'wide' : 'stacked'} />
+    </div>}
+    <p role="status" className={compact ? styles.countHidden : styles.count}>
+      {t('history.count', { shown: String(visibleMatches.length), total: String(matches.length) })}
+    </p>
+    {list}
     {shownMatches.length < visibleMatches.length && <Button className={styles.more} onClick={() => setPages(pages + 1)}>
       {t('history.showMore', { n: String(visibleMatches.length - shownMatches.length) })}</Button>}
+    {detailMatch && <MatchDetailsDialog key={detailMatch.id} match={detailMatch} players={players} accountId={subjectId}
+      onClose={() => setDetailMatch(null)}
+      onReplay={(match) => { setDetailMatch(null); setReplayMatch(match); }} />}
     {replayMatch && subjectId && <Suspense fallback={<p role="status">{t('replay.loading')}</p>}>
       <MatchReplayDialog key={replayMatch.id} match={replayMatch} players={players}
         accountId={subjectId} onClose={() => setReplayMatch(null)} />

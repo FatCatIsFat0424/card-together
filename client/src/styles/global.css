@@ -104,6 +104,8 @@
 
   /* Equal outer margin of page content and of centered dialogs; dialogs pad their header, body and footer alike. */
   --page-inset: 24px;
+  /* Widest content of a routed page; pages stay left-aligned to the rail instead of centering. */
+  --page-max: 90rem;
   --dialog-inset: 16px;
   --dialog-padding: 16px;
 

@@ -1,4 +1,4 @@
-.page { width: 100%; max-width: 74rem; margin: 0 auto; padding: var(--page-inset) var(--page-inset) calc(var(--page-inset) + var(--room-card-clearance, 0px)); }
+.page { width: 100%; max-width: var(--page-max); margin: 0; padding: var(--page-inset) var(--page-inset) calc(var(--page-inset) + var(--room-card-clearance, 0px)); }
 .header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--space-4); margin-bottom: var(--space-3); border-bottom: 1px solid var(--separator); }
 .tabs { flex: 1 1 auto; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
@@ -60,7 +60,8 @@
 .imageHeading .compactActions { margin-top: 0; }
 .imageSetting > p { margin-top: var(--spacing-xs); }
 .securityForm { max-width: 30rem; }
-.historyVisibility { margin: var(--space-1) 0 var(--space-1) -12px; }
+.historyMeta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--space-4); margin-bottom: var(--space-1); }
+.historyVisibility { margin: 0; }
 @media (max-width: 52rem) {
   .editor { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
   .preview { position: static; max-height: none; overflow: visible; }

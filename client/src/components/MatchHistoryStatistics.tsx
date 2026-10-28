@@ -12,6 +12,8 @@ interface MatchHistoryStatisticsProps {
   readonly accountId?: string;
   /** The surrounding section already names the statistics. */
   readonly hideTitle?: boolean;
+  /** `wide` lays the game mix and the per-game table side by side; `compact` lists only the games played. */
+  readonly layout?: 'stacked' | 'wide' | 'compact';
 }
 
 const GAME_COLORS = ['#60a5fa', '#a78bfa', '#f472b6', '#fb923c', '#4ade80',
@@ -20,7 +22,7 @@ const GAME_COLORS = ['#60a5fa', '#a78bfa', '#f472b6', '#fb923c', '#4ade80',
 const AXIS_HEIGHT = 32;
 const ROW_HEIGHT = 52;
 
-export function MatchHistoryStatistics({ matches, accountId, hideTitle = false }: MatchHistoryStatisticsProps): ReactNode {
+export function MatchHistoryStatistics({ matches, accountId, hideTitle = false, layout = 'stacked' }: MatchHistoryStatisticsProps): ReactNode {
   const { t, locale } = useI18nStore();
   const headingId = useId();
   const percent = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 });
@@ -31,7 +33,16 @@ export function MatchHistoryStatistics({ matches, accountId, hideTitle = false }
     id: game.gameType, label: t(`gameType.${game.gameType}`), value: game.played,
     color: GAME_COLORS[index % GAME_COLORS.length],
   }));
-  return <section className={styles.statistics} aria-labelledby={headingId}>
+  if (layout === 'compact') return <section className={styles.statistics} aria-labelledby={headingId}>
+    <h3 id={headingId} className={styles.srOnly}>{t('history.statistics')}</h3>
+    {total > 0 ? <ul className={styles.gameList}>{statistics.filter((game) => game.played > 0).map((game) => <li key={game.gameType}>
+      <span className={styles.gameName}>{t(`gameType.${game.gameType}`)}</span>
+      <span className={styles.gameMeta}>{number.format(game.played)} {t('history.totalPlayed')}
+        {game.winRate !== null && <> · <strong className={styles.rate}>{percent.format(game.winRate)}</strong></>}</span>
+    </li>)}</ul> : <p className={styles.emptyMix}>{t('history.notPlayed')}</p>}
+    <p className={styles.hint}>{t('history.statisticsHint')}</p>
+  </section>;
+  return <section className={`${styles.statistics} ${layout === 'wide' ? styles.wide : ''}`} aria-labelledby={headingId}>
     <h3 id={headingId} className={hideTitle ? styles.srOnly : undefined}>{t('history.statistics')}</h3>
     <p className={styles.hint}>{t('history.statisticsHint')}</p>
     <div className={styles.mix}>

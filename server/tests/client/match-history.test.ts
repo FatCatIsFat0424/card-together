@@ -1,7 +1,10 @@
 import { gameSeatValues } from '../helpers/game-seat-values';
 import { describe, expect, it } from 'vitest';
 import type { MatchSummary, PublicAccount } from '@shared/types';
-import { gameHistoryStatistics, matchOutcome, selectHistoryMatches } from '../../../client/src/match-history';
+import {
+  HISTORY_SORT_OPTIONS, gameHistoryStatistics, historySummary, historySummaryItems, matchOutcome, outcomeBadge,
+  selectHistoryMatches, sortOptionFor,
+} from '../../../client/src/match-history';
 import { GAME_TYPES } from '@shared/constants';
 import type { HistoryFilters } from '../../../client/src/match-history';
 
@@ -136,5 +139,48 @@ describe('per-game history statistics', () => {
       expect(statistics.every((game) => game.played === 0 && game.wins === 0
         && game.ties === 0 && game.winRate === null)).toBe(true);
     }
+  });
+});
+
+describe('compact history helpers', () => {
+  it('maps every outcome to a translated label and a color tone', () => {
+    expect(outcomeBadge('win')).toEqual({ label: 'history.outcome.win', tone: 'win' });
+    expect(outcomeBadge('loss')).toEqual({ label: 'history.outcome.loss', tone: 'loss' });
+    expect(outcomeBadge('tie')).toEqual({ label: 'history.outcome.tie', tone: 'tie' });
+    expect(outcomeBadge('completed')).toEqual({ label: 'history.outcome.completed', tone: 'neutral' });
+  });
+
+  it('offers one sort option per column and falls back to newest first', () => {
+    expect(new Set(HISTORY_SORT_OPTIONS.map((option) => option.id)).size).toBe(HISTORY_SORT_OPTIONS.length);
+    for (const option of HISTORY_SORT_OPTIONS) expect(sortOptionFor(option.key, option.direction)).toBe(option);
+    expect(sortOptionFor('room', 'desc').id).toBe('date-desc');
+    expect(sortOptionFor('date', 'desc').key).toBe('date');
+  });
+
+  it('summarizes human-only matches with the win rate and the most played game', () => {
+    const another: MatchSummary = { ...bridge, id: 'bridge-2', roomCode: 'ROOM11', finishedAt: 400 };
+    expect(historySummary([bridge, another, tie, loss], 'north'))
+      .toEqual({ matches: 4, wins: 2, winRate: 0.5, topGame: 'bridge' });
+    const withBot: MatchSummary = { ...loss, id: 'with-bot', accountIds: ['north', 'bot:east', 'south', 'west'] };
+    expect(historySummary([withBot, tie], 'north')).toEqual({ matches: 1, wins: 0, winRate: 0, topGame: 'redpoints' });
+    expect(historySummary([bridge, tie, loss], 'visitor'))
+      .toEqual({ matches: 0, wins: 0, winRate: null, topGame: null });
+  });
+
+  it('breaks a most-played tie by game order', () => {
+    const order = GAME_TYPES.filter((type) => ['bridge', 'ninetynine'].includes(type));
+    expect(historySummary([loss, bridge], 'north').topGame).toBe(order[0]);
+  });
+
+  it('lists label and value pairs and drops items without data', () => {
+    const text = (key: string): string => key;
+    const gameName = (type: string): string => `game:${type}`;
+    expect(historySummaryItems({ matches: 12, wins: 9, winRate: 0.75, topGame: 'bridge' }, text, gameName, 'en'))
+      .toEqual([
+        { id: 'matches', label: 'history.summary.matches', value: '12' },
+        { id: 'winRate', label: 'history.summary.winRate', value: '75%' },
+        { id: 'topGame', label: 'history.summary.topGame', value: 'game:bridge' },
+      ]);
+    expect(historySummaryItems({ matches: 0, wins: 0, winRate: null, topGame: null }, text, gameName, 'en')).toEqual([]);
   });
 });

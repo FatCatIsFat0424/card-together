@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { FriendsData, MatchHistory, PublicAccount } from '@shared/types';
@@ -7,12 +8,17 @@ import { Nameplate } from '../components/Nameplate';
 import { Avatar } from '../components/Avatar';
 import { Button, buttonClassName } from '../components/Button';
 import { MatchHistoryList } from '../components/MatchHistoryList';
+import { historySummary, historySummaryItems } from '../match-history';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './PlayerProfilePage.module.css';
 
+/** Desktop shell at full rail width: the header grows to a wide strip with inline statistics. */
+const WIDE_QUERY = '(min-width: 1024px) and (min-height: 501px)';
+
 function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
-  const { t } = useI18nStore();
+  const { t, locale } = useI18nStore();
+  const wide = useMediaQuery(WIDE_QUERY, { noSsr: true });
   const viewerId = useAccountStore((state) => state.account?.id);
   const isSelf = viewerId === accountId;
   const [player, setPlayer] = useState<PublicAccount | null>(null);
@@ -101,63 +107,67 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
   const incoming = friends?.incoming.find((request) => request.requester.id === accountId);
   const outgoing = friends?.outgoing.find((request) => request.recipient.id === accountId);
   const disabled = busy || loading;
+  const summary = history && history !== 'private'
+    ? historySummaryItems(historySummary(history.matches, accountId), (key) => t(key), (type) => t(`gameType.${type}`), locale)
+    : [];
 
   return <main className={styles.page}>
-    <div className={styles.layout}>
-      <section className={`${styles.card} ${styles.profile}`}>
-        <div className={styles.identity}>
-          <Avatar avatar={player.avatar} image={player.avatarImage} border={player.avatarBorder} color={player.color} size="medium" />
-          <div className={styles.name}>
-            <h1 style={{ color: player.color }}>{player.nickname}</h1>
-            <Nameplate id={player.nameplate} />
-            <p className={styles.username}>@{player.username}</p>
-          </div>
-        </div>
-        {isSelf ? <div className={styles.actions}>
-          <Link className={buttonClassName('primary')} to="/account">{t('player.edit')}</Link>
-        </div> : <>
+    <section className={styles.header}>
+      <div className={styles.avatar}>
+        <Avatar avatar={player.avatar} image={player.avatarImage} border={player.avatarBorder} color={player.color}
+          size={wide ? 'large' : 'compact'} />
+      </div>
+      <div className={styles.name}>
+        <h1 style={{ color: player.color }}>{player.nickname}</h1>
+        <Nameplate id={player.nameplate} />
+        <p className={styles.username}>@{player.username}</p>
+      </div>
+      {summary.length > 0 && <ul className={styles.summary} aria-label={t('history.statistics')}>
+        {summary.map((item) => <li key={item.id}>
+          <span className={styles.summaryLabel}>{item.label}</span> <strong>{item.value}</strong>
+        </li>)}
+      </ul>}
+      <div className={styles.actions}>
+        {isSelf ? <Link className={buttonClassName('primary')} to="/account">{t('player.edit')}</Link> : <>
           {friends && <>
             {(isFriend || incoming || outgoing) && <p className={styles.description}>{t(isFriend ? 'player.friends'
               : incoming ? 'player.incoming' : 'player.outgoing')}</p>}
-            <div className={styles.actions}>
-              {isFriend ? confirmRemove ? <>
-                <span>{t('friends.confirmRemove')}</span>
-                <Button variant="danger-text" disabled={disabled}
-                  onClick={() => void act(`/api/friends/${encodeURIComponent(accountId)}`, 'DELETE')}>
-                  {t('friends.remove')}</Button>
-                <Button disabled={disabled}
-                  onClick={() => setConfirmRemove(false)}>{t('common.cancel')}</Button>
-              </> : <Button disabled={disabled}
-                onClick={() => setConfirmRemove(true)}>{t('friends.remove')}</Button>
-              : incoming ? <>
-                <Button variant="primary" disabled={disabled}
-                  onClick={() => void act(`/api/friends/requests/${incoming.id}/accept`, 'POST')}>
-                  {t('friends.accept')}</Button>
-                <Button disabled={disabled}
-                  onClick={() => void act(`/api/friends/requests/${incoming.id}`, 'DELETE')}>
-                  {t('friends.decline')}</Button>
-              </> : outgoing ? <Button disabled={disabled}
-                onClick={() => void act(`/api/friends/requests/${outgoing.id}`, 'DELETE')}>
-                {t('friends.cancel')}</Button>
-              : <Button variant="primary" disabled={disabled}
-                onClick={() => void act('/api/friends/requests', 'POST', { username: player.username })}>
-                {t('friends.add')}</Button>}
-            </div>
+            {isFriend ? confirmRemove ? <>
+              <span className={styles.description}>{t('friends.confirmRemove')}</span>
+              <Button variant="danger-text" disabled={disabled}
+                onClick={() => void act(`/api/friends/${encodeURIComponent(accountId)}`, 'DELETE')}>
+                {t('friends.remove')}</Button>
+              <Button disabled={disabled}
+                onClick={() => setConfirmRemove(false)}>{t('common.cancel')}</Button>
+            </> : <Button disabled={disabled}
+              onClick={() => setConfirmRemove(true)}>{t('friends.remove')}</Button>
+            : incoming ? <>
+              <Button variant="primary" disabled={disabled}
+                onClick={() => void act(`/api/friends/requests/${incoming.id}/accept`, 'POST')}>
+                {t('friends.accept')}</Button>
+              <Button disabled={disabled}
+                onClick={() => void act(`/api/friends/requests/${incoming.id}`, 'DELETE')}>
+                {t('friends.decline')}</Button>
+            </> : outgoing ? <Button disabled={disabled}
+              onClick={() => void act(`/api/friends/requests/${outgoing.id}`, 'DELETE')}>
+              {t('friends.cancel')}</Button>
+            : <Button variant="primary" disabled={disabled}
+              onClick={() => void act('/api/friends/requests', 'POST', { username: player.username })}>
+              {t('friends.add')}</Button>}
           </>}
-          {friendError && <div className={styles.feedback}>
-            <p className={styles.error} role="alert">{friendError}</p>
-            <Button disabled={disabled}
-              onClick={() => void refresh()}>{t('common.retry')}</Button>
-          </div>}
-          {updated && <p className={styles.success} role="status">{t('player.updated')}</p>}
           <Link className={styles.friendsLink} to="/friends">{t('player.manageFriends')}</Link>
         </>}
-      </section>
-      {history && <section className={`${styles.card} ${styles.history}`}>
-        {history === 'private' ? <p className={styles.description}>{t('history.private')}</p>
-          : <MatchHistoryList matches={history.matches} players={history.players} accountId={accountId} />}
-      </section>}
-    </div>
+      </div>
+    </section>
+    {friendError && <div className={styles.feedback}>
+      <p className={styles.error} role="alert">{friendError}</p>
+      <Button disabled={disabled} onClick={() => void refresh()}>{t('common.retry')}</Button>
+    </div>}
+    {updated && <p className={styles.success} role="status">{t('player.updated')}</p>}
+    {history && <section className={styles.history}>
+      {history === 'private' ? <p className={styles.description}>{t('history.private')}</p>
+        : <MatchHistoryList matches={history.matches} players={history.players} accountId={accountId} />}
+    </section>}
   </main>;
 }
 
