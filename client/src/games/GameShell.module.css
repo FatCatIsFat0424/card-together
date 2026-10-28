@@ -905,3 +905,6 @@
   .infoPanel { left: var(--page-inset); }
   .chatRail { right: var(--page-inset); }
 }
+
+/* Board games: `BoardTable` fills the table and lays out its own seats around the board. */
+.table.boardMode { display: block; padding: 0; }

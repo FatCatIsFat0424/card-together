@@ -1,0 +1,36 @@
+/* ─── Board pieces: colours come from the board theme variables (board-theme.ts) ─── */
+
+.shadow { fill: var(--piece-shadow); }
+.label, .badgeText {
+  font-family: 'Noto Serif TC', 'Noto Sans TC', serif;
+  font-weight: 700;
+  pointer-events: none;
+  user-select: none;
+}
+
+.darkStone .body { fill: var(--piece-dark-stone); }
+.darkStone .shine { fill: rgb(255 255 255 / 0.14); }
+.lightStone .body { fill: var(--piece-light-stone); stroke: var(--piece-light-stone-rim); stroke-width: 0.03; }
+.lightStone .shine { fill: rgb(255 255 255 / 0.9); }
+
+.engraved .body { fill: var(--piece-face); stroke: var(--tone); }
+.engraved .ring { fill: none; stroke: var(--tone); }
+.engraved .label { fill: var(--tone); }
+.solid .body { fill: var(--tone); stroke: var(--piece-on-solid); }
+.solid .label { fill: var(--piece-on-solid); }
+.badge { fill: var(--piece-black); }
+.badgeText { fill: var(--piece-on-solid); font-family: inherit; }
+
+.red { --tone: var(--piece-red); }
+.black { --tone: var(--piece-black); }
+.blue { --tone: var(--piece-blue); }
+
+.covered .body { fill: var(--piece-back); stroke: var(--piece-on-solid); }
+.covered .pattern, .hidden .pattern { fill: none; stroke: var(--piece-back-pattern); }
+
+.tile .body { fill: var(--tone); stroke: var(--piece-on-solid); }
+.tile .label { fill: var(--piece-on-solid); }
+.tile.hidden .body { fill: var(--piece-back); }
+
+.marble .body { fill: var(--marble); stroke: rgb(0 0 0 / 0.45); }
+.marble .shine { fill: rgb(255 255 255 / 0.55); }

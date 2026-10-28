@@ -40,6 +40,7 @@
 
 .win { color: var(--color-success); }
 .lose { color: var(--color-danger); }
+.draw { color: var(--color-warning); }
 
 .scoreTable {
   width: 100%;

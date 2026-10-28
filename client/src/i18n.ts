@@ -40,6 +40,8 @@ import { achievementsTranslations } from './achievements-i18n';
 import type { AchievementsTranslationKey } from './achievements-i18n';
 import { statsTranslations } from './stats-i18n';
 import type { StatsTranslationKey } from './stats-i18n';
+import { boardTranslations } from './board-i18n';
+import type { BoardTranslationKey } from './board-i18n';
 
 export type Locale = 'zh-TW' | 'en';
 
@@ -47,7 +49,7 @@ type TranslationKeys = Record<
   ReplayTranslationKey | RoomErrorTranslationKey | SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | AudioTranslationKey | VoiceTranslationKey | UiTranslationKey
     | EmojiTranslationKey | GameTranslationKey | SevensTranslationKey | ChinesePokerTranslationKey
     | LiarsDeckTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
-    | StatsTranslationKey, string
+    | StatsTranslationKey | BoardTranslationKey, string
 > & {
   // Lobby
   'lobby.nickname': string;
@@ -144,6 +146,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...dailyRewardsTranslations['zh-TW'],
     ...achievementsTranslations['zh-TW'],
     ...statsTranslations['zh-TW'],
+    ...boardTranslations['zh-TW'],
     'lobby.nickname': '暱稱',
     'lobby.nicknamePlaceholder': '輸入暱稱...',
     'lobby.color': '顏色',
@@ -228,6 +231,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...dailyRewardsTranslations.en,
     ...achievementsTranslations.en,
     ...statsTranslations.en,
+    ...boardTranslations.en,
     'lobby.nickname': 'Nickname',
     'lobby.nicknamePlaceholder': 'Enter nickname...',
     'lobby.color': 'Color',

@@ -1,0 +1,67 @@
+/* ─── Board view: every colour is a board theme variable (board-theme.ts); sizes are board units ─── */
+
+.board {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.surface { fill: var(--board-surface); }
+.grid { fill: var(--board-line); }
+.cell { fill: var(--board-cell); }
+.water { fill: var(--board-water); }
+.trap { fill: var(--board-trap); }
+.den { fill: var(--board-cell); }
+.waves { fill: none; stroke: var(--board-water-line); stroke-width: 0.04; opacity: 0.85; }
+.trapMark { stroke: var(--board-trap-line); stroke-width: 0.05; }
+.denMark { opacity: 0.85; }
+
+.frame { fill: none; stroke: var(--board-line); stroke-width: 0.06; }
+.line { stroke: var(--board-line); stroke-width: 0.035; stroke-linecap: square; }
+.road { stroke: var(--board-line); stroke-width: 0.05; }
+.rail { stroke: var(--board-rail); stroke-width: 0.24; }
+.railInner { stroke: var(--board-rail-inner); stroke-width: 0.09; stroke-dasharray: 0.15 0.15; }
+.star { fill: var(--board-line); }
+.marks { fill: none; stroke: var(--board-line); stroke-width: 0.03; }
+.river text, .mountainText, .axis {
+  fill: var(--board-ink);
+  font-family: 'Noto Serif TC', 'Noto Sans TC', serif;
+  pointer-events: none;
+}
+.river text { letter-spacing: 0.15px; }
+.mountain { fill: var(--board-mountain); stroke: var(--board-mountain-line); stroke-width: 0.05; }
+
+.station { fill: var(--board-station); stroke: var(--board-line); stroke-width: 0.05; }
+.camp { fill: var(--board-camp); stroke: var(--board-camp-line); stroke-width: 0.07; }
+.hq { fill: var(--board-station); stroke: var(--board-hq-line); stroke-width: 0.11; }
+
+.holeBed { fill: var(--board-cell); }
+.hole { fill: var(--board-hole); stroke: var(--board-hole-rim); stroke-width: 0.04; }
+
+/* Markers: blue last move, gold selection, green targets, orange captures, red check. */
+.lastFrom { fill: color-mix(in srgb, var(--marker-last) 16%, transparent); stroke: var(--marker-last); stroke-width: 0.04; }
+.lastTo { fill: color-mix(in srgb, var(--marker-last) 30%, transparent); stroke: var(--marker-last); stroke-width: 0.06; }
+.lastPath, .pendingPath {
+  fill: none;
+  stroke: var(--marker-last);
+  stroke-width: 0.07;
+  stroke-dasharray: 0.14 0.11;
+  stroke-linejoin: round;
+}
+.lastDot { fill: var(--marker-last-dot); stroke: #fff; stroke-width: 0.03; }
+.selected { fill: color-mix(in srgb, var(--marker-selected) 32%, transparent); stroke: var(--marker-selected); stroke-width: 0.075; }
+.check { fill: color-mix(in srgb, var(--marker-check) 35%, transparent); stroke: var(--marker-check); stroke-width: 0.065; }
+.target { fill: var(--marker-target); fill-opacity: 0.92; stroke: #fff; stroke-opacity: 0.75; stroke-width: 0.03; }
+.capture { fill: none; stroke: var(--marker-capture); stroke-width: 0.08; }
+.pendingRing { fill: none; stroke: var(--marker-last); stroke-width: 0.075; stroke-dasharray: 0.15 0.1; }
+.dashed { stroke-dasharray: 0.1 0.075; }
+.dimmed { opacity: 0.42; }
+.ghost { opacity: 0.72; pointer-events: none; }
+.under, .over, .pieces { pointer-events: none; }
+
+/* Invisible tap and focus targets over interactive nodes. */
+.hit { fill: transparent; cursor: pointer; outline: none; }
+.hit:focus-visible { stroke: var(--color-primary); stroke-width: 0.06; }

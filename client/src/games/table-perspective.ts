@@ -1,12 +1,20 @@
 import type { PlayerVisibleGameState, GameSeat } from '@shared/types';
+import { gameDefinition } from '@shared/games/registry';
 import { matchSeats } from '../game-view';
 import type { GodView } from '../stores/god-view-store';
 import { isSpectator } from './observer-view';
 import { clientGame } from './registry';
 
-export function perspectiveSeat(game: PlayerVisibleGameState | null, selected: GameSeat, own: GameSeat | null): GameSeat {
-  if (!isSpectator(game)) return own ?? 'S';
+/**
+ * Spectators watch from the seat they picked. Until they pick one, card tables keep South at the bottom
+ * and board games show the first player's side.
+ */
+export function perspectiveSeat(
+  game: PlayerVisibleGameState | null, selected: GameSeat, own: GameSeat | null, chosen = true,
+): GameSeat {
+  if (!game || !isSpectator(game)) return own ?? 'S';
   const seats = matchSeats(game);
+  if (!chosen && gameDefinition(game.gameType).category === 'board') return seats[0] ?? 'S';
   return seats.includes(selected) ? selected : seats[0] ?? 'S';
 }
 

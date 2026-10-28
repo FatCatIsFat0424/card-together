@@ -1,0 +1,12 @@
+.reason {
+  display: inline-flex;
+  align-self: flex-start;
+  margin: 0;
+  padding: 2px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+.meta { margin: 6px 0 0; color: var(--text-secondary); font-size: var(--text-sm); }

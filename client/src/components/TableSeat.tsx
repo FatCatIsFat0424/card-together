@@ -217,6 +217,8 @@ interface TableSeatProps {
   /** Card this seat just played (a change replays the flash) */
   moveKey?: number | string;
   suppressTurn?: boolean;
+  /** Board games: chips the game draws beside the clock; the seat then shows no card counts or trays. */
+  stats?: ReactNode;
 }
 
 interface RoleLabel {
@@ -226,7 +228,7 @@ interface RoleLabel {
   readonly title?: string;
 }
 
-export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppressTurn }: TableSeatProps): ReactNode {
+export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppressTurn, stats }: TableSeatProps): ReactNode {
   const cardImageUrl = useCardFaceUrl();
   const { t } = useI18nStore();
   const player = useRoomStore((state) => state.roomInfo ? roomSeatInfo(state.roomInfo, seat)?.player ?? null : null);
@@ -314,7 +316,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
     autoPlayed,
     arranged: arranged || betPlaced || napoleonReviewed,
   });
-  const cards = bigTwoCards ?? redPointsCards ?? ninetyNineCards ?? sevensCards ?? chinesePokerCards
+  const cards = stats !== undefined ? 0 : bigTwoCards ?? redPointsCards ?? ninetyNineCards ?? sevensCards ?? chinesePokerCards
     ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? napoleonCards
     ?? remainingCards(seat, playing);
   // A Hold'em fold outranks a timeout in the status slot, so a timed-out fold keeps the timeout icon.
@@ -443,6 +445,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
             title={t('table.lastCall')}>
             {call.type === 'pass' ? t('game.pass') : <BidLabel level={call.level} suit={call.suit} />}
           </span>}
+          {stats}
           <TurnClock seat={seat} showBank={isMe} />
           {leftEarly && <span className={`${styles.statusChip} ${styles.earlyLeave}`} title={t('actions.autoPlay')}>
             {t('earlyLeave.button')}</span>}

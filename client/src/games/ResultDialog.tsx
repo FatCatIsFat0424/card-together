@@ -24,8 +24,8 @@ export interface ResultHistory {
 
 interface ResultDialogProps {
   title: ReactNode;
-  /** Colour of the title; Bridge shows a defender win in the danger tone. */
-  tone?: 'win' | 'lose';
+  /** Colour of the title; Bridge shows a defender win in the danger tone, board games a draw in amber. */
+  tone?: 'win' | 'lose' | 'draw';
   /** Short line above the title, e.g. Big Two's dragon. */
   eyebrow?: ReactNode;
   wide?: boolean;
@@ -89,7 +89,7 @@ export function ResultDialog({
       <header className={`${dialogParts.header} ${styles.header}`}>
         <div className={styles.heading}>
           {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}
-          <h2 id={titleId} className={`${styles.title} ${tone === 'lose' ? styles.lose : styles.win}`}>{title}</h2>
+          <h2 id={titleId} className={`${styles.title} ${styles[tone]}`}>{title}</h2>
         </div>
         {gameType && <span className={styles.gameName}>{t(`gameType.${gameType}`)}</span>}
       </header>

@@ -112,6 +112,11 @@ interface GameShellProps {
   pickableSeats?: readonly GameSeat[];
   onPickSeat?: (seat: GameSeat) => void;
   turnReady?: boolean;
+  /**
+   * Board games draw their own seats, board, and controls (`BoardTable`): this replaces the seat ring,
+   * the table centre, and the hand zone.
+   */
+  board?: ReactNode;
 }
 
 
@@ -150,7 +155,7 @@ function FittedCentre({ children, style, responsive, wide, foreground }: {
 
 export function GameShell({
   info, centre, centreForeground, hand, overlay, panel, tableEffect, centreVisible, prompt, error, pickableSeats, onPickSeat,
-  turnReady,
+  turnReady, board,
 }: GameShellProps): ReactNode {
   const presentation = useGamePresentation();
   // Playback has no seat, clocks, or room controls; personal playback has no chat either.
@@ -218,8 +223,8 @@ export function GameShell({
   };
   // Seats left empty in a Blackjack or Hold'em match get no plate.
   const tableSeats = matchSeats(visibleGame);
-  const layout = seatLayout(tableSeats);
-  const expandedTable = usesCornerSlots(tableSeats);
+  const layout = board ? null : seatLayout(tableSeats);
+  const expandedTable = !board && usesCornerSlots(tableSeats);
   // Empty cells go to their neighbours: with no side seats (six players) the top corner seats reach down beside
   // the centre, and with no opposite seat (five players) the centre rises between the top corner seats.
   const sidePositions = tableSeats.filter((seat) => seat !== bottomSeat)
@@ -428,7 +433,7 @@ export function GameShell({
 
       <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''} ${tableArt ? styles.layeredTable : ''}`} style={tableStyle}>
         {tableArt && <TableArt art={tableArt} />}
-        <div className={`${styles.table} ${expandedTable ? styles.expandedTable : ''} ${cornersSpan ? styles.cornersSpan : ''} ${centreUp ? styles.centreUp : ''} ${layout === 'trio' ? styles.trioTable : ''} ${layout === 'facing' ? styles.facingTable : ''}`}
+        <div className={`${styles.table} ${expandedTable ? styles.expandedTable : ''} ${cornersSpan ? styles.cornersSpan : ''} ${centreUp ? styles.centreUp : ''} ${layout === 'trio' ? styles.trioTable : ''} ${layout === 'facing' ? styles.facingTable : ''} ${board ? styles.boardMode : ''}`}
           data-card-table data-hud-info={HudInfo ? '' : undefined}
           data-expanded-table={expandedTable ? '' : undefined}>
           {dockLayout && !dockOpen && <IconButton className={`${styles.hudButton} ${styles.dockToggle}`}
@@ -448,7 +453,8 @@ export function GameShell({
               label={t('table.chatExpand')} onClick={openChat} ref={chatButtonRef}
               badge={unread} aria-expanded={chatOpen} />}
           </div>
-          {tableSeats.filter((seat) => seat !== bottomSeat && tableSeats.includes(seat)).map((seat) => (
+          {board}
+          {!board && tableSeats.filter((seat) => seat !== bottomSeat && tableSeats.includes(seat)).map((seat) => (
             <TableSeat key={seat} seat={seat} position={tablePosition(seat, bottomSeat, tableSeats)}
               onObserve={watching ? () => observeSeat(seat) : undefined}
               suppressTurn={presentation.locked}
@@ -457,7 +463,7 @@ export function GameShell({
                 : move?.seat === seat ? move.index : undefined}
               onPick={onPickSeat && pickableSeats?.includes(seat) ? () => onPickSeat(seat) : undefined} />
           ))}
-          <FittedCentre foreground={centreForeground} responsive={Boolean(centreLayout?.responsive) && !presentation.frame}
+          {!board && <FittedCentre foreground={centreForeground} responsive={Boolean(centreLayout?.responsive) && !presentation.frame}
             wide={Boolean(centreLayout?.wide)}
             style={move ? FLY_FROM[tablePosition(move.seat, bottomSeat, tableSeats)] : undefined}>
             {presentation.frame && visibleGame && !centreVisible ? (
@@ -466,7 +472,7 @@ export function GameShell({
                 elapsedMs={Math.max(0, Date.now() - presentation.frameStartedAt)}
                 summary={presentationSummary(visibleGame, t)} />
             ) : <div className={`${styles.centreBody} ${visibleGame?.presentation ? styles.settledCentre : ''}`}>{centre}</div>}
-          </FittedCentre>
+          </FittedCentre>}
           {outBanner && <p key={outBanner.index} className={styles.outBanner} role="status">
             <AppIcon name="burst" /> {t('table.eliminated', { name: seatName(outBanner.seat) })}
           </p>}
@@ -476,7 +482,7 @@ export function GameShell({
           <RotateHint />
         </div>
 
-        <div className={styles.handZone} data-hand-zone>
+        {!board && <div className={styles.handZone} data-hand-zone>
           <div className={styles.handHeader}>
             {tableSeats.includes(bottomSeat) && <TableSeat seat={bottomSeat} position="bottom" suppressTurn={presentation.locked}
               onObserve={watching ? () => observeSeat(bottomSeat) : undefined}
@@ -495,7 +501,7 @@ export function GameShell({
           </div>
           {!replay && (sheetLayout ? <TableToolsDrawer /> : <TableTools />)}
           <div inert={visibleGame?.autoPlay}>{hand}</div>
-        </div>
+        </div>}
         {tableEffect}
       </main>
 

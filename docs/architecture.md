@@ -75,6 +75,7 @@
 - 統計指標、勝率基準與角色群組由 [`statistics-registry.ts`](../client/src/games/statistics-registry.ts) 查詢各遊戲的純函式。名次、分數單位與固定局數取自 shared 遊戲定義，統計視窗與房間頁面只負責格式化。
 - ESLint 拒絕在各遊戲模組與 registry 以外，將 `gameType` 與遊戲字串常值做相等或不相等比較；雙向比較與 computed property 都受檢查。變數間比較與歷史篩選的 `all` 保留使用。
 - 類別（`cards`、`dice`、`board`）取自 shared 定義，由 `gamesInCategory` 提供給大廳分頁使用。
+- 棋類共用棋盤元件：[`shared/src/rules/board/`](../shared/src/rules/board/) 以「節點與座標」加上分類的邊（直線、斜線、鐵路、六角）與區域（己方半場、九宮、河、陷阱、獸穴、行營、大本營、跳棋角落）描述棋盤，並提供各種棋盤的建構函式、視角旋轉、手數紀錄與記譜 hook、認輸／提和的純函式與結束原因。用戶端的 [`client/src/games/board/`](../client/src/games/board/) 依模型畫出 SVG 棋盤（`BoardView`）、棋子、選取與確認流程（`useBoardInput`）、手數紀錄與 `BoardTable` 版面；遊戲定義以 `matchControls` 開放認輸與提和，以 `timeControl` 指定預設計時。
 - 輸入框內容改變時，聊天訊息列會保留既有的渲染結果。新的或被取代的訊息、語系變更與外觀偏好仍會更新受影響的列。
 - 字型樣式表與應用程式資源一起在文件 head 中宣告，並對字型主機加上連線提示，而不是透過 CSS import 鏈載入。
 - 主題、動態效果、音樂與語音偏好存在瀏覽器本機；個人檔案、圖片與歷史紀錄可見度存在伺服器端。

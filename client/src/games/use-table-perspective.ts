@@ -11,7 +11,8 @@ export function useTablePerspective(): GameSeat {
   const game = useGameStore((state) => state.visible);
   const own = useRoomStore((state) => state.mySeat);
   const selected = useTablePerspectiveStore((state) => state.seat);
-  return perspectiveSeat(game, selected, own);
+  const chosen = useTablePerspectiveStore((state) => state.chosen);
+  return perspectiveSeat(game, selected, own, chosen);
 }
 
 export function useViewedGame<T extends PlayerVisibleGameState>(game: T | null): T | null {

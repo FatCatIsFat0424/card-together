@@ -1,0 +1,116 @@
+/* ─── Move list, phone strip, and drawer ─── */
+
+.info { display: flex; flex-direction: column; gap: var(--space-2); min-height: 0; }
+
+.list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--space-2) 10px;
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+}
+.title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.count { color: var(--text-muted); font-size: var(--text-xs); font-weight: 500; }
+.scroll { max-height: 320px; overflow-y: auto; overscroll-behavior: contain; }
+.empty { margin: 0; color: var(--text-muted); font-size: var(--text-xs); }
+
+.grid {
+  display: grid;
+  row-gap: 1px;
+  column-gap: 2px;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.row { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; }
+.head { padding: 0 6px 4px; color: var(--text-muted); font-size: var(--text-xs); }
+.number { padding: 2px 0; color: var(--text-muted); }
+.move {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 2px 6px;
+  border-radius: 5px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.last { background: var(--color-primary-soft); color: var(--color-primary); font-weight: 700; }
+
+.setting {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+.hint { display: block; color: var(--text-muted); font-size: var(--text-xs); }
+
+/* Phone strip: always visible in the left column, a button that opens the drawer. */
+.strip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: rgb(0 0 0 / 0.28);
+  color: var(--table-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.stripHead {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.strip .grid { font-size: var(--text-xs); }
+.strip .move { padding: 1px 3px; }
+.strip .number { padding: 1px 0; }
+
+.drawer {
+  position: absolute;
+  z-index: 20;
+  inset: 0 auto 0 0;
+  width: min(240px, 60%);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2) 10px;
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+  outline: none;
+}
+.drawerClose {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.drawerList { flex: 1; min-height: 0; padding: 0; background: none; }
+.drawerList .title { min-height: 36px; align-items: center; padding-right: 40px; }
+.drawerList .scroll { max-height: none; flex: 1; }
