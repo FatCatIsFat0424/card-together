@@ -218,92 +218,61 @@
   color: var(--text-primary);
 }
 
-/* Sits over the message list, just above the input row. */
+/* Covers the message area between the header and the input row; the conversation stays mounted underneath. */
+.messageArea { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .picker {
   position: absolute;
-  left: var(--spacing-sm);
-  right: var(--spacing-sm);
-  bottom: 52px;
-  max-height: 60%;
+  inset: var(--space-2);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-sm);
+  overflow: hidden;
   background: var(--bg-surface);
+  border: 1px solid var(--separator);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   z-index: 1;
 }
 
-.pickerSearch {
-  font-size: var(--text-sm);
-  padding: var(--spacing-xs) var(--spacing-sm);
-}
+/* One 48px row: emoji/sticker switch, scrollable categories, search, and the sticker shop. */
+.pickerRow { display: flex; align-items: center; flex-shrink: 0; gap: var(--space-1); height: 48px; padding: 0 var(--space-1) 0 var(--space-2); border-bottom: 1px solid var(--separator); }
+.modeSwitch { display: flex; flex-shrink: 0; padding: 3px; border-radius: var(--radius-pill); background: var(--surface-2); }
+.modeSwitch button { height: 30px; padding: 0 var(--space-3); border-radius: var(--radius-pill); color: var(--text-secondary); font-size: var(--text-sm); font-weight: 600; }
+.modeSwitch button[aria-pressed='true'] { color: var(--color-primary); background: var(--color-primary-soft); }
+.categories { display: flex; align-items: center; flex: 1; gap: 2px; min-width: 0; height: 100%; margin-left: var(--space-1); padding-left: var(--space-2); border-left: 1px solid var(--separator); overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+.categories::-webkit-scrollbar { display: none; }
+.categories button { position: relative; display: grid; place-items: center; flex-shrink: 0; min-width: 40px; height: 40px; padding: 0 var(--space-2); border-radius: var(--radius-md); color: var(--text-secondary); font-size: var(--text-sm); font-weight: 600; white-space: nowrap; }
+.categories button:hover { color: var(--text-primary); background: var(--surface-1); }
+.categories button[aria-selected='true'] { color: var(--text-primary); background: var(--surface-2); }
+.categories button[aria-selected='true']::after { content: ''; position: absolute; left: 30%; right: 30%; bottom: 3px; height: 2px; border-radius: 1px; background: var(--color-primary); }
+.categories .packTab { width: 40px; padding: 0; }
+.categories .packTab img { width: 28px; height: 28px; }
+.pickerIcon { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; border-radius: var(--radius-pill); color: var(--text-secondary); font-size: var(--icon-size); }
+.pickerIcon:hover:not(:disabled) { color: var(--text-primary); background: var(--surface-1); }
+.pickerIcon:disabled { opacity: 0.4; cursor: default; }
+.pickerSearch { display: flex; align-items: center; flex: 1; gap: var(--space-2); min-width: 0; height: 36px; padding: 0 var(--space-3); border: 2px solid var(--color-primary); border-radius: var(--radius-pill); background: var(--surface-2); color: var(--text-secondary); font-size: var(--icon-size); }
+.pickerSearch input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: transparent; font-size: var(--text-base); }
+.pickerSearch input:focus { box-shadow: none; outline: none; }
+.pickerSearch input::-webkit-search-cancel-button { display: none; }
 
-.pickerGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
-  gap: var(--spacing-xs);
-  overflow-y: auto;
-}
-
-.pickerItem {
-  display: grid;
-  place-items: center;
-  aspect-ratio: 1;
-  border-radius: var(--radius-sm);
-}
-
+.pickerBody { flex: 1; min-height: 0; padding: var(--space-2); overflow-y: auto; overscroll-behavior: contain; }
+.pickerGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: var(--space-1); }
+.pickerItem { display: grid; place-items: center; height: 44px; border-radius: var(--radius-md); }
 .pickerItem:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.pickerItem:hover { background: var(--bg-card-hover); }
-
-.pickerItem img {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
+.pickerItem:hover:not(:disabled) { background: var(--bg-card-hover); }
+.pickerItem .smallImage { --sticker-size: 34px; }
+/* Shop stickers are drawn larger, so their cells span two columns and rows. */
+.pickerItem.shopItem { grid-column: span 2; grid-row: span 2; height: auto; aspect-ratio: 1; }
+.pickerItem.shopItem img { width: 80%; height: 80%; }
+.pickerEmpty { padding: var(--space-2); font-size: var(--text-sm); color: var(--text-secondary); }
+/* The docked room chat is narrow: tighter controls leave the categories room to show. */
+.picker { container-type: inline-size; }
+@container (max-width: 340px) {
+  .pickerRow { gap: 0; padding-left: var(--space-1); }
+  .modeSwitch button { padding: 0 var(--space-2); }
+  .categories { margin-left: 2px; padding-left: var(--space-1); }
+  .categories button { min-width: 34px; padding: 0 6px; }
+  .pickerIcon { width: 34px; }
 }
-
-.pickerEmpty {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-}
-
-/* Scrolls the library and site sections together below the fixed tabs and search. */
-.pickerBody {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.pickerBody .pickerGrid {
-  flex-shrink: 0;
-  overflow: visible;
-}
-
-/* One row of section tabs; scrolls sideways instead of wrapping when packs add up. */
-.sectionTabs {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: var(--spacing-xs);
-  overflow-x: auto;
-  border-bottom: 1px solid var(--separator);
-  white-space: nowrap;
-}
-.sectionTabs button {
-  flex-shrink: 0;
-  min-height: var(--hit-size);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  border-bottom: 2px solid transparent;
-}
-.sectionTabs button:hover { color: var(--text-primary); }
-.sectionTabs button[aria-selected='true'] { color: var(--color-primary); border-bottom-color: var(--color-primary); }
-.sectionLink { display: inline-flex; align-items: center; min-height: var(--hit-size); flex-shrink: 0; margin-left: auto; padding: 0 var(--space-2); font-size: var(--text-xs); }
 
 .stickerImage {
   --sticker-size: 160px;
@@ -316,13 +285,6 @@
   overflow: hidden;
 }
 .stickerImage img { width: 100%; height: 100%; object-fit: contain; }
-.pickerTabs { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); }
-.pickerTabs button { min-height: var(--hit-size); padding: 0 var(--space-3); color: var(--text-secondary); font-size: var(--text-sm); }
-.pickerTabs button[aria-pressed='true'] { color: var(--color-primary); background: var(--color-primary-soft); border-radius: var(--radius-pill); }
 
 .stickerImage.smallImage { --sticker-size: 28px; font-size: var(--text-xs); }
-.stickerPicker { max-height: calc(100% - 56px); overflow-y: auto; }
-.stickerPicker .pickerGrid { min-height: 36px; flex-shrink: 0; }
 
-.shopStickerGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; padding: 4px 0 12px; }
-.shopStickerGrid .pickerItem { width: 100%; height: auto; padding: 2px; }

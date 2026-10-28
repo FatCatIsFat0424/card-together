@@ -24,7 +24,7 @@ vi.mock('../../../client/src/stores/chat-store', () => ({
   useChatStore: (select: (value: typeof chat) => unknown) => select(chat),
 }));
 
-import { ChatMessageBody, EmojiPickerSections } from '../../../client/src/components/ChatEmoji';
+import { ChatMessageBody, EmojiPicker } from '../../../client/src/components/ChatEmoji';
 import { ChatPanel } from '../../../client/src/components/ChatPanel';
 import { PROVIDED_EMOJIS, providedEmojiUrl } from '../../../client/src/provided-emoji';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
@@ -42,8 +42,8 @@ function render(element: ReactElement): string {
 }
 
 function picker(mode: 'emoji' | 'sticker', provided: readonly ProvidedEmoji[], query = ''): string {
-  return render(createElement(EmojiPickerSections, {
-    mode, query, personal: PERSONAL, provided, busy: false, onInsert: vi.fn(), onSendSticker: vi.fn(),
+  return render(createElement(EmojiPicker, {
+    initialMode: mode, initialQuery: query, personal: PERSONAL, provided, busy: false, onInsert: vi.fn(), onSendSticker: vi.fn(),
   }));
 }
 
@@ -70,17 +70,21 @@ describe('site-provided chat emoji UI', () => {
     }
   });
 
-  it('should show library and site emoji as tabs and hide names shadowed by the library when inserting', () => {
+  it('should show library and site emoji as tabs in one row and hide names shadowed by the library when inserting', () => {
     useI18nStore.setState({ locale: 'en' });
     const insert = picker('emoji', [WAVE, CHEER]);
-    expect(insert).toMatch(/role="tab" aria-selected="true">My emoji<\/button>/);
-    expect(insert).toMatch(/role="tab" aria-selected="false">Site emoji<\/button>/);
+    expect(insert).toMatch(/role="tab" aria-selected="true" aria-label="My emoji" title="My emoji">Mine<\/button>/);
+    expect(insert).toMatch(/role="tab" aria-selected="false" aria-label="Site emoji" title="Site emoji">Site<\/button>/);
+    expect(insert).toMatch(/aria-pressed="true">Emoji<\/button>/);
+    expect(insert).toContain('aria-label="Search emoji"');
+    expect(insert).toContain('href="/shop?type=stickerPack"');
     expect(insert).toContain(`/api/media/${MEDIA}`);
     expect(insert).not.toContain(CHEER.file);
 
-    // Searching jumps to the first tab with matches; the shadowed provided name stays hidden.
+    // Searching replaces the row with a field and lists matches from every category; shadowed names stay hidden.
     const searched = picker('emoji', [WAVE, CHEER], 'cheer');
-    expect(searched).toMatch(/aria-selected="true">Site emoji/);
+    expect(searched).not.toContain('role="tab"');
+    expect(searched).toContain('type="search"');
     expect(searched).toContain(`/provided-emoji/${CHEER.file}`);
     expect(picker('emoji', [WAVE, CHEER], 'wave')).not.toContain(WAVE.file);
     expect(picker('sticker', [WAVE, CHEER], 'wave')).toContain(`/api/media/${MEDIA}`);
@@ -101,7 +105,7 @@ describe('site-provided chat emoji UI', () => {
   it('should keep the personal-only picker when the site has no emoji', () => {
     useI18nStore.setState({ locale: 'en' });
     const html = picker('emoji', []);
-    expect(html).not.toContain('role="tab"');
+    expect(html.match(/role="tab"/g)).toHaveLength(1);
     expect(html).not.toContain('Site emoji');
     expect(html).toContain(`/api/media/${MEDIA}`);
   });

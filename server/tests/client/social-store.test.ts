@@ -116,20 +116,32 @@ describe('social overview state', () => {
   it('counts requests and accepted notices separately from unread messages', () => {
     const mixed: SocialOverview = {
       ...overview(3),
-      incoming: [{ id: 'request-1', requester: ALICE, recipient: { ...ALICE, id: 'bob' }, createdAt: 1 }],
-      accepted: [{ id: 'accepted-1', account: ALICE, createdAt: 1 }],
+      incoming: [{ id: 'request-1', requester: ALICE, recipient: { ...ALICE, id: 'bob' }, createdAt: 1, readAt: null }],
+      accepted: [{ id: 'accepted-1', account: ALICE, createdAt: 1, readAt: null }],
       conversations: [...overview(3).conversations, ...overview(4, 'message-2').conversations],
     };
     expect(notificationUnreadCount(mixed)).toBe(2);
     expect(messageUnreadCount(mixed)).toBe(7);
     expect(notificationUnreadCount(overview(3))).toBe(0);
     expect(messageUnreadCount({ ...mixed, conversations: [] })).toBe(0);
+    // The badge counts unread notifications only; read ones stay listed.
+    expect(notificationUnreadCount({ ...mixed, incoming: [{ ...mixed.incoming[0], readAt: 5 }] })).toBe(1);
+    expect(notificationUnreadCount({ ...mixed, incoming: [{ ...mixed.incoming[0], readAt: 5 }],
+      accepted: [{ ...mixed.accepted[0], readAt: 5 }] })).toBe(0);
   });
 
-  it('dismisses accepted notices through persistence and reloads the overview', async () => {
-    request.mockResolvedValueOnce({ success: true }).mockResolvedValueOnce(overview(0));
-    expect(await useSocialStore.getState().dismissAccepted(['accepted-1'])).toBe(true);
+  it('marks notifications read or clears them through persistence and reloads the overview', async () => {
+    request.mockImplementation(async (path: string) => path === '/api/messages' ? overview(0) : { success: true });
+    expect(await useSocialStore.getState().markNotificationsRead(['accepted-1'])).toBe(true);
     expect(request).toHaveBeenNthCalledWith(1, '/api/messages/notifications/read', 'POST', { ids: ['accepted-1'] });
     expect(request).toHaveBeenNthCalledWith(2, '/api/messages');
+    await useSocialStore.getState().markNotificationsRead('all');
+    expect(request).toHaveBeenNthCalledWith(3, '/api/messages/notifications/read', 'POST', { all: true });
+    await useSocialStore.getState().clearNotifications('read');
+    expect(request).toHaveBeenNthCalledWith(5, '/api/messages/notifications/clear', 'POST', { read: true });
+    await useSocialStore.getState().clearNotifications(['accepted-1']);
+    expect(request).toHaveBeenNthCalledWith(7, '/api/messages/notifications/clear', 'POST', { ids: ['accepted-1'] });
+    expect(await useSocialStore.getState().markNotificationsRead([])).toBe(false);
+    expect(request).toHaveBeenCalledTimes(8);
   });
 });

@@ -1,0 +1,44 @@
+/* Friend cards (desktop shell) and two-line rows (phone landscape). */
+.presenceAvatar { position: relative; display: inline-flex; flex-shrink: 0; }
+.presenceDot { position: absolute; right: 0; bottom: 0; width: 12px; height: 12px; border: 2px solid var(--bg-surface); border-radius: 50%; background: var(--text-muted); }
+.presenceDot[data-online='true'] { background: var(--color-success); }
+.presenceAvatar[data-size='compact'] .presenceDot, .presenceAvatar[data-size='row'] .presenceDot { width: 10px; height: 10px; right: -1px; bottom: -1px; }
+
+.card { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; padding: var(--space-4); border: 1px solid transparent; border-radius: var(--radius-xl); background: var(--surface-1); }
+.card[data-online] { border-color: color-mix(in srgb, var(--color-success) 22%, transparent); }
+.top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); }
+.avatarLink { display: inline-flex; border-radius: 50%; }
+.identity { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.nameLine { display: flex; align-items: center; flex-wrap: wrap; gap: 2px var(--space-2); min-width: 0; }
+.name { overflow: hidden; color: var(--text-primary); font-size: var(--text-lg); font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.name:hover { color: var(--color-primary); text-decoration: underline; }
+.identity small { color: var(--text-secondary); font-size: var(--text-sm); }
+.menu { align-self: start; margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) 0 0; }
+
+/* What the friend is doing, as a tinted block; offline friends get one plain line. */
+.activity { display: flex; align-items: center; gap: var(--space-3); min-height: 54px; padding: var(--space-2) var(--space-3); border-radius: var(--radius-lg); background: var(--surface-2); }
+.activity > svg { flex-shrink: 0; font-size: 20px; color: var(--text-secondary); }
+.activity[data-kind='playing'] > svg, .activity[data-kind='replaying'] > svg { color: var(--color-success); }
+.activity[data-kind='waiting'] > svg { color: var(--color-primary); }
+.activity > div { display: flex; flex-direction: column; min-width: 0; }
+.activity b { overflow: hidden; font-size: var(--text-sm); font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.activity small { overflow: hidden; color: var(--text-secondary); font-size: var(--text-xs); text-overflow: ellipsis; white-space: nowrap; }
+.seen { display: flex; align-items: center; gap: var(--space-2); padding-left: var(--space-1); color: var(--text-secondary); font-size: var(--text-sm); }
+.offDot, .liveDot { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+.liveDot { display: inline-block; margin-right: var(--space-1); background: var(--color-success); }
+.meta { display: flex; flex-wrap: wrap; gap: 0 var(--space-2); color: var(--text-secondary); font-size: var(--text-xs); }
+.meta > span + span::before { content: '·'; margin-right: var(--space-2); }
+.actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--space-2); margin-top: auto; }
+.message .count { min-width: 1.25rem; padding: 0 5px; border-radius: var(--radius-pill); background: var(--color-primary); color: var(--text-on-primary); font-size: var(--text-xs); font-weight: 700; line-height: 1.25rem; text-align: center; }
+.primary { min-width: 0; }
+.confirm { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: var(--space-1); margin-top: auto; color: var(--text-secondary); font-size: var(--text-sm); }
+
+.row { display: flex; align-items: center; gap: var(--space-2); min-width: 0; min-height: 60px; padding: var(--space-2) var(--space-1) var(--space-2) var(--space-3); border-radius: var(--radius-lg); background: var(--surface-1); }
+.rowIdentity { display: flex; align-items: center; flex: 1; gap: var(--space-3); min-width: 0; color: var(--text-primary); }
+.rowText { display: flex; flex-direction: column; min-width: 0; line-height: 1.35; }
+.rowText b { overflow: hidden; font-size: var(--text-base); font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.rowText small { overflow: hidden; color: var(--text-secondary); font-size: var(--text-xs); text-overflow: ellipsis; white-space: nowrap; }
+.rowIdentity:hover b { color: var(--color-primary); }
+.rowActions { display: flex; align-items: center; flex-shrink: 0; gap: 2px; }
+.rowActions .primary { height: 34px; margin: 0 var(--space-1); }
+.row .confirm { flex: 0 1 auto; justify-content: flex-end; }

@@ -10,6 +10,11 @@ import Check from '@mui/icons-material/Check';
 import Headset from '@mui/icons-material/Headset';
 import HeadsetOff from '@mui/icons-material/HeadsetOff';
 import HomeOutlined from '@mui/icons-material/HomeOutlined';
+import HowToRegOutlined from '@mui/icons-material/HowToRegOutlined';
+import MeetingRoomOutlined from '@mui/icons-material/MeetingRoomOutlined';
+import Search from '@mui/icons-material/Search';
+import ArrowBack from '@mui/icons-material/ArrowBack';
+import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined';
 import PeopleOutline from '@mui/icons-material/PeopleOutlined';
 import CalendarMonthOutlined from '@mui/icons-material/CalendarMonthOutlined';
 import CheckCircleOutline from '@mui/icons-material/CheckCircleOutlined';
@@ -56,7 +61,16 @@ import UnfoldMore from '@mui/icons-material/UnfoldMore';
 import VolumeOff from '@mui/icons-material/VolumeOff';
 import VolumeUp from '@mui/icons-material/VolumeUp';
 import WarningAmber from '@mui/icons-material/WarningAmber';
+import { createSvgIcon } from '@mui/material/utils';
 import styles from './AppIcon.module.css';
+
+/** A person sending a paper plane: inviting someone into a room, unlike the person-plus of adding a friend. */
+const InviteToRoom = createSvgIcon(<g fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round">
+  <circle cx="7.5" cy="7.5" r="3.2" />
+  <path d="M10.6 15.4c-.95-.28-2-.4-3.1-.4-2.8 0-6 1.5-6 3.9V20h9" />
+  <path d="M13.4 14.2 22.5 10.2 19 20.6 17.1 16.4z" />
+  <path d="M17.1 16.4 22.5 10.2" />
+</g>, 'InviteToRoom');
 
 const ICONS = {
   add: Add, android: Android, person: PersonOutline, personAdd: PersonAddOutlined, more: MoreHoriz, home: HomeOutlined, friends: PeopleOutline,
@@ -78,6 +92,8 @@ const ICONS = {
   emoji: SentimentSatisfiedOutlined, robot: SmartToyOutlined, table: StyleOutlined,
   hangUp: CallEnd, headset: Headset, headsetOff: HeadsetOff, microphoneOff: MicOff,
   volume: VolumeUp, volumeOff: VolumeOff,
+  invite: InviteToRoom, personCheck: HowToRegOutlined, room: MeetingRoomOutlined, search: Search, back: ArrowBack,
+  cards: StyleOutlined, spectate: VisibilityOutlined,
 } as const;
 
 export type AppIconName = keyof typeof ICONS;

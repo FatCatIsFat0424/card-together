@@ -100,7 +100,7 @@ export function LobbyPage(): ReactNode {
   };
 
   const joinFriend = (friend: FriendEntry): void => {
-    const code = friend.hostedRoomCode;
+    const code = friend.room?.code;
     if (!friend.online || !code || blocked) return;
     if (currentRoomCode === code) { navigate(roomPath); return; }
     if (currentRoomCode && !window.confirm(t('invite.confirmLeave', { code }))) return;
@@ -125,7 +125,7 @@ export function LobbyPage(): ReactNode {
       roomLocked={roomLocked} pending={pending} roomCode={roomCodeInput} onRoomCodeChange={setRoomCodeInput}
       onCreate={() => createRoom(selectedGame)} onJoin={joinRoom}
       friends={{ refreshToken: friendsRevision, onJoin: joinFriend,
-        activity: { viewerInRoom: Boolean(currentRoomCode), invited: invites.invited, onInvite: (friend) => invites.invite(friend.id) } }} />
+        activity: { viewerRoomCode: currentRoomCode, invited: invites.invited, onInvite: (friend) => invites.invite(friend.id) } }} />
     {rulesGame && <GameRulesDialog gameType={rulesGame} onClose={() => setRulesGame(null)} />}
   </>;
   return <main className={styles.page} data-reduced-motion={reducedMotion || undefined}>

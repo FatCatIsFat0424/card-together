@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   RAIL_ITEMS, activeLobbyCategory, currentRailItem, isTableRoute, railItemPath, tableRailPath,
 } from '../../../client/src/components/desktop-nav';
-import { friendAction, friendActivity } from '../../../client/src/components/lobby-friend-activity';
 
 describe('desktop navigation', () => {
   it('lists the destinations in rail order with the account entry last', () => {
@@ -56,22 +55,3 @@ describe('desktop navigation', () => {
   });
 });
 
-describe('lobby friend activity', () => {
-  const presence = (online: boolean, inRoom: boolean, hostedRoomCode: string | null) => ({ online, inRoom, hostedRoomCode });
-
-  it('reports hosting, room and lobby activity of online friends only', () => {
-    expect(friendActivity(presence(true, true, 'ABC123'))).toEqual({ kind: 'hosting', code: 'ABC123' });
-    expect(friendActivity(presence(true, true, null))).toEqual({ kind: 'room' });
-    expect(friendActivity(presence(true, false, null))).toEqual({ kind: 'lobby' });
-    expect(friendActivity(presence(false, false, null))).toBeNull();
-  });
-
-  it('offers joining a hosted room and inviting friends who are free, never both', () => {
-    expect(friendAction(presence(true, true, 'ABC123'), false)).toBe('join');
-    expect(friendAction(presence(true, true, 'ABC123'), true)).toBe('join');
-    expect(friendAction(presence(true, false, null), true)).toBe('invite');
-    expect(friendAction(presence(true, false, null), false)).toBeNull();
-    expect(friendAction(presence(true, true, null), true)).toBeNull();
-    expect(friendAction(presence(false, false, null), true)).toBeNull();
-  });
-});

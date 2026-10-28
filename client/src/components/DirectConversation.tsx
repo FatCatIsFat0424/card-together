@@ -1,18 +1,26 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { DirectMessage, MessageHistory, MessageInput } from '@shared/types/direct-message';
-import type { PublicAccount } from '@shared/types/social';
+import type { FriendEntry, PublicAccount } from '@shared/types/social';
 import { apiRequest } from '../api';
 import { createMessageClientId } from '../messages/message-client-id';
 import { latestIncomingMessageId, mergeDirectMessages } from '../messages/message-history';
-import { groupDirectMessages, groupTimeLabel } from '../messages/message-groups';
+import { groupDirectMessages, groupTimeLabel, messageDay, startsNewDay } from '../messages/message-groups';
 import type { MessageGroup } from '../messages/message-groups';
 import { AppIcon } from './AppIcon';
+import { Avatar } from './Avatar';
 import { Button } from './Button';
-import { ChatMessageBody, EmojiPickerSections } from './ChatEmoji';
+import { ChatMessageBody, EmojiPicker } from './ChatEmoji';
 import type { StickerPayload } from './ChatEmoji';
-import { PlayerLink } from './PlayerLink';
+import { IconButton } from './IconButton';
+import { Nameplate } from './Nameplate';
+import { OverflowMenu } from './OverflowMenu';
+import { PresenceAvatar } from './FriendCard';
+import { friendActivityText } from './friend-activity-text';
+import { friendAction } from './lobby-friend-activity';
+import { useInviteFriend } from '../hooks/use-invite-friend';
+import { useRoomStore } from '../stores/room-store';
 import { ChatFrame } from '../cosmetics/chat-frames/ChatFrame';
 import { PROVIDED_EMOJIS } from '../provided-emoji';
 import { useAccountStore } from '../stores/account-store';
@@ -23,26 +31,83 @@ import { useMotionStore } from '../stores/motion-store';
 import chatStyles from './ChatPanel.module.css';
 import styles from './DirectMessages.module.css';
 
+/** A day separator: today, yesterday, or the date. */
+function DaySeparator({ timestamp, locale }: { readonly timestamp: number; readonly locale: string }): ReactNode {
+  const { t } = useI18nStore();
+  const day = messageDay(timestamp, locale);
+  return <div className={styles.day} role="separator">
+    <span>{day.kind === 'date' ? day.label : t(day.kind === 'today' ? 'social.today' : 'messages.yesterday')}</span>
+  </div>;
+}
+
+/** The friend's groups carry their avatar beside the bubbles; your own groups show only the time. */
 const DirectMessageGroupRow = memo(function DirectMessageGroupRow({ group, locale, dateTimeFormat }: {
   readonly group: MessageGroup; readonly locale: string; readonly dateTimeFormat: Intl.DateTimeFormat;
 }): ReactNode {
   const first = group.messages[0];
   return <div className={`${styles.group} ${group.own ? styles.ownGroup : ''}`}>
-    <div className={styles.messageMeta}>{!group.own && <span>{first.sender.nickname}</span>}
-      <time dateTime={new Date(first.timestamp).toISOString()} title={dateTimeFormat.format(first.timestamp)}>
-        {groupTimeLabel(first.timestamp, locale)}</time>
+    {!group.own && <span className={styles.groupAvatar}><Avatar avatar={first.sender.avatar} image={first.sender.avatarImage}
+      border={first.sender.avatarBorder} color={first.sender.color} size="row" /></span>}
+    <div className={styles.stack}>
+      <div className={styles.messageMeta}>{!group.own && <b>{first.sender.nickname}</b>}
+        <time dateTime={new Date(first.timestamp).toISOString()} title={dateTimeFormat.format(first.timestamp)}>
+          {groupTimeLabel(first.timestamp, locale)}</time>
+      </div>
+      {group.messages.map((message) => <ChatFrame key={message.id} as="article" id={message.sender.chatFrame}
+        className={`${styles.message} ${group.own ? styles.ownMessage : ''}`}>
+        <div className={styles.messageContent}><ChatMessageBody message={message} /></div>
+      </ChatFrame>)}
     </div>
-    {group.messages.map((message) => <ChatFrame key={message.id} as="article" id={message.sender.chatFrame}
-      className={`${styles.message} ${group.own ? styles.ownMessage : ''}`}>
-      <div className={styles.messageContent}><ChatMessageBody message={message} /></div>
-    </ChatFrame>)}
   </div>;
 });
 
-export function DirectConversation({ ownId, otherId, initialAccount, embedded = false, onLoadError, refreshVersion = 0 }: {
+/** Name, nameplate and what the friend is doing, with room invite and more actions. */
+function ConversationHeader({ account, friend, onClose }: {
+  readonly account: PublicAccount; readonly friend: FriendEntry | undefined; readonly onClose?: () => void;
+}): ReactNode {
+  const { locale, t } = useI18nStore();
+  const navigate = useNavigate();
+  const roomCode = useRoomStore((state) => state.currentRoomCode);
+  const { invited, error, invite } = useInviteFriend();
+  const activity = friend && friendActivityText(friend, locale);
+  const profile = `/players/${encodeURIComponent(account.id)}`;
+  const canInvite = friend !== undefined && friendAction(friend, roomCode) === 'invite';
+  return <>
+    <Link to={profile} className={styles.headerAvatar} tabIndex={-1} aria-hidden="true">
+      {friend ? <PresenceAvatar friend={friend} size="compact" />
+        : <Avatar avatar={account.avatar} image={account.avatarImage} border={account.avatarBorder} color={account.color} size="compact" />}
+    </Link>
+    <div className={styles.who} data-player-identity>
+      <span className={styles.whoName}>
+        <Link to={profile} aria-label={t('player.view', { nickname: account.nickname })}>{account.nickname}</Link>
+        <span className={styles.whoTitle}><Nameplate id={account.nameplate} /></span>
+        <span className={styles.whoInline}>@{account.username}</span>
+      </span>
+      <small>{activity && <><span className={styles.activityDot} data-online={friend?.online || undefined} aria-hidden="true" />
+        {activity.short}<span className={styles.whoSeparator} aria-hidden="true"> · </span></>}
+        <span className={styles.whoUsername}>@{account.username}</span></small>
+    </div>
+    {error && <span className={styles.headerError} role="alert">{error}</span>}
+    {canInvite && <Button className={styles.headerInvite} disabled={invited.has(account.id)} onClick={() => invite(account.id)}>
+      {t(invited.has(account.id) ? 'invite.sent' : 'messages.inviteToRoom')}</Button>}
+    <span className={styles.headerMore}>
+      <OverflowMenu label={t('friends.moreFor', { nickname: account.nickname })}
+        items={[{ label: t('friends.viewProfile'), onSelect: () => navigate(profile) }]} />
+    </span>
+    {onClose && <IconButton icon="close" label={t('messages.close')} className={styles.headerClose} onClick={onClose} />}
+  </>;
+}
+
+export function DirectConversation({
+  ownId, otherId, initialAccount, friend, embedded = false, onLoadError, refreshVersion = 0, onClose,
+}: {
   readonly ownId: string; readonly otherId: string;
   readonly initialAccount?: PublicAccount;
+  /** Live presence of a current friend, for the header's activity line and room invite. */
+  readonly friend?: FriendEntry;
   readonly embedded?: boolean;
+  /** Short landscape: the header closes the messages window, since the page has no title bar there. */
+  readonly onClose?: () => void;
   readonly onLoadError: (otherId: string, error: string) => void;
   readonly refreshVersion?: number;
 }): ReactNode {
@@ -62,8 +127,6 @@ export function DirectConversation({ ownId, otherId, initialAccount, embedded = 
   const [busy, setBusy] = useState(false);
   const [sendFailed, setSendFailed] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [mode, setMode] = useState<'emoji' | 'sticker'>('emoji');
   const mounted = useRef(false);
   const sequence = useRef(0);
   const busyRef = useRef(false);
@@ -223,16 +286,28 @@ export function DirectConversation({ ownId, otherId, initialAccount, embedded = 
     <section className={`${styles.conversation} ${embedded ? styles.embedded : ''}`} aria-label={t('messages.title')}
       data-reduced-motion={reducedMotion || undefined}>
     <header className={styles.header}>
-      {!embedded && <Link to="/messages"><AppIcon name="previousPage" /> {t('messages.back')}</Link>}
-      {displayedAccount && <PlayerLink player={displayedAccount} showUsername showTitle={false} size="row" dense />}
+      {!embedded && <Link className={styles.backLink} to="/messages"><AppIcon name="previousPage" /> {t('messages.back')}</Link>}
+      {displayedAccount && <ConversationHeader account={displayedAccount}
+        friend={friend?.id === displayedAccount.id ? friend : undefined} onClose={onClose} />}
+      {!displayedAccount && onClose && <IconButton icon="close" label={t('messages.close')} className={styles.headerClose}
+        onClick={onClose} />}
     </header>
-    <div ref={messagesRef} className={`${styles.messages} ${history ? styles.messagesReady : ''}`} role="log" aria-live="polite" aria-relevant="additions" aria-busy={loading || paging}>
-      {loading && <p className={styles.loadingNotice} role="status">{t('common.loading')}</p>}
-      {history?.hasMore && <Button type="button" disabled={paging}
-        onClick={() => void load(history.messages[0]?.id)}>
-        {paging ? t('common.loading') : t('messages.older')}</Button>}
-      {history?.messages.length === 0 && <p className={styles.empty}>{t('messages.emptyConversation')}</p>}
-      {groups.map((group) => <DirectMessageGroupRow key={group.key} group={group} locale={locale} dateTimeFormat={dateTimeFormat} />)}
+    <div className={chatStyles.messageArea}>
+      <div ref={messagesRef} className={`${styles.messages} ${history ? styles.messagesReady : ''}`} role="log" aria-live="polite" aria-relevant="additions" aria-busy={loading || paging}>
+        {loading && <p className={styles.loadingNotice} role="status">{t('common.loading')}</p>}
+        {history?.hasMore && <Button type="button" disabled={paging}
+          onClick={() => void load(history.messages[0]?.id)}>
+          {paging ? t('common.loading') : t('messages.older')}</Button>}
+        {history?.messages.length === 0 && <p className={styles.empty}>{t('messages.emptyConversation')}</p>}
+        {groups.map((group, index) => <Fragment key={group.key}>
+          {startsNewDay(group, groups[index - 1]) && <DaySeparator timestamp={group.messages[0].timestamp} locale={locale} />}
+          <DirectMessageGroupRow group={group} locale={locale} dateTimeFormat={dateTimeFormat} />
+        </Fragment>)}
+      </div>
+      {pickerOpen && (loading || history?.canSend) && <div data-direct-picker>
+        <EmojiPicker personal={emojis} provided={PROVIDED_EMOJIS} busy={busy} onInsert={insertEmoji}
+          onSendSticker={(payload: StickerPayload) => void send(payload)} />
+      </div>}
     </div>
     {readError && <p className={styles.notice} role="alert">{t('common.error')}{' '}
       <Button type="button" onClick={() => void markVisible()}>{t('common.retry')}</Button></p>}
@@ -241,24 +316,14 @@ export function DirectConversation({ ownId, otherId, initialAccount, embedded = 
         onClick={() => { if (pending.current) void send(pending.current.payload, true); }}>{t('messages.retrySend')}</Button></p>}
     {history && !history.canSend && <p className={styles.notice}>{t('messages.formerFriend')}</p>}
     {(loading || history?.canSend) && <div className={styles.composer}>
-      {pickerOpen && <div className={`${chatStyles.picker} ${mode === 'sticker' ? chatStyles.stickerPicker : ''}`}
-        data-direct-picker>
-        <div className={chatStyles.pickerTabs}>
-          <button type="button" aria-pressed={mode === 'emoji'} onClick={() => setMode('emoji')}>{t('emoji.title')}</button>
-          <button type="button" aria-pressed={mode === 'sticker'} onClick={() => setMode('sticker')}>{t('sticker.mode')}</button>
-        </div>
-        <input type="search" className={chatStyles.pickerSearch} value={search} autoFocus
-          aria-label={t('emoji.search')} placeholder={t('emoji.search')} onChange={(event) => setSearch(event.target.value)} />
-        <EmojiPickerSections mode={mode} query={search.trim().toLowerCase()} personal={emojis}
-          provided={PROVIDED_EMOJIS} busy={busy} onInsert={insertEmoji}
-          onSendSticker={(payload: StickerPayload) => void send(payload)} />
-      </div>}
       <form className={chatStyles.chatInputRow} onSubmit={submit}>
         <button type="button" className={chatStyles.pickerBtn} data-direct-picker disabled={busy || loading}
           aria-label={t('emoji.picker')} aria-expanded={pickerOpen} onClick={() => setPickerOpen((open) => !open)}>
           <AppIcon name="emoji" /></button>
         <input ref={inputRef} type="text" className={chatStyles.chatInput} maxLength={500} value={input} disabled={busy || loading}
-          aria-label={t('chat.placeholder')} placeholder={t('chat.placeholder')} onChange={(event) => setInput(event.target.value)} />
+          aria-label={t('chat.placeholder')} onChange={(event) => setInput(event.target.value)}
+          placeholder={embedded && !onClose && displayedAccount
+            ? t('messages.placeholderFor', { nickname: displayedAccount.nickname }) : t('chat.placeholder')} />
         <button type="submit" className={chatStyles.chatSendBtn} disabled={busy || loading || !input.trim()}>{t('chat.send')}</button>
       </form>
     </div>}

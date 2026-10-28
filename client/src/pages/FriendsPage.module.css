@@ -10,27 +10,25 @@
 .addForm input:focus { background: var(--surface-3); box-shadow: 0 0 0 2px var(--color-primary); }
 .panel { margin-top: var(--space-3); }
 
-/* Row layout: identity, actions and the more menu on one line. */
+/* Accepted friends: cards from FriendCard, grouped by presence on the desktop shell. */
+.friendList { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: var(--space-2); list-style: none; }
+.groupHeading { margin: var(--space-4) 0 var(--space-2); color: var(--text-secondary); font-size: var(--text-sm); font-weight: 600; }
+section:first-of-type > .groupHeading { margin-top: 0; }
+
+/* Request rows: identity and actions on one line. */
 .list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: var(--space-2); list-style: none; }
-.person { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: 'identity actions menu'; align-items: center; gap: var(--space-1) var(--space-2); min-height: 52px; padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3); border-radius: var(--radius-lg); background: var(--surface-1); }
-.person[data-confirming] { grid-template-areas: 'identity identity' 'confirm confirm'; }
+.person { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'identity actions'; align-items: center; gap: var(--space-1) var(--space-2); min-height: 52px; padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3); border-radius: var(--radius-lg); background: var(--surface-1); }
 .request { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'identity actions'; padding-right: var(--space-3); }
 .identity { grid-area: identity; min-width: 0; }
-.menu { grid-area: menu; }
-.status { grid-area: status; }
 .actions { grid-area: actions; display: flex; align-items: center; gap: var(--space-1); }
-.confirm { grid-area: confirm; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-1); color: var(--text-secondary); font-size: var(--text-sm); }
-.person .count { margin-left: var(--space-1); }
 
-/* Desktop shell: each person is a card with an avatar, a status line and equal-width action pills. */
+/* Desktop shell: requests are cards with equal-width action pills. */
 @media (min-width: 48rem) and (min-height: 501px) {
   .addForm { flex: 0 1 28rem; margin-left: auto; }
   .list { grid-template-columns: repeat(auto-fill, minmax(min(100%, 16.25rem), 1fr)); gap: var(--space-3); }
-  .person { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'identity menu' 'status status' 'actions actions'; align-items: start; gap: var(--space-3) var(--space-2); padding: var(--space-4); border-radius: var(--radius-xl); }
-  .person[data-confirming] { grid-template-areas: 'identity identity' 'status status' 'confirm confirm'; }
+  .friendList { grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr)); gap: var(--space-3); }
+  .person { align-items: start; gap: var(--space-3) var(--space-2); padding: var(--space-4); border-radius: var(--radius-xl); }
   .request { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'identity' 'actions'; padding: var(--space-4); }
   .identity { font-size: var(--text-md); }
-  .menu { margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) 0 0; }
   .actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--space-2); }
-  .confirm { flex-wrap: wrap; justify-content: space-between; }
 }

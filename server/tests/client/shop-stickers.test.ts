@@ -12,13 +12,18 @@ vi.mock('../../../client/src/stores/account-store', () => ({
 vi.mock('../../../client/src/media', () => ({ mediaUrl: (id: string): string => `/api/media/${id}` }));
 
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
-import { ChatMessageBody, EmojiPickerSections } from '../../../client/src/components/ChatEmoji';
+import { ChatMessageBody, EmojiPicker } from '../../../client/src/components/ChatEmoji';
 import { shopStickerUrl } from '../../../client/src/shop-stickers';
 
 function picker(mode: 'emoji' | 'sticker' = 'sticker', query = '', busy = false): string {
-  return renderToStaticMarkup(createElement(MemoryRouter, null, createElement(EmojiPickerSections, {
-    mode, query, personal: [], provided: [], busy, onInsert: vi.fn(), onSendSticker: vi.fn(),
+  return renderToStaticMarkup(createElement(MemoryRouter, null, createElement(EmojiPicker, {
+    initialMode: mode, initialQuery: query, personal: [], provided: [], busy, onInsert: vi.fn(), onSendSticker: vi.fn(),
   })));
+}
+
+/** The grid of the open category; tab thumbnails show each pack's first sticker too. */
+function grid(html: string): string {
+  return html.slice(html.lastIndexOf('role="group"'));
 }
 
 function inventory(ids: AccountProfile['ownedShopItems']): void {
@@ -50,7 +55,7 @@ describe('official shop sticker UI', () => {
     useI18nStore.setState({ locale });
     for (const { id } of STICKER_PACKS) {
       inventory([id]);
-      const html = picker();
+      const html = grid(picker());
       for (const sticker of SHOP_STICKERS) {
         if (sticker.packId === id) expect(html).toContain(shopStickerUrl(sticker.id));
         else expect(html).not.toContain(shopStickerUrl(sticker.id));
@@ -64,16 +69,16 @@ describe('official shop sticker UI', () => {
     expect(picker()).toContain('/shop?type=stickerPack');
     expect(picker()).not.toContain(shopStickerUrl('table-hello'));
     inventory(['stickers-table-talk']);
-    expect(picker()).toContain(shopStickerUrl('table-hello'));
+    expect(grid(picker())).toContain(shopStickerUrl('table-hello'));
     expect(picker()).not.toContain(shopStickerUrl('forest-cheer'));
     expect(picker('emoji')).not.toContain(shopStickerUrl('table-hello'));
     inventory(['stickers-table-talk', 'stickers-forest-friends']);
     useI18nStore.setState({ locale: 'en' });
-    // Each pack is a tab; the first owned pack opens, and searching reaches the others.
-    expect(picker()).toMatch(/aria-selected="true">Table talk<\/button>/);
-    expect(picker()).toMatch(/aria-selected="false">Forest friends<\/button>/);
-    expect(picker()).not.toContain(shopStickerUrl('forest-cheer'));
-    expect(picker('sticker', 'forest-cheer')).toContain(shopStickerUrl('forest-cheer'));
+    // Each pack is a thumbnail tab after the personal one; the first pack with stickers opens, and searching reaches the others.
+    expect(picker()).toMatch(/role="tab" aria-selected="true" aria-label="Table talk"/);
+    expect(picker()).toMatch(/role="tab" aria-selected="false" aria-label="Forest friends"/);
+    expect(grid(picker())).not.toContain(shopStickerUrl('forest-cheer'));
+    expect(grid(picker('sticker', 'forest-cheer'))).toContain(shopStickerUrl('forest-cheer'));
   });
 
   it('searches translated names and IDs and disables sending while busy', () => {
@@ -82,7 +87,7 @@ describe('official shop sticker UI', () => {
     expect(picker('sticker', 'table-hello')).toContain(shopStickerUrl('table-hello'));
     expect(picker('sticker', 'table-hello')).not.toContain(shopStickerUrl('table-nice'));
     expect(picker('sticker', 'zzzz')).not.toContain(shopStickerUrl('table-hello'));
-    expect(picker('sticker', '', true).match(/disabled=""/g)).toHaveLength(4);
+    expect(grid(picker('sticker', '', true)).match(/disabled=""/g)).toHaveLength(4);
     useI18nStore.setState({ locale: 'zh-TW' });
     expect(picker('sticker', '嗨')).toContain(shopStickerUrl('table-hello'));
     expect(picker('sticker', '嗨')).not.toContain(shopStickerUrl('table-nice'));

@@ -1,2 +1,0 @@
-.status { display: inline-flex; align-items: center; gap: var(--spacing-xs); color: var(--text-secondary); font-size: var(--text-xs); }
-.onlineDot { width: 10px; height: 10px; border-radius: 50%; background: var(--color-success); flex-shrink: 0; }

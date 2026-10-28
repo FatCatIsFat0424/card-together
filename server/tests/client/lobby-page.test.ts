@@ -101,10 +101,12 @@ describe('lobby page', () => {
     expect(choices.every((choice) => !choice.includes('disabled'))).toBe(true);
   });
 
-  it('shows online hosts first without mutating the supplied friend list', () => {
-    const friend = (id: string, online: boolean, hostedRoomCode: string | null): FriendEntry => ({
+  it('shows online friends in enterable rooms first without mutating the supplied friend list', () => {
+    const friend = (id: string, online: boolean, roomCode: string | null): FriendEntry => ({
       id, username: id, nickname: id, avatar: 'cat', avatarImage: null, color: '#4a9eff',
-      online, hostedRoomCode, inRoom: Boolean(hostedRoomCode), lastSeenAt: null,
+      online, hostedRoomCode: null, inRoom: Boolean(roomCode), lastSeenAt: null,
+      room: roomCode && online ? { code: roomCode, gameType: 'bridge', status: 'playing', players: 4, seats: 4,
+        hosting: false, joinable: false, spectatable: true } : null,
     });
     const friends = Object.freeze([
       friend('available', true, null), friend('offline', false, 'OLD123'),
@@ -121,7 +123,7 @@ describe('lobby page', () => {
         accountId: 'alice', category: 'cards', selectedGame: 'holdem', onSelectGame: noop, onShowRules: noop, error: '',
         inRoom: false, blocked: false, roomLocked: false, pending: null, roomCode: '', onRoomCodeChange: noop,
         onCreate: noop, onJoin: noop,
-        friends: { refreshToken: 0, onJoin: noop, activity: { viewerInRoom: false, invited: new Set<string>(), onInvite: noop } },
+        friends: { refreshToken: 0, onJoin: noop, activity: { viewerRoomCode: null, invited: new Set<string>(), onInvite: noop } },
         ...overrides,
       })));
 

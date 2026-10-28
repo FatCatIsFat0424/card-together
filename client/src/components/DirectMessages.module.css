@@ -1,14 +1,19 @@
+/* Conversation list: cards when stacked on narrow screens, a roomy list beside the chat otherwise. */
 .conversations { list-style: none; display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; gap: var(--spacing-sm); }
-.conversations a { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-lg); background: var(--surface-1); overflow-wrap: anywhere; }
+.conversations a { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-lg); background: var(--surface-1); color: var(--text-primary); overflow-wrap: anywhere; }
 .conversations a:hover { background: var(--surface-2); }
 .username, .conversations time { color: var(--text-secondary); font-size: var(--text-sm); }
 .preview { flex-basis: 100%; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .unread { margin-left: auto; font-size: var(--text-sm); font-weight: 700; color: var(--color-primary); }
-.splitList { gap: 0; }
+.search { display: flex; align-items: center; flex-shrink: 0; gap: var(--space-2); height: var(--hit-size); margin: 0 var(--space-1) var(--space-2) 0; padding: 0 var(--space-3); border-radius: var(--radius-pill); background: var(--surface-2); color: var(--text-secondary); font-size: var(--icon-size); }
+.search:focus-within { box-shadow: 0 0 0 2px var(--color-primary); }
+.search input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: transparent; font-size: var(--text-sm); }
+.search input:focus { box-shadow: none; outline: none; }
+.splitList { gap: 2px; padding-right: var(--space-1); }
 .splitList > li { animation: conversationTabIn 200ms ease-out backwards; animation-delay: calc(60ms + var(--entry-index, 0) * 45ms); }
 .splitList[data-reduced-motion] > li { animation: none; }
 @keyframes conversationTabIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
-.splitList a { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 0 var(--space-2); min-height: 48px; padding: var(--space-1) var(--space-2); border-radius: var(--radius-lg); background: transparent; transition: background-color 160ms ease, color 160ms ease; }
+.splitList a { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 2px var(--space-3); min-height: 64px; padding: var(--space-2) var(--space-3); border-radius: var(--radius-lg); background: transparent; transition: background-color 160ms ease, color 160ms ease; }
 .splitList a:hover { background: var(--surface-1); }
 .splitList a[aria-current='page'] { background: var(--surface-2); }
 .splitList a:focus-visible { outline-offset: -2px; }
@@ -17,20 +22,48 @@
 .conversationName > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .presenceDot { width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%; background: var(--text-secondary); }
 .presenceDot[data-online='true'] { background: var(--color-success); }
-.splitList strong { grid-column: 2; overflow: hidden; font-size: var(--text-sm); }
+.splitList strong { grid-column: 2; grid-row: 1; overflow: hidden; font-size: var(--text-md); font-weight: 500; }
 .splitList .username { display: none; }
-.splitList .preview { grid-column: 2; grid-row: 2; min-width: 0; font-size: var(--text-xs); }
+.splitList .preview { grid-column: 2; grid-row: 2; min-width: 0; font-size: var(--text-sm); }
 .splitList time { grid-column: 3; grid-row: 1; justify-self: end; white-space: nowrap; font-size: var(--text-xs); }
-.splitList .unread { grid-column: 3; grid-row: 2; justify-self: end; font-size: var(--text-xs); }
+.unreadCount { grid-column: 3; grid-row: 2; justify-self: end; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--color-primary); color: var(--text-on-primary); font-size: var(--text-xs); font-weight: 700; line-height: 20px; text-align: center; }
+.splitList a[data-unread] strong { font-weight: 700; }
+.splitList a[data-unread] .preview { color: var(--text-primary); }
+.splitList a[data-unread] time { color: var(--color-primary); }
 .empty { padding: var(--spacing-lg); color: var(--text-secondary); }
+
+/* Conversation: header, the message area (with the picker over it), and the composer. */
 .conversation { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; overflow: hidden; }
 .conversation.embedded { flex: 1; height: auto; min-height: 0; }
-.header { display: flex; align-items: center; flex-shrink: 0; gap: var(--space-2); min-height: var(--hit-size); padding: 3px var(--space-2); border-bottom: 1px solid var(--separator); font-size: var(--text-sm); }
-.header > a:first-child:not([data-player-identity]) { display: inline-flex; align-items: center; min-height: var(--hit-size); }
-.messages { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: var(--space-2); }
-.group { display: flex; flex-direction: column; align-items: flex-start; flex-shrink: 0; gap: 2px; width: 100%; }
-.ownGroup { align-items: flex-end; }
+.header { display: flex; align-items: center; flex-shrink: 0; gap: var(--space-3); min-height: 60px; padding: var(--space-2) var(--space-2) var(--space-2) var(--space-5); border-bottom: 1px solid var(--separator); font-size: var(--text-sm); }
+.backLink { display: inline-flex; align-items: center; min-height: var(--hit-size); }
+.headerAvatar { display: inline-flex; flex-shrink: 0; border-radius: 50%; }
+.who { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.35; }
+.whoName { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.whoName > a { overflow: hidden; color: var(--text-primary); font-size: var(--text-lg); font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.whoName > a:hover { color: var(--color-primary); text-decoration: underline; }
+.whoTitle { display: inline-flex; min-width: 0; }
+.whoTitle:empty { display: none; }
+.whoInline { display: none; color: var(--text-secondary); font-size: var(--text-xs); white-space: nowrap; }
+.who small { display: flex; align-items: center; gap: 0; overflow: hidden; color: var(--text-secondary); font-size: var(--text-xs); white-space: nowrap; }
+.activityDot { flex-shrink: 0; width: 7px; height: 7px; margin-right: var(--space-1); border-radius: 50%; background: var(--text-muted); }
+.activityDot[data-online] { background: var(--color-success); }
+.whoSeparator { white-space: pre; }
+.headerInvite.headerInvite { flex-shrink: 0; }
+.headerError { flex: 0 1 12rem; min-width: 0; overflow: hidden; color: var(--color-danger); font-size: var(--text-xs); text-overflow: ellipsis; white-space: nowrap; }
+.headerMore, .headerClose { flex-shrink: 0; }
+
+.messages { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: stretch; gap: var(--space-4); padding: var(--space-4) var(--space-5); }
 .messages > button { align-self: center; flex-shrink: 0; }
+.day { display: flex; align-items: center; flex-shrink: 0; gap: var(--space-3); margin: var(--space-1) 0 calc(-1 * var(--space-1)); color: var(--text-secondary); font-size: var(--text-xs); }
+.day::before, .day::after { content: ''; flex: 1; height: 1px; background: var(--separator); }
+.day span { padding: 2px var(--space-3); border-radius: var(--radius-pill); background: var(--surface-1); }
+.group { display: flex; align-items: flex-start; flex-shrink: 0; gap: var(--space-2); width: 100%; }
+.ownGroup { justify-content: flex-end; }
+/* Lines the avatar up with the first bubble, below the name and time. */
+.groupAvatar { display: inline-flex; flex-shrink: 0; margin-top: 22px; }
+.stack { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); min-width: 0; max-width: 70%; }
+.ownGroup .stack { align-items: flex-end; }
 .messagesReady { animation: conversationIn 160ms ease-out; }
 .header [data-player-identity] { animation: conversationIn 160ms ease-out; }
 .loadingNotice { margin: 0; color: var(--text-secondary); font-size: var(--text-sm); visibility: hidden; animation: showLoading 0s 180ms forwards; }
@@ -43,31 +76,35 @@
   .messagesReady, .header [data-player-identity] { animation: none; }
   .splitList a { transition: none; }
 }
-.message { flex-shrink: 0; max-width: 70%; background: var(--surface-2); border-radius: var(--radius-lg); padding: 5px var(--space-2); overflow-wrap: anywhere; }
-.ownMessage { align-self: flex-end; background: var(--color-primary-soft); }
-.messageMeta { display: flex; flex-wrap: wrap; gap: 0 var(--space-2); padding-inline: var(--space-1); color: var(--text-secondary); font-size: var(--text-xs); line-height: 1.4; }
-.messageContent { white-space: pre-wrap; font-size: var(--text-base); line-height: 1.4; }
+.message { flex-shrink: 0; max-width: 100%; background: var(--surface-2); border-radius: var(--radius-xl); padding: var(--space-2) var(--space-3); overflow-wrap: anywhere; }
+.ownMessage { background: var(--color-primary-soft); border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent); }
+.messageMeta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-2); padding-inline: var(--space-1); color: var(--text-secondary); font-size: var(--text-xs); line-height: 1.4; }
+.messageMeta b { color: var(--text-primary); font-weight: 600; }
+.messageContent { white-space: pre-wrap; font-size: var(--text-base); line-height: 1.45; }
 .notice { flex-shrink: 0; padding: var(--spacing-sm) var(--spacing-md); font-size: var(--text-sm); }
 .notice[role='alert'] { color: var(--color-danger); }
 .composer { flex-shrink: 0; }
 /* The input row is drawn by the chat panel stylesheet; here it becomes one flat pill. */
-.composer form { margin: var(--space-1) var(--space-2); overflow: hidden; border: 0; border-radius: var(--radius-pill); background: var(--surface-2); }
+.composer form { margin: var(--space-2) var(--space-5) var(--space-3); overflow: hidden; border: 0; border-radius: var(--radius-pill); background: var(--surface-2); }
 .composer form button, .composer form input { min-height: var(--hit-size); border: 0; background: transparent; }
 .composer form button { min-width: var(--hit-size); }
 .composer form input { padding-inline: var(--space-3); }
-.composer > div { max-height: 70%; }
 @media (max-width: 40rem) {
-  .message { max-width: 85%; }
+  .stack { max-width: 85%; }
 }
 
-/* Short landscape: the name and time sit beside the first bubble instead of above it, so each group costs one line less. */
+/* Short landscape: the header is one line, groups drop their avatars, and the margins tighten. */
 @media (max-height: 500px) and (min-width: 600px) {
-  .group { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); align-items: start; gap: 2px var(--space-2); }
-  /* Your own groups need no name: just the time, right-aligned over the bubbles' edge. */
-  .ownGroup { display: flex; flex-direction: column; align-items: flex-end; }
-  .group .messageMeta { grid-column: 1; grid-row: 1; flex-direction: column; min-width: 0; padding-inline: 0; line-height: 1.25; }
-  .group .messageMeta > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .group > article { grid-column: 2; justify-self: start; max-width: 85%; }
-  .ownGroup .messageMeta { flex-direction: row; padding-inline: 0; }
-  .ownGroup > article { max-width: 70%; }
+  .splitList a { grid-template-columns: 36px minmax(0, 1fr) auto; gap: 0 var(--space-2); min-height: 52px; padding: var(--space-1) var(--space-2); }
+  .splitList strong { font-size: var(--text-base); }
+  .splitList .preview { font-size: var(--text-xs); }
+  .header { min-height: 48px; padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3); gap: var(--space-2); }
+  .who { flex-direction: row; align-items: center; gap: var(--space-2); }
+  .whoName > a { font-size: var(--text-md); }
+  .whoTitle, .whoUsername, .whoSeparator, .headerMore { display: none; }
+  .whoInline { display: inline; }
+  .messages { gap: var(--space-3); padding: var(--space-2) var(--space-3); }
+  .groupAvatar { display: none; }
+  .stack { max-width: 85%; }
+  .composer form { margin: var(--space-1) var(--space-2) var(--space-2); }
 }

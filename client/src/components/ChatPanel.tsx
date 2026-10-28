@@ -10,7 +10,7 @@ import { usePlayerStore } from '../stores/player-store';
 import { useRoomStore } from '../stores/room-store';
 import type { TranslationKey } from '../i18n';
 import { Avatar } from './Avatar';
-import { ChatMessageBody, EmojiPickerSections } from './ChatEmoji';
+import { ChatMessageBody, EmojiPicker } from './ChatEmoji';
 import type { StickerPayload } from './ChatEmoji';
 import { AppIcon } from './AppIcon';
 import { Nameplate } from './Nameplate';
@@ -68,8 +68,6 @@ export function ChatPanel({ onCollapse, embedded = false }: ChatPanelProps): Rea
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [mode, setMode] = useState<'emoji' | 'sticker'>('emoji');
   const busyRef = useRef(false);
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -149,24 +147,16 @@ export function ChatPanel({ onCollapse, embedded = false }: ChatPanelProps): Rea
         {onCollapse && <button type="button" className={`${styles.collapseBtn} touch-target`} onClick={onCollapse}
           aria-label={t('table.chatCollapse')} title={t('table.chatCollapse')}><AppIcon name="nextPage" /></button>}
       </div>}
-      <div ref={messagesRef} className={styles.chatMessages} role="log" aria-live="polite">
-        {messages.map((message) => <ChatMessageRow key={message.id} message={message} />)}
+      <div className={styles.messageArea}>
+        <div ref={messagesRef} className={styles.chatMessages} role="log" aria-live="polite">
+          {messages.map((message) => <ChatMessageRow key={message.id} message={message} />)}
+        </div>
+        {pickerOpen && <div data-emoji-picker>
+          <EmojiPicker personal={emojis} provided={PROVIDED_EMOJIS} busy={busy} onInsert={insertEmoji} onSendSticker={sendSticker} />
+        </div>}
       </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
       {observing && <p className={styles.observerNotice}>{t('chat.observerNotice')}</p>}
-      {pickerOpen && (
-        <div className={`${styles.picker} ${mode === 'sticker' ? styles.stickerPicker : ''}`} data-emoji-picker>
-          <div className={styles.pickerTabs}>
-            <button type="button" aria-pressed={mode === 'emoji'} onClick={() => setMode('emoji')}>{t('emoji.title')}</button>
-            <button type="button" aria-pressed={mode === 'sticker'} onClick={() => setMode('sticker')}>{t('sticker.mode')}</button>
-          </div>
-          <input className={styles.pickerSearch} type="search" value={search} autoFocus
-            aria-label={t('emoji.search')} placeholder={t('emoji.search')}
-            onChange={(event) => setSearch(event.target.value)} />
-          <EmojiPickerSections mode={mode} query={search.trim().toLowerCase()} personal={emojis}
-            provided={PROVIDED_EMOJIS} busy={busy} onInsert={insertEmoji} onSendSticker={sendSticker} />
-        </div>
-      )}
       <form className={styles.chatInputRow} onSubmit={send}>
         <button type="button" className={styles.pickerBtn} data-emoji-picker
           aria-label={t('emoji.picker')} title={t('emoji.picker')} aria-expanded={pickerOpen}

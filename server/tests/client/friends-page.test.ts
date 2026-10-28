@@ -37,7 +37,7 @@ function account(id: string, nickname: string): PublicAccount {
 }
 
 function friend(id: string, nickname: string): FriendEntry {
-  return { ...account(id, nickname), online: false, inRoom: false, hostedRoomCode: null, lastSeenAt: null };
+  return { ...account(id, nickname), online: false, inRoom: false, hostedRoomCode: null, room: null, lastSeenAt: null };
 }
 
 function conversation(other: PublicAccount, timestamp: number, canSend = true): Conversation {
@@ -193,6 +193,8 @@ describe('independent private messages', () => {
     const today = new Date(2026, 9, 14, 13, 45).getTime();
     expect(listTime(today, 'en', new Date(2026, 9, 14, 20, 0).getTime())).toBe('1:45 PM');
     expect(listTime(today, 'en', new Date(2026, 9, 15, 9, 0).getTime())).toBe('10/14');
+    expect(listTime(today, 'en', new Date(2026, 9, 15, 9, 0).getTime(), 'Yesterday')).toBe('Yesterday');
+    expect(listTime(today, 'en', new Date(2026, 9, 16, 9, 0).getTime(), 'Yesterday')).toBe('10/14');
     const time = render('/messages/bob').match(/<time[^>]*>[^<]*<\/time>/)?.[0];
     expect(time).toMatch(/title="[^"]*\d{4}[^"]*"/);
   });

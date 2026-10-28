@@ -54,8 +54,8 @@ function setOverview(unreadCount: number, withNotifications = false): void {
   useSocialStore.setState({
     status: 'ready',
     incoming: withNotifications
-      ? [{ id: 'incoming-1', requester: BOB, recipient: { ...BOB, id: 'alice' }, createdAt: 1 }] : [],
-    accepted: withNotifications ? [{ id: 'accepted-1', account: BOB, createdAt: 1 }] : [],
+      ? [{ id: 'incoming-1', requester: BOB, recipient: { ...BOB, id: 'alice' }, createdAt: 1, readAt: null }] : [],
+    accepted: withNotifications ? [{ id: 'accepted-1', account: BOB, createdAt: 1, readAt: null }] : [],
     conversations: [{ account: BOB, canSend: true, unreadCount,
       lastMessage: { id: 'message-1', clientId: 'client-1', sender: BOB, recipientId: 'alice',
         timestamp: 1, content: 'Hello' } }],
@@ -187,9 +187,14 @@ describe('topbar navigation', () => {
     const { t } = useI18nStore.getState();
     expect(html).toContain(`aria-label="${t('social.notificationCount', { n: '2' })}"`);
     expect(html).toContain(`aria-label="${t('messages.unreadCount', { n: '4' })}"`);
-    const panel = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(NotificationPanel)));
+    const panel = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(NotificationPanel)))
+      .replace(/<\/?b>/g, '');
     expect(panel).toContain(t('social.incoming', { nickname: 'Bob' }));
     expect(panel).toContain(t('social.accepted', { nickname: 'Bob' }));
+    // Both are unread: tinted rows with an accept and decline pair on the request.
+    expect(panel.match(/data-unread="true"/g)).toHaveLength(2);
+    expect(panel).toContain(`>${t('friends.accept')}</button>`);
+    expect(panel).toContain(`>${t('social.clearRead', { n: '0' })}</button>`);
     expect(panel).not.toContain(t('social.message', { nickname: 'Bob' }));
     expect(panel).not.toContain(t('social.unread', { n: '4' }));
   });

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { DirectMessage } from '@shared/types/direct-message';
-import { GROUP_GAP_MS, groupDirectMessages, groupTimeLabel } from '../../../client/src/messages/message-groups';
+import {
+  GROUP_GAP_MS, groupDirectMessages, groupTimeLabel, messageDay, startsNewDay,
+} from '../../../client/src/messages/message-groups';
 
 function message(id: string, sender: string, timestamp: number): DirectMessage {
   return { id, clientId: `client-${id}`, recipientId: sender === 'me' ? 'you' : 'me', content: id, timestamp,
@@ -27,14 +29,29 @@ describe('direct message groups', () => {
   });
 });
 
-describe('group time label', () => {
+describe('group time label and day separators', () => {
   const now = new Date(2026, 9, 28, 15, 0).getTime();
-  it('shows only the time for today and adds the date for earlier groups', () => {
-    const today = groupTimeLabel(new Date(2026, 9, 28, 9, 5).getTime(), 'en', now);
-    const earlier = groupTimeLabel(new Date(2026, 9, 27, 21, 10).getTime(), 'en', now);
-    expect(today).toMatch(/9:05/);
-    expect(today).not.toMatch(/10\/28/);
-    expect(earlier).toMatch(/10\/27/);
-    expect(earlier).toMatch(/9:10/);
+
+  it('shows only the time on groups', () => {
+    const label = groupTimeLabel(new Date(2026, 9, 27, 21, 10).getTime(), 'en');
+    expect(label).toMatch(/9:10/);
+    expect(label).not.toMatch(/10\/27/);
+  });
+
+  it('names today, yesterday, and earlier dates, adding the year only when it differs', () => {
+    expect(messageDay(new Date(2026, 9, 28, 0, 1).getTime(), 'zh-TW', now)).toEqual({ kind: 'today' });
+    expect(messageDay(new Date(2026, 9, 27, 23, 59).getTime(), 'zh-TW', now)).toEqual({ kind: 'yesterday' });
+    expect(messageDay(new Date(2026, 9, 26, 12).getTime(), 'zh-TW', now)).toEqual({ kind: 'date', label: '10月26日' });
+    expect(messageDay(new Date(2025, 9, 26, 12).getTime(), 'zh-TW', now)).toEqual({ kind: 'date', label: '2025年10月26日' });
+  });
+
+  it('splits a run at midnight and marks where each day starts', () => {
+    const late = new Date(2026, 9, 27, 23, 59).getTime();
+    const groups = groupDirectMessages([message('a', 'you', late), message('b', 'you', late + 2 * 60_000)], 'me');
+    expect(groups).toHaveLength(2);
+    expect(startsNewDay(groups[0], undefined)).toBe(true);
+    expect(startsNewDay(groups[1], groups[0])).toBe(true);
+    const same = groupDirectMessages([message('a', 'you', late - GROUP_GAP_MS * 2), message('b', 'me', late)], 'me');
+    expect(startsNewDay(same[1], same[0])).toBe(false);
   });
 });

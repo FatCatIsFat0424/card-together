@@ -16,6 +16,9 @@ import styles from './MessagesPage.module.css';
 /** Below 700px, or up to 52rem on a tall screen, the list and the chat take turns on one screen. */
 const STACKED_QUERY = '(max-width: 43.75rem), (max-width: 52rem) and (min-height: 501px)';
 
+/** Phone landscape: the title row moves into the list column so the conversation keeps the full height. */
+const COMPACT_QUERY = '(max-height: 500px) and (min-width: 600px)';
+
 export function MessagesPage(): ReactNode {
   const { accountId: otherId } = useParams<{ accountId: string }>();
   const accountId = useAccountStore((state) => state.account?.id);
@@ -25,7 +28,8 @@ export function MessagesPage(): ReactNode {
   const error = useSocialStore((state) => state.error);
   const conversations = useSocialStore((state) => state.conversations);
   const { friends, error: friendsError } = useMessageFriends(accountId);
-  const selectedAccount = friends?.find((friend) => friend.id === otherId)
+  const selectedFriend = friends?.find((friend) => friend.id === otherId);
+  const selectedAccount = selectedFriend
     ?? conversations.find((conversation) => conversation.account.id === otherId)?.account;
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -38,6 +42,7 @@ export function MessagesPage(): ReactNode {
   // Matching list, friend, and conversation errors appear only once.
   const errors = [...new Set([error, friendsError, loadError].filter(Boolean))];
   const mobile = useMediaQuery(STACKED_QUERY);
+  const compact = useMediaQuery(COMPACT_QUERY) && !mobile;
   const { t } = useI18nStore();
   const navigate = useNavigate();
   const closingTo = useMessagesWindowStore((state) => state.closingTo);
@@ -57,36 +62,51 @@ export function MessagesPage(): ReactNode {
     }
   };
 
-  return <main className={styles.page}>
+  const title = <h1>{t('messages.title')}</h1>;
+  const refreshButton = <button type="button" className={`${styles.refreshButton} touch-target`}
+    disabled={refreshing || status === 'loading'} aria-label={t('common.refresh')} title={t('common.refresh')}
+    onClick={() => void refresh()}>
+    <AppIcon name="refresh" />
+  </button>;
+  const notices = <>
+    {status === 'loading' && <p className={styles.status} role="status">{t('common.loading')}</p>}
+    {errors.map((message) => <p key={message} className={styles.error} role="alert">{message}</p>)}
+  </>;
+  const closeLink = (className: string): ReactNode => <Link className={className} to={closeTo}
+    onClick={(event) => closeMessagesWindow(event, closeTo)} aria-label={t('table.close')} title={t('table.close')}>
+    <AppIcon name="close" />
+  </Link>;
+
+  return <main className={`${styles.page} ${compact ? styles.compact : ''}`}>
     <div className={`${styles.layout} ${closingTo ? styles.closing : ''}`} inert={closingTo !== null || undefined}
       onAnimationEnd={(event) => { if (event.target === event.currentTarget && closingTo) navigate(closingTo); }}>
-      <header className={styles.toolbar}>
+      {!compact && <header className={styles.toolbar}>
         <div className={styles.toolbarContent}>
-          <h1>{t('messages.title')}</h1>
-          <button type="button" className={`${styles.refreshButton} touch-target`} disabled={refreshing || status === 'loading'}
-            aria-label={t('common.refresh')} title={t('common.refresh')}
-            onClick={() => void refresh()}>
-            <AppIcon name="refresh" />
-          </button>
+          {title}
+          {refreshButton}
           <p className={styles.retention}>{t('messages.retention')}</p>
-          {status === 'loading' && <p className={styles.status} role="status">{t('common.loading')}</p>}
-          {errors.map((message) => <p key={message} className={styles.error} role="alert">{message}</p>)}
+          {notices}
         </div>
-        <Link className={styles.closeButton} to={closeTo} onClick={(event) => closeMessagesWindow(event, closeTo)}
-          aria-label={t('table.close')} title={t('table.close')}>
-          <AppIcon name="close" />
-        </Link>
-      </header>
+        {closeLink(styles.closeButton)}
+      </header>}
       <div className={styles.panels}>
         <aside className={`${styles.sidebar} ${otherId ? styles.hideOnMobile : ''}`} aria-label={t('messages.back')}>
-          {(!mobile || !otherId) && <MessageConversations selectedId={otherId} split={!mobile} friends={friends} />}
+          {compact && <header className={styles.sideHeader}>{title}{refreshButton}</header>}
+          {compact && errors.length + Number(status === 'loading') > 0 && <div className={styles.sideNotices}>{notices}</div>}
+          {(!mobile || !otherId) && <MessageConversations selectedId={otherId} split={!mobile} friends={friends}
+            searchable={!mobile && !compact} />}
+          {compact && <p className={styles.sideRetention}>{t('messages.retention')}</p>}
         </aside>
         <div className={`${styles.detail} ${!otherId ? styles.hideOnMobile : ''}`}>
           {otherId
             ? <DirectConversation key={`${accountId}:${otherId}`} ownId={accountId} otherId={otherId}
-              initialAccount={selectedAccount}
+              initialAccount={selectedAccount} friend={selectedFriend}
+              onClose={compact ? () => useMessagesWindowStore.getState().close(closeTo) : undefined}
               embedded={!mobile} onLoadError={handleLoadError} refreshVersion={refreshVersion} />
-            : <div className={styles.empty}><AppIcon name="chat" /><p>{t('messages.selectConversation')}</p></div>}
+            : <div className={styles.empty}>
+              {compact && closeLink(`${styles.closeButton} ${styles.emptyClose}`)}
+              <AppIcon name="chat" /><p>{t('messages.selectConversation')}</p>
+            </div>}
         </div>
       </div>
     </div>
