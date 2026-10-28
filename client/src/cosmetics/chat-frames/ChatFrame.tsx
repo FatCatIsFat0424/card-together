@@ -8,6 +8,8 @@ import styles from './ChatFrame.module.css';
 type Corner = 'tl' | 'tr' | 'bl' | 'br';
 
 const FRAME_IDS: ReadonlySet<string> = new Set(CHAT_FRAMES.map((frame) => frame.id));
+/** Frames with a highlight that slides along one edge; the extra element clips it to the edge's length. */
+const RAILED: ReadonlySet<string> = new Set(['chat-frame-starfleet', 'chat-frame-crownrealm']);
 
 /** Unknown ids (a newer server, a retired product) render like an unequipped sender. */
 export function resolveChatFrame(id: string | null | undefined): ChatFrameId | null {
@@ -203,7 +205,7 @@ export function ChatFrame({ id, as: Tag = 'div', className, children }: ChatFram
   const frame = resolveChatFrame(id);
   if (!frame) return <Tag className={className}>{children}</Tag>;
   return <Tag className={[className, styles.frame, styles[frame]].filter(Boolean).join(' ')} data-chat-frame={frame} data-reduced-motion={reducedMotion || undefined}>
-    <span className={styles.bed} aria-hidden="true" />
+    <span className={styles.bed} aria-hidden="true">{RAILED.has(frame) && <span className={styles.rail} />}</span>
     {ORNAMENTS[frame]}
     <div className={styles.content}>{children}</div>
   </Tag>;

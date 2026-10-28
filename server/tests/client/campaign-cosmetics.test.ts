@@ -62,8 +62,10 @@ describe.each(SERIES)('%s campaign cosmetics', (series) => {
     const html = renderToStaticMarkup(createElement(ChatFrame, { id: `chat-frame-${series}`, children: body }));
     expect(html).toContain('<a href="#message">Readable message</a>');
     expect(html).toMatch(/<div class="[^"]*content[^"]*"><a/);
-    expect(html.match(/<svg/g)).toHaveLength(2);
-    expect(html.match(/focusable="false"/g)).toHaveLength(2);
+    // Parts that move are separate elements so the browser animates them on the compositor.
+    const artwork = { starfleet: 3, shrine: 4, ironfront: 2, neoncity: 3, crownrealm: 3 }[series];
+    expect(html.match(/<svg/g)).toHaveLength(artwork);
+    expect(html.match(/focusable="false"/g)).toHaveLength(artwork);
     expect(html.replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, '')).toBe('Readable message');
     const seat = renderToStaticMarkup(createElement(SeatFrame, { frame: `seat-frame-${series}`, turn: true }));
     expect(seat.match(/_corner_/g)).toHaveLength(4);

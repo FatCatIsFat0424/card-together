@@ -39,7 +39,15 @@
 
 .content { position: relative; z-index: 1; min-width: 0; }
 
+/*
+ * A clip window for a sliding highlight: the strip inside is three windows wide and moves by
+ * transform, which the compositor runs; animating background-position would repaint every frame.
+ */
+.rail { position: absolute; overflow: hidden; }
+.rail::before { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 300%; }
+
 .orn { position: absolute; z-index: 0; pointer-events: none; }
+.movingArt { display: block; }
 .tl { top: -5px; left: -4px; }
 .tr { top: -6px; right: -5px; }
 .bl { bottom: -6px; left: -5px; }
@@ -223,9 +231,9 @@
   --f-bg: color-mix(in srgb, #2d7db2 9%, var(--bg-card));
   box-shadow: inset 3px 0 #295589, inset -3px 0 #295589;
 }
-.chat-frame-starfleet .bed::after {
-  left: 8px; right: 8px; bottom: 1px; height: 2px;
-  background: linear-gradient(90deg, transparent, #54cfe7, #f4cf73, transparent) 0 0 / 200% 100%;
+.chat-frame-starfleet .rail { left: 8px; right: 8px; bottom: 1px; height: 2px; }
+.chat-frame-starfleet .rail::before {
+  background: linear-gradient(90deg, transparent, #54cfe7, #f4cf73, transparent) 0 0 / 66.6667% 100% repeat-x;
   animation: commsRail 4s linear infinite;
 }
 .engine { animation: commsPulse 2s ease-in-out infinite; }
@@ -247,7 +255,8 @@
 }
 .chat-frame-ironfront .bed::before { inset: 3px; border: 1px dashed color-mix(in srgb, #829361 35%, transparent); }
 .chat-frame-ironfront .bed::after { left: 2px; top: 4px; bottom: 4px; width: 2px; background: radial-gradient(circle, #b4b783 0 1px, transparent 1.5px) 0 0 / 2px 9px; }
-.radar { transform-origin: 14px 20px; animation: commsRotate 6s linear infinite; }
+/* A quarter-circle sweep centred on (14, 20) of the 48x36 ornament artwork, drawn as an HTML element so it can rotate on the compositor. */
+.radar { bottom: -3.3px; left: -3.8px; width: 14.5px; height: 14.5px; border-radius: 50%; background: conic-gradient(#d2ac5acc 0 25%, transparent 25%); transform-origin: 50% 50%; animation: commsRotate 6s linear infinite; }
 
 .chat-frame-neoncity.chat-frame-neoncity {
   --f-radius: 2px 13px 2px 13px; --f-line: #bd4bb9;
@@ -255,7 +264,8 @@
   border-right: 3px solid #39a4b2;
   box-shadow: 0 0 5px rgb(193 71 191 / 0.18);
 }
-.chat-frame-neoncity .bed::before { left: 0; right: 0; top: 1px; height: 2px; background: repeating-linear-gradient(90deg, #c147bf 0 12px, transparent 12px 22px, #45c5d0 22px 27px, transparent 27px 40px); animation: commsData 5s linear infinite; }
+/* One pattern period (40px) of extra width on the left lets the strip slide right by a period without a gap. */
+.chat-frame-neoncity .bed::before { left: -40px; right: 0; top: 1px; height: 2px; background: repeating-linear-gradient(90deg, #c147bf 0 12px, transparent 12px 22px, #45c5d0 22px 27px, transparent 27px 40px); animation: commsData 5s linear infinite; }
 .chat-frame-neoncity .bed::after { bottom: 2px; right: 5px; width: 28px; height: 2px; background: repeating-linear-gradient(90deg, #c147bf 0 2px, transparent 2px 5px); }
 .signal { animation: commsPulse 2.2s ease-in-out infinite; }
 
@@ -265,15 +275,20 @@
   border-left: 4px solid #355b9b;
 }
 .chat-frame-crownrealm .bed::before { inset: 3px; border: 1px solid color-mix(in srgb, #c69c45 45%, transparent); border-radius: 0 0 9px 0; }
-.chat-frame-crownrealm .bed::after { left: 12px; right: 25px; top: 0; height: 1px; background: linear-gradient(90deg, #b9903c, #ffedb2, #b9903c) 0 0 / 200% 100%; animation: commsRail 6s ease-in-out infinite; }
-.royalGold { animation: royalGleam 4.5s ease-in-out infinite; }
+.chat-frame-crownrealm .rail { left: 12px; right: 25px; top: 0; height: 1px; }
+.chat-frame-crownrealm .rail::before {
+  background: linear-gradient(90deg, #b9903c, #ffedb2, #b9903c) 0 0 / 66.6667% 100% repeat-x;
+  animation: commsRail 6s ease-in-out infinite;
+}
+/* A brighter copy of the crown fades in over it: brightness() on an SVG child repaints every frame. */
+.royalGleam { opacity: 0; animation: royalGleam 4.5s ease-in-out infinite; }
 
-@keyframes commsRail { to { background-position: 200% 0; } }
-@keyframes commsData { to { background-position: 40px 0; } }
+@keyframes commsRail { to { transform: translateX(-66.6667%); } }
+@keyframes commsData { to { transform: translateX(40px); } }
 @keyframes commsPulse { 50% { opacity: 0.55; } }
-@keyframes commsRotate { to { rotate: 360deg; } }
-@keyframes foxfireFloat { 50% { translate: 0 -2px; opacity: 0.6; } }
-@keyframes royalGleam { 50% { filter: brightness(1.25); } }
+@keyframes commsRotate { to { transform: rotate(360deg); } }
+@keyframes foxfireFloat { 50% { transform: translateY(-1.2px); opacity: 0.6; } }
+@keyframes royalGleam { 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
   .frame *, .frame *::before, .frame *::after { animation: none !important; }
 }
