@@ -1,6 +1,7 @@
 import type {
-  Card, ChinesePokerRow, DiceFace, GamePresentation, LiarFace, LiarTableFace, NapoleonCard, NapoleonSummon,
+  Card, ChinesePokerRow, DiceFace, GamePresentation, LiarFace, LiarTableFace, NapoleonCard, NapoleonSummon, Suit,
 } from '../types/game';
+import type { CrazyEightsEffect } from './crazyeights/types';
 import type { GameSeat } from '../types/player';
 
 /** Stamped on new presentations; restored ones keep their version so saved deadlines stay valid. */
@@ -29,7 +30,7 @@ export interface PresentationFrame {
   readonly flipped?: boolean;
   /** Chinese Poker row revealed by this frame */
   readonly row?: ChinesePokerRow;
-  /** Liar's Deck: face-down cards played */
+  /** Liar's Deck: face-down cards played; Crazy Eights: cards drawn */
   readonly count?: number;
   /** Liar's Deck: the round's table face */
   readonly tableFace?: LiarTableFace;
@@ -44,6 +45,10 @@ export interface PresentationFrame {
   readonly handIndex?: number;
   /** Hold'em: the seat's street stake after a call, bet, or raise */
   readonly amount?: number;
+  /** Crazy Eights: the suit an 8 declared */
+  readonly suit?: Suit;
+  /** Crazy Eights: what an action card did */
+  readonly effect?: CrazyEightsEffect;
   /** Napoleon: cards shown, which may include jokers; `cards` stays empty */
   readonly napoleonCards?: readonly NapoleonCard[];
   /** Napoleon: what the lead summoned */

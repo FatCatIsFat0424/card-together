@@ -13,6 +13,7 @@ import { holdemGame, coherentHoldemGame } from './holdem-validation';
 import { napoleonGame, coherentNapoleonGame } from './napoleon-validation';
 import { tenHalfGame, coherentTenHalfGame } from './tenhalf-validation';
 import { liarsDiceGame, coherentLiarsDiceGame } from './liarsdice-validation';
+import { crazyEightsGame, coherentCrazyEightsGame } from './crazyeights-validation';
 
 export interface GameStateValidator<K extends GameType> {
   /** Field types and bounds of a stored game of this type */
@@ -34,6 +35,7 @@ export const GAME_VALIDATORS: { readonly [K in GameType]: GameStateValidator<K> 
   napoleon: { shape: napoleonGame, coherent: coherentNapoleonGame },
   tenhalf: { shape: tenHalfGame, coherent: coherentTenHalfGame },
   liarsdice: { shape: liarsDiceGame, coherent: coherentLiarsDiceGame },
+  crazyeights: { shape: crazyEightsGame, coherent: coherentCrazyEightsGame },
 };
 
 /** Called with a game's own type, the validator accepts that game even when TypeScript only knows the union. */

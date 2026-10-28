@@ -31,6 +31,7 @@ export { isHoldemResult } from '../managers/games/holdem-validation';
 export { isNapoleonResult } from '../managers/games/napoleon-validation';
 export { isTenHalfResult } from '../managers/games/tenhalf-validation';
 export { isLiarsDiceResult } from '../managers/games/liarsdice-validation';
+export { isCrazyEightsResult } from '../managers/games/crazyeights-validation';
 
 function player(value: unknown): boolean {
   return (

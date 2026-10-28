@@ -108,6 +108,13 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('exactBids', 'log', 'count'),
     record('diceInWin', 'result', 'max'),
   ],
+  crazyeights: [
+    record('handsWon', 'result', 'count', true),
+    record('lowScore', 'result', 'min'),
+    record('wildFinishes', 'log', 'count'),
+    record('eights', 'log', 'count'),
+    record('penaltiesDealt', 'log', 'count'),
+  ],
 };
 
 /**

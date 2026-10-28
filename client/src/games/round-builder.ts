@@ -1,8 +1,9 @@
 import type {
   BlackjackOutcome, Card, ChinesePokerCategory, DiceFace, HoldemStreet, LiarFace, LiarTableFace, PlayerVisibleGameState,
-  GameSeat, GameType, TenHalfHandKind,
+  GameSeat, GameType, Suit, TenHalfHandKind,
 } from '@shared/types';
 import type { BigTwoComboType } from '@shared/rules/bigtwo';
+import type { CrazyEightsEffect } from '@shared/games/crazyeights/types';
 
 export interface HistoryAction {
   kind: 'play' | 'pass' | 'round_end' | 'dragon' | 'flip' | 'eliminated' | 'cover' | 'challenge' | 'shot'
@@ -19,8 +20,11 @@ export interface HistoryAction {
   target?: GameSeat | null;
   choice?: 'plus' | 'minus' | null;
   pending?: boolean;
-  /** Liar's Deck: face-down cards played */
+  /** Liar's Deck: face-down cards played; Crazy Eights: cards a 2 made the target draw */
   count?: number;
+  /** Crazy Eights: the suit an 8 named, and what an action card did */
+  suit?: Suit;
+  effect?: CrazyEightsEffect;
   /** Liar's Deck: the revealed play and whether it held a lie */
   faces?: readonly LiarFace[];
   lied?: boolean;

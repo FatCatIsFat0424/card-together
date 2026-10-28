@@ -13,6 +13,7 @@ import { ninetyNineFacts } from './ninetynine';
 import { redPointsFacts } from './redpoints';
 import { sevensFacts } from './sevens';
 import { tenHalfFacts } from './tenhalf';
+import { crazyEightsFacts } from './crazyeights';
 
 /** Every registered game supplies facts for its own result contract. */
 export const GAME_STATS: {
@@ -30,6 +31,7 @@ export const GAME_STATS: {
   napoleon: napoleonFacts,
   tenhalf: tenHalfFacts,
   liarsdice: liarsDiceFacts,
+  crazyeights: crazyEightsFacts,
 };
 
 export function gameFacts<K extends GameType>(

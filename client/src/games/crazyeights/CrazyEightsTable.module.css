@@ -1,0 +1,236 @@
+/* ─── CrazyEightsTable styles: piles, suit in force, hand controls, info rail, settlement ─── */
+
+/* ─── Table center ─── */
+.centre {
+  /* Grow with the table (the centre column is the size container): the piles and the suit badge share
+     the centre cell between the side seats. */
+  --card-w: max(44px, min(calc(132px * var(--playing-card-scale)), 15cqh, 9cqw));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--table-ink);
+}
+
+.card {
+  flex: none;
+  display: block;
+  width: var(--card-w);
+  aspect-ratio: 224 / 313;
+  border-radius: calc(var(--card-w) * 0.08);
+  background: var(--card-face);
+  box-shadow: var(--shadow-md);
+}
+
+.pileRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--spacing-md);
+}
+
+.pile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+
+/* The stock doubles as a draw button while drawing is the only move. */
+.drawable {
+  cursor: pointer;
+  border-radius: calc(var(--card-w) * 0.1);
+  animation: nudge 1.4s ease-in-out infinite;
+}
+
+.drawable:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+@keyframes nudge {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.back {
+  position: relative;
+  flex: none;
+  width: var(--card-w);
+  aspect-ratio: 224 / 313;
+  border-radius: calc(var(--card-w) * 0.08);
+  background: var(--card-back);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--card-back) 70%, transparent), var(--shadow-md);
+}
+
+/* The edge sits above the image. An outline would be repainted whenever the animated image moves. */
+.back::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: var(--card-back-outline, none);
+  pointer-events: none;
+}
+
+/* Image on its own layer so a custom back can fade over the theme card base. */
+.back::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--card-back-image) center / var(--card-back-size, 100% 100%) no-repeat;
+  opacity: var(--card-back-opacity, 1);
+}
+
+.lastCard { animation: flyIn 0.4s ease-out; }
+
+@keyframes flyIn {
+  0% { transform: translateY(-12px) scale(1.08); opacity: 0.4; }
+  100% { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lastCard, .drawable, .activeSuit { animation: none; }
+}
+
+.pill {
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--bg-page) 45%, transparent);
+  border: 1px solid var(--rail-border);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ─── Suit in force, direction, hand number ─── */
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.suit {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.9em;
+  height: 1.9em;
+  padding: 0 4px;
+  border-radius: var(--radius-md);
+  background: var(--card-face);
+  color: var(--card-ink-black);
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: var(--shadow-sm);
+}
+
+.red { color: var(--card-ink-red); }
+
+.activeSuit {
+  font-size: clamp(1.4rem, 5cqh, 2.4rem);
+  animation: bump 0.35s ease;
+}
+
+@keyframes bump {
+  0% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.direction {
+  font-size: clamp(1.4rem, 5cqh, 2.4rem);
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ─── Hand controls ─── */
+.handArea {
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 6px var(--spacing-sm) 0;
+}
+
+.ctrl {
+  min-height: 36px;
+  padding: 4px 14px;
+  font-size: var(--text-sm);
+}
+
+/* Suit pickers stay compact squares; the symbol carries the meaning, the label serves screen readers. */
+.suitButton {
+  min-width: 44px;
+  padding: 4px 8px;
+  background: var(--card-face);
+  color: var(--card-ink-black);
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.suitButton.red { color: var(--card-ink-red); }
+
+/* ─── Info rail ─── */
+.count {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.recentTotal {
+  min-width: 2.2em;
+  text-align: right;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.mini {
+  --card-w: calc((24px) * var(--playing-card-scale));
+  box-shadow: var(--shadow-sm);
+}
+
+.miniSuit {
+  min-width: 1.5em;
+  height: 1.5em;
+  font-size: var(--text-sm);
+}
+
+.effect {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.muted { color: var(--text-secondary); }
+
+/* ─── Settlement ─── */
+.rankTable td,
+.rankTable th { text-align: left; }
+
+@media (max-width: 767px) {
+  .centre { --card-w: calc((clamp(36px, 11vw, 52px)) * var(--playing-card-scale)); gap: 6px; }
+  .mini { --card-w: calc((20px) * var(--playing-card-scale)); }
+  .ctrl { min-height: 40px; padding: 4px 10px; }
+}
+
+/* Short landscape: the suit status sits beside the piles so the low centre keeps its text unscaled. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .centre { flex-direction: row; gap: var(--spacing-md); }
+  .status { flex-direction: column; }
+}

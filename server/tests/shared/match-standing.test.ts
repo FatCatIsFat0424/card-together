@@ -44,6 +44,17 @@ describe('ranking games', () => {
     expect(stand(stockOut, 'E')).toMatchObject({ tied: true, players: 3 });
   });
 
+  it('ranks Crazy Eights by the lowest total, with equal totals sharing the win', () => {
+    const scores = { N: 12, E: 12, S: 40, W: 3, P5: 0, P6: 0, P7: 0, P8: 0 };
+    const result: MatchResult = { gameType: 'crazyeights', seats: ['N', 'E', 'S', 'W'], hands: 3,
+      handWinners: ['W', 'W', 'N'], scores, winners: ['W'] };
+    expect(ranks(result, NESW)).toEqual([2, 2, 4, 1]);
+    expect(wins(result, NESW)).toEqual([false, false, false, true]);
+    const tied: MatchResult = { ...result, scores: { ...scores, W: 12 }, winners: ['N', 'E', 'W'] };
+    expect(ranks(tied, NESW)).toEqual([1, 1, 4, 1]);
+    expect(stand(tied, 'E')).toMatchObject({ tied: true, won: true, score: 12, players: 4 });
+  });
+
   it('ranks Liar\'s Deck eliminated seats in reverse order of elimination', () => {
     const result: MatchResult = { gameType: 'liarsdeck', winnerSeat: 'E', eliminationOrder: ['S', 'W', 'N'],
       shots: { N: 3, E: 1, S: 1, W: 2 }, rounds: 7 };

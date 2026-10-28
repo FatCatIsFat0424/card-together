@@ -31,6 +31,7 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
   const actionCount = game.bigTwo?.log.filter((entry) =>
     'seat' in entry && entry.seat === room.mySeat).length ??
     game.ninetyNine?.log.filter((entry) => entry.seat === room.mySeat).length ??
+    game.crazyEights?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
     game.sevens?.log.filter((entry) => entry.seat === room.mySeat).length ??
     game.liarsDeck?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
     game.liarsDice?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??

@@ -20,6 +20,8 @@ const CHOICES: GameOptions = {
   ninetynine: { twoDecks: true },
   blackjack: { playerDealer: true },
   napoleon: { jokerSummon: false },
+  // Added after schema v9, so migrated rooms take its default.
+  crazyeights: { actionCards: false },
 };
 
 function fixture(gameType: GameType = 'sevens'): {
@@ -71,7 +73,7 @@ describe('room options document migration', () => {
     const migrated = migrateDocument(withoutOptions) as ReturnType<typeof emptyDocument>;
     expect(migrated.runtime?.rooms[0].info.gameOptions).toEqual({
       sevens: { closeOnEnd: false }, ninetynine: { twoDecks: false },
-      blackjack: { playerDealer: false }, napoleon: { jokerSummon: true },
+      blackjack: { playerDealer: false }, napoleon: { jokerSummon: true }, crazyeights: { actionCards: false },
     });
     expect(migrated.runtime?.games).toEqual(untouched.games);
     expect(migrated.runtime?.players).toEqual(untouched.players);

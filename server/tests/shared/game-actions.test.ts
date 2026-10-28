@@ -46,6 +46,10 @@ const ACTIONS = [
   { gameType: 'napoleon', action: { type: 'play', card: { joker: 'small' }, leadSuit: 'hearts', summon: 'secretary' } },
   { gameType: 'liarsdice', action: { type: 'bid', quantity: 12, face: 6 } },
   { gameType: 'liarsdice', action: { type: 'challenge' } },
+  { gameType: 'crazyeights', action: { type: 'play', card, suit: 'hearts' } },
+  { gameType: 'crazyeights', action: { type: 'play', card } },
+  { gameType: 'crazyeights', action: { type: 'draw' } },
+  { gameType: 'crazyeights', action: { type: 'pass' } },
 ] satisfies readonly GameActionEnvelope[];
 
 function inject(value: unknown, strictCards = false): unknown {
@@ -124,6 +128,9 @@ describe('game action contracts', () => {
     ['napoleon', { type: 'discard', cards: Array(2) }, 'Invalid action.'],
     ['napoleon', { type: 'play', card, leadSuit: 'nt' }, 'Invalid action.'],
     ['napoleon', { type: 'play', card, summon: 'unknown' }, 'Invalid action.'],
+    ['crazyeights', { type: 'play', card, suit: 'stars' }, 'Invalid suit.'],
+    ['crazyeights', { type: 'play', card: { ...card, rank: 1 } }, 'Invalid card.'],
+    ['crazyeights', { type: 'discard' }, 'Invalid action.'],
   ];
   it.each(malformed)('rejects malformed %s action %#', (gameType, action, error) => {
     expect(parseGameAction({ gameType, action })).toBe(error);

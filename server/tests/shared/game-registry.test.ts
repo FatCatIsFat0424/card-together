@@ -18,6 +18,7 @@ const PREVIOUS_SEATS: Readonly<Record<GameType, readonly [min: number, max: numb
   napoleon: [4, 6, true, true],
   tenhalf: [2, 8, true, false],
   liarsdice: [2, 8, true, false],
+  crazyeights: [2, 8, true, false],
 };
 
 describe('shared game registry', () => {
@@ -33,7 +34,7 @@ describe('shared game registry', () => {
   });
 
   it('lists the expandable rooms in lobby order', () => {
-    expect(EXPANDABLE_ROOM_GAMES).toEqual(['ninetynine', 'blackjack', 'holdem', 'napoleon', 'tenhalf', 'liarsdice']);
+    expect(EXPANDABLE_ROOM_GAMES).toEqual(['ninetynine', 'blackjack', 'holdem', 'napoleon', 'tenhalf', 'liarsdice', 'crazyeights']);
   });
 
   it('classifies the dice game by its category and gives chips only to the betting games', () => {
@@ -61,14 +62,14 @@ describe('registered result metadata', () => {
       ['bridge', 'team', null], ['bigtwo', 'ranking', 'penalty'], ['redpoints', 'ranking', 'points'],
       ['ninetynine', 'ranking', null], ['sevens', 'ranking', 'penalty'], ['chinesepoker', 'ranking', 'points'],
       ['liarsdeck', 'ranking', null], ['blackjack', 'ranking', 'chips'], ['holdem', 'ranking', 'chips'],
-      ['napoleon', 'roles', null], ['tenhalf', 'ranking', 'chips'], ['liarsdice', 'ranking', null],
+      ['napoleon', 'roles', null], ['tenhalf', 'ranking', 'chips'], ['liarsdice', 'ranking', null], ['crazyeights', 'ranking', 'penalty'],
     ]);
   });
 
-  it('gives only Holdem the waiting-room fixed hand count', () => {
+  it('gives only Hold\'em and Crazy Eights the waiting-room fixed hand count', () => {
     expect(GAME_TYPES.flatMap((gameType) => {
       const hands = gameDefinition(gameType).matchHands;
       return hands === undefined ? [] : [[gameType, hands]];
-    })).toEqual([['holdem', 20]]);
+    })).toEqual([['holdem', 20], ['crazyeights', 3]]);
   });
 });

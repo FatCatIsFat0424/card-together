@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { CrazyEightsLogEntry } from '@shared/games/crazyeights/types';
 import type { BigTwoLogEntry, Card, NinetyNineLogEntry, RedPointsLogEntry, SevensLogEntry } from '@shared/types';
 import { deriveRoundHistory } from '../../../client/src/games/round-history';
 
@@ -76,6 +77,25 @@ describe('round history', () => {
     expect(rounds[2].actions[0]).toMatchObject({ previousTotal: 0, total: 10, choice: 'plus' });
     expect(rounds.every((round) => round.complete)).toBe(true);
     expect(deriveRoundHistory(structuredClone(input))).toEqual(rounds);
+  });
+
+  it('should group Crazy Eights actions by hand and list each seat\'s leftover points', () => {
+    const points = { N: 0, E: 9, S: 50, W: 0, P5: 0, P6: 0, P7: 0, P8: 0 };
+    const log: CrazyEightsLogEntry[] = [
+      { type: 'hand', hand: 1, first: 'N', starter: card, timestamp: 1 },
+      { type: 'play', seat: 'N', card: { suit: 'clubs', rank: 8 }, suit: 'hearts', effect: null, target: null, drawn: 0, timestamp: 2 },
+      { type: 'draw', seat: 'E', timestamp: 3 },
+      { type: 'pass', seat: 'E', timestamp: 3 },
+      { type: 'handEnd', hand: 1, winner: 'N', points: { ...points, E: 9, S: 50 }, timestamp: 4 },
+      { type: 'hand', hand: 2, first: 'E', starter: captured, timestamp: 5 },
+    ];
+    const rounds = deriveRoundHistory({ gameType: 'crazyeights', phase: 'playing', log, seats: ['N', 'E', 'S'] });
+    expect(rounds.map((round) => [round.number, round.complete])).toEqual([[1, true], [2, false]]);
+    expect(rounds[0].actions.map((action) => action.kind)).toEqual(['deal', 'play', 'hit', 'pass', 'settle', 'settle', 'settle']);
+    expect(rounds[0].actions[1]).toMatchObject({ seat: 'N', suit: 'hearts', cards: [{ suit: 'clubs', rank: 8 }] });
+    expect(rounds[0].actions.filter((action) => action.kind === 'settle').map((action) => [action.seat, action.points]))
+      .toEqual([['N', 0], ['E', 9], ['S', 50]]);
+    expect(rounds[1].actions).toEqual([{ kind: 'deal', seat: 'E', cards: [captured] }]);
   });
 
   it('should group Sevens actions by rotation and never show covered cards', () => {

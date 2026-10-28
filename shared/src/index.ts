@@ -14,5 +14,6 @@ export * from './rules/holdem';
 export * from './rules/cards';
 export * from './rules/napoleon';
 export * from './rules/tenhalf';
+export * from './rules/crazyeights';
 export * from './rules/match-standing';
 export * from './rules/seats';

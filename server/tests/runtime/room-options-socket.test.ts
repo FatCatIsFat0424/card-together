@@ -64,6 +64,7 @@ describe.each(REPOSITORY_ADAPTERS)('unified room options ($name)', (adapter) => 
       { gameType: 'ninetynine', options: { twoDecks: true } },
       { gameType: 'blackjack', options: { playerDealer: true } },
       { gameType: 'napoleon', options: { jokerSummon: false } },
+      { gameType: 'crazyeights', options: { actionCards: true } },
     ] satisfies readonly GameOptionsPayload[]) {
       await host.emitWithAck('room:setGameType', { gameType: payload.gameType });
       expect(await host.emitWithAck('room:setGameOptions', payload)).toEqual({ success: true });
@@ -72,7 +73,7 @@ describe.each(REPOSITORY_ADAPTERS)('unified room options ($name)', (adapter) => 
     await host.emitWithAck('room:setGameType', { gameType: 'sevens' });
     expect(rooms.getRoomInfo(code)?.gameOptions).toEqual({
       sevens: { closeOnEnd: false }, ninetynine: { twoDecks: true },
-      blackjack: { playerDealer: true }, napoleon: { jokerSummon: false },
+      blackjack: { playerDealer: true }, napoleon: { jokerSummon: false }, crazyeights: { actionCards: true },
     });
   });
 });

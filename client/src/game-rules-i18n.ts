@@ -184,6 +184,15 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Calling', 'Every cup is lifted and the bid face is counted. At least the bid: the caller loses a die. Fewer: the bidder loses a die.', 'The loser opens the next round, or the next player clockwise if they have no dice left.'),
     section('Winning', 'A player with no dice is out. The last player with dice wins; later eliminations rank higher.'),
   ],
+  crazyeights: [
+    section('Goal and match', 'Empty your hand first. A match is three hands: after each, everyone else adds the points left in their hand, and the lowest total wins. Tied totals share the win.', 'Two to eight players. Five cards each, seven heads-up. Five or more players share two decks (104 cards), so two copies of every card exist.', 'Random first player, then counterclockwise; each later hand starts one seat further along.'),
+    section('Playing a card', 'Play a card of the suit in force, or one that matches the top card’s rank. The turned-up starter is never an 8, and action cards on it have no effect.', 'If any card in your hand is playable, you must play one; you cannot draw instead.'),
+    section('Eights', 'An 8 is wild: play it any time and name the suit that must follow. The next player may match that suit or play any 8.', 'The last card of a hand needs no suit.'),
+    section('Drawing', 'With no playable card, draw one. If it fits you may play it or pass; if not, your turn passes. When the stock runs out, the discards below the top card are shuffled back. With nothing left to draw, you pass.'),
+    table('Leftover card points', ['Card', 'Points'], [['8', '50'], ['K, Q, J, 10', '10'], ['A', '1'], ['2–9', 'Face value']], 'The player who goes out scores 0 for the hand; everyone else adds the points of the cards they still hold.'),
+    section('Option: action cards (default off)', '2: the next player draws two cards and is skipped. Q: the next player is skipped. A: play reverses; heads-up, it skips the opponent so you play again.', 'A card that empties your hand has no effect, and effects do not stack.'),
+    section('Timer', 'On timeout a legal move is made for you. Each hand refills the reserve.'),
+  ],
 };
 
 const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
@@ -322,12 +331,21 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('開', '掀開所有骰盅，統計所喊的點數。達到所喊個數，開的人少一顆骰子；不足，則喊的人少一顆。', '輸的人先喊下一輪；若他已沒有骰子，則由順時針下一位開始。'),
     section('勝負', '骰子用完即淘汰，最後還有骰子的人獲勝；越晚淘汰名次越高。'),
   ],
+  crazyeights: [
+    section('目標與對局', '最先出完手牌者獲勝。一場打 3 手，每手結束後其他人加上手中剩牌的點數，總和最低者勝；總和相同則並列獲勝。', '2～8 人。每人 5 張，2 人時 7 張。5 人以上共用兩副牌（104 張），每種牌各有兩張。', '隨機先手，之後逆時針輪流；之後每一手由下一個座位先出。'),
+    section('出牌', '出一張與目前花色相同，或與頂牌點數相同的牌。翻開的起始牌不會是 8，若是功能牌也不生效。', '手中有任何可出的牌就必須出牌，不能改摸牌。'),
+    section('8 為萬用牌', '8 隨時可以出，並指定接下來要跟的花色；下一位可出該花色的牌，或任何一張 8。', '手上最後一張牌是 8 時不需要指定花色。'),
+    section('摸牌', '沒有可出的牌就摸一張；摸到的牌能出就可以出或跳過，不能出就換下一位。牌堆用完時，頂牌以下的棄牌洗回牌堆；完全沒牌可摸時直接跳過。'),
+    table('剩牌點數', ['牌', '點數'], [['8', '50'], ['K、Q、J、10', '10'], ['A', '1'], ['2～9', '牌面點數']], '出完手牌的人這一手得 0 點；其他人加上手中剩牌的點數。'),
+    section('選項：功能牌（預設關閉）', '2：下一位摸 2 張並跳過。Q：跳過下一位。A：迴轉方向；2 人時等於跳過對手，由自己再出一次。', '出完最後一張牌時不生效，效果不能疊加。'),
+    section('計時', '逾時由系統代為出一步合法動作。每一手補滿保留時間。'),
+  ],
 };
 
 const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> = {
   en: [
     table('Room setup', ['Item', 'Rule'], [
-      ['Players', 'Ninety-Nine, Blackjack, Hold’em, Liar’s Dice 2–8; Napoleon 4–6; others 4'],
+      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice 2–8; Napoleon 4–6; others 4'],
       ['Seat order', 'Clockwise N → E → S → W → P5–P8, skipping empty seats'],
       ['Start', 'Once everyone seated is ready, the host presses Start'],
       ['Bots', 'The host adds or removes them; at least one human must sit'],
@@ -343,7 +361,7 @@ const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> =
   ],
   'zh-TW': [
     table('房間設定', ['項目', '規則'], [
-      ['人數', '99、21 點、德州撲克、吹牛骰 2～8 人；拿破崙 4～6 人；其他 4 人'],
+      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰 2～8 人；拿破崙 4～6 人；其他 4 人'],
       ['座位順序', '順時針 北 → 東 → 南 → 西 → 第 5～8 席，跳過空位'],
       ['開始', '入座者都準備後，由房主按開始'],
       ['Bot', '房主可加入或移除；至少需一位真人入座'],

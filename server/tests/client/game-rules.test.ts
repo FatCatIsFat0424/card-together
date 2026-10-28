@@ -65,6 +65,7 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
   napoleon: { en: 'Secretary card', 'zh-TW': '秘書牌' },
   tenhalf: { en: 'Special hands: strongest first', 'zh-TW': '特殊牌型：由大到小' },
   liarsdice: { en: 'Calling', 'zh-TW': '開' },
+  crazyeights: { en: 'Eights', 'zh-TW': '8 為萬用牌' },
 };
 
 describe('contextual game rules', () => {
@@ -104,13 +105,13 @@ describe('contextual game rules', () => {
   });
 
   it('defaults legacy room options to off and limits status to the selected game', () => {
-    for (const gameType of ['sevens', 'ninetynine', 'blackjack'] as const) {
+    for (const gameType of ['sevens', 'ninetynine', 'blackjack', 'crazyeights'] as const) {
       const context = roomRulesContext(room(gameType));
       expect(context.option?.enabled).toBe(false);
       expect(render(gameType, context)).toContain('<dd>Off</dd>');
       expect(context.active).toBe(false);
     }
-    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon'].includes(type))) {
+    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights'].includes(type))) {
       expect(roomRulesContext(room(gameType, { gameOptions: { sevens: { closeOnEnd: true } } })).option).toBeNull();
     }
     // Joker summoning is the one option that defaults to on.

@@ -13,6 +13,7 @@ import { holdemAdapter } from './holdem-adapter';
 import { napoleonAdapter } from './napoleon-adapter';
 import { tenHalfAdapter } from './tenhalf-adapter';
 import { liarsDiceAdapter } from './liarsdice-adapter';
+import { crazyEightsAdapter } from './crazyeights-adapter';
 
 /** Every game type maps to its own adapter; a missing or mismatched entry fails to compile. */
 export const GAME_ADAPTERS: { readonly [K in GameType]: GameAdapter<K> } = {
@@ -28,6 +29,7 @@ export const GAME_ADAPTERS: { readonly [K in GameType]: GameAdapter<K> } = {
   napoleon: napoleonAdapter,
   tenhalf: tenHalfAdapter,
   liarsdice: liarsDiceAdapter,
+  crazyeights: crazyEightsAdapter,
 };
 
 /**

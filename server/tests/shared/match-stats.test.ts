@@ -93,6 +93,25 @@ describe('result records', () => {
 });
 
 describe('log records', () => {
+  it('Crazy Eights: hands won and the lowest total from the result, 8s, wild finishes and penalties from the log', () => {
+    const zero = { N: 0, E: 0, S: 0, W: 0, P5: 0, P6: 0, P7: 0, P8: 0 };
+    const result: MatchResult = { gameType: 'crazyeights', seats: ['N', 'E', 'S'], hands: 3, handWinners: ['N', 'E', 'N'],
+      scores: { ...zero, N: 4, E: 17, S: 61 }, winners: ['N'] };
+    const entry = (seat: Seat, played: Card, effect: 'draw' | null = null, drawn = 0) => ({ type: 'play' as const, seat,
+      card: played, suit: played.rank === 8 ? 'hearts' as const : null, effect, target: effect ? 'E' as const : null,
+      drawn, timestamp: 1 });
+    const frame = { gameType: 'crazyeights', log: [
+      entry('N', card('clubs', 8)), entry('S', card('hearts', 2), 'draw', 2),
+      { type: 'handEnd', hand: 1, winner: 'N', points: zero, timestamp: 1 },
+      entry('N', card('spades', 8)),
+      { type: 'handEnd', hand: 2, winner: 'N', points: zero, timestamp: 2 },
+    ] } as unknown as ReplaySnapshot;
+    expect(matchFacts(result, 'N', null)).toMatchObject({ counts: { handsWon: 2 }, values: { lowScore: 4 } });
+    expect(matchFacts(result, 'N', frame).counts).toEqual({ handsWon: 2, eights: 2, wildFinishes: 1 });
+    expect(matchFacts(result, 'S', frame)).toMatchObject({ counts: { penaltiesDealt: 2 }, values: { lowScore: 61 } });
+    expect(matchFacts(result, 'E', null).counts).toEqual({ handsWon: 1 });
+  });
+
   it('99: spade aces, kings, and every seat knocked out right after the seat played', () => {
     const result: NinetyNineMatchResult = { gameType: 'ninetynine', eliminationOrder: ['E', 'S', 'W'], finalTotal: 99, winnerSeat: 'N' };
     const play = (seat: Seat, played: Card) => ({ type: 'play' as const, seat, card: played, choice: null, target: null,

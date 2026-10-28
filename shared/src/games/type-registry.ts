@@ -10,6 +10,7 @@ import type { BlackjackGameContract } from './blackjack/types';
 import type { HoldemGameContract } from './holdem/types';
 import type { NapoleonGameContract } from './napoleon/types';
 import type { TenHalfGameContract } from './tenhalf/types';
+import type { CrazyEightsGameContract } from './crazyeights/types';
 import type { GameAutomation } from '../types/game';
 import type { GameSeat } from '../types/player';
 
@@ -27,6 +28,7 @@ export interface GameTypeRegistry {
   readonly napoleon: NapoleonGameContract;
   readonly tenhalf: TenHalfGameContract;
   readonly liarsdice: LiarsDiceGameContract;
+  readonly crazyeights: CrazyEightsGameContract;
 }
 
 export type GameType = keyof GameTypeRegistry;

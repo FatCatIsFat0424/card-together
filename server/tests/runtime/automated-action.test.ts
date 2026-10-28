@@ -14,7 +14,7 @@ const CODE = 'FALL01';
 describe('first legal automated action', () => {
   afterEach(() => { games.restoreGames([]); vi.restoreAllMocks(); });
 
-  it.each<GameType>(['bridge', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'chinesepoker', 'liarsdeck', 'blackjack', 'holdem'])(
+  it.each<GameType>(['bridge', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'chinesepoker', 'liarsdeck', 'blackjack', 'holdem', 'crazyeights'])(
     'is accepted on every turn of a %s game until it ends', (type) => {
       let seed = 17;
       vi.spyOn(Math, 'random').mockImplementation(() => {

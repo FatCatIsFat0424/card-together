@@ -79,7 +79,7 @@ describe('lobby page', () => {
     expect(gamesInCategory('dice')).toEqual(['liarsdice']);
     expect(gamesInCategory('board')).toEqual([]);
     // Artwork is generated separately, so a game without it must still list (see `GAME_CARD_ART`).
-    const unillustrated = ['tenhalf', 'liarsdice'];
+    const unillustrated = ['tenhalf', 'liarsdice', 'crazyeights'];
     for (const gameType of GAME_TYPES.filter((type) => !unillustrated.includes(type))) expect(GAME_CARD_ART[gameType]).toBeTruthy();
   });
 

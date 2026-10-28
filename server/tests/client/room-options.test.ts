@@ -35,13 +35,15 @@ const optionIds = {
   ninetynine: 'ninetynine-two-decks-hint',
   blackjack: 'blackjack-player-dealer-hint',
   napoleon: 'napoleon-joker-summon-hint',
+  crazyeights: 'crazyeights-action-cards-hint',
 } as const;
-const configuredGames = ['sevens', 'ninetynine', 'blackjack', 'napoleon'] as const;
+const configuredGames = ['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights'] as const;
 const saved: GameOptions = {
   sevens: { closeOnEnd: true, slayEffect: 'fire' },
   ninetynine: { twoDecks: true },
   blackjack: { playerDealer: true },
   napoleon: { jokerSummon: false },
+  crazyeights: { actionCards: true },
 };
 
 function room(gameType: GameType, gameOptions?: GameOptions): RoomInfo {
@@ -130,6 +132,7 @@ describe('per-game room options', () => {
     ['ninetynine', { twoDecks: false }],
     ['blackjack', { playerDealer: false }],
     ['napoleon', { jokerSummon: false }],
+    ['crazyeights', { actionCards: false }],
   ] as const)('emits the typed game/options payload for %s', (gameType, options) => {
     render(room(gameType, saved));
     option(optionIds[gameType]).onChange(false);

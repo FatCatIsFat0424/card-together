@@ -240,7 +240,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const {
     phase, turn, declarer, dealer, playing, bigTwoCards, redPointsCards, ninetyNineCards, locked, captured, busted,
     sevensCards, sevensCovered, chinesePokerCards, arranging, arranged, autoArranged, blackjackCards, holdemCards,
-    napoleonCards, tenHalfCards, diceCards,
+    napoleonCards, tenHalfCards, diceCards, crazyEightsCards,
   } = useGameStore(useShallow((state) => ({
     sevensCards: gameSeatValue(state.sevens?.handCounts, seat) ?? null,
     // Blackjack hands are drawn face up on the table, so the plate shows no card backs.
@@ -258,6 +258,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
     arranged: state.chinesePoker?.phase === 'arranging' && gameSeatValue(state.chinesePoker.submitted, seat),
     autoArranged: (isCompassSeat(seat) && state.chinesePoker?.autoArranged.includes(seat)) ?? false,
     ninetyNineCards: gameSeatValue(state.ninetyNine?.handCounts, seat) ?? null,
+    crazyEightsCards: gameSeatValue(state.crazyEights?.handCounts, seat) ?? null,
     busted: state.ninetyNine?.eliminated.includes(seat) ?? false,
     phase: state.phase,
     turn: state.currentTurnSeat === seat,
@@ -332,7 +333,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
     arranged: arranged || betPlaced || napoleonReviewed,
   });
   const cards = stats !== undefined ? 0 : bigTwoCards ?? redPointsCards ?? ninetyNineCards ?? sevensCards ?? chinesePokerCards
-    ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? diceCards ?? napoleonCards ?? tenHalfCards
+    ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? diceCards ?? napoleonCards ?? tenHalfCards ?? crazyEightsCards
     ?? remainingCards(seat, playing);
   // A Hold'em fold outranks a timeout in the status slot, so a timed-out fold keeps the timeout icon.
   const heStatusLabel: TranslationKey | null = heOut && status === 'busted' ? 'holdem.out'

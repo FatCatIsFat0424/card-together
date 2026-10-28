@@ -24,6 +24,7 @@ import type {
   NapoleonVisibleState,
   TenHalfVisibleState,
 } from '@shared/types';
+import type { CrazyEightsVisibleState } from '@shared/games/crazyeights/types';
 import { clientGame } from '../games/registry';
 import type { HeldHoleCards } from '../games/holdem/holdem-view';
 import { equalSnapshotValue } from './snapshot-equality';
@@ -45,6 +46,7 @@ export interface GameStoreState {
   holdemHeld: HeldHoleCards | null;
   napoleon: NapoleonVisibleState | null;
   tenhalf: TenHalfVisibleState | null;
+  crazyEights: CrazyEightsVisibleState | null;
   gameType: GameType | null;
   phase: GamePhase | null;
   myHand: Card[];
@@ -79,6 +81,7 @@ const initialState: GameStoreState = {
   holdemHeld: null,
   napoleon: null,
   tenhalf: null,
+  crazyEights: null,
   gameType: null,
   phase: null,
   myHand: [],
