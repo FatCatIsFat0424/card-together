@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import type { FriendEntry, FriendRequest, FriendsData, PublicAccount } from '@shared/types/social';
+import type { GameType } from '@shared/types';
+import type { FriendEntry, FriendPlayStats, FriendRequest, FriendsData, PublicAccount } from '@shared/types/social';
 import type { AccountRecord, FriendshipRecord, Repository } from '../database/repository';
 
 interface FriendError {
@@ -12,7 +13,7 @@ type FriendResult<T> = { readonly success: true; readonly data: T } | FriendErro
 
 /** Live presence is added by the HTTP route after reading accepted-friend metadata. */
 export type FriendList = Omit<FriendsData, 'friends'> & {
-  readonly friends: Omit<FriendEntry, 'online' | 'inRoom' | 'hostedRoomCode'>[];
+  readonly friends: Omit<FriendEntry, 'online' | 'inRoom' | 'hostedRoomCode' | 'room'>[];
 };
 
 export interface FriendService {
@@ -23,6 +24,8 @@ export interface FriendService {
   accept(accountId: string, requestId: string): Promise<FriendResult<null>>;
   dismiss(accountId: string, requestId: string): Promise<FriendResult<null>>;
   remove(accountId: string, friendId: string): Promise<FriendResult<null>>;
+  /** Matches played together and each friend's favorite game, keyed by friend ID. */
+  playStats(accountId: string): Promise<Record<string, FriendPlayStats>>;
 }
 
 export function publicProfile(account: AccountRecord): PublicAccount {
@@ -50,6 +53,15 @@ function requestProfile(
     recipient: publicProfile(recipient),
     createdAt: record.createdAt,
   };
+}
+
+/** The most frequent game; ties go to the one played most recently (histories are newest first). */
+export function favoriteGame(gameTypes: readonly GameType[]): GameType | null {
+  const counts = new Map<GameType, number>();
+  for (const gameType of gameTypes) counts.set(gameType, (counts.get(gameType) ?? 0) + 1);
+  let best: GameType | null = null;
+  for (const [gameType, count] of counts) if (best === null || count > counts.get(best)!) best = gameType;
+  return best;
 }
 
 function normalizeUsername(username: unknown): string | null {
@@ -177,6 +189,24 @@ export function createFriendService(repository: Repository): FriendService {
 
     async areFriends(accountId: string, otherId: string): Promise<boolean> {
       return Boolean(await acceptedFriendship(accountId, otherId));
+    },
+
+    async playStats(accountId: string): Promise<Record<string, FriendPlayStats>> {
+      const relationships = await repository.listFriendships(accountId);
+      const friendIds = relationships.filter((relationship) => relationship.status === 'accepted')
+        .map((relationship) => relationship.requesterId === accountId ? relationship.recipientId : relationship.requesterId);
+      const own = await repository.listMatches(accountId);
+      const stats: Record<string, FriendPlayStats> = {};
+      await Promise.all(friendIds.map(async (friendId): Promise<void> => {
+        const friend = await repository.getAccountById(friendId);
+        if (!friend) return;
+        const together = own.filter((match) => match.accountIds.includes(friendId)).length;
+        // The favorite game reads the friend's own history, so it follows their privacy setting
+        // (as `canViewMatchHistory` does for another viewer).
+        const history = friend.matchesPublic ? await repository.listMatches(friendId) : [];
+        stats[friendId] = { together, favoriteGame: favoriteGame(history.map((match) => match.result.gameType)) };
+      }));
+      return stats;
     },
 
     async remove(accountId: string, friendId: string): Promise<FriendResult<null>> {

@@ -187,18 +187,47 @@ describe.each(REPOSITORY_ADAPTERS)('friend direct messages and notifications ($n
     expect(await app.repository.listDirectMessages(bob)).toHaveLength(1);
   });
 
-  it('recovers friend notifications from persistence and dismisses accepted notices only for their owner', async () => {
+  it('recovers friend notifications from persistence and marks or clears them only for their owner', async () => {
     const sent = await request(0, 'friends/requests', { username: 'player_0_2' });
     expect(sent.status).toBe(201);
     const body = await sent.json() as { request: { id: string } };
-    expect((await overview(2)).incoming).toMatchObject([{ id: body.request.id, requester: { id: alice } }]);
+    expect((await overview(2)).incoming).toMatchObject([{ id: body.request.id, requester: { id: alice }, readAt: null }]);
+    await request(0, 'messages/notifications/read', { ids: [body.request.id] });
+    expect((await overview(2)).incoming).toMatchObject([{ readAt: null }]);
+    expect((await request(2, 'messages/notifications/read', { all: true })).status).toBe(200);
+    const read = (await overview(2)).incoming;
+    expect(read).toMatchObject([{ id: body.request.id, readAt: expect.any(Number) }]);
+    await request(2, 'messages/notifications/read', { ids: [body.request.id] });
+    expect((await overview(2)).incoming).toEqual(read);
+    // Clearing never removes a request; only answering it does.
+    await request(2, 'messages/notifications/clear', { read: true });
+    expect((await overview(2)).incoming).toHaveLength(1);
     expect((await request(2, `friends/requests/${body.request.id}/accept`, {})).status).toBe(200);
     const notices = (await overview(0)).accepted;
-    expect(notices).toMatchObject([{ account: { id: carol } }]);
+    expect(notices).toMatchObject([{ account: { id: carol }, readAt: null }]);
     expect((await overview(2)).incoming).toEqual([]);
     await request(1, 'messages/notifications/read', { ids: notices.map((entry) => entry.id) });
+    await request(1, 'messages/notifications/clear', { ids: notices.map((entry) => entry.id) });
+    expect((await overview(0)).accepted).toMatchObject([{ readAt: null }]);
+    await request(0, 'messages/notifications/clear', { read: true });
     expect((await overview(0)).accepted).toHaveLength(1);
     await request(0, 'messages/notifications/read', { ids: notices.map((entry) => entry.id) });
+    expect((await overview(0)).accepted).toMatchObject([{ id: notices[0].id, readAt: expect.any(Number) }]);
+    await request(0, 'messages/notifications/clear', { read: true });
+    expect((await overview(0)).accepted).toEqual([]);
+  });
+
+  it('dismisses one accepted notification and validates notification selections', async () => {
+    const sent = await request(0, 'friends/requests', { username: 'player_0_2' });
+    const body = await sent.json() as { request: { id: string } };
+    await request(2, `friends/requests/${body.request.id}/accept`, {});
+    const [notice] = (await overview(0)).accepted;
+    for (const [path, payload] of [
+      ['read', {}], ['read', { all: false }], ['read', { ids: [] }], ['read', { ids: ['a', 'a'] }],
+      ['read', { ids: [notice.id], all: true }], ['clear', { all: true }], ['clear', { read: 'yes' }],
+    ] as const) expect((await request(0, `messages/notifications/${path}`, payload)).status).toBe(400);
+    expect((await overview(0)).accepted).toMatchObject([{ id: notice.id, readAt: null }]);
+    expect((await request(0, 'messages/notifications/clear', { ids: [notice.id] })).status).toBe(200);
     expect((await overview(0)).accepted).toEqual([]);
   });
 

@@ -95,15 +95,14 @@ export function registerRoomHandlers(context: SocketContext, socket: TypedSocket
     }
     const accountId = socket.data.accountId;
     if (!await context.friends.areFriends(accountId, payload.accountId)) {
-      throw actionError('You can only join rooms hosted by friends.');
+      throw actionError('You can only join rooms your friends are in.');
     }
-    const host = playerManager.getPlayerState(payload.accountId);
+    const friend = playerManager.getPlayerState(payload.accountId);
     const code = payload.roomCode.trim().toUpperCase();
-    const room = roomManager.getRoomInfo(code);
-    if (host?.connectionStatus !== 'connected' || host.currentRoomCode !== code
-      || room?.hostId !== payload.accountId) {
-      throw actionError('This friend is no longer hosting this room. Refresh your friends list.');
+    if (friend?.connectionStatus !== 'connected' || friend.currentRoomCode !== code || !roomManager.getRoomInfo(code)) {
+      throw actionError('This friend is no longer in this room. Refresh your friends list.');
     }
+    // Waiting rooms admit a new member; running matches and replays admit spectators. The room manager checks space.
     joinRoom(code, accountId);
     return { success: true, room: roomManager.getRoomInfo(code) ?? undefined };
   }));

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import type { AccountRecord, Repository } from '../../src/database/repository';
-import { createFriendService } from '../../src/social/friend-service';
+import { createFriendService, favoriteGame } from '../../src/social/friend-service';
 import type { FriendService } from '../../src/social/friend-service';
 
 const STORED_PASSWORD_HASH = `scrypt$131072$8$1$${'a'.repeat(32)}$${'b'.repeat(128)}`;
@@ -258,5 +258,13 @@ describe.each(REPOSITORY_ADAPTERS)('friend service ($name)', (adapter) => {
     expect(list.friends.map((friend) => friend.id)).toEqual(['carol-id', 'bob-id']);
     expect(list.incoming.map((request) => request.id)).toEqual(['in-new', 'in-old']);
     expect(list.outgoing.map((request) => request.id)).toEqual(['out-new', 'out-old']);
+  });
+});
+
+describe('favorite game', () => {
+  it('picks the most played game and breaks ties by the most recent match', () => {
+    expect(favoriteGame([])).toBeNull();
+    expect(favoriteGame(['bigtwo', 'bridge', 'bridge', 'bigtwo', 'holdem'])).toBe('bigtwo');
+    expect(favoriteGame(['holdem', 'bridge', 'bridge'])).toBe('bridge');
   });
 });

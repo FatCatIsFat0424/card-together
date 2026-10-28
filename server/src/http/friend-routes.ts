@@ -7,7 +7,7 @@ import type { FriendEntry } from '@shared/types';
 import { createFriendService } from '../social/friend-service';
 import type { SocialPublisher } from './message-routes';
 
-export type FriendPresence = Pick<FriendEntry, 'online' | 'inRoom' | 'hostedRoomCode'>;
+export type FriendPresence = Pick<FriendEntry, 'online' | 'inRoom' | 'hostedRoomCode' | 'room'>;
 
 /** Reads committed runtime presence; injected so HTTP routes never touch managers directly. */
 export type PresenceReader = (accountIds: readonly string[]) => Promise<ReadonlyMap<string, FriendPresence>>;
@@ -40,8 +40,13 @@ export function createFriendRouter(
     const presence = await readPresence(list.friends.map((friend) => friend.id));
     response.json({ success: true, ...list, friends: list.friends.map((friend) => ({
       ...friend, online: presence.get(friend.id)?.online ?? false, inRoom: presence.get(friend.id)?.inRoom ?? false,
-      hostedRoomCode: presence.get(friend.id)?.hostedRoomCode ?? null,
+      hostedRoomCode: presence.get(friend.id)?.hostedRoomCode ?? null, room: presence.get(friend.id)?.room ?? null,
     })) });
+  }));
+
+  router.get('/stats', handleAsync(async (_request, response): Promise<void> => {
+    const { account } = getRequestSession(response);
+    response.json({ success: true, stats: await friends.playStats(account.id) });
   }));
 
   router.get('/search', handleAsync(async (request, response): Promise<void> => {

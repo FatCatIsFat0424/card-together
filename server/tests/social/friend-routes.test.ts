@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -11,6 +12,7 @@ import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import type { Repository } from '../../src/database/repository';
 import { createFriendRouter } from '../../src/http/friend-routes';
 import type { FriendPresence } from '../../src/http/friend-routes';
+import { match } from '../helpers/storage-fixture';
 
 const ORIGIN = 'http://localhost:5173';
 const PASSWORD_HASH = `scrypt$131072$8$1$${'a'.repeat(32)}$${'b'.repeat(128)}`;
@@ -133,7 +135,7 @@ describe.each(REPOSITORY_ADAPTERS)('friend HTTP routes ($name)', (adapter) => {
     });
     const reciprocal = await fetch(baseUrl, { headers: headers('bob') });
     expect(await reciprocal.json()).toMatchObject({ friends: [{ id: 'alice', lastSeenAt: null }] });
-    presence.set('bob', { online: true, inRoom: true, hostedRoomCode: 'ABC123' });
+    presence.set('bob', { online: true, inRoom: true, hostedRoomCode: 'ABC123', room: null });
     const present = await fetch(baseUrl, { headers: headers('alice') });
     expect(await present.json()).toMatchObject({
       friends: [{ id: 'bob', lastSeenAt: 123, online: true, inRoom: true, hostedRoomCode: 'ABC123' }],
@@ -173,5 +175,23 @@ describe.each(REPOSITORY_ADAPTERS)('friend HTTP routes ($name)', (adapter) => {
         avatarImage: null, avatarBorder: null, nameplate: null, chatFrame: null,
       },
     });
+  });
+
+  it('reports matches played together and the favorite game only from public histories', async () => {
+    for (const friend of ['bob', 'carol']) {
+      await repository.createFriendship({ id: `alice-${friend}`, requesterId: 'alice', recipientId: friend,
+        status: 'accepted', createdAt: 1, updatedAt: 1 });
+    }
+    const bots = (): string[] => [`bot:${randomUUID()}`, `bot:${randomUUID()}`];
+    await repository.saveMatch(match('one', ['alice', 'bob', ...bots()], 1));
+    await repository.saveMatch(match('two', ['bob', 'carol', ...bots()], 2));
+    await repository.updateProfile('bob', { matchesPublic: true }, Date.now());
+    const response = await fetch(`${baseUrl}/stats`, { headers: headers('alice') });
+    expect(await response.json()).toEqual({ success: true, stats: {
+      bob: { together: 1, favoriteGame: 'bridge' },
+      carol: { together: 0, favoriteGame: null },
+    } });
+    expect(await (await fetch(`${baseUrl}/stats`, { headers: headers('carol') })).json())
+      .toEqual({ success: true, stats: { alice: { together: 0, favoriteGame: null } } });
   });
 });

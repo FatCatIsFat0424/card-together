@@ -24,7 +24,13 @@ type SqliteMigration = (database: DatabaseSync) => void;
  * Index i upgrades SQLITE_BASELINE_VERSION + i to the next version inside one transaction, after a
  * backup. Append a step whenever CURRENT_SCHEMA_VERSION changes; never edit shipped steps.
  */
-const SQLITE_STEPS: readonly SqliteMigration[] = [];
+const SQLITE_STEPS: readonly SqliteMigration[] = [
+  // v8: notification read times; NULL means unread.
+  (database) => {
+    database.exec('ALTER TABLE friendships ADD COLUMN recipient_read_at INTEGER');
+    database.exec('ALTER TABLE friend_notifications ADD COLUMN read_at INTEGER');
+  },
+];
 
 if (SQLITE_BASELINE_VERSION + SQLITE_STEPS.length !== CURRENT_SCHEMA_VERSION) {
   throw new Error('Every document schema version needs a SQLite migration step.');
@@ -64,7 +70,8 @@ CREATE TABLE friendships (
   pair TEXT NOT NULL UNIQUE,
   status TEXT NOT NULL CHECK (status IN ('pending', 'accepted')),
   created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
+  updated_at INTEGER NOT NULL,
+  recipient_read_at INTEGER
 ) STRICT;
 CREATE INDEX friendships_requester ON friendships(requester_id);
 CREATE INDEX friendships_recipient ON friendships(recipient_id);
@@ -120,7 +127,8 @@ CREATE TABLE friend_notifications (
   id TEXT NOT NULL UNIQUE,
   account_id TEXT NOT NULL REFERENCES accounts(id),
   actor_id TEXT NOT NULL REFERENCES accounts(id),
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  read_at INTEGER
 ) STRICT;
 CREATE INDEX friend_notifications_account ON friend_notifications(account_id, created_at);
 CREATE INDEX friend_notifications_created ON friend_notifications(created_at);

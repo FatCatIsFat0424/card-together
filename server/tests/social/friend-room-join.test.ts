@@ -9,7 +9,7 @@ import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import { createSocketHarness, TEST_ORIGIN } from '../performance/socket-harness';
 import type { SocketHarness } from '../performance/socket-harness';
 
-describe.each(REPOSITORY_ADAPTERS)('joining a room hosted by a friend ($name)', (adapter) => {
+describe.each(REPOSITORY_ADAPTERS)('joining a room a friend is in ($name)', (adapter) => {
   let app: SocketHarness;
   let friendshipId: string;
 
@@ -44,6 +44,8 @@ describe.each(REPOSITORY_ADAPTERS)('joining a room hosted by a friend ($name)', 
   it('lists the hosted room and switches rooms without an invitation, joining as a spectator', async () => {
     expect((await listFriends(1)).friends).toMatchObject([{
       id: app.accountIds[0][0], online: true, inRoom: true, hostedRoomCode: app.roomCodes[0],
+      room: { code: app.roomCodes[0], gameType: 'bridge', status: 'waiting', players: 4, seats: 4,
+        hosting: true, joinable: true, spectatable: false },
     }]);
     const result = await join();
     expect(result).toMatchObject({ success: true, room: { code: app.roomCodes[0] } });
@@ -69,6 +71,7 @@ describe.each(REPOSITORY_ADAPTERS)('joining a room hosted by a friend ($name)', 
     for (const client of app.clients[0]) expect(await client.timeout(5_000).emitWithAck('room:ready'))
       .toEqual({ success: true });
     expect(await app.clients[0][0].timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
+    expect((await listFriends(1)).friends[0].room).toMatchObject({ status: 'playing', joinable: false, spectatable: true });
     expect(await join()).toMatchObject({ success: true, room: { status: 'playing' } });
     const spectator = await app.clients[1][0].timeout(5_000).emitWithAck('player:resume');
     expect(spectator.gameState).toMatchObject({ observer: 'spectator' });
@@ -82,7 +85,7 @@ describe.each(REPOSITORY_ADAPTERS)('joining a room hosted by a friend ($name)', 
 
   it('rejects non-friends, pending requests and removed friendships without leaving the original room', async () => {
     await app.repository.deleteFriendship(friendshipId, app.accountIds[1][0]);
-    expect(await join()).toMatchObject({ success: false, error: 'You can only join rooms hosted by friends.' });
+    expect(await join()).toMatchObject({ success: false, error: 'You can only join rooms your friends are in.' });
     await app.repository.createFriendship({
       id: randomUUID(), requesterId: app.accountIds[0][0], recipientId: app.accountIds[1][0],
       status: 'pending', createdAt: 1, updatedAt: 1,
@@ -92,12 +95,20 @@ describe.each(REPOSITORY_ADAPTERS)('joining a room hosted by a friend ($name)', 
     expect(players.getPlayerState(app.accountIds[1][0])?.currentRoomCode).toBe(app.roomCodes[1]);
   });
 
-  it('hides the room and rejects stale joins when the friend is no longer its host', async () => {
+  it('joins a room the friend does not host and rejects stale joins after the friend leaves', async () => {
     expect(await app.clients[0][0].timeout(5_000).emitWithAck('room:leave')).toEqual({ success: true });
     expect(await app.clients[0][0].timeout(5_000).emitWithAck('room:join', { roomCode: app.roomCodes[0] }))
       .toMatchObject({ success: true });
-    expect((await listFriends(1)).friends[0]).toMatchObject({ inRoom: true, hostedRoomCode: null });
-    expect(await join()).toMatchObject({ success: false, error: expect.stringContaining('no longer hosting') });
+    expect((await listFriends(1)).friends[0]).toMatchObject({
+      inRoom: true, hostedRoomCode: null, room: { code: app.roomCodes[0], hosting: false, joinable: true },
+    });
+    expect(await join()).toMatchObject({ success: true, room: { code: app.roomCodes[0] } });
+    expect(await app.clients[1][0].timeout(5_000).emitWithAck('room:leave')).toEqual({ success: true });
+    expect(await app.clients[1][0].timeout(5_000).emitWithAck('room:join', { roomCode: app.roomCodes[1] }))
+      .toMatchObject({ success: true });
+    expect(await app.clients[0][0].timeout(5_000).emitWithAck('room:leave')).toEqual({ success: true });
+    expect((await listFriends(1)).friends[0]).toMatchObject({ online: true, inRoom: false, room: null });
+    expect(await join()).toMatchObject({ success: false, error: expect.stringContaining('no longer in this room') });
     expect(players.getPlayerState(app.accountIds[1][0])?.currentRoomCode).toBe(app.roomCodes[1]);
   });
 
@@ -107,7 +118,7 @@ describe.each(REPOSITORY_ADAPTERS)('joining a room hosted by a friend ($name)', 
     })).toMatchObject({ success: false });
     app.clients[0][0].disconnect();
     await expect.poll(() => players.getPlayerState(app.accountIds[0][0])?.connectionStatus).toBe('disconnected');
-    expect((await listFriends(1)).friends[0]).toMatchObject({ online: false, hostedRoomCode: null });
+    expect((await listFriends(1)).friends[0]).toMatchObject({ online: false, hostedRoomCode: null, room: null });
     expect(await join()).toMatchObject({ success: false });
     expect(players.getPlayerState(app.accountIds[1][0])?.currentRoomCode).toBe(app.roomCodes[1]);
   });
@@ -132,6 +143,16 @@ describe.each(REPOSITORY_ADAPTERS)('joining a room hosted by a friend ($name)', 
     expect(players.getPlayerState(app.accountIds[1][0])?.currentRoomCode).toBe(app.roomCodes[1]);
     for (let index = 0; index < MAX_SPECTATORS; index++) rooms.leaveRoom(app.roomCodes[0], `watcher-${index}`);
     expect(await join()).toMatchObject({ success: true });
+  });
+
+  it('records last-seen activity when a socket connects and disconnects', async () => {
+    const recorded = vi.spyOn(app.repository, 'recordAccountActivity');
+    const calls = (): number => recorded.mock.calls.filter(([id]) => id === app.accountIds[1][0]).length;
+    const tab = await app.connect(app.cookies[1][0]);
+    await expect.poll(calls).toBe(1);
+    tab.disconnect();
+    await expect.poll(calls).toBe(2);
+    expect((await app.repository.getAccountById(app.accountIds[1][0]))?.lastSeenAt).toEqual(expect.any(Number));
   });
 
   it('validates payloads, requires callbacks and rechecks the session', async () => {

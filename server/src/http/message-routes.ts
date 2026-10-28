@@ -33,6 +33,17 @@ function object(body: unknown): Record<string, unknown> {
   return body as Record<string, unknown>;
 }
 
+/** `{ ids }` with 1–100 unique IDs, or `{ [everyKey]: true }` for every eligible notification. */
+function notificationIds(body: Record<string, unknown>, everyKey: 'all' | 'read'): readonly string[] | 'all' {
+  const keys = Object.keys(body);
+  if (keys.length === 1 && body[everyKey] === true) return 'all';
+  const ids = body.ids;
+  if (keys.length !== 1 || !Array.isArray(ids) || ids.length === 0 || ids.length > 100
+    || !ids.every((id: unknown) => typeof id === 'string' && id.length > 0 && id.length <= 128)
+    || new Set(ids).size !== ids.length) throw messageError(400, 'Send 1–100 unique notification IDs.');
+  return ids as string[];
+}
+
 export function createMessageRouter(
   repository: Repository, auth: AuthService, provided: ProvidedEmojiCatalog,
   publish: SocialPublisher,
@@ -45,13 +56,22 @@ export function createMessageRouter(
     response.json({ success: true, ...await messages.overview(getRequestSession(response).account.id) });
   }));
 
+  /** Marks notifications read: `{ ids }` (accepted notifications or incoming requests) or `{ all: true }`. */
   router.post('/notifications/read', handleAsync(async (request, response): Promise<void> => {
     const body = object(request.body);
-    if (Object.keys(body).length !== 1 || !Array.isArray(body.ids) || body.ids.length === 0
-      || body.ids.length > 100 || !body.ids.every((id: unknown) => typeof id === 'string' && id.length > 0 && id.length <= 128)
-      || new Set(body.ids).size !== body.ids.length) throw messageError(400, 'Send 1–100 unique notification IDs.');
     const accountId = getRequestSession(response).account.id;
-    await repository.dismissFriendNotifications(accountId, body.ids as string[]);
+    await repository.markFriendNotificationsRead(accountId, notificationIds(body, 'all'));
+    publish([accountId]);
+    response.json({ success: true });
+  }));
+
+  /** Deletes accepted notifications: `{ ids }`, or every read one with `{ read: true }`. */
+  router.post('/notifications/clear', handleAsync(async (request, response): Promise<void> => {
+    const body = object(request.body);
+    const accountId = getRequestSession(response).account.id;
+    const ids = notificationIds(body, 'read');
+    if (ids === 'all') await repository.clearReadFriendNotifications(accountId);
+    else await repository.dismissFriendNotifications(accountId, ids);
     publish([accountId]);
     response.json({ success: true });
   }));

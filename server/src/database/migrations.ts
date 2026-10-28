@@ -1,6 +1,6 @@
 import { backfillAchievementCounts } from './migrate-achievements';
 
-export const CURRENT_SCHEMA_VERSION = 7;
+export const CURRENT_SCHEMA_VERSION = 8;
 
 type JsonObject = Record<string, unknown>;
 
@@ -140,10 +140,19 @@ function toVersion6(document: JsonObject): JsonObject {
   };
 }
 
+/**
+ * v8: optional read times on accepted-request notifications (`readAt`) and on pending requests for
+ * their recipient (`recipientReadAt`). Absent means unread, so existing records keep their badge.
+ */
+function toVersion8(document: JsonObject): JsonObject {
+  return { ...document, schemaVersion: 8 };
+}
+
 /** Index i upgrades version i + 1 to i + 2. Append new steps; never edit shipped ones. */
 const STEPS: readonly ((document: JsonObject) => JsonObject)[] = [
   toVersion2, toVersion3, toVersion4, toVersion5, toVersion6,
   (document) => ({ ...backfillAchievementCounts(document), schemaVersion: 7 }),
+  toVersion8,
 ];
 
 /**

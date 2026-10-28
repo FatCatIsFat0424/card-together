@@ -79,6 +79,7 @@ export async function createApplication(repository: Repository, options: Applica
   const runtime = await createRuntimeCoordinator(repository);
   const context = {
     io, auth, runtime, voice: createVoiceManager(), friends: createFriendService(repository),
+    recordActivity: (accountId: string) => repository.recordAccountActivity(accountId, Date.now()),
     listEmojis: (accountId: string) => repository.listEmojis(accountId),
     providedEmojis: options.providedEmojis ?? new Map(),
     matchReplays: {

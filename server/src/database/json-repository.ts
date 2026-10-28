@@ -482,10 +482,34 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
         return data.friendNotifications.filter((entry) => entry.accountId === accountId && entry.createdAt > cutoff)
           .sort((first, second) => second.createdAt - first.createdAt);
       }),
+      markFriendNotificationsRead: (accountId, ids) => write([], (data) => {
+        const readAt = now();
+        const selected = ids === 'all' ? null : new Set(ids);
+        const chosen = (id: string): boolean => selected === null || selected.has(id);
+        data.friendNotifications = data.friendNotifications.map((entry) =>
+          entry.accountId === accountId && entry.readAt === undefined && chosen(entry.id) ? { ...entry, readAt } : entry);
+        data.friendships = data.friendships.map((entry) => entry.recipientId === accountId && entry.status === 'pending'
+          && entry.recipientReadAt === undefined && chosen(entry.id) ? { ...entry, recipientReadAt: readAt } : entry);
+      }),
       dismissFriendNotifications: (accountId, ids) => write([], (data) => {
         const selected = new Set(ids);
         data.friendNotifications = data.friendNotifications.filter((entry) =>
           entry.accountId !== accountId || !selected.has(entry.id));
+      }),
+      clearReadFriendNotifications: (accountId) => write([], (data) => {
+        const before = data.friendNotifications.length;
+        data.friendNotifications = data.friendNotifications.filter((entry) =>
+          entry.accountId !== accountId || entry.readAt === undefined);
+        return before - data.friendNotifications.length;
+      }),
+      recordAccountActivity: (accountId, at) => write([], (data) => {
+        if (!Number.isSafeInteger(at) || at < 0) throw new Error('Invalid activity time.');
+        const index = indexes.accounts(document.accounts).positions.get(accountId);
+        if (index === undefined) return;
+        const account = data.accounts[index];
+        if (account.lastSeenAt !== undefined && account.lastSeenAt >= at) return;
+        data.accounts = data.accounts.slice();
+        data.accounts[index] = { ...account, lastSeenAt: at };
       }),
       pruneSocialHistory: (time) => write([], (data) => {
         if (!Number.isSafeInteger(time) || time < 0) throw new Error('Invalid social history pruning time.');

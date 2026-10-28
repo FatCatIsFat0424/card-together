@@ -6,6 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { exportSqliteToJson, previewJsonExport } from '../../src/database/export-sqlite';
+import { CURRENT_SCHEMA_VERSION } from '../../src/database/migrations';
 import { createJsonRepository } from '../../src/database/json-repository';
 import { migrateJsonToSqlite, previewSqliteMigration } from '../../src/database/migrate-sqlite';
 import type { AccountRecord } from '../../src/database/repository';
@@ -69,7 +70,7 @@ describe('SQLite cutover tools', () => {
     it('previews counts without writing anything', async () => {
       const preview = await previewSqliteMigration(jsonPath, sqlitePath);
       expect(preview).toMatchObject({
-        source: jsonPath, target: sqlitePath, sourceSchemaVersion: 7, collections: COLLECTIONS, runtime: true,
+        source: jsonPath, target: sqlitePath, sourceSchemaVersion: CURRENT_SCHEMA_VERSION, collections: COLLECTIONS, runtime: true,
         droppedRecordings: [], sourceBytes: source.length, requiredBytes: source.length * 5,
       });
       expect(preview.availableBytes).toBeGreaterThan(0);

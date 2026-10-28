@@ -97,6 +97,41 @@ describe('SQLite repository', () => {
     await expect(importJsonDocument(emptyDocument(), path)).rejects.toMatchObject({ code: 'DATABASE_IN_USE' });
   });
 
+  it('upgrades a v7 database with notification read columns after a backup', async () => {
+    repository = await createSqliteRepository(path);
+    const [alice, bob, carol] = [account('alice'), account('bob'), account('carol')];
+    for (const entry of [alice, bob, carol]) await repository.createAccount(entry);
+    await repository.createFriendship({ id: 'ab', requesterId: alice.id, recipientId: bob.id, status: 'pending', createdAt: 1, updatedAt: 1 });
+    await repository.acceptFriendship('ab', bob.id);
+    await repository.createFriendship({ id: 'ca', requesterId: carol.id, recipientId: alice.id, status: 'pending', createdAt: 1, updatedAt: 1 });
+    const [notice] = await repository.listFriendNotifications(alice.id);
+    await repository.close();
+    repository = undefined;
+    const columns = (database: DatabaseSync, table: string): unknown[] =>
+      database.prepare(`PRAGMA table_info(${table})`).all().map((column) => [column.name, column.type, column.notnull]);
+    const legacy = new DatabaseSync(path);
+    const current = { friendships: columns(legacy, 'friendships'), notifications: columns(legacy, 'friend_notifications') };
+    legacy.exec('ALTER TABLE friendships DROP COLUMN recipient_read_at');
+    legacy.exec('ALTER TABLE friend_notifications DROP COLUMN read_at');
+    legacy.exec('PRAGMA user_version = 7');
+    legacy.close();
+    repository = await createSqliteRepository(path);
+    expect((await readdir(directory)).filter((name) => name.endsWith('.v7.bak'))).toEqual(['database.sqlite.v7.bak']);
+    expect(await repository.listFriendNotifications(alice.id)).toEqual([notice]);
+    await repository.markFriendNotificationsRead(alice.id, 'all');
+    expect((await repository.listFriendNotifications(alice.id))[0].readAt).toEqual(expect.any(Number));
+    expect((await repository.getFriendship('ca'))?.recipientReadAt).toEqual(expect.any(Number));
+    await repository.close();
+    repository = undefined;
+    // A migrated database has the same columns as a newly created one.
+    const migrated = new DatabaseSync(path, { readOnly: true });
+    try {
+      expect(Object.values(migrated.prepare('PRAGMA user_version').get()!)[0]).toBe(CURRENT_SCHEMA_VERSION);
+      expect({ friendships: columns(migrated, 'friendships'), notifications: columns(migrated, 'friend_notifications') })
+        .toEqual(current);
+    } finally { migrated.close(); }
+  });
+
   it('enforces unique usernames under concurrent registration and in the schema itself', async () => {
     repository = await createSqliteRepository(path);
     const results = await Promise.allSettled(['Alice', 'alice', 'ALICE'].map((name) => repository!.createAccount(account(name))));

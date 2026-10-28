@@ -124,7 +124,8 @@ export function validFriendship(value: unknown): value is FriendshipRecord {
     value.requesterId !== value.recipientId &&
     (value.status === 'pending' || value.status === 'accepted') &&
     timestamp(value.createdAt) &&
-    timestamp(value.updatedAt)
+    timestamp(value.updatedAt) &&
+    (value.recipientReadAt === undefined || timestamp(value.recipientReadAt))
   );
 }
 
@@ -232,7 +233,8 @@ export function validMessageRead(value: unknown): value is MessageReadRecord {
 
 export function validFriendNotification(value: unknown): value is FriendNotificationRecord {
   return isObject(value) && nonEmpty(value.id) && nonEmpty(value.accountId) && nonEmpty(value.actorId) &&
-    value.accountId !== value.actorId && timestamp(value.createdAt);
+    value.accountId !== value.actorId && timestamp(value.createdAt) &&
+    (value.readAt === undefined || timestamp(value.readAt));
 }
 
 function unique(values: readonly string[]): boolean {

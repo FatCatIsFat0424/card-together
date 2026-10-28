@@ -241,6 +241,9 @@ export function createAuthService(
     if (!(await repository.createSession(session, account.passwordHash))) {
       throw authError(401, 'INVALID_CREDENTIALS', 'Invalid username or password.');
     }
+    // Friends see when this account was last active; a failed write must not block signing in.
+    await repository.recordAccountActivity(account.id, createdAt)
+      .catch((error: unknown) => console.error('[auth] Recording sign-in activity failed:', error));
     return { account: publicAccount(account), token, session };
   }
 

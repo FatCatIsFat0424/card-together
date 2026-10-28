@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { CURRENT_SCHEMA_VERSION } from '../../src/database/migrations';
 import { databaseLockPath } from '../../src/database/owner-lock';
 import type { Repository } from '../../src/database/repository';
 import { emptyDocument } from '../../src/database/schema';
@@ -35,7 +36,7 @@ describe('SQLite snapshots for backup and restore', () => {
     await repository.saveRuntime({ players: [], rooms: [], games: [], chat: [] });
     const result = await snapshotSqliteDatabase(path, snapshot);
     expect(result).toMatchObject({
-      path: snapshot, schemaVersion: 7, droppedRecordings: [],
+      path: snapshot, schemaVersion: CURRENT_SCHEMA_VERSION, droppedRecordings: [],
       collections: expect.objectContaining({ accounts: 1, matches: 0 }),
       sqlite: { quickCheck: 'ok', foreignKeyViolations: 0, tables: expect.objectContaining({ accounts: 1, runtime_state: 1 }) },
     });
@@ -62,7 +63,7 @@ describe('SQLite snapshots for backup and restore', () => {
     await expect(snapshotSqliteDatabase(path, snapshot)).rejects.toThrow('Unsupported database schema version: 99');
     expect((await readdir(directory)).filter((name) => name.startsWith('snapshot'))).toEqual([]);
     const restored = new DatabaseSync(path);
-    restored.exec('PRAGMA user_version = 7');
+    restored.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION}`);
     restored.close();
     await snapshotSqliteDatabase(path, snapshot);
     // Keep the header page so the file still opens, and damage every table page after it.
@@ -81,7 +82,7 @@ describe('SQLite snapshots for backup and restore', () => {
   it('verifies JSON snapshots, including older schema versions that migrate at startup', async () => {
     const json = join(directory, 'database.json');
     await writeFile(json, JSON.stringify({ ...emptyDocument(), accounts: [account('alice')] }));
-    expect(await verifyDatabaseSnapshot(json)).toMatchObject({ schemaVersion: 7, collections: expect.objectContaining({ accounts: 1 }) });
+    expect(await verifyDatabaseSnapshot(json)).toMatchObject({ schemaVersion: CURRENT_SCHEMA_VERSION, collections: expect.objectContaining({ accounts: 1 }) });
     await writeFile(json, JSON.stringify({ ...emptyDocument(), schemaVersion: 6 }));
     expect((await verifyDatabaseSnapshot(json)).schemaVersion).toBe(6);
     await writeFile(json, JSON.stringify({ schemaVersion: 99 }));

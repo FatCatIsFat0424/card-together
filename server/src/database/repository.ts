@@ -33,6 +33,8 @@ export interface FriendshipRecord {
   readonly status: 'pending' | 'accepted';
   readonly createdAt: number;
   readonly updatedAt: number;
+  /** When the recipient marked a pending request read in the notification panel; omitted while unread. */
+  readonly recipientReadAt?: number;
 }
 
 export interface MatchRecord {
@@ -75,6 +77,8 @@ export interface FriendNotificationRecord {
   readonly accountId: string;
   readonly actorId: string;
   readonly createdAt: number;
+  /** Omitted while unread. */
+  readonly readAt?: number;
 }
 
 export interface RepositoryOptions {
@@ -146,7 +150,17 @@ export interface Repository {
   /** A retained message received from this peer advances the cursor; stale updates are ignored. */
   markDirectMessagesRead(accountId: string, otherId: string, messageId: string): Promise<void>;
   listFriendNotifications(accountId: string): Promise<FriendNotificationRecord[]>;
+  /**
+   * Marks this account's accepted-request notifications and pending requests it received as read,
+   * by notification or friendship ID, or all of them. Earlier read times are kept.
+   */
+  markFriendNotificationsRead(accountId: string, ids: readonly string[] | 'all'): Promise<void>;
+  /** Deletes the listed accepted-request notifications of this account. */
   dismissFriendNotifications(accountId: string, ids: readonly string[]): Promise<void>;
+  /** Deletes this account's read accepted-request notifications; returns how many were deleted. */
+  clearReadFriendNotifications(accountId: string): Promise<number>;
+  /** Advances the durable last-seen time on sign-in and socket activity; never moves it backwards. */
+  recordAccountActivity(accountId: string, at: number): Promise<void>;
   /** Durably remove expired messages, notifications, and their orphaned read cursors. */
   pruneSocialHistory(now: number): Promise<void>;
   loadRuntime(): Promise<RuntimeSnapshot | null>;

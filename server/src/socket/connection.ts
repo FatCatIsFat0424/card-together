@@ -63,8 +63,15 @@ export function setupConnectionHandler(context: SocketContext): () => void {
     }).catch(() => next(new Error('Unable to authenticate.')));
   });
 
+  /** Last-seen history is best effort; presence itself stays ephemeral. */
+  function recordActivity(accountId: string): void {
+    void context.recordActivity(accountId)
+      .catch((error: unknown) => console.error('[activity] Recording last seen failed:', error));
+  }
+
   io.on('connection', (socket) => {
     void socket.join(`account:${socket.data.accountId}`);
+    recordActivity(socket.data.accountId);
     const expiry = setTimeout(() => socket.disconnect(true),
       Math.max(0, socket.data.expiresAt - Date.now()));
     expiry.unref();
@@ -89,6 +96,7 @@ export function setupConnectionHandler(context: SocketContext): () => void {
     socket.on('disconnect', () => {
       clearTimeout(expiry);
       if (closing) { context.voice.leave(socket.id); return; }
+      recordActivity(socket.data.accountId);
       leaveVoice(context, socket.id, 'Voice connection closed.');
       const recipients = new Set<string>();
       void runtime.mutate(() => {

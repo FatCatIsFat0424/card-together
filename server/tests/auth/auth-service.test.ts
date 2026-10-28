@@ -51,8 +51,12 @@ describe.each(REPOSITORY_ADAPTERS)('account authentication ($name)', (adapter) =
     expect(text).not.toContain('correct horse battery');
     expect(text).not.toContain(registered.token);
     expect(text).toContain('scrypt$131072$8$1$');
+    expect((await repository.getAccountById(registered.account.id))?.lastSeenAt).toBe(time);
+    time += 500;
     const login = await service.login({ username: 'alice', password: 'correct horse battery' });
     expect(login.account.id).toBe(registered.account.id);
+    // Friends see sign-ins as activity before any game socket connects.
+    expect((await repository.getAccountById(registered.account.id))?.lastSeenAt).toBe(time);
     expect(login.token).not.toBe(registered.token);
     expect(await service.resolveSession(`other=foo; bridge_session=${login.token}`)).toMatchObject({
       account: registered.account,

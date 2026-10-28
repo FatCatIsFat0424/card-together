@@ -78,7 +78,7 @@ export interface ClientToServerEvents {
   'room:invite': (
     payload: { accountId: string }, callback: (response: ActionResult) => void,
   ) => void;
-  /** Join an accepted friend's hosted room, checking the listed room is still current. */
+  /** Join the room an accepted, online friend is in (as a spectator while it runs), checking it is still current. */
   'room:joinFriend': (
     payload: { accountId: string; roomCode: RoomCode },
     callback: (response: ActionResult & { room?: RoomInfo }) => void,

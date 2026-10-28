@@ -29,7 +29,8 @@
 | `GET /api/players/:accountId` | — | 公開個人檔案 |
 | `GET /api/players/:accountId/history` | — | 對局與參與者對照表；限本人或歷史紀錄公開時 |
 | `GET /api/players/:accountId/history/:matchId/replay` | — | `{ success: true, replay: MatchReplay }`；限本人或對象的歷史紀錄公開時 |
-| `GET /api/friends` | — | `friends, incoming, outgoing`；已接受的好友包含上線狀態、可為 null 的 `hostedRoomCode` 與 `lastSeenAt` |
+| `GET /api/friends` | — | `friends, incoming, outgoing`；已接受的好友包含上線狀態、可為 null 的 `hostedRoomCode`、`room` 與 `lastSeenAt` |
+| `GET /api/friends/stats` | — | `stats`：以好友 ID 為鍵的 `together`（自己保留的對局中同桌的場數）與 `favoriteGame`（好友歷史紀錄中最常玩的遊戲；不公開或沒有紀錄時為 null） |
 | `GET /api/friends/search?username=` | 完全相符的使用者名稱 | 公開帳號或 null |
 | `POST /api/friends/requests` | `username` | 201、好友邀請 |
 | `POST /api/friends/requests/:id/accept` | `{}` | 收件者接受 |
@@ -39,7 +40,8 @@
 | `GET /api/messages/:accountId` | 選填的 `before` 訊息 ID | 游標之前最近的 50 則訊息，依時間排序；帳號、`hasMore`、`canSend` |
 | `POST /api/messages/:accountId` | `clientId` 加上一個[訊息輸入](../shared/src/types/direct-message.ts)，包括 `shopSticker` | 201、訊息；只限已接受的好友 |
 | `POST /api/messages/:accountId/read` | `messageId` | 推進讀者的收件訊息游標 |
-| `POST /api/messages/notifications/read` | `ids`：1–100 個不重複的通知 ID | 只關閉已驗證帳號自己的「邀請已接受」通知 |
+| `POST /api/messages/notifications/read` | `ids`：1–100 個不重複的通知或收到的邀請 ID；或 `{ all: true }` | 把自己的通知與收到的待處理邀請標為已讀，不刪除；已讀時間不會被改寫 |
+| `POST /api/messages/notifications/clear` | `ids`：1–100 個不重複的通知 ID；或 `{ read: true }` | 刪除自己指定的「邀請已接受」通知，或所有已讀的；待處理的邀請只會因回覆而消失 |
 | `POST /api/media` | `data`（base64）、`purpose`：`avatar`、`emoji`、`background`、`cardBack` | 圖片 ID |
 | `GET /api/media/:id` | — | 不可變的圖片位元組 |
 | `GET /api/emojis` | — | 自己的表情符號項目 |
@@ -80,6 +82,8 @@
 
 - `AccountProfile`（只給本人）：偏好設定、時間戳、金幣、物品欄、裝備。
 - `PublicAccount`：ID、使用者名稱、暱稱、顏色、頭像、頭像圖片、裝備中的外框、名牌與聊天框。不含餘額或物品欄。
+- 已接受的好友另有 `room`（[`FriendRoomPresence`](../shared/src/types/social.ts)）：好友在線且在房間中時，包含房號、遊戲、狀態、有人座位／總座位數、是否為房主，以及 `joinable`（等待中且旁觀區有空間）與 `spectatable`（對局或回放中且有空間）；否則為 null。
+- `GET /api/messages` 的 `incoming` 與 `accepted` 項目都有 `readAt`（未讀時為 null）。標為已讀、清除與回覆邀請後會送出 `social:changed`，讓其他分頁同步。
 - 只有 `GET /api/friends` 中已接受的項目包含必填的 `lastSeenAt`：Unix epoch 毫秒時間戳，或在沒有任何歷史活動紀錄時為 `null`。這個值在玩家清理與伺服器重新啟動後仍會保留。公開個人檔案、搜尋結果與待處理的邀請不包含它。顯示方式：[好友介面](interface.md#大廳與好友)。
 - 任何回應都不包含密碼雜湊或工作階段摘要。
 - 歷史列表 endpoint 回傳最近 100 場符合條件的 [MatchSummary](../shared/src/types/game.ts)，不分頁，包括有 bot 的對局；參與者對照表包含仍保留的真人帳號。對局的封存仍保留時，摘要會加上選填的 `hasReplay: true`，且從不包含回放或紀錄內容。既有的列表外層格式維持不變：帳號歷史為 `{ success: true, matches }`，玩家歷史為 `{ success: true, matches, players }`。搜尋、篩選與統計在用戶端進行；統計會排除任何有 bot 的對局。
@@ -102,7 +106,7 @@
 | `player:resume` | — | 回傳 `PlayerSnapshot`；連結或還原帳號 |
 | `room:create` | `{ gameType }` | 回傳 `roomCode` |
 | `room:join` | `{ roomCode }` | 以旁觀者身分加入，對局進行中也可以 |
-| `room:joinFriend` | `{ accountId, roomCode }` | 以旁觀者身分加入線上好友主持的房間，並以原子操作離開原本的房間 |
+| `room:joinFriend` | `{ accountId, roomCode }` | 以旁觀者身分加入線上好友所在的房間（不論是否為房主；對局或回放進行中也可以），並以原子操作離開原本的房間 |
 | `room:invite` | `{ accountId }` | 在旁觀區還有空間時邀請已接受的好友 |
 | `room:leave` | — | 離開；入座玩家離開會中止未結束的遊戲 |
 | `room:kick` | `{ accountId }` | 房主移除另一位真人（對局中也可以移除旁觀者）；對方可以用房號重新加入 |

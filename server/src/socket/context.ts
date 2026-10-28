@@ -1,7 +1,8 @@
 import { roomSeatInfo } from '@shared/rules/seats';
 import type { Server, Socket } from 'socket.io';
 import type {
-  AccountProfile, ChatMessage, ClientToServerEvents, EmojiRecord, PublicAccount, ServerToClientEvents,
+  AccountProfile, ChatMessage, ClientToServerEvents, EmojiRecord, FriendRoomPresence, PublicAccount, RoomInfo,
+  ServerToClientEvents,
 } from '@shared/types';
 import type { PlayerSnapshot } from '@shared/types/socket-events';
 import { GAME_SEAT_ORDER } from '@shared/constants';
@@ -43,6 +44,8 @@ export interface SocketContext {
   /** Site-provided emoji every sender may use; the sender's library wins on name clashes. */
   providedEmojis: ProvidedEmojiCatalog;
   friends: FriendService;
+  /** Advances the account's durable last-seen time on socket connect and disconnect. */
+  recordActivity: (accountId: string) => Promise<void>;
   /** Recorded matches for shared room replays; see `findMatchReplay` and `matchPlayers`. */
   matchReplays: {
     find: (viewerId: string | null, subjectId: string, matchId: string) => Promise<MatchReplayLookup>;
@@ -127,6 +130,19 @@ function chatUpdate(
   return index < 0 ? { history: [...history] } : { messages: history.slice(index + 1) };
 }
 
+/** What a friend's friends may see of the room they are in; admission still goes through `room:joinFriend`. */
+function friendRoomPresence(room: RoomInfo, friendId: string): FriendRoomPresence {
+  const seats = [...Object.values(room.seats), ...room.additionalSeats ?? []];
+  const space = roomManager.hasSpectatorRoom(room.code);
+  return {
+    code: room.code, gameType: room.gameType, status: room.status,
+    players: seats.filter((seat) => seat.player).length, seats: seats.length,
+    hosting: room.hostId === friendId,
+    joinable: room.status === 'waiting' && space,
+    spectatable: room.status !== 'waiting' && space,
+  };
+}
+
 /** Live presence for friend lists, read in runtime queue order. */
 export function readPresence(
   runtime: RuntimeCoordinator, accountIds: readonly string[],
@@ -138,6 +154,7 @@ export function readPresence(
     return [id, {
       online, inRoom: Boolean(state?.currentRoomCode),
       hostedRoomCode: online && room?.hostId === id ? room.code : null,
+      room: online && room ? friendRoomPresence(room, id) : null,
     }];
   })));
 }

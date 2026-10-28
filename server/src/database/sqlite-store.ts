@@ -125,14 +125,18 @@ export function insertSession(sql: Statements, session: SessionRecord): void {
 export function friendshipFromRow(row: Row): FriendshipRecord {
   const status = textColumn(row, 'status');
   if (status !== 'pending' && status !== 'accepted') throw new Error('SQLite friendship status is invalid.');
-  return { id: textColumn(row, 'id'), requesterId: textColumn(row, 'requester_id'), recipientId: textColumn(row, 'recipient_id'),
-    status, createdAt: integerColumn(row, 'created_at'), updatedAt: integerColumn(row, 'updated_at') };
+  const record: FriendshipRecord = { id: textColumn(row, 'id'), requesterId: textColumn(row, 'requester_id'),
+    recipientId: textColumn(row, 'recipient_id'), status, createdAt: integerColumn(row, 'created_at'),
+    updatedAt: integerColumn(row, 'updated_at') };
+  return row.recipient_read_at === null || row.recipient_read_at === undefined ? record
+    : { ...record, recipientReadAt: integerColumn(row, 'recipient_read_at') };
 }
 
 export function insertFriendship(sql: Statements, friendship: FriendshipRecord): void {
-  sql(`INSERT INTO friendships (id, requester_id, recipient_id, pair, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)`).run(friendship.id, friendship.requesterId, friendship.recipientId,
-    friendshipPair(friendship.requesterId, friendship.recipientId), friendship.status, friendship.createdAt, friendship.updatedAt);
+  sql(`INSERT INTO friendships (id, requester_id, recipient_id, pair, status, created_at, updated_at, recipient_read_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(friendship.id, friendship.requesterId, friendship.recipientId,
+    friendshipPair(friendship.requesterId, friendship.recipientId), friendship.status, friendship.createdAt, friendship.updatedAt,
+    friendship.recipientReadAt ?? null);
 }
 
 export function matchFromRow(row: Row): MatchRecord {
@@ -184,13 +188,14 @@ export function insertMessageRead(sql: Statements, cursor: MessageReadRecord): v
 }
 
 export function friendNotificationFromRow(row: Row): FriendNotificationRecord {
-  return { id: textColumn(row, 'id'), accountId: textColumn(row, 'account_id'), actorId: textColumn(row, 'actor_id'),
-    createdAt: integerColumn(row, 'created_at') };
+  const record: FriendNotificationRecord = { id: textColumn(row, 'id'), accountId: textColumn(row, 'account_id'),
+    actorId: textColumn(row, 'actor_id'), createdAt: integerColumn(row, 'created_at') };
+  return row.read_at === null || row.read_at === undefined ? record : { ...record, readAt: integerColumn(row, 'read_at') };
 }
 
 export function insertFriendNotification(sql: Statements, notification: FriendNotificationRecord): void {
-  sql('INSERT INTO friend_notifications (id, account_id, actor_id, created_at) VALUES (?, ?, ?, ?)')
-    .run(notification.id, notification.accountId, notification.actorId, notification.createdAt);
+  sql('INSERT INTO friend_notifications (id, account_id, actor_id, created_at, read_at) VALUES (?, ?, ?, ?, ?)')
+    .run(notification.id, notification.accountId, notification.actorId, notification.createdAt, notification.readAt ?? null);
 }
 
 // Runtime: one row per player, room, game, and room chat, plus the order of each list.

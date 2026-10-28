@@ -80,9 +80,10 @@ export function createMessageService(
       const incoming = await Promise.all(relationships
         .filter((entry) => entry.status === 'pending' && entry.recipientId === accountId)
         .map(async (entry) => ({ id: entry.id, createdAt: entry.createdAt,
-          requester: await profile(entry.requesterId), recipient: await profile(entry.recipientId) })));
+          requester: await profile(entry.requesterId), recipient: await profile(entry.recipientId),
+          readAt: entry.recipientReadAt ?? null })));
       const accepted = await Promise.all(notifications.map(async (entry) => ({
-        id: entry.id, account: await profile(entry.actorId), createdAt: entry.createdAt,
+        id: entry.id, account: await profile(entry.actorId), createdAt: entry.createdAt, readAt: entry.readAt ?? null,
       })));
       const conversations = await Promise.all([...grouped].map(async ([otherId, history]) => {
         const cursor = reads.find((entry) => entry.otherId === otherId)?.messageId;

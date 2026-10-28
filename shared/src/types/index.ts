@@ -132,7 +132,7 @@ export type {
 export type { ChatMessage } from './chat';
 export type {
   MessageContent, DirectMessage, MessageInput, Conversation, MessageHistory,
-  AcceptedFriendNotification, SocialOverview,
+  AcceptedFriendNotification, IncomingFriendNotification, SocialOverview,
 } from './direct-message';
 export type { EmojiRecord, ProvidedEmoji } from './emoji';
 export type { AccountProfile, AvatarPreset, AvatarId, MediaId } from './account';
@@ -157,6 +157,7 @@ export type { MatchReplay, ReplayPatchOp, ReplayPath, ReplayRecording, ReplaySna
 export type { DailyTaskId, DailyRewardId, DailyRewardsStatus } from './daily-rewards';
 export type {
   PublicAccount, FriendEntry, FriendRequest, FriendsData, FriendsResponse, CreateFriendRequestResponse,
+  FriendRoomPresence, FriendPlayStats, FriendStatsResponse,
   MatchHistory,
 } from './social';
 

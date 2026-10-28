@@ -26,8 +26,8 @@ const MEMORY_SAMPLE_MS = 1_000;
 const WRITE_METHODS = [
   'createAccount', 'updateProfile', 'purchaseAvatarBorder', 'purchaseShopItem', 'claimAchievement', 'replaceDailyTask',
   'claimDailyReward', 'changePassword', 'createSession', 'deleteSession', 'deleteAccountSessions', 'createFriendship',
-  'acceptFriendship', 'deleteFriendship', 'createDirectMessage', 'markDirectMessagesRead', 'dismissFriendNotifications',
-  'pruneSocialHistory', 'saveRuntime', 'saveMatch', 'createEmojis', 'deleteEmoji', 'deleteEmojis', 'renameEmoji',
+  'acceptFriendship', 'deleteFriendship', 'createDirectMessage', 'markDirectMessagesRead', 'markFriendNotificationsRead',
+  'dismissFriendNotifications', 'clearReadFriendNotifications', 'recordAccountActivity', 'pruneSocialHistory', 'saveRuntime', 'saveMatch', 'createEmojis', 'deleteEmoji', 'deleteEmojis', 'renameEmoji',
 ] as const satisfies readonly (keyof Repository)[];
 
 function requiredEnvironment(name: string): string {

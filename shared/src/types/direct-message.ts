@@ -32,10 +32,18 @@ export interface AcceptedFriendNotification {
   readonly id: string;
   readonly account: PublicAccount;
   readonly createdAt: number;
+  /** Null while unread. */
+  readonly readAt: number | null;
+}
+
+/** A pending request to the viewer, with the viewer's notification read state. */
+export interface IncomingFriendNotification extends FriendRequest {
+  /** Null while unread. */
+  readonly readAt: number | null;
 }
 
 export interface SocialOverview {
-  readonly incoming: FriendRequest[];
+  readonly incoming: IncomingFriendNotification[];
   readonly accepted: AcceptedFriendNotification[];
   readonly conversations: Conversation[];
 }

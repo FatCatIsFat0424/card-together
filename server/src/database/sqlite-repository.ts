@@ -480,8 +480,29 @@ export async function createSqliteRepository(filePath: string, options: Reposito
       listFriendNotifications: (accountId) => read(() =>
         sql('SELECT * FROM friend_notifications WHERE account_id = ? AND created_at > ? ORDER BY created_at DESC, seq ASC')
           .all(accountId, messageCutoff()).map(friendNotificationFromRow)),
+      markFriendNotificationsRead: (accountId, ids) => write(() => {
+        const readAt = now();
+        if (ids === 'all') {
+          sql('UPDATE friend_notifications SET read_at = ? WHERE account_id = ? AND read_at IS NULL').run(readAt, accountId);
+          sql(`UPDATE friendships SET recipient_read_at = ? WHERE recipient_id = ? AND status = 'pending'
+            AND recipient_read_at IS NULL`).run(readAt, accountId);
+          return;
+        }
+        for (const id of new Set(ids)) {
+          sql('UPDATE friend_notifications SET read_at = ? WHERE account_id = ? AND id = ? AND read_at IS NULL')
+            .run(readAt, accountId, id);
+          sql(`UPDATE friendships SET recipient_read_at = ? WHERE recipient_id = ? AND id = ? AND status = 'pending'
+            AND recipient_read_at IS NULL`).run(readAt, accountId, id);
+        }
+      }),
       dismissFriendNotifications: (accountId, ids) => write(() => {
         for (const id of new Set(ids)) sql('DELETE FROM friend_notifications WHERE account_id = ? AND id = ?').run(accountId, id);
+      }),
+      clearReadFriendNotifications: (accountId) => write(() =>
+        Number(sql('DELETE FROM friend_notifications WHERE account_id = ? AND read_at IS NOT NULL').run(accountId).changes)),
+      recordAccountActivity: (accountId, at) => write(() => {
+        if (!Number.isSafeInteger(at) || at < 0) throw new Error('Invalid activity time.');
+        advanceLastSeen(sql, accountId, at);
       }),
       pruneSocialHistory: (time) => write(() => {
         if (!Number.isSafeInteger(time) || time < 0) throw new Error('Invalid social history pruning time.');

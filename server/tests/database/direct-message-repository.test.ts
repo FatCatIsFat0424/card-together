@@ -155,6 +155,51 @@ describe.each(REPOSITORY_ADAPTERS)('durable friend messages ($name)', (adapter) 
     expect(await repository.listFriendNotifications('alice')).toEqual([]);
   });
 
+  it('marks notifications and received requests read for their owner only and clears read notifications', async () => {
+    await request();
+    await request('friend-charlie-bob', 'charlie', 'bob');
+    await repository.acceptFriendship('friend-alice-bob', 'bob');
+    await request('friend-alice-charlie', 'alice', 'charlie');
+    const [notice] = await repository.listFriendNotifications('alice');
+    expect(notice.readAt).toBeUndefined();
+    // Other accounts, and the sender of a request, cannot mark it.
+    await repository.markFriendNotificationsRead('bob', [notice.id, 'friend-alice-charlie']);
+    await repository.markFriendNotificationsRead('alice', ['friend-alice-charlie']);
+    expect(await repository.listFriendNotifications('alice')).toEqual([notice]);
+    expect((await repository.getFriendship('friend-alice-charlie'))?.recipientReadAt).toBeUndefined();
+    await repository.markFriendNotificationsRead('charlie', ['friend-alice-charlie']);
+    expect(await repository.getFriendship('friend-alice-charlie')).toMatchObject({ recipientReadAt: now });
+    expect((await repository.getFriendship('friend-charlie-bob'))?.recipientReadAt).toBeUndefined();
+    const readAt = now;
+    now += 1000;
+    await repository.markFriendNotificationsRead('bob', 'all');
+    expect(await repository.getFriendship('friend-charlie-bob')).toMatchObject({ recipientReadAt: now });
+    await repository.markFriendNotificationsRead('charlie', 'all');
+    expect(await repository.getFriendship('friend-alice-charlie')).toMatchObject({ recipientReadAt: readAt });
+    expect(await repository.clearReadFriendNotifications('alice')).toBe(0);
+    await repository.markFriendNotificationsRead('alice', 'all');
+    expect(await repository.listFriendNotifications('alice')).toEqual([{ ...notice, readAt: now }]);
+    await repository.close();
+    repository = await adapter.open(path, { now: () => now });
+    expect(await repository.listFriendNotifications('alice')).toEqual([{ ...notice, readAt: now }]);
+    expect(await repository.clearReadFriendNotifications('bob')).toBe(0);
+    expect(await repository.clearReadFriendNotifications('alice')).toBe(1);
+    expect(await repository.listFriendNotifications('alice')).toEqual([]);
+    expect(await repository.getFriendship('friend-alice-charlie')).toMatchObject({ status: 'pending' });
+  });
+
+  it('advances last-seen activity monotonically and ignores unknown accounts', async () => {
+    await repository.recordAccountActivity('alice', 500);
+    await repository.recordAccountActivity('alice', 400);
+    await repository.recordAccountActivity('nobody', 600);
+    expect((await repository.getAccountById('alice'))?.lastSeenAt).toBe(500);
+    await expect(repository.recordAccountActivity('alice', -1)).rejects.toThrow('Invalid activity time');
+    await repository.close();
+    repository = await adapter.open(path, { now: () => now });
+    expect((await repository.getAccountById('alice'))?.lastSeenAt).toBe(500);
+    expect((await repository.getAccountById('bob'))?.lastSeenAt).toBeUndefined();
+  });
+
   it('filters expired messages, cursors and notifications before durable pruning and survives reopening', async () => {
     await friends();
     await repository.createDirectMessage(message('expires'));
