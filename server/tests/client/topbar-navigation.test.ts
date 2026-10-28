@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const state = vi.hoisted(() => ({ accountId: 'alice' as string | null, roomCode: 'ABC123' as string | null }));
 vi.mock('../../../client/src/socket', () => ({ socket: {} }));
 vi.mock('../../../client/src/api', () => ({ apiRequest: vi.fn() }));
+vi.mock('../../../client/src/media', () => ({ mediaUrl: (id: string) => `/api/media/${id}` }));
 vi.mock('../../../client/src/stores/social-store', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../client/src/stores/social-store')>();
   return {

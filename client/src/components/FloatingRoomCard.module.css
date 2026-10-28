@@ -1,8 +1,9 @@
 .card {
   position: fixed;
   z-index: 80;
-  left: max(var(--spacing-md), env(safe-area-inset-left));
-  bottom: max(var(--spacing-md), env(safe-area-inset-bottom));
+  /* Bottom right, under the lobby's social column, where it covers the least content. */
+  right: max(var(--page-inset), env(safe-area-inset-right));
+  bottom: max(var(--page-inset), env(safe-area-inset-bottom));
   width: 264px;
   max-width: calc(100vw - 2 * var(--spacing-md));
   border-radius: var(--radius-lg);
@@ -39,6 +40,7 @@
     --corner-x: 0px;
     --corner-y: calc(100dvh - 100% - var(--topbar-height) - 8px - max(8px, env(safe-area-inset-bottom)));
     width: max-content;
+    right: auto;
     left: calc(var(--rail-width) + max(8px, env(safe-area-inset-left)));
     top: calc(var(--topbar-height) + 8px);
     bottom: auto;

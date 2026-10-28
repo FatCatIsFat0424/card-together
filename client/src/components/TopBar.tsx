@@ -22,6 +22,9 @@ import { Button } from './Button';
 import { CoinBalance } from './CoinBalance';
 import { IconButton, IconLink, badgeText } from './IconButton';
 import { RoomCodeButton } from './RoomCodeButton';
+import { DesktopShell } from './DesktopShell';
+import type { ShellPopover } from './DesktopShell';
+import { DESKTOP_SHELL_QUERY, isTableRoute } from './desktop-nav';
 import { NotificationPanel } from './NotificationPanel';
 import { nextReturnLocation, togglePageHref, togglePageOf } from './topbar-toggle-page';
 import { messageUnreadCount, notificationUnreadCount, useSocialStore } from '../stores/social-store';
@@ -29,7 +32,7 @@ import { closeMessagesWindow } from '../stores/messages-window-store';
 import { useShellStore } from '../stores/shell-store';
 import styles from './TopBar.module.css';
 
-type Popover = 'notifications' | 'menu' | 'music' | 'signOut';
+type Popover = ShellPopover;
 
 /** The short landscape layout, where the top bar becomes a slim icon rail. */
 const RAIL_QUERY = '(max-height: 500px) and (min-width: 600px)';
@@ -58,7 +61,9 @@ export function TopBar(): ReactNode {
   const { containerRef: navRef, indicatorRef: navIndicatorRef } =
     useActiveIndicator<HTMLElement, HTMLSpanElement>('a[aria-current="page"]', pathname);
   const railLayout = useMediaQuery(RAIL_QUERY);
-  const { data: friendsData } = useFriendsData(railLayout && Boolean(accountId));
+  const wideLayout = useMediaQuery(DESKTOP_SHELL_QUERY);
+  const desktopShell = wideLayout && Boolean(accountId) && !isTableRoute(pathname);
+  const { data: friendsData } = useFriendsData((railLayout || desktopShell) && Boolean(accountId));
   const onlineFriends = friendsData?.friends.filter((friend) => friend.online).length ?? 0;
   const notificationsRequest = useShellStore((state) => state.notificationsRequest);
   const handledRequest = useRef(notificationsRequest);
@@ -159,6 +164,11 @@ export function TopBar(): ReactNode {
     setOpen(null);
     if (togglePage === 'messages') closeMessagesWindow(event, returnTo);
   };
+
+  if (desktopShell && accountId) return <DesktopShell pathname={pathname} accountId={accountId} returnTo={returnTo}
+    onlineFriends={onlineFriends}
+    popovers={{ open, toggle, close: () => setOpen(null), shown, panelProps }}
+    signOut={{ request: requestSignOut, run: () => void signOut(), busy, error, confirm: confirmSignOut }} />;
 
   return (
     <header className={styles.bar}>

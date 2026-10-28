@@ -6,6 +6,7 @@ import { useI18nStore } from '../stores/i18n-store';
 import { PlayerLink } from './PlayerLink';
 import { Button } from './Button';
 import { IconButton } from './IconButton';
+import { friendAction, friendActivity } from './lobby-friend-activity';
 import styles from './LobbyFriends.module.css';
 
 /** Online friends appear in the lobby, with hosts first and input order preserved otherwise. */
@@ -14,14 +15,40 @@ export function onlineLobbyFriends(friends: readonly FriendEntry[]): FriendEntry
     .sort((a, b) => Number(Boolean(b.hostedRoomCode)) - Number(Boolean(a.hostedRoomCode)));
 }
 
-export function LobbyFriends({ disabled, refreshToken, onJoin }: {
+/** Desktop column extras: each row shows what the friend is doing and offers join or invite. */
+export interface LobbyFriendsActivity {
+  readonly viewerInRoom: boolean;
+  readonly invited: ReadonlySet<string>;
+  readonly onInvite: (friend: FriendEntry) => void;
+}
+
+export function LobbyFriends({ disabled, refreshToken, onJoin, activity }: {
   readonly disabled: boolean; readonly refreshToken: number;
   readonly onJoin: (friend: FriendEntry) => void;
+  readonly activity?: LobbyFriendsActivity;
 }): ReactNode {
   const { t } = useI18nStore();
   const { data, error, loading, reload } = useFriendsData(true, refreshToken);
   const friends = onlineLobbyFriends(data?.friends ?? []);
-  return <section className={styles.panel} aria-labelledby="lobby-friends-title">
+  const statusOf = (friend: FriendEntry): string | undefined => {
+    const current = friendActivity(friend);
+    if (!current) return undefined;
+    return current.kind === 'hosting' ? t('lobby.friendHosting', { code: current.code })
+      : t(current.kind === 'room' ? 'lobby.friendInRoom' : 'lobby.friendInLobby');
+  };
+  const joinButton = (friend: FriendEntry): ReactNode => <Button variant="ghost" size="small" disabled={disabled}
+    aria-label={t('friends.joinRoomLabel', { nickname: friend.nickname })}
+    onClick={() => onJoin(friend)}>{t('lobby.join')}</Button>;
+  const friendActions = (friend: FriendEntry): ReactNode => {
+    const action = friendAction(friend, activity?.viewerInRoom ?? false);
+    if (action === 'join') return joinButton(friend);
+    if (action !== 'invite') return null;
+    const sent = activity?.invited.has(friend.id) ?? false;
+    return <Button variant="ghost" size="small" disabled={disabled || sent}
+      aria-label={`${t('invite.send')} ${friend.nickname}`}
+      onClick={() => activity?.onInvite(friend)}>{t(sent ? 'invite.sent' : 'invite.send')}</Button>;
+  };
+  return <section className={`${styles.panel} ${activity ? styles.activity : ''}`} aria-labelledby="lobby-friends-title">
     <div className={styles.heading}>
       <div className={styles.title}>
         <h2 id="lobby-friends-title">{t('lobby.onlineFriends')}</h2>
@@ -40,11 +67,10 @@ export function LobbyFriends({ disabled, refreshToken, onJoin }: {
     {data && !loading && friends.length > 0 && <ul className={styles.list}>
       {friends.map((friend) => <li key={friend.id} className={styles.friend}>
         <div className={styles.friendIdentity} title={friend.nickname}>
-          <PlayerLink player={friend} showUsername />
+          {activity ? <PlayerLink player={friend} dense size="compact" showTitle={false} details={statusOf(friend)} />
+            : <PlayerLink player={friend} showUsername />}
         </div>
-        {friend.hostedRoomCode && <Button variant="ghost" size="small" disabled={disabled}
-          aria-label={t('friends.joinRoomLabel', { nickname: friend.nickname })}
-          onClick={() => onJoin(friend)}>{t('lobby.join')}</Button>}
+        {activity ? friendActions(friend) : friend.hostedRoomCode && joinButton(friend)}
       </li>)}
     </ul>}
     {data && data.incoming.length > 0 && <Link className={styles.requests} to="/friends">

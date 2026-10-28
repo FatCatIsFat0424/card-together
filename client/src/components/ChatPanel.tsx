@@ -52,9 +52,11 @@ const ChatMessageRow = memo(function ChatMessageRow({ message }: { readonly mess
 interface ChatPanelProps {
   /** When provided: the panel fills the container height and the header shows a collapse button */
   onCollapse?: () => void;
+  /** Fills a dock that already has its own tab and collapse button, so the panel drops its header. */
+  embedded?: boolean;
 }
 
-export function ChatPanel({ onCollapse }: ChatPanelProps): ReactNode {
+export function ChatPanel({ onCollapse, embedded = false }: ChatPanelProps): ReactNode {
   const messages = useChatStore((state) => state.messages);
   const emojis = useEmojiStore((state) => state.emojis);
   const loadEmojis = useEmojiStore((state) => state.load);
@@ -141,12 +143,12 @@ export function ChatPanel({ onCollapse }: ChatPanelProps): ReactNode {
   };
 
   return (
-    <section className={`${styles.chatContainer} ${onCollapse ? styles.fill : ''}`}>
-      <div className={styles.chatHeader}>
+    <section className={`${styles.chatContainer} ${onCollapse || embedded ? styles.fill : ''} ${embedded ? styles.embedded : ''}`}>
+      {!embedded && <div className={styles.chatHeader}>
         <h2 className={styles.chatTitle}><AppIcon name="chat" /> {t('chat.title')}</h2>
         {onCollapse && <button type="button" className={`${styles.collapseBtn} touch-target`} onClick={onCollapse}
           aria-label={t('table.chatCollapse')} title={t('table.chatCollapse')}><AppIcon name="nextPage" /></button>}
-      </div>
+      </div>}
       <div ref={messagesRef} className={styles.chatMessages} role="log" aria-live="polite">
         {messages.map((message) => <ChatMessageRow key={message.id} message={message} />)}
       </div>

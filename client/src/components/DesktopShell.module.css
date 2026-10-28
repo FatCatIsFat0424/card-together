@@ -1,0 +1,50 @@
+/* ─── Desktop top bar: category tabs on the left, quick actions on the right ─── */
+/* Panels reuse the popover classes of the classic bar (TopBar.module.css). */
+
+.bar {
+  grid-column: 2;
+  grid-row: 1;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+  height: var(--topbar-height);
+  padding: 0 var(--page-inset);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--separator);
+}
+
+.lead { flex: 1; min-width: 0; }
+.tabs { overflow-x: auto; scrollbar-width: none; margin-left: calc(-1 * var(--space-1)); }
+
+.actions { display: flex; align-items: center; gap: var(--space-1); flex-shrink: 0; }
+.actions .panel { right: var(--page-inset); }
+.actions .playing { color: var(--color-primary); }
+.actions .coins { margin: 0 var(--space-1); }
+
+/* A 32px avatar inside a 40px hit area. */
+.avatarButton {
+  display: grid;
+  place-items: center;
+  width: var(--hit-size);
+  height: var(--hit-size);
+  border-radius: var(--radius-pill);
+}
+.avatarButton[aria-expanded='true'] { background: var(--surface-2); }
+
+.actions .menu { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-2); width: 260px; padding: var(--space-2); }
+.menuName { padding: var(--space-1) var(--space-2) 0; overflow: hidden; font-size: var(--text-md); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.menuLinks { display: flex; flex-direction: column; }
+.menuLinks a {
+  display: flex;
+  align-items: center;
+  height: var(--hit-size);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+}
+.menuLinks a:hover { background: var(--surface-2); }
+.menuPrefs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: 0 var(--space-2); }
+.menuSignOut { justify-content: flex-start; width: 100%; height: var(--hit-size); border-top: 1px solid var(--separator); border-radius: 0; }

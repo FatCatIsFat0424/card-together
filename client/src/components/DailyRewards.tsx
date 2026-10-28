@@ -11,6 +11,7 @@ import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { AppIcon } from './AppIcon';
 import { Button } from './Button';
+import { DailyPanel } from './DailyPanel';
 import { IconButton } from './IconButton';
 import { dialogParts, dialogPaperClass } from '../styles/dialog';
 import styles from './DailyRewards.module.css';
@@ -106,7 +107,8 @@ export function needsAutoCheckIn(status: DailyRewardsStatus, attemptedDay: strin
   return status.day !== attemptedDay && !status.checkInDays.includes(status.day);
 }
 
-export function DailyRewards(): ReactNode {
+/** `icons` shows two icon buttons that open the dialogs; `panel` shows the compact task bars and check-in button. */
+export function DailyRewards({ layout = 'icons' }: { readonly layout?: 'icons' | 'panel' }): ReactNode {
   const { t } = useI18nStore();
   const accountId = useAccountStore((state) => state.account?.id);
   const coinRevision = useAccountStore((state) => state.account?.coinRevision);
@@ -192,10 +194,14 @@ export function DailyRewards(): ReactNode {
   const claimable = status?.tasks.some(({ id, progress }) =>
     progress >= DAILY_TASKS.find((task) => task.id === id)!.target && !status.claimedTasks.includes(id));
   return <aside className={styles.widgets}>
-    <IconButton icon="info" label={t('daily.tasks')} aria-haspopup="dialog" badge={claimable ? 'dot' : undefined}
-      onClick={() => open('tasks')} />
-    <IconButton icon="calendar" label={t('daily.checkIn')} aria-haspopup="dialog" badge={status && !checkedIn ? 'dot' : undefined}
-      onClick={() => open('check-in')} />
+    {layout === 'panel' ? <DailyPanel status={status} error={error} pending={pending}
+      onClaim={(id) => { void mutate(id); }} onOpenTasks={() => open('tasks')} onOpenCheckIn={() => open('check-in')}
+      onRetry={() => setRefresh((value) => value + 1)} /> : <>
+      <IconButton icon="info" label={t('daily.tasks')} aria-haspopup="dialog" badge={claimable ? 'dot' : undefined}
+        onClick={() => open('tasks')} />
+      <IconButton icon="calendar" label={t('daily.checkIn')} aria-haspopup="dialog" badge={status && !checkedIn ? 'dot' : undefined}
+        onClick={() => open('check-in')} />
+    </>}
     <Dialog open={dialogOpen} onClose={close} aria-labelledby="daily-rewards-title"
       slotProps={{ paper: { className: dialogPaperClass(dialog === 'tasks' ? 'wide' : 'medium') } }}>
       <DialogTitle component="div" className={`${dialogParts.header} ${styles.dialogHeader}`}>

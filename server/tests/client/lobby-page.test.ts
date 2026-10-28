@@ -30,6 +30,8 @@ vi.mock('../../../client/src/stores/game-store', () => ({
 }));
 
 import { LobbyPage } from '../../../client/src/pages/LobbyPage';
+import { DesktopLobby } from '../../../client/src/pages/DesktopLobby';
+import type { DesktopLobbyProps } from '../../../client/src/pages/DesktopLobby';
 import { onlineLobbyFriends } from '../../../client/src/components/LobbyFriends';
 import { GAME_CARD_ART } from '../../../client/src/game-backgrounds';
 import { gamesInCategory, lobbyCategories } from '../../../client/src/games/registry';
@@ -110,5 +112,45 @@ describe('lobby page', () => {
     ]);
     expect(onlineLobbyFriends(friends).map(({ id }) => id)).toEqual(['host', 'available', 'other']);
     expect(friends.map(({ id }) => id)).toEqual(['available', 'offline', 'host', 'other']);
+  });
+
+  describe('desktop layout', () => {
+    const noop = (): void => undefined;
+    const desktop = (overrides: Partial<DesktopLobbyProps> = {}): string => renderToStaticMarkup(createElement(MemoryRouter, null,
+      createElement(DesktopLobby, {
+        accountId: 'alice', category: 'cards', selectedGame: 'holdem', onSelectGame: noop, onShowRules: noop, error: '',
+        inRoom: false, blocked: false, roomLocked: false, pending: null, roomCode: '', onRoomCodeChange: noop,
+        onCreate: noop, onJoin: noop,
+        friends: { refreshToken: 0, onJoin: noop, activity: { viewerInRoom: false, invited: new Set<string>(), onInvite: noop } },
+        ...overrides,
+      })));
+
+    it('puts the selected game in a hero with one create, join and rules control, above one card per game', () => {
+      const html = desktop();
+      expect(html).toContain('id="lobby-selected-game-title">Texas Hold&#x27;em</h2>');
+      expect(html).toContain('2–8 players · Betting');
+      expect(html.match(/>Create Room</g)).toHaveLength(1);
+      expect(html).toContain('placeholder="Enter room code"');
+      expect(html).toContain('Rules</button>');
+      const cards = html.match(/<button[^>]*aria-controls="lobby-selected-game"[^>]*>/g) ?? [];
+      expect(cards).toHaveLength(GAME_TYPES.length);
+      expect(cards.filter((card) => card.includes('aria-pressed="true"'))).toHaveLength(1);
+      expect(html.indexOf('Create Room')).toBeLessThan(html.indexOf('aria-controls="lobby-selected-game"'));
+    });
+
+    it('keeps friends and daily rewards in a social column', () => {
+      const html = desktop();
+      const social = html.slice(html.indexOf('<aside'));
+      expect(social).toContain('Friends online');
+      expect(social).toContain('Daily tasks');
+      expect(social).toContain('Daily check-in');
+    });
+
+    it('locks creating and joining while in a room and shows request errors', () => {
+      const html = desktop({ roomLocked: true, inRoom: true, error: 'Room is full.' });
+      expect(html).toMatch(/disabled=""[^>]*>Create Room/);
+      expect(html).toMatch(/<input[^>]*disabled=""/);
+      expect(html).toContain('role="alert">Room is full.');
+    });
   });
 });

@@ -12,7 +12,7 @@
   display: grid;
   height: 100%;
   min-height: 0;
-  grid-template-columns: minmax(0, 1fr) clamp(300px, 28vw, 440px);
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 24vw, 360px);
   grid-template-areas:
     'bar bar'
     'table chat';
@@ -298,6 +298,18 @@
   .chatOpen .chat > * { transform: translateY(0); transition-timing-function: ease-out; }
 }
 
+/* Count next to a dock tab name. */
+.tabCount {
+  margin-left: var(--space-1);
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
 /* ─── Entrance: controls rise first, seats follow, the footer finishes the sequence ─── */
 .entering .bar,
 .entering .summary,
@@ -331,6 +343,11 @@
 .roomContainer[data-reduced-motion] .chat > * { transition: none; }
 @media (prefers-reduced-motion: reduce) {
   .chat, .chat > * { transition: none; }
+}
+
+/* Desktop and tablets sit inside the app shell, so the page uses the shared outer inset. */
+@media (min-width: 768px) and (min-height: 501px) {
+  .roomLayout { padding: 0 var(--page-inset) var(--page-inset); }
 }
 
 /* Phone landscape: the bar and footer shrink to give the oval the height. */

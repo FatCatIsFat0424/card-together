@@ -25,11 +25,13 @@ import { GameRulesDialog } from '../components/GameRulesDialog';
 import { DailyRewards } from '../components/DailyRewards';
 import { AndroidAppBanner } from '../components/AndroidAppBanner';
 import { Tabs, tabElementId } from '../components/Tabs';
+import { DESKTOP_SHELL_QUERY, DEFAULT_LOBBY_GAME, LOBBY_PANEL_ID, LOBBY_TAB_PREFIX, activeLobbyCategory } from '../components/desktop-nav';
+import { useInviteFriend } from '../hooks/use-invite-friend';
+import { DesktopLobby } from './DesktopLobby';
 import styles from './LobbyPage.module.css';
 
-const CATEGORY_PANEL_ID = 'lobby-games';
-const TAB_PREFIX = 'lobby-category';
-const DEFAULT_GAME: GameType = 'bridge';
+const CATEGORY_PANEL_ID = LOBBY_PANEL_ID;
+const TAB_PREFIX = LOBBY_TAB_PREFIX;
 const LANDSCAPE_QUERY = '(max-height: 500px) and (min-width: 600px)';
 
 export function LobbyPage(): ReactNode {
@@ -43,8 +45,13 @@ export function LobbyPage(): ReactNode {
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const notificationCount = useSocialStore(notificationUnreadCount);
   const requestNotifications = useShellStore((state) => state.requestNotifications);
-  const [category, setCategory] = useState<GameCategory>(() => gameDefinition(DEFAULT_GAME).category);
-  const [selectedGame, setSelectedGame] = useState<GameType>(DEFAULT_GAME);
+  const desktopLayout = useMediaQuery(DESKTOP_SHELL_QUERY);
+  const category = activeLobbyCategory(useShellStore((state) => state.lobbyCategory));
+  const setCategory = useShellStore((state) => state.setLobbyCategory);
+  const [pickedGame, setSelectedGame] = useState<GameType>(DEFAULT_LOBBY_GAME);
+  // The top bar's tabs can change the category without telling this page, so the selection follows it.
+  const selectedGame = gamesInCategory(category).includes(pickedGame) ? pickedGame : gamesInCategory(category)[0];
+  const invites = useInviteFriend();
   const [rulesGame, setRulesGame] = useState<GameType | null>(null);
   const [roomCodeInput, setRoomCodeInput] = useState('');
   const [error, setError] = useState('');
@@ -112,6 +119,15 @@ export function LobbyPage(): ReactNode {
 
   if (!account) return null;
   const roomLocked = blocked || Boolean(currentRoomCode);
+  if (desktopLayout) return <>
+    <DesktopLobby accountId={account.id} category={category} selectedGame={selectedGame} onSelectGame={setSelectedGame}
+      onShowRules={setRulesGame} error={error || invites.error} inRoom={Boolean(currentRoomCode)} blocked={blocked}
+      roomLocked={roomLocked} pending={pending} roomCode={roomCodeInput} onRoomCodeChange={setRoomCodeInput}
+      onCreate={() => createRoom(selectedGame)} onJoin={joinRoom}
+      friends={{ refreshToken: friendsRevision, onJoin: joinFriend,
+        activity: { viewerInRoom: Boolean(currentRoomCode), invited: invites.invited, onInvite: (friend) => invites.invite(friend.id) } }} />
+    {rulesGame && <GameRulesDialog gameType={rulesGame} onClose={() => setRulesGame(null)} />}
+  </>;
   return <main className={styles.page} data-reduced-motion={reducedMotion || undefined}>
     <header className={styles.bar}>
       {!landscapeLayout && <div className={styles.welcome}>

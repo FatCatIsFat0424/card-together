@@ -22,12 +22,14 @@ export interface RoomSpectatorsProps {
   readonly onStandUp: () => void;
   readonly onKick: (player: PlayerInfo) => void;
   readonly onMove: (player: PlayerInfo) => void;
+  /** `dock` fills a side panel; the default is the 280px popover. */
+  readonly layout?: 'popover' | 'dock';
 }
 
 /** The spectator list opened from "旁觀 n/8": join as spectator, and the host's kick and move controls. */
 export function RoomSpectators(props: RoomSpectatorsProps): ReactNode {
   const { t } = useI18nStore();
-  return <section className={styles.panel}>
+  return <section className={`${styles.panel} ${props.layout === 'dock' ? styles.dock : ''}`}>
     <h2 id="room-spectators-label" className={styles.title}>
       {t('room.spectators', { n: String(props.spectators.length), max: String(MAX_SPECTATORS) })}</h2>
     {props.seated && <Button variant="ghost" disabled={!props.canSpectate}

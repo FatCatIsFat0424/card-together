@@ -1,0 +1,21 @@
+/* ─── Daily panel: compact task bars and the check-in button in the lobby's social column ─── */
+
+.panel { display: flex; flex: 1; flex-direction: column; gap: var(--space-2); min-width: 0; padding: var(--space-3) var(--space-4) var(--space-4); border-radius: var(--radius-lg); background: var(--surface-1); }
+.heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.heading h2 { font-size: var(--text-md); font-weight: 600; white-space: nowrap; }
+.message { color: var(--text-secondary); font-size: var(--text-sm); line-height: 1.6; }
+
+.tasks { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.task { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-3); row-gap: 6px; }
+.taskText { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); min-width: 0; font-size: var(--text-sm); }
+.taskName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.taskCount { flex-shrink: 0; color: var(--text-secondary); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
+.bar { grid-column: 1; height: 6px; overflow: hidden; border-radius: var(--radius-pill); background: var(--surface-2); }
+.bar > span { display: block; height: 100%; border-radius: inherit; background: var(--color-gold); }
+.reward { grid-column: 2; grid-row: 1 / span 2; display: inline-flex; align-items: center; gap: 2px; min-width: 3rem; color: var(--color-gold); font-size: var(--text-sm); font-weight: 600; justify-content: flex-end; }
+.reward > svg { font-size: 16px; }
+.claim { grid-column: 2; grid-row: 1 / span 2; }
+
+.checkIn { justify-content: center; width: 100%; margin-top: var(--space-1); }
+.checkInReward { margin-left: var(--space-1); color: var(--color-gold); font-size: var(--text-sm); }
+.unclaimed .checkInReward { color: inherit; }

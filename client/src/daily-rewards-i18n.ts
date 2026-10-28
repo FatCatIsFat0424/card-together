@@ -1,6 +1,7 @@
 const en = {
   'daily.tasks': 'Daily tasks',
   'daily.checkIn': 'Daily check-in',
+  'daily.viewAll': 'View all',
   'daily.play-variety': 'Finish three different types of games',
   'daily.win-two': 'Win two games',
   'daily.play-bridge': 'Finish one game of Bridge',
@@ -39,6 +40,7 @@ export const dailyRewardsTranslations: Record<'en' | 'zh-TW', Record<DailyReward
   'zh-TW': {
     'daily.tasks': '每日任務',
     'daily.checkIn': '每日簽到',
+    'daily.viewAll': '查看全部',
     'daily.play-variety': '玩三種不同類型的遊戲',
     'daily.win-two': '贏兩局',
     'daily.play-bridge': '完成 1 局橋牌',

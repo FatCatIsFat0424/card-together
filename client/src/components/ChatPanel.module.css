@@ -17,6 +17,8 @@
   background: var(--bg-surface);
 }
 
+.embedded { background: transparent; border-radius: 0; }
+
 .chatHeader {
   display: flex;
   align-items: center;

@@ -1,0 +1,27 @@
+/* ─── Dock: tabs above one scrolling panel, filling its grid cell ─── */
+
+.dock {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  padding: 0 var(--space-1) 0 var(--space-4);
+  border-bottom: 1px solid var(--separator);
+}
+.tabs { min-width: 0; }
+
+.body { position: relative; flex: 1; min-height: 0; }
+.panel { height: 100%; min-height: 0; }
+.panel[hidden] { display: none; }

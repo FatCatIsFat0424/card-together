@@ -16,3 +16,5 @@
 .actions a { display: inline-flex; align-items: center; height: var(--hit-size); padding: 0 var(--space-1); }
 .requests { display: flex; align-items: center; min-height: var(--hit-size); font-size: var(--text-sm); }
 .error { margin-top: var(--space-2); color: var(--color-danger); font-size: var(--text-sm); overflow-wrap: anywhere; }
+/* The desktop social column has the height for a longer list than the phone layout. */
+.activity .list { max-height: 20rem; }

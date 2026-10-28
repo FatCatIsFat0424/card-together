@@ -4,21 +4,20 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { FriendEntry, FriendsData } from '@shared/types';
 import { apiRequest } from '../api';
-import { socket } from '../socket';
+import { useInviteFriend } from '../hooks/use-invite-friend';
 import { useI18nStore } from '../stores/i18n-store';
 import { Avatar } from './Avatar';
 import { Button } from './Button';
 import { IconButton } from './IconButton';
 import styles from './InviteFriends.module.css';
 
-const INVITED_MS = 15_000;
-
 export function InviteFriends(): ReactNode {
   const { t } = useI18nStore();
   const [open, setOpen] = useState(false);
   const [friends, setFriends] = useState<FriendEntry[] | null>(null);
-  const [invited, setInvited] = useState<ReadonlySet<string>>(new Set());
-  const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const { invited, error: inviteError, invite, clearError } = useInviteFriend();
+  const error = loadError || inviteError;
 
   useEffect(() => {
     if (!open) return;
@@ -27,7 +26,7 @@ export function InviteFriends(): ReactNode {
       if (!active) return;
       if (result.success) {
         setFriends([...result.friends].sort((first, second) => Number(second.online) - Number(first.online)));
-      } else setError(result.error);
+      } else setLoadError(result.error);
     });
     const onPointerDown = (event: PointerEvent): void => {
       if (!(event.target instanceof Element) || !event.target.closest('[data-invite-popover]')) setOpen(false);
@@ -42,26 +41,10 @@ export function InviteFriends(): ReactNode {
     };
   }, [open]);
 
-  const invite = (accountId: string): void => {
-    setError('');
-    socket.timeout(10000).emit('room:invite', { accountId }, (timeout, result) => {
-      if (timeout || !result.success) {
-        setError(timeout ? t('auth.connectionError') : result.error ?? t('common.error'));
-        return;
-      }
-      setInvited((current) => new Set(current).add(accountId));
-      setTimeout(() => setInvited((current) => {
-        const next = new Set(current);
-        next.delete(accountId);
-        return next;
-      }), INVITED_MS);
-    });
-  };
-
   return (
     <div className={styles.group} data-invite-popover>
       <IconButton icon="personAdd" label={t('invite.open')} aria-expanded={open}
-        onClick={() => setOpen((current) => !current)} />
+        onClick={() => { clearError(); setOpen((current) => !current); }} />
       {open && <div className={styles.popover}>
         {error && <p className={styles.error} role="alert">{error}</p>}
         {!friends && !error && <p role="status">{t('common.loading')}</p>}

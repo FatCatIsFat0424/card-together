@@ -347,6 +347,21 @@ body {
   :root { --page-inset: 12px; --dialog-inset: 12px; --dialog-padding: 12px; }
 }
 
+/* Desktop and tablet: a left rail beside a slim top bar around the routed page. Table routes keep the classic bar. */
+@media (min-width: 768px) and (min-height: 501px) {
+  :root:has(#root > header[data-desktop-shell]) { --topbar-height: 52px; --rail-width: 76px; }
+  #root:has(> header[data-desktop-shell]) {
+    display: grid;
+    grid-template-columns: var(--rail-width) minmax(0, 1fr);
+    grid-template-rows: var(--topbar-height) minmax(0, 1fr);
+  }
+  #root:has(> header[data-desktop-shell]) > :not(nav, header) { grid-column: 2; grid-row: 2; }
+}
+/* Tablets collapse the rail to icons. */
+@media (min-width: 768px) and (max-width: 1023px) and (min-height: 501px) {
+  :root:has(#root > header[data-desktop-shell]) { --rail-width: 56px; }
+}
+
 /* Phone games keep the whole screen for the table; the game menu carries the app bar's controls. */
 @media (max-width: 767px), (max-height: 500px) and (min-width: 600px) {
   :root:has([data-game-shell]) { --topbar-height: 0px; --rail-width: 0px; }

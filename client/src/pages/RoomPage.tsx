@@ -26,6 +26,7 @@ import { useI18nStore } from '../stores/i18n-store';
 import { seatLabel } from '../games/seat-names';
 import { useMotionStore } from '../stores/motion-store';
 import { RoomSpectators } from '../components/RoomSpectators';
+import { Dock } from '../components/Dock';
 import { ChatPanel } from '../components/ChatPanel';
 import { InviteFriends } from '../components/InviteFriends';
 import { RoomSettings } from '../components/RoomSettings';
@@ -46,6 +47,8 @@ import { layeredShopArt } from '../cosmetics/art-layers/shop-art-layers';
 import { TableArt } from '../cosmetics/art-layers/TableArt';
 
 const COPIED_MS = 2000;
+
+type RoomDockTab = 'chat' | 'spectators';
 const RoomReplayPicker = lazy(() => import('../components/RoomReplayPicker')
   .then((module) => ({ default: module.RoomReplayPicker })));
 
@@ -71,10 +74,12 @@ export function RoomPage(): ReactNode {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
-  const [desktopChatCollapsed, setDesktopChatCollapsed] = useState(false);
+  const [dockOpen, setDockOpen] = useState(true);
+  const [dockTab, setDockTab] = useState<RoomDockTab>('chat');
   const chatToggleRef = useRef<HTMLButtonElement>(null);
   const compactLayout = useMediaQuery('(max-width: 1023px), (max-height: 700px)');
-  const chatVisible = compactLayout ? chatOpen : !desktopChatCollapsed;
+  const dockVisible = compactLayout ? chatOpen : dockOpen;
+  const chatVisible = dockVisible && (compactLayout || dockTab === 'chat');
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const systemReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const stillArt = reducedMotion || systemReducedMotion;
@@ -185,13 +190,24 @@ export function RoomPage(): ReactNode {
   const toggleChat = (): void => {
     setSeenMessages(messageCount);
     if (compactLayout) setChatOpen((open) => !open);
-    else setDesktopChatCollapsed((collapsed) => !collapsed);
+    else if (dockOpen && dockTab === 'chat') setDockOpen(false);
+    else { setDockTab('chat'); setDockOpen(true); }
   };
   const collapseChat = (): void => {
     setSeenMessages(messageCount);
     if (compactLayout) setChatOpen(false);
-    else setDesktopChatCollapsed(true);
+    else setDockOpen(false);
     chatToggleRef.current?.focus();
+  };
+  const changeDockTab = (tab: RoomDockTab): void => {
+    setSeenMessages(messageCount);
+    setDockTab(tab);
+  };
+  // The popover is the compact layout's spectator list; with a dock the list is its tab.
+  const openSpectators = (button: HTMLElement): void => {
+    if (compactLayout) { setSpectatorAnchor(button); return; }
+    setDockTab('spectators');
+    setDockOpen(true);
   };
 
   const changeSeat = (seat: Seat): void => {
@@ -366,6 +382,12 @@ export function RoomPage(): ReactNode {
       aria-label={t('room.movePlayer', { nickname: player.nickname })}
       aria-pressed={movingPlayer?.id === player.id} title={t('room.dragHint')}
       onClick={() => seatDrag.select(player)}><AppIcon name="drag" /></button>;
+  const spectatorList = (layout: 'popover' | 'dock'): ReactNode => <RoomSpectators layout={layout}
+    spectators={spectators} hostId={roomInfo.hostId} playerId={playerId}
+    seated={Boolean(mySeat || myAdditionalSeat >= 0)} canSpectate={canSpectate} canManage={canManagePlayers}
+    isHost={isHost} blocked={blocked} pending={Boolean(pendingDisabled(!waiting))}
+    onStandUp={() => { setSpectatorAnchor(null); standUp(); }} onKick={kick}
+    onMove={(player) => { seatDrag.select(player); setSpectatorAnchor(null); }} />;
   const primary = startNow
     ? <Button variant="primary" onClick={start} disabled={blocked}
       data-pending-disabled={pendingDisabled()}>{t('room.start')}</Button>
@@ -374,7 +396,7 @@ export function RoomPage(): ReactNode {
 
   return (
     <main data-reduced-motion={reducedMotion || undefined}
-      className={`${styles.roomContainer} ${styles.roomLayout} ${chatVisible ? styles.chatOpen : ''} ${entering ? styles.entering : ''}`}>
+      className={`${styles.roomContainer} ${styles.roomLayout} ${dockVisible ? styles.chatOpen : ''} ${entering ? styles.entering : ''}`}>
       <header className={styles.bar}>
         <IconButton icon="previousPage" label={t('room.back')} onClick={() => navigate('/')} />
         <h1 className={styles.title}>{t(`gameType.${roomInfo.gameType}`)}</h1>
@@ -406,7 +428,7 @@ export function RoomPage(): ReactNode {
       </header>
       <div ref={tableAreaRef} className={`${styles.tableArea} ${tableStyle ? styles.customTable : ''} ${tableArt ? styles.layeredTable : ''}`} style={tableStyle}
         aria-busy={busy}
-        inert={compactLayout && chatVisible}
+        inert={compactLayout && chatOpen}
         onDragStart={(event) => { if (canMovePlayers) event.preventDefault(); }}
         onClickCapture={seatDrag.choose} onPointerMove={seatDrag.move} onPointerUp={seatDrag.finish}
         onPointerCancel={seatDrag.cancel}>
@@ -454,8 +476,10 @@ export function RoomPage(): ReactNode {
           if (event.target === event.currentTarget) setEnteredRoom(roomInfo.code);
         }}>
           <button type="button" className={`${styles.spectatorEntry} ${seatDrag.drag?.targetKey === 'spectator' ? styles.dropTarget : ''}`}
-            data-room-drop="spectator" aria-haspopup="dialog" aria-expanded={Boolean(spectatorAnchor)}
-            onClick={(event) => setSpectatorAnchor(event.currentTarget)}>
+            data-room-drop="spectator" aria-haspopup={compactLayout ? 'dialog' : undefined}
+            aria-controls={compactLayout ? undefined : 'room-dock'}
+            aria-expanded={compactLayout ? Boolean(spectatorAnchor) : dockOpen && dockTab === 'spectators'}
+            onClick={(event) => openSpectators(event.currentTarget)}>
             {movingPlayer ? t('room.dropSpectator')
               : t('room.spectatorsShort', { n: String(spectators.length), max: String(MAX_SPECTATORS) })}
           </button>
@@ -478,16 +502,19 @@ export function RoomPage(): ReactNode {
       <Popover open={Boolean(spectatorAnchor)} anchorEl={spectatorAnchor} onClose={() => setSpectatorAnchor(null)}
         anchorOrigin={{ vertical: 'top', horizontal: 'left' }} transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         slotProps={{ paper: { className: styles.popover, role: 'dialog', 'aria-labelledby': 'room-spectators-label' } }}>
-        <RoomSpectators spectators={spectators} hostId={roomInfo.hostId} playerId={playerId}
-          seated={Boolean(mySeat || myAdditionalSeat >= 0)} canSpectate={canSpectate} canManage={canManagePlayers}
-          isHost={isHost} blocked={blocked} pending={Boolean(pendingDisabled(!waiting))}
-          onStandUp={() => { setSpectatorAnchor(null); standUp(); }} onKick={kick}
-          onMove={(player) => { seatDrag.select(player); setSpectatorAnchor(null); }} />
+        {spectatorList('popover')}
       </Popover>
       {seatDrag.drag && <div className={styles.dragPreview} aria-hidden="true"
         style={{ left: seatDrag.drag.x, top: seatDrag.drag.y }}>{seatDrag.drag.player.nickname}</div>}
-      <div className={styles.chat} id="room-chat" inert={!chatVisible}>
-        <ChatPanel onCollapse={collapseChat} />
+      <div className={styles.chat} id="room-chat" inert={!dockVisible}>
+        {compactLayout ? <ChatPanel onCollapse={collapseChat} /> : <Dock id="room-dock" label={t('room.dock')}
+          value={dockTab} onChange={changeDockTab} onCollapse={collapseChat} tabs={[
+            { id: 'chat', label: <>{t('chat.title')}{unread > 0 && <span className={styles.tabCount}
+              aria-label={t('room.unread', { n: String(unread) })}>{unread > 99 ? '99+' : unread}</span>}</>,
+            panel: <ChatPanel embedded /> },
+            { id: 'spectators', label: <>{t('room.spectatorsTab')}<span className={styles.tabCount}>{spectators.length}</span></>,
+              panel: spectatorList('dock') },
+          ]} />}
       </div>
       <Snackbar key={error ? `error:${error}` : readyNotice?.id} open={Boolean(error) || readyNotice !== null} autoHideDuration={5000}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}

@@ -231,9 +231,11 @@ describe('bot player interface', () => {
     expect(entry(panel())).not.toContain('disabled');
     expect(entry(panel({ isHost: false, canManage: false }))).not.toContain('disabled');
     expect(entry(panel({ seated: false }))).toBeUndefined();
-    // The room shows how many watch and opens the list from one footer control.
+    // The room shows how many watch and opens the list from one footer control: the dock's tab on desktop.
     state.room = { ...room(), spectators: [human] };
-    expect(render(createElement(RoomPage))).toMatch(/aria-haspopup="dialog"[^>]*>Spectators 1\/8<\/button>/);
+    const html = render(createElement(RoomPage));
+    expect(html).toMatch(/aria-controls="room-dock"[^>]*>Spectators 1\/8<\/button>/);
+    expect(html).toContain('id="room-dock-tab-spectators"');
   });
 
   it('disables spectator entry when disconnected or no longer waiting and translates its visible label', () => {
