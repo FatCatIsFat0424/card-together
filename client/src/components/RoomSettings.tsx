@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import { GAME_TYPES } from '@shared/constants';
-import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
+import { gameTimeControl } from '@shared/games/registry';
 import type {
   GameOptionsPayload, GameType, RoomInfo, TimeControl,
 } from '@shared/types';
@@ -51,7 +51,7 @@ export function RoomSettings({ room, editable, isHost, pending, ...actions }: Ro
     </label>
     <TimeControlSettings
       key={`${room.code}:${room.hostId}:${room.timeControl?.baseSeconds}:${room.timeControl?.bankSeconds}`}
-      value={room.timeControl ?? DEFAULT_TIME_CONTROL} disabled={lock} onSave={actions.setTimeControl} />
+      value={room.timeControl ?? gameTimeControl(room.gameType)} disabled={lock} onSave={actions.setTimeControl} />
     <RoomOption id="room-shuffle-hint" label={t('room.shuffleSeats')} hint={t('room.shuffleSeats')}
       checked={room.shuffleSeats ?? false} disabled={lock} onChange={actions.setShuffleSeats} />
     {GameRoomOptions && <GameRoomOptions gameOptions={room.gameOptions} disabled={lock}

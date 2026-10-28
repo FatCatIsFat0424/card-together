@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { GAME_TYPES } from '@shared/constants';
 import { getPresentationEndsAt } from '@shared/game-presentation';
+import { BOARD_TIME_CONTROL } from '@shared/time-control';
 import { ACTION_PARSERS, parseGameAction } from '@shared/games/actions';
 import { GAME_DEFINITIONS } from '@shared/games/registry';
 import type { ActionResult } from '@shared/types/socket-events';
@@ -76,6 +77,8 @@ async function startSample(adapter: RepositoryAdapter): Promise<SocketHarness> {
   for (const client of players) expect(await client.emitWithAck('room:ready')).toEqual({ success: true });
   expect(await players[0].emitWithAck('room:start')).toEqual({ success: true });
   expect(sampleAdapter.getGameState(app.roomCodes[0])?.clock?.turn?.seat).toBe('N');
+  // The room timer followed the game's own default when the host switched games.
+  expect(sampleAdapter.getGameState(app.roomCodes[0])?.clock?.settings).toEqual(BOARD_TIME_CONTROL);
   return app;
 }
 

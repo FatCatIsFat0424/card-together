@@ -1,5 +1,6 @@
 import { GAME_TYPES } from '../constants/game-rules';
-import type { GameType } from '../types/room';
+import type { GameType, TimeControl } from '../types/room';
+import { DEFAULT_TIME_CONTROL } from '../time-control';
 import type { GameDefinition } from './game-definition';
 import { bridgeDefinition } from './bridge/definition';
 import { bigTwoDefinition } from './bigtwo/definition';
@@ -28,6 +29,11 @@ export const GAME_DEFINITIONS: { readonly [K in GameType]: GameDefinition<K> } =
 
 export function gameDefinition<K extends GameType>(gameType: K): GameDefinition<K> {
   return GAME_DEFINITIONS[gameType];
+}
+
+/** Turn timer a room starts with for the game. */
+export function gameTimeControl(gameType: GameType): TimeControl {
+  return GAME_DEFINITIONS[gameType].timeControl ?? DEFAULT_TIME_CONTROL;
 }
 
 export function isGameType(value: unknown): value is GameType {

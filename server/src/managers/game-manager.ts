@@ -4,7 +4,7 @@ import { advanceGameClock, initializeGameClock } from './game-clock';
 import { randomUUID } from 'node:crypto';
 import { getPresentationEndsAt, PRESENTATION_TIMING_VERSION } from '@shared/game-presentation';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
-import { gameDefinition } from '@shared/games/registry';
+import { gameDefinition, gameTimeControl } from '@shared/games/registry';
 import type { GameActionEnvelope, GameActionMap } from '@shared/games/actions';
 import type {
   GameOptions,
@@ -113,14 +113,14 @@ export function startGame(
   // A finished board of another game type may still be waiting for game:continue.
   removeGame(roomCode);
   const adapter = gameAdapter(gameType);
-  const started = adapter.start({ roomCode, players, settings: settings ?? DEFAULT_TIME_CONTROL,
+  const started = adapter.start({ roomCode, players, settings: settings ?? gameTimeControl(gameType),
     options });
   if (!started.success) return started;
   const game = getGameState(roomCode);
   if (game?.phase === 'scoring' || (game && adapter.presentsOpening)) {
     game.presentation = { id: randomUUID(), startedAt: Date.now(), logStart: 0, timingVersion: PRESENTATION_TIMING_VERSION };
   }
-  if (game) initializeGameClock(game, settings);
+  if (game) initializeGameClock(game, settings ?? gameTimeControl(gameType));
   return { success: true };
 }
 

@@ -1,5 +1,5 @@
 import { defaultGameOptions, isGameOptionsPayload, restoredGameOptions } from '@shared/games/room-options';
-import { DEFAULT_TIME_CONTROL, isTimeControl } from '@shared/time-control';
+import { DEFAULT_TIME_CONTROL, followDefaultTimeControl, isTimeControl } from '@shared/time-control';
 import { isBotDifficulty } from '@shared/bot-difficulty';
 import { isRoomReplayPlayback } from '@shared/replay-session';
 import { isDeepStrictEqual } from 'node:util';
@@ -14,7 +14,7 @@ import {
 import type { PersistedRoom } from '../runtime/types';
 import { generateRoomCode } from '../utils/id-generator';
 import { botNickname, isCompassSeat, maxPlayers, roomPlayers, roomCanStart, roomSeatInfo } from '@shared/rules/seats';
-import { gameDefinition } from '@shared/games/registry';
+import { gameDefinition, gameTimeControl } from '@shared/games/registry';
 import type { GameSeat } from '@shared/types';
 
 const rooms = new Map<RoomCode, PersistedRoom>();
@@ -54,7 +54,7 @@ export function createRoom(gameType: GameType, creatorId: string): RoomCode {
   rooms.set(code, {
     info: {
       code, gameType, status: 'waiting', seats: emptySeats(), createdAt: Date.now(),
-      timeControl: { ...DEFAULT_TIME_CONTROL }, hostId: creatorId, abortVote: null, abortVoteCooldownUntil: null,
+      timeControl: { ...gameTimeControl(gameType) }, hostId: creatorId, abortVote: null, abortVoteCooldownUntil: null,
       gameOptions: defaultGameOptions(),
     },
     memberIds: [creatorId],
@@ -482,6 +482,7 @@ export function setGameType(code: RoomCode, playerId: string, gameType: GameType
   const removedBots = new Set(removed.flatMap((entry) => entry.player ? [entry.player.id] : []));
   room.memberIds = room.memberIds.filter((id) => !removedBots.has(id));
   room.info = withBotNames({ ...room.info, gameType,
+    timeControl: followDefaultTimeControl(room.info.timeControl, gameTimeControl(room.info.gameType), gameTimeControl(gameType)),
     ...(room.info.additionalSeats ? { additionalSeats: room.info.additionalSeats.slice(0, additionalLimit) } : {}),
   });
   resetAllReady(code);

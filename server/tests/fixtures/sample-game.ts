@@ -1,6 +1,7 @@
 import type { GameClock, GameSeat, ObserverRole, PlayerInfo, RoomCode, Seat } from '@shared/types';
 import type { GameAutomation, GamePresentation } from '@shared/types/game';
 import type { PresentationFrame } from '@shared/games/presentation';
+import { BOARD_TIME_CONTROL } from '@shared/time-control';
 import { commonGame, object, oneOf, sameJson, seats, text } from '../../src/runtime/validation-helpers';
 import type { ObjectValue, PlayerValidator } from '../../src/runtime/validation-helpers';
 import type { GameActionContext, GameActionResult, GameStartRequest } from '../../src/managers/games/game-adapter';
@@ -84,6 +85,8 @@ export const sampleAdapter = {
 
 export const sampleDefinition = {
   gameType: 'sample', category: 'board', equipment: [],
+  // Board games start rooms on the board timer; the room follows it when switching to this game.
+  timeControl: BOARD_TIME_CONTROL,
   seats: { minPlayers: 4, maxPlayers: 4, flexible: false, expandable: false, numbered: false },
   presentation: {
     logFrames: (_game: unknown, _index: number, key: string): PresentationFrame[] =>

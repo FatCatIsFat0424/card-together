@@ -7,11 +7,10 @@ import Popover from '@mui/material/Popover';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { GAME_SEAT_ORDER, MAX_SPECTATORS, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
-import { EXPANDABLE_ROOM_GAMES, gameDefinition } from '@shared/games/registry';
+import { EXPANDABLE_ROOM_GAMES, gameDefinition, gameTimeControl } from '@shared/games/registry';
 import type {
   BotDifficulty, GameOptionsPayload, GameSeat, GameType, PlayerInfo, RoomInfo, RoomSeatTarget, Seat, TimeControl,
 } from '@shared/types';
-import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import type { TranslationKey } from '../i18n';
 import { socket } from '../socket';
 import { roomErrorKey } from '../room-error-i18n';
@@ -410,7 +409,7 @@ export function RoomPage(): ReactNode {
   const matchHands = gameDefinition(roomInfo.gameType).matchHands;
   const length = matchHands === undefined ? t(`gameType.${roomInfo.gameType}Tag`)
     : t('room.summaryHands', { n: String(matchHands) });
-  const timeControl = roomInfo.timeControl ?? DEFAULT_TIME_CONTROL;
+  const timeControl = roomInfo.timeControl ?? gameTimeControl(roomInfo.gameType);
   const memberMenu = (player: PlayerInfo, variant: 'seat' | 'row'): ReactNode => isHost && waiting && !player.isBot &&
     <PlayerMoveMenu key="move-menu" variant={variant} player={player} spectatorCount={spectators.length}
       options={moveOptions(seatCards, spectators, player, MAX_SPECTATORS)} disabled={blocked}

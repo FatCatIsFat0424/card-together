@@ -1,8 +1,9 @@
 import type { AnyGameState, PlayerVisibleGameState } from '../types/game';
 import type { GameSeat } from '../types/player';
-import type { GameOptionsByType, GameType } from '../types/room';
+import type { GameOptionsByType, GameType, TimeControl } from '../types/room';
 import type { MatchResult } from '../types';
 import type { MatchStanding } from '../rules/match-standing';
+import type { MatchControlRules } from '../rules/board/match-controls';
 import type { FrameTiming, PresentationFrame } from './presentation';
 
 /** Lobby grouping; every current game is a card game. */
@@ -64,6 +65,10 @@ export interface GameDefinition<K extends GameType> {
   readonly seats: GameSeatRules;
   readonly presentation: GamePresentationRules<K>;
   readonly options?: GameOptionsRules<K>;
+  /** Turn timer a room starts with for this game; absent uses `DEFAULT_TIME_CONTROL`. */
+  readonly timeControl?: TimeControl;
+  /** Resign and draw-offer actions the game accepts (board games); absent means neither. */
+  readonly matchControls?: MatchControlRules;
   /** Fixed match length shown in the waiting room; absent when the game's tag describes its length. */
   readonly matchHands?: number;
   readonly result: {
