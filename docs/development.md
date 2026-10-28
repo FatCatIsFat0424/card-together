@@ -27,6 +27,9 @@ client 的 `predev` 與 `prebuild` 會從被忽略的 `local-music/` 與 `local-
 | `CLIENT_ORIGIN` | 以逗號分隔、完全相符的 `http(s)://host[:port]` origin：不含路徑、結尾斜線或預設連接埠。正式環境必填；開發環境預設為 `localhost:5173` 與 `127.0.0.1:5173`。有無效項目時會停止啟動 |
 | `NODE_ENV` | `production` 會啟用 Secure cookie 並要求 HTTPS |
 | `TRUST_PROXY_LOOPBACK` | 預設 `false`。只在可信任、會覆寫轉送位址的本機 proxy 後方啟用 |
+| `BOT_WORKERS` | 搜尋型 bot 的 worker thread 數量，預設 `2`，範圍 0–8；`0` 關閉 worker pool，搜尋型 bot 改用簡單策略（[Bot worker pool](architecture.md#bot-worker-pool)）。不是範圍內的整數時會停止啟動 |
+| `BOT_WORKER_MEMORY_MB` | 每個 worker 的 V8 old-generation 堆積上限（MiB），預設 `128`，範圍 32–1024；超過時該 worker 會被終止並視為當機 |
+| `BOT_SEARCH_QUEUE` | 等待空閒 worker 的任務上限，預設 `32`，範圍 0–1024；超過時直接改用簡單策略 |
 | `SEVENS_DEV_PRESET` | 只限開發環境。`near-slay` 會在 44 筆出牌紀錄後開始牌七，每個花色都已從 2 排到 Q，每個座位留下兩張 A 或 K。其他任何值，或正式環境中的任何值，都會停止啟動 |
 
 | Vite 變數 | 行為 |

@@ -2,6 +2,7 @@ import type { VisibleStateOf } from '@shared/games/game-definition';
 import { BJ_MIN_BET } from '@shared/rules/blackjack';
 import type { GameType, NapoleonAction } from '@shared/types';
 import type { BotAction } from './bot-decisions';
+import type { SearchBotSpec } from './search/search-types';
 import { getBridgeBotAction } from './bridge-strategy';
 import { getBigTwoBotAction } from './bigtwo-strategy';
 import { getRedPointsBotAction } from './redpoints-strategy';
@@ -34,10 +35,19 @@ export interface AutomationContext {
 
 /** Decisions for one game type; every hook receives only the seat's own filtered view. */
 export interface GameBot<K extends GameType> {
+  /**
+   * Synchronous. For a game that declares `search` it must stay cheap: it then serves only human
+   * timeouts and shared deadlines, never a bot's own turn.
+   */
   readonly hard: Strategy<K>;
   readonly easy: Strategy<K>;
   /** A deliberately simple legal move used only after the strategy repeatedly fails */
   readonly firstLegal: (visible: VisibleStateOf<K>) => BotAction | null;
+  /**
+   * Opts the hard bot's own turns into the worker pool: the strategy runs off the event loop within
+   * `budgetMs`, and `easy` decides instead when the search times out, fails, or no pool is running.
+   */
+  readonly search?: SearchBotSpec<K>;
   /** A human whose turn clock expired; defaults to the hard strategy */
   readonly turnTimeout?: (visible: VisibleStateOf<K>, context: AutomationContext) => BotAction | null;
   /** A seat that missed a shared deadline; defaults to the hard strategy */

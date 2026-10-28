@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { isIP } from 'node:net';
 import { openRepository } from './database/open-repository';
 import { createApplication } from './app';
-import { parseAllowedOrigins, parseDatabaseConfig, parseSevensDevPreset } from './config';
+import { parseAllowedOrigins, parseBotWorkerConfig, parseDatabaseConfig, parseSevensDevPreset } from './config';
 import { PROVIDED_EMOJI_CATALOG_PATH, loadProvidedEmojiCatalog } from './media/provided-emoji';
 
 const port = Number(process.env.PORT ?? 3001);
@@ -27,6 +27,7 @@ async function main(): Promise<void> {
   const allowedOrigins = parseAllowedOrigins(clientOrigins);
   const sevensDevPreset = parseSevensDevPreset(process.env.SEVENS_DEV_PRESET, process.env.NODE_ENV === 'production');
   if (sevensDevPreset) console.warn('[server] SEVENS_DEV_PRESET=near-slay: Sevens games start with 2-Q laid out.');
+  const botWorkers = parseBotWorkerConfig(process.env.BOT_WORKERS, process.env.BOT_WORKER_MEMORY_MB, process.env.BOT_SEARCH_QUEUE);
   const providedEmojis = await loadProvidedEmojiCatalog(PROVIDED_EMOJI_CATALOG_PATH);
   const repository = await openRepository(database);
   let application: Awaited<ReturnType<typeof createApplication>>;
@@ -37,6 +38,7 @@ async function main(): Promise<void> {
       mediaDirectory: join(dirname(database.path), 'media'),
       providedEmojis,
       sevensDevPreset,
+      botWorkers,
       listen: { port, host },
     });
   } catch (error) {

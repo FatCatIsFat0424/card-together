@@ -60,6 +60,7 @@ DATABASE_PATH=/var/lib/card-together/database.json
 - 只能使用字面的 `KEY=value` 行：不能用 `export` 或 shell 展開。
 - `CLIENT_ORIGIN` 是完全相符的 origin，不含路徑或結尾斜線。
 - `DATABASE_ENGINE` 與 `DATABASE_PATH` 只能是 `json` 搭配 `database.json`，或 `sqlite` 搭配 `database.sqlite`，都在可寫入的狀態目錄內；部署會拒絕其他組合。沒有 `DATABASE_ENGINE` 的舊設定視為 `json`。
+- 搜尋型 bot 的 worker pool 由選填的 `BOT_WORKERS`（預設 2）、`BOT_WORKER_MEMORY_MB`（預設 128）與 `BOT_SEARCH_QUEUE`（預設 32）控制；範例檔不含這三項，沿用預設即可。Worker 在第一次搜尋時才啟動，每個閒置約增加 30 MB RSS，執行搜尋時再加上最多 `BOT_WORKER_MEMORY_MB` 的堆積。預設最壞約 400 MB，仍在 `MemoryMax=1G` 內；增加 worker 數量或堆積上限前，必須先附量測數據提案調整記憶體上限（專案上限 4 GB）。Worker 以同一個 `tsx` 載入 TypeScript，部署不需額外步驟。
 - 後端保持在 loopback 上。信任 loopback 時，Nginx 必須覆寫 `X-Forwarded-For`。
 - 變更連接埠時，要同時更新這個檔案、Nginx upstream 與健康檢查指令。
 - 前端建置：`VITE_BASE_PATH=/card-together/`、空的 `VITE_SERVER_URL`、`VITE_SOCKET_PATH=/card-together/socket.io`。TURN 設定放在 `client/.env.local`（[語音](media.md#語音)）。

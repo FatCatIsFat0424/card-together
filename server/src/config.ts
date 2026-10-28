@@ -1,4 +1,5 @@
 import { extname, join, resolve } from 'node:path';
+import type { BotWorkerConfig } from './bots/search/search-worker-pool';
 
 export type DatabaseEngine = 'json' | 'sqlite';
 
@@ -52,4 +53,37 @@ export function parseAllowedOrigins(value: string): string[] {
     }
   }
   return origins;
+}
+
+export const BOT_WORKER_DEFAULTS: BotWorkerConfig = { workers: 2, memoryMb: 128, queueLimit: 32 };
+
+const BOT_WORKER_LIMITS = {
+  BOT_WORKERS: { min: 0, max: 8 },
+  BOT_WORKER_MEMORY_MB: { min: 32, max: 1024 },
+  BOT_SEARCH_QUEUE: { min: 0, max: 1024 },
+} as const;
+
+function parseBounded(name: keyof typeof BOT_WORKER_LIMITS, value: string | undefined, fallback: number): number {
+  if (value === undefined || value === '') return fallback;
+  const { min, max } = BOT_WORKER_LIMITS[name];
+  const parsed = /^\d+$/.test(value) ? Number(value) : Number.NaN;
+  if (!Number.isSafeInteger(parsed) || parsed < min || parsed > max) {
+    throw new Error(`${name} must be an integer from ${min} to ${max}.`);
+  }
+  return parsed;
+}
+
+/**
+ * Search-bot worker pool: `BOT_WORKERS` threads (0 turns the pool off), each capped at
+ * `BOT_WORKER_MEMORY_MB` of V8 old-generation heap, with `BOT_SEARCH_QUEUE` tasks allowed to wait.
+ * Unset or empty values use the defaults; anything else that is not an in-range integer stops startup.
+ */
+export function parseBotWorkerConfig(
+  workers: string | undefined, memoryMb: string | undefined, queueLimit: string | undefined,
+): BotWorkerConfig {
+  return {
+    workers: parseBounded('BOT_WORKERS', workers, BOT_WORKER_DEFAULTS.workers),
+    memoryMb: parseBounded('BOT_WORKER_MEMORY_MB', memoryMb, BOT_WORKER_DEFAULTS.memoryMb),
+    queueLimit: parseBounded('BOT_SEARCH_QUEUE', queueLimit, BOT_WORKER_DEFAULTS.queueLimit),
+  };
 }

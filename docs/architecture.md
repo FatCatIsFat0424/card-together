@@ -20,7 +20,8 @@
 | `auth/`、`social/` | 密碼、工作階段、個人檔案、好友關係與私訊服務 |
 | `http/`、`socket/` | 驗證請求與身分；轉換結果 |
 | `runtime/` | 序列化變更、建立快照與還原、commit、排程 bot 與逾時 |
-| `bots/` | 各遊戲的啟發式策略，只使用 bot 自己過濾後的視角；各遊戲的 bot registry（困難、簡單、第一個合法動作、逾時與共用截止時間的預設動作） |
+| `bots/` | 各遊戲的啟發式策略，只使用 bot 自己過濾後的視角；各遊戲的 bot registry（困難、簡單、第一個合法動作、逾時與共用截止時間的預設動作、選填的搜尋策略） |
+| `bots/search/` | 搜尋型 bot 的 `worker_threads` pool、worker 啟動檔、搜尋策略型別與帶種子的亂數 |
 | `managers/`、`managers/games/` | 玩家、房間、遊戲、聊天、語音狀態；各遊戲模組、adapter、狀態驗證與各自的 registry |
 | `engine/` | 純函式的橋牌牌組、叫牌、出牌、計分 |
 | `database/`、`media/` | 非同步 Repository、JSON 與 SQLite adapter、共用的帳號規則、migration、索引、每場對局的回放檔；以內容定址的圖片 |
@@ -151,3 +152,13 @@
 - 有 bot 的對局和真人對局走相同的持久歷史紀錄與回放流程；統計把它們算在「全部」範圍，不算在「只算真人」。見[儲存與保留期限](storage.md#回放封存)與[統計](storage.md#統計)。
 
 策略：[遊戲](games/cards.md#bot-策略)。
+
+### Bot worker pool
+
+搜尋型 bot（迭代加深、alpha-beta、expectimax）不能卡住事件迴圈，所以在 registry 的 `GameBot.search` 宣告後，改在 `worker_threads` 執行。啟發式 bot 不變，仍同步執行。
+
+- **宣告**：`search: { strategy, budgetMs, maxDepth? }`。`strategy` 以 `searchStrategy(new URL('./x-search.ts', import.meta.url), 'exportName')` 指向一個模組與其匯出的純函式 `(可見視角, { random, budget }) => BotAction | null`。函式只能讀自己的過濾後視角，不得碰 manager 狀態或 I/O；`budget.expired()`、`budget.timeLeftMs()` 與 `budget.maxDepth` 供迭代加深使用。`random` 是以種子產生的亂數；只受深度限制（不受時鐘限制）的搜尋，相同視角與種子會得到相同結果。
+- **流程**：bot 計時器到期後，在 runtime 佇列內取得該座位的視角並交給 pool，然後釋放佇列；結果回來時再開一次佇列內的 mutation，確認同一局、階段、log 長度與座位（即計時器的回合 key）仍是待處理的回合，且沒有呈現進行中，才套用，之後的 commit、發布與失敗重試與同步 bot 完全相同。狀態已前進則丟棄結果。回合改變、對局中止或關閉時，執行中的任務會被取消。種子由回合 key 雜湊得出，所以同一回合重試時相同。
+- **回退**：逾時（`budgetMs` 加 250 ms 寬限）、worker 當機（含超過記憶體上限）、策略丟出例外、佇列已滿、等候空閒 worker 超過 3 秒、pool 關閉或 `BOT_WORKERS=0`，一律改用簡單策略的同步決定；之後仍失敗則走既有的「第一個合法動作」流程。簡單難度的 bot 不搜尋。搜尋型遊戲的 `hard` 仍要保持便宜，因為它只服務玩家逾時與共用截止時間。
+- **Pool**：`createSearchPool` 依設定建立固定數量的 slot，worker 在第一次使用時才啟動（啟動約 100 ms，沒有搜尋型遊戲就不花資源）。每個任務獨占一個 worker；逾時、取消與當機都會終止該 worker，下一個任務在該 slot 啟動新的 worker（不會自動重啟迴圈）。Worker 使用空的 `execArgv`，由 `search-worker-entry.mjs` 自行註冊 `tsx`，所以開發（`tsx watch`）、測試（vitest）與正式環境（`node --import tsx`）行為相同，並沿用 `server/tsconfig.json` 的 `@shared` 別名。
+- **設定與記憶體**：`BOT_WORKERS`、`BOT_WORKER_MEMORY_MB`、`BOT_SEARCH_QUEUE`（[開發](development.md#設定)；記憶體估算見[部署](deployment.md#執行環境設定)）。

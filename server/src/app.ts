@@ -18,6 +18,8 @@ import { createRuntimeCoordinator } from './runtime/coordinator';
 import { startBigTwoAutoPass } from './runtime/bigtwo-auto-pass';
 import { startTurnTimers } from './runtime/turn-timers';
 import { startBotTurns } from './runtime/bot-turns';
+import { createSearchPool } from './bots/search/search-worker-pool';
+import type { BotWorkerConfig } from './bots/search/search-worker-pool';
 import { startSharedDeadlines } from './runtime/shared-deadline';
 import { broadcastState, readPresence } from './socket/context';
 import { getRoomMemberIds } from './managers/room-manager';
@@ -40,6 +42,8 @@ export interface ApplicationOptions {
   listen?: { readonly port: number; readonly host?: string };
   /** Developer-only: start every Sevens game with 2-Q laid out; see `parseSevensDevPreset`. */
   sevensDevPreset?: boolean;
+  /** Search-bot worker pool; omitted or zero workers means search bots use their synchronous fallback. */
+  botWorkers?: BotWorkerConfig;
 }
 
 export async function createApplication(repository: Repository, options: ApplicationOptions): Promise<{
@@ -165,7 +169,9 @@ export async function createApplication(repository: Repository, options: Applica
     await new Promise<void>((resolve) => io.close(() => resolve()));
     throw error;
   }
-  const stopBots = startBotTurns(runtime, publish);
+  // Workers start on the first search, so a server without search games never spawns one.
+  const botPool = options.botWorkers && options.botWorkers.workers > 0 ? createSearchPool(options.botWorkers) : undefined;
+  const stopBots = startBotTurns(runtime, publish, botPool);
   const stopSharedDeadlines = startSharedDeadlines(runtime, publish);
   const socialCleanup = setInterval(() => {
     void repository.pruneSocialHistory(Date.now()).catch((error: unknown) => {
@@ -181,6 +187,7 @@ export async function createApplication(repository: Repository, options: Applica
       stopCoinUpdates();
       stopSharedDeadlines();
       stopBots();
+      await botPool?.close();
       stopTurnTimers();
       stopAutoPass?.();
       stopConnections();
