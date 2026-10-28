@@ -107,8 +107,11 @@ export interface Repository {
   ): Promise<AccountRecord | null>;
   /** Atomically debit the catalog price and grant ownership; repeats do not debit again. */
   purchaseAvatarBorder(id: string, border: AvatarBorderId, now: number): Promise<AccountRecord | null>;
-  /** Atomically debit the catalog price and grant permanent ownership, once per item. */
-  purchaseShopItem(id: string, item: ShopItemId, now: number): Promise<AccountRecord | null>;
+  /**
+   * Atomically debit the catalog price and grant permanent ownership, once per item. `equip` also fills the
+   * product's equipment slot in the same write.
+   */
+  purchaseShopItem(id: string, item: ShopItemId, now: number, equip?: boolean): Promise<AccountRecord | null>;
   getDailyRewards(id: string): Promise<DailyRewardsStatus | null>;
   getAchievements(id: string): Promise<AchievementsStatus | null>;
   /** Validate every item and grant the exclusive title once, in a single durable write. */

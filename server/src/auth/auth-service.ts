@@ -352,8 +352,11 @@ export function createAuthService(
       if (!isShopItemId(body.item)) {
         throw authError(400, 'INVALID_SHOP_ITEM', 'Choose an available shop item.');
       }
+      if (body.equip !== undefined && typeof body.equip !== 'boolean') {
+        throw authError(400, 'INVALID_EQUIP', 'Equip must be true or false.');
+      }
       try {
-        const account = await repository.purchaseShopItem(accountId, body.item, now());
+        const account = await repository.purchaseShopItem(accountId, body.item, now(), body.equip === true);
         if (!account) throw authError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
         return publicAccount(account);
       } catch (error) {

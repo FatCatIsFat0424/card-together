@@ -278,6 +278,23 @@ describe.each(REPOSITORY_ADAPTERS)('account HTTP routes ($name)', (adapter) => {
     expect((await buy({ item: 'gold', price: 0 })).status).toBe(409);
   });
 
+  it('should equip in the purchase request when equip is true and reject a non-boolean flag', async () => {
+    const owner = await seedAuthenticatedAccount(repository, 'equip_buyer', { coins: 500 });
+    const headers = { ...HEADERS, Cookie: owner.cookie };
+    const buy = (body: unknown): Promise<Response> =>
+      fetch(`${baseUrl}/shop/items`, { method: 'POST', headers, body: JSON.stringify(body) });
+    expect((await buy({ item: 'card-back-aurora', equip: 'yes' })).status).toBe(400);
+    expect((await repository.getAccountById(owner.account.id))?.coins).toBe(500);
+    onAccountUpdated.mockClear();
+    expect(await (await buy({ item: 'card-back-aurora', equip: true })).json()).toMatchObject({ account: {
+      cardBackStyle: 'card-back-aurora', coins: 380, ownedShopItems: ['card-back-aurora'] } });
+    expect(onAccountUpdated).toHaveBeenCalledTimes(1);
+    expect(await (await buy({ item: 'copper', equip: true })).json()).toMatchObject({ account: {
+      avatarBorder: 'copper', cardBackStyle: 'card-back-aurora', coins: 330 } });
+    expect(await (await buy({ item: 'table-tide' })).json()).toMatchObject({ account: { coins: 170 } });
+    expect((await repository.getAccountById(owner.account.id))?.tableBackgroundStyle).toBeUndefined();
+  });
+
   it('should reject unowned official equipment when registering', async () => {
     const response = await fetch(`${baseUrl}/register`, {
       method: 'POST', headers: HEADERS,

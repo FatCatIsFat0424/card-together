@@ -122,6 +122,31 @@ describe.each(REPOSITORY_ADAPTERS)('permanent shop item transactions ($name)', (
     expect(isRuntimeSnapshot(snapshot({ chatFrame: 'unknown' }))).toBe(false);
   });
 
+  it('purchases and equips in one write, and re-equips an owned product without charging again', async () => {
+    await repository.createAccount(account);
+    const bought = await repository.purchaseShopItem(account.id, 'card-back-aurora', 2, true);
+    expect(bought).toMatchObject({ cardBackStyle: 'card-back-aurora', ownedShopItems: ['card-back-aurora'],
+      coins: 1000 - 120, coinRevision: 1 });
+    const border = await repository.purchaseShopItem(account.id, 'copper', 3, true);
+    expect(border).toMatchObject({ avatarBorder: 'copper', ownedAvatarBorders: ['copper'], coinRevision: 2 });
+    // Sticker packs have no slot, so the flag only grants ownership.
+    const pack = await repository.purchaseShopItem(account.id, 'stickers-table-talk', 4, true);
+    expect(pack).toMatchObject({ ownedShopItems: ['card-back-aurora', 'stickers-table-talk'] });
+    expect(Object.keys(EQUIPMENT_SLOTS).filter((slot) => pack?.[slot as EquipmentSlot] !== undefined)).toEqual(['cardBackStyle']);
+    await repository.purchaseShopItem(account.id, 'card-back-tide', 5);
+    await repository.updateProfile(account.id, { cardBackStyle: 'card-back-tide' }, 6);
+    const again = await repository.purchaseShopItem(account.id, 'card-back-aurora', 7, true);
+    expect(again).toMatchObject({ cardBackStyle: 'card-back-aurora', coins: pack!.coins - 120, coinRevision: 4 });
+  });
+
+  it('leaves the equipment untouched when an equipping purchase fails', async () => {
+    await repository.createAccount({ ...account, coins: 10, cardBackStyle: undefined });
+    await expect(repository.purchaseShopItem(account.id, 'card-back-aurora', 2, true))
+      .rejects.toMatchObject({ code: 'INSUFFICIENT_COINS' });
+    expect(await repository.getAccountById(account.id)).toMatchObject({ coins: 10 });
+    expect((await repository.getAccountById(account.id))?.cardBackStyle).toBeUndefined();
+  });
+
   it('serializes concurrent retries and competing purchases, then retains ownership after reopening', async () => {
     await repository.createAccount({ ...account, coins: 200 });
     await Promise.all(Array.from({ length: 6 }, () => repository.purchaseShopItem(account.id, 'card-back-aurora', 2)));

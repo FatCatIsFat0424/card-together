@@ -272,11 +272,11 @@ export async function createSqliteRepository(filePath: string, options: Reposito
       });
     }
 
-    function purchaseShopItem(id: string, itemId: ShopItemId, timestamp: number): Promise<AccountRecord | null> {
+    function purchaseShopItem(id: string, itemId: ShopItemId, timestamp: number, equip = false): Promise<AccountRecord | null> {
       return write(() => {
         const account = accountForUpdate(id);
         if (!account) return null;
-        const updated = purchasedAccount(account, itemId, timestamp);
+        const updated = purchasedAccount(account, itemId, timestamp, equip);
         if (updated !== account) updateAccount(sql, updated);
         return updated;
       });

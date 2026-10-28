@@ -1,4 +1,4 @@
-import { GAME_COIN_REWARD, getShopItem, ownsShopItem } from '@shared/constants';
+import { GAME_COIN_REWARD, equipmentSlotFor, getShopItem, ownsShopItem } from '@shared/constants';
 import { ACHIEVEMENT_CATEGORIES } from '@shared/constants/achievements';
 import type { AchievementCategoryId } from '@shared/constants/achievements';
 import { DAILY_CHECK_IN_COINS, DAILY_TASKS } from '@shared/constants/daily-rewards';
@@ -15,17 +15,26 @@ import { equipmentError } from './shop-equipment';
 
 export type ProfileUpdate = Parameters<Repository['updateProfile']>[1];
 
-export function purchasedAccount(account: AccountRecord, itemId: ShopItemId, now: number): AccountRecord {
+/**
+ * Debits and grants ownership once per item. With `equip`, the product also fills its slot in the same
+ * write (repeats re-equip without charging); sticker packs have no slot, so the flag does nothing there.
+ */
+export function purchasedAccount(account: AccountRecord, itemId: ShopItemId, now: number, equip = false): AccountRecord {
   const item = getShopItem(itemId);
   if (!item) throw repositoryError('INVALID_SHOP_ITEM', 'Choose an available shop item.');
-  if (ownsShopItem(account, item)) return account;
+  const slot = item.type === 'avatarBorder' ? 'avatarBorder' : equipmentSlotFor(item.type);
+  const equipment = equip && slot ? { [slot]: item.id } : {};
+  if (ownsShopItem(account, item)) {
+    return Object.entries(equipment).every(([field, value]) => account[field as keyof AccountRecord] === value)
+      ? account : { ...account, ...equipment, updatedAt: Math.max(now, account.updatedAt + 1) };
+  }
   if ((account.coins ?? 0) < item.price) {
     throw repositoryError('INSUFFICIENT_COINS', 'Not enough coins. Play more games to earn coins.');
   }
   const inventory = item.type === 'avatarBorder'
     ? { ownedAvatarBorders: [...(account.ownedAvatarBorders ?? []), item.id] }
     : { ownedShopItems: [...(account.ownedShopItems ?? []), item.id] };
-  return { ...account, ...inventory,
+  return { ...account, ...inventory, ...equipment,
     coins: (account.coins ?? 0) - item.price,
     coinRevision: (account.coinRevision ?? 0) + 1,
     updatedAt: Math.max(now, account.updatedAt + 1) };

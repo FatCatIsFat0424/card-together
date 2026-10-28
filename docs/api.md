@@ -16,7 +16,7 @@
 | `GET /api/auth/me` | — | 目前的帳號 |
 | `PATCH /api/auth/profile` | [個人檔案欄位](#個人檔案欄位) | 更新後的帳號；同步給已連線的玩家 |
 | `POST /api/auth/shop/avatar-borders` | `border`（目錄 ID） | 購買後更新的帳號 |
-| `POST /api/auth/shop/items` | `item`（目錄 ID） | 永久購買後更新的帳號；不會自動裝備 |
+| `POST /api/auth/shop/items` | `item`（目錄 ID）；選填 `equip: true` | 永久購買後更新的帳號；`equip` 會在同一次寫入裝備該商品（貼圖包沒有欄位，忽略），已擁有時只裝備、不再扣款；預設不裝備 |
 | `GET /api/auth/achievements` | — | 本人的[成就狀態](../shared/src/types/achievements.ts)、里程碑進度與各類別的領取狀態 |
 | `POST /api/auth/achievements/claim` | `category`：[目錄](../shared/src/constants/achievements.ts)中的 ID | 更新後的帳號與成就狀態；必須完成所有里程碑，重複領取具冪等性，不扣金幣 |
 | `GET /api/auth/daily-rewards` | — | 本人的[每日狀態](../shared/src/types/daily-rewards.ts)、伺服器日期與時間、本月的簽到紀錄 |

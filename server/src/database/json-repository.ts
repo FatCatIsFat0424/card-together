@@ -247,11 +247,11 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       data.rewardedGameIds = [...rewarded];
     }
 
-    function purchaseShopItem(id: string, itemId: ShopItemId, now: number): Promise<AccountRecord | null> {
+    function purchaseShopItem(id: string, itemId: ShopItemId, now: number, equip = false): Promise<AccountRecord | null> {
       return write(['accounts'], (data) => {
         const index = indexes.accounts(document.accounts).positions.get(id);
         if (index === undefined) return null;
-        const updated = purchasedAccount(data.accounts[index], itemId, now);
+        const updated = purchasedAccount(data.accounts[index], itemId, now, equip);
         data.accounts[index] = updated;
         return updated;
       });
