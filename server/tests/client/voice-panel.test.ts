@@ -15,7 +15,7 @@ vi.mock('../../../client/src/stores/voice-store', () => ({
   disposeVoice: vi.fn(), joinVoice: vi.fn(), leaveVoice: vi.fn(), resumeVoiceAudio: vi.fn(),
   setVoiceDeafened: vi.fn(), setVoiceInputDevice: vi.fn(), setVoiceMuted: vi.fn(),
   setVoiceOutputDevice: vi.fn(), setVoicePeerMuted: vi.fn(), setVoicePeerVolume: vi.fn(),
-  watchAudioDevices: vi.fn(),
+  voiceStreamFor: vi.fn(() => null), watchAudioDevices: vi.fn(),
 }));
 vi.mock('../../../client/src/stores/account-store', () => ({
   useAccountStore: (select: (state: typeof mocks.accountStore) => unknown) => select(mocks.accountStore),
@@ -62,17 +62,29 @@ beforeEach(() => {
 });
 
 describe('voice panel states', () => {
-  it('should show only the header and a join button when not joined, without the room code', () => {
+  it('should show the status card, a join button and the device check when not joined, without the room code', () => {
     const html = render();
-    expect(html).toContain('語音');
-    expect(html).toContain('未加入');
+    expect(html).toContain('尚未加入語音');
+    expect(html).toContain('加入後可與同桌的人語音');
     expect(html).toContain('加入語音');
+    expect(html).toContain('加入前先確認裝置');
     expect(html).not.toContain('ABC123');
     expect(html).not.toContain('aria-pressed="true"');
     expect(html).not.toContain('重新加入');
-    expect(html).not.toContain('aria-label="離開語音"');
+    expect(html).not.toContain('離開語音');
     expect(html).not.toContain('role="alert"');
     expect(html).not.toContain('<ul');
+  });
+
+  it('should offer the dark device pickers, a mic test, a test tone and the voice volume before joining', () => {
+    const html = render();
+    expect(html.match(/aria-haspopup="listbox"/g)).toHaveLength(2);
+    expect(html).not.toContain('<select');
+    expect(html).toContain('>測試</button>');
+    expect(html).toContain('aria-label="播放測試音"');
+    expect(html).toMatch(/<input[^>]*type="range"[^>]*value="100"/);
+    expect(html).toContain('更多音量設定 ›');
+    expect(html).toContain('aria-label="麥克風音量"');
   });
 
   it('should disable joining while the connection is not ready', () => {
@@ -82,29 +94,33 @@ describe('voice panel states', () => {
 
   it('should offer cancel instead of join while joining', () => {
     const html = render({ status: 'joining' });
-    expect(html).toContain('連線中…');
+    expect(html).toContain('正在連線…');
     expect(html).toContain('取消');
     expect(html).not.toContain('加入語音');
     expect(html).not.toContain('<span>麥克風</span>');
   });
 
-  it('should show the error banner and a retry button after a failed join', () => {
+  it('should show the reason in the card and a reconnect button after a failed join', () => {
     const html = render({ status: 'error', error: 'permission' });
     expect(html).toMatch(/role="alert"[^>]*>麥克風權限遭拒/);
-    expect(html).toContain('重試');
+    expect(html).toContain('重新連線');
     expect(html).toContain('連線失敗');
+    expect(html).toContain('data-state="bad"');
     expect(html).not.toContain('加入語音');
   });
 
-  it('should show status with the participant count, icon buttons, and two toggles when joined', () => {
+  it('should show status with the participant count, a leave action, two toggles and the gear when joined', () => {
     const html = render(JOINED);
-    expect(html).toContain('已連線 · 3 人');
+    expect(html).toContain('語音已連線');
+    expect(html).toContain('3 人在線 · 連線正常');
     expect(html).toContain('data-state="ok"');
     expect(html).toContain('aria-label="裝置"');
-    expect(html).toContain('aria-label="離開語音"');
+    expect(html).toContain('離開語音');
     expect(html).toContain('<span>麥克風</span>');
     expect(html).toContain('<span>聲音</span>');
-    expect(html.match(/aria-pressed="false"/g)).toHaveLength(2);
+    // Two toggles and one mute button per remote player.
+    expect(html.match(/aria-pressed="false"/g)).toHaveLength(4);
+    expect(html).not.toContain('加入前先確認裝置');
     expect(html).not.toContain('重新加入');
     expect(html).not.toContain('role="alert"');
   });
@@ -118,13 +134,14 @@ describe('voice panel states', () => {
 
   it('should keep a lone participant joined rather than connected', () => {
     const html = render({ status: 'joined', peerId: 'self', participants: [participant('self', { accountId: 'me' })] });
-    expect(html).toContain('已加入 · 1 人');
-    expect(html).not.toContain('已連線');
+    expect(html).toContain('已加入語音');
+    expect(html).toContain('1 人在線');
+    expect(html).not.toContain('語音已連線');
   });
 
   it('should offer rejoin inline only when a peer connection failed', () => {
     const html = render({ ...JOINED, peerErrors: { b: 'connection-failed' }, peerConnections: { a: 'connected' } });
-    expect(html).toContain('部分連線 · 3 人');
+    expect(html).toContain('部分連線失敗');
     expect(html).toContain('data-state="bad"');
     expect(html).toMatch(/role="alert"[^>]*>.*部分語音連線失敗.*重新加入/);
     expect(html).toMatch(/role="alert">連線失敗/);
@@ -132,7 +149,7 @@ describe('voice panel states', () => {
 
   it('should not offer rejoin while peers are only still connecting', () => {
     const html = render({ ...JOINED, peerConnections: { a: 'connected' } });
-    expect(html).toContain('已加入 · 3 人');
+    expect(html).toContain('已加入語音');
     expect(html).toContain('連線中…');
     expect(html).not.toContain('重新加入');
   });
@@ -153,7 +170,9 @@ describe('voice panel states', () => {
     });
     expect(html).toContain('aria-label="麥克風已靜音"');
     expect(html).toContain('aria-label="聲音已關"');
-    expect(html).toContain('aria-label="已被你靜音"');
+    // The one-tap mute button carries the state.
+    expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
+    expect(html).toContain('title="已被你靜音"');
   });
 
   it('should show compact banners for observers, silenced observers, and blocked playback', () => {
@@ -168,7 +187,8 @@ describe('voice panel states', () => {
   it('should render English labels', () => {
     useI18nStore.getState().setLocale('en');
     const html = render(JOINED);
-    expect(html).toContain('Connected · 3');
+    expect(html).toContain('Voice connected');
+    expect(html).toContain('3 in voice');
     expect(html).toContain('<span>Microphone</span>');
     expect(html).toContain('<span>Sound</span>');
   });

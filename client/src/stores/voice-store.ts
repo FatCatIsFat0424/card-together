@@ -138,6 +138,11 @@ export function setVoicePeerVolume(accountId: string, volume: number): void {
   session?.setPeerVolume(accountId, volume);
 }
 
+/** Stream to meter for one participant, or null when none is flowing yet. */
+export function voiceStreamFor(accountId: string): MediaStream | null {
+  return session?.streamFor(accountId) ?? null;
+}
+
 /** Observers whose voice a player still in the match must not hear. */
 export function setVoiceSilenced(accountIds: readonly string[]): void {
   if (session) session.setSilenced(accountIds);

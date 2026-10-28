@@ -41,7 +41,9 @@ describe('grouped music menu', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.9);
     const { MusicControl: GroupedControl } = await import('../../../client/src/components/MusicControl');
     const html = renderToStaticMarkup(createElement(GroupedControl));
-    expect(html).toContain('Composer B · </span>Evening');
+    expect(html).toContain('>Composer B</span>');
+    expect(html).toContain('Evening</span>');
+    expect(html).toContain('第 1/1 首');
     expect(html.match(/aria-expanded="true"/g)).toHaveLength(1);
     expect(html.match(/aria-expanded="false"/g)).toHaveLength(1);
     expect(html).not.toContain('Morning');

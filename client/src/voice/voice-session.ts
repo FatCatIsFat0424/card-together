@@ -63,6 +63,8 @@ export interface VoiceSession {
   setPeerMuted(accountId: string, muted: boolean): void;
   setPeerVolume(accountId: string, volume: number): void;
   setSilenced(accountIds: readonly string[]): void;
+  /** Audio of one participant for level meters: the local microphone or a remote player's incoming stream. */
+  streamFor(accountId: string): MediaStream | null;
   /** Overall output gain (0-1) multiplied with every player's own volume. */
   setOutputGain(gain: number): void;
   dispose(): void;
@@ -835,6 +837,12 @@ export function createVoiceSession(
       if (!Number.isFinite(gain)) return;
       outputGain = clampVolume(gain);
       for (const peer of peers.values()) applyPeerAudio(peer);
+    },
+    streamFor(accountId): MediaStream | null {
+      if (accountId === currentAccount) return localStream;
+      const participant = state.participants.find((entry) => entry.accountId === accountId);
+      const source = participant ? peers.get(participant.peerId)?.audio.srcObject : null;
+      return source instanceof MediaStream ? source : null;
     },
     setSilenced(accountIds): void {
       if (accountIds.length === state.silenced.length && accountIds.every((id) => state.silenced.includes(id))) return;
