@@ -16,14 +16,15 @@ import { getNapoleonBotAction } from './napoleon-strategy';
 import { easyTenHalfAction, getTenHalfBotAction, tenHalfFirstLegalAction } from './tenhalf-strategy';
 import { easyLiarsDiceAction, getLiarsDiceBotAction, liarsDiceFirstLegalAction } from './liarsdice-strategy';
 import { crazyEightsFirstLegalAction, easyCrazyEightsAction, getCrazyEightsBotAction } from './crazyeights-strategy';
+import { getStudBotAction } from './stud-strategy';
 import {
   easyBigTwoAction, easyBlackjackAction, easyBridgeAction, easyChinesePokerAction, easyHoldemAction, easyLiarsDeckAction,
-  easyNinetyNineAction, easyRedPointsAction, easySevensAction,
+  easyNinetyNineAction, easyRedPointsAction, easySevensAction, easyStudAction,
 } from './easy-strategy';
 import {
   bigTwoFirstLegalAction, blackjackDealerDefault, blackjackFirstLegalAction, bridgeFirstLegalAction,
   chinesePokerFirstLegalAction, holdemPassiveAction, liarsDeckFirstLegalAction, napoleonFirstLegalAction,
-  ninetyNineFirstLegalAction, redPointsFirstLegalAction, sevensFirstLegalAction,
+  ninetyNineFirstLegalAction, redPointsFirstLegalAction, sevensFirstLegalAction, studPassiveAction,
 } from './fallback-actions';
 
 type Strategy<K extends GameType> = (visible: VisibleStateOf<K>, random: () => number) => BotAction | null;
@@ -111,6 +112,13 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     turnTimeout: (visible) => easyLiarsDiceAction(visible),
   },
   crazyeights: { hard: getCrazyEightsBotAction, easy: easyCrazyEightsAction, firstLegal: crazyEightsFirstLegalAction },
+  stud: {
+    hard: getStudBotAction,
+    easy: easyStudAction,
+    firstLegal: studPassiveAction,
+    // A player who runs out of time checks or folds rather than letting a bot stake their chips.
+    turnTimeout: (visible) => studPassiveAction(visible),
+  },
 };
 
 export function gameBot<K extends GameType>(gameType: K): GameBot<K> {

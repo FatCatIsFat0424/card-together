@@ -29,3 +29,21 @@ export function rankedStanding(
   const tied = seats.some((other) => other !== seat && finish(other).rank === rank);
   return { seat, players: seats.length, rank, tied, won: rank === 1, side: null, role: null, score };
 }
+
+/** Chip-race match: busted seats rank by elimination order, survivors by their remaining chips. */
+export function chipRaceStanding(
+  result: {
+    readonly chips: Readonly<Record<GameSeat, number>>;
+    readonly winners: readonly GameSeat[];
+    readonly eliminationOrder: readonly GameSeat[];
+  },
+  seat: GameSeat, seats: readonly GameSeat[], startingChips: number,
+): MatchStanding {
+  const survivors = seats.filter((other) => !result.eliminationOrder.includes(other));
+  return rankedStanding(seats, seat, (other) => {
+    const out = result.eliminationOrder.indexOf(other);
+    return { rank: out >= 0 ? seats.length - out
+      : rankAfterWinners(survivors, result.winners, other, (member) => result.chips[member], false),
+    score: result.chips[other] - startingChips };
+  });
+}

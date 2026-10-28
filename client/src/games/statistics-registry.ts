@@ -11,6 +11,7 @@ import { napoleonStatistics } from './napoleon/statistics';
 import { tenHalfStatistics } from './tenhalf/statistics';
 import { liarsDiceStatistics } from './liarsdice/statistics';
 import { crazyEightsStatistics } from './crazyeights/statistics';
+import { studStatistics } from './stud/statistics';
 
 export const GAME_STATISTICS: Readonly<Record<GameType, GameStatisticsRules>> = {
   bridge: bridgeStatistics,
@@ -26,6 +27,7 @@ export const GAME_STATISTICS: Readonly<Record<GameType, GameStatisticsRules>> = 
   tenhalf: tenHalfStatistics,
   liarsdice: liarsDiceStatistics,
   crazyeights: crazyEightsStatistics,
+  stud: studStatistics,
 };
 
 export function gameStatisticsRules(gameType: GameType): GameStatisticsRules {

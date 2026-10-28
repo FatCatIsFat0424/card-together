@@ -2,7 +2,8 @@
 
 import type {
   BigTwoVisibleState, BlackjackVisibleState, BridgeVisibleState, Card, ChinesePokerVisibleState, HoldemVisibleState,
-  LiarsDeckVisibleState, NinetyNineVisibleState, RedPointsVisibleState, SevensVisibleState,
+  LiarsDeckVisibleState, NinetyNineVisibleState, RedPointsVisibleState, SevensVisibleState, StudAction,
+  StudVisibleState,
 } from '@shared/types';
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { identifyCombo, legalPlays } from '@shared/rules/bigtwo';
@@ -140,4 +141,32 @@ export function easyHoldemAction(visible: HoldemVisibleState, random: () => numb
   const choice = random();
   if (legal.raise && choice < 0.1) return { type: 'holdem-action', action: { type: 'raise', to: legal.raise.min } };
   return { type: 'holdem-action', action: { type: legal.call > 0 && choice < 0.8 ? 'call' : 'fold' } };
+}
+
+/** 3: two pair or better, 2: a pair, 1: an ace or king, 0: nothing worth a bet. */
+function studHoldingStrength(cards: readonly Card[]): number {
+  const counts = new Map<number, number>();
+  for (const card of cards) counts.set(card.rank, (counts.get(card.rank) ?? 0) + 1);
+  const groups = [...counts.values()].sort((a, b) => b - a);
+  if (groups[0] >= 3 || (groups[0] === 2 && groups[1] === 2)) return 3;
+  if (groups[0] === 2) return 2;
+  return cards.some((card) => card.rank >= 13) ? 1 : 0;
+}
+
+/**
+ * Simple stud thresholds on the five cards the bot holds so far: pairs and better play on, a high up
+ * card or hole card calls small bets, and anything weaker checks or folds.
+ */
+export function easyStudAction(visible: StudVisibleState, random: () => number): BotAction | null {
+  if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat) return null;
+  const legal = heLegalActions(visible, visible.mySeat);
+  if (!legal) return null;
+  const strength = studHoldingStrength([...visible.myHand, ...visible.up[visible.mySeat]]);
+  const play = (action: StudAction): BotAction => ({ type: 'game-action', request: { gameType: 'stud', action } });
+  if (legal.check) {
+    return legal.raise && strength >= 2 && random() < 0.5 ? play({ type: 'raise', to: legal.raise.min }) : play({ type: 'check' });
+  }
+  const cheap = legal.call <= visible.minBet;
+  if (strength >= 2 && legal.raise && strength >= 3 && random() < 0.3) return play({ type: 'raise', to: legal.raise.min });
+  return play({ type: strength >= 2 || (strength === 1 && cheap) ? 'call' : 'fold' });
 }

@@ -193,6 +193,17 @@ export type {
 } from '../games/liarsdice/types';
 
 export type {
+  StudStreet,
+  StudAction,
+  StudPot,
+  StudLogEntry,
+  StudMatchResult,
+  StudPhase,
+  StudGameState,
+  StudVisibleState,
+} from '../games/stud/types';
+
+export type {
   NapoleonJoker,
   NapoleonCard,
   NapoleonBidLevel,

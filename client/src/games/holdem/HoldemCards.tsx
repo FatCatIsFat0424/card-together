@@ -21,8 +21,12 @@ export function cardName(card: Card): string {
  * A row of face-up cards, plus `backs` face-down cards. Cards from `freshFrom` on animate in so a
  * presentation can show which cards just arrived.
  */
-export function HeCards({ cards: incoming, backs = 0, size = 'md', freshFrom, overlap = false, label, peek = false, sortable = false }: {
+export function HeCards({
+  cards: incoming, backs = 0, size = 'md', freshFrom, overlap = false, label, peek = false, sortable = false, backsFirst = false,
+}: {
   cards: readonly Card[]; backs?: number; size?: CardSize; freshFrom?: number; overlap?: boolean; label?: string;
+  /** Face-down cards come before the face-up ones, as a stud hole card does */
+  backsFirst?: boolean;
   /** God view: cards the players cannot see, drawn face up but marked as hidden */
   peek?: boolean;
   sortable?: boolean;
@@ -31,14 +35,16 @@ export function HeCards({ cards: incoming, backs = 0, size = 'md', freshFrom, ov
   const dragProps = useHandReorder(cards, canReorder, reorder);
   const cardImageUrl = useCardFaceUrl();
   const { t } = useI18nStore();
+  const hidden = Array.from({ length: backs }, (_, index) => <span key={`back-${index}`} className={`${styles.card} ${styles.back}`}
+    role="img" aria-label={t('holdem.hiddenCard')}><CardBackArt /></span>);
   return <span className={`${styles.cards} ${styles[size]} ${overlap ? styles.overlap : ''}`}
     role={label ? 'group' : undefined} aria-label={label}>
+    {backsFirst && hidden}
     {cards.map((card, index) => <img key={`${card.suit}-${card.rank}`} {...dragProps(index)}
       className={`${styles.card} ${peek ? styles.peek : ''} ${freshFrom !== undefined && index >= freshFrom ? styles.fresh : ''}`}
       style={{ ...dragProps(index).style, '--card-index': index - (freshFrom ?? 0) } as CSSProperties}
       src={cardImageUrl(card)} alt={cardName(card)} draggable={false} />)}
-    {Array.from({ length: backs }, (_, index) => <span key={`back-${index}`} className={`${styles.card} ${styles.back}`}
-      role="img" aria-label={t('holdem.hiddenCard')}><CardBackArt /></span>)}
+    {!backsFirst && hidden}
   </span>;
 }
 

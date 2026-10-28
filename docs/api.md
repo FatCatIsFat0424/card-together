@@ -116,7 +116,7 @@
 | `room:changeAdditionalSeat` | `{ index }` | 坐到一個額外座位；`RoomInfo.additionalSeats` 的索引，從 0 開始 |
 | `room:standUp` | — | 等待中起身成為旁觀者 |
 | `room:movePlayer` | `{ accountId, target }` | 房主在等待中移動一位真人；`target` 是 [`RoomSeatTarget`](../shared/src/types/room.ts) |
-| `room:addSeat`、`room:removeSeat` | — | 房主加開一個額外座位（總共八個，拿破崙為六個），或移除最後一個空的額外座位；只限等待中的 99、瘋狂 8、21 點、德州撲克與拿破崙 |
+| `room:addSeat`、`room:removeSeat` | — | 房主加開一個額外座位（總共八個，拿破崙為六個），或移除最後一個空的額外座位；只限等待中的 99、瘋狂 8、21 點、德州撲克、梭哈與拿破崙 |
 | `room:addBot` | `{ seat, difficulty? }` | 房主在等待中把 bot 加到任何已設定的座位（`N`–`W`，或已加開的 `P5`–`P8`）；省略難度時為困難 |
 | `room:removeBot` | `{ seat }` | 房主在等待中移除 bot |
 | `room:setBotDifficulty` | `{ seat, difficulty }` | 房主把等待中房間的一個 bot 改為簡單或困難；重設真人的準備狀態 |

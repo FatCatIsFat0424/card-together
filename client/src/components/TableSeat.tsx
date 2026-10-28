@@ -22,6 +22,7 @@ import { ChipIcon } from '../games/ChipIcon';
 import { clientGame } from '../games/registry';
 import { holdemBlindSeats, holdemView, seatState } from '../games/holdem/holdem-view';
 import { BetStack } from '../games/holdem/HoldemCards';
+import { studView } from '../games/stud/stud-view';
 import { useGamePresentation } from '../games/use-game-presentation';
 import { useGameStore } from '../stores/game-store';
 import { useGodViewStore } from '../stores/god-view-store';
@@ -245,8 +246,8 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
     sevensCards: gameSeatValue(state.sevens?.handCounts, seat) ?? null,
     // Blackjack hands are drawn face up on the table, so the plate shows no card backs.
     blackjackCards: state.blackjack ? 0 : null,
-    // Hold'em hole cards are drawn on the felt, so the plate shows no card backs either.
-    holdemCards: state.holdem ? 0 : null,
+    // Hold'em and stud cards are drawn on the felt, so the plate shows no card backs either.
+    holdemCards: state.holdem || state.stud ? 0 : null,
     // Ten and a Half hands are drawn on the felt, so the plate shows no card backs.
     tenHalfCards: state.tenhalf ? 0 : null,
     // Liar's Dice cups are counted in the seat's dice chip instead.
@@ -290,9 +291,12 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const betPlaced = bettingOpen && Boolean((blackjack ?? tenHalf)?.betPlaced[seat]);
   const holdem = useGameStore((state) => state.holdem);
   // Hold'em chips and seat states follow the presentation so a pot is not paid out before its frame.
-  const he = holdem && holdemView(holdem, frame);
+  const holdemTable = holdem && holdemView(holdem, frame);
+  const stud = useGameStore((state) => state.stud);
+  // Five-Card Stud shares the chip, fold, and stake display; it has no blinds.
+  const he = holdemTable ?? (stud && studView(stud, frame));
   const heState = he ? seatState(he, seat) : null;
-  const heBlinds = he ? holdemBlindSeats(he) : null;
+  const heBlinds = holdemTable ? holdemBlindSeats(holdemTable) : null;
   const heOut = heState === 'out';
   // The own stake sits beside the hole cards instead (see the Hold'em hand zone).
   const heBet = he && !isMe && heState !== 'waiting' && heState !== 'out' ? he.streetBets[seat] ?? 0 : 0;

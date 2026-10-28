@@ -35,6 +35,8 @@ import type { HoldemTranslationKey } from './holdem-i18n';
 import { napoleonTranslations } from './napoleon-i18n';
 import { crazyEightsTranslations } from './crazyeights-i18n';
 import type { CrazyEightsTranslationKey } from './crazyeights-i18n';
+import { studTranslations } from './stud-i18n';
+import type { StudTranslationKey } from './stud-i18n';
 import type { NapoleonTranslationKey } from './napoleon-i18n';
 import { tenHalfTranslations } from './tenhalf-i18n';
 import type { TenHalfTranslationKey } from './tenhalf-i18n';
@@ -55,6 +57,7 @@ type TranslationKeys = Record<
   ReplayTranslationKey | RoomErrorTranslationKey | SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | AudioTranslationKey | VoiceTranslationKey | UiTranslationKey
     | EmojiTranslationKey | GameTranslationKey | SevensTranslationKey | ChinesePokerTranslationKey
     | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | TenHalfTranslationKey | CrazyEightsTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
+    | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | StudTranslationKey | TenHalfTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
     | StatsTranslationKey | BoardTranslationKey, string
 > & {
   // Lobby
@@ -151,6 +154,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...napoleonTranslations['zh-TW'],
     ...tenHalfTranslations['zh-TW'],
     ...crazyEightsTranslations['zh-TW'],
+    ...studTranslations['zh-TW'],
     ...shopTranslations['zh-TW'],
     ...dailyRewardsTranslations['zh-TW'],
     ...achievementsTranslations['zh-TW'],
@@ -239,6 +243,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...napoleonTranslations.en,
     ...tenHalfTranslations.en,
     ...crazyEightsTranslations.en,
+    ...studTranslations.en,
     ...shopTranslations.en,
     ...dailyRewardsTranslations.en,
     ...achievementsTranslations.en,

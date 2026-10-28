@@ -9,6 +9,7 @@ import { chinesePokerUi } from './chinesepoker/chinesepoker-ui';
 import { liarsDeckUi } from './liarsdeck/liarsdeck-ui';
 import { blackjackUi } from './blackjack/blackjack-ui';
 import { holdemUi } from './holdem/holdem-ui';
+import { studUi } from './stud/stud-ui';
 import { napoleonUi } from './napoleon/napoleon-ui';
 import { tenHalfUi } from './tenhalf/tenhalf-ui';
 import { liarsDiceUi } from './liarsdice/liarsdice-ui';
@@ -33,6 +34,7 @@ export const GAME_UIS: { readonly [K in GameType]: GameUi<K> } = {
   tenhalf: tenHalfUi,
   liarsdice: liarsDiceUi,
   crazyeights: crazyEightsUi,
+  stud: studUi,
 };
 
 /**

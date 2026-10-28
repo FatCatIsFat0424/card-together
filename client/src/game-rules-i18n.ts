@@ -193,6 +193,21 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Option: action cards (default off)', '2: the next player draws two cards and is skipped. Q: the next player is skipped. A: play reverses; heads-up, it skips the opponent so you play again.', 'A card that empties your hand has no effect, and effects do not stack.'),
     section('Timer', 'On timeout a legal move is made for you. Each hand refills the reserve.'),
   ],
+  stud: [
+    section('Match', 'No-limit, 2–8 players, 52 cards, 1000 chips each. Win every chip or have the most after 20 hands; ties share.', 'Players with no chips are out; earlier busts rank lower.'),
+    table('Antes and minimum bet', ['Hands', 'Ante / min bet'], [['1–4', '10 / 20'], ['5–8', '15 / 30'], ['9–12', '25 / 50'], ['13–16', '40 / 80'], ['17–20', '60 / 120']], 'Every seat antes each hand (a short stack posts all it has). There is no forced bring-in. The button starts at random, moves clockwise, and only decides who gets odd chips.'),
+    section('Dealing', 'Each seat gets one face-down hole card and one face-up card. Three more face-up cards follow, one per round, so everyone ends with a hole card and four up cards.', 'Betting follows each of the four deals.'),
+    section('Who acts first', 'In every round the best showing cards act first, then play goes clockwise. A pair beats high cards, three of a kind beats two pair, and so on; straights and flushes do not count among up cards.', 'Equal ranks break by the suit of the deciding card: spades, hearts, diamonds, clubs. Folded seats are ignored; an all-in seat is skipped.'),
+    table('Decisions and raises', ['Action', 'Rule'], [
+      ['Fold', 'Give up the hand'], ['Check', 'Only when nothing is owed'], ['Call', 'Match the bet, or go all-in if short'],
+      ['Bet / raise', 'Enter your round total. A full raise adds at least the last raise (initially the minimum bet)'],
+      ['All-in', 'Every chip; a short all-in does not reopen raising'],
+    ], 'Example: bet 40 after a raise of 20 → minimum raise to 60; with 20 already in, that costs 40 more.'),
+    pokerEnglish,
+    section('Showdown', 'If all but one fold, that player wins without showing. After the last round, remaining seats turn over their hole cards and the best five cards win. Suits never break ties here.', 'If at most one player can act, the remaining cards are dealt out automatically. Uncalled chips are returned.'),
+    section('Main pot, side pots, and ties', 'Each all-in level forms a side pot; you only win pots you put chips into. Antes count toward the pot.', 'Ties split each pot; odd chips go clockwise from the button.'),
+    section('Timer', 'On timeout you check, or fold if you owe chips. Each hand refills the reserve.'),
+  ],
 };
 
 const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
@@ -339,6 +354,21 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     table('剩牌點數', ['牌', '點數'], [['8', '50'], ['K、Q、J、10', '10'], ['A', '1'], ['2～9', '牌面點數']], '出完手牌的人這一手得 0 點；其他人加上手中剩牌的點數。'),
     section('選項：功能牌（預設關閉）', '2：下一位摸 2 張並跳過。Q：跳過下一位。A：迴轉方向；2 人時等於跳過對手，由自己再出一次。', '出完最後一張牌時不生效，效果不能疊加。'),
     section('計時', '逾時由系統代為出一步合法動作。每一手補滿保留時間。'),
+  ],
+  stud: [
+    section('對局', '無限注，2～8 人，52 張牌，每人 1000 籌碼。贏走全部籌碼，或 20 手後籌碼最多者獲勝；同分共同獲勝。', '籌碼歸零即淘汰，越早淘汰名次越低。'),
+    table('前注與最小下注', ['手數', '前注／最小下注'], [['1～4', '10／20'], ['5～8', '15／30'], ['9～12', '25／50'], ['13～16', '40／80'], ['17～20', '60／120']], '每手每人先付前注（籌碼不足就全付）。沒有強制的開局下注。莊位隨機開始、順時針移動，只用來決定零頭歸誰。'),
+    section('發牌', '每人先拿 1 張蓋著的底牌和 1 張明牌，之後再各發 3 張明牌（每輪 1 張），最後每人有 1 張底牌加 4 張明牌。', '四次發牌後各有一輪下注。'),
+    section('誰先行動', '每一輪都由明牌最大者先行動，之後順時針。一對大於單張、三條大於兩對，以此類推；明牌不計順子與同花。', '點數相同時比決定牌的花色：♠ > ♥ > ♦ > ♣。已棄牌者不計；已全押者跳過。'),
+    table('行動與加注', ['行動', '規則'], [
+      ['棄牌 Fold', '放棄本手'], ['過牌 Check', '不欠下注時才能用'], ['跟注 Call', '補齊下注，不足則全押'],
+      ['下注／加注', '輸入本輪總投入；完整加注至少再加上次加注額（起始為最小下注）'],
+      ['All-in 梭哈', '押上全部；不足完整加注的全押不會重新開放加注'],
+    ], '例：目前下注 40、上次加注 20，最低加注到 60；已投入 20 的話還要付 40。'),
+    pokerChinese,
+    section('攤牌', '只剩一人沒棄牌就直接贏，不必亮牌。最後一輪結束後，剩下的人亮出底牌，五張牌最好者贏；花色不分大小。', '最多只剩一人能行動時，自動發完剩下的牌。沒人跟到的籌碼退回。'),
+    section('主池、邊池與平手', '每個全押金額會分出邊池，只能贏自己有投入的池。前注也算入底池。', '平手均分，零頭從莊位後順時針分配。'),
+    section('計時', '逾時自動過牌，欠下注時棄牌。每手補滿保留時間。'),
   ],
 };
 

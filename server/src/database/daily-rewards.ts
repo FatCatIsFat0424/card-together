@@ -48,7 +48,7 @@ export function taskProgress(state: DailyRewardsRecord, id: DailyTaskId): number
   if (id === 'play-variety') return Math.min(3, state.gameTypes.length);
   if (id === 'win-two') return state.wins;
   const counts = state.gameCounts ?? {};
-  if (id === 'play-casino') return Math.min(1, (counts.blackjack ?? 0) + (counts.holdem ?? 0) + (counts.tenhalf ?? 0));
+  if (id === 'play-casino') return Math.min(1, (counts.blackjack ?? 0) + (counts.holdem ?? 0) + (counts.tenhalf ?? 0) + (counts.stud ?? 0));
   const type = id.slice(5) as GameType;
   return Math.min(type === 'bridge' ? 1 : 2, counts[type] ?? 0);
 }

@@ -228,5 +228,6 @@ describe('daily completed-game progress', () => {
     expect(taskProgress(played, 'play-bigtwo')).toBe(1);
     expect(taskProgress(played, 'play-casino')).toBe(1);
     expect(taskProgress({ ...played, gameCounts: { holdem: 1 } }, 'play-casino')).toBe(1);
+    expect(taskProgress({ ...played, gameCounts: { stud: 1 } }, 'play-casino')).toBe(1);
   });
 });

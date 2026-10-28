@@ -14,6 +14,7 @@ import { createNapoleonDeck, hasNapoleonCard, isNapoleonFreeCard, napoleonDealSi
 import type {
   BigTwoVisibleState, BlackjackVisibleState, BridgeVisibleState, ChinesePokerVisibleState, HoldemVisibleState,
   LiarsDeckVisibleState, NapoleonVisibleState, NinetyNineVisibleState, RedPointsVisibleState, SevensVisibleState,
+  StudVisibleState,
 } from '@shared/types';
 import type { BotAction } from './bot-decisions';
 
@@ -90,6 +91,14 @@ export function holdemPassiveAction(visible: HoldemVisibleState): BotAction | nu
   const legal = heLegalActions(visible, visible.mySeat);
   if (!legal) return null;
   return { type: 'holdem-action', action: legal.check ? { type: 'check' } : { type: 'fold' } };
+}
+
+/** Check when free, otherwise fold, as in Hold'em. */
+export function studPassiveAction(visible: StudVisibleState): BotAction | null {
+  if (visible.currentTurnSeat !== visible.mySeat) return null;
+  const legal = heLegalActions(visible, visible.mySeat);
+  if (!legal) return null;
+  return { type: 'game-action', request: { gameType: 'stud', action: legal.check ? { type: 'check' } : { type: 'fold' } } };
 }
 
 /** Pass, discard the last cards, acknowledge, call the first card outside the hand, or play the first legal card. */

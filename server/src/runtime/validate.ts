@@ -28,6 +28,7 @@ export { isChinesePokerResult } from '../managers/games/chinesepoker-validation'
 export { isLiarsDeckResult } from '../managers/games/liarsdeck-validation';
 export { isBlackjackResult } from '../managers/games/blackjack-validation';
 export { isHoldemResult } from '../managers/games/holdem-validation';
+export { isStudResult } from '../managers/games/stud-validation';
 export { isNapoleonResult } from '../managers/games/napoleon-validation';
 export { isTenHalfResult } from '../managers/games/tenhalf-validation';
 export { isLiarsDiceResult } from '../managers/games/liarsdice-validation';

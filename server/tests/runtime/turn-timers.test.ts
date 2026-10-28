@@ -111,6 +111,18 @@ describe('durable turn clocks', () => {
     expect(game().clock!.bankRemainingMs).toEqual({ N: 20000, E: 20000, S: 20000, W: 20000 });
   });
 
+  it('checks for a timed-out stud opener instead of asking the bot', async () => {
+    const { runtime, game } = await fixture('stud');
+    const turn = game().clock!.turn!;
+    const choose = vi.spyOn(decisions, 'getBotAction');
+    stops.push(await startTurnTimers(runtime, vi.fn()));
+    await vi.advanceTimersByTimeAsync(turn.deadline - Date.now());
+    await runtime.idle();
+    expect(choose).not.toHaveBeenCalled();
+    expect(game().log.at(-1)).toMatchObject({ type: 'action', seat: turn.seat, action: 'check' });
+    expect(game().clock!.lastTimeout).toEqual({ seat: turn.seat, at: Date.now() });
+  });
+
   it('charges only excess decision time, preserves other banks, and rejects expired manual actions', async () => {
     const { code, runtime, game } = await fixture();
     const first = game().clock!.turn!;

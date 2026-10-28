@@ -1,0 +1,31 @@
+/* ─── StudTable styles: card rows beside the shared Hold'em felt layout (HoldemTable.module.css) ─── */
+
+.cards {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+/* Opponents' cards stay together: the hole card back sits first, up cards overlap after it. */
+.spotCards {
+  display: inline-flex;
+}
+
+.spot .cards {
+  gap: 2px;
+}
+
+/* Own cards: five slots that must fit beside each other on every width. */
+.myCards {
+  --stud-card-w: min(calc(72px * var(--playing-card-scale)), 11cqh, calc((100cqw - 72px) / 5.5));
+}
+
+.myCards > span {
+  --card-w: var(--stud-card-w);
+}
+
+/* Short landscape phones keep the felt for opponents' up cards; stakes sit on the plates. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .spot > .spotCards { display: inline-flex; }
+  .myCards { --stud-card-w: min(calc(64px * var(--playing-card-scale)), 15cqh, calc((100cqw - 96px) / 5.5)); }
+}

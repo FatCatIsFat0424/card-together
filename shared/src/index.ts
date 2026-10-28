@@ -11,6 +11,7 @@ export * from './rules/liarsdeck';
 export * from './rules/liarsdice';
 export * from './rules/blackjack';
 export * from './rules/holdem';
+export * from './rules/stud';
 export * from './rules/cards';
 export * from './rules/napoleon';
 export * from './rules/tenhalf';

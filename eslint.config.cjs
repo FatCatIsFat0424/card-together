@@ -81,8 +81,8 @@ module.exports = tseslint.config(
       'shared/src/games/**', 'client/src/games/**', 'server/src/managers/games/**',
       'server/src/database/games/**',
       // Existing pure per-game rules, facts, and strategies are game modules too.
-      'shared/src/rules/{bridge,bigtwo,redpoints,ninetynine,sevens,chinesepoker,liarsdeck,liarsdice,blackjack,holdem,napoleon}.ts',
-      'shared/src/stats/{bridge,bigtwo,redpoints,ninetynine,sevens,chinesepoker,liarsdeck,liarsdice,blackjack,holdem,napoleon}.ts',
+      'shared/src/rules/{bridge,bigtwo,redpoints,ninetynine,sevens,chinesepoker,liarsdeck,liarsdice,blackjack,holdem,napoleon,stud}.ts',
+      'shared/src/stats/{bridge,bigtwo,redpoints,ninetynine,sevens,chinesepoker,liarsdeck,liarsdice,blackjack,holdem,napoleon,stud}.ts',
       'server/src/bots/*-bot.ts',
       '**/*registry.ts',
     ],

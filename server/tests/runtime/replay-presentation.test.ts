@@ -11,6 +11,7 @@ import { createDeck } from '../../src/engine/deck';
 import * as games from '../../src/managers/game-manager';
 import * as holdem from '../../src/managers/games/holdem-game';
 import * as liar from '../../src/managers/games/liarsdeck-game';
+import * as stud from '../../src/managers/games/stud-game';
 import * as players from '../../src/managers/player-manager';
 import * as rooms from '../../src/managers/room-manager';
 import { createRuntimeCoordinator } from '../../src/runtime/coordinator';
@@ -119,6 +120,31 @@ describe('recorded presentation stages', () => {
       const showdown = snapshot.log.find((entry) => entry.type === 'showdown');
       expect(showdown).toMatchObject({ cards: hole });
       expect(snapshot.log.filter((entry) => entry.type === 'street').flatMap((entry) => entry.cards)).toEqual(board);
+    } finally { await context.close(); }
+  });
+
+  it('keeps the stud runout, showdown and award in the step that deals the next hand', async () => {
+    const deal = [
+      card(14), card(2), card(3, 'hearts'), card(4, 'hearts'), card(14, 'hearts'), card(7, 'diamonds'), card(8, 'clubs'),
+      card(9, 'clubs'), card(13), card(5, 'diamonds'), card(12), card(6, 'hearts'), card(11), card(10, 'clubs'),
+    ];
+    const random = randomSequence([0.99, ...shuffleDraws(deal)]);
+    const context = await setup('stud', (code, seated) => stud.startGame(code, seated, random));
+    try {
+      const { code } = context;
+      const { hands } = stud.getGameState(code)!;
+      await present(context, () => games.handleGameAction(code, 'N', { gameType: 'stud', action: { type: 'raise', to: 990 } }, true));
+      await present(context, () => games.handleGameAction(code, 'E', { gameType: 'stud', action: { type: 'call' } }, true));
+      await present(context, () => games.handleGameAction(code, 'S', { gameType: 'stud', action: { type: 'fold' } }, true));
+      // Folding the last open seat runs the remaining up cards out and deals the next hand within one operation.
+      const snapshot = await present(context, () => games.handleGameAction(code, 'W', { gameType: 'stud', action: { type: 'fold' } }, true));
+      if (snapshot.gameType !== 'stud') throw new Error('Expected stud.');
+      expect(snapshot.hand).toBe(2);
+      expect(snapshot.presentation).not.toHaveProperty('serverNow');
+      const kinds = getPresentationFrames(snapshot).map((frame) => frame.kind);
+      expect(kinds).toEqual(['fold', 'street', 'street', 'street', 'showdown', 'award', 'deal', 'street']);
+      const showdown = snapshot.log.find((entry) => entry.type === 'showdown');
+      expect(showdown).toMatchObject({ cards: { N: hands.N, E: hands.E, S: [], W: [] } });
     } finally { await context.close(); }
   });
 

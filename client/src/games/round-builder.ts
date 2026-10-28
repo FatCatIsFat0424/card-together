@@ -1,6 +1,6 @@
 import type {
   BlackjackOutcome, Card, ChinesePokerCategory, DiceFace, HoldemStreet, LiarFace, LiarTableFace, PlayerVisibleGameState,
-  GameSeat, GameType, Suit, TenHalfHandKind,
+  GameSeat, GameType, StudStreet, Suit, TenHalfHandKind,
 } from '@shared/types';
 import type { BigTwoComboType } from '@shared/rules/bigtwo';
 import type { CrazyEightsEffect } from '@shared/games/crazyeights/types';
@@ -8,7 +8,7 @@ import type { CrazyEightsEffect } from '@shared/games/crazyeights/types';
 export interface HistoryAction {
   kind: 'play' | 'pass' | 'round_end' | 'dragon' | 'flip' | 'eliminated' | 'cover' | 'challenge' | 'shot'
     | 'deal' | 'hit' | 'stand' | 'double' | 'split' | 'dealerReveal' | 'dealerHit' | 'dealerStand' | 'settle'
-    | 'button' | 'blind' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street' | 'showdown' | 'award' | 'bid';
+    | 'button' | 'blind' | 'ante' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street' | 'showdown' | 'award' | 'bid';
   /** Null for the Blackjack dealer and Hold'em board cards */
   seat: GameSeat | null;
   cards: readonly Card[];
@@ -58,6 +58,10 @@ export interface HistoryAction {
   category?: ChinesePokerCategory;
   /** Hold'em: the hand's blinds, on the button entry */
   blinds?: { readonly small: number; readonly big: number };
+  /** Five-Card Stud: the street a dealt up card belongs to */
+  studStreet?: StudStreet;
+  /** Five-Card Stud: the hand's ante and minimum bet, on its first ante entry */
+  stakes?: { readonly ante: number; readonly minBet: number };
 }
 
 export interface HistoryRound {

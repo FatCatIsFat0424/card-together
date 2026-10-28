@@ -1,9 +1,9 @@
 // ─── HoldemTable: board and pots, every seat's stake, hole cards, betting controls, info rail, result ───
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { HE_HANDS } from '@shared/rules/holdem';
-import type { HoldemAction, HoldemLogEntry, HoldemMatchResult, HoldemVisibleState, GameSeat } from '@shared/types';
+import type { HoldemAction, HoldemLogEntry, HoldemVisibleState, GameSeat } from '@shared/types';
 import { tablePosition, usesCornerSlots } from '../../game-view';
 import type { TablePosition } from '../../game-view';
 import { socket } from '../../socket';
@@ -12,24 +12,19 @@ import { useI18nStore } from '../../stores/i18n-store';
 import { ChipIcon } from '../ChipIcon';
 import { GameShell } from '../GameShell';
 import { useViewedGame } from '../use-table-perspective';
-import { ResultDialog, resultStyles } from '../ResultDialog';
-import { useResultRoundHistory } from '../RoundHistory';
 import { infoStyles, TurnBox } from '../TableInfo';
-import { joinNames, useSeatName } from '../seat-names';
+import { useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
 import { BetStack, Board, ChipAmount, HeCards, SeatMarkers, cardName } from './HoldemCards';
-import { usePotLabel } from './HoldemFrame';
 import {
-  HE_SEATS, QUICK_SIZES, chipsAdded, clampRaise, holdemBlindSeats, holdemCategory, holdemControls, holdemTableAt, holdemView,
-  potLines, potTotal, quickRaise, raiseKind, rankHoldem, recentHoldemMoves, seatState, shownAward, shownHoleCards,
-  signedChips, streetActions,
+  HE_SEATS, chipsAdded, holdemBlindSeats, holdemCategory, holdemControls, holdemTableAt, holdemView,
+  potTotal, recentHoldemMoves, seatState, shownAward, shownHoleCards, streetActions,
 } from './holdem-view';
-import type { HoldemBlindSeats, HoldemControls, HoldemTableView, RaiseControl, SeatAction } from './holdem-view';
+import type { HoldemBlindSeats, HoldemTableView, SeatAction } from './holdem-view';
+import { BettingControls } from './HoldemControls';
+import { MatchResultOverlay, PotList } from './HoldemShared';
 import { AppIcon } from '../../components/AppIcon';
-import { Button } from '../../components/Button';
-import { Chip } from '../../components/Chip';
-import { HandActions } from '../HandActions';
 import styles from './HoldemTable.module.css';
 import { isOwnTurn, isSpectator } from '../observer-view';
 import { useGodViewStore } from '../../stores/god-view-store';
@@ -37,8 +32,6 @@ import { useGodViewStore } from '../../stores/god-view-store';
 const RECENT_MOVES = 12;
 
 type ActionCallback = (timeout: Error | null, response?: { success: boolean; error?: string }) => void;
-
-const toneClass = (value: number): string | undefined => value > 0 ? styles.gain : value < 0 ? styles.loss : undefined;
 
 /** One seat's corner of the felt: hole cards (opponents), last action, street stake, and winnings. */
 function SeatSpot({ seat, view, position, isMe, action, blinds }: {
@@ -72,21 +65,6 @@ function SeatSpot({ seat, view, position, isMe, action, blinds }: {
     {won > 0 && <strong className={styles.won}><AppIcon name="trophy" /> {t('holdem.wonAmount', { n: String(won) })}</strong>}
     {bet > 0 && <span className={styles.spotBet}><BetStack amount={bet} title={t('holdem.betTitle', { n: String(bet) })} /></span>}
   </section>;
-}
-
-function PotList({ view }: { view: HoldemTableView }): ReactNode {
-  const { t } = useI18nStore();
-  const seatName = useSeatName();
-  const potLabel = usePotLabel();
-  const lines = potLines(view);
-  const total = view.award ? lines.reduce((sum, line) => sum + line.amount, 0) : potTotal(view);
-  return <div className={styles.pots}>
-    <strong className={styles.potTotal}>{t('holdem.pot')} <ChipAmount amount={total} /></strong>
-    {(lines.length > 1 || view.award) && <ul className={styles.potLines}>{lines.map((line, index) => <li key={index}>
-      {potLabel(line, index, lines.length)} <ChipAmount amount={line.amount} />
-      {line.winners.length > 0 && !line.returned && <> → {line.winners.map(seatName).join(' · ')}</>}
-    </li>)}</ul>}
-  </div>;
 }
 
 function Centre({ game, view }: { game: HoldemVisibleState; view: HoldemTableView }): ReactNode {
@@ -209,124 +187,6 @@ function Info({ game, view, locked }: { game: HoldemVisibleState; view: HoldemTa
   </aside>;
 }
 
-function ResultOverlay({ result, pending, error, disabled, onBack }: {
-  result: HoldemMatchResult; pending: boolean; error: string; disabled: boolean; onBack: () => void;
-}): ReactNode {
-  const { t, locale } = useI18nStore();
-  const history = useResultRoundHistory(useGameStore((state) => state.visible));
-  const seatName = useSeatName();
-  return <ResultDialog history={history} title={t('holdem.winner', { names: joinNames(result.winners.map(seatName), locale) })}
-    pending={pending} error={error} disabled={disabled} onBack={onBack}>
-    <table className={`${resultStyles.table} ${styles.rankTable}`}>
-      <thead><tr>
-        <th>{t('holdem.rank')}</th><th>{t('holdem.player')}</th>
-        <th>{t('holdem.chipsColumn')}</th><th>{t('holdem.net')}</th>
-      </tr></thead>
-      <tbody>{rankHoldem(result).map((row) => (
-        <tr key={row.seat} className={row.winner ? resultStyles.winnerRow : ''}>
-          <td>{t('holdem.place', { n: String(row.place) })}</td>
-          <td>{row.winner && <><AppIcon name="trophy" /> </>}{seatName(row.seat)}</td>
-          <td>{row.eliminated ? t('holdem.out') : row.chips}</td>
-          <td className={toneClass(row.net)}>{signedChips(row.net)}</td>
-        </tr>
-      ))}</tbody>
-    </table>
-    <p className={resultStyles.note}>{t('holdem.handsPlayed', { n: String(result.hands) })}</p>
-  </ResultDialog>;
-}
-
-/** Presets, slider, amount field and confirm for a bet or raise, clamped to the legal street totals. */
-function RaiseSheet({ game, control, disabled, onRaise, onClose }: {
-  game: HoldemVisibleState; control: RaiseControl; disabled: boolean; onRaise: (to: number) => void; onClose: () => void;
-}): ReactNode {
-  const { t } = useI18nStore();
-  const [draft, setDraft] = useState<string | null>(null);
-  const [chosen, setChosen] = useState(control.min);
-  const value = clampRaise(draft === null ? chosen : Number(draft), control);
-  const choose = (to: number): void => {
-    setDraft(null);
-    setChosen(clampRaise(to, control));
-  };
-  const kind = raiseKind(value, control);
-  const confirm = <Button variant="primary" className={kind === 'allIn' ? styles.allInButton : undefined}
-    disabled={disabled} onClick={() => onRaise(value)}>
-    {t(`holdem.confirm.${kind}`, { n: String(value) })}
-  </Button>;
-  const fixed = control.min === control.max;
-  return <div className={styles.sheet} role="group" aria-label={t('holdem.raiseAmount')}
-    onKeyDown={(event) => {
-      if (event.key !== 'Escape') return;
-      // Closing the sheet must not also close a menu or chat drawer underneath.
-      event.preventDefault();
-      event.stopPropagation();
-      onClose();
-    }}>
-    {fixed ? <span className={styles.limits}>{t('holdem.raiseAllInOnly')}</span> : <>
-      <div className={styles.quickRow} role="group" aria-label={t('holdem.raiseAmount')}>
-        {QUICK_SIZES.map((size) => {
-          const to = quickRaise(size, game, game.mySeat, control);
-          return <Chip key={size} selected={to === value} disabled={disabled} onClick={() => choose(to)} title={String(to)}>
-            {t(`holdem.quick.${size}`)}
-          </Chip>;
-        })}
-      </div>
-      <div className={styles.sliderRow}>
-        <input type="range" className={styles.slider} min={control.min} max={control.max} step={1} value={value}
-          aria-label={t('holdem.raiseAmount')} disabled={disabled} autoFocus
-          onChange={(event) => choose(Number(event.target.value))} />
-        <input type="number" className={styles.amountInput} min={control.min} max={control.max} step={1}
-          inputMode="numeric" aria-label={t('holdem.raiseAmount')} disabled={disabled}
-          value={draft ?? String(value)}
-          onChange={(event) => setDraft(event.target.value)}
-          onBlur={() => choose(value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !disabled) {
-              choose(value);
-              onRaise(value);
-            }
-          }} />
-      </div>
-    </>}
-    <div className={styles.sheetActions}>
-      {!fixed && <span className={styles.limits}>{t('holdem.raiseRange', { min: String(control.min), max: String(control.max) })}</span>}
-      <Button onClick={onClose}>{t('common.cancel')}</Button>
-      {confirm}
-    </div>
-  </div>;
-}
-
-/** Fold, check or call, and raise as three pills; raising opens the sheet in their place. */
-function Controls({ game, options, enabled, onAction }: {
-  game: HoldemVisibleState; options: HoldemControls | null; enabled: boolean; onAction: (action: HoldemAction) => void;
-}): ReactNode {
-  const { t } = useI18nStore();
-  const [raising, setRaising] = useState(false);
-  const raiseButton = useRef<HTMLButtonElement>(null);
-  const wasRaising = useRef(false);
-  useEffect(() => {
-    // Closing the sheet hands focus back to the pill that opened it.
-    if (wasRaising.current && !raising) raiseButton.current?.focus({ preventScroll: true });
-    wasRaising.current = raising;
-  }, [raising]);
-  const disabled = !enabled || !options;
-  const callLabel = !options || options.check ? t('holdem.action.check')
-    : t(options.callAllIn ? 'holdem.action.callAllIn' : 'holdem.action.call', { n: String(options.call) });
-  if (raising && options?.raise) {
-    return <HandActions className={styles.controls} layout="sheet">
-      <RaiseSheet key={`${options.raise.min}-${options.raise.max}`} game={game} control={options.raise}
-        disabled={disabled} onClose={() => setRaising(false)}
-        onRaise={(to) => onAction({ type: 'raise', to })} />
-    </HandActions>;
-  }
-  return <HandActions className={styles.controls} layout="row">
-    <Button disabled={disabled} onClick={() => onAction({ type: 'fold' })}>{t('holdem.action.fold')}</Button>
-    <Button variant={options?.raise ? 'ghost' : 'primary'} disabled={disabled}
-      onClick={() => onAction(options?.check ? { type: 'check' } : { type: 'call' })}>{callLabel}</Button>
-    {options?.raise && <Button ref={raiseButton} variant="primary" disabled={disabled} aria-haspopup="true"
-      onClick={() => setRaising(true)}>{t(options.raise.bet ? 'holdem.tag.bet' : 'holdem.tag.raise')}</Button>}
-  </HandActions>;
-}
-
 export function HoldemTable(): ReactNode {
   const { locked, frame } = useGamePresentation();
   const connectionReady = useConnectionReady();
@@ -397,7 +257,7 @@ export function HoldemTable(): ReactNode {
       </div>
     </div>}
     {game.phase === 'playing' && !isSpectator(game) && myState === 'active'
-      && <Controls key={game.log.length} game={game} options={options} enabled={myTurn} onAction={sendAction} />}
+      && <BettingControls key={game.log.length} table={game} seat={me} options={options} enabled={myTurn} onAction={sendAction} />}
   </div>;
   const handPrompt = game.phase !== 'playing' ? null
     : isSpectator(game) || myState === 'active' ? prompt : stateNote;
@@ -408,7 +268,7 @@ export function HoldemTable(): ReactNode {
       centre={<Centre game={game} view={view} />}
       hand={handZone}
       prompt={handPrompt}
-      overlay={game.phase === 'scoring' && game.result && <ResultOverlay result={game.result}
+      overlay={game.phase === 'scoring' && game.result && <MatchResultOverlay result={game.result}
         pending={actionPending} error={actionError} disabled={!connectionReady} onBack={backToRoom} />}
       error={game.phase !== 'scoring' ? actionError : undefined}
     />

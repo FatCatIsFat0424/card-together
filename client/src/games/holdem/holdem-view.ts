@@ -2,7 +2,7 @@ import { GAME_SEAT_ORDER, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { frameLogIndex } from '@shared/game-presentation';
 import type { PresentationFrame } from '@shared/game-presentation';
 import { HE_STARTING_CHIPS, heBestHand, heBlindSeats, heLegalActions, hePots, heReplay } from '@shared/rules/holdem';
-import type { HeTableView } from '@shared/rules/holdem';
+import type { HeBettingView, HeTableView } from '@shared/rules/holdem';
 import type {
   Card, ChinesePokerCategory, HoldemLogEntry, HoldemMatchResult, HoldemPot, HoldemVisibleState, GameSeat,
 } from '@shared/types';
@@ -21,6 +21,12 @@ export interface HoldemAwardView {
   readonly payouts: Record<GameSeat, number>;
   /** Seats that lost their last chip in this hand */
   readonly eliminated: readonly GameSeat[];
+}
+
+/** What the pot list needs of a table; Five-Card Stud tables satisfy it as well. */
+export interface BettingTableView extends HeBettingView {
+  readonly award: HoldemAwardView | null;
+  readonly revealed: Readonly<Record<GameSeat, readonly Card[]>>;
 }
 
 /** Public table as the presentation currently shows it. */
@@ -109,7 +115,8 @@ export interface ShownHoleCards {
  * has not played, so earlier hands fall back to their showdown, the remembered cards, or backs.
  */
 export function shownHoleCards(
-  game: Pick<HoldemVisibleState, 'hand' | 'myHand' | 'mySeat'>, view: HoldemTableView, held: HeldHoleCards | null,
+  game: Pick<HoldemVisibleState, 'hand' | 'myHand' | 'mySeat'>, view: Pick<HeTableView, 'hand' | 'dealt' | 'revealed'>,
+  held: HeldHoleCards | null,
 ): ShownHoleCards {
   const me = game.mySeat;
   if (!view.dealt.includes(me)) return { cards: [], hidden: false };
@@ -144,7 +151,7 @@ export function holdemBlindSeats(view: HeTableView): HoldemBlindSeats | null {
 }
 
 /** Every chip staked this hand, including the current street. */
-export function potTotal(view: HeTableView): number {
+export function potTotal(view: Pick<HeBettingView, 'totalBets'>): number {
   return HE_SEATS.reduce((sum, seat) => sum + view.totalBets[seat], 0);
 }
 
@@ -160,7 +167,7 @@ export interface PotLine {
  * Main and side pots to display. During a street only chips from finished streets are split into
  * pots (current bets sit in front of each seat); after showdown or the award every stake counts.
  */
-export function potLines(view: HoldemTableView): PotLine[] {
+export function potLines(view: BettingTableView): PotLine[] {
   const mark = (pots: readonly { amount: number; eligible: readonly GameSeat[]; winners?: readonly GameSeat[] }[]): PotLine[] =>
     pots.map((pot, index) => ({
       amount: pot.amount,
@@ -177,8 +184,15 @@ export function potLines(view: HoldemTableView): PotLine[] {
 
 export type SeatAction = 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn';
 
+/** The log entries street actions read; Hold'em and Five-Card Stud logs both fit. */
+export type StreetLogEntry =
+  | { readonly type: 'hand' | 'street' | 'showdown' | 'award' }
+  | { readonly type: 'action'; readonly seat: GameSeat; readonly action: Exclude<SeatAction, 'allIn'>; readonly allIn: boolean };
+
 /** Each seat's latest action on the shown street. */
-export function streetActions(log: readonly HoldemLogEntry[], end: number): Partial<Record<GameSeat, SeatAction>> {
+export function streetActions(
+  log: readonly StreetLogEntry[], end: number,
+): Partial<Record<GameSeat, SeatAction>> {
   const actions: Partial<Record<GameSeat, SeatAction>> = {};
   for (let index = Math.min(end, log.length) - 1; index >= 0; index--) {
     const entry = log[index];
@@ -204,7 +218,9 @@ export function chipsAdded(log: readonly HoldemLogEntry[], index: number): numbe
 export type SeatState = 'out' | 'folded' | 'allIn' | 'active' | 'waiting';
 
 /** Out: lost every chip; waiting: not dealt into the shown hand (before the first deal). */
-export function seatState(view: HeTableView, seat: GameSeat): SeatState {
+export function seatState(
+  view: Pick<HeBettingView, 'dealt' | 'folded' | 'chips' | 'totalBets'> & { readonly eliminated: readonly GameSeat[] }, seat: GameSeat,
+): SeatState {
   if (view.eliminated.includes(seat)) return 'out';
   if (!view.dealt.includes(seat)) return 'waiting';
   if (view.folded.includes(seat)) return 'folded';
@@ -228,7 +244,9 @@ export interface HoldemControls {
 }
 
 /** Controls for the local seat; null unless it owes an action and the table is ready. */
-export function holdemControls(game: HoldemVisibleState, ready: boolean): HoldemControls | null {
+export function holdemControls(
+  game: HeBettingView & Pick<HoldemVisibleState, 'phase' | 'mySeat' | 'currentTurnSeat' | 'observer'>, ready: boolean,
+): HoldemControls | null {
   if (!ready || game.phase !== 'playing' || !isOwnTurn(game)) return null;
   const legal = heLegalActions(game, game.mySeat);
   if (!legal) return null;
@@ -253,7 +271,7 @@ export const QUICK_SIZES: readonly QuickSize[] = ['min', 'halfPot', 'pot', 'allI
  * Street totals for the shortcuts. A pot-sized raise first calls, then raises by the pot after
  * that call; half pot raises by half of it. Every size is clamped to the legal range.
  */
-export function quickRaise(size: QuickSize, view: HeTableView, seat: GameSeat, range: Pick<RaiseControl, 'min' | 'max'>): number {
+export function quickRaise(size: QuickSize, view: HeBettingView, seat: GameSeat, range: Pick<RaiseControl, 'min' | 'max'>): number {
   if (size === 'min') return range.min;
   if (size === 'allIn') return range.max;
   const owed = Math.max(0, view.currentBet - view.streetBets[seat]);
@@ -287,7 +305,7 @@ export interface HoldemRanking {
  * Final standings of the seats that took part: chips first (ties share a place), then busted
  * seats, last to bust highest.
  */
-export function rankHoldem(result: HoldemMatchResult): HoldemRanking[] {
+export function rankHoldem(result: Pick<HoldemMatchResult, 'seats' | 'chips' | 'winners' | 'eliminationOrder'>): HoldemRanking[] {
   const out = (seat: GameSeat): number => result.eliminationOrder.indexOf(seat);
   const sorted = [...result.seats ?? SEAT_ORDER_CLOCKWISE].sort((a, b) => result.chips[b] - result.chips[a] || out(b) - out(a));
   return sorted.map((seat, index) => {

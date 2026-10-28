@@ -66,6 +66,7 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
   tenhalf: { en: 'Special hands: strongest first', 'zh-TW': '特殊牌型：由大到小' },
   liarsdice: { en: 'Calling', 'zh-TW': '開' },
   crazyeights: { en: 'Eights', 'zh-TW': '8 為萬用牌' },
+  stud: { en: 'Who acts first', 'zh-TW': '誰先行動' },
 };
 
 describe('contextual game rules', () => {

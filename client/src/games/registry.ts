@@ -12,6 +12,7 @@ import { chinesePokerClient } from './chinesepoker/chinesepoker-client';
 import { liarsDeckClient } from './liarsdeck/liarsdeck-client';
 import { blackjackClient } from './blackjack/blackjack-client';
 import { holdemClient } from './holdem/holdem-client';
+import { studClient } from './stud/stud-client';
 import { napoleonClient } from './napoleon/napoleon-client';
 import { tenHalfClient } from './tenhalf/tenhalf-client';
 import { liarsDiceClient } from './liarsdice/liarsdice-client';
@@ -36,6 +37,7 @@ export const CLIENT_GAMES: { readonly [K in GameType]: ClientGame<K> } = {
   tenhalf: tenHalfClient,
   liarsdice: liarsDiceClient,
   crazyeights: crazyEightsClient,
+  stud: studClient,
 };
 
 /**

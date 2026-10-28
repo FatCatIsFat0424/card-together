@@ -115,6 +115,12 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('eights', 'log', 'count'),
     record('penaltiesDealt', 'log', 'count'),
   ],
+  stud: [
+    record('bestShowdown', 'log', 'max'),
+    record('biggestPot', 'log', 'max'),
+    record('knockouts', 'log', 'count'),
+    record('allInWins', 'log', 'count'),
+  ],
 };
 
 /**
@@ -125,6 +131,7 @@ export const LOG_METRICS: Readonly<Partial<Record<GameType, readonly string[]>>>
   blackjack: ['handsPlayed', 'busts'],
   holdem: ['showdowns', 'showdownWins'],
   tenhalf: ['handsPlayed', 'busts'],
+  stud: ['showdowns', 'showdownWins'],
 };
 
 /** Suits in contract order, for encoding contracts as comparable numbers. */

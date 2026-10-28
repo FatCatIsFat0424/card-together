@@ -56,6 +56,24 @@ export interface HeTableView {
   readonly eliminated: readonly GameSeat[];
 }
 
+/**
+ * The slice of a table that betting, pots and eliminations need. Other no-limit games satisfy it
+ * structurally and share those rules without the Hold'em board.
+ */
+export type HeBettingView = Pick<HeTableView,
+  'chips' | 'streetBets' | 'totalBets' | 'dealt' | 'folded' | 'currentBet' | 'minRaise' | 'acted'>;
+
+/** Mutable counterpart of `HeBettingView`. */
+export interface HeBettingTable {
+  chips: Record<GameSeat, number>;
+  streetBets: Record<GameSeat, number>;
+  totalBets: Record<GameSeat, number>;
+  folded: GameSeat[];
+  currentBet: number;
+  minRaise: number;
+  acted: GameSeat[];
+}
+
 export interface HeLegalActions {
   readonly fold: boolean;
   readonly check: boolean;
@@ -105,16 +123,17 @@ export function heBlindSeats(dealt: readonly GameSeat[], button: GameSeat): { sm
   return { small, big: heNextSeat(small, (seat) => dealt.includes(seat)) ?? small };
 }
 
-export function heInHand(table: HeTableView): GameSeat[] {
+export function heInHand(table: Pick<HeBettingView, 'dealt' | 'folded'>): GameSeat[] {
   return table.dealt.filter((seat) => !table.folded.includes(seat));
 }
 
 /** An unfolded seat with chips behind can still act; an all-in seat cannot. */
-export function heCanAct(table: HeTableView, seat: GameSeat): boolean {
+export function heCanAct(table: Pick<HeBettingView, 'dealt' | 'folded' | 'chips'>, seat: GameSeat): boolean {
   return table.dealt.includes(seat) && !table.folded.includes(seat) && table.chips[seat] > 0;
 }
 
-function needsAction(table: HeTableView, seat: GameSeat): boolean {
+/** Whether the seat can act and still owes a decision on this street. */
+export function heNeedsAction(table: HeBettingView, seat: GameSeat): boolean {
   return heCanAct(table, seat) && (!table.acted.includes(seat) || table.streetBets[seat] < table.currentBet);
 }
 
@@ -122,18 +141,18 @@ function needsAction(table: HeTableView, seat: GameSeat): boolean {
  * Betting on a street is over once one seat remains, nobody owes an action, or at most one seat
  * can act and it has matched the stake (raising against all-in seats is pointless).
  */
-export function heBettingClosed(table: HeTableView): boolean {
+export function heBettingClosed(table: HeBettingView): boolean {
   const inHand = heInHand(table);
   if (inHand.length <= 1) return true;
   const active = inHand.filter((seat) => heCanAct(table, seat));
-  if (!active.some((seat) => needsAction(table, seat))) return true;
+  if (!active.some((seat) => heNeedsAction(table, seat))) return true;
   return active.length <= 1 && active.every((seat) => table.streetBets[seat] >= table.currentBet);
 }
 
 /** Next seat clockwise after `seat` that owes an action, or null once betting is closed. */
-export function heNextToAct(table: HeTableView, seat: GameSeat): GameSeat | null {
+export function heNextToAct(table: HeBettingView, seat: GameSeat): GameSeat | null {
   if (heBettingClosed(table)) return null;
-  return heNextSeat(seat, (candidate) => needsAction(table, candidate));
+  return heNextSeat(seat, (candidate) => heNeedsAction(table, candidate));
 }
 
 /** Preflop the seat after the big blind opens; later streets start after the button. */
@@ -142,8 +161,8 @@ export function heFirstToAct(table: HeTableView): GameSeat | null {
   return heNextToAct(table, anchor);
 }
 
-export function heLegalActions(table: HeTableView, seat: GameSeat): HeLegalActions | null {
-  if (!needsAction(table, seat)) return null;
+export function heLegalActions(table: HeBettingView, seat: GameSeat): HeLegalActions | null {
+  if (!heNeedsAction(table, seat)) return null;
   const owed = table.currentBet - table.streetBets[seat];
   const max = table.streetBets[seat] + table.chips[seat];
   const opponentCanAct = heInHand(table).some((other) => other !== seat && heCanAct(table, other));
@@ -174,7 +193,7 @@ export function heBestHand(cards: readonly Card[]): CpEvaluation {
  * Stakes split into layers by contribution level; unfolded seats that reached a layer are its
  * eligible winners. Adjacent layers with the same eligible seats merge into one pot.
  */
-export function hePots(table: HeTableView): { amount: number; eligible: GameSeat[] }[] {
+export function hePots(table: Pick<HeBettingView, 'dealt' | 'folded' | 'totalBets'>): { amount: number; eligible: GameSeat[] }[] {
   const inHand = heInHand(table);
   const levels = [...new Set(table.dealt.map((seat) => table.totalBets[seat]).filter((value) => value > 0))]
     .sort((a, b) => a - b);
@@ -194,13 +213,19 @@ export function hePots(table: HeTableView): { amount: number; eligible: GameSeat
   return pots;
 }
 
-/** Awards every pot to its best eligible hand; odd chips go clockwise from the button. */
-export function heAward(table: HeTableView): HeAward {
+/**
+ * Awards every pot to its best eligible hand; odd chips go clockwise from the button.
+ * `handOf` is only called for pots that more than one seat can win.
+ */
+export function hePayouts(
+  table: Pick<HeBettingView, 'dealt' | 'folded' | 'totalBets'> & { readonly button: GameSeat },
+  handOf: (seat: GameSeat) => CpEvaluation,
+): HeAward {
   const payouts = seatMap(() => 0);
   const pots = hePots(table).map(({ amount, eligible }) => {
     let winners = eligible;
     if (eligible.length > 1) {
-      const scored = eligible.map((seat) => ({ seat, hand: heBestHand([...table.revealed[seat], ...table.board]) }));
+      const scored = eligible.map((seat) => ({ seat, hand: handOf(seat) }));
       const best = scored.reduce((top, entry) => (cpCompare(entry.hand, top.hand) > 0 ? entry : top));
       winners = scored.filter((entry) => cpCompare(entry.hand, best.hand) === 0).map((entry) => entry.seat);
     }
@@ -217,8 +242,12 @@ export function heAward(table: HeTableView): HeAward {
   return { pots, payouts };
 }
 
+export function heAward(table: HeTableView): HeAward {
+  return hePayouts(table, (seat) => heBestHand([...table.revealed[seat], ...table.board]));
+}
+
 /** Dealt seats left without chips, smaller starting stacks first, then N, E, S, W. */
-export function heEliminations(table: HeTableView, chips: Readonly<Record<GameSeat, number>>): GameSeat[] {
+export function heEliminations(table: Pick<HeBettingView, 'dealt' | 'totalBets'>, chips: Readonly<Record<GameSeat, number>>): GameSeat[] {
   return table.dealt.filter((seat) => chips[seat] === 0)
     .sort((a, b) => table.totalBets[a] - table.totalBets[b] || GAME_SEAT_ORDER.indexOf(a) - GAME_SEAT_ORDER.indexOf(b));
 }
@@ -230,7 +259,7 @@ export function heWinners(chips: Readonly<Record<GameSeat, number>>): GameSeat[]
 }
 
 /** The match ends after the last hand or once a single seat holds chips. */
-export function heMatchOver(table: HeTableView): boolean {
+export function heMatchOver(table: Pick<HeTableView, 'hand' | 'chips'>): boolean {
   return table.hand >= HE_HANDS || GAME_SEAT_ORDER.filter((seat) => table.chips[seat] > 0).length <= 1;
 }
 
@@ -257,9 +286,34 @@ export function heEmptyTable(seats: readonly GameSeat[]): HeTable {
 }
 
 /**
- * Applies one public log entry. A raise of at least the previous increment reopens betting for
+ * Applies one betting action. A raise of at least the previous increment reopens betting for
  * every other seat; a shorter all-in raise must be called but does not let earlier actors raise.
  */
+export function heApplyBet(
+  table: HeBettingTable, entry: { readonly seat: GameSeat; readonly action: string; readonly to: number },
+): void {
+  const { seat } = entry;
+  if (entry.action === 'fold') {
+    table.folded = ordered([...table.folded, seat]);
+    return;
+  }
+  const added = entry.to - table.streetBets[seat];
+  table.chips[seat] -= added;
+  table.streetBets[seat] = entry.to;
+  table.totalBets[seat] += added;
+  const increment = entry.to - table.currentBet;
+  if (increment > 0) {
+    table.currentBet = entry.to;
+    if (increment >= table.minRaise) {
+      table.minRaise = increment;
+      table.acted = [seat];
+      return;
+    }
+  }
+  table.acted = ordered([...table.acted, seat]);
+}
+
+/** Applies one public log entry. */
 export function heApplyEntry(table: HeTable, entry: HoldemLogEntry): void {
   switch (entry.type) {
     case 'hand':
@@ -279,28 +333,9 @@ export function heApplyEntry(table: HeTable, entry: HoldemLogEntry): void {
       table.acted = [];
       table.revealed = seatMap(() => []);
       return;
-    case 'action': {
-      const { seat } = entry;
-      if (entry.action === 'fold') {
-        table.folded = ordered([...table.folded, seat]);
-        return;
-      }
-      const added = entry.to - table.streetBets[seat];
-      table.chips[seat] -= added;
-      table.streetBets[seat] = entry.to;
-      table.totalBets[seat] += added;
-      const increment = entry.to - table.currentBet;
-      if (increment > 0) {
-        table.currentBet = entry.to;
-        if (increment >= table.minRaise) {
-          table.minRaise = increment;
-          table.acted = [seat];
-          return;
-        }
-      }
-      table.acted = ordered([...table.acted, seat]);
+    case 'action':
+      heApplyBet(table, entry);
       return;
-    }
     case 'street':
       table.street = entry.street;
       table.board = [...table.board, ...entry.cards];
