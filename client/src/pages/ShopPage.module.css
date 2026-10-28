@@ -53,13 +53,17 @@
 .product .tableArt, .product .seatArt { width: 100%; height: 100%; }
 .tableArt > img, .seatArt > img, .backgroundArt { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .seatArt { width: min(100%, 150px); }
-.seatArt > span { z-index: 1; }
+/* Spans the scene, so the avatar and its decorations shrink to the scene's own box. */
+.seatArt > .artScale { position: absolute; z-index: 1; inset: 0; }
 .tableCards { position: relative; display: flex; gap: 4px; }
 .product .tableCards { zoom: 0.65; }
 .tableCards > span { width: 26px; height: 38px; border: 1px solid #cfd6e2; border-radius: 3px; background: #f1f4f9; box-shadow: 0 2px 6px #0004; }
 .tableCards > span:first-child { transform: rotate(-12deg) translateY(3px); }
 .tableCards > span:last-child { transform: rotate(12deg) translateY(3px); }
 .nameplateArt { display: grid; justify-items: center; gap: var(--space-3); max-width: 100%; }
+/* Tiles shrink the sample to fit; a larger plate keeps the title at least 11px once shrunk on phones. */
+.product .nameplateArt { gap: var(--space-1); }
+.product .nameplateArt > [data-nameplate] { font-size: var(--text-sm); }
 .stickerPackArt { display: grid; grid-template-columns: repeat(2, 52px); gap: var(--space-1); }
 .stickerPackArt > * { width: 52px; height: 52px; }
 

@@ -95,6 +95,23 @@ describe('shop preview visibility', () => {
   });
 });
 
+describe('shop tile sizing', () => {
+  const bordered = { ...account, avatarBorder: 'rabbit' } as const;
+
+  it('puts the tile nameplate under a small avatar and keeps the dialog avatar large', () => {
+    const item = getShopItem('nameplate-tide')!;
+    expect(renderToStaticMarkup(createElement(ShopProductArt, { item, account: bordered, tile: true })))
+      .toContain('data-avatar-size="row"');
+    expect(renderToStaticMarkup(createElement(ShopProductArt, { item, account: bordered })))
+      .toContain('data-avatar-size="large"');
+  });
+
+  it('fits the seat background avatar, decorations included, inside the scene', () => {
+    const html = renderToStaticMarkup(createElement(ShopProductArt, { item: getShopItem('seat-tide')!, account: bordered }));
+    expect(html).toMatch(/<div[^>]*inert=""[^>]*><div[^>]*><span[^>]*data-avatar-size="large"/);
+  });
+});
+
 describe('shop animated background previews', () => {
   it.each(['card-back', 'table', 'seat'])('uses composited layers for %s and preserves the reduced-motion still image', (prefix) => {
     const item = getShopItem(`${prefix}-neoncity`)!;

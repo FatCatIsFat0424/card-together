@@ -67,12 +67,15 @@ export function ShopProductPreview({ item, account, className, children }: ShopP
   return <div ref={container} className={className}>
     {children}
     {visible && <FitArt fill={item.type === 'tableBackground' || item.type === 'seatBackground'}>
-      <ShopProductArt item={item} account={account} /></FitArt>}
+      <ShopProductArt item={item} account={account} tile /></FitArt>}
   </div>;
 }
 
 /** Uses the same assets and identity components as equipped products. */
-export function ShopProductArt({ item, account }: ShopProductArtProps): ReactNode {
+export function ShopProductArt({ item, account, tile = false }: ShopProductArtProps & {
+  /** Product tiles are short, so the nameplate sample sits under a smaller avatar to keep its text legible. */
+  readonly tile?: boolean;
+}): ReactNode {
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const stillArt = useStillArt();
   switch (item.type) {
@@ -92,7 +95,8 @@ export function ShopProductArt({ item, account }: ShopProductArtProps): ReactNod
   }
   if (item.type === 'nameplate') {
     return <div className={styles.nameplateArt}>
-      <Avatar avatar={account.avatar} image={account.avatarImage} border={account.avatarBorder} color={account.color} size="large" />
+      <Avatar avatar={account.avatar} image={account.avatarImage} border={account.avatarBorder} color={account.color}
+        size={tile ? 'row' : 'large'} />
       <Nameplate id={item.id} />
     </div>;
   }
@@ -105,7 +109,10 @@ export function ShopProductArt({ item, account }: ShopProductArtProps): ReactNod
     {layers ? <LayeredArt art={layers} fit="cover" className={styles.backgroundArt} />
       : <img src={artwork} alt="" />}
     {item.type === 'seatBackground'
-      ? <Avatar avatar={account.avatar} image={account.avatarImage} border={account.avatarBorder} color={account.color} size="large" />
+      // Border decorations reach past the avatar, so the seat avatar shrinks to stay inside the scene.
+      ? <FitArt fill={false}>
+        <Avatar avatar={account.avatar} image={account.avatarImage} border={account.avatarBorder} color={account.color} size="large" />
+      </FitArt>
       : <span className={styles.tableCards} aria-hidden="true"><span /><span /><span /></span>}
   </div>;
 }
