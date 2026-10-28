@@ -1,5 +1,6 @@
-import { createContext, lazy, Suspense, useContext, useState } from 'react';
+import { createContext, lazy, Suspense, useContext, useLayoutEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import Popover from '@mui/material/Popover';
 import { useLocation } from 'react-router-dom';
 import { useAccountStore } from '../stores/account-store';
@@ -13,7 +14,16 @@ const VoicePanel = lazy(() => import('./VoicePanel').then((module) => ({ default
 const VoiceControlsContext = createContext<{
   readonly anchor: HTMLButtonElement | null;
   readonly toggle: (button: HTMLButtonElement) => void;
+  readonly setDockSlot: (slot: HTMLElement | null) => void;
 } | null>(null);
+
+/** Detached holder of the call panel; absent where there is no DOM, such as server-side rendering. */
+function createPanelHost(): HTMLElement | null {
+  if (typeof document === 'undefined') return null;
+  const host = document.createElement('div');
+  host.style.display = 'contents';
+  return host;
+}
 
 /** Keep the media owner mounted while room and game routes exchange their buttons. */
 export function VoiceControls({ children }: { readonly children: ReactNode }): ReactNode {
@@ -22,10 +32,17 @@ export function VoiceControls({ children }: { readonly children: ReactNode }): R
   const roomCode = useRoomStore((state) => state.currentRoomCode);
   const { t } = useI18nStore();
   const [target, setTarget] = useState<{ button: HTMLButtonElement; path: string } | null>(null);
+  // The panel owns the call, so its DOM node moves between the popover and a docked tab instead of remounting.
+  const [panelHost] = useState(createPanelHost);
+  const [popoverSlot, setPopoverSlot] = useState<HTMLElement | null>(null);
+  const [dockSlot, setDockSlot] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    if (panelHost) (dockSlot ?? popoverSlot)?.append(panelHost);
+  }, [dockSlot, popoverSlot, panelHost]);
   const available = Boolean(accountId && roomCode);
   const anchor = available && target?.path === pathname && target.button.isConnected ? target.button : null;
   const close = (): void => setTarget(null);
-  return <VoiceControlsContext.Provider value={{ anchor, toggle: (button) => {
+  return <VoiceControlsContext.Provider value={{ anchor, setDockSlot, toggle: (button) => {
     setTarget(anchor === button ? null : { button, path: pathname });
   } }}>
     {children}
@@ -34,9 +51,16 @@ export function VoiceControls({ children }: { readonly children: ReactNode }): R
       transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       slotProps={{ paper: { className: styles.panel, id: 'table-voice-controls', role: 'dialog',
         'aria-label': t('voice.title') } }}>
-      <div inert={!anchor}><Suspense fallback={null}><VoicePanel /></Suspense></div>
+      <div inert={!anchor} ref={setPopoverSlot} />
     </Popover>}
+    {available && panelHost && createPortal(<Suspense fallback={null}><VoicePanel /></Suspense>, panelHost)}
   </VoiceControlsContext.Provider>;
+}
+
+/** The call panel as the body of a dock tab; while it is mounted the voice popover has nothing to show. */
+export function VoiceDockPanel({ className }: { readonly className?: string }): ReactNode {
+  const controls = useContext(VoiceControlsContext);
+  return <div className={className} ref={controls?.setDockSlot} />;
 }
 
 export function VoiceButton({ className = '' }: { readonly className?: string }): ReactNode {

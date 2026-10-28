@@ -15,6 +15,8 @@ import { useRoomStore } from '../stores/room-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useSeatName } from './seat-names';
 import { ChatPanel } from '../components/ChatPanel';
+import { Dock, DockCount } from '../components/Dock';
+import { DESKTOP_SHELL_QUERY } from '../components/desktop-nav';
 import { TableSeat } from '../components/TableSeat';
 import { AppCheckbox } from '../components/AppCheckbox';
 import { lastElimination, lastMove, matchSeats, tablePosition } from '../game-view';
@@ -24,7 +26,7 @@ import { SpectatorLeaveButton } from './SpectatorLeave';
 import { EarlyLeaveButton } from './EarlyLeave';
 import { AppIcon } from '../components/AppIcon';
 import { IconButton } from '../components/IconButton';
-import { VoiceButton } from '../components/VoiceControls';
+import { VoiceButton, VoiceDockPanel } from '../components/VoiceControls';
 import { RoomCodeButton } from '../components/RoomCodeButton';
 import { GameRulesDialog } from '../components/GameRulesDialog';
 import { matchRulesContext } from '../game-rules-context';
@@ -51,7 +53,8 @@ import { godViewSource, useReplayMode } from './replay-mode';
 import { TableStoreScope } from './TableStoreScope';
 import { gameUi } from './ui-registry';
 
-const DESKTOP_QUERY = '(min-width: 1024px)';
+/** Wide enough for the dock to sit beside the table; narrower desktop windows start with it collapsed. */
+const DOCK_OPEN_QUERY = '(min-width: 1024px)';
 const SHEET_QUERY = '(max-width: 767px), (max-height: 500px) and (min-width: 600px)';
 const OUT_BANNER_MS = 3500;
 // Keep the setting available in code while its UI is temporarily hidden.
@@ -79,12 +82,13 @@ function matches(query: string): boolean {
   return typeof window !== 'undefined' && window.matchMedia(query).matches;
 }
 
-/** The info rail is a column only on wide, tall screens; elsewhere it is an overlay sheet. */
-const infoIsOverlay = (): boolean => !matches(DESKTOP_QUERY) || matches(SHEET_QUERY);
-const chatIsOverlay = (): boolean => matches(SHEET_QUERY);
+/** Phones open the info and chat as sheets; the desktop shell docks them beside the table. */
+const sheetsAreOverlays = (): boolean => matches(SHEET_QUERY);
+
+type TableDockTab = 'info' | 'chat' | 'voice';
 
 interface GameShellProps {
-  /** Info rail content (left column on desktop, overlay on tablet, drawer on mobile) */
+  /** Info rail content (dock tab on desktop, drawer on phones) */
   info: ReactNode;
   /** Table center */
   centre: ReactNode;
@@ -182,8 +186,14 @@ export function GameShell({
   const turnName = turnSeat ? seatName(turnSeat) : '';
   const turnAnnouncement = presentation.locked || !turnSeat ? ''
     : turnSeat === mySeat ? (myTurn ? t('table.yourTurn') : '') : t('table.turnOf', { name: turnName });
-  // Chat is collapsed by default on tablet; on mobile it is a bottom drawer, closed by default
-  const [chatOpen, setChatOpen] = useState(() => chatVisible && matches(DESKTOP_QUERY) && !matches(SHEET_QUERY));
+  const dockLayout = useMediaQuery(DESKTOP_SHELL_QUERY);
+  // The game info leads: it carries the contract and auction that the bidding panel only summarizes.
+  const [dockTab, setDockTab] = useState<TableDockTab>('info');
+  const [dockOpen, setDockOpen] = useState(() => matches(DOCK_OPEN_QUERY));
+  const dockToggleRef = useRef<HTMLButtonElement>(null);
+  const restoreToggleFocus = useRef(false);
+  // On phones chat and info are bottom drawers, closed by default
+  const [chatOpen, setChatOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const settlementVisible = Boolean(overlay) && !presentation.locked;
@@ -193,9 +203,9 @@ export function GameShell({
   const chatButtonRef = useRef<HTMLButtonElement>(null);
   const infoPanelRef = useRef<HTMLDivElement>(null);
   const chatRailRef = useRef<HTMLElement>(null);
-  useSheetFocus(infoOpen && !rulesVisible, infoPanelRef, infoButtonRef, infoIsOverlay);
+  useSheetFocus(infoOpen && !rulesVisible, infoPanelRef, infoButtonRef, sheetsAreOverlays);
   // Focusing the chat input would raise the phone keyboard; focus the sheet itself.
-  useSheetFocus(chatOpen && !rulesVisible, chatRailRef, chatButtonRef, chatIsOverlay, 'panel');
+  useSheetFocus(chatOpen && !rulesVisible, chatRailRef, chatButtonRef, sheetsAreOverlays, 'panel');
   const bottomSeat = useTablePerspective();
   const selectSeat = useTablePerspectiveStore((state) => state.selectSeat);
   const watching = isSpectator(visibleGame);
@@ -215,7 +225,8 @@ export function GameShell({
     .map((seat) => tablePosition(seat, bottomSeat, tableSeats));
   const cornersSpan = expandedTable && !sidePositions.includes('left') && !sidePositions.includes('right');
   const centreUp = expandedTable && !sidePositions.includes('top');
-  const unread = chatOpen ? 0 : Math.max(0, messageCount - seenMessages);
+  const chatShown = dockLayout ? dockOpen && dockTab === 'chat' : chatOpen;
+  const unread = chatShown ? 0 : Math.max(0, messageCount - seenMessages);
   // Phones hide the app bar during games, so this sheet becomes the menu for everything it held.
   const phoneMenu = useMediaQuery(SHEET_QUERY) && !replay;
   const menuUnread = useGameMenuUnread();
@@ -289,18 +300,40 @@ export function GameShell({
     setChatOpen(false);
   }, [messageCount]);
 
-  // Collapse chat below desktop width so the mobile view is not covered by the chat drawer on entry
+  // Chat seen so far: leaving its tab or collapsing the dock marks everything up to now as read.
+  const collapseDock = useCallback((): void => {
+    if (dockOpen && dockTab === 'chat') setSeenMessages(messageCount);
+    setDockOpen(false);
+  }, [dockOpen, dockTab, messageCount]);
+  const changeDockTab = (tab: TableDockTab): void => {
+    if (dockTab === 'chat') setSeenMessages(messageCount);
+    setDockTab(tab);
+  };
+  const collapseDockFromButton = (): void => {
+    restoreToggleFocus.current = true;
+    collapseDock();
+  };
   useEffect(() => {
-    const query = window.matchMedia(DESKTOP_QUERY);
+    if (dockOpen || !restoreToggleFocus.current) return;
+    restoreToggleFocus.current = false;
+    dockToggleRef.current?.focus();
+  }, [dockOpen]);
+
+  // Collapse the drawers when the window becomes a phone, and the dock when it gets too narrow to sit beside the table
+  useEffect(() => {
+    const wide = window.matchMedia(DOCK_OPEN_QUERY);
     const sheets = window.matchMedia(SHEET_QUERY);
-    const onChange = (): void => { if (!query.matches || sheets.matches) collapseChat(); };
-    query.addEventListener('change', onChange);
+    const onChange = (): void => {
+      if (sheets.matches) collapseChat();
+      if (!wide.matches) collapseDock();
+    };
+    wide.addEventListener('change', onChange);
     sheets.addEventListener('change', onChange);
     return (): void => {
-      query.removeEventListener('change', onChange);
+      wide.removeEventListener('change', onChange);
       sheets.removeEventListener('change', onChange);
     };
-  }, [collapseChat]);
+  }, [collapseChat, collapseDock]);
 
   // Only one drawer is open at a time on mobile
   const openInfo = (): void => {
@@ -335,47 +368,72 @@ export function GameShell({
     return () => window.removeEventListener('keydown', onKey);
   }, [closeSheets, rulesVisible]);
 
+  // The phone sheet and the dock's info tab hold the same table controls and game info.
+  const tableControls = !replay && <>
+    {room && <RoomCodeButton key={room.code} code={room.code} compact={phoneMenu} className={styles.menuRoomCode} />}
+    <AbortVoteButton className={`${styles.abortRail} ${styles.menuExit}`} />
+    <EarlyLeaveButton className={`${styles.abortRail} ${styles.menuExit}`} />
+    <SpectatorLeaveButton className={styles.menuExit} />
+  </>;
+  const rulesButton = visibleGame && <button type="button" className={`btn btn-outline ${styles.rulesRailButton}`}
+    aria-haspopup="dialog" onClick={openRules}>
+    <AppIcon name="rules" /> {t('rules.open')}
+  </button>;
+  const motionSetting = SHOW_REDUCED_MOTION_CONTROL && <label className={styles.motionSetting}>
+    <AppCheckbox checked={reducedMotion}
+      onChange={(event) => setReducedMotion(event.target.checked)} />
+    {t('table.reduceMotion')}
+  </label>;
+  const infoContent = <div className={styles.infoContent}>
+    {info}
+    {visibleGame && <RoundHistory game={visibleGame} />}
+  </div>;
+  const chatPanel = replay ? <TableStoreScope stores={null}><ChatPanel embedded /></TableStoreScope>
+    : <ChatPanel embedded />;
+  const dockTabs = [
+    { id: 'info' as const, label: t('table.info'), panel: <div className={styles.dockInfo}>
+      {tableControls}
+      {!replay && <GameActionBar className={styles.menuTools} />}
+      {rulesButton}
+      {motionSetting}
+      {infoContent}
+    </div> },
+    ...chatVisible ? [{ id: 'chat' as const, panel: chatPanel,
+      label: <>{t('chat.title')}{unread > 0 && <DockCount label={t('room.unread', { n: String(unread) })}>
+        {unread > 99 ? '99+' : unread}</DockCount>}</> }] : [],
+    ...!replay ? [{ id: 'voice' as const, label: t('voice.title'), panel: <VoiceDockPanel className={styles.dockVoice} /> }] : [],
+  ];
+  const dockToggleLabel = unread > 0 ? `${t('dock.expand')} ${t('room.unread', { n: String(unread) })}` : t('dock.expand');
+
   const shell = (
-    <div data-game-shell data-reduced-motion={reducedMotion || undefined} className={`${styles.gameContainer} ${chatOpen ? '' : styles.chatCollapsed} ${infoOpen ? styles.infoOpen : ''} ${replay ? styles.replayMode : ''} ${chatVisible ? '' : styles.noChat}`}
+    <div data-game-shell data-reduced-motion={reducedMotion || undefined}
+      className={`${styles.gameContainer} ${dockLayout ? (dockOpen ? '' : styles.dockHidden) : `${chatOpen ? '' : styles.chatCollapsed} ${infoOpen ? styles.infoOpen : ''} ${chatVisible ? '' : styles.noChat}`} ${replay ? styles.replayMode : ''}`}
       style={cardBackStyle(account, reducedMotion, !!cardBackArt)}>
-      {(infoOpen || chatOpen) && <button type="button" className={styles.backdrop} tabIndex={-1}
+      {!dockLayout && (infoOpen || chatOpen) && <button type="button" className={styles.backdrop} tabIndex={-1}
         aria-label={t('table.close')} onClick={closeSheets} />}
 
-      <div className={styles.infoPanel} id="game-info-panel" ref={infoPanelRef}>
+      {!dockLayout && <div className={styles.infoPanel} id="game-info-panel" ref={infoPanelRef}>
         <div className={styles.sheetHeader}>
           <span>{t(phoneMenu ? 'topbar.menu' : 'table.info')}</span>
           <button type="button" className={styles.sheetClose} onClick={() => setInfoOpen(false)}
             aria-label={t('table.close')} title={t('table.close')}><AppIcon name="close" /></button>
         </div>
-        {!replay && <>
-          {room && <RoomCodeButton key={room.code} code={room.code} compact={phoneMenu} className={styles.menuRoomCode} />}
-          <AbortVoteButton className={`${styles.abortRail} ${styles.menuExit}`} />
-          <EarlyLeaveButton className={`${styles.abortRail} ${styles.menuExit}`} />
-          <SpectatorLeaveButton className={styles.menuExit} />
-        </>}
+        {tableControls}
         {!replay && <GameActionBar className={styles.menuTools} />}
-        {visibleGame && <button type="button" className={`btn btn-outline ${styles.rulesRailButton}`}
-          aria-haspopup="dialog" onClick={openRules}>
-          <AppIcon name="rules" /> {t('rules.open')}
-        </button>}
-        {SHOW_REDUCED_MOTION_CONTROL && <label className={styles.motionSetting}>
-          <AppCheckbox checked={reducedMotion}
-            onChange={(event) => setReducedMotion(event.target.checked)} />
-          {t('table.reduceMotion')}
-        </label>}
-        <div className={styles.infoContent}>
-          {info}
-          {visibleGame && <RoundHistory game={visibleGame} />}
-        </div>
+        {rulesButton}
+        {motionSetting}
+        {infoContent}
         {phoneMenu && <GameMenuLinks />}
-      </div>
+      </div>}
 
       <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''} ${tableArt ? styles.layeredTable : ''}`} style={tableStyle}>
         {tableArt && <TableArt art={tableArt} />}
         <div className={`${styles.table} ${expandedTable ? styles.expandedTable : ''} ${cornersSpan ? styles.cornersSpan : ''} ${centreUp ? styles.centreUp : ''}`}
           data-card-table data-hud-info={HudInfo ? '' : undefined}
           data-expanded-table={expandedTable ? '' : undefined}>
-          {!replay && <div className={styles.desktopVoice}><VoiceButton className={styles.hudButton} /></div>}
+          {dockLayout && !dockOpen && <IconButton className={`${styles.hudButton} ${styles.dockToggle}`}
+            icon={chatVisible ? 'chat' : 'info'} label={dockToggleLabel} badge={unread}
+            onClick={() => setDockOpen(true)} ref={dockToggleRef} aria-controls="game-dock" aria-expanded={false} />}
           <div className={styles.tableTools}>
             <IconButton className={`${styles.hudButton} ${styles.menuTool}`} icon={phoneMenu ? 'menu' : 'info'}
               label={t(phoneMenu ? 'topbar.menu' : 'table.info')} onClick={openInfo} ref={infoButtonRef}
@@ -440,7 +498,10 @@ export function GameShell({
         {tableEffect}
       </main>
 
-      {chatVisible && <aside className={styles.chatRail} ref={chatRailRef} tabIndex={-1} aria-label={t('chat.title')}>
+      {dockLayout ? <div className={styles.dock} inert={!dockOpen}>
+        <Dock id="game-dock" label={t('table.dock')} value={dockTab} onChange={changeDockTab}
+          onCollapse={collapseDockFromButton} tabs={dockTabs} />
+      </div> : chatVisible && <aside className={styles.chatRail} ref={chatRailRef} tabIndex={-1} aria-label={t('chat.title')}>
         {!chatOpen && (
           <button type="button" className={styles.chatStrip} onClick={() => setChatOpen(true)}
             aria-label={t('table.chatExpand')} title={t('table.chatExpand')}>

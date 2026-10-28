@@ -25,3 +25,14 @@
 .body { position: relative; flex: 1; min-height: 0; }
 .panel { height: 100%; min-height: 0; }
 .panel[hidden] { display: none; }
+
+.count {
+  margin-left: var(--space-1);
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.5;
+}

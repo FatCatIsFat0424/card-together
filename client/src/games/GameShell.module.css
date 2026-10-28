@@ -5,14 +5,29 @@
   height: calc(100dvh - var(--topbar-height));
   overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(200px, 220px) minmax(0, 1fr) minmax(240px, 260px);
+  /* Desktop: the table beside the dock; phones override the columns below. */
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 24vw, 360px);
   gap: 12px;
   padding: 12px;
 }
 
 .gameContainer > * { min-height: 0; min-width: 0; }
 
-.chatCollapsed { grid-template-columns: minmax(200px, 220px) minmax(0, 1fr) 48px; }
+/* A collapsed dock stays mounted, so chat drafts and scroll positions survive. */
+.dockHidden { grid-template-columns: minmax(0, 1fr); }
+.dockHidden > .dock { display: none; }
+/* The dock scrolls inside its cell without making the row, and so the table, taller. */
+.dock { position: relative; }
+.dock > * { position: absolute; inset: 0; }
+.dockInfo, .dockVoice {
+  height: 100%;
+  padding: var(--space-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.dockInfo { display: flex; flex-direction: column; gap: var(--space-2); }
+.dockInfo > * { flex-shrink: 0; }
+.dockInfo .infoContent { flex: none; overflow: visible; }
 
 .actionError {
   min-width: 0;
@@ -247,7 +262,7 @@
 
 .infoContent > * { flex-shrink: 0; }
 .rulesRailButton { width: 100%; flex-shrink: 0; }
-.desktopVoice { position: absolute; top: 4px; right: 4px; z-index: 6; }
+.dockToggle { position: absolute; top: 4px; right: 4px; z-index: 6; }
 
 /* Top bar: menu glyph on the left, an optional info line in the middle, voice and chat on the right. */
 .tableTools {
@@ -278,18 +293,16 @@
   white-space: nowrap;
   pointer-events: none;
 }
-/* Desktop keeps the info rail and chat column; only the info line stays on the felt. */
-@media (min-width: 1024px) and (min-height: 501px) {
+/* The desktop dock holds the info, chat and voice; only the info line stays on the felt. */
+@media (min-width: 768px) and (min-height: 501px) {
   .tableTools :is(.menuTool, .rulesTool, .voiceTool, .chatFab, .hudChip) { display: none; }
 }
+/* With the dock collapsed the contract chip returns to the felt, so the contract and tricks stay in view. */
+.dockHidden .tableTools > .hudChip:not(:empty) { display: inline; }
 /* An info line takes the top edge, so the opposite seat sits below it. */
 .table[data-hud-info] > [data-table-seat='top'] { margin-top: 24px; }
 @media (max-height: 500px) and (min-width: 600px) {
   .table[data-hud-info] > [data-table-seat='top'] { margin-top: 30px; }
-}
-
-@media (max-width: 1023px), (max-height: 500px) and (min-width: 600px) {
-  .desktopVoice { display: none; }
 }
 
 .sheetHeader,
@@ -329,11 +342,9 @@
   animation: fadeIn 0.2s ease;
 }
 
-/* ─── Tablet (768-1023px): the info rail becomes an overlay opened from the top-left of the table ─── */
-@media (max-width: 1023px) {
+/* ─── Phones narrower than 768px and short landscape up to 1023px: the info rail is an overlay sheet ─── */
+@media (max-width: 767px), (max-width: 1023px) and (max-height: 500px) {
   .rulesRailButton { display: none; }
-  .gameContainer { grid-template-columns: minmax(0, 1fr) minmax(260px, 300px); }
-  .chatCollapsed { grid-template-columns: minmax(0, 1fr) 48px; }
 
   .infoPanel {
     display: none;
@@ -654,14 +665,14 @@
   white-space: nowrap;
 }
 
-/* Large screens widen the side rails and let the centre grow with the scaled cards. */
+/* Large screens give the centre more room beside the dock and let it grow with the scaled cards. */
 @media (min-width: 1920px) and (min-height: 1000px) {
   .gameContainer {
-    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr) minmax(320px, 400px);
+    grid-template-columns: minmax(0, 1fr) clamp(360px, 20vw, 420px);
     gap: 16px;
     padding: 16px;
   }
-  .chatCollapsed { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr) 56px; }
+  .dockHidden { grid-template-columns: minmax(0, 1fr); }
   /* Plates already fit side by side here; give the extra width to the centre. */
   .table { grid-template-columns: minmax(100px, 17%) minmax(0, 1fr) minmax(100px, 17%); }
   .centreContent { max-width: 680px; }
@@ -669,8 +680,8 @@
 }
 
 @media (min-width: 2400px) and (min-height: 1300px) {
-  .gameContainer { grid-template-columns: minmax(320px, 380px) minmax(0, 1fr) minmax(360px, 440px); }
-  .chatCollapsed { grid-template-columns: minmax(320px, 380px) minmax(0, 1fr) 56px; }
+  .gameContainer { grid-template-columns: minmax(0, 1fr) clamp(420px, 18vw, 480px); }
+  .dockHidden { grid-template-columns: minmax(0, 1fr); }
   .centreContent { max-width: 820px; }
 }
 
@@ -777,15 +788,6 @@
 /* ─── Playback: the viewer sizes the shell and places its transport below it ─── */
 .replayMode { position: relative; flex: 1 1 auto; height: auto; min-height: 0; }
 .noChat, .noChat.chatCollapsed { grid-template-columns: minmax(0, 1fr); }
-@media (min-width: 1024px) and (min-height: 501px) {
-  .noChat, .noChat.chatCollapsed { grid-template-columns: minmax(200px, 220px) minmax(0, 1fr); }
-}
-@media (min-width: 1920px) and (min-height: 1000px) {
-  .noChat, .noChat.chatCollapsed { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); }
-}
-@media (min-width: 2400px) and (min-height: 1300px) {
-  .noChat, .noChat.chatCollapsed { grid-template-columns: minmax(320px, 380px) minmax(0, 1fr); }
-}
 
 /* Short landscape: toolbar glyphs sit on the same 12px inset as the seats and the hand. */
 @media (max-height: 500px) and (min-width: 600px) {

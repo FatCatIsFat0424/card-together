@@ -26,7 +26,7 @@ import { useI18nStore } from '../stores/i18n-store';
 import { seatLabel } from '../games/seat-names';
 import { useMotionStore } from '../stores/motion-store';
 import { RoomSpectators } from '../components/RoomSpectators';
-import { Dock } from '../components/Dock';
+import { Dock, DockCount } from '../components/Dock';
 import { ChatPanel } from '../components/ChatPanel';
 import { InviteFriends } from '../components/InviteFriends';
 import { RoomSettings } from '../components/RoomSettings';
@@ -509,10 +509,10 @@ export function RoomPage(): ReactNode {
       <div className={styles.chat} id="room-chat" inert={!dockVisible}>
         {compactLayout ? <ChatPanel onCollapse={collapseChat} /> : <Dock id="room-dock" label={t('room.dock')}
           value={dockTab} onChange={changeDockTab} onCollapse={collapseChat} tabs={[
-            { id: 'chat', label: <>{t('chat.title')}{unread > 0 && <span className={styles.tabCount}
-              aria-label={t('room.unread', { n: String(unread) })}>{unread > 99 ? '99+' : unread}</span>}</>,
+            { id: 'chat', label: <>{t('chat.title')}{unread > 0 && <DockCount
+              label={t('room.unread', { n: String(unread) })}>{unread > 99 ? '99+' : unread}</DockCount>}</>,
             panel: <ChatPanel embedded /> },
-            { id: 'spectators', label: <>{t('room.spectatorsTab')}<span className={styles.tabCount}>{spectators.length}</span></>,
+            { id: 'spectators', label: <>{t('room.spectatorsTab')}<DockCount>{spectators.length}</DockCount></>,
               panel: spectatorList('dock') },
           ]} />}
       </div>
