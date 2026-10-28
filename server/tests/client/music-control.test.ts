@@ -28,6 +28,27 @@ describe('grouped music menu', () => {
     vi.restoreAllMocks();
   });
 
+  it('shows artwork in the now-playing row, album row and track thumbnails, lazily where listed', async () => {
+    vi.resetModules();
+    const cover = `imported-cover-${'d'.repeat(24)}.webp`;
+    vi.doMock('../../../client/src/audio/provided-music-catalog', async (importOriginal) => ({
+      ...await importOriginal<typeof import('../../../client/src/audio/provided-music-catalog')>(),
+      PROVIDED_MUSIC_TRACKS: [
+        { id: 'a-one', title: 'Morning', file: 'a1.mp3', group: 'Composer A', cover },
+        { id: 'a-two', title: 'Noon', file: 'a2.mp3', group: 'Composer A' },
+      ],
+    }));
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const { MusicControl: CoverControl } = await import('../../../client/src/components/MusicControl');
+    const html = renderToStaticMarkup(createElement(CoverControl));
+    const images = html.match(/<img[^>]*>/g) ?? [];
+    // Now playing, album row and the playing track's thumbnail; the track without art shows its number instead.
+    expect(images).toHaveLength(3);
+    expect(images.every((image) => image.includes(`provided-music/${cover}`))).toBe(true);
+    expect(images.filter((image) => image.includes('loading="lazy"'))).toHaveLength(2);
+    expect(html).toContain('>2</span>');
+  });
+
   it('labels the current track with its group and opens only that group', async () => {
     vi.resetModules();
     vi.doMock('../../../client/src/audio/provided-music-catalog', async (importOriginal) => ({

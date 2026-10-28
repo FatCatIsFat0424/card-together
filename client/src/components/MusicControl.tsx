@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { PROVIDED_MUSIC_TRACKS, groupProvidedMusicTracks } from '../audio/provided-music-catalog';
+import {
+  PROVIDED_MUSIC_TRACKS, albumCoverUrl, groupProvidedMusicTracks, providedMusicCoverUrl,
+} from '../audio/provided-music-catalog';
 import type { ProvidedMusicTrack } from '../audio/provided-music-catalog';
 import { coverGradient } from '../audio/music-cover';
 import { useShallow } from 'zustand/react/shallow';
@@ -22,6 +24,24 @@ const HAS_UNGROUPED_TRACKS = TRACK_GROUPS.some((group) => group.name === undefin
 function trackPosition(track: ProvidedMusicTrack): { readonly n: number; readonly total: number } {
   const siblings = PROVIDED_MUSIC_TRACKS.filter((candidate) => candidate.group === track.group);
   return { n: siblings.indexOf(track) + 1, total: siblings.length };
+}
+
+/** Artwork over a gradient swatch; `fallback` shows on the swatch when there is no image or it fails to load. */
+function MusicCover({ url, seed, className, lazy = false, fallback, overlay }: {
+  readonly url: string | null;
+  readonly seed: string;
+  readonly className: string;
+  readonly lazy?: boolean;
+  readonly fallback?: ReactNode;
+  readonly overlay?: ReactNode;
+}): ReactNode {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const showImage = url !== null && failedUrl !== url;
+  return <span className={className} style={{ background: coverGradient(seed) }} aria-hidden="true">
+    {showImage ? <img className={styles.coverImage} src={url} alt="" width={160} height={160}
+      loading={lazy ? 'lazy' : undefined} decoding="async" onError={() => setFailedUrl(url)} /> : fallback}
+    {overlay}
+  </span>;
 }
 
 export function MusicControl(): ReactNode {
@@ -78,10 +98,11 @@ export function MusicControl(): ReactNode {
     const current = track.id === providedTrackId;
     return <button type="button" data-music-transport className={styles.track} aria-current={current}
       onClick={() => void play(track.id)}>
-      <span className={styles.trackNumber} aria-hidden="true">
-        {current ? <span className={styles.bars} data-playing={playing}><i /><i /><i /></span>
-          : trackPosition(track).n}
-      </span>
+      <MusicCover url={providedMusicCoverUrl(track)} seed={track.group ?? track.id} className={styles.thumb} lazy
+        fallback={current ? null : <span className={styles.trackNumber}>{trackPosition(track).n}</span>}
+        overlay={current && <span className={styles.thumbPlaying}>
+          <span className={styles.bars} data-playing={playing}><i /><i /><i /></span>
+        </span>} />
       <span className={styles.trackTitle}>{track.title}</span>
     </button>;
   };
@@ -94,8 +115,8 @@ export function MusicControl(): ReactNode {
           onClick={openAudioSettings}><AppIcon name="tune" /></button>
       </div>
       <div className={styles.now}>
-        <span className={styles.cover} style={{ background: coverGradient(providedTrack?.group ?? providedTrack?.id ?? '') }}
-          aria-hidden="true"><AppIcon name="music" /></span>
+        <MusicCover url={providedTrack ? providedMusicCoverUrl(providedTrack) : null}
+          seed={providedTrack?.group ?? providedTrack?.id ?? ''} className={styles.cover} fallback={<AppIcon name="music" />} />
         <div className={styles.nowText} aria-live="polite">
           <span className={styles.nowTitle}>
             {busy ? t('music.loading') : providedTrack ? providedTrack.title : t('music.noTracks')}
@@ -136,6 +157,7 @@ export function MusicControl(): ReactNode {
                 onChange={(event) => setGroupEnabled(name, event.target.checked)} />
               <button type="button" className={styles.groupToggle} aria-expanded={expanded} aria-controls={listId}
                 onClick={() => toggleExpanded(name)}>
+                <MusicCover url={albumCoverUrl(group.tracks)} seed={name} className={styles.groupCover} lazy />
                 <span className={styles.groupName}>{name}</span>
                 <span className={styles.groupCount}>{t('music.trackCount', { n: String(group.tracks.length) })}</span>
                 <AppIcon name="nextPage" className={styles.chevron} />

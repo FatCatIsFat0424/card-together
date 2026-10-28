@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { AUDIO_UNLOCK_EVENTS } from '../audio/audio-unlock';
 import { createFileMusicPlayer } from '../audio/file-music-player';
 import type { FileMusicPlayer } from '../audio/file-music-player';
+import { updateMediaSession } from '../audio/media-session';
 import { createMusicRoute, resumeMusicRoute } from '../audio/music-route';
 import { clampVolume, parseVolume } from '../audio/mix';
 import { nextTrackIndex } from '../audio/music-playlist';
@@ -172,6 +173,7 @@ export const useMusicStore = create<MusicState>((set, get) => {
       }
       set({ providedTrackId: track.id, busy: true, error: false });
       writePreference(PROVIDED_TRACK_KEY, track.id);
+      updateMediaSession(track);
       try {
         if (!player) {
           const generation = transportGeneration;

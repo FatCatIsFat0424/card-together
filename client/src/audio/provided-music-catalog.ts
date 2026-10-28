@@ -16,6 +16,20 @@ export function providedMusicUrl(track: ProvidedMusicTrack): string {
   return `${import.meta.env.BASE_URL}provided-music/${encodeURIComponent(track.file)}`;
 }
 
+/** Thumbnail URL for a track, or null when it has no artwork. */
+export function providedMusicCoverUrl(track: ProvidedMusicTrack): string | null {
+  return track.cover === undefined ? null : `${import.meta.env.BASE_URL}provided-music/${encodeURIComponent(track.cover)}`;
+}
+
+/** An album shows the artwork of its first track that has any. */
+export function albumCoverUrl(tracks: readonly ProvidedMusicTrack[]): string | null {
+  for (const track of tracks) {
+    const url = providedMusicCoverUrl(track);
+    if (url) return url;
+  }
+  return null;
+}
+
 export interface ProvidedMusicGroup {
   /** Undefined for tracks at the music root. */
   readonly name?: string;

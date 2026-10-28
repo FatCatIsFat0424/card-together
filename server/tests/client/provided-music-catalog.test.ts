@@ -2,7 +2,8 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  PROVIDED_MUSIC_TRACKS, groupProvidedMusicTracks, providedMusicUrl, validateProvidedMusicCatalog,
+  PROVIDED_MUSIC_TRACKS, albumCoverUrl, groupProvidedMusicTracks, providedMusicCoverUrl, providedMusicUrl,
+  validateProvidedMusicCatalog,
 } from '../../../client/src/audio/provided-music-catalog';
 
 afterEach(() => { vi.unstubAllEnvs(); });
@@ -35,6 +36,27 @@ describe('owner-provided music catalog', () => {
       { name: 'Album', tracks: [tracks[1], tracks[2]] },
       { name: 'Composer', tracks: [tracks[3]] },
     ]);
+  });
+  it('accepts only generated cover thumbnails and resolves them against the base', () => {
+    vi.stubEnv('BASE_URL', '/card-together/');
+    const cover = `imported-cover-${'a'.repeat(24)}.webp`;
+    const track = { id: 'owner', title: 'Song', file: 'song.mp3', cover };
+    expect(() => validateProvidedMusicCatalog([track])).not.toThrow();
+    for (const bad of ['../x.webp', 'cover.webp', `imported-cover-${'a'.repeat(24)}.png`, `imported-cover-${'A'.repeat(24)}.webp`]) {
+      expect(() => validateProvidedMusicCatalog([{ ...track, cover: bad }])).toThrow();
+    }
+    expect(providedMusicCoverUrl(track)).toBe(`/card-together/provided-music/${cover}`);
+    expect(providedMusicCoverUrl({ id: 'plain', title: 'Plain', file: 'plain.mp3' })).toBeNull();
+  });
+  it('shows an album with its first track that has artwork', () => {
+    vi.stubEnv('BASE_URL', '/');
+    const cover = `imported-cover-${'b'.repeat(24)}.webp`;
+    const tracks = [
+      { id: 'a', title: 'A', file: 'a.mp3' },
+      { id: 'b', title: 'B', file: 'b.mp3', cover },
+    ];
+    expect(albumCoverUrl(tracks)).toBe(`/provided-music/${cover}`);
+    expect(albumCoverUrl([tracks[0]])).toBeNull();
   });
   it('encodes file names relative to the deployment base', () => {
     vi.stubEnv('BASE_URL', '/card-together/');
