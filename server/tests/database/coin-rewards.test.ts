@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PlayerInfo, Seat } from '@shared/types';
 import { cpGreedyArrangement } from '@shared/rules/chinesepoker-arrange';
+import { matchStanding } from '@shared/rules/match-standing';
 import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
 import type { AccountRecord, MatchRecord, Repository } from '../../src/database/repository';
 import { createDeck } from '../../src/engine/deck';
@@ -82,10 +83,9 @@ describe.each(REPOSITORY_ADAPTERS)('compound completed-game writes ($name)', (ad
       repository.saveRuntime(snapshot, [match], [id]), repository.saveRuntime(snapshot, [match], [id, id]),
     ]);
     expect(await repository.loadRuntime()).toEqual(snapshot);
-    for (const account of accounts) {
+    for (const [index, account] of accounts.entries()) {
       expect(await repository.getAccountById(account.id)).toMatchObject({ coins: 60, coinRevision: 3 });
-      const result = snapshot.games[0].result!;
-      const won = 'winners' in result && result.winners.length === 1 && result.winners[0] === account.id;
+      const won = matchStanding(match.result, SEATS[index])!.won;
       expect(await repository.getDailyRewards(account.id)).toMatchObject({ gameTypes: ['chinesepoker'], wins: Number(won) });
       expect((await repository.getAccountById(account.id))!.achievements).toEqual({ games: 1, wins: Number(won),
         gameTypes: ['chinesepoker'], dailyTasks: 0 });

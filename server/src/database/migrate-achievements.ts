@@ -1,10 +1,20 @@
 import { GAME_SEAT_ORDER, GAME_TYPES } from '@shared/constants';
-import type { GameType } from '@shared/types';
+import { matchStanding } from '@shared/rules/match-standing';
+import type { GameSeat, GameType, MatchResult } from '@shared/types';
 import { achievementState, validAchievements } from './achievements';
 
 type JsonObject = Record<string, unknown>;
 function object(value: unknown): value is JsonObject {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** Stored documents are unvalidated here, so a malformed result counts as no win instead of aborting the migration. */
+function wonSeat(result: JsonObject, seat: string): boolean {
+  try {
+    return matchStanding(result as unknown as MatchResult, seat as GameSeat)?.won ?? false;
+  } catch {
+    return false;
+  }
 }
 
 /** v7: recover retained history once; never add overlapping legacy counters twice. */
@@ -22,11 +32,8 @@ export function backfillAchievementCounts(document: JsonObject): JsonObject {
     for (const [seat, accountId] of seats) {
       const total = typeof accountId === 'string' ? totals.get(accountId) : undefined;
       if (!total) continue;
-      // Same outcome semantics as daily rewards: tied leaders do not count as wins.
-      const won = typeof result.declarerTeamWins === 'boolean' && object(result.contract)
-        ? (['N', 'S'].includes(seat) === ['N', 'S'].includes(String(result.contract.declarer))) === result.declarerTeamWins
-        : typeof result.winnerSeat === 'string' ? result.winnerSeat === seat
-        : Array.isArray(result.winners) && result.winners.length === 1 && result.winners[0] === seat;
+      // Same rule as live play and daily rewards: first place (ties included) or the winning side.
+      const won = wonSeat({ ...result, gameType }, seat);
       total.games++;
       total.wins += Number(won);
       total.types.add(gameType);

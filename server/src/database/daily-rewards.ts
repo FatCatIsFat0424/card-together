@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
-import { GAME_TYPES } from '@shared/constants';
+import { GAME_SEAT_ORDER, GAME_TYPES } from '@shared/constants';
+import { matchStanding } from '@shared/rules/match-standing';
 import { DAILY_TASKS, DAILY_TASK_COUNT, isDailyTaskId } from '@shared/constants/daily-rewards';
-import type { AnyGameState, DailyRewardsStatus, DailyTaskId, GameType } from '@shared/types';
+import type { AnyGameState, DailyRewardsStatus, DailyTaskId, GameSeat, GameType, MatchResult, PlayerInfo } from '@shared/types';
 
 /** Private account state. Old accounts need no migration or historical backfill. */
 export interface DailyRewardsRecord {
@@ -66,19 +67,15 @@ export function dailyStatus(record: DailyRewardsRecord | undefined, now: number,
   };
 }
 
-/**
- * Mirror history outcomes: Bridge partnerships and the Napoleon's side win together; tied leaders
- * are not wins.
- */
+/** Win rule shared with the match history: first place (ties included) or the winning side. */
 export function gameWonByAccount(game: Pick<AnyGameState, 'players' | 'result'>, accountId: string): boolean {
-  const seat = Object.entries(game.players).find(([, player]) => player.id === accountId && !player.isBot)?.[0];
-  if (!seat || !game.result) return false;
-  const result = game.result;
-  return 'declarerTeamWins' in result
-    ? (['N', 'S'].includes(seat) === ['N', 'S'].includes(result.contract.declarer)) === result.declarerTeamWins
-    : 'winnerSeat' in result ? result.winnerSeat === seat
-    : result.gameType === 'napoleon' ? (result.winners as readonly string[]).includes(seat)
-    : result.winners.length === 1 && result.winners[0] === seat;
+  const players: Partial<Record<GameSeat, PlayerInfo>> = game.players;
+  const seat = GAME_SEAT_ORDER.find((candidate) => players[candidate]?.id === accountId && !players[candidate]?.isBot);
+  const { result } = game;
+  if (!seat || !result) return false;
+  // Bridge keeps its result without a discriminator while a game runs.
+  const finished: MatchResult = 'gameType' in result ? result : { ...result, gameType: 'bridge' };
+  return matchStanding(finished, seat)?.won ?? false;
 }
 
 export function dailyGameProgress(

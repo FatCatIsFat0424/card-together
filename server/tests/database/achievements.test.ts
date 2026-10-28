@@ -136,8 +136,15 @@ describe('achievement game counting', () => {
     expect(achievementGameProgress({ ...complete, games: 99, wins: 49 }, withBot, 'alice'))
       .toMatchObject({ games: 100, wins: 50 });
   });
-  it('does not count tied leaders as wins', () => {
-    const tied = { ...game, gameType: 'holdem', result: { winners: ['N', 'E'] } } as unknown as typeof game;
-    expect(achievementGameProgress(undefined, tied, 'alice')).toMatchObject({ games: 1, wins: 0 });
+  it('counts tied leaders as wins, and a Napoleon-side partner but not a defender', () => {
+    const tied = { ...game, gameType: 'holdem', players: { N: player, E: { ...player, id: 'bob' } },
+      result: { gameType: 'holdem', seats: ['N', 'E'], chips: { N: 1000, E: 1000, S: 0, W: 0, P5: 0, P6: 0, P7: 0, P8: 0 },
+        hands: 20, winners: ['N', 'E'], eliminationOrder: [] } } as unknown as typeof game;
+    expect(achievementGameProgress(undefined, tied, 'alice')).toMatchObject({ games: 1, wins: 1 });
+    expect(achievementGameProgress(undefined, tied, 'bob')).toMatchObject({ games: 1, wins: 1 });
+    const napoleon = { ...game, gameType: 'napoleon', players: { N: player, E: { ...player, id: 'bob' }, S: { ...player, id: 'cy' } },
+      result: { gameType: 'napoleon', seats: ['N', 'E', 'S'], contract: { level: 13, suit: 'hearts', napoleon: 'N' },
+        secretarySeat: 'E', winners: ['N', 'E'], napoleonWins: true } } as unknown as typeof game;
+    expect(['alice', 'bob', 'cy'].map((id) => achievementGameProgress(undefined, napoleon, id).wins)).toEqual([1, 1, 0]);
   });
 });

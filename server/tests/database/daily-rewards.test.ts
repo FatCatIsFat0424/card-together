@@ -194,13 +194,14 @@ describe('daily completed-game progress', () => {
     expect(initial).toMatchObject({ gameTypes: [], wins: 0 });
     expect(dailyGameProgress(first, bridge, 'S', now + 86_400_000)).toMatchObject({ wins: 1, claimedTasks: [] });
   });
-  it('excludes unfinished games, spectators, bots, losses and tied leaders from wins', () => {
+  it('excludes unfinished games, spectators, bots and losses from wins, but counts tied leaders', () => {
     expect(dailyGameProgress(undefined, { ...bridge, result: null }, 'N', now).gameTypes).toEqual([]);
     expect(dailyGameProgress(undefined, bridge, 'spectator', now).gameTypes).toEqual([]);
     expect(dailyGameProgress(undefined, { ...bridge, players: { ...players, N: { ...players.N, isBot: true } } }, 'N', now).gameTypes).toEqual([]);
     const tied: typeof bridge = { gameType: 'redpoints', players,
       result: { gameType: 'redpoints', points: { N: 80, E: 80, S: 24, W: 24 }, winners: ['N', 'E'] } };
-    expect(dailyGameProgress(undefined, tied, 'N', now)).toMatchObject({ gameTypes: ['redpoints'], wins: 0 });
+    expect(dailyGameProgress(undefined, tied, 'N', now)).toMatchObject({ gameTypes: ['redpoints'], wins: 1 });
+    expect(dailyGameProgress(undefined, tied, 'S', now)).toMatchObject({ gameTypes: ['redpoints'], wins: 0 });
     const lastSurvivor: typeof bridge = { gameType: 'ninetynine', players,
       result: { gameType: 'ninetynine', winnerSeat: 'W', eliminationOrder: ['N', 'E', 'S'], finalTotal: 99 } };
     expect(dailyGameProgress(undefined, lastSurvivor, 'W', now).wins).toBe(1);
