@@ -75,14 +75,14 @@ function mulberry32(seed: number): () => number {
 describe('Sevens gameplay', () => {
   beforeEach(() => sevens.restoreGames([]));
 
-  it('should start with the spade seven holder and deal sorted 13-card hands', () => {
+  it('should start with the spade seven holder and deal 13-card hands sorted high to low', () => {
     sevens.startGame(CODE, PLAYERS, stuckSouthDeck());
     expect(game()).toMatchObject({ phase: 'playing', currentTurnSeat: 'W', result: null, log: [] });
     for (const seat of SEATS) expect(game().hands[seat]).toHaveLength(13);
     expect(game().table).toEqual({ spades: null, hearts: null, clubs: null, diamonds: null });
     expect(visible('W').validCards).toEqual([card('spades', 7)]);
     expect(visible('N').validCards).toEqual([]);
-    expect(game().hands.S[0]).toEqual(card('clubs', 14));
+    expect(game().hands.S[0]).toEqual(card('clubs', 13));
   });
 
   it('should reject wrong turn, missing cards, illegal first plays and early covers', () => {

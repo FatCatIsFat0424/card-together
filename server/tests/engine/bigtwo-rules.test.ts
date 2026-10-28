@@ -11,6 +11,7 @@ import {
   isDragon,
   legalPlays,
   sortBigTwoHand,
+  sortBigTwoHandHighFirst,
   type BigTwoCombo,
 } from '@shared/rules/bigtwo';
 import { nextSeatClockwise, nextSeatCounterClockwise } from '@shared/rules/seats';
@@ -61,6 +62,12 @@ describe('bigtwo card order', () => {
 
   it('sorts by suit then rank', () => {
     expect(sortBigTwoHand(cards('S3 C2 H4 CA C3'), 'suit')).toEqual(cards('C3 CA C2 H4 S3'));
+  });
+
+  it('shows the strongest card on the left in both display orders', () => {
+    const hand = cards('S3 C2 H4 CA C3 D2 SA');
+    expect(sortBigTwoHandHighFirst(hand)).toEqual(cards('D2 C2 SA CA H4 S3 C3'));
+    expect(sortBigTwoHandHighFirst(hand, 'suit')).toEqual(cards('SA S3 H4 D2 C2 CA C3'));
   });
 });
 

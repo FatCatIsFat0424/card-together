@@ -175,8 +175,8 @@ describe('sevens rules', () => {
     );
   });
 
-  it('sorts hands by suit then ace-low order', () => {
-    const sorted = svSortHand([c('KD'), c('AS'), c('7H'), c('2S'), c('AH')]);
-    expect(sorted).toEqual([c('AS'), c('2S'), c('AH'), c('7H'), c('KD')]);
+  it('sorts hands by suit, then high to low in ace-low order', () => {
+    const sorted = svSortHand([c('AS'), c('KD'), c('7H'), c('2S'), c('AH')]);
+    expect(sorted).toEqual([c('2S'), c('AS'), c('7H'), c('AH'), c('KD')]);
   });
 });

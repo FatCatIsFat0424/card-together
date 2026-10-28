@@ -47,10 +47,10 @@ describe("Liar's Deck rules", () => {
     expect(ldMustChallenge('W', counts(0, 0, 0, 3), null)).toBe(false);
   });
 
-  it('should sort a hand by face, then id, without mutating it', () => {
+  it('should sort a hand joker, A, K, Q, then by id, without mutating it', () => {
     const hand: LiarCard[] = [{ id: 19, face: 'joker' }, { id: 12, face: 'A' }, { id: 3, face: 'K' }, { id: 1, face: 'K' }];
     const before = structuredClone(hand);
-    expect(ldSortHand(hand).map((card) => card.id)).toEqual([1, 3, 12, 19]);
+    expect(ldSortHand(hand).map((card) => card.id)).toEqual([19, 12, 1, 3]);
     expect(hand).toEqual(before);
   });
 });

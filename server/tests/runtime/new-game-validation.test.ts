@@ -1,10 +1,11 @@
 import { gameSeatValues } from '../helpers/game-seat-values';
 import { afterEach, describe, expect, it } from 'vitest';
-import { svAllClosed, svLegalPlays, svPenalty } from '@shared/rules/sevens';
+import { svAllClosed, svLegalPlays, svOrder, svPenalty } from '@shared/rules/sevens';
 import { getPresentationEndsAt, getPresentationFrames, PRESENTATION_TIMING_VERSION } from '@shared/game-presentation';
 import { SEVENS_SLAY_FRAME_MS } from '@shared/sevens-options';
 import { cpGreedyArrangement } from '@shared/rules/chinesepoker-arrange';
-import type { AnyGameState, GameType, PlayerInfo, Seat } from '@shared/types';
+import { SUIT_DISPLAY_ORDER } from '@shared/constants';
+import type { AnyGameState, Card, GameType, PlayerInfo, Seat } from '@shared/types';
 import { createDeck, shuffleDeck } from '../../src/engine/deck';
 import * as sevens from '../../src/managers/games/sevens-game';
 import { ldCanChallenge, ldMustChallenge } from '@shared/rules/liarsdeck';
@@ -57,13 +58,17 @@ function persists(game: AnyGameState, gameType: GameType): boolean {
 describe('persisted Sevens games', () => {
   afterEach(() => sevens.restoreGames([]));
 
+  /** Spades first and the lowest card of each suit first, whatever order the hand is shown in. */
+  const lowestFirst = (cards: readonly Card[]): Card[] => [...cards].sort((a, b) =>
+    SUIT_DISPLAY_ORDER.indexOf(a.suit) - SUIT_DISPLAY_ORDER.indexOf(b.suit) || svOrder(a) - svOrder(b));
+
   function playSevens(steps: number): void {
     for (let step = 0; step < steps; step++) {
       const game = sevens.getGameState(CODE)!;
       if (game.phase === 'scoring') return;
       const seat = game.currentTurnSeat;
-      const legal = svLegalPlays(game.hands[seat], game.table, game.log.length === 0, game.options?.closeOnEnd);
-      const result = legal[0] ? sevens.play(CODE, seat, legal[0]) : sevens.cover(CODE, seat, game.hands[seat][0]);
+      const legal = lowestFirst(svLegalPlays(game.hands[seat], game.table, game.log.length === 0, game.options?.closeOnEnd));
+      const result = legal[0] ? sevens.play(CODE, seat, legal[0]) : sevens.cover(CODE, seat, lowestFirst(game.hands[seat])[0]);
       expect(result.success).toBe(true);
     }
   }

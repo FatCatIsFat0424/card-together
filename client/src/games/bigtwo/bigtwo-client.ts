@@ -22,7 +22,8 @@ export const bigTwoClient: ClientGame<'bigtwo'> = {
   handSort: {
     order: {
       rank: (card) => BIGTWO_RANK_ORDER.indexOf(card.rank),
-      suit: (card) => BIGTWO_SUIT_ORDER.indexOf(card.suit),
+      // The strongest suit sits first, like the strongest rank.
+      suit: (card) => BIGTWO_SUIT_ORDER.length - 1 - BIGTWO_SUIT_ORDER.indexOf(card.suit),
     },
     bySuit: true,
   },

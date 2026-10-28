@@ -88,11 +88,11 @@ export function svTableCards(table: SevensTable): Card[] {
   return cards;
 }
 
-/** Hand display order: suit, then ace-low order. */
+/** Hand display order: suit, then K down to ace-low, so the highest card sits on the left. */
 export function svSortHand(hand: readonly Card[]): Card[] {
   return [...hand].sort((a, b) => {
     const suitDiff = SUIT_DISPLAY_ORDER.indexOf(a.suit) - SUIT_DISPLAY_ORDER.indexOf(b.suit);
-    return suitDiff !== 0 ? suitDiff : svOrder(a) - svOrder(b);
+    return suitDiff !== 0 ? suitDiff : svOrder(b) - svOrder(a);
   });
 }
 

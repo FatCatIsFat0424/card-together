@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { canPlay, identifyCombo, isBomb, sortBigTwoHand } from '@shared/rules/bigtwo';
+import { canPlay, identifyCombo, isBomb, sortBigTwoHandHighFirst } from '@shared/rules/bigtwo';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import type { BigTwoMatchResult, BigTwoVisibleState, Card, Seat } from '@shared/types';
 import { useCardFaceUrl } from '../../cosmetics/card-faces/use-card-face';
@@ -114,7 +114,7 @@ function ResultOverlay({ result, revealed, pending, error, disabled, onBack }: {
       <tbody>{SEATS.map((seat) => <tr key={seat} className={seat === result.winnerSeat ? resultStyles.winnerRow : ''}>
         <td>
           <div>{seat === result.winnerSeat && <><AppIcon name="trophy" /> </>}{seatName(seat)}</div>
-          {revealed && revealed[seat].length > 0 && <CardFan cards={sortBigTwoHand(revealed[seat])} small />}
+          {revealed && revealed[seat].length > 0 && <CardFan cards={sortBigTwoHandHighFirst(revealed[seat])} small />}
         </td>
         <td>{result.cardsLeft[seat]}</td>
         <td>{result.twosLeft[seat]}</td>
@@ -139,7 +139,7 @@ export function BigTwoTable(): ReactNode {
   const actionInFlight = useRef(false);
 
   const hand = useMemo(() => reconcileHandOrder(
-    sortBigTwoHand(game?.myHand ?? [], sortBy), manualOrder,
+    sortBigTwoHandHighFirst(game?.myHand ?? [], sortBy), manualOrder,
   ), [game?.myHand, sortBy, manualOrder]);
   // Keep the preselection when others play; only drop cards no longer in hand
   const selected = selection.filter((card) => hand.some((c) => sameCard(c, card)));

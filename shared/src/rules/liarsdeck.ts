@@ -60,7 +60,10 @@ export function ldMustChallenge(
     && SEAT_ORDER_CLOCKWISE.every((other) => other === seat || handCounts[other] === 0);
 }
 
-/** Hand display order: K, Q, A, joker, then deck id. */
+/** Hand display order, left to right: joker, A, K, Q. */
+export const LD_HAND_ORDER: readonly LiarFace[] = ['joker', 'A', 'K', 'Q'];
+
+/** Hand display order: joker, A, K, Q, then deck id. */
 export function ldSortHand(hand: readonly LiarCard[]): LiarCard[] {
-  return [...hand].sort((a, b) => LD_FACES.indexOf(a.face) - LD_FACES.indexOf(b.face) || a.id - b.id);
+  return [...hand].sort((a, b) => LD_HAND_ORDER.indexOf(a.face) - LD_HAND_ORDER.indexOf(b.face) || a.id - b.id);
 }

@@ -18,7 +18,7 @@ import {
   identifyCombo,
   isDragon,
   legalPlays,
-  sortBigTwoHand,
+  sortBigTwoHandHighFirst,
 } from '@shared/rules/bigtwo';
 import { nextSeatCounterClockwise } from '@shared/rules/seats';
 import { createDeck, shuffleDeck } from '../../engine/deck';
@@ -51,7 +51,7 @@ export function startGame(
   deck: readonly Card[] = shuffleDeck(createDeck()),
 ): void {
   const dealt = dealCards(deck);
-  const hands = seatMap((seat) => sortBigTwoHand(dealt[seat]));
+  const hands = seatMap((seat) => sortBigTwoHandHighFirst(dealt[seat]));
   const dragonSeat = SEAT_ORDER_CLOCKWISE.find((seat) => isDragon(hands[seat])) ?? null;
   const now = Date.now();
   games.set(roomCode, {

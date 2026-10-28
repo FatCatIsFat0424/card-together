@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { GameType } from '@shared/types';
 import { reconcileOrder } from '../components/card-hand-order';
+import { useGameStore } from '../stores/game-store';
 import { useHandSortStore } from '../stores/hand-sort-store';
 import { sameHandCard, sortHand } from './hand-sort';
 import type { SortableCard } from './hand-sort';
@@ -9,15 +10,16 @@ export function useSortedHand<T extends SortableCard>(incoming: readonly T[], ga
   cards: readonly T[]; canReorder: boolean; reorder: (cards: readonly T[]) => void;
 } {
   const sorting = useHandSortStore();
+  const trump = useGameStore((state) => game === 'napoleon' ? state.napoleon?.contract?.suit ?? null : null);
   const mode = enabled && sorting.gameType === game ? sorting.order : null;
   const [saved, setSaved] = useState({ game, mode, cards: [] as readonly T[] });
   let order = saved;
   if (saved.game !== game || saved.mode !== mode) {
     // Turning sorting off freezes the displayed order as the starting manual order.
     order = { game, mode, cards: saved.game === game && saved.mode && !mode && game
-      ? sortHand(incoming, saved.mode, game) : [] };
+      ? sortHand(incoming, saved.mode, game, trump) : [] };
     setSaved(order);
   }
-  const cards = mode && game ? sortHand(incoming, mode, game) : reconcileOrder(incoming, order.cards, sameHandCard);
+  const cards = mode && game ? sortHand(incoming, mode, game, trump) : reconcileOrder(incoming, order.cards, sameHandCard);
   return { cards, canReorder: enabled && !mode, reorder: (next) => setSaved({ game, mode, cards: next }) };
 }

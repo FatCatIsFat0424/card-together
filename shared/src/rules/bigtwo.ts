@@ -51,9 +51,16 @@ export function compareBigTwoCards(a: Card, b: Card): number {
   return cardKey(a) - cardKey(b);
 }
 
+/** Ascending, for rule evaluation; hands are shown with `sortBigTwoHandHighFirst`. */
 export function sortBigTwoHand(cards: readonly Card[], by: 'rank' | 'suit' = 'rank'): Card[] {
   if (by === 'rank') return [...cards].sort(compareBigTwoCards);
   return [...cards].sort((a, b) => suitValue(a.suit) - suitValue(b.suit) || rankValue(a.rank) - rankValue(b.rank));
+}
+
+/** Hand display order, strongest on the left: by rank, or grouped by suit (♠ ♥ ♦ ♣) with the strongest rank first. */
+export function sortBigTwoHandHighFirst(cards: readonly Card[], by: 'rank' | 'suit' = 'rank'): Card[] {
+  if (by === 'rank') return [...cards].sort((a, b) => compareBigTwoCards(b, a));
+  return [...cards].sort((a, b) => suitValue(b.suit) - suitValue(a.suit) || rankValue(b.rank) - rankValue(a.rank));
 }
 
 /** Returns the straight index (A2345 = 0 ... 10JQKA = 9) and comparison card, or null if not a straight */

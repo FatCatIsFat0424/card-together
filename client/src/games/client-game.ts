@@ -31,7 +31,7 @@ export interface SpectatorPatch {
   readonly validCards?: readonly never[];
 }
 
-/** Sort keys of one game's cards; a lower value sorts first. */
+/** Sort keys of one game's cards. Hands read high to low: a higher rank sorts first, a lower suit value sorts first. */
 export interface HandOrder {
   readonly rank: (card: Card) => number;
   readonly suit: (card: Card) => number;

@@ -1,4 +1,5 @@
 import { gameSeatValue } from '@shared/rules/seats';
+import { svOrder } from '@shared/rules/sevens';
 import type { ClientGame } from '../client-game';
 import { STANDARD_HAND_ORDER } from '../client-game-helpers';
 import { deriveSevensRounds } from './sevens-rounds';
@@ -22,7 +23,8 @@ export const sevensClient: ClientGame<'sevens'> = {
     matchContext: (game) => ({ option: { label: 'sevens.closeOnEnd', enabled: game.options?.closeOnEnd ?? false } }),
   },
   roundHistory: { derive: deriveSevensRounds },
-  handSort: { order: STANDARD_HAND_ORDER, bySuit: true },
+  // Aces are low in Sevens, so a hand reads K down to A.
+  handSort: { order: { rank: svOrder, suit: STANDARD_HAND_ORDER.suit }, bySuit: true },
   handBeside: true,
   lobbyIcon: { glyph: '7️⃣', icon: 'seven' },
   settlement: (game) => game.result,
