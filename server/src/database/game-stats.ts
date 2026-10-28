@@ -4,7 +4,7 @@ import { countAccountMatch, countGameMatch, RECENT_RESULTS } from '@shared/stats
 import { STATS_VERSION } from '@shared/stats/definitions';
 import { finalReplayFrame, matchFacts } from '@shared/stats';
 import type {
-  AccountStats, GameStats, GameType, MatchReplay, PlayerStats, ReplaySnapshot, RoleTally, StatsScope,
+  AccountStats, GameStats, GameType, MatchReplay, PlayerStats, ReplaySnapshot, StatsScope,
 } from '@shared/types';
 import type { MatchRecord } from './repository';
 
@@ -162,23 +162,7 @@ export function validStatsBackfill(value: unknown): value is StatsBackfillState 
 
 // The API response.
 
-const NAPOLEON_ROLES = ['napoleon', 'secretary', 'defender'] as const;
-
-/** Napoleon results of every account by role, per scope, from their stored counters. */
-export function napoleonRoleTotals(
-  records: Iterable<Pick<GameStatsRecord, 'scope' | 'counts'>>,
-): PlayerStats['napoleonRoles'] {
-  const totals: Record<StatsScope, Partial<Record<typeof NAPOLEON_ROLES[number], RoleTally>>> = { human: {}, all: {} };
-  for (const record of records) {
-    for (const role of NAPOLEON_ROLES) {
-      const played = record.counts[`role.${role}`] ?? 0;
-      if (played === 0) continue;
-      const total = totals[record.scope][role] ?? { played: 0, won: 0 };
-      totals[record.scope][role] = { played: total.played + played, won: total.won + (record.counts[`won.${role}`] ?? 0) };
-    }
-  }
-  return totals;
-}
+export { napoleonRoleTotals } from './games/napoleon-stats';
 
 function withoutKeys<T extends { readonly accountId: string; readonly scope: StatsScope }>(
   record: T,

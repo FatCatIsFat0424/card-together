@@ -1,3 +1,4 @@
+import type { GameActionEnvelope } from '@shared/games/actions';
 import type {
   BidAction, BlackjackAction, BlackjackDealerAction, Card, ChinesePokerArrangement, HoldemAction, NapoleonAction,
   PlayerVisibleGameState,
@@ -7,6 +8,7 @@ import type { NnChoice } from '@shared/rules/ninetynine';
 import { gameBot } from './bot-registry';
 
 export type BotAction =
+  | { readonly type: 'game-action'; readonly request: GameActionEnvelope }
   | { readonly type: 'bridge-redeal'; readonly accept: boolean }
   | { readonly type: 'bridge-bid'; readonly action: BidAction }
   | { readonly type: 'bridge-play'; readonly card: Card }

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { matchStanding } from '@shared/rules/match-standing';
 import { matchFacts } from '@shared/stats';
 import { countAccountMatch, countGameMatch } from '@shared/stats/accumulate';
-import type { AccountStats, GameStats, MatchResult, PlayerStats, Seat } from '@shared/types';
+import type { AccountStats, GameStats, GameType, MatchResult, PlayerStats, Seat } from '@shared/types';
+import { GAME_TYPES } from '@shared/constants';
+import { gameStatisticsRules } from '../../../client/src/games/statistics-registry';
 import { ROLE_BASELINE_MIN, serverStatistics } from '../../../client/src/player-stats';
 
 function counted(stats: { game: GameStats | null; account: AccountStats | null }, result: MatchResult, seat: Seat, at: number,
@@ -64,5 +66,52 @@ describe('server statistics view', () => {
     const game = serverStatistics(playerStats([stats.game!], stats.account), 'all').games.find((entry) => entry.gameType === 'redpoints')!;
     expect(game.records.find((record) => record.id === 'heartAces')).toMatchObject({ value: 0, since: 5 });
     expect(game.records.find((record) => record.id === 'topPoints')).toMatchObject({ value: 50, since: null });
+  });
+});
+
+function counters(gameType: GameType, values: Partial<GameStats> = {}): GameStats {
+  return { gameType, version: 1, since: null, versionSince: {}, matches: 4, wins: 1, ties: 0,
+    ranks: [], tables: { 2: 2, 4: 2 }, counts: {}, sums: {}, best: {}, latest: {},
+    streak: { current: 0, best: 1 }, logged: 0, logSince: null, lastAt: 10, ...values };
+}
+
+describe('per-game statistics hooks', () => {
+  it.each([
+    ['bridge', { 'won.declarer': 1, 'won.partner': 1 }, { overtricks: 3 },
+      { id: 'overtricks', value: 1.5, format: 'signed', basis: 2 }],
+    ['ninetynine', { firstOut: 1 }, {}, { id: 'firstOut', value: 0.25, format: 'rate', basis: 4 }],
+    ['chinesepoker', { fouls: 2 }, {}, { id: 'fouls', value: 0.5, format: 'rate', basis: 4 }],
+    ['liarsdeck', {}, { shots: 5 }, { id: 'shots', value: 1.25, format: 'decimal', basis: 4 }],
+    ['blackjack', { busts: 3, handsPlayed: 10 }, {}, { id: 'busts', value: 0.3, format: 'rate', basis: 10 }],
+    ['holdem', { showdownWins: 2, showdowns: 5 }, {}, { id: 'showdownWins', value: 0.4, format: 'rate', basis: 5 }],
+  ] as const)('keeps the %s metric and its denominator', (gameType, counts, sums, expected) => {
+    const view = serverStatistics(playerStats([counters(gameType, { counts, sums })], null), 'all');
+    expect(view.games.find((game) => game.gameType === gameType)?.metrics).toEqual([expected]);
+  });
+
+  it.each(['bridge', 'blackjack', 'holdem'] as const)('omits %s metrics without any denominator observations', (gameType) => {
+    const view = serverStatistics(playerStats([counters(gameType)], null), 'all');
+    expect(view.games.find((game) => game.gameType === gameType)?.metrics).toEqual([]);
+  });
+
+  it('keeps table-size chance levels in ranking games and a coin flip for Bridge', () => {
+    for (const gameType of GAME_TYPES.filter((game) => game !== 'napoleon')) {
+      const view = serverStatistics(playerStats([counters(gameType)], null), 'all');
+      expect(view.games.find((game) => game.gameType === gameType)?.expectedWinRate)
+        .toBe(gameType === 'bridge' ? 0.5 : 0.375);
+    }
+  });
+
+  it('keeps Bridge role groups and Napoleon role order without grouping defenders as declarers', () => {
+    expect(gameStatisticsRules('bridge').roleMetrics).toEqual([
+      { label: 'history.stats.bridge.declarerSide', roles: ['declarer', 'partner'] },
+      { label: 'history.stats.bridge.declarer', roles: ['declarer'] },
+      { label: 'history.stats.bridge.defender', roles: ['defender'] },
+    ]);
+    expect(gameStatisticsRules('napoleon').roleMetrics).toEqual([
+      { label: 'history.stats.role.napoleon', roles: ['napoleon'] },
+      { label: 'history.stats.role.secretary', roles: ['secretary'] },
+      { label: 'history.stats.role.defender', roles: ['defender'] },
+    ]);
   });
 });

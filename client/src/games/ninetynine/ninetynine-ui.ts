@@ -1,10 +1,12 @@
 import { lazy } from 'react';
 import type { GameUi } from '../game-ui';
+import { NinetyNineRoomOptions } from './NinetyNineRoomOptions';
 import { NinetyNineFrameEffects } from './NinetyNineFrameEffects';
 import { NinetyNineRounds } from './NinetyNineHistory';
 
 export const ninetyNineUi: GameUi<'ninetynine'> = {
   gameType: 'ninetynine',
+  roomOptions: NinetyNineRoomOptions,
   table: lazy(() => import('./NinetyNineTable').then((game) => ({ default: game.NinetyNineTable }))),
   presentation: {
     // A two-deck match can end with several survivors tied for first.

@@ -1,5 +1,5 @@
 import type { GameAdapter } from './game-adapter';
-import { compassView, startFullTable } from './game-adapter';
+import { compassAction, compassView, startFullTable } from './game-adapter';
 import * as liarsdeck from './liarsdeck-game';
 
 export const liarsDeckAdapter: GameAdapter<'liarsdeck'> = {
@@ -11,6 +11,8 @@ export const liarsDeckAdapter: GameAdapter<'liarsdeck'> = {
   start: ({ roomCode, players }) => startFullTable(players, (table) => liarsdeck.startGame(roomCode, table)),
   // The match opens by revealing the first round's table card.
   presentsOpening: true,
+  applyAction: (code, seat, action, context) => compassAction(seat, (player) => context.timed(() => context.present(() =>
+    action.type === 'play' ? liarsdeck.play(code, player, action.cardIds) : liarsdeck.challenge(code, player)))),
   getPlayerVisibleState: (roomCode, seat) => compassView(seat, (compass) => liarsdeck.getPlayerVisibleState(roomCode, compass)),
   withObserverView: (visible, game, observer) => ({ ...visible, observer, observedHands: game.hands }),
   eliminationIndex: (game, seat) => game.log.findIndex((entry) => entry.type === 'shot' && entry.seat === seat

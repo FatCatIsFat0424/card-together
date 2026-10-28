@@ -172,7 +172,10 @@ export function BiddingPanel({ disabled = false }: { disabled?: boolean }): Reac
   const { t } = useI18nStore();
 
   const submit = useCallback((action: AuctionAction<BidLevel>, done: (error: string | null) => void): void => {
-    socket.timeout(10000).emit('game:bid', { bid: action }, (timeout, response) => {
+    socket.timeout(10000).emit('game:action', {
+      gameType: 'bridge',
+      action: { type: 'bid', bid: action },
+    }, (timeout, response) => {
       if (timeout) done(t('auth.connectionError'));
       else if (!response.success) done(response.error ?? t('common.error'));
       else done(null);

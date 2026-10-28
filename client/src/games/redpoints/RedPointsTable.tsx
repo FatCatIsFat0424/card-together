@@ -203,9 +203,15 @@ export function RedPointsTable(): ReactNode {
     setActionError('');
     setActionPending(true);
     if (choosingFlip && capture) {
-      socket.timeout(10000).emit('game:redpoints:chooseFlip', { capture }, handleActionResult);
+      socket.timeout(10000).emit('game:action', {
+        gameType: 'redpoints',
+        action: { type: 'chooseFlip', capture },
+      }, handleActionResult);
     } else if (card) {
-      socket.timeout(10000).emit('game:redpoints:play', capture ? { card, capture } : { card },
+      socket.timeout(10000).emit('game:action', {
+        gameType: 'redpoints',
+        action: { type: 'play', card, ...(capture ? { capture } : {}) },
+      },
         (timeout, response) => {
           if (!timeout && response?.success) setSelection(null);
           handleActionResult(timeout, response);

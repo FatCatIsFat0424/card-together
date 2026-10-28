@@ -1,6 +1,7 @@
 import type { GameType, MatchSummary, StatsMark, StatsScope } from '@shared/types';
 import type { StatsRecordKind, StatsSource } from '@shared/stats/definitions';
 import { GAME_TYPES } from '@shared/constants';
+import { gameDefinition } from '@shared/games/registry';
 import { matchSeats, matchStanding } from '@shared/rules/match-standing';
 import type { MatchStanding, StandingRole } from '@shared/rules/match-standing';
 import { readPreference, writePreference } from './utils/preference-storage';
@@ -107,9 +108,6 @@ export interface MatchStatistics {
 }
 
 const RECENT_COUNT = 10;
-export const SCORE_KINDS: Readonly<Partial<Record<GameType, ScoreKind>>> = {
-  bigtwo: 'penalty', sevens: 'penalty', redpoints: 'points', chinesepoker: 'points', blackjack: 'chips', holdem: 'chips',
-};
 
 export function isHumanMatch(match: MatchSummary): boolean {
   return !match.accountIds.some((id) => id.startsWith('bot:'));
@@ -179,7 +177,7 @@ function gameStatistics(gameType: GameType, tally: Tally): GameStatistics {
     topTwoRate: tally.threePlus ? tally.topTwo / tally.threePlus : null,
     topTwoCount: tally.topTwo,
     rankCounts: tally.rankCounts,
-    scoreKind: SCORE_KINDS[gameType] ?? null,
+    scoreKind: gameDefinition(gameType).result.scoreKind,
     averageScore: tally.scored ? tally.scoreSum / tally.scored : null,
     roles: tally.roles,
     lossAverageScore: null, metrics: [], records: [],

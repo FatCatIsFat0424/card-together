@@ -183,7 +183,10 @@ export function LiarsDeckTable(): ReactNode {
     setActionError('');
     setActionPending(true);
     setSelected([]);
-    socket.timeout(10000).emit('game:liarsdeck:play', { cardIds: chosen }, handleActionResult);
+    socket.timeout(10000).emit('game:action', {
+      gameType: 'liarsdeck',
+      action: { type: 'play', cardIds: chosen },
+    }, handleActionResult);
   };
 
   const sendCall = (): void => {
@@ -191,7 +194,7 @@ export function LiarsDeckTable(): ReactNode {
     setActionError('');
     setActionPending(true);
     setSelected([]);
-    socket.timeout(10000).emit('game:liarsdeck:challenge', handleActionResult);
+    socket.timeout(10000).emit('game:action', { gameType: 'liarsdeck', action: { type: 'challenge' } }, handleActionResult);
   };
 
   const backToRoom = (): void => {

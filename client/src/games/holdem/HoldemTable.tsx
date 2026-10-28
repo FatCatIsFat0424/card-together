@@ -369,7 +369,7 @@ export function HoldemTable(): ReactNode {
     setActionError('');
     setActionPending(true);
     setSentAt(game.log.length);
-    socket.timeout(10000).emit('game:holdem:action', { action }, handleActionResult);
+    socket.timeout(10000).emit('game:action', { gameType: 'holdem', action }, handleActionResult);
   };
 
   const backToRoom = (): void => {

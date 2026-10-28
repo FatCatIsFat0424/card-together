@@ -1,3 +1,5 @@
+import type { GameSeat } from '../../types';
+import { rankedStanding } from '../result-standing';
 import type { GameDefinition } from '../game-definition';
 import type { PresentationFrame } from '../presentation';
 
@@ -6,6 +8,17 @@ export const liarsDeckDefinition: GameDefinition<'liarsdeck'> = {
   category: 'cards',
   equipment: ['cards'],
   seats: { minPlayers: 4, maxPlayers: 4, flexible: false, expandable: false, numbered: false },
+  result: {
+    kind: 'ranking',
+    scoreKind: null,
+    standing: (result, seat, seats) => {
+      const eliminated: readonly GameSeat[] = result.eliminationOrder;
+      return rankedStanding(seats, seat, (other) => ({
+        rank: other === result.winnerSeat ? 1 : seats.length - eliminated.indexOf(other),
+        score: null,
+      }));
+    },
+  },
   presentation: {
     logFrames: (game, index, key, timing): PresentationFrame[] => {
       const entry = game.log[index];

@@ -15,7 +15,7 @@ export const ninetyNineClient: ClientGame<'ninetynine'> = {
   rules: {
     summary: (context, t) => [t('ninetynine.rulesNumbers'), t('ninetynine.rulesSpecial'), t('ninetynine.rulesBust'),
       ...(context?.option?.enabled ? [t('ninetynine.rulesTwoDecks')] : [])],
-    roomContext: (room) => ({ option: { label: 'ninetynine.twoDecks', enabled: room.ninetyNineOptions?.twoDecks ?? false } }),
+    roomContext: (room) => ({ option: { label: 'ninetynine.twoDecks', enabled: room.gameOptions?.ninetynine?.twoDecks ?? false } }),
     matchContext: (game) => ({ option: { label: 'ninetynine.twoDecks', enabled: game.options?.twoDecks ?? false } }),
   },
   roundHistory: { derive: deriveNinetyNineRounds },

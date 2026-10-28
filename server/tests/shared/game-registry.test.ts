@@ -47,3 +47,22 @@ describe('shared game registry', () => {
     for (const value of ['', 'chess', 'BRIDGE', null, undefined, 4, {}]) expect(isGameType(value)).toBe(false);
   });
 });
+
+describe('registered result metadata', () => {
+  it('keeps the score units and side-game kinds', () => {
+    expect(GAME_TYPES.map((gameType) => [gameType, gameDefinition(gameType).result.kind,
+      gameDefinition(gameType).result.scoreKind])).toEqual([
+      ['bridge', 'team', null], ['bigtwo', 'ranking', 'penalty'], ['redpoints', 'ranking', 'points'],
+      ['ninetynine', 'ranking', null], ['sevens', 'ranking', 'penalty'], ['chinesepoker', 'ranking', 'points'],
+      ['liarsdeck', 'ranking', null], ['blackjack', 'ranking', 'chips'], ['holdem', 'ranking', 'chips'],
+      ['napoleon', 'roles', null],
+    ]);
+  });
+
+  it('gives only Holdem the waiting-room fixed hand count', () => {
+    expect(GAME_TYPES.flatMap((gameType) => {
+      const hands = gameDefinition(gameType).matchHands;
+      return hands === undefined ? [] : [[gameType, hands]];
+    })).toEqual([['holdem', 20]]);
+  });
+});

@@ -1,3 +1,4 @@
+import { rankedStanding, rankAfterWinners, compassScore } from '../result-standing';
 import { soleWinner } from '../game-definition';
 import type { GameDefinition } from '../game-definition';
 import type { PresentationFrame } from '../presentation';
@@ -7,6 +8,14 @@ export const chinesePokerDefinition: GameDefinition<'chinesepoker'> = {
   category: 'cards',
   equipment: ['cards'],
   seats: { minPlayers: 4, maxPlayers: 4, flexible: false, expandable: false, numbered: false },
+  result: {
+    kind: 'ranking',
+    scoreKind: 'points',
+    standing: (result, seat, seats) => rankedStanding(seats, seat, (other) => ({
+      rank: rankAfterWinners(seats, result.winners, other, (seat) => compassScore(result.scores, seat), false),
+      score: compassScore(result.scores, other),
+    })),
+  },
   presentation: {
     // Submissions are private and simultaneous, so only the showdown is presented.
     logFrames: (game, index, key): PresentationFrame[] => {

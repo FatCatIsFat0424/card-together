@@ -1,3 +1,4 @@
+import { napoleonReviewSeconds } from '@shared/rules/napoleon';
 import { occupiedSeats } from '@shared/rules/seats';
 import type { NapoleonGameState } from '@shared/types';
 import type { GameAdapter } from './game-adapter';
@@ -14,9 +15,11 @@ export const napoleonAdapter: GameAdapter<'napoleon'> = {
   restoreGames: napoleon.restoreGames,
   abortGame: napoleon.abortGame,
   start: ({ roomCode, players, options }) => {
-    napoleon.startGame(roomCode, players, options.napoleonOptions);
+    napoleon.startGame(roomCode, players, options.napoleon);
     return { success: true };
   },
+  applyAction: (code, seat, action, context) => context.timed(() => context.present(() =>
+    napoleon.act(code, seat, action, napoleonReviewSeconds(context.settings.baseSeconds) * 1000))),
   getPlayerVisibleState: napoleon.getPlayerVisibleState,
   withObserverView: (visible, game, observer) => ({ ...visible, observer, ...napoleon.getObserverView(game) }),
   // Discards are acknowledged against a shared deadline, not one seat's turn.

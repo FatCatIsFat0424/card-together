@@ -14,6 +14,7 @@ export const MAX_AUTOMATED_FAILURES = 3;
 export const AUTOMATED_ABORT_MESSAGE = 'game.automatedAborted';
 
 export function applyAutomatedAction(code: RoomCode, seat: GameSeat, action: BotAction): { success: boolean; reason?: string } {
+  if (action.type === 'game-action') return gameManager.handleGameAction(code, seat, action.request, true);
   if (!isCompassSeat(seat) && !['ninetynine-play', 'blackjack-bet', 'blackjack-action', 'blackjack-dealer', 'holdem-action',
     'napoleon-action'].includes(action.type)) {
     return { success: false, reason: 'This action requires a compass seat.' };

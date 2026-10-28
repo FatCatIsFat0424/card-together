@@ -1,7 +1,7 @@
 import { cpArrangeSeconds } from '@shared/rules/chinesepoker';
 import { occupiedSeats } from '@shared/rules/seats';
 import type { GameAdapter } from './game-adapter';
-import { compassView, startFullTable, withObservedHands } from './game-adapter';
+import { compassAction, compassView, startFullTable, withObservedHands } from './game-adapter';
 import * as chinesepoker from './chinesepoker-game';
 
 export const chinesePokerAdapter: GameAdapter<'chinesepoker'> = {
@@ -12,6 +12,9 @@ export const chinesePokerAdapter: GameAdapter<'chinesepoker'> = {
   abortGame: chinesepoker.abortGame,
   start: ({ roomCode, players, settings }) => startFullTable(players, (table) => chinesepoker.startGame(roomCode, table,
     cpArrangeSeconds(settings.baseSeconds, settings.bankSeconds) * 1000)),
+  // Arrangements share one deadline; the final submission presents the showdown.
+  applyAction: (code, seat, action, context) => compassAction(seat, (player) => context.simultaneous(() =>
+    context.present(() => chinesepoker.arrange(code, player, action.arrangement, context.automatic)))),
   getPlayerVisibleState: (roomCode, seat) => compassView(seat,
     (compass) => chinesepoker.getPlayerVisibleState(roomCode, compass)),
   withObserverView: (visible, game, observer) => withObservedHands(visible, game.hands, observer),

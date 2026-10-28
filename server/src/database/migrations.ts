@@ -1,6 +1,7 @@
 import { backfillAchievementCounts } from './migrate-achievements';
+import { migrateRoomOptions } from './migrate-room-options';
 
-export const CURRENT_SCHEMA_VERSION = 9;
+export const CURRENT_SCHEMA_VERSION = 10;
 
 type JsonObject = Record<string, unknown>;
 
@@ -156,11 +157,23 @@ function toVersion9(document: JsonObject): JsonObject {
   return { ...document, schemaVersion: 9, gameStats: [], accountStats: [], statsBackfill: { after: null } };
 }
 
+/** v10: room rules share a per-game map, including choices for games not currently selected. */
+function toVersion10(document: JsonObject): JsonObject {
+  const runtime = document.runtime;
+  return {
+    ...document,
+    schemaVersion: 10,
+    runtime: isObject(runtime)
+      ? { ...runtime, rooms: Array.isArray(runtime.rooms) ? runtime.rooms.map(migrateRoomOptions) : runtime.rooms }
+      : runtime,
+  };
+}
+
 /** Index i upgrades version i + 1 to i + 2. Append new steps; never edit shipped ones. */
 const STEPS: readonly ((document: JsonObject) => JsonObject)[] = [
   toVersion2, toVersion3, toVersion4, toVersion5, toVersion6,
   (document) => ({ ...backfillAchievementCounts(document), schemaVersion: 7 }),
-  toVersion8, toVersion9,
+  toVersion8, toVersion9, toVersion10,
 ];
 
 /**

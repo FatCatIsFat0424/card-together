@@ -9,9 +9,11 @@ export const ninetyNineAdapter: GameAdapter<'ninetynine'> = {
   restoreGames: ninetynine.restoreGames,
   abortGame: ninetynine.abortGame,
   start: ({ roomCode, players, options }) => {
-    ninetynine.startGame(roomCode, players, undefined, undefined, options.ninetyNineOptions);
+    ninetynine.startGame(roomCode, players, undefined, undefined, options.ninetynine);
     return { success: true };
   },
+  applyAction: (code, seat, action, context) => context.timed(() => context.present(() =>
+    ninetynine.play(code, seat, action.card, action.choice, action.target))),
   getPlayerVisibleState: ninetynine.getPlayerVisibleState,
   withObserverView: (visible, game, observer) => withObservedHands(visible, game.hands, observer),
   eliminationIndex: (game, seat) => game.log.findIndex((entry) => entry.type === 'eliminated' && entry.seat === seat),

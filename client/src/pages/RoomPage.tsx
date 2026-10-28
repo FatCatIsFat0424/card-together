@@ -8,9 +8,8 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { GAME_SEAT_ORDER, MAX_SPECTATORS, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { EXPANDABLE_ROOM_GAMES, gameDefinition } from '@shared/games/registry';
-import { HE_HANDS } from '@shared/rules/holdem';
 import type {
-  BlackjackOptions, BotDifficulty, GameSeat, NapoleonOptions, GameType, NinetyNineOptions, PlayerInfo, RoomInfo, RoomSeatTarget, Seat, SevensOptions, TimeControl,
+  BotDifficulty, GameOptionsPayload, GameSeat, GameType, PlayerInfo, RoomInfo, RoomSeatTarget, Seat, TimeControl,
 } from '@shared/types';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import type { TranslationKey } from '../i18n';
@@ -302,25 +301,10 @@ export function RoomPage(): ReactNode {
     setError('');
     socket.timeout(10000).emit('room:setTimeControl', settings, handleResult);
   };
-  const setSevensOptions = (options: SevensOptions): void => {
+  const setGameOptions = (payload: GameOptionsPayload): void => {
     setBusy(true);
     setError('');
-    socket.timeout(10000).emit('room:setSevensOptions', options, handleResult);
-  };
-  const setNinetyNineOptions = (options: NinetyNineOptions): void => {
-    setBusy(true);
-    setError('');
-    socket.timeout(10000).emit('room:setNinetyNineOptions', options, handleResult);
-  };
-  const setBlackjackOptions = (options: BlackjackOptions): void => {
-    setBusy(true);
-    setError('');
-    socket.timeout(10000).emit('room:setBlackjackOptions', options, handleResult);
-  };
-  const setNapoleonOptions = (options: NapoleonOptions): void => {
-    setBusy(true);
-    setError('');
-    socket.timeout(10000).emit('room:setNapoleonOptions', options, handleResult);
+    socket.timeout(10000).emit('room:setGameOptions', payload, handleResult);
   };
   const addBot = (seat: GameSeat): void => {
     setBusy(true);
@@ -423,8 +407,9 @@ export function RoomPage(): ReactNode {
   const players = definition.minPlayers === definition.maxPlayers
     ? t('lobby.players', { n: String(definition.maxPlayers) })
     : t('lobby.playersRange', { min: String(definition.minPlayers), max: String(definition.maxPlayers) });
-  const length = roomInfo.gameType === 'holdem' ? t('room.summaryHands', { n: String(HE_HANDS) })
-    : t(`gameType.${roomInfo.gameType}Tag`);
+  const matchHands = gameDefinition(roomInfo.gameType).matchHands;
+  const length = matchHands === undefined ? t(`gameType.${roomInfo.gameType}Tag`)
+    : t('room.summaryHands', { n: String(matchHands) });
   const timeControl = roomInfo.timeControl ?? DEFAULT_TIME_CONTROL;
   const memberMenu = (player: PlayerInfo, variant: 'seat' | 'row'): ReactNode => isHost && waiting && !player.isBot &&
     <PlayerMoveMenu key="move-menu" variant={variant} player={player} spectatorCount={spectators.length}
@@ -542,9 +527,7 @@ export function RoomPage(): ReactNode {
         slotProps={{ paper: { className: styles.popover, id: 'room-game-settings', role: 'dialog', 'aria-label': t('room.settings') } }}>
         <RoomSettings room={roomInfo} isHost={isHost} editable={Boolean(isHost && !blocked && waiting)}
           pending={Boolean(pendingDisabled())} setGameType={setGameType} setTimeControl={setTimeControl}
-          setShuffleSeats={setShuffleSeats} setSevensOptions={setSevensOptions}
-          setNinetyNineOptions={setNinetyNineOptions} setBlackjackOptions={setBlackjackOptions}
-          setNapoleonOptions={setNapoleonOptions} />
+          setShuffleSeats={setShuffleSeats} setGameOptions={setGameOptions} />
       </Popover>
       <Popover open={Boolean(spectatorAnchor)} anchorEl={spectatorAnchor} onClose={() => setSpectatorAnchor(null)}
         anchorOrigin={{ vertical: 'top', horizontal: 'left' }} transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}

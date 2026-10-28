@@ -67,7 +67,7 @@ function snapshot(): RuntimeSnapshot {
     rooms: [{
       info: {
         code: CODE, gameType: 'blackjack', status: state.phase === 'scoring' ? 'waiting' : 'playing', createdAt: 1,
-        hostId: ids[0], abortVote: null, abortVoteCooldownUntil: null, blackjackOptions: PLAYER_DEALER,
+        hostId: ids[0], abortVote: null, abortVoteCooldownUntil: null, gameOptions: { blackjack: PLAYER_DEALER },
         seats: {
           N: { player: state.players.N ?? null, isReady: Boolean(state.players.N) },
           E: { player: state.players.E ?? null, isReady: Boolean(state.players.E) },
@@ -317,22 +317,22 @@ describe('Blackjack player dealer room option', () => {
     roomManager.changeSeat(code, player('host'), 'N');
     roomManager.changeSeat(code, player('guest'), 'S');
     roomManager.setReady(code, 'guest', true);
-    expect(roomManager.getRoomInfo(code)?.blackjackOptions).toEqual({ playerDealer: false });
-    expect(roomManager.setBlackjackOptions(code, 'guest', PLAYER_DEALER).success).toBe(false);
-    expect(roomManager.setBlackjackOptions(code, 'host', { playerDealer: 'yes' } as never).success).toBe(false);
-    expect(roomManager.setBlackjackOptions(code, 'host', PLAYER_DEALER).success).toBe(true);
+    expect(roomManager.getRoomInfo(code)?.gameOptions?.blackjack).toEqual({ playerDealer: false });
+    expect(roomManager.setGameOptions(code, 'guest', { gameType: 'blackjack', options: PLAYER_DEALER }).success).toBe(false);
+    expect(roomManager.setGameOptions(code, 'host', { gameType: 'blackjack', options: { playerDealer: 'yes' } as never }).success).toBe(false);
+    expect(roomManager.setGameOptions(code, 'host', { gameType: 'blackjack', options: PLAYER_DEALER }).success).toBe(true);
     expect(roomManager.getRoomInfo(code)?.seats.S.isReady).toBe(false);
-    const { blackjackOptions: _omitted, ...legacy } = roomManager.exportRooms()[0].info;
+    const { gameOptions: _omitted, ...legacy } = roomManager.exportRooms()[0].info;
     roomManager.restoreRooms([{ ...roomManager.exportRooms()[0], info: legacy }]);
-    expect(roomManager.getRoomInfo(code)?.blackjackOptions).toEqual({ playerDealer: false });
-    roomManager.setBlackjackOptions(code, 'host', PLAYER_DEALER);
+    expect(roomManager.getRoomInfo(code)?.gameOptions?.blackjack).toEqual({ playerDealer: false });
+    roomManager.setGameOptions(code, 'host', { gameType: 'blackjack', options: PLAYER_DEALER });
     const room = roomManager.getRoomInfo(code)!;
     expect(gameManager.startGame(code, 'blackjack', roomManager.getSeatPlayers(code)!, room.timeControl,
-      room.sevensOptions, room.ninetyNineOptions, room.blackjackOptions).success).toBe(true);
+      room.gameOptions).success).toBe(true);
     const state = gameManager.getGameState(code);
     expect(state?.gameType === 'blackjack' && state.dealerSeat).toMatch(/^[NS]$/);
     expect(roomManager.setGameType(code, 'host', 'holdem').success).toBe(true);
-    expect(roomManager.setBlackjackOptions(code, 'host', { playerDealer: false }))
-      .toEqual({ success: false, reason: 'Not a Blackjack room.' });
+    expect(roomManager.setGameOptions(code, 'host', { gameType: 'blackjack', options: { playerDealer: false } }))
+      .toEqual({ success: false, reason: 'The room game has changed. Refresh your page.' });
   });
 });

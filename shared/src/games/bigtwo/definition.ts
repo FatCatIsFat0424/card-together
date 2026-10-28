@@ -1,3 +1,4 @@
+import { rankedStanding, rankAfterWinners, compassScore } from '../result-standing';
 import type { GameDefinition } from '../game-definition';
 import type { PresentationFrame } from '../presentation';
 
@@ -6,6 +7,14 @@ export const bigTwoDefinition: GameDefinition<'bigtwo'> = {
   category: 'cards',
   equipment: ['cards'],
   seats: { minPlayers: 4, maxPlayers: 4, flexible: false, expandable: false, numbered: false },
+  result: {
+    kind: 'ranking',
+    scoreKind: 'penalty',
+    standing: (result, seat, seats) => rankedStanding(seats, seat, (other) => ({
+      rank: rankAfterWinners(seats, [result.winnerSeat], other, (seat) => compassScore(result.scores, seat), true),
+      score: compassScore(result.scores, other),
+    })),
+  },
   presentation: {
     logFrames: (game, index, key, timing): PresentationFrame[] => {
       const entry = game.log[index];

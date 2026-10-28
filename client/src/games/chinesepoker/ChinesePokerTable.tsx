@@ -297,7 +297,10 @@ export function ChinesePokerTable(): ReactNode {
     actionInFlight.current = true;
     setActionError('');
     setActionPending(true);
-    socket.timeout(10000).emit('game:chinesepoker:arrange', { arrangement: final }, (timeout, response) => {
+    socket.timeout(10000).emit('game:action', {
+      gameType: 'chinesepoker',
+      action: { type: 'arrange', arrangement: final },
+    }, (timeout, response) => {
       if (!timeout && response?.success) setSentFor(handKey);
       handleActionResult(timeout, response);
     });

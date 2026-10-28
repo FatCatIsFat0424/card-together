@@ -2,6 +2,7 @@ import { open } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
 import { pathToFileURL } from 'node:url';
 import { CURRENT_SCHEMA_VERSION } from './migrations';
+import { migrateRoomOptions } from './migrate-room-options';
 
 /** Marks Card Together databases in the SQLite header ('CTDB'); other SQLite files are refused untouched. */
 export const SQLITE_APPLICATION_ID = 0x43544442;
@@ -60,6 +61,14 @@ const SQLITE_STEPS: readonly SqliteMigration[] = [
   (database) => {
     database.exec(STATS_TABLES);
     database.exec('INSERT INTO stats_backfill (id, after_at, after_match_id) VALUES (1, NULL, NULL)');
+  },
+  // v10: replace per-game room option fields without changing active game or replay snapshots.
+  (database) => {
+    const update = database.prepare('UPDATE runtime_rooms SET data = ? WHERE room_code = ?');
+    for (const row of database.prepare('SELECT room_code, data FROM runtime_rooms').all()) {
+      if (typeof row.data !== 'string') throw new Error('Invalid saved room.');
+      update.run(JSON.stringify(migrateRoomOptions(JSON.parse(row.data))), row.room_code);
+    }
   },
 ];
 

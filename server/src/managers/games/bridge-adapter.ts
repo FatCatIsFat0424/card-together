@@ -1,5 +1,5 @@
 import type { GameAdapter } from './game-adapter';
-import { compassView, startFullTable, withObservedHands } from './game-adapter';
+import { compassAction, compassView, startFullTable, withObservedHands } from './game-adapter';
 import * as bridge from './bridge-game';
 
 export const bridgeAdapter: GameAdapter<'bridge'> = {
@@ -9,6 +9,13 @@ export const bridgeAdapter: GameAdapter<'bridge'> = {
   restoreGames: bridge.restoreGames,
   abortGame: bridge.abortGame,
   start: ({ roomCode, players }) => startFullTable(players, (table) => bridge.startGame(roomCode, table)),
+  applyAction: (code, seat, action, context) => compassAction(seat, (player) => {
+    switch (action.type) {
+      case 'bid': return context.timed(() => bridge.handleBid(code, player, action.bid));
+      case 'redeal': return context.timed(() => bridge.handleRedealResponse(code, player, action.accept));
+      case 'play': return context.timed(() => context.present(() => bridge.handlePlayCard(code, player, action.card)));
+    }
+  }),
   getPlayerVisibleState: (roomCode, seat) => compassView(seat, (compass) => bridge.getPlayerVisibleState(roomCode, compass)),
   withObserverView: (visible, game, observer) => withObservedHands(visible, game.hands, observer),
   turnSeat: (game) => {

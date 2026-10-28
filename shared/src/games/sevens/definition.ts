@@ -1,5 +1,9 @@
+import { rankedStanding, rankAfterWinners, compassScore } from '../result-standing';
 import type { SevensLogEntry } from '../../types/game';
-import { SEVENS_COLLAPSE_MS, SEVENS_COLLAPSE_SETTLE_MS, SEVENS_SLAY_FRAME_MS, sevensSlayEffect } from '../../sevens-options';
+import {
+  DEFAULT_SEVENS_OPTIONS, isSevensOptions, LEGACY_SEVENS_OPTIONS, SEVENS_COLLAPSE_MS, SEVENS_COLLAPSE_SETTLE_MS,
+  SEVENS_SLAY_FRAME_MS, sevensSlayEffect,
+} from '../../sevens-options';
 import { soleWinner } from '../game-definition';
 import type { GameDefinition } from '../game-definition';
 import { FINAL_RESULT_MS, PRESENTATION_TIMING_VERSION } from '../presentation';
@@ -14,9 +18,23 @@ function isAutoCover(entry: SevensLogEntry | undefined): boolean {
 
 export const sevensDefinition: GameDefinition<'sevens'> = {
   gameType: 'sevens',
+  options: {
+    defaults: DEFAULT_SEVENS_OPTIONS,
+    legacyDefaults: LEGACY_SEVENS_OPTIONS,
+    isValid: isSevensOptions,
+    resetsReady: (previous, next) => previous.closeOnEnd !== next.closeOnEnd,
+  },
   category: 'cards',
   equipment: ['cards'],
   seats: { minPlayers: 4, maxPlayers: 4, flexible: false, expandable: false, numbered: false },
+  result: {
+    kind: 'ranking',
+    scoreKind: 'penalty',
+    standing: (result, seat, seats) => rankedStanding(seats, seat, (other) => ({
+      rank: rankAfterWinners(seats, result.winners, other, (seat) => compassScore(result.penalties, seat), true),
+      score: compassScore(result.penalties, other),
+    })),
+  },
   presentation: {
     logFrames: (game, index, key, timing): PresentationFrame[] => {
       const entry = game.log[index];

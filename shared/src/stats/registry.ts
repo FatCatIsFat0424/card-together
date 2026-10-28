@@ -1,0 +1,35 @@
+import type { ResultOf } from '../games/game-definition';
+import type { GameSeat, GameType, ReplaySnapshot } from '../types';
+import { bigTwoFacts } from './bigtwo';
+import { blackjackFacts } from './blackjack';
+import { bridgeFacts } from './bridge';
+import { chinesePokerFacts } from './chinesepoker';
+import type { SeatFacts } from './facts';
+import { holdemFacts } from './holdem';
+import { liarsDeckFacts } from './liarsdeck';
+import { napoleonFacts } from './napoleon';
+import { ninetyNineFacts } from './ninetynine';
+import { redPointsFacts } from './redpoints';
+import { sevensFacts } from './sevens';
+
+/** Every registered game supplies facts for its own result contract. */
+export const GAME_STATS: {
+  readonly [K in GameType]: (result: ResultOf<K>, seat: GameSeat, frame: ReplaySnapshot | null) => SeatFacts;
+} = {
+  bridge: bridgeFacts,
+  bigtwo: bigTwoFacts,
+  redpoints: redPointsFacts,
+  ninetynine: ninetyNineFacts,
+  sevens: sevensFacts,
+  chinesepoker: chinesePokerFacts,
+  liarsdeck: liarsDeckFacts,
+  blackjack: blackjackFacts,
+  holdem: (_result, seat, frame) => holdemFacts(seat, frame),
+  napoleon: napoleonFacts,
+};
+
+export function gameFacts<K extends GameType>(
+  gameType: K, result: ResultOf<K>, seat: GameSeat, frame: ReplaySnapshot | null,
+): SeatFacts {
+  return GAME_STATS[gameType](result, seat, frame);
+}

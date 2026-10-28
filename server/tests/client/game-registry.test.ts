@@ -92,7 +92,7 @@ describe('client game registries', () => {
       const room = {
         seats: { N: seat('a'), E: seat('b'), S: seat(null), W: seat(null) },
         additionalSeats: [seat('c')],
-        blackjackOptions: { playerDealer: true },
+        gameOptions: { blackjack: { playerDealer: true } },
       } as unknown as RoomInfo;
       const context = clientGame('blackjack').rules.roomContext(room);
       expect(context.option).toEqual({ label: 'blackjack.playerDealer', enabled: true });

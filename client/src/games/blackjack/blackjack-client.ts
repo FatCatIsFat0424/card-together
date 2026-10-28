@@ -22,7 +22,7 @@ export const blackjackClient: ClientGame<'blackjack'> = {
         t('blackjack.rulesPay', { hands })];
     },
     roomContext: (room) => {
-      const playerDealer = room.blackjackOptions?.playerDealer ?? false;
+      const playerDealer = room.gameOptions?.blackjack?.playerDealer ?? false;
       const seated = [...Object.values(room.seats), ...(room.additionalSeats ?? [])].filter((seat) => seat.player).length;
       return { option: { label: 'blackjack.playerDealer', enabled: playerDealer },
         blackjackHands: bjMatchHands(Math.max(1, seated), playerDealer) };

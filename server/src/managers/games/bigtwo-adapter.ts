@@ -1,7 +1,7 @@
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import type { BigTwoGameState } from '@shared/types';
 import type { GameAdapter } from './game-adapter';
-import { compassView, startFullTable, withObservedHands } from './game-adapter';
+import { compassAction, compassView, startFullTable, withObservedHands } from './game-adapter';
 import * as bigtwo from './bigtwo-game';
 
 /** Keeps a forced pass inside the public turn allowance so it never looks like a timeout. */
@@ -21,6 +21,8 @@ export const bigTwoAdapter: GameAdapter<'bigtwo'> = {
   restoreGames: bigtwo.restoreGames,
   abortGame: bigtwo.abortGame,
   start: ({ roomCode, players }) => startFullTable(players, (table) => bigtwo.startGame(roomCode, table)),
+  applyAction: (code, seat, action, context) => compassAction(seat, (player) => context.timed(() => context.present(() =>
+    action.type === 'play' ? bigtwo.play(code, player, action.cards) : bigtwo.pass(code, player)))),
   getPlayerVisibleState: (roomCode, seat) => compassView(seat, (compass) => bigtwo.getPlayerVisibleState(roomCode, compass)),
   withObserverView: (visible, game, observer) => withObservedHands(visible, game.hands, observer),
   turnSeat: (game) => game.currentTurnSeat,

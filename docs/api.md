@@ -131,10 +131,7 @@
 | --- | --- |
 | `room:setGameType` | `{ gameType }` |
 | `room:setTimeControl` | [`TimeControl`](../shared/src/types/room.ts) |
-| `room:setSevensOptions` | `SevensOptions`；`slayEffect` 為 `dragon`（預設）或 `fire`。只改特效時保留準備狀態 |
-| `room:setNinetyNineOptions` | `NinetyNineOptions` |
-| `room:setBlackjackOptions` | `BlackjackOptions`（玩家當莊） |
-| `room:setNapoleonOptions` | `NapoleonOptions`（鬼牌召喚） |
+| `room:setGameOptions` | [`GameOptionsPayload`](../shared/src/types/room.ts)：`{ gameType, options }`；遊戲必須與房間一致。只改排七的 `slayEffect` 時保留準備狀態 |
 
 **共同觀看回放**（工作階段：[`RoomReplaySession`](../shared/src/types/room.ts)；時序：[`replay-session.ts`](../shared/src/replay-session.ts)）
 
@@ -152,27 +149,14 @@
 
 | 操作 | Payload | 效果 |
 | --- | --- | --- |
-| `game:redealResponse` | `{ accept }` | 橋牌是否重新發牌 |
-| `game:bid` | `{ bid }` | 橋牌叫牌或 pass |
-| `game:playCard` | `{ card }` | 橋牌出牌 |
-| `game:bigtwo:play` / `pass` | `{ cards }` / — | 大老二出一組牌或 pass |
-| `game:redpoints:play` | `{ card, capture? }` | 出牌，可選擇要吃的牌 |
-| `game:redpoints:chooseFlip` | `{ capture }` | 選擇翻開的牌要吃哪一張 |
-| `game:ninetynine:play` | `{ card, choice?, target? }` | 加減選擇或指定座位 |
-| `game:sevens:play` / `cover` | `{ card }` | 出一張合法的牌，或在無牌可出時蓋一張牌 |
-| `game:chinesepoker:arrange` | `{ arrangement: { front, middle, back } }` | 最終的 3/5/5 排法 |
-| `game:liarsdeck:play` | `{ cardIds }` | 一到三個不重複的牌 ID（0–19），蓋著打出 |
-| `game:liarsdeck:challenge` | — | 對上一手喊 LIAR |
-| `game:blackjack:bet` | `{ amount }` | 10–200，以 10 為單位，且不超過持有籌碼 |
-| `game:blackjack:action` | `{ action }` | `hit`、`stand`、`double` 或 `split` |
-| `game:blackjack:dealerAction` | `{ action }` | 玩家莊家的 `hit` 或 `stand`；低於 17 點停牌會被拒絕 |
-| `game:holdem:action` | `{ action }` | `{ type: 'fold' \| 'check' \| 'call' }` 或 `{ type: 'raise', to }`，其中 `to` 是該輪的總注額 |
-| `game:napoleon:action` | `{ action }` | 一個 [`NapoleonAction`](../shared/src/types/game.ts)：`bid`、`discard`、`review`（四人棄牌確認）、`call`（秘書牌），或 `play`；首攻秘書牌或鬼牌時帶 `leadSuit`，並可選擇帶 `summon` |
+| `game:action` | `{ gameType, action }`，型別契約見 [`ClientToServerEvents`](../shared/src/types/socket-events.ts) | 所有遊戲的叫牌、出牌、下注與其他規則操作；依目前遊戲的 adapter 驗證並套用，拒絕不符的 `gameType` |
 | `game:autoPlay` | `{ enabled }` | 切換本局中由 bot 持續代打呼叫者的真人座位；需驗證身分，先 commit 再回覆與廣播 |
 | `game:leaveEarly` | — | 開啟代打，並在一次 commit 中對所有玩家與旁觀者標示呼叫者已離開；關閉代打會清除這個標示 |
 | `game:continue` | — | 離開結果畫面回到等待中的房間；其他人仍會看到結果 |
 | `game:abortVote:start` / `cast` | — / `{ agree }` | 發起或投票終止對局（[規則](games/common.md#房間流程)） |
 | `chat:send` | 一個[聊天輸入](../shared/src/types/socket-events.ts)，包括 `{ shopSticker }` | 文字，或一張個人／站方／商店貼圖；發送商店貼圖需要擁有該貼圖包 |
+
+房規保存在 `RoomInfo.gameOptions` 的遊戲鍵下，切換遊戲再切回時保留原本選擇。遊戲局內仍使用開局時固定的規則；房規只在等待中可改。舊版個別遊戲操作事件與四個 `room:set*Options` 事件只回覆重新整理提示，不會執行操作；部署後仍開啟舊版的玩家需重新整理。
 
 **權限**
 

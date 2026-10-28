@@ -14,6 +14,7 @@ export const holdemAdapter: GameAdapter<'holdem'> = {
   },
   // The match opens by dealing the first hand.
   presentsOpening: true,
+  applyAction: (code, seat, action, context) => context.timed(() => context.present(() => holdem.act(code, seat, action))),
   getPlayerVisibleState: holdem.getPlayerVisibleState,
   withObserverView: (visible, game, observer) => withObservedHands(visible, game.hands, observer),
   eliminationIndex: (game, seat) => game.log.findIndex((entry) => entry.type === 'award' && entry.eliminated.includes(seat)),

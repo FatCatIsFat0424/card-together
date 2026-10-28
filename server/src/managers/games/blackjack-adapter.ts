@@ -10,8 +10,21 @@ export const blackjackAdapter: GameAdapter<'blackjack'> = {
   restoreGames: blackjack.restoreGames,
   abortGame: blackjack.abortGame,
   start: ({ roomCode, players, settings, options }) => {
-    blackjack.startGame(roomCode, players, bjBetSeconds(settings.baseSeconds) * 1000, undefined, options.blackjackOptions);
+    blackjack.startGame(roomCode, players, bjBetSeconds(settings.baseSeconds) * 1000, undefined, options.blackjack);
     return { success: true };
+  },
+  applyAction: (code, seat, action, context) => {
+    switch (action.type) {
+      case 'bet': return context.simultaneous(() => {
+        const before = blackjack.getGameState(code)?.hand;
+        const result = context.present(() => blackjack.bet(code, seat, action.amount, context.automatic));
+        // The last simultaneous bet deals a hand and refills every reserve.
+        if (result.success && blackjack.getGameState(code)?.hand !== before) context.resetClock();
+        return result;
+      });
+      case 'act': return context.timed(() => context.present(() => blackjack.act(code, seat, action.action)));
+      case 'dealerAct': return context.timed(() => context.present(() => blackjack.dealerAct(code, seat, action.action)));
+    }
   },
   getPlayerVisibleState: blackjack.getPlayerVisibleState,
   // Hands are dealt face up; god view only adds the dealer's hidden hole card.

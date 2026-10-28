@@ -69,8 +69,7 @@ async function fixture(seats: readonly GameSeat[], bots: readonly GameSeat[] = [
     }
     for (const seat of bots) expect(rooms.addBot(code, seats[0], seat as 'N').success).toBe(true);
     rooms.setRoomStatus(code, 'playing');
-    expect(games.startGame(code, 'napoleon', rooms.getSeatPlayers(code)!, SETTINGS, undefined, undefined, undefined,
-      rooms.getRoomInfo(code)!.napoleonOptions)).toEqual({ success: true });
+    expect(games.startGame(code, 'napoleon', rooms.getSeatPlayers(code)!, SETTINGS, rooms.getRoomInfo(code)!.gameOptions)).toEqual({ success: true });
   });
   repository.saveRuntime.mockClear();
   const game = (): NapoleonGameState => {
@@ -281,21 +280,21 @@ describe('Napoleon room options and seats', () => {
 
   it('creates rooms with joker summoning on and lets only the waiting host change it', () => {
     const code = rooms.createRoom('napoleon', 'host');
-    expect(rooms.getRoomInfo(code)?.napoleonOptions).toEqual({ jokerSummon: true });
+    expect(rooms.getRoomInfo(code)?.gameOptions?.napoleon).toEqual({ jokerSummon: true });
     rooms.joinRoom(code, 'guest');
     rooms.joinRoom(code, 'N');
     expect(rooms.changeSeat(code, human('N'), 'N').success).toBe(true);
     rooms.setReady(code, 'N', true);
-    expect(rooms.setNapoleonOptions(code, 'guest', { jokerSummon: false }).success).toBe(false);
-    expect(rooms.setNapoleonOptions(code, 'host', { jokerSummon: 'no' } as never).success).toBe(false);
+    expect(rooms.setGameOptions(code, 'guest', { gameType: 'napoleon', options: { jokerSummon: false } }).success).toBe(false);
+    expect(rooms.setGameOptions(code, 'host', { gameType: 'napoleon', options: { jokerSummon: 'no' } as never }).success).toBe(false);
     expect(rooms.getRoomInfo(code)?.seats.N.isReady).toBe(true);
-    expect(rooms.setNapoleonOptions(code, 'host', { jokerSummon: false })).toEqual({ success: true });
-    expect(rooms.getRoomInfo(code)).toMatchObject({ napoleonOptions: { jokerSummon: false }, seats: { N: { isReady: false } } });
+    expect(rooms.setGameOptions(code, 'host', { gameType: 'napoleon', options: { jokerSummon: false } })).toEqual({ success: true });
+    expect(rooms.getRoomInfo(code)).toMatchObject({ gameOptions: { napoleon: { jokerSummon: false } }, seats: { N: { isReady: false } } });
     rooms.setRoomStatus(code, 'playing');
-    expect(rooms.setNapoleonOptions(code, 'host', { jokerSummon: true }).success).toBe(false);
+    expect(rooms.setGameOptions(code, 'host', { gameType: 'napoleon', options: { jokerSummon: true } }).success).toBe(false);
     rooms.setRoomStatus(code, 'waiting');
     expect(rooms.setGameType(code, 'host', 'bridge').success).toBe(true);
-    expect(rooms.setNapoleonOptions(code, 'host', { jokerSummon: true }).success).toBe(false);
+    expect(rooms.setGameOptions(code, 'host', { gameType: 'napoleon', options: { jokerSummon: true } }).success).toBe(false);
   });
 
   it('caps Napoleon rooms at two extra seats and trims empty extra seats on a game switch', () => {
@@ -314,9 +313,9 @@ describe('Napoleon room options and seats', () => {
   it('restores legacy rooms with the default options', () => {
     const code = rooms.createRoom('napoleon', 'host');
     const [record] = structuredClone(rooms.exportRooms());
-    const legacy = { ...record, info: { ...record.info, napoleonOptions: undefined } };
+    const legacy = { ...record, info: { ...record.info, gameOptions: undefined } };
     rooms.restoreRooms([legacy]);
-    expect(rooms.getRoomInfo(code)?.napoleonOptions).toEqual(DEFAULT_NAPOLEON_OPTIONS);
+    expect(rooms.getRoomInfo(code)?.gameOptions?.napoleon).toEqual(DEFAULT_NAPOLEON_OPTIONS);
   });
 });
 
@@ -352,10 +351,10 @@ describe('Napoleon socket actions', () => {
     const clients = app.clients[0];
     const [host, guest] = clients;
     expect(await host.emitWithAck('room:setGameType', { gameType: 'napoleon' })).toEqual({ success: true });
-    expect(await guest.emitWithAck('room:setNapoleonOptions', { jokerSummon: false })).toMatchObject({ success: false });
-    expect(await host.emitWithAck('room:setNapoleonOptions', { jokerSummon: 1 } as never))
-      .toEqual({ success: false, error: 'Invalid Napoleon options.' });
-    expect(await host.emitWithAck('room:setNapoleonOptions', { jokerSummon: false })).toEqual({ success: true });
+    expect(await guest.emitWithAck('room:setGameOptions', { gameType: 'napoleon', options: { jokerSummon: false } })).toMatchObject({ success: false });
+    expect(await host.emitWithAck('room:setGameOptions', { gameType: 'napoleon', options: { jokerSummon: 1 } as never }))
+      .toEqual({ success: false, error: 'Invalid game options.' });
+    expect(await host.emitWithAck('room:setGameOptions', { gameType: 'napoleon', options: { jokerSummon: false } })).toEqual({ success: true });
     for (const client of clients) expect(await client.emitWithAck('room:ready')).toEqual({ success: true });
     expect(await host.emitWithAck('room:start')).toEqual({ success: true });
     const state = (await host.emitWithAck('player:resume')).gameState;
@@ -369,13 +368,16 @@ describe('Napoleon socket actions', () => {
       { type: 'play', card: { suit: 'clubs', rank: 1 } }, { type: 'play', card: { joker: 'small' }, leadSuit: 'nt' },
       { type: 'play', card: { joker: 'small' }, summon: 'king' }, { type: 'claim' },
     ]) {
-      expect(await bidder.emitWithAck('game:napoleon:action', { action: action as NapoleonAction }))
+      expect(await bidder.emitWithAck('game:action', { gameType: 'napoleon', action: action as NapoleonAction }))
         .toEqual({ success: false, error: 'Invalid action.' });
     }
     const injected = { type: 'bid', injected: 'x', action: { type: 'bid', level: 9, suit: 'hearts', seat: 'N' } };
-    expect(await bidder.emitWithAck('game:napoleon:action', { action: injected as unknown as NapoleonAction }))
+    expect(await bidder.emitWithAck('game:action', { gameType: 'napoleon', action: injected as unknown as NapoleonAction }))
       .toEqual({ success: true });
-    expect(await bidder.emitWithAck('game:napoleon:action', { action: { type: 'bid', action: { type: 'pass' } } }))
+    expect(await bidder.emitWithAck('game:action', {
+      gameType: 'napoleon',
+      action: { type: 'bid', action: { type: 'pass' } },
+    }))
       .toMatchObject({ success: false });
     const saved = (await app.repository.loadRuntime())?.games[0];
     if (saved?.gameType !== 'napoleon') throw new Error('Expected a saved Napoleon game');

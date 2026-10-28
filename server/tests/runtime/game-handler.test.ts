@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { BidAction, BridgeGameState, Card } from '@shared/types';
-import type { PlayerSnapshot } from '@shared/types/socket-events';
+import type { ActionResult, PlayerSnapshot } from '@shared/types/socket-events';
+import { tokenHash } from '../../src/auth/auth-service';
 import * as games from '../../src/managers/game-manager';
 import * as rooms from '../../src/managers/room-manager';
 import { getTurnSeat } from '../../src/managers/game-clock';
@@ -34,7 +35,10 @@ async function startBridge(app: SocketHarness): Promise<TestClient[]> {
     const seat = snapshot.gameState.redealPendingSeat;
     if (!seat) throw new Error('Expected a redeal decision');
     expect(await players[SEATS.indexOf(seat)].timeout(5_000)
-      .emitWithAck('game:redealResponse', { accept: false })).toEqual({ success: true });
+      .emitWithAck('game:action', {
+        gameType: 'bridge',
+        action: { type: 'redeal', accept: false },
+      })).toEqual({ success: true });
     snapshot = await resume(players[0]);
   }
   expect(snapshot.gameState?.phase).toBe('bidding');
@@ -59,7 +63,10 @@ describe('Bridge action payloads', () => {
       const bid = (index === 0
         ? { type: 'bid', level: 1, suit: 'clubs', injected: 'x'.repeat(64) }
         : { type: 'pass', level: 7, injected: true }) as unknown as BidAction;
-      expect(await players[SEATS.indexOf(bidder)].timeout(5_000).emitWithAck('game:bid', { bid }))
+      expect(await players[SEATS.indexOf(bidder)].timeout(5_000).emitWithAck('game:action', {
+        gameType: 'bridge',
+        action: { type: 'bid', bid },
+      }))
         .toEqual({ success: true });
     }
     const bidding = await savedGame(app);
@@ -76,7 +83,10 @@ describe('Bridge action payloads', () => {
     const card = visible?.gameType === 'bridge' ? visible.validCards[0] : undefined;
     if (!card) throw new Error('Expected a legal card');
     const extended = { ...card, injected: 'x' } as Card;
-    expect(await client.timeout(5_000).emitWithAck('game:playCard', { card: extended })).toEqual({ success: true });
+    expect(await client.timeout(5_000).emitWithAck('game:action', {
+      gameType: 'bridge',
+      action: { type: 'play', card: extended },
+    })).toEqual({ success: true });
     const played = await savedGame(app);
     expect(played.playing?.currentTrick[seat]).toEqual(card);
     expect(Object.keys(played.playing?.currentTrick[seat] ?? {}).sort()).toEqual(['rank', 'suit']);
@@ -84,6 +94,133 @@ describe('Bridge action payloads', () => {
     const logged = played.log.at(-1);
     if (logged?.type !== 'play') throw new Error('Expected a play log entry');
     expect(Object.keys(logged.card).sort()).toEqual(['rank', 'suit']);
+  });
+});
+
+describe('unified game actions', () => {
+  it('rejects malformed envelopes and actions without changing the game', async () => {
+    const app = await (harness = await createSocketHarness(1));
+    const [client] = await startBridge(app);
+    const before = structuredClone(games.getGameState(app.roomCodes[0]));
+    const saved = await app.repository.loadRuntime();
+    app.resetMetrics();
+    for (const payload of [null, [], {}, { gameType: 'unknown', action: { type: 'pass' } },
+      { gameType: 'bridge' }, { gameType: 'bridge', action: null },
+      { gameType: 'bridge', action: { type: 'bid', bid: { type: 'bid', level: 8, suit: 'clubs' } } },
+      { gameType: 'bridge', action: { type: 'play', card: { suit: 'clubs', rank: 1 } } },
+      { gameType: 'bridge', action: { type: 'redeal', accept: 'yes' } },
+    ]) {
+      expect(await client.timeout(5_000).emitWithAck('game:action', payload as never))
+        .toMatchObject({ success: false, error: expect.stringMatching(/^Invalid /) });
+    }
+    expect(games.getGameState(app.roomCodes[0])).toEqual(before);
+    expect(await app.repository.loadRuntime()).toEqual(saved);
+    expect(app.metrics.snapshots).toBe(0);
+    expect(app.metrics.runtimeWrites).toBe(0);
+  });
+
+  it('rejects a different game type before dispatch or clock mutation', async () => {
+    const app = await (harness = await createSocketHarness(1));
+    const [client] = await startBridge(app);
+    const code = app.roomCodes[0];
+    const before = structuredClone(games.getGameState(code));
+    app.resetMetrics();
+    expect(await client.timeout(5_000).emitWithAck('game:action', { gameType: 'bigtwo', action: { type: 'pass' } }))
+      .toEqual({ success: false, error: 'This action is not available in this game.' });
+    expect(games.getGameState(code)).toEqual(before);
+    expect(games.handleGameAction(code, 'N', { gameType: 'bigtwo', action: { type: 'pass' } })).toMatchObject({ success: false });
+    expect(games.getGameState(code)).toEqual(before);
+    expect(app.metrics.runtimeWrites).toBe(0);
+    expect(app.metrics.snapshots).toBe(0);
+  });
+
+  it('ignores valid actions with missing or non-function callbacks', async () => {
+    const app = await (harness = await createSocketHarness(1));
+    const players = await startBridge(app);
+    const code = app.roomCodes[0];
+    const before = structuredClone(games.getGameState(code));
+    const bidder = before?.gameType === 'bridge' ? before.bidding?.currentBidderSeat : undefined;
+    if (!bidder) throw new Error('Expected a bidder');
+    const client = players[SEATS.indexOf(bidder)];
+    const payload = { gameType: 'bridge' as const, action: { type: 'bid' as const, bid: { type: 'pass' as const } } };
+    const emit = client.emit.bind(client) as (event: string, ...args: unknown[]) => void;
+    app.resetMetrics();
+    emit('game:action', payload);
+    emit('game:action', payload, null);
+    emit('game:action', payload, {});
+    await resume(client);
+    expect(games.getGameState(code)).toEqual(before);
+    expect(app.metrics.runtimeWrites).toBe(0);
+    expect(await client.timeout(5_000).emitWithAck('game:action', payload)).toEqual({ success: true });
+  });
+
+  it('keeps every legacy gameplay event as a refresh-only acknowledgment', async () => {
+    const app = await (harness = await createSocketHarness(1));
+    const players = await startBridge(app);
+    const code = app.roomCodes[0];
+    const before = structuredClone(games.getGameState(code));
+    const saved = await app.repository.loadRuntime();
+    const emit = players[0].timeout(5_000).emitWithAck.bind(players[0]) as
+      (event: string, ...args: unknown[]) => Promise<ActionResult>;
+    const payloadEvents = ['game:redealResponse', 'game:bid', 'game:playCard', 'game:bigtwo:play',
+      'game:redpoints:play', 'game:redpoints:chooseFlip', 'game:ninetynine:play', 'game:sevens:play',
+      'game:sevens:cover', 'game:chinesepoker:arrange', 'game:liarsdeck:play', 'game:blackjack:bet',
+      'game:blackjack:action', 'game:blackjack:dealerAction', 'game:holdem:action', 'game:napoleon:action'];
+    app.resetMetrics();
+    for (const event of payloadEvents) expect(await emit(event, null))
+      .toEqual({ success: false, error: 'Please refresh the page to continue playing.' });
+    for (const event of ['game:bigtwo:pass', 'game:liarsdeck:challenge']) expect(await emit(event))
+      .toEqual({ success: false, error: 'Please refresh the page to continue playing.' });
+    const send = players[0].emit.bind(players[0]) as (event: string, ...args: unknown[]) => void;
+    for (const event of payloadEvents) { send(event, {}); send(event, {}, null); }
+    send('game:bigtwo:pass');
+    send('game:liarsdeck:challenge', null);
+    await resume(players[0]);
+    expect(games.getGameState(code)).toEqual(before);
+    expect(await app.repository.loadRuntime()).toEqual(saved);
+    expect(app.metrics.runtimeWrites).toBe(0);
+  });
+
+  it('authenticates both unified and legacy actions before dispatch', async () => {
+    const app = await (harness = await createSocketHarness(1));
+    const [client] = await startBridge(app);
+    const code = app.roomCodes[0];
+    const before = structuredClone(games.getGameState(code));
+    const cookie = app.cookies[0][0];
+    await app.repository.deleteSession(tokenHash(cookie.slice(cookie.indexOf('=') + 1)));
+    app.resetMetrics();
+    expect(await client.timeout(5_000).emitWithAck('game:action', {
+      gameType: 'bridge', action: { type: 'bid', bid: { type: 'pass' } },
+    })).toEqual({ success: false, error: 'Your session has expired. Please sign in again.' });
+    expect(await client.timeout(5_000).emitWithAck('game:bid', { bid: { type: 'pass' } }))
+      .toEqual({ success: false, error: 'Your session has expired. Please sign in again.' });
+    expect(games.getGameState(code)).toEqual(before);
+    expect(app.metrics.runtimeWrites).toBe(0);
+    expect(app.metrics.snapshots).toBe(0);
+  });
+
+  it('rolls back a failed game action without publishing and permits a retry', async () => {
+    const app = await (harness = await createSocketHarness(1));
+    const players = await startBridge(app);
+    const code = app.roomCodes[0];
+    const before = structuredClone(games.getGameState(code));
+    const saved = await app.repository.loadRuntime();
+    const bidder = before?.gameType === 'bridge' ? before.bidding?.currentBidderSeat : undefined;
+    if (!bidder) throw new Error('Expected a bidder');
+    const client = players[SEATS.indexOf(bidder)];
+    const payload = { gameType: 'bridge' as const, action: { type: 'bid' as const, bid: { type: 'pass' as const } } };
+    app.resetMetrics();
+    vi.spyOn(app.repository, 'saveRuntime').mockRejectedValueOnce(new Error('Disk full'));
+    expect(await client.timeout(5_000).emitWithAck('game:action', payload))
+      .toEqual({ success: false, error: 'Unable to save your changes. Please try again.' });
+    expect(games.getGameState(code)).toEqual(before);
+    expect(await app.repository.loadRuntime()).toEqual(saved);
+    expect(app.metrics.snapshots).toBe(0);
+    expect(await client.timeout(5_000).emitWithAck('game:action', payload)).toEqual({ success: true });
+    const after = await savedGame(app);
+    expect(after.log).toHaveLength(before!.log.length + 1);
+    expect(after.log.at(-1)).toMatchObject({ type: 'bid', seat: bidder, action: { type: 'pass' } });
+    expect(app.metrics.snapshots).toBeGreaterThan(0);
   });
 });
 

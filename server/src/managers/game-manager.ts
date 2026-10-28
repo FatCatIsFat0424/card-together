@@ -5,46 +5,35 @@ import { randomUUID } from 'node:crypto';
 import { getPresentationEndsAt, PRESENTATION_TIMING_VERSION } from '@shared/game-presentation';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import { gameDefinition } from '@shared/games/registry';
+import type { GameActionEnvelope, GameActionMap } from '@shared/games/actions';
 import type {
+  GameOptions,
   AnyGameState,
   BidAction,
   BlackjackAction,
   BlackjackDealerAction,
-  BlackjackOptions,
   Card,
   ChinesePokerArrangement,
   GameType,
   HoldemAction,
   MatchResult,
   NapoleonAction,
-  NapoleonOptions,
-  NinetyNineOptions,
   ObserverRole,
   PlayerInfo,
   PlayerVisibleGameState,
   RoomCode,
   GameSeat, Seat,
-  SevensOptions,
   TimeControl,
 } from '@shared/types';
 import type { NnChoice } from '@shared/rules/ninetynine';
-import { napoleonReviewSeconds } from '@shared/rules/napoleon';
 import { gamePlayer, isCompassSeat, occupiedSeats } from '@shared/rules/seats';
 import { normalizeFlexibleGame } from '@shared/game-seat-compat';
 import { isFullTable } from './games/game-adapter';
 import type { SharedDeadlineWindow } from './games/game-adapter';
 import { prepareAutoPass } from './games/bigtwo-adapter';
 import { allGameAdapters, gameAdapter } from './games/registry';
-import * as bridge from './games/bridge-game';
 import * as bigtwo from './games/bigtwo-game';
-import * as redpoints from './games/redpoints-game';
-import * as ninetynine from './games/ninetynine-game';
 import * as sevens from './games/sevens-game';
-import * as chinesepoker from './games/chinesepoker-game';
-import * as liarsdeck from './games/liarsdeck-game';
-import * as blackjack from './games/blackjack-game';
-import * as holdem from './games/holdem-game';
-import * as napoleon from './games/napoleon-game';
 
 type Result = { success: true } | { success: false; reason: string };
 
@@ -109,10 +98,7 @@ export function startGame(
   gameType: GameType,
   players: Partial<Record<GameSeat, PlayerInfo>>,
   settings?: TimeControl,
-  sevensOptions?: SevensOptions,
-  ninetyNineOptions?: NinetyNineOptions,
-  blackjackOptions?: BlackjackOptions,
-  napoleonOptions?: NapoleonOptions,
+  options: GameOptions = {},
 ): Result {
   const seats = gameDefinition(gameType).seats;
   if (occupiedSeats(players).length < seats.minPlayers) {
@@ -128,7 +114,7 @@ export function startGame(
   removeGame(roomCode);
   const adapter = gameAdapter(gameType);
   const started = adapter.start({ roomCode, players, settings: settings ?? DEFAULT_TIME_CONTROL,
-    options: { sevensOptions, ninetyNineOptions, blackjackOptions, napoleonOptions } });
+    options });
   if (!started.success) return started;
   const game = getGameState(roomCode);
   if (game?.phase === 'scoring' || (game && adapter.presentsOpening)) {
@@ -282,109 +268,113 @@ export function getMatchResult(game: AnyGameState): MatchResult | null {
   return gameAdapter(game.gameType).matchResult(game);
 }
 
+function dispatchGameAction<K extends GameType>(
+  code: RoomCode, seat: GameSeat, gameType: K, action: GameActionMap[K], automatic = false,
+): Result {
+  const available = (operation: () => Result): Result => isGame(code, gameType) ? operation() : WRONG_GAME;
+  return gameAdapter(gameType).applyAction(code, seat, action, {
+    automatic,
+    settings: getGameState(code)?.clock?.settings ?? DEFAULT_TIME_CONTROL,
+    timed: (operation) => timedAction(code, seat, () => available(operation), automatic),
+    present: (operation) => available(() => presentAction(code, operation)),
+    simultaneous: (operation) => {
+      if (!automatic && getGameState(code)?.autoPlaySeats?.includes(seat)) {
+        return { success: false, reason: 'Turn off auto-play before playing manually.' };
+      }
+      return available(operation);
+    },
+    resetClock: () => {
+      const game = getGameState(code);
+      if (game?.clock) initializeGameClock(game, game.clock.settings);
+    },
+  });
+}
+
+/** Rejects stale game envelopes before any clock or game mutation. */
+export function handleGameAction(
+  code: RoomCode, seat: GameSeat, request: GameActionEnvelope, automatic = false,
+): Result {
+  if (!isGame(code, request.gameType)) return WRONG_GAME;
+  return dispatchGameAction(code, seat, request.gameType, request.action, automatic);
+}
+
+// Compatibility entry points for bots and internal callers use the same adapter actions.
 export function handleRedealResponse(roomCode: RoomCode, seat: Seat, accept: boolean, automatic = false): Result {
-  return timedAction(roomCode, seat, () => isGame(roomCode, 'bridge') ? bridge.handleRedealResponse(roomCode, seat, accept) : WRONG_GAME, automatic);
+  return dispatchGameAction(roomCode, seat, 'bridge', { type: 'redeal', accept }, automatic);
 }
 
 export function handleBid(roomCode: RoomCode, seat: Seat, action: BidAction, automatic = false): Result {
-  return timedAction(roomCode, seat, () => isGame(roomCode, 'bridge') ? bridge.handleBid(roomCode, seat, action) : WRONG_GAME, automatic);
+  return dispatchGameAction(roomCode, seat, 'bridge', { type: 'bid', bid: action }, automatic);
 }
 
 export function handlePlayCard(roomCode: RoomCode, seat: Seat, card: Card, automatic = false): Result {
-  return timedAction(roomCode, seat, () => isGame(roomCode, 'bridge') ? presentAction(roomCode, () => bridge.handlePlayCard(roomCode, seat, card)) : WRONG_GAME, automatic);
+  return dispatchGameAction(roomCode, seat, 'bridge', { type: 'play', card }, automatic);
 }
 
 export function handleBigTwoPlay(roomCode: RoomCode, seat: Seat, cards: readonly Card[], automatic = false): Result {
-  return timedAction(roomCode, seat, () => isGame(roomCode, 'bigtwo') ? presentAction(roomCode, () => bigtwo.play(roomCode, seat, cards)) : WRONG_GAME, automatic);
+  return dispatchGameAction(roomCode, seat, 'bigtwo', { type: 'play', cards }, automatic);
 }
 
 export function handleBigTwoPass(roomCode: RoomCode, seat: Seat, automatic = false): Result {
-  return timedAction(roomCode, seat, () => isGame(roomCode, 'bigtwo') ? presentAction(roomCode, () => bigtwo.pass(roomCode, seat)) : WRONG_GAME, automatic);
+  return dispatchGameAction(roomCode, seat, 'bigtwo', { type: 'pass' }, automatic);
 }
 
 export function handleRedPointsPlay(roomCode: RoomCode, seat: Seat, card: Card, capture?: Card, automatic = false): Result {
-  return timedAction(roomCode, seat, () => isGame(roomCode, 'redpoints') ? presentAction(roomCode, () => redpoints.play(roomCode, seat, card, capture)) : WRONG_GAME, automatic);
+  return dispatchGameAction(roomCode, seat, 'redpoints', { type: 'play', card, capture }, automatic);
 }
 
 export function handleRedPointsChooseFlip(roomCode: RoomCode, seat: Seat, capture: Card, automatic = false): Result {
-  return timedAction(roomCode, seat, () => isGame(roomCode, 'redpoints') ? presentAction(roomCode, () => redpoints.chooseFlip(roomCode, seat, capture)) : WRONG_GAME, automatic);
+  return dispatchGameAction(roomCode, seat, 'redpoints', { type: 'chooseFlip', capture }, automatic);
 }
 
 export function handleNinetyNinePlay(
   roomCode: RoomCode, seat: GameSeat, card: Card, choice?: NnChoice, target?: GameSeat, automatic = false,
 ): Result {
-  return timedAction(roomCode, seat, () => isGame(roomCode, 'ninetynine') ? presentAction(roomCode, () => ninetynine.play(roomCode, seat, card, choice, target)) : WRONG_GAME, automatic);
+  return dispatchGameAction(roomCode, seat, 'ninetynine', { type: 'play', card, choice, target }, automatic);
 }
 
 export function handleSevensPlay(roomCode: RoomCode, seat: Seat, card: Card, automatic = false): Result {
-  return timedAction(roomCode, seat, () => isGame(roomCode, 'sevens') ? presentAction(roomCode, () => sevens.play(roomCode, seat, card)) : WRONG_GAME, automatic);
+  return dispatchGameAction(roomCode, seat, 'sevens', { type: 'play', card }, automatic);
 }
 
 export function handleSevensCover(roomCode: RoomCode, seat: Seat, card: Card, automatic = false): Result {
-  return timedAction(roomCode, seat, () => isGame(roomCode, 'sevens') ? presentAction(roomCode, () => sevens.cover(roomCode, seat, card)) : WRONG_GAME, automatic);
+  return dispatchGameAction(roomCode, seat, 'sevens', { type: 'cover', card }, automatic);
 }
 
 export function handleLiarsDeckPlay(roomCode: RoomCode, seat: Seat, cardIds: readonly number[], automatic = false): Result {
-  return timedAction(roomCode, seat, () => isGame(roomCode, 'liarsdeck') ? presentAction(roomCode, () => liarsdeck.play(roomCode, seat, cardIds)) : WRONG_GAME, automatic);
+  return dispatchGameAction(roomCode, seat, 'liarsdeck', { type: 'play', cardIds }, automatic);
 }
 
 export function handleLiarsDeckChallenge(roomCode: RoomCode, seat: Seat, automatic = false): Result {
-  return timedAction(roomCode, seat, () => isGame(roomCode, 'liarsdeck') ? presentAction(roomCode, () => liarsdeck.challenge(roomCode, seat)) : WRONG_GAME, automatic);
+  return dispatchGameAction(roomCode, seat, 'liarsdeck', { type: 'challenge' }, automatic);
 }
 
 export function handleBlackjackAction(roomCode: RoomCode, seat: GameSeat, action: BlackjackAction, automatic = false): Result {
-  return timedAction(roomCode, seat, () => isGame(roomCode, 'blackjack') ? presentAction(roomCode, () => blackjack.act(roomCode, seat, action)) : WRONG_GAME, automatic);
+  return dispatchGameAction(roomCode, seat, 'blackjack', { type: 'act', action }, automatic);
 }
 
 export function handleBlackjackDealerAction(
   roomCode: RoomCode, seat: GameSeat, action: BlackjackDealerAction, automatic = false,
 ): Result {
-  return timedAction(roomCode, seat, () => isGame(roomCode, 'blackjack') ? presentAction(roomCode, () => blackjack.dealerAct(roomCode, seat, action)) : WRONG_GAME, automatic);
+  return dispatchGameAction(roomCode, seat, 'blackjack', { type: 'dealerAct', action }, automatic);
 }
 
 export function handleHoldemAction(roomCode: RoomCode, seat: GameSeat, action: HoldemAction, automatic = false): Result {
-  return timedAction(roomCode, seat, () => isGame(roomCode, 'holdem') ? presentAction(roomCode, () => holdem.act(roomCode, seat, action)) : WRONG_GAME, automatic);
+  return dispatchGameAction(roomCode, seat, 'holdem', action, automatic);
 }
 
-/**
- * Every Napoleon decision. Acknowledging public discards belongs to no single turn; the last
- * acknowledgment hands the Napoleon the call, and a redeal refills every reserve.
- */
 export function handleNapoleonAction(roomCode: RoomCode, seat: GameSeat, action: NapoleonAction, automatic = false): Result {
-  const settings = getGameState(roomCode)?.clock?.settings ?? DEFAULT_TIME_CONTROL;
-  const reviewMs = napoleonReviewSeconds(settings.baseSeconds) * 1000;
-  return timedAction(roomCode, seat, () => isGame(roomCode, 'napoleon')
-    ? presentAction(roomCode, () => napoleon.act(roomCode, seat, action, reviewMs)) : WRONG_GAME, automatic);
+  return dispatchGameAction(roomCode, seat, 'napoleon', action, automatic);
 }
 
-/**
- * Seats bet simultaneously against one shared deadline. The final bet deals a new hand, which
- * refills every reserve and starts the first player's turn after the deal presentation.
- */
 export function handleBlackjackBet(roomCode: RoomCode, seat: GameSeat, amount: number, automatic = false): Result {
-  if (!automatic && getGameState(roomCode)?.autoPlaySeats?.includes(seat)) {
-    return { success: false, reason: 'Turn off auto-play before playing manually.' };
-  }
-  if (!isGame(roomCode, 'blackjack')) return WRONG_GAME;
-  const before = blackjack.getGameState(roomCode)?.hand;
-  const result = presentAction(roomCode, () => blackjack.bet(roomCode, seat, amount, automatic));
-  const game = blackjack.getGameState(roomCode);
-  if (result.success && game?.clock && game.hand !== before) initializeGameClock(game, game.clock.settings);
-  return result;
+  return dispatchGameAction(roomCode, seat, 'blackjack', { type: 'bet', amount }, automatic);
 }
 
-/**
- * Seats arrange simultaneously against one shared deadline, so the single-seat turn clock
- * does not apply; the final submission starts the showdown presentation.
- */
 export function handleChinesePokerArrange(
   roomCode: RoomCode, seat: Seat, arrangement: ChinesePokerArrangement, automatic = false,
 ): Result {
-  if (!automatic && getGameState(roomCode)?.autoPlaySeats?.includes(seat)) {
-    return { success: false, reason: 'Turn off auto-play before playing manually.' };
-  }
-  if (!isGame(roomCode, 'chinesepoker')) return WRONG_GAME;
-  return presentAction(roomCode, () => chinesepoker.arrange(roomCode, seat, arrangement, automatic));
+  return dispatchGameAction(roomCode, seat, 'chinesepoker', { type: 'arrange', arrangement }, automatic);
 }
 
 /**

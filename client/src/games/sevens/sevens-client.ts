@@ -19,7 +19,7 @@ export const sevensClient: ClientGame<'sevens'> = {
   rules: {
     summary: (context, t) => [t('sevens.rulesOpen'), t('sevens.rulesExtend'), t('sevens.rulesCover'),
       t('sevens.rulesScore'), ...(context?.option?.enabled ? [t('sevens.rulesCloseOnEnd')] : [])],
-    roomContext: (room) => ({ option: { label: 'sevens.closeOnEnd', enabled: room.sevensOptions?.closeOnEnd ?? false } }),
+    roomContext: (room) => ({ option: { label: 'sevens.closeOnEnd', enabled: room.gameOptions?.sevens?.closeOnEnd ?? false } }),
     matchContext: (game) => ({ option: { label: 'sevens.closeOnEnd', enabled: game.options?.closeOnEnd ?? false } }),
   },
   roundHistory: { derive: deriveSevensRounds },

@@ -1,9 +1,11 @@
 import { lazy } from 'react';
 import type { GameUi } from '../game-ui';
+import { SevensRoomOptions } from './SevensRoomOptions';
 import { SevensRounds } from './SevensHistory';
 
 export const sevensUi: GameUi<'sevens'> = {
   gameType: 'sevens',
+  roomOptions: SevensRoomOptions,
   table: lazy(() => import('./SevensTable').then((game) => ({ default: game.SevensTable }))),
   centre: { wide: true },
   presentation: {

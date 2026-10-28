@@ -1,3 +1,4 @@
+import { applyAutomatedAction } from '../../src/runtime/automated-action';
 import { GAME_SEAT_ORDER } from '@shared/constants';
 import { cpIsFoul } from '@shared/rules/chinesepoker';
 import { gameSeatValues } from '../helpers/game-seat-values';
@@ -48,6 +49,7 @@ function random(seed: number): () => number {
 
 function execute(seat: Seat, action: BotAction): { success: boolean } {
   switch (action.type) {
+    case 'game-action': return applyAutomatedAction(CODE, seat, action);
     case 'bridge-redeal': return bridge.handleRedealResponse(CODE, seat, action.accept);
     case 'bridge-bid': return bridge.handleBid(CODE, seat, action.action);
     case 'bridge-play': return bridge.handlePlayCard(CODE, seat, action.card);

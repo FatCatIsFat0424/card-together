@@ -164,8 +164,9 @@ export function NinetyNineTable(): ReactNode {
     setActionError('');
     setActionPending(true);
     setPendingCard(null);
-    socket.timeout(10000).emit('game:ninetynine:play', {
-      card, ...(choice && { choice }), ...(target && { target }),
+    socket.timeout(10000).emit('game:action', {
+      gameType: 'ninetynine',
+      action: { type: 'play', card, ...(choice && { choice }), ...(target && { target }) },
     }, handleActionResult);
   };
 

@@ -1,103 +1,16 @@
 import { roomSeatInfo } from '@shared/rules/seats';
-import { isCompassSeat } from '@shared/rules/seats';
-import { BID_SUIT_ORDER, GAME_SEAT_ORDER } from '@shared/constants';
-import { GAME_DEFINITIONS } from '@shared/games/registry';
-import type {
-  BidAction, BidSuit, BlackjackAction, BlackjackDealerAction, Card, ChinesePokerArrangement, HoldemAction, GameSeat,
-  NapoleonAction, NapoleonBidLevel, NapoleonCard, NapoleonSummon, Seat, Suit,
-} from '@shared/types';
-import { LD_DECK, LD_MAX_PLAY } from '@shared/rules/liarsdeck';
-import { BJ_ACTIONS, BJ_DEALER_ACTIONS, BJ_MAX_BET, BJ_MIN_BET } from '@shared/rules/blackjack';
-import {
-  NAPOLEON_BID_LEVELS, isNapoleonCard, isNapoleonJoker, napoleonCardKey, napoleonDealSize,
-} from '@shared/rules/napoleon';
+import type { GameSeat } from '@shared/types';
+import { parseGameAction } from '@shared/games/actions';
 import type { SocketContext, TypedSocket } from './context';
 import { actionError, requireRoom, requireSuccess, runAction } from './context';
 import * as roomManager from '../managers/room-manager';
 import * as gameManager from '../managers/game-manager';
 import * as chatManager from '../managers/chat-manager';
 
-const SEATS = GAME_SEAT_ORDER;
-
 function playerGameSeat(socket: TypedSocket, code: string): GameSeat {
   const seat = roomManager.getGamePlayerSeat(code, socket.data.accountId);
   if (!seat) throw actionError('Select a seat first.');
   return seat;
-}
-
-function playerSeat(socket: TypedSocket, code: string): Seat {
-  const seat = playerGameSeat(socket, code);
-  if (!isCompassSeat(seat)) throw actionError('This game uses four seats.');
-  return seat;
-}
-
-function isCard(value: unknown): value is Card {
-  if (typeof value !== 'object' || value === null) return false;
-  const { suit, rank } = value as { suit?: unknown; rank?: unknown };
-  return typeof rank === 'number' && Number.isInteger(rank) && rank >= 2 && rank <= 14
-    && typeof suit === 'string' && ['clubs', 'diamonds', 'hearts', 'spades'].includes(suit);
-}
-
-/** Rebuilds a Hold'em action so client-supplied extra keys never reach saved state. */
-function parseHoldemAction(value: unknown): HoldemAction | null {
-  if (typeof value !== 'object' || value === null) return null;
-  const { type, to } = value as { type?: unknown; to?: unknown };
-  if (type === 'fold' || type === 'check' || type === 'call') return { type };
-  return type === 'raise' && typeof to === 'number' && Number.isSafeInteger(to) && to > 0 ? { type, to } : null;
-}
-
-const NAPOLEON_SUITS: readonly unknown[] = ['clubs', 'diamonds', 'hearts', 'spades'];
-const NAPOLEON_SUMMONS: readonly unknown[] = ['secretary', 'bigJoker', 'smallJoker'];
-/** The most cards any Napoleon exchange returns: the six-player table. */
-const NAPOLEON_MAX_DISCARDS = napoleonDealSize(GAME_DEFINITIONS.napoleon.seats.maxPlayers).kitty;
-
-function parseNapoleonCard(value: unknown): NapoleonCard | null {
-  if (!isNapoleonCard(value)) return null;
-  return isNapoleonJoker(value) ? { joker: value.joker } : { suit: value.suit, rank: value.rank };
-}
-
-/** Rebuilds a Napoleon action so client-supplied extra keys never reach saved state. */
-function parseNapoleonAction(value: unknown): NapoleonAction | null {
-  if (typeof value !== 'object' || value === null) return null;
-  const { type, action, cards, card, leadSuit, summon } = value as Record<string, unknown>;
-  if (type === 'review') return { type };
-  if (type === 'bid') {
-    if (typeof action !== 'object' || action === null) return null;
-    const bid = action as Record<string, unknown>;
-    if (bid.type === 'pass') return { type, action: { type: 'pass' } };
-    return bid.type === 'bid' && NAPOLEON_BID_LEVELS.includes(bid.level as NapoleonBidLevel)
-      && (BID_SUIT_ORDER as readonly unknown[]).includes(bid.suit)
-      ? { type, action: { type: 'bid', level: bid.level as NapoleonBidLevel, suit: bid.suit as BidSuit } }
-      : null;
-  }
-  if (type === 'discard') {
-    if (!Array.isArray(cards) || cards.length < 1 || cards.length > NAPOLEON_MAX_DISCARDS) return null;
-    const parsed = cards.map(parseNapoleonCard);
-    if (!parsed.every((entry): entry is NapoleonCard => entry !== null)
-      || new Set(parsed.map(napoleonCardKey)).size !== parsed.length) return null;
-    return { type, cards: parsed };
-  }
-  const parsed = parseNapoleonCard(card);
-  if (!parsed) return null;
-  if (type === 'call') return { type, card: parsed };
-  if (type !== 'play' || (leadSuit !== undefined && !NAPOLEON_SUITS.includes(leadSuit))
-    || (summon !== undefined && !NAPOLEON_SUMMONS.includes(summon))) return null;
-  return { type, card: parsed,
-    ...(leadSuit !== undefined ? { leadSuit: leadSuit as Suit } : {}),
-    ...(summon !== undefined ? { summon: summon as NapoleonSummon } : {}) };
-}
-
-/** Rebuilds a 3/5/5 arrangement so client-supplied extra keys never reach saved state. */
-function parseArrangement(value: unknown): ChinesePokerArrangement | null {
-  if (typeof value !== 'object' || value === null) return null;
-  const { front, middle, back } = value as { front?: unknown; middle?: unknown; back?: unknown };
-  const row = (cards: unknown, size: number): Card[] | null => Array.isArray(cards) && cards.length === size
-    && cards.every(isCard) ? cards.map(({ suit, rank }: Card): Card => ({ suit, rank })) : null;
-  const arrangement = { front: row(front, 3), middle: row(middle, 5), back: row(back, 5) };
-  if (!arrangement.front || !arrangement.middle || !arrangement.back) return null;
-  const all = [...arrangement.front, ...arrangement.middle, ...arrangement.back];
-  if (new Set(all.map((card) => `${card.suit}-${card.rank}`)).size !== all.length) return null;
-  return { front: arrangement.front, middle: arrangement.middle, back: arrangement.back };
 }
 
 /** Adds an abort-vote chat line about `accountId`, read from the room seats. */
@@ -124,169 +37,33 @@ export function registerGameHandlers(context: SocketContext, socket: TypedSocket
     return { success: true };
   }));
 
-  socket.on('game:redealResponse', (payload, callback) => runAction(context, socket, callback, () => {
-    if (!payload || typeof payload.accept !== 'boolean') throw actionError('Invalid redeal response.');
+  socket.on('game:action', (payload, callback) => runAction(context, socket, callback, () => {
+    const request = parseGameAction(payload);
+    if (typeof request === 'string') throw actionError(request);
     const code = requireRoom(socket);
-    requireSuccess(gameManager.handleRedealResponse(code, playerSeat(socket, code), payload.accept));
+    requireSuccess(gameManager.handleGameAction(code, playerGameSeat(socket, code), request));
     return { success: true };
   }));
 
-  socket.on('game:bid', (payload, callback) => runAction(context, socket, callback, () => {
-    const bid = payload?.bid;
-    if (!bid || (bid.type !== 'pass' && (bid.type !== 'bid' || !Number.isInteger(bid.level)
-      || bid.level < 1 || bid.level > 7
-      || !['clubs', 'diamonds', 'hearts', 'spades', 'nt'].includes(bid.suit)))) {
-      throw actionError('Invalid bid.');
-    }
-    const code = requireRoom(socket);
-    // Rebuild the bid so client-supplied extra keys never reach saved logs or snapshots.
-    const action: BidAction = bid.type === 'pass' ? { type: 'pass' }
-      : { type: 'bid', level: bid.level, suit: bid.suit };
-    requireSuccess(gameManager.handleBid(code, playerSeat(socket, code), action));
-    return { success: true };
-  }));
-
-  socket.on('game:playCard', (payload, callback) => runAction(context, socket, callback, () => {
-    const card = payload?.card;
-    if (!isCard(card)) throw actionError('Invalid card.');
-    const code = requireRoom(socket);
-    requireSuccess(gameManager.handlePlayCard(code, playerSeat(socket, code), { suit: card.suit, rank: card.rank }));
-    return { success: true };
-  }));
-
-  socket.on('game:bigtwo:play', (payload, callback) => runAction(context, socket, callback, () => {
-    const cards: unknown = payload?.cards;
-    if (!Array.isArray(cards) || cards.length < 1 || cards.length > 5 || !cards.every(isCard)
-      || new Set(cards.map((card: Card) => `${card.suit}-${card.rank}`)).size !== cards.length) {
-      throw actionError('Invalid cards.');
-    }
-    const code = requireRoom(socket);
-    const played = cards.map(({ suit, rank }: Card): Card => ({ suit, rank }));
-    requireSuccess(gameManager.handleBigTwoPlay(code, playerSeat(socket, code), played));
-    return { success: true };
-  }));
-
-  socket.on('game:bigtwo:pass', (callback) => runAction(context, socket, callback, () => {
-    const code = requireRoom(socket);
-    requireSuccess(gameManager.handleBigTwoPass(code, playerSeat(socket, code)));
-    return { success: true };
-  }));
-
-  socket.on('game:redpoints:play', (payload, callback) => runAction(context, socket, callback, () => {
-    const card: unknown = payload?.card;
-    const capture: unknown = payload?.capture;
-    if (!isCard(card) || (capture !== undefined && !isCard(capture))) throw actionError('Invalid card.');
-    const code = requireRoom(socket);
-    requireSuccess(gameManager.handleRedPointsPlay(code, playerSeat(socket, code), { suit: card.suit, rank: card.rank },
-      capture === undefined ? undefined : { suit: capture.suit, rank: capture.rank }));
-    return { success: true };
-  }));
-
-  socket.on('game:redpoints:chooseFlip', (payload, callback) => runAction(context, socket, callback, () => {
-    const capture: unknown = payload?.capture;
-    if (!isCard(capture)) throw actionError('Invalid card.');
-    const code = requireRoom(socket);
-    requireSuccess(gameManager.handleRedPointsChooseFlip(code, playerSeat(socket, code),
-      { suit: capture.suit, rank: capture.rank }));
-    return { success: true };
-  }));
-
-  socket.on('game:sevens:play', (payload, callback) => runAction(context, socket, callback, () => {
-    const card: unknown = payload?.card;
-    if (!isCard(card)) throw actionError('Invalid card.');
-    const code = requireRoom(socket);
-    requireSuccess(gameManager.handleSevensPlay(code, playerSeat(socket, code), { suit: card.suit, rank: card.rank }));
-    return { success: true };
-  }));
-
-  socket.on('game:sevens:cover', (payload, callback) => runAction(context, socket, callback, () => {
-    const card: unknown = payload?.card;
-    if (!isCard(card)) throw actionError('Invalid card.');
-    const code = requireRoom(socket);
-    requireSuccess(gameManager.handleSevensCover(code, playerSeat(socket, code), { suit: card.suit, rank: card.rank }));
-    return { success: true };
-  }));
-
-  socket.on('game:chinesepoker:arrange', (payload, callback) => runAction(context, socket, callback, () => {
-    const arrangement = parseArrangement(payload?.arrangement);
-    if (!arrangement) throw actionError('Invalid arrangement.');
-    const code = requireRoom(socket);
-    requireSuccess(gameManager.handleChinesePokerArrange(code, playerSeat(socket, code), arrangement));
-    return { success: true };
-  }));
-
-  socket.on('game:ninetynine:play', (payload, callback) => runAction(context, socket, callback, () => {
-    const card: unknown = payload?.card;
-    const choice: unknown = payload?.choice;
-    const target: unknown = payload?.target;
-    if (!isCard(card)) throw actionError('Invalid card.');
-    if (choice !== undefined && choice !== 'plus' && choice !== 'minus') throw actionError('Invalid choice.');
-    if (target !== undefined && !SEATS.includes(target as GameSeat)) throw actionError('Invalid target.');
-    const code = requireRoom(socket);
-    requireSuccess(gameManager.handleNinetyNinePlay(code, playerGameSeat(socket, code), { suit: card.suit, rank: card.rank },
-      choice, target as GameSeat | undefined));
-    return { success: true };
-  }));
-
-  socket.on('game:liarsdeck:play', (payload, callback) => runAction(context, socket, callback, () => {
-    const cardIds: unknown = payload?.cardIds;
-    if (!Array.isArray(cardIds) || cardIds.length < 1 || cardIds.length > LD_MAX_PLAY
-      || !cardIds.every((id) => Number.isInteger(id) && id >= 0 && id < LD_DECK.length)) {
-      throw actionError('Invalid cards.');
-    }
-    const code = requireRoom(socket);
-    requireSuccess(gameManager.handleLiarsDeckPlay(code, playerSeat(socket, code), [...cardIds] as number[]));
-    return { success: true };
-  }));
-
-  socket.on('game:liarsdeck:challenge', (callback) => runAction(context, socket, callback, () => {
-    const code = requireRoom(socket);
-    requireSuccess(gameManager.handleLiarsDeckChallenge(code, playerSeat(socket, code)));
-    return { success: true };
-  }));
-
-  socket.on('game:blackjack:bet', (payload, callback) => runAction(context, socket, callback, () => {
-    const amount: unknown = payload?.amount;
-    if (typeof amount !== 'number' || !Number.isSafeInteger(amount) || amount < BJ_MIN_BET || amount > BJ_MAX_BET) {
-      throw actionError('Invalid bet.');
-    }
-    const code = requireRoom(socket);
-    requireSuccess(gameManager.handleBlackjackBet(code, playerGameSeat(socket, code), amount));
-    return { success: true };
-  }));
-
-  socket.on('game:blackjack:action', (payload, callback) => runAction(context, socket, callback, () => {
-    const action: unknown = payload?.action;
-    if (!BJ_ACTIONS.includes(action as BlackjackAction)) throw actionError('Invalid action.');
-    const code = requireRoom(socket);
-    requireSuccess(gameManager.handleBlackjackAction(code, playerGameSeat(socket, code), action as BlackjackAction));
-    return { success: true };
-  }));
-
-  socket.on('game:blackjack:dealerAction', (payload, callback) => runAction(context, socket, callback, () => {
-    const action: unknown = payload?.action;
-    if (!BJ_DEALER_ACTIONS.includes(action as BlackjackDealerAction)) throw actionError('Invalid action.');
-    const code = requireRoom(socket);
-    requireSuccess(gameManager.handleBlackjackDealerAction(code, playerGameSeat(socket, code),
-      action as BlackjackDealerAction));
-    return { success: true };
-  }));
-
-  socket.on('game:holdem:action', (payload, callback) => runAction(context, socket, callback, () => {
-    const action = parseHoldemAction(payload?.action);
-    if (!action) throw actionError('Invalid action.');
-    const code = requireRoom(socket);
-    requireSuccess(gameManager.handleHoldemAction(code, playerGameSeat(socket, code), action));
-    return { success: true };
-  }));
-
-  socket.on('game:napoleon:action', (payload, callback) => runAction(context, socket, callback, () => {
-    const action = parseNapoleonAction(payload?.action);
-    if (!action) throw actionError('Invalid action.');
-    const code = requireRoom(socket);
-    requireSuccess(gameManager.handleNapoleonAction(code, playerGameSeat(socket, code), action));
-    return { success: true };
-  }));
+  const refreshRequired = (): never => { throw actionError('Please refresh the page to continue playing.'); };
+  socket.on('game:redealResponse', (_payload, callback) => runAction(context, socket, callback, refreshRequired));
+  socket.on('game:bid', (_payload, callback) => runAction(context, socket, callback, refreshRequired));
+  socket.on('game:playCard', (_payload, callback) => runAction(context, socket, callback, refreshRequired));
+  socket.on('game:bigtwo:play', (_payload, callback) => runAction(context, socket, callback, refreshRequired));
+  socket.on('game:bigtwo:pass', (callback) => runAction(context, socket, callback, refreshRequired));
+  socket.on('game:redpoints:play', (_payload, callback) => runAction(context, socket, callback, refreshRequired));
+  socket.on('game:redpoints:chooseFlip', (_payload, callback) => runAction(context, socket, callback, refreshRequired));
+  socket.on('game:sevens:play', (_payload, callback) => runAction(context, socket, callback, refreshRequired));
+  socket.on('game:sevens:cover', (_payload, callback) => runAction(context, socket, callback, refreshRequired));
+  socket.on('game:chinesepoker:arrange', (_payload, callback) => runAction(context, socket, callback, refreshRequired));
+  socket.on('game:ninetynine:play', (_payload, callback) => runAction(context, socket, callback, refreshRequired));
+  socket.on('game:liarsdeck:play', (_payload, callback) => runAction(context, socket, callback, refreshRequired));
+  socket.on('game:liarsdeck:challenge', (callback) => runAction(context, socket, callback, refreshRequired));
+  socket.on('game:blackjack:bet', (_payload, callback) => runAction(context, socket, callback, refreshRequired));
+  socket.on('game:blackjack:action', (_payload, callback) => runAction(context, socket, callback, refreshRequired));
+  socket.on('game:blackjack:dealerAction', (_payload, callback) => runAction(context, socket, callback, refreshRequired));
+  socket.on('game:holdem:action', (_payload, callback) => runAction(context, socket, callback, refreshRequired));
+  socket.on('game:napoleon:action', (_payload, callback) => runAction(context, socket, callback, refreshRequired));
 
   socket.on('game:abortVote:start', (callback) => runAction(context, socket, callback, () => {
     const code = requireRoom(socket);

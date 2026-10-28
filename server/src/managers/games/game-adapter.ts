@@ -1,14 +1,29 @@
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import type { GameStateOf, VisibleStateOf } from '@shared/games/game-definition';
+import type { GameActionMap } from '@shared/games/actions';
 import { isCompassSeat } from '@shared/rules/seats';
 import type {
-  Card, GameSeat, GameType, MatchResult, ObserverRole, ObserverView, PlayerInfo, RoomCode, RoomInfo, Seat, TimeControl,
+  Card, GameOptions, GameSeat, GameType, MatchResult, ObserverRole, ObserverView, PlayerInfo, RoomCode, Seat, TimeControl,
 } from '@shared/types';
 
 export type GameActionResult = { success: true } | { success: false; reason: string };
 
+/** Facade-owned policies injected into game actions without importing the facade. */
+export interface GameActionContext {
+  readonly automatic: boolean;
+  readonly settings: TimeControl;
+  /** Rejects manual auto-play/timeouts and advances the single-seat clock on success. */
+  readonly timed: (operation: () => GameActionResult) => GameActionResult;
+  /** Rejects overlapping presentations and presents successful log changes. */
+  readonly present: (operation: () => GameActionResult) => GameActionResult;
+  /** Rejects manual auto-play without charging a single-seat clock. */
+  readonly simultaneous: (operation: () => GameActionResult) => GameActionResult;
+  /** Refills reserves and starts the new hand's clock after its presentation. */
+  readonly resetClock: () => void;
+}
+
 /** Room rules a match starts with; each game reads only its own field. */
-export type GameStartOptions = Pick<RoomInfo, 'sevensOptions' | 'ninetyNineOptions' | 'blackjackOptions' | 'napoleonOptions'>;
+export type GameStartOptions = GameOptions;
 
 export interface GameStartRequest {
   readonly roomCode: RoomCode;
@@ -61,6 +76,9 @@ export interface GameAdapter<K extends GameType> {
   readonly abortGame: (roomCode: RoomCode) => void;
   /** Deals a new match; the facade has already removed any previous game */
   readonly start: (request: GameStartRequest) => GameActionResult;
+  readonly applyAction: (
+    roomCode: RoomCode, seat: GameSeat, action: GameActionMap[K], context: GameActionContext,
+  ) => GameActionResult;
   /** The opening deal is presented, so the first turn waits for it */
   readonly presentsOpening?: boolean;
   /** One seat's own filtered view, or null when the seat cannot take part */
@@ -99,6 +117,11 @@ export function startFullTable(
 /** Compass-seat games have no view for additional seats. */
 export function compassView<V>(seat: GameSeat, view: (seat: Seat) => V | null): V | null {
   return isCompassSeat(seat) ? view(seat) : null;
+}
+
+/** Compass-seat games reject additional seats before applying any runtime policy. */
+export function compassAction(seat: GameSeat, run: (seat: Seat) => GameActionResult): GameActionResult {
+  return isCompassSeat(seat) ? run(seat) : { success: false, reason: 'This game uses four seats.' };
 }
 
 /** God view that adds every seat's private hand. */

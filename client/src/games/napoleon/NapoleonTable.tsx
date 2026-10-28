@@ -143,11 +143,14 @@ export function NapoleonTable(): ReactNode {
   const send = useCallback((action: NapoleonAction): void => {
     setActionError('');
     setActionPending(true);
-    socket.timeout(10000).emit('game:napoleon:action', { action }, handleResult);
+    socket.timeout(10000).emit('game:action', { gameType: 'napoleon', action }, handleResult);
   }, [handleResult]);
 
   const submitBid = useCallback((action: AuctionAction<NapoleonBidLevel>, done: (error: string | null) => void): void => {
-    socket.timeout(10000).emit('game:napoleon:action', { action: { type: 'bid', action } }, (timeout, response) => {
+    socket.timeout(10000).emit('game:action', {
+      gameType: 'napoleon',
+      action: { type: 'bid', action },
+    }, (timeout, response) => {
       if (timeout) done(t('auth.connectionError'));
       else if (!response.success) done(response.error ?? t('common.error'));
       else done(null);

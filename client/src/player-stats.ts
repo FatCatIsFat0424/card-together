@@ -3,14 +3,13 @@ import type { StandingRole } from '@shared/rules/match-standing';
 import { STATS_RECORDS } from '@shared/stats/definitions';
 import type { StatsRecordDefinition } from '@shared/stats/definitions';
 import type { GameStats, GameType, PlayerStats, RoleTally, StatsScope } from '@shared/types';
-import { SCORE_KINDS } from './match-statistics';
-import type { GameMetric, GameStatistics, MatchStatistics, RoleRecord, SpecialRecord } from './match-statistics';
+import { gameDefinition } from '@shared/games/registry';
+import { gameStatisticsRules } from './games/statistics-registry';
+import type { GameStatistics, MatchStatistics, RoleRecord, SpecialRecord } from './match-statistics';
 
-/** Role baselines need this many Napoleon matches server-wide; fewer fall back to a coin flip. */
-export const ROLE_BASELINE_MIN = 20;
+export { ROLE_BASELINE_MIN } from './games/napoleon/statistics';
 
 const ROLES: readonly StandingRole[] = ['declarer', 'partner', 'napoleon', 'secretary', 'defender'];
-const PENALTY_GAMES: ReadonlySet<GameType> = new Set(['bigtwo', 'sevens']);
 
 function ratio(value: number, total: number): number | null {
   return total > 0 ? value / total : null;
@@ -18,7 +17,7 @@ function ratio(value: number, total: number): number | null {
 
 function emptyGame(gameType: GameType): GameStatistics {
   return { gameType, matches: 0, wins: 0, ties: 0, winRate: null, expectedWinRate: null, averageRank: null,
-    expectedAverageRank: null, topTwoRate: null, topTwoCount: 0, rankCounts: [], scoreKind: SCORE_KINDS[gameType] ?? null,
+    expectedAverageRank: null, topTwoRate: null, topTwoCount: 0, rankCounts: [], scoreKind: gameDefinition(gameType).result.scoreKind,
     averageScore: null, roles: {}, lossAverageScore: null, metrics: [], records: [] };
 }
 
@@ -29,42 +28,6 @@ function roleRecords(stats: GameStats): Partial<Record<StandingRole, RoleRecord>
     if (played > 0) roles[role] = { played, won: stats.counts[`won.${role}`] ?? 0 };
   }
   return roles;
-}
-
-/**
- * Chance of winning: one in the seats of a ranking game, a coin flip for Bridge sides, and for Napoleon
- * every role weighted by how often that role wins across all players.
- */
-function expectedWins(stats: GameStats, roles: Partial<Record<StandingRole, RoleRecord>>,
-  baselines: Readonly<Partial<Record<string, RoleTally>>>): number {
-  if (stats.gameType === 'bridge') return stats.matches / 2;
-  if (stats.gameType === 'napoleon') {
-    return Object.entries(roles).reduce((sum, [role, record]) => {
-      const baseline = baselines[role];
-      const rate = baseline && baseline.played >= ROLE_BASELINE_MIN ? baseline.won / baseline.played : 0.5;
-      return sum + record.played * rate;
-    }, 0);
-  }
-  return Object.entries(stats.tables).reduce((sum, [players, count]) => sum + count / Number(players), 0);
-}
-
-function metrics(stats: GameStats): GameMetric[] {
-  const { counts, sums, matches } = stats;
-  const list: GameMetric[] = [];
-  const declaringWins = (counts['won.declarer'] ?? 0) + (counts['won.partner'] ?? 0);
-  if (stats.gameType === 'bridge' && declaringWins > 0) {
-    list.push({ id: 'overtricks', value: (sums.overtricks ?? 0) / declaringWins, format: 'signed', basis: declaringWins });
-  }
-  if (stats.gameType === 'ninetynine') list.push({ id: 'firstOut', value: (counts.firstOut ?? 0) / matches, format: 'rate', basis: matches });
-  if (stats.gameType === 'chinesepoker') list.push({ id: 'fouls', value: (counts.fouls ?? 0) / matches, format: 'rate', basis: matches });
-  if (stats.gameType === 'liarsdeck') list.push({ id: 'shots', value: (sums.shots ?? 0) / matches, format: 'decimal', basis: matches });
-  if (stats.gameType === 'blackjack' && (counts.handsPlayed ?? 0) > 0) {
-    list.push({ id: 'busts', value: (counts.busts ?? 0) / counts.handsPlayed, format: 'rate', basis: counts.handsPlayed });
-  }
-  if (stats.gameType === 'holdem' && (counts.showdowns ?? 0) > 0) {
-    list.push({ id: 'showdownWins', value: (counts.showdownWins ?? 0) / counts.showdowns, format: 'rate', basis: counts.showdowns });
-  }
-  return list;
 }
 
 /** Where a record's counting started, or null when it covers every counted match. */
@@ -96,12 +59,12 @@ function gameStatistics(stats: GameStats, baselines: Readonly<Partial<Record<str
   const ranked = stats.ranks.reduce((sum, count) => sum + count, 0);
   const expectedRankSum = Object.entries(stats.tables).reduce((sum, [players, count]) => sum + count * (Number(players) + 1) / 2, 0);
   const threePlus = Object.entries(stats.tables).reduce((sum, [players, count]) => sum + (Number(players) > 2 ? count : 0), 0);
-  const scoreKind = SCORE_KINDS[gameType] ?? null;
+  const scoreKind = gameDefinition(gameType).result.scoreKind;
   const losses = matches - stats.wins;
   return {
     gameType, matches, wins: stats.wins, ties: stats.ties,
     winRate: ratio(stats.wins, matches),
-    expectedWinRate: ratio(expectedWins(stats, roles, baselines), matches),
+    expectedWinRate: ratio(gameStatisticsRules(gameType).expectedWins(stats, baselines), matches),
     averageRank: ranked ? ratio(stats.sums.rank ?? 0, ranked) : null,
     expectedAverageRank: ranked ? ratio(expectedRankSum, ranked) : null,
     topTwoRate: ranked ? ratio(stats.counts.topTwo ?? 0, threePlus) : null,
@@ -110,8 +73,8 @@ function gameStatistics(stats: GameStats, baselines: Readonly<Partial<Record<str
     scoreKind,
     averageScore: scoreKind ? ratio(stats.sums.score ?? 0, matches) : null,
     roles,
-    lossAverageScore: PENALTY_GAMES.has(gameType) ? ratio(stats.sums.lossScore ?? 0, losses) : null,
-    metrics: metrics(stats),
+    lossAverageScore: scoreKind === 'penalty' ? ratio(stats.sums.lossScore ?? 0, losses) : null,
+    metrics: gameStatisticsRules(gameType).metrics(stats),
     records: specialRecords(stats),
   };
 }

@@ -1,6 +1,7 @@
+import type { GameActionEnvelope } from '../games/actions';
 import type { BotDifficulty, GameSeat, PlayerInfo, Seat } from './player';
 import type {
-  BlackjackOptions, NapoleonOptions, RoomCode, RoomInfo, RoomSeatTarget, GameType, NinetyNineOptions, SevensOptions, TimeControl,
+  BlackjackOptions, GameOptionsPayload, NapoleonOptions, RoomCode, RoomInfo, RoomSeatTarget, GameType, NinetyNineOptions, SevensOptions, TimeControl,
 } from './room';
 import type {
   Card, BidAction, BlackjackAction, BlackjackDealerAction, ChinesePokerArrangement, HoldemAction, NapoleonAction,
@@ -108,6 +109,9 @@ export interface ClientToServerEvents {
   'room:setTimeControl': (
     payload: TimeControl, callback: (response: ActionResult) => void,
   ) => void;
+  'room:setGameOptions': (
+    payload: GameOptionsPayload, callback: (response: ActionResult) => void,
+  ) => void;
   'room:setSevensOptions': (
     payload: SevensOptions, callback: (response: ActionResult) => void,
   ) => void;
@@ -148,6 +152,8 @@ export interface ClientToServerEvents {
   'room:replay:load': (
     callback: (response: ActionResult & { archive?: RoomReplayArchive }) => void,
   ) => void;
+  'game:action': (payload: GameActionEnvelope, callback: (response: ActionResult) => void) => void;
+  /** Legacy events only acknowledge a refresh-required error. */
   'game:redealResponse': (
     payload: { accept: boolean }, callback: (response: ActionResult) => void,
   ) => void;

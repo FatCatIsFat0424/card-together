@@ -2,11 +2,13 @@ import { lazy } from 'react';
 import { frameLogIndex } from '@shared/game-presentation';
 import { isNapoleonFinalTrick, isNapoleonJoker, sameNapoleonCard } from '@shared/rules/napoleon';
 import type { GameUi } from '../game-ui';
+import { NapoleonRoomOptions } from './NapoleonRoomOptions';
 import { NapoleonChip } from './NapoleonChip';
 import { NapoleonFrame } from './NapoleonFrame';
 
 export const napoleonUi: GameUi<'napoleon'> = {
   gameType: 'napoleon',
+  roomOptions: NapoleonRoomOptions,
   table: lazy(() => import('./NapoleonTable').then((game) => ({ default: game.NapoleonTable }))),
   centre: { wide: true },
   hudChip: NapoleonChip,

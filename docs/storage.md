@@ -112,12 +112,12 @@
 | `cardFaceStyle`、`soundPack`、`chipStyle`、`seatFrame`、`victoryEffect`、`chatFrame`（帳號、runtime 的 `PlayerInfo`） | 內建設計 | 不支援：裝備中的值無法通過較舊的驗證。回復前請還原完整且相容的備份 |
 | 房間訊息與私訊中的 `shopSticker` | 不存在 | 不支援：回復前請還原完整且相容的備份 |
 | `seatBackground` | 主題圖案 | 忽略；資料與媒體保留 |
-| `RoomInfo.napoleonOptions` | 鬼牌召喚開啟 | 有拿破崙狀態時不支援；見下方 |
 | `RoomInfo.additionalSeats`（99、21 點、德州撲克、拿破崙） | 四個座位；最多四個額外座位，可坐真人或 bot | 不支援：先請玩家離開額外座位，並由房主移除這些座位 |
 
 - 較早的版本無法讀取 99 的並列結果（`winners`）。
 - 加入牌七、十三支、騙子酒館、21 點、德州撲克或拿破崙之前的版本，會拒絕包含這些遊戲的狀態或歷史紀錄。
 - 絕對不要讓兩個伺服器版本使用同一個資料庫。回復步驟：[部署](deployment.md#回復版本)。
+- schema v10 的房規型別見 [`GameOptions`](../shared/src/types/room.ts)。遷移保留未選中遊戲的房規；舊房間沒有排七選項時仍採標準規則，新房間則預設開啟斬龍。已開始遊戲的 `options` 與回放內容維持原值。v9 伺服器無法讀取 v10；回復版本前必須還原升級前的完整備份。
 
 ## 資料庫
 
@@ -125,7 +125,8 @@
 
 | Schema 版本 | 變更 |
 | --- | --- |
-| 9（目前） | 加入[統計](#統計)的 `gameStats`、`accountStats`；啟動時一次回補保留中的對局（SQLite 新增三個資料表） |
+| 10（目前） | `RoomInfo` 的各遊戲 `*Options` 合併成依遊戲鍵保存的 `gameOptions`；JSON 與 SQLite 同步遷移，保留所有遊戲的選擇與舊預設值，不更動進行中的遊戲或回放 |
+| 9 | 加入[統計](#統計)的 `gameStats`、`accountStats`；啟動時一次回補保留中的對局（SQLite 新增三個資料表） |
 | 8 | 通知與收到的邀請加入選填的已讀時間（缺少代表未讀；JSON 不改資料，SQLite 新增兩個可為 null 的欄位） |
 | 7 | 回補仍保留的成就歷史，並移除成就計數器上限 |
 | 6 | 加入私訊、私人已讀游標與「邀請已接受」通知 |
@@ -133,7 +134,7 @@
 | 4 | 牌背與圖片透明度的預設值，維持原本的外觀 |
 | 1–3 | 啟動時 migration |
 
-- JSON：啟動時會 migration 較舊的版本、驗證結果，並先把原檔另存為 `database.json.v<version>.bak`。較早的伺服器會拒絕 v9 檔案；回復需要完整且相容的備份，並會遺失該備份之後的寫入。
+- JSON：啟動時會 migration 較舊的版本、驗證結果，並先把原檔另存為 `database.json.v<version>.bak`。較早的伺服器會拒絕 v10 檔案；回復需要完整且相容的備份，並會遺失該備份之後的寫入。
 - SQLite：版本記錄在 `PRAGMA user_version`，從 v7 開始。schema 版本變更時，[SQLite migration](../server/src/database/sqlite-schema.ts) 必須同時加入一個步驟；啟動時先以 `VACUUM INTO` 另存 `database.sqlite.v<version>.bak`，再在一個 transaction 內套用。較舊的 JSON 文件先經過 JSON migration 才匯入。
 - 無效的 JSON、版本、重複資料或參照會讓啟動停止，且不會動到檔案。
 

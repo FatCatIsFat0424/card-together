@@ -69,7 +69,7 @@ describe('load benchmark targets and summary', () => {
       targets: evaluateTargets({ ...passing, ackP95Ms: 200 }),
       acks: {
         'chat:send': { ...summarize([5, 6]), failures: 0 },
-        'game:playCard': { ...summarize([40, 300]), failures: 1 },
+        'game:action': { ...summarize([40, 300]), failures: 1 },
         'GET /api/friends': { ...summarize([]), failures: 0 },
       },
       phases: { engine: 'json', databaseBytes: 2 * MIB, runtimeBytes: MIB / 2, samples: 3, validateMs: 10, validateRuntimeMs: 6, stringifyMs: 8,
@@ -81,8 +81,8 @@ describe('load benchmark targets and summary', () => {
     expect(lines[1]).toBe('Host: load average 1.00 0.50 0.25, CPU 12.5% of all cores during the window');
     expect(lines).toContain('Ack latency p95         <= 150 ms  200 ms   FAIL');
     const events = lines.filter((line) => /^(game|chat|GET)/.test(line));
-    expect(events.map((line) => line.split(/\s+/)[0])).toEqual(['game:playCard', 'chat:send', 'GET']);
-    expect(events[0]).toBe('game:playCard     2      1     40      300     300     300');
+    expect(events.map((line) => line.split(/\s+/)[0])).toEqual(['game:action', 'chat:send', 'GET']);
+    expect(events[0]).toBe('game:action       2      1     40      300     300     300');
     expect(events[2]).toBe('GET /api/friends  0      0     -       -       -       -');
     expect(summary).toContain('Writes: 1 (0.1/s), service p50/p95/p99 20/20/20 ms, queued p95 10 ms, mean 2048 KiB, busy 0.2%');
     expect(summary).toContain('One write at 2 MiB without load: validate 10 ms (runtime 6 ms for 0.5 MiB), stringify 8 ms, '

@@ -501,7 +501,7 @@ describe('Napoleon persistence validation', () => {
     (copy.games[0] as { options: unknown }).options = { jokerSummon: 'yes' };
     expect(isRuntimeSnapshot(copy)).toBe(false);
     const room = snapshot(game());
-    room.rooms[0].info = { ...room.rooms[0].info, napoleonOptions: { jokerSummon: true, extra: 1 } as never };
+    room.rooms[0].info = { ...room.rooms[0].info, gameOptions: { napoleon: { jokerSummon: true, extra: 1 } as never } };
     expect(isRuntimeSnapshot(room)).toBe(false);
     const seats = snapshot(game());
     seats.rooms[0].info = { ...seats.rooms[0].info,

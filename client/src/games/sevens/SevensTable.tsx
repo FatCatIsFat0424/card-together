@@ -250,12 +250,15 @@ export function SevensTable(): ReactNode {
   const play = (card: Card): void => {
     if (mode !== 'play' || !game.validCards.some((valid) => sameCard(valid, card)) || !begin()) return;
     setPreview(null);
-    socket.timeout(10000).emit('game:sevens:play', { card }, handleActionResult);
+    socket.timeout(10000).emit('game:action', { gameType: 'sevens', action: { type: 'play', card } }, handleActionResult);
   };
 
   const cover = (card: Card): void => {
     if (mode !== 'cover' || !begin()) return;
-    socket.timeout(10000).emit('game:sevens:cover', { card }, (timeout, response) => {
+    socket.timeout(10000).emit('game:action', {
+      gameType: 'sevens',
+      action: { type: 'cover', card },
+    }, (timeout, response) => {
       if (!timeout && response?.success) setCoverPick(null);
       handleActionResult(timeout, response);
     });

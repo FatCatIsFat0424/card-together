@@ -65,7 +65,7 @@ export function BridgeTable(): ReactNode {
     (card: Card): void => {
       setActionError('');
       setActionPending(true);
-      socket.timeout(10000).emit('game:playCard', { card }, handleActionResult);
+      socket.timeout(10000).emit('game:action', { gameType: 'bridge', action: { type: 'play', card } }, handleActionResult);
     },
     [handleActionResult],
   );
@@ -74,7 +74,10 @@ export function BridgeTable(): ReactNode {
     (accept: boolean): void => {
       setActionError('');
       setActionPending(true);
-      socket.timeout(10000).emit('game:redealResponse', { accept }, handleActionResult);
+      socket.timeout(10000).emit('game:action', {
+        gameType: 'bridge',
+        action: { type: 'redeal', accept },
+      }, handleActionResult);
     },
     [handleActionResult],
   );

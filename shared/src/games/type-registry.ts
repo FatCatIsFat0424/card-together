@@ -1,0 +1,42 @@
+import type { BridgeGameContract } from './bridge/types';
+import type { BigTwoGameContract } from './bigtwo/types';
+import type { RedPointsGameContract } from './redpoints/types';
+import type { NinetyNineGameContract } from './ninetynine/types';
+import type { SevensGameContract } from './sevens/types';
+import type { ChinesePokerGameContract } from './chinesepoker/types';
+import type { LiarsDeckGameContract } from './liarsdeck/types';
+import type { BlackjackGameContract } from './blackjack/types';
+import type { HoldemGameContract } from './holdem/types';
+import type { NapoleonGameContract } from './napoleon/types';
+import type { GameAutomation } from '../types/game';
+import type { GameSeat } from '../types/player';
+
+/** Type-only contracts; each game owns its state, visible view, result, and room rules. */
+export interface GameTypeRegistry {
+  readonly bridge: BridgeGameContract;
+  readonly bigtwo: BigTwoGameContract;
+  readonly redpoints: RedPointsGameContract;
+  readonly ninetynine: NinetyNineGameContract;
+  readonly sevens: SevensGameContract;
+  readonly chinesepoker: ChinesePokerGameContract;
+  readonly liarsdeck: LiarsDeckGameContract;
+  readonly blackjack: BlackjackGameContract;
+  readonly holdem: HoldemGameContract;
+  readonly napoleon: NapoleonGameContract;
+}
+
+export type GameType = keyof GameTypeRegistry;
+
+export type AnyGameState = GameAutomation & GameTypeRegistry[GameType]['state'];
+
+export type PlayerVisibleGameState = {
+  readonly autoPlay?: boolean;
+  readonly earlyLeaveSeats?: readonly GameSeat[];
+} & GameTypeRegistry[GameType]['visible'];
+
+export type MatchResult = GameTypeRegistry[GameType]['result'];
+
+/** Each game owns its room-rule shape; games without configurable rules accept an empty object. */
+export type GameOptionsByType = {
+  readonly [K in GameType]: GameTypeRegistry[K]['options'];
+};

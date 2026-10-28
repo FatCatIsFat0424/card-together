@@ -1,16 +1,7 @@
 import { applyReplayPatch } from '../replay-patch';
 import type { GameSeat, MatchReplay, MatchResult, ReplaySnapshot } from '../types';
-import { bigTwoFacts } from './bigtwo';
-import { blackjackFacts } from './blackjack';
-import { bridgeFacts } from './bridge';
-import { chinesePokerFacts } from './chinesepoker';
 import type { SeatFacts } from './facts';
-import { holdemFacts } from './holdem';
-import { liarsDeckFacts } from './liarsdeck';
-import { napoleonFacts } from './napoleon';
-import { ninetyNineFacts } from './ninetynine';
-import { redPointsFacts } from './redpoints';
-import { sevensFacts } from './sevens';
+import { gameFacts } from './registry';
 
 export type { SeatFacts } from './facts';
 
@@ -21,23 +12,8 @@ export type { SeatFacts } from './facts';
  */
 export function matchFacts(result: MatchResult, seat: GameSeat, frame: ReplaySnapshot | null): SeatFacts {
   // Only the data: extractors return their builders.
-  const { counts, sums, values } = gameFacts(result, seat, frame);
+  const { counts, sums, values } = gameFacts(result.gameType, result, seat, frame);
   return { counts, sums, values };
-}
-
-function gameFacts(result: MatchResult, seat: GameSeat, frame: ReplaySnapshot | null): SeatFacts {
-  switch (result.gameType) {
-    case 'bridge': return bridgeFacts(result, seat);
-    case 'bigtwo': return bigTwoFacts(result, seat, frame);
-    case 'redpoints': return redPointsFacts(result, seat, frame);
-    case 'ninetynine': return ninetyNineFacts(result, seat, frame);
-    case 'sevens': return sevensFacts(result, seat, frame);
-    case 'chinesepoker': return chinesePokerFacts(result, seat);
-    case 'liarsdeck': return liarsDeckFacts(result, seat, frame);
-    case 'blackjack': return blackjackFacts(result, seat, frame);
-    case 'holdem': return holdemFacts(seat, frame);
-    case 'napoleon': return napoleonFacts(result, seat);
-  }
 }
 
 /** The last recorded spectator frame: every step applied to the initial snapshot. Throws on an invalid patch. */

@@ -21,7 +21,7 @@ export const napoleonClient: ClientGame<'napoleon'> = {
       t('napoleon.rulesPlay'), ...(context?.option?.enabled ?? true ? [t('napoleon.rulesSummon')] : []),
       t('napoleon.rulesWin')],
     roomContext: (room) => ({ option: { label: 'napoleon.jokerSummon',
-      enabled: (room.napoleonOptions ?? DEFAULT_NAPOLEON_OPTIONS).jokerSummon } }),
+      enabled: (room.gameOptions?.napoleon ?? DEFAULT_NAPOLEON_OPTIONS).jokerSummon } }),
     matchContext: (game) => ({ option: { label: 'napoleon.jokerSummon', enabled: game.options.jokerSummon } }),
   },
   handSort: { order: STANDARD_HAND_ORDER, bySuit: true, initial: 'suit' },

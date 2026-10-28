@@ -3,7 +3,7 @@
 import type { ComponentType, LazyExoticComponent, ReactNode } from 'react';
 import type { PresentationFrame } from '@shared/game-presentation';
 import type { VisibleStateOf } from '@shared/games/game-definition';
-import type { GameSeat, GameType } from '@shared/types';
+import type { GameOptions, GameOptionsPayload, GameSeat, GameType } from '@shared/types';
 import type { TranslationKey } from '../i18n';
 import type { CardPlayEffect } from './card-play-effect';
 import type { Translate } from './client-game';
@@ -44,12 +44,21 @@ export interface GamePresentationUi<K extends GameType> {
   readonly cue?: (game: VisibleStateOf<K>, frame: PresentationFrame) => FrameCue | undefined;
 }
 
+/** Shared room settings surface; each game reads and updates only its own options. */
+export interface RoomOptionsProps {
+  readonly gameOptions?: GameOptions;
+  readonly disabled: boolean;
+  readonly setGameOptions: (payload: GameOptionsPayload) => void;
+}
+
 /**
  * What the browser draws for one game. Lives behind the table shell rather than the eager client
  * registry: it holds components, the table itself behind a lazy import, and rules-heavy derivations.
  */
 export interface GameUi<K extends GameType> {
   readonly gameType: K;
+  /** Optional room rules, displayed beside the shared room settings */
+  readonly roomOptions?: ComponentType<RoomOptionsProps>;
   /** Loaded on demand so entering one game never loads another game's table */
   readonly table: LazyExoticComponent<() => ReactNode>;
   /** How the table centre is laid out around the shared presentation */

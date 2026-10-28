@@ -309,7 +309,10 @@ export function BlackjackTable(): ReactNode {
     setActionError('');
     setActionPending(true);
     setSentAt(game.log.length);
-    socket.timeout(10000).emit('game:blackjack:bet', { amount: value }, handleActionResult);
+    socket.timeout(10000).emit('game:action', {
+      gameType: 'blackjack',
+      action: { type: 'bet', amount: value },
+    }, handleActionResult);
   };
 
   const sendAction = (action: BlackjackAction): void => {
@@ -317,7 +320,10 @@ export function BlackjackTable(): ReactNode {
     setActionError('');
     setActionPending(true);
     setSentAt(game.log.length);
-    socket.timeout(10000).emit('game:blackjack:action', { action }, handleActionResult);
+    socket.timeout(10000).emit('game:action', {
+      gameType: 'blackjack',
+      action: { type: 'act', action },
+    }, handleActionResult);
   };
 
   const sendDealerAction = (action: BlackjackDealerAction): void => {
@@ -325,7 +331,10 @@ export function BlackjackTable(): ReactNode {
     setActionError('');
     setActionPending(true);
     setSentAt(game.log.length);
-    socket.timeout(10000).emit('game:blackjack:dealerAction', { action }, handleActionResult);
+    socket.timeout(10000).emit('game:action', {
+      gameType: 'blackjack',
+      action: { type: 'dealerAct', action },
+    }, handleActionResult);
   };
 
   const backToRoom = (): void => {

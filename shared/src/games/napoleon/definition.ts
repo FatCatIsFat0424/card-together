@@ -1,3 +1,5 @@
+import { DEFAULT_NAPOLEON_OPTIONS, isNapoleonOptions } from '../../napoleon-options';
+import type { StandingRole } from '../../rules/match-standing';
 import { soleWinner } from '../game-definition';
 import type { GameDefinition } from '../game-definition';
 import type { PresentationFrame } from '../presentation';
@@ -7,9 +9,24 @@ export const NAPOLEON_NOTICE_MS = 2000;
 
 export const napoleonDefinition: GameDefinition<'napoleon'> = {
   gameType: 'napoleon',
+  options: {
+    defaults: DEFAULT_NAPOLEON_OPTIONS,
+    legacyDefaults: DEFAULT_NAPOLEON_OPTIONS,
+    isValid: isNapoleonOptions,
+  },
   category: 'cards',
   equipment: ['cards'],
   seats: { minPlayers: 4, maxPlayers: 6, flexible: true, expandable: true, numbered: true },
+  result: {
+    kind: 'roles',
+    scoreKind: null,
+    standing: (result, seat, seats) => {
+      const role: StandingRole = seat === result.contract.napoleon ? 'napoleon'
+        : seat === result.secretarySeat ? 'secretary' : 'defender';
+      return { seat, players: seats.length, rank: null, tied: false, won: result.winners.includes(seat),
+        side: role === 'defender' ? 'defender' : 'declarer', role, score: null };
+    },
+  },
   presentation: {
     logFrames: (game, index, key, timing): PresentationFrame[] => {
       const entry = game.log[index];

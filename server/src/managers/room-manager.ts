@@ -1,15 +1,12 @@
+import { defaultGameOptions, isGameOptionsPayload, restoredGameOptions } from '@shared/games/room-options';
 import { DEFAULT_TIME_CONTROL, isTimeControl } from '@shared/time-control';
-import { DEFAULT_SEVENS_OPTIONS, isSevensOptions, LEGACY_SEVENS_OPTIONS } from '@shared/sevens-options';
-import { DEFAULT_NINETYNINE_OPTIONS, isNinetyNineOptions } from '@shared/ninetynine-options';
-import { DEFAULT_BLACKJACK_OPTIONS, isBlackjackOptions } from '@shared/blackjack-options';
-import { DEFAULT_NAPOLEON_OPTIONS, isNapoleonOptions } from '@shared/napoleon-options';
 import { isBotDifficulty } from '@shared/bot-difficulty';
 import { isRoomReplayPlayback } from '@shared/replay-session';
 import { isDeepStrictEqual } from 'node:util';
 import { randomInt, randomUUID } from 'node:crypto';
 import type {
-  BlackjackOptions, BotDifficulty, GameType, NapoleonOptions, NinetyNineOptions, PlayerInfo, RoomCode, RoomInfo,
-  RoomReplaySession, RoomSeatTarget, RoomStatus, Seat, SeatInfo, SeatMap, SevensOptions, TimeControl,
+  BotDifficulty, GameOptionsByType, GameOptionsPayload, GameType, PlayerInfo, RoomCode, RoomInfo,
+  RoomReplaySession, RoomSeatTarget, RoomStatus, Seat, SeatInfo, SeatMap, TimeControl,
 } from '@shared/types';
 import {
   ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD, MAX_ROOM_MEMBERS, MAX_SPECTATORS,
@@ -58,8 +55,7 @@ export function createRoom(gameType: GameType, creatorId: string): RoomCode {
     info: {
       code, gameType, status: 'waiting', seats: emptySeats(), createdAt: Date.now(),
       timeControl: { ...DEFAULT_TIME_CONTROL }, hostId: creatorId, abortVote: null, abortVoteCooldownUntil: null,
-      sevensOptions: { ...DEFAULT_SEVENS_OPTIONS }, blackjackOptions: { ...DEFAULT_BLACKJACK_OPTIONS },
-      ninetyNineOptions: { ...DEFAULT_NINETYNINE_OPTIONS }, napoleonOptions: { ...DEFAULT_NAPOLEON_OPTIONS },
+      gameOptions: defaultGameOptions(),
     },
     memberIds: [creatorId],
   });
@@ -486,7 +482,6 @@ export function setGameType(code: RoomCode, playerId: string, gameType: GameType
   const removedBots = new Set(removed.flatMap((entry) => entry.player ? [entry.player.id] : []));
   room.memberIds = room.memberIds.filter((id) => !removedBots.has(id));
   room.info = withBotNames({ ...room.info, gameType,
-    napoleonOptions: room.info.napoleonOptions ?? { ...DEFAULT_NAPOLEON_OPTIONS },
     ...(room.info.additionalSeats ? { additionalSeats: room.info.additionalSeats.slice(0, additionalLimit) } : {}),
   });
   resetAllReady(code);
@@ -505,63 +500,24 @@ export function setTimeControl(code: RoomCode, playerId: string, timeControl: Ti
   return { success: true };
 }
 
-export function setSevensOptions(code: RoomCode, playerId: string, sevensOptions: SevensOptions): Result {
+export function setGameOptions(code: RoomCode, playerId: string, payload: GameOptionsPayload): Result {
   const room = rooms.get(code);
   if (!room) return { success: false, reason: 'Room not found' };
   if (room.info.hostId !== playerId) return { success: false, reason: 'Only the host can change the rules.' };
   if (room.info.status !== 'waiting') return { success: false, reason: 'Game is in progress' };
-  if (room.info.gameType !== 'sevens') return { success: false, reason: 'Not a Sevens room.' };
-  if (!isSevensOptions(sevensOptions)) return { success: false, reason: 'Invalid Sevens options.' };
-  const previous = room.info.sevensOptions ?? LEGACY_SEVENS_OPTIONS;
-  if (isDeepStrictEqual(previous, sevensOptions)) return { success: true };
-  room.info = { ...room.info, sevensOptions: { ...sevensOptions } };
-  // The slaying effect is only a presentation choice; readiness resets only when the rules change.
-  if (previous.closeOnEnd !== sevensOptions.closeOnEnd) resetAllReady(code);
-  return { success: true };
+  if (!isGameOptionsPayload(payload)) return { success: false, reason: 'Invalid game options.' };
+  if (room.info.gameType !== payload.gameType) return { success: false, reason: 'The room game has changed. Refresh your page.' };
+  return applyGameOptions(room, code, payload.gameType, payload.options);
 }
 
-export function setNinetyNineOptions(code: RoomCode, playerId: string, ninetyNineOptions: NinetyNineOptions): Result {
-  const room = rooms.get(code);
-  if (!room) return { success: false, reason: 'Room not found' };
-  if (room.info.hostId !== playerId) return { success: false, reason: 'Only the host can change the rules.' };
-  if (room.info.status !== 'waiting') return { success: false, reason: 'Game is in progress' };
-  if (room.info.gameType !== 'ninetynine') return { success: false, reason: 'Not a Ninety-Nine room.' };
-  if (!isNinetyNineOptions(ninetyNineOptions)) return { success: false, reason: 'Invalid Ninety-Nine options.' };
-  if (isDeepStrictEqual(room.info.ninetyNineOptions ?? DEFAULT_NINETYNINE_OPTIONS, ninetyNineOptions)) {
-    return { success: true };
-  }
-  room.info = { ...room.info, ninetyNineOptions: { ...ninetyNineOptions } };
-  resetAllReady(code);
-  return { success: true };
-}
-
-export function setBlackjackOptions(code: RoomCode, playerId: string, blackjackOptions: BlackjackOptions): Result {
-  const room = rooms.get(code);
-  if (!room) return { success: false, reason: 'Room not found' };
-  if (room.info.hostId !== playerId) return { success: false, reason: 'Only the host can change the rules.' };
-  if (room.info.status !== 'waiting') return { success: false, reason: 'Game is in progress' };
-  if (room.info.gameType !== 'blackjack') return { success: false, reason: 'Not a Blackjack room.' };
-  if (!isBlackjackOptions(blackjackOptions)) return { success: false, reason: 'Invalid Blackjack options.' };
-  if (isDeepStrictEqual(room.info.blackjackOptions ?? DEFAULT_BLACKJACK_OPTIONS, blackjackOptions)) {
-    return { success: true };
-  }
-  room.info = { ...room.info, blackjackOptions: { ...blackjackOptions } };
-  resetAllReady(code);
-  return { success: true };
-}
-
-export function setNapoleonOptions(code: RoomCode, playerId: string, napoleonOptions: NapoleonOptions): Result {
-  const room = rooms.get(code);
-  if (!room) return { success: false, reason: 'Room not found' };
-  if (room.info.hostId !== playerId) return { success: false, reason: 'Only the host can change the rules.' };
-  if (room.info.status !== 'waiting') return { success: false, reason: 'Game is in progress' };
-  if (room.info.gameType !== 'napoleon') return { success: false, reason: 'Not a Napoleon room.' };
-  if (!isNapoleonOptions(napoleonOptions)) return { success: false, reason: 'Invalid Napoleon options.' };
-  if (isDeepStrictEqual(room.info.napoleonOptions ?? DEFAULT_NAPOLEON_OPTIONS, napoleonOptions)) {
-    return { success: true };
-  }
-  room.info = { ...room.info, napoleonOptions: { ...napoleonOptions } };
-  resetAllReady(code);
+function applyGameOptions<K extends GameType>(
+  room: PersistedRoom, code: RoomCode, gameType: K, options: GameOptionsByType[K],
+): Result {
+  const rules = gameDefinition(gameType).options;
+  const previous = room.info.gameOptions?.[gameType] ?? rules?.legacyDefaults;
+  if (isDeepStrictEqual(previous, options)) return { success: true };
+  room.info = { ...room.info, gameOptions: { ...room.info.gameOptions, [gameType]: structuredClone(options) } };
+  if (!previous || !rules?.resetsReady || rules.resetsReady(previous, options)) resetAllReady(code);
   return { success: true };
 }
 
@@ -687,10 +643,7 @@ export function restoreRooms(records: PersistedRoom[]): void {
   for (const room of records) rooms.set(room.info.code, {
     ...room, info: withBotNames({
       ...room.info, timeControl: room.info.timeControl ?? { ...DEFAULT_TIME_CONTROL },
-      sevensOptions: room.info.sevensOptions ?? { ...LEGACY_SEVENS_OPTIONS },
-      ninetyNineOptions: room.info.ninetyNineOptions ?? { ...DEFAULT_NINETYNINE_OPTIONS },
-      blackjackOptions: room.info.blackjackOptions ?? { ...DEFAULT_BLACKJACK_OPTIONS },
-      napoleonOptions: room.info.napoleonOptions ?? { ...DEFAULT_NAPOLEON_OPTIONS },
+      gameOptions: restoredGameOptions(room.info.gameOptions),
     }),
   });
 }

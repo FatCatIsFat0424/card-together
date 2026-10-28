@@ -109,23 +109,23 @@ describe('contextual game rules', () => {
       expect(context.active).toBe(false);
     }
     for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon'].includes(type))) {
-      expect(roomRulesContext(room(gameType, { sevensOptions: { closeOnEnd: true } })).option).toBeNull();
+      expect(roomRulesContext(room(gameType, { gameOptions: { sevens: { closeOnEnd: true } } })).option).toBeNull();
     }
     // Joker summoning is the one option that defaults to on.
     const napoleon = roomRulesContext(room('napoleon'));
     expect(napoleon.option).toEqual({ label: 'napoleon.jokerSummon', enabled: true });
     expect(render('napoleon', napoleon)).toContain('<dd>On</dd>');
-    expect(roomRulesContext(room('napoleon', { napoleonOptions: { jokerSummon: false } })).option?.enabled).toBe(false);
+    expect(roomRulesContext(room('napoleon', { gameOptions: { napoleon: { jokerSummon: false } } })).option?.enabled).toBe(false);
   });
 
   it('reflects current room mode and option changes without modifying room data', () => {
-    const original = room('sevens', { sevensOptions: { closeOnEnd: true } });
+    const original = room('sevens', { gameOptions: { sevens: { closeOnEnd: true } } });
     const before = structuredClone(original);
     expect(roomRulesContext(original).option).toEqual({ label: 'sevens.closeOnEnd', enabled: true });
-    expect(roomRulesContext({ ...original, sevensOptions: { closeOnEnd: false } }).option?.enabled).toBe(false);
-    expect(roomRulesContext({ ...original, gameType: 'ninetynine', ninetyNineOptions: { twoDecks: true } }).option)
+    expect(roomRulesContext({ ...original, gameOptions: { sevens: { closeOnEnd: false } } }).option?.enabled).toBe(false);
+    expect(roomRulesContext({ ...original, gameType: 'ninetynine', gameOptions: { ...original.gameOptions, ninetynine: { twoDecks: true } } }).option)
       .toEqual({ label: 'ninetynine.twoDecks', enabled: true });
-    expect(roomRulesContext(room('blackjack', { blackjackOptions: { playerDealer: true } })).option)
+    expect(roomRulesContext(room('blackjack', { gameOptions: { blackjack: { playerDealer: true } } })).option)
       .toEqual({ label: 'blackjack.playerDealer', enabled: true });
     expect(original).toEqual(before);
   });
@@ -170,7 +170,7 @@ describe('contextual game rules', () => {
     const players: SeatInfo = { player: { id: 'p', username: 'p', nickname: 'P', color: '#fff', avatar: 'cat',
       avatarImage: null }, isReady: false };
     const playerDealer = render('blackjack', roomRulesContext(room('blackjack', {
-      blackjackOptions: { playerDealer: true },
+      gameOptions: { blackjack: { playerDealer: true } },
       seats: { N: players, E: players, S: players, W: { player: null, isReady: false } },
     })));
     expect(playerDealer).toContain(t('blackjack.rulesPlayerDealer'));

@@ -161,7 +161,10 @@ export function BigTwoTable(): ReactNode {
     actionInFlight.current = true;
     setActionError('');
     setActionPending(true);
-    socket.timeout(10000).emit('game:bigtwo:play', { cards: [...cards] }, (timeout, response) => {
+    socket.timeout(10000).emit('game:action', {
+      gameType: 'bigtwo',
+      action: { type: 'play', cards: [...cards] },
+    }, (timeout, response) => {
       if (!timeout && response?.success) setSelection([]);
       handleActionResult(timeout, response);
     });
@@ -172,7 +175,7 @@ export function BigTwoTable(): ReactNode {
     actionInFlight.current = true;
     setActionError('');
     setActionPending(true);
-    socket.timeout(10000).emit('game:bigtwo:pass', handleActionResult);
+    socket.timeout(10000).emit('game:action', { gameType: 'bigtwo', action: { type: 'pass' } }, handleActionResult);
   };
 
   const backToRoom = (): void => {

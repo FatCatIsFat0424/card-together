@@ -426,7 +426,7 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
     const accounts = [await seedAccount('sevens_host'), await seedAccount('sevens_guest')];
     const [host, guest] = await connectPlayers(accounts);
     const { roomCode } = await host.timeout(5_000).emitWithAck('room:create', { gameType: 'bridge' });
-    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: true }))
+    expect(await host.timeout(5_000).emitWithAck('room:setGameOptions', { gameType: 'sevens', options: { closeOnEnd: true } }))
       .toMatchObject({ success: false });
     await host.timeout(5_000).emitWithAck('room:setGameType', { gameType: 'sevens' });
     await host.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'N' });
@@ -434,36 +434,36 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
     await guest.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'E' });
     await guest.timeout(5_000).emitWithAck('room:ready');
     // New Sevens rooms start with Dragon Slaying on.
-    expect((await resume(host)).room?.sevensOptions).toEqual({ closeOnEnd: true });
-    expect(await guest.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: false }))
+    expect((await resume(host)).room?.gameOptions?.sevens).toEqual({ closeOnEnd: true });
+    expect(await guest.timeout(5_000).emitWithAck('room:setGameOptions', { gameType: 'sevens', options: { closeOnEnd: false } }))
       .toMatchObject({ success: false });
     for (const payload of [null, {}, [], true, { closeOnEnd: 'true' }, { closeOnEnd: 1 },
       { closeOnEnd: true, extra: true }, { closeOnEnd: true, slayEffect: 'smoke' }, { slayEffect: 'fire' }]) {
-      expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', payload as SevensOptions))
+      expect(await host.timeout(5_000).emitWithAck('room:setGameOptions', { gameType: 'sevens', options: payload as SevensOptions }))
         .toMatchObject({ success: false });
     }
-    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: true }))
+    expect(await host.timeout(5_000).emitWithAck('room:setGameOptions', { gameType: 'sevens', options: { closeOnEnd: true } }))
       .toEqual({ success: true });
     const before = (await resume(host)).room!;
     expect(before.seats.E.isReady).toBe(true);
     vi.spyOn(repository, 'saveRuntime').mockRejectedValueOnce(new Error('Disk full'));
-    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: false }))
+    expect(await host.timeout(5_000).emitWithAck('room:setGameOptions', { gameType: 'sevens', options: { closeOnEnd: false } }))
       .toMatchObject({ success: false });
     expect((await resume(host)).room).toEqual(before);
-    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: false }))
+    expect(await host.timeout(5_000).emitWithAck('room:setGameOptions', { gameType: 'sevens', options: { closeOnEnd: false } }))
       .toEqual({ success: true });
     const changed = (await resume(guest)).room!;
-    expect(changed.sevensOptions).toEqual({ closeOnEnd: false });
+    expect(changed.gameOptions?.sevens).toEqual({ closeOnEnd: false });
     expect(changed.seats.E.isReady).toBe(false);
-    expect((await repository.loadRuntime())?.rooms[0].info.sevensOptions).toEqual({ closeOnEnd: false });
-    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: true }))
+    expect((await repository.loadRuntime())?.rooms[0].info.gameOptions?.sevens).toEqual({ closeOnEnd: false });
+    expect(await host.timeout(5_000).emitWithAck('room:setGameOptions', { gameType: 'sevens', options: { closeOnEnd: true } }))
       .toEqual({ success: true });
     // The slaying effect is a host choice saved with the rules and fixed for the match; being only a
     // presentation choice, it leaves everyone ready.
     await guest.timeout(5_000).emitWithAck('room:ready');
-    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: true, slayEffect: 'fire' }))
+    expect(await host.timeout(5_000).emitWithAck('room:setGameOptions', { gameType: 'sevens', options: { closeOnEnd: true, slayEffect: 'fire' } }))
       .toEqual({ success: true });
-    expect((await repository.loadRuntime())?.rooms[0].info.sevensOptions)
+    expect((await repository.loadRuntime())?.rooms[0].info.gameOptions?.sevens)
       .toEqual({ closeOnEnd: true, slayEffect: 'fire' });
     expect((await resume(guest)).room?.seats.E.isReady).toBe(true);
     await host.timeout(5_000).emitWithAck('room:fillBots');
@@ -472,13 +472,13 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
     expect(await host.timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
     const active = await resume(host);
     expect(active.gameState).toMatchObject({ gameType: 'sevens', options: { closeOnEnd: true, slayEffect: 'fire' } });
-    expect(await host.timeout(5_000).emitWithAck('room:setSevensOptions', { closeOnEnd: false }))
+    expect(await host.timeout(5_000).emitWithAck('room:setGameOptions', { gameType: 'sevens', options: { closeOnEnd: false } }))
       .toMatchObject({ success: false });
     await stop();
     await start();
     const [reconnected] = await connectPlayers(accounts);
     const restored = await resume(reconnected);
-    expect(restored.room?.sevensOptions).toEqual({ closeOnEnd: true, slayEffect: 'fire' });
+    expect(restored.room?.gameOptions?.sevens).toEqual({ closeOnEnd: true, slayEffect: 'fire' });
     expect(restored.gameState).toMatchObject({ gameType: 'sevens', options: { closeOnEnd: true, slayEffect: 'fire' } });
   }, 15_000);
 
@@ -486,47 +486,47 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
     const accounts = [await seedAccount('nn_opt_host'), await seedAccount('nn_opt_guest')];
     const [host, guest] = await connectPlayers(accounts);
     const { roomCode } = await host.timeout(5_000).emitWithAck('room:create', { gameType: 'sevens' });
-    expect(await host.timeout(5_000).emitWithAck('room:setNinetyNineOptions', { twoDecks: true }))
+    expect(await host.timeout(5_000).emitWithAck('room:setGameOptions', { gameType: 'ninetynine', options: { twoDecks: true } }))
       .toMatchObject({ success: false });
     await host.timeout(5_000).emitWithAck('room:setGameType', { gameType: 'ninetynine' });
     await host.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'N' });
     await guest.timeout(5_000).emitWithAck('room:join', { roomCode: roomCode! });
     await guest.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'E' });
     await guest.timeout(5_000).emitWithAck('room:ready');
-    expect((await resume(host)).room?.ninetyNineOptions).toEqual({ twoDecks: false });
-    expect(await guest.timeout(5_000).emitWithAck('room:setNinetyNineOptions', { twoDecks: true }))
+    expect((await resume(host)).room?.gameOptions?.ninetynine).toEqual({ twoDecks: false });
+    expect(await guest.timeout(5_000).emitWithAck('room:setGameOptions', { gameType: 'ninetynine', options: { twoDecks: true } }))
       .toMatchObject({ success: false });
     for (const payload of [null, {}, [], true, { twoDecks: 'true' }, { twoDecks: 1 }, { twoDecks: true, extra: true }]) {
-      expect(await host.timeout(5_000).emitWithAck('room:setNinetyNineOptions', payload as NinetyNineOptions))
+      expect(await host.timeout(5_000).emitWithAck('room:setGameOptions', { gameType: 'ninetynine', options: payload as NinetyNineOptions }))
         .toMatchObject({ success: false });
     }
-    expect(await host.timeout(5_000).emitWithAck('room:setNinetyNineOptions', { twoDecks: false }))
+    expect(await host.timeout(5_000).emitWithAck('room:setGameOptions', { gameType: 'ninetynine', options: { twoDecks: false } }))
       .toEqual({ success: true });
     const before = (await resume(host)).room!;
     expect(before.seats.E.isReady).toBe(true);
     vi.spyOn(repository, 'saveRuntime').mockRejectedValueOnce(new Error('Disk full'));
-    expect(await host.timeout(5_000).emitWithAck('room:setNinetyNineOptions', { twoDecks: true }))
+    expect(await host.timeout(5_000).emitWithAck('room:setGameOptions', { gameType: 'ninetynine', options: { twoDecks: true } }))
       .toMatchObject({ success: false });
     expect((await resume(host)).room).toEqual(before);
-    expect(await host.timeout(5_000).emitWithAck('room:setNinetyNineOptions', { twoDecks: true }))
+    expect(await host.timeout(5_000).emitWithAck('room:setGameOptions', { gameType: 'ninetynine', options: { twoDecks: true } }))
       .toEqual({ success: true });
     const changed = (await resume(guest)).room!;
-    expect(changed.ninetyNineOptions).toEqual({ twoDecks: true });
+    expect(changed.gameOptions?.ninetynine).toEqual({ twoDecks: true });
     expect(changed.seats.E.isReady).toBe(false);
-    expect((await repository.loadRuntime())?.rooms[0].info.ninetyNineOptions).toEqual({ twoDecks: true });
+    expect((await repository.loadRuntime())?.rooms[0].info.gameOptions?.ninetynine).toEqual({ twoDecks: true });
     await host.timeout(5_000).emitWithAck('room:fillBots');
     await host.timeout(5_000).emitWithAck('room:ready');
     await guest.timeout(5_000).emitWithAck('room:ready');
     expect(await host.timeout(5_000).emitWithAck('room:start')).toEqual({ success: true });
     const active = await resume(host);
     expect(active.gameState).toMatchObject({ gameType: 'ninetynine', options: { twoDecks: true }, stockCount: 84 });
-    expect(await host.timeout(5_000).emitWithAck('room:setNinetyNineOptions', { twoDecks: false }))
+    expect(await host.timeout(5_000).emitWithAck('room:setGameOptions', { gameType: 'ninetynine', options: { twoDecks: false } }))
       .toMatchObject({ success: false });
     await stop();
     await start();
     const [reconnected] = await connectPlayers(accounts);
     const restored = await resume(reconnected);
-    expect(restored.room?.ninetyNineOptions).toEqual({ twoDecks: true });
+    expect(restored.room?.gameOptions?.ninetynine).toEqual({ twoDecks: true });
     expect(restored.gameState).toMatchObject({ gameType: 'ninetynine', options: { twoDecks: true } });
   }, 15_000);
 
@@ -637,7 +637,10 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
       const seat = snapshot.gameState.redealPendingSeat;
       if (!seat) throw new Error('Expected player choosing whether to redeal');
       expect(await players[SEATS.indexOf(seat)].timeout(5_000)
-        .emitWithAck('game:redealResponse', { accept: true })).toEqual({ success: true });
+        .emitWithAck('game:action', {
+          gameType: 'bridge',
+          action: { type: 'redeal', accept: true },
+        })).toEqual({ success: true });
       snapshot = await resume(players[0]);
     }
     expect(snapshot.gameState?.phase).toBe('bidding');
@@ -657,7 +660,10 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
       if (!bidder) throw new Error('Expected current bidder');
       const bid = bidIndex === 0 ? { type: 'bid' as const, level: 1 as const, suit: 'clubs' as const }
         : { type: 'pass' as const };
-      expect(await players[SEATS.indexOf(bidder)].timeout(5_000).emitWithAck('game:bid', { bid }))
+      expect(await players[SEATS.indexOf(bidder)].timeout(5_000).emitWithAck('game:action', {
+        gameType: 'bridge',
+        action: { type: 'bid', bid },
+      }))
         .toEqual({ success: true });
       snapshot = await resume(players[0]);
     }
@@ -671,7 +677,10 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
     const firstState = await resume(firstPlayer);
     const firstCard = bridgeView(firstState)?.validCards[0];
     if (!firstCard) throw new Error('Expected playable card');
-    expect(await firstPlayer.timeout(5_000).emitWithAck('game:playCard', { card: firstCard }))
+    expect(await firstPlayer.timeout(5_000).emitWithAck('game:action', {
+      gameType: 'bridge',
+      action: { type: 'play', card: firstCard },
+    }))
       .toEqual({ success: true });
     const active = await Promise.all(players.map(resume));
     expect(active.reduce((total, state) => total + handOf(state).length, 0)).toBe(51);
@@ -704,7 +713,10 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
       const state = await resume(client);
       const card = bridgeView(state)?.validCards[0];
       if (!card) throw new Error('Expected a legal card');
-      expect(await client.timeout(5_000).emitWithAck('game:playCard', { card })).toEqual({ success: true });
+      expect(await client.timeout(5_000).emitWithAck('game:action', {
+        gameType: 'bridge',
+        action: { type: 'play', card },
+      })).toEqual({ success: true });
       snapshot = await resume(players[0]);
     }
     expect(snapshot.gameState?.phase).toBe('scoring');
@@ -831,10 +843,16 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
       const previous = mine.lastPlay ? identifyCombo(mine.lastPlay.cards) : null;
       const choice = legalPlays(mine.myHand, previous, mine.firstPlay)
         .find((combo) => previous === null || !isBomb(combo));
-      if (!previous) expect(await client.timeout(5_000).emitWithAck('game:bigtwo:pass')).toMatchObject({ success: false });
+      if (!previous) expect(await client.timeout(5_000).emitWithAck('game:action', {
+        gameType: 'bigtwo',
+        action: { type: 'pass' },
+      })).toMatchObject({ success: false });
       const response = choice
-        ? await client.timeout(5_000).emitWithAck('game:bigtwo:play', { cards: choice.cards })
-        : await client.timeout(5_000).emitWithAck('game:bigtwo:pass');
+        ? await client.timeout(5_000).emitWithAck('game:action', {
+          gameType: 'bigtwo',
+          action: { type: 'play', cards: choice.cards },
+        })
+        : await client.timeout(5_000).emitWithAck('game:action', { gameType: 'bigtwo', action: { type: 'pass' } });
       expect(response).toEqual({ success: true });
       return resume(players[0]);
     }
@@ -844,9 +862,15 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
     expect(new Set(allCards).size).toBe(52);
     let snapshot = opening[0];
     if (snapshot.gameState?.phase === 'playing') {
-      expect(await players[0].timeout(5_000).emitWithAck('game:bid', { bid: { type: 'pass' } }))
+      expect(await players[0].timeout(5_000).emitWithAck('game:action', {
+        gameType: 'bridge',
+        action: { type: 'bid', bid: { type: 'pass' } },
+      }))
         .toMatchObject({ success: false });
-      expect(await players[0].timeout(5_000).emitWithAck('game:bigtwo:play', { cards: [] }))
+      expect(await players[0].timeout(5_000).emitWithAck('game:action', {
+        gameType: 'bigtwo',
+        action: { type: 'play', cards: [] },
+      }))
         .toEqual({ success: false, error: 'Invalid cards.' });
       for (let moves = 0; moves < 6 && snapshot.gameState?.phase === 'playing'; moves += 1) snapshot = await step();
     }
@@ -908,12 +932,17 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
       if (mine?.gameType !== 'redpoints') throw new Error('Expected Red Points state');
       let response;
       if (mine.step === 'flip-choose' && mine.pendingFlip) {
-        response = await client.timeout(5_000).emitWithAck('game:redpoints:chooseFlip',
-          { capture: rpPairOptions(mine.pendingFlip, mine.table)[0] });
+        response = await client.timeout(5_000).emitWithAck('game:action', {
+          gameType: 'redpoints',
+          action: { type: 'chooseFlip', capture: rpPairOptions(mine.pendingFlip, mine.table)[0] },
+        });
       } else {
         const card = mine.myHand[0];
         const capture = rpPairOptions(card, mine.table)[0];
-        response = await client.timeout(5_000).emitWithAck('game:redpoints:play', capture ? { card, capture } : { card });
+        response = await client.timeout(5_000).emitWithAck('game:action', {
+          gameType: 'redpoints',
+          action: { type: 'play', card, ...(capture ? { capture } : {}) },
+        });
       }
       expect(response).toEqual({ success: true });
       return resume(players[0]);
@@ -927,8 +956,14 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
     expect(first).not.toHaveProperty('stock');
     expect(new Set(opening.flatMap((state) => handOf(state).map(cardKey))).size)
       .toBe(24);
-    expect(await players[0].timeout(5_000).emitWithAck('game:bigtwo:pass')).toMatchObject({ success: false });
-    expect(await players[0].timeout(5_000).emitWithAck('game:redpoints:play', { card: { suit: 'x', rank: 1 } } as never))
+    expect(await players[0].timeout(5_000).emitWithAck('game:action', {
+      gameType: 'bigtwo',
+      action: { type: 'pass' },
+    })).toMatchObject({ success: false });
+    expect(await players[0].timeout(5_000).emitWithAck('game:action', {
+      gameType: 'redpoints',
+      action: { type: 'play', card: { suit: 'x', rank: 1 } },
+    } as never))
       .toEqual({ success: false, error: 'Invalid card.' });
     for (let moves = 0; moves < 6; moves += 1) await step();
 
@@ -992,8 +1027,11 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
       const best = options.reduce((top, option) => (option.total > top.total ? option : top));
       const target = best.card.rank === 5
         ? SEATS.find((seat) => seat !== mine.mySeat && !mine.eliminated.includes(seat)) : undefined;
-      const response = await client.timeout(5_000).emitWithAck('game:ninetynine:play', {
-        card: best.card, ...(best.choice && { choice: best.choice }), ...(target && { target }),
+      const response = await client.timeout(5_000).emitWithAck('game:action', {
+        gameType: 'ninetynine',
+        action: {
+          type: 'play', card: best.card, ...(best.choice && { choice: best.choice }), ...(target && { target }),
+        },
       });
       expect(response).toEqual({ success: true });
       return resume(players[0]);
@@ -1007,10 +1045,15 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
     expect(first).not.toHaveProperty('discard');
     expect(new Set(opening.flatMap((state) => handOf(state).map(cardKey))).size)
       .toBe(20);
-    expect(await players[0].timeout(5_000).emitWithAck('game:redpoints:play', { card: first.myHand[0] }))
+    expect(await players[0].timeout(5_000).emitWithAck('game:action', {
+      gameType: 'redpoints',
+      action: { type: 'play', card: first.myHand[0] },
+    }))
       .toMatchObject({ success: false });
-    expect(await players[0].timeout(5_000).emitWithAck('game:ninetynine:play',
-      { card: first.myHand[0], choice: 'double' } as never)).toEqual({ success: false, error: 'Invalid choice.' });
+    expect(await players[0].timeout(5_000).emitWithAck('game:action', {
+      gameType: 'ninetynine',
+      action: { type: 'play', card: first.myHand[0], choice: 'double' },
+    } as never)).toEqual({ success: false, error: 'Invalid choice.' });
     let snapshot = opening[0];
     for (let moves = 0; snapshot.gameState?.phase === 'playing' && moves < 6; moves += 1) snapshot = await step();
 
@@ -1072,8 +1115,14 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
       expect(mine).not.toHaveProperty('bullets');
       const call = ldMustChallenge(mine.mySeat, mine.handCounts, mine.lastPlay)
         || (ldCanChallenge(mine.mySeat, mine.lastPlay) && mine.pileCount >= 2);
-      const response = call ? await client.timeout(5_000).emitWithAck('game:liarsdeck:challenge')
-        : await client.timeout(5_000).emitWithAck('game:liarsdeck:play', { cardIds: [mine.myHand[0].id] });
+      const response = call ? await client.timeout(5_000).emitWithAck('game:action', {
+        gameType: 'liarsdeck',
+        action: { type: 'challenge' },
+      })
+        : await client.timeout(5_000).emitWithAck('game:action', {
+          gameType: 'liarsdeck',
+          action: { type: 'play', cardIds: [mine.myHand[0].id] },
+        });
       expect(response).toEqual({ success: true });
       return resume(players[0]);
     }
@@ -1085,10 +1134,19 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
     expect(new Set(opening.flatMap((state) => handOf(state).map(cardKey))).size).toBe(20);
     finishPresentation(first);
     const opener = players[SEATS.indexOf(first.currentTurnSeat)];
-    expect(await opener.timeout(5_000).emitWithAck('game:liarsdeck:challenge')).toMatchObject({ success: false });
-    expect(await opener.timeout(5_000).emitWithAck('game:liarsdeck:play', { cardIds: [0, 1, 2, 3] }))
+    expect(await opener.timeout(5_000).emitWithAck('game:action', {
+      gameType: 'liarsdeck',
+      action: { type: 'challenge' },
+    })).toMatchObject({ success: false });
+    expect(await opener.timeout(5_000).emitWithAck('game:action', {
+      gameType: 'liarsdeck',
+      action: { type: 'play', cardIds: [0, 1, 2, 3] },
+    }))
       .toEqual({ success: false, error: 'Invalid cards.' });
-    expect(await opener.timeout(5_000).emitWithAck('game:liarsdeck:play', { cardIds: ['x'] } as never))
+    expect(await opener.timeout(5_000).emitWithAck('game:action', {
+      gameType: 'liarsdeck',
+      action: { type: 'play', cardIds: ['x'] },
+    } as never))
       .toEqual({ success: false, error: 'Invalid cards.' });
     let snapshot = opening[0];
     for (let moves = 0; snapshot.gameState?.phase === 'playing' && moves < 4; moves += 1) snapshot = await step();
@@ -1140,7 +1198,10 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
       if (view.phase === 'betting') {
         for (const seat of SEATS) {
           if (view.betPlaced[seat] || view.chips[seat] < 10) continue;
-          expect(await players[SEATS.indexOf(seat)].timeout(5_000).emitWithAck('game:blackjack:bet', { amount: 20 }))
+          expect(await players[SEATS.indexOf(seat)].timeout(5_000).emitWithAck('game:action', {
+            gameType: 'blackjack',
+            action: { type: 'bet', amount: 20 },
+          }))
             .toEqual({ success: true });
         }
         return resume(players[0]);
@@ -1149,22 +1210,40 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
       const hand = view.hands[view.currentTurnSeat][view.activeHand];
       const action = bjTotal(hand.cards).total < 12 ? 'hit' : 'stand';
       expect(await players[SEATS.indexOf((view.currentTurnSeat as Seat))].timeout(5_000)
-        .emitWithAck('game:blackjack:action', { action })).toEqual({ success: true });
+        .emitWithAck('game:action', {
+          gameType: 'blackjack',
+          action: { type: 'act', action },
+        })).toEqual({ success: true });
       return resume(players[0]);
     }
 
     const opening = await resume(players[0]);
     expect(opening.gameState).toMatchObject({ gameType: 'blackjack', phase: 'betting', hand: 0,
       chips: { N: 1000, E: 1000, S: 1000, W: 1000 } });
-    expect(await players[0].timeout(5_000).emitWithAck('game:blackjack:bet', { amount: 5 }))
+    expect(await players[0].timeout(5_000).emitWithAck('game:action', {
+      gameType: 'blackjack',
+      action: { type: 'bet', amount: 5 },
+    }))
       .toEqual({ success: false, error: 'Invalid bet.' });
-    expect(await players[0].timeout(5_000).emitWithAck('game:blackjack:bet', { amount: 15 }))
+    expect(await players[0].timeout(5_000).emitWithAck('game:action', {
+      gameType: 'blackjack',
+      action: { type: 'bet', amount: 15 },
+    }))
       .toMatchObject({ success: false });
-    expect(await players[0].timeout(5_000).emitWithAck('game:blackjack:action', { action: 'surrender' } as never))
+    expect(await players[0].timeout(5_000).emitWithAck('game:action', {
+      gameType: 'blackjack',
+      action: { type: 'act', action: 'surrender' },
+    } as never))
       .toEqual({ success: false, error: 'Invalid action.' });
-    expect(await players[0].timeout(5_000).emitWithAck('game:blackjack:action', { action: 'hit' }))
+    expect(await players[0].timeout(5_000).emitWithAck('game:action', {
+      gameType: 'blackjack',
+      action: { type: 'act', action: 'hit' },
+    }))
       .toMatchObject({ success: false });
-    expect(await players[0].timeout(5_000).emitWithAck('game:blackjack:bet', { amount: 40 })).toEqual({ success: true });
+    expect(await players[0].timeout(5_000).emitWithAck('game:action', {
+      gameType: 'blackjack',
+      action: { type: 'bet', amount: 40 },
+    })).toEqual({ success: true });
     const east = (await resume(players[1])).gameState;
     if (east?.gameType !== 'blackjack') throw new Error('Expected Blackjack state');
     expect(east.myBet).toBeNull();
@@ -1224,7 +1303,10 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
       const legal = heLegalActions(mine, mine.mySeat)!;
       const action = mine.hand % 3 === 0 && legal.raise ? { type: 'raise' as const, to: legal.raise.max }
         : legal.check ? { type: 'check' as const } : { type: 'call' as const };
-      expect(await client.timeout(5_000).emitWithAck('game:holdem:action', { action })).toEqual({ success: true });
+      expect(await client.timeout(5_000).emitWithAck('game:action', {
+        gameType: 'holdem',
+        action,
+      })).toEqual({ success: true });
       return resume(players[0]);
     }
 
@@ -1239,11 +1321,11 @@ describe.each(REPOSITORY_ADAPTERS)('persistent authenticated application ($name)
     }
     finishPresentation(first);
     const actor = players[SEATS.indexOf((first.currentTurnSeat as Seat))];
-    expect(await actor.timeout(5_000).emitWithAck('game:holdem:action', { action: { type: 'check' } }))
+    expect(await actor.timeout(5_000).emitWithAck('game:action', { gameType: 'holdem', action: { type: 'check' } }))
       .toMatchObject({ success: false });
-    expect(await actor.timeout(5_000).emitWithAck('game:holdem:action', { action: { type: 'raise', to: -5 } }))
+    expect(await actor.timeout(5_000).emitWithAck('game:action', { gameType: 'holdem', action: { type: 'raise', to: -5 } }))
       .toEqual({ success: false, error: 'Invalid action.' });
-    expect(await actor.timeout(5_000).emitWithAck('game:holdem:action', { action: { type: 'shove' } } as never))
+    expect(await actor.timeout(5_000).emitWithAck('game:action', { gameType: 'holdem', action: { type: 'shove' } } as never))
       .toEqual({ success: false, error: 'Invalid action.' });
 
     let snapshot = opening[0];

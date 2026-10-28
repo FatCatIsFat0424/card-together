@@ -219,7 +219,7 @@ sudo systemctl start card-together.service card-together-backup.timer
 ### 回復版本
 
 1. 停止 `card-together` 與舊版 `bridge-online` 兩個服務。選擇相容的應用程式、相依套件、unit、設定與 Nginx 設定。
-2. 只有在較舊的版本支援目前狀態的 schema 與欄位時，才保留目前的狀態（[相容性](storage.md#資料相容性)）。
+2. 只有在較舊的版本支援目前狀態的 schema 與欄位時，才保留目前的狀態（[相容性](storage.md#資料相容性)）。Schema v10 會遷移房間的 `gameOptions`；升級前先停止寫入，備妥資料庫、媒體與回放的完整備份。回復 v9 時必須使用升級前的完整備份，不能只換回舊程式。
 3. 否則還原快照，並接受遺失較新的寫入。**資料庫、媒體與回放要一起**還原，狀態目錄為 `0700`、私人檔案為 `0600`，擁有者與選定的服務使用者相符。
 4. 執行 `sudo systemctl daemon-reload`，測試並重新載入 Nginx，然後只啟動選定的服務。
 

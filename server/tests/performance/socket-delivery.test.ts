@@ -112,7 +112,10 @@ describe('socket delivery scope and read-only resume', () => {
       const seat = state.gameState.redealPendingSeat;
       if (!seat) throw new Error('Expected redeal recipient');
       expect(await players[SEATS.indexOf(seat)].timeout(5_000)
-        .emitWithAck('game:redealResponse', { accept: true })).toEqual({ success: true });
+        .emitWithAck('game:action', {
+          gameType: 'bridge',
+          action: { type: 'redeal', accept: true },
+        })).toEqual({ success: true });
       state = await resume(players[0]);
     }
     expect(state.gameState?.phase).toBe('bidding');
@@ -121,7 +124,10 @@ describe('socket delivery scope and read-only resume', () => {
       if (!seat) throw new Error('Expected bidder');
       const bid = bidIndex === 0 ? { type: 'bid' as const, level: 1 as const, suit: 'clubs' as const }
         : { type: 'pass' as const };
-      expect(await players[SEATS.indexOf(seat)].timeout(5_000).emitWithAck('game:bid', { bid }))
+      expect(await players[SEATS.indexOf(seat)].timeout(5_000).emitWithAck('game:action', {
+        gameType: 'bridge',
+        action: { type: 'bid', bid },
+      }))
         .toEqual({ success: true });
       state = await resume(players[0]);
     }
@@ -131,7 +137,10 @@ describe('socket delivery scope and read-only resume', () => {
     const card = bridgeView(await resume(actor))?.validCards[0];
     if (!card) throw new Error('Expected valid card');
     harness.resetMetrics();
-    expect(await actor.timeout(5_000).emitWithAck('game:playCard', { card })).toEqual({ success: true });
+    expect(await actor.timeout(5_000).emitWithAck('game:action', {
+      gameType: 'bridge',
+      action: { type: 'play', card },
+    })).toEqual({ success: true });
     expectRoomRecipients(0);
     for (const accountId of harness.accountIds[0]) {
       const snapshot = harness.metrics.latestSnapshots.get(accountId);

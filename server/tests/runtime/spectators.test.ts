@@ -66,7 +66,10 @@ describe('spectators', () => {
     expect(seated).not.toHaveProperty('observer');
     expect(seated).not.toHaveProperty('observedHands');
 
-    expect(await visitor.timeout(5_000).emitWithAck('game:bid', { bid: { type: 'pass' } }))
+    expect(await visitor.timeout(5_000).emitWithAck('game:action', {
+      gameType: 'bridge',
+      action: { type: 'bid', bid: { type: 'pass' } },
+    }))
       .toEqual({ success: false, error: 'Select a seat first.' });
     expect(await visitor.timeout(5_000).emitWithAck('game:abortVote:start')).toMatchObject({ success: false });
     expect(await visitor.timeout(5_000).emitWithAck('room:changeSeat', { seat: 'N' })).toMatchObject({ success: false });

@@ -1,11 +1,12 @@
 import { randomBytes } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
+import type { GameActionEnvelope } from '@shared/games/actions';
 import { getPresentationEndsAt } from '@shared/game-presentation';
 import { bjSitsIn } from '@shared/rules/blackjack';
 import { identifyCombo, legalPlays } from '@shared/rules/bigtwo';
 import { roomSeatInfo } from '@shared/rules/seats';
 import { GAME_SEAT_ORDER } from '@shared/constants';
-import type { Card, GameType, PlayerVisibleGameState, Seat } from '@shared/types';
+import type { GameType, PlayerVisibleGameState, Seat } from '@shared/types';
 import type { ActionResult, PlayerSnapshot } from '@shared/types/socket-events';
 import { getBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
@@ -136,50 +137,38 @@ export function pendingDecision(game: PlayerVisibleGameState): { key: string; at
 
 type Emit = (client: TestClient) => Promise<ActionResult>;
 
-/** The socket event a client sends for a strategy's action. */
-function botActionEmit(action: BotAction, timeout: number): { event: string; emit: Emit } {
-  const cards = (values: readonly Card[]): Card[] => [...values];
+/** Converts strategy decisions to the same typed envelope used by browser clients. */
+function botActionPayload(action: BotAction): GameActionEnvelope {
   switch (action.type) {
-    case 'bridge-redeal': return { event: 'game:redealResponse',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:redealResponse', { accept: action.accept }) };
-    case 'bridge-bid': return { event: 'game:bid',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:bid', { bid: action.action }) };
-    case 'bridge-play': return { event: 'game:playCard',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:playCard', { card: action.card }) };
-    case 'bigtwo-play': return { event: 'game:bigtwo:play',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:bigtwo:play', { cards: cards(action.cards) }) };
-    case 'bigtwo-pass': return { event: 'game:bigtwo:pass',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:bigtwo:pass') };
-    case 'redpoints-play': return { event: 'game:redpoints:play',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:redpoints:play',
-        action.capture ? { card: action.card, capture: action.capture } : { card: action.card }) };
-    case 'redpoints-flip': return { event: 'game:redpoints:chooseFlip',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:redpoints:chooseFlip', { capture: action.capture }) };
-    case 'ninetynine-play': return { event: 'game:ninetynine:play',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:ninetynine:play', {
-        card: action.card, ...(action.choice ? { choice: action.choice } : {}), ...(action.target ? { target: action.target } : {}),
-      }) };
-    case 'sevens-play': return { event: 'game:sevens:play',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:sevens:play', { card: action.card }) };
-    case 'sevens-cover': return { event: 'game:sevens:cover',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:sevens:cover', { card: action.card }) };
-    case 'chinesepoker-arrange': return { event: 'game:chinesepoker:arrange',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:chinesepoker:arrange', { arrangement: action.arrangement }) };
-    case 'liarsdeck-play': return { event: 'game:liarsdeck:play',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:liarsdeck:play', { cardIds: [...action.cardIds] }) };
-    case 'liarsdeck-challenge': return { event: 'game:liarsdeck:challenge',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:liarsdeck:challenge') };
-    case 'blackjack-bet': return { event: 'game:blackjack:bet',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:blackjack:bet', { amount: action.amount }) };
-    case 'blackjack-action': return { event: 'game:blackjack:action',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:blackjack:action', { action: action.action }) };
-    case 'blackjack-dealer': return { event: 'game:blackjack:dealerAction',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:blackjack:dealerAction', { action: action.action }) };
-    case 'holdem-action': return { event: 'game:holdem:action',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:holdem:action', { action: action.action }) };
-    case 'napoleon-action': return { event: 'game:napoleon:action',
-      emit: (client) => client.timeout(timeout).emitWithAck('game:napoleon:action', { action: action.action }) };
+    case 'game-action': return action.request;
+    case 'bridge-redeal': return { gameType: 'bridge', action: { type: 'redeal', accept: action.accept } };
+    case 'bridge-bid': return { gameType: 'bridge', action: { type: 'bid', bid: action.action } };
+    case 'bridge-play': return { gameType: 'bridge', action: { type: 'play', card: action.card } };
+    case 'bigtwo-play': return { gameType: 'bigtwo', action: { type: 'play', cards: [...action.cards] } };
+    case 'bigtwo-pass': return { gameType: 'bigtwo', action: { type: 'pass' } };
+    case 'redpoints-play': return { gameType: 'redpoints',
+      action: { type: 'play', card: action.card, ...(action.capture ? { capture: action.capture } : {}) } };
+    case 'redpoints-flip': return { gameType: 'redpoints', action: { type: 'chooseFlip', capture: action.capture } };
+    case 'ninetynine-play': return { gameType: 'ninetynine',
+      action: { type: 'play', card: action.card, ...(action.choice ? { choice: action.choice } : {}),
+        ...(action.target ? { target: action.target } : {}) } };
+    case 'sevens-play': return { gameType: 'sevens', action: { type: 'play', card: action.card } };
+    case 'sevens-cover': return { gameType: 'sevens', action: { type: 'cover', card: action.card } };
+    case 'chinesepoker-arrange': return { gameType: 'chinesepoker',
+      action: { type: 'arrange', arrangement: action.arrangement } };
+    case 'liarsdeck-play': return { gameType: 'liarsdeck', action: { type: 'play', cardIds: [...action.cardIds] } };
+    case 'liarsdeck-challenge': return { gameType: 'liarsdeck', action: { type: 'challenge' } };
+    case 'blackjack-bet': return { gameType: 'blackjack', action: { type: 'bet', amount: action.amount } };
+    case 'blackjack-action': return { gameType: 'blackjack', action: { type: 'act', action: action.action } };
+    case 'blackjack-dealer': return { gameType: 'blackjack', action: { type: 'dealerAct', action: action.action } };
+    case 'holdem-action': return { gameType: 'holdem', action: action.action };
+    case 'napoleon-action': return { gameType: 'napoleon', action: action.action };
   }
+}
+
+function botActionEmit(action: BotAction, timeout: number): { event: string; emit: Emit } {
+  const payload = botActionPayload(action);
+  return { event: 'game:action', emit: (client) => client.timeout(timeout).emitWithAck('game:action', payload) };
 }
 
 function errorMessage(error: unknown): string {

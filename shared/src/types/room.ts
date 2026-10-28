@@ -1,12 +1,16 @@
 // ─── Room types ───
 
 import type { PlayerInfo, Seat } from './player';
+import type { GameOptionsByType, GameType } from '../games/type-registry';
+
+export type { GameOptionsByType, GameType } from '../games/type-registry';
+export type { SevensOptions, SevensSlayEffect } from '../games/sevens/types';
+export type { NinetyNineOptions } from '../games/ninetynine/types';
+export type { BlackjackOptions } from '../games/blackjack/types';
+export type { NapoleonOptions } from '../games/napoleon/types';
 
 /** Room code (6 alphanumeric characters) */
 export type RoomCode = string;
-
-/** Game type */
-export type GameType = 'bridge' | 'bigtwo' | 'redpoints' | 'ninetynine' | 'sevens' | 'chinesepoker' | 'liarsdeck' | 'blackjack' | 'holdem' | 'napoleon';
 
 /** Room status; a shared replay locks the room like a match until the host ends it. */
 export type RoomStatus = 'waiting' | 'playing' | 'replaying';
@@ -40,28 +44,12 @@ export interface TimeControl {
   readonly bankSeconds: number;
 }
 
-/** Presentation shown when Dragon Slaying closes a row: a dragon cut down along it, or the fire alone. */
-export type SevensSlayEffect = 'dragon' | 'fire';
+export type GameOptions = Partial<GameOptionsByType>;
 
-export interface SevensOptions {
-  readonly closeOnEnd: boolean;
-  /** Missing means the dragon */
-  readonly slayEffect?: SevensSlayEffect;
-}
-
-export interface NinetyNineOptions {
-  readonly twoDecks: boolean;
-}
-
-export interface BlackjackOptions {
-  /** Seats take turns as the dealer instead of the house */
-  readonly playerDealer: boolean;
-}
-
-export interface NapoleonOptions {
-  /** The led trump 2 and 3 may summon the big and small joker */
-  readonly jokerSummon: boolean;
-}
+/** The game discriminator keeps rules from one game out of another game's payload. */
+export type GameOptionsPayload = {
+  [K in GameType]: { readonly gameType: K; readonly options: GameOptionsByType[K] };
+}[GameType];
 
 /** Host-controlled playback of a recorded match that every room member watches. */
 export interface RoomReplaySession {
@@ -85,16 +73,10 @@ export interface RoomReplaySession {
 export interface RoomInfo {
   /** Randomize occupied seats when the host starts; missing defaults to false. */
   readonly shuffleSeats?: boolean;
-  /** Missing on legacy snapshots; defaults to standard Sevens rules. */
-  readonly sevensOptions?: SevensOptions;
-  /** Missing on legacy snapshots; defaults to the house dealer. */
-  readonly blackjackOptions?: BlackjackOptions;
-  /** Missing on legacy snapshots; defaults to joker summoning on. */
-  readonly napoleonOptions?: NapoleonOptions;
+  /** Per-game choices survive game switches; missing on legacy runtime snapshots. */
+  readonly gameOptions?: GameOptions;
   /** Missing only on legacy snapshots. */
   readonly timeControl?: TimeControl;
-  /** Missing on legacy snapshots; defaults to standard Ninety-Nine rules. */
-  readonly ninetyNineOptions?: NinetyNineOptions;
   readonly code: RoomCode;
   readonly gameType: GameType;
   readonly status: RoomStatus;

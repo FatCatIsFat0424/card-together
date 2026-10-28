@@ -600,7 +600,7 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       getPlayerStats: (accountId) => read((data) => playerStats(
         data.gameStats.filter((entry) => entry.accountId === accountId),
         data.accountStats.filter((entry) => entry.accountId === accountId),
-        napoleonRoleTotals(data.gameStats.filter((entry) => entry.gameType === 'napoleon')))),
+        napoleonRoleTotals(data.gameStats))),
       listMatches: (accountId, limit) =>
         read((data) => {
           const matches = indexes.matches(data.matches).byAccount.get(accountId) ?? [];

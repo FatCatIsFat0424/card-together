@@ -2,7 +2,8 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import Dialog from '@mui/material/Dialog';
 import type { GameType, MatchSummary } from '@shared/types';
-import type { StandingRole } from '@shared/rules/match-standing';
+import { gameDefinition } from '@shared/games/registry';
+import { gameStatisticsRules } from '../games/statistics-registry';
 import { decodeContract } from '@shared/stats/definitions';
 import { decodePokerHand } from '@shared/stats/holdem';
 import { usePlayerStats } from '../hooks/use-player-stats';
@@ -102,27 +103,17 @@ function RankDistribution({ game }: { readonly game: GameStatistics }): ReactNod
   </section>;
 }
 
-const NAPOLEON_ROLES = ['napoleon', 'secretary', 'defender'] as const;
-
 function RoleMetrics({ game }: { readonly game: GameStatistics }): ReactNode {
   const { t } = useI18nStore();
   const { percent } = useFormats();
-  const record = (role: StandingRole): { readonly played: number; readonly won: number } =>
-    game.roles[role] ?? { played: 0, won: 0 };
-  const metric = (label: string, played: number, won: number): ReactNode =>
-    <Metric key={label} label={label} value={played ? percent(won / played) : '—'}
+  return <>{gameStatisticsRules(game.gameType).roleMetrics.map(({ label, roles }) => {
+    const { played, won } = roles.reduce((total, role) => ({
+      played: total.played + (game.roles[role]?.played ?? 0),
+      won: total.won + (game.roles[role]?.won ?? 0),
+    }), { played: 0, won: 0 });
+    return <Metric key={label} label={t(label)} value={played ? percent(won / played) : '—'}
       note={played ? t('history.stats.roleRecord', { won: String(won), played: String(played) }) : t('history.notPlayed')} />;
-  if (game.gameType === 'bridge') {
-    const declarer = record('declarer');
-    const partner = record('partner');
-    return <>
-      {metric(t('history.stats.bridge.declarerSide'), declarer.played + partner.played, declarer.won + partner.won)}
-      {metric(t('history.stats.bridge.declarer'), declarer.played, declarer.won)}
-      {metric(t('history.stats.bridge.defender'), record('defender').played, record('defender').won)}
-    </>;
-  }
-  return <>{NAPOLEON_ROLES.map((role) =>
-    metric(t(`history.stats.role.${role}`), record(role).played, record(role).won))}</>;
+  })}</>;
 }
 
 function GamePanel({ game, matches, onReplay }: {
@@ -132,20 +123,21 @@ function GamePanel({ game, matches, onReplay }: {
 }): ReactNode {
   const { t } = useI18nStore();
   const { percent, decimal, signed, integer } = useFormats();
-  const sides = game.gameType === 'bridge' || game.gameType === 'napoleon';
+  const kind = gameDefinition(game.gameType).result.kind;
+  const sides = kind !== 'ranking';
   const scoreLabel = game.scoreKind === 'penalty' ? t('history.stats.averagePenalty')
     : game.scoreKind === 'chips' ? t('history.stats.averageChips') : t('history.stats.averagePoints');
   return <div className={styles.panel}>
     <div className={styles.title}>
       <h3>{t(`gameType.${game.gameType}`)}</h3>
       <span>{t('history.summary.matchCount', { n: integer(game.matches) })} · {t(
-        game.gameType === 'napoleon' ? 'history.stats.kind.roles' : sides ? 'history.stats.kind.team' : 'history.stats.kind.ranking')}</span>
+        kind === 'roles' ? 'history.stats.kind.roles' : sides ? 'history.stats.kind.team' : 'history.stats.kind.ranking')}</span>
     </div>
     <div className={styles.figures}>
       <div className={styles.metrics}>
         <Metric label={t(sides ? 'history.winRate' : 'history.stats.winRateRanked')} emphasis
           value={game.winRate === null ? '—' : percent(game.winRate)}
-          note={game.expectedWinRate === null ? undefined : t(game.gameType === 'napoleon' ? 'stats.expectedRoles'
+          note={game.expectedWinRate === null ? undefined : t(kind === 'roles' ? 'stats.expectedRoles'
             : 'history.stats.expected', { value: percent(game.expectedWinRate) })} />
         {sides ? <RoleMetrics game={game} /> : <>
           {game.averageRank !== null && <Metric label={t('history.stats.averageRank')} value={decimal(game.averageRank)}

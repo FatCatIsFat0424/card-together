@@ -1,10 +1,12 @@
 import { lazy } from 'react';
 import type { GameUi } from '../game-ui';
+import { BlackjackRoomOptions } from './BlackjackRoomOptions';
 import { BlackjackFrame } from './BlackjackFrame';
 import { BlackjackRounds } from './BlackjackHistory';
 
 export const blackjackUi: GameUi<'blackjack'> = {
   gameType: 'blackjack',
+  roomOptions: BlackjackRoomOptions,
   table: lazy(() => import('./BlackjackTable').then((game) => ({ default: game.BlackjackTable }))),
   presentation: {
     summary: (game, t) => {

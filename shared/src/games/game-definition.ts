@@ -1,6 +1,8 @@
 import type { AnyGameState, PlayerVisibleGameState } from '../types/game';
 import type { GameSeat } from '../types/player';
-import type { GameType } from '../types/room';
+import type { GameOptionsByType, GameType } from '../types/room';
+import type { MatchResult } from '../types';
+import type { MatchStanding } from '../rules/match-standing';
 import type { FrameTiming, PresentationFrame } from './presentation';
 
 /** Lobby grouping; every current game is a card game. */
@@ -11,6 +13,9 @@ export type TableEquipment = 'cards' | 'chips';
 
 /** Server state of one game type. */
 export type GameStateOf<K extends GameType> = Extract<AnyGameState, { readonly gameType: K }>;
+
+/** Stored result of one game type. */
+export type ResultOf<K extends GameType> = Extract<MatchResult, { readonly gameType: K }>;
 
 /** One recipient's filtered view of one game type. */
 export type VisibleStateOf<K extends GameType> = Extract<PlayerVisibleGameState, { readonly gameType: K }>;
@@ -42,6 +47,15 @@ export interface GamePresentationRules<K extends GameType> {
   readonly finishMs?: (game: PresentedGameOf<K>) => number;
 }
 
+export interface GameOptionsRules<K extends GameType> {
+  readonly defaults: GameOptionsByType[K];
+  /** Rules used before the option existed; restoring old rooms must not enable newer rules. */
+  readonly legacyDefaults: GameOptionsByType[K];
+  readonly isValid: (value: unknown) => value is GameOptionsByType[K];
+  /** Presentation-only changes do not invalidate a player's readiness. */
+  readonly resetsReady?: (previous: GameOptionsByType[K], next: GameOptionsByType[K]) => boolean;
+}
+
 /** Pure per-game metadata shared by the browser and the server. */
 export interface GameDefinition<K extends GameType> {
   readonly gameType: K;
@@ -49,6 +63,15 @@ export interface GameDefinition<K extends GameType> {
   readonly equipment: readonly TableEquipment[];
   readonly seats: GameSeatRules;
   readonly presentation: GamePresentationRules<K>;
+  readonly options?: GameOptionsRules<K>;
+  /** Fixed match length shown in the waiting room; absent when the game's tag describes its length. */
+  readonly matchHands?: number;
+  readonly result: {
+    readonly kind: 'ranking' | 'team' | 'roles';
+    readonly scoreKind: 'penalty' | 'points' | 'chips' | null;
+    /** Called only for participating seats. */
+    readonly standing: (result: ResultOf<K>, seat: GameSeat, seats: readonly GameSeat[]) => MatchStanding;
+  };
 }
 
 /** The single winner among `winners`, or none when the result is shared or empty. */

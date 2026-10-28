@@ -1,5 +1,6 @@
 import type { RoomCode } from '@shared/types';
 import * as gameManager from '../managers/game-manager';
+import { gameAdapter } from '../managers/games/registry';
 import type { RuntimeCoordinator } from './coordinator';
 
 interface ScheduledPass {
@@ -18,7 +19,7 @@ export async function startBigTwoAutoPass(
 
   function reconcile(retryDelay = 0): void {
     if (stopped) return;
-    const games = gameManager.exportGames().filter((game) => game.gameType === 'bigtwo');
+    const games = gameAdapter('bigtwo').exportGames();
     for (const [roomCode, job] of scheduled) {
       const game = games.find((entry) => entry.roomCode === roomCode);
       if (game?.id !== job.gameId || game.pendingAutoPass?.id !== job.pendingId) {
