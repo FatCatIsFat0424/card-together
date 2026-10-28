@@ -1,11 +1,12 @@
-import type { GameType, MatchSummary } from '@shared/types';
+import type { GameType, MatchSummary, StatsMark, StatsScope } from '@shared/types';
+import type { StatsRecordKind, StatsSource } from '@shared/stats/definitions';
 import { GAME_TYPES } from '@shared/constants';
 import { matchSeats, matchStanding } from '@shared/rules/match-standing';
 import type { MatchStanding, StandingRole } from '@shared/rules/match-standing';
 import { readPreference, writePreference } from './utils/preference-storage';
 
 /** Human-only matches are the default; `all` also counts matches played against bots. */
-export type StatsScope = 'human' | 'all';
+export type { StatsScope };
 export type RecentOutcome = 'win' | 'loss' | 'tie';
 
 /** What the figure of a game's `averageScore` is: penalty and chips are signed against the starting position. */
@@ -14,6 +15,32 @@ export type ScoreKind = 'penalty' | 'points' | 'chips';
 export interface RoleRecord {
   readonly played: number;
   readonly won: number;
+}
+
+/** A game-specific figure beside the common ones. */
+export interface GameMetric {
+  readonly id: 'overtricks' | 'firstOut' | 'fouls' | 'shots' | 'busts' | 'showdownWins';
+  /** A rate (0–1) or an average */
+  readonly value: number;
+  readonly format: 'rate' | 'decimal' | 'signed';
+  /** Matches or hands the figure is based on */
+  readonly basis: number;
+}
+
+/** A special record of one game, with where its counting started when history is incomplete. */
+export interface SpecialRecord {
+  readonly id: string;
+  readonly source: StatsSource;
+  readonly kind: StatsRecordKind;
+  readonly remember: boolean;
+  /** False for log records before any logged match, and for records newer than the stored counters */
+  readonly tracked: boolean;
+  /** Null when untracked, or before any counted match reached a best value */
+  readonly value: number | null;
+  /** The match that set a best value, or the latest match of a remembered count */
+  readonly mark: StatsMark | null;
+  /** Counting started here; null when it covers every counted match */
+  readonly since: number | null;
 }
 
 export interface GameStatistics {
@@ -38,6 +65,11 @@ export interface GameStatistics {
   readonly averageScore: number | null;
   /** Bridge and Napoleon: how the account fared in each role it held */
   readonly roles: Readonly<Partial<Record<StandingRole, RoleRecord>>>;
+  /** Penalty games: the average penalty of the matches not won */
+  readonly lossAverageScore: number | null;
+  readonly metrics: readonly GameMetric[];
+  /** Empty without server statistics */
+  readonly records: readonly SpecialRecord[];
 }
 
 export interface RecentResult {
@@ -68,10 +100,14 @@ export interface MatchStatistics {
   readonly topGame: GameType | null;
   readonly topGameMatches: number;
   readonly games: readonly GameStatistics[];
+  /** Server statistics: counting started here because older results were pruned; null when complete */
+  readonly since: number | null;
+  /** Server statistics: the latest start of any played game's special records; null when all are complete */
+  readonly recordsSince: number | null;
 }
 
 const RECENT_COUNT = 10;
-const SCORE_KINDS: Readonly<Partial<Record<GameType, ScoreKind>>> = {
+export const SCORE_KINDS: Readonly<Partial<Record<GameType, ScoreKind>>> = {
   bigtwo: 'penalty', sevens: 'penalty', redpoints: 'points', chinesepoker: 'points', blackjack: 'chips', holdem: 'chips',
 };
 
@@ -146,6 +182,7 @@ function gameStatistics(gameType: GameType, tally: Tally): GameStatistics {
     scoreKind: SCORE_KINDS[gameType] ?? null,
     averageScore: tally.scored ? tally.scoreSum / tally.scored : null,
     roles: tally.roles,
+    lossAverageScore: null, metrics: [], records: [],
   };
 }
 
@@ -187,6 +224,7 @@ export function matchStatistics(
       outcome: !standing.won ? 'loss' : standing.rank !== null && standing.tied ? 'tie' : 'win',
     })),
     bestStreak, currentStreak, topGame: top?.gameType ?? null, topGameMatches: top?.matches ?? 0, games,
+    since: null, recordsSince: null,
   };
 }
 

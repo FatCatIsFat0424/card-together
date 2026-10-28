@@ -13,6 +13,9 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../client/src/socket', () => ({ socket: {} }));
+vi.mock('../../../client/src/deployment', () => ({
+  APP_BASE_PATH: '/', API_BASE_URL: '', SERVER_URL: '', SOCKET_PATH: '/socket.io',
+}));
 vi.mock('../../../client/src/media', () => ({ mediaUrl: (id: string) => `/api/media/${id}` }));
 vi.mock('../../../client/src/components/ChatPanel', () => ({ ChatPanel: () => null }));
 vi.mock('../../../client/src/components/InviteFriends', () => ({ InviteFriends: () => null }));

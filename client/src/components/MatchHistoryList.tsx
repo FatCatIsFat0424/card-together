@@ -205,8 +205,9 @@ export function MatchHistoryList({ matches, players, accountId, showStatsButton 
     {list}
     {shownMatches.length < visibleMatches.length && <Button className={styles.more} onClick={() => setPages(pages + 1)}>
       {t('history.showMore', { n: String(visibleMatches.length - shownMatches.length) })}</Button>}
-    {statsOpen && <MatchStatsDialog matches={matches} accountId={subjectId} scope={statsScope}
-      onScopeChange={setStatsScope} onClose={() => setStatsOpen(false)} />}
+    {statsOpen && subjectId && <MatchStatsDialog matches={matches} accountId={subjectId} scope={statsScope}
+      onScopeChange={setStatsScope} onReplay={(match) => { setStatsOpen(false); setReplayMatch(match); }}
+      onClose={() => setStatsOpen(false)} />}
     {detailMatch && <MatchDetailsDialog key={detailMatch.id} match={detailMatch} players={players} accountId={subjectId}
       onClose={() => setDetailMatch(null)}
       onReplay={(match) => { setDetailMatch(null); setReplayMatch(match); }} />}

@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import type { FriendsData, MatchHistory, PublicAccount } from '@shared/types';
+import type { FriendsData, MatchHistory, MatchSummary, PublicAccount } from '@shared/types';
 import { apiRequest } from '../api';
 import { Nameplate } from '../components/Nameplate';
 import { Avatar } from '../components/Avatar';
@@ -11,11 +11,14 @@ import { IconLink } from '../components/IconButton';
 import { MatchHistoryList } from '../components/MatchHistoryList';
 import { MatchStatsDialog } from '../components/MatchStatsDialog';
 import { MatchStatsStrip } from '../components/MatchStatsStrip';
+import { usePlayerStats } from '../hooks/use-player-stats';
 import { useStatsScope } from '../hooks/use-stats-scope';
-import { matchStatistics } from '../match-statistics';
+import { serverStatistics } from '../player-stats';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './PlayerProfilePage.module.css';
+
+const MatchReplayDialog = lazy(() => import('../components/MatchReplayDialog').then((module) => ({ default: module.MatchReplayDialog })));
 
 /** Desktop shell at full rail width: the header grows to a wide strip with inline statistics. */
 const WIDE_QUERY = '(min-width: 1024px) and (min-height: 501px)';
@@ -37,12 +40,16 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [statsScope, setStatsScope] = useStatsScope();
+  const [statsVersion, setStatsVersion] = useState(0);
+  const [replayMatch, setReplayMatch] = useState<MatchSummary | null>(null);
+  const stats = usePlayerStats(accountId, statsVersion);
   const active = useRef(false);
   const requestVersion = useRef(0);
 
   const refresh = useCallback(async (): Promise<void> => {
     const version = ++requestVersion.current;
     setLoading(true);
+    setStatsVersion(version);
     setProfileError('');
     setFriendError('');
     const [profileResult, friendResult, historyResult] = await Promise.all([
@@ -113,7 +120,7 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
   const incoming = friends?.incoming.find((request) => request.requester.id === accountId);
   const outgoing = friends?.outgoing.find((request) => request.recipient.id === accountId);
   const disabled = busy || loading;
-  const statistics = history && history !== 'private' ? matchStatistics(history.matches, accountId, statsScope) : null;
+  const statistics = stats.status === 'ready' ? serverStatistics(stats.stats, statsScope) : null;
 
   return <main className={styles.page}>
     <section className={styles.header}>
@@ -173,8 +180,13 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
       {history === 'private' ? <p className={styles.description}>{t('history.private')}</p>
         : <MatchHistoryList matches={history.matches} players={history.players} accountId={accountId} showStatsButton={false} />}
     </section>}
-    {statsOpen && history && history !== 'private' && <MatchStatsDialog matches={history.matches} accountId={accountId}
-      scope={statsScope} onScopeChange={setStatsScope} onClose={() => setStatsOpen(false)} />}
+    {statsOpen && history && history !== 'private' && <MatchStatsDialog stats={stats} matches={history.matches}
+      accountId={accountId} scope={statsScope} onScopeChange={setStatsScope}
+      onReplay={(match) => { setStatsOpen(false); setReplayMatch(match); }} onClose={() => setStatsOpen(false)} />}
+    {replayMatch && history && history !== 'private' && <Suspense fallback={<p role="status">{t('replay.loading')}</p>}>
+      <MatchReplayDialog key={replayMatch.id} match={replayMatch} players={history.players}
+        accountId={accountId} onClose={() => setReplayMatch(null)} />
+    </Suspense>}
   </main>;
 }
 
