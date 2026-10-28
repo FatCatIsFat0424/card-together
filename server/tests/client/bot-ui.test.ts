@@ -99,7 +99,9 @@ describe('bot player interface', () => {
     expect(buttonTag(hostHtml, 'aria-label="Manage Bot East"')).toContain('aria-haspopup="dialog"');
     expect(hostHtml).toContain(FILL);
     expect(hostHtml.match(/>Empty</g)).toHaveLength(2);
-    expect(hostHtml).toContain('>Not ready<');
+    // The host is implicitly ready.
+    expect(hostHtml).toContain('>Ready<');
+    expect(hostHtml).not.toContain('>Not ready<');
     expect(hostHtml).not.toContain('/players/bot');
     const menu = render(createElement(EmptySeatActions, { removable: true, onSit: noop, onAddBot: noop, onRemoveSeat: noop }));
     expect(menu).toContain('>Sit here<');
@@ -160,10 +162,10 @@ describe('bot player interface', () => {
       S: { player: { ...bot, id: 'bot:south' }, isReady: true },
       W: { player: { ...bot, id: 'bot:west' }, isReady: true },
     } };
-    expect(render(createElement(RoomPage))).not.toMatch(/disabled="">Ready<\/button>/);
+    expect(render(createElement(RoomPage))).not.toMatch(/<button[^>]*disabled=""[^>]*>Start game<\/button>/);
     state.connection = 'connecting';
     const html = render(createElement(RoomPage));
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Ready<\/button>/);
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Start game<\/button>/);
     expect(buttonTag(html, FILL)).toContain('disabled=""');
   });
 
@@ -203,21 +205,32 @@ describe('bot player interface', () => {
     expect(render(createElement(RoomPage))).not.toMatch(/disabled="">Ready<\/button>/);
   });
 
-  it('shows the primary action as ready, unready, or start', () => {
-    expect(render(createElement(RoomPage))).toMatch(/>Ready<\/button>/);
+  it('shows the host only Start game and every other player the ready toggle', () => {
+    const disabledStart = /<button[^>]*disabled=""[^>]*>Start game<\/button>/;
+    // Two of four seats are filled: the host's button stays "Start game", disabled, with no ready toggle.
+    let html = render(createElement(RoomPage));
+    expect(html).toMatch(disabledStart);
+    expect(html).not.toMatch(/>(Ready|Unready)<\/button>/);
+    // The host never needs to be marked ready: bots and the host's own implicit state are enough.
     state.room = { ...room(), seats: { ...room().seats,
-      N: { player: human, isReady: true },
       S: { player: { ...bot, id: 'bot:south' }, isReady: true }, W: { player: { ...bot, id: 'bot:west' }, isReady: true },
     } };
-    // Everyone is ready: the host starts the game.
-    let html = render(createElement(RoomPage));
+    html = render(createElement(RoomPage));
     expect(html).toMatch(/>Start game<\/button>/);
-    expect(html).not.toMatch(/>Unready<\/button>/);
+    expect(html).not.toMatch(disabledStart);
+    expect(html).not.toMatch(/>(Ready|Unready)<\/button>/);
+    // A host who spectates still only sees Start game.
+    state.mySeat = null;
+    html = render(createElement(RoomPage));
+    expect(html).toMatch(/>Start game<\/button>/);
+    expect(html).not.toMatch(/>(Ready|Unready)<\/button>/);
+    state.mySeat = 'N';
+    // Other players toggle between Ready and Unready and never see Start game.
     state.playerId = 'visitor';
     html = render(createElement(RoomPage));
+    expect(html).toMatch(/>Ready<\/button>/);
     expect(html).not.toMatch(/>Start game<\/button>/);
-    state.room = { ...state.room!, seats: { ...state.room!.seats, W: { player: null, isReady: false } } };
-    state.playerId = human.id;
+    state.room = { ...state.room!, seats: { ...state.room!.seats, N: { player: human, isReady: true } } };
     expect(render(createElement(RoomPage))).toMatch(/>Unready<\/button>/);
   });
 

@@ -368,7 +368,6 @@ export function RoomPage(): ReactNode {
   const firstSeat = Math.max(0, seatCards.findIndex(({ info }) => info.player?.id === playerId));
   const movingPlayer = seatDrag.drag?.player ?? seatDrag.selected;
   const canStart = roomCanStart(roomInfo);
-  const startNow = isHost && canStart;
   const definition = gameDefinition(roomInfo.gameType).seats;
   const players = definition.minPlayers === definition.maxPlayers
     ? t('lobby.players', { n: String(definition.maxPlayers) })
@@ -388,9 +387,9 @@ export function RoomPage(): ReactNode {
     isHost={isHost} blocked={blocked} pending={Boolean(pendingDisabled(!waiting))}
     onStandUp={() => { setSpectatorAnchor(null); standUp(); }} onKick={kick}
     onMove={(player) => { seatDrag.select(player); setSpectatorAnchor(null); }} />;
-  const primary = startNow
-    ? <Button variant="primary" onClick={start} disabled={blocked}
-      data-pending-disabled={pendingDisabled()}>{t('room.start')}</Button>
+  const primary = isHost
+    ? <Button variant="primary" onClick={start} disabled={blocked || !canStart}
+      data-pending-disabled={pendingDisabled(!canStart)}>{t('room.start')}</Button>
     : <Button variant={isReady ? 'ghost' : 'success'} onClick={ready} disabled={blocked || !waiting}
       data-pending-disabled={pendingDisabled(!waiting)}>{t(isReady ? 'room.unready' : 'room.ready')}</Button>;
 
@@ -420,8 +419,6 @@ export function RoomPage(): ReactNode {
           slotProps={{ paper: { className: styles.menu, role: 'menu', 'aria-label': t('room.more') } }}>
           {isHost && <Button variant="text" role="menuitem" onClick={() => { setMenuAnchor(null); setReplayPickerOpen(true); }}
             data-pending-disabled={pendingDisabled(!waiting)} disabled={blocked || !waiting}>{t('replay.sharedOpen')}</Button>}
-          {startNow && isReady && <Button variant="text" role="menuitem" disabled={blocked}
-            onClick={() => { setMenuAnchor(null); ready(); }}>{t('room.unready')}</Button>}
           <Button variant="danger-text" role="menuitem" onClick={() => { setMenuAnchor(null); leave(); }}
             disabled={blocked} data-pending-disabled={pendingDisabled()}>{t('room.leave')}</Button>
         </Popover>

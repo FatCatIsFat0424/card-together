@@ -115,7 +115,8 @@ describe('room bots', () => {
     roomManager.setReady(code, 'host', true);
     expect(roomManager.isAllReady(code)).toBe(true);
     roomManager.setGameType(code, 'host', 'bigtwo');
-    expect(roomManager.isAllReady(code)).toBe(false);
+    // The host counts as ready even though the reset cleared the stored flag.
+    expect(roomManager.isAllReady(code)).toBe(true);
     expect(roomManager.getRoomInfo(code)!.seats.N.isReady).toBe(false);
     expect(SEATS.slice(1).every((seat) => roomManager.getRoomInfo(code)!.seats[seat].isReady)).toBe(true);
   });

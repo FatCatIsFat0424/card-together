@@ -108,10 +108,8 @@ describe('two to four seat tables', () => {
     roomManager.setReady(code, 'host', true);
     expect(roomManager.isAllReady(code)).toBe(false);
     roomManager.changeSeat(code, player('guest'), 'S');
-    roomManager.setReady(code, 'guest', true);
-    // The guest sitting down asked the host to confirm the new table.
     expect(roomManager.isAllReady(code)).toBe(false);
-    roomManager.setReady(code, 'host', true);
+    roomManager.setReady(code, 'guest', true);
     expect(roomManager.isAllReady(code)).toBe(true);
     expect(Object.keys(roomManager.getSeatPlayers(code)!)).toEqual(['N', 'S']);
 
@@ -132,21 +130,20 @@ describe('two to four seat tables', () => {
     expect(gameManager.hasActiveGame(code)).toBe(false);
   });
 
-  it('should ask for readiness again when a flexible-seat table changes, but not for four-seat games', () => {
+  it('should ask other humans for readiness again when a flexible-seat table changes, but never the host', () => {
     const code = roomManager.createRoom('holdem', 'host');
     roomManager.joinRoom(code, 'guest');
     roomManager.changeSeat(code, player('host'), 'N');
-    roomManager.setReady(code, 'host', true);
     expect(roomManager.addBot(code, 'host', 'E').success).toBe(true);
     expect(roomManager.getRoomInfo(code)!.seats.N.isReady).toBe(false);
-    expect(roomManager.isAllReady(code)).toBe(false);
+    expect(roomManager.isAllReady(code)).toBe(true);
     roomManager.changeSeat(code, player('guest'), 'S');
-    roomManager.setReady(code, 'host', true);
-    roomManager.setReady(code, 'guest', true);
-    expect(roomManager.standUp(code, 'guest').success).toBe(true);
-    // Host and bot remain, but the host readied for a three-seat table.
     expect(roomManager.isAllReady(code)).toBe(false);
-    roomManager.setReady(code, 'host', true);
+    roomManager.setReady(code, 'guest', true);
+    expect(roomManager.isAllReady(code)).toBe(true);
+    expect(roomManager.standUp(code, 'guest').success).toBe(true);
+    // Host and bot remain.
+    expect(roomManager.isAllReady(code)).toBe(true);
     expect(roomManager.removeBot(code, 'host', 'E').success).toBe(true);
     expect(roomManager.getRoomInfo(code)!.seats.N.isReady).toBe(false);
 
@@ -156,6 +153,24 @@ describe('two to four seat tables', () => {
     roomManager.setReady(bridge, 'solo', true);
     roomManager.changeSeat(bridge, player('other'), 'E');
     expect(roomManager.getRoomInfo(bridge)!.seats.N.isReady).toBe(true);
+  });
+
+  it('should treat whoever hosts the room as ready, including after a host transfer', () => {
+    const code = roomManager.createRoom('holdem', 'host');
+    roomManager.joinRoom(code, 'guest');
+    roomManager.changeSeat(code, player('host'), 'N');
+    roomManager.changeSeat(code, player('guest'), 'S');
+    expect(roomManager.isAllReady(code)).toBe(false);
+    roomManager.setReady(code, 'guest', true);
+    expect(roomManager.isAllReady(code)).toBe(true);
+    roomManager.leaveRoom(code, 'host');
+    roomManager.joinRoom(code, 'third');
+    roomManager.changeSeat(code, player('third'), 'E');
+    expect(roomManager.getRoomInfo(code)!.hostId).toBe('guest');
+    // The table change cleared the new host's stored flag; only the other human has to prepare again.
+    expect(roomManager.isAllReady(code)).toBe(false);
+    roomManager.setReady(code, 'third', true);
+    expect(roomManager.isAllReady(code)).toBe(true);
   });
 
   it('should leave an empty Hold\'em seat out of the deal, button, blinds, and turn order', () => {

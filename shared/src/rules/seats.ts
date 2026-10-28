@@ -49,6 +49,11 @@ export function gameSeatValue<T>(values: Readonly<Partial<Record<GameSeat, T>>> 
   return values?.[seat];
 }
 
+/** Bots and the host count as ready without toggling; only other humans must press ready. */
+export function isSeatReady(room: Pick<RoomInfo, 'hostId'>, entry: SeatInfo): boolean {
+  return entry.isReady || entry.player?.isBot === true || entry.player?.id === room.hostId;
+}
+
 export function roomCanStart(room: RoomInfo): boolean {
   const occupied = GAME_SEAT_ORDER.flatMap((seat) => {
     const entry = roomSeatInfo(room, seat);
@@ -57,7 +62,7 @@ export function roomCanStart(room: RoomInfo): boolean {
   return room.status === 'waiting' && occupied.length >= minPlayers(room.gameType)
     && occupied.length <= maxPlayers(room.gameType)
     && occupied.some((entry) => !entry.player?.isBot)
-    && occupied.every((entry) => entry.isReady);
+    && occupied.every((entry) => isSeatReady(room, entry));
 }
 
 /** N → E → S → W → N. */

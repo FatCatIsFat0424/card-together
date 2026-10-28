@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent, ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { GAME_SEAT_ORDER } from '@shared/constants';
-import { roomCanStart, roomSeatInfo } from '@shared/rules/seats';
+import { isSeatReady, roomCanStart, roomSeatInfo } from '@shared/rules/seats';
 import { useAccountStore } from '../stores/account-store';
 import { useGameStore } from '../stores/game-store';
 import { useRoomStore } from '../stores/room-store';
@@ -133,7 +133,7 @@ export function FloatingRoomCard(): ReactNode {
       </ul> : <p className={styles.empty}>{t('roomCard.empty')}</p>}
       <div className={styles.footer}>
         {!playing && !replaying && connection === 'ready' && <span>
-          {t('roomCard.prepared', { ready: String(occupied.filter((seat) => seat.isReady).length), total: String(occupied.length) })}</span>}
+          {t('roomCard.prepared', { ready: String(occupied.filter((seat) => isSeatReady(room, seat)).length), total: String(occupied.length) })}</span>}
         {(room.spectators?.length ?? 0) > 0 && <span>{t('roomCard.spectators', { count: String(room.spectators!.length) })}</span>}
       </div>
     </Link>

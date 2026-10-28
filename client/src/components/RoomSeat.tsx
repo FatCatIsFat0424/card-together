@@ -5,6 +5,7 @@ import Popover from '@mui/material/Popover';
 import Select from '@mui/material/Select';
 import { Link } from 'react-router-dom';
 import { BOT_DIFFICULTIES, isBotDifficulty } from '@shared/bot-difficulty';
+import { isSeatReady } from '@shared/rules/seats';
 import type { BotDifficulty, PlayerInfo, SeatInfo } from '@shared/types';
 import { SeatFrame, seatFrameHostClass } from '../cosmetics/seat-frames/SeatFrame';
 import { useI18nStore } from '../stores/i18n-store';
@@ -150,7 +151,7 @@ function OccupiedSeat(props: RoomSeatProps & { readonly player: PlayerInfo }): R
   const { t } = useI18nStore();
   const [botAnchor, setBotAnchor] = useState<HTMLButtonElement | null>(null);
   const isMe = player.id === props.playerId;
-  const ready = info.isReady || Boolean(player.isBot);
+  const ready = isSeatReady({ hostId: props.hostId }, info);
   const manageBot = props.isHost && Boolean(player.isBot);
   const canKick = props.isHost && !player.isBot && !isMe && props.waiting;
   const status = player.isBot ? t(`room.botDifficulty.${player.botDifficulty ?? 'hard'}`)
