@@ -8,6 +8,7 @@ import type { AccountProfile, AchievementsStatus } from '@shared/types';
 import { apiRequest } from '../api';
 import { AppIcon } from '../components/AppIcon';
 import { Button } from '../components/Button';
+import { PageHeader } from '../components/PageHeader';
 import { Tabs, tabElementId } from '../components/Tabs';
 import { Nameplate } from '../components/Nameplate';
 import { AchievementItem } from '../components/AchievementItem';
@@ -109,15 +110,14 @@ export function AchievementsPage(): ReactNode {
   const total = ACHIEVEMENT_CATEGORIES.reduce((sum, category) => sum + category.items.length, 0);
 
   return <main className={styles.page}>
-    <header className={styles.header}>
-      <h1><AppIcon name="trophy" />{t('achievements.title')}</h1>
-      {status && <Tabs<AchievementCategoryId> idPrefix="achievement" controls="achievement-panel" label={t('achievements.categories')}
-        value={selected} onChange={setSelected} className={styles.categories}
+    <PageHeader title={t('achievements.title')} icon="trophy" iconColor="var(--color-gold)"
+      tabs={status && <Tabs<AchievementCategoryId> idPrefix="achievement" controls="achievement-panel"
+        label={t('achievements.categories')} value={selected} onChange={setSelected}
         tabs={ACHIEVEMENT_CATEGORIES.map((category) => ({ id: category.id, label: <>
           {t(`achievements.${category.id}`)}
           <span className={styles.categoryCount}>{completedCount(category.id)}/{category.items.length}</span></> }))} />}
-      {status && <span className={styles.total}><AppIcon name="agree" />{t('achievements.total', { done: String(done), total: String(total) })}</span>}
-    </header>
+      summary={status && <><AppIcon name="agree" />{t('achievements.total', { done: String(done), total: String(total) })}</>}
+      compactSummary={status && <><AppIcon name="agree" />{`${done}/${total}`}</>} />
     {error && <div className={styles.error} role="alert">{t('achievements.error')}
       <Button onClick={() => setRefresh((value) => value + 1)}>{t('achievements.retry')}</Button></div>}
     {!status && !error && <p role="status">{t('common.loading')}</p>}

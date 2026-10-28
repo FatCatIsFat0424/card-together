@@ -24,7 +24,7 @@ export const napoleonClient: ClientGame<'napoleon'> = {
       enabled: (room.napoleonOptions ?? DEFAULT_NAPOLEON_OPTIONS).jokerSummon } }),
     matchContext: (game) => ({ option: { label: 'napoleon.jokerSummon', enabled: game.options.jokerSummon } }),
   },
-  handSort: { order: STANDARD_HAND_ORDER, bySuit: true },
+  handSort: { order: STANDARD_HAND_ORDER, bySuit: true, initial: 'suit' },
   handBeside: true,
   lobbyIcon: { glyph: '👑' },
   settlement: (game) => game.result,

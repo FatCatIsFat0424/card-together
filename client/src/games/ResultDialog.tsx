@@ -1,8 +1,9 @@
 // Shared end-of-game dialog for every table: result, history, and "Back to room".
 
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { Button } from '../components/Button';
+import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { dialogPaperClass, dialogParts } from '../styles/dialog';
 import { useReplayMode } from './replay-mode';
@@ -14,6 +15,13 @@ export const resultStyles = {
   note: styles.note,
 } as const;
 
+/** A list of the match's tricks or rounds, opened by a button beside "Back to room" below the summary. */
+export interface ResultHistory {
+  /** Button text with the count, such as "Trick history (13)" */
+  readonly label: string;
+  readonly content: ReactNode;
+}
+
 interface ResultDialogProps {
   title: ReactNode;
   /** Colour of the title; Bridge shows a defender win in the danger tone. */
@@ -22,6 +30,7 @@ interface ResultDialogProps {
   eyebrow?: ReactNode;
   wide?: boolean;
   children?: ReactNode;
+  history?: ResultHistory | null;
   pending: boolean;
   error: string;
   disabled?: boolean;
@@ -30,19 +39,31 @@ interface ResultDialogProps {
 
 const FOCUSABLE = 'button:not([disabled]), [href], summary, input:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/**
+ * Desktop stacks title, summary and actions. Short landscape screens put the actions in a right column beside
+ * the summary, so the summary keeps the height; the history then expands inside the summary column.
+ */
 export function ResultDialog({
-  title, tone = 'win', eyebrow, wide = false, children, pending, error, disabled = false, onBack,
+  title, tone = 'win', eyebrow, wide = false, children, history = null, pending, error, disabled = false, onBack,
 }: ResultDialogProps): ReactNode {
   const { t } = useI18nStore();
   const titleId = useId();
+  const historyId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const primaryRef = useRef<HTMLButtonElement>(null);
+  const historyRef = useRef<HTMLElement>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const gameType = useGameStore((state) => state.visible?.gameType ?? null);
   // Playback shows the recorded result without acting on any live room.
   const replay = useReplayMode();
 
   useEffect(() => {
     primaryRef.current?.focus({ preventScroll: true });
   }, []);
+
+  useEffect(() => {
+    if (historyOpen) historyRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [historyOpen]);
 
   // Keep keyboard focus inside the modal dialog.
   const trapFocus = (event: KeyboardEvent<HTMLDivElement>): void => {
@@ -60,6 +81,7 @@ export function ResultDialog({
     }
   };
 
+  const shownHistory = historyOpen && history;
   // During playback it covers only the table, so the transport below stays usable.
   return <div className={`${styles.backdrop} ${replay ? styles.contained : ''}`}>
     <div ref={dialogRef} className={dialogPaperClass(wide ? 'medium' : 'narrow', styles.dialog)} role="dialog"
@@ -69,15 +91,27 @@ export function ResultDialog({
           {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}
           <h2 id={titleId} className={`${styles.title} ${tone === 'lose' ? styles.lose : styles.win}`}>{title}</h2>
         </div>
+        {gameType && <span className={styles.gameName}>{t(`gameType.${gameType}`)}</span>}
       </header>
-      <div className={dialogParts.body}>{children}</div>
-      {!replay && <footer className={`${dialogParts.footer} ${styles.footer}`}>
-        {pending && <p className={styles.readiness} role="status">{t('result.returning')}</p>}
-        {error && <p className={styles.error} role="alert">{error}</p>}
-        <Button ref={primaryRef} variant="primary" disabled={pending || disabled} onClick={onBack}>
-          {t('score.backToRoom')}
-        </Button>
-      </footer>}
+      <div className={styles.layout}>
+        <div className={dialogParts.body}>
+          {children}
+          {shownHistory && <section ref={historyRef} id={historyId} className={styles.history}
+            aria-label={history.label}>{history.content}</section>}
+        </div>
+        {(!replay || history) && <footer className={`${dialogParts.footer} ${styles.footer}`}>
+          {pending && <p className={styles.readiness} role="status">{t('result.returning')}</p>}
+          {error && <p className={styles.error} role="alert">{error}</p>}
+          {history && <Button className={styles.historyButton} icon="info" aria-expanded={historyOpen}
+            aria-controls={shownHistory ? historyId : undefined} onClick={() => setHistoryOpen((open) => !open)}>
+            {history.label}
+          </Button>}
+          {!replay && <Button ref={primaryRef} variant="primary" className={styles.back} disabled={pending || disabled}
+            onClick={onBack}>
+            {t('score.backToRoom')}
+          </Button>}
+        </footer>}
+      </div>
     </div>
   </div>;
 }

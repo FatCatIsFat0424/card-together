@@ -15,7 +15,7 @@ import { GameShell } from '../GameShell';
 import { HandActions } from '../HandActions';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
-import { RoundHistory } from '../RoundHistory';
+import { useResultRoundHistory } from '../RoundHistory';
 import { infoStyles, TurnBox } from '../TableInfo';
 import { useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
@@ -101,9 +101,9 @@ function ResultOverlay({ result, revealed, pending, error, disabled, onBack }: {
   pending: boolean; error: string; disabled: boolean; onBack: () => void;
 }): ReactNode {
   const { t } = useI18nStore();
-  const historyGame = useGameStore((state) => state.visible);
+  const history = useResultRoundHistory(useGameStore((state) => state.visible));
   const seatName = useSeatName();
-  return <ResultDialog wide title={t('bigtwo.winner', { name: seatName(result.winnerSeat) })}
+  return <ResultDialog history={history} wide title={t('bigtwo.winner', { name: seatName(result.winnerSeat) })}
     eyebrow={result.dragon ? t('bigtwo.dragon') : undefined}
     pending={pending} error={error} disabled={disabled} onBack={onBack}>
     <table className={resultStyles.table}>
@@ -122,7 +122,6 @@ function ResultOverlay({ result, revealed, pending, error, disabled, onBack }: {
           : penaltyFormula(result.cardsLeft[seat], result.twosLeft[seat], result.scores[seat])}</td>
       </tr>)}</tbody>
     </table>
-    {historyGame && <RoundHistory game={historyGame} />}
   </ResultDialog>;
 }
 

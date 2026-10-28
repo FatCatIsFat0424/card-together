@@ -22,7 +22,7 @@ export const chinesePokerClient: ClientGame<'chinesepoker'> = {
     roomContext: () => NO_RULES_OPTION,
     matchContext: () => NO_RULES_OPTION,
   },
-  handSort: { order: STANDARD_HAND_ORDER, bySuit: true },
+  handSort: { order: STANDARD_HAND_ORDER, bySuit: true, initial: 'rank' },
   handBeside: false,
   lobbyIcon: { glyph: '🀄' },
   settlement: (game) => game.result,

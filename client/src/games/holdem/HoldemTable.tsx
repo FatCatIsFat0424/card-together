@@ -13,7 +13,7 @@ import { ChipIcon } from '../ChipIcon';
 import { GameShell } from '../GameShell';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
-import { RoundHistory } from '../RoundHistory';
+import { useResultRoundHistory } from '../RoundHistory';
 import { infoStyles, TurnBox } from '../TableInfo';
 import { joinNames, useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
@@ -213,9 +213,9 @@ function ResultOverlay({ result, pending, error, disabled, onBack }: {
   result: HoldemMatchResult; pending: boolean; error: string; disabled: boolean; onBack: () => void;
 }): ReactNode {
   const { t, locale } = useI18nStore();
-  const historyGame = useGameStore((state) => state.visible);
+  const history = useResultRoundHistory(useGameStore((state) => state.visible));
   const seatName = useSeatName();
-  return <ResultDialog title={t('holdem.winner', { names: joinNames(result.winners.map(seatName), locale) })}
+  return <ResultDialog history={history} title={t('holdem.winner', { names: joinNames(result.winners.map(seatName), locale) })}
     pending={pending} error={error} disabled={disabled} onBack={onBack}>
     <table className={`${resultStyles.table} ${styles.rankTable}`}>
       <thead><tr>
@@ -232,7 +232,6 @@ function ResultOverlay({ result, pending, error, disabled, onBack }: {
       ))}</tbody>
     </table>
     <p className={resultStyles.note}>{t('holdem.handsPlayed', { n: String(result.hands) })}</p>
-    {historyGame && <RoundHistory game={historyGame} />}
   </ResultDialog>;
 }
 

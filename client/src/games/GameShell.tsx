@@ -46,7 +46,7 @@ import { useStillArt } from '../cosmetics/art-layers/art-layers';
 import { layeredShopArt } from '../cosmetics/art-layers/shop-art-layers';
 import { CardBackArtContext } from '../cosmetics/art-layers/CardBackArt';
 import { TableArt } from '../cosmetics/art-layers/TableArt';
-import { AutoPlayBanner, GameActionBar } from './GameActionBar';
+import { AutoPlayBanner, TableTools, TableToolsDrawer } from './TableTools';
 import { GameMenuLinks, useGameMenuUnread } from './GameMenuLinks';
 import { RotateHint } from './RotateHint';
 import { godViewSource, useReplayMode } from './replay-mode';
@@ -228,7 +228,8 @@ export function GameShell({
   const chatShown = dockLayout ? dockOpen && dockTab === 'chat' : chatOpen;
   const unread = chatShown ? 0 : Math.max(0, messageCount - seenMessages);
   // Phones hide the app bar during games, so this sheet becomes the menu for everything it held.
-  const phoneMenu = useMediaQuery(SHEET_QUERY) && !replay;
+  const sheetLayout = useMediaQuery(SHEET_QUERY);
+  const phoneMenu = sheetLayout && !replay;
   const menuUnread = useGameMenuUnread();
   const godView = useGodViewStore((state) => state.role);
   const godViewStore = useGodViewStore.useApi();
@@ -393,7 +394,6 @@ export function GameShell({
   const dockTabs = [
     { id: 'info' as const, label: t('table.info'), panel: <div className={styles.dockInfo}>
       {tableControls}
-      {!replay && <GameActionBar className={styles.menuTools} />}
       {rulesButton}
       {motionSetting}
       {infoContent}
@@ -419,7 +419,6 @@ export function GameShell({
             aria-label={t('table.close')} title={t('table.close')}><AppIcon name="close" /></button>
         </div>
         {tableControls}
-        {!replay && <GameActionBar className={styles.menuTools} />}
         {rulesButton}
         {motionSetting}
         {infoContent}
@@ -493,6 +492,7 @@ export function GameShell({
             {prompt && <p className={styles.handPrompt}>{prompt}</p>}
             {error && <p className={styles.actionError} role="alert">{error}</p>}
           </div>
+          {!replay && (sheetLayout ? <TableToolsDrawer /> : <TableTools />)}
           <div inert={visibleGame?.autoPlay}>{hand}</div>
         </div>
         {tableEffect}

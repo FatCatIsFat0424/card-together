@@ -62,4 +62,22 @@ describe('result dialog', () => {
       title: 'x', pending: true, error: '', onBack: () => undefined,
     }))).toContain('Returning to the room');
   });
+
+  it('should offer the history as a closed button beside the primary action', () => {
+    const html = renderToStaticMarkup(createElement(ResultDialog, {
+      title: 'x', pending: false, error: '', onBack: () => undefined,
+      history: { label: 'Trick history (13)', content: createElement('table', null, 'tricks') },
+    }));
+    expect(html).toMatch(/<button[^>]*aria-expanded="false"[^>]*>[\s\S]*?Trick history \(13\)<\/button>/);
+    expect(html).not.toContain('tricks');
+    expect(html.indexOf('Trick history')).toBeLessThan(html.indexOf('Back to Room'));
+    expect(html).not.toContain('<details');
+  });
+
+  it('should leave the history button out when a game has none', () => {
+    const html = renderToStaticMarkup(createElement(ResultDialog, {
+      title: 'x', pending: false, error: '', onBack: () => undefined, history: null,
+    }));
+    expect(html).not.toContain('aria-expanded');
+  });
 });

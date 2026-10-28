@@ -1,20 +1,16 @@
-/* Achievements: one header row (title, category tabs, total), one thin reward row, then a grid of compact tiles. */
+/* Achievements: the shared page header (title, category tabs, total), one thin reward row, then a grid of compact
+   tiles. The header starts at the top edge; the desktop shell moves it into its top bar. */
 .page {
   --achievement-gold: var(--color-gold);
   width: 100%;
   max-width: var(--page-max);
-  padding: var(--page-inset) var(--page-inset) calc(var(--page-inset) + var(--room-card-clearance, 0px));
+  padding: 0 var(--page-inset) calc(var(--page-inset) + var(--room-card-clearance, 0px));
+}
+@media (min-width: 768px) and (min-height: 501px) {
+  .page { padding-top: var(--space-4); }
 }
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.header { display: flex; align-items: center; flex-wrap: wrap; gap: 0 var(--space-4); min-height: 32px; margin-bottom: var(--space-2); }
-.header h1 { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-lg); font-weight: 600; }
-.header h1 > svg { color: var(--achievement-gold); }
-/* The 40px tab hit areas overlap the slim row so the header stays 32px tall. */
-.categories { margin-block: -4px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
-.categories::-webkit-scrollbar { display: none; }
 .categoryCount { margin-left: var(--space-2); color: var(--text-muted); font-size: var(--text-xs); font-weight: 400; font-variant-numeric: tabular-nums; }
-.total { display: inline-flex; align-items: center; gap: var(--space-1); margin-left: auto; color: var(--text-secondary); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
-.total > svg { color: var(--achievement-gold); font-size: var(--icon-size); }
 .details { min-width: 0; }
 .reward { display: flex; align-items: center; gap: var(--space-3); min-height: 28px; margin-bottom: var(--space-2); }
 .rewardTitle { display: inline-flex; flex-shrink: 0; font-size: var(--text-xs); }
@@ -41,10 +37,6 @@
 
 /* Desktop: a roomier header and reward row; the grid fills three or four columns. */
 @media (min-width: 64rem) and (min-height: 501px) {
-  .header { min-height: 40px; gap: 0 var(--space-5); margin-bottom: var(--space-3); }
-  .header h1 { font-size: var(--text-2xl); }
-  .categories { margin-block: 0; }
-  .total { font-size: var(--text-base); }
   .reward { min-height: 40px; margin-bottom: var(--space-3); }
   .rewardTitle, .percent, .hint, .manage { font-size: var(--text-sm); }
   .items { grid-template-columns: repeat(auto-fill, minmax(max(17rem, calc((100% - 3 * var(--space-3)) / 4)), 1fr)); gap: var(--space-3); }

@@ -18,7 +18,7 @@ export const redPointsClient: ClientGame<'redpoints'> = {
     matchContext: () => NO_RULES_OPTION,
   },
   roundHistory: { derive: deriveRedPointsRounds },
-  handSort: { order: STANDARD_HAND_ORDER, bySuit: true },
+  handSort: { order: STANDARD_HAND_ORDER, bySuit: true, initial: 'rank' },
   handBeside: true,
   lobbyIcon: { glyph: '🔴', icon: 'circle', red: true },
   settlement: (game) => game.result,

@@ -68,6 +68,35 @@
 
 .footer.footer { justify-content: flex-end; }
 
+/* Desktop keeps the body and footer as the paper's own rows. */
+.layout { display: contents; }
+.gameName { display: none; }
+.history { margin-top: var(--space-3); }
+
+/* Short landscape: a medium two-column dialog. The summary scrolls on the left; the actions stand in a column on
+   the right, so no footer row takes height. The title reads from the left, with the game named on the right. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .dialog.dialog.dialog { --dialog-width: 40rem; text-align: left; }
+  .header.header { justify-content: space-between; text-align: left; }
+  .gameName { display: block; flex: none; padding-right: var(--space-2); color: var(--text-muted); font-size: var(--text-xs); font-weight: 500; }
+  .layout { display: grid; flex: 1 1 auto; grid-template-columns: minmax(0, 1fr) 12.5rem; min-height: 0; }
+  .footer.footer {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: flex-start;
+    min-height: 0;
+    padding: var(--dialog-padding);
+    overflow-y: auto;
+    border-top: 0;
+    border-left: 1px solid var(--separator);
+  }
+  .back { order: -2; }
+  .historyButton { order: -1; }
+  .readiness, .error { flex: none; order: 1; margin-top: auto; }
+  .readiness + .error { margin-top: 0; }
+}
+
 .readiness,
 .error {
   flex: 1 1 auto;

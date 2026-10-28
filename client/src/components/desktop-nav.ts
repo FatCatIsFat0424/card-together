@@ -32,14 +32,23 @@ function under(pathname: string, base: string): boolean {
   return pathname === base || pathname.startsWith(`${base}/`);
 }
 
-/** Table pages draw their own full-screen chrome and keep the classic top bar until the in-game dock lands. */
+/** Table pages fill the screen beside the rail without a top bar; the dock holds the room details. */
 export function isTableRoute(pathname: string): boolean {
   return under(pathname, '/game') || /^\/room\/[^/]+\/replay\/?$/.test(pathname);
 }
 
+/** The leading rail item that returns to the viewer's room or game; it exists only while they are in one. */
+export type TableRailItem = 'table';
+
+/** Where the table item leads: the running game, or the waiting room (which also hosts shared replays). */
+export function tableRailPath(roomCode: string, playing: boolean): string {
+  return `/${playing ? 'game' : 'room'}/${encodeURIComponent(roomCode)}`;
+}
+
 /** Rail destination for a path, or null when no rail item stands for the page (for example another player's profile). */
-export function currentRailItem(pathname: string, accountId: string): RailItemId | null {
+export function currentRailItem(pathname: string, accountId: string): RailItemId | TableRailItem | null {
   if (pathname === '/') return 'lobby';
+  if (under(pathname, '/game') || under(pathname, '/room')) return 'table';
   if (under(pathname, '/friends')) return 'friends';
   if (under(pathname, '/messages')) return 'messages';
   if (under(pathname, '/shop')) return 'shop';

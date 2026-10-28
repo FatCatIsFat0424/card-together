@@ -9,6 +9,7 @@ import { clearAccount, useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useMusicStore } from '../stores/music-store';
 import { useRoomStore } from '../stores/room-store';
+import { useGameStore } from '../stores/game-store';
 import { useActiveIndicator } from '../hooks/use-active-indicator';
 import { useExitPresence } from '../hooks/use-exit-presence';
 import { useFriendsData } from '../hooks/use-friends-data';
@@ -24,7 +25,7 @@ import { IconButton, IconLink, badgeText } from './IconButton';
 import { RoomCodeButton } from './RoomCodeButton';
 import { DesktopShell } from './DesktopShell';
 import type { ShellPopover } from './DesktopShell';
-import { DESKTOP_SHELL_QUERY, isTableRoute } from './desktop-nav';
+import { DESKTOP_SHELL_QUERY, isTableRoute, tableRailPath } from './desktop-nav';
 import { NotificationPanel } from './NotificationPanel';
 import { nextReturnLocation, togglePageHref, togglePageOf } from './topbar-toggle-page';
 import { messageUnreadCount, notificationUnreadCount, useSocialStore } from '../stores/social-store';
@@ -62,7 +63,11 @@ export function TopBar(): ReactNode {
     useActiveIndicator<HTMLElement, HTMLSpanElement>('a[aria-current="page"]', pathname);
   const railLayout = useMediaQuery(RAIL_QUERY);
   const wideLayout = useMediaQuery(DESKTOP_SHELL_QUERY);
-  const desktopShell = wideLayout && Boolean(accountId) && !isTableRoute(pathname);
+  const desktopShell = wideLayout && Boolean(accountId);
+  const room = useRoomStore((state) => state.roomInfo);
+  const gamePhase = useGameStore((state) => state.phase);
+  const tableHref = roomCode && room?.code === roomCode
+    ? tableRailPath(roomCode, Boolean(gamePhase) || room.status === 'playing') : null;
   const { data: friendsData } = useFriendsData((railLayout || desktopShell) && Boolean(accountId));
   const onlineFriends = friendsData?.friends.filter((friend) => friend.online).length ?? 0;
   const notificationsRequest = useShellStore((state) => state.notificationsRequest);
@@ -166,7 +171,7 @@ export function TopBar(): ReactNode {
   };
 
   if (desktopShell && accountId) return <DesktopShell pathname={pathname} accountId={accountId} returnTo={returnTo}
-    onlineFriends={onlineFriends}
+    onlineFriends={onlineFriends} tableRoute={isTableRoute(pathname)} tableHref={tableHref}
     popovers={{ open, toggle, close: () => setOpen(null), shown, panelProps }}
     signOut={{ request: requestSignOut, run: () => void signOut(), busy, error, confirm: confirmSignOut }} />;
 

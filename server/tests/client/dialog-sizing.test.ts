@@ -34,6 +34,22 @@ describe('dialog sizing', () => {
     expect(css).toMatch(/\.footer \{[^}]*flex: none/);
   });
 
+  it('keeps confirms at 400px and medium dialogs at 640px on short landscape, with a 44px header', () => {
+    const css = read('styles/dialog.module.css');
+    const landscape = css.slice(css.indexOf('@media (max-height: 500px) and (min-width: 600px)'));
+    expect(landscape).toContain('.narrow.narrow { --dialog-width: 25rem; }');
+    expect(landscape).toContain('.medium.medium { --dialog-width: 40rem; }');
+    expect(landscape).toMatch(/\.header\.header \{[^}]*min-height: 44px/);
+  });
+
+  it('lays the settlement out in two columns on short landscape, actions on the right', () => {
+    const css = read('games/ResultDialog.module.css');
+    const landscape = css.slice(css.indexOf('@media (max-height: 500px) and (min-width: 600px)'));
+    expect(landscape).toMatch(/\.dialog\.dialog\.dialog \{[^}]*--dialog-width: 40rem/);
+    expect(landscape).toMatch(/\.layout \{[^}]*grid-template-columns: minmax\(0, 1fr\) 12\.5rem/);
+    expect(landscape).toMatch(/\.footer\.footer \{[^}]*flex-direction: column/);
+  });
+
   it('uses a 16px inset, tightened to 12px on phones and short landscape', () => {
     const global = read('styles/global.css');
     expect(global).toMatch(/:root \{[^}]*--dialog-inset: 16px/s);

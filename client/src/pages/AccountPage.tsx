@@ -22,6 +22,7 @@ import { AccountProfilePreview } from '../components/AccountProfilePreview';
 import { AppCheckbox } from '../components/AppCheckbox';
 import { AudioSettings } from '../components/AudioSettings';
 import { Button } from '../components/Button';
+import { PageHeader } from '../components/PageHeader';
 import { Tabs, tabElementId } from '../components/Tabs';
 import styles from './AccountPages.module.css';
 import editorStyles from './AccountPage.module.css';
@@ -190,16 +191,13 @@ export function AccountPage(): ReactNode {
     else setSecurityError(result.error);
   };
 
+  const joined = new Date(account.createdAt).toLocaleDateString(locale);
   return (
     <main className={editorStyles.page}>
-      <header className={editorStyles.header}>
-        <Tabs<AccountTab> idPrefix="account" controls="account-panel" label={t('nav.account')} value={activeTab}
-          className={editorStyles.tabs} onChange={setActiveTab}
-          tabs={ACCOUNT_TABS.map((tab) => ({ id: tab, label: t(`profile.tab.${tab}`) }))} />
-        <p className={editorStyles.joined}>
-          {t('profile.joined')} {new Date(account.createdAt).toLocaleDateString(locale)}
-        </p>
-      </header>
+      <PageHeader title={t('nav.account')} icon="person"
+        tabs={<Tabs<AccountTab> idPrefix="account" controls="account-panel" label={t('nav.account')} value={activeTab}
+          onChange={setActiveTab} tabs={ACCOUNT_TABS.map((tab) => ({ id: tab, label: t(`profile.tab.${tab}`) }))} />}
+        summary={`${t('profile.joined')} ${joined}`} compactSummary={t('profile.joinedOn', { date: joined })} />
       <div id="account-panel" role="tabpanel" aria-labelledby={tabElementId('account', activeTab)}>
       <div id="account-panel-profile" hidden={activeTab !== 'profile'}>
         <div className={editorStyles.editor}>

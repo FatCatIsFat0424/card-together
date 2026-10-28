@@ -24,7 +24,7 @@ export const sevensClient: ClientGame<'sevens'> = {
   },
   roundHistory: { derive: deriveSevensRounds },
   // Aces are low in Sevens, so a hand reads K down to A.
-  handSort: { order: { rank: svOrder, suit: STANDARD_HAND_ORDER.suit }, bySuit: true },
+  handSort: { order: { rank: svOrder, suit: STANDARD_HAND_ORDER.suit }, bySuit: true, initial: 'suit' },
   handBeside: true,
   lobbyIcon: { glyph: '7️⃣', icon: 'seven' },
   settlement: (game) => game.result,

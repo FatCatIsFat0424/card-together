@@ -1,0 +1,74 @@
+/* Slim page header: title, tabs and a short summary in one 40px row that sticks to the top of the page. Pages
+   start it at their top edge; it reaches across their side insets. */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 40px;
+  margin: 0 calc(-1 * var(--page-inset)) var(--space-2);
+  padding: 0 var(--page-inset);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--separator);
+}
+
+.title {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.title > svg { color: var(--page-header-icon, var(--text-secondary)); font-size: var(--icon-size); }
+
+/* Tabs scroll sideways when they do not fit; the summary keeps its place. */
+.tabs { flex: 0 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+
+.summary {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0 0 0 auto;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.summary > span { display: inline-flex; align-items: center; gap: var(--space-1); }
+.summary svg { color: var(--page-header-icon, var(--text-secondary)); font-size: var(--icon-size); }
+.summary > .compact { display: none; }
+
+/* Desktop: the row lives in the top bar's empty left half, after a thin divider beside the title. */
+.inBar {
+  position: static;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  gap: var(--space-4);
+  background: none;
+  border: 0;
+}
+.inBar .title::after { content: ''; width: 1px; height: 20px; margin-left: var(--space-2); background: var(--separator); }
+.inBar .summary { margin-left: 0; }
+
+/* Short landscape: the rail marks the page, so the title shows only its icon and the summary its short form. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .titleText, .full {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .summary > .compact { display: inline-flex; }
+}

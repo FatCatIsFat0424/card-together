@@ -33,7 +33,7 @@ export const blackjackClient: ClientGame<'blackjack'> = {
     }),
   },
   roundHistory: { derive: deriveBlackjackRounds, followsPresentation: true },
-  handSort: { order: STANDARD_HAND_ORDER, bySuit: true },
+  handSort: { order: STANDARD_HAND_ORDER, bySuit: true, initial: 'rank' },
   handBeside: false,
   lobbyIcon: { glyph: '🎰' },
   settlement: (game) => game.result,

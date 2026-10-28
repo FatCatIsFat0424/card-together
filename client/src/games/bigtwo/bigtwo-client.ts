@@ -26,6 +26,7 @@ export const bigTwoClient: ClientGame<'bigtwo'> = {
       suit: (card) => BIGTWO_SUIT_ORDER.length - 1 - BIGTWO_SUIT_ORDER.indexOf(card.suit),
     },
     bySuit: true,
+    initial: 'rank',
   },
   handBeside: false,
   lobbyIcon: { glyph: '🃏' },

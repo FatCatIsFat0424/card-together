@@ -24,7 +24,11 @@
 .body.body.body { flex: 1 1 auto; min-height: 0; padding: var(--dialog-padding); overflow-y: auto; overscroll-behavior: contain; border: 0; }
 .footer { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-2); padding: var(--space-2) var(--dialog-padding); border-top: 1px solid var(--separator); }
 
-/* Short landscape: dialogs span the screen minus the inset, so every edge shows the same margin. */
+/* Short landscape: a confirm stays a 400px column and a medium dialog 640px, so neither stretches into a strip;
+   wide content spans the screen minus the inset. The header is 44px and only the body scrolls. */
 @media (max-height: 500px) and (min-width: 600px) {
-  .paper.paper { width: min(56.25rem, calc(100vw - 2 * var(--dialog-inset))); }
+  .narrow.narrow { --dialog-width: 25rem; }
+  .medium.medium { --dialog-width: 40rem; }
+  .wide.wide { --dialog-width: 100vw; }
+  .header.header { min-height: 44px; padding-block: 2px; }
 }

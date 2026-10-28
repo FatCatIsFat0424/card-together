@@ -19,7 +19,7 @@ export const ninetyNineClient: ClientGame<'ninetynine'> = {
     matchContext: (game) => ({ option: { label: 'ninetynine.twoDecks', enabled: game.options?.twoDecks ?? false } }),
   },
   roundHistory: { derive: deriveNinetyNineRounds },
-  handSort: { order: STANDARD_HAND_ORDER, bySuit: true },
+  handSort: { order: STANDARD_HAND_ORDER, bySuit: true, initial: 'rank' },
   handBeside: true,
   lobbyIcon: { glyph: '💯' },
   settlement: (game) => game.result,

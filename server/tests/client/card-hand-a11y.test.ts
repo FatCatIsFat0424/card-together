@@ -17,7 +17,7 @@ const two: Card = { suit: 'hearts', rank: 2 };
 describe('card hand accessibility', () => {
   beforeEach(() => {
     useI18nStore.setState({ locale: 'en' });
-    useHandSortStore.setState({ gameType: null, order: null, revision: 0 });
+    useHandSortStore.setState({ gameType: null, order: null, manual: false });
   });
 
   it('should label the hand and keep unplayable cards focusable', () => {

@@ -13,7 +13,7 @@ import { GameShell } from '../GameShell';
 import { HandActions } from '../HandActions';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
-import { RoundHistory } from '../RoundHistory';
+import { useResultRoundHistory } from '../RoundHistory';
 import { infoStyles, TurnBox } from '../TableInfo';
 import { useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
@@ -114,11 +114,11 @@ function ResultOverlay({ result, pending, error, disabled, onBack }: {
   result: LiarsDeckMatchResult; pending: boolean; error: string; disabled: boolean; onBack: () => void;
 }): ReactNode {
   const { t } = useI18nStore();
-  const historyGame = useGameStore((state) => state.visible);
+  const history = useResultRoundHistory(useGameStore((state) => state.visible));
   const seatName = useSeatName();
   // The last player eliminated ranks 2nd, and so on
   const ranking = [result.winnerSeat, ...[...result.eliminationOrder].reverse()];
-  return <ResultDialog title={t('liarsdeck.winner', { name: seatName(result.winnerSeat) })}
+  return <ResultDialog history={history} title={t('liarsdeck.winner', { name: seatName(result.winnerSeat) })}
     pending={pending} error={error} disabled={disabled} onBack={onBack}>
     <table className={`${resultStyles.table} ${styles.rankTable}`}>
       <thead><tr>
@@ -133,7 +133,6 @@ function ResultOverlay({ result, pending, error, disabled, onBack }: {
       ))}</tbody>
     </table>
     <p className={resultStyles.note}>{t('liarsdeck.rounds', { n: String(result.rounds) })}</p>
-    {historyGame && <RoundHistory game={historyGame} />}
   </ResultDialog>;
 }
 

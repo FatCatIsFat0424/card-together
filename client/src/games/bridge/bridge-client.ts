@@ -26,7 +26,7 @@ export const bridgeClient: ClientGame<'bridge'> = {
     roomContext: () => NO_RULES_OPTION,
     matchContext: () => NO_RULES_OPTION,
   },
-  handSort: { order: STANDARD_HAND_ORDER, bySuit: true },
+  handSort: { order: STANDARD_HAND_ORDER, bySuit: true, initial: 'suit' },
   handBeside: true,
   lobbyIcon: { glyph: '♠' },
   settlement: (game) => game.result ? { ...game.result, gameType: 'bridge' } : null,

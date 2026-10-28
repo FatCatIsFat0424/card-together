@@ -19,7 +19,7 @@ export const liarsDeckClient: ClientGame<'liarsdeck'> = {
   },
   roundHistory: { derive: deriveLiarsDeckRounds },
   // Its cards differ only by rank, so there is no suit order to offer.
-  handSort: { order: STANDARD_HAND_ORDER, bySuit: false },
+  handSort: { order: STANDARD_HAND_ORDER, bySuit: false, initial: 'rank' },
   handBeside: true,
   lobbyIcon: { glyph: '🍺', icon: 'beer' },
   settlement: (game) => game.result,

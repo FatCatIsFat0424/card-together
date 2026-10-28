@@ -21,7 +21,7 @@ export const holdemClient: ClientGame<'holdem'> = {
     matchContext: () => NO_RULES_OPTION,
   },
   roundHistory: { derive: deriveHoldemRounds, followsPresentation: true },
-  handSort: { order: STANDARD_HAND_ORDER, bySuit: true },
+  handSort: { order: STANDARD_HAND_ORDER, bySuit: true, initial: 'rank' },
   handBeside: false,
   lobbyIcon: { glyph: '♦️' },
   settlement: (game) => game.result,

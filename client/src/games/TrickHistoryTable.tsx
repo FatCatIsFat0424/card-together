@@ -37,6 +37,7 @@ export function trickHistoryColumns(seats: readonly GameSeat[], viewer: GameSeat
 
 export function TrickHistoryTable({
   rows, columns, mySeat, roles = [], cardText, columnLabel, seatName, className, summaryClassName, defaultOpen = true,
+  bare = false,
 }: {
   rows: readonly TrickHistoryRow[];
   columns: readonly GameSeat[];
@@ -51,6 +52,8 @@ export function TrickHistoryTable({
   className?: string;
   summaryClassName?: string;
   defaultOpen?: boolean;
+  /** Only the table and legend, without its own disclosure */
+  bare?: boolean;
 }): ReactNode {
   const [open, setOpen] = useState(defaultOpen);
   const { t } = useI18nStore();
@@ -59,49 +62,52 @@ export function TrickHistoryTable({
   if (rows.length === 0) return null;
   const roleOf = (seat: GameSeat): TrickHistoryRole | undefined => roles.find((role) => role.seat === seat);
 
+  const content = <>
+    <table className={styles.table} style={{ '--columns': columns.length } as CSSProperties}>
+      <thead>
+        <tr>
+          <th scope="col" className={styles.number}>#</th>
+          {columns.map((seat) => <th key={seat} scope="col" title={name(seat)}
+            className={seat === mySeat ? styles.mine : undefined}
+            style={{ borderTopColor: roleOf(seat)?.color }}>
+            <span className={styles.name}>{columnLabel ? columnLabel(seat) : name(seat)}</span>
+          </th>)}
+        </tr>
+      </thead>
+      {rows.map((row) => <tbody key={row.number} className={styles.trick}>
+        <tr>
+          <th scope="row" className={styles.number}>{row.number}</th>
+          {columns.map((seat) => {
+            const card = row.cards[seat];
+            const lead = seat === row.leadSeat;
+            const won = seat === row.winnerSeat;
+            const title = [name(seat), card ? cardText(card) : null,
+              lead ? t('table.lead') : null, won ? t('table.winner') : null].filter(Boolean).join(' · ');
+            return <td key={seat} title={title} className={`${lead ? styles.lead : ''} ${won ? styles.won : ''}`}>
+              {card ? <CardLabel card={card} className={isNapoleonJoker(card) ? styles.joker : undefined} /> : <span className={styles.empty}>·</span>}
+            </td>;
+          })}
+        </tr>
+        {row.note && <tr className={styles.note}>
+          <td />
+          <td colSpan={columns.length}>{row.note}</td>
+        </tr>}
+      </tbody>)}
+    </table>
+    <p className={styles.legend}>
+      <span className={styles.legendLead}>{t('table.lead')}</span>
+      <span className={styles.legendWon}>{t('table.winner')}</span>
+      {roles.map((role) => <span key={role.seat} className={styles.badge}
+        style={{ background: role.color, color: role.ink }}>{role.label}</span>)}
+    </p>
+  </>;
+  // The result dialog shows and hides the table with its own button.
+  if (bare) return <div className={`${styles.history} ${className ?? ''}`}>{content}</div>;
   return (
     <details className={`${styles.history} ${className ?? ''}`} open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary className={summaryClassName}>{t('table.trickHistory')} ({rows.length})</summary>
-      {open && <>
-        <table className={styles.table} style={{ '--columns': columns.length } as CSSProperties}>
-          <thead>
-            <tr>
-              <th scope="col" className={styles.number}>#</th>
-              {columns.map((seat) => <th key={seat} scope="col" title={name(seat)}
-                className={seat === mySeat ? styles.mine : undefined}
-                style={{ borderTopColor: roleOf(seat)?.color }}>
-                <span className={styles.name}>{columnLabel ? columnLabel(seat) : name(seat)}</span>
-              </th>)}
-            </tr>
-          </thead>
-          {rows.map((row) => <tbody key={row.number} className={styles.trick}>
-            <tr>
-              <th scope="row" className={styles.number}>{row.number}</th>
-              {columns.map((seat) => {
-                const card = row.cards[seat];
-                const lead = seat === row.leadSeat;
-                const won = seat === row.winnerSeat;
-                const title = [name(seat), card ? cardText(card) : null,
-                  lead ? t('table.lead') : null, won ? t('table.winner') : null].filter(Boolean).join(' · ');
-                return <td key={seat} title={title} className={`${lead ? styles.lead : ''} ${won ? styles.won : ''}`}>
-                  {card ? <CardLabel card={card} className={isNapoleonJoker(card) ? styles.joker : undefined} /> : <span className={styles.empty}>·</span>}
-                </td>;
-              })}
-            </tr>
-            {row.note && <tr className={styles.note}>
-              <td />
-              <td colSpan={columns.length}>{row.note}</td>
-            </tr>}
-          </tbody>)}
-        </table>
-        <p className={styles.legend}>
-          <span className={styles.legendLead}>{t('table.lead')}</span>
-          <span className={styles.legendWon}>{t('table.winner')}</span>
-          {roles.map((role) => <span key={role.seat} className={styles.badge}
-            style={{ background: role.color, color: role.ink }}>{role.label}</span>)}
-        </p>
-      </>}
+      {open && content}
     </details>
   );
 }

@@ -78,11 +78,32 @@
   text-align: center;
 }
 
+/* The table item leads the rail in the accent colour, so the way back stands out from other pages too. */
+.table:not([aria-current]) { color: var(--color-primary); }
+
+/* Table pages: notifications, music and the account menu sit under a divider at the bottom. */
+.footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--separator);
+}
+.footer > * { display: grid; place-items: center; width: 100%; min-height: 44px; }
+
 /* Tablets: icons only; the accessible name and title carry the label. */
 @media (max-width: 1023px) {
   .rail { padding-inline: var(--space-2); }
   .item { min-height: var(--hit-size); }
   .label { display: none; }
+}
+/* Short desktops: the longer table rail keeps every item and its bottom controls in view with icons only. */
+@media (max-height: 660px) {
+  .withFooter .item { min-height: var(--hit-size); }
+  .withFooter .label { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

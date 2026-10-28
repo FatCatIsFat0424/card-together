@@ -141,8 +141,14 @@ export function BridgeTable(): ReactNode {
     centre = <p className={styles.centreText}>{t('common.loading')}</p>;
   }
 
+  const completedTricks = playing?.completedTricks ?? [];
   const overlay = phase === 'scoring' && result && !heldTrick && (
     <ResultDialog tone={result.declarerTeamWins ? 'win' : 'lose'}
+      history={completedTricks.length > 0 ? {
+        label: `${t('table.trickHistory')} (${completedTricks.length})`,
+        content: <TrickHistory tricks={completedTricks} mySeat={mySeat && isCompassSeat(mySeat) ? mySeat : null}
+          declarer={result.contract.declarer} className={styles.resultHistory} bare />,
+      } : null}
       title={result.declarerTeamWins ? t('score.declarerWins') : t('score.defenderWins')}
       pending={actionPending} error={actionError} disabled={!connectionReady} onBack={handleBackToRoom}>
       <dl className={styles.scoreDetails}>
@@ -155,8 +161,6 @@ export function BridgeTable(): ReactNode {
         <dt>{t('score.declarerTricks')}</dt><dd>{result.declarerTeamTricks}</dd>
         <dt>{t('score.defenderTricks')}</dt><dd>{result.defenderTeamTricks}</dd>
       </dl>
-      <TrickHistory tricks={playing?.completedTricks ?? []} mySeat={mySeat && isCompassSeat(mySeat) ? mySeat : null}
-        declarer={result.contract.declarer} className={styles.resultHistory} defaultOpen={false} />
     </ResultDialog>
   );
 

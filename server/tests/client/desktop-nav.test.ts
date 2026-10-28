@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  RAIL_ITEMS, activeLobbyCategory, currentRailItem, isTableRoute, railItemPath,
+  RAIL_ITEMS, activeLobbyCategory, currentRailItem, isTableRoute, railItemPath, tableRailPath,
 } from '../../../client/src/components/desktop-nav';
 import { friendAction, friendActivity } from '../../../client/src/components/lobby-friend-activity';
 
@@ -21,8 +21,9 @@ describe('desktop navigation', () => {
     ['/account', 'me'],
     ['/players/bob', null],
     ['/players/alice-2', null],
-    ['/room/ABC123', null],
-    ['/game/ABC123', null],
+    ['/room/ABC123', 'table'],
+    ['/room/ABC123/replay', 'table'],
+    ['/game/ABC123', 'table'],
   ] as const)('highlights %s as %s', (pathname, expected) => {
     expect(currentRailItem(pathname, 'alice')).toBe(expected);
   });
@@ -33,12 +34,18 @@ describe('desktop navigation', () => {
     expect(currentRailItem('/players/a%20b', 'a b')).toBe('history');
   });
 
-  it('keeps the classic top bar on table routes only', () => {
+  it('drops the top bar on table routes only', () => {
     expect(isTableRoute('/game/ABC123')).toBe(true);
     expect(isTableRoute('/room/ABC123/replay')).toBe(true);
     expect(isTableRoute('/room/ABC123')).toBe(false);
     expect(isTableRoute('/games')).toBe(false);
     expect(isTableRoute('/')).toBe(false);
+  });
+
+  it('leads the table item back to the running game, otherwise to the waiting room', () => {
+    expect(tableRailPath('ABC123', true)).toBe('/game/ABC123');
+    expect(tableRailPath('ABC123', false)).toBe('/room/ABC123');
+    expect(currentRailItem('/gamesroom', 'alice')).toBeNull();
   });
 
   it('falls back to the default game category when the stored one has no games', () => {

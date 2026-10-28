@@ -15,18 +15,19 @@ export function bridgeTrickRows(tricks: readonly TrickRecord[]): TrickHistoryRow
     winnerSeat: trick.winnerSeat }));
 }
 
-export function TrickHistory({ tricks, mySeat, declarer, className, summaryClassName, defaultOpen }: {
+export function TrickHistory({ tricks, mySeat, declarer, className, summaryClassName, defaultOpen, bare }: {
   tricks: readonly TrickRecord[];
   mySeat: Seat | null;
   declarer: Seat | null;
   className?: string;
   summaryClassName?: string;
   defaultOpen?: boolean;
+  bare?: boolean;
 }): ReactNode {
   const { t } = useI18nStore();
   return <TrickHistoryTable rows={bridgeTrickRows(tricks)} columns={trickHistoryColumns(SEATS, mySeat)} mySeat={mySeat}
     roles={declarer ? [{ seat: declarer, label: t('table.declarer'),
       color: 'var(--badge-declarer)', ink: 'var(--text-inverse)' }] : []}
     cardText={(card) => isNapoleonJoker(card) ? '' : `${SUIT_SYMBOLS[card.suit]}${RANK_DISPLAY[card.rank]}`}
-    className={className} summaryClassName={summaryClassName} defaultOpen={defaultOpen} />;
+    className={className} summaryClassName={summaryClassName} defaultOpen={defaultOpen} bare={bare} />;
 }

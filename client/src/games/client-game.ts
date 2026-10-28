@@ -8,6 +8,7 @@ import type { AppIconName } from '../components/AppIcon';
 import type { GameRulesContextFields } from '../game-rules-context';
 import type { TranslationKey } from '../i18n';
 import type { GodView } from '../stores/god-view-store';
+import type { HandSort } from '../stores/hand-sort-store';
 import type { HistoryInputOf, RoundBuilder } from './round-builder';
 import type { GameStoreState } from '../stores/game-store';
 
@@ -41,6 +42,8 @@ export interface HandSortRules {
   readonly order: HandOrder;
   /** Cards that differ only by rank have no suit order to offer */
   readonly bySuit: boolean;
+  /** Sort a new player starts with, matching the order the hand is dealt in where the server sorts it */
+  readonly initial: HandSort;
 }
 
 /** One line of the history list: winners with an optional own-score detail, or plain text. */

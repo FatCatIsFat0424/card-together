@@ -15,7 +15,7 @@ import { GameShell } from '../GameShell';
 import { HandActions } from '../HandActions';
 import { useViewedGame } from '../use-table-perspective';
 import { ResultDialog, resultStyles } from '../ResultDialog';
-import { RoundHistory } from '../RoundHistory';
+import { useResultRoundHistory } from '../RoundHistory';
 import { infoStyles, TurnBox } from '../TableInfo';
 import { joinNames, useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
@@ -107,12 +107,12 @@ function ResultOverlay({ result, pending, error, disabled, onBack }: {
   result: NinetyNineMatchResult; pending: boolean; error: string; disabled: boolean; onBack: () => void;
 }): ReactNode {
   const { locale, t } = useI18nStore();
-  const historyGame = useGameStore((state) => state.visible);
+  const history = useResultRoundHistory(useGameStore((state) => state.visible));
   const seatName = useSeatName();
   const winners = nnWinners(result);
   // Winners share first; the last player eliminated ranks next, and so on
   const ranking = [...winners, ...[...result.eliminationOrder].reverse()];
-  return <ResultDialog title={winners.length === 1 ? t('ninetynine.winner', { name: seatName(winners[0]) })
+  return <ResultDialog history={history} title={winners.length === 1 ? t('ninetynine.winner', { name: seatName(winners[0]) })
     : t('ninetynine.tiedWinners', { names: joinNames(winners.map(seatName), locale) })}
     pending={pending} error={error} disabled={disabled} onBack={onBack}>
     <table className={`${resultStyles.table} ${styles.rankTable}`}>
@@ -128,7 +128,6 @@ function ResultOverlay({ result, pending, error, disabled, onBack }: {
     <p className={resultStyles.note}>
       {winners.length > 1 && <>{t('ninetynine.stockOut')} · </>}{t('ninetynine.total')} {result.finalTotal}
     </p>
-    {historyGame && <RoundHistory game={historyGame} />}
   </ResultDialog>;
 }
 

@@ -47,8 +47,10 @@ import Shuffle from '@mui/icons-material/Shuffle';
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
 import SkipNext from '@mui/icons-material/SkipNext';
 import SkipPrevious from '@mui/icons-material/SkipPrevious';
+import SmartToyOutlined from '@mui/icons-material/SmartToyOutlined';
 import SportsBar from '@mui/icons-material/SportsBar';
 import StorefrontOutlined from '@mui/icons-material/StorefrontOutlined';
+import StyleOutlined from '@mui/icons-material/StyleOutlined';
 import TimerOutlined from '@mui/icons-material/TimerOutlined';
 import UnfoldMore from '@mui/icons-material/UnfoldMore';
 import VolumeOff from '@mui/icons-material/VolumeOff';
@@ -73,7 +75,7 @@ const ICONS = {
   refresh: Refresh, notifications: NotificationsNone,
   rules: MenuBookOutlined, settings: SettingsOutlined,
   beer: SportsBar, timer: TimerOutlined, sort: UnfoldMore, warning: WarningAmber,
-  emoji: SentimentSatisfiedOutlined,
+  emoji: SentimentSatisfiedOutlined, robot: SmartToyOutlined, table: StyleOutlined,
   hangUp: CallEnd, headset: Headset, headsetOff: HeadsetOff, microphoneOff: MicOff,
   volume: VolumeUp, volumeOff: VolumeOff,
 } as const;

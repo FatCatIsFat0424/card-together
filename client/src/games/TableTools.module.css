@@ -1,0 +1,246 @@
+/* Table tools: auto-play and hand sorting float on the table instead of living in the menus. */
+
+/* ─── Desktop cluster beside the hand ─── */
+.cluster {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: var(--table-tools-width, 200px);
+  padding: 6px;
+  border: 1px solid color-mix(in srgb, var(--text-primary) 10%, transparent);
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--bg-page) 76%, transparent);
+  box-shadow: var(--shadow-md);
+}
+
+.autoPlay {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--hit-size);
+  padding: 0 10px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+.autoPlay:hover:not(:disabled) { background: var(--surface-3); }
+.autoPlay > :first-child { flex: none; font-size: 18px; }
+.autoLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Gold matches the "auto-play is on" banner: the computer is playing for the viewer. */
+.autoPlay[aria-checked='true'] {
+  background: color-mix(in srgb, var(--color-warning) 20%, transparent);
+  color: var(--color-warning);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-warning) 60%, transparent);
+}
+.autoPlay:disabled { cursor: progress; }
+
+.switch {
+  position: relative;
+  flex: none;
+  width: 30px;
+  height: 18px;
+  margin-left: auto;
+  border-radius: 9px;
+  background: var(--surface-3);
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  transition: transform var(--transition-fast);
+}
+.autoPlay[aria-checked='true'] .switch { background: var(--color-warning); }
+.autoPlay[aria-checked='true'] .switch::after { transform: translateX(12px); background: var(--text-inverse); }
+
+.sort {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+}
+.sortOption {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  height: 34px;
+  padding: 0 6px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.sortOption:hover:not(:disabled) { color: var(--text-primary); }
+.sortOption[aria-pressed='true'] {
+  background: var(--color-primary-soft);
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-primary) 60%, transparent);
+}
+/* While the computer plays, the hand is locked and the sort orders wait. */
+.sortOption:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* A tiny card face: suits in sort order, or "A › 2" for ranks, both reading high to low from the left. */
+.glyph {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 3px 4px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #1e293b;
+  font: 800 12px/1 var(--font-primary);
+  letter-spacing: -0.02em;
+}
+.red { color: #dc2626; }
+.arrow { margin: 0 1px; color: #64748b; }
+
+.error { color: var(--color-danger); font-size: var(--text-xs); }
+
+/* ─── Phone drawer: an edge handle that slides out a strip ─── */
+.drawer { pointer-events: none; }
+.drawer > * { pointer-events: auto; }
+
+.handle {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 64px;
+  border: 1px solid color-mix(in srgb, var(--text-primary) 14%, transparent);
+  border-left: 0;
+  border-radius: 0 14px 14px 0;
+  background: color-mix(in srgb, var(--bg-page) 82%, transparent);
+  color: var(--text-primary);
+  font-size: 18px;
+}
+/* The 26px tab keeps a 40px hit area. */
+.handle::after { content: ''; position: absolute; inset: -4px -14px -4px 0; }
+.handleDot {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: var(--color-warning);
+}
+/* The gap between the side seat and the own seat is shorter than the tab on 360px-tall screens. */
+@media (max-height: 360px) {
+  .handle { height: 40px; }
+  .handleDot { top: 4px; }
+}
+
+.strip {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border: 1px solid color-mix(in srgb, var(--text-primary) 14%, transparent);
+  border-left: 0;
+  border-radius: 0 16px 16px 0;
+  background: color-mix(in srgb, var(--bg-page) 92%, transparent);
+  box-shadow: 8px 0 24px rgba(0, 0, 0, 0.5);
+  animation: stripIn 160ms ease-out;
+}
+@keyframes stripIn { from { transform: translateX(-100%); } }
+
+.stripItems { display: flex; flex-direction: column; gap: 6px; padding: 8px 6px 8px 8px; }
+.stripButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 60px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.stripButton > :first-child:not(.glyph) { font-size: 18px; }
+.stripButton[aria-pressed='true'] {
+  background: var(--color-primary-soft);
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-primary) 60%, transparent);
+}
+.stripAuto[aria-checked='true'] {
+  background: color-mix(in srgb, var(--color-warning) 20%, transparent);
+  color: var(--color-warning);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-warning) 60%, transparent);
+}
+.stripButton:disabled:not(.stripAuto) { opacity: 0.45; }
+.stripClose {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  border-left: 1px solid var(--separator);
+  color: var(--text-secondary);
+  font-size: 18px;
+}
+.stripError {
+  position: absolute;
+  top: 100%;
+  left: 8px;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--color-danger);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strip { animation: none; }
+  .switch::after, .autoPlay { transition: none; }
+}
+
+/* Sits on the toolbar beside voice and chat, clear of the contract chip and corner seats; the hand stays inert while the computer plays. */
+.banner {
+  position: absolute;
+  z-index: 9;
+  top: 12px;
+  right: 96px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 24px;
+  padding: 0 4px 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-warning) 88%, transparent);
+  color: var(--text-inverse);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* The stop control keeps a 40px hit area although the pill is 24px tall. */
+.bannerStop {
+  position: relative;
+  height: 20px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--text-inverse) 18%, transparent);
+  color: inherit;
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+.bannerStop::after { content: ''; position: absolute; inset: -10px -4px; }
+.bannerStop:disabled { opacity: 0.6; cursor: not-allowed; }

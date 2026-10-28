@@ -133,6 +133,21 @@
 
 .handZone [data-hand-actions='group'] { display: contents; }
 
+/* Auto-play and sorting float at the hand's bottom-right corner; the hand and its actions keep clear of them. */
+.handZone { --table-tools-width: 196px; }
+.handZone > [data-table-tools='cluster'] { position: absolute; right: 12px; bottom: 12px; z-index: 8; }
+.handZone:has(> [data-table-tools='cluster']) > :last-child { padding-right: calc(var(--table-tools-width) + 24px); }
+/* A table too narrow for a full hand beside the cluster lifts it above the hand's right end, beside the own seat. */
+@container (max-width: 1000px) {
+  .handZone > [data-table-tools='cluster'] { top: 8px; bottom: auto; }
+  .handZone:has(> [data-table-tools='cluster']) > :last-child { padding-right: 0; }
+}
+/* Phones: the drawer handle hangs on the left screen edge just above the hand row. */
+.handZone > [data-table-tools='drawer'] { position: absolute; left: 0; bottom: calc(100% - 20px); z-index: 12; }
+@media (max-height: 360px) {
+  .handZone > [data-table-tools='drawer'] { bottom: calc(100% - 12px); }
+}
+
 .handStatus {
   display: flex;
   justify-content: center;

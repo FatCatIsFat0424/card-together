@@ -12,6 +12,7 @@ import { DesktopShell } from '../../../client/src/components/DesktopShell';
 import type { DesktopShellProps } from '../../../client/src/components/DesktopShell';
 import { DailyPanel, taskPercent } from '../../../client/src/components/DailyPanel';
 import { Dock } from '../../../client/src/components/Dock';
+import { PageHeader } from '../../../client/src/components/PageHeader';
 import { useAccountStore } from '../../../client/src/stores/account-store';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
 import { useShellStore } from '../../../client/src/stores/shell-store';
@@ -80,6 +81,30 @@ describe('desktop shell', () => {
     expect(html).not.toContain('role="tablist"');
   });
 
+  it('drops the top bar on table pages and moves its controls to the bottom of the rail', () => {
+    const html = shell('/game/ABC123', { tableRoute: true, tableHref: '/game/ABC123' });
+    expect(html).not.toContain('<header');
+    expect(html).toContain('data-desktop-shell="table"');
+    const footer = html.slice(html.indexOf('data-popover="notifications"'));
+    expect(footer).toContain('data-popover-trigger="music"');
+    expect(footer).toContain('aria-label="帳號選單"');
+    // The account menu replaces the bottom "Me" item, and the coins move into that menu.
+    expect(link(html, '我')).toBe('');
+    expect(html).not.toContain('枚金幣');
+  });
+
+  it('leads the rail with the table item while the viewer is in a room or game', () => {
+    const atTable = shell('/game/ABC123', { tableRoute: true, tableHref: '/game/ABC123' });
+    expect(link(atTable, '牌桌')).toContain('href="/game/ABC123"');
+    expect(link(atTable, '牌桌')).toContain('aria-current="page"');
+    expect(atTable.indexOf('aria-label="牌桌"')).toBeLessThan(atTable.indexOf('aria-label="大廳"'));
+    expect(link(atTable, '大廳')).not.toContain('aria-current');
+    const away = shell('/shop', { tableHref: '/room/ABC123' });
+    expect(link(away, '牌桌')).toContain('href="/room/ABC123"');
+    expect(link(away, '牌桌')).not.toContain('aria-current');
+    expect(link(shell('/shop'), '牌桌')).toBe('');
+  });
+
   it('shows the category tabs on the lobby only, for categories that have games', () => {
     const html = shell('/');
     expect(html).toContain('role="tablist"');
@@ -88,6 +113,19 @@ describe('desktop shell', () => {
     expect(html).toContain('aria-selected="true"');
     expect(html).not.toContain('骰子');
     expect(shell('/friends')).not.toContain('role="tablist"');
+  });
+});
+
+describe('page header', () => {
+  it('renders the title, tabs and both summary forms in the page outside the desktop top bar', () => {
+    const html = renderToStaticMarkup(createElement(PageHeader, {
+      title: 'Awards', icon: 'trophy', tabs: createElement('div', { role: 'tablist' }),
+      summary: 'Completed 3/23', compactSummary: '3/23',
+    }));
+    expect(html).toMatch(/^<header[^>]*><h1[^>]*>.*Awards<\/span><\/h1>/);
+    expect(html).toContain('role="tablist"');
+    expect(html).toContain('>Completed 3/23</span>');
+    expect(html).toContain('aria-hidden="true">3/23</span>');
   });
 });
 

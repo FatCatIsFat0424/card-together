@@ -8,7 +8,8 @@ import { svSortHand } from '@shared/rules/sevens';
 import { sortHand as dealtBridgeHand } from '../../src/engine/dealing';
 import { sameHandCard, sortHand } from '../../../client/src/games/hand-sort';
 import { reconcileOrder } from '../../../client/src/components/card-hand-order';
-import { useHandSortStore } from '../../../client/src/stores/hand-sort-store';
+import { handArrangement, useHandSortStore } from '../../../client/src/stores/hand-sort-store';
+import { clientGame } from '../../../client/src/games/registry';
 
 const cards: readonly Card[] = [
   { suit: 'clubs', rank: 2 }, { suit: 'hearts', rank: 14 },
@@ -16,7 +17,7 @@ const cards: readonly Card[] = [
 ];
 
 describe('hand sorting controls', () => {
-  beforeEach(() => useHandSortStore.setState({ gameType: null, order: null, revision: 0 }));
+  beforeEach(() => useHandSortStore.setState({ gameType: null, order: null, manual: false }));
   it.each(['rank', 'suit'] as const)('retains Big Two rules for %s order', (order) => {
     expect(sortHand(cards, order, 'bigtwo')).toEqual(sortBigTwoHandHighFirst(cards, order));
   });
@@ -89,16 +90,34 @@ describe('hand sorting controls', () => {
       .toEqual([3, 2, 4]);
   });
 
-  it('toggles the active sort off and can enable a different sort or game', () => {
+  it('keeps the active sort when it is pressed again and can switch sort or game', () => {
     useHandSortStore.getState().sort('napoleon', 'suit');
-    const before = useHandSortStore.getState().revision;
     useHandSortStore.getState().sort('napoleon', 'suit');
-    expect(useHandSortStore.getState()).toMatchObject({ gameType: 'napoleon', order: null, revision: before + 1 });
+    expect(useHandSortStore.getState()).toMatchObject({ gameType: 'napoleon', order: 'suit', manual: false });
     useHandSortStore.getState().sort('napoleon', 'rank');
     expect(useHandSortStore.getState().order).toBe('rank');
-    useHandSortStore.getState().sort('napoleon', 'suit');
-    expect(useHandSortStore.getState().order).toBe('suit');
     useHandSortStore.getState().sort('bigtwo', 'suit');
     expect(useHandSortStore.getState()).toMatchObject({ gameType: 'bigtwo', order: 'suit' });
+  });
+
+  it('switches to a manual arrangement after a drag and back to a sort when one is pressed', () => {
+    useHandSortStore.getState().arrange('bridge', 'suit');
+    expect(handArrangement(useHandSortStore.getState(), 'bridge', 'suit')).toEqual({ order: 'suit', manual: true });
+    // Another game still starts from its own default.
+    expect(handArrangement(useHandSortStore.getState(), 'bigtwo', 'rank')).toEqual({ order: 'rank', manual: false });
+    useHandSortStore.getState().sort('bridge', 'suit');
+    expect(handArrangement(useHandSortStore.getState(), 'bridge', 'suit')).toEqual({ order: 'suit', manual: false });
+  });
+
+  it('starts every game sorted by suit or rank, matching the dealt order where the server sorts hands', () => {
+    const initial = Object.fromEntries(GAME_TYPES.map((game) => [game, clientGame(game).handSort.initial]));
+    expect(initial).toMatchObject({ bridge: 'suit', napoleon: 'suit', sevens: 'suit', bigtwo: 'rank', liarsdeck: 'rank' });
+    for (const game of GAME_TYPES) {
+      expect(['suit', 'rank']).toContain(initial[game]);
+      if (!clientGame(game).handSort.bySuit) expect(initial[game]).toBe('rank');
+    }
+    const hand: Card[] = [{ suit: 'diamonds', rank: 5 }, { suit: 'spades', rank: 9 }, { suit: 'clubs', rank: 13 }];
+    expect(sortHand(hand, 'suit', 'bridge')).toEqual(dealtBridgeHand(hand));
+    expect(sortHand(hand, 'rank', 'bigtwo')).toEqual(sortBigTwoHandHighFirst(hand));
   });
 });
