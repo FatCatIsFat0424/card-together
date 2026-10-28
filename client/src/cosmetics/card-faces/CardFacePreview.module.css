@@ -1,7 +1,12 @@
-/* Five sample cards in a shallow fan; sized from the art area so narrow shop columns still fit. */
+/*
+ * Five sample cards in a shallow fan; sized from the art area so narrow shop columns still fit.
+ * The width must stay definite: inline-size containment makes a percentage-only width collapse to 0
+ * inside a max-content parent such as the shop tile's fitting box.
+ */
 .fan {
   container-type: inline-size;
-  width: min(100%, 230px);
+  width: 230px;
+  max-width: 100%;
 }
 
 .row {
