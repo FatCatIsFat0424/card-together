@@ -1,4 +1,4 @@
-// ─── BridgeChip: contract, declarer and tricks won, always visible on the table toolbar ───
+// ─── BridgeChip: contract, declarer and each side's tricks toward its target, always visible on the table toolbar ───
 
 import type { ReactNode } from 'react';
 import { useShallow } from 'zustand/react/shallow';
@@ -8,6 +8,7 @@ import { useI18nStore } from '../../stores/i18n-store';
 import { useRoomStore } from '../../stores/room-store';
 import { seatLabel } from '../seat-names';
 import { bridgeChip } from '../trick-chip';
+import { TrickBar } from '../TrickBar';
 import styles from '../TrickChip.module.css';
 
 export function BridgeChip(): ReactNode {
@@ -31,10 +32,10 @@ export function BridgeChip(): ReactNode {
       {chip.declarer && <span className={styles.role}>
         <span className={styles.muted}>{t('table.declarer')}</span> {seatLabel(t, 'bridge', chip.declarer)}
       </span>}
-      {chip.sides.map((side) => <span key={side.team} className={styles.role}>
-        <span className={side.team === 'theirs' ? styles.theirs : side.team === 'ours' ? styles.ours : styles.muted}>
-          {sideLabel[side.team]}</span> <span className={styles.count}>{side.tricks}</span>
-      </span>)}
     </span>
+    {chip.sides.length > 0 && <span className={styles.bars}>
+      {chip.sides.map((side) => <TrickBar key={side.team} label={sideLabel[side.team]} count={side.tricks}
+        target={side.target} tone={side.team === 'ours' || side.team === 'ns' ? 'ours' : 'theirs'} />)}
+    </span>}
   </span>;
 }

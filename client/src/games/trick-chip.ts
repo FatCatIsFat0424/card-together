@@ -1,6 +1,7 @@
 // ─── Trick chip: what the persistent contract chip of Bridge and Napoleon shows, under their visibility rules ───
 
 import type { PresentationFrame } from '@shared/game-presentation';
+import { CONTRACT_BASE_TRICKS, TOTAL_TRICKS } from '@shared/constants';
 import { NAPOLEON_POINT_CARDS } from '@shared/rules/napoleon';
 import type { BidSuit, GameSeat, NapoleonCard, NapoleonVisibleState, Seat } from '@shared/types';
 import { napoleonPresentedSidePoints, napoleonSeatLabels } from './napoleon/napoleon-view';
@@ -14,6 +15,8 @@ export interface ChipBid {
 export interface BridgeChipSide {
   readonly team: 'ours' | 'theirs' | 'ns' | 'ew';
   readonly tricks: number;
+  /** Tricks that settle the contract for this side: the declarer's need, or the defenders' tricks to set it */
+  readonly target: number;
 }
 
 export interface BridgeChip {
@@ -39,12 +42,15 @@ export function bridgeChip(input: BridgeChipInput): BridgeChip | null {
   if (!contract) {
     return input.phase === 'bidding' ? { bid: highestBid, bidding: true, declarer: null, sides: [] } : null;
   }
-  const ns = tricks?.ns ?? 0;
-  const ew = tricks?.ew ?? 0;
+  const needed = contract.level + CONTRACT_BASE_TRICKS;
+  const declarerNS = contract.declarer === 'N' || contract.declarer === 'S';
+  const nsSide = { tricks: tricks?.ns ?? 0, target: declarerNS ? needed : TOTAL_TRICKS + 1 - needed };
+  const ewSide = { tricks: tricks?.ew ?? 0, target: declarerNS ? TOTAL_TRICKS + 1 - needed : needed };
   const mine = mySeat === 'N' || mySeat === 'S' ? 'ns' : mySeat === 'E' || mySeat === 'W' ? 'ew' : null;
-  const sides: readonly BridgeChipSide[] = mine === 'ns' ? [{ team: 'ours', tricks: ns }, { team: 'theirs', tricks: ew }]
-    : mine === 'ew' ? [{ team: 'ours', tricks: ew }, { team: 'theirs', tricks: ns }]
-      : [{ team: 'ns', tricks: ns }, { team: 'ew', tricks: ew }];
+  const sides: readonly BridgeChipSide[] = mine === 'ns'
+    ? [{ team: 'ours', ...nsSide }, { team: 'theirs', ...ewSide }]
+    : mine === 'ew' ? [{ team: 'ours', ...ewSide }, { team: 'theirs', ...nsSide }]
+      : [{ team: 'ns', ...nsSide }, { team: 'ew', ...ewSide }];
   return { bid: { level: contract.level, suit: contract.suit }, bidding: false, declarer: contract.declarer, sides };
 }
 

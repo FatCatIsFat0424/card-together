@@ -1,4 +1,4 @@
-/* ─── Contract chip on the table toolbar: one or two quiet lines of 12-14px text ─── */
+/* ─── Contract chip on the table toolbar: a contract line over each side's trick bar ─── */
 
 .chip {
   display: inline-flex;
@@ -7,7 +7,7 @@
   gap: 1px;
   min-width: 0;
   max-width: 100%;
-  padding: 3px var(--space-3);
+  padding: 3px var(--space-2) 4px;
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--bg-surface) 62%, transparent);
   color: var(--text-primary);
@@ -24,16 +24,43 @@
   min-width: 0;
 }
 
-.progress {
+/* Label, pips and count per side. Each pip is one trick or point card, so a bar's length shows its target. */
+.bars {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  justify-content: start;
+  align-items: center;
+  column-gap: var(--space-1);
   font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-weight: 700;
+  line-height: 1.25;
 }
+
+/* Both sides on one line, for tables whose corner seats sit right under the toolbar. */
+.bars.inline { grid-template-columns: repeat(6, auto); }
+.bars.inline > :nth-child(4) { margin-left: var(--space-3); }
+
+.barLabel { color: var(--text-secondary); }
+
+.bar {
+  display: flex;
+  gap: 2px;
+  height: 7px;
+}
+
+.pip {
+  flex: none;
+  width: 4px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--text-primary) 18%, transparent);
+}
+
+.pip.filled { background: currentColor; }
 
 .contract { font-size: var(--text-base); font-weight: 800; }
 .role { font-weight: 600; }
 .muted { color: var(--text-secondary); }
-.count { font-variant-numeric: tabular-nums; font-weight: 800; }
+.count { font-variant-numeric: tabular-nums; font-weight: 800; text-align: right; }
 .ours { color: var(--color-primary); }
 .theirs { color: var(--color-warning); }
 .pending { opacity: 0.7; }

@@ -18,21 +18,25 @@ describe('Bridge contract chip', () => {
       .toMatchObject({ bid: { level: 2, suit: 'hearts' }, bidding: true });
   });
 
-  it('lists the contract, the declarer and the viewer’s side first', () => {
+  it('lists the contract, the declarer and the viewer’s side first, each with the tricks that settle the contract', () => {
     const chip = bridgeChip({ phase: 'playing', contract, highestBid: null, tricks: { ns: 3, ew: 2 }, mySeat: 'N' });
+    // 4♠ by West needs ten tricks, so North-South set it with four.
     expect(chip).toEqual({
       bid: { level: 4, suit: 'spades' }, bidding: false, declarer: 'W',
-      sides: [{ team: 'ours', tricks: 3 }, { team: 'theirs', tricks: 2 }],
+      sides: [{ team: 'ours', tricks: 3, target: 4 }, { team: 'theirs', tricks: 2, target: 10 }],
     });
     expect(bridgeChip({ phase: 'playing', contract, highestBid: null, tricks: { ns: 3, ew: 2 }, mySeat: 'E' })?.sides)
-      .toEqual([{ team: 'ours', tricks: 2 }, { team: 'theirs', tricks: 3 }]);
+      .toEqual([{ team: 'ours', tricks: 2, target: 10 }, { team: 'theirs', tricks: 3, target: 4 }]);
+    const grand = bridgeChip({ phase: 'playing', contract: { level: 7, suit: 'nt', declarer: 'S' }, highestBid: null,
+      tricks: null, mySeat: 'S' });
+    expect(grand?.sides.map((side) => side.target)).toEqual([13, 1]);
   });
 
   it('names the compass teams for a viewer without a seat and starts at zero tricks', () => {
     expect(bridgeChip({ phase: 'playing', contract, highestBid: null, tricks: { ns: 1, ew: 0 }, mySeat: null })?.sides)
-      .toEqual([{ team: 'ns', tricks: 1 }, { team: 'ew', tricks: 0 }]);
+      .toEqual([{ team: 'ns', tricks: 1, target: 4 }, { team: 'ew', tricks: 0, target: 10 }]);
     expect(bridgeChip({ phase: 'playing', contract, highestBid: null, tricks: null, mySeat: 'S' })?.sides)
-      .toEqual([{ team: 'ours', tricks: 0 }, { team: 'theirs', tricks: 0 }]);
+      .toEqual([{ team: 'ours', tricks: 0, target: 4 }, { team: 'theirs', tricks: 0, target: 10 }]);
   });
 });
 

@@ -8,6 +8,7 @@ import { useI18nStore } from '../../stores/i18n-store';
 import { seatLabel } from '../seat-names';
 import { useGamePresentation } from '../use-game-presentation';
 import { napoleonChip } from '../trick-chip';
+import { TrickBar } from '../TrickBar';
 import { napoleonCardText } from './napoleon-view';
 import styles from '../TrickChip.module.css';
 
@@ -20,7 +21,6 @@ export function NapoleonChip(): ReactNode {
   const seat = (value: GameSeat): string => seatLabel(t, 'napoleon', value, true);
   const jokerName = (joker: 'big' | 'small'): string => t(`napoleon.joker.${joker}`);
   const { progress } = chip;
-  const count = (value: number | null, target: number): string => `${value ?? '–'}/${target}`;
   return <span className={styles.chip} role="group" aria-label={t('napoleon.contractChip')}>
     <span className={styles.row}>
       {chip.bidding && <span className={styles.muted}>{t(chip.bid ? 'table.highest' : 'table.biddingNow')}</span>}
@@ -35,15 +35,12 @@ export function NapoleonChip(): ReactNode {
         {napoleonCardText(chip.secretaryCard, jokerName)}
       </span>}
     </span>
-    {progress && <span className={`${styles.row} ${styles.progress}`}>
-      <span className={progress.napoleon === null ? styles.pending : undefined}>
-        {t('napoleon.napoleonSide')} <span className={styles.count}>{count(progress.napoleon, progress.napoleonTarget)}</span>
-      </span>
-      <span className={progress.defenders === null ? styles.pending : undefined}>
-        {t('napoleon.defenders')} <span className={styles.count}>
-          {count(progress.defenders, progress.defenderTarget)}{progress.pendingDiscards && progress.defenders !== null ? '+' : ''}
-        </span>
-      </span>
+    {progress && <span className={`${styles.bars} ${styles.inline}`}>
+      <TrickBar label={t('napoleon.napoleonShort')} fullLabel={t('napoleon.napoleonSide')} count={progress.napoleon} target={progress.napoleonTarget}
+        tone={progress.napoleon === null ? 'pending' : 'ours'} pendingText={t('napoleon.progressPending')} />
+      <TrickBar label={t('napoleon.defendersShort')} fullLabel={t('napoleon.defenders')} count={progress.defenders} target={progress.defenderTarget}
+        tone={progress.defenders === null ? 'pending' : 'theirs'} pendingText={t('napoleon.progressPending')}
+        suffix={progress.pendingDiscards && progress.defenders !== null ? '+' : ''} />
     </span>}
   </span>;
 }

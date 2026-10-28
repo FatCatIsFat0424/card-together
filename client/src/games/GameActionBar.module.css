@@ -9,12 +9,12 @@
 .sort { display: flex; gap: var(--space-1); }
 .error { flex-basis: 100%; color: var(--color-danger); font-size: var(--text-xs); }
 
-/* Sits under the menu button; the hand stays inert while the computer plays. */
+/* Sits on the toolbar beside voice and chat, clear of the contract chip and corner seats; the hand stays inert while the computer plays. */
 .banner {
   position: absolute;
   z-index: 9;
-  top: 48px;
-  left: 12px;
+  top: 12px;
+  right: 96px;
   display: flex;
   align-items: center;
   gap: var(--space-1);
