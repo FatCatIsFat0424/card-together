@@ -20,34 +20,12 @@ import { layeredShopArt } from '../cosmetics/art-layers/shop-art-layers';
 import { layeredSeatPreview } from '../cosmetics/art-layers/seat-preview-art-layers';
 import { LayeredArt } from '../cosmetics/art-layers/LayeredArt';
 import { observeShopPreview } from './shop-preview-visibility';
+import { observeArtFit } from './art-fit';
 import styles from '../pages/ShopPage.module.css';
-
-/** Share of the tile's art box that a preview may use; the rest is breathing room. */
-const ART_FILL = 0.9;
 
 interface ShopProductArtProps {
   readonly item: ShopItem;
   readonly account: PreviewAccount;
-}
-
-/**
- * How far painted descendants reach beyond the element's own box, so ears, antlers, tentacles and
- * emblems count toward the preview size. Elements running animations are skipped: they move in and
- * out of the box and would change the size from one measurement to the next.
- */
-export function paintedOverflow(element: HTMLElement): { top: number; right: number; bottom: number; left: number } {
-  const base = element.getBoundingClientRect();
-  const reach = { top: 0, right: 0, bottom: 0, left: 0 };
-  for (const child of element.querySelectorAll('*')) {
-    if (typeof child.getAnimations === 'function' && child.getAnimations().length > 0) continue;
-    const rect = child.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) continue;
-    reach.top = Math.max(reach.top, base.top - rect.top);
-    reach.left = Math.max(reach.left, base.left - rect.left);
-    reach.right = Math.max(reach.right, rect.right - base.right);
-    reach.bottom = Math.max(reach.bottom, rect.bottom - base.bottom);
-  }
-  return reach;
 }
 
 /** Shrinks a preview, with its overhanging decoration, to fit its tile; backgrounds fill the tile instead. */
@@ -63,18 +41,7 @@ export function FitArt({ fill, interactive = false, children }: {
     const outer = box.current;
     const inner = art.current;
     if (fill || !outer || !inner) return;
-    const fit = (): void => {
-      inner.style.zoom = '';
-      inner.style.padding = '';
-      const reach = paintedOverflow(inner);
-      inner.style.padding = `${reach.top}px ${reach.right}px ${reach.bottom}px ${reach.left}px`;
-      const { offsetWidth: width, offsetHeight: height } = inner;
-      if (width > 0 && height > 0) inner.style.zoom = String(Math.min(1, ART_FILL * outer.clientWidth / width, ART_FILL * outer.clientHeight / height));
-    };
-    fit();
-    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(fit) : null;
-    observer?.observe(outer);
-    return () => observer?.disconnect();
+    return observeArtFit({ outer, inner });
   }, [fill]);
   // Tile previews are decorative; the dialog holds the interactive copy (such as the sound sample button).
   return <div ref={box} className={styles.artScale} inert={!interactive}>
@@ -82,23 +49,24 @@ export function FitArt({ fill, interactive = false, children }: {
   </div>;
 }
 
-/** Keeps the product, description and purchase controls in place while distant artwork is unloaded. */
+/**
+ * Keeps the product, description and purchase controls in place while distant artwork is unloaded.
+ * Every type defers its artwork: the tile copy is decorative, and unmounting it also stops its animations.
+ */
 export function ShopProductPreview({ item, account, className, children }: ShopProductArtProps & {
   readonly className: string;
   readonly children: ReactNode;
 }): ReactNode {
   const container = useRef<HTMLDivElement>(null);
-  // Keep sound buttons in keyboard order and text-sized previews at their intrinsic height.
-  const persistent = item.type === 'soundPack' || item.type === 'chatFrame' || item.type === 'nameplate';
-  const [visible, setVisible] = useState(() => persistent || typeof IntersectionObserver !== 'function');
+  const [visible, setVisible] = useState(() => typeof IntersectionObserver !== 'function');
   useEffect(() => {
-    if (persistent || !container.current) return;
+    if (!container.current) return;
     // Routes scroll inside their viewport, so expand that root instead of the clipped document.
     return observeShopPreview(container.current, setVisible, container.current.closest('main')?.parentElement ?? null);
-  }, [persistent]);
+  }, []);
   return <div ref={container} className={className}>
     {children}
-    {(persistent || visible) && <FitArt fill={item.type === 'tableBackground' || item.type === 'seatBackground'}>
+    {visible && <FitArt fill={item.type === 'tableBackground' || item.type === 'seatBackground'}>
       <ShopProductArt item={item} account={account} /></FitArt>}
   </div>;
 }

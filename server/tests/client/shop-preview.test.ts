@@ -69,15 +69,18 @@ describe('shop preview visibility', () => {
     expect(disconnect).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps descriptive content and sound controls mounted while deferring decorative assets', () => {
-    vi.stubGlobal('IntersectionObserver', vi.fn());
-    const render = (id: string): string => renderToStaticMarkup(createElement(ShopProductPreview, {
-      item: getShopItem(id)!, account, className: 'preview', children: 'Product category',
-    }));
-    const distant = render('card-face-four-color');
-    expect(distant).toContain('Product category');
-    expect(distant).not.toContain('<img');
-    expect(render('sound-starfleet')).toContain('<button');
+  it.each(['card-face-four-color', 'sound-starfleet', 'chat-frame-starfleet', 'nameplate-starfleet'])(
+    'keeps descriptive content while deferring the decorative %s tile preview', (id) => {
+      vi.stubGlobal('IntersectionObserver', vi.fn());
+      const distant = renderToStaticMarkup(createElement(ShopProductPreview, {
+        item: getShopItem(id)!, account, className: 'preview', children: 'Product category',
+      }));
+      expect(distant).toBe('<div class="preview">Product category</div>');
+    });
+
+  it('renders the dialog copy of a sound pack with its sample button', () => {
+    expect(renderToStaticMarkup(createElement(ShopProductArt, { item: getShopItem('sound-starfleet')!, account })))
+      .toContain('<button');
   });
 
   it('renders artwork when observation is unavailable', () => {
