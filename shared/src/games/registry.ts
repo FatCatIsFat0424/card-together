@@ -13,6 +13,7 @@ import { blackjackDefinition } from './blackjack/definition';
 import { holdemDefinition } from './holdem/definition';
 import { napoleonDefinition } from './napoleon/definition';
 import { tenHalfDefinition } from './tenhalf/definition';
+import { liarsDiceDefinition } from './liarsdice/definition';
 
 /** Every game type maps to its own definition; a missing or mismatched entry fails to compile. */
 export const GAME_DEFINITIONS: { readonly [K in GameType]: GameDefinition<K> } = {
@@ -27,6 +28,7 @@ export const GAME_DEFINITIONS: { readonly [K in GameType]: GameDefinition<K> } =
   holdem: holdemDefinition,
   napoleon: napoleonDefinition,
   tenhalf: tenHalfDefinition,
+  liarsdice: liarsDiceDefinition,
 };
 
 export function gameDefinition<K extends GameType>(gameType: K): GameDefinition<K> {

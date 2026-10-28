@@ -293,11 +293,11 @@ describe('bot player interface', () => {
     expect(render(createElement(RoomPage))).toContain('旁觀 0/8');
   });
 
-  it('shows the seat expansion control only to hosts of Ninety-Nine, Blackjack, Hold\'em, and Napoleon', () => {
+  it('shows the seat expansion control only to hosts of Ninety-Nine, Blackjack, Hold\'em, Napoleon, and Liar\'s Dice', () => {
     for (const gameType of GAME_TYPES) {
       state.room = { ...room(), gameType };
       const expandable = gameType === 'ninetynine' || gameType === 'blackjack' || gameType === 'holdem'
-        || gameType === 'napoleon' || gameType === 'tenhalf';
+        || gameType === 'napoleon' || gameType === 'tenhalf' || gameType === 'liarsdice';
       const html = render(createElement(RoomPage));
       expect(html.includes('aria-label="Add seat"')).toBe(expandable);
     }

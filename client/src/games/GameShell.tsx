@@ -176,7 +176,7 @@ export function GameShell({
   const messageCount = useChatStore((state) => state.messages.length);
   const room = useRoomStore((state) => state.roomInfo);
   const log = useGameStore((state) => state.bigTwo?.log ?? state.redPoints?.log ?? state.ninetyNine?.log
-    ?? state.sevens?.log ?? state.chinesePoker?.log ?? state.liarsDeck?.log ?? state.blackjack?.log ?? state.holdem?.log
+    ?? state.sevens?.log ?? state.chinesePoker?.log ?? state.liarsDeck?.log ?? state.liarsDice?.log ?? state.blackjack?.log ?? state.holdem?.log
     ?? state.napoleon?.log ?? state.tenhalf?.log ?? state.log);
   const ownedTurn = useGameStore((state) => mySeat !== null && state.currentTurnSeat === mySeat
     && (state.phase === 'bidding' || state.phase === 'playing'));

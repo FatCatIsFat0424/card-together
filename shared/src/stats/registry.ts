@@ -7,6 +7,7 @@ import { chinesePokerFacts } from './chinesepoker';
 import type { SeatFacts } from './facts';
 import { holdemFacts } from './holdem';
 import { liarsDeckFacts } from './liarsdeck';
+import { liarsDiceFacts } from './liarsdice';
 import { napoleonFacts } from './napoleon';
 import { ninetyNineFacts } from './ninetynine';
 import { redPointsFacts } from './redpoints';
@@ -28,6 +29,7 @@ export const GAME_STATS: {
   holdem: (_result, seat, frame) => holdemFacts(seat, frame),
   napoleon: napoleonFacts,
   tenhalf: tenHalfFacts,
+  liarsdice: liarsDiceFacts,
 };
 
 export function gameFacts<K extends GameType>(

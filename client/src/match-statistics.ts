@@ -20,7 +20,7 @@ export interface RoleRecord {
 
 /** A game-specific figure beside the common ones. */
 export interface GameMetric {
-  readonly id: 'overtricks' | 'firstOut' | 'fouls' | 'shots' | 'busts' | 'showdownWins';
+  readonly id: 'overtricks' | 'firstOut' | 'fouls' | 'shots' | 'busts' | 'showdownWins' | 'diceLost';
   /** A rate (0–1) or an average */
   readonly value: number;
   readonly format: 'rate' | 'decimal' | 'signed';

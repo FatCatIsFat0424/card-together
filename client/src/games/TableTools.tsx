@@ -63,6 +63,7 @@ interface ToolsState {
   readonly autoPlay: AutoPlay;
   readonly active: HandSort | null;
   readonly suitSortable: boolean;
+  readonly sortable: boolean;
   readonly sort: (order: HandSort) => void;
 }
 
@@ -79,6 +80,7 @@ function useToolsState(): ToolsState | null {
     // A dragged arrangement highlights neither order.
     active: arrangement.manual ? null : arrangement.order,
     suitSortable: clientGame(gameType).handSort.bySuit,
+    sortable: !clientGame(gameType).handSort.unsortable,
     sort: (order) => sort(gameType, order),
   };
 }
@@ -108,9 +110,9 @@ export function TableTools(): ReactNode {
       <span className={styles.autoLabel}>{t(automatic ? 'actions.autoPlayOn' : 'actions.autoPlay')}</span>
       <span className={styles.switch} aria-hidden="true" />
     </button>
-    <div className={styles.sort} role="group" aria-label={t('actions.sortLabel')}>
+    {state.sortable && <div className={styles.sort} role="group" aria-label={t('actions.sortLabel')}>
       <SortButtons state={state} className={styles.sortOption} />
-    </div>
+    </div>}
     {error && <p className={styles.error} role="alert">{error}</p>}
   </section>;
 }
@@ -181,7 +183,7 @@ export function TableToolsDrawer(): ReactNode {
           className={`${styles.stripButton} ${styles.stripAuto}`} disabled={pending} onClick={toggle}>
           <AppIcon name="robot" />{t(automatic ? 'actions.autoPlayOnShort' : 'actions.autoPlayOffShort')}
         </button>
-        <SortButtons state={state} className={styles.stripButton} />
+        {state.sortable && <SortButtons state={state} className={styles.stripButton} />}
       </div>
       <button type="button" className={styles.stripClose} aria-label={t('actions.toolsClose')}
         title={t('actions.toolsClose')} onClick={close}>

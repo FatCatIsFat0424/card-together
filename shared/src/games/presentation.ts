@@ -1,4 +1,6 @@
-import type { Card, ChinesePokerRow, GamePresentation, LiarFace, LiarTableFace, NapoleonCard, NapoleonSummon } from '../types/game';
+import type {
+  Card, ChinesePokerRow, DiceFace, GamePresentation, LiarFace, LiarTableFace, NapoleonCard, NapoleonSummon,
+} from '../types/game';
 import type { GameSeat } from '../types/player';
 
 /** Stamped on new presentations; restored ones keep their version so saved deadlines stay valid. */
@@ -12,7 +14,7 @@ export interface PresentationFrame {
   readonly kind: 'play' | 'pass' | 'trick' | 'round' | 'capture' | 'eliminated' | 'cover' | 'reveal' | 'shoot'
     | 'homerun' | 'deal' | 'challenge' | 'roulette' | 'shot' | 'hit' | 'stand' | 'double' | 'split'
     | 'dealerReveal' | 'dealerHit' | 'dealerStand' | 'settle' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street'
-    | 'showdown' | 'award' | 'slay' | 'collapse' | 'summon' | 'finish';
+    | 'showdown' | 'award' | 'slay' | 'collapse' | 'summon' | 'bid' | 'diceReveal' | 'finish';
   readonly durationMs: number;
   readonly seat?: GameSeat;
   readonly cards: readonly Card[];
@@ -46,6 +48,24 @@ export interface PresentationFrame {
   readonly napoleonCards?: readonly NapoleonCard[];
   /** Napoleon: what the lead summoned */
   readonly summon?: NapoleonSummon;
+  /** Liar's Dice: the bid and, on the reveal frame, the lifted cups */
+  readonly liarsDice?: LiarsDiceFrameData;
+}
+
+/** Liar's Dice: the bid a frame announces, and what a challenge found once the cups are lifted. */
+export interface LiarsDiceFrameData {
+  readonly quantity: number;
+  readonly face: DiceFace;
+  /** Ones counted as the bid face */
+  readonly wild?: boolean;
+  /** Every seat's revealed dice; present only on the reveal frame */
+  readonly dice?: Readonly<Partial<Record<GameSeat, readonly DiceFace[]>>>;
+  /** Dice that matched the bid */
+  readonly count?: number;
+  readonly bidTrue?: boolean;
+  readonly loser?: GameSeat;
+  /** The loser's last die went */
+  readonly eliminated?: boolean;
 }
 
 /** Shared frame lengths for one presentation, which depend on its timing version. */

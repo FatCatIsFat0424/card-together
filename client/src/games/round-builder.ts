@@ -1,5 +1,5 @@
 import type {
-  BlackjackOutcome, Card, ChinesePokerCategory, HoldemStreet, LiarFace, LiarTableFace, PlayerVisibleGameState,
+  BlackjackOutcome, Card, ChinesePokerCategory, DiceFace, HoldemStreet, LiarFace, LiarTableFace, PlayerVisibleGameState,
   GameSeat, GameType, TenHalfHandKind,
 } from '@shared/types';
 import type { BigTwoComboType } from '@shared/rules/bigtwo';
@@ -7,7 +7,7 @@ import type { BigTwoComboType } from '@shared/rules/bigtwo';
 export interface HistoryAction {
   kind: 'play' | 'pass' | 'round_end' | 'dragon' | 'flip' | 'eliminated' | 'cover' | 'challenge' | 'shot'
     | 'deal' | 'hit' | 'stand' | 'double' | 'split' | 'dealerReveal' | 'dealerHit' | 'dealerStand' | 'settle'
-    | 'button' | 'blind' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street' | 'showdown' | 'award';
+    | 'button' | 'blind' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street' | 'showdown' | 'award' | 'bid';
   /** Null for the Blackjack dealer and Hold'em board cards */
   seat: GameSeat | null;
   cards: readonly Card[];
@@ -43,6 +43,13 @@ export interface HistoryAction {
   handKind?: TenHalfHandKind;
   /** Hold'em: the street a board entry dealt */
   street?: Exclude<HoldemStreet, 'preflop'>;
+  /** Liar's Dice: the bid made, or the bid a challenge called */
+  bid?: { readonly quantity: number; readonly face: DiceFace };
+  /** Liar's Dice: dice that matched the called bid, whether it held, and who lost a die */
+  found?: number;
+  bidTrue?: boolean;
+  loser?: GameSeat;
+  eliminated?: boolean;
   /** Hold'em: the shown hand's best category */
   category?: ChinesePokerCategory;
   /** Hold'em: the hand's blinds, on the button entry */
@@ -55,6 +62,8 @@ export interface HistoryRound {
   actions: HistoryAction[];
   /** Liar's Deck: the round's table card */
   tableFace?: LiarTableFace;
+  /** Liar's Dice: dice in play when the round began */
+  diceInPlay?: number;
 }
 
 export type HistoryInput = PlayerVisibleGameState extends infer T

@@ -75,6 +75,6 @@ describe('daily task pool presentation', () => {
     useI18nStore.getState().setLocale(locale);
     const html = renderTasks({ ...status, claimedTasks: [], tasks: DAILY_TASKS.map((task) => ({ id: task.id, progress: 0 })) });
     expect(html).not.toContain('daily.');
-    expect(html.match(/<li /g)).toHaveLength(10);
+    expect(html.match(/<li /g)).toHaveLength(DAILY_TASKS.length);
   });
 });

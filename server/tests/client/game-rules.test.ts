@@ -64,6 +64,7 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
   holdem: { en: 'Main pot, side pots, and ties', 'zh-TW': '主池、邊池與平手' },
   napoleon: { en: 'Secretary card', 'zh-TW': '秘書牌' },
   tenhalf: { en: 'Special hands: strongest first', 'zh-TW': '特殊牌型：由大到小' },
+  liarsdice: { en: 'Calling', 'zh-TW': '開' },
 };
 
 describe('contextual game rules', () => {

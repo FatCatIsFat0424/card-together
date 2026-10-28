@@ -97,6 +97,7 @@ describe('spectator table perspective', () => {
       import('../../../client/src/games/holdem/HoldemTable'),
       import('../../../client/src/games/napoleon/NapoleonTable'),
       import('../../../client/src/games/tenhalf/TenHalfTable'),
+      import('../../../client/src/games/liarsdice/LiarsDiceTable'),
     ]);
   }, 60_000);
   beforeEach(() => {
@@ -141,8 +142,11 @@ describe('spectator table perspective', () => {
       } else if (projected.gameType !== 'bridge' && projected.gameType !== 'chinesepoker') {
         expect(isOwnTurn(projected)).toBe(false);
       }
-      if (game.gameType !== 'blackjack' && projected.gameType !== 'blackjack'
-        && game.gameType !== 'tenhalf' && projected.gameType !== 'tenhalf') {
+      if (game.gameType === 'liarsdice' && projected.gameType === 'liarsdice') {
+        expect(projected.myDice).toEqual(game.observedHands?.[seat] ?? []);
+      } else if (game.gameType !== 'blackjack' && projected.gameType !== 'blackjack'
+        && game.gameType !== 'tenhalf' && projected.gameType !== 'tenhalf'
+        && game.gameType !== 'liarsdice' && projected.gameType !== 'liarsdice') {
         expect(projected.myHand).toEqual(game.observedHands?.[seat] ?? []);
       }
     }

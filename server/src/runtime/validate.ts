@@ -30,6 +30,7 @@ export { isBlackjackResult } from '../managers/games/blackjack-validation';
 export { isHoldemResult } from '../managers/games/holdem-validation';
 export { isNapoleonResult } from '../managers/games/napoleon-validation';
 export { isTenHalfResult } from '../managers/games/tenhalf-validation';
+export { isLiarsDiceResult } from '../managers/games/liarsdice-validation';
 
 function player(value: unknown): boolean {
   return (

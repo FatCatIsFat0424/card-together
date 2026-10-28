@@ -2,8 +2,8 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AccountProfile, FriendEntry } from '@shared/types';
 import { GAME_TYPES } from '@shared/constants';
+import type { AccountProfile, FriendEntry } from '@shared/types';
 
 const state = vi.hoisted(() => ({
   currentRoomCode: null as string | null,
@@ -53,13 +53,13 @@ describe('lobby page', () => {
   it('lists the games of the selected category with one create and join area', () => {
     const html = render();
     expect(html).toContain('role="tablist"');
-    expect(html.match(/role="tab"/g)).toHaveLength(1);
+    expect(html.match(/role="tab"/g)).toHaveLength(2);
     expect(html).toContain('>Cards</button>');
-    expect(html).not.toContain('>Dice<');
+    expect(html).toContain('>Dice</button>');
     expect(html).not.toContain('>Board games<');
     expect(html).toContain('id="lobby-games" role="tabpanel"');
     const choices = html.match(/<button[^>]*aria-controls="lobby-selected-game"[^>]*>/g) ?? [];
-    expect(choices).toHaveLength(GAME_TYPES.length);
+    expect(choices).toHaveLength(gamesInCategory('cards').length);
     expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
     expect(html).toContain('4 players · Tricks');
     expect(html).toContain('2–8 players · Betting');
@@ -75,10 +75,12 @@ describe('lobby page', () => {
   });
 
   it('shows a tab only for categories that have games', () => {
-    expect(lobbyCategories()).toEqual(['cards']);
-    expect(gamesInCategory('dice')).toEqual([]);
+    expect(lobbyCategories()).toEqual(['cards', 'dice']);
+    expect(gamesInCategory('dice')).toEqual(['liarsdice']);
+    expect(gamesInCategory('board')).toEqual([]);
     // Artwork is generated separately, so a game without it must still list (see `GAME_CARD_ART`).
-    for (const gameType of GAME_TYPES.filter((type) => type !== 'tenhalf')) expect(GAME_CARD_ART[gameType]).toBeTruthy();
+    const unillustrated = ['tenhalf', 'liarsdice'];
+    for (const gameType of GAME_TYPES.filter((type) => !unillustrated.includes(type))) expect(GAME_CARD_ART[gameType]).toBeTruthy();
   });
 
   it('keeps room actions disabled without duplicating the floating room card with a banner', () => {
@@ -98,7 +100,7 @@ describe('lobby page', () => {
     const html = render();
     expect(html).toMatch(/disabled=""[^>]*>Create Room/);
     const choices = html.match(/<button[^>]*aria-controls="lobby-selected-game"[^>]*>/g) ?? [];
-    expect(choices).toHaveLength(GAME_TYPES.length);
+    expect(choices).toHaveLength(gamesInCategory('cards').length);
     expect(choices.every((choice) => !choice.includes('disabled'))).toBe(true);
   });
 
@@ -136,7 +138,7 @@ describe('lobby page', () => {
       expect(html).toContain('placeholder="Enter room code"');
       expect(html).toContain('Rules</button>');
       const cards = html.match(/<button[^>]*aria-controls="lobby-selected-game"[^>]*>/g) ?? [];
-      expect(cards).toHaveLength(GAME_TYPES.length);
+      expect(cards).toHaveLength(gamesInCategory('cards').length);
       expect(cards.filter((card) => card.includes('aria-pressed="true"'))).toHaveLength(1);
       expect(html.indexOf('Create Room')).toBeLessThan(html.indexOf('aria-controls="lobby-selected-game"'));
     });

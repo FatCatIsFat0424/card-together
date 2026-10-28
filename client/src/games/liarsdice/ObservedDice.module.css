@@ -1,0 +1,8 @@
+.row {
+  --die-size: clamp(14px, 1.6vw, 20px);
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  max-width: 100%;
+}

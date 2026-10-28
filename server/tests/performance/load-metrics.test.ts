@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { GAME_TYPES } from '@shared/constants';
 import { evaluateTargets, formatSummary, loopDelay, percentile, summarize, summarizeWrites } from '../../benchmarks/load/load-metrics';
 import type { ServerStats } from '../../benchmarks/load/load-metrics';
 import { DEFAULT_LOAD_OPTIONS, parseLoadOptions, planRooms, SMOKE_DURATION_SECONDS } from '../../benchmarks/load/load-plan';
 
-import { GAME_TYPES } from '@shared/constants';
 const MIB = 1024 * 1024;
 
 describe('load benchmark statistics', () => {

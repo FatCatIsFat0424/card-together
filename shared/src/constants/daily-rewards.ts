@@ -8,6 +8,7 @@ export const DAILY_TASKS = [
   { id: 'play-sevens', target: 2, coins: 15 },
   { id: 'play-chinesepoker', target: 2, coins: 15 },
   { id: 'play-liarsdeck', target: 2, coins: 10 },
+  { id: 'play-liarsdice', target: 2, coins: 10 },
   { id: 'play-casino', target: 1, coins: 20 },
 ] as const;
 

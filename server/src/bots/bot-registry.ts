@@ -14,6 +14,7 @@ import { getBlackjackBotAction } from './blackjack-strategy';
 import { getHoldemBotAction } from './holdem-strategy';
 import { getNapoleonBotAction } from './napoleon-strategy';
 import { easyTenHalfAction, getTenHalfBotAction, tenHalfFirstLegalAction } from './tenhalf-strategy';
+import { easyLiarsDiceAction, getLiarsDiceBotAction, liarsDiceFirstLegalAction } from './liarsdice-strategy';
 import {
   easyBigTwoAction, easyBlackjackAction, easyBridgeAction, easyChinesePokerAction, easyHoldemAction, easyLiarsDeckAction,
   easyNinetyNineAction, easyRedPointsAction, easySevensAction,
@@ -100,6 +101,13 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     turnTimeout: (visible, { isBot, strategy }) => (isBot ? strategy() : tenHalfFirstLegalAction(visible)),
     // A human who missed the betting window stakes the minimum; bots keep their own decision.
     deadlineExpired: (visible, { isBot, strategy }) => (isBot ? strategy() : tenHalfFirstLegalAction(visible)),
+  },
+  liarsdice: {
+    hard: getLiarsDiceBotAction,
+    easy: easyLiarsDiceAction,
+    firstLegal: liarsDiceFirstLegalAction,
+    // A player who runs out of time raises by the least allowed or challenges, as the easy bot would.
+    turnTimeout: (visible) => easyLiarsDiceAction(visible),
   },
 };
 

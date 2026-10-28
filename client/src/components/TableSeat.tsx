@@ -14,6 +14,8 @@ import type { TranslationKey } from '../i18n';
 import { latestCallIndex, remainingCards } from '../game-view';
 import type { TablePosition } from '../game-view';
 import { liarsDeckView } from '../games/liarsdeck/liarsdeck-view';
+import { liarsDiceView } from '../games/liarsdice/liarsdice-view';
+import { ObservedDice } from '../games/liarsdice/ObservedDice';
 import { blackjackSeatOut, blackjackView } from '../games/blackjack/blackjack-view';
 import { tenHalfSeatOut, tenHalfView } from '../games/tenhalf/tenhalf-view';
 import { ChipIcon } from '../games/ChipIcon';
@@ -238,7 +240,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const {
     phase, turn, declarer, dealer, playing, bigTwoCards, redPointsCards, ninetyNineCards, locked, captured, busted,
     sevensCards, sevensCovered, chinesePokerCards, arranging, arranged, autoArranged, blackjackCards, holdemCards,
-    napoleonCards, tenHalfCards,
+    napoleonCards, tenHalfCards, diceCards,
   } = useGameStore(useShallow((state) => ({
     sevensCards: gameSeatValue(state.sevens?.handCounts, seat) ?? null,
     // Blackjack hands are drawn face up on the table, so the plate shows no card backs.
@@ -247,6 +249,8 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
     holdemCards: state.holdem ? 0 : null,
     // Ten and a Half hands are drawn on the felt, so the plate shows no card backs.
     tenHalfCards: state.tenhalf ? 0 : null,
+    // Liar's Dice cups are counted in the seat's dice chip instead.
+    diceCards: state.liarsDice ? 0 : null,
     napoleonCards: state.napoleon ? gameSeatValue(state.napoleon.handCounts, seat) ?? 0 : null,
     sevensCovered: gameSeatValue(state.sevens?.coveredCounts, seat) ?? null,
     chinesePokerCards: state.chinesePoker ? state.chinesePoker.phase === 'arranging' ? 13 : 0 : null,
@@ -270,6 +274,10 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   // Liar's Deck seats follow the presentation so a trigger pull is not revealed before its suspense ends.
   const liars = liarsDeck && liarsDeckView(liarsDeck, frame);
   const dead = (isCompassSeat(seat) && liars?.eliminated.includes(seat)) ?? false;
+  const liarsDice = useGameStore((state) => state.liarsDice);
+  // Liar's Dice counts and eliminations follow the presentation so a lost die is not shown before the reveal.
+  const dice = liarsDice && liarsDiceView(liarsDice, frame);
+  const diceOut = (dice?.eliminated.includes(seat)) ?? false;
   const blackjack = useGameStore((state) => state.blackjack);
   // Blackjack chips follow the presentation so a settlement is not paid out before its frame.
   const bj = blackjack && blackjackView(blackjack, frame);
@@ -290,6 +298,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const heLocked = heState === 'folded' || heState === 'allIn';
   const observedCards = useGodViewStore((state) => state.hands?.[seat]);
   const observedLiars = useGodViewStore((state) => state.liarHands?.[seat]);
+  const observedDice = useGodViewStore((state) => state.diceHands?.[seat]);
   const observedNapoleon = useGodViewStore((state) => state.napoleonHands?.[seat]);
   const napoleon = useGameStore((state) => state.napoleon);
   const gameType = useGameStore((state) => state.visible?.gameType);
@@ -316,21 +325,22 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const active = !suppressTurn && turn && (phase === 'bidding' || phase === 'playing');
   const autoPlayed = autoArranged || showsAutoPlayed(clock, seat, lastActionAt);
   const status = seatStatus({
-    busted: busted || dead || heOut,
+    busted: busted || dead || heOut || diceOut,
     locked: locked || heLocked,
     thinking: (active || arranging || (bettingOpen && !betPlaced)) && Boolean(player?.isBot),
     autoPlayed,
     arranged: arranged || betPlaced || napoleonReviewed,
   });
   const cards = stats !== undefined ? 0 : bigTwoCards ?? redPointsCards ?? ninetyNineCards ?? sevensCards ?? chinesePokerCards
-    ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? napoleonCards ?? tenHalfCards
+    ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? diceCards ?? napoleonCards ?? tenHalfCards
     ?? remainingCards(seat, playing);
   // A Hold'em fold outranks a timeout in the status slot, so a timed-out fold keeps the timeout icon.
   const heStatusLabel: TranslationKey | null = heOut && status === 'busted' ? 'holdem.out'
     : heLocked && status === 'locked' ? heState === 'folded' ? 'holdem.folded' : 'holdem.allIn' : null;
   // Lasting states (folded, out, busted) dim the whole seat instead of adding a badge on top of it.
-  const dimmed = busted || dead || sittingOut || heOut || heState === 'folded';
+  const dimmed = busted || dead || diceOut || sittingOut || heOut || heState === 'folded';
   const statusText = heStatusLabel ?? (dead && status === 'busted' ? 'liarsdeck.dead'
+    : diceOut && status === 'busted' ? 'liarsdice.out'
     : (bj || th) && status === 'arranged' ? 'blackjack.betPlaced'
       : napoleonReviewed && status === 'arranged' ? 'napoleon.reviewed' : status ? STATUS_LABEL[status] : null);
   // The turn ring already shows that a bot is thinking, so that status stays a screen-reader label only.
@@ -436,6 +446,10 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
             title={t('liarsdeck.shotsTitle', { n: String((gameSeatValue(liars.shots, seat) ?? 0)) })}>
             {t('liarsdeck.shots', { n: String((gameSeatValue(liars.shots, seat) ?? 0)) })}
           </span>}
+          {dice && <span className={styles.stat}
+            title={t('liarsdice.diceTitle', { n: String(dice.counts[seat] ?? 0) })}>
+            {t('liarsdice.diceChip', { n: String(dice.counts[seat] ?? 0) })}
+          </span>}
           {bj && <span className={`${styles.stat} ${styles.chips}`} title={t('blackjack.chipsTitle', { n: String(bj.chips[seat]) })}>
             <ChipIcon />{bj.chips[seat]}
           </span>}
@@ -468,6 +482,8 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
       </div>
       {tray}
       {observed}
+      {dice && !bottom && !dice.handHidden && observedDice && observedDice.length > 0 && !diceOut
+        && <ObservedDice dice={observedDice} owner={name} />}
       {cardAnchor && player && gameType && <Suspense fallback={null}>
         <PlayerCard player={player} gameType={gameType} anchor={cardAnchor} onClose={() => setCardAnchor(null)} />
       </Suspense>}

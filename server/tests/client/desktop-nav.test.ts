@@ -38,10 +38,10 @@ describe('desktop navigation', () => {
     expect(currentRailItem('/gamesroom', 'alice')).toBeNull();
   });
 
-  it('falls back to the default game category when the stored one has no games', () => {
+  it('keeps a stored category that has games and falls back to the default when it has none', () => {
     expect(activeLobbyCategory(null)).toBe('cards');
     expect(activeLobbyCategory('cards')).toBe('cards');
-    expect(activeLobbyCategory('dice')).toBe('cards');
+    expect(activeLobbyCategory('dice')).toBe('dice');
     expect(activeLobbyCategory('board')).toBe('cards');
   });
 });

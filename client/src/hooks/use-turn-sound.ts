@@ -33,6 +33,7 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
     game.ninetyNine?.log.filter((entry) => entry.seat === room.mySeat).length ??
     game.sevens?.log.filter((entry) => entry.seat === room.mySeat).length ??
     game.liarsDeck?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
+    game.liarsDice?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
     game.holdem?.log.filter((entry) => entry.type === 'action' && entry.seat === room.mySeat).length ??
     (game.napoleon ? `${game.napoleon.phase}-${game.napoleon.log.filter((entry) =>
       'seat' in entry && entry.seat === room.mySeat).length}` : undefined) ??

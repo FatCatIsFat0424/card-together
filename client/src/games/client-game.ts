@@ -2,7 +2,7 @@
 
 import type { VisibleStateOf } from '@shared/games/game-definition';
 import type {
-  Card, GameSeat, GameType, LiarCard, MatchResult, NapoleonCard, RoomInfo,
+  Card, DiceFace, GameSeat, GameType, LiarCard, MatchResult, NapoleonCard, RoomInfo,
 } from '@shared/types';
 import type { AppIconName } from '../components/AppIcon';
 import type { GameRulesContextFields } from '../game-rules-context';
@@ -27,6 +27,7 @@ export interface SnapshotContext {
 export interface SpectatorPatch {
   readonly myHand?: readonly (Card | LiarCard | NapoleonCard)[];
   readonly myCovered?: readonly Card[];
+  readonly myDice?: readonly DiceFace[];
   readonly myArrangement?: null;
   readonly myPlayed?: readonly never[];
   readonly validCards?: readonly never[];
@@ -44,6 +45,8 @@ export interface HandSortRules {
   readonly bySuit: boolean;
   /** Sort a new player starts with, matching the order the hand is dealt in where the server sorts it */
   readonly initial: HandSort;
+  /** The game has no cards to sort, so the table tools omit the sort buttons */
+  readonly unsortable?: true;
 }
 
 /** One line of the history list: winners with an optional own-score detail, or plain text. */

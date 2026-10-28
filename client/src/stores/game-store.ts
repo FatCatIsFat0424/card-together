@@ -18,6 +18,7 @@ import type {
   SevensVisibleState,
   ChinesePokerVisibleState,
   LiarsDeckVisibleState,
+  LiarsDiceVisibleState,
   BlackjackVisibleState,
   HoldemVisibleState,
   NapoleonVisibleState,
@@ -37,6 +38,7 @@ export interface GameStoreState {
   sevens: SevensVisibleState | null;
   chinesePoker: ChinesePokerVisibleState | null;
   liarsDeck: LiarsDeckVisibleState | null;
+  liarsDice: LiarsDiceVisibleState | null;
   blackjack: BlackjackVisibleState | null;
   holdem: HoldemVisibleState | null;
   /** Hold'em: my hole cards from the previous hand while its presentation may still be playing */
@@ -71,6 +73,7 @@ const initialState: GameStoreState = {
   sevens: null,
   chinesePoker: null,
   liarsDeck: null,
+  liarsDice: null,
   blackjack: null,
   holdem: null,
   holdemHeld: null,

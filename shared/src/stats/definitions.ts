@@ -102,6 +102,12 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('bestHand', 'log', 'max'),
     record('bankerNet', 'log', 'total'),
   ],
+  liarsdice: [
+    record('callsWon', 'log', 'count'),
+    record('bidsHeld', 'log', 'count'),
+    record('exactBids', 'log', 'count'),
+    record('diceInWin', 'result', 'max'),
+  ],
 };
 
 /**

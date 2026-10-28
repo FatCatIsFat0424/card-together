@@ -1,0 +1,99 @@
+/* ─── Dice renderer: HTML and CSS only; colours come from the theme variables on a container ─── */
+
+.die {
+  --size: var(--die-size, 2.6rem);
+  position: relative;
+  flex: none;
+  display: inline-grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  box-sizing: border-box;
+  width: var(--size);
+  aspect-ratio: 1;
+  padding: calc(var(--size) * 0.13);
+  border: max(1px, calc(var(--size) * 0.045)) solid var(--die-edge, #bdb294);
+  border-radius: calc(var(--size) * 0.22);
+  background: var(--die-body, #f6f1e4);
+  box-shadow: var(--shadow-sm);
+}
+
+.pip {
+  place-self: center;
+  width: 70%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--die-pip, #2a2420);
+}
+
+.one .pip {
+  width: 120%;
+  background: var(--die-pip-one, #b3261e);
+}
+
+.blank { display: block; }
+
+/* Dice that match the bid are ringed; the rest recede. The base styles are the settled look, and the
+   animations only travel to it, so reduced motion shows the same result. */
+.match {
+  border-color: var(--die-match, #e0a800);
+  box-shadow: 0 0 0 2px var(--die-match, #e0a800), var(--shadow-sm);
+  transform: scale(1.1);
+  animation: hit 360ms ease-out var(--match-delay, 0ms) backwards;
+}
+
+.miss {
+  opacity: 0.35;
+  animation: miss 360ms ease-out var(--match-delay, 0ms) backwards;
+}
+
+/* An unseen die is a blank cube in the cup's leather. */
+.hidden {
+  border-color: var(--cup-shade, #3d2515);
+  background: var(--cup-body, #6b4428);
+}
+
+@keyframes hit { from { transform: none; } }
+@keyframes miss { from { opacity: 1; } }
+
+/* ─── Cup ─── */
+.cup {
+  --size: var(--die-size, 2.6rem);
+  position: relative;
+  flex: none;
+  display: block;
+  width: calc(var(--size) * 1.15);
+  height: calc(var(--size) * 1.35);
+  background: linear-gradient(90deg, var(--cup-shade, #3d2515), var(--cup-body, #6b4428) 35%, var(--cup-body, #6b4428) 65%, var(--cup-shade, #3d2515));
+  clip-path: polygon(14% 0, 86% 0, 100% 100%, 0 100%);
+  transform-origin: 50% 100%;
+}
+
+.cup::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 16%;
+  background: var(--cup-rim, #a8743f);
+}
+
+.shaking { animation: rattle 520ms ease-in-out var(--enter-delay, 0ms) 3 both; }
+.lifted {
+  animation: lift 500ms ease-in var(--lift-delay, 0ms) both;
+  opacity: 0;
+  transform: translateY(-120%) rotate(-24deg);
+}
+
+@keyframes rattle {
+  0%, 100% { transform: none; }
+  20% { transform: translateY(-8%) rotate(-14deg); }
+  40% { transform: translateY(0) rotate(11deg); }
+  60% { transform: translateY(-6%) rotate(-9deg); }
+  80% { transform: translateY(0) rotate(7deg); }
+}
+
+@keyframes lift {
+  from { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .match, .miss, .shaking, .lifted { animation: none; }
+}

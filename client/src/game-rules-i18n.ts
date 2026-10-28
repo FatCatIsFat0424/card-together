@@ -177,6 +177,13 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     ], 'Any special hand beats every ordinary total. Equal hands go to the banker, and so does any tie.'),
     section('Settlement', 'A player wins by outranking the banker; a bust always loses, even if the banker busts. A winner collects bet × its own multiple. A loser pays bet × the banker’s multiple (1 if the banker busted) but never more than the chips held before the hand.', 'The banker pays winners from its own chips plus what it collected; if that falls short, winners share it in proportion to what each is owed.', 'Example, 20-chip bet: a plain win returns 40 in total; against a banker holding ten and a half you lose 40.'),
   ],
+  liarsdice: [
+    section('Dice and cups', 'Two to eight players start with 5 dice each. Everyone rolls under a cup and sees only their own dice; all dice are rolled again every round.', 'A random player opens the first round, then turns pass clockwise.'),
+    section('Bidding', 'Bid how many dice in total, across every cup, show a face: for example four 5s. The next bid must have more dice, or the same number of a higher face. Faces rank 2 < 3 < 4 < 5 < 6 < 1, so ones are highest.', 'Instead of bidding, call the previous bid. You cannot call before anyone has bid.'),
+    section('Ones', 'Ones are wild and count as any face. Once anyone bids on ones, they are no longer wild for the rest of the round.', 'A bid on ones counts only ones.'),
+    section('Calling', 'Every cup is lifted and the bid face is counted. At least the bid: the caller loses a die. Fewer: the bidder loses a die.', 'The loser opens the next round, or the next player clockwise if they have no dice left.'),
+    section('Winning', 'A player with no dice is out. The last player with dice wins; later eliminations rank higher.'),
+  ],
 };
 
 const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
@@ -308,12 +315,19 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     ], '任何特殊牌型都大於一般點數。牌型相同或點數相同，一律莊家勝。'),
     section('結算', '閒家牌比莊家大才算贏；閒家爆牌一律輸，即使莊家也爆。贏家拿下注額 × 自己牌型的倍數；輸家賠下注額 × 莊家牌型的倍數（莊家爆牌算 1 倍），但最多賠光該局開始前的籌碼。', '莊家用自己的籌碼加上收到的錢賠付；不夠賠時，依每位贏家應得的比例分配。', '例：押 20，一般贏拿回 40；對上十點半的莊家，輸 40。'),
   ],
+  liarsdice: [
+    section('骰子與骰盅', '2～8 人，每人 5 顆骰子。大家在骰盅下搖骰，只看得到自己的；每輪都重新搖骰。', '第一輪隨機一人先喊，之後順時針輪流。'),
+    section('喊點', '喊出所有骰盅合計有幾個幾點，例如「四個 5」。下一位要喊更多個，或同樣個數但點數更大；點數大小為 2 < 3 < 4 < 5 < 6 < 1，1 點最大。', '輪到你時也可以不喊，直接開上一位的喊法；還沒有人喊時不能開。'),
+    section('1 點百搭', '1 點百搭，可當任何點數。有人喊 1 點（叫齋）後，該輪 1 點不再百搭。', '喊 1 點時只算 1 點本身。'),
+    section('開', '掀開所有骰盅，統計所喊的點數。達到所喊個數，開的人少一顆骰子；不足，則喊的人少一顆。', '輸的人先喊下一輪；若他已沒有骰子，則由順時針下一位開始。'),
+    section('勝負', '骰子用完即淘汰，最後還有骰子的人獲勝；越晚淘汰名次越高。'),
+  ],
 };
 
 const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> = {
   en: [
     table('Room setup', ['Item', 'Rule'], [
-      ['Players', 'Ninety-Nine, Blackjack, Hold’em 2–8; Napoleon 4–6; others 4'],
+      ['Players', 'Ninety-Nine, Blackjack, Hold’em, Liar’s Dice 2–8; Napoleon 4–6; others 4'],
       ['Seat order', 'Clockwise N → E → S → W → P5–P8, skipping empty seats'],
       ['Start', 'Once everyone seated is ready, the host presses Start'],
       ['Bots', 'The host adds or removes them; at least one human must sit'],
@@ -329,7 +343,7 @@ const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> =
   ],
   'zh-TW': [
     table('房間設定', ['項目', '規則'], [
-      ['人數', '99、21 點、德州撲克 2～8 人；拿破崙 4～6 人；其他 4 人'],
+      ['人數', '99、21 點、德州撲克、吹牛骰 2～8 人；拿破崙 4～6 人；其他 4 人'],
       ['座位順序', '順時針 北 → 東 → 南 → 西 → 第 5～8 席，跳過空位'],
       ['開始', '入座者都準備後，由房主按開始'],
       ['Bot', '房主可加入或移除；至少需一位真人入座'],

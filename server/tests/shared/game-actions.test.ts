@@ -44,6 +44,8 @@ const ACTIONS = [
   { gameType: 'napoleon', action: { type: 'discard', cards: [card, { joker: 'big' }] } },
   { gameType: 'napoleon', action: { type: 'call', card: other } },
   { gameType: 'napoleon', action: { type: 'play', card: { joker: 'small' }, leadSuit: 'hearts', summon: 'secretary' } },
+  { gameType: 'liarsdice', action: { type: 'bid', quantity: 12, face: 6 } },
+  { gameType: 'liarsdice', action: { type: 'challenge' } },
 ] satisfies readonly GameActionEnvelope[];
 
 function inject(value: unknown, strictCards = false): unknown {
@@ -107,6 +109,12 @@ describe('game action contracts', () => {
     ['blackjack', { type: 'bet', amount: 0 }, 'Invalid bet.'],
     ['blackjack', { type: 'act', action: 'surrender' }, 'Invalid action.'],
     ['blackjack', { type: 'dealerAct', action: 'split' }, 'Invalid action.'],
+    ['liarsdice', { type: 'bid', quantity: 0, face: 3 }, 'Invalid bid.'],
+    ['liarsdice', { type: 'bid', quantity: 41, face: 3 }, 'Invalid bid.'],
+    ['liarsdice', { type: 'bid', quantity: 2.5, face: 3 }, 'Invalid bid.'],
+    ['liarsdice', { type: 'bid', quantity: 2, face: 7 }, 'Invalid bid.'],
+    ['liarsdice', { type: 'bid', quantity: 2, face: 0 }, 'Invalid bid.'],
+    ['liarsdice', { type: 'bid', quantity: 2 }, 'Invalid bid.'],
     ['holdem', { type: 'raise', to: 1.5 }, 'Invalid action.'],
     ['holdem', { type: 'raise', to: NaN }, 'Invalid action.'],
     ['napoleon', { type: 'bid', action: { type: 'bid', level: 1, suit: 'clubs' } }, 'Invalid action.'],

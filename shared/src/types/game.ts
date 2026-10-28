@@ -182,6 +182,17 @@ export type {
 } from '../games/holdem/types';
 
 export type {
+  DiceFace,
+  LiarsDiceBid,
+  LiarsDiceStandingBid,
+  LiarsDiceLogEntry,
+  LiarsDiceMatchResult,
+  LiarsDicePhase,
+  LiarsDiceGameState,
+  LiarsDiceVisibleState,
+} from '../games/liarsdice/types';
+
+export type {
   NapoleonJoker,
   NapoleonCard,
   NapoleonBidLevel,

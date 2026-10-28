@@ -67,9 +67,9 @@ describe('client game registries', () => {
   });
 
   describe('categories', () => {
-    it('lists every current game as a card game and none as dice or board', () => {
-      expect(gamesInCategory('cards')).toEqual(GAME_TYPES);
-      expect(gamesInCategory('dice')).toEqual([]);
+    it('lists the card games, the dice game, and no board game', () => {
+      expect(gamesInCategory('cards')).toEqual(GAME_TYPES.filter((gameType) => gameType !== 'liarsdice'));
+      expect(gamesInCategory('dice')).toEqual(['liarsdice']);
       expect(gamesInCategory('board')).toEqual([]);
     });
 
@@ -101,8 +101,8 @@ describe('client game registries', () => {
   });
 
   describe('hand sorting', () => {
-    it('offers suit sorting everywhere except Liar\'s Deck', () => {
-      expect(GAME_TYPES.filter((gameType) => !clientGame(gameType).handSort.bySuit)).toEqual(['liarsdeck']);
+    it('offers suit sorting everywhere except Liar\'s Deck and Liar\'s Dice', () => {
+      expect(GAME_TYPES.filter((gameType) => !clientGame(gameType).handSort.bySuit)).toEqual(['liarsdeck', 'liarsdice']);
     });
 
     it('orders Big Two ranks with twos high and everything else by face value', () => {
