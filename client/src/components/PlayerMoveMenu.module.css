@@ -1,0 +1,52 @@
+/* The seat variant is a small corner glyph with a 40px hit area; the row variant is a full 40px button. */
+.trigger {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  color: var(--text-secondary);
+}
+.trigger:hover:not(:disabled), .trigger[aria-expanded='true'] { color: var(--text-primary); }
+.seat {
+  position: absolute;
+  z-index: 3;
+  right: -2px;
+  top: -2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
+  font-size: 16px;
+}
+.seat::after { content: ''; position: absolute; inset: -9px; }
+.row {
+  width: var(--hit-size);
+  height: var(--hit-size);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xl);
+}
+.row:hover:not(:disabled) { background: var(--surface-2); }
+
+.menu:global(.MuiPaper-root) {
+  min-width: 220px;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  background-image: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+.menu :global(.MuiList-root) { padding: var(--space-1); }
+.menu :global(.MuiMenuItem-root) {
+  gap: var(--space-2);
+  min-height: var(--hit-size);
+  border-radius: var(--radius-md);
+  font-family: var(--font-primary);
+  font-size: var(--text-sm);
+}
+.menu :global(.MuiMenuItem-root:hover), .menu :global(.MuiMenuItem-root.Mui-focusVisible) { background: var(--surface-2); }
+.title { padding: var(--space-2) var(--space-3); color: var(--text-secondary); font-size: var(--text-sm); }
+.itemIcon { flex: none; color: var(--text-secondary); font-size: var(--text-xl); }
+.itemName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag { flex: none; color: var(--text-muted); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
+.danger.danger { color: var(--color-danger); }
+.danger .itemIcon { color: inherit; }

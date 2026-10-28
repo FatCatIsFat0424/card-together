@@ -161,27 +161,121 @@ button.identity:disabled { cursor: default; }
 }
 .readyText { color: var(--color-success); }
 
-/* Kick: a small glyph in the card corner with a 40px hit area. */
-.kick {
+/* The whole card is the drag handle: it lifts on hover and shows a grip on its top edge. */
+.draggable { cursor: grab; touch-action: none; user-select: none; -webkit-touch-callout: none; }
+.draggable .card { transition: transform var(--transition-fast), box-shadow var(--transition-fast); }
+.grip {
   position: absolute;
-  z-index: 2;
-  right: -2px;
-  top: -2px;
+  z-index: 3;
+  left: 50%;
+  top: -9px;
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
+  width: 22px;
+  height: 16px;
+  translate: -50% 0;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--bg-surface) 88%, transparent);
   color: var(--text-secondary);
   font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  rotate: 90deg;
+  transition: opacity var(--transition-fast);
 }
-.kick::after { content: ''; position: absolute; inset: -10px; }
-.kick:hover:not(:disabled) { color: var(--color-danger); }
+@media (hover: hover) {
+  .draggable:hover:not(.moving) .card { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+  .draggable:hover:not(.moving) .grip { opacity: 1; }
+}
 
-.draggable { cursor: grab; touch-action: none; user-select: none; }
-.moving { opacity: 0.55; }
-.dropTarget.dropTarget .card, .dropTarget.dropTarget .emptyButton { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+/* Long press on touch: a ring closes in on the card while the timer runs. */
+.seat[data-holding]::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  z-index: 1;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  pointer-events: none;
+  animation: seatHold 400ms linear both;
+}
+@keyframes seatHold {
+  from { opacity: 0.2; transform: scale(1.2); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* The dragged member's own seat stays as a dashed placeholder; the miniature follows the pointer. */
+.moving .card > * { opacity: 0.4; }
+.moving .card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1.5px dashed var(--border-color-hover);
+  border-radius: inherit;
+  pointer-events: none;
+}
+.moving .card > .status { opacity: 1; }
+
+/* Drop targets: dashed while a drag is open, solid blue with a glow under the pointer, grey when refused. */
+.seat::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  z-index: 2;
+  border: 2px dashed transparent;
+  border-radius: var(--radius-lg);
+  pointer-events: none;
+}
+.seat[data-drop='available']::after { border-color: color-mix(in srgb, var(--color-primary) 60%, transparent); }
+.seat[data-drop='hover']::after {
+  border-style: solid;
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--color-primary) 50%, transparent);
+}
+.seat[data-drop='unavailable']::after { border-color: var(--border-color-hover); }
+.seat[data-drop='unavailable'] .card, .seat[data-drop='unavailable'] .emptyButton { opacity: 0.45; filter: grayscale(1); }
+.dropLabel {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: -11px;
+  translate: -50% 0;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 18px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.seat[data-drop='hover'] .dropLabel { background: var(--color-primary); color: var(--text-inverse); }
+
+.dragPreview {
+  position: fixed;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: min(220px, 70vw);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  pointer-events: none;
+  transform: translate(-50%, -60%) rotate(3deg) scale(1.06);
+}
+/* A finger would hide the miniature, so touch lifts it above the contact point. */
+@media (hover: none) {
+  .dragPreview { transform: translate(-50%, -140%) rotate(3deg) scale(1.1); }
+}
+.previewName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .empty .emptyButton {
   display: flex;

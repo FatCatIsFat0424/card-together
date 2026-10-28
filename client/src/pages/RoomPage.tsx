@@ -10,9 +10,10 @@ import { GAME_SEAT_ORDER, MAX_SPECTATORS, SEAT_ORDER_CLOCKWISE } from '@shared/c
 import { EXPANDABLE_ROOM_GAMES, gameDefinition } from '@shared/games/registry';
 import { HE_HANDS } from '@shared/rules/holdem';
 import type {
-  BlackjackOptions, BotDifficulty, GameSeat, NapoleonOptions, GameType, NinetyNineOptions, PlayerInfo, RoomInfo, RoomSeatTarget, Seat, SeatInfo, SevensOptions, TimeControl,
+  BlackjackOptions, BotDifficulty, GameSeat, NapoleonOptions, GameType, NinetyNineOptions, PlayerInfo, RoomInfo, RoomSeatTarget, Seat, SevensOptions, TimeControl,
 } from '@shared/types';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
+import type { TranslationKey } from '../i18n';
 import { socket } from '../socket';
 import { roomErrorKey } from '../room-error-i18n';
 import { roomReplayErrorKey, roomReplayMembers } from '../room-replay';
@@ -30,7 +31,9 @@ import { Dock, DockCount } from '../components/Dock';
 import { ChatPanel } from '../components/ChatPanel';
 import { InviteFriends } from '../components/InviteFriends';
 import { RoomSettings } from '../components/RoomSettings';
-import { AddSeatSlot, RoomSeat } from '../components/RoomSeat';
+import { AddSeatSlot, RoomSeat, SeatDragPreview } from '../components/RoomSeat';
+import type { SeatDropView } from '../components/RoomSeat';
+import { PlayerMoveMenu } from '../components/PlayerMoveMenu';
 import { Button } from '../components/Button';
 import { IconButton } from '../components/IconButton';
 import { useConnectionReady } from '../games/use-connection-ready';
@@ -42,6 +45,9 @@ import styles from './RoomPage.module.css';
 import botSeatBackground from '../assets/room-backgrounds/bot-seat.webp';
 import { unreadCount } from './room-progress';
 import { ovalPosition } from './room-oval';
+import { moveOptions, seatDropOutcome, spectatorDropOutcome } from './room-moves';
+import type { DropAction, DropOutcome, MoveOption, RoomSeatCard } from './room-moves';
+import { readPreference, writePreference } from '../utils/preference-storage';
 import { useRoomSeatDrag } from '../hooks/use-room-seat-drag';
 import { layeredShopArt } from '../cosmetics/art-layers/shop-art-layers';
 import { TableArt } from '../cosmetics/art-layers/TableArt';
@@ -52,14 +58,19 @@ type RoomDockTab = 'chat' | 'spectators';
 const RoomReplayPicker = lazy(() => import('../components/RoomReplayPicker')
   .then((module) => ({ default: module.RoomReplayPicker })));
 
-interface RoomSeatCard {
-  readonly key: string;
-  readonly label: string;
-  readonly info: SeatInfo;
-  readonly seat?: Seat;
-  readonly additionalIndex?: number;
-  /** Seat a bot is added to or managed in */
-  readonly gameSeat: GameSeat;
+const DRAG_HINT_KEY = 'room.dragHint';
+type Translate = (key: TranslationKey, params?: Record<string, string>) => string;
+
+/** Name of a move destination, as the seat cards and the move menu show it. */
+function seatTargetLabel(t: Translate, gameType: GameType, target: RoomSeatTarget): string {
+  if (target.type === 'spectator') return t('room.moveToSpectators');
+  if (target.type === 'seat') return seatLabel(t, gameType, target.seat);
+  return additionalSeatLabel(t, gameType, target.index);
+}
+
+function additionalSeatLabel(t: Translate, gameType: GameType, index: number): string {
+  return isNumberedSeatGame(gameType) ? seatLabel(t, gameType, GAME_SEAT_ORDER[index + 4])
+    : t('room.additionalSeat', { n: String(index + 5) });
 }
 
 export function RoomPage(): ReactNode {
@@ -78,6 +89,7 @@ export function RoomPage(): ReactNode {
   const [dockTab, setDockTab] = useState<RoomDockTab>('chat');
   const chatToggleRef = useRef<HTMLButtonElement>(null);
   const compactLayout = useMediaQuery('(max-width: 1023px), (max-height: 700px)');
+  const touchInput = useMediaQuery('(hover: none)');
   const dockVisible = compactLayout ? chatOpen : dockOpen;
   const chatVisible = dockVisible && (compactLayout || dockTab === 'chat');
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
@@ -88,6 +100,8 @@ export function RoomPage(): ReactNode {
   const [enteredRoom, setEnteredRoom] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [dragHintDone, setDragHintDone] = useState(() => readPreference(DRAG_HINT_KEY) === 'done');
+  const [moved, setMoved] = useState('');
   const [replayPickerOpen, setReplayPickerOpen] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState<HTMLElement | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -118,6 +132,7 @@ export function RoomPage(): ReactNode {
     if (timeout) setError(t('auth.connectionError'));
     else if (!result?.success) setError(t(roomReplayErrorKey(result?.error)));
   };
+  const targetLabel = (gameType: GameType, target: RoomSeatTarget): string => seatTargetLabel(t, gameType, target);
   const movePlayer = (player: PlayerInfo, target: RoomSeatTarget): void => {
     if (!canMovePlayers || !roomInfo) return;
     if (target.type === 'seat' && roomInfo.seats[target.seat].player?.id === player.id) return;
@@ -125,9 +140,17 @@ export function RoomPage(): ReactNode {
     if (target.type === 'spectator' && roomInfo.spectators?.some((entry) => entry.id === player.id)) return;
     setBusy(true);
     setError('');
-    socket.timeout(10000).emit('room:movePlayer', { accountId: player.id, target }, handleResult);
+    setMoved('');
+    socket.timeout(10000).emit('room:movePlayer', { accountId: player.id, target }, (timeout, result) => {
+      handleResult(timeout, result);
+      if (timeout || !result?.success) return;
+      setMoved(t('room.moved', { nickname: player.nickname, place: targetLabel(roomInfo.gameType, target) }));
+      setDragHintDone(true);
+      writePreference(DRAG_HINT_KEY, 'done');
+    });
   };
-  const seatDrag = useRoomSeatDrag(canMovePlayers, movePlayer);
+  // A compact layout lists spectators in a popover; it closes on pick-up so the seats are free to drop on.
+  const seatDrag = useRoomSeatDrag(canMovePlayers, movePlayer, () => setSpectatorAnchor(null));
 
   useLayoutEffect(() => {
     const previous = previousSeats.current;
@@ -357,8 +380,7 @@ export function RoomPage(): ReactNode {
     ...SEAT_ORDER_CLOCKWISE.map((seat) => ({ key: seat, label: seatLabel(t, roomInfo.gameType, seat),
       info: roomInfo.seats[seat], seat, gameSeat: seat })),
     ...additionalSeats.map((info, index) => ({ key: `additional-${index}`,
-      label: isNumberedSeatGame(roomInfo.gameType) ? seatLabel(t, roomInfo.gameType, GAME_SEAT_ORDER[index + 4])
-        : t('room.additionalSeat', { n: String(index + 5) }), info, additionalIndex: index,
+      label: additionalSeatLabel(t, roomInfo.gameType, index), info, additionalIndex: index,
       gameSeat: GAME_SEAT_ORDER[index + 4] })),
   ];
   const spectators = roomInfo.spectators ?? [];
@@ -366,7 +388,36 @@ export function RoomPage(): ReactNode {
   const canAddSeat = isHost && expandableSeats && seatCards.length < maxPlayers(roomInfo.gameType);
   const slotCount = seatCards.length + (canAddSeat ? 1 : 0);
   const firstSeat = Math.max(0, seatCards.findIndex(({ info }) => info.player?.id === playerId));
-  const movingPlayer = seatDrag.drag?.player ?? seatDrag.selected;
+  const dragging = seatDrag.drag;
+  const actionLabels: Record<DropAction, string> = {
+    move: t('room.dropMove'), swap: t('room.dropSwap'), sit: t('room.dropSit'), spectate: t('room.dropSpectate'),
+  };
+  const dropView = (key: string, outcome: DropOutcome): SeatDropView | null => {
+    if (!dragging || outcome.state === 'origin') return null;
+    if (outcome.state === 'unavailable') return { state: 'unavailable', label: t('room.dropBotBlocked') };
+    return dragging.targetKey === key
+      ? { state: 'hover', label: outcome.action ? actionLabels[outcome.action] : null }
+      : { state: 'available', label: null };
+  };
+  const spectatorDrop = dragging ? dropView('spectator', spectatorDropOutcome(dragging.source)) : null;
+  const dragBar = ((): string | null => {
+    if (!dragging) return null;
+    const cancel = t(touchInput ? 'room.dragCancelTouch' : 'room.dragCancelPointer');
+    const key = dragging.targetKey;
+    const card = seatCards.find((entry) => entry.key === key);
+    let action: string;
+    if (key === 'spectator') action = t('room.dragBarSpectate');
+    else if (card) {
+      const outcome = seatDropOutcome(dragging.source, card.info.player, card.info.player?.id === dragging.player.id);
+      if (outcome.state === 'unavailable') action = t('room.dragBarBlocked');
+      else if (outcome.action === 'swap') {
+        action = t('room.dragBarSwap', { name: card.info.player?.nickname ?? card.label });
+      } else if (outcome.action === 'sit') action = t('room.dragBarSit', { seat: card.label });
+      else if (outcome.action === 'move') action = t('room.dragBarMove', { seat: card.label });
+      else action = t('room.dragBarIdle');
+    } else action = t('room.dragBarIdle');
+    return `${action} · ${cancel}`;
+  })();
   const canStart = roomCanStart(roomInfo);
   const definition = gameDefinition(roomInfo.gameType).seats;
   const players = definition.minPlayers === definition.maxPlayers
@@ -375,18 +426,19 @@ export function RoomPage(): ReactNode {
   const length = roomInfo.gameType === 'holdem' ? t('room.summaryHands', { n: String(HE_HANDS) })
     : t(`gameType.${roomInfo.gameType}Tag`);
   const timeControl = roomInfo.timeControl ?? DEFAULT_TIME_CONTROL;
-  const handle = (player: PlayerInfo): ReactNode => canManagePlayers && !player.isBot &&
-    <button key="move-player" type="button" className={styles.dragHandle} data-seat-drag-handle="true"
-      disabled={blocked}
-      aria-label={t('room.movePlayer', { nickname: player.nickname })}
-      aria-pressed={movingPlayer?.id === player.id} title={t('room.dragHint')}
-      onClick={() => seatDrag.select(player)}><AppIcon name="drag" /></button>;
+  const memberMenu = (player: PlayerInfo, variant: 'seat' | 'row'): ReactNode => isHost && waiting && !player.isBot &&
+    <PlayerMoveMenu key="move-menu" variant={variant} player={player} spectatorCount={spectators.length}
+      options={moveOptions(seatCards, spectators, player, MAX_SPECTATORS)} disabled={blocked}
+      onKick={player.id === playerId ? undefined : () => kick(player)}
+      onMove={(option: MoveOption) => movePlayer(player, option.target)} />;
   const spectatorList = (layout: 'popover' | 'dock'): ReactNode => <RoomSpectators layout={layout}
     spectators={spectators} hostId={roomInfo.hostId} playerId={playerId}
     seated={Boolean(mySeat || myAdditionalSeat >= 0)} canSpectate={canSpectate} canManage={canManagePlayers}
     isHost={isHost} blocked={blocked} pending={Boolean(pendingDisabled(!waiting))}
     onStandUp={() => { setSpectatorAnchor(null); standUp(); }} onKick={kick}
-    onMove={(player) => { seatDrag.select(player); setSpectatorAnchor(null); }} />;
+    draggingId={dragging?.source === 'spectator' ? dragging.player.id : null}
+    holdingId={seatDrag.holding} renderMenu={(player) => memberMenu(player, 'row')}
+    onDragStart={(event, player) => seatDrag.start(event, player, 'spectator')} />;
   const primary = isHost
     ? <Button variant="primary" onClick={start} disabled={blocked || !canStart}
       data-pending-disabled={pendingDisabled(!canStart)}>{t('room.start')}</Button>
@@ -423,12 +475,10 @@ export function RoomPage(): ReactNode {
             disabled={blocked} data-pending-disabled={pendingDisabled()}>{t('room.leave')}</Button>
         </Popover>
       </header>
-      <div ref={tableAreaRef} className={`${styles.tableArea} ${tableStyle ? styles.customTable : ''} ${tableArt ? styles.layeredTable : ''}`} style={tableStyle}
+      <div ref={tableAreaRef} className={`${styles.tableArea} ${dragging ? styles.dragging : ''} ${tableStyle ? styles.customTable : ''} ${tableArt ? styles.layeredTable : ''}`} style={tableStyle}
         aria-busy={busy}
         inert={compactLayout && chatOpen}
-        onDragStart={(event) => { if (canMovePlayers) event.preventDefault(); }}
-        onClickCapture={seatDrag.choose} onPointerMove={seatDrag.move} onPointerUp={seatDrag.finish}
-        onPointerCancel={seatDrag.cancel}>
+        onDragStart={(event) => { if (canMovePlayers) event.preventDefault(); }}>
         {tableArt && <TableArt art={tableArt} />}
         <div className={styles.stage}>
           <div className={styles.oval} aria-hidden="true" />
@@ -443,15 +493,18 @@ export function RoomPage(): ReactNode {
                 hostId={roomInfo.hostId} playerId={playerId} isHost={isHost} waiting={waiting}
                 blocked={blocked} pending={Boolean(pendingDisabled())}
                 draggable={canManagePlayers && Boolean(player) && !player?.isBot}
-                moving={Boolean(player) && movingPlayer?.id === player?.id}
-                dropTarget={seatDrag.drag?.targetKey === seatCard.key}
+                moving={Boolean(player) && dragging?.player.id === player?.id}
+                holding={Boolean(player) && seatDrag.holding === player?.id}
+                drop={dragging ? dropView(seatCard.key, seatDropOutcome(dragging.source, player ?? null,
+                  Boolean(player) && player?.id === dragging.player.id)) : null}
                 removable={seatCard.additionalIndex !== undefined && seatCard.additionalIndex === additionalSeats.length - 1}
-                handle={player ? handle(player) : null} onPointerDown={seatDrag.start}
+                menu={player ? memberMenu(player, 'seat') : null}
+                onPointerDown={(event, member) => seatDrag.start(event, member, 'seat')}
                 onSit={() => {
                   if (seatCard.seat) changeSeat(seatCard.seat);
                   else if (seatCard.additionalIndex !== undefined) changeAdditionalSeat(seatCard.additionalIndex);
                 }}
-                onAddBot={() => addBot(seatCard.gameSeat)} onRemoveSeat={removeSeat} onKick={kick}
+                onAddBot={() => addBot(seatCard.gameSeat)} onRemoveSeat={removeSeat}
                 onDifficulty={(difficulty) => setBotDifficulty(seatCard.gameSeat, difficulty)}
                 onRemoveBot={() => removeBot(seatCard.gameSeat)} />;
             })}
@@ -461,23 +514,24 @@ export function RoomPage(): ReactNode {
           <div className={styles.summary}>
             <strong>{players} · {length}</strong>
             <span>{t('room.summaryTime', { base: String(timeControl.baseSeconds), bank: String(timeControl.bankSeconds) })}</span>
+            {canManagePlayers && !dragHintDone && !dragging && <span className={styles.hostHint}>
+              {t(touchInput ? 'room.dragHostHintTouch' : 'room.dragHostHint')}</span>}
             <button type="button" className={styles.settingsLink} aria-haspopup="dialog"
               aria-expanded={Boolean(settingsAnchor)} onClick={(event) => setSettingsAnchor(event.currentTarget)}>
               <AppIcon name="settings" />{t('room.settings')}
             </button>
           </div>
-          {seatDrag.selected && <p className={styles.moveHint} role="status">
-            {t('room.placePlayer', { nickname: seatDrag.selected.nickname })}</p>}
+          {dragBar && <p className={styles.dragBar} role="status">{dragBar}</p>}
         </div>
         <footer className={styles.footer} onAnimationEnd={(event) => {
           if (event.target === event.currentTarget) setEnteredRoom(roomInfo.code);
         }}>
-          <button type="button" className={`${styles.spectatorEntry} ${seatDrag.drag?.targetKey === 'spectator' ? styles.dropTarget : ''}`}
+          <button type="button" className={styles.spectatorEntry} data-drop={spectatorDrop?.state}
             data-room-drop="spectator" aria-haspopup={compactLayout ? 'dialog' : undefined}
             aria-controls={compactLayout ? undefined : 'room-dock'}
             aria-expanded={compactLayout ? Boolean(spectatorAnchor) : dockOpen && dockTab === 'spectators'}
             onClick={(event) => openSpectators(event.currentTarget)}>
-            {movingPlayer ? t('room.dropSpectator')
+            {dragging?.source === 'seat' ? t('room.dropSpectate')
               : t('room.spectatorsShort', { n: String(spectators.length), max: String(MAX_SPECTATORS) })}
           </button>
           <span className={styles.grow} />
@@ -498,11 +552,11 @@ export function RoomPage(): ReactNode {
       </Popover>
       <Popover open={Boolean(spectatorAnchor)} anchorEl={spectatorAnchor} onClose={() => setSpectatorAnchor(null)}
         anchorOrigin={{ vertical: 'top', horizontal: 'left' }} transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        slotProps={{ paper: { className: styles.popover, role: 'dialog', 'aria-labelledby': 'room-spectators-label' } }}>
+        keepMounted={compactLayout} sx={{ pointerEvents: dragging ? 'none' : undefined }} slotProps={{ paper: { className: styles.popover, role: 'dialog', 'aria-labelledby': 'room-spectators-label' } }}>
         {spectatorList('popover')}
       </Popover>
-      {seatDrag.drag && <div className={styles.dragPreview} aria-hidden="true"
-        style={{ left: seatDrag.drag.x, top: seatDrag.drag.y }}>{seatDrag.drag.player.nickname}</div>}
+      {dragging && <SeatDragPreview player={dragging.player} x={dragging.x} y={dragging.y} />}
+      <span className={styles.srOnly} role="status">{moved}</span>
       <div className={styles.chat} id="room-chat" inert={!dockVisible}>
         {compactLayout ? <ChatPanel onCollapse={collapseChat} /> : <Dock id="room-dock" label={t('room.dock')}
           value={dockTab} onChange={changeDockTab} onCollapse={collapseChat} tabs={[

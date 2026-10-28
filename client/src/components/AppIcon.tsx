@@ -56,7 +56,9 @@ import SmartToyOutlined from '@mui/icons-material/SmartToyOutlined';
 import SportsBar from '@mui/icons-material/SportsBar';
 import StorefrontOutlined from '@mui/icons-material/StorefrontOutlined';
 import StyleOutlined from '@mui/icons-material/StyleOutlined';
+import SwapHoriz from '@mui/icons-material/SwapHoriz';
 import TimerOutlined from '@mui/icons-material/TimerOutlined';
+import Tune from '@mui/icons-material/Tune';
 import UnfoldMore from '@mui/icons-material/UnfoldMore';
 import VolumeOff from '@mui/icons-material/VolumeOff';
 import VolumeUp from '@mui/icons-material/VolumeUp';
@@ -100,6 +102,7 @@ const ICONS = {
   invite: InviteToRoom, personCheck: HowToRegOutlined, room: MeetingRoomOutlined, search: Search, back: ArrowBack,
   cards: StyleOutlined, spectate: VisibilityOutlined,
   trash: DeleteOutlined, upload: FileUploadOutlined, grid: GridViewOutlined, expand: KeyboardArrowDown, undo: Undo,
+  swap: SwapHoriz, tune: Tune,
 } as const;
 
 export type AppIconName = keyof typeof ICONS;

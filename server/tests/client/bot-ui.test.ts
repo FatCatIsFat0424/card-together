@@ -169,27 +169,33 @@ describe('bot player interface', () => {
     expect(buttonTag(html, FILL)).toContain('disabled=""');
   });
 
-  it('exposes placement handles only for humans managed by a connected waiting-room host', () => {
+  it('offers dragging and the move menu only for humans managed by a connected waiting-room host', () => {
     state.room = { ...room(), spectators: [{ ...human, id: 'spectator', nickname: 'Visitor' }] };
     const html = render(createElement(RoomPage));
-    expect(html).toContain('aria-label="Move Alice"');
-    expect(html).not.toContain('aria-label="Move Bot East"');
+    expect(html).toContain('aria-label="Actions for Alice"');
+    expect(html).not.toContain('aria-label="Actions for Bot East"');
+    expect(html).toContain('data-no-drag');
+    expect(html).toContain('draggable');
     expect(html).toContain('data-room-drop="spectator"');
     const panel = (canManage: boolean): string => render(createElement(RoomSpectators, {
       spectators: [{ ...human, id: 'spectator', nickname: 'Visitor' }], hostId: human.id, playerId: human.id,
       seated: true, canSpectate: true, canManage, isHost: true, blocked: false, pending: false,
-      onStandUp: noop, onKick: noop, onMove: noop,
+      onStandUp: noop, onKick: noop, renderMenu: (player) => createElement('button', { 'aria-label': `Menu ${player.nickname}` }),
     }));
-    expect(panel(true)).toContain('aria-label="Move Visitor"');
-    expect(panel(false)).not.toContain('aria-label="Move Visitor"');
+    expect(panel(true)).toContain('aria-label="Menu Visitor"');
+    expect(panel(true)).toContain('grip');
+    expect(panel(false)).not.toContain('aria-label="Menu Visitor"');
+    expect(panel(false)).not.toContain('grip');
     state.playerId = 'visitor';
-    expect(render(createElement(RoomPage))).not.toContain('data-seat-drag-handle');
+    expect(render(createElement(RoomPage))).not.toContain('Actions for');
     state.playerId = human.id;
     state.connection = 'connecting';
-    expect(render(createElement(RoomPage))).not.toContain('data-seat-drag-handle');
+    const offline = render(createElement(RoomPage));
+    expect(offline).not.toContain('grip');
+    expect(offline).toMatch(/<button[^>]*aria-label="Actions for Alice"[^>]*disabled=""/);
     state.connection = 'ready';
     state.room = { ...state.room!, status: 'playing' };
-    expect(render(createElement(RoomPage))).not.toContain('data-seat-drag-handle');
+    expect(render(createElement(RoomPage))).not.toContain('Actions for');
   });
 
   it('keeps Ready clickable without permanent player-count notices', () => {
@@ -237,7 +243,7 @@ describe('bot player interface', () => {
   it('shows an explicit spectator entry for standard and additional seated players', () => {
     const panel = (props: Partial<Parameters<typeof RoomSpectators>[0]> = {}): string => render(createElement(RoomSpectators, {
       spectators: [], hostId: human.id, playerId: human.id, seated: true, canSpectate: true, canManage: true,
-      isHost: true, blocked: false, pending: false, onStandUp: noop, onKick: noop, onMove: noop, ...props,
+      isHost: true, blocked: false, pending: false, onStandUp: noop, onKick: noop, ...props,
     }));
     const entry = (html: string): string | undefined => html.match(/<button[^>]*>Enter spectator area<\/button>/)?.[0];
     expect(entry(panel())).toBeDefined();
@@ -254,7 +260,7 @@ describe('bot player interface', () => {
   it('disables spectator entry when disconnected or no longer waiting and translates its visible label', () => {
     const panel = (canSpectate: boolean): string => render(createElement(RoomSpectators, {
       spectators: [], hostId: human.id, playerId: human.id, seated: true, canSpectate, canManage: true,
-      isHost: true, blocked: false, pending: false, onStandUp: noop, onKick: noop, onMove: noop,
+      isHost: true, blocked: false, pending: false, onStandUp: noop, onKick: noop,
     }));
     expect(panel(false)).toMatch(/<button[^>]*disabled=""[^>]*>Enter spectator area<\/button>/);
     useI18nStore.getState().setLocale('zh-TW');

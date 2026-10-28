@@ -37,18 +37,32 @@ export interface RoomSeatProps {
   readonly pending: boolean;
   /** The host may drag this player. */
   readonly draggable: boolean;
+  /** This member is being dragged: the card stays as a dashed "original spot". */
   readonly moving: boolean;
-  readonly dropTarget: boolean;
+  /** A touch long press on this card is running. */
+  readonly holding: boolean;
+  /** Drop feedback while a member is being dragged. */
+  readonly drop: SeatDropView | null;
   /** The last additional seat can be removed while empty. */
   readonly removable: boolean;
-  readonly handle: ReactNode;
+  /** The "..." menu of a member's card. */
+  readonly menu: ReactNode;
   readonly onPointerDown: (event: PointerEvent<HTMLElement>, player: PlayerInfo) => void;
   readonly onSit: () => void;
   readonly onAddBot: () => void;
   readonly onRemoveSeat: () => void;
-  readonly onKick: (player: PlayerInfo) => void;
   readonly onDifficulty: (difficulty: BotDifficulty) => void;
   readonly onRemoveBot: () => void;
+}
+
+/** How a seat reacts while a member is dragged over the oval; the label names what a release would do. */
+export interface SeatDropView {
+  readonly state: 'available' | 'hover' | 'unavailable';
+  readonly label: string | null;
+}
+
+function DropLabel({ drop }: { readonly drop: SeatDropView | null }): ReactNode {
+  return drop?.label ? <span className={styles.dropLabel} aria-hidden="true">{drop.label}</span> : null;
 }
 
 const CROWN = <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
@@ -80,7 +94,7 @@ function EmptySeat(props: RoomSeatProps): ReactNode {
   const pending = props.pending && props.waiting || undefined;
   // Only the host has a choice between sitting and adding a bot.
   const choose = props.isHost;
-  return <div className={`${styles.seat} ${styles.empty} ${props.dropTarget ? styles.dropTarget : ''}`}
+  return <div className={`${styles.seat} ${styles.empty}`} data-drop={props.drop?.state}
     style={props.position} data-room-drop={props.seatKey}>
     <button type="button" className={styles.emptyButton} disabled={locked} data-pending-disabled={pending}
       aria-label={label} aria-haspopup={choose ? 'menu' : undefined} aria-expanded={choose ? Boolean(anchor) : undefined}
@@ -89,6 +103,7 @@ function EmptySeat(props: RoomSeatProps): ReactNode {
       <span className={styles.plus} aria-hidden="true"><AppIcon name="add" /></span>
       <span className={styles.emptyLabel}>{t('room.seatEmpty')}</span>
     </button>
+    <DropLabel drop={props.drop} />
     {choose && <Popover open={Boolean(anchor)} anchorEl={anchor} onClose={() => setAnchor(null)}
       anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} transformOrigin={{ vertical: 'top', horizontal: 'center' }}
       slotProps={{ paper: { className: styles.menu, id: menuId, role: 'menu', 'aria-label': label } }}>
@@ -153,8 +168,7 @@ function OccupiedSeat(props: RoomSeatProps & { readonly player: PlayerInfo }): R
   const isMe = player.id === props.playerId;
   const ready = isSeatReady({ hostId: props.hostId }, info);
   const manageBot = props.isHost && Boolean(player.isBot);
-  const canKick = props.isHost && !player.isBot && !isMe && props.waiting;
-  const status = player.isBot ? t(`room.botDifficulty.${player.botDifficulty ?? 'hard'}`)
+  const status = props.moving ? t('room.dragOrigin') : player.isBot ? t(`room.botDifficulty.${player.botDifficulty ?? 'hard'}`)
     : t(ready ? 'room.ready.status' : 'room.notReady');
   const frame = seatFrameHostClass(player.seatFrame);
   const identity = <>
@@ -175,10 +189,11 @@ function OccupiedSeat(props: RoomSeatProps & { readonly player: PlayerInfo }): R
       {isMe && <span className={styles.srOnly}>{t('common.me')}</span>}
     </span>
   </>;
-  return <div className={`${styles.seat} ${props.draggable ? styles.draggable : ''} ${props.moving ? styles.moving : ''} ${props.dropTarget ? styles.dropTarget : ''}`}
-    style={props.position} data-room-drop={props.seatKey} onPointerDown={(event) => props.onPointerDown(event, player)}>
+  return <div className={`${styles.seat} ${props.draggable ? styles.draggable : ''} ${props.moving ? styles.moving : ''}`}
+    style={props.position} data-room-drop={props.seatKey} data-drop={props.drop?.state}
+    data-holding={props.holding || undefined} onPointerDown={(event) => props.onPointerDown(event, player)}>
     <div className={`${styles.card} ${props.art ? styles.hasArt : ''}`} style={props.art}>
-      {props.handle}
+      {props.draggable && <span className={styles.grip} aria-hidden="true"><AppIcon name="drag" /></span>}
       {manageBot
         ? <button type="button" className={styles.identity} data-player-identity aria-haspopup="dialog"
           aria-expanded={Boolean(botAnchor)} aria-label={t('room.botControlsFor', { nickname: player.nickname })}
@@ -186,11 +201,10 @@ function OccupiedSeat(props: RoomSeatProps & { readonly player: PlayerInfo }): R
         : player.isBot ? <div className={styles.identity} data-player-identity>{identity}</div>
           : <Link className={styles.identity} data-player-identity to={`/players/${encodeURIComponent(player.id)}`}
             aria-label={t('room.profileOf', { nickname: player.nickname })}>{identity}</Link>}
-      <span className={`${styles.status} ${ready && !player.isBot ? styles.readyText : ''}`}>{status}</span>
-      {canKick && <button type="button" className={styles.kick} disabled={props.blocked}
-        data-pending-disabled={props.pending || undefined} aria-label={`${t('room.kick')} ${player.nickname}`}
-        title={t('room.kick')} onClick={() => props.onKick(player)}><AppIcon name="close" /></button>}
+      <span className={`${styles.status} ${ready && !player.isBot && !props.moving ? styles.readyText : ''}`}>{status}</span>
+      {props.menu}
     </div>
+    <DropLabel drop={props.drop} />
     {manageBot && <BotMenu player={player} anchor={botAnchor} props={props} onClose={() => setBotAnchor(null)} />}
   </div>;
 }
@@ -215,5 +229,18 @@ export function AddSeatSlot({ position, disabled, pending, onAdd }: {
       <span className={styles.plus} aria-hidden="true"><AppIcon name="add" /></span>
       <span className={styles.emptyLabel}>{t('room.addSeat')}</span>
     </button>
+  </div>;
+}
+
+/** The miniature card that follows the pointer while a member is dragged. */
+export function SeatDragPreview({ player, x, y }: {
+  readonly player: PlayerInfo;
+  readonly x: number;
+  readonly y: number;
+}): ReactNode {
+  return <div className={styles.dragPreview} aria-hidden="true" style={{ left: x, top: y }}>
+    <Avatar avatar={player.avatar} image={player.avatarImage} border={player.avatarBorder} color={player.color}
+      size="compact" />
+    <span className={styles.previewName}>{player.nickname}</span>
   </div>;
 }
