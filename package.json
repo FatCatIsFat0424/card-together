@@ -12,6 +12,7 @@
     "check": "tsx scripts/validation/check.ts",
     "dev:server": "cd server && npx tsx watch src/index.ts",
     "dev:client": "cd client && npm run dev",
+    "dev:preview": "tsx scripts/dev/preview.ts",
     "build:client": "npm run music:import && npm run emoji:import && cd client && npx tsc -b && npx vite build",
     "test": "cd server && npx vitest run",
     "test:watch": "cd server && npx vitest",

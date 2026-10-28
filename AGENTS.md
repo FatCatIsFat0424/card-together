@@ -26,7 +26,7 @@ Authoritative project rule set; `CLAUDE.md` references it.
 | `client/src/cosmetics/` | Shop product renderers, previews, and translations per equippable type |
 | `client/src/audio/`, `voice/` | Music playback, turn reminders, WebRTC |
 | `server/tests/`, `deploy/tests/` | Vitest and Python standard-library tests |
-| `scripts/` | Check runner, asset importers, and the Vite artwork-layer plugin |
+| `scripts/` | Check runner, asset importers, dev preview, and the Vite artwork-layer plugin |
 | `deploy/` | Production build, install, and operation scripts |
 | `android/` | Android APK wrapper settings and build script ([Android app](docs/android.md)) |
 | `docs/`, `docs/games/` | Authoritative guides (index in [README](README.md#documentation)); game rules split by category |
@@ -66,7 +66,14 @@ Required before completing behavior changes (CI runs the same gate):
 npm run check -- full
 ```
 
-- Use `npm run check -- focused` while editing; it does not replace the full gate.
+- Use `npm run check -- focused --files <paths>` (or `--base main`) while editing; it does not replace the
+  full gate. Run `full` once before handing work back, and again only after further changes.
+- Browser checks: start one `npm run dev:preview` per worktree and reuse it; measure layout with scripts while
+  iterating and take screenshots only for final acceptance
+  ([browser verification](docs/development.md#瀏覽器驗證)).
+- Integrating parallel branches: after a conflict-free rebase whose files do not overlap the newly merged work, run
+  the focused check on the branch's changes and let CI run the full gate. Run `full` locally when the rebase had
+  conflicts or touched `shared/`, persistence, or check configuration.
 - Deployment builds use `release` mode with explicit production paths.
 - No formatter or secret scanner is configured: match adjacent formatting and review
   staged content manually.
