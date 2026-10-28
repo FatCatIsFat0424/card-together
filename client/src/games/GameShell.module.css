@@ -762,6 +762,11 @@
   }
   /* Three plates share each side column, so each keeps its counts beside the name on one line. */
   .expandedTable [data-seat-plate] { flex-flow: row wrap; align-items: center; column-gap: 6px; }
+  /* A contract chip with trick bars is three lines tall; the top corner seats step down below it, into the
+     gap above the side seats, instead of the chip squeezing its bars onto one line. */
+  .table.expandedTable:has(.hudChip [data-trick-bars]) > :is([data-table-seat='topLeft'], [data-table-seat='topRight']) {
+    margin-top: 20px;
+  }
 }
 
 /* Phone game menu: the info button leads the toolbar as the menu; rules, abort, and leave move into its

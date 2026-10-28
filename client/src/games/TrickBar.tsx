@@ -6,10 +6,8 @@ import styles from './TrickChip.module.css';
 export type TrickBarTone = 'ours' | 'theirs' | 'pending';
 
 /** Label, pips and count; the three parts are grid cells so both sides' bars line up under each other. */
-export function TrickBar({ label, fullLabel = label, count, target, tone, suffix = '', pendingText }: {
+export function TrickBar({ label, count, target, tone, suffix = '', pendingText }: {
   readonly label: string;
-  /** Spoken name when the visible label is abbreviated */
-  readonly fullLabel?: string;
   /** Null while the side is not yet known; the bar stays empty and shows a dash */
   readonly count: number | null;
   readonly target: number;
@@ -23,7 +21,7 @@ export function TrickBar({ label, fullLabel = label, count, target, tone, suffix
   const text = `${count ?? '–'}${count === null ? '' : suffix}/${target}`;
   return <>
     <span className={`${styles.barLabel} ${styles[tone]}`} aria-hidden>{label}</span>
-    <span className={`${styles.bar} ${styles[tone]}`} role="progressbar" aria-label={fullLabel}
+    <span className={`${styles.bar} ${styles[tone]}`} role="progressbar" aria-label={label}
       aria-valuemin={0} aria-valuemax={target} aria-valuenow={count === null ? undefined : filled}
       aria-valuetext={count === null ? pendingText : `${count}${suffix} / ${target}`}>
       {Array.from({ length: target }, (_, index) => <span key={index}

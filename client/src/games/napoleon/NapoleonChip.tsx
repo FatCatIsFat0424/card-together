@@ -35,10 +35,10 @@ export function NapoleonChip(): ReactNode {
         {napoleonCardText(chip.secretaryCard, jokerName)}
       </span>}
     </span>
-    {progress && <span className={`${styles.bars} ${styles.inline}`}>
-      <TrickBar label={t('napoleon.napoleonShort')} fullLabel={t('napoleon.napoleonSide')} count={progress.napoleon} target={progress.napoleonTarget}
+    {progress && <span className={styles.bars} data-trick-bars>
+      <TrickBar label={t('napoleon.napoleonSide')} count={progress.napoleon} target={progress.napoleonTarget}
         tone={progress.napoleon === null ? 'pending' : 'ours'} pendingText={t('napoleon.progressPending')} />
-      <TrickBar label={t('napoleon.defendersShort')} fullLabel={t('napoleon.defenders')} count={progress.defenders} target={progress.defenderTarget}
+      <TrickBar label={t('napoleon.defenders')} count={progress.defenders} target={progress.defenderTarget}
         tone={progress.defenders === null ? 'pending' : 'theirs'} pendingText={t('napoleon.progressPending')}
         suffix={progress.pendingDiscards && progress.defenders !== null ? '+' : ''} />
     </span>}

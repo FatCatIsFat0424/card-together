@@ -36,10 +36,6 @@
   line-height: 1.25;
 }
 
-/* Both sides on one line, for tables whose corner seats sit right under the toolbar. */
-.bars.inline { grid-template-columns: repeat(6, auto); }
-.bars.inline > :nth-child(4) { margin-left: var(--space-3); }
-
 .barLabel { color: var(--text-secondary); }
 
 .bar {

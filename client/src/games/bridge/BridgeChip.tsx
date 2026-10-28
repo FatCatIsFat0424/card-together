@@ -33,7 +33,7 @@ export function BridgeChip(): ReactNode {
         <span className={styles.muted}>{t('table.declarer')}</span> {seatLabel(t, 'bridge', chip.declarer)}
       </span>}
     </span>
-    {chip.sides.length > 0 && <span className={styles.bars}>
+    {chip.sides.length > 0 && <span className={styles.bars} data-trick-bars>
       {chip.sides.map((side) => <TrickBar key={side.team} label={sideLabel[side.team]} count={side.tricks}
         target={side.target} tone={side.team === 'ours' || side.team === 'ns' ? 'ours' : 'theirs'} />)}
     </span>}
