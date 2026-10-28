@@ -4,7 +4,7 @@ import type { Card, NapoleonCard, NapoleonLogEntry, NapoleonVisibleState } from 
 import { bridgeChip, napoleonChip } from '../../../client/src/games/trick-chip';
 
 vi.mock('../../../client/src/cosmetics/card-faces/use-card-face', () => ({
-  useCardFaceUrl: () => () => '/card.svg', useJokerFaceUrl: () => null, useNapoleonJokerFaceUrls: () => null,
+  useCardFaceUrl: () => () => '/card.svg', useJokerFaceUrl: () => null, useCardOrJokerFaceUrl: () => (card: object) => ('joker' in card ? '/joker.svg' : '/card.svg'),
 }));
 
 const contract = { level: 4, suit: 'spades', declarer: 'W' } as const;

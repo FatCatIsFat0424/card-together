@@ -2,9 +2,10 @@
 // Rules: docs/games/cards.md#拿破崙
 
 import type {
-  BidSuit, Card, GameSeat, NapoleonBidAction, NapoleonBidLevel, NapoleonBiddingState, NapoleonCard,
+  BidSuit, GameSeat, NapoleonBidAction, NapoleonBidLevel, NapoleonBiddingState, NapoleonCard,
   NapoleonContract, NapoleonJoker, NapoleonOptions, NapoleonSummon, NapoleonTrick, NapoleonTrickRecord, Suit,
 } from '../types';
+import { cardKey, createJokerDeck, hasCard, isCardOrJoker, isJoker, joker, removeCards, sameCard } from './cards';
 import { BID_SUIT_ORDER, RANK_ORDER_DESC, SUIT_DISPLAY_ORDER } from '../constants';
 
 export const NAPOLEON_MIN_LEVEL: NapoleonBidLevel = 9;
@@ -43,45 +44,24 @@ export function napoleonReviewSeconds(baseSeconds: number): number {
 
 // ─── Cards ───
 
-export function isNapoleonJoker(card: NapoleonCard): card is { readonly joker: NapoleonJoker } {
-  return 'joker' in card;
+export const isNapoleonJoker = isJoker;
+
+export function napoleonJoker(kind: NapoleonJoker): NapoleonCard {
+  return joker(kind);
 }
 
-export function napoleonJoker(joker: NapoleonJoker): NapoleonCard {
-  return { joker };
-}
-
-/** Stable identity: `S14`, `H2`, `BJ` (big joker), `SJ` (small joker). */
-export function napoleonCardKey(card: NapoleonCard): string {
-  if (isNapoleonJoker(card)) return card.joker === 'big' ? 'BJ' : 'SJ';
-  return `${card.suit[0].toUpperCase()}${card.rank}`;
-}
-
-export function sameNapoleonCard(a: NapoleonCard, b: NapoleonCard): boolean {
-  return napoleonCardKey(a) === napoleonCardKey(b);
-}
-
-export function hasNapoleonCard(cards: readonly NapoleonCard[], card: NapoleonCard): boolean {
-  return cards.some((candidate) => sameNapoleonCard(candidate, card));
-}
+export const napoleonCardKey = cardKey;
+export const sameNapoleonCard = sameCard;
+export const hasNapoleonCard = hasCard;
+export const isNapoleonCard = isCardOrJoker;
 
 export function removeNapoleonCards(cards: readonly NapoleonCard[], removed: readonly NapoleonCard[]): NapoleonCard[] {
-  return cards.filter((card) => !hasNapoleonCard(removed, card));
+  return removeCards(cards, removed);
 }
 
 /** The 54 cards: 52 suit cards then the big and small jokers. */
 export function createNapoleonDeck(): NapoleonCard[] {
-  const deck: NapoleonCard[] = SUITS.flatMap((suit) => RANK_ORDER_DESC.map((rank): Card => ({ suit, rank })));
-  return [...deck, napoleonJoker('big'), napoleonJoker('small')];
-}
-
-export function isNapoleonCard(value: unknown): value is NapoleonCard {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-  const record = value as Record<string, unknown>;
-  const keys = Object.keys(record);
-  if (keys.length === 1 && keys[0] === 'joker') return record.joker === 'big' || record.joker === 'small';
-  return keys.length === 2 && SUITS.includes(record.suit as Suit)
-    && (RANK_ORDER_DESC as readonly unknown[]).includes(record.rank);
+  return createJokerDeck(2);
 }
 
 export function isNapoleonPointCard(card: NapoleonCard): boolean {

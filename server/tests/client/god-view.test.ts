@@ -6,7 +6,7 @@ import { isOwnTurn, isSpectator } from '../../../client/src/games/observer-view'
 import { observedRows, sortObserved } from '../../../client/src/components/ObservedHand';
 
 vi.mock('../../../client/src/cosmetics/card-faces/use-card-face', () => ({
-  useCardFaceUrl: () => () => '/card.svg', useJokerFaceUrl: () => null, useNapoleonJokerFaceUrls: () => null,
+  useCardFaceUrl: () => () => '/card.svg', useJokerFaceUrl: () => null, useCardOrJokerFaceUrl: () => (card: object) => ('joker' in card ? '/joker.svg' : '/card.svg'),
 }));
 
 const c = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit });

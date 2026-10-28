@@ -1,6 +1,7 @@
 // ─── Deck Engine: deck creation and shuffling ───
 
-import type { Card, Suit, Rank } from '@shared/types';
+import type { Card, CardOrJoker, Suit, Rank } from '@shared/types';
+import { withJokers, type JokerCount } from '@shared/rules/cards';
 
 const SUITS: readonly Suit[] = ['spades', 'hearts', 'clubs', 'diamonds'];
 const RANKS: readonly Rank[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
@@ -17,6 +18,11 @@ export function createDeck(): Card[] {
     }
   }
   return deck;
+}
+
+/** The standard deck plus 0, 1 (big) or 2 jokers appended; the 52 suit cards keep `createDeck()` order. */
+export function createJokerDeck(jokers: JokerCount): CardOrJoker[] {
+  return withJokers(createDeck(), jokers);
 }
 
 /**

@@ -2,20 +2,20 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent, ReactNode } from 'react';
-import type { NapoleonCard } from '@shared/types';
+import type { CardOrJoker } from '@shared/types';
 import { SUIT_SYMBOLS, RANK_DISPLAY } from '@shared/constants';
-import { isNapoleonJoker, sameNapoleonCard } from '@shared/rules/napoleon';
+import { isJoker, sameCard } from '@shared/rules/cards';
 import { moveHandCardAt } from './card-hand-order';
 import { useGameStore } from '../stores/game-store';
 import { useSortedHand } from '../games/use-hand-sort';
 import { cardInput, cardTap, validArmedCard } from './card-hand-touch';
 import { useHandFit } from './use-hand-fit';
-import { useNapoleonCardImageUrl } from '../games/napoleon/napoleon-card-art';
+import { useCardOrJokerFaceUrl } from '../cosmetics/card-faces/use-card-face';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './CardHand.module.css';
 
-/** Suit cards for every game; Napoleon hands may also hold jokers. */
-interface CardHandProps<T extends NapoleonCard> {
+/** Suit cards for every game; decks with jokers use the same hand. */
+interface CardHandProps<T extends CardOrJoker> {
   cards: readonly T[];
   playableCards?: readonly T[];
   onCardClick?: (card: T) => void;
@@ -34,24 +34,24 @@ interface CardHandProps<T extends NapoleonCard> {
   confirmTouch?: boolean;
 }
 
-function containsCard(card: NapoleonCard, list?: readonly NapoleonCard[]): boolean {
+function containsCard(card: CardOrJoker, list?: readonly CardOrJoker[]): boolean {
   if (!list) return false;
-  return list.some((c) => sameNapoleonCard(c, card));
+  return list.some((c) => sameCard(c, card));
 }
 
-function cardName(card: NapoleonCard, jokerName: (joker: 'big' | 'small') => string): string {
-  return isNapoleonJoker(card) ? jokerName(card.joker) : `${RANK_DISPLAY[card.rank]}${SUIT_SYMBOLS[card.suit]}`;
+function cardName(card: CardOrJoker, jokerName: (joker: 'big' | 'small') => string): string {
+  return isJoker(card) ? jokerName(card.joker) : `${RANK_DISPLAY[card.rank]}${SUIT_SYMBOLS[card.suit]}`;
 }
 
-function cardKey(card: NapoleonCard): string {
-  return isNapoleonJoker(card) ? `joker-${card.joker}` : `${card.suit}-${card.rank}`;
+function cardKey(card: CardOrJoker): string {
+  return isJoker(card) ? `joker-${card.joker}` : `${card.suit}-${card.rank}`;
 }
 
 function coarsePointer(): boolean {
   return typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 }
 
-export function CardHand<T extends NapoleonCard>({
+export function CardHand<T extends CardOrJoker>({
   cards: incoming, playableCards, onCardClick, disabled, selectedCards, markedCards, markedLabel, highlightedCards,
   highlightedLabel, onCardPreview, onReorder: reorder, confirmTouch,
 }: CardHandProps<T>): ReactNode {
@@ -63,7 +63,7 @@ export function CardHand<T extends NapoleonCard>({
     sorting.reorder(next);
     reorder?.(next);
   } : undefined;
-  const napoleonCardImageUrl = useNapoleonCardImageUrl();
+  const faceUrl = useCardOrJokerFaceUrl();
   const gesture = useRef<{
     pointerId: number; card: T; startX: number; startY: number;
     source: number; centers: number[]; target: number; moved: boolean;
@@ -213,7 +213,7 @@ export function CardHand<T extends NapoleonCard>({
               armed && containsCard(card, [armed]) ? ` — ${t('hand.tapAgain')}` : ''}`}
             title={marked ? markedLabel : highlighted ? highlightedLabel : undefined}
           >
-            <img src={napoleonCardImageUrl(card)} alt="" draggable={false} />
+            <img src={faceUrl(card)} alt="" draggable={false} />
           </button>
         );
       })}

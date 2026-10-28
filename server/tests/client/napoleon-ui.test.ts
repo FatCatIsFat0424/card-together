@@ -8,7 +8,7 @@ import type { Card, NapoleonCard, NapoleonVisibleState } from '@shared/types';
 const state = vi.hoisted(() => ({ napoleon: null as unknown, frame: null as PresentationFrame | null }));
 
 vi.mock('../../../client/src/cosmetics/card-faces/use-card-face', () => ({
-  useCardFaceUrl: () => () => '/card.svg', useJokerFaceUrl: () => null, useNapoleonJokerFaceUrls: () => null,
+  useCardFaceUrl: () => () => '/card.svg', useJokerFaceUrl: () => null, useCardOrJokerFaceUrl: () => (card: object) => ('joker' in card ? '/joker.svg' : '/card.svg'),
 }));
 // Static rendering reads a store's initial state, so the frame reads this snapshot instead.
 vi.mock('../../../client/src/stores/game-store', () => ({

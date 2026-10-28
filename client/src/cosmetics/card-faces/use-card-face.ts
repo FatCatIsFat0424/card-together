@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
-import type { Card, CardFaceStyleId } from '@shared/types';
+import { isJoker } from '@shared/rules/cards';
+import type { Card, CardFaceStyleId, CardOrJoker } from '@shared/types';
 import { useAccountStore } from '../../stores/account-store';
-import { cardFaceUrl, jokerFaceUrl, napoleonJokerFaceUrls } from './card-faces';
+import { cardFaceUrl, jokerFaceUrl, jokerFaceUrls } from './card-faces';
+import bundledBigJoker from '../../assets/napoleon/joker-big.svg';
+import bundledSmallJoker from '../../assets/napoleon/joker-small.svg';
 import { fourColorResolver, loadFourColorDeck, subscribeFourColorDeck } from './four-color';
 
 export function useCardFaceStyle(): CardFaceStyleId | null {
@@ -28,7 +31,18 @@ export function useJokerFaceUrl(): string | null {
   return jokerFaceUrl(useCardFaceStyle());
 }
 
-/** Napoleon's big and small jokers for the signed-in player's deck; null keeps the bundled pair. */
-export function useNapoleonJokerFaceUrls(): { readonly big: string; readonly small: string } | null {
-  return napoleonJokerFaceUrls(useCardFaceStyle());
+const BUNDLED_JOKERS = { big: bundledBigJoker, small: bundledSmallJoker } as const;
+
+/** Big (coloured) and small (greyscale) joker URLs for the signed-in player's deck; the classic deck uses bundled art. */
+export function useJokerFaceUrls(): { readonly big: string; readonly small: string } {
+  return jokerFaceUrls(useCardFaceStyle()) ?? BUNDLED_JOKERS;
+}
+
+/** Face URL for any card or joker in the signed-in player's deck. */
+export function useCardOrJokerFaceUrl(): (card: CardOrJoker) => string {
+  const cardFace = useCardFaceUrl();
+  const { big, small } = useJokerFaceUrls();
+  return useCallback((card: CardOrJoker) => isJoker(card)
+    ? card.joker === 'big' ? big : small
+    : cardFace(card), [cardFace, big, small]);
 }

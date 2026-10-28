@@ -1,8 +1,8 @@
-import type { NapoleonCard } from '@shared/types';
-import { sameNapoleonCard as sameCard } from '@shared/rules/napoleon';
+import type { CardOrJoker } from '@shared/types';
+import { sameCard } from '@shared/rules/cards';
 
 /** Preserve the player's order while dropping played cards and appending new cards. */
-export function reconcileHandOrder<T extends NapoleonCard>(hand: readonly T[], order: readonly T[]): T[] {
+export function reconcileHandOrder<T extends CardOrJoker>(hand: readonly T[], order: readonly T[]): T[] {
   return reconcileOrder(hand, order, sameCard);
 }
 
@@ -16,7 +16,7 @@ export function reconcileOrder<T>(hand: readonly T[], order: readonly T[], same:
   return [...result, ...remaining];
 }
 
-export function moveHandCard<T extends NapoleonCard>(hand: readonly T[], card: T, target: number): T[] {
+export function moveHandCard<T extends CardOrJoker>(hand: readonly T[], card: T, target: number): T[] {
   const source = hand.findIndex((candidate) => sameCard(candidate, card));
   return moveHandCardAt(hand, source, target);
 }

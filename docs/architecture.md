@@ -36,6 +36,7 @@
 - HTTP 服務使用 Repository 介面（[儲存](storage.md)）。
 - 遊戲操作共用 [`game:action`](api.md#socket-操作)：每款遊戲的 `actions.ts` 清理不可信的輸入，adapter 套用操作，共用 facade 管理計時與呈現；Socket handler 不列舉遊戲。房規由 shared 定義驗證，用戶端選項元件由 UI registry 提供，資料格式與遷移見[儲存](storage.md#資料相容性)。
 - 遊戲型別集中登記在 [`type-registry.ts`](../shared/src/games/type-registry.ts)，各遊戲的 state、visible、result 與 options 宣告放在自己的 `types.ts`。跨遊戲 union 由 registry 推導；舊 `shared/src/types/game.ts` 與 `room.ts` 仍提供相容匯出。
+- 含鬼牌的牌組共用 [`CardOrJoker`](../shared/src/types/game.ts)（`Card` 本身不含鬼牌，其他遊戲不受影響）；鬼牌的 key、驗證與組牌在 [`rules/cards.ts`](../shared/src/rules/cards.ts)，傳輸格式為 `{ joker: 'big' | 'small' }`。拿破崙的 `NapoleonCard` 與相關函式是它的別名。用戶端以 `useCardOrJokerFaceUrl` 取得牌面，大鬼來自裝備中的牌面，小鬼為其灰階版本，經典牌組使用內建圖案。
 - 新 bot 可回傳 `{ type: 'game-action', request }`，直接沿用同一個 adapter 與自動操作政策；既有 bot 動作保留相容路徑，不必為新遊戲擴寫共用 runtime。
 - 狀態驗證由 [`validation-registry.ts`](../server/src/managers/games/validation-registry.ts) 對應到每款遊戲的 shape、result 與 coherence 檢查。`runtime/validate.ts` 只處理共用快照、時鐘、玩家與房間參照；玩家驗證函式注入遊戲 validator，避免反向相依。
 

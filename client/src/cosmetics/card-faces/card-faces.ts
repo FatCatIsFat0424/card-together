@@ -51,10 +51,10 @@ export function grayscaleSvg(svg: string): string {
 }
 
 /**
- * Napoleon needs two distinguishable jokers: the deck's own joker is the big joker and a greyscale copy
- * is the small one. Null means the built-in classic deck, whose Napoleon jokers are bundled art.
+ * Games with both jokers need them distinguishable: the deck's own joker is the big joker and a greyscale
+ * copy is the small one. Null means the built-in classic deck, whose jokers are bundled art.
  */
-export function napoleonJokerFaceUrls(
+export function jokerFaceUrls(
   style: CardFaceStyleId | null | undefined,
 ): { readonly big: string; readonly small: string } | null {
   if (!style) return null;
@@ -68,3 +68,5 @@ export function napoleonJokerFaceUrls(
     small: cached(`${series}:small-joker`, () => grayscaleSvg(renderDeckJoker(deckTheme(series)))),
   };
 }
+
+export const napoleonJokerFaceUrls = jokerFaceUrls;

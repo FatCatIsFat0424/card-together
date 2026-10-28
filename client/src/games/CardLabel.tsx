@@ -2,8 +2,8 @@
 
 import type { ReactNode } from 'react';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
-import { isNapoleonJoker } from '@shared/rules/napoleon';
-import type { NapoleonCard, Suit } from '@shared/types';
+import { isJoker } from '@shared/rules/cards';
+import type { CardOrJoker, Suit } from '@shared/types';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './CardLabel.module.css';
 
@@ -12,9 +12,9 @@ export function suitClass(suit: Suit): string | undefined {
   return suit === 'hearts' || suit === 'diamonds' ? styles.red : undefined;
 }
 
-export function CardLabel({ card, className }: { card: NapoleonCard; className?: string }): ReactNode {
+export function CardLabel({ card, className }: { card: CardOrJoker; className?: string }): ReactNode {
   const { t } = useI18nStore();
-  if (isNapoleonJoker(card)) {
+  if (isJoker(card)) {
     return <span className={`${card.joker === 'big' ? styles.bigJoker : styles.smallJoker} ${className ?? ''}`}>
       {t(`napoleon.jokerShort.${card.joker}`)}</span>;
   }

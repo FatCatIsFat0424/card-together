@@ -1,4 +1,4 @@
-import type { Card, Suit, BidSuit, GameClock, GamePresentation, ObserverView } from '../../types/game';
+import type { CardOrJoker, JokerKind, Suit, BidSuit, GameClock, GamePresentation, ObserverView } from '../../types/game';
 import type { GameSeat, PlayerInfo } from '../../types/player';
 import type { RoomCode } from '../../types/room';
 import type { ReplayRecording } from '../../types/replay';
@@ -8,10 +8,10 @@ export interface NapoleonOptions {
   readonly jokerSummon: boolean;
 }
 
-export type NapoleonJoker = 'big' | 'small';
+export type NapoleonJoker = JokerKind;
 
 /** A suit card or one of the two jokers; the big joker is the colored one. */
-export type NapoleonCard = Card | { readonly joker: NapoleonJoker };
+export type NapoleonCard = CardOrJoker;
 
 /** Napoleon contract levels count the point cards (A, K, Q, J) to win. */
 export type NapoleonBidLevel = 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;

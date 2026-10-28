@@ -56,6 +56,17 @@ export interface Card {
   readonly rank: Rank;
 }
 
+/** The two jokers of a deck; the big joker is the colored one. */
+export type JokerKind = 'big' | 'small';
+
+/** A joker card. Kept apart from `Card` so suit/rank games never see one. */
+export interface JokerCard {
+  readonly joker: JokerKind;
+}
+
+/** A suit card or a joker, for games whose deck includes jokers. */
+export type CardOrJoker = Card | JokerCard;
+
 /** Match-scoped opt-in automation; omitted in older snapshots. */
 export interface GameAutomation {
   autoPlaySeats?: GameSeat[];

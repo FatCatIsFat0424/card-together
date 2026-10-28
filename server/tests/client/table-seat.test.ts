@@ -14,7 +14,7 @@ const state = vi.hoisted(() => ({
 
 vi.mock('../../../client/src/cosmetics/chip-styles/use-chip-style', () => ({ useChipStyle: () => null }));
 vi.mock('../../../client/src/cosmetics/card-faces/use-card-face', () => ({
-  useCardFaceUrl: () => () => '/card.svg', useJokerFaceUrl: () => null, useNapoleonJokerFaceUrls: () => null,
+  useCardFaceUrl: () => () => '/card.svg', useJokerFaceUrl: () => null, useCardOrJokerFaceUrl: () => (card: object) => ('joker' in card ? '/joker.svg' : '/card.svg'),
 }));
 vi.mock('../../../client/src/media', () => ({ mediaUrl: (id: string) => `/api/media/${id}` }));
 vi.mock('../../../client/src/stores/room-store', () => ({
