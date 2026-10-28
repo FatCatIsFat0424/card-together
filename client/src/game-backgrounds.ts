@@ -20,12 +20,13 @@ import blackjackCard from './assets/lobby-backgrounds/cards/blackjack.webp';
 import holdemCard from './assets/lobby-backgrounds/cards/holdem.webp';
 import napoleonCard from './assets/lobby-backgrounds/cards/napoleon.webp';
 
-export const GAME_BACKGROUNDS: Readonly<Record<GameType, string>> = {
+/** A game without generated artwork is simply absent; consumers fall back to a plain panel. */
+export const GAME_BACKGROUNDS: Readonly<Partial<Record<GameType, string>>> = {
   bridge, bigtwo, redpoints, ninetynine, sevens, chinesepoker, liarsdeck, blackjack, holdem, napoleon,
 };
 
 /** Small renditions of the lobby artwork for game cards. */
-export const GAME_CARD_ART: Readonly<Record<GameType, string>> = {
+export const GAME_CARD_ART: Readonly<Partial<Record<GameType, string>>> = {
   bridge: bridgeCard, bigtwo: bigtwoCard, redpoints: redpointsCard, ninetynine: ninetynineCard,
   sevens: sevensCard, chinesepoker: chinesepokerCard, liarsdeck: liarsdeckCard, blackjack: blackjackCard,
   holdem: holdemCard, napoleon: napoleonCard,

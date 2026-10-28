@@ -13,6 +13,7 @@ import { liarsDeckClient } from './liarsdeck/liarsdeck-client';
 import { blackjackClient } from './blackjack/blackjack-client';
 import { holdemClient } from './holdem/holdem-client';
 import { napoleonClient } from './napoleon/napoleon-client';
+import { tenHalfClient } from './tenhalf/tenhalf-client';
 
 /**
  * Every game type maps to its own pure client module; a missing or mismatched entry fails to compile.
@@ -30,6 +31,7 @@ export const CLIENT_GAMES: { readonly [K in GameType]: ClientGame<K> } = {
   blackjack: blackjackClient,
   holdem: holdemClient,
   napoleon: napoleonClient,
+  tenhalf: tenHalfClient,
 };
 
 /**

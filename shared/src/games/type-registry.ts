@@ -8,6 +8,7 @@ import type { LiarsDeckGameContract } from './liarsdeck/types';
 import type { BlackjackGameContract } from './blackjack/types';
 import type { HoldemGameContract } from './holdem/types';
 import type { NapoleonGameContract } from './napoleon/types';
+import type { TenHalfGameContract } from './tenhalf/types';
 import type { GameAutomation } from '../types/game';
 import type { GameSeat } from '../types/player';
 
@@ -23,6 +24,7 @@ export interface GameTypeRegistry {
   readonly blackjack: BlackjackGameContract;
   readonly holdem: HoldemGameContract;
   readonly napoleon: NapoleonGameContract;
+  readonly tenhalf: TenHalfGameContract;
 }
 
 export type GameType = keyof GameTypeRegistry;

@@ -21,6 +21,8 @@ import { parseAction as parseHoldemAction } from './holdem/actions';
 import type { HoldemAction } from './holdem/actions';
 import { parseAction as parseNapoleonAction } from './napoleon/actions';
 import type { NapoleonAction } from './napoleon/actions';
+import { parseAction as parseTenHalfAction } from './tenhalf/actions';
+import type { TenHalfGameAction } from './tenhalf/actions';
 
 /** Action contracts are indexed separately from lobby and presentation metadata. */
 export interface GameActionMap {
@@ -34,6 +36,7 @@ export interface GameActionMap {
   blackjack: BlackjackGameAction;
   holdem: HoldemAction;
   napoleon: NapoleonAction;
+  tenhalf: TenHalfGameAction;
 }
 
 export type GameActionEnvelope<K extends GameType = GameType> = {
@@ -51,6 +54,7 @@ export const ACTION_PARSERS: { readonly [K in GameType]: (value: unknown) => Gam
   blackjack: parseBlackjackGameAction,
   holdem: parseHoldemAction,
   napoleon: parseNapoleonAction,
+  tenhalf: parseTenHalfAction,
 };
 
 function parseEnvelope<K extends GameType>(gameType: K, value: unknown): GameActionEnvelope<K> | string {

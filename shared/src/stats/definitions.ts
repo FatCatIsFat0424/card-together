@@ -96,6 +96,12 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('allSixteen', 'result', 'count', true),
     record('ntMade', 'result', 'count'),
   ],
+  tenhalf: [
+    record('topChips', 'result', 'max'),
+    record('specialHands', 'log', 'count'),
+    record('bestHand', 'log', 'max'),
+    record('bankerNet', 'log', 'total'),
+  ],
 };
 
 /**
@@ -105,6 +111,7 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
 export const LOG_METRICS: Readonly<Partial<Record<GameType, readonly string[]>>> = {
   blackjack: ['handsPlayed', 'busts'],
   holdem: ['showdowns', 'showdownWins'],
+  tenhalf: ['handsPlayed', 'busts'],
 };
 
 /** Suits in contract order, for encoding contracts as comparable numbers. */

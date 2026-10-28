@@ -70,7 +70,10 @@ export function blackjackBasicStrategy(
   return decision === 'doubleOrStand' ? 'stand' : 'hit';
 }
 
-export function blackjackBet(visible: BlackjackVisibleState, random: () => number): number {
+/** Also bets for other chip games whose view carries the same standings fields. */
+export function blackjackBet(
+  visible: Pick<BlackjackVisibleState, 'chips' | 'mySeat' | 'totalHands' | 'hand' | 'seats'>, random: () => number,
+): number {
   const chips = visible.chips[visible.mySeat];
   const share = MIN_BET_SHARE + random() * (MAX_BET_SHARE - MIN_BET_SHARE);
   let amount = chips * share;

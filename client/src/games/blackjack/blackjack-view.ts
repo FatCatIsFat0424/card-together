@@ -212,7 +212,7 @@ export interface BlackjackRanking {
 }
 
 /** Final standings of the seats that took part by chips; tied seats share a place. */
-export function rankBlackjack(result: BlackjackMatchResult): BlackjackRanking[] {
+export function rankBlackjack(result: Pick<BlackjackMatchResult, 'seats' | 'chips' | 'winners'>): BlackjackRanking[] {
   const sorted = [...result.seats ?? SEAT_ORDER_CLOCKWISE].sort((a, b) => result.chips[b] - result.chips[a]);
   return sorted.map((seat) => ({
     seat,

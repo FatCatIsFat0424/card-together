@@ -13,6 +13,7 @@ import { getLiarsDeckBotAction } from './liarsdeck-strategy';
 import { getBlackjackBotAction } from './blackjack-strategy';
 import { getHoldemBotAction } from './holdem-strategy';
 import { getNapoleonBotAction } from './napoleon-strategy';
+import { easyTenHalfAction, getTenHalfBotAction, tenHalfFirstLegalAction } from './tenhalf-strategy';
 import {
   easyBigTwoAction, easyBlackjackAction, easyBridgeAction, easyChinesePokerAction, easyHoldemAction, easyLiarsDeckAction,
   easyNinetyNineAction, easyRedPointsAction, easySevensAction,
@@ -90,6 +91,15 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     firstLegal: napoleonFirstLegalAction,
     // Everyone who left the discards open acknowledges them.
     deadlineExpired: () => ({ type: 'napoleon-action', action: { type: 'review' } }),
+  },
+  tenhalf: {
+    hard: getTenHalfBotAction,
+    easy: easyTenHalfAction,
+    firstLegal: tenHalfFirstLegalAction,
+    // A human who runs out of time stands rather than letting a bot draw for them.
+    turnTimeout: (visible, { isBot, strategy }) => (isBot ? strategy() : tenHalfFirstLegalAction(visible)),
+    // A human who missed the betting window stakes the minimum; bots keep their own decision.
+    deadlineExpired: (visible, { isBot, strategy }) => (isBot ? strategy() : tenHalfFirstLegalAction(visible)),
   },
 };
 

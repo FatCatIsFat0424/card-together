@@ -163,6 +163,20 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Winning', 'The Napoleon side wins with at least the bid in point cards; otherwise the defenders win. No multipliers.', 'Plates show each seat’s point cards; side totals stay hidden.'),
     section('Controls', 'Bid like Bridge. Exchange: select as many cards as you picked up (★), then discard. Naming: pick a suit or the jokers, then a card.'),
   ],
+  tenhalf: [
+    section('Match', 'Two to eight players, one 52-card deck per hand, 1000 chips each. Seats take turns as banker clockwise from a random seat, two rounds, so everyone banks equally often.', 'Most chips at the end wins; ties share. Ends early if fewer than two seats can bet 10.'),
+    section('Betting and deal', 'Players bet 10–200 in steps of 10, all at once and hidden. Window: twice the turn time, at least 15 seconds; a missed bet becomes 10. The banker does not bet; under 10 chips sits out betting.', 'Everyone in the hand, the banker too, gets one face-down card, seen only by its owner until the showdown.'),
+    table('Card values', ['Card', 'Points'], [['A', '1'], ['2–10', 'Face value'], ['J, Q, K', '½']], 'Over 10.5 points is a bust. A hand holds at most five cards and stops drawing at 10.5, a bust, or its fifth card.'),
+    section('Order', 'Players act N → E → S → W → P5–P8, then the banker. On your turn, hit (draw a face-up card) or stand; the banker chooses freely, too. Hands stay hidden until everyone is done; then every hole card is shown.'),
+    table('Special hands: strongest first', ['Hand', 'Makeup', 'Multiple'], [
+      ['Five faces (人五小)', 'Five J/Q/K cards', '×5'],
+      ['Tianwang (天王)', 'Five cards totalling exactly 10.5', '×4'],
+      ['Five small (五小)', 'Five cards totalling under 10.5', '×3'],
+      ['Ten and a half (十點半)', 'Fewer than five cards totalling exactly 10.5', '×2'],
+      ['Ordinary', 'Up to 10 points', '×1'],
+    ], 'Any special hand beats every ordinary total. Equal hands go to the banker, and so does any tie.'),
+    section('Settlement', 'A player wins by outranking the banker; a bust always loses, even if the banker busts. A winner collects bet × its own multiple. A loser pays bet × the banker’s multiple (1 if the banker busted) but never more than the chips held before the hand.', 'The banker pays winners from its own chips plus what it collected; if that falls short, winners share it in proportion to what each is owed.', 'Example, 20-chip bet: a plain win returns 40 in total; against a banker holding ten and a half you lose 40.'),
+  ],
 };
 
 const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
@@ -279,6 +293,20 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     table('召喚', ['首引', '必須打出'], [['王牌 2', '大鬼'], ['王牌 3', '小鬼'], ['拿破崙開啟召喚開關', '秘書牌']], '叫鬼依房主選項（預設開啟），自動觸發。無王合約、該鬼牌是秘書牌，或首引者自己持有時不召喚。', '秘書牌在別人手上且未打出時可召喚秘書，但會召喚鬼牌的王牌 2、3 不能用來召喚秘書。'),
     section('勝負', '拿破崙方吃到的點數牌達到叫牌數字即獲勝，否則防家獲勝。不計倍數。', '座位旁顯示各自吃到的點數牌；不顯示陣營合計。'),
     section('操作方式', '叫牌同橋牌。換牌：選與拿到的牌（★）相同張數後棄牌。指定秘書牌：先選花色或鬼牌，再選牌。'),
+  ],
+  tenhalf: [
+    section('對局', '2～8 位玩家，每手一副 52 張牌，每人 1000 籌碼。從隨機一位起順時針輪流當莊，共兩圈，每個座位當莊次數相同。', '最後籌碼最多者獲勝，同分共同獲勝；不足兩人付得起 10 時提早結束。'),
+    section('下注與發牌', '閒家下注 10～200，以 10 為單位，所有人同時暗下。期限為回合時間兩倍、至少 15 秒，未下注自動押 10。莊家不下注；籌碼不足 10 只能旁觀下注。', '參與的人（含莊家）各拿一張蓋著的暗牌，開牌前只有自己看得到。'),
+    table('點數', ['牌', '點數'], [['A', '1 點'], ['2～10', '依牌面'], ['J、Q、K', '半點']], '超過 10.5 點即爆牌。一手最多五張，到 10.5 點、爆牌或拿到第五張就不能再要。'),
+    section('行動順序', '閒家依北 → 東 → 南 → 西 → 第 5～8 席行動，最後是莊家。輪到你時可要牌（拿一張明牌）或停牌，莊家同樣自由決定。全部完成後才一起翻開暗牌。'),
+    table('特殊牌型：由大到小', ['牌型', '組成', '倍數'], [
+      ['人五小', '五張都是 J、Q、K', '×5'],
+      ['天王', '五張牌合計正好 10.5 點', '×4'],
+      ['五小', '五張牌合計不到 10.5 點', '×3'],
+      ['十點半', '不到五張牌，合計正好 10.5 點', '×2'],
+      ['一般點數', '10 點以下', '×1'],
+    ], '任何特殊牌型都大於一般點數。牌型相同或點數相同，一律莊家勝。'),
+    section('結算', '閒家牌比莊家大才算贏；閒家爆牌一律輸，即使莊家也爆。贏家拿下注額 × 自己牌型的倍數；輸家賠下注額 × 莊家牌型的倍數（莊家爆牌算 1 倍），但最多賠光該局開始前的籌碼。', '莊家用自己的籌碼加上收到的錢賠付；不夠賠時，依每位贏家應得的比例分配。', '例：押 20，一般贏拿回 40；對上十點半的莊家，輸 40。'),
   ],
 };
 

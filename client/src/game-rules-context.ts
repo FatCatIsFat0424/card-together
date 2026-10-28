@@ -12,6 +12,8 @@ export interface GameRulesContextFields {
   readonly option: GameRulesOption | null;
   /** Match length for Blackjack; player-dealer matches depend on the seats taking part. */
   readonly blackjackHands?: number;
+  /** Match length for Ten and a Half, which depends on the seats taking part. */
+  readonly tenHalfHands?: number;
 }
 
 export interface GameRulesContext extends GameRulesContextFields {

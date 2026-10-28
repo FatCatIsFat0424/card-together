@@ -1,6 +1,6 @@
 import type {
   BlackjackOutcome, Card, ChinesePokerCategory, HoldemStreet, LiarFace, LiarTableFace, PlayerVisibleGameState,
-  GameSeat, GameType,
+  GameSeat, GameType, TenHalfHandKind,
 } from '@shared/types';
 import type { BigTwoComboType } from '@shared/rules/bigtwo';
 
@@ -39,6 +39,8 @@ export interface HistoryAction {
   dealer?: boolean;
   /** Hold'em: chips a blind or call added, a bet or raise's street total, or chips won */
   amount?: number;
+  /** Ten and a Half: the shown hand's kind, with its total in `handTotal` as half points */
+  handKind?: TenHalfHandKind;
   /** Hold'em: the street a board entry dealt */
   street?: Exclude<HoldemStreet, 'preflop'>;
   /** Hold'em: the shown hand's best category */

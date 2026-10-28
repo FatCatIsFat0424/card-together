@@ -10,6 +10,7 @@ import { liarsDeckUi } from './liarsdeck/liarsdeck-ui';
 import { blackjackUi } from './blackjack/blackjack-ui';
 import { holdemUi } from './holdem/holdem-ui';
 import { napoleonUi } from './napoleon/napoleon-ui';
+import { tenHalfUi } from './tenhalf/tenhalf-ui';
 
 /**
  * Every game type maps to its own UI module; a missing or mismatched entry fails to compile. Table
@@ -27,6 +28,7 @@ export const GAME_UIS: { readonly [K in GameType]: GameUi<K> } = {
   blackjack: blackjackUi,
   holdem: holdemUi,
   napoleon: napoleonUi,
+  tenhalf: tenHalfUi,
 };
 
 /**

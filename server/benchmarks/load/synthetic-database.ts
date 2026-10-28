@@ -22,6 +22,7 @@ import * as gameManager from '../../src/managers/game-manager';
 import * as blackjack from '../../src/managers/games/blackjack-game';
 import * as chinesepoker from '../../src/managers/games/chinesepoker-game';
 import * as napoleon from '../../src/managers/games/napoleon-game';
+import * as tenhalf from '../../src/managers/games/tenhalf-game';
 import { applyAutomatedAction, firstLegalAction } from '../../src/runtime/automated-action';
 import { captureMatchReplay } from '../../src/runtime/match-replay';
 import { recordReplayStep } from '../../src/runtime/replay-recording';
@@ -103,6 +104,7 @@ function actingSeat(game: AnyGameState): GameSeat | null {
   if (game.phase === 'scoring') return null;
   if (game.gameType === 'chinesepoker') return chinesepoker.pendingSeats(game)[0] ?? null;
   if (game.gameType === 'blackjack' && game.phase === 'betting') return blackjack.pendingBetSeats(game)[0] ?? null;
+  if (game.gameType === 'tenhalf' && game.phase === 'betting') return tenhalf.pendingBetSeats(game)[0] ?? null;
   if (game.gameType === 'napoleon' && game.phase === 'reviewing') return napoleon.pendingReviewSeats(game)[0] ?? null;
   return getTurnSeat(game);
 }

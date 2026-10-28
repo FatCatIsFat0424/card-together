@@ -200,4 +200,15 @@ export type {
   NapoleonVisibleState,
 } from '../games/napoleon/types';
 
+export type {
+  TenHalfHandKind,
+  TenHalfAction,
+  TenHalfOutcome,
+  TenHalfLogEntry,
+  TenHalfMatchResult,
+  TenHalfPhase,
+  TenHalfGameState,
+  TenHalfVisibleState,
+} from '../games/tenhalf/types';
+
 export type { AnyGameState, PlayerVisibleGameState, MatchResult } from '../games/type-registry';

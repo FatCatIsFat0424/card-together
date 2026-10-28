@@ -21,6 +21,7 @@ import type {
   BlackjackVisibleState,
   HoldemVisibleState,
   NapoleonVisibleState,
+  TenHalfVisibleState,
 } from '@shared/types';
 import { clientGame } from '../games/registry';
 import type { HeldHoleCards } from '../games/holdem/holdem-view';
@@ -41,6 +42,7 @@ export interface GameStoreState {
   /** Hold'em: my hole cards from the previous hand while its presentation may still be playing */
   holdemHeld: HeldHoleCards | null;
   napoleon: NapoleonVisibleState | null;
+  tenhalf: TenHalfVisibleState | null;
   gameType: GameType | null;
   phase: GamePhase | null;
   myHand: Card[];
@@ -73,6 +75,7 @@ const initialState: GameStoreState = {
   holdem: null,
   holdemHeld: null,
   napoleon: null,
+  tenhalf: null,
   gameType: null,
   phase: null,
   myHand: [],

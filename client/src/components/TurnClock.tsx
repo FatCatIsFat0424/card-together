@@ -54,9 +54,12 @@ export function TurnClock({ seat, showBank = true }: TurnClockProps): ReactNode 
   const arrangeDeadline = useGameStore((state) => state.chinesePoker?.phase === 'arranging'
     && !gameSeatValue(state.chinesePoker.submitted, seat) ? state.chinesePoker.arrangeDeadline : null);
   const simultaneous = useGameStore((state) => Boolean(state.chinesePoker));
-  const betDeadline = useGameStore((state) => state.blackjack?.phase === 'betting'
-    && !state.blackjack.betPlaced[seat] && bjSitsIn(state.blackjack.chips[seat]) ? state.blackjack.betDeadline : null);
-  const betting = useGameStore((state) => state.blackjack?.phase === 'betting');
+  const betDeadline = useGameStore((state) => {
+    const chips = state.blackjack ?? state.tenhalf;
+    return chips?.phase === 'betting' && !chips.betPlaced[seat] && bjSitsIn(chips.chips[seat])
+      && !(state.tenhalf && state.tenhalf.banker === seat) ? chips.betDeadline : null;
+  });
+  const betting = useGameStore((state) => (state.blackjack ?? state.tenhalf)?.phase === 'betting');
   const reviewDeadline = useGameStore((state) => state.napoleon?.phase === 'reviewing'
     && state.napoleon.contract?.napoleon !== seat && !state.napoleon.reviewed.includes(seat)
     ? state.napoleon.reviewDeadline : null);

@@ -29,6 +29,7 @@ export { isLiarsDeckResult } from '../managers/games/liarsdeck-validation';
 export { isBlackjackResult } from '../managers/games/blackjack-validation';
 export { isHoldemResult } from '../managers/games/holdem-validation';
 export { isNapoleonResult } from '../managers/games/napoleon-validation';
+export { isTenHalfResult } from '../managers/games/tenhalf-validation';
 
 function player(value: unknown): boolean {
   return (

@@ -126,6 +126,10 @@ export function pendingDecision(game: PlayerVisibleGameState): { key: string; at
     return !game.betPlaced[game.mySeat] && game.dealerSeat !== game.mySeat && bjSitsIn(game.chips[game.mySeat])
       ? { key: `bet:${game.hand}:${game.log.length}`, at: presented } : null;
   }
+  if (game.gameType === 'tenhalf' && game.phase === 'betting') {
+    return !game.betPlaced[game.mySeat] && game.banker !== game.mySeat && bjSitsIn(game.chips[game.mySeat])
+      ? { key: `bet:${game.hand}:${game.log.length}`, at: presented } : null;
+  }
   if (game.gameType === 'napoleon' && game.phase === 'reviewing') {
     return game.contract?.napoleon !== game.mySeat && !game.reviewed.includes(game.mySeat)
       ? { key: `review:${game.log.length}:${fingerprint(game.myHand)}`, at: presented } : null;

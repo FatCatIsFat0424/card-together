@@ -39,6 +39,9 @@ function act(code: string): void {
     ? REPLAY_SEATS.find((pending) => game.arrangements[pending] === null)
     : game.gameType === 'blackjack' && game.phase === 'betting'
       ? REPLAY_SEATS.find((pending) => game.players[pending] && game.bets[pending] === null && game.chips[pending] >= 10)
+      : game.gameType === 'tenhalf' && game.phase === 'betting'
+        ? REPLAY_SEATS.find((pending) => game.players[pending] && game.pendingBets[pending] === null
+          && pending !== game.banker && game.chips[pending] >= 10)
       : game.gameType === 'napoleon' && game.phase === 'reviewing'
         ? game.seats.find((pending) => pending !== game.contract?.napoleon && !game.reviewed.includes(pending))
         : getTurnSeat(game);

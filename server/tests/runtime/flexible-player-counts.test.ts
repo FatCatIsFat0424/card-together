@@ -188,7 +188,7 @@ describe('two to eight actual players', () => {
     start(mode, GAME_SEAT_ORDER);
     const original = snapshot(game());
     const missingHand = structuredClone(original);
-    Reflect.deleteProperty(missingHand.games[0].hands, 'P8');
+    Reflect.deleteProperty((missingHand.games[0] as FlexibleGame).hands, 'P8');
     expect(isRuntimeSnapshot(missingHand)).toBe(false);
     const missingBank = structuredClone(original);
     Reflect.deleteProperty(missingBank.games[0].clock!.bankRemainingMs, 'P8');

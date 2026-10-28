@@ -12,6 +12,7 @@ import { liarsDeckDefinition } from './liarsdeck/definition';
 import { blackjackDefinition } from './blackjack/definition';
 import { holdemDefinition } from './holdem/definition';
 import { napoleonDefinition } from './napoleon/definition';
+import { tenHalfDefinition } from './tenhalf/definition';
 
 /** Every game type maps to its own definition; a missing or mismatched entry fails to compile. */
 export const GAME_DEFINITIONS: { readonly [K in GameType]: GameDefinition<K> } = {
@@ -25,6 +26,7 @@ export const GAME_DEFINITIONS: { readonly [K in GameType]: GameDefinition<K> } =
   blackjack: blackjackDefinition,
   holdem: holdemDefinition,
   napoleon: napoleonDefinition,
+  tenhalf: tenHalfDefinition,
 };
 
 export function gameDefinition<K extends GameType>(gameType: K): GameDefinition<K> {

@@ -32,6 +32,8 @@ const ACTIONS = [
   { gameType: 'blackjack', action: { type: 'bet', amount: 20 } },
   { gameType: 'blackjack', action: { type: 'act', action: 'split' } },
   { gameType: 'blackjack', action: { type: 'dealerAct', action: 'stand' } },
+  { gameType: 'tenhalf', action: { type: 'bet', amount: 20 } },
+  { gameType: 'tenhalf', action: { type: 'act', action: 'hit' } },
   { gameType: 'holdem', action: { type: 'fold' } },
   { gameType: 'holdem', action: { type: 'check' } },
   { gameType: 'holdem', action: { type: 'call' } },

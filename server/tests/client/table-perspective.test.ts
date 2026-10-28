@@ -48,6 +48,7 @@ import { useTablePerspectiveStore } from '../../../client/src/stores/table-persp
 import { blackjackActions, blackjackNeedsBet } from '../../../client/src/games/blackjack/blackjack-view';
 import { holdemControls } from '../../../client/src/games/holdem/holdem-view';
 import { napoleonOwnTurn } from '../../../client/src/games/napoleon/napoleon-view';
+import { tenHalfCanAct, tenHalfNeedsBet } from '../../../client/src/games/tenhalf/tenhalf-view';
 
 const code = 'VIEW01';
 const seats: readonly Seat[] = ['N', 'E', 'S', 'W'];
@@ -95,6 +96,7 @@ describe('spectator table perspective', () => {
       import('../../../client/src/games/blackjack/BlackjackTable'),
       import('../../../client/src/games/holdem/HoldemTable'),
       import('../../../client/src/games/napoleon/NapoleonTable'),
+      import('../../../client/src/games/tenhalf/TenHalfTable'),
     ]);
   }, 60_000);
   beforeEach(() => {
@@ -131,12 +133,16 @@ describe('spectator table perspective', () => {
         expect(blackjackActions(projected, true)).toEqual([]);
       } else if (projected.gameType === 'holdem') {
         expect(holdemControls(projected, true)).toBeNull();
+      } else if (projected.gameType === 'tenhalf') {
+        expect(tenHalfNeedsBet(projected)).toBe(false);
+        expect(tenHalfCanAct(projected, true)).toBe(false);
       } else if (projected.gameType === 'napoleon') {
         expect(napoleonOwnTurn(projected)).toBe(false);
       } else if (projected.gameType !== 'bridge' && projected.gameType !== 'chinesepoker') {
         expect(isOwnTurn(projected)).toBe(false);
       }
-      if (game.gameType !== 'blackjack' && projected.gameType !== 'blackjack') {
+      if (game.gameType !== 'blackjack' && projected.gameType !== 'blackjack'
+        && game.gameType !== 'tenhalf' && projected.gameType !== 'tenhalf') {
         expect(projected.myHand).toEqual(game.observedHands?.[seat] ?? []);
       }
     }

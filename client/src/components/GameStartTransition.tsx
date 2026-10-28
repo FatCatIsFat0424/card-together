@@ -49,7 +49,8 @@ function IntroScreen({ intro, finish }: { readonly intro: Intro; readonly finish
     aria-labelledby="game-intro-title" aria-describedby="game-intro-skip"
     slotProps={{ paper: { className: styles.screen } }}>
     <div className={styles.scene} data-stage={stage} data-reduced={reduced} onClick={finish}>
-      <div className={styles.background} style={{ backgroundImage: `url("${GAME_BACKGROUNDS[intro.room.gameType]}")` }} />
+      <div className={styles.background} style={GAME_BACKGROUNDS[intro.room.gameType]
+        ? { backgroundImage: `url("${GAME_BACKGROUNDS[intro.room.gameType]}")` } : undefined} />
       <div className={styles.shade} />
       <h1 id="game-intro-title" className={styles.title}>{t(`gameType.${intro.room.gameType}`)}</h1>
       <ul className={styles.players} aria-hidden={stage === 'title'} data-count={players.length}>

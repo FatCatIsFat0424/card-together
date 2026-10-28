@@ -11,6 +11,7 @@ import { napoleonFacts } from './napoleon';
 import { ninetyNineFacts } from './ninetynine';
 import { redPointsFacts } from './redpoints';
 import { sevensFacts } from './sevens';
+import { tenHalfFacts } from './tenhalf';
 
 /** Every registered game supplies facts for its own result contract. */
 export const GAME_STATS: {
@@ -26,6 +27,7 @@ export const GAME_STATS: {
   blackjack: blackjackFacts,
   holdem: (_result, seat, frame) => holdemFacts(seat, frame),
   napoleon: napoleonFacts,
+  tenhalf: tenHalfFacts,
 };
 
 export function gameFacts<K extends GameType>(

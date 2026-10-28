@@ -16,6 +16,7 @@ const PREVIOUS_SEATS: Readonly<Record<GameType, readonly [min: number, max: numb
   blackjack: [2, 8, true, false],
   holdem: [2, 8, true, false],
   napoleon: [4, 6, true, true],
+  tenhalf: [2, 8, true, false],
 };
 
 describe('shared game registry', () => {
@@ -31,14 +32,14 @@ describe('shared game registry', () => {
   });
 
   it('lists the expandable rooms in lobby order', () => {
-    expect(EXPANDABLE_ROOM_GAMES).toEqual(['ninetynine', 'blackjack', 'holdem', 'napoleon']);
+    expect(EXPANDABLE_ROOM_GAMES).toEqual(['ninetynine', 'blackjack', 'holdem', 'napoleon', 'tenhalf']);
   });
 
   it('classifies every current game as a card game and gives chips only to the betting games', () => {
     for (const gameType of GAME_TYPES) {
       const definition = gameDefinition(gameType);
       expect(definition.category).toBe('cards');
-      expect(definition.equipment).toEqual(gameType === 'blackjack' || gameType === 'holdem' ? ['cards', 'chips'] : ['cards']);
+      expect(definition.equipment).toEqual(gameType === 'blackjack' || gameType === 'holdem' || gameType === 'tenhalf' ? ['cards', 'chips'] : ['cards']);
     }
   });
 
@@ -55,7 +56,7 @@ describe('registered result metadata', () => {
       ['bridge', 'team', null], ['bigtwo', 'ranking', 'penalty'], ['redpoints', 'ranking', 'points'],
       ['ninetynine', 'ranking', null], ['sevens', 'ranking', 'penalty'], ['chinesepoker', 'ranking', 'points'],
       ['liarsdeck', 'ranking', null], ['blackjack', 'ranking', 'chips'], ['holdem', 'ranking', 'chips'],
-      ['napoleon', 'roles', null],
+      ['napoleon', 'roles', null], ['tenhalf', 'ranking', 'chips'],
     ]);
   });
 

@@ -3,6 +3,7 @@ import { evaluateTargets, formatSummary, loopDelay, percentile, summarize, summa
 import type { ServerStats } from '../../benchmarks/load/load-metrics';
 import { DEFAULT_LOAD_OPTIONS, parseLoadOptions, planRooms, SMOKE_DURATION_SECONDS } from '../../benchmarks/load/load-plan';
 
+import { GAME_TYPES } from '@shared/constants';
 const MIB = 1024 * 1024;
 
 describe('load benchmark statistics', () => {
@@ -104,7 +105,7 @@ describe('load benchmark plan and options', () => {
   it('should seat 100 clients at 20 mixed rooms with bots, spectators, and a lobby', () => {
     const plan = planRooms(100, 20);
     expect(plan.rooms).toHaveLength(20);
-    expect(new Set(plan.rooms.map((room) => room.gameType)).size).toBe(10);
+    expect(new Set(plan.rooms.map((room) => room.gameType)).size).toBe(GAME_TYPES.length);
     expect(plan.rooms.every((room) => room.humans + room.bots === 4 && room.humans >= 2)).toBe(true);
     expect(plan.rooms.filter((room) => room.bots > 0)).toHaveLength(6);
     const seated = plan.rooms.reduce((sum, room) => sum + room.humans + room.spectators, 0);

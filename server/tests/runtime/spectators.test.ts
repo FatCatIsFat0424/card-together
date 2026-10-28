@@ -59,6 +59,7 @@ describe('spectators', () => {
     if (view?.gameType !== 'bridge') throw new Error('Expected a Bridge view');
     expect(view.observer).toBe('spectator');
     expect(view.mySeat).toBe('S');
+    if (game.gameType !== 'bridge') throw new Error('Expected a Bridge game');
     expect(view.observedHands).toEqual(game.hands);
 
     const seated = (await resume(players[0])).gameState;

@@ -297,7 +297,7 @@ describe('bot player interface', () => {
     for (const gameType of GAME_TYPES) {
       state.room = { ...room(), gameType };
       const expandable = gameType === 'ninetynine' || gameType === 'blackjack' || gameType === 'holdem'
-        || gameType === 'napoleon';
+        || gameType === 'napoleon' || gameType === 'tenhalf';
       const html = render(createElement(RoomPage));
       expect(html.includes('aria-label="Add seat"')).toBe(expandable);
     }

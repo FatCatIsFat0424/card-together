@@ -64,8 +64,8 @@ export function DesktopLobby(props: DesktopLobbyProps): ReactNode {
         className={styles.main}>
         <section id="lobby-selected-game" className={styles.hero} aria-labelledby="lobby-selected-game-title"
           data-in-room={props.inRoom ? true : undefined}>
-          <img key={selectedGame} className={styles.heroArt} src={GAME_BACKGROUNDS[selectedGame]} alt="" width={1280}
-            height={720} decoding="async" draggable={false} />
+          {GAME_BACKGROUNDS[selectedGame] && <img key={selectedGame} className={styles.heroArt}
+            src={GAME_BACKGROUNDS[selectedGame]} alt="" width={1280} height={720} decoding="async" draggable={false} />}
           <div className={styles.heroText}>
             <p className={styles.heroMeta}>{playersLabel(selectedGame)} · {t(`gameType.${selectedGame}Tag`)}</p>
             <h2 id="lobby-selected-game-title">{t(`gameType.${selectedGame}`)}</h2>
@@ -94,8 +94,8 @@ export function DesktopLobby(props: DesktopLobbyProps): ReactNode {
             className={`${styles.card} ${selectedGame === game ? styles.selected : ''}`}
             aria-pressed={selectedGame === game} aria-controls="lobby-selected-game" disabled={props.pending !== null}
             onClick={() => props.onSelectGame(game)}>
-            <img className={styles.art} src={GAME_CARD_ART[game]} alt="" width={480} height={270}
-              loading="lazy" decoding="async" draggable={false} />
+            {GAME_CARD_ART[game] && <img className={styles.art} src={GAME_CARD_ART[game]} alt="" width={480} height={270}
+              loading="lazy" decoding="async" draggable={false} />}
             <span className={styles.cardText}>
               <span className={styles.cardName}>{t(`gameType.${game}`)}</span>
               <span className={styles.cardMeta}>{playersLabel(game)} · {t(`gameType.${game}Tag`)}</span>

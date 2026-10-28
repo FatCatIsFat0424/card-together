@@ -172,6 +172,7 @@ const RECORD_UNITS: Readonly<Record<string, RecordUnit>> = {
   'bigtwo.topCollect': 'points', 'redpoints.topPoints': 'points', 'sevens.lowPenalty': 'points', 'sevens.highPenalty': 'points',
   'chinesepoker.topScore': 'points', 'blackjack.topChips': 'chips', 'holdem.biggestPot': 'chips',
   'blackjack.bestHand': 'signedChips', 'blackjack.dealerNet': 'signedChips',
+  'tenhalf.topChips': 'chips', 'tenhalf.bestHand': 'signedChips', 'tenhalf.bankerNet': 'signedChips',
 };
 
 const SUIT_SYMBOLS = { clubs: '♣', diamonds: '♦', hearts: '♥', spades: '♠', nt: 'NT' } as const;

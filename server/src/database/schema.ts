@@ -1,5 +1,5 @@
 import {
-  isBigTwoResult, isBlackjackResult, isChinesePokerResult, isHoldemResult, isLiarsDeckResult, isNapoleonResult,
+  isBigTwoResult, isBlackjackResult, isChinesePokerResult, isHoldemResult, isLiarsDeckResult, isNapoleonResult, isTenHalfResult,
   isNinetyNineResult, isRedPointsResult, isRuntimeSnapshot, isSevensResult,
 } from '../runtime/validate';
 import {
@@ -164,6 +164,7 @@ export function validMatch(value: unknown): value is MatchRecord {
     blackjack: isBlackjackResult,
     holdem: isHoldemResult,
     napoleon: isNapoleonResult,
+    tenhalf: isTenHalfResult,
   };
   // Archives live in the replay store, named by match ID; records carry only the flag.
   return isGameType(gameType) && validators[gameType](value.result) && !Object.hasOwn(value, 'replay') &&

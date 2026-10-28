@@ -159,8 +159,8 @@ export function LobbyPage(): ReactNode {
             className={`${styles.card} ${selectedGame === gameType ? styles.selected : ''}`}
             aria-pressed={selectedGame === gameType} aria-controls="lobby-selected-game" disabled={pending !== null}
             onClick={() => setSelectedGame(gameType)}>
-            <img className={styles.art} src={GAME_CARD_ART[gameType]} alt="" width={480} height={270}
-              loading="lazy" decoding="async" draggable={false} />
+            {GAME_CARD_ART[gameType] && <img className={styles.art} src={GAME_CARD_ART[gameType]} alt="" width={480} height={270}
+              loading="lazy" decoding="async" draggable={false} />}
             <span className={styles.cardText}>
               <span className={styles.cardName}>{t(`gameType.${gameType}`)}</span>
               <span className={styles.cardMeta}>{playersLabel(gameType)} · {t(`gameType.${gameType}Tag`)}</span>

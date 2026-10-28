@@ -15,6 +15,7 @@ import { latestCallIndex, remainingCards } from '../game-view';
 import type { TablePosition } from '../game-view';
 import { liarsDeckView } from '../games/liarsdeck/liarsdeck-view';
 import { blackjackSeatOut, blackjackView } from '../games/blackjack/blackjack-view';
+import { tenHalfSeatOut, tenHalfView } from '../games/tenhalf/tenhalf-view';
 import { ChipIcon } from '../games/ChipIcon';
 import { clientGame } from '../games/registry';
 import { holdemBlindSeats, holdemView, seatState } from '../games/holdem/holdem-view';
@@ -237,13 +238,15 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const {
     phase, turn, declarer, dealer, playing, bigTwoCards, redPointsCards, ninetyNineCards, locked, captured, busted,
     sevensCards, sevensCovered, chinesePokerCards, arranging, arranged, autoArranged, blackjackCards, holdemCards,
-    napoleonCards,
+    napoleonCards, tenHalfCards,
   } = useGameStore(useShallow((state) => ({
     sevensCards: gameSeatValue(state.sevens?.handCounts, seat) ?? null,
     // Blackjack hands are drawn face up on the table, so the plate shows no card backs.
     blackjackCards: state.blackjack ? 0 : null,
     // Hold'em hole cards are drawn on the felt, so the plate shows no card backs either.
     holdemCards: state.holdem ? 0 : null,
+    // Ten and a Half hands are drawn on the felt, so the plate shows no card backs.
+    tenHalfCards: state.tenhalf ? 0 : null,
     napoleonCards: state.napoleon ? gameSeatValue(state.napoleon.handCounts, seat) ?? 0 : null,
     sevensCovered: gameSeatValue(state.sevens?.coveredCounts, seat) ?? null,
     chinesePokerCards: state.chinesePoker ? state.chinesePoker.phase === 'arranging' ? 13 : 0 : null,
@@ -270,9 +273,12 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const blackjack = useGameStore((state) => state.blackjack);
   // Blackjack chips follow the presentation so a settlement is not paid out before its frame.
   const bj = blackjack && blackjackView(blackjack, frame);
-  const sittingOut = bj ? blackjackSeatOut(bj, seat) : false;
-  const bettingOpen = Boolean(bj?.betting && blackjack?.betDeadline !== null && !sittingOut);
-  const betPlaced = bettingOpen && Boolean(blackjack?.betPlaced[seat]);
+  const tenHalf = useGameStore((state) => state.tenhalf);
+  const th = tenHalf && tenHalfView(tenHalf, frame);
+  const sittingOut = bj ? blackjackSeatOut(bj, seat) : th ? tenHalfSeatOut(th, seat) : false;
+  const bettingOpen = Boolean((bj?.betting && blackjack?.betDeadline !== null || th?.betting && tenHalf?.betDeadline !== null)
+    && !sittingOut);
+  const betPlaced = bettingOpen && Boolean((blackjack ?? tenHalf)?.betPlaced[seat]);
   const holdem = useGameStore((state) => state.holdem);
   // Hold'em chips and seat states follow the presentation so a pot is not paid out before its frame.
   const he = holdem && holdemView(holdem, frame);
@@ -317,7 +323,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
     arranged: arranged || betPlaced || napoleonReviewed,
   });
   const cards = stats !== undefined ? 0 : bigTwoCards ?? redPointsCards ?? ninetyNineCards ?? sevensCards ?? chinesePokerCards
-    ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? napoleonCards
+    ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? napoleonCards ?? tenHalfCards
     ?? remainingCards(seat, playing);
   // A Hold'em fold outranks a timeout in the status slot, so a timed-out fold keeps the timeout icon.
   const heStatusLabel: TranslationKey | null = heOut && status === 'busted' ? 'holdem.out'
@@ -325,7 +331,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   // Lasting states (folded, out, busted) dim the whole seat instead of adding a badge on top of it.
   const dimmed = busted || dead || sittingOut || heOut || heState === 'folded';
   const statusText = heStatusLabel ?? (dead && status === 'busted' ? 'liarsdeck.dead'
-    : bj && status === 'arranged' ? 'blackjack.betPlaced'
+    : (bj || th) && status === 'arranged' ? 'blackjack.betPlaced'
       : napoleonReviewed && status === 'arranged' ? 'napoleon.reviewed' : status ? STATUS_LABEL[status] : null);
   // The turn ring already shows that a bot is thinking, so that status stays a screen-reader label only.
   const statusChip = status && status !== 'thinking' && !(dimmed && (status === 'busted' || status === 'locked')) ? status : null;
@@ -356,6 +362,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
     declarer && { key: 'declarer', label: t('table.declarer'), tone: styles.gold },
     dealer && phase === 'bidding' && { key: 'dealer', label: t('table.dealer'), tone: styles.light },
     bj?.currentDealer === seat && { key: 'bjDealer', label: t('blackjack.dealerTag'), tone: styles.gold },
+    th?.currentBanker === seat && { key: 'thBanker', label: t('tenhalf.bankerTag'), tone: styles.gold },
     heBlinds?.button === seat && { key: 'button', label: t('holdem.button'), tone: styles.gold, title: t('holdem.buttonTitle') },
     heBlinds?.small === seat && { key: 'sb', label: t('holdem.sb'), tone: styles.light, title: t('holdem.sbTitle') },
     heBlinds?.big === seat && { key: 'bb', label: t('holdem.bb'), tone: styles.light, title: t('holdem.bbTitle') },
@@ -432,6 +439,9 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
           {bj && <span className={`${styles.stat} ${styles.chips}`} title={t('blackjack.chipsTitle', { n: String(bj.chips[seat]) })}>
             <ChipIcon />{bj.chips[seat]}
           </span>}
+          {th && <span className={`${styles.stat} ${styles.chips}`} title={t('tenhalf.chipsTitle', { n: String(th.chips[seat]) })}>
+            <ChipIcon />{th.chips[seat]}
+          </span>}
           {he && <span className={`${styles.stat} ${styles.chips}`} title={t('holdem.chipsTitle', { n: String(he.chips[seat]) })}>
             <ChipIcon />{he.chips[seat]}
           </span>}
@@ -453,7 +463,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
         </div>
         {(dimmed || status === 'thinking') && statusText && <span className={styles.srOnly}>{t(statusText)}</span>}
         {heBet > 0 && <span className={styles.bet}><BetStack amount={heBet} title={t('holdem.betTitle', { n: String(heBet) })} /></span>}
-        {sittingOut && <span className={styles.srOnly}>{t('blackjack.sittingOut')}</span>}
+        {sittingOut && <span className={styles.srOnly}>{t(th ? 'tenhalf.sittingOut' : 'blackjack.sittingOut')}</span>}
         {active && <span className={styles.srOnly}>{isMe ? t('table.yourTurn') : t('table.turn')}</span>}
       </div>
       {tray}

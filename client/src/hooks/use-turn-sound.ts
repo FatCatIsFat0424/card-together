@@ -10,6 +10,7 @@ import { useTurnSoundStore } from '../stores/turn-sound-store';
 import { presentationMoment } from '../games/presentation-state';
 import { blackjackNeedsBet } from '../games/blackjack/blackjack-view';
 import { napoleonReviewState } from '../games/napoleon/napoleon-view';
+import { tenHalfNeedsBet } from '../games/tenhalf/tenhalf-view';
 
 export function getTurnSoundSnapshot(): TurnSoundSnapshot {
   const game = useGameStore.getState();
@@ -19,7 +20,7 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
   // Chinese Poker has no single turn: every seat that still owes an arrangement is prompted.
   const arranging = game.chinesePoker?.phase === 'arranging' && !game.chinesePoker.submitted[game.chinesePoker.mySeat];
   // Blackjack betting is simultaneous too: every seat that can still bet is prompted.
-  const betting = game.blackjack ? blackjackNeedsBet(game.blackjack) : false;
+  const betting = game.blackjack ? blackjackNeedsBet(game.blackjack) : game.tenhalf ? tenHalfNeedsBet(game.tenhalf) : false;
   // The four-player Napoleon discard review is also owed by every seat at once.
   const reviewing = game.napoleon ? napoleonReviewState(game.napoleon) === 'review' : false;
   const owned = !held.locked && room.currentRoomCode && room.mySeat &&
@@ -36,7 +37,8 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
     (game.napoleon ? `${game.napoleon.phase}-${game.napoleon.log.filter((entry) =>
       'seat' in entry && entry.seat === room.mySeat).length}` : undefined) ??
     // One Blackjack turn spans several actions; prompt once per hand played, not on every hit.
-    (game.blackjack ? `${game.blackjack.phase}-${game.blackjack.hand}-${game.blackjack.activeHand}` : 0);
+    (game.blackjack ? `${game.blackjack.phase}-${game.blackjack.hand}-${game.blackjack.activeHand}`
+      : game.tenhalf ? `${game.tenhalf.phase}-${game.tenhalf.hand}` : 0);
   return {
     room: room.currentRoomCode,
     turn: owned ? [game.gameType, game.phase, room.mySeat, completedTricks,
