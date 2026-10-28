@@ -54,8 +54,7 @@ describe('match history list', () => {
     expect(html).toContain('ROOM10');
     expect(html).toContain('aria-haspopup="dialog"');
     expect(html).toContain('data-stats-toggle');
-    expect(html).toContain('aria-expanded="false"');
-    // Statistics stay folded until the toolbar button opens them.
+    // The statistics dialog stays closed until the toolbar button opens it.
     expect(html).not.toContain('<h3');
   });
 

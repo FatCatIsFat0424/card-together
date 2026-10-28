@@ -7,8 +7,12 @@ import { apiRequest } from '../api';
 import { Nameplate } from '../components/Nameplate';
 import { Avatar } from '../components/Avatar';
 import { Button, buttonClassName } from '../components/Button';
+import { IconLink } from '../components/IconButton';
 import { MatchHistoryList } from '../components/MatchHistoryList';
-import { historySummary, historySummaryItems } from '../match-history';
+import { MatchStatsDialog } from '../components/MatchStatsDialog';
+import { MatchStatsStrip } from '../components/MatchStatsStrip';
+import { useStatsScope } from '../hooks/use-stats-scope';
+import { matchStatistics } from '../match-statistics';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './PlayerProfilePage.module.css';
@@ -17,7 +21,7 @@ import styles from './PlayerProfilePage.module.css';
 const WIDE_QUERY = '(min-width: 1024px) and (min-height: 501px)';
 
 function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
-  const { t, locale } = useI18nStore();
+  const { t } = useI18nStore();
   const wide = useMediaQuery(WIDE_QUERY, { noSsr: true });
   const viewerId = useAccountStore((state) => state.account?.id);
   const isSelf = viewerId === accountId;
@@ -31,6 +35,8 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
   const [busy, setBusy] = useState(false);
   const [updated, setUpdated] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
+  const [statsScope, setStatsScope] = useStatsScope();
   const active = useRef(false);
   const requestVersion = useRef(0);
 
@@ -107,9 +113,7 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
   const incoming = friends?.incoming.find((request) => request.requester.id === accountId);
   const outgoing = friends?.outgoing.find((request) => request.recipient.id === accountId);
   const disabled = busy || loading;
-  const summary = history && history !== 'private'
-    ? historySummaryItems(historySummary(history.matches, accountId), (key) => t(key), (type) => t(`gameType.${type}`), locale)
-    : [];
+  const statistics = history && history !== 'private' ? matchStatistics(history.matches, accountId, statsScope) : null;
 
   return <main className={styles.page}>
     <section className={styles.header}>
@@ -122,13 +126,14 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
         <Nameplate id={player.nameplate} />
         <p className={styles.username}>@{player.username}</p>
       </div>
-      {summary.length > 0 && <ul className={styles.summary} aria-label={t('history.statistics')}>
-        {summary.map((item) => <li key={item.id}>
-          <span className={styles.summaryLabel}>{item.label}</span> <strong>{item.value}</strong>
-        </li>)}
-      </ul>}
+      {statistics && <div className={styles.summary}>
+        <MatchStatsStrip statistics={statistics} wide={wide} scope={statsScope} onScopeChange={setStatsScope}
+          onOpen={() => setStatsOpen(true)} />
+      </div>}
       <div className={styles.actions}>
-        {isSelf ? <Link className={buttonClassName('primary')} to="/account">{t('player.edit')}</Link> : <>
+        {isSelf ? wide
+          ? <Link className={buttonClassName('primary')} to="/account">{t('player.edit')}</Link>
+          : <IconLink icon="settings" label={t('player.edit')} to="/account" className={styles.editLink} /> : <>
           {friends && <>
             {(isFriend || incoming || outgoing) && <p className={styles.description}>{t(isFriend ? 'player.friends'
               : incoming ? 'player.incoming' : 'player.outgoing')}</p>}
@@ -166,8 +171,10 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
     {updated && <p className={styles.success} role="status">{t('player.updated')}</p>}
     {history && <section className={styles.history}>
       {history === 'private' ? <p className={styles.description}>{t('history.private')}</p>
-        : <MatchHistoryList matches={history.matches} players={history.players} accountId={accountId} />}
+        : <MatchHistoryList matches={history.matches} players={history.players} accountId={accountId} showStatsButton={false} />}
     </section>}
+    {statsOpen && history && history !== 'private' && <MatchStatsDialog matches={history.matches} accountId={accountId}
+      scope={statsScope} onScopeChange={setStatsScope} onClose={() => setStatsOpen(false)} />}
   </main>;
 }
 

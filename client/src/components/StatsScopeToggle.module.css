@@ -1,0 +1,8 @@
+.toggle { display: flex; flex-direction: column; justify-content: center; gap: var(--space-1); }
+.label { color: var(--text-secondary); font-size: var(--text-xs); white-space: nowrap; }
+.options { display: inline-flex; gap: 2px; padding: 2px; border-radius: var(--radius-pill); background: var(--surface-2); }
+.options button { position: relative; padding: 3px var(--space-3); border-radius: var(--radius-pill); color: var(--text-secondary); font-size: var(--text-xs); font-weight: 600; white-space: nowrap; }
+/* The pill is about 26px tall; the pseudo-element extends the hit area to 40px. */
+.options button::after { content: ''; position: absolute; inset: -7px 0; }
+.options button.on { background: var(--bg-card); color: var(--text-primary); box-shadow: 0 1px 3px rgb(0 0 0 / 0.4); }
+.options button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }

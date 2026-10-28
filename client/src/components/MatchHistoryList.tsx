@@ -13,11 +13,12 @@ import {
 import type { HistorySortKey, MatchOutcome, SortDirection } from '../match-history';
 import { resultSeats } from '../game-view';
 import { seatLabel } from '../games/seat-names';
+import { useStatsScope } from '../hooks/use-stats-scope';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { PlayerLink } from './PlayerLink';
 import { MatchDetailsDialog } from './MatchDetailsDialog';
-import { MatchHistoryStatistics } from './MatchHistoryStatistics';
+import { MatchStatsDialog } from './MatchStatsDialog';
 import { MatchResultLabel } from './MatchResultLabel';
 import { AppIcon } from './AppIcon';
 import { Button } from './Button';
@@ -25,16 +26,16 @@ import styles from './MatchHistoryList.module.css';
 
 /** Narrow windows and short landscape phones fold the charts and turn the table into one-line rows. */
 const COMPACT_QUERY = '(max-width: 52rem), (max-height: 500px) and (min-width: 600px)';
-/** Desktop shell at full rail width: the statistics panel lays its two blocks side by side. */
-const WIDE_QUERY = '(min-width: 1024px) and (min-height: 501px)';
 
 /** Matches revealed per step on narrow screens. */
 const COMPACT_PAGE = 8;
 
 const MatchReplayDialog = lazy(() => import('./MatchReplayDialog').then((module) => ({ default: module.MatchReplayDialog })));
 
-export function MatchHistoryList({ matches, players, accountId }: MatchHistory & {
+export function MatchHistoryList({ matches, players, accountId, showStatsButton = true }: MatchHistory & {
   readonly accountId?: string;
+  /** Pages without their own statistics entry (the profile header has one) get a button in the filter bar. */
+  readonly showStatsButton?: boolean;
 }): ReactNode {
   const { t, locale } = useI18nStore();
   const viewerId = useAccountStore((state) => state.account?.id);
@@ -47,9 +48,9 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
   const [replayMatch, setReplayMatch] = useState<MatchSummary | null>(null);
   const [detailMatch, setDetailMatch] = useState<MatchSummary | null>(null);
   const [statsOpen, setStatsOpen] = useState(false);
+  const [statsScope, setStatsScope] = useStatsScope();
   const [pages, setPages] = useState(1);
   const compact = useMediaQuery(COMPACT_QUERY, { noSsr: true });
-  const wide = useMediaQuery(WIDE_QUERY, { noSsr: true }) && !compact;
   const subjectId = accountId ?? viewerId;
   const visibleMatches = selectHistoryMatches(matches, players, {
     accountId: subjectId, query, gameType, outcome, sortKey, direction, locale,
@@ -72,7 +73,6 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
   };
   // Phones show the newest matches first and reveal the rest in steps, so the page stays short.
   const shownMatches = compact ? visibleMatches.slice(0, pages * COMPACT_PAGE) : visibleMatches;
-  const statisticsId = `${filterId}-statistics`;
   if (matches.length === 0) return <div className={styles.history}>
     <p className={styles.empty}>{t('history.noMatches')}</p>
   </div>;
@@ -128,9 +128,9 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
       </Select>
     </FormControl>}
     {(!compact || filtered) && <Button onClick={reset} disabled={!filtered}>{t('history.reset')}</Button>}
-    <Button className={styles.statsToggle} data-stats-toggle aria-expanded={statsOpen}
-      aria-controls={statisticsId} icon="info" onClick={() => setStatsOpen(!statsOpen)}>
-      {t(compact ? 'history.statsShort' : 'history.statistics')}</Button>
+    {showStatsButton && <Button className={styles.statsToggle} data-stats-toggle aria-haspopup="dialog"
+      icon="info" onClick={() => setStatsOpen(true)}>
+      {t(compact ? 'history.statsShort' : 'history.statistics')}</Button>}
   </div>;
 
   const list = compact
@@ -199,15 +199,14 @@ export function MatchHistoryList({ matches, players, accountId }: MatchHistory &
 
   return <div className={styles.history}>
     {toolbar}
-    {statsOpen && <div id={statisticsId} className={styles.statsPanel}>
-      <MatchHistoryStatistics matches={matches} accountId={subjectId} hideTitle layout={compact ? 'compact' : wide ? 'wide' : 'stacked'} />
-    </div>}
     <p role="status" className={compact ? styles.countHidden : styles.count}>
       {t('history.count', { shown: String(visibleMatches.length), total: String(matches.length) })}
     </p>
     {list}
     {shownMatches.length < visibleMatches.length && <Button className={styles.more} onClick={() => setPages(pages + 1)}>
       {t('history.showMore', { n: String(visibleMatches.length - shownMatches.length) })}</Button>}
+    {statsOpen && <MatchStatsDialog matches={matches} accountId={subjectId} scope={statsScope}
+      onScopeChange={setStatsScope} onClose={() => setStatsOpen(false)} />}
     {detailMatch && <MatchDetailsDialog key={detailMatch.id} match={detailMatch} players={players} accountId={subjectId}
       onClose={() => setDetailMatch(null)}
       onReplay={(match) => { setDetailMatch(null); setReplayMatch(match); }} />}

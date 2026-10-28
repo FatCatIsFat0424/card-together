@@ -1,0 +1,26 @@
+/* Profile header statistics: a scope switch beside one big button that opens the detailed view. */
+.strip { display: flex; align-items: stretch; min-width: 0; }
+.scope { padding-right: var(--space-4); }
+.open { display: flex; align-items: stretch; min-width: 0; padding: var(--space-1) var(--space-1) var(--space-1) 0; border-radius: var(--radius-lg); text-align: left; }
+.open:hover { background: var(--surface-1); }
+.open:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.stat { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding: 0 var(--space-4); border-left: 1px solid var(--separator); }
+.stat small { color: var(--text-secondary); font-size: var(--text-xs); white-space: nowrap; }
+.stat b { font-size: var(--text-xl); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stat b em { margin-left: var(--space-1); color: var(--text-muted); font-size: var(--text-xs); font-style: normal; font-weight: 500; }
+.go { display: flex; align-items: center; gap: var(--space-1); padding-left: var(--space-4); border-left: 1px solid var(--separator); color: var(--color-primary); font-size: var(--text-sm); font-weight: 600; white-space: nowrap; }
+
+.dots { display: inline-flex; align-items: center; gap: var(--space-1); height: 27px; }
+.dots i { display: block; width: 10px; height: 10px; border-radius: 50%; }
+.win { background: var(--color-success); }
+.loss { background: color-mix(in srgb, var(--color-danger) 55%, transparent); }
+.tie { background: var(--color-primary); }
+
+/* One 44px pill on narrow screens and phones; the scope switch lives in the detailed view there. */
+.pill { display: flex; align-items: center; gap: var(--space-3); min-width: 0; min-height: 44px; padding: 0 var(--space-3); border-radius: var(--radius-lg); background: var(--surface-1); color: var(--text-secondary); font-size: var(--text-xs); text-align: left; white-space: nowrap; }
+.pill:hover { background: var(--surface-2); }
+.pill:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.pill b { margin-left: 2px; color: var(--text-primary); font-size: var(--text-md); font-variant-numeric: tabular-nums; }
+.pill .go { margin-left: auto; padding-left: var(--space-2); border-left: 0; font-size: var(--text-sm); }
+
+.empty { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); min-height: 44px; color: var(--text-secondary); font-size: var(--text-sm); }
