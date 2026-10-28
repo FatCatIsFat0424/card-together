@@ -218,11 +218,17 @@
   color: var(--text-primary);
 }
 
-/* Covers the message area between the header and the input row; the conversation stays mounted underneath. */
+/*
+ * Rises from the emoji button over the message area's bottom-left corner. Narrow or short areas (the table dock,
+ * phones) are filled; wider ones keep recent messages readable beside and above it.
+ */
 .messageArea { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .picker {
   position: absolute;
-  inset: var(--space-2);
+  bottom: var(--space-2);
+  left: var(--space-2);
+  width: min(100% - 2 * var(--space-2), 440px);
+  height: min(100% - 2 * var(--space-2), 420px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
