@@ -69,6 +69,31 @@ describe('shop preview visibility', () => {
     expect(disconnect).toHaveBeenCalledTimes(1);
   });
 
+  it('observes each scroll root separately, so previews inside a dialog still report', () => {
+    const created: { root: Element | null; notify: IntersectionObserverCallback; disconnect: ReturnType<typeof vi.fn> }[] = [];
+    vi.stubGlobal('IntersectionObserver', vi.fn(function (this: unknown, notify: IntersectionObserverCallback, options: { root: Element | null }) {
+      const disconnect = vi.fn();
+      created.push({ root: options.root, notify, disconnect });
+      return { observe: vi.fn(), unobserve: vi.fn(), disconnect };
+    }));
+    const page = {} as Element;
+    const inPage = {} as Element;
+    const inDialog = {} as Element;
+    const pageVisible = vi.fn();
+    const dialogVisible = vi.fn();
+    const removePage = observeShopPreview(inPage, pageVisible, page);
+    const removeDialog = observeShopPreview(inDialog, dialogVisible, null);
+    expect(created.map((entry) => entry.root)).toEqual([page, null]);
+    created[1].notify([{ target: inDialog, isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+    expect(dialogVisible).toHaveBeenCalledWith(true);
+    expect(pageVisible).not.toHaveBeenCalled();
+    removeDialog();
+    expect(created[1].disconnect).toHaveBeenCalledTimes(1);
+    expect(created[0].disconnect).not.toHaveBeenCalled();
+    removePage();
+    expect(created[0].disconnect).toHaveBeenCalledTimes(1);
+  });
+
   it.each(['card-face-four-color', 'sound-starfleet', 'chat-frame-starfleet', 'nameplate-starfleet'])(
     'keeps descriptive content while deferring the decorative %s tile preview', (id) => {
       vi.stubGlobal('IntersectionObserver', vi.fn());

@@ -71,6 +71,16 @@ export function ShopProductPreview({ item, account, className, children }: ShopP
   </div>;
 }
 
+/** Class of a small square preview box; callers size it with `--thumb-w` and `--thumb-h` (40px by default). */
+export const SHOP_THUMB_CLASS = styles.thumb;
+
+/** A product preview shrunk into a thumbnail, with the same deferred mounting as product tiles. */
+export function ShopThumb({ item, account, className }: ShopProductArtProps & { readonly className?: string }): ReactNode {
+  return <ShopProductPreview item={item} account={account} className={[styles.thumb, className].filter(Boolean).join(' ')}>
+    {null}
+  </ShopProductPreview>;
+}
+
 /** Uses the same assets and identity components as equipped products. */
 export function ShopProductArt({ item, account, tile = false }: ShopProductArtProps & {
   /** Product tiles are short, so the nameplate sample sits under a smaller avatar to keep its text legible. */

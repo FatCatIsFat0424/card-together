@@ -62,6 +62,11 @@ import VolumeOff from '@mui/icons-material/VolumeOff';
 import VolumeUp from '@mui/icons-material/VolumeUp';
 import WarningAmber from '@mui/icons-material/WarningAmber';
 import { createSvgIcon } from '@mui/material/utils';
+import DeleteOutlined from '@mui/icons-material/DeleteOutlined';
+import FileUploadOutlined from '@mui/icons-material/FileUploadOutlined';
+import GridViewOutlined from '@mui/icons-material/GridViewOutlined';
+import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
+import Undo from '@mui/icons-material/Undo';
 import styles from './AppIcon.module.css';
 
 /** A person sending a paper plane: inviting someone into a room, unlike the person-plus of adding a friend. */
@@ -94,6 +99,7 @@ const ICONS = {
   volume: VolumeUp, volumeOff: VolumeOff,
   invite: InviteToRoom, personCheck: HowToRegOutlined, room: MeetingRoomOutlined, search: Search, back: ArrowBack,
   cards: StyleOutlined, spectate: VisibilityOutlined,
+  trash: DeleteOutlined, upload: FileUploadOutlined, grid: GridViewOutlined, expand: KeyboardArrowDown, undo: Undo,
 } as const;
 
 export type AppIconName = keyof typeof ICONS;

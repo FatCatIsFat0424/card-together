@@ -75,7 +75,7 @@
 
 ## 外觀物品欄
 
-- `Repository.purchaseShopItem` 使用共用的[目錄](../shared/src/constants/shop.ts)，以一次原子寫入扣除金幣、增加 `coinRevision`，並授予永久擁有權。重複購買不會有任何效果；寫入失敗時物品欄與餘額都不變。購買不會自動裝備。
+- `Repository.purchaseShopItem` 使用共用的[目錄](../shared/src/constants/shop.ts)，以一次原子寫入扣除金幣、增加 `coinRevision`，並授予永久擁有權。重複購買不會有任何效果；寫入失敗時物品欄與餘額都不變。購買預設不裝備；請求帶 `equip: true` 時，同一次寫入也會裝備該商品（貼圖包沒有欄位，忽略），已擁有的商品只裝備、不再扣款。
 - 商品與貼圖 ID 是持久的參照。重新命名或移除它們需要相容的資料 migration，並為已擁有的商品與歷史紀錄保留圖案。
 - 外框保留在 `ownedAvatarBorders`；其他商品使用私人的 `ownedShopItems`。裝備欄位定義在 [AccountProfile](../shared/src/types/account.ts)。服務層與 Repository 在裝備前都會驗證物品類型與擁有權。資料庫會拒絕不存在的 ID、重複的物品欄與未擁有的裝備。
 - 裝備官方圖片樣式時，會覆蓋仍保留的上傳圖片。設為 null 會恢復上傳圖片或主題，不會遺失媒體。公開個人檔案包含外觀名牌與聊天框；房間中的身分另外包含座位樣式、座位框與勝利特效。物品欄、牌背與牌面、牌桌樣式、音效包與籌碼樣式只有本人看得到。購買與變更裝備會更新本人所有已連線的分頁。

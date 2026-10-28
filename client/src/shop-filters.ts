@@ -87,14 +87,19 @@ export function shopTypeCount(items: readonly ShopItem[], view: ShopView, type: 
   return shopProducts(items, { ...view, type, series }).length;
 }
 
-/** Preserve the visible category when a legacy series-only URL changes collection. */
+/**
+ * Preserve the visible category when a legacy series-only URL changes collection. With every type
+ * showing, `group` pins the tab, which would otherwise jump to the first group holding the series.
+ */
 export function shopSeriesQuery(
   current: URLSearchParams,
   selectedType: ShopItemType | 'all',
   series: ShopSeriesFilter,
+  group?: ShopGroupId,
 ): URLSearchParams {
   const next = new URLSearchParams(current);
   if (selectedType !== 'all') next.set('type', selectedType);
+  else if (group) next.set('group', group);
   if (BORDER_SERIES.some((legacy) => legacy === series)) next.set('type', 'avatarBorder');
   if (series === 'all') next.delete('series');
   else next.set('series', series);
@@ -122,4 +127,25 @@ export function shopTypeQuery(current: URLSearchParams, type: ShopItemType | 'al
   }
   if (BORDER_SERIES.some((legacy) => legacy === next.get('series'))) next.delete('series');
   return next;
+}
+
+/** Keys of `shopSeriesCounts`: every collection, the products without one, and the whole tab. */
+export type ShopSeriesCountKey = ShopSeries | typeof OTHER_SERIES | 'all';
+
+/**
+ * Products per collection in the selected group and type. The collection filter itself does not
+ * narrow the counts, so the series menu shows what each choice would list.
+ */
+export function shopSeriesCounts(items: readonly ShopItem[], view: ShopView): Readonly<Record<ShopSeriesCountKey, number>> {
+  const counts = Object.fromEntries([...SHOP_SERIES, OTHER_SERIES, 'all'].map((key) => [key, 0])) as Record<ShopSeriesCountKey, number>;
+  for (const item of shopProducts(items, { ...view, series: 'all' })) {
+    counts.all += 1;
+    counts[shopItemSeries(item) ?? OTHER_SERIES] += 1;
+  }
+  return counts;
+}
+
+/** Whether the selection is a themed collection or the products without one (not a legacy border category). */
+export function isCollectionFilter(series: ShopSeriesFilter): series is ShopSeries | typeof OTHER_SERIES {
+  return series === OTHER_SERIES || SHOP_SERIES.some((entry) => entry === series);
 }

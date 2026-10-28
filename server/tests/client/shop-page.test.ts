@@ -14,10 +14,14 @@ vi.mock('../../../client/src/stores/account-store', () => ({
 vi.mock('../../../client/src/components/ShopProductArt', () => ({
   ShopProductArt: () => null,
   ShopProductPreview: ({ children }: { children: ReactNode }) => children,
+  ShopThumb: () => null,
+  FitArt: ({ children }: { children: ReactNode }) => children,
+  SHOP_THUMB_CLASS: 'thumb',
 }));
+vi.mock('../../../client/src/media', () => ({ mediaUrl: (id: string): string => `/api/media/${id}` }));
 
 import {
-  SHOP_GROUPS, resolveShopView, shopGroupQuery, shopSeriesQuery, shopTypeQuery, ungroupedShopTypes,
+  SHOP_GROUPS, resolveShopView, shopGroupQuery, shopSeriesCounts, shopSeriesQuery, shopTypeQuery, ungroupedShopTypes,
 } from '../../../client/src/shop-filters';
 import { ShopPage } from '../../../client/src/pages/ShopPage';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
@@ -29,7 +33,11 @@ function render(query = ''): string {
 
 const productCards = (html: string): string[] => html.match(/<li[^>]*class="[^"]*product[^"]*"/g) ?? [];
 const names = (html: string): string[] => [...html.matchAll(/<h3[^>]*>([^<]*)<\/h3>/g)].map((match) => match[1]);
-const selectedOption = (value: string): string => `<option value="${value}" selected="">`;
+/** The selected collection shows as the banner above the products and as a filled series button. */
+const banner = (name: string): RegExp => new RegExp(`<section class="[^"]*banner[^"]*" aria-label="${name}"`);
+const seriesName = (series: string): string => useI18nStore.getState().t(
+  (series === 'other' ? 'shop.otherSeries.name' : `shop.series.${series}.name`) as 'shop.otherSeries.name');
+const owned = (total: number): RegExp => new RegExp(`Owned \\d+ / ${total}`);
 const groupItems = (group: string): ShopItem[] => {
   const types: readonly string[] = SHOP_GROUPS.find((entry) => entry.id === group)?.types ?? [];
   return SHOP_ITEMS.filter((item) => types.includes(item.type));
@@ -114,7 +122,9 @@ describe('shop groups, type chips and inventory', () => {
     expect(productCards(html)).toHaveLength(count);
     expect(names(html)).toContain(included);
     expect(names(html)).not.toContain(excluded);
-    expect(html).toContain(selectedOption(series));
+    // Border categories live in their own row under the type chips, not in the series menu.
+    expect(html).toMatch(new RegExp(`aria-label="Border style"[^]*aria-pressed="true"[^>]*>${label}<`));
+    expect(html).not.toMatch(/class="[^"]*banner/);
     expect(html).toMatch(/aria-pressed="true"[^>]*>Avatar borders</);
   });
 
@@ -129,7 +139,7 @@ describe('shop groups, type chips and inventory', () => {
   it('translates navigation, selected series, and products into Traditional Chinese', () => {
     useI18nStore.getState().setLocale('zh-TW');
     const html = render('?series=metal');
-    for (const text of ['商品種類', '商店分類', '個人形象', '牌桌', '撲克牌', '系列：', '頭像邊框', '俏皮造型', '金屬系列',
+    for (const text of ['商品種類', '商店分類', '個人形象', '牌桌', '撲克牌', '邊框分類', '頭像邊框', '俏皮造型', '金屬系列',
       '光環系列', '3 項商品', '霧光銅框']) {
       expect(html).toContain(text);
     }
@@ -156,7 +166,8 @@ describe('shop groups, type chips and inventory', () => {
     const html = render('?type=cardBack&series=ears');
     expect(productCards(html)).toHaveLength(15);
     expect(names(html)).toContain('Aurora weave');
-    expect(html).toContain(selectedOption('all'));
+    expect(html).not.toMatch(/class="[^"]*banner/);
+    expect(html).not.toContain('aria-label="Border style"');
   });
 
   it.each(SHOP_SERIES)('restores the %s collection within its group', (series) => {
@@ -165,15 +176,16 @@ describe('shop groups, type chips and inventory', () => {
     const products = groupItems(view.group).filter((product) => shopItemSeries(product) === series);
     expect(products.length).toBeGreaterThan(0);
     expect(productCards(html)).toHaveLength(products.length);
-    expect(html).toContain(`${products.length} products`);
-    expect(html).toContain(selectedOption(series));
+    expect(html).toMatch(banner(seriesName(series)));
+    expect(html).toMatch(owned(products.length));
+    expect(html).toContain(`data-selected="true"`);
     expect(html).not.toContain('shop.series.');
     for (const type of new Set(products.map((item) => item.type))) {
       const selected = render(`?series=${series}&type=${type}`);
       const count = products.filter((item) => item.type === type).length;
       expect(productCards(selected)).toHaveLength(count);
       expect(selected).toContain(`data-shop-series="${series}"`);
-      expect(selected).toContain(`${count} products`);
+      expect(selected).toMatch(owned(count));
     }
   });
 
@@ -209,14 +221,12 @@ describe('shop groups, type chips and inventory', () => {
     const products = unseried(groupItems('personal'));
     const html = render('?series=other');
     expect(productCards(html)).toHaveLength(products.length);
-    expect(html).toContain(`${products.length} products`);
-    expect(html).toContain(selectedOption('other'));
+    expect(html).toMatch(owned(products.length));
+    expect(html).toMatch(banner('Other'));
     expect(html).not.toContain('data-shop-series=');
     expect(names(html)).toContain('Puppy ears');
     expect(names(html)).toContain('Brushed copper');
     expect(names(html)).not.toContain('Aurora weave');
-    // The option follows every themed series.
-    expect(html.indexOf('value="crownrealm"')).toBeLessThan(html.indexOf('value="other"'));
   });
 
   it.each(['avatarBorder', 'nameplate', 'stickerPack', 'cardFace'] as const)(
@@ -224,8 +234,8 @@ describe('shop groups, type chips and inventory', () => {
       const products = SHOP_ITEMS.filter((item) => item.type === type && shopItemSeries(item) === null);
       const html = render(`?series=other&type=${type}`);
       expect(productCards(html)).toHaveLength(products.length);
-      expect(html).toContain(`${products.length} products`);
-      expect(html).toContain(selectedOption('other'));
+      expect(html).toMatch(owned(products.length));
+      expect(html).toMatch(banner('Other'));
       // The type chips count only products without a series.
       const group = SHOP_GROUPS.find((entry) => (entry.types as readonly string[]).includes(type));
       const total = unseried(groupItems(group?.id ?? '')).length;
@@ -235,7 +245,7 @@ describe('shop groups, type chips and inventory', () => {
   it('shows the empty state when no unseried product matches the product type', () => {
     const html = render('?series=other&type=cardBack');
     expect(productCards(html)).toHaveLength(0);
-    expect(html).toContain(selectedOption('other'));
+    expect(html).toMatch(banner('Other'));
     expect(html).toContain('role="status"');
   });
 
@@ -257,9 +267,9 @@ describe('shop groups, type chips and inventory', () => {
     useI18nStore.getState().setLocale(locale);
     const html = render('?series=aurora&type=avatarBorder');
     expect(productCards(html)).toHaveLength(0);
-    expect(html).toContain(selectedOption('aurora'));
+    expect(html).toMatch(banner(locale === 'en' ? 'Northern Lights' : '極光夜旅'));
     expect(html).toContain(`role="status">${useI18nStore.getState().t('shop.emptyCollection')}</p>`);
-    expect(html).toContain(locale === 'en' ? '0 products' : '0 項商品');
+    expect(html).toContain(locale === 'en' ? 'Owned 0 / 0' : '已擁有 0 / 0');
     expect(html).toContain(locale === 'en' ? 'Northern Lights' : '極光夜旅');
     expect(html).not.toContain('shop.series.');
   });
@@ -270,15 +280,50 @@ describe('shop groups, type chips and inventory', () => {
     expect(render('?type=cardBack')).toMatch(
       /aria-label="Aurora weave \(equipped\)"[^>]*>.*?Equipped<\/button>/);
     expect(render('?type=tableBackground')).toContain('aria-label="Equip Quiet lagoon"');
+    expect(render('?type=tableBackground')).toContain('aria-label="Quiet lagoon details"');
     expect(render('?type=stickerPack')).toMatch(/aria-label="Table talk \(owned\)"[^>]*>Owned<\/button>/);
   });
 
-  it('shows the price or the ownership state on each card', () => {
-    state.account = { ...state.account, ownedShopItems: ['card-back-aurora'] };
+  it('shows the price, an equip button, or the equipped state on each card', () => {
+    state.account = { ...state.account, ownedShopItems: ['card-back-aurora', 'card-back-tide'], cardBackStyle: 'card-back-tide' };
     const html = render('?type=cardBack');
-    expect(html).toMatch(/data-state="owned"[^>]*>Owned<\/button>/);
-    expect(html.match(/data-state="buy"/g)).toHaveLength(14);
+    // An owned, unequipped card gets an equip button; the card itself still opens the details.
+    expect(html).toMatch(/aria-label="Equip Aurora weave"[^>]*>Equip<\/button>/);
+    expect(html).toContain('aria-label="Aurora weave details"');
+    expect(html.match(/data-state="details"/g)).toHaveLength(1);
+    expect(html).toMatch(/data-equipped="true"/);
+    expect(html.match(/data-state="buy"/g)).toHaveLength(13);
     expect(html).toContain('120</button>');
+  });
+
+  it('shows no product description or purchase boilerplate on cards', () => {
+    const html = render('?type=cardBack');
+    expect(html).not.toContain('Northern lights woven around a silver diamond.');
+    expect(html).not.toContain('Permanent ownership');
+  });
+
+  it('counts each collection in the selected tab and pins the tab when choosing one', () => {
+    const view = resolveShopView(new URLSearchParams('group=cards'), SHOP_ITEMS);
+    const counts = shopSeriesCounts(SHOP_ITEMS, view);
+    expect(counts.all).toBe(46);
+    expect(counts.aurora).toBe(3);
+    expect(counts.starfleet).toBe(3);
+    expect(counts.other).toBe(1);
+    expect(SHOP_SERIES.reduce((sum, series) => sum + counts[series], counts.other)).toBe(counts.all);
+    const typed = shopSeriesCounts(SHOP_ITEMS, resolveShopView(new URLSearchParams('type=cardBack'), SHOP_ITEMS));
+    expect([typed.all, typed.aurora, typed.other]).toEqual([15, 1, 0]);
+    // A collection without products in the tab keeps the tab instead of jumping to another group.
+    const next = shopSeriesQuery(new URLSearchParams('group=cards'), 'all', 'tide', 'cards');
+    expect([next.get('group'), next.get('series')]).toEqual(['cards', 'tide']);
+    const legacy = shopSeriesQuery(new URLSearchParams(), 'all', 'ears', 'personal');
+    expect([legacy.get('type'), legacy.get('series')]).toEqual(['avatarBorder', 'ears']);
+  });
+
+  it('shows the border row only for the avatar border type and keeps legacy borders out of the series filter', () => {
+    expect(render('?type=avatarBorder')).toContain('aria-label="Border style"');
+    expect(render('?type=cardBack')).not.toContain('aria-label="Border style"');
+    expect(render()).not.toContain('aria-label="Border style"');
+    expect(render('?series=ears')).not.toMatch(/class="[^"]*banner/);
   });
 
   it('explains visibility once beside the selected category heading, not on product cards', () => {

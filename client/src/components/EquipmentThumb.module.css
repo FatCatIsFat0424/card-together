@@ -1,0 +1,3 @@
+.image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* The built-in look has nothing to draw, so the tile says so instead of staying blank. */
+.empty { border: 1px dashed var(--border-color); background: none; color: var(--text-muted); font-size: var(--text-xs); }

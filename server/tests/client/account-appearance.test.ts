@@ -63,7 +63,7 @@ import { cardBackStyle, seatBackgroundStyle, tableBackgroundStyle } from '../../
 import { shopArtworkUrl } from '../../../client/src/shop-art';
 import { Nameplate } from '../../../client/src/components/Nameplate';
 import { PlayerLink } from '../../../client/src/components/PlayerLink';
-import { EquipmentSettings, equipmentChoices } from '../../../client/src/components/EquipmentSettings';
+import { EQUIPMENT_GROUPS, EquipmentSettings, equipmentSlots } from '../../../client/src/components/EquipmentSettings';
 import { AccountProfilePreview } from '../../../client/src/components/AccountProfilePreview';
 import borderStyles from '../../../client/src/components/AvatarBorder.module.css';
 import { GameShell } from '../../../client/src/games/GameShell';
@@ -241,28 +241,37 @@ describe('personal account appearance', () => {
     expect(renderRoom().replaceAll('&#x27;', "'")).toContain(shopArtworkUrl('seat-tide'));
   });
 
-  it('should show only owned equipment and keep uploaded images available', () => {
+  it('should group every slot, offer only owned products, and keep uploaded images available', () => {
     useI18nStore.getState().setLocale('en');
     const account = {
       ...state.account, ownedShopItems: ['card-back-aurora', 'table-tide', 'nameplate-sakura'],
       ownedAchievementNameplates: ['nameplate-table-traveler'], cardBackStyle: 'card-back-aurora', chipStyle: 'chips-tide',
+      ownedAvatarBorders: ['copper'], avatarBorder: 'copper', tableBackground: 'media-table', seatBackground: 'media-seat',
     } as AccountProfile;
-    const choices = equipmentChoices(account);
-    expect(choices.map((choice) => choice.field).sort()).toEqual(Object.keys(EQUIPMENT_SLOTS).sort());
-    const values = Object.fromEntries(choices.map((choice) => [choice.field, choice.options.map((option) => option.value)]));
-    expect(values.cardBackStyle).toEqual(['', 'card-back-aurora']);
-    expect(values.tableBackgroundStyle).toEqual(['', 'table-tide']);
-    expect(values.nameplate).toEqual(['', 'nameplate-table-traveler', 'nameplate-sakura']);
-    expect(values.seatBackgroundStyle).toEqual(['']);
+    const slots = equipmentSlots(account);
+    const targets = EQUIPMENT_GROUPS.flatMap((group) => group.slots);
+    expect(slots.map((slot) => slot.target)).toEqual(targets);
+    expect([...targets].sort()).toEqual([...Object.keys(EQUIPMENT_SLOTS), 'avatarBorder'].sort());
+    expect(EQUIPMENT_GROUPS.map((group) => [group.id, group.visibility])).toEqual([
+      ['personal', 'public'], ['table', null], ['cards', 'private'],
+    ]);
+    const slot = (target: string) => slots.find((entry) => entry.target === target)!;
+    expect(slot('cardBackStyle').owned).toEqual(['card-back-aurora']);
+    expect(slot('cardBackStyle').current).toEqual({ kind: 'item', id: 'card-back-aurora' });
+    expect(slot('nameplate').owned).toEqual(['nameplate-table-traveler', 'nameplate-sakura']);
+    expect(slot('avatarBorder')).toMatchObject({ owned: ['copper'], current: { kind: 'item', id: 'copper' } });
+    // An uploaded image stands in while no product is equipped; otherwise the built-in look does.
+    expect(slot('tableBackgroundStyle').current).toEqual({ kind: 'custom' });
+    expect(slot('seatBackgroundStyle')).toMatchObject({ current: { kind: 'custom' }, hasUpload: true, owned: [] });
+    expect(slot('soundPack').current).toEqual({ kind: 'default' });
     // An equipped but unowned value is shown as unequipped instead of an invalid selection.
-    expect(choices.find((choice) => choice.field === 'chipStyle')?.value).toBe('');
-    expect(choices.find((choice) => choice.field === 'cardBackStyle')?.value).toBe('card-back-aurora');
-    const empty = Object.fromEntries(choices.map((choice) => [choice.field, choice.options[0].label]));
-    expect(empty).toMatchObject({ cardBackStyle: 'shop.useUpload', nameplate: 'shop.noNameplate', soundPack: 'shop.useDefault' });
-    expect(Object.values(empty).filter((label) => label === 'shop.useDefault')).toHaveLength(6);
+    expect(slot('chipStyle').current).toEqual({ kind: 'default' });
+    expect(slot('tableBackgroundStyle').more).toBe(14);
     const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(EquipmentSettings, { account })));
-    expect(html).toContain('value="card-back-aurora"');
-    expect(html.match(/role="combobox"/g)).toHaveLength(choices.length);
+    expect(html.match(/data-slot=/g)).toHaveLength(targets.length);
+    expect(html).toContain('Custom · 100%');
+    expect(html).toContain('Everyone sees these');
+    expect(html).toContain('Only you see these');
     expect(html).toContain('href="/shop"');
   });
 

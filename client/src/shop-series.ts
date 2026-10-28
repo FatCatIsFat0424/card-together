@@ -47,3 +47,8 @@ export function shopSeriesEmblem(series: ShopSeries, reducedMotion = false): str
   const emblem = emblems[series];
   return emblem ? `${emblem}${reducedMotion ? '#still' : ''}` : null;
 }
+
+/** Animated collections are the ones with an emblem; their art moves on equipped items. */
+export function isAnimatedSeries(series: ShopSeries): boolean {
+  return shopSeriesEmblem(series) !== null;
+}

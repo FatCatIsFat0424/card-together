@@ -136,7 +136,7 @@ describe.each(REPOSITORY_ADAPTERS)('permanent shop item transactions ($name)', (
     await repository.purchaseShopItem(account.id, 'card-back-tide', 5);
     await repository.updateProfile(account.id, { cardBackStyle: 'card-back-tide' }, 6);
     const again = await repository.purchaseShopItem(account.id, 'card-back-aurora', 7, true);
-    expect(again).toMatchObject({ cardBackStyle: 'card-back-aurora', coins: pack!.coins - 120, coinRevision: 4 });
+    expect(again).toMatchObject({ cardBackStyle: 'card-back-aurora', coins: (pack?.coins ?? 0) - 120, coinRevision: 4 });
   });
 
   it('leaves the equipment untouched when an equipping purchase fails', async () => {

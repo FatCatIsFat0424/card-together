@@ -1,13 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@shared/constants';
-import type { AccountProfile, AvatarBorderId, MatchHistory } from '@shared/types';
+import type { AccountProfile, MatchHistory } from '@shared/types';
 import { apiRequest } from '../api';
 import { resizeImage } from '../image-resize';
 import { uploadImage } from '../media';
@@ -17,7 +13,6 @@ import { useI18nStore } from '../stores/i18n-store';
 import { MatchHistoryList } from '../components/MatchHistoryList';
 import { EquipmentSettings } from '../components/EquipmentSettings';
 import { EmojiLibrary } from '../components/EmojiLibrary';
-import { OpacitySlider } from '../components/OpacitySlider';
 import { AccountProfilePreview } from '../components/AccountProfilePreview';
 import { AppCheckbox } from '../components/AppCheckbox';
 import { AudioSettings } from '../components/AudioSettings';
@@ -27,9 +22,9 @@ import { Tabs, tabElementId } from '../components/Tabs';
 import styles from './AccountPages.module.css';
 import editorStyles from './AccountPage.module.css';
 
-type MediaField = 'avatarImage' | 'seatBackground' | 'tableBackground' | 'cardBack';
+type MediaField = 'avatarImage';
 type OpacityField = 'tableBackgroundOpacity' | 'cardBackOpacity';
-type SettingField = MediaField | OpacityField | 'matchesPublic';
+type SettingField = MediaField | 'matchesPublic';
 
 const ACCOUNT_TABS = ['profile', 'history', 'emoji', 'sound', 'password'] as const;
 /** Phone and narrow layouts start the long profile sections folded. */
@@ -38,15 +33,9 @@ type AccountTab = typeof ACCOUNT_TABS[number];
 
 const RESIZE = {
   avatarImage: { size: 256, square: true, quality: 0.9, fallbackType: 'image/png' },
-  seatBackground: { size: 1280, square: false, quality: 0.85, fallbackType: 'image/jpeg' },
-  tableBackground: { size: 1920, square: false, quality: 0.85, fallbackType: 'image/jpeg' },
-  // JPEG fallback keeps a 512-pixel photo well under the 512 KiB card back limit.
-  cardBack: { size: 512, square: false, quality: 0.85, fallbackType: 'image/jpeg' },
 } as const;
 
-const PURPOSE: Record<MediaField, MediaPurpose> = {
-  avatarImage: 'avatar', seatBackground: 'background', tableBackground: 'background', cardBack: 'cardBack',
-};
+const PURPOSE: Record<MediaField, MediaPurpose> = { avatarImage: 'avatar' };
 
 export function AccountPage(): ReactNode {
   const account = useAccountStore((state) => state.account);
@@ -57,8 +46,6 @@ export function AccountPage(): ReactNode {
   const [activeTab, setActiveTab] = useState<AccountTab>('profile');
   const [nickname, setNickname] = useState(account?.nickname ?? '');
   const [color, setColor] = useState(account?.color ?? '#4a9eff');
-  const [avatarBorder, setAvatarBorder] = useState<AvatarBorderId | null>(account?.avatarBorder ?? null);
-  const [borderDirty, setBorderDirty] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -69,13 +56,10 @@ export function AccountPage(): ReactNode {
   const [securityBusy, setSecurityBusy] = useState(false);
   const [history, setHistory] = useState<MatchHistory | null>(null);
   const [historyError, setHistoryError] = useState('');
-  const [mediaBusy, setMediaBusy] = useState<MediaField | 'matchesPublic' | null>(null);
+  const [mediaBusy, setMediaBusy] = useState<SettingField | null>(null);
   const [mediaError, setMediaError] = useState<{ field: SettingField; message: string } | null>(null);
   const [opacityDraft, setOpacityDraft] = useState<Partial<Record<OpacityField, number>>>({});
   const avatarInput = useRef<HTMLInputElement>(null);
-  const backgroundInput = useRef<HTMLInputElement>(null);
-  const seatBackgroundInput = useRef<HTMLInputElement>(null);
-  const cardBackInput = useRef<HTMLInputElement>(null);
   const accountId = account?.id;
 
   useEffect(() => {
@@ -90,7 +74,6 @@ export function AccountPage(): ReactNode {
   }, [accountId]);
 
   if (!account) return null;
-  const selectedBorder = borderDirty ? avatarBorder : account.avatarBorder ?? null;
 
   /** Media and visibility settings save immediately, independent of the profile form. */
   const patchSetting = async (
@@ -123,26 +106,6 @@ export function AccountPage(): ReactNode {
   const mediaFeedback = (field: SettingField): ReactNode =>
     mediaError?.field === field && <p role="alert" className={styles.error}>{mediaError.message}</p>;
 
-  /** Not marked busy: uploads stay usable while an opacity change saves in the background. */
-  const saveOpacity = async (field: OpacityField, value: number): Promise<void> => {
-    if (value !== account[field]) {
-      setMediaError(null);
-      const result = await apiRequest<{ account: AccountProfile }>('/api/auth/profile', 'PATCH', {
-        [field]: value,
-      });
-      if (result.success) setAccount(result.account);
-      else setMediaError({ field, message: result.error });
-    }
-    setOpacityDraft((draft) => (draft[field] === value ? { ...draft, [field]: undefined } : draft));
-  };
-
-  const opacitySlider = (field: OpacityField, label: string, enabled: boolean): ReactNode => (
-    <OpacitySlider id={`profile-${field}`} label={label} value={opacityDraft[field] ?? account[field]}
-      disabled={!enabled}
-      onChange={(value) => setOpacityDraft((draft) => ({ ...draft, [field]: value }))}
-      onCommit={(value) => void saveOpacity(field, value)} />
-  );
-
   const appearance = {
     ...account,
     tableBackgroundOpacity: opacityDraft.tableBackgroundOpacity ?? account.tableBackgroundOpacity,
@@ -155,13 +118,12 @@ export function AccountPage(): ReactNode {
     setSaved(false);
     setProfileBusy(true);
     const result = await apiRequest<{ account: AccountProfile }>('/api/auth/profile', 'PATCH', {
-      nickname: nickname.trim(), color, avatarBorder: selectedBorder,
+      nickname: nickname.trim(), color,
     });
     setProfileBusy(false);
     if (result.success) {
       setAccount(result.account);
       setNickname(result.account.nickname);
-      setBorderDirty(false);
       setSaved(true);
     } else setProfileError(result.error);
   };
@@ -204,10 +166,10 @@ export function AccountPage(): ReactNode {
           {compact ? <details className={editorStyles.fold}>
             <summary>{t('profile.livePreview')}</summary>
             <div className={editorStyles.foldBody}>
-              <AccountProfilePreview account={{ ...account, avatarBorder: selectedBorder }} nickname={nickname}
+              <AccountProfilePreview account={account} nickname={nickname}
                 color={color} appearance={appearance} />
             </div>
-          </details> : <AccountProfilePreview account={{ ...account, avatarBorder: selectedBorder }} nickname={nickname}
+          </details> : <AccountProfilePreview account={account} nickname={nickname}
             color={color} appearance={appearance} />}
           <div className={editorStyles.controls}>
             <form className={`${styles.form} ${editorStyles.profileForm}`} onSubmit={(event) => void saveProfile(event)}>
@@ -243,21 +205,7 @@ export function AccountPage(): ReactNode {
                 </div>
                 {mediaFeedback('avatarImage')}
               </fieldset>
-              <div className={editorStyles.borderRow}>
-                <FormControl fullWidth size="small" className={editorStyles.selectField}>
-                  <InputLabel id="profile-border-label" shrink>{t('shop.catalog')}</InputLabel>
-                  <Select id="profile-border" labelId="profile-border-label" label={t('shop.catalog')}
-                    value={selectedBorder ?? ''} displayEmpty
-                    MenuProps={{ disableScrollLock: true, slotProps: { paper: { className: editorStyles.selectMenu } } }}
-                    onChange={(event) => {
-                      const border = account.ownedAvatarBorders?.find((id) => id === event.target.value) ?? null;
-                      setAvatarBorder(border); setBorderDirty(true); setSaved(false);
-                    }}>
-                    <MenuItem value="">{t('shop.original')}</MenuItem>
-                    {(account.ownedAvatarBorders ?? []).map((id) =>
-                      <MenuItem key={id} value={id}>{t(`shop.item.${id}.name`)}</MenuItem>)}
-                  </Select>
-                </FormControl>
+              <div className={editorStyles.saveRow}>
                 <Button type="submit" variant="primary" disabled={profileBusy || !nickname.trim()}>
                   {profileBusy ? t('common.loading') : t('common.save')}
                 </Button>
@@ -267,76 +215,9 @@ export function AccountPage(): ReactNode {
             </form>
             <details className={editorStyles.fold} open={!compact}>
               <summary>{t('shop.equipment')}</summary>
-              <div className={editorStyles.foldBody}><EquipmentSettings key={account.id} account={account} /></div>
-            </details>
-            <details className={editorStyles.fold} open={!compact}>
-              <summary>{t('profile.appearance')}</summary>
               <div className={editorStyles.foldBody}>
-            <section className={editorStyles.appearance} aria-labelledby="profile-appearance-heading">
-              <h2 id="profile-appearance-heading">{t('profile.appearance')}</h2>
-              <p className={styles.hint}>{t('profile.appearanceAutoSave')}</p>
-              <div className={editorStyles.imageSetting}>
-                <div className={editorStyles.imageHeading}>
-                  <h3>{t('profile.seatBackground')}</h3>
-                  <div className={editorStyles.compactActions}>
-                    <input ref={seatBackgroundInput} type="file" accept="image/*" hidden
-                      onChange={chooseImage('seatBackground')} />
-                    <Button type="button" disabled={mediaBusy !== null}
-                      onClick={() => seatBackgroundInput.current?.click()}>
-                      {mediaBusy === 'seatBackground' ? t('profile.uploading') : t('profile.uploadBackground')}
-                    </Button>
-                    {account.seatBackground && <Button type="button"
-                      disabled={mediaBusy !== null}
-                      onClick={() => void patchSetting('seatBackground', async () => null)}>
-                      {t('profile.removeBackground')}</Button>}
-                  </div>
-                </div>
-                <p className={styles.hint}>{t('profile.seatBackgroundHelp')}</p>
-                {mediaFeedback('seatBackground')}
-              </div>
-              <div className={editorStyles.imageSetting}>
-                <div className={editorStyles.imageHeading}>
-                  <h3>{t('profile.background')}</h3>
-                  <div className={editorStyles.compactActions}>
-                    <input ref={backgroundInput} type="file" accept="image/*" hidden
-                      onChange={chooseImage('tableBackground')} />
-                    <Button type="button" disabled={mediaBusy !== null}
-                      onClick={() => backgroundInput.current?.click()}>
-                      {mediaBusy === 'tableBackground' ? t('profile.uploading') : t('profile.uploadBackground')}
-                    </Button>
-                    {account.tableBackground && <Button type="button"
-                      disabled={mediaBusy !== null}
-                      onClick={() => void patchSetting('tableBackground', async () => null)}>
-                      {t('profile.removeBackground')}</Button>}
-                  </div>
-                </div>
-                <p className={styles.hint}>{t('profile.backgroundHelp')}</p>
-                {mediaFeedback('tableBackground')}
-                {opacitySlider('tableBackgroundOpacity', t('profile.backgroundOpacity'), !!(account.tableBackgroundStyle || account.tableBackground))}
-                {mediaFeedback('tableBackgroundOpacity')}
-              </div>
-              <div className={editorStyles.imageSetting}>
-                <div className={editorStyles.imageHeading}>
-                  <h3>{t('profile.cardBack')}</h3>
-                  <div className={editorStyles.compactActions}>
-                    <input ref={cardBackInput} type="file" accept="image/*" hidden
-                      onChange={chooseImage('cardBack')} />
-                    <Button type="button" disabled={mediaBusy !== null}
-                      onClick={() => cardBackInput.current?.click()}>
-                      {mediaBusy === 'cardBack' ? t('profile.uploading') : t('profile.uploadCardBack')}
-                    </Button>
-                    {account.cardBack && <Button type="button"
-                      disabled={mediaBusy !== null}
-                      onClick={() => void patchSetting('cardBack', async () => null)}>
-                      {t('profile.removeCardBack')}</Button>}
-                  </div>
-                </div>
-                <p className={styles.hint}>{t('profile.cardBackHelp')}</p>
-                {mediaFeedback('cardBack')}
-                {opacitySlider('cardBackOpacity', t('profile.cardBackOpacity'), !!(account.cardBackStyle || account.cardBack))}
-                {mediaFeedback('cardBackOpacity')}
-              </div>
-            </section>
+                <EquipmentSettings key={account.id} account={account} opacityDraft={opacityDraft}
+                  onOpacityDraft={(field, value) => setOpacityDraft((draft) => ({ ...draft, [field]: value }))} />
               </div>
             </details>
           </div>
