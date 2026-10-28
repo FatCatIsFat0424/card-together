@@ -48,12 +48,11 @@ describe('desktop shell', () => {
 
   it('shows every destination with a 12px label and highlights the current page', () => {
     const html = shell('/shop');
-    for (const label of ['大廳', '好友', '商店', '成就', '戰績', '我']) expect(html).toContain(`>${label}</span>`);
+    for (const label of ['大廳', '好友', '商店', '成就', '戰績']) expect(html).toContain(`>${label}</span>`);
     expect(html).toContain('>訊息</span>');
     expect(link(html, '商店')).toContain('aria-current="page"');
     expect(link(html, '商店')).toContain('href="/shop"');
-    for (const other of ['大廳', '好友', '成就', '我']) expect(link(html, other)).not.toContain('aria-current');
-    expect(link(html, '我')).toContain('href="/account"');
+    for (const other of ['大廳', '好友', '成就']) expect(link(html, other)).not.toContain('aria-current');
     expect(link(html, '戰績')).toContain('href="/players/alice"');
   });
 
@@ -71,30 +70,29 @@ describe('desktop shell', () => {
     expect(html).toContain('aria-hidden="true"></span>');
   });
 
-  it('keeps notifications, music, gold coins and the account menu in the top bar', () => {
-    const html = shell('/shop');
-    expect(html).toContain('data-popover-trigger="notifications"');
-    expect(html).toContain('data-popover-trigger="music"');
-    expect(html).toContain('aria-label="0 枚金幣"');
-    expect(html).toContain('aria-label="帳號選單"');
-    expect(html).toContain('data-popover-trigger="menu"');
-    expect(html).not.toContain('role="tablist"');
+  it('has no top bar: coins, notifications, music and the account menu sit under the rail divider', () => {
+    for (const path of ['/', '/shop', '/game/ABC123']) {
+      const html = shell(path);
+      expect(html).not.toContain('<header');
+      expect(html).toContain('data-desktop-shell');
+      expect(html).not.toContain('role="tablist"');
+      const footer = html.slice(html.indexOf('data-popover="notifications"'));
+      expect(footer).toContain('data-popover-trigger="music"');
+      expect(footer).toContain('data-popover-trigger="menu"');
+      expect(footer).toContain('aria-label="帳號選單"');
+      expect(html.indexOf('aria-label="0 枚金幣"')).toBeLessThan(html.indexOf('data-popover="notifications"'));
+      // The avatar replaces the old "Me" item.
+      expect(link(html, '我')).toBe('');
+    }
   });
 
-  it('drops the top bar on table pages and moves its controls to the bottom of the rail', () => {
-    const html = shell('/game/ABC123', { tableRoute: true, tableHref: '/game/ABC123' });
-    expect(html).not.toContain('<header');
-    expect(html).toContain('data-desktop-shell="table"');
-    const footer = html.slice(html.indexOf('data-popover="notifications"'));
-    expect(footer).toContain('data-popover-trigger="music"');
-    expect(footer).toContain('aria-label="帳號選單"');
-    // The account menu replaces the bottom "Me" item, and the coins move into that menu.
-    expect(link(html, '我')).toBe('');
-    expect(html).not.toContain('枚金幣');
+  it('marks the avatar button on the account page only', () => {
+    expect(shell('/account')).toContain('data-current="true"');
+    expect(shell('/shop')).not.toContain('data-current');
   });
 
   it('leads the rail with the table item while the viewer is in a room or game', () => {
-    const atTable = shell('/game/ABC123', { tableRoute: true, tableHref: '/game/ABC123' });
+    const atTable = shell('/game/ABC123', { tableHref: '/game/ABC123' });
     expect(link(atTable, '牌桌')).toContain('href="/game/ABC123"');
     expect(link(atTable, '牌桌')).toContain('aria-current="page"');
     expect(atTable.indexOf('aria-label="牌桌"')).toBeLessThan(atTable.indexOf('aria-label="大廳"'));
@@ -104,28 +102,25 @@ describe('desktop shell', () => {
     expect(link(away, '牌桌')).not.toContain('aria-current');
     expect(link(shell('/shop'), '牌桌')).toBe('');
   });
-
-  it('shows the category tabs on the lobby only, for categories that have games', () => {
-    const html = shell('/');
-    expect(html).toContain('role="tablist"');
-    expect(html.match(/role="tab"/g)).toHaveLength(1);
-    expect(html).toContain('>撲克牌</button>');
-    expect(html).toContain('aria-selected="true"');
-    expect(html).not.toContain('骰子');
-    expect(shell('/friends')).not.toContain('role="tablist"');
-  });
 });
 
 describe('page header', () => {
-  it('renders the title, tabs and both summary forms in the page outside the desktop top bar', () => {
+  it('renders the title, tabs, both summary forms and the actions as one row in the page', () => {
     const html = renderToStaticMarkup(createElement(PageHeader, {
       title: 'Awards', icon: 'trophy', tabs: createElement('div', { role: 'tablist' }),
-      summary: 'Completed 3/23', compactSummary: '3/23',
+      summary: 'Completed 3/23', compactSummary: '3/23', actions: createElement('button', null, 'Refresh'),
     }));
     expect(html).toMatch(/^<header[^>]*><h1[^>]*>.*Awards<\/span><\/h1>/);
     expect(html).toContain('role="tablist"');
     expect(html).toContain('>Completed 3/23</span>');
     expect(html).toContain('aria-hidden="true">3/23</span>');
+    expect(html).toContain('<button>Refresh</button>');
+  });
+
+  it('keeps a hidden title as a heading for screen readers', () => {
+    const html = renderToStaticMarkup(createElement(PageHeader, { title: 'Lobby', titleHidden: true }));
+    expect(html).toMatch(/<h1 class="[^"]*hidden[^"]*">/);
+    expect(html).toContain('>Lobby</span>');
   });
 });
 

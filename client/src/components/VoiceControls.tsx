@@ -1,5 +1,5 @@
 import { createContext, lazy, Suspense, useContext, useLayoutEffect, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import Popover from '@mui/material/Popover';
 import { useLocation } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { useAccountStore } from '../stores/account-store';
 import { useRoomStore } from '../stores/room-store';
 import { useVoiceStore } from '../stores/voice-store';
 import { useI18nStore } from '../stores/i18n-store';
+import { ActionButton } from './ActionButton';
 import { IconButton } from './IconButton';
 import styles from './VoiceControls.module.css';
 
@@ -63,15 +64,24 @@ export function VoiceDockPanel({ className }: { readonly className?: string }): 
   return <div className={className} ref={controls?.setDockSlot} />;
 }
 
-export function VoiceButton({ className = '' }: { readonly className?: string }): ReactNode {
+export function VoiceButton({ className = '', labelled = false }: {
+  readonly className?: string;
+  /** A labelled page action whose text collapses in a narrow container, instead of a bare icon. */
+  readonly labelled?: boolean;
+}): ReactNode {
   const controls = useContext(VoiceControlsContext);
   const { t } = useI18nStore();
   const status = useVoiceStore((state) => state.status);
   const accountId = useAccountStore((state) => state.account?.id);
   const roomCode = useRoomStore((state) => state.currentRoomCode);
   if (!controls || !accountId || !roomCode) return null;
+  const onClick = (event: MouseEvent<HTMLButtonElement>): void => controls.toggle(event.currentTarget);
+  if (labelled) return <ActionButton className={className} icon="microphone" text={t('room.action.voice')}
+    label={t('topbar.voice')} collapsible data-voice-control badge={status === 'joined' ? 'dot' : undefined}
+    badgeTone="success" aria-haspopup="dialog" aria-expanded={Boolean(controls.anchor)}
+    aria-controls="table-voice-controls" onClick={onClick} />;
   return <IconButton className={className} icon="microphone" label={t('topbar.voice')} data-voice-control
     badge={status === 'joined' ? 'dot' : undefined} badgeTone="success"
     aria-haspopup="dialog" aria-expanded={Boolean(controls.anchor)} aria-controls="table-voice-controls"
-    onClick={(event) => controls.toggle(event.currentTarget)} />;
+    onClick={onClick} />;
 }

@@ -121,6 +121,28 @@ describe('bot player interface', () => {
     expect(visitorHtml.match(/>Empty</g)).toHaveLength(2);
   });
 
+  it('shows every room action as a labelled button, with no overflow menu', () => {
+    const header = (html: string): string => html.slice(html.indexOf('<header'), html.indexOf('</header>'));
+    const host = header(render(createElement(RoomPage)));
+    expect(host).not.toContain('aria-haspopup="menu"');
+    for (const text of ['>Rules<', '>Chat<', '>Watch a replay<', '>Leave Room<']) expect(host).toContain(text);
+    // Rules and chat may collapse to icons (voice and invite do too); replay and leave always keep their text.
+    expect(buttonTag(host, 'aria-label="Game rules"')).toContain('collapsible');
+    expect(buttonTag(host, 'aria-label="Leave Room"')).not.toContain('collapsible');
+    expect(buttonTag(host, 'title="Watch a replay"')).not.toContain('collapsible');
+    state.playerId = 'visitor';
+    const guest = header(render(createElement(RoomPage)));
+    expect(guest).toContain('>Leave Room<');
+    expect(guest).not.toContain('Watch a replay');
+  });
+
+  it('disables the shared replay button outside waiting rooms but keeps leaving available', () => {
+    state.room = { ...room(), status: 'playing' };
+    const html = render(createElement(RoomPage));
+    expect(buttonTag(html, 'title="Watch a replay"')).toContain('disabled=""');
+    expect(buttonTag(html, 'aria-label="Leave Room"')).not.toContain('disabled');
+  });
+
   it('keeps rules access available to hosts, guests, and disconnected spectators', () => {
     for (const gameType of GAME_TYPES) {
       state.room = { ...room(), gameType };

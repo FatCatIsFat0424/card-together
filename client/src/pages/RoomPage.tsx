@@ -35,6 +35,7 @@ import { AddSeatSlot, RoomSeat, SeatDragPreview } from '../components/RoomSeat';
 import type { SeatDropView } from '../components/RoomSeat';
 import { PlayerMoveMenu } from '../components/PlayerMoveMenu';
 import { Button } from '../components/Button';
+import { ActionButton } from '../components/ActionButton';
 import { IconButton } from '../components/IconButton';
 import { useConnectionReady } from '../games/use-connection-ready';
 import { AppIcon } from '../components/AppIcon';
@@ -104,7 +105,6 @@ export function RoomPage(): ReactNode {
   const [moved, setMoved] = useState('');
   const [replayPickerOpen, setReplayPickerOpen] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState<HTMLElement | null>(null);
-  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [spectatorAnchor, setSpectatorAnchor] = useState<HTMLElement | null>(null);
   const [readyNotice, setReadyNotice] = useState<{ id: number; message: string } | null>(null);
   const messageCount = useChatStore((state) => state.messages.length);
@@ -459,21 +459,17 @@ export function RoomPage(): ReactNode {
         </button>
         <span className={styles.srOnly} role="status">{copied ? t('room.copied') : ''}</span>
         <span className={styles.grow} />
-        <IconButton icon="rules" label={t('rules.open')} aria-haspopup="dialog" onClick={() => setRulesOpen(true)} />
-        <VoiceButton />
-        <IconButton icon="chat" label={unread > 0 ? `${t('chat.title')} ${t('room.unread', { n: String(unread) })}` : t('chat.title')}
-          ref={chatToggleRef} badge={unread} aria-expanded={chatVisible} aria-controls="room-chat" onClick={toggleChat} />
-        <InviteFriends />
-        <IconButton icon="more" label={t('room.more')} aria-haspopup="menu" aria-expanded={Boolean(menuAnchor)}
-          onClick={(event) => setMenuAnchor(event.currentTarget)} />
-        <Popover open={Boolean(menuAnchor)} anchorEl={menuAnchor} onClose={() => setMenuAnchor(null)}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-          slotProps={{ paper: { className: styles.menu, role: 'menu', 'aria-label': t('room.more') } }}>
-          {isHost && <Button variant="text" role="menuitem" onClick={() => { setMenuAnchor(null); setReplayPickerOpen(true); }}
-            data-pending-disabled={pendingDisabled(!waiting)} disabled={blocked || !waiting}>{t('replay.sharedOpen')}</Button>}
-          <Button variant="danger-text" role="menuitem" onClick={() => { setMenuAnchor(null); leave(); }}
-            disabled={blocked} data-pending-disabled={pendingDisabled()}>{t('room.leave')}</Button>
-        </Popover>
+        <ActionButton icon="rules" text={t('room.action.rules')} label={t('rules.open')} collapsible
+          aria-haspopup="dialog" onClick={() => setRulesOpen(true)} />
+        <VoiceButton labelled />
+        <ActionButton icon="chat" text={t('chat.title')} collapsible ref={chatToggleRef} badge={unread}
+          label={unread > 0 ? `${t('chat.title')} ${t('room.unread', { n: String(unread) })}` : t('chat.title')}
+          aria-expanded={chatVisible} aria-controls="room-chat" onClick={toggleChat} />
+        <InviteFriends labelled />
+        {isHost && <ActionButton icon="replay" text={t('replay.sharedOpen')} onClick={() => setReplayPickerOpen(true)}
+          data-pending-disabled={pendingDisabled(!waiting)} disabled={blocked || !waiting} />}
+        <ActionButton icon="logout" text={t('room.leave')} danger onClick={leave} disabled={blocked}
+          data-pending-disabled={pendingDisabled()} />
       </header>
       <div ref={tableAreaRef} className={`${styles.tableArea} ${dragging ? styles.dragging : ''} ${tableStyle ? styles.customTable : ''} ${tableArt ? styles.layeredTable : ''}`} style={tableStyle}
         aria-busy={busy}

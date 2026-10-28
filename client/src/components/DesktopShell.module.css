@@ -1,27 +1,19 @@
-/* ─── Desktop top bar: category tabs on the left, quick actions on the right ─── */
-/* Panels reuse the popover classes of the classic bar (TopBar.module.css). */
+/* ─── Desktop rail footer: coin balance, bell, music and the account menu ─── */
+/* Panels reuse the popover classes of the classic bar (TopBar.module.css) and open beside the rail. */
 
-.bar {
-  grid-column: 2;
-  grid-row: 1;
-  z-index: 90;
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  min-width: 0;
-  height: var(--topbar-height);
-  padding: 0 var(--page-inset);
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--separator);
-}
-
-.lead { flex: 1; min-width: 0; }
-.tabs { min-width: 0; overflow-x: auto; scrollbar-width: none; margin-left: calc(-1 * var(--space-1)); }
-
-.actions { display: flex; align-items: center; gap: var(--space-1); flex-shrink: 0; }
-.actions .panel { right: var(--page-inset); }
 .playing.playing { color: var(--color-primary); }
-.actions .coins { margin: 0 var(--space-1); }
+
+/* Compact balance: the coin above the number, 12px, so six digits fit the rail. */
+.coins { padding-inline: 0; }
+.coins > span {
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+  padding: 0;
+  font-size: var(--text-xs);
+  line-height: 1.25;
+}
+.coins > span > svg { font-size: var(--text-md); }
 
 /* A 32px avatar inside a 40px hit area. */
 .avatarButton {
@@ -31,7 +23,8 @@
   height: var(--hit-size);
   border-radius: var(--radius-pill);
 }
-.avatarButton[aria-expanded='true'] { background: var(--surface-2); }
+.avatarButton[aria-expanded='true'],
+.avatarButton[data-current] { background: var(--color-primary-soft); }
 
 .panel.menu { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-2); width: 260px; padding: var(--space-2); }
 .menuName { padding: var(--space-1) var(--space-2) 0; overflow: hidden; font-size: var(--text-md); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
@@ -49,11 +42,7 @@
 .menuPrefs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: 0 var(--space-2); }
 .menuSignOut { justify-content: flex-start; width: 100%; height: var(--hit-size); border-top: 1px solid var(--separator); border-radius: 0; }
 
-/* Page headers render into the bar's left half; the lobby tabs keep their own place. */
-.lead { display: flex; align-items: center; height: 100%; }
-.slot { display: contents; }
-
-/* Table pages: the panels open beside the rail, aligned with its bottom controls. */
+/* The panels open beside the rail, aligned with its bottom controls. */
 .panel.railPanel {
   top: auto;
   right: auto;

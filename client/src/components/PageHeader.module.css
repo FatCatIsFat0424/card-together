@@ -1,5 +1,5 @@
-/* Slim page header: title, tabs and a short summary in one 40px row that sticks to the top of the page. Pages
-   start it at their top edge; it reaches across their side insets. */
+/* Slim page header: title, tabs, a short summary and actions in one 40px row that sticks to the top of the page.
+   Pages start it at their top edge; it reaches across their side insets. */
 .header {
   position: sticky;
   top: 0;
@@ -35,7 +35,7 @@
   flex: none;
   align-items: center;
   gap: var(--space-1);
-  margin: 0 0 0 auto;
+  margin: 0;
   color: var(--text-secondary);
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
@@ -45,20 +45,25 @@
 .summary svg { color: var(--page-header-icon, var(--text-secondary)); font-size: var(--icon-size); }
 .summary > .compact { display: none; }
 
-/* Desktop: the row lives in the top bar's empty left half, after a thin divider beside the title. */
-.inBar {
-  position: static;
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  gap: var(--space-4);
-  background: none;
-  border: 0;
+/* The summary and actions sit together at the right end. */
+.end { display: flex; flex: none; align-items: center; gap: var(--space-3); margin-left: auto; }
+.actions { display: flex; align-items: center; gap: var(--space-2); }
+
+/* Screen-reader-only heading for pages whose tabs already name them. */
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
-.inBar .title::after { content: ''; width: 1px; height: 20px; margin-left: var(--space-2); background: var(--separator); }
-.inBar .summary { margin-left: 0; }
+
+/* Desktop: one 56px row at the top of the page; the title leads, then the tabs. */
+@media (min-width: 768px) and (min-height: 501px) {
+  .header { flex: none; height: 56px; margin-bottom: var(--space-3); gap: var(--space-4); background: var(--bg-page); border-bottom: 0; }
+  .title { font-size: var(--text-lg); }
+}
 
 /* Short landscape: the rail marks the page, so the title shows only its icon and the summary its short form. */
 @media (max-height: 500px) and (min-width: 600px) {

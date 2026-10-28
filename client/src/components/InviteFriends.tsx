@@ -8,6 +8,7 @@ import { useInviteFriend } from '../hooks/use-invite-friend';
 import { useI18nStore } from '../stores/i18n-store';
 import { useRoomStore } from '../stores/room-store';
 import { AppIcon } from './AppIcon';
+import { ActionButton } from './ActionButton';
 import { Button } from './Button';
 import { IconButton } from './IconButton';
 import { PresenceAvatar } from './FriendCard';
@@ -15,7 +16,8 @@ import { friendActivityText } from './friend-activity-text';
 import { friendGroups } from './lobby-friend-activity';
 import styles from './InviteFriends.module.css';
 
-export function InviteFriends(): ReactNode {
+/** `labelled` swaps the bare icon for a page action with text that collapses in a narrow container. */
+export function InviteFriends({ labelled = false }: { readonly labelled?: boolean }): ReactNode {
   const { locale, t } = useI18nStore();
   const roomCode = useRoomStore((state) => state.currentRoomCode);
   const [open, setOpen] = useState(false);
@@ -46,6 +48,8 @@ export function InviteFriends(): ReactNode {
     };
   }, [open]);
 
+  const toggle = (): void => { clearError(); setOpen((current) => !current); };
+
   const row = (friend: FriendEntry): ReactNode => {
     const activity = friendActivityText(friend, locale);
     const here = friend.room?.code === roomCode;
@@ -63,8 +67,9 @@ export function InviteFriends(): ReactNode {
 
   return (
     <div className={styles.group} data-invite-popover>
-      <IconButton icon="invite" label={t('invite.open')} aria-expanded={open} current={open}
-        onClick={() => { clearError(); setOpen((current) => !current); }} />
+      {labelled ? <ActionButton icon="invite" text={t('room.action.invite')} label={t('invite.open')} collapsible
+        aria-expanded={open} onClick={toggle} />
+        : <IconButton icon="invite" label={t('invite.open')} aria-expanded={open} current={open} onClick={toggle} />}
       {open && <div className={styles.popover} role="dialog" aria-labelledby="invite-friends-title">
         <h2 id="invite-friends-title" className={styles.title}>{t('invite.open')}
           {invited.size > 0 && <small>{t('invite.invitedCount', { n: String(invited.size) })}</small>}</h2>

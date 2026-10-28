@@ -8,6 +8,8 @@ import { Nameplate } from '../components/Nameplate';
 import { Avatar } from '../components/Avatar';
 import { Button, buttonClassName } from '../components/Button';
 import { IconLink } from '../components/IconButton';
+import { DESKTOP_SHELL_QUERY } from '../components/desktop-nav';
+import { PageHeader } from '../components/PageHeader';
 import { MatchHistoryList } from '../components/MatchHistoryList';
 import { MatchStatsDialog } from '../components/MatchStatsDialog';
 import { MatchStatsStrip } from '../components/MatchStatsStrip';
@@ -26,6 +28,7 @@ const WIDE_QUERY = '(min-width: 1024px) and (min-height: 501px)';
 function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
   const { t } = useI18nStore();
   const wide = useMediaQuery(WIDE_QUERY, { noSsr: true });
+  const desktop = useMediaQuery(DESKTOP_SHELL_QUERY, { noSsr: true });
   const viewerId = useAccountStore((state) => state.account?.id);
   const isSelf = viewerId === accountId;
   const [player, setPlayer] = useState<PublicAccount | null>(null);
@@ -122,14 +125,52 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
   const disabled = busy || loading;
   const statistics = stats.status === 'ready' ? serverStatistics(stats.stats, statsScope) : null;
 
+  const actions = <>
+    {isSelf ? desktop
+      ? <Link className={buttonClassName('primary')} to="/account">{t('player.edit')}</Link>
+      : <IconLink icon="settings" label={t('player.edit')} to="/account" className={styles.editLink} /> : <>
+      {friends && <>
+        {(isFriend || incoming || outgoing) && <p className={styles.description}>{t(isFriend ? 'player.friends'
+          : incoming ? 'player.incoming' : 'player.outgoing')}</p>}
+        {isFriend ? confirmRemove ? <>
+          <span className={styles.description}>{t('friends.confirmRemove')}</span>
+          <Button variant="danger-text" disabled={disabled}
+            onClick={() => void act(`/api/friends/${encodeURIComponent(accountId)}`, 'DELETE')}>
+            {t('friends.remove')}</Button>
+          <Button disabled={disabled}
+            onClick={() => setConfirmRemove(false)}>{t('common.cancel')}</Button>
+        </> : <Button disabled={disabled}
+          onClick={() => setConfirmRemove(true)}>{t('friends.remove')}</Button>
+        : incoming ? <>
+          <Button variant="primary" disabled={disabled}
+            onClick={() => void act(`/api/friends/requests/${incoming.id}/accept`, 'POST')}>
+            {t('friends.accept')}</Button>
+          <Button disabled={disabled}
+            onClick={() => void act(`/api/friends/requests/${incoming.id}`, 'DELETE')}>
+            {t('friends.decline')}</Button>
+        </> : outgoing ? <Button disabled={disabled}
+          onClick={() => void act(`/api/friends/requests/${outgoing.id}`, 'DELETE')}>
+          {t('friends.cancel')}</Button>
+        : <Button variant="primary" disabled={disabled}
+          onClick={() => void act('/api/friends/requests', 'POST', { username: player.username })}>
+          {t('friends.add')}</Button>}
+      </>}
+      <Link className={styles.friendsLink} to="/friends">{t('player.manageFriends')}</Link>
+    </>}
+  </>;
+
   return <main className={styles.page}>
+    {desktop && <PageHeader title={t(isSelf ? 'rail.history' : 'player.title')}
+      actions={<div className={styles.actions}>{actions}</div>} />}
     <section className={styles.header}>
       <div className={styles.avatar}>
         <Avatar avatar={player.avatar} image={player.avatarImage} border={player.avatarBorder} color={player.color}
           size={wide ? 'large' : 'compact'} />
       </div>
       <div className={styles.name}>
-        <h1 style={{ color: player.color }}>{player.nickname}</h1>
+        {/* The page header holds the page's own heading on the desktop shell. */}
+        {desktop ? <h2 style={{ color: player.color }}>{player.nickname}</h2>
+          : <h1 style={{ color: player.color }}>{player.nickname}</h1>}
         <Nameplate id={player.nameplate} />
         <p className={styles.username}>@{player.username}</p>
       </div>
@@ -137,39 +178,7 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
         <MatchStatsStrip statistics={statistics} wide={wide} scope={statsScope} onScopeChange={setStatsScope}
           onOpen={() => setStatsOpen(true)} />
       </div>}
-      <div className={styles.actions}>
-        {isSelf ? wide
-          ? <Link className={buttonClassName('primary')} to="/account">{t('player.edit')}</Link>
-          : <IconLink icon="settings" label={t('player.edit')} to="/account" className={styles.editLink} /> : <>
-          {friends && <>
-            {(isFriend || incoming || outgoing) && <p className={styles.description}>{t(isFriend ? 'player.friends'
-              : incoming ? 'player.incoming' : 'player.outgoing')}</p>}
-            {isFriend ? confirmRemove ? <>
-              <span className={styles.description}>{t('friends.confirmRemove')}</span>
-              <Button variant="danger-text" disabled={disabled}
-                onClick={() => void act(`/api/friends/${encodeURIComponent(accountId)}`, 'DELETE')}>
-                {t('friends.remove')}</Button>
-              <Button disabled={disabled}
-                onClick={() => setConfirmRemove(false)}>{t('common.cancel')}</Button>
-            </> : <Button disabled={disabled}
-              onClick={() => setConfirmRemove(true)}>{t('friends.remove')}</Button>
-            : incoming ? <>
-              <Button variant="primary" disabled={disabled}
-                onClick={() => void act(`/api/friends/requests/${incoming.id}/accept`, 'POST')}>
-                {t('friends.accept')}</Button>
-              <Button disabled={disabled}
-                onClick={() => void act(`/api/friends/requests/${incoming.id}`, 'DELETE')}>
-                {t('friends.decline')}</Button>
-            </> : outgoing ? <Button disabled={disabled}
-              onClick={() => void act(`/api/friends/requests/${outgoing.id}`, 'DELETE')}>
-              {t('friends.cancel')}</Button>
-            : <Button variant="primary" disabled={disabled}
-              onClick={() => void act('/api/friends/requests', 'POST', { username: player.username })}>
-              {t('friends.add')}</Button>}
-          </>}
-          <Link className={styles.friendsLink} to="/friends">{t('player.manageFriends')}</Link>
-        </>}
-      </div>
+      {!desktop && <div className={styles.actions}>{actions}</div>}
     </section>
     {friendError && <div className={styles.feedback}>
       <p className={styles.error} role="alert">{friendError}</p>

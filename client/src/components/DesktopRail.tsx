@@ -18,12 +18,9 @@ export interface DesktopRailProps {
   readonly messageCount: number;
   /** The viewer's room or game; adds a leading "Table" item that returns to it. */
   readonly tableHref?: string | null;
-  /**
-   * Controls that replace the bottom "Me" item on pages without a top bar: notifications, music and the account
-   * menu. The rail also turns icon-only on short screens so they stay in view.
-   */
-  readonly footer?: ReactNode;
-  /** Called when a link is used, so open top bar panels close. */
+  /** Coin balance, notifications, music and the account menu under the bottom divider. */
+  readonly footer: ReactNode;
+  /** Called when a link is used, so open rail panels close. */
   readonly onNavigate: () => void;
 }
 
@@ -34,7 +31,6 @@ export function DesktopRail({
   const { t } = useI18nStore();
   const current = currentRailItem(pathname, accountId);
   const togglePage = togglePageOf(pathname);
-  const items = footer ? RAIL_ITEMS.filter((item) => item.id !== 'me') : RAIL_ITEMS;
 
   const hrefOf = (id: RailItemId): string => id === 'messages' || id === 'achievements'
     ? togglePageHref(id, togglePage, returnTo) : railItemPath(id, accountId);
@@ -57,20 +53,19 @@ export function DesktopRail({
     return text && <span className={styles.count} aria-hidden="true">{text}</span>;
   };
 
-  return <nav className={`${styles.rail} ${footer ? styles.withFooter : ''}`} aria-label={t('rail.label')}
-    data-desktop-shell={footer ? 'table' : undefined}>
+  return <nav className={styles.rail} aria-label={t('rail.label')} data-desktop-shell>
     <Link to="/" className={styles.brand} aria-label="Card Together" onClick={onNavigate}><span aria-hidden="true">♠</span></Link>
     {tableHref && <Link to={tableHref} title={t('rail.table')} className={`${styles.item} ${styles.table}`}
       aria-label={t('rail.table')} aria-current={current === 'table' ? 'page' : undefined} onClick={onNavigate}>
       <span className={styles.glyph}><AppIcon name="table" /></span>
       <span className={styles.label} aria-hidden="true">{t('rail.table')}</span>
     </Link>}
-    {items.map((item) => <Link key={item.id} to={hrefOf(item.id)} title={t(item.label)}
-      className={`${styles.item} ${item.bottom ? styles.bottom : ''}`} aria-label={labelOf(item)}
+    {RAIL_ITEMS.map((item) => <Link key={item.id} to={hrefOf(item.id)} title={t(item.label)}
+      className={styles.item} aria-label={labelOf(item)}
       aria-current={current === item.id ? 'page' : undefined} onClick={onClick(item)}>
       <span className={styles.glyph}><AppIcon name={item.icon} />{badge(item.id)}</span>
       <span className={styles.label} aria-hidden="true">{t(item.label)}</span>
     </Link>)}
-    {footer && <div className={styles.footer}>{footer}</div>}
+    <div className={styles.footer}>{footer}</div>
   </nav>;
 }

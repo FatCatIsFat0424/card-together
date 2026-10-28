@@ -5,17 +5,15 @@ import { gameDefinition } from '@shared/games/registry';
 import type { TranslationKey } from '../i18n';
 import { lobbyCategories } from '../games/registry';
 
-/** The desktop layout: a left rail beside a slim top bar. Phones and short landscape keep their own chrome. */
+/** The desktop layout: a left rail with every page beside it. Phones and short landscape keep their own chrome. */
 export const DESKTOP_SHELL_QUERY = '(min-width: 768px) and (min-height: 501px)';
 
-export type RailItemId = 'lobby' | 'friends' | 'messages' | 'shop' | 'achievements' | 'history' | 'me';
+export type RailItemId = 'lobby' | 'friends' | 'messages' | 'shop' | 'achievements' | 'history';
 
 export interface RailItem {
   readonly id: RailItemId;
   readonly icon: AppIconName;
   readonly label: TranslationKey;
-  /** Sits at the bottom of the rail. */
-  readonly bottom?: boolean;
 }
 
 export const RAIL_ITEMS: readonly RailItem[] = [
@@ -25,20 +23,17 @@ export const RAIL_ITEMS: readonly RailItem[] = [
   { id: 'shop', icon: 'shop', label: 'rail.shop' },
   { id: 'achievements', icon: 'trophy', label: 'rail.achievements' },
   { id: 'history', icon: 'info', label: 'rail.history' },
-  { id: 'me', icon: 'person', label: 'rail.me', bottom: true },
 ];
 
 function under(pathname: string, base: string): boolean {
   return pathname === base || pathname.startsWith(`${base}/`);
 }
 
-/** Table pages fill the screen beside the rail without a top bar; the dock holds the room details. */
-export function isTableRoute(pathname: string): boolean {
-  return under(pathname, '/game') || /^\/room\/[^/]+\/replay\/?$/.test(pathname);
-}
-
 /** The leading rail item that returns to the viewer's room or game; it exists only while they are in one. */
 export type TableRailItem = 'table';
+
+/** The account page, marked on the avatar button at the rail's bottom instead of an item. */
+export type AccountRailItem = 'account';
 
 /** Where the table item leads: the running game, or the waiting room (which also hosts shared replays). */
 export function tableRailPath(roomCode: string, playing: boolean): string {
@@ -46,7 +41,9 @@ export function tableRailPath(roomCode: string, playing: boolean): string {
 }
 
 /** Rail destination for a path, or null when no rail item stands for the page (for example another player's profile). */
-export function currentRailItem(pathname: string, accountId: string): RailItemId | TableRailItem | null {
+export function currentRailItem(
+  pathname: string, accountId: string,
+): RailItemId | TableRailItem | AccountRailItem | null {
   if (pathname === '/') return 'lobby';
   if (under(pathname, '/game') || under(pathname, '/room')) return 'table';
   if (under(pathname, '/friends')) return 'friends';
@@ -54,7 +51,7 @@ export function currentRailItem(pathname: string, accountId: string): RailItemId
   if (under(pathname, '/shop')) return 'shop';
   if (under(pathname, '/achievements')) return 'achievements';
   if (under(pathname, `/players/${encodeURIComponent(accountId)}`)) return 'history';
-  if (under(pathname, '/account')) return 'me';
+  if (under(pathname, '/account')) return 'account';
   return null;
 }
 
@@ -67,7 +64,6 @@ export function railItemPath(id: RailItemId, accountId: string): string {
     case 'shop': return '/shop';
     case 'achievements': return '/achievements';
     case 'history': return `/players/${encodeURIComponent(accountId)}`;
-    case 'me': return '/account';
   }
 }
 

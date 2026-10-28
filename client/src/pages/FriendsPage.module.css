@@ -24,7 +24,8 @@ section:first-of-type > .groupHeading { margin-top: 0; }
 
 /* Desktop shell: requests are cards with equal-width action pills. */
 @media (min-width: 48rem) and (min-height: 501px) {
-  .addForm { flex: 0 1 28rem; margin-left: auto; }
+  .page.page { padding-top: 0; }
+  .addForm { flex: 0 1 28rem; margin-left: auto; padding-block: 0; }
   .list { grid-template-columns: repeat(auto-fill, minmax(min(100%, 16.25rem), 1fr)); gap: var(--space-3); }
   .friendList { grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr)); gap: var(--space-3); }
   .person { align-items: start; gap: var(--space-3) var(--space-2); padding: var(--space-4); border-radius: var(--radius-xl); }

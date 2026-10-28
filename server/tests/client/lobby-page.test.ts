@@ -120,7 +120,7 @@ describe('lobby page', () => {
     const noop = (): void => undefined;
     const desktop = (overrides: Partial<DesktopLobbyProps> = {}): string => renderToStaticMarkup(createElement(MemoryRouter, null,
       createElement(DesktopLobby, {
-        accountId: 'alice', category: 'cards', selectedGame: 'holdem', onSelectGame: noop, onShowRules: noop, error: '',
+        accountId: 'alice', category: 'cards', selectedGame: 'holdem', onCategoryChange: noop, onSelectGame: noop, onShowRules: noop, error: '',
         inRoom: false, blocked: false, roomLocked: false, pending: null, roomCode: '', onRoomCodeChange: noop,
         onCreate: noop, onJoin: noop,
         friends: { refreshToken: 0, onJoin: noop, activity: { viewerRoomCode: null, invited: new Set<string>(), onInvite: noop } },
@@ -138,6 +138,15 @@ describe('lobby page', () => {
       expect(cards).toHaveLength(GAME_TYPES.length);
       expect(cards.filter((card) => card.includes('aria-pressed="true"'))).toHaveLength(1);
       expect(html.indexOf('Create Room')).toBeLessThan(html.indexOf('aria-controls="lobby-selected-game"'));
+    });
+
+    it('puts the category tabs in the page header, labelling the tab panel they control', () => {
+      const html = desktop();
+      const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
+      expect(header).toContain('role="tablist"');
+      expect(header.match(/role="tab"/g)).toHaveLength(lobbyCategories().length);
+      expect(header).toContain('>Cards</button>');
+      expect(html).toContain('id="lobby-games" role="tabpanel"');
     });
 
     it('keeps friends and daily rewards in a social column', () => {

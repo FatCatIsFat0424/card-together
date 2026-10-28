@@ -18,6 +18,7 @@ import { useInviteFriend } from '../hooks/use-invite-friend';
 import { IconButton } from '../components/IconButton';
 import { Button } from '../components/Button';
 import { FriendCard } from '../components/FriendCard';
+import { PageHeader } from '../components/PageHeader';
 import { Tabs, tabElementId } from '../components/Tabs';
 import styles from './AccountPages.module.css';
 import tabStyles from './FriendsPage.module.css';
@@ -146,27 +147,29 @@ export function FriendsPage(): ReactNode {
   </ul>;
   const pill = card ? 'regular' : 'small';
 
+  const tabs = <Tabs<FriendTab> idPrefix="friends" controls="friends-panel" label={t('nav.friends')} value={activeTab}
+    className={tabStyles.tabs} onChange={setActiveTab}
+    tabs={FRIEND_TABS.map((tab) => ({ id: tab, label: <>{t(`friends.${tab}`)}
+      {counts[tab] !== undefined && <span className={tabStyles.count}>{counts[tab]}</span>}</> }))} />;
+  const addForm = <form className={tabStyles.addForm} onSubmit={add}>
+    <label htmlFor="friend-username" className={tabStyles.srOnly}>{t('friends.username')}</label>
+    <input id="friend-username" autoCapitalize="none" spellCheck={false} value={username}
+      placeholder={t('friends.username')}
+      onChange={(event) => setUsername(event.target.value)} required
+      minLength={USERNAME_MIN_LENGTH} maxLength={USERNAME_MAX_LENGTH} pattern={USERNAME_PATTERN} />
+    <Button type="submit" variant="primary" disabled={busy}>
+      {busy ? t('common.loading') : t('friends.add')}
+    </Button>
+    <IconButton icon="refresh" label={t('common.refresh')} disabled={busy || loading}
+      onClick={() => { setError(''); clearError(); setLoading(true); void refresh(); }} />
+  </form>;
+
   return (
     <main className={`${styles.page} ${tabStyles.page}`}>
-      <h1 className={tabStyles.srOnly}>{t('friends.title')}</h1>
-      <div className={tabStyles.bar}>
-        <Tabs<FriendTab> idPrefix="friends" controls="friends-panel" label={t('nav.friends')} value={activeTab}
-          className={tabStyles.tabs} onChange={setActiveTab}
-          tabs={FRIEND_TABS.map((tab) => ({ id: tab, label: <>{t(`friends.${tab}`)}
-            {counts[tab] !== undefined && <span className={tabStyles.count}>{counts[tab]}</span>}</> }))} />
-        <form className={tabStyles.addForm} onSubmit={add}>
-          <label htmlFor="friend-username" className={tabStyles.srOnly}>{t('friends.username')}</label>
-          <input id="friend-username" autoCapitalize="none" spellCheck={false} value={username}
-            placeholder={t('friends.username')}
-            onChange={(event) => setUsername(event.target.value)} required
-            minLength={USERNAME_MIN_LENGTH} maxLength={USERNAME_MAX_LENGTH} pattern={USERNAME_PATTERN} />
-          <Button type="submit" variant="primary" disabled={busy}>
-            {busy ? t('common.loading') : t('friends.add')}
-          </Button>
-          <IconButton icon="refresh" label={t('common.refresh')} disabled={busy || loading}
-            onClick={() => { setError(''); clearError(); setLoading(true); void refresh(); }} />
-        </form>
-      </div>
+      {card ? <PageHeader title={t('friends.title')} titleHidden tabs={tabs} actions={addForm} /> : <>
+        <h1 className={tabStyles.srOnly}>{t('friends.title')}</h1>
+        <div className={tabStyles.bar}>{tabs}{addForm}</div>
+      </>}
       {shownError && <p className={styles.error} role="alert">{shownError}</p>}
       {sent && <p className={styles.success} role="status">{t('friends.sent')}</p>}
       {loading && <p role="status">{t('common.loading')}</p>}

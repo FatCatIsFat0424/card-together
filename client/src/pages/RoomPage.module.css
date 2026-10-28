@@ -22,15 +22,17 @@
 }
 .roomLayout > * { min-width: 0; }
 
-/* ─── Top bar ─── */
+/* ─── Header row: back, game, room code, then the labelled actions ─── */
+/* The row is a size container: the actions' text collapses to icons when it gets narrow (ActionButton.module.css). */
 .bar {
   grid-area: bar;
+  container-type: inline-size;
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: var(--space-2);
   min-height: 44px;
-  /* The 40px hit areas of the first and last icons reach past the margin, so their glyphs line up with the footer. */
-  margin-inline: calc((var(--icon-size) - var(--hit-size)) / 2);
+  /* The 40px hit area of the back icon reaches past the margin, so its glyph lines up with the footer. */
+  margin-left: calc((var(--icon-size) - var(--hit-size)) / 2);
   padding-top: var(--space-1);
 }
 .title {
@@ -52,7 +54,6 @@
   gap: var(--space-1);
   flex-shrink: 0;
   height: 22px;
-  margin-left: var(--space-2);
   padding: 0 var(--space-2);
   border-radius: var(--radius-md);
   background: var(--surface-2);
@@ -64,23 +65,6 @@
 .codeChip::after { content: ''; position: absolute; inset: -9px -4px; }
 .codeChip:hover { background: var(--surface-3); color: var(--text-primary); }
 .codeChip svg { color: var(--color-success); }
-
-.menu.menu {
-  max-height: calc(100dvh - 24px);
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-1);
-  min-width: 180px;
-  padding: var(--space-2);
-  background: var(--bg-surface);
-  background-image: none;
-  color: var(--text-primary);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-}
-.menu > button { justify-content: flex-start; min-height: var(--hit-size); }
 
 .popover.popover {
   max-width: calc(100vw - 24px);
@@ -334,6 +318,8 @@
 /* Desktop and tablets sit inside the app shell, so the page uses the shared outer inset. */
 @media (min-width: 768px) and (min-height: 501px) {
   .roomLayout { padding: 0 var(--page-inset) var(--page-inset); }
+  /* The same 56px row as the other pages' headers. */
+  .bar { min-height: 56px; padding-top: 0; }
 }
 
 /* Phone landscape: the bar and footer shrink to give the oval the height. */

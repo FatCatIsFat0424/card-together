@@ -47,6 +47,7 @@ import PlayArrow from '@mui/icons-material/PlayArrow';
 import Repeat from '@mui/icons-material/Repeat';
 import RepeatOne from '@mui/icons-material/RepeatOne';
 import Refresh from '@mui/icons-material/Refresh';
+import Replay from '@mui/icons-material/Replay';
 import SentimentSatisfiedOutlined from '@mui/icons-material/SentimentSatisfiedOutlined';
 import Shuffle from '@mui/icons-material/Shuffle';
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
@@ -93,7 +94,7 @@ const ICONS = {
   lock: LockOutlined, logout: Logout, menu: Menu, microphone: MicNone,
   music: MusicNote, pause: Pause, play: PlayArrow, repeat: Repeat,
   repeatOne: RepeatOne, shuffle: Shuffle, next: SkipNext, previous: SkipPrevious,
-  refresh: Refresh, notifications: NotificationsNone,
+  refresh: Refresh, replay: Replay, notifications: NotificationsNone,
   rules: MenuBookOutlined, settings: SettingsOutlined,
   beer: SportsBar, timer: TimerOutlined, sort: UnfoldMore, warning: WarningAmber,
   emoji: SentimentSatisfiedOutlined, robot: SmartToyOutlined, table: StyleOutlined,

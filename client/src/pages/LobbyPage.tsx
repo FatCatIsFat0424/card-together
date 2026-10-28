@@ -49,7 +49,7 @@ export function LobbyPage(): ReactNode {
   const category = activeLobbyCategory(useShellStore((state) => state.lobbyCategory));
   const setCategory = useShellStore((state) => state.setLobbyCategory);
   const [pickedGame, setSelectedGame] = useState<GameType>(DEFAULT_LOBBY_GAME);
-  // The top bar's tabs can change the category without telling this page, so the selection follows it.
+  // The category can be stored from an earlier visit, so the selected game follows it.
   const selectedGame = gamesInCategory(category).includes(pickedGame) ? pickedGame : gamesInCategory(category)[0];
   const invites = useInviteFriend();
   const [rulesGame, setRulesGame] = useState<GameType | null>(null);
@@ -120,7 +120,8 @@ export function LobbyPage(): ReactNode {
   if (!account) return null;
   const roomLocked = blocked || Boolean(currentRoomCode);
   if (desktopLayout) return <>
-    <DesktopLobby accountId={account.id} category={category} selectedGame={selectedGame} onSelectGame={setSelectedGame}
+    <DesktopLobby accountId={account.id} category={category} selectedGame={selectedGame}
+      onCategoryChange={chooseCategory} onSelectGame={setSelectedGame}
       onShowRules={setRulesGame} error={error || invites.error} inRoom={Boolean(currentRoomCode)} blocked={blocked}
       roomLocked={roomLocked} pending={pending} roomCode={roomCodeInput} onRoomCodeChange={setRoomCodeInput}
       onCreate={() => createRoom(selectedGame)} onJoin={joinRoom}

@@ -1,8 +1,5 @@
-/* The shared page header starts at the top edge; the desktop shell moves it into its top bar. */
+/* The shared page header starts at the top edge. */
 .page { width: 100%; max-width: var(--page-max); margin: 0; padding: 0 var(--page-inset) calc(var(--page-inset) + var(--room-card-clearance, 0px)); }
-@media (min-width: 768px) and (min-height: 501px) {
-  .page { padding-top: var(--space-4); }
-}
 .managementPanel { padding: var(--space-2) 0; }
 .managementPanel h2 { margin-bottom: var(--space-4); font-size: var(--text-md); }
 .editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: var(--space-5); }

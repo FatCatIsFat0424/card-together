@@ -25,7 +25,7 @@ import { IconButton, IconLink, badgeText } from './IconButton';
 import { RoomCodeButton } from './RoomCodeButton';
 import { DesktopShell } from './DesktopShell';
 import type { ShellPopover } from './DesktopShell';
-import { DESKTOP_SHELL_QUERY, isTableRoute, tableRailPath } from './desktop-nav';
+import { DESKTOP_SHELL_QUERY, tableRailPath } from './desktop-nav';
 import { NotificationPanel } from './NotificationPanel';
 import { nextReturnLocation, togglePageHref, togglePageOf } from './topbar-toggle-page';
 import { messageUnreadCount, notificationUnreadCount, useSocialStore } from '../stores/social-store';
@@ -171,7 +171,7 @@ export function TopBar(): ReactNode {
   };
 
   if (desktopShell && accountId) return <DesktopShell pathname={pathname} accountId={accountId} returnTo={returnTo}
-    onlineFriends={onlineFriends} tableRoute={isTableRoute(pathname)} tableHref={tableHref}
+    onlineFriends={onlineFriends} tableHref={tableHref}
     popovers={{ open, toggle, close: () => setOpen(null), shown, panelProps }}
     signOut={{ request: requestSignOut, run: () => void signOut(), busy, error, confirm: confirmSignOut }} />;
 

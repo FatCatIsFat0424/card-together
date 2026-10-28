@@ -2,7 +2,7 @@ import type { FormEvent, ReactNode } from 'react';
 import type { FriendEntry, GameType } from '@shared/types';
 import { gameDefinition } from '@shared/games/registry';
 import type { GameCategory } from '@shared/games/game-definition';
-import { gamesInCategory } from '../games/registry';
+import { gamesInCategory, lobbyCategories } from '../games/registry';
 import { GAME_BACKGROUNDS, GAME_CARD_ART } from '../game-backgrounds';
 import { useI18nStore } from '../stores/i18n-store';
 import { AndroidAppBanner } from '../components/AndroidAppBanner';
@@ -10,14 +10,16 @@ import { Button } from '../components/Button';
 import { DailyRewards } from '../components/DailyRewards';
 import { LOBBY_PANEL_ID, LOBBY_TAB_PREFIX } from '../components/desktop-nav';
 import { LobbyFriends } from '../components/LobbyFriends';
+import { PageHeader } from '../components/PageHeader';
 import type { LobbyFriendsActivity } from '../components/LobbyFriends';
-import { tabElementId } from '../components/Tabs';
+import { Tabs, tabElementId } from '../components/Tabs';
 import styles from './DesktopLobby.module.css';
 
 export interface DesktopLobbyProps {
   readonly accountId: string;
   readonly category: GameCategory;
   readonly selectedGame: GameType;
+  readonly onCategoryChange: (category: GameCategory) => void;
   readonly onSelectGame: (game: GameType) => void;
   readonly onShowRules: (game: GameType) => void;
   readonly error: string;
@@ -52,6 +54,9 @@ export function DesktopLobby(props: DesktopLobbyProps): ReactNode {
   };
 
   return <main className={styles.page}>
+    <PageHeader title={t('rail.lobby')} titleHidden tabs={<Tabs label={t('lobby.categories')} idPrefix={LOBBY_TAB_PREFIX}
+      controls={LOBBY_PANEL_ID} value={category} onChange={props.onCategoryChange}
+      tabs={lobbyCategories().map((id) => ({ id, label: t(`lobby.category.${id}`) }))} />} />
     {props.error && <p className={styles.error} role="alert">{props.error}</p>}
     <AndroidAppBanner />
     <div className={styles.layout}>

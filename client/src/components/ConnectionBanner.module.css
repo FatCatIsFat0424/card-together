@@ -1,4 +1,4 @@
-/* Sits below the top bar without blocking the page; only the notice itself takes input. */
+/* Sits at the top of the page without blocking it; only the notice itself takes input. */
 .anchor {
   position: fixed;
   top: calc(var(--topbar-height) + var(--spacing-sm));

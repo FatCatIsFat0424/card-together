@@ -81,6 +81,11 @@ describe('topbar navigation', () => {
       createElement(VoiceControls, null, createElement(VoiceButton))));
     expect(button()).toContain('data-voice-control');
     expect(button()).toContain('aria-controls="table-voice-controls"');
+    const labelled = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [path] },
+      createElement(VoiceControls, null, createElement(VoiceButton, { labelled: true }))));
+    expect(labelled).toContain('>語音</span>');
+    expect(labelled).toContain('aria-label="牌桌語音"');
+    expect(labelled).toContain('data-voice-control');
     state.roomCode = null;
     expect(button()).not.toContain('data-voice-control');
   });
