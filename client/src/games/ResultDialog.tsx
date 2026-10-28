@@ -2,7 +2,9 @@
 
 import { useEffect, useId, useRef } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
+import { Button } from '../components/Button';
 import { useI18nStore } from '../stores/i18n-store';
+import { dialogPaperClass, dialogParts } from '../styles/dialog';
 import { useReplayMode } from './replay-mode';
 import styles from './ResultDialog.module.css';
 
@@ -60,17 +62,22 @@ export function ResultDialog({
 
   // During playback it covers only the table, so the transport below stays usable.
   return <div className={`${styles.backdrop} ${replay ? styles.contained : ''}`}>
-    <div ref={dialogRef} className={`${styles.dialog} ${wide ? styles.wide : ''}`} role="dialog" aria-modal={!replay}
-      aria-labelledby={titleId} onKeyDown={trapFocus}>
-      {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}
-      <h2 id={titleId} className={`${styles.title} ${tone === 'lose' ? styles.lose : styles.win}`}>{title}</h2>
-      {children}
-      {!replay && <>
+    <div ref={dialogRef} className={dialogPaperClass(wide ? 'medium' : 'narrow', styles.dialog)} role="dialog"
+      aria-modal={!replay} aria-labelledby={titleId} onKeyDown={trapFocus}>
+      <header className={`${dialogParts.header} ${styles.header}`}>
+        <div className={styles.heading}>
+          {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}
+          <h2 id={titleId} className={`${styles.title} ${tone === 'lose' ? styles.lose : styles.win}`}>{title}</h2>
+        </div>
+      </header>
+      <div className={dialogParts.body}>{children}</div>
+      {!replay && <footer className={`${dialogParts.footer} ${styles.footer}`}>
         {pending && <p className={styles.readiness} role="status">{t('result.returning')}</p>}
         {error && <p className={styles.error} role="alert">{error}</p>}
-        <button ref={primaryRef} type="button" className={`btn btn-primary ${styles.primary}`}
-          disabled={pending || disabled} onClick={onBack}>{t('score.backToRoom')}</button>
-      </>}
+        <Button ref={primaryRef} variant="primary" disabled={pending || disabled} onClick={onBack}>
+          {t('score.backToRoom')}
+        </Button>
+      </footer>}
     </div>
   </div>;
 }

@@ -100,6 +100,8 @@ interface GameShellProps {
   tableEffect?: ReactNode;
   /** Keep the table centre in place of the current presentation frame's card. */
   centreVisible?: boolean;
+  /** Hint for the player, such as what to pick next; shown beside the turn prompt above the hand */
+  prompt?: ReactNode;
   /** Action error shown on the table */
   error?: string;
   /** Selectable seats (Ninety-Nine: choose the next player) */
@@ -143,7 +145,8 @@ function FittedCentre({ children, style, responsive, wide, foreground }: {
 }
 
 export function GameShell({
-  info, centre, centreForeground, hand, overlay, panel, tableEffect, centreVisible, error, pickableSeats, onPickSeat, turnReady,
+  info, centre, centreForeground, hand, overlay, panel, tableEffect, centreVisible, prompt, error, pickableSeats, onPickSeat,
+  turnReady,
 }: GameShellProps): ReactNode {
   const presentation = useGamePresentation();
   // Playback has no seat, clocks, or room controls; personal playback has no chat either.
@@ -152,6 +155,7 @@ export function GameShell({
   const visibleGame = useGameStore((state) => state.visible);
   const centreLayout = visibleGame ? gameUi(visibleGame.gameType).centre : undefined;
   const HudInfo = visibleGame ? gameUi(visibleGame.gameType).hudInfo : undefined;
+  const HudChip = visibleGame ? gameUi(visibleGame.gameType).hudChip : undefined;
   const reducedMotion = useMotionStore((state) => state.reducedMotion);
   const setReducedMotion = useMotionStore((state) => state.setReducedMotion);
   const mySeat = useRoomStore((state) => state.mySeat);
@@ -379,6 +383,7 @@ export function GameShell({
               aria-expanded={infoOpen} aria-controls="game-info-panel" />
             {visibleGame && <IconButton className={`${styles.hudButton} ${styles.rulesTool}`} icon="rules"
               label={t('rules.open')} onClick={openRules} aria-haspopup="dialog" />}
+            {HudChip && <span className={styles.hudChip}><HudChip /></span>}
             <span className={styles.hudInfo}>{HudInfo && <HudInfo />}</span>
             {!replay && <VoiceButton className={`${styles.hudButton} ${styles.voiceTool}`} />}
             {chatVisible && <IconButton className={`${styles.hudButton} ${styles.chatFab}`} icon="chat"
@@ -427,6 +432,7 @@ export function GameShell({
               {t(godView === 'spectator' ? 'table.spectating' : 'table.godView')}
             </p>}
             {myTurn && <p className={styles.yourTurn}>{t('table.yourTurn')}</p>}
+            {prompt && <p className={styles.handPrompt}>{prompt}</p>}
             {error && <p className={styles.actionError} role="alert">{error}</p>}
           </div>
           <div inert={visibleGame?.autoPlay}>{hand}</div>

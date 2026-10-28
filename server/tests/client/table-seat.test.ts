@@ -301,7 +301,7 @@ describe('table seat plate', () => {
     const game = (gameType: string): Record<string, unknown> => ({
       ...baseGame(), phase: 'playing', visible: { gameType, clock: clock(null), log: [] },
     });
-    for (const gameType of ['bridge', 'sevens', 'liarsdeck', 'ninetynine', 'napoleon']) {
+    for (const gameType of ['bridge', 'sevens', 'liarsdeck', 'ninetynine', 'napoleon', 'redpoints']) {
       state.game = game(gameType);
       expect(render({ seat: 'N', position: 'top' })).toContain('handBeside');
       expect(render({ seat: 'W', position: 'left' })).not.toContain('handBeside');
@@ -426,7 +426,8 @@ describe('table seat plate', () => {
     state.game = { ...baseGame(), currentTurnSeat: 'W', napoleon, visible: { clock: clock(null), log: [] } };
     const north = render({ seat: 'N', position: 'top' });
     expect(north).toContain('napoleonRole');
-    expect(north).toContain('>Napoleon');
+    // A one-letter badge on the avatar corner keeps the stats line to counts and points.
+    expect(north).toMatch(/napoleonRole[^>]*title="Napoleon">N</);
     expect(north).toContain('12 cards');
     expect(north).toContain('0 pts');
     expect(render({ seat: 'W', position: 'left' })).toContain('2 pts');
@@ -434,7 +435,7 @@ describe('table seat plate', () => {
 
     state.mySeat = 'E';
     state.game = { ...state.game, napoleon: { ...napoleon, mySeat: 'E', secretarySeat: 'E' } };
-    expect(render({ seat: 'E', position: 'bottom' })).toContain('secretaryRole');
+    expect(render({ seat: 'E', position: 'bottom' })).toMatch(/secretaryRole[^>]*title="Secretary">S</);
 
     state.mySeat = 'S';
     state.game = { ...baseGame(), phase: 'bidding', currentTurnSeat: 'E', visible: { clock: clock(null), log: [] },

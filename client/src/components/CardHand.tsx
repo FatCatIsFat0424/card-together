@@ -9,6 +9,7 @@ import { moveHandCardAt } from './card-hand-order';
 import { useGameStore } from '../stores/game-store';
 import { useSortedHand } from '../games/use-hand-sort';
 import { cardInput, cardTap, validArmedCard } from './card-hand-touch';
+import { useHandFit } from './use-hand-fit';
 import { useNapoleonCardImageUrl } from '../games/napoleon/napoleon-card-art';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './CardHand.module.css';
@@ -72,6 +73,7 @@ export function CardHand<T extends NapoleonCard>({
   const containerRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<{ card: T; offset: number; target: number } | null>(null);
   const [armedCard, setArmedCard] = useState<T | null>(null);
+  const fitStyle = useHandFit(containerRef, cards.length);
   const { t } = useI18nStore();
   const selectMode = selectedCards !== undefined;
   // Big Two keeps its own toggle selection; two-step touch play applies to immediate-play hands.
@@ -106,7 +108,7 @@ export function CardHand<T extends NapoleonCard>({
   return (
     <div className={styles.handContainer} ref={containerRef} role="group" data-card-hand
       aria-label={t('hand.label', { n: String(cards.length) })}
-      style={{ '--hand-card-count': Math.max(cards.length, 1) } as CSSProperties}>
+      style={{ '--hand-card-count': Math.max(cards.length, 1), ...fitStyle } as CSSProperties}>
       {cards.map((card, index) => {
         const playable = selectMode || containsCard(card, playableCards);
         const selected = containsCard(card, selectedCards);

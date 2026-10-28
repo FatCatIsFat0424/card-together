@@ -1,6 +1,6 @@
 /* ─── HoldemTable styles: felt layout, seat spots, pots, hand zone controls, info rail, result ─── */
 
-/* ─── Table centre: each seat's stake sits toward that seat around the board ─── */
+/* ─── Table centre: showdown cards and street stakes sit toward their seat around the board ─── */
 .centre {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -96,6 +96,8 @@
   font-size: var(--text-xs);
 }
 
+.spotHeader:empty { display: none; }
+
 .spotName {
   max-width: 8em;
   overflow: hidden;
@@ -109,7 +111,6 @@
   padding: 0 7px;
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--bg-page) 45%, transparent);
-  border: 1px solid var(--rail-border);
   font-size: var(--text-xs);
   font-weight: 700;
   white-space: nowrap;
@@ -117,7 +118,6 @@
 
 .allInTag {
   background: var(--color-danger);
-  border-color: transparent;
   color: var(--text-on-danger);
 }
 
@@ -165,6 +165,8 @@
   gap: 4px;
 }
 
+.myBet { display: none; }
+
 .bestHand {
   font-size: var(--text-sm);
   font-weight: 700;
@@ -172,98 +174,61 @@
 
 .myHand .won { font-size: var(--text-sm); }
 
-.prompt {
-  margin: 0;
-  padding: 6px var(--spacing-sm) 0;
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  text-align: center;
-}
-
-.promptActive {
-  color: var(--text-primary);
-  font-weight: 700;
-}
-
+/* Fold, check or call, and raise: three pills in a row. */
 .controls {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  gap: 6px var(--spacing-md);
+  gap: var(--space-2);
   width: 100%;
   padding: 6px var(--spacing-sm);
   box-sizing: border-box;
-}
-
-.mainButtons {
-  display: flex;
-  gap: 6px;
-  align-self: center;
-}
-
-.ctrl {
-  min-height: 44px;
-  min-width: 80px;
-  padding: 4px 16px;
-  font-size: var(--text-sm);
-  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-.foldButton:not(:disabled):hover { border-color: var(--color-danger); color: var(--color-danger); }
+.allInButton:not(:disabled) { background: var(--color-danger); color: var(--text-on-danger); }
 
-.allInButton:not(:disabled) { background: var(--color-danger); border-color: var(--color-danger); color: var(--text-on-danger); }
-
-.raise {
+/* Raising: presets, slider with amount, then cancel and confirm, in a compact sheet. */
+.sheet {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
+  gap: var(--space-2);
+  width: min(100%, 22rem);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
 }
 
 .quickRow {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 4px;
-}
-
-.quick {
-  min-height: 44px;
-  min-width: 56px;
-  padding: 2px 10px;
-  font-size: var(--text-xs);
-  font-weight: 700;
-}
-
-.quickActive {
-  border-color: var(--turn-glow);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--turn-glow) 60%, transparent);
+  gap: var(--space-1);
 }
 
 .sliderRow {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .slider {
-  width: clamp(120px, 22vw, 220px);
-  min-height: 44px;
+  flex: 1 1 auto;
+  min-width: 80px;
+  min-height: var(--hit-size);
   accent-color: var(--color-warning);
 }
 
 .amountInput {
-  width: 6em;
-  min-height: 44px;
-  padding: 4px 8px;
+  flex: none;
+  width: 5.5em;
+  min-height: var(--hit-size);
+  padding: 0 var(--space-2);
   border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  background: var(--bg-input);
+  border: 0;
+  background: var(--surface-2);
   color: var(--text-primary);
   font-size: var(--text-base);
   font-weight: 700;
@@ -272,11 +237,19 @@
   box-sizing: border-box;
 }
 
-.amountInput:focus-visible { border-color: var(--border-color-focus); outline: none; background: var(--bg-input-focus); }
+.amountInput:focus-visible { outline: 2px solid var(--border-color-focus); outline-offset: 0; background: var(--bg-input-focus); }
+
+.sheetActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
 
 .limits {
+  margin-right: auto;
   font-size: var(--text-xs);
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* ─── Info rail ─── */
@@ -337,13 +310,10 @@
   }
   .middle { max-width: 240px; padding: 4px 6px; }
   .spotName { display: none; }
-  .ctrl { min-width: 64px; padding: 4px 12px; }
-  .controls { gap: 6px; }
-  .slider { width: clamp(110px, 40vw, 200px); }
 }
 
-/* Portrait phones: hole cards share a row with the prompt and the controls fold into three rows, leaving
-   the felt most of the height; stakes drop what the plates already show. */
+/* Portrait phones: the three pills sit below the hole cards and the sheet takes their place; stakes drop what
+   the plates already show. */
 @media (max-width: 767px) and (orientation: portrait) {
   .spotBacks, .spotMarkers { display: none; }
   .top, .bottom { flex-direction: row; padding: 1px 6px; }
@@ -362,41 +332,21 @@
   .handArea {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas: 'cards prompt' 'controls controls';
+    grid-template-areas: 'cards cards' 'controls controls';
     align-items: center;
     column-gap: var(--spacing-sm);
   }
   .myHand { grid-area: cards; flex-wrap: nowrap; padding: 4px 0 0; }
   .myHand > :first-child { --card-w: calc(52px * var(--playing-card-scale)); }
-  .handArea > .prompt { grid-area: prompt; padding: 4px 0 0; text-align: left; }
-  .controls {
-    grid-area: controls;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-    padding: 6px 0;
-  }
-  .mainButtons, .raise, .sliderRow { display: contents; }
-  .ctrl { min-width: 0; padding: 4px 6px; }
-  .mainButtons > :first-child { grid-area: 1 / 1; }
-  .mainButtons > :last-child { grid-area: 1 / 2; }
-  .raise .ctrl { grid-area: 1 / 3; }
-  .quickRow { grid-column: 1 / -1; grid-row: 2; flex-wrap: nowrap; }
-  .quick { flex: 1; min-width: 0; }
-  .slider { grid-column: 1 / 3; grid-row: 3; width: auto; min-width: 0; }
-  .amountInput { grid-column: 3; grid-row: 3; width: 100%; }
-  .limits { display: none; }
+  .handArea > [data-hand-actions] { grid-area: controls; padding: 6px 0; }
 }
 
-/* Short landscape: the felt keeps stakes in flat rows around a board with the pot beside it, and the
-   hole cards share one low row with the betting controls. */
+/* Short landscape: stakes sit beside their plates, the board has the pot under it, and the hole cards share
+   one low row with their stake. The pills float in the bottom corner (see the table shell). */
 @media (max-height: 500px) and (min-width: 600px) {
   .centre {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    grid-template-areas:
-      'left top right'
-      'left middle right'
-      'left bottom right';
+    grid-template-areas: 'left top right' 'left middle right' 'left bottom right';
     gap: 2px var(--spacing-sm);
   }
   .centre.expandedCentre {
@@ -406,42 +356,23 @@
       'left middle right'
       'bottomLeft bottom bottomRight';
   }
-  /* Plates show folds and blinds, so stakes drop the backs and markers along with the names. */
-  .spotName, .spotBacks, .spotMarkers { display: none; }
+  /* Plates show folds, blinds and stakes; the felt keeps only showdown cards, categories and winnings. */
+  .spotHeader, .spotBet, .spotBacks { display: none; }
+  .spot:not(:has(> :not(.spotHeader, .spotBet))) { display: none; }
   .top, .bottom, .topLeft, .topRight, .bottomLeft, .bottomRight { flex-direction: row; padding: 1px 6px; }
-  .middle {
-    display: grid;
-    grid-template-columns: auto auto;
-    align-items: center;
-    gap: 2px var(--spacing-sm);
-    padding: 4px 8px;
-  }
-  .pots { align-items: flex-start; }
-  .potLines { flex-direction: column; align-items: flex-start; }
+  .middle { gap: 2px; padding: 4px 8px; }
+  .pots { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 2px 8px; }
+  .potLines { flex-direction: row; }
 
   .handArea {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas: 'cards controls' 'prompt controls';
-    align-items: center;
-    column-gap: var(--spacing-sm);
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: flex-start;
+    gap: var(--space-2);
   }
-  .myHand { grid-area: cards; flex-wrap: nowrap; padding: 4px 0 0; }
-  .handArea > .prompt { grid-area: prompt; padding: 2px 0 0; }
-  .controls {
-    grid-area: controls;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 4px;
-    padding: 4px 0;
-  }
-  .raise { display: contents; }
-  .quickRow { justify-content: flex-start; flex-wrap: nowrap; }
-  .sliderRow { grid-column: 1 / -1; flex-wrap: nowrap; justify-content: flex-start; }
-  .slider { flex: 1; width: auto; min-width: 80px; }
-  .ctrl { min-width: 64px; padding: 4px 10px; }
-  .quick { min-width: 0; padding: 2px 8px; }
-  .raise > .limits:last-child { display: none; }
+  .myHand { flex-wrap: nowrap; padding: 18px 0 0; }
+  .myHand > :first-child { --card-w: min(calc(72px * var(--playing-card-scale)), 16.5cqh); }
+  .myBet { display: block; }
 }
 
 /* The smallest phones and crowded tables trade board card size for unscaled text. */

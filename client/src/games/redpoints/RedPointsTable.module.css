@@ -175,32 +175,6 @@
   align-items: center;
 }
 
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 42px;
-  padding: 6px var(--spacing-sm) 0;
-}
-
-.prompt {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
-
-.promptActive {
-  color: var(--text-primary);
-  font-weight: 700;
-}
-
-.ctrl {
-  min-height: 36px;
-  padding: 4px 14px;
-  font-size: var(--text-sm);
-}
-
 /* ─── Info rail ─── */
 
 .mini {
@@ -233,7 +207,6 @@
 @media (max-width: 767px) {
   .stockRow { gap: var(--spacing-sm); }
   .mini { --card-w: calc((20px) * var(--playing-card-scale)); }
-  .ctrl { min-height: 40px; padding: 4px 10px; }
 }
 
 .previewed {

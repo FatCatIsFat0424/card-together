@@ -19,7 +19,7 @@ export const redPointsClient: ClientGame<'redpoints'> = {
   },
   roundHistory: { derive: deriveRedPointsRounds },
   handSort: { order: STANDARD_HAND_ORDER, bySuit: true },
-  handBeside: false,
+  handBeside: true,
   lobbyIcon: { glyph: '🔴', icon: 'circle', red: true },
   settlement: (game) => game.result,
   result: {

@@ -18,6 +18,7 @@ import { blackjackSeatOut, blackjackView } from '../games/blackjack/blackjack-vi
 import { ChipIcon } from '../games/ChipIcon';
 import { clientGame } from '../games/registry';
 import { holdemBlindSeats, holdemView, seatState } from '../games/holdem/holdem-view';
+import { BetStack } from '../games/holdem/HoldemCards';
 import { useGamePresentation } from '../games/use-game-presentation';
 import { useGameStore } from '../stores/game-store';
 import { useGodViewStore } from '../stores/god-view-store';
@@ -276,6 +277,8 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const heState = he ? seatState(he, seat) : null;
   const heBlinds = he ? holdemBlindSeats(he) : null;
   const heOut = heState === 'out';
+  // The own stake sits beside the hole cards instead (see the Hold'em hand zone).
+  const heBet = he && !isMe && heState !== 'waiting' && heState !== 'out' ? he.streetBets[seat] ?? 0 : 0;
   const heLocked = heState === 'folded' || heState === 'allIn';
   const observedCards = useGodViewStore((state) => state.hands?.[seat]);
   const observedLiars = useGodViewStore((state) => state.liarHands?.[seat]);
@@ -354,8 +357,8 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
     heBlinds?.button === seat && { key: 'button', label: t('holdem.button'), tone: styles.gold, title: t('holdem.buttonTitle') },
     heBlinds?.small === seat && { key: 'sb', label: t('holdem.sb'), tone: styles.light, title: t('holdem.sbTitle') },
     heBlinds?.big === seat && { key: 'bb', label: t('holdem.bb'), tone: styles.light, title: t('holdem.bbTitle') },
-    napoleonLabels?.napoleon === seat && { key: 'napoleon', label: t('napoleon.napoleon'), tone: styles.napoleonRole },
-    napoleonLabels?.secretary === seat && { key: 'secretary', label: t('napoleon.secretary'), tone: styles.secretaryRole },
+    napoleonLabels?.napoleon === seat && { key: 'napoleon', label: t('napoleon.napoleonShort'), tone: styles.napoleonRole, title: t('napoleon.napoleon') },
+    napoleonLabels?.secretary === seat && { key: 'secretary', label: t('napoleon.secretaryShort'), tone: styles.secretaryRole, title: t('napoleon.secretary') },
   ].filter((role): role is RoleLabel => role !== false);
   // A single character fits a badge on the avatar's corner; longer labels join the stats line.
   const cornerRoles = roleLabels.filter((role) => [...role.label].length === 1);
@@ -446,6 +449,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
           {statusLine}
         </div>
         {(dimmed || status === 'thinking') && statusText && <span className={styles.srOnly}>{t(statusText)}</span>}
+        {heBet > 0 && <span className={styles.bet}><BetStack amount={heBet} title={t('holdem.betTitle', { n: String(heBet) })} /></span>}
         {sittingOut && <span className={styles.srOnly}>{t('blackjack.sittingOut')}</span>}
         {active && <span className={styles.srOnly}>{isMe ? t('table.yourTurn') : t('table.turn')}</span>}
       </div>

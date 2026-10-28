@@ -619,8 +619,8 @@ textarea::placeholder {
   max-height: calc(100dvh - 2 * var(--dialog-inset));
 }
 
-/* Phones and narrow windows tighten the shared insets; short landscape tightens them further above. */
-@media (max-width: 52rem) {
+/* Phones and narrow windows tighten the shared insets; short landscape keeps its own 12px from above. */
+@media (max-width: 52rem) and (min-height: 501px) {
   :root { --page-inset: 16px; }
 }
 @media (max-width: 40rem) {

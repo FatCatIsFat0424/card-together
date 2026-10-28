@@ -2,11 +2,10 @@ import { useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { AppIcon } from '../components/AppIcon';
+import { Button } from '../components/Button';
+import { dialogPaperClass, dialogParts } from '../styles/dialog';
 import { socket } from '../socket';
 import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
@@ -59,21 +58,20 @@ export function EarlyLeaveButton({ iconOnly = false, className = '', buttonClass
       aria-haspopup="dialog" onClick={() => { setError(''); setOpen(true); }}>
       <AppIcon name="logout" />{!iconOnly && <> {t('earlyLeave.button')}</>}
     </button>
-    <Dialog open={open} onClose={close} fullWidth maxWidth="xs"
+    <Dialog open={open} onClose={close}
       transitionDuration={{ enter: 0, exit: still ? 0 : 200 }}
       aria-labelledby={titleId} aria-describedby={`${titleId}-description`}
-      slotProps={{ paper: { className: `${styles.confirmDialog} ${open ? motionStyles.enter : motionStyles.exit} ${still ? motionStyles.still : ''}` } }}>
-      <DialogTitle id={titleId}>{t('earlyLeave.confirmTitle')}</DialogTitle>
-      <DialogContent>
+      slotProps={{ paper: { className: dialogPaperClass('narrow', open ? motionStyles.enter : motionStyles.exit, still && motionStyles.still) } }}>
+      <div className={dialogParts.header}><h2 id={titleId} className={styles.dialogTitle}>{t('earlyLeave.confirmTitle')}</h2></div>
+      <div className={dialogParts.body}>
         <p id={`${titleId}-description`}>{t('earlyLeave.confirmDescription')}</p>
         {error && <p className={styles.error} role="alert">{error}</p>}
-      </DialogContent>
-      <DialogActions>
-        <button type="button" className="btn btn-outline" autoFocus disabled={busy} onClick={close}>
-          {t('common.cancel')}</button>
-        <button type="button" className="btn btn-primary" disabled={!ready || busy || !open} onClick={confirm}>
-          {t('earlyLeave.confirm')}</button>
-      </DialogActions>
+      </div>
+      <div className={dialogParts.footer}>
+        <Button autoFocus disabled={busy} onClick={close}>{t('common.cancel')}</Button>
+        <Button variant="primary" disabled={!ready || busy || !open} onClick={confirm}>
+          {t('earlyLeave.confirm')}</Button>
+      </div>
     </Dialog>
   </div>;
 }

@@ -4,9 +4,6 @@ import { roomSeatInfo } from '@shared/rules/seats';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { ABORT_VOTE_THRESHOLD } from '@shared/constants';
 import type { PlayerInfo, RoomInfo } from '@shared/types';
@@ -18,6 +15,8 @@ import { useMotionStore } from '../stores/motion-store';
 import { Avatar } from '../components/Avatar';
 import { formatCountdown } from '../game-view';
 import { AppIcon } from '../components/AppIcon';
+import { Button } from '../components/Button';
+import { dialogPaperClass, dialogParts } from '../styles/dialog';
 import styles from './AbortVote.module.css';
 import motionStyles from '../styles/dialog-motion.module.css';
 import { useConnectionReady } from './use-connection-ready';
@@ -93,18 +92,17 @@ export function AbortVoteButton({ iconOnly = false, className = '', buttonClassN
         {!iconOnly && <> {label}</>}
       </button>
       {error && <p className={styles.error} role="alert">{error}</p>}
-      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} fullWidth maxWidth="xs"
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}
         transitionDuration={{ enter: 0, exit: still ? 0 : 200 }}
         aria-labelledby={titleId} aria-describedby={`${titleId}-description`}
-        slotProps={{ paper: { className: `${styles.confirmDialog} ${confirmOpen ? motionStyles.enter : motionStyles.exit} ${still ? motionStyles.still : ''}` } }}>
-        <DialogTitle id={titleId}>{t('abortVote.confirmTitle')}</DialogTitle>
-        <DialogContent id={`${titleId}-description`}>{t('abortVote.confirmDescription')}</DialogContent>
-        <DialogActions>
-          <button type="button" className="btn btn-outline" autoFocus onClick={() => setConfirmOpen(false)}>
-            {t('common.cancel')}</button>
-          <button type="button" className="btn btn-danger" disabled={disabled || !confirmOpen} onClick={confirm}>
-            {t('abortVote.confirmStart')}</button>
-        </DialogActions>
+        slotProps={{ paper: { className: dialogPaperClass('narrow', confirmOpen ? motionStyles.enter : motionStyles.exit, still && motionStyles.still) } }}>
+        <div className={dialogParts.header}><h2 id={titleId} className={styles.dialogTitle}>{t('abortVote.confirmTitle')}</h2></div>
+        <div className={dialogParts.body} id={`${titleId}-description`}>{t('abortVote.confirmDescription')}</div>
+        <div className={dialogParts.footer}>
+          <Button autoFocus onClick={() => setConfirmOpen(false)}>{t('common.cancel')}</Button>
+          <Button variant="primary" disabled={disabled || !confirmOpen} onClick={confirm}>
+            {t('abortVote.confirmStart')}</Button>
+        </div>
       </Dialog>
     </div>
   );
@@ -162,10 +160,10 @@ export function AbortVoteBanner(): ReactNode {
       <Tally room={room} ids={vote.yes} label={<><AppIcon name="agree" /> {t('abortVote.agree')}</>} />
       <Tally room={room} ids={vote.no} label={<><AppIcon name="disagree" /> {t('abortVote.disagree')}</>} />
       {canVote && <div className={styles.actions}>
-        <button type="button" className="btn btn-danger" disabled={busy || !connectionReady} onClick={() => cast(true)}>
-          {t('abortVote.agree')}</button>
-        <button type="button" className="btn btn-outline" disabled={busy || !connectionReady} onClick={() => cast(false)}>
-          {t('abortVote.disagree')}</button>
+        <Button variant="primary" disabled={busy || !connectionReady} onClick={() => cast(true)}>
+          {t('abortVote.agree')}</Button>
+        <Button disabled={busy || !connectionReady} onClick={() => cast(false)}>
+          {t('abortVote.disagree')}</Button>
       </div>}
       {error && <p className={styles.error} role="alert">{error}</p>}
     </div>

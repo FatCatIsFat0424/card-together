@@ -145,17 +145,24 @@
   .cardHighlighted::before { bottom: 25%; }
 }
 
-/* Full cards extend below the landscape table; its bottom edge clips the lower half. */
+/* Landscape phones show every card in full: `useHandFit` sizes the cards and their overlap to the row, and
+   the stylesheet only supplies sizes until it has measured. Playable cards rise above the row. */
 @media (max-height: 500px) and (min-width: 600px) {
   .handContainer {
-    --card-w: min(calc(144px * var(--playing-card-scale)), 27cqh, calc((100cqw - 32px) / (1.8 + (var(--hand-card-count) - 1) * (1 - var(--overlap)))));
+    --card-w: min(calc(60px * var(--playing-card-scale)), 16cqh);
     --overlap: 0.62;
+    --fan-step: 0.4deg;
   }
   .handContainer:not(:empty) {
-    height: calc(var(--card-w) * 313 / 448 + 22px);
-    padding-block: 18px 4px;
+    height: calc(var(--card-w) * 313 / 224 + 18px);
+    padding: 18px 0 0;
     align-items: flex-start;
   }
+  .cardPlayable { --lift: -10px; }
+  .cardPlayable:hover,
+  .cardPlayable:focus-visible { --lift: -14px; }
+  .cardSelected { --lift: -16px; }
+  .card.cardArmed { --lift: -16px; --card-scale: 1.1; }
 }
 
 .card.cardReorderable {

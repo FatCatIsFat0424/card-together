@@ -116,10 +116,7 @@
   border-radius: 18px;
 }
 
-.handZone [data-hand-actions='group'],
-.handZone [data-hand-actions-placeholder='group'] { display: contents; }
-.handZone [data-hand-actions-placeholder] { visibility: hidden; pointer-events: none; }
-.handZone [data-hand-actions-placeholder]:not(:has(button)) { display: none; }
+.handZone [data-hand-actions='group'] { display: contents; }
 
 .handStatus {
   display: flex;
@@ -138,6 +135,16 @@
   color: var(--table-ink);
   white-space: nowrap;
 }
+
+.handPrompt {
+  margin: 0 0 0 6px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  line-height: 22px;
+}
+.handPrompt:first-child { margin-left: 0; }
 
 .yourTurn {
   padding: 0 10px;
@@ -256,6 +263,8 @@
 .tableTools > * { pointer-events: auto; }
 .hudButton.hudButton { color: var(--table-ink); }
 .hudButton.hudButton:hover:not(:disabled) { color: var(--text-primary); }
+.hudChip { flex: none; min-width: 0; max-width: 56%; margin-left: var(--space-1); }
+.hudChip:empty { display: none; }
 .hudInfo {
   flex: 1;
   min-width: 0;
@@ -271,10 +280,13 @@
 }
 /* Desktop keeps the info rail and chat column; only the info line stays on the felt. */
 @media (min-width: 1024px) and (min-height: 501px) {
-  .tableTools :is(.menuTool, .rulesTool, .voiceTool, .chatFab) { display: none; }
+  .tableTools :is(.menuTool, .rulesTool, .voiceTool, .chatFab, .hudChip) { display: none; }
 }
 /* An info line takes the top edge, so the opposite seat sits below it. */
 .table[data-hud-info] > [data-table-seat='top'] { margin-top: 24px; }
+@media (max-height: 500px) and (min-width: 600px) {
+  .table[data-hud-info] > [data-table-seat='top'] { margin-top: 30px; }
+}
 
 @media (max-width: 1023px), (max-height: 500px) and (min-width: 600px) {
   .desktopVoice { display: none; }
@@ -447,7 +459,8 @@
 @media (max-height: 500px) and (min-width: 600px) {
   .abortRail.abortRail { display: none; }
   .rulesRailButton { display: none; }
-  .gameContainer, .chatCollapsed { grid-template-columns: minmax(0, 1fr); padding: 0 4px 4px; }
+  /* The table keeps the 12px phone inset on every landscape width; the page-wide narrow-window step would make it 16px. */
+  .gameContainer, .chatCollapsed { --page-inset: 12px; grid-template-columns: minmax(0, 1fr); padding: 0; }
   .infoPanel { display: none; }
   .infoOpen > .infoPanel { display: flex; }
   .chatCollapsed > .chatRail { display: none; }
@@ -474,6 +487,8 @@
     grid-template-columns: minmax(64px, 18%) minmax(0, 1fr) minmax(64px, 18%);
     grid-template-rows: auto minmax(0, 1fr);
     grid-template-areas: '. top .' 'left centre right';
+    gap: 0 var(--space-2);
+    padding: 0 var(--page-inset);
   }
   /* Four-seat tables have empty top corners, so the tools need no separate row. */
   .table:not(.expandedTable) > .tableTools {
@@ -520,52 +535,82 @@
 }
 
 @media (max-height: 500px) and (min-width: 600px) {
-  /* The own plate and turn prompt lead the hand row, keeping the centre and its presentations clear. */
+  /* The own seat sits at the left edge and the hand takes the rest of the bottom row; the turn prompt floats
+     over the felt above the hand and never moves a card. Explicit hand actions are pills in the bottom
+     corner, and the hand leaves them room. Every edge keeps the same inset as the toolbar icons. */
   .handZone {
     display: grid;
-    grid-template-columns: clamp(150px, 21vw, 180px) minmax(0, 1fr);
-    grid-template-rows: auto 1fr;
-    column-gap: 8px;
-    align-content: center;
-    align-items: start;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: var(--space-2);
+    align-items: end;
+    padding: 0 var(--page-inset) var(--page-inset);
   }
-  .handZone > .handHeader, .handZone > .handStatus { grid-column: 1; }
-  .handZone > .handStatus { justify-content: flex-start; }
-  .handZone > :last-child { grid-column: 2; grid-row: 1 / span 2; container-type: inline-size; }
-  /* Keep explicit hand actions above the viewport edge, beside the cards. */
-  .handZone:has([data-hand-actions] button) { --hand-actions-width: 120px; }
-  .handZone:has([data-hand-actions='wide'] button) { --hand-actions-width: clamp(160px, 26vw, 208px); }
-  /* Cards fit left of the floating actions instead of keeping a row below, so no card sits under a button. */
-  .handZone:has([data-hand-actions]:not([data-hand-actions='group']) button) > :last-child {
-    padding-right: calc(var(--hand-actions-width) + 4px);
+  .handZone > .handHeader { grid-column: 1; grid-row: 1; padding: 0; }
+  .handZone > .handStatus {
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    z-index: 6;
+    max-width: calc(100% - 2 * var(--page-inset));
+    min-height: 0;
+    padding: 0;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    pointer-events: none;
   }
-  .handZone [data-hand-actions-placeholder]:not([data-hand-actions-placeholder='group']) { display: none; }
+  .handStatus > * { flex: none; }
+  .handPrompt {
+    background: color-mix(in srgb, var(--bg-surface) 66%, transparent);
+    box-shadow: var(--shadow-sm);
+  }
+  .handZone > :last-child { grid-column: 2; grid-row: 1; container-type: inline-size; min-width: 0; }
+  /* Pills are 34px; the hand keeps clear of them by their measured column. */
+  .handZone:has([data-hand-actions] button) { --hand-actions-width: 104px; }
+  .handZone:has([data-hand-actions='wide'] button) { --hand-actions-width: 128px; }
+  .handZone:has([data-hand-actions]:not([data-hand-actions='group'], [data-hand-actions='sheet']) button) > :last-child {
+    padding-right: calc(var(--hand-actions-width) + var(--space-2));
+  }
   /* Plates already count side hands; their card backs would meet the own plate and actions. */
   .table > :not([data-table-seat='top']) [data-seat-tray='backs'] { display: none; }
   .handZone [data-hand-actions]:has(button) {
     position: absolute;
-    right: 4px;
-    bottom: 8px;
+    right: var(--page-inset);
+    bottom: var(--page-inset);
     z-index: 8;
     display: flex;
     flex-direction: column;
     flex-wrap: nowrap;
     align-items: stretch;
-    gap: 4px;
+    gap: var(--space-2);
     width: var(--hand-actions-width);
     max-height: min(220px, 55cqh);
     padding: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    overflow: visible;
   }
-  .handZone [data-hand-actions] button {
-    flex-shrink: 0;
+  .handZone [data-hand-actions] > * { flex-shrink: 0; }
+  /* Pills are 34px with a 40px hit area, like every other control. */
+  .handZone [data-hand-actions] > button,
+  .handZone [data-hand-actions] > div > button {
+    position: relative;
     min-width: 0;
-    min-height: 44px;
-    padding: 4px 8px;
-    white-space: normal;
+    min-height: var(--control-height);
+    height: var(--control-height);
+    padding: 0 var(--space-3);
+    font-size: var(--text-base);
+    white-space: nowrap;
   }
-  .handZone [data-hand-actions] > div { flex-wrap: wrap; justify-content: center; max-width: 100%; }
+  .handZone [data-hand-actions] > button::after,
+  .handZone [data-hand-actions] > div > button::after {
+    content: '';
+    position: absolute;
+    inset: calc((var(--control-height) - var(--hit-size)) / 2) 0;
+  }
+  /* A row of pills hugs the corner; a sheet is wider and replaces them. */
+  .handZone:has([data-hand-actions='row'] button) { --hand-actions-width: 248px; }
+  .handZone:has([data-hand-actions='sheet'] button) { --hand-actions-width: 348px; }
+  .handZone [data-hand-actions='row']:has(button) { flex-direction: row; width: auto; align-items: center; }
+  .handZone [data-hand-actions='sheet']:has(button) { display: block; width: var(--hand-actions-width); max-width: calc(100vw - 2 * var(--page-inset)); }
+  .handZone [data-hand-actions] > div { display: flex; flex-direction: column; gap: var(--space-2); max-width: 100%; }
   .handZone [data-hand-actions] input { max-width: 100%; }
   .handZone [data-hand-actions='grid']:has(button) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .handZone [data-hand-actions='grid'] > :last-child { grid-column: 1 / -1; }
@@ -740,4 +785,55 @@
 }
 @media (min-width: 2400px) and (min-height: 1300px) {
   .noChat, .noChat.chatCollapsed { grid-template-columns: minmax(320px, 380px) minmax(0, 1fr); }
+}
+
+/* Short landscape: toolbar glyphs sit on the same 12px inset as the seats and the hand. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .table > .tableTools.tableTools { inset: 2px 2px auto; }
+  /* The turn prompt line floats over the felt just above the hand; the centre keeps clear of it. */
+  .tableCentre { padding-bottom: 24px; }
+  .actionPanel { width: min(420px, calc(100% - 2 * var(--page-inset))); bottom: var(--space-2); }
+  /* The panel names whose turn it is, so the floating prompt would only cover its bottom edge. */
+  .centreColumn:has(.actionPanel) .yourTurn { display: none; }
+}
+
+/* Phone game menu in the v2 look: one flat card with 12px insets, a two-column grid of 40px pills for the room
+   code and table actions, then the tools and the destinations as plain rows. */
+@media (max-width: 767px), (max-height: 500px) and (min-width: 600px) {
+  .infoOpen > .infoPanel {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: min-content;
+    align-content: start;
+    gap: var(--space-1) var(--space-2);
+  }
+  .infoPanel > * { grid-column: 1 / -1; }
+  .infoPanel > :is(.menuRoomCode, .rulesRailButton, .menuExit) { grid-column: auto; }
+  .infoPanel .sheetHeader { padding: 0 0 var(--space-1) var(--space-1); font-size: var(--text-lg); }
+  .sheetClose { width: var(--hit-size); height: var(--hit-size); }
+  .infoPanel :is(.rulesRailButton, .menuExit button, .menuRoomCode) {
+    width: 100%;
+    min-height: var(--hit-size);
+    height: var(--hit-size);
+    padding: 0 var(--space-3);
+    justify-content: flex-start;
+    background: var(--surface-1);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+  .infoPanel :is(.rulesRailButton, .menuExit button, .menuRoomCode):hover { background: var(--surface-2); }
+  .menuExit { margin: 0; }
+}
+
+@media (max-height: 500px) and (min-width: 600px) {
+  .infoPanel, .chatRail {
+    top: var(--page-inset);
+    bottom: var(--page-inset);
+    width: min(332px, calc(100vw - 2 * var(--page-inset)));
+    padding: var(--space-3);
+    border: 0;
+    border-radius: var(--radius-lg);
+  }
+  .infoPanel { left: var(--page-inset); }
+  .chatRail { right: var(--page-inset); }
 }

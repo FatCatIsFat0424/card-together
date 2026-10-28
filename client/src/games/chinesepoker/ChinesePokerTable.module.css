@@ -94,7 +94,7 @@
 .dropZone {
   display: grid;
   place-items: center;
-  height: calc(var(--slot-w) * 313 / 224);
+  height: max(var(--hit-size), calc(var(--slot-w) * 313 / 224));
   padding: 0;
   border: 2px dashed color-mix(in srgb, var(--table-ink) 35%, transparent);
   border-radius: calc(var(--slot-w) * 0.08);
@@ -256,9 +256,11 @@ button.dropZone:disabled { cursor: default; }
   .ctrl { padding: 4px 10px; }
 }
 
+/* Short landscape: the three pills float in the bottom corner; the foul warning joins the prompt line above the hand. */
 @media (max-height: 500px) and (min-width: 600px) {
-  .controls { gap: 4px; padding-block: 2px; }
-  .ctrl { padding: 2px 4px; font-size: var(--text-xs); }
+  .controls { gap: var(--space-2); padding: 0; }
+  .ctrl { padding: 0 var(--space-3); font-size: var(--text-base); }
+  .foulWarning { position: absolute; left: 50%; bottom: calc(100% + 26px); margin: 0; transform: translateX(-50%); white-space: nowrap; }
 }
 
 /* ─── Info rail ─── */

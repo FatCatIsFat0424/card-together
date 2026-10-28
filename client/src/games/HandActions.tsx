@@ -1,17 +1,13 @@
 import type { ReactNode } from 'react';
-import useMediaQuery from '@mui/material/useMediaQuery';
 
-/** Preserve the original control row's footprint while its usable copy floats beside the hand. */
+/**
+ * Explicit hand actions. On landscape phones the stylesheet floats them as pills in the bottom corner,
+ * beside the hand; elsewhere they stay in the flow under it.
+ */
 export function HandActions({ children, className, layout = 'stack' }: {
   readonly children: ReactNode;
   readonly className?: string;
-  readonly layout?: 'stack' | 'grid' | 'wide' | 'group';
+  readonly layout?: 'stack' | 'grid' | 'wide' | 'group' | 'row' | 'sheet';
 }): ReactNode {
-  const landscape = useMediaQuery('(max-height: 500px) and (min-width: 600px)');
-  return <>
-    {landscape && <div className={className} data-hand-actions-placeholder={layout} inert aria-hidden="true">
-      {children}
-    </div>}
-    <div className={className} data-hand-actions={layout}>{children}</div>
-  </>;
+  return <div className={className} data-hand-actions={layout}>{children}</div>;
 }

@@ -291,20 +291,14 @@ export function SevensTable(): ReactNode {
         onCardClick={onCardClick} />
       : <CardHand cards={hand} playableCards={targets} disabled={!canAct}
         onCardClick={onCardClick} onCardPreview={setPreview} />}
-    {playing && !isSpectator(game) && <div className={styles.controls}>
-      <span className={styles.penaltyTag}>{t('sevens.myPenalty', { n: String(penalty) })}</span>
-      {game.myCovered.length > 0 && <ChipList cards={game.myCovered} label={t('sevens.myCovered')} />}
-      {prompt && <span className={`${styles.prompt} ${isMyTurn ? styles.promptActive : ''} ${
-        mode === 'cover' ? styles.promptCover : ''}`} role={mode === 'cover' ? 'status' : undefined}>{prompt}</span>}
-      {selected && cost && <HandActions layout="group">
-        <button type="button" className={`btn btn-danger ${styles.ctrl}`} disabled={!canAct}
-          onClick={() => cover(selected)}>
-          {t('sevens.coverConfirm', { card: cardLabel(selected), n: String(cost.penalty) })}
-        </button>
-        <button type="button" className={`btn btn-outline ${styles.ctrl}`}
-          onClick={() => setCoverPick(null)}>{t('sevens.cancel')}</button>
-      </HandActions>}
-    </div>}
+    {playing && !isSpectator(game) && selected && cost && <HandActions layout="group">
+      <button type="button" className={`btn btn-danger ${styles.ctrl}`} disabled={!canAct}
+        onClick={() => cover(selected)}>
+        {t('sevens.coverConfirm', { card: cardLabel(selected), n: String(cost.penalty) })}
+      </button>
+      <button type="button" className={`btn btn-outline ${styles.ctrl}`}
+        onClick={() => setCoverPick(null)}>{t('sevens.cancel')}</button>
+    </HandActions>}
   </div>;
 
   // When the last suit is slain the table caves in during its frame, then holds broken through the closing
@@ -326,6 +320,10 @@ export function SevensTable(): ReactNode {
       centre={<Centre game={game} targets={targets} slaying={slaying?.cards[0]?.suit ?? null} sunk={broken}
         preview={preview && targets.some((card) => sameCard(card, preview)) ? preview : null} />}
       hand={handZone}
+      prompt={playing && !isSpectator(game) ? <>
+        {[t('sevens.myPenalty', { n: String(penalty) }), prompt].filter(Boolean).join(' · ')}
+        {game.myCovered.length > 0 && <> <ChipList cards={game.myCovered} label={t('sevens.myCovered')} /></>}
+      </> : prompt}
       tableEffect={tableEffect}
       centreVisible={slaying !== null || broken}
       overlay={game.phase === 'scoring' && game.result && <ResultOverlay result={game.result}

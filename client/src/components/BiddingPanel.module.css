@@ -202,19 +202,51 @@
   .hint, .panel .recent { display: none; }
 }
 
-/* Short landscape tables keep the three button rows and drop secondary text. */
-@media (max-height: 500px) and (min-width: 600px) {
-  .panel { max-width: 352px; margin-inline: auto; padding: 4px 6px; gap: 2px; }
-  .title { font-size: var(--text-sm); }
-  .highest, .recent { font-size: var(--text-xs); }
-  .levels, .suits, .actions { gap: 3px; }
-  .hint { display: none; }
-}
-
-/* Phones put the title, highest bid, and any recent calls on one line so the panel stays clear of the seats. */
-@media (max-width: 767px), (max-height: 500px) and (min-width: 600px) {
+/* Portrait phones put the title, highest bid, and any recent calls on one line so the panel stays clear of the seats. */
+@media (max-width: 767px) {
   .panel { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 8px; }
   .header { grid-column: 1; justify-content: flex-start; }
   .panel .recent { grid-column: 2; justify-content: flex-end; align-self: center; }
   .levels, .suits, .actions, .hint, .error { grid-column: 1 / -1; }
+}
+
+/* Short landscape: one compact card. Title, recent calls and cancel share the first row, the levels and suits
+   sit beside the Pass and confirm pills, and every control keeps a 40px hit area. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .panel {
+    --bid-height: var(--hit-size);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 68px;
+    grid-template-areas: 'header cancel' 'levels pass' 'suits confirm';
+    align-items: center;
+    gap: var(--space-1) 6px;
+    width: 100%;
+    max-width: none;
+    margin-inline: 0;
+    padding: 6px;
+    border: 0;
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+    backdrop-filter: none;
+  }
+  .header { grid-area: header; }
+  /* Every plate already shows its seat's latest call. */
+  .panel .recent { display: none; }
+  .levels { grid-area: levels; }
+  .suits { grid-area: suits; }
+  .actions { display: contents; }
+  .cancelBtn { position: relative; grid-area: cancel; justify-self: end; min-height: var(--control-height-small); height: var(--control-height-small); padding: 0 var(--space-3); border: 0; background: transparent; color: var(--color-primary); font-size: var(--text-sm); }
+  .cancelBtn::after { content: ''; position: absolute; inset: calc((var(--control-height-small) - var(--hit-size)) / 2) 0; }
+  .passBtn { grid-area: pass; }
+  .confirmBtn { grid-area: confirm; }
+  .hint { display: none; }
+  .error { grid-column: 1 / -1; }
+  .levels, .suits { gap: 2px; }
+  .levels { grid-template-columns: repeat(var(--level-count, 7), minmax(var(--hit-size), 1fr)); }
+  .levelBtn, .suitBtn { min-height: var(--bid-height); border: 0; border-radius: var(--radius-md); background: var(--surface-2); }
+  .levelBtn:disabled, .suitBtn:disabled { background: transparent; opacity: 0.3; }
+  .passBtn, .confirmBtn { min-height: var(--bid-height); border: 0; border-radius: var(--radius-pill); }
+  .passBtn { background: var(--color-success); color: var(--text-inverse); }
+  .title { font-size: var(--text-base); }
+  .highest { font-size: var(--text-sm); }
 }

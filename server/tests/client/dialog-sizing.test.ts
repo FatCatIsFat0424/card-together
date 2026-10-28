@@ -41,11 +41,19 @@ describe('dialog sizing', () => {
     expect(global).toMatch(/\.MuiDialog-paper:not\(\.MuiDialog-paperFullScreen\) \{[^}]*max-height: calc\(100dvh/);
   });
 
-  it('applies the shared classes to every centered dialog outside the game table', () => {
-    const missing = sources(CLIENT).filter((path) => !path.startsWith(`${join(CLIENT, 'games')}/`))
+  it('applies the shared classes to every centered dialog, including the table ones', () => {
+    const missing = sources(CLIENT)
       .filter((path) => /<Dialog\b(?![^>]*\bfullScreen\b)/.test(readFileSync(path, 'utf8').replace(/\s+/g, ' ')))
       .filter((path) => !readFileSync(path, 'utf8').includes('dialogPaperClass'))
       .map((path) => relative(CLIENT, path));
     expect(missing).toEqual([]);
+  });
+
+  it('builds the settlement dialog from the shared parts', () => {
+    const source = read('games/ResultDialog.tsx');
+    expect(source).toContain('dialogPaperClass');
+    expect(source).toContain('dialogParts.header');
+    expect(source).toContain('dialogParts.body');
+    expect(source).toContain('dialogParts.footer');
   });
 });

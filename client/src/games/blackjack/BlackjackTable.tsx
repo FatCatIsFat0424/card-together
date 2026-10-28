@@ -30,6 +30,7 @@ import {
 } from './blackjack-view';
 import type { BlackjackTableView } from './blackjack-view';
 import { AppIcon } from '../../components/AppIcon';
+import { HandActions } from '../HandActions';
 import styles from './BlackjackTable.module.css';
 import { isOwnTurn, isSpectator } from '../observer-view';
 import { useGodViewStore } from '../../stores/god-view-store';
@@ -245,12 +246,14 @@ function BetControls({ game, amount, onAmount, disabled, expired, sent, onBet }:
       <button type="button" className={`btn btn-outline ${styles.stepButton}`} aria-label={t('blackjack.betPlus')}
         title={t('blackjack.betPlus')} disabled={locked || value >= max}
         onClick={() => onAmount(stepBet(value, 1, chips))}>+</button>
+      {expired && <span className={styles.prompt}>{t('blackjack.betClosed')}</span>}
+    </div>
+    <HandActions className={styles.confirm} layout="row">
       <button type="button" className={`btn btn-primary ${styles.ctrl}`} disabled={locked} onClick={() => onBet(value)}>
         {t('blackjack.confirmBet', { n: String(value) })}
       </button>
-      {expired ? <span className={styles.prompt}>{t('blackjack.betClosed')}</span>
-        : <span className={styles.deadline} title={t('blackjack.timeLeft')}><DeadlineClock deadline={game.betDeadline} /></span>}
-    </div>
+      {!expired && <span className={styles.deadline} title={t('blackjack.timeLeft')}><DeadlineClock deadline={game.betDeadline} /></span>}
+    </HandActions>
     <p className={styles.limits}>
       {t('blackjack.betLimits', { min: String(BJ_MIN_BET), max: String(max), chips: String(chips) })}
     </p>
@@ -352,18 +355,18 @@ export function BlackjackTable(): ReactNode {
         holeHidden={view.holeHidden} size="lg" peek={observedHole ?? undefined}
         label={t('blackjack.dealerOf', { name: seatName(game.mySeat) })} />
       // Phone landscape keeps controls beside the hand rather than floating them over the table.
-      : dealing ? <div className={styles.controls}>
-        {settlement ? <strong className={`${styles.myNet} ${toneClass(settlement.net[game.mySeat]) ?? ''}`}>
+      : dealing ? <>
+        {settlement && <strong className={`${styles.myNet} ${toneClass(settlement.net[game.mySeat]) ?? ''}`}>
           {signedChips(settlement.net[game.mySeat])}
-        </strong> : <span className={`${styles.prompt} ${view.dealerTurn ? styles.promptActive : ''}`}>
-          {t(view.dealerTurn ? 'blackjack.yourDealerTurn' : 'blackjack.dealerWait')}
-        </span>}
-        {game.phase === 'playing' && BJ_DEALER_ACTIONS.map((action) => <button key={action} type="button"
-          className={`btn ${action === 'hit' ? 'btn-primary' : 'btn-outline'} ${styles.ctrl}`}
-          disabled={!dealerLegal.includes(action)} title={dealerHint(action)} onClick={() => sendDealerAction(action)}>
-          {t(`blackjack.action.${action}`)}
-        </button>)}
-      </div>
+        </strong>}
+        {game.phase === 'playing' && <HandActions className={styles.controls} layout="row">
+          {BJ_DEALER_ACTIONS.map((action) => <button key={action} type="button"
+            className={`btn ${action === 'hit' ? 'btn-primary' : 'btn-outline'} ${styles.ctrl}`}
+            disabled={!dealerLegal.includes(action)} title={dealerHint(action)} onClick={() => sendDealerAction(action)}>
+            {t(`blackjack.action.${action}`)}
+          </button>)}
+        </HandActions>}
+      </>
       : <>
         {myHands.length > 0 ? <div className={styles.myHands} role="group" aria-label={t('blackjack.hand')}>
           {myHands.map((hand, handIndex) => <BjHand key={handIndex} hand={hand} size="lg" sortable={!watching}
@@ -376,16 +379,15 @@ export function BlackjackTable(): ReactNode {
         </div> : game.phase === 'playing' && view.hand > 0 && <p className={styles.prompt}>
           {t(bjSitsIn(view.chips[game.mySeat]) ? 'blackjack.notInHand' : 'blackjack.sittingOut')}
         </p>}
-        {game.phase === 'playing' && myHands.length > 0 && <div className={styles.controls}>
-          {prompt && <span className={`${styles.prompt} ${isMyTurn ? styles.promptActive : ''}`}>{prompt}</span>}
-          {!watching && BJ_ACTIONS.map((action) => <button key={action} type="button"
+        {game.phase === 'playing' && myHands.length > 0 && !watching && <HandActions className={styles.controls} layout="row">
+          {BJ_ACTIONS.map((action) => <button key={action} type="button"
             className={`btn ${action === 'hit' ? 'btn-primary' : 'btn-outline'} ${styles.ctrl}`}
             disabled={!legal.includes(action)}
             title={action === 'double' || action === 'split' ? t(`blackjack.hint.${action}`) : undefined}
             onClick={() => sendAction(action)}>
             {t(`blackjack.action.${action}`)}
           </button>)}
-        </div>}
+        </HandActions>}
       </>}
   </div>;
 
@@ -394,6 +396,8 @@ export function BlackjackTable(): ReactNode {
       info={<Info game={game} view={view} locked={locked} />}
       centre={<Centre game={game} view={view} />}
       hand={handZone}
+      prompt={dealing && game.phase === 'playing' && !settlement ? t(view.dealerTurn ? 'blackjack.yourDealerTurn' : 'blackjack.dealerWait')
+        : game.phase === 'playing' && myHands.length > 0 ? prompt : null}
       overlay={game.phase === 'scoring' && game.result && <ResultOverlay result={game.result}
         pending={actionPending} error={actionError} disabled={!connectionReady} onBack={backToRoom} />}
       error={game.phase !== 'scoring' ? actionError : undefined}

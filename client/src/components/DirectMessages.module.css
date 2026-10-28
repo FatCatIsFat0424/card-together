@@ -63,10 +63,11 @@
 /* Short landscape: the name and time sit beside the first bubble instead of above it, so each group costs one line less. */
 @media (max-height: 500px) and (min-width: 600px) {
   .group { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); align-items: start; gap: 2px var(--space-2); }
-  .ownGroup { grid-template-columns: minmax(0, 1fr) 5.5rem; }
+  /* Your own groups need no name: just the time, right-aligned over the bubbles' edge. */
+  .ownGroup { display: flex; flex-direction: column; align-items: flex-end; }
   .group .messageMeta { grid-column: 1; grid-row: 1; flex-direction: column; min-width: 0; padding-inline: 0; line-height: 1.25; }
   .group .messageMeta > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .group > article { grid-column: 2; justify-self: start; max-width: 85%; }
-  .ownGroup .messageMeta { grid-column: 2; text-align: right; }
-  .ownGroup > article { grid-column: 1; justify-self: end; }
+  .ownGroup .messageMeta { flex-direction: row; padding-inline: 0; }
+  .ownGroup > article { max-width: 70%; }
 }

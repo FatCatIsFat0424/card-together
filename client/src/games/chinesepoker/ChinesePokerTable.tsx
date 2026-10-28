@@ -336,7 +336,7 @@ export function ChinesePokerTable(): ReactNode {
         onCardClick={(card) => update({ selection: toggleCard(selection, card) })}
         onReorder={setManualOrder} />
       {foulWarned && <p className={styles.foulWarning} role="alert">{t('chinesepoker.foulWarning')}</p>}
-      <HandActions className={styles.controls} layout="grid">
+      <HandActions className={styles.controls} layout="wide">
         <button type="button" className={`btn btn-outline ${styles.ctrl}`} disabled={!editable}
           onClick={() => update({ rows: rowsFromArrangement(cpBestArrangement(myHand)), selection: [] })}>
           {t('chinesepoker.autoArrange')}

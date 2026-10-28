@@ -1,4 +1,5 @@
-/* Below the top bar (90) and invite/abort toasts (85) so music, voice, and sign-out stay usable. */
+/* The settlement dialog follows the shared dialog sizing: equal insets, a fixed title and footer, and a body that
+   scrolls inside. It sits below the top bar (90) and invite/abort toasts (85) so music, voice and sign-out stay usable. */
 .backdrop {
   position: fixed;
   top: var(--topbar-height);
@@ -9,43 +10,32 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-md);
   background: var(--bg-overlay);
   animation: fadeIn 0.3s ease;
 }
 
 .contained { position: absolute; inset: 0; }
 
-.dialog {
-  width: 100%;
-  max-width: 440px;
-  max-height: 100%;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: var(--spacing-xl);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  color: var(--text-primary);
-  text-align: center;
-  animation: slideUp 0.5s ease;
-}
+.dialog.dialog { animation: slideUp 0.5s ease; text-align: center; }
+.backdrop.contained .dialog.dialog { max-height: calc(100% - 2 * var(--dialog-inset)); }
 
-.wide { max-width: 560px; }
+.header.header { justify-content: center; text-align: center; }
+.heading { min-width: 0; }
 
 .eyebrow {
-  font-family: var(--font-display);
-  font-size: var(--text-2xl);
-  font-weight: 800;
+  margin: 0;
   color: var(--color-warning);
+  font-size: var(--text-base);
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .title {
-  margin-bottom: var(--spacing-md);
+  margin: 0;
   font-family: var(--font-display);
-  font-size: var(--text-2xl);
+  font-size: var(--text-xl);
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .win { color: var(--color-success); }
@@ -53,7 +43,7 @@
 
 .scoreTable {
   width: 100%;
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--space-3);
   border-collapse: collapse;
   font-size: var(--text-sm);
 }
@@ -61,7 +51,7 @@
 .scoreTable th,
 .scoreTable td {
   padding: 6px 4px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--separator);
   vertical-align: top;
 }
 
@@ -71,33 +61,24 @@
 .winnerRow { color: var(--color-success); font-weight: 700; }
 
 .note {
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--space-3);
   font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 
-.readiness {
-  margin: var(--spacing-md) 0 0;
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
+.footer.footer { justify-content: flex-end; }
 
+.readiness,
 .error {
-  margin-top: var(--spacing-md);
-  color: var(--color-danger);
+  flex: 1 1 auto;
+  margin: 0;
   font-size: var(--text-sm);
+  text-align: left;
 }
 
-.primary {
-  margin-top: var(--spacing-md);
-  min-height: 44px;
-}
-
-@media (max-width: 767px) {
-  .backdrop { padding: var(--spacing-sm); }
-  .dialog { padding: var(--spacing-md); }
-}
+.readiness { color: var(--text-secondary); }
+.error { color: var(--color-danger); }
 
 @media (prefers-reduced-motion: reduce) {
-  .backdrop, .dialog { animation: none; }
+  .backdrop, .dialog.dialog { animation: none; }
 }

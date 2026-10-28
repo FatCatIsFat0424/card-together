@@ -198,47 +198,10 @@
   align-items: center;
 }
 
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 42px;
-  padding: 6px var(--spacing-sm) 0;
-}
-
-.prompt {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
-
-.promptActive {
-  color: var(--text-primary);
-  font-weight: 700;
-}
-
-.promptCover {
-  padding: 2px 10px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--color-warning);
-  background: color-mix(in srgb, var(--color-warning) 16%, transparent);
-}
-
 .ctrl {
   min-height: 36px;
   padding: 4px 14px;
   font-size: var(--text-sm);
-}
-
-.penaltyTag {
-  padding: 0 8px;
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--color-danger) 16%, transparent);
-  color: var(--text-primary);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  white-space: nowrap;
 }
 
 /* ─── Info rail ─── */
@@ -281,7 +244,6 @@
   }
   .row { gap: 4px; }
   .mini { --chip-w: calc((18px) * var(--playing-card-scale)); }
-  .controls { gap: 4px; padding-top: 4px; }
   .ctrl { min-height: 40px; padding: 4px 10px; }
 }
 
@@ -307,4 +269,6 @@
   }
   .row { gap: 4px; }
   .rowSuit { width: auto; min-width: calc(var(--chip-w) * 0.9); }
+  /* Chip text never drops below 12px, whatever the chip size. */
+  .chipRank, .next .chipRank, .chipSuit { font-size: max(12px, calc(var(--chip-w) * 0.42)); }
 }

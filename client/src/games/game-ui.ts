@@ -56,6 +56,8 @@ export interface GameUi<K extends GameType> {
   readonly centre?: { readonly responsive?: boolean; readonly wide?: boolean };
   /** Short line centred in the table's top bar, such as the hand number; renders nothing when it has no content */
   readonly hudInfo?: ComponentType;
+  /** Compact chip at the toolbar's left, such as the contract of a trick-taking game; renders nothing when it has no content */
+  readonly hudChip?: ComponentType;
   readonly presentation?: GamePresentationUi<K>;
   /** Round list drawn from the rounds the client module derives; absent for games that list tricks elsewhere */
   readonly roundsView?: (props: RoundsViewProps) => ReactNode;

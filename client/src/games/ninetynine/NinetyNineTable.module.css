@@ -138,16 +138,6 @@
   padding: 6px var(--spacing-sm) 0;
 }
 
-.prompt {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
-
-.promptActive {
-  color: var(--text-primary);
-  font-weight: 700;
-}
-
 .choice {
   display: flex;
   align-items: center;

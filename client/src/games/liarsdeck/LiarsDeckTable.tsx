@@ -231,7 +231,6 @@ export function LiarsDeckTable(): ReactNode {
         className={styles.mini} label={t(`liarsdeck.face.${card.face}`)} />)}
     </div>}
     {playing && <HandActions className={styles.controls} layout="wide">
-      {prompt && <span className={`${styles.prompt} ${mode !== 'wait' ? styles.promptActive : ''}`}>{prompt}</span>}
       {showHand && (mode === 'play' || mode === 'playOrCall') && <button type="button"
         className={`btn btn-primary ${styles.ctrl}`} disabled={!canAct || chosen.length === 0}
         onClick={sendPlay}>
@@ -250,6 +249,7 @@ export function LiarsDeckTable(): ReactNode {
       info={<Info game={game} view={view} locked={locked} />}
       centre={<Centre view={view} />}
       hand={handZone}
+      prompt={prompt}
       overlay={game.phase === 'scoring' && game.result && <ResultOverlay result={game.result}
         pending={actionPending} error={actionError} disabled={!connectionReady} onBack={backToRoom} />}
       error={game.phase !== 'scoring' ? actionError : undefined}

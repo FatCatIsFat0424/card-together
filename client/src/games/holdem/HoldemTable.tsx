@@ -1,6 +1,6 @@
 // ─── HoldemTable: board and pots, every seat's stake, hole cards, betting controls, info rail, result ───
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { HE_HANDS } from '@shared/rules/holdem';
 import type { HoldemAction, HoldemLogEntry, HoldemMatchResult, HoldemVisibleState, GameSeat } from '@shared/types';
@@ -27,6 +27,9 @@ import {
 } from './holdem-view';
 import type { HoldemBlindSeats, HoldemControls, HoldemTableView, RaiseControl, SeatAction } from './holdem-view';
 import { AppIcon } from '../../components/AppIcon';
+import { Button } from '../../components/Button';
+import { Chip } from '../../components/Chip';
+import { HandActions } from '../HandActions';
 import styles from './HoldemTable.module.css';
 import { isOwnTurn, isSpectator } from '../observer-view';
 import { useGodViewStore } from '../../stores/god-view-store';
@@ -57,9 +60,9 @@ function SeatSpot({ seat, view, position, isMe, action, blinds }: {
     <header className={styles.spotHeader}>
       <span className={styles.spotMarkers}><SeatMarkers seat={seat} blinds={blinds} /></span>
       {!isMe && <span className={styles.spotName}>{seatName(seat)}</span>}
-      {state === 'folded' ? <span className={styles.tag}>{t('holdem.folded')}</span>
-        : state === 'allIn' ? <span className={`${styles.tag} ${styles.allInTag}`}>{t('holdem.allIn')}</span>
-          : action && <span className={styles.tag}>{t(`holdem.tag.${action}`)}</span>}
+      {/* Folded seats are dimmed instead of labelled. */}
+      {state === 'allIn' ? <span className={`${styles.tag} ${styles.allInTag}`}>{t('holdem.allIn')}</span>
+        : state !== 'folded' && action && <span className={styles.tag}>{t(`holdem.tag.${action}`)}</span>}
     </header>
     {!isMe && (revealed.length > 0
       ? <HeCards cards={revealed} size="sm" overlap label={seatName(seat)} />
@@ -67,7 +70,7 @@ function SeatSpot({ seat, view, position, isMe, action, blinds }: {
         : <span className={styles.spotBacks}><HeCards cards={[]} backs={2} size="xs" overlap /></span>)}
     {category && <span className={styles.category}>{t(`holdem.category.${category}`)}</span>}
     {won > 0 && <strong className={styles.won}><AppIcon name="trophy" /> {t('holdem.wonAmount', { n: String(won) })}</strong>}
-    {bet > 0 && <BetStack amount={bet} title={t('holdem.betTitle', { n: String(bet) })} />}
+    {bet > 0 && <span className={styles.spotBet}><BetStack amount={bet} title={t('holdem.betTitle', { n: String(bet) })} /></span>}
   </section>;
 }
 
@@ -233,9 +236,9 @@ function ResultOverlay({ result, pending, error, disabled, onBack }: {
   </ResultDialog>;
 }
 
-/** Slider, amount field, and shortcuts for a bet or raise, clamped to the legal street totals. */
-function RaiseInput({ game, control, disabled, onRaise }: {
-  game: HoldemVisibleState; control: RaiseControl; disabled: boolean; onRaise: (to: number) => void;
+/** Presets, slider, amount field and confirm for a bet or raise, clamped to the legal street totals. */
+function RaiseSheet({ game, control, disabled, onRaise, onClose }: {
+  game: HoldemVisibleState; control: RaiseControl; disabled: boolean; onRaise: (to: number) => void; onClose: () => void;
 }): ReactNode {
   const { t } = useI18nStore();
   const [draft, setDraft] = useState<string | null>(null);
@@ -246,65 +249,83 @@ function RaiseInput({ game, control, disabled, onRaise }: {
     setChosen(clampRaise(to, control));
   };
   const kind = raiseKind(value, control);
-  const confirm = <button type="button" className={`btn btn-primary ${styles.ctrl} ${kind === 'allIn' ? styles.allInButton : ''}`}
+  const confirm = <Button variant="primary" className={kind === 'allIn' ? styles.allInButton : undefined}
     disabled={disabled} onClick={() => onRaise(value)}>
     {t(`holdem.confirm.${kind}`, { n: String(value) })}
-  </button>;
-  if (control.min === control.max) {
-    return <div className={styles.raise}>
-      <span className={styles.limits}>{t('holdem.raiseAllInOnly')}</span>
+  </Button>;
+  const fixed = control.min === control.max;
+  return <div className={styles.sheet} role="group" aria-label={t('holdem.raiseAmount')}
+    onKeyDown={(event) => {
+      if (event.key !== 'Escape') return;
+      // Closing the sheet must not also close a menu or chat drawer underneath.
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+    }}>
+    {fixed ? <span className={styles.limits}>{t('holdem.raiseAllInOnly')}</span> : <>
+      <div className={styles.quickRow} role="group" aria-label={t('holdem.raiseAmount')}>
+        {QUICK_SIZES.map((size) => {
+          const to = quickRaise(size, game, game.mySeat, control);
+          return <Chip key={size} selected={to === value} disabled={disabled} onClick={() => choose(to)} title={String(to)}>
+            {t(`holdem.quick.${size}`)}
+          </Chip>;
+        })}
+      </div>
+      <div className={styles.sliderRow}>
+        <input type="range" className={styles.slider} min={control.min} max={control.max} step={1} value={value}
+          aria-label={t('holdem.raiseAmount')} disabled={disabled} autoFocus
+          onChange={(event) => choose(Number(event.target.value))} />
+        <input type="number" className={styles.amountInput} min={control.min} max={control.max} step={1}
+          inputMode="numeric" aria-label={t('holdem.raiseAmount')} disabled={disabled}
+          value={draft ?? String(value)}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={() => choose(value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !disabled) {
+              choose(value);
+              onRaise(value);
+            }
+          }} />
+      </div>
+    </>}
+    <div className={styles.sheetActions}>
+      {!fixed && <span className={styles.limits}>{t('holdem.raiseRange', { min: String(control.min), max: String(control.max) })}</span>}
+      <Button onClick={onClose}>{t('common.cancel')}</Button>
       {confirm}
-    </div>;
-  }
-  return <div className={styles.raise}>
-    <div className={styles.quickRow} role="group" aria-label={t('holdem.raiseAmount')}>
-      {QUICK_SIZES.map((size) => {
-        const to = quickRaise(size, game, game.mySeat, control);
-        return <button key={size} type="button" className={`btn btn-outline ${styles.quick} ${to === value ? styles.quickActive : ''}`}
-          aria-pressed={to === value} disabled={disabled} onClick={() => choose(to)} title={String(to)}>
-          {t(`holdem.quick.${size}`)}
-        </button>;
-      })}
     </div>
-    <div className={styles.sliderRow}>
-      <input type="range" className={styles.slider} min={control.min} max={control.max} step={1} value={value}
-        aria-label={t('holdem.raiseAmount')} disabled={disabled}
-        onChange={(event) => choose(Number(event.target.value))} />
-      <input type="number" className={styles.amountInput} min={control.min} max={control.max} step={1}
-        inputMode="numeric" aria-label={t('holdem.raiseAmount')} disabled={disabled}
-        value={draft ?? String(value)}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={() => choose(value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' && !disabled) {
-            choose(value);
-            onRaise(value);
-          }
-        }} />
-      {confirm}
-    </div>
-    <span className={styles.limits}>{t('holdem.raiseRange', { min: String(control.min), max: String(control.max) })}</span>
   </div>;
 }
 
+/** Fold, check or call, and raise as three pills; raising opens the sheet in their place. */
 function Controls({ game, options, enabled, onAction }: {
   game: HoldemVisibleState; options: HoldemControls | null; enabled: boolean; onAction: (action: HoldemAction) => void;
 }): ReactNode {
   const { t } = useI18nStore();
+  const [raising, setRaising] = useState(false);
+  const raiseButton = useRef<HTMLButtonElement>(null);
+  const wasRaising = useRef(false);
+  useEffect(() => {
+    // Closing the sheet hands focus back to the pill that opened it.
+    if (wasRaising.current && !raising) raiseButton.current?.focus({ preventScroll: true });
+    wasRaising.current = raising;
+  }, [raising]);
   const disabled = !enabled || !options;
   const callLabel = !options || options.check ? t('holdem.action.check')
     : t(options.callAllIn ? 'holdem.action.callAllIn' : 'holdem.action.call', { n: String(options.call) });
-  // Phone landscape keeps these beside the hole cards rather than floating them over the table.
-  return <div className={styles.controls}>
-    <div className={styles.mainButtons}>
-      <button type="button" className={`btn btn-outline ${styles.ctrl} ${styles.foldButton}`} disabled={disabled}
-        onClick={() => onAction({ type: 'fold' })}>{t('holdem.action.fold')}</button>
-      <button type="button" className={`btn btn-primary ${styles.ctrl}`} disabled={disabled}
-        onClick={() => onAction(options?.check ? { type: 'check' } : { type: 'call' })}>{callLabel}</button>
-    </div>
-    {options?.raise && <RaiseInput key={`${options.raise.min}-${options.raise.max}`} game={game} control={options.raise}
-      disabled={disabled} onRaise={(to) => onAction({ type: 'raise', to })} />}
-  </div>;
+  if (raising && options?.raise) {
+    return <HandActions className={styles.controls} layout="sheet">
+      <RaiseSheet key={`${options.raise.min}-${options.raise.max}`} game={game} control={options.raise}
+        disabled={disabled} onClose={() => setRaising(false)}
+        onRaise={(to) => onAction({ type: 'raise', to })} />
+    </HandActions>;
+  }
+  return <HandActions className={styles.controls} layout="row">
+    <Button disabled={disabled} onClick={() => onAction({ type: 'fold' })}>{t('holdem.action.fold')}</Button>
+    <Button variant={options?.raise ? 'ghost' : 'primary'} disabled={disabled}
+      onClick={() => onAction(options?.check ? { type: 'check' } : { type: 'call' })}>{callLabel}</Button>
+    {options?.raise && <Button ref={raiseButton} variant="primary" disabled={disabled} aria-haspopup="true"
+      onClick={() => setRaising(true)}>{t(options.raise.bet ? 'holdem.tag.bet' : 'holdem.tag.raise')}</Button>}
+  </HandActions>;
 }
 
 export function HoldemTable(): ReactNode {
@@ -370,24 +391,24 @@ export function HoldemTable(): ReactNode {
     {(hole.cards.length > 0 || hole.hidden) && <div className={`${styles.myHand} ${myState === 'folded' ? styles.folded : ''}`}>
       <HeCards cards={hole.cards} backs={hole.hidden ? 2 : 0} size="lg" label={t('holdem.hole')} sortable={!isSpectator(game)} />
       <div className={styles.myMeta}>
+        {view.streetBets[me] > 0 && <span className={styles.myBet}>
+          <BetStack amount={view.streetBets[me]} title={t('holdem.betTitle', { n: String(view.streetBets[me]) })} /></span>}
         {category && <span className={styles.bestHand}>{t('holdem.bestHand', { category: t(`holdem.category.${category}`) })}</span>}
         {won > 0 && <strong className={styles.won}><AppIcon name="trophy" /> {t('holdem.wonAmount', { n: String(won) })}</strong>}
       </div>
     </div>}
-    {game.phase === 'playing' && isSpectator(game) ? prompt && <p className={styles.prompt}>{prompt}</p>
-      : game.phase === 'playing' && (myState === 'active'
-      ? <>
-        {prompt && <p className={`${styles.prompt} ${isOwnTurn(game) && !locked ? styles.promptActive : ''}`}>{prompt}</p>}
-        <Controls key={game.log.length} game={game} options={options} enabled={myTurn} onAction={sendAction} />
-      </>
-      : stateNote && <p className={styles.prompt} role="status">{stateNote}</p>)}
+    {game.phase === 'playing' && !isSpectator(game) && myState === 'active'
+      && <Controls key={game.log.length} game={game} options={options} enabled={myTurn} onAction={sendAction} />}
   </div>;
+  const handPrompt = game.phase !== 'playing' ? null
+    : isSpectator(game) || myState === 'active' ? prompt : stateNote;
 
   return (
     <GameShell
       info={<Info game={game} view={view} locked={locked} />}
       centre={<Centre game={game} view={view} />}
       hand={handZone}
+      prompt={handPrompt}
       overlay={game.phase === 'scoring' && game.result && <ResultOverlay result={game.result}
         pending={actionPending} error={actionError} disabled={!connectionReady} onBack={backToRoom} />}
       error={game.phase !== 'scoring' ? actionError : undefined}

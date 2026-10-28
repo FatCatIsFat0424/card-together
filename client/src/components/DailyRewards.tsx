@@ -16,8 +16,10 @@ import { IconButton } from './IconButton';
 import { dialogParts, dialogPaperClass } from '../styles/dialog';
 import styles from './DailyRewards.module.css';
 
-export function CheckInCalendar({ status, pending, onCheckIn, celebrate = false }: {
+export function CheckInCalendar({ status, pending, onCheckIn, celebrate = false, reward }: {
   readonly status: DailyRewardsStatus; readonly pending: boolean; readonly onCheckIn: () => void;
+  /** Shown beside the month so the dialog keeps its height. */
+  readonly reward?: ReactNode;
   /** Plays the claim animation on today's date; set only right after this session's claim. */
   readonly celebrate?: boolean;
 }): ReactNode {
@@ -28,7 +30,7 @@ export function CheckInCalendar({ status, pending, onCheckIn, celebrate = false 
   const monthLabel = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long', timeZone: 'UTC' }).format(start);
   const weekdays = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
   return <section className={styles.calendar} aria-label={monthLabel}>
-    <h3>{monthLabel}</h3>
+    <div className={styles.calendarHead}><h3>{monthLabel}</h3>{reward}</div>
     <div className={styles.calendarGrid}>
       {Array.from({ length: 7 }, (_, day) => <span className={styles.weekday} key={`weekday-${day}`}>
         {weekdays.format(new Date(Date.UTC(2026, 0, 4 + day)))}</span>)}
@@ -80,22 +82,23 @@ export function DailyTaskList({ status, pending, onClaim, onReplace }: {
           <AppIcon name="coins" /><strong>{task.coins}</strong>
         </div>
         <div className={styles.taskBody}>
-          <h3>{t(`daily.${id}`)}</h3>
-          <div className={styles.progress}><progress value={progress} max={task.target} aria-label={t(`daily.${id}`)} /><span>{progress}/{task.target}</span></div>
+          <div className={styles.taskTitle}><h3>{t(`daily.${id}`)}</h3><span className={styles.count}>{progress}/{task.target}</span></div>
+          <progress className={styles.bar} value={progress} max={task.target} aria-label={t(`daily.${id}`)} />
         </div>
         <div className={styles.taskActions}>
           {(complete || claimed) && <Button variant="primary" size="small" disabled={pending || claimed}
             icon={claimed ? 'check' : undefined}
             aria-label={t('daily.claimTask', { task: t(`daily.${id}`) })} onClick={() => onClaim(id)}>
             {t(claimed ? 'daily.claimed' : 'daily.claim')}</Button>}
-          {!claimed && <Button variant={complete ? 'text' : 'ghost'} size="small" icon="refresh"
-            disabled={pending || status.swapsRemaining === 0} aria-label={t('daily.replaceTask', { task: t(`daily.${id}`) })}
-            onClick={() => onReplace(id)}>{t('daily.replace')}</Button>}
+          {!claimed && <IconButton icon="refresh" disabled={pending || status.swapsRemaining === 0}
+            label={t('daily.replaceTask', { task: t(`daily.${id}`) })} onClick={() => onReplace(id)} />}
         </div>
       </li>;
     })}</ul>
-    <div className={styles.taskFooter}><span>{t('daily.replacements', { count: String(status.swapsRemaining) })}</span></div>
-    <p className={styles.hint}>{t('daily.reset')}</p>
+    <div className={styles.taskFooter}>
+      <span>{t('daily.reset')}</span>
+      <span>{t('daily.replacements', { count: String(status.swapsRemaining) })}</span>
+    </div>
   </>;
 }
 
@@ -203,11 +206,11 @@ export function DailyRewards({ layout = 'icons' }: { readonly layout?: 'icons' |
         onClick={() => open('check-in')} />
     </>}
     <Dialog open={dialogOpen} onClose={close} aria-labelledby="daily-rewards-title"
-      slotProps={{ paper: { className: dialogPaperClass(dialog === 'tasks' ? 'wide' : 'medium') } }}>
+      slotProps={{ paper: { className: dialogPaperClass(dialog === 'tasks' ? 'narrow' : 'medium', dialog === 'tasks' && styles.tasksDialog) } }}>
       <DialogTitle component="div" className={`${dialogParts.header} ${styles.dialogHeader}`}>
         <div className={styles.dialogHeading}><h2 id="daily-rewards-title"><AppIcon name={dialog === 'tasks' ? 'info' : 'calendar'} />{t(dialog === 'tasks' ? 'daily.tasks' : 'daily.checkIn')}</h2>
-          {dialog === 'tasks' && <div className={styles.taskMeta}><span>{t('daily.poolHint')}</span>
-            {status && <DailyTaskCountdown key={status.serverTime} status={status} />}</div>}</div>
+          {dialog === 'tasks' && status && <div className={styles.taskMeta}>
+            <DailyTaskCountdown key={status.serverTime} status={status} /></div>}</div>
         <IconButton icon="close" label={t('table.close')} onClick={close} disabled={pending} />
       </DialogTitle>
       <DialogContent className={`${dialogParts.body} ${styles.content}`} inert={!dialogOpen}>
@@ -215,9 +218,9 @@ export function DailyRewards({ layout = 'icons' }: { readonly layout?: 'icons' |
           : !status ? <p role="status">{t('common.loading')}</p>
           : dialog === 'tasks' ? <DailyTaskList status={status} pending={pending}
             onClaim={(id) => { void mutate(id); }} onReplace={(id) => { void mutate(id, true); }} /> : <>
-            <p className={styles.checkInReward}><AppIcon name="coins" />{t('daily.reward', { coins: String(DAILY_CHECK_IN_COINS) })}</p>
             <CheckInCalendar status={status} pending={pending} celebrate={celebrateDay === status.day}
-              onCheckIn={() => { void mutate('check-in'); }} />
+              onCheckIn={() => { void mutate('check-in'); }}
+              reward={<p className={styles.checkInReward}><AppIcon name="coins" />{t('daily.reward', { coins: String(DAILY_CHECK_IN_COINS) })}</p>} />
           </>}
       </DialogContent>
     </Dialog>

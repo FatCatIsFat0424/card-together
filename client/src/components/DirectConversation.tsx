@@ -28,7 +28,7 @@ const DirectMessageGroupRow = memo(function DirectMessageGroupRow({ group, local
 }): ReactNode {
   const first = group.messages[0];
   return <div className={`${styles.group} ${group.own ? styles.ownGroup : ''}`}>
-    <div className={styles.messageMeta}><span>{first.sender.nickname}</span>
+    <div className={styles.messageMeta}>{!group.own && <span>{first.sender.nickname}</span>}
       <time dateTime={new Date(first.timestamp).toISOString()} title={dateTimeFormat.format(first.timestamp)}>
         {groupTimeLabel(first.timestamp, locale)}</time>
     </div>

@@ -449,7 +449,8 @@ button.identity:focus-visible { outline: 2px solid var(--color-primary); outline
     inset: -2px;
   }
   :global([data-expanded-table]) .seat:not(.bottom) .namePill { grid-column: 2; grid-row: 1; }
-  :global([data-expanded-table]) .seat:not(.bottom) .stats { grid-column: 2; grid-row: 2; justify-content: flex-start; }
+  /* Chips and one status chip share a line, so three plates per column stay three plates tall. */
+  :global([data-expanded-table]) .seat:not(.bottom) .stats { grid-column: 2; grid-row: 2; justify-content: flex-start; flex-wrap: nowrap; }
   /* The ring already counts the time down; the seconds chip stays readable to screen readers only. */
   :global([data-expanded-table]) .seat:not(.bottom) .stats [role='timer'] {
     position: absolute;
@@ -548,3 +549,32 @@ button.identity:focus-visible { outline: 2px solid var(--color-primary); outline
 /* Non-scoring captures stay visible but recede behind the red cards. */
 .capturedPlain { opacity: 0.55; }
 
+
+/* Short landscape: side seats share the screen's 12px inset and hug their own edge. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .left, .topLeft, .bottomLeft { align-items: flex-start; }
+  .right, .topRight, .bottomRight { align-items: flex-end; }
+  /* Content lines up with the edge: the avatar, name and numbers share one edge instead of centring on each other. */
+  .bottom { justify-content: flex-start; }
+  :is(.left, .topLeft, .bottomLeft, .bottom) .plate:not(.hasArt) { align-items: flex-start; padding-inline: 0; }
+  :is(.right, .topRight, .bottomRight) .plate:not(.hasArt) { align-items: flex-end; padding-inline: 0; }
+  :is(.left, .topLeft, .bottomLeft, .bottom) .identity { align-items: flex-start; }
+  :is(.right, .topRight, .bottomRight) .identity { align-items: flex-end; }
+  :is(.left, .topLeft, .bottomLeft, .bottom) .stats { justify-content: flex-start; }
+  :is(.right, .topRight, .bottomRight) .stats { justify-content: flex-end; }
+}
+
+/* Hold'em: the street stake sits beside its plate, on the side facing the table centre. The felt draws the
+   same stake in other layouts. */
+.bet { display: none; }
+@media (max-height: 500px) and (min-width: 600px) {
+  .bet {
+    position: absolute;
+    z-index: 2;
+    display: flex;
+    pointer-events: none;
+  }
+  .left .bet, .topLeft .bet, .bottomLeft .bet { left: calc(100% + 4px); top: 50%; transform: translateY(-50%); }
+  .right .bet, .topRight .bet, .bottomRight .bet { right: calc(100% + 4px); top: 50%; transform: translateY(-50%); }
+  .top .bet { top: calc(100% + 2px); left: 50%; transform: translateX(-50%); }
+}

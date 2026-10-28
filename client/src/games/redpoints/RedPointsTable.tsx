@@ -238,9 +238,6 @@ export function RedPointsTable(): ReactNode {
   const handZone = <div className={styles.handArea}>
     <CardHand cards={game.myHand} playableCards={game.myHand} selectedCards={selected ? [selected] : []}
       disabled={!canPlay} onCardClick={onCardClick} onCardPreview={setPreview} confirmTouch />
-    {playing && <div className={styles.controls}>
-      {prompt && <span className={`${styles.prompt} ${isMyTurn ? styles.promptActive : ''}`}>{prompt}</span>}
-    </div>}
   </div>;
 
   return (
@@ -248,6 +245,7 @@ export function RedPointsTable(): ReactNode {
       info={<Info game={game} />}
       centre={<Centre game={game} options={options} previewOptions={previewOptions} onCapture={options.length > 0 && !actionPending && connectionReady ? send : null} />}
       hand={handZone}
+      prompt={prompt}
       overlay={game.phase === 'scoring' && game.result && <ResultOverlay result={game.result}
         captured={game.captured} pending={actionPending} error={actionError} disabled={!connectionReady}
         onBack={backToRoom} />}

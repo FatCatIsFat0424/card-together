@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 import { AppIcon } from './AppIcon';
 import type { AppIconName } from './AppIcon';
 import styles from './Button.module.css';
@@ -23,6 +23,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   readonly size?: ButtonSize;
   /** Leading glyph; the visible text still names the button. */
   readonly icon?: AppIconName;
+  readonly ref?: Ref<HTMLButtonElement>;
 }
 
 export function Button({ variant = 'ghost', size = 'regular', icon, className, type = 'button', children, ...props }: ButtonProps): ReactNode {

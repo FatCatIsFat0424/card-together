@@ -1,6 +1,10 @@
 const english = {
   'napoleon.napoleon': 'Napoleon',
   'napoleon.secretary': 'Secretary',
+  'napoleon.napoleonShort': 'N',
+  'napoleon.secretaryShort': 'S',
+  'napoleon.contractChip': 'Contract, roles, and side progress',
+  'napoleon.chipCard': 'Card {card}',
   'napoleon.defender': 'Defender',
   'napoleon.pointsChip': '{n} pts',
   'napoleon.pointsTitle': 'Point cards won: {n}',
@@ -89,6 +93,10 @@ export const napoleonTranslations: Record<'en' | 'zh-TW', Record<NapoleonTransla
   'zh-TW': {
     'napoleon.napoleon': '拿破崙',
     'napoleon.secretary': '小秘書',
+    'napoleon.napoleonShort': '拿',
+    'napoleon.secretaryShort': '秘',
+    'napoleon.contractChip': '合約、身分與雙方進度',
+    'napoleon.chipCard': '牌 {card}',
     'napoleon.defender': '防家',
     'napoleon.pointsChip': '點數 {n}',
     'napoleon.pointsTitle': '已吃到 {n} 張點數牌',

@@ -190,7 +190,6 @@ export function NinetyNineTable(): ReactNode {
     <CardHand cards={game.myHand} playableCards={playable} disabled={!canPlay} onCardClick={onCardClick}
       markedCards={unplayable} markedLabel={t('ninetynine.unplayable')} />
     {playing && <HandActions className={styles.controls}>
-      {prompt && <span className={`${styles.prompt} ${isMyTurn ? styles.promptActive : ''}`}>{prompt}</span>}
       {chosen && nnRequiresChoice(chosen) && <div className={styles.choice} role="group" aria-label={cardLabel(chosen)}>
         <CardImage card={chosen} className={styles.mini} />
         {(['plus', 'minus'] as const).map((choice) => (
@@ -211,6 +210,7 @@ export function NinetyNineTable(): ReactNode {
       info={<Info game={game} />}
       centre={<Centre game={game} />}
       hand={handZone}
+      prompt={prompt}
       pickableSeats={targets}
       onPickSeat={chosen ? (seat) => send(chosen, undefined, seat) : undefined}
       overlay={game.phase === 'scoring' && game.result && <ResultOverlay result={game.result}
