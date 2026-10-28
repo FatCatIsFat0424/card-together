@@ -97,7 +97,7 @@ describe('SQLite repository', () => {
     await expect(importJsonDocument(emptyDocument(), path)).rejects.toMatchObject({ code: 'DATABASE_IN_USE' });
   });
 
-  it('upgrades a v7 database with notification read columns after a backup', async () => {
+  it('upgrades a v7 database with notification read columns and statistics tables after a backup', async () => {
     repository = await createSqliteRepository(path);
     const [alice, bob, carol] = [account('alice'), account('bob'), account('carol')];
     for (const entry of [alice, bob, carol]) await repository.createAccount(entry);
@@ -113,6 +113,7 @@ describe('SQLite repository', () => {
     const current = { friendships: columns(legacy, 'friendships'), notifications: columns(legacy, 'friend_notifications') };
     legacy.exec('ALTER TABLE friendships DROP COLUMN recipient_read_at');
     legacy.exec('ALTER TABLE friend_notifications DROP COLUMN read_at');
+    for (const table of ['game_stats', 'account_stats', 'stats_backfill']) legacy.exec(`DROP TABLE ${table}`);
     legacy.exec('PRAGMA user_version = 7');
     legacy.close();
     repository = await createSqliteRepository(path);
@@ -325,7 +326,7 @@ describe('SQLite repository', () => {
       const result = await importJsonDocument(source, path);
       expect(result).toEqual({ runtime: true, droppedRecordings: [], imported: {
         accounts: 3, sessions: 1, friendships: 2, matches: 2, emojis: 1, directMessages: 1, messageReads: 1,
-        friendNotifications: 1, rewardedGameIds: 1 } });
+        friendNotifications: 1, rewardedGameIds: 1, gameStats: 1, accountStats: 1 } });
       expect(await SQLITE_ADAPTER.readDocument(path)).toEqual(source);
       const json = await createJsonRepository(jsonPath);
       try {

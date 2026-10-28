@@ -29,7 +29,8 @@ import {
 import { claimSqlitePath, copySqliteDatabase, inTransaction, openSqliteDatabase } from './sqlite-schema';
 import type { RuntimeRows, Statements } from './sqlite-store';
 import {
-  accountFromRow, advanceLastSeen, createStatements, directMessageFromRow, emojiFromRow, friendNotificationFromRow,
+  accountFromRow, accountStatsFromRow, advanceLastSeen, createStatements, gameStatsFromRow, readStatsBackfill,
+  sqliteStatsSource, upsertAccountStats, upsertGameStats, writeStatsBackfill, directMessageFromRow, emojiFromRow, friendNotificationFromRow,
   friendshipFromRow, hasAccount, insertAccount, insertDirectMessage, insertEmoji, insertFriendNotification,
   insertFriendship, insertMessageRead, insertSession, integerColumn, invalidReferencesError, invalidSchemaError, isBotId, matchFromRow,
   messageReadFromRow, parseRuntime, readAccount, readAccountByUsername, readDocument, readRuntimeRows,
@@ -37,6 +38,10 @@ import {
 } from './sqlite-store';
 import { backupMatchHistoryState } from './state-backup';
 import { storedMatches } from './stored-matches';
+import type { StatsStage } from './game-stats';
+import { createStatsStage, napoleonRoleTotals, playerStats, replayFrame } from './game-stats';
+import type { AccountHistory } from './stats-backfill';
+import { backfillGameStats } from './stats-backfill';
 
 function boundedLimit(limit: number, maximum: number): number {
   return Math.trunc(Math.min(Math.max(limit, 0), maximum)) || 0;
@@ -147,6 +152,43 @@ export async function createSqliteRepository(filePath: string, options: Reposito
     }
     /** The committed runtime rows; only rows that differ from these are written. */
     let committedRuntime: RuntimeRows | null = readRuntimeRows(sql);
+    const statsSource = sqliteStatsSource(sql);
+    const isAccount = (accountId: string): boolean => hasAccount(sql, accountId);
+
+    function writeStatsStage(stage: StatsStage): void {
+      for (const record of stage.games.values()) upsertGameStats(sql, record);
+      for (const record of stage.accounts.values()) upsertAccountStats(sql, record);
+    }
+
+    // Counts stored matches into the v9 statistics before the repository serves any game.
+    const backfilled = await backfillGameStats({
+      ...statsSource,
+      isAccount,
+      state: async () => readStatsBackfill(sql),
+      histories: async () => {
+        const histories = new Map<string, AccountHistory>();
+        for (const row of sql(`SELECT p.account_id, COUNT(*) AS matches, MIN(p.finished_at) AS oldest, a.record
+          FROM match_participants p JOIN accounts a ON a.id = p.account_id GROUP BY p.account_id`).all()) {
+          histories.set(textColumn(row, 'account_id'), { matches: integerColumn(row, 'matches'),
+            oldest: integerColumn(row, 'oldest'), completed: accountFromRow(row).achievements?.games ?? 0 });
+        }
+        return histories;
+      },
+      matches: async (after, limit) => (after === null
+        ? sql('SELECT record FROM matches ORDER BY finished_at, id LIMIT ?').all(limit)
+        : sql(`SELECT record FROM matches WHERE finished_at > ? OR (finished_at = ? AND id > ?)
+          ORDER BY finished_at, id LIMIT ?`).all(after.at, after.at, after.matchId, limit)).map(matchFromRow),
+      replay: async (match) => {
+        const replay = await replays.read(match.id);
+        if (replay !== undefined && !isMatchReplay(replay, match.result, match.finishedAt)) throw new Error('Invalid replay archive.');
+        return replay as MatchReplay | undefined;
+      },
+      commit: async (stage, next) => inTransaction(db, () => {
+        writeStatsStage(stage);
+        writeStatsBackfill(sql, next);
+      }),
+    });
+    if (backfilled) console.warn(`[stats] Counted ${backfilled.matches} stored matches (${backfilled.logged} with replay logs).`);
 
     async function read<T>(select: () => T): Promise<T> {
       await queue;
@@ -211,8 +253,10 @@ export async function createSqliteRepository(filePath: string, options: Reposito
       return next;
     }
 
-    function awardGameCoins(snapshot: RuntimeSnapshot, completedGameIds: readonly string[]): void {
+    /** Returns the games rewarded by this commit; completions already receipted are skipped. */
+    function awardGameCoins(snapshot: RuntimeSnapshot, completedGameIds: readonly string[]): string[] {
       const rewardedAt = now();
+      const rewarded: string[] = [];
       for (const id of completedGameIds) {
         if (sql('SELECT 1 FROM rewarded_games WHERE game_id = ?').get(id)) continue;
         const game = completedGame(snapshot.games, id);
@@ -222,7 +266,19 @@ export async function createSqliteRepository(filePath: string, options: Reposito
           updateAccount(sql, gameRewardedAccount(account, game, rewardedAt));
         }
         sql('INSERT INTO rewarded_games (game_id) VALUES (?)').run(id);
+        rewarded.push(id);
       }
+      return rewarded;
+    }
+
+    /** Statistics count each match once, under the same receipt as its rewards. */
+    function countGameStats(matches: readonly NewMatchRecord[], rewardedIds: readonly string[]): void {
+      const counted = new Set(rewardedIds);
+      const stage = createStatsStage(statsSource, isAccount);
+      for (const match of matches) {
+        if (counted.delete(match.id)) stage.count(match, replayFrame(match.replay));
+      }
+      writeStatsStage(stage);
     }
 
     function recordLastSeen(snapshot: RuntimeSnapshot): void {
@@ -251,7 +307,7 @@ export async function createSqliteRepository(filePath: string, options: Reposito
           // The same order as the JSON adapter, so a request with several problems reports the same one.
           unflagged = inTransaction(db, () => {
             if (snapshot) {
-              awardGameCoins(snapshot, completedGameIds);
+              countGameStats(matches, awardGameCoins(snapshot, completedGameIds));
               recordLastSeen(snapshot);
             }
             const removed = upsertMatches(sql, records);
@@ -517,6 +573,10 @@ export async function createSqliteRepository(filePath: string, options: Reposito
       }),
       saveRuntime: (snapshot, matches = [], completedGameIds = []) => saveMatches(matches, snapshot, completedGameIds),
       saveMatch: (match) => saveMatches([match]),
+      getPlayerStats: (accountId) => read(() => playerStats(
+        sql('SELECT record FROM game_stats WHERE account_id = ? ORDER BY seq').all(accountId).map(gameStatsFromRow),
+        sql('SELECT record FROM account_stats WHERE account_id = ? ORDER BY seq').all(accountId).map(accountStatsFromRow),
+        napoleonRoleTotals(sql("SELECT record FROM game_stats WHERE game_type = 'napoleon'").all().map(gameStatsFromRow)))),
       listMatches: (accountId, limit) => read(() => {
         const count = limit === undefined ? MAX_MATCHES_PER_ACCOUNT : boundedLimit(limit, MAX_MATCHES_PER_ACCOUNT);
         if (count === 0) return [];

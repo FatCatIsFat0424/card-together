@@ -18,7 +18,7 @@ import { dtos, populate, resetRuntime } from '../helpers/storage-fixture';
 const run = promisify(execFile);
 const COLLECTIONS = {
   accounts: 3, sessions: 1, friendships: 2, matches: 2, emojis: 1, directMessages: 1, messageReads: 1,
-  friendNotifications: 1, rewardedGameIds: 1,
+  friendNotifications: 1, rewardedGameIds: 1, gameStats: 1, accountStats: 1,
 };
 
 function cli(script: string, ...args: string[]): Promise<{ stdout: string; stderr: string }> {

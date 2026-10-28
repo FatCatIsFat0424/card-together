@@ -20,6 +20,32 @@ const CACHE_SIZE_KIB = 32 * 1024;
 
 type SqliteMigration = (database: DatabaseSync) => void;
 
+/** Introduced by schema v9; also part of the full schema below. */
+const STATS_TABLES = `
+CREATE TABLE game_stats (
+  seq INTEGER PRIMARY KEY,
+  account_id TEXT NOT NULL REFERENCES accounts(id),
+  game_type TEXT NOT NULL,
+  scope TEXT NOT NULL CHECK (scope IN ('human', 'all')),
+  record TEXT NOT NULL,
+  UNIQUE (account_id, game_type, scope)
+) STRICT;
+CREATE INDEX game_stats_game ON game_stats(game_type, scope);
+CREATE TABLE account_stats (
+  seq INTEGER PRIMARY KEY,
+  account_id TEXT NOT NULL REFERENCES accounts(id),
+  scope TEXT NOT NULL CHECK (scope IN ('human', 'all')),
+  record TEXT NOT NULL,
+  UNIQUE (account_id, scope)
+) STRICT;
+CREATE TABLE stats_backfill (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  after_at INTEGER,
+  after_match_id TEXT,
+  CHECK ((after_at IS NULL) = (after_match_id IS NULL))
+) STRICT;
+`;
+
 /**
  * Index i upgrades SQLITE_BASELINE_VERSION + i to the next version inside one transaction, after a
  * backup. Append a step whenever CURRENT_SCHEMA_VERSION changes; never edit shipped steps.
@@ -29,6 +55,11 @@ const SQLITE_STEPS: readonly SqliteMigration[] = [
   (database) => {
     database.exec('ALTER TABLE friendships ADD COLUMN recipient_read_at INTEGER');
     database.exec('ALTER TABLE friend_notifications ADD COLUMN read_at INTEGER');
+  },
+  // v9: statistics tables; the backfill row makes the next start count the stored matches.
+  (database) => {
+    database.exec(STATS_TABLES);
+    database.exec('INSERT INTO stats_backfill (id, after_at, after_match_id) VALUES (1, NULL, NULL)');
   },
 ];
 
@@ -136,6 +167,7 @@ CREATE TABLE rewarded_games (
   seq INTEGER PRIMARY KEY,
   game_id TEXT NOT NULL UNIQUE
 ) STRICT;
+${STATS_TABLES}
 CREATE TABLE runtime_state (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   layout TEXT NOT NULL

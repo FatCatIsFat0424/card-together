@@ -10,6 +10,11 @@ import { emptyDocument, isObject, validDirectMessage, validateDocument } from '.
 import { migrateDocument } from './migrations';
 import type { DatabaseDocument } from './schema';
 import type { MatchReplay, ShopItemId } from '@shared/types';
+import { createStatsStage, napoleonRoleTotals, playerStats, replayFrame } from './game-stats';
+import type { StatsStage } from './game-stats';
+import { applyStatsStage, documentStatsSource } from './json-stats';
+import type { AccountHistory } from './stats-backfill';
+import { backfillGameStats } from './stats-backfill';
 import { dropUnplayableRecordings, isMatchReplay } from './match-replay';
 import { storedMatches } from './stored-matches';
 import { createReplayStore } from './replay-store';
@@ -118,6 +123,56 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
     for (const matchId of unavailable) reportedReplays.add(matchId);
     if (unavailable.length > 0) {
       console.warn(`[replays] ${unavailable.length} recorded matches have no archive file; they show no replay.`);
+    }
+    await backfillStats();
+
+    /** Counts stored matches into the v9 statistics before the repository serves any game. */
+    async function backfillStats(): Promise<void> {
+      if (!document.statsBackfill) return;
+      let ordered: MatchRecord[] | null = null;
+      const result = await backfillGameStats({
+        game: (accountId, gameType, scope) => documentStatsSource(document).game(accountId, gameType, scope),
+        account: (accountId, scope) => documentStatsSource(document).account(accountId, scope),
+        state: async () => document.statsBackfill ?? null,
+        histories: async () => {
+          const histories = new Map<string, AccountHistory>();
+          for (const match of document.matches) {
+            for (const accountId of match.accountIds) {
+              const history = histories.get(accountId);
+              histories.set(accountId, { matches: (history?.matches ?? 0) + 1,
+                oldest: Math.min(history?.oldest ?? match.finishedAt, match.finishedAt), completed: 0 });
+            }
+          }
+          for (const account of document.accounts) {
+            const history = histories.get(account.id);
+            if (history) histories.set(account.id, { ...history, completed: account.achievements?.games ?? 0 });
+          }
+          return histories;
+        },
+        isAccount: (accountId) => indexes.accounts(document.accounts).byId.has(accountId),
+        matches: async (after, limit) => {
+          const sorted = ordered ?? [...document.matches].sort((first, second) => first.finishedAt - second.finishedAt
+            || (first.id < second.id ? -1 : first.id > second.id ? 1 : 0));
+          ordered = sorted;
+          const start = after === null ? 0 : sorted.findIndex((match) =>
+            match.finishedAt > after.at || (match.finishedAt === after.at && match.id > after.matchId));
+          return start === -1 ? [] : sorted.slice(start, start + limit);
+        },
+        replay: async (match) => {
+          const replay = await replays.read(match.id);
+          if (replay !== undefined && !isMatchReplay(replay, match.result, match.finishedAt)) throw new Error('Invalid replay archive.');
+          return replay as MatchReplay | undefined;
+        },
+        commit: async (stage, next) => {
+          const updated: DatabaseDocument = { ...document };
+          applyStatsStage(updated, stage);
+          if (next) updated.statsBackfill = next;
+          else delete updated.statsBackfill;
+          await persist(updated);
+          document = updated;
+        },
+      });
+      if (result) console.warn(`[stats] Counted ${result.matches} stored matches (${result.logged} with replay logs).`);
     }
 
     async function read<T>(select: (data: DatabaseDocument) => T): Promise<T> {
@@ -228,9 +283,11 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       }
     }
 
-    function awardGameCoins(data: DatabaseDocument, snapshot: RuntimeSnapshot, completedGameIds: readonly string[]): void {
-      if (completedGameIds.length === 0) return;
+    /** Returns the games rewarded by this commit; completions already receipted are skipped. */
+    function awardGameCoins(data: DatabaseDocument, snapshot: RuntimeSnapshot, completedGameIds: readonly string[]): string[] {
+      if (completedGameIds.length === 0) return [];
       const rewarded = new Set(data.rewardedGameIds ?? []);
+      const newlyRewarded: string[] = [];
       const rewardedAt = now();
       const positions = indexes.accounts(document.accounts).positions;
       data.accounts = data.accounts.slice();
@@ -243,8 +300,21 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
           data.accounts[index] = gameRewardedAccount(data.accounts[index], game, rewardedAt);
         }
         rewarded.add(id);
+        newlyRewarded.push(id);
       }
       data.rewardedGameIds = [...rewarded];
+      return newlyRewarded;
+    }
+
+    /** Statistics count each match once, under the same receipt as its rewards. */
+    function countGameStats(data: DatabaseDocument, matches: readonly NewMatchRecord[], rewardedIds: readonly string[]): void {
+      const counted = new Set(rewardedIds);
+      const stage: StatsStage = createStatsStage(documentStatsSource(data),
+        (accountId) => indexes.accounts(data.accounts).byId.has(accountId));
+      for (const match of matches) {
+        if (counted.delete(match.id)) stage.count(match, replayFrame(match.replay));
+      }
+      applyStatsStage(data, stage);
     }
 
     function purchaseShopItem(id: string, itemId: ShopItemId, now: number, equip = false): Promise<AccountRecord | null> {
@@ -523,10 +593,14 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       saveRuntime: (snapshot, matches = [], completedGameIds = []) =>
         saveMatches(matches, (data) => {
           data.runtime = structuredClone(snapshot);
-          awardGameCoins(data, snapshot, completedGameIds);
+          countGameStats(data, matches, awardGameCoins(data, snapshot, completedGameIds));
           recordLastSeen(data, snapshot);
         }),
       saveMatch: (match) => saveMatches([match], () => undefined),
+      getPlayerStats: (accountId) => read((data) => playerStats(
+        data.gameStats.filter((entry) => entry.accountId === accountId),
+        data.accountStats.filter((entry) => entry.accountId === accountId),
+        napoleonRoleTotals(data.gameStats.filter((entry) => entry.gameType === 'napoleon')))),
       listMatches: (accountId, limit) =>
         read((data) => {
           const matches = indexes.matches(data.matches).byAccount.get(accountId) ?? [];

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import type { MatchHistory } from '@shared/types';
+import type { MatchHistory, PlayerStats } from '@shared/types';
 import type { AuthService } from '../auth/auth-service';
 import { getRequestSession, requireSession } from '../auth/http-middleware';
 import type { Repository } from '../database/repository';
@@ -54,6 +54,28 @@ export function createPlayerRouter(repository: Repository, authService: AuthServ
       const matches = await repository.listMatches(account.id);
       const history: MatchHistory = { matches: matches.map(matchSummary), players: await matchPlayers(repository, matches) };
       response.json({ success: true, ...history });
+    })().catch(next);
+  });
+
+  /** Accumulated statistics follow the history's visibility. */
+  router.get('/:accountId/stats', (request, response, next) => {
+    const { accountId } = request.params;
+    if (!isAccountId(accountId)) {
+      response.status(400).json({ success: false, error: 'Invalid player ID.' });
+      return;
+    }
+    void (async (): Promise<void> => {
+      const account = await repository.getAccountById(accountId);
+      if (!account) {
+        response.status(404).json({ success: false, error: 'Player not found.' });
+        return;
+      }
+      if (!canViewMatchHistory(getRequestSession(response).account.id, account)) {
+        response.status(403).json({ success: false, error: MATCH_REPLAY_ERRORS.private });
+        return;
+      }
+      const stats: PlayerStats = await repository.getPlayerStats(account.id);
+      response.json({ success: true, stats });
     })().catch(next);
   });
 

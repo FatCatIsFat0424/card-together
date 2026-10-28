@@ -76,6 +76,8 @@ function createFixture(): DatabaseDocument {
     directMessages: [],
     messageReads: [],
     friendNotifications: [],
+    gameStats: [],
+    accountStats: [],
   };
   const deck = createDeck();
   for (let table = 0; table < 25; table += 1) {

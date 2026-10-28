@@ -212,6 +212,13 @@ describe.each(REPOSITORY_ADAPTERS)('public player profile HTTP routes ($name)', 
     const hidden = await fetch(history, { headers: headers() });
     expect(hidden.status).toBe(403);
     expect((await hidden.json()).success).toBe(false);
+    // Statistics follow the history's visibility.
+    const stats = `${baseUrl}/api/players/${accounts.bravo.id}/stats`;
+    expect((await fetch(stats, { headers: headers() })).status).toBe(403);
+    const ownStats = await (await fetch(stats, { headers: headers('bravo') })).json();
+    expect(ownStats).toMatchObject({ success: true, stats: { scopes: { human: { games: [] }, all: { account: null } } } });
+    expect((await fetch(`${baseUrl}/api/players/${randomUUID()}/stats`, { headers: headers() })).status).toBe(404);
+    expect((await fetch(`${baseUrl}/api/players/bad%20id/stats`, { headers: headers() })).status).toBe(400);
 
     const published = await fetch(`${baseUrl}/api/auth/profile`, {
       method: 'PATCH',
@@ -221,6 +228,7 @@ describe.each(REPOSITORY_ADAPTERS)('public player profile HTTP routes ($name)', 
     expect(published.status).toBe(200);
     const visible = await fetch(history, { headers: headers() });
     expect(visible.status).toBe(200);
+    expect((await fetch(stats, { headers: headers() })).status).toBe(200);
     const publicHistory = await visible.json();
     expect(publicHistory.matches).toEqual(expected);
     expect(publicHistory.players[oldestParticipant.id]).toBeUndefined();

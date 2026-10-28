@@ -1,6 +1,6 @@
 import { backfillAchievementCounts } from './migrate-achievements';
 
-export const CURRENT_SCHEMA_VERSION = 8;
+export const CURRENT_SCHEMA_VERSION = 9;
 
 type JsonObject = Record<string, unknown>;
 
@@ -148,11 +148,19 @@ function toVersion8(document: JsonObject): JsonObject {
   return { ...document, schemaVersion: 8 };
 }
 
+/**
+ * v9: per-game statistics and the account-level streak, empty until the startup backfill counts the
+ * stored matches; `statsBackfill` records its progress and is removed once it finishes.
+ */
+function toVersion9(document: JsonObject): JsonObject {
+  return { ...document, schemaVersion: 9, gameStats: [], accountStats: [], statsBackfill: { after: null } };
+}
+
 /** Index i upgrades version i + 1 to i + 2. Append new steps; never edit shipped ones. */
 const STEPS: readonly ((document: JsonObject) => JsonObject)[] = [
   toVersion2, toVersion3, toVersion4, toVersion5, toVersion6,
   (document) => ({ ...backfillAchievementCounts(document), schemaVersion: 7 }),
-  toVersion8,
+  toVersion8, toVersion9,
 ];
 
 /**

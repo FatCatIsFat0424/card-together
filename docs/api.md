@@ -28,6 +28,7 @@
 | `GET /api/account/history` | — | 自己最近 100 場對局（包括有 bot 的對局），由新到舊 |
 | `GET /api/players/:accountId` | — | 公開個人檔案 |
 | `GET /api/players/:accountId/history` | — | 對局與參與者對照表；限本人或歷史紀錄公開時 |
+| `GET /api/players/:accountId/stats` | — | `{ success: true, stats: PlayerStats }`：伺服器累計的統計；限本人或歷史紀錄公開時 |
 | `GET /api/players/:accountId/history/:matchId/replay` | — | `{ success: true, replay: MatchReplay }`；限本人或對象的歷史紀錄公開時 |
 | `GET /api/friends` | — | `friends, incoming, outgoing`；已接受的好友包含上線狀態、可為 null 的 `hostedRoomCode`、`room` 與 `lastSeenAt` |
 | `GET /api/friends/stats` | — | `stats`：以好友 ID 為鍵的 `together`（自己保留的對局中同桌的場數）與 `favoriteGame`（好友歷史紀錄中最常玩的遊戲；不公開或沒有紀錄時為 null） |
@@ -86,7 +87,8 @@
 - `GET /api/messages` 的 `incoming` 與 `accepted` 項目都有 `readAt`（未讀時為 null）。標為已讀、清除與回覆邀請後會送出 `social:changed`，讓其他分頁同步。
 - 只有 `GET /api/friends` 中已接受的項目包含必填的 `lastSeenAt`：Unix epoch 毫秒時間戳，或在沒有任何歷史活動紀錄時為 `null`。這個值在玩家清理與伺服器重新啟動後仍會保留。公開個人檔案、搜尋結果與待處理的邀請不包含它。顯示方式：[好友介面](interface.md#大廳與好友)。
 - 任何回應都不包含密碼雜湊或工作階段摘要。
-- 歷史列表 endpoint 回傳最近 100 場符合條件的 [MatchSummary](../shared/src/types/game.ts)，不分頁，包括有 bot 的對局；參與者對照表包含仍保留的真人帳號。對局的封存仍保留時，摘要會加上選填的 `hasReplay: true`，且從不包含回放或紀錄內容。既有的列表外層格式維持不變：帳號歷史為 `{ success: true, matches }`，玩家歷史為 `{ success: true, matches, players }`。搜尋、篩選與統計在用戶端進行；統計會排除任何有 bot 的對局。
+- 歷史列表 endpoint 回傳最近 100 場符合條件的 [MatchSummary](../shared/src/types/game.ts)，不分頁，包括有 bot 的對局；參與者對照表包含仍保留的真人帳號。對局的封存仍保留時，摘要會加上選填的 `hasReplay: true`，且從不包含回放或紀錄內容。既有的列表外層格式維持不變：帳號歷史為 `{ success: true, matches }`，玩家歷史為 `{ success: true, matches, players }`。搜尋與篩選在用戶端進行。
+- 統計 endpoint 回傳 [`PlayerStats`](../shared/src/types/stats.ts)：兩個範圍（`human` 只算沒有 bot 座位的對局，`all` 全部）各有帳號層級的連勝與最近 10 場結果，以及每款玩過的遊戲的計數器（場數、勝場、並列、名次分布、各桌人數的場數、`counts`／`sums`、特殊紀錄的 `best`／`latest` 與締造的對局 ID、`since`／`logSince`／`versionSince` 起算時間），外加所有玩家拿破崙各角色的勝負合計（角色期望勝率的基準）。權限與歷史列表相同：帳號不存在 404、不公開 403、ID 格式錯誤 400。規則：[儲存](storage.md#統計)。
 - 回放需要有效的工作階段，以及和玩家歷史列表相同的權限（對象本人或歷史紀錄公開）。查詢只限該對象仍保留的對局；知道無關對局的 ID 也無法存取。帳號不存在回傳 404，對象不公開回傳 403，封存不存在、舊版、已清除或無法讀取時回傳 404（[保留規則](storage.md#回放封存)）。回應中的 [MatchReplay](../shared/src/types/replay.ts) 包含初始的旁觀快照，以及每個已記錄步驟的一份 patch，在相同權限下揭露每一份發出的手牌。沒有錄製資料的對局回傳 404。見[錄製與隱私](storage.md#身分與工作階段)。播放不會建立房間，也不需要原本的玩家或亂數種子。
 - 商店價格來自 [`shop.ts`](../shared/src/constants/shop.ts)，從不採用用戶端的值。重複購買不會再次扣款，也不會自動裝備。金幣規則：[儲存](storage.md#金幣)。
 - 私訊介面：[`direct-message.ts`](../shared/src/types/direct-message.ts)。讀取需要已接受的好友關係，或仍保留的共同參與紀錄。發送允許去除前後空白後 1–500 個字元，或一張個人／站方／商店貼圖。發送商店貼圖需要擁有該貼圖包；只接受目錄 ID。`clientId` 使用 8–64 個 ASCII 英文字母、數字、底線或連字號；結果不確定時，以相同的 ID 與內容重試。非好友回傳 403，衝突的重試回傳 409，無法存取的對話回傳 404，格式錯誤或已過期的游標回傳 400。保留期限與移除：[儲存](storage.md#身分與工作階段)。

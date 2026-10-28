@@ -15,6 +15,8 @@ import type {
   AccountRecord, DirectMessageRecord, EmojiRecord, FriendNotificationRecord, FriendshipRecord, MatchRecord, MessageReadRecord, SessionRecord,
 } from './repository';
 import { equipmentError } from './shop-equipment';
+import type { AccountStatsRecord, GameStatsRecord, StatsBackfillState } from './game-stats';
+import { accountStatsKey, gameStatsKey, validAccountStats, validGameStats, validStatsBackfill } from './game-stats';
 import type { ShopItemId } from '@shared/types';
 import { CURRENT_SCHEMA_VERSION } from './migrations';
 import { validDailyRewards } from './daily-rewards';
@@ -32,9 +34,15 @@ export interface DatabaseDocument {
   directMessages: DirectMessageRecord[];
   messageReads: MessageReadRecord[];
   friendNotifications: FriendNotificationRecord[];
+  /** Per account, game and scope; updated with the completion receipts in `rewardedGameIds`. */
+  gameStats: GameStatsRecord[];
+  /** Per account and scope: the cross-game streak and recent results. */
+  accountStats: AccountStatsRecord[];
   runtime: RuntimeSnapshot | null;
   /** Durable receipts prevent replayed completions from awarding coins twice. */
   rewardedGameIds?: string[];
+  /** Present until the schema v9 backfill has counted every stored match. */
+  statsBackfill?: StatsBackfillState;
 }
 
 export function isObject(value: unknown): value is Record<string, unknown> {
@@ -262,6 +270,9 @@ export function validateDocument(value: unknown, options: RuntimeValidationOptio
     !Array.isArray(value.directMessages) || !value.directMessages.every(validDirectMessage) ||
     !Array.isArray(value.messageReads) || !value.messageReads.every(validMessageRead) ||
     !Array.isArray(value.friendNotifications) || !value.friendNotifications.every(validFriendNotification) ||
+    !Array.isArray(value.gameStats) || !value.gameStats.every(validGameStats) ||
+    !Array.isArray(value.accountStats) || !value.accountStats.every(validAccountStats) ||
+    (value.statsBackfill !== undefined && !validStatsBackfill(value.statsBackfill)) ||
     (value.rewardedGameIds !== undefined && (!Array.isArray(value.rewardedGameIds)
       || !value.rewardedGameIds.every(nonEmpty) || !unique(value.rewardedGameIds))) ||
     !(value.runtime === null || isRuntimeSnapshot(value.runtime, options))
@@ -278,6 +289,8 @@ export function validateDocument(value: unknown, options: RuntimeValidationOptio
   const directMessages = value.directMessages as DirectMessageRecord[];
   const messageReads = value.messageReads as MessageReadRecord[];
   const friendNotifications = value.friendNotifications as FriendNotificationRecord[];
+  const gameStats = value.gameStats as GameStatsRecord[];
+  const accountStats = value.accountStats as AccountStatsRecord[];
   const messagesById = new Map(directMessages.map((message) => [message.id, message]));
   const runtime = value.runtime as RuntimeSnapshot | null;
   const accountIds = new Set(accounts.map((account) => account.id));
@@ -300,6 +313,8 @@ export function validateDocument(value: unknown, options: RuntimeValidationOptio
       return message?.recipientId === cursor.accountId && message.senderId === cursor.otherId;
     }) &&
     friendNotifications.every((notification) => accountIds.has(notification.accountId) && accountIds.has(notification.actorId)) &&
+    gameStats.every((stats) => accountIds.has(stats.accountId)) &&
+    accountStats.every((stats) => accountIds.has(stats.accountId)) &&
     [...emojiCounts.values()].every((count) => count <= MAX_EMOJIS_PER_ACCOUNT) &&
     (runtime === null ||
       (runtime.players.every((player) => accountIds.has(player.info.id)) &&
@@ -323,7 +338,9 @@ export function validateDocument(value: unknown, options: RuntimeValidationOptio
     !unique(directMessages.map((message) => message.id)) ||
     !unique(directMessages.map((message) => JSON.stringify([message.senderId, message.clientId]))) ||
     !unique(messageReads.map((cursor) => JSON.stringify([cursor.accountId, cursor.otherId]))) ||
-    !unique(friendNotifications.map((notification) => notification.id))
+    !unique(friendNotifications.map((notification) => notification.id)) ||
+    !unique(gameStats.map((stats) => gameStatsKey(stats.accountId, stats.gameType, stats.scope))) ||
+    !unique(accountStats.map((stats) => accountStatsKey(stats.accountId, stats.scope)))
   ) {
     throw new Error(
       'Database has invalid references or duplicate records. The original file was preserved.',
@@ -342,6 +359,8 @@ export function emptyDocument(): DatabaseDocument {
     directMessages: [],
     messageReads: [],
     friendNotifications: [],
+    gameStats: [],
+    accountStats: [],
     runtime: null,
   };
 }

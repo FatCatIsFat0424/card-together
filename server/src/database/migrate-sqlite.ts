@@ -121,7 +121,7 @@ function verifyTarget(target: string, expected: ImportCounts): SqliteMigrationRe
     const tables: Record<keyof ImportCounts, string> = {
       accounts: 'accounts', sessions: 'sessions', friendships: 'friendships', matches: 'matches', emojis: 'emojis',
       directMessages: 'direct_messages', messageReads: 'message_reads', friendNotifications: 'friend_notifications',
-      rewardedGameIds: 'rewarded_games',
+      rewardedGameIds: 'rewarded_games', gameStats: 'game_stats', accountStats: 'account_stats',
     };
     for (const [name, table] of Object.entries(tables) as [keyof ImportCounts, string][]) {
       if (structure.tables[table] !== expected[name]) throw new Error(`SQLite ${table} has ${structure.tables[table]} rows; expected ${expected[name]}.`);

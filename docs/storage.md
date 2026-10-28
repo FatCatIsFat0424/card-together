@@ -69,6 +69,20 @@
 - 遊戲進度和金幣與 `rewardedGameIds` 以原子操作一起 commit。每日任務數只在第一次成功的任務領取 transaction 中增加，並在每日重設後保留。重試或寫入失敗都不會讓任一計數器灌水。
 - `Repository.claimAchievement` 在序列化的 transaction 內檢查目錄中的每個里程碑，並把專屬稱號一次授予 `ownedAchievementNameplates`。這個永久且只有本人可見的物品欄與 `ownedShopItems` 分開，無法購買。領取會保留金幣與裝備中的外觀，推進 `updatedAt`，並在資料寫入後才發布給本人。私人計數器從不進入個人檔案。
 
+## 統計
+
+介面：[型別](../shared/src/types/stats.ts)、[紀錄定義](../shared/src/stats/definitions.ts)、[擷取函式](../shared/src/stats/index.ts)、[計數](../shared/src/stats/accumulate.ts)、[儲存](../server/src/database/game-stats.ts)、[回補](../server/src/database/stats-backfill.ts)。不放在 `AccountRecord` 裡。
+
+- **範圍**：`human` 只算沒有 bot 座位的對局，`all` 算全部；真人對局同時寫入兩個範圍。只有真人帳號有計數器；全是 bot 的遊戲本來就不存結果。
+- **勝負**：一律用 [`matchStanding`](../shared/src/rules/match-standing.ts)；並列第一算勝場並另計並列次數。
+- **計數器**（`gameStats`，帳號 × 遊戲 × 範圍）：場數、勝場、並列、名次分布、各桌人數的場數（期望值的基礎）、`counts`／`sums`（角色、前二、分數、輸的局分數與各遊戲的計數）、`max`／`min` 紀錄的 `best`（值、對局 ID、時間）、可回放的稀有紀錄的 `latest`、連勝、`logged`（讀到對局紀錄的場數）與 `lastAt`。帳號層級（`accountStats`）是跨遊戲連勝與最近 10 場結果。所有數值都是 safe integer，寫入時驗證。
+- **同一條路徑**：每場對局由純函式擷取每個座位的事實：輸入是結果與回放最後一格的觀戰畫面（完整公開紀錄），沒有錄製時只用結果。即時更新與回補都走這條路，所以結果一致。只讀已公開的出牌、攤牌與結算，從不使用沒公開的牌。
+- **即時更新**：`saveRuntime` 在發放金幣的同一次 commit 裡累計，只計這次新寫入 `rewardedGameIds` 收據的遊戲，所以重試、重新啟動與重複的完成通知都不會重複計算；寫入失敗時一起還原。
+- **起算時間**：`since` 表示帳號較早的結果已被[保留規則](#回放封存)清除，從這場開始累計（回補時判斷：保留的對局達到上限，或成就的完成場數多於保留的對局，就取最舊一場的時間）；之後才建立的遊戲計數器沿用帳號的 `since`。`logSince` 是先有沒錄製的對局、之後第一場有紀錄的時間，紀錄類項目從這裡算起。介面以「自某日起」標示。
+- **版本化定義**：`STATS_VERSION` 與每個紀錄項目的 `version`。新增項目時舊計數不動；帳號的計數器在下一場對局時升級，`versionSince` 記下新項目的起算時間，新項目從 0 開始。項目 ID 不可改名或重用。
+- **回補（schema v9）**：migration 加入空的計數器與進度標記（SQLite 為 `stats_backfill` 列）；repository 開啟時、任何遊戲開始前，依完成時間（同時間依 ID）每 250 場一批計入保留中的對局，有封存的對局讀取並驗證回放，一次只讀一份。每批的計數器與目前位置在同一個 transaction／同一次寫入中 commit，所以中斷後重新啟動會從最後一批之後繼續，不會重複計算；全部完成後移除進度標記。無法讀取的封存只算結果部分並記錄 log。記憶體只多一批對局與一份回放（JSON 引擎本來就把整份文件放在記憶體）。
+- **讀取**：`Repository.getPlayerStats` 回傳兩個範圍的計數器，以及所有帳號拿破崙各角色的勝負合計；API 權限與歷史紀錄相同（[API](api.md#http)）。各遊戲的項目：[遊戲規則](games/common.md#統計與特殊紀錄)。
+
 ## 頭像外框
 
 - 舊版的外框物品欄與購買路由仍由[外觀物品欄](#外觀物品欄)支援。
@@ -111,14 +125,15 @@
 
 | Schema 版本 | 變更 |
 | --- | --- |
-| 8（目前） | 通知與收到的邀請加入選填的已讀時間（缺少代表未讀；JSON 不改資料，SQLite 新增兩個可為 null 的欄位） |
+| 9（目前） | 加入[統計](#統計)的 `gameStats`、`accountStats`；啟動時一次回補保留中的對局（SQLite 新增三個資料表） |
+| 8 | 通知與收到的邀請加入選填的已讀時間（缺少代表未讀；JSON 不改資料，SQLite 新增兩個可為 null 的欄位） |
 | 7 | 回補仍保留的成就歷史，並移除成就計數器上限 |
 | 6 | 加入私訊、私人已讀游標與「邀請已接受」通知 |
 | 5 | 一次把既有的對局歷史設為公開 |
 | 4 | 牌背與圖片透明度的預設值，維持原本的外觀 |
 | 1–3 | 啟動時 migration |
 
-- JSON：啟動時會 migration 較舊的版本、驗證結果，並先把原檔另存為 `database.json.v<version>.bak`。較早的伺服器會拒絕 v8 檔案；回復需要完整且相容的備份，並會遺失該備份之後的寫入。
+- JSON：啟動時會 migration 較舊的版本、驗證結果，並先把原檔另存為 `database.json.v<version>.bak`。較早的伺服器會拒絕 v9 檔案；回復需要完整且相容的備份，並會遺失該備份之後的寫入。
 - SQLite：版本記錄在 `PRAGMA user_version`，從 v7 開始。schema 版本變更時，[SQLite migration](../server/src/database/sqlite-schema.ts) 必須同時加入一個步驟；啟動時先以 `VACUUM INTO` 另存 `database.sqlite.v<version>.bak`，再在一個 transaction 內套用。較舊的 JSON 文件先經過 JSON migration 才匯入。
 - 無效的 JSON、版本、重複資料或參照會讓啟動停止，且不會動到檔案。
 
@@ -132,6 +147,9 @@
 | `directMessages` | 寄件者、收件者、用戶端 ID、解析後的內容、時間戳 |
 | `messageReads` | 帳號、對話對象、最後讀取的收件訊息 |
 | `friendNotifications` | 發出邀請者、接受的帳號、時間戳 |
+| `gameStats` | 帳號 × 遊戲 × 範圍的[統計](#統計)計數器 |
+| `accountStats` | 帳號 × 範圍的跨遊戲連勝與最近 10 場結果 |
+| `statsBackfill` | 選填：v9 回補的進度，完成後移除 |
 | `runtime` | 玩家、房間、準備狀態、含私人手牌與紀錄的遊戲、最近的聊天、計時 |
 
 | 位置 | 路徑 |
@@ -176,6 +194,8 @@
 | `matches`、`match_participants` | 每場對局一列 JSON 結果與回放旗標；參與者依帳號與完成時間建立索引 |
 | `direct_messages`、`message_reads`、`friend_notifications` | 私訊 JSON 紀錄與寄件者／用戶端 ID 唯一鍵；刪除訊息時已讀游標一併刪除 |
 | `rewarded_games` | 已發放獎勵的遊戲 ID |
+| `game_stats`、`account_stats` | 帳號、遊戲與範圍的唯一鍵，加上 JSON 計數器紀錄 |
+| `stats_backfill` | 最多一列：回補進行中時的位置（完成後刪除） |
 | `runtime_state`、`runtime_players`、`runtime_rooms`、`runtime_games`、`runtime_chat` | 每位玩家、每個房間、每場遊戲與每個房間聊天各一列 JSON，加上一列記錄順序 |
 
 - 帳號以外的參照使用外鍵；bot 參與者沒有帳號，所以參與者表不設外鍵，改在寫入時檢查。
@@ -184,7 +204,7 @@
 **SQLite transaction 與驗證**
 
 - 所有操作依呼叫順序排隊，讀取會等待先前的寫入。每次寫入都是一個 `BEGIN IMMEDIATE` transaction；任何錯誤（包括 commit 失敗）都會 `ROLLBACK`。
-- `saveRuntime` 在同一個 transaction 中發放獎勵與收據、推進最後上線時間、寫入對局並套用保留規則，最後驗證並寫入 runtime。runtime 先轉成各列 JSON，只寫入和上次 commit 不同的列；這份「已 commit 列」的紀錄只在 commit 成功後更新。
+- `saveRuntime` 在同一個 transaction 中發放獎勵與收據、累計統計、推進最後上線時間、寫入對局並套用保留規則，最後驗證並寫入 runtime。runtime 先轉成各列 JSON，只寫入和上次 commit 不同的列；這份「已 commit 列」的紀錄只在 commit 成功後更新。
 - 寫入時只驗證這次寫入的紀錄，沿用 JSON 的單筆驗證函式。runtime 的玩家、房間與聊天每次都檢查；內容沒變的遊戲列在 commit 時已驗證過，只重新檢查它和玩家、房間的關聯；帳號參照只檢查有變化的列。唯一性與參照由 schema 的限制保證。
 - 啟動時讀出整份文件，執行和 JSON 相同的完整驗證（包括套用 runtime 錄製步驟）、丟棄無法套用的錄製、套用對局保留規則（先以 `VACUUM INTO` 備份到 `.match-history-<UUID>.bak/`），並清理回放目錄。
 - 連線設定：`foreign_keys=ON`、`busy_timeout` 5 秒、預先編譯並重複使用的 statement。

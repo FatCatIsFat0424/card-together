@@ -75,6 +75,7 @@ describe.each(REPOSITORY_ADAPTERS)('compound completed-game writes ($name)', (ad
     for (const account of accounts) {
       expect(await repository.getAccountById(account.id)).toEqual(account);
       expect(await repository.listMatches(account.id)).toEqual([]);
+      expect((await repository.getPlayerStats(account.id)).scopes.all).toEqual({ account: null, games: [] });
     }
     await repository.saveRuntime(snapshot, [match], [id, id]);
     await repository.close();
@@ -90,6 +91,13 @@ describe.each(REPOSITORY_ADAPTERS)('compound completed-game writes ($name)', (ad
       expect((await repository.getAccountById(account.id))!.achievements).toEqual({ games: 1, wins: Number(won),
         gameTypes: ['chinesepoker'], dailyTasks: 0 });
       expect(await repository.listMatches(account.id)).toEqual([match]);
+      // Statistics share the receipt: retries and reopening count the match once, in both scopes.
+      const stats = await repository.getPlayerStats(account.id);
+      for (const scope of ['human', 'all'] as const) {
+        expect(stats.scopes[scope].games).toEqual([expect.objectContaining({ gameType: 'chinesepoker', matches: 1,
+          wins: Number(won), logged: 0, since: null })]);
+        expect(stats.scopes[scope].account?.recent).toEqual([expect.objectContaining({ matchId: id })]);
+      }
     }
     expect((await adapter.readDocument(path)).rewardedGameIds).toEqual([id]);
   });

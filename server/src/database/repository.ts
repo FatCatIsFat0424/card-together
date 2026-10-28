@@ -1,4 +1,4 @@
-import type { AccountProfile, AvatarBorderId, DailyRewardId, DailyRewardsStatus, DailyTaskId, EmojiRecord, MatchReplay, MatchResult, MediaId, MessageContent, ShopItemId } from '@shared/types';
+import type { AccountProfile, AvatarBorderId, DailyRewardId, DailyRewardsStatus, DailyTaskId, EmojiRecord, MatchReplay, MatchResult, MediaId, MessageContent, PlayerStats, ShopItemId } from '@shared/types';
 import type { DailyRewardsRecord } from './daily-rewards';
 import type { AchievementsRecord } from './achievements';
 import type { AchievementsStatus } from '@shared/types';
@@ -168,7 +168,7 @@ export interface Repository {
   pruneSocialHistory(now: number): Promise<void>;
   loadRuntime(): Promise<RuntimeSnapshot | null>;
   /**
-   * Atomically commit runtime/history, once-per-game rewards, and monotonic account last-seen
+   * Atomically commit runtime/history, once-per-game rewards and statistics, and monotonic account last-seen
    * times: commit time for connected players, observed disconnect time for offline players.
    * Restore-only reconnection grace periods do not imply activity.
    * Missing players retain their historical last-seen times.
@@ -179,6 +179,8 @@ export interface Repository {
   saveMatch(match: NewMatchRecord): Promise<void>;
   /** Latest 100 participant matches, including bots, newest first; limit can request fewer. */
   listMatches(accountId: string, limit?: number): Promise<MatchRecord[]>;
+  /** Both scopes' counters of one account, and the Napoleon role totals of every account. */
+  getPlayerStats(accountId: string): Promise<PlayerStats>;
   /** The validated archive of a flagged match; undefined when unrecorded, pruned, missing, or corrupt. */
   getMatchReplay(matchId: string): Promise<MatchReplay | undefined>;
   listEmojis(accountId: string): Promise<EmojiRecord[]>;

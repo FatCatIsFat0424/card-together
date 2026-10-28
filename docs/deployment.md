@@ -308,7 +308,7 @@ sudo systemctl start card-together.service card-together-backup.timer
    sudo ls -l /var/lib/card-together/database.json /var/lib/card-together/database.sqlite
    ```
 
-   第 5 步輸出的 `verification.tables` 也應與這些數量一致（`direct_messages`、`message_reads`、`friend_notifications`、`rewarded_games` 對應各自的 collection）。
+   第 5 步輸出的 `verification.tables` 也應與這些數量一致（`direct_messages`、`message_reads`、`friend_notifications`、`rewarded_games`、`game_stats`、`account_stats` 對應各自的 collection）。
 
 7. 切換執行環境設定：
 

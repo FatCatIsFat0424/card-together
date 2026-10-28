@@ -102,6 +102,7 @@ export async function dtos(repository: Repository, accounts: readonly AccountRec
       emojis: await repository.listEmojis(id), matches: await repository.listMatches(id),
       replays: await Promise.all((await repository.listMatches(id)).map((entry) => repository.getMatchReplay(entry.id))),
       daily: await repository.getDailyRewards(id), achievements: await repository.getAchievements(id),
+      stats: await repository.getPlayerStats(id),
     }))),
   };
 }

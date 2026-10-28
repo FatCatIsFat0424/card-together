@@ -16,7 +16,7 @@ import { createStatements, insertDocument, integerColumn, readDocument } from '.
 const COUNTED_TABLES = {
   accounts: 'accounts', sessions: 'sessions', friendships: 'friendships', matches: 'matches', emojis: 'emojis',
   directMessages: 'direct_messages', messageReads: 'message_reads', friendNotifications: 'friend_notifications',
-  rewardedGameIds: 'rewarded_games',
+  rewardedGameIds: 'rewarded_games', gameStats: 'game_stats', accountStats: 'account_stats',
 } as const;
 
 export type ImportCounts = Record<keyof typeof COUNTED_TABLES, number>;
@@ -44,6 +44,7 @@ export function documentCounts(document: DatabaseDocument): ImportCounts {
     matches: document.matches.length, emojis: document.emojis.length, directMessages: document.directMessages.length,
     messageReads: document.messageReads.length, friendNotifications: document.friendNotifications.length,
     rewardedGameIds: document.rewardedGameIds?.length ?? 0,
+    gameStats: document.gameStats.length, accountStats: document.accountStats.length,
   };
 }
 
@@ -78,7 +79,7 @@ export async function importJsonDocument(source: unknown, databasePath: string):
       try {
         insertDocument(sql, document);
       } catch (error) {
-        if (error instanceof Error && (isConstraintError(error) || /already (exists|has runtime)/.test(error.message))) {
+        if (error instanceof Error && (isConstraintError(error) || /already (exists|has )/.test(error.message))) {
           throw repositoryError('IMPORT_CONFLICT', `The target database already has conflicting data (${error.message}). Nothing was imported.`);
         }
         throw error;
@@ -104,7 +105,7 @@ export async function importJsonDocument(source: unknown, databasePath: string):
 
 function verifyReadBack(source: DatabaseDocument, stored: DatabaseDocument): void {
   const collections = ['accounts', 'sessions', 'friendships', 'matches', 'emojis', 'directMessages', 'messageReads',
-    'friendNotifications'] as const;
+    'friendNotifications', 'gameStats', 'accountStats'] as const;
   for (const name of collections) {
     const rows: readonly unknown[] = stored[name];
     const imported: readonly unknown[] = source[name];
@@ -112,6 +113,9 @@ function verifyReadBack(source: DatabaseDocument, stored: DatabaseDocument): voi
     if (!isDeepStrictEqual(rows.slice(rows.length - imported.length), JSON.parse(JSON.stringify(imported)))) {
       throw new Error(`Imported ${name} do not read back unchanged.`);
     }
+  }
+  if (source.statsBackfill && !isDeepStrictEqual(stored.statsBackfill, source.statsBackfill)) {
+    throw new Error('Imported statistics backfill does not read back unchanged.');
   }
   if (source.runtime !== null && !isDeepStrictEqual(stored.runtime, JSON.parse(JSON.stringify(source.runtime)))) {
     throw new Error('Imported runtime does not read back unchanged.');

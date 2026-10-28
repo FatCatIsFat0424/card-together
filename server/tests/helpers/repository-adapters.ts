@@ -11,7 +11,8 @@ import { inTransaction, openSqliteDatabase } from '../../src/database/sqlite-sch
 import { createStatements, insertDocument, readDocument } from '../../src/database/sqlite-store';
 
 const SQLITE_TABLES = [
-  'runtime_chat', 'runtime_games', 'runtime_rooms', 'runtime_players', 'runtime_state', 'rewarded_games',
+  'stats_backfill', 'account_stats', 'game_stats', 'runtime_chat', 'runtime_games', 'runtime_rooms', 'runtime_players',
+  'runtime_state', 'rewarded_games',
   'friend_notifications', 'message_reads', 'direct_messages', 'emojis', 'match_participants', 'matches', 'friendships',
   'sessions', 'account_activity', 'accounts',
 ] as const;

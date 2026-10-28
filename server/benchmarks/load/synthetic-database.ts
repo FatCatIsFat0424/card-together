@@ -259,7 +259,7 @@ export function buildSyntheticDocument(options: SyntheticDatabaseOptions, templa
 
   const document: DatabaseDocument = {
     schemaVersion: CURRENT_SCHEMA_VERSION, accounts, sessions, friendships, matches: withReplays, emojis: [],
-    directMessages, messageReads: [], friendNotifications: [], runtime: null,
+    directMessages, messageReads: [], friendNotifications: [], gameStats: [], accountStats: [], runtime: null,
     // Every completed match leaves a reward receipt that is never pruned.
     rewardedGameIds: withReplays.map((match) => match.id),
   };

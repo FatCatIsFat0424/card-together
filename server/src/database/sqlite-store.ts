@@ -8,6 +8,8 @@ import type {
 } from './repository';
 import type { DatabaseDocument } from './schema';
 import { botId, validAccount } from './schema';
+import type { AccountStatsRecord, GameStatsRecord, StatsBackfillState, StatsSource } from './game-stats';
+import { validAccountStats, validGameStats } from './game-stats';
 import { friendshipPair } from './indexes';
 
 export type Row = Record<string, SQLOutputValue>;
@@ -198,6 +200,61 @@ export function insertFriendNotification(sql: Statements, notification: FriendNo
     .run(notification.id, notification.accountId, notification.actorId, notification.createdAt, notification.readAt ?? null);
 }
 
+// Statistics: key columns plus the validated JSON record.
+
+export function gameStatsFromRow(row: Row): GameStatsRecord {
+  return parseStored<GameStatsRecord>(textColumn(row, 'record'));
+}
+
+export function accountStatsFromRow(row: Row): AccountStatsRecord {
+  return parseStored<AccountStatsRecord>(textColumn(row, 'record'));
+}
+
+/** Inserts or replaces in place, keeping the original insertion order. */
+export function upsertGameStats(sql: Statements, record: GameStatsRecord): void {
+  if (!validGameStats(record)) throw invalidSchemaError();
+  sql(`INSERT INTO game_stats (account_id, game_type, scope, record) VALUES (?, ?, ?, ?)
+    ON CONFLICT (account_id, game_type, scope) DO UPDATE SET record = excluded.record`)
+    .run(record.accountId, record.gameType, record.scope, JSON.stringify(record));
+}
+
+export function upsertAccountStats(sql: Statements, record: AccountStatsRecord): void {
+  if (!validAccountStats(record)) throw invalidSchemaError();
+  sql(`INSERT INTO account_stats (account_id, scope, record) VALUES (?, ?, ?)
+    ON CONFLICT (account_id, scope) DO UPDATE SET record = excluded.record`)
+    .run(record.accountId, record.scope, JSON.stringify(record));
+}
+
+export function sqliteStatsSource(sql: Statements): StatsSource {
+  return {
+    game: (accountId, gameType, scope) => {
+      const row = sql('SELECT record FROM game_stats WHERE account_id = ? AND game_type = ? AND scope = ?').get(accountId, gameType, scope);
+      return row ? gameStatsFromRow(row) : null;
+    },
+    account: (accountId, scope) => {
+      const row = sql('SELECT record FROM account_stats WHERE account_id = ? AND scope = ?').get(accountId, scope);
+      return row ? accountStatsFromRow(row) : null;
+    },
+  };
+}
+
+export function readStatsBackfill(sql: Statements): StatsBackfillState | null {
+  const row = sql('SELECT after_at, after_match_id FROM stats_backfill WHERE id = 1').get();
+  if (!row) return null;
+  return { after: row.after_at === null ? null : { at: integerColumn(row, 'after_at'), matchId: textColumn(row, 'after_match_id') } };
+}
+
+/** Null removes the row: the backfill is finished. */
+export function writeStatsBackfill(sql: Statements, state: StatsBackfillState | null): void {
+  if (!state) {
+    sql('DELETE FROM stats_backfill WHERE id = 1').run();
+    return;
+  }
+  sql(`INSERT INTO stats_backfill (id, after_at, after_match_id) VALUES (1, ?, ?)
+    ON CONFLICT (id) DO UPDATE SET after_at = excluded.after_at, after_match_id = excluded.after_match_id`)
+    .run(state.after?.at ?? null, state.after?.matchId ?? null);
+}
+
 // Runtime: one row per player, room, game, and room chat, plus the order of each list.
 
 export interface RuntimeLayout {
@@ -282,6 +339,7 @@ export function writeRuntimeRows(sql: Statements, next: RuntimeRows, previous: R
 export function readDocument(sql: Statements): DatabaseDocument {
   const rewardedGameIds = sql('SELECT game_id FROM rewarded_games ORDER BY seq').all().map((row) => textColumn(row, 'game_id'));
   const runtime = readRuntimeRows(sql);
+  const statsBackfill = readStatsBackfill(sql);
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     accounts: sql(`${ACCOUNT_SELECT} ORDER BY a.seq`).all().map(accountFromRow),
@@ -292,8 +350,11 @@ export function readDocument(sql: Statements): DatabaseDocument {
     directMessages: sql('SELECT record FROM direct_messages ORDER BY seq').all().map(directMessageFromRow),
     messageReads: sql('SELECT * FROM message_reads ORDER BY seq').all().map(messageReadFromRow),
     friendNotifications: sql('SELECT * FROM friend_notifications ORDER BY seq').all().map(friendNotificationFromRow),
+    gameStats: sql('SELECT record FROM game_stats ORDER BY seq').all().map(gameStatsFromRow),
+    accountStats: sql('SELECT record FROM account_stats ORDER BY seq').all().map(accountStatsFromRow),
     runtime: runtime && parseRuntime(runtime),
     ...(rewardedGameIds.length > 0 ? { rewardedGameIds } : {}),
+    ...(statsBackfill ? { statsBackfill } : {}),
   };
 }
 
@@ -314,6 +375,18 @@ export function insertDocument(sql: Statements, document: DatabaseDocument): voi
   for (const cursor of document.messageReads) insertMessageRead(sql, cursor);
   for (const notification of document.friendNotifications) insertFriendNotification(sql, notification);
   for (const gameId of document.rewardedGameIds ?? []) sql('INSERT INTO rewarded_games (game_id) VALUES (?)').run(gameId);
+  for (const record of document.gameStats) {
+    if (sqliteStatsSource(sql).game(record.accountId, record.gameType, record.scope)) throw new Error('A game statistics record already exists.');
+    upsertGameStats(sql, record);
+  }
+  for (const record of document.accountStats) {
+    if (sqliteStatsSource(sql).account(record.accountId, record.scope)) throw new Error('An account statistics record already exists.');
+    upsertAccountStats(sql, record);
+  }
+  if (document.statsBackfill) {
+    if (readStatsBackfill(sql)) throw new Error('The target database already has a statistics backfill.');
+    writeStatsBackfill(sql, document.statsBackfill);
+  }
   if (document.runtime !== null) {
     if (sql('SELECT 1 FROM runtime_state WHERE id = 1').get()) throw new Error('The target database already has runtime state.');
     writeRuntimeRows(sql, serializeRuntime(document.runtime), null);
