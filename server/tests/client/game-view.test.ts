@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { MatchResult, PlayerVisibleGameState, PlayingState } from '@shared/types';
+import type { GameSeat, MatchResult, PlayerVisibleGameState, PlayingState } from '@shared/types';
 import {
   AUCTION_COLUMNS, auctionRows, auctionWaitIndex, formatCountdown, lastElimination, lastMove, latestCallIndex, matchSeats,
-  remainingCards, resultSeats,
+  remainingCards, resultSeats, seatLayout, tablePosition,
 } from '../../../client/src/game-view';
 import type { AuctionCall } from '../../../client/src/game-view';
 
@@ -144,5 +144,47 @@ describe('seats taking part', () => {
       .toEqual(['N', 'E', 'S', 'W', 'P5']);
     expect(resultSeats({ gameType: 'napoleon', seats: ['N', 'E', 'S', 'W', 'P5', 'P6'] } as unknown as MatchResult))
       .toEqual(['N', 'E', 'S', 'W', 'P5', 'P6']);
+  });
+});
+
+describe('table seat layouts', () => {
+  const positions = (seats: GameSeat[], me: GameSeat) => seats.map((seat) => tablePosition(seat, me, seats));
+
+  it('seats two players face to face whichever seats they hold', () => {
+    expect(seatLayout(['N', 'E'])).toBe('facing');
+    expect(positions(['N', 'E'], 'N')).toEqual(['bottom', 'top']);
+    expect(positions(['N', 'E'], 'E')).toEqual(['top', 'bottom']);
+    expect(positions(['E', 'P5'], 'P5')).toEqual(['top', 'bottom']);
+  });
+
+  it('seats three players at bottom, upper left and upper right in turn order', () => {
+    expect(seatLayout(['N', 'E', 'S'])).toBe('trio');
+    expect(positions(['N', 'E', 'S'], 'N')).toEqual(['bottom', 'topLeft', 'topRight']);
+    expect(positions(['N', 'E', 'S'], 'E')).toEqual(['topRight', 'bottom', 'topLeft']);
+    expect(positions(['N', 'S', 'P5'], 'P5')).toEqual(['topLeft', 'topRight', 'bottom']);
+  });
+
+  it('keeps the compass cross for four compass seats', () => {
+    expect(seatLayout(['N', 'E', 'S', 'W'])).toBe('compass');
+    expect(positions(['N', 'E', 'S', 'W'], 'S')).toEqual(['top', 'right', 'bottom', 'left']);
+    expect(tablePosition('W', 'N')).toBe('right');
+  });
+
+  it('rings four seats that include an additional seat, and five to eight seats', () => {
+    expect(seatLayout(['N', 'E', 'S', 'P5'])).toBe('ring');
+    expect(positions(['N', 'E', 'S', 'P5'], 'N')).toEqual(['bottom', 'left', 'top', 'right']);
+    const five: GameSeat[] = ['N', 'E', 'S', 'W', 'P5'];
+    expect(positions(five, 'N')).toEqual(['bottom', 'left', 'topLeft', 'topRight', 'right']);
+    const six: GameSeat[] = [...five, 'P6'];
+    expect(positions(six, 'N')).toEqual(['bottom', 'bottomLeft', 'topLeft', 'top', 'topRight', 'bottomRight']);
+    const eight: GameSeat[] = [...six, 'P7', 'P8'];
+    expect(positions(eight, 'W')).toEqual(['topRight', 'right', 'bottomRight', 'bottom', 'bottomLeft', 'left', 'topLeft', 'top']);
+    expect(positions(eight, 'N')).toEqual(['bottom', 'bottomLeft', 'left', 'topLeft', 'top', 'topRight', 'right', 'bottomRight']);
+  });
+
+  it('always puts the viewer at the bottom', () => {
+    for (const seats of [['N', 'S'], ['E', 'S', 'W'], ['N', 'E', 'S', 'W'], ['N', 'E', 'S', 'P5', 'P6'], ['N', 'E', 'S', 'W', 'P5', 'P6', 'P7', 'P8']] as GameSeat[][]) {
+      for (const me of seats) expect(tablePosition(me, me, seats)).toBe('bottom');
+    }
   });
 });

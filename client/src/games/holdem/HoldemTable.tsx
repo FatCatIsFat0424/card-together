@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { HE_HANDS } from '@shared/rules/holdem';
 import type { HoldemAction, HoldemLogEntry, HoldemMatchResult, HoldemVisibleState, GameSeat } from '@shared/types';
-import { tablePosition } from '../../game-view';
+import { tablePosition, usesCornerSlots } from '../../game-view';
 import type { TablePosition } from '../../game-view';
 import { socket } from '../../socket';
 import { useGameStore } from '../../stores/game-store';
@@ -92,7 +92,7 @@ function PotList({ view }: { view: HoldemTableView }): ReactNode {
 function Centre({ game, view }: { game: HoldemVisibleState; view: HoldemTableView }): ReactNode {
   const blinds = holdemBlindSeats(view);
   const actions = streetActions(game.log, view.logEnd);
-  return <div className={[styles.centre, game.seats.some((seat) => seat.startsWith('P')) && styles.expandedCentre].filter(Boolean).join(' ')}>
+  return <div className={[styles.centre, usesCornerSlots(game.seats) && styles.expandedCentre].filter(Boolean).join(' ')}>
     {game.seats.map((seat) => <SeatSpot key={seat} seat={seat} view={view} position={tablePosition(seat, game.mySeat, game.seats)}
       isMe={seat === game.mySeat} action={actions[seat]} blinds={blinds} />)}
     <div className={styles.middle}>

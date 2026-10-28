@@ -7,7 +7,7 @@ import type {
   BlackjackAction, BlackjackDealerAction, BlackjackLogEntry, BlackjackMatchResult, BlackjackVisibleState, GameSeat,
 } from '@shared/types';
 import { DeadlineClock } from '../../components/TurnClock';
-import { tablePosition } from '../../game-view';
+import { tablePosition, usesCornerSlots } from '../../game-view';
 import type { TablePosition } from '../../game-view';
 import { socket } from '../../socket';
 import { useGameStore } from '../../stores/game-store';
@@ -77,7 +77,7 @@ function Centre({ game, view }: { game: BlackjackVisibleState; view: BlackjackTa
   const auto = autoBetSeats(game.log, view.logEnd);
   // My own hands sit in the hand zone while a hand is played; between hands the zone holds the bet controls.
   const seats = game.seats.filter((seat) => view.betting || seat !== game.mySeat);
-  return <div className={[styles.centre, game.seats.some((seat) => seat.startsWith('P')) && styles.expandedCentre].filter(Boolean).join(' ')}>
+  return <div className={[styles.centre, usesCornerSlots(game.seats) && styles.expandedCentre].filter(Boolean).join(' ')}>
     <div className={styles.dealerArea}>
       <DealerHand cards={view.dealer} holeHidden={view.holeHidden} size="md" peek={peek}
         label={view.dealerSeat ? t('blackjack.dealerOf', { name: seatName(view.dealerSeat) }) : undefined} />

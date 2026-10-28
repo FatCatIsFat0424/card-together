@@ -59,14 +59,30 @@ export function resultSeats(result: MatchResult): readonly GameSeat[] {
   return gameDefinition(result.gameType).seats.flexible && 'seats' in result && result.seats ? result.seats : CLOCKWISE;
 }
 
+/** How the occupied seats are arranged: the layout follows the player count, not the compass letters. */
+export type SeatLayout = 'facing' | 'trio' | 'compass' | 'ring';
+
+const RING_SLOTS: readonly TablePosition[] = ['bottom', 'bottomLeft', 'left', 'topLeft', 'top', 'topRight', 'right', 'bottomRight'];
+
+/** Two players face each other, three sit bottom / upper-left / upper-right, four compass seats keep the cross, the rest ring the table. */
+export function seatLayout(seats: readonly GameSeat[] = CLOCKWISE): SeatLayout {
+  if (seats.length === 2) return 'facing';
+  if (seats.length === 3) return 'trio';
+  return seats.length <= 4 && seats.every(isCompassSeat) ? 'compass' : 'ring';
+}
+
+/** Whether seats can take the corner slots, so a table needs its eight-slot grid rather than the compass cross. */
+export function usesCornerSlots(seats: readonly GameSeat[]): boolean {
+  const layout = seatLayout(seats);
+  return layout === 'ring' || layout === 'trio';
+}
+
 /** Screen position of a seat when `bottomSeat` (me) sits at the bottom of the table. */
 export function tablePosition(seat: GameSeat, bottomSeat: GameSeat, seats: readonly GameSeat[] = CLOCKWISE): TablePosition {
-  if (seats.some((value) => !isCompassSeat(value)) || seats.length > 4) {
-    const slots: readonly TablePosition[] = ['bottom', 'bottomLeft', 'left', 'topLeft', 'top', 'topRight', 'right', 'bottomRight'];
-    const relative = (seats.indexOf(seat) - seats.indexOf(bottomSeat) + seats.length) % seats.length;
-    return slots[Math.round(relative * 8 / seats.length) % 8];
-  }
-  return POSITIONS[(CLOCKWISE.indexOf(seat) - CLOCKWISE.indexOf(bottomSeat) + 4) % 4];
+  const layout = seatLayout(seats);
+  if (layout === 'compass') return POSITIONS[(CLOCKWISE.indexOf(seat) - CLOCKWISE.indexOf(bottomSeat) + 4) % 4];
+  const relative = (seats.indexOf(seat) - seats.indexOf(bottomSeat) + seats.length) % seats.length;
+  return RING_SLOTS[Math.round(relative * 8 / seats.length) % 8];
 }
 
 /** Remaining time as `m:ss`, rounded up to whole seconds and never negative. */

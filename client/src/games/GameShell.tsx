@@ -19,7 +19,7 @@ import { Dock, DockCount } from '../components/Dock';
 import { DESKTOP_SHELL_QUERY } from '../components/desktop-nav';
 import { TableSeat } from '../components/TableSeat';
 import { AppCheckbox } from '../components/AppCheckbox';
-import { lastElimination, lastMove, matchSeats, tablePosition } from '../game-view';
+import { lastElimination, lastMove, matchSeats, seatLayout, tablePosition, usesCornerSlots } from '../game-view';
 import type { TablePosition } from '../game-view';
 import { AbortVoteBanner, AbortVoteButton } from './AbortVote';
 import { SpectatorLeaveButton } from './SpectatorLeave';
@@ -218,13 +218,14 @@ export function GameShell({
   };
   // Seats left empty in a Blackjack or Hold'em match get no plate.
   const tableSeats = matchSeats(visibleGame);
-  const expandedTable = tableSeats.some((seat) => !['N', 'E', 'S', 'W'].includes(seat));
+  const layout = seatLayout(tableSeats);
+  const expandedTable = usesCornerSlots(tableSeats);
   // Empty cells go to their neighbours: with no side seats (six players) the top corner seats reach down beside
   // the centre, and with no opposite seat (five players) the centre rises between the top corner seats.
   const sidePositions = tableSeats.filter((seat) => seat !== bottomSeat)
     .map((seat) => tablePosition(seat, bottomSeat, tableSeats));
-  const cornersSpan = expandedTable && !sidePositions.includes('left') && !sidePositions.includes('right');
-  const centreUp = expandedTable && !sidePositions.includes('top');
+  const cornersSpan = layout === 'ring' && !sidePositions.includes('left') && !sidePositions.includes('right');
+  const centreUp = layout === 'ring' && !sidePositions.includes('top');
   const chatShown = dockLayout ? dockOpen && dockTab === 'chat' : chatOpen;
   const unread = chatShown ? 0 : Math.max(0, messageCount - seenMessages);
   // Phones hide the app bar during games, so this sheet becomes the menu for everything it held.
@@ -427,7 +428,7 @@ export function GameShell({
 
       <main className={`${styles.centreColumn} ${tableStyle ? styles.customTable : ''} ${tableArt ? styles.layeredTable : ''}`} style={tableStyle}>
         {tableArt && <TableArt art={tableArt} />}
-        <div className={`${styles.table} ${expandedTable ? styles.expandedTable : ''} ${cornersSpan ? styles.cornersSpan : ''} ${centreUp ? styles.centreUp : ''}`}
+        <div className={`${styles.table} ${expandedTable ? styles.expandedTable : ''} ${cornersSpan ? styles.cornersSpan : ''} ${centreUp ? styles.centreUp : ''} ${layout === 'trio' ? styles.trioTable : ''} ${layout === 'facing' ? styles.facingTable : ''}`}
           data-card-table data-hud-info={HudInfo ? '' : undefined}
           data-expanded-table={expandedTable ? '' : undefined}>
           {dockLayout && !dockOpen && <IconButton className={`${styles.hudButton} ${styles.dockToggle}`}

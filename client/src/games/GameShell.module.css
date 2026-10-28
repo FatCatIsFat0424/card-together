@@ -784,6 +784,52 @@
   }
 }
 
+/* Two players face each other: no side seats, so the centre takes the width of the empty side lanes. */
+.table.facingTable {
+  grid-template-columns: 0 minmax(0, 1fr) 0;
+  column-gap: 0;
+}
+/* On short landscape screens the opposite seat's street stake hangs below its plate, so the board steps down. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .table.facingTable[data-hud-info] > .tableCentre { padding-top: 16px; }
+}
+
+/* Three players: the opponents take the upper corners and the centre spans the width between them; the
+   toolbar always floats, so no grid row is reserved for it. */
+.table.expandedTable.trioTable {
+  grid-template-columns: minmax(110px, 22%) minmax(0, 1fr) minmax(110px, 22%);
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: 'topLeft centre topRight';
+}
+.table.trioTable[data-hud-info] > .tableCentre { padding-top: 24px; }
+@media (max-width: 767px), (max-height: 500px) and (min-width: 600px) {
+  .table.expandedTable.trioTable > .tableTools {
+    position: absolute;
+    inset: 4px 4px auto;
+    grid-area: auto;
+    z-index: 10;
+    pointer-events: none;
+  }
+}
+@media (max-width: 767px) and (min-height: 501px) {
+  .table.expandedTable.trioTable {
+    grid-template-columns: minmax(72px, 24%) minmax(0, 1fr) minmax(72px, 24%);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: 'topLeft centre topRight';
+  }
+  .table.expandedTable.trioTable > :is([data-table-seat='topLeft'], [data-table-seat='topRight']) { margin-top: 40px; }
+}
+/* The corner seats sit beside the menu button on the left and the voice and chat buttons on the right. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .table.expandedTable.trioTable {
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr) minmax(0, auto);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: 'topLeft centre topRight';
+  }
+  .table.expandedTable.trioTable > [data-table-seat='topLeft'] { margin: 4px 0 0 36px; }
+  .table.expandedTable.trioTable > [data-table-seat='topRight'] { margin: 4px 80px 0 0; }
+}
+
 /* Phone game menu: the info button leads the toolbar as the menu; rules, abort, and leave move into its
    sheet, which scrolls as one list: room code, rules, then the exits before the game details. */
 @media (max-width: 767px), (max-height: 500px) and (min-width: 600px) {
