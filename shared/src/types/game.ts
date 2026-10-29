@@ -258,4 +258,12 @@ export type {
   DouDizhuVisibleState,
 } from '../games/doudizhu/types';
 
+export type {
+  JungleMove,
+  JunglePhase,
+  JungleMatchResult,
+  JungleGameState,
+  JungleVisibleState,
+} from '../games/jungle/types';
+
 export type { AnyGameState, PlayerVisibleGameState, MatchResult } from '../games/type-registry';

@@ -19,6 +19,7 @@ const PREVIOUS_SEATS: Readonly<Record<GameType, readonly [min: number, max: numb
   tenhalf: [2, 8, true, false],
   liarsdice: [2, 8, true, false],
   reversi: [2, 2, true, false],
+  jungle: [2, 2, true, false],
   crazyeights: [2, 8, true, false],
   stud: [2, 8, true, false],
   oldmaid: [2, 8, true, false],
@@ -49,7 +50,7 @@ describe('shared game registry', () => {
         expect([definition.category, definition.equipment]).toEqual(['dice', []]);
         continue;
       }
-      if (gameType === 'reversi') {
+      if (gameType === 'reversi' || gameType === 'jungle') {
         expect([definition.category, definition.equipment]).toEqual(['board', []]);
         continue;
       }
@@ -73,7 +74,7 @@ describe('registered result metadata', () => {
       ['liarsdeck', 'ranking', null], ['blackjack', 'ranking', 'chips'], ['holdem', 'ranking', 'chips'],
       ['napoleon', 'roles', null], ['tenhalf', 'ranking', 'chips'], ['liarsdice', 'ranking', null], ['crazyeights', 'ranking', 'penalty'], ['stud', 'ranking', 'chips'],
       ['reversi', 'ranking', null], ['oldmaid', 'ranking', 'points'],
-      ['gofish', 'ranking', 'points'], ['doudizhu', 'ranking', 'points'],
+      ['gofish', 'ranking', 'points'], ['doudizhu', 'ranking', 'points'], ['jungle', 'ranking', null],
     ]);
   });
 

@@ -16,6 +16,7 @@ import { crazyEightsStatistics } from './crazyeights/statistics';
 import { studStatistics } from './stud/statistics';
 import { reversiStatistics } from './reversi/statistics';
 import { goFishStatistics } from './gofish/statistics';
+import { jungleStatistics } from './jungle/statistics';
 
 export const GAME_STATISTICS: Readonly<Record<GameType, GameStatisticsRules>> = {
   bridge: bridgeStatistics,
@@ -36,6 +37,7 @@ export const GAME_STATISTICS: Readonly<Record<GameType, GameStatisticsRules>> = 
   stud: studStatistics,
   reversi: reversiStatistics,
   gofish: goFishStatistics,
+  jungle: jungleStatistics,
 };
 
 export function gameStatisticsRules(gameType: GameType): GameStatisticsRules {

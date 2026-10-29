@@ -13,6 +13,7 @@ import { napoleonFacts } from './napoleon';
 import { ninetyNineFacts } from './ninetynine';
 import { redPointsFacts } from './redpoints';
 import { reversiFacts } from './reversi';
+import { jungleFacts } from './jungle';
 import { sevensFacts } from './sevens';
 import { tenHalfFacts } from './tenhalf';
 import { crazyEightsFacts } from './crazyeights';
@@ -42,6 +43,7 @@ export const GAME_STATS: {
   oldmaid: oldMaidFacts,
   gofish: goFishFacts,
   doudizhu: douDizhuFacts,
+  jungle: jungleFacts,
 };
 
 export function gameFacts<K extends GameType>(

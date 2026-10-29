@@ -243,6 +243,13 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Scoring', 'Stake = bid (or 1) × 2 for each bomb, rocket, and grab. Spring (the farmers never played) and anti-spring (the landlord played only once) double it again.', 'The landlord wins or loses 2 × stake, each farmer the stake, so scores always sum to zero.'),
     section('Controls', 'Select cards, then press Play or Pass. The next player after you is marked on the table. Running out of time passes the auction or a trick, or leads your smallest play.'),
   ],
+  jungle: [
+    section('Board and start', 'A 7×9 board with a river in each half, three traps and a den per side. Each side has eight animals; the earlier seat plays red, starts at the bottom, and moves first. The board turns so you are always at the bottom, while piece text stays upright.', 'Each token shows the animal and its rank number (1 rat to 8 elephant). Coordinates run a–g and 1–9 as red sees the board.'),
+    section('Moving and capturing', 'Move one piece one step up, down, left, or right per turn. Ranks: elephant > lion > tiger > leopard > wolf > dog > cat > rat. A piece captures an equal or lower rank.', 'Exception: the rat captures the elephant, and the elephant cannot capture the rat. You can never enter your own den.'),
+    section('River', 'Only the rat may enter the river. Lions and tigers jump across it in a straight line (two squares sideways, three squares lengthwise) and may capture on landing, but not if any rat, yours or the opponent’s, is in the water they cross.', 'A capture needs both pieces on land or both in the water: a rat in the river cannot capture a piece on land (not even the elephant), and no land piece can capture a rat in the river.'),
+    section('Traps and den', 'A piece standing in an opponent’s trap counts as rank 0: any piece can capture it, and it can capture nothing. It regains its rank on leaving the trap. Entering the opponent’s den wins.'),
+    section('Winning', 'Win by entering the opponent’s den, by capturing every opposing piece, or by leaving the opponent with no legal move. If 100 plies pass without a capture the game is a draw.', 'You may resign. On your own turn you may offer a draw: the opponent accepts to draw, and making a move counts as declining. After a decline you must make 3 more moves before offering again.'),
+  ],
 };
 
 const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
@@ -440,12 +447,19 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('計分', '底分 =（叫分或 1）× 每個炸彈、火箭與搶地主各乘 2。春天（農民一手都沒出）與反春（地主只出過一手）再乘 2。', '地主輸贏底分的 2 倍，每位農民輸贏 1 倍，所以全場分數總和一定為 0。'),
     section('操作方式', '選牌後按「出牌」或「不出」。你的下家會在牌桌上標示。逾時時，叫牌視為不叫、跟牌視為不出，領牌則出最小的牌。'),
   ],
+  jungle: [
+    section('棋盤與開局', '7×9 棋盤，雙方半場各有一條河，各有三個陷阱與一個獸穴。雙方各 8 隻動物；座位順序在前的玩家執紅、從下方出發並先走。棋盤會依視角旋轉，讓自己永遠在下方，棋子文字保持正立。', '棋子上標示動物與等級數字（1 鼠到 8 象）；座標以紅方視角標示，a–g、1–9。'),
+    section('走法與吃子', '每回合走一隻棋子，上下左右一格。大小為象＞獅＞虎＞豹＞狼＞狗＞貓＞鼠，等級相同或較低的棋子都可以吃。', '例外：鼠可以吃象，象不能吃鼠。不能走進自己的獸穴。'),
+    section('河道', '只有鼠可以下河。獅、虎可以沿直線跳過河（橫向跳兩格、縱向跳三格），落點可以吃子；跳越的河中只要有鼠（不論敵我）就不能跳。', '吃子時雙方必須同在陸地或同在水中：河中的鼠不能吃岸上的棋子（包括象），岸上的棋子也不能吃河中的鼠。'),
+    section('陷阱與獸穴', '進入對方陷阱的棋子等級視為 0：任何棋子都能吃它，它也吃不了任何棋子；離開陷阱即恢復原等級。走進對方獸穴者獲勝。'),
+    section('勝負', '進入對方獸穴、吃光對方所有棋子，或讓對方無子可動者獲勝。連續 100 手（雙方各半）沒有吃子，判和局。', '可以認輸；輪到自己時可以提和，對手同意即和局，對手走子視為拒絕，被拒絕後需再走 3 手才能再次提和。'),
+  ],
 };
 
 const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> = {
   en: [
     table('Room setup', ['Item', 'Rule'], [
-      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Go Fish 2–6; Napoleon 4–6; Reversi 2; Dou Dizhu 3; others 4'],
+      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Go Fish 2–6; Napoleon 4–6; Reversi and Jungle 2; Dou Dizhu 3; others 4'],
       ['Seat order', 'Clockwise N → E → S → W → P5–P8, skipping empty seats'],
       ['Start', 'Once everyone seated is ready, the host presses Start'],
       ['Bots', 'The host adds or removes them; at least one human must sit'],
@@ -461,7 +475,7 @@ const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> =
   ],
   'zh-TW': [
     table('房間設定', ['項目', '規則'], [
-      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；釣魚 2～6 人；拿破崙 4～6 人；黑白棋 2 人；鬥地主 3 人；其他 4 人'],
+      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；釣魚 2～6 人；拿破崙 4～6 人；黑白棋與鬥獸棋 2 人；鬥地主 3 人；其他 4 人'],
       ['座位順序', '順時針 北 → 東 → 南 → 西 → 第 5～8 席，跳過空位'],
       ['開始', '入座者都準備後，由房主按開始'],
       ['Bot', '房主可加入或移除；至少需一位真人入座'],

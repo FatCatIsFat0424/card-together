@@ -19,6 +19,7 @@ import { reversiAdapter } from './reversi-adapter';
 import { oldMaidAdapter } from './oldmaid-adapter';
 import { goFishAdapter } from './gofish-adapter';
 import { douDizhuAdapter } from './doudizhu-adapter';
+import { jungleAdapter } from './jungle-adapter';
 
 /** Every game type maps to its own adapter; a missing or mismatched entry fails to compile. */
 export const GAME_ADAPTERS: { readonly [K in GameType]: GameAdapter<K> } = {
@@ -40,6 +41,7 @@ export const GAME_ADAPTERS: { readonly [K in GameType]: GameAdapter<K> } = {
   oldmaid: oldMaidAdapter,
   gofish: goFishAdapter,
   doudizhu: douDizhuAdapter,
+  jungle: jungleAdapter,
 };
 
 /**

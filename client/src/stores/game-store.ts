@@ -20,6 +20,7 @@ import type {
   LiarsDeckVisibleState,
   LiarsDiceVisibleState,
   ReversiVisibleState,
+  JungleVisibleState,
   BlackjackVisibleState,
   HoldemVisibleState,
   NapoleonVisibleState,
@@ -54,6 +55,7 @@ export interface GameStoreState {
   crazyEights: CrazyEightsVisibleState | null;
   stud: StudVisibleState | null;
   reversi: ReversiVisibleState | null;
+  jungle: JungleVisibleState | null;
   /** Stud: my hole card from the previous hand while its presentation may still be playing */
   studHeld: HeldHoleCards | null;
   oldMaid: OldMaidVisibleState | null;
@@ -96,6 +98,7 @@ const initialState: GameStoreState = {
   crazyEights: null,
   stud: null,
   reversi: null,
+  jungle: null,
   studHeld: null,
   oldMaid: null,
   goFish: null,

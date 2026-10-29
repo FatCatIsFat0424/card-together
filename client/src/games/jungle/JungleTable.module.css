@@ -1,0 +1,22 @@
+/* ─── Jungle table: side colour and piece count beside each seat ─── */
+
+.pieces {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  flex: none;
+}
+
+.red { background: #c0392b; }
+.blue { background: #2563eb; }
+
+.sideName { opacity: 0.85; }

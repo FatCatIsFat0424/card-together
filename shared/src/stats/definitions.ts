@@ -114,6 +114,12 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('corners', 'log', 'count'),
     record('biggestFlip', 'log', 'max'),
   ],
+  jungle: [
+    record('denWins', 'result', 'count', true),
+    record('topCaptures', 'log', 'max'),
+    record('ratSlays', 'log', 'count'),
+    record('jumps', 'log', 'count'),
+  ],
   crazyeights: [
     record('handsWon', 'result', 'count', true),
     record('lowScore', 'result', 'min'),

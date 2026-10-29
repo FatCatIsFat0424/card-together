@@ -11,6 +11,7 @@ import { blackjackUi } from './blackjack/blackjack-ui';
 import { holdemUi } from './holdem/holdem-ui';
 import { studUi } from './stud/stud-ui';
 import { reversiUi } from './reversi/reversi-ui';
+import { jungleUi } from './jungle/jungle-ui';
 import { napoleonUi } from './napoleon/napoleon-ui';
 import { tenHalfUi } from './tenhalf/tenhalf-ui';
 import { oldMaidUi } from './oldmaid/oldmaid-ui';
@@ -43,6 +44,7 @@ export const GAME_UIS: { readonly [K in GameType]: GameUi<K> } = {
   stud: studUi,
   reversi: reversiUi,
   gofish: goFishUi,
+  jungle: jungleUi,
 };
 
 /**

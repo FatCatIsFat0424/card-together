@@ -24,6 +24,7 @@ import { getStudBotAction } from './stud-strategy';
 import { easyReversiAction, getReversiBotAction, reversiFirstLegalAction } from './reversi-strategy';
 import { easyOldMaidAction, getOldMaidBotAction, oldMaidFirstLegalAction } from './oldmaid-strategy';
 import { easyGoFishAction, getGoFishBotAction, goFishFirstLegalAction } from './gofish-strategy';
+import { easyJungleAction, getJungleBotAction, jungleFirstLegalAction } from './jungle-strategy';
 import {
   easyBigTwoAction, easyBlackjackAction, easyBridgeAction, easyChinesePokerAction, easyHoldemAction, easyLiarsDeckAction,
   easyNinetyNineAction, easyRedPointsAction, easySevensAction, easyStudAction,
@@ -130,6 +131,19 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     },
     // A player who runs out of time gets a legal move by the easy policy.
     turnTimeout: (visible) => easyReversiAction(visible, Math.random),
+  },
+  jungle: {
+    hard: getJungleBotAction,
+    easy: easyJungleAction,
+    firstLegal: jungleFirstLegalAction,
+    // Hard bots search in the worker pool; the cheap synchronous hard move serves only other seats.
+    search: {
+      strategy: searchStrategy<'jungle'>(new URL('./jungle-search.ts', import.meta.url), 'jungleSearch'),
+      budgetMs: 1000,
+      maxDepth: 12,
+    },
+    // A player who runs out of time gets a legal move by the easy policy.
+    turnTimeout: (visible) => easyJungleAction(visible, Math.random),
   },
   crazyeights: { hard: getCrazyEightsBotAction, easy: easyCrazyEightsAction, firstLegal: crazyEightsFirstLegalAction },
   stud: {

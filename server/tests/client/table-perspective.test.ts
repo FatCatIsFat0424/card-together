@@ -108,6 +108,7 @@ describe('spectator table perspective', () => {
       import('../../../client/src/games/liarsdice/LiarsDiceTable'),
       import('../../../client/src/games/reversi/ReversiTable'),
       import('../../../client/src/games/doudizhu/DouDizhuTable'),
+      import('../../../client/src/games/jungle/JungleTable'),
     ]);
   }, 60_000);
   beforeEach(() => {
@@ -152,9 +153,10 @@ describe('spectator table perspective', () => {
       } else if (projected.gameType !== 'bridge' && projected.gameType !== 'chinesepoker') {
         expect(isOwnTurn(projected)).toBe(false);
       }
-      if (game.gameType === 'reversi' || projected.gameType === 'reversi') {
+      if (game.gameType === 'reversi' || projected.gameType === 'reversi'
+        || game.gameType === 'jungle' || projected.gameType === 'jungle') {
         // The whole position is public: spectators have no hidden hands to view.
-        expect(projected).toMatchObject({ gameType: 'reversi', observer: 'spectator', mySeat: seat });
+        expect(projected).toMatchObject({ gameType: game.gameType, observer: 'spectator', mySeat: seat });
       } else if (game.gameType === 'liarsdice' && projected.gameType === 'liarsdice') {
         expect(projected.myDice).toEqual(game.observedHands?.[seat] ?? []);
       } else if (game.gameType !== 'blackjack' && projected.gameType !== 'blackjack'
