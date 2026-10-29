@@ -102,6 +102,12 @@ describe('load benchmark targets and summary', () => {
 });
 
 describe('load benchmark plan and options', () => {
+  it('should cover every game with the default options', () => {
+    const plan = planRooms(DEFAULT_LOAD_OPTIONS.clients, DEFAULT_LOAD_OPTIONS.rooms);
+    expect(new Set(plan.rooms.map((room) => room.gameType))).toEqual(new Set(GAME_TYPES));
+    expect(plan.lobby).toBeGreaterThan(0);
+  });
+
   it('should seat 100 clients at 20 mixed rooms with bots, spectators, and a lobby', () => {
     const plan = planRooms(100, 20);
     expect(plan.rooms).toHaveLength(20);

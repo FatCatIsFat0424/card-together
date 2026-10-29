@@ -64,8 +64,9 @@ export interface LoadOptions {
   readonly output: string | null;
 }
 
+/** One room per game by default, so every game is exercised; 100 clients still fill them with a lobby left over. */
 export const DEFAULT_LOAD_OPTIONS: LoadOptions = {
-  engine: 'json', durationSeconds: 600, clients: 100, rooms: 20, accounts: 2_000, friendsPerAccount: 20, matchesPerAccount: 100,
+  engine: 'json', durationSeconds: 600, clients: 100, rooms: GAME_TYPES.length, accounts: 2_000, friendsPerAccount: 20, matchesPerAccount: 100,
   messagesPerAccount: 5, replays: 1_000, templatesPerGame: 3, thinkMs: [1_000, 3_000], chatEveryMs: [20_000, 60_000],
   lobbyEveryMs: [5_000, 15_000], socialEveryMs: [30_000, 90_000], reconnectEveryMs: 30_000, ackTimeoutMs: 30_000,
   writePhaseSamples: 5, output: null,
