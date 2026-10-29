@@ -1,8 +1,10 @@
 /* ─── CardHand styles ─── */
 
 .handContainer {
-  /* Reserve room for every card plus the fan edges inside the table column. */
-  --card-w: min(calc(96px * var(--playing-card-scale)), var(--hand-height-limit, 12cqh), calc((100cqw - 32px) / (1.8 + (var(--hand-card-count) - 1) * (1 - var(--overlap)))));
+  /* Card width without a width limit; `useHandFit` then sizes cards and overlap to the row's own width and
+     this formula is only the first paint's estimate from the table column. */
+  --card-max: min(calc(96px * var(--playing-card-scale)), var(--hand-height-limit, 12cqh));
+  --card-w: min(var(--card-max), calc((100cqw - 32px) / (1.8 + (var(--hand-card-count) - 1) * (1 - var(--overlap)))));
   --overlap: 0.42;
   --fan-step: 0.6deg;
   display: flex;
@@ -13,6 +15,20 @@
 }
 
 .handContainer:empty { padding: 0; }
+
+/* Fixed edges so the fit can measure the row without depending on the card size. */
+@media (min-width: 768px), (orientation: landscape) {
+  .handContainer { padding-inline: 24px; }
+}
+
+/* Measured by `useHandFit` to learn the card width the stylesheet allows. */
+.probe {
+  position: absolute;
+  width: var(--card-max);
+  height: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
 
 @container (max-height: 420px) {
   .handContainer { padding-block: 18px 4px; }

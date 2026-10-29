@@ -9,7 +9,7 @@ import { moveHandCardAt } from './card-hand-order';
 import { useGameStore } from '../stores/game-store';
 import { useSortedHand } from '../games/use-hand-sort';
 import { cardInput, cardTap, validArmedCard } from './card-hand-touch';
-import { useHandFit } from './use-hand-fit';
+import { HAND_PROBE, useHandFit } from './use-hand-fit';
 import { useCardOrJokerFaceUrl } from '../cosmetics/card-faces/use-card-face';
 import { useI18nStore } from '../stores/i18n-store';
 import styles from './CardHand.module.css';
@@ -217,6 +217,7 @@ export function CardHand<T extends CardOrJoker>({
           </button>
         );
       })}
+      {cards.length > 0 && <span className={styles.probe} aria-hidden="true" {...{ [HAND_PROBE]: '' }} />}
     </div>
   );
 }

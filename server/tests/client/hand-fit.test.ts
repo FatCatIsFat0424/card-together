@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CARD_ASPECT, HAND_MAX_VISIBLE, HAND_MIN_VISIBLE, cardHeight, fitHand, handCardLimit,
+  CARD_ASPECT, HAND_MAX_VISIBLE, HAND_MIN_VISIBLE, HAND_ROOMY_VISIBLE, cardHeight, fitHand, handCardLimit,
 } from '../../../client/src/components/hand-fit';
 
 /** Width a hand occupies once every card but the last is covered by its neighbour. */
@@ -44,6 +44,31 @@ describe('hand fit', () => {
     expect(fitHand(300, 0, 57).cardWidth).toBe(57);
     expect(fitHand(0, 13, 57).cardWidth).toBe(57);
     expect(Number.isFinite(fitHand(Number.NaN, 13, 57).overlap)).toBe(true);
+  });
+
+  it('fits the largest hand, 20 Dou Dizhu landlord cards, at every row width a table gives it', () => {
+    // Row widths: tables of 860 to 1600px, 24px fan edges on both sides, 220px kept for the corner tools.
+    const rows = [860, 1053, 1273, 1600].map((table) => table - 2 * 24 - (table > 1000 ? 220 : 0));
+    for (const row of rows) {
+      for (const cap of [72, 96, 115, 134]) {
+        const fit = fitHand(row, 20, cap, HAND_ROOMY_VISIBLE);
+        expect(rowWidth(fit, 20)).toBeLessThanOrEqual(row + 0.5);
+        expect(1 - fit.overlap).toBeGreaterThanOrEqual(HAND_MIN_VISIBLE - 0.001);
+        expect(1 - fit.overlap).toBeLessThanOrEqual(HAND_ROOMY_VISIBLE + 0.001);
+        expect(fit.cardWidth).toBeLessThanOrEqual(cap);
+      }
+    }
+    // A wide row keeps the full-size card; a tight one shrinks it instead of hiding cards.
+    expect(fitHand(1005, 20, 107, HAND_ROOMY_VISIBLE).cardWidth).toBe(107);
+    expect(fitHand(500, 20, 96, HAND_ROOMY_VISIBLE).cardWidth).toBeLessThan(96);
+  });
+
+  it('fits 20 cards in a 706x336 phone row without dropping below the phone card size floor', () => {
+    const row = 706 - 2 * 12 - 56 - 104;
+    const fit = fitHand(row, 20, handCardLimit(336));
+    expect(rowWidth(fit, 20)).toBeLessThanOrEqual(row + 0.5);
+    expect(1 - fit.overlap).toBeGreaterThanOrEqual(HAND_MIN_VISIBLE - 0.001);
+    expect(fit.cardWidth).toBeGreaterThan(40);
   });
 
   it('derives the card height from the face aspect ratio', () => {
