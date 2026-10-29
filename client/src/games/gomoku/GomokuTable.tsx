@@ -154,7 +154,7 @@ export function GomokuTable(): ReactNode {
     // Every empty point takes a tap but only the pending one is drawn: a dot on each would bury the board.
     selectable={canMove ? moves.targets : undefined}
     pending={pendingMove ? { to: pendingMove.to, piece: <PendingStone side={nextSide} /> } : null}
-    fileLabels={FILES} rankLabels={RANKS}
+    fileLabels={FILES} rankLabels={RANKS} winLine={winning.size > 0 ? [...winning] : undefined}
     onNodeClick={canMove ? input.tap : undefined} />;
 
   return (

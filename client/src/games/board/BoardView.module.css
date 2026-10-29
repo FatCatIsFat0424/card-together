@@ -63,6 +63,8 @@
 .pendingRing { fill: none; stroke: var(--marker-last); stroke-width: 0.075; stroke-dasharray: 0.15 0.1; }
 .dashed { stroke-dasharray: 0.1 0.075; }
 .dimmed { opacity: 0.42; }
+/* The effect layer draws this piece moving; the board shows it again when the move has landed. */
+.moving { visibility: hidden; }
 .ghost { opacity: 0.72; pointer-events: none; }
 .under, .over, .pieces { pointer-events: none; }
 

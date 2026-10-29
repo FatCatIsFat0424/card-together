@@ -3,7 +3,7 @@
 import { PIECE_STYLES } from '@shared/constants';
 import type { PieceStyleId } from '@shared/types';
 import { DEFAULT_BOARD_THEME, FIXED_PIECE_COLOURS } from '../../games/board/board-theme';
-import type { PieceFinish, PiecePalette } from '../../games/board/board-theme';
+import type { PieceEffects, PieceFinish, PiecePalette } from '../../games/board/board-theme';
 import { ensureContrast, mix, withLuminance } from '../colour';
 import { MATERIAL_GLOSS, SERIES_FONTS, SERIES_TOKENS } from '../series-tokens';
 import type { SeriesTokens } from '../series-tokens';
@@ -11,6 +11,7 @@ import type { SeriesTokens } from '../series-tokens';
 export interface PieceDesign {
   readonly palette: PiecePalette;
   readonly finish: PieceFinish;
+  readonly effects: PieceEffects;
   /** Shop thumbnail backdrop: a mid-dark ground that both stone shades stand out from, and the series glow on it. */
   readonly stage: { readonly ground: string; readonly glow: string };
 }
@@ -22,6 +23,10 @@ export const PIECE_STAGE_LUMINANCE = { min: 0.1, max: 0.2 } as const;
 export const PIECE_TEXT_CONTRAST = 4.5;
 /** A face-down token against a revealed face, and its motif against its own back (WCAG non-text contrast). */
 export const PIECE_BACK_CONTRAST = 3;
+/** Effect colours against the series board and the default wood, so a burst shows on light boards. */
+export const PIECE_EFFECT_CONTRAST = 2;
+/** At most this many particles in one burst. */
+export const MAX_EFFECT_PARTICLES = 10;
 /** Luminance range of face-down backs: dark enough to read as a back on every light board. */
 export const PIECE_BACK_LUMINANCE = { min: 0.03, max: 0.14 } as const;
 
@@ -57,8 +62,18 @@ function pieceDesign(tokens: SeriesTokens): PieceDesign {
     shadow: fixed.shadow, marbles: fixed.marbles,
   };
   const ground = withLuminance(mix(tokens.base, tokens.deep, 0.25), PIECE_STAGE_LUMINANCE.min, PIECE_STAGE_LUMINANCE.max);
+  const effects: PieceEffects = {
+    colour: ensureContrast(tokens.motion?.glow ?? tokens.accent, [tokens.board, DEFAULT_BOARD_THEME.surfaces.wood.surface],
+      PIECE_EFFECT_CONTRAST),
+    colour2: tokens.accent,
+    particle: tokens.effect.particle,
+    count: Math.min(MAX_EFFECT_PARTICLES, tokens.effect.count),
+    spread: tokens.effect.spread,
+    aura: tokens.motion ? tokens.effect.aura : 'ring',
+    loop: tokens.motion !== undefined,
+  };
   return {
-    palette, finish: { rim: tokens.rim, gloss, material: tokens.material, back: tokens.back }, stage: { ground, glow: tokens.accent },
+    palette, finish: { rim: tokens.rim, gloss, material: tokens.material, back: tokens.back }, effects, stage: { ground, glow: tokens.accent },
   };
 }
 

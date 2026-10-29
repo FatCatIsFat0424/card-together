@@ -54,6 +54,85 @@
 @keyframes hit { from { transform: none; } }
 @keyframes miss { from { opacity: 1; } }
 
+/* ─── Dice style effects: transform and opacity only, on the die and its own pseudo-elements ───
+   The sheen is a slim gloss bar that stays inside the die, so no rounded clip has to be repainted. */
+.sheen {
+  position: absolute;
+  left: 38%;
+  top: 12%;
+  width: 24%;
+  height: 76%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.75), transparent);
+  opacity: 0;
+  transform: translateX(-130%) rotate(20deg);
+  pointer-events: none;
+}
+
+/* A rolled die tumbles in from the upper left with a trail, settles, then a sheen crosses it. */
+.land { animation: land 480ms cubic-bezier(0.25, 0.8, 0.3, 1.1) var(--d, 0ms) both; }
+.land::before {
+  content: '';
+  position: absolute;
+  right: 55%;
+  bottom: 55%;
+  width: 150%;
+  height: 38%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--die-trail, #fff));
+  transform: rotate(38deg);
+  transform-origin: right bottom;
+  opacity: 0;
+  animation: trail 480ms ease-out var(--d, 0ms) both;
+  pointer-events: none;
+}
+.land .sheen { animation: glint 450ms ease-out calc(var(--d, 0ms) + 450ms) both; }
+
+/* The cup has lifted: matching dice shine as they are counted. */
+.reveal .sheen { animation: glint 450ms ease-out var(--match-delay, 0ms) both; }
+
+/* A wild one rings once after it lands or is revealed. */
+.wild::after {
+  content: '';
+  position: absolute;
+  inset: -18%;
+  border: 2px solid var(--die-pip-one, #b3261e);
+  border-radius: 28%;
+  opacity: 0;
+  animation: halo 600ms ease-out calc(var(--d, 0ms) + 500ms) both;
+  pointer-events: none;
+}
+.reveal.wild::after { animation-delay: calc(var(--match-delay, 0ms) + 120ms); }
+
+/* Animated collections keep a slow sheen crossing the dice in hand. */
+.loop .sheen { animation: shimmer 5s ease-in-out calc(var(--d, 0ms) + 900ms) infinite; }
+
+@keyframes land {
+  0% { transform: translate(-110%, -190%) rotate(-260deg) scale(0.8); opacity: 0; }
+  55% { transform: translate(0, 6%) rotate(8deg); opacity: 1; }
+  78% { transform: translate(0, -9%) rotate(-3deg); }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes trail {
+  0% { opacity: 0; }
+  20% { opacity: 0.85; }
+  55%, 100% { opacity: 0; }
+}
+@keyframes glint {
+  from { opacity: 0; transform: translateX(-130%) rotate(20deg); }
+  30%, 70% { opacity: 1; }
+  to { opacity: 0; transform: translateX(130%) rotate(20deg); }
+}
+@keyframes halo {
+  from { transform: scale(0.6); opacity: 1; }
+  to { transform: scale(1.15); opacity: 0; }
+}
+@keyframes shimmer {
+  0%, 84% { opacity: 0; transform: translateX(-130%) rotate(20deg); }
+  88%, 96% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(130%) rotate(20deg); }
+}
+
 /* ─── Cup ─── */
 .cup {
   --size: var(--die-size, 2.6rem);
@@ -106,5 +185,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .match, .miss, .shaking, .lifted, .glowing::after { animation: none; }
+  .match, .miss, .shaking, .lifted, .glowing::after, .land, .land::before, .sheen, .wild::after { animation: none; }
 }

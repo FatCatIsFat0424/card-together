@@ -181,7 +181,7 @@ export function BattleshipTable(): ReactNode {
   const seaBoard = (owner: GameSeat, options: { readonly aim?: boolean; readonly mini?: boolean } = {}): ReactNode => {
     const aim = Boolean(options.aim);
     const pending = aim ? input.pending : null;
-    return <BoardView board={BOARD} surface="wood" label={seaLabel(owner)} pieces={seaPieces(owner)}
+    return <BoardView board={BOARD} surface="wood" label={seaLabel(owner)} pieces={seaPieces(owner)} moveEffects={false}
       fileLabels={options.mini ? undefined : FILES} rankLabels={options.mini ? undefined : RANKS} nodeName={cellName}
       selectable={aim && canFire ? targets : []} pending={pending ? { to: pending.to } : null}
       onNodeClick={aim && canFire ? input.tap : undefined} />;

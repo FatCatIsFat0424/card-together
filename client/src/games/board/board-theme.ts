@@ -115,6 +115,24 @@ export const DEFAULT_PIECE_FINISH: PieceFinish = { rim: 'plain', gloss: 0, back:
 
 export type BoardMotionKind = 'drift' | 'flicker' | 'sweep' | 'pulse' | 'gleam';
 
+export type EffectParticle = 'petal' | 'streak' | 'spark' | 'dot' | 'flake' | 'leaf' | 'ember' | 'bubble';
+export type EffectAura = 'ring' | 'orbit' | 'flame' | 'radar' | 'neon' | 'halo';
+
+/**
+ * Piece effects of a piece style, drawn in an HTML layer over the board: a selection aura, a ripple where a
+ * piece lands, a burst on captures, and flips. `loop` styles keep their aura moving while a piece is selected;
+ * the others play it once.
+ */
+export interface PieceEffects {
+  readonly colour: string;
+  readonly colour2: string;
+  readonly particle: EffectParticle;
+  readonly count: number;
+  readonly spread: number;
+  readonly aura: EffectAura;
+  readonly loop: boolean;
+}
+
 /** Ambient light of animated board styles, composited between the board surface and the pieces. */
 export interface BoardMotion {
   readonly kind: BoardMotionKind;
@@ -131,6 +149,8 @@ export interface BoardTheme {
   readonly markers: MarkerPalette;
   readonly finish?: PieceFinish;
   readonly motion?: BoardMotion | null;
+  /** Piece effects; none without a piece style. */
+  readonly effects?: PieceEffects | null;
 }
 
 const STAR_COLOURS = ['#e53935', '#fdd835', '#43a047', '#1e88e5', '#8e24aa', '#f5f5f5'] as const;

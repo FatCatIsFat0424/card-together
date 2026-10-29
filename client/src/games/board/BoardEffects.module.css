@@ -1,0 +1,221 @@
+/* ─── Board effect layer: HTML only, animating transform and opacity, so the compositor runs every effect ───
+   Colours come from --fx-c and --fx-c2 (the piece style's effect colours). */
+
+.layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  /* Its own composited layer: effects mounting and unmounting repaint only this layer, never the page. */
+  contain: strict;
+  will-change: transform;
+}
+
+.paused * { animation-play-state: paused !important; }
+
+.box { position: absolute; }
+
+/* One effect anchored at a node; sizes are a share of the board width. */
+.at {
+  position: absolute;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+}
+
+.at > i, .flip, .slide { position: absolute; display: block; }
+
+.copy {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* A moved piece slides in from its origin while the board hides the real one. */
+.slide {
+  inset: 0;
+  animation: slide 300ms cubic-bezier(0.3, 0.7, 0.2, 1) both;
+}
+@keyframes slide {
+  from { transform: translate(var(--dx), var(--dy)); }
+  to { transform: none; }
+}
+
+/* Landing ripple and capture impact. */
+.ring {
+  inset: 0;
+  border: 3px solid var(--fx-c);
+  border-radius: 50%;
+  opacity: 0;
+  animation: ring 520ms ease-out both;
+}
+.ring2 { border-color: var(--fx-c2); }
+@keyframes ring {
+  from { transform: scale(0.35); opacity: 1; }
+  to { transform: scale(1.15); opacity: 0; }
+}
+
+/* A burst is one composited layer: the particles sit at their final reach (--a, --r as a share of their own
+   size) and the whole burst grows out from the centre and fades, so a capture adds one layer, not ten. */
+.burst {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  animation: burst 480ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+@keyframes burst {
+  from { transform: scale(0.2); opacity: 1; }
+  55% { opacity: 1; }
+  to { transform: none; opacity: 0; }
+}
+.particle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: rotate(var(--a)) translateX(var(--r)) rotate(var(--s));
+}
+.petal, .leaf {
+  width: 15%;
+  height: 15%;
+  margin: -7.5% 0 0 -7.5%;
+  border-radius: 0 100% 0 100%;
+  background: linear-gradient(135deg, var(--fx-c2), var(--fx-c));
+}
+.leaf { width: 14%; height: 8%; margin: -4% 0 0 -7%; }
+.streak {
+  width: 40%;
+  height: 5%;
+  margin-top: -2.5%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, transparent, var(--fx-c2) 40%, var(--fx-c));
+}
+.spark, .dot, .ember {
+  width: 8%;
+  height: 8%;
+  margin: -4% 0 0 -4%;
+  border-radius: 2px;
+  background: var(--fx-c);
+}
+.spark:nth-child(odd) { background: var(--fx-c2); }
+.dot, .ember { border-radius: 50%; }
+.ember { width: 7%; height: 7%; background: radial-gradient(circle, var(--fx-c2), var(--fx-c)); }
+.flake {
+  width: 11%;
+  height: 11%;
+  margin: -5.5% 0 0 -5.5%;
+  background: linear-gradient(135deg, var(--fx-c2), var(--fx-c));
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+.bubble {
+  width: 12%;
+  height: 12%;
+  margin: -6% 0 0 -6%;
+  border: 2px solid var(--fx-c);
+  border-radius: 50%;
+}
+
+/* Turning a piece over: squeeze, swap faces at the midpoint, open again, then a sheen. */
+.flip {
+  inset: 0;
+  animation: flip 380ms ease-in-out both;
+}
+.flip > span { position: absolute; inset: 0; }
+.before { animation: hideHalf 380ms both; }
+.after { opacity: 0; animation: showHalf 380ms both; }
+@keyframes flip {
+  0%, 100% { transform: scaleX(1); }
+  50% { transform: scaleX(0.06); }
+}
+@keyframes hideHalf { 0%, 49.9% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes showHalf { 0%, 49.9% { opacity: 0; } 50%, 100% { opacity: 1; } }
+/* A slim gloss bar crossing the piece; it stays inside the piece, so nothing needs a rounded clip. */
+.glint {
+  left: 45%;
+  top: 33%;
+  width: 10%;
+  height: 34%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.85), transparent);
+  opacity: 0;
+  animation: glint 320ms ease-out var(--d, 0ms) both;
+}
+@keyframes glint {
+  from { opacity: 0; transform: translateX(-170%) rotate(20deg); }
+  30%, 70% { opacity: 1; }
+  to { opacity: 0; transform: translateX(170%) rotate(20deg); }
+}
+
+/* Selection aura: one element, only while a piece is selected. */
+.aura {
+  inset: 0;
+  border-radius: 50%;
+}
+.once {
+  border: 3px solid var(--fx-c);
+  opacity: 0;
+  animation: ring 600ms ease-out both;
+}
+.loop { will-change: transform, opacity; }
+.auraOrbit.loop {
+  border: 2.5px dashed var(--fx-c);
+  animation: spin 5s linear infinite;
+}
+.auraFlame.loop {
+  background: radial-gradient(circle, transparent 48%, color-mix(in srgb, var(--fx-c) 55%, transparent) 62%, transparent 72%);
+  animation: breathe 1.4s ease-in-out infinite alternate;
+}
+.auraRadar.loop {
+  background: conic-gradient(from 0deg, color-mix(in srgb, var(--fx-c) 60%, transparent), transparent 28%, transparent);
+  mask: radial-gradient(circle, transparent 52%, #000 54%);
+  animation: spin 2.4s linear infinite;
+}
+.auraNeon.loop {
+  border: 2px solid var(--fx-c);
+  box-shadow: 0 0 6px var(--fx-c), inset 0 0 5px var(--fx-c2);
+  animation: flicker 1.4s steps(1) infinite;
+}
+.auraHalo.loop {
+  border: 2px solid var(--fx-c);
+  animation: breathe 1.8s ease-in-out infinite alternate;
+}
+.auraHalo.loop::after {
+  content: '';
+  position: absolute;
+  inset: -12%;
+  border: 1.5px solid color-mix(in srgb, var(--fx-c2) 70%, transparent);
+  border-radius: 50%;
+}
+.auraRing.loop { border: 3px solid var(--fx-c); animation: breathe 1.5s ease-in-out infinite alternate; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes breathe {
+  from { transform: scale(0.95); opacity: 0.45; }
+  to { transform: scale(1.04); opacity: 1; }
+}
+@keyframes flicker {
+  0%, 62%, 70%, 100% { opacity: 1; }
+  64%, 68% { opacity: 0.35; }
+}
+
+/* Gomoku's five in a row: a sheen runs along it three times, then the outline stays. */
+.winLine {
+  position: absolute;
+  border: 2px solid var(--fx-c);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fx-c) 14%, transparent);
+}
+.winLine > i {
+  position: absolute;
+  top: 12%;
+  bottom: 12%;
+  left: 2%;
+  width: 16%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, #fff 70%, var(--fx-c)), transparent);
+  opacity: 0;
+  animation: sweep 600ms ease-in-out 3 both;
+}
+@keyframes sweep {
+  from { opacity: 0; transform: none; }
+  15%, 85% { opacity: 1; }
+  to { opacity: 0; transform: translateX(500%); }
+}

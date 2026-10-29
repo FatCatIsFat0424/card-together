@@ -24,6 +24,11 @@ export interface DiceTheme {
   readonly sheen: string;
   /** Animated collections: a light that pulses over the cup. */
   readonly cupGlow: string | null;
+  /**
+   * Dice effects of a dice style: rolled dice land with a trail in `trail`, then a sheen and a halo on wild
+   * ones; `loop` styles also run a slow sheen over the dice in hand. None by default.
+   */
+  readonly effects: { readonly trail: string; readonly loop: boolean } | null;
 }
 
 export const DEFAULT_DICE_THEME: DiceTheme = {
@@ -37,6 +42,7 @@ export const DEFAULT_DICE_THEME: DiceTheme = {
   cupShade: '#3d2515',
   sheen: 'none',
   cupGlow: null,
+  effects: null,
 };
 
 /** The custom properties that carry a theme to every die inside the element they are set on. */
@@ -52,6 +58,7 @@ export function diceThemeVars(theme: DiceTheme): CSSProperties {
     '--cup-shade': theme.cupShade,
     '--die-sheen': theme.sheen,
     ...theme.cupGlow ? { '--cup-glow': theme.cupGlow } : {},
+    ...theme.effects ? { '--die-trail': theme.effects.trail } : {},
   } as CSSProperties;
 }
 

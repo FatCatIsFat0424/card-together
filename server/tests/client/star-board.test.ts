@@ -6,6 +6,7 @@ import { CC_BOARD, ccInitialHoles, ccNode } from '@shared/rules/chinesecheckers'
 
 vi.mock('../../../client/src/stores/account-store', () => ({
   useAccountStore: (select: (state: { account: null }) => unknown) => select({ account: null }),
+  selectConnectionReady: () => true,
 }));
 
 import { contrast } from '../../../client/src/cosmetics/colour';

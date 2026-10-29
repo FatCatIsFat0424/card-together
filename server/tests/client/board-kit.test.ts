@@ -40,6 +40,7 @@ vi.mock('../../../client/src/cosmetics/board-styles/use-board-theme', async () =
   return { useEquippedBoardTheme: () => DEFAULT_BOARD_THEME };
 });
 vi.mock('../../../client/src/cosmetics/dice-styles/use-dice-style', () => ({ useEquippedDiceTheme: () => null }));
+vi.mock('../../../client/src/games/use-connection-ready', () => ({ useConnectionReady: () => true }));
 
 import { BoardView } from '../../../client/src/games/board/BoardView';
 import { StonePiece, TokenPiece } from '../../../client/src/games/board/BoardPieces';

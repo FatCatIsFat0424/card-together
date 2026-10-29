@@ -1,6 +1,6 @@
 // ─── BoardView: SVG board drawn from the shared board model, with pieces and move markers ───
 
-import { useId, useMemo, useRef } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { coordinateLabel, nodeById, zonesAt } from '@shared/rules/board/board-model';
 import type { BoardModel, BoardNode, BoardPoint, NodeId } from '@shared/rules/board/board-model';
@@ -15,6 +15,7 @@ import { axisPositions, boardGeometry, hitBox, markerBox, movePath } from './boa
 import type { BoardGeometry } from './board-view';
 import { PIECE_RADIUS, PieceFinishContext } from './BoardPieces';
 import { StarMarbles, StarSurface, starClipPath } from './StarBoard';
+import { BoardFxLayer, useBoardFx } from './BoardEffects';
 import styles from './BoardView.module.css';
 
 export interface BoardPieceItem {
@@ -67,6 +68,13 @@ export interface BoardViewProps {
   readonly nodeName?: (node: NodeId) => string;
   /** Star corners in play, tinted at full strength; every corner when unset. */
   readonly activeHomes?: readonly number[];
+  /** A finished line of pieces (Gomoku's five), outlined by piece styles with effects. */
+  readonly winLine?: readonly NodeId[];
+  /**
+   * Plays piece style effects for new moves in the game log (default). Boards that show only part of the game,
+   * such as one of Battleship's two seas sharing node ids, turn it off.
+   */
+  readonly moveEffects?: boolean;
   readonly className?: string;
 }
 
@@ -250,13 +258,18 @@ function Highlight({ at, layout, className, dashed }: {
  */
 export function BoardView({
   board, surface, label, theme: fixedTheme, rotation = 0, pieces, lastMove, selected, targets = [], pending,
-  check, fileLabels, rankLabels, selectable = [], onNodeClick, nodeName, activeHomes, className,
+  check, fileLabels, rankLabels, selectable = [], onNodeClick, nodeName, activeHomes, winLine, moveEffects = true,
+  className,
 }: BoardViewProps): ReactNode {
   const { t } = useI18nStore();
   const equippedTheme = useEquippedBoardTheme();
   const theme = fixedTheme ?? equippedTheme;
   const still = useStillArt();
   const motion = still ? null : theme.motion ?? null;
+  // Piece effects play only at live tables (a fixed theme is a shop preview). Chinese checkers keeps its own look.
+  const effects = still || fixedTheme !== undefined || board.layout === 'holes' ? null : theme.effects ?? null;
+  const fx = useBoardFx(effects !== null && moveEffects, pieces);
+  const [host, setHost] = useState<HTMLDivElement | null>(null);
   const labels = Boolean(fileLabels || rankLabels);
   const geometry = useMemo(() => boardGeometry(board, rotation, labels), [board, rotation, labels]);
   const style = useMemo(() => boardThemeStyle(theme, surface), [theme, surface]);
@@ -320,7 +333,8 @@ export function BoardView({
         if (!at) return null;
         const lifted = item.node === selected && !pending;
         const dimmed = pending?.from === item.node;
-        return <g key={item.key} className={dimmed ? styles.dimmed : undefined}
+        const moving = fx.hidden.has(item.node);
+        return <g key={item.key} className={moving ? styles.moving : dimmed ? styles.dimmed : undefined}
           transform={`translate(${at.x} ${at.y - (lifted ? 0.07 : 0)})`}>
           {item.piece}
           {item.label && <title>{item.label}</title>}
@@ -370,22 +384,29 @@ export function BoardView({
     })}
   </StarPieces></PieceFinishContext.Provider>;
 
+  const layered = Boolean(motion || effects);
   const interactiveSvg = (classes: string, children: ReactNode): ReactNode => <svg className={classes}
-    style={motion ? undefined : style} viewBox={viewBox} role="group" aria-label={label} data-board-layout={layout}
+    style={layered ? undefined : style} viewBox={viewBox} role="group" aria-label={label} data-board-layout={layout}
     onPointerDown={(event) => { lastPointer.current = event.pointerType; }}
     onClick={onNodeClick ? (event) => activate(null, tapInput(event.detail)) : undefined}>{children}</svg>;
-  if (!motion) return interactiveSvg(`${styles.board} ${className ?? ''}`, <>{surfaceLayer}{content}</>);
+  if (!layered) return interactiveSvg(`${styles.board} ${className ?? ''}`, <>{surfaceLayer}{content}</>);
   // Animated styles move a light layer between the surface and the pieces, so it never covers lettering or
-  // move markers; the layer only changes transform or opacity, so the compositor runs it.
-  // The star clips the light to its outline, so it never lights the table round the board.
-  return <div className={`${styles.layered} ${className ?? ''}`}
-    style={star ? { ...style, clipPath: starClipPath(board, geometry) } : style} data-board-motion={motion.kind}>
-    <svg className={`${styles.board} ${styles.layer}`} viewBox={viewBox} aria-hidden="true" focusable="false">
-      {surfaceLayer}
-    </svg>
-    <span className={`${styles.motion} ${styles[motion.kind]}`} style={{ '--board-glow': motion.glow } as CSSProperties}
-      aria-hidden="true" />
-    {interactiveSvg(`${styles.board} ${styles.layer}`, content)}
+  // move markers; the layer only changes transform or opacity, so the compositor runs it. Piece effects play in
+  // an HTML layer on top, which never takes taps. The star clips both to its outline, so they never light the
+  // table round the board.
+  return <div ref={setHost} className={`${styles.layered} ${className ?? ''}`}
+    style={star ? { ...style, clipPath: starClipPath(board, geometry) } : style} data-board-motion={motion?.kind}>
+    {motion ? <>
+      <svg className={`${styles.board} ${styles.layer}`} viewBox={viewBox} aria-hidden="true" focusable="false">
+        {surfaceLayer}
+      </svg>
+      <span className={`${styles.motion} ${styles[motion.kind]}`} style={{ '--board-glow': motion.glow } as CSSProperties}
+        aria-hidden="true" />
+      {interactiveSvg(`${styles.board} ${styles.layer}`, content)}
+    </> : interactiveSvg(`${styles.board} ${styles.layer}`, <>{surfaceLayer}{content}</>)}
+    {effects && <BoardFxLayer host={host} viewBox={geometry.viewBox} point={geometry.point} effects={effects}
+      finish={theme.finish ?? DEFAULT_PIECE_FINISH} groups={fx.groups} selected={pending ? null : selected}
+      winLine={winLine} />}
   </div>;
 }
 

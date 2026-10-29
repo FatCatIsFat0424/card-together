@@ -27,6 +27,7 @@ function diceDesign(tokens: SeriesTokens): DiceTheme {
     cupShade: mix(tokens.base, '#000000', 0.55),
     sheen: `linear-gradient(145deg, rgb(255 255 255 / ${Math.round(gloss * 60) / 100}), transparent 55%)`,
     cupGlow: tokens.motion?.glow ?? null,
+    effects: { trail: tokens.motion?.glow ?? tokens.accent, loop: tokens.motion !== undefined },
   };
 }
 

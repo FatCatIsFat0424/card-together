@@ -11,6 +11,7 @@ import { nodeId } from '@shared/rules/board/board-model';
 const equipped = vi.hoisted(() => ({ account: null as Record<string, unknown> | null }));
 vi.mock('../../../client/src/stores/account-store', () => ({
   useAccountStore: (select: (state: { account: Record<string, unknown> | null }) => unknown) => select(equipped),
+  selectConnectionReady: () => true,
 }));
 
 import { colourDistance, contrast, luminance, mix } from '../../../client/src/cosmetics/colour';

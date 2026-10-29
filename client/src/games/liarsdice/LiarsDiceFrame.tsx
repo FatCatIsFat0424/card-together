@@ -3,7 +3,7 @@ import type { PresentationFrame } from '@shared/game-presentation';
 import { GAME_SEAT_ORDER } from '@shared/constants';
 import type { GameSeat } from '@shared/types';
 import { useI18nStore } from '../../stores/i18n-store';
-import { DiceCup, Die } from './Dice';
+import { DiceCup, Die, useDiceFx } from './Dice';
 import { diceThemeVars, useDiceTheme } from './dice-theme';
 import { dieMatches, sortDice } from './liarsdice-view';
 import styles from './LiarsDiceFrame.module.css';
@@ -12,6 +12,7 @@ import styles from './LiarsDiceFrame.module.css';
 export function LiarsDiceFrame({ frame, name }: { frame: PresentationFrame; name: (seat: GameSeat) => string }): ReactNode {
   const { t } = useI18nStore();
   const theme = useDiceTheme();
+  const diceFx = useDiceFx();
   const data = frame.liarsDice;
   const themed = diceThemeVars(theme);
 
@@ -52,6 +53,8 @@ export function LiarsDiceFrame({ frame, name }: { frame: PresentationFrame; name
           <span className={styles.cupDice}>
             {sortDice(data.dice?.[seat] ?? []).map((value, slot) => (
               <Die key={slot} value={value} state={dieMatches(value, data.face, onesWild) ? 'match' : 'miss'}
+                fx={diceFx && dieMatches(value, data.face, onesWild)
+                  ? { kind: 'reveal', wild: onesWild && value === 1 && data.face !== 1 } : null}
                 label={t('liarsdice.faceLabel', { face: String(value) })} />
             ))}
             <DiceCup mode="lifted" className={styles.cover} />

@@ -13,5 +13,6 @@ export function boardThemeFor(board: BoardStyleId | null, piece: PieceStyleId | 
     markers: DEFAULT_BOARD_THEME.markers,
     finish: piece ? PIECE_DESIGNS[piece].finish : DEFAULT_PIECE_FINISH,
     motion: board ? BOARD_DESIGNS[board].motion : null,
+    effects: piece ? PIECE_DESIGNS[piece].effects : null,
   };
 }

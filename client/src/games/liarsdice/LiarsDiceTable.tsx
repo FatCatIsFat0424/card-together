@@ -18,7 +18,7 @@ import { useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
 import { isOwnTurn, isSpectator } from '../observer-view';
-import { Die, HiddenDie } from './Dice';
+import { Die, HiddenDie, useDiceFx } from './Dice';
 import { diceThemeVars, useDiceTheme } from './dice-theme';
 import {
   defaultBid, dieMatches, liarsDiceMode, liarsDiceView, recentLiarsDiceMoves, sortDice, totalDice,
@@ -156,13 +156,18 @@ export function LiarsDiceTable(): ReactNode {
   const { t } = useI18nStore();
   const seatName = useSeatName();
   const theme = useDiceTheme();
+  const diceFx = useDiceFx();
   const [draft, setDraft] = useState<{ key: string; bid: LiarsDiceBid } | null>(null);
   const [actionError, setActionError] = useState('');
   const [actionPending, setActionPending] = useState(false);
+  // Dice already rolled when the table opened (joining, reloading, reconnecting) appear without landing.
+  const [firstRound, setFirstRound] = useState<number | null>(null);
 
   if (!game) return null;
 
   const view = liarsDiceView(game, frame);
+  if (firstRound === null) setFirstRound(view.round);
+  const landing = diceFx !== null && firstRound !== null && view.round !== firstRound;
   const playing = game.phase === 'playing';
   const watching = isSpectator(game);
   const out = !watching && view.eliminated.includes(game.mySeat);
@@ -213,7 +218,10 @@ export function LiarsDiceTable(): ReactNode {
   const handZone = <div className={styles.handArea} style={diceThemeVars(theme)}>
     {showDice && <div className={styles.dice} role="group" aria-label={t('liarsdice.hand')}>
       {faceUp
-        ? sortDice(game.myDice).map((value, index) => <Die key={index} value={value}
+        ? sortDice(game.myDice).map((value, index) => <Die key={`${view.round}-${index}`} value={value}
+          fx={diceFx && (landing || diceFx.loop) ? {
+            kind: landing ? 'land' : 'idle', delay: index * 70, loop: diceFx.loop, wild: landing && value === 1 && view.onesWild,
+          } : null}
           state={view.bid && dieMatches(value, view.bid.face, view.onesWild) ? 'match' : 'plain'}
           label={t('liarsdice.faceLabel', { face: String(value) })} />)
         : Array.from({ length: myCount }, (_, index) => <HiddenDie key={index} />)}
