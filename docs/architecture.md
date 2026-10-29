@@ -69,7 +69,7 @@
 - 公開路由：`/login`、`/register`。需登入：`/`、`/account`、`/friends`、`/messages`、`/messages/:accountId`、`/shop`、`/players/:accountId`、`/room/:roomCode`、`/game/:roomCode`，都位於設定的 base path 之下。舊版 `/friends?tab=messages` 和 `/friends/messages/:accountId` 連結會轉址到獨立的訊息頁面。
 - `api.ts` 以 cookie 處理 HTTP（逾時 15 秒，上傳為 120 秒）；`socket.ts` 處理即時通訊。
 - 帳號 hook 以伺服器快照取代 store 狀態，清除已不存在的房間或遊戲，並讓未變更的欄位保留原本的參照。
-- 牌桌依需求個別載入；進入一款遊戲不會載入其他九款牌桌實作。共用控制項放在可重用的 chunk 中，路由的錯誤復原也涵蓋牌桌載入失敗。
+- 牌桌依需求個別載入；進入一款遊戲不會載入其他遊戲的牌桌實作。共用控制項放在可重用的 chunk 中，路由的錯誤復原也涵蓋牌桌載入失敗。
 - 各遊戲在自己的資料夾提供兩個模組，並各登記一筆 registry 項目，缺少項目會編譯失敗。共用外框、store 與頁面只查詢 registry，不再寫 `gameType === '<遊戲>'`：
   - `<game>-client.ts` → `CLIENT_GAMES`（[`registry.ts`](../client/src/games/registry.ts)）：store 快照還原、觀戰視角、規則摘要與房規脈絡、手牌排序、歷史結果與勝負判定、大廳圖示。啟動時就載入，所以只放中繼資料與小型純函式，不放元件、CSS 或牌桌。
   - `<game>-ui.ts` → `GAME_UIS`（[`ui-registry.ts`](../client/src/games/ui-registry.ts)）：延遲載入的牌桌、房間選項元件、呈現畫格元件與樣式、出牌特效、音效提示、回合歷史畫面。只有牌桌外框與路由會匯入。
