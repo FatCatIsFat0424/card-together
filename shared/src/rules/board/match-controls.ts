@@ -50,18 +50,15 @@ export type MatchControlEffect =
 export function parseMatchControl(value: unknown, rules: MatchControlRules | undefined): MatchControlAction | string | null {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
-  const keys = Object.keys(record);
+  // Unknown fields are dropped: the result is rebuilt from the known ones only.
   switch (record.type) {
     case 'resign':
-      if (!rules?.resign) return 'This game has no resignation.';
-      return keys.length === 1 ? { type: 'resign' } : 'Invalid resignation.';
+      return rules?.resign ? { type: 'resign' } : 'This game has no resignation.';
     case 'offer-draw':
-      if (!rules?.draw) return 'This game has no draw offers.';
-      return keys.length === 1 ? { type: 'offer-draw' } : 'Invalid draw offer.';
+      return rules?.draw ? { type: 'offer-draw' } : 'This game has no draw offers.';
     case 'answer-draw':
       if (!rules?.draw) return 'This game has no draw offers.';
-      return keys.length === 2 && typeof record.accept === 'boolean'
-        ? { type: 'answer-draw', accept: record.accept } : 'Invalid draw answer.';
+      return typeof record.accept === 'boolean' ? { type: 'answer-draw', accept: record.accept } : 'Invalid draw answer.';
     default:
       return null;
   }

@@ -26,7 +26,7 @@ describe('match-control parsing', () => {
     expect(parseMatchControl({ type: 'offer-draw' }, { resign: true, draw: false })).toMatch(/no draw/);
     expect(parseMatchControl({ type: 'resign' }, undefined)).toMatch(/no resignation/);
     expect(parseMatchControl({ type: 'answer-draw', accept: 'yes' }, RULES)).toMatch(/Invalid/);
-    expect(parseMatchControl({ type: 'resign', extra: 1 }, RULES)).toMatch(/Invalid/);
+    expect(parseMatchControl({ type: 'resign', extra: 1 }, RULES)).toEqual({ type: 'resign' });
     expect(parseMatchControl({ type: 'move', to: 'a1' }, RULES)).toBeNull();
     expect(parseMatchControl('resign', RULES)).toBeNull();
     expect(isMatchControl({ type: 'offer-draw' })).toBe(true);

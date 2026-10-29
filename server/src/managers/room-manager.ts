@@ -187,8 +187,12 @@ export function fillBots(code: RoomCode, playerId: string): Result {
   const room = rooms.get(code)!;
   // Spectators do not reserve seats; every configured empty seat, additional ones included,
   // receives a bot, except the last one while no human is seated.
+  // A game with fewer seats than the room shows takes bots only up to its player limit, which also
+  // keeps one place free for a human.
+  const limit = maxPlayers(room.info.gameType);
   for (const seat of roomSeats(room.info)) {
     if (!hasSeatedHuman(room) && emptySeatCount(room) === 1) break;
+    if (Object.keys(roomPlayers(room.info)).length >= (hasSeatedHuman(room) ? limit : limit - 1)) break;
     if (!roomSeatInfo(room.info, seat)?.player) {
       const result = addBot(code, playerId, seat);
       if (!result.success) return result;

@@ -272,7 +272,7 @@ function dispatchGameAction<K extends GameType>(
   code: RoomCode, seat: GameSeat, gameType: K, action: GameActionMap[K], automatic = false,
 ): Result {
   const available = (operation: () => Result): Result => isGame(code, gameType) ? operation() : WRONG_GAME;
-  return gameAdapter(gameType).applyAction(code, seat, action, {
+  const result = gameAdapter(gameType).applyAction(code, seat, action, {
     automatic,
     settings: getGameState(code)?.clock?.settings ?? DEFAULT_TIME_CONTROL,
     timed: (operation) => timedAction(code, seat, () => available(operation), automatic),
@@ -288,6 +288,10 @@ function dispatchGameAction<K extends GameType>(
       if (game?.clock) initializeGameClock(game, game.clock.settings);
     },
   });
+  // A finished match has no turn, even when an untimed action (resigning, an agreed draw) ended it.
+  const finished = getGameState(code);
+  if (result.success && finished?.phase === 'scoring' && finished.clock?.turn) finished.clock = { ...finished.clock, turn: null };
+  return result;
 }
 
 /** Rejects stale game envelopes before any clock or game mutation. */

@@ -100,12 +100,13 @@ export function remainingCards(seat: GameSeat, playing: PlayingState | null): nu
 
 export interface TableMove { readonly seat: GameSeat; readonly index: number; readonly pass: boolean }
 
-type LogLike = readonly { readonly type: string; readonly seat?: GameSeat }[];
+/** Board move records carry no `type`, so it is optional; they never match a card play or elimination. */
+type LogLike = readonly { readonly type?: string; readonly seat?: GameSeat }[];
 
 function lastOf(log: LogLike, types: readonly string[]): { seat: GameSeat; index: number; type: string } | null {
   for (let index = log.length - 1; index >= 0; index--) {
     const { type, seat } = log[index];
-    if (seat && types.includes(type)) return { seat, index, type };
+    if (seat && type !== undefined && types.includes(type)) return { seat, index, type };
   }
   return null;
 }
