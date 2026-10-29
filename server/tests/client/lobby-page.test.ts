@@ -78,10 +78,7 @@ describe('lobby page', () => {
     expect(lobbyCategories()).toEqual(['cards', 'dice', 'board']);
     expect(gamesInCategory('dice')).toEqual(['liarsdice']);
     expect(gamesInCategory('board')).toEqual(['reversi', 'jungle', 'gomoku', 'xiangqi', 'banqi', 'chinesecheckers', 'landbattle']);
-    // Artwork is generated separately, so a game without it must still list (see `GAME_CARD_ART`).
-    const unillustrated = ['tenhalf', 'liarsdice', 'crazyeights', 'stud', 'reversi', 'oldmaid', 'gofish', 'doudizhu', 'jungle', 'gomoku', 'xiangqi', 'banqi',
-      'chinesecheckers', 'landbattle'];
-    for (const gameType of GAME_TYPES.filter((type) => !unillustrated.includes(type))) expect(GAME_CARD_ART[gameType]).toBeTruthy();
+    for (const gameType of GAME_TYPES) expect(GAME_CARD_ART[gameType]).toBeTruthy();
   });
 
   it('keeps room actions disabled without duplicating the floating room card with a banner', () => {

@@ -1,7 +1,7 @@
 # Lobby background artwork
 
-Ten original decorative illustrations, one per game, generated with the built-in
-imagegen tool. They contain no interface elements and do not replace the licensed card
+Original decorative illustrations, one per game. The first ten were generated with the built-in
+imagegen tool; the later ones with Canva image generation (see [Canva set](#canva-set)). They contain no interface elements and do not replace the licensed card
 graphics.
 
 - Encoded as WebP (quality 82) with the repository's Sharp dependency, keeping the
@@ -35,3 +35,27 @@ Constraints: background artwork only, no interface, no buttons, no labels, no ty
 - **blackjack.webp** — Scene: Blackjack: an elegant deep navy and champagne-gold casino atmosphere, two ivory cards showing an ace and a king near an outer corner, small neat chip stacks and smooth felt.
 - **holdem.webp** — Scene: Texas Hold'em: a forest-green poker-table atmosphere, a row of five community cards near an outer edge, two face-down hole cards and red, blue and ivory chip stacks, soft casino lighting.
 - **napoleon.webp** — Scene: Napoleon: an imperial midnight-blue and burgundy card salon, a black bicorne hat with restrained gold trim at an outer corner, antique brass laurel ornaments and a subtle eagle relief along the perimeter, ivory playing-card fans and two contrasting joker motifs near the outer edges, warm candlelit gold accents on dark felt; the broad central play area stays calm and uncluttered.
+
+## Canva set
+
+Generated with Canva at 1680x944 and encoded the same way. Each prompt is this common prefix, with the
+scene line inserted:
+
+```text
+Original decorative website background for a game lobby, landscape 16:9. Cinematic photorealistic digital illustration, believable materials, restrained atmosphere, <lighting>. Composition: wide full-bleed background; recognizable game details and brighter highlights toward the outer edges, broad calm uncluttered negative space in the middle. Constraints: background only, no interface, no buttons, no labels, no typography, no logos, no watermarks, no people.
+```
+
+- **tenhalf.webp** — Jade-green felt, festive Taiwanese night mood, fan of face and low cards, dealer button, small chip stacks, red lantern glow
+- **liarsdice.webp** — Smoky tavern table, leather dice cups, one lifted showing five dice, scattered dice, amber pendant light, whiskey glass
+- **crazyeights.webp** — Teal and coral game room, draw and discard piles with an eight on top, swirling cards, four glowing suit shapes at corners
+- **stud.webp** — Mahogany and oxblood-red card room, Hong Kong film mood, rows of five cards (four up, one down), chip stacks pushed all-in, smoky lamp light
+- **reversi.webp** — Deep-green felt grid near one edge, black-and-white discs in clusters, one mid-flip, cool soft light
+- **oldmaid.webp** — Plum and mustard living room at night, fan of face-down cards with one lifted, discarded pairs, joker peeking from the fan
+- **gofish.webp** — Ocean-blue and sandy-beige seaside cabin, completed four-card sets, loose pond of face-down cards, brass lure and rope
+- **doudizhu.webp** — Crimson and gold three-player table, hands at three edges, two jokers and three bonus cards, fanned four-card bomb, red paper-cut ornaments
+- **jungle.webp** — Emerald jungle board, carved elephant, lion, tiger, rat pieces, blue river channel, den and traps, leaves at corners
+- **gomoku.webp** — Wooden grid board with diagonal line of five black stones, stone bowls at corners, bamboo shadows, morning light
+- **xiangqi.webp** — Dark lacquered table, carved Xiangqi board near one edge, round pieces with red and black engraved characters at corners, celadon teacup, folded silk cloth
+- **banqi.webp** — 4×8 board on rosewood, face-down round pieces with blank backs, a few flipped red and black pieces, teacup, desk lamp, Taiwanese teahouse
+- **chinesecheckers.webp** — Six-pointed star wooden board, six-color glass marbles in corner triangles, a few mid-hop, nostalgic afternoon window light
+- **landbattle.webp** — Board with railway lines, camps and headquarters, upright tiles facing away, brass compass, folded map, small flag, war-room lamp
