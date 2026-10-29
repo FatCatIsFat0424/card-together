@@ -68,6 +68,7 @@ describe.each(REPOSITORY_ADAPTERS)('unified room options ($name)', (adapter) => 
       { gameType: 'gomoku', options: { renju: true, swap: true } },
       { gameType: 'xiangqi', options: { handicap: 'horses', handicapSide: 'black' } },
       { gameType: 'banqi', options: { chain: true, rookDash: false } },
+      { gameType: 'battleship', options: { noTouching: true, hitAgain: false } },
     ] satisfies readonly GameOptionsPayload[]) {
       await host.emitWithAck('room:setGameType', { gameType: payload.gameType });
       expect(await host.emitWithAck('room:setGameOptions', payload)).toEqual({ success: true });
@@ -80,6 +81,7 @@ describe.each(REPOSITORY_ADAPTERS)('unified room options ($name)', (adapter) => 
       gomoku: { renju: true, swap: true },
       xiangqi: { handicap: 'horses', handicapSide: 'black' },
       banqi: { chain: true, rookDash: false },
+      battleship: { noTouching: true, hitAgain: false },
     });
   });
 });

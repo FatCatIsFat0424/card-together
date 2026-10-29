@@ -298,6 +298,12 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Battles', 'The higher rank wins; equal ranks remove each other. A bomb removes itself and the piece it meets. Only an engineer clears a landmine; any other attacker is removed (a bomb takes the mine with it). Any piece that reaches the flag captures it.', 'The referee announces only won, lost, or both removed; identities stay hidden until the match ends, except a flag whose marshal has fallen.'),
     section('Winning', 'Capture the enemy flag, or leave the opponent without a legal move on their turn. 60 moves in a row without a battle draw. The rules vary by region; this game uses the common rules above.', 'Once play starts you may resign at any time. On your own turn you may offer a draw: the opponent accepts to draw, and making a move counts as declining. After a decline you must make 3 more moves before offering again. Running out of time plays a legal move for you; it never loses the game.'),
   ],
+  battleship: [
+    section('Sea and fleet', 'Two players, each with a 10 × 10 sea: columns A–J, rows 1–10 from the top. Each fleet has five ships: carrier 5, battleship 4, cruiser 3, submarine 3, destroyer 2 cells.', 'Each player sees their own sea with their ships and the shots fired at it, and the enemy sea with their own shots. Spectators see both fleets.'),
+    section('Placing', 'Both players place their fleets at the same time before a shared deadline (the room timer’s turn time plus reserve, at least 60 seconds). Ships lie across or down inside the sea and may not overlap; they may touch unless the room rule 「Ships may not touch」 is on, which also forbids corners touching.', 'Pick a ship, then tap where its bow goes; tap a placed ship to pick it up, and tap it again to turn it. Rotate, Random, and Clear help; a placement that breaks a rule is refused with the reason. Confirming is final. If time runs out, a random fleet is placed for you.'),
+    section('Firing', 'The earlier seat shoots first; players then take turns firing one shot at a cell of the enemy sea they have not shot before. Each shot is announced as a miss, a hit, or the sinking of a named ship, whose cells are then shown. A hit never says which ship it struck.', 'With the room rule 「A hit shoots again」 a hit or a sinking gives the shooter another shot.'),
+    section('Winning', 'Sink the whole enemy fleet to win. You may resign at any time, also while placing; there are no draw offers. Running out of time fires a shot for you (at random, or next to an earlier hit); it never loses the game.'),
+  ],
 };
 
 const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
@@ -550,12 +556,18 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('交戰', '大吃小，同級同歸於盡。炸彈與遇到的棋子同歸於盡。只有工兵能排除地雷，其他棋子攻擊地雷會陣亡（炸彈則與地雷同歸於盡）。任何棋子走到軍旗上即奪旗。', '裁判只公布勝、負或同歸於盡，對局結束前不公開身份；唯一例外是司令陣亡後，該方軍旗位置公開。'),
     section('勝負', '奪下對方軍旗，或輪到對方時對方無子可動者勝。連續 60 手沒有交戰則和局。各地規則略有差異，本遊戲採用以上常見規則。', '開戰後可隨時認輸。輪到自己時可以提和，對手同意即和局，對手走子視為拒絕，被拒絕後需再走 3 手才能再次提和。逾時由系統代走一步合法棋，不會因超時判負。'),
   ],
+  battleship: [
+    section('海域與艦隊', '雙人對局，每人一片 10 × 10 的海域：欄為 A～J，列由上而下為 1～10。每支艦隊有 5 艘船：航空母艦 5 格、戰艦 4 格、巡洋艦 3 格、潛艇 3 格、驅逐艦 2 格。', '每位玩家看到自己的海域（船隻與對手的射擊），以及敵方海域（自己的射擊結果）。旁觀者看得到雙方艦隊。'),
+    section('擺放', '雙方在共同期限內同時擺放艦隊（房間計時的每手時間加保留時間，至少 60 秒）。船隻橫放或直放，必須在海域內且不能重疊；預設可以相鄰，房規「船隻不可相鄰」開啟時，連斜角相接也不行。', '先選一艘船，再點船首要放的位置；點已擺好的船可以拿起，再點一次就旋轉。也可以用「旋轉」、「隨機擺放」與「清除」；違反規則的擺法會被拒絕並說明原因。確認後不能更改；時間到仍未確認時隨機擺放。'),
+    section('射擊', '座位順序在前的玩家先射擊，之後雙方輪流朝敵方海域射擊一格，同一格不能射兩次。每發公布未中、命中，或擊沉哪一艘船（擊沉後公開該船位置）；命中不會透露是哪一艘船。', '房規「命中可再射」開啟時，命中或擊沉的玩家可以再射一發。'),
+    section('勝負', '擊沉敵方整支艦隊者獲勝。可以隨時認輸（擺放期間也可以），沒有提和。逾時由系統代射一發（隨機，或射在先前命中的旁邊），不會因超時判負。'),
+  ],
 };
 
 const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> = {
   en: [
     table('Room setup', ['Item', 'Rule'], [
-      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Go Fish 2–6; Napoleon 4–6; Reversi, Jungle, Gomoku, Xiangqi, Banqi, and Land Battle Chess 2; Dou Dizhu 3; others 4'],
+      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Go Fish 2–6; Napoleon 4–6; Reversi, Jungle, Gomoku, Xiangqi, Banqi, Land Battle Chess, and Battleship 2; Dou Dizhu 3; others 4'],
       ['Seat order', 'Clockwise N → E → S → W → P5–P8, skipping empty seats'],
       ['Start', 'Once everyone seated is ready, the host presses Start'],
       ['Bots', 'The host adds or removes them; at least one human must sit'],
@@ -571,7 +583,7 @@ const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> =
   ],
   'zh-TW': [
     table('房間設定', ['項目', '規則'], [
-      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；釣魚 2～6 人；拿破崙 4～6 人；黑白棋、鬥獸棋、五子棋、象棋、暗棋與陸戰棋 2 人；鬥地主 3 人；其他 4 人'],
+      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；釣魚 2～6 人；拿破崙 4～6 人；黑白棋、鬥獸棋、五子棋、象棋、暗棋、陸戰棋與海戰棋 2 人；鬥地主 3 人；其他 4 人'],
       ['座位順序', '順時針 北 → 東 → 南 → 西 → 第 5～8 席，跳過空位'],
       ['開始', '入座者都準備後，由房主按開始'],
       ['Bot', '房主可加入或移除；至少需一位真人入座'],

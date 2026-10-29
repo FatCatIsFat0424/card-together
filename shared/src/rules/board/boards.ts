@@ -91,6 +91,14 @@ export function banqiBoard(): BoardModel {
   return squareBoard({ cols: 8, rows: 4, layout: 'cells', sideRotations: FIXED_SIDES });
 }
 
+/** Battleship: one 10 × 10 sea of water cells; each player's sea is drawn on its own, never turned. */
+export function battleshipBoard(): BoardModel {
+  return squareBoard({
+    cols: 10, rows: 10, layout: 'cells', sideRotations: FIXED_SIDES,
+    zones: [rectZone('water', undefined, range(0, 9), range(0, 9))],
+  });
+}
+
 /**
  * Xiangqi: 9 × 10 intersections. Side 0 (red, moving first) holds rows 5–9; the river lies between rows 4
  * and 5, and the inner files are not drawn across it although pieces still cross there.

@@ -301,4 +301,12 @@ export type {
   LandBattleVisibleState,
 } from '../games/landbattle/types';
 
+export type {
+  BattleshipShot,
+  BattleshipPhase,
+  BattleshipMatchResult,
+  BattleshipGameState,
+  BattleshipVisibleState,
+} from '../games/battleship/types';
+
 export type { AnyGameState, PlayerVisibleGameState, MatchResult } from '../games/type-registry';

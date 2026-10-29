@@ -23,6 +23,7 @@ import { oldMaidClient } from './oldmaid/oldmaid-client';
 import { douDizhuClient } from './doudizhu/doudizhu-client';
 import { xiangqiClient } from './xiangqi/xiangqi-client';
 import { landBattleClient } from './landbattle/landbattle-client';
+import { battleshipClient } from './battleship/battleship-client';
 import { liarsDiceClient } from './liarsdice/liarsdice-client';
 import { crazyEightsClient } from './crazyeights/crazyeights-client';
 import { goFishClient } from './gofish/gofish-client';
@@ -50,6 +51,7 @@ export const CLIENT_GAMES: { readonly [K in GameType]: ClientGame<K> } = {
   doudizhu: douDizhuClient,
   xiangqi: xiangqiClient,
   landbattle: landBattleClient,
+  battleship: battleshipClient,
   liarsdice: liarsDiceClient,
   crazyeights: crazyEightsClient,
   stud: studClient,

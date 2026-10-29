@@ -40,8 +40,9 @@ const optionIds = {
   doudizhu: 'doudizhu-grab-hint',
   gomoku: 'gomoku-renju-hint',
   banqi: 'banqi-chain-hint',
+  battleship: 'battleship-no-touching-hint',
 } as const;
-const configuredGames = ['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'banqi'] as const;
+const configuredGames = ['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'banqi', 'battleship'] as const;
 /** Games whose options are menus rather than switches. */
 const selectGames: readonly GameType[] = ['xiangqi'];
 const saved: GameOptions = {
@@ -53,6 +54,7 @@ const saved: GameOptions = {
   doudizhu: { variant: 'grab' },
   gomoku: { renju: true, swap: false },
   banqi: { chain: true, rookDash: true },
+  battleship: { noTouching: true, hitAgain: true },
 };
 
 function room(gameType: GameType, gameOptions?: GameOptions): RoomInfo {
@@ -146,6 +148,7 @@ describe('per-game room options', () => {
     ['doudizhu', { variant: 'score' }],
     ['gomoku', { renju: false, swap: false }],
     ['banqi', { chain: false, rookDash: true }],
+    ['battleship', { noTouching: false, hitAgain: true }],
   ] as const)('emits the typed game/options payload for %s', (gameType, options) => {
     render(room(gameType, saved));
     option(optionIds[gameType]).onChange(false);

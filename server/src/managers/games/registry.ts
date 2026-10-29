@@ -25,6 +25,7 @@ import { xiangqiAdapter } from './xiangqi-adapter';
 import { banqiAdapter } from './banqi-adapter';
 import { chineseCheckersAdapter } from './chinesecheckers-adapter';
 import { landBattleAdapter } from './landbattle-adapter';
+import { battleshipAdapter } from './battleship-adapter';
 
 /** Every game type maps to its own adapter; a missing or mismatched entry fails to compile. */
 export const GAME_ADAPTERS: { readonly [K in GameType]: GameAdapter<K> } = {
@@ -52,6 +53,7 @@ export const GAME_ADAPTERS: { readonly [K in GameType]: GameAdapter<K> } = {
   banqi: banqiAdapter,
   chinesecheckers: chineseCheckersAdapter,
   landbattle: landBattleAdapter,
+  battleship: battleshipAdapter,
 };
 
 /**

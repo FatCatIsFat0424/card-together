@@ -30,6 +30,7 @@ const PREVIOUS_SEATS: Readonly<Record<GameType, readonly [min: number, max: numb
   banqi: [2, 2, true, false],
   chinesecheckers: [2, 6, true, true],
   landbattle: [2, 2, true, false],
+  battleship: [2, 2, true, false],
 };
 
 describe('shared game registry', () => {
@@ -57,7 +58,7 @@ describe('shared game registry', () => {
         continue;
       }
       if (gameType === 'reversi' || gameType === 'jungle' || gameType === 'gomoku' || gameType === 'xiangqi' || gameType === 'banqi'
-        || gameType === 'chinesecheckers' || gameType === 'landbattle') {
+        || gameType === 'chinesecheckers' || gameType === 'landbattle' || gameType === 'battleship') {
         expect([definition.category, definition.equipment]).toEqual(['board', []]);
         continue;
       }
@@ -83,7 +84,7 @@ describe('registered result metadata', () => {
       ['reversi', 'ranking', null], ['oldmaid', 'ranking', 'points'],
       ['gofish', 'ranking', 'points'], ['doudizhu', 'ranking', 'points'], ['jungle', 'ranking', null], ['gomoku', 'ranking', null],
       ['xiangqi', 'ranking', null], ['banqi', 'ranking', null],
-      ['chinesecheckers', 'ranking', null], ['landbattle', 'ranking', null],
+      ['chinesecheckers', 'ranking', null], ['landbattle', 'ranking', null], ['battleship', 'ranking', null],
     ]);
   });
 

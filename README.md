@@ -1,13 +1,13 @@
 # Card Together
 
-Browser-based multiplayer games with server-authoritative rules, 24 in three categories:
+Browser-based multiplayer games with server-authoritative rules, 25 in three categories:
 
 - **Card games:** Bridge, Taiwanese Big Two, Red Points, Ninety-Nine, Sevens, Chinese Poker,
   Liar's Deck, Blackjack, Ten and a Half, Texas Hold'em, Five-Card Stud, Napoleon, Crazy Eights,
   Old Maid, Go Fish, and Dou Dizhu.
 - **Dice games:** Liar's Dice.
 - **Board games:** Reversi, Gomoku, Jungle, Xiangqi (with handicaps), Banqi, Chinese Checkers,
-  and Land Battle Chess.
+  Land Battle Chess, and Battleship.
 
 - Rooms with up to eight spectators, chat, bots (Easy and Hard), and turn timers. Ninety-Nine,
   Blackjack, Ten and a Half, Hold'em, Five-Card Stud, Crazy Eights, Liar's Dice, and Old Maid support

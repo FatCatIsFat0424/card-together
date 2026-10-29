@@ -31,6 +31,7 @@ import type {
   DouDizhuVisibleState,
   XiangqiVisibleState,
   LandBattleVisibleState,
+  BattleshipVisibleState,
 } from '@shared/types';
 import type { CrazyEightsVisibleState } from '@shared/games/crazyeights/types';
 import type { GoFishVisibleState } from '@shared/games/gofish/types';
@@ -71,6 +72,7 @@ export interface GameStoreState {
   banqi: BanqiVisibleState | null;
   chineseCheckers: ChineseCheckersVisibleState | null;
   landbattle: LandBattleVisibleState | null;
+  battleship: BattleshipVisibleState | null;
   gameType: GameType | null;
   phase: GamePhase | null;
   myHand: Card[];
@@ -118,6 +120,7 @@ const initialState: GameStoreState = {
   banqi: null,
   chineseCheckers: null,
   landbattle: null,
+  battleship: null,
   gameType: null,
   phase: null,
   myHand: [],

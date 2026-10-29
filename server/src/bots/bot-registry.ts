@@ -26,6 +26,9 @@ import { easyGomokuAction, getGomokuBotAction, gomokuFirstLegalAction } from './
 import {
   autoDeployAction, easyLandBattleAction, getLandBattleBotAction, landBattleFirstLegalAction,
 } from './landbattle-strategy';
+import {
+  autoPlaceAction, battleshipFirstLegalAction, easyBattleshipAction, getBattleshipBotAction,
+} from './battleship-strategy';
 import { easyOldMaidAction, getOldMaidBotAction, oldMaidFirstLegalAction } from './oldmaid-strategy';
 import { easyGoFishAction, getGoFishBotAction, goFishFirstLegalAction } from './gofish-strategy';
 import { easyJungleAction, getJungleBotAction, jungleFirstLegalAction } from './jungle-strategy';
@@ -250,6 +253,16 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     turnTimeout: (visible) => easyLandBattleAction(visible, Math.random),
     // A human who missed the deployment deadline gets the automatic deployment; bots keep their own.
     deadlineExpired: (visible, { isBot, strategy }) => (isBot ? strategy() : autoDeployAction(visible, Math.random)),
+  },
+  battleship: {
+    // The density search covers at most a few thousand ship placements, so it runs on the event loop.
+    hard: getBattleshipBotAction,
+    easy: easyBattleshipAction,
+    firstLegal: battleshipFirstLegalAction,
+    // A player who runs out of time gets a shot by the easy policy.
+    turnTimeout: (visible) => easyBattleshipAction(visible, Math.random),
+    // A human who missed the placement deadline gets a random fleet; bots keep their own.
+    deadlineExpired: (visible, { isBot, strategy }) => (isBot ? strategy() : autoPlaceAction(visible, Math.random)),
   },
 };
 

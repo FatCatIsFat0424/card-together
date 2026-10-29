@@ -114,6 +114,7 @@ describe('spectator table perspective', () => {
       import('../../../client/src/games/banqi/BanqiTable'),
       import('../../../client/src/games/chinesecheckers/ChineseCheckersTable'),
       import('../../../client/src/games/landbattle/LandBattleTable'),
+      import('../../../client/src/games/battleship/BattleshipTable'),
     ]);
   }, 60_000);
   beforeEach(() => {
@@ -169,8 +170,9 @@ describe('spectator table perspective', () => {
         // Players share the public board; the unseated spectator also holds the face-down pieces' identities.
         expect(projected).toMatchObject({ gameType: 'banqi', observer: 'spectator', mySeat: seat });
         expect(Object.keys((projected as { observedPieces?: object }).observedPieces ?? {})).toHaveLength(32);
-      } else if (game.gameType === 'landbattle' || projected.gameType === 'landbattle') {
-        // Identities travel in the pieces themselves; the chosen seat only turns the board.
+      } else if (game.gameType === 'landbattle' || projected.gameType === 'landbattle'
+        || game.gameType === 'battleship' || projected.gameType === 'battleship') {
+        // Identities and fleets travel in the view itself; the chosen seat only picks the seas or turns the board.
         expect(projected).toMatchObject({ observer: 'spectator', mySeat: seat });
       } else if (game.gameType === 'liarsdice' && projected.gameType === 'liarsdice') {
         expect(projected.myDice).toEqual(game.observedHands?.[seat] ?? []);

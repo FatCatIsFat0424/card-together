@@ -55,6 +55,7 @@ const englishReasons: Record<BoardResultReason, string> = {
   'flag-captured': 'Flag captured',
   'all-home': 'All pieces home',
   'move-limit': 'Turn limit reached',
+  'fleet-sunk': 'Fleet sunk',
 };
 
 const chineseReasons: Record<BoardResultReason, string> = {
@@ -75,6 +76,7 @@ const chineseReasons: Record<BoardResultReason, string> = {
   'flag-captured': '軍旗被奪',
   'all-home': '全部抵達對角',
   'move-limit': '達到回合上限',
+  'fleet-sunk': '艦隊全滅',
 };
 
 type ReasonKey = `board.reason.${BoardResultReason}`;

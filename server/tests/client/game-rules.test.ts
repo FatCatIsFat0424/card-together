@@ -77,6 +77,7 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
   banqi: { en: 'Rank and capture', 'zh-TW': '大小與吃子' },
   chinesecheckers: { en: 'Moving', 'zh-TW': '走法' },
   landbattle: { en: 'Battles', 'zh-TW': '交戰' },
+  battleship: { en: 'Firing', 'zh-TW': '射擊' },
 };
 
 describe('contextual game rules', () => {
@@ -122,7 +123,7 @@ describe('contextual game rules', () => {
       expect(render(gameType, context)).toContain('<dd>Off</dd>');
       expect(context.active).toBe(false);
     }
-    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'xiangqi', 'banqi'].includes(type))) {
+    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'xiangqi', 'banqi', 'battleship'].includes(type))) {
       expect(roomRulesContext(room(gameType, { gameOptions: { sevens: { closeOnEnd: true } } })).option).toBeNull();
     }
     // Banqi lists both of its variants, each off by default.
@@ -140,6 +141,10 @@ describe('contextual game rules', () => {
     expect([chosen.option?.enabled, chosen.moreOptions?.[0].enabled]).toEqual([true, true]);
     const html = render('gomoku', chosen);
     expect(html.match(/<dd>On<\/dd>/g)).toHaveLength(2);
+    // Battleship lists both of its room rules, each off until chosen.
+    const sea = roomRulesContext(room('battleship', { gameOptions: { battleship: { noTouching: true, hitAgain: false } } }));
+    expect(sea.option).toEqual({ label: 'battleship.noTouching', enabled: true });
+    expect(sea.moreOptions).toEqual([{ label: 'battleship.hitAgain', enabled: false }]);
     // Dou Dizhu bids for the landlord unless the host enables call-and-grab.
     expect(roomRulesContext(room('doudizhu')).option).toEqual({ label: 'doudizhu.grabOption', enabled: false });
     // A Xiangqi handicap shows as on and is spelled out in the summary.

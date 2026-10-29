@@ -1,6 +1,6 @@
 // ─── LandBattleTable: deployment by swapping stations, then a refereed match on the 5 × 12 board ───
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { GameSeat } from '@shared/types';
 import { coordinateLabel, sideRotation } from '@shared/rules/board/board-model';
@@ -17,7 +17,6 @@ import type { TranslationKey } from '../../i18n';
 import { GameShell } from '../GameShell';
 import { isSpectator } from '../observer-view';
 import { useSeatName } from '../seat-names';
-import { projectedServerNow } from '../turn-clock';
 import { useConnectionReady } from '../use-connection-ready';
 import { useTablePerspective, useViewedGame } from '../use-table-perspective';
 import { BoardResultDialog } from '../board/BoardResultDialog';
@@ -28,6 +27,7 @@ import { boardControls } from '../board/BoardControls';
 import { BoardInfo, boardMoveEntries } from '../board/BoardMoves';
 import { BoardTable } from '../board/BoardTable';
 import { useBoardInput } from '../board/use-board-input';
+import { useDeadlinePassed } from '../board/use-deadline-passed';
 import { boardAspect } from '../board/board-view';
 import {
   draftPieces, draftSlot, landBattleLastMove, landBattleMovable, landBattleNotation, landBattlePath, landBattleRemaining,
@@ -55,21 +55,6 @@ type ActionCallback = (timeout: Error | null, response?: { success: boolean; err
 interface Draft {
   readonly layout: readonly LbRank[];
   readonly selected: number | null;
-}
-
-/** True once the shared deployment deadline has passed on the server's clock. */
-function useDeadlinePassed(deadline: number | null): boolean {
-  const clock = useGameStore((state) => state.visible?.clock);
-  const receivedAt = useGameStore((state) => state.presentationReceivedAt);
-  const [passed, setPassed] = useState<number | null>(null);
-  useEffect(() => {
-    if (deadline === null) return;
-    const now = Date.now();
-    const remaining = deadline - (clock ? projectedServerNow(clock, receivedAt, now) : now);
-    const timer = setTimeout(() => setPassed(deadline), Math.min(2_147_483_647, Math.max(0, remaining)));
-    return () => clearTimeout(timer);
-  }, [deadline, clock, receivedAt]);
-  return deadline !== null && passed === deadline;
 }
 
 export function LandBattleTable(): ReactNode {

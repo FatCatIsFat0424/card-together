@@ -70,9 +70,9 @@ describe('client game registries', () => {
   describe('categories', () => {
     it('lists the card games, the dice game, and the board game', () => {
       expect(gamesInCategory('cards')).toEqual(GAME_TYPES.filter((gameType) => gameType !== 'liarsdice' && gameType !== 'reversi' && gameType !== 'jungle' && gameType !== 'gomoku' && gameType !== 'xiangqi' && gameType !== 'banqi'
-        && gameType !== 'chinesecheckers' && gameType !== 'landbattle'));
+        && gameType !== 'chinesecheckers' && gameType !== 'landbattle' && gameType !== 'battleship'));
       expect(gamesInCategory('dice')).toEqual(['liarsdice']);
-      expect(gamesInCategory('board')).toEqual(['reversi', 'jungle', 'gomoku', 'xiangqi', 'banqi', 'chinesecheckers', 'landbattle']);
+      expect(gamesInCategory('board')).toEqual(['reversi', 'jungle', 'gomoku', 'xiangqi', 'banqi', 'chinesecheckers', 'landbattle', 'battleship']);
     });
 
     it('follows the shared definition', () => {
@@ -105,7 +105,7 @@ describe('client game registries', () => {
   describe('hand sorting', () => {
     it('offers suit sorting only for card games with suits', () => {
       expect(GAME_TYPES.filter((gameType) => !clientGame(gameType).handSort.bySuit)).toEqual(['liarsdeck', 'liarsdice', 'reversi', 'jungle', 'gomoku', 'xiangqi', 'banqi',
-        'chinesecheckers', 'landbattle']);
+        'chinesecheckers', 'landbattle', 'battleship']);
     });
 
     it('orders Big Two ranks with twos high and everything else by face value', () => {
@@ -227,7 +227,7 @@ describe('client game registries', () => {
       const hasHistory = Boolean(clientGame(gameType).roundHistory);
       expect(hasHistory).toBe(Boolean(gameUi(gameType).roundsView));
       expect(hasHistory).toBe(!['bridge', 'chinesepoker', 'napoleon', 'reversi', 'jungle', 'gomoku', 'xiangqi', 'banqi',
-        'chinesecheckers', 'landbattle'].includes(gameType));
+        'chinesecheckers', 'landbattle', 'battleship'].includes(gameType));
     });
   });
 });

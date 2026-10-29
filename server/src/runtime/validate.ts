@@ -43,6 +43,7 @@ export { isXiangqiResult } from '../managers/games/xiangqi-validation';
 export { isBanqiResult } from '../managers/games/banqi-validation';
 export { isChineseCheckersResult } from '../managers/games/chinesecheckers-validation';
 export { isLandBattleResult } from '../managers/games/landbattle-validation';
+export { isBattleshipResult } from '../managers/games/battleship-validation';
 
 function player(value: unknown): boolean {
   return (

@@ -183,6 +183,11 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('battlesWon', 'log', 'count'),
     record('marshalsDowned', 'log', 'count'),
   ],
+  battleship: [
+    record('fleetsSunk', 'result', 'count', true),
+    record('fewestShots', 'result', 'min'),
+    record('shipsSunk', 'result', 'count'),
+  ],
 };
 
 /**

@@ -1,0 +1,17 @@
+/* ─── Battleship pieces: piece and marker colours come from the board theme variables (board-theme.ts) ─── */
+
+.hull { fill: var(--piece-black); stroke: var(--piece-accent); stroke-width: 0.035; }
+.deck { fill: var(--piece-face); opacity: 0.32; }
+.turret { fill: var(--piece-face); stroke: var(--piece-black); stroke-width: 0.025; }
+
+.sunk .hull { fill: color-mix(in srgb, var(--piece-black) 55%, var(--piece-red)); opacity: 0.8; }
+.sunk .deck, .sunk .turret { opacity: 0.25; }
+.selected .hull { stroke: var(--marker-selected); stroke-width: 0.08; }
+
+.splash { fill: var(--board-water-line); stroke: var(--board-line); stroke-width: 0.04; opacity: 0.92; }
+.drop { fill: var(--board-water); }
+
+.burst { fill: var(--piece-red); stroke: var(--piece-on-solid); stroke-width: 0.03; stroke-linejoin: round; }
+.core { fill: var(--piece-on-solid); }
+
+.last { fill: none; stroke: var(--marker-last); stroke-width: 0.07; }

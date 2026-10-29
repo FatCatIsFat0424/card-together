@@ -26,6 +26,7 @@ import { xiangqiDefinition } from './xiangqi/definition';
 import { banqiDefinition } from './banqi/definition';
 import { chineseCheckersDefinition } from './chinesecheckers/definition';
 import { landBattleDefinition } from './landbattle/definition';
+import { battleshipDefinition } from './battleship/definition';
 
 /** Every game type maps to its own definition; a missing or mismatched entry fails to compile. */
 export const GAME_DEFINITIONS: { readonly [K in GameType]: GameDefinition<K> } = {
@@ -53,6 +54,7 @@ export const GAME_DEFINITIONS: { readonly [K in GameType]: GameDefinition<K> } =
   banqi: banqiDefinition,
   chinesecheckers: chineseCheckersDefinition,
   landbattle: landBattleDefinition,
+  battleship: battleshipDefinition,
 };
 
 export function gameDefinition<K extends GameType>(gameType: K): GameDefinition<K> {

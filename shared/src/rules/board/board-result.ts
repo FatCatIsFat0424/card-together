@@ -36,6 +36,8 @@ export const BOARD_RESULT_REASONS = [
   'all-home',
   /** Chinese checkers: the turn limit ran out; the most progress wins. */
   'move-limit',
+  /** Battleship: every ship of the opponent's fleet was sunk. */
+  'fleet-sunk',
 ] as const;
 
 export type BoardResultReason = typeof BOARD_RESULT_REASONS[number];

@@ -25,7 +25,7 @@ describe('match facts from real recorded matches', () => {
     expect(frame).toEqual(snapshots.at(-1));
     expect(frame.result).not.toBeNull();
     const known = new Set([...STATS_RECORDS[gameType].map((record) => record.id), ...(LOG_METRICS[gameType] ?? []),
-      'overtricks', 'firstOut', 'fouls', 'shots', 'diceLost', 'jokerLosses']);
+      'overtricks', 'firstOut', 'fouls', 'shots', 'diceLost', 'jokerLosses', 'shotsFired', 'shotsHit']);
     for (const seat of matchSeats(match.result)) {
       const logged = matchFacts(match.result, seat, frame);
       const unlogged = matchFacts(match.result, seat, null);
