@@ -44,8 +44,8 @@ import styles from './RoomPage.module.css';
 import botSeatBackground from '../assets/room-backgrounds/bot-seat.webp';
 import { unreadCount } from './room-progress';
 import { ovalPosition } from './room-oval';
-import { moveOptions, seatDropOutcome, spectatorDropOutcome } from './room-moves';
-import type { DropAction, DropOutcome, MoveOption, RoomSeatCard } from './room-moves';
+import { moveOptions, roomSeatCards, seatDropOutcome, spectatorDropOutcome } from './room-moves';
+import type { DropAction, DropOutcome, MoveOption } from './room-moves';
 import { readPreference, writePreference } from '../utils/preference-storage';
 import { useRoomSeatDrag } from '../hooks/use-room-seat-drag';
 import { layeredShopArt } from '../cosmetics/art-layers/shop-art-layers';
@@ -119,7 +119,7 @@ export function RoomPage(): ReactNode {
   const isReady = mySeat ? (roomInfo ? roomSeatInfo(roomInfo, mySeat)?.isReady : false) ?? false : false;
   const isHost = Boolean(playerId) && roomInfo?.hostId === playerId;
   const hasEmptySeat = roomInfo
-    ? [...Object.values(roomInfo.seats), ...roomInfo.additionalSeats ?? []].some(({ player }) => !player) : false;
+    ? roomSeatCards(roomInfo, () => '').some(({ info }) => !info.player) : false;
   const canManagePlayers = isHost && connectionReady && roomInfo?.status === 'waiting';
   const canMovePlayers = canManagePlayers && !blocked;
   const canSpectate = Boolean(mySeat || myAdditionalSeat >= 0) && !blocked && roomInfo?.status === 'waiting';
@@ -359,13 +359,8 @@ export function RoomPage(): ReactNode {
   const additionalSeats = roomInfo.additionalSeats ?? [];
   const entering = enteredRoom !== roomInfo.code && !stillArt;
   const waiting = roomInfo.status === 'waiting';
-  const seatCards: RoomSeatCard[] = [
-    ...SEAT_ORDER_CLOCKWISE.map((seat) => ({ key: seat, label: seatLabel(t, roomInfo.gameType, seat),
-      info: roomInfo.seats[seat], seat, gameSeat: seat })),
-    ...additionalSeats.map((info, index) => ({ key: `additional-${index}`,
-      label: additionalSeatLabel(t, roomInfo.gameType, index), info, additionalIndex: index,
-      gameSeat: GAME_SEAT_ORDER[index + 4] })),
-  ];
+  const seatCards = roomSeatCards(roomInfo, (seat, additionalIndex) => additionalIndex === undefined
+    ? seatLabel(t, roomInfo.gameType, seat) : additionalSeatLabel(t, roomInfo.gameType, additionalIndex));
   const spectators = roomInfo.spectators ?? [];
   const expandableSeats = EXPANDABLE_ROOM_GAMES.includes(roomInfo.gameType);
   const canAddSeat = isHost && expandableSeats && seatCards.length < maxPlayers(roomInfo.gameType);

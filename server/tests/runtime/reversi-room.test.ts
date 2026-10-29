@@ -24,8 +24,8 @@ describe('a two-player room', () => {
     expect(rooms.changeSeat(code, human, 'N')).toEqual({ success: true });
     expect(rooms.fillBots(code, human.id)).toEqual({ success: true });
     const info = rooms.getRoomInfo(code)!;
-    expect(Object.keys(roomPlayers(info))).toEqual(['N', 'E']);
-    expect(info.seats.S.player).toBeNull();
+    expect(Object.keys(roomPlayers(info))).toEqual(['N', 'S']);
+    expect(info.seats.E.player).toBeNull();
     expect(info.seats.W.player).toBeNull();
     expect(rooms.setReady(code, human.id, true)).toEqual({ success: true });
     expect(roomCanStart(rooms.getRoomInfo(code)!)).toBe(true);

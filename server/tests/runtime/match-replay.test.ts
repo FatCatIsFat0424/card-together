@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GAME_TYPES } from '@shared/constants';
 import { gameDefinition } from '@shared/games/registry';
+import { roomCompassSeats } from '@shared/rules/seats';
 import { applyReplayPatch } from '@shared/replay-patch';
 import type { AnyGameState, Card, GameType, ReplayRecording, ReplaySnapshot, Seat } from '@shared/types';
 import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
@@ -37,6 +38,7 @@ async function startMatch(
   repository: Repository, gameType: GameType, bots = false,
 ): Promise<{ runtime: RuntimeCoordinator; code: string }> {
   const limit = Math.min(SEATS.length, gameDefinition(gameType).seats.maxPlayers);
+  const offered = roomCompassSeats(gameType);
   const accounts = (bots ? SEATS.slice(0, 1) : SEATS.slice(0, limit)).map(account);
   for (const entry of accounts) await repository.createAccount(entry);
   const runtime = await createRuntimeCoordinator(repository);
@@ -48,7 +50,7 @@ async function startMatch(
       players.attachPlayer(`socket-${entry.id}`, info);
       if (index > 0) rooms.joinRoom(code, entry.id);
       players.setPlayerRoom(entry.id, code);
-      rooms.changeSeat(code, info, SEATS[index]);
+      rooms.changeSeat(code, info, offered[index]);
     }
     if (bots) expect(rooms.fillBots(code, 'N').success).toBe(true);
     rooms.setRoomStatus(code, 'playing');

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { PlayerInfo } from '../../../shared/src/types';
+import type { PlayerInfo, RoomInfo, SeatInfo } from '../../../shared/src/types';
 import {
-  moveOptions, seatCardTarget, seatDropOutcome, spectatorDropOutcome,
+  moveOptions, roomSeatCards, seatCardTarget, seatDropOutcome, spectatorDropOutcome,
 } from '../../../client/src/pages/room-moves';
 import type { RoomSeatCard } from '../../../client/src/pages/room-moves';
 
@@ -69,5 +69,31 @@ describe('move menu options', () => {
     expect(seatCardTarget(card('N', 'N', null))).toEqual({ type: 'seat', seat: 'N' });
     expect(seatCardTarget({ ...card('additional-1', undefined, null), additionalIndex: 1 }))
       .toEqual({ type: 'additional', index: 1 });
+  });
+});
+
+describe('waiting-room seat list', () => {
+  const empty: SeatInfo = { player: null, isReady: false };
+  const room = (gameType: RoomInfo['gameType'], additional = 0): RoomInfo => ({
+    code: 'ABCD', gameType, seats: { N: empty, E: empty, S: empty, W: empty },
+    ...(additional ? { additionalSeats: Array.from({ length: additional }, () => empty) } : {}),
+  } as RoomInfo);
+  const keys = (info: RoomInfo): string[] => roomSeatCards(info, (seat) => seat).map((card) => card.key);
+
+  it('shows two facing seats for a two-player game', () => {
+    expect(keys(room('reversi'))).toEqual(['N', 'S']);
+  });
+
+  it('keeps four seats for a four-player game and adds the extra seats of flexible games', () => {
+    expect(keys(room('bridge'))).toEqual(['N', 'E', 'S', 'W']);
+    expect(keys(room('holdem', 4))).toEqual([
+      'N', 'E', 'S', 'W', 'additional-0', 'additional-1', 'additional-2', 'additional-3',
+    ]);
+  });
+
+  it('labels and targets each card by its seat', () => {
+    const cards = roomSeatCards(room('holdem', 1), (seat, index) => `${seat}:${index ?? '-'}`);
+    expect(cards.map((card) => card.label)).toEqual(['N:-', 'E:-', 'S:-', 'W:-', 'P5:0']);
+    expect(cards[4].gameSeat).toBe('P5');
   });
 });

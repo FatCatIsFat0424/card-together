@@ -1,4 +1,6 @@
-import type { GameSeat, PlayerInfo, RoomSeatTarget, Seat, SeatInfo } from '@shared/types';
+import type { GameSeat, PlayerInfo, RoomInfo, RoomSeatTarget, Seat, SeatInfo } from '@shared/types';
+import { GAME_SEAT_ORDER } from '@shared/constants';
+import { roomCompassSeats } from '@shared/rules/seats';
 
 /** One seat of the waiting-room oval. */
 export interface RoomSeatCard {
@@ -10,6 +12,21 @@ export interface RoomSeatCard {
   readonly additionalIndex?: number;
   /** Seat a bot is added to or managed in. */
   readonly gameSeat: GameSeat;
+}
+
+/** The seats a waiting room shows: the compass seats the game uses, then its additional seats. */
+export function roomSeatCards(
+  room: RoomInfo, label: (seat: GameSeat, additionalIndex?: number) => string,
+): RoomSeatCard[] {
+  return [
+    ...roomCompassSeats(room.gameType).map((seat) => ({
+      key: seat, label: label(seat), info: room.seats[seat], seat, gameSeat: seat,
+    })),
+    ...(room.additionalSeats ?? []).map((info, index) => ({
+      key: `additional-${index}`, label: label(GAME_SEAT_ORDER[index + 4], index), info,
+      additionalIndex: index, gameSeat: GAME_SEAT_ORDER[index + 4],
+    })),
+  ];
 }
 
 /** Where a dragged member comes from: a seat card or the spectator list. */

@@ -9,11 +9,13 @@ import type {
   RoomReplaySession, RoomSeatTarget, RoomStatus, Seat, SeatInfo, SeatMap, TimeControl,
 } from '@shared/types';
 import {
-  ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD, MAX_ROOM_MEMBERS, MAX_SPECTATORS,
+  ABORT_VOTE_COOLDOWN_MS, ABORT_VOTE_DURATION_MS, ABORT_VOTE_THRESHOLD, GAME_SEAT_ORDER, MAX_ROOM_MEMBERS, MAX_SPECTATORS,
 } from '@shared/constants';
 import type { PersistedRoom } from '../runtime/types';
 import { generateRoomCode } from '../utils/id-generator';
-import { botNickname, isCompassSeat, maxPlayers, roomPlayers, roomCanStart, roomSeatInfo } from '@shared/rules/seats';
+import {
+  botNickname, isCompassSeat, maxPlayers, roomCompassSeats, roomPlayers, roomCanStart, roomSeatInfo,
+} from '@shared/rules/seats';
 import { gameDefinition, gameTimeControl } from '@shared/games/registry';
 import type { GameSeat } from '@shared/types';
 
@@ -21,9 +23,39 @@ const rooms = new Map<RoomCode, PersistedRoom>();
 const seats: Seat[] = ['N', 'E', 'S', 'W'];
 type Result = { success: true } | { success: false; reason: string };
 
-/** Configured seats in order: the four standard seats, then P5 onwards for each additional seat. */
+/** Seats the room offers in order: the game's compass seats, then P5 onwards for each additional seat. */
 function roomSeats(info: RoomInfo): GameSeat[] {
-  return [...seats, ...(info.additionalSeats ?? []).map((_, index) => `P${index + 5}` as GameSeat)];
+  return [...roomCompassSeats(info.gameType), ...(info.additionalSeats ?? []).map((_, index) => `P${index + 5}` as GameSeat)];
+}
+
+/**
+ * Brings a waiting-room roster in line with the game's compass seats. Bots in seats that no longer exist
+ * leave the room; humans take the nearest free seat (ties go clockwise from N) or become spectators.
+ */
+function fitSeatsToGame(room: PersistedRoom): void {
+  const allowed = roomCompassSeats(room.info.gameType);
+  const hidden = seats.filter((seat) => !allowed.includes(seat) && room.info.seats[seat].player);
+  if (hidden.length === 0) return;
+  const next = { ...room.info.seats };
+  const droppedBots = new Set<string>();
+  for (const seat of hidden) {
+    const player = next[seat].player!;
+    next[seat] = { player: null, isReady: false };
+    if (player.isBot) droppedBots.add(player.id);
+  }
+  for (const seat of hidden) {
+    const player = room.info.seats[seat].player!;
+    if (player.isBot) continue;
+    const distance = (other: Seat): number => {
+      const gap = Math.abs(seats.indexOf(other) - seats.indexOf(seat));
+      return Math.min(gap, seats.length - gap);
+    };
+    const target = allowed.filter((other) => !next[other].player)
+      .sort((a, b) => distance(a) - distance(b))[0];
+    if (target) next[target] = { player, isReady: false };
+  }
+  room.memberIds = room.memberIds.filter((id) => !droppedBots.has(id));
+  room.info = { ...room.info, seats: next };
 }
 
 function withSeat(info: RoomInfo, seat: GameSeat, entry: SeatInfo): RoomInfo {
@@ -38,7 +70,7 @@ function withBotNames(info: RoomInfo): RoomInfo {
     ? { ...entry, player: { ...entry.player, nickname: botNickname(info.gameType, seat) } } : entry;
   const named = Object.fromEntries(seats.map((seat) => [seat, rename(info.seats[seat], seat)])) as SeatMap;
   return { ...info, seats: named, ...(info.additionalSeats
-    ? { additionalSeats: info.additionalSeats.map((entry, index) => rename(entry, roomSeats(info)[index + 4])) } : {}) };
+    ? { additionalSeats: info.additionalSeats.map((entry, index) => rename(entry, GAME_SEAT_ORDER[index + 4])) } : {}) };
 }
 
 function emptySeats(): SeatMap {
@@ -141,7 +173,7 @@ export function addBot(code: RoomCode, playerId: string, seat: GameSeat, difficu
   if (!isBotDifficulty(difficulty)) return { success: false, reason: 'Invalid bot difficulty.' };
   const room = rooms.get(code)!;
   const entry = roomSeatInfo(room.info, seat);
-  if (!entry) return { success: false, reason: 'Invalid seat.' };
+  if (!entry || !roomSeats(room.info).includes(seat)) return { success: false, reason: 'Invalid seat.' };
   if (entry.player) return { success: false, reason: 'Seat is occupied' };
   if (!hasSeatedHuman(room) && emptySeatCount(room) === 1) {
     return { success: false, reason: 'Leave a seat for a player.' };
@@ -222,6 +254,7 @@ export function changeSeat(code: RoomCode, player: PlayerInfo, target: Seat): Re
   const room = rooms.get(code);
   if (!room || !room.memberIds.includes(player.id)) return { success: false, reason: 'Not in room' };
   if (room.info.status !== 'waiting') return { success: false, reason: 'Cannot change seat during game' };
+  if (!roomCompassSeats(room.info.gameType).includes(target)) return { success: false, reason: 'Invalid seat.' };
   const occupant = room.info.seats[target].player;
   if (occupant && occupant.id !== player.id) return { success: false, reason: 'Seat is occupied' };
   const previous = getPlayerSeat(code, player.id);
@@ -246,7 +279,8 @@ export function movePlayer(code: RoomCode, hostId: string, player: PlayerInfo, t
   const previous = positions.findIndex((entry) => entry.player?.id === player.id);
   const destination = target.type === 'spectator' ? -1 : target.type === 'seat'
     ? seats.indexOf(target.seat) : Number.isInteger(target.index) && target.index >= 0 ? target.index + 4 : -1;
-  if (target.type !== 'spectator' && (destination < 0 || destination >= positions.length)) {
+  const hiddenSeat = target.type === 'seat' && !roomCompassSeats(room.info.gameType).includes(target.seat);
+  if (target.type !== 'spectator' && (hiddenSeat || destination < 0 || destination >= positions.length)) {
     return { success: false, reason: 'Invalid seat.' };
   }
   if (previous === destination) return { success: true };
@@ -417,6 +451,10 @@ export function setRoomStatus(code: RoomCode, status: Exclude<RoomStatus, 'repla
   if (!room) return;
   const { replay: _replay, ...info } = room.info;
   room.info = { ...info, status, abortVote: null };
+  if (status === 'waiting') {
+    fitSeatsToGame(room);
+    room.info = withBotNames(room.info);
+  }
 }
 
 /** The archive facts a session needs; the caller has checked the host may view the match. */
@@ -485,10 +523,12 @@ export function setGameType(code: RoomCode, playerId: string, gameType: GameType
   }
   const removedBots = new Set(removed.flatMap((entry) => entry.player ? [entry.player.id] : []));
   room.memberIds = room.memberIds.filter((id) => !removedBots.has(id));
-  room.info = withBotNames({ ...room.info, gameType,
+  room.info = { ...room.info, gameType,
     timeControl: followDefaultTimeControl(room.info.timeControl, gameTimeControl(room.info.gameType), gameTimeControl(gameType)),
     ...(room.info.additionalSeats ? { additionalSeats: room.info.additionalSeats.slice(0, additionalLimit) } : {}),
-  });
+  };
+  fitSeatsToGame(room);
+  room.info = withBotNames(room.info);
   resetAllReady(code);
   return { success: true };
 }
@@ -645,10 +685,16 @@ export function exportRooms(): PersistedRoom[] {
 
 export function restoreRooms(records: PersistedRoom[]): void {
   rooms.clear();
-  for (const room of records) rooms.set(room.info.code, {
-    ...room, info: withBotNames({
-      ...room.info, timeControl: room.info.timeControl ?? { ...DEFAULT_TIME_CONTROL },
-      gameOptions: restoredGameOptions(room.info.gameOptions),
-    }),
-  });
+  for (const record of records) {
+    const room: PersistedRoom = {
+      ...record, memberIds: [...record.memberIds], info: {
+        ...record.info, timeControl: record.info.timeControl ?? { ...DEFAULT_TIME_CONTROL },
+        gameOptions: restoredGameOptions(record.info.gameOptions),
+      },
+    };
+    // Rooms saved before seats followed the game's player limit may seat people in seats no longer offered.
+    if (room.info.status === 'waiting') fitSeatsToGame(room);
+    room.info = withBotNames(room.info);
+    rooms.set(room.info.code, room);
+  }
 }

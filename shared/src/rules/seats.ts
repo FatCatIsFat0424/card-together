@@ -86,6 +86,17 @@ export function maxPlayers(gameType: GameType): number {
   return gameDefinition(gameType).seats.maxPlayers;
 }
 
+/**
+ * Compass seats a waiting room offers for a game, derived from its player limit: two players face each
+ * other (N, S), three take N, E, S, and games for four or more keep all four. Other compass seats stay
+ * empty and hidden; the room schema is unchanged.
+ */
+export function roomCompassSeats(gameType: GameType): readonly Seat[] {
+  const limit = maxPlayers(gameType);
+  if (limit <= 2) return ['N', 'S'];
+  return limit === 3 ? ['N', 'E', 'S'] : SEAT_ORDER_CLOCKWISE;
+}
+
 /** Seats with a player, ordered N, E, S, W; empty seats take no part in the match. */
 export function occupiedSeats(players: Readonly<Partial<Record<GameSeat, unknown>>>): GameSeat[] {
   return GAME_SEAT_ORDER.filter((seat) => players[seat] !== undefined);
