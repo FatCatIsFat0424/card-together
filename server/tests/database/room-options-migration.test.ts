@@ -22,6 +22,7 @@ const CHOICES: GameOptions = {
   napoleon: { jokerSummon: false },
   // Added after schema v9, so migrated rooms take its default.
   crazyeights: { actionCards: false },
+  doudizhu: { variant: 'score' },
 };
 
 function fixture(gameType: GameType = 'sevens'): {
@@ -74,6 +75,7 @@ describe('room options document migration', () => {
     expect(migrated.runtime?.rooms[0].info.gameOptions).toEqual({
       sevens: { closeOnEnd: false }, ninetynine: { twoDecks: false },
       blackjack: { playerDealer: false }, napoleon: { jokerSummon: true }, crazyeights: { actionCards: false },
+      doudizhu: { variant: 'score' },
     });
     expect(migrated.runtime?.games).toEqual(untouched.games);
     expect(migrated.runtime?.players).toEqual(untouched.players);

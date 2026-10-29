@@ -34,6 +34,10 @@ const ACTIONS = [
   { gameType: 'blackjack', action: { type: 'dealerAct', action: 'stand' } },
   { gameType: 'tenhalf', action: { type: 'bet', amount: 20 } },
   { gameType: 'tenhalf', action: { type: 'act', action: 'hit' } },
+  { gameType: 'doudizhu', action: { type: 'bid', score: 2 } },
+  { gameType: 'doudizhu', action: { type: 'claim', take: true } },
+  { gameType: 'doudizhu', action: { type: 'play', cards: [card, { joker: 'small' }] } },
+  { gameType: 'doudizhu', action: { type: 'pass' } },
   { gameType: 'holdem', action: { type: 'fold' } },
   { gameType: 'holdem', action: { type: 'check' } },
   { gameType: 'holdem', action: { type: 'call' } },
@@ -63,6 +67,7 @@ const ACTIONS = [
 ] satisfies readonly GameActionEnvelope[];
 
 function inject(value: unknown, strictCards = false): unknown {
+  // Cards of the joker games are validated strictly, so extra keys reject them instead of being stripped.
   if (strictCards && isNapoleonCard(value)) return { ...value };
   if (Array.isArray(value)) return value.map((entry) => inject(entry, strictCards));
   return value && typeof value === 'object'
@@ -84,7 +89,7 @@ describe('game action contracts', () => {
   });
 
   it.each(ACTIONS)('sanitizes $gameType $action.type without retaining input references', (expected) => {
-    const input = inject(expected, expected.gameType === 'napoleon');
+    const input = inject(expected, expected.gameType === 'napoleon' || expected.gameType === 'doudizhu');
     const before = structuredClone(input);
     const parsed = parseGameAction(input);
     expect(parsed).toEqual(expected);

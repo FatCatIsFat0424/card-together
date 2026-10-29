@@ -249,4 +249,13 @@ export type {
   ReversiVisibleState,
 } from '../games/reversi/types';
 
+export type {
+  DouDizhuPlay,
+  DouDizhuLogEntry,
+  DouDizhuMatchResult,
+  DouDizhuPhase,
+  DouDizhuGameState,
+  DouDizhuVisibleState,
+} from '../games/doudizhu/types';
+
 export type { AnyGameState, PlayerVisibleGameState, MatchResult } from '../games/type-registry';

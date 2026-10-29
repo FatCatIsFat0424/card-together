@@ -19,6 +19,8 @@ import { ObservedDice } from '../games/liarsdice/ObservedDice';
 import { blackjackSeatOut, blackjackView } from '../games/blackjack/blackjack-view';
 import { tenHalfSeatOut, tenHalfView } from '../games/tenhalf/tenhalf-view';
 import { finishPlace, oldMaidView } from '../games/oldmaid/oldmaid-view';
+import { sortDdzHand } from '@shared/rules/doudizhu';
+import { doudizhuView, nextSeat, seatBid, signed } from '../games/doudizhu/doudizhu-view';
 import { ChipIcon } from '../games/ChipIcon';
 import { clientGame } from '../games/registry';
 import { holdemBlindSeats, holdemView, seatState } from '../games/holdem/holdem-view';
@@ -294,6 +296,11 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
   // Old Maid counts and finishers follow the presentation so a draw is not shown before its frame.
   const om = oldMaid && oldMaidView(oldMaid, frame);
   const omPlace = om ? finishPlace(om, seat) : null;
+  const doudizhu = useGameStore((state) => state.doudizhu);
+  // Dou Dizhu counts, the landlord, and bids follow the presentation so the next deal is not shown early.
+  const ddz = doudizhu && doudizhuView(doudizhu, frame);
+  const ddzBid = ddz ? seatBid(ddz, seat) : null;
+  const ddzNext = Boolean(doudizhu && doudizhu.observer !== 'spectator' && !isMe && nextSeat(doudizhu) === seat);
   const tenHalf = useGameStore((state) => state.tenhalf);
   const th = tenHalf && tenHalfView(tenHalf, frame);
   const sittingOut = bj ? blackjackSeatOut(bj, seat) : th ? tenHalfSeatOut(th, seat) : false;
@@ -350,7 +357,7 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
   });
   const cards = stats !== undefined ? 0 : bigTwoCards ?? redPointsCards ?? ninetyNineCards ?? sevensCards ?? chinesePokerCards
     ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? diceCards ?? napoleonCards ?? tenHalfCards ?? crazyEightsCards ?? goFishCards
-    ?? om?.counts[seat] ?? remainingCards(seat, playing);
+    ?? om?.counts[seat] ?? ddz?.counts[seat] ?? remainingCards(seat, playing);
   // A Hold'em fold outranks a timeout in the status slot, so a timed-out fold keeps the timeout icon.
   const heStatusLabel: TranslationKey | null = heOut && status === 'busted' ? 'holdem.out'
     : heLocked && status === 'locked' ? heState === 'folded' ? 'holdem.folded' : 'holdem.allIn' : null;
@@ -379,6 +386,7 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
       : oldMaid && observedOldMaid?.length ? <ObservedJokerCards cards={observedOldMaid} owner={name} />
       : napoleon && observedNapoleon?.length ? <ObservedNapoleonCards cards={observedNapoleon} owner={name}
         trump={napoleon.contract?.suit ?? null} />
+        : doudizhu && observedNapoleon?.length ? <ObservedJokerCards cards={sortDdzHand(observedNapoleon)} owner={name} />
         : observedCards?.length ? <ObservedCards cards={observedCards} owner={name} /> : null;
   // Red Points shows captured red cards instead of card backs; the hand size stays a chip.
   const tray = captured ? redCards.length > 0 && <CardTray count={redCards.length} kind="captured" render={(index) => (
@@ -390,6 +398,7 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
     declarer && { key: 'declarer', label: t('table.declarer'), tone: styles.gold },
     dealer && phase === 'bidding' && { key: 'dealer', label: t('table.dealer'), tone: styles.light },
     bj?.currentDealer === seat && { key: 'bjDealer', label: t('blackjack.dealerTag'), tone: styles.gold },
+    ddz?.landlord === seat && { key: 'landlord', label: t('doudizhu.landlordTag'), tone: styles.gold, title: t('doudizhu.landlord') },
     th?.currentBanker === seat && { key: 'thBanker', label: t('tenhalf.bankerTag'), tone: styles.gold },
     heBlinds?.button === seat && { key: 'button', label: t('holdem.button'), tone: styles.gold, title: t('holdem.buttonTitle') },
     heBlinds?.small === seat && { key: 'sb', label: t('holdem.sb'), tone: styles.light, title: t('holdem.sbTitle') },
@@ -498,6 +507,12 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
             title={t('table.lastCall')}>
             {call.type === 'pass' ? t('game.pass') : <BidLabel level={call.level} suit={call.suit} />}
           </span>}
+          {ddz && ddz.deal > 0 && <span className={`${styles.stat} ${ddz.totals[seat] < 0 ? styles.danger : ''}`}
+            title={t('doudizhu.scores')}>{signed(ddz.totals[seat])}</span>}
+          {ddzBid && <span className={`${styles.stat} ${styles.call} ${ddzBid.tone === 'pass' ? styles.callPass : ''}`}>
+            {t(ddzBid.key, ddzBid.params)}</span>}
+          {ddzNext && <span className={`${styles.stat} ${styles.nextTag}`} title={t('doudizhu.nextTitle')}>
+            {t('doudizhu.nextTag')}</span>}
           {stats}
           <TurnClock seat={seat} showBank={isMe} />
           {leftEarly && <span className={`${styles.statusChip} ${styles.earlyLeave}`} title={t('actions.autoPlay')}>

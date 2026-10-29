@@ -19,5 +19,7 @@ export * from './rules/tenhalf';
 export * from './rules/crazyeights';
 export * from './rules/reversi';
 export * from './rules/gofish';
+export * from './rules/doudizhu';
+export * from './rules/doudizhu-table';
 export * from './rules/match-standing';
 export * from './rules/seats';

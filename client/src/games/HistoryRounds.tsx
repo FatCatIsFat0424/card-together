@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
-import type { Card } from '@shared/types';
+import { isJoker } from '@shared/rules/cards';
+import type { CardOrJoker } from '@shared/types';
 import { AppIcon } from '../components/AppIcon';
 import { useI18nStore } from '../stores/i18n-store';
 import { ChipIcon } from './ChipIcon';
@@ -24,15 +25,21 @@ function classes(...names: readonly (string | false | null | undefined)[]): stri
   return names.filter(Boolean).join(' ');
 }
 
-export function CardChip({ card, off, title }: { card: Card; off?: boolean; title?: string }): ReactNode {
+export function CardChip({ card, off, title }: { card: CardOrJoker; off?: boolean; title?: string }): ReactNode {
+  const { t } = useI18nStore();
+  if (isJoker(card)) {
+    const label = t(`napoleon.jokerShort.${card.joker}`);
+    return <span className={classes(styles.card, card.joker === 'big' && styles.red, off && styles.off)} title={title ?? label}>
+      {label}</span>;
+  }
   const red = card.suit === 'hearts' || card.suit === 'diamonds';
   return <span className={classes(styles.card, red && styles.red, off && styles.off)} title={title}>
     {SUIT_SYMBOLS[card.suit]}{RANK_DISPLAY[card.rank]}</span>;
 }
 
-export function CardChips({ cards }: { cards: readonly Card[] }): ReactNode {
+export function CardChips({ cards }: { cards: readonly CardOrJoker[] }): ReactNode {
   return <span className={styles.cards}>
-    {cards.map((card, index) => <CardChip key={`${card.suit}-${card.rank}-${index}`} card={card} />)}</span>;
+    {cards.map((card, index) => <CardChip key={`${isJoker(card) ? card.joker : `${card.suit}-${card.rank}`}-${index}`} card={card} />)}</span>;
 }
 
 /** A chip for a card shown by name rather than suit and rank, such as a Liar's Deck face. */

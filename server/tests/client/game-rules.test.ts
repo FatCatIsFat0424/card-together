@@ -70,6 +70,7 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
   stud: { en: 'Who acts first', 'zh-TW': '誰先行動' },
   oldmaid: { en: 'Drawing', 'zh-TW': '抽牌' },
   gofish: { en: 'Go fish', 'zh-TW': '釣魚' },
+  doudizhu: { en: 'Combinations', 'zh-TW': '牌型' },
 };
 
 describe('contextual game rules', () => {
@@ -115,9 +116,11 @@ describe('contextual game rules', () => {
       expect(render(gameType, context)).toContain('<dd>Off</dd>');
       expect(context.active).toBe(false);
     }
-    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights'].includes(type))) {
+    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu'].includes(type))) {
       expect(roomRulesContext(room(gameType, { gameOptions: { sevens: { closeOnEnd: true } } })).option).toBeNull();
     }
+    // Dou Dizhu bids for the landlord unless the host enables call-and-grab.
+    expect(roomRulesContext(room('doudizhu')).option).toEqual({ label: 'doudizhu.grabOption', enabled: false });
     // Joker summoning is the one option that defaults to on.
     const napoleon = roomRulesContext(room('napoleon'));
     expect(napoleon.option).toEqual({ label: 'napoleon.jokerSummon', enabled: true });

@@ -16,7 +16,7 @@ export interface PresentationFrame {
   readonly kind: 'play' | 'pass' | 'trick' | 'round' | 'capture' | 'eliminated' | 'cover' | 'reveal' | 'shoot'
     | 'homerun' | 'deal' | 'challenge' | 'roulette' | 'shot' | 'hit' | 'stand' | 'double' | 'split'
     | 'dealerReveal' | 'dealerHit' | 'dealerStand' | 'settle' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street'
-    | 'showdown' | 'award' | 'slay' | 'collapse' | 'summon' | 'bid' | 'diceReveal' | 'finish' | 'draw';
+    | 'showdown' | 'award' | 'slay' | 'collapse' | 'summon' | 'bid' | 'diceReveal' | 'finish' | 'draw' | 'redeal';
   readonly durationMs: number;
   readonly seat?: GameSeat;
   readonly cards: readonly Card[];

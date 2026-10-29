@@ -73,7 +73,7 @@ describe.each(REPOSITORY_ADAPTERS)('unified room options ($name)', (adapter) => 
     await host.emitWithAck('room:setGameType', { gameType: 'sevens' });
     expect(rooms.getRoomInfo(code)?.gameOptions).toEqual({
       sevens: { closeOnEnd: false }, ninetynine: { twoDecks: true },
-      blackjack: { playerDealer: true }, napoleon: { jokerSummon: false }, crazyeights: { actionCards: true },
+      blackjack: { playerDealer: true }, napoleon: { jokerSummon: false }, crazyeights: { actionCards: true }, doudizhu: { variant: 'score' },
     });
   });
 });

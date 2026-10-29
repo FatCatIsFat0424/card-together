@@ -23,6 +23,7 @@ const PREVIOUS_SEATS: Readonly<Record<GameType, readonly [min: number, max: numb
   stud: [2, 8, true, false],
   oldmaid: [2, 8, true, false],
   gofish: [2, 6, true, false],
+  doudizhu: [3, 3, true, true],
 };
 
 describe('shared game registry', () => {
@@ -72,7 +73,7 @@ describe('registered result metadata', () => {
       ['liarsdeck', 'ranking', null], ['blackjack', 'ranking', 'chips'], ['holdem', 'ranking', 'chips'],
       ['napoleon', 'roles', null], ['tenhalf', 'ranking', 'chips'], ['liarsdice', 'ranking', null], ['crazyeights', 'ranking', 'penalty'], ['stud', 'ranking', 'chips'],
       ['reversi', 'ranking', null], ['oldmaid', 'ranking', 'points'],
-      ['gofish', 'ranking', 'points'],
+      ['gofish', 'ranking', 'points'], ['doudizhu', 'ranking', 'points'],
     ]);
   });
 
@@ -80,6 +81,6 @@ describe('registered result metadata', () => {
     expect(GAME_TYPES.flatMap((gameType) => {
       const hands = gameDefinition(gameType).matchHands;
       return hands === undefined ? [] : [[gameType, hands]];
-    })).toEqual([['holdem', 20], ['crazyeights', 3], ['stud', 20], ['oldmaid', 3], ['gofish', 3]]);
+    })).toEqual([['holdem', 20], ['crazyeights', 3], ['stud', 20], ['oldmaid', 3], ['gofish', 3], ['doudizhu', 6]]);
   });
 });

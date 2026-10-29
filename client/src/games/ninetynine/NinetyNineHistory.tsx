@@ -17,7 +17,7 @@ export function NinetyNineRounds({ rounds, mySeat }: {
     {round.actions.map((action, index) => {
       if (!action.seat) return null;
       const card = action.cards[0];
-      const step = card?.rank === 12 ? 20 : 10;
+      const step = card && 'rank' in card && card.rank === 12 ? 20 : 10;
       return <HistoryAction key={index} index={index === 0 ? round.number : null} name={name(action.seat)}
         nameTitle={name(action.seat)} mine={action.seat === mySeat} state={action.kind === 'eliminated' ? 'lost' : undefined}
         marks={action.total !== undefined

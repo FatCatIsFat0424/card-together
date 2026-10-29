@@ -8,6 +8,7 @@ export type { SevensOptions, SevensSlayEffect } from '../games/sevens/types';
 export type { NinetyNineOptions } from '../games/ninetynine/types';
 export type { BlackjackOptions } from '../games/blackjack/types';
 export type { NapoleonOptions } from '../games/napoleon/types';
+export type { DouDizhuOptions } from '../games/doudizhu/types';
 
 /** Room code (6 alphanumeric characters) */
 export type RoomCode = string;

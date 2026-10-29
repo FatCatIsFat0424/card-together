@@ -15,6 +15,7 @@ import type { StudGameContract } from './stud/types';
 import type { ReversiGameContract } from './reversi/types';
 import type { OldMaidGameContract } from './oldmaid/types';
 import type { GoFishGameContract } from './gofish/types';
+import type { DouDizhuGameContract } from './doudizhu/types';
 import type { GameAutomation } from '../types/game';
 import type { GameSeat } from '../types/player';
 
@@ -37,6 +38,7 @@ export interface GameTypeRegistry {
   readonly reversi: ReversiGameContract;
   readonly oldmaid: OldMaidGameContract;
   readonly gofish: GoFishGameContract;
+  readonly doudizhu: DouDizhuGameContract;
 }
 
 export type GameType = keyof GameTypeRegistry;

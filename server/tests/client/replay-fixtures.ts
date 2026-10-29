@@ -1,8 +1,8 @@
-import { gameDefinition } from '@shared/games/registry';
 import { diffReplaySnapshot } from '@shared/replay-patch';
 import type {
   GameType, MatchReplay, MatchResult, MatchSummary, PlayerInfo, PublicAccount, ReplayPatchOp, ReplaySnapshot, Seat,
 } from '@shared/types';
+import { gameDefinition } from '@shared/games/registry';
 import * as games from '../../src/managers/game-manager';
 import { getTurnSeat } from '../../src/managers/game-clock';
 import { applyAutomatedAction, firstLegalAction } from '../../src/runtime/automated-action';

@@ -289,6 +289,7 @@ button.identity:focus-visible { outline: 2px solid var(--color-primary); outline
   font-weight: 800;
   animation: callIn 260ms ease-out;
 }
+.nextTag { opacity: 0.6; font-weight: 600; }
 .callPass { background: var(--surface-2); color: var(--text-muted); font-weight: 700; }
 
 @keyframes callIn {

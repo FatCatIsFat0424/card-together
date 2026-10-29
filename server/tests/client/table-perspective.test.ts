@@ -59,9 +59,11 @@ const player = (seat: Seat): PlayerInfo => ({
 });
 const players = { N: player('N'), E: player('E'), S: player('S'), W: player('W') };
 
-/** Two-player games seat North and South only. */
-const playersOf = (type: GameType): Partial<Record<Seat, PlayerInfo>> =>
-  gameDefinition(type).seats.maxPlayers < 4 ? { N: players.N, S: players.S } : players;
+/** Two-player games seat North and South only; the three-player game seats North, East, and South. */
+const playersOf = (type: GameType): Partial<Record<Seat, PlayerInfo>> => {
+  const { maxPlayers } = gameDefinition(type).seats;
+  return maxPlayers === 3 ? { N: players.N, E: players.E, S: players.S } : maxPlayers < 4 ? { N: players.N, S: players.S } : players;
+};
 const seatsOf = (type: GameType): readonly Seat[] => seats.filter((seat) => playersOf(type)[seat]);
 
 function snapshot(type: GameType, seat: Seat | null = null): PlayerVisibleGameState {
@@ -105,6 +107,7 @@ describe('spectator table perspective', () => {
       import('../../../client/src/games/tenhalf/TenHalfTable'),
       import('../../../client/src/games/liarsdice/LiarsDiceTable'),
       import('../../../client/src/games/reversi/ReversiTable'),
+      import('../../../client/src/games/doudizhu/DouDizhuTable'),
     ]);
   }, 60_000);
   beforeEach(() => {

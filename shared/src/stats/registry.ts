@@ -18,6 +18,7 @@ import { tenHalfFacts } from './tenhalf';
 import { crazyEightsFacts } from './crazyeights';
 import { studFacts } from './stud';
 import { goFishFacts } from './gofish';
+import { douDizhuFacts } from './doudizhu';
 
 /** Every registered game supplies facts for its own result contract. */
 export const GAME_STATS: {
@@ -40,6 +41,7 @@ export const GAME_STATS: {
   reversi: reversiFacts,
   oldmaid: oldMaidFacts,
   gofish: goFishFacts,
+  doudizhu: douDizhuFacts,
 };
 
 export function gameFacts<K extends GameType>(

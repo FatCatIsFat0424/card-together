@@ -230,6 +230,19 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Running out of cards', 'A player with no cards draws one while the stock lasts. Once the stock is empty they sit out and cannot be asked.'),
     section('Timer', 'On timeout a random legal ask is made for you. Each hand refills the reserve.'),
   ],
+  doudizhu: [
+    section('Match', 'Exactly three players, a 54-card deck with both jokers: 17 cards each and 3 face-down bottom cards. A match is 6 deals and scores add up; the highest total wins, ties share.', 'The opening caller rotates each deal. Order: 3 < … < K < A < 2 < small joker < big joker.'),
+    section('Auction', 'Score auction (default): in turn, pass or bid 1–3, each bid higher than the last. A 3 ends it; otherwise the highest bid after all three have spoken is the landlord. The landlord takes the bottom cards, which are then shown to everyone.', 'Call-and-grab (host option): the first caller opens; each seat after may grab, and every grab doubles the stake. If someone grabbed, the first caller answers once. The stake base is 1.', 'Nobody bids: the cards are dealt again. After 3 redeals in a row, the next opener becomes landlord at stake 1.'),
+    table('Combinations', ['Cards', 'Combination'], [
+      ['1', 'Single'], ['2', 'Pair'], ['3', 'Triple'], ['4', 'Triple + 1 card'], ['5', 'Triple + a pair'],
+      ['5+', 'Straight: 5 or more ranks in a row, 3 to A'], ['6+', 'Consecutive pairs: 3 or more ranks'],
+      ['6+', 'Airplane: 2 or more consecutive triples, plain, with one single per triple, or with one pair per triple'],
+      ['6', 'Four + 2 single cards'], ['8', 'Four + 2 pairs'], ['4', 'Bomb: four of one rank'], ['2', 'Rocket: both jokers'],
+    ], 'Straights, pairs, and airplanes never include 2s or jokers. Wings cannot be the rocket.'),
+    section('Playing', 'The landlord leads. Beat the last play with the same combination and size but a higher rank, or with a bomb; a bigger bomb beats a smaller one, and the rocket beats everything.', 'Pass when you cannot or do not want to beat it. After two passes in a row the last player leads anything. First to empty their hand ends the deal: the landlord alone, or either farmer for both.'),
+    section('Scoring', 'Stake = bid (or 1) × 2 for each bomb, rocket, and grab. Spring (the farmers never played) and anti-spring (the landlord played only once) double it again.', 'The landlord wins or loses 2 × stake, each farmer the stake, so scores always sum to zero.'),
+    section('Controls', 'Select cards, then press Play or Pass. The next player after you is marked on the table. Running out of time passes the auction or a trick, or leads your smallest play.'),
+  ],
 };
 
 const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
@@ -414,12 +427,25 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('手牌用完', '手牌用完的人在牌堆還有牌時摸一張；牌堆已空就跳過，也不能被問。'),
     section('計時', '逾時由系統代為隨機發問一次。每一手補滿保留時間。'),
   ],
+  doudizhu: [
+    section('對局', '固定 3 位玩家，54 張牌（含大小王）：每人 17 張，另有 3 張蓋著的底牌。一場 6 副牌、分數累計，總分最高者獲勝，同分共同獲勝。', '每副的首位叫牌者輪流。牌序：3 < … < K < A < 2 < 小王 < 大王。'),
+    section('叫牌', '叫分（預設）：依序不叫或叫 1～3 分，後叫的要比前面高。叫 3 分立即結束；否則三人都表態後，叫分最高者當地主。地主拿走底牌，底牌此時公開給所有人。', '叫地主／搶地主（房主選項）：首位先叫，其後每位可以搶，每搶一次底分加倍；有人搶時，首位叫牌者可再回應一次。底分為 1。', '無人叫牌則重新發牌；連續重發 3 次後，下一次的首位叫牌者以 1 分當地主。'),
+    table('牌型', ['張數', '牌型'], [
+      ['1', '單張'], ['2', '對子'], ['3', '三張'], ['4', '三帶一'], ['5', '三帶一對'],
+      ['5 以上', '順子：5 個以上連續點數，3 到 A'], ['6 以上', '連對：3 對以上連續'],
+      ['6 以上', '飛機：2 組以上連續三張，可不帶、每組帶一張單牌，或每組帶一對'],
+      ['6', '四帶二（兩張單牌）'], ['8', '四帶兩對'], ['4', '炸彈：四張同點'], ['2', '火箭：大小王'],
+    ], '順子、連對與飛機不能含 2 或王。帶的牌不能是火箭。'),
+    section('出牌', '地主先出。要用同牌型、同張數且點數更大的牌壓過上一手，或用炸彈；大炸彈壓小炸彈，火箭最大。', '壓不過或不想壓時可以不出。連續兩人不出後，最後出牌的人可以出任何牌型。先出完手牌者結束該副：地主單獨獲勝，或兩位農民一起獲勝。'),
+    section('計分', '底分 =（叫分或 1）× 每個炸彈、火箭與搶地主各乘 2。春天（農民一手都沒出）與反春（地主只出過一手）再乘 2。', '地主輸贏底分的 2 倍，每位農民輸贏 1 倍，所以全場分數總和一定為 0。'),
+    section('操作方式', '選牌後按「出牌」或「不出」。你的下家會在牌桌上標示。逾時時，叫牌視為不叫、跟牌視為不出，領牌則出最小的牌。'),
+  ],
 };
 
 const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> = {
   en: [
     table('Room setup', ['Item', 'Rule'], [
-      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Go Fish 2–6; Napoleon 4–6; Reversi 2; others 4'],
+      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Go Fish 2–6; Napoleon 4–6; Reversi 2; Dou Dizhu 3; others 4'],
       ['Seat order', 'Clockwise N → E → S → W → P5–P8, skipping empty seats'],
       ['Start', 'Once everyone seated is ready, the host presses Start'],
       ['Bots', 'The host adds or removes them; at least one human must sit'],
@@ -435,7 +461,7 @@ const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> =
   ],
   'zh-TW': [
     table('房間設定', ['項目', '規則'], [
-      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；釣魚 2～6 人；拿破崙 4～6 人；黑白棋 2 人；其他 4 人'],
+      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；釣魚 2～6 人；拿破崙 4～6 人；黑白棋 2 人；鬥地主 3 人；其他 4 人'],
       ['座位順序', '順時針 北 → 東 → 南 → 西 → 第 5～8 席，跳過空位'],
       ['開始', '入座者都準備後，由房主按開始'],
       ['Bot', '房主可加入或移除；至少需一位真人入座'],

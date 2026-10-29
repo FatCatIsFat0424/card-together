@@ -69,8 +69,8 @@ describe('hand sorting controls', () => {
       { suit: 'clubs', rank: 5 }, { suit: 'hearts', rank: 14 }, { suit: 'spades', rank: 2 }, { suit: 'diamonds', rank: 13 },
       { suit: 'clubs', rank: 9 },
     ];
-    // Big Two ranks 2 highest and 3 lowest; Sevens ranks K highest and the ace lowest.
-    const [strongest, weakest] = game === 'bigtwo' ? [2, 5] : game === 'sevens' ? [13, 14] : [14, 2];
+    // Big Two and Dou Dizhu rank 2 highest and 3 lowest; Sevens ranks K highest and the ace lowest.
+    const [strongest, weakest] = game === 'bigtwo' || game === 'doudizhu' ? [2, 5] : game === 'sevens' ? [13, 14] : [14, 2];
     const sorted = sortHand(hand, 'rank', game);
     expect(sorted[0].rank).toBe(strongest);
     expect(sorted.at(-1)!.rank).toBe(weakest);

@@ -14,6 +14,7 @@ import { reversiUi } from './reversi/reversi-ui';
 import { napoleonUi } from './napoleon/napoleon-ui';
 import { tenHalfUi } from './tenhalf/tenhalf-ui';
 import { oldMaidUi } from './oldmaid/oldmaid-ui';
+import { douDizhuUi } from './doudizhu/doudizhu-ui';
 import { liarsDiceUi } from './liarsdice/liarsdice-ui';
 import { crazyEightsUi } from './crazyeights/crazyeights-ui';
 import { goFishUi } from './gofish/gofish-ui';
@@ -36,6 +37,7 @@ export const GAME_UIS: { readonly [K in GameType]: GameUi<K> } = {
   napoleon: napoleonUi,
   tenhalf: tenHalfUi,
   oldmaid: oldMaidUi,
+  doudizhu: douDizhuUi,
   liarsdice: liarsDiceUi,
   crazyeights: crazyEightsUi,
   stud: studUi,

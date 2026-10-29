@@ -30,6 +30,7 @@ export type {
   AbortVoteInfo,
   NinetyNineOptions,
   NapoleonOptions,
+  DouDizhuOptions,
 } from './room';
 
 export type {
@@ -162,6 +163,12 @@ export type {
   ReversiMatchResult,
   ReversiGameState,
   ReversiVisibleState,
+  DouDizhuPlay,
+  DouDizhuLogEntry,
+  DouDizhuMatchResult,
+  DouDizhuPhase,
+  DouDizhuGameState,
+  DouDizhuVisibleState,
   AnyGameState,
   PlayerVisibleGameState,
   ObserverRole,

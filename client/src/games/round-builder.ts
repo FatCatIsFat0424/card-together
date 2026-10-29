@@ -1,19 +1,25 @@
 import type {
-  BlackjackOutcome, Card, ChinesePokerCategory, DiceFace, HoldemStreet, LiarFace, LiarTableFace, PlayerVisibleGameState,
+  BlackjackOutcome, Card, CardOrJoker, ChinesePokerCategory, DiceFace, HoldemStreet, LiarFace, LiarTableFace, PlayerVisibleGameState,
   GameSeat, GameType, Rank, StudStreet, Suit, TenHalfHandKind,
 } from '@shared/types';
 import type { BigTwoComboType } from '@shared/rules/bigtwo';
+import type { DdzComboType } from '@shared/rules/doudizhu';
 import type { CrazyEightsEffect } from '@shared/games/crazyeights/types';
 import type { GoFishFish } from '@shared/games/gofish/types';
 
 export interface HistoryAction {
   kind: 'play' | 'pass' | 'round_end' | 'dragon' | 'flip' | 'eliminated' | 'cover' | 'challenge' | 'shot'
     | 'deal' | 'hit' | 'stand' | 'double' | 'split' | 'dealerReveal' | 'dealerHit' | 'dealerStand' | 'settle'
-    | 'button' | 'blind' | 'ante' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street' | 'showdown' | 'award' | 'bid' | 'draw' | 'ask' | 'book';
+    | 'button' | 'blind' | 'ante' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street' | 'showdown' | 'award' | 'bid' | 'draw' | 'ask' | 'book' | 'redeal';
   /** Null for the Blackjack dealer and Hold'em board cards */
   seat: GameSeat | null;
-  cards: readonly Card[];
+  cards: readonly CardOrJoker[];
   comboType?: BigTwoComboType;
+  /** Dou Dizhu: the combination played, the bid or call made, and a settled deal's stake and landlord side */
+  ddzCombo?: DdzComboType;
+  ddzBid?: { readonly kind: 'score' | 'claim'; readonly value: number };
+  ddzDeal?: { readonly landlord: GameSeat; readonly landlordWins: boolean; readonly multiplier: number;
+    readonly spring: boolean; readonly antiSpring: boolean; readonly bombs: number };
   captured?: Card | null;
   points?: number;
   previousTotal?: number;

@@ -2,8 +2,8 @@ import type { VisibleStateOf } from '@shared/games/game-definition';
 import { BJ_MIN_BET } from '@shared/rules/blackjack';
 import type { GameType, NapoleonAction } from '@shared/types';
 import type { BotAction } from './bot-decisions';
-import type { SearchBotSpec } from './search/search-types';
 import { searchStrategy } from './search/search-types';
+import type { SearchBotSpec } from './search/search-types';
 import { getBridgeBotAction } from './bridge-strategy';
 import { getBigTwoBotAction } from './bigtwo-strategy';
 import { getRedPointsBotAction } from './redpoints-strategy';
@@ -14,6 +14,9 @@ import { getLiarsDeckBotAction } from './liarsdeck-strategy';
 import { getBlackjackBotAction } from './blackjack-strategy';
 import { getHoldemBotAction } from './holdem-strategy';
 import { getNapoleonBotAction } from './napoleon-strategy';
+import {
+  douDizhuFirstLegalAction, easyDouDizhuAction, getDouDizhuBotAction,
+} from './doudizhu-strategy';
 import { easyTenHalfAction, getTenHalfBotAction, tenHalfFirstLegalAction } from './tenhalf-strategy';
 import { easyLiarsDiceAction, getLiarsDiceBotAction, liarsDiceFirstLegalAction } from './liarsdice-strategy';
 import { crazyEightsFirstLegalAction, easyCrazyEightsAction, getCrazyEightsBotAction } from './crazyeights-strategy';
@@ -149,6 +152,15 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     firstLegal: goFishFirstLegalAction,
     // A player who runs out of time asks as the easy bot would.
     turnTimeout: (visible) => easyGoFishAction(visible),
+  },
+  doudizhu: {
+    // The synchronous decision serves human timeouts; bots search in the worker pool.
+    hard: getDouDizhuBotAction,
+    easy: easyDouDizhuAction,
+    firstLegal: douDizhuFirstLegalAction,
+    search: { strategy: searchStrategy<'doudizhu'>(new URL('./doudizhu-search.ts', import.meta.url), 'douDizhuSearch'), budgetMs: 900 },
+    // A human who runs out of time passes the auction, passes a trick, or leads the smallest play.
+    turnTimeout: (visible, { isBot, strategy }) => (isBot ? strategy() : douDizhuFirstLegalAction(visible)),
   },
 };
 

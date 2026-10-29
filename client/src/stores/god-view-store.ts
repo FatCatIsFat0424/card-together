@@ -12,7 +12,7 @@ export interface GodView {
   readonly covered: Partial<Record<GameSeat, readonly Card[]>> | null;
   readonly liarHands: Partial<Record<GameSeat, readonly LiarCard[]>> | null;
   readonly diceHands: Partial<Record<GameSeat, readonly DiceFace[]>> | null;
-  /** Napoleon hands, which may hold jokers */
+  /** Hands that may hold jokers: Napoleon and Dou Dizhu */
   readonly napoleonHands: Partial<Record<GameSeat, readonly NapoleonCard[]>> | null;
   /** Old Maid hands, which may hold the joker */
   readonly oldMaidHands: Partial<Record<GameSeat, readonly CardOrJoker[]>> | null;

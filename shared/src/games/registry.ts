@@ -19,6 +19,7 @@ import { studDefinition } from './stud/definition';
 import { reversiDefinition } from './reversi/definition';
 import { oldMaidDefinition } from './oldmaid/definition';
 import { goFishDefinition } from './gofish/definition';
+import { douDizhuDefinition } from './doudizhu/definition';
 
 /** Every game type maps to its own definition; a missing or mismatched entry fails to compile. */
 export const GAME_DEFINITIONS: { readonly [K in GameType]: GameDefinition<K> } = {
@@ -39,6 +40,7 @@ export const GAME_DEFINITIONS: { readonly [K in GameType]: GameDefinition<K> } =
   reversi: reversiDefinition,
   oldmaid: oldMaidDefinition,
   gofish: goFishDefinition,
+  doudizhu: douDizhuDefinition,
 };
 
 export function gameDefinition<K extends GameType>(gameType: K): GameDefinition<K> {

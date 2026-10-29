@@ -139,6 +139,13 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('cardsTaken', 'log', 'count'),
     record('luckyFishes', 'log', 'count'),
   ],
+  doudizhu: [
+    record('topScore', 'result', 'max'),
+    record('landlordWins', 'log', 'count'),
+    record('bombs', 'log', 'count'),
+    record('rockets', 'log', 'count'),
+    record('springs', 'log', 'count'),
+  ],
 };
 
 /**

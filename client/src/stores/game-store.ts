@@ -26,6 +26,7 @@ import type {
   TenHalfVisibleState,
   StudVisibleState,
   OldMaidVisibleState,
+  DouDizhuVisibleState,
 } from '@shared/types';
 import type { CrazyEightsVisibleState } from '@shared/games/crazyeights/types';
 import type { GoFishVisibleState } from '@shared/games/gofish/types';
@@ -57,6 +58,7 @@ export interface GameStoreState {
   studHeld: HeldHoleCards | null;
   oldMaid: OldMaidVisibleState | null;
   goFish: GoFishVisibleState | null;
+  doudizhu: DouDizhuVisibleState | null;
   gameType: GameType | null;
   phase: GamePhase | null;
   myHand: Card[];
@@ -97,6 +99,7 @@ const initialState: GameStoreState = {
   studHeld: null,
   oldMaid: null,
   goFish: null,
+  doudizhu: null,
   gameType: null,
   phase: null,
   myHand: [],
