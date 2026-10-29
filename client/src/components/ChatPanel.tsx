@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useRef } from 'react';
+import { memo, useState, useEffect, useMemo, useRef } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import type { ChatMessage } from '@shared/types';
 import { socket } from '../socket';
@@ -16,6 +16,8 @@ import { AppIcon } from './AppIcon';
 import { Nameplate } from './Nameplate';
 import { ChatFrame } from '../cosmetics/chat-frames/ChatFrame';
 import { formatChatTime } from './chat-time';
+import { GROUP_GAP_MS, groupMessages } from '../messages/message-groups';
+import type { MessageGroup } from '../messages/message-groups';
 import styles from './ChatPanel.module.css';
 
 function ChatTime({ timestamp }: { readonly timestamp: number }): ReactNode {
@@ -23,28 +25,38 @@ function ChatTime({ timestamp }: { readonly timestamp: number }): ReactNode {
     {formatChatTime(timestamp)}</time>;
 }
 
+/** Notices and observer-only lines never merge into a player's run, so each keeps its own marker. */
+function canJoinGroup(previous: ChatMessage, next: ChatMessage): boolean {
+  return !previous.system && !next.system && previous.audience === next.audience;
+}
+
 // Composer edits leave existing message artwork and emoji text unchanged.
-const ChatMessageRow = memo(function ChatMessageRow({ message }: { readonly message: ChatMessage }): ReactNode {
+const ChatMessageGroupRow = memo(function ChatMessageGroupRow({ group }: {
+  readonly group: MessageGroup<ChatMessage>;
+}): ReactNode {
   const { t } = useI18nStore();
-  if (message.system) return <p className={styles.systemMessage}>
-    <ChatTime timestamp={message.timestamp} />{' '}
-    {t(message.content as TranslationKey, { name: message.sender.nickname })}
+  const first = group.messages[0];
+  if (first.system) return <p className={styles.systemMessage}>
+    <ChatTime timestamp={first.timestamp} />{' '}
+    {t(first.content as TranslationKey, { name: first.sender.nickname })}
   </p>;
   return <div className={styles.chatMessage}>
     <span className={styles.chatAvatar}>
-      <Avatar avatar={message.sender.avatar} image={message.sender.avatarImage} border={message.sender.avatarBorder} color={message.sender.color} size="compact" />
+      <Avatar avatar={first.sender.avatar} image={first.sender.avatarImage} border={first.sender.avatarBorder} color={first.sender.color} size="compact" />
     </span>
     <div className={styles.chatBody}>
       <div className={styles.chatHeading}>
-        <span className={styles.chatSender}>{message.sender.nickname}</span>
-        <Nameplate id={message.sender.nameplate} />
-        {message.audience === 'observers' && <span className={styles.observerTag}
+        <span className={styles.chatSender}>{first.sender.nickname}</span>
+        <Nameplate id={first.sender.nameplate} />
+        {first.audience === 'observers' && <span className={styles.observerTag}
           title={t('chat.observerTitle')}>{t('chat.observerTag')}</span>}
-        <ChatTime timestamp={message.timestamp} />
+        <ChatTime timestamp={first.timestamp} />
       </div>
-      <ChatFrame id={message.sender.chatFrame} className={styles.chatContent}>
+      {group.messages.map((message, index) => <ChatFrame key={message.id} id={message.sender.chatFrame}
+        className={styles.chatContent}>
+        {index > 0 && <span className={styles.srOnly}>{message.sender.nickname}: </span>}
         <ChatMessageBody message={message} />
-      </ChatFrame>
+      </ChatFrame>)}
     </div>
   </div>;
 });
@@ -63,6 +75,8 @@ export function ChatPanel({ onCollapse, embedded = false }: ChatPanelProps): Rea
   const { t } = useI18nStore();
   // During a match, observers' messages reach only other observers.
   const playerId = usePlayerStore((state) => state.playerId);
+  const groups = useMemo(() => groupMessages(messages, playerId ?? '', GROUP_GAP_MS, canJoinGroup),
+    [messages, playerId]);
   const observing = useRoomStore((state) => Boolean(playerId && state.roomInfo?.observerIds?.includes(playerId)));
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -149,7 +163,7 @@ export function ChatPanel({ onCollapse, embedded = false }: ChatPanelProps): Rea
       </div>}
       <div className={styles.messageArea}>
         <div ref={messagesRef} className={styles.chatMessages} role="log" aria-live="polite">
-          {messages.map((message) => <ChatMessageRow key={message.id} message={message} />)}
+          {groups.map((group) => <ChatMessageGroupRow key={group.key} group={group} />)}
         </div>
         {pickerOpen && <div data-emoji-picker>
           <EmojiPicker personal={emojis} provided={PROVIDED_EMOJIS} busy={busy} onInsert={insertEmoji} onSendSticker={sendSticker} />

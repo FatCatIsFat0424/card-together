@@ -1,27 +1,36 @@
-import type { DirectMessage } from '@shared/types/direct-message';
-
 /** A pause longer than this starts a new group even when the same person keeps writing. */
 export const GROUP_GAP_MS = 5 * 60_000;
 
-export interface MessageGroup {
+/** What grouping needs from a message; direct and room chat messages both fit. */
+export interface GroupableMessage {
+  readonly id: string;
+  readonly sender: { readonly id: string };
+  readonly timestamp: number;
+}
+
+export interface MessageGroup<T extends GroupableMessage = GroupableMessage> {
   readonly key: string;
   readonly own: boolean;
-  readonly messages: readonly DirectMessage[];
+  readonly messages: readonly T[];
 }
 
 function sameDay(first: number, second: number): boolean {
   return new Date(first).toDateString() === new Date(second).toDateString();
 }
 
-/** Consecutive messages from one sender on one day, so the name and time are shown once per run. */
-export function groupDirectMessages(messages: readonly DirectMessage[], ownId: string,
-  gapMs: number = GROUP_GAP_MS): MessageGroup[] {
-  const groups: { key: string; own: boolean; messages: DirectMessage[] }[] = [];
+/**
+ * Consecutive messages from one sender on one day, so the name and time are shown once per run.
+ * `canJoin` lets a caller keep some message kinds out of a run (room chat notices, observer-only lines).
+ */
+export function groupMessages<T extends GroupableMessage>(messages: readonly T[], ownId: string,
+  gapMs: number = GROUP_GAP_MS, canJoin?: (previous: T, next: T) => boolean): MessageGroup<T>[] {
+  const groups: { key: string; own: boolean; messages: T[] }[] = [];
   for (const message of messages) {
     const last = groups.at(-1);
     const previous = last?.messages.at(-1);
     if (last && previous && previous.sender.id === message.sender.id
-      && message.timestamp - previous.timestamp <= gapMs && sameDay(previous.timestamp, message.timestamp)) {
+      && message.timestamp - previous.timestamp <= gapMs && sameDay(previous.timestamp, message.timestamp)
+      && (canJoin?.(previous, message) ?? true)) {
       last.messages.push(message);
     } else groups.push({ key: message.id, own: message.sender.id === ownId, messages: [message] });
   }

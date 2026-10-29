@@ -6,7 +6,7 @@ import type { FriendEntry, PublicAccount } from '@shared/types/social';
 import { apiRequest } from '../api';
 import { createMessageClientId } from '../messages/message-client-id';
 import { latestIncomingMessageId, mergeDirectMessages } from '../messages/message-history';
-import { groupDirectMessages, groupTimeLabel, messageDay, startsNewDay } from '../messages/message-groups';
+import { groupMessages, groupTimeLabel, messageDay, startsNewDay } from '../messages/message-groups';
 import type { MessageGroup } from '../messages/message-groups';
 import { AppIcon } from './AppIcon';
 import { Avatar } from './Avatar';
@@ -42,7 +42,7 @@ function DaySeparator({ timestamp, locale }: { readonly timestamp: number; reado
 
 /** The friend's groups carry their avatar beside the bubbles; your own groups show only the time. */
 const DirectMessageGroupRow = memo(function DirectMessageGroupRow({ group, locale, dateTimeFormat }: {
-  readonly group: MessageGroup; readonly locale: string; readonly dateTimeFormat: Intl.DateTimeFormat;
+  readonly group: MessageGroup<DirectMessage>; readonly locale: string; readonly dateTimeFormat: Intl.DateTimeFormat;
 }): ReactNode {
   const first = group.messages[0];
   return <div className={`${styles.group} ${group.own ? styles.ownGroup : ''}`}>
@@ -140,7 +140,7 @@ export function DirectConversation({
   const latestMessage = history?.messages.at(-1)?.id;
   const latestIncoming = latestIncomingMessageId(history?.messages ?? [], ownId, otherId);
   const displayedAccount = history?.account ?? (initialAccount?.id === otherId ? initialAccount : undefined);
-  const groups = useMemo(() => groupDirectMessages(history?.messages ?? [], ownId), [history?.messages, ownId]);
+  const groups = useMemo(() => groupMessages(history?.messages ?? [], ownId), [history?.messages, ownId]);
   const current = (): boolean => mounted.current && useAccountStore.getState().account?.id === ownId;
 
   useEffect(() => { onLoadError(otherId, error); }, [error, onLoadError, otherId]);
