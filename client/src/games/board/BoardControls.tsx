@@ -29,6 +29,8 @@ export interface BoardControls {
   } | null;
   /** The opponent's offer, which the viewer can answer. */
   readonly incoming: { readonly accept: () => void; readonly decline: () => void } | null;
+  /** With three or more players still in, the match goes on without the resigning seat. */
+  readonly resignContinues?: boolean;
 }
 
 /** Builds the controls from the game's shared rules and draw state; `send` emits a match-control action. */
@@ -58,8 +60,8 @@ const BLOCK_HINT: Partial<Record<DrawOfferBlock, TranslationKey>> = {
   pending: 'board.drawOffered',
 };
 
-function ResignButton({ resign, disabled, compact }: {
-  readonly resign: () => void; readonly disabled: boolean; readonly compact: boolean;
+function ResignButton({ resign, disabled, compact, continues }: {
+  readonly resign: () => void; readonly disabled: boolean; readonly compact: boolean; readonly continues: boolean;
 }): ReactNode {
   const { t } = useI18nStore();
   const [open, setOpen] = useState(false);
@@ -74,7 +76,7 @@ function ResignButton({ resign, disabled, compact }: {
       aria-labelledby={titleId} aria-describedby={`${titleId}-description`}
       slotProps={{ paper: { className: dialogPaperClass('narrow', open ? motionStyles.enter : motionStyles.exit, still && motionStyles.still) } }}>
       <div className={dialogParts.header}><h2 id={titleId} className={styles.dialogTitle}>{t('board.resignTitle')}</h2></div>
-      <div className={dialogParts.body}><p id={`${titleId}-description`}>{t('board.resignDescription')}</p></div>
+      <div className={dialogParts.body}><p id={`${titleId}-description`}>{t(continues ? 'board.resignContinuesDescription' : 'board.resignDescription')}</p></div>
       <div className={dialogParts.footer}>
         <Button autoFocus onClick={() => setOpen(false)}>{t('common.cancel')}</Button>
         <Button variant="primary" className={styles.confirmResign} onClick={() => {
@@ -97,7 +99,8 @@ export function MatchButtons({ controls, disabled = false, compact = false }: {
     {draw && <Button className={`${styles.action} ${compact ? styles.compact : ''}`}
       disabled={disabled || draw.block !== null} title={hint ? t(hint) : undefined}
       aria-description={hint ? t(hint) : undefined} onClick={draw.offer}>{t('board.offerDraw')}</Button>}
-    {controls.resign && <ResignButton resign={controls.resign} disabled={disabled} compact={compact} />}
+    {controls.resign && <ResignButton resign={controls.resign} disabled={disabled} compact={compact}
+      continues={controls.resignContinues ?? false} />}
   </div>;
 }
 

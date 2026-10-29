@@ -127,10 +127,12 @@ export function ChineseCheckersTable(): ReactNode {
     };
 
   const stillPlaying = mySeat !== null && !game.resigned.includes(mySeat);
-  const controls = playing && stillPlaying ? boardControls(
+  const baseControls = playing && stillPlaying ? boardControls(
     chineseCheckersDefinition.matchControls, game.drawOffer, mySeat, { seats: game.seats, turnSeat: game.currentTurnSeat },
     (action) => send(action),
   ) : null;
+  const inPlay = game.seats.filter((seat) => !game.resigned.includes(seat)).length;
+  const controls = baseControls && { ...baseControls, resignContinues: inPlay > 2 };
 
   const passed = chineseCheckersPassedSeat(game);
   const status = !playing ? undefined
