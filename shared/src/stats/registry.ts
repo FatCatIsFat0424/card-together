@@ -17,6 +17,7 @@ import { sevensFacts } from './sevens';
 import { tenHalfFacts } from './tenhalf';
 import { crazyEightsFacts } from './crazyeights';
 import { studFacts } from './stud';
+import { goFishFacts } from './gofish';
 
 /** Every registered game supplies facts for its own result contract. */
 export const GAME_STATS: {
@@ -38,6 +39,7 @@ export const GAME_STATS: {
   stud: (_result, seat, frame) => studFacts(seat, frame),
   reversi: reversiFacts,
   oldmaid: oldMaidFacts,
+  gofish: goFishFacts,
 };
 
 export function gameFacts<K extends GameType>(

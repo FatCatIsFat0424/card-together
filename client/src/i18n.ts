@@ -41,6 +41,8 @@ import { studTranslations } from './stud-i18n';
 import { reversiTranslations } from './reversi-i18n';
 import type { ReversiTranslationKey } from './reversi-i18n';
 import type { StudTranslationKey } from './stud-i18n';
+import { goFishTranslations } from './gofish-i18n';
+import type { GoFishTranslationKey } from './gofish-i18n';
 import type { NapoleonTranslationKey } from './napoleon-i18n';
 import { tenHalfTranslations } from './tenhalf-i18n';
 import type { TenHalfTranslationKey } from './tenhalf-i18n';
@@ -61,7 +63,7 @@ type TranslationKeys = Record<
   ReplayTranslationKey | RoomErrorTranslationKey | SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | AudioTranslationKey | VoiceTranslationKey | UiTranslationKey
     | EmojiTranslationKey | GameTranslationKey | SevensTranslationKey | ChinesePokerTranslationKey
     | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | TenHalfTranslationKey | CrazyEightsTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
-    | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | StudTranslationKey | TenHalfTranslationKey | OldMaidTranslationKey | ReversiTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
+    | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | StudTranslationKey | TenHalfTranslationKey | OldMaidTranslationKey | GoFishTranslationKey | ReversiTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
     | StatsTranslationKey | BoardTranslationKey, string
 > & {
   // Lobby
@@ -161,6 +163,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...studTranslations['zh-TW'],
     ...reversiTranslations['zh-TW'],
     ...oldMaidTranslations['zh-TW'],
+    ...goFishTranslations['zh-TW'],
     ...shopTranslations['zh-TW'],
     ...dailyRewardsTranslations['zh-TW'],
     ...achievementsTranslations['zh-TW'],
@@ -252,6 +255,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...studTranslations.en,
     ...reversiTranslations.en,
     ...oldMaidTranslations.en,
+    ...goFishTranslations.en,
     ...shopTranslations.en,
     ...dailyRewardsTranslations.en,
     ...achievementsTranslations.en,

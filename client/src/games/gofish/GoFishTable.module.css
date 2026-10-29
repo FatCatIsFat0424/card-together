@@ -1,0 +1,175 @@
+/* ─── GoFishTable styles: stock, last ask, hand controls, info rail, settlement ─── */
+
+/* ─── Table center ─── */
+.centre {
+  /* Grow with the table (the centre column is the size container). */
+  --card-w: max(44px, min(calc(132px * var(--playing-card-scale)), 15cqh, 9cqw));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--table-ink);
+}
+
+.pile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.back {
+  position: relative;
+  flex: none;
+  width: var(--card-w);
+  aspect-ratio: 224 / 313;
+  border-radius: calc(var(--card-w) * 0.08);
+  background: var(--card-back);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--card-back) 70%, transparent), var(--shadow-md);
+}
+
+/* The edge sits above the image. An outline would be repainted whenever the animated image moves. */
+.back::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: var(--card-back-outline, none);
+  pointer-events: none;
+}
+
+/* Image on its own layer so a custom back can fade over the theme card base. */
+.back::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--card-back-image) center / var(--card-back-size, 100% 100%) no-repeat;
+  opacity: var(--card-back-opacity, 1);
+}
+
+.pill {
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--bg-page) 45%, transparent);
+  border: 1px solid var(--rail-border);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.lastAsk {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  font-size: var(--text-sm);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.lastCaption {
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+/* ─── Hand controls ─── */
+.handArea {
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 6px var(--spacing-sm) 0;
+}
+
+.ctrl {
+  min-height: 36px;
+  padding: 4px 14px;
+  font-size: var(--text-sm);
+}
+
+/* ─── Info rail ─── */
+.seatRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.count {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.total {
+  min-width: 2.2em;
+  text-align: right;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.bookChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  list-style: none;
+}
+
+.bookChip {
+  min-width: 1.8em;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--card-face);
+  color: var(--card-ink-black);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.logEntry {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.got { font-weight: 700; }
+.muted { color: var(--text-secondary); }
+
+/* ─── Settlement ─── */
+.rankTable td,
+.rankTable th { text-align: left; }
+
+@media (max-width: 767px) {
+  .centre { --card-w: calc((clamp(36px, 11vw, 52px)) * var(--playing-card-scale)); gap: 6px; }
+  .ctrl { min-height: 40px; padding: 4px 10px; }
+}
+
+/* Short landscape: the last ask sits beside the stock so the low centre keeps its text unscaled. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .centre { flex-direction: row; gap: var(--spacing-md); }
+  .status { align-items: flex-start; }
+  .lastAsk { align-items: flex-start; text-align: left; }
+}

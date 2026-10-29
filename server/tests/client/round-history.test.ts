@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CrazyEightsLogEntry } from '@shared/games/crazyeights/types';
+import type { GoFishLogEntry } from '@shared/games/gofish/types';
 import type { BigTwoLogEntry, Card, NinetyNineLogEntry, RedPointsLogEntry, SevensLogEntry } from '@shared/types';
 import { deriveRoundHistory } from '../../../client/src/games/round-history';
 
@@ -77,6 +78,27 @@ describe('round history', () => {
     expect(rounds[2].actions[0]).toMatchObject({ previousTotal: 0, total: 10, choice: 'plus' });
     expect(rounds.every((round) => round.complete)).toBe(true);
     expect(deriveRoundHistory(structuredClone(input))).toEqual(rounds);
+  });
+
+  it('should group Go Fish asks by hand, keep their results, and list each seat\'s books', () => {
+    const books = { N: 6, E: 7, S: 0, W: 0, P5: 0, P6: 0, P7: 0, P8: 0 };
+    const log: GoFishLogEntry[] = [
+      { type: 'hand', hand: 1, first: 'N', timestamp: 1 },
+      { type: 'ask', seat: 'N', target: 'E', rank: 7, given: 2, fished: null, timestamp: 2 },
+      { type: 'book', seat: 'N', rank: 7, timestamp: 2 },
+      { type: 'ask', seat: 'N', target: 'E', rank: 9, given: 0, fished: 'lucky', timestamp: 3 },
+      { type: 'refill', seat: 'E', timestamp: 3 },
+      { type: 'handEnd', hand: 1, books, timestamp: 4 },
+      { type: 'hand', hand: 2, first: 'E', timestamp: 5 },
+    ];
+    const rounds = deriveRoundHistory({ gameType: 'gofish', phase: 'playing', log, seats: ['N', 'E'] });
+    expect(rounds.map((round) => [round.number, round.complete])).toEqual([[1, true], [2, false]]);
+    expect(rounds[0].actions.map((action) => action.kind)).toEqual(['deal', 'ask', 'book', 'ask', 'hit', 'settle', 'settle']);
+    expect(rounds[0].actions[1]).toMatchObject({ seat: 'N', target: 'E', rank: 7, count: 2, fished: null });
+    expect(rounds[0].actions[3]).toMatchObject({ rank: 9, count: 0, fished: 'lucky' });
+    expect(rounds[0].actions.filter((action) => action.kind === 'settle').map((action) => [action.seat, action.points]))
+      .toEqual([['N', 6], ['E', 7]]);
+    expect(rounds[1].actions).toEqual([{ kind: 'deal', seat: 'E', cards: [] }]);
   });
 
   it('should group Crazy Eights actions by hand and list each seat\'s leftover points', () => {

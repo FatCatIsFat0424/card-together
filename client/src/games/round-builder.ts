@@ -1,14 +1,15 @@
 import type {
   BlackjackOutcome, Card, ChinesePokerCategory, DiceFace, HoldemStreet, LiarFace, LiarTableFace, PlayerVisibleGameState,
-  GameSeat, GameType, StudStreet, Suit, TenHalfHandKind,
+  GameSeat, GameType, Rank, StudStreet, Suit, TenHalfHandKind,
 } from '@shared/types';
 import type { BigTwoComboType } from '@shared/rules/bigtwo';
 import type { CrazyEightsEffect } from '@shared/games/crazyeights/types';
+import type { GoFishFish } from '@shared/games/gofish/types';
 
 export interface HistoryAction {
   kind: 'play' | 'pass' | 'round_end' | 'dragon' | 'flip' | 'eliminated' | 'cover' | 'challenge' | 'shot'
     | 'deal' | 'hit' | 'stand' | 'double' | 'split' | 'dealerReveal' | 'dealerHit' | 'dealerStand' | 'settle'
-    | 'button' | 'blind' | 'ante' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street' | 'showdown' | 'award' | 'bid' | 'draw';
+    | 'button' | 'blind' | 'ante' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street' | 'showdown' | 'award' | 'bid' | 'draw' | 'ask' | 'book';
   /** Null for the Blackjack dealer and Hold'em board cards */
   seat: GameSeat | null;
   cards: readonly Card[];
@@ -22,6 +23,9 @@ export interface HistoryAction {
   pending?: boolean;
   /** Liar's Deck: face-down cards played; Crazy Eights: cards a 2 made the target draw */
   count?: number;
+  /** Go Fish: the asked or booked rank, and what the draw after a miss was (`count` holds the cards received) */
+  rank?: Rank;
+  fished?: GoFishFish | null;
   /** Crazy Eights: the suit an 8 named, and what an action card did */
   suit?: Suit;
   effect?: CrazyEightsEffect;

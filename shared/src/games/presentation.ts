@@ -1,7 +1,8 @@
 import type {
-  Card, ChinesePokerRow, DiceFace, GamePresentation, LiarFace, LiarTableFace, NapoleonCard, NapoleonSummon, Suit,
+  Card, ChinesePokerRow, DiceFace, GamePresentation, LiarFace, LiarTableFace, NapoleonCard, NapoleonSummon, Rank, Suit,
 } from '../types/game';
 import type { CrazyEightsEffect } from './crazyeights/types';
+import type { GoFishFish } from './gofish/types';
 import type { GameSeat } from '../types/player';
 
 /** Stamped on new presentations; restored ones keep their version so saved deadlines stay valid. */
@@ -57,6 +58,8 @@ export interface PresentationFrame {
   readonly liarsDice?: LiarsDiceFrameData;
   /** Old Maid: what the deal, draw, or settlement shows */
   readonly oldMaid?: OldMaidFrameData;
+  /** Go Fish: the asked rank and its result, or the rank of a book laid down */
+  readonly goFish?: GoFishFrameData;
 }
 
 /** Old Maid: discarded pairs and finishers; a draw names no card except the pair it completed. */
@@ -69,6 +72,14 @@ export interface OldMaidFrameData {
   readonly order?: readonly GameSeat[];
   readonly points?: Readonly<Partial<Record<GameSeat, number>>>;
   readonly totals?: Readonly<Partial<Record<GameSeat, number>>>;
+}
+
+/** Go Fish: an ask frame also sets `given` and `fished`; a book frame carries only the rank. */
+export interface GoFishFrameData {
+  readonly rank: Rank;
+  /** Cards the target handed over; 0 sends the asker fishing */
+  readonly given?: number;
+  readonly fished?: GoFishFish | null;
 }
 
 /** Liar's Dice: the bid a frame announces, and what a challenge found once the cups are lifted. */

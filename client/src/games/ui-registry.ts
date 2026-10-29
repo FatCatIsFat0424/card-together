@@ -16,6 +16,7 @@ import { tenHalfUi } from './tenhalf/tenhalf-ui';
 import { oldMaidUi } from './oldmaid/oldmaid-ui';
 import { liarsDiceUi } from './liarsdice/liarsdice-ui';
 import { crazyEightsUi } from './crazyeights/crazyeights-ui';
+import { goFishUi } from './gofish/gofish-ui';
 
 /**
  * Every game type maps to its own UI module; a missing or mismatched entry fails to compile. Table
@@ -39,6 +40,7 @@ export const GAME_UIS: { readonly [K in GameType]: GameUi<K> } = {
   crazyeights: crazyEightsUi,
   stud: studUi,
   reversi: reversiUi,
+  gofish: goFishUi,
 };
 
 /**

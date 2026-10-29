@@ -14,6 +14,7 @@ import type { CrazyEightsGameContract } from './crazyeights/types';
 import type { StudGameContract } from './stud/types';
 import type { ReversiGameContract } from './reversi/types';
 import type { OldMaidGameContract } from './oldmaid/types';
+import type { GoFishGameContract } from './gofish/types';
 import type { GameAutomation } from '../types/game';
 import type { GameSeat } from '../types/player';
 
@@ -35,6 +36,7 @@ export interface GameTypeRegistry {
   readonly stud: StudGameContract;
   readonly reversi: ReversiGameContract;
   readonly oldmaid: OldMaidGameContract;
+  readonly gofish: GoFishGameContract;
 }
 
 export type GameType = keyof GameTypeRegistry;

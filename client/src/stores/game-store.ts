@@ -28,6 +28,7 @@ import type {
   OldMaidVisibleState,
 } from '@shared/types';
 import type { CrazyEightsVisibleState } from '@shared/games/crazyeights/types';
+import type { GoFishVisibleState } from '@shared/games/gofish/types';
 import { clientGame } from '../games/registry';
 import type { HeldHoleCards } from '../games/holdem/holdem-view';
 import { equalSnapshotValue } from './snapshot-equality';
@@ -55,6 +56,7 @@ export interface GameStoreState {
   /** Stud: my hole card from the previous hand while its presentation may still be playing */
   studHeld: HeldHoleCards | null;
   oldMaid: OldMaidVisibleState | null;
+  goFish: GoFishVisibleState | null;
   gameType: GameType | null;
   phase: GamePhase | null;
   myHand: Card[];
@@ -94,6 +96,7 @@ const initialState: GameStoreState = {
   reversi: null,
   studHeld: null,
   oldMaid: null,
+  goFish: null,
   gameType: null,
   phase: null,
   myHand: [],

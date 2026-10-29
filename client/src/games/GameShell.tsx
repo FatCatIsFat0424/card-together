@@ -115,6 +115,10 @@ interface GameShellProps {
   /** Selectable seats (Ninety-Nine: choose the next player) */
   pickableSeats?: readonly GameSeat[];
   onPickSeat?: (seat: GameSeat) => void;
+  /** Selectable seat chosen so far */
+  pickedSeat?: GameSeat | null;
+  /** Accessible name of a selectable seat */
+  pickLabel?: TranslationKey;
   turnReady?: boolean;
   /**
    * Board games draw their own seats, board, and controls (`BoardTable`): this replaces the seat ring,
@@ -158,7 +162,7 @@ function FittedCentre({ children, style, responsive, wide, foreground }: {
 }
 
 export function GameShell({
-  info, centre, centreForeground, hand, overlay, panel, tableEffect, centreVisible, prompt, error, pickableSeats, onPickSeat,
+  info, centre, centreForeground, hand, overlay, panel, tableEffect, centreVisible, prompt, error, pickableSeats, onPickSeat, pickedSeat, pickLabel,
   turnReady, board,
 }: GameShellProps): ReactNode {
   const presentation = useGamePresentation();
@@ -181,7 +185,7 @@ export function GameShell({
   const room = useRoomStore((state) => state.roomInfo);
   const log = useGameStore((state) => state.bigTwo?.log ?? state.redPoints?.log ?? state.ninetyNine?.log
     ?? state.sevens?.log ?? state.chinesePoker?.log ?? state.liarsDeck?.log ?? state.liarsDice?.log ?? state.blackjack?.log ?? state.holdem?.log
-    ?? state.napoleon?.log ?? state.tenhalf?.log ?? state.crazyEights?.log ?? state.stud?.log ?? state.reversi?.log ?? state.oldMaid?.log ?? state.log);
+    ?? state.napoleon?.log ?? state.tenhalf?.log ?? state.crazyEights?.log ?? state.stud?.log ?? state.reversi?.log ?? state.oldMaid?.log ?? state.goFish?.log ?? state.log);
   const ownedTurn = useGameStore((state) => mySeat !== null && state.currentTurnSeat === mySeat
     && (state.phase === 'bidding' || state.phase === 'playing'));
   const myTurn = (turnReady ?? ownedTurn) && !presentation.locked;
@@ -469,7 +473,8 @@ export function GameShell({
               moveKey={visibleGame?.presentation
                 ? presentation.frame?.seat === seat ? presentation.frame.key : undefined
                 : move?.seat === seat ? move.index : undefined}
-              onPick={onPickSeat && pickableSeats?.includes(seat) ? () => onPickSeat(seat) : undefined} />
+              onPick={onPickSeat && pickableSeats?.includes(seat) ? () => onPickSeat(seat) : undefined}
+              picked={pickedSeat === seat} pickLabel={pickLabel} />
           ))}
           {!board && <FittedCentre foreground={centreForeground} responsive={Boolean(centreLayout?.responsive) && !presentation.frame}
             wide={Boolean(centreLayout?.wide)}
@@ -497,7 +502,8 @@ export function GameShell({
               moveKey={visibleGame?.presentation
                 ? presentation.frame?.seat === bottomSeat ? presentation.frame.key : undefined
                 : move?.seat === bottomSeat ? move.index : undefined}
-              onPick={onPickSeat && pickableSeats?.includes(bottomSeat) ? () => onPickSeat(bottomSeat) : undefined} />}
+              onPick={onPickSeat && pickableSeats?.includes(bottomSeat) ? () => onPickSeat(bottomSeat) : undefined}
+              picked={pickedSeat === bottomSeat} pickLabel={pickLabel} />}
           </div>
           <div className={styles.handStatus}>
             {godView && <p className={styles.godView} title={watching ? t('table.changePerspective') : undefined}>

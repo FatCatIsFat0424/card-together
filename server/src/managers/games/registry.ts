@@ -17,6 +17,7 @@ import { crazyEightsAdapter } from './crazyeights-adapter';
 import { studAdapter } from './stud-adapter';
 import { reversiAdapter } from './reversi-adapter';
 import { oldMaidAdapter } from './oldmaid-adapter';
+import { goFishAdapter } from './gofish-adapter';
 
 /** Every game type maps to its own adapter; a missing or mismatched entry fails to compile. */
 export const GAME_ADAPTERS: { readonly [K in GameType]: GameAdapter<K> } = {
@@ -36,6 +37,7 @@ export const GAME_ADAPTERS: { readonly [K in GameType]: GameAdapter<K> } = {
   stud: studAdapter,
   reversi: reversiAdapter,
   oldmaid: oldMaidAdapter,
+  gofish: goFishAdapter,
 };
 
 /**

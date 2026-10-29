@@ -216,8 +216,12 @@ const STATUS_LABEL: Record<SeatStatus, TranslationKey> = {
 interface TableSeatProps {
   seat: GameSeat;
   position: TablePosition;
-  /** Selectable seat (Ninety-Nine: choose the next player) */
+  /** Selectable seat (Ninety-Nine: choose the next player; Go Fish: choose whom to ask) */
   onPick?: () => void;
+  /** The picked seat stays highlighted */
+  picked?: boolean;
+  /** Accessible name of a selectable seat; defaults to choosing the next player */
+  pickLabel?: TranslationKey;
   onObserve?: () => void;
   /** Card this seat just played (a change replays the flash) */
   moveKey?: number | string;
@@ -233,7 +237,7 @@ interface RoleLabel {
   readonly title?: string;
 }
 
-export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppressTurn, stats }: TableSeatProps): ReactNode {
+export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve, moveKey, suppressTurn, stats }: TableSeatProps): ReactNode {
   const cardImageUrl = useCardFaceUrl();
   const { t } = useI18nStore();
   const player = useRoomStore((state) => state.roomInfo ? roomSeatInfo(state.roomInfo, seat)?.player ?? null : null);
@@ -242,7 +246,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const {
     phase, turn, declarer, dealer, playing, bigTwoCards, redPointsCards, ninetyNineCards, locked, captured, busted,
     sevensCards, sevensCovered, chinesePokerCards, arranging, arranged, autoArranged, blackjackCards, holdemCards,
-    napoleonCards, tenHalfCards, diceCards, crazyEightsCards,
+    napoleonCards, tenHalfCards, diceCards, crazyEightsCards, goFishCards,
   } = useGameStore(useShallow((state) => ({
     sevensCards: gameSeatValue(state.sevens?.handCounts, seat) ?? null,
     // Blackjack hands are drawn face up on the table, so the plate shows no card backs.
@@ -261,6 +265,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
     autoArranged: (isCompassSeat(seat) && state.chinesePoker?.autoArranged.includes(seat)) ?? false,
     ninetyNineCards: gameSeatValue(state.ninetyNine?.handCounts, seat) ?? null,
     crazyEightsCards: gameSeatValue(state.crazyEights?.handCounts, seat) ?? null,
+    goFishCards: gameSeatValue(state.goFish?.handCounts, seat) ?? null,
     busted: state.ninetyNine?.eliminated.includes(seat) ?? false,
     phase: state.phase,
     turn: state.currentTurnSeat === seat,
@@ -277,6 +282,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   // Liar's Deck seats follow the presentation so a trigger pull is not revealed before its suspense ends.
   const liars = liarsDeck && liarsDeckView(liarsDeck, frame);
   const dead = (isCompassSeat(seat) && liars?.eliminated.includes(seat)) ?? false;
+  const goFish = useGameStore((state) => state.goFish);
   const liarsDice = useGameStore((state) => state.liarsDice);
   // Liar's Dice counts and eliminations follow the presentation so a lost die is not shown before the reveal.
   const dice = liarsDice && liarsDiceView(liarsDice, frame);
@@ -343,7 +349,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
     arranged: arranged || betPlaced || napoleonReviewed,
   });
   const cards = stats !== undefined ? 0 : bigTwoCards ?? redPointsCards ?? ninetyNineCards ?? sevensCards ?? chinesePokerCards
-    ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? diceCards ?? napoleonCards ?? tenHalfCards ?? crazyEightsCards
+    ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? diceCards ?? napoleonCards ?? tenHalfCards ?? crazyEightsCards ?? goFishCards
     ?? om?.counts[seat] ?? remainingCards(seat, playing);
   // A Hold'em fold outranks a timeout in the status slot, so a timed-out fold keeps the timeout icon.
   const heStatusLabel: TranslationKey | null = heOut && status === 'busted' ? 'holdem.out'
@@ -428,9 +434,10 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
 
   return (
     <div data-table-seat={position}
-      className={`${styles.seat} ${styles[position]} ${handBeside ? styles.handBeside : ''} ${active ? styles.turn : ''} ${isMe ? styles.mine : ''} ${frameClass ? `${styles.framed} ${frameClass}` : ''} ${dimmed ? styles.out : ''} ${onObserve ? styles.observable : onPick ? styles.pickable : ''}`}
+      className={`${styles.seat} ${styles[position]} ${handBeside ? styles.handBeside : ''} ${active ? styles.turn : ''} ${isMe ? styles.mine : ''} ${frameClass ? `${styles.framed} ${frameClass}` : ''} ${dimmed ? styles.out : ''} ${onObserve ? styles.observable : onPick ? styles.pickable : ''} ${picked ? styles.picked : ''}`}
       role={select ? 'button' : undefined} tabIndex={select ? 0 : undefined} onClick={select}
-      aria-label={onObserve ? t('table.observePlayer', { name }) : onPick ? t('seat.pickNext', { name }) : undefined}
+      aria-label={onObserve ? t('table.observePlayer', { name }) : onPick ? t(pickLabel ?? 'seat.pickNext', { name }) : undefined}
+      aria-pressed={onPick && !onObserve ? Boolean(picked) : undefined}
       title={onObserve ? t('table.observePlayer', { name }) : undefined}
       onKeyDown={select ? (event) => {
         if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return;
@@ -457,6 +464,10 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
           {liars && <span className={`${styles.stat} ${(gameSeatValue(liars.shots, seat) ?? 0) >= 4 ? styles.danger : ''}`}
             title={t('liarsdeck.shotsTitle', { n: String((gameSeatValue(liars.shots, seat) ?? 0)) })}>
             {t('liarsdeck.shots', { n: String((gameSeatValue(liars.shots, seat) ?? 0)) })}
+          </span>}
+          {goFish && <span className={styles.stat}
+            title={t('gofish.booksTitle', { hand: String(goFish.books[seat].length), total: String(goFish.scores[seat] + goFish.books[seat].length) })}>
+            {t('gofish.booksChip', { n: String(goFish.books[seat].length) })}
           </span>}
           {dice && <span className={styles.stat}
             title={t('liarsdice.diceTitle', { n: String(dice.counts[seat] ?? 0) })}>

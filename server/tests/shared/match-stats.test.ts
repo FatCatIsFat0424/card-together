@@ -93,6 +93,20 @@ describe('result records', () => {
 });
 
 describe('log records', () => {
+  it('Go Fish: hands with the most books and the match total from the result, cards taken and lucky fishes from the log', () => {
+    const zero = { N: 0, E: 0, S: 0, W: 0, P5: 0, P6: 0, P7: 0, P8: 0 };
+    const result: MatchResult = { gameType: 'gofish', seats: ['N', 'E', 'S'], hands: 3, scores: { ...zero, N: 15, E: 14, S: 10 },
+      handBooks: [{ ...zero, N: 5, E: 5, S: 3 }, { ...zero, N: 4, E: 6, S: 3 }, { ...zero, N: 6, E: 3, S: 4 }], winners: ['N'] };
+    const ask = (seat: Seat, given: number, fished: 'lucky' | 'miss' | null) => ({ type: 'ask' as const, seat, target: 'E' as const,
+      rank: 7 as const, given, fished, timestamp: 1 });
+    const frame = { gameType: 'gofish', log: [ask('N', 2, null), ask('N', 0, 'lucky'), ask('S', 0, 'miss'), ask('N', 1, null)] } as unknown as ReplaySnapshot;
+    expect(matchFacts(result, 'N', null)).toMatchObject({ counts: { handsWon: 2 }, values: { topBooks: 15 } });
+    expect(matchFacts(result, 'N', frame).counts).toEqual({ handsWon: 2, cardsTaken: 3, luckyFishes: 1 });
+    expect(matchFacts(result, 'E', null).counts).toEqual({ handsWon: 2 });
+    expect(matchFacts(result, 'S', frame)).toMatchObject({ values: { topBooks: 10 } });
+    expect(matchFacts(result, 'S', frame).counts).toEqual({});
+  });
+
   it('Crazy Eights: hands won and the lowest total from the result, 8s, wild finishes and penalties from the log', () => {
     const zero = { N: 0, E: 0, S: 0, W: 0, P5: 0, P6: 0, P7: 0, P8: 0 };
     const result: MatchResult = { gameType: 'crazyeights', seats: ['N', 'E', 'S'], hands: 3, handWinners: ['N', 'E', 'N'],

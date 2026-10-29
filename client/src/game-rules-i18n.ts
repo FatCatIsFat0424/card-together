@@ -222,6 +222,14 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     table('Placement points', ['Place in a deal', 'Points'], [['1st out', 'Players − 1'], ['2nd out', 'Players − 2'], ['…', '…'], ['Joker holder (last)', '0']], 'Example with four players: 3, 2, 1, 0.'),
     section('Match', 'A match is 3 deals; the first drawer moves to the next seat each deal. The most points after three deals wins, and ties share the win.', 'When you run out of time, a random position is drawn for you.'),
   ],
+  gofish: [
+    section('Goal and match', 'Collect the most books. A book is all four cards of one rank. A match is three hands; the most books over all three win, and tied totals share the win.', 'Two to six players. Five cards each, seven with two or three players; the rest is the stock.', 'Random first player, then clockwise; each later hand starts one seat further along.'),
+    section('Asking', 'On your turn, ask one player who still has cards for a rank you hold. If they have any, they hand over all of them and you ask again.', 'Asks are public: everyone sees who asked whom for what and how many cards moved. The cards themselves stay hidden.'),
+    section('Go fish', 'If the player has none, go fish: draw the top card of the stock. If it is the rank you asked for you go again; otherwise your turn passes. With an empty stock the turn simply passes.'),
+    section('Books', 'Four cards of one rank are laid down as a book at once, including when dealt or drawn. A hand ends when all 13 books are down.'),
+    section('Running out of cards', 'A player with no cards draws one while the stock lasts. Once the stock is empty they sit out and cannot be asked.'),
+    section('Timer', 'On timeout a random legal ask is made for you. Each hand refills the reserve.'),
+  ],
 };
 
 const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
@@ -398,12 +406,20 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     table('名次積分', ['該局名次', '積分'], [['第 1 個出完', '人數 − 1'], ['第 2 個出完', '人數 − 2'], ['…', '…'], ['拿鬼牌（最後）', '0']], '例：4 人時依序為 3、2、1、0 分。'),
     section('一場比賽', '一場共 3 局，每局的第一位抽牌者往下一個座位移動。三局後積分最高者獲勝，同分共同獲勝。', '超過時間時，系統會替你隨機抽一個位置。'),
   ],
+  gofish: [
+    section('目標與對局', '湊最多組牌。一組是同一點數的四張牌。一場打 3 手，三手累計組數最多者獲勝，總數相同則並列獲勝。', '2～6 人。每人 5 張，2 到 3 人時 7 張，其餘為牌堆。', '隨機先手，之後順時針輪流；之後每一手由下一個座位先問。'),
+    section('發問', '輪到你時，向一位還有手牌的玩家要你手上有的點數。對方有就全部交給你，你可以再問一次。', '發問是公開的：所有人都看得到誰向誰要了什麼點數、轉移了幾張牌，但手牌內容不公開。'),
+    section('釣魚', '對方沒有該點數就釣魚：摸牌堆頂一張。摸到你剛要的點數可以再問一次，否則換下一位。牌堆已空時直接換下一位。'),
+    section('組', '手上湊齊同點數四張就立刻攤開成一組，發牌或摸牌湊成也一樣。13 組全部攤開時這一手結束。'),
+    section('手牌用完', '手牌用完的人在牌堆還有牌時摸一張；牌堆已空就跳過，也不能被問。'),
+    section('計時', '逾時由系統代為隨機發問一次。每一手補滿保留時間。'),
+  ],
 };
 
 const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> = {
   en: [
     table('Room setup', ['Item', 'Rule'], [
-      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Napoleon 4–6; Reversi 2; others 4'],
+      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Go Fish 2–6; Napoleon 4–6; Reversi 2; others 4'],
       ['Seat order', 'Clockwise N → E → S → W → P5–P8, skipping empty seats'],
       ['Start', 'Once everyone seated is ready, the host presses Start'],
       ['Bots', 'The host adds or removes them; at least one human must sit'],
@@ -419,7 +435,7 @@ const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> =
   ],
   'zh-TW': [
     table('房間設定', ['項目', '規則'], [
-      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；拿破崙 4～6 人；黑白棋 2 人；其他 4 人'],
+      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；釣魚 2～6 人；拿破崙 4～6 人；黑白棋 2 人；其他 4 人'],
       ['座位順序', '順時針 北 → 東 → 南 → 西 → 第 5～8 席，跳過空位'],
       ['開始', '入座者都準備後，由房主按開始'],
       ['Bot', '房主可加入或移除；至少需一位真人入座'],

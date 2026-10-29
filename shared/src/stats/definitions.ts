@@ -133,6 +133,12 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('clean', 'result', 'count', true),
     record('pairsDiscarded', 'log', 'count'),
   ],
+  gofish: [
+    record('handsWon', 'result', 'count', true),
+    record('topBooks', 'result', 'max'),
+    record('cardsTaken', 'log', 'count'),
+    record('luckyFishes', 'log', 'count'),
+  ],
 };
 
 /**

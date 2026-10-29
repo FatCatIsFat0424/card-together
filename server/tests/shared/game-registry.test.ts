@@ -22,6 +22,7 @@ const PREVIOUS_SEATS: Readonly<Record<GameType, readonly [min: number, max: numb
   crazyeights: [2, 8, true, false],
   stud: [2, 8, true, false],
   oldmaid: [2, 8, true, false],
+  gofish: [2, 6, true, false],
 };
 
 describe('shared game registry', () => {
@@ -37,7 +38,7 @@ describe('shared game registry', () => {
   });
 
   it('lists the expandable rooms in lobby order', () => {
-    expect(EXPANDABLE_ROOM_GAMES).toEqual(['ninetynine', 'blackjack', 'holdem', 'napoleon', 'tenhalf', 'liarsdice', 'crazyeights', 'stud', 'oldmaid']);
+    expect(EXPANDABLE_ROOM_GAMES).toEqual(['ninetynine', 'blackjack', 'holdem', 'napoleon', 'tenhalf', 'liarsdice', 'crazyeights', 'stud', 'oldmaid', 'gofish']);
   });
 
   it('classifies the dice game by its category and gives chips only to the betting games', () => {
@@ -71,13 +72,14 @@ describe('registered result metadata', () => {
       ['liarsdeck', 'ranking', null], ['blackjack', 'ranking', 'chips'], ['holdem', 'ranking', 'chips'],
       ['napoleon', 'roles', null], ['tenhalf', 'ranking', 'chips'], ['liarsdice', 'ranking', null], ['crazyeights', 'ranking', 'penalty'], ['stud', 'ranking', 'chips'],
       ['reversi', 'ranking', null], ['oldmaid', 'ranking', 'points'],
+      ['gofish', 'ranking', 'points'],
     ]);
   });
 
-  it('gives only Hold\'em and Crazy Eights the waiting-room fixed hand count', () => {
+  it('gives only Hold\'em, Crazy Eights and Go Fish the waiting-room fixed hand count', () => {
     expect(GAME_TYPES.flatMap((gameType) => {
       const hands = gameDefinition(gameType).matchHands;
       return hands === undefined ? [] : [[gameType, hands]];
-    })).toEqual([['holdem', 20], ['crazyeights', 3], ['stud', 20], ['oldmaid', 3]]);
+    })).toEqual([['holdem', 20], ['crazyeights', 3], ['stud', 20], ['oldmaid', 3], ['gofish', 3]]);
   });
 });

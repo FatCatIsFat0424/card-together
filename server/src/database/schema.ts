@@ -1,6 +1,7 @@
 import {
   isBigTwoResult, isBlackjackResult, isChinesePokerResult, isHoldemResult, isLiarsDeckResult, isLiarsDiceResult,
   isNapoleonResult, isNinetyNineResult, isRedPointsResult, isRuntimeSnapshot, isSevensResult, isTenHalfResult, isCrazyEightsResult, isStudResult, isReversiResult, isOldMaidResult,
+  isGoFishResult,
 } from '../runtime/validate';
 import {
   MAX_EMOJIS_PER_ACCOUNT, MAX_MESSAGE_EMOJIS, NICKNAME_MAX_LENGTH, isEmojiName, isImageOpacity, isMediaId,
@@ -170,6 +171,7 @@ export function validMatch(value: unknown): value is MatchRecord {
     stud: isStudResult,
     reversi: isReversiResult,
     oldmaid: isOldMaidResult,
+    gofish: isGoFishResult,
   };
   // Archives live in the replay store, named by match ID; records carry only the flag.
   return isGameType(gameType) && validators[gameType](value.result) && !Object.hasOwn(value, 'replay') &&

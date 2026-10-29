@@ -126,7 +126,8 @@ function cards(value: unknown, found: string[] = []): string[] {
 
 /** Cards nobody has seen yet; Hold'em and Blackjack decks are checked before any reshuffle. */
 function undealt(game: AnyGameState): readonly Card[] {
-  if (game.gameType === 'redpoints' || game.gameType === 'ninetynine' || game.gameType === 'crazyeights') return game.stock;
+  if (game.gameType === 'redpoints' || game.gameType === 'ninetynine' || game.gameType === 'crazyeights'
+    || game.gameType === 'gofish') return game.stock;
   if (game.gameType === 'holdem' || game.gameType === 'blackjack' || game.gameType === 'stud') return game.deck;
   return [];
 }

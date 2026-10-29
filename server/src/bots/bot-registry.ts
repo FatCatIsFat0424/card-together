@@ -20,6 +20,7 @@ import { crazyEightsFirstLegalAction, easyCrazyEightsAction, getCrazyEightsBotAc
 import { getStudBotAction } from './stud-strategy';
 import { easyReversiAction, getReversiBotAction, reversiFirstLegalAction } from './reversi-strategy';
 import { easyOldMaidAction, getOldMaidBotAction, oldMaidFirstLegalAction } from './oldmaid-strategy';
+import { easyGoFishAction, getGoFishBotAction, goFishFirstLegalAction } from './gofish-strategy';
 import {
   easyBigTwoAction, easyBlackjackAction, easyBridgeAction, easyChinesePokerAction, easyHoldemAction, easyLiarsDeckAction,
   easyNinetyNineAction, easyRedPointsAction, easySevensAction, easyStudAction,
@@ -141,6 +142,13 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     firstLegal: oldMaidFirstLegalAction,
     // A player who runs out of time draws a random position, as the easy bot would.
     turnTimeout: (visible) => easyOldMaidAction(visible),
+  },
+  gofish: {
+    hard: getGoFishBotAction,
+    easy: easyGoFishAction,
+    firstLegal: goFishFirstLegalAction,
+    // A player who runs out of time asks as the easy bot would.
+    turnTimeout: (visible) => easyGoFishAction(visible),
   },
 };
 

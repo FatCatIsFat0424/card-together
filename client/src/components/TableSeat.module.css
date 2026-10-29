@@ -359,6 +359,7 @@ button.identity:focus-visible { outline: 2px solid var(--color-primary); outline
 }
 .pickable:hover,
 .pickable:focus-visible { outline-style: solid; }
+.picked { outline-style: solid; outline-width: 4px; }
 
 .observable { cursor: pointer; border-radius: var(--radius-lg); }
 .observable:hover .namePill { background: color-mix(in srgb, var(--color-primary) 35%, transparent); }
