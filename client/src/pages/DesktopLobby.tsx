@@ -1,8 +1,7 @@
 import type { FormEvent, ReactNode } from 'react';
 import type { FriendEntry, GameType } from '@shared/types';
-import { gameDefinition } from '@shared/games/registry';
 import type { GameCategory } from '@shared/games/game-definition';
-import { gamesInCategory, lobbyCategories } from '../games/registry';
+import { gamesInCategory, lobbyCategories, playersLabel } from '../games/registry';
 import { GAME_BACKGROUNDS, GAME_CARD_ART } from '../game-backgrounds';
 import { useI18nStore } from '../stores/i18n-store';
 import { AndroidAppBanner } from '../components/AndroidAppBanner';
@@ -47,11 +46,6 @@ export interface DesktopLobbyProps {
 export function DesktopLobby(props: DesktopLobbyProps): ReactNode {
   const { t } = useI18nStore();
   const { selectedGame, category } = props;
-  const playersLabel = (game: GameType): string => {
-    const { minPlayers, maxPlayers } = gameDefinition(game).seats;
-    return minPlayers === maxPlayers ? t('lobby.players', { n: String(minPlayers) })
-      : t('lobby.playersRange', { min: String(minPlayers), max: String(maxPlayers) });
-  };
 
   return <main className={styles.page}>
     <PageHeader title={t('rail.lobby')} titleHidden tabs={<Tabs label={t('lobby.categories')} idPrefix={LOBBY_TAB_PREFIX}
@@ -67,7 +61,7 @@ export function DesktopLobby(props: DesktopLobbyProps): ReactNode {
           {GAME_BACKGROUNDS[selectedGame] && <img key={selectedGame} className={styles.heroArt}
             src={GAME_BACKGROUNDS[selectedGame]} alt="" width={1280} height={720} decoding="async" draggable={false} />}
           <div className={styles.heroText}>
-            <p className={styles.heroMeta}>{playersLabel(selectedGame)} · {t(`gameType.${selectedGame}Tag`)}</p>
+            <p className={styles.heroMeta}>{playersLabel(selectedGame, t)} · {t(`gameType.${selectedGame}Tag`)}</p>
             <h2 id="lobby-selected-game-title">{t(`gameType.${selectedGame}`)}</h2>
             <p className={styles.heroDescription}>{t(`gameType.${selectedGame}Desc`)}</p>
             <div className={styles.heroActions}>
@@ -98,7 +92,7 @@ export function DesktopLobby(props: DesktopLobbyProps): ReactNode {
               loading="lazy" decoding="async" draggable={false} />}
             <span className={styles.cardText}>
               <span className={styles.cardName}>{t(`gameType.${game}`)}</span>
-              <span className={styles.cardMeta}>{playersLabel(game)} · {t(`gameType.${game}Tag`)}</span>
+              <span className={styles.cardMeta}>{playersLabel(game, t)} · {t(`gameType.${game}Tag`)}</span>
             </span>
           </button>)}
         </div>

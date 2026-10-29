@@ -3,7 +3,6 @@ import type { FormEvent, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import type { FriendEntry, GameType } from '@shared/types';
-import { gameDefinition } from '@shared/games/registry';
 import type { GameCategory } from '@shared/games/game-definition';
 import { socket } from '../socket';
 import { useAccountStore } from '../stores/account-store';
@@ -13,7 +12,7 @@ import { useI18nStore } from '../stores/i18n-store';
 import { useMotionStore } from '../stores/motion-store';
 import { useShellStore } from '../stores/shell-store';
 import { notificationUnreadCount, useSocialStore } from '../stores/social-store';
-import { gamesInCategory, lobbyCategories } from '../games/registry';
+import { gamesInCategory, lobbyCategories, playersLabel } from '../games/registry';
 import { useConnectionReady } from '../games/use-connection-ready';
 import { GAME_CARD_ART } from '../game-backgrounds';
 import { Avatar } from '../components/Avatar';
@@ -64,12 +63,6 @@ export function LobbyPage(): ReactNode {
   const chooseCategory = (next: GameCategory): void => {
     setCategory(next);
     setSelectedGame(gamesInCategory(next)[0]);
-  };
-
-  const playersLabel = (gameType: GameType): string => {
-    const { minPlayers, maxPlayers } = gameDefinition(gameType).seats;
-    return minPlayers === maxPlayers ? t('lobby.players', { n: String(minPlayers) })
-      : t('lobby.playersRange', { min: String(minPlayers), max: String(maxPlayers) });
   };
 
   const createRoom = (gameType: GameType): void => {
@@ -163,7 +156,7 @@ export function LobbyPage(): ReactNode {
               loading="lazy" decoding="async" draggable={false} />}
             <span className={styles.cardText}>
               <span className={styles.cardName}>{t(`gameType.${gameType}`)}</span>
-              <span className={styles.cardMeta}>{playersLabel(gameType)} · {t(`gameType.${gameType}Tag`)}</span>
+              <span className={styles.cardMeta}>{playersLabel(gameType, t)} · {t(`gameType.${gameType}Tag`)}</span>
             </span>
           </button>)}
         </div>

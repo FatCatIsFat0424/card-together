@@ -2,6 +2,7 @@ import { GAME_TYPES } from '@shared/constants';
 import { gameDefinition } from '@shared/games/registry';
 import type { GameCategory } from '@shared/games/game-definition';
 import type { GameType } from '@shared/types';
+import type { TranslationKey } from '../i18n';
 import type { ClientGame } from './client-game';
 import { bridgeClient } from './bridge/bridge-client';
 import { bigTwoClient } from './bigtwo/bigtwo-client';
@@ -78,4 +79,14 @@ const CATEGORY_ORDER: readonly GameCategory[] = ['cards', 'dice', 'board'];
 /** Lobby categories that have at least one game, in tab order. */
 export function lobbyCategories(): readonly GameCategory[] {
   return CATEGORY_ORDER.filter((category) => gamesInCategory(category).length > 0);
+}
+
+/** Seat count of a game as lobby text: "4 players" or "2–8 players". */
+export function playersLabel(
+  gameType: GameType,
+  t: (key: TranslationKey, params?: Record<string, string>) => string,
+): string {
+  const { minPlayers, maxPlayers } = gameDefinition(gameType).seats;
+  return minPlayers === maxPlayers ? t('lobby.players', { n: String(minPlayers) })
+    : t('lobby.playersRange', { min: String(minPlayers), max: String(maxPlayers) });
 }

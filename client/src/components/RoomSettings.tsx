@@ -1,13 +1,13 @@
+import { useState } from 'react';
 import type { ReactNode } from 'react';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
-import { GAME_TYPES } from '@shared/constants';
-import { gameTimeControl } from '@shared/games/registry';
+import { gameDefinition, gameTimeControl } from '@shared/games/registry';
+import type { GameCategory } from '@shared/games/game-definition';
 import type {
   GameOptionsPayload, GameType, RoomInfo, TimeControl,
 } from '@shared/types';
 import { useI18nStore } from '../stores/i18n-store';
 import { gameUi } from '../games/ui-registry';
+import { RoomGamePicker } from './RoomGamePicker';
 import { RoomOption } from './RoomOption';
 import { TimeControlSettings } from './TimeControlSettings';
 import styles from './RoomSettings.module.css';
@@ -32,23 +32,15 @@ interface RoomSettingsProps extends RoomSettingsActions {
 export function RoomSettings({ room, editable, isHost, pending, ...actions }: RoomSettingsProps): ReactNode {
   const { t } = useI18nStore();
   const lock = !editable;
+  // The tab starts on the current game's category; the panel remounts on each open.
+  const [pickedCategory, setPickedCategory] = useState<GameCategory | null>(null);
+  const category = pickedCategory ?? gameDefinition(room.gameType).category;
   const GameRoomOptions = gameUi(room.gameType).roomOptions;
-  const pendingFlag = pending && isHost && room.status === 'waiting' || undefined;
+  const pendingFlag = pending && isHost && room.status === 'waiting';
   return <div className={styles.panel}>
-    <label className={styles.field}>
-      <span className={styles.label}>{t('gameType.label')}</span>
-      <Select size="small" className={styles.select} value={room.gameType} disabled={lock}
-        data-pending-disabled={pendingFlag}
-        title={isHost ? undefined : t('room.hostOnly')}
-        inputProps={{ 'aria-label': t('gameType.label') }}
-        MenuProps={{ slotProps: { paper: { className: styles.menu } } }}
-        onChange={(event) => {
-          const selected = GAME_TYPES.find((gameType) => gameType === event.target.value);
-          if (selected) actions.setGameType(selected);
-        }}>
-        {GAME_TYPES.map((gameType) => <MenuItem key={gameType} value={gameType}>{t(`gameType.${gameType}`)}</MenuItem>)}
-      </Select>
-    </label>
+    <RoomGamePicker gameType={room.gameType} category={category} onCategoryChange={setPickedCategory}
+      onSelect={actions.setGameType} disabled={lock} pending={pendingFlag}
+      title={isHost ? undefined : t('room.hostOnly')} />
     <TimeControlSettings
       key={`${room.code}:${room.hostId}:${room.timeControl?.baseSeconds}:${room.timeControl?.bankSeconds}`}
       value={room.timeControl ?? gameTimeControl(room.gameType)} disabled={lock} onSave={actions.setTimeControl} />
