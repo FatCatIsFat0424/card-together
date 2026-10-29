@@ -1,22 +1,21 @@
 import { distinctPlayers, flexibleSeatGame, gameSeatList, gameSeats, number, object, oneOf, sameJson } from '../../runtime/validation-helpers';
 import type { ObjectValue, PlayerValidator } from '../../runtime/validation-helpers';
 import type { BanqiGameState } from '@shared/games/banqi/types';
-import { isBanqiOptions } from '@shared/banqi-options';
+import { banqiRules, isBanqiMatchOptions } from '@shared/banqi-options';
 import { occupiedSeats } from '@shared/rules/seats';
 import {
-  BQ_CELLS, BQ_DOWN, BQ_EMPTY, BQ_QUIET_LIMIT, bqApplyMove, bqCell, bqColour, bqFullSet, bqHasAction, bqMovesFrom, bqNode,
+  BQ_CELLS, BQ_DOWN, BQ_EMPTY, BQ_QUIET_LIMIT, bqApplyBlind, bqApplyMove, bqCell, bqColour, bqFullSet, bqHasAction, bqMovesFrom, bqNode,
   bqOpposite, bqTally, isBqBoard, isBqPiece,
 } from '@shared/rules/banqi';
 import type { BqColour, BqPiece, BqSlot } from '@shared/rules/banqi';
 import { isBoardOutcome } from '@shared/rules/board/board-result';
 import { isDrawOfferState } from '@shared/rules/board/match-controls';
-import { banqiRules } from './banqi-game';
 
 /** 32 flips plus 30 captures each followed by at most 49 quiet moves, with room for chain entries. */
 const MAX_LOG = 4000;
 const PIECES_PER_COLOUR = 16;
 const REASONS = ['all-captured', 'no-moves', 'no-capture-limit', 'resign', 'agreed-draw'];
-const LOG_KEYS = ['seat', 'from', 'to', 'revealed', 'piece', 'captured', 'chain', 'capture', 'timestamp'];
+const LOG_KEYS = ['seat', 'from', 'to', 'revealed', 'piece', 'captured', 'chain', 'capture', 'blind', 'timestamp'];
 
 function validResultFields(value: ObjectValue, seats: readonly string[]): boolean {
   const winners = value.winners as string[];
@@ -50,10 +49,13 @@ function banqiLog(value: unknown): boolean {
   if (!object(value) || !oneOf(value.seat, gameSeats) || !number(value.timestamp)
     || Object.keys(value).some((key) => !LOG_KEYS.includes(key)) || bqCell(value.to) === null) return false;
   if (value.chain !== undefined && value.chain !== true) return false;
-  if (value.revealed !== undefined) {
+  if (value.blind !== undefined && value.blind !== true) return false;
+  if (value.revealed !== undefined && value.blind === undefined) {
     return isBqPiece(value.revealed) && Object.keys(value).length === 4;
   }
   const captured = value.captured !== undefined;
+  // A blind attack names the piece it revealed, which is also the piece taken when it took one.
+  if (value.blind === true && (!isBqPiece(value.revealed) || (captured && value.captured !== value.revealed))) return false;
   return bqCell(value.from) !== null && isBqPiece(value.piece) && (!captured || isBqPiece(value.captured))
     && (value.capture === true) === captured && (value.capture === undefined || value.capture === true);
 }
@@ -65,7 +67,7 @@ function validColours(value: unknown): boolean {
 
 export function banqiGame(value: ObjectValue, player: PlayerValidator): boolean {
   return flexibleSeatGame(value, player) && Object.keys(value.players as ObjectValue).length === 2 &&
-    isBanqiOptions(value.options) &&
+    isBanqiMatchOptions(value.options) &&
     oneOf(value.phase, ['playing', 'scoring']) &&
     isBqBoard(value.board) &&
     Array.isArray(value.hidden) && value.hidden.length === BQ_CELLS
@@ -121,7 +123,7 @@ export function coherentBanqiGame(state: BanqiGameState): boolean {
     if (over || entry.seat !== seats[turn]) return false;
     const to = bqCell(entry.to);
     if (to === null) return false;
-    if (entry.revealed !== undefined) {
+    if (entry.revealed !== undefined && entry.blind === undefined) {
       if (chain !== null || board[to] !== BQ_DOWN || entry.from !== undefined) return false;
       board = board.map((slot, cell) => (cell === to ? entry.revealed as number : slot));
       if (colours === null) {
@@ -136,13 +138,14 @@ export function coherentBanqiGame(state: BanqiGameState): boolean {
         || bqColour(board[from]) !== colour) return false;
       if ((chain !== null) !== (entry.chain === true) || (chain !== null && chain !== from)) return false;
       const chosen = bqMovesFrom(board, from, rules, chain !== null).find((candidate) => candidate.to === to);
-      if (!chosen) return false;
-      const applied = bqApplyMove(board, chosen);
+      if (!chosen || (chosen.blind === true) !== (entry.blind === true)) return false;
+      if (chosen.blind && entry.revealed === undefined) return false;
+      const applied = chosen.blind ? bqApplyBlind(board, chosen, entry.revealed as BqPiece) : bqApplyMove(board, chosen);
       if (applied.captured !== (entry.captured ?? null)) return false;
       board = applied.board;
       if (applied.captured !== null) captured.push(applied.captured);
-      quiet = chosen.capture ? 0 : quiet + 1;
-      if (chosen.capture && rules.chain && bqMovesFrom(board, to, rules, true).length > 0) {
+      quiet = chosen.capture || chosen.blind ? 0 : quiet + 1;
+      if (applied.captured !== null && rules.chain && bqMovesFrom(board, to, rules, true).length > 0) {
         chain = to;
         continue;
       }

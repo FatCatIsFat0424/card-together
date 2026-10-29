@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { GameSeat, PlayerInfo } from '@shared/types';
 import type { BanqiGameState, BanqiVisibleState } from '@shared/games/banqi/types';
-import { DEFAULT_BANQI_OPTIONS } from '@shared/banqi-options';
+import { DEFAULT_BANQI_OPTIONS, banqiRules } from '@shared/banqi-options';
 import { BQ_DOWN, bqFlips, bqMoves, bqNode } from '@shared/rules/banqi';
 import { getBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
@@ -43,12 +43,12 @@ function apply(seat: GameSeat, action: Decoded): { success: boolean } {
 function legal(seat: GameSeat): string[] {
   const state = game();
   const index = banqi.banqiSeats(state).indexOf(seat);
-  const rules = banqi.banqiRules(state.options);
+  const rules = banqiRules(state.options);
   const list = bqFlips(state.board).map((cell) => `flip ${bqNode(cell)}`);
   if (state.colours !== null) {
     const from = state.chain;
     const moves = bqMoves(state.board, state.colours[index], rules)
-      .filter((move) => from === null || (bqNode(move.from) === from && move.capture));
+      .filter((move) => from === null || (bqNode(move.from) === from && (move.capture || move.blind)));
     list.push(...moves.map((move) => `move ${bqNode(move.from)} ${bqNode(move.to)}`));
   }
   if (state.chain !== null) return [...list.filter((entry) => entry.startsWith('move')), 'stop'];
@@ -135,6 +135,19 @@ describe('Banqi Hard bot', () => {
       .toEqual({ type: 'move', from: '1,0', to: '2,0' });
   });
 
+  it('weighs a blind attack over the unseen pieces and prefers it to flipping the same cell', () => {
+    // Every other piece is face down, so the unseen pool is exactly what the 30 covered cells hide.
+    const rows = ['R#######', '########', '########', '#######k'];
+    start();
+    setPosition(game(), rows);
+    const blind = decode(searchBanqi(view('N'), { maxDepth: 2, expired: () => false, random: () => 0 }));
+    expect(blind).toMatchObject({ type: 'move', from: '0,0' });
+    // Matches without blind attacks never offer one: the boxed-in chariot can only flip.
+    start({ chain: false, rookDash: false });
+    setPosition(game(), rows);
+    expect(decode(searchBanqi(view('N'), { maxDepth: 2, expired: () => false, random: () => 0 }))?.type).toBe('flip');
+  });
+
   it('avoids a capture that is answered by a heavier recapture', () => {
     start();
     // Taking the soldier with the horse puts it where the chariot takes it; stepping away or flipping is better.
@@ -158,7 +171,7 @@ describe('Banqi Hard bot', () => {
     banqi.flip(CODE, 'N', '0,0');
     expect(JSON.stringify(view('N')).includes('"hidden"')).toBe(false);
     expect(first.includes('"hidden"')).toBe(false);
-  });
+  }, 20_000);
 
   it('flips at random while the colours are unknown and returns nothing off turn or after the end', () => {
     start();

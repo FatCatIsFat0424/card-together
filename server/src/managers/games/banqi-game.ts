@@ -8,17 +8,17 @@ import type { GameSeat, PlayerInfo, RoomCode } from '@shared/types';
 import type { BanqiGameState, BanqiMatchResult, BanqiMove, BanqiOptions, BanqiVisibleState } from '@shared/games/banqi/types';
 import { occupiedSeats } from '@shared/rules/seats';
 import {
-  BQ_CELLS, BQ_DOWN, BQ_EMPTY, BQ_QUIET_LIMIT, bqApplyMove, bqCell, bqColour, bqFullSet, bqHasAction, bqMovesFrom, bqNode,
+  BQ_CELLS, BQ_DOWN, BQ_EMPTY, BQ_QUIET_LIMIT, bqApplyBlind, bqApplyMove, bqCell, bqColour, bqFullSet, bqHasAction, bqMovesFrom, bqNode,
   bqOpposite, isBqPiece,
 } from '@shared/rules/banqi';
-import type { BqColour, BqRules } from '@shared/rules/banqi';
+import type { BqColour } from '@shared/rules/banqi';
 import { nodeId } from '@shared/rules/board/board-model';
 import { resignationOutcome } from '@shared/rules/board/board-result';
 import type { BoardOutcome } from '@shared/rules/board/board-result';
 import { NO_DRAW_OFFER, afterBoardMove, applyMatchControl } from '@shared/rules/board/match-controls';
 import type { MatchControlAction } from '@shared/rules/board/match-controls';
 import { banqiDefinition } from '@shared/games/banqi/definition';
-import { DEFAULT_BANQI_OPTIONS } from '@shared/banqi-options';
+import { DEFAULT_BANQI_OPTIONS, banqiMatchOptions, banqiRules } from '@shared/banqi-options';
 import { shuffleDeck } from '../../engine/deck';
 
 type Result = { success: true } | { success: false; reason: string };
@@ -33,8 +33,6 @@ const games: Map<RoomCode, BanqiGameState> = new Map();
 export function banqiSeats(game: Pick<BanqiGameState, 'players'>): GameSeat[] {
   return occupiedSeats(game.players);
 }
-
-export const banqiRules = (options: BanqiOptions): BqRules => ({ chain: options.chain, rookDash: options.rookDash });
 
 /**
  * Deals a match: the 32 pieces shuffled by the injected generator, all face down. The first occupied seat
@@ -52,7 +50,7 @@ export function startGame(
     gameType: 'banqi',
     id: randomUUID(),
     startedAt: now,
-    options: { chain: options.chain, rookDash: options.rookDash },
+    options: banqiMatchOptions(options),
     players: structuredClone(players),
     roomCode,
     phase: 'playing',
@@ -155,7 +153,11 @@ export function flip(roomCode: RoomCode, seat: GameSeat, to: string, now: number
   return { success: true };
 }
 
-/** Moves or captures with one of the seat's face-up pieces, continuing a chain when the room allows it. */
+/**
+ * Moves or captures with one of the seat's face-up pieces, continuing a chain when the room allows it. A blind
+ * attack reveals the face-down target: a capturable enemy is taken as by a capture, anything else stays face up
+ * and the turn ends. It needs a face-up piece of the seat's colour, so it never comes before the colour-setting flip.
+ */
 export function move(roomCode: RoomCode, seat: GameSeat, from: string, to: string, now: number = Date.now()): Result {
   const game = turnCheck(roomCode, seat);
   if ('success' in game) return game;
@@ -171,19 +173,23 @@ export function move(roomCode: RoomCode, seat: GameSeat, from: string, to: strin
   const chosen = bqMovesFrom(game.board, source, rules, continuing).find((candidate) => candidate.to === target);
   if (!chosen) return fail('Illegal move');
 
-  const applied = bqApplyMove(game.board, chosen);
+  const revealed = chosen.blind ? game.hidden[target] : null;
+  const applied = revealed === null ? bqApplyMove(game.board, chosen) : bqApplyBlind(game.board, chosen, revealed);
   game.board = applied.board;
+  if (revealed !== null) game.hidden = game.hidden.map((slot, cell) => (cell === target ? BQ_EMPTY : slot));
   const record: BanqiMove = {
     seat, from: bqNode(source), to: bqNode(target), piece,
+    ...revealed === null ? {} : { blind: true, revealed },
     ...applied.captured === null ? {} : { capture: true, captured: applied.captured },
     ...continuing ? { chain: true } : {},
     timestamp: now,
   };
   game.log.push(record);
-  game.quietMoves = chosen.capture ? 0 : game.quietMoves + 1;
+  // A blind attack always reveals a piece, so like a flip it restarts the count even when it takes nothing.
+  game.quietMoves = chosen.capture || chosen.blind ? 0 : game.quietMoves + 1;
   if (!continuing) game.drawOffer = afterBoardMove(game.drawOffer, seat);
 
-  if (chosen.capture && rules.chain && bqMovesFrom(game.board, target, rules, true).length > 0) {
+  if (applied.captured !== null && rules.chain && bqMovesFrom(game.board, target, rules, true).length > 0) {
     // The same seat keeps the turn; the next action must be another capture by this piece, or `stop`.
     game.chain = bqNode(target);
     return { success: true };

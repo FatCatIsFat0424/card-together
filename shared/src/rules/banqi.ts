@@ -89,15 +89,18 @@ export function bqCell(node: unknown): number | null {
   return match ? Number(match[2]) * BQ_COLS + Number(match[1]) : null;
 }
 
-/** Room rules for the two optional variants; both default to off. */
+/** Rules a match plays, from its room options. */
 export interface BqRules {
   /** After a capture the same piece may keep capturing within the turn. */
   readonly chain: boolean;
   /** The chariot slides any distance along a line and may capture at distance. */
   readonly rookDash: boolean;
+  /** A face-up piece may attack a face-down one it could reach by capturing; the target is revealed. */
+  readonly blindCapture: boolean;
 }
 
-export const BQ_STANDARD_RULES: BqRules = { chain: false, rookDash: false };
+/** Every variant off: the rules games played before the room options existed. */
+export const BQ_STANDARD_RULES: BqRules = { chain: false, rookDash: false, blindCapture: false };
 
 /**
  * Whether `attacker` may take `target` by moving onto it: rank equal or lower, the soldier also takes the
@@ -114,11 +117,25 @@ export function bqCanCapture(attacker: BqPiece, target: BqPiece): boolean {
   return a <= d;
 }
 
-/** A move of a face-up piece; `capture` removes the piece on `to`. */
+/**
+ * Whether a blind attack by `attacker` takes the piece it reveals: an enemy it could capture by its normal rule.
+ * The cannon reached its target by jumping, so it takes any enemy, as a jump capture does.
+ */
+export function bqBlindTakes(attacker: BqPiece, revealed: BqPiece): boolean {
+  if (bqColour(attacker) === bqColour(revealed)) return false;
+  return bqRank(attacker) === BQ_CANNON || bqCanCapture(attacker, revealed);
+}
+
+/**
+ * A move of a face-up piece; `capture` removes the face-up piece on `to`. A `blind` move attacks the face-down
+ * piece on `to` (吃暗子): it is revealed, and taken only when `bqBlindTakes` allows, so its outcome is
+ * unknown until the server applies it with the hidden identity.
+ */
 export interface BqMove {
   readonly from: number;
   readonly to: number;
   readonly capture: boolean;
+  readonly blind?: true;
 }
 
 const DIRECTIONS: readonly (readonly [number, number])[] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
@@ -137,8 +154,9 @@ function nextOccupied(board: BqBoard, from: number, dc: number, dr: number): num
 }
 
 /**
- * Moves of the face-up piece on `from`, in board order of direction. `capturesOnly` lists just captures, which
- * is all a chain continuation may do. Face-down cells are never captured and never moved onto.
+ * Moves of the face-up piece on `from`, in board order of direction. `capturesOnly` lists just captures and
+ * blind attacks, which is all a chain continuation may do. A face-down cell is only ever a blind attack's
+ * target, reached with the piece's capture geometry (adjacent, the cannon's jump, or the dashing chariot's line).
  */
 export function bqMovesFrom(board: BqBoard, from: number, rules: BqRules, capturesOnly = false): BqMove[] {
   const piece = board[from];
@@ -147,6 +165,7 @@ export function bqMovesFrom(board: BqBoard, from: number, rules: BqRules, captur
   const rank = bqRank(piece);
   const moves: BqMove[] = [];
   const enemyUp = (cell: number): boolean => isBqPiece(board[cell]) && bqColour(board[cell]) !== colour;
+  const blind = (cell: number): boolean => rules.blindCapture && board[cell] === BQ_DOWN;
   for (const [dc, dr] of DIRECTIONS) {
     const near = stepFrom(from, dc, dr);
     if (near === null) continue;
@@ -156,6 +175,7 @@ export function bqMovesFrom(board: BqBoard, from: number, rules: BqRules, captur
       const screen = nextOccupied(board, from, dc, dr);
       const target = screen === null ? null : nextOccupied(board, screen, dc, dr);
       if (target !== null && enemyUp(target)) moves.push({ from, to: target, capture: true });
+      else if (target !== null && blind(target)) moves.push({ from, to: target, capture: false, blind: true });
     } else if (rank === BQ_CHARIOT && rules.rookDash) {
       let cell: number | null = near;
       while (cell !== null && board[cell] === BQ_EMPTY) {
@@ -164,11 +184,15 @@ export function bqMovesFrom(board: BqBoard, from: number, rules: BqRules, captur
       }
       if (cell !== null && isBqPiece(board[cell]) && bqCanCapture(piece, board[cell])) {
         moves.push({ from, to: cell, capture: true });
+      } else if (cell !== null && blind(cell)) {
+        moves.push({ from, to: cell, capture: false, blind: true });
       }
     } else if (board[near] === BQ_EMPTY) {
       if (!capturesOnly) moves.push({ from, to: near, capture: false });
     } else if (isBqPiece(board[near]) && bqCanCapture(piece, board[near])) {
       moves.push({ from, to: near, capture: true });
+    } else if (blind(near)) {
+      moves.push({ from, to: near, capture: false, blind: true });
     }
   }
   return moves;
@@ -201,7 +225,21 @@ export function bqHasAction(board: BqBoard, colour: BqColour, rules: BqRules): b
   return false;
 }
 
-/** The board after a move, and the piece it captured. */
+/** The board after a blind attack whose target turned out to be `revealed`, and the piece it took. */
+export function bqApplyBlind(board: BqBoard, move: BqMove, revealed: BqPiece): { board: BqSlot[]; captured: BqPiece | null } {
+  const next = [...board];
+  const attacker = board[move.from];
+  if (isBqPiece(attacker) && bqBlindTakes(attacker, revealed)) {
+    next[move.to] = attacker;
+    next[move.from] = BQ_EMPTY;
+    return { board: next, captured: revealed };
+  }
+  // A failed attack only turns the target over; the attacker stays where it was.
+  next[move.to] = revealed;
+  return { board: next, captured: null };
+}
+
+/** The board after a move that is not blind, and the piece it captured. */
 export function bqApplyMove(board: BqBoard, move: BqMove): { board: BqSlot[]; captured: BqPiece | null } {
   const next = [...board];
   const captured = move.capture && isBqPiece(board[move.to]) ? board[move.to] : null;

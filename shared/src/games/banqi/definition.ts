@@ -1,4 +1,4 @@
-import { DEFAULT_BANQI_OPTIONS, isBanqiOptions } from '../../banqi-options';
+import { DEFAULT_BANQI_OPTIONS, LEGACY_BANQI_OPTIONS, isBanqiOptions } from '../../banqi-options';
 import { BOARD_TIME_CONTROL } from '../../time-control';
 import { soleWinner } from '../game-definition';
 import type { GameDefinition } from '../game-definition';
@@ -8,7 +8,7 @@ export const banqiDefinition: GameDefinition<'banqi'> = {
   gameType: 'banqi',
   options: {
     defaults: DEFAULT_BANQI_OPTIONS,
-    legacyDefaults: DEFAULT_BANQI_OPTIONS,
+    legacyDefaults: LEGACY_BANQI_OPTIONS,
     isValid: isBanqiOptions,
   },
   category: 'board',

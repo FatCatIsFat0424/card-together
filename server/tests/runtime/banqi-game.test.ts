@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { GameSeat, PlayerInfo } from '@shared/types';
-import type { BanqiGameState } from '@shared/games/banqi/types';
-import { DEFAULT_BANQI_OPTIONS } from '@shared/banqi-options';
+import type { BanqiGameState, BanqiMatchOptions } from '@shared/games/banqi/types';
+import { DEFAULT_BANQI_OPTIONS, LEGACY_BANQI_OPTIONS } from '@shared/banqi-options';
 import { gameDefinition } from '@shared/games/registry';
 import { parseGameAction } from '@shared/games/actions';
 import { matchStanding } from '@shared/rules/match-standing';
@@ -74,10 +74,12 @@ describe('Banqi setup and shuffle', () => {
     expect(gameDefinition('banqi')).toMatchObject({
       category: 'board', equipment: [], seats: { minPlayers: 2, maxPlayers: 2, flexible: true },
       matchControls: { resign: true, draw: true }, timeControl: { baseSeconds: 60, bankSeconds: 300 },
-      options: { defaults: { chain: false, rookDash: false } },
+      options: { defaults: { chain: true, rookDash: false }, legacyDefaults: { chain: false, rookDash: false } },
     });
     const rules = gameDefinition('banqi').options!;
     expect(rules.isValid({ chain: true, rookDash: false })).toBe(true);
+    // Blind attacks are part of 連吃, so a room never stores them on their own.
+    expect(rules.isValid({ chain: true, rookDash: false, blindCapture: true })).toBe(false);
     expect(rules.isValid({ chain: true })).toBe(false);
     expect(rules.isValid({ chain: 1, rookDash: false })).toBe(false);
   });
@@ -156,7 +158,7 @@ describe('Banqi moves and captures', () => {
   });
 
   it('rejects illegal moves: opponent pieces, face-down cells, too far, out of rank, and without colours', () => {
-    start();
+    start(LEGACY_BANQI_OPTIONS);
     setPosition(game(), ['R#......', '........', '........', '#......k'], null);
     expect(banqi.move(CODE, 'N', '0,0', '0,1')).toMatchObject({ success: false, reason: 'Illegal move' });
     setPosition(game(), ['R#......', '........', '........', '#......k']);
@@ -245,7 +247,7 @@ describe('Banqi chain captures (連吃)', () => {
   });
 
   it('does not chain when the room rule is off', () => {
-    start();
+    start(LEGACY_BANQI_OPTIONS);
     setPosition(game(), ['Rpp.....', '........', '........', '#......k']);
     banqi.move(CODE, 'N', '0,0', '1,0');
     expect(game()).toMatchObject({ chain: null, currentTurnSeat: 'S' });
@@ -331,6 +333,146 @@ describe('Banqi endings', () => {
   });
 });
 
+describe('Banqi blind captures (連吃 attacks on face-down pieces)', () => {
+  /** Puts `piece` under the face-down cell at `col,row`. */
+  const hide = (col: number, row: number, piece: number): void => { game().hidden[row * 8 + col] = piece; };
+  const R = bqPiece(0, 3);
+
+  it('takes a capturable enemy it reveals, moves in, resets the count, and logs only what was revealed', () => {
+    start();
+    setPosition(game(), ['R#......', '........', '........', '#......k']);
+    hide(1, 0, bqPiece(1, 6));
+    game().quietMoves = 12;
+    expect(banqi.move(CODE, 'N', '0,0', '1,0', 4_000)).toEqual({ success: true });
+    expect(game().board.slice(0, 2)).toEqual([BQ_EMPTY, R]);
+    expect(game().hidden[1]).toBe(BQ_EMPTY);
+    expect(game().log.at(-1)).toEqual({
+      seat: 'N', from: '0,0', to: '1,0', piece: R, blind: true, revealed: bqPiece(1, 6), capture: true, captured: bqPiece(1, 6),
+      timestamp: 4_000,
+    });
+    expect(game()).toMatchObject({ quietMoves: 0, chain: null, currentTurnSeat: 'S' });
+  });
+
+  it('only turns over a bigger enemy or an own piece: the attacker stays and the turn ends', () => {
+    for (const [revealed, label] of [[bqPiece(1, 0), 'bigger'], [bqPiece(0, 6), 'own'], [bqPiece(1, 1), 'advisor']] as const) {
+      start();
+      setPosition(game(), ['R#......', '........', '........', '#......k']);
+      hide(1, 0, revealed);
+      game().quietMoves = 9;
+      expect(banqi.move(CODE, 'N', '0,0', '1,0'), label).toEqual({ success: true });
+      expect(game().board.slice(0, 2), label).toEqual([R, revealed]);
+      expect(game().log.at(-1), label).toMatchObject({ blind: true, revealed, piece: R });
+      expect(game().log.at(-1)?.captured, label).toBeUndefined();
+      expect(game(), label).toMatchObject({ quietMoves: 0, chain: null, currentTurnSeat: 'S' });
+      banqi.abortGame(CODE);
+    }
+  });
+
+  it('keeps the soldier and general exceptions: the soldier takes a hidden general, the general only reveals a soldier', () => {
+    start();
+    setPosition(game(), ['P#......', '........', '........', '#......k']);
+    hide(1, 0, bqPiece(1, 0));
+    banqi.move(CODE, 'N', '0,0', '1,0');
+    expect(game().log.at(-1)).toMatchObject({ captured: bqPiece(1, 0) });
+    start();
+    setPosition(game(), ['K#......', '........', '........', '#......p']);
+    hide(1, 0, bqPiece(1, 6));
+    banqi.move(CODE, 'N', '0,0', '1,0');
+    expect(game().board.slice(0, 2)).toEqual([bqPiece(0, 0), bqPiece(1, 6)]);
+  });
+
+  it('lets the cannon jump onto a face-down piece and take any enemy, but never attack an adjacent one', () => {
+    start();
+    setPosition(game(), ['C#.#....', '........', '........', '#......k']);
+    hide(3, 0, bqPiece(1, 0));
+    expect(banqi.move(CODE, 'N', '0,0', '1,0')).toMatchObject({ success: false });
+    expect(banqi.move(CODE, 'N', '0,0', '3,0')).toEqual({ success: true });
+    expect(game().log.at(-1)).toMatchObject({ blind: true, captured: bqPiece(1, 0) });
+    expect(game().board[3]).toBe(bqPiece(0, 5));
+  });
+
+  it('continues a chain after a blind capture, and a failed blind attack in the chain ends the turn', () => {
+    start();
+    setPosition(game(), ['R##.....', '........', '........', '#......k']);
+    hide(1, 0, bqPiece(1, 5));
+    hide(2, 0, bqPiece(1, 0));
+    expect(banqi.move(CODE, 'N', '0,0', '1,0')).toEqual({ success: true });
+    expect(game()).toMatchObject({ chain: '1,0', currentTurnSeat: 'N' });
+    expect(banqi.move(CODE, 'N', '1,0', '2,0')).toEqual({ success: true });
+    expect(game().log.at(-1)).toMatchObject({ chain: true, blind: true, revealed: bqPiece(1, 0) });
+    expect(game()).toMatchObject({ chain: null, currentTurnSeat: 'S' });
+    expect(game().board.slice(0, 3)).toEqual([BQ_EMPTY, R, bqPiece(1, 0)]);
+  });
+
+  it('reaches face-down pieces at a distance with 車衝 only', () => {
+    start({ chain: true, rookDash: true });
+    setPosition(game(), ['R..#....', '........', '........', '#......k']);
+    hide(3, 0, bqPiece(1, 6));
+    expect(banqi.move(CODE, 'N', '0,0', '3,0')).toEqual({ success: true });
+    expect(game().board[3]).toBe(R);
+    start();
+    setPosition(game(), ['R..#....', '........', '........', '#......k']);
+    expect(banqi.move(CODE, 'N', '0,0', '3,0')).toMatchObject({ success: false });
+  });
+
+  it('is off with 連吃 off, and is never the first action of a match', () => {
+    start();
+    expect(banqi.move(CODE, 'N', '0,0', '1,0')).toMatchObject({ success: false, reason: 'Illegal move' });
+    start(LEGACY_BANQI_OPTIONS);
+    setPosition(game(), ['R#......', '........', '........', '#......k']);
+    expect(banqi.move(CODE, 'N', '0,0', '1,0')).toMatchObject({ success: false });
+  });
+
+  it('shows seats only a face-down marker until the attack, then the revealed piece', () => {
+    start();
+    setPosition(game(), ['R#......', '........', '........', '#......k']);
+    hide(1, 0, bqPiece(1, 2));
+    const before = banqi.getPlayerVisibleState(CODE, 'S')!;
+    expect(before.board[1]).toBe(BQ_DOWN);
+    expect(before.log).toEqual([]);
+    banqi.move(CODE, 'N', '0,0', '1,0');
+    const after = banqi.getPlayerVisibleState(CODE, 'S')!;
+    expect(after.board[1]).toBe(bqPiece(1, 2));
+    expect(after.log.at(-1)).toMatchObject({ blind: true, revealed: bqPiece(1, 2) });
+  });
+});
+
+describe('Banqi matches stored before blind captures', () => {
+  /** A match started with 連吃 before attacks on face-down pieces existed: its options lack `blindCapture`. */
+  function startOld(options: BanqiMatchOptions, seed = 7): void {
+    start(options, seed);
+    (game() as { options: BanqiMatchOptions }).options = { chain: options.chain, rookDash: options.rookDash };
+  }
+
+  it('keeps chaining face-up captures only, and stays valid stored state through the end', () => {
+    startOld({ chain: true, rookDash: false });
+    playOut(41, 30);
+    const stored = JSON.parse(JSON.stringify(game())) as BanqiGameState;
+    expect(stored.options).toEqual({ chain: true, rookDash: false });
+    expect(banqiGame(stored as unknown as Record<string, unknown>, () => true) && coherentBanqiGame(stored)).toBe(true);
+    banqi.restoreGames([stored]);
+    playOut(42, 6000);
+    expect(game().phase).toBe('scoring');
+    expect(game().log.some((entry) => entry.blind)).toBe(false);
+    expect(coherent()).toBe(true);
+  }, 30_000);
+
+  it('refuses a blind attack in an old match and rejects one written into its log', () => {
+    startOld({ chain: true, rookDash: false });
+    setPosition(game(), ['R#......', '........', '........', '#......k']);
+    expect(banqi.move(CODE, 'N', '0,0', '1,0')).toMatchObject({ success: false });
+    // A new match's log with blind attacks is not coherent under the old rules.
+    start(DEFAULT_BANQI_OPTIONS, 9);
+    for (let seed = 100; !game().log.some((entry) => entry.blind) && game().phase === 'playing'; seed++) playOut(seed, 1);
+    const stored = JSON.parse(JSON.stringify(game())) as BanqiGameState;
+    expect(stored.log.some((entry) => entry.blind)).toBe(true);
+    expect(coherentBanqiGame(stored)).toBe(true);
+    expect(coherentBanqiGame({ ...stored, options: { chain: true, rookDash: false } })).toBe(false);
+    // Blind attacks come only with 連吃.
+    expect(banqiGame({ ...stored, options: { chain: false, rookDash: false, blindCapture: true } } as never, () => true)).toBe(false);
+  });
+});
+
 describe('Banqi resignation and draw offers', () => {
   it('lets either seat resign at any time, even off turn', () => {
     start();
@@ -398,9 +540,9 @@ describe('Banqi hidden information', () => {
     playOut(21, 40);
     const layoutAtEnd = game().hidden.filter((piece) => piece >= 0);
     for (const entry of game().log) {
-      expect(Object.keys(entry).every((key) => ['seat', 'from', 'to', 'revealed', 'piece', 'capture', 'captured', 'chain', 'timestamp']
-        .includes(key))).toBe(true);
-      if (entry.revealed !== undefined) expect(entry.from).toBeUndefined();
+      expect(Object.keys(entry).every((key) => ['seat', 'from', 'to', 'revealed', 'piece', 'capture', 'captured', 'chain', 'blind',
+        'timestamp'].includes(key))).toBe(true);
+      if (entry.revealed !== undefined && !entry.blind) expect(entry.from).toBeUndefined();
     }
     // Every identity still under a face-down cell is absent from the serialised log.
     const flippedCells = new Set(game().log.filter((entry) => entry.revealed !== undefined).map((entry) => entry.to));
@@ -524,7 +666,7 @@ describe('Banqi adapter and stored state', () => {
   });
 
   it('plays seeded random matches to the end with a coherent log at every step', () => {
-    for (const [seed, options] of [[1, DEFAULT_BANQI_OPTIONS], [2, { chain: true, rookDash: false }], [3, { chain: true, rookDash: true }]] as const) {
+    for (const [seed, options] of [[1, DEFAULT_BANQI_OPTIONS], [2, LEGACY_BANQI_OPTIONS], [3, { chain: true, rookDash: true }]] as const) {
       start(options, seed);
       for (let step = 0; step < 12 && game().phase === 'playing'; step++) {
         playOut(seed + step * 100, 1);
@@ -577,7 +719,7 @@ describe('Banqi through the game manager', () => {
 
   it('starts with the room options, runs a turn clock, and moves it with each action', () => {
     begin({ chain: true, rookDash: false });
-    expect((manager.getGameState(MANAGED) as BanqiGameState).options).toEqual({ chain: true, rookDash: false });
+    expect((manager.getGameState(MANAGED) as BanqiGameState).options).toEqual({ chain: true, rookDash: false, blindCapture: true });
     expect(manager.getGameState(MANAGED)?.clock?.turn).toMatchObject({ seat: 'N' });
     expect(manager.handleGameAction(MANAGED, 'N', { gameType: 'banqi', action: { type: 'flip', to: '3,1' } })).toEqual({ success: true });
     expect(manager.getGameState(MANAGED)?.clock?.turn).toMatchObject({ seat: 'S' });

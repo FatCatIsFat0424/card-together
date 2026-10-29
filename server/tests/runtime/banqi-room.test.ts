@@ -29,17 +29,20 @@ describe('a Banqi room', () => {
     expect(roomCanStart(rooms.getRoomInfo(code)!)).toBe(true);
   });
 
-  it('starts both variants off and keeps the host choice, clearing readiness when it changes', () => {
+  it('starts with 連吃 on and 車衝 off and keeps the host choice, clearing readiness when it changes', () => {
     players.attachPlayer('socket', human);
     code = rooms.createRoom('banqi', human.id);
     players.setPlayerRoom(human.id, code);
-    expect(rooms.getRoomInfo(code)?.gameOptions?.banqi).toEqual({ chain: false, rookDash: false });
+    expect(rooms.getRoomInfo(code)?.gameOptions?.banqi).toEqual({ chain: true, rookDash: false });
     rooms.changeSeat(code, human, 'N');
     rooms.setReady(code, human.id, true);
-    expect(rooms.setGameOptions(code, human.id, { gameType: 'banqi', options: { chain: true, rookDash: false } }))
+    expect(rooms.setGameOptions(code, human.id, { gameType: 'banqi', options: { chain: false, rookDash: false } }))
       .toEqual({ success: true });
-    expect(rooms.getRoomInfo(code)?.gameOptions?.banqi).toEqual({ chain: true, rookDash: false });
+    expect(rooms.getRoomInfo(code)?.gameOptions?.banqi).toEqual({ chain: false, rookDash: false });
     expect(rooms.setGameOptions(code, human.id, { gameType: 'banqi', options: { chain: true } } as never))
       .toMatchObject({ success: false });
+    // Blind attacks follow 連吃 at the start of a match; a room cannot set them apart.
+    expect(rooms.setGameOptions(code, human.id,
+      { gameType: 'banqi', options: { chain: true, rookDash: false, blindCapture: false } } as never)).toMatchObject({ success: false });
   });
 });

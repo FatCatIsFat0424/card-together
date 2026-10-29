@@ -22,7 +22,7 @@ import { BoardTable } from '../board/BoardTable';
 import { useBoardInput } from '../board/use-board-input';
 import { boardAspect } from '../board/board-view';
 import {
-  banqiCells, banqiChoices, banqiColour, banqiInChain, banqiLastMove, banqiNotation, banqiRemaining,
+  banqiBlindTarget, banqiCells, banqiChoices, banqiColour, banqiInChain, banqiLastMove, banqiNotation, banqiRemaining,
 } from './banqi-view';
 import styles from './BanqiTable.module.css';
 
@@ -157,7 +157,8 @@ export function BanqiTable(): ReactNode {
         controls={controls}
         pending={pendingMove ? {
           text: pendingMove.from
-            ? t('banqi.pendingMove', { from: label(pendingMove.from), to: label(pendingMove.to) })
+            ? t(banqiBlindTarget(game, pendingMove.to) ? 'banqi.pendingAttack' : 'banqi.pendingMove',
+              { from: label(pendingMove.from), to: label(pendingMove.to) })
             : t('banqi.pendingFlip', { at: label(pendingMove.to) }),
           confirm: input.confirm, cancel: input.cancel,
         } : null}

@@ -36,7 +36,8 @@ function isSafeCapture(visible: BanqiVisibleState, move: BqMove): boolean {
 }
 
 /**
- * Easy: take a safe capture when there is one (the most valuable victim), otherwise flip or step at random.
+ * Easy: take a safe capture when there is one (the most valuable victim), otherwise flip, step, or attack a
+ * face-down piece at random; a blind attack is never a known capture, so it counts with the flips.
  * Also the action a player gets after running out of time.
  */
 export function easyBanqiAction(visible: BanqiVisibleState, random: () => number): BotAction | null {

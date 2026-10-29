@@ -4,6 +4,7 @@ import Select from '@mui/material/Select';
 import type { SelectChangeEvent, SelectProps } from '@mui/material/Select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GAME_TYPES } from '@shared/constants';
+import { DEFAULT_BANQI_OPTIONS } from '@shared/banqi-options';
 import type { GameOptions, GameType, RoomInfo } from '@shared/types';
 import { RoomOption } from '../../../client/src/components/RoomOption';
 import { RoomSettings } from '../../../client/src/components/RoomSettings';
@@ -160,6 +161,10 @@ describe('per-game room options', () => {
     expect(option('banqi-rook-dash-hint').checked).toBe(false);
     option('banqi-chain-hint').onChange(true);
     expect(actions.setGameOptions).toHaveBeenLastCalledWith({ gameType: 'banqi', options: { chain: true, rookDash: false } });
+    // New rooms carry the defaults: 連吃, which includes attacking face-down pieces, is on.
+    render(room('banqi', { banqi: DEFAULT_BANQI_OPTIONS }));
+    expect(option('banqi-chain-hint').checked).toBe(true);
+    expect(option('banqi-rook-dash-hint').checked).toBe(false);
   });
 
   it('enables legacy Sevens rules and retains the chosen effect across toggles', () => {

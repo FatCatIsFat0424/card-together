@@ -3,7 +3,7 @@ import type { BanqiMove, BanqiVisibleState } from '@shared/games/banqi/types';
 import { NO_DRAW_OFFER } from '@shared/rules/board/match-controls';
 import { BQ_DOWN, bqPiece } from '@shared/rules/banqi';
 import {
-  banqiCells, banqiChoices, banqiColour, banqiInChain, banqiLastMove, banqiNotation, banqiRemaining,
+  banqiBlindTarget, banqiCells, banqiChoices, banqiColour, banqiInChain, banqiLastMove, banqiNotation, banqiRemaining,
 } from '../../../client/src/games/banqi/banqi-view';
 import { clientGame } from '../../../client/src/games/registry';
 import { gameUi } from '../../../client/src/games/ui-registry';
@@ -56,6 +56,23 @@ describe('Banqi view helpers', () => {
     expect(banqiChoices(game({ board, colours: [0, 1], currentTurnSeat: 'S', mySeat: 'S' }), 'S').movable).toEqual(['1,0', '7,3']);
   });
 
+  it('marks face-down cells the piece could attack as capture targets only when the match plays blind attacks', () => {
+    const board = position(['R#......', '........', '..#C#...', '.......k']);
+    const blind = { chain: true, rookDash: false, blindCapture: true };
+    const choices = banqiChoices(game({ board, colours: [0, 1], options: blind }), 'N');
+    expect(choices.targets('0,0')).toEqual([{ node: '1,0', capture: true }, { node: '0,1', capture: false }]);
+    // The cannon reaches a face-down piece only by jumping, never next to it.
+    expect(choices.targets('3,2').filter((target) => target.capture)).toEqual([]);
+    expect(banqiBlindTarget(game({ board }), '1,0')).toBe(true);
+    expect(banqiBlindTarget(game({ board }), '0,1')).toBe(false);
+    // A replay or match saved before blind attacks existed keeps chaining face-up captures only.
+    const old = banqiChoices(game({ board, colours: [0, 1], options: { chain: true, rookDash: false } }), 'N');
+    expect(old.targets('0,0')).toEqual([{ node: '0,1', capture: false }]);
+    // In a chain a blind attack counts as a further capture.
+    const chained = banqiChoices(game({ board, colours: [0, 1], options: blind, chain: '0,0' }), 'N');
+    expect(chained.targets('0,0')).toEqual([{ node: '1,0', capture: true }]);
+  });
+
   it('restricts a chain to captures by the chaining piece', () => {
     const board = position(['.Rp.....', '........', '........', '.......k']);
     const choices = banqiChoices(game({ board, colours: [0, 1], chain: '1,0', options: { chain: true, rookDash: false } }), 'N');
@@ -90,14 +107,30 @@ describe('Banqi view helpers', () => {
     expect(banqiNotation(flip, 'en')).toBe('Flip c3 俥');
     expect(banqiNotation(step, 'en')).toBe('車 a4-a3');
     expect(banqiNotation(take, 'zh-TW')).toBe('+俥 c3xd3');
+    const blindTake: BanqiMove = {
+      seat: 'N', from: '2,1', to: '3,1', piece: bqPiece(0, 3), blind: true, revealed: bqPiece(1, 6), capture: true,
+      captured: bqPiece(1, 6), timestamp: 1,
+    };
+    const blindFlip: BanqiMove = { seat: 'N', from: '2,1', to: '3,1', piece: bqPiece(0, 3), blind: true, revealed: bqPiece(1, 4), timestamp: 1 };
+    expect(banqiNotation(blindTake, 'zh-TW')).toBe('俥 c3x?d3 卒');
+    expect(banqiNotation({ ...blindTake, chain: true }, 'en')).toBe('+俥 c3x?d3 卒');
+    expect(banqiNotation(blindFlip, 'zh-TW')).toBe('俥 c3?d3 翻 馬');
+    expect(banqiNotation(blindFlip, 'en')).toBe('俥 c3?d3 Flip 馬');
   });
 
   it('registers the game with both room rules in the rules dialog context', () => {
     const client = clientGame('banqi');
-    const context = client.rules.matchContext(game({ options: { chain: true, rookDash: false } }));
+    const context = client.rules.matchContext(game({ options: { chain: true, rookDash: false, blindCapture: true } }));
     expect(context).toMatchObject({ option: { label: 'banqi.chain', enabled: true }, moreOptions: [{ label: 'banqi.rookDash', enabled: false }] });
-    expect(client.rules.summary(context, (key) => key)).toContain('banqi.rulesChain');
+    expect(client.rules.summary(context, (key) => key)).toEqual(expect.arrayContaining(['banqi.rulesChain', 'banqi.rulesBlind']));
     expect(client.rules.summary(context, (key) => key)).not.toContain('banqi.rulesRookDash');
+    // Matches and replays saved before blind attacks existed describe the chain rule they played.
+    const old = client.rules.matchContext(game({ options: { chain: true, rookDash: false } }));
+    expect(old.option).toEqual({ label: 'banqi.chainFaceUp', enabled: true });
+    expect(client.rules.summary(old, (key) => key)).toContain('banqi.rulesChain');
+    expect(client.rules.summary(old, (key) => key)).not.toContain('banqi.rulesBlind');
+    // The lobby describes a new room's defaults.
+    expect(client.rules.summary(undefined, (key) => key)).toEqual(expect.arrayContaining(['banqi.rulesChain', 'banqi.rulesBlind']));
     expect(client.lobbyIcon.glyph).toBe('暗');
   });
 
@@ -107,5 +140,8 @@ describe('Banqi view helpers', () => {
     expect(cue({ seat: 'N', to: '0,0', revealed: 1, timestamp: 1 }, state)).toBe('flip');
     expect(cue({ seat: 'N', from: '0,0', to: '1,0', piece: 3, capture: true, captured: 9, timestamp: 1 }, state)).toBe('capture');
     expect(cue({ seat: 'N', from: '0,0', to: '1,0', piece: 3, timestamp: 1 }, state)).toBe('place');
+    expect(cue({ seat: 'N', from: '0,0', to: '1,0', piece: 3, blind: true, revealed: 9, capture: true, captured: 9, timestamp: 1 }, state))
+      .toBe('capture');
+    expect(cue({ seat: 'N', from: '0,0', to: '1,0', piece: 3, blind: true, revealed: 0, timestamp: 1 }, state)).toBe('flip');
   });
 });

@@ -6,5 +6,6 @@ export const banqiUi: GameUi<'banqi'> = {
   gameType: 'banqi',
   roomOptions: BanqiRoomOptions,
   table: lazy(() => import('./BanqiTable').then((game) => ({ default: game.BanqiTable }))),
-  boardMoveCue: (move) => (move.revealed !== undefined ? 'flip' : move.capture ? 'capture' : 'place'),
+  // A blind attack that took nothing only turned the target over.
+  boardMoveCue: (move) => (move.capture ? 'capture' : move.revealed !== undefined ? 'flip' : 'place'),
 };

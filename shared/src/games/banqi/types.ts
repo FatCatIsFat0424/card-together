@@ -8,23 +8,34 @@ import type { BoardOutcome } from '../../rules/board/board-result';
 import type { DrawOfferState } from '../../rules/board/match-controls';
 import type { BqBoard, BqColour, BqPiece, BqSlot } from '../../rules/banqi';
 
-/** The two optional variants a room can switch on; both default to off. */
+/** Optional variants a room can switch on; defaults in `DEFAULT_BANQI_OPTIONS`. */
 export interface BanqiOptions {
-  /** 連吃: after a capture the same piece may keep capturing within the turn */
+  /** 連吃: after a capture the same piece may keep capturing within the turn, and pieces may attack face-down ones */
   readonly chain: boolean;
   /** 車衝: the chariot moves and captures at any distance along a line */
   readonly rookDash: boolean;
 }
 
+/** The rules a match plays, fixed when it starts. */
+export interface BanqiMatchOptions extends BanqiOptions {
+  /**
+   * Attacks on face-down pieces (吃暗子), which 連吃 includes. Missing on matches started before they
+   * existed: those keep chaining captures of face-up pieces only.
+   */
+  readonly blindCapture?: boolean;
+}
+
 /**
  * One public action. A flip names the cell and the piece it revealed (face up for everyone from then on);
- * a move names both cells, the moving piece, and the piece it captured. Pieces still face down never appear.
+ * a move names both cells, the moving piece, and the piece it captured. A blind attack is a move with `blind`
+ * and the piece it revealed: `captured` too when it took that piece, otherwise the piece stays face up on `to`.
+ * Pieces still face down never appear.
  */
 export interface BanqiMove extends BoardMoveRecord {
   readonly seat: GameSeat;
   readonly from?: NodeId;
   readonly to: NodeId;
-  /** Revealed by a flip; absent for moves */
+  /** Revealed by a flip or a blind attack; absent for other moves */
   readonly revealed?: BqPiece;
   /** The piece that moved; absent for flips */
   readonly piece?: BqPiece;
@@ -32,6 +43,8 @@ export interface BanqiMove extends BoardMoveRecord {
   readonly captured?: BqPiece;
   /** A further capture by the same piece within one turn (連吃) */
   readonly chain?: true;
+  /** The move attacked a face-down piece (吃暗子) */
+  readonly blind?: true;
   readonly timestamp: number;
 }
 
@@ -59,7 +72,7 @@ export interface BanqiGameState {
   readonly gameType: 'banqi';
   readonly id: string;
   readonly startedAt: number;
-  readonly options: BanqiOptions;
+  readonly options: BanqiMatchOptions;
   /** The two seats playing; the first in seat order moves first */
   readonly players: Partial<Record<GameSeat, PlayerInfo>>;
   readonly roomCode: RoomCode;
@@ -93,7 +106,7 @@ export interface BanqiVisibleState {
   readonly mySeat: GameSeat;
   /** The two seats in play order: the first mover first */
   readonly seats: readonly GameSeat[];
-  readonly options: BanqiOptions;
+  readonly options: BanqiMatchOptions;
   readonly board: BqBoard;
   readonly colours: readonly [BqColour, BqColour] | null;
   readonly currentTurnSeat: GameSeat;

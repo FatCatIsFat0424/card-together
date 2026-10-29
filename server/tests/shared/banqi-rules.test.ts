@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BQ_CELLS, BQ_DOWN, BQ_EMPTY, BQ_STANDARD_RULES, bqApplyMove, bqCanCapture, bqCell, bqColour, bqFlips, bqFullSet, bqGlyph, bqHasAction,
+  BQ_CELLS, BQ_DOWN, BQ_EMPTY, BQ_STANDARD_RULES, bqApplyBlind, bqApplyMove, bqBlindTakes, bqCanCapture, bqCell, bqColour, bqFlips, bqFullSet, bqGlyph, bqHasAction,
   bqMoves, bqMovesFrom, bqNode, bqPiece, bqRank, bqTally, isBqBoard,
 } from '@shared/rules/banqi';
 import type { BqBoard, BqRules } from '@shared/rules/banqi';
@@ -117,7 +117,7 @@ describe('Banqi cannon', () => {
 });
 
 describe('Banqi chariot dash option', () => {
-  const dash: BqRules = { chain: false, rookDash: true };
+  const dash: BqRules = { chain: false, rookDash: true, blindCapture: false };
 
   it('moves one step without the option', () => {
     expect(targets(position(['R.......', '........', '........', '........']), 0)).toEqual([1, 8]);
@@ -177,5 +177,51 @@ describe('Banqi chain continuation and legal actions', () => {
     expect(applied.board[1]).toBe(bqPiece(0, 3));
     expect(applied.board[0]).toBe(BQ_EMPTY);
     expect(board[0]).toBe(bqPiece(0, 3));
+  });
+});
+
+describe('Banqi blind attacks (連吃 on face-down pieces)', () => {
+  const blind: BqRules = { chain: true, rookDash: false, blindCapture: true };
+  const blindTargets = (board: BqBoard, from: number, rules: BqRules = blind, capturesOnly = false): number[] =>
+    bqMovesFrom(board, from, rules, capturesOnly).filter((move) => move.blind).map((move) => move.to).sort((a, b) => a - b);
+
+  it('reaches face-down neighbours with the normal capture geometry, and only with the rule on', () => {
+    const board = position(['#R#.....', '.#......', '........', '........']);
+    expect(blindTargets(board, 1)).toEqual([0, 2, 9]);
+    expect(blindTargets(board, 1, BQ_STANDARD_RULES)).toEqual([]);
+    expect(blindTargets(board, 1, { ...blind, blindCapture: false })).toEqual([]);
+    // A chain continuation may attack face-down pieces too.
+    expect(blindTargets(board, 1, blind, true)).toEqual([0, 2, 9]);
+    expect(bqMovesFrom(board, 1, blind).find((move) => move.to === 0)).toEqual({ from: 1, to: 0, capture: false, blind: true });
+  });
+
+  it('lets the cannon attack only by jumping, over any screen, and the dashing chariot at a distance', () => {
+    expect(blindTargets(position(['C#......', '........', '........', '........']), 0)).toEqual([]);
+    expect(blindTargets(position(['C##.....', '........', '........', '........']), 0)).toEqual([2]);
+    expect(blindTargets(position(['CP.#....', '........', '........', '........']), 0)).toEqual([3]);
+    expect(blindTargets(position(['Cp#.....', '........', '........', '........']), 0)).toEqual([2]);
+    expect(blindTargets(position(['R..#....', '........', '........', '........']), 0)).toEqual([]);
+    expect(blindTargets(position(['R..#....', '........', '........', '........']), 0, { ...blind, rookDash: true })).toEqual([3]);
+  });
+
+  it('takes a revealed enemy the attacker could capture, keeping the soldier and general exceptions', () => {
+    const [R, K, P, C] = [bqPiece(0, 3), bqPiece(0, 0), bqPiece(0, 6), bqPiece(0, 5)];
+    expect(bqBlindTakes(R, bqPiece(1, 3))).toBe(true);
+    expect(bqBlindTakes(R, bqPiece(1, 2))).toBe(false);
+    expect(bqBlindTakes(R, bqPiece(0, 6))).toBe(false);
+    expect(bqBlindTakes(P, bqPiece(1, 0))).toBe(true);
+    expect(bqBlindTakes(K, bqPiece(1, 6))).toBe(false);
+    expect(bqBlindTakes(C, bqPiece(1, 0))).toBe(true);
+    expect(bqBlindTakes(C, bqPiece(0, 0))).toBe(false);
+  });
+
+  it('applies a blind attack without mutating the board: a take moves in, a failure only turns the piece over', () => {
+    const board = position(['R#......', '........', '........', '........']);
+    const move = { from: 0, to: 1, capture: false, blind: true } as const;
+    expect(bqApplyBlind(board, move, bqPiece(1, 6)))
+      .toEqual({ board: position(['.R......', '........', '........', '........']), captured: bqPiece(1, 6) });
+    expect(bqApplyBlind(board, move, bqPiece(1, 0)))
+      .toEqual({ board: position(['Rk......', '........', '........', '........']), captured: null });
+    expect(board[1]).toBe(BQ_DOWN);
   });
 });

@@ -1,13 +1,15 @@
 // ─── Banqi search: expectimax over the unflipped pieces, from the seat's own view only ───
 //
-// A flip is a chance node: the piece under a face-down cell is drawn from the pieces the seat has not seen
-// (the full set minus the face-up pieces and the captures in the public log). Both players are equally
+// A flip, and a blind attack on a face-down piece, is a chance node: the piece under a face-down cell is drawn
+// from the pieces the seat has not seen (the full set minus the face-up pieces and the captures in the public
+// log). Both players are equally
 // uncertain, so the opponent is modelled with the same distribution. Runs inside a bot worker
 // (`GameBot.search`) and, with a tiny node budget, as the synchronous move that serves player timeouts.
 
 import type { BanqiVisibleState } from '@shared/games/banqi/types';
+import { banqiRules } from '@shared/banqi-options';
 import {
-  BQ_CELLS, BQ_DOWN, BQ_EMPTY, BQ_PIECE_COUNT, bqCell, bqColour, bqFullSet, bqMovesFrom, bqNode, bqOpposite, bqRank, bqTally,
+  BQ_CELLS, BQ_DOWN, BQ_EMPTY, BQ_PIECE_COUNT, bqBlindTakes, bqCell, bqColour, bqFullSet, bqMovesFrom, bqNode, bqOpposite, bqRank, bqTally,
   isBqPiece,
 } from '@shared/rules/banqi';
 import type { BqColour, BqMove, BqRules } from '@shared/rules/banqi';
@@ -20,6 +22,11 @@ const WIN = 10_000;
 
 /** Covered cells tried at each flip node: the ones next to the most pieces, since the rest are alike. */
 const FLIP_CANDIDATES = 4;
+/**
+ * Blind attacks tried below the root, the ones with the best immediate expected take. They replace flips in the
+ * same four chance nodes, so the tree grows no wider than without them.
+ */
+const BLIND_CANDIDATES = 2;
 
 class Stop extends Error {}
 
@@ -58,7 +65,7 @@ export function banqiState(visible: BanqiVisibleState): { state: State; colour: 
   return {
     state: { board, pool, down },
     colour: visible.colours === null ? null : visible.colours[index],
-    rules: { chain: visible.options.chain, rookDash: visible.options.rookDash },
+    rules: banqiRules(visible.options),
   };
 }
 
@@ -79,22 +86,41 @@ function neighbourCount(board: readonly number[], cell: number): number {
   return count;
 }
 
-function flipCells(state: State): number[] {
+function flipCells(state: State, limit = FLIP_CANDIDATES): number[] {
   if (state.down === 0) return [];
   const cells: number[] = [];
   for (let cell = 0; cell < BQ_CELLS; cell++) if (state.board[cell] === BQ_DOWN) cells.push(cell);
   return cells.map((cell) => ({ cell, near: neighbourCount(state.board, cell) }))
-    .sort((a, b) => b.near - a.near || a.cell - b.cell).slice(0, FLIP_CANDIDATES).map((entry) => entry.cell);
+    .sort((a, b) => b.near - a.near || a.cell - b.cell).slice(0, limit).map((entry) => entry.cell);
 }
 
-function movesOf(state: State, colour: BqColour, rules: BqRules): BqMove[] {
-  const moves: BqMove[] = [];
+/** Expected material a blind attack takes at once, over the unseen pieces it may reveal. */
+function blindGain(state: State, move: BqMove): number {
+  const total = poolTotal(state);
+  const attacker = state.board[move.from];
+  let gain = 0;
+  for (let piece = 0; piece < BQ_PIECE_COUNT; piece++) {
+    if (state.pool[piece] > 0 && bqBlindTakes(attacker, piece)) gain += state.pool[piece] * valueOf(piece);
+  }
+  return total === 0 ? 0 : gain / total;
+}
+
+/**
+ * Moves of `colour`: captures first, which tightens the alpha-beta window, then blind attacks, then the rest.
+ * Below the root only the most promising blind attacks are kept, as each one branches like a flip.
+ */
+function movesOf(state: State, colour: BqColour, rules: BqRules, allBlind = false): BqMove[] {
+  const plain: BqMove[] = [];
+  const blind: BqMove[] = [];
   for (let from = 0; from < BQ_CELLS; from++) {
     const piece = state.board[from];
-    if (isBqPiece(piece) && bqColour(piece) === colour) moves.push(...bqMovesFrom(state.board, from, rules));
+    if (!isBqPiece(piece) || bqColour(piece) !== colour) continue;
+    for (const move of bqMovesFrom(state.board, from, rules)) (move.blind ? blind : plain).push(move);
   }
-  // Captures first tightens the alpha-beta window.
-  return moves.sort((a, b) => Number(b.capture) - Number(a.capture));
+  plain.sort((a, b) => Number(b.capture) - Number(a.capture));
+  const tried = allBlind ? blind : blind.map((move) => ({ move, gain: blindGain(state, move) }))
+    .sort((a, b) => b.gain - a.gain).slice(0, BLIND_CANDIDATES).map((entry) => entry.move);
+  return [...plain, ...tried];
 }
 
 /** Total material a colour still owns: face-up pieces plus its share of the unseen pool. */
@@ -116,8 +142,12 @@ function pieceCount(state: State, colour: BqColour): number {
 function evaluate(state: State, mine: BqColour, toMove: BqColour, rules: BqRules): number {
   let score = material(state, mine) - material(state, bqOpposite(mine));
   let threat = 0;
-  for (const move of movesOf(state, toMove, rules)) {
-    if (move.capture) threat = Math.max(threat, valueOf(state.board[move.to]));
+  for (let from = 0; from < BQ_CELLS; from++) {
+    const piece = state.board[from];
+    if (!isBqPiece(piece) || bqColour(piece) !== toMove) continue;
+    for (const move of bqMovesFrom(state.board, from, rules, true)) {
+      if (move.capture) threat = Math.max(threat, valueOf(state.board[move.to]));
+    }
   }
   score += toMove === mine ? threat * 0.8 : -threat * 0.8;
   return score;
@@ -128,6 +158,20 @@ function applyMove(state: State, move: BqMove): State {
   board[move.to] = board[move.from];
   board[move.from] = BQ_EMPTY;
   return { board, pool: state.pool, down: state.down };
+}
+
+/** A blind attack that revealed `piece`: taken when the attacker may take it, otherwise left face up. */
+function applyBlind(state: State, move: BqMove, piece: number): State {
+  const board = [...state.board];
+  if (bqBlindTakes(board[move.from], piece)) {
+    board[move.to] = board[move.from];
+    board[move.from] = BQ_EMPTY;
+  } else {
+    board[move.to] = piece;
+  }
+  const pool = Int8Array.from(state.pool);
+  pool[piece]--;
+  return { board, pool, down: state.down - 1 };
 }
 
 function applyFlip(state: State, cell: number, piece: number): State {
@@ -145,16 +189,25 @@ interface Run {
   nodes: number;
 }
 
-/** Expected value of flipping `cell`: each unseen piece type weighted by how many of it remain. */
-function expectation(run: Run, state: State, cell: number, next: BqColour, depth: number): number {
+/**
+ * Expected value of revealing a face-down cell, by a flip of `cell` or by the blind attack `cell` is: each unseen
+ * piece type weighted by how many of it remain.
+ */
+function expectation(run: Run, state: State, cell: number | BqMove, next: BqColour, depth: number): number {
   const total = poolTotal(state);
   if (total === 0) return evaluate(state, run.mine, next, run.rules);
   let expected = 0;
   for (let piece = 0; piece < BQ_PIECE_COUNT; piece++) {
     if (state.pool[piece] === 0) continue;
-    expected += (state.pool[piece] / total) * value(run, applyFlip(state, cell, piece), next, depth - 1, -Infinity, Infinity);
+    const after = typeof cell === 'number' ? applyFlip(state, cell, piece) : applyBlind(state, cell, piece);
+    expected += (state.pool[piece] / total) * value(run, after, next, depth - 1, -Infinity, Infinity);
   }
   return expected;
+}
+
+/** Value of a move: a blind attack is a chance node like a flip; others are searched directly. */
+function moveValue(run: Run, state: State, move: BqMove, next: BqColour, depth: number, alpha: number, beta: number): number {
+  return move.blind ? expectation(run, state, move, next, depth) : value(run, applyMove(state, move), next, depth - 1, alpha, beta);
 }
 
 function value(run: Run, state: State, toMove: BqColour, depth: number, alpha: number, beta: number): number {
@@ -162,10 +215,12 @@ function value(run: Run, state: State, toMove: BqColour, depth: number, alpha: n
   const opponent = bqOpposite(toMove);
   if (pieceCount(state, run.mine) === 0) return -WIN - depth;
   if (pieceCount(state, bqOpposite(run.mine)) === 0) return WIN + depth;
+  // While a piece is face down the side to move can always flip, so a leaf needs no move list.
+  if (depth === 0 && state.down > 0) return evaluate(state, run.mine, toMove, run.rules);
   const moves = movesOf(state, toMove, run.rules);
   if (moves.length === 0 && state.down === 0) return toMove === run.mine ? -WIN - depth : WIN + depth;
   if (depth === 0) return evaluate(state, run.mine, toMove, run.rules);
-  const flips = flipCells(state);
+  const flips = flipCells(state, FLIP_CANDIDATES - moves.filter((move) => move.blind).length);
 
   const maximising = toMove === run.mine;
   let best = maximising ? -Infinity : Infinity;
@@ -180,7 +235,7 @@ function value(run: Run, state: State, toMove: BqColour, depth: number, alpha: n
     return alpha >= beta;
   };
   for (const move of moves) {
-    if (consider(value(run, applyMove(state, move), opponent, depth - 1, alpha, beta))) return best;
+    if (consider(moveValue(run, state, move, opponent, depth, alpha, beta))) return best;
   }
   for (const cell of flips) {
     // A flip is a chance node: weigh every piece the cell may hide by how many of it remain unseen.
@@ -194,14 +249,14 @@ function rootChoices(state: State, mine: BqColour, rules: BqRules, chain: number
   if (chain !== null) {
     return [...bqMovesFrom(state.board, chain, rules, true).map((move): Choice => ({ kind: 'move', move })), { kind: 'stop' }];
   }
-  return [...movesOf(state, mine, rules).map((move): Choice => ({ kind: 'move', move })),
+  return [...movesOf(state, mine, rules, true).map((move): Choice => ({ kind: 'move', move })),
     ...flipCells(state).map((cell): Choice => ({ kind: 'flip', cell }))];
 }
 
 function choiceValue(run: Run, state: State, choice: Choice, depth: number): number {
   const opponent = bqOpposite(run.mine);
   if (choice.kind === 'stop') return value(run, state, opponent, depth - 1, -Infinity, Infinity);
-  if (choice.kind === 'move') return value(run, applyMove(state, choice.move), opponent, depth - 1, -Infinity, Infinity);
+  if (choice.kind === 'move') return moveValue(run, state, choice.move, opponent, depth, -Infinity, Infinity);
   return expectation(run, state, choice.cell, opponent, depth);
 }
 

@@ -5,7 +5,8 @@ import type { BanqiMove, BanqiVisibleState } from '@shared/games/banqi/types';
 import {
   BQ_CELLS, BQ_DOWN, BQ_EMPTY, BQ_RANK_COUNTS, bqCell, bqColour, bqFlips, bqGlyph, bqMoves, bqMovesFrom, bqNode, isBqPiece,
 } from '@shared/rules/banqi';
-import type { BqColour, BqPiece, BqRules } from '@shared/rules/banqi';
+import type { BqColour, BqPiece } from '@shared/rules/banqi';
+import { banqiRules } from '@shared/banqi-options';
 import { coordinateLabel } from '@shared/rules/board/board-model';
 import type { NodeId } from '@shared/rules/board/board-model';
 import { banqiBoard } from '@shared/rules/board/boards';
@@ -20,9 +21,6 @@ export interface BanqiCellView {
   /** God view only: what a spectator knows lies under a face-down piece */
   readonly secret: BqPiece | null;
 }
-
-export const banqiRules = (game: Pick<BanqiVisibleState, 'options'>): BqRules =>
-  ({ chain: game.options.chain, rookDash: game.options.rookDash });
 
 /** Colour a seat plays, or null before the first flip (and for a spectator without a seat). */
 export function banqiColour(game: Pick<BanqiVisibleState, 'seats' | 'colours'>, seat: GameSeat): BqColour | null {
@@ -49,6 +47,7 @@ export interface BanqiChoices {
   readonly movable: NodeId[];
   /** Face-down pieces the viewer may flip with one tap */
   readonly flips: NodeId[];
+  /** Cells the piece on `from` may reach; `capture` also marks blind attacks on face-down pieces */
   readonly targets: (from: NodeId) => { readonly node: NodeId; readonly capture: boolean }[];
 }
 
@@ -57,7 +56,7 @@ const NONE: BanqiChoices = { movable: [], flips: [], targets: () => [] };
 /** What the viewer may do now: nothing unless it is their turn in a running match. */
 export function banqiChoices(game: BanqiVisibleState, mySeat: GameSeat | null): BanqiChoices {
   if (mySeat === null || game.phase !== 'playing' || game.currentTurnSeat !== mySeat) return NONE;
-  const rules = banqiRules(game);
+  const rules = banqiRules(game.options);
   const colour = banqiColour(game, mySeat);
   if (game.chain !== null) {
     const from = bqCell(game.chain);
@@ -74,7 +73,7 @@ export function banqiChoices(game: BanqiVisibleState, mySeat: GameSeat | null): 
     movable: [...new Set(moves.map((move) => bqNode(move.from)))],
     flips: bqFlips(game.board).map(bqNode),
     targets: (node) => moves.filter((move) => bqNode(move.from) === node)
-      .map((move) => ({ node: bqNode(move.to), capture: move.capture })),
+      .map((move) => ({ node: bqNode(move.to), capture: move.capture || move.blind === true })),
   };
 }
 
@@ -92,13 +91,26 @@ export function banqiLastMove(game: Pick<BanqiVisibleState, 'log'>): { readonly 
   return last ? { ...last.from === undefined ? {} : { from: last.from }, to: last.to } : null;
 }
 
-/** Piece characters carry the colour, so the list needs no colour column: `翻 c2 俥`, `俥 c2-c3`, `俥 c2xc3`. */
+/**
+ * Piece characters carry the colour, so the list needs no colour column: `翻 c2 俥`, `俥 c2-c3`, `俥 c2xc3`. A blind
+ * attack marks the face-down target with `?` and ends with the piece it revealed: `俥 c2x?c3 卒` took it,
+ * `俥 c2?c3 翻 傌` only turned it over.
+ */
 export const banqiNotation: MoveNotation<BanqiMove> = (move, locale) => {
   const to = coordinateLabel(BOARD, move.to);
-  if (move.revealed !== undefined) return `${locale === 'zh-TW' ? '翻' : 'Flip'} ${to} ${bqGlyph(move.revealed)}`;
+  const flipWord = locale === 'zh-TW' ? '翻' : 'Flip';
+  if (move.revealed !== undefined && !move.blind) return `${flipWord} ${to} ${bqGlyph(move.revealed)}`;
   const from = move.from === undefined ? '' : coordinateLabel(BOARD, move.from);
   const piece = move.piece !== undefined && isBqPiece(move.piece) ? bqGlyph(move.piece) : '';
-  return `${move.chain ? '+' : ''}${piece} ${from}${move.capture ? 'x' : '-'}${to}`.trim();
+  const step = `${move.chain ? '+' : ''}${piece} ${from}${move.capture ? 'x' : move.blind ? '' : '-'}${move.blind ? '?' : ''}${to}`.trim();
+  if (!move.blind || move.revealed === undefined) return step;
+  return move.capture ? `${step} ${bqGlyph(move.revealed)}` : `${step} ${flipWord} ${bqGlyph(move.revealed)}`;
+};
+
+/** Whether moving from `from` to `to` attacks a face-down piece, for the pending-move prompt. */
+export const banqiBlindTarget = (game: Pick<BanqiVisibleState, 'board'>, to: NodeId): boolean => {
+  const cell = bqCell(to);
+  return cell !== null && game.board[cell] === BQ_DOWN;
 };
 
 /** The seat to move is in a capture chain it may end. */
