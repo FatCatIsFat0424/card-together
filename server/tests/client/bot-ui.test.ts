@@ -230,7 +230,8 @@ describe('bot player interface', () => {
     expect(html).toContain('Seat 5');
     expect(html).not.toMatch(/disabled="">Ready<\/button>/);
     expect(html).not.toContain('Only four-player matches are currently supported');
-    expect(html).not.toMatch(/\d\/\d seated/);
+    // The summary card counts the seated players of the five visible seats.
+    expect(html).toMatch(/\d\/5 seated/);
     expect(html).not.toMatch(/\d\/\d ready/);
     state.mySeat = null;
     expect(render(createElement(RoomPage))).not.toMatch(/disabled="">Ready<\/button>/);

@@ -15,6 +15,7 @@ import type { TranslationKey } from '../i18n';
 import { socket } from '../socket';
 import { roomErrorKey } from '../room-error-i18n';
 import { roomReplayErrorKey, roomReplayMembers } from '../room-replay';
+import { GAME_CARD_ART } from '../game-backgrounds';
 import { seatBackgroundStyle, tableBackgroundStyle } from '../account-appearance';
 import { useAccountStore } from '../stores/account-store';
 import { usePlayerStore } from '../stores/player-store';
@@ -29,6 +30,7 @@ import { Dock, DockCount } from '../components/Dock';
 import { ChatPanel } from '../components/ChatPanel';
 import { InviteFriends } from '../components/InviteFriends';
 import { RoomSettings } from '../components/RoomSettings';
+import { RoomSummaryCard } from '../components/RoomSummaryCard';
 import { AddSeatSlot, RoomSeat, SeatDragPreview } from '../components/RoomSeat';
 import type { SeatDropView } from '../components/RoomSeat';
 import { PlayerMoveMenu } from '../components/PlayerMoveMenu';
@@ -44,6 +46,7 @@ import styles from './RoomPage.module.css';
 import botSeatBackground from '../assets/room-backgrounds/bot-seat.webp';
 import { unreadCount } from './room-progress';
 import { ovalPosition } from './room-oval';
+import { roomOptionChips, roomSummaryStatus, roomTimeChips, summaryDots } from './room-summary';
 import { moveOptions, roomSeatCards, seatDropOutcome, spectatorDropOutcome } from './room-moves';
 import type { DropAction, DropOutcome, MoveOption } from './room-moves';
 import { readPreference, writePreference } from '../utils/preference-storage';
@@ -402,9 +405,9 @@ export function RoomPage(): ReactNode {
     ? t('lobby.players', { n: String(definition.maxPlayers) })
     : t('lobby.playersRange', { min: String(definition.minPlayers), max: String(definition.maxPlayers) });
   const matchHands = gameDefinition(roomInfo.gameType).matchHands;
-  const length = matchHands === undefined ? t(`gameType.${roomInfo.gameType}Tag`)
-    : t('room.summaryHands', { n: String(matchHands) });
   const timeControl = roomInfo.timeControl ?? gameTimeControl(roomInfo.gameType);
+  const summary = roomSummaryStatus(roomInfo, seatCards, { isHost,
+    seatReady: seatCards.find((card) => card.info.player?.id === playerId)?.info.isReady ?? null });
   const memberMenu = (player: PlayerInfo, variant: 'seat' | 'row'): ReactNode => isHost && waiting && !player.isBot &&
     <PlayerMoveMenu key="move-menu" variant={variant} player={player} spectatorCount={spectators.length}
       options={moveOptions(seatCards, spectators, player, MAX_SPECTATORS)} disabled={blocked}
@@ -486,15 +489,21 @@ export function RoomPage(): ReactNode {
             {canAddSeat && <AddSeatSlot position={ovalPosition(seatCards.length, firstSeat, slotCount)}
               disabled={blocked || !waiting} pending={Boolean(pendingDisabled(!waiting))} onAdd={addSeat} />}
           </div>
-          <div className={styles.summary}>
-            <strong>{players} · {length}</strong>
-            <span>{t('room.summaryTime', { base: String(timeControl.baseSeconds), bank: String(timeControl.bankSeconds) })}</span>
-            {canManagePlayers && !dragHintDone && !dragging && <span className={styles.hostHint}>
-              {t(touchInput ? 'room.dragHostHintTouch' : 'room.dragHostHint')}</span>}
-            <button type="button" className={styles.settingsLink} aria-haspopup="dialog"
-              aria-expanded={Boolean(settingsAnchor)} onClick={(event) => setSettingsAnchor(event.currentTarget)}>
-              <AppIcon name="settings" />{t('room.settings')}
-            </button>
+          <div className={`${styles.summary} ${seatCards.length > 2 ? styles.summaryWide : ''}`}>
+            <RoomSummaryCard name={t(`gameType.${roomInfo.gameType}`)} category={t(`gameType.${roomInfo.gameType}Tag`)}
+              players={matchHands === undefined ? players : `${players} · ${t('room.summaryHands', { n: String(matchHands) })}`}
+              art={GAME_CARD_ART[roomInfo.gameType]}
+              dots={summaryDots(summary.seated, seatCards.length, definition.minPlayers)}
+              seatedText={t('room.summarySeated', { n: String(summary.seated), max: String(seatCards.length) })}
+              statusText={t(summary.tagKey, { n: String(summary.count) })} tone={summary.stage}
+              hint={t(summary.hintKey)}
+              timeChips={roomTimeChips(timeControl).map((chip) => t(chip.label, chip.params))}
+              optionChips={roomOptionChips(roomInfo, roomRulesContext(roomInfo)).map((chip) => t(chip.label))}
+              settingsLabel={t(isHost ? 'room.settings' : 'room.viewSettings')} settingsEditable={isHost}
+              settingsOpen={Boolean(settingsAnchor)}
+              note={canManagePlayers && !dragHintDone && !dragging
+                ? t(touchInput ? 'room.dragHostHintTouch' : 'room.dragHostHint') : undefined}
+              onOpenSettings={(event) => setSettingsAnchor(event.currentTarget)} />
           </div>
           {dragBar && <p className={styles.dragBar} role="status">{dragBar}</p>}
         </div>
