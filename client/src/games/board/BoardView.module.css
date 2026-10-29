@@ -26,12 +26,16 @@
 .railInner { stroke: var(--board-rail-inner); stroke-width: 0.09; stroke-dasharray: 0.15 0.15; }
 .star { fill: var(--board-line); }
 .marks { fill: none; stroke: var(--board-line); stroke-width: 0.03; }
+.palace { stroke: var(--board-palace); stroke-width: 0.04; stroke-linecap: round; }
+.riverBand { fill: var(--board-river); }
+.material { opacity: 0.55; pointer-events: none; }
+.grain { fill: none; stroke: var(--board-grain); }
 .river text, .mountainText, .axis {
   fill: var(--board-ink);
   font-family: 'Noto Serif TC', 'Noto Sans TC', serif;
   pointer-events: none;
 }
-.river text { letter-spacing: 0.15px; }
+.river text { font-family: var(--board-font); letter-spacing: 0.15px; }
 .mountain { fill: var(--board-mountain); stroke: var(--board-mountain-line); stroke-width: 0.05; }
 
 .station { fill: var(--board-station); stroke: var(--board-line); stroke-width: 0.05; }

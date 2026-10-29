@@ -1,6 +1,6 @@
 // ─── BoardView: SVG board drawn from the shared board model, with pieces and move markers ───
 
-import { useMemo, useRef } from 'react';
+import { useId, useMemo, useRef } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { coordinateLabel, nodeById, zonesAt } from '@shared/rules/board/board-model';
 import type { BoardModel, BoardNode, BoardPoint, NodeId } from '@shared/rules/board/board-model';
@@ -10,7 +10,7 @@ import { useI18nStore } from '../../stores/i18n-store';
 import { useEquippedBoardTheme } from '../../cosmetics/board-styles/use-board-theme';
 import { useStillArt } from '../../cosmetics/art-layers/art-layers';
 import { DEFAULT_PIECE_FINISH, boardThemeStyle } from './board-theme';
-import type { BoardSurface, BoardTheme } from './board-theme';
+import type { BoardPattern, BoardSurface, BoardTheme } from './board-theme';
 import { axisPositions, boardGeometry, hitBox, markerBox, movePath } from './board-view';
 import type { BoardGeometry } from './board-view';
 import { PIECE_RADIUS, PieceFinishContext } from './BoardPieces';
@@ -76,9 +76,47 @@ const coarsePointer = (): boolean => typeof window !== 'undefined' && typeof win
 const point = (geometry: BoardGeometry, id: NodeId | undefined): BoardPoint | undefined =>
   id === undefined ? undefined : geometry.point(id);
 
-function BoardSurfaceLayer({ board, geometry, surface, activeHomes }: {
+/** One tile of each material texture, in board units; drawn once into a static pattern, never animated. */
+const PATTERN_TILES: Readonly<Record<Exclude<BoardPattern, 'none'>, { readonly size: readonly [number, number]; readonly d: string }>> = {
+  grain: { size: [3, 0.55], d: 'M0 .28Q.75 .16 1.5 .28T3 .28M0 .05Q.9 .1 1.8 .04T3 .06' },
+  speckle: { size: [0.9, 0.9], d: 'M.14 .2h.05M.52 .1h.04M.7 .48h.05M.3 .62h.04M.82 .8h.03M.08 .78h.04' },
+  brushed: { size: [1, 0.22], d: 'M0 .07H.62M.4 .17H1' },
+  crackle: { size: [2, 2], d: 'M0 .5L.6 .7L.9 .3L1.4 .5L2 .2M.6 .7L.5 1.3L1 1.6L1.6 1.3L2 1.5M1 1.6L.9 2M1.4 .5L1.6 1.3' },
+};
+
+/** Faint material texture over the whole board, from a small static tile. */
+function MaterialPattern({ pattern, box }: {
+  readonly pattern: BoardPattern; readonly box: readonly [number, number, number, number];
+}): ReactNode {
+  const id = useId();
+  if (pattern === 'none') return null;
+  const tile = PATTERN_TILES[pattern];
+  const [x, y, width, height] = box;
+  return <>
+    <defs>
+      <pattern id={id} width={tile.size[0]} height={tile.size[1]} patternUnits="userSpaceOnUse">
+        <path className={styles.grain} d={tile.d} strokeWidth={pattern === 'speckle' ? 0.05 : 0.03}
+          strokeLinecap={pattern === 'speckle' ? 'round' : 'butt'} />
+      </pattern>
+    </defs>
+    <rect className={styles.material} x={x} y={y} width={width} height={height} rx={0.3} fill={`url(#${id})`} />
+  </>;
+}
+
+/** River band of a river board, drawn before the lines so the side files still cross it. */
+function riverBands(board: BoardModel, geometry: BoardGeometry): ReactNode[] {
+  return board.decorations.flatMap((decoration, index) => {
+    if (decoration.kind !== 'river') return [];
+    const a = geometry.turn({ x: decoration.x0, y: decoration.y - 0.5 });
+    const b = geometry.turn({ x: decoration.x1, y: decoration.y + 0.5 });
+    return [<rect key={`band${index}`} className={styles.riverBand} x={Math.min(a.x, b.x)} y={Math.min(a.y, b.y)}
+      width={Math.abs(b.x - a.x)} height={Math.abs(b.y - a.y)} />];
+  });
+}
+
+function BoardSurfaceLayer({ board, geometry, surface, activeHomes, pattern }: {
   readonly board: BoardModel; readonly geometry: BoardGeometry; readonly surface: BoardSurface;
-  readonly activeHomes?: readonly number[];
+  readonly activeHomes?: readonly number[]; readonly pattern: BoardPattern;
 }): ReactNode {
   const { t } = useI18nStore();
   if (isStar(board, surface)) return <StarSurface board={board} geometry={geometry} activeHomes={activeHomes} />;
@@ -89,7 +127,8 @@ function BoardSurfaceLayer({ board, geometry, surface, activeHomes }: {
     const end = geometry.point(b);
     return start && end ? { x1: start.x, y1: start.y, x2: end.x, y2: end.y } : null;
   };
-  const items: ReactNode[] = [<rect key="surface" className={styles.surface} x={x} y={y} width={width} height={height} rx={0.3} />];
+  const items: ReactNode[] = [<rect key="surface" className={styles.surface} x={x} y={y} width={width} height={height} rx={0.3} />,
+    <MaterialPattern key="material" pattern={pattern} box={geometry.viewBox} />, ...riverBands(board, geometry)];
 
   if (board.layout === 'cells') {
     const { minX, minY, maxX, maxY } = geometry.bounds;
@@ -124,7 +163,8 @@ function BoardSurfaceLayer({ board, geometry, surface, activeHomes }: {
       if (edge.kind === 'rail') {
         items.push(<g key={`e${index}`}><line className={styles.rail} {...line} /><line className={styles.railInner} {...line} /></g>);
       } else {
-        items.push(<line key={`e${index}`} className={board.layout === 'stations' ? styles.road : styles.line} {...line} />);
+        const kind = board.layout === 'stations' ? styles.road : edge.kind === 'diagonal' ? styles.palace : styles.line;
+        items.push(<line key={`e${index}`} className={kind} {...line} />);
       }
     });
   }
@@ -254,7 +294,8 @@ export function BoardView({
 
   const viewBox = `${vx} ${vy} ${vw} ${vh}`;
   const star = isStar(board, surface);
-  const surfaceLayer = <BoardSurfaceLayer board={board} geometry={geometry} surface={surface} activeHomes={activeHomes} />;
+  const surfaceLayer = <BoardSurfaceLayer board={board} geometry={geometry} surface={surface} activeHomes={activeHomes}
+    pattern={theme.surfaces[surface].pattern} />;
   const content = <PieceFinishContext.Provider value={theme.finish ?? DEFAULT_PIECE_FINISH}><StarPieces star={star} theme={theme}>
     {fileLabels && axisPositions(board, geometry).files.map(({ index, x }) => fileLabels[index] !== undefined
       && <text key={`f${index}`} className={styles.axis} x={x} y={vy + vh - 0.2} textAnchor="middle" fontSize={0.3}>

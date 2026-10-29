@@ -15,7 +15,7 @@ import { useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
 import { useTablePerspective, useViewedGame } from '../use-table-perspective';
 import { BoardResultDialog } from '../board/BoardResultDialog';
-import { StonePiece } from '../board/BoardPieces';
+import { DiscPiece } from '../board/BoardPieces';
 import { BoardView } from '../board/BoardView';
 import { boardControls } from '../board/BoardControls';
 import { BoardInfo, boardMoveEntries } from '../board/BoardMoves';
@@ -83,7 +83,7 @@ export function ReversiTable(): ReactNode {
   const counts = reversiDiscCounts(game);
   const passed = reversiPassedSeat(game);
   const mySide = reversiSide(game, mySeat ?? game.seats[0]);
-  const stone = (side: 0 | 1, key: string): ReactNode => <StonePiece key={key} tone={side === 0 ? 'dark' : 'light'} />;
+  const stone = (side: 0 | 1, key: string): ReactNode => <DiscPiece key={key} tone={side === 0 ? 'dark' : 'light'} />;
   const pieces = reversiPieces(game.discs).map((piece) => ({
     node: piece.node, key: `disc-${piece.node}`, piece: stone(piece.side, piece.node),
     label: t(piece.side === 0 ? 'reversi.dark' : 'reversi.light'),

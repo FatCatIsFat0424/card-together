@@ -13,20 +13,23 @@ vi.mock('../../../client/src/stores/account-store', () => ({
   useAccountStore: (select: (state: { account: Record<string, unknown> | null }) => unknown) => select(equipped),
 }));
 
-import { colourDistance, contrast, luminance } from '../../../client/src/cosmetics/colour';
+import { colourDistance, contrast, luminance, mix } from '../../../client/src/cosmetics/colour';
 import {
-  PIECE_DESIGNS, PIECE_TEXT_CONTRAST, piecePalette, resolvePieceStyle,
+  PIECE_BACK_CONTRAST, PIECE_DESIGNS, PIECE_TEXT_CONTRAST, piecePalette, resolvePieceStyle,
 } from '../../../client/src/cosmetics/piece-styles/piece-designs';
 import {
   BOARD_DESIGNS, BOARD_EDGE_WIDTH, BOARD_GAP_CONTRAST, BOARD_LINE_CONTRAST, BOARD_TEXT_CONTRAST, resolveBoardStyle,
 } from '../../../client/src/cosmetics/board-styles/board-designs';
+import { SERIES_TOKENS } from '../../../client/src/cosmetics/series-tokens';
 import { boardThemeFor } from '../../../client/src/cosmetics/board-styles/board-theme-for';
 import { DICE_DESIGNS, PIP_CONTRAST, PIP_ONE_CONTRAST, resolveDiceStyle } from '../../../client/src/cosmetics/dice-styles/dice-designs';
 import { pieceStylesTranslations } from '../../../client/src/cosmetics/piece-styles/i18n';
 import { boardStylesTranslations } from '../../../client/src/cosmetics/board-styles/i18n';
 import { diceStylesTranslations } from '../../../client/src/cosmetics/dice-styles/i18n';
-import { DEFAULT_BOARD_THEME, FIXED_PIECE_COLOURS, boardThemeStyle } from '../../../client/src/games/board/board-theme';
-import type { BoardSurface } from '../../../client/src/games/board/board-theme';
+import {
+  DEFAULT_BOARD_THEME, DEFAULT_PIECE_FINISH, FIXED_PIECE_COLOURS, GO_KAYA, boardThemeStyle,
+} from '../../../client/src/games/board/board-theme';
+import type { BoardSurface, PieceFinish } from '../../../client/src/games/board/board-theme';
 import {
   CoveredToken, PieceFinishContext, TilePiece, TokenPiece,
 } from '../../../client/src/games/board/BoardPieces';
@@ -34,7 +37,19 @@ import { BoardView } from '../../../client/src/games/board/BoardView';
 import { SHOP_GROUPS, resolveShopView } from '../../../client/src/shop-filters';
 
 const ANIMATED = new Set(['starfleet', 'shrine', 'ironfront', 'neoncity', 'crownrealm']);
-const SURFACES: readonly BoardSurface[] = ['wood', 'green', 'meadow', 'field', 'star'];
+const SURFACES: readonly BoardSurface[] = ['wood', 'green', 'meadow', 'field', 'star', 'go'];
+/** Hidden Land Battle Chess tiles darken the side colour like `.tile.hidden` in BoardPieces.module.css. */
+const hiddenTileBody = (tone: string): string => mix(tone, '#0b1020', 0.38);
+/** Face-down pieces of one view under a finish: covered tokens and both sides' hidden tiles. */
+const faceDown = (finish: PieceFinish): { covered: string; red: string; blue: string } => {
+  const draw = (element: ReactElement): string => renderToStaticMarkup(
+    createElement(PieceFinishContext.Provider, { value: finish }, element));
+  return {
+    covered: draw(createElement(CoveredToken)),
+    red: draw(createElement(TilePiece, { tone: 'red' })),
+    blue: draw(createElement(TilePiece, { tone: 'blue' })),
+  };
+};
 
 describe('board, piece, and dice products', () => {
   it.each([
@@ -94,28 +109,49 @@ describe.each(PIECE_STYLES)('$id piece readability', ({ id }) => {
     }
   });
 
-  it('never changes face-down pieces, marbles, or markers', () => {
+  it('never changes the shadow, marbles, or markers', () => {
     for (const key of FIXED_PIECE_COLOURS) expect(palette[key]).toEqual(DEFAULT_BOARD_THEME.pieces[key]);
     const theme = boardThemeFor(null, id);
     expect(theme.markers).toBe(DEFAULT_BOARD_THEME.markers);
     const vars = boardThemeStyle(theme, 'wood') as Record<string, string>;
     const defaults = boardThemeStyle(DEFAULT_BOARD_THEME, 'wood') as Record<string, string>;
-    for (const name of ['--piece-back', '--piece-back-pattern', '--piece-back-rim', '--piece-back-red', '--piece-back-black',
-      '--piece-back-blue', '--piece-shadow']) {
-      expect(vars[name]).toBe(defaults[name]);
+    expect(vars['--piece-shadow']).toBe(defaults['--piece-shadow']);
+  });
+
+  it('draws face-down pieces in the style, identical within it, with sides and backs apart', () => {
+    const { finish } = PIECE_DESIGNS[id];
+    const styled = faceDown(finish);
+    // Nothing identity-dependent reaches the renderer, so a second drawing in the same style is identical.
+    expect(faceDown({ ...finish })).toEqual(styled);
+    expect(styled.covered).not.toBe(faceDown(DEFAULT_PIECE_FINISH).covered);
+    expect(finish.back).toBe(SERIES_TOKENS[PIECE_STYLES.find((item) => item.id === id)!.design].back);
+    // A covered token never passes for a revealed face, and its motif shows on it.
+    expect(contrast(palette.back, palette.face)).toBeGreaterThanOrEqual(PIECE_BACK_CONTRAST);
+    expect(contrast(palette.backPattern, palette.back)).toBeGreaterThanOrEqual(PIECE_BACK_CONTRAST);
+    // Land Battle Chess: the owner of a hidden tile stays obvious; a hidden tile is darker than a shown one, which
+    // also carries its rank.
+    expect(styled.red).not.toBe(styled.blue);
+    expect(colourDistance(hiddenTileBody(palette.backRed), hiddenTileBody(palette.backBlue))).toBeGreaterThan(30);
+    for (const tone of [palette.red, palette.blue]) {
+      expect(colourDistance(tone, hiddenTileBody(tone))).toBeGreaterThan(10);
     }
-    const hidden = (finish: typeof PIECE_DESIGNS[typeof id]['finish'] | undefined): string => renderToStaticMarkup(
-      createElement(PieceFinishContext.Provider, { value: finish ?? DEFAULT_PIECE_FINISH },
-        createElement('g', null, createElement(CoveredToken), createElement(TilePiece, { tone: 'red' }),
-          createElement(TilePiece, { tone: 'blue' }))));
-    expect(hidden(PIECE_DESIGNS[id].finish)).toBe(hidden(undefined));
   });
 });
 
-const DEFAULT_PIECE_FINISH = { rim: 'plain', gloss: 0 } as const;
-
 describe.each(BOARD_STYLES)('$id board readability', ({ id, design }) => {
   const { surfaces, motion } = BOARD_DESIGNS[id];
+
+  it('draws palace diagonals in the accent, a legible river, and the go board as tinted kaya', () => {
+    const { wood, go } = surfaces;
+    for (const ground of [wood.surface, wood.cell]) expect(contrast(wood.palace, ground)).toBeGreaterThanOrEqual(BOARD_LINE_CONTRAST);
+    expect(contrast(wood.ink, wood.river)).toBeGreaterThanOrEqual(BOARD_TEXT_CONTRAST);
+    expect(contrast(wood.line, wood.river)).toBeGreaterThanOrEqual(BOARD_LINE_CONTRAST);
+    expect(wood.pattern).not.toBe('none');
+    expect(go.pattern).toBe('grain');
+    expect(go.edge).toBe(SERIES_TOKENS[design].accent);
+    expect(colourDistance(go.surface, GO_KAYA.surface)).toBeLessThan(colourDistance(go.surface, SERIES_TOKENS[design].board));
+    expect(go.surface).not.toBe(DEFAULT_BOARD_THEME.surfaces.go.surface);
+  });
 
   it('keeps lines, cells, and board text visible on every layout', () => {
     for (const surface of SURFACES) {
@@ -158,15 +194,16 @@ describe.each(DICE_STYLES)('$id dice readability', ({ id, design }) => {
 describe('equipped board styles on the shared board view', () => {
   const board = gomokuBoard();
   const render = (element: ReactElement): string => renderToStaticMarkup(element);
-  const view = (): string => render(createElement(BoardView, {
-    board, surface: 'wood', label: 'Board', pieces: [
+  const view = (surface: BoardSurface = 'wood'): string => render(createElement(BoardView, {
+    board, surface, label: 'Board', pieces: [
       { node: nodeId(3, 3), key: 'token', piece: createElement(TokenPiece, { tone: 'red', label: '帥' }) },
       { node: nodeId(4, 4), key: 'covered', piece: createElement(CoveredToken) },
+      { node: nodeId(6, 6), key: 'covered2', piece: createElement(CoveredToken) },
     ], targets: [{ node: nodeId(5, 5) }],
   }));
 
-  it('follows only the viewer\'s own equipment and keeps face-down pieces identical', () => {
-    const covered = (html: string): string => html.match(/<g class="[^"]*covered[^"]*">.*?<\/g>/)![0];
+  it('follows only the viewer\'s own equipment and draws every face-down piece alike in it', () => {
+    const covered = (html: string): string[] => [...html.matchAll(/<g class="[^"]*covered[^"]*">.*?<\/g><\/g>/g)].map((match) => match[0]);
     equipped.account = null;
     const plain = view();
     equipped.account = { pieceStyle: 'pieces-sakura', boardStyle: 'board-frost' };
@@ -174,8 +211,24 @@ describe('equipped board styles on the shared board view', () => {
     expect(styled).not.toBe(plain);
     expect(styled).toContain(`--board-surface:${BOARD_DESIGNS['board-frost'].surfaces.wood.surface}`);
     expect(styled).toContain(`--piece-red:${PIECE_DESIGNS['pieces-sakura'].palette.red}`);
-    expect(covered(styled)).toBe(covered(plain));
+    expect(styled).toContain(`--piece-back:${PIECE_DESIGNS['pieces-sakura'].palette.back}`);
+    const [first, second] = covered(styled);
+    expect(first).toBeTruthy();
+    expect(second).toBe(first);
+    expect(first).not.toBe(covered(plain)[0]);
     equipped.account = null;
+  });
+
+  it('draws Gomoku on the kaya surface, tinted and textured by the board style', () => {
+    equipped.account = null;
+    const plain = view('go');
+    expect(plain).toContain(`--board-surface:${GO_KAYA.surface}`);
+    expect(plain).toContain('<pattern');
+    equipped.account = { boardStyle: 'board-sakura' };
+    const styled = view('go');
+    equipped.account = null;
+    expect(styled).toContain(`--board-surface:${BOARD_DESIGNS['board-sakura'].surfaces.go.surface}`);
+    expect(styled).toContain(`--board-edge:${SERIES_TOKENS.sakura.accent}`);
   });
 
   it('animates animated boards in a layer under the pieces and move targets', () => {

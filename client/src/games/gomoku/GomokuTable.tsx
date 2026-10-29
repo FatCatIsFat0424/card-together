@@ -149,7 +149,7 @@ export function GomokuTable(): ReactNode {
           : undefined;
 
   const board = <BoardView
-    board={BOARD} surface="wood" label={t('gomoku.board')} rotation={0} pieces={pieces}
+    board={BOARD} surface="go" label={t('gomoku.board')} rotation={0} pieces={pieces}
     lastMove={gomokuLastMove(game)}
     // Every empty point takes a tap but only the pending one is drawn: a dot on each would bury the board.
     selectable={canMove ? moves.targets : undefined}

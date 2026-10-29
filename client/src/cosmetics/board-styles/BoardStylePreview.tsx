@@ -3,7 +3,7 @@ import type { BoardStyleId } from '@shared/types';
 import { squareBoard } from '@shared/rules/board/boards';
 import { nodeId } from '@shared/rules/board/board-model';
 import { BoardView } from '../../games/board/BoardView';
-import { StonePiece, TokenPiece } from '../../games/board/BoardPieces';
+import { DiscPiece, TokenPiece } from '../../games/board/BoardPieces';
 import type { PreviewAccount } from '../preview-props';
 import { boardThemeFor } from './board-theme-for';
 import styles from './BoardStylePreview.module.css';
@@ -24,8 +24,8 @@ export function BoardStylePreview({ id }: { readonly id: BoardStyleId; readonly 
       </div>
       <div className={styles.board}>
         <BoardView board={CELLS} surface="green" label="" theme={theme} pieces={[
-          { node: nodeId(1, 1), key: 'd', piece: <StonePiece tone="dark" /> },
-          { node: nodeId(2, 1), key: 'l', piece: <StonePiece tone="light" /> },
+          { node: nodeId(1, 1), key: 'd', piece: <DiscPiece tone="dark" /> },
+          { node: nodeId(2, 1), key: 'l', piece: <DiscPiece tone="light" /> },
         ]} />
       </div>
     </div>

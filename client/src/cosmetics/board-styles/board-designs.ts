@@ -2,12 +2,12 @@
 
 import { BOARD_STYLES } from '@shared/constants';
 import type { BoardStyleId } from '@shared/types';
-import { DEFAULT_BOARD_THEME } from '../../games/board/board-theme';
-import type { BoardMotion, BoardPalette, BoardSurface } from '../../games/board/board-theme';
+import { DEFAULT_BOARD_THEME, GO_KAYA } from '../../games/board/board-theme';
+import type { BoardMotion, BoardPalette, BoardPattern, BoardSurface } from '../../games/board/board-theme';
 import { contrast, ensureContrast, luminance, mix, withLuminance } from '../colour';
 import { MARBLE_HOLE_CONTRAST } from '../../games/board/marble-finish';
-import { SERIES_TOKENS } from '../series-tokens';
-import type { SeriesTokens } from '../series-tokens';
+import { SERIES_FONTS, SERIES_TOKENS } from '../series-tokens';
+import type { SeriesMaterial, SeriesTokens } from '../series-tokens';
 
 export interface BoardDesign {
   readonly surfaces: Readonly<Record<BoardSurface, BoardPalette>>;
@@ -27,6 +27,14 @@ export const BOARD_EDGE_WIDTH = {
 } as const;
 /** Reversi felt stays mid-dark so both dark and light discs stand out from it. */
 export const FELT_LUMINANCE = { min: 0.1, max: 0.24 } as const;
+/** How far a style tints the kaya go board toward its own board colour; the wood stays recognisable. */
+export const GO_TINT = 0.35;
+
+/** Static texture of each material, drawn faintly over light boards. */
+const MATERIAL_PATTERN: Readonly<Record<SeriesMaterial, BoardPattern>> = {
+  glass: 'brushed', porcelain: 'crackle', jade: 'speckle', enamel: 'speckle', ivory: 'grain', lacquer: 'grain',
+  stone: 'speckle', metal: 'brushed',
+};
 
 /** A bright accent or a high-contrast one draws a heavy line, so the stroke narrows with whichever is louder. */
 export function edgeWidthFor(edge: string, surface: string): number {
@@ -68,27 +76,44 @@ function boardDesign(tokens: SeriesTokens): BoardDesign {
     homes: fixed.homes,
     edge: tokens.accent,
     edgeWidth: BOARD_EDGE_WIDTH.max,
+    font: SERIES_FONTS[tokens.font],
+    pattern: MATERIAL_PATTERN[tokens.material],
+    grain: mix(light, tokens.base, 0.22),
   };
-  const wood: BoardPalette = { ...shared, surface: light, line: ink, ink, cell };
+  const river = mix(light, tokens.cool, 0.16);
+  const wood: BoardPalette = {
+    ...shared, surface: light, line: ink, ink: ensureContrast(ink, river, BOARD_TEXT_CONTRAST + 0.3), cell, river,
+    palace: ensureContrast(tokens.accent, [light, cell], BOARD_LINE_CONTRAST + 0.2),
+  };
+  const plain = { river: light, palace: ink };
   const feltCell = withLuminance(tokens.felt, FELT_LUMINANCE.min, FELT_LUMINANCE.max);
   const feltSurface = mix(feltCell, '#000000', 0.42);
   const green: BoardPalette = {
-    ...shared, surface: feltSurface, line: mix(feltCell, '#000000', 0.62), cell: feltCell,
+    ...shared, ...plain, pattern: 'none', surface: feltSurface, line: mix(feltCell, '#000000', 0.62), cell: feltCell,
     ink: ensureContrast(mix(tokens.accent, '#ffffff', 0.5), feltSurface, BOARD_TEXT_CONTRAST + 0.3),
   };
   const meadowSurface = mix(withLuminance(tokens.felt, 0.06, 0.14), '#000000', 0.1);
   const meadow: BoardPalette = {
-    ...shared, surface: meadowSurface, line: meadowSurface, cell: mix(light, tokens.felt, 0.12),
+    ...shared, ...plain, pattern: 'none', surface: meadowSurface, line: meadowSurface, cell: mix(light, tokens.felt, 0.12),
     ink: ensureContrast('#f1f5f9', meadowSurface, BOARD_TEXT_CONTRAST + 0.3),
   };
   const fieldSurface = mix(light, tokens.base, 0.12);
   const fieldInk = ensureContrast(ink, [fieldSurface, shared.station], BOARD_TEXT_CONTRAST + 0.3);
-  const field: BoardPalette = { ...shared, surface: fieldSurface, line: fieldInk, ink: fieldInk, hqLine: fieldInk, cell };
-  const star = starPalette(tokens, shared);
+  const field: BoardPalette = {
+    ...shared, ...plain, surface: fieldSurface, line: fieldInk, ink: fieldInk, hqLine: fieldInk, cell, grain: mix(fieldSurface, tokens.base, 0.2),
+  };
+  const star = starPalette(tokens, { ...shared, ...plain, pattern: 'none' });
+  // The go board keeps its kaya wood, tinted toward the series board colour and inlaid with its accent.
+  const goSurface = mix(GO_KAYA.surface, light, GO_TINT);
+  const goLine = ensureContrast(mix(tokens.deep, GO_KAYA.line, 0.5), goSurface, BOARD_TEXT_CONTRAST + 0.3);
+  const go: BoardPalette = {
+    ...shared, ...plain, surface: goSurface, cell: goSurface, line: goLine, ink: goLine, palace: goLine, pattern: 'grain',
+    grain: mix(goSurface, mix(GO_KAYA.grain, tokens.base, 0.3), 0.7),
+  };
   return {
     surfaces: {
       wood: withEdgeWidth(wood), green: withEdgeWidth(green), meadow: withEdgeWidth(meadow),
-      field: withEdgeWidth(field), star: withEdgeWidth(star),
+      field: withEdgeWidth(field), star: withEdgeWidth(star), go: withEdgeWidth(go),
     },
     motion: tokens.motion ? { kind: tokens.motion.kind, glow: tokens.motion.glow } : null,
   };

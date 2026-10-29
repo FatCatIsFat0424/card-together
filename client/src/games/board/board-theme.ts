@@ -3,7 +3,10 @@
 import type { CSSProperties } from 'react';
 
 /** Surface family of a board; each game picks one, and a board style supplies a palette for each. */
-export type BoardSurface = 'wood' | 'green' | 'meadow' | 'field' | 'star';
+export type BoardSurface = 'wood' | 'green' | 'meadow' | 'field' | 'star' | 'go';
+
+/** Static texture tile laid over light board materials; `none` draws nothing. */
+export type BoardPattern = 'none' | 'grain' | 'speckle' | 'brushed' | 'crackle';
 
 export interface BoardPalette {
   /** Outer board and margin. */
@@ -35,6 +38,15 @@ export interface BoardPalette {
   readonly edge: string;
   /** Stroke width of the outer edge in board units. */
   readonly edgeWidth: number;
+  /** Xiangqi palace diagonals. */
+  readonly palace: string;
+  /** Band between the two halves of a river board (Xiangqi). */
+  readonly river: string;
+  /** Board text such as the river inscription. */
+  readonly font: string;
+  /** Texture tile and its colour. */
+  readonly pattern: BoardPattern;
+  readonly grain: string;
 }
 
 export interface PiecePalette {
@@ -45,7 +57,10 @@ export interface PiecePalette {
   readonly blue: string;
   /** Text on solid tokens and tiles */
   readonly onSolid: string;
-  /** Face-down Banqi tokens and hidden Land Battle Chess tiles; piece styles never change these */
+  /**
+   * Face-down Banqi tokens and hidden Land Battle Chess tiles in the viewer's own piece style. The server never
+   * sends hidden identities, so every face-down piece in one view is drawn alike.
+   */
   readonly back: string;
   readonly backPattern: string;
   readonly backRim: string;
@@ -80,6 +95,9 @@ export interface MarkerPalette {
 /** Edge treatment of round pieces: an extra inner ring, or beads or notches on the rim. */
 export type PieceRim = 'plain' | 'double' | 'beaded' | 'notched';
 
+/** Motif on the back of face-down pieces; `ring` is the default look. */
+export type PieceBackMotif = 'ring' | 'wave' | 'petal' | 'star' | 'lattice' | 'diamond' | 'sun' | 'hex' | 'neon';
+
 /** Shape details of a piece style that colours alone cannot express. */
 export interface PieceFinish {
   readonly rim: PieceRim;
@@ -87,12 +105,13 @@ export interface PieceFinish {
   readonly gloss: number;
   /** Surface of Chinese checkers marbles; glass when unset. Their hue always stays the corner colour. */
   readonly material?: MarbleMaterial;
+  readonly back: PieceBackMotif;
 }
 
 /** Marble surfaces a piece style can give Chinese checkers marbles: highlight shape, texture, and sheen. */
 export type MarbleMaterial = 'glass' | 'porcelain' | 'jade' | 'enamel' | 'ivory' | 'lacquer' | 'stone' | 'metal';
 
-export const DEFAULT_PIECE_FINISH: PieceFinish = { rim: 'plain', gloss: 0 };
+export const DEFAULT_PIECE_FINISH: PieceFinish = { rim: 'plain', gloss: 0, back: 'ring' };
 
 export type BoardMotionKind = 'drift' | 'flicker' | 'sweep' | 'pulse' | 'gleam';
 
@@ -121,7 +140,11 @@ const WOOD: BoardPalette = {
   trap: '#a98b5e', trapLine: '#5b3a1a', dens: ['#b91c1c', '#1d4ed8'], station: '#ecdfb4', camp: '#a9d4b0',
   campLine: '#4d7a58', hqLine: '#7a4a1f', rail: '#3f3a30', railInner: '#cdbd92', mountain: '#8d9378',
   mountainLine: '#5f6650', hole: '#9a7440', holeRim: '#6b4f2a', homes: STAR_COLOURS, edge: '#dcb775', edgeWidth: 0.12,
+  palace: '#5b3a1a', river: '#dcb775', font: "'Noto Serif TC', 'Noto Sans TC', serif", pattern: 'none', grain: '#dcb775',
 };
+
+/** Kaya (榧木) go board: warm yellow wood with a fine grain and dark ink lines. */
+export const GO_KAYA = { surface: '#e4bd76', line: '#3b2a16', edge: '#b88a47', grain: '#cf9f55' } as const;
 
 /** Matches the approved 2026-10-29 mockups. */
 export const DEFAULT_BOARD_THEME: BoardTheme = {
@@ -135,6 +158,10 @@ export const DEFAULT_BOARD_THEME: BoardTheme = {
     star: {
       ...WOOD, surface: '#4a2d14', line: '#7a4f22', ink: '#f8e7c4', cell: '#d4a869', edge: '#e9c77d', hole: '#8c6234',
       holeRim: '#35210f',
+    },
+    go: {
+      ...WOOD, surface: GO_KAYA.surface, line: GO_KAYA.line, ink: GO_KAYA.line, cell: GO_KAYA.surface, edge: GO_KAYA.edge,
+      pattern: 'grain', grain: GO_KAYA.grain,
     },
   },
   pieces: {
@@ -153,12 +180,10 @@ export const DEFAULT_BOARD_THEME: BoardTheme = {
 const kebab = (name: string): string => name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 
 /**
- * Piece colours every piece style keeps: face-down pieces look alike to everyone, and marble hues name the corner
- * they belong to. Styles still change a marble's finish (`PieceFinish`): material, gloss, and rim.
+ * Piece colours every piece style keeps: the drop shadow, and the marble hues that name the corner they belong
+ * to. Styles still change a marble's finish (`PieceFinish`): material, gloss, and rim.
  */
-export const FIXED_PIECE_COLOURS = [
-  'back', 'backPattern', 'backRim', 'backRed', 'backBlack', 'backBlue', 'shadow', 'marbles',
-] as const;
+export const FIXED_PIECE_COLOURS = ['shadow', 'marbles'] as const;
 
 /** CSS custom properties for one surface of a theme; the board view and pieces read only these. */
 export function boardThemeStyle(theme: BoardTheme, surface: BoardSurface): CSSProperties {

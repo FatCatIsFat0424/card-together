@@ -12,6 +12,15 @@
 .darkStone .shine { fill: var(--piece-dark-shine); }
 .lightStone .body { fill: var(--piece-light-stone); stroke: var(--piece-light-stone-rim); stroke-width: 0.03; }
 .lightStone .shine { fill: var(--piece-light-shine); }
+.stoneRing { fill: none; stroke: var(--piece-accent); opacity: 0.55; }
+.stoneBeads { fill: none; stroke: var(--piece-accent); opacity: 0.8; }
+.darkStone .stoneBeads { opacity: 0.6; }
+.lightStone .stoneRing, .lightStone .stoneBeads { stroke: var(--piece-light-stone-rim); }
+
+/* Reversi discs: the rim underneath is the other side's colour. */
+.disc.darkStone .under { fill: var(--piece-light-stone); stroke: var(--piece-light-stone-rim); stroke-width: 0.02; }
+.disc.lightStone .under { fill: var(--piece-dark-stone); }
+.disc.lightStone .body { stroke: none; }
 
 .engraved .body { fill: var(--piece-face); stroke: var(--tone); }
 .engraved .ring { fill: none; stroke: var(--tone); }
@@ -27,6 +36,9 @@
 
 .covered .body { fill: var(--piece-back); stroke: var(--piece-back-rim); }
 .covered .pattern, .hidden .pattern { fill: none; stroke: var(--piece-back-pattern); }
+.patternFill { fill: var(--piece-back-pattern); }
+.patternRim { fill: var(--piece-back-rim); }
+.patternRimStroke { fill: none; stroke: var(--piece-back-rim); }
 
 .tile .body { fill: var(--tone); stroke: var(--piece-on-solid); }
 .tile .label { fill: var(--piece-on-solid); }
