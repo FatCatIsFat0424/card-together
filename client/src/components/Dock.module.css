@@ -21,6 +21,9 @@
   border-bottom: 1px solid var(--separator);
 }
 .tabs { min-width: 0; }
+/* Four tabs do not fit the narrowest dock (300px) at the roomy spacing; the row scrolls if a badge still overflows it. */
+.dense { padding-left: var(--space-3); }
+.dense .tabs { gap: var(--space-1); overflow-x: auto; scrollbar-width: none; }
 
 .body { position: relative; flex: 1; min-height: 0; }
 .panel { height: 100%; min-height: 0; }

@@ -30,6 +30,7 @@ import { EarlyLeaveButton } from './EarlyLeave';
 import { useBoardMoveSound } from './board/board-move-sound';
 import { AppIcon } from '../components/AppIcon';
 import { IconButton } from '../components/IconButton';
+import { GameSpectators, SpectatorsTabLabel } from './GameSpectators';
 import { VoiceButton, VoiceDockPanel } from '../components/VoiceControls';
 import { RoomCodeButton } from '../components/RoomCodeButton';
 import { GameRulesDialog } from '../components/GameRulesDialog';
@@ -89,7 +90,7 @@ function matches(query: string): boolean {
 /** Phones open the info and chat as sheets; the desktop shell docks them beside the table. */
 const sheetsAreOverlays = (): boolean => matches(SHEET_QUERY);
 
-type TableDockTab = 'info' | 'chat' | 'voice';
+type TableDockTab = 'info' | 'chat' | 'spectators' | 'voice';
 
 interface GameShellProps {
   /** Info rail content (dock tab on desktop, drawer on phones) */
@@ -420,6 +421,8 @@ export function GameShell({
     ...chatVisible ? [{ id: 'chat' as const, panel: chatPanel,
       label: <>{t('chat.title')}{unread > 0 && <DockCount label={t('room.unread', { n: String(unread) })}>
         {unread > 99 ? '99+' : unread}</DockCount>}</> }] : [],
+    ...!replay ? [{ id: 'spectators' as const, panel: <GameSpectators layout="dock" />,
+      label: <SpectatorsTabLabel /> }] : [],
     ...!replay ? [{ id: 'voice' as const, label: t('voice.title'), panel: <VoiceDockPanel className={styles.dockVoice} /> }] : [],
   ];
   const dockToggleLabel = unread > 0 ? `${t('dock.expand')} ${t('room.unread', { n: String(unread) })}` : t('dock.expand');
@@ -441,6 +444,7 @@ export function GameShell({
         {rulesButton}
         {motionSetting}
         {infoContent}
+        {!replay && <GameSpectators layout="sheet" />}
         {phoneMenu && <GameMenuLinks />}
       </div>}
 

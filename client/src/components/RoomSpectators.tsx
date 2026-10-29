@@ -28,14 +28,14 @@ export interface RoomSpectatorsProps {
   readonly holdingId?: string | null;
   /** The "..." menu of a managed member; without it the host keeps a plain remove button. */
   readonly renderMenu?: (player: PlayerInfo) => ReactNode;
-  /** `dock` fills a side panel; the default is the 280px popover. */
-  readonly layout?: 'popover' | 'dock';
+  /** `dock` fills a side panel and `sheet` a menu sheet with a visible heading; the default is the 280px popover. */
+  readonly layout?: 'popover' | 'dock' | 'sheet';
 }
 
 /** The spectator list opened from "旁觀 n/8": join as spectator, and the host's kick and move controls. */
 export function RoomSpectators(props: RoomSpectatorsProps): ReactNode {
   const { t } = useI18nStore();
-  return <section className={`${styles.panel} ${props.layout === 'dock' ? styles.dock : ''}`}>
+  return <section className={`${styles.panel} ${props.layout === 'dock' ? styles.dock : props.layout === 'sheet' ? styles.sheet : ''}`}>
     <h2 id="room-spectators-label" className={styles.title}>
       {t('room.spectators', { n: String(props.spectators.length), max: String(MAX_SPECTATORS) })}</h2>
     {props.seated && <Button variant="ghost" disabled={!props.canSpectate}

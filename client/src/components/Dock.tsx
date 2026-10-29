@@ -28,7 +28,7 @@ export function Dock<T extends string>({ id, label, tabs, value, onChange, onCol
   const { t } = useI18nStore();
   const panelId = `${id}-panel`;
   return <aside id={id} aria-label={label} className={`${styles.dock} ${className ?? ''}`}>
-    <div className={styles.head}>
+    <div className={`${styles.head} ${tabs.length > 3 ? styles.dense : ''}`}>
       <Tabs className={styles.tabs} label={label} idPrefix={id} controls={panelId} value={value} onChange={onChange}
         tabs={tabs.map(({ id: tabId, label: tabLabel }) => ({ id: tabId, label: tabLabel }))} />
       <IconButton icon="nextPage" label={t('dock.collapse')} onClick={onCollapse} />

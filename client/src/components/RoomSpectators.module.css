@@ -26,3 +26,5 @@
 .dock.dock { width: 100%; height: 100%; max-height: none; padding: var(--space-3) var(--space-4); }
 .dock .title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .dock .list { max-height: none; }
+.sheet.sheet { width: 100%; max-height: none; padding: var(--space-2) 0; overflow: visible; }
+.sheet .list { max-height: none; }
