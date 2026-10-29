@@ -132,7 +132,6 @@ describe.each(BOARD_STYLES)('$id board readability', ({ id, design }) => {
     }
     expect(contrast(surfaces.wood.ink, surfaces.wood.mountain)).toBeGreaterThanOrEqual(BOARD_LINE_CONTRAST);
     expect(contrast(surfaces.field.line, surfaces.field.station)).toBeGreaterThanOrEqual(BOARD_LINE_CONTRAST);
-    expect(contrast(surfaces.star.holeRim, surfaces.star.cell)).toBeGreaterThanOrEqual(BOARD_LINE_CONTRAST);
     expect(motion !== null).toBe(ANIMATED.has(design));
   });
 

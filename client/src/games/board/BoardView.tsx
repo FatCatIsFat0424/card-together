@@ -14,6 +14,7 @@ import type { BoardSurface, BoardTheme } from './board-theme';
 import { axisPositions, boardGeometry, hitBox, markerBox, movePath } from './board-view';
 import type { BoardGeometry } from './board-view';
 import { PIECE_RADIUS, PieceFinishContext } from './BoardPieces';
+import { StarMarbles, StarSurface, starClipPath } from './StarBoard';
 import styles from './BoardView.module.css';
 
 export interface BoardPieceItem {
@@ -64,6 +65,8 @@ export interface BoardViewProps {
   readonly onNodeClick?: (node: NodeId | null, input: CardInput) => void;
   /** Accessible coordinate of a node; chess-style coordinates by default. */
   readonly nodeName?: (node: NodeId) => string;
+  /** Star corners in play, tinted at full strength; every corner when unset. */
+  readonly activeHomes?: readonly number[];
   readonly className?: string;
 }
 
@@ -73,8 +76,12 @@ const coarsePointer = (): boolean => typeof window !== 'undefined' && typeof win
 const point = (geometry: BoardGeometry, id: NodeId | undefined): BoardPoint | undefined =>
   id === undefined ? undefined : geometry.point(id);
 
-function BoardSurfaceLayer({ board, geometry }: { readonly board: BoardModel; readonly geometry: BoardGeometry }): ReactNode {
+function BoardSurfaceLayer({ board, geometry, surface, activeHomes }: {
+  readonly board: BoardModel; readonly geometry: BoardGeometry; readonly surface: BoardSurface;
+  readonly activeHomes?: readonly number[];
+}): ReactNode {
   const { t } = useI18nStore();
+  if (isStar(board, surface)) return <StarSurface board={board} geometry={geometry} activeHomes={activeHomes} />;
   const [x, y, width, height] = geometry.viewBox;
   const turned = (node: BoardNode): BoardPoint => geometry.point(node.id) ?? node;
   const edgeLine = (a: NodeId, b: NodeId): { x1: number; y1: number; x2: number; y2: number } | null => {
@@ -183,6 +190,9 @@ function BoardSurfaceLayer({ board, geometry }: { readonly board: BoardModel; re
   return <g>{items}</g>;
 }
 
+/** The Chinese checkers star draws its own outline, holes, and marbles (`StarBoard.tsx`). */
+const isStar = (board: BoardModel, surface: BoardSurface): boolean => surface === 'star' && board.layout === 'holes';
+
 function Highlight({ at, layout, className, dashed }: {
   readonly at: BoardPoint; readonly layout: BoardModel['layout']; readonly className: string; readonly dashed?: boolean;
 }): ReactNode {
@@ -200,7 +210,7 @@ function Highlight({ at, layout, className, dashed }: {
  */
 export function BoardView({
   board, surface, label, theme: fixedTheme, rotation = 0, pieces, lastMove, selected, targets = [], pending,
-  check, fileLabels, rankLabels, selectable = [], onNodeClick, nodeName, className,
+  check, fileLabels, rankLabels, selectable = [], onNodeClick, nodeName, activeHomes, className,
 }: BoardViewProps): ReactNode {
   const { t } = useI18nStore();
   const equippedTheme = useEquippedBoardTheme();
@@ -243,8 +253,9 @@ export function BoardView({
   const targetSet = new Map(targets.map((target) => [target.node, target]));
 
   const viewBox = `${vx} ${vy} ${vw} ${vh}`;
-  const surfaceLayer = <BoardSurfaceLayer board={board} geometry={geometry} />;
-  const content = <PieceFinishContext.Provider value={theme.finish ?? DEFAULT_PIECE_FINISH}>
+  const star = isStar(board, surface);
+  const surfaceLayer = <BoardSurfaceLayer board={board} geometry={geometry} surface={surface} activeHomes={activeHomes} />;
+  const content = <PieceFinishContext.Provider value={theme.finish ?? DEFAULT_PIECE_FINISH}><StarPieces star={star} theme={theme}>
     {fileLabels && axisPositions(board, geometry).files.map(({ index, x }) => fileLabels[index] !== undefined
       && <text key={`f${index}`} className={styles.axis} x={x} y={vy + vh - 0.2} textAnchor="middle" fontSize={0.3}>
         {fileLabels[index]}</text>)}
@@ -316,7 +327,7 @@ export function BoardView({
         }}
         onKeyDown={onKey(id)} />;
     })}
-  </PieceFinishContext.Provider>;
+  </StarPieces></PieceFinishContext.Provider>;
 
   const interactiveSvg = (classes: string, children: ReactNode): ReactNode => <svg className={classes}
     style={motion ? undefined : style} viewBox={viewBox} role="group" aria-label={label} data-board-layout={layout}
@@ -325,7 +336,9 @@ export function BoardView({
   if (!motion) return interactiveSvg(`${styles.board} ${className ?? ''}`, <>{surfaceLayer}{content}</>);
   // Animated styles move a light layer between the surface and the pieces, so it never covers lettering or
   // move markers; the layer only changes transform or opacity, so the compositor runs it.
-  return <div className={`${styles.layered} ${className ?? ''}`} style={style} data-board-motion={motion.kind}>
+  // The star clips the light to its outline, so it never lights the table round the board.
+  return <div className={`${styles.layered} ${className ?? ''}`}
+    style={star ? { ...style, clipPath: starClipPath(board, geometry) } : style} data-board-motion={motion.kind}>
     <svg className={`${styles.board} ${styles.layer}`} viewBox={viewBox} aria-hidden="true" focusable="false">
       {surfaceLayer}
     </svg>
@@ -333,4 +346,10 @@ export function BoardView({
       aria-hidden="true" />
     {interactiveSvg(`${styles.board} ${styles.layer}`, content)}
   </div>;
+}
+
+function StarPieces({ star, theme, children }: {
+  readonly star: boolean; readonly theme: BoardTheme; readonly children: ReactNode;
+}): ReactNode {
+  return star ? <StarMarbles theme={theme}>{children}</StarMarbles> : children;
 }

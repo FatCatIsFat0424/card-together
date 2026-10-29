@@ -5,6 +5,7 @@ import type { BoardStyleId } from '@shared/types';
 import { DEFAULT_BOARD_THEME } from '../../games/board/board-theme';
 import type { BoardMotion, BoardPalette, BoardSurface } from '../../games/board/board-theme';
 import { contrast, ensureContrast, luminance, mix, withLuminance } from '../colour';
+import { MARBLE_HOLE_CONTRAST } from '../../games/board/marble-finish';
 import { SERIES_TOKENS } from '../series-tokens';
 import type { SeriesTokens } from '../series-tokens';
 
@@ -83,17 +84,32 @@ function boardDesign(tokens: SeriesTokens): BoardDesign {
   const fieldSurface = mix(light, tokens.base, 0.12);
   const fieldInk = ensureContrast(ink, [fieldSurface, shared.station], BOARD_TEXT_CONTRAST + 0.3);
   const field: BoardPalette = { ...shared, surface: fieldSurface, line: fieldInk, ink: fieldInk, hqLine: fieldInk, cell };
-  const starSurface = withLuminance(mix(tokens.base, tokens.deep, 0.35), 0.03, 0.09);
-  const star: BoardPalette = {
-    ...shared, surface: starSurface, line: mix(starSurface, '#000000', 0.2), cell: mix(light, tokens.base, 0.18),
-    ink: ensureContrast(mix(tokens.accent, '#ffffff', 0.4), starSurface, BOARD_TEXT_CONTRAST + 0.3),
-  };
+  const star = starPalette(tokens, shared);
   return {
     surfaces: {
       wood: withEdgeWidth(wood), green: withEdgeWidth(green), meadow: withEdgeWidth(meadow),
       field: withEdgeWidth(field), star: withEdgeWidth(star),
     },
     motion: tokens.motion ? { kind: tokens.motion.kind, glow: tokens.motion.glow } : null,
+  };
+}
+
+/**
+ * The Chinese checkers star in the series' mid tone: a lightened face with darker grain, a dark outer edge, the
+ * accent as inlay, and holes darkened toward a bottom that every marble hue stands out from. Field meanings for
+ * this surface are listed in `StarBoard.tsx`.
+ */
+function starPalette(tokens: SeriesTokens, shared: Omit<BoardPalette, 'surface' | 'line' | 'ink' | 'cell'>): BoardPalette {
+  const edge = mix(tokens.base, '#000000', 0.55);
+  return {
+    ...shared,
+    surface: edge,
+    line: mix(tokens.base, '#000000', 0.38),
+    cell: mix(tokens.base, '#ffffff', 0.1),
+    ink: ensureContrast(mix(tokens.accent, '#ffffff', 0.4), edge, BOARD_TEXT_CONTRAST + 0.3),
+    edge: tokens.accent,
+    hole: mix(tokens.base, '#000000', 0.42),
+    holeRim: ensureContrast(mix(tokens.base, '#000000', 0.72), DEFAULT_BOARD_THEME.pieces.marbles, MARBLE_HOLE_CONTRAST),
   };
 }
 

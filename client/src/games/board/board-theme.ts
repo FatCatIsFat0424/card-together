@@ -61,10 +61,9 @@ export interface PiecePalette {
   readonly lightStone: string;
   readonly lightStoneRim: string;
   readonly shadow: string;
-  /** Highlight fills of stones and marbles */
+  /** Highlight fills of stones; marbles take theirs from the finish's material (`marble-finish.ts`) */
   readonly darkShine: string;
   readonly lightShine: string;
-  readonly marbleShine: string;
   /** Marble colours of the six star corners, in `STAR_CORNERS` order. */
   readonly marbles: readonly string[];
 }
@@ -86,7 +85,12 @@ export interface PieceFinish {
   readonly rim: PieceRim;
   /** Opacity of the highlight under the lettering of round tokens; 0 draws none. */
   readonly gloss: number;
+  /** Surface of Chinese checkers marbles; glass when unset. Their hue always stays the corner colour. */
+  readonly material?: MarbleMaterial;
 }
+
+/** Marble surfaces a piece style can give Chinese checkers marbles: highlight shape, texture, and sheen. */
+export type MarbleMaterial = 'glass' | 'porcelain' | 'jade' | 'enamel' | 'ivory' | 'lacquer' | 'stone' | 'metal';
 
 export const DEFAULT_PIECE_FINISH: PieceFinish = { rim: 'plain', gloss: 0 };
 
@@ -126,7 +130,12 @@ export const DEFAULT_BOARD_THEME: BoardTheme = {
     green: { ...WOOD, surface: '#14532d', line: '#175132', ink: '#bbf7d0', cell: '#2a7d4f', edge: '#14532d' },
     meadow: { ...WOOD, surface: '#4d6b3a', line: '#4d6b3a', ink: '#e2e8f0', cell: '#b9cf8e', edge: '#4d6b3a' },
     field: { ...WOOD, surface: '#cdbd92', line: '#7b6a49', ink: '#3f4636', edge: '#cdbd92' },
-    star: { ...WOOD, surface: '#7a5a33', line: '#6b4f2a', ink: '#f8e7c4', cell: '#d8b26a', edge: '#7a5a33' },
+    // The star board reads its fields as materials (StarBoard.tsx): cell is the wood face, line its grain,
+    // surface the dark outer edge, edge the inlay, hole the upper well, and holeRim the dark hole bottom.
+    star: {
+      ...WOOD, surface: '#4a2d14', line: '#7a4f22', ink: '#f8e7c4', cell: '#d4a869', edge: '#e9c77d', hole: '#8c6234',
+      holeRim: '#35210f',
+    },
   },
   pieces: {
     face: '#f7ebc8', red: '#c0392b', black: '#1f2937', blue: '#2563eb', onSolid: '#ffffff', back: '#1d4ed8',
@@ -134,7 +143,7 @@ export const DEFAULT_BOARD_THEME: BoardTheme = {
     backBlue: '#2563eb', accent: '#ffffff',
     font: "'Noto Serif TC', 'Noto Sans TC', serif", darkStone: '#151a24', lightStone: '#f4f6fa', lightStoneRim: '#9aa5b8',
     shadow: 'rgba(0, 0, 0, 0.3)', darkShine: 'rgba(255, 255, 255, 0.14)', lightShine: 'rgba(255, 255, 255, 0.9)',
-    marbleShine: 'rgba(255, 255, 255, 0.55)', marbles: STAR_COLOURS,
+    marbles: STAR_COLOURS,
   },
   markers: {
     last: '#2563eb', lastDot: '#ef4444', selected: '#fbbf24', target: '#16a34a', capture: '#ea580c', check: '#dc2626',
@@ -143,7 +152,10 @@ export const DEFAULT_BOARD_THEME: BoardTheme = {
 
 const kebab = (name: string): string => name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 
-/** Piece colours that hide information; every piece style keeps them, so face-down pieces look alike to everyone. */
+/**
+ * Piece colours every piece style keeps: face-down pieces look alike to everyone, and marble hues name the corner
+ * they belong to. Styles still change a marble's finish (`PieceFinish`): material, gloss, and rim.
+ */
 export const FIXED_PIECE_COLOURS = [
   'back', 'backPattern', 'backRim', 'backRed', 'backBlack', 'backBlue', 'shadow', 'marbles',
 ] as const;

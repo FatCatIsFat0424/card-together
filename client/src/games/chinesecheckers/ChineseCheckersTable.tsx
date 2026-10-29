@@ -18,7 +18,7 @@ import { useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
 import { useTablePerspective, useViewedGame } from '../use-table-perspective';
 import { BoardResultDialog } from '../board/BoardResultDialog';
-import { MarblePiece } from '../board/BoardPieces';
+import { MarblePiece } from '../board/StarBoard';
 import { BoardView } from '../board/BoardView';
 import { boardControls } from '../board/BoardControls';
 import { BoardInfo, boardMoveEntries } from '../board/BoardMoves';
@@ -27,8 +27,8 @@ import { useBoardInput } from '../board/use-board-input';
 import { boardAspect } from '../board/board-view';
 import { DEFAULT_BOARD_THEME } from '../board/board-theme';
 import {
-  chineseCheckersArrived, chineseCheckersLastMove, chineseCheckersMoveCount, chineseCheckersMovable,
-  chineseCheckersPassedSeat, chineseCheckersPath, chineseCheckersPieces, chineseCheckersPlaces, chineseCheckersRotation,
+  chineseCheckersAnchors, chineseCheckersArrived, chineseCheckersLastMove, chineseCheckersMoveCount,
+  chineseCheckersMovable, chineseCheckersPassedSeat, chineseCheckersPath, chineseCheckersPieces, chineseCheckersRotation,
   chineseCheckersSeatOrder, chineseCheckersTargets, seatCorner,
 } from './chinesecheckers-view';
 import styles from './ChineseCheckersTable.module.css';
@@ -144,7 +144,7 @@ export function ChineseCheckersTable(): ReactNode {
   const lastMove = chineseCheckersLastMove(game);
   const board = <BoardView
     board={CC_BOARD} surface="star" label={t('cc.board')} rotation={chineseCheckersRotation(game, bottomSeat)}
-    pieces={pieces}
+    pieces={pieces} activeHomes={game.corners}
     lastMove={lastMove ? { from: lastMove.from, to: lastMove.to, path: lastMove.path } : null}
     selected={input.selected}
     targets={selectedTargets.map((node) => ({ node }))}
@@ -176,11 +176,11 @@ export function ChineseCheckersTable(): ReactNode {
       centre={null}
       hand={null}
       board={<BoardTable
-        // Listed by height round the board rather than turn order, so each side column reads top to bottom.
+        // Listed round the star rather than in turn order, so plates read (and take focus) by where they sit.
         seats={chineseCheckersSeatOrder(game, bottomSeat)}
         bottomSeat={seatCorner(game, bottomSeat) === null ? game.seats[0] : bottomSeat} board={board}
         aspect={ASPECT} moves={moves} seatStats={seatStats}
-        places={chineseCheckersPlaces(game, bottomSeat)}
+        anchors={chineseCheckersAnchors(game, bottomSeat)}
         controls={controls}
         pending={pendingMove ? {
           text: `${coordinateLabel(CC_BOARD, pendingMove.from ?? pendingMove.to)}-${coordinateLabel(CC_BOARD, pendingMove.to)}`

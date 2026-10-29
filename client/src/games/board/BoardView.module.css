@@ -109,3 +109,24 @@
 @keyframes flicker { 50% { opacity: 0.45; } }
 @keyframes sweep { to { transform: rotate(360deg); } }
 @keyframes gleam { from { transform: translateX(-45%); } 60%, to { transform: translateX(45%); } }
+
+/* Star board (StarBoard.tsx): rings of one outline path, static wood pattern, and shared holes and marbles. */
+.turnGlow, .starEdge, .starRim, .starInlay, .starLight, .homeTint { stroke-linejoin: round; }
+.turnGlow { fill: none; stroke: var(--turn-glow); opacity: 0; }
+/* The board table marks the viewer's turn; the glow follows the star instead of a rectangular ring. */
+:global([data-my-turn]) .turnGlow { opacity: 1; }
+.starEdge { fill: var(--board-surface); stroke: var(--board-surface); }
+.starInlay { fill: var(--board-edge); stroke: var(--board-edge); }
+.starLight { opacity: 0.75; }
+.starFace { fill: var(--board-cell); }
+.starGrain { fill: none; stroke: var(--board-line); }
+.starKnot { fill: var(--board-line); fill-opacity: 0.18; }
+.homeTint { stroke-width: 1.15; }
+.homeRing { fill: none; stroke-width: 0.07; stroke-opacity: 0.6; }
+.wellTop { stop-color: var(--board-hole); }
+.wellBottom { stop-color: var(--board-hole-rim); }
+.wellShadow { fill: none; stroke: #000; stroke-opacity: 0.55; stroke-width: 0.09; stroke-linecap: round; }
+.wellLight { fill: none; stroke: #fff; stroke-opacity: 0.26; stroke-width: 0.05; stroke-linecap: round; }
+.marbleShadow { fill: var(--piece-shadow); }
+.marbleGloss { fill: #fff; }
+.marbleLine { fill: none; stroke: #fff; }

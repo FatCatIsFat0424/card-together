@@ -41,12 +41,11 @@ function pieceDesign(tokens: SeriesTokens): PieceDesign {
     lightStoneRim: ensureContrast(tokens.base, lightStone, 2.2),
     darkShine: white(0.08 + gloss * 0.3),
     lightShine: white(0.55 + gloss * 0.7),
-    marbleShine: white(0.3 + gloss * 0.8),
     back: fixed.back, backPattern: fixed.backPattern, backRim: fixed.backRim, backRed: fixed.backRed, backBlack: fixed.backBlack,
     backBlue: fixed.backBlue, shadow: fixed.shadow, marbles: fixed.marbles,
   };
   const ground = withLuminance(mix(tokens.base, tokens.deep, 0.25), PIECE_STAGE_LUMINANCE.min, PIECE_STAGE_LUMINANCE.max);
-  return { palette, finish: { rim: tokens.rim, gloss }, stage: { ground, glow: tokens.accent } };
+  return { palette, finish: { rim: tokens.rim, gloss, material: tokens.material }, stage: { ground, glow: tokens.accent } };
 }
 
 export const PIECE_DESIGNS: Readonly<Record<PieceStyleId, PieceDesign>> = Object.fromEntries(

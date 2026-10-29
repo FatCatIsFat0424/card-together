@@ -137,3 +137,72 @@
   .status { padding: 2px 8px; font-size: var(--text-xs); text-align: center; }
   .error { bottom: 8px; font-size: var(--text-xs); }
 }
+
+/*
+ * Board-anchored seats (the Chinese checkers star): the board fills the table and draws its own edge and turn
+ * glow, each plate sits beside its corner, and the controls gather in the lower-right corner.
+ */
+.boardTable.anchored {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: 'mid';
+  padding: 8px 16px;
+}
+.anchored .boardArea { grid-area: 1 / 1 / -1 / -1; }
+.boardTable.anchored .boardFrame { position: relative; border-radius: 0; overflow: visible; box-shadow: none; }
+.seatAnchor {
+  position: absolute;
+  z-index: 1;
+  left: var(--wide-x);
+  top: var(--wide-y);
+  transform: var(--wide-shift);
+  width: max-content;
+  max-width: 240px;
+  padding: 2px 8px 2px 4px;
+  border-left: 3px solid var(--seat-accent, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg-surface) 70%, transparent);
+}
+.anchored .strip { display: none; }
+/* A grid item rather than a positioned box, so phones can lift the match buttons out to the opposite corner. */
+.dock {
+  grid-area: 1 / 1 / -1 / -1;
+  justify-self: end;
+  align-self: end;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: min(360px, 40%);
+}
+.dock .status, .dock .prompt, .dock .buttons { grid-area: auto; justify-self: auto; align-self: auto; }
+
+/* Narrow portrait screens: the board fills the width, so plates move into the room above and below it. */
+@media (max-width: 767px) {
+  .seatAnchor { left: var(--narrow-x); top: var(--narrow-y); transform: var(--narrow-shift); max-width: var(--narrow-max, 49%); }
+}
+
+@media (max-height: 500px) and (min-width: 600px) {
+  .boardTable.anchored {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: 'mid';
+    padding: 6px;
+  }
+  .seatAnchor {
+    left: var(--compact-x);
+    top: var(--compact-y);
+    transform: var(--compact-shift);
+    max-width: 176px;
+    padding: 1px 6px 1px 3px;
+  }
+  /* Two-player matches keep the phone move strip under the menu button, where no corner plate sits. */
+  .anchored .anchoredStrip { display: block; position: absolute; top: 46px; left: 8px; width: 190px; }
+  .dock { margin: 2px; gap: 6px; width: 190px; max-width: none; align-items: stretch; }
+  /*
+   * The confirm panel needs the whole lower-right corner beside the lower side plate, so the match buttons move
+   * to the lower-left corner, apart from 確認 and outside the viewer's plate.
+   */
+  .dock .buttons { position: absolute; left: 8px; bottom: 8px; width: 124px; }
+}

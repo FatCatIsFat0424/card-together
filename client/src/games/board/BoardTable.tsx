@@ -15,8 +15,8 @@ import { DrawOfferPrompt, MatchButtons, PendingMove } from './BoardControls';
 import type { BoardControls } from './BoardControls';
 import { BoardMoveDrawer, BoardMoveStrip } from './BoardMoves';
 import type { BoardMoveListData } from './BoardMoves';
-import { boardSeatPlaces } from './board-table';
-import type { BoardSeatPlace } from './board-table';
+import { boardSeatAnchorStyle, boardSeatPlaces } from './board-table';
+import type { BoardSeatAnchors, BoardSeatPlace } from './board-table';
 import styles from './BoardTable.module.css';
 
 export interface BoardPendingMove {
@@ -40,6 +40,11 @@ export interface BoardTableProps {
   readonly seatStats?: (seat: GameSeat) => ReactNode;
   /** Opponent places around the board; by default from turn order (`boardSeatPlaces`). */
   readonly places?: Partial<Record<GameSeat, BoardSeatPlace>>;
+  /**
+   * Every seat's plate pinned beside its own part of the board instead of `places`. The board fills the table,
+   * draws its own edge and turn glow, and the controls gather in the lower-right corner.
+   */
+  readonly anchors?: Partial<Record<GameSeat, BoardSeatAnchors>>;
   /** Null for spectators and finished matches. */
   readonly controls: BoardControls | null;
   readonly pending: BoardPendingMove | null;
@@ -61,11 +66,12 @@ export interface BoardTableProps {
  * Desktop: opponents above the board, the viewer's seat and controls below, side seats beside it, and the
  * move list in the dock. Short landscape phones: the board fills the height in the middle, the left column
  * holds opponents and the last moves (tap for the full list), and the right column the controls, the fixed
- * 確認 button, and the viewer's seat.
+ * 確認 button, and the viewer's seat. With `anchors`, the board fills the table and every plate sits beside its
+ * own corner of it instead.
  */
 export function BoardTable({
-  seats, bottomSeat, board, aspect, moves, seatStats, places, controls, pending, tools, status, error, busy = false,
-  ownTurn,
+  seats, bottomSeat, board, aspect, moves, seatStats, places, anchors, controls, pending, tools, status, error,
+  busy = false, ownTurn,
 }: BoardTableProps): ReactNode {
   const { t } = useI18nStore();
   const presentation = useGamePresentation();
@@ -95,6 +101,39 @@ export function BoardTable({
       onObserve={watching ? () => selectSeat(value) : undefined} />;
 
   const incoming = controls?.incoming ?? null;
+  const statusItem = statusLine && <p className={styles.status} role="status">{statusLine}</p>;
+  const errorItem = error && <p className={styles.error} role="alert">{error}</p>;
+  const promptItem = incoming ? <div className={styles.prompt}><DrawOfferPrompt incoming={incoming} disabled={busy} compact /></div>
+    : pending ? <div className={styles.prompt}>
+      <PendingMove text={pending.text} onConfirm={pending.confirm} onCancel={pending.cancel} disabled={busy} />
+    </div> : tools ? <div className={styles.prompt}>{tools}</div>
+      // GameShell's live region already announces the turn, so the pill stays out of the accessibility tree.
+      : myTurn && <p className={`${styles.prompt} ${styles.yourTurn}`} aria-hidden="true">{t('table.yourTurn')}</p>;
+  const buttonsItem = controls && <div className={styles.buttons}><MatchButtons controls={controls} disabled={busy || locked} compact /></div>;
+  const drawer = drawerOpen && <BoardMoveDrawer data={moves} id={drawerId} onClose={closeDrawer} />;
+
+  if (anchors) {
+    // Plates keep one place for the whole match, and the dock grows upward from the corner, so turns never shift.
+    return <div className={`${styles.boardTable} ${styles.anchored} ${myTurn ? styles.myTurn : ''}`} data-board-table
+      data-my-turn={myTurn || undefined}
+      data-expanded-table="" style={{ '--board-aspect': String(aspect) } as CSSProperties}>
+      <div className={styles.boardArea}><div className={styles.boardFrame} data-board-frame>
+        {board}
+        {seats.map((value) => {
+          const anchor = anchors[value];
+          return anchor && <div key={value} className={styles.seatAnchor} data-anchored-seat
+            style={boardSeatAnchorStyle(anchor) as CSSProperties}>{seat(value, value === bottomSeat ? 'bottom' : 'left')}</div>;
+        })}
+      </div></div>
+      {!multi && <div className={`${styles.strip} ${styles.anchoredStrip}`}>
+        <BoardMoveStrip data={moves} open={drawerOpen} onOpen={() => setDrawerOpen(true)} controls={drawerId} />
+      </div>}
+      <div className={styles.dock}>{statusItem}{promptItem}{buttonsItem}</div>
+      {errorItem}
+      {drawer}
+    </div>;
+  }
+
   return <div className={`${styles.boardTable} ${multi ? styles.multi : ''} ${myTurn ? styles.myTurn : ''}`} data-board-table
     data-my-turn={myTurn || undefined}
     data-expanded-table="" style={{ '--board-aspect': String(aspect) } as CSSProperties}>
@@ -111,18 +150,13 @@ export function BoardTable({
     <div className={styles.laneRight}>
       <div className={`${styles.sideSeats} ${styles.rightSeats}`}>{at('right').map((value) => seat(value, 'right'))}</div>
       <span className={styles.spacer} />
-      {statusLine && <p className={styles.status} role="status">{statusLine}</p>}
-      {error && <p className={styles.error} role="alert">{error}</p>}
-      {incoming ? <div className={styles.prompt}><DrawOfferPrompt incoming={incoming} disabled={busy} compact /></div>
-        : pending ? <div className={styles.prompt}>
-          <PendingMove text={pending.text} onConfirm={pending.confirm} onCancel={pending.cancel} disabled={busy} />
-        </div> : tools ? <div className={styles.prompt}>{tools}</div>
-          // GameShell's live region already announces the turn, so the pill stays out of the accessibility tree.
-          : myTurn && <p className={`${styles.prompt} ${styles.yourTurn}`} aria-hidden="true">{t('table.yourTurn')}</p>}
-      {controls && <div className={styles.buttons}><MatchButtons controls={controls} disabled={busy || locked} compact /></div>}
+      {statusItem}
+      {errorItem}
+      {promptItem}
+      {buttonsItem}
       <div className={styles.ownSeat}>{seats.includes(bottomSeat) && seat(bottomSeat, 'bottom')}</div>
     </div>
 
-    {drawerOpen && <BoardMoveDrawer data={moves} id={drawerId} onClose={closeDrawer} />}
+    {drawer}
   </div>;
 }

@@ -32,9 +32,6 @@
 .tile .label { fill: var(--piece-on-solid); }
 .tile.hidden .body { fill: color-mix(in srgb, var(--back-tone) 62%, #0b1020); stroke: var(--piece-back-rim); }
 
-.marble .body { fill: var(--marble); stroke: rgb(0 0 0 / 0.45); }
-.marble .shine { fill: var(--piece-marble-shine); }
-
 /* Piece style finish: highlight under the lettering, and rim beads, notches, or an inner ring. */
 .gloss { fill: #fff; pointer-events: none; }
 .rimMarks { fill: none; stroke: var(--piece-accent); }

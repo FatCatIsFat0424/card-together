@@ -26,7 +26,7 @@ const CPU_THROTTLE = 4;
 const TRACE_MS = 5_000;
 /** Lets the deal and the turn banner settle before tracing. */
 const SETTLE_MS = 2_500;
-const GAMES: readonly GameType[] = ['liarsdeck', 'holdem', 'liarsdice', 'xiangqi'];
+const GAMES: readonly GameType[] = ['liarsdeck', 'holdem', 'liarsdice', 'xiangqi', 'chinesecheckers'];
 const FIXTURE_HASH = `scrypt$131072$8$1$${'a'.repeat(32)}$${'b'.repeat(128)}`;
 
 type Equipment = 'plain' | ShopSeries;

@@ -580,3 +580,21 @@ button.identity:focus-visible { outline: 2px solid var(--color-primary); outline
   .right .bet, .topRight .bet, .bottomRight .bet { right: calc(100% + 4px); top: 50%; transform: translateY(-50%); }
   .top .bet { top: calc(100% + 2px); left: 50%; transform: translateX(-50%); }
 }
+
+/* Plates pinned beside a board corner (Chinese checkers) put the avatar beside the name and stats at every size. */
+:global([data-anchored-seat]) .plate {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  justify-items: start;
+  column-gap: 6px;
+  row-gap: 1px;
+  padding: 0;
+}
+:global([data-anchored-seat]) .identity { display: contents; }
+:global([data-anchored-seat]) .avatarBox { grid-row: 1 / span 2; }
+:global([data-anchored-seat]) .avatarBox::after { content: ''; position: absolute; inset: -2px; }
+:global([data-anchored-seat]) .namePill { grid-column: 2; grid-row: 1; }
+:global([data-anchored-seat]) .stats { grid-column: 2; grid-row: 2; justify-content: flex-start; flex-wrap: nowrap; }
+/* The viewer's clock and time bank wrap under the colour line rather than widening the plate into the controls. */
+:global([data-anchored-seat]) .bottom .stats { flex-wrap: wrap; }

@@ -3,13 +3,15 @@ import type { ChineseCheckersVisibleState } from '@shared/types';
 import { NO_DRAW_OFFER } from '@shared/rules/board/match-controls';
 import { CC_BOARD, CC_HOLES, CC_TRIANGLES, ccCorners, ccIndex, ccInitialHoles, ccNode } from '@shared/rules/chinesecheckers';
 import type { CcHole } from '@shared/rules/chinesecheckers';
-import { boardAspect } from '../../../client/src/games/board/board-view';
+import type { GameSeat } from '@shared/types';
+import type { BoardSeatAnchor } from '../../../client/src/games/board/board-table';
+import { boardAspect, boardGeometry } from '../../../client/src/games/board/board-view';
 import {
-  chineseCheckersArrived, chineseCheckersLastMove, chineseCheckersMoveCount, chineseCheckersMovable,
-  chineseCheckersPassedSeat, chineseCheckersPath, chineseCheckersPieces, chineseCheckersPlaces, chineseCheckersRotation,
-  chineseCheckersSeatOrder,
-  chineseCheckersTargets,
+  chineseCheckersAnchors, chineseCheckersArrived, chineseCheckersLastMove, chineseCheckersMoveCount,
+  chineseCheckersMovable, chineseCheckersPassedSeat, chineseCheckersPath, chineseCheckersPieces, chineseCheckersRotation,
+  chineseCheckersSeatOrder, chineseCheckersSlot, chineseCheckersTargets,
 } from '../../../client/src/games/chinesecheckers/chinesecheckers-view';
+import { DEFAULT_BOARD_THEME } from '../../../client/src/games/board/board-theme';
 import { clientGame } from '../../../client/src/games/registry';
 
 function game(overrides: Partial<ChineseCheckersVisibleState> = {}): ChineseCheckersVisibleState {
@@ -53,18 +55,68 @@ describe('Chinese checkers view helpers', () => {
     expect(chineseCheckersPath(chain, '0,12', '2,10')).toEqual([]);
   });
 
-  it('places opponents by their corner: opposite on top, others to the sides', () => {
-    expect(chineseCheckersPlaces(game(), 'N')).toEqual({ S: 'top' });
+  it('numbers corners clockwise from the viewer and reads plates round the star', () => {
     const six = game({ seats: ['N', 'E', 'S', 'W', 'P5', 'P6'], corners: [...ccCorners(6)!] });
-    expect(chineseCheckersPlaces(six, 'N')).toEqual({ E: 'left', S: 'left', W: 'top', P5: 'right', P6: 'right' });
-    expect(chineseCheckersPlaces(six, 'W')).toEqual({ P5: 'left', P6: 'left', N: 'top', E: 'right', S: 'right' });
-    const four = game({ seats: ['N', 'E', 'S', 'W'], corners: [...ccCorners(4)!] });
-    expect(chineseCheckersPlaces(four, 'E')).toEqual({ S: 'left', W: 'top', N: 'right' });
-    const three = game({ seats: ['N', 'E', 'S'], corners: [...ccCorners(3)!] });
-    expect(chineseCheckersPlaces(three, 'N')).toEqual({ E: 'left', S: 'right' });
-    // Side columns read top to bottom: the upper corner's seat comes first.
+    expect(six.seats.map((seat) => chineseCheckersSlot(six, 'N', seat))).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(six.seats.map((seat) => chineseCheckersSlot(six, 'W', seat))).toEqual([3, 4, 5, 0, 1, 2]);
+    expect(chineseCheckersSlot(game(), 'N', 'S')).toBe(3);
+    // A spectator watching a seat outside the match sees the first player's view.
+    expect(chineseCheckersSlot(game(), 'W', 'N')).toBe(0);
+    expect(chineseCheckersSlot(game(), 'N', 'W')).toBeNull();
+    // The viewer first, the opposite corner next, then each side from its upper corner down.
     expect(chineseCheckersSeatOrder(six, 'N')).toEqual(['N', 'W', 'S', 'E', 'P5', 'P6']);
     expect(chineseCheckersSeatOrder(six, 'W')).toEqual(['W', 'N', 'P6', 'P5', 'E', 'S']);
+  });
+
+  // Nominal frames and the widest plates seen in the browser: desktop 1280 × 800, a 706 × 336 phone, a 390 × 844 portrait phone.
+  const LAYOUTS = [
+    { key: 'wide', width: 672, height: 760, plate: { width: 200, height: 40 }, room: { x: 70, y: 0 } },
+    { key: 'compact', width: 287, height: 324, plate: { width: 160, height: 40 }, room: { x: 200, y: 0 } },
+    { key: 'narrow', width: 346, height: 391, plate: { width: 168, height: 40 }, room: { x: 0, y: 200 } },
+  ] as const;
+  const SHIFT = { start: 0, center: 0.5, end: 1 } as const;
+
+  function plateRect(anchor: BoardSeatAnchor, layout: typeof LAYOUTS[number]): { left: number; top: number; right: number; bottom: number } {
+    const { width, height } = layout.plate;
+    const left = anchor.x * layout.width - SHIFT[anchor.inline] * width;
+    const away = (anchor.stack ?? 0) * (height + 6) * (anchor.block === 'end' ? -1 : 1);
+    const top = anchor.y * layout.height - SHIFT[anchor.block] * height + away;
+    return { left, top, right: left + width, bottom: top + height };
+  }
+
+  it.each([2, 3, 4, 6])('pins %i plates beside their corners, clear of holes and of each other', (count) => {
+    const seats = (['N', 'E', 'S', 'W', 'P5', 'P6'] as GameSeat[]).slice(0, count);
+    const match = game({ seats, corners: [...ccCorners(count)!], holes: ccInitialHoles([...ccCorners(count)!]) });
+    const [vx, vy, vw] = boardGeometry(CC_BOARD, 0).viewBox;
+    for (const viewer of seats) {
+      const anchors = chineseCheckersAnchors(match, viewer);
+      expect(Object.keys(anchors).sort()).toEqual([...seats].sort());
+      for (const layout of LAYOUTS) {
+        const unit = layout.width / vw;
+        const rects = seats.map((seat) => plateRect(anchors[seat]![layout.key], layout));
+        rects.forEach((rect, index) => {
+          const where = `${count}p ${viewer} ${layout.key} ${seats[index]}`;
+          for (const node of CC_BOARD.nodes) {
+            const cx = (node.x - vx) * unit;
+            const cy = (node.y - vy) * unit;
+            const nearX = Math.max(rect.left, Math.min(cx, rect.right));
+            const nearY = Math.max(rect.top, Math.min(cy, rect.bottom));
+            expect(Math.hypot(cx - nearX, cy - nearY), `${where} covers ${node.id}`).toBeGreaterThan(0.46 * unit);
+          }
+          expect(rect.left, where).toBeGreaterThanOrEqual(-layout.room.x);
+          expect(rect.right, where).toBeLessThanOrEqual(layout.width + layout.room.x);
+          expect(rect.top, where).toBeGreaterThanOrEqual(-layout.room.y);
+          expect(rect.bottom, where).toBeLessThanOrEqual(layout.height + layout.room.y);
+          rects.slice(index + 1).forEach((other) => {
+            const apart = other.left >= rect.right || rect.left >= other.right || other.top >= rect.bottom || rect.top >= other.bottom;
+            expect(apart, `${where} overlaps another plate`).toBe(true);
+          });
+        });
+      }
+      // The viewer's own corner is always the bottom one, and plates carry their corner colour.
+      expect(anchors[viewer]!.wide).toEqual(chineseCheckersAnchors(game({ seats: ['N', 'S'] }), 'N').N!.wide);
+      expect(anchors[viewer]!.accent).toBe(DEFAULT_BOARD_THEME.pieces.marbles[match.corners[seats.indexOf(viewer)]]);
+    }
   });
 
   it('tracks arrivals, the last move, passes, and the move count', () => {

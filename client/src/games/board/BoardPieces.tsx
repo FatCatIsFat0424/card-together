@@ -1,7 +1,7 @@
 // ─── Piece primitives: drawn around (0, 0) in board units; the board view places them ───
 
 import { createContext, useContext } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { DEFAULT_PIECE_FINISH } from './board-theme';
 import type { PieceFinish } from './board-theme';
 import styles from './BoardPieces.module.css';
@@ -118,14 +118,5 @@ function TileShape({ className, label, children }: {
       ? <path className={styles.pattern} d={`M${-width * 0.32} ${height * 0.22}L0 ${-height * 0.22}L${width * 0.32} ${height * 0.22}`}
         strokeWidth={0.07} fill="none" />
       : <text className={styles.label} fontSize={height * 0.62} dominantBaseline="central" textAnchor="middle">{label}</text>}
-  </g>;
-}
-
-/** Chinese checkers marble in the colour of star corner `corner`. */
-export function MarblePiece({ corner, radius = PIECE_RADIUS }: { readonly corner: number; readonly radius?: number }): ReactNode {
-  return <g className={styles.marble} style={{ '--marble': `var(--piece-marble-${corner})` } as CSSProperties}>
-    <circle className={styles.shadow} cx={radius * 0.06} cy={radius * 0.1} r={radius} />
-    <circle className={styles.body} r={radius} strokeWidth={radius * 0.12} />
-    <circle className={styles.shine} cx={-radius * 0.3} cy={-radius * 0.35} r={radius * 0.34} />
   </g>;
 }

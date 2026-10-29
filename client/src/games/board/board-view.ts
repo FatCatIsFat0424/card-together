@@ -3,12 +3,18 @@
 import { nodeById, rotatePoint } from '@shared/rules/board/board-model';
 import type { BoardLayout, BoardModel, BoardPoint, NodeId } from '@shared/rules/board/board-model';
 
+/**
+ * Distance in board units from the line through the star's outermost holes to its outer edge: the wood rim and,
+ * on the viewer's turn, the glow round it (`StarBoard.tsx`).
+ */
+export const STAR_RIM = 1.1;
+
 /** Space around the outermost nodes, in board units, so cells, tiles and pieces are not clipped. */
 const PADDING: Record<BoardLayout, { readonly x: number; readonly y: number }> = {
   cells: { x: 0.65, y: 0.65 },
   points: { x: 0.55, y: 0.55 },
   stations: { x: 1.02, y: 0.56 },
-  holes: { x: 0.68, y: 0.68 },
+  holes: { x: STAR_RIM, y: STAR_RIM },
 };
 /** Extra room on the bottom and left edges for coordinate labels. */
 const LABEL_ROOM = 0.42;
