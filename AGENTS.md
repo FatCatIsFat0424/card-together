@@ -13,17 +13,17 @@ Authoritative project rule set; `CLAUDE.md` references it.
 
 | Path | Contents |
 | --- | --- |
-| `shared/src/types/`, `constants/`, `rules/` | Browser/server contracts and pure game rules |
-| `shared/src/games/` | Per-game definitions and the typed game registry |
+| `shared/src/types/`, `constants/`, `rules/` | Browser/server contracts and pure game rules; `rules/board/` is the shared board kit (node-and-coordinate boards, resign and draw offers, result reasons) |
+| `shared/src/games/`, `stats/` | Per-game definitions and the typed game registry; per-game statistics extractors |
 | `server/src/engine/` | Pure Bridge functions |
 | `server/src/managers/`, `managers/games/` | Runtime state; per-game modules, adapters, and adapter registry |
 | `server/src/runtime/` | Serialized persistence, rollback, bot and timeout scheduling |
-| `server/src/bots/` | Bot strategies and the per-game bot registry |
+| `server/src/bots/`, `bots/search/` | Bot strategies and the per-game bot registry; `worker_threads` pool for search bots |
 | `server/src/auth/`, `social/`, `http/`, `socket/` | Services and transport adapters |
 | `server/src/database/`, `media/` | Repository and uploaded-image storage |
 | `client/src/pages/`, `components/`, `hooks/`, `stores/` | UI and client state |
-| `client/src/games/` | Table shell and one folder per game; `registry.ts` (eager data) and `ui-registry.ts` (components, lazy tables) |
-| `client/src/cosmetics/` | Shop product renderers, previews, and translations per equippable type |
+| `client/src/games/` | Table shell and one folder per game (`<game>-client.ts`, `<game>-ui.ts`, table); `board/` is the shared board table kit; `registry.ts` (eager data) and `ui-registry.ts` (components, lazy tables) |
+| `client/src/cosmetics/` | Shop product renderers, previews, and translations per equippable type (card faces, chips, sound packs, piece, board, and dice styles, and others) |
 | `client/src/audio/`, `voice/` | Music playback, turn reminders, WebRTC |
 | `server/tests/`, `deploy/tests/` | Vitest and Python standard-library tests |
 | `scripts/` | Check runner, asset importers, dev preview, and the Vite artwork-layer plugin |
@@ -32,6 +32,8 @@ Authoritative project rule set; `CLAUDE.md` references it.
 | `docs/`, `docs/games/` | Authoritative guides (index in [README](README.md#documentation)); game rules split by category |
 
 ## Implementation rules
+
+- Adding a game: [architecture](docs/architecture.md#新增遊戲) lists the modules, the board kit recipe, and the per-game acceptance checklist.
 
 - The server decides legality, turns, and results, and filters private hands per recipient.
 - Engine and shared rule functions have no I/O, manager state, or transport access.

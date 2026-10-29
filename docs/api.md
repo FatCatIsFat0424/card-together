@@ -98,7 +98,7 @@
 - 握手與每個操作都需要有效的工作階段與允許的 Origin。操作者由工作階段決定，從不取自 payload。
 - 最後一個參數必須是 callback，否則操作會被忽略。沒有 payload 的操作只接收 callback。
 - 失敗回傳 `{ success: false, error }`。成功會在資料寫入後才回覆，但暫時性的 signaling 與狀態未變更時除外。
-- 遊戲類型：`bridge`、`bigtwo`、`redpoints`、`ninetynine`、`sevens`、`chinesepoker`、`liarsdeck`、`blackjack`、`holdem`、`napoleon`、`tenhalf`、`liarsdice`、`reversi`、`doudizhu`、`oldmaid`、`jungle`、`gomoku`、`xiangqi`、`gofish`、`banqi`、`chinesecheckers`、`landbattle`。標準座位：`N`、`E`、`S`、`W`。
+- 遊戲類型（[`GAME_TYPES`](../shared/src/constants/game-rules.ts)）：`bridge`、`bigtwo`、`redpoints`、`ninetynine`、`sevens`、`chinesepoker`、`liarsdeck`、`blackjack`、`holdem`、`napoleon`、`tenhalf`、`liarsdice`、`crazyeights`、`stud`、`reversi`、`oldmaid`、`gofish`、`doudizhu`、`jungle`、`gomoku`、`xiangqi`、`banqi`、`chinesecheckers`、`landbattle`。標準座位：`N`、`E`、`S`、`W`。
 - 確切的 payload 與結果：[`socket-events.ts`](../shared/src/types/socket-events.ts)。
 
 **房間**
@@ -116,7 +116,7 @@
 | `room:changeAdditionalSeat` | `{ index }` | 坐到一個額外座位；`RoomInfo.additionalSeats` 的索引，從 0 開始 |
 | `room:standUp` | — | 等待中起身成為旁觀者 |
 | `room:movePlayer` | `{ accountId, target }` | 房主在等待中移動一位真人；`target` 是 [`RoomSeatTarget`](../shared/src/types/room.ts) |
-| `room:addSeat`、`room:removeSeat` | — | 房主加開一個額外座位（總共八個，拿破崙與釣魚為六個），或移除最後一個空的額外座位；只限等待中的 99、瘋狂 8、釣魚、21 點、德州撲克、梭哈與拿破崙 |
+| `room:addSeat`、`room:removeSeat` | — | 房主加開一個額外座位（總共八個，拿破崙與釣魚為六個），或移除最後一個空的額外座位；只限等待中、人數彈性且可加開座位的遊戲（`seats.expandable`：99、瘋狂 8、釣魚、21 點、十點半、德州撲克、梭哈、拿破崙、吹牛骰、抽鬼牌與跳棋） |
 | `room:addBot` | `{ seat, difficulty? }` | 房主在等待中把 bot 加到任何已設定的座位（`N`–`W`，或已加開的 `P5`–`P8`）；省略難度時為困難 |
 | `room:removeBot` | `{ seat }` | 房主在等待中移除 bot |
 | `room:setBotDifficulty` | `{ seat, difficulty }` | 房主把等待中房間的一個 bot 改為簡單或困難；重設真人的準備狀態 |

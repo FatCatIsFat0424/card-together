@@ -115,7 +115,7 @@
 | `RoomInfo.additionalSeats`（99、瘋狂 8、釣魚、21 點、十點半、德州撲克、梭哈、拿破崙、吹牛骰、抽鬼牌、跳棋） | 四個座位；最多四個額外座位，可坐真人或 bot | 不支援：先請玩家離開額外座位，並由房主移除這些座位 |
 
 - 較早的版本無法讀取 99 的並列結果（`winners`）。
-- 加入牌七、十三支、騙子酒館、21 點、德州撲克、拿破崙、吹牛骰、黑白棋、五子棋、抽鬼牌、鬥地主、鬥獸棋、象棋、暗棋、跳棋或陸戰棋之前的版本，會拒絕包含這些遊戲的狀態或歷史紀錄。
+- 尚未加入某款遊戲的舊版本，會拒絕包含該遊戲的狀態或歷史紀錄；牌七、十三支、騙子酒館、21 點、德州撲克、拿破崙，以及之後新增的每一款遊戲皆然。
 - 絕對不要讓兩個伺服器版本使用同一個資料庫。回復步驟：[部署](deployment.md#回復版本)。
 - schema v10 的房規型別見 [`GameOptions`](../shared/src/types/room.ts)。遷移保留未選中遊戲的房規；舊房間沒有排七選項時仍採標準規則，新房間則預設開啟斬龍。已開始遊戲的 `options` 與回放內容維持原值。v9 伺服器無法讀取 v10；回復版本前必須還原升級前的完整備份。
 
@@ -156,7 +156,7 @@
 | 位置 | 路徑 |
 | --- | --- |
 | 開發 | `server/data/database.json`；SQLite 為 `server/data/database.sqlite`（覆寫：[`DATABASE_ENGINE`、`DATABASE_PATH`](development.md#設定)） |
-| 正式環境 | `/var/lib/card-together/database.json`；[切換](#sqlite-切換)後為 `database.sqlite`，JSON 保留為唯讀備援 |
+| 正式環境 | `/var/lib/card-together/database.sqlite`（2026-10-27 起，[切換](#sqlite-切換)）；`database.json` 保留為唯讀備援，內容已過時 |
 | 圖片 | 資料庫旁的 `media/`：以內容定址的檔案，加上 `media/owners/` 配額標記 |
 | 回放 | 資料庫旁的 `replays/`：每場已錄製對局一個 `<match ID>.json` 封存 |
 
@@ -345,7 +345,7 @@ npm run admin:export-json -- /absolute/path/database.sqlite /absolute/path/datab
 
 - 第一階段：SQLite adapter、匯入函式，以及在兩種引擎上執行的 repository、auth、social、runtime、持久化與金幣測試。
 - 第二階段：[擁有者鎖定檔](#單一擁有者鎖定)、[遷移](#遷移到-sqlite)與[匯出](#匯出-sqlite-為-json)工具、兩種引擎的維護工具、SQLite 線上備份與[還原](deployment.md#還原資料)，以及[切換 runbook](deployment.md#切換到-sqlite)。
-- 正式環境的切換**尚未執行**，需經核准後依 runbook 進行；在那之前繼續使用 JSON（`server.env.example` 的預設值）。不要只修改 `DATABASE_ENGINE` 而跳過遷移。
+- 正式環境已於 2026-10-27 切換到 SQLite；`server.env.example` 與開發環境的預設值仍是 JSON。重新切換需經核准並依 runbook 進行，不要只修改 `DATABASE_ENGINE` 而跳過遷移。
 - JSON adapter 至少再保留一個版本，作為回復與開發用的引擎。
 - SQLite 開始接受寫入後，JSON 檔就已過時：回復時必須用匯出工具帶出較新的資料。不要加入雙重寫入。
 - 多程序的房間協調需要另外設計。

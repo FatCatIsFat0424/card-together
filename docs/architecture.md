@@ -14,7 +14,7 @@
 
 | 位置 | 職責 |
 | --- | --- |
-| `shared/src/` | 型別、常數、純遊戲規則、呈現畫格 |
+| `shared/src/` | 型別、常數、純遊戲規則、呈現畫格；`rules/board/` 是棋類共用的棋盤模型與認輸／提和規則；`stats/` 是各遊戲的統計擷取與特殊紀錄定義 |
 | `shared/src/games/` | 各遊戲定義（座位規則、類別、桌面配備、房規驗證與預設值、呈現畫格、結果名次與分數單位）與型別化的 registry |
 | `server/src/app.ts`、`index.ts` | 設定、組合服務、啟動與關閉 |
 | `auth/`、`social/` | 密碼、工作階段、個人檔案、好友關係與私訊服務 |
@@ -27,7 +27,8 @@
 | `database/`、`media/` | 非同步 Repository、JSON 與 SQLite adapter、共用的帳號規則、migration、索引、每場對局的回放檔；以內容定址的圖片 |
 | `client/src/pages/`、`components/` | 延遲載入的路由與 CSS Modules UI |
 | `client/src/hooks/`、`stores/` | 帳號與 Socket 生命週期；Zustand 快照與偏好設定 |
-| `client/src/games/` | 共用牌桌外框，以及各遊戲資料夾；`registry.ts`（輕量的純資料與函式）與 `ui-registry.ts`（元件、牌桌）依遊戲型別查詢 |
+| `client/src/games/` | 共用牌桌外框，以及各遊戲資料夾；`registry.ts`（輕量的純資料與函式）與 `ui-registry.ts`（元件、牌桌）依遊戲型別查詢；`board/` 是棋類共用的棋盤牌桌元件 |
+| `client/src/cosmetics/` | 各裝備類型的商店商品繪製、預覽與翻譯：牌面、籌碼、音效包、座位框、聊天框、勝利特效，以及棋子（`piece-styles/`）、棋盤（`board-styles/`）與骰子（`dice-styles/`）造型；`series-tokens.ts` 提供 15 個系列的共用主題參數，`art-layers/` 是動態圖案的合成圖層 |
 | `client/src/audio/`、`voice/` | 音樂、輪到提醒、WebRTC |
 | `deploy/` | 執行環境準備、安裝、備份、migration、發布 |
 
@@ -40,6 +41,35 @@
 - 含鬼牌的牌組共用 [`CardOrJoker`](../shared/src/types/game.ts)（`Card` 本身不含鬼牌，其他遊戲不受影響）；鬼牌的 key、驗證與組牌在 [`rules/cards.ts`](../shared/src/rules/cards.ts)，傳輸格式為 `{ joker: 'big' | 'small' }`。拿破崙的 `NapoleonCard` 與相關函式是它的別名，只用在拿破崙的程式碼；共用程式碼使用通用名稱（呈現畫格的 `jokerCards`、旁觀者視角的 `jokerHands`、`cards.joker*` 文字）。用戶端以 `useCardOrJokerFaceUrl` 取得牌面，大鬼來自裝備中的牌面，小鬼為其灰階版本，經典牌組使用[內建圖案](../client/src/assets/jokers/)。
 - 新 bot 可回傳 `{ type: 'game-action', request }`，直接沿用同一個 adapter 與自動操作政策；既有 bot 動作保留相容路徑，不必為新遊戲擴寫共用 runtime。
 - 狀態驗證由 [`validation-registry.ts`](../server/src/managers/games/validation-registry.ts) 對應到每款遊戲的 shape、result 與 coherence 檢查。`runtime/validate.ts` 只處理共用快照、時鐘、玩家與房間參照；玩家驗證函式注入遊戲 validator，避免反向相依。
+
+## 新增遊戲
+
+每款遊戲在三層各有自己的檔案，並各登記一筆 registry 項目，缺少任何一項都會編譯失敗；registry 與遊戲自己的檔案之外不需要修改其他檔案（只供測試的 [`sample-game.ts`](../server/tests/fixtures/sample-game.ts) 示範完整串接）。參考實作：撲克牌看十點半，棋類看黑白棋。
+
+| 層 | 位置 | 內容 |
+| --- | --- | --- |
+| shared | `shared/src/games/<game>/`、`rules/<game>.ts`、`stats/<game>.ts` | 定義（類別、座位、配備、房規、計時）、型別、操作解析；純規則；統計擷取與特殊紀錄（定義版本從 1 開始，勝負用 `matchStanding`） |
+| server | `managers/games/<game>-{game,adapter,validation}.ts`、`bots/<game>-strategy.ts` | 開局、可見狀態過濾、操作驗證與套用、逾時動作、bot；搜尋型 bot 另有 `<game>-search.ts`（[worker pool](#bot-worker-pool)） |
+| client | `client/src/games/<game>/`、`<game>-i18n.ts`、`game-rules-i18n.ts` | 牌桌、`<game>-client.ts`、`<game>-ui.ts`、`statistics.ts`；中英文字典與規則說明 |
+
+**每款遊戲的驗收**
+
+- 規則是純函式，測試涵蓋合法步、勝負、計分與邊界情況。
+- 可見狀態過濾的測試確認手牌、骰子、蓋著的棋子與陸戰棋對方身份不會外洩。
+- bot 與逾時動作只產生合法動作，且只用自己看得到的資訊；搜尋型 bot 有時間上限測試。
+- 回放、觀戰、重啟恢復與中止投票正常；每日任務與統計同步登錄。
+- 中英文字典、規則說明與 `docs/games/` 的繁體中文規則一起更新。
+- 大廳類別（`cards`、`dice`、`board`）取自定義；`GAME_BACKGROUNDS` 與 `GAME_CARD_ART` 是 `Partial`，缺圖的遊戲退回純色底板。
+- 介面沿用現行設計：電腦版只有左側欄與頁面標題列；理牌與代打用牌桌浮動工具，手牌一律大牌在左（`HandSortRules.initial`）；彈窗用共用尺寸；手機橫向 706×336 不得溢出或重疊。
+
+**棋類**
+
+- 定義：`category: 'board'`、`equipment: []`；座位必須 `flexible: true`（可見狀態才會帶 `seats`）；`timeControl: BOARD_TIME_CONTROL`；`matchControls: { resign, draw }`，沒有和局的遊戲設 `draw: false`，和局只限兩人。
+- 棋盤：用 `rules/board/boards` 的建構函式與 `board-model` 的輔助函式；第 0 方是下方與先手。跳棋的星形棋盤使用加倍的欄座標。
+- 狀態與結果：公開的 `drawOffer`（起始 `NO_DRAW_OFFER`）；結果 `BoardOutcome { winners, reason }`，新原因附加到 `BOARD_RESULT_REASONS`，並在 `client/src/board-i18n.ts` 補翻譯（否則編譯失敗）。手數紀錄擴充 `BoardMoveRecord`，不放隱藏資訊（陸戰棋的軍階）；記譜 hook 預設為座標。
+- 操作：`parseAction` 先交給 `parseMatchControl`，回傳 null 才解析遊戲自己的操作。adapter 以 `applyMatchControl` 處理認輸與提和（不走呈現畫格，不推進回合與計時），每次走子後 `afterBoardMove` 更新提和狀態；bot 從不提和；逾時沿用平台預設，自動走一步合法棋。
+- 用戶端：牌桌把 `BoardTable` 放進 `GameShell` 的 `board` 欄位，`useBoardInput` 負責選取與確認。棋盤模式下 `GameShell` 隱藏 `prompt`、`error` 與呈現畫格，改用 `BoardTable` 的 `status` 與 `error`；`restoreSnapshot` 要設定 `phase: 'playing'` 與 `currentTurnSeat`；旁觀者預設以 `seats[0]` 的視角觀看。
+- 兩人棋類的座位用 `numbered: false`、`expandable: false`；`fillBots` 不會超過 `maxPlayers`；棋步沒有呈現畫格，所以結算對話框立即出現。
 
 ## 狀態 commit
 
