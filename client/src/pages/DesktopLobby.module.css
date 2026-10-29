@@ -142,7 +142,7 @@
     scrollbar-width: thin;
     scrollbar-color: var(--border-color) transparent;
   }
-  .social { display: flex; flex-direction: column; gap: var(--space-4); }
+  .social { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-4); }
   /* The scrolling column clips at its padding box, so the selection ring's room moves from the cards to the column. */
   .main { padding: 2px; margin: -2px; }
   .cards { padding: 0; margin: 0; }
