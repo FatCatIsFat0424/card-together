@@ -26,7 +26,7 @@ const CPU_THROTTLE = 4;
 const TRACE_MS = 5_000;
 /** Lets the deal and the turn banner settle before tracing. */
 const SETTLE_MS = 2_500;
-const GAMES: readonly GameType[] = ['liarsdeck', 'holdem'];
+const GAMES: readonly GameType[] = ['liarsdeck', 'holdem', 'liarsdice', 'xiangqi'];
 const FIXTURE_HASH = `scrypt$131072$8$1$${'a'.repeat(32)}$${'b'.repeat(128)}`;
 
 type Equipment = 'plain' | ShopSeries;
@@ -72,7 +72,7 @@ function equipment(set: Equipment): Record<string, unknown> {
     cardBackStyle: `card-back-${set}`, tableBackgroundStyle: `table-${set}`, seatBackgroundStyle: `seat-${set}`,
     nameplate: `nameplate-${set}`, cardFaceStyle: `card-face-${set}`, chipStyle: `chips-${set}`,
     seatFrame: `seat-frame-${set}`, chatFrame: `chat-frame-${set}`, victoryEffect: `victory-${set}`,
-    soundPack: `sound-${set}`,
+    soundPack: `sound-${set}`, pieceStyle: `pieces-${set}`, boardStyle: `board-${set}`, diceStyle: `dice-${set}`,
   };
   for (const item of Object.values(slots)) {
     if (!getShopItem(item as ShopItemId)) throw new Error(`Missing shop item ${item}.`);

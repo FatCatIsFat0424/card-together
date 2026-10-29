@@ -92,7 +92,7 @@
 - `Repository.purchaseShopItem` 使用共用的[目錄](../shared/src/constants/shop.ts)，以一次原子寫入扣除金幣、增加 `coinRevision`，並授予永久擁有權。重複購買不會有任何效果；寫入失敗時物品欄與餘額都不變。購買預設不裝備；請求帶 `equip: true` 時，同一次寫入也會裝備該商品（貼圖包沒有欄位，忽略），已擁有的商品只裝備、不再扣款。
 - 商品與貼圖 ID 是持久的參照。重新命名或移除它們需要相容的資料 migration，並為已擁有的商品與歷史紀錄保留圖案。
 - 外框保留在 `ownedAvatarBorders`；其他商品使用私人的 `ownedShopItems`。裝備欄位定義在 [AccountProfile](../shared/src/types/account.ts)。服務層與 Repository 在裝備前都會驗證物品類型與擁有權。資料庫會拒絕不存在的 ID、重複的物品欄與未擁有的裝備。
-- 裝備官方圖片樣式時，會覆蓋仍保留的上傳圖片。設為 null 會恢復上傳圖片或主題，不會遺失媒體。公開個人檔案包含外觀名牌與聊天框；房間中的身分另外包含座位樣式、座位框與勝利特效。物品欄、牌背與牌面、牌桌樣式、音效包與籌碼樣式只有本人看得到。購買與變更裝備會更新本人所有已連線的分頁。
+- 裝備官方圖片樣式時，會覆蓋仍保留的上傳圖片。設為 null 會恢復上傳圖片或主題，不會遺失媒體。公開個人檔案包含外觀名牌與聊天框；房間中的身分另外包含座位樣式、座位框與勝利特效。物品欄、牌背與牌面、牌桌樣式、音效包、籌碼樣式，以及棋子、棋盤與骰子樣式只有本人看得到。購買與變更裝備會更新本人所有已連線的分頁。
 - 貼圖訊息儲存穩定的目錄 ID。傳送需要擁有包含該貼圖的貼圖包；收件者不需擁有也能顯示。既有的表情符號與上傳貼圖維持各自獨立且免費的行為。
 
 ## 資料相容性
@@ -109,7 +109,7 @@
 | `AccountRecord.achievements`、`ownedAchievementNameplates` | 計數器為零／已取得的物品欄為空 | 計數器不會推進；不支援帳號或 runtime 中裝備的已取得稱號。回復前請還原完整且相容的備份 |
 | `ownedAvatarBorders`、`avatarBorder` | 空／原始頭像 | 保留欄位；無法顯示或管理外框 |
 | `ownedShopItems`、官方圖片樣式欄位、`nameplate` | 物品欄為空／上傳圖片或主題／沒有名牌 | 無法顯示或管理商品；較舊的個人檔案寫入可能會丟失裝備 |
-| `cardFaceStyle`、`soundPack`、`chipStyle`、`seatFrame`、`victoryEffect`、`chatFrame`（帳號、runtime 的 `PlayerInfo`） | 內建設計 | 不支援：裝備中的值無法通過較舊的驗證。回復前請還原完整且相容的備份 |
+| `cardFaceStyle`、`soundPack`、`chipStyle`、`seatFrame`、`victoryEffect`、`chatFrame`、`pieceStyle`、`boardStyle`、`diceStyle`（帳號、runtime 的 `PlayerInfo`） | 內建設計 | 不支援：裝備中的值無法通過較舊的驗證。回復前請還原完整且相容的備份 |
 | 房間訊息與私訊中的 `shopSticker` | 不存在 | 不支援：回復前請還原完整且相容的備份 |
 | `seatBackground` | 主題圖案 | 忽略；資料與媒體保留 |
 | `RoomInfo.additionalSeats`（99、瘋狂 8、釣魚、21 點、十點半、德州撲克、梭哈、拿破崙、吹牛骰、抽鬼牌、跳棋） | 四個座位；最多四個額外座位，可坐真人或 bot | 不支援：先請玩家離開額外座位，並由房主移除這些座位 |

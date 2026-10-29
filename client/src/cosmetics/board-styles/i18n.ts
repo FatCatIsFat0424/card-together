@@ -1,0 +1,38 @@
+const en = {
+  'shop.item.board-aurora.name': 'Aurora board',
+  'shop.item.board-tide.name': 'Pearl Tide board',
+  'shop.item.board-sakura.name': 'Sakura board',
+  'shop.item.board-constellation.name': 'Stargazer board',
+  'shop.item.board-bamboo.name': 'Jade Bamboo board',
+  'shop.item.board-gilded.name': 'Gilded Salon board',
+  'shop.item.board-ember.name': 'Ember board',
+  'shop.item.board-lotus.name': 'Moonlit Lotus board',
+  'shop.item.board-frost.name': 'Crystal Frost board',
+  'shop.item.board-dune.name': 'Dusk Dunes board',
+  'shop.item.board-starfleet.name': 'Astral Armada board',
+  'shop.item.board-shrine.name': 'Thousand Lanterns board',
+  'shop.item.board-ironfront.name': 'Iron Front board',
+  'shop.item.board-neoncity.name': 'Neon Overdrive board',
+  'shop.item.board-crownrealm.name': 'Lioncrown Dynasty board',
+};
+
+export const boardStylesTranslations: { readonly en: typeof en; readonly 'zh-TW': Record<keyof typeof en, string> } = {
+  en,
+  'zh-TW': {
+    'shop.item.board-aurora.name': '極光棋盤',
+    'shop.item.board-tide.name': '珍珠潮汐棋盤',
+    'shop.item.board-sakura.name': '櫻花棋盤',
+    'shop.item.board-constellation.name': '星月棋盤',
+    'shop.item.board-bamboo.name': '翠竹棋盤',
+    'shop.item.board-gilded.name': '鎏金沙龍棋盤',
+    'shop.item.board-ember.name': '餘燼棋盤',
+    'shop.item.board-lotus.name': '月映蓮池棋盤',
+    'shop.item.board-frost.name': '霜晶棋盤',
+    'shop.item.board-dune.name': '暮色沙丘棋盤',
+    'shop.item.board-starfleet.name': '星穹遠征棋盤',
+    'shop.item.board-shrine.name': '千燈神域棋盤',
+    'shop.item.board-ironfront.name': '鋼鐵戰線棋盤',
+    'shop.item.board-neoncity.name': '霓虹失控棋盤',
+    'shop.item.board-crownrealm.name': '獅冠王朝棋盤',
+  },
+};

@@ -29,6 +29,11 @@ vi.mock('../../../client/src/stores/god-view-store', () => ({
 }));
 
 vi.mock('../../../client/src/socket', () => ({ socket: { emit: vi.fn() } }));
+vi.mock('../../../client/src/cosmetics/board-styles/use-board-theme', async () => {
+  const { DEFAULT_BOARD_THEME } = await import('../../../client/src/games/board/board-theme');
+  return { useEquippedBoardTheme: () => DEFAULT_BOARD_THEME };
+});
+vi.mock('../../../client/src/cosmetics/dice-styles/use-dice-style', () => ({ useEquippedDiceTheme: () => null }));
 
 import { TableSeat } from '../../../client/src/components/TableSeat';
 import { AuctionTable } from '../../../client/src/components/AuctionTable';

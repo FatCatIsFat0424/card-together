@@ -74,7 +74,8 @@ describe.each(REPOSITORY_ADAPTERS)('permanent shop item transactions ($name)', (
     });
   });
 
-  const NEW_SLOTS = ['cardFaceStyle', 'soundPack', 'chipStyle', 'seatFrame', 'victoryEffect', 'chatFrame'] as const;
+  const NEW_SLOTS = ['cardFaceStyle', 'soundPack', 'chipStyle', 'seatFrame', 'victoryEffect', 'chatFrame',
+    'pieceStyle', 'boardStyle', 'diceStyle'] as const;
   it.each(NEW_SLOTS)('equips every owned %s product of its type only, and persists it', async (slot) => {
     const items = SHOP_ITEMS.filter((item) => item.type === EQUIPMENT_SLOTS[slot]);
     expect(items.length).toBeGreaterThanOrEqual(10);
@@ -97,6 +98,7 @@ describe.each(REPOSITORY_ADAPTERS)('permanent shop item transactions ($name)', (
 
   it('shares only public equipment with tables and other players', () => {
     const equipped = { ...account, cardFaceStyle: 'card-face-aurora', soundPack: 'sound-tide', chipStyle: 'chips-dune',
+      pieceStyle: 'pieces-tide', boardStyle: 'board-ember', diceStyle: 'dice-frost',
       seatFrame: 'seat-frame-frost', victoryEffect: 'victory-ember', chatFrame: 'chat-frame-lotus' } as const;
     const info = toPlayerInfo(publicAccount(equipped));
     expect(info).toMatchObject({ seatFrame: 'seat-frame-frost', victoryEffect: 'victory-ember', chatFrame: 'chat-frame-lotus' });
@@ -105,6 +107,7 @@ describe.each(REPOSITORY_ADAPTERS)('permanent shop item transactions ($name)', (
       expect(shared).not.toHaveProperty('cardFaceStyle');
       expect(shared).not.toHaveProperty('soundPack');
       expect(shared).not.toHaveProperty('chipStyle');
+      for (const slot of ['pieceStyle', 'boardStyle', 'diceStyle']) expect(shared).not.toHaveProperty(slot);
     }
     expect(publicProfile(equipped)).not.toHaveProperty('victoryEffect');
   });

@@ -35,6 +35,11 @@ vi.mock('../../../client/src/stores/table-perspective-store', () => ({
   useTablePerspectiveStore: (select: (value: Record<string, unknown>) => unknown) =>
     select({ seat: 'S', chosen: false, selectSeat: () => undefined }),
 }));
+vi.mock('../../../client/src/cosmetics/board-styles/use-board-theme', async () => {
+  const { DEFAULT_BOARD_THEME } = await import('../../../client/src/games/board/board-theme');
+  return { useEquippedBoardTheme: () => DEFAULT_BOARD_THEME };
+});
+vi.mock('../../../client/src/cosmetics/dice-styles/use-dice-style', () => ({ useEquippedDiceTheme: () => null }));
 
 import { BoardView } from '../../../client/src/games/board/BoardView';
 import { StonePiece, TokenPiece } from '../../../client/src/games/board/BoardPieces';

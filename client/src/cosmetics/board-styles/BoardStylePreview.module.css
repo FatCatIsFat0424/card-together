@@ -1,0 +1,14 @@
+.preview {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+}
+
+.board {
+  width: 96px;
+  height: 96px;
+  overflow: hidden;
+  border-radius: 6px;
+  box-shadow: var(--shadow-sm);
+}

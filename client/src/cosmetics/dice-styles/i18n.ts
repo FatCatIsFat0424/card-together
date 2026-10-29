@@ -1,0 +1,38 @@
+const en = {
+  'shop.item.dice-aurora.name': 'Aurora glass dice',
+  'shop.item.dice-tide.name': 'Pearl dice',
+  'shop.item.dice-sakura.name': 'Sakura dice',
+  'shop.item.dice-constellation.name': 'Midnight star dice',
+  'shop.item.dice-bamboo.name': 'Jade bamboo dice',
+  'shop.item.dice-gilded.name': 'Gilded dice',
+  'shop.item.dice-ember.name': 'Ember dice',
+  'shop.item.dice-lotus.name': 'Lotus dice',
+  'shop.item.dice-frost.name': 'Frost dice',
+  'shop.item.dice-dune.name': 'Dune dice',
+  'shop.item.dice-starfleet.name': 'Astral Armada dice',
+  'shop.item.dice-shrine.name': 'Thousand Lanterns dice',
+  'shop.item.dice-ironfront.name': 'Iron Front dice',
+  'shop.item.dice-neoncity.name': 'Neon Overdrive dice',
+  'shop.item.dice-crownrealm.name': 'Lioncrown Dynasty dice',
+};
+
+export const diceStylesTranslations: { readonly en: typeof en; readonly 'zh-TW': Record<keyof typeof en, string> } = {
+  en,
+  'zh-TW': {
+    'shop.item.dice-aurora.name': '極光琉璃骰',
+    'shop.item.dice-tide.name': '珍珠骰',
+    'shop.item.dice-sakura.name': '櫻花骰',
+    'shop.item.dice-constellation.name': '午夜星辰骰',
+    'shop.item.dice-bamboo.name': '翠竹骰',
+    'shop.item.dice-gilded.name': '鎏金骰',
+    'shop.item.dice-ember.name': '餘燼骰',
+    'shop.item.dice-lotus.name': '蓮池骰',
+    'shop.item.dice-frost.name': '霜晶骰',
+    'shop.item.dice-dune.name': '沙丘骰',
+    'shop.item.dice-starfleet.name': '星穹遠征骰',
+    'shop.item.dice-shrine.name': '千燈神域骰',
+    'shop.item.dice-ironfront.name': '鋼鐵戰線骰',
+    'shop.item.dice-neoncity.name': '霓虹失控骰',
+    'shop.item.dice-crownrealm.name': '獅冠王朝骰',
+  },
+};

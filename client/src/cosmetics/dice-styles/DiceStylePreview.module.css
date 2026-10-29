@@ -1,0 +1,15 @@
+.preview {
+  --die-size: 1.9rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+}
+
+.cup { --die-size: 2.4rem; }
+
+.dice {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 8px;
+}

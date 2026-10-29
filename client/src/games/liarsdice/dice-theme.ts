@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useEquippedDiceTheme } from '../../cosmetics/dice-styles/use-dice-style';
 
 /**
  * Everything the dice renderer paints with. Cosmetic series provide their own theme; the renderer reads
@@ -19,6 +20,10 @@ export interface DiceTheme {
   readonly cupBody: string;
   readonly cupRim: string;
   readonly cupShade: string;
+  /** Highlight layered over the die body (a CSS image), or `none`. */
+  readonly sheen: string;
+  /** Animated collections: a light that pulses over the cup. */
+  readonly cupGlow: string | null;
 }
 
 export const DEFAULT_DICE_THEME: DiceTheme = {
@@ -30,6 +35,8 @@ export const DEFAULT_DICE_THEME: DiceTheme = {
   cupBody: '#6b4428',
   cupRim: '#a8743f',
   cupShade: '#3d2515',
+  sheen: 'none',
+  cupGlow: null,
 };
 
 /** The custom properties that carry a theme to every die inside the element they are set on. */
@@ -43,10 +50,12 @@ export function diceThemeVars(theme: DiceTheme): CSSProperties {
     '--cup-body': theme.cupBody,
     '--cup-rim': theme.cupRim,
     '--cup-shade': theme.cupShade,
+    '--die-sheen': theme.sheen,
+    ...theme.cupGlow ? { '--cup-glow': theme.cupGlow } : {},
   } as CSSProperties;
 }
 
-/** The theme the viewer's equipped dice style selects; only the default style exists so far. */
+/** The theme the viewer's equipped dice style selects; other players never see it. */
 export function useDiceTheme(): DiceTheme {
-  return DEFAULT_DICE_THEME;
+  return useEquippedDiceTheme() ?? DEFAULT_DICE_THEME;
 }

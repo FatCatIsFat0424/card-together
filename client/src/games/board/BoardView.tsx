@@ -1,17 +1,19 @@
 // ─── BoardView: SVG board drawn from the shared board model, with pieces and move markers ───
 
 import { useMemo, useRef } from 'react';
-import type { KeyboardEvent, ReactNode } from 'react';
+import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { coordinateLabel, nodeById, zonesAt } from '@shared/rules/board/board-model';
 import type { BoardModel, BoardNode, BoardPoint, NodeId } from '@shared/rules/board/board-model';
 import { cardInput } from '../../components/card-hand-touch';
 import type { CardInput } from '../../components/card-hand-touch';
 import { useI18nStore } from '../../stores/i18n-store';
-import { DEFAULT_BOARD_THEME, boardThemeStyle } from './board-theme';
+import { useEquippedBoardTheme } from '../../cosmetics/board-styles/use-board-theme';
+import { useStillArt } from '../../cosmetics/art-layers/art-layers';
+import { DEFAULT_PIECE_FINISH, boardThemeStyle } from './board-theme';
 import type { BoardSurface, BoardTheme } from './board-theme';
 import { axisPositions, boardGeometry, hitBox, markerBox, movePath } from './board-view';
 import type { BoardGeometry } from './board-view';
-import { PIECE_RADIUS } from './BoardPieces';
+import { PIECE_RADIUS, PieceFinishContext } from './BoardPieces';
 import styles from './BoardView.module.css';
 
 export interface BoardPieceItem {
@@ -41,6 +43,7 @@ export interface BoardViewProps {
   readonly surface: BoardSurface;
   /** Board accessible name, such as the game title. */
   readonly label: string;
+  /** Fixed look; by default the viewer's equipped board and piece styles. */
   readonly theme?: BoardTheme;
   /** Clockwise turn from `sideRotation` for the viewer's side; text and pieces stay upright. */
   readonly rotation?: number;
@@ -196,10 +199,14 @@ function Highlight({ at, layout, className, dashed }: {
  * dots, orange rings for captures), a pending move (dashed blue with a translucent piece), and check (red).
  */
 export function BoardView({
-  board, surface, label, theme = DEFAULT_BOARD_THEME, rotation = 0, pieces, lastMove, selected, targets = [], pending,
+  board, surface, label, theme: fixedTheme, rotation = 0, pieces, lastMove, selected, targets = [], pending,
   check, fileLabels, rankLabels, selectable = [], onNodeClick, nodeName, className,
 }: BoardViewProps): ReactNode {
   const { t } = useI18nStore();
+  const equippedTheme = useEquippedBoardTheme();
+  const theme = fixedTheme ?? equippedTheme;
+  const still = useStillArt();
+  const motion = still ? null : theme.motion ?? null;
   const labels = Boolean(fileLabels || rankLabels);
   const geometry = useMemo(() => boardGeometry(board, rotation, labels), [board, rotation, labels]);
   const style = useMemo(() => boardThemeStyle(theme, surface), [theme, surface]);
@@ -235,12 +242,9 @@ export function BoardView({
     ...pending ? [pending.to] : []])] : [];
   const targetSet = new Map(targets.map((target) => [target.node, target]));
 
-  return <svg className={`${styles.board} ${className ?? ''}`} style={style} viewBox={`${vx} ${vy} ${vw} ${vh}`}
-    role="group" aria-label={label} data-board-layout={layout}
-    onPointerDown={(event) => { lastPointer.current = event.pointerType; }}
-    onClick={onNodeClick ? (event) => activate(null, tapInput(event.detail)) : undefined}>
-    <BoardSurfaceLayer board={board} geometry={geometry} />
-
+  const viewBox = `${vx} ${vy} ${vw} ${vh}`;
+  const surfaceLayer = <BoardSurfaceLayer board={board} geometry={geometry} />;
+  const content = <PieceFinishContext.Provider value={theme.finish ?? DEFAULT_PIECE_FINISH}>
     {fileLabels && axisPositions(board, geometry).files.map(({ index, x }) => fileLabels[index] !== undefined
       && <text key={`f${index}`} className={styles.axis} x={x} y={vy + vh - 0.2} textAnchor="middle" fontSize={0.3}>
         {fileLabels[index]}</text>)}
@@ -312,5 +316,21 @@ export function BoardView({
         }}
         onKeyDown={onKey(id)} />;
     })}
-  </svg>;
+  </PieceFinishContext.Provider>;
+
+  const interactiveSvg = (classes: string, children: ReactNode): ReactNode => <svg className={classes}
+    style={motion ? undefined : style} viewBox={viewBox} role="group" aria-label={label} data-board-layout={layout}
+    onPointerDown={(event) => { lastPointer.current = event.pointerType; }}
+    onClick={onNodeClick ? (event) => activate(null, tapInput(event.detail)) : undefined}>{children}</svg>;
+  if (!motion) return interactiveSvg(`${styles.board} ${className ?? ''}`, <>{surfaceLayer}{content}</>);
+  // Animated styles move a light layer between the surface and the pieces, so it never covers lettering or
+  // move markers; the layer only changes transform or opacity, so the compositor runs it.
+  return <div className={`${styles.layered} ${className ?? ''}`} style={style} data-board-motion={motion.kind}>
+    <svg className={`${styles.board} ${styles.layer}`} viewBox={viewBox} aria-hidden="true" focusable="false">
+      {surfaceLayer}
+    </svg>
+    <span className={`${styles.motion} ${styles[motion.kind]}`} style={{ '--board-glow': motion.glow } as CSSProperties}
+      aria-hidden="true" />
+    {interactiveSvg(`${styles.board} ${styles.layer}`, content)}
+  </div>;
 }

@@ -306,11 +306,69 @@ export const CHAT_FRAMES = [
   { id: 'chat-frame-crownrealm', type: 'chatFrame', price: 120, design: 'crownrealm' },
 ] as const;
 
+/** Private piece looks for every board game; face-down pieces never change. */
+export const PIECE_STYLES = [
+  { id: 'pieces-aurora', type: 'pieceStyle', price: 160, design: 'aurora' },
+  { id: 'pieces-tide', type: 'pieceStyle', price: 160, design: 'tide' },
+  { id: 'pieces-sakura', type: 'pieceStyle', price: 160, design: 'sakura' },
+  { id: 'pieces-constellation', type: 'pieceStyle', price: 160, design: 'constellation' },
+  { id: 'pieces-bamboo', type: 'pieceStyle', price: 160, design: 'bamboo' },
+  { id: 'pieces-gilded', type: 'pieceStyle', price: 160, design: 'gilded' },
+  { id: 'pieces-ember', type: 'pieceStyle', price: 160, design: 'ember' },
+  { id: 'pieces-lotus', type: 'pieceStyle', price: 160, design: 'lotus' },
+  { id: 'pieces-frost', type: 'pieceStyle', price: 160, design: 'frost' },
+  { id: 'pieces-dune', type: 'pieceStyle', price: 160, design: 'dune' },
+  { id: 'pieces-starfleet', type: 'pieceStyle', price: 160, design: 'starfleet' },
+  { id: 'pieces-shrine', type: 'pieceStyle', price: 160, design: 'shrine' },
+  { id: 'pieces-ironfront', type: 'pieceStyle', price: 160, design: 'ironfront' },
+  { id: 'pieces-neoncity', type: 'pieceStyle', price: 160, design: 'neoncity' },
+  { id: 'pieces-crownrealm', type: 'pieceStyle', price: 160, design: 'crownrealm' },
+] as const;
+
+/** Private board looks for every board layout. */
+export const BOARD_STYLES = [
+  { id: 'board-aurora', type: 'boardStyle', price: 120, design: 'aurora' },
+  { id: 'board-tide', type: 'boardStyle', price: 120, design: 'tide' },
+  { id: 'board-sakura', type: 'boardStyle', price: 120, design: 'sakura' },
+  { id: 'board-constellation', type: 'boardStyle', price: 120, design: 'constellation' },
+  { id: 'board-bamboo', type: 'boardStyle', price: 120, design: 'bamboo' },
+  { id: 'board-gilded', type: 'boardStyle', price: 120, design: 'gilded' },
+  { id: 'board-ember', type: 'boardStyle', price: 120, design: 'ember' },
+  { id: 'board-lotus', type: 'boardStyle', price: 120, design: 'lotus' },
+  { id: 'board-frost', type: 'boardStyle', price: 120, design: 'frost' },
+  { id: 'board-dune', type: 'boardStyle', price: 120, design: 'dune' },
+  { id: 'board-starfleet', type: 'boardStyle', price: 120, design: 'starfleet' },
+  { id: 'board-shrine', type: 'boardStyle', price: 120, design: 'shrine' },
+  { id: 'board-ironfront', type: 'boardStyle', price: 120, design: 'ironfront' },
+  { id: 'board-neoncity', type: 'boardStyle', price: 120, design: 'neoncity' },
+  { id: 'board-crownrealm', type: 'boardStyle', price: 120, design: 'crownrealm' },
+] as const;
+
+/** Private dice faces, pips and cups for Liar's Dice. */
+export const DICE_STYLES = [
+  { id: 'dice-aurora', type: 'diceStyle', price: 80, design: 'aurora' },
+  { id: 'dice-tide', type: 'diceStyle', price: 80, design: 'tide' },
+  { id: 'dice-sakura', type: 'diceStyle', price: 80, design: 'sakura' },
+  { id: 'dice-constellation', type: 'diceStyle', price: 80, design: 'constellation' },
+  { id: 'dice-bamboo', type: 'diceStyle', price: 80, design: 'bamboo' },
+  { id: 'dice-gilded', type: 'diceStyle', price: 80, design: 'gilded' },
+  { id: 'dice-ember', type: 'diceStyle', price: 80, design: 'ember' },
+  { id: 'dice-lotus', type: 'diceStyle', price: 80, design: 'lotus' },
+  { id: 'dice-frost', type: 'diceStyle', price: 80, design: 'frost' },
+  { id: 'dice-dune', type: 'diceStyle', price: 80, design: 'dune' },
+  { id: 'dice-starfleet', type: 'diceStyle', price: 80, design: 'starfleet' },
+  { id: 'dice-shrine', type: 'diceStyle', price: 80, design: 'shrine' },
+  { id: 'dice-ironfront', type: 'diceStyle', price: 80, design: 'ironfront' },
+  { id: 'dice-neoncity', type: 'diceStyle', price: 80, design: 'neoncity' },
+  { id: 'dice-crownrealm', type: 'diceStyle', price: 80, design: 'crownrealm' },
+] as const;
+
 /** Server-authoritative prices for every permanent shop product, including legacy borders. */
 export const SHOP_ITEMS = [
   ...AVATAR_BORDERS.map((item) => ({ ...item, type: 'avatarBorder' as const })),
   ...CARD_BACKS, ...TABLE_BACKGROUNDS, ...SEAT_BACKGROUNDS, ...NAMEPLATES, ...STICKER_PACKS,
   ...CARD_FACES, ...SOUND_PACKS, ...SEAT_FRAMES, ...VICTORY_EFFECTS, ...CHIP_STYLES, ...CHAT_FRAMES,
+  ...PIECE_STYLES, ...BOARD_STYLES, ...DICE_STYLES,
 ] as const;
 
 export type ShopItem = typeof SHOP_ITEMS[number];
@@ -330,6 +388,9 @@ const SERIES_ID_PREFIX: Readonly<Record<ShopItem['type'], string>> = {
   victoryEffect: 'victory-',
   chipStyle: 'chips-',
   chatFrame: 'chat-frame-',
+  pieceStyle: 'pieces-',
+  boardStyle: 'board-',
+  diceStyle: 'dice-',
 };
 
 /** Collection membership does not change product identity or ownership. */
@@ -348,6 +409,9 @@ export type SeatFrameId = typeof SEAT_FRAMES[number]['id'];
 export type VictoryEffectId = typeof VICTORY_EFFECTS[number]['id'];
 export type ChipStyleId = typeof CHIP_STYLES[number]['id'];
 export type ChatFrameId = typeof CHAT_FRAMES[number]['id'];
+export type PieceStyleId = typeof PIECE_STYLES[number]['id'];
+export type BoardStyleId = typeof BOARD_STYLES[number]['id'];
+export type DiceStyleId = typeof DICE_STYLES[number]['id'];
 /** Account field that equips each product type; sticker packs and avatar borders are not listed. */
 export const EQUIPMENT_SLOTS = {
   cardBackStyle: 'cardBack',
@@ -360,6 +424,9 @@ export const EQUIPMENT_SLOTS = {
   victoryEffect: 'victoryEffect',
   chipStyle: 'chipStyle',
   chatFrame: 'chatFrame',
+  pieceStyle: 'pieceStyle',
+  boardStyle: 'boardStyle',
+  diceStyle: 'diceStyle',
 } as const;
 
 export type EquipmentSlot = keyof typeof EQUIPMENT_SLOTS;

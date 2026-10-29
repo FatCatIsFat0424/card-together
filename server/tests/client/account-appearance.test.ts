@@ -253,7 +253,7 @@ describe('personal account appearance', () => {
     expect(slots.map((slot) => slot.target)).toEqual(targets);
     expect([...targets].sort()).toEqual([...Object.keys(EQUIPMENT_SLOTS), 'avatarBorder'].sort());
     expect(EQUIPMENT_GROUPS.map((group) => [group.id, group.visibility])).toEqual([
-      ['personal', 'public'], ['table', null], ['cards', 'private'],
+      ['personal', 'public'], ['table', null], ['cards', 'private'], ['chess', 'private'], ['dice', 'private'],
     ]);
     const slot = (target: string) => slots.find((entry) => entry.target === target)!;
     expect(slot('cardBackStyle').owned).toEqual(['card-back-aurora']);

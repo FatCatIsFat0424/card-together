@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { DiceFace } from '@shared/types';
+import { useStillArt } from '../../cosmetics/art-layers/art-layers';
+import { useDiceTheme } from './dice-theme';
 import styles from './Dice.module.css';
 
 /** Which of the nine grid cells carry a pip, row by row. */
@@ -37,9 +39,15 @@ export function HiddenDie({ className, style }: { className?: string; style?: CS
 }
 
 /** A leather cup. `shaking` rattles it; `lifted` lifts it away to reveal what it covers. */
-export function DiceCup({ mode = 'still', className, style }: {
+export function DiceCup({ mode = 'still', className, style, glow }: {
   mode?: 'still' | 'shaking' | 'lifted'; className?: string; style?: CSSProperties;
+  /** Whether the cup's style animates; the viewer's equipped dice style by default. */
+  glow?: boolean;
 }): ReactNode {
-  return <span className={[styles.cup, mode === 'shaking' && styles.shaking, mode === 'lifted' && styles.lifted, className]
+  const theme = useDiceTheme();
+  const still = useStillArt();
+  const glowing = (glow ?? theme.cupGlow !== null) && !still;
+  return <span className={[styles.cup, mode === 'shaking' && styles.shaking, mode === 'lifted' && styles.lifted,
+    glowing && styles.glowing, className]
     .filter(Boolean).join(' ')} style={style} aria-hidden="true" />;
 }

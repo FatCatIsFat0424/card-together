@@ -1,6 +1,8 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('../../../client/src/cosmetics/dice-styles/use-dice-style', () => ({ useEquippedDiceTheme: () => null }));
 import { getPresentationFrames } from '@shared/game-presentation';
 import type { PresentationFrame } from '@shared/game-presentation';
 import type { DiceFace, LiarsDiceLogEntry, LiarsDiceMatchResult, LiarsDiceVisibleState } from '@shared/types';
@@ -127,7 +129,7 @@ describe("Liar's Dice renderer", () => {
   it('should carry every colour through theme variables rather than markup', () => {
     const vars = diceThemeVars(DEFAULT_DICE_THEME) as Record<string, string>;
     expect(Object.keys(vars).sort()).toEqual(['--cup-body', '--cup-rim', '--cup-shade', '--die-body', '--die-edge', '--die-match',
-      '--die-pip', '--die-pip-one'].sort());
+      '--die-pip', '--die-pip-one', '--die-sheen'].sort());
     expect(renderToStaticMarkup(createElement(Die, { value: 5, label: 'five' }))).not.toContain('#');
   });
 

@@ -56,8 +56,8 @@ describe('existing products grouped by theme', () => {
   });
 
   it('matches a series only by its exact product id, never by a shared suffix', () => {
-    const expected = { aurora: 10, tide: 11, sakura: 11, constellation: 9, bamboo: 9, gilded: 9, ember: 9, lotus: 9,
-      frost: 9, dune: 9, starfleet: 12, shrine: 12, ironfront: 12, neoncity: 12, crownrealm: 12 };
+    const expected = { aurora: 13, tide: 14, sakura: 14, constellation: 12, bamboo: 12, gilded: 12, ember: 12, lotus: 12,
+      frost: 12, dune: 12, starfleet: 15, shrine: 15, ironfront: 15, neoncity: 15, crownrealm: 15 };
     for (const series of SHOP_SERIES) {
       expect(SHOP_ITEMS.filter((item) => shopItemSeries(item) === series), series).toHaveLength(expected[series]);
     }

@@ -32,6 +32,8 @@ export const EQUIPMENT_GROUPS = [
   { id: 'personal', visibility: 'public', slots: ['avatarBorder', 'nameplate', 'chatFrame'] },
   { id: 'table', visibility: null, slots: ['tableBackgroundStyle', 'seatBackgroundStyle', 'seatFrame', 'victoryEffect', 'soundPack'] },
   { id: 'cards', visibility: 'private', slots: ['cardBackStyle', 'cardFaceStyle', 'chipStyle'] },
+  { id: 'chess', visibility: 'private', slots: ['pieceStyle', 'boardStyle'] },
+  { id: 'dice', visibility: 'private', slots: ['diceStyle'] },
 ] as const satisfies readonly {
   readonly id: string; readonly visibility: 'public' | 'private' | null; readonly slots: readonly EquipmentTarget[];
 }[];

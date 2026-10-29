@@ -66,14 +66,13 @@ describe('shop groups, type chips and inventory', () => {
     expect(html).toContain('aria-label="Buy Puppy ears"');
   });
 
-  it('lists the groups that have products and hides empty future groups', () => {
+  it('lists the groups that have products and hides empty ones', () => {
     const html = render();
-    for (const label of ['Personal', 'Table', 'Playing cards']) {
+    for (const label of ['Personal', 'Table', 'Playing cards', 'Board games', 'Dice']) {
       expect(html).toMatch(new RegExp(`role="tab"[^>]*>${label}</button>`));
     }
-    for (const label of ['Board games', 'Dice']) expect(html).not.toContain(label);
-    expect(html.match(/role="tab"/g)).toHaveLength(3);
-    expect(resolveShopView(new URLSearchParams(), SHOP_ITEMS).groups).toEqual(['personal', 'table', 'cards']);
+    expect(html.match(/role="tab"/g)).toHaveLength(5);
+    expect(resolveShopView(new URLSearchParams(), SHOP_ITEMS).groups).toEqual(['personal', 'table', 'cards', 'chess', 'dice']);
     // A group appears as soon as one of its types has a product.
     const onlyCards = SHOP_ITEMS.filter((item) => item.type === 'cardBack');
     expect(resolveShopView(new URLSearchParams(), onlyCards).groups).toEqual(['cards']);
@@ -129,7 +128,7 @@ describe('shop groups, type chips and inventory', () => {
   });
 
   it.each(['?series=unknown', '?series=cats', '?series=forest', '?series=dog', '?series=rainbow', '?series=garden',
-    '?type=unknown', '?series=', '?unrelated=metal', '?group=chess', '?group=unknown'])(
+    '?type=unknown', '?series=', '?unrelated=metal', '?group=unknown'])(
     'falls back to the first group for %s', (query) => {
       const html = render(query);
       expect(productCards(html)).toHaveLength(groupItems('personal').length);

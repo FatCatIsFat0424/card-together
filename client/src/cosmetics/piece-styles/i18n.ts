@@ -1,0 +1,38 @@
+const en = {
+  'shop.item.pieces-aurora.name': 'Aurora glass pieces',
+  'shop.item.pieces-tide.name': 'Pearl porcelain pieces',
+  'shop.item.pieces-sakura.name': 'Sakura porcelain pieces',
+  'shop.item.pieces-constellation.name': 'Star enamel pieces',
+  'shop.item.pieces-bamboo.name': 'Jade bamboo pieces',
+  'shop.item.pieces-gilded.name': 'Gilded ivory pieces',
+  'shop.item.pieces-ember.name': 'Ember lacquer pieces',
+  'shop.item.pieces-lotus.name': 'Lotus jade pieces',
+  'shop.item.pieces-frost.name': 'Frost crystal pieces',
+  'shop.item.pieces-dune.name': 'Dune sandstone pieces',
+  'shop.item.pieces-starfleet.name': 'Astral Armada pieces',
+  'shop.item.pieces-shrine.name': 'Thousand Lanterns pieces',
+  'shop.item.pieces-ironfront.name': 'Iron Front pieces',
+  'shop.item.pieces-neoncity.name': 'Neon Overdrive pieces',
+  'shop.item.pieces-crownrealm.name': 'Lioncrown Dynasty pieces',
+};
+
+export const pieceStylesTranslations: { readonly en: typeof en; readonly 'zh-TW': Record<keyof typeof en, string> } = {
+  en,
+  'zh-TW': {
+    'shop.item.pieces-aurora.name': '極光琉璃棋子',
+    'shop.item.pieces-tide.name': '珍珠白瓷棋子',
+    'shop.item.pieces-sakura.name': '櫻花粉瓷棋子',
+    'shop.item.pieces-constellation.name': '星月琺瑯棋子',
+    'shop.item.pieces-bamboo.name': '翠竹玉石棋子',
+    'shop.item.pieces-gilded.name': '鎏金象牙棋子',
+    'shop.item.pieces-ember.name': '餘燼朱漆棋子',
+    'shop.item.pieces-lotus.name': '月蓮青玉棋子',
+    'shop.item.pieces-frost.name': '霜晶棋子',
+    'shop.item.pieces-dune.name': '沙丘砂岩棋子',
+    'shop.item.pieces-starfleet.name': '星穹遠征棋子',
+    'shop.item.pieces-shrine.name': '千燈神域棋子',
+    'shop.item.pieces-ironfront.name': '鋼鐵戰線棋子',
+    'shop.item.pieces-neoncity.name': '霓虹失控棋子',
+    'shop.item.pieces-crownrealm.name': '獅冠王朝棋子',
+  },
+};

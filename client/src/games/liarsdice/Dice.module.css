@@ -12,7 +12,7 @@
   padding: calc(var(--size) * 0.13);
   border: max(1px, calc(var(--size) * 0.045)) solid var(--die-edge, #bdb294);
   border-radius: calc(var(--size) * 0.22);
-  background: var(--die-body, #f6f1e4);
+  background: var(--die-sheen, none), var(--die-body, #f6f1e4);
   box-shadow: var(--shadow-sm);
 }
 
@@ -82,6 +82,17 @@
   transform: translateY(-120%) rotate(-24deg);
 }
 
+/* Animated dice styles: a light that pulses over the cup, changing only opacity. */
+.glowing::after {
+  content: '';
+  position: absolute;
+  inset: 16% 0 0;
+  background: radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--cup-glow) 55%, transparent), transparent 70%);
+  animation: glow 2.8s ease-in-out infinite;
+  will-change: opacity;
+}
+@keyframes glow { 50% { opacity: 0.3; } }
+
 @keyframes rattle {
   0%, 100% { transform: none; }
   20% { transform: translateY(-8%) rotate(-14deg); }
@@ -95,5 +106,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .match, .miss, .shaking, .lifted { animation: none; }
+  .match, .miss, .shaking, .lifted, .glowing::after { animation: none; }
 }

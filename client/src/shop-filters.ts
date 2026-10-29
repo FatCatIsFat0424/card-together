@@ -14,8 +14,8 @@ export const SHOP_GROUPS = [
   { id: 'personal', types: ['avatarBorder', 'nameplate', 'chatFrame', 'stickerPack'] },
   { id: 'table', types: ['tableBackground', 'seatBackground', 'seatFrame', 'victoryEffect', 'soundPack'] },
   { id: 'cards', types: ['cardBack', 'cardFace', 'chipStyle'] },
-  { id: 'chess', types: [] },
-  { id: 'dice', types: [] },
+  { id: 'chess', types: ['pieceStyle', 'boardStyle'] },
+  { id: 'dice', types: ['diceStyle'] },
 ] as const satisfies readonly { readonly id: string; readonly types: readonly ShopItemType[] }[];
 
 export type ShopGroupId = typeof SHOP_GROUPS[number]['id'];

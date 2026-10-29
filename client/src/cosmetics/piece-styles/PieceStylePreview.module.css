@@ -1,0 +1,8 @@
+.preview {
+  display: block;
+  width: 200px;
+  max-width: 100%;
+  height: auto;
+}
+
+.surface { fill: var(--board-surface); }

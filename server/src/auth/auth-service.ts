@@ -91,6 +91,7 @@ type EditableProfile = Pick<
   | 'tableBackgroundOpacity' | 'cardBack' | 'cardBackOpacity' | 'matchesPublic'
   | 'avatarBorder' | 'cardBackStyle' | 'tableBackgroundStyle' | 'seatBackgroundStyle' | 'nameplate'
   | 'cardFaceStyle' | 'soundPack' | 'chipStyle' | 'seatFrame' | 'victoryEffect' | 'chatFrame'
+  | 'pieceStyle' | 'boardStyle' | 'diceStyle'
 >;
 
 function mediaValue(
@@ -187,6 +188,9 @@ function profileValues(
     seatFrame: equipmentValue('seatFrame', input.seatFrame, fallback.seatFrame),
     victoryEffect: equipmentValue('victoryEffect', input.victoryEffect, fallback.victoryEffect),
     chatFrame: equipmentValue('chatFrame', input.chatFrame, fallback.chatFrame),
+    pieceStyle: equipmentValue('pieceStyle', input.pieceStyle, fallback.pieceStyle),
+    boardStyle: equipmentValue('boardStyle', input.boardStyle, fallback.boardStyle),
+    diceStyle: equipmentValue('diceStyle', input.diceStyle, fallback.diceStyle),
     avatarImage: mediaValue(input.avatarImage, fallback.avatarImage, mediaExists),
     seatBackground: mediaValue(input.seatBackground, fallback.seatBackground ?? null, mediaExists),
     tableBackground: mediaValue(input.tableBackground, fallback.tableBackground, mediaExists),

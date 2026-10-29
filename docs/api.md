@@ -61,7 +61,7 @@
 | `avatarImage`、`seatBackground`、`tableBackground`、`cardBack` | 已上傳的媒體 ID 或 null；`seatBackground` 使用 `background` 用途，並在房間的 `PlayerInfo` 中共享 |
 | `tableBackgroundOpacity`、`cardBackOpacity` | 整數百分比 20–100 |
 | `avatarBorder` | null（原始外框）或已擁有的目錄 ID；未擁有時回傳 403 |
-| [`EQUIPMENT_SLOTS`](../shared/src/constants/shop.ts) 中的裝備欄位（`cardBackStyle`、`nameplate`、`cardFaceStyle`、`soundPack`、`seatFrame`、`victoryEffect`、`chipStyle`、`chatFrame`、…） | null 或已擁有且類型相符的目錄 ID；未擁有回傳 403，類型錯誤回傳 400 |
+| [`EQUIPMENT_SLOTS`](../shared/src/constants/shop.ts) 中的裝備欄位（`cardBackStyle`、`nameplate`、`cardFaceStyle`、`soundPack`、`seatFrame`、`victoryEffect`、`chipStyle`、`chatFrame`、`pieceStyle`、`boardStyle`、`diceStyle`、…） | null 或已擁有且類型相符的目錄 ID；未擁有回傳 403，類型錯誤回傳 400 |
 | `coins`、`coinRevision`、`ownedAvatarBorders`、`ownedShopItems`、`ownedAchievementNameplates` | 由伺服器管理；註冊或個人檔案請求從不能設定 |
 
 成就路由需要工作階段，以及變更請求的 Origin／JSON 保護。不存在的類別 ID 回傳 400；未完成的類別回傳 409。伺服器依目錄授予稱號，忽略用戶端送來的計數、物品欄、帳號 ID 與獎勵 ID。取得的稱號只有在已擁有時，才能透過 `nameplate` 裝備欄位使用；商店會把它們當成不存在的商品而拒絕。

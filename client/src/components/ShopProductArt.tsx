@@ -15,6 +15,9 @@ import { SeatFramePreview } from '../cosmetics/seat-frames/SeatFramePreview';
 import { VictoryEffectPreview } from '../cosmetics/victory-effects/VictoryEffectPreview';
 import { ChipStylePreview } from '../cosmetics/chip-styles/ChipStylePreview';
 import { ChatFramePreview } from '../cosmetics/chat-frames/ChatFramePreview';
+import { PieceStylePreview } from '../cosmetics/piece-styles/PieceStylePreview';
+import { BoardStylePreview } from '../cosmetics/board-styles/BoardStylePreview';
+import { DiceStylePreview } from '../cosmetics/dice-styles/DiceStylePreview';
 import { useStillArt } from '../cosmetics/art-layers/art-layers';
 import { layeredShopArt } from '../cosmetics/art-layers/shop-art-layers';
 import { layeredSeatPreview } from '../cosmetics/art-layers/seat-preview-art-layers';
@@ -95,6 +98,9 @@ export function ShopProductArt({ item, account, tile = false }: ShopProductArtPr
     case 'victoryEffect': return <VictoryEffectPreview id={item.id} account={account} />;
     case 'chipStyle': return <ChipStylePreview id={item.id} account={account} />;
     case 'chatFrame': return <ChatFramePreview id={item.id} account={account} />;
+    case 'pieceStyle': return <PieceStylePreview id={item.id} account={account} />;
+    case 'boardStyle': return <BoardStylePreview id={item.id} account={account} />;
+    case 'diceStyle': return <DiceStylePreview id={item.id} account={account} />;
   }
   if (item.type === 'avatarBorder') {
     return <AvatarBorder border={item.id} avatar={account.avatar} image={account.avatarImage} color={account.color} />;

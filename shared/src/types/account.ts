@@ -1,6 +1,6 @@
 import type {
-  AchievementNameplateId, AvatarBorderId, CardBackStyleId, CardFaceStyleId, ChatFrameId, ChipStyleId, NameplateId,
-  SeatBackgroundStyleId, SeatFrameId, ShopItemId, SoundPackId, TableBackgroundStyleId, VictoryEffectId,
+  AchievementNameplateId, AvatarBorderId, BoardStyleId, CardBackStyleId, CardFaceStyleId, ChatFrameId, ChipStyleId,
+  DiceStyleId, NameplateId, PieceStyleId, SeatBackgroundStyleId, SeatFrameId, ShopItemId, SoundPackId, TableBackgroundStyleId, VictoryEffectId,
 } from '../constants/shop';
 /**
  * Retired preset avatars: accounts keep the stored value but every client shows the single
@@ -35,6 +35,10 @@ export interface AccountProfile {
   readonly cardFaceStyle?: CardFaceStyleId | null;
   readonly soundPack?: SoundPackId | null;
   readonly chipStyle?: ChipStyleId | null;
+  /** Private board-game equipment: null or missing keeps the built-in pieces, boards, and dice. */
+  readonly pieceStyle?: PieceStyleId | null;
+  readonly boardStyle?: BoardStyleId | null;
+  readonly diceStyle?: DiceStyleId | null;
   /** Public equipment shared with tables and chat; null or missing keeps the theme design. */
   readonly seatFrame?: SeatFrameId | null;
   readonly victoryEffect?: VictoryEffectId | null;

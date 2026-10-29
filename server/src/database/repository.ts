@@ -102,6 +102,7 @@ export interface Repository {
       | 'tableBackgroundOpacity' | 'cardBack' | 'cardBackOpacity' | 'matchesPublic'
       | 'avatarBorder' | 'cardBackStyle' | 'tableBackgroundStyle' | 'seatBackgroundStyle' | 'nameplate'
       | 'cardFaceStyle' | 'soundPack' | 'chipStyle' | 'seatFrame' | 'victoryEffect' | 'chatFrame'
+      | 'pieceStyle' | 'boardStyle' | 'diceStyle'
     >>,
     now: number,
   ): Promise<AccountRecord | null>;
@@ -218,6 +219,9 @@ export function publicAccount(account: AccountRecord): AccountProfile {
     seatFrame: account.seatFrame ?? null,
     victoryEffect: account.victoryEffect ?? null,
     chatFrame: account.chatFrame ?? null,
+    pieceStyle: account.pieceStyle ?? null,
+    boardStyle: account.boardStyle ?? null,
+    diceStyle: account.diceStyle ?? null,
     nickname: account.nickname,
     color: account.color,
     avatar: account.avatar,

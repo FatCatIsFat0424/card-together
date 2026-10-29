@@ -2,16 +2,16 @@
 
 .shadow { fill: var(--piece-shadow); }
 .label, .badgeText {
-  font-family: 'Noto Serif TC', 'Noto Sans TC', serif;
+  font-family: var(--piece-font, 'Noto Serif TC', 'Noto Sans TC', serif);
   font-weight: 700;
   pointer-events: none;
   user-select: none;
 }
 
 .darkStone .body { fill: var(--piece-dark-stone); }
-.darkStone .shine { fill: rgb(255 255 255 / 0.14); }
+.darkStone .shine { fill: var(--piece-dark-shine); }
 .lightStone .body { fill: var(--piece-light-stone); stroke: var(--piece-light-stone-rim); stroke-width: 0.03; }
-.lightStone .shine { fill: rgb(255 255 255 / 0.9); }
+.lightStone .shine { fill: var(--piece-light-shine); }
 
 .engraved .body { fill: var(--piece-face); stroke: var(--tone); }
 .engraved .ring { fill: none; stroke: var(--tone); }
@@ -21,16 +21,22 @@
 .badge { fill: var(--piece-black); }
 .badgeText { fill: var(--piece-on-solid); font-family: inherit; }
 
-.red { --tone: var(--piece-red); }
-.black { --tone: var(--piece-black); }
-.blue { --tone: var(--piece-blue); }
+.red { --tone: var(--piece-red); --back-tone: var(--piece-back-red); }
+.black { --tone: var(--piece-black); --back-tone: var(--piece-back-black); }
+.blue { --tone: var(--piece-blue); --back-tone: var(--piece-back-blue); }
 
-.covered .body { fill: var(--piece-back); stroke: var(--piece-on-solid); }
+.covered .body { fill: var(--piece-back); stroke: var(--piece-back-rim); }
 .covered .pattern, .hidden .pattern { fill: none; stroke: var(--piece-back-pattern); }
 
 .tile .body { fill: var(--tone); stroke: var(--piece-on-solid); }
 .tile .label { fill: var(--piece-on-solid); }
-.tile.hidden .body { fill: color-mix(in srgb, var(--tone) 62%, #0b1020); }
+.tile.hidden .body { fill: color-mix(in srgb, var(--back-tone) 62%, #0b1020); stroke: var(--piece-back-rim); }
 
 .marble .body { fill: var(--marble); stroke: rgb(0 0 0 / 0.45); }
-.marble .shine { fill: rgb(255 255 255 / 0.55); }
+.marble .shine { fill: var(--piece-marble-shine); }
+
+/* Piece style finish: highlight under the lettering, and rim beads, notches, or an inner ring. */
+.gloss { fill: #fff; pointer-events: none; }
+.rimMarks { fill: none; stroke: var(--piece-accent); }
+.innerRing { fill: none; stroke: var(--tone); opacity: 0.6; }
+.solid .innerRing, .tile .innerRing { stroke: var(--piece-on-solid); }

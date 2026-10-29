@@ -28,6 +28,11 @@ vi.mock('../../../client/src/stores/game-store', () => ({
 vi.mock('../../../client/src/stores/god-view-store', () => ({
   useGodViewStore: (select: (value: Record<string, unknown>) => unknown) => select({ role: null, covered: null }),
 }));
+vi.mock('../../../client/src/cosmetics/board-styles/use-board-theme', async () => {
+  const { DEFAULT_BOARD_THEME } = await import('../../../client/src/games/board/board-theme');
+  return { useEquippedBoardTheme: () => DEFAULT_BOARD_THEME };
+});
+vi.mock('../../../client/src/cosmetics/dice-styles/use-dice-style', () => ({ useEquippedDiceTheme: () => null }));
 
 import { TableSeat } from '../../../client/src/components/TableSeat';
 import { seatFrameHostClass } from '../../../client/src/cosmetics/seat-frames/SeatFrame';
