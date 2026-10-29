@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GAME_TYPES } from '@shared/constants';
-import type { AccountProfile, FriendEntry, GameType } from '@shared/types';
+import type { AccountProfile, FriendEntry } from '@shared/types';
 
 const state = vi.hoisted(() => ({
   currentRoomCode: null as string | null,
@@ -79,9 +79,7 @@ describe('lobby page', () => {
     expect(gamesInCategory('dice')).toEqual(['liarsdice']);
     expect(gamesInCategory('board')).toEqual(['reversi', 'jungle', 'gomoku', 'xiangqi', 'banqi', 'chinesecheckers', 'landbattle',
       'battleship']);
-    // Battleship has no lobby artwork yet, so its card falls back to the plain panel.
-    const withoutArt: readonly GameType[] = ['battleship'];
-    for (const gameType of GAME_TYPES.filter((type) => !withoutArt.includes(type))) expect(GAME_CARD_ART[gameType]).toBeTruthy();
+    for (const gameType of GAME_TYPES) expect(GAME_CARD_ART[gameType]).toBeTruthy();
   });
 
   it('keeps room actions disabled without duplicating the floating room card with a banner', () => {

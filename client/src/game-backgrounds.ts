@@ -23,6 +23,7 @@ import xiangqi from './assets/lobby-backgrounds/xiangqi.webp';
 import banqi from './assets/lobby-backgrounds/banqi.webp';
 import chinesecheckers from './assets/lobby-backgrounds/chinesecheckers.webp';
 import landbattle from './assets/lobby-backgrounds/landbattle.webp';
+import battleship from './assets/lobby-backgrounds/battleship.webp';
 import bridgeCard from './assets/lobby-backgrounds/cards/bridge.webp';
 import bigtwoCard from './assets/lobby-backgrounds/cards/bigtwo.webp';
 import redpointsCard from './assets/lobby-backgrounds/cards/redpoints.webp';
@@ -47,12 +48,13 @@ import xiangqiCard from './assets/lobby-backgrounds/cards/xiangqi.webp';
 import banqiCard from './assets/lobby-backgrounds/cards/banqi.webp';
 import chinesecheckersCard from './assets/lobby-backgrounds/cards/chinesecheckers.webp';
 import landbattleCard from './assets/lobby-backgrounds/cards/landbattle.webp';
+import battleshipCard from './assets/lobby-backgrounds/cards/battleship.webp';
 
 /** A game without generated artwork is simply absent; consumers fall back to a plain panel. */
 export const GAME_BACKGROUNDS: Readonly<Partial<Record<GameType, string>>> = {
   bridge, bigtwo, redpoints, ninetynine, sevens, chinesepoker, liarsdeck, blackjack, holdem, napoleon,
   tenhalf, liarsdice, crazyeights, stud, reversi, oldmaid, gofish, doudizhu, jungle, gomoku, xiangqi, banqi,
-  chinesecheckers, landbattle,
+  chinesecheckers, landbattle, battleship,
 };
 
 /** Small renditions of the lobby artwork for game cards. */
@@ -63,4 +65,5 @@ export const GAME_CARD_ART: Readonly<Partial<Record<GameType, string>>> = {
   tenhalf: tenhalfCard, liarsdice: liarsdiceCard, crazyeights: crazyeightsCard, stud: studCard, reversi: reversiCard,
   oldmaid: oldmaidCard, gofish: gofishCard, doudizhu: doudizhuCard, jungle: jungleCard, gomoku: gomokuCard, xiangqi: xiangqiCard,
   banqi: banqiCard, chinesecheckers: chinesecheckersCard, landbattle: landbattleCard,
+  battleship: battleshipCard,
 };

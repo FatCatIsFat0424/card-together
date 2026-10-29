@@ -59,3 +59,4 @@ Original decorative website background for a game lobby, landscape 16:9. Cinemat
 - **banqi.webp** — 4×8 board on rosewood, face-down round pieces with blank backs, a few flipped red and black pieces, teacup, desk lamp, Taiwanese teahouse
 - **chinesecheckers.webp** — Six-pointed star wooden board, six-color glass marbles in corner triangles, a few mid-hop, nostalgic afternoon window light
 - **landbattle.webp** — Board with railway lines, camps and headquarters, upright tiles facing away, brass compass, folded map, small flag, war-room lamp
+- **battleship.webp** — Battleship board game near the edges: navy plastic grid boards with peg holes, small grey warships, red and white hit and miss pegs, brass ship compass and folded nautical chart; cool moonlit naval lamp light
