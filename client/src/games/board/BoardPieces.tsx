@@ -53,10 +53,13 @@ export function CoveredToken({ radius = PIECE_RADIUS }: { readonly radius?: numb
   </g>;
 }
 
-/** Land Battle Chess tile; without a label it shows the back, so hidden identities all look alike. */
+/**
+ * Land Battle Chess tile; without a label it shows the back in a darker shade of the side colour, so hidden
+ * identities all look alike while the owner stays visible.
+ */
 export function TilePiece({ tone, label }: { readonly tone: TokenTone; readonly label?: string }): ReactNode {
   const { width, height } = TILE_SIZE;
-  return <g className={`${styles.tile} ${label === undefined ? styles.hidden : TONE[tone]}`}>
+  return <g className={`${styles.tile} ${label === undefined ? styles.hidden : ''} ${TONE[tone]}`}>
     <rect className={styles.shadow} x={-width / 2 + 0.04} y={-height / 2 + 0.06} width={width} height={height} rx={0.1} />
     <rect className={styles.body} x={-width / 2} y={-height / 2} width={width} height={height} rx={0.1} strokeWidth={0.05} />
     {label === undefined

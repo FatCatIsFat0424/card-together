@@ -41,6 +41,8 @@ export interface BoardTableProps {
   /** Null for spectators and finished matches. */
   readonly controls: BoardControls | null;
   readonly pending: BoardPendingMove | null;
+  /** Game actions shown where a pending move would be, such as the Land Battle Chess deployment buttons. */
+  readonly tools?: ReactNode;
   /** Short note such as 「無子可下，已跳過」; defaults to the opponent-thinking or spectating line. */
   readonly status?: ReactNode;
   readonly error?: string;
@@ -55,7 +57,7 @@ export interface BoardTableProps {
  * 確認 button, and the viewer's seat.
  */
 export function BoardTable({
-  seats, bottomSeat, board, aspect, moves, seatStats, places, controls, pending, status, error, busy = false,
+  seats, bottomSeat, board, aspect, moves, seatStats, places, controls, pending, tools, status, error, busy = false,
 }: BoardTableProps): ReactNode {
   const { t } = useI18nStore();
   const presentation = useGamePresentation();
@@ -98,9 +100,9 @@ export function BoardTable({
       {statusLine && <p className={styles.status} role="status">{statusLine}</p>}
       {error && <p className={styles.error} role="alert">{error}</p>}
       {incoming ? <div className={styles.prompt}><DrawOfferPrompt incoming={incoming} disabled={busy} compact /></div>
-        : pending && <div className={styles.prompt}>
+        : pending ? <div className={styles.prompt}>
           <PendingMove text={pending.text} onConfirm={pending.confirm} onCancel={pending.cancel} disabled={busy} />
-        </div>}
+        </div> : tools && <div className={styles.prompt}>{tools}</div>}
       {controls && <div className={styles.buttons}><MatchButtons controls={controls} disabled={busy || locked} compact /></div>}
       <div className={styles.ownSeat}>{seats.includes(bottomSeat) && seat(bottomSeat, 'bottom')}</div>
     </div>

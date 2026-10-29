@@ -23,10 +23,13 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
   const betting = game.blackjack ? blackjackNeedsBet(game.blackjack) : game.tenhalf ? tenHalfNeedsBet(game.tenhalf) : false;
   // The four-player Napoleon discard review is also owed by every seat at once.
   const reviewing = game.napoleon ? napoleonReviewState(game.napoleon) === 'review' : false;
+  // Land Battle Chess deployment is simultaneous: a seat is prompted until it has deployed.
+  const deploying = game.landbattle?.phase === 'deploying' && game.landbattle.seats.includes(game.landbattle.mySeat)
+    && !game.landbattle.deployed.includes(game.landbattle.mySeat);
   const owned = !held.locked && room.currentRoomCode && room.mySeat &&
     account.status === 'authenticated' && account.connection === 'ready' &&
     (game.phase === 'bidding' || game.phase === 'playing') &&
-    (game.currentTurnSeat === room.mySeat || arranging || betting || reviewing);
+    (game.currentTurnSeat === room.mySeat || arranging || betting || reviewing || deploying);
   const completedTricks = game.playing?.completedTricks.length ?? game.napoleon?.tricks.length ?? 0;
   const actionCount = game.bigTwo?.log.filter((entry) =>
     'seat' in entry && entry.seat === room.mySeat).length ??
@@ -40,6 +43,7 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
     game.reversi?.log.filter((entry) => entry.to !== undefined && entry.seat === room.mySeat).length ??
     game.gomoku?.log.filter((entry) => entry.seat === room.mySeat).length ??
     game.chineseCheckers?.log.filter((entry) => entry.to !== undefined && entry.seat === room.mySeat).length ??
+    (game.landbattle ? `${game.landbattle.phase}-${game.landbattle.log.filter((entry) => entry.seat === room.mySeat).length}` : undefined) ??
     game.oldMaid?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
     game.jungle?.log.filter((entry) => entry.seat === room.mySeat).length ??
     game.xiangqi?.log.filter((entry) => entry.seat === room.mySeat).length ??

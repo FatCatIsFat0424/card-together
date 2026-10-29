@@ -23,6 +23,9 @@ import { crazyEightsFirstLegalAction, easyCrazyEightsAction, getCrazyEightsBotAc
 import { getStudBotAction } from './stud-strategy';
 import { easyReversiAction, getReversiBotAction, reversiFirstLegalAction } from './reversi-strategy';
 import { easyGomokuAction, getGomokuBotAction, gomokuFirstLegalAction } from './gomoku-strategy';
+import {
+  autoDeployAction, easyLandBattleAction, getLandBattleBotAction, landBattleFirstLegalAction,
+} from './landbattle-strategy';
 import { easyOldMaidAction, getOldMaidBotAction, oldMaidFirstLegalAction } from './oldmaid-strategy';
 import { easyGoFishAction, getGoFishBotAction, goFishFirstLegalAction } from './gofish-strategy';
 import { easyJungleAction, getJungleBotAction, jungleFirstLegalAction } from './jungle-strategy';
@@ -233,6 +236,20 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     },
     // A player who runs out of time gets a legal move by the easy policy.
     turnTimeout: (visible) => easyChineseCheckersAction(visible, Math.random),
+  },
+  landbattle: {
+    hard: getLandBattleBotAction,
+    easy: easyLandBattleAction,
+    firstLegal: landBattleFirstLegalAction,
+    // Hard bots deploy from a template and sample hidden identities in the worker pool.
+    search: {
+      strategy: searchStrategy<'landbattle'>(new URL('./landbattle-search.ts', import.meta.url), 'landBattleSearch'),
+      budgetMs: 1000,
+    },
+    // A player who runs out of time gets a legal move by the easy policy.
+    turnTimeout: (visible) => easyLandBattleAction(visible, Math.random),
+    // A human who missed the deployment deadline gets the automatic deployment; bots keep their own.
+    deadlineExpired: (visible, { isBot, strategy }) => (isBot ? strategy() : autoDeployAction(visible, Math.random)),
   },
 };
 

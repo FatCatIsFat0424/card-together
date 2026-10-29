@@ -291,4 +291,14 @@ export type {
   ChineseCheckersVisibleState,
 } from '../games/chinesecheckers/types';
 
+export type {
+  LandBattleMove,
+  LandBattlePhase,
+  LandBattleStoredPiece,
+  LandBattleMatchResult,
+  LandBattleGameState,
+  LandBattleVisiblePiece,
+  LandBattleVisibleState,
+} from '../games/landbattle/types';
+
 export type { AnyGameState, PlayerVisibleGameState, MatchResult } from '../games/type-registry';

@@ -16,6 +16,6 @@ describe('server game registries', () => {
 
   it('gives shared deadlines only to the simultaneous-decision games', () => {
     expect(GAME_TYPES.filter((gameType) => gameAdapter(gameType).sharedDeadline))
-      .toEqual(['chinesepoker', 'blackjack', 'napoleon', 'tenhalf']);
+      .toEqual(['chinesepoker', 'blackjack', 'napoleon', 'tenhalf', 'landbattle']);
   });
 });

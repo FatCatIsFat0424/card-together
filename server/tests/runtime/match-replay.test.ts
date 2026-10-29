@@ -71,6 +71,8 @@ function act(code: string): void {
           && pending !== game.banker && game.chips[pending] >= 10)
       : game.gameType === 'napoleon' && game.phase === 'reviewing'
         ? game.seats.find((pending) => pending !== game.contract?.napoleon && !game.reviewed.includes(pending))
+      : game.gameType === 'landbattle' && game.phase === 'deploying'
+        ? SEATS.find((pending) => game.players[pending] && !game.layouts[pending])
         : getTurnSeat(game);
   if (!seat) throw new Error('Expected a pending action.');
   if (game.gameType === 'bridge' && game.phase === 'bidding' && !game.bidding?.highestBid) {

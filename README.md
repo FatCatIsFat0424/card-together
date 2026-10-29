@@ -2,10 +2,10 @@
 
 Browser-based multiplayer card games with server-authoritative rules: Bridge,
 Taiwanese Big Two, Red Points, Ninety-Nine, Sevens, Chinese Poker, Liar's Deck,
-Blackjack, Ten and a Half, Texas Hold'em, Napoleon, Liar's Dice, Reversi, Dou Dizhu, Old Maid, Jungle, Gomoku, Xiangqi, Banqi, and Chinese Checkers.
+Blackjack, Ten and a Half, Texas Hold'em, Napoleon, Liar's Dice, Reversi, Dou Dizhu, Old Maid, Jungle, Gomoku, Xiangqi, Banqi, Chinese Checkers, and Land Battle Chess.
 
 - Rooms with up to eight spectators, chat, bots, and turn timers; Ninety-Nine,
-  Blackjack, Ten and a Half, Hold'em, Liar's Dice, and Old Maid support 2–8 occupied seats, Napoleon 4–6, Reversi, Jungle, Gomoku, Xiangqi, and Banqi exactly two, Dou Dizhu exactly three, Chinese Checkers 2, 3, 4, or 6, while other games use four.
+  Blackjack, Ten and a Half, Hold'em, Liar's Dice, and Old Maid support 2–8 occupied seats, Napoleon 4–6, Reversi, Jungle, Gomoku, Xiangqi, Banqi, and Land Battle Chess exactly two, Dou Dizhu exactly three, Chinese Checkers 2, 3, 4, or 6, while other games use four.
 - Accounts, friends, match history, rooms, and unfinished games survive restarts.
 - Traditional Chinese and English, themes, uploaded avatars and table artwork,
   custom and site-provided emoji, optional WebRTC voice, and owner-provided music.

@@ -176,6 +176,13 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('longestChain', 'log', 'max'),
     record('longChains', 'log', 'count'),
   ],
+  landbattle: [
+    record('flagCaptures', 'result', 'count', true),
+    record('fastestWin', 'result', 'min'),
+    record('mostSurvivors', 'result', 'max'),
+    record('battlesWon', 'log', 'count'),
+    record('marshalsDowned', 'log', 'count'),
+  ],
 };
 
 /**

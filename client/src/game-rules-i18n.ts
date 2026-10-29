@@ -287,6 +287,17 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Resigning, draws, and limits', 'You may resign at any time. With two players the opponent wins, and on your own turn you may offer a draw (after a decline, make 3 more moves before offering again). With three or more there are no draw offers; a player who resigns leaves with their marbles, places last, and the rest play on.', 'A player whose marbles are all blocked is skipped. After 150 turns each, or if nobody can move, the least distance left wins; a tie between everyone is a draw.'),
     section('Timer', 'On timeout a marble moves as far forward as it can, with a little randomness.'),
   ],
+  landbattle: [
+    section('Board', 'Two players on 5 × 12 stations, six rows each. Thin lines are roads, thick lines railways; the front is crossed only on the left, middle, and right files, as mountains block the other two. Each side has 5 camps (ovals) and 2 headquarters.', 'The earlier seat plays Red and moves first. Each player sees their own side at the bottom; spectators start from Red.'),
+    table('Pieces (25 each, strongest first)', ['Piece', 'Count'], [
+      ['Marshal', '1'], ['General', '1'], ['Major general', '2'], ['Brigadier', '2'], ['Colonel', '2'], ['Major', '2'],
+      ['Captain', '3'], ['Lieutenant', '3'], ['Engineer', '3'], ['Landmine', '3'], ['Bomb', '2'], ['Flag', '1'],
+    ], 'When the marshal falls, its side’s flag is shown. Engineers turn along railways and clear landmines; landmines and the flag never move.'),
+    section('Deployment', 'Both players deploy at the same time before a shared deadline (the room timer’s turn time plus reserve, at least 60 seconds). Every station except the camps gets one piece.', 'The flag goes in a headquarters, landmines in your last two rows, and bombs anywhere but the front row.', 'Pick a preset formation or Auto, then tap two of your stations to swap them; a swap that breaks a rule is refused. Confirming is final. If time runs out, an automatic deployment is made for you.'),
+    section('Moving', 'One step along any road or camp diagonal, or any distance in a straight line along a railway while the way is clear. Engineers may also turn along railways. A move stops before your own pieces and on the first enemy piece, which it attacks.', 'Pieces in a camp cannot be attacked. Pieces in either headquarters, landmines, and the flag never move.'),
+    section('Battles', 'The higher rank wins; equal ranks remove each other. A bomb removes itself and the piece it meets. Only an engineer clears a landmine; any other attacker is removed (a bomb takes the mine with it). Any piece that reaches the flag captures it.', 'The referee announces only won, lost, or both removed; identities stay hidden until the match ends, except a flag whose marshal has fallen.'),
+    section('Winning', 'Capture the enemy flag, or leave the opponent without a legal move on their turn. 60 moves in a row without a battle draw. The rules vary by region; this game uses the common rules above.', 'Once play starts you may resign at any time. On your own turn you may offer a draw: the opponent accepts to draw, and making a move counts as declining. After a decline you must make 3 more moves before offering again. Running out of time plays a legal move for you; it never loses the game.'),
+  ],
 };
 
 const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
@@ -528,12 +539,23 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('認輸、和局與上限', '可以隨時認輸。2 人時由對手獲勝；輪到自己時可以提和，被拒絕後需再走 3 手才能再提。3 人以上不能提和；認輸的玩家連同彈珠離開棋盤、排在最後，其餘玩家繼續。', '所有彈珠都被堵住的玩家自動跳過。每人走滿 150 回合，或沒有人能走時，剩餘距離最少者獲勝；全員相同則為和局。'),
     section('計時', '逾時由系統代走：讓一顆彈珠盡量往前，並加入少量隨機。'),
   ],
+  landbattle: [
+    section('棋盤', '雙人對局，5 × 12 個站點，每方 6 排。細線是公路，粗線是鐵路；前線只有左、中、右三路相通，另外兩路被山界擋住。每方有 5 個行營（橢圓）與 2 個大本營。', '座位順序在前的玩家執紅先走。每位玩家都看到自己在下方；旁觀者預設從紅方視角觀看。'),
+    table('棋子（每方 25 枚，由大到小）', ['棋子', '數量'], [
+      ['司令', '1'], ['軍長', '1'], ['師長', '2'], ['旅長', '2'], ['團長', '2'], ['營長', '2'],
+      ['連長', '3'], ['排長', '3'], ['工兵', '3'], ['地雷', '3'], ['炸彈', '2'], ['軍旗', '1'],
+    ], '司令陣亡時公開己方軍旗位置。工兵可沿鐵路轉彎並能排除地雷；地雷與軍旗不能移動。'),
+    section('布陣', '雙方在共同期限內同時布陣（房間計時的每手時間加保留時間，至少 60 秒）。行營以外的每個站點各放一枚棋子。', '軍旗必須放在大本營，地雷只能放在最後兩排，炸彈不能放在第一排。', '先選預設陣型或「自動」，再點選自己的兩個位置交換棋子；違反限制的交換會被拒絕。確認後不能更改；時間到仍未確認時自動布陣。'),
+    section('走法', '沿公路或行營斜線走一格；或沿鐵路直線走任意距離，途中不能有棋子。工兵在鐵路上可以轉彎。不能越過或停在己方棋子上；遇到第一枚敵方棋子即停下並攻擊它。', '行營內的棋子不能被攻擊。兩方大本營內的棋子、地雷與軍旗都不能移動。'),
+    section('交戰', '大吃小，同級同歸於盡。炸彈與遇到的棋子同歸於盡。只有工兵能排除地雷，其他棋子攻擊地雷會陣亡（炸彈則與地雷同歸於盡）。任何棋子走到軍旗上即奪旗。', '裁判只公布勝、負或同歸於盡，對局結束前不公開身份；唯一例外是司令陣亡後，該方軍旗位置公開。'),
+    section('勝負', '奪下對方軍旗，或輪到對方時對方無子可動者勝。連續 60 手沒有交戰則和局。各地規則略有差異，本遊戲採用以上常見規則。', '開戰後可隨時認輸。輪到自己時可以提和，對手同意即和局，對手走子視為拒絕，被拒絕後需再走 3 手才能再次提和。逾時由系統代走一步合法棋，不會因超時判負。'),
+  ],
 };
 
 const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> = {
   en: [
     table('Room setup', ['Item', 'Rule'], [
-      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Go Fish 2–6; Napoleon 4–6; Reversi, Jungle, Gomoku, Xiangqi, and Banqi 2; Dou Dizhu 3; others 4'],
+      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Go Fish 2–6; Napoleon 4–6; Reversi, Jungle, Gomoku, Xiangqi, Banqi, and Land Battle Chess 2; Dou Dizhu 3; others 4'],
       ['Seat order', 'Clockwise N → E → S → W → P5–P8, skipping empty seats'],
       ['Start', 'Once everyone seated is ready, the host presses Start'],
       ['Bots', 'The host adds or removes them; at least one human must sit'],
@@ -549,7 +571,7 @@ const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> =
   ],
   'zh-TW': [
     table('房間設定', ['項目', '規則'], [
-      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；釣魚 2～6 人；拿破崙 4～6 人；黑白棋、鬥獸棋、五子棋、象棋與暗棋 2 人；鬥地主 3 人；其他 4 人'],
+      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；釣魚 2～6 人；拿破崙 4～6 人；黑白棋、鬥獸棋、五子棋、象棋、暗棋與陸戰棋 2 人；鬥地主 3 人；其他 4 人'],
       ['座位順序', '順時針 北 → 東 → 南 → 西 → 第 5～8 席，跳過空位'],
       ['開始', '入座者都準備後，由房主按開始'],
       ['Bot', '房主可加入或移除；至少需一位真人入座'],

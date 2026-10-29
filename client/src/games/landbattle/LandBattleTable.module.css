@@ -1,0 +1,42 @@
+/* ─── Land Battle Chess table: side colour and pieces left beside each seat; deployment buttons ─── */
+
+.stats {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgb(0 0 0 / 0.45);
+  flex: none;
+}
+
+.red { background: var(--piece-red, #c0392b); }
+.blue { background: var(--piece-blue, #2f6fb5); }
+
+.sideName { opacity: 0.85; }
+
+.flagShown {
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-danger) 22%, transparent);
+  color: var(--text-primary);
+}
+
+.deploy { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; justify-content: center; }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.preset.preset { color: var(--text-secondary); }
+
+/* Short landscape phones stack the deployment tools in the right column: presets in a 3 × 2 grid, then 確認布陣. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .deploy { flex-direction: column; align-items: stretch; gap: 6px; }
+  .presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+  .preset.preset { height: 36px; min-width: 0; padding: 0 4px; font-size: var(--text-xs); }
+  .submit.submit { height: 44px; font-size: var(--text-sm); }
+}

@@ -20,6 +20,7 @@ export const DAILY_TASKS = [
   { id: 'play-doudizhu', target: 2, coins: 15 },
   { id: 'play-banqi', target: 2, coins: 10 },
   { id: 'play-chinesecheckers', target: 2, coins: 10 },
+  { id: 'play-landbattle', target: 2, coins: 15 },
 ] as const;
 
 export const DAILY_TASK_COUNT = 3;

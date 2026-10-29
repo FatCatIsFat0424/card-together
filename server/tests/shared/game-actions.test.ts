@@ -5,6 +5,7 @@ import { parseGameAction } from '@shared/games/actions';
 import type { GameActionEnvelope } from '@shared/games/actions';
 import type { BridgeAction } from '@shared/games/bridge/actions';
 import type { Card, GameType } from '@shared/types';
+import { LB_PRESETS } from '@shared/rules/landbattle';
 
 const card = { suit: 'clubs', rank: 2 } as const;
 const other = { suit: 'hearts', rank: 14 } as const;
@@ -77,6 +78,9 @@ const ACTIONS = [
   { gameType: 'banqi', action: { type: 'offer-draw' } },
   { gameType: 'chinesecheckers', action: { type: 'move', from: '-3,13', to: '-4,12' } },
   { gameType: 'chinesecheckers', action: { type: 'resign' } },
+  { gameType: 'landbattle', action: { type: 'deploy', layout: [...LB_PRESETS[0]] } },
+  { gameType: 'landbattle', action: { type: 'move', from: '0,6', to: '0,5' } },
+  { gameType: 'landbattle', action: { type: 'resign' } },
 ] satisfies readonly GameActionEnvelope[];
 
 function inject(value: unknown, strictCards = false): unknown {
@@ -142,6 +146,8 @@ describe('game action contracts', () => {
     ['blackjack', { type: 'act', action: 'surrender' }, 'Invalid action.'],
     ['blackjack', { type: 'dealerAct', action: 'split' }, 'Invalid action.'],
     ['reversi', { type: 'place', to: '8,0' }, 'Invalid action.'],
+    ['landbattle', { type: 'deploy', layout: ['flag'] }, 'Invalid deployment.'],
+    ['landbattle', { type: 'move', from: '0,12', to: '0,11' }, 'Invalid action.'],
     ['reversi', { type: 'answer-draw' }, 'Invalid draw answer.'],
     ['jungle', { type: 'move', from: '0,6', to: '7,0' }, 'Invalid action.'],
     ['jungle', { type: 'move', to: '0,5' }, 'Invalid action.'],
