@@ -35,7 +35,7 @@ function napoleon(tricks: number, players: number, played: NapoleonCard, secreta
       log: [...log, { type: 'play', seat: 'N', card: played }, { type: 'trick_end', trickIndex: tricks + 1 }],
       tricks: Array.from({ length: tricks + 1 }, () => ({})),
     }),
-    frame: play([], { key: `action:${tricks}`, napoleonCards: [played] }),
+    frame: play([], { key: `action:${tricks}`, jokerCards: [played] }),
   };
 }
 

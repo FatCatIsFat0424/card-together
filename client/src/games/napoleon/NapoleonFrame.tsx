@@ -16,7 +16,7 @@ export function NapoleonFrame({ frame, name }: { frame: PresentationFrame; name:
   if (!game) return null;
   const notice = napoleonNotice(game, frame);
   if (!notice) return null;
-  const jokerName = (joker: 'big' | 'small'): string => t(`napoleon.joker.${joker}`);
+  const jokerName = (joker: 'big' | 'small'): string => t(`cards.joker.${joker}`);
 
   if (notice.kind === 'secretaryCard') {
     const card = napoleonCardText(notice.card, jokerName);

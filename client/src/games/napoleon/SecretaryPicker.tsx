@@ -24,7 +24,7 @@ export function SecretaryPicker({ game, disabled, onConfirm }: {
   const [picked, setPicked] = useState<NapoleonCard | null>(null);
   const [groupPick, setGroupPick] = useState<NapoleonPickerGroup | null>(null);
   const group = groupPick ?? (picked ? napoleonPickerGroup(picked) : napoleonTrump(game) ?? 'spades');
-  const jokerName = (joker: 'big' | 'small'): string => t(`napoleon.joker.${joker}`);
+  const jokerName = (joker: 'big' | 'small'): string => t(`cards.joker.${joker}`);
   const note = picked && napoleonPickerNote(game, picked);
 
   return (
@@ -38,7 +38,7 @@ export function SecretaryPicker({ game, disabled, onConfirm }: {
           <button key={value} type="button" className={`${styles.choiceBtn} ${value === 'hearts' || value === 'diamonds'
             ? styles.redSuit : ''}`} aria-pressed={group === value} disabled={disabled}
             onClick={() => setGroupPick(value)}>
-            {value === 'joker' ? t('napoleon.jokers') : SUIT_SYMBOLS[value]}
+            {value === 'joker' ? t('cards.jokers') : SUIT_SYMBOLS[value]}
           </button>
         ))}
       </div>

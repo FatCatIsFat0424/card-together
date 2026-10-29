@@ -322,7 +322,7 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
   const observedCards = useGodViewStore((state) => state.hands?.[seat]);
   const observedLiars = useGodViewStore((state) => state.liarHands?.[seat]);
   const observedDice = useGodViewStore((state) => state.diceHands?.[seat]);
-  const observedNapoleon = useGodViewStore((state) => state.napoleonHands?.[seat]);
+  const observedJokerHand = useGodViewStore((state) => state.jokerHands?.[seat]);
   const observedOldMaid = useGodViewStore((state) => state.oldMaidHands?.[seat]);
   const napoleon = useGameStore((state) => state.napoleon);
   const gameType = useGameStore((state) => state.visible?.gameType);
@@ -384,9 +384,9 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
     : liarsDeck && observedLiars?.length ? <ObservedLiarCards cards={observedLiars} owner={name}
       tableFace={liarsDeck.tableFace} />
       : oldMaid && observedOldMaid?.length ? <ObservedJokerCards cards={observedOldMaid} owner={name} />
-      : napoleon && observedNapoleon?.length ? <ObservedNapoleonCards cards={observedNapoleon} owner={name}
+      : napoleon && observedJokerHand?.length ? <ObservedNapoleonCards cards={observedJokerHand} owner={name}
         trump={napoleon.contract?.suit ?? null} />
-        : doudizhu && observedNapoleon?.length ? <ObservedJokerCards cards={sortDdzHand(observedNapoleon)} owner={name} />
+        : doudizhu && observedJokerHand?.length ? <ObservedJokerCards cards={sortDdzHand(observedJokerHand)} owner={name} />
         : observedCards?.length ? <ObservedCards cards={observedCards} owner={name} /> : null;
   // Red Points shows captured red cards instead of card backs; the hand size stays a chip.
   const tray = captured ? redCards.length > 0 && <CardTray count={redCards.length} kind="captured" render={(index) => (

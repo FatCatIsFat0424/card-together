@@ -28,7 +28,7 @@ function classes(...names: readonly (string | false | null | undefined)[]): stri
 export function CardChip({ card, off, title }: { card: CardOrJoker; off?: boolean; title?: string }): ReactNode {
   const { t } = useI18nStore();
   if (isJoker(card)) {
-    const label = t(`napoleon.jokerShort.${card.joker}`);
+    const label = t(`cards.jokerShort.${card.joker}`);
     return <span className={classes(styles.card, card.joker === 'big' && styles.red, off && styles.off)} title={title ?? label}>
       {label}</span>;
   }

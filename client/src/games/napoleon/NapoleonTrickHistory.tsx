@@ -14,7 +14,7 @@ import { useGamePresentation } from '../use-game-presentation';
 import { napoleonCardText, napoleonPresentedEnd, napoleonSeatLabels, napoleonTrickHistory } from './napoleon-view';
 
 const SUMMON_KEYS = {
-  secretary: 'napoleon.secretary', bigJoker: 'napoleon.joker.big', smallJoker: 'napoleon.joker.small',
+  secretary: 'napoleon.secretary', bigJoker: 'cards.joker.big', smallJoker: 'cards.joker.small',
 } as const satisfies Record<NapoleonSummon, string>;
 
 export function NapoleonTrickHistory({ game }: { game: NapoleonVisibleState }): ReactNode {
@@ -42,7 +42,7 @@ export function NapoleonTrickHistory({ game }: { game: NapoleonVisibleState }): 
   ];
 
   return <TrickHistoryTable rows={rows} columns={trickHistoryColumns(game.seats, game.mySeat)} mySeat={game.mySeat}
-    roles={roles} cardText={(card) => napoleonCardText(card, (joker) => t(`napoleon.joker.${joker}`))}
+    roles={roles} cardText={(card) => napoleonCardText(card, (joker) => t(`cards.joker.${joker}`))}
     // Seat numbers, like the seat badges and the auction, so six columns fit the rail.
     columnLabel={(seat) => compactSeatLabel(t, 'napoleon', seat)}
     className={railStyles.box} summaryClassName={railStyles.caption} />;

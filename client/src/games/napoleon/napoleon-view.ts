@@ -184,7 +184,7 @@ export function napoleonNotice(
 ): NapoleonNotice | null {
   const participant = napoleonParticipant(game);
   if (frame.kind === 'call') {
-    const card = frame.napoleonCards?.[0];
+    const card = frame.jokerCards?.[0];
     if (!card) return null;
     const self = participant && game.secretarySeat !== null && game.secretarySeat === game.mySeat;
     return game.observer ? { kind: 'secretaryCard', card, self: false, holder: game.secretarySeat }

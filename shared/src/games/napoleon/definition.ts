@@ -32,22 +32,22 @@ export const napoleonDefinition: GameDefinition<'napoleon'> = {
       const entry = game.log[index];
       if (entry.type === 'call') {
         return [{ key, kind: 'call', durationMs: NAPOLEON_NOTICE_MS, seat: entry.seat, cards: [],
-          napoleonCards: [entry.card] }];
+          jokerCards: [entry.card] }];
       }
       if (entry.type === 'play') {
         const frames: PresentationFrame[] = [
-          { key, kind: 'play', durationMs: timing.playMs, seat: entry.seat, cards: [], napoleonCards: [entry.card] },
+          { key, kind: 'play', durationMs: timing.playMs, seat: entry.seat, cards: [], jokerCards: [entry.card] },
         ];
         if (entry.summon) {
           frames.push({ key: `${key}:summon`, kind: 'summon', durationMs: NAPOLEON_NOTICE_MS, seat: entry.seat, cards: [],
-            napoleonCards: [entry.card], summon: entry.summon });
+            jokerCards: [entry.card], summon: entry.summon });
         }
         return frames;
       }
       if (entry.type === 'trick_end') {
         const trick = game.tricks[entry.trickIndex - 1];
         return [{ key, kind: 'trick', durationMs: 2000, seat: entry.winnerSeat, cards: [],
-          napoleonCards: trick?.plays.map((play) => play.card) ?? [], cardSeats: trick?.plays.map((play) => play.seat) ?? [] }];
+          jokerCards: trick?.plays.map((play) => play.card) ?? [], cardSeats: trick?.plays.map((play) => play.seat) ?? [] }];
       }
       return [];
     },

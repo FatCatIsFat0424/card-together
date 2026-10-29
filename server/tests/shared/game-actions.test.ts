@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { isNapoleonCard } from '@shared/rules/napoleon';
+import { isCardOrJoker } from '@shared/rules/cards';
 import { GAME_TYPES } from '@shared/constants';
 import { parseGameAction } from '@shared/games/actions';
 import type { GameActionEnvelope } from '@shared/games/actions';
@@ -85,7 +85,7 @@ const ACTIONS = [
 
 function inject(value: unknown, strictCards = false): unknown {
   // Cards of the joker games are validated strictly, so extra keys reject them instead of being stripped.
-  if (strictCards && isNapoleonCard(value)) return { ...value };
+  if (strictCards && isCardOrJoker(value)) return { ...value };
   if (Array.isArray(value)) return value.map((entry) => inject(entry, strictCards));
   return value && typeof value === 'object'
     ? { ...Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, inject(entry, strictCards)])), injected: 'untrusted' }

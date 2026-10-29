@@ -23,10 +23,10 @@ export function getPresentationFrames(
   }
   if (game.phase === 'scoring') {
     const seat = rules.finishSeat(game);
-    const lastCards = [...frames].reverse().find((frame) => frame.cards.length > 0 || (frame.napoleonCards?.length ?? 0) > 0);
+    const lastCards = [...frames].reverse().find((frame) => frame.cards.length > 0 || (frame.jokerCards?.length ?? 0) > 0);
     frames.push({ key: `${id}:finish`, kind: 'finish', durationMs: rules.finishMs?.(game) ?? FINAL_RESULT_MS,
       cards: lastCards?.cards ?? [],
-      ...(lastCards?.napoleonCards ? { napoleonCards: lastCards.napoleonCards } : {}),
+      ...(lastCards?.jokerCards ? { jokerCards: lastCards.jokerCards } : {}),
       ...(lastCards?.cardSeats ? { cardSeats: lastCards.cardSeats } : {}),
       ...(seat ? { seat } : {}) });
   }

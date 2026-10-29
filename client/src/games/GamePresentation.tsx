@@ -3,15 +3,16 @@ import { useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { PresentationFrame } from '@shared/game-presentation';
 import { NN_MAX } from '@shared/rules/ninetynine';
-import type { GameSeat, NapoleonCard, PlayerVisibleGameState } from '@shared/types';
+import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
+import { isJoker } from '@shared/rules/cards';
+import type { CardOrJoker, GameSeat, PlayerVisibleGameState } from '@shared/types';
+import { useCardOrJokerFaceUrl } from '../cosmetics/card-faces/use-card-face';
 import { tablePosition } from '../game-view';
 import { useI18nStore } from '../stores/i18n-store';
 import { useMotionStore } from '../stores/motion-store';
 import { useRoomStore } from '../stores/room-store';
 import { seatLabel } from './seat-names';
 import styles from './GamePresentation.module.css';
-import { useNapoleonCardImageUrl } from './napoleon/napoleon-card-art';
-import { napoleonCardText } from './napoleon/napoleon-view';
 import { CardPlayEffect } from './CardPlayEffect';
 import { cardPlayEffect } from './card-play-effect';
 import { gameUi } from './ui-registry';
@@ -30,7 +31,7 @@ export function GamePresentation({
   const gameType = game.gameType;
   const ui = gameUi(gameType).presentation;
   const { Frame, Effects } = ui ?? {};
-  const napoleonCardImageUrl = useNapoleonCardImageUrl();
+  const faceUrl = useCardOrJokerFaceUrl();
   const rootRef = useRef<HTMLDivElement>(null);
   const timingRef = useRef({ key: frame.key, elapsedMs });
   if (timingRef.current.key !== frame.key) timingRef.current = { key: frame.key, elapsedMs };
@@ -41,8 +42,8 @@ export function GamePresentation({
     ?? seatLabel(t, gameType, seat);
   const position = frame.seat ? tablePosition(frame.seat, bottomSeat, room ? occupiedSeats(roomPlayers(room)) : undefined) : 'bottom';
   const collecting = frame.kind === 'trick' || frame.kind === 'capture';
-  // Napoleon frames carry their cards separately because they may include jokers.
-  const frameCards: readonly NapoleonCard[] = frame.napoleonCards ?? frame.cards;
+  // Frames of the joker games carry their cards separately because they may include jokers.
+  const frameCards: readonly CardOrJoker[] = frame.jokerCards ?? frame.cards;
   const playEffect = cardPlayEffect(game, frame);
 
   useLayoutEffect(() => {
@@ -74,10 +75,11 @@ export function GamePresentation({
       <div className={[styles.cards, (frame.kind === 'play' || frame.kind === 'capture') && styles.arriving,
         frame.kind === 'trick' && styles.trickCards].filter(Boolean).join(' ')}>
         {frameCards.map((card, index) => <div className={styles.cardSlot}
-          key={`${'joker' in card ? `joker-${card.joker}` : `${card.suit}-${card.rank}`}-${index}`}>
+          key={`${isJoker(card) ? `joker-${card.joker}` : `${card.suit}-${card.rank}`}-${index}`}>
           <img className={[styles.card, frame.flipped && index === 0 && styles.flipped].filter(Boolean).join(' ')}
-            src={napoleonCardImageUrl(card)}
-            alt={napoleonCardText(card, (joker) => t(`napoleon.joker.${joker}`))} draggable={false} />
+            src={faceUrl(card)}
+            alt={isJoker(card) ? t(`cards.joker.${card.joker}`) : `${SUIT_SYMBOLS[card.suit]}${RANK_DISPLAY[card.rank]}`}
+            draggable={false} />
           {frame.cardSeats?.[index] && <span className={styles.cardSeat}>
             {name(frame.cardSeats[index])}
           </span>}

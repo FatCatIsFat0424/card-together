@@ -138,7 +138,7 @@ describe('client game registries', () => {
       expect(clientGame('blackjack').observedView({ observedHole: { suit: 'clubs', rank: 5 } } as never))
         .toEqual({ hole: { suit: 'clubs', rank: 5 } });
       expect(clientGame('liarsdeck').observedView({} as never)).toEqual({ liarHands: null });
-      expect(clientGame('napoleon').observedView({ observedHands: {} } as never)).toEqual({ napoleonHands: {} });
+      expect(clientGame('napoleon').observedView({ observedHands: {} } as never)).toEqual({ jokerHands: {} });
       expect(clientGame('sevens').observedView({} as never)).toEqual({ hands: null, covered: null });
       expect(clientGame('bridge').observedView({} as never)).toEqual({ hands: null });
     });

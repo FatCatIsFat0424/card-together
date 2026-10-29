@@ -35,7 +35,7 @@ export function NapoleonInfoRail({ game }: { game: NapoleonVisibleState }): Reac
   const { t } = useI18nStore();
   const name = useSeatName();
   const { frame } = useGamePresentation();
-  const jokerName = (joker: 'big' | 'small'): string => t(`napoleon.joker.${joker}`);
+  const jokerName = (joker: 'big' | 'small'): string => t(`cards.joker.${joker}`);
   const { contract } = game;
   const points = napoleonPresentedSidePoints(game, frame);
   const showProgress = game.phase === 'playing' || game.phase === 'scoring';

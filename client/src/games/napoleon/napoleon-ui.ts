@@ -26,7 +26,7 @@ export const napoleonUi: GameUi<'napoleon'> = {
     Frame: NapoleonFrame,
     playEffect: (game, frame) => {
       if (frame.kind !== 'play') return null;
-      const played = frame.napoleonCards?.[0];
+      const played = frame.jokerCards?.[0];
       const index = frameLogIndex(frame);
       if (!played || index === null || index < 0 || index >= game.log.length) return null;
       if (game.secretaryCard && sameNapoleonCard(played, game.secretaryCard)) return { kind: 'secretary' };

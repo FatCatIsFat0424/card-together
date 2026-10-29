@@ -331,6 +331,11 @@ const english = {
   'topbar.signOutConfirm': 'You are in a game. Signing out disconnects you from the table. Sign out anyway?',
   'topbar.cancel': 'Cancel',
   'seat.pickNext': 'Choose {name} to play next',
+  'cards.joker.big': 'Big joker',
+  'cards.joker.small': 'Small joker',
+  'cards.jokerShort.big': 'BJ',
+  'cards.jokerShort.small': 'SJ',
+  'cards.jokers': 'Jokers',
 } as const;
 
 export type GameTranslationKey = keyof typeof english;
@@ -670,5 +675,10 @@ export const gameTranslations: Record<'en' | 'zh-TW', Record<GameTranslationKey,
     'topbar.signOutConfirm': '你正在對局中，登出會中斷你在牌桌上的連線。仍要登出嗎？',
     'topbar.cancel': '取消',
     'seat.pickNext': '指定 {name} 為下一位',
+    'cards.joker.big': '大鬼',
+    'cards.joker.small': '小鬼',
+    'cards.jokerShort.big': '大鬼',
+    'cards.jokerShort.small': '小鬼',
+    'cards.jokers': '鬼牌',
   },
 };

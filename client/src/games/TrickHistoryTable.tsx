@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { isNapoleonJoker } from '@shared/rules/napoleon';
-import type { GameSeat, NapoleonCard } from '@shared/types';
+import { isJoker } from '@shared/rules/cards';
+import type { CardOrJoker, GameSeat } from '@shared/types';
 import { useI18nStore } from '../stores/i18n-store';
 import { CardLabel } from './CardLabel';
 import { useSeatName } from './seat-names';
@@ -13,7 +13,7 @@ export interface TrickHistoryRow {
   /** One-based trick number */
   readonly number: number;
   readonly leadSeat: GameSeat;
-  readonly cards: Readonly<Partial<Record<GameSeat, NapoleonCard>>>;
+  readonly cards: Readonly<Partial<Record<GameSeat, CardOrJoker>>>;
   /** Null while the trick is still being played */
   readonly winnerSeat: GameSeat | null;
   /** Shown under the row, such as a named suit or a summon */
@@ -44,7 +44,7 @@ export function TrickHistoryTable({
   mySeat: GameSeat | null;
   roles?: readonly TrickHistoryRole[];
   /** Plain card name for hover titles */
-  cardText: (card: NapoleonCard) => string;
+  cardText: (card: CardOrJoker) => string;
   /** Column heading for a seat; the player's name by default, which stays the heading's hover title */
   columnLabel?: (seat: GameSeat) => string;
   /** Historical views resolve seats from their recorded participants instead of the live room. */
@@ -84,7 +84,7 @@ export function TrickHistoryTable({
             const title = [name(seat), card ? cardText(card) : null,
               lead ? t('table.lead') : null, won ? t('table.winner') : null].filter(Boolean).join(' · ');
             return <td key={seat} title={title} className={`${lead ? styles.lead : ''} ${won ? styles.won : ''}`}>
-              {card ? <CardLabel card={card} className={isNapoleonJoker(card) ? styles.joker : undefined} /> : <span className={styles.empty}>·</span>}
+              {card ? <CardLabel card={card} className={isJoker(card) ? styles.joker : undefined} /> : <span className={styles.empty}>·</span>}
             </td>;
           })}
         </tr>

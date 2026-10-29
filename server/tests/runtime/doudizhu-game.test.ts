@@ -335,7 +335,7 @@ describe('Dou Dizhu adapter and presentation', () => {
     state.presentation = { id: 'p', startedAt: 0, logStart: 0, timingVersion: 3 };
     const frames = getPresentationFrames(state);
     expect(frames.map((frame) => frame.kind)).toEqual(['deal', 'call', 'play', 'settle', 'deal']);
-    expect(frames[1].napoleonCards).toHaveLength(3);
+    expect(frames[1].jokerCards).toHaveLength(3);
     expect(frames[2]).toMatchObject({ durationMs: frameTiming(3).playMs, seat: 'N' });
     expect(gameDefinition('doudizhu').presentation.finishSeat(state)).toBeUndefined();
   });

@@ -41,7 +41,7 @@ type Translate = ReturnType<typeof useI18nStore.getState>['t'];
 function CardStrip({ cards, label }: { cards: readonly NapoleonCard[]; label: string }): ReactNode {
   const napoleonCardImageUrl = useNapoleonCardImageUrl();
   const { t } = useI18nStore();
-  const jokerName = (joker: 'big' | 'small'): string => t(`napoleon.joker.${joker}`);
+  const jokerName = (joker: 'big' | 'small'): string => t(`cards.joker.${joker}`);
   return <ul className={styles.cardRow} aria-label={label}>
     {cards.map((card, index) => <li key={napoleonListKey(card, index)}>
       <img src={napoleonCardImageUrl(card)} alt={napoleonCardText(card, jokerName)} draggable={false} />
@@ -81,7 +81,7 @@ function NapoleonResult({ result, name, t }: {
 function SecretaryNotice({ card, onConfirm }: { card: NapoleonCard; onConfirm: () => void }): ReactNode {
   const napoleonCardImageUrl = useNapoleonCardImageUrl();
   const { t } = useI18nStore();
-  const jokerName = (joker: 'big' | 'small'): string => t(`napoleon.joker.${joker}`);
+  const jokerName = (joker: 'big' | 'small'): string => t(`cards.joker.${joker}`);
   return <section className={styles.panel} role="alertdialog" aria-labelledby="napoleon-ack-title"
     aria-describedby="napoleon-ack-text">
     <div className={styles.panelHeader}>
@@ -159,7 +159,7 @@ export function NapoleonTable(): ReactNode {
 
   if (!game || !viewed) return null;
 
-  const jokerName = (joker: 'big' | 'small'): string => t(`napoleon.joker.${joker}`);
+  const jokerName = (joker: 'big' | 'small'): string => t(`cards.joker.${joker}`);
   const ownTurn = napoleonOwnTurn(game);
   const acting = ownTurn && !locked;
   const blocked = actionPending || !connectionReady;

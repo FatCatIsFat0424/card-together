@@ -3,8 +3,8 @@ import { isJoker } from '@shared/rules/cards';
 import type { Card, CardFaceStyleId, CardOrJoker } from '@shared/types';
 import { useAccountStore } from '../../stores/account-store';
 import { cardFaceUrl, jokerFaceUrl, jokerFaceUrls } from './card-faces';
-import bundledBigJoker from '../../assets/napoleon/joker-big.svg';
-import bundledSmallJoker from '../../assets/napoleon/joker-small.svg';
+import bundledBigJoker from '../../assets/jokers/joker-big.svg';
+import bundledSmallJoker from '../../assets/jokers/joker-small.svg';
 import { fourColorResolver, loadFourColorDeck, subscribeFourColorDeck } from './four-color';
 
 export function useCardFaceStyle(): CardFaceStyleId | null {

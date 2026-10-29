@@ -67,7 +67,7 @@ export function ObservedNapoleonCards({ cards, owner, trump }: {
   const { t } = useI18nStore();
   return <CardRows cards={sortNapoleonHand(cards, trump)} label={t('table.observedHand', { name: owner })}
     render={(card) => <img className={styles.card} src={napoleonCardImageUrl(card)} draggable={false}
-      alt={napoleonCardText(card, (joker) => t(`napoleon.joker.${joker}`))} />} />;
+      alt={napoleonCardText(card, (joker) => t(`cards.joker.${joker}`))} />} />;
 }
 
 /** Hands that may hold a joker, in the order their owner keeps them. */
@@ -76,6 +76,6 @@ export function ObservedJokerCards({ cards, owner }: { cards: readonly CardOrJok
   const { t } = useI18nStore();
   return <CardRows cards={cards} label={t('table.observedHand', { name: owner })}
     render={(card) => <img className={styles.card} src={faceUrl(card)} draggable={false}
-      alt={'joker' in card ? t(`napoleon.joker.${card.joker}`)
+      alt={'joker' in card ? t(`cards.joker.${card.joker}`)
         : `${SUIT_SYMBOLS[card.suit]}${RANK_DISPLAY[card.rank]}`} />} />;
 }

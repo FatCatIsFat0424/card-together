@@ -208,7 +208,7 @@ export function CardHand<T extends CardOrJoker>({
             // aria-disabled keeps every card focusable and readable; activation is still blocked above.
             aria-disabled={disabled || !playable}
             aria-pressed={selectMode ? selected : undefined}
-            aria-label={`${cardName(card, (joker) => t(`napoleon.joker.${joker}`))}${marked && markedLabel ? ` (${markedLabel})` : ''}${
+            aria-label={`${cardName(card, (joker) => t(`cards.joker.${joker}`))}${marked && markedLabel ? ` (${markedLabel})` : ''}${
               highlighted && highlightedLabel ? ` (${highlightedLabel})` : ''}${
               armed && containsCard(card, [armed]) ? ` — ${t('hand.tapAgain')}` : ''}`}
             title={marked ? markedLabel : highlighted ? highlightedLabel : undefined}

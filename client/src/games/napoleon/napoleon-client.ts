@@ -13,8 +13,8 @@ export const napoleonClient: ClientGame<'napoleon'> = {
       ?? (game.phase === 'bidding' ? game.bidding?.currentBidderSeat ?? null : null),
     napoleon: retain(state.napoleon, game),
   }),
-  observedView: (game) => ({ napoleonHands: game.observedHands ?? null }),
-  spectatorPatch: (view, seat) => ({ myHand: [...view.napoleonHands?.[seat] ?? []], validCards: [] }),
+  observedView: (game) => ({ jokerHands: game.observedHands ?? null }),
+  spectatorPatch: (view, seat) => ({ myHand: [...view.jokerHands?.[seat] ?? []], validCards: [] }),
   rules: {
     // Joker summoning is on by default, so the lobby lists it too.
     summary: (context, t) => [t('napoleon.rulesDeal'), t('napoleon.rulesBid'), t('napoleon.rulesSecretary'),

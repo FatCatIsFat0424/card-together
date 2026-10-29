@@ -40,7 +40,7 @@ function CardFan({ cards, small }: { cards: readonly CardOrJoker[]; small?: bool
   const faceUrl = useCardOrJokerFaceUrl();
   const { t } = useI18nStore();
   const middle = (cards.length - 1) / 2;
-  const jokerName = (joker: 'big' | 'small'): string => t(`napoleon.joker.${joker}`);
+  const jokerName = (joker: 'big' | 'small'): string => t(`cards.joker.${joker}`);
   return <span className={`${styles.fan} ${small ? styles.fanSmall : ''}`}>
     {cards.map((card, index) => <img key={cardKey(card)} className={styles.fanCard} src={faceUrl(card)} draggable={false}
       alt={cardName(card, jokerName)} style={{ '--fan': index - middle } as CSSProperties} />)}

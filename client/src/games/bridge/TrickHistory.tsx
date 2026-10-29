@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
-import { isNapoleonJoker } from '@shared/rules/napoleon';
+import { isJoker } from '@shared/rules/cards';
 import type { Seat, TrickRecord } from '@shared/types';
 import { useI18nStore } from '../../stores/i18n-store';
 import { TrickHistoryTable, trickHistoryColumns } from '../TrickHistoryTable';
@@ -28,6 +28,6 @@ export function TrickHistory({ tricks, mySeat, declarer, className, summaryClass
   return <TrickHistoryTable rows={bridgeTrickRows(tricks)} columns={trickHistoryColumns(SEATS, mySeat)} mySeat={mySeat}
     roles={declarer ? [{ seat: declarer, label: t('table.declarer'),
       color: 'var(--badge-declarer)', ink: 'var(--text-inverse)' }] : []}
-    cardText={(card) => isNapoleonJoker(card) ? '' : `${SUIT_SYMBOLS[card.suit]}${RANK_DISPLAY[card.rank]}`}
+    cardText={(card) => isJoker(card) ? '' : `${SUIT_SYMBOLS[card.suit]}${RANK_DISPLAY[card.rank]}`}
     className={className} summaryClassName={summaryClassName} defaultOpen={defaultOpen} bare={bare} />;
 }

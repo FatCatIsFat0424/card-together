@@ -16,7 +16,7 @@ export function CardLabel({ card, className }: { card: CardOrJoker; className?: 
   const { t } = useI18nStore();
   if (isJoker(card)) {
     return <span className={`${card.joker === 'big' ? styles.bigJoker : styles.smallJoker} ${className ?? ''}`}>
-      {t(`napoleon.jokerShort.${card.joker}`)}</span>;
+      {t(`cards.jokerShort.${card.joker}`)}</span>;
   }
   return <span className={`${suitClass(card.suit) ?? ''} ${className ?? ''}`}>
     <span className={styles.suit}>{SUIT_SYMBOLS[card.suit]}</span>{RANK_DISPLAY[card.rank]}</span>;

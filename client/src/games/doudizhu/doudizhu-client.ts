@@ -11,8 +11,8 @@ export const douDizhuClient: ClientGame<'doudizhu'> = {
     currentTurnSeat: game.phase === 'scoring' ? null : game.currentTurnSeat,
     doudizhu: retain(state.doudizhu, game),
   }),
-  observedView: (game) => ({ napoleonHands: game.observedHands ?? null }),
-  spectatorPatch: (view, seat) => ({ myHand: [...view.napoleonHands?.[seat] ?? []] }),
+  observedView: (game) => ({ jokerHands: game.observedHands ?? null }),
+  spectatorPatch: (view, seat) => ({ myHand: [...view.jokerHands?.[seat] ?? []] }),
   rules: {
     summary: (context, t) => [t('doudizhu.rulesDeal'),
       t(context?.option?.enabled ? 'doudizhu.rulesGrab' : 'doudizhu.rulesBid'),

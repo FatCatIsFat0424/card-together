@@ -40,7 +40,7 @@ export function NapoleonTrickArea({ trick, seats, bottomSeat, myTurn }: {
   const napoleonCardImageUrl = useNapoleonCardImageUrl();
   const { t } = useI18nStore();
   const name = useSeatName();
-  const jokerName = (joker: 'big' | 'small'): string => t(`napoleon.joker.${joker}`);
+  const jokerName = (joker: 'big' | 'small'): string => t(`cards.joker.${joker}`);
   const plays = trick?.plays ?? [];
   const slotStyle = (seat: GameSeat): CSSProperties => {
     const slot = napoleonTrickSlot(seat, bottomSeat, seats);

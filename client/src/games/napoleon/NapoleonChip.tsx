@@ -19,7 +19,7 @@ export function NapoleonChip(): ReactNode {
   const chip = game ? napoleonChip(game, frame) : null;
   if (!chip) return null;
   const seat = (value: GameSeat): string => seatLabel(t, 'napoleon', value, true);
-  const jokerName = (joker: 'big' | 'small'): string => t(`napoleon.joker.${joker}`);
+  const jokerName = (joker: 'big' | 'small'): string => t(`cards.joker.${joker}`);
   const { progress } = chip;
   return <span className={styles.chip} role="group" aria-label={t('napoleon.contractChip')}>
     <span className={styles.row}>

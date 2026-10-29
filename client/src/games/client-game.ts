@@ -2,7 +2,7 @@
 
 import type { VisibleStateOf } from '@shared/games/game-definition';
 import type {
-  Card, DiceFace, GameSeat, GameType, LiarCard, MatchResult, NapoleonCard, RoomInfo,
+  Card, CardOrJoker, DiceFace, GameSeat, GameType, LiarCard, MatchResult, RoomInfo,
 } from '@shared/types';
 import type { AppIconName } from '../components/AppIcon';
 import type { GameRulesContextFields } from '../game-rules-context';
@@ -25,7 +25,7 @@ export interface SnapshotContext {
 
 /** Display fields a spectator's chosen seat overrides; every game also gets the seat itself. */
 export interface SpectatorPatch {
-  readonly myHand?: readonly (Card | LiarCard | NapoleonCard)[];
+  readonly myHand?: readonly (CardOrJoker | LiarCard)[];
   readonly myCovered?: readonly Card[];
   readonly myDice?: readonly DiceFace[];
   readonly myArrangement?: null;

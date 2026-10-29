@@ -1,5 +1,5 @@
 import type {
-  Card, ChinesePokerRow, DiceFace, GamePresentation, LiarFace, LiarTableFace, NapoleonCard, NapoleonSummon, Rank, Suit,
+  Card, CardOrJoker, ChinesePokerRow, DiceFace, GamePresentation, LiarFace, LiarTableFace, NapoleonSummon, Rank, Suit,
 } from '../types/game';
 import type { CrazyEightsEffect } from './crazyeights/types';
 import type { GoFishFish } from './gofish/types';
@@ -50,8 +50,8 @@ export interface PresentationFrame {
   readonly suit?: Suit;
   /** Crazy Eights: what an action card did */
   readonly effect?: CrazyEightsEffect;
-  /** Napoleon: cards shown, which may include jokers; `cards` stays empty */
-  readonly napoleonCards?: readonly NapoleonCard[];
+  /** Napoleon and Dou Dizhu: cards shown, which may include jokers; `cards` stays empty */
+  readonly jokerCards?: readonly CardOrJoker[];
   /** Napoleon: what the lead summoned */
   readonly summon?: NapoleonSummon;
   /** Liar's Dice: the bid and, on the reveal frame, the lifted cups */

@@ -37,14 +37,14 @@ export const douDizhuDefinition: GameDefinition<'doudizhu'> = {
         case 'deal': return [{ key, kind: 'deal', durationMs: 1500, seat: entry.firstCaller, cards: [] }];
         case 'redeal': return [{ key, kind: 'redeal', durationMs: 1500, cards: [] }];
         case 'landlord': return [{ key, kind: 'call', durationMs: DOUDIZHU_LANDLORD_MS, seat: entry.seat, cards: [],
-          napoleonCards: entry.bottom }];
+          jokerCards: entry.bottom }];
         case 'play': return [{ key, kind: 'play', durationMs: timing.playMs, seat: entry.seat, cards: [],
-          napoleonCards: entry.cards }];
+          jokerCards: entry.cards }];
         case 'pass': return [{ key, kind: 'pass', durationMs: timing.passMs, seat: entry.seat, cards: [] }];
         case 'round_end': {
           const lastPlay = [...game.log.slice(0, index)].reverse().find((event) => event.type === 'play');
           return [{ key, kind: 'round', durationMs: 1000, seat: entry.leaderSeat, cards: [],
-            napoleonCards: lastPlay?.type === 'play' ? lastPlay.cards : [] }];
+            jokerCards: lastPlay?.type === 'play' ? lastPlay.cards : [] }];
         }
         case 'deal_end': return [{ key, kind: 'settle', durationMs: 3200, seat: entry.landlord, cards: [] }];
       }
