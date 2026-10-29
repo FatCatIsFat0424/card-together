@@ -1,5 +1,5 @@
 import type { SlashTiming, SoundPack, ToneVoice } from '../../../audio/sound-pack';
-import { cue, noise, note, stack, thump, tone } from '../voices';
+import { cue, noise, note, scatter, stack, thump, tone } from '../voices';
 
 /** A singing bowl: the fundamental beats against a slightly sharp twin, over its characteristic 2.7x overtone. */
 const bowl = (at: number, frequency: number, level: number, decay: number): ToneVoice[] => stack(at, frequency, level, decay,
@@ -35,6 +35,34 @@ export const LOTUS_SOUND_PACK: SoundPack = {
     // Bowls sinking in a slow, low cluster.
     bowl(0.3, note('A3'), 0.12, 1.0), bowl(0.45, note('E3'), 0.12, 1.2),
   ),
+  diceRoll: cue(
+    scatter(0, 0.6, 7).map((at, index) => [
+      noise(at, 0.07, 'lowpass', 750, 0.7, 0.9, { attack: 0.1, decay: 3 }),
+      tone(at, 210 + (index % 3) * 30, 0.1, 0.07, { attack: 0.004, glide: { ratio: 0.75, time: 0.05 } }),
+    ]),
+    chime(0.05, note('A5'), 0.04, 0.5),
+  ),
+  diceReveal: cue(
+    bowl(0, note('D4'), 0.22, 0.6),
+    thump(0, 90, 0.22, 0.4),
+    noise(0, 0.3, 'lowpass', 210, 0.7, 0.8, { decay: 3 }),
+  ),
+  place: cue(
+    noise(0, 0.07, 'lowpass', 720, 0.7, 1, { attack: 0.1, decay: 3 }),
+    tone(0, 330, 0.14, 0.08, { attack: 0.004, glide: { ratio: 0.7, time: 0.05 } }),
+    chime(0, note('A5'), 0.05, 0.18),
+  ),
+  capture: cue(
+    noise(0, 0.07, 'lowpass', 720, 0.7, 1, { attack: 0.1, decay: 3 }),
+    tone(0, 330, 0.14, 0.08, { attack: 0.004, glide: { ratio: 0.7, time: 0.05 } }),
+    noise(0.08, 0.1, 'lowpass', 460, 0.7, 1, { attack: 0.1, decay: 3 }),
+    chime(0.08, note('E5'), 0.12, 0.35),
+  ),
+  flip: cue(
+    noise(0, 0.1, 'bandpass', 1200, 0.8, 0.4, { attack: 0.4, decay: 2 }, 2400),
+    chime(0.05, note('E6'), 0.09, 0.2),
+  ),
+  check: cue(chime(0, note('A5'), 0.18, 0.25), chime(0.12, note('A5'), 0.18, 0.25), bowl(0.24, note('E5'), 0.2, 0.5)),
   slash: ({ fireStart, fireEnd, strike, cut }: SlashTiming) => {
     const burn = fireEnd - fireStart;
     return cue(

@@ -1,4 +1,4 @@
-import { noiseEnvelope } from '../../../client/src/audio/sound-pack';
+import { SOUND_CUES, noiseEnvelope } from '../../../client/src/audio/sound-pack';
 import type { Cue, SlashTiming, SoundPack, Voice } from '../../../client/src/audio/sound-pack';
 
 export const SAMPLE_SLASH: SlashTiming = { fireStart: 0.3, fireEnd: 1.85, strike: 1.85, cut: 0.12 };
@@ -49,7 +49,7 @@ export function worstOverlap(cue: Cue, tonesOnly = false): number {
 
 export function allCues(pack: SoundPack): Record<string, Cue> {
   return {
-    turn: pack.turn, join: pack.join, card: pack.card, pass: pack.pass, out: pack.out,
-    start: pack.start, collapse: pack.collapse, slash: pack.slash(SAMPLE_SLASH),
+    ...Object.fromEntries(SOUND_CUES.map((name) => [name, pack[name]])),
+    slash: pack.slash(SAMPLE_SLASH),
   };
 }

@@ -45,6 +45,15 @@ export const DUNE_SOUND_PACK: SoundPack = {
     noise(0.4, 1.3, 'bandpass', 1800, 0.6, 0.5, { attack: 0.2, decay: 1.5 }),
     [0.6, 0.85, 1.15].map((at) => doum(at, 0.15)),
   ),
+  diceRoll: cue(
+    [0, 0.06, 0.11, 0.18, 0.26, 0.36, 0.48].map((at, index) => tek(at, 0.24 - index * 0.015)),
+    noise(0, 0.6, 'bandpass', 1800, 0.6, 0.25, { attack: 0.2, decay: 1.5 }),
+  ),
+  diceReveal: cue(doum(0, 0.3), tek(0, 0.3), oud(0.04, note('D4'), 0.16, 0.3)),
+  place: cue(doum(0, 0.14), tek(0, 0.22)),
+  capture: cue(tek(0, 0.3), doum(0.07, 0.2), tek(0.14, 0.26)),
+  flip: cue(tek(0, 0.2), tek(0.05, 0.26), noise(0, 0.08, 'highpass', 4000, 0.7, 0.15, { rise: 1.5 })),
+  check: cue(oud(0, note('D5'), 0.22, 0.18), oud(0.1, note('D5'), 0.22, 0.18), oud(0.2, note('Eb5'), 0.24, 0.4)),
   slash: ({ fireStart, fireEnd, strike, cut }: SlashTiming) => cue(
     // Wind-blown sand over a driving drum pattern.
     noise(fireStart, fireEnd - fireStart, 'bandpass', 1600, 0.7, 0.55, { attack: 0.35, hold: 4 }, 3000),

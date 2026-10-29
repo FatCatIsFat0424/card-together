@@ -43,6 +43,35 @@ export const FROST_SOUND_PACK: SoundPack = {
     noise(0.45, 0.8, 'highpass', 3500, 0.7, 0.18, { attack: 0.05, decay: 2.5 }),
     scatter(0.6, 1.5, 5).map((at, index) => tone(at, SHARDS[index], 0.04, 0.2, { attack: 0.002 })),
   ),
+  diceRoll: cue(
+    scatter(0, 0.6, 9).map((at, index) => [
+      tone(at, SHARDS[index % SHARDS.length], 0.05, 0.06, { attack: 0.002 }),
+      noise(at, 0.03, 'highpass', 6500, 0.7, 0.2, { decay: 3 }),
+    ]),
+    noise(0, 0.6, 'bandpass', 3800, 1, 0.2, { attack: 0.2, decay: 1.5 }),
+  ),
+  diceReveal: cue(
+    thump(0, 150, 0.26, 0.3),
+    noise(0, 0.3, 'lowpass', 230, 0.7, 0.8, { decay: 3 }),
+    noise(0, 0.08, 'bandpass', 4500, 0.8, 0.35, { decay: 4 }),
+    glass(0.01, note('A5'), 0.12, 0.45),
+  ),
+  place: cue(
+    noise(0, 0.035, 'highpass', 6000, 0.7, 0.24, { decay: 3 }),
+    tone(0, 3300, 0.07, 0.07, { attack: 0.002 }),
+    glass(0, note('E6'), 0.07, 0.15),
+  ),
+  capture: cue(
+    noise(0, 0.035, 'highpass', 6000, 0.7, 0.24, { decay: 3 }),
+    tone(0, 3300, 0.07, 0.07, { attack: 0.002 }),
+    glass(0.06, note('A5'), 0.12, 0.3, 0.96),
+    noise(0.06, 0.07, 'bandpass', 4800, 1, 0.4, { decay: 4 }),
+  ),
+  flip: cue(
+    noise(0, 0.08, 'bandpass', 3200, 1.2, 0.35, { attack: 0.3, decay: 2 }, 8000),
+    tone(0.045, 5000, 0.05, 0.08, { attack: 0.002 }),
+  ),
+  check: cue(glass(0, note('E6'), 0.2, 0.2), glass(0.1, note('E6'), 0.2, 0.2), glass(0.2, note('A6'), 0.22, 0.5)),
   slash: ({ fireStart, fireEnd, strike, cut }: SlashTiming) => cue(
     // An icy gale in place of the fire's roar.
     noise(fireStart, fireEnd - fireStart, 'bandpass', 1200, 1.5, 0.9, { attack: 0.4, hold: 4 }, 3200),

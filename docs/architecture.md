@@ -73,6 +73,7 @@
 - 各遊戲在自己的資料夾提供兩個模組，並各登記一筆 registry 項目，缺少項目會編譯失敗。共用外框、store 與頁面只查詢 registry，不再寫 `gameType === '<遊戲>'`：
   - `<game>-client.ts` → `CLIENT_GAMES`（[`registry.ts`](../client/src/games/registry.ts)）：store 快照還原、觀戰視角、規則摘要與房規脈絡、手牌排序、歷史結果與勝負判定、大廳圖示。啟動時就載入，所以只放中繼資料與小型純函式，不放元件、CSS 或牌桌。
   - `<game>-ui.ts` → `GAME_UIS`（[`ui-registry.ts`](../client/src/games/ui-registry.ts)）：延遲載入的牌桌、房間選項元件、呈現畫格元件與樣式、出牌特效、音效提示、回合歷史畫面。只有牌桌外框與路由會匯入。
+- 音效提示：每個音效包（含預設）都必須定義 [`SOUND_CUES`](../client/src/audio/sound-pack.ts) 的全部提示，新增提示時每個包都要補齊。牌類與骰子遊戲在 `<game>-ui.ts` 的 `presentation.cue(game, frame)` 回傳 `FrameCue`（`card`、`soft`、`out`、`diceRoll`、`diceReveal`），畫格第一次出現時由 `GameShell` 播放。棋類沒有呈現畫格，改在 `<game>-ui.ts` 提供 `boardMoveCue(move, game)`，回傳 `place`、`capture`、`flip`、`check` 或 `null`（靜音，例如 pass）；省略時落子為 `place`、吃子為 `capture`。公開手數紀錄新增紀錄時播放，載入、重新連線、新對局與回放跳轉不播放（[`board-move-sound.ts`](../client/src/games/board/board-move-sound.ts)）。兩者都走音效聲道並跟隨音效開關。
 - 統計指標、勝率基準與角色群組由 [`statistics-registry.ts`](../client/src/games/statistics-registry.ts) 查詢各遊戲的純函式。名次、分數單位與固定局數取自 shared 遊戲定義，統計視窗與房間頁面只負責格式化。
 - ESLint 拒絕在各遊戲模組與 registry 以外，將 `gameType` 與遊戲字串常值做相等或不相等比較；雙向比較與 computed property 都受檢查。變數間比較與歷史篩選的 `all` 保留使用。
 - 類別（`cards`、`dice`、`board`）取自 shared 定義，由 `gamesInCategory` 提供給大廳分頁使用。

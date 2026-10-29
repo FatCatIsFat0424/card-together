@@ -8,6 +8,7 @@ import type { GameType, PlayerVisibleGameState, RoomInfo } from '@shared/types';
 import { CLIENT_GAMES, clientGame, gamesInCategory } from '../../../client/src/games/registry';
 import { GAME_UIS, gameUi } from '../../../client/src/games/ui-registry';
 import { frameCue } from '../../../client/src/games/frame-cue';
+import { defaultBoardMoveCue, newBoardMoveCue } from '../../../client/src/games/board/board-move-sound';
 import { createRoundBuilder } from '../../../client/src/games/round-builder';
 import { HIDDEN_GOD_VIEW } from '../../../client/src/stores/god-view-store';
 
@@ -161,6 +162,16 @@ describe('client game registries', () => {
       expect(frameCue(null, frame('deal'))).toBeNull();
     });
 
+    it('lets Liar\'s Dice roll on a new round and reveal on a call, keeping the elimination cue', () => {
+      const dice = { gameType: 'liarsdice' } as never;
+      const reveal = (eliminated: boolean) => frame('diceReveal', { liarsDice: { eliminated } as never });
+      expect(frameCue(dice, frame('deal'))).toBe('diceRoll');
+      expect(frameCue(dice, reveal(false))).toBe('diceReveal');
+      expect(frameCue(dice, reveal(true))).toBe('out');
+      expect(frameCue(dice, frame('bid'))).toBeNull();
+      expect(frameCue(dice, frame('challenge'))).toBe('card');
+    });
+
     it('lets Hold\'em add its deal sound and knock-out award sound', () => {
       const holdem = (log: unknown[]): PlayerVisibleGameState => ({ gameType: 'holdem', log }) as never;
       expect(frameCue(holdem([]), frame('deal'))).toBe('card');
@@ -168,6 +179,32 @@ describe('client game registries', () => {
       const award = frame('award', { key: 'action:0' });
       expect(frameCue(holdem([{ type: 'award', eliminated: ['E'] }]), award)).toBe('out');
       expect(frameCue(holdem([{ type: 'award', eliminated: [] }]), award)).toBeNull();
+    });
+  });
+
+  describe('board move sounds', () => {
+    const reversi = (log: unknown[]): PlayerVisibleGameState => ({ gameType: 'reversi', log }) as never;
+    const place = { seat: 'N', to: 'c3' };
+    const pass = { seat: 'S' };
+
+    it('plays a placement as the first new record and nothing on load, restore or a new match', () => {
+      expect(newBoardMoveCue(reversi([]), reversi([place]))).toBe('place');
+      expect(newBoardMoveCue(null, reversi([place]))).toBeNull();
+      expect(newBoardMoveCue(reversi([]), reversi([place, place, place, place]))).toBeNull();
+      expect(newBoardMoveCue(reversi([place, place]), reversi([place]))).toBeNull();
+      expect(newBoardMoveCue(reversi([place]), reversi([place]))).toBeNull();
+      expect(newBoardMoveCue({ gameType: 'bigTwo', log: [] } as never, reversi([place]))).toBeNull();
+    });
+
+    it('stays silent for a pass and sounds the placement that came with it', () => {
+      expect(newBoardMoveCue(reversi([place]), reversi([place, pass]))).toBeNull();
+      expect(newBoardMoveCue(reversi([place]), reversi([place, place, pass]))).toBe('place');
+    });
+
+    it('falls back to place and capture for games without their own cue', () => {
+      expect(defaultBoardMoveCue({ seat: 'N', to: 'a1' } as never)).toBe('place');
+      expect(defaultBoardMoveCue({ seat: 'N', from: 'a1', to: 'a2', capture: true } as never)).toBe('capture');
+      expect(defaultBoardMoveCue({ seat: 'N' } as never)).toBeNull();
     });
   });
 

@@ -40,6 +40,31 @@ export const SAKURA_SOUND_PACK: SoundPack = {
     // A glissando tumbling down the scale as the table gives way.
     [...PENTATONIC].reverse().map((frequency, index) => pluck(0.4 + index * 0.1, frequency / 2, 0.05, 0.3)),
   ),
+  diceRoll: cue(
+    scatter(0, 0.6, 9).map((at, index) => pluck(at, PENTATONIC[(index * 2) % PENTATONIC.length] * 2, 0.08, 0.08)),
+    noise(0, 0.6, 'bandpass', 3000, 1, 0.25, { attack: 0.2, decay: 1.5 }),
+  ),
+  diceReveal: cue(
+    thump(0, 120, 0.34, 0.35),
+    noise(0, 0.3, 'lowpass', 260, 0.7, 0.8, { decay: 3 }),
+    pluck(0, note('A4'), 0.18, 0.3),
+  ),
+  place: cue(
+    tone(0, note('D6'), 0.12, 0.08, { wave: 'triangle', attack: 0.003 }),
+    noise(0, 0.05, 'bandpass', 2400, 1.2, 0.3, { decay: 3 }),
+    thump(0, 200, 0.1, 0.07),
+  ),
+  capture: cue(
+    tone(0, note('D6'), 0.12, 0.08, { wave: 'triangle', attack: 0.003 }),
+    noise(0, 0.05, 'bandpass', 2400, 1.2, 0.3, { decay: 3 }),
+    pluck(0.07, note('A5'), 0.16, 0.2),
+    noise(0.07, 0.1, 'bandpass', 1200, 1, 0.3, { decay: 3 }),
+  ),
+  flip: cue(
+    noise(0, 0.07, 'bandpass', 3500, 1, 0.35, { attack: 0.2, decay: 2 }, 6500),
+    tone(0.04, note('G6'), 0.09, 0.09, { wave: 'triangle', attack: 0.003 }),
+  ),
+  check: cue(pluck(0, note('A5'), 0.22, 0.2), pluck(0.1, note('A5'), 0.22, 0.2), pluck(0.2, note('D6'), 0.24, 0.4)),
   slash: ({ fireStart, fireEnd, strike, cut }: SlashTiming) => cue(
     noise(fireStart, fireEnd - fireStart, 'lowpass', 800, 0.7, 0.8, { attack: 0.2, hold: 5 }),
     // A shamisen-style tremolo over the flames.

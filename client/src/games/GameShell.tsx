@@ -5,7 +5,10 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import type { CSSProperties, ReactNode } from 'react';
 import type { PlayerVisibleGameState, GameSeat } from '@shared/types';
 import type { TranslationKey } from '../i18n';
-import { playCardSound, playOutSound, unlockCardSounds, disposeCardSounds } from '../audio/card-sound';
+import {
+  playBoardSound, playCardSound, playDiceRevealSound, playDiceRollSound, playOutSound, unlockCardSounds,
+  disposeCardSounds,
+} from '../audio/card-sound';
 import { cardBackStyle, tableBackgroundStyle } from '../account-appearance';
 import { useAccountStore } from '../stores/account-store';
 import { useGameStore } from '../stores/game-store';
@@ -24,6 +27,7 @@ import type { TablePosition } from '../game-view';
 import { AbortVoteBanner, AbortVoteButton } from './AbortVote';
 import { SpectatorLeaveButton } from './SpectatorLeave';
 import { EarlyLeaveButton } from './EarlyLeave';
+import { useBoardMoveSound } from './board/board-move-sound';
 import { AppIcon } from '../components/AppIcon';
 import { IconButton } from '../components/IconButton';
 import { VoiceButton, VoiceDockPanel } from '../components/VoiceControls';
@@ -255,10 +259,11 @@ export function GameShell({
   // Play sounds only for actions after joining the table, not for the existing log on join or reconnect
   const heardMove = useRef(move?.index);
   useEffect(() => {
-    if (visibleGame?.presentation || !move || move.index === heardMove.current) return;
+    if (board || visibleGame?.presentation || !move || move.index === heardMove.current) return;
     heardMove.current = move.index;
     playCardSound(move.pass);
-  }, [move, visibleGame?.presentation]);
+  }, [move, visibleGame?.presentation, board]);
+  useBoardMoveSound(!!board);
 
   useEffect(() => {
     const unlock = (event: Event): void => { if (event.isTrusted) unlockCardSounds(); };
@@ -300,6 +305,9 @@ export function GameShell({
     if (cue === 'card') playCardSound();
     else if (cue === 'soft') playCardSound(true);
     else if (cue === 'out') playOutSound();
+    else if (cue === 'diceRoll') playDiceRollSound();
+    else if (cue === 'diceReveal') playDiceRevealSound();
+    else if (cue) playBoardSound(cue);
   }, [presentation.frame, visibleGame]);
 
   const collapseChat = useCallback((): void => {

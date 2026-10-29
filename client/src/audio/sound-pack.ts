@@ -67,7 +67,10 @@ export interface SlashTiming {
   readonly cut: number;
 }
 
-export const SOUND_CUES = ['turn', 'join', 'card', 'pass', 'out', 'start', 'collapse'] as const;
+export const SOUND_CUES = [
+  'turn', 'join', 'card', 'pass', 'out', 'start', 'collapse',
+  'diceRoll', 'diceReveal', 'place', 'capture', 'flip', 'check',
+] as const;
 export type SoundCueName = typeof SOUND_CUES[number];
 
 /** Every sound the application can play; `classic` is the unequipped default. */

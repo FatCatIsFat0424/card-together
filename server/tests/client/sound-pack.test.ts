@@ -3,9 +3,11 @@ import { SOUND_PACKS } from '../../../shared/src/constants/shop';
 import { CLASSIC_SOUND_PACK, JOIN_NOTES, TURN_NOTES } from '../../../client/src/audio/classic-sound-pack';
 import { SOUND_CUES, cueDuration, noiseEnvelope } from '../../../client/src/audio/sound-pack';
 import type { Cue, SoundPack, ToneVoice } from '../../../client/src/audio/sound-pack';
+import { useSoundEffectsStore } from '../../../client/src/stores/sound-effects-store';
 import { createTurnSound } from '../../../client/src/audio/turn-sound';
 import {
-  disposeCardSounds, playCardSound, playSoundPackPreview, unlockCardSounds,
+  disposeCardSounds, playBoardSound, playCardSound, playDiceRevealSound, playDiceRollSound, playSoundPackPreview,
+  unlockCardSounds,
 } from '../../../client/src/audio/card-sound';
 import { getActiveSoundPack } from '../../../client/src/cosmetics/sound-packs/active-sound-pack';
 import { SOUND_PACK_DEFINITIONS, resolveSoundPack } from '../../../client/src/cosmetics/sound-packs/sound-packs';
@@ -54,6 +56,7 @@ describe('sound pack catalog', () => {
 describe('sound pack parameters', () => {
   const limits: Readonly<Record<string, number>> = {
     turn: 1, join: 0.8, card: 0.2, pass: 0.2, out: 1.3, start: 1.2, collapse: 2.2,
+    diceRoll: 1, diceReveal: 0.8, place: 0.3, capture: 0.5, flip: 0.3, check: 0.9,
   };
 
   function checkFilter(filter: { type: string; frequency: number; q: number }): void {
@@ -112,6 +115,7 @@ describe('sound pack parameters', () => {
           }
         }
       }
+      expect(Object.keys(limits).sort()).toEqual([...SOUND_CUES].sort());
       for (const [name, limit] of Object.entries(limits)) {
         expect(cueDuration(pack[name as keyof typeof limits as 'turn']), name).toBeLessThanOrEqual(limit);
       }
@@ -120,7 +124,7 @@ describe('sound pack parameters', () => {
     });
 
   it.each(PACKS.map((pack) => [pack.id, pack] as const))('%s should stay peak-safe and audible', (_id, pack) => {
-    const tonal = new Set(['turn', 'join', 'card', 'pass', 'out']);
+    const tonal = new Set(['turn', 'join', 'card', 'pass', 'out', 'check']);
     for (const [name, cue] of Object.entries(allCues(pack))) {
       expect(worstOverlap(cue), name).toBeLessThanOrEqual(0.95);
       expect(worstOverlap(cue), name).toBeGreaterThanOrEqual(0.1);
@@ -321,6 +325,38 @@ describe('synthesis', () => {
     expect(oscillators).toHaveLength(0);
     expect(buffers).toHaveLength(1);
     for (const audio of [turn, join, explicit]) audio.dispose();
+  });
+
+  it('should play the dice and board cues of the equipped pack, and nothing when sound effects are off', () => {
+    const { oscillators, buffers } = installAudio();
+    unlockCardSounds();
+    const count = (cue: Cue) => ({
+      tones: cue.filter((voice) => voice.kind === 'tone').length,
+      noises: cue.filter((voice) => voice.kind === 'noise').length,
+    });
+    const plays: Array<[string, () => void, Cue]> = [
+      ['diceRoll', playDiceRollSound, SOUND_PACK_DEFINITIONS['sound-gilded'].diceRoll],
+      ['diceReveal', playDiceRevealSound, SOUND_PACK_DEFINITIONS['sound-gilded'].diceReveal],
+      ['place', () => playBoardSound('place'), SOUND_PACK_DEFINITIONS['sound-gilded'].place],
+      ['capture', () => playBoardSound('capture'), SOUND_PACK_DEFINITIONS['sound-gilded'].capture],
+      ['flip', () => playBoardSound('flip'), SOUND_PACK_DEFINITIONS['sound-gilded'].flip],
+      ['check', () => playBoardSound('check'), SOUND_PACK_DEFINITIONS['sound-gilded'].check],
+    ];
+    equip('sound-gilded');
+    for (const [name, play, expected] of plays) {
+      oscillators.length = 0;
+      buffers.length = 0;
+      play();
+      expect({ tones: oscillators.length, noises: buffers.length }, name).toEqual({
+        tones: count(expected).tones, noises: count(expected).noises,
+      });
+    }
+    useSoundEffectsStore.setState({ enabled: false });
+    oscillators.length = 0;
+    buffers.length = 0;
+    for (const [, play] of plays) play();
+    useSoundEffectsStore.setState({ enabled: true });
+    expect(oscillators.length + buffers.length).toBe(0);
   });
 
   it('should preview the turn cue then a card play, replacing an earlier preview and waiting for resume', async () => {

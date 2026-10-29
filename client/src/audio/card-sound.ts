@@ -58,6 +58,24 @@ export function playCardSound(pass = false): void {
   play((pack) => (pass ? pack.pass : pack.card));
 }
 
+/** Dice rattling to a stop, e.g. a new round's roll. */
+export function playDiceRollSound(): void {
+  play((pack) => pack.diceRoll);
+}
+
+/** The cups coming up and the dice landing in the open. */
+export function playDiceRevealSound(): void {
+  play((pack) => pack.diceReveal);
+}
+
+/** Board-game cues; each is also a presentation `FrameCue` of the same name. */
+export type BoardSoundCue = 'place' | 'capture' | 'flip' | 'check';
+
+/** A piece placed, a piece taken, a face-down piece turned over, or a king put in check. */
+export function playBoardSound(cue: BoardSoundCue): void {
+  play((pack) => pack[cue]);
+}
+
 /**
  * Dragon Slaying: a fire roar while the fire burns, a whoosh rising across the blade's sweep, and an impact as
  * it reaches the far end. Times are seconds from the start of the presentation.

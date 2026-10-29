@@ -33,6 +33,34 @@ export const CLASSIC_SOUND_PACK: SoundPack = {
     ...[0, 0.08, 0.17, 0.29, 0.43].map((at) => noise(at, 0.07, 'bandpass', 2600, 0.7, 0.7, { decay: 4 })),
     noise(0.35, 1.6, 'lowpass', 140, 0.7, 1, { attack: 0.1, decay: 2 }),
   ],
+  // Clicks that spread apart as the dice slow down.
+  diceRoll: [
+    ...[0, 0.05, 0.1, 0.16, 0.23, 0.32, 0.44].map((at, index) =>
+      noise(at, 0.04, 'bandpass', 2000 + (index % 3) * 500, 1, 0.55, { decay: 4 })),
+    noise(0, 0.55, 'bandpass', 1500, 0.8, 0.2, { attack: 0.1, decay: 1.5 }),
+  ],
+  diceReveal: [
+    noise(0, 0.1, 'bandpass', 1400, 0.8, 0.4, { rise: 2 }, 3000),
+    noise(0.1, 0.3, 'lowpass', 300, 0.7, 0.9, { decay: 3 }),
+    noise(0.1, 0.06, 'bandpass', 2200, 0.9, 0.5, { decay: 4 }),
+  ],
+  place: [
+    noise(0, 0.06, 'bandpass', 1400, 1, 0.7, { decay: 4 }),
+    noise(0, 0.09, 'lowpass', 320, 0.7, 0.6, { decay: 3 }),
+  ],
+  capture: [
+    noise(0, 0.06, 'bandpass', 1400, 1, 0.7, { decay: 4 }),
+    noise(0, 0.09, 'lowpass', 320, 0.7, 0.6, { decay: 3 }),
+    noise(0.07, 0.12, 'bandpass', 900, 1, 0.5, { decay: 3 }, 500),
+    noise(0.07, 0.1, 'lowpass', 260, 0.7, 0.6, { decay: 3 }),
+  ],
+  flip: [
+    noise(0, 0.05, 'bandpass', 2600, 1, 0.5, { decay: 3 }),
+    noise(0.06, 0.06, 'bandpass', 3200, 1, 0.55, { decay: 4 }),
+  ],
+  check: ([[0, 988], [0.11, 988], [0.22, 1319]] as const).map(([at, frequency]): ToneVoice => ({
+    kind: 'tone', at, frequency, wave: 'triangle', level: 0.22, attack: 0.01, decay: 0.18,
+  })),
   // A fire roar while the fire burns, a whoosh across the blade's sweep, and an impact as it reaches the far end.
   slash: ({ fireStart, fireEnd, strike, cut }: SlashTiming) => [
     noise(fireStart, fireEnd - fireStart, 'lowpass', 750, 0.7, 0.35,

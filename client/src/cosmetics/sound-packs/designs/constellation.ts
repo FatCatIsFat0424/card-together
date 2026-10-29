@@ -1,5 +1,5 @@
 import type { SlashTiming, SoundPack, ToneVoice } from '../../../audio/sound-pack';
-import { cue, noise, note, pattern, stack, thump, tone } from '../voices';
+import { cue, noise, note, pattern, scatter, stack, thump, tone } from '../voices';
 
 /** A celesta-like twinkle: pure fundamental with a fourth-partial shine. */
 const twinkle = (at: number, frequency: number, level: number, decay: number): ToneVoice[] => stack(at, frequency, level, decay,
@@ -44,6 +44,33 @@ export const CONSTELLATION_SOUND_PACK: SoundPack = {
     // Stars tumbling out of the sky.
     [...SKY].reverse().flatMap((frequency, index) => twinkle(0.3 + index * 0.16, frequency, 0.05, 0.3)),
   ),
+  diceRoll: cue(
+    scatter(0, 0.6, 9).map((at, index) => [
+      twinkle(at, SKY[index % SKY.length], 0.07, 0.09),
+      noise(at, 0.025, 'highpass', 7000, 0.7, 0.2, { decay: 3 }),
+    ]),
+    noise(0, 0.65, 'highpass', 6000, 0.7, 0.14, { attack: 0.2, hold: 3 }),
+  ),
+  diceReveal: cue(
+    thump(0, 105, 0.34, 0.4),
+    noise(0, 0.3, 'lowpass', 210, 0.7, 0.8, { decay: 3 }),
+    star(0.02, note('G6'), 0.1, 0.4),
+  ),
+  place: cue(
+    twinkle(0, note('E7'), 0.14, 0.12),
+    noise(0, 0.03, 'highpass', 6000, 0.7, 0.2, { decay: 3 }),
+    thump(0, 170, 0.12, 0.08),
+  ),
+  capture: cue(
+    twinkle(0, note('E7'), 0.14, 0.12),
+    noise(0, 0.03, 'highpass', 6000, 0.7, 0.2, { decay: 3 }),
+    tone(0.05, 2200, 0.1, 0.3, { attack: 0.006, glide: { ratio: 0.2, time: 0.26 } }),
+  ),
+  flip: cue(
+    tone(0, 1500, 0.1, 0.12, { attack: 0.004, glide: { ratio: 3, time: 0.08 } }),
+    twinkle(0.08, note('C7'), 0.12, 0.16),
+  ),
+  check: cue(star(0, note('A6'), 0.18, 0.28), star(0.1, note('A6'), 0.18, 0.28), star(0.2, note('E7'), 0.2, 0.4)),
   slash: ({ fireStart, fireEnd, strike, cut }: SlashTiming) => cue(
     noise(fireStart, fireEnd - fireStart, 'lowpass', 600, 0.7, 0.8, { attack: 0.3, hold: 4 }),
     pattern(fireStart + 0.05, fireEnd, 0.13, (at, index) =>

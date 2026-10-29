@@ -52,6 +52,29 @@ function createSignals({ id, signal, pitches: [low, middle, high], gap, decay, n
       noise(0.35, 1.25, 'lowpass', noiseHz * 0.2, 0.7, 0.75, { attack: 0.1, decay: 3 }, engineHz),
       thump(0.45, engineHz * 0.85, 0.28, 0.6),
     ),
+    diceRoll: cue(
+      // Clicks that spread apart as the dice slow down, over a faint rattle.
+      [0, 0.05, 0.1, 0.16, 0.23, 0.32, 0.44].map((step, index) =>
+        click(step * pulse / 0.14, 0.045, 0.34 - index * 0.02)),
+      noise(0, pulse * 4.5, 'bandpass', noiseHz * 0.55, 0.8, 0.2, { attack: 0.2, decay: 1.5 }),
+    ),
+    diceReveal: cue(
+      thump(0, engineHz * 1.3, 0.3, 0.3),
+      noise(0, 0.3, 'lowpass', noiseHz * 0.1 + 80, 0.7, 0.7, { decay: 3 }),
+      click(0, 0.05, 0.36),
+      signal(0.04, low * 0.8, 0.1, decay),
+    ),
+    place: cue(click(0, 0.055, 0.42), noise(0, 0.08, 'lowpass', noiseHz * 0.15, 0.7, 0.55, { decay: 3 })),
+    capture: cue(
+      click(0, 0.055, 0.42), noise(0, 0.08, 'lowpass', noiseHz * 0.15, 0.7, 0.55, { decay: 3 }),
+      click(pulse * 0.6, 0.05, 0.4), signal(pulse * 0.6, low * 0.8, 0.09, decay * 0.6),
+    ),
+    flip: cue(
+      noise(0, 0.09, 'bandpass', noiseHz * 0.6, 1, 0.3, { attack: 0.3, decay: 2 }, noiseHz * 1.6),
+      signal(pulse * 0.4, high, 0.09, 0.12),
+    ),
+    check: cue(signal(0, high, 0.2, decay * 0.8), signal(gap * 0.6, high, 0.2, decay * 0.8),
+      signal(gap * 1.2, high * 1.25, 0.2, decay * 1.3)),
     slash: ({ fireStart, fireEnd, strike, cut }) => cue(
       noise(fireStart, fireEnd - fireStart, 'lowpass', noiseHz * 0.3, 0.7, 0.38, { attack: 0.2, hold: 3 }, noiseHz * 0.5),
       pattern(fireStart, fireEnd, pulse, (at, index) => signal(at, index % 2 ? low : middle, 0.07, 0.11), 10),

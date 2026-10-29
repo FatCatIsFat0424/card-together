@@ -4,6 +4,7 @@ import type { ComponentType, LazyExoticComponent, ReactNode } from 'react';
 import type { PresentationFrame } from '@shared/game-presentation';
 import type { VisibleStateOf } from '@shared/games/game-definition';
 import type { GameOptions, GameOptionsPayload, GameSeat, GameType } from '@shared/types';
+import type { BoardSoundCue } from '../audio/card-sound';
 import type { TranslationKey } from '../i18n';
 import type { CardPlayEffect } from './card-play-effect';
 import type { Translate } from './client-game';
@@ -15,8 +16,11 @@ export interface FrameProps {
   readonly name: (seat: GameSeat) => string;
 }
 
+/** Record type of a game's public move log. */
+export type LogEntryOf<K extends GameType> = VisibleStateOf<K> extends { readonly log: readonly (infer M)[] } ? M : never;
+
 /** Sound a presentation frame triggers when it first appears. */
-export type FrameCue = 'card' | 'soft' | 'out';
+export type FrameCue = 'card' | 'soft' | 'out' | 'diceRoll' | 'diceReveal' | BoardSoundCue;
 
 export interface RoundsViewProps {
   readonly rounds: readonly HistoryRound[];
@@ -68,6 +72,12 @@ export interface GameUi<K extends GameType> {
   /** Compact chip at the toolbar's left, such as the contract of a trick-taking game; renders nothing when it has no content */
   readonly hudChip?: ComponentType;
   readonly presentation?: GamePresentationUi<K>;
+  /**
+   * Board games: the sound for a move that just appeared in the public move log (`null` for silence, such as a
+   * pass). Board games play no presentation frames, so this replaces `presentation.cue`. Without it every
+   * placement sounds as `place` and every capture as `capture`.
+   */
+  readonly boardMoveCue?: (move: LogEntryOf<K>, game: VisibleStateOf<K>) => BoardSoundCue | null;
   /** Round list drawn from the rounds the client module derives; absent for games that list tricks elsewhere */
   readonly roundsView?: (props: RoundsViewProps) => ReactNode;
 }

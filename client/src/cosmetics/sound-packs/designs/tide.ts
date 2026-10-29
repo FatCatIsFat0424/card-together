@@ -1,5 +1,5 @@
 import type { SlashTiming, SoundPack, ToneVoice, Voice } from '../../../audio/sound-pack';
-import { cue, noise, note, pattern, thump, tone } from '../voices';
+import { cue, noise, note, pattern, scatter, thump, tone } from '../voices';
 
 /** A rising bloop: a bubble's pitch climbs as the drop settles. */
 const drop = (at: number, frequency: number, level: number, decay: number): Voice[] => [
@@ -39,6 +39,25 @@ export const TIDE_SOUND_PACK: SoundPack = {
     noise(0.3, 1.6, 'lowpass', 2400, 0.7, 0.8, { attack: 0.08, decay: 1.5 }, 150),
     thump(0.35, 70, 0.3, 1.0),
   ),
+  diceRoll: cue(
+    scatter(0, 0.6, 8).map((at, index) => drop(at, [note('D6'), note('A5'), note('E6')][index % 3], 0.08, 0.07)),
+    noise(0, 0.7, 'lowpass', 1600, 0.7, 0.5, { attack: 0.3, hold: 3 }, 600),
+  ),
+  diceReveal: cue(
+    noise(0, 0.35, 'lowpass', 1600, 0.7, 0.8, { attack: 0.1, decay: 2 }, 220),
+    thump(0.02, 90, 0.3, 0.4),
+    drop(0.02, note('D5'), 0.14, 0.2),
+  ),
+  place: cue(drop(0, note('G5'), 0.17, 0.1), noise(0, 0.06, 'lowpass', 1300, 0.7, 0.6, { decay: 3 })),
+  capture: cue(
+    drop(0, note('G5'), 0.17, 0.1), noise(0, 0.06, 'lowpass', 1300, 0.7, 0.6, { decay: 3 }),
+    sink(0.07, 520, 0.18, 0.25), noise(0.07, 0.12, 'lowpass', 1800, 0.7, 0.6, { attack: 0.2, decay: 2 }, 500),
+  ),
+  flip: cue(
+    noise(0, 0.1, 'bandpass', 1200, 0.8, 0.5, { attack: 0.3, decay: 2 }, 3000),
+    drop(0.05, note('E6'), 0.09, 0.1),
+  ),
+  check: cue(drop(0, note('A5'), 0.2, 0.14), drop(0.1, note('A5'), 0.2, 0.14), drop(0.2, note('E6'), 0.22, 0.3)),
   slash: ({ fireStart, fireEnd, strike, cut }: SlashTiming) => cue(
     noise(fireStart, fireEnd - fireStart, 'lowpass', 500, 0.7, 0.7, { attack: 0.5, hold: 6 }, 1800),
     pattern(fireStart + 0.1, fireEnd, 0.2, (at, index) =>

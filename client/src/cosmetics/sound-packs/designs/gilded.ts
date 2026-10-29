@@ -39,6 +39,31 @@ export const GILDED_SOUND_PACK: SoundPack = {
     // Coins scattering across the floor.
     scatter(0.5, 1.4, 5).map((at, index) => ding(at, COINS[index], 0.04, 0.12)),
   ),
+  diceRoll: cue(
+    scatter(0, 0.6, 9).map((at, index) => ding(at, COINS[index % COINS.length], 0.06, 0.1)),
+    noise(0, 0.6, 'highpass', 5500, 0.7, 0.14, { attack: 0.2, hold: 3 }),
+    noise(0, 0.6, 'bandpass', 2200, 0.8, 0.2, { attack: 0.2, decay: 1.5 }),
+  ),
+  diceReveal: cue(
+    bell(0, note('C5'), 0.2, 0.5),
+    thump(0, 120, 0.22, 0.3),
+    noise(0, 0.3, 'lowpass', 220, 0.7, 0.7, { decay: 3 }),
+  ),
+  place: cue(
+    ding(0, note('G6'), 0.1, 0.1),
+    noise(0, 0.05, 'bandpass', 2100, 1, 0.35, { decay: 4 }),
+    thump(0, 210, 0.1, 0.08),
+  ),
+  capture: cue(
+    ding(0, note('G6'), 0.1, 0.1),
+    noise(0, 0.05, 'bandpass', 2100, 1, 0.35, { decay: 4 }),
+    scatter(0.07, 0.25, 3).map((at, index) => ding(at, COINS[index], 0.07, 0.12)),
+  ),
+  flip: cue(
+    ding(0, note('E7'), 0.09, 0.07), ding(0.05, note('C7'), 0.1, 0.09),
+    noise(0, 0.04, 'highpass', 6000, 0.7, 0.12, { decay: 3 }),
+  ),
+  check: cue(bell(0, note('C6'), 0.22, 0.2), bell(0.11, note('C6'), 0.22, 0.2), bell(0.22, note('G6'), 0.25, 0.5)),
   slash: ({ fireStart, fireEnd, strike, cut }: SlashTiming) => cue(
     noise(fireStart, fireEnd - fireStart, 'lowpass', 700, 0.7, 0.7, { attack: 0.25, hold: 4 }),
     pattern(fireStart + 0.1, fireEnd, 0.3, (at, index) => ding(at, COINS[index % COINS.length], 0.035, 0.3), 6),

@@ -1,5 +1,5 @@
 import type { SlashTiming, SoundPack, Voice } from '../../../audio/sound-pack';
-import { cue, noise, note, pair, thump, tone } from '../voices';
+import { cue, noise, note, pair, scatter, thump, tone } from '../voices';
 
 /** Detuned triangle pair with a soft octave: a slow-beating, airy pad. */
 const pad = (at: number, frequency: number, level: number, decay: number): Voice[] => [
@@ -45,6 +45,35 @@ export const AURORA_SOUND_PACK: SoundPack = {
     noise(0.35, 1.6, 'lowpass', 150, 0.7, 1, { attack: 0.1, decay: 2 }),
     tone(0.3, 330, 0.1, 1.5, { wave: 'triangle', attack: 0.1, glide: { ratio: 0.25, time: 1.4 } }),
   ),
+  diceRoll: cue(
+    scatter(0, 0.6, 9).map((at, index) => [
+      noise(at, 0.03, 'highpass', 5600, 0.7, 0.16, { decay: 3 }),
+      tone(at, [note('E7'), note('B6'), note('G#6')][index % 3], 0.05, 0.08, { attack: 0.004 }),
+    ]),
+    noise(0, 0.7, 'bandpass', 4200, 0.8, 0.3, { attack: 0.2, hold: 3 }),
+  ),
+  diceReveal: cue(
+    noise(0, 0.12, 'bandpass', 1500, 0.8, 0.35, { rise: 2 }, 5000),
+    thump(0.12, 130, 0.3, 0.35),
+    noise(0.12, 0.3, 'lowpass', 240, 0.7, 0.8, { decay: 3 }),
+    spark(0.12, note('B6'), 0.1, 0.5),
+  ),
+  place: cue(
+    noise(0, 0.05, 'highpass', 4800, 0.7, 0.2, { decay: 3 }),
+    tone(0, note('A6'), 0.1, 0.1, { attack: 0.004 }),
+    thump(0, 220, 0.12, 0.08),
+  ),
+  capture: cue(
+    noise(0, 0.05, 'highpass', 4800, 0.7, 0.2, { decay: 3 }),
+    tone(0, note('A6'), 0.1, 0.1, { attack: 0.004 }),
+    thump(0, 220, 0.12, 0.08),
+    pad(0.07, note('E5'), 0.16, 0.3).map((voice) => ({ ...voice, glide: { ratio: 0.9, time: 0.25 } })),
+  ),
+  flip: cue(
+    noise(0, 0.09, 'bandpass', 2500, 1, 0.3, { attack: 0.3, decay: 2 }, 7000),
+    spark(0.06, note('E7'), 0.09, 0.14),
+  ),
+  check: cue(pad(0, note('B5'), 0.2, 0.25), pad(0.11, note('B5'), 0.2, 0.25), pad(0.22, note('F#6'), 0.2, 0.45)),
   slash: ({ fireStart, fireEnd, strike, cut }: SlashTiming) => {
     const burn = fireEnd - fireStart;
     return cue(

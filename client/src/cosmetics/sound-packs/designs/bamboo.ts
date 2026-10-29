@@ -31,6 +31,18 @@ export const BAMBOO_SOUND_PACK: SoundPack = {
     noise(0.35, 1.6, 'lowpass', 140, 0.7, 1, { attack: 0.1, decay: 2 }),
     [900, 780, 660, 560, 480].map((frequency, index) => knock(0.5 + index * 0.09, frequency, 0.1, 0.1)),
   ),
+  diceRoll: cue(
+    scatter(0, 0.6, 9).map((at, index) => knock(at, [980, 1240, 1100][index % 3], 0.13, 0.04)),
+    noise(0, 0.6, 'bandpass', 1500, 0.8, 0.2, { attack: 0.15, decay: 1.5 }),
+  ),
+  diceReveal: cue(thump(0, 140, 0.28, 0.3), knock(0, 760, 0.24, 0.1), noise(0, 0.3, 'lowpass', 300, 0.7, 0.7, { decay: 3 })),
+  place: cue(knock(0, 840, 0.26, 0.07), noise(0, 0.07, 'lowpass', 380, 0.7, 0.6, { decay: 3 })),
+  capture: cue(
+    knock(0, 840, 0.26, 0.07), knock(0.07, 560, 0.24, 0.1),
+    noise(0.07, 0.1, 'bandpass', 1300, 1, 0.4, { decay: 3 }, 700),
+  ),
+  flip: cue(knock(0, 1450, 0.16, 0.03), knock(0.055, 1050, 0.18, 0.04)),
+  check: cue(marimba(0, note('G5'), 0.22, 0.16), marimba(0.09, note('G5'), 0.22, 0.16), marimba(0.18, note('C6'), 0.24, 0.4)),
   slash: ({ fireStart, fireEnd, strike, cut }: SlashTiming) => cue(
     noise(fireStart, fireEnd - fireStart, 'lowpass', 900, 0.7, 0.7, { attack: 0.2, hold: 5 }),
     // Burning bamboo pops.

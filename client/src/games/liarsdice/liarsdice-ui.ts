@@ -16,8 +16,12 @@ export const liarsDiceUi: GameUi<'liarsdice'> = {
       }
     },
     Frame: LiarsDiceFrame,
-    // Hook for the dice sound cues that come with the sound packs; only an elimination has one today.
-    cue: (_game, frame) => (frame.kind === 'diceReveal' && frame.liarsDice?.eliminated ? 'out' : undefined),
+    // The roll opens a round, the reveal lifts the cups; an elimination keeps its own cue.
+    cue: (_game, frame) => {
+      if (frame.kind === 'deal') return 'diceRoll';
+      if (frame.kind !== 'diceReveal') return undefined;
+      return frame.liarsDice?.eliminated ? 'out' : 'diceReveal';
+    },
   },
   roundsView: LiarsDiceRounds,
 };

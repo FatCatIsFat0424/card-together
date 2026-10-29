@@ -38,6 +38,21 @@ export const EMBER_SOUND_PACK: SoundPack = {
     noise(0.35, 1.6, 'lowpass', 140, 0.7, 1, { attack: 0.1, decay: 2 }),
     scatter(0.5, 1.5, 6).map((at) => pop(at, 0.3)),
   ),
+  diceRoll: cue(
+    scatter(0, 0.6, 9).map((at) => pop(at, 0.35)),
+    noise(0, 0.65, 'lowpass', 600, 0.7, 0.35, { attack: 0.15, hold: 3, crackle: { chance: 0.006, boost: 4 } }),
+  ),
+  diceReveal: cue(thump(0, 85, 0.34, 0.4), noise(0, 0.35, 'lowpass', 190, 0.7, 0.9, { decay: 3 }), pop(0, 0.4), pop(0.05, 0.3)),
+  place: cue(
+    noise(0, 0.05, 'bandpass', 1900, 1.2, 0.6, { decay: 4 }), noise(0, 0.08, 'lowpass', 260, 0.7, 0.7, { decay: 3 }),
+    pop(0.03, 0.25),
+  ),
+  capture: cue(
+    noise(0, 0.05, 'bandpass', 1900, 1.2, 0.6, { decay: 4 }), noise(0, 0.08, 'lowpass', 260, 0.7, 0.7, { decay: 3 }),
+    glow(0.06, note('D4'), 0.16, 0.3, 0.6), pop(0.09, 0.3), pop(0.16, 0.25),
+  ),
+  flip: cue(pop(0, 0.3), pop(0.05, 0.38), noise(0, 0.1, 'bandpass', 1500, 1, 0.35, { attack: 0.3, decay: 2 }, 3500)),
+  check: cue(glow(0, note('A4'), 0.2, 0.16), glow(0.1, note('A4'), 0.2, 0.16), glow(0.2, note('D5'), 0.22, 0.42), pop(0.2, 0.3)),
   slash: ({ fireStart, fireEnd, strike, cut }: SlashTiming) => cue(
     noise(fireStart, fireEnd - fireStart, 'lowpass', 900, 0.7, 0.6,
       { attack: 0.2, hold: 5, crackle: { chance: 0.006, boost: 4 } }),
