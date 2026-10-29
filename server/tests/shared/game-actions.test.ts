@@ -75,6 +75,8 @@ const ACTIONS = [
   { gameType: 'banqi', action: { type: 'move', from: '0,0', to: '1,0' } },
   { gameType: 'banqi', action: { type: 'stop' } },
   { gameType: 'banqi', action: { type: 'offer-draw' } },
+  { gameType: 'chinesecheckers', action: { type: 'move', from: '-3,13', to: '-4,12' } },
+  { gameType: 'chinesecheckers', action: { type: 'resign' } },
 ] satisfies readonly GameActionEnvelope[];
 
 function inject(value: unknown, strictCards = false): unknown {
@@ -183,6 +185,7 @@ describe('game action contracts', () => {
     ['banqi', { type: 'flip', to: '0,4' }, 'Invalid action.'],
     ['banqi', { type: 'move', from: '0,0' }, 'Invalid action.'],
     ['banqi', { type: 'place', to: '0,0' }, 'Invalid action.'],
+    ['chinesecheckers', { type: 'move', from: '0,1', to: '-4,12' }, 'Invalid action.'],
   ];
   it.each(malformed)('rejects malformed %s action %#', (gameType, action, error) => {
     expect(parseGameAction({ gameType, action })).toBe(error);

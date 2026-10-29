@@ -280,6 +280,13 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Winning and drawing', 'Win by capturing every opposing piece (face-down ones included) or by leaving the opponent without a legal action on their turn. A player may always flip while any piece is face down.', 'A draw is declared after 50 moves in a row with no flip and no capture (each player’s move counts as one).', 'You may resign. On your own turn you may offer a draw: the opponent accepts to draw, and making a move counts as declining. After a decline you must make 3 more moves before offering again.'),
     section('Timer', 'On timeout the easy bot policy acts for you: a safe capture if there is one, otherwise a random flip or step. Each turn refills the base time.'),
   ],
+  chinesecheckers: [
+    section('Board and players', 'A 121-hole star. Two, three, four, or six players with ten marbles each; five cannot play.', 'Two players start in opposite corners, three in alternating corners, four in two opposite pairs, six in every corner. The first seat starts at the bottom and moves first; play goes clockwise. Each player sees their own corner at the bottom.'),
+    section('Moving', 'On your turn move one marble: a step into an empty neighbouring hole, or a jump over one adjacent marble (any colour) into the empty hole straight beyond. Jumps can chain in any directions in the same turn; a step cannot follow a jump.', 'Tap a marble, then its final hole: the server finds the jump chain. Marbles are never captured and may pass through any corner.'),
+    section('Winning', 'Fill the opposite corner to win. Anti-spoiling: once every other hole of your target holds one of your marbles, opposing marbles still sitting there count as yours.', 'With three or more players the game ends as soon as the first player finishes; the others place by the rows their marbles still have to travel, fewer first, and equal distances share a place.'),
+    section('Resigning, draws, and limits', 'You may resign at any time. With two players the opponent wins, and on your own turn you may offer a draw (after a decline, make 3 more moves before offering again). With three or more there are no draw offers; a player who resigns leaves with their marbles, places last, and the rest play on.', 'A player whose marbles are all blocked is skipped. After 150 turns each, or if nobody can move, the least distance left wins; a tie between everyone is a draw.'),
+    section('Timer', 'On timeout a marble moves as far forward as it can, with a little randomness.'),
+  ],
 };
 
 const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
@@ -513,6 +520,13 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('房規', '連吃：吃子後，同一顆棋子可以在同一回合繼續吃子（從新位置能吃的子都算），隨時可以按「結束回合」停手；吃子後不能再翻棋或單純移動。', '車衝：俥／車可沿橫線或直線走任意格數（中間必須是空格），也可以隔著空格吃線上第一顆已翻開、且大小相等或較小的敵子。沒有這條房規時，俥／車和其他棋子一樣只走一格。兩項房規預設關閉，由房主設定。'),
     section('勝負與和局', '吃光對手所有棋子（包含蓋著的）、或讓對手在他的回合無棋可翻也無棋可走者獲勝。只要場上還有蓋著的棋子，玩家就一定有棋可翻。', '連續 50 步沒有翻棋也沒有吃子即和局（雙方各走一步各算一步）。', '可以認輸；輪到自己時可以提和，對手同意即和局，對手走子視為拒絕，被拒絕後需再走 3 手才能再次提和。'),
     section('計時', '逾時由系統依簡單難度代走：有安全的吃子就吃，否則隨機翻棋或走一步。每回合補滿單手時間。'),
+  ],
+  chinesecheckers: [
+    section('棋盤與人數', '121 孔星形棋盤。2、3、4 或 6 人，每人 10 顆彈珠；不支援 5 人。', '2 人坐對角，3 人隔一角而坐，4 人為兩組對角，6 人坐滿六個角。第一個座位從下方的角出發並先走，之後順時針輪流。每位玩家都看到自己的角在下方。'),
+    section('走法', '每回合移動一顆彈珠：走到相鄰的空位，或跳過相鄰的一顆彈珠（任何顏色）落到正後方的空位。同一回合可以朝任意方向連續跳；跳完不能再走一步。', '點選彈珠後直接點最終落點，伺服器會自動找出連跳路徑。彈珠不會被吃，也可以經過任何一個角。'),
+    section('勝負', '先填滿對角者獲勝。防堵規則：目標角其餘空位都由自己的彈珠填滿時，仍留在那裡的對手彈珠視為已抵達。', '3 人以上時，第一位完成者出現即結束；其餘玩家依彈珠尚需前進的列數排名，越少越前面，相同則並列。'),
+    section('認輸、和局與上限', '可以隨時認輸。2 人時由對手獲勝；輪到自己時可以提和，被拒絕後需再走 3 手才能再提。3 人以上不能提和；認輸的玩家連同彈珠離開棋盤、排在最後，其餘玩家繼續。', '所有彈珠都被堵住的玩家自動跳過。每人走滿 150 回合，或沒有人能走時，剩餘距離最少者獲勝；全員相同則為和局。'),
+    section('計時', '逾時由系統代走：讓一顆彈珠盡量往前，並加入少量隨機。'),
   ],
 };
 

@@ -23,6 +23,7 @@ import { studFacts } from './stud';
 import { goFishFacts } from './gofish';
 import { douDizhuFacts } from './doudizhu';
 import { banqiFacts } from './banqi';
+import { chineseCheckersFacts } from './chinesecheckers';
 
 /** Every registered game supplies facts for its own result contract. */
 export const GAME_STATS: {
@@ -50,6 +51,7 @@ export const GAME_STATS: {
   jungle: jungleFacts,
   xiangqi: xiangqiFacts,
   banqi: banqiFacts,
+  chinesecheckers: chineseCheckersFacts,
 };
 
 export function gameFacts<K extends GameType>(

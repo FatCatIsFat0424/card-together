@@ -283,4 +283,12 @@ export type {
   XiangqiVisibleState,
 } from '../games/xiangqi/types';
 
+export type {
+  ChineseCheckersMove,
+  ChineseCheckersPhase,
+  ChineseCheckersMatchResult,
+  ChineseCheckersGameState,
+  ChineseCheckersVisibleState,
+} from '../games/chinesecheckers/types';
+
 export type { AnyGameState, PlayerVisibleGameState, MatchResult } from '../games/type-registry';

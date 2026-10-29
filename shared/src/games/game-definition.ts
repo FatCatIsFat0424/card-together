@@ -29,6 +29,8 @@ export interface GameSeatRules {
   readonly minPlayers: number;
   /** Occupied seats a match accepts; also caps the waiting-room seats */
   readonly maxPlayers: number;
+  /** Occupied-seat totals a match accepts between the limits; every total when omitted */
+  readonly playerCounts?: readonly number[];
   /** Occupied seats may include P5–P8 and leave others empty; otherwise exactly N, E, S, W play */
   readonly flexible: boolean;
   /** The waiting room can add seats beyond the four compass seats, up to `maxPlayers` */

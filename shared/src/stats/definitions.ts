@@ -170,6 +170,12 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('generalsTaken', 'log', 'count'),
     record('bestChain', 'log', 'max'),
   ],
+  chinesecheckers: [
+    record('crowdWins', 'result', 'count', true),
+    record('fewestMoves', 'log', 'min'),
+    record('longestChain', 'log', 'max'),
+    record('longChains', 'log', 'count'),
+  ],
 };
 
 /**

@@ -59,8 +59,7 @@ export function roomCanStart(room: RoomInfo): boolean {
     const entry = roomSeatInfo(room, seat);
     return entry?.player ? [entry] : [];
   });
-  return room.status === 'waiting' && occupied.length >= minPlayers(room.gameType)
-    && occupied.length <= maxPlayers(room.gameType)
+  return room.status === 'waiting' && playerCountAllowed(room.gameType, occupied.length)
     && occupied.some((entry) => !entry.player?.isBot)
     && occupied.every((entry) => isSeatReady(room, entry));
 }
@@ -84,6 +83,12 @@ export function minPlayers(gameType: GameType): number {
 /** Occupied seats a match of this game accepts at most; also caps its waiting-room seats. */
 export function maxPlayers(gameType: GameType): number {
   return gameDefinition(gameType).seats.maxPlayers;
+}
+
+/** Whether a match of this game can start with `count` occupied seats (Chinese checkers skips five). */
+export function playerCountAllowed(gameType: GameType, count: number): boolean {
+  const { minPlayers: min, maxPlayers: max, playerCounts } = gameDefinition(gameType).seats;
+  return count >= min && count <= max && (playerCounts?.includes(count) ?? true);
 }
 
 /**

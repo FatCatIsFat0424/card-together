@@ -28,6 +28,7 @@ const PREVIOUS_SEATS: Readonly<Record<GameType, readonly [min: number, max: numb
   gofish: [2, 6, true, false],
   doudizhu: [3, 3, true, true],
   banqi: [2, 2, true, false],
+  chinesecheckers: [2, 6, true, true],
 };
 
 describe('shared game registry', () => {
@@ -38,12 +39,13 @@ describe('shared game registry', () => {
 
   it.each(GAME_TYPES)('keeps the previous seat limits for %s', (gameType) => {
     const [min, max, flexible, numbered] = PREVIOUS_SEATS[gameType];
-    expect(gameDefinition(gameType).seats).toEqual({ minPlayers: min, maxPlayers: max, flexible, expandable: flexible && max > 4, numbered });
+    expect(gameDefinition(gameType).seats).toEqual({ minPlayers: min, maxPlayers: max, flexible, expandable: flexible && max > 4, numbered,
+      ...gameType === 'chinesecheckers' ? { playerCounts: [2, 3, 4, 6] } : {} });
     expect([minPlayers(gameType), maxPlayers(gameType), isNumberedSeatGame(gameType)]).toEqual([min, max, numbered]);
   });
 
   it('lists the expandable rooms in lobby order', () => {
-    expect(EXPANDABLE_ROOM_GAMES).toEqual(['ninetynine', 'blackjack', 'holdem', 'napoleon', 'tenhalf', 'liarsdice', 'crazyeights', 'stud', 'oldmaid', 'gofish']);
+    expect(EXPANDABLE_ROOM_GAMES).toEqual(['ninetynine', 'blackjack', 'holdem', 'napoleon', 'tenhalf', 'liarsdice', 'crazyeights', 'stud', 'oldmaid', 'gofish', 'chinesecheckers']);
   });
 
   it('classifies the dice game by its category and gives chips only to the betting games', () => {
@@ -53,7 +55,8 @@ describe('shared game registry', () => {
         expect([definition.category, definition.equipment]).toEqual(['dice', []]);
         continue;
       }
-      if (gameType === 'reversi' || gameType === 'jungle' || gameType === 'gomoku' || gameType === 'xiangqi' || gameType === 'banqi') {
+      if (gameType === 'reversi' || gameType === 'jungle' || gameType === 'gomoku' || gameType === 'xiangqi' || gameType === 'banqi'
+        || gameType === 'chinesecheckers') {
         expect([definition.category, definition.equipment]).toEqual(['board', []]);
         continue;
       }
@@ -79,6 +82,7 @@ describe('registered result metadata', () => {
       ['reversi', 'ranking', null], ['oldmaid', 'ranking', 'points'],
       ['gofish', 'ranking', 'points'], ['doudizhu', 'ranking', 'points'], ['jungle', 'ranking', null], ['gomoku', 'ranking', null],
       ['xiangqi', 'ranking', null], ['banqi', 'ranking', null],
+      ['chinesecheckers', 'ranking', null],
     ]);
   });
 

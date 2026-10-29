@@ -277,7 +277,10 @@ export function BoardView({
       {targets.map((target) => {
         const at = geometry.point(target.node);
         if (!at) return null;
-        if (!target.capture) return <circle key={target.node} className={styles.target} cx={at.x} cy={at.y} r={0.13} />;
+        // Star holes are about 17 px apart on a phone, so their targets are drawn large enough to aim at.
+        if (!target.capture) {
+          return <circle key={target.node} className={styles.target} cx={at.x} cy={at.y} r={layout === 'holes' ? 0.24 : 0.13} />;
+        }
         return layout === 'stations'
           ? <Highlight key={target.node} at={at} layout={layout} className={styles.capture} />
           : <circle key={target.node} className={styles.capture} cx={at.x} cy={at.y} r={PIECE_RADIUS * 1.18} />;

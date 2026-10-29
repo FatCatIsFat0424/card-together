@@ -34,6 +34,8 @@ export const BOARD_RESULT_REASONS = [
   'flag-captured',
   /** Chinese checkers: every piece reached the opposite corner. */
   'all-home',
+  /** Chinese checkers: the turn limit ran out; the most progress wins. */
+  'move-limit',
 ] as const;
 
 export type BoardResultReason = typeof BOARD_RESULT_REASONS[number];

@@ -75,6 +75,7 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
   gofish: { en: 'Go fish', 'zh-TW': '釣魚' },
   doudizhu: { en: 'Combinations', 'zh-TW': '牌型' },
   banqi: { en: 'Rank and capture', 'zh-TW': '大小與吃子' },
+  chinesecheckers: { en: 'Moving', 'zh-TW': '走法' },
 };
 
 describe('contextual game rules', () => {

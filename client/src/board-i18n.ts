@@ -53,6 +53,7 @@ const englishReasons: Record<BoardResultReason, string> = {
   'den-entered': 'Den entered',
   'flag-captured': 'Flag captured',
   'all-home': 'All pieces home',
+  'move-limit': 'Turn limit reached',
 };
 
 const chineseReasons: Record<BoardResultReason, string> = {
@@ -72,6 +73,7 @@ const chineseReasons: Record<BoardResultReason, string> = {
   'den-entered': '進入獸穴',
   'flag-captured': '軍旗被奪',
   'all-home': '全部抵達對角',
+  'move-limit': '達到回合上限',
 };
 
 type ReasonKey = `board.reason.${BoardResultReason}`;

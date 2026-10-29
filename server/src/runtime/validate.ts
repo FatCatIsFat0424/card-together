@@ -41,6 +41,7 @@ export { isDouDizhuResult } from '../managers/games/doudizhu-validation';
 export { isJungleResult } from '../managers/games/jungle-validation';
 export { isXiangqiResult } from '../managers/games/xiangqi-validation';
 export { isBanqiResult } from '../managers/games/banqi-validation';
+export { isChineseCheckersResult } from '../managers/games/chinesecheckers-validation';
 
 function player(value: unknown): boolean {
   return (

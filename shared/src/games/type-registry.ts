@@ -20,6 +20,7 @@ import type { DouDizhuGameContract } from './doudizhu/types';
 import type { JungleGameContract } from './jungle/types';
 import type { XiangqiGameContract } from './xiangqi/types';
 import type { BanqiGameContract } from './banqi/types';
+import type { ChineseCheckersGameContract } from './chinesecheckers/types';
 import type { GameAutomation } from '../types/game';
 import type { GameSeat } from '../types/player';
 
@@ -47,6 +48,7 @@ export interface GameTypeRegistry {
   readonly jungle: JungleGameContract;
   readonly xiangqi: XiangqiGameContract;
   readonly banqi: BanqiGameContract;
+  readonly chinesecheckers: ChineseCheckersGameContract;
 }
 
 export type GameType = keyof GameTypeRegistry;

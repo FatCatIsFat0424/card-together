@@ -26,7 +26,7 @@ import type {
   TimeControl,
 } from '@shared/types';
 import type { NnChoice } from '@shared/rules/ninetynine';
-import { gamePlayer, isCompassSeat, occupiedSeats } from '@shared/rules/seats';
+import { gamePlayer, isCompassSeat, occupiedSeats, playerCountAllowed } from '@shared/rules/seats';
 import { normalizeFlexibleGame } from '@shared/game-seat-compat';
 import { isFullTable } from './games/game-adapter';
 import type { SharedDeadlineWindow } from './games/game-adapter';
@@ -109,6 +109,9 @@ export function startGame(
   }
   if (occupiedSeats(players).length > seats.maxPlayers) {
     return { success: false, reason: 'Too many players for this game.' };
+  }
+  if (!playerCountAllowed(gameType, occupiedSeats(players).length)) {
+    return { success: false, reason: 'This game cannot start with this many players.' };
   }
   // A finished board of another game type may still be waiting for game:continue.
   removeGame(roomCode);

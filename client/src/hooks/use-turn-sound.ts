@@ -39,6 +39,7 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
     game.banqi?.log.filter((entry) => entry.seat === room.mySeat).length ??
     game.reversi?.log.filter((entry) => entry.to !== undefined && entry.seat === room.mySeat).length ??
     game.gomoku?.log.filter((entry) => entry.seat === room.mySeat).length ??
+    game.chineseCheckers?.log.filter((entry) => entry.to !== undefined && entry.seat === room.mySeat).length ??
     game.oldMaid?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
     game.jungle?.log.filter((entry) => entry.seat === room.mySeat).length ??
     game.xiangqi?.log.filter((entry) => entry.seat === room.mySeat).length ??

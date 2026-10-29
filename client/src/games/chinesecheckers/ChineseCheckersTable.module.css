@@ -1,0 +1,62 @@
+/* ─── Chinese checkers table: marble colour and progress beside each seat, places in the result ─── */
+
+.stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dot {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-right: 4px;
+  border-radius: 50%;
+  border: 1px solid rgb(0 0 0 / 0.45);
+  background: var(--dot);
+  flex: none;
+  vertical-align: -1px;
+}
+
+.stats .dot { margin-right: 0; }
+
+.colour { opacity: 0.85; }
+
+.standings {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.standings li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.place {
+  min-width: 4.5em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}

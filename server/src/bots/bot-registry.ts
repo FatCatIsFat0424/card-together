@@ -29,6 +29,9 @@ import { easyJungleAction, getJungleBotAction, jungleFirstLegalAction } from './
 import { easyXiangqiAction, getXiangqiBotAction, xiangqiFirstLegalAction } from './xiangqi-strategy';
 import { banqiFirstLegalAction, easyBanqiAction, getBanqiBotAction } from './banqi-strategy';
 import {
+  chineseCheckersFirstLegalAction, easyChineseCheckersAction, getChineseCheckersBotAction,
+} from './chinesecheckers-strategy';
+import {
   easyBigTwoAction, easyBlackjackAction, easyBridgeAction, easyChinesePokerAction, easyHoldemAction, easyLiarsDeckAction,
   easyNinetyNineAction, easyRedPointsAction, easySevensAction, easyStudAction,
 } from './easy-strategy';
@@ -217,6 +220,19 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     },
     // A player who runs out of time gets a legal action by the easy policy.
     turnTimeout: (visible) => easyBanqiAction(visible, Math.random),
+  },
+  chinesecheckers: {
+    hard: getChineseCheckersBotAction,
+    easy: easyChineseCheckersAction,
+    firstLegal: chineseCheckersFirstLegalAction,
+    // Hard bots look two moves ahead in the worker pool; the cheap one-move evaluation serves only other seats.
+    search: {
+      strategy: searchStrategy<'chinesecheckers'>(new URL('./chinesecheckers-search.ts', import.meta.url), 'chineseCheckersSearch'),
+      budgetMs: 800,
+      maxDepth: 2,
+    },
+    // A player who runs out of time gets a legal move by the easy policy.
+    turnTimeout: (visible) => easyChineseCheckersAction(visible, Math.random),
   },
 };
 

@@ -22,6 +22,7 @@ import { liarsDiceUi } from './liarsdice/liarsdice-ui';
 import { crazyEightsUi } from './crazyeights/crazyeights-ui';
 import { goFishUi } from './gofish/gofish-ui';
 import { banqiUi } from './banqi/banqi-ui';
+import { chineseCheckersUi } from './chinesecheckers/chinesecheckers-ui';
 
 /**
  * Every game type maps to its own UI module; a missing or mismatched entry fails to compile. Table
@@ -51,6 +52,7 @@ export const GAME_UIS: { readonly [K in GameType]: GameUi<K> } = {
   gofish: goFishUi,
   jungle: jungleUi,
   banqi: banqiUi,
+  chinesecheckers: chineseCheckersUi,
 };
 
 /**
