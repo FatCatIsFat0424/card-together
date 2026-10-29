@@ -5,7 +5,7 @@
 
 import type { LandBattleVisibleState } from '@shared/types';
 import {
-  LB_COUNTS, LB_NODES, LB_RANKS, lbBattle, lbCell, lbDeploySlots, lbMobile, lbSlotIndex, lbSlotOf, lbSlotProblem,
+  LB_COUNTS, LB_NODES, LB_PIECES_PER_SIDE, LB_RANKS, lbBattle, lbCell, lbDeploySlots, lbIsHq, lbMobile, lbSlotIndex, lbSlotOf, lbSlotProblem, lbSteps,
 } from '@shared/rules/landbattle';
 import type { LbCell, LbRank, LbSide } from '@shared/rules/landbattle';
 
@@ -40,12 +40,26 @@ function turns(route: readonly number[]): boolean {
   return false;
 }
 
-/** Spreads probability so each token sums to one and each identity to its count among all tokens. */
-export function estimateOdds(tokens: readonly number[], allowed: ReadonlyMap<number, ReadonlySet<LbRank>>): Map<number, Record<LbRank, number>> {
+/** How much likelier a mine is on a station next to a headquarters: formations usually ring the flag with mines. */
+const MINE_NEAR_HQ = 4;
+
+/** Deployment habits: mines next to a headquarters. Only weights the odds; it never rules an identity out. */
+export function deploymentPrior(token: number, rank: LbRank): number {
+  return rank === 'mine' && lbSteps(token).some(lbIsHq) ? MINE_NEAR_HQ : 1;
+}
+
+/**
+ * Spreads probability so each token sums to one and each identity to its count among all tokens, starting
+ * from the identity counts times `prior`.
+ */
+export function estimateOdds(
+  tokens: readonly number[], allowed: ReadonlyMap<number, ReadonlySet<LbRank>>,
+  prior: (token: number, rank: LbRank) => number = () => 1,
+): Map<number, Record<LbRank, number>> {
   const weights = new Map<number, Record<LbRank, number>>();
   for (const token of tokens) {
     const set = allowed.get(token)!;
-    weights.set(token, Object.fromEntries(LB_RANKS.map((rank) => [rank, set.has(rank) ? LB_COUNTS[rank] : 0])) as Record<LbRank, number>);
+    weights.set(token, Object.fromEntries(LB_RANKS.map((rank) => [rank, set.has(rank) ? LB_COUNTS[rank] * prior(token, rank) : 0])) as Record<LbRank, number>);
   }
   for (let round = 0; round < 24; round++) {
     for (const row of weights.values()) {
@@ -69,8 +83,8 @@ export function estimateOdds(tokens: readonly number[], allowed: ReadonlyMap<num
  * Replays the public moves from the seat's own deployment. Each opponent piece starts with the identities
  * its station allows (flag in a headquarters, mines in the last two rows, no bomb on the front row); moving
  * rules out mines and the flag, turning along a railway means an engineer, every battle keeps only the
- * identities that give its published outcome against the known own piece, and a shown flag or a fallen
- * marshal pins the piece down. `inferBattles` false keeps only what movement shows (the easy bot).
+ * identities that give its published outcome against the known own piece (and never the flag, since play
+ * went on), and a shown flag or a fallen marshal pins the piece down. `inferBattles` false keeps only what movement shows (the easy bot).
  */
 export function landBattleKnowledge(visible: LandBattleVisibleState, inferBattles = true): LbKnowledge | null {
   const index = visible.seats.indexOf(visible.mySeat);
@@ -118,7 +132,9 @@ export function landBattleKnowledge(visible: LandBattleVisibleState, inferBattle
     const ownPiece = moverIsOpponent ? defender : mover;
     const ownRank = ownPiece.rank!;
     if (inferBattles) {
-      keep(opponentPiece.token, (rank) => (moverIsOpponent ? lbBattle(rank, ownRank) : lbBattle(ownRank, rank)) === entry.battle);
+      // A battle against the flag ends the match, so a piece that fought while play goes on is not the flag.
+      keep(opponentPiece.token, (rank) => rank !== 'flag'
+        && (moverIsOpponent ? lbBattle(rank, ownRank) : lbBattle(ownRank, rank)) === entry.battle);
     }
     const attackerWins = entry.battle === 'win';
     const removed = entry.battle === 'tie' ? [mover, defender] : attackerWins ? [defender] : [mover];
@@ -152,7 +168,7 @@ export function landBattleKnowledge(visible: LandBattleVisibleState, inferBattle
       for (const token of tokens) if (!pinned.includes(token)) keep(token, (other) => other !== rank);
     }
   }
-  return { side, board, tokens, alive, allowed, odds: estimateOdds(tokens, allowed), ownLost };
+  return { side, board, tokens, alive, allowed, odds: estimateOdds(tokens, allowed, inferBattles ? deploymentPrior : undefined), ownLost };
 }
 
 /** Plain prior knowledge, which ignores battle outcomes: the easy bot and the immediate fallback use it. */
@@ -167,23 +183,48 @@ export function likelyRanks(knowledge: LbKnowledge, token: number): LbRank[] {
 }
 
 /**
- * One full assignment of identities to the opponent's living pieces, drawn in proportion to the estimated
- * odds while respecting the counts; the most constrained pieces are drawn first.
+ * One full assignment of identities to the opponent's pieces (dead ones too, so living ones see the right
+ * remaining counts), drawn in proportion to the estimated odds while respecting the counts. An identity
+ * with exactly as many candidate pieces left as copies goes to those pieces at once; otherwise the piece
+ * with the fewest choices is drawn next.
  */
 export function sampleIdentities(knowledge: LbKnowledge, random: () => number): Map<number, LbRank> | null {
+  // Counts can only force identities when every copy goes to some piece, as in a real match.
+  const exact = knowledge.tokens.length === LB_PIECES_PER_SIDE;
   for (let attempt = 0; attempt < 8; attempt++) {
     const left: Record<LbRank, number> = { ...LB_COUNTS };
-    // Dead pieces still used up an identity; draw them too, so living ones see the right remaining counts.
-    const order = [...knowledge.tokens].sort((a, b) => knowledge.allowed.get(a)!.size - knowledge.allowed.get(b)!.size);
+    const open = new Set(knowledge.tokens);
     const drawn = new Map<number, LbRank>();
+    const assign = (token: number, rank: LbRank): void => {
+      left[rank]--;
+      open.delete(token);
+      drawn.set(token, rank);
+    };
     let failed = false;
-    for (const token of order) {
-      const odds = knowledge.odds.get(token)!;
-      const choices = [...knowledge.allowed.get(token)!].filter((rank) => left[rank] > 0);
+    while (open.size > 0 && !failed) {
+      let forced = false;
+      for (const rank of exact ? LB_RANKS : []) {
+        if (left[rank] === 0) continue;
+        const candidates = [...open].filter((token) => knowledge.allowed.get(token)!.has(rank));
+        if (candidates.length < left[rank]) failed = true;
+        else if (candidates.length === left[rank]) {
+          for (const token of candidates) assign(token, rank);
+          forced = true;
+        }
+        if (failed || forced) break;
+      }
+      if (failed || forced) continue;
+      let token = -1;
+      let choices: LbRank[] = [];
+      for (const candidate of open) {
+        const options = [...knowledge.allowed.get(candidate)!].filter((rank) => left[rank] > 0);
+        if (token < 0 || options.length < choices.length) [token, choices] = [candidate, options];
+      }
       if (choices.length === 0) {
         failed = true;
-        break;
+        continue;
       }
+      const odds = knowledge.odds.get(token)!;
       const weights = choices.map((rank) => odds[rank] * left[rank] + 1e-6);
       let roll = random() * weights.reduce((sum, weight) => sum + weight, 0);
       let choice = choices[choices.length - 1];
@@ -194,8 +235,7 @@ export function sampleIdentities(knowledge: LbKnowledge, random: () => number): 
           break;
         }
       }
-      left[choice]--;
-      drawn.set(token, choice);
+      assign(token, choice);
     }
     if (!failed) return drawn;
   }

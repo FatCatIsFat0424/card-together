@@ -1,15 +1,20 @@
 import type { LandBattleVisibleState } from '@shared/types';
-import {
-  LB_NODES, LB_PRESETS, LB_RANKS, lbBattle, lbCell, lbDestinations, lbIsCamp, lbLegalMoves, lbMobile, lbRandomLayout,
-} from '@shared/rules/landbattle';
+import { LB_NODES, LB_PRESETS, LB_RANKS, lbBattle, lbCell, lbIsCamp, lbLegalMoves, lbRandomLayout } from '@shared/rules/landbattle';
 import type { LbMove, LbRank, LbSide } from '@shared/rules/landbattle';
 import type { BotAction } from './bot-decisions';
 import { landBattleKnowledge, movementKnowledge } from './landbattle-knowledge';
-import type { LbBotCell, LbKnowledge } from './landbattle-knowledge';
-import { LB_VALUE, attackBonus, deployAction, lbRoadDistance, moveAction, templateLayout } from './landbattle-search';
+import type { LbKnowledge } from './landbattle-knowledge';
+import { LB_VALUE, deployAction, moveAction, recentMoves, searchMoves, templateLayout } from './landbattle-search';
 
 /** Score noise of the easy bot, in material points. */
 const EASY_NOISE = 14;
+
+/** What capturing the flag is worth against material. */
+const FLAG_VALUE = 5_000;
+
+/** Sampled worlds and clock limit of the synchronous hard move, which runs on the event loop. */
+const QUICK_SAMPLES = 24;
+const QUICK_BUDGET_MS = 60;
 
 /** The seat's side while it still owes a deployment, otherwise null. */
 function deployingSide(visible: LandBattleVisibleState): LbSide | null {
@@ -49,86 +54,10 @@ export function expectedScore(knowledge: LbKnowledge, move: LbMove): number {
   return expected + positional;
 }
 
-/** What losing the flag is worth against material. */
-const FLAG_VALUE = 5_000;
-
-/** Chance that an opponent piece attacking an own `rank` removes it (a trade counts half). */
-function attackChance(knowledge: LbKnowledge, token: number, rank: LbRank): number {
-  const odds = knowledge.odds.get(token);
-  if (!odds) return 0;
-  let chance = 0;
-  for (const other of LB_RANKS) {
-    if (!lbMobile(other) || odds[other] <= 0) continue;
-    const outcome = lbBattle(other, rank);
-    if (outcome === 'win') chance += odds[other];
-    else if (outcome === 'tie') chance += odds[other] / 2;
-  }
-  return chance;
-}
-
-/** Expected loss of an own `rank` standing on `at`, from every opponent piece that could attack it next. */
-function exposure(knowledge: LbKnowledge, board: readonly (LbBotCell | null)[], at: number, rank: LbRank): number {
-  if (at < 0 || lbIsCamp(at)) return 0;
-  let safe = 1;
-  for (let from = 0; from < LB_NODES; from++) {
-    const cell = board[from];
-    if (cell && cell.side !== knowledge.side && lbDestinations(board, from).some((option) => option.to === at)) {
-      safe *= 1 - attackChance(knowledge, cell.token, rank);
-    }
-  }
-  return (1 - safe) * (rank === 'flag' ? FLAG_VALUE : LB_VALUE[rank]);
-}
-
-/** Material-scale danger of opponent pieces closing in on the own flag, by road distance (direct attacks aside). */
-const APPROACH: readonly number[] = [0, 0, 40, 10];
-
-/** Expected loss at the own flag: direct attacks plus pieces two or three stations away. */
-function flagDanger(knowledge: LbKnowledge, board: readonly (LbBotCell | null)[], flag: number): number {
-  if (flag < 0) return 0;
-  let danger = exposure(knowledge, board, flag, 'flag');
-  for (let at = 0; at < LB_NODES; at++) {
-    const cell = board[at];
-    const odds = cell && cell.side !== knowledge.side ? knowledge.odds.get(cell.token) : undefined;
-    const distance = lbRoadDistance(at, flag);
-    if (odds && distance < APPROACH.length) danger += APPROACH[distance] * (1 - odds.mine - odds.flag);
-  }
-  return danger;
-}
-
-/** Probability the own piece wins the battle on `move.to` and stands there afterwards. */
-function survives(knowledge: LbKnowledge, move: LbMove, rank: LbRank): number {
-  const target = knowledge.board[move.to];
-  const odds = target && knowledge.odds.get(target.token);
-  if (!odds) return 1;
-  return LB_RANKS.reduce((sum, other) => sum + (other !== 'flag' && lbBattle(rank, other) === 'win' ? odds[other] : 0), 0);
-}
-
-/**
- * The expected score plus what the move does to danger: an own piece left where a likely stronger piece can
- * reach it, and any opening toward the own flag, count against it; escaping or removing a threat counts for.
- */
-export function carefulScore(knowledge: LbKnowledge, move: LbMove, flag: number): number {
-  const rank = knowledge.board[move.from]!.rank!;
-  const kept = survives(knowledge, move, rank);
-  const won = [...knowledge.board];
-  won[move.from] = null;
-  won[move.to] = knowledge.board[move.from];
-  const lost = [...knowledge.board];
-  lost[move.from] = null;
-  const before = exposure(knowledge, knowledge.board, move.from, rank) + flagDanger(knowledge, knowledge.board, flag);
-  const flagAfter = kept * flagDanger(knowledge, won, flag) + (kept < 1 ? (1 - kept) * flagDanger(knowledge, lost, flag) : 0);
-  const after = kept * exposure(knowledge, won, move.to, rank) + flagAfter;
-  return expectedScore(knowledge, move) - 0.7 * (after - before);
-}
-
-function bestMove(
-  knowledge: LbKnowledge, random: () => number, noise: number, careful: boolean, quietMoves: number,
-): LbMove | null {
-  const flag = knowledge.board.findIndex((cell) => cell?.side === knowledge.side && cell.rank === 'flag');
+function bestMove(knowledge: LbKnowledge, random: () => number): LbMove | null {
   let best: { move: LbMove; score: number } | null = null;
   for (const move of lbLegalMoves(knowledge.board, knowledge.side)) {
-    const bonus = careful && knowledge.board[move.to] ? attackBonus(knowledge.board[move.from]!.rank!, quietMoves) : 0;
-    const score = (careful ? carefulScore(knowledge, move, flag) : expectedScore(knowledge, move)) + bonus + random() * noise;
+    const score = expectedScore(knowledge, move) + random() * EASY_NOISE;
     if (!best || score > best.score) best = { move, score };
   }
   return best?.move ?? null;
@@ -142,21 +71,24 @@ export function easyLandBattleAction(visible: LandBattleVisibleState, random: ()
   if (deployingSide(visible) !== null) return deployAction(lbRandomLayout(random));
   if (!onTurn(visible)) return null;
   const knowledge = movementKnowledge(visible);
-  const move = knowledge && bestMove(knowledge, random, EASY_NOISE, false, visible.quietMoves);
+  const move = knowledge && bestMove(knowledge, random);
   return move ? moveAction(move) : landBattleFirstLegalAction(visible);
 }
 
 /**
- * Hard, synchronous: a template deployment, then the one-ply careful score with full inference from public
- * battle outcomes. Bot turns use the worker search instead; this serves only seats that are not on a bot's
- * own turn, so it must stay cheap.
+ * Hard, synchronous: a template deployment, then the worker's sampled search with only a few worlds and a
+ * short clock. Bot turns use the worker search instead; this serves only seats that are not on a bot's own
+ * turn, so it must stay cheap.
  */
 export function getLandBattleBotAction(visible: LandBattleVisibleState, random: () => number): BotAction | null {
   if (deployingSide(visible) !== null) return deployAction(templateLayout(random));
   if (!onTurn(visible)) return null;
   const knowledge = landBattleKnowledge(visible);
-  const move = knowledge && bestMove(knowledge, random, 0.01, true, visible.quietMoves);
-  return move ? moveAction(move) : landBattleFirstLegalAction(visible);
+  const deadline = performance.now() + QUICK_BUDGET_MS;
+  const found = knowledge && searchMoves(
+    knowledge, random, () => performance.now() >= deadline, QUICK_SAMPLES, visible.quietMoves, recentMoves(visible),
+  );
+  return found ? moveAction(found.move) : landBattleFirstLegalAction(visible);
 }
 
 /** The first preset or the first legal move in board order: the last resort when the strategies keep failing. */

@@ -1,12 +1,17 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { GameSeat, LandBattleGameState, LandBattleVisibleState, PlayerInfo } from '@shared/types';
-import { LB_NODES, LB_PRESETS, LB_RANKS, lbCell, lbIndex, lbLayoutError, lbLegalMoves } from '@shared/rules/landbattle';
+import {
+  LB_COUNTS, LB_NODES, LB_PRESETS, LB_QUIET_LIMIT, LB_RANKS, lbCell, lbIndex, lbLayoutError, lbLegalMoves, lbSwapSlots,
+} from '@shared/rules/landbattle';
 import type { LbRank, LbSide } from '@shared/rules/landbattle';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
-import { estimateOdds, landBattleKnowledge, movementKnowledge, sampleIdentities } from '../../src/bots/landbattle-knowledge';
+import { deploymentPrior, estimateOdds, landBattleKnowledge, movementKnowledge, sampleIdentities } from '../../src/bots/landbattle-knowledge';
 import type { LbBotCell, LbKnowledge } from '../../src/bots/landbattle-knowledge';
-import { landBattleSearch, searchMoves, templateLayout } from '../../src/bots/landbattle-search';
+import {
+  flagOpenings, lbAttackers, landBattleSearch, recentMoves, scoreMove, searchMoves, templateLayout,
+} from '../../src/bots/landbattle-search';
+import type { World } from '../../src/bots/landbattle-search';
 import { createSearchPool } from '../../src/bots/search/search-worker-pool';
 import type { SearchPool } from '../../src/bots/search/search-worker-pool';
 import { seededRandom } from '../../src/bots/search/seeded-random';
@@ -55,6 +60,19 @@ function knowledgeOf(
   }
   const tokens = [...allowed.keys()];
   return { side: 0, board, tokens, alive: new Set(tokens), allowed, odds: estimateOdds(tokens, allowed), ownLost: [] };
+}
+
+/** A fully known world for the search's own helpers. */
+function worldOf(pieces: readonly [node: string, side: LbSide, rank: LbRank][]): World {
+  const world: World = new Array(LB_NODES).fill(null);
+  for (const [node, side, rank] of pieces) world[lbCell(node)!] = { side, rank };
+  return world;
+}
+
+/** A search budget that stops after a fixed number of sampled worlds, so decisions depend only on the seed. */
+function samples(count: number): { maxDepth: undefined; timeLeftMs: () => number; expired: () => boolean } {
+  let checks = 0;
+  return { maxDepth: undefined, timeLeftMs: () => 1_000, expired: () => ++checks >= count };
 }
 
 afterEach(() => landbattle.abortGame(CODE));
@@ -119,6 +137,50 @@ describe('Land Battle Chess identity inference', () => {
     expect(sample.get(lbIndex(1, 0))).toBe('flag');
     expect([...sample.values()].filter((rank) => rank === 'marshal')).toHaveLength(1);
   });
+
+  it('expects mines around the headquarters and draws complete identities that respect every constraint', () => {
+    start();
+    const knowledge = landBattleKnowledge(view('N'))!;
+    // (0,0) touches S's headquarters at (1,0); (0,1) is also in the last two rows but touches none.
+    expect(deploymentPrior(lbIndex(0, 0), 'mine')).toBeGreaterThan(1);
+    expect(deploymentPrior(lbIndex(0, 1), 'mine')).toBe(1);
+    expect(knowledge.odds.get(lbIndex(0, 0))!.mine).toBeGreaterThan(knowledge.odds.get(lbIndex(0, 1))!.mine);
+    // Once one headquarters is ruled out, every sample puts the flag in the other.
+    const allowed = new Map(knowledge.allowed);
+    allowed.set(lbIndex(3, 0), new Set([...allowed.get(lbIndex(3, 0))!].filter((rank) => rank !== 'flag')));
+    const narrowed: LbKnowledge = { ...knowledge, allowed, odds: estimateOdds(knowledge.tokens, allowed, deploymentPrior) };
+    for (let seed = 1; seed <= 20; seed++) {
+      const sample = sampleIdentities(narrowed, seededRandom(seed))!;
+      expect(sample.get(lbIndex(1, 0))).toBe('flag');
+      for (const rank of LB_RANKS) expect([...sample.values()].filter((other) => other === rank)).toHaveLength(LB_COUNTS[rank]);
+      for (const [token, rank] of sample) expect(narrowed.allowed.get(token)!.has(rank)).toBe(true);
+    }
+  });
+
+  it('decides the same way whatever the hidden identities behind the same public history', () => {
+    const [first, second] = [ASSAULT, lbSwapSlots(ASSAULT, 9, 10)!];
+    expect(first[9]).not.toBe(first[10]);
+    const decide = (hidden: readonly LbRank[]): { view: string; search: unknown; quick: unknown } => {
+      start(BALANCED, hidden);
+      expect(landbattle.move(CODE, 'N', '1,6', '1,7', 5_000).success).toBe(true);
+      expect(landbattle.move(CODE, 'S', '1,5', '1,4', 6_000).success).toBe(true);
+      const visible = view('N');
+      const result = {
+        view: JSON.stringify(visible),
+        search: landBattleSearch(visible, { random: seededRandom(7), budget: samples(12) }),
+        quick: searchMoves(landBattleKnowledge(visible)!, seededRandom(8), () => false, 6)?.move,
+      };
+      landbattle.abortGame(CODE);
+      return result;
+    };
+    const [a, b] = [decide(first), decide(second)];
+    expect(a.view).toBe(b.view);
+    const opponents = (JSON.parse(a.view) as LandBattleVisibleState).pieces.filter((piece) => piece.side === 1);
+    expect(opponents).toHaveLength(25);
+    expect(opponents.every((piece) => piece.rank === undefined)).toBe(true);
+    expect(a.search).toEqual(b.search);
+    expect(a.quick).toEqual(b.quick);
+  });
 });
 
 describe('Land Battle Chess Hard search', () => {
@@ -134,6 +196,70 @@ describe('Land Battle Chess Hard search', () => {
     );
     const choice = searchMoves(noFlag, seededRandom(2), () => false, 8)?.move;
     expect(choice?.to).not.toBe(lbIndex(2, 5));
+  });
+
+  it('finds the pieces that reach a station by step, straight railway, or an engineer turning along it', () => {
+    const world = worldOf([
+      ['4,10', 0, 'colonel'], ['0,9', 0, 'engineer'], ['0,8', 0, 'captain'], ['2,9', 0, 'lieutenant'], ['2,11', 0, 'mine'],
+      ['1,9', 1, 'general'],
+    ]);
+    const sorted = (stations: number[]): number[] => [...stations].sort((a, b) => a - b);
+    expect(sorted(lbAttackers(world, lbIndex(2, 10), 0))).toEqual(sorted([lbIndex(4, 10), lbIndex(0, 9), lbIndex(2, 9)]));
+    expect(lbAttackers(world, lbIndex(2, 10), 1)).toEqual([lbIndex(1, 9)]);
+  });
+
+  it('keeps an engineer from clearing a mine beside its flag while an officer waits in the camp behind it', () => {
+    const own: [string, LbRank][] = [
+      ['1,11', 'flag'], ['0,11', 'mine'], ['2,11', 'mine'], ['1,10', 'mine'], ['0,10', 'lieutenant'], ['4,11', 'captain'],
+      ['2,7', 'colonel'],
+    ];
+    const opponents: [string, LbRank[]][] = [
+      ['4,6', ['engineer']], ['1,9', ['general']], ['1,0', ['flag']], ['0,0', ['mine']], ['2,0', ['mine']], ['1,1', ['mine']],
+      ['3,3', ['major']],
+    ];
+    const world = worldOf([
+      ...own.map(([node, rank]): [string, LbSide, LbRank] => [node, 0, rank]),
+      ...opponents.map(([node, [rank]]): [string, LbSide, LbRank] => [node, 1, rank]),
+    ]);
+    // The engineer clears (1,10), the lieutenant takes it, and the general in the camp takes the lieutenant.
+    expect(flagOpenings(world, lbIndex(1, 11), 0)).toBe(1);
+    const choice = searchMoves(knowledgeOf(own, opponents), seededRandom(1), () => false, 6)!.move;
+    const after = [...world];
+    after[choice.to] = after[choice.from];
+    after[choice.from] = null;
+    expect(flagOpenings(after, lbIndex(1, 11), 0)).toBe(0);
+  });
+
+  it('scores a quiet move that reaches the quiet-move limit as a draw', () => {
+    const world = worldOf([
+      ['1,11', 0, 'flag'], ['2,6', 0, 'marshal'], ['0,9', 0, 'captain'], ['4,9', 0, 'captain'], ['0,8', 0, 'lieutenant'],
+      ['1,0', 1, 'flag'], ['2,4', 1, 'lieutenant'], ['2,5', 1, 'captain'], ['0,2', 1, 'lieutenant'], ['4,2', 1, 'major'],
+    ]);
+    const quiet = { from: lbIndex(2, 6), to: lbIndex(1, 6), path: [] };
+    const capture = { from: lbIndex(2, 6), to: lbIndex(2, 5), path: [] };
+    expect(scoreMove(world, quiet, 0, LB_QUIET_LIMIT - 1)).toBe(0);
+    expect(scoreMove(world, quiet, 0, 0)).not.toBe(0);
+    // A battle restarts the count, so the limit does not touch it.
+    expect(scoreMove(world, capture, 0, LB_QUIET_LIMIT - 1)).toBe(scoreMove(world, capture, 0, 0));
+  });
+
+  it('lists its own last moves, newest first, so it does not shuffle a piece back and forth', () => {
+    start();
+    expect(landbattle.move(CODE, 'N', '1,6', '1,7').success).toBe(true);
+    expect(landbattle.move(CODE, 'S', '1,5', '1,4').success).toBe(true);
+    expect(landbattle.move(CODE, 'N', '1,7', '1,6').success).toBe(true);
+    expect(landbattle.move(CODE, 'S', '1,4', '1,5').success).toBe(true);
+    expect(recentMoves(view('N'))).toEqual([
+      { from: lbIndex(1, 7), to: lbIndex(1, 6) }, { from: lbIndex(1, 6), to: lbIndex(1, 7) },
+    ]);
+  });
+
+  it('keeps the synchronous Hard move cheap and legal', () => {
+    start();
+    const started = performance.now();
+    const action = gameBot('landbattle').hard(view('N'), seededRandom(3));
+    expect(performance.now() - started).toBeLessThan(400);
+    expect(legal('N', action)).toBe(true);
   });
 
   it('stops within its time budget and still returns a legal move', () => {

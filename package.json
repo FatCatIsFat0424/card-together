@@ -23,6 +23,7 @@
     "bench:database": "cd server && npx tsx tests/database/repository-benchmark.ts",
     "bench:socket": "cd server && npx tsx benchmarks/socket-benchmark.ts",
     "bench:arrange": "cd server && npx tsx benchmarks/arrange-benchmark.ts",
+    "bench:landbattle": "cd server && npx tsx benchmarks/landbattle-bot-benchmark.ts",
     "bench:load": "cd server && npx tsx benchmarks/load/load-benchmark.ts",
     "bench:render": "npm run music:import && npm run emoji:import && cd server && npx tsx benchmarks/render-benchmark.ts",
     "lint": "eslint \"shared/src/**/*.ts\" \"server/src/**/*.ts\" \"server/tests/**/*.ts\" \"server/benchmarks/**/*.ts\" \"client/src/**/*.{ts,tsx}\" \"scripts/**/*.{ts,mjs}\" client/vite.config.ts server/vitest.config.ts",

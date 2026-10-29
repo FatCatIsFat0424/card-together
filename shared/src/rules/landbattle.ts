@@ -80,6 +80,8 @@ export const lbIsCamp = (index: number): boolean => CAMPS[index] ?? false;
 export const lbIsHq = (index: number): boolean => HQS[index] ?? false;
 export const lbIsRail = (index: number): boolean => (RAILS[index]?.length ?? 0) > 0;
 export const lbSteps = (index: number): readonly number[] => STEPS[index] ?? [];
+/** Railway neighbours of a station; empty off the railways. */
+export const lbRailSteps = (index: number): readonly number[] => RAILS[index] ?? [];
 
 // ─── Deployment ───
 
