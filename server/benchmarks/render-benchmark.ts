@@ -27,6 +27,11 @@ const TRACE_MS = 5_000;
 /** Lets the deal and the turn banner settle before tracing. */
 const SETTLE_MS = 2_500;
 const GAMES: readonly GameType[] = ['liarsdeck', 'holdem', 'liarsdice', 'xiangqi', 'chinesecheckers'];
+/** Further board games for comparing piece, board, and dice effects; not traced unless asked for. */
+const EXTRA_GAMES: readonly GameType[] = ['reversi', 'gomoku', 'banqi'];
+const ALL_GAMES: readonly GameType[] = [...GAMES, ...EXTRA_GAMES];
+/** `idle` traces a quiet turn; `moves` lets the bots play the player's seat too, so moves land during the trace. */
+type Mode = 'idle' | 'moves';
 const FIXTURE_HASH = `scrypt$131072$8$1$${'a'.repeat(32)}$${'b'.repeat(128)}`;
 
 type Equipment = 'plain' | ShopSeries;
@@ -36,16 +41,17 @@ interface Options {
   games: readonly GameType[];
   sets: readonly Equipment[];
   samples: number;
+  mode: Mode;
 }
 
 function parseOptions(args: readonly string[]): Options {
-  const options: Options = { games: GAMES, sets: ['plain', 'starfleet', 'neoncity'], samples: 1 };
+  const options: Options = { games: GAMES, sets: ['plain', 'starfleet', 'neoncity'], samples: 1, mode: 'idle' };
   for (let index = 0; index < args.length; index += 2) {
     const [flag, value] = [args[index], args[index + 1]];
     if (!value) throw new Error(`${flag} needs a value.`);
     if (flag === '--games') {
       options.games = value.split(',').map((game) => {
-        if (!GAMES.includes(game as GameType)) throw new Error(`--games accepts ${GAMES.join(', ')}.`);
+        if (!ALL_GAMES.includes(game as GameType)) throw new Error(`--games accepts ${ALL_GAMES.join(', ')}.`);
         return game as GameType;
       });
     } else if (flag === '--sets') {
@@ -60,7 +66,10 @@ function parseOptions(args: readonly string[]): Options {
       if (!Number.isInteger(options.samples) || options.samples < 1 || options.samples > 10) {
         throw new Error('--samples must be an integer from 1 to 10.');
       }
-    } else throw new Error(`Unknown option ${flag}. Use --games, --sets, or --samples.`);
+    } else if (flag === '--mode') {
+      if (value !== 'idle' && value !== 'moves') throw new Error('--mode accepts idle or moves.');
+      options.mode = value;
+    } else throw new Error(`Unknown option ${flag}. Use --games, --sets, --samples, or --mode.`);
   }
   return options;
 }
@@ -106,22 +115,59 @@ async function createPlayer(repository: Repository, name: string, set: Equipment
   return token;
 }
 
-/** Creates a room, fills it with bots, and starts the game over Socket, as the lobby buttons do. */
-async function startGame(serverUrl: string, origin: string, token: string, gameType: GameType): Promise<string> {
+const succeed = (response: { success: boolean; error?: string }): void => {
+  if (!response.success) throw new Error(response.error ?? 'Room setup failed.');
+};
+
+async function connectPlayer(serverUrl: string, origin: string, token: string): Promise<ClientSocket> {
   const socket: ClientSocket = connectSocket(serverUrl, {
     autoConnect: false, forceNew: true, reconnection: false, transports: ['websocket'],
     extraHeaders: { Origin: origin, Cookie: `${SESSION_COOKIE_NAME}=${token}` },
   });
+  await new Promise<void>((resolveConnect, reject) => {
+    socket.once('connect', () => resolveConnect());
+    socket.once('connect_error', reject);
+    socket.connect();
+  });
   try {
-    await new Promise<void>((resolveConnect, reject) => {
-      socket.once('connect', () => resolveConnect());
-      socket.once('connect_error', reject);
-      socket.connect();
-    });
-    const succeed = (response: { success: boolean; error?: string }): void => {
-      if (!response.success) throw new Error(response.error ?? 'Room setup failed.');
-    };
     succeed(await socket.timeout(5_000).emitWithAck('player:resume'));
+  } catch (error) {
+    socket.disconnect();
+    throw error;
+  }
+  return socket;
+}
+
+/**
+ * Hands the player's seat to the bots from a second connection, so moves keep landing while the page is traced;
+ * the returned function stops counting and reports the moves the trace saw.
+ */
+async function autoPlay(serverUrl: string, origin: string, token: string): Promise<() => number> {
+  const socket = await connectPlayer(serverUrl, origin, token);
+  let first: number | null = null;
+  let last = 0;
+  socket.on('player:state', (snapshot) => {
+    const log = (snapshot.gameState as { log?: unknown } | undefined)?.log;
+    if (!Array.isArray(log)) return;
+    first ??= log.length;
+    last = log.length;
+  });
+  try {
+    succeed(await socket.timeout(5_000).emitWithAck('game:autoPlay', { enabled: true }));
+  } catch (error) {
+    socket.disconnect();
+    throw error;
+  }
+  return () => {
+    socket.disconnect();
+    return first === null ? 0 : last - first;
+  };
+}
+
+/** Creates a room, fills it with bots, and starts the game over Socket, as the lobby buttons do. */
+async function startGame(serverUrl: string, origin: string, token: string, gameType: GameType): Promise<string> {
+  const socket = await connectPlayer(serverUrl, origin, token);
+  try {
     const created = await socket.timeout(5_000).emitWithAck('room:create', { gameType });
     succeed(created);
     if (!created.roomCode) throw new Error('Room setup returned no room code.');
@@ -154,6 +200,7 @@ async function trace(page: Page, cdp: CDPSession): Promise<Record<string, unknow
   const busy: Record<string, number> = {};
   const painted: Record<string, number> = {};
   let paints = 0;
+  let svgPaints = 0;
   for (const event of events) {
     if (event.ph !== 'X' || !event.dur) continue;
     const thread = threads.get(`${event.pid}:${event.tid}`) ?? '';
@@ -162,12 +209,13 @@ async function trace(page: Page, cdp: CDPSession): Promise<Record<string, unknow
       const node = (event.args?.data?.nodeName ?? '?').replace(/ class='([^']*)'.*/, '.$1');
       painted[node] = (painted[node] ?? 0) + 1;
     }
+    if (event.name === 'Paint' && thread === 'CrRendererMain' && event.args?.data?.nodeName?.startsWith('svg')) svgPaints += 1;
     if (!['RunTask', 'ThreadControllerImpl::RunTask', 'TaskGraphRunner::RunTask'].includes(event.name)) continue;
     const key = thread.startsWith('CompositorTileWorker') ? 'raster' : thread;
     if (['CrRendererMain', 'Compositor', 'VizCompositorThread', 'raster'].includes(key)) busy[key] = (busy[key] ?? 0) + event.dur / 1000;
   }
   return {
-    mainTaskMs: Math.round(mainTaskMs), paints,
+    mainTaskMs: Math.round(mainTaskMs), paints, svgPaints,
     threadMs: Object.fromEntries(Object.entries(busy).map(([key, value]) => [key, Math.round(value)])),
     mostPainted: Object.entries(painted).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([node, count]) => `${count}x ${node}`),
   };
@@ -239,10 +287,13 @@ async function main(): Promise<void> {
             await page.waitForTimeout(SETTLE_MS);
             const cdp = await context.newCDPSession(page);
             await cdp.send('Performance.enable');
+            const stop = options.mode === 'moves' ? await autoPlay(serverUrl, origin, token) : null;
             const result = await trace(page, cdp);
+            const moves = stop?.();
             if (errors.length) throw new Error(`Page errors: ${errors.join('; ')}`);
             process.stdout.write(`${JSON.stringify({
-              node: process.version, chromium: browser.version(), game, equipment: set, sample,
+              node: process.version, chromium: browser.version(), game, equipment: set, sample, mode: options.mode,
+              ...moves === undefined ? {} : { moves },
               viewport: `${VIEWPORT.width}x${VIEWPORT.height}@3`, cpuThrottle: CPU_THROTTLE, traceMs: TRACE_MS, ...result,
             })}\n`);
           } finally {
