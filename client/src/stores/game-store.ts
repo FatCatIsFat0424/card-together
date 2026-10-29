@@ -33,6 +33,7 @@ import type {
 } from '@shared/types';
 import type { CrazyEightsVisibleState } from '@shared/games/crazyeights/types';
 import type { GoFishVisibleState } from '@shared/games/gofish/types';
+import type { BanqiVisibleState } from '@shared/games/banqi/types';
 import { clientGame } from '../games/registry';
 import type { HeldHoleCards } from '../games/holdem/holdem-view';
 import { equalSnapshotValue } from './snapshot-equality';
@@ -65,6 +66,7 @@ export interface GameStoreState {
   goFish: GoFishVisibleState | null;
   doudizhu: DouDizhuVisibleState | null;
   xiangqi: XiangqiVisibleState | null;
+  banqi: BanqiVisibleState | null;
   gameType: GameType | null;
   phase: GamePhase | null;
   myHand: Card[];
@@ -109,6 +111,7 @@ const initialState: GameStoreState = {
   goFish: null,
   doudizhu: null,
   xiangqi: null,
+  banqi: null,
   gameType: null,
   phase: null,
   myHand: [],

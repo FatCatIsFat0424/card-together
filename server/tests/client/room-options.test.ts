@@ -38,8 +38,9 @@ const optionIds = {
   crazyeights: 'crazyeights-action-cards-hint',
   doudizhu: 'doudizhu-grab-hint',
   gomoku: 'gomoku-renju-hint',
+  banqi: 'banqi-chain-hint',
 } as const;
-const configuredGames = ['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku'] as const;
+const configuredGames = ['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'banqi'] as const;
 /** Games whose options are menus rather than switches. */
 const selectGames: readonly GameType[] = ['xiangqi'];
 const saved: GameOptions = {
@@ -50,6 +51,7 @@ const saved: GameOptions = {
   crazyeights: { actionCards: true },
   doudizhu: { variant: 'grab' },
   gomoku: { renju: true, swap: false },
+  banqi: { chain: true, rookDash: true },
 };
 
 function room(gameType: GameType, gameOptions?: GameOptions): RoomInfo {
@@ -142,10 +144,22 @@ describe('per-game room options', () => {
     ['crazyeights', { actionCards: false }],
     ['doudizhu', { variant: 'score' }],
     ['gomoku', { renju: false, swap: false }],
+    ['banqi', { chain: false, rookDash: true }],
   ] as const)('emits the typed game/options payload for %s', (gameType, options) => {
     render(room(gameType, saved));
     option(optionIds[gameType]).onChange(false);
     expect(actions.setGameOptions).toHaveBeenCalledExactlyOnceWith({ gameType, options });
+  });
+
+  it('toggles each Banqi variant on its own and keeps the other', () => {
+    render(room('banqi', { banqi: { chain: true, rookDash: false } }));
+    option('banqi-rook-dash-hint').onChange(true);
+    expect(actions.setGameOptions).toHaveBeenLastCalledWith({ gameType: 'banqi', options: { chain: true, rookDash: true } });
+    render(room('banqi'));
+    expect(option('banqi-chain-hint').checked).toBe(false);
+    expect(option('banqi-rook-dash-hint').checked).toBe(false);
+    option('banqi-chain-hint').onChange(true);
+    expect(actions.setGameOptions).toHaveBeenLastCalledWith({ gameType: 'banqi', options: { chain: true, rookDash: false } });
   });
 
   it('enables legacy Sevens rules and retains the chosen effect across toggles', () => {

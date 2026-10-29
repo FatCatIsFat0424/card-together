@@ -49,6 +49,8 @@ import type { JungleTranslationKey } from './jungle-i18n';
 import type { StudTranslationKey } from './stud-i18n';
 import { goFishTranslations } from './gofish-i18n';
 import type { GoFishTranslationKey } from './gofish-i18n';
+import { banqiTranslations } from './banqi-i18n';
+import type { BanqiTranslationKey } from './banqi-i18n';
 import type { NapoleonTranslationKey } from './napoleon-i18n';
 import { tenHalfTranslations } from './tenhalf-i18n';
 import { douDizhuTranslations } from './doudizhu-i18n';
@@ -71,7 +73,7 @@ type TranslationKeys = Record<
   ReplayTranslationKey | RoomErrorTranslationKey | SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | AudioTranslationKey | VoiceTranslationKey | UiTranslationKey
     | EmojiTranslationKey | GameTranslationKey | SevensTranslationKey | ChinesePokerTranslationKey
     | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | TenHalfTranslationKey | DouDizhuTranslationKey | CrazyEightsTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
-    | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | StudTranslationKey | TenHalfTranslationKey | OldMaidTranslationKey | GoFishTranslationKey | ReversiTranslationKey | GomokuTranslationKey | JungleTranslationKey | XiangqiTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
+    | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | StudTranslationKey | TenHalfTranslationKey | OldMaidTranslationKey | GoFishTranslationKey | ReversiTranslationKey | GomokuTranslationKey | JungleTranslationKey | XiangqiTranslationKey | BanqiTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
     | StatsTranslationKey | BoardTranslationKey, string
 > & {
   // Lobby
@@ -176,6 +178,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...douDizhuTranslations['zh-TW'],
     ...jungleTranslations['zh-TW'],
     ...xiangqiTranslations['zh-TW'],
+    ...banqiTranslations['zh-TW'],
     ...shopTranslations['zh-TW'],
     ...dailyRewardsTranslations['zh-TW'],
     ...achievementsTranslations['zh-TW'],
@@ -272,6 +275,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...douDizhuTranslations.en,
     ...jungleTranslations.en,
     ...xiangqiTranslations.en,
+    ...banqiTranslations.en,
     ...shopTranslations.en,
     ...dailyRewardsTranslations.en,
     ...achievementsTranslations.en,

@@ -74,6 +74,7 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
   oldmaid: { en: 'Drawing', 'zh-TW': '抽牌' },
   gofish: { en: 'Go fish', 'zh-TW': '釣魚' },
   doudizhu: { en: 'Combinations', 'zh-TW': '牌型' },
+  banqi: { en: 'Rank and capture', 'zh-TW': '大小與吃子' },
 };
 
 describe('contextual game rules', () => {
@@ -119,9 +120,16 @@ describe('contextual game rules', () => {
       expect(render(gameType, context)).toContain('<dd>Off</dd>');
       expect(context.active).toBe(false);
     }
-    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'xiangqi'].includes(type))) {
+    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'xiangqi', 'banqi'].includes(type))) {
       expect(roomRulesContext(room(gameType, { gameOptions: { sevens: { closeOnEnd: true } } })).option).toBeNull();
     }
+    // Banqi lists both of its variants, each off by default.
+    const banqi = roomRulesContext(room('banqi'));
+    expect(banqi.option).toEqual({ label: 'banqi.chain', enabled: false });
+    expect(banqi.moreOptions).toEqual([{ label: 'banqi.rookDash', enabled: false }]);
+    expect(render('banqi', banqi).match(/<dd>Off<\/dd>/g)).toHaveLength(2);
+    const dash = roomRulesContext(room('banqi', { gameOptions: { banqi: { chain: false, rookDash: true } } }));
+    expect(dash.moreOptions).toEqual([{ label: 'banqi.rookDash', enabled: true }]);
     // Gomoku lists both of its room rules, each off until chosen.
     const gomoku = roomRulesContext(room('gomoku'));
     expect(gomoku.option).toEqual({ label: 'gomoku.renju', enabled: false });

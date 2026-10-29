@@ -24,6 +24,7 @@ import { xiangqiClient } from './xiangqi/xiangqi-client';
 import { liarsDiceClient } from './liarsdice/liarsdice-client';
 import { crazyEightsClient } from './crazyeights/crazyeights-client';
 import { goFishClient } from './gofish/gofish-client';
+import { banqiClient } from './banqi/banqi-client';
 
 /**
  * Every game type maps to its own pure client module; a missing or mismatched entry fails to compile.
@@ -52,6 +53,7 @@ export const CLIENT_GAMES: { readonly [K in GameType]: ClientGame<K> } = {
   gomoku: gomokuClient,
   gofish: goFishClient,
   jungle: jungleClient,
+  banqi: banqiClient,
 };
 
 /**

@@ -24,5 +24,6 @@ export * from './rules/doudizhu';
 export * from './rules/doudizhu-table';
 export * from './rules/jungle';
 export * from './rules/xiangqi';
+export * from './rules/banqi';
 export * from './rules/match-standing';
 export * from './rules/seats';

@@ -1,0 +1,43 @@
+/* ─── Banqi table: side colour and pieces left beside each seat, plus the chain stop button ─── */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  flex: none;
+}
+
+.red { background: #c62828; }
+.black { background: #1d1f22; }
+
+/* God view: the identity under a face-down piece, faint enough to read as a hint */
+.secret {
+  fill: #fff;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.stop {
+  margin-left: 6px;
+  padding: 2px 10px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.stop:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

@@ -271,6 +271,15 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Handicap', 'The host may set a handicap: the giving colour starts without its left horse, both horses, its left chariot, or nine pieces (five soldiers, two advisors, two elephants). Red still moves first.'),
     section('Move list', 'Chinese notation in Traditional Chinese (炮二平五, 馬8進7) and WXF notation in English (C2=5, H8+7): piece, file, + forward, − backward, = sideways, then the destination file or the number of points. Two identical pieces on one file use 前／後 or + / −.', 'When you run out of time, a legal move is made for you.'),
   ],
+  banqi: [
+    section('Board and pieces', 'A 4×8 half board with all 32 Xiangqi pieces shuffled and face down: red 帥 仕 相 俥 傌 炮 兵 and black 將 士 象 車 馬 包 卒 (1 general, 2 each of advisor, elephant, chariot, horse, cannon, 5 soldiers per colour).', 'The earlier seat moves first. Coordinates run a–h and 1–4; the board never turns.'),
+    section('Your turn', 'Do exactly one: flip a face-down piece (it stays where it is, now face up for everyone), move one of your face-up pieces one step up, down, left or right onto an empty cell, or capture.', 'Your first flip decides your colour: you play the colour of the piece you turned over, and your opponent plays the other.'),
+    section('Rank and capture', 'Rank, strongest first: general, advisor, elephant, chariot, horse, cannon, soldier. A piece captures an enemy piece of equal or lower rank on an adjacent cell. Exceptions: the soldier captures the general, and the general cannot capture a soldier.', 'You cannot capture a face-down piece.'),
+    section('The cannon', 'The cannon does not capture adjacent pieces. It captures by jumping over exactly one piece of any kind, face up or face down, along a row or column at any distance, landing on a face-up enemy piece of any rank. It moves one step like other pieces when not capturing.'),
+    section('Optional rules', 'Chain captures (連吃): after a capture, the same piece may capture again in the same turn, with any capture it could make from its new cell, and may stop at any time with End turn. Flips and plain moves cannot follow a capture.', 'Chariot dash (車衝): the chariot moves any distance along a row or column over empty cells, and may capture the first piece in a line at a distance if it is a face-up enemy it outranks or equals. Without this rule the chariot moves one step like the other pieces. Both rules are off by default and set by the host.'),
+    section('Winning and drawing', 'Win by capturing every opposing piece (face-down ones included) or by leaving the opponent without a legal action on their turn. A player may always flip while any piece is face down.', 'A draw is declared after 50 moves in a row with no flip and no capture (each player’s move counts as one).', 'You may resign. On your own turn you may offer a draw: the opponent accepts to draw, and making a move counts as declining. After a decline you must make 3 more moves before offering again.'),
+    section('Timer', 'On timeout the easy bot policy acts for you: a safe capture if there is one, otherwise a random flip or step. Each turn refills the base time.'),
+  ],
 };
 
 const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
@@ -496,12 +505,21 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('讓子', '房主可以設定讓子：讓子方開局少掉左馬（讓單馬）、雙馬（讓雙馬）、左車（讓單車），或五兵雙仕雙相共九子（讓九子）。仍由紅方先走。'),
     section('記譜', '繁體中文用中文記譜（炮二平五、馬8進7），英文用 WXF 記譜（C2=5、H8+7）：棋子、所在路數、進／退／平，再接目標路數或前進後退的步數。同一路有兩個相同棋子時用「前／後」區分。', '逾時由系統替你走一步合法棋。'),
   ],
+  banqi: [
+    section('棋盤與棋子', '4×8 半盤，象棋 32 子全部洗牌後蓋著：紅方帥、仕、相、俥、傌、炮、兵，黑方將、士、象、車、馬、包、卒（每色帥將 1、仕士／相象／俥車／傌馬／炮包各 2、兵卒 5）。', '座位順序在前的玩家先手；座標以 a–h、1–4 標示，棋盤固定不旋轉。'),
+    section('你的回合', '每回合只做一件事：翻開一顆蓋著的棋子（留在原位，所有人都看得到）、把自己已翻開的棋子往上下左右走一格到空格，或吃子。', '你翻開的第一顆棋子決定你的顏色：你執該棋子的顏色，對手執另一色。'),
+    section('大小與吃子', '大小由大到小：帥將、仕士、相象、俥車、傌馬、炮包、兵卒。棋子可以吃相鄰、同級或較小的敵子。例外：兵卒可以吃帥將，帥將不能吃兵卒。', '不能吃蓋著的棋子。'),
+    section('炮的走法', '炮不能吃相鄰的棋子。它隔著剛好一顆棋子（蓋著或翻開、任何顏色都可以）沿橫線或直線跳過，吃掉遠處已翻開的敵子，距離不限，大小不拘。不吃子時和其他棋子一樣走一格。'),
+    section('房規', '連吃：吃子後，同一顆棋子可以在同一回合繼續吃子（從新位置能吃的子都算），隨時可以按「結束回合」停手；吃子後不能再翻棋或單純移動。', '車衝：俥／車可沿橫線或直線走任意格數（中間必須是空格），也可以隔著空格吃線上第一顆已翻開、且大小相等或較小的敵子。沒有這條房規時，俥／車和其他棋子一樣只走一格。兩項房規預設關閉，由房主設定。'),
+    section('勝負與和局', '吃光對手所有棋子（包含蓋著的）、或讓對手在他的回合無棋可翻也無棋可走者獲勝。只要場上還有蓋著的棋子，玩家就一定有棋可翻。', '連續 50 步沒有翻棋也沒有吃子即和局（雙方各走一步各算一步）。', '可以認輸；輪到自己時可以提和，對手同意即和局，對手走子視為拒絕，被拒絕後需再走 3 手才能再次提和。'),
+    section('計時', '逾時由系統依簡單難度代走：有安全的吃子就吃，否則隨機翻棋或走一步。每回合補滿單手時間。'),
+  ],
 };
 
 const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> = {
   en: [
     table('Room setup', ['Item', 'Rule'], [
-      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Go Fish 2–6; Napoleon 4–6; Reversi, Jungle, Gomoku, and Xiangqi 2; Dou Dizhu 3; others 4'],
+      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Go Fish 2–6; Napoleon 4–6; Reversi, Jungle, Gomoku, Xiangqi, and Banqi 2; Dou Dizhu 3; others 4'],
       ['Seat order', 'Clockwise N → E → S → W → P5–P8, skipping empty seats'],
       ['Start', 'Once everyone seated is ready, the host presses Start'],
       ['Bots', 'The host adds or removes them; at least one human must sit'],
@@ -517,7 +535,7 @@ const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> =
   ],
   'zh-TW': [
     table('房間設定', ['項目', '規則'], [
-      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；釣魚 2～6 人；拿破崙 4～6 人；黑白棋、鬥獸棋、五子棋與象棋 2 人；鬥地主 3 人；其他 4 人'],
+      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；釣魚 2～6 人；拿破崙 4～6 人；黑白棋、鬥獸棋、五子棋、象棋與暗棋 2 人；鬥地主 3 人；其他 4 人'],
       ['座位順序', '順時針 北 → 東 → 南 → 西 → 第 5～8 席，跳過空位'],
       ['開始', '入座者都準備後，由房主按開始'],
       ['Bot', '房主可加入或移除；至少需一位真人入座'],

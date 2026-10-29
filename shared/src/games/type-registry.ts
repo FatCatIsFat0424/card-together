@@ -19,6 +19,7 @@ import type { GoFishGameContract } from './gofish/types';
 import type { DouDizhuGameContract } from './doudizhu/types';
 import type { JungleGameContract } from './jungle/types';
 import type { XiangqiGameContract } from './xiangqi/types';
+import type { BanqiGameContract } from './banqi/types';
 import type { GameAutomation } from '../types/game';
 import type { GameSeat } from '../types/player';
 
@@ -45,6 +46,7 @@ export interface GameTypeRegistry {
   readonly doudizhu: DouDizhuGameContract;
   readonly jungle: JungleGameContract;
   readonly xiangqi: XiangqiGameContract;
+  readonly banqi: BanqiGameContract;
 }
 
 export type GameType = keyof GameTypeRegistry;

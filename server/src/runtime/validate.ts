@@ -40,6 +40,7 @@ export { isGoFishResult } from '../managers/games/gofish-validation';
 export { isDouDizhuResult } from '../managers/games/doudizhu-validation';
 export { isJungleResult } from '../managers/games/jungle-validation';
 export { isXiangqiResult } from '../managers/games/xiangqi-validation';
+export { isBanqiResult } from '../managers/games/banqi-validation';
 
 function player(value: unknown): boolean {
   return (

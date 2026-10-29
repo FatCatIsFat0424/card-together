@@ -71,6 +71,10 @@ const ACTIONS = [
   { gameType: 'oldmaid', action: { type: 'reorder', order: [1, 0] } },
   { gameType: 'oldmaid', action: { type: 'reorder', order: [] } },
   { gameType: 'gofish', action: { type: 'ask', target: 'P6', rank: 14 } },
+  { gameType: 'banqi', action: { type: 'flip', to: '7,3' } },
+  { gameType: 'banqi', action: { type: 'move', from: '0,0', to: '1,0' } },
+  { gameType: 'banqi', action: { type: 'stop' } },
+  { gameType: 'banqi', action: { type: 'offer-draw' } },
 ] satisfies readonly GameActionEnvelope[];
 
 function inject(value: unknown, strictCards = false): unknown {
@@ -176,6 +180,9 @@ describe('game action contracts', () => {
     ['gofish', { type: 'ask', target: 'X', rank: 7 }, 'Invalid player.'],
     ['gofish', { type: 'ask', target: 'E', rank: 15 }, 'Invalid rank.'],
     ['gofish', { type: 'draw' }, 'Invalid action.'],
+    ['banqi', { type: 'flip', to: '0,4' }, 'Invalid action.'],
+    ['banqi', { type: 'move', from: '0,0' }, 'Invalid action.'],
+    ['banqi', { type: 'place', to: '0,0' }, 'Invalid action.'],
   ];
   it.each(malformed)('rejects malformed %s action %#', (gameType, action, error) => {
     expect(parseGameAction({ gameType, action })).toBe(error);

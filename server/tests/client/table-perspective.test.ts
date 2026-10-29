@@ -111,6 +111,7 @@ describe('spectator table perspective', () => {
       import('../../../client/src/games/jungle/JungleTable'),
       import('../../../client/src/games/gomoku/GomokuTable'),
       import('../../../client/src/games/xiangqi/XiangqiTable'),
+      import('../../../client/src/games/banqi/BanqiTable'),
     ]);
   }, 60_000);
   beforeEach(() => {
@@ -161,6 +162,10 @@ describe('spectator table perspective', () => {
         || game.gameType === 'xiangqi' || projected.gameType === 'xiangqi') {
         // The whole position is public: spectators have no hidden hands to view.
         expect(projected).toMatchObject({ gameType: game.gameType, observer: 'spectator', mySeat: seat });
+      } else if (game.gameType === 'banqi' || projected.gameType === 'banqi') {
+        // Players share the public board; the unseated spectator also holds the face-down pieces' identities.
+        expect(projected).toMatchObject({ gameType: 'banqi', observer: 'spectator', mySeat: seat });
+        expect(Object.keys((projected as { observedPieces?: object }).observedPieces ?? {})).toHaveLength(32);
       } else if (game.gameType === 'liarsdice' && projected.gameType === 'liarsdice') {
         expect(projected.myDice).toEqual(game.observedHands?.[seat] ?? []);
       } else if (game.gameType !== 'blackjack' && projected.gameType !== 'blackjack'

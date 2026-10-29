@@ -164,6 +164,12 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('checks', 'log', 'count'),
     record('mostCaptures', 'log', 'max'),
   ],
+  banqi: [
+    record('topPieces', 'result', 'max'),
+    record('wipeouts', 'result', 'count', true),
+    record('generalsTaken', 'log', 'count'),
+    record('bestChain', 'log', 'max'),
+  ],
 };
 
 /**

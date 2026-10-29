@@ -19,6 +19,7 @@ import { reversiStatistics } from './reversi/statistics';
 import { gomokuStatistics } from './gomoku/statistics';
 import { goFishStatistics } from './gofish/statistics';
 import { jungleStatistics } from './jungle/statistics';
+import { banqiStatistics } from './banqi/statistics';
 
 export const GAME_STATISTICS: Readonly<Record<GameType, GameStatisticsRules>> = {
   bridge: bridgeStatistics,
@@ -42,6 +43,7 @@ export const GAME_STATISTICS: Readonly<Record<GameType, GameStatisticsRules>> = 
   gomoku: gomokuStatistics,
   gofish: goFishStatistics,
   jungle: jungleStatistics,
+  banqi: banqiStatistics,
 };
 
 export function gameStatisticsRules(gameType: GameType): GameStatisticsRules {
