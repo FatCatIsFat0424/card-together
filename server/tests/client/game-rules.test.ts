@@ -68,6 +68,7 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
   reversi: { en: 'Passing', 'zh-TW': '跳過' },
   jungle: { en: 'River', 'zh-TW': '河道' },
   gomoku: { en: 'Renju option', 'zh-TW': '連珠禁手選項' },
+  xiangqi: { en: 'Handicap', 'zh-TW': '讓子' },
   crazyeights: { en: 'Eights', 'zh-TW': '8 為萬用牌' },
   stud: { en: 'Who acts first', 'zh-TW': '誰先行動' },
   oldmaid: { en: 'Drawing', 'zh-TW': '抽牌' },
@@ -112,13 +113,13 @@ describe('contextual game rules', () => {
   });
 
   it('defaults legacy room options to off and limits status to the selected game', () => {
-    for (const gameType of ['sevens', 'ninetynine', 'blackjack', 'crazyeights'] as const) {
+    for (const gameType of ['sevens', 'ninetynine', 'blackjack', 'crazyeights', 'xiangqi'] as const) {
       const context = roomRulesContext(room(gameType));
       expect(context.option?.enabled).toBe(false);
       expect(render(gameType, context)).toContain('<dd>Off</dd>');
       expect(context.active).toBe(false);
     }
-    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku'].includes(type))) {
+    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'xiangqi'].includes(type))) {
       expect(roomRulesContext(room(gameType, { gameOptions: { sevens: { closeOnEnd: true } } })).option).toBeNull();
     }
     // Gomoku lists both of its room rules, each off until chosen.
@@ -131,6 +132,10 @@ describe('contextual game rules', () => {
     expect(html.match(/<dd>On<\/dd>/g)).toHaveLength(2);
     // Dou Dizhu bids for the landlord unless the host enables call-and-grab.
     expect(roomRulesContext(room('doudizhu')).option).toEqual({ label: 'doudizhu.grabOption', enabled: false });
+    // A Xiangqi handicap shows as on and is spelled out in the summary.
+    const handicap = roomRulesContext(room('xiangqi', { gameOptions: { xiangqi: { handicap: 'horses', handicapSide: 'black' } } }));
+    expect(handicap.option).toEqual({ label: 'xiangqi.handicap', enabled: true });
+    expect(render('xiangqi', handicap)).toContain('Handicap: Black starts without both horses.');
     // Joker summoning is the one option that defaults to on.
     const napoleon = roomRulesContext(room('napoleon'));
     expect(napoleon.option).toEqual({ label: 'napoleon.jokerSummon', enabled: true });

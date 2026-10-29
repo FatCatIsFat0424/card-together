@@ -24,6 +24,7 @@ const CHOICES: GameOptions = {
   crazyeights: { actionCards: false },
   doudizhu: { variant: 'score' },
   gomoku: { renju: false, swap: false },
+  xiangqi: { handicap: 'none', handicapSide: 'red' },
 };
 
 function fixture(gameType: GameType = 'sevens'): {
@@ -77,7 +78,7 @@ describe('room options document migration', () => {
       sevens: { closeOnEnd: false }, ninetynine: { twoDecks: false },
       blackjack: { playerDealer: false }, napoleon: { jokerSummon: true }, crazyeights: { actionCards: false },
       doudizhu: { variant: 'score' },
-      gomoku: { renju: false, swap: false },
+      gomoku: { renju: false, swap: false }, xiangqi: { handicap: 'none', handicapSide: 'red' },
     });
     expect(migrated.runtime?.games).toEqual(untouched.games);
     expect(migrated.runtime?.players).toEqual(untouched.players);

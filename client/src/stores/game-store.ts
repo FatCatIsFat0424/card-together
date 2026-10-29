@@ -29,6 +29,7 @@ import type {
   StudVisibleState,
   OldMaidVisibleState,
   DouDizhuVisibleState,
+  XiangqiVisibleState,
 } from '@shared/types';
 import type { CrazyEightsVisibleState } from '@shared/games/crazyeights/types';
 import type { GoFishVisibleState } from '@shared/games/gofish/types';
@@ -63,6 +64,7 @@ export interface GameStoreState {
   oldMaid: OldMaidVisibleState | null;
   goFish: GoFishVisibleState | null;
   doudizhu: DouDizhuVisibleState | null;
+  xiangqi: XiangqiVisibleState | null;
   gameType: GameType | null;
   phase: GamePhase | null;
   myHand: Card[];
@@ -106,6 +108,7 @@ const initialState: GameStoreState = {
   oldMaid: null,
   goFish: null,
   doudizhu: null,
+  xiangqi: null,
   gameType: null,
   phase: null,
   myHand: [],

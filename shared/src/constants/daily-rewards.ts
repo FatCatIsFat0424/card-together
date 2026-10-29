@@ -13,6 +13,7 @@ export const DAILY_TASKS = [
   { id: 'play-gomoku', target: 2, coins: 10 },
   { id: 'play-oldmaid', target: 2, coins: 10 },
   { id: 'play-jungle', target: 2, coins: 10 },
+  { id: 'play-xiangqi', target: 2, coins: 15 },
   { id: 'play-casino', target: 1, coins: 20 },
   { id: 'play-crazyeights', target: 2, coins: 15 },
   { id: 'play-gofish', target: 2, coins: 15 },

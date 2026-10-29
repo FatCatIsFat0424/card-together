@@ -41,6 +41,8 @@ import { parseAction as parseDouDizhuAction } from './doudizhu/actions';
 import type { DouDizhuAction } from './doudizhu/actions';
 import { parseAction as parseJungleAction } from './jungle/actions';
 import type { JungleGameAction } from './jungle/actions';
+import { parseAction as parseXiangqiAction } from './xiangqi/actions';
+import type { XiangqiGameAction } from './xiangqi/actions';
 
 /** Action contracts are indexed separately from lobby and presentation metadata. */
 export interface GameActionMap {
@@ -64,6 +66,7 @@ export interface GameActionMap {
   gofish: GoFishAction;
   doudizhu: DouDizhuAction;
   jungle: JungleGameAction;
+  xiangqi: XiangqiGameAction;
 }
 
 export type GameActionEnvelope<K extends GameType = GameType> = {
@@ -91,6 +94,7 @@ export const ACTION_PARSERS: { readonly [K in GameType]: (value: unknown) => Gam
   gofish: parseGoFishAction,
   doudizhu: parseDouDizhuAction,
   jungle: parseJungleAction,
+  xiangqi: parseXiangqiAction,
 };
 
 function parseEnvelope<K extends GameType>(gameType: K, value: unknown): GameActionEnvelope<K> | string {

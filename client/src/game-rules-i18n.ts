@@ -256,6 +256,21 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Traps and den', 'A piece standing in an opponent’s trap counts as rank 0: any piece can capture it, and it can capture nothing. It regains its rank on leaving the trap. Entering the opponent’s den wins.'),
     section('Winning', 'Win by entering the opponent’s den, by capturing every opposing piece, or by leaving the opponent with no legal move. If 100 plies pass without a capture the game is a draw.', 'You may resign. On your own turn you may offer a draw: the opponent accepts to draw, and making a move counts as declining. After a decline you must make 3 more moves before offering again.'),
   ],
+  xiangqi: [
+    section('Board and start', 'Nine files by ten ranks of points, split by the river, with a 3×3 palace on each side. Red (the earlier seat) moves first.', 'Each player sees their own side at the bottom; piece characters never turn.'),
+    table('Pieces', ['Piece', 'Movement'], [
+      ['General 帥／將', 'One point orthogonally, inside the palace'],
+      ['Advisor 仕／士', 'One point diagonally, inside the palace'],
+      ['Elephant 相／象', 'Exactly two points diagonally; blocked by a piece on the point between; never crosses the river'],
+      ['Horse 傌／馬', 'One point orthogonally then one diagonally outward; blocked by a piece on the first point'],
+      ['Chariot 俥／車', 'Any distance orthogonally'],
+      ['Cannon 炮／包', 'Moves like a chariot; captures only by jumping exactly one piece (the screen)'],
+      ['Soldier 兵／卒', 'One point forward; after crossing the river also one point sideways; never backward'],
+    ], 'The two generals may never face each other on an open file, and no move may leave your own general in check.'),
+    section('Winning and drawing', 'Checkmate wins. A player with no legal move loses, even when not in check (stalemate).', 'Perpetual check loses: when a position appears for the third time, a side that gave check with every move since its first appearance loses. Any other threefold repetition is a draw, as are 60 moves by each side without a capture.', 'You may resign. On your own turn you may offer a draw: the opponent accepts to draw, and making a move counts as declining. After a decline you must make 3 more moves before offering again.'),
+    section('Handicap', 'The host may set a handicap: the giving colour starts without its left horse, both horses, its left chariot, or nine pieces (five soldiers, two advisors, two elephants). Red still moves first.'),
+    section('Move list', 'Chinese notation in Traditional Chinese (炮二平五, 馬8進7) and WXF notation in English (C2=5, H8+7): piece, file, + forward, − backward, = sideways, then the destination file or the number of points. Two identical pieces on one file use 前／後 or + / −.', 'When you run out of time, a legal move is made for you.'),
+  ],
 };
 
 const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
@@ -466,12 +481,27 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('陷阱與獸穴', '進入對方陷阱的棋子等級視為 0：任何棋子都能吃它，它也吃不了任何棋子；離開陷阱即恢復原等級。走進對方獸穴者獲勝。'),
     section('勝負', '進入對方獸穴、吃光對方所有棋子，或讓對方無子可動者獲勝。連續 100 手（雙方各半）沒有吃子，判和局。', '可以認輸；輪到自己時可以提和，對手同意即和局，對手走子視為拒絕，被拒絕後需再走 3 手才能再次提和。'),
   ],
+  xiangqi: [
+    section('棋盤與開局', '棋盤為 9 路 10 線的交叉點，中間以楚河漢界分開，雙方各有 3×3 的九宮。紅方（座位順序在前）先走。', '每位玩家的己方都在畫面下方，棋子文字永遠正立。'),
+    table('棋子走法', ['棋子', '走法'], [
+      ['帥／將', '在九宮內直走或橫走一步'],
+      ['仕／士', '在九宮內斜走一步'],
+      ['相／象', '斜走兩步（田字），中間有子擋住（塞象眼）就不能走；不能過河'],
+      ['傌／馬', '先直或橫一步再斜一步（日字），第一步有子擋住（蹩馬腳）就不能走'],
+      ['俥／車', '直走或橫走，距離不限'],
+      ['炮／包', '移動同車；吃子時必須隔恰好一子（炮架）跳吃'],
+      ['兵／卒', '向前一步；過河後也可以橫走一步；不能後退'],
+    ], '雙方的將帥不能在同一直線上直接相對（中間無子），任何一步都不能讓自己的將帥處於被將軍的狀態。'),
+    section('勝負與和局', '將死對方獲勝；輪到的一方沒有合法步時，即使沒被將軍也判負（困斃）。', '長將判負：同一局面第 3 次出現時，若某一方從該局面第一次出現起每一步都在將軍，該方判負；其他局面重複 3 次為和局。雙方各走 60 步（120 手）都沒有吃子也是和局。', '可以認輸；輪到自己時可以提和，對手同意即和局，對手走子視為拒絕，被拒絕後需再走 3 手才能再次提和。'),
+    section('讓子', '房主可以設定讓子：讓子方開局少掉左馬（讓單馬）、雙馬（讓雙馬）、左車（讓單車），或五兵雙仕雙相共九子（讓九子）。仍由紅方先走。'),
+    section('記譜', '繁體中文用中文記譜（炮二平五、馬8進7），英文用 WXF 記譜（C2=5、H8+7）：棋子、所在路數、進／退／平，再接目標路數或前進後退的步數。同一路有兩個相同棋子時用「前／後」區分。', '逾時由系統替你走一步合法棋。'),
+  ],
 };
 
 const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> = {
   en: [
     table('Room setup', ['Item', 'Rule'], [
-      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Go Fish 2–6; Napoleon 4–6; Reversi, Jungle and Gomoku 2; Dou Dizhu 3; others 4'],
+      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Go Fish 2–6; Napoleon 4–6; Reversi, Jungle, Gomoku, and Xiangqi 2; Dou Dizhu 3; others 4'],
       ['Seat order', 'Clockwise N → E → S → W → P5–P8, skipping empty seats'],
       ['Start', 'Once everyone seated is ready, the host presses Start'],
       ['Bots', 'The host adds or removes them; at least one human must sit'],
@@ -487,7 +517,7 @@ const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> =
   ],
   'zh-TW': [
     table('房間設定', ['項目', '規則'], [
-      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；釣魚 2～6 人；拿破崙 4～6 人；黑白棋、鬥獸棋與五子棋 2 人；鬥地主 3 人；其他 4 人'],
+      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；釣魚 2～6 人；拿破崙 4～6 人；黑白棋、鬥獸棋、五子棋與象棋 2 人；鬥地主 3 人；其他 4 人'],
       ['座位順序', '順時針 北 → 東 → 南 → 西 → 第 5～8 席，跳過空位'],
       ['開始', '入座者都準備後，由房主按開始'],
       ['Bot', '房主可加入或移除；至少需一位真人入座'],

@@ -26,6 +26,7 @@ import { easyGomokuAction, getGomokuBotAction, gomokuFirstLegalAction } from './
 import { easyOldMaidAction, getOldMaidBotAction, oldMaidFirstLegalAction } from './oldmaid-strategy';
 import { easyGoFishAction, getGoFishBotAction, goFishFirstLegalAction } from './gofish-strategy';
 import { easyJungleAction, getJungleBotAction, jungleFirstLegalAction } from './jungle-strategy';
+import { easyXiangqiAction, getXiangqiBotAction, xiangqiFirstLegalAction } from './xiangqi-strategy';
 import {
   easyBigTwoAction, easyBlackjackAction, easyBridgeAction, easyChinesePokerAction, easyHoldemAction, easyLiarsDeckAction,
   easyNinetyNineAction, easyRedPointsAction, easySevensAction, easyStudAction,
@@ -189,6 +190,19 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     search: { strategy: searchStrategy<'doudizhu'>(new URL('./doudizhu-search.ts', import.meta.url), 'douDizhuSearch'), budgetMs: 900 },
     // A human who runs out of time passes the auction, passes a trick, or leads the smallest play.
     turnTimeout: (visible, { isBot, strategy }) => (isBot ? strategy() : douDizhuFirstLegalAction(visible)),
+  },
+  xiangqi: {
+    hard: getXiangqiBotAction,
+    easy: easyXiangqiAction,
+    firstLegal: xiangqiFirstLegalAction,
+    // Hard bots search in the worker pool; the cheap synchronous hard move serves only other seats.
+    search: {
+      strategy: searchStrategy<'xiangqi'>(new URL('./xiangqi-search.ts', import.meta.url), 'xiangqiSearch'),
+      budgetMs: 1500,
+      maxDepth: 12,
+    },
+    // A player who runs out of time gets a legal move by the easy policy.
+    turnTimeout: (visible) => easyXiangqiAction(visible, Math.random),
   },
 };
 

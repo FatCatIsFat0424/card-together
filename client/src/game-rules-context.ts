@@ -1,4 +1,4 @@
-import type { GameType, PlayerVisibleGameState, RoomInfo } from '@shared/types';
+import type { GameType, PlayerVisibleGameState, RoomInfo, XiangqiOptions } from '@shared/types';
 import { clientGame } from './games/registry';
 import type { TranslationKey } from './i18n';
 
@@ -16,6 +16,8 @@ export interface GameRulesContextFields {
   readonly blackjackHands?: number;
   /** Match length for Ten and a Half, which depends on the seats taking part. */
   readonly tenHalfHands?: number;
+  /** Xiangqi handicap, described in the summary when one is set. */
+  readonly xiangqiHandicap?: XiangqiOptions;
 }
 
 export interface GameRulesContext extends GameRulesContextFields {

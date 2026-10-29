@@ -21,6 +21,7 @@ const PREVIOUS_SEATS: Readonly<Record<GameType, readonly [min: number, max: numb
   reversi: [2, 2, true, false],
   jungle: [2, 2, true, false],
   gomoku: [2, 2, true, false],
+  xiangqi: [2, 2, true, false],
   crazyeights: [2, 8, true, false],
   stud: [2, 8, true, false],
   oldmaid: [2, 8, true, false],
@@ -51,7 +52,7 @@ describe('shared game registry', () => {
         expect([definition.category, definition.equipment]).toEqual(['dice', []]);
         continue;
       }
-      if (gameType === 'reversi' || gameType === 'jungle' || gameType === 'gomoku') {
+      if (gameType === 'reversi' || gameType === 'jungle' || gameType === 'gomoku' || gameType === 'xiangqi') {
         expect([definition.category, definition.equipment]).toEqual(['board', []]);
         continue;
       }
@@ -76,6 +77,7 @@ describe('registered result metadata', () => {
       ['napoleon', 'roles', null], ['tenhalf', 'ranking', 'chips'], ['liarsdice', 'ranking', null], ['crazyeights', 'ranking', 'penalty'], ['stud', 'ranking', 'chips'],
       ['reversi', 'ranking', null], ['oldmaid', 'ranking', 'points'],
       ['gofish', 'ranking', 'points'], ['doudizhu', 'ranking', 'points'], ['jungle', 'ranking', null], ['gomoku', 'ranking', null],
+      ['xiangqi', 'ranking', null],
     ]);
   });
 

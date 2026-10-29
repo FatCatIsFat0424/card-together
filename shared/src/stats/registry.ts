@@ -9,6 +9,7 @@ import { holdemFacts } from './holdem';
 import { liarsDeckFacts } from './liarsdeck';
 import { liarsDiceFacts } from './liarsdice';
 import { oldMaidFacts } from './oldmaid';
+import { xiangqiFacts } from './xiangqi';
 import { napoleonFacts } from './napoleon';
 import { ninetyNineFacts } from './ninetynine';
 import { redPointsFacts } from './redpoints';
@@ -46,6 +47,7 @@ export const GAME_STATS: {
   gofish: goFishFacts,
   doudizhu: douDizhuFacts,
   jungle: jungleFacts,
+  xiangqi: xiangqiFacts,
 };
 
 export function gameFacts<K extends GameType>(

@@ -158,6 +158,12 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('rockets', 'log', 'count'),
     record('springs', 'log', 'count'),
   ],
+  xiangqi: [
+    record('checkmates', 'result', 'count', true),
+    record('fastestMate', 'result', 'min'),
+    record('checks', 'log', 'count'),
+    record('mostCaptures', 'log', 'max'),
+  ],
 };
 
 /**

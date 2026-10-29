@@ -1,0 +1,45 @@
+/* ─── Xiangqi table: side chip and captured pieces beside each seat ─── */
+
+.stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.side {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 999px;
+  line-height: 18px;
+  color: #fff;
+}
+.side.red { background: #b4382c; }
+.side.black { background: #2b3038; }
+
+.captured {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  min-width: 0;
+  max-height: 38px;
+  overflow: hidden;
+}
+
+/* Small ivory tokens in the captured piece's colour, like the pieces on the board. */
+.mini {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  background: #f7ebc8;
+  font-family: 'Noto Serif TC', 'Noto Sans TC', serif;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+.mini.red { color: #b4382c; }
+.mini.black { color: #1f2937; }

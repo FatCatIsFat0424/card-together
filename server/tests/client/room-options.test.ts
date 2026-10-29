@@ -40,6 +40,8 @@ const optionIds = {
   gomoku: 'gomoku-renju-hint',
 } as const;
 const configuredGames = ['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku'] as const;
+/** Games whose options are menus rather than switches. */
+const selectGames: readonly GameType[] = ['xiangqi'];
 const saved: GameOptions = {
   sevens: { closeOnEnd: true, slayEffect: 'fire' },
   ninetynine: { twoDecks: true },
@@ -92,7 +94,8 @@ describe('per-game room options', () => {
 
   it('registers room options only for games with configurable rules', () => {
     expect(GAME_TYPES.filter((gameType) => gameUi(gameType).roomOptions)).toEqual(
-      GAME_TYPES.filter((gameType) => configuredGames.some((configured) => configured === gameType)),
+      GAME_TYPES.filter((gameType) => configuredGames.some((configured) => configured === gameType)
+        || selectGames.includes(gameType)),
     );
   });
 
@@ -186,5 +189,28 @@ describe('per-game room options', () => {
       expect(html.includes(useI18nStore.getState().t('room.hostOnly'))).toBe(!isHost);
       expect(html.includes('data-pending-disabled="true"')).toBe(pending);
     }
+  });
+
+  it('offers the Xiangqi handicap menus and emits complete options', () => {
+    const select = (hint: string): SelectProps | undefined => vi.mocked(Select).mock.calls.findLast(([props]) =>
+      (props.inputProps as { 'aria-describedby'?: string } | undefined)?.['aria-describedby'] === hint)?.[0];
+    let html = render(room('xiangqi'));
+    expect(select('xiangqi-handicap-hint')?.value).toBe('none');
+    expect(html).not.toContain('id="xiangqi-handicap-side-hint"');
+    select('xiangqi-handicap-hint')!.onChange?.({ target: { value: 'nine' } } as SelectChangeEvent, null);
+    expect(actions.setGameOptions).toHaveBeenLastCalledWith({
+      gameType: 'xiangqi', options: { handicap: 'nine', handicapSide: 'red' },
+    });
+    vi.clearAllMocks();
+    html = render(room('xiangqi', { xiangqi: { handicap: 'horse', handicapSide: 'black' } }));
+    expect(html).toContain('id="xiangqi-handicap-side-hint"');
+    expect(select('xiangqi-handicap-side-hint')?.value).toBe('black');
+    select('xiangqi-handicap-side-hint')!.onChange?.({ target: { value: 'red' } } as SelectChangeEvent, null);
+    select('xiangqi-handicap-side-hint')!.onChange?.({ target: { value: 'green' } } as SelectChangeEvent, null);
+    expect(actions.setGameOptions).toHaveBeenCalledExactlyOnceWith({
+      gameType: 'xiangqi', options: { handicap: 'horse', handicapSide: 'red' },
+    });
+    render(room('xiangqi', { xiangqi: { handicap: 'horse', handicapSide: 'black' } }), false, false);
+    expect(select('xiangqi-handicap-hint')?.disabled).toBe(true);
   });
 });

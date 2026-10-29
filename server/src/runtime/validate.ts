@@ -39,6 +39,7 @@ export { isOldMaidResult } from '../managers/games/oldmaid-validation';
 export { isGoFishResult } from '../managers/games/gofish-validation';
 export { isDouDizhuResult } from '../managers/games/doudizhu-validation';
 export { isJungleResult } from '../managers/games/jungle-validation';
+export { isXiangqiResult } from '../managers/games/xiangqi-validation';
 
 function player(value: unknown): boolean {
   return (

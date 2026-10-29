@@ -40,6 +40,7 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
     game.gomoku?.log.filter((entry) => entry.seat === room.mySeat).length ??
     game.oldMaid?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
     game.jungle?.log.filter((entry) => entry.seat === room.mySeat).length ??
+    game.xiangqi?.log.filter((entry) => entry.seat === room.mySeat).length ??
     game.holdem?.log.filter((entry) => entry.type === 'action' && entry.seat === room.mySeat).length ??
     game.stud?.log.filter((entry) => entry.type === 'action' && entry.seat === room.mySeat).length ??
     (game.napoleon ? `${game.napoleon.phase}-${game.napoleon.log.filter((entry) =>

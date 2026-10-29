@@ -274,4 +274,13 @@ export type {
   JungleVisibleState,
 } from '../games/jungle/types';
 
+export type {
+  XiangqiOptions,
+  XiangqiMove,
+  XiangqiPhase,
+  XiangqiMatchResult,
+  XiangqiGameState,
+  XiangqiVisibleState,
+} from '../games/xiangqi/types';
+
 export type { AnyGameState, PlayerVisibleGameState, MatchResult } from '../games/type-registry';
