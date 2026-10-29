@@ -9,6 +9,7 @@ import { blackjackStatistics } from './blackjack/statistics';
 import { holdemStatistics } from './holdem/statistics';
 import { napoleonStatistics } from './napoleon/statistics';
 import { tenHalfStatistics } from './tenhalf/statistics';
+import { oldMaidStatistics } from './oldmaid/statistics';
 import { liarsDiceStatistics } from './liarsdice/statistics';
 import { crazyEightsStatistics } from './crazyeights/statistics';
 import { studStatistics } from './stud/statistics';
@@ -26,6 +27,7 @@ export const GAME_STATISTICS: Readonly<Record<GameType, GameStatisticsRules>> = 
   holdem: holdemStatistics,
   napoleon: napoleonStatistics,
   tenhalf: tenHalfStatistics,
+  oldmaid: oldMaidStatistics,
   liarsdice: liarsDiceStatistics,
   crazyeights: crazyEightsStatistics,
   stud: studStatistics,

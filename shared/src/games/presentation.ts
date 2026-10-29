@@ -15,7 +15,7 @@ export interface PresentationFrame {
   readonly kind: 'play' | 'pass' | 'trick' | 'round' | 'capture' | 'eliminated' | 'cover' | 'reveal' | 'shoot'
     | 'homerun' | 'deal' | 'challenge' | 'roulette' | 'shot' | 'hit' | 'stand' | 'double' | 'split'
     | 'dealerReveal' | 'dealerHit' | 'dealerStand' | 'settle' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street'
-    | 'showdown' | 'award' | 'slay' | 'collapse' | 'summon' | 'bid' | 'diceReveal' | 'finish';
+    | 'showdown' | 'award' | 'slay' | 'collapse' | 'summon' | 'bid' | 'diceReveal' | 'finish' | 'draw';
   readonly durationMs: number;
   readonly seat?: GameSeat;
   readonly cards: readonly Card[];
@@ -55,6 +55,20 @@ export interface PresentationFrame {
   readonly summon?: NapoleonSummon;
   /** Liar's Dice: the bid and, on the reveal frame, the lifted cups */
   readonly liarsDice?: LiarsDiceFrameData;
+  /** Old Maid: what the deal, draw, or settlement shows */
+  readonly oldMaid?: OldMaidFrameData;
+}
+
+/** Old Maid: discarded pairs and finishers; a draw names no card except the pair it completed. */
+export interface OldMaidFrameData {
+  /** Pairs each seat discarded after the deal */
+  readonly discards?: Readonly<Partial<Record<GameSeat, readonly Card[]>>>;
+  /** Seats left without cards by this deal or draw */
+  readonly finished?: readonly GameSeat[];
+  /** Settlement: finishing order, joker holder last */
+  readonly order?: readonly GameSeat[];
+  readonly points?: Readonly<Partial<Record<GameSeat, number>>>;
+  readonly totals?: Readonly<Partial<Record<GameSeat, number>>>;
 }
 
 /** Liar's Dice: the bid a frame announces, and what a challenge found once the cups are lifted. */

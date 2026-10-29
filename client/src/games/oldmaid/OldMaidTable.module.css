@@ -1,0 +1,166 @@
+/* ─── OldMaidTable styles: neighbour's face-down fan, own hand, info rail, settlement ─── */
+
+/* ─── Table centre ─── */
+.centre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  color: var(--table-ink);
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.pill {
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--bg-page) 45%, transparent);
+  border: 1px solid var(--rail-border);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.caption {
+  font-weight: 700;
+  text-align: center;
+  text-shadow: var(--shadow-sm);
+}
+
+/* The width of a face-down card follows the number per row and the height left in the centre. */
+.fan {
+  --fan-w: min(calc(60px * var(--playing-card-scale)), calc(15cqh / var(--fan-rows)), calc((100cqw - 24px) / (var(--fan-cards) * 0.5 + 0.5)));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.fanRow {
+  display: flex;
+  justify-content: center;
+}
+
+.fanCard {
+  position: relative;
+  flex: none;
+  display: block;
+  width: max(var(--fan-w), 26px);
+  aspect-ratio: 224 / 313;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--fan-w) * 0.08);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast);
+}
+
+.fanCard + .fanCard { margin-left: calc(var(--fan-w) * -0.5); }
+
+button.fanCard { cursor: pointer; touch-action: manipulation; }
+
+/* The touch area reaches the control target without widening the visible slice. */
+button.fanCard::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
+}
+
+button.fanCard:hover, button.fanCard:focus-visible, .fanArmed { transform: translateY(-12%); z-index: 1; }
+
+.fanArmed { outline: 2px solid var(--turn-glow); outline-offset: -2px; }
+
+/* ─── Hand ─── */
+.handArea {
+  --hand-w: min(calc(64px * var(--playing-card-scale)), 17cqh, calc((100cqw - 24px) / (var(--hand-cards, 7) * 0.5 + 0.5)));
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.hand {
+  --card-w: max(var(--hand-w), 28px);
+  --hand-cards: 7;
+  display: flex;
+  justify-content: center;
+  padding: 8px var(--spacing-sm) 2px;
+  min-height: calc(var(--card-w) * 1.4 + 10px);
+}
+
+.handCard {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 2px var(--spacing-sm) 0;
+}
+
+.ctrl {
+  min-height: 44px;
+  padding: 4px 16px;
+  font-size: var(--text-sm);
+}
+
+/* ─── Info rail ─── */
+.dealLine {
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.score {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.tag {
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--text-primary) 12%, transparent);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tagGood {
+  background: color-mix(in srgb, var(--color-success) 18%, transparent);
+  color: var(--color-success);
+}
+
+/* ─── Settlement ─── */
+.rankTable td,
+.rankTable th { text-align: left; }
+
+.lastPlace { color: var(--color-danger); font-weight: 700; }
+
+/* Short landscape: the facts sit beside the fan so the low centre stays unscaled. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .centre {
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-areas: 'facts fan' 'caption fan';
+    align-items: center;
+    gap: 2px var(--spacing-md);
+  }
+  .facts { grid-area: facts; flex-direction: column; align-items: flex-start; }
+  .caption { grid-area: caption; align-self: start; max-width: 9em; text-align: left; }
+  .fan { grid-area: fan; --fan-w: min(calc(46px * var(--playing-card-scale)), calc(30cqh / var(--fan-rows)), calc((100cqw - 150px) / (var(--fan-cards) * 0.5 + 0.5))); }
+  .handArea { --hand-w: clamp(30px, 17cqh, 52px); gap: 2px; }
+  .hand { padding-top: 2px; min-height: 0; }
+  .controls { min-height: 0; padding: 0; }
+}

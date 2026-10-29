@@ -21,6 +21,7 @@ const PREVIOUS_SEATS: Readonly<Record<GameType, readonly [min: number, max: numb
   reversi: [2, 2, true, false],
   crazyeights: [2, 8, true, false],
   stud: [2, 8, true, false],
+  oldmaid: [2, 8, true, false],
 };
 
 describe('shared game registry', () => {
@@ -36,7 +37,7 @@ describe('shared game registry', () => {
   });
 
   it('lists the expandable rooms in lobby order', () => {
-    expect(EXPANDABLE_ROOM_GAMES).toEqual(['ninetynine', 'blackjack', 'holdem', 'napoleon', 'tenhalf', 'liarsdice', 'crazyeights', 'stud']);
+    expect(EXPANDABLE_ROOM_GAMES).toEqual(['ninetynine', 'blackjack', 'holdem', 'napoleon', 'tenhalf', 'liarsdice', 'crazyeights', 'stud', 'oldmaid']);
   });
 
   it('classifies the dice game by its category and gives chips only to the betting games', () => {
@@ -69,7 +70,7 @@ describe('registered result metadata', () => {
       ['ninetynine', 'ranking', null], ['sevens', 'ranking', 'penalty'], ['chinesepoker', 'ranking', 'points'],
       ['liarsdeck', 'ranking', null], ['blackjack', 'ranking', 'chips'], ['holdem', 'ranking', 'chips'],
       ['napoleon', 'roles', null], ['tenhalf', 'ranking', 'chips'], ['liarsdice', 'ranking', null], ['crazyeights', 'ranking', 'penalty'], ['stud', 'ranking', 'chips'],
-      ['reversi', 'ranking', null],
+      ['reversi', 'ranking', null], ['oldmaid', 'ranking', 'points'],
     ]);
   });
 
@@ -77,6 +78,6 @@ describe('registered result metadata', () => {
     expect(GAME_TYPES.flatMap((gameType) => {
       const hands = gameDefinition(gameType).matchHands;
       return hands === undefined ? [] : [[gameType, hands]];
-    })).toEqual([['holdem', 20], ['crazyeights', 3], ['stud', 20]]);
+    })).toEqual([['holdem', 20], ['crazyeights', 3], ['stud', 20], ['oldmaid', 3]]);
   });
 });

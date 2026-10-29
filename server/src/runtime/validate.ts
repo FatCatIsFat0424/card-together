@@ -34,6 +34,7 @@ export { isTenHalfResult } from '../managers/games/tenhalf-validation';
 export { isLiarsDiceResult } from '../managers/games/liarsdice-validation';
 export { isCrazyEightsResult } from '../managers/games/crazyeights-validation';
 export { isReversiResult } from '../managers/games/reversi-validation';
+export { isOldMaidResult } from '../managers/games/oldmaid-validation';
 
 function player(value: unknown): boolean {
   return (

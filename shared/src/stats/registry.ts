@@ -8,6 +8,7 @@ import type { SeatFacts } from './facts';
 import { holdemFacts } from './holdem';
 import { liarsDeckFacts } from './liarsdeck';
 import { liarsDiceFacts } from './liarsdice';
+import { oldMaidFacts } from './oldmaid';
 import { napoleonFacts } from './napoleon';
 import { ninetyNineFacts } from './ninetynine';
 import { redPointsFacts } from './redpoints';
@@ -36,6 +37,7 @@ export const GAME_STATS: {
   crazyeights: crazyEightsFacts,
   stud: (_result, seat, frame) => studFacts(seat, frame),
   reversi: reversiFacts,
+  oldmaid: oldMaidFacts,
 };
 
 export function gameFacts<K extends GameType>(

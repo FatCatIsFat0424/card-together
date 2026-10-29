@@ -4,8 +4,8 @@ import type { CSSProperties, ReactNode } from 'react';
 import { RANK_DISPLAY, RANK_ORDER_DESC, SUIT_DISPLAY_ORDER, SUIT_SYMBOLS } from '@shared/constants';
 import { ldIsTruth, ldSortHand } from '@shared/rules/liarsdeck';
 import { sortNapoleonHand } from '@shared/rules/napoleon';
-import type { BidSuit, Card, LiarCard, LiarTableFace, NapoleonCard } from '@shared/types';
-import { useCardFaceUrl } from '../cosmetics/card-faces/use-card-face';
+import type { BidSuit, Card, CardOrJoker, LiarCard, LiarTableFace, NapoleonCard } from '@shared/types';
+import { useCardFaceUrl, useCardOrJokerFaceUrl } from '../cosmetics/card-faces/use-card-face';
 import { LiarCardFace } from '../games/liarsdeck/LiarCardFace';
 import { useNapoleonCardImageUrl } from '../games/napoleon/napoleon-card-art';
 import { napoleonCardText } from '../games/napoleon/napoleon-view';
@@ -68,4 +68,14 @@ export function ObservedNapoleonCards({ cards, owner, trump }: {
   return <CardRows cards={sortNapoleonHand(cards, trump)} label={t('table.observedHand', { name: owner })}
     render={(card) => <img className={styles.card} src={napoleonCardImageUrl(card)} draggable={false}
       alt={napoleonCardText(card, (joker) => t(`napoleon.joker.${joker}`))} />} />;
+}
+
+/** Hands that may hold a joker, in the order their owner keeps them. */
+export function ObservedJokerCards({ cards, owner }: { cards: readonly CardOrJoker[]; owner: string }): ReactNode {
+  const faceUrl = useCardOrJokerFaceUrl();
+  const { t } = useI18nStore();
+  return <CardRows cards={cards} label={t('table.observedHand', { name: owner })}
+    render={(card) => <img className={styles.card} src={faceUrl(card)} draggable={false}
+      alt={'joker' in card ? t(`napoleon.joker.${card.joker}`)
+        : `${SUIT_SYMBOLS[card.suit]}${RANK_DISPLAY[card.rank]}`} />} />;
 }

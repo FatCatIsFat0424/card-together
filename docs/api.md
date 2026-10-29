@@ -98,7 +98,7 @@
 - 握手與每個操作都需要有效的工作階段與允許的 Origin。操作者由工作階段決定，從不取自 payload。
 - 最後一個參數必須是 callback，否則操作會被忽略。沒有 payload 的操作只接收 callback。
 - 失敗回傳 `{ success: false, error }`。成功會在資料寫入後才回覆，但暫時性的 signaling 與狀態未變更時除外。
-- 遊戲類型：`bridge`、`bigtwo`、`redpoints`、`ninetynine`、`sevens`、`chinesepoker`、`liarsdeck`、`blackjack`、`holdem`、`napoleon`、`tenhalf`、`liarsdice`、`reversi`。標準座位：`N`、`E`、`S`、`W`。
+- 遊戲類型：`bridge`、`bigtwo`、`redpoints`、`ninetynine`、`sevens`、`chinesepoker`、`liarsdeck`、`blackjack`、`holdem`、`napoleon`、`tenhalf`、`liarsdice`、`reversi`、`oldmaid`。標準座位：`N`、`E`、`S`、`W`。
 - 確切的 payload 與結果：[`socket-events.ts`](../shared/src/types/socket-events.ts)。
 
 **房間**

@@ -204,6 +204,14 @@ export type {
 } from '../games/stud/types';
 
 export type {
+  OldMaidLogEntry,
+  OldMaidMatchResult,
+  OldMaidPhase,
+  OldMaidGameState,
+  OldMaidVisibleState,
+} from '../games/oldmaid/types';
+
+export type {
   NapoleonJoker,
   NapoleonCard,
   NapoleonBidLevel,

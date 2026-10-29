@@ -1,0 +1,96 @@
+/* ─── Old Maid presentation bodies: discarded pairs per seat, the drawn card's flight, and the order out ─── */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  width: 100%;
+  font-size: 0.8rem;
+}
+
+.heading { font-weight: 700; }
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px var(--spacing-md);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.grid[data-seats='3'], .grid[data-seats='4'], .grid[data-seats='5'], .grid[data-seats='6'],
+.grid[data-seats='7'], .grid[data-seats='8'] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.seat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-xs);
+  min-width: 0;
+  animation: rise 260ms ease-out calc(var(--enter-delay, 0ms) + var(--row, 0) * 80ms) both;
+}
+
+.seatName {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-align: left;
+}
+
+.pairs {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ranks { font-size: var(--text-xs); opacity: 0.75; }
+
+.flying {
+  --card-w: 2.6rem;
+  animation: fly 700ms ease-out var(--enter-delay, 0ms) both;
+}
+
+.pair { color: var(--color-success); animation: rise 260ms ease-out calc(var(--enter-delay, 0ms) + 600ms) both; }
+
+.out { opacity: 0.85; animation: rise 260ms ease-out calc(var(--enter-delay, 0ms) + 900ms) both; }
+
+.order {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.order li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+}
+
+.loser { color: var(--color-danger); font-weight: 700; }
+
+.gain { margin-left: auto; font-variant-numeric: tabular-nums; opacity: 0.8; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(40%); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes fly {
+  from { opacity: 0; transform: translateY(-120%) scale(0.8); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seat, .flying, .pair, .out { animation: none; }
+}

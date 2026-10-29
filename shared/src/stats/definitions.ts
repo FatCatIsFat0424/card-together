@@ -127,6 +127,12 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('knockouts', 'log', 'count'),
     record('allInWins', 'log', 'count'),
   ],
+  oldmaid: [
+    record('topPoints', 'result', 'max'),
+    record('firstOuts', 'result', 'count'),
+    record('clean', 'result', 'count', true),
+    record('pairsDiscarded', 'log', 'count'),
+  ],
 };
 
 /**

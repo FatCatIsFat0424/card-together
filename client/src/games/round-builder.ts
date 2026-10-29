@@ -8,7 +8,7 @@ import type { CrazyEightsEffect } from '@shared/games/crazyeights/types';
 export interface HistoryAction {
   kind: 'play' | 'pass' | 'round_end' | 'dragon' | 'flip' | 'eliminated' | 'cover' | 'challenge' | 'shot'
     | 'deal' | 'hit' | 'stand' | 'double' | 'split' | 'dealerReveal' | 'dealerHit' | 'dealerStand' | 'settle'
-    | 'button' | 'blind' | 'ante' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street' | 'showdown' | 'award' | 'bid';
+    | 'button' | 'blind' | 'ante' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allIn' | 'street' | 'showdown' | 'award' | 'bid' | 'draw';
   /** Null for the Blackjack dealer and Hold'em board cards */
   seat: GameSeat | null;
   cards: readonly Card[];
@@ -54,6 +54,9 @@ export interface HistoryAction {
   bidTrue?: boolean;
   loser?: GameSeat;
   eliminated?: boolean;
+  /** Old Maid: the position drawn, and on a settlement the finishing order */
+  index?: number;
+  order?: readonly GameSeat[];
   /** Hold'em: the shown hand's best category */
   category?: ChinesePokerCategory;
   /** Hold'em: the hand's blinds, on the button entry */

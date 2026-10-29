@@ -18,6 +18,7 @@ import { liarsDiceView } from '../games/liarsdice/liarsdice-view';
 import { ObservedDice } from '../games/liarsdice/ObservedDice';
 import { blackjackSeatOut, blackjackView } from '../games/blackjack/blackjack-view';
 import { tenHalfSeatOut, tenHalfView } from '../games/tenhalf/tenhalf-view';
+import { finishPlace, oldMaidView } from '../games/oldmaid/oldmaid-view';
 import { ChipIcon } from '../games/ChipIcon';
 import { clientGame } from '../games/registry';
 import { holdemBlindSeats, holdemView, seatState } from '../games/holdem/holdem-view';
@@ -30,7 +31,7 @@ import { useI18nStore } from '../stores/i18n-store';
 import { seatLabel } from '../games/seat-names';
 import { useRoomStore } from '../stores/room-store';
 import { napoleonPresentedPoints, napoleonSeatLabels } from '../games/napoleon/napoleon-view';
-import { ObservedCards, ObservedLiarCards, ObservedNapoleonCards } from './ObservedHand';
+import { ObservedCards, ObservedJokerCards, ObservedLiarCards, ObservedNapoleonCards } from './ObservedHand';
 import { Avatar } from './Avatar';
 import { latestSeatAction, seatStatus, showsAutoPlayed } from './seat-status';
 import type { SeatStatus } from './seat-status';
@@ -283,6 +284,10 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const blackjack = useGameStore((state) => state.blackjack);
   // Blackjack chips follow the presentation so a settlement is not paid out before its frame.
   const bj = blackjack && blackjackView(blackjack, frame);
+  const oldMaid = useGameStore((state) => state.oldMaid);
+  // Old Maid counts and finishers follow the presentation so a draw is not shown before its frame.
+  const om = oldMaid && oldMaidView(oldMaid, frame);
+  const omPlace = om ? finishPlace(om, seat) : null;
   const tenHalf = useGameStore((state) => state.tenhalf);
   const th = tenHalf && tenHalfView(tenHalf, frame);
   const sittingOut = bj ? blackjackSeatOut(bj, seat) : th ? tenHalfSeatOut(th, seat) : false;
@@ -305,6 +310,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const observedLiars = useGodViewStore((state) => state.liarHands?.[seat]);
   const observedDice = useGodViewStore((state) => state.diceHands?.[seat]);
   const observedNapoleon = useGodViewStore((state) => state.napoleonHands?.[seat]);
+  const observedOldMaid = useGodViewStore((state) => state.oldMaidHands?.[seat]);
   const napoleon = useGameStore((state) => state.napoleon);
   const gameType = useGameStore((state) => state.visible?.gameType);
   // Napoleon roles and won points follow the presentation, so a secretary is not unmasked early.
@@ -338,12 +344,12 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   });
   const cards = stats !== undefined ? 0 : bigTwoCards ?? redPointsCards ?? ninetyNineCards ?? sevensCards ?? chinesePokerCards
     ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? diceCards ?? napoleonCards ?? tenHalfCards ?? crazyEightsCards
-    ?? remainingCards(seat, playing);
+    ?? om?.counts[seat] ?? remainingCards(seat, playing);
   // A Hold'em fold outranks a timeout in the status slot, so a timed-out fold keeps the timeout icon.
   const heStatusLabel: TranslationKey | null = heOut && status === 'busted' ? 'holdem.out'
     : heLocked && status === 'locked' ? heState === 'folded' ? 'holdem.folded' : 'holdem.allIn' : null;
   // Lasting states (folded, out, busted) dim the whole seat instead of adding a badge on top of it.
-  const dimmed = busted || dead || diceOut || sittingOut || heOut || heState === 'folded';
+  const dimmed = busted || dead || diceOut || sittingOut || heOut || heState === 'folded' || omPlace !== null;
   const statusText = heStatusLabel ?? (dead && status === 'busted' ? 'liarsdeck.dead'
     : diceOut && status === 'busted' ? 'liarsdice.out'
     : (bj || th) && status === 'arranged' ? 'blackjack.betPlaced'
@@ -364,6 +370,7 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
   const observed = bottom || cards === 0 ? null
     : liarsDeck && observedLiars?.length ? <ObservedLiarCards cards={observedLiars} owner={name}
       tableFace={liarsDeck.tableFace} />
+      : oldMaid && observedOldMaid?.length ? <ObservedJokerCards cards={observedOldMaid} owner={name} />
       : napoleon && observedNapoleon?.length ? <ObservedNapoleonCards cards={observedNapoleon} owner={name}
         trump={napoleon.contract?.suit ?? null} />
         : observedCards?.length ? <ObservedCards cards={observedCards} owner={name} /> : null;
@@ -454,6 +461,12 @@ export function TableSeat({ seat, position, onPick, onObserve, moveKey, suppress
           {dice && <span className={styles.stat}
             title={t('liarsdice.diceTitle', { n: String(dice.counts[seat] ?? 0) })}>
             {t('liarsdice.diceChip', { n: String(dice.counts[seat] ?? 0) })}
+          </span>}
+          {om && <span className={styles.stat} title={t('oldmaid.pointsTitle', { n: String(om.totals[seat] ?? 0) })}>
+            {t('oldmaid.points', { n: String(om.totals[seat] ?? 0) })}
+          </span>}
+          {omPlace !== null && <span className={styles.stat} title={t('oldmaid.finishedTitle', { n: String(omPlace) })}>
+            {t('oldmaid.finishedTag', { n: String(omPlace) })}
           </span>}
           {bj && <span className={`${styles.stat} ${styles.chips}`} title={t('blackjack.chipsTitle', { n: String(bj.chips[seat]) })}>
             <ChipIcon />{bj.chips[seat]}

@@ -68,6 +68,7 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
   reversi: { en: 'Passing', 'zh-TW': '跳過' },
   crazyeights: { en: 'Eights', 'zh-TW': '8 為萬用牌' },
   stud: { en: 'Who acts first', 'zh-TW': '誰先行動' },
+  oldmaid: { en: 'Drawing', 'zh-TW': '抽牌' },
 };
 
 describe('contextual game rules', () => {

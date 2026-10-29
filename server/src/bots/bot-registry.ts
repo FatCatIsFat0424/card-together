@@ -19,6 +19,7 @@ import { easyLiarsDiceAction, getLiarsDiceBotAction, liarsDiceFirstLegalAction }
 import { crazyEightsFirstLegalAction, easyCrazyEightsAction, getCrazyEightsBotAction } from './crazyeights-strategy';
 import { getStudBotAction } from './stud-strategy';
 import { easyReversiAction, getReversiBotAction, reversiFirstLegalAction } from './reversi-strategy';
+import { easyOldMaidAction, getOldMaidBotAction, oldMaidFirstLegalAction } from './oldmaid-strategy';
 import {
   easyBigTwoAction, easyBlackjackAction, easyBridgeAction, easyChinesePokerAction, easyHoldemAction, easyLiarsDeckAction,
   easyNinetyNineAction, easyRedPointsAction, easySevensAction, easyStudAction,
@@ -133,6 +134,13 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     firstLegal: studPassiveAction,
     // A player who runs out of time checks or folds rather than letting a bot stake their chips.
     turnTimeout: (visible) => studPassiveAction(visible),
+  },
+  oldmaid: {
+    hard: getOldMaidBotAction,
+    easy: easyOldMaidAction,
+    firstLegal: oldMaidFirstLegalAction,
+    // A player who runs out of time draws a random position, as the easy bot would.
+    turnTimeout: (visible) => easyOldMaidAction(visible),
   },
 };
 

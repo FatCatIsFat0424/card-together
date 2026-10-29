@@ -16,6 +16,7 @@ import { liarsDiceGame, coherentLiarsDiceGame } from './liarsdice-validation';
 import { crazyEightsGame, coherentCrazyEightsGame } from './crazyeights-validation';
 import { studGame, coherentStudGame } from './stud-validation';
 import { reversiGame, coherentReversiGame } from './reversi-validation';
+import { oldMaidGame, coherentOldMaidGame } from './oldmaid-validation';
 
 export interface GameStateValidator<K extends GameType> {
   /** Field types and bounds of a stored game of this type */
@@ -40,6 +41,7 @@ export const GAME_VALIDATORS: { readonly [K in GameType]: GameStateValidator<K> 
   crazyeights: { shape: crazyEightsGame, coherent: coherentCrazyEightsGame },
   stud: { shape: studGame, coherent: coherentStudGame },
   reversi: { shape: reversiGame, coherent: coherentReversiGame },
+  oldmaid: { shape: oldMaidGame, coherent: coherentOldMaidGame },
 };
 
 /** Called with a game's own type, the validator accepts that game even when TypeScript only knows the union. */

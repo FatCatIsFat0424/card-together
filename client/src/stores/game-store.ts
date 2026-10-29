@@ -25,6 +25,7 @@ import type {
   NapoleonVisibleState,
   TenHalfVisibleState,
   StudVisibleState,
+  OldMaidVisibleState,
 } from '@shared/types';
 import type { CrazyEightsVisibleState } from '@shared/games/crazyeights/types';
 import { clientGame } from '../games/registry';
@@ -53,6 +54,7 @@ export interface GameStoreState {
   reversi: ReversiVisibleState | null;
   /** Stud: my hole card from the previous hand while its presentation may still be playing */
   studHeld: HeldHoleCards | null;
+  oldMaid: OldMaidVisibleState | null;
   gameType: GameType | null;
   phase: GamePhase | null;
   myHand: Card[];
@@ -91,6 +93,7 @@ const initialState: GameStoreState = {
   stud: null,
   reversi: null,
   studHeld: null,
+  oldMaid: null,
   gameType: null,
   phase: null,
   myHand: [],

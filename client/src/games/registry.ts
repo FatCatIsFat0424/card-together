@@ -16,6 +16,7 @@ import { studClient } from './stud/stud-client';
 import { reversiClient } from './reversi/reversi-client';
 import { napoleonClient } from './napoleon/napoleon-client';
 import { tenHalfClient } from './tenhalf/tenhalf-client';
+import { oldMaidClient } from './oldmaid/oldmaid-client';
 import { liarsDiceClient } from './liarsdice/liarsdice-client';
 import { crazyEightsClient } from './crazyeights/crazyeights-client';
 
@@ -36,6 +37,7 @@ export const CLIENT_GAMES: { readonly [K in GameType]: ClientGame<K> } = {
   holdem: holdemClient,
   napoleon: napoleonClient,
   tenhalf: tenHalfClient,
+  oldmaid: oldMaidClient,
   liarsdice: liarsDiceClient,
   crazyeights: crazyEightsClient,
   stud: studClient,

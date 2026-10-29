@@ -1,7 +1,7 @@
 // ─── God View Store: other seats' hands for spectators and eliminated players ───
 
 import { scopedStore } from './scoped-store';
-import type { Card, DiceFace, LiarCard, NapoleonCard, ObserverRole, PlayerVisibleGameState, GameSeat } from '@shared/types';
+import type { Card, CardOrJoker, DiceFace, LiarCard, NapoleonCard, ObserverRole, PlayerVisibleGameState, GameSeat } from '@shared/types';
 import { clientGame } from '../games/registry';
 import { retainSnapshotValue } from './snapshot-equality';
 
@@ -14,12 +14,14 @@ export interface GodView {
   readonly diceHands: Partial<Record<GameSeat, readonly DiceFace[]>> | null;
   /** Napoleon hands, which may hold jokers */
   readonly napoleonHands: Partial<Record<GameSeat, readonly NapoleonCard[]>> | null;
+  /** Old Maid hands, which may hold the joker */
+  readonly oldMaidHands: Partial<Record<GameSeat, readonly CardOrJoker[]>> | null;
   /** Blackjack's face-down dealer card */
   readonly hole: Card | null;
 }
 
 export const HIDDEN_GOD_VIEW: GodView = {
-  role: null, hands: null, covered: null, liarHands: null, diceHands: null, napoleonHands: null, hole: null,
+  role: null, hands: null, covered: null, liarHands: null, diceHands: null, napoleonHands: null, oldMaidHands: null, hole: null,
 };
 
 function godViewOf(visible: PlayerVisibleGameState, role: ObserverRole): GodView {
@@ -47,7 +49,7 @@ export const useGodViewStore = scopedStore<GodViewStore>((set) => ({
   ...HIDDEN_GOD_VIEW,
   update: (visible, locked) => set((state) => {
     const current: GodView = { role: state.role, hands: state.hands, covered: state.covered,
-      liarHands: state.liarHands, diceHands: state.diceHands, napoleonHands: state.napoleonHands, hole: state.hole };
+      liarHands: state.liarHands, diceHands: state.diceHands, napoleonHands: state.napoleonHands, oldMaidHands: state.oldMaidHands, hole: state.hole };
     const next = nextGodView(current, visible, locked);
     return next === current ? state : next;
   }),

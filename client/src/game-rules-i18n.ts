@@ -214,6 +214,14 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Passing', 'A player with no legal move is skipped automatically, with a notice, and the opponent plays again.'),
     section('Winning', 'The game ends when neither side can move, usually on a full board. More discs wins; equal counts draw.', 'You may resign. On your own turn you may offer a draw: the opponent accepts to draw, and making a move counts as declining. After a decline you must make 3 more moves before offering again.'),
   ],
+  oldmaid: [
+    section('Cards and the first discard', 'Two to eight players share a 52-card deck plus one joker, dealt out one card at a time. Everyone starts by discarding every pair of the same rank at once (four of a rank make two pairs). The joker never pairs.'),
+    section('Drawing', 'The first drawer rotates each deal. On your turn, take one face-down card from the next player who still holds cards, choosing its position in their fanned hand. If it matches a card you hold, discard the pair. Then the next player draws.', 'You see the card you took, and nobody else learns which one it was unless it made a pair.'),
+    section('Reordering your hand', 'You can rearrange your own hand at any time, by dragging cards or pressing Shuffle. Players drawing from you see only the card backs, so a shuffle hides where the joker sits.'),
+    section('Going out and losing a deal', 'A player with no cards is out. The last player left holding the joker loses the deal. Players place by the order they went out; the joker holder is last.'),
+    table('Placement points', ['Place in a deal', 'Points'], [['1st out', 'Players − 1'], ['2nd out', 'Players − 2'], ['…', '…'], ['Joker holder (last)', '0']], 'Example with four players: 3, 2, 1, 0.'),
+    section('Match', 'A match is 3 deals; the first drawer moves to the next seat each deal. The most points after three deals wins, and ties share the win.', 'When you run out of time, a random position is drawn for you.'),
+  ],
 };
 
 const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
@@ -382,12 +390,20 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('跳過', '輪到的玩家沒有合法位置時，系統自動跳過並顯示提示，由對手繼續下。'),
     section('勝負', '雙方都無子可下時結束（通常是棋盤下滿），棋子較多者獲勝，數量相同為和局。', '可以認輸；輪到自己時可以提和，對手同意即和局，對手走子視為拒絕，被拒絕後需再走 3 手才能再次提和。'),
   ],
+  oldmaid: [
+    section('牌與開局丟牌', '2～8 人共用一副 52 張牌加一張鬼牌，逐張發完。開局所有人同時把手上點數相同的牌成對丟掉（同點數四張算兩對），鬼牌不能配對。'),
+    section('抽牌', '每局第一位抽牌的人輪流換人。輪到你時，向下一位還有牌的玩家挑一個位置，抽走他蓋著的一張牌；若和你手上的牌湊成一對，就把這對丟掉。接著換下一位。', '你看得到自己抽的牌，其他人除非抽到後湊成對，否則不知道是哪一張。'),
+    section('整理手牌', '自己的手牌隨時可以調整順序：拖曳牌，或按「洗牌」。抽你牌的人只看得到牌背，洗牌可以讓人猜不到鬼牌的位置。'),
+    section('出完與輸掉一局', '手牌出完的人先離場，最後手上留著鬼牌的人輸掉該局。名次依出完的先後，拿鬼牌的人最後。'),
+    table('名次積分', ['該局名次', '積分'], [['第 1 個出完', '人數 − 1'], ['第 2 個出完', '人數 − 2'], ['…', '…'], ['拿鬼牌（最後）', '0']], '例：4 人時依序為 3、2、1、0 分。'),
+    section('一場比賽', '一場共 3 局，每局的第一位抽牌者往下一個座位移動。三局後積分最高者獲勝，同分共同獲勝。', '超過時間時，系統會替你隨機抽一個位置。'),
+  ],
 };
 
 const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> = {
   en: [
     table('Room setup', ['Item', 'Rule'], [
-      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice 2–8; Napoleon 4–6; Reversi 2; others 4'],
+      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Napoleon 4–6; Reversi 2; others 4'],
       ['Seat order', 'Clockwise N → E → S → W → P5–P8, skipping empty seats'],
       ['Start', 'Once everyone seated is ready, the host presses Start'],
       ['Bots', 'The host adds or removes them; at least one human must sit'],
@@ -403,7 +419,7 @@ const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> =
   ],
   'zh-TW': [
     table('房間設定', ['項目', '規則'], [
-      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰 2～8 人；拿破崙 4～6 人；黑白棋 2 人；其他 4 人'],
+      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；拿破崙 4～6 人；黑白棋 2 人；其他 4 人'],
       ['座位順序', '順時針 北 → 東 → 南 → 西 → 第 5～8 席，跳過空位'],
       ['開始', '入座者都準備後，由房主按開始'],
       ['Bot', '房主可加入或移除；至少需一位真人入座'],

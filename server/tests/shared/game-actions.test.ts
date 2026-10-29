@@ -55,6 +55,10 @@ const ACTIONS = [
   { gameType: 'crazyeights', action: { type: 'play', card } },
   { gameType: 'crazyeights', action: { type: 'draw' } },
   { gameType: 'crazyeights', action: { type: 'pass' } },
+  { gameType: 'oldmaid', action: { type: 'draw', index: 3 } },
+  { gameType: 'oldmaid', action: { type: 'draw', index: 0, reorder: [2, 0, 1] } },
+  { gameType: 'oldmaid', action: { type: 'reorder', order: [1, 0] } },
+  { gameType: 'oldmaid', action: { type: 'reorder', order: [] } },
 ] satisfies readonly GameActionEnvelope[];
 
 function inject(value: unknown, strictCards = false): unknown {
@@ -126,6 +130,16 @@ describe('game action contracts', () => {
     ['liarsdice', { type: 'bid', quantity: 2, face: 7 }, 'Invalid bid.'],
     ['liarsdice', { type: 'bid', quantity: 2, face: 0 }, 'Invalid bid.'],
     ['liarsdice', { type: 'bid', quantity: 2 }, 'Invalid bid.'],
+    ['oldmaid', { type: 'draw', index: -1 }, 'Invalid position.'],
+    ['oldmaid', { type: 'draw', index: 1.5 }, 'Invalid position.'],
+    ['oldmaid', { type: 'draw', index: 53 }, 'Invalid position.'],
+    ['oldmaid', { type: 'draw', index: '1' }, 'Invalid position.'],
+    ['oldmaid', { type: 'draw', index: 0, reorder: [0, 0] }, 'Invalid order.'],
+    ['oldmaid', { type: 'draw', index: 0, reorder: [1] }, 'Invalid order.'],
+    ['oldmaid', { type: 'reorder', order: [0, 2] }, 'Invalid order.'],
+    ['oldmaid', { type: 'reorder', order: 'abc' }, 'Invalid order.'],
+    ['oldmaid', { type: 'reorder' }, 'Invalid order.'],
+    ['oldmaid', { type: 'shuffle' }, 'Invalid action.'],
     ['holdem', { type: 'raise', to: 1.5 }, 'Invalid action.'],
     ['holdem', { type: 'raise', to: NaN }, 'Invalid action.'],
     ['stud', { type: 'raise', to: 1.5 }, 'Invalid action.'],
