@@ -201,19 +201,23 @@ describe('classic pack', () => {
 describe('active sound pack', () => {
   it('should fall back to classic for unequipped, unknown and inherited ids', () => {
     for (const id of [null, undefined, '', 'sound-unknown', 'classic', 'toString', '__proto__', 'constructor']) {
-      expect(resolveSoundPack(id)).toBe(CLASSIC_SOUND_PACK);
+      expect(resolveSoundPack(id).id).toBe('classic');
+      expect(resolveSoundPack(id)).toBe(resolveSoundPack(null));
     }
-    for (const [id, pack] of Object.entries(SOUND_PACK_DEFINITIONS)) expect(resolveSoundPack(id)).toBe(pack);
+    for (const id of Object.keys(SOUND_PACK_DEFINITIONS)) {
+      expect(resolveSoundPack(id).id).toBe(id);
+      expect(resolveSoundPack(id)).toBe(resolveSoundPack(id));
+    }
   });
 
   it('should follow the account store at play time without a reload', () => {
-    expect(getActiveSoundPack()).toBe(CLASSIC_SOUND_PACK);
+    expect(getActiveSoundPack().id).toBe('classic');
     equip('sound-gilded');
-    expect(getActiveSoundPack()).toBe(SOUND_PACK_DEFINITIONS['sound-gilded']);
+    expect(getActiveSoundPack().id).toBe('sound-gilded');
     equip('sound-from-a-newer-version');
-    expect(getActiveSoundPack()).toBe(CLASSIC_SOUND_PACK);
+    expect(getActiveSoundPack().id).toBe('classic');
     equip(null);
-    expect(getActiveSoundPack()).toBe(CLASSIC_SOUND_PACK);
+    expect(getActiveSoundPack().id).toBe('classic');
   });
 });
 

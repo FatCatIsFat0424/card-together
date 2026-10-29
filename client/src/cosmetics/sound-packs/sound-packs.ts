@@ -1,6 +1,7 @@
 import { CAMPAIGN_SOUND_PACKS } from './designs/campaign';
 import type { SoundPackId } from '@shared/types';
 import { CLASSIC_SOUND_PACK } from '../../audio/classic-sound-pack';
+import { PACK_CUE_TRIM_DB, calibratePack } from '../../audio/sound-levels';
 import type { SoundPack } from '../../audio/sound-pack';
 import { AURORA_SOUND_PACK } from './designs/aurora';
 import { BAMBOO_SOUND_PACK } from './designs/bamboo';
@@ -27,8 +28,15 @@ export const SOUND_PACK_DEFINITIONS: Readonly<Record<SoundPackId, SoundPack>> = 
   'sound-dune': DUNE_SOUND_PACK,
 };
 
-/** Unknown or missing ids fall back to the classic tones, e.g. a pack from a newer client. */
+const CALIBRATED_CLASSIC = calibratePack(CLASSIC_SOUND_PACK, PACK_CUE_TRIM_DB.classic);
+const CALIBRATED_PACKS: Readonly<Record<SoundPackId, SoundPack>> = Object.fromEntries(
+  Object.entries(SOUND_PACK_DEFINITIONS).map(([id, pack]) => [id, calibratePack(pack, PACK_CUE_TRIM_DB[pack.id])]),
+) as Record<SoundPackId, SoundPack>;
+
+/**
+ * The pack to play, with every cue trimmed to the shared target loudness. Unknown or missing ids fall back to the
+ * classic tones, e.g. a pack from a newer client.
+ */
 export function resolveSoundPack(id: string | null | undefined): SoundPack {
-  return id && Object.hasOwn(SOUND_PACK_DEFINITIONS, id)
-    ? SOUND_PACK_DEFINITIONS[id as SoundPackId] : CLASSIC_SOUND_PACK;
+  return id && Object.hasOwn(CALIBRATED_PACKS, id) ? CALIBRATED_PACKS[id as SoundPackId] : CALIBRATED_CLASSIC;
 }

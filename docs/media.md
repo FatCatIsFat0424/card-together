@@ -44,7 +44,12 @@
 - 「回合提醒音」是音效聲道下的獨立開關，沒有自己的滑桿；關閉時回合提醒和加入提示都不會播放。
 - 實際音量是主音量 × 聲道音量，任一開關關閉即靜音。商店試聽也走音效聲道，所以音效關閉時不會出聲。
 - 設定只存在瀏覽器本機。舊的開關（`sound.effects`、`music.enabled`、`sound.turn`）與 `music.volume` 沿用原本的儲存鍵；新增的 `audio.master.*`、`audio.voice.*`、`sound.effects.volume` 缺少時使用預設值，無效或超出範圍的數值會修正到 0–100。
-- 合成音效在每個 AudioContext 內經過「音效增益 → 主增益 → 喇叭」。背景音樂經由 `MediaElementAudioSourceNode` 與增益節點播放；iOS Safari 的 `HTMLMediaElement.volume` 是唯讀的，只有這條路徑的滑桿才會生效。
+- 合成音效在每個 AudioContext 內經過「提升增益 → 軟上限 → 音效增益 → 主增益 → 喇叭」。背景音樂經由 `MediaElementAudioSourceNode` 與增益節點播放；iOS Safari 的 `HTMLMediaElement.volume` 是唯讀的，只有這條路徑的滑桿才會生效。
+- 音效響度：
+  - 離線量測（[`sound-pack-render.ts`](../server/tests/client/sound-pack-render.ts)）把每個提示算成取樣，單位是 150 Hz 高通後最響的 100 ms RMS（dBFS）。調整前，各音效包的同一個提示最多差 13 dB（例如出牌 −24 至 −37 dBFS），整體落在 −17 至 −38 dBFS；音樂預設音量 50% 時平均約 −21 dBFS，最響的 100 ms 約 −18 dBFS。
+  - 每個提示有共用的目標響度（[`CUE_TARGET_DB`](../client/src/audio/sound-levels.ts)），每個音效包的每個提示再有一個逐項修正（`PACK_CUE_TRIM_DB`，−6 至 +12 dB）。`resolveSoundPack` 回傳套用修正後的副本，原始配方不變，所以安靜的配方被拉得最多、大聲的略降。更動配方後，`sound-levels.test.ts` 會失敗並指出偏離的提示，依量測值重新產生修正表。
+  - 所有音效再統一提升 6 dB（[`EFFECTS_BOOST_DB`](../client/src/audio/mix.ts)），新增的軟上限讓同時疊加的提示（例如連發的出牌聲）不會削波：−6 dBFS 以下維持線性，之後以 tanh 曲線平滑逼近滿格，輸出永遠不超過滿格。軟上限在滑桿之前，調低音效或主音量仍會等比降低輸出。軟上限沒有過取樣，否則輸出濾波器的振鈴會讓峰值超過滿格。
+  - 音樂與語音的音量不變，滑桿仍是 0–100，儲存的偏好也沒有變動；音效滑桿 100 因此比以前響 6 dB 以上。
 - 音樂的 AudioContext 只在使用者手勢內建立或恢復（沿用現有的手勢解鎖事件）。進入 running 之前，音樂直接用 `<audio>` 播放並以 `element.volume` 調整音量，所以 iOS 上剛載入時的第一首歌，音量滑桿不會生效。沒有 Web Audio 的瀏覽器也使用這個後備方式。
 - 語音聊天的整體音量同樣乘在每位對象的音量上；iOS 上語音沒有走 Web Audio，所以只有靜音與關閉會生效。
 

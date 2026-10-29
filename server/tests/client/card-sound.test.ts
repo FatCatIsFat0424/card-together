@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   disposeCardSounds, playCardSound, playOutSound, playSlashSound, playStartSound, unlockCardSounds,
 } from '../../../client/src/audio/card-sound';
+import { CEILING_RANGE, EFFECTS_BOOST_DB, dbToGain } from '../../../client/src/audio/mix';
 import { useAudioSettingsStore } from '../../../client/src/stores/audio-settings-store';
 import { useSoundEffectsStore } from '../../../client/src/stores/sound-effects-store';
 
@@ -27,7 +28,9 @@ function installAudio() {
   const node = (): FakeNode => ({ connect: vi.fn(), disconnect: vi.fn() });
   const sources: Array<ReturnType<typeof source>> = [];
   const nodes: Array<ReturnType<typeof node>> = [];
-  // The effects bus (master gain, then channel gain) is created with the first cue and lives until disposal.
+  const shapers: Array<ReturnType<typeof node> & { curve: Float32Array | null; oversample: string }> = [];
+  // The effects bus (master gain, channel gain, boost gain, soft ceiling) is created with the first cue and lives
+  // until disposal.
   const bus: Array<ReturnType<typeof gain>> = [];
   function gain() {
     return { ...node(), gain: { value: 0, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() } };
@@ -45,7 +48,12 @@ function installAudio() {
     createBufferSource: vi.fn(source), createOscillator: vi.fn(source),
     createGain: vi.fn(() => {
       const value = gain();
-      (bus.length < 2 ? bus : nodes).push(value);
+      (bus.length < 3 ? bus : nodes).push(value);
+      return value;
+    }),
+    createWaveShaper: vi.fn(() => {
+      const value = { ...node(), curve: null as Float32Array | null, oversample: '' };
+      shapers.push(value);
       return value;
     }),
     createBiquadFilter: vi.fn(() => {
@@ -56,7 +64,7 @@ function installAudio() {
   };
   const construct = vi.fn(function () { return context; });
   vi.stubGlobal('AudioContext', construct);
-  return { context, construct, sources, nodes, bus };
+  return { context, construct, sources, nodes, bus, shapers };
 }
 
 afterEach(() => {
@@ -145,18 +153,23 @@ describe('card sounds', () => {
   });
 
   it('should route cues through the effects gain under the master gain and follow settings', () => {
-    const { context, sources, bus } = installAudio();
+    const { context, sources, bus, shapers } = installAudio();
     useSoundEffectsStore.setState({ enabled: true, volume: 0.5 });
     useAudioSettingsStore.setState({ masterEnabled: true, masterVolume: 0.8 });
     unlockCardSounds();
     context.state = 'running';
     playCardSound();
-    const [master, effects] = bus;
+    const [master, effects, boost] = bus;
     expect(sources).toHaveLength(1);
     expect(effects.gain.value).toBe(0.5);
     expect(master.gain.value).toBe(0.8);
     expect(effects.connect).toHaveBeenCalledWith(master);
     expect(master.connect).toHaveBeenCalledWith(context.destination);
+    // Voices enter the boost, which feeds the soft ceiling ahead of the sliders so overlapping cues cannot clip.
+    expect(shapers).toHaveLength(1);
+    expect(boost.connect).toHaveBeenCalledWith(shapers[0]);
+    expect(shapers[0].connect).toHaveBeenCalledWith(effects);
+    expect(shapers[0].oversample).toBe('none');
     useSoundEffectsStore.setState({ volume: 0.25 });
     useAudioSettingsStore.setState({ masterEnabled: false });
     expect(effects.gain.value).toBe(0.25);
@@ -165,6 +178,37 @@ describe('card sounds', () => {
     useSoundEffectsStore.setState({ volume: 1 });
     expect(effects.gain.value).toBe(0.25);
     expect(bus.every((node) => node.disconnect.mock.calls.length === 1)).toBe(true);
+  });
+
+  it('should boost effects by a fixed amount and hold the mix under full scale', () => {
+    const { context, bus, shapers } = installAudio();
+    unlockCardSounds();
+    context.state = 'running';
+    playCardSound();
+    const [, , boost] = bus;
+    const curve = shapers[0].curve as Float32Array;
+    const input = (index: number): number => ((2 * index) / (curve.length - 1) - 1) * CEILING_RANGE;
+    // The curve is linear below its knee, so the boost is exact for ordinary cues.
+    expect(boost.gain.value * CEILING_RANGE).toBeCloseTo(dbToGain(EFFECTS_BOOST_DB), 10);
+    const small = Math.round(((0.1 / CEILING_RANGE + 1) / 2) * (curve.length - 1));
+    expect(curve[small]).toBeCloseTo(input(small), 6);
+    // Stacked cues saturate smoothly: monotonic, symmetric, and never above full scale.
+    for (let i = 1; i < curve.length; i++) expect(curve[i]).toBeGreaterThanOrEqual(curve[i - 1]);
+    expect(Math.max(...curve)).toBeLessThanOrEqual(1);
+    expect(Math.min(...curve)).toBeGreaterThanOrEqual(-1);
+    expect(curve[0]).toBeCloseTo(-curve[curve.length - 1], 10);
+    expect(curve[curve.length - 1]).toBeGreaterThan(0.99);
+  });
+
+  it('should fall back to the plain boost when the context has no wave shaper', () => {
+    const { context, bus } = installAudio();
+    delete (context as { createWaveShaper?: unknown }).createWaveShaper;
+    unlockCardSounds();
+    context.state = 'running';
+    playCardSound();
+    const [, effects, boost] = bus;
+    expect(boost.gain.value).toBeCloseTo(dbToGain(EFFECTS_BOOST_DB), 10);
+    expect(boost.connect).toHaveBeenCalledWith(effects);
   });
 
   it('should stop pending tones on disposal and require another gesture to reopen', () => {

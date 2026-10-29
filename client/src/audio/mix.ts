@@ -34,3 +34,35 @@ export function peerOutputVolume(peerVolume: number, outputGain: number): number
 export function volumePercent(volume: number): number {
   return Math.round(clampVolume(volume) * 100);
 }
+
+/** Linear gain for a level in decibels. */
+export function dbToGain(db: number): number {
+  return 10 ** (db / 20);
+}
+
+/**
+ * Loudness added to every effect. Cues are calibrated to the targets in `sound-levels.ts`, which left them 6 to
+ * 10 dB under the music at its default volume; this lifts them to sit with it.
+ */
+export const EFFECTS_BOOST_DB = 6;
+
+/** Samples below this amplitude (-6 dBFS) pass the soft ceiling unchanged. */
+export const CEILING_KNEE = 0.5;
+
+/** Input amplitude the ceiling's curve covers; mixes louder than this (+12 dBFS) flatten at its end. */
+export const CEILING_RANGE = 4;
+
+/** Transfer of the soft ceiling: linear up to the knee, then a smooth approach to full scale that never exceeds it. */
+export function softCeiling(amplitude: number): number {
+  const magnitude = Math.abs(amplitude);
+  if (magnitude <= CEILING_KNEE) return amplitude;
+  const room = 1 - CEILING_KNEE;
+  return Math.sign(amplitude) * (CEILING_KNEE + room * Math.tanh((magnitude - CEILING_KNEE) / room));
+}
+
+/** Curve table for a `WaveShaperNode` whose input is scaled by `1 / CEILING_RANGE`. */
+export function ceilingCurve(points = 4097): Float32Array<ArrayBuffer> {
+  const curve = new Float32Array(points);
+  for (let i = 0; i < points; i++) curve[i] = softCeiling(((2 * i) / (points - 1) - 1) * CEILING_RANGE);
+  return curve;
+}
