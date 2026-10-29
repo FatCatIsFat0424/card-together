@@ -242,6 +242,14 @@ export type {
 } from '../games/tenhalf/types';
 
 export type {
+  GomokuMove,
+  GomokuPhase,
+  GomokuMatchResult,
+  GomokuGameState,
+  GomokuVisibleState,
+} from '../games/gomoku/types';
+
+export type {
   ReversiMove,
   ReversiPhase,
   ReversiMatchResult,

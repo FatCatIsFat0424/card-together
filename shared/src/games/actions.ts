@@ -31,6 +31,8 @@ import { parseAction as parseStudAction } from './stud/actions';
 import type { StudAction } from './stud/actions';
 import { parseAction as parseReversiAction } from './reversi/actions';
 import type { ReversiGameAction } from './reversi/actions';
+import { parseAction as parseGomokuAction } from './gomoku/actions';
+import type { GomokuGameAction } from './gomoku/actions';
 import { parseAction as parseOldMaidAction } from './oldmaid/actions';
 import type { OldMaidAction } from './oldmaid/actions';
 import { parseAction as parseGoFishAction } from './gofish/actions';
@@ -57,6 +59,7 @@ export interface GameActionMap {
   crazyeights: CrazyEightsAction;
   stud: StudAction;
   reversi: ReversiGameAction;
+  gomoku: GomokuGameAction;
   oldmaid: OldMaidAction;
   gofish: GoFishAction;
   doudizhu: DouDizhuAction;
@@ -83,6 +86,7 @@ export const ACTION_PARSERS: { readonly [K in GameType]: (value: unknown) => Gam
   crazyeights: parseCrazyEightsAction,
   stud: parseStudAction,
   reversi: parseReversiAction,
+  gomoku: parseGomokuAction,
   oldmaid: parseOldMaidAction,
   gofish: parseGoFishAction,
   doudizhu: parseDouDizhuAction,

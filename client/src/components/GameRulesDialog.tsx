@@ -31,10 +31,10 @@ export function GameRulesContent({ gameType, context }: {
     </section>}
     {context?.option && <section className={styles.roomSettings}>
       <h3>{t('rules.roomSettings')}</h3>
-      <dl className={styles.option}>
-        <dt>{t(context.option.label)}</dt>
-        <dd>{t(context.option.enabled ? 'rules.enabled' : 'rules.disabled')}</dd>
-      </dl>
+      {[context.option, ...context.moreOptions ?? []].map((option) => <dl key={option.label} className={styles.option}>
+        <dt>{t(option.label)}</dt>
+        <dd>{t(option.enabled ? 'rules.enabled' : 'rules.disabled')}</dd>
+      </dl>)}
     </section>}
     {context?.active && <p className={styles.playNotice}>{t('rules.playContinues')}</p>}
     {getGameRules(gameType, locale).map((section) => <section key={section.title}>

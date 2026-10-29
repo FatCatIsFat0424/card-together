@@ -2,7 +2,7 @@ import type { GameType, PlayerVisibleGameState, RoomInfo } from '@shared/types';
 import { clientGame } from './games/registry';
 import type { TranslationKey } from './i18n';
 
-interface GameRulesOption {
+export interface GameRulesOption {
   readonly label: TranslationKey;
   readonly enabled: boolean;
 }
@@ -10,6 +10,8 @@ interface GameRulesOption {
 /** The part of a rules context that depends on the game's own room rules. */
 export interface GameRulesContextFields {
   readonly option: GameRulesOption | null;
+  /** Further room rules of a game with more than one, listed after `option` */
+  readonly moreOptions?: readonly GameRulesOption[];
   /** Match length for Blackjack; player-dealer matches depend on the seats taking part. */
   readonly blackjackHands?: number;
   /** Match length for Ten and a Half, which depends on the seats taking part. */

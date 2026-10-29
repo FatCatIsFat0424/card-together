@@ -1,0 +1,60 @@
+/* ─── Gomoku table: side colour beside each seat, the pending-stone crosshair, and marked points ─── */
+
+.side {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  flex: none;
+}
+
+.black { background: #1d1f22; }
+.white { background: #f3efe6; }
+
+/* Board markers: sizes are board units (one intersection apart), colours come from the board theme. */
+.cross {
+  fill: none;
+  stroke: var(--marker-last);
+  stroke-width: 0.1;
+  stroke-linecap: round;
+}
+
+.win {
+  fill: none;
+  stroke: var(--marker-last);
+  stroke-width: 0.11;
+}
+
+.forbidden {
+  fill: none;
+  stroke: var(--marker-check);
+  stroke-width: 0.09;
+  stroke-linecap: round;
+}
+
+/* The swap opening's colour choice sits in the status slot, so it stays compact. */
+.choice {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.choiceButtons {
+  display: flex;
+  gap: 6px;
+  align-self: stretch;
+}
+
+.choiceButtons > * { flex: 1; min-width: 0; }
+
+@media (max-height: 500px) and (min-width: 600px) {
+  .choose.choose { height: 40px; padding: 0 var(--space-2); font-size: var(--text-sm); }
+}

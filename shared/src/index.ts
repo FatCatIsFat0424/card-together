@@ -18,6 +18,7 @@ export * from './rules/napoleon';
 export * from './rules/tenhalf';
 export * from './rules/crazyeights';
 export * from './rules/reversi';
+export * from './rules/gomoku';
 export * from './rules/gofish';
 export * from './rules/doudizhu';
 export * from './rules/doudizhu-table';

@@ -16,6 +16,7 @@ import { liarsDiceAdapter } from './liarsdice-adapter';
 import { crazyEightsAdapter } from './crazyeights-adapter';
 import { studAdapter } from './stud-adapter';
 import { reversiAdapter } from './reversi-adapter';
+import { gomokuAdapter } from './gomoku-adapter';
 import { oldMaidAdapter } from './oldmaid-adapter';
 import { goFishAdapter } from './gofish-adapter';
 import { douDizhuAdapter } from './doudizhu-adapter';
@@ -38,6 +39,7 @@ export const GAME_ADAPTERS: { readonly [K in GameType]: GameAdapter<K> } = {
   crazyeights: crazyEightsAdapter,
   stud: studAdapter,
   reversi: reversiAdapter,
+  gomoku: gomokuAdapter,
   oldmaid: oldMaidAdapter,
   gofish: goFishAdapter,
   doudizhu: douDizhuAdapter,

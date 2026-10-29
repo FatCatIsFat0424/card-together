@@ -185,7 +185,7 @@ export function GameShell({
   const room = useRoomStore((state) => state.roomInfo);
   const log = useGameStore((state) => state.bigTwo?.log ?? state.redPoints?.log ?? state.ninetyNine?.log
     ?? state.sevens?.log ?? state.chinesePoker?.log ?? state.liarsDeck?.log ?? state.liarsDice?.log ?? state.blackjack?.log ?? state.holdem?.log
-    ?? state.napoleon?.log ?? state.tenhalf?.log ?? state.doudizhu?.log ?? state.crazyEights?.log ?? state.stud?.log ?? state.reversi?.log ?? state.oldMaid?.log ?? state.goFish?.log ?? state.jungle?.log ?? state.log);
+    ?? state.napoleon?.log ?? state.tenhalf?.log ?? state.doudizhu?.log ?? state.crazyEights?.log ?? state.stud?.log ?? state.reversi?.log ?? state.gomoku?.log ?? state.oldMaid?.log ?? state.goFish?.log ?? state.jungle?.log ?? state.log);
   const ownedTurn = useGameStore((state) => mySeat !== null && state.currentTurnSeat === mySeat
     && (state.phase === 'bidding' || state.phase === 'playing'));
   const myTurn = (turnReady ?? ownedTurn) && !presentation.locked;

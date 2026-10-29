@@ -120,6 +120,12 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('ratSlays', 'log', 'count'),
     record('jumps', 'log', 'count'),
   ],
+  gomoku: [
+    record('fiveWins', 'result', 'count', true),
+    record('shortestWin', 'result', 'min'),
+    record('longestGame', 'result', 'max'),
+    record('renjuWins', 'result', 'count'),
+  ],
   crazyeights: [
     record('handsWon', 'result', 'count', true),
     record('lowScore', 'result', 'min'),

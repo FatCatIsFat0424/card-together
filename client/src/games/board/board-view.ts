@@ -64,6 +64,14 @@ export function markerBox(layout: BoardLayout): { readonly width: number; readon
   return { width: 0.94, height: 0.94 };
 }
 
+/**
+ * Tap box of a node. Intersections tile the board exactly (the view draws them with square corners), so every
+ * tap lands on the nearest one; cells and stations keep a small gap that matches their drawn edges.
+ */
+export function hitBox(layout: BoardLayout): { readonly width: number; readonly height: number } {
+  return layout === 'points' ? { width: 1, height: 1 } : markerBox(layout);
+}
+
 /** Columns and rows of the nodes, for coordinate labels drawn along the bottom and left edges. */
 export function axisPositions(board: BoardModel, geometry: BoardGeometry): {
   readonly files: readonly { readonly index: number; readonly x: number }[];

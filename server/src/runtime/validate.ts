@@ -34,6 +34,7 @@ export { isTenHalfResult } from '../managers/games/tenhalf-validation';
 export { isLiarsDiceResult } from '../managers/games/liarsdice-validation';
 export { isCrazyEightsResult } from '../managers/games/crazyeights-validation';
 export { isReversiResult } from '../managers/games/reversi-validation';
+export { isGomokuResult } from '../managers/games/gomoku-validation';
 export { isOldMaidResult } from '../managers/games/oldmaid-validation';
 export { isGoFishResult } from '../managers/games/gofish-validation';
 export { isDouDizhuResult } from '../managers/games/doudizhu-validation';

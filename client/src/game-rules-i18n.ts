@@ -208,6 +208,12 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Main pot, side pots, and ties', 'Each all-in level forms a side pot; you only win pots you put chips into. Antes count toward the pot.', 'Ties split each pot; odd chips go clockwise from the button.'),
     section('Timer', 'On timeout you check, or fold if you owe chips. Each hand refills the reserve.'),
   ],
+  gomoku: [
+    section('Board and start', 'A 15×15 board; stones go on the line intersections. Black moves first, then the players alternate. The earlier seat plays black. The board never turns; coordinates run a–o and 1–15.'),
+    section('Winning', 'The first player to make five or more stones in an unbroken row, column, or diagonal wins. If the board fills with no such line, the game is a draw.', 'You may resign. On your own turn you may offer a draw: the opponent accepts to draw, and making a move counts as declining. After a decline you must make 3 more moves before offering again.'),
+    section('Renju option', 'Black may not make an overline (six or more), a double four, or a double three; those points are marked and cannot be played. Black wins only with exactly five; white wins with five or more. A stone that makes exactly five is always allowed.', 'Black has no legal point left only in a nearly full board; that counts as a draw.'),
+    section('Swap option', 'The first seat places three opening stones: black, white, black. The second seat then chooses a colour: taking black swaps the sides; keeping white does not. White moves next.'),
+  ],
   reversi: [
     section('Board and start', 'An 8×8 board; each side plays black or white. The four centre cells start with two discs of each colour, and black moves first.', 'The earlier seat plays black. The board never turns; coordinates run a–h and 1–8.'),
     section('Placing and flipping', 'Place a disc on an empty cell so that, in at least one direction (row, column, or diagonal), a line of opposing discs lies between it and another disc of yours. Every disc in those lines flips to your colour.', 'A cell that flips nothing is not a legal move.'),
@@ -412,6 +418,12 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('主池、邊池與平手', '每個全押金額會分出邊池，只能贏自己有投入的池。前注也算入底池。', '平手均分，零頭從莊位後順時針分配。'),
     section('計時', '逾時自動過牌，欠下注時棄牌。每手補滿保留時間。'),
   ],
+  gomoku: [
+    section('棋盤與開局', '15×15 棋盤，棋子下在線的交叉點上。黑棋先下，之後雙方輪流落子；座位順序在前的玩家執黑。棋盤固定不旋轉，座標以 a–o、1–15 標示。'),
+    section('勝負', '先在橫、直、斜任一方向連成五子（含五子以上）者獲勝；棋盤下滿仍無人連線則為和局。', '可以認輸；輪到自己時可以提和，對手同意即和局，對手走子視為拒絕，被拒絕後需再走 3 手才能再次提和。'),
+    section('連珠禁手選項', '黑棋不得下出長連（六子以上）、雙四或雙三，這些位置會標示且無法落子；黑棋必須恰好連成五子才算贏，白棋五子以上都算贏。下出恰好五子的位置不受禁手限制。', '只有棋盤幾乎下滿時黑棋才可能無處可下，此時視為和局。'),
+    section('交換開局選項', '先手玩家依序下三顆開局子：黑、白、黑。後手玩家再選擇顏色：執黑代表與先手交換，執白則維持原樣。接著由白棋下。'),
+  ],
   reversi: [
     section('棋盤與開局', '8×8 棋盤，雙方各執黑或白。開局中央四格為黑白各兩子，黑棋先下。', '座位順序在前的玩家執黑；棋盤固定不旋轉，座標以 a–h、1–8 標示。'),
     section('落子與翻面', '每步必須下在空格，並在至少一個方向（橫、直、斜）上夾住連續的對手棋子，被夾住的棋子全部翻成自己的顏色。', '沒有能夾住對手的位置就不能下在該格。'),
@@ -459,7 +471,7 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
 const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> = {
   en: [
     table('Room setup', ['Item', 'Rule'], [
-      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Go Fish 2–6; Napoleon 4–6; Reversi and Jungle 2; Dou Dizhu 3; others 4'],
+      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Go Fish 2–6; Napoleon 4–6; Reversi, Jungle and Gomoku 2; Dou Dizhu 3; others 4'],
       ['Seat order', 'Clockwise N → E → S → W → P5–P8, skipping empty seats'],
       ['Start', 'Once everyone seated is ready, the host presses Start'],
       ['Bots', 'The host adds or removes them; at least one human must sit'],
@@ -475,7 +487,7 @@ const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> =
   ],
   'zh-TW': [
     table('房間設定', ['項目', '規則'], [
-      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；釣魚 2～6 人；拿破崙 4～6 人；黑白棋與鬥獸棋 2 人；鬥地主 3 人；其他 4 人'],
+      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；釣魚 2～6 人；拿破崙 4～6 人；黑白棋、鬥獸棋與五子棋 2 人；鬥地主 3 人；其他 4 人'],
       ['座位順序', '順時針 北 → 東 → 南 → 西 → 第 5～8 席，跳過空位'],
       ['開始', '入座者都準備後，由房主按開始'],
       ['Bot', '房主可加入或移除；至少需一位真人入座'],

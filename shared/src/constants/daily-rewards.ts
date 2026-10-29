@@ -10,6 +10,7 @@ export const DAILY_TASKS = [
   { id: 'play-liarsdeck', target: 2, coins: 10 },
   { id: 'play-liarsdice', target: 2, coins: 10 },
   { id: 'play-reversi', target: 2, coins: 10 },
+  { id: 'play-gomoku', target: 2, coins: 10 },
   { id: 'play-oldmaid', target: 2, coins: 10 },
   { id: 'play-jungle', target: 2, coins: 10 },
   { id: 'play-casino', target: 1, coins: 20 },

@@ -22,6 +22,7 @@ import { easyLiarsDiceAction, getLiarsDiceBotAction, liarsDiceFirstLegalAction }
 import { crazyEightsFirstLegalAction, easyCrazyEightsAction, getCrazyEightsBotAction } from './crazyeights-strategy';
 import { getStudBotAction } from './stud-strategy';
 import { easyReversiAction, getReversiBotAction, reversiFirstLegalAction } from './reversi-strategy';
+import { easyGomokuAction, getGomokuBotAction, gomokuFirstLegalAction } from './gomoku-strategy';
 import { easyOldMaidAction, getOldMaidBotAction, oldMaidFirstLegalAction } from './oldmaid-strategy';
 import { easyGoFishAction, getGoFishBotAction, goFishFirstLegalAction } from './gofish-strategy';
 import { easyJungleAction, getJungleBotAction, jungleFirstLegalAction } from './jungle-strategy';
@@ -144,6 +145,19 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     },
     // A player who runs out of time gets a legal move by the easy policy.
     turnTimeout: (visible) => easyJungleAction(visible, Math.random),
+  },
+  gomoku: {
+    hard: getGomokuBotAction,
+    easy: easyGomokuAction,
+    firstLegal: gomokuFirstLegalAction,
+    // Hard bots search in the worker pool; the cheap synchronous hard move serves only other seats.
+    search: {
+      strategy: searchStrategy<'gomoku'>(new URL('./gomoku-search.ts', import.meta.url), 'gomokuSearch'),
+      budgetMs: 1000,
+      maxDepth: 10,
+    },
+    // A player who runs out of time gets a legal move by the easy policy.
+    turnTimeout: (visible) => easyGomokuAction(visible, Math.random),
   },
   crazyeights: { hard: getCrazyEightsBotAction, easy: easyCrazyEightsAction, firstLegal: crazyEightsFirstLegalAction },
   stud: {

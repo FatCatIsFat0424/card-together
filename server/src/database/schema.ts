@@ -1,6 +1,6 @@
 import {
   isBigTwoResult, isBlackjackResult, isChinesePokerResult, isHoldemResult, isLiarsDeckResult, isLiarsDiceResult,
-  isNapoleonResult, isNinetyNineResult, isRedPointsResult, isRuntimeSnapshot, isSevensResult, isTenHalfResult, isCrazyEightsResult, isStudResult, isReversiResult, isOldMaidResult,
+  isNapoleonResult, isNinetyNineResult, isRedPointsResult, isRuntimeSnapshot, isSevensResult, isTenHalfResult, isCrazyEightsResult, isStudResult, isReversiResult, isGomokuResult, isOldMaidResult,
   isGoFishResult, isDouDizhuResult, isJungleResult,
 } from '../runtime/validate';
 import {
@@ -170,6 +170,7 @@ export function validMatch(value: unknown): value is MatchRecord {
     crazyeights: isCrazyEightsResult,
     stud: isStudResult,
     reversi: isReversiResult,
+    gomoku: isGomokuResult,
     oldmaid: isOldMaidResult,
     gofish: isGoFishResult,
     doudizhu: isDouDizhuResult,

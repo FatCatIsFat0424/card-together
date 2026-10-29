@@ -67,6 +67,7 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
   liarsdice: { en: 'Calling', 'zh-TW': '開' },
   reversi: { en: 'Passing', 'zh-TW': '跳過' },
   jungle: { en: 'River', 'zh-TW': '河道' },
+  gomoku: { en: 'Renju option', 'zh-TW': '連珠禁手選項' },
   crazyeights: { en: 'Eights', 'zh-TW': '8 為萬用牌' },
   stud: { en: 'Who acts first', 'zh-TW': '誰先行動' },
   oldmaid: { en: 'Drawing', 'zh-TW': '抽牌' },
@@ -117,9 +118,17 @@ describe('contextual game rules', () => {
       expect(render(gameType, context)).toContain('<dd>Off</dd>');
       expect(context.active).toBe(false);
     }
-    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu'].includes(type))) {
+    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku'].includes(type))) {
       expect(roomRulesContext(room(gameType, { gameOptions: { sevens: { closeOnEnd: true } } })).option).toBeNull();
     }
+    // Gomoku lists both of its room rules, each off until chosen.
+    const gomoku = roomRulesContext(room('gomoku'));
+    expect(gomoku.option).toEqual({ label: 'gomoku.renju', enabled: false });
+    expect(gomoku.moreOptions).toEqual([{ label: 'gomoku.swap', enabled: false }]);
+    const chosen = roomRulesContext(room('gomoku', { gameOptions: { gomoku: { renju: true, swap: true } } }));
+    expect([chosen.option?.enabled, chosen.moreOptions?.[0].enabled]).toEqual([true, true]);
+    const html = render('gomoku', chosen);
+    expect(html.match(/<dd>On<\/dd>/g)).toHaveLength(2);
     // Dou Dizhu bids for the landlord unless the host enables call-and-grab.
     expect(roomRulesContext(room('doudizhu')).option).toEqual({ label: 'doudizhu.grabOption', enabled: false });
     // Joker summoning is the one option that defaults to on.

@@ -39,7 +39,9 @@ import { crazyEightsTranslations } from './crazyeights-i18n';
 import type { CrazyEightsTranslationKey } from './crazyeights-i18n';
 import { studTranslations } from './stud-i18n';
 import { reversiTranslations } from './reversi-i18n';
+import { gomokuTranslations } from './gomoku-i18n';
 import type { ReversiTranslationKey } from './reversi-i18n';
+import type { GomokuTranslationKey } from './gomoku-i18n';
 import { jungleTranslations } from './jungle-i18n';
 import type { JungleTranslationKey } from './jungle-i18n';
 import type { StudTranslationKey } from './stud-i18n';
@@ -67,7 +69,7 @@ type TranslationKeys = Record<
   ReplayTranslationKey | RoomErrorTranslationKey | SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | AudioTranslationKey | VoiceTranslationKey | UiTranslationKey
     | EmojiTranslationKey | GameTranslationKey | SevensTranslationKey | ChinesePokerTranslationKey
     | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | TenHalfTranslationKey | DouDizhuTranslationKey | CrazyEightsTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
-    | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | StudTranslationKey | TenHalfTranslationKey | OldMaidTranslationKey | GoFishTranslationKey | ReversiTranslationKey | JungleTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
+    | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | StudTranslationKey | TenHalfTranslationKey | OldMaidTranslationKey | GoFishTranslationKey | ReversiTranslationKey | GomokuTranslationKey | JungleTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
     | StatsTranslationKey | BoardTranslationKey, string
 > & {
   // Lobby
@@ -166,6 +168,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...crazyEightsTranslations['zh-TW'],
     ...studTranslations['zh-TW'],
     ...reversiTranslations['zh-TW'],
+    ...gomokuTranslations['zh-TW'],
     ...oldMaidTranslations['zh-TW'],
     ...goFishTranslations['zh-TW'],
     ...douDizhuTranslations['zh-TW'],
@@ -260,6 +263,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...crazyEightsTranslations.en,
     ...studTranslations.en,
     ...reversiTranslations.en,
+    ...gomokuTranslations.en,
     ...oldMaidTranslations.en,
     ...goFishTranslations.en,
     ...douDizhuTranslations.en,

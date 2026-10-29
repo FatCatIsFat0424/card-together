@@ -69,9 +69,9 @@ describe('client game registries', () => {
 
   describe('categories', () => {
     it('lists the card games, the dice game, and the board game', () => {
-      expect(gamesInCategory('cards')).toEqual(GAME_TYPES.filter((gameType) => gameType !== 'liarsdice' && gameType !== 'reversi' && gameType !== 'jungle'));
+      expect(gamesInCategory('cards')).toEqual(GAME_TYPES.filter((gameType) => gameType !== 'liarsdice' && gameType !== 'reversi' && gameType !== 'jungle' && gameType !== 'gomoku'));
       expect(gamesInCategory('dice')).toEqual(['liarsdice']);
-      expect(gamesInCategory('board')).toEqual(['reversi', 'jungle']);
+      expect(gamesInCategory('board')).toEqual(['reversi', 'jungle', 'gomoku']);
     });
 
     it('follows the shared definition', () => {
@@ -103,7 +103,7 @@ describe('client game registries', () => {
 
   describe('hand sorting', () => {
     it('offers suit sorting only for card games with suits', () => {
-      expect(GAME_TYPES.filter((gameType) => !clientGame(gameType).handSort.bySuit)).toEqual(['liarsdeck', 'liarsdice', 'reversi', 'jungle']);
+      expect(GAME_TYPES.filter((gameType) => !clientGame(gameType).handSort.bySuit)).toEqual(['liarsdeck', 'liarsdice', 'reversi', 'jungle', 'gomoku']);
     });
 
     it('orders Big Two ranks with twos high and everything else by face value', () => {
@@ -224,7 +224,7 @@ describe('client game registries', () => {
     it.each(GAME_TYPES)('keeps %s history optional only where tricks or results are listed elsewhere', (gameType: GameType) => {
       const hasHistory = Boolean(clientGame(gameType).roundHistory);
       expect(hasHistory).toBe(Boolean(gameUi(gameType).roundsView));
-      expect(hasHistory).toBe(!['bridge', 'chinesepoker', 'napoleon', 'reversi', 'jungle'].includes(gameType));
+      expect(hasHistory).toBe(!['bridge', 'chinesepoker', 'napoleon', 'reversi', 'jungle', 'gomoku'].includes(gameType));
     });
   });
 });

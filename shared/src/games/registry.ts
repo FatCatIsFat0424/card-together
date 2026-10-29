@@ -17,6 +17,7 @@ import { liarsDiceDefinition } from './liarsdice/definition';
 import { crazyEightsDefinition } from './crazyeights/definition';
 import { studDefinition } from './stud/definition';
 import { reversiDefinition } from './reversi/definition';
+import { gomokuDefinition } from './gomoku/definition';
 import { oldMaidDefinition } from './oldmaid/definition';
 import { goFishDefinition } from './gofish/definition';
 import { douDizhuDefinition } from './doudizhu/definition';
@@ -39,6 +40,7 @@ export const GAME_DEFINITIONS: { readonly [K in GameType]: GameDefinition<K> } =
   crazyeights: crazyEightsDefinition,
   stud: studDefinition,
   reversi: reversiDefinition,
+  gomoku: gomokuDefinition,
   oldmaid: oldMaidDefinition,
   gofish: goFishDefinition,
   doudizhu: douDizhuDefinition,

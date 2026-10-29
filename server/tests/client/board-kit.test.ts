@@ -135,6 +135,20 @@ describe('board markers and input targets', () => {
     expect(html).not.toContain('role="button"');
   });
 
+  it('should tile intersection tap boxes edge to edge with square corners and draw no dot per point', () => {
+    const html = render(createElement(BoardView, {
+      board: gomokuBoard(), surface: 'wood', label: 'Gomoku', pieces: [], selectable: ['7,7', '8,7'], onNodeClick: () => undefined,
+    }));
+    const hits = [...html.matchAll(/<rect[^>]*data-board-node="(\d+),7"[^>]*>/g)].map((match) => match[0]);
+    expect(hits).toHaveLength(2);
+    const [left, right] = hits.map((hit) => ({
+      x: Number(/ x="([-\d.]+)"/.exec(hit)![1]), width: Number(/ width="([\d.]+)"/.exec(hit)![1]), hit,
+    }));
+    expect(left.x + left.width).toBeCloseTo(right.x, 5);
+    expect(left.hit).toContain('rx="0"');
+    expect(html).not.toMatch(/class="[^"]*target/);
+  });
+
   it('should draw coordinate labels along the viewer\'s edges', () => {
     const files = 'abcdefghi'.split('');
     const html = boardHtml({ fileLabels: files, rankLabels: Array.from({ length: 10 }, (_, row) => String(10 - row)) });

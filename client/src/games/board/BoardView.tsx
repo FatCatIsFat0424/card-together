@@ -9,7 +9,7 @@ import type { CardInput } from '../../components/card-hand-touch';
 import { useI18nStore } from '../../stores/i18n-store';
 import { DEFAULT_BOARD_THEME, boardThemeStyle } from './board-theme';
 import type { BoardSurface, BoardTheme } from './board-theme';
-import { axisPositions, boardGeometry, markerBox, movePath } from './board-view';
+import { axisPositions, boardGeometry, hitBox, markerBox, movePath } from './board-view';
 import type { BoardGeometry } from './board-view';
 import { PIECE_RADIUS } from './BoardPieces';
 import styles from './BoardView.module.css';
@@ -299,9 +299,9 @@ export function BoardView({
       const coordinate = name(id);
       const aria = target || pending?.to === id ? t('board.moveTo', { point: coordinate })
         : `${t('board.select', { point: coordinate })}${pieceLabel ? ` · ${pieceLabel}` : ''}`;
-      const { width, height } = markerBox(layout);
+      const { width, height } = hitBox(layout);
       return <rect key={`hit${id}`} className={styles.hit} data-board-node={id} x={at.x - width / 2} y={at.y - height / 2}
-        width={width} height={height} rx={0.1} role="button" tabIndex={0} aria-label={aria}
+        width={width} height={height} rx={layout === 'points' ? 0 : 0.1} role="button" tabIndex={0} aria-label={aria}
         aria-pressed={id === selected || undefined}
         onClick={(event) => {
           event.stopPropagation();

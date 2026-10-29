@@ -37,6 +37,7 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
     game.liarsDeck?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
     game.liarsDice?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
     game.reversi?.log.filter((entry) => entry.to !== undefined && entry.seat === room.mySeat).length ??
+    game.gomoku?.log.filter((entry) => entry.seat === room.mySeat).length ??
     game.oldMaid?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
     game.jungle?.log.filter((entry) => entry.seat === room.mySeat).length ??
     game.holdem?.log.filter((entry) => entry.type === 'action' && entry.seat === room.mySeat).length ??
