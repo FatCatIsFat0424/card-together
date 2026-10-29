@@ -13,7 +13,8 @@ import {
   profileUpdatedAccount, purchasedAccount, rewardedHumans,
 } from './account-operations';
 import { achievementsStatus } from './achievements';
-import { dailyStatus } from './daily-rewards';
+import { dailyStatus, favoriteWindow, recentGameCounts } from './daily-rewards';
+import type { RecentGames } from './daily-rewards';
 import { friendshipPair } from './indexes';
 import { dropUnplayableRecordings, isMatchReplay } from './match-replay';
 import { retainMatches } from './match-retention';
@@ -253,6 +254,15 @@ export async function createSqliteRepository(filePath: string, options: Reposito
       return next;
     }
 
+    /** Favorite games through the per-account history index; the window ends before today, so today's commit cannot affect it. */
+    function recentGames(accountId: string, timestamp: number): RecentGames {
+      return () => {
+        const { from, to } = favoriteWindow(timestamp);
+        return recentGameCounts(sql(`SELECT m.record FROM match_participants p JOIN matches m ON m.seq = p.match_seq
+          WHERE p.account_id = ? AND p.finished_at >= ? AND p.finished_at < ?`).all(accountId, from, to).map(matchFromRow), timestamp);
+      };
+    }
+
     /** Returns the games rewarded by this commit; completions already receipted are skipped. */
     function awardGameCoins(snapshot: RuntimeSnapshot, completedGameIds: readonly string[]): string[] {
       const rewardedAt = now();
@@ -263,7 +273,7 @@ export async function createSqliteRepository(filePath: string, options: Reposito
         for (const accountId of rewardedHumans(game)) {
           const account = accountForUpdate(accountId);
           if (!account) throw new Error('Coin reward account does not exist.');
-          updateAccount(sql, gameRewardedAccount(account, game, rewardedAt));
+          updateAccount(sql, gameRewardedAccount(account, game, rewardedAt, recentGames(accountId, rewardedAt)));
         }
         sql('INSERT INTO rewarded_games (game_id) VALUES (?)').run(id);
         rewarded.push(id);
@@ -385,19 +395,22 @@ export async function createSqliteRepository(filePath: string, options: Reposito
       }),
       getDailyRewards: (id) => read(() => {
         const account = readAccount(sql, id);
-        return account ? dailyStatus(account.dailyRewards, now(), id) : null;
+        const timestamp = now();
+        return account ? dailyStatus(account.dailyRewards, timestamp, id, recentGames(id, timestamp)) : null;
       }),
       claimDailyReward: (id, reward, day) => write(() => {
         const account = accountForUpdate(id);
         if (!account) return null;
-        const claimed = dailyRewardClaim(account, reward, day, now());
+        const timestamp = now();
+        const claimed = dailyRewardClaim(account, reward, day, timestamp, recentGames(id, timestamp));
         if (claimed.account !== account) updateAccount(sql, claimed.account);
         return claimed;
       }),
       replaceDailyTask: (id, task, day) => write(() => {
         const account = accountForUpdate(id);
         if (!account) return null;
-        const replaced = dailyTaskReplacement(account, task, day, now());
+        const timestamp = now();
+        const replaced = dailyTaskReplacement(account, task, day, timestamp, recentGames(id, timestamp));
         if (replaced.account !== account) updateAccount(sql, replaced.account);
         return replaced;
       }),

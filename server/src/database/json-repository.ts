@@ -24,7 +24,8 @@ import type { RuntimeSnapshot } from '../runtime/types';
 import { createDatabaseIndexes, friendshipPair } from './indexes';
 import type { DatabaseLock } from './owner-lock';
 import { acquireDatabaseLock } from './owner-lock';
-import { dailyStatus } from './daily-rewards';
+import { dailyStatus, recentGameCounts } from './daily-rewards';
+import type { RecentGames } from './daily-rewards';
 import { achievementsStatus } from './achievements';
 import {
   achievementClaim, completedGame, dailyRewardClaim, dailyTaskReplacement, gameRewardedAccount, observedLastSeen,
@@ -244,6 +245,11 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       });
     }
 
+    /** Favorite games from the published per-account history index; today's commit cannot affect the window. */
+    function recentGames(accountId: string, timestamp: number): RecentGames {
+      return () => recentGameCounts(indexes.matches(document.matches).byAccount.get(accountId) ?? [], timestamp);
+    }
+
     /** Upserts results and prunes history atomically; archive deletion follows a successful commit. */
     function upsertMatches(data: DatabaseDocument, matches: readonly MatchRecord[]): string[] {
       if (matches.length === 0) return [];
@@ -297,7 +303,7 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
         for (const accountId of rewardedHumans(game)) {
           const index = positions.get(accountId);
           if (index === undefined) throw new Error('Coin reward account does not exist.');
-          data.accounts[index] = gameRewardedAccount(data.accounts[index], game, rewardedAt);
+          data.accounts[index] = gameRewardedAccount(data.accounts[index], game, rewardedAt, recentGames(accountId, rewardedAt));
         }
         rewarded.add(id);
         newlyRewarded.push(id);
@@ -386,19 +392,22 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       }),
       getDailyRewards: (id) => read((data) => {
         const account = indexes.accounts(data.accounts).byId.get(id);
-        return account ? dailyStatus(account.dailyRewards, now(), id) : null;
+        const timestamp = now();
+        return account ? dailyStatus(account.dailyRewards, timestamp, id, recentGames(id, timestamp)) : null;
       }),
       claimDailyReward: (id, reward, day) => write(['accounts'], (data) => {
         const index = indexes.accounts(document.accounts).positions.get(id);
         if (index === undefined) return null;
-        const claimed = dailyRewardClaim(data.accounts[index], reward, day, now());
+        const timestamp = now();
+        const claimed = dailyRewardClaim(data.accounts[index], reward, day, timestamp, recentGames(id, timestamp));
         data.accounts[index] = claimed.account;
         return claimed;
       }),
       replaceDailyTask: (id, task, day) => write(['accounts'], (data) => {
         const index = indexes.accounts(document.accounts).positions.get(id);
         if (index === undefined) return null;
-        const replaced = dailyTaskReplacement(data.accounts[index], task, day, now());
+        const timestamp = now();
+        const replaced = dailyTaskReplacement(data.accounts[index], task, day, timestamp, recentGames(id, timestamp));
         data.accounts[index] = replaced.account;
         return replaced;
       }),

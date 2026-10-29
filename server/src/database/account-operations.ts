@@ -6,6 +6,7 @@ import type { AchievementsStatus, AnyGameState, DailyRewardId, DailyRewardsStatu
 import type { PersistedPlayer } from '../runtime/types';
 import { achievementGameProgress, achievementState, achievementsStatus } from './achievements';
 import { dailyGameProgress, dailyState, dailyStatus, replacementTask, taskProgress } from './daily-rewards';
+import type { RecentGames } from './daily-rewards';
 import type { AccountRecord, Repository } from './repository';
 import { repositoryError } from './repository';
 import { equipmentError } from './shop-equipment';
@@ -66,18 +67,18 @@ export function achievementClaim(account: AccountRecord, categoryId: Achievement
   return { account: updated, achievements: achievementsStatus(updated) };
 }
 
-export function dailyRewardClaim(account: AccountRecord, reward: DailyRewardId, day: string, timestamp: number): {
-  account: AccountRecord; dailyRewards: DailyRewardsStatus;
-} {
+export function dailyRewardClaim(
+  account: AccountRecord, reward: DailyRewardId, day: string, timestamp: number, recent: RecentGames,
+): { account: AccountRecord; dailyRewards: DailyRewardsStatus } {
   const id = account.id;
-  const state = dailyState(account.dailyRewards, timestamp, id);
+  const state = dailyState(account.dailyRewards, timestamp, id, recent);
   if (day !== state.day) throw repositoryError('DAILY_DATE_CHANGED', 'Refresh today’s rewards.');
   const task = DAILY_TASKS.find((entry) => entry.id === reward);
   if (!task && reward !== 'check-in') throw repositoryError('INVALID_DAILY_REWARD', 'Choose an available daily reward.');
   const alreadyClaimed = reward === 'check-in' ? state.checkInDays.includes(day)
     : state.claimedTasks.includes(reward);
   if (task && !state.taskIds.includes(task.id)) throw repositoryError('DAILY_TASK_UNASSIGNED', 'This task is not assigned today.');
-  if (alreadyClaimed) return { account, dailyRewards: dailyStatus(account.dailyRewards, timestamp, id) };
+  if (alreadyClaimed) return { account, dailyRewards: dailyStatus(state, timestamp, id, recent) };
   if (task && taskProgress(state, task.id) < task.target) {
     throw repositoryError('DAILY_TASK_INCOMPLETE', 'Complete the daily task before claiming.');
   }
@@ -92,33 +93,40 @@ export function dailyRewardClaim(account: AccountRecord, reward: DailyRewardId, 
       ...achievementState(account.achievements), dailyTasks: (account.achievements?.dailyTasks ?? 0) + 1,
     },
     coinRevision: (account.coinRevision ?? 0) + 1, updatedAt: Math.max(timestamp, account.updatedAt + 1) };
-  return { account: updated, dailyRewards: dailyStatus(dailyRewards, timestamp, id) };
+  return { account: updated, dailyRewards: dailyStatus(dailyRewards, timestamp, id, recent) };
 }
 
-export function dailyTaskReplacement(account: AccountRecord, task: DailyTaskId, day: string, timestamp: number): {
-  account: AccountRecord; dailyRewards: DailyRewardsStatus;
-} {
+/** Swaps one unstarted task for another from the same slot pool; the server allows one swap per day. */
+export function dailyTaskReplacement(
+  account: AccountRecord, task: DailyTaskId, day: string, timestamp: number, recent: RecentGames,
+): { account: AccountRecord; dailyRewards: DailyRewardsStatus } {
   const id = account.id;
-  const state = dailyState(account.dailyRewards, timestamp, id);
+  const state = dailyState(account.dailyRewards, timestamp, id, recent);
   if (day !== state.day) throw repositoryError('DAILY_DATE_CHANGED', 'Refresh today’s rewards.');
-  if (state.replacement?.from === task) return { account, dailyRewards: dailyStatus(state, timestamp, id) };
+  if (state.replacement?.from === task) return { account, dailyRewards: dailyStatus(state, timestamp, id, recent) };
   if (state.replacement) throw repositoryError('DAILY_REPLACE_USED', 'Today’s replacement has been used.');
-  if (!state.taskIds.includes(task) || state.claimedTasks.includes(task)) {
+  const slot = state.taskIds.indexOf(task);
+  if (slot < 0 || state.claimedTasks.includes(task)) {
     throw repositoryError('DAILY_TASK_UNAVAILABLE', 'Choose an assigned, unclaimed task.');
   }
-  const to = replacementTask(state, id);
-  const dailyRewards = { ...state, taskIds: state.taskIds.map((entry) => entry === task ? to : entry), replacement: { from: task, to } };
+  if (taskProgress(state, task) > 0) throw repositoryError('DAILY_TASK_STARTED', 'Only tasks without progress can be replaced.');
+  const next = replacementTask(state, slot, id, recent);
+  if (!next) throw repositoryError('DAILY_TASK_UNAVAILABLE', 'No other task is available for this slot.');
+  const { favoriteTask, ...rest } = state;
+  const favorite = next.favorite ? next.id : favoriteTask === task ? undefined : favoriteTask;
+  const dailyRewards = { ...rest, ...(favorite ? { favoriteTask: favorite } : {}),
+    taskIds: state.taskIds.map((entry, index) => index === slot ? next.id : entry), replacement: { from: task, to: next.id } };
   const updated: AccountRecord = { ...account, dailyRewards, updatedAt: Math.max(timestamp, account.updatedAt + 1) };
-  return { account: updated, dailyRewards: dailyStatus(dailyRewards, timestamp, id) };
+  return { account: updated, dailyRewards: dailyStatus(dailyRewards, timestamp, id, recent) };
 }
 
 /** Coins, achievement counters, and daily progress for one human in a newly completed game. */
-export function gameRewardedAccount(account: AccountRecord, game: AnyGameState, rewardedAt: number): AccountRecord {
+export function gameRewardedAccount(account: AccountRecord, game: AnyGameState, rewardedAt: number, recent: RecentGames): AccountRecord {
   const coins = (account.coins ?? 0) + GAME_COIN_REWARD;
   if (!Number.isSafeInteger(coins)) throw new Error('Coin balance exceeds the supported limit.');
   return { ...account, coins, coinRevision: (account.coinRevision ?? 0) + 1,
     achievements: achievementGameProgress(account.achievements, game, account.id),
-    dailyRewards: dailyGameProgress(account.dailyRewards, game, account.id, rewardedAt) };
+    dailyRewards: dailyGameProgress(account.dailyRewards, game, account.id, rewardedAt, recent) };
 }
 
 /** The completed game a reward is for; throws when it is missing or has no result. */

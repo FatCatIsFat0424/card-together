@@ -143,11 +143,12 @@ describe('daily panel', () => {
   const status = (overrides: Partial<DailyRewardsStatus> = {}): DailyRewardsStatus => ({
     day: '2026-10-15', serverTime: 0, resetsAt: 1, gameTypes: [], wins: 0, claimedTasks: [],
     checkInDays: [], swapsRemaining: 1,
-    tasks: [{ id: 'play-bridge', progress: 0 }, { id: 'win-two', progress: 1 }, { id: 'play-bigtwo', progress: 2 }],
+    tasks: [{ id: 'play-any-3', progress: 0, replaceable: true }, { id: 'win-two', progress: 1, replaceable: false },
+      { id: 'play-bigtwo', progress: 2, replaceable: false, favorite: true }],
     ...overrides,
   });
   const render = (value: DailyRewardsStatus | null, error = false): string => renderToStaticMarkup(createElement(DailyPanel, {
-    status: value, error, pending: false, onClaim: noop, onOpenTasks: noop, onOpenCheckIn: noop, onRetry: noop,
+    status: value, error, pending: false, onClaim: noop, onReplace: noop, onOpenTasks: noop, onOpenCheckIn: noop, onRetry: noop,
   }));
 
   beforeEach(() => { useI18nStore.getState().setLocale('zh-TW'); });
@@ -162,6 +163,16 @@ describe('daily panel', () => {
     expect(html).toContain('aria-valuenow="1"');
     expect(html.match(/aria-label="領取[^"]*"|aria-label="[^"]*領取[^"]*"/g)).toHaveLength(1);
     expect(html).toContain('width:100%');
+  });
+
+  it('offers swaps only on unfinished tasks, enabled while unstarted, with the daily allowance', () => {
+    const html = render(status());
+    const swaps = html.match(/<button[^>]*aria-label="換一個：[^"]*"[^>]*>/g)!;
+    expect(swaps).toHaveLength(2);
+    expect(swaps.map((button) => button.includes('disabled'))).toEqual([false, true]);
+    expect(html).toContain('今日剩 1 次');
+    expect(html).toContain('你常玩');
+    expect(render(status({ swapsRemaining: 0 }))).not.toContain('aria-label="換一個：');
   });
 
   it('offers the check-in with its reward until the day is claimed', () => {

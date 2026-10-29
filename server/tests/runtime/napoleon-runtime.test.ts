@@ -334,11 +334,11 @@ describe('Napoleon team wins', () => {
 
   it('counts a win for both the Napoleon and the secretary, not as a tie', () => {
     const game = finished(['N', 'S']);
-    expect(dailyGameProgress(undefined, game, 'N', now).wins).toBe(1);
-    expect(dailyGameProgress(undefined, game, 'S', now).wins).toBe(1);
-    expect(dailyGameProgress(undefined, game, 'E', now)).toMatchObject({ wins: 0, gameTypes: ['napoleon'] });
+    expect(dailyGameProgress(undefined, game, 'N', now, () => ({})).wins).toBe(1);
+    expect(dailyGameProgress(undefined, game, 'S', now, () => ({})).wins).toBe(1);
+    expect(dailyGameProgress(undefined, game, 'E', now, () => ({}))).toMatchObject({ wins: 0, gameTypes: ['napoleon'] });
     expect(achievementGameProgress(undefined, game, 'S')).toMatchObject({ games: 1, wins: 1 });
-    expect(dailyGameProgress(undefined, finished(['E', 'W', 'P5']), 'P5', now).wins).toBe(1);
+    expect(dailyGameProgress(undefined, finished(['E', 'W', 'P5']), 'P5', now, () => ({})).wins).toBe(1);
   });
 });
 

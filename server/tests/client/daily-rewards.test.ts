@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import type { DailyRewardsStatus } from '@shared/types';
+import type { DailyRewardsStatus, DailyTaskId } from '@shared/types';
 vi.mock('../../../client/src/api', () => ({ apiRequest: vi.fn() }));
 vi.mock('../../../client/src/socket', () => ({ socket: {} }));
 import { CheckInCalendar, DailyTaskList, needsAutoCheckIn } from '../../../client/src/components/DailyRewards';
@@ -54,26 +54,39 @@ describe('automatic check-in', () => {
 
 describe('daily task pool presentation', () => {
   const status: DailyRewardsStatus = { day: '2026-10-15', serverTime: 0, resetsAt: 1, gameTypes: [], wins: 0,
-    claimedTasks: ['play-bridge'], checkInDays: [], swapsRemaining: 1,
-    tasks: [{ id: 'play-bridge', progress: 1 }, { id: 'play-bigtwo', progress: 1 }, { id: 'play-casino', progress: 1 }] };
-  const renderTasks = (value: DailyRewardsStatus): string => renderToStaticMarkup(createElement(DailyTaskList, {
-    status: value, pending: false, onClaim: () => undefined, onReplace: () => undefined,
-  }));
-  it('shows only assigned tasks, their rewards and progress, with eligible controls', () => {
+    claimedTasks: ['play-any-2'], checkInDays: [], swapsRemaining: 1,
+    tasks: [{ id: 'play-any-2', progress: 2, replaceable: false }, { id: 'win-two', progress: 0, replaceable: true },
+      { id: 'play-bigtwo', progress: 1, replaceable: false, favorite: true }] };
+  const renderTasks = (value: DailyRewardsStatus, replacing: DailyTaskId | null = null): string =>
+    renderToStaticMarkup(createElement(DailyTaskList, {
+      status: value, pending: replacing !== null, replacing, onClaim: () => undefined, onReplace: () => undefined,
+    }));
+  it('shows assigned tasks, rewards, progress, the favorite hint, and swap only for unstarted tasks', () => {
     useI18nStore.getState().setLocale('en');
     const html = renderTasks(status);
     expect(html.match(/<li /g)).toHaveLength(3);
     expect(html).toContain('1/2');
-    expect(html).toContain('+20 coins');
-    expect(html).not.toContain('Win two games');
-    const buttons = html.match(/<button[^>]*>/g)!;
-    expect(buttons.filter((button) => button.includes('Replace:'))).toHaveLength(2);
-    expect(buttons.filter((button) => button.includes('disabled'))).toHaveLength(1);
-    expect((renderTasks({ ...status, swapsRemaining: 0 }).match(/<button[^>]*disabled/g) ?? [])).toHaveLength(3);
+    expect(html).toContain('+15 coins');
+    expect(html.match(/You play this often/g)).toHaveLength(1);
+    const swaps = html.match(/<button[^>]*aria-label="Swap:[^"]*"[^>]*>/g)!;
+    expect(swaps).toHaveLength(2);
+    expect(swaps.map((button) => button.includes('disabled'))).toEqual([false, true]);
+    expect(html).toContain('1 swap left today');
+    const used = renderTasks({ ...status, swapsRemaining: 0, tasks: status.tasks.map((task) => ({ ...task, replaceable: false })) })
+      .match(/<button[^>]*aria-label="Swap:[^"]*"[^>]*>/g)!;
+    expect(used.map((button) => button.includes('disabled'))).toEqual([true, true]);
+  });
+  it('marks the in-flight swap and disables every control while pending', () => {
+    useI18nStore.getState().setLocale('zh-TW');
+    const html = renderTasks({ ...status, claimedTasks: [] }, 'win-two');
+    expect(html).toContain('更換中…');
+    expect(html).toContain('今日剩 1 次');
+    expect(html.match(/<button[^>]*>/g)!.every((button) => button.includes('disabled'))).toBe(true);
   });
   it.each(['en', 'zh-TW'] as const)('translates every pool task in %s', (locale) => {
     useI18nStore.getState().setLocale(locale);
-    const html = renderTasks({ ...status, claimedTasks: [], tasks: DAILY_TASKS.map((task) => ({ id: task.id, progress: 0 })) });
+    const html = renderTasks({ ...status, claimedTasks: [],
+      tasks: DAILY_TASKS.map((task) => ({ id: task.id, progress: 0, replaceable: true })) });
     expect(html).not.toContain('daily.');
     expect(html.match(/<li /g)).toHaveLength(DAILY_TASKS.length);
   });

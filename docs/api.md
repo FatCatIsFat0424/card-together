@@ -21,7 +21,7 @@
 | `POST /api/auth/achievements/claim` | `category`：[目錄](../shared/src/constants/achievements.ts)中的 ID | 更新後的帳號與成就狀態；必須完成所有里程碑，重複領取具冪等性，不扣金幣 |
 | `GET /api/auth/daily-rewards` | — | 本人的[每日狀態](../shared/src/types/daily-rewards.ts)、伺服器日期與時間、本月的簽到紀錄 |
 | `POST /api/auth/daily-rewards` | `reward`：已指派的[任務 ID](../shared/src/constants/daily-rewards.ts) 或 `check-in`；`day`：伺服器的 YYYY-MM-DD | 更新後的帳號與每日狀態；重複領取具冪等性 |
-| `POST /api/auth/daily-rewards/replace` | `task`：已指派且未領取的任務 ID；`day`：伺服器的 YYYY-MM-DD | 更新後的帳號與每日狀態；每天可替換一次，以同一個原始任務重試具冪等性 |
+| `POST /api/auth/daily-rewards/replace` | `task`：已指派、未領取且進度為 0 的任務 ID；`day`：伺服器的 YYYY-MM-DD | 更新後的帳號與每日狀態；每天可替換一次，新任務來自同一欄位的任務池；以同一個原始任務重試具冪等性。其他情況回應 409：`DAILY_REPLACE_USED`、`DAILY_TASK_STARTED`、`DAILY_TASK_UNAVAILABLE`、`DAILY_DATE_CHANGED` |
 | `POST /api/auth/password` | `currentPassword, newPassword` | 撤銷所有工作階段 |
 | `POST /api/auth/logout` | `{}` | 撤銷請求中帶有的工作階段，清除 cookie |
 | `POST /api/auth/logout-all` | `{}` | 撤銷該帳號的所有工作階段 |

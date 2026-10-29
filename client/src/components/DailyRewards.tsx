@@ -11,7 +11,7 @@ import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { AppIcon } from './AppIcon';
 import { Button } from './Button';
-import { DailyPanel } from './DailyPanel';
+import { DailyPanel, DailySwapButton } from './DailyPanel';
 import { IconButton } from './IconButton';
 import { dialogParts, dialogPaperClass } from '../styles/dialog';
 import styles from './DailyRewards.module.css';
@@ -67,14 +67,17 @@ function DailyTaskCountdown({ status }: { readonly status: DailyRewardsStatus })
   return <span className={styles.countdown}><AppIcon name="timer" />{t('daily.refreshIn', { time })}</span>;
 }
 
-export function DailyTaskList({ status, pending, onClaim, onReplace }: {
+export function DailyTaskList({ status, pending, replacing, onClaim, onReplace }: {
   readonly status: DailyRewardsStatus; readonly pending: boolean;
+  /** The task whose swap request is in flight. */
+  readonly replacing?: DailyTaskId | null;
   readonly onClaim: (id: DailyTaskId) => void; readonly onReplace: (id: DailyTaskId) => void;
 }): ReactNode {
   const { t } = useI18nStore();
   return <>
-    <ul className={styles.tasks}>{status.tasks.map(({ id, progress }) => {
+    <ul className={styles.tasks}>{status.tasks.map(({ id, progress, favorite, replaceable }) => {
       const task = DAILY_TASKS.find((entry) => entry.id === id)!;
+      const label = t(`daily.${id}`);
       const claimed = status.claimedTasks.includes(id);
       const complete = progress >= task.target;
       return <li key={id} className={`${styles.task} ${claimed ? styles.claimedTask : ''}`}>
@@ -82,16 +85,17 @@ export function DailyTaskList({ status, pending, onClaim, onReplace }: {
           <AppIcon name="coins" /><strong>{task.coins}</strong>
         </div>
         <div className={styles.taskBody}>
-          <div className={styles.taskTitle}><h3>{t(`daily.${id}`)}</h3><span className={styles.count}>{progress}/{task.target}</span></div>
-          <progress className={styles.bar} value={progress} max={task.target} aria-label={t(`daily.${id}`)} />
+          <div className={styles.taskTitle}><h3>{label}{favorite && <span className={styles.favorite}>{t('daily.favorite')}</span>}</h3>
+            <span className={styles.count}>{progress}/{task.target}</span></div>
+          <progress className={styles.bar} value={progress} max={task.target} aria-label={label} />
         </div>
         <div className={styles.taskActions}>
-          {(complete || claimed) && <Button variant="primary" size="small" disabled={pending || claimed}
+          {complete || claimed ? <Button variant="primary" size="small" disabled={pending || claimed}
             icon={claimed ? 'check' : undefined}
-            aria-label={t('daily.claimTask', { task: t(`daily.${id}`) })} onClick={() => onClaim(id)}>
-            {t(claimed ? 'daily.claimed' : 'daily.claim')}</Button>}
-          {!claimed && <IconButton icon="refresh" disabled={pending || status.swapsRemaining === 0}
-            label={t('daily.replaceTask', { task: t(`daily.${id}`) })} onClick={() => onReplace(id)} />}
+            aria-label={t('daily.claimTask', { task: label })} onClick={() => onClaim(id)}>
+            {t(claimed ? 'daily.claimed' : 'daily.claim')}</Button>
+            : <DailySwapButton id={id} label={label} replaceable={replaceable} pending={pending}
+              replacing={replacing === id} onReplace={onReplace} />}
         </div>
       </li>;
     })}</ul>
@@ -122,6 +126,7 @@ export function DailyRewards({ layout = 'icons' }: { readonly layout?: 'icons' |
   const [error, setError] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [pending, setPending] = useState(false);
+  const [replacing, setReplacing] = useState<DailyTaskId | null>(null);
   const [notice, setNotice] = useState('');
   const [celebrateDay, setCelebrateDay] = useState('');
   const claiming = useRef(false);
@@ -156,6 +161,7 @@ export function DailyRewards({ layout = 'icons' }: { readonly layout?: 'icons' |
     if (!status || claiming.current || !accountId) return false;
     claiming.current = true;
     setPending(true);
+    if (replacing) setReplacing(reward as DailyTaskId);
     ++requestVersion.current;
     const result = await apiRequest<{ account: AccountProfile; dailyRewards: DailyRewardsStatus }>(
       replacing ? '/api/auth/daily-rewards/replace' : '/api/auth/daily-rewards', 'POST',
@@ -165,6 +171,7 @@ export function DailyRewards({ layout = 'icons' }: { readonly layout?: 'icons' |
     ++requestVersion.current;
     claiming.current = false;
     setPending(false);
+    setReplacing(null);
     if (result.success) {
       setStatus(result.dailyRewards);
       setError(false);
@@ -197,8 +204,8 @@ export function DailyRewards({ layout = 'icons' }: { readonly layout?: 'icons' |
   const claimable = status?.tasks.some(({ id, progress }) =>
     progress >= DAILY_TASKS.find((task) => task.id === id)!.target && !status.claimedTasks.includes(id));
   return <aside className={styles.widgets}>
-    {layout === 'panel' ? <DailyPanel status={status} error={error} pending={pending}
-      onClaim={(id) => { void mutate(id); }} onOpenTasks={() => open('tasks')} onOpenCheckIn={() => open('check-in')}
+    {layout === 'panel' ? <DailyPanel status={status} error={error} pending={pending} replacing={replacing}
+      onClaim={(id) => { void mutate(id); }} onReplace={(id) => { void mutate(id, true); }} onOpenTasks={() => open('tasks')} onOpenCheckIn={() => open('check-in')}
       onRetry={() => setRefresh((value) => value + 1)} /> : <>
       <IconButton icon="info" label={t('daily.tasks')} aria-haspopup="dialog" badge={claimable ? 'dot' : undefined}
         onClick={() => open('tasks')} />
@@ -216,7 +223,7 @@ export function DailyRewards({ layout = 'icons' }: { readonly layout?: 'icons' |
       <DialogContent className={`${dialogParts.body} ${styles.content}`} inert={!dialogOpen}>
         {error ? <p role="alert">{t('daily.error')} <Button size="small" onClick={() => setRefresh((value) => value + 1)}>{t('daily.retry')}</Button></p>
           : !status ? <p role="status">{t('common.loading')}</p>
-          : dialog === 'tasks' ? <DailyTaskList status={status} pending={pending}
+          : dialog === 'tasks' ? <DailyTaskList status={status} pending={pending} replacing={replacing}
             onClaim={(id) => { void mutate(id); }} onReplace={(id) => { void mutate(id, true); }} /> : <>
             <CheckInCalendar status={status} pending={pending} celebrate={celebrateDay === status.day}
               onCheckIn={() => { void mutate('check-in'); }}
