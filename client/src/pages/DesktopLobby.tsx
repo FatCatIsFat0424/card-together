@@ -105,9 +105,9 @@ export function DesktopLobby(props: DesktopLobbyProps): ReactNode {
       </section>
 
       <aside className={styles.social} aria-label={t('lobby.social')}>
-        <LobbyFriends key={props.accountId} disabled={props.blocked} refreshToken={props.friends.refreshToken}
+        <LobbyFriends key={`friends:${props.accountId}`} disabled={props.blocked} refreshToken={props.friends.refreshToken}
           onJoin={props.friends.onJoin} activity={props.friends.activity} />
-        <DailyRewards key={props.accountId} layout="panel" />
+        <DailyRewards key={`rewards:${props.accountId}`} layout="panel" />
       </aside>
     </div>
   </main>;
