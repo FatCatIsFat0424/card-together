@@ -6,8 +6,10 @@ import type { GameSeat } from '@shared/types';
 import { TableSeat } from '../../components/TableSeat';
 import { useGameStore } from '../../stores/game-store';
 import { useI18nStore } from '../../stores/i18n-store';
+import { useRoomStore } from '../../stores/room-store';
 import { useTablePerspectiveStore } from '../../stores/table-perspective-store';
 import { isSpectator } from '../observer-view';
+import { useReplayMode } from '../replay-mode';
 import { useGamePresentation } from '../use-game-presentation';
 import { DrawOfferPrompt, MatchButtons, PendingMove } from './BoardControls';
 import type { BoardControls } from './BoardControls';
@@ -48,6 +50,11 @@ export interface BoardTableProps {
   readonly error?: string;
   /** Disables the controls while an action is in flight or the connection is not ready. */
   readonly busy?: boolean;
+  /**
+   * Whether the viewer must act now, for simultaneous phases such as the Land Battle Chess deployment; by default
+   * the viewer's own turn.
+   */
+  readonly ownTurn?: boolean;
 }
 
 /**
@@ -58,11 +65,14 @@ export interface BoardTableProps {
  */
 export function BoardTable({
   seats, bottomSeat, board, aspect, moves, seatStats, places, controls, pending, tools, status, error, busy = false,
+  ownTurn,
 }: BoardTableProps): ReactNode {
   const { t } = useI18nStore();
   const presentation = useGamePresentation();
   const game = useGameStore((state) => state.visible);
   const turnSeat = useGameStore((state) => state.phase === 'playing' ? state.currentTurnSeat : null);
+  const mySeat = useRoomStore((state) => state.mySeat);
+  const replay = useReplayMode();
   const selectSeat = useTablePerspectiveStore((state) => state.selectSeat);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerId = useId();
@@ -73,6 +83,9 @@ export function BoardTable({
   const at = (place: BoardSeatPlace): GameSeat[] => opponents.filter((seat) => (seatPlaces[seat] ?? 'top') === place);
   const multi = seats.length > 2;
   const locked = presentation.locked;
+  // Spectators and replays watch someone else's seat, so only a seated player is ever told to move.
+  const myTurn = !watching && replay === null && mySeat !== null && mySeat === bottomSeat && !locked
+    && (ownTurn ?? turnSeat === mySeat);
   const statusLine = status ?? (watching ? t('table.spectating')
     : turnSeat && turnSeat !== bottomSeat && !locked && !multi ? t('board.opponentThinking') : null);
 
@@ -82,7 +95,8 @@ export function BoardTable({
       onObserve={watching ? () => selectSeat(value) : undefined} />;
 
   const incoming = controls?.incoming ?? null;
-  return <div className={`${styles.boardTable} ${multi ? styles.multi : ''}`} data-board-table
+  return <div className={`${styles.boardTable} ${multi ? styles.multi : ''} ${myTurn ? styles.myTurn : ''}`} data-board-table
+    data-my-turn={myTurn || undefined}
     data-expanded-table="" style={{ '--board-aspect': String(aspect) } as CSSProperties}>
     <div className={styles.laneLeft}>
       <div className={styles.topSeats}>{at('top').map((value) => seat(value, 'top'))}</div>
@@ -102,7 +116,9 @@ export function BoardTable({
       {incoming ? <div className={styles.prompt}><DrawOfferPrompt incoming={incoming} disabled={busy} compact /></div>
         : pending ? <div className={styles.prompt}>
           <PendingMove text={pending.text} onConfirm={pending.confirm} onCancel={pending.cancel} disabled={busy} />
-        </div> : tools && <div className={styles.prompt}>{tools}</div>}
+        </div> : tools ? <div className={styles.prompt}>{tools}</div>
+          // GameShell's live region already announces the turn, so the pill stays out of the accessibility tree.
+          : myTurn && <p className={`${styles.prompt} ${styles.yourTurn}`} aria-hidden="true">{t('table.yourTurn')}</p>}
       {controls && <div className={styles.buttons}><MatchButtons controls={controls} disabled={busy || locked} compact /></div>}
       <div className={styles.ownSeat}>{seats.includes(bottomSeat) && seat(bottomSeat, 'bottom')}</div>
     </div>

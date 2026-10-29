@@ -68,7 +68,36 @@
 }
 .prompt { grid-area: prompt; justify-self: center; align-self: center; min-width: 0; }
 .buttons { grid-area: buttons; align-self: center; }
-.ownSeat { grid-area: own; align-self: center; min-width: 0; }
+.ownSeat {
+  grid-area: own;
+  align-self: center;
+  min-width: 0;
+  padding: 0 6px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-lg);
+}
+
+/*
+ * The viewer's turn: a ring round the board, the own seat lit, and the 輪到你了！ pill, as card tables show above
+ * the hand. Nothing loops and every edge is reserved, so the cue appears without moving anything.
+ */
+.myTurn .boardFrame { box-shadow: 0 0 0 3px var(--turn-glow), var(--shadow-md); }
+.myTurn .ownSeat {
+  border-color: var(--turn-glow);
+  background: color-mix(in srgb, var(--turn-glow) 16%, transparent);
+}
+.yourTurn {
+  margin: 0;
+  padding: 2px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--turn-glow);
+  color: var(--text-inverse);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  line-height: 1.35;
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+}
 
 /* Short landscape phones (706 × 336 and up): board centred at full height between two columns. */
 @media (max-height: 500px) and (min-width: 600px) {
@@ -101,6 +130,9 @@
   .spacer { display: block; flex: 1; min-height: 0; }
   .boardArea { grid-area: board; }
   .boardFrame { box-shadow: none; }
+  .myTurn .boardFrame { box-shadow: 0 0 0 3px var(--turn-glow); }
+  .ownSeat { padding: 0 2px; }
+  .yourTurn { padding: 2px 8px; font-size: var(--text-xs); text-align: center; }
   .status, .prompt, .buttons, .ownSeat { grid-area: auto; justify-self: stretch; align-self: stretch; }
   .status { padding: 2px 8px; font-size: var(--text-xs); text-align: center; }
   .error { bottom: 8px; font-size: var(--text-xs); }

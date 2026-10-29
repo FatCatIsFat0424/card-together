@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import type { GameSeat } from '@shared/types';
+import { gameDefinition } from '@shared/games/registry';
 import { AUDIO_UNLOCK_EVENTS } from '../audio/audio-unlock';
 import { createTurnSound } from '../audio/turn-sound';
 import { createTurnSoundController } from '../audio/turn-sound-controller';
@@ -11,6 +13,21 @@ import { presentationMoment } from '../games/presentation-state';
 import { blackjackNeedsBet } from '../games/blackjack/blackjack-view';
 import { napoleonReviewState } from '../games/napoleon/napoleon-view';
 import { tenHalfNeedsBet } from '../games/tenhalf/tenhalf-view';
+
+/**
+ * Board tables play a piece sound for the move that hands the turn over; the reminder waits until that sound has
+ * finished so the two do not blur into one.
+ */
+export const BOARD_TURN_CUE_DELAY_MS = 260;
+
+/**
+ * Board turns are counted by what the other seats did (moves, passes, resignations), not by the viewer's own
+ * moves: a turn that goes on after the viewer's own move (a Banqi capture chain, the Gomoku swap opening) stays
+ * the same turn, while one that comes straight back because every other seat was skipped is a new turn.
+ */
+function othersActed(log: readonly { readonly seat: GameSeat }[] | undefined, mySeat: GameSeat): number | undefined {
+  return log?.filter((entry) => entry.seat !== mySeat).length;
+}
 
 export function getTurnSoundSnapshot(): TurnSoundSnapshot {
   const game = useGameStore.getState();
@@ -26,7 +43,7 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
   // Land Battle Chess deployment is simultaneous: a seat is prompted until it has deployed.
   const deploying = game.landbattle?.phase === 'deploying' && game.landbattle.seats.includes(game.landbattle.mySeat)
     && !game.landbattle.deployed.includes(game.landbattle.mySeat);
-  const owned = !held.locked && room.currentRoomCode && room.mySeat &&
+  const owned = !held.locked && room.currentRoomCode && room.mySeat && game.visible?.observer !== 'spectator' &&
     account.status === 'authenticated' && account.connection === 'ready' &&
     (game.phase === 'bidding' || game.phase === 'playing') &&
     (game.currentTurnSeat === room.mySeat || arranging || betting || reviewing || deploying);
@@ -39,14 +56,12 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
     game.sevens?.log.filter((entry) => entry.seat === room.mySeat).length ??
     game.liarsDeck?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
     game.liarsDice?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
-    game.banqi?.log.filter((entry) => entry.seat === room.mySeat).length ??
-    game.reversi?.log.filter((entry) => entry.to !== undefined && entry.seat === room.mySeat).length ??
-    game.gomoku?.log.filter((entry) => entry.seat === room.mySeat).length ??
-    game.chineseCheckers?.log.filter((entry) => entry.to !== undefined && entry.seat === room.mySeat).length ??
-    (game.landbattle ? `${game.landbattle.phase}-${game.landbattle.log.filter((entry) => entry.seat === room.mySeat).length}` : undefined) ??
+    (room.mySeat ? othersActed(game.banqi?.log ?? game.reversi?.log ?? game.gomoku?.log ?? game.chineseCheckers?.log
+      ?? game.jungle?.log ?? game.xiangqi?.log, room.mySeat) : undefined) ??
+    (game.landbattle && room.mySeat
+      ? `${game.landbattle.phase}-${othersActed(game.landbattle.log, room.mySeat)}` : undefined) ??
     game.oldMaid?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
-    game.jungle?.log.filter((entry) => entry.seat === room.mySeat).length ??
-    game.xiangqi?.log.filter((entry) => entry.seat === room.mySeat).length ??
+    game.doudizhu?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
     game.holdem?.log.filter((entry) => entry.type === 'action' && entry.seat === room.mySeat).length ??
     game.stud?.log.filter((entry) => entry.type === 'action' && entry.seat === room.mySeat).length ??
     (game.napoleon ? `${game.napoleon.phase}-${game.napoleon.log.filter((entry) =>
@@ -59,6 +74,7 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
     turn: owned ? [game.gameType, game.phase, room.mySeat, completedTricks,
       game.redPoints?.step ?? '', actionCount].join(':') : null,
     completedTricks,
+    delayMs: game.gameType && gameDefinition(game.gameType).category === 'board' ? BOARD_TURN_CUE_DELAY_MS : 0,
     enabled: useTurnSoundStore.getState().enabled,
   };
 }

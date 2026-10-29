@@ -5,6 +5,8 @@ export interface TurnSoundSnapshot {
   room: string | null;
   turn: string | null;
   completedTricks: number;
+  /** Wait before an owned turn's cue, so it follows the move sound that delivered the turn. */
+  delayMs: number;
   enabled: boolean;
 }
 
@@ -34,7 +36,8 @@ export function createTurnSoundController(audio: TurnSound): TurnSoundController
       }
       if (!changed || !next.turn || !next.enabled || !audio.ready()) return;
       // Consume transitions even while audio is locked; unlocking never replays stale turns.
-      if (hold) timer = setTimeout(() => { timer = null; audio.play(); }, TRICK_HOLD_MS);
+      const wait = hold ? TRICK_HOLD_MS : next.delayMs;
+      if (wait > 0) timer = setTimeout(() => { timer = null; audio.play(); }, wait);
       else audio.play();
     },
     dispose: () => { disposed = true; cancel(); audio.dispose(); },

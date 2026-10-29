@@ -12,7 +12,7 @@ function mockAudio() {
   return { ready: vi.fn(() => true), unlock: vi.fn(), play: vi.fn(), stop: vi.fn(), dispose: vi.fn() };
 }
 
-const ownTurn = { room: 'ROOM', turn: 'playing:N:0', completedTricks: 0, enabled: true };
+const ownTurn = { room: 'ROOM', turn: 'playing:N:0', completedTricks: 0, delayMs: 0, enabled: true };
 
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
@@ -84,6 +84,22 @@ describe('turn sound transitions', () => {
     controller.update({ ...ownTurn, turn: 'ninetynine:N:1' });
     controller.update({ ...ownTurn, turn: 'ninetynine:N:2' });
     expect(audio.play).toHaveBeenCalledTimes(2);
+  });
+
+  it('should play a board turn after the move sound and drop it when the turn moves on first', () => {
+    vi.useFakeTimers();
+    const audio = mockAudio();
+    const controller = createTurnSoundController(audio);
+    const board = { ...ownTurn, turn: 'chinesecheckers:N:1', delayMs: 260 };
+    controller.update(board);
+    vi.advanceTimersByTime(259);
+    expect(audio.play).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(audio.play).toHaveBeenCalledOnce();
+    controller.update({ ...board, turn: 'chinesecheckers:N:2' });
+    controller.update({ ...board, turn: null });
+    vi.runAllTimers();
+    expect(audio.play).toHaveBeenCalledOnce();
   });
 });
 

@@ -244,7 +244,8 @@ export function LandBattleTable(): ReactNode {
         tools={tools}
         status={status}
         error={game.phase !== 'scoring' ? actionError : undefined}
-        busy={actionPending || !connectionReady} />}
+        busy={actionPending || !connectionReady}
+        ownTurn={owesDeployment ? canDeploy : undefined} />}
       overlay={game.phase === 'scoring' && game.result && <BoardResultDialog
         outcome={game.result} viewer={mySeat} moves={game.log.length} pending={actionPending}
         error={actionError} disabled={!connectionReady} onBack={backToRoom} />}
