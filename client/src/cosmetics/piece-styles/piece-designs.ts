@@ -4,14 +4,19 @@ import { PIECE_STYLES } from '@shared/constants';
 import type { PieceStyleId } from '@shared/types';
 import { DEFAULT_BOARD_THEME, FIXED_PIECE_COLOURS } from '../../games/board/board-theme';
 import type { PieceFinish, PiecePalette } from '../../games/board/board-theme';
-import { ensureContrast, mix } from '../colour';
+import { ensureContrast, mix, withLuminance } from '../colour';
 import { MATERIAL_GLOSS, SERIES_FONTS, SERIES_TOKENS } from '../series-tokens';
 import type { SeriesTokens } from '../series-tokens';
 
 export interface PieceDesign {
   readonly palette: PiecePalette;
   readonly finish: PieceFinish;
+  /** Shop thumbnail backdrop: a mid-dark ground that both stone shades stand out from, and the series glow on it. */
+  readonly stage: { readonly ground: string; readonly glow: string };
 }
+
+/** Luminance range of the thumbnail ground, so the dark stone and the pale pieces both read against it. */
+export const PIECE_STAGE_LUMINANCE = { min: 0.1, max: 0.2 } as const;
 
 /** Lettering on engraved faces and solid bodies needs normal-text contrast (WCAG AA). */
 export const PIECE_TEXT_CONTRAST = 4.5;
@@ -40,7 +45,8 @@ function pieceDesign(tokens: SeriesTokens): PieceDesign {
     back: fixed.back, backPattern: fixed.backPattern, backRim: fixed.backRim, backRed: fixed.backRed, backBlack: fixed.backBlack,
     backBlue: fixed.backBlue, shadow: fixed.shadow, marbles: fixed.marbles,
   };
-  return { palette, finish: { rim: tokens.rim, gloss } };
+  const ground = withLuminance(mix(tokens.base, tokens.deep, 0.25), PIECE_STAGE_LUMINANCE.min, PIECE_STAGE_LUMINANCE.max);
+  return { palette, finish: { rim: tokens.rim, gloss }, stage: { ground, glow: tokens.accent } };
 }
 
 export const PIECE_DESIGNS: Readonly<Record<PieceStyleId, PieceDesign>> = Object.fromEntries(

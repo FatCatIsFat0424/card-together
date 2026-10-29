@@ -33,6 +33,8 @@ export interface BoardPalette {
   readonly homes: readonly string[];
   /** Outer edge of the board. */
   readonly edge: string;
+  /** Stroke width of the outer edge in board units. */
+  readonly edgeWidth: number;
 }
 
 export interface PiecePalette {
@@ -114,7 +116,7 @@ const WOOD: BoardPalette = {
   surface: '#dcb775', line: '#5b3a1a', ink: '#5b3a1a', cell: '#e4c48a', water: '#4aa3e0', waterLine: '#e0f2fe',
   trap: '#a98b5e', trapLine: '#5b3a1a', dens: ['#b91c1c', '#1d4ed8'], station: '#ecdfb4', camp: '#a9d4b0',
   campLine: '#4d7a58', hqLine: '#7a4a1f', rail: '#3f3a30', railInner: '#cdbd92', mountain: '#8d9378',
-  mountainLine: '#5f6650', hole: '#9a7440', holeRim: '#6b4f2a', homes: STAR_COLOURS, edge: '#dcb775',
+  mountainLine: '#5f6650', hole: '#9a7440', holeRim: '#6b4f2a', homes: STAR_COLOURS, edge: '#dcb775', edgeWidth: 0.12,
 };
 
 /** Matches the approved 2026-10-29 mockups. */
@@ -152,6 +154,7 @@ export function boardThemeStyle(theme: BoardTheme, surface: BoardSurface): CSSPr
   const entries: [string, string][] = [];
   for (const [name, value] of Object.entries(palette)) {
     if (typeof value === 'string') entries.push([`--board-${kebab(name)}`, value]);
+    else if (typeof value === 'number') entries.push([`--board-${kebab(name)}`, String(value)]);
   }
   palette.dens.forEach((value, side) => entries.push([`--board-den-${side}`, value]));
   palette.homes.forEach((value, side) => entries.push([`--board-home-${side}`, value]));

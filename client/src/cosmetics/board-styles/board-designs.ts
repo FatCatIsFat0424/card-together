@@ -4,7 +4,7 @@ import { BOARD_STYLES } from '@shared/constants';
 import type { BoardStyleId } from '@shared/types';
 import { DEFAULT_BOARD_THEME } from '../../games/board/board-theme';
 import type { BoardMotion, BoardPalette, BoardSurface } from '../../games/board/board-theme';
-import { ensureContrast, mix, withLuminance } from '../colour';
+import { contrast, ensureContrast, luminance, mix, withLuminance } from '../colour';
 import { SERIES_TOKENS } from '../series-tokens';
 import type { SeriesTokens } from '../series-tokens';
 
@@ -20,8 +20,27 @@ export const BOARD_LINE_CONTRAST = 3;
 export const BOARD_GAP_CONTRAST = 1.8;
 /** River text, mountain labels, and coordinates. */
 export const BOARD_TEXT_CONTRAST = 4.5;
+/** Edge stroke widths: full while the edge stays quiet, thinner as its contrast or its brightness grows. */
+export const BOARD_EDGE_WIDTH = {
+  max: 0.12, min: 0.04, softContrast: 2, loudContrast: 7, softLuminance: 0.3, loudLuminance: 0.7,
+} as const;
 /** Reversi felt stays mid-dark so both dark and light discs stand out from it. */
 export const FELT_LUMINANCE = { min: 0.1, max: 0.24 } as const;
+
+/** A bright accent or a high-contrast one draws a heavy line, so the stroke narrows with whichever is louder. */
+export function edgeWidthFor(edge: string, surface: string): number {
+  const { max, min, softContrast, loudContrast, softLuminance, loudLuminance } = BOARD_EDGE_WIDTH;
+  const ramp = (value: number, soft: number, loud: number): number => Math.min(1, Math.max(0, (value - soft) / (loud - soft)));
+  const loudness = Math.max(
+    ramp(contrast(edge, surface), softContrast, loudContrast),
+    ramp(luminance(edge), softLuminance, loudLuminance),
+  );
+  return Math.round((max - (max - min) * loudness) * 1000) / 1000;
+}
+
+function withEdgeWidth(palette: BoardPalette): BoardPalette {
+  return { ...palette, edgeWidth: edgeWidthFor(palette.edge, palette.surface) };
+}
 
 function boardDesign(tokens: SeriesTokens): BoardDesign {
   const fixed = DEFAULT_BOARD_THEME.surfaces.wood;
@@ -47,6 +66,7 @@ function boardDesign(tokens: SeriesTokens): BoardDesign {
     holeRim: mix(tokens.deep, tokens.base, 0.3),
     homes: fixed.homes,
     edge: tokens.accent,
+    edgeWidth: BOARD_EDGE_WIDTH.max,
   };
   const wood: BoardPalette = { ...shared, surface: light, line: ink, ink, cell };
   const feltCell = withLuminance(tokens.felt, FELT_LUMINANCE.min, FELT_LUMINANCE.max);
@@ -69,7 +89,10 @@ function boardDesign(tokens: SeriesTokens): BoardDesign {
     ink: ensureContrast(mix(tokens.accent, '#ffffff', 0.4), starSurface, BOARD_TEXT_CONTRAST + 0.3),
   };
   return {
-    surfaces: { wood, green, meadow, field, star },
+    surfaces: {
+      wood: withEdgeWidth(wood), green: withEdgeWidth(green), meadow: withEdgeWidth(meadow),
+      field: withEdgeWidth(field), star: withEdgeWidth(star),
+    },
     motion: tokens.motion ? { kind: tokens.motion.kind, glow: tokens.motion.glow } : null,
   };
 }

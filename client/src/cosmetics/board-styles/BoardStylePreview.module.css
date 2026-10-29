@@ -1,13 +1,17 @@
 .preview {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
   justify-content: center;
+  width: 200px;
+  max-width: 100%;
 }
 
+/* Both boards shrink together so neither is cut off in a narrow card. */
 .board {
-  width: 96px;
-  height: 96px;
+  flex: 0 1 96px;
+  min-width: 0;
+  aspect-ratio: 1;
   overflow: hidden;
   border-radius: 6px;
   box-shadow: var(--shadow-sm);

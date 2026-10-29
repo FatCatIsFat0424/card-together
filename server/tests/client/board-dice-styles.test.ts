@@ -13,12 +13,12 @@ vi.mock('../../../client/src/stores/account-store', () => ({
   useAccountStore: (select: (state: { account: Record<string, unknown> | null }) => unknown) => select(equipped),
 }));
 
-import { colourDistance, contrast } from '../../../client/src/cosmetics/colour';
+import { colourDistance, contrast, luminance } from '../../../client/src/cosmetics/colour';
 import {
   PIECE_DESIGNS, PIECE_TEXT_CONTRAST, piecePalette, resolvePieceStyle,
 } from '../../../client/src/cosmetics/piece-styles/piece-designs';
 import {
-  BOARD_DESIGNS, BOARD_GAP_CONTRAST, BOARD_LINE_CONTRAST, BOARD_TEXT_CONTRAST, resolveBoardStyle,
+  BOARD_DESIGNS, BOARD_EDGE_WIDTH, BOARD_GAP_CONTRAST, BOARD_LINE_CONTRAST, BOARD_TEXT_CONTRAST, resolveBoardStyle,
 } from '../../../client/src/cosmetics/board-styles/board-designs';
 import { boardThemeFor } from '../../../client/src/cosmetics/board-styles/board-theme-for';
 import { DICE_DESIGNS, PIP_CONTRAST, PIP_ONE_CONTRAST, resolveDiceStyle } from '../../../client/src/cosmetics/dice-styles/dice-designs';
@@ -134,6 +134,15 @@ describe.each(BOARD_STYLES)('$id board readability', ({ id, design }) => {
     expect(contrast(surfaces.field.line, surfaces.field.station)).toBeGreaterThanOrEqual(BOARD_LINE_CONTRAST);
     expect(contrast(surfaces.star.holeRim, surfaces.star.cell)).toBeGreaterThanOrEqual(BOARD_LINE_CONTRAST);
     expect(motion !== null).toBe(ANIMATED.has(design));
+  });
+
+  it('keeps the edge line thin when the accent is bright', () => {
+    for (const surface of SURFACES) {
+      const { edge, edgeWidth } = surfaces[surface];
+      expect(edgeWidth, surface).toBeGreaterThanOrEqual(BOARD_EDGE_WIDTH.min);
+      expect(edgeWidth, surface).toBeLessThanOrEqual(BOARD_EDGE_WIDTH.max);
+      if (luminance(edge) >= BOARD_EDGE_WIDTH.loudLuminance) expect(edgeWidth, surface).toBe(BOARD_EDGE_WIDTH.min);
+    }
   });
 });
 

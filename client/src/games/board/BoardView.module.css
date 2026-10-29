@@ -9,7 +9,7 @@
   touch-action: manipulation;
 }
 
-.surface { fill: var(--board-surface); stroke: var(--board-edge); stroke-width: 0.12; }
+.surface { fill: var(--board-surface); stroke: var(--board-edge); stroke-width: var(--board-edge-width, 0.12); }
 .grid { fill: var(--board-line); }
 .cell { fill: var(--board-cell); }
 .water { fill: var(--board-water); }
