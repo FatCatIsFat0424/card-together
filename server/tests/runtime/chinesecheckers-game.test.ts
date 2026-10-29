@@ -4,7 +4,7 @@ import { gameDefinition } from '@shared/games/registry';
 import { matchStanding } from '@shared/rules/match-standing';
 import { roomCanStart, roomPlayers } from '@shared/rules/seats';
 import {
-  CC_HOLES, CC_TRIANGLES, CC_TURN_LIMIT, ccIndex, ccMoves, ccNode, ccTarget,
+  CC_HOLES, CC_NEIGHBOURS, CC_TRIANGLES, CC_TURN_LIMIT, ccIndex, ccMoves, ccNode, ccTarget,
 } from '@shared/rules/chinesecheckers';
 import type { CcHole } from '@shared/rules/chinesecheckers';
 import { chineseCheckersAdapter } from '../../src/managers/games/chinesecheckers-adapter';
@@ -48,6 +48,15 @@ function setBoard(marbles: Readonly<Record<string, number>>): void {
 }
 
 const triangle = (corner: number): string[] => CC_TRIANGLES[corner].map(ccNode);
+
+/** A hole of the corner's triangle and a neighbouring hole outside it, so one step enters the triangle. */
+function entry(corner: number): { hole: string; outside: string } {
+  for (const index of CC_TRIANGLES[corner]) {
+    const outside = CC_NEIGHBOURS[index].find((next) => next >= 0 && !CC_TRIANGLES[corner].includes(next));
+    if (outside !== undefined) return { hole: ccNode(index), outside: ccNode(outside) };
+  }
+  throw new Error('Expected a triangle with an outside neighbour');
+}
 const coherent = (): boolean => coherentChineseCheckersGame(structuredClone(game()));
 
 function seeded(seed: number): () => number {
@@ -159,6 +168,46 @@ describe('Chinese checkers moves', () => {
     expect(result.remaining.S).toBe(120);
     expect(matchStanding(result, 'E')).toMatchObject({ rank: 2, won: false, players: 3 });
     expect(matchStanding(result, 'N')).toMatchObject({ rank: 1, won: true });
+  });
+
+  it('gives a two-player win to the rival whose last target hole the mover fills', () => {
+    start();
+    // East's target is North's home. North steps its last marble of the day into the one hole East left open.
+    const { hole, outside } = entry(0);
+    const marbles: Record<string, number> = { [outside]: 0 };
+    for (const node of triangle(0).filter((node) => node !== hole)) marbles[node] = 3;
+    setBoard(marbles);
+    expect(checkers.move(CODE, 'N', outside, hole)).toEqual({ success: true });
+    expect(game()).toMatchObject({ phase: 'scoring', result: { winners: ['E'], reason: 'all-home', ranks: { E: 1, N: 2 } } });
+    expect(game().result).toMatchObject({ arrived: { E: 9 }, remaining: { E: 0 } });
+  });
+
+  it('gives a multi-player win to the rival whose target the mover filled and ranks the rest', () => {
+    start(3);
+    const { hole, outside } = entry(ccTarget(2));
+    const marbles: Record<string, number> = { [outside]: 0, '0,0': 4 };
+    for (const node of triangle(ccTarget(2)).filter((node) => node !== hole)) marbles[node] = 2;
+    setBoard(marbles);
+    expect(checkers.move(CODE, 'N', outside, hole)).toEqual({ success: true });
+    const result = game().result!;
+    expect(game().phase).toBe('scoring');
+    expect(result).toMatchObject({ winners: ['E'], reason: 'all-home' });
+    expect(result.ranks.E).toBe(1);
+    expect(result.ranks.N).toBeGreaterThan(1);
+    expect(result.ranks.S).toBeGreaterThan(1);
+    expect(matchStanding(result, 'N')).toMatchObject({ won: false, players: 3 });
+    expect(matchStanding(result, 'E')).toMatchObject({ rank: 1, won: true });
+  });
+
+  it('keeps playing while a rival target still has an empty hole', () => {
+    start(3);
+    const { hole, outside } = entry(ccTarget(2));
+    const [open] = triangle(ccTarget(2)).filter((node) => node !== hole);
+    const marbles: Record<string, number> = { [outside]: 0, '0,0': 4 };
+    for (const node of triangle(ccTarget(2)).filter((node) => node !== hole && node !== open)) marbles[node] = 2;
+    setBoard(marbles);
+    expect(checkers.move(CODE, 'N', outside, hole)).toEqual({ success: true });
+    expect(game()).toMatchObject({ phase: 'playing', result: null, currentTurnSeat: 'E' });
   });
 
   it('skips a seat whose marbles are all blocked and logs the pass', () => {

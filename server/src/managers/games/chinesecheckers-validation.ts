@@ -79,20 +79,31 @@ export function chineseCheckersGame(value: ObjectValue, player: PlayerValidator)
  * Replaying the public log from the starting corners reproduces the board, the turn, the automatic passes,
  * the resignations, and the result. Two-player resignations and agreed draws leave no log entry, so they are
  * accepted only while the replayed match is still running and must close it exactly as stored.
+ *
+ * Matches stored before a move into a rival's last target hole ended the match may have played on past such a
+ * position, so the replay accepts that continuation: rivals are settled only after the final logged action, and
+ * only when that reproduces the stored state. The next move in such a match then ends it.
  */
 export function coherentChineseCheckersGame(state: ChineseCheckersGameState): boolean {
   if (!distinctPlayers(state.players)) return false;
+  return replaysAs(state, true) || replaysAs(state, false);
+}
+
+function replaysAs(state: ChineseCheckersGameState, settleLastRivals: boolean): boolean {
   const replay = newChineseCheckersGame(state.roomCode, state.players, state.startedAt, state.id);
   if (!replay) return false;
   const seats = occupiedSeats(state.players);
-  for (const entry of state.log) {
+  const last = state.log.reduce((at, entry, index) => (entry.to !== undefined || entry.resigned ? index : at), -1);
+  for (const [index, entry] of state.log.entries()) {
     // Passes are recorded by the moves before them, so the replay writes them itself.
     if (entry.to === undefined && !entry.resigned) continue;
     if (replay.phase !== 'playing') return false;
     if (entry.resigned) {
       if (seats.length <= 2 || replay.resigned.includes(entry.seat)) return false;
       applyResignation(replay, entry.seat, entry.timestamp);
-    } else if (!applyMove(replay, entry.seat, entry.from ?? '', entry.to ?? '', entry.timestamp).success) {
+    } else if (!applyMove(
+      replay, entry.seat, entry.from ?? '', entry.to ?? '', entry.timestamp, settleLastRivals && index === last,
+    ).success) {
       return false;
     }
   }

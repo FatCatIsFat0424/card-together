@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ChineseCheckersVisibleState } from '@shared/types';
 import { NO_DRAW_OFFER } from '@shared/rules/board/match-controls';
-import { CC_BOARD, CC_HOLES, ccCorners, ccIndex, ccInitialHoles } from '@shared/rules/chinesecheckers';
+import { CC_BOARD, CC_HOLES, CC_TRIANGLES, ccCorners, ccIndex, ccInitialHoles, ccNode } from '@shared/rules/chinesecheckers';
 import type { CcHole } from '@shared/rules/chinesecheckers';
 import { boardAspect } from '../../../client/src/games/board/board-view';
 import {
@@ -81,6 +81,18 @@ describe('Chinese checkers view helpers', () => {
     expect(chineseCheckersArrived(game(), 'N')).toBe(0);
     expect(chineseCheckersArrived(game({ holes: holes({ '0,0': 0, '1,1': 0 }) }), 'N')).toBe(2);
     expect(chineseCheckersArrived(game({ resigned: ['N'] }), 'N')).toBe(0);
+  });
+
+  it('counts opposing marbles as arrived only once the target is finished', () => {
+    // Every hole of North's target is taken: nine by South, one by North itself.
+    const target = CC_TRIANGLES[3].map(ccNode);
+    const marbles = Object.fromEntries(target.map((node) => [node, 3]));
+    expect(chineseCheckersArrived(game({ holes: holes({ ...marbles, [target[0]]: 0 }) }), 'N')).toBe(10);
+    expect(chineseCheckersArrived(game({ holes: holes({ ...marbles, [target[0]]: 0, [target[1]]: 0 }) }), 'N')).toBe(10);
+    // With no marble of its own in the full target, North has not finished.
+    expect(chineseCheckersArrived(game({ holes: holes(marbles) }), 'N')).toBe(0);
+    const open = Object.fromEntries(target.slice(2).map((node) => [node, 3]));
+    expect(chineseCheckersArrived(game({ holes: holes({ ...open, [target[0]]: 0 }) }), 'N')).toBe(1);
   });
 
   it('registers the client module with board-game defaults', () => {

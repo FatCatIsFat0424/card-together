@@ -2,7 +2,7 @@
 
 import type { ChineseCheckersMove, ChineseCheckersVisibleState, GameSeat } from '@shared/types';
 import {
-  CC_BOARD, ccArrived, ccDestinations, ccFindMove, ccIndex, ccNode,
+  CC_BOARD, CC_PIECES, ccArrived, ccDestinations, ccFindMove, ccFinished, ccIndex, ccNode,
 } from '@shared/rules/chinesecheckers';
 import { STAR_CORNERS } from '@shared/rules/board/boards';
 import type { NodeId } from '@shared/rules/board/board-model';
@@ -102,10 +102,11 @@ export function chineseCheckersSeatOrder(
   return [...game.seats].sort((a, b) => height(a) - height(b));
 }
 
-/** Marbles each seat has in its target triangle, out of ten. */
+/** Marbles each seat has in its target triangle, out of ten; a finished target counts opposing marbles as arrived. */
 export function chineseCheckersArrived(game: ChineseCheckersVisibleState, seat: GameSeat): number {
   const corner = seatCorner(game, seat);
-  return corner === null || game.resigned.includes(seat) ? 0 : ccArrived(game.holes, corner);
+  if (corner === null || game.resigned.includes(seat)) return 0;
+  return ccFinished(game.holes, corner) ? CC_PIECES : ccArrived(game.holes, corner);
 }
 
 /** The latest move, for the last-move markers and its jump path. */

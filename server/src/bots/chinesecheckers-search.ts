@@ -29,6 +29,8 @@ const STRAGGLER_WEIGHT = 0.04;
 const DRIFT_WEIGHT = 0.15;
 /** A move that finishes the race beats any progress. */
 const FINISH_SCORE = 10_000;
+/** Filling a rival's last target hole hands it the win, which is as bad as finishing is good. */
+const HANDOVER_COST = FINISH_SCORE;
 /** Undoing one's own previous move is mildly discouraged, so equal moves do not shuttle back and forth. */
 const BACKTRACK_COST = 0.6;
 /**
@@ -121,15 +123,19 @@ export function searchFinished(board: SearchBoard, corner: number): boolean {
   return own > 0;
 }
 
-/** Progress a move makes for `corner`; finishing outweighs everything. */
-function gain(board: SearchBoard, corner: number, move: SearchMove): number {
+/**
+ * Progress a move makes for `corner`; finishing outweighs everything. Unless the move finishes the mover's own
+ * race, completing the target of one of `rivals` ends the match in the rival's favour and is heavily penalised.
+ */
+function gain(board: SearchBoard, corner: number, move: SearchMove, rivals: readonly number[] = []): number {
   const cost = SEARCH_COST[corner];
   board[move.to] = corner;
   board[move.from] = EMPTY;
   const done = searchFinished(board, corner);
+  const handedOver = !done && rivals.some((rival) => searchFinished(board, rival));
   board[move.from] = corner;
   board[move.to] = EMPTY;
-  return cost[move.from] - cost[move.to] + (done ? FINISH_SCORE : 0);
+  return cost[move.from] - cost[move.to] + (done ? FINISH_SCORE : 0) - (handedOver ? HANDOVER_COST : 0);
 }
 
 /** The largest progress any single move of `corner` makes on this board. */
@@ -150,9 +156,11 @@ export interface SearchOptions {
   readonly depth: 1 | 2;
 }
 
-function firstPly(board: SearchBoard, corner: number, move: SearchMove, previous: SearchMove | null): number {
+function firstPly(
+  board: SearchBoard, corner: number, move: SearchMove, previous: SearchMove | null, rivals: readonly number[],
+): number {
   const back = previous && move.from === previous.to && move.to === previous.from ? BACKTRACK_COST : 0;
-  return gain(board, corner, move) - back;
+  return gain(board, corner, move, rivals) - back;
 }
 
 /**
@@ -165,7 +173,7 @@ export function searchBestMove(board: SearchBoard, corner: number, options: Sear
   const moves = searchMoves(board, corner);
   if (moves.length === 0) return null;
   if (moves.length === 1) return moves[0];
-  let scored = moves.map((move) => ({ move, score: firstPly(board, corner, move, options.previous) }))
+  let scored = moves.map((move) => ({ move, score: firstPly(board, corner, move, options.previous, options.opponents) }))
     .sort((a, b) => b.score - a.score);
   if (options.depth === 2 && scored[0].score < FINISH_SCORE) {
     const refined: typeof scored = [];

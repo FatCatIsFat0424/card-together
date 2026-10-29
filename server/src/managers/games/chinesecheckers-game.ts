@@ -146,10 +146,30 @@ function passTurn(game: ChineseCheckersGameState, from: GameSeat, now: number): 
 }
 
 /**
- * Moves a marble of the seat on turn to `to` by a step or the shortest jump chain the server finds, then
- * ends the match if the seat filled its target or hands the turn on.
+ * The seat a move just won for: the mover when its target is complete, else the first other seat still playing
+ * (in turn order) whose target the move completed, since a marble dropped into a rival's last empty hole gives
+ * the rival the win. `settleRivals` is false only when replaying a match stored before rivals were settled.
  */
-export function applyMove(game: ChineseCheckersGameState, seat: GameSeat, from: string, to: string, now: number): Result {
+function finishedSeat(game: ChineseCheckersGameState, mover: GameSeat, settleRivals: boolean): GameSeat | null {
+  if (ccFinished(game.holes, cornerOf(game, mover))) return mover;
+  if (!settleRivals) return null;
+  const seats = chineseCheckersSeats(game);
+  const start = seats.indexOf(mover);
+  for (let step = 1; step < seats.length; step++) {
+    const seat = seats[(start + step) % seats.length];
+    if (!game.resigned.includes(seat) && ccFinished(game.holes, cornerOf(game, seat))) return seat;
+  }
+  return null;
+}
+
+/**
+ * Moves a marble of the seat on turn to `to` by a step or the shortest jump chain the server finds, then
+ * ends the match if the move completed a target (the mover's, or a rival's that it filled) or hands the turn on.
+ * Passes and resignations never complete a target: a move fills one hole, and a resignation only empties holes.
+ */
+export function applyMove(
+  game: ChineseCheckersGameState, seat: GameSeat, from: string, to: string, now: number, settleRivals: boolean = true,
+): Result {
   if (game.phase !== 'playing') return { success: false, reason: 'The game is over' };
   if (game.currentTurnSeat !== seat) return { success: false, reason: 'Not your turn' };
   const start = ccIndex(from);
@@ -166,7 +186,8 @@ export function applyMove(game: ChineseCheckersGameState, seat: GameSeat, from: 
     timestamp: now,
   });
   game.drawOffer = afterBoardMove(game.drawOffer, seat);
-  if (ccFinished(game.holes, corner)) finish(game, { winners: [seat], reason: 'all-home' });
+  const winner = finishedSeat(game, seat, settleRivals);
+  if (winner) finish(game, { winners: [winner], reason: 'all-home' });
   else passTurn(game, seat, now);
   return { success: true };
 }

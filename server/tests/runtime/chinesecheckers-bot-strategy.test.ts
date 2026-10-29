@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { ChineseCheckersGameState, ChineseCheckersVisibleState, GameSeat, PlayerInfo } from '@shared/types';
-import { CC_HOLES, CC_TRIANGLES, ccIndex, ccMoves, ccNode } from '@shared/rules/chinesecheckers';
+import { CC_HOLES, CC_NEIGHBOURS, CC_TRIANGLES, ccIndex, ccMoves, ccNode, ccTarget } from '@shared/rules/chinesecheckers';
 import type { CcHole } from '@shared/rules/chinesecheckers';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
@@ -87,6 +87,63 @@ describe('Chinese checkers Hard bot', () => {
     setBoard({ '0,14': 0, '0,4': 0, '0,0': 3 });
     const action = getChineseCheckersBotAction(view('N'), () => 0);
     expect(chosen(action)?.from).toBe('0,14');
+  });
+
+  describe('when a move would fill a rival\'s last target hole', () => {
+    interface Entry { readonly hole: number; readonly outside: number; readonly rival: number }
+
+    const strategies: readonly [string, () => BotAction | null][] = [
+      ['synchronous', () => getChineseCheckersBotAction(view('N'), () => 0)],
+      ['one-move search', () => chineseCheckersSearch(view('N'), { random: () => 0, budget: budget(() => false, 1) })],
+      ['two-move search', () => chineseCheckersSearch(view('N'), { random: () => 0, budget: budget(() => false, 2) })],
+    ];
+
+    /**
+     * North has one marble beside the rival's target, boxed in so that stepping into the hole is its only move,
+     * and a marble on its own tip whose every move loses ground. The rival has filled its target but for the
+     * hole, plus one more hole when `short`.
+     */
+    function setUp(short: boolean): Entry {
+      const rival = 2;
+      const target = CC_TRIANGLES[ccTarget(rival)];
+      const hole = target.find((index) => CC_NEIGHBOURS[index].some((next) => next >= 0 && !target.includes(next)))!;
+      const outside = CC_NEIGHBOURS[hole].find((next) => next >= 0 && !target.includes(next))!;
+      const boxed = new Set<number>();
+      CC_NEIGHBOURS[outside].forEach((over, direction) => {
+        if (over < 0 || over === hole) return;
+        boxed.add(over);
+        boxed.add(CC_NEIGHBOURS[over][direction]);
+      });
+      boxed.delete(hole);
+      boxed.delete(outside);
+      boxed.delete(-1);
+      const marbles: Record<string, number> = {};
+      for (const index of boxed) marbles[ccNode(index)] = 5;
+      const open = target.find((index) => index !== hole && !boxed.has(index) && !CC_NEIGHBOURS[outside].includes(index))!;
+      for (const index of target) if (index !== hole && !(short && index === open)) marbles[ccNode(index)] = rival;
+      marbles[ccNode(outside)] = 0;
+      marbles['0,0'] = 0;
+      start(6);
+      setBoard(marbles);
+      return { hole, outside, rival };
+    }
+
+    const stepsIn = (action: BotAction | null, entry: Entry): boolean => {
+      const move = chosen(action);
+      return move?.from === ccNode(entry.outside) && move.to === ccNode(entry.hole);
+    };
+
+    it.each(strategies)('%s: steps in while it does not complete the target', (_name, act) => {
+      const entry = setUp(true);
+      expect(stepsIn(act(), entry)).toBe(true);
+    });
+
+    it.each(strategies)('%s: plays another move once the step would complete it', (_name, act) => {
+      const entry = setUp(false);
+      const action = act();
+      expect(legal(action, 0)).toBe(true);
+      expect(stepsIn(action, entry)).toBe(false);
+    });
   });
 
   it('returns null with no legal move and the only move without searching', () => {
