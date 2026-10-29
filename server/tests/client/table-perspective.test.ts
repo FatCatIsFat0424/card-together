@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GAME_TYPES } from '@shared/constants';
 import type { Card, GameType, PlayerInfo, PlayerVisibleGameState, RoomInfo, Seat } from '@shared/types';
+import { gameDefinition } from '@shared/games/registry';
 import * as games from '../../src/managers/game-manager';
 import * as blackjack from '../../src/managers/games/blackjack-game';
 
@@ -58,8 +59,13 @@ const player = (seat: Seat): PlayerInfo => ({
 });
 const players = { N: player('N'), E: player('E'), S: player('S'), W: player('W') };
 
+/** Two-player games seat North and South only. */
+const playersOf = (type: GameType): Partial<Record<Seat, PlayerInfo>> =>
+  gameDefinition(type).seats.maxPlayers < 4 ? { N: players.N, S: players.S } : players;
+const seatsOf = (type: GameType): readonly Seat[] => seats.filter((seat) => playersOf(type)[seat]);
+
 function snapshot(type: GameType, seat: Seat | null = null): PlayerVisibleGameState {
-  expect(games.startGame(code, type, players)).toEqual({ success: true });
+  expect(games.startGame(code, type, playersOf(type))).toEqual({ success: true });
   const current = games.getGameState(code)!;
   delete current.presentation;
   return games.getRecipientVisibleState(code, seat)!;
@@ -98,6 +104,7 @@ describe('spectator table perspective', () => {
       import('../../../client/src/games/napoleon/NapoleonTable'),
       import('../../../client/src/games/tenhalf/TenHalfTable'),
       import('../../../client/src/games/liarsdice/LiarsDiceTable'),
+      import('../../../client/src/games/reversi/ReversiTable'),
     ]);
   }, 60_000);
   beforeEach(() => {
@@ -118,7 +125,7 @@ describe('spectator table perspective', () => {
     const game = snapshot(type);
     const original = structuredClone(game);
     const view = nextGodView(HIDDEN_GOD_VIEW, game, false);
-    for (const seat of seats) {
+    for (const seat of seatsOf(type)) {
       useTablePerspectiveStore.getState().selectSeat(seat);
       const html = await render(game);
       const bottom = html.split('data-table-seat="bottom"')[1]?.split('data-hand-zone')[0];
@@ -142,7 +149,10 @@ describe('spectator table perspective', () => {
       } else if (projected.gameType !== 'bridge' && projected.gameType !== 'chinesepoker') {
         expect(isOwnTurn(projected)).toBe(false);
       }
-      if (game.gameType === 'liarsdice' && projected.gameType === 'liarsdice') {
+      if (game.gameType === 'reversi' || projected.gameType === 'reversi') {
+        // The whole position is public: spectators have no hidden hands to view.
+        expect(projected).toMatchObject({ gameType: 'reversi', observer: 'spectator', mySeat: seat });
+      } else if (game.gameType === 'liarsdice' && projected.gameType === 'liarsdice') {
         expect(projected.myDice).toEqual(game.observedHands?.[seat] ?? []);
       } else if (game.gameType !== 'blackjack' && projected.gameType !== 'blackjack'
         && game.gameType !== 'tenhalf' && projected.gameType !== 'tenhalf'

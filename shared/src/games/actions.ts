@@ -29,6 +29,8 @@ import { parseAction as parseCrazyEightsAction } from './crazyeights/actions';
 import type { CrazyEightsAction } from './crazyeights/actions';
 import { parseAction as parseStudAction } from './stud/actions';
 import type { StudAction } from './stud/actions';
+import { parseAction as parseReversiAction } from './reversi/actions';
+import type { ReversiGameAction } from './reversi/actions';
 
 /** Action contracts are indexed separately from lobby and presentation metadata. */
 export interface GameActionMap {
@@ -46,6 +48,7 @@ export interface GameActionMap {
   liarsdice: LiarsDiceAction;
   crazyeights: CrazyEightsAction;
   stud: StudAction;
+  reversi: ReversiGameAction;
 }
 
 export type GameActionEnvelope<K extends GameType = GameType> = {
@@ -67,6 +70,7 @@ export const ACTION_PARSERS: { readonly [K in GameType]: (value: unknown) => Gam
   liarsdice: parseLiarsDiceAction,
   crazyeights: parseCrazyEightsAction,
   stud: parseStudAction,
+  reversi: parseReversiAction,
 };
 
 function parseEnvelope<K extends GameType>(gameType: K, value: unknown): GameActionEnvelope<K> | string {

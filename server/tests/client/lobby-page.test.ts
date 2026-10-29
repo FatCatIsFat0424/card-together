@@ -53,10 +53,10 @@ describe('lobby page', () => {
   it('lists the games of the selected category with one create and join area', () => {
     const html = render();
     expect(html).toContain('role="tablist"');
-    expect(html.match(/role="tab"/g)).toHaveLength(2);
+    expect(html.match(/role="tab"/g)).toHaveLength(3);
     expect(html).toContain('>Cards</button>');
     expect(html).toContain('>Dice</button>');
-    expect(html).not.toContain('>Board games<');
+    expect(html).toContain('>Board games</button>');
     expect(html).toContain('id="lobby-games" role="tabpanel"');
     const choices = html.match(/<button[^>]*aria-controls="lobby-selected-game"[^>]*>/g) ?? [];
     expect(choices).toHaveLength(gamesInCategory('cards').length);
@@ -75,11 +75,11 @@ describe('lobby page', () => {
   });
 
   it('shows a tab only for categories that have games', () => {
-    expect(lobbyCategories()).toEqual(['cards', 'dice']);
+    expect(lobbyCategories()).toEqual(['cards', 'dice', 'board']);
     expect(gamesInCategory('dice')).toEqual(['liarsdice']);
-    expect(gamesInCategory('board')).toEqual([]);
+    expect(gamesInCategory('board')).toEqual(['reversi']);
     // Artwork is generated separately, so a game without it must still list (see `GAME_CARD_ART`).
-    const unillustrated = ['tenhalf', 'liarsdice', 'crazyeights', 'stud'];
+    const unillustrated = ['tenhalf', 'liarsdice', 'crazyeights', 'stud', 'reversi'];
     for (const gameType of GAME_TYPES.filter((type) => !unillustrated.includes(type))) expect(GAME_CARD_ART[gameType]).toBeTruthy();
   });
 

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GAME_TYPES } from '@shared/constants';
+import { gameDefinition } from '@shared/games/registry';
 import { applyReplayPatch } from '@shared/replay-patch';
 import type { AnyGameState, Card, GameType, ReplayRecording, ReplaySnapshot, Seat } from '@shared/types';
 import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
@@ -35,7 +36,8 @@ function account(seat: Seat): AccountRecord {
 async function startMatch(
   repository: Repository, gameType: GameType, bots = false,
 ): Promise<{ runtime: RuntimeCoordinator; code: string }> {
-  const accounts = (bots ? SEATS.slice(0, 1) : SEATS).map(account);
+  const limit = Math.min(SEATS.length, gameDefinition(gameType).seats.maxPlayers);
+  const accounts = (bots ? SEATS.slice(0, 1) : SEATS.slice(0, limit)).map(account);
   for (const entry of accounts) await repository.createAccount(entry);
   const runtime = await createRuntimeCoordinator(repository);
   let code = '';

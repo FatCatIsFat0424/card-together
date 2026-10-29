@@ -2,10 +2,10 @@
 
 Browser-based multiplayer card games with server-authoritative rules: Bridge,
 Taiwanese Big Two, Red Points, Ninety-Nine, Sevens, Chinese Poker, Liar's Deck,
-Blackjack, Ten and a Half, Texas Hold'em, Napoleon, and Liar's Dice.
+Blackjack, Ten and a Half, Texas Hold'em, Napoleon, Liar's Dice, and Reversi.
 
 - Rooms with up to eight spectators, chat, bots, and turn timers; Ninety-Nine,
-  Blackjack, Ten and a Half, Hold'em, and Liar's Dice support 2–8 occupied seats, Napoleon 4–6, while other games use four.
+  Blackjack, Ten and a Half, Hold'em, and Liar's Dice support 2–8 occupied seats, Napoleon 4–6, Reversi exactly two, while other games use four.
 - Accounts, friends, match history, rooms, and unfinished games survive restarts.
 - Traditional Chinese and English, themes, uploaded avatars and table artwork,
   custom and site-provided emoji, optional WebRTC voice, and owner-provided music.

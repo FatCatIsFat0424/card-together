@@ -233,4 +233,12 @@ export type {
   TenHalfVisibleState,
 } from '../games/tenhalf/types';
 
+export type {
+  ReversiMove,
+  ReversiPhase,
+  ReversiMatchResult,
+  ReversiGameState,
+  ReversiVisibleState,
+} from '../games/reversi/types';
+
 export type { AnyGameState, PlayerVisibleGameState, MatchResult } from '../games/type-registry';

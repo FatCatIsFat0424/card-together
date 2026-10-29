@@ -98,7 +98,7 @@
 - 握手與每個操作都需要有效的工作階段與允許的 Origin。操作者由工作階段決定，從不取自 payload。
 - 最後一個參數必須是 callback，否則操作會被忽略。沒有 payload 的操作只接收 callback。
 - 失敗回傳 `{ success: false, error }`。成功會在資料寫入後才回覆，但暫時性的 signaling 與狀態未變更時除外。
-- 遊戲類型：`bridge`、`bigtwo`、`redpoints`、`ninetynine`、`sevens`、`chinesepoker`、`liarsdeck`、`blackjack`、`holdem`、`napoleon`、`tenhalf`、`liarsdice`。標準座位：`N`、`E`、`S`、`W`。
+- 遊戲類型：`bridge`、`bigtwo`、`redpoints`、`ninetynine`、`sevens`、`chinesepoker`、`liarsdeck`、`blackjack`、`holdem`、`napoleon`、`tenhalf`、`liarsdice`、`reversi`。標準座位：`N`、`E`、`S`、`W`。
 - 確切的 payload 與結果：[`socket-events.ts`](../shared/src/types/socket-events.ts)。
 
 **房間**
@@ -120,7 +120,7 @@
 | `room:addBot` | `{ seat, difficulty? }` | 房主在等待中把 bot 加到任何已設定的座位（`N`–`W`，或已加開的 `P5`–`P8`）；省略難度時為困難 |
 | `room:removeBot` | `{ seat }` | 房主在等待中移除 bot |
 | `room:setBotDifficulty` | `{ seat, difficulty }` | 房主把等待中房間的一個 bot 改為簡單或困難；重設真人的準備狀態 |
-| `room:fillBots` | — | 房主以已準備的 bot 補滿所有空位，包括額外座位 |
+| `room:fillBots` | — | 房主以已準備的 bot 補滿所有空位（包括額外座位），不超過遊戲的人數上限 |
 | `room:ready`、`room:unready` | — | 等待中設定入座玩家的準備狀態，不論目前人數；從不會開始對局。房主永遠視為已準備，所以不需要呼叫（呼叫也不影響開始條件） |
 | `room:start` | — | 只有在房主以外所有有人的座位都已準備，且人數符合該遊戲時，房主才能開始 |
 | `room:setShuffleSeats` | `{ enabled }` | 房主在等待中切換自動隨機座位；預設為 false，並重設真人的準備狀態 |

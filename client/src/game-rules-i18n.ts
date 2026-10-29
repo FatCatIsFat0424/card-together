@@ -208,6 +208,12 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Main pot, side pots, and ties', 'Each all-in level forms a side pot; you only win pots you put chips into. Antes count toward the pot.', 'Ties split each pot; odd chips go clockwise from the button.'),
     section('Timer', 'On timeout you check, or fold if you owe chips. Each hand refills the reserve.'),
   ],
+  reversi: [
+    section('Board and start', 'An 8×8 board; each side plays black or white. The four centre cells start with two discs of each colour, and black moves first.', 'The earlier seat plays black. The board never turns; coordinates run a–h and 1–8.'),
+    section('Placing and flipping', 'Place a disc on an empty cell so that, in at least one direction (row, column, or diagonal), a line of opposing discs lies between it and another disc of yours. Every disc in those lines flips to your colour.', 'A cell that flips nothing is not a legal move.'),
+    section('Passing', 'A player with no legal move is skipped automatically, with a notice, and the opponent plays again.'),
+    section('Winning', 'The game ends when neither side can move, usually on a full board. More discs wins; equal counts draw.', 'You may resign. On your own turn you may offer a draw: the opponent accepts to draw, and making a move counts as declining. After a decline you must make 3 more moves before offering again.'),
+  ],
 };
 
 const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
@@ -370,12 +376,18 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('主池、邊池與平手', '每個全押金額會分出邊池，只能贏自己有投入的池。前注也算入底池。', '平手均分，零頭從莊位後順時針分配。'),
     section('計時', '逾時自動過牌，欠下注時棄牌。每手補滿保留時間。'),
   ],
+  reversi: [
+    section('棋盤與開局', '8×8 棋盤，雙方各執黑或白。開局中央四格為黑白各兩子，黑棋先下。', '座位順序在前的玩家執黑；棋盤固定不旋轉，座標以 a–h、1–8 標示。'),
+    section('落子與翻面', '每步必須下在空格，並在至少一個方向（橫、直、斜）上夾住連續的對手棋子，被夾住的棋子全部翻成自己的顏色。', '沒有能夾住對手的位置就不能下在該格。'),
+    section('跳過', '輪到的玩家沒有合法位置時，系統自動跳過並顯示提示，由對手繼續下。'),
+    section('勝負', '雙方都無子可下時結束（通常是棋盤下滿），棋子較多者獲勝，數量相同為和局。', '可以認輸；輪到自己時可以提和，對手同意即和局，對手走子視為拒絕，被拒絕後需再走 3 手才能再次提和。'),
+  ],
 };
 
 const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> = {
   en: [
     table('Room setup', ['Item', 'Rule'], [
-      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice 2–8; Napoleon 4–6; others 4'],
+      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice 2–8; Napoleon 4–6; Reversi 2; others 4'],
       ['Seat order', 'Clockwise N → E → S → W → P5–P8, skipping empty seats'],
       ['Start', 'Once everyone seated is ready, the host presses Start'],
       ['Bots', 'The host adds or removes them; at least one human must sit'],
@@ -391,7 +403,7 @@ const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> =
   ],
   'zh-TW': [
     table('房間設定', ['項目', '規則'], [
-      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰 2～8 人；拿破崙 4～6 人；其他 4 人'],
+      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰 2～8 人；拿破崙 4～6 人；黑白棋 2 人；其他 4 人'],
       ['座位順序', '順時針 北 → 東 → 南 → 西 → 第 5～8 席，跳過空位'],
       ['開始', '入座者都準備後，由房主按開始'],
       ['Bot', '房主可加入或移除；至少需一位真人入座'],

@@ -11,6 +11,7 @@ import { liarsDiceFacts } from './liarsdice';
 import { napoleonFacts } from './napoleon';
 import { ninetyNineFacts } from './ninetynine';
 import { redPointsFacts } from './redpoints';
+import { reversiFacts } from './reversi';
 import { sevensFacts } from './sevens';
 import { tenHalfFacts } from './tenhalf';
 import { crazyEightsFacts } from './crazyeights';
@@ -34,6 +35,7 @@ export const GAME_STATS: {
   liarsdice: liarsDiceFacts,
   crazyeights: crazyEightsFacts,
   stud: (_result, seat, frame) => studFacts(seat, frame),
+  reversi: reversiFacts,
 };
 
 export function gameFacts<K extends GameType>(

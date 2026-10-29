@@ -42,7 +42,8 @@ describe('desktop navigation', () => {
     expect(activeLobbyCategory(null)).toBe('cards');
     expect(activeLobbyCategory('cards')).toBe('cards');
     expect(activeLobbyCategory('dice')).toBe('dice');
-    expect(activeLobbyCategory('board')).toBe('cards');
+    expect(activeLobbyCategory('board')).toBe('board');
+    expect(activeLobbyCategory('chess' as never)).toBe('cards');
   });
 });
 

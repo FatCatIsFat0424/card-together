@@ -3,7 +3,7 @@
 import type { GameSeat, Seat, BidSuit, Team, GameType } from '../types';
 
 /** All game types, in lobby order; per-game metadata lives in `games/registry`. */
-export const GAME_TYPES: readonly GameType[] = ['bridge', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'chinesepoker', 'liarsdeck', 'blackjack', 'holdem', 'napoleon', 'tenhalf', 'liarsdice', 'crazyeights', 'stud'];
+export const GAME_TYPES: readonly GameType[] = ['bridge', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'chinesepoker', 'liarsdeck', 'blackjack', 'holdem', 'napoleon', 'tenhalf', 'liarsdice', 'crazyeights', 'stud', 'reversi'];
 
 /** Fewest occupied seats a flexible-seat match starts with */
 export const MIN_FLEXIBLE_PLAYERS = 2;

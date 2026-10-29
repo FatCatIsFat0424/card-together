@@ -1,3 +1,4 @@
+import { gameDefinition } from '@shared/games/registry';
 import { diffReplaySnapshot } from '@shared/replay-patch';
 import type {
   GameType, MatchReplay, MatchResult, MatchSummary, PlayerInfo, PublicAccount, ReplayPatchOp, ReplaySnapshot, Seat,
@@ -67,7 +68,9 @@ export interface RecordedMatch {
 
 /** Plays a real match with simple legal moves and records it as the server would. */
 export function recordMatch(gameType: GameType, code = 'REPLAY', maxSteps = 2_000): RecordedMatch {
-  const live = Object.fromEntries(REPLAY_SEATS.map((seat) => [seat, player(seat)]));
+  // Two-player games seat only the first two seats.
+  const seated = REPLAY_SEATS.slice(0, Math.min(REPLAY_SEATS.length, gameDefinition(gameType).seats.maxPlayers));
+  const live = Object.fromEntries(seated.map((seat) => [seat, player(seat)]));
   if (!games.startGame(code, gameType, live).success) throw new Error('Game did not start.');
   const startedAt = games.getGameState(code)!.startedAt;
   const snapshots = [spectatorSnapshot(code)];
@@ -85,7 +88,7 @@ export function recordMatch(gameType: GameType, code = 'REPLAY', maxSteps = 2_00
   games.removeGame(code);
   return {
     replay: { version: 1, gameType, startedAt, initial: snapshots[0], steps },
-    match: { id: `match-${gameType}`, roomCode: 'OLD123', accountIds: REPLAY_SEATS.map((seat) => `account-${seat}`),
+    match: { id: `match-${gameType}`, roomCode: 'OLD123', accountIds: seated.map((seat) => `account-${seat}`),
       result, finishedAt: startedAt + 1, hasReplay: true },
     snapshots,
   };

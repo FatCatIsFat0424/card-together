@@ -19,6 +19,7 @@ import type {
   ChinesePokerVisibleState,
   LiarsDeckVisibleState,
   LiarsDiceVisibleState,
+  ReversiVisibleState,
   BlackjackVisibleState,
   HoldemVisibleState,
   NapoleonVisibleState,
@@ -49,6 +50,7 @@ export interface GameStoreState {
   tenhalf: TenHalfVisibleState | null;
   crazyEights: CrazyEightsVisibleState | null;
   stud: StudVisibleState | null;
+  reversi: ReversiVisibleState | null;
   /** Stud: my hole card from the previous hand while its presentation may still be playing */
   studHeld: HeldHoleCards | null;
   gameType: GameType | null;
@@ -87,6 +89,7 @@ const initialState: GameStoreState = {
   tenhalf: null,
   crazyEights: null,
   stud: null,
+  reversi: null,
   studHeld: null,
   gameType: null,
   phase: null,

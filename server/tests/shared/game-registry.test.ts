@@ -18,6 +18,7 @@ const PREVIOUS_SEATS: Readonly<Record<GameType, readonly [min: number, max: numb
   napoleon: [4, 6, true, true],
   tenhalf: [2, 8, true, false],
   liarsdice: [2, 8, true, false],
+  reversi: [2, 2, true, false],
   crazyeights: [2, 8, true, false],
   stud: [2, 8, true, false],
 };
@@ -30,7 +31,7 @@ describe('shared game registry', () => {
 
   it.each(GAME_TYPES)('keeps the previous seat limits for %s', (gameType) => {
     const [min, max, flexible, numbered] = PREVIOUS_SEATS[gameType];
-    expect(gameDefinition(gameType).seats).toEqual({ minPlayers: min, maxPlayers: max, flexible, expandable: flexible, numbered });
+    expect(gameDefinition(gameType).seats).toEqual({ minPlayers: min, maxPlayers: max, flexible, expandable: flexible && max > 4, numbered });
     expect([minPlayers(gameType), maxPlayers(gameType), isNumberedSeatGame(gameType)]).toEqual([min, max, numbered]);
   });
 
@@ -43,6 +44,10 @@ describe('shared game registry', () => {
       const definition = gameDefinition(gameType);
       if (gameType === 'liarsdice') {
         expect([definition.category, definition.equipment]).toEqual(['dice', []]);
+        continue;
+      }
+      if (gameType === 'reversi') {
+        expect([definition.category, definition.equipment]).toEqual(['board', []]);
         continue;
       }
       expect(definition.category).toBe('cards');
@@ -64,6 +69,7 @@ describe('registered result metadata', () => {
       ['ninetynine', 'ranking', null], ['sevens', 'ranking', 'penalty'], ['chinesepoker', 'ranking', 'points'],
       ['liarsdeck', 'ranking', null], ['blackjack', 'ranking', 'chips'], ['holdem', 'ranking', 'chips'],
       ['napoleon', 'roles', null], ['tenhalf', 'ranking', 'chips'], ['liarsdice', 'ranking', null], ['crazyeights', 'ranking', 'penalty'], ['stud', 'ranking', 'chips'],
+      ['reversi', 'ranking', null],
     ]);
   });
 

@@ -33,6 +33,7 @@ export { isNapoleonResult } from '../managers/games/napoleon-validation';
 export { isTenHalfResult } from '../managers/games/tenhalf-validation';
 export { isLiarsDiceResult } from '../managers/games/liarsdice-validation';
 export { isCrazyEightsResult } from '../managers/games/crazyeights-validation';
+export { isReversiResult } from '../managers/games/reversi-validation';
 
 function player(value: unknown): boolean {
   return (

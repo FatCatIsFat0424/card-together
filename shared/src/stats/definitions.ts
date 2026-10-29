@@ -108,6 +108,12 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('exactBids', 'log', 'count'),
     record('diceInWin', 'result', 'max'),
   ],
+  reversi: [
+    record('topDiscs', 'result', 'max'),
+    record('wipeouts', 'result', 'count', true),
+    record('corners', 'log', 'count'),
+    record('biggestFlip', 'log', 'max'),
+  ],
   crazyeights: [
     record('handsWon', 'result', 'count', true),
     record('lowScore', 'result', 'min'),

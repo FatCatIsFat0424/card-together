@@ -1,0 +1,22 @@
+/* ─── Reversi table: side colour and disc count beside each seat ─── */
+
+.discs {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  flex: none;
+}
+
+.dark { background: #1d1f22; }
+.light { background: #f3efe6; }
+
+.sideName { opacity: 0.85; }

@@ -3,6 +3,7 @@ import { BJ_MIN_BET } from '@shared/rules/blackjack';
 import type { GameType, NapoleonAction } from '@shared/types';
 import type { BotAction } from './bot-decisions';
 import type { SearchBotSpec } from './search/search-types';
+import { searchStrategy } from './search/search-types';
 import { getBridgeBotAction } from './bridge-strategy';
 import { getBigTwoBotAction } from './bigtwo-strategy';
 import { getRedPointsBotAction } from './redpoints-strategy';
@@ -17,6 +18,7 @@ import { easyTenHalfAction, getTenHalfBotAction, tenHalfFirstLegalAction } from 
 import { easyLiarsDiceAction, getLiarsDiceBotAction, liarsDiceFirstLegalAction } from './liarsdice-strategy';
 import { crazyEightsFirstLegalAction, easyCrazyEightsAction, getCrazyEightsBotAction } from './crazyeights-strategy';
 import { getStudBotAction } from './stud-strategy';
+import { easyReversiAction, getReversiBotAction, reversiFirstLegalAction } from './reversi-strategy';
 import {
   easyBigTwoAction, easyBlackjackAction, easyBridgeAction, easyChinesePokerAction, easyHoldemAction, easyLiarsDeckAction,
   easyNinetyNineAction, easyRedPointsAction, easySevensAction, easyStudAction,
@@ -110,6 +112,19 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     firstLegal: liarsDiceFirstLegalAction,
     // A player who runs out of time raises by the least allowed or challenges, as the easy bot would.
     turnTimeout: (visible) => easyLiarsDiceAction(visible),
+  },
+  reversi: {
+    hard: getReversiBotAction,
+    easy: easyReversiAction,
+    firstLegal: reversiFirstLegalAction,
+    // Hard bots search in the worker pool; the cheap synchronous hard move serves only other seats.
+    search: {
+      strategy: searchStrategy<'reversi'>(new URL('./reversi-search.ts', import.meta.url), 'reversiSearch'),
+      budgetMs: 1000,
+      maxDepth: 10,
+    },
+    // A player who runs out of time gets a legal move by the easy policy.
+    turnTimeout: (visible) => easyReversiAction(visible, Math.random),
   },
   crazyeights: { hard: getCrazyEightsBotAction, easy: easyCrazyEightsAction, firstLegal: crazyEightsFirstLegalAction },
   stud: {

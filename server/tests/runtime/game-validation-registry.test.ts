@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GAME_TYPES, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { normalizeFlexibleGame } from '@shared/game-seat-compat';
+import { gameDefinition } from '@shared/games/registry';
 import { defaultGameOptions } from '@shared/games/room-options';
 import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 import type { PlayerInfo, Seat } from '@shared/types';
@@ -26,8 +27,11 @@ afterEach(() => {
 describe('game validation registry', () => {
   it.each(GAME_TYPES)('validates %s without mutating the stored game and uses the runtime player validator', (gameType) => {
     const adapter = gameAdapter(gameType);
+    // Two-player games seat only the first two seats; the validator still reads every seat's player.
+    const seated = SEAT_ORDER_CLOCKWISE.slice(0, gameDefinition(gameType).seats.maxPlayers);
+    const players = Object.fromEntries(seated.map((seat) => [seat, PLAYERS[seat]]));
     expect(adapter.start({
-      roomCode: CODE, players: PLAYERS, settings: DEFAULT_TIME_CONTROL, options: defaultGameOptions(),
+      roomCode: CODE, players, settings: DEFAULT_TIME_CONTROL, options: defaultGameOptions(),
     })).toEqual({ success: true });
     const state = structuredClone(normalizeFlexibleGame(adapter.getGameState(CODE)!));
     const before = structuredClone(state);
@@ -35,7 +39,7 @@ describe('game validation registry', () => {
     const validator = gameValidator(gameType);
     const validPlayer = vi.fn(() => true);
     expect(validator.shape(state as unknown as ObjectValue, validPlayer)).toBe(true);
-    expect(validPlayer).toHaveBeenCalledTimes(SEAT_ORDER_CLOCKWISE.length);
+    expect(validPlayer).toHaveBeenCalledTimes(seated.length);
     expect(validator.coherent(state)).toBe(true);
     expect(validator.shape(state as unknown as ObjectValue, () => false)).toBe(false);
     expect(state).toEqual(before);

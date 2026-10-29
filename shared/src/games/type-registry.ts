@@ -12,6 +12,7 @@ import type { NapoleonGameContract } from './napoleon/types';
 import type { TenHalfGameContract } from './tenhalf/types';
 import type { CrazyEightsGameContract } from './crazyeights/types';
 import type { StudGameContract } from './stud/types';
+import type { ReversiGameContract } from './reversi/types';
 import type { GameAutomation } from '../types/game';
 import type { GameSeat } from '../types/player';
 
@@ -31,6 +32,7 @@ export interface GameTypeRegistry {
   readonly liarsdice: LiarsDiceGameContract;
   readonly crazyeights: CrazyEightsGameContract;
   readonly stud: StudGameContract;
+  readonly reversi: ReversiGameContract;
 }
 
 export type GameType = keyof GameTypeRegistry;
