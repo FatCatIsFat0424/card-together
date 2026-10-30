@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { useStillArt } from '../art-layers/art-layers';
-import { borderOrbitKeyframes } from './border-orbit';
+import { runBorderOrbit } from './border-orbit';
 import { SEAT_FRAME_MOTIFS, motifMotion, seatFrameDesign } from './seat-frame-designs';
 import type { MotifMotion, MotifPart, SeatFrameDesign } from './seat-frame-designs';
 import styles from './SeatFrame.module.css';
@@ -47,35 +47,14 @@ function CornerImages({ design, parts }: { design: SeatFrameDesign; parts: reado
   });
 }
 
-/**
- * Runs a design's border orbit on the compositor, refitting the path when the frame resizes. While it
- * runs, `data-orbit` replaces the static CSS motion path that places the mark when idle.
- */
+/** Runs a design's border orbit while its seat is on turn. */
 function useBorderOrbit(design: SeatFrameDesign | null, active: boolean, markRef: RefObject<HTMLSpanElement | null>): void {
   const orbit = design ? ORBITS[design] : undefined;
   useEffect(() => {
     const mark = markRef.current;
     const frame = mark?.parentElement;
     if (!active || !orbit || !mark || !frame || typeof mark.animate !== 'function') return;
-    let animation: Animation | null = null;
-    const start = (): void => {
-      const radius = parseFloat(getComputedStyle(frame).borderTopLeftRadius) || 0;
-      const keyframes = borderOrbitKeyframes({ width: frame.clientWidth, height: frame.clientHeight, radius },
-        { width: mark.offsetWidth, height: mark.offsetHeight }, orbit.from, orbit.from + 1);
-      const elapsed = animation?.currentTime ?? 0;
-      animation?.cancel();
-      animation = mark.animate(keyframes, { duration: orbit.seconds * 1000, iterations: Infinity });
-      animation.currentTime = elapsed;
-    };
-    mark.dataset.orbit = '';
-    start();
-    const resize = typeof ResizeObserver === 'function' ? new ResizeObserver(start) : null;
-    resize?.observe(frame);
-    return () => {
-      resize?.disconnect();
-      animation?.cancel();
-      delete mark.dataset.orbit;
-    };
+    return runBorderOrbit(mark, frame, orbit);
   }, [active, orbit, markRef]);
 }
 

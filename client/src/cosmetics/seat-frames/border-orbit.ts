@@ -75,3 +75,36 @@ export function borderOrbitKeyframes(
 function round(value: number): number {
   return Math.round(value * 1000) / 1000 || 0;
 }
+
+/**
+ * Runs the orbit on `mark` around `frame` on the compositor, starting `from` of a lap, and refits the path
+ * at the same lap position only when the frame or mark size changes. While it runs, `data-orbit` replaces
+ * the static CSS motion path that places the mark when idle. Returns the function that stops it.
+ */
+export function runBorderOrbit(mark: HTMLElement, frame: HTMLElement, lap: { from: number; seconds: number }): () => void {
+  let animation: Animation | null = null;
+  let fitted = '';
+  const fit = (): void => {
+    const box = { width: frame.clientWidth, height: frame.clientHeight,
+      radius: parseFloat(getComputedStyle(frame).borderTopLeftRadius) || 0 };
+    const size = { width: mark.offsetWidth, height: mark.offsetHeight };
+    const key = `${box.width} ${box.height} ${box.radius} ${size.width} ${size.height}`;
+    // A resize observer first reports the size it starts with, which the first fit already used.
+    if (key === fitted) return;
+    fitted = key;
+    const elapsed = animation?.currentTime ?? 0;
+    animation?.cancel();
+    animation = mark.animate(borderOrbitKeyframes(box, size, lap.from, lap.from + 1),
+      { duration: lap.seconds * 1000, iterations: Infinity });
+    animation.currentTime = elapsed;
+  };
+  mark.dataset.orbit = '';
+  fit();
+  const resize = typeof ResizeObserver === 'function' ? new ResizeObserver(fit) : null;
+  resize?.observe(frame);
+  return () => {
+    resize?.disconnect();
+    animation?.cancel();
+    delete mark.dataset.orbit;
+  };
+}

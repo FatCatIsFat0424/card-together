@@ -1,8 +1,9 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SEAT_FRAMES } from '@shared/constants';
 import { SeatFrame, seatFrameHostClass } from '../../../client/src/cosmetics/seat-frames/SeatFrame';
+import { runBorderOrbit } from '../../../client/src/cosmetics/seat-frames/border-orbit';
 import { SEAT_FRAME_MOTIFS, seatFrameDesign } from '../../../client/src/cosmetics/seat-frames/seat-frame-designs';
 import { seatFramesTranslations } from '../../../client/src/cosmetics/seat-frames/i18n';
 
@@ -77,5 +78,50 @@ describe('SeatFrame layer', () => {
     const paths = (html: string): string[] => [...html.matchAll(/<svg[^>]*>(.*?)<\/svg>/g)].map((match) => match[1]);
     expect(new Set(paths(aurora)).size).toBe(1);
     expect(new Set(paths(sakura)).size).toBe(2);
+  });
+});
+
+describe('border orbit runner', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('keeps one orbit across resize reports until the frame size changes, then refits at the same lap position', () => {
+    const resizeReports: Array<() => void> = [];
+    const observer = { observe: vi.fn(), disconnect: vi.fn() };
+    vi.stubGlobal('ResizeObserver', vi.fn(function (report: () => void) {
+      resizeReports.push(report);
+      return observer;
+    }));
+    vi.stubGlobal('getComputedStyle', () => ({ borderTopLeftRadius: '8px' }));
+    const animations: Array<{ currentTime: number | null; cancel: ReturnType<typeof vi.fn> }> = [];
+    const mark = {
+      offsetWidth: 6, offsetHeight: 2, dataset: {} as DOMStringMap,
+      animate: vi.fn(() => {
+        const animation = { currentTime: null, cancel: vi.fn() };
+        animations.push(animation);
+        return animation;
+      }),
+    };
+    const frame = { clientWidth: 120, clientHeight: 40 };
+
+    const stop = runBorderOrbit(mark as unknown as HTMLElement, frame as unknown as HTMLElement, { from: 0.15, seconds: 2.5 });
+    expect(mark.dataset.orbit).toBe('');
+    expect(observer.observe).toHaveBeenCalledWith(frame);
+    // The observer's first report and later same-size reports leave the running orbit alone.
+    resizeReports[0]();
+    resizeReports[0]();
+    expect(animations).toHaveLength(1);
+    expect(animations[0].cancel).not.toHaveBeenCalled();
+
+    animations[0].currentTime = 900;
+    frame.clientWidth = 140;
+    resizeReports[0]();
+    expect(animations).toHaveLength(2);
+    expect(animations[0].cancel).toHaveBeenCalledOnce();
+    expect(animations[1].currentTime).toBe(900);
+
+    stop();
+    expect(animations[1].cancel).toHaveBeenCalledOnce();
+    expect(observer.disconnect).toHaveBeenCalledOnce();
+    expect(mark.dataset.orbit).toBeUndefined();
   });
 });
