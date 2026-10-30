@@ -1,0 +1,56 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:12.702
+Start and controls
+Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+
+00:00:12.702 --> 00:00:19.002
+Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+
+00:00:19.002 --> 00:00:35.002
+Sevens: minimize covered-card penalties
+Each player has 13 cards. Follow the spade-seven holder in a match with Dragon Slaying enabled and aim for the lowest covered-card penalty.
+
+00:00:35.002 --> 00:00:46.002
+Open with the spade seven
+Click the spade seven to play it directly. Then open another suit with its seven or extend an open end with the adjacent rank of that suit.
+
+00:00:46.002 --> 00:00:55.002
+Turns run counterclockwise. Each row extends from 7 down to A and up to K without gaps or wrapping.
+
+00:00:55.002 --> 00:01:04.902
+Play whenever you can
+Watch other players extend rows or cover a card when blocked. Only the number of their covered cards is visible.
+
+00:01:04.902 --> 00:01:13.002
+Any legal play prevents covering. Only a player with no legal play must choose a card to cover.
+
+00:01:13.002 --> 00:01:33.002
+Build each suit outward
+Speed through the growing rows. On your turn, clicking an available legal hand card sends it directly.
+
+00:01:33.002 --> 00:01:45.102
+Confirm a covered card
+You now have no legal extension. Click the card to cover, then press the confirmation showing its name and penalty; cancel lets you choose again.
+
+00:01:45.102 --> 00:01:55.002
+Covered cards score penalties: A=1, 2–10 face value, J=11, Q=12, K=13.
+
+00:01:55.002 --> 00:02:08.202
+Dragon Slaying closes both ends
+Watch the following public plays and suit closure. With Dragon Slaying enabled, playing an A or K closes both ends of that suit.
+
+00:02:08.202 --> 00:02:19.002
+Other suits remain open. If all four close, the game automatically covers every remaining card. With this option off, rows can continue to both A and K.
+
+00:02:19.002 --> 00:02:47.001
+Speed through the remaining cards
+All further plays and covers run in order at higher speed. Watch dimmed suits, hand counts, and your covered-card penalty.
+
+00:02:47.001 --> 00:03:03.001
+Finish the last few turns
+Resolve the remaining hand cards. Once every card is played or covered, the game reveals covers and calculates penalties.
+
+00:03:03.001 --> 00:03:20.000
+Sevens: lower penalties win
+Demo S wins with 11 points. Demo E has 12, N has 17, and W has 28.

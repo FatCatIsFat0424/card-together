@@ -1,0 +1,59 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:14.581
+Start and controls
+Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+
+00:00:14.581 --> 00:00:20.881
+Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+
+00:00:20.881 --> 00:00:27.481
+Gomoku: a 15×15 grid
+This example enables Swap opening and Renju forbidden moves. We keep the first player’s perspective.
+
+00:00:27.481 --> 00:00:32.881
+Both options are off by default. The host chooses them before the match; they cannot change during play.
+
+00:00:32.881 --> 00:00:46.881
+Goal: connect five stones
+Use empty intersections to make a horizontal, vertical or diagonal line. Stones cannot move. For this short rules example, white deliberately leaves black’s line unblocked.
+
+00:00:46.881 --> 00:01:00.081
+First player places black, white, black
+In the swap opening, the first player places all three opening stones. Click an empty intersection; touch previews before Confirm or a second tap.
+
+00:01:00.081 --> 00:01:10.880
+The prompt shows which colour to place. Players do not alternate during these first three stones.
+
+00:01:10.880 --> 00:01:21.880
+Second player chooses Black or White
+The three opening stones are on the board. The opponent now chooses a colour; this example keeps White, which moves next.
+
+00:01:21.880 --> 00:01:30.880
+Choosing Black swaps colours, not seats. The fixed player view waits while the opponent chooses.
+
+00:01:30.880 --> 00:01:48.880
+Alternate normally after the choice
+After white plays, black moves. Mouse clicks place immediately; touch previews allow confirmation or cancellation.
+
+00:01:48.880 --> 00:01:59.880
+Rule card: Renju restrictions for black
+Renju is enabled here. On black’s turn, red crosses mark forbidden points that cannot be played.
+
+00:01:59.880 --> 00:02:08.882
+Black cannot make an overline, double four or double three; an exact five takes priority as a legal win. White wins with five or more.
+
+00:02:08.882 --> 00:02:26.882
+Faster play: build a threat
+Speed through the next few moves and watch both lines and their open ends. In a competitive game, block the opponent before they connect five.
+
+00:02:26.882 --> 00:02:40.882
+Place the fifth stone
+Black now has four consecutive stones and can add the fifth. The server declares the result and the winning line is highlighted.
+
+00:02:40.882 --> 00:02:49.682
+Result: black connects five
+Nine placements and one colour choice complete this swap-opening example. Review the reason and stone count, then use Back to room.
+
+00:02:49.682 --> 00:02:57.867
+A full board without a winner draws. With Renju disabled, five or more wins for either colour.

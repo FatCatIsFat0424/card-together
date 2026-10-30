@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: npm ci --include=dev
 
-      # The owner's music and site emoji are not in the repository; the import steps run
-      # against empty local-music and local-emoji directories.
+      # The owner's music, site emoji and walkthrough videos are not in the repository; the
+      # import steps run against empty local-music, local-emoji and local-demos directories.
       - name: Validate all checks and build artifacts
         run: npm run check -- full

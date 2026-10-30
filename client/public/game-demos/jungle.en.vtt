@@ -1,0 +1,63 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:13.398
+Start and controls
+Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+
+00:00:13.398 --> 00:00:19.698
+Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+
+00:00:19.698 --> 00:00:31.697
+Jungle: eight animals per side
+We are red and move first. Rivers, traps and dens affect how each of the eight animals can move and fight.
+
+00:00:31.697 --> 00:00:45.697
+Goal: enter the opposing den
+Entering the enemy den wins without capturing every animal. Capturing them all or leaving the opponent no legal move also wins.
+
+00:00:45.697 --> 00:01:07.697
+Select an animal, then a legal square
+Ordinary moves are one orthogonal square; your own den is forbidden. Select an animal to see targets, then choose one. Touch normally requires confirmation.
+
+00:01:07.697 --> 00:01:18.697
+Only rats enter water
+Our red rat is on the riverbank and can now enter the water. Legal target hints exclude water squares other animals cannot reach.
+
+00:01:18.697 --> 00:01:27.697
+Water and land animals cannot capture each other across the bank. Rats may leave onto empty land; two rats in water can capture each other.
+
+00:01:27.697 --> 00:01:39.797
+Faster play: ranks and captures
+Speed up until the sides meet. From strongest down: elephant, lion, tiger, leopard, wolf, dog, cat, rat. Equal ranks can capture each other.
+
+00:01:39.797 --> 00:01:49.697
+Exception: a rat on land can capture an elephant; an elephant cannot capture a rat. Enemy traps change ranks separately.
+
+00:01:49.697 --> 00:02:01.797
+Lions and tigers leap across rivers
+Speed through the approach and watch the blue lion’s long river leap, followed by the red elephant’s recapture.
+
+00:02:01.797 --> 00:02:11.696
+A leap crosses the full river in a straight line to an empty square or capturable enemy. Any rat in the crossed water blocks it.
+
+00:02:11.696 --> 00:02:22.696
+Traps weaken invading animals
+Watch the next captures at higher speed. Each den’s three traps protect its defender; check them before approaching.
+
+00:02:22.696 --> 00:02:31.695
+An animal in an enemy trap has rank 0: it cannot capture and any enemy can capture it. Leaving restores its rank.
+
+00:02:31.695 --> 00:02:43.795
+Fast-forward to the den approach
+Both sides keep moving and fighting as the red lion approaches the opposing den. Every action leading to the finish is included.
+
+00:02:43.795 --> 00:02:53.695
+A run of 100 plies without capture draws automatically. A draw offer on your turn requires the opponent’s agreement.
+
+00:02:53.695 --> 00:03:07.695
+The final step into the den
+The red lion is now beside the blue den. Red can enter it and let the server settle the match.
+
+00:03:07.695 --> 00:03:24.700
+Result: red enters the enemy den
+After 55 moves the red lion enters blue’s den. Both sides still have animals, but the match ends immediately. Review the result and return to the room.

@@ -1,0 +1,62 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:08.690
+Start and controls
+Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+
+00:00:08.690 --> 00:00:14.989
+Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+
+00:00:14.989 --> 00:00:24.889
+Five-card stud: one down, four up
+Watch from N in a two-seat match. Each seat antes 10, then receives one hidden card and one up card. Only your own hidden card is visible until showdown.
+
+00:00:24.889 --> 00:00:32.989
+Start with 1,000 chips each. No forced bring-in. The strongest showing hand opens each round, followed clockwise. Every hand uses a newly shuffled deck.
+
+00:00:32.989 --> 00:00:43.989
+Up cards set the order; hidden cards affect strength
+N’s showing ace beats E’s king, so N acts first. E’s full hand cannot be known from an up card; a card back is still private information.
+
+00:00:43.989 --> 00:00:52.988
+Opening order compares showing quads, trips, two pair, pair, then high cards. Ties use ranks, then spades, hearts, diamonds, clubs. Showing straights and flushes do not count.
+
+00:00:52.988 --> 00:01:02.888
+The opener may check or bet
+N clicks Bet, enters 40 and confirms. The slider and Min, Half Pot, Pot and All-in shortcuts also work. Antes already count toward the pot.
+
+00:01:02.888 --> 00:01:10.988
+The current minimum bet is 20. A raise amount is the total for this round; the panel enforces the legal range.
+
+00:01:10.988 --> 00:01:20.338
+Call before the next up card
+E clicks Call 40. The next up card is dealt only after all remaining players with chips match the bet and finish their decisions.
+
+00:01:20.338 --> 00:01:27.987
+Facing a bet, call, raise or fold. Check only when nothing is owed. Folding keeps the hole card private but forfeits committed chips.
+
+00:01:27.987 --> 00:01:41.987
+Third card: reassess the showing hands
+N’s two up cards now make a pair of aces, so N opens again. Both players check. The server reassesses the showing-card order every round.
+
+00:01:41.987 --> 00:01:55.987
+Fourth card: a fresh betting round
+The fourth card has been dealt. N bets to 100 and E calls. Earlier contributions stay in the pot while this round tracks its own bets.
+
+00:01:55.987 --> 00:02:06.987
+Fifth card: the final round goes all-in
+Each player has one down card and four up cards. N opens Bet, chooses All-in and confirms the remaining 850. N then has no further decisions.
+
+00:02:06.987 --> 00:02:15.986
+Rule card: an incomplete all-in raise does not reopen raising. Unequal contributions create main and side pots, each limited to eligible players.
+
+00:02:15.986 --> 00:02:26.986
+Call all-in, then reveal the hole cards
+E calls all-in. Only after the final round closes are the hole cards shown. Compare each player’s five cards; there is no shared board as in Hold’em.
+
+00:02:26.986 --> 00:02:35.986
+High to low: straight flush, quads, full house, flush, straight, trips, two pair, pair, high card. Suits do not break final ties; tied hands split the pot.
+
+00:02:35.986 --> 00:02:53.000
+One hand complete: N’s three aces win
+E’s hole card is public now. N’s three aces beat E’s pair of kings, collecting 2,000 including antes. E is eliminated and the match ends.

@@ -1,23 +1,26 @@
+import { boardsDemoScenes } from './game-demos/boards-scenes';
+import { cardsDemoScenes } from './game-demos/cards-scenes';
+import { bettingDemoScenes } from './game-demos/betting-scenes';
 import type { GameType } from '@shared/types';
+import recordings from './game-demo-recordings.json';
 import type { DemoTextKey } from './game-demo-i18n';
+import type { DemoScene as SharedDemoScene } from './game-demos/types';
 
-export const DEMO_GAME_TYPES = ['bridge', 'napoleon', 'chinesepoker', 'liarsdice'] as const;
+export const DEMO_GAME_TYPES = ['bridge', 'napoleon', 'chinesepoker', 'liarsdice', 'blackjack', 'holdem', 'stud', 'tenhalf', 'reversi', 'gomoku', 'xiangqi', 'jungle', 'landbattle', 'battleship', 'banqi', 'chinesecheckers', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'crazyeights', 'oldmaid', 'gofish', 'doudizhu', 'liarsdeck'] as const;
 export type DemoGameType = typeof DEMO_GAME_TYPES[number];
-/** Measured from the shipped recordings, including their opening delay and final reading time. */
-export const DEMO_RECORDINGS: Record<DemoGameType, { readonly leadIn: number; readonly duration: number }> = {
-  bridge: { leadIn: 3.019, duration: 232.896467 },
-  napoleon: { leadIn: 1.886, duration: 301.382233 },
-  chinesepoker: { leadIn: 2.492, duration: 219.231433 },
-  liarsdice: { leadIn: 2.610, duration: 212.453333 },
-};
-export interface DemoScene {
-  readonly text: DemoTextKey;
-  readonly seconds: number;
-  readonly step: number;
-  readonly until?: number;
-  readonly interaction?: 'front' | 'middle' | 'back' | 'edit';
+interface DemoRecording { readonly leadIn: number; readonly duration: number; readonly chapters?: readonly number[] }
+/** Measured from the owner's recordings, including their opening delay and final reading time; `npm run demos:import` checks durations. */
+export const DEMO_RECORDINGS: Record<DemoGameType, DemoRecording> = recordings;
+export type DemoScene = SharedDemoScene<DemoTextKey>;
+function withIntroduction<K extends string>(courses: Record<K, readonly DemoScene[]>): Record<K, readonly DemoScene[]> {
+  const introduction: DemoScene = { text: 'start', seconds: 14, step: 0 };
+  return Object.fromEntries(Object.keys(courses).map((game) =>
+    [game, [introduction, ...courses[game as K]]])) as unknown as Record<K, readonly DemoScene[]>;
 }
 export const DEMO_SCENES: Record<DemoGameType, readonly DemoScene[]> = {
+  ...withIntroduction(bettingDemoScenes),
+  ...withIntroduction(boardsDemoScenes),
+  ...withIntroduction(cardsDemoScenes),
   bridge: [
     { text: 'start', seconds: 14, step: 0 },
     { text: 'bridge-goal', seconds: 14, step: 0 },
@@ -69,7 +72,7 @@ export const DEMO_SCENES: Record<DemoGameType, readonly DemoScene[]> = {
   ],
 };
 
-export function hasGameDemo(game: GameType): game is DemoGameType {
+export function isDemoGameType(game: GameType): game is DemoGameType {
   return DEMO_GAME_TYPES.some((candidate) => candidate === game);
 }
 
@@ -77,7 +80,7 @@ export function hasGameDemo(game: GameType): game is DemoGameType {
 export function demoChapters(game: DemoGameType): readonly { text: DemoTextKey; start: number }[] {
   let start = DEMO_RECORDINGS[game].leadIn;
   return DEMO_SCENES[game].map((scene, index) => {
-    const chapter = { text: scene.text, start: index === 0 ? 0 : start };
+    const chapter = { text: scene.text, start: index === 0 ? 0 : DEMO_RECORDINGS[game].chapters?.[index] ?? start };
     start += scene.seconds;
     return chapter;
   });

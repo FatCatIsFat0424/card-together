@@ -1,0 +1,81 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:08.631
+Start and controls
+Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+
+00:00:08.631 --> 00:00:14.931
+Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+
+00:00:14.931 --> 00:00:24.281
+Blackjack: beat the dealer
+Watch all four hands from N. This room has Player Dealer enabled, with E dealing first. Beat the dealer without going over 21.
+
+00:00:24.281 --> 00:00:31.930
+Rule card: start with 1,000 chips. The default house game lasts eight hands and stands on all 17s. Player Dealer lasts two rotations: four hands with two seats.
+
+00:00:31.930 --> 00:00:41.280
+Choose an amount, then place the bet
+Click the 100 chip, or adjust with − / +, then click Bet. The dealer does not bet; other pending amounts stay hidden until the deal.
+
+00:00:41.280 --> 00:00:48.930
+Bet 10–200 in steps of 10, within your stack. Aces count as 1 or 11; J, Q and K count as 10.
+
+00:00:48.930 --> 00:00:59.380
+Split equal-value cards
+N has two eights. Click Split to stake another 100 and create two hands. Play the highlighted hand first, then the next.
+
+00:00:59.380 --> 00:01:07.930
+One split per seat, including unequal ranks worth ten. Split aces receive one card each; a split 21 is not a natural blackjack.
+
+00:01:07.930 --> 00:01:21.929
+Double while holding two cards
+The first hand totals 11. Click Double to add an equal stake, receive exactly one card, and finish that hand. Doubling after splitting is allowed.
+
+00:01:21.929 --> 00:01:33.929
+A hit adds both opportunity and risk
+The second hand now acts with 10 points. Click Hit for one card, then reassess. Going over 21 immediately busts the hand.
+
+00:01:33.929 --> 00:01:45.929
+Stand to keep your total
+The second hand has 19. Click Stand to finish. Only after all player hands finish does the dealer reveal its hole card and act.
+
+00:01:45.929 --> 00:01:55.829
+The revealed hole card completes the dealer total
+E’s hole card is now public: the dealer has 16 and must hit. Once the dealer finishes, each split hand is settled separately.
+
+00:01:55.829 --> 00:02:03.928
+A regular win profits 1× the stake; ties return it. A natural two-card 21 profits 1.5×. A player bust loses even if the dealer busts.
+
+00:02:03.928 --> 00:02:14.928
+N deals the next hand
+E is now the bettor and chooses to stand after betting. N is the dealer and can see its own hole card; E still cannot.
+
+00:02:14.928 --> 00:02:23.928
+Rule card: with an ace or ten-value up card, the dealer checks for blackjack first. Dealer blackjack ends the hand immediately. There is no insurance or surrender.
+
+00:02:23.928 --> 00:02:35.928
+A player dealer uses the controls too
+After E finishes, N has a dealer total of 14. Click Hit. A player dealer cannot stand below 17.
+
+00:02:35.928 --> 00:02:45.828
+A player dealer may stand from 17
+N has reached 17. Click Stand to finish the dealer turn. Player dealers may also hit at 17 or above; 21 or a bust ends the turn automatically.
+
+00:02:45.828 --> 00:02:53.928
+Rule card: no dealer draw is needed if every player hand is busted or a natural. If a player dealer cannot pay all winnings, winners receive proportional payouts.
+
+00:02:53.928 --> 00:03:06.928
+Hand three: a natural blackjack
+E deals again and N bets 100. Watch for immediate settlement: an unsplit ace plus a ten-value card is a natural blackjack.
+
+00:03:06.928 --> 00:03:14.078
+Speed through the last hand
+N deals the final hand. E bets, then hits. This accelerated sequence completes the same normal flow until all four hands are settled.
+
+00:03:14.078 --> 00:03:19.927
+Below 10 chips a seat cannot bet but still takes its dealer turn. The match ends early if fewer than two seats can bet.
+
+00:03:19.927 --> 00:03:33.934
+Four hands complete: compare final stacks
+N finishes with 1,250 chips and E with 750. N wins by the final match stack, rather than the last hand alone.

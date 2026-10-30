@@ -1,0 +1,68 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:12.687
+Start and controls
+Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+
+00:00:12.687 --> 00:00:18.986
+Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+
+00:00:18.986 --> 00:00:28.986
+Battleship: begin with hidden fleets
+Each player has a 10×10 sea. We keep our own player view; enemy ship positions have not been revealed.
+
+00:00:28.986 --> 00:00:40.986
+Goal: sink all five enemy ships
+Carrier: 5 cells; battleship: 4; cruiser and submarine: 3 each; destroyer: 2. The full fleet occupies 17 cells.
+
+00:00:40.986 --> 00:00:54.186
+Choose a ship, then its bow square
+Select a ship button and tap its bow square. Use Rotate, Random or Clear as needed. Select a placed ship to reposition it.
+
+00:00:54.186 --> 00:01:04.985
+Ships cannot overlap or leave the sea. Tapping the selected placed ship again rotates it. This example submits a fixed legal fleet.
+
+00:01:04.985 --> 00:01:20.985
+Confirm fleet to lock positions
+All five ships must be legal before confirmation, which is final. Both players must finish before firing. Enemy readiness reveals no positions.
+
+00:01:20.985 --> 00:01:30.885
+Choose one cell in the target sea
+Choose a cell you have not fired at. Mouse fires immediately; touch previews before Confirm or a second tap. This match alternates one shot each.
+
+00:01:30.885 --> 00:01:38.985
+You cannot shoot the same cell twice. Your own sea shows your ships and incoming enemy shots.
+
+00:01:38.985 --> 00:01:54.985
+Keep searching after a miss
+Both first shots missed. We now choose another cell, narrowing possibilities using only public shot results.
+
+00:01:54.985 --> 00:02:05.985
+Follow a hit into neighbouring cells
+We just hit a cell, but do not know the ship’s type or full length. Follow up nearby while the opponent continues taking turns.
+
+00:02:05.985 --> 00:02:14.984
+A hit does not name the ship. Only hitting every cell of that ship sinks it.
+
+00:02:14.984 --> 00:02:28.984
+A sinking reveals the ship and its cells
+The battleship is now sunk, so its name and all four cells are public. Other ships still afloat remain hidden.
+
+00:02:28.984 --> 00:02:38.884
+Rule card: room options change the search
+Both options are off here: ships may touch, and a hit still passes the turn.
+
+00:02:38.884 --> 00:02:46.984
+Before starting, the host can enable No touching, including diagonals, or Hit again, including sinkings. This game has no draw offers.
+
+00:02:46.984 --> 00:03:14.984
+Fast-forward through searching and sinkings
+Every shot is retained at higher speed. Search from misses, hits and sinkings; enemy ships still afloat are never shown early.
+
+00:03:14.984 --> 00:03:26.983
+Resolve the final ship one cell at a time
+We have sunk four ships and have one unresolved hit. Fire at its neighbour to check the remaining ship.
+
+00:03:26.983 --> 00:03:43.967
+Result: all five enemy ships sunk
+We win with 41 shots, 17 hits and five sinkings. Both complete fleets become visible only after the match ends. Review the result, then return to the room.

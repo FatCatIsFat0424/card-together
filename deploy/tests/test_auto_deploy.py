@@ -38,7 +38,7 @@ class AutoDeployTests(unittest.TestCase):
         self.git(self.source, 'config', 'user.email', 'deployment-test@example.invalid')
         (self.source / 'client').mkdir()
         (self.source / 'client/package.json').write_text('{}\n')
-        (self.source / '.gitignore').write_text('local-music/\nlocal-emoji/\n.env*\n.deploy/\n')
+        (self.source / '.gitignore').write_text('local-music/\nlocal-emoji/\nlocal-demos/\n.env*\n.deploy/\n')
         (self.source / '.node-version').write_text('24.21.0\n')
         (self.source / 'application.txt').write_text('first\n')
         self.git(self.source, 'add', '.')
@@ -316,6 +316,27 @@ class AutoDeployTests(unittest.TestCase):
         config = AUTO.Config(**{**self.config.__dict__, 'frontend_env': None})
         AUTO.prepare_checkout(config, self.sha)
         self.assertFalse((self.checkout / 'client/.env.local').exists())
+
+    def test_demo_input_is_optional_and_snapshotted_when_configured(self):
+        self.assertIsNone(self.config.demo_dir)
+        AUTO.prepare_checkout(self.config, self.sha)
+        self.assertFalse((self.checkout / 'local-demos').exists())
+        demos = self.root / 'demos'
+        demos.mkdir()
+        (demos / 'bridge.mp4').write_bytes(b'owner video fixture')
+        self.config_path.write_text(json.dumps({**self.raw_config, 'demo_dir': str(demos)}))
+        config = AUTO.load_config(self.config_path)
+        AUTO.prepare_checkout(config, self.sha)
+        copied = self.checkout / 'local-demos/bridge.mp4'
+        self.assertEqual(copied.read_bytes(), b'owner video fixture')
+        (demos / 'bridge.mp4').write_bytes(b'changed original')
+        self.assertEqual(copied.read_bytes(), b'owner video fixture')
+        missing = AUTO.Config(**{**config.__dict__, 'demo_dir': self.root / 'missing'})
+        with self.assertRaises(ValueError):
+            AUTO.validate_inputs(missing)
+        self.config_path.write_text(json.dumps({**self.raw_config, 'demo_dir': str(self.checkout / 'demos')}))
+        with self.assertRaises(ValueError):
+            AUTO.load_config(self.config_path)
 
     def test_owner_input_destination_symlinks_are_not_followed(self):
         AUTO.prepare_checkout(self.config, self.sha)

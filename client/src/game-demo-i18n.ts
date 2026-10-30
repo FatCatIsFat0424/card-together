@@ -1,4 +1,8 @@
 import type { Locale } from './i18n';
+import type { DemoText } from './game-demos/types';
+import { boardsDemoZh, boardsDemoEn } from './game-demos/boards-i18n';
+import { cardsDemoZh, cardsDemoEn } from './game-demos/cards-i18n';
+import { bettingDemoZh, bettingDemoEn } from './game-demos/betting-i18n';
 
 const zh = {
   start: { title: '開始與操作', caption: '先入座並按準備；其他人準備好後，由房主開始。下方是自己的牌或骰子。', rule: '看回合提示再操作。動畫結束後才繼續；時間用完會由系統代打。結算後按「返回房間」準備下一局。' },
@@ -41,7 +45,6 @@ const zh = {
   'dice-end': { title: '結算｜骰子歸零就淘汰', caption: '北家最後一顆也輸掉；東家還有 3 顆骰子，成為本局贏家。', rule: '多人局會跳過淘汰者。若輸的人已淘汰，由下一位存活玩家先喊；越晚淘汰，名次越高。返回房間後可準備下一局。' },
 };
 
-type DemoText = { readonly title: string; readonly caption: string; readonly rule?: string; readonly outcome?: string };
 const en: Record<keyof typeof zh, DemoText> = {
   start: { title: 'Start and controls', caption: 'Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.', rule: 'Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.' },
   'bridge-goal': { title: 'Bridge | Play as a team', caption: 'North/South versus East/West. Four cards make a trick; play all 13 tricks.', rule: 'Each player controls their own cards. This version has no dummy, doubles or redoubles. This fixed deal teaches controls, not bidding strategy.' },
@@ -83,5 +86,7 @@ const en: Record<keyof typeof zh, DemoText> = {
   'dice-end': { title: 'Result | Zero dice means elimination', caption: 'North loses their final die. East still has three and wins the match.', rule: 'Skip eliminated players. If the loser is eliminated, the next surviving player starts. Later elimination places higher. Return to the room to play again.' },
 };
 
-export type DemoTextKey = keyof typeof zh;
-export const gameDemoTranslations: Record<Locale, Record<DemoTextKey, DemoText>> = { 'zh-TW': zh, en };
+const translationsZh = { ...zh, ...bettingDemoZh, ...boardsDemoZh, ...cardsDemoZh };
+const translationsEn = { ...en, ...bettingDemoEn, ...boardsDemoEn, ...cardsDemoEn };
+export type DemoTextKey = keyof typeof translationsZh;
+export const gameDemoTranslations: Record<Locale, Record<DemoTextKey, DemoText>> = { 'zh-TW': translationsZh, en: translationsEn };

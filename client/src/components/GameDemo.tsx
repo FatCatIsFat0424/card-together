@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { GameType } from '@shared/types';
-import { demoChapters, hasGameDemo } from '../game-demos';
+import { demoChapters, isDemoGameType } from '../game-demos';
+import { demoVideoFile } from '../game-demo-catalog';
 import type { DemoGameType } from '../game-demos';
 import { gameDemoTranslations } from '../game-demo-i18n';
 import { useI18nStore } from '../stores/i18n-store';
@@ -11,7 +12,7 @@ function timeLabel(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 }
 
-export function GameDemoPlayer({ gameType }: { readonly gameType: DemoGameType }): ReactNode {
+export function GameDemoPlayer({ gameType, file }: { readonly gameType: DemoGameType; readonly file: string }): ReactNode {
   const { locale, t } = useI18nStore();
   const video = useRef<HTMLVideoElement>(null);
   const [currentTime, setCurrentTime] = useState(0);
@@ -19,6 +20,7 @@ export function GameDemoPlayer({ gameType }: { readonly gameType: DemoGameType }
   const chapters = demoChapters(gameType);
   const copy = gameDemoTranslations[locale];
   const base = `${import.meta.env.BASE_URL}game-demos/${gameType}`;
+  const source = `${import.meta.env.BASE_URL}game-demos/${file}`;
   const current = chapters.findLast((chapter) => chapter.start <= currentTime)?.text;
   const seek = (seconds: number): void => {
     if (!video.current) return;
@@ -27,14 +29,14 @@ export function GameDemoPlayer({ gameType }: { readonly gameType: DemoGameType }
   };
   return <div className={styles.player}>
     <p className={styles.note}>{t('demo.description')}</p>
-    <video ref={video} controls playsInline preload="none" src={`${base}.mp4`}
+    <video ref={video} controls playsInline preload="none" src={source}
       aria-label={t('demo.videoLabel', { game: t(`gameType.${gameType}`) })}
       onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)} onError={() => setError(true)}>
       <track kind="subtitles" src={`${base}.en.vtt`} srcLang="en" label="English" default={locale === 'en'} />
       <track kind="subtitles" src={`${base}.zh-TW.vtt`} srcLang="zh-TW" label="繁體中文" />
-      <a href={`${base}.mp4`}>{t('demo.openVideo')}</a>
+      <a href={source}>{t('demo.openVideo')}</a>
     </video>
-    {error && <p role="alert">{t('demo.loadError')} <a href={`${base}.mp4`}>{t('demo.openVideo')}</a></p>}
+    {error && <p role="alert">{t('demo.loadError')} <a href={source}>{t('demo.openVideo')}</a></p>}
     <ol className={styles.chapters} aria-label={t('demo.chapters')}>
       {chapters.map((chapter) => <li key={chapter.text}>
         <button type="button" className={styles.chapter} aria-current={current === chapter.text ? 'true' : undefined}
@@ -58,9 +60,10 @@ export function GameDemoPlayer({ gameType }: { readonly gameType: DemoGameType }
 export function GameDemo({ gameType }: { readonly gameType: GameType }): ReactNode {
   const { t } = useI18nStore();
   const [open, setOpen] = useState(false);
-  if (!hasGameDemo(gameType)) return null;
+  const file = isDemoGameType(gameType) ? demoVideoFile(gameType) : null;
+  if (!file) return null;
   return <details className={styles.demo} onToggle={(event) => setOpen(event.currentTarget.open)}>
     <summary>{t('demo.title')}</summary>
-    {open && <GameDemoPlayer key={gameType} gameType={gameType} />}
+    {open && <GameDemoPlayer key={gameType} gameType={gameType} file={file} />}
   </details>;
 }

@@ -5,6 +5,8 @@ import { loadEnv } from 'vite';
 import { parseProvidedEmojiCatalog } from '../../shared/src/constants/emoji';
 import { validateProvidedMusicCatalog } from '../../client/src/audio/validate-provided-music-catalog';
 import type { ProvidedMusicTrack } from '../../client/src/audio/validate-provided-music-catalog';
+import { DEMO_GAME_TYPES } from '../../client/src/game-demos';
+import { parseDemoVideoCatalog } from '../../client/src/game-demo-videos';
 
 export interface BuildEnvironment {
   base: string;
@@ -61,7 +63,7 @@ function parseMusic(value: unknown): ProvidedMusicTrack[] {
   return tracks;
 }
 
-export async function validateArtifacts(root: string, base: string): Promise<{ assets: number; music: number; emoji: number }> {
+export async function validateArtifacts(root: string, base: string): Promise<{ assets: number; music: number; emoji: number; demos: number }> {
   const html = (await regularFile(root, 'client/dist/index.html')).toString('utf8');
   const urls = [...html.matchAll(/(?:src|href)=["']([^"']+)["']/g)].map((match) => match[1]);
   const localUrls = urls.filter((url) => !/^(?:https?:|data:|#)/.test(url));
@@ -78,10 +80,12 @@ export async function validateArtifacts(root: string, base: string): Promise<{ a
   }
   const musicValue: unknown = JSON.parse((await regularFile(root, 'client/src/audio/provided-music.generated.json')).toString('utf8'));
   const emojiValue: unknown = JSON.parse((await regularFile(root, 'shared/src/provided-emoji.generated.json')).toString('utf8'));
+  const demoValue: unknown = JSON.parse((await regularFile(root, 'client/src/game-demo-videos.generated.json')).toString('utf8'));
   const music = parseMusic(musicValue);
   const emoji = parseProvidedEmojiCatalog(emojiValue);
+  const demos = parseDemoVideoCatalog(demoValue, DEMO_GAME_TYPES);
   const musicFiles = music.flatMap((track) => track.cover === undefined ? [{ file: track.file }] : [{ file: track.file }, { file: track.cover }]);
-  for (const [directory, records] of [['provided-music', musicFiles], ['provided-emoji', emoji]] as const) {
+  for (const [directory, records] of [['provided-music', musicFiles], ['provided-emoji', emoji], ['game-demos', demos]] as const) {
     for (const { file } of records) {
       const source = await regularFile(root, `client/public/${directory}/${file}`);
       const built = await regularFile(root, `client/dist/${directory}/${file}`);
@@ -90,5 +94,5 @@ export async function validateArtifacts(root: string, base: string): Promise<{ a
       if (!file.endsWith(`-${digest}.${file.split('.').at(-1)}`)) throw new Error(`Asset filename content hash mismatch: ${file}`);
     }
   }
-  return { assets: localUrls.length, music: music.length, emoji: emoji.length };
+  return { assets: localUrls.length, music: music.length, emoji: emoji.length, demos: demos.length };
 }

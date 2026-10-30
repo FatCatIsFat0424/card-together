@@ -48,8 +48,9 @@ export function planGates(root: string, selection: Selection, options: CheckOpti
   const full = selection.scope === 'full' || selection.scope === 'release';
   const gates: Gate[] = [];
   if (full || selection.build) {
-    for (const kind of ['music', 'emoji']) gates.push({ id: `import-${kind}`, command: process.execPath,
-      args: [`scripts/${kind === 'music' ? 'audio' : 'emoji'}/import-provided-${kind}.mjs`, ...(options.noCache ? ['--no-cache'] : [])], preparation: true });
+    const importers = { music: 'audio/import-provided-music.mjs', emoji: 'emoji/import-provided-emoji.mjs', demos: 'demos/import-demo-videos.mjs' };
+    for (const [kind, script] of Object.entries(importers)) gates.push({ id: `import-${kind}`, command: process.execPath,
+      args: [`scripts/${script}`, ...(options.noCache ? ['--no-cache'] : [])], preparation: true });
   }
   if (options.noCache && selection.types.length) gates.push({ id: 'clear-type-cache', internal: 'clear-types', preparation: true });
   for (const type of selection.types) gates.push({ id: `type-${type}`, command: 'npx',
@@ -79,7 +80,9 @@ function fingerprintFiles(root: string, roots: readonly string[], cache: Map<str
   for (const path of collectFiles(root, roots)) {
     if (excludeGenerated && (path === 'shared/src/provided-emoji.generated.json' ||
       path === 'client/src/audio/provided-music.generated.json' ||
-      /^client\/public\/provided-(?:music|emoji)\//.test(path))) continue;
+      path === 'client/src/game-demo-videos.generated.json' ||
+      /^client\/public\/provided-(?:music|emoji)\//.test(path) ||
+      /^client\/public\/game-demos\/(?:[a-z]+-[a-f0-9]{24}\.mp4$|\.import-)/.test(path))) continue;
     const absolute = join(root, path);
     hash.update(path).update('\0');
     const info = lstatSync(absolute, { bigint: true });
@@ -103,7 +106,7 @@ export function inputFingerprint(root: string, selection: Selection, cache = new
     'node_modules/.package-lock.json', 'node_modules/typescript/package.json', 'node_modules/eslint/package.json',
     'node_modules/tsx/package.json', 'node_modules/vite/package.json', 'node_modules/sharp/package.json',
     ...collectFiles(root, ['client']).filter((path) => /^client\/\.env(?:\.|$)/.test(path))];
-  if (selection.build) roots.push('local-music', 'local-emoji', 'client/public');
+  if (selection.build) roots.push('local-music', 'local-emoji', 'local-demos', 'client/public');
   if (selection.scope !== 'focused') roots.push(...DOCUMENTATION_ROOTS);
   if (selection.scope === 'documentation') roots.push(...selection.paths);
   return fingerprintFiles(root, roots, cache, excludeGenerated);

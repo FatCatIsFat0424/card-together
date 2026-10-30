@@ -1,0 +1,79 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:13.716
+Start and controls
+Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+
+00:00:13.716 --> 00:00:20.016
+Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+
+00:00:20.016 --> 00:00:30.015
+Banqi: all 32 pieces start covered
+We keep the first mover’s perspective. Neither player knows the covered identities, and neither has a colour yet.
+
+00:00:30.015 --> 00:00:42.014
+Goal: capture all enemies or block their actions
+On your turn, flip a covered piece or move one of your face-up pieces. The first flipped colour determines both players’ colours.
+
+00:00:42.014 --> 00:01:00.014
+Choose a covered piece to flip
+Click to flip with a mouse. Touch previews before Confirm or a second tap. The identity becomes public only after the flip.
+
+00:01:00.014 --> 00:01:16.014
+The first flip is a black general: we are black
+Our first flip revealed the black general, making us black and the opponent red. A player can flip an opposing colour but cannot move it.
+
+00:01:16.014 --> 00:01:27.014
+Chain mode also allows blind attacks
+Our black general can attack an adjacent covered piece without knowing its identity. Select the face-up attacker, then the legal covered target.
+
+00:01:27.014 --> 00:01:36.014
+This match uses the default chain and blind captures, with Rook dash off. The target is revealed and resolved only after the attack.
+
+00:01:36.014 --> 00:01:44.814
+Failed blind attack: reveal and end the turn
+The target was our own black soldier. The general stayed put, the soldier turned face up, and the opponent now acts. Covered identities cannot be inspected first.
+
+00:01:44.814 --> 00:01:52.013
+A capturable enemy is taken and entered. A friendly or uncatchable piece is only revealed, ending the turn.
+
+00:01:52.013 --> 00:02:08.013
+Choose a face-up enemy to capture
+The opponent just revealed a red elephant that our black general can take. Select the general, then the legal target; touch normally asks for confirmation.
+
+00:02:08.013 --> 00:02:22.013
+Use End turn to decline another capture
+The capture left a chain available, so the turn has not passed. End turn gives up the remaining capture opportunity.
+
+00:02:22.013 --> 00:02:33.013
+Faster play: flips and captures
+The order is general, advisor, elephant, rook, horse, cannon, soldier. Normal movement is one orthogonal cell; equal or lower enemies can be captured.
+
+00:02:33.013 --> 00:02:42.013
+Soldiers can capture generals, but generals cannot capture soldiers. A cannon capture jumps exactly one piece in a straight line, regardless of target rank.
+
+00:02:42.013 --> 00:03:06.013
+Fast-forward through reveals and exchanges
+Every flip, blind attack, move and End turn is retained as the board becomes public and the remaining pieces fight.
+
+00:03:06.013 --> 00:03:15.913
+Continue capturing with the same piece
+Our black advisor just captured and can continue. Choose another legal target with that advisor, or use End turn.
+
+00:03:15.913 --> 00:03:24.013
+A chain cannot switch pieces or make a quiet move. A failed blind attack ends the turn immediately.
+
+00:03:24.013 --> 00:03:33.913
+Faster endgame: watch the quiet-move count
+Both sides move their remaining pieces. A side behind in numbers can still capture, but must avoid losing all legal actions.
+
+00:03:33.913 --> 00:03:42.014
+Fifty consecutive non-capturing moves draw. Flips and blind attacks reset the count. A draw offer needs the opponent’s agreement.
+
+00:03:42.014 --> 00:03:54.014
+Our last black piece is threatened
+We have one black advisor left, beside a red advisor. Watch the final capture and the server’s result.
+
+00:03:54.014 --> 00:04:11.000
+Result: red captures every black piece
+Our black pieces are gone; red wins with eight left. The complete match has 81 flip/move entries and 12 End turn actions. Review the result and return to the room.

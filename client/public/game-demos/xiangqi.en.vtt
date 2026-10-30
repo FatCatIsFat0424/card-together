@@ -1,0 +1,64 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:13.691
+Start and controls
+Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+
+00:00:13.691 --> 00:00:19.991
+Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+
+00:00:19.991 --> 00:00:31.991
+Xiangqi: the standard opening
+No handicap is used. We play red from the bottom and move first; the opponent is black. Every piece is public.
+
+00:00:31.991 --> 00:00:45.990
+Goal: checkmate or stalemate the opponent
+Protect your general while removing every legal answer for the opposing general. Winning material alone does not end the match.
+
+00:00:45.990 --> 00:01:05.990
+Select a piece, then a legal destination
+Select your piece to see legal targets, then choose one. Mouse moves immediately; touch previews before Confirm or a second tap on the destination.
+
+00:01:05.990 --> 00:01:15.890
+A cannon capture needs one screen
+The red cannon just jumped the black cannon to capture a horse. Black can now recapture with the rook. Captures appear in the move list.
+
+00:01:15.890 --> 00:01:23.990
+Rooks move straight without jumping. Cannons move like rooks when not capturing, but a capture must jump exactly one piece.
+
+00:01:23.990 --> 00:01:37.190
+Horses, elephants, advisors and soldiers
+Watch the horses develop and an advisor and cannon move. Selecting a piece shows only destinations legal in the current position.
+
+00:01:37.190 --> 00:01:47.989
+A blocked horse leg or elephant eye stops the move. Elephants cannot cross the river. Advisors move diagonally, generals orthogonally, one palace step. Soldiers gain sideways moves after crossing.
+
+00:01:47.989 --> 00:01:57.889
+Rule card: keep your general safe
+The generals cannot face each other along an unobstructed file. Legal targets already account for this and self-check.
+
+00:01:57.889 --> 00:02:05.989
+On the third repeated position, a sole perpetual checker loses; other repetition draws. A run of 120 plies without capture also draws.
+
+00:02:05.989 --> 00:02:31.988
+Fast-forward through the middlegame
+Every move is retained at higher speed. Black’s rook enters red’s territory while red must keep the general protected.
+
+00:02:31.988 --> 00:02:47.988
+Watch black’s next attack
+Black’s rook is deep in our territory. Watch it open the central file. If checked, the next move must remove that threat.
+
+00:02:47.988 --> 00:03:01.989
+Red is in check: answer it first
+Black’s rook has captured the central soldier and given check. Red interposes an advisor; this move must pass the general-safety check.
+
+00:03:01.989 --> 00:03:15.989
+Black’s cannon joins the attack
+Red has blocked the rook with an advisor and black moves again. Watch the cannon line and the red general’s remaining palace squares.
+
+00:03:15.989 --> 00:03:24.789
+Result: black wins by checkmate
+After 46 moves red has no answer to check. Review the checkmate reason and move count, then use Back to room.
+
+00:03:24.789 --> 00:03:33.000
+A player with no legal move also loses without being in check; this is stalemate in Xiangqi.

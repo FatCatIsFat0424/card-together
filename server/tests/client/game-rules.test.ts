@@ -11,7 +11,8 @@ import { matchRulesContext, roomRulesContext } from '../../../client/src/game-ru
 import type { GameRulesContext } from '../../../client/src/game-rules-context';
 import { getGameRules, getSharedGameRules } from '../../../client/src/game-rules-i18n';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
-import { hasGameDemo } from '../../../client/src/game-demos';
+import { isDemoGameType } from '../../../client/src/game-demos';
+import { demoVideoFile } from '../../../client/src/game-demo-catalog';
 
 // Static rendering otherwise reads Zustand's initial locale rather than test updates.
 vi.mock('../../../client/src/stores/i18n-store', async (importOriginal) => {
@@ -92,7 +93,7 @@ describe('contextual game rules', () => {
       const quickStart = html.split('<details')[0];
       expect(quickStart).toContain(`<h3>${useI18nStore.getState().t('rules.summary')}</h3>`);
       expect(quickStart).not.toContain(`<h3>${requiredRule[gameType][locale]}</h3>`);
-      expect(html.match(/<details[^>]*>/g)).toHaveLength(hasGameDemo(gameType) ? 3 : 2);
+      expect(html.match(/<details[^>]*>/g)).toHaveLength(isDemoGameType(gameType) && demoVideoFile(gameType) ? 3 : 2);
       expect(html).not.toMatch(/<details[^>]*\bopen(?:[\s=>])/);
       expect(sections.length).toBeGreaterThanOrEqual(3);
       expect(sections.map((section) => section.title)).toContain(requiredRule[gameType][locale]);

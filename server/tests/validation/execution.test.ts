@@ -15,7 +15,7 @@ describe('validation gate execution', () => {
     const options = parseOptions(['full', '--no-cache']);
     const gates = planGates(root, selectChecks(root, options), options);
     const ids = gates.map((gate) => gate.id);
-    expect(ids.slice(0, 2)).toEqual(['import-music', 'import-emoji']);
+    expect(ids.slice(0, 3)).toEqual(['import-music', 'import-emoji', 'import-demos']);
     expect(ids.filter((id) => id.startsWith('type-'))).toEqual(['type-shared', 'type-server', 'type-tests', 'type-client', 'type-client-node']);
     expect(ids.filter((id) => id === 'type-client')).toHaveLength(1);
     expect(ids.indexOf('type-client')).toBeLessThan(ids.indexOf('bundle'));
@@ -86,7 +86,7 @@ describe('validation gate execution', () => {
 
 it('tracks immutable source, HTML and environment during preparation while allowing generated catalogs', async () => {
   const root = await mkdtemp(join(tmpdir(), 'card-validation-preparation-')); directories.push(root);
-  for (const path of ['server/src', 'client/src/audio', 'shared/src', 'client/public/provided-music']) {
+  for (const path of ['server/src', 'client/src/audio', 'shared/src', 'client/public/provided-music', 'client/public/game-demos']) {
     await mkdir(join(root, path), { recursive: true });
   }
   await writeFile(join(root, 'server/src/a.ts'), 'first');
@@ -94,7 +94,9 @@ it('tracks immutable source, HTML and environment during preparation while allow
   const before = preparationFingerprint(root, cache);
   await writeFile(join(root, 'client/src/audio/provided-music.generated.json'), '[]');
   await writeFile(join(root, 'shared/src/provided-emoji.generated.json'), '[]');
+  await writeFile(join(root, 'client/src/game-demo-videos.generated.json'), '[]');
   await writeFile(join(root, 'client/public/provided-music/imported-fixture.mp3'), 'generated');
+  await writeFile(join(root, `client/public/game-demos/bridge-${'a'.repeat(24)}.mp4`), 'generated');
   expect(preparationFingerprint(root, cache)).toBe(before);
   const gates = [{ id: 'import', preparation: true }, { id: 'type' }];
   const result = await runGates(gates, async () => {

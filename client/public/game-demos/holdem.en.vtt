@@ -1,0 +1,85 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:08.571
+Start and controls
+Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+
+00:00:08.571 --> 00:00:14.870
+Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+
+00:00:14.870 --> 00:00:24.220
+Hold’em: two private cards and five community cards
+Watch a three-seat match from N. Your two hole cards are visible; opponents’ cards are hidden. Make the best five-card hand from up to seven cards.
+
+00:00:24.220 --> 00:00:31.870
+Start with 1,000 chips each. Win every chip to finish early, otherwise play up to twenty hands. Blinds rise every four hands; the largest final stack wins.
+
+00:00:31.870 --> 00:00:41.770
+Preflop: button and blinds
+N has the button, E posts 10 and S posts 20. N clicks Call 20, E completes the difference, and S checks when nothing is owed.
+
+00:00:41.770 --> 00:00:49.869
+Preflop starts after the big blind; later streets start after the button. Heads-up, the button posts the small blind. There are no antes or burn cards.
+
+00:00:49.869 --> 00:00:58.119
+Flop: three community cards
+The three flop cards are public now. E and S check. When N acts, compare your hole cards with the board before choosing a bet.
+
+00:00:58.119 --> 00:01:04.871
+Check only when nothing is owed. Facing a bet, call, raise or fold. Folding leaves your committed chips in the pot and exits only this hand.
+
+00:01:04.871 --> 00:01:14.771
+Open the bet panel and enter a street total
+N clicks Bet, enters 100 in the amount field and confirms. The panel also offers a slider and Min, Half Pot, Pot and All-in shortcuts.
+
+00:01:14.771 --> 00:01:22.871
+The amount is the total for this street, not extra chips. Respect the displayed minimum; the maximum includes your existing street bet and remaining stack.
+
+00:01:22.871 --> 00:01:34.871
+Opponents may fold or call
+Facing N’s 100, E folds and S calls. E’s hole cards remain hidden; E’s earlier blind contribution stays in the pot.
+
+00:01:34.871 --> 00:01:46.871
+Turn: fourth community card and a new betting round
+The turn is public and street bets reset to zero. S and N check in order. Chips from earlier streets remain in the total pot.
+
+00:01:46.871 --> 00:01:57.321
+River: the fifth community card
+No more community cards follow the river. S checks first, then N acts. Remaining players reveal only after the final betting round closes.
+
+00:01:57.321 --> 00:02:05.870
+High to low: straight flush, four of a kind, full house, flush, straight, trips, two pair, pair, high card. Suits do not break ties; A2345 is the lowest straight.
+
+00:02:05.870 --> 00:02:17.870
+Check, show down, then start the next hand
+N clicks Check to close river betting. The server reveals remaining hands, awards the pot, rotates the button and automatically starts the next hand.
+
+00:02:17.870 --> 00:02:29.870
+Hand two: different stack depths
+N won the previous pot. Before posting the new blinds, the stacks were N 1,140, E 980 and S 880. E has the button and calls first, before S acts.
+
+00:02:29.870 --> 00:02:41.869
+A short stack can go all-in and still show down
+S opens Raise, chooses All-in and confirms 880. An all-in seat takes no further actions but keeps eligibility for the pot matching its contribution.
+
+00:02:41.869 --> 00:02:51.869
+N calls to 880
+N clicks Call to match 880. N still has chips and E still owes a decision, so the betting round continues.
+
+00:02:51.869 --> 00:03:01.769
+An all-in below a full raise
+E goes all-in to 980, only 100 more, below the previous full raise size. N must match the difference but does not regain raising rights.
+
+00:03:01.769 --> 00:03:09.869
+Rule card: a short all-in does not reopen raising for players who already acted. A lone player with chips also cannot raise against all-in opponents.
+
+00:03:09.869 --> 00:03:19.769
+Call the difference: main pot and side pot
+N clicks Call 100. N, E and S contest the 2,640 main pot; only N and E contest the 200 side pot. The board then runs out automatically before showdown.
+
+00:03:19.769 --> 00:03:27.868
+Rule card: award each pot independently. Ties split it, with odd chips clockwise after the button. Uncalled excess chips return to their owner.
+
+00:03:27.868 --> 00:03:42.867
+Two hands complete: win every chip at showdown
+The hole cards are legally public now. N’s three aces win both pots for a 3,000 stack. E and S have no chips, ending the match.

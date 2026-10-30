@@ -17,9 +17,10 @@ for (const game of DEMO_GAME_TYPES) {
     let elapsed = DEMO_RECORDINGS[game].leadIn;
     const cues: string[] = [];
     for (const [index, scene] of DEMO_SCENES[game].entries()) {
+      elapsed = DEMO_RECORDINGS[game].chapters?.[index] ?? elapsed;
       const copy = gameDemoTranslations[locale][scene.text];
       const start = index === 0 ? 0 : elapsed;
-      const end = index === DEMO_SCENES[game].length - 1 ? DEMO_RECORDINGS[game].duration : elapsed + scene.seconds;
+      const end = index === DEMO_SCENES[game].length - 1 ? DEMO_RECORDINGS[game].duration : DEMO_RECORDINGS[game].chapters?.[index + 1] ?? elapsed + scene.seconds;
       if (copy.outcome && scene.until) {
         const interval = (scene.seconds - 3.5) / (scene.until - scene.step);
         const reveal = elapsed + 3.5 + (scene.until - scene.step - 1) * interval;

@@ -1,4 +1,8 @@
+import { generateCardsFixtures } from './cards-fixtures';
+import { generateBoardFixtures } from './boards-fixtures';
+import { generateBettingFixtures } from './betting-fixtures';
 import { writeFileSync } from 'node:fs';
+import { compactLegacyFixture } from './demo-fixture';
 import type {
   BridgeVisibleState, Card, ChinesePokerArrangement, ChinesePokerMatchResult, ChinesePokerVisibleState,
   DiceFace, GameResult, GameSeat, LiarsDiceMatchResult, LiarsDiceVisibleState, NapoleonAction,
@@ -268,7 +272,19 @@ function main(): void {
       version: 1, synthetic: true,
       games: { bridge: bridgeFixture(), napoleon: napoleonFixture(), chinesepoker: chinesePokerFixture(), liarsdice: liarsDiceFixture() },
     };
-    writeFileSync(new URL('./fixtures.json', import.meta.url), `${JSON.stringify(fixtures, null, 2)}\n`);
+    const compact = {
+      version: 2, synthetic: true,
+      games: {
+        ...generateBettingFixtures(),
+        ...generateBoardFixtures(),
+        ...generateCardsFixtures(),
+        bridge: compactLegacyFixture(fixtures.games.bridge),
+        napoleon: compactLegacyFixture(fixtures.games.napoleon),
+        chinesepoker: compactLegacyFixture(fixtures.games.chinesepoker),
+        liarsdice: compactLegacyFixture(fixtures.games.liarsdice),
+      },
+    };
+    writeFileSync(new URL('./fixtures.json', import.meta.url), `${JSON.stringify(compact, null, 2)}\n`);
   } finally {
     Date.now = now;
     bridge.restoreGames([]);

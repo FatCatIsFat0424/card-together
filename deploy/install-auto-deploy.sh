@@ -49,7 +49,8 @@ if not match:
     raise SystemExit('origin must be a GitHub SSH or HTTPS URL without embedded credentials.')
 config = dict(repository=match[1], source=source, checkout=checkout,
               state_dir=str(state), music_dir=str(inputs / 'local-music'),
-              emoji_dir=str(inputs / 'local-emoji'), frontend_env=None, workflows=['ci.yml'])
+              emoji_dir=str(inputs / 'local-emoji'), demo_dir=str(inputs / 'local-demos'),
+              frontend_env=None, workflows=['ci.yml'])
 if Path(source, 'client/.env.local').exists():
     config['frontend_env'] = str(inputs / 'frontend.env')
 installed = Path('/etc/card-together-auto-deploy.json')
@@ -57,6 +58,10 @@ if installed.exists():
     existing = json.loads(installed.read_text())
     if existing['source'] != source or existing['checkout'] != checkout:
         raise SystemExit('Existing configuration uses different checkouts; stop the timer and review it first.')
+    if 'demo_dir' not in existing:
+        # Configurations from before walkthrough videos gain the new owner input on reinstall.
+        existing['demo_dir'] = config['demo_dir']
+        (Path(staging) / 'config-migrated').touch()
     config = existing
 stage = Path(staging)
 (stage / 'config.json').write_text(json.dumps(config, indent=2) + '\n')
@@ -65,7 +70,7 @@ module = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = module
 spec.loader.exec_module(module)
 module.load_config(stage / 'config.json')
-for name in ('local-music', 'local-emoji'):
+for name in ('local-music', 'local-emoji', 'local-demos'):
     original = Path(source) / name
     if not original.is_dir() or original.is_symlink():
         raise SystemExit(f'Missing owner inputs: {name}. Create an empty directory only if intentional.')
@@ -107,7 +112,7 @@ fi
 install -d -m 0755 /usr/local/lib/card-together-auto-deploy
 install -m 0755 "$repo_dir/deploy/auto-deploy.py" /usr/local/lib/card-together-auto-deploy/auto-deploy.py
 install -d -o "$deploy_user" -g "$deploy_group" -m 0700 "$state_dir" "$state_dir/inputs"
-for name in local-music local-emoji; do
+for name in local-music local-emoji local-demos; do
   if [[ ! -e $state_dir/inputs/$name ]]; then
     cp -a -- "$staging/$name" "$state_dir/inputs/$name"
     chown -R "$deploy_user:$deploy_group" "$state_dir/inputs/$name"
@@ -116,7 +121,7 @@ done
 if [[ -f $staging/frontend.env && ! -e $state_dir/inputs/frontend.env ]]; then
   install -o "$deploy_user" -g "$deploy_group" -m 0600 "$staging/frontend.env" "$state_dir/inputs/frontend.env"
 fi
-if [[ ! -e /etc/card-together-auto-deploy.json ]]; then
+if [[ ! -e /etc/card-together-auto-deploy.json || -e $staging/config-migrated ]]; then
   install -m 0644 "$staging/config.json" /etc/card-together-auto-deploy.json
 fi
 exec 9>&-

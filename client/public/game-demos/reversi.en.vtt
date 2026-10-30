@@ -1,0 +1,60 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:14.353
+Start and controls
+Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+
+00:00:14.353 --> 00:00:20.654
+Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+
+00:00:20.654 --> 00:00:32.656
+Reversi: start with four discs
+We keep the dark player’s perspective throughout. Dark moves first on the 8×8 board, then light.
+
+00:00:32.656 --> 00:00:46.657
+Goal: finish with more discs
+Bracket opposing discs to turn them into your colour. A lead in the middle of the match does not guarantee victory.
+
+00:00:46.657 --> 00:00:57.657
+Choose a legal empty square
+Dots mark legal destinations on your turn. Click to play with a mouse; touch previews first, then use Confirm or tap the same square again.
+
+00:00:57.657 --> 00:01:06.656
+On touch, Cancel lets you choose again. One-tap mode skips confirmation.
+
+00:01:06.656 --> 00:01:15.456
+Every bracketed disc flips
+The first move has flipped the white disc between the dark discs. Now watch light bracket a disc in reply.
+
+00:01:15.456 --> 00:01:22.656
+There must be at least one continuous opposing disc between the new disc and an existing friendly disc, with no empty gap.
+
+00:01:22.656 --> 00:01:40.656
+Check all eight directions
+Horizontal, vertical and diagonal lines all count. A move can flip several directions at once. Follow the move list and last-move marker.
+
+00:01:40.656 --> 00:01:56.657
+Faster play: edges and corners
+We speed up the next legal moves. A corner disc cannot be bracketed again; consider which replies your move leaves available.
+
+00:01:56.657 --> 00:02:05.457
+Rule card: automatic passes
+Pause here to explain passing. There is no separate pass button to operate.
+
+00:02:05.457 --> 00:02:12.656
+A player with no legal square passes automatically. When neither player can move, the match ends even if squares remain empty.
+
+00:02:12.656 --> 00:02:38.656
+Fast-forward through the middle and endgame
+Every remaining move is retained as the empty squares fill. Disc counts can swing repeatedly before the final count.
+
+00:02:38.656 --> 00:02:50.659
+The last empty square
+One square remains. After this placement the server checks whether either player still has a legal move.
+
+00:02:50.659 --> 00:02:58.359
+Result: dark wins 44–20
+After 60 placements, dark has 44 discs and light 20. Review the outcome, reason and move count, then use Back to room.
+
+00:02:58.359 --> 00:03:05.667
+Equal final disc counts draw. A draw offer on your turn also needs the opponent’s agreement.

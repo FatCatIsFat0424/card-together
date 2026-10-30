@@ -100,7 +100,7 @@ sudo bash deploy/install-auto-deploy.sh acaccel \
   /home/acaccel/card-together /home/acaccel/card-together-release
 ```
 
-前置需求：部署使用者能在不需互動輸入的情況下 fetch `origin`，該使用者已設定 `gh auth login` 且具備 repository Actions 讀取權限，而且 `local-music/` 與 `local-emoji/` 都存在。只有在刻意要空目錄時，才允許空的資料夾。不需要 webhook endpoint。
+前置需求：部署使用者能在不需互動輸入的情況下 fetch `origin`，該使用者已設定 `gh auth login` 且具備 repository Actions 讀取權限，而且 `local-music/`、`local-emoji/` 與 `local-demos/` 都存在。只有在刻意要空目錄時，才允許空的資料夾。不需要 webhook endpoint。
 
 安裝程式會建立：
 
@@ -109,7 +109,7 @@ sudo bash deploy/install-auto-deploy.sh acaccel \
 | `/usr/local/lib/card-together-auto-deploy/auto-deploy.py` | 穩定的控制程式，不受開發 checkout 中的編輯影響 |
 | `/home/acaccel/card-together-release` | detached 的 linked worktree，只用於發行建置 |
 | `/etc/card-together-auto-deploy.json` | 非機密設定：repository、來源／checkout／狀態／輸入路徑、選填的前端環境檔路徑、必要的 workflow 檔名、選填的 [Discord 通知](#部署通知) |
-| `/var/lib/card-together-auto-deploy/inputs/` | 獨立保存的站長音樂、表情符號與選填 `frontend.env` 快照 |
+| `/var/lib/card-together-auto-deploy/inputs/` | 獨立保存的站長音樂、表情符號、入門展示影片與選填 `frontend.env` 快照 |
 | `/var/lib/card-together-auto-deploy/state.json` | 成功的 SHA、建置失敗的 SHA，以及未完成安裝的標記 |
 | `/var/lib/card-together-auto-deploy/notifications.json` | 尚未送達、等待重送的[通知](#部署通知)更新；沒有時不存在 |
 | `/etc/sudoers.d/card-together-auto-deploy` | 只允許部署使用者不輸入密碼執行 `/usr/bin/bash <release-checkout>/deploy/deploy.sh` |
@@ -140,7 +140,7 @@ sudo systemctl stop card-together-auto-deploy.timer card-together-auto-deploy.se
 - 安裝前，控制程式會持久寫入 `installing_sha`。安裝錯誤、中斷、逾時或重新開機都會讓它留著，並停止**所有**後續的自動部署。依照[失敗處理](#失敗處理)與[回復版本](#回復版本)處理，確認應用程式與資料的相容性以及服務健康狀態，再以部署使用者身分加上 `--resume` 執行控制程式。復原指令只會解除封鎖，不會執行部署。
 - 手動復原後，以 `sudo systemctl start card-together-auto-deploy.timer` 恢復 timer。若要在重新開機後也保持停用，請用 `disable --now` 而不是 `stop`。
 
-重新執行安裝程式可以更新穩定的控制程式與 unit；它會暫停 timer，並保留既有的設定、輸入快照與收據。它不會中斷正在執行的循環：請等該循環結束後再重新執行安裝程式。若在暫停 timer 後重新安裝失敗，timer 會保持停止，直到操作者修正問題並重新啟動。安裝程式本身不會部署應用程式。從以 npm 為基礎的 Node.js bootstrap 升級時，請在 push 第一個需要官方下載工具的版本之前重新執行這個安裝程式；已安裝的穩定控制程式不會在應用程式程式碼變更時自我更新。要發布變更過的站長輸入，請停止 timer／服務，更新 `inputs/` 下對應的快照，並在發行 worktree 中使用既有的手動建置／部署流程。只變更輸入不會觸發自動部署；控制程式只監看 Git 版本。絕對不要把開發用的資料庫檔案複製進去。
+重新執行安裝程式可以更新穩定的控制程式與 unit；它會暫停 timer，並保留既有的設定、輸入快照與收據。它不會中斷正在執行的循環：請等該循環結束後再重新執行安裝程式。若在暫停 timer 後重新安裝失敗，timer 會保持停止，直到操作者修正問題並重新啟動。安裝程式本身不會部署應用程式。在加入展示影片之前安裝的設定沒有 `demo_dir`：重新執行安裝程式會補上設定並建立 `local-demos` 快照；補上之前，自動部署的網站不含展示影片，規則面板只顯示文字。從以 npm 為基礎的 Node.js bootstrap 升級時，請在 push 第一個需要官方下載工具的版本之前重新執行這個安裝程式；已安裝的穩定控制程式不會在應用程式程式碼變更時自我更新。要發布變更過的站長輸入，請停止 timer／服務，更新 `inputs/` 下對應的快照，並在發行 worktree 中使用既有的手動建置／部署流程。只變更輸入不會觸發自動部署；控制程式只監看 Git 版本。絕對不要把開發用的資料庫檔案複製進去。
 
 同時進行開發時，請使用另一個後端連接埠與資料庫，並讓 Vite 的開發 proxy 指向它：[開發](development.md#設定)。
 

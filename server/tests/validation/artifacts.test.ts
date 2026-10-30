@@ -18,6 +18,7 @@ async function fixture(): Promise<{ root: string; file: string }> {
     'client/dist/assets/entry.js': 'export {};',
     'client/src/audio/provided-music.generated.json': JSON.stringify([{ id: `provided-${'a'.repeat(24)}`, title: 'Fixture', file }]),
     'shared/src/provided-emoji.generated.json': '[]',
+    'client/src/game-demo-videos.generated.json': '[]',
     [`client/public/provided-music/${file}`]: bytes,
     [`client/dist/provided-music/${file}`]: bytes,
   };
@@ -30,7 +31,7 @@ async function fixture(): Promise<{ root: string; file: string }> {
 describe('real build artifact boundaries', () => {
   it('checks configured base, catalog acceptance and identical imported/built bytes', async () => {
     const { root } = await fixture();
-    await expect(validateArtifacts(root, '/card-together/')).resolves.toEqual({ assets: 1, music: 1, emoji: 0 });
+    await expect(validateArtifacts(root, '/card-together/')).resolves.toEqual({ assets: 1, music: 1, emoji: 0, demos: 0 });
     await expect(validateArtifacts(root, '/')).rejects.toThrow();
   });
 

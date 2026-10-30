@@ -49,6 +49,8 @@ class Config:
     frontend_env: Path | None
     workflows: tuple[str, ...]
     notification: Notification | None = None
+    # Configurations installed before walkthrough videos existed have no demo input.
+    demo_dir: Path | None = None
 
 
 def load_notification(raw: object) -> Notification | None:
@@ -72,14 +74,14 @@ def load_config(path: Path) -> Config:
     raw = json.loads(path.read_text())
     required = {"repository", "source", "checkout", "state_dir", "music_dir",
                 "emoji_dir", "frontend_env", "workflows"}
-    if not isinstance(raw, dict) or not required <= set(raw) <= required | {"notification"}:
+    if not isinstance(raw, dict) or not required <= set(raw) <= required | {"notification", "demo_dir"}:
         raise ValueError("Configuration must contain exactly the documented keys.")
     if not isinstance(raw["repository"], str) or not REPOSITORY.fullmatch(raw["repository"]):
         raise ValueError("repository must be a GitHub owner/repository name.")
     paths = {}
-    for key in ("source", "checkout", "state_dir", "music_dir", "emoji_dir", "frontend_env"):
-        value = raw[key]
-        if key == "frontend_env" and value is None:
+    for key in ("source", "checkout", "state_dir", "music_dir", "emoji_dir", "frontend_env", "demo_dir"):
+        value = raw.get(key)
+        if key in ("frontend_env", "demo_dir") and value is None:
             paths[key] = None
             continue
         if not isinstance(value, str) or not Path(value).is_absolute():
@@ -91,8 +93,10 @@ def load_config(path: Path) -> Config:
     source, checkout = paths["source"], paths["checkout"]
     if source == checkout or source in checkout.parents or checkout in source.parents:
         raise ValueError("Development and deployment checkouts must be separate directories.")
-    for key in ("state_dir", "music_dir", "emoji_dir"):
+    for key in ("state_dir", "music_dir", "emoji_dir", "demo_dir"):
         candidate = paths[key]
+        if candidate is None:
+            continue
         if candidate == checkout or checkout in candidate.parents:
             raise ValueError(f"{key} must be outside the deployment checkout.")
     workflows = raw["workflows"]
@@ -394,10 +398,15 @@ def validate_worktree(config: Config) -> None:
         raise ValueError("Deployment worktree has local changes; inspect rather than overwrite them.")
 
 
+def owner_inputs(config: Config) -> list[tuple[Path, str]]:
+    inputs = [(config.music_dir, "local-music"), (config.emoji_dir, "local-emoji")]
+    return inputs + ([(config.demo_dir, "local-demos")] if config.demo_dir else [])
+
+
 def validate_inputs(config: Config) -> None:
-    for source in (config.music_dir, config.emoji_dir):
+    for source, _ in owner_inputs(config):
         if not source.is_dir() or source.is_symlink():
-            raise ValueError("Both owner input directories must exist, even when intentionally empty.")
+            raise ValueError("Every configured owner input directory must exist, even when intentionally empty.")
         for path in source.rglob("*"):
             if path.is_symlink() or not (path.is_file() or path.is_dir()):
                 raise ValueError("Owner inputs must contain only regular files and directories.")
@@ -411,7 +420,7 @@ def prepare_checkout(config: Config, sha: str) -> None:
         git(config.source, "worktree", "add", "--detach", str(config.checkout), sha)
     validate_worktree(config)
     git(config.checkout, "checkout", "--detach", sha)
-    for source, name in ((config.music_dir, "local-music"), (config.emoji_dir, "local-emoji")):
+    for source, name in owner_inputs(config):
         destination = config.checkout / name
         if git(config.checkout, "ls-files", "--", name):
             raise ValueError("Owner input destinations must remain Git-ignored.")

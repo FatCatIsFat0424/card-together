@@ -49,3 +49,10 @@ server/data/
 /client/public/provided-emoji/.import-*/
 /shared/src/provided-emoji.generated.json
 /shared/src/provided-emoji.generated.json.*.tmp
+
+# Walkthrough video originals and imported copies; subtitles stay tracked
+/local-demos/
+/client/public/game-demos/*.mp4
+/client/public/game-demos/.import-*/
+/client/src/game-demo-videos.generated.json
+/client/src/game-demo-videos.generated.json.*.tmp

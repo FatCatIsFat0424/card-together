@@ -1,0 +1,66 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:13.247
+Start and controls
+Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+
+00:00:13.247 --> 00:00:19.546
+Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+
+00:00:19.546 --> 00:00:26.146
+Chinese checkers: a race with ten marbles
+This two-player match keeps our starting corner at the bottom. Each player has ten marbles, and every position is public.
+
+00:00:26.146 --> 00:00:31.546
+Supported player counts are 2, 3, 4 and 6. Five players cannot start.
+
+00:00:31.546 --> 00:00:45.545
+Goal: fill all ten holes in the opposite corner
+Move from your starting corner into its opposite target. Jumped marbles stay on the board, and either colour can serve as a stepping stone.
+
+00:00:45.545 --> 00:00:56.545
+Select a marble and a legal destination
+Select a friendly marble to see targets, then choose the final hole. Mouse moves immediately; touch previews before Confirm or a second tap.
+
+00:00:56.545 --> 00:01:05.545
+Step into an adjacent empty hole, or jump one adjacent marble into the empty hole immediately beyond in the same direction.
+
+00:01:05.545 --> 00:01:17.645
+For a jump chain, choose only the final hole
+Our back marble can now chain jumps. Select its starting and final holes; the server finds a legal route without separate clicks for each landing.
+
+00:01:17.645 --> 00:01:27.545
+Chains may turn. A step cannot be followed by jumps, and a jump cannot be followed by a step.
+
+00:01:27.545 --> 00:01:45.545
+Faster play: bring the back marbles along
+Players alternate, using either colour to build jump routes. The move list includes intermediate landings in a chain.
+
+00:01:45.545 --> 00:02:11.545
+Fast-forward across the centre
+Every move is retained as the marbles meet in the middle, borrow stepping stones and enter their opposite targets.
+
+00:02:11.545 --> 00:02:21.445
+Rule card: blocking and automatic passes
+Pause to explain target completion. An opponent deliberately leaving marbles in your target does not necessarily prevent a win.
+
+00:02:21.445 --> 00:02:29.544
+A full target with at least one friendly marble completes it; enemies count as arrived. Any player filling the last hole settles the win immediately. No legal move means an automatic pass.
+
+00:02:29.544 --> 00:02:42.744
+Fast-forward through the final arrivals
+Fill the remaining target holes and watch Arrived and Rows left on the player badges.
+
+00:02:42.744 --> 00:02:53.544
+At 150 turns per player, or when nobody can move, the fewest rows left wins; if everyone ties, it is a draw.
+
+00:02:53.544 --> 00:03:07.544
+The opponent needs one last hole
+The opponent’s target is almost full. Filling the remaining hole will complete it, while some of our marbles still have not arrived.
+
+00:03:07.544 --> 00:03:16.344
+Result: the opponent completes the target first
+After 102 moves, the opponent has 10/10 arrived and we have 7/10. Review the winning reason and move count, then use Back to room.
+
+00:03:16.344 --> 00:03:24.534
+In multiplayer, the first completion ends the match; others rank by rows left, sharing places for ties.

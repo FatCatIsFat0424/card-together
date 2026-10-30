@@ -1,0 +1,66 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:12.748
+Start and controls
+Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+
+00:00:12.748 --> 00:00:19.048
+Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+
+00:00:19.048 --> 00:00:35.049
+Ninety-Nine: stay alive
+Everyone starts with 5 cards and a total of zero. Follow Demo N in this single-deck match and keep a legal play available.
+
+00:00:35.049 --> 00:00:46.049
+Click a card and draw automatically
+Click a legal ordinary number card to play it and automatically draw a replacement. Watch the center total and turn direction.
+
+00:00:46.049 --> 00:00:55.049
+The total cannot exceed 99. Ordinary 2, 3, 6, 7, 8, and 9 add their value; non-spade aces add 1, while the spade ace resets to zero.
+
+00:00:55.049 --> 00:01:06.049
+Special cards change the situation
+Follow the public log, running total, and direction to recognize special effects.
+
+00:01:06.049 --> 00:01:15.050
+K sets the total to 99, J leaves it unchanged, and 4 reverses direction. Legal plays can do more than add points.
+
+00:01:15.050 --> 00:01:24.950
+Five selects the next player
+On your turn, select a five and then click the living player you want to act next. Choosing the seat completes the play.
+
+00:01:24.950 --> 00:01:33.050
+You cannot choose yourself or an eliminated player. A five leaves the total unchanged.
+
+00:01:33.050 --> 00:01:47.050
+Recheck every turn
+Continue after the designated player acts. Recheck the total each time; neither the direction nor the next player stays fixed.
+
+00:01:47.050 --> 00:01:59.150
+Choose plus or minus for ten and queen
+Click a queen, then press +20 or −20 to commit. A ten offers +10 and −10. Cancel lets you choose a different card.
+
+00:01:59.150 --> 00:02:09.050
+Addition above 99 is disabled, and subtraction stops at zero. This example chooses subtraction for the queen.
+
+00:02:09.050 --> 00:02:20.050
+No legal card means elimination
+Speed through the next legal turns and watch the elimination log. The game determines elimination automatically; no surrender button is needed.
+
+00:02:20.050 --> 00:02:29.049
+A player with no legal card on their turn discards their hand and is eliminated. Survivors continue at the same running total.
+
+00:02:29.049 --> 00:02:40.049
+Replacement cards and reshuffling
+Survivors keep playing. With one deck, an empty stock is refilled by shuffling discards except the top card.
+
+00:02:40.049 --> 00:02:49.049
+The optional two-deck mode never reshuffles. Drawing its final stock card ends the match with all survivors tied for first.
+
+00:02:49.049 --> 00:03:17.049
+Speed through to the last survivor
+All remaining turns, plus/minus choices, and seat designations play in order at higher speed. Watch who survives the final elimination.
+
+00:03:17.049 --> 00:03:34.034
+Ninety-Nine: the final survivor
+Demo N wins at a final total of 99. Demo S, E, and W were eliminated in that order.

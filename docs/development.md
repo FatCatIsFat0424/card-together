@@ -8,7 +8,7 @@
 2. 在 repository 根目錄執行 `npm ci`。所有 workspace 共用根目錄的 TypeScript。
 3. 啟動 `npm run dev:server` 與 `npm run dev:client`，再開啟 <http://localhost:5173>。
 
-client 的 `predev` 與 `prebuild` 會從被忽略的 `local-music/` 與 `local-emoji/` 資料夾匯入站長的音樂與站方表情符號；見[媒體](media.md)。
+client 的 `predev` 與 `prebuild` 會從被忽略的 `local-music/`、`local-emoji/` 與 `local-demos/` 資料夾匯入站長的音樂、站方表情符號與入門展示影片；見[媒體](media.md)與[對局展示製作](game-demos.md#影片檔)。
 
 專案使用 Node.js 與 npm，不需要 Conda。`npm ci` 會把鎖定版本的相依套件安裝到這個 checkout 的 `node_modules/`；另一個 checkout 有自己的相依套件。Node.js 版本管理工具是選用的。在支援的 Linux 主機上，也可以用[官方 Node.js bootstrap](deployment.md#建置與部署)，以固定版本與內附的 npm 執行開發指令，而不變更系統的執行環境。正式環境使用複製的 Node 執行檔與專用的 systemd 帳號；應用程式、設定與狀態的路徑記錄在[部署](deployment.md)中。
 

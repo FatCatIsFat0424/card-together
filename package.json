@@ -13,7 +13,7 @@
     "dev:server": "cd server && npx tsx watch src/index.ts",
     "dev:client": "cd client && npm run dev",
     "dev:preview": "tsx scripts/dev/preview.ts",
-    "build:client": "npm run music:import && npm run emoji:import && cd client && npx tsc -b && npx vite build",
+    "build:client": "npm run music:import && npm run emoji:import && npm run demos:import && cd client && npx tsc -b && npx vite build",
     "test": "cd server && npx vitest run",
     "test:watch": "cd server && npx vitest",
     "cleanup:match-history": "cd server && tsx src/database/cleanup-match-history-cli.ts",
@@ -32,7 +32,8 @@
     "typecheck:server": "cd server && npx tsc --noEmit && npx tsc -p tsconfig.test.json --noEmit",
     "typecheck:client": "cd client && npx tsc -p tsconfig.app.json --noEmit && npx tsc -p tsconfig.node.json --noEmit",
     "music:import": "node scripts/audio/import-provided-music.mjs",
-    "emoji:import": "node scripts/emoji/import-provided-emoji.mjs"
+    "emoji:import": "node scripts/emoji/import-provided-emoji.mjs",
+    "demos:import": "node scripts/demos/import-demo-videos.mjs"
   },
   "engines": {
     "node": ">=24.0.0"

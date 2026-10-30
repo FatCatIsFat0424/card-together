@@ -1,0 +1,82 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:13.098
+Start and controls
+Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+
+00:00:13.098 --> 00:00:19.397
+Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+
+00:00:19.397 --> 00:00:31.400
+Land Battle Chess: deploy, then fight
+We keep red’s perspective. Each side has 25 pieces; only our own identities are visible. The server referees the hidden enemy ranks.
+
+00:00:31.400 --> 00:00:43.400
+Goal: capture the enemy flag
+Take the opposing flag or leave the opponent no legal move to win. Both sides must submit legal deployments before alternating moves.
+
+00:00:43.400 --> 00:00:56.600
+Tap two stations to swap pieces
+Choose a preset or Auto, or tap two friendly pieces to swap them. This example uses a legal automatically generated deployment.
+
+00:00:56.600 --> 00:01:07.400
+Flags belong in headquarters, mines in the last two rows, and bombs off the front row. Camps start empty. Invalid swaps explain the restriction.
+
+00:01:07.400 --> 00:01:23.399
+Confirm deployment to lock it in
+Both players confirm independently and cannot edit afterwards. Enemy readiness does not reveal ranks. Play starts only when both are ready.
+
+00:01:23.399 --> 00:01:41.399
+Select your piece and a legal target
+Select a friendly piece to see destinations, then choose one. Mouse submits immediately; touch previews before Confirm or a second tap.
+
+00:01:41.399 --> 00:01:51.299
+Faster play: roads, rails and camps
+Roads move one station; railways allow longer straight moves without jumping pieces. Speed through both sides’ initial manoeuvres.
+
+00:01:51.299 --> 00:01:59.399
+Pieces in camps cannot be attacked. Mines, flags and any piece inside headquarters cannot move.
+
+00:01:59.399 --> 00:02:15.398
+The first battle reveals only its outcome
+Red is about to attack a blue piece on the front. The referee reports attacker win, loss or mutual removal, without naming the enemy rank.
+
+00:02:15.398 --> 00:02:27.498
+Faster battles: ranks and special pieces
+Follow the referee’s outcomes and removed pieces. Enemy appearances do not establish identities; public movements and battle results are your clues.
+
+00:02:27.498 --> 00:02:37.399
+Higher rank wins; equal ranks remove both. Bombs remove both fighters. Engineers clear mines; other ranks die attacking them. Any piece can take a flag.
+
+00:02:37.399 --> 00:02:47.299
+Engineers can turn along railways
+Watch our engineer manoeuvre at higher speed. Choose its legal final station; the server finds the route, and the move list records stations passed.
+
+00:02:47.299 --> 00:02:55.398
+Only engineers may turn along rails. No railway path can pass through another piece.
+
+00:02:55.398 --> 00:03:15.397
+Faster attacks, with enemy ranks still hidden
+Every upcoming move retains red’s filtered view. An enemy piece that moved cannot be a mine or flag, but its exact rank remains hidden.
+
+00:03:15.397 --> 00:03:24.197
+Blue’s fallen marshal reveals its flag
+The latest mutual removal killed blue’s marshal, so blue’s flag location is now public. Other unrevealed ranks stay covered.
+
+00:03:24.197 --> 00:03:31.397
+A marshal’s death reveals that side’s flag. Ordinary battles do not turn every enemy piece face up.
+
+00:03:31.397 --> 00:03:41.297
+Fast-forward through the final manoeuvres
+Both flags have now been revealed. Speed through the remaining moves and battles as red approaches blue’s headquarters.
+
+00:03:41.297 --> 00:03:49.397
+A run of 60 plies without battle draws. A draw offer also requires the opponent’s agreement.
+
+00:03:49.397 --> 00:04:01.397
+The final flag capture
+Red is beside blue’s revealed flag. It is red’s turn to attack the headquarters and take that publicly known target.
+
+00:04:01.397 --> 00:04:16.400
+Result: red captures the flag
+After deployment and 137 moves, red takes the flag. Only now are all surviving ranks revealed. Review the reason and move count, then return to the room.
