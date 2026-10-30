@@ -8,6 +8,21 @@
 }
 
 .railBtn { width: 100%; }
+
+/* In the room header the error floats below the pill instead of growing the row. */
+.headerAction { position: relative; flex: none; }
+.headerAction > .error {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: 30;
+  width: max-content;
+  max-width: 280px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+}
 .dialogTitle { margin: 0; font-size: var(--text-lg); font-weight: 700; }
 
 .error {

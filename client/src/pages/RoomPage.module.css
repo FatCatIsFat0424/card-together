@@ -22,49 +22,17 @@
 }
 .roomLayout > * { min-width: 0; }
 
-/* ─── Header row: back, game, room code, then the labelled actions ─── */
-/* The row is a size container: the actions' text collapses to icons when it gets narrow (ActionButton.module.css). */
-.bar {
-  grid-area: bar;
-  container-type: inline-size;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 44px;
-  /* The 40px hit area of the back icon reaches past the margin, so its glyph lines up with the footer. */
-  margin-left: calc((var(--icon-size) - var(--hit-size)) / 2);
-  padding-top: var(--space-1);
-}
-.title {
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  font-size: var(--text-md);
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* ─── Header row (RoomHeader) ─── */
+.bar { grid-area: bar; }
 .grow { flex: 1; }
 
-/* The room code is a small chip; the pseudo-element extends its hit area to 40px. */
-.codeChip {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  flex-shrink: 0;
-  height: 22px;
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-md);
-  background: var(--surface-2);
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  letter-spacing: 1px;
+/* The call panel as a dock tab, padded like the chat beside it. */
+.dockVoice {
+  height: 100%;
+  padding: var(--space-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
-.codeChip::after { content: ''; position: absolute; inset: -9px -4px; }
-.codeChip:hover { background: var(--surface-3); color: var(--text-primary); }
-.codeChip svg { color: var(--color-success); }
 
 .popover.popover {
   max-width: calc(100vw - 24px);
@@ -295,14 +263,11 @@
 /* Desktop and tablets sit inside the app shell, so the page uses the shared outer inset. */
 @media (min-width: 768px) and (min-height: 501px) {
   .roomLayout { padding: 0 var(--page-inset) var(--page-inset); }
-  /* The same 56px row as the other pages' headers. */
-  .bar { min-height: 56px; padding-top: 0; }
 }
 
 /* Phone landscape: the bar and footer shrink to give the oval the height. */
 @media (max-height: 500px) and (min-width: 600px) {
   .roomLayout { padding: 0 var(--space-3) var(--space-2); }
-  .bar { min-height: 40px; padding-top: 0; }
   .footer { min-height: 44px; padding-top: 0; }
   /* The strip spans the gap between the top and bottom seats; with side seats it narrows to clear them. */
   .summary { top: 52%; width: min(470px, 94%); max-width: none; }

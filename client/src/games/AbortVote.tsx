@@ -12,6 +12,8 @@ import { useChatStore } from '../stores/chat-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useRoomStore } from '../stores/room-store';
 import { useMotionStore } from '../stores/motion-store';
+import { useRoomNoticeStore } from '../stores/room-notice-store';
+import { ActionButton } from '../components/ActionButton';
 import { Avatar } from '../components/Avatar';
 import { formatCountdown } from '../game-view';
 import { AppIcon } from '../components/AppIcon';
@@ -57,10 +59,12 @@ function useVoteAction(): [boolean, string, (send: (done: Done) => void) => void
   return [busy, error, run];
 }
 
-export function AbortVoteButton({ iconOnly = false, className = '', buttonClassName = '' }: {
-  readonly iconOnly?: boolean;
+/** A full-width rail button (phone menu) or a labelled pill in the room header. */
+export type TableActionAppearance = 'rail' | 'header';
+
+export function AbortVoteButton({ appearance = 'rail', className = '' }: {
+  readonly appearance?: TableActionAppearance;
   readonly className?: string;
-  readonly buttonClassName?: string;
 }): ReactNode {
   const { t } = useI18nStore();
   const connectionReady = useConnectionReady();
@@ -84,13 +88,15 @@ export function AbortVoteButton({ iconOnly = false, className = '', buttonClassN
     run((done) => socket.timeout(10000).emit('game:abortVote:start', done));
   };
   return (
-    <div className={`${styles.rail} ${className}`}>
-      <button type="button" className={iconOnly ? buttonClassName : `btn btn-outline ${styles.railBtn}`}
-        disabled={disabled} aria-label={label} title={label} aria-haspopup="dialog"
-        onClick={() => setConfirmOpen(true)}>
-        <AppIcon name="flag" />
-        {!iconOnly && <> {label}</>}
-      </button>
+    <div className={`${appearance === 'header' ? styles.headerAction : styles.rail} ${className}`}>
+      {appearance === 'header'
+        ? <ActionButton icon="flag" text={label} disabled={disabled} aria-haspopup="dialog"
+          onClick={() => setConfirmOpen(true)} />
+        : <button type="button" className={`btn btn-outline ${styles.railBtn}`}
+          disabled={disabled} aria-label={label} title={label} aria-haspopup="dialog"
+          onClick={() => setConfirmOpen(true)}>
+          <AppIcon name="flag" /> {label}
+        </button>}
       {error && <p className={styles.error} role="alert">{error}</p>}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}
         transitionDuration={{ enter: 0, exit: still ? 0 : 200 }}
@@ -170,25 +176,32 @@ export function AbortVoteBanner(): ReactNode {
   );
 }
 
-/** Brief notice when a vote this client watched passes; mounted app-wide so it survives the route change. */
+/**
+ * Brief notice when a vote this client watched passes; mounted app-wide so it survives the route change. A room
+ * header shows it in its status pill; pages without one get a floating toast.
+ */
 export function AbortVoteToast(): ReactNode {
   const { t } = useI18nStore();
   const messages = useChatStore((state) => state.messages);
   const seen = useRef<Set<string> | null>(null);
-  const [visible, setVisible] = useState(false);
+  const notice = useRoomNoticeStore((state) => state.notice);
+  const headerShown = useRoomNoticeStore((state) => state.headers > 0);
 
   useEffect(() => {
     const previous = seen.current;
     seen.current = new Set(messages.map((message) => message.id));
     if (previous && messages.some((message) => !previous.has(message.id)
-      && message.system && message.content === 'abortVote.passed')) setVisible(true);
+      && message.system && message.content === 'abortVote.passed')) {
+      useRoomNoticeStore.getState().show('abortVote.passedToast');
+    }
   }, [messages]);
 
+  const noticeId = notice?.id;
   useEffect(() => {
-    if (!visible) return;
-    const timer = setTimeout(() => setVisible(false), 4000);
+    if (noticeId === undefined) return;
+    const timer = setTimeout(() => useRoomNoticeStore.getState().hide(noticeId), 4000);
     return () => clearTimeout(timer);
-  }, [visible]);
+  }, [noticeId]);
 
-  return visible ? <p className={styles.toast} role="status">{t('abortVote.passedToast')}</p> : null;
+  return notice && !headerShown ? <p className={styles.toast} role="status">{t(notice.key)}</p> : null;
 }

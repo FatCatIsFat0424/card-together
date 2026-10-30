@@ -6,10 +6,15 @@ import { useNavigate } from 'react-router-dom';
 import { socket } from '../socket';
 import { useI18nStore } from '../stores/i18n-store';
 import { useRoomStore } from '../stores/room-store';
+import { ActionButton } from '../components/ActionButton';
 import { useConnectionReady } from './use-connection-ready';
+import type { TableActionAppearance } from './AbortVote';
 import styles from './SpectatorLeave.module.css';
 
-export function SpectatorLeaveButton({ className = '' }: { readonly className?: string }): ReactNode {
+export function SpectatorLeaveButton({ appearance = 'rail', className = '' }: {
+  readonly appearance?: TableActionAppearance;
+  readonly className?: string;
+}): ReactNode {
   const { t } = useI18nStore();
   const navigate = useNavigate();
   const connectionReady = useConnectionReady();
@@ -34,9 +39,11 @@ export function SpectatorLeaveButton({ className = '' }: { readonly className?: 
     });
   };
 
-  return <div className={`${styles.rail} ${className}`}>
-    <button type="button" className={`btn btn-outline ${styles.button}`} disabled={busy || !connectionReady}
-      onClick={leave}>{t('room.leave')}</button>
+  return <div className={`${appearance === 'header' ? styles.headerAction : styles.rail} ${className}`}>
+    {appearance === 'header'
+      ? <ActionButton icon="logout" text={t('room.leave')} danger disabled={busy || !connectionReady} onClick={leave} />
+      : <button type="button" className={`btn btn-outline ${styles.button}`} disabled={busy || !connectionReady}
+        onClick={leave}>{t('room.leave')}</button>}
     {error && <p className={styles.error} role="alert">{error}</p>}
   </div>;
 }

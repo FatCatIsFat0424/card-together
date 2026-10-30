@@ -36,12 +36,11 @@ import type { SeatDropView } from '../components/RoomSeat';
 import { PlayerMoveMenu } from '../components/PlayerMoveMenu';
 import { Button } from '../components/Button';
 import { ActionButton } from '../components/ActionButton';
-import { IconButton } from '../components/IconButton';
 import { useConnectionReady } from '../games/use-connection-ready';
-import { AppIcon } from '../components/AppIcon';
 import { GameRulesDialog } from '../components/GameRulesDialog';
 import { roomRulesContext } from '../game-rules-context';
-import { VoiceButton } from '../components/VoiceControls';
+import { VoiceButton, VoiceDockPanel } from '../components/VoiceControls';
+import { RoomHeader } from '../components/RoomHeader';
 import styles from './RoomPage.module.css';
 import botSeatBackground from '../assets/room-backgrounds/bot-seat.webp';
 import { unreadCount } from './room-progress';
@@ -54,9 +53,7 @@ import { useRoomSeatDrag } from '../hooks/use-room-seat-drag';
 import { layeredShopArt } from '../cosmetics/art-layers/shop-art-layers';
 import { TableArt } from '../cosmetics/art-layers/TableArt';
 
-const COPIED_MS = 2000;
-
-type RoomDockTab = 'chat' | 'spectators';
+type RoomDockTab = 'chat' | 'spectators' | 'voice';
 const RoomReplayPicker = lazy(() => import('../components/RoomReplayPicker')
   .then((module) => ({ default: module.RoomReplayPicker })));
 
@@ -100,7 +97,6 @@ export function RoomPage(): ReactNode {
   const tableArt = stillArt ? null : layeredShopArt(account?.tableBackgroundStyle);
   const tableStyle = tableBackgroundStyle(account, stillArt, !!tableArt);
   const [enteredRoom, setEnteredRoom] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [dragHintDone, setDragHintDone] = useState(() => readPreference(DRAG_HINT_KEY) === 'done');
   const [moved, setMoved] = useState('');
@@ -198,19 +194,6 @@ export function RoomPage(): ReactNode {
     }
   }, [roomCode, roomInfo, phase, navigate, t]);
 
-  useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => setCopied(false), COPIED_MS);
-    return () => clearTimeout(timer);
-  }, [copied]);
-
-  const copyCode = (code: string): void => {
-    if (!navigator.clipboard) {
-      setError(t('room.copyFailed'));
-      return;
-    }
-    navigator.clipboard.writeText(code).then(() => setCopied(true), () => setError(t('room.copyFailed')));
-  };
   const toggleChat = (): void => {
     setSeenMessages(messageCount);
     if (compactLayout) setChatOpen((open) => !open);
@@ -226,6 +209,12 @@ export function RoomPage(): ReactNode {
   const changeDockTab = (tab: RoomDockTab): void => {
     setSeenMessages(messageCount);
     setDockTab(tab);
+  };
+  // With a dock the call panel is its tab; the compact layout keeps the voice popover.
+  const toggleVoiceTab = (): void => {
+    setSeenMessages(messageCount);
+    if (dockOpen && dockTab === 'voice') setDockOpen(false);
+    else { setDockTab('voice'); setDockOpen(true); }
   };
   // The popover is the compact layout's spectator list; with a dock the list is its tab.
   const openSpectators = (button: HTMLElement): void => {
@@ -430,29 +419,21 @@ export function RoomPage(): ReactNode {
   return (
     <main data-reduced-motion={reducedMotion || undefined}
       className={`${styles.roomContainer} ${styles.roomLayout} ${dockVisible ? styles.chatOpen : ''} ${entering ? styles.entering : ''}`}>
-      <header className={styles.bar}>
-        <IconButton icon="previousPage" label={t('room.back')} onClick={() => navigate('/')} />
-        <h1 className={styles.title}>{t(`gameType.${roomInfo.gameType}`)}</h1>
-        {/* The code itself is the copy control. */}
-        <button type="button" className={styles.codeChip} onClick={() => copyCode(roomInfo.code)}
-          aria-label={`${t('room.copyCode')} ${roomInfo.code}`} title={t('room.copyCode')}>
-          <span>{roomInfo.code}</span>
-          {copied && <AppIcon name="check" />}
-        </button>
-        <span className={styles.srOnly} role="status">{copied ? t('room.copied') : ''}</span>
-        <span className={styles.grow} />
-        <ActionButton icon="rules" text={t('room.action.rules')} label={t('rules.open')} collapsible
-          aria-haspopup="dialog" onClick={() => setRulesOpen(true)} />
-        <VoiceButton labelled />
-        <ActionButton icon="chat" text={t('chat.title')} collapsible ref={chatToggleRef} badge={unread}
-          label={unread > 0 ? `${t('chat.title')} ${t('room.unread', { n: String(unread) })}` : t('chat.title')}
-          aria-expanded={chatVisible} aria-controls="room-chat" onClick={toggleChat} />
-        <InviteFriends labelled />
-        {isHost && <ActionButton icon="replay" text={t('replay.sharedOpen')} onClick={() => setReplayPickerOpen(true)}
-          data-pending-disabled={pendingDisabled(!waiting)} disabled={blocked || !waiting} />}
-        <ActionButton icon="logout" text={t('room.leave')} danger onClick={leave} disabled={blocked}
-          data-pending-disabled={pendingDisabled()} />
-      </header>
+      <RoomHeader className={styles.bar} title={t(`gameType.${roomInfo.gameType}`)} code={roomInfo.code}
+        status={waiting ? { text: t('room.headerWaiting', {
+          n: String(summary.seated), max: String(seatCards.length) }) } : null}
+        onBack={() => navigate('/')} onRules={() => setRulesOpen(true)}
+        onCopyFailed={() => setError(t('room.copyFailed'))}
+        voice={<VoiceButton labelled dock={compactLayout ? undefined
+          : { id: 'room-dock', open: dockOpen && dockTab === 'voice', onToggle: toggleVoiceTab }} />}
+        chat={{ unread, expanded: chatVisible, controls: 'room-chat', onToggle: toggleChat }} chatRef={chatToggleRef}
+        actions={<>
+          <InviteFriends labelled />
+          {isHost && <ActionButton icon="replay" text={t('replay.sharedOpen')} onClick={() => setReplayPickerOpen(true)}
+            data-pending-disabled={pendingDisabled(!waiting)} disabled={blocked || !waiting} />}
+          <ActionButton icon="logout" text={t('room.leave')} danger onClick={leave} disabled={blocked}
+            data-pending-disabled={pendingDisabled()} />
+        </>} />
       <div ref={tableAreaRef} className={`${styles.tableArea} ${dragging ? styles.dragging : ''} ${tableStyle ? styles.customTable : ''} ${tableArt ? styles.layeredTable : ''}`} style={tableStyle}
         aria-busy={busy}
         inert={compactLayout && chatOpen}
@@ -547,6 +528,7 @@ export function RoomPage(): ReactNode {
             panel: <ChatPanel embedded /> },
             { id: 'spectators', label: <>{t('room.spectatorsTab')}<DockCount>{spectators.length}</DockCount></>,
               panel: spectatorList('dock') },
+            { id: 'voice', label: t('voice.title'), panel: <VoiceDockPanel className={styles.dockVoice} /> },
           ]} />}
       </div>
       <Snackbar key={error ? `error:${error}` : readyNotice?.id} open={Boolean(error) || readyNotice !== null} autoHideDuration={5000}

@@ -136,6 +136,19 @@ describe('bot player interface', () => {
     expect(guest).not.toContain('Watch a replay');
   });
 
+  it('shares the table header layout: status pill, then rules and chat, then the room actions with leave last', () => {
+    const html = render(createElement(RoomPage));
+    const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
+    expect(header).toMatch(/data-room-status[^>]*>Waiting to start · 2\/4 seated</);
+    const order = ['Waiting to start', 'aria-label="Game rules"', 'aria-label="Chat"', 'data-phase-actions',
+      'Watch a replay', 'aria-label="Leave Room"'].map((marker) => header.indexOf(marker));
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    // The dock beside the table holds chat, spectators, and voice.
+    const tabs = [...html.matchAll(/role="tab"[^>]*>(.*?)<\/button>/g)].map((match) => match[1].replace(/<[^>]+>/g, ''));
+    expect(tabs).toEqual(['Chat', 'Spectators0', 'Voice']);
+  });
+
   it('disables the shared replay button outside waiting rooms but keeps leaving available', () => {
     state.room = { ...room(), status: 'playing' };
     const html = render(createElement(RoomPage));

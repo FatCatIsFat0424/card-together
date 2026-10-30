@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Dialog from '@mui/material/Dialog';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import { ActionButton } from '../components/ActionButton';
 import { AppIcon } from '../components/AppIcon';
 import { Button } from '../components/Button';
 import { dialogPaperClass, dialogParts } from '../styles/dialog';
@@ -11,13 +12,13 @@ import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useMotionStore } from '../stores/motion-store';
 import { useConnectionReady } from './use-connection-ready';
+import type { TableActionAppearance } from './AbortVote';
 import styles from './AbortVote.module.css';
 import motionStyles from '../styles/dialog-motion.module.css';
 
-export function EarlyLeaveButton({ iconOnly = false, className = '', buttonClassName = '' }: {
-  readonly iconOnly?: boolean;
+export function EarlyLeaveButton({ appearance = 'rail', className = '' }: {
+  readonly appearance?: TableActionAppearance;
   readonly className?: string;
-  readonly buttonClassName?: string;
 }): ReactNode {
   const { t } = useI18nStore();
   const navigate = useNavigate();
@@ -52,12 +53,16 @@ export function EarlyLeaveButton({ iconOnly = false, className = '', buttonClass
     });
   };
 
-  return <div className={`${styles.rail} ${className}`}>
-    <button type="button" className={iconOnly ? buttonClassName : `btn btn-outline ${styles.railBtn}`}
-      disabled={!ready || busy} aria-label={t('earlyLeave.button')} title={t('earlyLeave.button')}
-      aria-haspopup="dialog" onClick={() => { setError(''); setOpen(true); }}>
-      <AppIcon name="logout" />{!iconOnly && <> {t('earlyLeave.button')}</>}
-    </button>
+  const openConfirm = (): void => { setError(''); setOpen(true); };
+  return <div className={`${appearance === 'header' ? styles.headerAction : styles.rail} ${className}`}>
+    {appearance === 'header'
+      ? <ActionButton icon="logout" text={t('earlyLeave.button')} danger disabled={!ready || busy}
+        aria-haspopup="dialog" onClick={openConfirm} />
+      : <button type="button" className={`btn btn-outline ${styles.railBtn}`}
+        disabled={!ready || busy} aria-label={t('earlyLeave.button')} title={t('earlyLeave.button')}
+        aria-haspopup="dialog" onClick={openConfirm}>
+        <AppIcon name="logout" /> {t('earlyLeave.button')}
+      </button>}
     <Dialog open={open} onClose={close}
       transitionDuration={{ enter: 0, exit: still ? 0 : 200 }}
       aria-labelledby={titleId} aria-describedby={`${titleId}-description`}

@@ -1,0 +1,105 @@
+/* ─── Room header: back, game, room code, a status pill, then the labelled actions ─── */
+/* The row is a size container: the actions' text collapses to icons when it gets narrow (ActionButton.module.css). */
+.header {
+  container-type: inline-size;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: 44px;
+  /* The 40px hit area of the back icon reaches past the margin, so its glyph lines up with the content below. */
+  margin-left: calc((var(--icon-size) - var(--hit-size)) / 2);
+  padding-top: var(--space-1);
+}
+
+.title {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-md);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The room code is a small chip; the pseudo-element extends its hit area to 40px. */
+.codeChip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  height: 22px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 1px;
+}
+.codeChip::after { content: ''; position: absolute; inset: -9px -4px; }
+.codeChip:hover { background: var(--surface-3); color: var(--text-primary); }
+.codeChip > svg { font-size: 14px; }
+
+/* The pill sits centred in the space between the room's name and its actions, and shortens before they do. */
+.centre {
+  display: flex;
+  flex: 1 1 0;
+  justify-content: center;
+  min-width: 0;
+}
+.status {
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 var(--space-3);
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 28px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.status[data-tone='turn'] { background: var(--turn-glow); color: var(--text-inverse); }
+.status[data-tone='notice'] {
+  background: var(--surface-3);
+  color: var(--text-primary);
+  animation: fadeIn 0.2s ease;
+}
+
+.actions { display: flex; flex: none; align-items: center; gap: var(--space-2); }
+.actions:empty { display: none; }
+.divider { flex: none; width: 1px; height: 20px; background: var(--separator); }
+.divider:has(+ .actions:empty) { display: none; }
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Narrow rows keep the actions and drop the routine status; a notice still shows, shortened. */
+@container (max-width: 45rem) {
+  .status:not([data-tone='notice']) { display: none; }
+}
+
+/* Desktop and tablets: the same 56px row as the other pages' headers. */
+@media (min-width: 768px) and (min-height: 501px) {
+  .header { min-height: 56px; padding-top: 0; }
+}
+
+/* Phone landscape: a slim row that leaves the height to the table. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .header { min-height: 40px; padding-top: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status[data-tone='notice'] { animation: none; }
+}

@@ -16,6 +16,18 @@
 /* A collapsed dock stays mounted, so chat drafts and scroll positions survive. */
 .dockHidden { grid-template-columns: minmax(0, 1fr); }
 .dockHidden > .dock { display: none; }
+
+/* The room header spans the table and the dock, at the same place as the waiting room's: its side padding makes
+   up the difference between the table's inset and the page inset. */
+.withHeader { grid-template-rows: auto minmax(0, 1fr); padding-top: 0; row-gap: 0; }
+.withHeader > .header {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  min-height: 56px;
+  padding-inline: calc(var(--page-inset) - 12px);
+}
+.withHeader > :is(.centreColumn, .dock) { grid-row: 2; }
+
 /* The dock scrolls inside its cell without making the row, and so the table, taller. */
 .dock { position: relative; }
 .dock > * { position: absolute; inset: 0; }
@@ -25,9 +37,31 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-.dockInfo { display: flex; flex-direction: column; gap: var(--space-2); }
+/* The per-game info cards are compact in the dock (TableInfo, GameInfoRail). */
+.dockInfo {
+  --info-box-padding: 6px 10px;
+  --info-gap: 6px;
+  --info-turn-size: var(--text-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--info-gap);
+}
 .dockInfo > * { flex-shrink: 0; }
-.dockInfo .infoContent { flex: none; overflow: visible; }
+.dockInfo .infoContent { flex: none; gap: var(--info-gap); overflow: visible; }
+
+/* The game tab: the info on top, scrolling on its own up to half the height, and the chat in the rest. */
+.dockHome { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.dockHome > .dockInfo { flex: 0 1 auto; height: auto; min-height: 0; }
+.dockHome > .dockInfo:has(+ .dockChat) { max-height: 50%; padding-bottom: var(--space-2); }
+.dockChat {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 180px;
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--separator);
+}
+.dockChat > * { flex: 1; min-height: 0; }
 
 .actionError {
   min-width: 0;
@@ -396,7 +430,6 @@
 
 /* ─── Mobile (< 768px): single column; info and chat are bottom drawers ─── */
 @media (max-width: 767px) {
-  .abortRail.abortRail { display: none; }
   .gameContainer,
   .chatCollapsed {
     grid-template-columns: minmax(0, 1fr);
@@ -485,7 +518,6 @@
 
 /* A short landscape viewport puts the hand beside the table instead of below it. */
 @media (max-height: 500px) and (min-width: 600px) {
-  .abortRail.abortRail { display: none; }
   .rulesRailButton { display: none; }
   /* The table keeps the 12px phone inset on every landscape width; the page-wide narrow-window step would make it 16px. */
   .gameContainer, .chatCollapsed { --page-inset: 12px; grid-template-columns: minmax(0, 1fr); padding: 0; }
@@ -690,6 +722,8 @@
     padding: 16px;
   }
   .dockHidden { grid-template-columns: minmax(0, 1fr); }
+  .withHeader { padding-top: 0; row-gap: 0; }
+  .withHeader > .header { padding-inline: calc(var(--page-inset) - 16px); }
   /* Plates already fit side by side here; give the extra width to the centre. */
   .table { grid-template-columns: minmax(100px, 17%) minmax(0, 1fr) minmax(100px, 17%); }
   .centreContent { max-width: 680px; }
@@ -843,12 +877,6 @@
   .infoPanel { overflow-y: auto; overscroll-behavior: contain; }
   .infoContent { flex: none; overflow: visible; }
   .rulesRailButton { display: inline-flex; justify-content: center; }
-  .abortRail.abortRail { display: flex; }
-  .infoPanel > * { order: 4; }
-  .infoPanel > .sheetHeader { order: 0; }
-  .infoPanel > .menuRoomCode { order: 1; }
-  .infoPanel > .rulesRailButton { order: 2; }
-  .infoPanel > .menuExit { order: 3; }
   /* Unavailable secondary actions leave the corner instead of greying out; primary actions stay. */
   .handZone [data-hand-actions] :global(.btn-outline):disabled { display: none; }
 }
@@ -878,10 +906,10 @@
     gap: var(--space-1) var(--space-2);
   }
   .infoPanel > * { grid-column: 1 / -1; }
-  .infoPanel > :is(.menuRoomCode, .rulesRailButton, .menuExit) { grid-column: auto; }
+  .infoPanel > :is(.menuRoomCode, .rulesRailButton, .menuAction, .menuExit) { grid-column: auto; }
   .infoPanel .sheetHeader { padding: 0 0 var(--space-1) var(--space-1); font-size: var(--text-lg); }
   .sheetClose { width: var(--hit-size); height: var(--hit-size); }
-  .infoPanel :is(.rulesRailButton, .menuExit button, .menuRoomCode) {
+  .infoPanel :is(.rulesRailButton, .menuAction, .menuExit button, .menuRoomCode) {
     width: 100%;
     min-height: var(--hit-size);
     height: var(--hit-size);
@@ -891,7 +919,8 @@
     font-size: var(--text-sm);
     font-weight: 600;
   }
-  .infoPanel :is(.rulesRailButton, .menuExit button, .menuRoomCode):hover { background: var(--surface-2); }
+  .infoPanel :is(.rulesRailButton, .menuAction, .menuExit button, .menuRoomCode):hover { background: var(--surface-2); }
+  .infoPanel .menuAction > svg { font-size: inherit; }
   .menuExit { margin: 0; }
 }
 

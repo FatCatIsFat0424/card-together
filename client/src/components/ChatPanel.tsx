@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useMemo, useRef } from 'react';
+import { memo, useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import type { ChatMessage } from '@shared/types';
 import { socket } from '../socket';
@@ -66,9 +66,20 @@ interface ChatPanelProps {
   onCollapse?: () => void;
   /** Fills a dock that already has its own tab and collapse button, so the panel drops its header. */
   embedded?: boolean;
+  /** Shares a dock tab with other content: a small "Chat" caption with the new-message hint leads the panel. */
+  captioned?: boolean;
 }
 
-export function ChatPanel({ onCollapse, embedded = false }: ChatPanelProps): ReactNode {
+/** Pixels from the end of the log that still count as reading the latest message. */
+const BOTTOM_SLACK = 24;
+/** How long the hint stays once the latest messages are in view. */
+const FRESH_HINT_MS = 5000;
+
+function atBottom(element: HTMLElement): boolean {
+  return element.scrollHeight - element.scrollTop - element.clientHeight <= BOTTOM_SLACK;
+}
+
+export function ChatPanel({ onCollapse, embedded = false, captioned = false }: ChatPanelProps): ReactNode {
   const messages = useChatStore((state) => state.messages);
   const emojis = useEmojiStore((state) => state.emojis);
   const loadEmojis = useEmojiStore((state) => state.load);
@@ -85,11 +96,76 @@ export function ChatPanel({ onCollapse, embedded = false }: ChatPanelProps): Rea
   const busyRef = useRef(false);
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Follow new messages only while the reader is at the end of the log; scrolling up holds the position.
+  const following = useRef(true);
+  const lastScrollTop = useRef(0);
+  const lastSeenId = useRef<string | null>(null);
+  // Messages that arrived while the log was hidden or scrolled up.
+  const [fresh, setFresh] = useState(0);
+  const [scrolledUp, setScrolledUp] = useState(false);
+  // Hidden while its dock tab or the dock is closed.
+  const [visible, setVisible] = useState(true);
 
+  useLayoutEffect(() => {
+    const container = messagesRef.current;
+    const previous = lastSeenId.current;
+    const latest = messages.at(-1);
+    lastSeenId.current = latest?.id ?? null;
+    if (!container) return;
+    const index = previous === null ? -1 : messages.findIndex((message) => message.id === previous);
+    const added = index < 0 ? 0 : messages.length - 1 - index;
+    const mine = latest !== undefined && !latest.system && latest.sender.id === playerId && added > 0;
+    if (mine) following.current = true;
+    const hidden = container.clientHeight === 0;
+    if (added > 0 && !mine && (hidden || !following.current)) setFresh((count) => count + added);
+    if (mine) setFresh(0);
+    if (following.current) container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+  }, [messages, playerId]);
+
+  // A log shown again (a dock tab, a reopened dock) jumps back to the end it was following.
   useEffect(() => {
     const container = messagesRef.current;
+    if (!container) return;
+    let shown = container.clientHeight > 0;
+    setVisible(shown);
+    const observer = new ResizeObserver(() => {
+      const now = container.clientHeight > 0;
+      if (now && !shown && following.current) container.scrollTop = container.scrollHeight;
+      shown = now;
+      setVisible(now);
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (fresh === 0 || scrolledUp || !visible) return;
+    const timer = setTimeout(() => { if (following.current) setFresh(0); }, FRESH_HINT_MS);
+    return () => clearTimeout(timer);
+  }, [fresh, scrolledUp, visible]);
+
+  const onScroll = (): void => {
+    const container = messagesRef.current;
+    if (!container || container.clientHeight === 0) return;
+    // Programmatic scrolls only move down, so only a move up stops following.
+    const up = container.scrollTop < lastScrollTop.current;
+    lastScrollTop.current = container.scrollTop;
+    if (atBottom(container)) {
+      // Reaching the end after scrolling up reads what arrived meanwhile.
+      if (!following.current) setFresh(0);
+      following.current = true;
+    } else if (up) following.current = false;
+    setScrolledUp(!following.current);
+  };
+
+  const showLatest = (): void => {
+    following.current = true;
+    setScrolledUp(false);
+    setFresh(0);
+    const container = messagesRef.current;
     container?.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-  }, [messages]);
+  };
+  const freshLabel = t('chat.newMessages', { n: String(fresh) });
 
   useEffect(() => { void loadEmojis(); }, [loadEmojis]);
 
@@ -156,15 +232,21 @@ export function ChatPanel({ onCollapse, embedded = false }: ChatPanelProps): Rea
 
   return (
     <section className={`${styles.chatContainer} ${onCollapse || embedded ? styles.fill : ''} ${embedded ? styles.embedded : ''}`}>
+      {captioned && <div className={styles.caption}>
+        <h3 className={styles.captionTitle}>{t('chat.title')}</h3>
+        {fresh > 0 && <button type="button" className={styles.freshHint} onClick={showLatest}>{freshLabel}</button>}
+      </div>}
       {!embedded && <div className={styles.chatHeader}>
         <h2 className={styles.chatTitle}><AppIcon name="chat" /> {t('chat.title')}</h2>
         {onCollapse && <button type="button" className={`${styles.collapseBtn} touch-target`} onClick={onCollapse}
           aria-label={t('table.chatCollapse')} title={t('table.chatCollapse')}><AppIcon name="nextPage" /></button>}
       </div>}
       <div className={styles.messageArea}>
-        <div ref={messagesRef} className={styles.chatMessages} role="log" aria-live="polite">
+        <div ref={messagesRef} className={styles.chatMessages} role="log" aria-live="polite" onScroll={onScroll}>
           {groups.map((group) => <ChatMessageGroupRow key={group.key} group={group} />)}
         </div>
+        {!captioned && scrolledUp && fresh > 0 && <button type="button" className={styles.freshPill}
+          onClick={showLatest}>{freshLabel} <AppIcon name="nextPage" /></button>}
         {pickerOpen && <div data-emoji-picker>
           <EmojiPicker personal={emojis} provided={PROVIDED_EMOJIS} busy={busy} onInsert={insertEmoji} onSendSticker={sendSticker} />
         </div>}

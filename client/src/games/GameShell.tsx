@@ -3,6 +3,7 @@
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { PlayerVisibleGameState, GameSeat } from '@shared/types';
 import type { TranslationKey } from '../i18n';
 import {
@@ -28,8 +29,11 @@ import { AbortVoteBanner, AbortVoteButton } from './AbortVote';
 import { SpectatorLeaveButton } from './SpectatorLeave';
 import { EarlyLeaveButton } from './EarlyLeave';
 import { useBoardMoveSound } from './board/board-move-sound';
+import { ActionButton } from '../components/ActionButton';
 import { AppIcon } from '../components/AppIcon';
 import { IconButton } from '../components/IconButton';
+import { RoomHeader } from '../components/RoomHeader';
+import type { RoomHeaderStatus } from '../components/RoomHeader';
 import { GameSpectators, SpectatorsTabLabel } from './GameSpectators';
 import { VoiceButton, VoiceDockPanel } from '../components/VoiceControls';
 import { RoomCodeButton } from '../components/RoomCodeButton';
@@ -90,7 +94,8 @@ function matches(query: string): boolean {
 /** Phones open the info and chat as sheets; the desktop shell docks them beside the table. */
 const sheetsAreOverlays = (): boolean => matches(SHEET_QUERY);
 
-type TableDockTab = 'info' | 'chat' | 'spectators' | 'voice';
+/** The game tab holds the game's info with the chat below it. */
+type TableDockTab = 'info' | 'spectators' | 'voice';
 
 interface GameShellProps {
   /** Info rail content (dock tab on desktop, drawer on phones) */
@@ -197,10 +202,14 @@ export function GameShell({
   const out = lastElimination(log);
   const [outBanner, setOutBanner] = useState<{ seat: GameSeat; index: number } | null>(null);
   const { t } = useI18nStore();
+  const navigate = useNavigate();
   const seatName = useSeatName();
   const turnName = turnSeat ? seatName(turnSeat) : '';
   const turnAnnouncement = presentation.locked || !turnSeat ? ''
     : turnSeat === mySeat ? (myTurn ? t('table.yourTurn') : '') : t('table.turnOf', { name: turnName });
+  // The header pill names whose turn it is and lights up on the viewer's own.
+  const headerStatus: RoomHeaderStatus | null = myTurn ? { text: t('table.yourTurn'), tone: 'turn' }
+    : turnSeat && turnSeat !== mySeat ? { text: t('table.turnOf', { name: turnName }) } : null;
   const dockLayout = useMediaQuery(DESKTOP_SHELL_QUERY);
   // The game info leads: it carries the contract and auction that the bidding panel only summarizes.
   const [dockTab, setDockTab] = useState<TableDockTab>('info');
@@ -241,7 +250,7 @@ export function GameShell({
     .map((seat) => tablePosition(seat, bottomSeat, tableSeats));
   const cornersSpan = layout === 'ring' && !sidePositions.includes('left') && !sidePositions.includes('right');
   const centreUp = layout === 'ring' && !sidePositions.includes('top');
-  const chatShown = dockLayout ? dockOpen && dockTab === 'chat' : chatOpen;
+  const chatShown = dockLayout ? dockOpen && dockTab === 'info' : chatOpen;
   const unread = chatShown ? 0 : Math.max(0, messageCount - seenMessages);
   // Phones hide the app bar during games, so this sheet becomes the menu for everything it held.
   const sheetLayout = useMediaQuery(SHEET_QUERY);
@@ -323,12 +332,19 @@ export function GameShell({
 
   // Chat seen so far: leaving its tab or collapsing the dock marks everything up to now as read.
   const collapseDock = useCallback((): void => {
-    if (dockOpen && dockTab === 'chat') setSeenMessages(messageCount);
+    if (dockOpen && dockTab === 'info') setSeenMessages(messageCount);
     setDockOpen(false);
   }, [dockOpen, dockTab, messageCount]);
   const changeDockTab = (tab: TableDockTab): void => {
-    if (dockTab === 'chat') setSeenMessages(messageCount);
+    if (dockTab === 'info') setSeenMessages(messageCount);
     setDockTab(tab);
+  };
+  // The header's chat and voice buttons open the dock on their tab, or collapse it when it already shows it.
+  const toggleDockTab = (tab: TableDockTab): void => {
+    if (dockOpen && dockTab === 'info') setSeenMessages(messageCount);
+    if (dockOpen && dockTab === tab) { setDockOpen(false); return; }
+    setDockTab(tab);
+    setDockOpen(true);
   };
   const collapseDockFromButton = (): void => {
     restoreToggleFocus.current = true;
@@ -389,17 +405,35 @@ export function GameShell({
     return () => window.removeEventListener('keydown', onKey);
   }, [closeSheets, rulesVisible]);
 
-  // The phone sheet and the dock's info tab hold the same table controls and game info.
-  const tableControls = !replay && <>
-    {room && <RoomCodeButton key={room.code} code={room.code} compact={phoneMenu} className={styles.menuRoomCode} />}
-    <AbortVoteButton className={`${styles.abortRail} ${styles.menuExit}`} />
-    <EarlyLeaveButton className={`${styles.abortRail} ${styles.menuExit}`} />
-    <SpectatorLeaveButton className={styles.menuExit} />
-  </>;
   const rulesButton = visibleGame && <button type="button" className={`btn btn-outline ${styles.rulesRailButton}`}
     aria-haspopup="dialog" onClick={openRules}>
     <AppIcon name="rules" /> {t('rules.open')}
   </button>;
+  // The phone menu lists the header's controls in its order: room code, rules, voice, chat, then the exits.
+  const sheetControls = <>
+    {!replay && room && <RoomCodeButton key={room.code} code={room.code} compact={phoneMenu} className={styles.menuRoomCode} />}
+    {rulesButton}
+    {!replay && <VoiceButton labelled className={styles.menuAction} />}
+    {!replay && <ActionButton icon="chat" text={t('chat.title')} badge={unread} className={styles.menuAction}
+      label={unread > 0 ? `${t('chat.title')} ${t('room.unread', { n: String(unread) })}` : t('chat.title')}
+      onClick={openChat} />}
+    {!replay && <>
+      <AbortVoteButton className={styles.menuExit} />
+      <EarlyLeaveButton className={styles.menuExit} />
+      <SpectatorLeaveButton className={styles.menuExit} />
+    </>}
+  </>;
+  const header =dockLayout && !replay && room && visibleGame && <RoomHeader className={styles.header}
+    title={t(`gameType.${visibleGame.gameType}`)} code={room.code} status={headerStatus}
+    onBack={() => navigate('/')} onRules={openRules}
+    voice={<VoiceButton labelled dock={{ id: 'game-dock', open: dockOpen && dockTab === 'voice',
+      onToggle: () => toggleDockTab('voice') }} />}
+    chat={{ unread, expanded: chatShown, controls: 'game-dock', onToggle: () => toggleDockTab('info') }}
+    actions={<>
+      <AbortVoteButton appearance="header" />
+      <EarlyLeaveButton appearance="header" />
+      <SpectatorLeaveButton appearance="header" />
+    </>} />;
   const motionSetting = SHOW_REDUCED_MOTION_CONTROL && <label className={styles.motionSetting}>
     <AppCheckbox checked={reducedMotion}
       onChange={(event) => setReducedMotion(event.target.checked)} />
@@ -409,18 +443,21 @@ export function GameShell({
     {info}
     {visibleGame && <RoundHistory game={visibleGame} />}
   </div>;
-  const chatPanel = replay ? <TableStoreScope stores={null}><ChatPanel embedded /></TableStoreScope>
-    : <ChatPanel embedded />;
+  // Shared playback chats in the live room, not the recorded one.
+  const chatPanel = replay ? <TableStoreScope stores={null}><ChatPanel embedded captioned /></TableStoreScope>
+    : <ChatPanel embedded captioned />;
   const dockTabs = [
-    { id: 'info' as const, label: t('table.info'), panel: <div className={styles.dockInfo}>
-      {tableControls}
-      {rulesButton}
-      {motionSetting}
-      {infoContent}
-    </div> },
-    ...chatVisible ? [{ id: 'chat' as const, panel: chatPanel,
-      label: <>{t('chat.title')}{unread > 0 && <DockCount label={t('room.unread', { n: String(unread) })}>
-        {unread > 99 ? '99+' : unread}</DockCount>}</> }] : [],
+    { id: 'info' as const, panel: <div className={styles.dockHome}>
+      <div className={styles.dockInfo}>
+        {/* Live tables open the rules from the header; playback has no header. */}
+        {replay && rulesButton}
+        {motionSetting}
+        {infoContent}
+      </div>
+      {chatVisible && <div className={styles.dockChat}>{chatPanel}</div>}
+    </div>,
+    label: <>{t('table.gameTab')}{unread > 0 && <DockCount label={t('room.unread', { n: String(unread) })}>
+      {unread > 99 ? '99+' : unread}</DockCount>}</> },
     ...!replay ? [{ id: 'spectators' as const, panel: <GameSpectators layout="dock" />,
       label: <SpectatorsTabLabel /> }] : [],
     ...!replay ? [{ id: 'voice' as const, label: t('voice.title'), panel: <VoiceDockPanel className={styles.dockVoice} /> }] : [],
@@ -429,8 +466,9 @@ export function GameShell({
 
   const shell = (
     <div data-game-shell data-reduced-motion={reducedMotion || undefined}
-      className={`${styles.gameContainer} ${dockLayout ? (dockOpen ? '' : styles.dockHidden) : `${chatOpen ? '' : styles.chatCollapsed} ${infoOpen ? styles.infoOpen : ''} ${chatVisible ? '' : styles.noChat}`} ${replay ? styles.replayMode : ''}`}
+      className={`${styles.gameContainer} ${dockLayout ? (dockOpen ? '' : styles.dockHidden) : `${chatOpen ? '' : styles.chatCollapsed} ${infoOpen ? styles.infoOpen : ''} ${chatVisible ? '' : styles.noChat}`} ${replay ? styles.replayMode : ''} ${header ? styles.withHeader : ''}`}
       style={cardBackStyle(account, reducedMotion, !!cardBackArt)}>
+      {header}
       {!dockLayout && (infoOpen || chatOpen) && <button type="button" className={styles.backdrop} tabIndex={-1}
         aria-label={t('table.close')} onClick={closeSheets} />}
 
@@ -440,8 +478,7 @@ export function GameShell({
           <button type="button" className={styles.sheetClose} onClick={() => setInfoOpen(false)}
             aria-label={t('table.close')} title={t('table.close')}><AppIcon name="close" /></button>
         </div>
-        {tableControls}
-        {rulesButton}
+        {sheetControls}
         {motionSetting}
         {infoContent}
         {!replay && <GameSpectators layout="sheet" />}
@@ -536,7 +573,6 @@ export function GameShell({
           </button>
         )}
         <div className={`${styles.chatBody} ${chatOpen ? '' : styles.hidden}`} inert={!chatOpen}>
-          {/* Shared playback chats in the live room, not the recorded one. */}
           {replay ? <TableStoreScope stores={null}><ChatPanel onCollapse={collapseChat} /></TableStoreScope>
             : <ChatPanel onCollapse={collapseChat} />}
         </div>

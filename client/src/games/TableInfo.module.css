@@ -3,14 +3,14 @@
 .rail {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--info-gap, var(--spacing-sm));
   min-height: 0;
   overflow-y: auto;
 }
 
 .box {
   flex: none;
-  padding: 10px 14px;
+  padding: var(--info-box-padding, 10px 14px);
   background: var(--rail-bg);
   border: 1px solid var(--rail-border);
   border-radius: var(--radius-lg);
@@ -30,7 +30,7 @@
 .turn {
   margin-top: 4px;
   font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-size: var(--info-turn-size, var(--text-lg));
   font-weight: 800;
   color: var(--text-primary);
 }
