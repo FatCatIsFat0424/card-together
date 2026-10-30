@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { io } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 import type { ClientToServerEvents, ServerToClientEvents } from '@shared/types';
+import { MEDIA_MAX_BYTES } from '@shared/constants';
+import type { MediaPurpose } from '@shared/constants';
 import { isRuntimeSnapshot } from '../../src/runtime/validate';
 import { createApplication } from '../../src/app';
 import { SESSION_COOKIE_NAME, tokenHash } from '../../src/auth/auth-service';
@@ -114,9 +116,13 @@ describe.each(REPOSITORY_ADAPTERS)('media HTTP routes ($name)', (adapter) => {
     expect(served.status).toBe(200);
     expect(served.headers.get('content-type')).toBe('image/gif');
     expect(Buffer.from(await served.arrayBuffer())).toEqual(ANIMATED_GIF);
-    const limit = purpose === 'background' ? 2 * 1024 * 1024 : 512 * 1024;
+    const limit = MEDIA_MAX_BYTES[purpose as MediaPurpose];
     const oversized = Buffer.concat([ANIMATED_GIF, Buffer.alloc(limit)]);
-    expect((await upload(oversized, purpose)).status).toBe(413);
+    const refused = await upload(oversized, purpose);
+    expect(refused.status).toBe(413);
+    expect(await refused.json()).toEqual({
+      success: false, error: `Image is too large. The limit is ${purpose === 'background' ? '2 MB' : '512 KB'}.`,
+    });
   });
 
   it('should reject non-images, oversize avatars, bad purposes and anonymous uploads', async () => {

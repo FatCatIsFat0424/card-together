@@ -1,20 +1,13 @@
 import express, { Router } from 'express';
-import { EMOJI_MAX_BYTES } from '@shared/constants';
+import { isMediaPurpose, MEDIA_MAX_BYTES, mediaTooLargeMessage } from '@shared/constants';
 import type { AuthService } from '../auth/auth-service';
 import { createRateLimiter, getRequestSession, requireSession } from '../auth/http-middleware';
 import type { MediaStore } from '../media/media-store';
 import { sniffImage } from '../media/media-store';
 
-const MAX_BYTES = {
-  avatar: 512 * 1024, emoji: EMOJI_MAX_BYTES, background: 2 * 1024 * 1024, cardBack: 512 * 1024,
-} as const;
 const CONTENT_TYPES = {
   png: 'image/png', jpg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp',
 } as const;
-
-function isPurpose(value: unknown): value is keyof typeof MAX_BYTES {
-  return typeof value === 'string' && Object.hasOwn(MAX_BYTES, value);
-}
 
 /** Without a store every media request answers 503 so clients can hide upload UI. */
 export function createMediaRouter(store: MediaStore | null, authService: AuthService): Router {
@@ -38,13 +31,13 @@ export function createMediaRouter(store: MediaStore | null, authService: AuthSer
       const data = typeof body === 'object' && body !== null && 'data' in body ? body.data : null;
       const purpose = typeof body === 'object' && body !== null && 'purpose' in body
         ? body.purpose : null;
-      if (typeof data !== 'string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(data) || !isPurpose(purpose)) {
+      if (typeof data !== 'string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(data) || !isMediaPurpose(purpose)) {
         response.status(400).json({ success: false, error: 'Send base64 image data and a purpose.' });
         return;
       }
       const bytes = Buffer.from(data, 'base64');
-      if (bytes.length > MAX_BYTES[purpose]) {
-        response.status(413).json({ success: false, error: 'Image is too large.' });
+      if (bytes.length > MEDIA_MAX_BYTES[purpose]) {
+        response.status(413).json({ success: false, error: mediaTooLargeMessage(purpose) });
         return;
       }
       if (!sniffImage(bytes)) {

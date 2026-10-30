@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@shared/constants';
+import { formatMediaBytes, MEDIA_MAX_BYTES, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@shared/constants';
 import type { AccountProfile, MatchHistory } from '@shared/types';
 import { apiRequest } from '../api';
 import { resizeImage } from '../image-resize';
@@ -203,6 +203,7 @@ export function AccountPage(): ReactNode {
                       {t('profile.removeAvatar')}</Button>}
                   </div>
                 </div>
+                <p className={styles.hint}>{t('profile.avatarLimit', { limit: formatMediaBytes(MEDIA_MAX_BYTES.avatar) })}</p>
                 {mediaFeedback('avatarImage')}
               </fieldset>
               <div className={editorStyles.saveRow}>

@@ -39,7 +39,11 @@ export {
   GAME_COIN_REWARD,
   isUsername,
 } from './account';
-export { IMAGE_OPACITY_MAX, IMAGE_OPACITY_MIN, isImageOpacity, isMediaId } from './media';
+export {
+  IMAGE_OPACITY_MAX, IMAGE_OPACITY_MIN, MEDIA_MAX_BYTES, MEDIA_TOO_LARGE_PREFIX, formatMediaBytes, isImageOpacity,
+  isMediaId, isMediaPurpose, mediaTooLargeMessage,
+} from './media';
+export type { MediaPurpose } from './media';
 export {
   AVATAR_BORDERS, isAvatarBorderId, CARD_BACKS, TABLE_BACKGROUNDS, SEAT_BACKGROUNDS,
   NAMEPLATES, STICKER_PACKS, SHOP_STICKERS, SHOP_ITEMS, getShopItem, isShopItemId,

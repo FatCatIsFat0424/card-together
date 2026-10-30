@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent, DragEvent, FormEvent, ReactNode } from 'react';
 import type { EmojiRecord, MediaId } from '@shared/types';
-import { EMOJI_MAX_BYTES, EMOJI_NAME_MAX_LENGTH, MAX_EMOJIS_PER_ACCOUNT } from '@shared/constants';
+import { EMOJI_NAME_MAX_LENGTH, MAX_EMOJIS_PER_ACCOUNT } from '@shared/constants';
 import { apiRequest } from '../api';
 import { filesFromDataTransfer } from '../dropped-files';
 import { emojiNameFromFile } from '../emoji-names';
@@ -190,7 +190,6 @@ export function EmojiLibrary(): ReactNode {
     for (const [index, file] of accepted.entries()) {
       setProgress(t('emoji.progress', { done: String(index + 1), total: String(accepted.length) }));
       try {
-        if (file.type === 'image/gif' && file.size > EMOJI_MAX_BYTES) throw new Error(t('emoji.tooLarge'));
         const blob = file.type === 'image/gif' ? file
           : await resizeImage(file, { size: 128, square: false, quality: 0.9, fallbackType: 'image/png' });
         items.push({ name: emojiNameFromFile(file.name, taken), mediaId: await uploadImage(blob, 'emoji') });
