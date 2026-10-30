@@ -122,7 +122,7 @@ describe('room header', () => {
     }));
     expect(buttonNames(html)).toEqual(['Back to lobby', 'Copy ABC123', 'Game rules', 'VOICE', 'Chat 3 unread messages', 'PHASE']);
     expect(html.indexOf('Waiting to start · 2/4 seated')).toBeLessThan(html.indexOf('Game rules'));
-    expect(html.indexOf('data-phase-actions')).toBeGreaterThan(html.indexOf('aria-hidden="true"></span>'));
+    expect(html.indexOf('data-phase-actions')).toBeGreaterThan(html.indexOf('Chat 3 unread messages'));
   });
 
   it('shows a room notice in place of the status', () => {

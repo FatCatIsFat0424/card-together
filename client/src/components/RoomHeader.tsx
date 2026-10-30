@@ -86,7 +86,6 @@ export function RoomHeader({
       {chat && <ActionButton icon="chat" text={t('chat.title')} collapsible ref={chatRef} badge={chat.unread}
         label={chatLabel} aria-expanded={chat.expanded} aria-controls={chat.controls} onClick={chat.onToggle} />}
     </div>
-    <span className={styles.divider} aria-hidden="true" />
-    <div className={styles.actions} data-phase-actions>{actions}</div>
+    <div className={`${styles.actions} ${styles.phaseActions}`} data-phase-actions>{actions}</div>
   </header>;
 }

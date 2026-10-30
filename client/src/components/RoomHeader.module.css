@@ -73,8 +73,8 @@
 
 .actions { display: flex; flex: none; align-items: center; gap: var(--space-2); }
 .actions:empty { display: none; }
-.divider { flex: none; width: 1px; height: 20px; background: var(--separator); }
-.divider:has(+ .actions:empty) { display: none; }
+/* The divider lives in the phase group, so an empty group hides both without :has(). */
+.phaseActions::before { content: ''; flex: none; width: 1px; height: 20px; background: var(--separator); }
 
 .srOnly {
   position: absolute;
