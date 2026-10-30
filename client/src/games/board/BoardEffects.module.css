@@ -49,10 +49,35 @@
   opacity: 0;
   animation: ring 520ms ease-out both;
 }
-.ring2 { border-color: var(--fx-c2); }
+.ring2 { border-color: var(--fx-c2); animation: ringEcho 600ms linear both; }
 @keyframes ring {
   from { transform: scale(0.35); opacity: 1; }
   to { transform: scale(1.15); opacity: 0; }
+}
+/* The second neon ring follows 80 ms behind the first. */
+@keyframes ringEcho {
+  0%, 13.3% { transform: scale(0.35); opacity: 1; animation-timing-function: ease-out; }
+  to { transform: scale(1.15); opacity: 0; }
+}
+
+/* After a slide, the landing ring and burst hold their first frame until the piece lands (220 ms), inside one
+   longer animation rather than after a delay: every later start makes Chrome render the page on the main thread
+   for a few frames around it, so a move's effects start together. */
+.ring.late { animation: ringLate 740ms linear both; }
+.ring2.late { animation: ringEchoLate 820ms linear both; }
+.burst.late { animation: burstLate 700ms linear both; }
+@keyframes ringLate {
+  0%, 29.7% { transform: scale(0.35); opacity: 1; animation-timing-function: ease-out; }
+  to { transform: scale(1.15); opacity: 0; }
+}
+@keyframes ringEchoLate {
+  0%, 36.6% { transform: scale(0.35); opacity: 1; animation-timing-function: ease-out; }
+  to { transform: scale(1.15); opacity: 0; }
+}
+@keyframes burstLate {
+  0%, 31.4% { transform: scale(0.2); opacity: 1; animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1); }
+  69.1% { opacity: 1; animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1); }
+  to { transform: none; opacity: 0; }
 }
 
 /* A burst is one composited layer: the particles sit at their final reach (--a, --r as a share of their own
@@ -114,20 +139,11 @@
   border-radius: 50%;
 }
 
-/* Turning a piece over: squeeze, swap faces at the midpoint, open again, then a sheen. */
-.flip {
-  inset: 0;
-  animation: flip 380ms ease-in-out both;
-}
+/* Turning a piece over: squeeze, swap faces at the midpoint, open again, then a sheen. Web Animations run
+   these parts (`flipFrames` in board-effects.ts); the styles here are their resting look. */
+.flip { inset: 0; }
 .flip > span { position: absolute; inset: 0; }
-.before { animation: hideHalf 380ms both; }
-.after { opacity: 0; animation: showHalf 380ms both; }
-@keyframes flip {
-  0%, 100% { transform: scaleX(1); }
-  50% { transform: scaleX(0.06); }
-}
-@keyframes hideHalf { 0%, 49.9% { opacity: 1; } 50%, 100% { opacity: 0; } }
-@keyframes showHalf { 0%, 49.9% { opacity: 0; } 50%, 100% { opacity: 1; } }
+.after { opacity: 0; }
 /* A slim gloss bar crossing the piece; it stays inside the piece, so nothing needs a rounded clip. */
 .glint {
   left: 45%;
@@ -137,12 +153,6 @@
   border-radius: 999px;
   background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.85), transparent);
   opacity: 0;
-  animation: glint 320ms ease-out var(--d, 0ms) both;
-}
-@keyframes glint {
-  from { opacity: 0; transform: translateX(-170%) rotate(20deg); }
-  30%, 70% { opacity: 1; }
-  to { opacity: 0; transform: translateX(170%) rotate(20deg); }
 }
 
 /* Selection aura: one element, only while a piece is selected. */

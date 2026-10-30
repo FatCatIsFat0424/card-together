@@ -1,6 +1,6 @@
 // ─── BoardView: SVG board drawn from the shared board model, with pieces and move markers ───
 
-import { useId, useMemo, useRef, useState } from 'react';
+import { memo, useId, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { coordinateLabel, nodeById, zonesAt } from '@shared/rules/board/board-model';
 import type { BoardModel, BoardNode, BoardPoint, NodeId } from '@shared/rules/board/board-model';
@@ -122,7 +122,8 @@ function riverBands(board: BoardModel, geometry: BoardGeometry): ReactNode[] {
   });
 }
 
-function BoardSurfaceLayer({ board, geometry, surface, activeHomes, pattern }: {
+/** The board under the pieces; memoised, so a render that only moves or hides pieces skips it. */
+const BoardSurfaceLayer = memo(function BoardSurfaceLayer({ board, geometry, surface, activeHomes, pattern }: {
   readonly board: BoardModel; readonly geometry: BoardGeometry; readonly surface: BoardSurface;
   readonly activeHomes?: readonly number[]; readonly pattern: BoardPattern;
 }): ReactNode {
@@ -236,7 +237,7 @@ function BoardSurfaceLayer({ board, geometry, surface, activeHomes, pattern }: {
     }
   }
   return <g>{items}</g>;
-}
+});
 
 /** The Chinese checkers star draws its own outline, holes, and marbles (`StarBoard.tsx`). */
 const isStar = (board: BoardModel, surface: BoardSurface): boolean => surface === 'star' && board.layout === 'holes';
@@ -405,7 +406,7 @@ export function BoardView({
       {interactiveSvg(`${styles.board} ${styles.layer}`, content)}
     </> : interactiveSvg(`${styles.board} ${styles.layer}`, <>{surfaceLayer}{content}</>)}
     {effects && <BoardFxLayer host={host} viewBox={geometry.viewBox} point={geometry.point} effects={effects}
-      finish={theme.finish ?? DEFAULT_PIECE_FINISH} groups={fx.groups} selected={pending ? null : selected}
+      finish={theme.finish ?? DEFAULT_PIECE_FINISH} groups={fx.groups} landed={fx.landed} selected={pending ? null : selected}
       winLine={winLine} />}
   </div>;
 }

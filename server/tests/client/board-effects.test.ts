@@ -24,9 +24,11 @@ import { DiceStylePreview } from '../../../client/src/cosmetics/dice-styles/Dice
 import { DICE_DESIGNS } from '../../../client/src/cosmetics/dice-styles/dice-designs';
 import { SERIES_TOKENS } from '../../../client/src/cosmetics/series-tokens';
 import {
-  BOARD_FX_LIMITS, boardFxOf, boardFxPlan, boardFxTiming, burstParticles, flipDelays, newBoardRecords,
+  BOARD_FX_LIMITS, GLINT_MS, boardFxOf, boardFxPlan, boardFxTiming, burstParticles, flipDelays, flipFrames,
+  flipSequenceMs, newBoardRecords,
 } from '../../../client/src/games/board/board-effects';
-import { boardFxGroup } from '../../../client/src/games/board/BoardEffects';
+import { boardFxGroup, landedFxGroups, nextFxGroups } from '../../../client/src/games/board/BoardEffects';
+import type { BoardFxGroup } from '../../../client/src/games/board/BoardEffects';
 import { StonePiece } from '../../../client/src/games/board/BoardPieces';
 import { BoardView } from '../../../client/src/games/board/BoardView';
 
@@ -80,6 +82,28 @@ describe('board effect triggers', () => {
       .toBeLessThanOrEqual(BOARD_FX_LIMITS.flipSequenceMs);
   });
 
+  it('runs every part of a turning sequence from its start to its end, staggered only inside the keyframes', () => {
+    const delays = flipDelays(5);
+    const total = flipSequenceMs(delays);
+    expect(total).toBe(delays[delays.length - 1] + BOARD_FX_LIMITS.flipMs / 2 + GLINT_MS);
+    for (const delay of delays) {
+      const frames = flipFrames(delay, total);
+      for (const keyframes of [frames.flip, frames.before, frames.after, frames.glint]) {
+        const offsets = keyframes.map((frame) => frame.offset as number);
+        expect(offsets[0]).toBe(0);
+        expect(offsets[offsets.length - 1]).toBe(1);
+        expect(offsets).toEqual([...offsets].sort((a, b) => a - b));
+      }
+      // The faces swap halfway through the turn, when the squeezed box is thinnest.
+      const turn = (delay + BOARD_FX_LIMITS.flipMs / 2) / total;
+      expect(frames.flip.find((frame) => frame.transform === 'scaleX(0.06)')?.offset).toBe(turn);
+      expect(frames.after.filter((frame) => frame.opacity === 1)[0].offset).toBe(turn);
+      expect(frames.before.at(-1)).toMatchObject({ opacity: 0 });
+      expect(frames.after.at(-1)).toMatchObject({ opacity: 1 });
+    }
+    expect(flipSequenceMs([])).toBe(0);
+  });
+
   it('hides only the moving pieces and animates at most twelve turned discs', () => {
     const flips = Array.from({ length: 14 }, (_, index) => nodeId(index, 0));
     const now = new Map<NodeId, string>([[nodeId(0, 1), 'placed'], ...flips.map((node) => [node, 'light'] as [NodeId, string])]);
@@ -91,6 +115,24 @@ describe('board effect triggers', () => {
     const move = boardFxGroup({ from: nodeId(0, 0), to: nodeId(0, 1), capture: true, flips: [] }, now, before)!;
     expect(move.hides).toEqual([nodeId(0, 1)]);
     expect(boardFxGroup({ to: nodeId(9, 9), capture: false, flips: [] }, now, before)).toBeNull();
+  });
+
+  it('drops finished groups only when a new move arrives, keeping at most three', () => {
+    const pieces = new Map<NodeId, string>([[nodeId(0, 0), 'stone']]);
+    const at = (start: number): BoardFxGroup => boardFxGroup({ to: nodeId(0, 0), capture: false, flips: [] }, pieces, pieces, start)!;
+    const first = at(0);
+    const { totalMs } = first;
+    expect(first.startedAt).toBe(0);
+    expect(nextFxGroups([first], at(totalMs), totalMs).map((group) => group.startedAt)).toEqual([totalMs]);
+    const playing = [at(0), at(100), at(200)];
+    expect(nextFxGroups(playing, at(300), 300).map((group) => group.startedAt)).toEqual([100, 200, 300]);
+  });
+
+  it('lands a move\'s pieces once they have arrived, never earlier', () => {
+    const pieces = new Map<NodeId, string>([[nodeId(0, 1), 'chariot']]);
+    const slide = boardFxGroup({ from: nodeId(0, 0), to: nodeId(0, 1), capture: false, flips: [] }, pieces, pieces, 1000)!;
+    expect(landedFxGroups([slide], 1000 + slide.hideMs - 1).has(slide.id)).toBe(false);
+    expect(landedFxGroups([slide], 1000 + slide.hideMs).has(slide.id)).toBe(true);
   });
 });
 

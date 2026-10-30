@@ -96,6 +96,51 @@ export function flipDelays(count: number): readonly number[] {
   return Array.from({ length: animated }, (_, index) => Math.round(step * index));
 }
 
+/** The sheen that crosses a turned piece once it shows its new face. */
+export const GLINT_MS = 320;
+
+/** Web Animations keyframes of one turned piece's parts: the squeezing box, its two faces, and the sheen. */
+export interface FlipFrames {
+  readonly flip: Keyframe[];
+  readonly before: Keyframe[];
+  readonly after: Keyframe[];
+  readonly glint: Keyframe[];
+}
+
+/** How long a sequence of turned pieces runs, including the last sheen. */
+export function flipSequenceMs(delays: readonly number[]): number {
+  return delays.length ? Math.max(...delays) + BOARD_FX_LIMITS.flipMs / 2 + GLINT_MS : 0;
+}
+
+/**
+ * Keyframes of a piece turning `delay` ms into a sequence of `totalMs`. Every part of every piece runs for the
+ * whole sequence and waits inside its keyframes, so they all start and end together: staggered starts and ends
+ * would each make Chrome render the page on the main thread for a few frames.
+ */
+export function flipFrames(delay: number, totalMs: number): FlipFrames {
+  const at = (ms: number): number => Math.min(1, Math.max(0, ms / totalMs));
+  const turn = delay + BOARD_FX_LIMITS.flipMs / 2;
+  const done = delay + BOARD_FX_LIMITS.flipMs;
+  const glintEnd = turn + GLINT_MS;
+  const from = 'translateX(-170%) rotate(20deg)';
+  const to = 'translateX(170%) rotate(20deg)';
+  return {
+    flip: [
+      { offset: 0, transform: 'scaleX(1)' }, { offset: at(delay), transform: 'scaleX(1)', easing: 'ease-in-out' },
+      { offset: at(turn), transform: 'scaleX(0.06)', easing: 'ease-in-out' }, { offset: at(done), transform: 'scaleX(1)' },
+      { offset: 1, transform: 'scaleX(1)' },
+    ],
+    before: [{ offset: 0, opacity: 1 }, { offset: at(turn), opacity: 1 }, { offset: at(turn), opacity: 0 }, { offset: 1, opacity: 0 }],
+    after: [{ offset: 0, opacity: 0 }, { offset: at(turn), opacity: 0 }, { offset: at(turn), opacity: 1 }, { offset: 1, opacity: 1 }],
+    glint: [
+      { offset: 0, opacity: 0, transform: from }, { offset: at(turn), opacity: 0, transform: from, easing: 'ease-out' },
+      { offset: at(turn + GLINT_MS * 0.3), opacity: 1, easing: 'ease-out' },
+      { offset: at(turn + GLINT_MS * 0.7), opacity: 1, easing: 'ease-out' },
+      { offset: at(glintEnd), opacity: 0, transform: to }, { offset: 1, opacity: 0, transform: to },
+    ],
+  };
+}
+
 /** Particle angles and reach for a burst of `count`, alternating slightly so it never looks like a clock face. */
 export function burstParticles(count: number, spread: number): readonly { readonly angle: number; readonly reach: number }[] {
   const total = Math.max(0, Math.min(BOARD_FX_LIMITS.particles, Math.round(count)));
