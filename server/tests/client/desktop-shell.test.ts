@@ -53,7 +53,7 @@ describe('desktop shell', () => {
     expect(link(html, '商店')).toContain('aria-current="page"');
     expect(link(html, '商店')).toContain('href="/shop"');
     for (const other of ['大廳', '好友', '成就']) expect(link(html, other)).not.toContain('aria-current');
-    expect(link(html, '戰績')).toContain('href="/players/alice"');
+    expect(link(html, '戰績')).toContain('href="/players/alice#match-history"');
   });
 
   it('turns the messages and achievements items into links back out while open', () => {
@@ -79,7 +79,7 @@ describe('desktop shell', () => {
       const footer = html.slice(html.indexOf('data-popover="notifications"'));
       expect(footer).toContain('data-popover-trigger="music"');
       expect(footer).toContain('data-popover-trigger="menu"');
-      expect(footer).toContain('aria-label="帳號選單"');
+      expect(footer).toContain('aria-label="個人選單"');
       expect(html.indexOf('aria-label="0 枚金幣"')).toBeLessThan(html.indexOf('data-popover="notifications"'));
       // The avatar replaces the old "Me" item.
       expect(link(html, '我')).toBe('');

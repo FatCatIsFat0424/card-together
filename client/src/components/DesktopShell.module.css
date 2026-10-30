@@ -26,20 +26,10 @@
 .avatarButton[aria-expanded='true'],
 .avatarButton[data-current] { background: var(--color-primary-soft); }
 
-.panel.menu { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-2); width: 260px; padding: var(--space-2); }
+.panel.menu { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-2); width: 320px; padding: var(--space-4); }
 .menuName { padding: var(--space-1) var(--space-2) 0; overflow: hidden; font-size: var(--text-md); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .menuLinks { display: flex; flex-direction: column; }
-.menuLinks a {
-  display: flex;
-  align-items: center;
-  height: var(--hit-size);
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font-size: var(--text-base);
-}
-.menuLinks a:hover { background: var(--surface-2); }
-.menuPrefs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: 0 var(--space-2); }
+.menuPrefs { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-3) var(--space-2); border-top: 1px solid var(--separator); color: var(--text-secondary); font-size: var(--text-xs); }
 .menuSignOut { justify-content: flex-start; width: 100%; height: var(--hit-size); border-top: 1px solid var(--separator); border-radius: 0; }
 
 /* The panels open beside the rail, aligned with its bottom controls. */
@@ -51,6 +41,7 @@
   max-height: calc(100dvh - 2 * var(--space-2));
   transform-origin: bottom left;
 }
-.menuIdentity { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2) 0; }
+.menuIdentity { display: flex; align-items: center; gap: var(--space-3); padding: 0 0 var(--space-3); border-bottom: 1px solid var(--separator); }
+.menuCaption { margin: 3px 0 0; color: var(--text-secondary); font-size: var(--text-xs); }
 .menuIdentityText { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
 .menuIdentity .menuName { max-width: 100%; padding: 0; }

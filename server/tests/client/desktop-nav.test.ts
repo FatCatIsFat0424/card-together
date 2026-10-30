@@ -28,7 +28,7 @@ describe('desktop navigation', () => {
 
   it('links every item to its page and encodes the account id', () => {
     expect(RAIL_ITEMS.map((item) => railItemPath(item.id, 'a b'))).toEqual(
-      ['/', '/friends', '/messages', '/shop', '/achievements', '/players/a%20b']);
+      ['/', '/friends', '/messages', '/shop', '/achievements', '/players/a%20b#match-history']);
     expect(currentRailItem('/players/a%20b', 'a b')).toBe('history');
   });
 

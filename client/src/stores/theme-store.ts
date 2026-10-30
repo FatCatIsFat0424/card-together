@@ -5,6 +5,8 @@ import { readPreference, writePreference } from '../utils/preference-storage';
 
 export type Theme = 'dashboard' | 'felt' | 'paper';
 export const THEMES: readonly Theme[] = ['dashboard', 'felt', 'paper'];
+/** Keep alternate themes available for a future appearance feature. */
+export const THEME_SWITCH_ENABLED = false;
 
 const STORAGE_KEY = 'theme';
 
@@ -17,7 +19,7 @@ export function applyTheme(theme: Theme): void {
 }
 
 function readStoredTheme(): Theme {
-  return parseTheme(readPreference(STORAGE_KEY));
+  return THEME_SWITCH_ENABLED ? parseTheme(readPreference(STORAGE_KEY)) : 'dashboard';
 }
 
 interface ThemeStore {

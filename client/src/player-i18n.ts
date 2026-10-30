@@ -1,5 +1,5 @@
 const english = {
-  'player.myProfile': 'My profile',
+  'player.myProfile': 'Player profile',
   'player.title': 'Player profile',
   'player.view': 'View {nickname}’s profile',
   'player.edit': 'Edit profile',
@@ -40,7 +40,7 @@ export type PlayerTranslationKey = keyof typeof english;
 export const playerTranslations: Record<'en' | 'zh-TW', Record<PlayerTranslationKey, string>> = {
   en: english,
   'zh-TW': {
-    'player.myProfile': '我的個人頁面',
+    'player.myProfile': '玩家檔案',
     'player.title': '玩家個人頁面',
     'player.view': '查看 {nickname} 的個人頁面',
     'player.edit': '編輯個人資料',

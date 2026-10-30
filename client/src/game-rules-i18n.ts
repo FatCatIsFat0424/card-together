@@ -1,5 +1,7 @@
 import type { GameType } from '@shared/types';
 import type { Locale } from './i18n';
+import { gameDefinition } from '@shared/games/registry';
+import { DEFAULT_TIME_CONTROL } from '@shared/time-control';
 
 export interface GameRuleSection {
   readonly title: string;
@@ -49,13 +51,7 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Weak-hand redeal', 'High-card points (HCP): A 4, K 3, Q 2, J 1. A hand with at most 4 HCP may ask for a redeal, including a lone ace with no other points.', 'Eligible seats are asked clockwise from the auction starter. Accepting redeals every hand; a seat that declines is not asked again that deal.'),
     section('Playing a trick', 'The seat counterclockwise from declarer leads first; play goes clockwise and each trick winner leads the next.', 'Follow the led suit if you can; otherwise play anything, including trump.', 'The highest trump wins; with no trump played, the highest card of the led suit wins.'),
     section('Controls', 'Pick a level and strain or Pass, then confirm; picking the same call again also confirms.', 'Touch: tap a card to lift it and tap it again to play.'),
-    table('Bot bidding agreements', ['Call', 'Bots read it as'], [
-      ['Opening', '12+ HCP; a major shows five cards, a minor the longest suit. After three passes a weak fourth-seat bot may open low.'],
-      ['1NT / 2NT', 'Balanced (4333, 4432, 5332) with 15–17 / 20–21 HCP. A 1NT overcall also stops their suit.'],
-      ['New suit', 'Four cards; 6+ HCP at the one level, 10+ at the two level.'],
-      ['Raise', 'Eight or more combined cards in the suit.'],
-      ['Game tries', 'Combined HCP: NT 23 invites, 25 bids 3NT; majors 18/23/25 for levels 2/3/4; minors 18/23/26/29 for levels 2–5. 2NT over 1NT invites with 8+.'],
-    ], 'These only describe bot bids; humans bid freely. Bots never explore slams and always decline weak-hand redeals.'),
+    section('Playing with bots', 'Bots use a simplified natural bidding system, reading strength and suit length from previous calls. Humans may bid freely.', 'A 1NT opening shows 15–17 HCP and 2NT 20–21, both balanced. Bots decline weak-hand redeals.'),
   ],
   bigtwo: [
     section('Goal and first play', '13 cards each, counterclockwise. First to empty their hand wins.', 'The ♣3 holder leads, and the first play must include ♣3. A dragon (one of every rank 3–2) wins at once.', 'Order: 3 < 4 < … < K < A < 2 by rank, then ♣ < ♦ < ♥ < ♠ by suit.'),
@@ -313,13 +309,7 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('弱牌重發', '大牌點 HCP：A 4、K 3、Q 2、J 1。HCP ≤ 4 可要求重發，包含一張 A 且其餘牌沒有點數的手牌。', '從叫牌起始座位順時針詢問符合者；接受則全部重發，拒絕者本副牌不再被問。'),
     section('出牌與牌墩', '莊家逆時針鄰座首攻，之後順時針出牌，贏墩者先出下一墩。', '有首攻花色必須跟；沒有才可出其他牌，包括王牌。', '最大王牌贏墩；沒人出王牌時，首攻花色最大者贏。'),
     section('操作方式', '選線位與花色或 Pass 後按確認；再選一次相同叫牌也算確認。', '觸控：點一下抬起牌，再點一次出牌。'),
-    table('Bot 叫牌約定', ['叫牌', 'Bot 的解讀'], [
-      ['開叫', '12+ HCP；高花表示五張，低花選最長花色。前三家 Pass 時，第四家弱牌 Bot 可能低線開叫。'],
-      ['1NT／2NT', '平均牌型（4333、4432、5332），15～17／20～21 HCP。1NT 蓋叫還需擋住對方花色。'],
-      ['新花色答叫', '四張；一線 6+ HCP、二線 10+ HCP。'],
-      ['加叫', '兩人合計八張以上配合。'],
-      ['成局門檻', '合計 HCP：NT 23 邀請、25 叫 3NT；高花 2／3／4 線 18／23／25；低花 2～5 線 18／23／26／29。對 1NT 答 2NT 為 8+ 邀請。'],
-    ], '以上只用來解讀 Bot，不限制真人叫牌。Bot 不探索滿貫，也一律拒絕弱牌重發。'),
+    section('與 Bot 遊玩', 'Bot 採簡化自然叫牌，依先前叫品估計牌力與花色長度；真人仍可自由叫牌。', '常見開叫：1NT 為 15～17 HCP、2NT 為 20～21 HCP，皆為平均牌型。Bot 一律拒絕弱牌重發。'),
   ],
   bigtwo: [
     section('目標與首出', '每人 13 張，逆時針出牌，先出完者獲勝。', '持有 ♣3 者先出，第一手必須包含 ♣3。一條龍（3～2 各一張）直接獲勝。', '大小：點數 3 < 4 < … < K < A < 2，同點數再比花色 ♣ < ♦ < ♥ < ♠。'),
@@ -432,7 +422,7 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
       ['五小', '五張牌合計不到 10.5 點', '×3'],
       ['十點半', '不到五張牌，合計正好 10.5 點', '×2'],
       ['一般點數', '10 點以下', '×1'],
-    ], '任何特殊牌型都大於一般點數。牌型相同或點數相同，一律莊家勝。'),
+    ], '任何特殊牌型都大於一般點數。牌型與點數均相同時，莊家勝。'),
     section('結算', '閒家牌比莊家大才算贏；閒家爆牌一律輸，即使莊家也爆。贏家拿下注額 × 自己牌型的倍數；輸家賠下注額 × 莊家牌型的倍數（莊家爆牌算 1 倍），但最多賠光該局開始前的籌碼。', '莊家用自己的籌碼加上收到的錢賠付；不夠賠時，依每位贏家應得的比例分配。', '例：押 20，一般贏拿回 40；對上十點半的莊家，輸 40。'),
   ],
   liarsdice: [
@@ -564,45 +554,51 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
   ],
 };
 
-const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> = {
-  en: [
-    table('Room setup', ['Item', 'Rule'], [
-      ['Players', 'Ninety-Nine, Crazy Eights, Blackjack, Hold’em, Liar’s Dice, Old Maid 2–8; Go Fish 2–6; Napoleon 4–6; Reversi, Jungle, Gomoku, Xiangqi, Banqi, Land Battle Chess, and Battleship 2; Dou Dizhu 3; others 4'],
-      ['Seat order', 'Clockwise N → E → S → W → P5–P8, skipping empty seats'],
-      ['Start', 'Once everyone seated is ready, the host presses Start'],
-      ['Bots', 'The host adds or removes them; at least one human must sit'],
-      ['Seat shuffle', 'Optional, off by default; shuffles humans at the start'],
-    ], 'Changing settings clears readiness. Matches with bots are practice and are not recorded. Chips and scores last one match.'),
-    table('Turn timer', ['Item', 'Rule'], [
-      ['Default', '300 seconds per turn, then a 300-second reserve per deal'],
-      ['Host range', '1–300 seconds per turn, 0–300 reserve'],
-      ['Timeout', 'A legal move is made for you; Bridge redeal offers are declined'],
-    ], 'Unused turn time is not saved; animations are free. Disconnecting does not pause the clock; leaving or 60 seconds offline aborts the match.'),
-    section('Spectators', 'Up to eight spectators besides the seats. Join as a spectator; sit or stand while waiting.', 'Spectators and eliminated players see every hand but not the stock or bullets. Sevens covers stay hidden from players until the end.', 'During a match spectator chat and voice are separate; spectators cannot act or vote.'),
-    section('Ending early', 'Seated players can vote to end a match: three yes votes, or every seated human if fewer. Bots do not vote.', 'Votes last 60 seconds, with a three-minute cooldown.'),
-  ],
-  'zh-TW': [
-    table('房間設定', ['項目', '規則'], [
-      ['人數', '99、瘋狂 8、21 點、德州撲克、吹牛骰、抽鬼牌 2～8 人；釣魚 2～6 人；拿破崙 4～6 人；黑白棋、鬥獸棋、五子棋、象棋、暗棋、陸戰棋與海戰棋 2 人；鬥地主 3 人；其他 4 人'],
-      ['座位順序', '順時針 北 → 東 → 南 → 西 → 第 5～8 席，跳過空位'],
-      ['開始', '入座者都準備後，由房主按開始'],
-      ['Bot', '房主可加入或移除；至少需一位真人入座'],
-      ['自動換位', '可選，預設關閉；開局時打亂真人座位'],
-    ], '變更設定會清除準備狀態。有 Bot 的對局是練習局，不列入紀錄。籌碼與分數只限本場。'),
-    table('回合計時', ['項目', '規則'], [
-      ['預設', '每回合 300 秒，用完再扣每副牌 300 秒保留時間'],
-      ['房主可調', '每回合 1～300 秒，保留 0～300 秒'],
-      ['逾時', '系統代出合法行動；橋牌重發詢問視為拒絕'],
-    ], '沒用完的回合時間不累積，動畫不計時。斷線不暫停；離開或斷線超過 60 秒會中止對局。'),
-    section('觀戰', '座位外最多 8 位觀戰者。加入房間先觀戰，等待中可入座或起身。', '觀戰者與已淘汰者可看所有手牌，但看不到牌庫與子彈位置。牌七的蓋牌對玩家要到結算才公開。', '對局中觀戰者的文字與語音另外分開；觀戰者不能行動或投票。'),
-    section('提前結束', '入座玩家可發起結束投票：需三票贊成，真人不足三位時需全員贊成。Bot 不投票。', '投票 60 秒，發起後冷卻三分鐘。'),
-  ],
-};
+export function getSharedGameRules(gameType: GameType, locale: Locale): readonly GameRuleSection[] {
+  const { seats, timeControl = DEFAULT_TIME_CONTROL } = gameDefinition(gameType);
+  const players = seats.playerCounts?.join(locale === 'en' ? ', ' : '、')
+    ?? (seats.minPlayers === seats.maxPlayers ? String(seats.minPlayers) : `${seats.minPlayers}–${seats.maxPlayers}`);
+  const sharedTranslations: Readonly<Record<Locale, readonly GameRuleSection[]>> = {
+    en: [
+      table('Room setup', ['Item', 'Rule'], [
+        ['Players', `${players} players`],
+        ['Seat order', 'Clockwise N → E → S → W → P5–P8, skipping empty seats'],
+        ['Start', 'Once everyone seated is ready, the host presses Start'],
+        ['Bots', 'The host adds or removes them; at least one human must sit'],
+        ['Seat shuffle', 'Optional, off by default; shuffles humans at the start'],
+      ], 'Changing settings clears readiness. Completed bot matches also have history and replays; statistics default to human-only matches. Chips and scores last one match.'),
+      table('Turn timer', ['Item', 'Rule'], [
+        ['Default', `${timeControl.baseSeconds} seconds per turn, then a ${timeControl.bankSeconds}-second reserve`],
+        ['Host range', '1–300 seconds per turn, 0–300 reserve'],
+        ['Timeout', 'The system acts for you according to the game rules; Bridge redeal offers are declined'],
+      ], 'Unused turn time is not saved; animations are free. Disconnecting does not pause the clock; leaving or 60 seconds offline aborts the match.'),
+      section('Spectators', 'Up to eight spectators besides the seats. Join as a spectator; sit or stand while waiting.', 'Spectators and eliminated players see every hand but not the stock or bullets. Sevens covers stay hidden from players until the end.', 'During a match spectator chat and voice are separate; spectators cannot act or vote.'),
+      section('Ending early', 'Seated players can vote to end a match: three yes votes, or every seated human if fewer. Bots do not vote.', 'Votes last 60 seconds, with a three-minute cooldown.'),
+    ],
+    'zh-TW': [
+      table('房間設定', ['項目', '規則'], [
+        ['人數', `${players} 人`],
+        ['座位順序', '順時針 北 → 東 → 南 → 西 → 第 5～8 席，跳過空位'],
+        ['開始', '入座者都準備後，由房主按開始'],
+        ['Bot', '房主可加入或移除；至少需一位真人入座'],
+        ['自動換位', '可選，預設關閉；開局時打亂真人座位'],
+      ], '變更設定會清除準備狀態。有 Bot 的完成對局也保留紀錄與回放；統計預設只計真人對局。籌碼與分數只限本場。'),
+      table('回合計時', ['項目', '規則'], [
+        ['預設', `每回合 ${timeControl.baseSeconds} 秒，用完再扣 ${timeControl.bankSeconds} 秒保留時間`],
+        ['房主可調', '每回合 1～300 秒，保留 0～300 秒'],
+        ['逾時', '系統依各遊戲規則代為行動；橋牌重發詢問視為拒絕'],
+      ], '沒用完的回合時間不累積，動畫不計時。斷線不暫停；離開或斷線超過 60 秒會中止對局。'),
+      section('觀戰', '座位外最多 8 位觀戰者。加入房間先觀戰，等待中可入座或起身。', '觀戰者與已淘汰者可看所有手牌，但看不到牌庫與子彈位置。牌七的蓋牌對玩家要到結算才公開。', '對局中觀戰者的文字與語音另外分開；觀戰者不能行動或投票。'),
+      section('提前結束', '入座玩家可發起結束投票：需三票贊成，真人不足三位時需全員贊成。Bot 不投票。', '投票 60 秒，發起後冷卻三分鐘。'),
+    ],
+  };
+  return sharedTranslations[locale];
+}
 
 export const gameRulesTranslations: Readonly<Record<Locale, Readonly<Record<GameType, readonly GameRuleSection[]>>>> = {
   en: english, 'zh-TW': chinese,
 };
 
 export function getGameRules(gameType: GameType, locale: Locale): readonly GameRuleSection[] {
-  return [...gameRulesTranslations[locale][gameType], ...sharedTranslations[locale]];
+  return [...gameRulesTranslations[locale][gameType], ...getSharedGameRules(gameType, locale)];
 }

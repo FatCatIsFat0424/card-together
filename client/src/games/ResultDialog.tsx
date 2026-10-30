@@ -24,6 +24,7 @@ export interface ResultHistory {
 
 interface ResultDialogProps {
   title: ReactNode;
+  status?: string;
   /** Colour of the title; Bridge shows a defender win in the danger tone, board games a draw in amber. */
   tone?: 'win' | 'lose' | 'draw';
   /** Short line above the title, e.g. Big Two's dragon. */
@@ -44,7 +45,7 @@ const FOCUSABLE = 'button:not([disabled]), [href], summary, input:not([disabled]
  * the summary, so the summary keeps the height; the history then expands inside the summary column.
  */
 export function ResultDialog({
-  title, tone = 'win', eyebrow, wide = false, children, history = null, pending, error, disabled = false, onBack,
+  title, status, tone = 'win', eyebrow, wide = false, children, history = null, pending, error, disabled = false, onBack,
 }: ResultDialogProps): ReactNode {
   const { t } = useI18nStore();
   const titleId = useId();
@@ -86,11 +87,12 @@ export function ResultDialog({
   return <div className={`${styles.backdrop} ${replay ? styles.contained : ''}`}>
     <div ref={dialogRef} className={dialogPaperClass(wide ? 'medium' : 'narrow', styles.dialog)} role="dialog"
       aria-modal={!replay} aria-labelledby={titleId} onKeyDown={trapFocus}>
-      <header className={`${dialogParts.header} ${styles.header}`}>
+      <header className={`${dialogParts.header} ${styles.header} ${status ? styles.withStatus : ''}`}>
         <div className={styles.heading}>
           {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}
           <h2 id={titleId} className={`${styles.title} ${styles[tone]}`}>{title}</h2>
         </div>
+        {status && <span className={`${styles.resultStatus} ${styles[tone]}`}>{status}</span>}
         {gameType && <span className={styles.gameName}>{t(`gameType.${gameType}`)}</span>}
       </header>
       <div className={styles.layout}>

@@ -73,7 +73,7 @@ describe('preference storage migration', () => {
     expect(() => writePreference('theme', 'felt')).not.toThrow();
   });
 
-  it('should restore theme, motion, and turn-sound stores from legacy preferences', async () => {
+  it('should keep modern style while restoring other preferences and retaining theme switching', async () => {
     vi.resetModules();
     values.set('bridge.theme', 'paper');
     values.set('bridge.ui.reducedMotion', 'true');
@@ -81,7 +81,8 @@ describe('preference storage migration', () => {
     const { useThemeStore } = await import('../../../client/src/stores/theme-store');
     const { useMotionStore } = await import('../../../client/src/stores/motion-store');
     const { useTurnSoundStore } = await import('../../../client/src/stores/turn-sound-store');
-    expect(useThemeStore.getState().theme).toBe('paper');
+    expect(useThemeStore.getState().theme).toBe('dashboard');
+    expect(values.get('bridge.theme')).toBe('paper');
     expect(useMotionStore.getState().reducedMotion).toBe(true);
     expect(useTurnSoundStore.getState().enabled).toBe(false);
     useThemeStore.getState().setTheme('felt');

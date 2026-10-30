@@ -99,10 +99,10 @@
 @keyframes popoverOut {
   to { opacity: 0; transform: translateY(-6px) scale(0.97); }
 }
-.menu { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); width: auto; }
+.menu { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-3); width: 320px; }
 .menuLinks { flex-direction: column; align-items: stretch; gap: 0; width: 100%; }
 .menuLinks a { justify-content: flex-start; padding: 0 var(--space-2); }
-.menuPrefs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: 0 var(--space-2); }
+.menuPrefs { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-3) var(--space-2); border-top: 1px solid var(--separator); color: var(--text-secondary); font-size: var(--text-xs); }
 .error { color: var(--color-danger); font-size: var(--text-sm); }
 
 .menuGroup { display: none; }

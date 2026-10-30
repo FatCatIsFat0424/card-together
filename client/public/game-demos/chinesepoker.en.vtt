@@ -1,0 +1,63 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:10.192
+Start and controls
+Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+
+00:00:10.192 --> 00:00:16.492
+Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+
+00:00:16.492 --> 00:00:26.392
+Chinese Poker | Arrange simultaneously
+Split 13 cards into front (3), middle (5), and back (5). There is no turn order.
+
+00:00:26.392 --> 00:00:34.492
+Back must be at least as strong as middle, and middle at least as strong as front. Reversing strength fouls. Front recognizes trips, pairs and high cards only.
+
+00:00:34.492 --> 00:00:52.492
+Select cards, then a row
+Select club two, diamond two and spade nine, then click the front row. This makes a pair.
+
+00:00:52.492 --> 00:01:12.492
+Fill the middle
+Place club three, diamond four, heart five, spade six and club seven in the middle: a seven-high straight.
+
+00:01:12.492 --> 00:01:30.492
+Fill the back
+Place the remaining hearts K, Q, 9, 7, 3 in the back: a flush. Each row shows its category.
+
+00:01:30.492 --> 00:01:41.492
+Adjust before confirming
+Click a placed card to return it to your hand, then replace it. Auto Arrange can suggest a legal arrangement.
+
+00:01:41.492 --> 00:01:50.492
+A legal arrangement does not guarantee a win. You may change it before confirming. Select cards and click a row; dragging is not required.
+
+00:01:50.492 --> 00:02:00.392
+Essential safeguard | Check for a foul
+Rule explanation: reversed row strength displays a foul warning. Fix it before submitting.
+
+00:02:00.392 --> 00:02:08.492
+A second confirmation can submit a foul, but every row loses against a legal hand. Two foul hands score zero against each other. Three-card flushes and straights do not count in front.
+
+00:02:08.492 --> 00:02:24.492
+Submit, then wait
+Once confirmed, your arrangement cannot change. Other players’ arrangements remain private until all four submit.
+
+00:02:24.492 --> 00:02:38.492
+All four submit, then reveal
+Compare all three rows separately with each opponent. Ordinary rows score one point; tied rows score zero.
+
+00:02:38.492 --> 00:02:51.692
+Understand sweeps and bonuses
+East sweeps North, and West sweeps South. Winning every row against one opponent doubles that matchup.
+
+00:02:51.692 --> 00:03:02.492
+Bonuses: front trips 3; middle full house/quads/straight flush 2/8/10; back quads/straight flush 4/5. Sweeping everyone doubles those matchups again. Suits never break ties; A2345 is the lowest straight.
+
+00:03:02.492 --> 00:03:12.392
+Result | Sum all three matchups
+West wins with +55; East +10, South -32, North -33. All scores sum to zero.
+
+00:03:12.392 --> 00:03:39.231
+Scroll down for each matchup’s calculation. Return to the room for another deal. Timeout makes an automatic legal arrangement, identified in the result.

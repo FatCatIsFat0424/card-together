@@ -18,6 +18,7 @@ import { useTurnSound } from '../hooks/use-turn-sound';
 import { LanguageSwitch } from './LanguageSwitch';
 import { MusicControl } from './MusicControl';
 import { ThemeSwitch } from './ThemeSwitch';
+import { AccountMenuLinks } from './AccountMenuLinks';
 import { AppIcon } from './AppIcon';
 import { Button } from './Button';
 import { CoinBalance } from './CoinBalance';
@@ -235,11 +236,17 @@ export function TopBar(): ReactNode {
                 <AppIcon name="music" />{t('topbar.music')}
               </button>
             </div>}
-            {showLinks && <nav className={styles.menuLinks}>{links}</nav>}
+            {showLinks && accountId && <nav className={styles.menuLinks}>
+              <NavLink to="/" end data-rail-duplicate>{t('nav.lobby')}</NavLink>
+              <NavLink to="/friends" data-rail-duplicate>{t('nav.friends')}</NavLink>
+              <NavLink to="/shop" data-rail-duplicate>{t('nav.shop')}</NavLink>
+              <AccountMenuLinks accountId={accountId} />
+            </nav>}
             <div className={styles.menuPrefs}>
-              <ThemeSwitch />
+              <span>{t('accountMenu.language')}</span>
               <LanguageSwitch />
             </div>
+            <ThemeSwitch />
             {accountId && <Button variant="danger-text" className={styles.menuSignOut} onClick={requestSignOut} disabled={busy}
               icon="logout">{t('topbar.signOut')}</Button>}
           </div>}

@@ -1,12 +1,12 @@
 // ─── DesktopShell: the left rail used on desktop and tablet widths; its bottom holds the account controls ───
 
 import type { AnimationEvent, ReactNode } from 'react';
-import { Link } from 'react-router-dom';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useMusicStore } from '../stores/music-store';
 import { notificationUnreadCount, messageUnreadCount, useSocialStore } from '../stores/social-store';
 import { Avatar } from './Avatar';
+import { AccountMenuLinks } from './AccountMenuLinks';
 import { Button } from './Button';
 import { CoinBalance } from './CoinBalance';
 import { DesktopRail } from './DesktopRail';
@@ -101,17 +101,17 @@ export function DesktopShell({
         {avatar}
         <div className={styles.menuIdentityText}>
           <p className={styles.menuName}>{account.nickname}</p>
-          <CoinBalance />
+          <p className={styles.menuCaption}>{t('topbar.accountMenu')}</p>
         </div>
       </div>}
       <nav className={styles.menuLinks}>
-        <Link to={`/players/${encodeURIComponent(accountId)}`}>{t('player.myProfile')}</Link>
-        <Link to="/account">{t('nav.account')}</Link>
+        <AccountMenuLinks accountId={accountId} />
       </nav>
       <div className={styles.menuPrefs}>
-        <ThemeSwitch />
+        <span>{t('accountMenu.language')}</span>
         <LanguageSwitch />
       </div>
+      <ThemeSwitch />
       <Button variant="danger-text" className={styles.menuSignOut} onClick={signOut.request} disabled={signOut.busy}
         icon="logout">{t('topbar.signOut')}</Button>
     </div>}

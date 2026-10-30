@@ -185,6 +185,47 @@ describe('spectator table perspective', () => {
     expect(game).toEqual(original);
   });
 
+  it.each(['N', 'W'] as const)('keeps Bridge targets accessible with a %s declarer after removing target prose', async (declarer) => {
+    const game = snapshot('bridge');
+    if (game.gameType !== 'bridge') throw new Error('Expected Bridge');
+    const html = await render({ ...game, phase: 'playing', bidding: null,
+      contract: { level: 3, suit: 'hearts', declarer },
+      playing: { currentTrick: {}, trickLeadSeat: 'N', currentTurnSeat: 'N', completedTricks: [],
+        trickCountNS: 7, trickCountEW: 2 } });
+    const progress = html.match(/role="progressbar"[^>]+/g) ?? [];
+    const ns = progress.find((bar) => bar.includes('aria-label="NS"'));
+    const ew = progress.find((bar) => bar.includes('aria-label="EW"'));
+    const nsTarget = declarer === 'N' ? 9 : 5;
+    const ewTarget = declarer === 'N' ? 5 : 9;
+    expect(ns).toContain(`aria-valuemax="${nsTarget}"`);
+    expect(ns).toContain(`aria-valuenow="${Math.min(7, nsTarget)}"`);
+    expect(ns).toContain(`aria-valuetext="7 / ${nsTarget}"`);
+    expect(ew).toContain(`aria-valuemax="${ewTarget}"`);
+    expect(ew).toContain(`aria-valuetext="2 / ${ewTarget}"`);
+    expect(html).not.toContain('Needs 9 tricks');
+    expect(html).not.toContain('NS needs');
+    expect(html).not.toContain('EW needs');
+  });
+
+  it.each([
+    { tricks: 9, en: 'Contract made', zh: '剛好達約' },
+    { tricks: 10, en: 'Overtricks: 1', zh: '超約 1 墩' },
+    { tricks: 7, en: 'Down 2', zh: '宕 2 墩' },
+  ])('shows the Bridge contract outcome for $tricks declarer tricks in both locales', async ({ tricks, en, zh }) => {
+    const game = snapshot('bridge');
+    if (game.gameType !== 'bridge') throw new Error('Expected Bridge');
+    const contract = { level: 3, suit: 'hearts', declarer: 'W' } as const;
+    const result = { contract, requiredTricks: 9, declarerTeamTricks: tricks,
+      defenderTeamTricks: 13 - tricks, declarerTeamWins: tricks >= 9 };
+    for (const [locale, expected] of [['en', en], ['zh-TW', zh]] as const) {
+      useI18nStore.getState().setLocale(locale);
+      const html = await render({ ...game, phase: 'scoring', contract, bidding: null, playing: null, result });
+      expect(html).toContain(expected);
+      expect(html).toContain(locale === 'en' ? 'Target 9 tricks' : '目標 9 墩');
+      expect(html).toContain('role="dialog"');
+    }
+  });
+
   it('keeps the previous selected hand and covered cards while a presentation plays', () => {
     const game = snapshot('sevens');
     if (game.gameType !== 'sevens') throw new Error('Expected Sevens');

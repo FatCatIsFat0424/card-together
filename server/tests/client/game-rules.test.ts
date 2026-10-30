@@ -9,8 +9,9 @@ import type {
 import { GameRulesContent } from '../../../client/src/components/GameRulesDialog';
 import { matchRulesContext, roomRulesContext } from '../../../client/src/game-rules-context';
 import type { GameRulesContext } from '../../../client/src/game-rules-context';
-import { getGameRules } from '../../../client/src/game-rules-i18n';
+import { getGameRules, getSharedGameRules } from '../../../client/src/game-rules-i18n';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
+import { hasGameDemo } from '../../../client/src/game-demos';
 
 // Static rendering otherwise reads Zustand's initial locale rather than test updates.
 vi.mock('../../../client/src/stores/i18n-store', async (importOriginal) => {
@@ -88,6 +89,11 @@ describe('contextual game rules', () => {
       useI18nStore.getState().setLocale(locale);
       const html = render(gameType);
       const sections = getGameRules(gameType, locale);
+      const quickStart = html.split('<details')[0];
+      expect(quickStart).toContain(`<h3>${useI18nStore.getState().t('rules.summary')}</h3>`);
+      expect(quickStart).not.toContain(`<h3>${requiredRule[gameType][locale]}</h3>`);
+      expect(html.match(/<details[^>]*>/g)).toHaveLength(hasGameDemo(gameType) ? 3 : 2);
+      expect(html).not.toMatch(/<details[^>]*\bopen(?:[\s=>])/);
       expect(sections.length).toBeGreaterThanOrEqual(3);
       expect(sections.map((section) => section.title)).toContain(requiredRule[gameType][locale]);
       for (const section of sections) {
@@ -114,6 +120,24 @@ describe('contextual game rules', () => {
       expect(html).not.toContain(useI18nStore.getState().t('rules.roomSettings'));
       expect(html).not.toContain(useI18nStore.getState().t('rules.playContinues'));
     }
+  });
+
+  it('describes only the selected game player counts and default timer', () => {
+    const checkers = getSharedGameRules('chinesecheckers', 'zh-TW');
+    expect(checkers[0].table?.rows[0]).toEqual(['人數', '2、3、4、6 人']);
+    expect(checkers[1].table?.rows[0]).toEqual(['預設', '每回合 60 秒，用完再扣 300 秒保留時間']);
+    for (const game of ['tenhalf', 'stud'] as const) {
+      expect(getSharedGameRules(game, 'en')[0].table?.rows[0]).toEqual(['Players', '2–8 players']);
+    }
+    expect(getSharedGameRules('bridge', 'en')[1].table?.rows[0])
+      .toEqual(['Default', '300 seconds per turn, then a 300-second reserve']);
+    expect(render('reversi')).not.toContain('practice and are not recorded');
+  });
+
+  it('describes Ten and a Half rotations without inventing a lobby hand count', () => {
+    const quickStart = render('tenhalf').split('<details')[0];
+    expect(quickStart).toContain('each seat banks twice');
+    expect(quickStart).not.toContain('0 hands');
   });
 
   it('defaults legacy room options to off and limits status to the selected game', () => {
@@ -221,6 +245,6 @@ describe('contextual game rules', () => {
     expect(render('sevens')).not.toContain(t('sevens.rulesCloseOnEnd'));
     expect(render('sevens', matchRulesContext({ ...sevens, options: { closeOnEnd: true } })))
       .toContain(t('sevens.rulesCloseOnEnd'));
-    expect(render('bridge')).not.toContain(`<h3>${t('rules.summary')}</h3>`);
+    expect(render('bridge')).toContain(`<h3>${t('rules.summary')}</h3>`);
   });
 });

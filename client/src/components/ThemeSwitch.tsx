@@ -3,10 +3,14 @@
 import type { ReactNode } from 'react';
 import { useActiveIndicator } from '../hooks/use-active-indicator';
 import { useI18nStore } from '../stores/i18n-store';
-import { THEMES, useThemeStore } from '../stores/theme-store';
+import { THEMES, THEME_SWITCH_ENABLED, useThemeStore } from '../stores/theme-store';
 import styles from './ThemeSwitch.module.css';
 
 export function ThemeSwitch(): ReactNode {
+  return THEME_SWITCH_ENABLED ? <ThemeOptions /> : null;
+}
+
+function ThemeOptions(): ReactNode {
   const { t } = useI18nStore();
   const { theme, setTheme } = useThemeStore();
   const { containerRef, indicatorRef } = useActiveIndicator<HTMLDivElement, HTMLSpanElement>('[aria-pressed="true"]', theme);

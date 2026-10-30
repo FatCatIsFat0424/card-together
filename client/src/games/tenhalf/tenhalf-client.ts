@@ -16,9 +16,9 @@ export const tenHalfClient: ClientGame<'tenhalf'> = {
   spectatorPatch: () => ({}),
   rules: {
     summary: (context, t) => {
-      const hands = String(context?.tenHalfHands ?? 0);
-      return [t('tenhalf.rulesBet', { hands }), t('tenhalf.rulesPlay'), t('tenhalf.rulesSpecial'),
-        t('tenhalf.rulesPay', { hands })];
+      const hands = context?.tenHalfHands;
+      return [t(hands === undefined ? 'tenhalf.rulesMatch' : 'tenhalf.rulesMatchHands', { hands: String(hands ?? '') }),
+        t('tenhalf.rulesBet'), t('tenhalf.rulesPlay'), t('tenhalf.rulesSpecial'), t('tenhalf.rulesPay')];
     },
     roomContext: (room) => {
       const seated = [...Object.values(room.seats), ...(room.additionalSeats ?? [])].filter((seat) => seat.player).length;

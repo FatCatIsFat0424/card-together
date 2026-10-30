@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import type { ReactNode } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import type { FriendsData, MatchHistory, MatchSummary, PublicAccount } from '@shared/types';
 import { apiRequest } from '../api';
 import { Nameplate } from '../components/Nameplate';
@@ -27,6 +27,9 @@ const WIDE_QUERY = '(min-width: 1024px) and (min-height: 501px)';
 
 function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
   const { t } = useI18nStore();
+  const location = useLocation();
+  const historyRef = useRef<HTMLElement>(null);
+  const historyJump = useRef<string | null>(null);
   const wide = useMediaQuery(WIDE_QUERY, { noSsr: true });
   const desktop = useMediaQuery(DESKTOP_SHELL_QUERY, { noSsr: true });
   const viewerId = useAccountStore((state) => state.account?.id);
@@ -86,6 +89,15 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
       window.removeEventListener('focus', handleFocus);
     };
   }, [refresh]);
+
+  useEffect(() => {
+    if (loading || location.hash !== '#match-history' || historyJump.current === location.key) return;
+    const target = historyRef.current;
+    if (!target) return;
+    target.scrollIntoView({ block: 'start' });
+    target.focus({ preventScroll: true });
+    historyJump.current = location.key;
+  }, [loading, location.hash, location.key]);
 
   const act = async (path: string, method: 'POST' | 'DELETE', body?: object): Promise<void> => {
     if (busy) return;
@@ -185,7 +197,8 @@ function PlayerProfile({ accountId }: { accountId: string }): ReactNode {
       <Button disabled={disabled} onClick={() => void refresh()}>{t('common.retry')}</Button>
     </div>}
     {updated && <p className={styles.success} role="status">{t('player.updated')}</p>}
-    {history && <section className={styles.history}>
+    {history && <section ref={historyRef} id="match-history" className={styles.history} tabIndex={-1}
+      aria-label={t('profile.tab.history')}>
       {history === 'private' ? <p className={styles.description}>{t('history.private')}</p>
         : <MatchHistoryList matches={history.matches} players={history.players} accountId={accountId} showStatsButton={false} />}
     </section>}

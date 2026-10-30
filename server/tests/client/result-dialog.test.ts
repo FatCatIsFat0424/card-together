@@ -63,6 +63,15 @@ describe('result dialog', () => {
     }))).toContain('Returning to the room');
   });
 
+  it('should display an optional contract outcome beside the title', () => {
+    const props = { title: 'Declarer wins!', pending: false, error: '', onBack: () => undefined };
+    const withStatus = renderToStaticMarkup(createElement(ResultDialog, { ...props, status: 'Overtricks: 1' }));
+    const header = withStatus.split('</header>')[0];
+    expect(header).toContain('Declarer wins!');
+    expect(header).toContain('Overtricks: 1');
+    expect(renderToStaticMarkup(createElement(ResultDialog, props))).not.toContain('Overtricks: 1');
+  });
+
   it('should offer the history as a closed button beside the primary action', () => {
     const html = renderToStaticMarkup(createElement(ResultDialog, {
       title: 'x', pending: false, error: '', onBack: () => undefined,

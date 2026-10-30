@@ -63,7 +63,7 @@ export function railItemPath(id: RailItemId, accountId: string): string {
     case 'messages': return '/messages';
     case 'shop': return '/shop';
     case 'achievements': return '/achievements';
-    case 'history': return `/players/${encodeURIComponent(accountId)}`;
+    case 'history': return `/players/${encodeURIComponent(accountId)}#match-history`;
   }
 }
 

@@ -145,6 +145,7 @@ export function BridgeTable(): ReactNode {
   }
 
   const completedTricks = playing?.completedTricks ?? [];
+  const trickDifference = result ? result.declarerTeamTricks - result.requiredTricks : 0;
   const overlay = phase === 'scoring' && result && !heldTrick && (
     <ResultDialog tone={result.declarerTeamWins ? 'win' : 'lose'}
       history={completedTricks.length > 0 ? {
@@ -153,16 +154,31 @@ export function BridgeTable(): ReactNode {
           declarer={result.contract.declarer} className={styles.resultHistory} bare />,
       } : null}
       title={result.declarerTeamWins ? t('score.declarerWins') : t('score.defenderWins')}
+      status={trickDifference === 0 ? t('score.contractMade') : t(
+        trickDifference > 0 ? 'score.overtricks' : 'score.undertricks',
+        { n: String(Math.abs(trickDifference)) },
+      )}
       pending={actionPending} error={actionError} disabled={!connectionReady} onBack={handleBackToRoom}>
       <dl className={styles.scoreDetails}>
-        <dt>{t('game.contract')}</dt>
-        <dd>
-          <BidLabel level={result.contract.level} suit={result.contract.suit} />{' '}
-          {t('score.declarerSeat', { seat: seatLabel(result.contract.declarer) })}
-        </dd>
-        <dt>{t('score.required')}</dt><dd>{result.requiredTricks}</dd>
-        <dt>{t('score.declarerTricks')}</dt><dd>{result.declarerTeamTricks}</dd>
-        <dt>{t('score.defenderTricks')}</dt><dd>{result.defenderTeamTricks}</dd>
+        <div className={styles.resultContract}>
+          <dt>{t('game.contract')}</dt>
+          <dd className={styles.resultContractMain}>
+            <span className={styles.resultBid}><BidLabel level={result.contract.level} suit={result.contract.suit} /></span>
+            <span className={styles.resultDeclarer} aria-label={t('score.declarerSeat', { seat: seatLabel(result.contract.declarer) })}>
+              <span className={styles.declarerBadge}>{t('table.declarer')}</span> {seatLabel(result.contract.declarer)}
+            </span>
+          </dd>
+          <dt className={styles.requiredLabel}>{t('score.required')}</dt>
+          <dd className={styles.resultTarget}>{t('score.targetTricks', { n: String(result.requiredTricks) })}</dd>
+        </div>
+        <div className={styles.resultStat}>
+          <dt>{t('score.declarerTricks')}</dt>
+          <dd className={result.declarerTeamWins ? styles.winningTricks : ''}>{result.declarerTeamTricks}</dd>
+        </div>
+        <div className={styles.resultStat}>
+          <dt>{t('score.defenderTricks')}</dt>
+          <dd className={!result.declarerTeamWins ? styles.winningTricks : ''}>{result.defenderTeamTricks}</dd>
+        </div>
       </dl>
     </ResultDialog>
   );

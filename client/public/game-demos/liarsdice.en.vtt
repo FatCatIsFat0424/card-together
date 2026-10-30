@@ -1,0 +1,64 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:10.310
+Start and controls
+Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+
+00:00:10.310 --> 00:00:16.610
+Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+
+00:00:16.610 --> 00:00:25.410
+Liar’s Dice | Last player with dice wins
+Everyone starts with five dice. Normally you see only your own. This example has two players.
+
+00:00:25.410 --> 00:00:32.610
+A bid estimates the total across every cup, not just your dice. The live total shrinks as players lose dice.
+
+00:00:32.610 --> 00:00:48.610
+Choose quantity and face, then bid
+North bids four twos: at least four matching dice across all cups. The opening player cannot challenge.
+
+00:00:48.610 --> 00:00:52.110
+Challenge | Ones are normally wild
+East challenges. After the cups open, count twos and wild ones to check whether there are four.
+
+00:00:52.110 --> 00:00:59.110
+Two twos plus two ones make exactly four. The bid is true, so challenger East loses a die.
+
+00:00:59.110 --> 00:01:08.610
+If the count meets the bid, the challenger loses one die; otherwise the bidder loses one. The loser starts the next round and everyone rerolls.
+
+00:01:08.610 --> 00:01:25.360
+Bidding ones removes wilds
+Next round East bids three ones. North challenges. This time only actual ones count.
+
+00:01:25.360 --> 00:01:32.360
+There are only two ones. The bid is false, so bidder East loses another die.
+
+00:01:32.360 --> 00:01:38.610
+Once anyone bids ones, ones stop being wild for the rest of that round, even after a different face is bid. A bid of ones counts only ones.
+
+00:01:38.610 --> 00:01:49.360
+Wilds reset with a new round
+After rerolling, ones are wild again. East bids three twos and North challenges to check.
+
+00:01:49.360 --> 00:01:56.610
+Four dice match, meeting the bid of three. Challenger North loses a die.
+
+00:01:56.610 --> 00:02:07.610
+Raise quantity or face
+North bids one two; East raises to one three. North can challenge if they do not believe it.
+
+00:02:07.610 --> 00:02:16.610
+At the same quantity, faces rank 2,3,4,5,6,1. Alternatively increase quantity and choose any face. After ones, changing face requires more dice. No halving or doubling rule applies.
+
+00:02:16.610 --> 00:02:52.610
+Play to elimination | Repeated rounds accelerated
+Each challenge costs one die. Reroll and bid again. Every remaining round is shown here.
+
+00:02:52.610 --> 00:03:02.510
+Result | Zero dice means elimination
+North loses their final die. East still has three and wins the match.
+
+00:03:02.510 --> 00:03:32.453
+Skip eliminated players. If the loser is eliminated, the next surviving player starts. Later elimination places higher. Return to the room to play again.

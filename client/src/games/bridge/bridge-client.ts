@@ -22,7 +22,7 @@ export const bridgeClient: ClientGame<'bridge'> = {
   observedView: (game) => ({ hands: game.observedHands ?? null }),
   spectatorPatch: spectatorHand,
   rules: {
-    summary: () => [],
+    summary: (_context, t) => [t('bridge.rulesGoal'), t('bridge.rulesBid'), t('bridge.rulesPlay'), t('bridge.rulesEnd')],
     roomContext: () => NO_RULES_OPTION,
     matchContext: () => NO_RULES_OPTION,
   },

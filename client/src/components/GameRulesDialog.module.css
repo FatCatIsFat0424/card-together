@@ -36,7 +36,12 @@
 .option dd { flex-shrink: 0; font-weight: 600; color: var(--color-primary); }
 .summary { padding: var(--spacing-md); border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--bg-card); }
 .playNotice { color: var(--text-muted); margin-bottom: var(--spacing-lg); }
-.rules > section + section { margin-top: var(--spacing-xl); }
+.rules > * + * { margin-top: var(--spacing-md); }
+.details { border: 1px solid var(--border-color); border-radius: var(--radius-lg); }
+.details > summary { padding: var(--spacing-md); min-height: 44px; cursor: pointer; font-weight: 600; color: var(--text-primary); }
+.details > summary:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; border-radius: var(--radius-lg); }
+.sections { padding: 0 var(--spacing-md) var(--spacing-md); }
+.sections > section + section { margin-top: var(--spacing-lg); }
 .rules h3 { margin-bottom: var(--spacing-sm); font-size: var(--text-base); color: var(--text-primary); }
 .rules ul { padding-left: var(--spacing-lg); color: var(--text-secondary); }
 .rules li + li { margin-top: var(--spacing-sm); }

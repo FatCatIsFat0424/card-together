@@ -13,8 +13,12 @@ import { AuctionTable, BidLabel } from './AuctionTable';
 import styles from './GameInfoRail.module.css';
 import { TrickHistory } from '../games/bridge/TrickHistory';
 
-function Pips({ count, target, team }: { count: number; target: number; team: 'ns' | 'ew' }): ReactNode {
-  return <span className={styles.pips}>
+function Pips({ count, target, team, label }: {
+  count: number; target: number; team: 'ns' | 'ew'; label: string;
+}): ReactNode {
+  return <span className={styles.pips} role="progressbar" aria-label={label}
+    aria-valuemin={0} aria-valuemax={target} aria-valuenow={Math.min(count, target)}
+    aria-valuetext={`${count} / ${target}`}>
     {Array.from({ length: target }, (_, i) => (
       <span key={i} className={`${styles.pip} ${i < count ? styles[team] : ''}`} />
     ))}
@@ -24,7 +28,6 @@ function Pips({ count, target, team }: { count: number; target: number; team: 'n
 export function GameInfoRail(): ReactNode {
   const { t } = useI18nStore();
   const mySeat = useRoomStore((state) => ['N', 'E', 'S', 'W'].includes(state.mySeat ?? '') ? state.mySeat as Seat : null);
-  const roomInfo = useRoomStore((state) => state.roomInfo);
   const { phase, bidding, dealerSeat, currentTurnSeat, contract, playing } = useGameStore(useShallow((state) => ({
     phase: state.phase,
     bidding: state.bidding,
@@ -40,44 +43,34 @@ export function GameInfoRail(): ReactNode {
   const declarerNS = contract?.declarer === 'N' || contract?.declarer === 'S';
   const targetNS = declarerNS ? needed : TOTAL_TRICKS + 1 - needed;
   const targetEW = declarerNS ? TOTAL_TRICKS + 1 - needed : needed;
-  const declarerName = contract && roomInfo?.seats[contract.declarer].player?.nickname;
 
   return (
     <aside className={styles.rail}>
-      <section className={styles.box}>
-        <h2 className={styles.caption}>{t('game.contract')}</h2>
-        {contract ? <>
-          <div className={styles.contractMain}>
-            <span className={styles.big}><BidLabel level={contract.level} suit={contract.suit} /></span>
-            <span className={styles.meta}>
-              <span className={styles.badge}>{t('table.declarer')}</span> {seatLabel(contract.declarer)}
-              {declarerName && <> {declarerName}</>}
-            </span>
+      <section className={`${styles.box} ${contract ? styles.contractSummary : ''}`}>
+        <div className={styles.contractInfo}>
+          <h2 className={styles.caption}>{t('game.contract')}</h2>
+          {contract ?
+            <div className={styles.contractMain}>
+              <span className={styles.big}><BidLabel level={contract.level} suit={contract.suit} /></span>
+            </div>
+          : <div className={styles.kv}>
+            {phase === 'bidding' && <span className={styles.status}>{t('table.biddingNow')}</span>}
+            {dealerSeat && <span>{t('table.dealerIs', { seat: seatLabel(dealerSeat as Seat) })}</span>}
+          </div>}
+        </div>
+        {contract && <div className={styles.scores} role="group" aria-label={t('table.tricks')}>
+          <div className={styles.scoreRow}>
+            <span className={`${styles.team} ${styles.nsText}`}>{t('table.teamNS')}</span>
+            <Pips count={playing?.trickCountNS ?? 0} target={targetNS} team="ns" label={t('table.teamNS')} />
+            <span className={`${styles.count} ${styles.nsText}`}>{playing?.trickCountNS ?? 0}</span>
           </div>
-          <div className={styles.kv}>{t('table.needs', { n: String(needed) })}</div>
-        </> : <div className={styles.kv}>
-          {phase === 'bidding' && <span className={styles.status}>{t('table.biddingNow')}</span>}
-          {dealerSeat && <span>{t('table.dealerIs', { seat: seatLabel(dealerSeat as Seat) })}</span>}
+          <div className={styles.scoreRow}>
+            <span className={`${styles.team} ${styles.ewText}`}>{t('table.teamEW')}</span>
+            <Pips count={playing?.trickCountEW ?? 0} target={targetEW} team="ew" label={t('table.teamEW')} />
+            <span className={`${styles.count} ${styles.ewText}`}>{playing?.trickCountEW ?? 0}</span>
+          </div>
         </div>}
       </section>
-
-      {contract && <section className={styles.box}>
-        <h2 className={styles.caption}>{t('table.tricks')}</h2>
-        <div className={styles.scoreRow}>
-          <span className={`${styles.team} ${styles.nsText}`}>{t('table.teamNS')}</span>
-          <Pips count={playing?.trickCountNS ?? 0} target={targetNS} team="ns" />
-          <span className={`${styles.count} ${styles.nsText}`}>{playing?.trickCountNS ?? 0}</span>
-        </div>
-        <div className={styles.scoreRow}>
-          <span className={`${styles.team} ${styles.ewText}`}>{t('table.teamEW')}</span>
-          <Pips count={playing?.trickCountEW ?? 0} target={targetEW} team="ew" />
-          <span className={`${styles.count} ${styles.ewText}`}>{playing?.trickCountEW ?? 0}</span>
-        </div>
-        <p className={styles.note}>
-          {t('table.target', { team: t('table.teamNS'), n: String(targetNS) })} · {t('table.target', {
-            team: t('table.teamEW'), n: String(targetEW) })}
-        </p>
-      </section>}
 
       <TrickHistory tricks={playing?.completedTricks ?? []} mySeat={mySeat} declarer={contract?.declarer ?? null}
         className={styles.box} summaryClassName={styles.caption} />

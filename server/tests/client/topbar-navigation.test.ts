@@ -92,7 +92,7 @@ describe('topbar navigation', () => {
 
   it.each(['/game/ABC123', '/room/ABC123', '/friends', '/messages', '/messages/bob', '/account', '/shop', '/achievements'])('keeps account navigation on %s', (path) => {
     const html = render(path);
-    for (const label of ['大廳', '好友', '我的個人頁面', '我的帳號']) expect(html).toContain(label);
+    for (const label of ['大廳', '好友', '玩家檔案', '個人設定']) expect(html).toContain(label);
     expect(html).toContain('href="/players/alice"');
     expect(html).toContain('href="/shop"');
     // The open page's button links back instead; without history that is the lobby.

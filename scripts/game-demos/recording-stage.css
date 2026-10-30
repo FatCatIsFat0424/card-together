@@ -1,0 +1,13 @@
+#root > .lessonHeader { flex: 0 0 140px; height: 140px; padding: 12px 24px; border-bottom: 1px solid var(--border); background: #101827; position: relative; z-index: 1600; }
+.lessonMeta { color: #9bb2ce; font-size: 14px; letter-spacing: .04em; }
+.lessonHeader h1 { font-size: 25px; margin: 5px 0; color: #69b4ff; }
+.lessonHeader p { font-size: 21px; line-height: 1.5; margin: 0; color: #f4f7fc; max-width: 1180px; }
+.lessonTable { --topbar-height: 140px; }
+.lessonTable [class*="gameContainer"] { height: calc(100dvh - 140px); }
+.lessonRule { position: fixed; z-index: 1550; top: 245px; left: 160px; width: min(670px, 65vw); padding: 24px; background: #17283ff5; border: 1px solid #5b9cdd; border-radius: 16px; box-shadow: 0 16px 40px #0008; }
+.lessonRule span { color: #69b4ff; font-size: 16px; }
+.lessonRule p { margin: 12px 0 0; font-size: 25px; line-height: 1.6; white-space: pre-line; }
+.lessonReveal { position: fixed; z-index: 1500; inset: 140px 0 0; background: #101827f5; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+.MuiDialog-container { padding-top: 140px; }
+.MuiDialog-paper { max-height: calc(100% - 164px) !important; }
+#lessonPointer { position: fixed; z-index: 1700; width: 40px; height: 40px; border: 3px solid #ffd45b; border-radius: 50%; background: #ffd45b25; pointer-events: none; opacity: 0; top: 0; left: 0; }

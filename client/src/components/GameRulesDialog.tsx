@@ -8,15 +8,34 @@ import Tab from '@mui/material/Tab';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { GAME_TYPES } from '@shared/constants';
 import type { GameType } from '@shared/types';
-import { getGameRules } from '../game-rules-i18n';
+import { gameRulesTranslations, getSharedGameRules } from '../game-rules-i18n';
+import type { GameRuleSection } from '../game-rules-i18n';
 import type { GameRulesContext } from '../game-rules-context';
 import { gameRulesSummary } from '../games/rules-summary';
 import { useI18nStore } from '../stores/i18n-store';
 import { useMotionStore } from '../stores/motion-store';
 import { AppIcon } from './AppIcon';
+import { GameDemo } from './GameDemo';
 import { dialogPaperClass, dialogParts } from '../styles/dialog';
 import styles from './GameRulesDialog.module.css';
 import motionStyles from '../styles/dialog-motion.module.css';
+
+function RuleSection({ section }: { readonly section: GameRuleSection }): ReactNode {
+  return <section>
+    <h3>{section.title}</h3>
+    {section.table && <div className={styles.tableScroll}>
+      <table aria-label={section.title}>
+        <thead><tr>{section.table.headers.map((header) => <th key={header} scope="col">{header}</th>)}</tr></thead>
+        <tbody>{section.table.rows.map((row) => <tr key={row.join('|')}>
+          {row.map((cell, index) => index === 0
+            ? <th key={index} scope="row">{cell}</th>
+            : <td key={index}>{cell}</td>)}
+        </tr>)}</tbody>
+      </table>
+    </div>}
+    <ul>{section.paragraphs.map((paragraph) => <li key={paragraph}>{paragraph}</li>)}</ul>
+  </section>;
+}
 
 export function GameRulesContent({ gameType, context }: {
   readonly gameType: GameType;
@@ -37,20 +56,17 @@ export function GameRulesContent({ gameType, context }: {
       </dl>)}
     </section>}
     {context?.active && <p className={styles.playNotice}>{t('rules.playContinues')}</p>}
-    {getGameRules(gameType, locale).map((section) => <section key={section.title}>
-      <h3>{section.title}</h3>
-      {section.table && <div className={styles.tableScroll}>
-        <table aria-label={section.title}>
-          <thead><tr>{section.table.headers.map((header) => <th key={header} scope="col">{header}</th>)}</tr></thead>
-          <tbody>{section.table.rows.map((row) => <tr key={row.join('|')}>
-            {row.map((cell, index) => index === 0
-              ? <th key={index} scope="row">{cell}</th>
-              : <td key={index}>{cell}</td>)}
-          </tr>)}</tbody>
-        </table>
-      </div>}
-      <ul>{section.paragraphs.map((paragraph) => <li key={paragraph}>{paragraph}</li>)}</ul>
-    </section>)}
+    <GameDemo key={gameType} gameType={gameType} />
+    <details className={styles.details}>
+      <summary>{t('rules.details')}</summary>
+      <div className={styles.sections}>{gameRulesTranslations[locale][gameType].map((section) =>
+        <RuleSection key={section.title} section={section} />)}</div>
+    </details>
+    <details className={styles.details}>
+      <summary>{t('rules.roomGuide')}</summary>
+      <div className={styles.sections}>{getSharedGameRules(gameType, locale).map((section) =>
+        <RuleSection key={section.title} section={section} />)}</div>
+    </details>
   </article>;
 }
 
