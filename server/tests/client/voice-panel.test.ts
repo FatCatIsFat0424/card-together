@@ -26,7 +26,7 @@ vi.mock('../../../client/src/stores/room-store', () => ({
 vi.mock('../../../client/src/api', () => ({ apiRequest: vi.fn() }));
 vi.mock('../../../client/src/components/Avatar', () => ({ Avatar: () => null }));
 
-import { VoiceParticipantRow, VoicePanel } from '../../../client/src/components/VoicePanel';
+import { VoiceDevicePickers, VoiceParticipantRow, VoicePanel } from '../../../client/src/components/VoicePanel';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
 import {
   summarizeVoice, toggleExpandedRow, visibleExpandedRow,
@@ -62,12 +62,13 @@ beforeEach(() => {
 });
 
 describe('voice panel states', () => {
-  it('should show the status card, a join button and the device check when not joined, without the room code', () => {
+  it('should show the status card with a compact join pill and folded device settings when not joined', () => {
     const html = render();
     expect(html).toContain('尚未加入語音');
     expect(html).toContain('加入後可與同桌的人語音');
-    expect(html).toContain('加入語音');
-    expect(html).toContain('加入前先確認裝置');
+    expect(html).toMatch(/<button[^>]*aria-label="加入語音"[^>]*>.*?加入<\/button>/);
+    expect(html).toMatch(/<button[^>]*aria-expanded="false"[^>]*>.*?裝置設定/);
+    expect(html).toContain('麥克風：系統預設・喇叭：系統預設');
     expect(html).not.toContain('ABC123');
     expect(html).not.toContain('aria-pressed="true"');
     expect(html).not.toContain('重新加入');
@@ -76,20 +77,35 @@ describe('voice panel states', () => {
     expect(html).not.toContain('<ul');
   });
 
-  it('should offer the dark device pickers, a mic test, a test tone and the voice volume before joining', () => {
+  it('should keep the device pickers folded and the voice volume in view before joining', () => {
     const html = render();
+    expect(html).not.toContain('aria-haspopup="listbox"');
+    expect(html).not.toContain('>測試</button>');
+    expect(html).toMatch(/<input[^>]*type="range"[^>]*value="100"/);
+    expect(html).toContain('更多音量設定 ›');
+  });
+
+  it('should open to the dark device pickers, a mic test and a test tone', () => {
+    mocks.voice = voiceState();
+    const html = renderToStaticMarkup(createElement(VoiceDevicePickers, { id: 'devices', joined: false, stream: null }));
     expect(html.match(/aria-haspopup="listbox"/g)).toHaveLength(2);
     expect(html).not.toContain('<select');
     expect(html).toContain('>測試</button>');
     expect(html).toContain('aria-label="播放測試音"');
-    expect(html).toMatch(/<input[^>]*type="range"[^>]*value="100"/);
-    expect(html).toContain('更多音量設定 ›');
     expect(html).toContain('aria-label="麥克風音量"');
+  });
+
+  it('should name the chosen devices in the folded summary', () => {
+    const html = render({
+      inputs: [{ deviceId: 'usb', label: 'USB Mic' }], inputDeviceId: 'usb',
+      outputs: [{ deviceId: 'hp', label: '' }], outputDeviceId: 'hp',
+    });
+    expect(html).toMatch(/麥克風：USB Mic・喇叭：(喇叭 1|系統預設)/);
   });
 
   it('should disable joining while the connection is not ready', () => {
     mocks.accountStore.connection = 'connecting';
-    expect(render()).toMatch(/<button[^>]*disabled=""[^>]*>加入語音/);
+    expect(render()).toMatch(/<button[^>]*disabled=""[^>]*aria-label="加入語音"/);
   });
 
   it('should offer cancel instead of join while joining', () => {
@@ -109,18 +125,18 @@ describe('voice panel states', () => {
     expect(html).not.toContain('加入語音');
   });
 
-  it('should show status with the participant count, a leave action, two toggles and the gear when joined', () => {
+  it('should show status with the participant count, a leave action, two toggles and the device row when joined', () => {
     const html = render(JOINED);
     expect(html).toContain('語音已連線');
     expect(html).toContain('3 人在線 · 連線正常');
     expect(html).toContain('data-state="ok"');
-    expect(html).toContain('aria-label="裝置"');
+    expect(html).toMatch(/aria-expanded="false"[^>]*>.*?裝置設定/);
     expect(html).toContain('離開語音');
     expect(html).toContain('<span>麥克風</span>');
     expect(html).toContain('<span>聲音</span>');
     // Two toggles and one mute button per remote player.
     expect(html.match(/aria-pressed="false"/g)).toHaveLength(4);
-    expect(html).not.toContain('加入前先確認裝置');
+    expect(html).not.toContain('加入語音');
     expect(html).not.toContain('重新加入');
     expect(html).not.toContain('role="alert"');
   });
@@ -159,7 +175,8 @@ describe('voice panel states', () => {
     expect(html.match(/aria-expanded="false"/g)).toHaveLength(3);
     expect(html.match(/class="[^"]*rowButton[^"]*"[^>]*aria-expanded="false"/g)).toHaveLength(2);
     expect(html).toContain('（我）');
-    expect(html).not.toContain('type="range"');
+    // Only the voice volume; a player's own slider waits until the row opens.
+    expect(html.match(/type="range"/g)).toHaveLength(1);
   });
 
   it('should show muted and deafened icons per participant', () => {

@@ -66,8 +66,18 @@ function LevelMeter({ stream, label, compact = false }: {
   </span>;
 }
 
-function DeviceSettings({ id, joined, stream }: {
-  readonly id: string;
+type Translate = (key: TranslationKey, params?: Record<string, string>) => string;
+
+function deviceName(
+  devices: readonly MediaDeviceInfo[], id: string | null, key: TranslationKey, t: Translate,
+): string {
+  const index = id ? devices.findIndex((device) => device.deviceId === id) : -1;
+  if (index < 0) return t('voice.defaultDevice');
+  return devices[index].label || t(key, { n: String(index + 1) });
+}
+
+/** Microphone and speaker choice with their tests, folded into one summary row until opened. */
+function DeviceSettings({ joined, stream }: {
   readonly joined: boolean;
   /** The call's own microphone while joined. */
   readonly stream: MediaStream | null;
@@ -82,16 +92,49 @@ function DeviceSettings({ id, joined, stream }: {
       outputDeviceId: state.outputDeviceId,
     })),
   );
-  const voiceVolume = useAudioSettingsStore((state) => state.voiceVolume);
-  const setVoiceVolume = useAudioSettingsStore((state) => state.setVoiceVolume);
-  const openAudioSettings = useAudioSettingsDialogStore((state) => state.openDialog);
+  const [open, setOpen] = useState(false);
   const outputSupported = outputSelectionSupported();
-  const mic = useMicTest(joined ? stream : null, inputDeviceId);
-  const [tonePlaying, setTonePlaying] = useState(false);
-  const volumeId = useId();
+  const id = useId();
 
   // Device labels only appear after microphone permission, so reload once joined.
   useEffect(() => watchAudioDevices(), [status]);
+
+  const summary = t('voice.deviceSummary', {
+    input: deviceName(inputs, inputDeviceId, 'voice.microphoneN', t),
+    output: outputSupported ? deviceName(outputs, outputDeviceId, 'voice.speakerN', t) : t('voice.defaultDevice'),
+  });
+  return <div className={styles.deviceCard} data-open={open}>
+    <button type="button" className={styles.deviceToggle} aria-expanded={open} aria-controls={id}
+      onClick={() => setOpen(!open)}>
+      <span className={styles.deviceToggleText}>
+        <span className={styles.deviceToggleTitle}>{t('voice.deviceSettings')}</span>
+        <span className={styles.deviceSummary}>{summary}</span>
+      </span>
+      <AppIcon name="nextPage" className={styles.chevron} />
+    </button>
+    {/* Closing unmounts the pickers, which also ends a running microphone test. */}
+    {open && <VoiceDevicePickers id={id} joined={joined} stream={stream} />}
+  </div>;
+}
+
+/** The opened device settings: microphone and speaker pickers with the microphone test and a test tone. */
+export function VoiceDevicePickers({ id, joined, stream }: {
+  readonly id: string;
+  readonly joined: boolean;
+  readonly stream: MediaStream | null;
+}): ReactNode {
+  const { t } = useI18nStore();
+  const { inputs, outputs, inputDeviceId, outputDeviceId } = useVoiceStore(
+    useShallow((state) => ({
+      inputs: state.inputs,
+      outputs: state.outputs,
+      inputDeviceId: state.inputDeviceId,
+      outputDeviceId: state.outputDeviceId,
+    })),
+  );
+  const outputSupported = outputSelectionSupported();
+  const mic = useMicTest(joined ? stream : null, inputDeviceId);
+  const [tonePlaying, setTonePlaying] = useState(false);
 
   const options = (devices: MediaDeviceInfo[], key: TranslationKey): { value: string; label: string }[] => [
     { value: '', label: t('voice.defaultDevice') },
@@ -130,15 +173,25 @@ function DeviceSettings({ id, joined, stream }: {
       </div>
       {!outputSupported && <p id="table-voice-output-hint" className={styles.hint}>
         {t('voice.outputUnsupported')}</p>}
-      <div className={styles.volumeRow}>
-        <label htmlFor={volumeId}>{t('voice.volume')}</label>
-        <input id={volumeId} type="range" min={0} max={100} value={volumePercent(voiceVolume)}
-          onChange={(event) => setVoiceVolume(Number(event.target.value) / 100)} />
-        <output htmlFor={volumeId} className={styles.volumeValue}>{volumePercent(voiceVolume)}</output>
-      </div>
-      <button type="button" className={styles.link} onClick={openAudioSettings}>{t('voice.moreVolume')} ›</button>
     </div>
   );
+}
+
+function VolumeSettings(): ReactNode {
+  const { t } = useI18nStore();
+  const voiceVolume = useAudioSettingsStore((state) => state.voiceVolume);
+  const setVoiceVolume = useAudioSettingsStore((state) => state.setVoiceVolume);
+  const openAudioSettings = useAudioSettingsDialogStore((state) => state.openDialog);
+  const volumeId = useId();
+  return <>
+    <div className={styles.volumeRow}>
+      <label htmlFor={volumeId}>{t('voice.volume')}</label>
+      <input id={volumeId} type="range" min={0} max={100} value={volumePercent(voiceVolume)}
+        onChange={(event) => setVoiceVolume(Number(event.target.value) / 100)} />
+      <output htmlFor={volumeId} className={styles.volumeValue}>{volumePercent(voiceVolume)}</output>
+    </div>
+    <button type="button" className={styles.link} onClick={openAudioSettings}>{t('voice.moreVolume')} ›</button>
+  </>;
 }
 
 function leaveActiveVoice(): void {
@@ -244,10 +297,7 @@ export function VoicePanel(): ReactNode {
   const { status, participants, muted, deafened, error, autoplayBlocked, peerPrefs,
     peerErrors, peerConnections, peerId, silenced } = voice;
   const [profiles, setProfiles] = useState<Record<string, PublicAccount>>({});
-  const [showDevices, setShowDevices] = useState(false);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const devicesId = useId();
-  const openAudioSettings = useAudioSettingsDialogStore((state) => state.openDialog);
 
   // Membership controls the media lifetime; navigating between pages does not.
   useEffect(() => {
@@ -309,15 +359,12 @@ export function VoicePanel(): ReactNode {
           <AppIcon name="hangUp" />{t('voice.leave')}
         </button>}
         {joining && <button type="button" className={styles.pill} onClick={leaveVoice}>{t('common.cancel')}</button>}
+        {!joined && !joining && <button type="button" className={styles.join} disabled={!canJoin}
+          aria-label={t(error ? 'voice.reconnect' : 'voice.join')}
+          onClick={() => void joinVoice(roomCode, account.id)}>
+          <AppIcon name="microphone" />{t(error ? 'voice.reconnect' : 'voice.joinShort')}
+        </button>}
       </div>
-      {!joined && !joining && <button type="button" className={`btn btn-primary ${styles.primaryAction}`}
-        disabled={!canJoin} onClick={() => void joinVoice(roomCode, account.id)}>
-        {t(error ? 'voice.reconnect' : 'voice.join')}
-      </button>}
-      {!joined && !joining && <>
-        <h3 className={styles.sectionTitle}>{t('voice.checkDevices')}</h3>
-        <DeviceSettings id={devicesId} joined={false} stream={null} />
-      </>}
       {joined && <>
         <div className={styles.toggles}>
           <button type="button" className={styles.toggle} aria-pressed={muted} data-off={muted}
@@ -331,12 +378,7 @@ export function VoicePanel(): ReactNode {
             <AppIcon name={deafened ? 'headsetOff' : 'headset'} />
             <span>{t(deafened ? 'voice.soundOff' : 'voice.sound')}</span>
           </button>
-          <button type="button" className={styles.iconButton} aria-expanded={showDevices} aria-controls={devicesId}
-            aria-label={t('voice.devices')} title={t('voice.devices')} onClick={() => setShowDevices(!showDevices)}>
-            <AppIcon name="settings" />
-          </button>
         </div>
-        {showDevices && <DeviceSettings id={devicesId} joined stream={stream} />}
         {error && summary.kind !== 'error' && <p className={styles.banner} data-tone="error" role="alert">
           {t(ERROR_TRANSLATIONS[error])}</p>}
         {summary.needsRejoin && <div className={styles.banner} data-tone="error" role="alert">
@@ -353,11 +395,11 @@ export function VoicePanel(): ReactNode {
           <button type="button" className={styles.bannerAction}
             onClick={() => void resumeVoiceAudio()}>{t('voice.enableAudio')}</button>
         </div>}
-        <div className={styles.membersHead}>
-          <h3 className={styles.sectionTitle}>{t('voice.members')}</h3>
-          {!showDevices && <button type="button" className={styles.link} onClick={openAudioSettings}>
-            {t('voice.moreVolume')} ›</button>}
-        </div>
+      </>}
+      <DeviceSettings joined={joined} stream={stream} />
+      <VolumeSettings />
+      {joined && <>
+        <h3 className={styles.sectionTitle}>{t('voice.members')}</h3>
         <ul className={styles.participants} aria-label={t('voice.participants')}>
           {participants.map((participant) => {
             const self = participant.accountId === account.id;

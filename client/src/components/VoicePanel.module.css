@@ -37,7 +37,24 @@
 .pill[aria-pressed='true'] { color: var(--color-primary); }
 .leave, .leave:hover { background: color-mix(in srgb, var(--color-danger) 18%, transparent); color: var(--color-danger); }
 
-.primaryAction { width: 100%; min-height: 44px; }
+/* Joining is a small pill at the card's end, the same size as the leave and cancel pills. */
+.join {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: var(--text-on-primary);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.join > svg { font-size: var(--icon-size); }
+.join:hover:not(:disabled) { background: var(--color-primary-hover); }
+.join:disabled { opacity: 0.5; cursor: not-allowed; }
 .sectionTitle { margin: 0; color: var(--text-secondary); font-size: var(--text-sm); font-weight: 600; }
 
 .iconButton {
@@ -68,12 +85,13 @@
   justify-content: center;
   gap: var(--space-2);
   min-width: 0;
-  min-height: 44px;
+  min-height: 36px;
   padding: 0 var(--space-2);
   border-radius: var(--radius-pill);
   background: var(--surface-2);
   color: var(--text-primary);
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
+  font-weight: 600;
   white-space: nowrap;
 }
 .toggle:first-child { flex: 1.5; }
@@ -92,14 +110,38 @@
 }
 .meterCompact { flex: none; width: 28px; }
 
-/* ─── Devices ─── */
-.devices { display: flex; flex-direction: column; gap: var(--space-2); }
+/* ─── Devices: a summary row that opens to the pickers and tests ─── */
+.deviceCard { min-width: 0; border-radius: var(--radius-md); background: var(--surface-1); }
+.deviceToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  text-align: left;
+}
+.deviceToggle:hover { background: var(--surface-2); }
+.deviceToggleText { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.deviceToggleTitle { font-size: var(--text-sm); font-weight: 600; line-height: 20px; }
+.deviceSummary {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.deviceCard[data-open='true'] .chevron { transform: rotate(90deg); }
+.devices { display: flex; flex-direction: column; gap: var(--space-2); padding: 0 var(--space-2) var(--space-2); }
 .deviceRow { display: flex; align-items: center; gap: var(--space-2); }
 .deviceRow > :nth-child(2) { flex: 1; min-width: 0; }
 .deviceIcon { display: grid; flex: none; place-items: center; width: 40px; height: 40px; border-radius: var(--radius-pill); background: var(--surface-2); color: var(--text-secondary); font-size: var(--text-xl); }
 .testRow { display: flex; align-items: center; gap: var(--space-3); padding-left: 48px; }
 .hint { margin: 0; padding-left: 48px; color: var(--text-secondary); font-size: var(--text-xs); line-height: 16px; }
-.volumeRow { display: flex; align-items: center; gap: var(--space-3); padding-left: 48px; color: var(--text-secondary); font-size: var(--text-sm); }
+.volumeRow { display: flex; align-items: center; gap: var(--space-3); color: var(--text-secondary); font-size: var(--text-sm); }
 .volumeRow input[type='range'] { flex: 1; min-width: 0; min-height: 40px; margin: 0; padding: 0; accent-color: var(--color-primary); }
 .volumeValue { flex: none; min-width: 3ch; text-align: right; color: var(--text-secondary); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
 
@@ -129,7 +171,6 @@
 .bannerAction:hover:not(:disabled) { background: var(--surface-3); }
 
 /* ─── Members ─── */
-.membersHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .participants { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
 .participant { min-width: 0; border-radius: var(--radius-md); background: var(--surface-1); }
 .row { display: flex; align-items: center; gap: var(--space-1); min-width: 0; padding-right: var(--space-1); }
