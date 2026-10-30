@@ -519,7 +519,7 @@ export function GameShell({
             {error && <p className={styles.actionError} role="alert">{error}</p>}
           </div>
           {!replay && (sheetLayout ? <TableToolsDrawer /> : <TableTools />)}
-          <div inert={visibleGame?.autoPlay}>{hand}</div>
+          <div className={styles.handBody} inert={visibleGame?.autoPlay}>{hand}</div>
         </div>}
         {tableEffect}
       </main>

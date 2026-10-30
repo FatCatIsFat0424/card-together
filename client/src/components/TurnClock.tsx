@@ -9,6 +9,18 @@ import { useI18nStore } from '../stores/i18n-store';
 import { useReplayMode } from '../games/replay-mode';
 import styles from './TurnClock.module.css';
 
+/**
+ * The ticking text. A hidden copy with every digit as 0 sizes the chip, and the live text sits over it in a
+ * contained box, so a tick lays out only that box; otherwise every second would lay out the table again, and
+ * with it a board drawn beside the seat.
+ */
+function ClockText({ text }: { readonly text: string }): ReactNode {
+  return <>
+    <span className={styles.sizer} aria-hidden="true">{text.replace(/\d/g, '0')}</span>
+    <span className={styles.time} aria-hidden="true">{text}</span>
+  </>;
+}
+
 interface TurnClockProps {
   seat: GameSeat;
   /** Players see only their own reserve; other seats show the turn allowance alone. */
@@ -45,7 +57,7 @@ function LiveDeadlineClock({ deadline }: { deadline: number }): ReactNode {
   const description = [t('clock.base', { seconds }), ...(ms === 0 ? [t('clock.expired')] : [])].join(', ');
   return <div className={`${styles.clock} ${styles.active} ${ms <= 10_000 ? styles.bank : ''}`}
     role="timer" aria-live="off" aria-label={description} title={description}>
-    <span aria-hidden="true">{t('clock.seconds', { seconds })}</span>
+    <ClockText text={t('clock.seconds', { seconds })} />
   </div>;
 }
 
@@ -111,6 +123,6 @@ function SeatTurnClock({ seat, showBank = true }: TurnClockProps): ReactNode {
     ...(time.expired ? [t('clock.expired')] : [])].join(', ');
   return <div className={`${styles.clock} ${time.active ? styles.active : ''} ${time.active && time.baseMs === 0 ? styles.bank : ''}`}
     role="timer" aria-live="off" aria-label={description} title={description}>
-    <span aria-hidden="true">{showBank ? `${base} + ${bank}` : t('clock.seconds', { seconds: base })}</span>
+    <ClockText text={showBank ? `${base} + ${bank}` : t('clock.seconds', { seconds: base })} />
   </div>;
 }

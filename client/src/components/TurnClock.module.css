@@ -1,5 +1,6 @@
 /* Seat clock chip; it sits in the seat's stats line next to the card counts. */
 .clock {
+  position: relative;
   height: 18px;
   padding: 0 6px;
   border-radius: 9px;
@@ -10,6 +11,14 @@
   font-variant-numeric: tabular-nums;
   line-height: 18px;
   white-space: nowrap;
+}
+.sizer { visibility: hidden; }
+/* Tabular digits keep the live text exactly as wide as its sizer. */
+.time {
+  position: absolute;
+  inset: 0;
+  padding: inherit;
+  contain: strict;
 }
 .active { background: var(--turn-glow); color: var(--text-inverse); }
 .bank { background: var(--color-danger); color: var(--text-on-danger); }

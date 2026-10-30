@@ -50,7 +50,9 @@ Authoritative project rule set; `CLAUDE.md` references it.
   where callers must not be mutated.
 - Formatting: single quotes, semicolons, kebab-case module filenames, PascalCase React
   component files and types, camelCase functions and CSS classes.
-- Styling uses CSS Modules and the variables in `client/src/styles/global.css`.
+- Styling uses CSS Modules and the variables in `client/src/styles/global.css`. Never follow `:has()` with a
+  structural pseudo-class such as `:last-child` (a test checks this): Chrome then restyles the whole page on every
+  DOM insertion or removal.
   User-visible strings live in the typed English and Traditional Chinese dictionaries.
 - Looping decorative animations change only `transform`, `opacity`, or brightness on HTML
   elements, so the compositor runs them: never SVG children, backgrounds, shadows, offset paths,
