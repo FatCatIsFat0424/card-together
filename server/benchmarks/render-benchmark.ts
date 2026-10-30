@@ -1,8 +1,8 @@
 import { randomBytes } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 import type { Browser, CDPSession, Page } from 'playwright-core';
@@ -37,15 +37,30 @@ const FIXTURE_HASH = `scrypt$131072$8$1$${'a'.repeat(32)}$${'b'.repeat(128)}`;
 type Equipment = 'plain' | ShopSeries;
 type ClientSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
+/** Equipment slots of a collection; `--slots` equips only some of them, to attribute a cost to one product. */
+const SLOTS = [
+  'cardBackStyle', 'tableBackgroundStyle', 'seatBackgroundStyle', 'nameplate', 'cardFaceStyle', 'chipStyle', 'seatFrame',
+  'chatFrame', 'victoryEffect', 'soundPack', 'pieceStyle', 'boardStyle', 'diceStyle', 'avatarBorder',
+] as const;
+type Slot = typeof SLOTS[number];
+
 interface Options {
   games: readonly GameType[];
   sets: readonly Equipment[];
   samples: number;
   mode: Mode;
+  slots: readonly Slot[];
+  /** Emulates `prefers-reduced-motion`, which keeps static styles but stops every animation and move effect. */
+  reducedMotion: boolean;
+  /** Keeps each raw trace as `<game>-<set>-<sample>.json` for DevTools. */
+  traceDir: string | null;
 }
 
 function parseOptions(args: readonly string[]): Options {
-  const options: Options = { games: GAMES, sets: ['plain', 'starfleet', 'neoncity'], samples: 1, mode: 'idle' };
+  const options: Options = {
+    games: GAMES, sets: ['plain', 'starfleet', 'neoncity'], samples: 1, mode: 'idle', slots: SLOTS, reducedMotion: false,
+    traceDir: null,
+  };
   for (let index = 0; index < args.length; index += 2) {
     const [flag, value] = [args[index], args[index + 1]];
     if (!value) throw new Error(`${flag} needs a value.`);
@@ -69,24 +84,46 @@ function parseOptions(args: readonly string[]): Options {
     } else if (flag === '--mode') {
       if (value !== 'idle' && value !== 'moves') throw new Error('--mode accepts idle or moves.');
       options.mode = value;
-    } else throw new Error(`Unknown option ${flag}. Use --games, --sets, --samples, or --mode.`);
+    } else if (flag === '--slots') {
+      options.slots = value.split(',').map((slot) => {
+        if (!SLOTS.includes(slot as Slot)) throw new Error(`--slots accepts ${SLOTS.join(', ')}.`);
+        return slot as Slot;
+      });
+    } else if (flag === '--reduced-motion') {
+      if (value !== 'on' && value !== 'off') throw new Error('--reduced-motion accepts on or off.');
+      options.reducedMotion = value === 'on';
+    } else if (flag === '--trace-dir') {
+      options.traceDir = resolve(process.env.INIT_CWD ?? process.cwd(), value);
+    } else {
+      throw new Error(`Unknown option ${flag}. Use --games, --sets, --samples, --mode, --slots, --reduced-motion, or --trace-dir.`);
+    }
   }
   return options;
 }
 
-/** Every equippable item of one collection, so all of its animations are on screen. */
-function equipment(set: Equipment): Record<string, unknown> {
+/**
+ * The equippable items of one collection in `slots`, so all of their animations are on screen. A slot the
+ * collection has no product for stays empty, unless `--slots` asked for it by name.
+ */
+function equipment(set: Equipment, slots: readonly Slot[]): Record<string, unknown> {
   if (set === 'plain') return { ownedShopItems: [], ownedAvatarBorders: [] };
-  const slots = {
+  const items: Record<Exclude<Slot, 'avatarBorder'>, string> = {
     cardBackStyle: `card-back-${set}`, tableBackgroundStyle: `table-${set}`, seatBackgroundStyle: `seat-${set}`,
     nameplate: `nameplate-${set}`, cardFaceStyle: `card-face-${set}`, chipStyle: `chips-${set}`,
     seatFrame: `seat-frame-${set}`, chatFrame: `chat-frame-${set}`, victoryEffect: `victory-${set}`,
     soundPack: `sound-${set}`, pieceStyle: `pieces-${set}`, boardStyle: `board-${set}`, diceStyle: `dice-${set}`,
   };
-  for (const item of Object.values(slots)) {
-    if (!getShopItem(item as ShopItemId)) throw new Error(`Missing shop item ${item}.`);
+  const equipped: Record<string, string> = {};
+  for (const slot of slots) {
+    if (slot === 'avatarBorder') continue;
+    if (getShopItem(items[slot] as ShopItemId)) equipped[slot] = items[slot];
+    else if (slots !== SLOTS) throw new Error(`Missing shop item ${items[slot]}.`);
   }
-  return { ...slots, avatarBorder: set, ownedAvatarBorders: [set], ownedShopItems: Object.values(slots) };
+  const border = slots.includes('avatarBorder');
+  return {
+    ...equipped, ...border ? { avatarBorder: set } : {}, ownedAvatarBorders: border ? [set] : [],
+    ownedShopItems: Object.values(equipped),
+  };
 }
 
 async function freePort(): Promise<number> {
@@ -100,14 +137,16 @@ async function freePort(): Promise<number> {
   });
 }
 
-async function createPlayer(repository: Repository, name: string, set: Equipment): Promise<string> {
+async function createPlayer(
+  repository: Repository, name: string, set: Equipment, slots: readonly Slot[],
+): Promise<string> {
   const now = Date.now();
   const token = randomBytes(32).toString('base64url');
   await repository.createAccount({
     id: name, username: name, usernameNormalized: name, passwordHash: FIXTURE_HASH, nickname: name,
     avatar: 'cat', avatarImage: null, tableBackground: null, tableBackgroundOpacity: 100, cardBack: null,
     cardBackOpacity: 100, matchesPublic: false, color: '#2563eb', createdAt: now, updatedAt: now,
-    ...equipment(set),
+    ...equipment(set, slots),
   });
   await repository.createSession({
     tokenHash: tokenHash(token), accountId: name, createdAt: now, expiresAt: now + 3_600_000,
@@ -181,7 +220,48 @@ async function startGame(serverUrl: string, origin: string, token: string, gameT
   }
 }
 
-async function trace(page: Page, cdp: CDPSession): Promise<Record<string, unknown>> {
+/** Main-thread rendering steps; time inside an unlisted event counts toward its nearest listed ancestor. */
+const MAIN_STEPS: Readonly<Record<string, string>> = {
+  FunctionCall: 'script', EvaluateScript: 'script', TimerFire: 'script', EventDispatch: 'script', FireAnimationFrame: 'script',
+  RunMicrotasks: 'script', MajorGC: 'gc', MinorGC: 'gc', UpdateLayoutTree: 'style', Layout: 'layout', PrePaint: 'prePaint',
+  Paint: 'paint', Layerize: 'layerize', Commit: 'commit',
+};
+
+type TraceEvent = {
+  name: string; ph: string; ts: number; dur?: number; tdur?: number; pid: number; tid: number;
+  args?: { name?: string; data?: { nodeName?: string } };
+};
+
+/** Exclusive main-thread milliseconds per `MAIN_STEPS` step, from one thread's complete events. */
+function stepTimes(events: readonly TraceEvent[]): Record<string, number> {
+  const sorted = [...events].sort((a, b) => a.ts - b.ts || (b.dur ?? 0) - (a.dur ?? 0));
+  const stack: Array<{ end: number; step: string | undefined }> = [];
+  const steps: Record<string, number> = {};
+  /** Running exclusive time of the open step owners, charged when a child starts or the owner ends. */
+  let cursor = 0;
+  const charge = (until: number): void => {
+    const owner = stack[stack.length - 1];
+    if (owner?.step && until > cursor) steps[owner.step] = (steps[owner.step] ?? 0) + (until - cursor) / 1000;
+    cursor = Math.max(cursor, until);
+  };
+  for (const event of sorted) {
+    const end = event.ts + (event.dur ?? 0);
+    while (stack.length && stack[stack.length - 1].end <= event.ts) {
+      charge(stack[stack.length - 1].end);
+      stack.pop();
+    }
+    charge(event.ts);
+    const parent = stack[stack.length - 1];
+    stack.push({ end, step: MAIN_STEPS[event.name] ?? parent?.step });
+  }
+  while (stack.length) {
+    charge(stack[stack.length - 1].end);
+    stack.pop();
+  }
+  return Object.fromEntries(Object.entries(steps).map(([key, value]) => [key, Math.round(value)]));
+}
+
+async function trace(page: Page, cdp: CDPSession, savePath: string | null): Promise<Record<string, unknown>> {
   const browser = page.context().browser()!;
   const metric = async (): Promise<number> => {
     const { metrics } = await cdp.send('Performance.getMetrics');
@@ -191,16 +271,19 @@ async function trace(page: Page, cdp: CDPSession): Promise<Record<string, unknow
   const before = await metric();
   await browser.startTracing(page, { categories: ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'viz'] });
   await page.waitForTimeout(TRACE_MS);
-  const events = JSON.parse((await browser.stopTracing()).toString()).traceEvents as Array<{
-    name: string; ph: string; dur?: number; pid: number; tid: number; args?: { name?: string; data?: { nodeName?: string } };
-  }>;
+  const raw = await browser.stopTracing();
+  if (savePath) await writeFile(savePath, raw);
+  const events = JSON.parse(raw.toString()).traceEvents as TraceEvent[];
   const mainTaskMs = (await metric() - before) * 1000;
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
   const threads = new Map(events.filter((event) => event.name === 'thread_name').map((event) => [`${event.pid}:${event.tid}`, event.args?.name ?? '']));
   const busy: Record<string, number> = {};
+  /** Main-thread CPU time; unlike wall time it barely moves when other processes load the machine. */
+  let mainCpu = 0;
   const painted: Record<string, number> = {};
   let paints = 0;
   let svgPaints = 0;
+  const main: TraceEvent[] = [];
   for (const event of events) {
     if (event.ph !== 'X' || !event.dur) continue;
     const thread = threads.get(`${event.pid}:${event.tid}`) ?? '';
@@ -210,13 +293,16 @@ async function trace(page: Page, cdp: CDPSession): Promise<Record<string, unknow
       painted[node] = (painted[node] ?? 0) + 1;
     }
     if (event.name === 'Paint' && thread === 'CrRendererMain' && event.args?.data?.nodeName?.startsWith('svg')) svgPaints += 1;
+    if (thread === 'CrRendererMain') main.push(event);
     if (!['RunTask', 'ThreadControllerImpl::RunTask', 'TaskGraphRunner::RunTask'].includes(event.name)) continue;
     const key = thread.startsWith('CompositorTileWorker') ? 'raster' : thread;
     if (['CrRendererMain', 'Compositor', 'VizCompositorThread', 'raster'].includes(key)) busy[key] = (busy[key] ?? 0) + event.dur / 1000;
+    if (key === 'CrRendererMain') mainCpu += (event.tdur ?? 0) / 1000;
   }
   return {
-    mainTaskMs: Math.round(mainTaskMs), paints, svgPaints,
+    mainTaskMs: Math.round(mainTaskMs), mainCpuMs: Math.round(mainCpu), paints, svgPaints,
     threadMs: Object.fromEntries(Object.entries(busy).map(([key, value]) => [key, Math.round(value)])),
+    stepMs: stepTimes(main),
     mostPainted: Object.entries(painted).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([node, count]) => `${count}x ${node}`),
   };
 }
@@ -267,6 +353,7 @@ async function main(): Promise<void> {
       build: { outDir }, preview: { host: '127.0.0.1', port: previewPort, strictPort: true },
     });
     cleanup.push(() => server.close());
+    if (options.traceDir) await mkdir(options.traceDir, { recursive: true });
     browser = await launch();
     let players = 0;
     for (const game of options.games) {
@@ -274,9 +361,12 @@ async function main(): Promise<void> {
         for (const set of options.sets) {
           players += 1;
           const name = `bench${players}`;
-          const token = await createPlayer(repository, name, set);
+          const token = await createPlayer(repository, name, set, options.slots);
           const roomCode = await startGame(serverUrl, origin, token, game);
-          const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+          const context = await browser.newContext({
+            viewport: VIEWPORT, deviceScaleFactor: 3, isMobile: true, hasTouch: true,
+            reducedMotion: options.reducedMotion ? 'reduce' : 'no-preference',
+          });
           try {
             await context.addCookies([{ name: SESSION_COOKIE_NAME, value: token, url: origin }]);
             const page = await context.newPage();
@@ -288,12 +378,14 @@ async function main(): Promise<void> {
             const cdp = await context.newCDPSession(page);
             await cdp.send('Performance.enable');
             const stop = options.mode === 'moves' ? await autoPlay(serverUrl, origin, token) : null;
-            const result = await trace(page, cdp);
+            const result = await trace(page, cdp, options.traceDir && join(options.traceDir, `${game}-${set}-${sample}.json`));
             const moves = stop?.();
             if (errors.length) throw new Error(`Page errors: ${errors.join('; ')}`);
             process.stdout.write(`${JSON.stringify({
               node: process.version, chromium: browser.version(), game, equipment: set, sample, mode: options.mode,
               ...moves === undefined ? {} : { moves },
+              ...options.slots === SLOTS ? {} : { slots: options.slots.join(',') },
+              ...options.reducedMotion ? { reducedMotion: true } : {},
               viewport: `${VIEWPORT.width}x${VIEWPORT.height}@3`, cpuThrottle: CPU_THROTTLE, traceMs: TRACE_MS, ...result,
             })}\n`);
           } finally {
