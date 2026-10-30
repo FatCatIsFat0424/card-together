@@ -9,7 +9,7 @@ import type { Browser, CDPSession, Page } from 'playwright-core';
 import { io as connectSocket } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 import { build, preview } from 'vite';
-import { SHOP_SERIES, getShopItem } from '@shared/constants';
+import { SHOP_SERIES, getShopItem, isAvatarBorderId } from '@shared/constants';
 import type { GameType, ShopItemId, ShopSeries } from '@shared/types';
 import type { ClientToServerEvents, ServerToClientEvents } from '@shared/types/socket-events';
 import { uiTranslations } from '../../client/src/ui-i18n';
@@ -119,7 +119,8 @@ function equipment(set: Equipment, slots: readonly Slot[]): Record<string, unkno
     if (getShopItem(items[slot] as ShopItemId)) equipped[slot] = items[slot];
     else if (slots !== SLOTS) throw new Error(`Missing shop item ${items[slot]}.`);
   }
-  const border = slots.includes('avatarBorder');
+  const border = slots.includes('avatarBorder') && isAvatarBorderId(set);
+  if (slots.includes('avatarBorder') && !border && slots !== SLOTS) throw new Error(`Missing avatar border ${set}.`);
   return {
     ...equipped, ...border ? { avatarBorder: set } : {}, ownedAvatarBorders: border ? [set] : [],
     ownedShopItems: Object.values(equipped),
