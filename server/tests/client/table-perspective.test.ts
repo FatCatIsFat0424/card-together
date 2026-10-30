@@ -246,7 +246,9 @@ describe('spectator table perspective', () => {
     const handZone = (await render(visible)).split('data-hand-zone')[1]?.split('</main>')[0];
     expect(handZone).toContain(`Dealer · Player ${visible.dealerSeat}`);
     expect(handZone?.match(/<img [^>]*src="[^"]*\/cards\//g)).toHaveLength(2);
-    expect(handZone).not.toMatch(/<button/);
+    // The seat plate keeps its view-switch and player-card buttons; the dealer's own controls must be absent.
+    const seatButtons = /<button[^>]*(?:aria-haspopup="dialog"|aria-label="View )[^>]*>.*?<\/button>/g;
+    expect(handZone?.replace(seatButtons, '')).not.toMatch(/<button/);
   });
 
   it('shows the selected frozen Hold\'em hand rather than the original seat previous hand', async () => {

@@ -365,6 +365,20 @@ button.identity:focus-visible { outline: 2px solid var(--color-primary); outline
 .observable { cursor: pointer; border-radius: var(--radius-lg); }
 .observable:hover .namePill { background: color-mix(in srgb, var(--color-primary) 35%, transparent); }
 .observable:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.observeName { border: 0; font-family: inherit; cursor: pointer; }
+.observeName:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+/* Transparent hit area over the avatar; the seat's own click (move the view) stays on the rest of the plate. */
+.avatarHit {
+  position: absolute;
+  inset: -2px;
+  z-index: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+.avatarHit:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
 /* ─── Card tray: card backs, or Red Points captured red cards ─── */
 .tray {

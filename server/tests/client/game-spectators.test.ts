@@ -31,20 +31,23 @@ describe('in-game spectator list', () => {
     state.playerId = 'host';
   });
 
-  it('should list each spectator with a player card link and mark the viewer', () => {
+  it('should list each spectator as a button that opens the player card and mark the viewer', () => {
     state.roomInfo = room([player('ann'), player('host')]);
     const html = renderList('dock');
     expect(html).toContain('Spectator area (2/');
     expect(html).toContain('Nick ann');
-    expect(html).toContain('href="/players/ann"');
+    // Opening a profile must not navigate away from the match.
+    expect(html).not.toContain('href=');
+    expect(html).toMatch(/<button[^>]*aria-haspopup="dialog"[^>]*aria-label="Open Nick ann’s player card"/);
     expect(html).toContain('(me)');
   });
 
   it('should stay read-only during a match', () => {
     state.roomInfo = room([player('ann'), player('host')]);
     const html = renderList('sheet');
-    expect(html).not.toContain('<button');
+    expect(html.match(/<button/g)).toHaveLength(2);
     expect(html).not.toContain('draggable');
+    expect(html).not.toContain('Remove');
   });
 
   it('should show the empty note and render nothing outside a room', () => {

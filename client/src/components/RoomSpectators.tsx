@@ -30,6 +30,8 @@ export interface RoomSpectatorsProps {
   readonly renderMenu?: (player: PlayerInfo) => ReactNode;
   /** `dock` fills a side panel and `sheet` a menu sheet with a visible heading; the default is the 280px popover. */
   readonly layout?: 'popover' | 'dock' | 'sheet';
+  /** Opens a spectator's player card over the page (the match view); without it the name links to the profile. */
+  readonly onOpenPlayer?: (player: PlayerInfo, anchor: HTMLElement) => void;
 }
 
 /** The spectator list opened from "旁觀 n/8": join as spectator, and the host's kick and move controls. */
@@ -47,7 +49,8 @@ export function RoomSpectators(props: RoomSpectatorsProps): ReactNode {
           data-holding={props.holdingId === spectator.id || undefined}
           onPointerDown={props.canManage && !spectator.isBot ? (event) => props.onDragStart?.(event, spectator) : undefined}>
           {props.canManage && !spectator.isBot && <span className={styles.grip} aria-hidden="true"><AppIcon name="drag" /></span>}
-          <div className={styles.who}><PlayerLink player={spectator} size="compact" showTitle={false} details={<>
+          <div className={styles.who}><PlayerLink player={spectator} size="compact" showTitle={false}
+            onOpen={props.onOpenPlayer && ((anchor) => props.onOpenPlayer?.(spectator, anchor))} details={<>
             {spectator.id === props.hostId && <span className={styles.hostTag}>{t('room.host')}</span>}
             {spectator.id === props.playerId && <span>{t('common.me')}</span>}
             {props.draggingId === spectator.id && <span>{t('room.dragOrigin')}</span>}

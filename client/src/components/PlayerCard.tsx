@@ -1,12 +1,13 @@
-// ─── PlayerCard: in-game popover with a seated player's identity, record, and friendship ───
+// ─── PlayerCard: in-game popover with a player's identity, record, and friendship; seats and the spectator list open it ───
 
 import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import Popover from '@mui/material/Popover';
 import { Link } from 'react-router-dom';
-import type { FriendsData, GameType, MatchHistory, PlayerInfo } from '@shared/types';
+import type { FriendsData, GameType, PlayerInfo } from '@shared/types';
 import { apiRequest } from '../api';
-import { gameHistoryStatistics } from '../match-history';
+import { usePlayerStats } from '../hooks/use-player-stats';
+import { useStatsScope } from '../hooks/use-stats-scope';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { Avatar } from './Avatar';
@@ -23,7 +24,9 @@ export function PlayerCard({ player, gameType, anchor, onClose }: {
   const { t, locale } = useI18nStore();
   const accountId = useAccountStore((state) => state.account?.id);
   const self = player.id === accountId;
-  const [history, setHistory] = useState<MatchHistory | 'private' | 'failed' | null>(null);
+  const [scope] = useStatsScope();
+  // Counters, not the match list: one small request, and the server applies the history privacy flag to it.
+  const stats = usePlayerStats(player.isBot ? null : player.id);
   const [friends, setFriends] = useState<FriendsData | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -31,10 +34,6 @@ export function PlayerCard({ player, gameType, anchor, onClose }: {
   useEffect(() => {
     if (player.isBot) return undefined;
     let live = true;
-    const id = encodeURIComponent(player.id);
-    void apiRequest<MatchHistory>(`/api/players/${id}/history`).then((result) => {
-      if (live) setHistory(result.success ? result : result.status === 403 ? 'private' : 'failed');
-    });
     if (!self) void apiRequest<FriendsData>('/api/friends').then((result) => {
       if (live && result.success) setFriends(result);
     });
@@ -55,17 +54,19 @@ export function PlayerCard({ player, gameType, anchor, onClose }: {
   };
 
   const percent = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 0 });
-  const statistics = history && typeof history === 'object' ? gameHistoryStatistics(history.matches, player.id) : null;
-  const current = statistics?.find((game) => game.gameType === gameType);
-  const total = statistics?.reduce((count, game) => count + game.played, 0) ?? 0;
+  const counters = stats.status === 'ready' ? stats.stats.scopes[scope] : null;
+  const current = counters?.games.find((game) => game.gameType === gameType);
+  const total = counters?.games.reduce((count, game) => count + game.matches, 0) ?? 0;
+  const streak = counters?.account?.streak.current ?? 0;
   const isFriend = friends?.friends.some((friend) => friend.id === player.id) ?? false;
   const incoming = friends?.incoming.some((request) => request.requester.id === player.id) ?? false;
   const outgoing = friends?.outgoing.some((request) => request.recipient.id === player.id) ?? false;
   const game = t(`gameType.${gameType}`);
 
   return <Popover open anchorEl={anchor} onClose={onClose}
-    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} transformOrigin={{ vertical: 'top', horizontal: 'center' }}
-    slotProps={{ paper: { className: styles.card, role: 'dialog', 'aria-label': t('playerCard.label', { nickname: player.nickname }) } }}>
+    // The card is portalled but React still bubbles its events to the seat or row that opened it.
+    slotProps={{ root: { onClick: (event: MouseEvent) => event.stopPropagation() }, paper: { className: styles.card, role: 'dialog', 'aria-label': t('playerCard.label', { nickname: player.nickname }) } }}
+    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} transformOrigin={{ vertical: 'top', horizontal: 'center' }}>
     <div className={styles.identity}>
       <Avatar avatar={player.avatar} image={player.avatarImage} border={player.avatarBorder} color={player.color} size="large" />
       <div className={styles.names}>
@@ -77,14 +78,15 @@ export function PlayerCard({ player, gameType, anchor, onClose }: {
       </div>
     </div>
     {!player.isBot && <div className={styles.record}>
-      {history === null ? <span className={styles.muted}>{t('common.loading')}</span>
-        : history === 'private' ? <span className={styles.muted}>{t('playerCard.private')}</span>
-          : history === 'failed' ? <span className={styles.muted}>{t('common.error')}</span>
+      {stats.status === 'loading' ? <span className={styles.muted}>{t('common.loading')}</span>
+        : stats.status === 'private' ? <span className={styles.muted}>{t('playerCard.private')}</span>
+          : stats.status === 'error' ? <span className={styles.muted}>{t('common.error')}</span>
             : <>
-              <span>{current?.played ? t('playerCard.thisGame', {
-                game, played: String(current.played), rate: percent.format(current.winRate ?? 0),
+              <span>{current?.matches ? t('playerCard.thisGame', {
+                game, played: String(current.matches), rate: percent.format(current.wins / current.matches),
               }) : t('playerCard.noGames', { game })}</span>
-              <span className={styles.muted}>{t('playerCard.total', { n: String(total) })}</span>
+              <span className={styles.muted}>{t('playerCard.total', { n: String(total) })}
+                {streak >= 2 && ` · ${t('playerCard.streak', { n: String(streak) })}`}</span>
             </>}
     </div>}
     {!player.isBot && <div className={styles.actions}>

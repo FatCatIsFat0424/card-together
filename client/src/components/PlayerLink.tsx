@@ -16,10 +16,12 @@ interface PlayerLinkProps {
   details?: ReactNode;
   /** List-row layout: nickname and @username share a line, details sit on the next one. */
   dense?: boolean;
+  /** Opens the player's card over the current page instead of navigating to the profile. */
+  onOpen?: (anchor: HTMLElement) => void;
 }
 
 export function PlayerLink({
-  player, showUsername = false, size = 'small', linked = true, showTitle = true, details, dense = false,
+  player, showUsername = false, size = 'small', linked = true, showTitle = true, details, dense = false, onOpen,
 }: PlayerLinkProps): ReactNode {
   const { t } = useI18nStore();
   const identity = <>
@@ -36,6 +38,13 @@ export function PlayerLink({
   </>;
   const className = dense ? `${styles.link} ${styles.dense}` : styles.link;
   if (player.isBot || !linked) return <span className={className} data-player-identity>{identity}</span>;
+  if (onOpen) return (
+    <button type="button" className={`${className} ${styles.opener}`} data-player-identity aria-haspopup="dialog"
+      aria-label={t('playerCard.open', { nickname: player.nickname })}
+      onClick={(event) => onOpen(event.currentTarget)}>
+      {identity}
+    </button>
+  );
   return (
     <Link className={className} data-player-identity to={`/players/${encodeURIComponent(player.id)}`}
       aria-label={t('player.view', { nickname: player.nickname })}>

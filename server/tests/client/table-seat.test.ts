@@ -115,12 +115,13 @@ describe('table seat plate', () => {
 
   afterEach(() => vi.useRealTimers());
 
-  it('makes the whole spectator plate selectable while seated plates open the player card', () => {
+  it('lets spectators move the view from the name and open the player card from the avatar', () => {
     const html = render({ seat: 'S', position: 'bottom', onObserve: () => undefined });
-    expect(html).toContain('role="button" tabindex="0"');
-    expect(html).toContain('aria-label="View Alice at the bottom"');
+    // Two sibling buttons rather than a button role wrapped around other buttons.
+    expect(html).not.toContain('role="button"');
+    expect(html).toMatch(/<button[^>]*aria-label="View Alice at the bottom"/);
+    expect(html).toMatch(/<button[^>]*aria-haspopup="dialog"[^>]*aria-label="Open Alice’s player card"/);
     expect(html).not.toContain('/players/alice');
-    expect(html).not.toContain('player card');
     const plain = render({ seat: 'S', position: 'bottom' });
     expect(plain).toContain('aria-label="Open Alice’s player card"');
     expect(plain).not.toContain('/players/alice');
@@ -129,6 +130,8 @@ describe('table seat plate', () => {
     useI18nStore.getState().setLocale('zh-TW');
     expect(render({ seat: 'S', position: 'bottom', onObserve: () => undefined }))
       .toContain('將 Alice 移到底部觀看');
+    expect(render({ seat: 'S', position: 'bottom', onObserve: () => undefined }))
+      .toContain('開啟 Alice 的玩家名片');
   });
 
   it('offers covered-card details at all four Sevens seats only to spectators', () => {

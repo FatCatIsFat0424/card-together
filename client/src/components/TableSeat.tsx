@@ -1,7 +1,7 @@
 import { gameSeatValue, isCompassSeat, roomSeatInfo } from '@shared/rules/seats';
 // ─── TableSeat: avatar-first seat (avatar, seat-framed name pill, key numbers, status) and card tray ───
 
-import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { RANK_DISPLAY, SUIT_SYMBOLS } from '@shared/constants';
 import { useShallow } from 'zustand/react/shallow';
@@ -43,9 +43,7 @@ import { BidLabel } from './AuctionTable';
 import { AppIcon } from './AppIcon';
 import styles from './TableSeat.module.css';
 import { CardBackArt } from '../cosmetics/art-layers/CardBackArt';
-
-// Loaded on first open: the card fetches history and friends, which plates never need.
-const PlayerCard = lazy(() => import('./PlayerCard').then((module) => ({ default: module.PlayerCard })));
+import { LazyPlayerCard } from './LazyPlayerCard';
 
 const MAX_BACKS = 6;
 const MAX_PILE = 6;
@@ -416,6 +414,12 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
   const avatarBox = <span className={styles.avatarBox} data-seat-avatar>
     {player ? <Avatar avatar={player.avatar} image={player.avatarImage} border={player.avatarBorder}
       color={player.color} size="compact" /> : <span className={styles.emptyAvatar} aria-hidden="true" />}
+    {player && onObserve && <button type="button" className={`${styles.avatarHit} touch-target`} aria-haspopup="dialog"
+      aria-label={t('playerCard.open', { nickname: player.nickname })} title={t('playerCard.open', { nickname: player.nickname })}
+      onClick={(event) => {
+        event.stopPropagation();
+        setCardAnchor(event.currentTarget);
+      }} />}
     <span className={`${styles.ring} ${clockTurn ? styles.timed : ''}`} aria-hidden="true" />
     {clockTurn && clock && <TurnRing key={clockTurn.id} turn={clockTurn} bankMs={isMe ? clock.bankRemainingMs[seat] ?? 0 : 0}
       serverNow={clock.serverNow} receivedAt={receivedAt} />}
@@ -429,10 +433,16 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
     </span>}
     {moveKey !== undefined && <span key={moveKey} className={styles.moved} aria-hidden="true" />}
   </span>;
-  const namePill = <span className={styles.namePill}>
+  const pillContent = <>
     <SeatFrame frame={player?.seatFrame} turn={Boolean(active)} />
     <span className={styles.nickname}>{player ? player.nickname : '—'}</span>
-  </span>;
+  </>;
+  // A spectator's seat click moves the view; the avatar opens the player card and the name gives that
+  // click a keyboard and screen-reader target, so the plate holds no nested interactive roles.
+  const namePill = onObserve
+    ? <button type="button" className={`${styles.namePill} ${styles.observeName}`}
+      aria-label={t('table.observePlayer', { name })}>{pillContent}</button>
+    : <span className={styles.namePill}>{pillContent}</span>;
   const identity = <>{avatarBox}{namePill}{isMe && <span className={styles.srOnly}>{t('seat.meTag')}</span>}</>;
   const statusLine = statusChip ? <span className={`${styles.statusChip} ${styles[statusChip]}`}
     title={statusChip === 'autoPlayed' ? t('clock.autoPlayed') : undefined}>
@@ -444,15 +454,15 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
   return (
     <div data-table-seat={position}
       className={`${styles.seat} ${styles[position]} ${handBeside ? styles.handBeside : ''} ${active ? styles.turn : ''} ${isMe ? styles.mine : ''} ${frameClass ? `${styles.framed} ${frameClass}` : ''} ${dimmed ? styles.out : ''} ${onObserve ? styles.observable : onPick ? styles.pickable : ''} ${picked ? styles.picked : ''}`}
-      role={select ? 'button' : undefined} tabIndex={select ? 0 : undefined} onClick={select}
-      aria-label={onObserve ? t('table.observePlayer', { name }) : onPick ? t(pickLabel ?? 'seat.pickNext', { name }) : undefined}
+      role={onPick && !onObserve ? 'button' : undefined} tabIndex={onPick && !onObserve ? 0 : undefined} onClick={select}
+      aria-label={onPick && !onObserve ? t(pickLabel ?? 'seat.pickNext', { name }) : undefined}
       aria-pressed={onPick && !onObserve ? Boolean(picked) : undefined}
       title={onObserve ? t('table.observePlayer', { name }) : undefined}
-      onKeyDown={select ? (event) => {
+      onKeyDown={onPick && !onObserve ? (event) => {
         if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return;
         // Space would otherwise scroll; Enter must not also activate a focused child.
         event.preventDefault();
-        select();
+        onPick?.();
       } : undefined}>
       <div className={`${styles.plate} ${seatArt ? styles.hasArt : ''}`} style={seatArt} data-seat-plate>
         {player && !select
@@ -529,7 +539,7 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
       {dice && !bottom && !dice.handHidden && observedDice && observedDice.length > 0 && !diceOut
         && <ObservedDice dice={observedDice} owner={name} />}
       {cardAnchor && player && gameType && <Suspense fallback={null}>
-        <PlayerCard player={player} gameType={gameType} anchor={cardAnchor} onClose={() => setCardAnchor(null)} />
+        <LazyPlayerCard player={player} gameType={gameType} anchor={cardAnchor} onClose={() => setCardAnchor(null)} />
       </Suspense>}
     </div>
   );

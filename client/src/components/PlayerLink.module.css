@@ -7,6 +7,8 @@
   color: var(--text-primary);
   border-radius: var(--radius-sm);
 }
+.opener { padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
+.opener:hover .nickname { color: var(--color-primary); text-decoration: underline; }
 .identity { min-width: 0; overflow-wrap: anywhere; }
 .nickname { font-weight: 600; }
 .details { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-xs); margin-top: 2px; }
