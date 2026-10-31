@@ -104,6 +104,104 @@ export const boardsDemoZh = {
     title: '結算：黑方將死獲勝', caption: '46 手後紅方無法解將，黑方獲勝。結算列出將死與手數，按「返回房間」結束。',
     rule: '輪到的一方即使沒被將軍，只要完全沒有合法步也算輸，稱為困斃。', outcome: '本局我方紅棋落敗，黑方將死獲勝。',
   },
+  'go-start': {
+    title: '圍棋：9 路棋盤', caption: '這局在 9×9 的交叉點上進行，不讓子，我方執黑先下。所有棋子都是公開資訊，棋盤固定不旋轉。',
+  },
+  'go-goal': {
+    title: '目標：圍住更多地盤', caption: '採數子法：自己的棋子，加上只被自己圍住的空點。白棋加貼目 7.5，所以不會有和局。',
+    rule: '提到的子數不是勝負依據；最後比的是雙方的目數。',
+  },
+  'go-place': {
+    title: '點交叉點落子', caption: '輪到自己時，點空的交叉點放一顆棋，放下後不能移動或收回。滑鼠直接落子；觸控預設先出現十字準星預覽，再按「確認」或再點同一點。',
+    rule: '座標的列由下往上，欄位字母跳過 I，例如 D4。開啟「一點即走」後，觸控也會省略確認。',
+  },
+  'go-liberty': {
+    title: '氣：棋子旁邊的空點', caption: '棋子上下左右相鄰的空點叫「氣」，相連的同色棋共用氣。接著白 E5 被黑棋包住三面，只剩一口氣。',
+    rule: '一塊棋失去最後一口氣，就會被提走。只剩一口氣時稱為叫吃。',
+  },
+  'go-capture': {
+    title: '提子：占住最後一口氣', caption: '黑下 D5，占住白 E5 的最後一口氣，這顆白子被提走，提子數會顯示在座位旁。',
+    rule: '被提走的位置成為空點，之後雙方都能再下在那裡，但要遵守劫的規則。',
+  },
+  'go-rules': {
+    title: '規則卡：自殺與劫', caption: '以下是規則補充，這局沒有出現。下在沒有氣的位置（自殺）不允許，除非同時提走對手的棋。',
+    rule: '也不能下出讓棋盤回到先前任何一個出現過的局面，這條劫規則涵蓋單劫與循環劫。牌桌不標示這些點，它們無法點選。',
+  },
+  'go-speed': {
+    title: '加速完成中盤', caption: '接下來加速播放，觀察雙方如何圍出地盤、互相提子；每一手都會記在手數紀錄中。',
+  },
+  'go-pass': {
+    title: '停一手與結束對局', caption: '雙方都沒有值得下的地方時，按「停一手」再確認。對手先停一手，我方也停一手；連續兩次停一手，對局就停止。',
+    rule: '手數達棋盤點數的 3 倍（9 路為 243 手，停一手也算一手）也會停止。停止後都進入點目。',
+  },
+  'go-mark': {
+    title: '點目：先看伺服器標出的死子', caption: '伺服器依形勢先標出它認為已死的棋子，以淡色顯示；小方塊標示各自圍住的地盤，上方即時顯示雙方目數。',
+    rule: '死子在計分前先從盤面拿掉。雙方共用一個期限，逾時未確認的真人視為接受目前標記。',
+  },
+  'go-toggle': {
+    title: '點選棋塊，切換死活', caption: '右上角的黑 J9 被白棋包圍，卻沒有被標出。我方點一下，整塊相連的棋一起改標為死子，目數立即更新。',
+    rule: '再點一次改回活子。任何切換都會清除雙方的確認，必須重新確認。',
+  },
+  'go-resume': {
+    title: '規則卡：看法不同就繼續下棋', caption: '以下是規則補充，這局不需要。若雙方對死活的看法不同，任一方可按「繼續下棋」回到對局，由最後停一手者的對手先下。',
+    rule: '確認時會附上自己看到的死子清單；標記若已變更就會被拒絕，所以不會確認到沒看過的結果。已達手數上限的對局不能繼續。',
+  },
+  'go-confirm': {
+    title: '雙方確認，才計分', caption: '我方按「確認點目」，畫面顯示等待對手；對手確認後，伺服器立即依數子法結算。',
+  },
+  'go-end': {
+    title: '結算：黑棋勝 3.5 目', caption: '黑棋 46 目，白棋 35 目加貼目 7.5，黑棋以 3.5 目獲勝。結算也列出手數與共提子數，按「返回房間」結束。',
+    rule: '可隨時認輸，包含點目期間。不開放提和，貼目的 .5 也讓對局沒有和局。', outcome: '我方黑棋以數子法勝 3.5 目。',
+  },
+  'chess-start': {
+    title: '西洋棋：8×8 棋盤', caption: '這局固定從白方視角觀看：我方在下方執白、先走，黑方在上方。所有棋子都是公開資訊，沒有讓子。',
+  },
+  'chess-goal': {
+    title: '目標：將死對方的王', caption: '王被攻擊稱為「將軍」；被將軍又無法解除，就是「將死」，將死的一方輸。吃掉很多棋子不是直接的勝利條件。',
+  },
+  'chess-move': {
+    title: '先選棋子，再選合法落點', caption: '點自己的棋子，棋盤標出合法落點，再點落點。滑鼠直接走子；觸控預設先預覽，再按「確認」或再點落點。',
+    rule: '手數紀錄使用標準代數記譜，例如 Nc3 是馬走到 c3。可隨時認輸；輪到自己時可以提和，對手同意才成立。',
+  },
+  'chess-pieces': {
+    title: '六種棋子｜重複走子加速展示', caption: '接下來加速展示：馬跳出、兵推進與吃子、后出動。選到棋子後，只會標示目前合法的落點。',
+    rule: '王走一格；后直橫斜不限距離；車直橫、象斜走不限距離，都不能越子；馬走 L 形，可跳過棋子；兵向前一格（起始位置可走兩格），斜前一格吃子。',
+  },
+  'chess-check': {
+    title: '被將軍：必須立刻解除', caption: '黑后走到 e7，沿 e 線攻擊我方的王。被將軍時，下一手必須解除威脅，棋盤只提供合法的應對；我方用象擋在中間。',
+    rule: '解將有三種方法：移開王、吃掉攻擊的棋子、擋住攻擊線。任何一步都不能讓自己的王處於被將軍的狀態。',
+  },
+  'chess-escape': {
+    title: '另一種解將：吃掉攻擊者', caption: '黑馬先跳到 b4，我方走兵後，黑馬吃掉 c2 的兵並將軍。我方改用后把這匹馬吃掉。',
+    rule: '馬的攻擊無法擋住，只能移王或吃掉它。王也不能走到被攻擊的格子。',
+  },
+  'chess-speed': {
+    title: '加速完成中盤', caption: '接下來加速播放：我方象將軍，黑兵擋住後被吃；白兵再吃一子，讓象的攻擊線打開，黑王被迫移開。',
+  },
+  'chess-promote': {
+    title: '兵到底線：選擇升變棋子', caption: '白兵吃掉 a8 的黑車並到達底線，必須升變。棋盤跳出選單，這裡選「后」；黑象隨後把新的后吃回。',
+    rule: '升變可選后、車、象或馬，不能維持為兵。升變後的棋子也可能被吃。',
+  },
+  'chess-castle': {
+    title: '王車易位', caption: '點王再點 g1：王向車靠近兩格，車自動跳到王的另一側。這一步同時讓王更安全，並讓車離開角落。',
+    rule: '條件：王與該側的車都沒動過，中間沒有棋子；王不能在被將軍時易位，也不能經過或停在被攻擊的格子。短易位記為 O-O，長易位記為 O-O-O。',
+  },
+  'chess-enpassant': {
+    title: '規則卡：吃過路兵', caption: '以下是規則補充，這局沒有出現。敵兵從起始格一次走兩格，停在我方兵旁邊時，我方兵可以斜走到它經過的格子，把它吃掉。',
+    rule: '只能在緊接著的下一步執行，錯過就不能再吃。操作與一般兵吃子相同：點兵，再點那個空格，記譜例如 exd6。',
+  },
+  'chess-draws': {
+    title: '規則卡：自動和局', caption: '以下是規則補充。伺服器會立即判和，不必宣告：困斃、同一局面第三次出現、雙方各走 50 步都沒有吃子或動兵、子力不足以將死。',
+    rule: '困斃是輪到的一方沒被將軍卻無合法步。子力不足只判王對王、王加單象或單馬對王、雙方只剩同色格的象。',
+  },
+  'chess-mate': {
+    title: '連續將軍，直到將死', caption: '我方馬跳開，露出后的 c 線將軍；黑象擋住後被后吃掉，再次將軍；黑王退回 d8，后走到 a8，王沒有任何出路。',
+    rule: '將死是被將軍，而且無法移王、吃掉攻擊者或擋住攻擊線。',
+  },
+  'chess-end': {
+    title: '結算：白方將死獲勝', caption: '33 手後黑王無法解將，我方白棋獲勝。結算列出將死的原因與手數，按「返回房間」結束。',
+    rule: '和局時雙方同列第一。逾時不會判負，系統會代走一步合法棋。', outcome: '我方白棋將死黑王獲勝。',
+  },
   'jungle-start': {
     title: '鬥獸棋：八種動物的攻防', caption: '我方執紅先走，每方八隻動物；河流、陷阱與獸穴都會改變走法與戰局。',
   },
@@ -419,6 +517,104 @@ export const boardsDemoEn: Record<keyof typeof boardsDemoZh, DemoText> = {
   'xiangqi-end': {
     title: 'Result: black wins by checkmate', caption: 'After 46 moves red has no answer to check. Review the checkmate reason and move count, then use Back to room.',
     rule: 'A player with no legal move also loses without being in check; this is stalemate in Xiangqi.', outcome: 'Our red side loses; black wins by checkmate.',
+  },
+  'go-start': {
+    title: 'Go: a 9×9 board', caption: 'This match uses 9×9 intersections with no handicap. We play black and move first. Every stone is public and the board never rotates.',
+  },
+  'go-goal': {
+    title: 'Goal: surround more territory', caption: 'Area scoring counts your stones plus the empty points only you surround. White adds 7.5 komi, so there are no ties.',
+    rule: 'The number of captured stones does not decide the winner; the final point count does.',
+  },
+  'go-place': {
+    title: 'Click an intersection to place', caption: 'On your turn, click an empty intersection to place a stone. It cannot be moved or taken back. Mouse clicks place immediately; touch shows a crosshair preview first, then Confirm or a second tap on the same point.',
+    rule: 'Rows are counted from the bottom and the column letters skip I, as in D4. With one-tap play enabled, touch skips the confirmation.',
+  },
+  'go-liberty': {
+    title: 'Liberties: empty neighbouring points', caption: 'The empty points above, below and beside a stone are its liberties; connected stones of one colour share them. White E5 is soon surrounded on three sides with one liberty left.',
+    rule: 'A group that loses its last liberty is captured. A group with one liberty left is in atari.',
+  },
+  'go-capture': {
+    title: 'Capture: fill the last liberty', caption: 'Black plays D5, filling the last liberty of white E5. The white stone is removed and the capture count appears beside the seat.',
+    rule: 'A captured point becomes empty and can be played again, subject to the ko rule.',
+  },
+  'go-rules': {
+    title: 'Rule card: suicide and ko', caption: 'Rule explanation; this match does not show them. A stone placed where it has no liberties (suicide) is not allowed unless it captures opposing stones.',
+    rule: 'A move also cannot recreate any earlier board position; this superko rule covers simple ko and longer cycles. The table does not mark these points, but they cannot be selected.',
+  },
+  'go-speed': {
+    title: 'Fast-forward through the middle game', caption: 'We now speed up and watch both sides build territory and trade captures. Every move is still written in the move list.',
+  },
+  'go-pass': {
+    title: 'Passing ends the game', caption: 'When neither side sees a worthwhile move, press Pass and confirm. The opponent passes first and we pass too; two passes in a row stop the game.',
+    rule: 'Play also stops at three times the number of points (243 moves on 9×9, passes included). Either way, the count begins.',
+  },
+  'go-mark': {
+    title: 'Marking: start from the server’s dead stones', caption: 'The server first marks the stones it judges dead, shown faded. Small squares show each side’s territory and the totals update live.',
+    rule: 'Dead stones are removed before scoring. Both players share one deadline; a human who has not confirmed in time accepts the current marking.',
+  },
+  'go-toggle': {
+    title: 'Click a group to toggle dead or alive', caption: 'Black J9 in the top-right corner is surrounded by white but was not marked. We click it and the whole connected group becomes dead; the totals update immediately.',
+    rule: 'Click again to mark it alive. Any change clears both confirmations, so both players confirm again.',
+  },
+  'go-resume': {
+    title: 'Rule card: play on if you disagree', caption: 'Rule explanation; this match does not need it. If the players disagree about dead stones, either can press Play on to resume. The opponent of the last passer moves next.',
+    rule: 'Confirmation includes the dead stones you saw and is refused if the marking changed, so nobody confirms a result they have not seen. A match at the move limit cannot resume.',
+  },
+  'go-confirm': {
+    title: 'Both confirm, then the count', caption: 'We press Accept and the table waits for the opponent. When they confirm, the server scores the position at once by area counting.',
+  },
+  'go-end': {
+    title: 'Result: black wins by 3.5', caption: 'Black has 46 points; white has 35 plus 7.5 komi, so black wins by 3.5. The result also lists the move count and captured stones; use Back to room.',
+    rule: 'You may resign at any time, including during marking. Draw offers are unavailable, and the half-point komi prevents ties.', outcome: 'Our black side wins by area scoring by 3.5 points.',
+  },
+  'chess-start': {
+    title: 'Chess: an 8×8 board', caption: 'We keep white’s perspective throughout: our side is at the bottom and moves first, with black at the top. Every piece is public and there is no handicap.',
+  },
+  'chess-goal': {
+    title: 'Goal: checkmate the king', caption: 'An attacked king is in check; if the check cannot be answered, it is checkmate and that player loses. Winning material is not itself a win.',
+  },
+  'chess-move': {
+    title: 'Select a piece, then a legal square', caption: 'Select your piece to see its legal squares, then choose one. Mouse moves immediately; touch previews before Confirm or a second tap on the destination.',
+    rule: 'The move list uses standard algebraic notation: Nc3 means a knight moves to c3. You can resign at any time, or offer a draw on your turn if the opponent agrees.',
+  },
+  'chess-pieces': {
+    title: 'The six pieces | Repeated moves accelerated', caption: 'We now speed up: knights develop, pawns advance and capture, and a queen comes out. Selecting a piece shows only squares legal in the current position.',
+    rule: 'The king moves one square; the queen any distance in a straight or diagonal line; rooks straight and bishops diagonally, neither jumping; knights move in an L and may jump; pawns advance one square (two from the start) and capture diagonally forward.',
+  },
+  'chess-check': {
+    title: 'In check: answer it immediately', caption: 'The black queen reaches e7 and attacks our king along the e-file. After a check the next move must remove it, and the board offers only legal replies; we block with a bishop.',
+    rule: 'There are three answers: move the king, capture the attacker, or block the line. No move may leave your own king in check.',
+  },
+  'chess-escape': {
+    title: 'Another answer: capture the attacker', caption: 'A black knight goes to b4. After our pawn move it captures the pawn on c2 with check, and our queen captures the knight.',
+    rule: 'A knight’s attack cannot be blocked, so move the king or capture it. The king also cannot step onto an attacked square.',
+  },
+  'chess-speed': {
+    title: 'Fast-forward through the middlegame', caption: 'We speed up: our bishop gives check and the blocking pawn is captured; our pawn captures again, opening the bishop’s line and forcing the black king aside.',
+  },
+  'chess-promote': {
+    title: 'A pawn on the last rank: choose a piece', caption: 'The white pawn captures the rook on a8 and must promote. A picker opens; we choose the queen. The black bishop then recaptures it.',
+    rule: 'A pawn may become a queen, rook, bishop or knight, but cannot remain a pawn. The new piece can be captured like any other.',
+  },
+  'chess-castle': {
+    title: 'Castling', caption: 'Select the king, then g1. The king moves two squares toward the rook and the rook jumps to its other side, tucking the king away and activating the rook.',
+    rule: 'Neither the king nor that rook may have moved, and no piece may stand between them. The king may not castle out of, through or into check. Kingside is O-O; queenside is O-O-O.',
+  },
+  'chess-enpassant': {
+    title: 'Rule card: en passant', caption: 'Rule explanation; it does not occur in this game. If an enemy pawn advances two squares from its start and lands beside our pawn, our pawn may capture it by moving to the square it crossed.',
+    rule: 'It must be done on the very next move or the chance is lost. Select the pawn, then the empty square, as for any pawn capture; it is written exd6.',
+  },
+  'chess-draws': {
+    title: 'Rule card: automatic draws', caption: 'Rule explanation. The server declares these immediately, with no claim needed: stalemate, the third occurrence of a position, 50 moves each without a capture or pawn move, and insufficient material.',
+    rule: 'Stalemate means the side to move is not in check but has no legal move. Insufficient material covers only king versus king, king plus one bishop or knight versus king, and bishops of one square colour.',
+  },
+  'chess-mate': {
+    title: 'Check after check until mate', caption: 'Our knight steps aside and the queen checks along the c-file. The bishop blocks and is captured with check; the king returns to d8 and the queen goes to a8 with no escape.',
+    rule: 'Checkmate is check with no way to move the king, capture the attacker or block the line.',
+  },
+  'chess-end': {
+    title: 'Result: white wins by checkmate', caption: 'After 33 moves the black king cannot answer check, so our white side wins. The result lists the checkmate reason and move count; use Back to room.',
+    rule: 'In a draw both players share first place. A timeout never loses; the system plays a legal move for you.', outcome: 'Our white side wins by checkmate.',
   },
   'jungle-start': {
     title: 'Jungle: eight animals per side', caption: 'We are red and move first. Rivers, traps and dens affect how each of the eight animals can move and fight.',

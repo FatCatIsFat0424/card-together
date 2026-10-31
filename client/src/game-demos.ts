@@ -6,7 +6,7 @@ import recordings from './game-demo-recordings.json';
 import type { DemoTextKey } from './game-demo-i18n';
 import type { DemoScene as SharedDemoScene } from './game-demos/types';
 
-export const DEMO_GAME_TYPES = ['bridge', 'napoleon', 'chinesepoker', 'liarsdice', 'blackjack', 'holdem', 'stud', 'tenhalf', 'reversi', 'gomoku', 'xiangqi', 'jungle', 'landbattle', 'battleship', 'banqi', 'chinesecheckers', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'crazyeights', 'oldmaid', 'gofish', 'doudizhu', 'liarsdeck'] as const;
+export const DEMO_GAME_TYPES = ['bridge', 'napoleon', 'chinesepoker', 'liarsdice', 'blackjack', 'holdem', 'stud', 'tenhalf', 'reversi', 'gomoku', 'go', 'xiangqi', 'chess', 'jungle', 'landbattle', 'battleship', 'banqi', 'chinesecheckers', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'crazyeights', 'oldmaid', 'gofish', 'doudizhu', 'liarsdeck'] as const;
 export type DemoGameType = typeof DEMO_GAME_TYPES[number];
 interface DemoRecording { readonly leadIn: number; readonly duration: number; readonly chapters?: readonly number[] }
 /** Measured from the owner's recordings, including their opening delay and final reading time; `npm run demos:import` checks durations. */

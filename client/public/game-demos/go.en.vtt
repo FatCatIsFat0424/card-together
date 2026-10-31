@@ -1,0 +1,90 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:11.240
+Start and controls
+Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+
+00:00:11.240 --> 00:00:17.540
+Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+
+00:00:17.540 --> 00:00:25.542
+Go: a 9×9 board
+This match uses 9×9 intersections with no handicap. We play black and move first. Every stone is public and the board never rotates.
+
+00:00:25.542 --> 00:00:32.142
+Goal: surround more territory
+Area scoring counts your stones plus the empty points only you surround. White adds 7.5 komi, so there are no ties.
+
+00:00:32.142 --> 00:00:37.542
+The number of captured stones does not decide the winner; the final point count does.
+
+00:00:37.542 --> 00:00:46.342
+Click an intersection to place
+On your turn, click an empty intersection to place a stone. It cannot be moved or taken back. Mouse clicks place immediately; touch shows a crosshair preview first, then Confirm or a second tap on the same point.
+
+00:00:46.342 --> 00:00:53.542
+Rows are counted from the bottom and the column letters skip I, as in D4. With one-tap play enabled, touch skips the confirmation.
+
+00:00:53.542 --> 00:01:03.442
+Liberties: empty neighbouring points
+The empty points above, below and beside a stone are its liberties; connected stones of one colour share them. White E5 is soon surrounded on three sides with one liberty left.
+
+00:01:03.442 --> 00:01:11.542
+A group that loses its last liberty is captured. A group with one liberty left is in atari.
+
+00:01:11.542 --> 00:01:18.142
+Capture: fill the last liberty
+Black plays D5, filling the last liberty of white E5. The white stone is removed and the capture count appears beside the seat.
+
+00:01:18.142 --> 00:01:23.542
+A captured point becomes empty and can be played again, subject to the ko rule.
+
+00:01:23.542 --> 00:01:31.242
+Rule card: suicide and ko
+Rule explanation; this match does not show them. A stone placed where it has no liberties (suicide) is not allowed unless it captures opposing stones.
+
+00:01:31.242 --> 00:01:37.541
+A move also cannot recreate any earlier board position; this superko rule covers simple ko and longer cycles. The table does not mark these points, but they cannot be selected.
+
+00:01:37.541 --> 00:02:01.541
+Fast-forward through the middle game
+We now speed up and watch both sides build territory and trade captures. Every move is still written in the move list.
+
+00:02:01.541 --> 00:02:11.441
+Passing ends the game
+When neither side sees a worthwhile move, press Pass and confirm. The opponent passes first and we pass too; two passes in a row stop the game.
+
+00:02:11.441 --> 00:02:19.541
+Play also stops at three times the number of points (243 moves on 9×9, passes included). Either way, the count begins.
+
+00:02:19.541 --> 00:02:26.141
+Marking: start from the server’s dead stones
+The server first marks the stones it judges dead, shown faded. Small squares show each side’s territory and the totals update live.
+
+00:02:26.141 --> 00:02:31.542
+Dead stones are removed before scoring. Both players share one deadline; a human who has not confirmed in time accepts the current marking.
+
+00:02:31.542 --> 00:02:39.242
+Click a group to toggle dead or alive
+Black J9 in the top-right corner is surrounded by white but was not marked. We click it and the whole connected group becomes dead; the totals update immediately.
+
+00:02:39.242 --> 00:02:45.542
+Click again to mark it alive. Any change clears both confirmations, so both players confirm again.
+
+00:02:45.542 --> 00:02:51.042
+Rule card: play on if you disagree
+Rule explanation; this match does not need it. If the players disagree about dead stones, either can press Play on to resume. The opponent of the last passer moves next.
+
+00:02:51.042 --> 00:02:55.542
+Confirmation includes the dead stones you saw and is refused if the marking changed, so nobody confirms a result they have not seen. A match at the move limit cannot resume.
+
+00:02:55.542 --> 00:03:07.541
+Both confirm, then the count
+We press Accept and the table waits for the opponent. When they confirm, the server scores the position at once by area counting.
+
+00:03:07.541 --> 00:03:15.241
+Result: black wins by 3.5
+Black has 46 points; white has 35 plus 7.5 komi, so black wins by 3.5. The result also lists the move count and captured stones; use Back to room.
+
+00:03:15.241 --> 00:03:22.541
+You may resign at any time, including during marking. Draw offers are unavailable, and the half-point komi prevents ties.

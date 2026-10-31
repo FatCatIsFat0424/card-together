@@ -61,7 +61,7 @@ describe('walkthrough video catalog', () => {
     const file = `bridge-${'a'.repeat(24)}.mp4`;
     expect(parseDemoVideoCatalog([{ game: 'bridge', file }], DEMO_GAME_TYPES)).toEqual([{ game: 'bridge', file }]);
     for (const value of [
-      {}, [null], [{ game: 'chess', file: `chess-${'a'.repeat(24)}.mp4` }], [{ game: 'bridge', file: `napoleon-${'a'.repeat(24)}.mp4` }],
+      {}, [null], [{ game: 'checkers', file: `checkers-${'a'.repeat(24)}.mp4` }], [{ game: 'bridge', file: `napoleon-${'a'.repeat(24)}.mp4` }],
       [{ game: 'bridge', file: '../bridge.mp4' }], [{ game: 'bridge', file }, { game: 'bridge', file }],
     ]) expect(() => parseDemoVideoCatalog(value, DEMO_GAME_TYPES)).toThrow();
   });

@@ -1,9 +1,14 @@
 import type { GameSeat, PlayerInfo, PlayerVisibleGameState } from '../../shared/src/types';
 import type { GameActionEnvelope } from '../../shared/src/games/actions';
 import { DEFAULT_BATTLESHIP_OPTIONS } from '../../shared/src/rules/battleship';
+import { chessApply, chessInitialPosition, chessLegalMoves, chessNode, chessSan } from '../../shared/src/rules/chess';
+import type { ChessPosition } from '../../shared/src/rules/chess';
+import { goNode, goParsePoint } from '../../shared/src/rules/go';
 import * as reversi from '../../server/src/managers/games/reversi-game';
 import * as gomoku from '../../server/src/managers/games/gomoku-game';
 import * as xiangqi from '../../server/src/managers/games/xiangqi-game';
+import * as chess from '../../server/src/managers/games/chess-game';
+import * as go from '../../server/src/managers/games/go-game';
 import * as jungle from '../../server/src/managers/games/jungle-game';
 import * as landbattle from '../../server/src/managers/games/landbattle-game';
 import * as battleship from '../../server/src/managers/games/battleship-game';
@@ -20,9 +25,11 @@ import type { BotAction } from '../../server/src/bots/bot-decisions';
 import { createDemoRecorder, DEMO_NOW } from './demo-recorder';
 import type { DemoFixture } from './demo-fixture-types';
 
-type AssignedGameType = 'reversi' | 'gomoku' | 'xiangqi' | 'jungle' | 'landbattle' | 'battleship' | 'banqi' | 'chinesecheckers';
+type AssignedGameType = 'reversi' | 'gomoku' | 'go' | 'xiangqi' | 'chess' | 'jungle' | 'landbattle' | 'battleship' | 'banqi' | 'chinesecheckers';
+/** Lessons scripted move by move instead of played by a bot. */
+type ScriptedGameType = 'gomoku' | 'go' | 'chess';
 type BoardView = Extract<PlayerVisibleGameState, { gameType: AssignedGameType }>;
-type BoardRequest = Extract<GameActionEnvelope, { gameType: AssignedGameType }>;
+type BoardRequest = Extract<GameActionEnvelope, { gameType: Exclude<AssignedGameType, 'go' | 'chess'> }>;
 type ActionResult = { readonly success: boolean; readonly reason?: string };
 
 const SEATS = ['N', 'E'] as const;
@@ -45,7 +52,7 @@ function required<T>(value: T | null | undefined, context: string): T {
 }
 
 function read(code: string, type: AssignedGameType, seat: GameSeat): BoardView {
-  const managers = { reversi, gomoku, xiangqi, jungle, landbattle, battleship, banqi, chinesecheckers };
+  const managers = { reversi, gomoku, go, xiangqi, chess, jungle, landbattle, battleship, banqi, chinesecheckers };
   return required(managers[type].getPlayerVisibleState(code, seat), `${type} player view`);
 }
 
@@ -58,7 +65,7 @@ function choose(view: BoardView, random: () => number): BotAction | null {
     case 'battleship': return getBattleshipBotAction(view, random);
     case 'banqi': return easyBanqiAction(view, random);
     case 'chinesecheckers': return getChineseCheckersBotAction(view, random);
-    case 'gomoku': throw new Error('Gomoku uses the scripted swap opening.');
+    case 'gomoku': case 'go': case 'chess': throw new Error(`${view.gameType} uses a scripted game.`);
   }
 }
 
@@ -93,7 +100,7 @@ function apply(code: string, seat: GameSeat, request: BoardRequest): ActionResul
   }
 }
 
-function automatedFixture(type: Exclude<AssignedGameType, 'gomoku'>, seed: number): DemoFixture {
+function automatedFixture(type: Exclude<AssignedGameType, ScriptedGameType>, seed: number): DemoFixture {
   const code = `DEMO-${type.toUpperCase()}`;
   const random = seededRandom(seed);
   switch (type) {
@@ -153,6 +160,79 @@ function gomokuFixture(): DemoFixture {
   }
 }
 
+/** A short legal game with a bishop-blocked check, a captured checker, a promotion, castling and a queen mate. */
+const CHESS_GAME = [
+  'Nc3', 'd6', 'Nf3', 'Nc6', 'e4', 'Qd7', 'd4', 'e6', 'd5', 'exd5', 'exd5', 'Qe7+', 'Be3', 'Nb4', 'a3', 'Nxc2+', 'Qxc2',
+  'Bg4', 'Bb5+', 'c6', 'dxc6', 'Bxf3', 'cxb7+', 'Kd8', 'bxa8=Q+', 'Bxa8', 'O-O', 'Kc8', 'Nd5+', 'Bc6', 'Qxc6+', 'Kd8', 'Qa8#',
+] as const;
+
+function chessFixture(): DemoFixture {
+  const code = 'DEMO-CHESS';
+  chess.startGame(code, PLAYERS, DEMO_NOW);
+  const recorder = createDemoRecorder(code, 'N', SEATS, () => chess.getPlayerVisibleState(code, 'N'));
+  try {
+    let position: ChessPosition = chessInitialPosition();
+    for (const [index, san] of CHESS_GAME.entries()) {
+      const seat = SEATS[index % 2];
+      const matches = chessLegalMoves(position).filter((candidate) => chessSan(position, candidate) === san);
+      const move = required(matches.length === 1 ? matches[0] : null, `unique legal move for ${san}`);
+      const action = {
+        type: 'move' as const, from: chessNode(move.from), to: chessNode(move.to), ...move.promotion ? { promotion: move.promotion } : {},
+      };
+      recorder.act(seat, action, 'chess-move',
+        () => chess.move(code, seat, action.from, action.to, move.promotion, DEMO_NOW));
+      position = chessApply(position, move);
+    }
+    const result = required(chess.getGameState(code)?.result, 'Chess result');
+    if (result.reason !== 'checkmate' || result.winners.join() !== 'N') {
+      throw new Error('The Chess lesson no longer ends in checkmate for white.');
+    }
+    return recorder.finish();
+  } finally {
+    chess.abortGame(code);
+  }
+}
+
+/** A 9 × 9 game played once offline by the hard bot and kept as a fixed list; the marking steps are scripted. */
+const GO_GAME = (
+  'E4 D4 E6 E5 F5 E3 D5 C5 C4 D3 F3 C3 B4 B5 B2 B3 E2 F2 A4 A3 G2 G8 D7 F4 G4 E8 F7 H7 F8 G9 H6 F1 C6 C8 B6 A5 B7 F9 B8 '
+  + 'G6 H5 J7 E1 D2 D8 D1 G7 J6 E7 H4 J5 J4 G5 G3 H3 H8 J9 G1 H1 H2 J2 D9 A6 C9 E1 E2 E9 A9 E8 pass pass'
+).split(' ');
+/** The server's estimate leaves this lone corner stone alive; the lesson marks it dead by hand. */
+const GO_MARKED = 'J9';
+const GO_MARK_MS = 90_000;
+
+function goFixture(): DemoFixture {
+  const code = 'DEMO-GO';
+  go.startGame(code, PLAYERS, { size: 9, handicap: 0 }, DEMO_NOW);
+  const recorder = createDemoRecorder(code, 'N', SEATS, () => go.getPlayerVisibleState(code, 'N'));
+  const node = (name: string): string => goNode(9, required(goParsePoint(9, name), `Go point ${name}`));
+  try {
+    for (const [index, name] of GO_GAME.entries()) {
+      const seat = SEATS[index % 2];
+      if (name === 'pass') {
+        recorder.act(seat, { type: 'pass' }, 'go-pass', () => go.pass(code, seat, GO_MARK_MS, DEMO_NOW));
+      } else {
+        const to = node(name);
+        recorder.act(seat, { type: 'place', to }, 'go-place', () => go.place(code, seat, to, GO_MARK_MS, DEMO_NOW));
+      }
+    }
+    const marked = node(GO_MARKED);
+    recorder.act('N', { type: 'toggle-dead', to: marked }, 'go-mark', () => go.toggleDead(code, 'N', marked, false, DEMO_NOW));
+    for (const seat of SEATS) {
+      const dead = [...required(go.getGameState(code), 'Go game').dead];
+      recorder.act(seat, { type: 'confirm-score', dead }, 'go-confirm', () => go.confirmScore(code, seat, dead, false, DEMO_NOW));
+    }
+    const result = required(go.getGameState(code)?.result, 'Go result');
+    if (result.reason !== 'score' || result.winners.join() !== 'N' || result.margin !== 3.5) {
+      throw new Error('The Go lesson no longer ends with black winning by 3.5 points.');
+    }
+    return recorder.finish();
+  } finally {
+    go.abortGame(code);
+  }
+}
+
 /** Complete legal matches, always recorded from N's filtered player perspective. */
 export function generateBoardFixtures(): Record<AssignedGameType, DemoFixture> {
   return {
@@ -164,5 +244,7 @@ export function generateBoardFixtures(): Record<AssignedGameType, DemoFixture> {
     battleship: automatedFixture('battleship', 15),
     banqi: automatedFixture('banqi', 16),
     chinesecheckers: automatedFixture('chinesecheckers', 17),
+    go: goFixture(),
+    chess: chessFixture(),
   };
 }

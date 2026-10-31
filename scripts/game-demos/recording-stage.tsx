@@ -239,7 +239,21 @@ async function prepareAction(step: ExpandedDemoStep): Promise<void> {
     const target = boardNode(action.to);
     if (!target) throw new Error('Missing legal board destination.');
     point(target); await wait(800);
-  } else if (['place', 'flip', 'fire'].includes(String(action.type)) && typeof action.to === 'string') {
+    if (gameType === 'chess' && action.promotion) {
+      // The picker opens locally; cancelling it keeps the lesson from sending a real move.
+      await selectNode(action.to);
+      await wait(1200);
+      point(button(`升變為${action.promotion === 'q' ? '后' : action.promotion === 'r' ? '車' : action.promotion === 'b' ? '象' : '馬'}`));
+      await wait(1500);
+      await click('取消');
+      await wait(400);
+    }
+  } else if (gameType === 'go' && action.type === 'pass') {
+    await click('停一手');
+    point(button('確定停一手')); await wait(1000);
+  } else if (gameType === 'go' && action.type === 'confirm-score') {
+    point(button('確認點目')); await wait(1000);
+  } else if (['place', 'flip', 'fire', 'toggle-dead'].includes(String(action.type)) && typeof action.to === 'string') {
     const target = boardNode(action.to);
     if (target) { point(target); await wait(800); }
   } else if ((gameType === 'holdem' || gameType === 'stud') && action.type === 'raise') {

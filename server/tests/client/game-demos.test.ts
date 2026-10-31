@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { GAME_TYPES } from '../../../shared/src/constants/game-rules';
-import type { GameType, PlayerVisibleGameState } from '@shared/types';
+import type { PlayerVisibleGameState } from '@shared/types';
 import { DEMO_GAME_TYPES, DEMO_SCENES, demoChapters, isDemoGameType } from '../../../client/src/game-demos';
 import { demoVideoFile } from '../../../client/src/game-demo-catalog';
 import { gameDemoTranslations } from '../../../client/src/game-demo-i18n';
@@ -21,18 +21,16 @@ const fixtures = { games: Object.fromEntries(DEMO_GAME_TYPES.map((game) => [game
   expandDemoFixture(storedFixtures.games[game as keyof typeof storedFixtures.games] as unknown as DemoFixture),
 ])) as Record<DemoGameType, ExpandedDemoFixture> };
 
-/** Modes still waiting for the owner's recorded walkthrough; their table offers no lesson. */
-const WITHOUT_LESSON: readonly GameType[] = ['go', 'chess'];
-
 describe('beginner walkthroughs', () => {
-  it('has a lesson for every other mode and shows it only with an imported video, unloaded until opened', () => {
-    expect([...DEMO_GAME_TYPES].sort()).toEqual(GAME_TYPES.filter((game) => !WITHOUT_LESSON.includes(game)).sort());
-    expect(GAME_TYPES.filter((game) => !isDemoGameType(game))).toEqual(WITHOUT_LESSON);
-    for (const game of WITHOUT_LESSON) expect(renderToStaticMarkup(createElement(GameDemo, { gameType: game }))).toBe('');
-    const html = renderToStaticMarkup(createElement(GameDemo, { gameType: 'bridge' }));
-    if (demoVideoFile('bridge')) expect(html).toContain('<summary>');
-    else expect(html).toBe('');
-    expect(html).not.toContain('<video');
+  it('has a lesson for every mode and shows it only with an imported video, unloaded until opened', () => {
+    expect([...DEMO_GAME_TYPES].sort()).toEqual([...GAME_TYPES].sort());
+    expect(GAME_TYPES.every(isDemoGameType)).toBe(true);
+    for (const game of DEMO_GAME_TYPES) {
+      const html = renderToStaticMarkup(createElement(GameDemo, { gameType: game }));
+      if (demoVideoFile(game)) expect(html).toContain('<summary>');
+      else expect(html).toBe('');
+      expect(html).not.toContain('<video');
+    }
   });
 
   for (const game of DEMO_GAME_TYPES) {

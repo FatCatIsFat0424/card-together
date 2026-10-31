@@ -1,7 +1,7 @@
 import type { DemoScene } from './types';
 import type { boardsDemoZh } from './boards-i18n';
 
-type AssignedGameType = 'reversi' | 'gomoku' | 'xiangqi' | 'jungle' | 'landbattle' | 'battleship' | 'banqi' | 'chinesecheckers';
+type AssignedGameType = 'reversi' | 'gomoku' | 'go' | 'xiangqi' | 'chess' | 'jungle' | 'landbattle' | 'battleship' | 'banqi' | 'chinesecheckers';
 
 export const boardsDemoScenes: Record<AssignedGameType, readonly DemoScene<keyof typeof boardsDemoZh>[]> = {
   reversi: [
@@ -27,6 +27,21 @@ export const boardsDemoScenes: Record<AssignedGameType, readonly DemoScene<keyof
     { text: 'gomoku-five', seconds: 14, step: 9, until: 10 },
     { text: 'gomoku-end', seconds: 16, step: 10 },
   ],
+  go: [
+    { text: 'go-start', seconds: 8, step: 0 },
+    { text: 'go-goal', seconds: 12, step: 0 },
+    { text: 'go-place', seconds: 16, step: 0, until: 2 },
+    { text: 'go-liberty', seconds: 18, step: 2, until: 6 },
+    { text: 'go-capture', seconds: 12, step: 6, until: 7 },
+    { text: 'go-rules', seconds: 14, step: 7 },
+    { text: 'go-speed', seconds: 24, step: 7, until: 68 },
+    { text: 'go-pass', seconds: 18, step: 68, until: 71 },
+    { text: 'go-mark', seconds: 12, step: 71 },
+    { text: 'go-toggle', seconds: 14, step: 71, until: 72 },
+    { text: 'go-resume', seconds: 10, step: 72 },
+    { text: 'go-confirm', seconds: 12, step: 72, until: 74 },
+    { text: 'go-end', seconds: 14, step: 74 },
+  ],
   xiangqi: [
     { text: 'xiangqi-start', seconds: 12, step: 0 },
     { text: 'xiangqi-goal', seconds: 14, step: 0 },
@@ -39,6 +54,21 @@ export const boardsDemoScenes: Record<AssignedGameType, readonly DemoScene<keyof
     { text: 'xiangqi-escape', seconds: 14, step: 44, until: 45 },
     { text: 'xiangqi-mate', seconds: 14, step: 45, until: 46 },
     { text: 'xiangqi-end', seconds: 16, step: 46 },
+  ],
+  chess: [
+    { text: 'chess-start', seconds: 8, step: 0 },
+    { text: 'chess-goal', seconds: 10, step: 0 },
+    { text: 'chess-move', seconds: 14, step: 0, until: 2 },
+    { text: 'chess-pieces', seconds: 22, step: 2, until: 11 },
+    { text: 'chess-check', seconds: 16, step: 11, until: 13 },
+    { text: 'chess-escape', seconds: 18, step: 13, until: 17 },
+    { text: 'chess-speed', seconds: 18, step: 17, until: 24 },
+    { text: 'chess-promote', seconds: 18, step: 24, until: 26 },
+    { text: 'chess-castle', seconds: 14, step: 26, until: 27 },
+    { text: 'chess-enpassant', seconds: 12, step: 27 },
+    { text: 'chess-draws', seconds: 14, step: 27 },
+    { text: 'chess-mate', seconds: 20, step: 27, until: 33 },
+    { text: 'chess-end', seconds: 14, step: 33 },
   ],
   jungle: [
     { text: 'jungle-start', seconds: 12, step: 0 },

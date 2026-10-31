@@ -1,0 +1,90 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:11.150
+Start and controls
+Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+
+00:00:11.150 --> 00:00:17.450
+Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+
+00:00:17.450 --> 00:00:25.449
+Chess: an 8×8 board
+We keep white’s perspective throughout: our side is at the bottom and moves first, with black at the top. Every piece is public and there is no handicap.
+
+00:00:25.449 --> 00:00:35.449
+Goal: checkmate the king
+An attacked king is in check; if the check cannot be answered, it is checkmate and that player loses. Winning material is not itself a win.
+
+00:00:35.449 --> 00:00:43.149
+Select a piece, then a legal square
+Select your piece to see its legal squares, then choose one. Mouse moves immediately; touch previews before Confirm or a second tap on the destination.
+
+00:00:43.149 --> 00:00:49.449
+The move list uses standard algebraic notation: Nc3 means a knight moves to c3. You can resign at any time, or offer a draw on your turn if the opponent agrees.
+
+00:00:49.449 --> 00:01:01.549
+The six pieces | Repeated moves accelerated
+We now speed up: knights develop, pawns advance and capture, and a queen comes out. Selecting a piece shows only squares legal in the current position.
+
+00:01:01.549 --> 00:01:11.448
+The king moves one square; the queen any distance in a straight or diagonal line; rooks straight and bishops diagonally, neither jumping; knights move in an L and may jump; pawns advance one square (two from the start) and capture diagonally forward.
+
+00:01:11.448 --> 00:01:20.248
+In check: answer it immediately
+The black queen reaches e7 and attacks our king along the e-file. After a check the next move must remove it, and the board offers only legal replies; we block with a bishop.
+
+00:01:20.248 --> 00:01:27.448
+There are three answers: move the king, capture the attacker, or block the line. No move may leave your own king in check.
+
+00:01:27.448 --> 00:01:37.348
+Another answer: capture the attacker
+A black knight goes to b4. After our pawn move it captures the pawn on c2 with check, and our queen captures the knight.
+
+00:01:37.348 --> 00:01:45.447
+A knight’s attack cannot be blocked, so move the king or capture it. The king also cannot step onto an attacked square.
+
+00:01:45.447 --> 00:02:03.447
+Fast-forward through the middlegame
+We speed up: our bishop gives check and the blocking pawn is captured; our pawn captures again, opening the bishop’s line and forcing the black king aside.
+
+00:02:03.447 --> 00:02:13.347
+A pawn on the last rank: choose a piece
+The white pawn captures the rook on a8 and must promote. A picker opens; we choose the queen. The black bishop then recaptures it.
+
+00:02:13.347 --> 00:02:21.447
+A pawn may become a queen, rook, bishop or knight, but cannot remain a pawn. The new piece can be captured like any other.
+
+00:02:21.447 --> 00:02:29.147
+Castling
+Select the king, then g1. The king moves two squares toward the rook and the rook jumps to its other side, tucking the king away and activating the rook.
+
+00:02:29.147 --> 00:02:35.447
+Neither the king nor that rook may have moved, and no piece may stand between them. The king may not castle out of, through or into check. Kingside is O-O; queenside is O-O-O.
+
+00:02:35.447 --> 00:02:42.047
+Rule card: en passant
+Rule explanation; it does not occur in this game. If an enemy pawn advances two squares from its start and lands beside our pawn, our pawn may capture it by moving to the square it crossed.
+
+00:02:42.047 --> 00:02:47.449
+It must be done on the very next move or the chance is lost. Select the pawn, then the empty square, as for any pawn capture; it is written exd6.
+
+00:02:47.449 --> 00:02:55.149
+Rule card: automatic draws
+Rule explanation. The server declares these immediately, with no claim needed: stalemate, the third occurrence of a position, 50 moves each without a capture or pawn move, and insufficient material.
+
+00:02:55.149 --> 00:03:01.449
+Stalemate means the side to move is not in check but has no legal move. Insufficient material covers only king versus king, king plus one bishop or knight versus king, and bishops of one square colour.
+
+00:03:01.449 --> 00:03:12.449
+Check after check until mate
+Our knight steps aside and the queen checks along the c-file. The bishop blocks and is captured with check; the king returns to d8 and the queen goes to a8 with no escape.
+
+00:03:12.449 --> 00:03:21.449
+Checkmate is check with no way to move the king, capture the attacker or block the line.
+
+00:03:21.449 --> 00:03:29.149
+Result: white wins by checkmate
+After 33 moves the black king cannot answer check, so our white side wins. The result lists the checkmate reason and move count; use Back to room.
+
+00:03:29.149 --> 00:03:36.449
+In a draw both players share first place. A timeout never loses; the system plays a legal move for you.
