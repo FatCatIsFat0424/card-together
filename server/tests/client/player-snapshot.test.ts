@@ -241,6 +241,21 @@ describe('serialized snapshot equality', () => {
 });
 
 describe('chat history deltas', () => {
+  it('notifies an evicted source author without retaining its quote after corrective history', () => {
+    useChatMentionStore.getState().setMode('sound');
+    const reply = {
+      id: 'last-source-reply', sender: { ...player, id: 'bob', nickname: 'Bob' }, content: 'Answer', timestamp: 456,
+      reply: { messageId: 'first', notify: true },
+    };
+    applyChatMessage({ roomCode: 'ABC123', message: reply });
+    expect(useChatMentionStore.getState()).toMatchObject({ unreadIds: [reply.id], notice: reply, soundCueId: reply.id });
+    applyPlayerSnapshot({ ...structuredClone(snapshot), chatHistory: [reply] });
+    expect(useChatStore.getState().messages).toEqual([reply]);
+    expect(useChatStore.getState().messages[0]).not.toHaveProperty('replyPreview');
+    expect(useChatMentionStore.getState().unreadIds).toEqual([reply.id]);
+    applyChatMessage({ roomCode: 'ABC123', message: reply });
+    expect(useChatMentionStore.getState().unreadIds).toEqual([reply.id]);
+  });
   beforeEach(() => {
     clearAccount();
     useAccountStore.getState().setAccount(structuredClone(account));

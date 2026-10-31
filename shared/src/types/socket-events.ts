@@ -211,12 +211,12 @@ export interface ClientToServerEvents {
     payload: { agree: boolean }, callback: (response: ActionResult) => void,
   ) => void;
   'chat:send': (
-    payload:
+    payload: { replyTo?: string; replyNotify?: boolean } & (
       | { message: string; mentions?: readonly ChatMention[]; stickerId?: never; providedSticker?: never; shopSticker?: never }
       | { stickerId: string; mentions?: never; message?: never; providedSticker?: never; shopSticker?: never }
       /** Name of a site-provided emoji sent as a sticker. */
       | { providedSticker: string; mentions?: never; message?: never; stickerId?: never; shopSticker?: never }
-      | { shopSticker: ShopStickerId; mentions?: never; message?: never; stickerId?: never; providedSticker?: never },
+      | { shopSticker: ShopStickerId; mentions?: never; message?: never; stickerId?: never; providedSticker?: never }),
     callback: (response: ActionResult) => void,
   ) => void;
 }

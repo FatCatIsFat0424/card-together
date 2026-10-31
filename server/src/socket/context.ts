@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from 'node:util';
+import { replyPreview } from '../media/message-reply';
 import { roomSeatInfo } from '@shared/rules/seats';
 import type { Server, Socket } from 'socket.io';
 import type {
@@ -84,8 +86,14 @@ function hidesObserverChat(code: string, accountId: string, observers: readonly 
 /** The room history this account may read. */
 export function visibleChatHistory(code: string, accountId: string): ChatMessage[] {
   const history = chatManager.getChatHistory(code);
-  return hidesObserverChat(code, accountId, observerIds(code))
+  const visible = hidesObserverChat(code, accountId, observerIds(code))
     ? history.filter((message) => message.audience !== 'observers') : history;
+  const sources = new Map(visible.map((message) => [message.id, message]));
+  return visible.map(({ replyPreview: _preview, ...message }) => {
+    const source = message.reply && sources.get(message.reply.messageId);
+    return source && !source.system ? { ...message,
+      replyPreview: replyPreview(source.sender.id, source.sender.nickname, source) } : message;
+  });
 }
 
 /** Full snapshot; `includeChat` false omits history so broadcasts can send chat deltas. */
@@ -116,18 +124,24 @@ interface ChatCursor {
   readonly lastId: string | null;
   /** Whether observers' messages were withheld; a change resends the full history. */
   readonly filtered: boolean;
+  /** Canonical previews already delivered; retained replies can change when sources disappear. */
+  readonly replyPreviews: ReadonlyMap<string, ChatMessage['replyPreview']>;
 }
 
 const chatCursors = new WeakMap<TypedServer, Map<string, ChatCursor>>();
 
-/** Returns the full history when the room changed or the cursor fell out of history. */
+/** Resyncs when visibility or retained previews change, or the cursor falls out of history. */
 function chatUpdate(
   cursor: ChatCursor | undefined, roomCode: string | null, history: readonly ChatMessage[], filtered: boolean,
-): { readonly history: ChatMessage[] } | { readonly messages: ChatMessage[] } {
-  if (!cursor || cursor.roomCode !== roomCode || cursor.filtered !== filtered) return { history: [...history] };
+): { readonly history?: ChatMessage[]; readonly messages: ChatMessage[] } {
+  if (!cursor || cursor.roomCode !== roomCode || cursor.filtered !== filtered) return { history: [...history], messages: [] };
   if (cursor.lastId === null) return { messages: [...history] };
   const index = history.findIndex((message) => message.id === cursor.lastId);
-  return index < 0 ? { history: [...history] } : { messages: history.slice(index + 1) };
+  if (index < 0) return { history: [...history], messages: [] };
+  const messages = history.slice(index + 1);
+  return history.slice(0, index + 1).some((message) =>
+    !isDeepStrictEqual(message.replyPreview, cursor.replyPreviews.get(message.id)))
+    ? { history: [...history], messages } : { messages };
 }
 
 /** What a friend's friends may see of the room they are in; admission still goes through `room:joinFriend`. */
@@ -169,8 +183,8 @@ export function affectedAccounts(accountId: string): Set<string> {
 }
 
 /**
- * Sends each account its filtered snapshot. Chat history is included only when the room
- * changes; otherwise new messages follow as `chat:message` deltas.
+ * Sends each account its filtered snapshot, resynchronizing chat history only when needed.
+ * New live messages precede corrective history so synchronization does not suppress alerts.
  */
 export function broadcastState(io: TypedServer, accountIds: Iterable<string>): void {
   let cursors = chatCursors.get(io);
@@ -185,16 +199,20 @@ export function broadcastState(io: TypedServer, accountIds: Iterable<string>): v
     const snapshot = playerSnapshot(accountId, false);
     const roomCode = snapshot.room?.code ?? null;
     const filtered = roomCode !== null && hidesObserverChat(roomCode, accountId, snapshot.room?.observerIds ?? []);
-    const history = roomCode ? chatManager.getChatHistory(roomCode)
-      .filter((message) => !filtered || message.audience !== 'observers') : [];
+    const history = roomCode ? visibleChatHistory(roomCode, accountId) : [];
     const update = snapshot.success ? chatUpdate(cursors.get(accountId), roomCode, history, filtered) : null;
-    if (update && 'history' in update) snapshot.chatHistory = update.history;
-    if (snapshot.success) cursors.set(accountId, { roomCode, lastId: history.at(-1)?.id ?? null, filtered });
+    if (update?.history) snapshot.chatHistory = update.history;
+    if (snapshot.success) cursors.set(accountId, {
+      roomCode, lastId: history.at(-1)?.id ?? null, filtered,
+      replyPreviews: new Map(history.filter((message) => message.replyPreview)
+        .map((message) => [message.id, message.replyPreview])),
+    });
     else cursors.delete(accountId);
-    io.to(channel).emit('player:state', snapshot);
-    if (roomCode && update && 'messages' in update) {
+    if (!update?.history) io.to(channel).emit('player:state', snapshot);
+    if (roomCode && update) {
       for (const message of update.messages) io.to(channel).emit('chat:message', { roomCode, message });
     }
+    if (update?.history) io.to(channel).emit('player:state', snapshot);
   }
 }
 

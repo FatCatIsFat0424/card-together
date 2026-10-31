@@ -43,4 +43,26 @@ describe('direct message history ordering', () => {
     expect(latestIncomingMessageId(messages, 'bob', 'alice')).toBe('incoming');
     expect(latestIncomingMessageId([message('outgoing', NOW, 'bob')], 'bob', 'alice')).toBeUndefined();
   });
+
+  it('expires older cached reply excerpts even when the source was never loaded or the reply is outside the refreshed page', () => {
+    const cutoff = NOW - 90 * 24 * 60 * 60_000;
+    const reply = { ...message('older-reply', NOW - 1000), reply: { messageId: 'source', notify: true },
+      replyPreview: { senderId: PEER.id, nickname: PEER.nickname, timestamp: cutoff, content: 'Expired source', kind: 'text' as const } };
+    const freshPage = Array.from({ length: 50 }, (_, index) => message(`fresh-${index}`));
+    for (const current of [[reply], [message('source', cutoff), reply]]) {
+      const merged = mergeDirectMessages(current, freshPage, 'after', NOW);
+      expect(merged).toHaveLength(51);
+      expect(merged[0]).toMatchObject({ id: reply.id, reply: reply.reply });
+      expect(merged[0]).not.toHaveProperty('replyPreview');
+      expect(reply).toHaveProperty('replyPreview');
+    }
+  });
+
+  it('preserves a valid canonical excerpt for a source outside the loaded page until its exact expiry', () => {
+    const cutoff = NOW - 90 * 24 * 60 * 60_000;
+    const reply = { ...message('reply'), reply: { messageId: 'not-loaded', notify: true },
+      replyPreview: { senderId: PEER.id, nickname: PEER.nickname, timestamp: cutoff + 1, content: 'Retained source', kind: 'text' as const } };
+    expect(mergeDirectMessages([reply], [], 'after', NOW)[0]).toHaveProperty('replyPreview', reply.replyPreview);
+    expect(mergeDirectMessages([reply], [], 'after', NOW + 1)[0]).not.toHaveProperty('replyPreview');
+  });
 });

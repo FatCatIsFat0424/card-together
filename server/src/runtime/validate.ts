@@ -1,3 +1,4 @@
+import { isMessageReply } from '../media/message-reply';
 import { isBotDifficulty } from '@shared/bot-difficulty';
 import {
   isAvatarBorderId, MAX_MESSAGE_EMOJIS, isEmojiName, isMediaId, isProvidedEmojiFile, ABORT_VOTE_THRESHOLD,
@@ -305,9 +306,11 @@ export function isRuntimeSnapshot(value: unknown, options: RuntimeValidationOpti
             player(message.sender) &&
             typeof message.content === 'string' &&
             number(message.timestamp) &&
+            message.replyPreview === undefined &&
+            (message.reply === undefined || (message.system === undefined && isMessageReply(message.reply))) &&
             (message.shopSticker === undefined || (
               isShopStickerId(message.shopSticker) && stickerOnly(message, 'shopSticker') &&
-              Object.keys(message).every((key) => ['id', 'sender', 'content', 'timestamp', 'shopSticker', 'audience'].includes(key))
+              Object.keys(message).every((key) => ['id', 'sender', 'content', 'timestamp', 'shopSticker', 'audience', 'reply'].includes(key))
             )) &&
             (message.sticker === undefined || (
               object(message.sticker) && text(message.sticker.id) &&

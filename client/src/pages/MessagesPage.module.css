@@ -1,4 +1,4 @@
-.page { display: flex; width: 100%; max-width: var(--page-max); height: 100%; min-height: 0; margin: 0; padding: var(--page-inset) var(--page-inset) calc(var(--page-inset) + var(--room-card-clearance, 0px)); }
+.page { display: flex; width: 100%; max-width: var(--page-max); height: 100%; min-height: 0; margin: 0; padding: var(--page-inset) var(--page-inset) max(var(--page-inset), env(safe-area-inset-bottom)); }
 .layout { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; overflow: hidden; transform-origin: top right; animation: windowIn 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 /* The window grows out of and shrinks back toward the corner it was opened from. */
 .layout.closing { pointer-events: none; animation: windowOut 170ms ease-in both; }
@@ -30,13 +30,13 @@
 .compact .layout { position: relative; }
 .compact .detail { position: relative; }
 @media (max-height: 500px) and (min-width: 600px) {
-  .compact { padding: 0 0 var(--room-card-clearance, 0px); }
+  .compact { padding: 0 0 env(safe-area-inset-bottom); }
   .compact .sidebar { padding: 0 var(--space-1) 0 0; }
 }
 
 /* Desktop shell: the toolbar is the page's 56px header row and the window fills the page edge to edge. */
 @media (min-width: 768px) and (min-height: 501px) {
-  .page { padding: 0 0 var(--room-card-clearance, 0px); }
+  .page { padding: 0 0 env(safe-area-inset-bottom); }
   .toolbar { align-items: center; min-height: 56px; padding: 0 var(--page-inset); }
   .toolbar h1 { font-size: var(--text-lg); }
   .panels { padding: var(--space-3) var(--page-inset) var(--page-inset); }

@@ -1,10 +1,12 @@
-import type { ChatMessage } from './chat';
+import type { ChatMessage, MessageReply, ReplyPreview } from './chat';
 import type { FriendRequest, PublicAccount } from './social';
 import type { ShopStickerId } from '../constants/shop';
 
 export type MessageContent = Pick<ChatMessage, 'content' | 'sticker' | 'providedSticker' | 'shopSticker' | 'emojis' | 'providedEmojis'>;
 
 export interface DirectMessage extends MessageContent {
+  readonly reply?: MessageReply;
+  readonly replyPreview?: ReplyPreview;
   readonly id: string;
   readonly clientId: string;
   readonly sender: PublicAccount;
@@ -12,7 +14,7 @@ export interface DirectMessage extends MessageContent {
   readonly timestamp: number;
 }
 
-export type MessageInput = { message: string } | { stickerId: string } | { providedSticker: string } | { shopSticker: ShopStickerId };
+export type MessageInput = { replyTo?: string; replyNotify?: boolean } & ({ message: string } | { stickerId: string } | { providedSticker: string } | { shopSticker: ShopStickerId });
 
 export interface Conversation {
   readonly account: PublicAccount;

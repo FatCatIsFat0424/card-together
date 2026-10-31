@@ -9,7 +9,7 @@
   max-width: 74rem;
   min-height: 100%;
   margin: 0 auto;
-  padding: var(--page-inset) var(--page-inset) calc(var(--page-inset) + var(--room-card-clearance, 0px));
+  padding: var(--page-inset) var(--page-inset) max(var(--page-inset), env(safe-area-inset-bottom));
 }
 
 .bar {
@@ -130,7 +130,7 @@
 
 /* Portrait phones and narrow windows: two card columns, the action area pinned to the bottom. */
 @media (max-width: 52rem) {
-  .page { padding-bottom: var(--room-card-clearance, 0px); }
+  .page { padding-bottom: env(safe-area-inset-bottom); }
   .layout { display: flex; flex-direction: column; gap: var(--space-4); }
   .sidebar { display: contents; }
   .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }

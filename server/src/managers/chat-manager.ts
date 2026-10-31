@@ -1,7 +1,7 @@
 // ─── Chat Manager ───
 
 import type {
-  RoomCode, ChatMention, ChatMessage, EmojiRecord, PlayerInfo, ProvidedEmoji, ShopStickerId,
+  RoomCode, MessageReply, ChatMention, ChatMessage, EmojiRecord, PlayerInfo, ProvidedEmoji, ShopStickerId,
 } from '@shared/types';
 
 /** `observers` limits a message to spectators and eliminated players during a match. */
@@ -36,6 +36,7 @@ export function addMessage(
   provided: ReadonlyMap<string, ProvidedEmoji> = new Map(),
   audience?: ChatAudience,
   mentions: readonly ChatMention[] = [],
+  reply?: MessageReply,
 ): ChatMessage {
   const { emojis, providedEmojis } = resolveMessageEmojis(content, library, provided);
   const message: ChatMessage = {
@@ -48,6 +49,7 @@ export function addMessage(
     ...(Object.keys(emojis).length > 0 && { emojis }),
     ...(Object.keys(providedEmojis).length > 0 && { providedEmojis }),
     ...(audience && { audience }),
+    ...(reply && { reply: { ...reply } }),
   };
 
   append(roomCode, message);
@@ -84,18 +86,22 @@ export function clearRoomChat(roomCode: RoomCode): void {
 }
 
 export function exportChat(): { roomCode: string; messages: ChatMessage[] }[] {
-  return [...chatHistory].map(([roomCode, messages]) => ({ roomCode, messages }));
+  return [...chatHistory].map(([roomCode, messages]) => ({
+    roomCode, messages: messages.map(({ replyPreview: _preview, ...message }) => message),
+  }));
 }
 
 export function restoreChat(records: { roomCode: string; messages: ChatMessage[] }[]): void {
   chatHistory.clear();
-  for (const record of records) chatHistory.set(record.roomCode, record.messages);
+  for (const record of records) {
+    chatHistory.set(record.roomCode, record.messages.map(({ replyPreview: _preview, ...message }) => message));
+  }
 }
 
 /** Resolves stickers exclusively from the authenticated sender's library. */
 export function addSticker(
   roomCode: RoomCode, sender: PlayerInfo, stickerId: string, library: readonly EmojiRecord[],
-  audience?: ChatAudience,
+  audience?: ChatAudience, reply?: MessageReply,
 ): ChatMessage | null {
   const asset = library.find((emoji) => emoji.id === stickerId && emoji.accountId === sender.id);
   if (!asset) return null;
@@ -103,6 +109,7 @@ export function addSticker(
     id: generateMessageId(), sender, content: '', timestamp: Date.now(),
     sticker: { id: asset.id, name: asset.name, mediaId: asset.mediaId },
     ...(audience && { audience }),
+    ...(reply && { reply: { ...reply } }),
   };
   append(roomCode, message);
   return message;
@@ -111,7 +118,7 @@ export function addSticker(
 /** Resolves stickers exclusively from the site-provided catalog, by emoji name. */
 export function addProvidedSticker(
   roomCode: RoomCode, sender: PlayerInfo, name: string, provided: ReadonlyMap<string, ProvidedEmoji>,
-  audience?: ChatAudience,
+  audience?: ChatAudience, reply?: MessageReply,
 ): ChatMessage | null {
   const asset = provided.get(name);
   if (!asset) return null;
@@ -119,6 +126,7 @@ export function addProvidedSticker(
     id: generateMessageId(), sender, content: '', timestamp: Date.now(),
     providedSticker: { name: asset.name, file: asset.file },
     ...(audience && { audience }),
+    ...(reply && { reply: { ...reply } }),
   };
   append(roomCode, message);
   return message;
@@ -126,11 +134,12 @@ export function addProvidedSticker(
 
 /** Ownership is checked against the durable account before appending. */
 export function addShopSticker(
-  roomCode: RoomCode, sender: PlayerInfo, shopSticker: ShopStickerId, audience?: ChatAudience,
+  roomCode: RoomCode, sender: PlayerInfo, shopSticker: ShopStickerId, audience?: ChatAudience, reply?: MessageReply,
 ): ChatMessage {
   const message: ChatMessage = {
     id: generateMessageId(), sender, content: '', timestamp: Date.now(), shopSticker,
     ...(audience && { audience }),
+    ...(reply && { reply: { ...reply } }),
   };
   append(roomCode, message);
   return message;

@@ -1,0 +1,107 @@
+.row {
+  position: relative;
+  min-width: 0;
+  min-height: 40px;
+  max-width: 100%;
+  padding-inline-end: 40px;
+  border-radius: var(--radius-sm);
+}
+
+.row[data-reply-target] {
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+.row[data-chat-message-id][data-chat-mentioned] {
+  padding-inline-end: 40px;
+}
+
+.action {
+  position: absolute;
+  inset-inline-end: 0;
+  top: 0;
+  opacity: 0;
+}
+
+.row:hover > .action,
+.row:focus-within > .action {
+  opacity: 1;
+}
+
+.quote,
+.unavailable {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0 0 4px;
+  padding: 4px 6px;
+  border: 0;
+  border-inline-start: 2px solid var(--text-muted);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: start;
+}
+
+.quote {
+  cursor: pointer;
+}
+
+.quote:hover {
+  color: var(--text-primary);
+}
+
+.quote > svg,
+.quote > b {
+  flex-shrink: 0;
+}
+
+.quote > b {
+  max-width: 35%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quote > span,
+.context > small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-surface);
+}
+
+.context {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 0.8rem;
+}
+
+.context > small {
+  color: var(--text-muted);
+}
+
+.notify {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+}
+
+@media (hover: none) {
+  .action { opacity: 1; }
+}

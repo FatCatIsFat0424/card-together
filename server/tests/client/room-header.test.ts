@@ -142,7 +142,7 @@ describe('room header', () => {
       chat: { unread: 8, mentions: 2, expanded: false, controls: 'room-dock', onToggle: () => undefined },
       actions: null, onBack: () => undefined, onRules: () => undefined,
     }));
-    expect(buttonNames(html)).toContain('Chat 8 unread messages · 2 unread mentions');
+    expect(buttonNames(html)).toContain('Chat 8 unread messages · 2 unread alerts');
     expect(html).toMatch(/aria-hidden="true">@2</);
   });
 });

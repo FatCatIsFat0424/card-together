@@ -2,6 +2,10 @@
 
 import { socialTranslations } from './social-i18n';
 import { chatMentionTranslations } from './chat-mention-i18n';
+import { messageReplyTranslations } from './message-reply-i18n';
+import type { MessageReplyTranslationKey } from './message-reply-i18n';
+import { floatingRoomCardTranslations } from './floating-room-card-i18n';
+import type { FloatingRoomCardTranslationKey } from './floating-room-card-i18n';
 import type { ChatMentionTranslationKey } from './chat-mention-i18n';
 import { replayTranslations } from './replay-i18n';
 import type { ReplayTranslationKey } from './replay-i18n';
@@ -80,7 +84,7 @@ import type { BoardTranslationKey } from './board-i18n';
 export type Locale = 'zh-TW' | 'en';
 
 type TranslationKeys = Record<
-  ChatMentionTranslationKey | ReplayTranslationKey | RoomErrorTranslationKey | SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | AudioTranslationKey | VoiceTranslationKey | UiTranslationKey
+  FloatingRoomCardTranslationKey | MessageReplyTranslationKey | ChatMentionTranslationKey | ReplayTranslationKey | RoomErrorTranslationKey | SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | AudioTranslationKey | VoiceTranslationKey | UiTranslationKey
     | EmojiTranslationKey | GameTranslationKey | SevensTranslationKey | ChinesePokerTranslationKey
     | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | TenHalfTranslationKey | DouDizhuTranslationKey | ChineseCheckersTranslationKey | CrazyEightsTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
     | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | StudTranslationKey | TenHalfTranslationKey | OldMaidTranslationKey | GoFishTranslationKey | ReversiTranslationKey | GomokuTranslationKey | JungleTranslationKey | XiangqiTranslationKey | BanqiTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
@@ -163,6 +167,8 @@ type TranslationKeys = Record<
 const translations: Record<Locale, TranslationKeys> = {
   'zh-TW': {
     ...chatMentionTranslations['zh-TW'],
+    ...messageReplyTranslations['zh-TW'],
+    ...floatingRoomCardTranslations['zh-TW'],
     ...socialTranslations['zh-TW'],
     ...accountTranslations['zh-TW'],
     ...replayTranslations['zh-TW'],
@@ -265,6 +271,8 @@ const translations: Record<Locale, TranslationKeys> = {
   },
   en: {
     ...chatMentionTranslations.en,
+    ...messageReplyTranslations.en,
+    ...floatingRoomCardTranslations.en,
     ...socialTranslations.en,
     ...accountTranslations.en,
     ...replayTranslations.en,

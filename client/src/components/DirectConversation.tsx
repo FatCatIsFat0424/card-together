@@ -28,6 +28,10 @@ import { useEmojiStore } from '../stores/emoji-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useSocialStore } from '../stores/social-store';
 import { useMotionStore } from '../stores/motion-store';
+import { messageReplyPreview } from '../messages/message-replies';
+import { messageReplyErrorKey } from '../message-reply-i18n';
+import { ReplyAction, ReplyComposer, ReplyQuote } from './MessageReply';
+import replyStyles from './MessageReply.module.css';
 import chatStyles from './ChatPanel.module.css';
 import styles from './DirectMessages.module.css';
 
@@ -41,8 +45,12 @@ function DaySeparator({ timestamp, locale }: { readonly timestamp: number; reado
 }
 
 /** The friend's groups carry their avatar beside the bubbles; your own groups show only the time. */
-const DirectMessageGroupRow = memo(function DirectMessageGroupRow({ group, locale, dateTimeFormat }: {
+const DirectMessageGroupRow = memo(function DirectMessageGroupRow({ group, locale, dateTimeFormat, onReply, onJump, busy, targetId }: {
   readonly group: MessageGroup<DirectMessage>; readonly locale: string; readonly dateTimeFormat: Intl.DateTimeFormat;
+  readonly onReply: (message: DirectMessage) => void;
+  readonly onJump: (messageId: string) => void;
+  readonly busy: boolean;
+  readonly targetId: string | null;
 }): ReactNode {
   const first = group.messages[0];
   return <div className={`${styles.group} ${group.own ? styles.ownGroup : ''}`}>
@@ -53,10 +61,15 @@ const DirectMessageGroupRow = memo(function DirectMessageGroupRow({ group, local
         <time dateTime={new Date(first.timestamp).toISOString()} title={dateTimeFormat.format(first.timestamp)}>
           {groupTimeLabel(first.timestamp, locale)}</time>
       </div>
-      {group.messages.map((message) => <ChatFrame key={message.id} as="article" id={message.sender.chatFrame}
-        className={`${styles.message} ${group.own ? styles.ownMessage : ''}`}>
-        <div className={styles.messageContent}><ChatMessageBody message={message} /></div>
-      </ChatFrame>)}
+      {group.messages.map((message) => <div key={message.id} className={replyStyles.row}
+        data-direct-message-id={message.id} data-reply-target={message.id === targetId || undefined}>
+        {message.reply && <ReplyQuote preview={message.replyPreview} onJump={() => onJump(message.reply!.messageId)} />}
+        <ChatFrame as="article" id={message.sender.chatFrame}
+          className={`${styles.message} ${group.own ? styles.ownMessage : ''}`}>
+          <div className={styles.messageContent}><ChatMessageBody message={message} /></div>
+        </ChatFrame>
+        <ReplyAction onReply={() => onReply(message)} disabled={busy} />
+      </div>)}
     </div>
   </div>;
 });
@@ -126,7 +139,14 @@ export function DirectConversation({
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [sendFailed, setSendFailed] = useState(false);
+  const [sendError, setSendError] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [reply, setReply] = useState<DirectMessage | null>(null);
+  const [jumpId, setJumpId] = useState<string | null>(null);
+  const [targetId, setTargetId] = useState<string | null>(null);
+  const [jumpUnavailable, setJumpUnavailable] = useState(false);
+  const holdPosition = useRef(false);
+  const jumpCursor = useRef<string | null>(null);
   const mounted = useRef(false);
   const sequence = useRef(0);
   const busyRef = useRef(false);
@@ -142,6 +162,18 @@ export function DirectConversation({
   const displayedAccount = history?.account ?? (initialAccount?.id === otherId ? initialAccount : undefined);
   const groups = useMemo(() => groupMessages(history?.messages ?? [], ownId), [history?.messages, ownId]);
   const current = (): boolean => mounted.current && useAccountStore.getState().account?.id === ownId;
+  const startReply = useCallback((message: DirectMessage): void => {
+    if (busyRef.current) return;
+    setReply(message);
+    setPickerOpen(false);
+    inputRef.current?.focus();
+  }, []);
+  const jumpToReply = useCallback((messageId: string): void => {
+    holdPosition.current = true;
+    jumpCursor.current = null;
+    setJumpUnavailable(false);
+    setJumpId(messageId);
+  }, []);
 
   useEffect(() => { onLoadError(otherId, error); }, [error, onLoadError, otherId]);
 
@@ -195,8 +227,36 @@ export function DirectConversation({
     if (scrollBefore.current) {
       container.scrollTop = scrollBefore.current.top + container.scrollHeight - scrollBefore.current.height;
       scrollBefore.current = null;
-    } else container.scrollTo({ top: container.scrollHeight });
+    } else if (!holdPosition.current) container.scrollTo({ top: container.scrollHeight });
   }, [latestMessage, history?.messages.length]);
+
+  useEffect(() => {
+    if (!jumpId || !history || paging || loading) return;
+    const container = messagesRef.current;
+    const element = container && Array.from(container.querySelectorAll<HTMLElement>('[data-direct-message-id]'))
+      .find((row) => row.dataset.directMessageId === jumpId);
+    if (element && container) {
+      container.scrollTop += element.getBoundingClientRect().top - container.getBoundingClientRect().top
+        - (container.clientHeight - element.offsetHeight) / 2;
+      setTargetId(jumpId);
+      setJumpId(null);
+      return;
+    }
+    const cursor = history.messages[0]?.id;
+    if (error || !history.hasMore || !cursor || cursor === jumpCursor.current) {
+      setJumpUnavailable(true);
+      setJumpId(null);
+      return;
+    }
+    jumpCursor.current = cursor;
+    void load(cursor);
+  }, [jumpId, history, paging, loading, error, load]);
+
+  useEffect(() => {
+    if (!targetId) return;
+    const timer = setTimeout(() => setTargetId(null), 2500);
+    return () => clearTimeout(timer);
+  }, [targetId]);
 
   const markVisible = useCallback(async (): Promise<void> => {
     if (document.visibilityState !== 'visible' || !latestIncoming || readCursor.current === latestIncoming) return;
@@ -240,10 +300,18 @@ export function DirectConversation({
     const matchesPending = pending.current && JSON.stringify(pending.current.payload) === JSON.stringify(payload);
     const submission = retry || matchesPending ? pending.current : { clientId: createMessageClientId(), payload };
     if (!submission) return;
+    const sameReply = reply?.id === submission.payload.replyTo;
+    const sameDraft = 'message' in submission.payload && input.trim() === submission.payload.message && sameReply;
+    setJumpId(null);
+    setTargetId(null);
+    setJumpUnavailable(false);
+    holdPosition.current = false;
+    scrollBefore.current = null;
     pending.current = submission;
     busyRef.current = true;
     setBusy(true);
     setSendFailed(false);
+    setSendError('');
     const result = await apiRequest<{ message: DirectMessage }>(`/api/messages/${encodeURIComponent(otherId)}`,
       'POST', { clientId: submission.clientId, ...submission.payload });
     busyRef.current = false;
@@ -251,12 +319,16 @@ export function DirectConversation({
     setBusy(false);
     if (!result.success) {
       setSendFailed(true);
+      const key = messageReplyErrorKey(result.error);
+      setSendError(key ? t(key) : '');
       if (result.status === 403) void load();
       return;
     }
     pending.current = null;
+    holdPosition.current = false;
     setHistory((previous) => previous && { ...previous, messages: mergeDirectMessages(previous.messages, [result.message]) });
-    if ('message' in submission.payload) setInput('');
+    if (sameDraft) setInput('');
+    if (sameReply && (!('message' in submission.payload) || sameDraft)) setReply(null);
     setPickerOpen(false);
     void useSocialStore.getState().refresh();
   };
@@ -264,7 +336,7 @@ export function DirectConversation({
   const submit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     const message = input.trim();
-    if (message) void send({ message });
+    if (message) void send({ message, ...(reply && { replyTo: reply.id }) });
   };
 
   const insertEmoji = (name: string): void => {
@@ -293,7 +365,11 @@ export function DirectConversation({
         onClick={onClose} />}
     </header>
     <div className={chatStyles.messageArea}>
-      <div ref={messagesRef} className={`${styles.messages} ${history ? styles.messagesReady : ''}`} role="log" aria-live="polite" aria-relevant="additions" aria-busy={loading || paging}>
+      <div ref={messagesRef} className={`${styles.messages} ${history ? styles.messagesReady : ''}`} role="log" aria-live="polite" aria-relevant="additions" aria-busy={loading || paging}
+        onScroll={(event) => {
+          const element = event.currentTarget;
+          if (!jumpId && element.scrollHeight - element.scrollTop - element.clientHeight < 24) holdPosition.current = false;
+        }}>
         {loading && <p className={styles.loadingNotice} role="status">{t('common.loading')}</p>}
         {history?.hasMore && <Button type="button" disabled={paging}
           onClick={() => void load(history.messages[0]?.id)}>
@@ -301,22 +377,29 @@ export function DirectConversation({
         {history?.messages.length === 0 && <p className={styles.empty}>{t('messages.emptyConversation')}</p>}
         {groups.map((group, index) => <Fragment key={group.key}>
           {startsNewDay(group, groups[index - 1]) && <DaySeparator timestamp={group.messages[0].timestamp} locale={locale} />}
-          <DirectMessageGroupRow group={group} locale={locale} dateTimeFormat={dateTimeFormat} />
+          <DirectMessageGroupRow group={group} locale={locale} dateTimeFormat={dateTimeFormat}
+            onReply={startReply} onJump={jumpToReply} busy={busy || !history?.canSend} targetId={targetId} />
         </Fragment>)}
       </div>
       {pickerOpen && (loading || history?.canSend) && <div data-direct-picker>
         <EmojiPicker personal={emojis} provided={PROVIDED_EMOJIS} busy={busy} onInsert={insertEmoji}
-          onSendSticker={(payload: StickerPayload) => void send(payload)} />
+          onSendSticker={(payload: StickerPayload) => void send({ ...payload, ...(reply && { replyTo: reply.id }) })} />
       </div>}
     </div>
+    {jumpId && <p className={styles.notice} role="status">{t('reply.loading')}</p>}
+    {jumpUnavailable && <p className={styles.notice} role="status">{t('reply.unavailable')}</p>}
     {readError && <p className={styles.notice} role="alert">{t('common.error')}{' '}
       <Button type="button" onClick={() => void markVisible()}>{t('common.retry')}</Button></p>}
-    {sendFailed && <p className={styles.notice} role="alert">{t('messages.sendFailed')}{' '}
+    {sendFailed && <p className={styles.notice} role="alert">{sendError || t('messages.sendFailed')}{' '}
       <Button type="button" disabled={busy || !history?.canSend}
         onClick={() => { if (pending.current) void send(pending.current.payload, true); }}>{t('messages.retrySend')}</Button></p>}
     {history && !history.canSend && <p className={styles.notice}>{t('messages.formerFriend')}</p>}
     {(loading || history?.canSend) && <div className={styles.composer}>
-      <form className={chatStyles.chatInputRow} onSubmit={submit}>
+      {reply && <ReplyComposer preview={messageReplyPreview(reply)} disabled={busy}
+        onCancel={() => { setReply(null); inputRef.current?.focus(); }} />}
+      <form className={chatStyles.chatInputRow} onSubmit={submit} onKeyDown={(event) => {
+        if (event.key === 'Escape' && !event.defaultPrevented && !event.nativeEvent.isComposing && !pickerOpen && !busy) setReply(null);
+      }}>
         <button type="button" className={chatStyles.pickerBtn} data-direct-picker disabled={busy || loading}
           aria-label={t('emoji.picker')} aria-expanded={pickerOpen} onClick={() => setPickerOpen((open) => !open)}>
           <AppIcon name="emoji" /></button>

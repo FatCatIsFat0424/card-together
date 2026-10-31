@@ -1,10 +1,11 @@
 import type { EmojiRecord } from '@shared/types';
 import { SHOP_STICKERS, isEmojiName, isShopStickerId } from '@shared/constants';
 import type { SocketContext, TypedSocket } from './context';
-import { actionError, observerIds, requireRoom, runAction } from './context';
+import { actionError, observerIds, visibleChatHistory, requireRoom, runAction } from './context';
 import * as playerManager from '../managers/player-manager';
 import * as chatManager from '../managers/chat-manager';
 import * as roomManager from '../managers/room-manager';
+import { parseMessageReply } from '../media/message-reply';
 import { parseChatMentions } from './chat-mentions';
 
 export function registerChatHandlers(context: SocketContext, socket: TypedSocket): void {
@@ -21,34 +22,43 @@ export function registerChatHandlers(context: SocketContext, socket: TypedSocket
         if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
           throw actionError('Invalid chat payload.');
         }
+        const reply = parseMessageReply(payload);
+        if (reply === null) throw actionError('Invalid message reply.');
+        if (reply) {
+          const source = visibleChatHistory(roomCode, player.id).find((message) => message.id === reply.messageId);
+          if (!source || source.system) throw actionError('Reply message is not available in this room.');
+          if (reply.notify && audience === 'observers' && !observers.includes(source.sender.id)) {
+            throw actionError('Observers can only notify other observers during a match.');
+          }
+        }
         if ('shopSticker' in payload) {
-          if (!isShopStickerId(payload.shopSticker) || Object.keys(payload).some((key) => key !== 'shopSticker')) {
+          if (!isShopStickerId(payload.shopSticker) || Object.keys(payload).some((key) => !['shopSticker', 'replyTo', 'replyNotify'].includes(key))) {
             throw actionError('Invalid sticker payload.');
           }
           const sticker = SHOP_STICKERS.find((entry) => entry.id === payload.shopSticker);
           if (!sticker || !account.ownedShopItems?.includes(sticker.packId)) {
             throw actionError('Purchase this sticker pack before sending it.');
           }
-          chatManager.addShopSticker(roomCode, player, payload.shopSticker, audience);
+          chatManager.addShopSticker(roomCode, player, payload.shopSticker, audience, reply);
         } else if ('stickerId' in payload) {
-          if (typeof payload.stickerId !== 'string' || !payload.stickerId ||
-            Object.keys(payload).some((key) => key !== 'stickerId')) {
+          if (typeof payload.stickerId !== 'string' || !payload.stickerId || payload.stickerId.length > 128 ||
+            Object.keys(payload).some((key) => !['stickerId', 'replyTo', 'replyNotify'].includes(key))) {
             throw actionError('Invalid sticker payload.');
           }
-          if (!chatManager.addSticker(roomCode, player, payload.stickerId, library, audience)) {
+          if (!chatManager.addSticker(roomCode, player, payload.stickerId, library, audience, reply)) {
             throw actionError('Sticker is not in your library.');
           }
         } else if ('providedSticker' in payload) {
           if (!isEmojiName(payload.providedSticker) ||
-            Object.keys(payload).some((key) => key !== 'providedSticker')) {
+            Object.keys(payload).some((key) => !['providedSticker', 'replyTo', 'replyNotify'].includes(key))) {
             throw actionError('Invalid sticker payload.');
           }
           if (!chatManager.addProvidedSticker(roomCode, player, payload.providedSticker, context.providedEmojis,
-            audience)) {
+            audience, reply)) {
             throw actionError('Sticker is not available.');
           }
         } else {
-          if (Object.keys(payload).some((key) => key !== 'message' && key !== 'mentions')) throw actionError('Invalid chat payload.');
+          if (Object.keys(payload).some((key) => !['message', 'mentions', 'replyTo', 'replyNotify'].includes(key))) throw actionError('Invalid chat payload.');
           const content = 'message' in payload ? payload.message : undefined;
           if (typeof content !== 'string' || !content.trim() || content.trim().length > 500) {
             throw actionError('Messages must contain 1–500 characters.');
@@ -68,7 +78,7 @@ export function registerChatHandlers(context: SocketContext, socket: TypedSocket
               throw actionError('Observers can only mention other observers during a match.');
             }
           }
-          chatManager.addMessage(roomCode, player, content.trim(), library, context.providedEmojis, audience, mentions);
+          chatManager.addMessage(roomCode, player, content.trim(), library, context.providedEmojis, audience, mentions, reply);
         }
         return { success: true };
       }));

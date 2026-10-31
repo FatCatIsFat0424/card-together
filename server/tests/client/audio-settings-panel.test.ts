@@ -53,7 +53,7 @@ describe('audio settings panel', () => {
     expect(html).toContain('value="70"');
     expect(html).toContain('aria-label="語音聊天"');
     expect(html).toContain('這些設定只儲存在這台裝置。');
-    expect(html).toContain('提及提醒');
+    expect(html).toContain('提及與回覆提醒');
     expect(html).toContain('提示與音效');
     expect(html).toContain('僅視覺提示');
     expect(html).toContain('關閉提醒');

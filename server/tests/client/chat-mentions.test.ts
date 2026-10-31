@@ -36,7 +36,7 @@ import { ChatMentionComposer } from '../../../client/src/components/ChatMentionC
 import { ChatRoomMentionBody } from '../../../client/src/components/ChatRoomMentionBody';
 import { chatLogShown, intersectsChatViewport } from '../../../client/src/components/use-chat-mention-reading';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
-import { chatMentionErrorKey } from '../../../client/src/chat-mention-i18n';
+import { chatMentionErrorKey, chatMentionTranslations } from '../../../client/src/chat-mention-i18n';
 
 const ALICE: PlayerInfo = { id: 'alice', username: 'alice-one', nickname: 'Alice', avatar: 'cat', avatarImage: null, color: '#123456' };
 const OTHER_ALICE: PlayerInfo = { ...ALICE, id: 'other-alice', username: 'alice-two' };
@@ -129,6 +129,8 @@ describe('intentional mention drafts', () => {
     expect(mentionKeyAction('Enter', false, true, false)).toBe('select');
     expect(mentionKeyAction('Tab', false, true, false)).toBe('select');
     expect(mentionKeyAction('Tab', false, true, true)).toBeNull();
+    expect(mentionKeyAction('ArrowDown', false, true, false)).toBe('next');
+    expect(mentionKeyAction('ArrowUp', false, true, false)).toBe('previous');
     expect(mentionKeyAction('Escape', false, true, false)).toBe('dismiss');
     expect(mentionKeyAction('Enter', false, false, false)).toBe('send');
     expect(mentionKeyAction('Enter', false, false, true)).toBeNull();
@@ -174,6 +176,11 @@ describe('room mention rendering', () => {
       candidates: mentionCandidates(room(), null), inputRef: { current: null }, busy: false }));
     expect(html).toMatch(/class="[^"]*composerMention[^"]*">@Alice/);
     expect(html).toContain('role="combobox"');
+    expect(html).toContain('aria-autocomplete="list"');
+    expect(html).toContain('aria-expanded="false"');
+    for (const dictionary of Object.values(chatMentionTranslations)) {
+      expect(Object.keys(dictionary)).not.toContain('chatMention.hint');
+    }
     expect(html).toContain('maxLength="500"');
     expect(html).toContain('<textarea');
   });

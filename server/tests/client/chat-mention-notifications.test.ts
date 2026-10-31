@@ -18,6 +18,19 @@ beforeEach(() => {
 });
 
 describe('room mention alerts', () => {
+  it('uses reply notifications without inventing mention ranges or duplicating combined alerts', () => {
+    const store = useChatMentionStore.getState();
+    const reply = { messageId: 'source', notify: true };
+    const replyPreview = { senderId: 'alice', nickname: 'Alice', timestamp: 1, content: 'Original', kind: 'text' as const };
+    store.receive(message('reply', { mentions: undefined, reply, replyPreview }), 'alice', false, 0);
+    store.receive(message('muted', { mentions: undefined, reply: { ...reply, notify: false }, replyPreview }), 'alice', false, 100);
+    store.receive(message('missing', { mentions: undefined, reply }), 'alice', false, 200);
+    store.receive(message('combined', { reply, replyPreview }), 'alice', false, 6000);
+    store.receive(message('combined', { reply, replyPreview }), 'alice', false, 7000);
+    expect(useChatMentionStore.getState()).toMatchObject({
+      unreadIds: ['reply', 'combined'], soundCueId: 'combined', notice: { id: 'combined' },
+    });
+  });
   it('tracks live mentions once by message ID and target account, not nickname text', () => {
     const store = useChatMentionStore.getState();
     store.receive(message('one'), 'alice', true, 0);

@@ -1,16 +1,29 @@
 .card {
   position: fixed;
   z-index: 80;
-  /* Bottom right, under the lobby's social column, where it covers the least content. */
-  right: max(var(--page-inset), env(safe-area-inset-right));
-  bottom: max(var(--page-inset), env(safe-area-inset-bottom));
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  right: max(var(--page-inset), var(--safe-right));
+  bottom: max(var(--page-inset), var(--safe-bottom));
   width: 264px;
-  max-width: calc(100vw - 2 * var(--spacing-md));
+  max-width: var(--card-max-width, calc(100dvw - var(--rail-width) - max(8px, var(--safe-left)) - max(8px, var(--safe-right))));
+  max-height: var(--card-max-height, calc(100dvh - var(--topbar-height) - max(8px, var(--safe-top)) - max(8px, var(--safe-bottom))));
   border-radius: var(--radius-lg);
   background: var(--bg-card);
   box-shadow: var(--shadow-lg);
-  overflow: hidden;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
+.card[data-messages] { top: calc(var(--topbar-height) + max(8px, var(--safe-top))); bottom: auto; }
+.controls { display: flex; background: var(--surface-2); border-bottom: 1px solid var(--separator); }
+.dragHandle, .reset { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; border: 0; border-radius: 0; padding: 0 10px; background: transparent; color: var(--text-secondary); }
+.dragHandle { flex: 1; cursor: grab; touch-action: none; user-select: none; }
+.reset { cursor: pointer; }
+.dragHandle:hover, .reset:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.dragHandle:focus-visible, .reset:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -3px; }
+.card[data-dragging] .dragHandle { cursor: grabbing; }
 .link { display: block; padding: 14px; color: var(--text-primary); transition: background var(--transition-fast); }
 .link:hover { background: var(--surface-2); color: var(--text-primary); }
 .link:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -3px; border-radius: var(--radius-lg); }
@@ -30,35 +43,26 @@
 .players li > span:last-child { display: block; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; font-size: var(--text-xs); color: var(--text-secondary); }
 .footer { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid var(--separator); padding-top: 8px; color: var(--text-muted); font-size: var(--text-xs); }
 .empty { margin: 16px 0; color: var(--text-secondary); font-size: var(--text-xs); }
-@media (max-width: 600px) {
-  .card { width: 220px; left: max(var(--spacing-sm), env(safe-area-inset-left)); bottom: max(var(--spacing-sm), env(safe-area-inset-bottom)); }
-  .link { padding: 12px; }
-}
-
 @media (max-width: 767px), (max-height: 500px) and (min-width: 600px) {
   .card {
-    --corner-x: 0px;
-    --corner-y: calc(100dvh - 100% - var(--topbar-height) - 8px - max(8px, env(safe-area-inset-bottom)));
+    display: flex;
+    align-items: stretch;
     width: max-content;
     right: auto;
-    left: calc(var(--rail-width) + max(8px, env(safe-area-inset-left)));
-    top: calc(var(--topbar-height) + 8px);
-    bottom: auto;
-    transform: translate(calc(var(--corner-x) + var(--drag-x, 0px)), calc(var(--corner-y) + var(--drag-y, 0px)));
-    transition: transform 200ms ease-out;
+    left: calc(var(--rail-width) + max(8px, var(--safe-left)));
+    bottom: max(8px, var(--safe-bottom));
   }
-  .card[data-corner$='right'] { --corner-x: calc(100vw - 100% - var(--rail-width) - max(8px, env(safe-area-inset-left)) - max(8px, env(safe-area-inset-right))); }
-  .card[data-corner^='top'] { --corner-y: 0px; }
-  .card[data-dragging] { transition: none; }
-  .link { display: flex; align-items: center; min-height: 44px; padding: 0 10px; touch-action: none; user-select: none; cursor: grab; }
-  .card[data-dragging] .link { cursor: grabbing; }
-  .heading { gap: 4px; font-size: var(--text-sm); }
+  .controls { flex-shrink: 0; border-bottom: 0; border-right: 1px solid var(--separator); }
+  .dragHandle { flex: none; }
+  .link { display: flex; align-items: center; min-width: 0; min-height: 44px; padding: 0 10px; }
+  .heading { gap: 4px; min-width: 0; font-size: var(--text-sm); }
   .compactCount { display: inline; flex-shrink: 0; font-variant-numeric: tabular-nums; }
   .compactDot { display: inline-block; }
   .code { font-family: inherit; font-size: inherit; letter-spacing: normal; }
   .status, .players, .empty, .footer { display: none; }
+  .card[data-messages] { left: auto; right: max(8px, var(--safe-right)); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .card { transition: none; }
+@media (max-height: 500px) and (min-width: 600px) {
+  .card { left: auto; right: max(8px, var(--safe-right)); }
 }

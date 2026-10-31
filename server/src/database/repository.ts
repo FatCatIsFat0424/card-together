@@ -1,4 +1,4 @@
-import type { AccountProfile, AvatarBorderId, DailyRewardId, DailyRewardsStatus, DailyTaskId, EmojiRecord, MatchReplay, MatchResult, MediaId, MessageContent, PlayerStats, ShopItemId } from '@shared/types';
+import type { AccountProfile, MessageReply, AvatarBorderId, DailyRewardId, DailyRewardsStatus, DailyTaskId, EmojiRecord, MatchReplay, MatchResult, MediaId, MessageContent, PlayerStats, ShopItemId } from '@shared/types';
 import type { DailyRewardsRecord } from './daily-rewards';
 import type { AchievementsRecord } from './achievements';
 import type { AchievementsStatus } from '@shared/types';
@@ -59,6 +59,7 @@ export const MAX_MATCHES_PER_ACCOUNT = 100;
 export { SOCIAL_HISTORY_RETENTION_MS } from '@shared/constants';
 
 export interface DirectMessageRecord extends MessageContent {
+  readonly reply?: MessageReply;
   readonly id: string;
   readonly clientId: string;
   readonly senderId: string;

@@ -100,7 +100,6 @@ export function ChatMentionComposer({ draft, onChange, candidates, inputRef, bus
             : t('chatMention.seat', { seat: candidate.seat })}</span>
         </button>)}
       </div>
-      <p className={styles.mentionHint}>{t('chatMention.hint')}</p>
     </div>}
     <div ref={overlayRef} className={styles.composerHighlight} aria-hidden="true">{highlights}</div>
     <textarea ref={inputRef} className={styles.mentionInput} rows={1} role="combobox"

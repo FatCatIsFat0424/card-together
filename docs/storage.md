@@ -113,6 +113,7 @@
 | `ownedShopItems`、官方圖片樣式欄位、`nameplate` | 物品欄為空／上傳圖片或主題／沒有名牌 | 無法顯示或管理商品；較舊的個人檔案寫入可能會丟失裝備 |
 | `cardFaceStyle`、`soundPack`、`chipStyle`、`seatFrame`、`victoryEffect`、`chatFrame`、`pieceStyle`、`boardStyle`、`diceStyle`（帳號、runtime 的 `PlayerInfo`） | 內建設計 | 不支援：裝備中的值無法通過較舊的驗證。回復前請還原完整且相容的備份 |
 | 房間訊息與私訊中的 `shopSticker` | 不存在 | 不支援：回復前請還原完整且相容的備份 |
+| 房間訊息與私訊中的 `reply` | 沒有引用原訊息 | 不支援：較舊的驗證器會拒絕回覆欄位；回復前請還原完整且相容的備份。僅保存原訊息 ID 與通知選項，`replyPreview` 只在回應時解析，不持久化，也不延長原文的保留期限 |
 | `seatBackground` | 主題圖案 | 忽略；資料與媒體保留 |
 | `RoomInfo.gameOptions.battleship`、海戰棋對局的 `options`（船隻不可相鄰、命中可再射） | 兩項都關閉 | 不支援：較舊的版本不認得海戰棋，含此鍵的房間或對局無法通過驗證。回復前請還原完整且相容的備份 |
 | 暗棋對局的 `options.blindCapture`（連吃包含吃暗子） | 不能吃暗子：之前開始的對局維持只連吃翻開棋子的原規則 | 不支援：含此欄位的進行中對局無法通過較舊的驗證。回復前請還原完整且相容的備份 |

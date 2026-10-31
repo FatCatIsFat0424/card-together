@@ -518,6 +518,10 @@ export async function createSqliteRepository(filePath: string, options: Reposito
           if (!sql("SELECT 1 FROM friendships WHERE pair = ? AND status = 'accepted'").get(friendshipPair(message.senderId, message.recipientId))) {
             throw repositoryError('NOT_FRIENDS', 'You can only send messages to friends.');
           }
+          if (message.reply && !sql('SELECT 1 FROM direct_messages WHERE id = ? AND pair = ? AND timestamp > ?')
+            .get(message.reply.messageId, friendshipPair(message.senderId, message.recipientId), messageCutoff())) {
+            throw repositoryError('INVALID_REPLY', 'Reply message is not available in this conversation.');
+          }
           insertDirectMessage(sql, message);
           return message;
         });

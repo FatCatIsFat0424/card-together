@@ -6,7 +6,7 @@
   flex-direction: column;
   width: 100%;
   min-height: 100%;
-  padding: 0 var(--page-inset) calc(var(--page-inset) + var(--room-card-clearance, 0px));
+  padding: 0 var(--page-inset) max(var(--page-inset), env(safe-area-inset-bottom));
 }
 
 .error {
@@ -133,7 +133,7 @@
 .social { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); align-items: start; min-width: 0; }
 
 @media (min-width: 1024px) {
-  .page { height: 100%; padding-bottom: calc(var(--page-inset) + var(--room-card-clearance, 0px)); }
+  .page { height: 100%; }
   .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; }
   .main, .social {
     min-height: 0;

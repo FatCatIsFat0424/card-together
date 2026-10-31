@@ -8,8 +8,16 @@ export function mergeDirectMessages(
   const incomingIds = new Set(incoming.map((message) => message.id));
   const retained = current.filter((message) => !incomingIds.has(message.id));
   const combined = position === 'before' ? [...incoming, ...retained] : [...retained, ...incoming];
+  const cutoff = now - SOCIAL_HISTORY_RETENTION_MS;
+  const expiredIds = new Set(combined.filter((message) => message.timestamp <= cutoff).map((message) => message.id));
   // Stable sorting retains server insertion order when timestamps share a millisecond.
-  return combined.filter((message) => message.timestamp > now - SOCIAL_HISTORY_RETENTION_MS)
+  return combined.filter((message) => message.timestamp > cutoff)
+    .map((message) => {
+      if (!message.reply || !message.replyPreview
+        || (message.replyPreview.timestamp > cutoff && !expiredIds.has(message.reply.messageId))) return message;
+      const { replyPreview: _preview, ...withoutPreview } = message;
+      return withoutPreview;
+    })
     .sort((first, second) => first.timestamp - second.timestamp);
 }
 

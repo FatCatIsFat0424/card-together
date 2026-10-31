@@ -20,6 +20,11 @@ vi.mock('../../../client/src/stores/room-store', () => ({
 vi.mock('../../../client/src/stores/game-store', () => ({
   useGameStore: (select: (value: { phase: GamePhase | null }) => unknown) => select(state),
 }));
+// SSR must receive the selected locale rather than Zustand's initial server snapshot.
+vi.mock('../../../client/src/stores/i18n-store', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../client/src/stores/i18n-store')>();
+  return { useI18nStore: Object.assign(() => actual.useI18nStore.getState(), actual.useI18nStore) };
+});
 vi.mock('../../../client/src/media', () => ({ mediaUrl: (id: string) => `/api/media/${id}` }));
 import { FloatingRoomCard } from '../../../client/src/components/FloatingRoomCard';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
@@ -99,6 +104,26 @@ describe('floating room card', () => {
     expect(render()).not.toContain('Game finished');
     state.connection = 'ready'; state.phase = null;
     expect(render()).toContain('href="/room/ABC123"');
+  });
+  it.each([
+    ['en', 'Move room card', 'Reset room card position', 'Drag or use arrow keys to move; hold Shift for larger steps'],
+    ['zh-TW', '移動房間卡片', '重設房間卡片位置', '拖曳或使用方向鍵移動；按住 Shift 可加大移動距離'],
+  ] as const)('provides separate localized keyboard controls in %s', (locale, move, reset, hint) => {
+    useI18nStore.getState().setLocale(locale);
+    const html = render();
+    expect(html).toContain(`aria-label="${move}"`);
+    expect(html).toContain(`aria-label="${reset}"`);
+    expect(html).toContain(`aria-description="${hint}"`);
+    expect(html.match(/<button /g)).toHaveLength(2);
+    const link = html.match(/<a [\s\S]*?<\/a>/)?.[0];
+    expect(link).toBeDefined();
+    expect(link).not.toContain('<button');
+    expect(html).not.toContain('data-room-card');
+  });
+  it('selects the unobstructive default only for message routes', () => {
+    expect(render('/messages')).toContain('data-messages="true"');
+    expect(render('/messages/bob')).toContain('data-messages="true"');
+    expect(render('/account')).not.toContain('data-messages');
   });
   it.each(['en', 'zh-TW'] as const)('localizes every game variant in %s', (locale) => {
     useI18nStore.getState().setLocale(locale);

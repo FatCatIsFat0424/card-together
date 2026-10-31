@@ -47,7 +47,10 @@ export function applyChatMessage(event: ChatMessageEvent): void {
   if (useRoomStore.getState().currentRoomCode !== event.roomCode) return;
   const accountId = useAccountStore.getState().account?.id;
   if (!accountId || useChatStore.getState().messages.some((message) => message.id === event.message.id)) return;
+  // A send can evict its own source; use the previously delivered identity without restoring the excerpt.
+  const sourceAuthorId = event.message.reply && useChatStore.getState().messages
+    .find((message) => message.id === event.message.reply?.messageId)?.sender.id;
   useChatStore.getState().addMessage(event.message);
   const foreground = typeof document !== 'undefined' && document.visibilityState === 'visible' && document.hasFocus();
-  useChatMentionStore.getState().receive(event.message, accountId, foreground);
+  useChatMentionStore.getState().receive(event.message, accountId, foreground, undefined, sourceAuthorId);
 }

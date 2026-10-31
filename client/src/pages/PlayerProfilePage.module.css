@@ -1,5 +1,5 @@
 /* Player profile: one header strip (avatar, name, statistics, actions) above the match history. */
-.page { width: 100%; max-width: var(--page-max); padding: var(--page-inset) var(--page-inset) calc(var(--page-inset) + var(--room-card-clearance, 0px)); }
+.page { width: 100%; max-width: var(--page-max); padding: var(--page-inset) var(--page-inset) max(var(--page-inset), env(safe-area-inset-bottom)); }
 .card { background: var(--surface-1); border-radius: var(--radius-lg); padding: var(--space-4); }
 .status { text-align: center; padding: var(--space-5); }
 .header { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; grid-template-areas: 'avatar name summary actions'; align-items: center; column-gap: var(--space-3); min-height: 48px; margin-bottom: var(--space-2); padding: var(--space-1) var(--space-3); border-radius: var(--radius-lg); background: var(--surface-1); }

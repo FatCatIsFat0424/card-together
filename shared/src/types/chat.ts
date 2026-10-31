@@ -14,11 +14,28 @@ export interface ChatMention {
   readonly end: number;
 }
 
+export interface MessageReply {
+  readonly messageId: string;
+  readonly notify: boolean;
+}
+
+/** Response-only excerpt resolved from the recipient's retained, visible history. */
+export interface ReplyPreview {
+  readonly senderId: string;
+  readonly nickname: string;
+  /** Original message time; clients expire cached excerpts with their source. */
+  readonly timestamp: number;
+  readonly content: string;
+  readonly kind: 'text' | 'sticker';
+}
+
 /** Chat message */
 export interface ChatMessage {
   readonly id: string;
   readonly sender: PlayerInfo;
   readonly content: string;
+  readonly reply?: MessageReply;
+  readonly replyPreview?: ReplyPreview;
   readonly mentions?: readonly ChatMention[];
   readonly timestamp: number;
   /** Large standalone image resolved from the sender's existing emoji library. */

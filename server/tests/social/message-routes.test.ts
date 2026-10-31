@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DirectMessage, MessageHistory, SocialOverview } from '@shared/types/direct-message';
+import { SOCIAL_HISTORY_RETENTION_MS } from '../../src/database/repository';
 import type { MediaId } from '@shared/types';
 import { createMessageService } from '../../src/social/message-service';
 import { REPOSITORY_ADAPTERS } from '../helpers/repository-adapters';
@@ -14,7 +15,7 @@ describe.each(REPOSITORY_ADAPTERS)('friend direct messages and notifications ($n
   let carol: string;
 
   beforeEach(async () => {
-    app = await createSocketHarness(1, adapter);
+    app = await createSocketHarness(1, { ...adapter, open: (path) => adapter.open(path, { now: () => Date.now() }) });
     [alice, bob, carol] = app.accountIds[0];
     await app.repository.createFriendship({ id: 'alice-bob', requesterId: alice, recipientId: bob,
       status: 'accepted', createdAt: Date.now(), updatedAt: Date.now() });
@@ -237,5 +238,137 @@ describe.each(REPOSITORY_ADAPTERS)('friend direct messages and notifications ($n
     expect(limited.status).toBe(429);
     expect(Number(limited.headers.get('Retry-After'))).toBeGreaterThan(0);
     expect(await app.repository.listDirectMessages(bob)).toHaveLength(5);
+  });
+
+  it('resolves reply sources outside the page and overview without repeated history loads', async () => {
+    const service = createMessageService(app.repository, new Map());
+    const source = await service.send(bob, alice, { clientId: randomUUID(), message: 'Canonical source' });
+    for (let index = 0; index < 51; index += 1) {
+      await app.repository.createDirectMessage({ id: randomUUID(), clientId: randomUUID(), senderId: alice,
+        recipientId: bob, content: `Filler ${index}`, timestamp: Date.now() });
+    }
+    const input = { clientId: randomUUID(), message: 'Answer', replyTo: source.id };
+    const answer = await service.send(alice, bob, input);
+    const preview = { senderId: bob, nickname: source.sender.nickname, timestamp: source.timestamp, content: 'Canonical source', kind: 'text' };
+    expect(answer).toMatchObject({ reply: { messageId: source.id, notify: true }, replyPreview: preview });
+    const loads = vi.spyOn(app.repository, 'listDirectMessages');
+    const history = await service.history(bob, alice);
+    expect(history.hasMore).toBe(true);
+    expect(history.messages.some((entry) => entry.id === source.id)).toBe(false);
+    expect(history.messages.at(-1)?.replyPreview).toEqual(preview);
+    expect(loads).toHaveBeenCalledTimes(1);
+    loads.mockClear();
+    expect((await service.overview(bob)).conversations[0].lastMessage.replyPreview).toEqual(preview);
+    expect(loads).toHaveBeenCalledTimes(1);
+    const older = await service.history(bob, alice, history.messages[0].id);
+    expect(older.messages[0].id).toBe(source.id);
+    const stored = (await app.repository.listDirectMessages(alice, bob)).at(-1)!;
+    expect(stored.reply).toEqual(answer.reply);
+    expect(stored).not.toHaveProperty('replyPreview');
+    await app.repository.updateProfile(bob, { nickname: 'Current name' }, Date.now());
+    expect((await service.history(alice, bob)).messages.at(-1)?.replyPreview?.nickname).toBe('Current name');
+  });
+
+  it('supports reply options for personal, provided, and paid DM stickers', async () => {
+    const mediaId = `${'a'.repeat(64)}.webp` as MediaId;
+    const [asset] = await app.repository.createEmojis(alice, [{ name: 'wave', mediaId }], Date.now());
+    const provided = { name: 'wave', file: `wave-${'b'.repeat(24)}.png` };
+    const original = app.repository.getAccountById.bind(app.repository);
+    vi.spyOn(app.repository, 'getAccountById').mockImplementation(async (id) => {
+      const account = await original(id);
+      return account && { ...account, ownedShopItems: ['stickers-table-talk'] };
+    });
+    const service = createMessageService(app.repository, new Map([['wave', provided]]));
+    let source = await service.send(alice, bob, { clientId: randomUUID(), message: 'Source' });
+    for (const content of [{ stickerId: asset.id }, { providedSticker: 'wave' }, { shopSticker: 'table-hello' }]) {
+      const response = await service.send(alice, bob, { ...content, clientId: randomUUID(), replyTo: source.id, replyNotify: false });
+      expect(response.reply).toEqual({ messageId: source.id, notify: false });
+      expect(response.replyPreview?.kind).toBe(source.content ? 'text' : 'sticker');
+      expect(response.replyPreview).not.toHaveProperty('mediaId');
+      source = response;
+    }
+  });
+
+  it('rejects foreign, cross-account, missing and expired DM sources with no writes or notifications', async () => {
+    await app.repository.createFriendship({ id: 'alice-carol', requesterId: alice, recipientId: carol,
+      status: 'accepted', createdAt: Date.now(), updatedAt: Date.now() });
+    const service = createMessageService(app.repository, new Map());
+    const foreign = await service.send(alice, carol, { clientId: randomUUID(), message: 'Private to Carol' });
+    const source = await service.send(alice, bob, { clientId: randomUUID(), message: 'Source' });
+    const broadcast = vi.spyOn(app.application.io.sockets.adapter, 'broadcast');
+    const writes = vi.spyOn(app.repository, 'createDirectMessage');
+    for (const [sender, peer, replyTo] of [[alice, bob, foreign.id], [carol, alice, source.id], [alice, bob, 'missing']]) {
+      await expect(service.send(sender, peer, { clientId: randomUUID(), message: 'Answer', replyTo }))
+        .rejects.toMatchObject({ status: 400, message: 'Reply message is not available in this conversation.' });
+    }
+    const clock = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(clock + SOCIAL_HISTORY_RETENTION_MS + 1);
+    await expect(service.send(alice, bob, { clientId: randomUUID(), message: 'Expired', replyTo: source.id }))
+      .rejects.toMatchObject({ status: 400 });
+    expect(writes).not.toHaveBeenCalled();
+    expect(broadcast).not.toHaveBeenCalled();
+  });
+
+  it('retries the original reply after source expiry but rejects changed references or notification intent', async () => {
+    const service = createMessageService(app.repository, new Map());
+    const source = await service.send(bob, alice, { clientId: randomUUID(), message: 'Original' });
+    const clock = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(clock + 1000);
+    const input = { clientId: randomUUID(), message: 'Answer', replyTo: source.id };
+    const original = await service.send(alice, bob, input);
+    const alternate = await service.send(bob, alice, { clientId: randomUUID(), message: 'Alternate' });
+    const conflicts = await Promise.allSettled([
+      service.send(alice, bob, { ...input, replyTo: alternate.id }),
+      service.send(alice, bob, { ...input, replyNotify: false }),
+      service.send(alice, bob, { clientId: input.clientId, message: input.message }),
+    ]);
+    for (const result of conflicts) expect(result).toMatchObject({ status: 'rejected', reason: { status: 409 } });
+    vi.spyOn(Date, 'now').mockReturnValue(clock + SOCIAL_HISTORY_RETENTION_MS + 1);
+    await app.repository.pruneSocialHistory(Date.now());
+    const retry = await service.send(alice, bob, { ...input, replyNotify: true });
+    expect(retry.id).toBe(original.id);
+    expect(retry.reply).toEqual(original.reply);
+    expect(retry).not.toHaveProperty('replyPreview');
+    expect((await service.history(bob, alice)).messages.find((entry) => entry.id === original.id))
+      .not.toHaveProperty('replyPreview');
+  });
+
+  it('strictly rejects malformed reply options, mixed contents and spoofed quote payloads', async () => {
+    const service = createMessageService(app.repository, new Map());
+    const source = await service.send(bob, alice, { clientId: randomUUID(), message: 'Source' });
+    const writes = vi.spyOn(app.repository, 'createDirectMessage');
+    for (const patch of [
+      { replyNotify: true }, { replyTo: null }, { replyTo: '' }, { replyTo: 'x'.repeat(129) },
+      { replyTo: source.id, replyNotify: null }, { replyTo: source.id, replyNotify: 'true' },
+      { replyTo: source.id, replyPreview: { content: 'Forged' } },
+      { replyTo: source.id, reply: { messageId: source.id, notify: true } },
+      { replyTo: source.id, senderId: alice }, { replyTo: source.id, stickerId: 'mixed' },
+    ]) await expect(service.send(alice, bob, { clientId: randomUUID(), message: 'Answer', ...patch }))
+      .rejects.toMatchObject({ status: 400 });
+    expect(writes).not.toHaveBeenCalled();
+    const broadcast = vi.spyOn(app.application.io.sockets.adapter, 'broadcast');
+    expect((await request(0, `messages/${bob}`, { clientId: randomUUID(), message: 'Answer', replyTo: source.id,
+      replyPreview: { content: 'Forged' } })).status).toBe(400);
+    writes.mockRejectedValueOnce(new Error('Disk full'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect((await request(0, `messages/${bob}`, { clientId: randomUUID(), message: 'Answer', replyTo: source.id })).status)
+      .toBe(500);
+    expect(await app.repository.listDirectMessages(alice, bob)).toHaveLength(1);
+    expect(broadcast.mock.calls.filter(([packet]) => packet.data?.[0] === 'social:changed')).toHaveLength(0);
+  });
+
+  it('atomically rejects concurrent requests that reuse clientId with different reply intent', async () => {
+    const service = createMessageService(app.repository, new Map());
+    const first = await service.send(bob, alice, { clientId: randomUUID(), message: 'First source' });
+    const second = await service.send(bob, alice, { clientId: randomUUID(), message: 'Second source' });
+    const body = { clientId: randomUUID(), message: 'Answer' };
+    const results = await Promise.allSettled([
+      service.send(alice, bob, { ...body, replyTo: first.id }),
+      service.send(alice, bob, { ...body, replyTo: second.id }),
+    ]);
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.find((result) => result.status === 'rejected')).toMatchObject({ reason: { status: 409 } });
+    expect((await app.repository.listDirectMessages(alice, bob)).filter((entry) => entry.clientId === body.clientId))
+      .toHaveLength(1);
   });
 });

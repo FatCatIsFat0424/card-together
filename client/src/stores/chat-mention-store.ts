@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { ChatMessage } from '@shared/types';
 import { readPreference, writePreference } from '../utils/preference-storage';
+import { replyNotifies } from '../messages/message-replies';
 
 export type ChatMentionMode = 'sound' | 'visual' | 'off';
 
@@ -22,7 +23,7 @@ interface ChatMentionState {
   readerAtBottom: boolean;
   setMode: (mode: ChatMentionMode) => void;
   setReading: (visible: boolean, atBottom: boolean) => void;
-  receive: (message: ChatMessage, accountId: string, foreground: boolean, now?: number) => void;
+  receive: (message: ChatMessage, accountId: string, foreground: boolean, now?: number, sourceAuthorId?: string) => void;
   syncHistory: (messages: readonly ChatMessage[]) => void;
   markRead: (ids: readonly string[]) => void;
   dismissNotice: (messageId: string) => void;
@@ -55,12 +56,12 @@ export const useChatMentionStore = create<ChatMentionState>((set, get) => {
     setReading: (visible, atBottom) => set((state) =>
       state.readerVisible === visible && state.readerAtBottom === atBottom ? state
         : { readerVisible: visible, readerAtBottom: atBottom }),
-    receive: (message, accountId, foreground, now = Date.now()) => {
+    receive: (message, accountId, foreground, now = Date.now(), sourceAuthorId) => {
       if (knownIds.has(message.id)) return;
       knownIds.add(message.id);
       const state = get();
       if (state.mode === 'off' || message.system || message.sender.id === accountId
-        || !message.mentions?.some((mention) => mention.playerId === accountId)) return;
+        || !(message.mentions?.some((mention) => mention.playerId === accountId) || replyNotifies(message, accountId, sourceAuthorId))) return;
       const reading = foreground && state.readerVisible && state.readerAtBottom;
       const sound = !reading && state.mode === 'sound' && now - lastSoundAt >= MENTION_SOUND_COOLDOWN_MS;
       if (sound) lastSoundAt = now;

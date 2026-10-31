@@ -5,6 +5,7 @@ import { SHOP_STICKERS, isEmojiName, isShopStickerId } from '@shared/constants';
 import type { DirectMessageRecord, Repository } from '../database/repository';
 import type { ProvidedEmojiCatalog } from '../media/provided-emoji';
 import { resolveMessageEmojis } from '../media/message-content';
+import { parseMessageReply, replyPreview } from '../media/message-reply';
 import { publicProfile } from './friend-service';
 
 export interface MessageService {
@@ -33,9 +34,23 @@ export function createMessageService(
     return publicProfile(account);
   }
 
-  async function message(record: DirectMessageRecord): Promise<DirectMessage> {
-    const { senderId, ...content } = record;
-    return { ...content, sender: await profile(senderId) };
+  function renderer(records: readonly DirectMessageRecord[]): (record: DirectMessageRecord) => Promise<DirectMessage> {
+    const sources = new Map(records.map((record) => [record.id, record]));
+    const profiles = new Map<string, Promise<PublicAccount>>();
+    function sender(id: string): Promise<PublicAccount> {
+      let value = profiles.get(id);
+      if (!value) profiles.set(id, value = profile(id));
+      return value;
+    }
+    return async (record) => {
+      const { senderId, ...content } = record;
+      const source = record.reply && sources.get(record.reply.messageId);
+      const samePair = source && ((source.senderId === record.senderId && source.recipientId === record.recipientId)
+        || (source.senderId === record.recipientId && source.recipientId === record.senderId));
+      return { ...content, sender: await sender(senderId), ...(samePair && {
+        replyPreview: replyPreview(source.senderId, (await sender(source.senderId)).nickname, source),
+      }) };
+    };
   }
 
   async function acceptedPeers(accountId: string): Promise<Set<string>> {
@@ -47,7 +62,8 @@ export function createMessageService(
   async function retainedRetry(
     accountId: string, otherId: string, body: Record<string, unknown>,
   ): Promise<DirectMessage | null> {
-    const existing = (await repository.listDirectMessages(accountId)).find((entry) =>
+    const records = await repository.listDirectMessages(accountId);
+    const existing = records.find((entry) =>
       entry.senderId === accountId && entry.clientId === body.clientId);
     if (!existing) return null;
     const sameContent = 'message' in body
@@ -56,10 +72,12 @@ export function createMessageService(
       : 'stickerId' in body ? existing.sticker?.id === body.stickerId
         : 'providedSticker' in body ? existing.providedSticker?.name === body.providedSticker
           : 'shopSticker' in body && existing.shopSticker === body.shopSticker;
-    if (existing.recipientId !== otherId || !sameContent) {
+    const reply = parseMessageReply(body);
+    const sameReply = existing.reply?.messageId === reply?.messageId && existing.reply?.notify === reply?.notify;
+    if (existing.recipientId !== otherId || !sameContent || !sameReply) {
       throw messageError(409, 'This message ID was already used for another message.');
     }
-    return message(existing);
+    return renderer(records)(existing);
   }
 
   return {
@@ -89,7 +107,7 @@ export function createMessageService(
         const cursor = reads.find((entry) => entry.otherId === otherId)?.messageId;
         const lastRead = cursor ? history.findIndex((entry) => entry.id === cursor) : -1;
         return {
-          account: await profile(otherId), lastMessage: await message(history[history.length - 1]),
+          account: await profile(otherId), lastMessage: await renderer(history)(history[history.length - 1]),
           unreadCount: history.slice(lastRead + 1).filter((entry) => entry.recipientId === accountId).length,
           canSend: peers.has(otherId),
         };
@@ -109,7 +127,7 @@ export function createMessageService(
       const end = before === undefined ? records.length : records.findIndex((entry) => entry.id === before);
       if (end < 0) throw messageError(400, 'Invalid message cursor. Refresh this conversation.');
       const start = Math.max(0, end - 50);
-      return { account, messages: await Promise.all(records.slice(start, end).map(message)),
+      return { account, messages: await Promise.all(records.slice(start, end).map(renderer(records))),
         hasMore: start > 0, canSend: peers.has(otherId) };
     },
 
@@ -120,7 +138,16 @@ export function createMessageService(
       }
       const body = payload as Record<string, unknown>;
       if (typeof body.clientId !== 'string' || !/^[a-zA-Z0-9_-]{8,64}$/.test(body.clientId)
-        || Object.keys(body).length !== 2) throw messageError(400, 'Invalid message payload.');
+        || Object.keys(body).some((key) => !['clientId', 'message', 'stickerId', 'providedSticker', 'shopSticker',
+          'replyTo', 'replyNotify'].includes(key))
+        || ['message', 'stickerId', 'providedSticker', 'shopSticker'].filter((key) => key in body).length !== 1) {
+        throw messageError(400, 'Invalid message payload.');
+      }
+      if ('stickerId' in body && (typeof body.stickerId !== 'string' || !body.stickerId || body.stickerId.length > 128)) {
+        throw messageError(400, 'Invalid sticker payload.');
+      }
+      const reply = parseMessageReply(body);
+      if (reply === null) throw messageError(400, 'Invalid message reply.');
       if ('shopSticker' in body) {
         if (!isShopStickerId(body.shopSticker)) throw messageError(400, 'Invalid sticker payload.');
         const sticker = SHOP_STICKERS.find((entry) => entry.id === body.shopSticker);
@@ -132,6 +159,10 @@ export function createMessageService(
       // A retry confirms the original intent even if its emoji library has since changed.
       const retry = await retainedRetry(accountId, otherId, body);
       if (retry) return retry;
+      const records = reply ? await repository.listDirectMessages(accountId, otherId) : [];
+      if (reply && !records.some((record) => record.id === reply.messageId)) {
+        throw messageError(400, 'Reply message is not available in this conversation.');
+      }
       const library = await repository.listEmojis(accountId);
       let content: Pick<DirectMessageRecord, 'content' | 'emojis' | 'providedEmojis' | 'sticker' | 'providedSticker' | 'shopSticker'>;
       if ('message' in body) {
@@ -157,9 +188,9 @@ export function createMessageService(
       try {
         const saved = await repository.createDirectMessage({
           id: randomUUID(), clientId: body.clientId, senderId: accountId,
-          recipientId: otherId, timestamp: Date.now(), ...content,
+          recipientId: otherId, timestamp: Date.now(), ...content, ...(reply && { reply }),
         });
-        return await message(saved);
+        return await renderer(records)(saved);
       } catch (error: unknown) {
         // Concurrent retries may resolve different media while sharing the same intent.
         if (error instanceof Error && 'code' in error && error.code === 'MESSAGE_CONFLICT') {

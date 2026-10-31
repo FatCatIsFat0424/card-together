@@ -1,5 +1,5 @@
 /* Shared by account, friends, sign-in and status screens: flat surfaces, 40px fields, hairline separators. */
-.page { width: 100%; max-width: 66rem; margin: 0 auto; padding: var(--page-inset) var(--page-inset) calc(var(--page-inset) + var(--room-card-clearance, 0px)); }
+.page { width: 100%; max-width: 66rem; margin: 0 auto; padding: var(--page-inset) var(--page-inset) max(var(--page-inset), env(safe-area-inset-bottom)); }
 .authPage { min-height: 100%; display: grid; place-items: center; padding: var(--space-5); }
 .authCard { width: 100%; max-width: 30rem; padding: var(--space-5); background: var(--surface-1); border-radius: var(--radius-xl); }
 .title { font-size: var(--text-xl); font-weight: 600; margin-bottom: var(--space-2); }

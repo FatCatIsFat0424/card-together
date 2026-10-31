@@ -1,9 +1,8 @@
 const english = {
   'chatMention.suggestions': 'Mention a room member',
-  'chatMention.hint': '↑ ↓ to browse · Enter or Tab to choose · Esc to close',
   'chatMention.seat': 'Seat {seat}',
   'chatMention.spectator': 'Spectator',
-  'chatMention.unread': '@ {n} unread mentions',
+  'chatMention.unread': '@ {n} unread alerts',
   'chatMention.openPlayer': 'View {name}’s player card',
   'chatMention.profile': 'View {name}’s profile',
   'chatMention.error.invalid': 'Invalid chat mentions. Please select players again.',
@@ -19,10 +18,9 @@ export const chatMentionTranslations: Record<'en' | 'zh-TW', Record<ChatMentionT
   en: english,
   'zh-TW': {
     'chatMention.suggestions': '提及房間成員',
-    'chatMention.hint': '↑ ↓ 瀏覽 · Enter 或 Tab 選取 · Esc 關閉',
     'chatMention.seat': '座位 {seat}',
     'chatMention.spectator': '旁觀者',
-    'chatMention.unread': '@ {n} 則未讀提及',
+    'chatMention.unread': '@ {n} 則未讀提醒',
     'chatMention.openPlayer': '查看 {name} 的玩家名片',
     'chatMention.profile': '查看 {name} 的個人檔案',
     'chatMention.error.invalid': '提及資料無效，請重新選取玩家。',

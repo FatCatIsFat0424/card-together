@@ -1,3 +1,4 @@
+import { isMessageReply } from '../media/message-reply';
 import {
   isBigTwoResult, isBlackjackResult, isChinesePokerResult, isHoldemResult, isLiarsDeckResult, isLiarsDiceResult,
   isNapoleonResult, isNinetyNineResult, isRedPointsResult, isRuntimeSnapshot, isSevensResult, isTenHalfResult, isCrazyEightsResult, isStudResult, isReversiResult, isGomokuResult, isOldMaidResult,
@@ -223,8 +224,9 @@ export function validDirectMessage(value: unknown): value is DirectMessageRecord
     !timestamp(value.timestamp) || typeof value.content !== 'string' ||
     Object.keys(value).some((key) => ![
       'id', 'clientId', 'senderId', 'recipientId', 'timestamp', 'content',
-      'sticker', 'providedSticker', 'shopSticker', 'emojis', 'providedEmojis',
+      'sticker', 'providedSticker', 'shopSticker', 'emojis', 'providedEmojis', 'reply',
     ].includes(key))) return false;
+  if (value.reply !== undefined && !isMessageReply(value.reply)) return false;
   if (value.shopSticker !== undefined) {
     return isShopStickerId(value.shopSticker) && value.content === '' && value.sticker === undefined &&
       value.providedSticker === undefined && value.emojis === undefined && value.providedEmojis === undefined;

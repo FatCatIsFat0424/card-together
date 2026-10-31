@@ -88,6 +88,8 @@
 .composer form { margin: var(--space-2) var(--space-5) var(--space-3); overflow: hidden; border: 0; border-radius: var(--radius-pill); background: var(--surface-2); }
 .composer form button, .composer form input { min-height: var(--hit-size); border: 0; background: transparent; }
 .composer form button { min-width: var(--hit-size); }
+.composer form button[type='submit'] { color: var(--color-primary); }
+.composer form button[type='submit']:hover:not(:disabled) { background: var(--color-primary-soft); }
 .composer form input { padding-inline: var(--space-3); }
 @media (max-width: 40rem) {
   .stack { max-width: 85%; }

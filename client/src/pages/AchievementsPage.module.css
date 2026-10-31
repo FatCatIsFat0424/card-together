@@ -4,7 +4,7 @@
   --achievement-gold: var(--color-gold);
   width: 100%;
   max-width: var(--page-max);
-  padding: 0 var(--page-inset) calc(var(--page-inset) + var(--room-card-clearance, 0px));
+  padding: 0 var(--page-inset) max(var(--page-inset), env(safe-area-inset-bottom));
 }
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .categoryCount { margin-left: var(--space-2); color: var(--text-muted); font-size: var(--text-xs); font-weight: 400; font-variant-numeric: tabular-nums; }

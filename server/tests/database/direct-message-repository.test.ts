@@ -349,4 +349,58 @@ describe.each(REPOSITORY_ADAPTERS)('durable friend messages ($name)', (adapter) 
     await expect(adapter.open(path, { now: () => now })).rejects.toThrow('invalid references');
     expect(await adapter.persisted(path)).toBe(corrupted);
   });
+
+  it('stores only reply references and checks same-conversation retained targets atomically', async () => {
+    await friends();
+    await repository.createDirectMessage(message('source'));
+    await request('alice-charlie', 'alice', 'charlie');
+    await repository.acceptFriendship('alice-charlie', 'charlie');
+    await repository.createDirectMessage(message('foreign', { recipientId: 'charlie' }));
+    const reply = message('answer', { reply: { messageId: 'source', notify: false } });
+    expect(await repository.createDirectMessage(reply)).toEqual(reply);
+    for (const messageId of ['foreign', 'missing']) {
+      await expect(repository.createDirectMessage(message(`bad-${messageId}`, { reply: { messageId, notify: true } })))
+        .rejects.toMatchObject({ code: 'INVALID_REPLY' });
+    }
+    await repository.close();
+    repository = await adapter.open(path, { now: () => now });
+    expect((await repository.listDirectMessages('alice', 'bob')).at(-1)).toEqual(reply);
+    expect((await adapter.readDocument(path)).directMessages.at(-1)).not.toHaveProperty('replyPreview');
+  });
+
+  it('keeps retries idempotent after source expiry and rejects concurrent changes of reply intent', async () => {
+    await friends();
+    await repository.createDirectMessage(message('source', { timestamp: now - SOCIAL_HISTORY_RETENTION_MS + 10 }));
+    await repository.createDirectMessage(message('second'));
+    const original = message('answer', { reply: { messageId: 'source', notify: true } });
+    await repository.createDirectMessage(original);
+    const results = await Promise.allSettled([
+      repository.createDirectMessage({ ...original, id: 'retry' }),
+      repository.createDirectMessage({ ...original, reply: { messageId: 'source', notify: false } }),
+      repository.createDirectMessage({ ...original, reply: { messageId: 'second', notify: true } }),
+      repository.createDirectMessage({ ...original, reply: undefined }),
+    ]);
+    expect(results[0]).toMatchObject({ status: 'fulfilled', value: original });
+    for (const result of results.slice(1)) expect(result).toMatchObject({ status: 'rejected', reason: { code: 'MESSAGE_CONFLICT' } });
+    now += 10;
+    await repository.pruneSocialHistory(now);
+    expect(await repository.createDirectMessage({ ...original, id: 'retry-expired-source' })).toEqual(original);
+    await expect(repository.createDirectMessage(message('new-answer', { reply: original.reply })))
+      .rejects.toMatchObject({ code: 'INVALID_REPLY' });
+    expect(await repository.listDirectMessages('alice', 'bob')).toHaveLength(2);
+  });
+
+  it('rejects malformed durable references and response-only previews', async () => {
+    await friends();
+    const before = await adapter.persisted(path);
+    for (const patch of [
+      { reply: null }, { reply: {} }, { reply: { messageId: 'source' } },
+      { reply: { messageId: '', notify: true } }, { reply: { messageId: 'x'.repeat(129), notify: true } },
+      { reply: { messageId: 'source', notify: 1 } },
+      { reply: { messageId: 'source', notify: true, content: 'Forged' } },
+      { replyPreview: { senderId: 'alice', nickname: 'Alice', content: 'Quote', kind: 'text' } },
+    ]) await expect(repository.createDirectMessage({ ...message('invalid-reply'), ...patch } as DirectMessageRecord))
+      .rejects.toMatchObject({ code: 'INVALID_MESSAGE' });
+    expect(await adapter.persisted(path)).toBe(before);
+  });
 });

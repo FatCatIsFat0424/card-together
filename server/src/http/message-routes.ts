@@ -13,7 +13,7 @@ function handleAsync(handler: (request: Request, response: Response) => Promise<
     void handler(request, response).catch((error: unknown) => {
       const codes: Record<string, number> = {
         NOT_FRIENDS: 403, MESSAGE_CONFLICT: 409, INVALID_MESSAGE: 400, MESSAGE_NOT_FOUND: 404,
-        INVALID_MESSAGE_READ: 400,
+        INVALID_MESSAGE_READ: 400, INVALID_REPLY: 400,
         MESSAGE_EXPIRED: 400,
       };
       const code = error instanceof Error && 'code' in error ? String(error.code) : '';

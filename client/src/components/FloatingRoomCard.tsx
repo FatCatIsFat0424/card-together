@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties, PointerEvent, ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
+import type { PointerEvent, ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { GAME_SEAT_ORDER } from '@shared/constants';
 import { isSeatReady, roomCanStart, roomSeatInfo } from '@shared/rules/seats';
@@ -7,6 +7,8 @@ import { useAccountStore } from '../stores/account-store';
 import { useGameStore } from '../stores/game-store';
 import { useRoomStore } from '../stores/room-store';
 import { useI18nStore } from '../stores/i18n-store';
+import { clampFloatingCard, defaultFloatingCardPosition, floatingCardArea, floatingCardBounds, floatingCardDragStarted, floatingCardKeyMove, normalizeFloatingCard, restoreFloatingCard } from './floating-room-card-position';
+import type { FloatingCardBounds, FloatingCardPoint } from './floating-room-card-position';
 import { Avatar } from './Avatar';
 import { AppIcon } from './AppIcon';
 import styles from './FloatingRoomCard.module.css';
@@ -24,58 +26,102 @@ export function FloatingRoomCard(): ReactNode {
   const roomCode = useRoomStore((state) => state.currentRoomCode);
   const room = useRoomStore((state) => state.roomInfo);
   const phase = useGameStore((state) => state.phase);
-  // Short landscape screens start at the right edge so the lobby's room details stay uncovered.
-  const [corner, setCorner] = useState<'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'>(
-    () => typeof window !== 'undefined' && window.matchMedia?.(LANDSCAPE_QUERY).matches ? 'bottom-right' : 'bottom-left');
   const hidden = !accountId || !roomCode || !room || room.code !== roomCode
     || pathname.startsWith('/room/') || pathname.startsWith('/game/')
     || pathname === '/login' || pathname === '/register';
-  const [offset, setOffset] = useState<{ x: number; y: number } | null>(null);
-  const drag = useRef<{ id: number; x: number; y: number; rect: DOMRect; dx: number; dy: number; moved: boolean } | null>(null);
+  const cardRef = useRef<HTMLElement>(null);
+  const [position, setPosition] = useState<FloatingCardPoint | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const preferredPosition = useRef<FloatingCardPoint | null>(null);
+  const boundsRef = useRef<FloatingCardBounds | null>(null);
+  const refreshRef = useRef<(() => void) | null>(null);
+  const drag = useRef<{
+    id: number; target: HTMLButtonElement; start: FloatingCardPoint; origin: FloatingCardPoint; moved: boolean;
+  } | null>(null);
   const suppressClick = useRef(false);
+  const messages = pathname === '/messages' || pathname.startsWith('/messages/');
 
-  // Pages reserve room below their content while the pill floats over the viewport.
-  useEffect(() => {
-    if (hidden) return;
-    document.documentElement.dataset.roomCard = '';
-    return () => { delete document.documentElement.dataset.roomCard; };
-  }, [hidden]);
+  const releaseDrag = (): void => {
+    const current = drag.current;
+    drag.current = null;
+    if (current?.target.hasPointerCapture(current.id)) current.target.releasePointerCapture(current.id);
+  };
 
-  useEffect(() => {
-    const cancel = (): void => { drag.current = null; setOffset(null); };
-    window.addEventListener('resize', cancel);
+  useLayoutEffect(() => {
+    const card = cardRef.current;
+    if (hidden || !card) return;
+    const cancel = (): void => { releaseDrag(); setDragging(false); };
+    const refresh = (): void => {
+      cancel();
+      const rootStyle = getComputedStyle(document.documentElement);
+      const cardStyle = getComputedStyle(card);
+      const pixels = (style: CSSStyleDeclaration, name: string): number => Number.parseFloat(style.getPropertyValue(name)) || 0;
+      const viewport = window.visualViewport;
+      const area = floatingCardArea({
+        left: viewport?.offsetLeft ?? 0, top: viewport?.offsetTop ?? 0,
+        width: viewport?.width ?? window.innerWidth, height: viewport?.height ?? window.innerHeight,
+      }, { left: pixels(rootStyle, '--rail-width'), top: pixels(rootStyle, '--topbar-height') }, {
+        left: pixels(cardStyle, '--safe-left'), top: pixels(cardStyle, '--safe-top'),
+        right: pixels(cardStyle, '--safe-right'), bottom: pixels(cardStyle, '--safe-bottom'),
+      });
+      // Limit the rendered size before measuring so even a short keyboard viewport retains the controls.
+      card.style.setProperty('--card-max-width', `${area.right - area.left}px`);
+      card.style.setProperty('--card-max-height', `${area.bottom - area.top}px`);
+      const bounds = floatingCardBounds(area, card.getBoundingClientRect());
+      boundsRef.current = bounds;
+      const preferred = preferredPosition.current ?? defaultFloatingCardPosition(
+        messages, window.matchMedia(COMPACT_QUERY).matches, window.matchMedia(LANDSCAPE_QUERY).matches,
+      );
+      const next = restoreFloatingCard(preferred, bounds);
+      setPosition((previous) => previous?.x === next.x && previous.y === next.y ? previous : next);
+    };
+    refreshRef.current = refresh;
+    refresh();
+    const observer = new ResizeObserver(refresh);
+    observer.observe(card);
+    window.addEventListener('resize', refresh);
+    window.addEventListener('orientationchange', refresh);
     window.addEventListener('blur', cancel);
-    return () => { window.removeEventListener('resize', cancel); window.removeEventListener('blur', cancel); };
-  }, []);
+    const viewport = window.visualViewport;
+    viewport?.addEventListener('resize', refresh);
+    viewport?.addEventListener('scroll', refresh);
+    return () => {
+      releaseDrag();
+      refreshRef.current = null;
+      boundsRef.current = null;
+      observer.disconnect();
+      window.removeEventListener('resize', refresh);
+      window.removeEventListener('orientationchange', refresh);
+      window.removeEventListener('blur', cancel);
+      viewport?.removeEventListener('resize', refresh);
+      viewport?.removeEventListener('scroll', refresh);
+    };
+  }, [hidden, messages, pathname]);
 
-  const move = (event: PointerEvent<HTMLAnchorElement>): void => {
+  const place = (point: FloatingCardPoint): void => {
+    const bounds = boundsRef.current;
+    if (!bounds) return;
+    const next = clampFloatingCard(point, bounds);
+    preferredPosition.current = normalizeFloatingCard(next, bounds);
+    setPosition(next);
+  };
+
+  const move = (event: PointerEvent<HTMLButtonElement>): void => {
     const current = drag.current;
     if (!current || current.id !== event.pointerId) return;
-    const dx = event.clientX - current.x;
-    const dy = event.clientY - current.y;
-    if (!current.moved && Math.hypot(dx, dy) < 6) return;
+    const point = { x: event.clientX, y: event.clientY };
+    if (!current.moved && !floatingCardDragStarted(current.start, point)) return;
     current.moved = true;
     suppressClick.current = true;
-    const rootStyle = getComputedStyle(document.documentElement);
-    const top = (Number.parseFloat(rootStyle.getPropertyValue('--topbar-height')) || 0) + 8;
-    const left = (Number.parseFloat(rootStyle.getPropertyValue('--rail-width')) || 0) + 8;
-    current.dx = Math.max(left, Math.min(innerWidth - current.rect.width - 8, current.rect.left + dx)) - current.rect.left;
-    current.dy = Math.max(top, Math.min(innerHeight - current.rect.height - 8, current.rect.top + dy)) - current.rect.top;
-    setOffset({ x: current.dx, y: current.dy });
+    setDragging(true);
+    place({ x: current.origin.x + point.x - current.start.x, y: current.origin.y + point.y - current.start.y });
     event.preventDefault();
   };
 
-  const finish = (event: PointerEvent<HTMLAnchorElement>): void => {
-    const current = drag.current;
-    if (!current || current.id !== event.pointerId) return;
-    drag.current = null;
-    setOffset(null);
-    if (current.moved && event.type === 'pointerup') {
-      const vertical = current.rect.top + current.dy + current.rect.height / 2 < innerHeight / 2 ? 'top' : 'bottom';
-      const horizontal = current.rect.left + current.dx + current.rect.width / 2 < innerWidth / 2 ? 'left' : 'right';
-      setCorner(`${vertical}-${horizontal}`);
-    }
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  const finish = (event: PointerEvent<HTMLButtonElement>): void => {
+    if (drag.current?.id !== event.pointerId) return;
+    releaseDrag();
+    setDragging(false);
   };
 
   if (hidden) return null;
@@ -95,21 +141,43 @@ export function FloatingRoomCard(): ReactNode {
     : roomCanStart(room) ? 'roomCard.ready' : 'roomCard.waiting';
   const gameName = t(`gameType.${room.gameType}`);
 
-  return <aside className={styles.card} aria-label={t('roomCard.title')} data-corner={corner}
-    data-dragging={offset ? true : undefined}
-    style={offset ? { '--drag-x': `${offset.x}px`, '--drag-y': `${offset.y}px` } as CSSProperties : undefined}>
+  return <aside ref={cardRef} className={styles.card} aria-label={t('roomCard.title')}
+    data-messages={messages || undefined} data-dragging={dragging || undefined}
+    style={position ? { left: position.x, top: position.y, right: 'auto', bottom: 'auto' } : undefined}>
+    <div className={styles.controls}>
+      <button type="button" className={styles.dragHandle} aria-label={t('roomCard.move')}
+        aria-description={t('roomCard.moveHint')} title={t('roomCard.moveHint')}
+        onDragStart={(event) => event.preventDefault()}
+        onPointerDown={(event) => {
+          suppressClick.current = false;
+          if (drag.current || !event.isPrimary || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+          const rect = cardRef.current?.getBoundingClientRect();
+          if (!rect) return;
+          drag.current = { id: event.pointerId, target: event.currentTarget,
+            start: { x: event.clientX, y: event.clientY }, origin: { x: rect.left, y: rect.top }, moved: false };
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={move} onPointerUp={finish} onPointerCancel={finish} onLostPointerCapture={finish}
+        onClick={(event) => { if (suppressClick.current) event.preventDefault(); }}
+        onKeyDown={(event) => {
+          if (event.altKey || event.ctrlKey || event.metaKey) return;
+          const delta = floatingCardKeyMove(event.key, event.shiftKey);
+          const rect = cardRef.current?.getBoundingClientRect();
+          if (!delta || !rect) return;
+          event.preventDefault();
+          releaseDrag();
+          setDragging(false);
+          place({ x: rect.left + delta.x, y: rect.top + delta.y });
+        }}><AppIcon name="drag" /></button>
+      <button type="button" className={styles.reset} aria-label={t('roomCard.resetPosition')}
+        title={t('roomCard.resetPosition')} onClick={() => {
+          preferredPosition.current = null;
+          refreshRef.current?.();
+        }}><AppIcon name="refresh" /></button>
+    </div>
     <Link className={styles.link} to={path} aria-label={t('roomCard.open', { game: gameName, code: roomCode })}
-      onDragStart={(event) => { if (drag.current) event.preventDefault(); }}
-      onPointerDown={(event) => {
-        suppressClick.current = false;
-        if (!event.isPrimary || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey
-          || !window.matchMedia(COMPACT_QUERY).matches) return;
-        const rect = event.currentTarget.parentElement!.getBoundingClientRect();
-        drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, rect, dx: 0, dy: 0, moved: false };
-        event.currentTarget.setPointerCapture(event.pointerId);
-      }}
-      onPointerMove={move} onPointerUp={finish} onPointerCancel={finish} onLostPointerCapture={finish}
-      onKeyDown={(event) => { if (event.key === 'Enter') suppressClick.current = false; }}
+      onPointerDown={() => { suppressClick.current = false; }}
+      onKeyDown={() => { suppressClick.current = false; }}
       onClick={(event) => {
         if (suppressClick.current) { event.preventDefault(); suppressClick.current = false; }
       }}>

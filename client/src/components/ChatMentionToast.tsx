@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useChatMentionStore } from '../stores/chat-mention-store';
 import { useRoomStore } from '../stores/room-store';
 import { useI18nStore } from '../stores/i18n-store';
+import { useAccountStore } from '../stores/account-store';
+import { replyNotifies } from '../messages/message-replies';
 import { Button } from './Button';
 import { IconButton } from './IconButton';
 import styles from './ChatMentionToast.module.css';
@@ -11,6 +13,9 @@ import styles from './ChatMentionToast.module.css';
 export function ChatMentionToast(): ReactNode {
   const notice = useChatMentionStore((state) => state.notice);
   const { t } = useI18nStore();
+  const accountId = useAccountStore((state) => state.account?.id ?? null);
+  const replyNotice = notice && (replyNotifies(notice, accountId)
+    || (notice.reply?.notify && !notice.mentions?.some((mention) => mention.playerId === accountId)));
   const navigate = useNavigate();
   const dismiss = (): void => {
     if (notice) useChatMentionStore.getState().dismissNotice(notice.id);
@@ -28,7 +33,7 @@ export function ChatMentionToast(): ReactNode {
     onClose={(_event, reason) => { if (reason !== 'clickaway') dismiss(); }}>
     <div className={styles.toast} role="status">
       <div className={styles.body}>
-        <strong>{notice && t('chat.notifications.notice', { nickname: notice.sender.nickname })}</strong>
+        <strong>{notice && t(replyNotice ? 'reply.notice' : 'chat.notifications.notice', { nickname: notice.sender.nickname })}</strong>
         <p>{notice?.content}</p>
       </div>
       <Button size="small" onClick={view}>{t('chat.notifications.view')}</Button>

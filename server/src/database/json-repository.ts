@@ -531,6 +531,13 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
             ?.find((record) => record.status === 'accepted' &&
               friendshipPair(record.requesterId, record.recipientId) === friendshipPair(message.senderId, message.recipientId));
           if (!friendship) throw repositoryError('NOT_FRIENDS', 'You can only send messages to friends.');
+          if (message.reply) {
+            const source = messages.byId.get(message.reply.messageId);
+            if (!source || source.timestamp <= now() - SOCIAL_HISTORY_RETENTION_MS ||
+              friendshipPair(source.senderId, source.recipientId) !== friendshipPair(message.senderId, message.recipientId)) {
+              throw repositoryError('INVALID_REPLY', 'Reply message is not available in this conversation.');
+            }
+          }
           data.directMessages.push(message);
           return message;
         });

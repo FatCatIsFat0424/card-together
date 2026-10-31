@@ -209,7 +209,7 @@ export type {
   MatchResult,
 } from './game';
 
-export type { ChatMention, ChatMessage } from './chat';
+export type { ChatMention, ChatMessage, MessageReply, ReplyPreview } from './chat';
 export type {
   MessageContent, DirectMessage, MessageInput, Conversation, MessageHistory,
   AcceptedFriendNotification, IncomingFriendNotification, SocialOverview,
