@@ -1,4 +1,4 @@
-// Shared end-of-game dialog for every table: result, history, and "Back to room".
+// Shared end-of-game dialog for every table: result, history, a peek at the final table, and "Back to room".
 
 import { useEffect, useId, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
@@ -53,14 +53,17 @@ export function ResultDialog({
   const dialogRef = useRef<HTMLDivElement>(null);
   const primaryRef = useRef<HTMLButtonElement>(null);
   const historyRef = useRef<HTMLElement>(null);
+  const showRef = useRef<HTMLButtonElement>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  // Folds the dialog away so the final position stays readable; one button brings it back.
+  const [peeking, setPeeking] = useState(false);
   const gameType = useGameStore((state) => state.visible?.gameType ?? null);
   // Playback shows the recorded result without acting on any live room.
   const replay = useReplayMode();
 
   useEffect(() => {
-    primaryRef.current?.focus({ preventScroll: true });
-  }, []);
+    (peeking ? showRef : primaryRef).current?.focus({ preventScroll: true });
+  }, [peeking]);
 
   useEffect(() => {
     if (historyOpen) historyRef.current?.scrollIntoView({ block: 'nearest' });
@@ -82,6 +85,14 @@ export function ResultDialog({
     }
   };
 
+  if (peeking) {
+    return <div className={`${styles.peek} ${replay ? styles.peekContained : ''}`}>
+      <Button ref={showRef} variant="primary" icon="trophy" onClick={() => setPeeking(false)}>
+        {t('result.show')}
+      </Button>
+    </div>;
+  }
+
   const shownHistory = historyOpen && history;
   // During playback it covers only the table, so the transport below stays usable.
   return <div className={`${styles.backdrop} ${replay ? styles.contained : ''}`}>
@@ -101,18 +112,21 @@ export function ResultDialog({
           {shownHistory && <section ref={historyRef} id={historyId} className={styles.history}
             aria-label={history.label}>{history.content}</section>}
         </div>
-        {(!replay || history) && <footer className={`${dialogParts.footer} ${styles.footer}`}>
+        <footer className={`${dialogParts.footer} ${styles.footer}`}>
           {pending && <p className={styles.readiness} role="status">{t('result.returning')}</p>}
           {error && <p className={styles.error} role="alert">{error}</p>}
           {history && <Button className={styles.historyButton} icon="info" aria-expanded={historyOpen}
             aria-controls={shownHistory ? historyId : undefined} onClick={() => setHistoryOpen((open) => !open)}>
             {history.label}
           </Button>}
+          <Button className={styles.peekButton} icon="spectate" onClick={() => setPeeking(true)}>
+            {t('result.viewTable')}
+          </Button>
           {!replay && <Button ref={primaryRef} variant="primary" className={styles.back} disabled={pending || disabled}
             onClick={onBack}>
             {t('score.backToRoom')}
           </Button>}
-        </footer>}
+        </footer>
       </div>
     </div>
   </div>;

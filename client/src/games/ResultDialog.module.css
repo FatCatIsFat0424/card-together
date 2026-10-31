@@ -78,6 +78,21 @@
 
 .footer.footer { justify-content: flex-end; }
 
+/* While the player looks at the final table, only this button stays, centred low over the table area. */
+.peek {
+  position: fixed;
+  right: 0;
+  bottom: var(--space-4);
+  left: var(--rail-width);
+  z-index: 80;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.peek > * { pointer-events: auto; }
+.peekContained { position: absolute; left: 0; }
+
 /* Desktop keeps the body and footer as the paper's own rows. */
 .layout { display: contents; }
 .gameName { display: none; }
@@ -102,7 +117,9 @@
     border-left: 1px solid var(--separator);
   }
   .back { order: -2; }
-  .historyButton { order: -1; }
+  .historyButton, .peekButton { order: -1; }
+  /* The board fills the height here, so the button moves beside the table menu in the top-left corner. */
+  .peek:not(.peekContained) { top: 6px; right: auto; bottom: auto; left: 48px; }
   .readiness, .error { flex: none; order: 1; margin-top: auto; }
   .readiness + .error { margin-top: 0; }
 }

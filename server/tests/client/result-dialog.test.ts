@@ -83,6 +83,17 @@ describe('result dialog', () => {
     expect(html).not.toContain('<details');
   });
 
+  it('should offer a view of the final table before the primary action', () => {
+    const html = renderToStaticMarkup(createElement(ResultDialog, {
+      title: 'x', pending: false, error: '', onBack: () => undefined,
+      history: { label: 'Trick history (13)', content: null },
+    }));
+    expect(html).toMatch(/<button[^>]*>[\s\S]*?View table<\/button>/);
+    expect(html.indexOf('Trick history')).toBeLessThan(html.indexOf('View table'));
+    expect(html.indexOf('View table')).toBeLessThan(html.indexOf('Back to Room'));
+    expect(html).not.toContain('Show result');
+  });
+
   it('should leave the history button out when a game has none', () => {
     const html = renderToStaticMarkup(createElement(ResultDialog, {
       title: 'x', pending: false, error: '', onBack: () => undefined, history: null,
