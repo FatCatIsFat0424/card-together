@@ -10,7 +10,7 @@
 - `npm run demos:import`（client 的 `predev`／`prebuild` 與完整檢查也會執行）把影片複製為帶內容雜湊的 `client/public/game-demos/<game>-<hash>.mp4`，並產生 `client/src/game-demo-videos.generated.json`。
 - 匯入時比對 MP4 長度與 [`game-demo-recordings.json`](../client/src/game-demo-recordings.json)，相差超過 0.1 秒或沒有記錄長度（分段式 MP4）就失敗；其他檔名列為略過。
 - 沒有影片的模式，規則面板不顯示展示區，只保留文字規則。字幕 `<game>.<locale>.vtt` 與章節時間仍在 Git 中，換影片時必須一併更新。
-- 自動部署使用 `local-demos` 輸入快照，見[部署](deployment.md#ci-通過後自動部署)。
+- 自動部署使用 `local-demos` 輸入快照（設定中的 `demo_dir`），見[部署](deployment.md#ci-通過後自動部署)。安裝程式只在快照不存在時建立，之後不會同步：新增或更換影片時，也要以部署使用者把檔案複製到該目錄。
 
 ## 來源與隱私
 

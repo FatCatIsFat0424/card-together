@@ -51,6 +51,9 @@ describe('Go Fish through the game manager', () => {
     const game = goFish();
     game.presentation = { id: 'p', startedAt: 0, logStart: 0, timingVersion: 3 };
     const zero = Object.fromEntries(GAME_SEAT_ORDER.map((seat) => [seat, 0])) as Record<GameSeat, number>;
+    // A random deal can open with books; keep only the hand entry so the frames below are deterministic.
+    expect(game.log[0].type).toBe('hand');
+    game.log.splice(1);
     game.log.push(
       { type: 'ask', seat: 'N', target: 'E', rank: 7, given: 2, fished: null, timestamp: 1 },
       { type: 'ask', seat: 'N', target: 'S', rank: 9, given: 0, fished: 'lucky', timestamp: 2 },
