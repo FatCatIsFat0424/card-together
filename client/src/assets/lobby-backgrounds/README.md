@@ -60,3 +60,5 @@ Original decorative website background for a game lobby, landscape 16:9. Cinemat
 - **chinesecheckers.webp** — Six-pointed star wooden board, six-color glass marbles in corner triangles, a few mid-hop, nostalgic afternoon window light
 - **landbattle.webp** — Board with railway lines, camps and headquarters, upright tiles facing away, brass compass, folded map, small flag, war-room lamp
 - **battleship.webp** — Battleship board game near the edges: navy plastic grid boards with peg holes, small grey warships, red and white hit and miss pegs, brass ship compass and folded nautical chart; cool moonlit naval lamp light
+- **chess.webp** — Polished walnut and maple chessboard near one edge with carved wooden pieces mid-game, one toppled king, captured pieces at a corner, brass desk clock and leather-bound book on a dark green leather study table; warm library lamp light
+- **go.webp** — Floor-standing kaya go board near one edge with a game in progress, slate and shell stones, round wooden bowls with lids holding captured stones, celadon teacup, tatami teahouse; dusk paper-window light with a warm lantern glow

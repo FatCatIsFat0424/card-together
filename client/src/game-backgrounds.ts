@@ -19,7 +19,9 @@ import gofish from './assets/lobby-backgrounds/gofish.webp';
 import doudizhu from './assets/lobby-backgrounds/doudizhu.webp';
 import jungle from './assets/lobby-backgrounds/jungle.webp';
 import gomoku from './assets/lobby-backgrounds/gomoku.webp';
+import go from './assets/lobby-backgrounds/go.webp';
 import xiangqi from './assets/lobby-backgrounds/xiangqi.webp';
+import chess from './assets/lobby-backgrounds/chess.webp';
 import banqi from './assets/lobby-backgrounds/banqi.webp';
 import chinesecheckers from './assets/lobby-backgrounds/chinesecheckers.webp';
 import landbattle from './assets/lobby-backgrounds/landbattle.webp';
@@ -44,7 +46,9 @@ import gofishCard from './assets/lobby-backgrounds/cards/gofish.webp';
 import doudizhuCard from './assets/lobby-backgrounds/cards/doudizhu.webp';
 import jungleCard from './assets/lobby-backgrounds/cards/jungle.webp';
 import gomokuCard from './assets/lobby-backgrounds/cards/gomoku.webp';
+import goCard from './assets/lobby-backgrounds/cards/go.webp';
 import xiangqiCard from './assets/lobby-backgrounds/cards/xiangqi.webp';
+import chessCard from './assets/lobby-backgrounds/cards/chess.webp';
 import banqiCard from './assets/lobby-backgrounds/cards/banqi.webp';
 import chinesecheckersCard from './assets/lobby-backgrounds/cards/chinesecheckers.webp';
 import landbattleCard from './assets/lobby-backgrounds/cards/landbattle.webp';
@@ -53,7 +57,7 @@ import battleshipCard from './assets/lobby-backgrounds/cards/battleship.webp';
 /** A game without generated artwork is simply absent; consumers fall back to a plain panel. */
 export const GAME_BACKGROUNDS: Readonly<Partial<Record<GameType, string>>> = {
   bridge, bigtwo, redpoints, ninetynine, sevens, chinesepoker, liarsdeck, blackjack, holdem, napoleon,
-  tenhalf, liarsdice, crazyeights, stud, reversi, oldmaid, gofish, doudizhu, jungle, gomoku, xiangqi, banqi,
+  tenhalf, liarsdice, crazyeights, stud, reversi, oldmaid, gofish, doudizhu, jungle, gomoku, go, xiangqi, chess, banqi,
   chinesecheckers, landbattle, battleship,
 };
 
@@ -63,7 +67,8 @@ export const GAME_CARD_ART: Readonly<Partial<Record<GameType, string>>> = {
   sevens: sevensCard, chinesepoker: chinesepokerCard, liarsdeck: liarsdeckCard, blackjack: blackjackCard,
   holdem: holdemCard, napoleon: napoleonCard,
   tenhalf: tenhalfCard, liarsdice: liarsdiceCard, crazyeights: crazyeightsCard, stud: studCard, reversi: reversiCard,
-  oldmaid: oldmaidCard, gofish: gofishCard, doudizhu: doudizhuCard, jungle: jungleCard, gomoku: gomokuCard, xiangqi: xiangqiCard,
+  oldmaid: oldmaidCard, gofish: gofishCard, doudizhu: doudizhuCard, jungle: jungleCard, gomoku: gomokuCard, go: goCard,
+  xiangqi: xiangqiCard, chess: chessCard,
   banqi: banqiCard, chinesecheckers: chinesecheckersCard, landbattle: landbattleCard,
   battleship: battleshipCard,
 };
