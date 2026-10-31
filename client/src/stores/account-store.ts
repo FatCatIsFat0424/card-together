@@ -6,6 +6,7 @@ import { usePlayerStore } from './player-store';
 import { useRoomStore } from './room-store';
 import { useGameStore } from './game-store';
 import { useChatStore } from './chat-store';
+import { useChatMentionStore } from './chat-mention-store';
 import { useEmojiStore } from './emoji-store';
 import { useInviteStore } from './invite-store';
 import { useSocialStore } from './social-store';
@@ -31,6 +32,7 @@ function clearGameSession(): void {
   useRoomStore.getState().leaveRoom();
   useGameStore.getState().reset();
   useChatStore.getState().clearMessages();
+  useChatMentionStore.getState().reset();
   useEmojiStore.getState().reset();
   useInviteStore.getState().reset();
   useSocialStore.getState().reset();

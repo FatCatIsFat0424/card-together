@@ -5,11 +5,21 @@ import type { EmojiRecord, ProvidedEmoji } from './emoji';
 import type { PlayerInfo } from './player';
 import type { ShopStickerId } from '../constants/shop';
 
+/** A selected room player; offsets use UTF-16 in the trimmed message, with an exclusive end. */
+export interface ChatMention {
+  readonly playerId: string;
+  readonly nickname: string;
+  /** The range must contain exactly `@${nickname}`. */
+  readonly start: number;
+  readonly end: number;
+}
+
 /** Chat message */
 export interface ChatMessage {
   readonly id: string;
   readonly sender: PlayerInfo;
   readonly content: string;
+  readonly mentions?: readonly ChatMention[];
   readonly timestamp: number;
   /** Large standalone image resolved from the sender's existing emoji library. */
   readonly sticker?: Pick<EmojiRecord, 'id' | 'name' | 'mediaId'>;

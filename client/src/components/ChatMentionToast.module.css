@@ -1,0 +1,15 @@
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: min(28rem, calc(100vw - 24px));
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-sm);
+}
+.body { flex: 1; min-width: 0; }
+.body p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); }

@@ -47,6 +47,7 @@
 
 .successBadge .dot,
 .successBadge .count { background: var(--color-success); color: var(--text-inverse); }
+.mentionCount { background: var(--color-primary); color: var(--text-on-primary); }
 
 @media (prefers-reduced-motion: reduce) {
   .iconButton { transition: none; }

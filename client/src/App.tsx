@@ -9,6 +9,8 @@ import { VoiceControls } from './components/VoiceControls';
 import { FloatingRoomCard } from './components/FloatingRoomCard';
 import { GameStartTransition } from './components/GameStartTransition';
 import { InviteToast } from './components/InviteToast';
+import { ChatMentionToast } from './components/ChatMentionToast';
+import { useChatMentionSound } from './hooks/use-chat-mention-sound';
 import { AbortVoteToast } from './games/AbortVote';
 import { useVoiceSilencing } from './hooks/use-voice-silencing';
 import { useAccountConnection } from './hooks/use-account-connection';
@@ -71,6 +73,7 @@ function ProtectedRoute(): ReactNode {
 
 function AppRoutes(): ReactNode {
   useAccountConnection();
+  useChatMentionSound();
   useSocialNotifications();
   useAchievementNotifications();
   useVoiceSilencing();
@@ -123,6 +126,7 @@ export function App(): ReactNode {
       <AudioSettingsDialog />
       <FloatingRoomCard />
       {signedIn && <InviteToast />}
+      {signedIn && <ChatMentionToast />}
       {signedIn && <SocialToast />}
       {signedIn && <AchievementToast />}
       {signedIn && <AbortVoteToast />}

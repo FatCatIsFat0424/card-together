@@ -12,6 +12,8 @@ export interface ActionButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonE
   readonly label?: string;
   /** A count (hidden at 0, `99+` above 99) or a plain dot. */
   readonly badge?: number | 'dot';
+  /** Unread mentions take priority over the ordinary count on compact chat buttons. */
+  readonly mentionCount?: number;
   readonly badgeTone?: 'danger' | 'success';
   /** Red outline for a leaving or destructive action. */
   readonly danger?: boolean;
@@ -22,15 +24,16 @@ export interface ActionButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonE
 
 /** An icon and text in a 36px pill. Inside a size container, `collapsible` ones shrink to icons without changing role. */
 export function ActionButton({
-  icon, text, label, badge, badgeTone, danger = false, collapsible = false, className, type = 'button', title, ...props
+  icon, text, label, badge, mentionCount, badgeTone, danger = false, collapsible = false, className, type = 'button', title, ...props
 }: ActionButtonProps): ReactNode {
-  const count = badgeText(badge);
+  const mentions = badgeText(mentionCount);
+  const count = mentions ? `@${mentions}` : badgeText(badge);
   const classes = [styles.action, danger && styles.danger, collapsible && styles.collapsible, badgeTone === 'success' && styles.success,
     className].filter(Boolean).join(' ');
   return <button {...props} type={type} aria-label={label ?? text} title={title ?? label ?? text} className={classes}>
     <AppIcon name={icon} />
     <span className={styles.text}>{text}</span>
     {badge === 'dot' && <span className={styles.dot} aria-hidden="true" />}
-    {count && <span className={styles.count} aria-hidden="true">{count}</span>}
+    {count && <span className={`${styles.count} ${mentions ? styles.mentionCount : ''}`} aria-hidden="true">{count}</span>}
   </button>;
 }

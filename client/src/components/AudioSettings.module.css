@@ -12,6 +12,8 @@
 .channel[data-enabled='false'] .slider { opacity: 0.55; }
 .slider { width: 100%; min-height: 40px; margin: 0; padding: 0; accent-color: var(--color-primary); }
 .note { margin: 0; color: var(--text-secondary); font-size: var(--text-sm); }
+.mentionLabel { color: var(--text-secondary); font-size: var(--text-sm); }
+.mentionSelect { width: 100%; min-height: 40px; padding: 0 var(--spacing-sm); border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-card); color: var(--text-primary); font: inherit; }
 
 .switch {
   appearance: none;

@@ -1,16 +1,20 @@
-import { memo, useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { memo, useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import type { ChatMessage } from '@shared/types';
+import type { ChatMessage, RoomInfo } from '@shared/types';
 import { socket } from '../socket';
 import { PROVIDED_EMOJIS } from '../provided-emoji';
 import { useChatStore } from '../stores/chat-store';
+import { useChatMentionStore } from '../stores/chat-mention-store';
+import { useChatMentionJump } from '../hooks/use-chat-mention-jump';
+import { useAccountStore } from '../stores/account-store';
 import { useEmojiStore } from '../stores/emoji-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { usePlayerStore } from '../stores/player-store';
 import { useRoomStore } from '../stores/room-store';
 import type { TranslationKey } from '../i18n';
+import { chatMentionErrorKey } from '../chat-mention-i18n';
 import { Avatar } from './Avatar';
-import { ChatMessageBody, EmojiPicker } from './ChatEmoji';
+import { EmojiPicker } from './ChatEmoji';
 import type { StickerPayload } from './ChatEmoji';
 import { AppIcon } from './AppIcon';
 import { Nameplate } from './Nameplate';
@@ -18,6 +22,10 @@ import { ChatFrame } from '../cosmetics/chat-frames/ChatFrame';
 import { formatChatTime } from './chat-time';
 import { GROUP_GAP_MS, groupMessages } from '../messages/message-groups';
 import type { MessageGroup } from '../messages/message-groups';
+import { ChatMentionComposer } from './ChatMentionComposer';
+import { ChatRoomMentionBody } from './ChatRoomMentionBody';
+import { EMPTY_MENTION_DRAFT, CHAT_MAX_LENGTH, isMentioned, mentionCandidates, prepareMentionMessage, replaceMentionRange } from './chat-mentions';
+import { chatLogShown, useChatMentionReading } from './use-chat-mention-reading';
 import styles from './ChatPanel.module.css';
 
 function ChatTime({ timestamp }: { readonly timestamp: number }): ReactNode {
@@ -31,12 +39,14 @@ function canJoinGroup(previous: ChatMessage, next: ChatMessage): boolean {
 }
 
 // Composer edits leave existing message artwork and emoji text unchanged.
-const ChatMessageGroupRow = memo(function ChatMessageGroupRow({ group }: {
+const ChatMessageGroupRow = memo(function ChatMessageGroupRow({ group, room, viewerId }: {
   readonly group: MessageGroup<ChatMessage>;
+  readonly room: RoomInfo | null;
+  readonly viewerId: string | null;
 }): ReactNode {
   const { t } = useI18nStore();
   const first = group.messages[0];
-  if (first.system) return <p className={styles.systemMessage}>
+  if (first.system) return <p className={styles.systemMessage} data-chat-message-id={first.id}>
     <ChatTime timestamp={first.timestamp} />{' '}
     {t(first.content as TranslationKey, { name: first.sender.nickname })}
   </p>;
@@ -52,11 +62,14 @@ const ChatMessageGroupRow = memo(function ChatMessageGroupRow({ group }: {
           title={t('chat.observerTitle')}>{t('chat.observerTag')}</span>}
         <ChatTime timestamp={first.timestamp} />
       </div>
-      {group.messages.map((message, index) => <ChatFrame key={message.id} id={message.sender.chatFrame}
-        className={styles.chatContent}>
-        {index > 0 && <span className={styles.srOnly}>{message.sender.nickname}: </span>}
-        <ChatMessageBody message={message} />
-      </ChatFrame>)}
+      {group.messages.map((message, index) => <div key={message.id} data-chat-message-id={message.id}
+        data-chat-mentioned={isMentioned(message.content, message.mentions, viewerId) || undefined}
+        className={styles.messageRow}>
+        <ChatFrame id={message.sender.chatFrame} className={styles.chatContent}>
+          {index > 0 && <span className={styles.srOnly}>{message.sender.nickname}: </span>}
+          <ChatRoomMentionBody message={message} room={room} />
+        </ChatFrame>
+      </div>)}
     </div>
   </div>;
 });
@@ -88,16 +101,25 @@ export function ChatPanel({ onCollapse, embedded = false, captioned = false }: C
   const playerId = usePlayerStore((state) => state.playerId);
   const groups = useMemo(() => groupMessages(messages, playerId ?? '', GROUP_GAP_MS, canJoinGroup),
     [messages, playerId]);
-  const observing = useRoomStore((state) => Boolean(playerId && state.roomInfo?.observerIds?.includes(playerId)));
-  const [input, setInput] = useState('');
+  const room = useRoomStore((state) => state.roomInfo);
+  const accountId = useAccountStore((state) => state.account?.id ?? null);
+  const viewerId = accountId ?? playerId;
+  const candidates = useMemo(() => mentionCandidates(room, viewerId), [room, viewerId]);
+  const observing = Boolean(viewerId && room?.observerIds?.includes(viewerId));
+  const unreadIds = useChatMentionStore((state) => state.unreadIds);
+  const requestJump = useChatMentionStore((state) => state.requestJump);
+  const [draft, setDraft] = useState(EMPTY_MENTION_DRAFT);
+  const input = draft.text;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
   const busyRef = useRef(false);
   const messagesRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   // Follow new messages only while the reader is at the end of the log; scrolling up holds the position.
   const following = useRef(true);
+  useChatMentionReading(messagesRef, following, room?.code ?? null, pickerOpen);
+  useChatMentionJump(useCallback(() => setPickerOpen(false), []));
   const lastScrollTop = useRef(0);
   const lastSeenId = useRef<string | null>(null);
   // Messages that arrived while the log was hidden or scrolled up.
@@ -116,7 +138,7 @@ export function ChatPanel({ onCollapse, embedded = false, captioned = false }: C
     const added = index < 0 ? 0 : messages.length - 1 - index;
     const mine = latest !== undefined && !latest.system && latest.sender.id === playerId && added > 0;
     if (mine) following.current = true;
-    const hidden = container.clientHeight === 0;
+    const hidden = !chatLogShown(container);
     if (added > 0 && !mine && (hidden || !following.current)) setFresh((count) => count + added);
     if (mine) setFresh(0);
     if (following.current) container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
@@ -126,10 +148,10 @@ export function ChatPanel({ onCollapse, embedded = false, captioned = false }: C
   useEffect(() => {
     const container = messagesRef.current;
     if (!container) return;
-    let shown = container.clientHeight > 0;
+    let shown = chatLogShown(container);
     setVisible(shown);
     const observer = new ResizeObserver(() => {
-      const now = container.clientHeight > 0;
+      const now = chatLogShown(container);
       if (now && !shown && following.current) container.scrollTop = container.scrollHeight;
       shown = now;
       setVisible(now);
@@ -192,7 +214,8 @@ export function ChatPanel({ onCollapse, embedded = false, captioned = false }: C
     const start = field?.selectionStart ?? input.length;
     const end = field?.selectionEnd ?? input.length;
     const token = `:${name}:`;
-    setInput(input.slice(0, start) + token + input.slice(end));
+    if (input.length - (end - start) + token.length > CHAT_MAX_LENGTH || busyRef.current) return;
+    setDraft(replaceMentionRange(draft, start, end, token));
     setPickerOpen(false);
     requestAnimationFrame(() => {
       field?.focus();
@@ -202,17 +225,22 @@ export function ChatPanel({ onCollapse, embedded = false, captioned = false }: C
 
   const send = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
-    const message = input.trim();
-    if (!message || busyRef.current) return;
+    const prepared = prepareMentionMessage(draft, candidates);
+    if (!prepared.ok) { setError(t(prepared.error)); return; }
+    const payload = prepared.payload;
+    if (!payload.message || busyRef.current) return;
     busyRef.current = true;
     setBusy(true);
     setError('');
-    socket.timeout(10000).emit('chat:send', { message }, (timeout, result) => {
+    socket.timeout(10000).emit('chat:send', payload, (timeout, result) => {
       busyRef.current = false;
       setBusy(false);
       if (timeout) setError(t('auth.connectionError'));
-      else if (result.success) setInput('');
-      else setError(result.error ?? t('common.error'));
+      else if (result.success) setDraft(EMPTY_MENTION_DRAFT);
+      else {
+        const key = chatMentionErrorKey(result.error);
+        setError(key ? t(key) : result.error ?? t('common.error'));
+      }
     });
   };
 
@@ -231,7 +259,7 @@ export function ChatPanel({ onCollapse, embedded = false, captioned = false }: C
   };
 
   return (
-    <section className={`${styles.chatContainer} ${onCollapse || embedded ? styles.fill : ''} ${embedded ? styles.embedded : ''}`}>
+    <section data-chat-panel className={`${styles.chatContainer} ${onCollapse || embedded ? styles.fill : ''} ${embedded ? styles.embedded : ''}`}>
       {captioned && <div className={styles.caption}>
         <h3 className={styles.captionTitle}>{t('chat.title')}</h3>
         {fresh > 0 && <button type="button" className={styles.freshHint} onClick={showLatest}>{freshLabel}</button>}
@@ -243,8 +271,10 @@ export function ChatPanel({ onCollapse, embedded = false, captioned = false }: C
       </div>}
       <div className={styles.messageArea}>
         <div ref={messagesRef} className={styles.chatMessages} role="log" aria-live="polite" onScroll={onScroll}>
-          {groups.map((group) => <ChatMessageGroupRow key={group.key} group={group} />)}
+          {groups.map((group) => <ChatMessageGroupRow key={group.key} group={group} room={room} viewerId={viewerId} />)}
         </div>
+        {unreadIds.length > 0 && <button type="button" className={styles.mentionUnread}
+          onClick={() => requestJump(unreadIds[0])}>{t('chatMention.unread', { n: String(unreadIds.length) })}</button>}
         {!captioned && scrolledUp && fresh > 0 && <button type="button" className={styles.freshPill}
           onClick={showLatest}>{freshLabel} <AppIcon name="nextPage" /></button>}
         {pickerOpen && <div data-emoji-picker>
@@ -257,9 +287,7 @@ export function ChatPanel({ onCollapse, embedded = false, captioned = false }: C
         <button type="button" className={styles.pickerBtn} data-emoji-picker
           aria-label={t('emoji.picker')} title={t('emoji.picker')} aria-expanded={pickerOpen}
           onClick={() => setPickerOpen((open) => !open)}><AppIcon name="emoji" /></button>
-        <input ref={inputRef} className={styles.chatInput} type="text" aria-label={t('chat.placeholder')}
-          placeholder={t('chat.placeholder')} value={input} maxLength={500}
-          onChange={(event) => setInput(event.target.value)} />
+        <ChatMentionComposer draft={draft} onChange={setDraft} candidates={candidates} inputRef={inputRef} busy={busy} />
         <button type="submit" className={styles.chatSendBtn} disabled={busy || !input.trim()}>
           {t('chat.send')}</button>
       </form>

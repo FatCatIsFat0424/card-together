@@ -17,6 +17,7 @@ export interface RoomHeaderStatus {
 
 export interface RoomHeaderChat {
   readonly unread: number;
+  readonly mentions?: number;
   readonly expanded: boolean;
   /** Id of the panel the button shows and hides. */
   readonly controls: string;
@@ -65,6 +66,7 @@ export function RoomHeader({
   const pill = noticeText || status?.text;
   const chatLabel = chat && chat.unread > 0 ? `${t('chat.title')} ${t('room.unread', { n: String(chat.unread) })}`
     : t('chat.title');
+  const mentionLabel = chat?.mentions ? ` · ${t('chat.notifications.unread', { n: String(chat.mentions) })}` : '';
 
   return <header className={`${styles.header} ${className}`} data-room-header>
     <IconButton icon="previousPage" label={t('room.back')} onClick={onBack} />
@@ -84,7 +86,8 @@ export function RoomHeader({
         aria-haspopup="dialog" onClick={onRules} />
       {voice}
       {chat && <ActionButton icon="chat" text={t('chat.title')} collapsible ref={chatRef} badge={chat.unread}
-        label={chatLabel} aria-expanded={chat.expanded} aria-controls={chat.controls} onClick={chat.onToggle} />}
+        mentionCount={chat.mentions} label={chatLabel + mentionLabel}
+        aria-expanded={chat.expanded} aria-controls={chat.controls} onClick={chat.onToggle} />}
     </div>
     <div className={`${styles.actions} ${styles.phaseActions}`} data-phase-actions>{actions}</div>
   </header>;

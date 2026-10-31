@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { Button, buttonClassName } from '../../../client/src/components/Button';
 import { Chip } from '../../../client/src/components/Chip';
 import { IconButton, IconLink, badgeText } from '../../../client/src/components/IconButton';
+import { ActionButton } from '../../../client/src/components/ActionButton';
 import { Tabs, nextTabIndex, tabElementId } from '../../../client/src/components/Tabs';
 
 describe('Button', () => {
@@ -58,6 +59,23 @@ describe('IconButton', () => {
   it('should pass through expanded state for popover triggers', () => {
     const html = renderToStaticMarkup(createElement(IconButton, { icon: 'menu', label: 'Menu', 'aria-expanded': true }));
     expect(html).toContain('aria-expanded="true"');
+  });
+
+  it('prioritizes a distinct capped mention count on compact chat controls', () => {
+    const icon = renderToStaticMarkup(createElement(IconButton, {
+      icon: 'chat', label: 'Chat, 150 mentions', badge: 200, mentionCount: 150,
+    }));
+    const action = renderToStaticMarkup(createElement(ActionButton, {
+      icon: 'chat', text: 'Chat', label: 'Chat, 2 mentions', badge: 8, mentionCount: 2,
+    }));
+    expect(icon).toMatch(/aria-hidden="true">@99\+</);
+    expect(action).toMatch(/aria-hidden="true">@2</);
+    expect(icon).not.toContain('mentionCount=');
+    expect(action).not.toContain('mentionCount=');
+    const ordinary = renderToStaticMarkup(createElement(IconButton, {
+      icon: 'chat', label: 'Chat, 8 unread', badge: 8, mentionCount: 0,
+    }));
+    expect(ordinary).toMatch(/aria-hidden="true">8</);
   });
 
   it('should render navigation as a labelled link with aria-current on the current page', () => {

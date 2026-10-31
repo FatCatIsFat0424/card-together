@@ -16,6 +16,10 @@ vi.mock('../../../client/src/media', () => ({
 }));
 
 vi.mock('../../../client/src/socket', () => ({ socket: {} }));
+vi.mock('../../../client/src/stores/chat-mention-store', () => ({
+  useChatMentionStore: (select: (value: { unreadIds: readonly string[]; targetMessageId: null; requestJump: () => void }) => unknown) =>
+    select({ unreadIds: [], targetMessageId: null, requestJump: () => {} }),
+}));
 vi.mock('../../../client/src/api', () => ({ apiRequest: vi.fn() }));
 
 // Server rendering reads a Zustand store's initial state, so messages come from this stub.

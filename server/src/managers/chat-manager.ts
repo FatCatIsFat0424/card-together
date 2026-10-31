@@ -1,7 +1,7 @@
 // ─── Chat Manager ───
 
 import type {
-  RoomCode, ChatMessage, EmojiRecord, PlayerInfo, ProvidedEmoji, ShopStickerId,
+  RoomCode, ChatMention, ChatMessage, EmojiRecord, PlayerInfo, ProvidedEmoji, ShopStickerId,
 } from '@shared/types';
 
 /** `observers` limits a message to spectators and eliminated players during a match. */
@@ -35,6 +35,7 @@ export function addMessage(
   library: readonly Pick<EmojiRecord, 'name' | 'mediaId'>[] = [],
   provided: ReadonlyMap<string, ProvidedEmoji> = new Map(),
   audience?: ChatAudience,
+  mentions: readonly ChatMention[] = [],
 ): ChatMessage {
   const { emojis, providedEmojis } = resolveMessageEmojis(content, library, provided);
   const message: ChatMessage = {
@@ -42,6 +43,8 @@ export function addMessage(
     sender,
     content,
     timestamp: Date.now(),
+    ...(mentions.length > 0 && { mentions: mentions.map(({ playerId, nickname, start, end }) =>
+      ({ playerId, nickname, start, end })).sort((a, b) => a.start - b.start) }),
     ...(Object.keys(emojis).length > 0 && { emojis }),
     ...(Object.keys(providedEmojis).length > 0 && { providedEmojis }),
     ...(audience && { audience }),

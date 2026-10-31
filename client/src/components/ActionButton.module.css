@@ -53,6 +53,7 @@
   text-align: center;
 }
 .success .dot { background: var(--color-success); }
+.mentionCount { background: var(--color-primary); color: var(--text-on-primary); }
 
 /* The nearest size container decides; without one the text always shows. */
 @container (max-width: 67.5rem) {

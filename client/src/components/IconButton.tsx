@@ -10,6 +10,8 @@ export interface IconButtonLook {
   readonly label: string;
   /** A count (hidden at 0, `99+` above 99) or a plain dot. */
   readonly badge?: number | 'dot';
+  /** Unread mentions replace an ordinary chat count with an explicit @ count. */
+  readonly mentionCount?: number;
   readonly badgeTone?: 'danger' | 'success';
   /** The control stands for the current page or an open panel. */
   readonly current?: boolean;
@@ -27,12 +29,13 @@ function classNameOf({ badgeTone, current, className }: IconButtonLook): string 
     .filter(Boolean).join(' ');
 }
 
-function Content({ icon, badge }: Pick<IconButtonLook, 'icon' | 'badge'>): ReactNode {
-  const text = badgeText(badge);
+function Content({ icon, badge, mentionCount }: Pick<IconButtonLook, 'icon' | 'badge' | 'mentionCount'>): ReactNode {
+  const mentions = badgeText(mentionCount);
+  const text = mentions ? `@${mentions}` : badgeText(badge);
   return <>
     <AppIcon name={icon} />
     {badge === 'dot' && <span className={styles.dot} aria-hidden="true" />}
-    {text && <span className={styles.count} aria-hidden="true">{text}</span>}
+    {text && <span className={`${styles.count} ${mentions ? styles.mentionCount : ''}`} aria-hidden="true">{text}</span>}
   </>;
 }
 
@@ -42,10 +45,10 @@ export interface IconButtonProps extends IconButtonLook,
 }
 
 /** A 20px glyph in a 40px hit area, without a background or border. */
-export function IconButton({ icon, label, badge, badgeTone, current, className, type = 'button', title, ...props }: IconButtonProps): ReactNode {
+export function IconButton({ icon, label, badge, mentionCount, badgeTone, current, className, type = 'button', title, ...props }: IconButtonProps): ReactNode {
   return <button {...props} type={type} aria-label={label} title={title ?? label}
     className={classNameOf({ icon, label, badge, badgeTone, current, className })}>
-    <Content icon={icon} badge={badge} />
+    <Content icon={icon} badge={badge} mentionCount={mentionCount} />
   </button>;
 }
 
@@ -55,10 +58,10 @@ export interface IconLinkProps extends IconButtonLook {
 }
 
 /** `IconButton` look for navigation; `current` also sets `aria-current="page"`. */
-export function IconLink({ to, icon, label, badge, badgeTone, current, className, onClick }: IconLinkProps): ReactNode {
+export function IconLink({ to, icon, label, badge, mentionCount, badgeTone, current, className, onClick }: IconLinkProps): ReactNode {
   return <Link to={to} aria-label={label} title={label} onClick={onClick}
     aria-current={current ? 'page' : undefined}
     className={classNameOf({ icon, label, badge, badgeTone, current, className })}>
-    <Content icon={icon} badge={badge} />
+    <Content icon={icon} badge={badge} mentionCount={mentionCount} />
   </Link>;
 }

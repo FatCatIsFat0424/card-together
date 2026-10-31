@@ -15,6 +15,7 @@ import { usePlayerStore } from '../../../client/src/stores/player-store';
 import { useRoomStore } from '../../../client/src/stores/room-store';
 import { useGameStore } from '../../../client/src/stores/game-store';
 import { useChatStore } from '../../../client/src/stores/chat-store';
+import { useChatMentionStore } from '../../../client/src/stores/chat-mention-store';
 import { equalSnapshotValue } from '../../../client/src/stores/snapshot-equality';
 
 const player: PlayerInfo = {
@@ -264,5 +265,26 @@ describe('chat history deltas', () => {
     const { chatHistory: _history, ...moved } = structuredClone(snapshot);
     applyPlayerSnapshot({ ...moved, room: { ...moved.room!, code: 'XYZ789' } });
     expect(useChatStore.getState().messages).toEqual([]);
+  });
+
+  it('alerts only for new live mentions in the current account and room', () => {
+    const mention = {
+      id: 'mention', sender: { ...player, id: 'bob', nickname: 'Bob' }, content: '@Alice ready?', timestamp: 456,
+      mentions: [{ playerId: 'alice', nickname: 'Alice', start: 0, end: 6 }],
+    };
+    useChatMentionStore.getState().setMode('sound');
+    applyChatMessage({ roomCode: 'OTHER1', message: mention });
+    expect(useChatMentionStore.getState().unreadIds).toEqual([]);
+    applyChatMessage({ roomCode: 'ABC123', message: mention });
+    applyChatMessage({ roomCode: 'ABC123', message: mention });
+    expect(useChatMentionStore.getState().unreadIds).toEqual(['mention']);
+    applyPlayerSnapshot({ ...structuredClone(snapshot), chatHistory: [...snapshot.chatHistory!, mention] });
+    expect(useChatMentionStore.getState().unreadIds).toEqual(['mention']);
+    const { chatHistory: _history, ...moved } = structuredClone(snapshot);
+    applyPlayerSnapshot({ ...moved, room: { ...moved.room!, code: 'XYZ789' } });
+    expect(useChatMentionStore.getState()).toMatchObject({ unreadIds: [], notice: null, soundCueId: null });
+    clearAccount();
+    applyChatMessage({ roomCode: 'XYZ789', message: { ...mention, id: 'late' } });
+    expect(useChatMentionStore.getState().unreadIds).toEqual([]);
   });
 });

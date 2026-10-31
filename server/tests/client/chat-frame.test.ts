@@ -13,6 +13,10 @@ vi.mock('../../../client/src/stores/account-store', async () => {
 });
 vi.mock('../../../client/src/media', () => ({ mediaUrl: (id: string): string => `/api/media/${id}` }));
 vi.mock('../../../client/src/socket', () => ({ socket: {} }));
+vi.mock('../../../client/src/stores/chat-mention-store', () => ({
+  useChatMentionStore: (select: (value: { unreadIds: readonly string[]; targetMessageId: null; requestJump: () => void }) => unknown) =>
+    select({ unreadIds: [], targetMessageId: null, requestJump: () => {} }),
+}));
 vi.mock('../../../client/src/api', () => ({ apiRequest: vi.fn() }));
 
 const chat = vi.hoisted(() => ({ messages: [] as unknown[] }));

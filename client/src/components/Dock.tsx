@@ -40,6 +40,8 @@ export function Dock<T extends string>({ id, label, tabs, value, onChange, onCol
 }
 
 /** Count beside a tab name, such as unread messages. */
-export function DockCount({ label, children }: { readonly label?: string; readonly children: ReactNode }): ReactNode {
-  return <span className={styles.count} aria-label={label}>{children}</span>;
+export function DockCount({ label, children, mention = false }: {
+  readonly label?: string; readonly children: ReactNode; readonly mention?: boolean;
+}): ReactNode {
+  return <span className={`${styles.count} ${mention ? styles.mentionCount : ''}`} aria-label={label}>{children}</span>;
 }

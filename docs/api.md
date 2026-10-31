@@ -154,7 +154,7 @@
 | `game:leaveEarly` | — | 開啟代打，並在一次 commit 中對所有玩家與旁觀者標示呼叫者已離開；關閉代打會清除這個標示 |
 | `game:continue` | — | 離開結果畫面回到等待中的房間；其他人仍會看到結果 |
 | `game:abortVote:start` / `cast` | — / `{ agree }` | 發起或投票終止對局（[規則](games/common.md#房間流程)） |
-| `chat:send` | 一個[聊天輸入](../shared/src/types/socket-events.ts)，包括 `{ shopSticker }` | 文字，或一張個人／站方／商店貼圖；發送商店貼圖需要擁有該貼圖包 |
+| `chat:send` | 一個[聊天輸入](../shared/src/types/socket-events.ts)，文字可附 `mentions`，或 `{ shopSticker }` 等貼圖輸入 | 文字，或一張個人／站方／商店貼圖；發送商店貼圖需要擁有該貼圖包 |
 
 房規保存在 `RoomInfo.gameOptions` 的遊戲鍵下，切換遊戲再切回時保留原本選擇。遊戲局內仍使用開局時固定的規則；房規只在等待中可改。舊版個別遊戲操作事件與四個 `room:set*Options` 事件只回覆重新整理提示，不會執行操作；部署後仍開啟舊版的玩家需重新整理。
 
@@ -164,6 +164,7 @@
 - [`GameClock`](../shared/src/types/game.ts) 提供行動中的座位、截止時間、時間庫與伺服器時間。只有伺服器會強制執行逾時。
 - `isBot` 不存在或為 false 代表真人。`bot:<UUID>` 身分無法驗證，也不會收到快照。
 - `room:movePlayer`：目標位置有人時會交換兩人的位置；旁觀者坐到真人的座位時，兩人交換旁觀身分。bot 從不移到旁觀區或額外座位。移動會遵守旁觀區容量、重設真人的準備狀態，並讓 bot 保持準備。
+- `chat:send` 的提及契約見 [`ChatMention`](../shared/src/types/chat.ts)：最多 20 段，文字範圍以去除首尾空白後的內容計算 UTF-16 索引。伺服器驗證範圍不重疊、文字與目前暱稱相符，且目標是同房間、有權閱讀訊息的真人；任一失敗會拒絕整則訊息。貼圖不能附提及。通過後的中繼資料與訊息一同保存，沿用 `chat:message` 與歷史快照送達，不另發通知事件。
 
 **伺服器事件**
 

@@ -4,9 +4,11 @@ import type { SocketContext, TypedSocket } from './context';
 import { actionError, observerIds, requireRoom, runAction } from './context';
 import * as playerManager from '../managers/player-manager';
 import * as chatManager from '../managers/chat-manager';
+import * as roomManager from '../managers/room-manager';
+import { parseChatMentions } from './chat-mentions';
 
 export function registerChatHandlers(context: SocketContext, socket: TypedSocket): void {
-  socket.on('chat:send', (payload, callback) => {
+  socket.on('chat:send', (payload: unknown, callback) => {
     if (typeof callback !== 'function') return;
     // A library read failure only drops emoji images; the message itself still sends.
     void context.listEmojis(socket.data.accountId).catch((): EmojiRecord[] => [])
@@ -14,7 +16,8 @@ export function registerChatHandlers(context: SocketContext, socket: TypedSocket
         const player = playerManager.getPlayerInfo(socket.data.accountId);
         if (!player) throw actionError('Player not found.');
         const roomCode = requireRoom(socket);
-        const audience = observerIds(roomCode).includes(player.id) ? 'observers' : undefined;
+        const observers = observerIds(roomCode);
+        const audience = observers.includes(player.id) ? 'observers' : undefined;
         if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
           throw actionError('Invalid chat payload.');
         }
@@ -45,12 +48,27 @@ export function registerChatHandlers(context: SocketContext, socket: TypedSocket
             throw actionError('Sticker is not available.');
           }
         } else {
-          if (Object.keys(payload).some((key) => key !== 'message')) throw actionError('Invalid chat payload.');
-          const content = payload.message;
+          if (Object.keys(payload).some((key) => key !== 'message' && key !== 'mentions')) throw actionError('Invalid chat payload.');
+          const content = 'message' in payload ? payload.message : undefined;
           if (typeof content !== 'string' || !content.trim() || content.trim().length > 500) {
             throw actionError('Messages must contain 1–500 characters.');
           }
-          chatManager.addMessage(roomCode, player, content.trim(), library, context.providedEmojis, audience);
+          const mentions = parseChatMentions('mentions' in payload ? payload.mentions : undefined, content.trim());
+          if (!mentions) throw actionError('Invalid chat mentions. Please select players again.');
+          const members = new Set(roomManager.getRoomMemberIds(roomCode));
+          for (const mention of mentions) {
+            const target = playerManager.getPlayerInfo(mention.playerId);
+            if (!members.has(mention.playerId) || !target || target.isBot) {
+              throw actionError('Mentioned players must be human members of this room. Please select players again.');
+            }
+            if (target.nickname !== mention.nickname) {
+              throw actionError('A mentioned player changed their nickname. Please select them again.');
+            }
+            if (audience === 'observers' && !observers.includes(target.id)) {
+              throw actionError('Observers can only mention other observers during a match.');
+            }
+          }
+          chatManager.addMessage(roomCode, player, content.trim(), library, context.providedEmojis, audience, mentions);
         }
         return { success: true };
       }));

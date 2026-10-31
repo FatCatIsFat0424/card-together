@@ -8,6 +8,7 @@ import { useI18nStore } from '../stores/i18n-store';
 import { useMusicStore } from '../stores/music-store';
 import { useSoundEffectsStore } from '../stores/sound-effects-store';
 import { useTurnSoundStore } from '../stores/turn-sound-store';
+import { useChatMentionStore } from '../stores/chat-mention-store';
 import { AppIcon } from './AppIcon';
 import styles from './AudioSettings.module.css';
 
@@ -60,6 +61,7 @@ export function AudioSettings({ showTitle = true, onClose }: {
 }): ReactNode {
   const { t } = useI18nStore();
   const turnId = useId();
+  const mentionMode = useChatMentionStore((state) => state.mode);
   const master = useAudioSettingsStore();
   const musicEnabled = useMusicStore((state) => state.enabled);
   const musicVolume = useMusicStore((state) => state.volume);
@@ -86,6 +88,16 @@ export function AudioSettings({ showTitle = true, onClose }: {
         <Switch id={`${turnId}-turn`} checked={turnEnabled} onChange={setTurnEnabled} />
         <span>{t('audio.turnReminder')}</span>
       </label>
+      <label className={styles.mentionLabel} htmlFor={`${turnId}-mentions`}>{t('chat.notifications')}</label>
+      <select id={`${turnId}-mentions`} className={styles.mentionSelect} value={mentionMode}
+        onChange={(event) => {
+          const mode = event.target.value;
+          if (mode === 'sound' || mode === 'visual' || mode === 'off') useChatMentionStore.getState().setMode(mode);
+        }}>
+        {(['sound', 'visual', 'off'] as const).map((mode) =>
+          <option key={mode} value={mode}>{t(`chat.notifications.${mode}`)}</option>)}
+      </select>
+      <p className={styles.note}>{t('chat.notifications.note')}</p>
     </Channel>
     <Channel name="audio.voice" enabled={master.voiceEnabled} volume={master.voiceVolume}
       onEnabled={master.setVoiceEnabled} onVolume={master.setVoiceVolume} />

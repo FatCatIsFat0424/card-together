@@ -15,6 +15,8 @@ import { useAccountStore } from '../stores/account-store';
 import { useGameStore } from '../stores/game-store';
 import { useGodViewStore } from '../stores/god-view-store';
 import { useChatStore } from '../stores/chat-store';
+import { useChatMentionStore } from '../stores/chat-mention-store';
+import { useChatMentionJump } from '../hooks/use-chat-mention-jump';
 import { useRoomStore } from '../stores/room-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useSeatName } from './seat-names';
@@ -252,6 +254,15 @@ export function GameShell({
   const centreUp = layout === 'ring' && !sidePositions.includes('top');
   const chatShown = dockLayout ? dockOpen && dockTab === 'info' : chatOpen;
   const unread = chatShown ? 0 : Math.max(0, messageCount - seenMessages);
+  const mentionCount = useChatMentionStore((state) => chatVisible ? state.unreadIds.length : 0);
+  const mentionLabel = mentionCount > 0 ? ` · ${t('chat.notifications.unread', { n: String(mentionCount) })}` : '';
+  useChatMentionJump(useCallback(() => {
+    if (!chatVisible) return;
+    setInfoOpen(false);
+    setDockTab('info');
+    setDockOpen(true);
+    setChatOpen(true);
+  }, [chatVisible]));
   // Phones hide the app bar during games, so this sheet becomes the menu for everything it held.
   const sheetLayout = useMediaQuery(SHEET_QUERY);
   const phoneMenu = sheetLayout && !replay;
@@ -414,8 +425,8 @@ export function GameShell({
     {!replay && room && <RoomCodeButton key={room.code} code={room.code} compact={phoneMenu} className={styles.menuRoomCode} />}
     {rulesButton}
     {!replay && <VoiceButton labelled className={styles.menuAction} />}
-    {!replay && <ActionButton icon="chat" text={t('chat.title')} badge={unread} className={styles.menuAction}
-      label={unread > 0 ? `${t('chat.title')} ${t('room.unread', { n: String(unread) })}` : t('chat.title')}
+    {!replay && <ActionButton icon="chat" text={t('chat.title')} badge={unread} mentionCount={mentionCount} className={styles.menuAction}
+      label={(unread > 0 ? `${t('chat.title')} ${t('room.unread', { n: String(unread) })}` : t('chat.title')) + mentionLabel}
       onClick={openChat} />}
     {!replay && <>
       <AbortVoteButton className={styles.menuExit} />
@@ -428,7 +439,7 @@ export function GameShell({
     onBack={() => navigate('/')} onRules={openRules}
     voice={<VoiceButton labelled dock={{ id: 'game-dock', open: dockOpen && dockTab === 'voice',
       onToggle: () => toggleDockTab('voice') }} />}
-    chat={{ unread, expanded: chatShown, controls: 'game-dock', onToggle: () => toggleDockTab('info') }}
+    chat={{ unread, mentions: mentionCount, expanded: chatShown, controls: 'game-dock', onToggle: () => toggleDockTab('info') }}
     actions={<>
       <AbortVoteButton appearance="header" />
       <EarlyLeaveButton appearance="header" />
@@ -457,7 +468,9 @@ export function GameShell({
       {chatVisible && <div className={styles.dockChat}>{chatPanel}</div>}
     </div>,
     label: <>{t('table.gameTab')}{unread > 0 && <DockCount label={t('room.unread', { n: String(unread) })}>
-      {unread > 99 ? '99+' : unread}</DockCount>}</> },
+      {unread > 99 ? '99+' : unread}</DockCount>}
+      {mentionCount > 0 && <DockCount mention label={t('chat.notifications.unread', { n: String(mentionCount) })}>
+        @{mentionCount > 99 ? '99+' : mentionCount}</DockCount>}</> },
     ...!replay ? [{ id: 'spectators' as const, panel: <GameSpectators layout="dock" />,
       label: <SpectatorsTabLabel /> }] : [],
     ...!replay ? [{ id: 'voice' as const, label: t('voice.title'), panel: <VoiceDockPanel className={styles.dockVoice} /> }] : [],
@@ -491,8 +504,8 @@ export function GameShell({
           data-card-table data-hud-info={HudInfo ? '' : undefined}
           data-expanded-table={expandedTable ? '' : undefined}>
           {dockLayout && !dockOpen && <IconButton className={`${styles.hudButton} ${styles.dockToggle}`}
-            icon={chatVisible ? 'chat' : 'info'} label={dockToggleLabel} badge={unread}
-            onClick={() => setDockOpen(true)} ref={dockToggleRef} aria-controls="game-dock" aria-expanded={false} />}
+            icon={chatVisible ? 'chat' : 'info'} label={dockToggleLabel + mentionLabel} badge={unread} mentionCount={mentionCount}
+            onClick={() => { setDockTab('info'); setDockOpen(true); }} ref={dockToggleRef} aria-controls="game-dock" aria-expanded={false} />}
           <div className={styles.tableTools}>
             <IconButton className={`${styles.hudButton} ${styles.menuTool}`} icon={phoneMenu ? 'menu' : 'info'}
               label={t(phoneMenu ? 'topbar.menu' : 'table.info')} onClick={openInfo} ref={infoButtonRef}
@@ -504,8 +517,8 @@ export function GameShell({
             <span className={styles.hudInfo}>{HudInfo && <HudInfo />}</span>
             {!replay && <VoiceButton className={`${styles.hudButton} ${styles.voiceTool}`} />}
             {chatVisible && <IconButton className={`${styles.hudButton} ${styles.chatFab}`} icon="chat"
-              label={t('table.chatExpand')} onClick={openChat} ref={chatButtonRef}
-              badge={unread} aria-expanded={chatOpen} />}
+              label={t('table.chatExpand') + mentionLabel} onClick={openChat} ref={chatButtonRef}
+              badge={unread} mentionCount={mentionCount} aria-expanded={chatOpen} />}
           </div>
           {board}
           {!board && tableSeats.filter((seat) => seat !== bottomSeat && tableSeats.includes(seat)).map((seat) => (
@@ -567,9 +580,10 @@ export function GameShell({
       </div> : chatVisible && <aside className={styles.chatRail} ref={chatRailRef} tabIndex={-1} aria-label={t('chat.title')}>
         {!chatOpen && (
           <button type="button" className={styles.chatStrip} onClick={() => setChatOpen(true)}
-            aria-label={t('table.chatExpand')} title={t('table.chatExpand')}>
+            aria-label={t('table.chatExpand') + mentionLabel} title={t('table.chatExpand') + mentionLabel}>
             <AppIcon name="chat" />
             {unread > 0 && <span className={styles.unread}>{unread}</span>}
+            {mentionCount > 0 && <span className={styles.unread}>@{mentionCount > 99 ? '99+' : mentionCount}</span>}
           </button>
         )}
         <div className={`${styles.chatBody} ${chatOpen ? '' : styles.hidden}`} inert={!chatOpen}>

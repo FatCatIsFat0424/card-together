@@ -1,5 +1,5 @@
 import { isNumberedSeatGame, maxPlayers, roomCanStart, roomSeatInfo } from '@shared/rules/seats';
-import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
@@ -21,6 +21,8 @@ import { useAccountStore } from '../stores/account-store';
 import { usePlayerStore } from '../stores/player-store';
 import { useRoomStore } from '../stores/room-store';
 import { useChatStore } from '../stores/chat-store';
+import { useChatMentionStore } from '../stores/chat-mention-store';
+import { useChatMentionJump } from '../hooks/use-chat-mention-jump';
 import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { seatLabel } from '../games/seat-names';
@@ -107,6 +109,12 @@ export function RoomPage(): ReactNode {
   const messageCount = useChatStore((state) => state.messages.length);
   const [seenMessages, setSeenMessages] = useState(messageCount);
   const unread = unreadCount(messageCount, seenMessages, chatVisible);
+  const mentionCount = useChatMentionStore((state) => state.unreadIds.length);
+  useChatMentionJump(useCallback(() => {
+    setDockTab('chat');
+    setDockOpen(true);
+    setChatOpen(true);
+  }, []));
   const attemptedRoom = useRef<string | null>(null);
   const hadRoom = useRef(false);
   const leaving = useRef(false);
@@ -426,7 +434,7 @@ export function RoomPage(): ReactNode {
         onCopyFailed={() => setError(t('room.copyFailed'))}
         voice={<VoiceButton labelled dock={compactLayout ? undefined
           : { id: 'room-dock', open: dockOpen && dockTab === 'voice', onToggle: toggleVoiceTab }} />}
-        chat={{ unread, expanded: chatVisible, controls: 'room-chat', onToggle: toggleChat }} chatRef={chatToggleRef}
+        chat={{ unread, mentions: mentionCount, expanded: chatVisible, controls: 'room-chat', onToggle: toggleChat }} chatRef={chatToggleRef}
         actions={<>
           <InviteFriends labelled />
           {isHost && <ActionButton icon="replay" text={t('replay.sharedOpen')} onClick={() => setReplayPickerOpen(true)}
@@ -524,7 +532,9 @@ export function RoomPage(): ReactNode {
         {compactLayout ? <ChatPanel onCollapse={collapseChat} /> : <Dock id="room-dock" label={t('room.dock')}
           value={dockTab} onChange={changeDockTab} onCollapse={collapseChat} tabs={[
             { id: 'chat', label: <>{t('chat.title')}{unread > 0 && <DockCount
-              label={t('room.unread', { n: String(unread) })}>{unread > 99 ? '99+' : unread}</DockCount>}</>,
+              label={t('room.unread', { n: String(unread) })}>{unread > 99 ? '99+' : unread}</DockCount>}
+              {mentionCount > 0 && <DockCount mention label={t('chat.notifications.unread', { n: String(mentionCount) })}>
+                @{mentionCount > 99 ? '99+' : mentionCount}</DockCount>}</>,
             panel: <ChatPanel embedded /> },
             { id: 'spectators', label: <>{t('room.spectatorsTab')}<DockCount>{spectators.length}</DockCount></>,
               panel: spectatorList('dock') },

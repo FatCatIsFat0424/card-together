@@ -7,7 +7,7 @@ import type {
   Card, BidAction, BlackjackAction, BlackjackDealerAction, ChinesePokerArrangement, HoldemAction, NapoleonAction,
   PlayerVisibleGameState,
 } from './game';
-import type { ChatMessage } from './chat';
+import type { ChatMention, ChatMessage } from './chat';
 import type { MatchSummary } from './game';
 import type { MatchReplay } from './replay';
 import type { PublicAccount } from './social';
@@ -212,11 +212,11 @@ export interface ClientToServerEvents {
   ) => void;
   'chat:send': (
     payload:
-      | { message: string; stickerId?: never; providedSticker?: never; shopSticker?: never }
-      | { stickerId: string; message?: never; providedSticker?: never; shopSticker?: never }
+      | { message: string; mentions?: readonly ChatMention[]; stickerId?: never; providedSticker?: never; shopSticker?: never }
+      | { stickerId: string; mentions?: never; message?: never; providedSticker?: never; shopSticker?: never }
       /** Name of a site-provided emoji sent as a sticker. */
-      | { providedSticker: string; message?: never; stickerId?: never; shopSticker?: never }
-      | { shopSticker: ShopStickerId; message?: never; stickerId?: never; providedSticker?: never },
+      | { providedSticker: string; mentions?: never; message?: never; stickerId?: never; shopSticker?: never }
+      | { shopSticker: ShopStickerId; mentions?: never; message?: never; stickerId?: never; providedSticker?: never },
     callback: (response: ActionResult) => void,
   ) => void;
 }

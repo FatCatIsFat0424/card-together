@@ -12,6 +12,8 @@ import { providedEmojiUrl } from '../provided-emoji';
 import { useI18nStore } from '../stores/i18n-store';
 import { AppIcon } from './AppIcon';
 import styles from './ChatPanel.module.css';
+import { validMentions } from './chat-mentions';
+import type { ChatMention } from './chat-mentions';
 
 export type StickerPayload = { stickerId: string } | { providedSticker: string } | { shopSticker: ShopStickerId };
 
@@ -28,7 +30,10 @@ export function StickerImage({ name, src, small = false }: {
 }
 
 /** Text stays text; only emoji the server attached to this message become images. */
-export function ChatMessageBody({ message }: { message: MessageContent }): ReactNode {
+export function ChatMessageBody({ message, renderMention }: {
+  readonly message: MessageContent & { readonly mentions?: readonly ChatMention[] };
+  readonly renderMention?: (mention: ChatMention) => ReactNode;
+}): ReactNode {
   if (message.shopSticker) return <ShopSticker id={message.shopSticker} />;
   if (message.sticker) {
     return <StickerImage name={message.sticker.name} src={mediaUrl(message.sticker.mediaId)} />;
@@ -37,12 +42,22 @@ export function ChatMessageBody({ message }: { message: MessageContent }): React
     return <StickerImage name={message.providedSticker.name}
       src={providedEmojiUrl(message.providedSticker.file)} />;
   }
-  return splitEmojiText(message.content, message.emojis, message.providedEmojis).map((segment, index) => {
+  const text = (content: string): ReactNode => splitEmojiText(content, message.emojis, message.providedEmojis).map((segment, index) => {
     if (typeof segment === 'string') return segment;
     const src = 'mediaId' in segment ? mediaUrl(segment.mediaId) : providedEmojiUrl(segment.file);
     const token = `:${segment.name}:`;
     return src ? <img key={index} className={styles.emoji} src={src} alt={token} title={token} /> : token;
   });
+  if (!renderMention) return text(message.content);
+  const parts: ReactNode[] = [];
+  let cursor = 0;
+  for (const mention of validMentions(message.content, message.mentions)) {
+    parts.push(<span key={`text-${cursor}`}>{text(message.content.slice(cursor, mention.start))}</span>);
+    parts.push(<span key={`mention-${mention.start}`}>{renderMention(mention)}</span>);
+    cursor = mention.end;
+  }
+  parts.push(<span key={`text-${cursor}`}>{text(message.content.slice(cursor))}</span>);
+  return parts;
 }
 
 export interface EmojiPickerProps {

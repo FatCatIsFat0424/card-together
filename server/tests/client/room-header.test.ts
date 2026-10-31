@@ -135,6 +135,16 @@ describe('room header', () => {
     expect(html).toContain('Vote passed — back to the room.');
     expect(html).not.toContain('2/4 seated');
   });
+
+  it('names unread messages and mentions separately while showing the @ count', () => {
+    const html = renderToStaticMarkup(createElement(RoomHeader, {
+      title: 'Big Two', code: 'ABC123', status: null, voice: null,
+      chat: { unread: 8, mentions: 2, expanded: false, controls: 'room-dock', onToggle: () => undefined },
+      actions: null, onBack: () => undefined, onRules: () => undefined,
+    }));
+    expect(buttonNames(html)).toContain('Chat 8 unread messages · 2 unread mentions');
+    expect(html).toMatch(/aria-hidden="true">@2</);
+  });
 });
 
 describe('table header and dock', () => {
