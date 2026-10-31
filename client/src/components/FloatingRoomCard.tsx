@@ -34,9 +34,8 @@ export function FloatingRoomCard(): ReactNode {
   const [dragging, setDragging] = useState(false);
   const preferredPosition = useRef<FloatingCardPoint | null>(null);
   const boundsRef = useRef<FloatingCardBounds | null>(null);
-  const refreshRef = useRef<(() => void) | null>(null);
   const drag = useRef<{
-    id: number; target: HTMLButtonElement; start: FloatingCardPoint; origin: FloatingCardPoint; moved: boolean;
+    id: number; target: HTMLElement; start: FloatingCardPoint; origin: FloatingCardPoint; moved: boolean;
   } | null>(null);
   const suppressClick = useRef(false);
   const messages = pathname === '/messages' || pathname.startsWith('/messages/');
@@ -51,8 +50,7 @@ export function FloatingRoomCard(): ReactNode {
     const card = cardRef.current;
     if (hidden || !card) return;
     const cancel = (): void => { releaseDrag(); setDragging(false); };
-    const refresh = (): void => {
-      cancel();
+    const measure = (): void => {
       const rootStyle = getComputedStyle(document.documentElement);
       const cardStyle = getComputedStyle(card);
       const pixels = (style: CSSStyleDeclaration, name: string): number => Number.parseFloat(style.getPropertyValue(name)) || 0;
@@ -64,7 +62,7 @@ export function FloatingRoomCard(): ReactNode {
         left: pixels(cardStyle, '--safe-left'), top: pixels(cardStyle, '--safe-top'),
         right: pixels(cardStyle, '--safe-right'), bottom: pixels(cardStyle, '--safe-bottom'),
       });
-      // Limit the rendered size before measuring so even a short keyboard viewport retains the controls.
+      // Limit the rendered size before measuring so the card stays inside even a short keyboard viewport.
       card.style.setProperty('--card-max-width', `${area.right - area.left}px`);
       card.style.setProperty('--card-max-height', `${area.bottom - area.top}px`);
       const bounds = floatingCardBounds(area, card.getBoundingClientRect());
@@ -75,9 +73,10 @@ export function FloatingRoomCard(): ReactNode {
       const next = restoreFloatingCard(preferred, bounds);
       setPosition((previous) => previous?.x === next.x && previous.y === next.y ? previous : next);
     };
-    refreshRef.current = refresh;
+    const refresh = (): void => { cancel(); measure(); };
     refresh();
-    const observer = new ResizeObserver(refresh);
+    // Moving can shift the card's size by subpixels, so its own resizes keep an ongoing drag.
+    const observer = new ResizeObserver(measure);
     observer.observe(card);
     window.addEventListener('resize', refresh);
     window.addEventListener('orientationchange', refresh);
@@ -87,7 +86,6 @@ export function FloatingRoomCard(): ReactNode {
     viewport?.addEventListener('scroll', refresh);
     return () => {
       releaseDrag();
-      refreshRef.current = null;
       boundsRef.current = null;
       observer.disconnect();
       window.removeEventListener('resize', refresh);
@@ -106,11 +104,13 @@ export function FloatingRoomCard(): ReactNode {
     setPosition(next);
   };
 
-  const move = (event: PointerEvent<HTMLButtonElement>): void => {
+  const move = (event: PointerEvent<HTMLElement>): void => {
     const current = drag.current;
     if (!current || current.id !== event.pointerId) return;
     const point = { x: event.clientX, y: event.clientY };
     if (!current.moved && !floatingCardDragStarted(current.start, point)) return;
+    // Capture only once dragging, so a plain click still reaches the link.
+    if (!current.moved) current.target.setPointerCapture(current.id);
     current.moved = true;
     suppressClick.current = true;
     setDragging(true);
@@ -118,7 +118,7 @@ export function FloatingRoomCard(): ReactNode {
     event.preventDefault();
   };
 
-  const finish = (event: PointerEvent<HTMLButtonElement>): void => {
+  const finish = (event: PointerEvent<HTMLElement>): void => {
     if (drag.current?.id !== event.pointerId) return;
     releaseDrag();
     setDragging(false);
@@ -143,41 +143,33 @@ export function FloatingRoomCard(): ReactNode {
 
   return <aside ref={cardRef} className={styles.card} aria-label={t('roomCard.title')}
     data-messages={messages || undefined} data-dragging={dragging || undefined}
-    style={position ? { left: position.x, top: position.y, right: 'auto', bottom: 'auto' } : undefined}>
-    <div className={styles.controls}>
-      <button type="button" className={styles.dragHandle} aria-label={t('roomCard.move')}
-        aria-description={t('roomCard.moveHint')} title={t('roomCard.moveHint')}
-        onDragStart={(event) => event.preventDefault()}
-        onPointerDown={(event) => {
-          suppressClick.current = false;
-          if (drag.current || !event.isPrimary || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-          const rect = cardRef.current?.getBoundingClientRect();
-          if (!rect) return;
-          drag.current = { id: event.pointerId, target: event.currentTarget,
-            start: { x: event.clientX, y: event.clientY }, origin: { x: rect.left, y: rect.top }, moved: false };
-          event.currentTarget.setPointerCapture(event.pointerId);
-        }}
-        onPointerMove={move} onPointerUp={finish} onPointerCancel={finish} onLostPointerCapture={finish}
-        onClick={(event) => { if (suppressClick.current) event.preventDefault(); }}
-        onKeyDown={(event) => {
-          if (event.altKey || event.ctrlKey || event.metaKey) return;
-          const delta = floatingCardKeyMove(event.key, event.shiftKey);
-          const rect = cardRef.current?.getBoundingClientRect();
-          if (!delta || !rect) return;
-          event.preventDefault();
-          releaseDrag();
-          setDragging(false);
-          place({ x: rect.left + delta.x, y: rect.top + delta.y });
-        }}><AppIcon name="drag" /></button>
-      <button type="button" className={styles.reset} aria-label={t('roomCard.resetPosition')}
-        title={t('roomCard.resetPosition')} onClick={() => {
-          preferredPosition.current = null;
-          refreshRef.current?.();
-        }}><AppIcon name="refresh" /></button>
-    </div>
+    style={position ? { left: position.x, top: position.y, right: 'auto', bottom: 'auto' } : undefined}
+    onDragStart={(event) => event.preventDefault()}
+    onPointerDown={(event) => {
+      suppressClick.current = false;
+      // A press on the card's own box, outside the link, can only be its scrollbar.
+      if (drag.current?.moved || event.target === event.currentTarget || !event.isPrimary || event.button !== 0
+        || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      const rect = event.currentTarget.getBoundingClientRect();
+      drag.current = { id: event.pointerId, target: event.currentTarget,
+        start: { x: event.clientX, y: event.clientY }, origin: { x: rect.left, y: rect.top }, moved: false };
+    }}
+    onPointerMove={move} onPointerUp={finish} onPointerCancel={finish}
+    // Touch input implicitly captures to the pressed child, which loses it once the card takes over.
+    onLostPointerCapture={(event) => { if (event.target === event.currentTarget) finish(event); }}>
     <Link className={styles.link} to={path} aria-label={t('roomCard.open', { game: gameName, code: roomCode })}
-      onPointerDown={() => { suppressClick.current = false; }}
-      onKeyDown={() => { suppressClick.current = false; }}
+      aria-description={t('roomCard.moveHint')}
+      onKeyDown={(event) => {
+        suppressClick.current = false;
+        if (event.altKey || event.ctrlKey || event.metaKey) return;
+        const delta = floatingCardKeyMove(event.key, event.shiftKey);
+        const rect = cardRef.current?.getBoundingClientRect();
+        if (!delta || !rect) return;
+        event.preventDefault();
+        releaseDrag();
+        setDragging(false);
+        place({ x: rect.left + delta.x, y: rect.top + delta.y });
+      }}
       onClick={(event) => {
         if (suppressClick.current) { event.preventDefault(); suppressClick.current = false; }
       }}>

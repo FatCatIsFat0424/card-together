@@ -115,8 +115,7 @@ export function DesktopShell({
       <Button variant="danger-text" className={styles.menuSignOut} onClick={signOut.request} disabled={signOut.busy}
         icon="logout">{t('topbar.signOut')}</Button>
     </div>}
-  </div>;
-  const signOutConfirm = <div className={popoverStyles.group} data-popover="signOut">
+    {/* The confirmation shares the menu's group: a group of its own would add an empty rail slot. */}
     {shown('signOut') && signOut.error && <p {...panelProps('signOut', `${PANEL} ${popoverStyles.error}`)}
       role="alert">{signOut.error}</p>}
     {shown('signOut') && !signOut.error && signOut.confirm && <div
@@ -134,5 +133,5 @@ export function DesktopShell({
 
   return <DesktopRail pathname={pathname} accountId={accountId} returnTo={returnTo} onlineFriends={onlineFriends}
     messageCount={messageCount} tableHref={tableHref} onNavigate={close}
-    footer={<>{coins}{notifications}{music}{menu}{signOutConfirm}</>} />;
+    footer={<>{coins}{notifications}{music}{menu}</>} />;
 }

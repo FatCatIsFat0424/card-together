@@ -106,18 +106,13 @@ describe('floating room card', () => {
     expect(render()).toContain('href="/room/ABC123"');
   });
   it.each([
-    ['en', 'Move room card', 'Reset room card position', 'Drag or use arrow keys to move; hold Shift for larger steps'],
-    ['zh-TW', '移動房間卡片', '重設房間卡片位置', '拖曳或使用方向鍵移動；按住 Shift 可加大移動距離'],
-  ] as const)('provides separate localized keyboard controls in %s', (locale, move, reset, hint) => {
+    ['en', 'Drag or use arrow keys to move; hold Shift for larger steps'],
+    ['zh-TW', '拖曳或使用方向鍵移動；按住 Shift 可加大移動距離'],
+  ] as const)('moves the whole card without a separate control bar in %s', (locale, hint) => {
     useI18nStore.getState().setLocale(locale);
     const html = render();
-    expect(html).toContain(`aria-label="${move}"`);
-    expect(html).toContain(`aria-label="${reset}"`);
-    expect(html).toContain(`aria-description="${hint}"`);
-    expect(html.match(/<button /g)).toHaveLength(2);
-    const link = html.match(/<a [\s\S]*?<\/a>/)?.[0];
-    expect(link).toBeDefined();
-    expect(link).not.toContain('<button');
+    expect(html).not.toContain('<button');
+    expect(html.match(/<a [^>]*>/)?.[0]).toContain(`aria-description="${hint}"`);
     expect(html).not.toContain('data-room-card');
   });
   it('selects the unobstructive default only for message routes', () => {
