@@ -86,6 +86,11 @@ export function gomokuBoard(size = 15): BoardModel {
   });
 }
 
+/** Chess: 8 × 8 cells in alternating light and dark squares; white (side 0) at the bottom, black turned to face it. */
+export function chessBoard(): BoardModel {
+  return squareBoard({ cols: 8, rows: 8, layout: 'cells', decorations: [{ kind: 'checker' }] });
+}
+
 /** Banqi: the 8 × 4 half board, pieces in cells; colours are decided in play, so the board never turns. */
 export function banqiBoard(): BoardModel {
   return squareBoard({ cols: 8, rows: 4, layout: 'cells', sideRotations: FIXED_SIDES });

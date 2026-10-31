@@ -38,6 +38,10 @@ export const BOARD_RESULT_REASONS = [
   'move-limit',
   /** Battleship: every ship of the opponent's fleet was sunk. */
   'fleet-sunk',
+  /** Chess: 50 moves by each side without a capture or pawn move ruled a draw. */
+  'fifty-move',
+  /** Chess: neither side can possibly mate ruled a draw. */
+  'insufficient-material',
 ] as const;
 
 export type BoardResultReason = typeof BOARD_RESULT_REASONS[number];

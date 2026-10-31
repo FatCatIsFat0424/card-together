@@ -71,6 +71,7 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
   jungle: { en: 'River', 'zh-TW': '河道' },
   gomoku: { en: 'Renju option', 'zh-TW': '連珠禁手選項' },
   xiangqi: { en: 'Handicap', 'zh-TW': '讓子' },
+  chess: { en: 'Special moves', 'zh-TW': '特殊走法' },
   crazyeights: { en: 'Eights', 'zh-TW': '8 為萬用牌' },
   stud: { en: 'Who acts first', 'zh-TW': '誰先行動' },
   oldmaid: { en: 'Drawing', 'zh-TW': '抽牌' },

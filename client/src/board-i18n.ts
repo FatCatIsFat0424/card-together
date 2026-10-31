@@ -56,6 +56,8 @@ const englishReasons: Record<BoardResultReason, string> = {
   'all-home': 'All pieces home',
   'move-limit': 'Turn limit reached',
   'fleet-sunk': 'Fleet sunk',
+  'fifty-move': 'Fifty-move rule',
+  'insufficient-material': 'Insufficient material',
 };
 
 const chineseReasons: Record<BoardResultReason, string> = {
@@ -77,6 +79,8 @@ const chineseReasons: Record<BoardResultReason, string> = {
   'all-home': '全部抵達對角',
   'move-limit': '達到回合上限',
   'fleet-sunk': '艦隊全滅',
+  'fifty-move': '五十步和局',
+  'insufficient-material': '子力不足',
 };
 
 type ReasonKey = `board.reason.${BoardResultReason}`;

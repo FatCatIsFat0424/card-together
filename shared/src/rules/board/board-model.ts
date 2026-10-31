@@ -49,6 +49,8 @@ export interface BoardZone {
 export type BoardDecoration =
   /** Outer border around the playing area (Xiangqi). */
   | { readonly kind: 'frame' }
+  /** Alternating light and dark squares, the a8 corner (column plus row even) light (Chess). */
+  | { readonly kind: 'checker' }
   /** Star point (Gomoku, Reversi). */
   | { readonly kind: 'star'; readonly x: number; readonly y: number }
   /** Xiangqi soldier and cannon position marks; `left`/`right` say which sides get corners. */

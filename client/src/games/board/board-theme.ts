@@ -3,7 +3,7 @@
 import type { CSSProperties } from 'react';
 
 /** Surface family of a board; each game picks one, and a board style supplies a palette for each. */
-export type BoardSurface = 'wood' | 'green' | 'meadow' | 'field' | 'star' | 'go';
+export type BoardSurface = 'wood' | 'green' | 'meadow' | 'field' | 'star' | 'go' | 'chess';
 
 /** Static texture tile laid over light board materials; `none` draws nothing. */
 export type BoardPattern = 'none' | 'grain' | 'speckle' | 'brushed' | 'crackle';
@@ -16,6 +16,9 @@ export interface BoardPalette {
   /** Coordinates and board text. */
   readonly ink: string;
   readonly cell: string;
+  /** Light and dark squares of a checkered board (Chess); `surface` stays the frame around them. */
+  readonly squareLight: string;
+  readonly squareDark: string;
   readonly water: string;
   readonly waterLine: string;
   readonly trap: string;
@@ -158,7 +161,7 @@ const STAR_COLOURS = ['#e53935', '#fdd835', '#43a047', '#1e88e5', '#8e24aa', '#f
 const WOOD: BoardPalette = {
   surface: '#dcb775', line: '#5b3a1a', ink: '#5b3a1a', cell: '#e4c48a', water: '#4aa3e0', waterLine: '#e0f2fe',
   trap: '#a98b5e', trapLine: '#5b3a1a', dens: ['#b91c1c', '#1d4ed8'], station: '#ecdfb4', camp: '#a9d4b0',
-  campLine: '#4d7a58', hqLine: '#7a4a1f', rail: '#3f3a30', railInner: '#cdbd92', mountain: '#8d9378',
+  campLine: '#4d7a58', squareLight: '#f0d9b5', squareDark: '#b58863', hqLine: '#7a4a1f', rail: '#3f3a30', railInner: '#cdbd92', mountain: '#8d9378',
   mountainLine: '#5f6650', hole: '#9a7440', holeRim: '#6b4f2a', homes: STAR_COLOURS, edge: '#dcb775', edgeWidth: 0.12,
   palace: '#5b3a1a', river: '#dcb775', font: "'Noto Serif TC', 'Noto Sans TC', serif", pattern: 'none', grain: '#dcb775',
 };
@@ -183,6 +186,7 @@ export const DEFAULT_BOARD_THEME: BoardTheme = {
       ...WOOD, surface: GO_KAYA.surface, line: GO_KAYA.line, ink: GO_KAYA.line, cell: GO_KAYA.surface, edge: GO_KAYA.edge,
       pattern: 'grain', grain: GO_KAYA.grain,
     },
+    chess: { ...WOOD, cell: '#f0d9b5' },
   },
   pieces: {
     face: '#f7ebc8', red: '#c0392b', black: '#1f2937', blue: '#2563eb', onSolid: '#ffffff', back: '#1d4ed8',

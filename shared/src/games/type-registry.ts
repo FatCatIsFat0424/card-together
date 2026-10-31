@@ -19,6 +19,7 @@ import type { GoFishGameContract } from './gofish/types';
 import type { DouDizhuGameContract } from './doudizhu/types';
 import type { JungleGameContract } from './jungle/types';
 import type { XiangqiGameContract } from './xiangqi/types';
+import type { ChessGameContract } from './chess/types';
 import type { BanqiGameContract } from './banqi/types';
 import type { ChineseCheckersGameContract } from './chinesecheckers/types';
 import type { LandBattleGameContract } from './landbattle/types';
@@ -49,6 +50,7 @@ export interface GameTypeRegistry {
   readonly doudizhu: DouDizhuGameContract;
   readonly jungle: JungleGameContract;
   readonly xiangqi: XiangqiGameContract;
+  readonly chess: ChessGameContract;
   readonly banqi: BanqiGameContract;
   readonly chinesecheckers: ChineseCheckersGameContract;
   readonly landbattle: LandBattleGameContract;

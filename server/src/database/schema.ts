@@ -2,7 +2,7 @@ import { isMessageReply } from '../media/message-reply';
 import {
   isBigTwoResult, isBlackjackResult, isChinesePokerResult, isHoldemResult, isLiarsDeckResult, isLiarsDiceResult,
   isNapoleonResult, isNinetyNineResult, isRedPointsResult, isRuntimeSnapshot, isSevensResult, isTenHalfResult, isCrazyEightsResult, isStudResult, isReversiResult, isGomokuResult, isOldMaidResult,
-  isGoFishResult, isDouDizhuResult, isJungleResult, isXiangqiResult, isBanqiResult, isChineseCheckersResult, isLandBattleResult,
+  isGoFishResult, isDouDizhuResult, isJungleResult, isXiangqiResult, isChessResult, isBanqiResult, isChineseCheckersResult, isLandBattleResult,
   isBattleshipResult,
 } from '../runtime/validate';
 import {
@@ -178,6 +178,7 @@ export function validMatch(value: unknown): value is MatchRecord {
     doudizhu: isDouDizhuResult,
     jungle: isJungleResult,
     xiangqi: isXiangqiResult,
+    chess: isChessResult,
     banqi: isBanqiResult,
     chinesecheckers: isChineseCheckersResult,
     landbattle: isLandBattleResult,

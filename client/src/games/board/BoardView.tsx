@@ -142,14 +142,18 @@ const BoardSurfaceLayer = memo(function BoardSurfaceLayer({ board, geometry, sur
   if (board.layout === 'cells') {
     const { minX, minY, maxX, maxY } = geometry.bounds;
     items.push(<rect key="grid" className={styles.grid} x={minX - 0.5} y={minY - 0.5} width={maxX - minX + 1} height={maxY - minY + 1} />);
+    // A checkered board has no gaps: its squares meet, and the light one is the corner where column plus row is even.
+    const checker = board.decorations.some((decoration) => decoration.kind === 'checker');
     for (const node of board.nodes) {
       const { x: cx, y: cy } = turned(node);
       const zones = zonesAt(board, node.id);
       const zone = (kind: string): { owner?: number } | undefined => zones.find((entry) => entry.kind === kind);
       const den = zone('den');
-      const kind = zone('water') ? styles.water : den ? styles.den : zone('trap') ? styles.trap : styles.cell;
+      const kind = checker ? (node.col + node.row) % 2 === 0 ? styles.squareLight : styles.squareDark
+        : zone('water') ? styles.water : den ? styles.den : zone('trap') ? styles.trap : styles.cell;
       items.push(<g key={node.id} transform={`translate(${cx} ${cy})`}>
-        <rect className={kind} x={-0.475} y={-0.475} width={0.95} height={0.95} rx={0.06} />
+        {checker ? <rect className={kind} x={-0.5} y={-0.5} width={1} height={1} />
+          : <rect className={kind} x={-0.475} y={-0.475} width={0.95} height={0.95} rx={0.06} />}
         {zone('water') && <path className={styles.waves} d="M-.32 -.09q.16 -.14 .32 0t.32 0M-.32 .18q.16 -.14 .32 0t.32 0" />}
         {zone('trap') && <path className={styles.trapMark} d="M-.22 -.22L.22 .22M.22 -.22L-.22 .22" />}
         {den && <path className={styles.denMark} style={{ fill: `var(--board-den-${den.owner ?? 0})` }}

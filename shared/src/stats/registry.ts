@@ -10,6 +10,7 @@ import { liarsDeckFacts } from './liarsdeck';
 import { liarsDiceFacts } from './liarsdice';
 import { oldMaidFacts } from './oldmaid';
 import { xiangqiFacts } from './xiangqi';
+import { chessFacts } from './chess';
 import { napoleonFacts } from './napoleon';
 import { ninetyNineFacts } from './ninetynine';
 import { redPointsFacts } from './redpoints';
@@ -52,6 +53,7 @@ export const GAME_STATS: {
   doudizhu: douDizhuFacts,
   jungle: jungleFacts,
   xiangqi: xiangqiFacts,
+  chess: chessFacts,
   banqi: banqiFacts,
   chinesecheckers: chineseCheckersFacts,
   landbattle: landBattleFacts,

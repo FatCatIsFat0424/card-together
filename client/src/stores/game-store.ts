@@ -30,6 +30,7 @@ import type {
   OldMaidVisibleState,
   DouDizhuVisibleState,
   XiangqiVisibleState,
+  ChessVisibleState,
   LandBattleVisibleState,
   BattleshipVisibleState,
 } from '@shared/types';
@@ -69,6 +70,7 @@ export interface GameStoreState {
   goFish: GoFishVisibleState | null;
   doudizhu: DouDizhuVisibleState | null;
   xiangqi: XiangqiVisibleState | null;
+  chess: ChessVisibleState | null;
   banqi: BanqiVisibleState | null;
   chineseCheckers: ChineseCheckersVisibleState | null;
   landbattle: LandBattleVisibleState | null;
@@ -117,6 +119,7 @@ const initialState: GameStoreState = {
   goFish: null,
   doudizhu: null,
   xiangqi: null,
+  chess: null,
   banqi: null,
   chineseCheckers: null,
   landbattle: null,

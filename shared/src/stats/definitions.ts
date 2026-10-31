@@ -164,6 +164,13 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('checks', 'log', 'count'),
     record('mostCaptures', 'log', 'max'),
   ],
+  chess: [
+    record('checkmates', 'result', 'count', true),
+    record('fastestMate', 'result', 'min'),
+    record('promotions', 'log', 'count'),
+    record('castles', 'log', 'count'),
+    record('enPassants', 'log', 'count'),
+  ],
   banqi: [
     record('topPieces', 'result', 'max'),
     record('wipeouts', 'result', 'count', true),

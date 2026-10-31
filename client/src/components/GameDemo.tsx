@@ -60,10 +60,11 @@ export function GameDemoPlayer({ gameType, file }: { readonly gameType: DemoGame
 export function GameDemo({ gameType }: { readonly gameType: GameType }): ReactNode {
   const { t } = useI18nStore();
   const [open, setOpen] = useState(false);
-  const file = isDemoGameType(gameType) ? demoVideoFile(gameType) : null;
-  if (!file) return null;
+  const demoGame = isDemoGameType(gameType) ? gameType : null;
+  const file = demoGame ? demoVideoFile(demoGame) : null;
+  if (!demoGame || !file) return null;
   return <details className={styles.demo} onToggle={(event) => setOpen(event.currentTarget.open)}>
     <summary>{t('demo.title')}</summary>
-    {open && <GameDemoPlayer key={gameType} gameType={gameType} file={file} />}
+    {open && <GameDemoPlayer key={demoGame} gameType={demoGame} file={file} />}
   </details>;
 }

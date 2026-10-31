@@ -33,6 +33,7 @@ import { easyOldMaidAction, getOldMaidBotAction, oldMaidFirstLegalAction } from 
 import { easyGoFishAction, getGoFishBotAction, goFishFirstLegalAction } from './gofish-strategy';
 import { easyJungleAction, getJungleBotAction, jungleFirstLegalAction } from './jungle-strategy';
 import { easyXiangqiAction, getXiangqiBotAction, xiangqiFirstLegalAction } from './xiangqi-strategy';
+import { chessFirstLegalAction, easyChessAction, getChessBotAction } from './chess-strategy';
 import { banqiFirstLegalAction, easyBanqiAction, getBanqiBotAction } from './banqi-strategy';
 import {
   chineseCheckersFirstLegalAction, easyChineseCheckersAction, getChineseCheckersBotAction,
@@ -213,6 +214,19 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     },
     // A player who runs out of time gets a legal move by the easy policy.
     turnTimeout: (visible) => easyXiangqiAction(visible, Math.random),
+  },
+  chess: {
+    hard: getChessBotAction,
+    easy: easyChessAction,
+    firstLegal: chessFirstLegalAction,
+    // Hard bots search in the worker pool; the cheap synchronous hard move serves only other seats.
+    search: {
+      strategy: searchStrategy<'chess'>(new URL('./chess-search.ts', import.meta.url), 'chessSearch'),
+      budgetMs: 1500,
+      maxDepth: 12,
+    },
+    // A player who runs out of time gets a legal move by the easy policy.
+    turnTimeout: (visible) => easyChessAction(visible, Math.random),
   },
   banqi: {
     hard: getBanqiBotAction,

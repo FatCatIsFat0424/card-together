@@ -111,6 +111,7 @@ describe('spectator table perspective', () => {
       import('../../../client/src/games/jungle/JungleTable'),
       import('../../../client/src/games/gomoku/GomokuTable'),
       import('../../../client/src/games/xiangqi/XiangqiTable'),
+      import('../../../client/src/games/chess/ChessTable'),
       import('../../../client/src/games/banqi/BanqiTable'),
       import('../../../client/src/games/chinesecheckers/ChineseCheckersTable'),
       import('../../../client/src/games/landbattle/LandBattleTable'),
@@ -163,6 +164,7 @@ describe('spectator table perspective', () => {
         || game.gameType === 'jungle' || projected.gameType === 'jungle'
         || game.gameType === 'gomoku' || projected.gameType === 'gomoku'
         || game.gameType === 'xiangqi' || projected.gameType === 'xiangqi'
+        || game.gameType === 'chess' || projected.gameType === 'chess'
         || game.gameType === 'chinesecheckers' || projected.gameType === 'chinesecheckers') {
         // The whole position is public: spectators have no hidden hands to view.
         expect(projected).toMatchObject({ gameType: game.gameType, observer: 'spectator', mySeat: seat });

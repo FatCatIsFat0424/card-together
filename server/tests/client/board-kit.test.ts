@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameSeat, PlayerInfo, RoomInfo } from '@shared/types';
-import { gomokuBoard, junqiBoard, reversiBoard, starBoard, xiangqiBoard } from '@shared/rules/board/boards';
+import { chessBoard, gomokuBoard, junqiBoard, reversiBoard, starBoard, xiangqiBoard } from '@shared/rules/board/boards';
 import { sideRotation } from '@shared/rules/board/board-model';
 import { NO_DRAW_OFFER } from '@shared/rules/board/match-controls';
 import type { MatchControlAction } from '@shared/rules/board/match-controls';
@@ -76,6 +76,28 @@ function boardHtml(props: Partial<Parameters<typeof BoardView>[0]> = {}): string
 }
 
 beforeEach(() => useI18nStore.getState().setLocale('en'));
+
+describe('checkered boards', () => {
+  it('should alternate light and dark squares from the light a8 corner for both sides', () => {
+    const chess = chessBoard();
+    const squares = (html: string): string[] => [...html.matchAll(/class="[^"]*(squareLight|squareDark)[^"]*"/g)].map((match) => match[1]);
+    const own = squares(boardHtml({ board: chess, surface: 'chess', pieces: [] }));
+    const far = squares(boardHtml({ board: chess, surface: 'chess', pieces: [], rotation: sideRotation(chess, 1) }));
+    expect(own).toHaveLength(64);
+    expect(own.slice(0, 3)).toEqual(['squareLight', 'squareDark', 'squareLight']);
+    expect(own.slice(8, 10)).toEqual(['squareDark', 'squareLight']);
+    expect(far).toHaveLength(64);
+    expect(new Set(own).size).toBe(2);
+  });
+
+  it('should turn the chess board half way for black, putting h8 where white sees a1', () => {
+    const chess = chessBoard();
+    expect(sideRotation(chess, 1)).toBe(180);
+    const own = boardGeometry(chess, sideRotation(chess, 0)).point('0,7')!;
+    const far = boardGeometry(chess, sideRotation(chess, 1)).point('7,0')!;
+    expect([far.x, far.y]).toEqual([own.x, own.y]);
+  });
+});
 
 describe('board perspective', () => {
   it('should turn piece positions for the far side while text stays upright', () => {

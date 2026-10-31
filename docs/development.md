@@ -75,7 +75,7 @@ npm run bench:socket     # snapshot/chat payload bytes and runtime writes across
 npm run bench:arrange    # Chinese Poker arrangement search: seed 23, 1 warmup, 20 samples
 npm run bench:landbattle # Land Battle Chess bot matches: seeded, colours alternate per game
 npm run bench:render     # phone render cost of bot games with each cosmetic collection
-npm run bench:load       # 100 scripted players against a separate server process (10 min; -- --smoke for 30 s, -- --engine sqlite)
+npm run bench:load       # 120 scripted players against a separate server process (10 min; -- --smoke for 30 s, -- --engine sqlite)
 ```
 
 - 每個基準測試都會建立並移除自己的暫存資料庫。絕對不要讓它指向正式環境的 `DATABASE_PATH`。

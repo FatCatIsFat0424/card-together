@@ -1,0 +1,33 @@
+/* ─── Chess table: side chip and captured pieces beside each seat ─── */
+
+.stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.side {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 999px;
+  line-height: 18px;
+}
+.side.white { background: #f4f6fa; color: #151a24; border: 1px solid #9aa5b8; line-height: 16px; }
+.side.black { background: #151a24; color: #fff; border: 1px solid #151a24; line-height: 16px; }
+
+.captured {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0;
+  min-width: 0;
+  max-height: 38px;
+  overflow: hidden;
+}
+
+/* Captured silhouettes are drawn small (the icon is sized in em) and overlap slightly. */
+.mini {
+  margin-right: -2px;
+  font-size: 12px;
+}

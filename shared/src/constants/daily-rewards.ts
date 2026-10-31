@@ -39,6 +39,7 @@ export const DAILY_TASKS = [
   { id: 'play-jungle', pool: 'favorite', gameType: 'jungle', target: 2, coins: 10 },
   { id: 'play-gomoku', pool: 'favorite', gameType: 'gomoku', target: 2, coins: 10 },
   { id: 'play-xiangqi', pool: 'favorite', gameType: 'xiangqi', target: 2, coins: 15 },
+  { id: 'play-chess', pool: 'favorite', gameType: 'chess', target: 2, coins: 15 },
   { id: 'play-banqi', pool: 'favorite', gameType: 'banqi', target: 2, coins: 10 },
   { id: 'play-chinesecheckers', pool: 'favorite', gameType: 'chinesecheckers', target: 2, coins: 10 },
   { id: 'play-landbattle', pool: 'favorite', gameType: 'landbattle', target: 2, coins: 15 },

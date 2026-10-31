@@ -22,6 +22,7 @@ import { goFishAdapter } from './gofish-adapter';
 import { douDizhuAdapter } from './doudizhu-adapter';
 import { jungleAdapter } from './jungle-adapter';
 import { xiangqiAdapter } from './xiangqi-adapter';
+import { chessAdapter } from './chess-adapter';
 import { banqiAdapter } from './banqi-adapter';
 import { chineseCheckersAdapter } from './chinesecheckers-adapter';
 import { landBattleAdapter } from './landbattle-adapter';
@@ -50,6 +51,7 @@ export const GAME_ADAPTERS: { readonly [K in GameType]: GameAdapter<K> } = {
   doudizhu: douDizhuAdapter,
   jungle: jungleAdapter,
   xiangqi: xiangqiAdapter,
+  chess: chessAdapter,
   banqi: banqiAdapter,
   chinesecheckers: chineseCheckersAdapter,
   landbattle: landBattleAdapter,

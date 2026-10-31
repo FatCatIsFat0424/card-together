@@ -40,6 +40,8 @@ import { oldMaidTranslations } from './oldmaid-i18n';
 import type { OldMaidTranslationKey } from './oldmaid-i18n';
 import { xiangqiTranslations } from './xiangqi-i18n';
 import type { XiangqiTranslationKey } from './xiangqi-i18n';
+import { chessTranslations } from './chess-i18n';
+import type { ChessTranslationKey } from './chess-i18n';
 import { blackjackTranslations } from './blackjack-i18n';
 import type { BlackjackTranslationKey } from './blackjack-i18n';
 import { holdemTranslations } from './holdem-i18n';
@@ -88,7 +90,7 @@ type TranslationKeys = Record<
     | EmojiTranslationKey | GameTranslationKey | SevensTranslationKey | ChinesePokerTranslationKey
     | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | TenHalfTranslationKey | DouDizhuTranslationKey | ChineseCheckersTranslationKey | CrazyEightsTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
     | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | StudTranslationKey | TenHalfTranslationKey | OldMaidTranslationKey | GoFishTranslationKey | ReversiTranslationKey | GomokuTranslationKey | JungleTranslationKey | XiangqiTranslationKey | BanqiTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
-    | StatsTranslationKey | BoardTranslationKey | LandBattleTranslationKey
+    | StatsTranslationKey | BoardTranslationKey | LandBattleTranslationKey | ChessTranslationKey
     | BattleshipTranslationKey | ChatNotificationTranslationKey, string
 > & {
   // Lobby
@@ -197,6 +199,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...douDizhuTranslations['zh-TW'],
     ...jungleTranslations['zh-TW'],
     ...xiangqiTranslations['zh-TW'],
+    ...chessTranslations['zh-TW'],
     ...banqiTranslations['zh-TW'],
     ...chineseCheckersTranslations['zh-TW'],
     ...landBattleTranslations['zh-TW'],
@@ -301,6 +304,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...douDizhuTranslations.en,
     ...jungleTranslations.en,
     ...xiangqiTranslations.en,
+    ...chessTranslations.en,
     ...banqiTranslations.en,
     ...chineseCheckersTranslations.en,
     ...landBattleTranslations.en,

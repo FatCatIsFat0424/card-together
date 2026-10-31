@@ -284,6 +284,14 @@ export type {
 } from '../games/xiangqi/types';
 
 export type {
+  ChessMoveRecord,
+  ChessPhase,
+  ChessMatchResult,
+  ChessGameState,
+  ChessVisibleState,
+} from '../games/chess/types';
+
+export type {
   ChineseCheckersMove,
   ChineseCheckersPhase,
   ChineseCheckersMatchResult,

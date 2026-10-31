@@ -19,7 +19,8 @@ import {
   PIECE_BACK_CONTRAST, PIECE_DESIGNS, PIECE_TEXT_CONTRAST, piecePalette, resolvePieceStyle,
 } from '../../../client/src/cosmetics/piece-styles/piece-designs';
 import {
-  BOARD_DESIGNS, BOARD_EDGE_WIDTH, BOARD_GAP_CONTRAST, BOARD_LINE_CONTRAST, BOARD_TEXT_CONTRAST, resolveBoardStyle,
+  BOARD_DESIGNS, BOARD_EDGE_WIDTH, BOARD_GAP_CONTRAST, BOARD_LINE_CONTRAST, BOARD_TEXT_CONTRAST, SQUARE_CONTRAST, SQUARE_LUMINANCE,
+  resolveBoardStyle,
 } from '../../../client/src/cosmetics/board-styles/board-designs';
 import { SERIES_TOKENS } from '../../../client/src/cosmetics/series-tokens';
 import { boardThemeFor } from '../../../client/src/cosmetics/board-styles/board-theme-for';
@@ -38,7 +39,7 @@ import { BoardView } from '../../../client/src/games/board/BoardView';
 import { SHOP_GROUPS, resolveShopView } from '../../../client/src/shop-filters';
 
 const ANIMATED = new Set(['starfleet', 'shrine', 'ironfront', 'neoncity', 'crownrealm']);
-const SURFACES: readonly BoardSurface[] = ['wood', 'green', 'meadow', 'field', 'star', 'go'];
+const SURFACES: readonly BoardSurface[] = ['wood', 'green', 'meadow', 'field', 'star', 'go', 'chess'];
 /** Hidden Land Battle Chess tiles darken the side colour like `.tile.hidden` in BoardPieces.module.css. */
 const hiddenTileBody = (tone: string): string => mix(tone, '#0b1020', 0.38);
 /** Face-down pieces of one view under a finish: covered tokens and both sides' hidden tiles. */
@@ -170,6 +171,18 @@ describe.each(BOARD_STYLES)('$id board readability', ({ id, design }) => {
     expect(contrast(surfaces.wood.ink, surfaces.wood.mountain)).toBeGreaterThanOrEqual(BOARD_LINE_CONTRAST);
     expect(contrast(surfaces.field.line, surfaces.field.station)).toBeGreaterThanOrEqual(BOARD_LINE_CONTRAST);
     expect(motion !== null).toBe(ANIMATED.has(design));
+  });
+
+  it('keeps chess squares apart and both piece colours readable on each', () => {
+    const { chess } = surfaces;
+    const { darkStone, lightStone } = boardThemeFor(null, null).pieces;
+    expect(contrast(chess.squareLight, chess.squareDark), 'squares').toBeGreaterThanOrEqual(SQUARE_CONTRAST);
+    expect(luminance(chess.squareLight)).toBeGreaterThanOrEqual(SQUARE_LUMINANCE.light.min);
+    expect(luminance(chess.squareDark)).toBeLessThanOrEqual(SQUARE_LUMINANCE.dark.max);
+    // White pieces are outlined in the dark stone, black pieces in the light one, so each outline must show.
+    expect(contrast(darkStone, chess.squareLight), 'white outline').toBeGreaterThanOrEqual(4.5);
+    expect(contrast(lightStone, chess.squareDark), 'black outline').toBeGreaterThanOrEqual(2.5);
+    expect(contrast(chess.ink, chess.surface), 'coordinates').toBeGreaterThanOrEqual(BOARD_TEXT_CONTRAST);
   });
 
   it('keeps the edge line thin when the accent is bright', () => {

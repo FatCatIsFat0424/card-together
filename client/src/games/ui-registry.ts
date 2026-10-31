@@ -18,6 +18,7 @@ import { tenHalfUi } from './tenhalf/tenhalf-ui';
 import { oldMaidUi } from './oldmaid/oldmaid-ui';
 import { douDizhuUi } from './doudizhu/doudizhu-ui';
 import { xiangqiUi } from './xiangqi/xiangqi-ui';
+import { chessUi } from './chess/chess-ui';
 import { landBattleUi } from './landbattle/landbattle-ui';
 import { battleshipUi } from './battleship/battleship-ui';
 import { liarsDiceUi } from './liarsdice/liarsdice-ui';
@@ -46,6 +47,7 @@ export const GAME_UIS: { readonly [K in GameType]: GameUi<K> } = {
   oldmaid: oldMaidUi,
   doudizhu: douDizhuUi,
   xiangqi: xiangqiUi,
+  chess: chessUi,
   landbattle: landBattleUi,
   battleship: battleshipUi,
   liarsdice: liarsDiceUi,

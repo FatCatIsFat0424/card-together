@@ -12,6 +12,7 @@ import { tenHalfStatistics } from './tenhalf/statistics';
 import { oldMaidStatistics } from './oldmaid/statistics';
 import { douDizhuStatistics } from './doudizhu/statistics';
 import { xiangqiStatistics } from './xiangqi/statistics';
+import { chessStatistics } from './chess/statistics';
 import { landBattleStatistics } from './landbattle/statistics';
 import { battleshipStatistics } from './battleship/statistics';
 import { liarsDiceStatistics } from './liarsdice/statistics';
@@ -39,6 +40,7 @@ export const GAME_STATISTICS: Readonly<Record<GameType, GameStatisticsRules>> = 
   oldmaid: oldMaidStatistics,
   doudizhu: douDizhuStatistics,
   xiangqi: xiangqiStatistics,
+  chess: chessStatistics,
   landbattle: landBattleStatistics,
   battleship: battleshipStatistics,
   liarsdice: liarsDiceStatistics,

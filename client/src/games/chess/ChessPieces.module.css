@@ -1,0 +1,42 @@
+/* ─── Chess pieces: colours come from the piece style variables (board-theme.ts) ─── */
+
+.shadow { fill: var(--piece-shadow); }
+
+.outline {
+  fill: none;
+  stroke-width: 0.05;
+  stroke-linejoin: round;
+}
+.fill { stroke: none; }
+.detail, .gloss, .innerRing, .rimMarks {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.detail { stroke-width: 0.035; }
+.gloss { stroke: #fff; stroke-width: 0.04; }
+.innerRing { stroke-width: 0.012; opacity: 0.6; }
+.rimMarks { stroke: var(--piece-accent); stroke-width: 0.03; opacity: 0.85; }
+
+.white .outline { stroke: var(--piece-dark-stone); }
+.white .fill { fill: var(--piece-light-stone); }
+.white .detail { stroke: var(--piece-dark-stone); fill: var(--piece-dark-stone); }
+.white .innerRing { stroke: var(--piece-dark-stone); }
+
+.black .outline { stroke: var(--piece-light-stone); stroke-width: 0.04; }
+.black .fill { fill: var(--piece-dark-stone); }
+.black .detail { stroke: var(--piece-light-stone); fill: var(--piece-light-stone); }
+.black .innerRing { stroke: var(--piece-light-stone); }
+
+/* Icons outside a board keep the default piece colours whatever piece style is equipped. */
+.icon {
+  --piece-light-stone: #f4f6fa;
+  --piece-dark-stone: #151a24;
+  --piece-shadow: transparent;
+  --piece-accent: #ffffff;
+  display: block;
+  width: 1.5em;
+  height: 1.8em;
+  overflow: visible;
+}

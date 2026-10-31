@@ -27,6 +27,13 @@ export const BOARD_EDGE_WIDTH = {
 } as const;
 /** Reversi felt stays mid-dark so both dark and light discs stand out from it. */
 export const FELT_LUMINANCE = { min: 0.1, max: 0.24 } as const;
+/**
+ * Luminance ranges of the chess squares: light enough for dark pieces, dark enough for light ones, and far enough
+ * apart that the checker reads under every style.
+ */
+export const SQUARE_LUMINANCE = { light: { min: 0.4, max: 0.62 }, dark: { min: 0.1, max: 0.22 } } as const;
+/** Light against dark squares. */
+export const SQUARE_CONTRAST = 1.6;
 /** How far a style tints the kaya go board toward its own board colour; the wood stays recognisable. */
 export const GO_TINT = 0.35;
 
@@ -57,6 +64,9 @@ function boardDesign(tokens: SeriesTokens): BoardDesign {
   const cell = mix(light, '#ffffff', 0.28);
   const ink = ensureContrast(mix(tokens.deep, tokens.base, 0.2), [light, cell], BOARD_TEXT_CONTRAST + 0.3);
   const water = mix(tokens.cool, '#4aa3e0', 0.45);
+  // Chess squares: the series board colour for the light ones, its base colour for the dark ones.
+  const squareLight = withLuminance(mix(light, '#ffffff', 0.3), SQUARE_LUMINANCE.light.min, SQUARE_LUMINANCE.light.max);
+  const squareDark = withLuminance(mix(tokens.base, light, 0.35), SQUARE_LUMINANCE.dark.min, SQUARE_LUMINANCE.dark.max);
   const shared = {
     water,
     waterLine: mix(water, '#ffffff', 0.8),
@@ -71,6 +81,8 @@ function boardDesign(tokens: SeriesTokens): BoardDesign {
     railInner: mix(light, '#ffffff', 0.3),
     mountain: mix(tokens.base, light, 0.45),
     mountainLine: ink,
+    squareLight,
+    squareDark,
     hole: mix(light, tokens.deep, 0.32),
     holeRim: mix(tokens.deep, tokens.base, 0.3),
     homes: fixed.homes,
@@ -110,10 +122,12 @@ function boardDesign(tokens: SeriesTokens): BoardDesign {
     ...shared, ...plain, surface: goSurface, cell: goSurface, line: goLine, ink: goLine, palace: goLine, pattern: 'grain',
     grain: mix(goSurface, mix(GO_KAYA.grain, tokens.base, 0.3), 0.7),
   };
+  // The chess frame is the wood board, so coordinates keep the wood ink; squares fill the playing area.
+  const chess: BoardPalette = { ...wood, cell: squareLight };
   return {
     surfaces: {
       wood: withEdgeWidth(wood), green: withEdgeWidth(green), meadow: withEdgeWidth(meadow),
-      field: withEdgeWidth(field), star: withEdgeWidth(star), go: withEdgeWidth(go),
+      field: withEdgeWidth(field), star: withEdgeWidth(star), go: withEdgeWidth(go), chess: withEdgeWidth(chess),
     },
     motion: tokens.motion ? { kind: tokens.motion.kind, glow: tokens.motion.glow } : null,
   };

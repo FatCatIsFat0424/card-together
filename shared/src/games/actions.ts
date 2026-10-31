@@ -43,6 +43,8 @@ import { parseAction as parseJungleAction } from './jungle/actions';
 import type { JungleGameAction } from './jungle/actions';
 import { parseAction as parseXiangqiAction } from './xiangqi/actions';
 import type { XiangqiGameAction } from './xiangqi/actions';
+import { parseAction as parseChessAction } from './chess/actions';
+import type { ChessGameAction } from './chess/actions';
 import { parseAction as parseBanqiAction } from './banqi/actions';
 import type { BanqiGameAction } from './banqi/actions';
 import { parseAction as parseChineseCheckersAction } from './chinesecheckers/actions';
@@ -75,6 +77,7 @@ export interface GameActionMap {
   doudizhu: DouDizhuAction;
   jungle: JungleGameAction;
   xiangqi: XiangqiGameAction;
+  chess: ChessGameAction;
   banqi: BanqiGameAction;
   chinesecheckers: ChineseCheckersAction;
   landbattle: LandBattleGameAction;
@@ -107,6 +110,7 @@ export const ACTION_PARSERS: { readonly [K in GameType]: (value: unknown) => Gam
   doudizhu: parseDouDizhuAction,
   jungle: parseJungleAction,
   xiangqi: parseXiangqiAction,
+  chess: parseChessAction,
   banqi: parseBanqiAction,
   chinesecheckers: parseChineseCheckersAction,
   landbattle: parseLandBattleAction,

@@ -12,6 +12,8 @@
 .surface { fill: var(--board-surface); stroke: var(--board-edge); stroke-width: var(--board-edge-width, 0.12); }
 .grid { fill: var(--board-line); }
 .cell { fill: var(--board-cell); }
+.squareLight { fill: var(--board-square-light); }
+.squareDark { fill: var(--board-square-dark); }
 .water { fill: var(--board-water); }
 .trap { fill: var(--board-trap); }
 .den { fill: var(--board-cell); }

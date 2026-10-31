@@ -22,6 +22,7 @@ import { goFishGame, coherentGoFishGame } from './gofish-validation';
 import { douDizhuGame, coherentDouDizhuGame } from './doudizhu-validation';
 import { jungleGame, coherentJungleGame } from './jungle-validation';
 import { xiangqiGame, coherentXiangqiGame } from './xiangqi-validation';
+import { chessGame, coherentChessGame } from './chess-validation';
 import { banqiGame, coherentBanqiGame } from './banqi-validation';
 import { chineseCheckersGame, coherentChineseCheckersGame } from './chinesecheckers-validation';
 import { landBattleGame, coherentLandBattleGame } from './landbattle-validation';
@@ -56,6 +57,7 @@ export const GAME_VALIDATORS: { readonly [K in GameType]: GameStateValidator<K> 
   doudizhu: { shape: douDizhuGame, coherent: coherentDouDizhuGame },
   jungle: { shape: jungleGame, coherent: coherentJungleGame },
   xiangqi: { shape: xiangqiGame, coherent: coherentXiangqiGame },
+  chess: { shape: chessGame, coherent: coherentChessGame },
   banqi: { shape: banqiGame, coherent: coherentBanqiGame },
   chinesecheckers: { shape: chineseCheckersGame, coherent: coherentChineseCheckersGame },
   landbattle: { shape: landBattleGame, coherent: coherentLandBattleGame },

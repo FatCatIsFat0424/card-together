@@ -267,6 +267,20 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Handicap', 'The host may set a handicap: the giving colour starts without its left horse, both horses, its left chariot, or nine pieces (five soldiers, two advisors, two elephants). Red still moves first.'),
     section('Move list', 'Chinese notation in Traditional Chinese (炮二平五, 馬8進7) and WXF notation in English (C2=5, H8+7): piece, file, + forward, − backward, = sideways, then the destination file or the number of points. Two identical pieces on one file use 前／後 or + / −.', 'When you run out of time, a legal move is made for you.'),
   ],
+  chess: [
+    section('Board and start', 'An 8×8 board of light and dark squares. White (the earlier seat) moves first. Each player sees their own side at the bottom; files a–h run along the bottom and ranks 1–8 up the left.'),
+    table('Pieces', ['Piece', 'Movement'], [
+      ['King', 'One square in any direction; may castle'],
+      ['Queen', 'Any distance orthogonally or diagonally'],
+      ['Rook', 'Any distance orthogonally'],
+      ['Bishop', 'Any distance diagonally'],
+      ['Knight', 'An L: two squares one way and one square across; jumps over pieces'],
+      ['Pawn', 'One square forward (two from its first square), capturing one square diagonally forward'],
+    ], 'No move may leave your own king in check. Pieces capture by moving onto an enemy piece.'),
+    section('Special moves', 'Castling: the king moves two squares towards a rook that has not moved, and the rook jumps to its other side. Neither piece may have moved, the squares between must be empty, and the king may not start in, pass through, or land in check.', 'En passant: right after an enemy pawn advances two squares and stops beside yours, your pawn may capture it as if it had moved one square. The chance lasts one move.', 'Promotion: a pawn reaching the far rank becomes a queen, rook, bishop, or knight of your choice.'),
+    section('Winning and drawing', 'Checkmate wins: the king is in check and no move escapes it.', 'These end the game as a draw automatically: stalemate (no legal move while not in check), the same position for the third time, 50 moves by each side without a capture or pawn move, and too little material to mate (king against king, king and one bishop or knight against king, or only bishops on same-coloured squares).', 'You may resign. On your own turn you may offer a draw: the opponent accepts to draw, and making a move counts as declining. After a decline you must make 3 more moves before offering again.'),
+    section('Move list', 'Standard algebraic notation in both languages: piece letter (K, Q, R, B, N; none for pawns), x for captures, the destination square, = and the new piece for promotion, O-O and O-O-O for castling, + for check and # for checkmate (e4, Nf3, exd5, e8=Q+, Qh5#).', 'When you run out of time, a legal move is made for you.'),
+  ],
   banqi: [
     section('Board and pieces', 'A 4×8 half board with all 32 Xiangqi pieces shuffled and face down: red 帥 仕 相 俥 傌 炮 兵 and black 將 士 象 車 馬 包 卒 (1 general, 2 each of advisor, elephant, chariot, horse, cannon, 5 soldiers per colour).', 'The earlier seat moves first. Coordinates run a–h and 1–4; the board never turns.'),
     section('Your turn', 'Do exactly one: flip a face-down piece (it stays where it is, now face up for everyone), move one of your face-up pieces one step up, down, left or right onto an empty cell, or capture.', 'Your first flip decides your colour: you play the colour of the piece you turned over, and your opponent plays the other.'),
@@ -518,6 +532,20 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('勝負與和局', '將死對方獲勝；輪到的一方沒有合法步時，即使沒被將軍也判負（困斃）。', '長將判負：同一局面第 3 次出現時，若某一方從該局面第一次出現起每一步都在將軍，該方判負；其他局面重複 3 次為和局。雙方各走 60 步（120 手）都沒有吃子也是和局。', '可以認輸；輪到自己時可以提和，對手同意即和局，對手走子視為拒絕，被拒絕後需再走 3 手才能再次提和。'),
     section('讓子', '房主可以設定讓子：讓子方開局少掉左馬（讓單馬）、雙馬（讓雙馬）、左車（讓單車），或五兵雙仕雙相共九子（讓九子）。仍由紅方先走。'),
     section('記譜', '繁體中文用中文記譜（炮二平五、馬8進7），英文用 WXF 記譜（C2=5、H8+7）：棋子、所在路數、進／退／平，再接目標路數或前進後退的步數。同一路有兩個相同棋子時用「前／後」區分。', '逾時由系統替你走一步合法棋。'),
+  ],
+  chess: [
+    section('棋盤與開局', '8×8 的深淺格棋盤。白方（座位順序在前）先走。每位玩家的己方都在畫面下方；a–h 檔標在下緣，1–8 列標在左緣。'),
+    table('棋子走法', ['棋子', '走法'], [
+      ['王', '往任一方向走一格；可以王車易位'],
+      ['后', '直走、橫走或斜走，距離不限'],
+      ['車', '直走或橫走，距離不限'],
+      ['象', '斜走，距離不限'],
+      ['馬', '走 L 形：一個方向兩格再轉彎一格；可以跳過其他棋子'],
+      ['兵', '向前一格（從起始格出發可走兩格），斜前一格吃子'],
+    ], '任何一步都不能讓自己的王處於被將軍的狀態。走到有敵子的格子即吃掉它。'),
+    section('特殊走法', '王車易位：王向沒動過的車靠近兩格，車跳到王的另一側。兩子都必須沒動過、中間沒有棋子，且王不能在被將軍時出發、不能經過或落在被攻擊的格子。', '吃過路兵：敵兵從起始格一次走兩格並停在你的兵旁邊時，你的兵可以在下一步斜走到它跳過的格子吃掉它；機會只有這一步。', '升變：兵走到底線時，可以選擇變成后、車、象或馬。'),
+    section('勝負與和局', '將死對方獲勝：王被將軍且沒有任何一步能解除。', '以下情況自動判和：困斃（輪到的一方沒被將軍但無合法步）、同一局面出現第 3 次、雙方各走 50 步都沒有吃子或動兵，以及子力不足以將死（王對王、王加單象或單馬對王、只剩同色格的象）。', '可以認輸；輪到自己時可以提和，對手同意即和局，對手走子視為拒絕，被拒絕後需再走 3 手才能再提。'),
+    section('記譜', '中英文都使用標準代數記譜：棋子字母（K、Q、R、B、N，兵不標）、吃子用 x、目標格、升變用 = 加新棋子、王車易位寫 O-O 與 O-O-O、將軍加 +、將死加 #（e4、Nf3、exd5、e8=Q+、Qh5#）。', '逾時由系統替你走一步合法棋。'),
   ],
   banqi: [
     section('棋盤與棋子', '4×8 半盤，象棋 32 子全部洗牌後蓋著：紅方帥、仕、相、俥、傌、炮、兵，黑方將、士、象、車、馬、包、卒（每色帥將 1、仕士／相象／俥車／傌馬／炮包各 2、兵卒 5）。', '座位順序在前的玩家先手；座標以 a–h、1–4 標示，棋盤固定不旋轉。'),
