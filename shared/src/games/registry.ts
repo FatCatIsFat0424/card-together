@@ -18,6 +18,7 @@ import { crazyEightsDefinition } from './crazyeights/definition';
 import { studDefinition } from './stud/definition';
 import { reversiDefinition } from './reversi/definition';
 import { gomokuDefinition } from './gomoku/definition';
+import { goDefinition } from './go/definition';
 import { oldMaidDefinition } from './oldmaid/definition';
 import { goFishDefinition } from './gofish/definition';
 import { douDizhuDefinition } from './doudizhu/definition';
@@ -47,6 +48,7 @@ export const GAME_DEFINITIONS: { readonly [K in GameType]: GameDefinition<K> } =
   stud: studDefinition,
   reversi: reversiDefinition,
   gomoku: gomokuDefinition,
+  go: goDefinition,
   oldmaid: oldMaidDefinition,
   gofish: goFishDefinition,
   doudizhu: douDizhuDefinition,

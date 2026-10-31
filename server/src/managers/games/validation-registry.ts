@@ -17,6 +17,7 @@ import { crazyEightsGame, coherentCrazyEightsGame } from './crazyeights-validati
 import { studGame, coherentStudGame } from './stud-validation';
 import { reversiGame, coherentReversiGame } from './reversi-validation';
 import { gomokuGame, coherentGomokuGame } from './gomoku-validation';
+import { goGame, coherentGoGame } from './go-validation';
 import { oldMaidGame, coherentOldMaidGame } from './oldmaid-validation';
 import { goFishGame, coherentGoFishGame } from './gofish-validation';
 import { douDizhuGame, coherentDouDizhuGame } from './doudizhu-validation';
@@ -52,6 +53,7 @@ export const GAME_VALIDATORS: { readonly [K in GameType]: GameStateValidator<K> 
   stud: { shape: studGame, coherent: coherentStudGame },
   reversi: { shape: reversiGame, coherent: coherentReversiGame },
   gomoku: { shape: gomokuGame, coherent: coherentGomokuGame },
+  go: { shape: goGame, coherent: coherentGoGame },
   oldmaid: { shape: oldMaidGame, coherent: coherentOldMaidGame },
   gofish: { shape: goFishGame, coherent: coherentGoFishGame },
   doudizhu: { shape: douDizhuGame, coherent: coherentDouDizhuGame },

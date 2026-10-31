@@ -16,6 +16,7 @@ import { holdemClient } from './holdem/holdem-client';
 import { studClient } from './stud/stud-client';
 import { reversiClient } from './reversi/reversi-client';
 import { gomokuClient } from './gomoku/gomoku-client';
+import { goClient } from './go/go-client';
 import { jungleClient } from './jungle/jungle-client';
 import { napoleonClient } from './napoleon/napoleon-client';
 import { tenHalfClient } from './tenhalf/tenhalf-client';
@@ -59,6 +60,7 @@ export const CLIENT_GAMES: { readonly [K in GameType]: ClientGame<K> } = {
   stud: studClient,
   reversi: reversiClient,
   gomoku: gomokuClient,
+  go: goClient,
   gofish: goFishClient,
   jungle: jungleClient,
   banqi: banqiClient,

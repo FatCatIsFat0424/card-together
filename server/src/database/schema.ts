@@ -1,7 +1,7 @@
 import { isMessageReply } from '../media/message-reply';
 import {
   isBigTwoResult, isBlackjackResult, isChinesePokerResult, isHoldemResult, isLiarsDeckResult, isLiarsDiceResult,
-  isNapoleonResult, isNinetyNineResult, isRedPointsResult, isRuntimeSnapshot, isSevensResult, isTenHalfResult, isCrazyEightsResult, isStudResult, isReversiResult, isGomokuResult, isOldMaidResult,
+  isNapoleonResult, isNinetyNineResult, isRedPointsResult, isRuntimeSnapshot, isSevensResult, isTenHalfResult, isCrazyEightsResult, isStudResult, isReversiResult, isGomokuResult, isGoResult, isOldMaidResult,
   isGoFishResult, isDouDizhuResult, isJungleResult, isXiangqiResult, isChessResult, isBanqiResult, isChineseCheckersResult, isLandBattleResult,
   isBattleshipResult,
 } from '../runtime/validate';
@@ -173,6 +173,7 @@ export function validMatch(value: unknown): value is MatchRecord {
     stud: isStudResult,
     reversi: isReversiResult,
     gomoku: isGomokuResult,
+    go: isGoResult,
     oldmaid: isOldMaidResult,
     gofish: isGoFishResult,
     doudizhu: isDouDizhuResult,

@@ -44,7 +44,7 @@ const optionIds = {
 } as const;
 const configuredGames = ['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'banqi', 'battleship'] as const;
 /** Games whose options are menus rather than switches. */
-const selectGames: readonly GameType[] = ['xiangqi'];
+const selectGames: readonly GameType[] = ['xiangqi', 'go'];
 const saved: GameOptions = {
   sevens: { closeOnEnd: true, slayEffect: 'fire' },
   ninetynine: { twoDecks: true },
@@ -234,5 +234,30 @@ describe('per-game room options', () => {
     });
     render(room('xiangqi', { xiangqi: { handicap: 'horse', handicapSide: 'black' } }), false, false);
     expect(select('xiangqi-handicap-hint')?.disabled).toBe(true);
+  });
+
+  it('offers the Go size and handicap menus, and a smaller board lowers a handicap it cannot take', () => {
+    const select = (hint: string): SelectProps | undefined => vi.mocked(Select).mock.calls.findLast(([props]) =>
+      (props.inputProps as { 'aria-describedby'?: string } | undefined)?.['aria-describedby'] === hint)?.[0];
+    const choose = (value: number): SelectChangeEvent => ({ target: { value } }) as unknown as SelectChangeEvent;
+    render(room('go'));
+    expect(select('go-size-hint')?.value).toBe(9);
+    expect(select('go-handicap-hint')?.value).toBe(0);
+    select('go-size-hint')!.onChange?.(choose(19), null);
+    expect(actions.setGameOptions).toHaveBeenLastCalledWith({ gameType: 'go', options: { size: 19, handicap: 0 } });
+    vi.clearAllMocks();
+    render(room('go', { go: { size: 19, handicap: 9 } }));
+    select('go-handicap-hint')!.onChange?.(choose(6), null);
+    expect(actions.setGameOptions).toHaveBeenLastCalledWith({ gameType: 'go', options: { size: 19, handicap: 6 } });
+    vi.clearAllMocks();
+    render(room('go', { go: { size: 19, handicap: 9 } }));
+    select('go-size-hint')!.onChange?.(choose(9), null);
+    expect(actions.setGameOptions).toHaveBeenLastCalledWith({ gameType: 'go', options: { size: 9, handicap: 5 } });
+    select('go-size-hint')!.onChange?.(choose(7), null);
+    select('go-handicap-hint')!.onChange?.(choose(1), null);
+    expect(actions.setGameOptions).toHaveBeenCalledTimes(1);
+    render(room('go'), false, false);
+    expect(select('go-size-hint')?.disabled).toBe(true);
+    expect(select('go-handicap-hint')?.disabled).toBe(true);
   });
 });

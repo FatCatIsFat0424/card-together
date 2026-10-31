@@ -1,4 +1,5 @@
 import type { GameType, PlayerVisibleGameState, RoomInfo, XiangqiOptions } from '@shared/types';
+import type { GoOptions } from '@shared/rules/go';
 import { clientGame } from './games/registry';
 import type { TranslationKey } from './i18n';
 
@@ -18,6 +19,8 @@ export interface GameRulesContextFields {
   readonly tenHalfHands?: number;
   /** Xiangqi handicap, described in the summary when one is set. */
   readonly xiangqiHandicap?: XiangqiOptions;
+  /** Go board size and handicap, described in the summary. */
+  readonly goOptions?: GoOptions;
 }
 
 export interface GameRulesContext extends GameRulesContextFields {

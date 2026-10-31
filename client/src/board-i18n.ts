@@ -58,6 +58,7 @@ const englishReasons: Record<BoardResultReason, string> = {
   'fleet-sunk': 'Fleet sunk',
   'fifty-move': 'Fifty-move rule',
   'insufficient-material': 'Insufficient material',
+  score: 'Won on points',
 };
 
 const chineseReasons: Record<BoardResultReason, string> = {
@@ -81,6 +82,7 @@ const chineseReasons: Record<BoardResultReason, string> = {
   'fleet-sunk': '艦隊全滅',
   'fifty-move': '五十步和局',
   'insufficient-material': '子力不足',
+  score: '點目勝',
 };
 
 type ReasonKey = `board.reason.${BoardResultReason}`;

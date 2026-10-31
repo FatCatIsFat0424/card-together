@@ -21,6 +21,7 @@ import type {
   LiarsDiceVisibleState,
   ReversiVisibleState,
   GomokuVisibleState,
+  GoVisibleState,
   JungleVisibleState,
   BlackjackVisibleState,
   HoldemVisibleState,
@@ -63,6 +64,7 @@ export interface GameStoreState {
   stud: StudVisibleState | null;
   reversi: ReversiVisibleState | null;
   gomoku: GomokuVisibleState | null;
+  go: GoVisibleState | null;
   jungle: JungleVisibleState | null;
   /** Stud: my hole card from the previous hand while its presentation may still be playing */
   studHeld: HeldHoleCards | null;
@@ -113,6 +115,7 @@ const initialState: GameStoreState = {
   stud: null,
   reversi: null,
   gomoku: null,
+  go: null,
   jungle: null,
   studHeld: null,
   oldMaid: null,

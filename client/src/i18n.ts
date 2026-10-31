@@ -52,8 +52,10 @@ import type { CrazyEightsTranslationKey } from './crazyeights-i18n';
 import { studTranslations } from './stud-i18n';
 import { reversiTranslations } from './reversi-i18n';
 import { gomokuTranslations } from './gomoku-i18n';
+import { goTranslations } from './go-i18n';
 import type { ReversiTranslationKey } from './reversi-i18n';
 import type { GomokuTranslationKey } from './gomoku-i18n';
+import type { GoTranslationKey } from './go-i18n';
 import { jungleTranslations } from './jungle-i18n';
 import type { JungleTranslationKey } from './jungle-i18n';
 import type { StudTranslationKey } from './stud-i18n';
@@ -89,7 +91,7 @@ type TranslationKeys = Record<
   FloatingRoomCardTranslationKey | MessageReplyTranslationKey | ChatMentionTranslationKey | ReplayTranslationKey | RoomErrorTranslationKey | SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | AudioTranslationKey | VoiceTranslationKey | UiTranslationKey
     | EmojiTranslationKey | GameTranslationKey | SevensTranslationKey | ChinesePokerTranslationKey
     | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | TenHalfTranslationKey | DouDizhuTranslationKey | ChineseCheckersTranslationKey | CrazyEightsTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
-    | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | StudTranslationKey | TenHalfTranslationKey | OldMaidTranslationKey | GoFishTranslationKey | ReversiTranslationKey | GomokuTranslationKey | JungleTranslationKey | XiangqiTranslationKey | BanqiTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
+    | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | StudTranslationKey | TenHalfTranslationKey | OldMaidTranslationKey | GoFishTranslationKey | ReversiTranslationKey | GomokuTranslationKey | GoTranslationKey | JungleTranslationKey | XiangqiTranslationKey | BanqiTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
     | StatsTranslationKey | BoardTranslationKey | LandBattleTranslationKey | ChessTranslationKey
     | BattleshipTranslationKey | ChatNotificationTranslationKey, string
 > & {
@@ -194,6 +196,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...studTranslations['zh-TW'],
     ...reversiTranslations['zh-TW'],
     ...gomokuTranslations['zh-TW'],
+    ...goTranslations['zh-TW'],
     ...oldMaidTranslations['zh-TW'],
     ...goFishTranslations['zh-TW'],
     ...douDizhuTranslations['zh-TW'],
@@ -299,6 +302,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...studTranslations.en,
     ...reversiTranslations.en,
     ...gomokuTranslations.en,
+    ...goTranslations.en,
     ...oldMaidTranslations.en,
     ...goFishTranslations.en,
     ...douDizhuTranslations.en,

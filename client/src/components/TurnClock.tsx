@@ -27,7 +27,7 @@ interface TurnClockProps {
   showBank?: boolean;
 }
 
-/** A shared deadline for simultaneous choices (Chinese Poker arrangements, Blackjack bets, Land Battle Chess deployment, Battleship placement). */
+/** A shared deadline for simultaneous choices (Chinese Poker arrangements, Blackjack bets, Land Battle Chess deployment, Battleship placement, Go marking). */
 export function DeadlineClock({ deadline }: { deadline: number }): ReactNode {
   // Recorded deadlines passed long ago; playback has no clocks.
   return useReplayMode() ? null : <LiveDeadlineClock deadline={deadline} />;
@@ -82,11 +82,15 @@ export function TurnClock({ seat, showBank = true }: TurnClockProps): ReactNode 
   const placeDeadline = useGameStore((state) => state.battleship?.phase === 'placing'
     && !state.battleship.placed.includes(seat) ? state.battleship.placeDeadline : null);
   const placing = useGameStore((state) => state.battleship?.phase === 'placing');
+  const markDeadline = useGameStore((state) => state.go?.phase === 'marking'
+    && !state.go.confirmed.includes(seat) ? state.go.markDeadline : null);
+  const marking = useGameStore((state) => state.go?.phase === 'marking');
   if (simultaneous) return showBank && arrangeDeadline !== null ? <DeadlineClock deadline={arrangeDeadline} /> : null;
   if (betting) return showBank && betDeadline !== null ? <DeadlineClock deadline={betDeadline} /> : null;
   if (reviewing) return showBank && reviewDeadline !== null ? <DeadlineClock deadline={reviewDeadline} /> : null;
   if (deploying) return showBank && deployDeadline !== null ? <DeadlineClock deadline={deployDeadline} /> : null;
   if (placing) return showBank && placeDeadline !== null ? <DeadlineClock deadline={placeDeadline} /> : null;
+  if (marking) return showBank && markDeadline !== null ? <DeadlineClock deadline={markDeadline} /> : null;
   return <SeatTurnClock seat={seat} showBank={showBank} />;
 }
 

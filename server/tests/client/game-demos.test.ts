@@ -22,7 +22,7 @@ const fixtures = { games: Object.fromEntries(DEMO_GAME_TYPES.map((game) => [game
 ])) as Record<DemoGameType, ExpandedDemoFixture> };
 
 /** Modes still waiting for the owner's recorded walkthrough; their table offers no lesson. */
-const WITHOUT_LESSON: readonly GameType[] = ['chess'];
+const WITHOUT_LESSON: readonly GameType[] = ['go', 'chess'];
 
 describe('beginner walkthroughs', () => {
   it('has a lesson for every other mode and shows it only with an imported video, unloaded until opened', () => {

@@ -14,6 +14,7 @@ import type { CrazyEightsGameContract } from './crazyeights/types';
 import type { StudGameContract } from './stud/types';
 import type { ReversiGameContract } from './reversi/types';
 import type { GomokuGameContract } from './gomoku/types';
+import type { GoGameContract } from './go/types';
 import type { OldMaidGameContract } from './oldmaid/types';
 import type { GoFishGameContract } from './gofish/types';
 import type { DouDizhuGameContract } from './doudizhu/types';
@@ -45,6 +46,7 @@ export interface GameTypeRegistry {
   readonly stud: StudGameContract;
   readonly reversi: ReversiGameContract;
   readonly gomoku: GomokuGameContract;
+  readonly go: GoGameContract;
   readonly oldmaid: OldMaidGameContract;
   readonly gofish: GoFishGameContract;
   readonly doudizhu: DouDizhuGameContract;

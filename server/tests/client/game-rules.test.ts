@@ -70,6 +70,7 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
   reversi: { en: 'Passing', 'zh-TW': '跳過' },
   jungle: { en: 'River', 'zh-TW': '河道' },
   gomoku: { en: 'Renju option', 'zh-TW': '連珠禁手選項' },
+  go: { en: 'Passing and counting', 'zh-TW': '停一手與點目' },
   xiangqi: { en: 'Handicap', 'zh-TW': '讓子' },
   chess: { en: 'Special moves', 'zh-TW': '特殊走法' },
   crazyeights: { en: 'Eights', 'zh-TW': '8 為萬用牌' },
@@ -143,13 +144,13 @@ describe('contextual game rules', () => {
   });
 
   it('defaults legacy room options to off and limits status to the selected game', () => {
-    for (const gameType of ['sevens', 'ninetynine', 'blackjack', 'crazyeights', 'xiangqi'] as const) {
+    for (const gameType of ['sevens', 'ninetynine', 'blackjack', 'crazyeights', 'xiangqi', 'go'] as const) {
       const context = roomRulesContext(room(gameType));
       expect(context.option?.enabled).toBe(false);
       expect(render(gameType, context)).toContain('<dd>Off</dd>');
       expect(context.active).toBe(false);
     }
-    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'xiangqi', 'banqi', 'battleship'].includes(type))) {
+    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'go', 'xiangqi', 'banqi', 'battleship'].includes(type))) {
       expect(roomRulesContext(room(gameType, { gameOptions: { sevens: { closeOnEnd: true } } })).option).toBeNull();
     }
     // Banqi lists both of its variants, each off by default.

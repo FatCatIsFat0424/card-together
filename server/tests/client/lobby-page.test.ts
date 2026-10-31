@@ -77,11 +77,12 @@ describe('lobby page', () => {
   it('shows a tab only for categories that have games', () => {
     expect(lobbyCategories()).toEqual(['cards', 'dice', 'board']);
     expect(gamesInCategory('dice')).toEqual(['liarsdice']);
-    expect(gamesInCategory('board')).toEqual(['reversi', 'jungle', 'gomoku', 'xiangqi', 'chess', 'banqi', 'chinesecheckers', 'landbattle',
+    expect(gamesInCategory('board')).toEqual(['reversi', 'jungle', 'gomoku', 'go', 'xiangqi', 'chess', 'banqi', 'chinesecheckers', 'landbattle',
       'battleship']);
-    // Chess has no card art yet; its lobby card falls back to a plain background.
-    for (const gameType of GAME_TYPES.filter((type) => type !== 'chess')) expect(GAME_CARD_ART[gameType]).toBeTruthy();
+    // Chess and Go have no card art yet; their lobby cards fall back to a plain background.
+    for (const gameType of GAME_TYPES.filter((type) => type !== 'chess' && type !== 'go')) expect(GAME_CARD_ART[gameType]).toBeTruthy();
     expect(GAME_CARD_ART.chess).toBeUndefined();
+    expect(GAME_CARD_ART.go).toBeUndefined();
   });
 
   it('keeps room actions disabled without duplicating the floating room card with a banner', () => {

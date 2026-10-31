@@ -24,6 +24,7 @@ const CHOICES: GameOptions = {
   crazyeights: { actionCards: false },
   doudizhu: { variant: 'score' },
   gomoku: { renju: false, swap: false },
+  go: { size: 9, handicap: 0 },
   xiangqi: { handicap: 'none', handicapSide: 'red' },
   banqi: { chain: false, rookDash: false },
   battleship: { noTouching: false, hitAgain: false },
@@ -80,7 +81,7 @@ describe('room options document migration', () => {
       sevens: { closeOnEnd: false }, ninetynine: { twoDecks: false },
       blackjack: { playerDealer: false }, napoleon: { jokerSummon: true }, crazyeights: { actionCards: false },
       doudizhu: { variant: 'score' },
-      gomoku: { renju: false, swap: false }, xiangqi: { handicap: 'none', handicapSide: 'red' },
+      gomoku: { renju: false, swap: false }, go: { size: 9, handicap: 0 }, xiangqi: { handicap: 'none', handicapSide: 'red' },
       banqi: { chain: false, rookDash: false }, battleship: { noTouching: false, hitAgain: false },
     });
     expect(migrated.runtime?.games).toEqual(untouched.games);

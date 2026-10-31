@@ -42,6 +42,8 @@ export const BOARD_RESULT_REASONS = [
   'fifty-move',
   /** Chess: neither side can possibly mate ruled a draw. */
   'insufficient-material',
+  /** Go: area count after both seats accepted the dead stones (the move cap uses `move-limit`). */
+  'score',
 ] as const;
 
 export type BoardResultReason = typeof BOARD_RESULT_REASONS[number];

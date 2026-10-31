@@ -1,5 +1,7 @@
 // ─── Standard boards: one builder per board shape the board games use ───
 
+import { goStarPoints } from '../go';
+import type { GoSize } from '../go';
 import { nodeId } from './board-model';
 import type { BoardDecoration, BoardEdge, BoardLayout, BoardModel, BoardNode, BoardZone, NodeId } from './board-model';
 
@@ -89,6 +91,14 @@ export function gomokuBoard(size = 15): BoardModel {
 /** Chess: 8 × 8 cells in alternating light and dark squares; white (side 0) at the bottom, black turned to face it. */
 export function chessBoard(): BoardModel {
   return squareBoard({ cols: 8, rows: 8, layout: 'cells', decorations: [{ kind: 'checker' }] });
+}
+
+/** Go: `size` × `size` intersections with the star points of the size, never turned. */
+export function goBoard(size: GoSize): BoardModel {
+  return squareBoard({
+    cols: size, rows: size, layout: 'points', sideRotations: FIXED_SIDES,
+    decorations: goStarPoints(size).map((point) => ({ kind: 'star', x: point % size, y: Math.floor(point / size) })),
+  });
 }
 
 /** Banqi: the 8 × 4 half board, pieces in cells; colours are decided in play, so the board never turns. */

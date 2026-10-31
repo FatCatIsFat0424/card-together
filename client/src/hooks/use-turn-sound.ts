@@ -46,10 +46,13 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
   // Battleship fleets are placed at the same time too.
   const placing = game.battleship?.phase === 'placing' && game.battleship.seats.includes(game.battleship.mySeat)
     && !game.battleship.placed.includes(game.battleship.mySeat);
+  // Go marking is joint: a seat is prompted until it has accepted the count.
+  const marking = game.go?.phase === 'marking' && game.go.seats.includes(game.go.mySeat)
+    && !game.go.confirmed.includes(game.go.mySeat);
   const owned = !held.locked && room.currentRoomCode && room.mySeat && game.visible?.observer !== 'spectator' &&
     account.status === 'authenticated' && account.connection === 'ready' &&
     (game.phase === 'bidding' || game.phase === 'playing') &&
-    (game.currentTurnSeat === room.mySeat || arranging || betting || reviewing || deploying || placing);
+    (game.currentTurnSeat === room.mySeat || arranging || betting || reviewing || deploying || placing || marking);
   const completedTricks = game.playing?.completedTricks.length ?? game.napoleon?.tricks.length ?? 0;
   const actionCount = game.bigTwo?.log.filter((entry) =>
     'seat' in entry && entry.seat === room.mySeat).length ??
@@ -63,6 +66,8 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
       ?? game.jungle?.log ?? game.xiangqi?.log ?? game.chess?.log, room.mySeat) : undefined) ??
     (game.landbattle && room.mySeat
       ? `${game.landbattle.phase}-${othersActed(game.landbattle.log, room.mySeat)}` : undefined) ??
+    (game.go && room.mySeat
+      ? `${game.go.phase}-${othersActed(game.go.log, room.mySeat)}` : undefined) ??
     (game.battleship && room.mySeat
       ? `${game.battleship.phase}-${othersActed(game.battleship.log, room.mySeat)}` : undefined) ??
     game.oldMaid?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??

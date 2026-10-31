@@ -210,6 +210,13 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Renju option', 'Black may not make an overline (six or more), a double four, or a double three; those points are marked and cannot be played. Black wins only with exactly five; white wins with five or more. A stone that makes exactly five is always allowed.', 'Black has no legal point left only in a nearly full board; that counts as a draw.'),
     section('Swap option', 'The first seat places three opening stones: black, white, black. The second seat then chooses a colour: taking black swaps the sides; keeping white does not. White moves next.'),
   ],
+  go: [
+    section('Board and start', 'A 9×9, 13×13, or 19×19 board chosen in the room (9×9 by default); stones go on the line intersections. Black moves first, then the players alternate. The earlier seat plays black. Coordinates run A–T (skipping I) and 1–19.'),
+    section('Capturing', 'A stone or connected group needs an empty neighbouring point (a liberty). When a move takes away the last liberty of opposing stones they are captured and removed. A move that would leave your own group with no liberty is not allowed unless it captures.', 'Ko: a move may not recreate any board position that appeared earlier in the game, which covers single ko and longer cycles alike.'),
+    section('Passing and counting', 'You may pass instead of playing. Two passes in a row, or reaching 3 moves per point of the board, end play and start the count.', 'The server first marks the stones it thinks are dead. Either player can tap a group to mark it dead or alive, which clears both acceptances. When both players accept, the area is counted. Either player may instead choose to play on; the player who did not pass last moves next. A game that reached the move limit cannot be resumed.', 'Each player has a limited time to accept; a player who runs out of time accepts the marking shown. A bot sends the count back to play when its own estimate says a group of its own marked dead is alive.'),
+    section('Scoring', 'Area scoring: each side counts its living stones plus the empty regions bordered only by its own stones. White adds 7.5 komi, so a game never ties. With a handicap white adds only 0.5.', 'You may resign at any time. Draws cannot be offered.'),
+    section('Handicap option', 'Black starts with 2 to 9 stones (at most 5 on 9×9) on fixed star points, and white moves first.'),
+  ],
   reversi: [
     section('Board and start', 'An 8×8 board; each side plays black or white. The four centre cells start with two discs of each colour, and black moves first.', 'The earlier seat plays black. The board never turns; coordinates run a–h and 1–8.'),
     section('Placing and flipping', 'Place a disc on an empty cell so that, in at least one direction (row, column, or diagonal), a line of opposing discs lies between it and another disc of yours. Every disc in those lines flips to your colour.', 'A cell that flips nothing is not a legal move.'),
@@ -475,6 +482,13 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('勝負', '先在橫、直、斜任一方向連成五子（含五子以上）者獲勝；棋盤下滿仍無人連線則為和局。', '可以認輸；輪到自己時可以提和，對手同意即和局，對手走子視為拒絕，被拒絕後需再走 3 手才能再次提和。'),
     section('連珠禁手選項', '黑棋不得下出長連（六子以上）、雙四或雙三，這些位置會標示且無法落子；黑棋必須恰好連成五子才算贏，白棋五子以上都算贏。下出恰好五子的位置不受禁手限制。', '只有棋盤幾乎下滿時黑棋才可能無處可下，此時視為和局。'),
     section('交換開局選項', '先手玩家依序下三顆開局子：黑、白、黑。後手玩家再選擇顏色：執黑代表與先手交換，執白則維持原樣。接著由白棋下。'),
+  ],
+  go: [
+    section('棋盤與開局', '房間可選 9×9、13×13 或 19×19 棋盤（預設 9 路），棋子下在線的交叉點上。黑棋先下，之後雙方輪流落子；座位順序在前的玩家執黑。座標以 A–T（沒有 I）、1–19 標示。'),
+    section('提子', '棋子或相連的棋塊需要有相鄰的空點（氣）。當一手棋讓對手棋塊失去最後一口氣，該棋塊就被提走。除非能提子，否則不能下在讓自己棋塊沒有氣的位置（自殺）。', '劫：不能下出讓棋盤回到先前出現過的局面，單劫與循環劫都適用。'),
+    section('停一手與點目', '可以選擇停一手。雙方連續停一手，或手數達到棋盤點數的 3 倍，就結束對局並開始點目。', '伺服器會先標出它判斷的死子；任一方可點選棋塊切換死活，切換後雙方的確認都會取消，雙方都確認後才計分。任一方也可以選擇繼續下棋，由最後停一手者的對手先下；已達手數上限的對局無法繼續。', '確認有時間限制，逾時未確認的玩家視為接受目前標記。bot 若依自己的形勢估計認為被標成死子的己方棋塊仍然活著，就會選擇繼續下棋。'),
+    section('計分', '數子法：雙方各算自己的活子，加上只被自己棋子圍住的空點。白棋貼目 7.5，所以不會有和局；有讓子時白棋只貼 0.5。', '可隨時認輸；不開放提和。'),
+    section('讓子選項', '黑棋先在固定的星位擺上 2 至 9 子（9 路最多 5 子），白棋先走。'),
   ],
   reversi: [
     section('棋盤與開局', '8×8 棋盤，雙方各執黑或白。開局中央四格為黑白各兩子，黑棋先下。', '座位順序在前的玩家執黑；棋盤固定不旋轉，座標以 a–h、1–8 標示。'),

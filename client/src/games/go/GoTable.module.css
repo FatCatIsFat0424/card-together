@@ -1,0 +1,89 @@
+/* ─── Go table: side colour and captures beside each seat, the pending-stone crosshair, and the marking panel ─── */
+
+.side {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  flex: none;
+}
+
+.black { background: #1d1f22; }
+.white { background: #f3efe6; }
+
+.captured { opacity: 0.85; }
+
+/* Board markers: sizes are board units (one intersection apart), colours come from the board theme. */
+.cross {
+  fill: none;
+  stroke: var(--marker-last);
+  stroke-width: 0.1;
+  stroke-linecap: round;
+}
+
+/* Counted points: a small square in the colour of the side that owns the point. */
+.areaBlack { fill: #1d1f22; stroke: rgb(243 239 230 / 0.85); stroke-width: 0.04; }
+.areaWhite { fill: #f3efe6; stroke: rgb(29 31 34 / 0.85); stroke-width: 0.04; }
+
+.passTools { display: flex; flex: none; gap: 6px; justify-content: center; }
+.passTools > * { flex: 1 1 0; min-width: 0; flex-shrink: 0; }
+
+.marking {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.totals {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.lead { color: var(--text-secondary); font-size: var(--text-xs); }
+
+.markButtons { display: flex; flex: none; gap: 6px; }
+.markButtons > * { flex: 1 1 0; min-width: 0; flex-shrink: 0; }
+
+.reason {
+  display: inline-flex;
+  align-self: flex-start;
+  margin: 0;
+  padding: 2px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.meta { margin: 6px 0 0; color: var(--text-secondary); font-size: var(--text-sm); }
+
+/* Short landscape phones: both rows of buttons stay a full touch target tall in the narrow right column. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .marking { gap: 4px; }
+  .totals { font-size: var(--text-xs); }
+  .markButton.markButton, .passButton.passButton {
+    flex: 1 1 0;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 var(--space-2);
+    font-size: var(--text-sm);
+  }
+}

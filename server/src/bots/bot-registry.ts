@@ -23,6 +23,8 @@ import { crazyEightsFirstLegalAction, easyCrazyEightsAction, getCrazyEightsBotAc
 import { getStudBotAction } from './stud-strategy';
 import { easyReversiAction, getReversiBotAction, reversiFirstLegalAction } from './reversi-strategy';
 import { easyGomokuAction, getGomokuBotAction, gomokuFirstLegalAction } from './gomoku-strategy';
+import { easyGoAction, getGoBotAction, goFirstLegalAction } from './go-strategy';
+import { goConfirmAction } from './go-search';
 import {
   autoDeployAction, easyLandBattleAction, getLandBattleBotAction, landBattleFirstLegalAction,
 } from './landbattle-strategy';
@@ -201,6 +203,21 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     search: { strategy: searchStrategy<'doudizhu'>(new URL('./doudizhu-search.ts', import.meta.url), 'douDizhuSearch'), budgetMs: 900 },
     // A human who runs out of time passes the auction, passes a trick, or leads the smallest play.
     turnTimeout: (visible, { isBot, strategy }) => (isBot ? strategy() : douDizhuFirstLegalAction(visible)),
+  },
+  go: {
+    hard: getGoBotAction,
+    easy: easyGoAction,
+    firstLegal: goFirstLegalAction,
+    // Hard bots search in the worker pool (UCT with RAVE, capped by iterations per board size); the cheap
+    // synchronous move serves only other seats. The same strategy answers the marking of dead stones.
+    search: {
+      strategy: searchStrategy<'go'>(new URL('./go-search.ts', import.meta.url), 'goSearch'),
+      budgetMs: 2500,
+    },
+    // A player who runs out of time gets a move by the easy policy, and passes only when no sensible point is left.
+    turnTimeout: (visible) => easyGoAction(visible, Math.random),
+    // A human who missed the marking deadline accepts the proposed dead stones; bots keep their own answer.
+    deadlineExpired: (visible, { isBot, strategy }) => (isBot ? strategy() : goConfirmAction(visible)),
   },
   xiangqi: {
     hard: getXiangqiBotAction,

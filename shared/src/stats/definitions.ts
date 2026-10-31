@@ -126,6 +126,12 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('longestGame', 'result', 'max'),
     record('renjuWins', 'result', 'count'),
   ],
+  go: [
+    record('bigMargin', 'result', 'max'),
+    record('handicapWins', 'result', 'count', true),
+    record('resignWins', 'result', 'count'),
+    record('mostCaptured', 'result', 'max'),
+  ],
   crazyeights: [
     record('handsWon', 'result', 'count', true),
     record('lowScore', 'result', 'min'),

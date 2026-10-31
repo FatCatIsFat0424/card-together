@@ -21,6 +21,7 @@ const PREVIOUS_SEATS: Readonly<Record<GameType, readonly [min: number, max: numb
   reversi: [2, 2, true, false],
   jungle: [2, 2, true, false],
   gomoku: [2, 2, true, false],
+  go: [2, 2, true, false],
   xiangqi: [2, 2, true, false],
   chess: [2, 2, true, false],
   crazyeights: [2, 8, true, false],
@@ -58,7 +59,7 @@ describe('shared game registry', () => {
         expect([definition.category, definition.equipment]).toEqual(['dice', []]);
         continue;
       }
-      if (gameType === 'reversi' || gameType === 'jungle' || gameType === 'gomoku' || gameType === 'xiangqi' || gameType === 'chess' || gameType === 'banqi'
+      if (gameType === 'reversi' || gameType === 'jungle' || gameType === 'gomoku' || gameType === 'go' || gameType === 'xiangqi' || gameType === 'chess' || gameType === 'banqi'
         || gameType === 'chinesecheckers' || gameType === 'landbattle' || gameType === 'battleship') {
         expect([definition.category, definition.equipment]).toEqual(['board', []]);
         continue;
@@ -83,7 +84,7 @@ describe('registered result metadata', () => {
       ['liarsdeck', 'ranking', null], ['blackjack', 'ranking', 'chips'], ['holdem', 'ranking', 'chips'],
       ['napoleon', 'roles', null], ['tenhalf', 'ranking', 'chips'], ['liarsdice', 'ranking', null], ['crazyeights', 'ranking', 'penalty'], ['stud', 'ranking', 'chips'],
       ['reversi', 'ranking', null], ['oldmaid', 'ranking', 'points'],
-      ['gofish', 'ranking', 'points'], ['doudizhu', 'ranking', 'points'], ['jungle', 'ranking', null], ['gomoku', 'ranking', null],
+      ['gofish', 'ranking', 'points'], ['doudizhu', 'ranking', 'points'], ['jungle', 'ranking', null], ['gomoku', 'ranking', null], ['go', 'ranking', null],
       ['xiangqi', 'ranking', null], ['chess', 'ranking', null], ['banqi', 'ranking', null],
       ['chinesecheckers', 'ranking', null], ['landbattle', 'ranking', null], ['battleship', 'ranking', null],
     ]);

@@ -250,6 +250,14 @@ export type {
 } from '../games/gomoku/types';
 
 export type {
+  GoMoveRecord,
+  GoPhase,
+  GoMatchResult,
+  GoGameState,
+  GoVisibleState,
+} from '../games/go/types';
+
+export type {
   ReversiMove,
   ReversiPhase,
   ReversiMatchResult,

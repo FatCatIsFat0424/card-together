@@ -16,6 +16,7 @@ import { ninetyNineFacts } from './ninetynine';
 import { redPointsFacts } from './redpoints';
 import { reversiFacts } from './reversi';
 import { gomokuFacts } from './gomoku';
+import { goFacts } from './go';
 import { jungleFacts } from './jungle';
 import { sevensFacts } from './sevens';
 import { tenHalfFacts } from './tenhalf';
@@ -48,6 +49,7 @@ export const GAME_STATS: {
   stud: (_result, seat, frame) => studFacts(seat, frame),
   reversi: reversiFacts,
   gomoku: gomokuFacts,
+  go: goFacts,
   oldmaid: oldMaidFacts,
   gofish: goFishFacts,
   doudizhu: douDizhuFacts,

@@ -20,6 +20,7 @@ import { crazyEightsStatistics } from './crazyeights/statistics';
 import { studStatistics } from './stud/statistics';
 import { reversiStatistics } from './reversi/statistics';
 import { gomokuStatistics } from './gomoku/statistics';
+import { goStatistics } from './go/statistics';
 import { goFishStatistics } from './gofish/statistics';
 import { jungleStatistics } from './jungle/statistics';
 import { banqiStatistics } from './banqi/statistics';
@@ -48,6 +49,7 @@ export const GAME_STATISTICS: Readonly<Record<GameType, GameStatisticsRules>> = 
   stud: studStatistics,
   reversi: reversiStatistics,
   gomoku: gomokuStatistics,
+  go: goStatistics,
   gofish: goFishStatistics,
   jungle: jungleStatistics,
   banqi: banqiStatistics,
