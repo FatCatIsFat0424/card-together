@@ -67,6 +67,19 @@ class ConfigureTests(unittest.TestCase):
         }
         self.assertEqual(actual, expected)
 
+    def test_optional_security_hooks_do_not_require_global_security_configuration(self):
+        locations = self.snippet_locations()
+        expected = {
+            '/card-together/api/': '/etc/nginx/workstation-security/card-api-*.conf',
+            '/card-together/socket.io/': '/etc/nginx/workstation-security/card-socket-*.conf',
+        }
+        for route, path in expected.items():
+            self.assertEqual(directives(locations[route], 'include'), [['include', path]])
+        snippet = (Path(__file__).resolve().parents[1] / 'nginx/card-together.conf').read_text()
+        self.assertNotIn('limit_req ', snippet)
+        self.assertNotIn('limit_conn ', snippet)
+        self.assertNotIn('$ws_security_', snippet)
+
     def test_api_upload_limit_accepts_base64_background(self):
         snippet = (Path(__file__).resolve().parents[1] / 'nginx/card-together.conf').read_text()
         location = next(node for node in MODULE.parse(snippet)

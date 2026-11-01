@@ -479,6 +479,7 @@ bash deploy/publish-client.sh
 | 壓縮 | CSS、JS、JSON、SVG |
 | 標頭 | `X-Content-Type-Options`、`Referrer-Policy`，以及包含 `frame-ancestors` 的 **report-only** CSP |
 
+- API 與 Socket.IO location 提供 `/etc/nginx/workstation-security/card-api-*.conf`、`card-socket-*.conf` 的選用 hook。未安裝符合檔案時不載入任何規則，也不依賴全域限流變數；觀察／限制政策由管理者維護。啟用時須同步有效 snippet 與 `/usr/local/lib/card-together-local-deploy/deploy/nginx/card-together.conf` 的固定 root 部署政策，通過 `nginx -t` 後再 reload，避免下次部署覆寫。
 - 把標頭改名為 `Content-Security-Policy` 之前，先檢查瀏覽器的 CSP 回報。
 - 只要 location 有自己的 `add_header`，Nginx 就會丟掉繼承的標頭，所以每個這樣的 location 都要重複完整的標頭組。
 
