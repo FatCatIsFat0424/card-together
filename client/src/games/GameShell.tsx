@@ -96,8 +96,7 @@ function matches(query: string): boolean {
 /** Phones open the info and chat as sheets; the desktop shell docks them beside the table. */
 const sheetsAreOverlays = (): boolean => matches(SHEET_QUERY);
 
-/** The game tab holds the game's info with the chat below it. */
-type TableDockTab = 'info' | 'spectators' | 'voice';
+type TableDockTab = 'info' | 'spectators' | 'chat' | 'voice';
 
 interface GameShellProps {
   /** Info rail content (dock tab on desktop, drawer on phones) */
@@ -252,14 +251,14 @@ export function GameShell({
     .map((seat) => tablePosition(seat, bottomSeat, tableSeats));
   const cornersSpan = layout === 'ring' && !sidePositions.includes('left') && !sidePositions.includes('right');
   const centreUp = layout === 'ring' && !sidePositions.includes('top');
-  const chatShown = dockLayout ? dockOpen && dockTab === 'info' : chatOpen;
+  const chatShown = dockLayout ? dockOpen && dockTab === 'chat' : chatOpen;
   const unread = chatShown ? 0 : Math.max(0, messageCount - seenMessages);
   const mentionCount = useChatMentionStore((state) => chatVisible ? state.unreadIds.length : 0);
   const mentionLabel = mentionCount > 0 ? ` · ${t('chat.notifications.unread', { n: String(mentionCount) })}` : '';
   useChatMentionJump(useCallback(() => {
     if (!chatVisible) return;
     setInfoOpen(false);
-    setDockTab('info');
+    setDockTab('chat');
     setDockOpen(true);
     setChatOpen(true);
   }, [chatVisible]));
@@ -343,16 +342,16 @@ export function GameShell({
 
   // Chat seen so far: leaving its tab or collapsing the dock marks everything up to now as read.
   const collapseDock = useCallback((): void => {
-    if (dockOpen && dockTab === 'info') setSeenMessages(messageCount);
+    if (dockOpen && dockTab === 'chat') setSeenMessages(messageCount);
     setDockOpen(false);
   }, [dockOpen, dockTab, messageCount]);
   const changeDockTab = (tab: TableDockTab): void => {
-    if (dockTab === 'info') setSeenMessages(messageCount);
+    if (dockTab === 'chat') setSeenMessages(messageCount);
     setDockTab(tab);
   };
   // The header's chat and voice buttons open the dock on their tab, or collapse it when it already shows it.
   const toggleDockTab = (tab: TableDockTab): void => {
-    if (dockOpen && dockTab === 'info') setSeenMessages(messageCount);
+    if (dockOpen && dockTab === 'chat') setSeenMessages(messageCount);
     if (dockOpen && dockTab === tab) { setDockOpen(false); return; }
     setDockTab(tab);
     setDockOpen(true);
@@ -439,7 +438,7 @@ export function GameShell({
     onBack={() => navigate('/')} onRules={openRules}
     voice={<VoiceButton labelled dock={{ id: 'game-dock', open: dockOpen && dockTab === 'voice',
       onToggle: () => toggleDockTab('voice') }} />}
-    chat={{ unread, mentions: mentionCount, expanded: chatShown, controls: 'game-dock', onToggle: () => toggleDockTab('info') }}
+    chat={{ unread, mentions: mentionCount, expanded: chatShown, controls: 'game-dock', onToggle: () => toggleDockTab('chat') }}
     actions={<>
       <AbortVoteButton appearance="header" />
       <EarlyLeaveButton appearance="header" />
@@ -455,24 +454,22 @@ export function GameShell({
     {visibleGame && <RoundHistory game={visibleGame} />}
   </div>;
   // Shared playback chats in the live room, not the recorded one.
-  const chatPanel = replay ? <TableStoreScope stores={null}><ChatPanel embedded captioned /></TableStoreScope>
-    : <ChatPanel embedded captioned />;
+  const chatPanel = replay ? <TableStoreScope stores={null}><ChatPanel embedded /></TableStoreScope>
+    : <ChatPanel embedded />;
   const dockTabs = [
-    { id: 'info' as const, panel: <div className={styles.dockHome}>
-      <div className={styles.dockInfo}>
-        {/* Live tables open the rules from the header; playback has no header. */}
-        {replay && rulesButton}
-        {motionSetting}
-        {infoContent}
-      </div>
-      {chatVisible && <div className={styles.dockChat}>{chatPanel}</div>}
-    </div>,
-    label: <>{t('table.gameTab')}{unread > 0 && <DockCount label={t('room.unread', { n: String(unread) })}>
-      {unread > 99 ? '99+' : unread}</DockCount>}
-      {mentionCount > 0 && <DockCount mention label={t('chat.notifications.unread', { n: String(mentionCount) })}>
-        @{mentionCount > 99 ? '99+' : mentionCount}</DockCount>}</> },
+    { id: 'info' as const, label: t('table.gameTab'), panel: <div className={styles.dockInfo}>
+      {/* Live tables open the rules from the header; playback has no header. */}
+      {replay && rulesButton}
+      {motionSetting}
+      {infoContent}
+    </div> },
     ...!replay ? [{ id: 'spectators' as const, panel: <GameSpectators layout="dock" />,
       label: <SpectatorsTabLabel /> }] : [],
+    ...chatVisible ? [{ id: 'chat' as const, panel: chatPanel,
+      label: <>{t('chat.title')}{unread > 0 && <DockCount label={t('room.unread', { n: String(unread) })}>
+        {unread > 99 ? '99+' : unread}</DockCount>}
+        {mentionCount > 0 && <DockCount mention label={t('chat.notifications.unread', { n: String(mentionCount) })}>
+          @{mentionCount > 99 ? '99+' : mentionCount}</DockCount>}</> }] : [],
     ...!replay ? [{ id: 'voice' as const, label: t('voice.title'), panel: <VoiceDockPanel className={styles.dockVoice} /> }] : [],
   ];
   const dockToggleLabel = unread > 0 ? `${t('dock.expand')} ${t('room.unread', { n: String(unread) })}` : t('dock.expand');
@@ -505,7 +502,7 @@ export function GameShell({
           data-expanded-table={expandedTable ? '' : undefined}>
           {dockLayout && !dockOpen && <IconButton className={`${styles.hudButton} ${styles.dockToggle}`}
             icon={chatVisible ? 'chat' : 'info'} label={dockToggleLabel + mentionLabel} badge={unread} mentionCount={mentionCount}
-            onClick={() => { setDockTab('info'); setDockOpen(true); }} ref={dockToggleRef} aria-controls="game-dock" aria-expanded={false} />}
+            onClick={() => { setDockTab(chatVisible ? 'chat' : 'info'); setDockOpen(true); }} ref={dockToggleRef} aria-controls="game-dock" aria-expanded={false} />}
           <div className={styles.tableTools}>
             <IconButton className={`${styles.hudButton} ${styles.menuTool}`} icon={phoneMenu ? 'menu' : 'info'}
               label={t(phoneMenu ? 'topbar.menu' : 'table.info')} onClick={openInfo} ref={infoButtonRef}

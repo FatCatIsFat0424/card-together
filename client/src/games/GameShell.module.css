@@ -49,20 +49,6 @@
 .dockInfo > * { flex-shrink: 0; }
 .dockInfo .infoContent { flex: none; gap: var(--info-gap); overflow: visible; }
 
-/* The game tab: the info on top, scrolling on its own up to half the height, and the chat in the rest. */
-.dockHome { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-.dockHome > .dockInfo { flex: 0 1 auto; height: auto; min-height: 0; }
-.dockHome > .dockInfo:has(+ .dockChat) { max-height: 50%; padding-bottom: var(--space-2); }
-.dockChat {
-  display: flex;
-  flex: 1 1 0;
-  flex-direction: column;
-  min-height: 180px;
-  padding-top: var(--space-1);
-  border-top: 1px solid var(--separator);
-}
-.dockChat > * { flex: 1; min-height: 0; }
-
 .actionError {
   min-width: 0;
   padding: 2px 8px;

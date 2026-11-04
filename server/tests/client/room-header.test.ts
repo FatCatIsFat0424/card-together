@@ -12,6 +12,7 @@ const state = vi.hoisted(() => ({
   room: null as RoomInfo | null,
   mySeat: 'N' as GameSeat | null,
   observer: undefined as 'spectator' | undefined,
+  messages: [] as unknown[],
 }));
 
 vi.mock('@mui/material/useMediaQuery', () => ({
@@ -62,7 +63,7 @@ vi.mock('../../../client/src/stores/player-store', () => ({
   usePlayerStore: (select: (value: { playerId: string }) => unknown) => select({ playerId: 'alice' }),
 }));
 vi.mock('../../../client/src/stores/chat-store', () => ({
-  useChatStore: (select: (value: { messages: never[] }) => unknown) => select({ messages: [] }),
+  useChatStore: (select: (value: { messages: unknown[] }) => unknown) => select({ messages: state.messages }),
 }));
 vi.mock('../../../client/src/stores/game-store', () => ({
   useGameStore: (select: (value: Record<string, unknown>) => unknown) => select({
@@ -155,6 +156,7 @@ describe('table header and dock', () => {
     state.room = room();
     state.mySeat = 'N';
     state.observer = undefined;
+    state.messages = [];
   });
 
   it('gives the live table the room header with the vote and early leave last', () => {
@@ -173,16 +175,28 @@ describe('table header and dock', () => {
     expect(names.slice(-2)).toEqual(['Chat', 'Leave Room']);
   });
 
-  it('docks the game info above the chat, with no separate chat tab or table controls', () => {
+  it('gives game info and chat separate tabs, with chat immediately before voice', () => {
     const html = renderShell();
     const tabs = [...section(html, 'role="tablist"', '</div>').matchAll(/role="tab"[^>]*>(.*?)<\/button>/g)]
       .map((match) => match[1].replace(/<[^>]+>/g, ''));
-    expect(tabs).toEqual(['Game', 'Spectators', 'Voice']);
+    expect(tabs).toEqual(['Game', 'Spectators', 'Chat', 'Voice']);
     const dock = section(html, 'id="game-dock"', '</aside>');
-    expect(dock.indexOf('GAME-INFO')).toBeLessThan(dock.indexOf('data-chat-panel="captioned"'));
+    const activePanel = section(dock, 'role="tabpanel"', ' hidden=""');
+    expect(activePanel).toContain('GAME-INFO');
+    expect(activePanel).not.toContain('data-chat-panel');
+    expect(dock).toMatch(/<div class="[^"]*" hidden=""><div data-chat-panel="plain"><\/div><\/div>/);
     expect(dock).not.toContain('Vote to abort');
     expect(dock).not.toContain('Copy ABC123');
     expect(dock).not.toContain('>Game rules<');
+  });
+
+  it('puts unread messages on the chat tab while game info is selected', () => {
+    state.messages = [{}, {}, {}];
+    const html = renderShell();
+    const tabs = section(html, 'role="tablist"', '</div>');
+    expect(tabs).toMatch(/id="game-dock-tab-info"[^>]*aria-selected="true"[^>]*>Game<\/button>/);
+    expect(tabs).toMatch(/id="game-dock-tab-chat"[^>]*>Chat<span[^>]*aria-label="3 unread messages">3<\/span><\/button>/);
+    expect(section(html, '<header', '</header>')).toContain('aria-label="Chat 3 unread messages"');
   });
 
   it('lists the header controls in the same order in the phone menu', () => {
