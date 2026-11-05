@@ -1,12 +1,13 @@
 import { boardsDemoScenes } from './game-demos/boards-scenes';
 import { cardsDemoScenes } from './game-demos/cards-scenes';
+import { trickDemoScenes } from './game-demos/trick-scenes';
 import { bettingDemoScenes } from './game-demos/betting-scenes';
 import type { GameType } from '@shared/types';
 import recordings from './game-demo-recordings.json';
 import type { DemoTextKey } from './game-demo-i18n';
 import type { DemoScene as SharedDemoScene } from './game-demos/types';
 
-export const DEMO_GAME_TYPES = ['bridge', 'napoleon', 'chinesepoker', 'liarsdice', 'blackjack', 'holdem', 'stud', 'tenhalf', 'reversi', 'gomoku', 'go', 'xiangqi', 'chess', 'jungle', 'landbattle', 'battleship', 'banqi', 'chinesecheckers', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'crazyeights', 'oldmaid', 'gofish', 'doudizhu', 'liarsdeck'] as const;
+export const DEMO_GAME_TYPES = ['bridge', 'napoleon', 'chinesepoker', 'liarsdice', 'blackjack', 'holdem', 'stud', 'tenhalf', 'reversi', 'gomoku', 'go', 'xiangqi', 'chess', 'jungle', 'landbattle', 'battleship', 'banqi', 'chinesecheckers', 'bigtwo', 'redpoints', 'ninetynine', 'sevens', 'crazyeights', 'oldmaid', 'gofish', 'doudizhu', 'liarsdeck', 'hearts', 'gongzhu', 'spades'] as const;
 export type DemoGameType = typeof DEMO_GAME_TYPES[number];
 interface DemoRecording { readonly leadIn: number; readonly duration: number; readonly chapters?: readonly number[] }
 /** Measured from the owner's recordings, including their opening delay and final reading time; `npm run demos:import` checks durations. */
@@ -21,6 +22,7 @@ export const DEMO_SCENES: Record<DemoGameType, readonly DemoScene[]> = {
   ...withIntroduction(bettingDemoScenes),
   ...withIntroduction(boardsDemoScenes),
   ...withIntroduction(cardsDemoScenes),
+  ...withIntroduction(trickDemoScenes),
   bridge: [
     { text: 'start', seconds: 14, step: 0 },
     { text: 'bridge-goal', seconds: 14, step: 0 },

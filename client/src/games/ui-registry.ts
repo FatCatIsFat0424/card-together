@@ -1,3 +1,5 @@
+import { spadesUi } from './spades/spades-ui';
+import { heartsUi } from './hearts/hearts-ui';
 import type { GameType } from '@shared/types';
 import type { GameUi } from './game-ui';
 import { bridgeUi } from './bridge/bridge-ui';
@@ -24,6 +26,7 @@ import { landBattleUi } from './landbattle/landbattle-ui';
 import { battleshipUi } from './battleship/battleship-ui';
 import { liarsDiceUi } from './liarsdice/liarsdice-ui';
 import { crazyEightsUi } from './crazyeights/crazyeights-ui';
+import { gongZhuUi } from './gongzhu/gongzhu-ui';
 import { goFishUi } from './gofish/gofish-ui';
 import { banqiUi } from './banqi/banqi-ui';
 import { chineseCheckersUi } from './chinesecheckers/chinesecheckers-ui';
@@ -34,6 +37,7 @@ import { chineseCheckersUi } from './chinesecheckers/chinesecheckers-ui';
  * only from the table shell and its routes: the eager [client registry](registry.ts) must not.
  */
 export const GAME_UIS: { readonly [K in GameType]: GameUi<K> } = {
+  hearts: heartsUi,
   bridge: bridgeUi,
   bigtwo: bigTwoUi,
   redpoints: redPointsUi,
@@ -57,7 +61,9 @@ export const GAME_UIS: { readonly [K in GameType]: GameUi<K> } = {
   reversi: reversiUi,
   gomoku: gomokuUi,
   go: goUi,
+  spades: spadesUi,
   gofish: goFishUi,
+  gongzhu: gongZhuUi,
   jungle: jungleUi,
   banqi: banqiUi,
   chinesecheckers: chineseCheckersUi,

@@ -62,7 +62,9 @@ async function startMatch(
 function act(code: string): void {
   const game = games.getGameState(code)!;
   delete game.presentation;
-  const seat = game.gameType === 'chinesepoker'
+  const seat = game.gameType === 'hearts' && game.phase === 'passing'
+    ? SEATS.find((pending) => !game.deals[game.hand - 1].passes[pending])
+    : game.gameType === 'chinesepoker'
     ? SEATS.find((pending) => game.arrangements[pending] === null)
     : game.gameType === 'blackjack' && game.phase === 'betting'
       ? SEATS.find((pending) => game.players[pending] && game.bets[pending] === null && game.chips[pending] >= 10)
@@ -160,131 +162,134 @@ describe.each(REPOSITORY_ADAPTERS)('live-table match recordings ($name)', (adapt
     players.restorePlayers([]);
   });
 
-  it.each(GAME_TYPES.flatMap((gameType) => [false, true].map((bots) => ({ gameType, bots }))))(
-    'records $gameType (bots: $bots) across restart, rollback and room removal', async ({ gameType, bots }) => {
-    let seed = 17;
-    vi.spyOn(Math, 'random').mockImplementation(() => {
-      seed = (seed * 1664525 + 1013904223) >>> 0;
-      return seed / 4294967296;
-    });
-    const directory = await mkdtemp(join(tmpdir(), 'card-replay-'));
-    const path = join(directory, adapter.fileName);
-    let repository = await adapter.open(path);
-    try {
-      const { runtime, code } = await startMatch(repository, gameType, bots);
-      const initial = games.getGameState(code)!;
-      expect(initial.replayRecording).toEqual({ initial: spectatorSnapshot(code), steps: [] });
-      const unseen = undealt(initial).map((card) => `${card.suit}${card.rank}`);
-      expect(cards(initial.replayRecording!.initial).filter((card) => unseen.includes(card))).toEqual([]);
-      for (const seat of [...SEATS, null]) {
-        expect(JSON.stringify(games.getRecipientVisibleState(code, seat))).not.toContain('replayRecording');
-      }
-      expect(JSON.stringify(rooms.getRoomInfo(code))).not.toContain('replayRecording');
+  for (const gameType of GAME_TYPES) {
+    it.each([false, true].map((bots) => ({ gameType, bots })))(
+      'records $gameType (bots: $bots) across restart, rollback and room removal', async ({ gameType, bots }) => {
+      let seed = 17;
+      vi.spyOn(Math, 'random').mockImplementation(() => {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        return seed / 4294967296;
+      });
+      const directory = await mkdtemp(join(tmpdir(), 'card-replay-'));
+      const path = join(directory, adapter.fileName);
+      let repository = await adapter.open(path);
+      try {
+        const { runtime, code } = await startMatch(repository, gameType, bots);
+        const initial = games.getGameState(code)!;
+        expect(initial.replayRecording).toEqual({ initial: spectatorSnapshot(code), steps: [] });
+        const unseen = undealt(initial).map((card) => `${card.suit}${card.rank}`);
+        expect(cards(initial.replayRecording!.initial).filter((card) => unseen.includes(card))).toEqual([]);
+        for (const seat of [...SEATS, null]) {
+          expect(JSON.stringify(games.getRecipientVisibleState(code, seat))).not.toContain('replayRecording');
+        }
+        expect(JSON.stringify(rooms.getRoomInfo(code))).not.toContain('replayRecording');
 
-      // Server time alone never produces a step.
-      const now = Date.now();
-      vi.spyOn(Date, 'now').mockReturnValue(now + 60_000);
-      await runtime.mutate(() => undefined, { skipUnchanged: true });
-      vi.mocked(Date.now).mockRestore();
-      expect(games.getGameState(code)!.replayRecording!.steps).toEqual([]);
+        // Server time alone never produces a step.
+        const now = Date.now();
+        vi.spyOn(Date, 'now').mockReturnValue(now + 60_000);
+        await runtime.mutate(() => undefined, { skipUnchanged: true });
+        vi.mocked(Date.now).mockRestore();
+        expect(games.getGameState(code)!.replayRecording!.steps).toEqual([]);
 
-      const live = follower(code);
-      await runtime.mutate(() => act(code));
-      live.check();
-      expect(games.getGameState(code)!.replayRecording!.steps).toHaveLength(1);
-      expect(isRuntimeSnapshot(runtime.snapshot())).toBe(true);
-      const recording = structuredClone(games.getGameState(code)!.replayRecording);
-      await repository.close();
-      const disk = await adapter.readDocument(path);
-      if (gameType === 'bridge') {
-        const damaged = structuredClone(disk) as { runtime: RuntimeSnapshot };
-        Object.assign(damaged.runtime.games[0].replayRecording!.steps[0][0], { path: ['__proto__'] });
-        await adapter.writeUnchecked(path, damaged);
-        const corrupt = await adapter.persisted(path);
-        await expect(adapter.open(path)).rejects.toThrow('schema');
-        expect(await adapter.persisted(path)).toBe(corrupt);
-        await adapter.writeUnchecked(path, disk);
-        // Frequent writes check recording structure only; loading applies every step and drops a
-        // recording that no longer applies, so the match continues unrecorded.
-        const inapplicable = structuredClone(disk) as { runtime: RuntimeSnapshot };
-        const steps = inapplicable.runtime.games[0].replayRecording!.steps as unknown[][];
-        steps.push([{ op: 'set', path: ['missing', 'child'], value: 0 }]);
-        repository = await adapter.open(path);
-        await repository.saveRuntime(inapplicable.runtime);
+        const live = follower(code);
+        await runtime.mutate(() => act(code));
+        live.check();
+        expect(games.getGameState(code)!.replayRecording!.steps).toHaveLength(1);
+        expect(isRuntimeSnapshot(runtime.snapshot())).toBe(true);
+        const recording = structuredClone(games.getGameState(code)!.replayRecording);
         await repository.close();
-        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        const disk = await adapter.readDocument(path);
+        if (gameType === 'bridge') {
+          const damaged = structuredClone(disk) as { runtime: RuntimeSnapshot };
+          Object.assign(damaged.runtime.games[0].replayRecording!.steps[0][0], { path: ['__proto__'] });
+          await adapter.writeUnchecked(path, damaged);
+          const corrupt = await adapter.persisted(path);
+          await expect(adapter.open(path)).rejects.toThrow('schema');
+          expect(await adapter.persisted(path)).toBe(corrupt);
+          await adapter.writeUnchecked(path, disk);
+          // Frequent writes check recording structure only; loading applies every step and drops a
+          // recording that no longer applies, so the match continues unrecorded.
+          const inapplicable = structuredClone(disk) as { runtime: RuntimeSnapshot };
+          const steps = inapplicable.runtime.games[0].replayRecording!.steps as unknown[][];
+          steps.push([{ op: 'set', path: ['missing', 'child'], value: 0 }]);
+          repository = await adapter.open(path);
+          await repository.saveRuntime(inapplicable.runtime);
+          await repository.close();
+          const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+          repository = await adapter.open(path);
+          expect((await repository.loadRuntime())!.games[0].replayRecording).toBeUndefined();
+          expect(warn).toHaveBeenCalledWith(expect.stringContaining('unplayable replay recording'));
+          warn.mockRestore();
+          await repository.close();
+          await adapter.writeUnchecked(path, disk);
+        }
         repository = await adapter.open(path);
-        expect((await repository.loadRuntime())!.games[0].replayRecording).toBeUndefined();
-        expect(warn).toHaveBeenCalledWith(expect.stringContaining('unplayable replay recording'));
-        warn.mockRestore();
+        const resumed = await createRuntimeCoordinator(repository);
+        expect(games.getGameState(code)!.replayRecording).toEqual(recording);
+
+        // A failed commit discards its step; the retry records from the committed snapshot.
+        const failing = vi.spyOn(repository, 'saveRuntime').mockRejectedValueOnce(new Error('Write failed'));
+        const committed = resumed.snapshot();
+        await expect(resumed.mutate(() => act(code))).rejects.toThrow('Write failed');
+        expect(resumed.snapshot()).toEqual(committed);
+        failing.mockRestore();
+        await resumed.mutate(() => act(code));
+        live.check();
+        expect(games.getGameState(code)!.replayRecording!.steps).toHaveLength(recording!.steps.length + 1);
+
+        if (gameType === 'holdem') {
+          let before = resumed.snapshot();
+          const save = repository.saveRuntime.bind(repository);
+          const spy = vi.spyOn(repository, 'saveRuntime').mockImplementation(async (...args) => {
+            if (args[1]?.length) throw new Error('Archive write failed');
+            await save(...args);
+          });
+          await expect(finish(code, resumed, () => { before = resumed.snapshot(); })).rejects.toThrow('Archive write failed');
+          expect(resumed.snapshot()).toEqual(before);
+          expect(await repository.loadRuntime()).toEqual(before);
+          expect(await repository.listMatches('N')).toEqual([]);
+          spy.mockRestore();
+        }
+        await finish(code, resumed, live.check);
+        const completed = games.getGameState(code)!;
+        const history = await repository.listMatches('N');
+        expect(history).toHaveLength(1);
+        expect(history[0]).toMatchObject({ hasReplay: true });
+        expect(history[0]).not.toHaveProperty('replay');
+        // The archive lives in its own file beside the database, read and validated on demand.
+        expect(JSON.parse(await readFile(join(directory, 'replays', `${history[0].id}.json`), 'utf8')))
+          .toEqual(await repository.getMatchReplay(history[0].id));
+        const archive = (await repository.getMatchReplay(history[0].id))!;
+        expect(Object.keys(archive).sort()).toEqual(['gameType', 'initial', 'startedAt', 'steps', 'version']);
+        expect(archive).toEqual({ version: 1, gameType, startedAt: completed.startedAt,
+          ...completed.replayRecording });
+        expect(isMatchReplay(archive, history[0].result, history[0].finishedAt)).toBe(true);
+        expect(fold(archive)).toEqual(spectatorSnapshot(code));
+        expect(archive.steps.every((step) => step.length > 0)).toBe(true);
+        for (const snapshot of live.folded()) expect(privateKeys(snapshot)).toEqual([]);
+        // Patches stay proportional to each step, so a full Bridge board stays well below raw snapshots.
+        if (gameType === 'bridge') expect(JSON.stringify(archive).length).toBeLessThan(100_000);
+
+        // Finished boards are archived once and stop recording.
+        const steps = completed.replayRecording!.steps.length;
+        await resumed.mutate(() => games.returnFromResult(code, 'N'));
+        if (bots) expect(games.getGameState(code)).toBeNull();
+        else expect(games.getGameState(code)!.replayRecording!.steps).toHaveLength(steps);
+
+        // Retained history does not depend on runtime rooms, private hands, or connected players.
+        await repository.saveRuntime({ players: [], rooms: [], games: [], chat: [] });
         await repository.close();
-        await adapter.writeUnchecked(path, disk);
+        repository = await adapter.open(path);
+        const restarted = await createRuntimeCoordinator(repository);
+        expect(restarted.snapshot()).toEqual({ players: [], rooms: [], games: [], chat: [] });
+        expect(await repository.listMatches('N')).toEqual(history);
+      } finally {
+        await repository.close();
+        await rm(directory, { recursive: true, force: true });
       }
-      repository = await adapter.open(path);
-      const resumed = await createRuntimeCoordinator(repository);
-      expect(games.getGameState(code)!.replayRecording).toEqual(recording);
-
-      // A failed commit discards its step; the retry records from the committed snapshot.
-      const failing = vi.spyOn(repository, 'saveRuntime').mockRejectedValueOnce(new Error('Write failed'));
-      const committed = resumed.snapshot();
-      await expect(resumed.mutate(() => act(code))).rejects.toThrow('Write failed');
-      expect(resumed.snapshot()).toEqual(committed);
-      failing.mockRestore();
-      await resumed.mutate(() => act(code));
-      live.check();
-      expect(games.getGameState(code)!.replayRecording!.steps).toHaveLength(recording!.steps.length + 1);
-
-      if (gameType === 'holdem') {
-        let before = resumed.snapshot();
-        const save = repository.saveRuntime.bind(repository);
-        const spy = vi.spyOn(repository, 'saveRuntime').mockImplementation(async (...args) => {
-          if (args[1]?.length) throw new Error('Archive write failed');
-          await save(...args);
-        });
-        await expect(finish(code, resumed, () => { before = resumed.snapshot(); })).rejects.toThrow('Archive write failed');
-        expect(resumed.snapshot()).toEqual(before);
-        expect(await repository.loadRuntime()).toEqual(before);
-        expect(await repository.listMatches('N')).toEqual([]);
-        spy.mockRestore();
-      }
-      await finish(code, resumed, live.check);
-      const completed = games.getGameState(code)!;
-      const history = await repository.listMatches('N');
-      expect(history).toHaveLength(1);
-      expect(history[0]).toMatchObject({ hasReplay: true });
-      expect(history[0]).not.toHaveProperty('replay');
-      // The archive lives in its own file beside the database, read and validated on demand.
-      expect(JSON.parse(await readFile(join(directory, 'replays', `${history[0].id}.json`), 'utf8')))
-        .toEqual(await repository.getMatchReplay(history[0].id));
-      const archive = (await repository.getMatchReplay(history[0].id))!;
-      expect(Object.keys(archive).sort()).toEqual(['gameType', 'initial', 'startedAt', 'steps', 'version']);
-      expect(archive).toEqual({ version: 1, gameType, startedAt: completed.startedAt,
-        ...completed.replayRecording });
-      expect(isMatchReplay(archive, history[0].result, history[0].finishedAt)).toBe(true);
-      expect(fold(archive)).toEqual(spectatorSnapshot(code));
-      expect(archive.steps.every((step) => step.length > 0)).toBe(true);
-      for (const snapshot of live.folded()) expect(privateKeys(snapshot)).toEqual([]);
-      // Patches stay proportional to each step, so a full Bridge board stays well below raw snapshots.
-      if (gameType === 'bridge') expect(JSON.stringify(archive).length).toBeLessThan(100_000);
-
-      // Finished boards are archived once and stop recording.
-      const steps = completed.replayRecording!.steps.length;
-      await resumed.mutate(() => games.returnFromResult(code, 'N'));
-      if (bots) expect(games.getGameState(code)).toBeNull();
-      else expect(games.getGameState(code)!.replayRecording!.steps).toHaveLength(steps);
-
-      // Retained history does not depend on runtime rooms, private hands, or connected players.
-      await repository.saveRuntime({ players: [], rooms: [], games: [], chat: [] });
-      await repository.close();
-      repository = await adapter.open(path);
-      const restarted = await createRuntimeCoordinator(repository);
-      expect(restarted.snapshot()).toEqual({ players: [], rooms: [], games: [], chat: [] });
-      expect(await repository.listMatches('N')).toEqual(history);
-    } finally {
-      await repository.close();
-      await rm(directory, { recursive: true, force: true });
-    }
-  }, 30_000);
+    // Hearts can record up to 16 full hands with a save and replay comparison after every card.
+    }, gameType === 'hearts' ? 120_000 : 30_000);
+  }
 
   it.each(['legacy', 'bots'] as const)('keeps %s games unrecorded after restart and completion', async (mode) => {
     const directory = await mkdtemp(join(tmpdir(), 'card-replay-legacy-'));

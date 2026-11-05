@@ -55,6 +55,8 @@ function render(gameType: GameType, context?: GameRulesContext): string {
 }
 
 const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', string>>>> = {
+  spades: { en: 'Spades', 'zh-TW': '黑桃王' },
+  hearts: { en: 'Tricks', 'zh-TW': '出牌與贏墩' },
   bridge: { en: 'Playing a trick', 'zh-TW': '出牌與牌墩' },
   bigtwo: { en: 'Legal combinations', 'zh-TW': '合法牌型' },
   redpoints: { en: 'Capturing cards', 'zh-TW': '吃牌配對' },
@@ -77,6 +79,7 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
   stud: { en: 'Who acts first', 'zh-TW': '誰先行動' },
   oldmaid: { en: 'Drawing', 'zh-TW': '抽牌' },
   gofish: { en: 'Go fish', 'zh-TW': '釣魚' },
+  gongzhu: { en: 'Transformer and grand slam', 'zh-TW': '變壓器與全收' },
   doudizhu: { en: 'Combinations', 'zh-TW': '牌型' },
   banqi: { en: 'Rank and capture', 'zh-TW': '大小與吃子' },
   chinesecheckers: { en: 'Moving', 'zh-TW': '走法' },

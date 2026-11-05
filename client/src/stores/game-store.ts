@@ -1,3 +1,5 @@
+import type { SpadesVisibleState } from '@shared/games/spades/types';
+import type { HeartsVisibleState } from '@shared/games/hearts/types';
 // ─── Game Store ───
 
 import { scopedStore } from './scoped-store';
@@ -36,6 +38,7 @@ import type {
   BattleshipVisibleState,
 } from '@shared/types';
 import type { CrazyEightsVisibleState } from '@shared/games/crazyeights/types';
+import type { GongZhuVisibleState } from '@shared/games/gongzhu/types';
 import type { GoFishVisibleState } from '@shared/games/gofish/types';
 import type { BanqiVisibleState } from '@shared/games/banqi/types';
 import type { ChineseCheckersVisibleState } from '@shared/games/chinesecheckers/types';
@@ -69,7 +72,10 @@ export interface GameStoreState {
   /** Stud: my hole card from the previous hand while its presentation may still be playing */
   studHeld: HeldHoleCards | null;
   oldMaid: OldMaidVisibleState | null;
+  spades: SpadesVisibleState | null;
+  hearts: HeartsVisibleState | null;
   goFish: GoFishVisibleState | null;
+  gongzhu: GongZhuVisibleState | null;
   doudizhu: DouDizhuVisibleState | null;
   xiangqi: XiangqiVisibleState | null;
   chess: ChessVisibleState | null;
@@ -119,7 +125,10 @@ const initialState: GameStoreState = {
   jungle: null,
   studHeld: null,
   oldMaid: null,
+  spades: null,
+  hearts: null,
   goFish: null,
+  gongzhu: null,
   doudizhu: null,
   xiangqi: null,
   chess: null,

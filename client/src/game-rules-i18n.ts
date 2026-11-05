@@ -1,3 +1,4 @@
+import { spadesTranslations } from './spades-i18n';
 import type { GameType } from '@shared/types';
 import type { Locale } from './i18n';
 import { gameDefinition } from '@shared/games/registry';
@@ -45,6 +46,24 @@ const pokerChinese = table('撲克牌型：由大到小', ['牌型', '組成'], 
 ], '同牌型先比主要組合（四條、三條、再到對子），再由大到小比其餘牌；順子比最大張。', 'A 最大，只有 A2345 的 A 算最小；順子不能繞過 A。花色不分大小。');
 
 const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
+  spades: [section(spadesTranslations['en']['gameType.spades'], spadesTranslations['en']['spades.rulesDeal'], spadesTranslations['en']['spades.rulesBid']), section(spadesTranslations['en']['spades.contract'], spadesTranslations['en']['spades.rulesPlay'], spadesTranslations['en']['spades.rulesScore']), section(spadesTranslations['en']['spades.nilPoints'], spadesTranslations['en']['spades.rulesNil'], spadesTranslations['en']['spades.rulesBags'], spadesTranslations['en']['spades.rulesWin'])],
+  gongzhu: [
+    section('Deal and goal', 'Four compass seats, a standard 52-card deck, 13 cards each, no passing. Play exactly four hands; the highest cumulative total wins, including ties.'),
+    section('Tricks', 'Each deal begins with the two of clubs (♣2), a fixed convention. Play clockwise and follow suit if possible; otherwise play any card. There is no trump. The highest card of the led suit wins the trick and leads next. A is high, 2 low.', 'There is no hearts-broken rule, first-trick penalty restriction, or forced unexposed queen of spades play.'),
+    table('Captured cards', ['Card', 'Score'], [
+      ['♠Q (pig)', '−100'], ['♦J (sheep)', '+100'], ['♥2–4', '0'], ['♥5–10', '−10 each'],
+      ['♥J / ♥Q / ♥K / ♥A', '−20 / −30 / −40 / −50'],
+      ['All 13 hearts', '+200 instead of −200'],
+    ]),
+    section('Transformer and grand slam', '♣10 doubles the sum of all other captured scoring cards. Alone, including with only zero-value ♥2–4, it scores +50. If other nonzero scoring cards cancel to zero, doubling gives zero, not +50.', 'Capturing all 13 hearts, ♠Q, ♦J and ♣10 scores +1000 total; do not double again. There are no exposed-card multipliers.'),
+    section('Settlement and controls', 'Captures, each hand’s scores and cumulative totals stay available in the history. The next hand starts automatically after settlement. Click a legal card to play; on touch screens tap once to lift it, then again to play. Hands initially sort from A to 2.', 'Easy bots pick a random legal card. Hard bots seek positive tricks, avoid penalties and shed dangerous cards using only their own hand and public captures. Timeouts play the first legal card.'),
+  ],
+  hearts: [
+    section('Deal and passing', 'Four compass seats, a standard 52-card deck, 13 cards each. A is high and there is no trump. Expect about 20–40 minutes.', 'Pass exactly three different held cards in secret. The cycle is left (N → E → S → W), right, across, then no passing. All selections are committed before any cards move; timeout selects legal cards automatically.'),
+    section('Tricks', 'The two of clubs starts the first trick. Play clockwise, following suit whenever possible; the highest card of the led suit wins and leads the next trick.', 'You cannot lead hearts until a heart has been played, unless your entire hand is hearts. The queen of spades does not break hearts.', 'When void in clubs on the first trick, you cannot discard hearts or the queen of spades if you hold any nonpenalty card. If all your cards are penalty cards, you may discard one.'),
+    section('Scoring and finish', 'Every heart is 1 penalty point; the queen of spades is 13. Taking all 26 points shoots the moon: you add zero, each opponent adds 26.', 'After all 13 tricks, scores appear and the next hand starts automatically. Finish after a hand when anyone reaches at least 100; all players tied for the lowest total win.'),
+    section('Controls', 'Select three hand cards and confirm the pass. After passing, play a highlighted legal card; on touch screens tap it again to confirm. Submitted selections cannot be changed.', 'Both bot difficulties use only their own visible cards and public history. Timeouts select a legal pass or play. Spectators can inspect hands but cannot act.'),
+  ],
   bridge: [
     section('Goal and teams', 'North–South play East–West with 13 cards each. Ranks run A high to 2 low.', 'Declarer’s side needs 6 + contract level tricks (level 1 needs 7, level 7 all 13); otherwise the defenders win.', 'No doubles, vulnerability, bonus scoring, or exposed dummy.'),
     section('Auction', 'Clockwise. Bid level 1–7 with ♣, ♦, ♥, ♠, or no trump (NT), or pass.', 'Each bid must be higher: level first, then ♣ < ♦ < ♥ < ♠ < NT (1NT beats 1♠; 2♣ beats 1NT).', 'After a bid, three passes in a row end the auction. The last bidder declares and that suit is trump; NT has none. Four opening passes redeal.'),
@@ -324,6 +343,23 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
 };
 
 const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
+  spades: [section(spadesTranslations['zh-TW']['gameType.spades'], spadesTranslations['zh-TW']['spades.rulesDeal'], spadesTranslations['zh-TW']['spades.rulesBid']), section(spadesTranslations['zh-TW']['spades.contract'], spadesTranslations['zh-TW']['spades.rulesPlay'], spadesTranslations['zh-TW']['spades.rulesScore']), section(spadesTranslations['zh-TW']['spades.nilPoints'], spadesTranslations['zh-TW']['spades.rulesNil'], spadesTranslations['zh-TW']['spades.rulesBags'], spadesTranslations['zh-TW']['spades.rulesWin'])],
+  gongzhu: [
+    section('發牌與目標', '固定 N/E/S/W 四席，一副 52 張撲克牌，每人 13 張，不傳牌。打滿四手，累計最高分獲勝，同分並列。'),
+    section('出牌與吃墩', '採固定慣例：每手第一墩由 ♣2 首攻。順時針出牌，有首攻花色就必須跟出，否則可任出一張。沒有王牌，首攻花色最大牌贏墩，並由贏家繼續首攻。A 最大、2 最小。', '沒有紅心解禁、首墩罰牌限制，也沒有未亮 ♠Q 必須強制出牌的規定。'),
+    table('收取分數牌', ['牌', '得分'], [
+      ['♠Q（豬）', '−100'], ['♦J（羊）', '+100'], ['♥2–4', '0'], ['♥5–10', '各 −10'],
+      ['♥J／♥Q／♥K／♥A', '−20／−30／−40／−50'], ['13 張紅心全收', '由 −200 改為 +200'],
+    ]),
+    section('變壓器與全收', '♣10 將其他分數牌的總和加倍。單收 ♣10（含僅搭配零分的 ♥2–4）得 +50；若其他非零分數牌互相抵銷為 0，則加倍後仍為 0，不改得 +50。', '收齊 13 張紅心、♠Q、♦J 與 ♣10 共得 +1000，不再加倍。沒有亮牌倍數。'),
+    section('結算與操作', '吃牌、每手得分與累計分數都可從紀錄查看。結算呈現後自動開始下一手。桌機點合法牌出牌；觸控先點選抬牌，再點一次確認，預設由 A 排到 2。', '簡單 bot 隨機選合法牌；困難 bot 只用自己的手牌與公開吃牌，爭取正分墩、避開負分墩，並在無法贏墩時卸下危險牌。逾時出第一張合法牌。'),
+  ],
+  hearts: [
+    section('發牌與交換', '四個方位座位使用標準 52 張牌，每人 13 張；A 最大，沒有王牌。目標遊玩時間約 20–40 分鐘。', '每副選三張不同的手牌秘密交換。依序傳左（北 → 東 → 南 → 西）、傳右、傳對家、不換牌，每四副循環。全部提交後才一起交換，不能修改已提交的選牌；逾時會自動選合法牌。'),
+    section('出牌與贏墩', '梅花 2 首攻第一墩，順時針出牌；有首攻花色必須跟牌，首攻花色最大者贏墩並首攻下一墩。', '紅心被打出後才解禁；解禁前不能以紅心首攻，除非整手只剩紅心。黑桃 Q 不會讓紅心解禁。', '第一墩缺梅花時，只要有非罰分牌，就不能墊紅心或黑桃 Q。全手都只有罰分牌時可以墊一張。'),
+    section('罰分與勝負', '每張紅心罰 1 分，黑桃 Q 罰 13 分。包辦全部 26 分為射月，自己加 0 分、其他三人各加 26 分。', '13 墩打完先呈現本副分數，再自動開始下一副。任一玩家累計達 100 分時，在該副結算後結束；累計最低分者獲勝，同分可並列。'),
+    section('操作與代打', '點三張手牌後確認交換；出牌時只能選亮起的合法牌，手機先點選、再點一次出牌。', '簡單與困難 bot 只看自己的手牌與公開紀錄。逾時自動交換或出合法牌；旁觀者可切換視角看手牌，不能操作。'),
+  ],
   bridge: [
     section('目標與分隊', '南北對東西，每人 13 張。點數 A 最大、2 最小。', '莊家隊需取得「6＋合約線位」墩（1 線 7 墩、7 線全部 13 墩），未達標則防守隊獲勝。', '沒有賭倍、身價、超墩加分，也不攤明手。'),
     section('叫牌', '順時針叫牌：1～7 線搭配 ♣、♦、♥、♠ 或無王 NT，或 Pass。', '叫牌必須更高：先比線位，再比 ♣ < ♦ < ♥ < ♠ < NT（1NT 高於 1♠，2♣ 高於 1NT）。', '有人叫牌後連續三家 Pass 即結束，最後叫牌者當莊家，該花色為王牌，NT 無王牌。開場四家 Pass 就重發。'),

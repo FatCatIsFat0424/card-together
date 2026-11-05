@@ -2,8 +2,8 @@ import { SEAT_ORDER_CLOCKWISE } from '../constants';
 import type { GameSeat, MatchResult } from '../types';
 import { gameDefinition } from '../games/registry';
 
-/** The declaring side (Bridge declarer partnership, Napoleon and secretary) against the defence. */
-export type StandingSide = 'declarer' | 'defender';
+/** Contract sides or the fixed compass partnerships in Spades. */
+export type StandingSide = 'declarer' | 'defender' | 'NS' | 'EW';
 
 export type StandingRole = 'declarer' | 'partner' | 'napoleon' | 'secretary' | 'defender';
 

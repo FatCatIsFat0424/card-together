@@ -1,3 +1,5 @@
+import { spadesGame, coherentSpadesGame } from './spades-validation';
+import { heartsGame, coherentHeartsGame } from './hearts-validation';
 import type { GameType } from '@shared/types';
 import type { ObjectValue, PlayerValidator } from '../../runtime/validation-helpers';
 import type { GameStateOf } from '@shared/games/game-definition';
@@ -19,6 +21,7 @@ import { reversiGame, coherentReversiGame } from './reversi-validation';
 import { gomokuGame, coherentGomokuGame } from './gomoku-validation';
 import { goGame, coherentGoGame } from './go-validation';
 import { oldMaidGame, coherentOldMaidGame } from './oldmaid-validation';
+import { gongZhuGame, coherentGongZhuGame } from './gongzhu-validation';
 import { goFishGame, coherentGoFishGame } from './gofish-validation';
 import { douDizhuGame, coherentDouDizhuGame } from './doudizhu-validation';
 import { jungleGame, coherentJungleGame } from './jungle-validation';
@@ -37,6 +40,8 @@ export interface GameStateValidator<K extends GameType> {
 }
 
 export const GAME_VALIDATORS: { readonly [K in GameType]: GameStateValidator<K> } = {
+  spades: { shape: spadesGame, coherent: coherentSpadesGame },
+  hearts: { shape: heartsGame, coherent: coherentHeartsGame },
   bridge: { shape: bridgeGame, coherent: coherentBridgeGame },
   bigtwo: { shape: bigTwoGame, coherent: coherentBigTwoGame },
   redpoints: { shape: redPointsGame, coherent: coherentRedPointsGame },
@@ -56,6 +61,7 @@ export const GAME_VALIDATORS: { readonly [K in GameType]: GameStateValidator<K> 
   go: { shape: goGame, coherent: coherentGoGame },
   oldmaid: { shape: oldMaidGame, coherent: coherentOldMaidGame },
   gofish: { shape: goFishGame, coherent: coherentGoFishGame },
+  gongzhu: { shape: gongZhuGame, coherent: coherentGongZhuGame },
   doudizhu: { shape: douDizhuGame, coherent: coherentDouDizhuGame },
   jungle: { shape: jungleGame, coherent: coherentJungleGame },
   xiangqi: { shape: xiangqiGame, coherent: coherentXiangqiGame },

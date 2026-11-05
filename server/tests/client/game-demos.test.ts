@@ -15,6 +15,7 @@ import type { DemoFixture } from '../../../scripts/game-demos/demo-fixture-types
 import { generateBettingFixtures } from '../../../scripts/game-demos/betting-fixtures';
 import { generateBoardFixtures } from '../../../scripts/game-demos/boards-fixtures';
 import { generateCardsFixtures } from '../../../scripts/game-demos/cards-fixtures';
+import { generateTrickFixtures } from '../../../scripts/game-demos/trick-fixtures';
 import type { DemoGameType } from '../../../client/src/game-demos';
 
 const fixtures = { games: Object.fromEntries(DEMO_GAME_TYPES.map((game) => [game,
@@ -83,9 +84,17 @@ describe('beginner walkthroughs', () => {
   }
 
   it('regenerates every new walkthrough through legal manager actions', () => {
-    const generated = { ...generateBettingFixtures(), ...generateBoardFixtures(), ...generateCardsFixtures() };
+    const generated = { ...generateBettingFixtures(), ...generateBoardFixtures(), ...generateCardsFixtures(), ...generateTrickFixtures() };
     for (const [game, fixture] of Object.entries(generated)) {
       expect(fixture).toEqual(storedFixtures.games[game as keyof typeof storedFixtures.games]);
+    }
+  });
+
+  it('records Hearts passing without exposing other players’ selections', () => {
+    for (const step of fixtures.games.hearts.steps) {
+      if (step.actingSeat === fixtures.games.hearts.focusSeat || !step.action || typeof step.action !== 'object') continue;
+      if ('type' in step.action && step.action.type === 'pass') expect(step.action).toEqual({ type: 'pass' });
+      expect(step.after).not.toHaveProperty('deals');
     }
   });
 

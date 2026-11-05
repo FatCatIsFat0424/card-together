@@ -1,3 +1,4 @@
+import { trickDemoZh, trickDemoEn } from './game-demos/trick-i18n';
 import type { Locale } from './i18n';
 import type { DemoText } from './game-demos/types';
 import { boardsDemoZh, boardsDemoEn } from './game-demos/boards-i18n';
@@ -86,7 +87,7 @@ const en: Record<keyof typeof zh, DemoText> = {
   'dice-end': { title: 'Result | Zero dice means elimination', caption: 'North loses their final die. East still has three and wins the match.', rule: 'Skip eliminated players. If the loser is eliminated, the next surviving player starts. Later elimination places higher. Return to the room to play again.' },
 };
 
-const translationsZh = { ...zh, ...bettingDemoZh, ...boardsDemoZh, ...cardsDemoZh };
-const translationsEn = { ...en, ...bettingDemoEn, ...boardsDemoEn, ...cardsDemoEn };
+const translationsZh = { ...zh, ...bettingDemoZh, ...boardsDemoZh, ...cardsDemoZh, ...trickDemoZh };
+const translationsEn = { ...en, ...bettingDemoEn, ...boardsDemoEn, ...cardsDemoEn, ...trickDemoEn };
 export type DemoTextKey = keyof typeof translationsZh;
 export const gameDemoTranslations: Record<Locale, Record<DemoTextKey, DemoText>> = { 'zh-TW': translationsZh, en: translationsEn };

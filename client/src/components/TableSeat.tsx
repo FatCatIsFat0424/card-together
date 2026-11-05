@@ -246,7 +246,7 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
   const {
     phase, turn, declarer, dealer, playing, bigTwoCards, redPointsCards, ninetyNineCards, locked, captured, busted,
     sevensCards, sevensCovered, chinesePokerCards, arranging, arranged, autoArranged, blackjackCards, holdemCards,
-    napoleonCards, tenHalfCards, diceCards, crazyEightsCards, goFishCards,
+    napoleonCards, tenHalfCards, diceCards, crazyEightsCards, goFishCards, snapshotCards,
   } = useGameStore(useShallow((state) => ({
     sevensCards: gameSeatValue(state.sevens?.handCounts, seat) ?? null,
     // Blackjack hands are drawn face up on the table, so the plate shows no card backs.
@@ -257,6 +257,8 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
     tenHalfCards: state.tenhalf ? 0 : null,
     // Liar's Dice cups are counted in the seat's dice chip instead.
     diceCards: state.liarsDice ? 0 : null,
+    snapshotCards: state.visible && 'handCounts' in state.visible
+      ? gameSeatValue(state.visible.handCounts, seat) ?? null : null,
     napoleonCards: state.napoleon ? gameSeatValue(state.napoleon.handCounts, seat) ?? 0 : null,
     sevensCovered: gameSeatValue(state.sevens?.coveredCounts, seat) ?? null,
     chinesePokerCards: state.chinesePoker ? state.chinesePoker.phase === 'arranging' ? 13 : 0 : null,
@@ -354,7 +356,7 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
     arranged: arranged || betPlaced || napoleonReviewed,
   });
   const cards = stats !== undefined ? 0 : bigTwoCards ?? redPointsCards ?? ninetyNineCards ?? sevensCards ?? chinesePokerCards
-    ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? diceCards ?? napoleonCards ?? tenHalfCards ?? crazyEightsCards ?? goFishCards
+    ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? diceCards ?? napoleonCards ?? tenHalfCards ?? crazyEightsCards ?? goFishCards ?? snapshotCards
     ?? om?.counts[seat] ?? ddz?.counts[seat] ?? remainingCards(seat, playing);
   // A Hold'em fold outranks a timeout in the status slot, so a timed-out fold keeps the timeout icon.
   const heStatusLabel: TranslationKey | null = heOut && status === 'busted' ? 'holdem.out'

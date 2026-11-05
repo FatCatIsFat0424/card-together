@@ -98,7 +98,7 @@ describe('per-game statistics hooks', () => {
     for (const gameType of GAME_TYPES.filter((game) => game !== 'napoleon')) {
       const view = serverStatistics(playerStats([counters(gameType)], null), 'all');
       expect(view.games.find((game) => game.gameType === gameType)?.expectedWinRate)
-        .toBe(gameType === 'bridge' ? 0.5 : 0.375);
+        .toBe(gameType === 'bridge' || gameType === 'spades' ? 0.5 : 0.375);
     }
   });
 

@@ -36,7 +36,9 @@ function act(code: string): void {
   const game = games.getGameState(code)!;
   // Presentations hold the next action back; the recording already holds this one.
   delete game.presentation;
-  const seat = game.gameType === 'chinesepoker'
+  const seat = game.gameType === 'hearts' && game.phase === 'passing'
+    ? REPLAY_SEATS.find((pending) => !game.deals[game.hand - 1].passes[pending])
+    : game.gameType === 'chinesepoker'
     ? REPLAY_SEATS.find((pending) => game.arrangements[pending] === null)
     : game.gameType === 'blackjack' && game.phase === 'betting'
       ? REPLAY_SEATS.find((pending) => game.players[pending] && game.bets[pending] === null && game.chips[pending] >= 10)

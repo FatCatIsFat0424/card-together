@@ -79,7 +79,14 @@ describe('lobby page', () => {
     expect(gamesInCategory('dice')).toEqual(['liarsdice']);
     expect(gamesInCategory('board')).toEqual(['reversi', 'jungle', 'gomoku', 'go', 'xiangqi', 'chess', 'banqi', 'chinesecheckers', 'landbattle',
       'battleship']);
-    for (const gameType of GAME_TYPES) expect(GAME_CARD_ART[gameType]).toBeTruthy();
+    for (const [gameType, art] of Object.entries(GAME_CARD_ART)) {
+      expect(GAME_TYPES).toContain(gameType);
+      expect(art).toBeTruthy();
+    }
+    const html = render();
+    for (const gameType of gamesInCategory('cards').filter((game) => !GAME_CARD_ART[game])) {
+      expect(html).toContain(useI18nStore.getState().t(`gameType.${gameType}`));
+    }
   });
 
   it('keeps room actions disabled without duplicating the floating room card with a banner', () => {

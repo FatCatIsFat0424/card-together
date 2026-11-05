@@ -3,7 +3,7 @@
 import type { ObserverRole, GameSeat } from '@shared/types';
 
 interface TurnView {
-  readonly currentTurnSeat: GameSeat;
+  readonly currentTurnSeat: GameSeat | null;
   readonly mySeat: GameSeat;
   readonly observer?: ObserverRole;
 }

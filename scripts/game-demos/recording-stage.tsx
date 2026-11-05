@@ -284,6 +284,15 @@ async function prepareAction(step: ExpandedDemoStep): Promise<void> {
     const control = label && [...document.querySelectorAll<HTMLButtonElement>('button')]
       .find((candidate) => candidate.textContent?.trim().startsWith(label) && !candidate.disabled);
     if (control) { point(control); await wait(800); }
+  } else if (gameType === 'hearts' && action.type === 'pass' && Array.isArray(action.cards)) {
+    for (const card of action.cards) await selectCard(card as { rank: number; suit: string });
+    const confirm = [...document.querySelectorAll<HTMLButtonElement>('button')]
+      .find((element) => element.textContent?.trim().startsWith('確認交換') && !element.disabled);
+    if (!confirm) throw new Error('Missing tutorial pass confirmation.');
+    point(confirm); await wait(800);
+  } else if (gameType === 'spades' && action.type === 'bid' && typeof action.bid === 'number') {
+    await click(action.bid === 0 ? 'Nil（0 墩）' : String(action.bid));
+    point(button('確認叫牌'));
   } else if (action.type === 'bid' && (gameType === 'bridge' || gameType === 'napoleon')) {
     await click(gameType === 'bridge' ? '3' : '9');
     await click(gameType === 'bridge' ? '3♥' : '9♥');

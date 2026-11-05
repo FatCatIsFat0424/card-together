@@ -94,6 +94,7 @@ describe('spectator table perspective', () => {
   // Module transforms belong to fixture setup, not a timed game-state assertion.
   beforeAll(async () => {
     await Promise.all([
+      import('../../../client/src/games/hearts/HeartsTable'),
       import('../../../client/src/games/bridge/BridgeTable'),
       import('../../../client/src/games/bigtwo/BigTwoTable'),
       import('../../../client/src/games/redpoints/RedPointsTable'),
@@ -104,6 +105,7 @@ describe('spectator table perspective', () => {
       import('../../../client/src/games/blackjack/BlackjackTable'),
       import('../../../client/src/games/holdem/HoldemTable'),
       import('../../../client/src/games/napoleon/NapoleonTable'),
+      import('../../../client/src/games/spades/SpadesTable'),
       import('../../../client/src/games/tenhalf/TenHalfTable'),
       import('../../../client/src/games/liarsdice/LiarsDiceTable'),
       import('../../../client/src/games/reversi/ReversiTable'),

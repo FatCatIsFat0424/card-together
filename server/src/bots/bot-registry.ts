@@ -1,3 +1,5 @@
+import { getSpadesBotAction, easySpadesAction, spadesFirstLegalAction } from './spades-strategy';
+import { heartsFirstLegalAction, easyHeartsAction, getHeartsBotAction } from './hearts-strategy';
 import type { VisibleStateOf } from '@shared/games/game-definition';
 import { BJ_MIN_BET } from '@shared/rules/blackjack';
 import type { GameType, NapoleonAction } from '@shared/types';
@@ -32,6 +34,7 @@ import {
   autoPlaceAction, battleshipFirstLegalAction, easyBattleshipAction, getBattleshipBotAction,
 } from './battleship-strategy';
 import { easyOldMaidAction, getOldMaidBotAction, oldMaidFirstLegalAction } from './oldmaid-strategy';
+import { getGongZhuBotAction, easyGongZhuAction, gongZhuFirstLegalAction } from './gongzhu-strategy';
 import { easyGoFishAction, getGoFishBotAction, goFishFirstLegalAction } from './gofish-strategy';
 import { easyJungleAction, getJungleBotAction, jungleFirstLegalAction } from './jungle-strategy';
 import { easyXiangqiAction, getXiangqiBotAction, xiangqiFirstLegalAction } from './xiangqi-strategy';
@@ -87,6 +90,9 @@ function napoleonAction(action: NapoleonAction | null): BotAction | null {
 
 /** Every game type maps to its own bot; a missing or mismatched entry fails to compile. */
 export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
+  spades: { hard: getSpadesBotAction, easy: easySpadesAction, firstLegal: spadesFirstLegalAction,
+    turnTimeout: (visible) => getSpadesBotAction(visible) },
+  hearts: { hard: getHeartsBotAction, easy: easyHeartsAction, firstLegal: heartsFirstLegalAction },
   bridge: { hard: getBridgeBotAction, easy: easyBridgeAction, firstLegal: bridgeFirstLegalAction },
   bigtwo: { hard: getBigTwoBotAction, easy: easyBigTwoAction, firstLegal: bigTwoFirstLegalAction },
   redpoints: { hard: getRedPointsBotAction, easy: easyRedPointsAction, firstLegal: redPointsFirstLegalAction },
@@ -188,6 +194,8 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     // A player who runs out of time draws a random position, as the easy bot would.
     turnTimeout: (visible) => easyOldMaidAction(visible),
   },
+  gongzhu: { hard: getGongZhuBotAction, easy: easyGongZhuAction, firstLegal: gongZhuFirstLegalAction,
+    turnTimeout: gongZhuFirstLegalAction },
   gofish: {
     hard: getGoFishBotAction,
     easy: easyGoFishAction,

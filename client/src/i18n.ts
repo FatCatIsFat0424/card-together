@@ -1,3 +1,7 @@
+import { spadesTranslations } from './spades-i18n';
+import type { SpadesTranslationKey } from './spades-i18n';
+import { heartsTranslations } from './hearts-i18n';
+import type { HeartsTranslationKey } from './hearts-i18n';
 // ─── i18n system ───
 
 import { socialTranslations } from './social-i18n';
@@ -59,6 +63,8 @@ import type { GoTranslationKey } from './go-i18n';
 import { jungleTranslations } from './jungle-i18n';
 import type { JungleTranslationKey } from './jungle-i18n';
 import type { StudTranslationKey } from './stud-i18n';
+import { gongZhuTranslations } from './gongzhu-i18n';
+import type { GongZhuTranslationKey } from './gongzhu-i18n';
 import { goFishTranslations } from './gofish-i18n';
 import type { GoFishTranslationKey } from './gofish-i18n';
 import { banqiTranslations } from './banqi-i18n';
@@ -88,11 +94,12 @@ import type { BoardTranslationKey } from './board-i18n';
 export type Locale = 'zh-TW' | 'en';
 
 type TranslationKeys = Record<
-  FloatingRoomCardTranslationKey | MessageReplyTranslationKey | ChatMentionTranslationKey | ReplayTranslationKey | RoomErrorTranslationKey | SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | AudioTranslationKey | VoiceTranslationKey | UiTranslationKey
+  HeartsTranslationKey | FloatingRoomCardTranslationKey | MessageReplyTranslationKey | ChatMentionTranslationKey | ReplayTranslationKey | RoomErrorTranslationKey | SocialTranslationKey | AccountTranslationKey | PlayerTranslationKey | AudioTranslationKey | VoiceTranslationKey | UiTranslationKey
     | EmojiTranslationKey | GameTranslationKey | SevensTranslationKey | ChinesePokerTranslationKey
+    | SpadesTranslationKey
     | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | TenHalfTranslationKey | DouDizhuTranslationKey | ChineseCheckersTranslationKey | CrazyEightsTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
     | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | StudTranslationKey | TenHalfTranslationKey | OldMaidTranslationKey | GoFishTranslationKey | ReversiTranslationKey | GomokuTranslationKey | GoTranslationKey | JungleTranslationKey | XiangqiTranslationKey | BanqiTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
-    | StatsTranslationKey | BoardTranslationKey | LandBattleTranslationKey | ChessTranslationKey
+    | GongZhuTranslationKey | StatsTranslationKey | BoardTranslationKey | LandBattleTranslationKey | ChessTranslationKey
     | BattleshipTranslationKey | ChatNotificationTranslationKey, string
 > & {
   // Lobby
@@ -190,6 +197,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...liarsDiceTranslations['zh-TW'],
     ...blackjackTranslations['zh-TW'],
     ...holdemTranslations['zh-TW'],
+    ...heartsTranslations['zh-TW'],
     ...napoleonTranslations['zh-TW'],
     ...tenHalfTranslations['zh-TW'],
     ...crazyEightsTranslations['zh-TW'],
@@ -198,6 +206,8 @@ const translations: Record<Locale, TranslationKeys> = {
     ...gomokuTranslations['zh-TW'],
     ...goTranslations['zh-TW'],
     ...oldMaidTranslations['zh-TW'],
+    ...spadesTranslations['zh-TW'],
+    ...gongZhuTranslations['zh-TW'],
     ...goFishTranslations['zh-TW'],
     ...douDizhuTranslations['zh-TW'],
     ...jungleTranslations['zh-TW'],
@@ -296,6 +306,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...liarsDiceTranslations.en,
     ...blackjackTranslations.en,
     ...holdemTranslations.en,
+    ...heartsTranslations.en,
     ...napoleonTranslations.en,
     ...tenHalfTranslations.en,
     ...crazyEightsTranslations.en,
@@ -304,6 +315,8 @@ const translations: Record<Locale, TranslationKeys> = {
     ...gomokuTranslations.en,
     ...goTranslations.en,
     ...oldMaidTranslations.en,
+    ...spadesTranslations.en,
+    ...gongZhuTranslations.en,
     ...goFishTranslations.en,
     ...douDizhuTranslations.en,
     ...jungleTranslations.en,

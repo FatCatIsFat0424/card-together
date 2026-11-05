@@ -1,0 +1,25 @@
+.captureRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding-block: var(--spacing-xs);
+  min-width: 0;
+}
+
+.scoreScroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.settle {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  font-size: var(--text-sm);
+}
+
+.settle strong {
+  flex-basis: 100%;
+  text-align: center;
+}

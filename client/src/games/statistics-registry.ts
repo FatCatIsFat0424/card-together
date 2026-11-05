@@ -1,3 +1,5 @@
+import { spadesStatistics } from './spades/statistics';
+import { heartsStatistics } from './hearts/statistics';
 import type { GameType } from '@shared/types';
 import { rankingStatistics } from './game-statistics';
 import type { GameStatisticsRules } from './game-statistics';
@@ -21,12 +23,14 @@ import { studStatistics } from './stud/statistics';
 import { reversiStatistics } from './reversi/statistics';
 import { gomokuStatistics } from './gomoku/statistics';
 import { goStatistics } from './go/statistics';
+import { gongZhuStatistics } from './gongzhu/statistics';
 import { goFishStatistics } from './gofish/statistics';
 import { jungleStatistics } from './jungle/statistics';
 import { banqiStatistics } from './banqi/statistics';
 import { chineseCheckersStatistics } from './chinesecheckers/statistics';
 
 export const GAME_STATISTICS: Readonly<Record<GameType, GameStatisticsRules>> = {
+  hearts: heartsStatistics,
   bridge: bridgeStatistics,
   bigtwo: rankingStatistics,
   redpoints: rankingStatistics,
@@ -50,7 +54,9 @@ export const GAME_STATISTICS: Readonly<Record<GameType, GameStatisticsRules>> = 
   reversi: reversiStatistics,
   gomoku: gomokuStatistics,
   go: goStatistics,
+  spades: spadesStatistics,
   gofish: goFishStatistics,
+  gongzhu: gongZhuStatistics,
   jungle: jungleStatistics,
   banqi: banqiStatistics,
   chinesecheckers: chineseCheckersStatistics,

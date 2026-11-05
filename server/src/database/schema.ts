@@ -1,8 +1,10 @@
+import { isSpadesResult } from '../managers/games/spades-validation';
+import { isHeartsResult } from '../managers/games/hearts-validation';
 import { isMessageReply } from '../media/message-reply';
 import {
   isBigTwoResult, isBlackjackResult, isChinesePokerResult, isHoldemResult, isLiarsDeckResult, isLiarsDiceResult,
   isNapoleonResult, isNinetyNineResult, isRedPointsResult, isRuntimeSnapshot, isSevensResult, isTenHalfResult, isCrazyEightsResult, isStudResult, isReversiResult, isGomokuResult, isGoResult, isOldMaidResult,
-  isGoFishResult, isDouDizhuResult, isJungleResult, isXiangqiResult, isChessResult, isBanqiResult, isChineseCheckersResult, isLandBattleResult,
+  isGongZhuResult, isGoFishResult, isDouDizhuResult, isJungleResult, isXiangqiResult, isChessResult, isBanqiResult, isChineseCheckersResult, isLandBattleResult,
   isBattleshipResult,
 } from '../runtime/validate';
 import {
@@ -157,6 +159,7 @@ export function validMatch(value: unknown): value is MatchRecord {
   const participants = isGameType(gameType) && gameDefinition(gameType).seats.flexible ? value.result.seats : undefined;
   if (value.accountIds.length !== (Array.isArray(participants) ? participants.length : 4)) return false;
   const validators: Record<GameType, (result: Record<string, unknown>) => boolean> = {
+    hearts: isHeartsResult,
     bridge: validBridgeResult,
     bigtwo: isBigTwoResult,
     redpoints: isRedPointsResult,
@@ -175,7 +178,9 @@ export function validMatch(value: unknown): value is MatchRecord {
     gomoku: isGomokuResult,
     go: isGoResult,
     oldmaid: isOldMaidResult,
+    spades: isSpadesResult,
     gofish: isGoFishResult,
+    gongzhu: isGongZhuResult,
     doudizhu: isDouDizhuResult,
     jungle: isJungleResult,
     xiangqi: isXiangqiResult,

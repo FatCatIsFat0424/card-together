@@ -38,6 +38,8 @@ export { isReversiResult } from '../managers/games/reversi-validation';
 export { isGomokuResult } from '../managers/games/gomoku-validation';
 export { isGoResult } from '../managers/games/go-validation';
 export { isOldMaidResult } from '../managers/games/oldmaid-validation';
+export { isSpadesResult } from '../managers/games/spades-validation';
+export { isGongZhuResult } from '../managers/games/gongzhu-validation';
 export { isGoFishResult } from '../managers/games/gofish-validation';
 export { isDouDizhuResult } from '../managers/games/doudizhu-validation';
 export { isJungleResult } from '../managers/games/jungle-validation';

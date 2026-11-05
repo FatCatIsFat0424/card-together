@@ -1,12 +1,12 @@
 # 對局展示製作
 
-全部 27 款模式都提供完整入門展示，入口在各模式的規則面板。影片無旁白，使用中文牌桌與畫面說明，附中英文字幕、章節和文字稿。內容以操作與完成一局為目標，特殊分支以明確標示的規則補充卡說明，不將單一牌例當成策略建議。
+各模式均有完整入門展示腳本，影片入口在各模式的規則面板；只有匯入站長提供的影片後才顯示。影片無旁白，使用中文牌桌與畫面說明，附中英文字幕、章節和文字稿。內容以操作與完成一局為目標，特殊分支以明確標示的規則補充卡說明，不將單一牌例當成策略建議。
 
 ## 影片檔
 
 影片不進 Git，比照[音樂與表情符號](media.md)由站長在本機提供：
 
-- 原始檔放在被忽略的 `local-demos/<game>.mp4`（`<game>` 為 `DEMO_GAME_TYPES` 中的模式，只認根目錄）。請自行備份；重錄全部模式約需 40 分鐘。
+- 原始檔放在被忽略的 `local-demos/<game>.mp4`（`<game>` 為 `DEMO_GAME_TYPES` 中的模式，只認根目錄）。請自行備份；新增模式須先完成下述錄製與驗證。
 - `npm run demos:import`（client 的 `predev`／`prebuild` 與完整檢查也會執行）把影片複製為帶內容雜湊的 `client/public/game-demos/<game>-<hash>.mp4`，並產生 `client/src/game-demo-videos.generated.json`。
 - 匯入時比對 MP4 長度與 [`game-demo-recordings.json`](../client/src/game-demo-recordings.json)，相差超過 0.1 秒或沒有記錄長度（分段式 MP4）就失敗；其他檔名列為略過。
 - 沒有影片的模式，規則面板不顯示展示區，只保留文字規則。字幕 `<game>.<locale>.vtt` 與章節時間仍在 Git 中，換影片時必須一併更新。
@@ -15,7 +15,7 @@
 ## 來源與隱私
 
 - 課程時間軸：[`game-demos.ts`](../client/src/game-demos.ts)，實際錄影的起點、長度與章節秒數在 [`game-demo-recordings.json`](../client/src/game-demo-recordings.json)；雙語說明與文字稿入口：[`game-demo-i18n.ts`](../client/src/game-demo-i18n.ts)。牌類、下注類與棋類各自維護於 `client/src/game-demos/`；章節與字幕共用課程來源。
-- [`generate-fixtures.ts`](../scripts/game-demos/generate-fixtures.ts) 整合 `cards-fixtures.ts`、`betting-fixtures.ts`、`boards-fixtures.ts`，以固定牌序／骰序或亂數種子呼叫正式 manager，驗證每一步合法並完成對局。產出僅包含固定玩家視角；他人未公開的排牌、蓋牌、布陣與船位提交內容也會移除；長局以差異快照儲存。
+- [`generate-fixtures.ts`](../scripts/game-demos/generate-fixtures.ts) 整合 `cards-fixtures.ts`、`betting-fixtures.ts`、`boards-fixtures.ts` 與 `trick-fixtures.ts`，以固定牌序／骰序或亂數種子呼叫正式 manager，驗證每一步合法並完成對局。產出僅包含固定玩家視角；他人未公開的排牌、蓋牌、布陣與船位提交內容也會移除；長局以差異快照儲存。
 - [`recording-stage.tsx`](../scripts/game-demos/recording-stage.tsx) 使用正式牌桌與隔離的 store，按課程時間軸示範合成資料；選牌、排牌與叫品選擇使用正式控制項，提交後的狀態來自已驗證快照，不連線操作真實房間。各模式以正式展示元件呈現公開的揭盅、攤牌、底池與輪盤結果，再切換下一輪。
 - 開發用入口 `client/demo-recording.html` 不在正式 build 的 HTML entry 中；fixtures 與錄製工具不會打包進正式網站。
 

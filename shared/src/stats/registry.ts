@@ -1,3 +1,5 @@
+import { spadesFacts } from './spades';
+import { heartsFacts } from './hearts';
 import type { ResultOf } from '../games/game-definition';
 import type { GameSeat, GameType, ReplaySnapshot } from '../types';
 import { bigTwoFacts } from './bigtwo';
@@ -22,6 +24,7 @@ import { sevensFacts } from './sevens';
 import { tenHalfFacts } from './tenhalf';
 import { crazyEightsFacts } from './crazyeights';
 import { studFacts } from './stud';
+import { gongZhuFacts } from './gongzhu';
 import { goFishFacts } from './gofish';
 import { douDizhuFacts } from './doudizhu';
 import { banqiFacts } from './banqi';
@@ -33,6 +36,8 @@ import { battleshipFacts } from './battleship';
 export const GAME_STATS: {
   readonly [K in GameType]: (result: ResultOf<K>, seat: GameSeat, frame: ReplaySnapshot | null) => SeatFacts;
 } = {
+  spades: spadesFacts,
+  hearts: heartsFacts,
   bridge: bridgeFacts,
   bigtwo: bigTwoFacts,
   redpoints: redPointsFacts,
@@ -52,6 +57,7 @@ export const GAME_STATS: {
   go: goFacts,
   oldmaid: oldMaidFacts,
   gofish: goFishFacts,
+  gongzhu: gongZhuFacts,
   doudizhu: douDizhuFacts,
   jungle: jungleFacts,
   xiangqi: xiangqiFacts,

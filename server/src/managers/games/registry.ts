@@ -1,3 +1,5 @@
+import { spadesAdapter } from './spades-adapter';
+import { heartsAdapter } from './hearts-adapter';
 import { GAME_TYPES } from '@shared/constants';
 import type { GameType } from '@shared/types';
 import type { GameAdapter } from './game-adapter';
@@ -19,6 +21,7 @@ import { reversiAdapter } from './reversi-adapter';
 import { gomokuAdapter } from './gomoku-adapter';
 import { goAdapter } from './go-adapter';
 import { oldMaidAdapter } from './oldmaid-adapter';
+import { gongZhuAdapter } from './gongzhu-adapter';
 import { goFishAdapter } from './gofish-adapter';
 import { douDizhuAdapter } from './doudizhu-adapter';
 import { jungleAdapter } from './jungle-adapter';
@@ -31,6 +34,8 @@ import { battleshipAdapter } from './battleship-adapter';
 
 /** Every game type maps to its own adapter; a missing or mismatched entry fails to compile. */
 export const GAME_ADAPTERS: { readonly [K in GameType]: GameAdapter<K> } = {
+  spades: spadesAdapter,
+  hearts: heartsAdapter,
   bridge: bridgeAdapter,
   bigtwo: bigTwoAdapter,
   redpoints: redPointsAdapter,
@@ -50,6 +55,7 @@ export const GAME_ADAPTERS: { readonly [K in GameType]: GameAdapter<K> } = {
   go: goAdapter,
   oldmaid: oldMaidAdapter,
   gofish: goFishAdapter,
+  gongzhu: gongZhuAdapter,
   doudizhu: douDizhuAdapter,
   jungle: jungleAdapter,
   xiangqi: xiangqiAdapter,

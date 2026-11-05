@@ -1,3 +1,5 @@
+import type { SpadesGameContract } from './spades/types';
+import type { HeartsGameContract } from './hearts/types';
 import type { BridgeGameContract } from './bridge/types';
 import type { BigTwoGameContract } from './bigtwo/types';
 import type { RedPointsGameContract } from './redpoints/types';
@@ -16,6 +18,7 @@ import type { ReversiGameContract } from './reversi/types';
 import type { GomokuGameContract } from './gomoku/types';
 import type { GoGameContract } from './go/types';
 import type { OldMaidGameContract } from './oldmaid/types';
+import type { GongZhuGameContract } from './gongzhu/types';
 import type { GoFishGameContract } from './gofish/types';
 import type { DouDizhuGameContract } from './doudizhu/types';
 import type { JungleGameContract } from './jungle/types';
@@ -30,6 +33,8 @@ import type { GameSeat } from '../types/player';
 
 /** Type-only contracts; each game owns its state, visible view, result, and room rules. */
 export interface GameTypeRegistry {
+  readonly spades: SpadesGameContract;
+  readonly hearts: HeartsGameContract;
   readonly bridge: BridgeGameContract;
   readonly bigtwo: BigTwoGameContract;
   readonly redpoints: RedPointsGameContract;
@@ -49,6 +54,7 @@ export interface GameTypeRegistry {
   readonly go: GoGameContract;
   readonly oldmaid: OldMaidGameContract;
   readonly gofish: GoFishGameContract;
+  readonly gongzhu: GongZhuGameContract;
   readonly doudizhu: DouDizhuGameContract;
   readonly jungle: JungleGameContract;
   readonly xiangqi: XiangqiGameContract;

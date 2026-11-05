@@ -15,6 +15,8 @@ const row = (from: number, size: number): Card[] => Array.from({ length: size },
 const arrangement = { front: row(2, 3), middle: row(5, 5), back: row(10, 5) };
 
 const ACTIONS = [
+  { gameType: 'hearts', action: { type: 'play', card } },
+  { gameType: 'hearts', action: { type: 'pass', cards: [card, other, { suit: 'diamonds', rank: 3 }] } },
   { gameType: 'bridge', action: { type: 'bid', bid: { type: 'pass' } } },
   { gameType: 'bridge', action: { type: 'bid', bid: { type: 'bid', level: 7, suit: 'nt' } } },
   { gameType: 'bridge', action: { type: 'play', card } },
@@ -80,6 +82,9 @@ const ACTIONS = [
   { gameType: 'oldmaid', action: { type: 'draw', index: 0, reorder: [2, 0, 1] } },
   { gameType: 'oldmaid', action: { type: 'reorder', order: [1, 0] } },
   { gameType: 'oldmaid', action: { type: 'reorder', order: [] } },
+  { gameType: 'spades', action: { type: 'bid', bid: 0 } },
+  { gameType: 'spades', action: { type: 'play', card } },
+  { gameType: 'gongzhu', action: { type: 'play', card } },
   { gameType: 'gofish', action: { type: 'ask', target: 'P6', rank: 14 } },
   { gameType: 'banqi', action: { type: 'flip', to: '7,3' } },
   { gameType: 'banqi', action: { type: 'move', from: '0,0', to: '1,0' } },
@@ -117,7 +122,7 @@ describe('game action contracts', () => {
   });
 
   it.each(ACTIONS)('sanitizes $gameType $action.type without retaining input references', (expected) => {
-    const input = inject(expected, expected.gameType === 'napoleon' || expected.gameType === 'doudizhu');
+    const input = inject(expected, expected.gameType === 'napoleon' || expected.gameType === 'doudizhu' || expected.gameType === 'hearts');
     const before = structuredClone(input);
     const parsed = parseGameAction(input);
     expect(parsed).toEqual(expected);

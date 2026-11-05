@@ -129,7 +129,7 @@ describe('client game registries', () => {
     });
 
     it('marks only side-based games as never tying', () => {
-      expect(GAME_TYPES.filter((gameType) => clientGame(gameType).result.sidesWin)).toEqual(['bridge', 'napoleon']);
+      expect(GAME_TYPES.filter((gameType) => clientGame(gameType).result.sidesWin)).toEqual(['bridge', 'napoleon', 'spades']);
     });
   });
 
@@ -226,7 +226,7 @@ describe('client game registries', () => {
     it.each(GAME_TYPES)('keeps %s history optional only where tricks or results are listed elsewhere', (gameType: GameType) => {
       const hasHistory = Boolean(clientGame(gameType).roundHistory);
       expect(hasHistory).toBe(Boolean(gameUi(gameType).roundsView));
-      expect(hasHistory).toBe(!['bridge', 'chinesepoker', 'napoleon', 'reversi', 'jungle', 'gomoku', 'go', 'xiangqi', 'chess', 'banqi',
+      expect(hasHistory).toBe(!['spades', 'hearts', 'bridge', 'chinesepoker', 'napoleon', 'reversi', 'jungle', 'gomoku', 'go', 'xiangqi', 'chess', 'banqi',
         'chinesecheckers', 'landbattle', 'battleship'].includes(gameType));
     });
   });

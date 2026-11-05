@@ -1,4 +1,5 @@
 import { generateCardsFixtures } from './cards-fixtures';
+import { generateTrickFixtures } from './trick-fixtures';
 import { generateBoardFixtures } from './boards-fixtures';
 import { generateBettingFixtures } from './betting-fixtures';
 import { writeFileSync } from 'node:fs';
@@ -278,6 +279,7 @@ function main(): void {
         ...generateBettingFixtures(),
         ...generateBoardFixtures(),
         ...generateCardsFixtures(),
+        ...generateTrickFixtures(),
         bridge: compactLegacyFixture(fixtures.games.bridge),
         napoleon: compactLegacyFixture(fixtures.games.napoleon),
         chinesepoker: compactLegacyFixture(fixtures.games.chinesepoker),

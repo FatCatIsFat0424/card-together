@@ -1,3 +1,5 @@
+import { spadesClient } from './spades/spades-client';
+import { heartsClient } from './hearts/hearts-client';
 import { GAME_TYPES } from '@shared/constants';
 import { gameDefinition } from '@shared/games/registry';
 import type { GameCategory } from '@shared/games/game-definition';
@@ -28,6 +30,7 @@ import { landBattleClient } from './landbattle/landbattle-client';
 import { battleshipClient } from './battleship/battleship-client';
 import { liarsDiceClient } from './liarsdice/liarsdice-client';
 import { crazyEightsClient } from './crazyeights/crazyeights-client';
+import { gongZhuClient } from './gongzhu/gongzhu-client';
 import { goFishClient } from './gofish/gofish-client';
 import { banqiClient } from './banqi/banqi-client';
 import { chineseCheckersClient } from './chinesecheckers/chinesecheckers-client';
@@ -38,6 +41,7 @@ import { chineseCheckersClient } from './chinesecheckers/chinesecheckers-client'
  * derivations, and tables in the matching [UI registry](ui-registry.ts).
  */
 export const CLIENT_GAMES: { readonly [K in GameType]: ClientGame<K> } = {
+  hearts: heartsClient,
   bridge: bridgeClient,
   bigtwo: bigTwoClient,
   redpoints: redPointsClient,
@@ -61,7 +65,9 @@ export const CLIENT_GAMES: { readonly [K in GameType]: ClientGame<K> } = {
   reversi: reversiClient,
   gomoku: gomokuClient,
   go: goClient,
+  spades: spadesClient,
   gofish: goFishClient,
+  gongzhu: gongZhuClient,
   jungle: jungleClient,
   banqi: banqiClient,
   chinesecheckers: chineseCheckersClient,

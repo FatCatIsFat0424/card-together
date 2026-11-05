@@ -34,6 +34,8 @@ function record(id: string, source: StatsSource, kind: StatsRecordKind, remember
  * played combinations, revealed showdowns and settled results, never undisclosed cards.
  */
 export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefinition[]>> = {
+  spades: [record('nilsMade', 'result', 'count', true), record('topScore', 'result', 'max')],
+  hearts: [record('moons', 'result', 'count', true), record('cleanHands', 'result', 'count'), record('lowPenalty', 'result', 'min')],
   bridge: [
     record('slams', 'result', 'count', true),
     record('topContract', 'result', 'max'),
@@ -150,6 +152,12 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('firstOuts', 'result', 'count'),
     record('clean', 'result', 'count', true),
     record('pairsDiscarded', 'log', 'count'),
+  ],
+  gongzhu: [
+    record('topScore', 'result', 'max'),
+    record('bestHand', 'result', 'max'),
+    record('allHearts', 'result', 'count'),
+    record('grandSlams', 'result', 'count'),
   ],
   gofish: [
     record('handsWon', 'result', 'count', true),

@@ -97,6 +97,15 @@ describe('table seat plate', () => {
     vi.useFakeTimers({ now: 0 });
   });
 
+  it.each(['hearts', 'gongzhu', 'spades'])('shows changing public hand counts for %s', (gameType) => {
+    for (const count of [13, 7, 1, 0]) {
+      state.game = { ...baseGame(), visible: { gameType, handCounts: counts(count), log: [] } };
+      const html = render({ seat: 'N', position: 'top' });
+      if (count > 0) expect(html).toContain(`>${count} cards</span>`);
+      else expect(html).not.toContain('data-seat-tray="backs"');
+    }
+  });
+
   it('shows early departure to other players and spectators while retaining PASS', () => {
     state.game = { ...baseGame(),
       bigTwo: { phase: 'playing', handCounts: counts(7), lockedSeats: ['E'] },

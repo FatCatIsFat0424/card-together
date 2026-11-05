@@ -6,6 +6,8 @@ import type { GameType } from '@shared/types';
 
 /** Seat rules as they were before the registry: four fixed seats unless listed here. */
 const PREVIOUS_SEATS: Readonly<Record<GameType, readonly [min: number, max: number, flexible: boolean, numbered: boolean]>> = {
+  spades: [4, 4, false, false],
+  hearts: [4, 4, false, false],
   bridge: [4, 4, false, false],
   bigtwo: [4, 4, false, false],
   redpoints: [4, 4, false, false],
@@ -28,6 +30,7 @@ const PREVIOUS_SEATS: Readonly<Record<GameType, readonly [min: number, max: numb
   stud: [2, 8, true, false],
   oldmaid: [2, 8, true, false],
   gofish: [2, 6, true, false],
+  gongzhu: [4, 4, false, false],
   doudizhu: [3, 3, true, true],
   banqi: [2, 2, true, false],
   chinesecheckers: [2, 6, true, true],
@@ -84,16 +87,16 @@ describe('registered result metadata', () => {
       ['liarsdeck', 'ranking', null], ['blackjack', 'ranking', 'chips'], ['holdem', 'ranking', 'chips'],
       ['napoleon', 'roles', null], ['tenhalf', 'ranking', 'chips'], ['liarsdice', 'ranking', null], ['crazyeights', 'ranking', 'penalty'], ['stud', 'ranking', 'chips'],
       ['reversi', 'ranking', null], ['oldmaid', 'ranking', 'points'],
-      ['gofish', 'ranking', 'points'], ['doudizhu', 'ranking', 'points'], ['jungle', 'ranking', null], ['gomoku', 'ranking', null], ['go', 'ranking', null],
+      ['gofish', 'ranking', 'points'], ['gongzhu', 'ranking', 'points'], ['doudizhu', 'ranking', 'points'], ['jungle', 'ranking', null], ['gomoku', 'ranking', null], ['go', 'ranking', null],
       ['xiangqi', 'ranking', null], ['chess', 'ranking', null], ['banqi', 'ranking', null],
-      ['chinesecheckers', 'ranking', null], ['landbattle', 'ranking', null], ['battleship', 'ranking', null],
+      ['chinesecheckers', 'ranking', null], ['landbattle', 'ranking', null], ['battleship', 'ranking', null], ['spades', 'team', 'points'], ['hearts', 'ranking', 'penalty'],
     ]);
   });
 
-  it('gives only Hold\'em, Crazy Eights and Go Fish the waiting-room fixed hand count', () => {
+  it('lists every fixed-hand match in the waiting room', () => {
     expect(GAME_TYPES.flatMap((gameType) => {
       const hands = gameDefinition(gameType).matchHands;
       return hands === undefined ? [] : [[gameType, hands]];
-    })).toEqual([['holdem', 20], ['crazyeights', 3], ['stud', 20], ['oldmaid', 3], ['gofish', 3], ['doudizhu', 6]]);
+    })).toEqual([['holdem', 20], ['crazyeights', 3], ['stud', 20], ['oldmaid', 3], ['gofish', 3], ['gongzhu', 4], ['doudizhu', 6]]);
   });
 });

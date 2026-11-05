@@ -1,3 +1,7 @@
+import { parseAction as parseSpadesAction } from './spades/actions';
+import type { SpadesAction } from './spades/actions';
+import { parseAction as parseHeartsAction } from './hearts/actions';
+import type { HeartsAction } from './hearts/actions';
 import type { GameType } from '../types/room';
 import { isGameType } from './registry';
 import { actionRecord } from './action-validation';
@@ -38,6 +42,8 @@ import type { GoGameAction } from './go/actions';
 import { parseAction as parseOldMaidAction } from './oldmaid/actions';
 import type { OldMaidAction } from './oldmaid/actions';
 import { parseAction as parseGoFishAction } from './gofish/actions';
+import { parseAction as parseGongZhuAction } from './gongzhu/actions';
+import type { GongZhuAction } from './gongzhu/actions';
 import type { GoFishAction } from './gofish/actions';
 import { parseAction as parseDouDizhuAction } from './doudizhu/actions';
 import type { DouDizhuAction } from './doudizhu/actions';
@@ -58,6 +64,8 @@ import type { BattleshipGameAction } from './battleship/actions';
 
 /** Action contracts are indexed separately from lobby and presentation metadata. */
 export interface GameActionMap {
+  spades: SpadesAction;
+  hearts: HeartsAction;
   bridge: BridgeAction;
   bigtwo: BigTwoAction;
   redpoints: RedPointsAction;
@@ -77,6 +85,7 @@ export interface GameActionMap {
   go: GoGameAction;
   oldmaid: OldMaidAction;
   gofish: GoFishAction;
+  gongzhu: GongZhuAction;
   doudizhu: DouDizhuAction;
   jungle: JungleGameAction;
   xiangqi: XiangqiGameAction;
@@ -92,6 +101,8 @@ export type GameActionEnvelope<K extends GameType = GameType> = {
 }[K];
 
 export const ACTION_PARSERS: { readonly [K in GameType]: (value: unknown) => GameActionMap[K] | string } = {
+  spades: parseSpadesAction,
+  hearts: parseHeartsAction,
   bridge: parseBridgeAction,
   bigtwo: parseBigTwoAction,
   redpoints: parseRedPointsAction,
@@ -111,6 +122,7 @@ export const ACTION_PARSERS: { readonly [K in GameType]: (value: unknown) => Gam
   go: parseGoAction,
   oldmaid: parseOldMaidAction,
   gofish: parseGoFishAction,
+  gongzhu: parseGongZhuAction,
   doudizhu: parseDouDizhuAction,
   jungle: parseJungleAction,
   xiangqi: parseXiangqiAction,

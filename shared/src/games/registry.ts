@@ -1,3 +1,5 @@
+import { spadesDefinition } from './spades/definition';
+import { heartsDefinition } from './hearts/definition';
 import { GAME_TYPES } from '../constants/game-rules';
 import type { GameType, TimeControl } from '../types/room';
 import { DEFAULT_TIME_CONTROL } from '../time-control';
@@ -20,6 +22,7 @@ import { reversiDefinition } from './reversi/definition';
 import { gomokuDefinition } from './gomoku/definition';
 import { goDefinition } from './go/definition';
 import { oldMaidDefinition } from './oldmaid/definition';
+import { gongZhuDefinition } from './gongzhu/definition';
 import { goFishDefinition } from './gofish/definition';
 import { douDizhuDefinition } from './doudizhu/definition';
 import { jungleDefinition } from './jungle/definition';
@@ -32,6 +35,8 @@ import { battleshipDefinition } from './battleship/definition';
 
 /** Every game type maps to its own definition; a missing or mismatched entry fails to compile. */
 export const GAME_DEFINITIONS: { readonly [K in GameType]: GameDefinition<K> } = {
+  spades: spadesDefinition,
+  hearts: heartsDefinition,
   bridge: bridgeDefinition,
   bigtwo: bigTwoDefinition,
   redpoints: redPointsDefinition,
@@ -51,6 +56,7 @@ export const GAME_DEFINITIONS: { readonly [K in GameType]: GameDefinition<K> } =
   go: goDefinition,
   oldmaid: oldMaidDefinition,
   gofish: goFishDefinition,
+  gongzhu: gongZhuDefinition,
   doudizhu: douDizhuDefinition,
   jungle: jungleDefinition,
   xiangqi: xiangqiDefinition,
