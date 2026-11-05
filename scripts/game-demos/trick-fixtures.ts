@@ -3,7 +3,7 @@ import { createDeck, shuffleDeck } from '../../server/src/engine/deck';
 import * as hearts from '../../server/src/managers/games/hearts-game';
 import * as gongzhu from '../../server/src/managers/games/gongzhu-game';
 import * as spades from '../../server/src/managers/games/spades-game';
-import { getBotAction } from '../../server/src/bots/bot-decisions';
+import { createCardRecipe } from './card-recipe';
 import type { GameActionEnvelope } from '../../shared/src/games/actions';
 import { createDemoRecorder, DEMO_NOW } from './demo-recorder';
 import type { DemoFixture } from './demo-fixture-types';
@@ -50,6 +50,7 @@ function fixture(game: TrickDemoGame, seed: number): DemoFixture {
     state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
     return state / 2 ** 32;
   };
+  const recipe = createCardRecipe(game, random);
   const deck = (): Card[] => shuffleDeck(createDeck(), random);
   Math.random = random;
   Date.now = () => DEMO_NOW;
@@ -62,9 +63,9 @@ function fixture(game: TrickDemoGame, seed: number): DemoFixture {
     const recorder = createDemoRecorder(code, 'N', SEATS, () => read(code, game, 'N'));
     for (let step = 0; step < 5_000; step++) {
       const visible = read(code, game, 'N');
-      if (visible.result) return recorder.finish();
+      if (visible.result) { recipe.finish(); return recorder.finish(); }
       const seat = pending(visible);
-      const action = required(getBotAction(read(code, game, seat), random, 'hard'));
+      const action = recipe.next(seat);
       if (action.type !== 'game-action') throw new Error('Expected a trick game action.');
       const request = action.request;
       // Opponents' exchanged cards are private even though their submitted status is public.

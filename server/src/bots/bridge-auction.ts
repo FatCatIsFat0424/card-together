@@ -23,14 +23,15 @@ export const BRIDGE_RANGES = {
   twoNtOpening: [20, 21],
   preempt: [5, 10],
   simpleRaise: [5, 12],
-  limitRaise: [10, 18],
+  // A jump raise is a safe placement, not an invitation to chase a game bonus.
+  jumpRaise: [10, MAX_POINTS],
   oneNtResponse: [6, 12],
-  twoNtResponse: [13, 18],
+  twoNtResponse: [13, MAX_POINTS],
   oneLevelResponse: [6, MAX_POINTS],
   twoLevelResponse: [10, MAX_POINTS],
   minimumRebid: [11, 18],
   reverse: [16, MAX_POINTS],
-  jumpNtRebid: [18, 24],
+  jumpNtRebid: [18, MAX_POINTS],
   oneLevelOvercall: [8, 18],
   twoLevelOvercall: [10, 18],
   ntOvercall: [15, 19],
@@ -210,8 +211,6 @@ function describeOpening(action: BidAction, passesBefore: number): CallMeaning {
     return { minPoints: 22, balanced: true };
   }
   if (action.level === 1) {
-    // Fourth-seat practice openings may be weak and name the longest suit only.
-    if (passesBefore === 3) return { minPoints: 0, minLength: length(action.suit, isMajor(action.suit) ? 4 : 3) };
     return { ...range(BRIDGE_RANGES.opening), minLength: length(action.suit, isMajor(action.suit) ? 5 : 3) };
   }
   const minimum = action.level === 2 ? 6 : 7;
@@ -227,8 +226,8 @@ function describeResponse(ctx: CallContext, action: BidAction, profiles: Readonl
   if (opened.level === 1 && opened.suit !== 'nt') {
     const suit = opened.suit;
     const supportDenied = profiles[ctx.partner].minLength[suit] >= 5 ? 2 : 3;
-    // A contested pass may hold values when the opponents are expected to fail at a high level.
-    if (!isBid(action)) return { maxPoints: contested ? ((ctx.highest?.level ?? 1) >= 3 ? 15 : 10) : 5 };
+    // With interference a pass can lack a safe natural bid rather than lack strength.
+    if (!isBid(action)) return contested ? {} : { maxPoints: 5 };
     const jump = jumpOf(ctx, action);
     if (action.suit === 'nt') {
       if (action.level === 1) {
@@ -245,8 +244,12 @@ function describeResponse(ctx: CallContext, action: BidAction, profiles: Readonl
     }
     if (action.suit === suit) {
       const support = supportDenied + 1;
-      if (jump === 0) return { minPoints: BRIDGE_RANGES.simpleRaise[0], maxPoints: contested ? 15 : BRIDGE_RANGES.simpleRaise[1], minLength: length(suit, isMajor(suit) ? support : 4) };
-      if (jump === 1) return { ...range(BRIDGE_RANGES.limitRaise), minLength: length(suit, isMajor(suit) ? support : 4) };
+      if (jump === 0) return {
+        minPoints: contested ? 3 : BRIDGE_RANGES.simpleRaise[0],
+        maxPoints: contested ? undefined : BRIDGE_RANGES.simpleRaise[1],
+        minLength: length(suit, isMajor(suit) ? support : 4),
+      };
+      if (jump === 1) return { ...range(BRIDGE_RANGES.jumpRaise), minLength: length(suit, isMajor(suit) ? support : 4) };
       return { minPoints: 3, maxPoints: 10, minLength: length(suit, 5) };
     }
     const maxPoints = ctx.passedHand ? BRIDGE_RANGES.opening[0] : MAX_POINTS;
@@ -266,7 +269,7 @@ function describeResponse(ctx: CallContext, action: BidAction, profiles: Readonl
   const opponentsHold = ctx.highest?.seat !== ctx.partner;
   if (opened.suit === 'nt') {
     if (action.suit === 'nt') return { minPoints: opened.level === 1 ? 8 : 4, balanced: true };
-    if (jumpOf(ctx, action) === 0 && action.level <= 2) return { minPoints: 0, maxPoints: 15, minLength: length(action.suit, 5) };
+    if (jumpOf(ctx, action) === 0 && action.level <= 2) return { minPoints: 0, minLength: length(action.suit, 5) };
     return opponentsHold ? describeCompetitive(ctx, action, profiles) : { minLength: length(action.suit, 6) };
   }
   if (opponentsHold) return describeCompetitive(ctx, action, profiles);
@@ -281,46 +284,44 @@ function describeOpenerRebid(ctx: CallContext, action: BidAction, profiles: Read
   if (ctx.highest?.seat !== ctx.partner) return describeCompetitive(ctx, action, profiles);
   const own = opened.suit;
   const jump = jumpOf(ctx, action);
-  // Fourth-seat practice openers keep rebidding by shape whatever their strength.
-  const floor = (points: number): number => (ctx.opening!.index === 3 ? 0 : points);
-  if (response.suit === own) return { minPoints: floor(16) };
+  if (response.suit === own) return { minPoints: 16 };
   if (response.suit !== 'nt' && action.suit === response.suit) {
     const needed = profiles[ctx.partner].minLength[response.suit] >= 5 ? 3 : 4;
-    if (jump === 0) return { minPoints: floor(BRIDGE_RANGES.minimumRebid[0]), maxPoints: 19, minLength: length(response.suit, needed) };
-    return { minPoints: floor(14), minLength: length(response.suit, needed) };
+    if (jump === 0) return { minPoints: BRIDGE_RANGES.minimumRebid[0], maxPoints: 19, minLength: length(response.suit, needed) };
+    return { minPoints: 14, minLength: length(response.suit, needed) };
   }
   if (action.suit === own) {
-    if (jump === 0) return { minPoints: floor(BRIDGE_RANGES.minimumRebid[0]), maxPoints: BRIDGE_RANGES.minimumRebid[1], minLength: length(own, ctx.partnerForcing ? 5 : 6) };
-    return { minPoints: floor(16), minLength: length(own, 6) };
+    if (jump === 0) return { minPoints: BRIDGE_RANGES.minimumRebid[0], maxPoints: BRIDGE_RANGES.minimumRebid[1], minLength: length(own, ctx.partnerForcing ? 5 : 6) };
+    return { minPoints: 16, minLength: length(own, 6) };
   }
   if (action.suit === 'nt') {
     if (jump > 0) return { ...range(BRIDGE_RANGES.jumpNtRebid), balanced: true };
     return response.level === 1 && response.suit === 'nt'
-      ? { minPoints: floor(BRIDGE_RANGES.jumpNtRebid[0]), balanced: true }
-      : { minPoints: floor(BRIDGE_RANGES.minimumRebid[0]), maxPoints: 14 };
+      ? { minPoints: BRIDGE_RANGES.jumpNtRebid[0], balanced: true }
+      : { minPoints: BRIDGE_RANGES.minimumRebid[0], maxPoints: 14 };
   }
-  if (jump > 0) return { minPoints: floor(19), minLength: length(action.suit, 4), forcing: true };
-  if (action.level === 1) return { minPoints: floor(BRIDGE_RANGES.opening[0]), minLength: length(action.suit, 4) };
+  if (jump > 0) return { minPoints: 19, minLength: length(action.suit, 4), forcing: true };
+  if (action.level === 1) return { minPoints: BRIDGE_RANGES.opening[0], minLength: length(action.suit, 4) };
   const reverse = BID_SUIT_ORDER.indexOf(action.suit) > BID_SUIT_ORDER.indexOf(own);
-  if (reverse) return { minPoints: floor(BRIDGE_RANGES.reverse[0]), minLength: { [action.suit]: 4, [own]: isMajor(own) ? 5 : 4 }, forcing: true };
+  if (reverse) return { minPoints: BRIDGE_RANGES.reverse[0], minLength: { [action.suit]: 4, [own]: isMajor(own) ? 5 : 4 }, forcing: true };
   return {
-    minPoints: floor(BRIDGE_RANGES.opening[0]), maxPoints: action.level === 2 ? 18 : 24,
+    minPoints: BRIDGE_RANGES.opening[0], maxPoints: action.level === 2 ? 18 : 24,
     minLength: { [action.suit]: 4, [own]: isMajor(own) ? 5 : 4 },
   };
 }
 
 function describeOvercall(ctx: CallContext, action: BidAction): CallMeaning {
   const relief = ctx.balancing ? 2 : 0;
-  if (!isBid(action)) return ctx.highest && ctx.highest.level === 1 && !ctx.balancing ? { maxPoints: 17 } : {};
+  if (!isBid(action)) return {};
   if (ctx.balancing && action.suit !== 'nt' && action.level - cheapestLevel(action.suit, ctx.highest) === 0) {
-    return action.level === 1 ? { minPoints: 6, minLength: length(action.suit, 5) } : { minLength: length(action.suit, 5) };
+    return action.level === 1 ? { minPoints: 5, minLength: length(action.suit, 5) } : { minLength: length(action.suit, 5) };
   }
   const jump = jumpOf(ctx, action);
   if (action.suit === 'nt') return { minPoints: BRIDGE_RANGES.ntOvercall[0] - relief * 2, maxPoints: BRIDGE_RANGES.ntOvercall[1], balanced: jump === 0 };
   if (jump === 0) {
     if (action.level === 1) return { minPoints: BRIDGE_RANGES.oneLevelOvercall[0] - relief, maxPoints: BRIDGE_RANGES.oneLevelOvercall[1], minLength: length(action.suit, 5) };
     if (action.level === 2) return { minPoints: BRIDGE_RANGES.twoLevelOvercall[0] - relief, maxPoints: BRIDGE_RANGES.twoLevelOvercall[1], minLength: length(action.suit, 5) };
-    return { minPoints: 13 - relief, maxPoints: 18, minLength: length(action.suit, 6) };
+    return { minPoints: 13 - relief, minLength: length(action.suit, 6) };
   }
   return { ...range(BRIDGE_RANGES.preempt), minLength: length(action.suit, action.level <= 2 ? 6 : 7) };
 }
@@ -334,8 +335,8 @@ function describeAdvance(ctx: CallContext, action: BidAction, profiles: Readonly
     return jump === 0 ? { minPoints: 3, maxPoints: 20, minLength: length(overcall.suit, 3) } : { minPoints: 3, maxPoints: 10, minLength: length(overcall.suit, 4) };
   }
   if (action.suit === 'nt') return jump === 0 ? { minPoints: 8, maxPoints: 12 } : { minPoints: 13, maxPoints: 16 };
-  if (overcall.suit === 'nt') return { minPoints: 0, maxPoints: 15, minLength: length(action.suit, 5) };
-  return { minPoints: 10, maxPoints: 18, minLength: length(action.suit, 5) };
+  if (overcall.suit === 'nt') return { minPoints: 0, minLength: length(action.suit, 5) };
+  return { minPoints: 10, minLength: length(action.suit, 5) };
 }
 
 /** Competitive bids need a known eight-card fit or a six-card suit of one's own. */

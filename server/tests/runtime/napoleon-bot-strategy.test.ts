@@ -10,6 +10,7 @@ import {
   napoleonTrickWinner, napoleonValidCards, removeNapoleonCards,
 } from '@shared/rules/napoleon';
 import { getNapoleonBotAction } from '../../src/bots/napoleon-strategy';
+import { seededRandom } from '../../src/bots/search/seeded-random';
 import { runSeededGame } from './seeded-game-runner';
 
 const ALL_SEATS: readonly GameSeat[] = ['N', 'E', 'S', 'W', 'P5', 'P6'];
@@ -417,6 +418,26 @@ describe('Napoleon Hard play', () => {
       trick: heartsTrick([['S', card('hearts', 5)], ['W', card('hearts', 4)], ['N', card('hearts', 14)]]),
     });
     expect(playFor(sim).card).toEqual(card('hearts', 12));
+  });
+
+  it('varies comparable point feeds while always supporting the known teammate', () => {
+    const sim = playingSim({
+      hands: { N: hand('S5 S4'), E: hand('BJ HQ HJ H3'), S: hand('C9 C8'), W: hand('D8 D9') },
+      trump: 'spades', secretaryCard: BIG, secretarySeat: 'E', tricks: filler(10),
+      trick: heartsTrick([['S', card('hearts', 5)], ['W', card('hearts', 4)], ['N', card('hearts', 14)]]),
+    });
+    const visible = visibleFor(sim, 'E');
+    const before = structuredClone(visible);
+    const choices = Array.from({ length: 64 }, (_, index) => getNapoleonBotAction(visible, seededRandom(index + 1), 'hard'));
+    const ranks = new Set<number>();
+    for (const choice of choices) {
+      if (choice?.type !== 'play' || isNapoleonJoker(choice.card)) throw new Error('Expected an ordinary point card.');
+      expect(choice.card.suit).toBe('hearts');
+      expect([11, 12]).toContain(choice.card.rank);
+      ranks.add(choice.card.rank);
+    }
+    expect(ranks.size).toBe(2);
+    expect(visible).toEqual(before);
   });
 
   it('a defender sheds a low card instead of feeding the Napoleon', () => {

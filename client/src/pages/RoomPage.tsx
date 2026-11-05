@@ -43,6 +43,7 @@ import { GameRulesDialog } from '../components/GameRulesDialog';
 import { roomRulesContext } from '../game-rules-context';
 import { VoiceButton, VoiceDockPanel } from '../components/VoiceControls';
 import { RoomHeader } from '../components/RoomHeader';
+import { normalizeRoomCode } from '../room-invitation';
 import styles from './RoomPage.module.css';
 import botSeatBackground from '../assets/room-backgrounds/bot-seat.webp';
 import { unreadCount } from './room-progress';
@@ -75,7 +76,8 @@ function additionalSeatLabel(t: Translate, gameType: GameType, index: number): s
 }
 
 export function RoomPage(): ReactNode {
-  const { roomCode } = useParams<{ roomCode: string }>();
+  const { roomCode: roomCodeParam } = useParams<{ roomCode: string }>();
+  const roomCode = normalizeRoomCode(roomCodeParam);
   const navigate = useNavigate();
   const account = useAccountStore((state) => state.account);
   const playerId = usePlayerStore((state) => state.playerId);

@@ -150,8 +150,8 @@ function openingCall(s: Situation, passesBefore: number): BidAction {
   const [twoNtLow, twoNtHigh] = BRIDGE_RANGES.twoNtOpening;
   if (hand.balanced && hand.points >= twoNtLow && hand.points <= twoNtHigh) return bid(2, 'nt');
   if (opensAtOneLevel(hand)) return bid(1, openingSuit(hand));
-  // A fourth-seat pass would redeal, so open the longest suit to keep practice moving.
-  if (passesBefore === 3) return bid(1, bySuitLength(hand, BRIDGE_SUITS)[0]);
+  // Fourth seat may pass out the deal; a weak opening would mislead partner.
+  if (passesBefore === 3) return PASS;
   for (const suit of bySuitLength(hand, BRIDGE_SUITS)) {
     const level = preemptLevel(hand, suit);
     if (level > 0) return bid(level, suit);
@@ -170,8 +170,7 @@ function oneLevelSuit(s: Situation, exclude: readonly BidSuit[]): Suit | null {
 
 function raiseNeeds(s: Situation, suit: Suit): number {
   const shown = partnerProfile(s).minLength[suit];
-  if (shown >= 5) return 3;
-  return isMajor(suit) || suit === 'diamonds' ? 4 : 5;
+  return Math.max(3, 8 - shown);
 }
 
 function respondToSuit(s: Situation, opened: Suit): BidAction {
@@ -191,7 +190,7 @@ function respondToSuit(s: Situation, opened: Suit): BidAction {
     return PASS;
   }
   const canRaise = support >= needs && (raise <= 2 || (raise === 3 && (fit >= 9 || points >= 10)));
-  if (support >= needs && hand.points >= BRIDGE_RANGES.limitRaise[0] && points >= BRIDGE_RANGES.limitRaise[0] + 1
+  if (support >= needs && hand.points >= BRIDGE_RANGES.jumpRaise[0] && points >= BRIDGE_RANGES.jumpRaise[0] + 1
     && raise + 1 <= 3 && isSafe(raise + 1, opened, combinedMinimum, fit)) {
     return bid(raise + 1, opened);
   }
@@ -212,12 +211,12 @@ function respondToSuit(s: Situation, opened: Suit): BidAction {
     if (ntLevel <= 2 && hand.balanced && hand.points >= BRIDGE_RANGES.twoNtResponse[0]) return bid(2, 'nt');
   }
   if (!contested && hand.points >= BRIDGE_RANGES.twoNtResponse[0]) {
-    // Strong unbalanced hands without a natural four-card suit at two still force with their longest suit.
-    const longest = bySuitLength(hand, BRIDGE_SUITS.filter((suit) => suit !== opened && cheapest(s, suit) <= 2))[0];
+    const longest = bySuitLength(hand, BRIDGE_SUITS.filter((suit) => suit !== opened && cheapest(s, suit) <= 2
+      && hand.lengths[suit] >= (isMajor(suit) ? 5 : 4)))[0];
     if (longest) return bid(cheapest(s, longest), longest);
   }
   if (contested) return competitiveCall(s);
-  return ntLevel === 1 ? bid(1, 'nt') : PASS;
+  return ntLevel === 1 && hand.points <= BRIDGE_RANGES.oneNtResponse[1] ? bid(1, 'nt') : PASS;
 }
 
 /** Over partner's NT, any five-card suit plays better than NT in this no-dummy game. */
@@ -260,12 +259,12 @@ function rebidOverNt(s: Situation, own: Suit): BidAction {
   if (hand.lengths[own] >= 6) {
     const level = cheapest(s, own);
     const fit = hand.lengths[own] + partner.minLength[own];
-    if (hand.points >= 16 && isSafe(level + 1, own, hand.points + partner.minPoints, fit)) return bid(level + 1, own);
+    if (hand.points >= 19 || (hand.points >= 16 && isSafe(level + 1, own, hand.points + partner.minPoints, fit))) return bid(level + 1, own);
     return legal(s, level, own) ?? PASS;
   }
   for (const suit of bySuitLength(hand, BRIDGE_SUITS.filter((other) => other !== own))) {
     if (hand.lengths[suit] < 4 || partner.maxLength[suit] < 4 || cheapest(s, suit) !== 2) continue;
-    if (!ranksAbove(suit, own) || hand.points >= BRIDGE_RANGES.reverse[0]) return bid(2, suit);
+    if (!ranksAbove(suit, own) || hand.points >= BRIDGE_RANGES.reverse[0]) return bid(hand.points >= 19 ? 3 : 2, suit);
   }
   return PASS;
 }
@@ -284,22 +283,25 @@ function rebidOverNewSuit(s: Situation, own: Suit, response: Suit): BidAction {
   if (newSuit) return bid(1, newSuit);
   const ntLevel = cheapest(s, 'nt');
   if (hand.balanced) {
-    if (hand.points >= BRIDGE_RANGES.jumpNtRebid[0] && isSafe(ntLevel + 1, 'nt', combinedMinimum, 0)) return bid(ntLevel + 1, 'nt');
+    if (hand.points >= BRIDGE_RANGES.jumpNtRebid[0] && ntLevel + 1 <= 3
+      && (ctx.partnerForcing || isSafe(ntLevel + 1, 'nt', combinedMinimum, 0))) return bid(ntLevel + 1, 'nt');
     if (ntLevel <= 2 && hand.points <= 14) return bid(ntLevel, 'nt');
   }
   if (hand.lengths[own] >= 6) {
     const level = cheapest(s, own);
     const fit = hand.lengths[own] + partner.minLength[own];
-    if (hand.points >= 16 && isSafe(level + 1, own, combinedMinimum, fit)) return bid(level + 1, own);
+    if (hand.points >= 19 || (hand.points >= 16 && isSafe(level + 1, own, combinedMinimum, fit))) return bid(level + 1, own);
     if (level <= 3) return bid(level, own);
   }
   for (const suit of bySuitLength(hand, BRIDGE_SUITS.filter((other) => other !== own && other !== response))) {
     if (hand.lengths[suit] < 4 || cheapest(s, suit) > 2) continue;
-    if (!ranksAbove(suit, own) || hand.points >= BRIDGE_RANGES.reverse[0]) return bid(cheapest(s, suit), suit);
+    if (!ranksAbove(suit, own) || hand.points >= BRIDGE_RANGES.reverse[0]) {
+      const level = cheapest(s, suit);
+      return bid(level + Number(hand.points >= 19), suit);
+    }
   }
   if (!ctx.partnerForcing) return PASS;
   if (hand.lengths[own] >= 5 && cheapest(s, own) <= 3) return bid(cheapest(s, own), own);
-  if (hand.lengths[response] >= 3 && cheapest(s, response) <= 3) return bid(cheapest(s, response), response);
   if (ntLevel <= 2) return bid(ntLevel, 'nt');
   return legal(s, cheapest(s, own), own) ?? PASS;
 }

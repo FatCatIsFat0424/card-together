@@ -1,15 +1,16 @@
 import type { CardOrJoker, DouDizhuVisibleState, GameSeat } from '@shared/types';
 import { cardKey } from '@shared/rules/cards';
-import { ddzIsBomb, ddzNextSeat, ddzSmallestMove, sortDdzHand } from '@shared/rules/doudizhu';
+import { ddzIsBomb, ddzNextSeat, ddzResolve, ddzSmallestMove, sortDdzHand } from '@shared/rules/doudizhu';
 import type { DdzCombo, DdzMove } from '@shared/rules/doudizhu';
 import type { BotAction } from './bot-decisions';
 import { getDouDizhuBotAction, partnerOf, scoreOptions, unseenCards } from './doudizhu-strategy';
 import type { SearchContext } from './search/search-types';
+import { selectNearBest } from './selection';
 
 // Determinized rollouts: the hidden cards are dealt at random to the two other hands, every candidate play is
 // followed by a quick greedy game to the end, and the play whose side wins most often is chosen. All
 // candidates share each deal of the hidden cards, so their results compare directly. The heuristic ranks
-// the candidates and breaks ties; a spent clock stops after the rounds already finished.
+// the candidates; close rollout results share the choice without overruling a clear win-rate advantage.
 
 /** Candidates examined per decision. */
 const CANDIDATES = 6;
@@ -34,6 +35,24 @@ function shuffled<T>(items: readonly T[], random: () => number): T[] {
   return copy;
 }
 
+/** Public bottom cards that have not been played still belong to the landlord. */
+export function sampleDouDizhuHands(visible: DouDizhuVisibleState, random: () => number): Map<GameSeat, CardOrJoker[]> {
+  const unseen = unseenCards(visible);
+  const keys = new Set(unseen.map(cardKey));
+  const fixed = visible.landlord !== visible.mySeat ? (visible.bottom ?? []).filter((card) => keys.has(cardKey(card))) : [];
+  const fixedKeys = new Set(fixed.map(cardKey));
+  const deck = shuffled(unseen.filter((card) => !fixedKeys.has(cardKey(card))), random);
+  const hands = new Map<GameSeat, CardOrJoker[]>([[visible.mySeat, [...visible.myHand]]]);
+  let offset = 0;
+  for (const seat of visible.seats.filter((seat) => seat !== visible.mySeat)) {
+    const known = seat === visible.landlord ? fixed : [];
+    const count = Math.max(0, visible.handCounts[seat] - known.length);
+    hands.set(seat, sortDdzHand([...known, ...deck.slice(offset, offset + count)]));
+    offset += count;
+  }
+  return hands;
+}
+
 /** Plays on greedily; returns the seat that went out first, or null when the rollout ran too long. */
 function playOut(
   state: Rollout, seats: readonly GameSeat[], landlord: GameSeat, apply: DdzMove | null, first: boolean,
@@ -49,9 +68,12 @@ function playOut(
     } else {
       const friends = seat === landlord ? [] : seats.filter((other) => other !== seat && other !== landlord);
       const partnerLed = state.last !== null && friends.includes(state.last.seat);
-      move = partnerLed ? null : ddzSmallestMove(hand, state.last?.combo ?? null);
+      const landlordCards = state.hands.get(landlord)!.length;
+      const threatened = partnerLed && landlordCards <= 2 && state.last!.combo.size === landlordCards;
+      const finish = ddzResolve(hand, state.last?.combo ?? null);
+      move = finish ? { cards: hand, combo: finish } : partnerLed && !threatened ? null : ddzSmallestMove(hand, state.last?.combo ?? null);
       // A bomb is not worth it while every opponent still holds a lot of cards.
-      if (move && ddzIsBomb(move.combo) && state.last && !ddzIsBomb(state.last.combo)
+      if (!finish && move && ddzIsBomb(move.combo) && state.last && !ddzIsBomb(state.last.combo)
         && seats.every((other) => other === seat || friends.includes(other) || (state.hands.get(other)?.length ?? 0) > 4)) move = null;
     }
     if (move === null) {
@@ -95,18 +117,10 @@ export function douDizhuSearch(visible: DouDizhuVisibleState, context: SearchCon
   }).sort((a, b) => b.score - a.score);
   if (options.length <= 1 || options[0].score >= 1000) return getDouDizhuBotAction(visible, random);
   const candidates = options.slice(0, CANDIDATES);
-  const others = seats.filter((seat) => seat !== me);
-  const unseen = unseenCards(visible);
   const wins = candidates.map(() => 0);
   let rounds = 0;
   while (rounds < MAX_ROUNDS && (rounds === 0 || !budget.expired())) {
-    const deck = shuffled(unseen, random);
-    const dealt = new Map<GameSeat, CardOrJoker[]>();
-    let offset = 0;
-    for (const seat of others) {
-      dealt.set(seat, deck.slice(offset, offset + visible.handCounts[seat]));
-      offset += visible.handCounts[seat];
-    }
+    const dealt = sampleDouDizhuHands(visible, random);
     candidates.forEach((candidate, index) => {
       const hands = new Map<GameSeat, CardOrJoker[]>([[me, [...visible.myHand]]]);
       for (const [seat, cards] of dealt) hands.set(seat, sortDdzHand(cards));
@@ -119,16 +133,13 @@ export function douDizhuSearch(visible: DouDizhuVisibleState, context: SearchCon
     });
     rounds += 1;
   }
-  let best = 0;
-  let bestValue = -Infinity;
-  candidates.forEach((candidate, index) => {
-    const value = (wins[index] / rounds) * 100 + candidate.score * 0.1;
-    if (value > bestValue) {
-      bestValue = value;
-      best = index;
-    }
-  });
-  const move = candidates[best].move;
+  // The heuristic breaks close ties, but its influence is capped at one percentage point.
+  const topScore = candidates[0].score;
+  const chosen = selectNearBest(candidates.map((candidate, index) => ({
+    value: candidate,
+    score: wins[index] / rounds - Math.min(0.01, Math.max(0, topScore - candidate.score) * 0.001),
+  })), random, 0.015)!;
+  const move = chosen.move;
   return move
     ? { type: 'game-action', request: { gameType: 'doudizhu', action: { type: 'play', cards: move.cards } } }
     : { type: 'game-action', request: { gameType: 'doudizhu', action: { type: 'pass' } } };

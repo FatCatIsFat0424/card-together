@@ -1,0 +1,7 @@
+.title { font-size: var(--text-lg); }
+.content { display: flex; flex-direction: column; gap: var(--space-2); }
+.content p { margin: 0; }
+.content label { font-weight: 600; }
+.content input { width: 100%; min-width: 0; font-size: var(--text-base); }
+.hint { color: var(--text-secondary); font-size: var(--text-sm); }
+.status { min-height: 1.5em; color: var(--text-secondary); font-size: var(--text-sm); }

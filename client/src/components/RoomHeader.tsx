@@ -5,6 +5,7 @@ import { useRoomNoticeStore } from '../stores/room-notice-store';
 import { ActionButton } from './ActionButton';
 import { AppIcon } from './AppIcon';
 import { IconButton } from './IconButton';
+import { RoomInvitationButton } from './RoomInvitationButton';
 import styles from './RoomHeader.module.css';
 
 const COPIED_MS = 2000;
@@ -26,7 +27,7 @@ export interface RoomHeaderChat {
 
 /**
  * The one header row of the waiting room and the live table: back, game name, and room code on the left, a status
- * pill in the middle, then rules, voice, and chat, and after a divider the actions of the current phase with the
+ * pill in the middle, then the invite link, rules, voice, and chat, and after a divider the phase actions with the
  * exit last. A room notice, such as a passed abort vote, takes the pill's place while it shows.
  */
 export function RoomHeader({
@@ -82,6 +83,7 @@ export function RoomHeader({
     </div>
     <span className={styles.srOnly} role="status">{copied ? t('room.copied') : noticeText}</span>
     <div className={styles.actions}>
+      <RoomInvitationButton code={code} collapsible />
       <ActionButton icon="rules" text={t('room.action.rules')} label={t('rules.open')} collapsible
         aria-haspopup="dialog" onClick={onRules} />
       {voice}

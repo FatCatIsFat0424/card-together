@@ -121,7 +121,7 @@ describe('room header', () => {
       actions: createElement('button', { 'aria-label': 'PHASE' }),
       onBack: () => undefined, onRules: () => undefined,
     }));
-    expect(buttonNames(html)).toEqual(['Back to lobby', 'Copy ABC123', 'Game rules', 'VOICE', 'Chat 3 unread messages', 'PHASE']);
+    expect(buttonNames(html)).toEqual(['Back to lobby', 'Copy ABC123', 'Invite link', 'Game rules', 'VOICE', 'Chat 3 unread messages', 'PHASE']);
     expect(html.indexOf('Waiting to start · 2/4 seated')).toBeLessThan(html.indexOf('Game rules'));
     expect(html.indexOf('data-phase-actions')).toBeGreaterThan(html.indexOf('Chat 3 unread messages'));
   });
@@ -164,7 +164,7 @@ describe('table header and dock', () => {
     expect(header).toContain('>Big Two<');
     expect(header).toMatch(/data-room-status[^>]*>[^<]*s turn</);
     const names = buttonNames(header);
-    expect(names.slice(2)).toEqual(['Game rules', 'Table voice', 'Chat', 'Vote to abort', 'Leave early']);
+    expect(names.slice(2)).toEqual(['Invite link', 'Game rules', 'Table voice', 'Chat', 'Vote to abort', 'Leave early']);
     expect(header).toMatch(/aria-label="Leave early"[^>]*class="[^"]*danger/);
   });
 
@@ -204,7 +204,7 @@ describe('table header and dock', () => {
     const html = renderShell();
     expect(html).not.toContain('<header');
     const sheet = section(html, 'id="game-info-panel"', 'GAME-INFO');
-    const order = ['Copy ABC123', '> Game rules', 'Table voice', '"Chat"', 'Vote to abort', 'Leave early']
+    const order = ['Copy ABC123', 'Invite link', '> Game rules', 'Table voice', '"Chat"', 'Vote to abort', 'Leave early']
       .map((text) => sheet.indexOf(text));
     expect(order.every((index) => index >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);

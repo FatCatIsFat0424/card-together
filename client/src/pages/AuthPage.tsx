@@ -6,6 +6,7 @@ import {
 } from '@shared/constants';
 import type { AccountProfile } from '@shared/types';
 import { apiRequest } from '../api';
+import { authDestination } from '../auth-destination';
 import { AppCheckbox } from '../components/AppCheckbox';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
@@ -29,8 +30,7 @@ export function AuthPage({ mode }: AuthPageProps): ReactNode {
   const passwordType = showPassword ? 'text' : 'password';
   const register = mode === 'register';
   const locationState = location.state as { from?: string; passwordChanged?: boolean } | null;
-  const from = locationState?.from;
-  const destination = from?.startsWith('/') && !from.startsWith('//') ? from : '/';
+  const destination = authDestination(location.state);
 
   if (account) return <Navigate to={destination} replace />;
 

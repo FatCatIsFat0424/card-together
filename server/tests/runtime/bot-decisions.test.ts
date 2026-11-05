@@ -172,13 +172,13 @@ describe('filtered bot decisions', () => {
     },
   );
 
-  it('should pass with a weak hand but open after three passes and decline a pending redeal', () => {
+  it('should pass with a weak hand even after three passes and decline a pending redeal', () => {
     const hand = [card('clubs', 2), card('clubs', 3), card('hearts', 4)];
     expect(getBotAction(bridgeState({ myHand: hand }))).toEqual({ type: 'bridge-bid', action: { type: 'pass' } });
     expect(getBotAction(bridgeState({ myHand: hand,
       bidding: { ...createBiddingState('N'), consecutivePassCount: 3 },
     }))).toEqual({
-      type: 'bridge-bid', action: { type: 'bid', level: 1, suit: 'clubs' },
+      type: 'bridge-bid', action: { type: 'pass' },
     });
     expect(getBotAction(bridgeState({ phase: 'redeal_pending', redealPendingSeat: 'N' }))).toEqual({
       type: 'bridge-redeal', accept: false,
@@ -186,12 +186,13 @@ describe('filtered bot decisions', () => {
     expect(getBotAction(bridgeState({ phase: 'redeal_pending', redealPendingSeat: 'E' }))).toBeNull();
   });
 
-  it('should follow suit and win as cheaply as possible when an opponent leads', () => {
+  it('should follow suit and win as cheaply as possible when playing last', () => {
     const hand = [card('clubs', 2), card('clubs', 9), card('clubs', 14), card('spades', 14)];
     expect(getBotAction(bridgeState({
       phase: 'playing', myHand: hand, validCards: hand.slice(0, 3),
       contract: { level: 1, suit: 'nt', declarer: 'N' },
-      playing: { ...createPlayingState('W'), currentTurnSeat: 'N', currentTrick: { W: card('clubs', 8) } },
+      playing: { ...createPlayingState('E'), currentTurnSeat: 'N',
+        currentTrick: { E: card('clubs', 8), S: card('clubs', 3), W: card('clubs', 5) } },
     }))).toEqual({ type: 'bridge-play', card: card('clubs', 9) });
   });
 

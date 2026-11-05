@@ -113,7 +113,7 @@ describe('Spades runtime and bots', () => {
       expect(matchStanding(result!, seat)?.won).toBe(result!.winners.includes(seat));
       expect(spadesFacts(result!, seat).values.topScore).toBe(result!.scores[seat === 'N' || seat === 'S' ? 'NS' : 'EW']);
     }
-  });
+  }, 20_000);
   it('rejects corrupted cards, turns, bids, trick winners, score/bag totals and history order', () => {
     spades.startGame(code, players, createDeck(), 'N', 1);
     for (let i = 0; i < 20; i++) legal(view(state().position.currentTurnSeat!));

@@ -61,13 +61,13 @@ describe('bridge bot strategy', () => {
   beforeEach(() => bridge.restoreGames([]));
   afterEach(() => vi.restoreAllMocks());
 
-  it('passes a weak opening but opens at the fourth seat after three passes', () => {
+  it('passes a weak opening even in fourth seat instead of inventing opening strength', () => {
     const hand = [card('clubs', 2), card('clubs', 3), card('hearts', 4)];
     expect(getBridgeBotAction(visible({ myHand: hand }), () => 0)).toEqual({ type: 'bridge-bid', action: { type: 'pass' } });
     let bidding = createBiddingState('E');
     for (const seat of ['E', 'S', 'W'] as const) bidding = applyBid(bidding, seat, { type: 'pass' });
     expect(getBridgeBotAction(visible({ myHand: hand, bidding }), () => 0)).toEqual({
-      type: 'bridge-bid', action: { type: 'bid', suit: 'clubs', level: 1 },
+      type: 'bridge-bid', action: { type: 'pass' },
     });
   });
 
@@ -151,6 +151,37 @@ describe('bridge bot strategy', () => {
     expect(profile.minLength.hearts).toBe(4);
   });
 
+  it('describes fourth-seat openings with the same strength and major length as other seats', () => {
+    const profile = analyzeAuction(auction('N', 'P P P 1S').bids).profiles.W;
+    expect(profile.minPoints).toBe(11);
+    expect(profile.minLength.spades).toBe(5);
+  });
+
+  it('keeps an 18-point forced NT rebid out of the minimum range', () => {
+    expect(callFor('A98.T65.AK3.AKT5', auction('N', '1C P 1H P'))).toEqual(bid(2, 'nt'));
+    expect(analyzeAuction(auction('N', '1C P 1H P 2NT').bids).profiles.N).toMatchObject({ minPoints: 18, balanced: true });
+  });
+
+  it('shows extra strength with a jump rebid instead of understating a 19-point long suit', () => {
+    expect(callFor('Q4.K82.AKQT75.AJ', auction('N', '1D P 1S P'))).toEqual(bid(3, 'diamonds'));
+  });
+
+  it('prefers a descriptive NT response over raising a merely seven-card minor fit', () => {
+    expect(callFor('A94.QT6.K832.A94', auction('S', '1D P'))).toEqual(bid(2, 'nt'));
+  });
+
+  it('does not cap a strong jump raise or a strong natural NT placement', () => {
+    expect(callFor('AK2.A32.KQ.A7532', auction('S', '1H P'))).toEqual(bid(3, 'hearts'));
+    expect(analyzeAuction(auction('S', '1H P 3H').bids).profiles.N.maxPoints).toBeGreaterThanOrEqual(20);
+    expect(analyzeAuction(auction('S', '1C P 2NT').bids).profiles.N.maxPoints).toBeGreaterThanOrEqual(23);
+    expect(analyzeAuction(auction('S', '1NT P 2C').bids).profiles.N.maxPoints).toBeGreaterThanOrEqual(16);
+  });
+
+  it('does not interpret a contested pass as a promise of a weak hand', () => {
+    expect(callFor('72.AQ752.K72.Q73', auction('S', '1C 2S'))).toEqual(pass);
+    expect(analyzeAuction(auction('S', '1C 2S P').bids).profiles.N.maxPoints).toBeGreaterThanOrEqual(11);
+  });
+
   it('signs off in a five-card suit over partner 1NT and opener passes it', () => {
     expect(callFor('J2.Q8642.T75.932', auction('S', '1NT P'))).toEqual(bid(2, 'hearts'));
     expect(callFor('K72.Q86.T752.K93', auction('S', '1NT P'))).toEqual(pass);
@@ -160,7 +191,7 @@ describe('bridge bot strategy', () => {
   it('preempts with a weak long suit except in fourth seat', () => {
     expect(callFor('KQJ972.84.753.92', auction('N', ''))).toEqual(bid(2, 'spades'));
     expect(callFor('KQJ9732.84.75.92', auction('N', ''))).toEqual(bid(3, 'spades'));
-    expect(callFor('KQJ972.84.753.92', auction('N', 'P P P'))).toEqual(bid(1, 'spades'));
+    expect(callFor('KQJ972.84.753.92', auction('N', 'P P P'))).toEqual(pass);
   });
 
   it('competes with a known fit up to the total trump count', () => {
@@ -221,6 +252,18 @@ describe('bridge bot strategy', () => {
     expect(state).toEqual(original);
   });
 
+  it('preserves a secure partner lead even when its own honors are equivalent', () => {
+    const state = playing([card('hearts', 12), card('hearts', 14)], {
+      contract: { level: 1, suit: 'nt', declarer: 'N' }, playing: {
+        ...createPlayingState('E'), currentTurnSeat: 'N', currentTrick: {
+          E: card('hearts', 2), S: card('hearts', 13), W: card('hearts', 8),
+        },
+      },
+    });
+    for (let seed = 1; seed <= 64; seed++) expect(getBridgeBotAction(state, random(seed)))
+      .toEqual({ type: 'bridge-play', card: card('hearts', 12) });
+  });
+
   it('cashes a king once the ace has been publicly played', () => {
     const hand = [card('hearts', 13), card('clubs', 2), card('clubs', 3), card('clubs', 4)];
     const state = playing(hand, { playing: {
@@ -277,6 +320,75 @@ describe('bridge bot strategy', () => {
         ...createPlayingState('S'), currentTurnSeat: 'N', currentTrick: { S: card('clubs', 14), W: card('clubs', 2) },
       },
     }), () => 0)).toEqual({ type: 'bridge-play', card: card('hearts', 3) });
+  });
+
+  it('covers a vulnerable partner in third seat with an established winner', () => {
+    const state = playing(hand('-.A2.-.-'), { playing: {
+      ...createPlayingState('S'), currentTurnSeat: 'N', currentTrick: { S: card('hearts', 8), W: card('hearts', 3) },
+    } });
+    for (const sample of [0, 0.5, 0.999]) {
+      expect(getBridgeBotAction(state, () => sample)).toEqual({ type: 'bridge-play', card: card('hearts', 14) });
+    }
+  });
+
+  it('preserves the ace when partner king cannot be overtaken in the led suit', () => {
+    const state = playing(hand('-.A2.-.-'), { playing: {
+      ...createPlayingState('S'), currentTurnSeat: 'N', currentTrick: { S: card('hearts', 13), W: card('hearts', 3) },
+    } });
+    for (const sample of [0, 0.999]) {
+      expect(getBridgeBotAction(state, () => sample)).toEqual({ type: 'bridge-play', card: card('hearts', 2) });
+    }
+  });
+
+  it('does not cover partner on fourth hand even with a higher honor', () => {
+    const state = playing(hand('-.A2.-.-'), { playing: {
+      ...createPlayingState('E'), currentTurnSeat: 'N', currentTrick: {
+        E: card('hearts', 3), S: card('hearts', 8), W: card('hearts', 4),
+      },
+    } });
+    expect(getBridgeBotAction(state, () => 0)).toEqual({ type: 'bridge-play', card: card('hearts', 2) });
+  });
+
+  it('ducks an unsupported second-hand honor except when every remaining trick is needed', () => {
+    const state = playing(hand('-.Q2.-.-'), { playing: {
+      ...createPlayingState('W'), currentTurnSeat: 'N', currentTrick: { W: card('hearts', 3) },
+    } });
+    for (const sample of [0, 0.999]) {
+      expect(getBridgeBotAction(state, () => sample)).toEqual({ type: 'bridge-play', card: card('hearts', 2) });
+      expect(getBridgeBotAction({ ...state, contract: { level: 7, suit: 'nt', declarer: 'N' } }, () => sample))
+        .toEqual({ type: 'bridge-play', card: card('hearts', 12) });
+    }
+  });
+
+  it('protects partner against a publicly demonstrated ruff threat', () => {
+    const state = playing(hand('A2.3.-.-'), {
+      bidding: auction('E', '1C P 1NT P P P'),
+      contract: { level: 2, suit: 'spades', declarer: 'N' }, playing: {
+        ...createPlayingState('S'), currentTurnSeat: 'N', currentTrick: { S: card('clubs', 14), W: card('clubs', 2) },
+        completedTricks: [{ leadSeat: 'S', winnerSeat: 'E', cards: {
+          S: card('clubs', 13), W: card('clubs', 4), N: card('clubs', 5), E: card('spades', 3),
+        } }],
+      },
+    });
+    expect(getBridgeBotAction(state, () => 0)).toEqual({ type: 'bridge-play', card: card('spades', 14) });
+  });
+
+  it('varies equivalent winning honors across seeds without risking the trick', () => {
+    const state = playing(hand('-.AK2.-.-'), { playing: {
+      ...createPlayingState('S'), currentTurnSeat: 'N', currentTrick: { S: card('hearts', 3), W: card('hearts', 12) },
+    } });
+    const choices = new Set<number>();
+    for (let seed = 1; seed <= 32; seed++) {
+      const rng = random(seed * 7919);
+      const action = getBridgeBotAction(state, rng);
+      expect(action?.type).toBe('bridge-play');
+      if (action?.type === 'bridge-play') {
+        expect(action.card.suit).toBe('hearts');
+        expect(action.card.rank).toBeGreaterThanOrEqual(13);
+        choices.add(action.card.rank);
+      }
+    }
+    expect(choices).toEqual(new Set([13, 14]));
   });
 
   it.each([1, 7, 42, 99, 256, 1024, 2026, 8675309])('finishes seeded game %i with legal actions and immutable visible inputs', (seed) => {

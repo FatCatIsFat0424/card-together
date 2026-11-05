@@ -139,7 +139,8 @@ export function chooseHardPlay(visible: NapoleonVisibleState, random: () => numb
     value: choice,
     score: leading ? scoreLead(table, choice) : scoreFollow(table, choice),
   }));
-  return selectNearBest(scored, random, 0.05);
+  // Less than an eighth of a point keeps tactical wins and feeding ahead of variety.
+  return selectNearBest(scored, random, 0.12);
 }
 
 function pick<T>(options: readonly T[], random: () => number): T | null {

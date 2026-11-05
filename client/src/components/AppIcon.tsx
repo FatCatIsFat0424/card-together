@@ -32,6 +32,7 @@ import Flare from '@mui/icons-material/Flare';
 import GpsFixed from '@mui/icons-material/GpsFixed';
 import HighlightOff from '@mui/icons-material/HighlightOff';
 import LockOutlined from '@mui/icons-material/LockOutlined';
+import Link from '@mui/icons-material/Link';
 import Logout from '@mui/icons-material/Logout';
 import Menu from '@mui/icons-material/Menu';
 import MenuBookOutlined from '@mui/icons-material/MenuBookOutlined';
@@ -51,6 +52,7 @@ import Replay from '@mui/icons-material/Replay';
 import Reply from '@mui/icons-material/Reply';
 import SentimentSatisfiedOutlined from '@mui/icons-material/SentimentSatisfiedOutlined';
 import Shuffle from '@mui/icons-material/Shuffle';
+import ShareOutlined from '@mui/icons-material/ShareOutlined';
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
 import SkipNext from '@mui/icons-material/SkipNext';
 import SkipPrevious from '@mui/icons-material/SkipPrevious';
@@ -90,7 +92,7 @@ const ICONS = {
   arrowDown: ArrowDownward, arrowUp: ArrowUpward, info: AssignmentOutlined,
   chat: ChatBubbleOutline, check: Check, agree: CheckCircleOutline,
   previousPage: ChevronLeft, nextPage: ChevronRight, circle: Circle,
-  close: Close, copy: ContentCopy, trophy: EmojiEventsOutlined,
+  close: Close, copy: ContentCopy, link: Link, share: ShareOutlined, trophy: EmojiEventsOutlined,
   seven: Filter7, flag: FlagOutlined, burst: Flare, target: GpsFixed, disagree: HighlightOff,
   lock: LockOutlined, logout: Logout, menu: Menu, microphone: MicNone,
   music: MusicNote, pause: Pause, play: PlayArrow, repeat: Repeat,

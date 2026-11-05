@@ -2,6 +2,7 @@ import type { Card, Seat } from '@shared/types';
 import type { SpadesAction, SpadesVisibleState } from '@shared/games/spades/types';
 import { spadesTeam, spadesTrickWinner } from '@shared/rules/spades';
 import type { BotAction } from './bot-decisions';
+import { selectNearBest } from './selection';
 
 function wrap(action: SpadesAction): BotAction { return { type: 'game-action', request: { gameType: 'spades', action } }; }
 function active(view: SpadesVisibleState): boolean { return view.phase !== 'scoring' && view.currentTurnSeat === view.mySeat; }
@@ -23,7 +24,7 @@ export function easySpadesAction(view: SpadesVisibleState, random: () => number 
   return cards.length ? wrap({ type: 'play', card: cards[Math.min(cards.length - 1, Math.floor(random() * cards.length))] }) : null;
 }
 /** Partnership heuristics use only the player's hand, public bids, and the current trick. */
-export function getSpadesBotAction(view: SpadesVisibleState): BotAction | null {
+export function getSpadesBotAction(view: SpadesVisibleState, random: () => number = Math.random): BotAction | null {
   if (!active(view)) return null;
   if (view.phase === 'bidding') {
     const safeNil = view.myHand.every((card) => card.rank < 12)
@@ -31,7 +32,7 @@ export function getSpadesBotAction(view: SpadesVisibleState): BotAction | null {
       && view.myHand.filter((card) => card.suit === 'spades').length <= 2;
     return wrap({ type: 'bid', bid: safeNil ? 0 : estimate(view.myHand) });
   }
-  const cards = [...view.validCards].sort((a, b) => (a.suit === 'spades' ? 20 : 0) + a.rank - (b.suit === 'spades' ? 20 : 0) - b.rank);
+  const cards = view.validCards;
   if (!cards.length) return null;
   const { position, mySeat } = view;
   const nil = position.bids[mySeat] === 0 && position.taken[mySeat] === 0;
@@ -41,12 +42,31 @@ export function getSpadesBotAction(view: SpadesVisibleState): BotAction | null {
   const losing = cards.filter((card) => !winning.includes(card));
   const partner = ({ N: 'S', S: 'N', E: 'W', W: 'E' } as const)[mySeat] as Seat;
   const protectNil = winner === partner && position.bids[partner] === 0 && position.taken[partner] === 0;
-  let card: Card;
-  if (nil) card = losing.at(-1) ?? cards[0];
-  else if (protectNil && winning.length) card = winning[0];
-  else if (partnerWinning) card = cards[0];
-  else if (position.trick.length && winning.length) card = winning[0];
-  else if (position.trick.length) card = cards.find((item) => item.suit !== 'spades') ?? cards[0];
-  else card = cards.find((item) => item.rank === 14 && item.suit !== 'spades') ?? cards[0];
-  return wrap({ type: 'play', card });
+  const publicCards = [...position.tricks.flatMap((trick) => trick.plays), ...position.trick].map((play) => play.card);
+  const known = new Set([...view.myHand, ...publicCards].map((card) => `${card.suit}:${card.rank}`));
+  const missing = (suit: Card['suit'], rank: number): boolean => !known.has(`${suit}:${rank}`);
+  // Adjacent cards held together have identical strength against every unseen card.
+  const cost = (card: Card): number => (card.suit === 'spades' ? 20 : 0)
+    + Array.from({ length: card.rank - 2 }, (_, index) => index + 2).filter((rank) => missing(card.suit, rank)).length;
+  const master = (card: Card): boolean => Array.from({ length: 14 - card.rank }, (_, index) => card.rank + index + 1)
+    .every((rank) => !missing(card.suit, rank));
+  let pool: readonly Card[];
+  let shedHigh = false;
+  if (nil) {
+    pool = losing.length ? losing : cards;
+    shedHigh = losing.length > 0;
+  } else if (protectNil && winning.length) pool = winning;
+  else if (partnerWinning) {
+    const current = position.trick.find((play) => play.seat === winner)!.card;
+    // Secure a vulnerable partner's winner before the last opponent can overtake it.
+    const secure = position.trick.length < 3 && !master(current) ? winning.filter(master) : [];
+    pool = secure.length ? secure : losing.length ? losing : cards;
+  } else if (position.trick.length && winning.length) pool = winning;
+  else if (position.trick.length) pool = cards;
+  else {
+    const cash = cards.filter((card) => card.suit !== 'spades' && master(card));
+    pool = cash.length ? cash : cards;
+  }
+  const card = selectNearBest(pool.map((value) => ({ value, score: (shedHigh ? 1 : -1) * cost(value) })), random, 0);
+  return card ? wrap({ type: 'play', card }) : null;
 }

@@ -184,12 +184,15 @@ describe('easy bot decisions', () => {
     expect(getEasyBotAction(bridgeState({ phase: 'redeal_pending', redealPendingSeat: 'E' }))).toBeNull();
   });
 
-  it('should follow suit without the hard bot choosing the cheapest winner', () => {
+  it('should let the hard bot conserve winners in last position', () => {
     const myHand = [card('clubs', 2), card('clubs', 9), card('clubs', 14), card('spades', 14)];
     const visible = bridgeState({
       phase: 'playing', myHand, validCards: myHand.slice(0, 3),
       contract: { level: 1, suit: 'nt', declarer: 'N' },
-      playing: { ...createPlayingState('W'), currentTurnSeat: 'N', currentTrick: { W: card('clubs', 8) } },
+      playing: {
+        ...createPlayingState('E'), currentTurnSeat: 'N',
+        currentTrick: { E: card('clubs', 8), S: card('clubs', 3), W: card('clubs', 5) },
+      },
     });
     expect(getEasyBotAction(visible, () => 0.99)).toEqual({ type: 'bridge-play', card: card('clubs', 14) });
     expect(getBotAction(visible, () => 0.99)).toEqual({ type: 'bridge-play', card: card('clubs', 9) });

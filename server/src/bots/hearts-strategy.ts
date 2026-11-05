@@ -2,6 +2,7 @@ import type { Card } from '@shared/types';
 import type { HeartsAction, HeartsVisibleState } from '@shared/games/hearts/types';
 import { heartsPenalty } from '@shared/rules/hearts';
 import type { BotAction } from './bot-decisions';
+import { selectNearBest } from './selection';
 const wrap = (action: HeartsAction): BotAction => ({ type: 'game-action', request: { gameType: 'hearts', action } });
 function passing(view: HeartsVisibleState): boolean {
   return view.phase === 'passing' && !view.passedSeats.includes(view.mySeat);
@@ -21,11 +22,18 @@ export function easyHeartsAction(view: HeartsVisibleState, random: () => number 
   return wrap({ type: 'play', card: view.validCards[Math.min(view.validCards.length - 1, Math.floor(random() * view.validCards.length))] });
 }
 /** Shed dangerous high cards; play below the current winner, and dump penalties when void. */
-export function getHeartsBotAction(view: HeartsVisibleState, _random: () => number = Math.random): BotAction | null {
+export function getHeartsBotAction(view: HeartsVisibleState, random: () => number = Math.random): BotAction | null {
   if (passing(view)) {
     const risk = (card: Card): number => card.suit === 'spades' && card.rank >= 12 ? 50 + card.rank
       : card.rank + (card.suit === 'hearts' ? 10 : 0);
-    return wrap({ type: 'pass', cards: [...view.myHand].sort((a, b) => risk(b) - risk(a)).slice(0, 3) });
+    const remaining = [...view.myHand];
+    const cards: Card[] = [];
+    while (cards.length < 3 && remaining.length > 0) {
+      const card = selectNearBest(remaining.map((value) => ({ value, score: risk(value) })), random, 0)!;
+      cards.push(card);
+      remaining.splice(remaining.indexOf(card), 1);
+    }
+    return wrap({ type: 'pass', cards });
   }
   if (view.validCards.length === 0) return null;
   const plays = view.trick?.plays ?? [];
@@ -34,11 +42,12 @@ export function getHeartsBotAction(view: HeartsVisibleState, _random: () => numb
   const score = (card: Card): number => {
     if (!suit) return -card.rank - heartsPenalty(card) * 3;
     if (card.suit !== suit) return heartsPenalty(card) * 20 + card.rank;
-    if (card.rank < highest) return 100 + card.rank;
     // Last to play on a clean trick can safely shed a high card.
-    if (plays.length === 3 && plays.every((play) => heartsPenalty(play.card) === 0) && heartsPenalty(card) === 0) return card.rank;
+    if (plays.length === 3 && plays.every((play) => heartsPenalty(play.card) === 0) && heartsPenalty(card) === 0) return 100 + card.rank;
+    if (card.rank < highest) return 100 + card.rank;
     return -card.rank - heartsPenalty(card) * 3;
   };
-  const card = [...view.validCards].sort((a, b) => score(b) - score(a))[0];
-  return wrap({ type: 'play', card });
+  // One rank of latitude never crosses the penalty-dumping or ducking priorities.
+  const card = selectNearBest(view.validCards.map((value) => ({ value, score: score(value) })), random, 1);
+  return card ? wrap({ type: 'play', card }) : null;
 }

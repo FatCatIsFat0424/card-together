@@ -71,6 +71,32 @@ function remainingLengths(
   return result;
 }
 
+/** Evaluate higher cards and demonstrated ruff threats without guessing hidden hands. */
+function canOvertake(
+  card: Card, seat: Seat, lead: Suit, visible: BridgeVisibleState, played: readonly Card[],
+  voids: Record<Seat, Set<Suit>>,
+): boolean {
+  const trump = visible.contract!.suit;
+  const known = [...visible.myHand, ...played];
+  for (const suit of [lead, ...(trump !== 'nt' && trump !== lead ? [trump] : [])]) {
+    if (voids[seat].has(suit) || (suit !== lead && !voids[seat].has(lead))) continue;
+    for (let rank = 2; rank <= 14; rank++) {
+      const candidate: Card = { suit, rank: rank as Card['rank'] };
+      if (compareCards(candidate, card, lead, trump) > 0
+        && !known.some((other) => other.suit === suit && other.rank === rank)) return true;
+    }
+  }
+  return false;
+}
+
+/** Touching ranks with no missing card between them are interchangeable within this trick. */
+function equivalentRank(card: Card, visible: BridgeVisibleState, played: readonly Card[]): number {
+  let rank = card.rank;
+  const known = [...visible.myHand, ...played];
+  while (rank > 2 && known.some((other) => other.suit === card.suit && other.rank === rank - 1)) rank--;
+  return rank;
+}
+
 function play(visible: BridgeVisibleState, random: () => number): Card | null {
   const playing = visible.playing;
   const contract = visible.contract;
@@ -128,16 +154,32 @@ function play(visible: BridgeVisibleState, random: () => number): Card | null {
     }
   }
   const partnerWinning = isPartner(visible.mySeat, winnerSeat);
-  const lastToPlay = Object.keys(playing.currentTrick).length === 3;
-  const options = visible.validCards.map((card) => {
+  const cardsPlayed = Object.keys(playing.currentTrick).length;
+  const voids = knownVoids(visible);
+  const partner = partnerOf(visible.mySeat);
+  const remainingOpponents = SEAT_ORDER_CLOCKWISE.filter((seat) => seat !== visible.mySeat && seat !== partner && !playing.currentTrick[seat]);
+  const secure = (card: Card): boolean => remainingOpponents.every((seat) => !canOvertake(card, seat, lead.suit, visible, played, voids));
+  const partnerSecure = partnerWinning && secure(winnerCard);
+  const declarerTeam = visible.mySeat === contract.declarer || isPartner(visible.mySeat, contract.declarer);
+  const target = declarerTeam ? 6 + contract.level : 8 - contract.level;
+  const tricks = visible.mySeat === 'N' || visible.mySeat === 'S' ? playing.trickCountNS : playing.trickCountEW;
+  const mustWin = target - tricks >= 13 - playing.completedTricks.length;
+  const ducking = partnerSecure
+    ? visible.validCards.filter((card) => compareCards(card, winnerCard, lead.suit, contract.suit) <= 0) : [];
+  const candidates = ducking.length > 0 ? ducking : visible.validCards;
+  const options = candidates.map((card) => {
     const trump = card.suit === contract.suit;
     const wins = compareCards(card, winnerCard, lead.suit, contract.suit) > 0;
     const higher = outstandingHigher(card, visible, played);
-    let score = -card.rank * 0.8 - Number(trump) * 5;
-    if (!partnerWinning && wins) {
-      score += 24;
-      // Account for remaining higher cards while still preferring an economical winning card.
-      if (!lastToPlay) score -= higher * 0.35;
+    let score = -equivalentRank(card, visible, played) * 0.8 - Number(trump) * 5;
+    if (wins) {
+      const secured = secure(card);
+      // Cover partner only when it protects the trick from the opponent still to play.
+      if (!partnerWinning || (!partnerSecure && secured)) {
+        const duckHonor = cardsPlayed === 1 && !secured && !mustWin
+          && card.suit === lead.suit && card.rank >= 11 && higher > 0;
+        if (!duckHonor) score += secured ? 40 : 24 - higher * 0.35;
+      }
     }
     return { value: card, score };
   });

@@ -70,7 +70,7 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Weak-hand redeal', 'High-card points (HCP): A 4, K 3, Q 2, J 1. A hand with at most 4 HCP may ask for a redeal, including a lone ace with no other points.', 'Eligible seats are asked clockwise from the auction starter. Accepting redeals every hand; a seat that declines is not asked again that deal.'),
     section('Playing a trick', 'The seat counterclockwise from declarer leads first; play goes clockwise and each trick winner leads the next.', 'Follow the led suit if you can; otherwise play anything, including trump.', 'The highest trump wins; with no trump played, the highest card of the led suit wins.'),
     section('Controls', 'Pick a level and strain or Pass, then confirm; picking the same call again also confirms.', 'Touch: tap a card to lift it and tap it again to play.'),
-    section('Playing with bots', 'Bots use a simplified natural bidding system, reading strength and suit length from previous calls. Humans may bid freely.', 'A 1NT opening shows 15–17 HCP and 2NT 20–21, both balanced. Bots decline weak-hand redeals.'),
+    section('Playing with bots', 'Hard bots use simplified natural bidding and interpret human calls with the same agreements. There are no artificial conventions such as Stayman or transfers; humans may still bid freely.', 'An opening of one heart or one spade shows at least five cards. Otherwise open the longer minor; one-level openings normally need 12 HCP, or 11 when HCP plus the lengths of the two longest suits reaches twenty. A weak fourth hand may pass and redeal.', 'A 1NT opening shows 15–17 HCP and 2NT 20–21, both balanced. A cheapest-level long-suit response to partner’s NT is a sign-off, not a transfer.', 'Support raises aim for an eight-card fit. A new-suit response by a hand that has not previously passed forces one round; a passed hand’s new suit does not. Once partner gives a nonforcing placement, extra points alone do not require another bid.', 'Reasonable equivalent plays may vary, while bid meanings stay consistent. Bots decline weak-hand redeals.'),
   ],
   bigtwo: [
     section('Goal and first play', '13 cards each, counterclockwise. First to empty their hand wins.', 'The ♣3 holder leads, and the first play must include ♣3. A dragon (one of every rank 3–2) wins at once.', 'Order: 3 < 4 < … < K < A < 2 by rank, then ♣ < ♦ < ♥ < ♠ by suit.'),
@@ -366,7 +366,7 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('弱牌重發', '大牌點 HCP：A 4、K 3、Q 2、J 1。HCP ≤ 4 可要求重發，包含一張 A 且其餘牌沒有點數的手牌。', '從叫牌起始座位順時針詢問符合者；接受則全部重發，拒絕者本副牌不再被問。'),
     section('出牌與牌墩', '莊家逆時針鄰座首攻，之後順時針出牌，贏墩者先出下一墩。', '有首攻花色必須跟；沒有才可出其他牌，包括王牌。', '最大王牌贏墩；沒人出王牌時，首攻花色最大者贏。'),
     section('操作方式', '選線位與花色或 Pass 後按確認；再選一次相同叫牌也算確認。', '觸控：點一下抬起牌，再點一次出牌。'),
-    section('與 Bot 遊玩', 'Bot 採簡化自然叫牌，依先前叫品估計牌力與花色長度；真人仍可自由叫牌。', '常見開叫：1NT 為 15～17 HCP、2NT 為 20～21 HCP，皆為平均牌型。Bot 一律拒絕弱牌重發。'),
+    section('與 Bot 遊玩', '困難 Bot 採簡化自然叫牌，也按相同約定解讀真人叫品；不使用 Stayman、轉移叫等人為約定，真人仍可自由叫牌。', '一線紅心或黑桃開叫表示至少五張，否則開較長的低花。通常需 12 HCP；11 HCP 加上最長兩門的張數達 20 時亦可開叫。第四家弱牌可 Pass 重發。', '1NT 開叫為 15～17 HCP、2NT 為 20～21 HCP，皆為平均牌型。搭檔開 NT 後，以最低線位應叫長花色是止叫，不是轉移叫。', '支持加叫以合計八張配合為目標。尚未 Pass 過的手牌應叫新花色，會逼叫一輪；先前 Pass 過則不逼叫。搭檔已給出非逼叫的合約選擇時，不會只因點數較高就繼續推高。', '合理且相近的出牌可能不同，叫品含義維持一致。Bot 一律拒絕弱牌重發。'),
   ],
   bigtwo: [
     section('目標與首出', '每人 13 張，逆時針出牌，先出完者獲勝。', '持有 ♣3 者先出，第一手必須包含 ♣3。一條龍（3～2 各一張）直接獲勝。', '大小：點數 3 < 4 < … < K < A < 2，同點數再比花色 ♣ < ♦ < ♥ < ♠。'),

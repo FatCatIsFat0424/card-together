@@ -16,6 +16,7 @@
 
 - 課程時間軸：[`game-demos.ts`](../client/src/game-demos.ts)，實際錄影的起點、長度與章節秒數在 [`game-demo-recordings.json`](../client/src/game-demo-recordings.json)；雙語說明與文字稿入口：[`game-demo-i18n.ts`](../client/src/game-demo-i18n.ts)。牌類、下注類與棋類各自維護於 `client/src/game-demos/`；章節與字幕共用課程來源。
 - [`generate-fixtures.ts`](../scripts/game-demos/generate-fixtures.ts) 整合 `cards-fixtures.ts`、`betting-fixtures.ts`、`boards-fixtures.ts` 與 `trick-fixtures.ts`，以固定牌序／骰序或亂數種子呼叫正式 manager，驗證每一步合法並完成對局。產出僅包含固定玩家視角；他人未公開的排牌、蓋牌、布陣與船位提交內容也會移除；長局以差異快照儲存。
+- 牌類與吃墩教學使用 [`card-recipes.json`](../scripts/game-demos/card-recipes.json) 的固定動作及亂數消耗次數，與即時 bot 策略分開，避免策略更新改變已錄影片。腳本包含離線重播所需的完整合成動作，只供產生工具使用；輸出的牌例仍會移除其他玩家未公開的換牌、蓋牌及整理內容。改腳本時須重新驗證整場、課程章節、字幕與對應影片。
 - [`recording-stage.tsx`](../scripts/game-demos/recording-stage.tsx) 使用正式牌桌與隔離的 store，按課程時間軸示範合成資料；選牌、排牌與叫品選擇使用正式控制項，提交後的狀態來自已驗證快照，不連線操作真實房間。各模式以正式展示元件呈現公開的揭盅、攤牌、底池與輪盤結果，再切換下一輪。
 - 開發用入口 `client/demo-recording.html` 不在正式 build 的 HTML entry 中；fixtures 與錄製工具不會打包進正式網站。
 

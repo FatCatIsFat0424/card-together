@@ -39,6 +39,7 @@ import type { RoomHeaderStatus } from '../components/RoomHeader';
 import { GameSpectators, SpectatorsTabLabel } from './GameSpectators';
 import { VoiceButton, VoiceDockPanel } from '../components/VoiceControls';
 import { RoomCodeButton } from '../components/RoomCodeButton';
+import { RoomInvitationButton } from '../components/RoomInvitationButton';
 import { GameRulesDialog } from '../components/GameRulesDialog';
 import { matchRulesContext } from '../game-rules-context';
 import styles from './GameShell.module.css';
@@ -416,9 +417,10 @@ export function GameShell({
     aria-haspopup="dialog" onClick={openRules}>
     <AppIcon name="rules" /> {t('rules.open')}
   </button>;
-  // The phone menu lists the header's controls in its order: room code, rules, voice, chat, then the exits.
+  // The phone menu keeps the header's room controls before the exits.
   const sheetControls = <>
     {!replay && room && <RoomCodeButton key={room.code} code={room.code} compact={phoneMenu} className={styles.menuRoomCode} />}
+    {!replay && room && <RoomInvitationButton code={room.code} className={styles.menuAction} />}
     {rulesButton}
     {!replay && <VoiceButton labelled className={styles.menuAction} />}
     {!replay && <ActionButton icon="chat" text={t('chat.title')} badge={unread} mentionCount={mentionCount} className={styles.menuAction}

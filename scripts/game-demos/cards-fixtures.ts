@@ -1,3 +1,4 @@
+import { createCardRecipe } from './card-recipe';
 import type { GameSeat, GameType, PlayerInfo, PlayerVisibleGameState, Seat } from '../../shared/src/types';
 import { createDeck, shuffleDeck } from '../../server/src/engine/deck';
 import * as bigtwo from '../../server/src/managers/games/bigtwo-game';
@@ -9,16 +10,7 @@ import * as oldmaid from '../../server/src/managers/games/oldmaid-game';
 import * as gofish from '../../server/src/managers/games/gofish-game';
 import * as doudizhu from '../../server/src/managers/games/doudizhu-game';
 import * as liarsdeck from '../../server/src/managers/games/liarsdeck-game';
-import { getBigTwoBotAction } from '../../server/src/bots/bigtwo-strategy';
-import { getRedPointsBotAction } from '../../server/src/bots/redpoints-strategy';
-import { getNinetyNineBotAction } from '../../server/src/bots/ninetynine-strategy';
-import { getSevensBotAction } from '../../server/src/bots/sevens-strategy';
-import { getCrazyEightsBotAction } from '../../server/src/bots/crazyeights-strategy';
-import { getOldMaidBotAction } from '../../server/src/bots/oldmaid-strategy';
-import { getGoFishBotAction } from '../../server/src/bots/gofish-strategy';
-import { getDouDizhuBotAction } from '../../server/src/bots/doudizhu-strategy';
 import type { BotAction } from '../../server/src/bots/bot-decisions';
-import { ldIsTruth } from '../../shared/src/rules/liarsdeck';
 import { createDemoRecorder, DEMO_NOW } from './demo-recorder';
 import type { DemoFixture } from './demo-fixture-types';
 
@@ -57,32 +49,6 @@ function read(code: string, game: CardsGameType, seat: GameSeat): CardsVisibleSt
     case 'gofish': return required(gofish.getPlayerVisibleState(code, seat));
     case 'doudizhu': return required(doudizhu.getPlayerVisibleState(code, seat));
     case 'liarsdeck': return required(liarsdeck.getPlayerVisibleState(code, seat as Seat));
-  }
-}
-
-function choose(visible: PlayerVisibleGameState, random: () => number): BotAction {
-  switch (visible.gameType) {
-    case 'bigtwo': return required(getBigTwoBotAction(visible, random));
-    case 'redpoints': return required(getRedPointsBotAction(visible, random));
-    case 'ninetynine': return required(getNinetyNineBotAction(visible, random));
-    case 'sevens': return required(getSevensBotAction(visible, random));
-    case 'crazyeights': return required(getCrazyEightsBotAction(visible, random));
-    case 'oldmaid': return required(getOldMaidBotAction(visible, random));
-    case 'gofish': return required(getGoFishBotAction(visible, random));
-    case 'doudizhu':
-      // A positive opening bid avoids uninformative all-pass redeals.
-      if (visible.phase === 'calling' && visible.log.at(-1)?.type === 'deal') {
-        return { type: 'game-action', request: { gameType: 'doudizhu', action: { type: 'bid', score: 1 } } };
-      }
-      return required(getDouDizhuBotAction(visible, random));
-    case 'liarsdeck': {
-      if (visible.lastPlay) return { type: 'liarsdeck-challenge' };
-      // Each actor chooses from their own view; alternate honest claims and bluffs across rounds.
-      const truth = visible.round % 2 === 1;
-      const card = visible.myHand.find((entry) => ldIsTruth(entry.face, visible.tableFace) === truth) ?? visible.myHand[0];
-      return { type: 'liarsdeck-play', cardIds: [required(card).id] };
-    }
-    default: throw new Error(`Unexpected card tutorial game: ${visible.gameType}.`);
   }
 }
 
@@ -155,6 +121,7 @@ function publicAction(action: BotAction, own: boolean): unknown {
 function fixture(game: CardsGameType, seed: number): DemoFixture {
   const code = `DEMO-${game.toUpperCase()}`;
   const random = seededRandom(seed);
+  const recipe = createCardRecipe(game, random);
   const originalRandom = Math.random;
   // Later Crazy Eights / Go Fish hands use the engine's Math.random default rather than a per-match hook.
   Math.random = random;
@@ -180,13 +147,14 @@ function fixture(game: CardsGameType, seed: number): DemoFixture {
     for (let step = 0; step < 3000; step++) {
       const visible = read(code, game, focus);
       if (visible.result) {
+        recipe.finish();
         const result = recorder.finish();
         return { ...result, ...(game === 'sevens' ? { roomOptions: { sevens: { closeOnEnd: true } } }
           : game === 'crazyeights' ? { roomOptions: { crazyeights: { actionCards: true } } }
             : game === 'doudizhu' ? { roomOptions: { doudizhu: { variant: 'score' } } } : {}) };
       }
       const seat = visible.currentTurnSeat;
-      const action = choose(read(code, game, seat), random);
+      const action = recipe.next(seat);
       const publicMove = publicAction(action, seat === focus);
       const kind = (publicMove as { type: string }).type;
       recorder.act(seat, publicMove, `${game}-${kind}`, () => apply(code, seat, action, random));

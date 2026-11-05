@@ -90,6 +90,14 @@
   .status:not([data-tone='notice']) { display: none; }
 }
 
+/* Keep every waiting-room action reachable when the phase group needs another row. */
+@media (max-width: 767px) {
+  .header { flex-wrap: wrap; row-gap: var(--space-1); }
+  .title { flex: 1 1 0; }
+  .centre { display: contents; }
+  .phaseActions { margin-left: auto; }
+}
+
 /* Desktop and tablets: the same 56px row as the other pages' headers. */
 @media (min-width: 768px) and (min-height: 501px) {
   .header { min-height: 56px; padding-top: 0; }

@@ -94,7 +94,7 @@ describe('Gong Zhu runtime', () => {
       expect(timeout).toEqual(gongZhuFirstLegalAction(view));
       const before = structuredClone(view);
       const poisoned = { ...view, observedHands: gongZhuSeatMap(() => [{ suit: 'spades', rank: 14 } as Card]) };
-      expect(getGongZhuBotAction(poisoned)).toEqual(getGongZhuBotAction(view));
+      expect(getGongZhuBotAction(poisoned, seeded(steps))).toEqual(getGongZhuBotAction(view, seeded(steps)));
       expect(view).toEqual(before);
       act(strategy.request.action.card);
       validate();

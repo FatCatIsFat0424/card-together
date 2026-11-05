@@ -10,8 +10,8 @@ import { selectNearBest } from './selection';
 // Heuristic summary: bots bid from a count of jokers, 2s, aces and bombs. Easy plays the smallest legal
 // combination. Hard measures a hand by how many plays it needs to empty (rocket, bombs, chains, triples with
 // kickers, pairs, singles); it plays the move that leaves the fewest plays, spends control cards only when
-// the table is close to ending, never beats a partner's winning play, and feeds a partner who is about to
-// go out. The same evaluation drives the rollouts of the search bot.
+// the table is close to ending, preserves a partner's control unless the landlord threatens to finish, and feeds
+// a partner who is about to go out. The search bot uses this evaluation to rank candidates.
 
 const asAction = (action: DouDizhuAction): BotAction => ({ type: 'game-action', request: { gameType: 'doudizhu', action } });
 
@@ -162,16 +162,25 @@ function opponents(state: Situation): GameSeat[] {
 /** Scores every legal play and the pass, higher is better. */
 export function scoreOptions(state: Situation): { move: DdzMove | null; score: number }[] {
   const moves = ddzMoves(state.hand, state.previous);
+  const finish = moves.find((move) => move.cards.length === state.hand.length);
+  if (finish) return [{ move: finish, score: 1000 }];
+  // Preserve a partner's last round of control when the landlord has no immediate finish threat.
+  if (state.previous && state.partner !== null && state.lastSeat === state.partner && state.counts[state.partner] <= 2
+    && state.counts[state.landlord] > 2) {
+    return [{ move: null, score: 100 }];
+  }
   const opposing = opponents(state);
   const nearEnd = opposing.some((seat) => state.counts[seat] <= 2);
   const turnsNow = handTurns(state.hand);
   const options: { move: DdzMove | null; score: number }[] = [];
   for (const move of moves) {
     const rest = state.hand.filter((card) => !move.cards.some((played) => cardKey(played) === cardKey(card)));
-    if (rest.length === 0) return [{ move, score: 1000 }];
     let score = -12 * handTurns(rest) - 0.6 * (move.combo.power - 3);
     if (!nearEnd) score -= controlCost(move) * (state.previous ? 1.2 : 2);
     if (ddzIsBomb(move.combo) && !nearEnd) score -= 14;
+    // A following farmer must cover a low partner single before a last-card landlord acts.
+    if (state.previous?.type === 'single' && opposing.some((seat) => state.counts[seat] === 1)
+      && move.combo.type === 'single') score += 2 * move.combo.power;
     // An opponent one card from winning must not be handed an easy single or pair.
     if (!state.previous && opposing.some((seat) => state.counts[seat] === 1) && move.combo.type === 'single') {
       score += move.combo.power * 0.8 - 8;
@@ -191,7 +200,8 @@ export function scoreOptions(state: Situation): { move: DdzMove | null; score: n
   if (state.previous) {
     const partnerLead = state.partner !== null && state.lastSeat === state.partner;
     let pass = -12 * turnsNow - 1;
-    if (partnerLead) pass += 40;
+    const exposedFinish = nearEnd && opposing.some((seat) => state.counts[seat] === state.previous!.size);
+    if (partnerLead && !exposedFinish) pass += 40;
     else if (nearEnd) pass -= 60;
     options.push({ move: null, score: pass });
   }
@@ -209,7 +219,9 @@ export function getDouDizhuBotAction(visible: DouDizhuVisibleState, random: () =
   if (!state) return null;
   const options = scoreOptions(state);
   if (options.length === 0) return null;
-  const chosen = selectNearBest(options.map((option) => ({ value: option.move, score: option.score })), random, 0.4);
+  // One ordinary rank step costs 0.6; vary it before the endgame without sacrificing a planned turn.
+  const urgent = opponents(state).some((seat) => state.counts[seat] <= 2);
+  const chosen = selectNearBest(options.map((option) => ({ value: option.move, score: option.score })), random, urgent ? 0.4 : 0.65);
   return toAction(chosen);
 }
 

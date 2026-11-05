@@ -90,6 +90,15 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
 describe('contextual game rules', () => {
   beforeEach(() => useI18nStore.getState().setLocale('en'));
 
+  it('explains the natural agreements a human Bridge partner needs in both languages', () => {
+    for (const locale of ['en', 'zh-TW'] as const) {
+      useI18nStore.getState().setLocale(locale);
+      const html = render('bridge');
+      for (const term of locale === 'en' ? ['Stayman', '15–17', 'five cards', 'forces one round', 'sign-off']
+        : ['Stayman', '15～17', '至少五張', '逼叫一輪', '止叫']) expect(html).toContain(term);
+    }
+  });
+
   it.each(GAME_TYPES)('renders complete rules for %s in both languages without lobby room status', (gameType) => {
     for (const locale of ['en', 'zh-TW'] as const) {
       useI18nStore.getState().setLocale(locale);

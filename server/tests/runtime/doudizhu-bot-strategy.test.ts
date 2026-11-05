@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { CardOrJoker, DouDizhuVisibleState, GameSeat, PlayerInfo } from '@shared/types';
 import { cardKey, joker } from '@shared/rules/cards';
-import { ddzCanPlay, ddzResolve, sortDdzHand } from '@shared/rules/doudizhu';
+import { createDdzDeck, ddzCanPlay, ddzResolve, sortDdzHand } from '@shared/rules/doudizhu';
 import { getBotAction, getEasyBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
-import { douDizhuSearch } from '../../src/bots/doudizhu-search';
+import { douDizhuSearch, sampleDouDizhuHands } from '../../src/bots/doudizhu-search';
 import { handStrength, handTurns, unseenCards } from '../../src/bots/doudizhu-strategy';
 import { createSearchPool } from '../../src/bots/search/search-worker-pool';
 import { seededRandom } from '../../src/bots/search/seeded-random';
@@ -110,11 +110,61 @@ describe('Dou Dizhu Hard bot', () => {
     expect(action(getBotAction(view('N'), () => 0.5, 'hard'))?.cards).toHaveLength(2);
   });
 
+  it('varies adjacent ordinary ranks while preserving the hand plan and high controls', () => {
+    table('3 4 9 2', '5 6 7 8', '9 10 J Q');
+    const visible = view('N');
+    const before = structuredClone(visible);
+    const ranks = new Set<number>();
+    for (let seed = 1; seed <= 64; seed++) {
+      const chosen = action(getBotAction(visible, seededRandom(seed), 'hard'));
+      expect(chosen?.type).toBe('play');
+      expect(chosen?.cards).toHaveLength(1);
+      const card = chosen!.cards![0];
+      expect('rank' in card && [3, 4].includes(card.rank)).toBe(true);
+      if ('rank' in card) ranks.add(card.rank);
+      expect(action(getBotAction(visible, seededRandom(seed), 'hard'))).toEqual(chosen);
+    }
+    expect(ranks.size).toBe(2);
+    expect(visible).toEqual(before);
+  });
+
   it('does not beat its farmer partner’s play', () => {
     table('4 4 5 5 6 6 K', '3 3 4 6 8', '9 9 A A K J', { seat: 'E', cards: '7 7' });
     // S is a farmer after E's play: it could beat 7 7 with 9 9, but its partner E is winning the round.
     const decided = action(getBotAction(view('S'), () => 0.5, 'hard'));
     expect(decided).toEqual({ type: 'pass' });
+  });
+
+  it('protects a partner close to going out in both the heuristic and worker search, unless it can finish', () => {
+    table('3 4 5 6 7 8 9 K', '3 5', '6 6 6 7 7 7 8 8 8 9 10 J Q K A 2 BJ', { seat: 'E', cards: '3' });
+    for (let seed = 1; seed <= 32; seed++) {
+      const visible = view('S');
+      const budget = { maxDepth: undefined, timeLeftMs: () => 900, expired: () => false };
+      expect(action(getBotAction(visible, seededRandom(seed), 'hard'))).toEqual({ type: 'pass' });
+      expect(action(douDizhuSearch(visible, { random: seededRandom(seed), budget }))).toEqual({ type: 'pass' });
+    }
+    game().hands.S = hand('BJ');
+    expect(action(douDizhuSearch(view('S'), { random: seededRandom(4),
+      budget: { maxDepth: undefined, timeLeftMs: () => 900, expired: () => false } }))).toMatchObject({ type: 'play' });
+  });
+
+  it('covers a low partner play when a last-card landlord is next, instead of cooperating into a loss', () => {
+    table('4', '6 8', '5 A K', { seat: 'E', cards: '3' });
+    const base = view('S');
+    const known = new Set(['N', 'E', 'S'].flatMap((seat) => game().hands[seat as GameSeat]).map(cardKey));
+    const visible: DouDizhuVisibleState = { ...base, bottom: null,
+      log: createDdzDeck().filter((card) => !known.has(cardKey(card))).map((card) => ({
+        type: 'play', seat: 'N', cards: [card], combo: ddzResolve([card], null)!, timestamp: 1,
+      })) };
+    for (let seed = 1; seed <= 32; seed++) {
+      const chosen = action(getBotAction(visible, seededRandom(seed), 'hard'));
+      expect(chosen?.type).toBe('play');
+      expect(chosen?.cards).toEqual(hand('A'));
+      const searched = action(douDizhuSearch(visible, { random: seededRandom(seed),
+        budget: { maxDepth: undefined, timeLeftMs: () => 900, expired: () => false } }));
+      expect(searched?.type).toBe('play');
+      expect(ddzCanPlay(visible.myHand, searched!.cards!, visible.lastPlay!.combo)).toBe(true);
+    }
   });
 
   it('beats the landlord when it can do so cheaply', () => {
@@ -192,6 +242,59 @@ describe('Dou Dizhu automation', () => {
 });
 
 describe('Dou Dizhu search bot', () => {
+  it('varies equally winning partner feeds in the actual rollout search', () => {
+    table('5 6 7', '3 4 9', '2');
+    const own = hand('3 4 9');
+    const bottom = hand('5 6 7');
+    const remaining = [...own, ...bottom, ...hand('2')];
+    const known = new Set(remaining.map(cardKey));
+    const base = view('E');
+    const visible: DouDizhuVisibleState = { ...base, currentTurnSeat: 'E', bottom,
+      log: createDdzDeck().filter((card) => !known.has(cardKey(card))).map((card) => ({
+        type: 'play', seat: 'N', cards: [card], combo: ddzResolve([card], null)!, timestamp: 1,
+      })) };
+    const before = structuredClone(visible);
+    const choices = new Set<string>();
+    for (let seed = 1; seed <= 32; seed++) {
+      const context = { random: seededRandom(seed), budget: { maxDepth: undefined, timeLeftMs: () => 900, expired: () => false } };
+      const chosen = action(douDizhuSearch(visible, context));
+      expect(chosen?.type).toBe('play');
+      expect(chosen?.cards).toHaveLength(1);
+      expect(ddzCanPlay(own, chosen!.cards!, null)).toBe(true);
+      choices.add(chosen!.cards!.map(cardKey).join(','));
+      expect(action(douDizhuSearch(visible, { ...context, random: seededRandom(seed) }))).toEqual(chosen);
+    }
+    expect(choices.size).toBe(3);
+    expect(visible).toEqual(before);
+  });
+
+  it('samples complete hands with public bottom cards fixed to the landlord, without spectator information', () => {
+    doudizhu.startGame(CODE, Object.fromEntries(SEATS.map((seat) => [seat, bot(seat)])), { variant: 'score' }, 1_000, seeded(42));
+    doudizhu.bid(CODE, 'N', 3);
+    const visible = view('E');
+    const before = structuredClone(visible);
+    Object.defineProperty(visible, 'observedHands', { get: () => { throw new Error('Spectator data read.'); } });
+    const samples = new Set<string>();
+    for (let seed = 1; seed <= 32; seed++) {
+      const hands = sampleDouDizhuHands(visible, seededRandom(seed));
+      for (const bottom of visible.bottom!) expect(hands.get('N')).toContainEqual(bottom);
+      for (const seat of SEATS) expect(hands.get(seat)).toHaveLength(visible.handCounts[seat]);
+      expect(hands.get('E')).toEqual(visible.myHand);
+      expect(new Set([...hands.values()].flat().map(cardKey)).size).toBe(54);
+      expect(sampleDouDizhuHands(visible, seededRandom(seed))).toEqual(hands);
+      samples.add(hands.get('S')!.map(cardKey).join(','));
+    }
+    expect(samples.size).toBeGreaterThan(24);
+    expect({ ...visible, observedHands: undefined }).toEqual({ ...before, observedHands: undefined });
+    const played = visible.bottom![0];
+    expect(doudizhu.play(CODE, 'N', [played], 2_000).success).toBe(true);
+    const following = view('E');
+    const sampled = sampleDouDizhuHands(following, seededRandom(33));
+    expect([...sampled.values()].flat()).not.toContainEqual(played);
+    expect(sampled.get('N')).toHaveLength(following.handCounts.N);
+    for (const bottom of visible.bottom!.slice(1)) expect(sampled.get('N')).toContainEqual(bottom);
+  });
+
   it('is declared for the worker pool with a time budget', () => {
     const search = gameBot('doudizhu').search;
     expect(search?.budgetMs).toBeGreaterThan(0);
@@ -217,7 +320,7 @@ describe('Dou Dizhu search bot', () => {
     const pool = createSearchPool({ workers: 1, memoryMb: 256, queueLimit: 2 });
     try {
       const spec = gameBot('doudizhu').search!;
-      const outcome = await pool.run({ strategy: spec.strategy, visible, budgetMs: 300, seed: 5 });
+      const outcome = await pool.run({ strategy: spec.strategy, visible, budgetMs: spec.budgetMs, seed: 5 });
       expect(outcome.status).toBe('ok');
       const move = outcome.status === 'ok' ? action(outcome.action) : null;
       expect(move).not.toBeNull();
