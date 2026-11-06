@@ -33,7 +33,11 @@ start_application_service() {
 # Checked before any service stops so a wrong or missing build cannot cause an outage.
 validate_install_artifacts() {
   local node_binary=$1
-  "$node_binary" -e 'if (Number(process.versions.node.split(".")[0]) < 24) process.exit(1)' || {
+  local node_check=()
+  if [[ $EUID -eq 0 ]]; then
+    node_check=(timeout 10s setpriv --reuid=65534 --regid=65534 --clear-groups --no-new-privs --)
+  fi
+  "${node_check[@]}" "$node_binary" -e 'if (Number(process.versions.node.split(".")[0]) < 24) process.exit(1)' || {
     echo 'Node.js 24 or newer is required; use the version in .node-version.' >&2
     return 1
   }

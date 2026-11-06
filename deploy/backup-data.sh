@@ -72,8 +72,12 @@ backup_sqlite() {
   if [[ $EUID -eq 0 ]]; then
     owner=$(stat -c %u -- "$database")
     group=$(stat -c %g -- "$database")
+    if [[ $owner == 0 ]]; then
+      echo 'State must belong to a non-root service user before backing up SQLite.' >&2
+      exit 1
+    fi
     chown "$owner:$group" "$transient"
-    run_as=(setpriv --reuid="$owner" --regid="$group" --clear-groups --)
+    run_as=(setpriv --reuid="$owner" --regid="$group" --clear-groups --no-new-privs --)
   fi
   (cd "$app_dir/server" && ${run_as[@]+"${run_as[@]}"} "$node_binary" --import tsx \
     src/database/sqlite-snapshot-cli.ts backup "$database" "$transient/database.sqlite") || {

@@ -346,6 +346,14 @@ class AutoDeployTests(unittest.TestCase):
             AUTO.prepare_checkout(self.config, self.sha)
         self.assertEqual((self.music / 'track.ogg').read_bytes(), b'owner music fixture')
 
+    def test_install_invokes_only_the_fixed_isolated_helper_without_checkout_arguments(self):
+        with patch.object(AUTO.subprocess, 'run') as run:
+            AUTO.install_checkout(self.config)
+        run.assert_called_once_with([
+            'sudo', '-n', '/usr/bin/python3', '-I',
+            '/usr/local/lib/card-together-local-deploy/secure-deploy.py',
+        ], cwd=self.config.checkout, stdin=subprocess.DEVNULL, check=True)
+
     def test_success_receipt_is_written_only_after_install_and_prevents_duplicate_deploy(self):
         def install(config):
             self.assertEqual(AUTO.read_state(config), {'installing_sha': self.sha})

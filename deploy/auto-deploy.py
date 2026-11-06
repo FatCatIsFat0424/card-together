@@ -448,7 +448,8 @@ def build_checkout(config: Config) -> None:
 
 
 def install_checkout(config: Config) -> None:
-    subprocess.run(["sudo", "-n", "/usr/bin/bash", str(config.checkout / "deploy/deploy.sh")],
+    subprocess.run(["sudo", "-n", "/usr/bin/python3", "-I",
+                    "/usr/local/lib/card-together-local-deploy/secure-deploy.py"],
                    cwd=config.checkout, stdin=subprocess.DEVNULL, check=True)
 
 

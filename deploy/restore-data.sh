@@ -68,11 +68,33 @@ if [[ -n $(find "$snapshot/media" "$snapshot/replays" -type l -print -quit) ]]; 
   exit 1
 fi
 
-# The schema must be one this version can start from; the checks never modify the snapshot.
-(cd "$app_dir/server" && "$node_binary" --import tsx src/database/sqlite-snapshot-cli.ts verify "$snapshot/$database_name") || {
+# Application validators are release code: never execute them with root privileges.
+owner=$(stat -c %u -- "$state_dir")
+group=$(stat -c %g -- "$state_dir")
+validation_database="$snapshot/$database_name"
+validation_root=
+run_as=()
+if [[ $EUID -eq 0 ]]; then
+  if [[ $owner == 0 ]]; then
+    echo 'State must belong to a non-root service user before restoring.' >&2
+    exit 1
+  fi
+  validation_root=$(mktemp -d /var/tmp/card-together-verify.XXXXXX)
+  trap 'rm -rf -- "$validation_root"' EXIT
+  chmod 0711 "$validation_root"
+  install -d -o "$owner" -g "$group" -m 0700 "$validation_root/input"
+  validation_database="$validation_root/input/$database_name"
+  install -o "$owner" -g "$group" -m 0600 "$snapshot/$database_name" "$validation_database"
+  run_as=(setpriv --reuid="$owner" --regid="$group" --clear-groups --no-new-privs --)
+fi
+(cd "$app_dir/server" && timeout 60s "${run_as[@]}" "$node_binary" --import tsx src/database/sqlite-snapshot-cli.ts verify "$validation_database") || {
   echo 'The snapshot database failed its checks; nothing was restored.' >&2
   exit 1
 }
+if [[ -n $validation_root ]]; then
+  rm -rf -- "$validation_root"
+  trap - EXIT
+fi
 
 umask 077
 install -d -m 0700 "$backup_root"

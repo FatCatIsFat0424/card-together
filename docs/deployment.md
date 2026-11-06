@@ -10,9 +10,10 @@
 
 ## 建置與部署
 
+先由管理員安裝[固定部署政策](#固定部署政策與權限邊界)。日常部署只從政策指定的發行 checkout 接收產物；`deploy.sh` 不會把目前 checkout 的腳本交給 root。
+
 ```sh
-python3 -B deploy/with-node.py -- bash deploy/build.sh &&
-bash deploy/deploy.sh
+python3 -B deploy/with-node.py -- bash deploy/build.sh && bash deploy/deploy.sh
 ```
 
 [`with-node.py`](../deploy/with-node.py) 從 `https://nodejs.org/dist/` 下載完全相同的[固定版本](../.node-version)，透過 HTTPS 以官方的 `SHASUMS256.txt` 驗證壓縮檔，並安全地解壓縮到私人的暫存目錄。它把該發行版的 Node.js 與內附的 npm 放在 `PATH` 最前面執行指令，完成後移除暫存的發行版。轉址到官方 HTTPS 來源以外、checksum 不符、不支援的平台，以及以 root 執行，都會在建置前被拒絕。下載不會快取。這只驗證透過 HTTPS 發布的 checksum，不是 GPG 簽章。建置會在清理前把驗證過的 Node 執行檔複製到 `.deploy/node`。專案相依套件仍透過 `npm ci` 從 npm registry 取得。
@@ -100,7 +101,7 @@ sudo bash deploy/install-auto-deploy.sh acaccel \
   /home/acaccel/card-together /home/acaccel/card-together-release
 ```
 
-前置需求：部署使用者能在不需互動輸入的情況下 fetch `origin`，該使用者已設定 `gh auth login` 且具備 repository Actions 讀取權限，而且 `local-music/`、`local-emoji/` 與 `local-demos/` 都存在。只有在刻意要空目錄時，才允許空的資料夾。不需要 webhook endpoint。
+安裝前先完成[固定部署政策](#固定部署政策與權限邊界)。前置需求：部署使用者能在不需互動輸入的情況下 fetch `origin`，該使用者已設定 `gh auth login` 且具備 repository Actions 讀取權限，而且 `local-music/`、`local-emoji/` 與 `local-demos/` 都存在。只有在刻意要空目錄時，才允許空的資料夾。不需要 webhook endpoint。
 
 安裝程式會建立：
 
@@ -112,15 +113,17 @@ sudo bash deploy/install-auto-deploy.sh acaccel \
 | `/var/lib/card-together-auto-deploy/inputs/` | 獨立保存的站長音樂、表情符號、入門展示影片與選填 `frontend.env` 快照 |
 | `/var/lib/card-together-auto-deploy/state.json` | 成功的 SHA、建置失敗的 SHA，以及未完成安裝的標記 |
 | `/var/lib/card-together-auto-deploy/notifications.json` | 尚未送達、等待重送的[通知](#部署通知)更新；沒有時不存在 |
-| `/etc/sudoers.d/card-together-auto-deploy` | 只允許部署使用者不輸入密碼執行 `/usr/bin/bash <release-checkout>/deploy/deploy.sh` |
+| `/etc/sudoers.d/card-together-auto-deploy` | 只允許部署使用者免密碼執行 `/usr/bin/python3 -I /usr/local/lib/card-together-local-deploy/secure-deploy.py`，不接受其他參數 |
+| `/usr/local/lib/card-together-local-deploy/` | root 擁有的 helper、完整部署政策與固定 Node runtime |
+| `/etc/card-together-local-deploy.json` | root 擁有的固定發行 checkout 路徑 |
 
 服務以部署使用者的身分執行，timer 在開機一分鐘後、以及每次循環結束一分鐘後觸發。它只 fetch 遠端的 `main`，不變更開發分支、index 或檔案。遇到新的 SHA 時，它會查詢 GitHub Actions 針對該 `main` SHA 的 `push` run。每個回傳的 workflow，其最新的 run/attempt 都必須是 `completed` 且為 `success`；設定中必要的 workflow（一開始是 `ci.yml`）也必須存在。結果缺少、排隊中、失敗、取消、略過、格式錯誤或無法取得時，一律不允許部署。新增必要的 workflow 時，要加入設定中的 `workflows`，讓它們缺少時也會阻擋部署。
 
-控制程式把輸入快照放進乾淨的 detached worktree，透過該版本官方的 [Node.js bootstrap](#建置與部署) 與發行檢查執行 `build.sh`，在呼叫既有的 `deploy.sh` 前再次檢查 CI。只有安裝成功（包括本機與公開的健康檢查）才會記錄 `last_success_sha`。建置期間抵達的較新 commit 會等到下一次循環。第一個符合條件的 SHA 一定會部署，即使既有的手動安裝剛好就是這個版本。完整部署仍會讓玩家短暫斷線。
+控制程式把輸入快照放進乾淨的 detached worktree，透過該版本官方的 [Node.js bootstrap](#建置與部署) 與發行檢查執行 `build.sh`，在呼叫固定的 root helper 前再次檢查 CI。只有安裝成功（包括本機與公開的健康檢查）才會記錄 `last_success_sha`。建置期間抵達的較新 commit 會等到下一次循環。第一個符合條件的 SHA 一定會部署，即使既有的手動安裝剛好就是這個版本。完整部署仍會讓玩家短暫斷線。
 
 開發中的變更（包括尚未 push 到 `main` 的本機 commit）都不會部署。這些 worktree 共用 Git 物件與 ref，但不共用工作檔案或相依套件。timer 啟用期間，不要在發行 worktree 中編輯或手動部署。API 憑證保留在該使用者既有的 `gh` 憑證儲存中；不要把 token 放進設定、repository 或指令參數。
 
-**信任邊界**：來自 `main`、經 CI 核准的程式碼與部署腳本會在這台工作站上執行，而部署腳本以 root 執行。只有可信任的維護者應能 merge 進 `main`；請以審查與必要的 CI 保護該分支。部署使用者也必須被信任為主機管理者：允許執行的腳本位於該使用者可寫入的 worktree 中，所以這個指令限制並不能防止該使用者修改腳本。不要把這條規則給不受信任的使用者。
+**信任邊界**：CI 與建置在部署帳號下執行，固定 root helper 只接受應用產物。產物仍可在 `card-together` 身分下執行任意應用程式碼、讀取該服務的秘密與狀態，所以只有可信任的維護者應能 merge 進 `main`。helper 不會獨立驗證 CI；取得部署帳號控制權的人仍能發布該服務的產物。主帳號既有的 sudo、docker 等管理能力不受此改動限制。
 
 檢查或暫停：
 
@@ -143,6 +146,29 @@ sudo systemctl stop card-together-auto-deploy.timer card-together-auto-deploy.se
 重新執行安裝程式可以更新穩定的控制程式與 unit；它會暫停 timer，並保留既有的設定、輸入快照與收據。它不會中斷正在執行的循環：請等該循環結束後再重新執行安裝程式。若在暫停 timer 後重新安裝失敗，timer 會保持停止，直到操作者修正問題並重新啟動。安裝程式本身不會部署應用程式。在加入展示影片之前安裝的設定沒有 `demo_dir`：重新執行安裝程式會補上設定並建立 `local-demos` 快照；補上之前，自動部署的網站不含展示影片，規則面板只顯示文字。從以 npm 為基礎的 Node.js bootstrap 升級時，請在 push 第一個需要官方下載工具的版本之前重新執行這個安裝程式；已安裝的穩定控制程式不會在應用程式程式碼變更時自我更新。要發布變更過的站長輸入，請停止 timer／服務，更新 `inputs/` 下對應的快照，並在發行 worktree 中使用既有的手動建置／部署流程。只變更輸入不會觸發自動部署；控制程式只監看 Git 版本。絕對不要把開發用的資料庫檔案複製進去。
 
 同時進行開發時，請使用另一個後端連接埠與資料庫，並讓 Vite 的開發 proxy 指向它：[開發](development.md#設定)。
+
+#### 固定部署政策與權限邊界
+
+從經人工審查的 checkout，使用 root 已擁有、符合 `.node-version` 的既有 Node（首次安裝則先由管理員把經官方 checksum 驗證的 Node 安裝到 root 擁有且其他使用者不可寫入的路徑），明確安裝政策：
+
+```sh
+sudo bash deploy/install-secure-deploy.sh /home/acaccel/card-together-release /opt/card-together/node
+```
+
+此步驟只寫入 `/usr/local/lib/card-together-local-deploy/` 與 `/etc/card-together-local-deploy.json`，不停止或部署應用程式，也不更新資料庫。從 `main` 發布的應用版本不會自動更新政策、service unit、Nginx snippet、備份／還原工具或 Node。這些內容有變更時，管理員須先審查並重新安裝政策；只有 `.node-version` 與政策完全一致的產物才能部署。
+
+helper 會在 root 私有的 `/var/tmp/card-together-trusted-*` 目錄建立獨立快照，只讀取 manifests、TypeScript 設定、`node_modules/`、`shared/src/`、`server/src/` 與 `client/dist/`。它以 directory descriptor 與 `O_NOFOLLOW` 固定來源路徑，拒絕 symlink entrypoint、特殊檔、連向核准產物以外的 hardlink、其他擁有者的檔案、逃出應用目錄的 symlink 鏈，以及超過 150,000 個項目／4 GiB 的產物。npm workspace 的內部相對 symlink 可保留；npm 的內部 hardlink 會複製為獨立檔案。來源可變動，故不保證同時寫入時的版本一致性；非預期變動仍可能造成拒絕部署。
+
+root 只執行固定政策中的 shell／Python，不載入發行 checkout 的 `deploy/`、`.deploy/node` 或環境變數。Node 檢查會先降權並啟用 `no-new-privs`；應用程式由既有的 `card-together` systemd sandbox 啟動。還原時的應用 schema 驗證同樣降至資料擁有者身分，透過獨立的暫存副本驗證，不以 root 載入 artifact 程式碼。部署備份、失敗停機、健康檢查與資料回復規則維持不變。
+
+**既有自動部署的切換順序**：
+
+1. 停止 `card-together-auto-deploy.timer`，確認 service 沒有執行中的循環；保留現有 app、資料、設定與 state 收據。
+2. 執行上方政策安裝，再從同一份已審查 checkout 重新執行 `install-auto-deploy.sh`。它會更新固定控制程式與 sudoers，並驗證固定 checkout 相符；不會立即部署應用。
+3. 用 `sudo visudo -c` 驗證，並用 `sudo -l -U acaccel` 確認舊的 `/usr/bin/bash /home/acaccel/card-together-release/deploy/deploy.sh` 免密碼授權已移除。其他 sudoers 若仍授權該舊路徑，也要由管理員一併撤銷。
+4. 確認 timer 恢復、`--inspect` 正常，且目前健康檢查沒有改變。首次完整應用部署仍應另選維護時間。
+
+回復應用版本時，保留這個安全邊界：停止 timer，在固定發行 checkout 重建相容的舊版本，再呼叫已安裝的 helper；不要恢復舊版免密碼 sudo 規則，也不要讓舊版腳本以 root 執行。資料仍依[回復版本](#回復版本)確認 schema 相容性與完整快照後處理。
 
 #### 部署通知
 

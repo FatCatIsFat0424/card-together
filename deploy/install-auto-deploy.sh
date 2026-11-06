@@ -89,9 +89,20 @@ unit = Path(repo, 'deploy/systemd/card-together-auto-deploy.service').read_text(
 for key, value in (('@DEPLOY_USER@', username), ('@DEPLOY_GROUP@', group), ('@DEPLOY_HOME@', user.pw_dir)):
     unit = unit.replace(key, value)
 (stage / 'service').write_text(unit)
-(stage / 'sudoers').write_text(f'{username} ALL=(root) NOPASSWD: /usr/bin/bash {checkout}/deploy/deploy.sh\n')
+(stage / 'sudoers').write_text(f'{username} ALL=(root) NOPASSWD: /usr/bin/python3 -I /usr/local/lib/card-together-local-deploy/secure-deploy.py\n')
 (stage / 'group').write_text(group)
 PY
+if [[ ! -f /etc/card-together-local-deploy.json || ! -f /usr/local/lib/card-together-local-deploy/secure-deploy.py ]]; then
+  echo 'Install the reviewed policy with deploy/install-secure-deploy.sh first.' >&2
+  exit 1
+fi
+python3 -I - "$release_checkout" <<'PYCONFIG'
+import json
+from pathlib import Path
+import sys
+if json.loads(Path('/etc/card-together-local-deploy.json').read_text()) != {'checkout': sys.argv[1]}:
+    raise SystemExit('Trusted deployment checkout does not match auto-deploy configuration.')
+PYCONFIG
 visudo -cf "$staging/sudoers"
 deploy_group=$(cat "$staging/group")
 state_dir=/var/lib/card-together-auto-deploy
