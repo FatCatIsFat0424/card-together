@@ -287,8 +287,8 @@ describe.each(REPOSITORY_ADAPTERS)('live-table match recordings ($name)', (adapt
         await repository.close();
         await rm(directory, { recursive: true, force: true });
       }
-    // Hearts can record up to 16 full hands with a save and replay comparison after every card.
-    }, gameType === 'hearts' ? 120_000 : 30_000);
+    // Hearts and Spades play whole multi-hand matches with a save and replay comparison after every card.
+    }, gameType === 'hearts' || gameType === 'spades' ? 120_000 : 30_000);
   }
 
   it.each(['legacy', 'bots'] as const)('keeps %s games unrecorded after restart and completion', async (mode) => {
