@@ -5,12 +5,12 @@ Browser-based multiplayer games with server-authoritative rules, 27 in three cat
 - **Card games:** Bridge, Taiwanese Big Two, Red Points, Ninety-Nine, Sevens, Chinese Poker,
   Liar's Deck, Blackjack, Ten and a Half, Texas Hold'em, Five-Card Stud, Napoleon, Crazy Eights,
   Old Maid, Go Fish, and Dou Dizhu.
-- **Dice games:** Liar's Dice.
+- **Dice games:** Liar's Dice and Yacht Dice (turns or all at once).
 - **Board games:** Reversi, Gomoku, Go (9, 13, or 19 lines, with handicaps), Jungle, Xiangqi (with handicaps), Chess,
   Banqi, Chinese Checkers, Land Battle Chess, Battleship, and Code Breaker (a shared-secret deduction race).
 
 - Rooms with up to eight spectators, chat, bots (Easy and Hard), and turn timers. Ninety-Nine,
-  Blackjack, Ten and a Half, Hold'em, Five-Card Stud, Crazy Eights, Liar's Dice, and Old Maid support
+  Blackjack, Ten and a Half, Hold'em, Five-Card Stud, Crazy Eights, Liar's Dice, Yacht Dice, and Old Maid support
   2–8 occupied seats, Go Fish and Code Breaker 2–6, Napoleon 4–6, Chinese Checkers 2, 3, 4, or 6, Dou Dizhu exactly
   three, the other board games exactly two, and the remaining card games four.
 - Accounts, friends, match history with replays and statistics, daily rewards, a coin-based cosmetics shop,

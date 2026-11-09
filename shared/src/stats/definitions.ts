@@ -213,6 +213,11 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('codesCracked', 'result', 'count', true),
     record('fewestGuesses', 'result', 'min'),
   ],
+  yacht: [
+    record('topScore', 'result', 'max'),
+    record('yachts', 'result', 'count', true),
+    record('upperBonuses', 'result', 'count'),
+  ],
 };
 
 /**

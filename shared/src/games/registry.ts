@@ -33,6 +33,7 @@ import { chineseCheckersDefinition } from './chinesecheckers/definition';
 import { landBattleDefinition } from './landbattle/definition';
 import { battleshipDefinition } from './battleship/definition';
 import { codeBreakerDefinition } from './codebreaker/definition';
+import { yachtDefinition } from './yacht/definition';
 
 /** Every game type maps to its own definition; a missing or mismatched entry fails to compile. */
 export const GAME_DEFINITIONS: { readonly [K in GameType]: GameDefinition<K> } = {
@@ -67,6 +68,7 @@ export const GAME_DEFINITIONS: { readonly [K in GameType]: GameDefinition<K> } =
   landbattle: landBattleDefinition,
   battleship: battleshipDefinition,
   codebreaker: codeBreakerDefinition,
+  yacht: yachtDefinition,
 };
 
 export function gameDefinition<K extends GameType>(gameType: K): GameDefinition<K> {

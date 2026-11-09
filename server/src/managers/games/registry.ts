@@ -32,6 +32,7 @@ import { chineseCheckersAdapter } from './chinesecheckers-adapter';
 import { landBattleAdapter } from './landbattle-adapter';
 import { battleshipAdapter } from './battleship-adapter';
 import { codeBreakerAdapter } from './codebreaker-adapter';
+import { yachtAdapter } from './yacht-adapter';
 
 /** Every game type maps to its own adapter; a missing or mismatched entry fails to compile. */
 export const GAME_ADAPTERS: { readonly [K in GameType]: GameAdapter<K> } = {
@@ -66,6 +67,7 @@ export const GAME_ADAPTERS: { readonly [K in GameType]: GameAdapter<K> } = {
   landbattle: landBattleAdapter,
   battleship: battleshipAdapter,
   codebreaker: codeBreakerAdapter,
+  yacht: yachtAdapter,
 };
 
 /**

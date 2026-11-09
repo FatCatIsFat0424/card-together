@@ -32,6 +32,7 @@ import { chineseCheckersFacts } from './chinesecheckers';
 import { landBattleFacts } from './landbattle';
 import { battleshipFacts } from './battleship';
 import { codeBreakerFacts } from './codebreaker';
+import { yachtFacts } from './yacht';
 
 /** Every registered game supplies facts for its own result contract. */
 export const GAME_STATS: {
@@ -68,6 +69,7 @@ export const GAME_STATS: {
   landbattle: landBattleFacts,
   battleship: battleshipFacts,
   codebreaker: codeBreakerFacts,
+  yacht: yachtFacts,
 };
 
 export function gameFacts<K extends GameType>(

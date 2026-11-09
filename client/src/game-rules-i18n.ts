@@ -349,6 +349,22 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     ], 'Feedback is private: you see only your own guesses. Other players show how many guesses they have used, whether they have cracked the code, and whether they have submitted this round.'),
     section('Winning', 'The match ends when everyone has cracked the code or used 10 guesses. The player with the fewest guesses wins; players who needed the same number share the win and the rank, and players who did not crack it tie for last. If nobody cracks the code, nobody wins.', 'At the end the secret code and everyone’s guesses are revealed. Unseated spectators see the code and all guesses while the match runs. Bots reason only from their own feedback.'),
   ],
+  yacht: [
+    section('Dice and turns', 'Two to eight players. Each turn you roll five dice up to three times. After a roll, tap the dice to keep and roll the rest again; you may score at any time after the first roll.', 'Every round each player fills exactly one of their 13 boxes, so a match lasts 13 rounds. Dice and scorecards are public.'),
+    table('Boxes', ['Box', 'Score'], [
+      ['Ones – Sixes', 'Sum of the dice showing that face'],
+      ['Three of a Kind', 'Sum of all dice with at least three alike'],
+      ['Four of a Kind', 'Sum of all dice with at least four alike'],
+      ['Full House', '25 (three of one face and two of another)'],
+      ['Small Straight', '30 (four in a row)'],
+      ['Large Straight', '40 (five in a row)'],
+      ['Yacht', '50 (five alike)'],
+      ['Chance', 'Sum of all dice'],
+    ], 'A box that cannot be matched can still be filled, with 0.'),
+    section('Bonuses', 'Upper boxes (Ones to Sixes) totalling 63 or more earn a 35-point bonus: that is three of every face.', 'Rolling another Yacht when the Yacht box already holds 50 earns 100 points and acts as a joker: the matching upper box must be used if it is empty; otherwise any empty lower box may be used, with Full House and the straights scoring in full; if every lower box is full, an empty upper box takes 0. A Yacht scored as 0 earns no bonus.'),
+    section('Play modes', 'Turns (default): players roll one at a time and everyone watches the active player’s dice.', 'Simultaneous: in each round every player rolls their own dice at the same time, and the round ends when everyone has scored. The round has one shared timer (the room timer’s turn time, at least 30 seconds).'),
+    section('Winning', 'After 13 rounds the highest total wins; tied totals share the win.', 'Running out of time rolls the dice if they were not rolled yet, then scores them in the best available box.'),
+  ],
 };
 
 const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
@@ -647,6 +663,22 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
       ['顏色', '實心：顏色與位置都對。空心圈：顏色對但位置不對。'],
     ], '回應是私人的：你只看得到自己的猜測。其他玩家只顯示已猜次數、是否猜中，以及本輪是否已送出。'),
     section('勝負', '所有人都猜中或用完 10 次時對局結束。用最少次數猜中者獲勝；次數相同則並列獲勝與名次，沒猜中的人並列最後。沒有人猜中就沒有贏家。', '結束時公開答案與所有人的猜測；未入座的旁觀者在對局中就看得到答案與所有猜測。Bot 只依自己的回應推理。'),
+  ],
+  yacht: [
+    section('骰子與回合', '2～8 人。每回合用 5 顆骰子最多擲 3 次；每次擲完，點選要保留的骰子，再重擲其餘的。擲出第一次後，隨時可以計分。', '每一輪每位玩家恰好填滿自己 13 格中的一格，所以一場共 13 輪。骰子與計分表都是公開的。'),
+    table('計分格', ['格子', '得分'], [
+      ['一點～六點', '該點數骰子的總和'],
+      ['三條', '至少三顆相同時，全部骰子的總和'],
+      ['四條', '至少四顆相同時，全部骰子的總和'],
+      ['葫蘆', '25 分（三顆同點加兩顆同點）'],
+      ['小順', '30 分（四顆連號）'],
+      ['大順', '40 分（五顆連號）'],
+      ['快艇', '50 分（五顆同點）'],
+      ['機會', '全部骰子的總和'],
+    ], '湊不出的格子仍可填入，得 0 分。'),
+    section('獎勵', '上半部（一點到六點）合計 63 分以上，加 35 分獎勵，也就是每種點數各三顆。', '快艇格已得 50 分後再擲出快艇，加 100 分並可當作百搭：對應的上半部格子若還空著，必須填在那格；否則可填任何一個空的下半部格子，葫蘆與兩種順子照全額計分；下半部都填滿時，只能填空的上半部格子並得 0 分。快艇格填 0 分時，之後的快艇不加分。'),
+    section('遊戲方式', '輪流（預設）：一次一位玩家擲骰，所有人都看得到當前玩家的骰子。', '同時：每一輪所有玩家各自同時擲自己的骰子，全員計分後才進入下一輪。每輪共用一個計時（房間計時的每回合時間，至少 30 秒）。'),
+    section('勝負', '13 輪後總分最高者獲勝，同分並列獲勝。', '逾時時，若還沒擲骰就先擲一次，再把骰子填入最划算的空格。'),
   ],
 };
 

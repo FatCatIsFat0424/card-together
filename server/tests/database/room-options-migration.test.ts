@@ -29,6 +29,7 @@ const CHOICES: GameOptions = {
   banqi: { chain: false, rookDash: false },
   battleship: { noTouching: false, hitAgain: false },
   codebreaker: { variant: 'digits' },
+  yacht: { mode: 'turns' },
 };
 
 function fixture(gameType: GameType = 'sevens'): {
@@ -85,6 +86,7 @@ describe('room options document migration', () => {
       gomoku: { renju: false, swap: false }, go: { size: 9, handicap: 0 }, xiangqi: { handicap: 'none', handicapSide: 'red' },
       banqi: { chain: false, rookDash: false }, battleship: { noTouching: false, hitAgain: false },
       codebreaker: { variant: 'digits' },
+      yacht: { mode: 'turns' },
     });
     expect(migrated.runtime?.games).toEqual(untouched.games);
     expect(migrated.runtime?.players).toEqual(untouched.players);

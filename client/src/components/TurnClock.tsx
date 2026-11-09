@@ -90,6 +90,9 @@ export function TurnClock({ seat, showBank = true }: TurnClockProps): ReactNode 
   const markDeadline = useGameStore((state) => state.go?.phase === 'marking'
     && !state.go.confirmed.includes(seat) ? state.go.markDeadline : null);
   const marking = useGameStore((state) => state.go?.phase === 'marking');
+  const roundDeadline = useGameStore((state) => state.yacht?.phase === 'playing'
+    && !state.yacht.turns[seat]?.done ? state.yacht.roundDeadline : null);
+  const roundTimed = useGameStore((state) => state.yacht?.phase === 'playing' && state.yacht.roundDeadline !== null);
   if (simultaneous) return showBank && arrangeDeadline !== null ? <DeadlineClock deadline={arrangeDeadline} /> : null;
   if (betting) return showBank && betDeadline !== null ? <DeadlineClock deadline={betDeadline} /> : null;
   if (reviewing) return showBank && reviewDeadline !== null ? <DeadlineClock deadline={reviewDeadline} /> : null;
@@ -97,6 +100,7 @@ export function TurnClock({ seat, showBank = true }: TurnClockProps): ReactNode 
   if (placing) return showBank && placeDeadline !== null ? <DeadlineClock deadline={placeDeadline} /> : null;
   if (guessing) return showBank && guessDeadline !== null ? <DeadlineClock deadline={guessDeadline} /> : null;
   if (marking) return showBank && markDeadline !== null ? <DeadlineClock deadline={markDeadline} /> : null;
+  if (roundTimed) return showBank && roundDeadline !== null ? <DeadlineClock deadline={roundDeadline} /> : null;
   return <SeatTurnClock seat={seat} showBank={showBank} />;
 }
 

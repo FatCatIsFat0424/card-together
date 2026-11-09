@@ -14,6 +14,7 @@ import { blackjackNeedsBet } from '../games/blackjack/blackjack-view';
 import { codeBreakerNeedsGuess } from '../games/codebreaker/codebreaker-view';
 import { napoleonReviewState } from '../games/napoleon/napoleon-view';
 import { tenHalfNeedsBet } from '../games/tenhalf/tenhalf-view';
+import { ownTurn as yachtOwnTurn } from '../games/yacht/yacht-view';
 
 /**
  * Board tables play a piece sound for the move that hands the turn over; the reminder waits until that sound has
@@ -52,10 +53,12 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
   // Go marking is joint: a seat is prompted until it has accepted the count.
   const marking = game.go?.phase === 'marking' && game.go.seats.includes(game.go.mySeat)
     && !game.go.confirmed.includes(game.go.mySeat);
+  // Yacht Dice rounds in simultaneous mode are owed by every seat that has not scored yet.
+  const rolling = game.yacht !== null && yachtOwnTurn(game.yacht) !== null;
   const owned = !held.locked && room.currentRoomCode && room.mySeat && game.visible?.observer !== 'spectator' &&
     account.status === 'authenticated' && account.connection === 'ready' &&
     (game.phase === 'bidding' || game.phase === 'playing') &&
-    (game.currentTurnSeat === room.mySeat || arranging || betting || reviewing || deploying || placing || guessing || marking);
+    (game.currentTurnSeat === room.mySeat || arranging || betting || reviewing || deploying || placing || guessing || marking || rolling);
   const completedTricks = game.playing?.completedTricks.length ?? game.napoleon?.tricks.length ?? 0;
   const actionCount = game.bigTwo?.log.filter((entry) =>
     'seat' in entry && entry.seat === room.mySeat).length ??
@@ -74,6 +77,7 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
     (game.codebreaker ? `${game.codebreaker.phase}-${game.codebreaker.round}` : undefined) ??
     (game.battleship && room.mySeat
       ? `${game.battleship.phase}-${othersActed(game.battleship.log, room.mySeat)}` : undefined) ??
+    game.yacht?.round ??
     game.oldMaid?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
     game.doudizhu?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??
     game.holdem?.log.filter((entry) => entry.type === 'action' && entry.seat === room.mySeat).length ??

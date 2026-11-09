@@ -36,6 +36,9 @@ import {
 import {
   codeBreakerFirstLegalAction, easyCodeBreakerAction, getCodeBreakerBotAction,
 } from './codebreaker-strategy';
+import {
+  easyYachtAction, getYachtBotAction, yachtFirstLegalAction, yachtTimeoutAction,
+} from './yacht-strategy';
 import { easyOldMaidAction, getOldMaidBotAction, oldMaidFirstLegalAction } from './oldmaid-strategy';
 import { getGongZhuBotAction, easyGongZhuAction, gongZhuFirstLegalAction } from './gongzhu-strategy';
 import { easyGoFishAction, getGoFishBotAction, goFishFirstLegalAction } from './gofish-strategy';
@@ -313,6 +316,15 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     firstLegal: codeBreakerFirstLegalAction,
     // A seat that missed the round window guesses a random code that fits its own feedback, as the easy bot would.
     deadlineExpired: (visible, { isBot, strategy }) => (isBot ? strategy() : easyCodeBreakerAction(visible, Math.random)),
+  },
+  yacht: {
+    hard: getYachtBotAction,
+    easy: easyYachtAction,
+    firstLegal: yachtFirstLegalAction,
+    // A player who runs out of time rolls if needed and writes the dice into the best box, as the easy bot would.
+    turnTimeout: yachtTimeoutAction,
+    // A round that ran out completes every unfinished turn the same way, bots included.
+    deadlineExpired: yachtTimeoutAction,
   },
 };
 

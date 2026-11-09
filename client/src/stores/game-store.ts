@@ -1,5 +1,6 @@
 import type { SpadesVisibleState } from '@shared/games/spades/types';
 import type { HeartsVisibleState } from '@shared/games/hearts/types';
+import type { YachtVisibleState } from '@shared/games/yacht/types';
 // ─── Game Store ───
 
 import { scopedStore } from './scoped-store';
@@ -75,6 +76,7 @@ export interface GameStoreState {
   oldMaid: OldMaidVisibleState | null;
   spades: SpadesVisibleState | null;
   hearts: HeartsVisibleState | null;
+  yacht: YachtVisibleState | null;
   goFish: GoFishVisibleState | null;
   gongzhu: GongZhuVisibleState | null;
   doudizhu: DouDizhuVisibleState | null;
@@ -129,6 +131,7 @@ const initialState: GameStoreState = {
   oldMaid: null,
   spades: null,
   hearts: null,
+  yacht: null,
   goFish: null,
   gongzhu: null,
   doudizhu: null,

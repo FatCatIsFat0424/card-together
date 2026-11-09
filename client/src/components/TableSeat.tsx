@@ -255,8 +255,8 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
     holdemCards: state.holdem || state.stud ? 0 : null,
     // Ten and a Half hands are drawn on the felt, so the plate shows no card backs.
     tenHalfCards: state.tenhalf ? 0 : null,
-    // Liar's Dice cups are counted in the seat's dice chip instead.
-    diceCards: state.liarsDice ? 0 : null,
+    // Dice games show no card backs: Liar's Dice counts dice in its chip and Yacht Dice on its scorecard.
+    diceCards: state.liarsDice || state.yacht ? 0 : null,
     snapshotCards: state.visible && 'handCounts' in state.visible
       ? gameSeatValue(state.visible.handCounts, seat) ?? null : null,
     napoleonCards: state.napoleon ? gameSeatValue(state.napoleon.handCounts, seat) ?? 0 : null,

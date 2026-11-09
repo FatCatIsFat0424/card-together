@@ -86,6 +86,7 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
   landbattle: { en: 'Battles', 'zh-TW': '交戰' },
   battleship: { en: 'Firing', 'zh-TW': '射擊' },
   codebreaker: { en: 'Feedback', 'zh-TW': '回應' },
+  yacht: { en: 'Bonuses', 'zh-TW': '獎勵' },
 };
 
 describe('contextual game rules', () => {
@@ -163,7 +164,7 @@ describe('contextual game rules', () => {
       expect(render(gameType, context)).toContain('<dd>Off</dd>');
       expect(context.active).toBe(false);
     }
-    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'go', 'xiangqi', 'banqi', 'battleship', 'codebreaker'].includes(type))) {
+    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'go', 'xiangqi', 'banqi', 'battleship', 'codebreaker', 'yacht'].includes(type))) {
       expect(roomRulesContext(room(gameType, { gameOptions: { sevens: { closeOnEnd: true } } })).option).toBeNull();
     }
     // Banqi lists both of its variants, each off by default.

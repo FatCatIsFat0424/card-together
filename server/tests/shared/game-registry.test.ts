@@ -37,6 +37,7 @@ const PREVIOUS_SEATS: Readonly<Record<GameType, readonly [min: number, max: numb
   landbattle: [2, 2, true, false],
   battleship: [2, 2, true, false],
   codebreaker: [2, 6, true, false],
+  yacht: [2, 8, true, false],
 };
 
 describe('shared game registry', () => {
@@ -53,13 +54,13 @@ describe('shared game registry', () => {
   });
 
   it('lists the expandable rooms in lobby order', () => {
-    expect(EXPANDABLE_ROOM_GAMES).toEqual(['ninetynine', 'blackjack', 'holdem', 'napoleon', 'tenhalf', 'liarsdice', 'crazyeights', 'stud', 'oldmaid', 'gofish', 'chinesecheckers', 'codebreaker']);
+    expect(EXPANDABLE_ROOM_GAMES).toEqual(['ninetynine', 'blackjack', 'holdem', 'napoleon', 'tenhalf', 'liarsdice', 'crazyeights', 'stud', 'oldmaid', 'gofish', 'chinesecheckers', 'codebreaker', 'yacht']);
   });
 
   it('classifies the dice game by its category and gives chips only to the betting games', () => {
     for (const gameType of GAME_TYPES) {
       const definition = gameDefinition(gameType);
-      if (gameType === 'liarsdice') {
+      if (gameType === 'liarsdice' || gameType === 'yacht') {
         expect([definition.category, definition.equipment]).toEqual(['dice', []]);
         continue;
       }
@@ -90,7 +91,7 @@ describe('registered result metadata', () => {
       ['reversi', 'ranking', null], ['oldmaid', 'ranking', 'points'],
       ['gofish', 'ranking', 'points'], ['gongzhu', 'ranking', 'points'], ['doudizhu', 'ranking', 'points'], ['jungle', 'ranking', null], ['gomoku', 'ranking', null], ['go', 'ranking', null],
       ['xiangqi', 'ranking', null], ['chess', 'ranking', null], ['banqi', 'ranking', null],
-      ['chinesecheckers', 'ranking', null], ['landbattle', 'ranking', null], ['battleship', 'ranking', null], ['codebreaker', 'ranking', null], ['spades', 'team', 'points'], ['hearts', 'ranking', 'penalty'],
+      ['chinesecheckers', 'ranking', null], ['landbattle', 'ranking', null], ['battleship', 'ranking', null], ['codebreaker', 'ranking', null], ['spades', 'team', 'points'], ['hearts', 'ranking', 'penalty'], ['yacht', 'ranking', 'points'],
     ]);
   });
 

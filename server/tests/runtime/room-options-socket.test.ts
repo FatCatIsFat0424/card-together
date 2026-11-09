@@ -71,6 +71,7 @@ describe.each(REPOSITORY_ADAPTERS)('unified room options ($name)', (adapter) => 
       { gameType: 'banqi', options: { chain: true, rookDash: false } },
       { gameType: 'battleship', options: { noTouching: true, hitAgain: false } },
       { gameType: 'codebreaker', options: { variant: 'colors' } },
+      { gameType: 'yacht', options: { mode: 'simultaneous' } },
     ] satisfies readonly GameOptionsPayload[]) {
       await host.emitWithAck('room:setGameType', { gameType: payload.gameType });
       expect(await host.emitWithAck('room:setGameOptions', payload)).toEqual({ success: true });
@@ -86,6 +87,7 @@ describe.each(REPOSITORY_ADAPTERS)('unified room options ($name)', (adapter) => 
       banqi: { chain: true, rookDash: false },
       battleship: { noTouching: true, hitAgain: false },
       codebreaker: { variant: 'colors' },
+      yacht: { mode: 'simultaneous' },
     });
   });
 });

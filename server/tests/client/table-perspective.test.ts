@@ -120,6 +120,7 @@ describe('spectator table perspective', () => {
       import('../../../client/src/games/landbattle/LandBattleTable'),
       import('../../../client/src/games/battleship/BattleshipTable'),
       import('../../../client/src/games/codebreaker/CodeBreakerTable'),
+      import('../../../client/src/games/yacht/YachtTable'),
     ]);
   }, 60_000);
   beforeEach(() => {
@@ -178,7 +179,8 @@ describe('spectator table perspective', () => {
         expect(projected).toMatchObject({ gameType: 'banqi', observer: 'spectator', mySeat: seat });
         expect(Object.keys((projected as { observedPieces?: object }).observedPieces ?? {})).toHaveLength(32);
       } else if (game.gameType === 'landbattle' || projected.gameType === 'landbattle'
-        || game.gameType === 'battleship' || projected.gameType === 'battleship') {
+        || game.gameType === 'battleship' || projected.gameType === 'battleship'
+        || game.gameType === 'yacht' || projected.gameType === 'yacht') {
         // Identities and fleets travel in the view itself; the chosen seat only picks the seas or turns the board.
         expect(projected).toMatchObject({ observer: 'spectator', mySeat: seat });
       } else if (game.gameType === 'liarsdice' && projected.gameType === 'liarsdice') {

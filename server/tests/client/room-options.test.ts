@@ -44,7 +44,7 @@ const optionIds = {
 } as const;
 const configuredGames = ['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'banqi', 'battleship'] as const;
 /** Games whose options are menus rather than switches. */
-const selectGames: readonly GameType[] = ['xiangqi', 'go', 'codebreaker'];
+const selectGames: readonly GameType[] = ['xiangqi', 'go', 'codebreaker', 'yacht'];
 const saved: GameOptions = {
   sevens: { closeOnEnd: true, slayEffect: 'fire' },
   ninetynine: { twoDecks: true },
@@ -274,5 +274,21 @@ describe('per-game room options', () => {
     render(room('go'), false, false);
     expect(select('go-size-hint')?.disabled).toBe(true);
     expect(select('go-handicap-hint')?.disabled).toBe(true);
+  });
+
+  it('offers the Yacht Dice play mode menu, ignoring values it does not know', () => {
+    const select = (): SelectProps | undefined => vi.mocked(Select).mock.calls.findLast(([props]) =>
+      (props.inputProps as { 'aria-describedby'?: string } | undefined)?.['aria-describedby'] === 'yacht-mode-hint')?.[0];
+    const choose = (value: string): SelectChangeEvent => ({ target: { value } }) as unknown as SelectChangeEvent;
+    render(room('yacht'));
+    expect(select()?.value).toBe('turns');
+    select()!.onChange?.(choose('simultaneous'), null);
+    expect(actions.setGameOptions).toHaveBeenLastCalledWith({ gameType: 'yacht', options: { mode: 'simultaneous' } });
+    select()!.onChange?.(choose('async'), null);
+    expect(actions.setGameOptions).toHaveBeenCalledTimes(1);
+    render(room('yacht', { yacht: { mode: 'simultaneous' } }));
+    expect(select()?.value).toBe('simultaneous');
+    render(room('yacht'), false, false);
+    expect(select()?.disabled).toBe(true);
   });
 });
