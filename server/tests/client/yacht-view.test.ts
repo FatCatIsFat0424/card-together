@@ -5,9 +5,9 @@ import { t } from '../../../client/src/i18n';
 import { useI18nStore } from '../../../client/src/stores/i18n-store';
 import { yachtClient } from '../../../client/src/games/yacht/yacht-client';
 import {
-  boxLabel, boxShortLabel, diceSeat, ownTurn, potentialSeat, recentScores, rerolled, rollsLeft, rowState, seatCells, seatTotals,
+  boxLabel, boxShortLabel, diceSeat, ownTurn, pickerCells, potentialSeat, recentScores, rerolled, rollsLeft, rowState, seatCells, seatTotals,
 } from '../../../client/src/games/yacht/yacht-view';
-import { YACHT_BOXES } from '@shared/rules/yacht';
+import { YACHT_BOXES, yachtPotentials } from '@shared/rules/yacht';
 
 const open = (dice: readonly number[], rolls: number, held = [false, false, false, false, false], done = false): YachtTurn =>
   ({ dice: dice as YachtFace[], held, rolls, done });
@@ -64,6 +64,19 @@ describe('Yacht Dice table view', () => {
     expect(seatCells(game(), 'N', YACHT_BOXES).every((cell) => cell.potential === null)).toBe(true);
     // Dice that are not rolled yet promise nothing.
     expect(seatCells(game({ turns: { E: open([], 0) } }), 'E', YACHT_BOXES).every((cell) => cell.potential === null)).toBe(true);
+  });
+
+  it('lists the viewer boxes for the picker as open, used, or blocked by the joker rule', () => {
+    const cells = pickerCells({ boxes: { ones: 3, yacht: 50 }, extraYachts: 0 }, { twos: 4, fullHouse: 25 }, YACHT_BOXES);
+    const byBox = Object.fromEntries(cells.map((cell) => [cell.box, cell]));
+    expect(cells.map((cell) => cell.box)).toEqual([...YACHT_BOXES]);
+    expect(byBox.ones).toEqual({ box: 'ones', state: 'used', value: 3 });
+    expect(byBox.twos).toEqual({ box: 'twos', state: 'open', value: 4 });
+    expect(byBox.chance).toEqual({ box: 'chance', state: 'blocked', value: null });
+    // A joker must go to its empty upper box, so every other empty box is blocked.
+    const card = { boxes: { yacht: 50 }, extraYachts: 0 };
+    const joker = pickerCells(card, yachtPotentials(card, [4, 4, 4, 4, 4]), YACHT_BOXES);
+    expect(joker.filter((cell) => cell.state === 'open').map((cell) => cell.box)).toEqual(['fours']);
   });
 
   it('totals a card with its bonuses and counts the rolls left', () => {

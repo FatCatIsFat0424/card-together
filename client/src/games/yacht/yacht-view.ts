@@ -70,6 +70,26 @@ export function seatCells(game: YachtVisibleState, seat: GameSeat, boxes: readon
   return boxes.map((box) => ({ box, score: card?.boxes[box] ?? null, potential: potentials[box] ?? null }));
 }
 
+export interface YachtPickerCell {
+  readonly box: YachtBox;
+  /** `open` boxes can take the dice, `used` ones already hold a score, `blocked` ones are ruled out by the joker rule */
+  readonly state: 'open' | 'used' | 'blocked';
+  /** The score written into a used box, or what the dice would score in an open one */
+  readonly value: number | null;
+}
+
+/** The viewer's 13 boxes in column order for the box picker. */
+export function pickerCells(
+  card: YachtScorecard, potentials: Partial<Record<YachtBox, number>>, boxes: readonly YachtBox[],
+): YachtPickerCell[] {
+  return boxes.map((box): YachtPickerCell => {
+    const score = card.boxes[box];
+    if (score !== undefined) return { box, state: 'used', value: score };
+    const potential = potentials[box];
+    return potential === undefined ? { box, state: 'blocked', value: null } : { box, state: 'open', value: potential };
+  });
+}
+
 export function seatTotals(game: YachtVisibleState, seat: GameSeat): ReturnType<typeof yachtTotals> {
   const card = game.cards[seat];
   return card ? yachtTotals(card) : { upper: 0, upperBonus: 0, lower: 0, extra: 0, total: 0 };

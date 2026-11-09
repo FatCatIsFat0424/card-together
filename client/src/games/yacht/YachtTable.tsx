@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { YACHT_DICE, YACHT_LOWER_BOXES, YACHT_UPPER_BOXES, isYachtJoker, yachtPotentials } from '@shared/rules/yacht';
-import type { YachtBox } from '@shared/rules/yacht';
+import {
+  YACHT_DICE, YACHT_LOWER_BOXES, YACHT_UPPER_BOXES, YACHT_UPPER_BONUS_TARGET, isYachtJoker, yachtPotentials, yachtTotals,
+} from '@shared/rules/yacht';
+import type { YachtBox, YachtScorecard } from '@shared/rules/yacht';
 import type { GameSeat } from '@shared/types';
 import type { YachtGameAction } from '@shared/games/yacht/actions';
 import type { YachtLogEntry, YachtMatchResult, YachtTurn, YachtVisibleState } from '@shared/games/yacht/types';
@@ -23,7 +25,7 @@ import { joinNames, useSeatName } from '../seat-names';
 import { useConnectionReady } from '../use-connection-ready';
 import { useViewedGame } from '../use-table-perspective';
 import {
-  YACHT_ROUNDS_TOTAL, boxLabel, boxShortLabel, diceSeat, ownTurn, recentScores, rerolled, rollsLeft, rowState,
+  YACHT_ROUNDS_TOTAL, boxLabel, boxShortLabel, diceSeat, ownTurn, pickerCells, recentScores, rerolled, rollsLeft, rowState,
   seatCells, seatTotals,
 } from './yacht-view';
 import styles from './YachtTable.module.css';
@@ -93,30 +95,56 @@ function DiceRow({ game, seat, turn, holdMask, canHold, onToggle }: {
   </div>;
 }
 
-function ScoreCell({ cell, seat, interactive, picked, onPick, name }: {
-  cell: ReturnType<typeof seatCells>[number]; seat: GameSeat; interactive: boolean; picked: boolean;
-  onPick: (box: YachtBox) => void; name: string;
-}): ReactNode {
+function ScoreCell({ cell, name }: { cell: ReturnType<typeof seatCells>[number]; name: string }): ReactNode {
   const { t } = useI18nStore();
   const filled = cell.score !== null;
   const hasPotential = !filled && cell.potential !== null;
   const state = filled ? t('yacht.cellScored', { n: String(cell.score) })
     : hasPotential ? t('yacht.cellPotential', { n: String(cell.potential) }) : t('yacht.cellEmpty');
-  const label = t('yacht.boxCell', { name, box: t(boxLabel(cell.box)), state });
-  const classes = [styles.cell, filled ? styles.filled : '', hasPotential ? styles.potential : '',
-    picked ? styles.picked : ''].filter(Boolean).join(' ');
-  if (interactive && hasPotential) {
-    return <button type="button" role="cell" className={`${classes} ${styles.pickable}`} aria-pressed={picked}
-      aria-label={label} data-seat={seat} onClick={() => onPick(cell.box)}>{cell.potential}</button>;
-  }
-  return <span role="cell" className={classes} aria-label={label}>
+  const classes = [styles.cell, filled ? styles.filled : '', hasPotential ? styles.potential : ''].filter(Boolean).join(' ');
+  return <span role="cell" className={classes} aria-label={t('yacht.boxCell', { name, box: t(boxLabel(cell.box)), state })}>
     {filled ? cell.score : hasPotential ? cell.potential : ''}
   </span>;
 }
 
-function Scorecard({ game, picked, onPick, canPick }: {
-  game: YachtVisibleState; picked: YachtBox | null; onPick: (box: YachtBox) => void; canPick: boolean;
+const PICKER_BOXES = [...YACHT_UPPER_BOXES, ...YACHT_LOWER_BOXES] as readonly YachtBox[];
+
+/** The viewer's own boxes as large buttons; only the viewer ever scores here, so no other seat is listed. */
+function BoxPicker({ card, potentials, picked, onPick }: {
+  card: YachtScorecard; potentials: Partial<Record<YachtBox, number>>; picked: YachtBox | null; onPick: (box: YachtBox) => void;
 }): ReactNode {
+  const { t } = useI18nStore();
+  const cells = pickerCells(card, potentials, PICKER_BOXES);
+  const totals = yachtTotals(card);
+  const cell = (entry: ReturnType<typeof pickerCells>[number]): ReactNode => {
+    const label = t(boxShortLabel(entry.box));
+    if (entry.state !== 'open') {
+      return <span key={entry.box} className={`${styles.pickCell} ${styles.pickUsed}`} role="img"
+        aria-label={t('yacht.boxState', { box: t(boxLabel(entry.box)),
+          state: entry.value === null ? t('yacht.cellBlocked') : t('yacht.cellScored', { n: String(entry.value) }) })}>
+        <span className={styles.pickLabel}>{label}</span>
+        <span className={styles.pickValue}>{entry.value ?? '–'}</span>
+      </span>;
+    }
+    return <button key={entry.box} type="button" className={`${styles.pickCell} ${styles.pickOpen} ${picked === entry.box ? styles.picked : ''}`}
+      aria-pressed={picked === entry.box} onClick={() => onPick(entry.box)}
+      aria-label={t('yacht.boxState', { box: t(boxLabel(entry.box)), state: t('yacht.cellPotential', { n: String(entry.value) }) })}>
+      <span className={styles.pickLabel}>{label}</span>
+      <span className={styles.pickValue}>{entry.value}</span>
+    </button>;
+  };
+  const progress = <span key="progress" className={`${styles.pickCell} ${styles.pickProgress} ${totals.upperBonus > 0 ? styles.bonus : ''}`}
+    role="img" aria-label={totals.upperBonus > 0 ? t('yacht.upperBonus') : t('yacht.upperProgress', { n: String(totals.upper) })}>
+    <span className={styles.pickLabel}>{t('yacht.upperShort')}</span>
+    <span className={styles.pickValue}>{totals.upper}/{YACHT_UPPER_BONUS_TARGET}</span>
+  </span>;
+  return <div className={styles.picker} role="group" aria-label={t('yacht.pickBox')} data-yacht-picker>
+    {[...cells.slice(0, 6).map(cell), progress, ...cells.slice(6).map(cell)]}
+  </div>;
+}
+
+/** `onPeek` puts a button to the viewer's own boxes in the corner cell while the picker is the viewer's way to score. */
+function Scorecard({ game, onPeek }: { game: YachtVisibleState; onPeek: (() => void) | null }): ReactNode {
   const { t, locale } = useI18nStore();
   // Two-character Chinese labels stand upright in one column's width.
   const headClass = `${styles.boxHead} ${locale === 'zh-TW' ? styles.stacked : ''}`;
@@ -127,7 +155,10 @@ function Scorecard({ game, picked, onPick, canPick }: {
     <div className={`${styles.row} ${styles.head}`} role="row">
       <span role="columnheader" className={styles.nameHead}
         aria-label={t('yacht.round', { n: String(game.round), total: String(YACHT_ROUNDS_TOTAL) })}>
-        {game.round}/{YACHT_ROUNDS_TOTAL}</span>
+        <span className={styles.roundText}>{game.round}/{YACHT_ROUNDS_TOTAL}</span>
+        {onPeek && <button type="button" className={styles.peekHead} data-yacht-toggle onClick={onPeek}
+          aria-label={t('yacht.showPicker')}>{t('yacht.mine')}</button>}
+      </span>
       {YACHT_UPPER_BOXES.map((box) => <span key={box} role="columnheader" className={styles.boxHead}
         title={t(boxLabel(box))} aria-label={t(boxLabel(box))}>{t(boxShortLabel(box))}</span>)}
       <span role="columnheader" className={`${styles.boxHead} ${styles.sumHead}`} title={t('yacht.upperBonus')}
@@ -151,16 +182,14 @@ function Scorecard({ game, picked, onPick, canPick }: {
           {state === 'rolling' && <span className={styles.pips} aria-label={t('yacht.rowRolling')}>
             {Array.from({ length: game.turns[seat]?.rolls ?? 0 }, (_, index) => <i key={index} />)}</span>}
         </span>
-        {cells.slice(0, 6).map((cell) => <ScoreCell key={cell.box} cell={cell} seat={seat} name={name}
-          interactive={canPick && mine} picked={picked === cell.box && mine} onPick={onPick} />)}
+        {cells.slice(0, 6).map((cell) => <ScoreCell key={cell.box} cell={cell} name={name} />)}
         <span role="cell" className={`${styles.sum} ${totals.upperBonus > 0 ? styles.bonus : ''}`}
           title={totals.upperBonus > 0 ? t('yacht.upperBonus') : t('yacht.upperProgress', { n: String(totals.upper) })}
           aria-label={t('yacht.upperProgress', { n: String(totals.upper) })}>
           {totals.upper}
         </span>
         {cells.slice(6).map((cell) => <span key={cell.box} className={styles.lowerSlot} role="presentation">
-          <ScoreCell cell={cell} seat={seat} name={name} interactive={canPick && mine}
-            picked={picked === cell.box && mine} onPick={onPick} />
+          <ScoreCell cell={cell} name={name} />
           {cell.box === 'yacht' && extra > 0 && <i className={styles.extra} title={t('yacht.extraYachts', { n: String(extra) })} />}
         </span>)}
         <span role="cell" className={`${styles.sum} ${styles.total}`}>{totals.total}</span>
@@ -240,6 +269,7 @@ export function YachtTable(): ReactNode {
   const theme = useDiceTheme();
   const [draft, setDraft] = useState<{ key: string; held: boolean[] } | null>(null);
   const [pick, setPick] = useState<{ key: string; box: YachtBox } | null>(null);
+  const [peek, setPeek] = useState<string | null>(null);
   const [actionError, setActionError] = useState('');
   const [actionPending, setActionPending] = useState(false);
 
@@ -260,6 +290,9 @@ export function YachtTable(): ReactNode {
   const canRoll = canAct && turn !== undefined && rollsLeft(turn) > 0 && !holdMask.every(Boolean);
   const canHold = canAct && turn !== undefined && turn.rolls > 0 && rollsLeft(turn) > 0;
   const canScore = canAct && turn !== undefined && turn.rolls > 0;
+  // Where the centre is too short for the picker and the scorecard together, the viewer flips between them.
+  const picking = acting !== null && turn !== undefined && turn.rolls > 0;
+  const peeking = peek === stateKey;
 
   const handleActionResult: ActionCallback = (timeout, response) => {
     setActionPending(false);
@@ -327,8 +360,14 @@ export function YachtTable(): ReactNode {
     <GameShell
       info={<Info game={game} />}
       centre={<div className={styles.centre}>
-        <Scorecard game={game} picked={picked} canPick={canScore}
-          onPick={(box) => setPick({ key: stateKey, box })} />
+        <div className={styles.stack} data-seats={game.seats.length} data-view={picking && !peeking ? 'picker' : 'card'}
+          data-picking={picking ? '' : undefined}>
+          {picking && acting && <BoxPicker card={acting.card} potentials={canScore ? potentials : {}} picked={picked}
+            onPick={(box) => setPick({ key: stateKey, box })} />}
+          <Scorecard game={game} onPeek={picking ? () => setPeek(null) : null} />
+          {picking && <button type="button" className={`btn ${styles.peek}`} data-yacht-toggle
+            onClick={() => setPeek(stateKey)}>{t('yacht.showScorecard')}</button>}
+        </div>
       </div>}
       hand={dicePanel}
       prompt={prompt}
