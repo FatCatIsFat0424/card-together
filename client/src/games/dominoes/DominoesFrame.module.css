@@ -1,0 +1,54 @@
+/* ─── Dominoes presentation bodies: the deal and the round summary ─── */
+
+.body {
+  --tile-s: clamp(9px, 1.7vw, 15px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  width: 100%;
+  font-size: 0.8rem;
+}
+
+.table {
+  border-collapse: collapse;
+  max-width: 100%;
+}
+
+.caption {
+  padding-bottom: 2px;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.table th,
+.table td {
+  padding: 2px var(--spacing-xs);
+  vertical-align: middle;
+}
+
+.name {
+  max-width: 7em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: start;
+  font-weight: 600;
+}
+
+.tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.pips,
+.total {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.out { color: var(--text-secondary); }
+
+.winner .name { color: var(--color-primary); }

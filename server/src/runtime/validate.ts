@@ -51,6 +51,7 @@ export { isLandBattleResult } from '../managers/games/landbattle-validation';
 export { isBattleshipResult } from '../managers/games/battleship-validation';
 export { isCodeBreakerResult } from '../managers/games/codebreaker-validation';
 export { isYachtResult } from '../managers/games/yacht-validation';
+export { isDominoesResult } from '../managers/games/dominoes-validation';
 
 function player(value: unknown): boolean {
   return (

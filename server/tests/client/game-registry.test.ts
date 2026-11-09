@@ -69,9 +69,9 @@ describe('client game registries', () => {
 
   describe('categories', () => {
     it('lists the card games, the dice game, and the board game', () => {
-      expect(gamesInCategory('cards')).toEqual(GAME_TYPES.filter((gameType) => gameType !== 'liarsdice' && gameType !== 'yacht' && gameType !== 'reversi' && gameType !== 'jungle' && gameType !== 'gomoku' && gameType !== 'go' && gameType !== 'xiangqi' && gameType !== 'chess' && gameType !== 'banqi'
+      expect(gamesInCategory('cards')).toEqual(GAME_TYPES.filter((gameType) => gameType !== 'liarsdice' && gameType !== 'yacht' && gameType !== 'dominoes' && gameType !== 'reversi' && gameType !== 'jungle' && gameType !== 'gomoku' && gameType !== 'go' && gameType !== 'xiangqi' && gameType !== 'chess' && gameType !== 'banqi'
         && gameType !== 'chinesecheckers' && gameType !== 'landbattle' && gameType !== 'battleship' && gameType !== 'codebreaker'));
-      expect(gamesInCategory('dice')).toEqual(['liarsdice', 'yacht']);
+      expect(gamesInCategory('dice')).toEqual(['liarsdice', 'yacht', 'dominoes']);
       expect(gamesInCategory('board')).toEqual(['reversi', 'jungle', 'gomoku', 'go', 'xiangqi', 'chess', 'banqi', 'chinesecheckers', 'landbattle', 'battleship', 'codebreaker']);
     });
 
@@ -105,7 +105,7 @@ describe('client game registries', () => {
   describe('hand sorting', () => {
     it('offers suit sorting only for card games with suits', () => {
       expect(GAME_TYPES.filter((gameType) => !clientGame(gameType).handSort.bySuit)).toEqual(['liarsdeck', 'liarsdice', 'reversi', 'jungle', 'gomoku', 'go', 'xiangqi', 'chess', 'banqi',
-        'chinesecheckers', 'landbattle', 'battleship', 'codebreaker', 'yacht']);
+        'chinesecheckers', 'landbattle', 'battleship', 'codebreaker', 'yacht', 'dominoes']);
     });
 
     it('orders Big Two ranks with twos high and everything else by face value', () => {

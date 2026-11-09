@@ -31,7 +31,7 @@ const cardKey = (card: CardOrJoker | LiarCard): string => ('suit' in card ? `${c
 /** Every game except Blackjack, whose cards are public, has a private hand. */
 function handOf(state: PlayerSnapshot): readonly (CardOrJoker | LiarCard)[] {
   const game = state.gameState;
-  if (!game || !('myHand' in game)) throw new Error('Expected a private hand');
+  if (!game || !('myHand' in game) || game.gameType === 'dominoes') throw new Error('Expected a private hand');
   return game.myHand;
 }
 type Client = Socket<ServerToClientEvents, ClientToServerEvents>;

@@ -44,7 +44,7 @@ const optionIds = {
 } as const;
 const configuredGames = ['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'banqi', 'battleship'] as const;
 /** Games whose options are menus rather than switches. */
-const selectGames: readonly GameType[] = ['xiangqi', 'go', 'codebreaker', 'yacht'];
+const selectGames: readonly GameType[] = ['xiangqi', 'go', 'codebreaker', 'yacht', 'dominoes'];
 const saved: GameOptions = {
   sevens: { closeOnEnd: true, slayEffect: 'fire' },
   ninetynine: { twoDecks: true },

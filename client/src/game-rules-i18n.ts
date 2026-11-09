@@ -334,6 +334,14 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Battles', 'The higher rank wins; equal ranks remove each other. A bomb removes itself and the piece it meets. Only an engineer clears a landmine; any other attacker is removed (a bomb takes the mine with it). Any piece that reaches the flag captures it.', 'The referee announces only won, lost, or both removed; identities stay hidden until the match ends, except a flag whose marshal has fallen.'),
     section('Winning', 'Capture the enemy flag, or leave the opponent without a legal move on their turn. 60 moves in a row without a battle draw. The rules vary by region; this game uses the common rules above.', 'Once play starts you may resign at any time. On your own turn you may offer a draw: the opponent accepts to draw, and making a move counts as declining. After a decline you must make 3 more moves before offering again. Running out of time plays a legal move for you; it never loses the game.'),
   ],
+  dominoes: [
+    section('Tiles and dealing', 'A double-six set of 28 tiles; each half shows 0–6 pips. Two to four players: seven tiles each heads-up, five each with three or four, and the rest form the boneyard. Hands are private; everyone sees the counts.', 'Round 1 is opened by the holder of the highest double, who must play it first (with no double at the table, the heaviest tile). Later rounds are opened by the previous round’s winner with any tile; after a round that scored nothing, the previous opener’s left neighbour opens.'),
+    section('Playing', 'Build one line with two open ends. Add a tile to an end by matching the number showing there. Doubles lie crosswise but still have one open number. If a tile fits both ends, you choose; select a tile to see the ends it fits.'),
+    section('Drawing and passing', 'With no playable tile you must draw from the boneyard, one tile at a time, until you can play. You may not draw while holding a playable tile. When the boneyard is empty you pass. The boneyard’s tiles stay unseen; others only see that you drew or passed, which also shows which numbers you lacked.'),
+    section('Scoring a round', 'A round ends when a player empties their hand: they score the pips left in all opponents’ hands. If nobody can play and the boneyard is empty, the round is blocked: the lowest pip total scores all opponents’ pips, and a tie for lowest scores nothing. Every hand is shown at the end of the round.'),
+    section('Winning', 'Choose a target of 50, 100 (default) or 150 points in the room. The match ends after the round in which someone reaches it; the highest total wins and ties share the win. A match also stops after 30 rounds.'),
+    section('Timer', 'On timeout the heaviest legal tile is played, otherwise you draw or pass. Each round refills the reserve.'),
+  ],
   battleship: [
     section('Sea and fleet', 'Two players, each with a 10 × 10 sea: columns A–J, rows 1–10 from the top. Each fleet has five ships: carrier 5, battleship 4, cruiser 3, submarine 3, destroyer 2 cells.', 'Each player sees their own sea with their ships and the shots fired at it, and the enemy sea with their own shots. Spectators see both fleets.'),
     section('Placing', 'Both players place their fleets at the same time before a shared deadline (the room timer’s turn time plus reserve, at least 60 seconds). Ships lie across or down inside the sea and may not overlap; they may touch unless the room rule 「Ships may not touch」 is on, which also forbids corners touching.', 'Pick a ship, then tap where its bow goes; tap a placed ship to pick it up, and tap it again to turn it. Rotate, Random, and Clear help; a placement that breaks a rule is refused with the reason. Confirming is final. If time runs out, a random fleet is placed for you.'),
@@ -648,6 +656,14 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('走法', '沿公路或行營斜線走一格；或沿鐵路直線走任意距離，途中不能有棋子。工兵在鐵路上可以轉彎。不能越過或停在己方棋子上；遇到第一枚敵方棋子即停下並攻擊它。', '行營內的棋子不能被攻擊。兩方大本營內的棋子、地雷與軍旗都不能移動。'),
     section('交戰', '大吃小，同級同歸於盡。炸彈與遇到的棋子同歸於盡。只有工兵能排除地雷，其他棋子攻擊地雷會陣亡（炸彈則與地雷同歸於盡）。任何棋子走到軍旗上即奪旗。', '裁判只公布勝、負或同歸於盡，對局結束前不公開身份；唯一例外是司令陣亡後，該方軍旗位置公開。'),
     section('勝負', '奪下對方軍旗，或輪到對方時對方無子可動者勝。連續 60 手沒有交戰則和局。各地規則略有差異，本遊戲採用以上常見規則。', '開戰後可隨時認輸。輪到自己時可以提和，對手同意即和局，對手走子視為拒絕，被拒絕後需再走 3 手才能再次提和。逾時由系統代走一步合法棋，不會因超時判負。'),
+  ],
+  dominoes: [
+    section('骨牌與發牌', '使用 28 張雙六骨牌，每張兩端各 0～6 點。2～4 人：兩人各 7 張，三到四人各 5 張，其餘留作牌庫。手牌不公開，但大家看得到張數。', '第 1 局由持有最大雙牌的人先出，且必須先出那張牌（桌上沒有雙牌時，改由點數最大的牌開局）。之後每一局由上一局的贏家任意先出一張；上一局沒人得分時，由上一局先手的下家先出。'),
+    section('出牌', '所有牌接成一條龍，兩端各開放一個點數。接牌時，牌的一端要和該端的點數相同。雙牌橫放，但仍只開放一個點數。同一張牌兩端都接得上時由你選擇；選牌後會標示可以接的位置。'),
+    section('摸牌與跳過', '沒有能接的牌時，必須從牌庫一張一張摸，直到有牌可出；手上有可出的牌時不能摸牌。牌庫空了就跳過。摸到的牌不公開，其他人只看得到你摸牌或跳過，也就知道你缺少哪些點數。'),
+    section('單局計分', '有人出完手牌就結束這一局，得到所有對手剩餘的點數總和。若沒有人能出牌且牌庫已空，這一局卡死：剩餘點數最少的人得到其他人的點數總和，最少的點數並列則無人得分。結算時會公開所有人剩下的牌。'),
+    section('勝負', '房間可選目標分數 50、100（預設）或 150 分。有人在某一局後達到目標，整場就結束，總分最高者獲勝，同分並列。整場最多進行 30 局。'),
+    section('計時', '逾時時系統會打出點數最大的合法牌，沒有就代為摸牌或跳過。每一局重新補滿保留時間。'),
   ],
   battleship: [
     section('海域與艦隊', '雙人對局，每人一片 10 × 10 的海域：欄為 A～J，列由上而下為 1～10。每支艦隊有 5 艘船：航空母艦 5 格、戰艦 4 格、巡洋艦 3 格、潛艇 3 格、驅逐艦 2 格。', '每位玩家看到自己的海域（船隻與對手的射擊），以及敵方海域（自己的射擊結果）。旁觀者看得到雙方艦隊。'),

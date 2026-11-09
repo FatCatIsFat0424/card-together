@@ -218,6 +218,12 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('yachts', 'result', 'count', true),
     record('upperBonuses', 'result', 'count'),
   ],
+  dominoes: [
+    record('roundsWon', 'result', 'count', true),
+    record('dominoes', 'log', 'count'),
+    record('blockedWins', 'log', 'count'),
+    record('bestRound', 'log', 'max'),
+  ],
 };
 
 /**

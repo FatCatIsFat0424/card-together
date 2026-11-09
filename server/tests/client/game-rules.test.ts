@@ -87,6 +87,7 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
   battleship: { en: 'Firing', 'zh-TW': '射擊' },
   codebreaker: { en: 'Feedback', 'zh-TW': '回應' },
   yacht: { en: 'Bonuses', 'zh-TW': '獎勵' },
+  dominoes: { en: 'Drawing and passing', 'zh-TW': '摸牌與跳過' },
 };
 
 describe('contextual game rules', () => {

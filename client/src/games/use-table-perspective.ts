@@ -18,7 +18,7 @@ export function useTablePerspective(): GameSeat {
 export function useViewedGame<T extends PlayerVisibleGameState>(game: T | null): T | null {
   const seat = useTablePerspective();
   const view = useGodViewStore(useShallow((state) => ({
-    role: state.role, hands: state.hands, covered: state.covered, liarHands: state.liarHands, diceHands: state.diceHands,
+    role: state.role, hands: state.hands, covered: state.covered, liarHands: state.liarHands, diceHands: state.diceHands, dominoHands: state.dominoHands,
     jokerHands: state.jokerHands, oldMaidHands: state.oldMaidHands, hole: state.hole,
   })));
   return useMemo(() => game ? spectatorGame(game, seat, view) : null, [game, seat, view]);

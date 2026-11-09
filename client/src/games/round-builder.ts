@@ -6,6 +6,7 @@ import type { BigTwoComboType } from '@shared/rules/bigtwo';
 import type { DdzComboType } from '@shared/rules/doudizhu';
 import type { CrazyEightsEffect } from '@shared/games/crazyeights/types';
 import type { GoFishFish } from '@shared/games/gofish/types';
+import type { DominoTile } from '@shared/games/dominoes/types';
 
 export interface HistoryAction {
   kind: 'play' | 'pass' | 'round_end' | 'dragon' | 'flip' | 'eliminated' | 'cover' | 'challenge' | 'shot'
@@ -35,6 +36,8 @@ export interface HistoryAction {
   /** Crazy Eights: the suit an 8 named, and what an action card did */
   suit?: Suit;
   effect?: CrazyEightsEffect;
+  /** Dominoes: the tile laid */
+  tile?: DominoTile;
   /** Liar's Deck: the revealed play and whether it held a lie */
   faces?: readonly LiarFace[];
   lied?: boolean;

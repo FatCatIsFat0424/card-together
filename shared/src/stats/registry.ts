@@ -33,6 +33,7 @@ import { landBattleFacts } from './landbattle';
 import { battleshipFacts } from './battleship';
 import { codeBreakerFacts } from './codebreaker';
 import { yachtFacts } from './yacht';
+import { dominoesFacts } from './dominoes';
 
 /** Every registered game supplies facts for its own result contract. */
 export const GAME_STATS: {
@@ -70,6 +71,7 @@ export const GAME_STATS: {
   battleship: battleshipFacts,
   codebreaker: codeBreakerFacts,
   yacht: yachtFacts,
+  dominoes: dominoesFacts,
 };
 
 export function gameFacts<K extends GameType>(

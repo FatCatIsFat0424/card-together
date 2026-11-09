@@ -336,4 +336,20 @@ export type {
   CodeBreakerVisibleState,
 } from '../games/codebreaker/types';
 
+export type {
+  DominoPip,
+  DominoTile,
+  DominoSide,
+  DominoTarget,
+  DominoesOptions,
+  DominoPlacement,
+  DominoEnds,
+  DominoRoundReason,
+  DominoesLogEntry,
+  DominoesMatchResult,
+  DominoesPhase,
+  DominoesGameState,
+  DominoesVisibleState,
+} from '../games/dominoes/types';
+
 export type { AnyGameState, PlayerVisibleGameState, MatchResult } from '../games/type-registry';

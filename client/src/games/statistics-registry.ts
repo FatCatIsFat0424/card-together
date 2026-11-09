@@ -19,6 +19,7 @@ import { landBattleStatistics } from './landbattle/statistics';
 import { battleshipStatistics } from './battleship/statistics';
 import { codeBreakerStatistics } from './codebreaker/statistics';
 import { yachtStatistics } from './yacht/statistics';
+import { dominoesStatistics } from './dominoes/statistics';
 import { liarsDiceStatistics } from './liarsdice/statistics';
 import { crazyEightsStatistics } from './crazyeights/statistics';
 import { studStatistics } from './stud/statistics';
@@ -52,6 +53,7 @@ export const GAME_STATISTICS: Readonly<Record<GameType, GameStatisticsRules>> = 
   battleship: battleshipStatistics,
   codebreaker: codeBreakerStatistics,
   yacht: yachtStatistics,
+  dominoes: dominoesStatistics,
   liarsdice: liarsDiceStatistics,
   crazyeights: crazyEightsStatistics,
   stud: studStatistics,

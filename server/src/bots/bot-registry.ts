@@ -39,6 +39,7 @@ import {
 import {
   easyYachtAction, getYachtBotAction, yachtFirstLegalAction, yachtTimeoutAction,
 } from './yacht-strategy';
+import { dominoesFirstLegalAction, easyDominoesAction, getDominoesBotAction } from './dominoes-strategy';
 import { easyOldMaidAction, getOldMaidBotAction, oldMaidFirstLegalAction } from './oldmaid-strategy';
 import { getGongZhuBotAction, easyGongZhuAction, gongZhuFirstLegalAction } from './gongzhu-strategy';
 import { easyGoFishAction, getGoFishBotAction, goFishFirstLegalAction } from './gofish-strategy';
@@ -325,6 +326,13 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     turnTimeout: yachtTimeoutAction,
     // A round that ran out completes every unfinished turn the same way, bots included.
     deadlineExpired: yachtTimeoutAction,
+  },
+  dominoes: {
+    hard: getDominoesBotAction,
+    easy: easyDominoesAction,
+    firstLegal: dominoesFirstLegalAction,
+    // A player who runs out of time plays the heaviest legal tile, or draws or passes.
+    turnTimeout: dominoesFirstLegalAction,
   },
 };
 

@@ -1,0 +1,81 @@
+/* ─── Domino tile: HTML and CSS only; colours come from the dice theme variables on the tile ─── */
+
+.tile {
+  --s: var(--tile-s, 2rem);
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: stretch;
+  box-sizing: border-box;
+  width: calc(var(--s) * 2);
+  height: var(--s);
+  border: max(1px, calc(var(--s) * 0.05)) solid var(--die-edge, #bdb294);
+  border-radius: calc(var(--s) * 0.2);
+  background: var(--die-sheen, none), var(--die-body, #f6f1e4);
+  box-shadow: var(--shadow-sm);
+}
+
+.vertical {
+  flex-direction: column;
+  width: var(--s);
+  height: calc(var(--s) * 2);
+}
+
+.half {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  padding: calc(var(--s) * 0.1);
+}
+
+.pip {
+  place-self: center;
+  width: 74%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--die-pip, #2a2420);
+}
+
+.one .pip {
+  width: 110%;
+  background: var(--die-pip-one, #b3261e);
+}
+
+.blank { display: block; }
+
+.divider {
+  flex: none;
+  align-self: stretch;
+  width: max(1px, calc(var(--s) * 0.05));
+  margin: calc(var(--s) * 0.12) 0;
+  background: var(--die-edge, #bdb294);
+}
+
+.vertical .divider {
+  width: auto;
+  height: max(1px, calc(var(--s) * 0.05));
+  margin: 0 calc(var(--s) * 0.12);
+}
+
+/* A face-down tile is a blank block in the cup's leather. */
+.hidden {
+  border-color: var(--cup-shade, #3d2515);
+  background: var(--cup-body, #6b4428);
+}
+
+.playable { cursor: pointer; }
+
+.selected {
+  border-color: var(--die-match, #e0a800);
+  box-shadow: 0 0 0 2px var(--die-match, #e0a800), var(--shadow-sm);
+  transform: translateY(calc(var(--s) * -0.25));
+}
+
+.opening {
+  border-color: var(--die-match, #e0a800);
+  box-shadow: 0 0 0 2px var(--die-match, #e0a800), var(--shadow-sm);
+}
+
+.dim { opacity: 0.45; }

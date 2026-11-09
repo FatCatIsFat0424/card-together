@@ -1,7 +1,7 @@
 // ─── God View Store: other seats' hands for spectators and eliminated players ───
 
 import { scopedStore } from './scoped-store';
-import type { Card, CardOrJoker, DiceFace, LiarCard, ObserverRole, PlayerVisibleGameState, GameSeat } from '@shared/types';
+import type { Card, CardOrJoker, DiceFace, DominoTile, LiarCard, ObserverRole, PlayerVisibleGameState, GameSeat } from '@shared/types';
 import { clientGame } from '../games/registry';
 import { retainSnapshotValue } from './snapshot-equality';
 
@@ -12,6 +12,7 @@ export interface GodView {
   readonly covered: Partial<Record<GameSeat, readonly Card[]>> | null;
   readonly liarHands: Partial<Record<GameSeat, readonly LiarCard[]>> | null;
   readonly diceHands: Partial<Record<GameSeat, readonly DiceFace[]>> | null;
+  readonly dominoHands: Partial<Record<GameSeat, readonly DominoTile[]>> | null;
   /** Hands that may hold jokers: Napoleon and Dou Dizhu */
   readonly jokerHands: Partial<Record<GameSeat, readonly CardOrJoker[]>> | null;
   /** Old Maid hands, which may hold the joker */
@@ -21,7 +22,7 @@ export interface GodView {
 }
 
 export const HIDDEN_GOD_VIEW: GodView = {
-  role: null, hands: null, covered: null, liarHands: null, diceHands: null, jokerHands: null, oldMaidHands: null, hole: null,
+  role: null, hands: null, covered: null, liarHands: null, diceHands: null, dominoHands: null, jokerHands: null, oldMaidHands: null, hole: null,
 };
 
 function godViewOf(visible: PlayerVisibleGameState, role: ObserverRole): GodView {
@@ -49,7 +50,7 @@ export const useGodViewStore = scopedStore<GodViewStore>((set) => ({
   ...HIDDEN_GOD_VIEW,
   update: (visible, locked) => set((state) => {
     const current: GodView = { role: state.role, hands: state.hands, covered: state.covered,
-      liarHands: state.liarHands, diceHands: state.diceHands, jokerHands: state.jokerHands, oldMaidHands: state.oldMaidHands, hole: state.hole };
+      liarHands: state.liarHands, diceHands: state.diceHands, dominoHands: state.dominoHands, jokerHands: state.jokerHands, oldMaidHands: state.oldMaidHands, hole: state.hole };
     const next = nextGodView(current, visible, locked);
     return next === current ? state : next;
   }),

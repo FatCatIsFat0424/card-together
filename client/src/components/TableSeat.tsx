@@ -16,6 +16,7 @@ import type { TablePosition } from '../game-view';
 import { liarsDeckView } from '../games/liarsdeck/liarsdeck-view';
 import { liarsDiceView } from '../games/liarsdice/liarsdice-view';
 import { ObservedDice } from '../games/liarsdice/ObservedDice';
+import { ObservedTiles } from '../games/dominoes/ObservedTiles';
 import { blackjackSeatOut, blackjackView } from '../games/blackjack/blackjack-view';
 import { tenHalfSeatOut, tenHalfView } from '../games/tenhalf/tenhalf-view';
 import { finishPlace, oldMaidView } from '../games/oldmaid/oldmaid-view';
@@ -246,7 +247,7 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
   const {
     phase, turn, declarer, dealer, playing, bigTwoCards, redPointsCards, ninetyNineCards, locked, captured, busted,
     sevensCards, sevensCovered, chinesePokerCards, arranging, arranged, autoArranged, blackjackCards, holdemCards,
-    napoleonCards, tenHalfCards, diceCards, crazyEightsCards, goFishCards, snapshotCards,
+    napoleonCards, tenHalfCards, diceCards, dominoCards, crazyEightsCards, goFishCards, snapshotCards,
   } = useGameStore(useShallow((state) => ({
     sevensCards: gameSeatValue(state.sevens?.handCounts, seat) ?? null,
     // Blackjack hands are drawn face up on the table, so the plate shows no card backs.
@@ -257,6 +258,8 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
     tenHalfCards: state.tenhalf ? 0 : null,
     // Dice games show no card backs: Liar's Dice counts dice in its chip and Yacht Dice on its scorecard.
     diceCards: state.liarsDice || state.yacht ? 0 : null,
+    // Dominoes tiles are counted in the seat's chips and drawn face up in god view, never as card backs.
+    dominoCards: state.dominoes ? 0 : null,
     snapshotCards: state.visible && 'handCounts' in state.visible
       ? gameSeatValue(state.visible.handCounts, seat) ?? null : null,
     napoleonCards: state.napoleon ? gameSeatValue(state.napoleon.handCounts, seat) ?? 0 : null,
@@ -322,6 +325,8 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
   const observedCards = useGodViewStore((state) => state.hands?.[seat]);
   const observedLiars = useGodViewStore((state) => state.liarHands?.[seat]);
   const observedDice = useGodViewStore((state) => state.diceHands?.[seat]);
+  const observedTiles = useGodViewStore((state) => state.dominoHands?.[seat]);
+  const dominoes = useGameStore((state) => state.dominoes);
   const observedJokerHand = useGodViewStore((state) => state.jokerHands?.[seat]);
   const observedOldMaid = useGodViewStore((state) => state.oldMaidHands?.[seat]);
   const napoleon = useGameStore((state) => state.napoleon);
@@ -356,7 +361,7 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
     arranged: arranged || betPlaced || napoleonReviewed,
   });
   const cards = stats !== undefined ? 0 : bigTwoCards ?? redPointsCards ?? ninetyNineCards ?? sevensCards ?? chinesePokerCards
-    ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? diceCards ?? napoleonCards ?? tenHalfCards ?? crazyEightsCards ?? goFishCards ?? snapshotCards
+    ?? gameSeatValue(liars?.handCounts, seat) ?? blackjackCards ?? holdemCards ?? diceCards ?? dominoCards ?? napoleonCards ?? tenHalfCards ?? crazyEightsCards ?? goFishCards ?? snapshotCards
     ?? om?.counts[seat] ?? ddz?.counts[seat] ?? remainingCards(seat, playing);
   // A Hold'em fold outranks a timeout in the status slot, so a timed-out fold keeps the timeout icon.
   const heStatusLabel: TranslationKey | null = heOut && status === 'busted' ? 'holdem.out'
@@ -509,6 +514,14 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
           {he && <span className={`${styles.stat} ${styles.chips}`} title={t('holdem.chipsTitle', { n: String(he.chips[seat]) })}>
             <ChipIcon />{he.chips[seat]}
           </span>}
+          {dominoes && dominoes.seats.includes(seat) && <>
+            <span className={styles.stat} title={t('dominoes.tilesTitle', { n: String(dominoes.handCounts[seat]) })}>
+              {t('dominoes.tilesChip', { n: String(dominoes.handCounts[seat]) })}</span>
+            <span className={styles.stat} title={t('dominoes.scoreTitle', { n: String(dominoes.scores[seat]) })}>
+              {t('dominoes.scoreChip', { n: String(dominoes.scores[seat]) })}</span>
+            {dominoes.leader === seat && dominoes.line.length === 0 && <span className={`${styles.stat} ${styles.nextTag}`}>
+              {t('dominoes.leaderTag')}</span>}
+          </>}
           {napoleonPoints !== null && <span className={styles.stat}
             title={t('napoleon.pointsTitle', { n: String(napoleonPoints) })}>
             {t('napoleon.pointsChip', { n: String(napoleonPoints) })}
@@ -540,6 +553,8 @@ export function TableSeat({ seat, position, onPick, picked, pickLabel, onObserve
       {observed}
       {dice && !bottom && !dice.handHidden && observedDice && observedDice.length > 0 && !diceOut
         && <ObservedDice dice={observedDice} owner={name} />}
+      {dominoes && !bottom && observedTiles && observedTiles.length > 0
+        && <ObservedTiles tiles={observedTiles} owner={name} />}
       {cardAnchor && player && gameType && <Suspense fallback={null}>
         <LazyPlayerCard player={player} gameType={gameType} anchor={cardAnchor} onClose={() => setCardAnchor(null)} />
       </Suspense>}

@@ -1,0 +1,8 @@
+.row {
+  --tile-s: clamp(8px, 0.9vw, 11px);
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  max-width: 100%;
+}

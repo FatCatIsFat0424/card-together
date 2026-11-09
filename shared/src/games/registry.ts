@@ -34,6 +34,7 @@ import { landBattleDefinition } from './landbattle/definition';
 import { battleshipDefinition } from './battleship/definition';
 import { codeBreakerDefinition } from './codebreaker/definition';
 import { yachtDefinition } from './yacht/definition';
+import { dominoesDefinition } from './dominoes/definition';
 
 /** Every game type maps to its own definition; a missing or mismatched entry fails to compile. */
 export const GAME_DEFINITIONS: { readonly [K in GameType]: GameDefinition<K> } = {
@@ -69,6 +70,7 @@ export const GAME_DEFINITIONS: { readonly [K in GameType]: GameDefinition<K> } =
   battleship: battleshipDefinition,
   codebreaker: codeBreakerDefinition,
   yacht: yachtDefinition,
+  dominoes: dominoesDefinition,
 };
 
 export function gameDefinition<K extends GameType>(gameType: K): GameDefinition<K> {

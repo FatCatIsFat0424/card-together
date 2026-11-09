@@ -40,6 +40,7 @@ import type {
   CodeBreakerVisibleState,
 } from '@shared/types';
 import type { CrazyEightsVisibleState } from '@shared/games/crazyeights/types';
+import type { DominoesVisibleState } from '@shared/games/dominoes/types';
 import type { GongZhuVisibleState } from '@shared/games/gongzhu/types';
 import type { GoFishVisibleState } from '@shared/games/gofish/types';
 import type { BanqiVisibleState } from '@shared/games/banqi/types';
@@ -87,6 +88,7 @@ export interface GameStoreState {
   landbattle: LandBattleVisibleState | null;
   battleship: BattleshipVisibleState | null;
   codebreaker: CodeBreakerVisibleState | null;
+  dominoes: DominoesVisibleState | null;
   gameType: GameType | null;
   phase: GamePhase | null;
   myHand: Card[];
@@ -142,6 +144,7 @@ const initialState: GameStoreState = {
   landbattle: null,
   battleship: null,
   codebreaker: null,
+  dominoes: null,
   gameType: null,
   phase: null,
   myHand: [],

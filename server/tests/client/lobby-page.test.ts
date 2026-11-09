@@ -76,7 +76,7 @@ describe('lobby page', () => {
 
   it('shows a tab only for categories that have games', () => {
     expect(lobbyCategories()).toEqual(['cards', 'dice', 'board']);
-    expect(gamesInCategory('dice')).toEqual(['liarsdice', 'yacht']);
+    expect(gamesInCategory('dice')).toEqual(['liarsdice', 'yacht', 'dominoes']);
     expect(gamesInCategory('board')).toEqual(['reversi', 'jungle', 'gomoku', 'go', 'xiangqi', 'chess', 'banqi', 'chinesecheckers', 'landbattle',
       'battleship', 'codebreaker']);
     for (const [gameType, art] of Object.entries(GAME_CARD_ART)) {

@@ -21,6 +21,8 @@ export interface GameRulesContextFields {
   readonly xiangqiHandicap?: XiangqiOptions;
   /** Go board size and handicap, described in the summary. */
   readonly goOptions?: GoOptions;
+  /** Dominoes target score, described in the summary. */
+  readonly dominoesTarget?: number;
 }
 
 export interface GameRulesContext extends GameRulesContextFields {

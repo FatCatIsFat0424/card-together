@@ -30,6 +30,7 @@ import type { LandBattleGameContract } from './landbattle/types';
 import type { BattleshipGameContract } from './battleship/types';
 import type { CodeBreakerGameContract } from './codebreaker/types';
 import type { YachtGameContract } from './yacht/types';
+import type { DominoesGameContract } from './dominoes/types';
 import type { GameAutomation } from '../types/game';
 import type { GameSeat } from '../types/player';
 
@@ -67,6 +68,7 @@ export interface GameTypeRegistry {
   readonly battleship: BattleshipGameContract;
   readonly codebreaker: CodeBreakerGameContract;
   readonly yacht: YachtGameContract;
+  readonly dominoes: DominoesGameContract;
 }
 
 export type GameType = keyof GameTypeRegistry;

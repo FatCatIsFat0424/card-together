@@ -121,6 +121,7 @@ describe('spectator table perspective', () => {
       import('../../../client/src/games/battleship/BattleshipTable'),
       import('../../../client/src/games/codebreaker/CodeBreakerTable'),
       import('../../../client/src/games/yacht/YachtTable'),
+      import('../../../client/src/games/dominoes/DominoesTable'),
     ]);
   }, 60_000);
   beforeEach(() => {

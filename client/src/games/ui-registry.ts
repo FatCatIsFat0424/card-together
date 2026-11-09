@@ -26,6 +26,7 @@ import { landBattleUi } from './landbattle/landbattle-ui';
 import { battleshipUi } from './battleship/battleship-ui';
 import { codeBreakerUi } from './codebreaker/codebreaker-ui';
 import { yachtUi } from './yacht/yacht-ui';
+import { dominoesUi } from './dominoes/dominoes-ui';
 import { liarsDiceUi } from './liarsdice/liarsdice-ui';
 import { crazyEightsUi } from './crazyeights/crazyeights-ui';
 import { gongZhuUi } from './gongzhu/gongzhu-ui';
@@ -59,6 +60,7 @@ export const GAME_UIS: { readonly [K in GameType]: GameUi<K> } = {
   battleship: battleshipUi,
   codebreaker: codeBreakerUi,
   yacht: yachtUi,
+  dominoes: dominoesUi,
   liarsdice: liarsDiceUi,
   crazyeights: crazyEightsUi,
   stud: studUi,
