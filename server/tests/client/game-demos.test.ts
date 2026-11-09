@@ -23,9 +23,11 @@ const fixtures = { games: Object.fromEntries(DEMO_GAME_TYPES.map((game) => [game
 ])) as Record<DemoGameType, ExpandedDemoFixture> };
 
 describe('beginner walkthroughs', () => {
-  it('has a lesson for every mode and shows it only with an imported video, unloaded until opened', () => {
-    expect([...DEMO_GAME_TYPES].sort()).toEqual([...GAME_TYPES].sort());
-    expect(GAME_TYPES.every(isDemoGameType)).toBe(true);
+  it('shows a lesson only with an imported video, unloaded until opened', () => {
+    expect(DEMO_GAME_TYPES.every((game) => GAME_TYPES.includes(game))).toBe(true);
+    for (const game of GAME_TYPES.filter((candidate) => !isDemoGameType(candidate))) {
+      expect(renderToStaticMarkup(createElement(GameDemo, { gameType: game }))).toBe('');
+    }
     for (const game of DEMO_GAME_TYPES) {
       const html = renderToStaticMarkup(createElement(GameDemo, { gameType: game }));
       if (demoVideoFile(game)) expect(html).toContain('<summary>');
