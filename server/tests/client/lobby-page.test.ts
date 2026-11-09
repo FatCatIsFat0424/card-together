@@ -78,7 +78,7 @@ describe('lobby page', () => {
     expect(lobbyCategories()).toEqual(['cards', 'dice', 'board']);
     expect(gamesInCategory('dice')).toEqual(['liarsdice']);
     expect(gamesInCategory('board')).toEqual(['reversi', 'jungle', 'gomoku', 'go', 'xiangqi', 'chess', 'banqi', 'chinesecheckers', 'landbattle',
-      'battleship']);
+      'battleship', 'codebreaker']);
     for (const [gameType, art] of Object.entries(GAME_CARD_ART)) {
       expect(GAME_TYPES).toContain(gameType);
       expect(art).toBeTruthy();

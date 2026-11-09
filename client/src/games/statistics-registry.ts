@@ -17,6 +17,7 @@ import { xiangqiStatistics } from './xiangqi/statistics';
 import { chessStatistics } from './chess/statistics';
 import { landBattleStatistics } from './landbattle/statistics';
 import { battleshipStatistics } from './battleship/statistics';
+import { codeBreakerStatistics } from './codebreaker/statistics';
 import { liarsDiceStatistics } from './liarsdice/statistics';
 import { crazyEightsStatistics } from './crazyeights/statistics';
 import { studStatistics } from './stud/statistics';
@@ -48,6 +49,7 @@ export const GAME_STATISTICS: Readonly<Record<GameType, GameStatisticsRules>> = 
   chess: chessStatistics,
   landbattle: landBattleStatistics,
   battleship: battleshipStatistics,
+  codebreaker: codeBreakerStatistics,
   liarsdice: liarsDiceStatistics,
   crazyeights: crazyEightsStatistics,
   stud: studStatistics,

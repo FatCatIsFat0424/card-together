@@ -165,7 +165,7 @@ function GameMetricCard({ metric }: { readonly metric: GameMetric }): ReactNode 
   return <Metric label={t(`stats.metric.${metric.id}`)} value={value} note={t('stats.metric.basis', { n: integer(metric.basis) })} />;
 }
 
-type RecordUnit = 'times' | 'points' | 'chips' | 'signedChips' | 'contract' | 'hand';
+type RecordUnit = 'times' | 'points' | 'chips' | 'signedChips' | 'contract' | 'hand' | 'guesses';
 
 const RECORD_UNITS: Readonly<Record<string, RecordUnit>> = {
   'bridge.topContract': 'contract', 'napoleon.topContract': 'contract', 'holdem.bestShowdown': 'hand',
@@ -173,7 +173,7 @@ const RECORD_UNITS: Readonly<Record<string, RecordUnit>> = {
   'chinesepoker.topScore': 'points', 'blackjack.topChips': 'chips', 'holdem.biggestPot': 'chips',
   'blackjack.bestHand': 'signedChips', 'blackjack.dealerNet': 'signedChips',
   'doudizhu.topScore': 'points', 'tenhalf.topChips': 'chips', 'tenhalf.bestHand': 'signedChips', 'tenhalf.bankerNet': 'signedChips',
-  'oldmaid.topPoints': 'points',
+  'oldmaid.topPoints': 'points', 'codebreaker.fewestGuesses': 'guesses',
 };
 
 const SUIT_SYMBOLS = { clubs: '♣', diamonds: '♦', hearts: '♥', spades: '♠', nt: 'NT' } as const;
@@ -186,6 +186,7 @@ function useRecordValue(gameType: GameType): (record: SpecialRecord, value: numb
     switch (RECORD_UNITS[`${gameType}.${record.id}`] ?? 'times') {
       case 'times': return t('stats.times', { n: integer(value) });
       case 'points': return t('stats.points', { n: integer(value) });
+      case 'guesses': return t('stats.guesses', { n: integer(value) });
       case 'chips': return t('stats.chips', { n: integer(value) });
       case 'signedChips': return t('stats.chips', { n: signed(value) });
       case 'contract': {

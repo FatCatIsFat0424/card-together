@@ -5,6 +5,7 @@ import type {
 import { gameDefinition } from '@shared/games/registry';
 import * as games from '../../src/managers/game-manager';
 import { getTurnSeat } from '../../src/managers/game-clock';
+import { pendingSeats as codeBreakerPendingSeats } from '../../src/managers/games/codebreaker-game';
 import { applyAutomatedAction, firstLegalAction } from '../../src/runtime/automated-action';
 
 export const REPLAY_SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
@@ -49,6 +50,8 @@ function act(code: string): void {
         ? game.seats.find((pending) => pending !== game.contract?.napoleon && !game.reviewed.includes(pending))
       : game.gameType === 'landbattle' && game.phase === 'deploying'
         ? REPLAY_SEATS.find((pending) => game.players[pending] && !game.layouts[pending])
+      : game.gameType === 'codebreaker'
+        ? REPLAY_SEATS.find((pending) => game.players[pending] && codeBreakerPendingSeats(game).includes(pending))
       : game.gameType === 'battleship' && game.phase === 'placing'
         ? REPLAY_SEATS.find((pending) => game.players[pending] && !game.fleets[pending])
         : game.gameType === 'go' && game.phase === 'marking'

@@ -28,6 +28,7 @@ import type { BanqiGameContract } from './banqi/types';
 import type { ChineseCheckersGameContract } from './chinesecheckers/types';
 import type { LandBattleGameContract } from './landbattle/types';
 import type { BattleshipGameContract } from './battleship/types';
+import type { CodeBreakerGameContract } from './codebreaker/types';
 import type { GameAutomation } from '../types/game';
 import type { GameSeat } from '../types/player';
 
@@ -63,6 +64,7 @@ export interface GameTypeRegistry {
   readonly chinesecheckers: ChineseCheckersGameContract;
   readonly landbattle: LandBattleGameContract;
   readonly battleship: BattleshipGameContract;
+  readonly codebreaker: CodeBreakerGameContract;
 }
 
 export type GameType = keyof GameTypeRegistry;

@@ -29,5 +29,6 @@ export * from './rules/banqi';
 export * from './rules/chinesecheckers';
 export * from './rules/landbattle';
 export * from './rules/battleship';
+export * from './rules/codebreaker';
 export * from './rules/match-standing';
 export * from './rules/seats';

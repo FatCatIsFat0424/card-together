@@ -81,6 +81,7 @@ function turn(game: AnyGameState): Seat {
     if (!pending) throw new Error('Every seat has bet');
     return pending as Seat;
   }
+  if (game.gameType === 'codebreaker') throw new Error('Code Breaker has no single acting seat');
   if (game.gameType === 'spades') return game.position.currentTurnSeat as Seat;
   if (game.gameType !== 'bridge') return game.currentTurnSeat as Seat;
   if (game.phase === 'redeal_pending' && game.redealPendingSeat) return game.redealPendingSeat;

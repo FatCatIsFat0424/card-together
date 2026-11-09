@@ -14,6 +14,7 @@ import * as games from '../../src/managers/game-manager';
 import * as players from '../../src/managers/player-manager';
 import * as rooms from '../../src/managers/room-manager';
 import { getTurnSeat } from '../../src/managers/game-clock';
+import { pendingSeats as codeBreakerPendingSeats } from '../../src/managers/games/codebreaker-game';
 import { applyAutomatedAction, firstLegalAction } from '../../src/runtime/automated-action';
 import { createRuntimeCoordinator } from '../../src/runtime/coordinator';
 import type { RuntimeCoordinator } from '../../src/runtime/coordinator';
@@ -75,6 +76,8 @@ function act(code: string): void {
         ? game.seats.find((pending) => pending !== game.contract?.napoleon && !game.reviewed.includes(pending))
       : game.gameType === 'landbattle' && game.phase === 'deploying'
         ? SEATS.find((pending) => game.players[pending] && !game.layouts[pending])
+      : game.gameType === 'codebreaker'
+        ? SEATS.find((pending) => game.players[pending] && codeBreakerPendingSeats(game).includes(pending))
       : game.gameType === 'battleship' && game.phase === 'placing'
         ? SEATS.find((pending) => game.players[pending] && !game.fleets[pending])
         : game.gameType === 'go' && game.phase === 'marking'

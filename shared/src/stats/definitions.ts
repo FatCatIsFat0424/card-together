@@ -209,6 +209,10 @@ export const STATS_RECORDS: Readonly<Record<GameType, readonly StatsRecordDefini
     record('fewestShots', 'result', 'min'),
     record('shipsSunk', 'result', 'count'),
   ],
+  codebreaker: [
+    record('codesCracked', 'result', 'count', true),
+    record('fewestGuesses', 'result', 'min'),
+  ],
 };
 
 /**

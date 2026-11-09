@@ -70,9 +70,9 @@ describe('client game registries', () => {
   describe('categories', () => {
     it('lists the card games, the dice game, and the board game', () => {
       expect(gamesInCategory('cards')).toEqual(GAME_TYPES.filter((gameType) => gameType !== 'liarsdice' && gameType !== 'reversi' && gameType !== 'jungle' && gameType !== 'gomoku' && gameType !== 'go' && gameType !== 'xiangqi' && gameType !== 'chess' && gameType !== 'banqi'
-        && gameType !== 'chinesecheckers' && gameType !== 'landbattle' && gameType !== 'battleship'));
+        && gameType !== 'chinesecheckers' && gameType !== 'landbattle' && gameType !== 'battleship' && gameType !== 'codebreaker'));
       expect(gamesInCategory('dice')).toEqual(['liarsdice']);
-      expect(gamesInCategory('board')).toEqual(['reversi', 'jungle', 'gomoku', 'go', 'xiangqi', 'chess', 'banqi', 'chinesecheckers', 'landbattle', 'battleship']);
+      expect(gamesInCategory('board')).toEqual(['reversi', 'jungle', 'gomoku', 'go', 'xiangqi', 'chess', 'banqi', 'chinesecheckers', 'landbattle', 'battleship', 'codebreaker']);
     });
 
     it('follows the shared definition', () => {
@@ -105,7 +105,7 @@ describe('client game registries', () => {
   describe('hand sorting', () => {
     it('offers suit sorting only for card games with suits', () => {
       expect(GAME_TYPES.filter((gameType) => !clientGame(gameType).handSort.bySuit)).toEqual(['liarsdeck', 'liarsdice', 'reversi', 'jungle', 'gomoku', 'go', 'xiangqi', 'chess', 'banqi',
-        'chinesecheckers', 'landbattle', 'battleship']);
+        'chinesecheckers', 'landbattle', 'battleship', 'codebreaker']);
     });
 
     it('orders Big Two ranks with twos high and everything else by face value', () => {
@@ -227,7 +227,7 @@ describe('client game registries', () => {
       const hasHistory = Boolean(clientGame(gameType).roundHistory);
       expect(hasHistory).toBe(Boolean(gameUi(gameType).roundsView));
       expect(hasHistory).toBe(!['spades', 'hearts', 'bridge', 'chinesepoker', 'napoleon', 'reversi', 'jungle', 'gomoku', 'go', 'xiangqi', 'chess', 'banqi',
-        'chinesecheckers', 'landbattle', 'battleship'].includes(gameType));
+        'chinesecheckers', 'landbattle', 'battleship', 'codebreaker'].includes(gameType));
     });
   });
 });

@@ -1,0 +1,340 @@
+/* ─── CodeBreakerTable styles: seats, guess history, entry pad, settlement ─── */
+
+.table {
+  --cb-size: 30px;
+  --slot: 54px;
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: 'seats seats' 'history input';
+  gap: 12px 18px;
+  padding: 12px 18px 14px;
+  color: var(--table-ink);
+}
+
+/* ─── Seats ─── */
+.seats {
+  grid-area: seats;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  min-width: 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--text-primary) 14%, transparent);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.good {
+  background: color-mix(in srgb, var(--color-success) 22%, transparent);
+  color: var(--color-success);
+}
+
+/* ─── History ─── */
+.history {
+  grid-area: history;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--rail-border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg-page) 45%, transparent);
+}
+
+.historyHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 800;
+}
+
+.round {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+.secret {
+  --cb-size: 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.secretLabel {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.row {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.hidden {
+  display: inline-grid;
+  place-items: center;
+  width: var(--cb-size);
+  height: var(--cb-size);
+  border: 2px dashed var(--rail-border);
+  border-radius: var(--radius-md);
+  font-weight: 800;
+  opacity: 0.7;
+}
+
+.empty {
+  margin: 0;
+  font-size: var(--text-sm);
+  opacity: 0.75;
+}
+
+.list {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 6px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+
+.pendingEntry {
+  border: 1px dashed var(--rail-border);
+  background: none;
+}
+
+.index {
+  min-width: 2ch;
+  text-align: right;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.auto {
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-warning) 22%, transparent);
+  color: var(--color-warning);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.pendingText {
+  font-size: var(--text-xs);
+  opacity: 0.8;
+}
+
+.legend {
+  margin: 0;
+  font-size: var(--text-xs);
+  opacity: 0.75;
+}
+
+/* ─── Entry ─── */
+.input {
+  grid-area: input;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--rail-border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg-page) 45%, transparent);
+  overflow-y: auto;
+}
+
+.ownSeat { flex: none; min-width: 0; }
+
+.owes { border-color: var(--turn-glow); box-shadow: 0 0 0 2px color-mix(in srgb, var(--turn-glow) 40%, transparent); }
+
+.status {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.entryPad {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.slots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.slot {
+  --cb-size: calc(var(--slot) - 14px);
+  width: var(--slot);
+  height: var(--slot);
+  padding: 5px;
+  border: 2px dashed var(--rail-border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-surface) 70%, transparent);
+  cursor: pointer;
+}
+
+.slot:disabled { cursor: default; }
+.cursor { border: 2px solid var(--turn-glow); }
+
+.pad {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.colorPad { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.key {
+  --cb-size: 26px;
+  min-height: var(--hit-size);
+  padding: 4px;
+  border: 1px solid var(--rail-border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.key:hover:not(:disabled) { background: var(--bg-surface); }
+.key:disabled { opacity: 0.4; cursor: default; }
+.colorPad .key { min-height: 44px; }
+
+.keyFace {
+  display: block;
+  width: var(--cb-size);
+  height: var(--cb-size);
+  margin: 0 auto;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+}
+
+.action {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: var(--hit-size);
+  padding-inline: 8px;
+  font-size: var(--text-sm);
+}
+
+.submit { flex: 2 1 0; }
+
+.error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--text-xs);
+}
+
+/* ─── Settlement ─── */
+.resultSecret {
+  --cb-size: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.allGuesses {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.guessBlock { --cb-size: 22px; min-width: 0; }
+.guessName { margin: 0 0 4px; font-size: var(--text-sm); }
+
+/* ─── Narrow portrait ─── */
+@media (max-width: 767px) and (min-height: 501px) {
+  .table {
+    --cb-size: 26px;
+    --slot: 48px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'seats' 'history' 'input';
+    gap: 8px;
+    padding: 44px 8px 8px;
+  }
+}
+
+/* ─── Short landscape phones (706 × 336 and up): seats, history, and entry side by side ─── */
+@media (max-height: 500px) and (min-width: 600px) {
+  .table {
+    --cb-size: 20px;
+    --slot: 36px;
+    grid-template-columns: minmax(120px, 156px) minmax(0, 1fr) minmax(236px, 270px);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: 'seats history input';
+    gap: 0 8px;
+    padding: 6px 8px;
+  }
+  /* The corners above the outer columns belong to the menu, voice, and chat buttons. */
+  .seats {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 4px;
+    padding-top: 36px;
+    overflow-y: auto;
+  }
+  .input { padding: 36px 8px 4px; gap: 4px; border: 0; background: none; }
+  .owes { box-shadow: none; }
+  .history { padding: 6px 8px; gap: 4px; }
+  .legend { display: none; }
+  .secret { --cb-size: 20px; }
+  .entry { gap: 6px; padding: 1px 4px; }
+  .list { gap: 2px; }
+  .key { --cb-size: 22px; min-height: var(--hit-size); padding: 2px; }
+  .colorPad .key { min-height: var(--hit-size); }
+  .pad { gap: 4px; }
+  .status { font-size: var(--text-xs); }
+  .slots { gap: 6px; }
+  .action { min-height: var(--hit-size); font-size: var(--text-xs); }
+  .entryPad { gap: 6px; }
+}

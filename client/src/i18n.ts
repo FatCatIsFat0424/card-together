@@ -79,6 +79,8 @@ import { landBattleTranslations } from './landbattle-i18n';
 import type { LandBattleTranslationKey } from './landbattle-i18n';
 import { battleshipTranslations } from './battleship-i18n';
 import type { BattleshipTranslationKey } from './battleship-i18n';
+import { codeBreakerTranslations } from './codebreaker-i18n';
+import type { CodeBreakerTranslationKey } from './codebreaker-i18n';
 import type { TenHalfTranslationKey } from './tenhalf-i18n';
 import { shopTranslations } from './shop-i18n';
 import type { ShopTranslationKey } from './shop-i18n';
@@ -102,7 +104,7 @@ type TranslationKeys = Record<
     | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | TenHalfTranslationKey | DouDizhuTranslationKey | ChineseCheckersTranslationKey | CrazyEightsTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
     | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | StudTranslationKey | TenHalfTranslationKey | OldMaidTranslationKey | GoFishTranslationKey | ReversiTranslationKey | GomokuTranslationKey | GoTranslationKey | JungleTranslationKey | XiangqiTranslationKey | BanqiTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
     | GongZhuTranslationKey | StatsTranslationKey | BoardTranslationKey | LandBattleTranslationKey | ChessTranslationKey
-    | BattleshipTranslationKey | ChatNotificationTranslationKey | ProgressionTranslationKey, string
+    | BattleshipTranslationKey | CodeBreakerTranslationKey | ChatNotificationTranslationKey | ProgressionTranslationKey, string
 > & {
   // Lobby
   'lobby.nickname': string;
@@ -219,6 +221,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...chineseCheckersTranslations['zh-TW'],
     ...landBattleTranslations['zh-TW'],
     ...battleshipTranslations['zh-TW'],
+    ...codeBreakerTranslations['zh-TW'],
     ...shopTranslations['zh-TW'],
     ...dailyRewardsTranslations['zh-TW'],
     ...achievementsTranslations['zh-TW'],
@@ -329,6 +332,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...chineseCheckersTranslations.en,
     ...landBattleTranslations.en,
     ...battleshipTranslations.en,
+    ...codeBreakerTranslations.en,
     ...shopTranslations.en,
     ...dailyRewardsTranslations.en,
     ...achievementsTranslations.en,

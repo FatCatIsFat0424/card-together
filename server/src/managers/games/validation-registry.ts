@@ -31,6 +31,7 @@ import { banqiGame, coherentBanqiGame } from './banqi-validation';
 import { chineseCheckersGame, coherentChineseCheckersGame } from './chinesecheckers-validation';
 import { landBattleGame, coherentLandBattleGame } from './landbattle-validation';
 import { battleshipGame, coherentBattleshipGame } from './battleship-validation';
+import { codeBreakerGame, coherentCodeBreakerGame } from './codebreaker-validation';
 
 export interface GameStateValidator<K extends GameType> {
   /** Field types and bounds of a stored game of this type */
@@ -70,6 +71,7 @@ export const GAME_VALIDATORS: { readonly [K in GameType]: GameStateValidator<K> 
   chinesecheckers: { shape: chineseCheckersGame, coherent: coherentChineseCheckersGame },
   landbattle: { shape: landBattleGame, coherent: coherentLandBattleGame },
   battleship: { shape: battleshipGame, coherent: coherentBattleshipGame },
+  codebreaker: { shape: codeBreakerGame, coherent: coherentCodeBreakerGame },
 };
 
 /** Called with a game's own type, the validator accepts that game even when TypeScript only knows the union. */

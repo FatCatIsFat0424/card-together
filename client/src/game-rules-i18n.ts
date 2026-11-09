@@ -340,6 +340,15 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Firing', 'The earlier seat shoots first; players then take turns firing one shot at a cell of the enemy sea they have not shot before. Each shot is announced as a miss, a hit, or the sinking of a named ship, whose cells are then shown. A hit never says which ship it struck.', 'With the room rule 「A hit shoots again」 a hit or a sinking gives the shooter another shot.'),
     section('Winning', 'Sink the whole enemy fleet to win. You may resign at any time, also while placing; there are no draw offers. Running out of time fires a shot for you (at random, or next to an earlier hit); it never loses the game.'),
   ],
+  codebreaker: [
+    section('The secret code', 'Two to six players race to crack the same secret code. The server draws a fresh code for every match; nobody, spectators included until the end, is told it before the match is over.', 'Room rule 「Code type」: Digits (default) is four different digits 0–9. Colours is four slots filled from six colours, each with its own shape, and repeats are allowed.'),
+    section('Rounds', 'Play runs in simultaneous rounds. Every player who is still guessing submits one guess per round; the round resolves when all of them have guessed or the round timer (the room timer’s turn time plus reserve, at least 20 seconds) runs out. Each player gets at most 10 guesses.', 'A guess must be well-formed (in Digits, four different digits) but need not agree with your earlier feedback. If time runs out, a random guess that fits your own feedback is made for you.'),
+    table('Feedback', ['Mode', 'Meaning'], [
+      ['Digits (nAmB)', 'A: a right digit in the right slot. B: a right digit in the wrong slot.'],
+      ['Colours', 'Filled peg: right colour in the right slot. Ring: right colour in the wrong slot.'],
+    ], 'Feedback is private: you see only your own guesses. Other players show how many guesses they have used, whether they have cracked the code, and whether they have submitted this round.'),
+    section('Winning', 'The match ends when everyone has cracked the code or used 10 guesses. The player with the fewest guesses wins; players who needed the same number share the win and the rank, and players who did not crack it tie for last. If nobody cracks the code, nobody wins.', 'At the end the secret code and everyone’s guesses are revealed. Unseated spectators see the code and all guesses while the match runs. Bots reason only from their own feedback.'),
+  ],
 };
 
 const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
@@ -629,6 +638,15 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('擺放', '雙方在共同期限內同時擺放艦隊（房間計時的每手時間加保留時間，至少 60 秒）。船隻橫放或直放，必須在海域內且不能重疊；預設可以相鄰，房規「船隻不可相鄰」開啟時，連斜角相接也不行。', '先選一艘船，再點船首要放的位置；點已擺好的船可以拿起，再點一次就旋轉。也可以用「旋轉」、「隨機擺放」與「清除」；違反規則的擺法會被拒絕並說明原因。確認後不能更改；時間到仍未確認時隨機擺放。'),
     section('射擊', '座位順序在前的玩家先射擊，之後雙方輪流朝敵方海域射擊一格，同一格不能射兩次。每發公布未中、命中，或擊沉哪一艘船（擊沉後公開該船位置）；命中不會透露是哪一艘船。', '房規「命中可再射」開啟時，命中或擊沉的玩家可以再射一發。'),
     section('勝負', '擊沉敵方整支艦隊者獲勝。可以隨時認輸（擺放期間也可以），沒有提和。逾時由系統代射一發（隨機，或射在先前命中的旁邊），不會因超時判負。'),
+  ],
+  codebreaker: [
+    section('密碼', '2～6 位玩家同時猜同一組密碼。每局由伺服器重新抽出一組，對局結束前沒有人知道答案（未入座的旁觀者除外）。', '房規「密碼種類」：預設為數字，四個不重複的 0–9 數字；顏色是四格、六種顏色（各有不同形狀），可以重複。'),
+    section('回合', '以同步回合進行。還在猜的玩家每輪各送出一次猜測；全部送出，或回合計時（房間計時的每手時間加保留時間，至少 20 秒）到了，就結算本輪。每人最多猜 10 次。', '猜測必須格式正確（數字模式為四個不重複的數字），但不必和先前的回應一致。時間到仍未送出時，系統會依你自己的回應，隨機代猜一組合理的密碼。'),
+    table('回應', ['模式', '意義'], [
+      ['數字（nAmB）', 'A：數字對且位置對。B：數字對但位置不對。'],
+      ['顏色', '實心：顏色與位置都對。空心圈：顏色對但位置不對。'],
+    ], '回應是私人的：你只看得到自己的猜測。其他玩家只顯示已猜次數、是否猜中，以及本輪是否已送出。'),
+    section('勝負', '所有人都猜中或用完 10 次時對局結束。用最少次數猜中者獲勝；次數相同則並列獲勝與名次，沒猜中的人並列最後。沒有人猜中就沒有贏家。', '結束時公開答案與所有人的猜測；未入座的旁觀者在對局中就看得到答案與所有猜測。Bot 只依自己的回應推理。'),
   ],
 };
 

@@ -44,7 +44,7 @@ const optionIds = {
 } as const;
 const configuredGames = ['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'banqi', 'battleship'] as const;
 /** Games whose options are menus rather than switches. */
-const selectGames: readonly GameType[] = ['xiangqi', 'go'];
+const selectGames: readonly GameType[] = ['xiangqi', 'go', 'codebreaker'];
 const saved: GameOptions = {
   sevens: { closeOnEnd: true, slayEffect: 'fire' },
   ninetynine: { twoDecks: true },
@@ -234,6 +234,21 @@ describe('per-game room options', () => {
     });
     render(room('xiangqi', { xiangqi: { handicap: 'horse', handicapSide: 'black' } }), false, false);
     expect(select('xiangqi-handicap-hint')?.disabled).toBe(true);
+  });
+
+  it('offers the Code Breaker code type menu and emits the complete option', () => {
+    const select = (): SelectProps | undefined => vi.mocked(Select).mock.calls.findLast(([props]) =>
+      (props.inputProps as { 'aria-describedby'?: string } | undefined)?.['aria-describedby'] === 'codebreaker-variant-hint')?.[0];
+    render(room('codebreaker'));
+    expect(select()?.value).toBe('digits');
+    select()!.onChange?.({ target: { value: 'colors' } } as SelectChangeEvent, null);
+    expect(actions.setGameOptions).toHaveBeenLastCalledWith({ gameType: 'codebreaker', options: { variant: 'colors' } });
+    select()!.onChange?.({ target: { value: 'hex' } } as SelectChangeEvent, null);
+    expect(actions.setGameOptions).toHaveBeenCalledTimes(1);
+    render(room('codebreaker', { codebreaker: { variant: 'colors' } }));
+    expect(select()?.value).toBe('colors');
+    render(room('codebreaker'), false, false);
+    expect(select()?.disabled).toBe(true);
   });
 
   it('offers the Go size and handicap menus, and a smaller board lowers a handicap it cannot take', () => {

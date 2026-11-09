@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { bjSitsIn } from '@shared/rules/blackjack';
+import { CB_MAX_GUESSES } from '@shared/rules/codebreaker';
 import type { GameSeat } from '@shared/types';
 import { gameSeatValue } from '@shared/rules/seats';
 import { clockTickDelay, countingMs, projectedServerNow, seatClock } from '../games/turn-clock';
@@ -27,7 +28,7 @@ interface TurnClockProps {
   showBank?: boolean;
 }
 
-/** A shared deadline for simultaneous choices (Chinese Poker arrangements, Blackjack bets, Land Battle Chess deployment, Battleship placement, Go marking). */
+/** A shared deadline for simultaneous choices (Chinese Poker arrangements, Blackjack bets, Land Battle Chess deployment, Battleship placement, Code Breaker guesses, Go marking). */
 export function DeadlineClock({ deadline }: { deadline: number }): ReactNode {
   // Recorded deadlines passed long ago; playback has no clocks.
   return useReplayMode() ? null : <LiveDeadlineClock deadline={deadline} />;
@@ -82,6 +83,10 @@ export function TurnClock({ seat, showBank = true }: TurnClockProps): ReactNode 
   const placeDeadline = useGameStore((state) => state.battleship?.phase === 'placing'
     && !state.battleship.placed.includes(seat) ? state.battleship.placeDeadline : null);
   const placing = useGameStore((state) => state.battleship?.phase === 'placing');
+  const guessDeadline = useGameStore((state) => state.codebreaker?.phase === 'playing'
+    && state.codebreaker.progress[seat]?.submitted === false && !state.codebreaker.progress[seat].solved
+    && state.codebreaker.progress[seat].used < CB_MAX_GUESSES ? state.codebreaker.roundDeadline : null);
+  const guessing = useGameStore((state) => state.codebreaker?.phase === 'playing');
   const markDeadline = useGameStore((state) => state.go?.phase === 'marking'
     && !state.go.confirmed.includes(seat) ? state.go.markDeadline : null);
   const marking = useGameStore((state) => state.go?.phase === 'marking');
@@ -90,6 +95,7 @@ export function TurnClock({ seat, showBank = true }: TurnClockProps): ReactNode 
   if (reviewing) return showBank && reviewDeadline !== null ? <DeadlineClock deadline={reviewDeadline} /> : null;
   if (deploying) return showBank && deployDeadline !== null ? <DeadlineClock deadline={deployDeadline} /> : null;
   if (placing) return showBank && placeDeadline !== null ? <DeadlineClock deadline={placeDeadline} /> : null;
+  if (guessing) return showBank && guessDeadline !== null ? <DeadlineClock deadline={guessDeadline} /> : null;
   if (marking) return showBank && markDeadline !== null ? <DeadlineClock deadline={markDeadline} /> : null;
   return <SeatTurnClock seat={seat} showBank={showBank} />;
 }

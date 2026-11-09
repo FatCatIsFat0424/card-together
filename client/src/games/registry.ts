@@ -28,6 +28,7 @@ import { xiangqiClient } from './xiangqi/xiangqi-client';
 import { chessClient } from './chess/chess-client';
 import { landBattleClient } from './landbattle/landbattle-client';
 import { battleshipClient } from './battleship/battleship-client';
+import { codeBreakerClient } from './codebreaker/codebreaker-client';
 import { liarsDiceClient } from './liarsdice/liarsdice-client';
 import { crazyEightsClient } from './crazyeights/crazyeights-client';
 import { gongZhuClient } from './gongzhu/gongzhu-client';
@@ -59,6 +60,7 @@ export const CLIENT_GAMES: { readonly [K in GameType]: ClientGame<K> } = {
   chess: chessClient,
   landbattle: landBattleClient,
   battleship: battleshipClient,
+  codebreaker: codeBreakerClient,
   liarsdice: liarsDiceClient,
   crazyeights: crazyEightsClient,
   stud: studClient,

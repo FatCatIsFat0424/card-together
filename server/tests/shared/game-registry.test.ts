@@ -36,6 +36,7 @@ const PREVIOUS_SEATS: Readonly<Record<GameType, readonly [min: number, max: numb
   chinesecheckers: [2, 6, true, true],
   landbattle: [2, 2, true, false],
   battleship: [2, 2, true, false],
+  codebreaker: [2, 6, true, false],
 };
 
 describe('shared game registry', () => {
@@ -52,7 +53,7 @@ describe('shared game registry', () => {
   });
 
   it('lists the expandable rooms in lobby order', () => {
-    expect(EXPANDABLE_ROOM_GAMES).toEqual(['ninetynine', 'blackjack', 'holdem', 'napoleon', 'tenhalf', 'liarsdice', 'crazyeights', 'stud', 'oldmaid', 'gofish', 'chinesecheckers']);
+    expect(EXPANDABLE_ROOM_GAMES).toEqual(['ninetynine', 'blackjack', 'holdem', 'napoleon', 'tenhalf', 'liarsdice', 'crazyeights', 'stud', 'oldmaid', 'gofish', 'chinesecheckers', 'codebreaker']);
   });
 
   it('classifies the dice game by its category and gives chips only to the betting games', () => {
@@ -63,7 +64,7 @@ describe('shared game registry', () => {
         continue;
       }
       if (gameType === 'reversi' || gameType === 'jungle' || gameType === 'gomoku' || gameType === 'go' || gameType === 'xiangqi' || gameType === 'chess' || gameType === 'banqi'
-        || gameType === 'chinesecheckers' || gameType === 'landbattle' || gameType === 'battleship') {
+        || gameType === 'chinesecheckers' || gameType === 'landbattle' || gameType === 'battleship' || gameType === 'codebreaker') {
         expect([definition.category, definition.equipment]).toEqual(['board', []]);
         continue;
       }
@@ -89,7 +90,7 @@ describe('registered result metadata', () => {
       ['reversi', 'ranking', null], ['oldmaid', 'ranking', 'points'],
       ['gofish', 'ranking', 'points'], ['gongzhu', 'ranking', 'points'], ['doudizhu', 'ranking', 'points'], ['jungle', 'ranking', null], ['gomoku', 'ranking', null], ['go', 'ranking', null],
       ['xiangqi', 'ranking', null], ['chess', 'ranking', null], ['banqi', 'ranking', null],
-      ['chinesecheckers', 'ranking', null], ['landbattle', 'ranking', null], ['battleship', 'ranking', null], ['spades', 'team', 'points'], ['hearts', 'ranking', 'penalty'],
+      ['chinesecheckers', 'ranking', null], ['landbattle', 'ranking', null], ['battleship', 'ranking', null], ['codebreaker', 'ranking', null], ['spades', 'team', 'points'], ['hearts', 'ranking', 'penalty'],
     ]);
   });
 

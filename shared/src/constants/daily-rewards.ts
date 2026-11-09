@@ -48,6 +48,7 @@ export const DAILY_TASKS = [
   { id: 'play-chinesecheckers', pool: 'favorite', gameType: 'chinesecheckers', target: 2, coins: 10 },
   { id: 'play-landbattle', pool: 'favorite', gameType: 'landbattle', target: 2, coins: 15 },
   { id: 'play-battleship', pool: 'favorite', gameType: 'battleship', target: 2, coins: 10 },
+  { id: 'play-codebreaker', pool: 'favorite', gameType: 'codebreaker', target: 2, coins: 10 },
   { id: 'play-variety', target: 3, coins: 20 },
   { id: 'play-casino', target: 1, coins: 20 },
 ] as const satisfies readonly {

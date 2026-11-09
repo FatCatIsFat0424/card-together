@@ -61,6 +61,8 @@ import { parseAction as parseLandBattleAction } from './landbattle/actions';
 import type { LandBattleGameAction } from './landbattle/actions';
 import { parseAction as parseBattleshipAction } from './battleship/actions';
 import type { BattleshipGameAction } from './battleship/actions';
+import { parseAction as parseCodeBreakerAction } from './codebreaker/actions';
+import type { CodeBreakerGameAction } from './codebreaker/actions';
 
 /** Action contracts are indexed separately from lobby and presentation metadata. */
 export interface GameActionMap {
@@ -94,6 +96,7 @@ export interface GameActionMap {
   chinesecheckers: ChineseCheckersAction;
   landbattle: LandBattleGameAction;
   battleship: BattleshipGameAction;
+  codebreaker: CodeBreakerGameAction;
 }
 
 export type GameActionEnvelope<K extends GameType = GameType> = {
@@ -131,6 +134,7 @@ export const ACTION_PARSERS: { readonly [K in GameType]: (value: unknown) => Gam
   chinesecheckers: parseChineseCheckersAction,
   landbattle: parseLandBattleAction,
   battleship: parseBattleshipAction,
+  codebreaker: parseCodeBreakerAction,
 };
 
 function parseEnvelope<K extends GameType>(gameType: K, value: unknown): GameActionEnvelope<K> | string {

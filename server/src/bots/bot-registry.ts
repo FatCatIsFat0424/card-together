@@ -33,6 +33,9 @@ import {
 import {
   autoPlaceAction, battleshipFirstLegalAction, easyBattleshipAction, getBattleshipBotAction,
 } from './battleship-strategy';
+import {
+  codeBreakerFirstLegalAction, easyCodeBreakerAction, getCodeBreakerBotAction,
+} from './codebreaker-strategy';
 import { easyOldMaidAction, getOldMaidBotAction, oldMaidFirstLegalAction } from './oldmaid-strategy';
 import { getGongZhuBotAction, easyGongZhuAction, gongZhuFirstLegalAction } from './gongzhu-strategy';
 import { easyGoFishAction, getGoFishBotAction, goFishFirstLegalAction } from './gofish-strategy';
@@ -302,6 +305,14 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     turnTimeout: (visible) => easyBattleshipAction(visible, Math.random),
     // A human who missed the placement deadline gets a random fleet; bots keep their own.
     deadlineExpired: (visible, { isBot, strategy }) => (isBot ? strategy() : autoPlaceAction(visible, Math.random)),
+  },
+  codebreaker: {
+    // Deduction over at most a few thousand codes with sampled scoring, cheap enough for the event loop.
+    hard: getCodeBreakerBotAction,
+    easy: easyCodeBreakerAction,
+    firstLegal: codeBreakerFirstLegalAction,
+    // A seat that missed the round window guesses a random code that fits its own feedback, as the easy bot would.
+    deadlineExpired: (visible, { isBot, strategy }) => (isBot ? strategy() : easyCodeBreakerAction(visible, Math.random)),
   },
 };
 

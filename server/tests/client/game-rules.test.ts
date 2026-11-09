@@ -85,6 +85,7 @@ const requiredRule: Readonly<Record<GameType, Readonly<Record<'en' | 'zh-TW', st
   chinesecheckers: { en: 'Moving', 'zh-TW': '走法' },
   landbattle: { en: 'Battles', 'zh-TW': '交戰' },
   battleship: { en: 'Firing', 'zh-TW': '射擊' },
+  codebreaker: { en: 'Feedback', 'zh-TW': '回應' },
 };
 
 describe('contextual game rules', () => {
@@ -162,7 +163,7 @@ describe('contextual game rules', () => {
       expect(render(gameType, context)).toContain('<dd>Off</dd>');
       expect(context.active).toBe(false);
     }
-    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'go', 'xiangqi', 'banqi', 'battleship'].includes(type))) {
+    for (const gameType of GAME_TYPES.filter((type) => !['sevens', 'ninetynine', 'blackjack', 'napoleon', 'crazyeights', 'doudizhu', 'gomoku', 'go', 'xiangqi', 'banqi', 'battleship', 'codebreaker'].includes(type))) {
       expect(roomRulesContext(room(gameType, { gameOptions: { sevens: { closeOnEnd: true } } })).option).toBeNull();
     }
     // Banqi lists both of its variants, each off by default.
@@ -184,6 +185,10 @@ describe('contextual game rules', () => {
     const sea = roomRulesContext(room('battleship', { gameOptions: { battleship: { noTouching: true, hitAgain: false } } }));
     expect(sea.option).toEqual({ label: 'battleship.noTouching', enabled: true });
     expect(sea.moreOptions).toEqual([{ label: 'battleship.hitAgain', enabled: false }]);
+    // Code Breaker names its colour variant as the one rule.
+    expect(roomRulesContext(room('codebreaker')).option).toEqual({ label: 'codebreaker.optionColors', enabled: false });
+    expect(roomRulesContext(room('codebreaker', { gameOptions: { codebreaker: { variant: 'colors' } } })).option)
+      .toEqual({ label: 'codebreaker.optionColors', enabled: true });
     // Dou Dizhu bids for the landlord unless the host enables call-and-grab.
     expect(roomRulesContext(room('doudizhu')).option).toEqual({ label: 'doudizhu.grabOption', enabled: false });
     // A Xiangqi handicap shows as on and is spelled out in the summary.

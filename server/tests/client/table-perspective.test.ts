@@ -119,6 +119,7 @@ describe('spectator table perspective', () => {
       import('../../../client/src/games/chinesecheckers/ChineseCheckersTable'),
       import('../../../client/src/games/landbattle/LandBattleTable'),
       import('../../../client/src/games/battleship/BattleshipTable'),
+      import('../../../client/src/games/codebreaker/CodeBreakerTable'),
     ]);
   }, 60_000);
   beforeEach(() => {
@@ -160,7 +161,7 @@ describe('spectator table perspective', () => {
         expect(tenHalfCanAct(projected, true)).toBe(false);
       } else if (projected.gameType === 'napoleon') {
         expect(napoleonOwnTurn(projected)).toBe(false);
-      } else if (projected.gameType !== 'bridge' && projected.gameType !== 'chinesepoker') {
+      } else if (projected.gameType !== 'bridge' && projected.gameType !== 'chinesepoker' && projected.gameType !== 'codebreaker') {
         expect(isOwnTurn(projected)).toBe(false);
       }
       if (game.gameType === 'reversi' || projected.gameType === 'reversi'
@@ -184,7 +185,8 @@ describe('spectator table perspective', () => {
         expect(projected.myDice).toEqual(game.observedHands?.[seat] ?? []);
       } else if (game.gameType !== 'blackjack' && projected.gameType !== 'blackjack'
         && game.gameType !== 'tenhalf' && projected.gameType !== 'tenhalf'
-        && game.gameType !== 'liarsdice' && projected.gameType !== 'liarsdice') {
+        && game.gameType !== 'liarsdice' && projected.gameType !== 'liarsdice'
+        && game.gameType !== 'codebreaker' && projected.gameType !== 'codebreaker') {
         expect(projected.myHand).toEqual(game.observedHands?.[seat] ?? []);
       }
     }

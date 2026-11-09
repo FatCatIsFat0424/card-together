@@ -36,6 +36,7 @@ import type {
   ChessVisibleState,
   LandBattleVisibleState,
   BattleshipVisibleState,
+  CodeBreakerVisibleState,
 } from '@shared/types';
 import type { CrazyEightsVisibleState } from '@shared/games/crazyeights/types';
 import type { GongZhuVisibleState } from '@shared/games/gongzhu/types';
@@ -83,6 +84,7 @@ export interface GameStoreState {
   chineseCheckers: ChineseCheckersVisibleState | null;
   landbattle: LandBattleVisibleState | null;
   battleship: BattleshipVisibleState | null;
+  codebreaker: CodeBreakerVisibleState | null;
   gameType: GameType | null;
   phase: GamePhase | null;
   myHand: Card[];
@@ -136,6 +138,7 @@ const initialState: GameStoreState = {
   chineseCheckers: null,
   landbattle: null,
   battleship: null,
+  codebreaker: null,
   gameType: null,
   phase: null,
   myHand: [],

@@ -11,6 +11,7 @@ import { useRoomStore } from '../stores/room-store';
 import { useTurnSoundStore } from '../stores/turn-sound-store';
 import { presentationMoment } from '../games/presentation-state';
 import { blackjackNeedsBet } from '../games/blackjack/blackjack-view';
+import { codeBreakerNeedsGuess } from '../games/codebreaker/codebreaker-view';
 import { napoleonReviewState } from '../games/napoleon/napoleon-view';
 import { tenHalfNeedsBet } from '../games/tenhalf/tenhalf-view';
 
@@ -46,13 +47,15 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
   // Battleship fleets are placed at the same time too.
   const placing = game.battleship?.phase === 'placing' && game.battleship.seats.includes(game.battleship.mySeat)
     && !game.battleship.placed.includes(game.battleship.mySeat);
+  // Code Breaker guesses are simultaneous: a seat is prompted each round until it has guessed.
+  const guessing = game.codebreaker ? codeBreakerNeedsGuess(game.codebreaker) : false;
   // Go marking is joint: a seat is prompted until it has accepted the count.
   const marking = game.go?.phase === 'marking' && game.go.seats.includes(game.go.mySeat)
     && !game.go.confirmed.includes(game.go.mySeat);
   const owned = !held.locked && room.currentRoomCode && room.mySeat && game.visible?.observer !== 'spectator' &&
     account.status === 'authenticated' && account.connection === 'ready' &&
     (game.phase === 'bidding' || game.phase === 'playing') &&
-    (game.currentTurnSeat === room.mySeat || arranging || betting || reviewing || deploying || placing || marking);
+    (game.currentTurnSeat === room.mySeat || arranging || betting || reviewing || deploying || placing || guessing || marking);
   const completedTricks = game.playing?.completedTricks.length ?? game.napoleon?.tricks.length ?? 0;
   const actionCount = game.bigTwo?.log.filter((entry) =>
     'seat' in entry && entry.seat === room.mySeat).length ??
@@ -68,6 +71,7 @@ export function getTurnSoundSnapshot(): TurnSoundSnapshot {
       ? `${game.landbattle.phase}-${othersActed(game.landbattle.log, room.mySeat)}` : undefined) ??
     (game.go && room.mySeat
       ? `${game.go.phase}-${othersActed(game.go.log, room.mySeat)}` : undefined) ??
+    (game.codebreaker ? `${game.codebreaker.phase}-${game.codebreaker.round}` : undefined) ??
     (game.battleship && room.mySeat
       ? `${game.battleship.phase}-${othersActed(game.battleship.log, room.mySeat)}` : undefined) ??
     game.oldMaid?.log.filter((entry) => 'seat' in entry && entry.seat === room.mySeat).length ??

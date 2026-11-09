@@ -97,6 +97,7 @@ const ACTIONS = [
   { gameType: 'landbattle', action: { type: 'resign' } },
   { gameType: 'battleship', action: { type: 'place-fleet', fleet: [0, 20, 40, 60, 80].map((cell) => ({ cell, vertical: false })) } },
   { gameType: 'battleship', action: { type: 'fire', to: '1,6' } },
+  { gameType: 'codebreaker', action: { type: 'guess', code: [1, 2, 3, 4] } },
 ] satisfies readonly GameActionEnvelope[];
 
 function inject(value: unknown, strictCards = false): unknown {
@@ -166,6 +167,8 @@ describe('game action contracts', () => {
     ['landbattle', { type: 'move', from: '0,12', to: '0,11' }, 'Invalid action.'],
     ['battleship', { type: 'place-fleet', fleet: [{ cell: 0, vertical: false }] }, 'Invalid fleet.'],
     ['battleship', { type: 'offer-draw' }, 'This game has no draw offers.'],
+    ['codebreaker', { type: 'guess', code: [1, 2, 3] }, 'Invalid guess.'],
+    ['codebreaker', { type: 'resign' }, 'Invalid action.'],
     ['reversi', { type: 'answer-draw' }, 'Invalid draw answer.'],
     ['jungle', { type: 'move', from: '0,6', to: '7,0' }, 'Invalid action.'],
     ['jungle', { type: 'move', to: '0,5' }, 'Invalid action.'],

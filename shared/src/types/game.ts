@@ -325,4 +325,15 @@ export type {
   BattleshipVisibleState,
 } from '../games/battleship/types';
 
+export type {
+  CodeBreakerGuess,
+  CodeBreakerPublicEntry,
+  CodeBreakerLogEntry,
+  CodeBreakerPhase,
+  CodeBreakerProgress,
+  CodeBreakerMatchResult,
+  CodeBreakerGameState,
+  CodeBreakerVisibleState,
+} from '../games/codebreaker/types';
+
 export type { AnyGameState, PlayerVisibleGameState, MatchResult } from '../games/type-registry';
