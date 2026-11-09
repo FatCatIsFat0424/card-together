@@ -66,8 +66,12 @@ describe('shared game registry', () => {
         continue;
       }
       if (gameType === 'reversi' || gameType === 'jungle' || gameType === 'gomoku' || gameType === 'go' || gameType === 'xiangqi' || gameType === 'chess' || gameType === 'banqi'
-        || gameType === 'chinesecheckers' || gameType === 'landbattle' || gameType === 'battleship' || gameType === 'codebreaker') {
+        || gameType === 'chinesecheckers' || gameType === 'landbattle' || gameType === 'battleship') {
         expect([definition.category, definition.equipment]).toEqual(['board', []]);
+        continue;
+      }
+      if (gameType === 'codebreaker') {
+        expect([definition.category, definition.equipment]).toEqual(['puzzle', []]);
         continue;
       }
       expect(definition.category).toBe('cards');

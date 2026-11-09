@@ -7,7 +7,7 @@ import type { MatchControlRules } from '../rules/board/match-controls';
 import type { FrameTiming, PresentationFrame } from './presentation';
 
 /** Lobby grouping; every current game is a card game. */
-export type GameCategory = 'cards' | 'dice' | 'board';
+export type GameCategory = 'cards' | 'dice' | 'board' | 'puzzle';
 
 /** Table pieces a game renders, which decides the equippable cosmetics that apply to it. */
 export type TableEquipment = 'cards' | 'chips';

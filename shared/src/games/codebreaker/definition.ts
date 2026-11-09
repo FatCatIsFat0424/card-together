@@ -9,7 +9,7 @@ export const CODEBREAKER_MAX_PLAYERS = 6;
 
 export const codeBreakerDefinition: GameDefinition<'codebreaker'> = {
   gameType: 'codebreaker',
-  category: 'board',
+  category: 'puzzle',
   equipment: [],
   options: {
     defaults: DEFAULT_CODEBREAKER_OPTIONS,

@@ -64,10 +64,10 @@ afterEach(() => {
 });
 
 describe('Code Breaker setup', () => {
-  it('registers a two to six player board game with a digits or colours room rule', () => {
+  it('registers a two to six player puzzle game with a digits or colours room rule', () => {
     const definition = gameDefinition('codebreaker');
     expect(definition).toMatchObject({
-      category: 'board', equipment: [],
+      category: 'puzzle', equipment: [],
       seats: { minPlayers: 2, maxPlayers: 6, flexible: true, expandable: true, numbered: false },
       options: { defaults: { variant: 'digits' } },
     });

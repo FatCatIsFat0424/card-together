@@ -59,7 +59,7 @@
 - bot 與逾時動作只產生合法動作，且只用自己看得到的資訊；搜尋型 bot 有時間上限測試。
 - 回放、觀戰、重啟恢復與中止投票正常；每日任務與統計同步登錄。
 - 中英文字典、規則說明與 `docs/games/` 的繁體中文規則一起更新。
-- 大廳類別（`cards`、`dice`、`board`）取自定義；`GAME_BACKGROUNDS` 與 `GAME_CARD_ART` 是 `Partial`，缺圖的遊戲退回純色底板。
+- 大廳類別（`cards`、`dice`、`board`、`puzzle`）取自定義；`GAME_BACKGROUNDS` 與 `GAME_CARD_ART` 是 `Partial`，缺圖的遊戲退回純色底板。
 - 介面沿用現行設計：電腦版只有左側欄與頁面標題列；理牌與代打用牌桌浮動工具，手牌一律大牌在左（`HandSortRules.initial`）；彈窗用共用尺寸；手機橫向 706×336 不得溢出或重疊。
 
 **棋類**
@@ -106,7 +106,7 @@
 - 音效提示：每個音效包（含預設）都必須定義 [`SOUND_CUES`](../client/src/audio/sound-pack.ts) 的全部提示，新增提示時每個包都要補齊。牌類與骰子遊戲在 `<game>-ui.ts` 的 `presentation.cue(game, frame)` 回傳 `FrameCue`（`card`、`soft`、`out`、`diceRoll`、`diceReveal`），畫格第一次出現時由 `GameShell` 播放。棋類沒有呈現畫格，改在 `<game>-ui.ts` 提供 `boardMoveCue(move, game)`，回傳 `place`、`capture`、`flip`、`check` 或 `null`（靜音，例如 pass）；省略時落子為 `place`、吃子為 `capture`。公開手數紀錄新增紀錄時播放，載入、重新連線、新對局與回放跳轉不播放（[`board-move-sound.ts`](../client/src/games/board/board-move-sound.ts)）；判斷新紀錄的 `newBoardRecords` 與棋子特效共用（[`board-effects.ts`](../client/src/games/board/board-effects.ts)），特效從同一筆紀錄的 `from`、`to`、`capture`、`battle`、`flips`、`revealed` 判斷滑動、吃子與翻面。兩者都走音效聲道並跟隨音效開關。
 - 統計指標、勝率基準與角色群組由 [`statistics-registry.ts`](../client/src/games/statistics-registry.ts) 查詢各遊戲的純函式。名次、分數單位與固定局數取自 shared 遊戲定義，統計視窗與房間頁面只負責格式化。
 - ESLint 拒絕在各遊戲模組與 registry 以外，將 `gameType` 與遊戲字串常值做相等或不相等比較；雙向比較與 computed property 都受檢查。變數間比較與歷史篩選的 `all` 保留使用。
-- 類別（`cards`、`dice`、`board`）取自 shared 定義，由 `gamesInCategory` 提供給大廳分頁使用。
+- 類別（`cards`、`dice`、`board`、`puzzle`）取自 shared 定義，由 `gamesInCategory` 提供給大廳分頁使用。
 - 棋類共用棋盤元件：[`shared/src/rules/board/`](../shared/src/rules/board/) 以「節點與座標」加上分類的邊（直線、斜線、鐵路、六角）與區域（己方半場、九宮、河、陷阱、獸穴、行營、大本營、跳棋角落）描述棋盤，並提供各種棋盤的建構函式、視角旋轉、手數紀錄與記譜 hook、認輸／提和的純函式與結束原因。用戶端的 [`client/src/games/board/`](../client/src/games/board/) 依模型畫出 SVG 棋盤（`BoardView`）、棋子、選取與確認流程（`useBoardInput`）、手數紀錄與 `BoardTable` 版面；遊戲定義以 `matchControls` 開放認輸與提和，以 `timeControl` 指定預設計時。
 - 輸入框內容改變時，聊天訊息列會保留既有的渲染結果。新的或被取代的訊息、語系變更與外觀偏好仍會更新受影響的列。
 - 字型樣式表與應用程式資源一起在文件 head 中宣告，並對字型主機加上連線提示，而不是透過 CSS import 鏈載入。

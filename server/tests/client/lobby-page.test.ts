@@ -53,10 +53,11 @@ describe('lobby page', () => {
   it('lists the games of the selected category with one create and join area', () => {
     const html = render();
     expect(html).toContain('role="tablist"');
-    expect(html.match(/role="tab"/g)).toHaveLength(3);
+    expect(html.match(/role="tab"/g)).toHaveLength(4);
     expect(html).toContain('>Cards</button>');
     expect(html).toContain('>Dice</button>');
     expect(html).toContain('>Board games</button>');
+    expect(html).toContain('>Puzzles</button>');
     expect(html).toContain('id="lobby-games" role="tabpanel"');
     const choices = html.match(/<button[^>]*aria-controls="lobby-selected-game"[^>]*>/g) ?? [];
     expect(choices).toHaveLength(gamesInCategory('cards').length);
@@ -75,10 +76,11 @@ describe('lobby page', () => {
   });
 
   it('shows a tab only for categories that have games', () => {
-    expect(lobbyCategories()).toEqual(['cards', 'dice', 'board']);
+    expect(lobbyCategories()).toEqual(['cards', 'dice', 'board', 'puzzle']);
     expect(gamesInCategory('dice')).toEqual(['liarsdice', 'yacht', 'dominoes']);
     expect(gamesInCategory('board')).toEqual(['reversi', 'jungle', 'gomoku', 'go', 'xiangqi', 'chess', 'banqi', 'chinesecheckers', 'landbattle',
-      'battleship', 'codebreaker']);
+      'battleship']);
+    expect(gamesInCategory('puzzle')).toEqual(['codebreaker']);
     for (const [gameType, art] of Object.entries(GAME_CARD_ART)) {
       expect(GAME_TYPES).toContain(gameType);
       expect(art).toBeTruthy();

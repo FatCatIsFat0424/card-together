@@ -72,7 +72,8 @@ describe('client game registries', () => {
       expect(gamesInCategory('cards')).toEqual(GAME_TYPES.filter((gameType) => gameType !== 'liarsdice' && gameType !== 'yacht' && gameType !== 'dominoes' && gameType !== 'reversi' && gameType !== 'jungle' && gameType !== 'gomoku' && gameType !== 'go' && gameType !== 'xiangqi' && gameType !== 'chess' && gameType !== 'banqi'
         && gameType !== 'chinesecheckers' && gameType !== 'landbattle' && gameType !== 'battleship' && gameType !== 'codebreaker'));
       expect(gamesInCategory('dice')).toEqual(['liarsdice', 'yacht', 'dominoes']);
-      expect(gamesInCategory('board')).toEqual(['reversi', 'jungle', 'gomoku', 'go', 'xiangqi', 'chess', 'banqi', 'chinesecheckers', 'landbattle', 'battleship', 'codebreaker']);
+      expect(gamesInCategory('board')).toEqual(['reversi', 'jungle', 'gomoku', 'go', 'xiangqi', 'chess', 'banqi', 'chinesecheckers', 'landbattle', 'battleship']);
+      expect(gamesInCategory('puzzle')).toEqual(['codebreaker']);
     });
 
     it('follows the shared definition', () => {

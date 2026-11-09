@@ -92,7 +92,7 @@ export function gamesInCategory(category: GameCategory): readonly GameType[] {
   return GAME_TYPES.filter((gameType) => gameDefinition(gameType).category === category);
 }
 
-const CATEGORY_ORDER: readonly GameCategory[] = ['cards', 'dice', 'board'];
+const CATEGORY_ORDER: readonly GameCategory[] = ['cards', 'dice', 'board', 'puzzle'];
 
 /** Lobby categories that have at least one game, in tab order. */
 export function lobbyCategories(): readonly GameCategory[] {
