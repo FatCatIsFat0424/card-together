@@ -14,6 +14,23 @@ interface NameplateProps {
 }
 
 const MARKS: Readonly<Record<NameplateId, string>> = {
+  'nameplate-level-5': '◇',
+  'nameplate-level-10': '♧',
+  'nameplate-level-15': '⌘',
+  'nameplate-level-20': '❖',
+  'nameplate-level-25': '✧',
+  'nameplate-level-30': '⬡',
+  'nameplate-level-35': '▤',
+  'nameplate-level-40': '❋',
+  'nameplate-level-45': '✵',
+  'nameplate-level-50': '✺',
+  'nameplate-bigtwo-regular': '♣',
+  'nameplate-bigtwo-veteran': '♠',
+  'nameplate-liarsdice-regular': '⚂',
+  'nameplate-liarsdice-veteran': '⚅',
+  'nameplate-record-seeker': '⌕',
+  'nameplate-record-keeper': '▥',
+  'nameplate-record-curator': '❈',
   'nameplate-table-traveler': '♠',
   'nameplate-daily-collector': '✦',
   'nameplate-aurora': '✧',

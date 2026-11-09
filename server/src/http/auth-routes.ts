@@ -173,6 +173,19 @@ export function createAuthRouter(service: AuthService, config: AuthRouterConfig)
     }
     response.json({ success: true, account });
   }));
+  router.get('/progression', auth, route(async (_request, response) => {
+    const progression = await service.getProgression(getRequestSession(response).account.id);
+    response.json({ success: true, progression });
+  }));
+  router.post('/progression/claim', auth, route(async (request, response) => {
+    const result = await service.claimProgression(getRequestSession(response).account.id, request.body);
+    try {
+      await config.onAccountUpdated?.(result.account);
+    } catch (error) {
+      console.error('[auth] Unable to sync the progression reward:', error);
+    }
+    response.json({ success: true, ...result });
+  }));
   router.get('/achievements', auth, route(async (_request, response) => {
     const achievements = await service.getAchievements(getRequestSession(response).account.id);
     response.json({ success: true, achievements });

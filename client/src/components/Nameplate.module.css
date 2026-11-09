@@ -53,3 +53,21 @@
   :is(.nameplate-starfleet, .nameplate-shrine, .nameplate-ironfront, .nameplate-neoncity, .nameplate-crownrealm)::before { animation: none; }
 }
 :is(.nameplate-starfleet, .nameplate-shrine, .nameplate-ironfront, .nameplate-neoncity, .nameplate-crownrealm)[data-reduced-motion]::before { animation: none; }
+
+.nameplate-level-5 { --title-line: #8dc7b880; --title-bg: #233e38; --title-ink: #d5eee4; }
+.nameplate-level-10 { --title-line: #93cf9380; --title-bg: #2a422e; --title-ink: #d9f1c8; }
+.nameplate-level-15 { --title-line: #8fcad580; --title-bg: #213e49; --title-ink: #c8edf4; }
+.nameplate-level-20 { --title-line: #a8bfe980; --title-bg: #2d3a55; --title-ink: #dae5ff; }
+.nameplate-level-25 { --title-line: #b6b0ef90; --title-bg: linear-gradient(120deg, #37354e, #49405e); --title-ink: #e6dfff; }
+.nameplate-level-30 { --title-line: #b7cebd90; --title-bg: linear-gradient(120deg, #24413f, #3e5042); --title-ink: #e1f4dd; }
+.nameplate-level-35 { --title-line: #dfb69290; --title-bg: linear-gradient(120deg, #43342d, #564238); --title-ink: #f6dfc5; }
+.nameplate-level-40 { --title-line: #a4d1c490; --title-bg: linear-gradient(120deg, #264645, #315345); --title-ink: #dcf9e6; }
+.nameplate-level-45 { --title-line: #ceb8e990; --title-bg: linear-gradient(120deg, #39324d, #554056); --title-ink: #f3e0ff; }
+.nameplate-level-50 { --title-line: #e3cf9e; --title-bg: linear-gradient(120deg, #343e4e, #50533e); --title-ink: #fff0ca; border-radius: var(--radius-sm); }
+.nameplate-bigtwo-regular { --title-line: #9bb6d980; --title-bg: #293b51; --title-ink: #d5e6ff; }
+.nameplate-bigtwo-veteran { --title-line: #bdcdee; --title-bg: linear-gradient(120deg, #28394e, #3f4861); --title-ink: #ecf1ff; }
+.nameplate-liarsdice-regular { --title-line: #d6ad9580; --title-bg: #49332d; --title-ink: #f9dfca; }
+.nameplate-liarsdice-veteran { --title-line: #e1bfaa; --title-bg: linear-gradient(120deg, #49332e, #5b4644); --title-ink: #ffede0; }
+.nameplate-record-seeker { --title-line: #a8c4ab80; --title-bg: #2e4035; --title-ink: #e0edcf; }
+.nameplate-record-keeper { --title-line: #b8c7db90; --title-bg: #334052; --title-ink: #e1eafa; }
+.nameplate-record-curator { --title-line: #cebddc; --title-bg: linear-gradient(120deg, #40374b, #514957); --title-ink: #f4e5ff; border-radius: var(--radius-sm); }

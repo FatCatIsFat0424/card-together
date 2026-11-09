@@ -19,6 +19,8 @@
 | `POST /api/auth/shop/items` | `item`（目錄 ID）；選填 `equip: true` | 永久購買後更新的帳號；`equip` 會在同一次寫入裝備該商品（貼圖包沒有欄位，忽略），已擁有時只裝備、不再扣款；預設不裝備 |
 | `GET /api/auth/achievements` | — | 本人的[成就狀態](../shared/src/types/achievements.ts)、里程碑進度與各類別的領取狀態 |
 | `POST /api/auth/achievements/claim` | `category`：[目錄](../shared/src/constants/achievements.ts)中的 ID | 更新後的帳號與成就狀態；必須完成所有里程碑，重複領取具冪等性，不扣金幣 |
+| `GET /api/auth/progression` | — | `{ success: true, progression }`：本人的[成長與圖鑑狀態](../shared/src/types/progression.ts)，含等級、資歷、收藏與領獎狀態；累計 `totalXp` 為十進位字串 |
+| `POST /api/auth/progression/claim` | 僅接受 `reward`：[目錄](../shared/src/constants/progression.ts)中的獎勵 ID | 更新後的帳號與 `progression`；同一交易內檢查本人資格並授予永久稱號，重複領取具冪等性，不扣金幣、不自動裝備；拒絕額外欄位 |
 | `GET /api/auth/daily-rewards` | — | 本人的[每日狀態](../shared/src/types/daily-rewards.ts)、伺服器日期與時間、本月的簽到紀錄 |
 | `POST /api/auth/daily-rewards` | `reward`：已指派的[任務 ID](../shared/src/constants/daily-rewards.ts) 或 `check-in`；`day`：伺服器的 YYYY-MM-DD | 更新後的帳號與每日狀態；重複領取具冪等性 |
 | `POST /api/auth/daily-rewards/replace` | `task`：已指派、未領取且進度為 0 的任務 ID；`day`：伺服器的 YYYY-MM-DD | 更新後的帳號與每日狀態；每天可替換一次，新任務來自同一欄位的任務池；以同一個原始任務重試具冪等性。其他情況回應 409：`DAILY_REPLACE_USED`、`DAILY_TASK_STARTED`、`DAILY_TASK_UNAVAILABLE`、`DAILY_DATE_CHANGED` |

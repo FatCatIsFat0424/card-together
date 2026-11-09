@@ -27,6 +27,7 @@ import { acquireDatabaseLock } from './owner-lock';
 import { dailyStatus, recentGameCounts } from './daily-rewards';
 import type { RecentGames } from './daily-rewards';
 import { achievementsStatus } from './achievements';
+import { accountProgression, progressionClaim } from './progression';
 import {
   achievementClaim, completedGame, dailyRewardClaim, dailyTaskReplacement, gameRewardedAccount, observedLastSeen,
   profileUpdatedAccount, purchasedAccount, rewardedHumans,
@@ -382,6 +383,19 @@ export async function createJsonRepository(filePath: string, options: JsonReposi
       getAchievements: (id) => read((data) => {
         const account = indexes.accounts(data.accounts).byId.get(id);
         return account ? achievementsStatus(account) : null;
+      }),
+      getProgression: (id) => read((data) => {
+        const account = indexes.accounts(data.accounts).byId.get(id);
+        return account ? accountProgression(account,
+          data.gameStats.filter((entry) => entry.accountId === id && entry.scope === 'all')) : null;
+      }),
+      claimProgression: (id, reward) => write(['accounts'], (data) => {
+        const index = indexes.accounts(document.accounts).positions.get(id);
+        if (index === undefined) return null;
+        const claimed = progressionClaim(data.accounts[index],
+          data.gameStats.filter((entry) => entry.accountId === id && entry.scope === 'all'), reward, now());
+        data.accounts[index] = claimed.account;
+        return claimed;
       }),
       claimAchievement: (id, categoryId) => write(['accounts'], (data) => {
         const index = indexes.accounts(document.accounts).positions.get(id);

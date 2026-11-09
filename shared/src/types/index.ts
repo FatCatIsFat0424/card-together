@@ -256,6 +256,7 @@ export type {
   VoiceDescription, VoiceCandidate, VoiceSignal, VoiceIncomingSignal,
 } from './voice';
 export type { AchievementsStatus } from './achievements';
+export type { ProgressionStatus } from './progression';
 export type {
   StatsScope, StatsOutcome, StatsMark, StatsStreak, GameStats, StatsRecentResult, AccountStats, RoleTally, ScopeStats,
   PlayerStats,

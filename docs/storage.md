@@ -71,6 +71,17 @@
 - 遊戲進度和金幣與 `rewardedGameIds` 以原子操作一起 commit。每日任務數只在第一次成功的任務領取 transaction 中增加，並在每日重設後保留。重試或寫入失敗都不會讓任一計數器灌水。
 - `Repository.claimAchievement` 在序列化的 transaction 內檢查目錄中的每個里程碑，並把專屬稱號一次授予 `ownedAchievementNameplates`。這個永久且只有本人可見的物品欄與 `ownedShopItems` 分開，無法購買。領取會保留金幣與裝備中的外觀，推進 `updatedAt`，並在資料寫入後才發布給本人。私人計數器從不進入個人檔案。
 
+## 成長與紀錄圖鑑
+
+契約：[狀態型別](../shared/src/types/progression.ts)、[門檻與獎勵目錄](../shared/src/constants/progression.ts)、[純計算規則](../shared/src/rules/progression.ts)。進度僅本人可讀，未加入公開個人檔案。
+
+- **全站等級**：每場符合既有完局獎勵資格的對局為 100 XP，輸贏等值，含 bot 的對局也計入。直接使用 `achievements.games`，不另外保存 XP 計數器。從 Lv.L 升到下一級需 `100 × L` XP；Lv.L 的累計門檻為 `50 × L × (L − 1)` XP。初始 Lv.1，上限 Lv.50；滿級後仍保留實際累計經驗，不重置。每五級可領永久稱號。`totalXp` 是十進位字串，避免將 safe integer 完局數乘以 100 時失去精確度。
+- **各遊戲資歷**：首批大老二與吹牛骰由 `all.matches` 推導階段。這是遊玩資歷，不是實力評分。各遊戲的場數可能少於全站累計，因為較舊的結果已在統計回補前清除；沿用統計起算日，不按比例分配遺失的舊場數。
+- **圖鑑**：沿用 `all` 的既有公開統計，不與 `human` 相加，也不重掃回放。一般收藏是葫蘆、開對、喊的被開仍成立，達成各段門檻可取得印記；一條龍、同花順、鐵支與被開時剛好相符是額外稀有收藏，不影響核心獎勵。印記與稱號門檻以目錄為準。
+- **資料涵蓋範圍**：需要公開對局紀錄卻沒有可統計資料的項目，回傳 `count: null`、`tracked: false`，不當作確定的零次。沿用 `since`、`logSince`、`versionSince` 標示起算日，不臆測首次取得時間。已累計的收藏不因來源結果或回放日後清理而消失。
+- **領取**：`Repository.claimProgression` 在同一個序列化寫入／SQL transaction 中讀取帳號與統計、驗證目錄資格，再授予 `ownedAchievementNameplates`。每個獎勵對應唯一稱號，以擁有權防止重複領取；併發、重試與重啟都不會重複授予。領取保留金幣及目前裝備，首次授予才推進 `updatedAt`，成功保存後才同步本人各分頁。這些稱號不在可購買商品中。
+- **舊玩家與回復**：直接採認已保存的進度，符合門檻即可領取，不另補發完局金幣；不新增資料表或重建歷史。新稱號 ID 會擴充資料驗證的允許值，較舊程式可能拒絕物品欄或裝備中的新稱號；回復前需還原完整且相容的備份，不能僅退回程式版本。
+
 ## 統計
 
 介面：[型別](../shared/src/types/stats.ts)、[紀錄定義](../shared/src/stats/definitions.ts)、[擷取函式](../shared/src/stats/index.ts)、[計數](../shared/src/stats/accumulate.ts)、[儲存](../server/src/database/game-stats.ts)、[回補](../server/src/database/stats-backfill.ts)。不放在 `AccountRecord` 裡。

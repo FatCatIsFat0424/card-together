@@ -4,13 +4,15 @@ import { Link } from 'react-router-dom';
 import Snackbar from '@mui/material/Snackbar';
 import { ACHIEVEMENT_CATEGORIES } from '@shared/constants/achievements';
 import type { AchievementCategoryId } from '@shared/constants/achievements';
-import type { AccountProfile, AchievementsStatus } from '@shared/types';
+import type { ProgressionRewardId } from '@shared/constants/progression';
+import type { AccountProfile, AchievementsStatus, ProgressionStatus } from '@shared/types';
 import { apiRequest } from '../api';
 import { AppIcon } from '../components/AppIcon';
 import { Button } from '../components/Button';
 import { PageHeader } from '../components/PageHeader';
 import { Tabs, tabElementId } from '../components/Tabs';
 import { Nameplate } from '../components/Nameplate';
+import { ProgressionCollection, ProgressionGrowth } from '../components/ProgressionDetails';
 import { AchievementItem } from '../components/AchievementItem';
 import { useAccountStore } from '../stores/account-store';
 import { useI18nStore } from '../stores/i18n-store';
@@ -47,14 +49,27 @@ export function AchievementDetails({ categoryId, status, pending, onClaim }: {
   </section>;
 }
 
+type ProgressSection = 'growth' | 'collection' | 'achievements';
+type TitleClaim = { readonly kind: 'achievement'; readonly id: AchievementCategoryId }
+  | { readonly kind: 'progression'; readonly id: ProgressionRewardId };
+
 export function AchievementsPage(): ReactNode {
+  const accountId = useAccountStore((state) => state.account?.id);
+  return accountId ? <AccountAchievements key={accountId} accountId={accountId} /> : null;
+}
+
+function AccountAchievements({ accountId }: { readonly accountId: string }): ReactNode {
   const { t } = useI18nStore();
   const account = useAccountStore((state) => state.account);
+  const [section, setSection] = useState<ProgressSection>('growth');
   const [selected, setSelected] = useState<AchievementCategoryId>('table');
   const [status, setStatus] = useState<AchievementsStatus | null>(null);
-  const [error, setError] = useState(false);
+  const [progression, setProgression] = useState<ProgressionStatus | null>(null);
+  const [legacyError, setLegacyError] = useState(false);
+  const [progressionError, setProgressionError] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [pending, setPending] = useState(false);
+  const [pendingReward, setPendingReward] = useState<ProgressionRewardId | null>(null);
   const [notice, setNotice] = useState('');
   const busy = useRef(false);
   const mounted = useRef(false);
@@ -64,41 +79,66 @@ export function AchievementsPage(): ReactNode {
     mounted.current = true;
     const onFocus = (): void => setRefresh((value) => value + 1);
     window.addEventListener('focus', onFocus);
-    return () => { mounted.current = false; window.removeEventListener('focus', onFocus); };
+    return () => {
+      mounted.current = false;
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   useEffect(() => {
+    if (busy.current) return;
     let active = true;
     const request = ++version.current;
+    const current = (): boolean => active && request === version.current
+      && useAccountStore.getState().account?.id === accountId
+      && useAccountStore.getState().account?.updatedAt === account?.updatedAt
+      && useAccountStore.getState().account?.coinRevision === account?.coinRevision;
     void apiRequest<{ achievements: AchievementsStatus }>('/api/auth/achievements').then((result) => {
-      if (!active || request !== version.current) return;
-      setError(!result.success);
+      if (!current()) return;
+      setLegacyError(!result.success);
       if (result.success) setStatus(result.achievements);
     });
+    void apiRequest<{ progression: ProgressionStatus }>('/api/auth/progression').then((result) => {
+      if (!current()) return;
+      setProgressionError(!result.success);
+      if (result.success) setProgression(result.progression);
+    });
     return () => { active = false; };
-  }, [account?.id, account?.coinRevision, account?.updatedAt, refresh]);
+  }, [accountId, account?.coinRevision, account?.updatedAt, refresh]);
 
-  const claim = async (category: AchievementCategoryId): Promise<void> => {
+  const claim = async (target: TitleClaim): Promise<void> => {
+    const legacy = target.kind === 'achievement';
     if (!account || busy.current) return;
     busy.current = true;
     setPending(true);
+    setPendingReward(target.kind === 'progression' ? target.id : null);
     ++version.current;
-    const result = await apiRequest<{ account: AccountProfile; achievements: AchievementsStatus }>(
-      '/api/auth/achievements/claim', 'POST', { category },
-    );
+    const result = legacy
+      ? await apiRequest<{ account: AccountProfile; achievements: AchievementsStatus }>(
+        '/api/auth/achievements/claim', 'POST', { category: target.id },
+      )
+      : await apiRequest<{ account: AccountProfile; progression: ProgressionStatus }>(
+        '/api/auth/progression/claim', 'POST', { reward: target.id },
+      );
     busy.current = false;
-    if (!mounted.current || useAccountStore.getState().account?.id !== account.id) return;
+    if (!mounted.current || useAccountStore.getState().account?.id !== accountId) return;
     ++version.current;
     setPending(false);
+    setPendingReward(null);
     if (result.success) {
-      setStatus(result.achievements);
-      setError(false);
+      const current = useAccountStore.getState().account;
+      const stale = current && (current.updatedAt > result.account.updatedAt
+        || (current.coinRevision ?? -1) > (result.account.coinRevision ?? -1));
+      if (!stale) {
+        if ('achievements' in result) { setStatus(result.achievements); setLegacyError(false); }
+        if ('progression' in result) { setProgression(result.progression); setProgressionError(false); }
+      }
       useAccountStore.getState().setAccount(result.account);
-      setNotice(t('achievements.success'));
+      setNotice(t(legacy ? 'achievements.success' : 'progression.success'));
     } else {
-      setNotice(t('achievements.claimError'));
-      setRefresh((value) => value + 1);
+      setNotice(t(legacy ? 'achievements.claimError' : 'progression.claimError'));
     }
+    setRefresh((value) => value + 1);
   };
 
   const completedCount = (id: AchievementCategoryId): number => {
@@ -106,27 +146,34 @@ export function AchievementsPage(): ReactNode {
     const state = status?.categories.find((entry) => entry.id === id);
     return category.items.filter((item) => state?.items.some((entry) => entry.id === item.id && entry.progress >= item.target)).length;
   };
-  const done = ACHIEVEMENT_CATEGORIES.reduce((sum, category) => sum + completedCount(category.id), 0);
-  const total = ACHIEVEMENT_CATEGORIES.reduce((sum, category) => sum + category.items.length, 0);
+  const error = section === 'achievements' ? legacyError : progressionError;
+  const loading = section === 'achievements' ? !status : !progression;
 
   return <main className={styles.page}>
-    <PageHeader title={t('achievements.title')} icon="trophy" iconColor="var(--color-gold)"
-      tabs={status && <Tabs<AchievementCategoryId> idPrefix="achievement" controls="achievement-panel"
-        label={t('achievements.categories')} value={selected} onChange={setSelected}
-        tabs={ACHIEVEMENT_CATEGORIES.map((category) => ({ id: category.id, label: <>
-          {t(`achievements.${category.id}`)}
-          <span className={styles.categoryCount}>{completedCount(category.id)}/{category.items.length}</span></> }))} />}
-      summary={status && <><AppIcon name="agree" />{t('achievements.total', { done: String(done), total: String(total) })}</>}
-      compactSummary={status && <><AppIcon name="agree" />{`${done}/${total}`}</>} />
-    {error && <div className={styles.error} role="alert">{t('achievements.error')}
-      <Button onClick={() => setRefresh((value) => value + 1)}>{t('achievements.retry')}</Button></div>}
-    {!status && !error && <p role="status">{t('common.loading')}</p>}
-    {status && <>
-      <div id="achievement-panel" role="tabpanel" aria-labelledby={tabElementId('achievement', selected)}>
-        <AchievementDetails categoryId={selected} status={status} pending={pending} onClaim={(id) => { void claim(id); }} />
-      </div>
-    </>}
-    <p className={styles.note}>{t('achievements.tracking')}</p>
+    <PageHeader title={t('progression.title')} titleHidden icon="trophy" iconColor="var(--color-gold)"
+      tabs={<Tabs<ProgressSection> idPrefix="progression" controls="progression-panel"
+        label={t('progression.sections')} value={section} onChange={setSection}
+        tabs={(['growth', 'collection', 'achievements'] as const).map((id) => ({ id, label: t(`progression.${id}`) }))} />} />
+    <div id="progression-panel" role="tabpanel" aria-labelledby={tabElementId('progression', section)}>
+      {error && <div className={styles.error} role="alert">{t(section === 'achievements' ? 'achievements.error' : 'progression.error')}
+        <Button disabled={pending} onClick={() => setRefresh((value) => value + 1)}>{t('achievements.retry')}</Button></div>}
+      {loading && !error && <p role="status">{t('common.loading')}</p>}
+      {section === 'growth' && progression && <ProgressionGrowth status={progression} pending={pendingReward} busy={pending}
+        onClaim={(id) => { void claim({ kind: 'progression', id }); }} />}
+      {section === 'collection' && progression && <ProgressionCollection status={progression} pending={pendingReward} busy={pending}
+        onClaim={(id) => { void claim({ kind: 'progression', id }); }} />}
+      {section === 'achievements' && status && <>
+        <Tabs<AchievementCategoryId> idPrefix="achievement" controls="achievement-panel"
+          label={t('achievements.categories')} value={selected} onChange={setSelected}
+          tabs={ACHIEVEMENT_CATEGORIES.map((category) => ({ id: category.id, label: <>
+            {t(`achievements.${category.id}`)}
+            <span className={styles.categoryCount}>{completedCount(category.id)}/{category.items.length}</span></> }))} />
+        <div id="achievement-panel" className={styles.legacyPanel} role="tabpanel" aria-labelledby={tabElementId('achievement', selected)}>
+          <AchievementDetails categoryId={selected} status={status} pending={pending} onClaim={(id) => { void claim({ kind: 'achievement', id }); }} />
+        </div>
+      </>}
+    </div>
+    <p className={styles.note}>{t('achievements.tracking')}<br />{t('progression.private')}</p>
     <Snackbar open={Boolean(notice)} message={notice} autoHideDuration={4500} onClose={() => setNotice('')} />
   </main>;
 }

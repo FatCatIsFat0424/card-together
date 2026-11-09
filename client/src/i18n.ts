@@ -84,6 +84,8 @@ import { shopTranslations } from './shop-i18n';
 import type { ShopTranslationKey } from './shop-i18n';
 import { dailyRewardsTranslations } from './daily-rewards-i18n';
 import type { DailyRewardsTranslationKey } from './daily-rewards-i18n';
+import { progressionTranslations } from './progression-i18n';
+import type { ProgressionTranslationKey } from './progression-i18n';
 import { achievementsTranslations } from './achievements-i18n';
 import type { AchievementsTranslationKey } from './achievements-i18n';
 import { statsTranslations } from './stats-i18n';
@@ -100,7 +102,7 @@ type TranslationKeys = Record<
     | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | TenHalfTranslationKey | DouDizhuTranslationKey | ChineseCheckersTranslationKey | CrazyEightsTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
     | LiarsDeckTranslationKey | LiarsDiceTranslationKey | BlackjackTranslationKey | HoldemTranslationKey | NapoleonTranslationKey | StudTranslationKey | TenHalfTranslationKey | OldMaidTranslationKey | GoFishTranslationKey | ReversiTranslationKey | GomokuTranslationKey | GoTranslationKey | JungleTranslationKey | XiangqiTranslationKey | BanqiTranslationKey | ShopTranslationKey | DailyRewardsTranslationKey | AchievementsTranslationKey
     | GongZhuTranslationKey | StatsTranslationKey | BoardTranslationKey | LandBattleTranslationKey | ChessTranslationKey
-    | BattleshipTranslationKey | ChatNotificationTranslationKey, string
+    | BattleshipTranslationKey | ChatNotificationTranslationKey | ProgressionTranslationKey, string
 > & {
   // Lobby
   'lobby.nickname': string;
@@ -220,6 +222,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...shopTranslations['zh-TW'],
     ...dailyRewardsTranslations['zh-TW'],
     ...achievementsTranslations['zh-TW'],
+    ...progressionTranslations['zh-TW'],
     ...statsTranslations['zh-TW'],
     ...boardTranslations['zh-TW'],
     'lobby.nickname': '暱稱',
@@ -329,6 +332,7 @@ const translations: Record<Locale, TranslationKeys> = {
     ...shopTranslations.en,
     ...dailyRewardsTranslations.en,
     ...achievementsTranslations.en,
+    ...progressionTranslations.en,
     ...statsTranslations.en,
     ...boardTranslations.en,
     'lobby.nickname': 'Nickname',

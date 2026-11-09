@@ -4,6 +4,9 @@
 .notice > li > div:first-child { width: 44px; height: 52px; font-size: 24px; }
 .notice h3 { font-size: var(--text-base); }
 .notice p { font-size: var(--text-xs); }
+.progression { display: flex; align-items: center; gap: var(--space-3); padding: 14px 16px; border-radius: var(--radius-lg); background: var(--surface-1); color: var(--text-primary); }
+.progression > svg { flex-shrink: 0; color: var(--color-gold); font-size: 24px; }
+.progression strong { font-size: var(--text-base); overflow-wrap: anywhere; }
 .leaving { animation: achievementExit 200ms ease-in both; }
 .still { animation: none; }
 @keyframes achievementEnter {

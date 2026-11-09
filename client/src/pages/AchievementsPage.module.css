@@ -1,5 +1,4 @@
-/* Achievements: the shared page header (title, category tabs, total), one thin reward row, then a grid of compact
-   tiles. The header starts at the top edge. */
+/* Growth and collection share the existing achievement page shell. */
 .page {
   --achievement-gold: var(--color-gold);
   width: 100%;
@@ -38,3 +37,5 @@
   .rewardTitle, .percent, .hint, .manage { font-size: var(--text-sm); }
   .items { grid-template-columns: repeat(auto-fill, minmax(max(17rem, calc((100% - 3 * var(--space-3)) / 4)), 1fr)); gap: var(--space-3); }
 }
+
+.legacyPanel { padding-top: var(--space-3); }

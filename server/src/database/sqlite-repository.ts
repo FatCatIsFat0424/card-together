@@ -13,6 +13,7 @@ import {
   profileUpdatedAccount, purchasedAccount, rewardedHumans,
 } from './account-operations';
 import { achievementsStatus } from './achievements';
+import { accountProgression, progressionClaim } from './progression';
 import { dailyStatus, favoriteWindow, recentGameCounts } from './daily-rewards';
 import type { RecentGames } from './daily-rewards';
 import { friendshipPair } from './indexes';
@@ -385,6 +386,19 @@ export async function createSqliteRepository(filePath: string, options: Reposito
       getAchievements: (id) => read(() => {
         const account = readAccount(sql, id);
         return account ? achievementsStatus(account) : null;
+      }),
+      getProgression: (id) => read(() => {
+        const account = readAccount(sql, id);
+        return account ? accountProgression(account,
+          sql("SELECT record FROM game_stats WHERE account_id = ? AND scope = 'all'").all(id).map(gameStatsFromRow)) : null;
+      }),
+      claimProgression: (id, reward) => write(() => {
+        const account = accountForUpdate(id);
+        if (!account) return null;
+        const claimed = progressionClaim(account,
+          sql("SELECT record FROM game_stats WHERE account_id = ? AND scope = 'all'").all(id).map(gameStatsFromRow), reward, now());
+        if (claimed.account !== account) updateAccount(sql, claimed.account);
+        return claimed;
       }),
       claimAchievement: (id, categoryId) => write(() => {
         const account = accountForUpdate(id);

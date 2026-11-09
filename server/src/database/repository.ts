@@ -3,6 +3,8 @@ import type { DailyRewardsRecord } from './daily-rewards';
 import type { AchievementsRecord } from './achievements';
 import type { AchievementsStatus } from '@shared/types';
 import type { AchievementCategoryId } from '@shared/constants/achievements';
+import type { ProgressionRewardId } from '@shared/constants/progression';
+import type { ProgressionStatus } from '@shared/types';
 
 export type { EmojiRecord };
 import type { RuntimeSnapshot } from '../runtime/types';
@@ -116,6 +118,11 @@ export interface Repository {
   purchaseShopItem(id: string, item: ShopItemId, now: number, equip?: boolean): Promise<AccountRecord | null>;
   getDailyRewards(id: string): Promise<DailyRewardsStatus | null>;
   getAchievements(id: string): Promise<AchievementsStatus | null>;
+  getProgression(id: string): Promise<ProgressionStatus | null>;
+  /** Check account and all-scope stats, granting title ownership once in a single durable write. */
+  claimProgression(id: string, reward: ProgressionRewardId): Promise<{
+    account: AccountRecord; progression: ProgressionStatus;
+  } | null>;
   /** Validate every item and grant the exclusive title once, in a single durable write. */
   claimAchievement(id: string, category: AchievementCategoryId): Promise<{
     account: AccountRecord; achievements: AchievementsStatus;

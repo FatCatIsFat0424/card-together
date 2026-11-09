@@ -1,3 +1,5 @@
+import { PROGRESSION_REWARDS } from './progression';
+
 /** Themed collections designed together; individually designed products belong to none. */
 export const SHOP_SERIES = [
   'aurora', 'tide', 'sakura', 'constellation', 'bamboo', 'gilded', 'ember', 'lotus', 'frost', 'dune',
@@ -440,6 +442,7 @@ export function equipmentSlotFor(type: ShopItemType): EquipmentSlot | null {
 export const ACHIEVEMENT_NAMEPLATES = [
   { id: 'nameplate-table-traveler' },
   { id: 'nameplate-daily-collector' },
+  ...PROGRESSION_REWARDS.map(({ nameplate }) => ({ id: nameplate })),
 ] as const;
 export type AchievementNameplateId = typeof ACHIEVEMENT_NAMEPLATES[number]['id'];
 export type NameplateId = typeof NAMEPLATES[number]['id'] | AchievementNameplateId;

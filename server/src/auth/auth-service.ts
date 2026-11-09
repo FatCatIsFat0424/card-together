@@ -3,6 +3,8 @@ import type { AccountProfile, AvatarPreset, DailyRewardsStatus, MediaId } from '
 import { isDailyTaskId } from '@shared/constants/daily-rewards';
 import { isAchievementCategoryId } from '@shared/constants/achievements';
 import type { AchievementsStatus } from '@shared/types';
+import { isProgressionRewardId } from '@shared/constants/progression';
+import type { ProgressionStatus } from '@shared/types';
 import {
   IMAGE_OPACITY_MAX, IMAGE_OPACITY_MIN, NICKNAME_MAX_LENGTH, PASSWORD_MAX_LENGTH,
   USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, isImageOpacity, isMediaId,
@@ -41,6 +43,8 @@ export interface AuthService {
   purchaseShopItem(accountId: string, input: unknown): Promise<AccountProfile>;
   getDailyRewards(accountId: string): Promise<DailyRewardsStatus>;
   getAchievements(accountId: string): Promise<AchievementsStatus>;
+  getProgression(accountId: string): Promise<ProgressionStatus>;
+  claimProgression(accountId: string, input: unknown): Promise<{ account: AccountProfile; progression: ProgressionStatus }>;
   claimAchievement(accountId: string, input: unknown): Promise<{ account: AccountProfile; achievements: AchievementsStatus }>;
   replaceDailyTask(accountId: string, input: unknown): Promise<{ account: AccountProfile; dailyRewards: DailyRewardsStatus }>;
   claimDailyReward(accountId: string, input: unknown): Promise<{ account: AccountProfile; dailyRewards: DailyRewardsStatus }>;
@@ -374,6 +378,27 @@ export function createAuthService(
       const status = await repository.getAchievements(accountId);
       if (!status) throw authError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
       return status;
+    },
+    getProgression: async (accountId) => {
+      const status = await repository.getProgression(accountId);
+      if (!status) throw authError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
+      return status;
+    },
+    claimProgression: async (accountId, input) => {
+      const body = requiredObject(input);
+      if (Object.keys(body).length !== 1 || !isProgressionRewardId(body.reward)) {
+        throw authError(400, 'INVALID_PROGRESSION_REWARD', 'Provide only a progression reward.');
+      }
+      try {
+        const result = await repository.claimProgression(accountId, body.reward);
+        if (!result) throw authError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
+        return { account: publicAccount(result.account), progression: result.progression };
+      } catch (error) {
+        if (isObject(error) && error.code === 'PROGRESSION_INCOMPLETE') {
+          throw authError(409, error.code, 'Reach this progression target first.');
+        }
+        throw error;
+      }
     },
     claimAchievement: async (accountId, input) => {
       const body = requiredObject(input);
