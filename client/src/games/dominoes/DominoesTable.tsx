@@ -24,6 +24,7 @@ import { useConnectionReady } from '../use-connection-ready';
 import { useGamePresentation } from '../use-game-presentation';
 import { isOwnTurn } from '../observer-view';
 import { DominoTile } from './DominoTile';
+import { fitHand } from './dominoes-hand';
 import { fitLine, lineGap, lineSlots, reversedRow } from './dominoes-line';
 import type { LineSlot } from './dominoes-line';
 import styles from './DominoesTable.module.css';
@@ -43,7 +44,7 @@ function latestTile(log: DominoesVisibleState['log']): Tile | undefined {
   return undefined;
 }
 
-/** Size of the box the line may fill, tracked as the table is resized. */
+/** Size of a box that fills its container, tracked as the table is resized. */
 function useBoxSize(): { ref: RefObject<HTMLDivElement | null>; width: number; height: number } {
   const ref = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -133,6 +134,35 @@ function Centre({ game, canDraw, onDraw, selected, onPick }: {
         : <span className={styles.pill}>{label}</span>}
     </div>
     <Line game={game} selected={selected} onPick={onPick} />
+  </div>;
+}
+
+/** The player's tiles: one row while each keeps a full tap area, otherwise balanced rows. */
+function Hand({ tiles, playable, chosen, opening, isMyTurn, canAct, onPick, children }: {
+  tiles: readonly Tile[]; playable: readonly Tile[]; chosen: Tile | null; opening: Tile | null;
+  isMyTurn: boolean; canAct: boolean; onPick: (tile: Tile) => void; children: ReactNode;
+}): ReactNode {
+  const { t } = useI18nStore();
+  const { ref, width } = useBoxSize();
+  const fit = fitHand(tiles.length, width);
+  return <div className={styles.handArea} ref={ref}>
+    <div className={`${styles.hand} ${fit.rows > 1 ? styles.wrapped : ''}`}
+      style={{ '--per-row': fit.perRow, '--hit-w': `${fit.hit}px` } as CSSProperties}
+      role="group" aria-label={t('dominoes.hand')}>
+      {tiles.map((tile) => {
+        const fits = playable.some((other) => dmSameTile(other, tile));
+        const selectedTile = chosen !== null && dmSameTile(chosen, tile);
+        const label = t('dominoes.tileLabel', { a: String(tile[0]), b: String(tile[1]) });
+        const opens = opening !== null && dmSameTile(opening, tile);
+        return <button key={`${tile[0]}-${tile[1]}`} type="button" className={styles.handTile}
+          disabled={!canAct || !fits} aria-label={label} aria-pressed={selectedTile}
+          title={isMyTurn && !fits ? t('dominoes.unplayable') : label} onClick={() => onPick(tile)}>
+          <DominoTile left={tile[0]} right={tile[1]} vertical
+            state={selectedTile ? 'selected' : opens ? 'opening' : isMyTurn && !fits ? 'dim' : fits && isMyTurn ? 'playable' : 'plain'} />
+        </button>;
+      })}
+    </div>
+    {children}
   </div>;
 }
 
@@ -286,7 +316,7 @@ export function DominoesTable(): ReactNode {
             : options.canPass ? t('dominoes.mustPass') : t('dominoes.pickTile');
 
   const sorted = dmSortHand(game.myHand);
-  const actions = isMyTurn && (options.canDraw || options.canPass || chosen) && <HandActions className={styles.controls}>
+  const actions = isMyTurn && (options.canDraw || options.canPass || chosen) && <HandActions className={styles.controls} layout="corner">
     {chosen && <button type="button" className={`btn btn-outline ${styles.ctrl}`} onClick={() => setPendingTile(null)}>
       {t('dominoes.cancel')}</button>}
     {options.canDraw && <button type="button" className={`btn btn-primary ${styles.ctrl}`}
@@ -295,23 +325,8 @@ export function DominoesTable(): ReactNode {
       disabled={!canPass} onClick={() => send({ type: 'pass' })}>{t('dominoes.pass')}</button>}
   </HandActions>;
 
-  const handZone = <div className={styles.handArea}>
-    <div className={styles.hand} style={{ '--count': sorted.length } as CSSProperties} role="group" aria-label={t('dominoes.hand')}>
-      {sorted.map((tile) => {
-        const fits = playable.some((other) => dmSameTile(other, tile));
-        const selectedTile = chosen !== null && dmSameTile(chosen, tile);
-        const label = t('dominoes.tileLabel', { a: String(tile[0]), b: String(tile[1]) });
-        const opens = opening !== null && dmSameTile(opening, tile);
-        return <button key={`${tile[0]}-${tile[1]}`} type="button" className={styles.handTile}
-          disabled={!canAct || !fits} aria-label={label} aria-pressed={selectedTile}
-          title={isMyTurn && !fits ? t('dominoes.unplayable') : label} onClick={() => onTileClick(tile)}>
-          <DominoTile left={tile[0]} right={tile[1]} vertical
-            state={selectedTile ? 'selected' : opens ? 'opening' : isMyTurn && !fits ? 'dim' : fits && isMyTurn ? 'playable' : 'plain'} />
-        </button>;
-      })}
-    </div>
-    {actions}
-  </div>;
+  const handZone = <Hand tiles={sorted} playable={playable} chosen={chosen} opening={opening} isMyTurn={isMyTurn}
+    canAct={canAct} onPick={onTileClick}>{actions}</Hand>;
 
   return (
     <GameShell

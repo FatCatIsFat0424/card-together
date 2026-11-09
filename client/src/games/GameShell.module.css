@@ -613,7 +613,7 @@
   /* Pills are 34px; the hand keeps clear of them by their measured column. */
   .handZone:has([data-hand-actions] button) { --hand-actions-width: 104px; }
   .handZone:has([data-hand-actions='wide'] button) { --hand-actions-width: 128px; }
-  .handZone:has([data-hand-actions]:not([data-hand-actions='group'], [data-hand-actions='sheet']) button) > .handBody {
+  .handZone:has([data-hand-actions]:not([data-hand-actions='group'], [data-hand-actions='sheet'], [data-hand-actions='corner']) button) > .handBody {
     padding-right: calc(var(--hand-actions-width) + var(--space-2));
   }
   /* Plates already count side hands; their card backs would meet the own plate and actions. */
