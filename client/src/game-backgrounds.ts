@@ -29,6 +29,9 @@ import battleship from './assets/lobby-backgrounds/battleship.webp';
 import codebreaker from './assets/lobby-backgrounds/codebreaker.webp';
 import yacht from './assets/lobby-backgrounds/yacht.webp';
 import dominoes from './assets/lobby-backgrounds/dominoes.webp';
+import spades from './assets/lobby-backgrounds/spades.webp';
+import hearts from './assets/lobby-backgrounds/hearts.webp';
+import gongzhu from './assets/lobby-backgrounds/gongzhu.webp';
 import bridgeCard from './assets/lobby-backgrounds/cards/bridge.webp';
 import bigtwoCard from './assets/lobby-backgrounds/cards/bigtwo.webp';
 import redpointsCard from './assets/lobby-backgrounds/cards/redpoints.webp';
@@ -59,12 +62,15 @@ import battleshipCard from './assets/lobby-backgrounds/cards/battleship.webp';
 import codebreakerCard from './assets/lobby-backgrounds/cards/codebreaker.webp';
 import yachtCard from './assets/lobby-backgrounds/cards/yacht.webp';
 import dominoesCard from './assets/lobby-backgrounds/cards/dominoes.webp';
+import spadesCard from './assets/lobby-backgrounds/cards/spades.webp';
+import heartsCard from './assets/lobby-backgrounds/cards/hearts.webp';
+import gongzhuCard from './assets/lobby-backgrounds/cards/gongzhu.webp';
 
 /** A game without generated artwork is simply absent; consumers fall back to a plain panel. */
 export const GAME_BACKGROUNDS: Readonly<Partial<Record<GameType, string>>> = {
   bridge, bigtwo, redpoints, ninetynine, sevens, chinesepoker, liarsdeck, blackjack, holdem, napoleon,
   tenhalf, liarsdice, crazyeights, stud, reversi, oldmaid, gofish, doudizhu, jungle, gomoku, go, xiangqi, chess, banqi,
-  chinesecheckers, landbattle, battleship, codebreaker, yacht, dominoes,
+  chinesecheckers, landbattle, battleship, codebreaker, yacht, dominoes, spades, hearts, gongzhu,
 };
 
 /** Small renditions of the lobby artwork for game cards. */
@@ -77,4 +83,5 @@ export const GAME_CARD_ART: Readonly<Partial<Record<GameType, string>>> = {
   xiangqi: xiangqiCard, chess: chessCard,
   banqi: banqiCard, chinesecheckers: chinesecheckersCard, landbattle: landbattleCard,
   battleship: battleshipCard, codebreaker: codebreakerCard, yacht: yachtCard, dominoes: dominoesCard,
+  spades: spadesCard, hearts: heartsCard, gongzhu: gongzhuCard,
 };
