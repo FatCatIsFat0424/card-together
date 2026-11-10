@@ -27,8 +27,8 @@ npm-debug.log*
 # Persistent application database and atomic-write files
 server/data/
 
-# Local deployment runtime prepared by deploy/build.sh
-.deploy/
+# Release tree assembled by npm run build:release
+.release/
 
 # Temporary implementation plans
 .plan/
