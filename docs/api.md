@@ -1,6 +1,6 @@
 # HTTP 與 Socket API
 
-權威型別：[`shared/src/types/`](../shared/src/types)。路徑以後端為基準；正式環境的 Nginx 在 `/card-together/` 之下提供這些路徑。
+權威型別：[`shared/src/types/`](../shared/src/types)。路徑以後端為基準；正式環境的 ingress 在 `/card-together/` 之下提供這些路徑。
 
 ## HTTP
 

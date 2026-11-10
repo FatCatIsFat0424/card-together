@@ -12,12 +12,28 @@ APK 是 Trusted Web Activity：一個在手機的 Chrome 中以全螢幕開啟 `
 | 下載 | `/card-together/download/card-together.apk`，commit 在 `client/public/download/` |
 | 包裝設定 | [`android/twa-manifest.json`](../android/twa-manifest.json) |
 | Web manifest 與圖示 | `client/public/manifest.webmanifest`、`client/public/app-icons/` |
-| Asset links | `/.well-known/assetlinks.json`，由 [Nginx snippet](../deploy/nginx/card-together.conf) 提供 |
+| Asset links | `/.well-known/assetlinks.json`，由主機 ingress 的 well-known 設定提供（[見下](#asset-links)） |
 
 - 網站的變更會在下次開啟 app 時生效；只有包裝設定、圖示或簽署金鑰改變時才需要重新建置 APK。
-- asset links 不相符時 app 仍可使用，但會顯示瀏覽器網址列。有測試確保 snippet 中的套件名稱與指紋和 `twa-manifest.json` 一致。
+- asset links 不相符時 app 仍可使用，但會顯示瀏覽器網址列。
 - 沒有支援 TWA 瀏覽器的手機會以 Custom Tab 開啟網站。
 - 大廳只會在 Android 瀏覽器中、且不在已安裝的 app 內時提供 APK 下載；關閉提示後會儲存 `card-together.androidAppDismissed`。
+
+## Asset links
+
+`/.well-known/assetlinks.json` 是整個網域共用的檔案，不在這個 repository 內，也不由部署腳本寫入。內容由主機 ingress 的 well-known 設定提供（LCM 的 `components.ingress.wellKnown`，指向一個 root 擁有的檔案），必須與 `twa-manifest.json` 一致：
+
+```json
+[{"relation":["delegate_permission/common.handle_all_urls"],
+  "target":{"namespace":"android_app",
+            "package_name":"<twa-manifest.json 的 packageId>",
+            "sha256_cert_fingerprints":["<twa-manifest.json 的 fingerprints[].value>"]}}]
+```
+
+兩者位於不同位置，沒有自動檢查。更換金鑰或套件名稱後，手動確認：
+
+1. 主機上的檔案內容與 `twa-manifest.json` 的 `packageId` 與每個指紋相符。
+2. `curl https://example.org/.well-known/assetlinks.json`（以實際網域取代）回傳相同內容，`Content-Type` 為 `application/json`。
 
 ## 簽署金鑰
 
@@ -25,7 +41,7 @@ APK 是 Trusted Web Activity：一個在手機的 Chrome 中以全螢幕開啟 `
 
 - keystore 與密碼放在 repository 之外的 `~/.config/card-together/android/`（`release.keystore`、`signing.env`，權限 0600）。兩者都要保留離線備份。
 - `signing.env` 定義 `ANDROID_KEYSTORE`、`ANDROID_KEY_ALIAS`、`ANDROID_KEYSTORE_PASSWORD` 與 `ANDROID_KEY_PASSWORD`。
-- 若更換金鑰，要更新 `twa-manifest.json` 與 Nginx snippet 中的 SHA-256 指紋；既有的安裝必須先解除安裝。
+- 若更換金鑰，要更新 `twa-manifest.json` 與主機 ingress 的 asset links 檔案中的 SHA-256 指紋；既有的安裝必須先解除安裝。
 
 ## 建置工具鏈
 

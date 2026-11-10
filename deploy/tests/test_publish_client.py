@@ -26,7 +26,7 @@ class PublishClientTests(unittest.TestCase):
         self.assertEqual(len(backups), 1)
         self.assertEqual((backups[0] / 'index.html').read_text(), 'old entry')
         self.assertEqual(list(fixture.site.glob('.index-publish-*')), [])
-        self.assertFalse(any(call[0] in ('systemctl', 'nginx', 'useradd') for call in calls))
+        self.assertFalse(any(call[0] in ('systemctl', 'useradd') for call in calls))
 
     def test_changed_emoji_catalog_is_rejected_before_any_writes(self):
         fixture = self.fixture
@@ -46,7 +46,7 @@ class PublishClientTests(unittest.TestCase):
                     self.assertNotEqual(result.returncode, 0)
                     self.assertEqual((fixture.site / 'index.html').read_text(), 'old entry')
                     self.assertEqual(list(fixture.site.glob('.index-publish-*')), [])
-                    self.assertFalse(any(call[0] in ('systemctl', 'nginx') for call in fixture.calls()))
+                    self.assertFalse(any(call[0] == 'systemctl' for call in fixture.calls()))
                 finally:
                     fixture.close()
 

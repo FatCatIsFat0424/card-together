@@ -95,7 +95,7 @@ python3 -B -m unittest discover -s deploy/tests
 | 媒體 | 真實的動態 GIF 上傳與提供的位元組；寫入、重新命名與擁有權失敗；配額；佇列復原 |
 | 匯入與建置產物 | 各匯入工具的輸入、輸出、旗標、鎖與安全性；真實的 GIF 與動態 WebP 壓縮，包括無法壓進上限的輸入；失效處理；拒絕符號連結與 FIFO；SIGKILL 後復原；建置雜湊與 base 驗證 |
 | 用戶端 | 帳號 generation 競態、API 失敗與 401 epoch、canvas 裁切與清理、零尺寸幾何、雙語規則、好友排序 |
-| 部署 | 備份鎖與擁有權、受保護的安裝與發布、精確 SHA 的 CI 把關、開發／worktree 隔離、持久的自動部署停止、目錄防護、失敗與訊號復原、timer 順序、Nginx 解析、migration 與設定、unit 的寫入範圍。SQLite 線上備份與還原以真實的 Node.js 工具執行；`PATH` 上（或 `CARD_TOGETHER_NODE`）沒有 Node.js 24 與已安裝的相依套件時，這些測試會被略過 |
+| 部署 | 備份鎖與擁有權、受保護的安裝與發布、精確 SHA 的 CI 把關、開發／worktree 隔離、持久的自動部署停止、目錄防護、失敗與訊號復原、timer 順序、migration 與設定、unit 的寫入範圍。SQLite 線上備份與還原以真實的 Node.js 工具執行；`PATH` 上（或 `CARD_TOGETHER_NODE`）沒有 Node.js 24 與已安裝的相依套件時，這些測試會被略過 |
 
 - 伺服器啟動時會讀取產生的[表情符號目錄](media.md#站方表情符號)；測試會注入目錄，而不需要站長的原始檔。
 - 部署測試使用暫存路徑與允許清單內的指令替身；正式環境的進入點保留權限檢查。

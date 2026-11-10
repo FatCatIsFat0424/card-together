@@ -11,7 +11,7 @@ import tempfile
 DEPLOY = Path(__file__).resolve().parents[1]
 TOOLS = ('bash', 'basename', 'cat', 'chmod', 'chown', 'cmp', 'cp', 'date', 'dirname',
          'find', 'flock', 'getent', 'grep', 'head', 'install', 'mkdir', 'mktemp', 'mv',
-         'nginx', 'python3', 'readlink', 'rm', 'rsync', 'sort', 'systemctl',
+         'python3', 'readlink', 'rm', 'rsync', 'sort', 'systemctl',
          'systemd-analyze', 'tail', 'useradd')
 
 DISPATCH = r'''#!/bin/bash
@@ -64,8 +64,8 @@ for argument in "${path_arguments[@]}"; do
             cp:-a|cp:-p|mv:-f|rm:-rf|rm:-f|readlink:-f|cmp:-s|flock:-n|head:-n|tail:-n|\
             rsync:-a|rsync:--delete|rsync:--exclude=*|rsync:--chown=*|rsync:--chmod=a+rX|rsync:--chmod=D755,F644|rsync:--link-dest=*|\
             find:-mindepth|find:-maxdepth|find:-type|find:-name|find:-mtime|find:-print0|find:-exec|find:-rf|\
-            python3:--input|python3:--output|python3:--current|python3:--legacy|python3:--example|\
-            systemctl:--quiet|systemctl:--now|systemctl:--no-pager|nginx:-t|date:-u|\
+            python3:--output|python3:--current|python3:--legacy|python3:--example|\
+            systemctl:--quiet|systemctl:--now|systemctl:--no-pager|date:-u|\
             useradd:--system|useradd:--user-group|useradd:--home-dir=*|useradd:--no-create-home|useradd:--shell) ;;
             head:-*|tail:-*) [[ $argument =~ ^-[0-9]+$ ]] || reject 'Unexpected line count' ;;
             *) reject "Unexpected fixture option: $name $argument" ;;
@@ -138,7 +138,6 @@ case $name in
         if ((${#args[@]} > 1)); then unit=${args[-1]}; fi
         case $operation in
             is-active)
-                if [[ $unit == nginx ]]; then exit 0; fi
                 for entry in "${active[@]}"; do [[ $entry != "$unit" ]] || exit 0; done
                 exit 3 ;;
             is-failed) exit 1 ;;
@@ -157,25 +156,22 @@ case $name in
             *) reject 'Unexpected systemctl operation' ;;
         esac
         exit 0 ;;
-    nginx|systemd-analyze)
-        expected=-t
-        if [[ $name == systemd-analyze ]]; then expected=verify; fi
-        [[ ${args[0]:-} == "$expected" ]] || reject 'Unexpected service validator operation'
+    systemd-analyze)
+        [[ ${args[0]:-} == verify ]] || reject 'Unexpected service validator operation'
         exit 0 ;;
     getent|useradd|chown) exit 0 ;;
     date) printf '%s\n' "${FIXTURE_STAMP:-20261012T000000Z}"; exit 0 ;;
     python3)
         [[ ${args[0]:--} != - ]] || reject 'Unexpected inline Python execution'
         case ${args[0]} in
-            "$root/checkout/deploy/configure-nginx.py"|"$root/checkout/deploy/prepare-runtime.py"|\
-            "$root/checkout/deploy/migrate-state.py"|"$root/checkout/deploy/wait-for-health.py") ;;
+            "$root/checkout/deploy/prepare-runtime.py"|"$root/checkout/deploy/migrate-state.py"|\
+            "$root/checkout/deploy/wait-for-health.py") ;;
             *) reject 'Unexpected Python script' ;;
         esac
         script=${args[0]##*/}
         if [[ $script == wait-for-health.py ]]; then
             [[ ${#args[@]} == 2 ]] || reject 'Unexpected health URL'
-            [[ ${args[1]} == http://127.0.0.1:3001/health ||
-               ${args[1]} == https://acserver.csie.org/card-together/health ]] || reject 'Unexpected health URL'
+            [[ ${args[1]} == http://127.0.0.1:3001/health ]] || reject 'Unexpected health URL'
             if [[ -n ${SIGNAL_AT_HEALTH:-} && ${args[1]} == "${SIGNAL_HEALTH_URL:-${args[1]}}" ]]; then
                 kill -s "$SIGNAL_AT_HEALTH" "$PPID"
             fi
@@ -215,8 +211,7 @@ class DeploymentFixture:
         self.application = self.host / 'opt/card-together'
         self.state = self.host / 'var/lib/card-together'
         self.site = self.application / 'www/card-together'
-        for directory in ('run/lock', 'tmp', 'etc/nginx/sites-enabled', 'etc/nginx/snippets',
-                          'etc/systemd/system', 'var/lib/card-together', 'etc/card-together'):
+        for directory in ('run/lock', 'tmp', 'etc/systemd/system', 'var/lib/card-together', 'etc/card-together'):
             (self.host / directory).mkdir(parents=True, exist_ok=True)
         self.executables = {name: shutil.which(name) for name in TOOLS if shutil.which(name)}
         realpath = shutil.which('realpath')
@@ -262,18 +257,6 @@ class DeploymentFixture:
         (self.state / 'database.json').write_text('{"schemaVersion": 5}')
         (self.host / 'etc/card-together/server.env').write_text(
             (self.checkout / 'deploy/systemd/server.env.example').read_text())
-        (self.host / 'etc/nginx/sites-enabled/acserver.csie.org').write_text('''server {
-  listen 192.168.10.10:80;
-  server_name acserver.csie.org;
-  location /unrelated { return 204; }
-}
-server {
-  listen 192.168.10.10:443 ssl;
-  server_name acserver.csie.org;
-  ssl_certificate /etc/cert.pem;
-  location /unrelated { return 204; }
-}
-''')
 
     def close(self):
         self.temporary.cleanup()

@@ -8,7 +8,7 @@
 | Socket.IO | 經過驗證的房間、遊戲、聊天操作；語音 signaling |
 | WebRTC | 瀏覽器之間的語音音訊 |
 
-正式環境在本機 Nginx 後方執行一個 systemd 後端，狀態存放在應用程式目錄之外（[部署](deployment.md)）。
+正式環境在主機的 LCM ingress 後方執行一個 systemd 後端，狀態存放在應用程式目錄之外（[部署](deployment.md)）。
 
 ## 模組
 

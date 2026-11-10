@@ -53,7 +53,7 @@ Guides in `docs/` are written in Traditional Chinese.
 | [Media](docs/media.md) | Music, uploads, emoji, chat, and voice |
 | [Development](docs/development.md) | Environment, configuration, benchmarks, browser checks |
 | [Testing](docs/testing.md) | Check runner, gates, caches, coverage |
-| [Deployment](docs/deployment.md) | Build, install, Nginx, backups, rollback |
+| [Deployment](docs/deployment.md) | Build, install, ingress route, backups, rollback |
 | [Android app](docs/android.md) | APK wrapper, signing key, release steps |
 | [Roadmap](docs/roadmap.md) | Public launch gates, monetization, operations, and development priorities |
 

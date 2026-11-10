@@ -39,15 +39,12 @@ umask 077
 exec 9>/run/card-together-local-deploy.lock
 flock -n 9 || { echo 'A trusted deployment is running; retry after it finishes.' >&2; exit 1; }
 # Administrative installation is explicit; future automated releases cannot update this policy.
-install -d -o root -g root -m 0755 "$policy" "$policy/deploy" "$policy/deploy/systemd" "$policy/deploy/nginx"
-for name in operations.sh prune-assets.sh configure-nginx.py prepare-runtime.py migrate-state.py wait-for-health.py backup-data.sh restore-data.sh; do
+install -d -o root -g root -m 0755 "$policy" "$policy/deploy" "$policy/deploy/systemd"
+for name in operations.sh prune-assets.sh prepare-runtime.py migrate-state.py wait-for-health.py backup-data.sh restore-data.sh; do
   install -o root -g root -m 0644 "$repo_dir/deploy/$name" "$policy/deploy/$name"
 done
 for name in card-together.service card-together-backup.service card-together-backup.timer server.env.example; do
   install -o root -g root -m 0644 "$repo_dir/deploy/systemd/$name" "$policy/deploy/systemd/$name"
-done
-for name in card-together.conf card-together-http.conf; do
-  install -o root -g root -m 0644 "$repo_dir/deploy/nginx/$name" "$policy/deploy/nginx/$name"
 done
 install -o root -g root -m 0755 "$node_binary" "$policy/node"
 install -o root -g root -m 0644 "$repo_dir/.node-version" "$policy/.node-version"

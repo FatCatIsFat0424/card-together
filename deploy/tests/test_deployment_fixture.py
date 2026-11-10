@@ -108,7 +108,6 @@ class DeploymentFixtureTests(unittest.TestCase):
             ('python3', ('-',)),
             ('python3', (str(self.fixture.root / 'unapproved.py'),)),
             ('python3', (str(self.fixture.checkout / 'deploy/wait-for-health.py'), 'https://unapproved/health')),
-            ('nginx', ('-s', 'reload')),
             ('systemd-analyze', ('security',)),
             ('grep', ('-q', 'pattern', str(self.fixture.site / 'index.html'))),
         ):
@@ -121,7 +120,7 @@ class DeploymentFixtureTests(unittest.TestCase):
         marker = self.fixture.root / 'executed'
         bash = self.fixture.root / 'prune-assets.sh'
         bash.write_text('printf triggered > ' + shlex.quote(str(marker)) + '\n')
-        python = self.fixture.root / 'configure-nginx.py'
+        python = self.fixture.root / 'prepare-runtime.py'
         python.write_text('from pathlib import Path\nPath(' + repr(str(marker)) + ').write_text("triggered")\n')
         for name, arguments in (
             ('bash', ('-c', 'printf triggered > executed')),

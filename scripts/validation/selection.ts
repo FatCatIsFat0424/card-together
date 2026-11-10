@@ -28,9 +28,6 @@ export interface Selection {
 const SOURCE_ROOTS = ['shared/src', 'server/src', 'server/tests', 'server/benchmarks', 'client/src', 'scripts'];
 const CODE = new Set(['.ts', '.tsx', '.mts', '.mjs', '.js']);
 const PYTHON_INPUTS: Readonly<Record<string, readonly string[]>> = {
-  'deploy/configure-nginx.py': ['test_configure_nginx'],
-  'deploy/nginx/card-together.conf': ['test_configure_nginx'],
-  'deploy/nginx/card-together-http.conf': ['test_configure_nginx'],
   'deploy/prepare-runtime.py': ['test_prepare_runtime'],
   'deploy/systemd/server.env.example': ['test_prepare_runtime'],
   'deploy/migrate-state.py': ['test_migrate_state'],

@@ -5,8 +5,8 @@
 **前置需求**
 
 - 以部署使用者的身分，在目標作業系統與架構上，從 repository 根目錄執行。
-- Python 3.12+（含 HTTPS 憑證與 xz 支援）、rsync、util-linux（`flock`）、sudo、systemd 與 Nginx。Node.js bootstrap 支援 Linux x64 與 arm64。
-- DNS、TLS 憑證與 HTTPS virtual host 必須已經可以運作；這些腳本不會建立它們。
+- Python 3.12+（含 HTTPS 憑證與 xz 支援）、rsync、util-linux（`flock`）、sudo 與 systemd。Node.js bootstrap 支援 Linux x64 與 arm64。
+- DNS、TLS 憑證與 ingress 路由必須已經可以運作（[所需路由](#ingress-路由)）；這些腳本不會建立它們。
 
 ## 建置與部署
 
@@ -23,9 +23,9 @@ python3 -B deploy/with-node.py -- bash deploy/build.sh && bash deploy/deploy.sh
 | 建置 | `build.sh` | 安裝鎖定版本的相依套件，包括 devDependencies（後端透過 `tsx` 執行 TypeScript）；執行[完整檢查](testing.md#完整檢查)；以正式環境路徑建置，並匯入音樂與站方表情符號；準備 `.deploy/node` |
 | 備份 | `deploy.sh` | 要求 sudo、驗證設定、為應用程式、設定與狀態建立快照 |
 | 安裝 | `deploy.sh` | 停止服務（短暫中斷）、安裝建置產物（包括產生的表情符號目錄）、啟動新服務 |
-| Proxy 與健康檢查 | `deploy.sh` | 安裝 Nginx snippet、更新 `/etc/nginx/sites-enabled/acserver.csie.org` 中受管理的 include、測試並重新載入 Nginx、輪詢本機與公開的健康檢查 |
+| 健康檢查 | `deploy.sh` | 輪詢本機的健康檢查 |
 
-這個 snippet 也提供整個網域共用的 `/.well-known/assetlinks.json`，以及 [Android app](android.md) 的 APK 下載。
+路由、TLS 與整個網域共用的 `/.well-known/assetlinks.json` 由 ingress 提供（[Ingress 路由](#ingress-路由)），不在部署範圍內。
 
 較早帶雜湊的資源與站方表情符號會持續發布，直到寬限期過後由 `prune-assets.sh` 移除。
 
@@ -62,8 +62,8 @@ DATABASE_PATH=/var/lib/card-together/database.json
 - `CLIENT_ORIGIN` 是完全相符的 origin，不含路徑或結尾斜線。
 - `DATABASE_ENGINE` 與 `DATABASE_PATH` 只能是 `json` 搭配 `database.json`，或 `sqlite` 搭配 `database.sqlite`，都在可寫入的狀態目錄內；部署會拒絕其他組合。沒有 `DATABASE_ENGINE` 的舊設定視為 `json`。
 - 搜尋型 bot 的 worker pool 由選填的 `BOT_WORKERS`（預設 2）、`BOT_WORKER_MEMORY_MB`（預設 128）與 `BOT_SEARCH_QUEUE`（預設 32）控制；正式環境的 `server.env.example` 不含這三項，沿用預設即可。Worker 在第一次搜尋時才啟動，每個閒置約增加 30 MB RSS，執行搜尋時再加上最多 `BOT_WORKER_MEMORY_MB` 的堆積。預設最壞約 400 MB，仍在 `MemoryMax=1G` 內；增加 worker 數量或堆積上限前，必須先附量測數據提案調整記憶體上限（專案上限 4 GB）。Worker 以同一個 `tsx` 載入 TypeScript，部署不需額外步驟。
-- 後端保持在 loopback 上。信任 loopback 時，Nginx 必須覆寫 `X-Forwarded-For`。
-- 變更連接埠時，要同時更新這個檔案、Nginx upstream 與健康檢查指令。
+- 後端保持在 loopback 上。信任 loopback 時，ingress 必須覆寫 `X-Forwarded-For`。
+- 變更連接埠時，要同時更新這個檔案、主機設定中服務的 port 與健康檢查指令。
 - 前端建置：`VITE_BASE_PATH=/card-together/`、空的 `VITE_SERVER_URL`、`VITE_SOCKET_PATH=/card-together/socket.io`。TURN 設定放在 `client/.env.local`（[語音](media.md#語音)）。
 
 所有變數：[開發](development.md#設定)。
@@ -71,13 +71,12 @@ DATABASE_PATH=/var/lib/card-together/database.json
 ## 驗證
 
 ```sh
-sudo nginx -t
 sudo systemctl status card-together.service --no-pager
 curl --fail --show-error http://127.0.0.1:3001/health
 curl --fail --show-error https://acserver.csie.org/card-together/health
 ```
 
-- 健康檢查回傳 `{"status":"ok"}`。`deploy.sh` 會為啟動與 Nginx worker 切換輪詢最多 30 秒。
+- 健康檢查回傳 `{"status":"ok"}`。`deploy.sh` 會為啟動輪詢本機的健康檢查最多 30 秒。
 - 在瀏覽器中確認：登入、建立房間、在 `/card-together/login` 重新整理、Socket 連線、重新啟動後恢復、上傳的圖片、站方表情符號、音樂，以及既有用戶端的偏好設定遷移。
 - 用不同網路上的真實裝置測試語音；可能需要 TURN。
 
@@ -134,7 +133,7 @@ python3 -B /usr/local/lib/card-together-auto-deploy/auto-deploy.py --inspect
 sudo systemctl stop card-together-auto-deploy.timer card-together-auto-deploy.service
 ```
 
-`--inspect` 會檢查憑證、CI、輸入與既有的發行 worktree，但不建置也不安裝。它只更新 remote-tracking ref。整個循環共用一把鎖，讓輪詢、複製輸入、建置、安裝、檢查與復原依序執行。既有的部署／Nginx 鎖仍會讓需要特權的安裝依序執行。
+`--inspect` 會檢查憑證、CI、輸入與既有的發行 worktree，但不建置也不安裝。它只更新 remote-tracking ref。整個循環共用一把鎖，讓輪詢、複製輸入、建置、安裝、檢查與復原依序執行。既有的部署鎖仍會讓需要特權的安裝依序執行。
 
 失敗與復原：
 
@@ -155,7 +154,7 @@ sudo systemctl stop card-together-auto-deploy.timer card-together-auto-deploy.se
 sudo bash deploy/install-secure-deploy.sh /home/acaccel/card-together-release /opt/card-together/node
 ```
 
-此步驟只寫入 `/usr/local/lib/card-together-local-deploy/` 與 `/etc/card-together-local-deploy.json`，不停止或部署應用程式，也不更新資料庫。從 `main` 發布的應用版本不會自動更新政策、service unit、Nginx snippet、備份／還原工具或 Node。這些內容有變更時，管理員須先審查並重新安裝政策；只有 `.node-version` 與政策完全一致的產物才能部署。
+此步驟只寫入 `/usr/local/lib/card-together-local-deploy/` 與 `/etc/card-together-local-deploy.json`，不停止或部署應用程式，也不更新資料庫。從 `main` 發布的應用版本不會自動更新政策、service unit、備份／還原工具或 Node。這些內容有變更時，管理員須先審查並重新安裝政策；只有 `.node-version` 與政策完全一致的產物才能部署。
 
 helper 會在 root 私有的 `/var/tmp/card-together-trusted-*` 目錄建立獨立快照，只讀取 manifests、TypeScript 設定、`node_modules/`、`shared/src/`、`server/src/` 與 `client/dist/`。它以 directory descriptor 與 `O_NOFOLLOW` 固定來源路徑，拒絕 symlink entrypoint、特殊檔、連向核准產物以外的 hardlink、其他擁有者的檔案、逃出應用目錄的 symlink 鏈，以及超過 150,000 個項目／4 GiB 的產物。npm workspace 的內部相對 symlink 可保留；npm 的內部 hardlink 會複製為獨立檔案。來源可變動，故不保證同時寫入時的版本一致性；非預期變動仍可能造成拒絕部署。
 
@@ -191,9 +190,9 @@ root 只執行固定政策中的 shell／Python，不載入發行 checkout 的 `
 
 ### 失敗處理
 
-- `deploy.sh` 會鎖定，防止同時部署（包括舊版的部署）與共用的 Nginx 編輯，偵測同時發生的網站變更，並在安裝前建立快照。
+- `deploy.sh` 會鎖定，防止同時部署（包括舊版的部署），並在安裝前建立快照。
 - 缺少建置結果，或建置結果不是以 `/card-together/` 為 base 時，會在停止任何服務之前失敗。`npm run check -- full` 會以 `/` 重新建置 `client/dist`，所以請在 `deploy.sh` 前一刻執行 `build.sh`。
-- 停止服務後發生失敗或收到 `SIGINT`/`SIGTERM` 時，會停止新服務並還原已變更的 Nginx 設定。應用程式與狀態保留原處供檢查，服務也保持停止，避免有程式對較舊的狀態寫入。
+- 停止服務後發生失敗或收到 `SIGINT`/`SIGTERM` 時，會停止新服務。應用程式與狀態保留原處供檢查，服務也保持停止，避免有程式對較舊的狀態寫入。
 
 ### 備份
 
@@ -245,10 +244,10 @@ sudo systemctl start card-together.service card-together-backup.timer
 
 ### 回復版本
 
-1. 停止 `card-together` 與舊版 `bridge-online` 兩個服務。選擇相容的應用程式、相依套件、unit、設定與 Nginx 設定。
+1. 停止 `card-together` 與舊版 `bridge-online` 兩個服務。選擇相容的應用程式、相依套件、unit 與設定。
 2. 只有在較舊的版本支援目前狀態的 schema 與欄位時，才保留目前的狀態（[相容性](storage.md#資料相容性)）。Schema v10 會遷移房間的 `gameOptions`；升級前先停止寫入，備妥資料庫、媒體與回放的完整備份。回復 v9 時必須使用升級前的完整備份，不能只換回舊程式。
 3. 否則還原快照，並接受遺失較新的寫入。**資料庫、媒體與回放要一起**還原，狀態目錄為 `0700`、私人檔案為 `0600`，擁有者與選定的服務使用者相符。
-4. 執行 `sudo systemctl daemon-reload`，測試並重新載入 Nginx，然後只啟動選定的服務。
+4. 執行 `sudo systemctl daemon-reload`，然後只啟動選定的服務。
 
 回復到改名前的應用程式時：它未被動過的資料庫只是 migration 前的快照，所以要先整合較新的狀態。
 
@@ -429,59 +428,85 @@ SQLite 已經接受寫入後，用[匯出工具](storage.md#匯出-sqlite-為-js
 
 ## 只發布前端
 
-適用於沒有後端或 Nginx 變更的 UI 或音樂變更：
+適用於沒有後端變更的 UI 或音樂變更：
 
 ```sh
 VITE_BASE_PATH=/card-together/ VITE_SERVER_URL='' VITE_SOCKET_PATH=/card-together/socket.io npm run build:client
 bash deploy/publish-client.sh
 ```
 
-- 使用部署鎖，同步資源，再以原子操作替換 `index.html`。它不會重新啟動後端，也不會重新載入 Nginx。
+- 使用部署鎖，同步資源，再以原子操作替換 `index.html`。它不會重新啟動後端。
 - 較早帶雜湊的資源保留 14 天；之後 `prune-assets.sh` 會移除目前建置中沒有的檔案。
 - 只匯入音樂不會發布任何東西。音樂封面與音訊同在 `provided-music/`，隨建置產出一起發布，也適用同樣的 14 天保留規則。
 - 站方表情符號目錄有變更時需要 `deploy.sh`；發布工具會拒絕與已安裝後端不同的目錄。
 
 ## 手動安裝
 
-例行更新請使用 `deploy.sh`。單獨執行 `install.sh` 會保留 `server.env` 並停止服務，但不會遷移狀態，也不會變更 Nginx。
+例行更新請使用 `deploy.sh`。單獨執行 `install.sh` 會保留 `server.env` 並停止服務，但不會遷移狀態，也不會變更 ingress 路由。
 
-1. 安裝 snippet 並檢查 virtual host：
-
-   ```sh
-   sudo install -d -m 0755 /etc/nginx/snippets
-   sudo install -m 0644 deploy/nginx/card-together.conf /etc/nginx/snippets/card-together.conf
-   sudo install -m 0644 deploy/nginx/card-together-http.conf /etc/nginx/snippets/card-together-http.conf
-   sudo nginx -T
-   sudoedit /etc/nginx/sites-enabled/acserver.csie.org
-   ```
-
-2. 在既有的 server block 內各 include 每個 snippet **一次**，保持 TLS 與其他應用程式不變。絕對不要把它們加在 `http` 層級，或建立重複的 host。
-
-   | Server block | Include |
-   | --- | --- |
-   | HTTPS | `include /etc/nginx/snippets/card-together.conf;` |
-   | HTTP | `include /etc/nginx/snippets/card-together-http.conf;` |
-
-3. 檢查執行環境設定，完成所有狀態遷移，然後啟動：
+1. 確認 ingress 已有[所需路由](#ingress-路由)。
+2. 檢查執行環境設定，完成所有狀態遷移，然後啟動：
 
    ```sh
-   sudo nginx -t
    sudo systemctl enable --now card-together.service
-   sudo systemctl reload nginx
    ```
 
-4. 執行[驗證](#驗證)。
+3. 執行[驗證](#驗證)。
 
-| Snippet | 行為 |
+## Ingress 路由
+
+Nginx、TLS 與路由由主機的 LCM ingress 提供，這個 repository 不含任何 Nginx 設定；ingress 的設定方式見 LCM repository 的 `docs/operations.md`（Ingress 與 Routes）。主機設定（`host.json`）授予服務的前綴 `/card-together/`、後端 port 與靜態目錄 `/opt/card-together/www/card-together`（`/card-together/x.js` 對應到該目錄下的 `x.js`）；呈現選項是服務 Resource 文件的 `route` 區段。應用程式需要：
+
+| 需求 | 值 |
 | --- | --- |
-| 路由 | SPA fallback、移除路徑前綴、WebSocket 標頭、cookie 路徑；3 MiB 請求上限，容納 base64 編碼的 2 MiB 圖片 |
-| 帶雜湊的資源 | `/card-together/assets/` 與 `/card-together/provided-emoji/` 使用 `try_files $uri =404` 搭配 `Cache-Control: public, max-age=31536000, immutable`；缺少的檔案回傳 404，從不回傳 `index.html` |
-| 壓縮 | CSS、JS、JSON、SVG |
-| 標頭 | `X-Content-Type-Options`、`Referrer-Policy`，以及包含 `frame-ancestors` 的 **report-only** CSP |
+| 前綴 | `/card-together/`；`/card-together` 轉址到 `/card-together/` |
+| API proxy | `api/` 轉發到後端 `/api/`；請求上限 3 MiB（base64 編碼的 2 MiB 圖片）；cookie 路徑改寫為前綴 |
+| Socket.IO | `socket.io/` 轉發到後端 `/socket.io/`；WebSocket、讀取逾時 75 秒、不緩衝 |
+| 健康檢查 | `health` 精確比對，轉發到後端 `/health` |
+| 不可變資源 | `assets/` 與 `provided-emoji/`：快取一年，缺少的檔案回傳 404，從不回傳 `index.html` |
+| SPA fallback | 其他路徑回到 `index.html`（`no-cache`） |
+| APK 下載 | `download/card-together.apk` 以附件、`application/vnd.android.package-archive` 提供 |
+| 標頭 | `X-Content-Type-Options`、`Referrer-Policy`，以及下列 **report-only** CSP |
+| `/.well-known/assetlinks.json` | 網域層級，由 ingress 的 well-known 設定提供，見 [Android app](android.md#asset-links) |
 
-- API 與 Socket.IO location 提供 `/etc/nginx/workstation-security/card-api-*.conf`、`card-socket-*.conf` 的選用 hook。未安裝符合檔案時不載入任何規則，也不依賴全域限流變數；觀察／限制政策由管理者維護。啟用時須同步有效 snippet 與 `/usr/local/lib/card-together-local-deploy/deploy/nginx/card-together.conf` 的固定 root 部署政策，通過 `nginx -t` 後再 reload，避免下次部署覆寫。
+路由範例（網域以 `example.org` 表示）：
+
+```yaml
+route:
+  proxy:
+    - path: api/
+      upstream: /api/
+      bodyLimit: 3m
+      cookiePath: true
+      category: api
+    - path: socket.io/
+      upstream: /socket.io/
+      websocket: true
+      timeout: 75s
+      category: socket
+    - path: health
+      exact: true
+      upstream: /health
+      category: health
+  static:
+    spa: true
+    immutable: [assets/, provided-emoji/]
+    downloads:
+      - path: download/card-together.apk
+        type: application/vnd.android.package-archive
+  headers:
+    cspReportOnly: true
+    csp: >-
+      default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:;
+      connect-src 'self' wss://example.org; object-src 'none'; base-uri 'self'; form-action 'self';
+      frame-ancestors 'self'
+```
+
+- 後端保持在 loopback 上；ingress 以用戶端位址覆寫 `X-Forwarded-For`，這是 `TRUST_PROXY_LOOPBACK=true` 的前提。
 - 把標頭改名為 `Content-Security-Policy` 之前，先檢查瀏覽器的 CSP 回報。
-- 只要 location 有自己的 `add_header`，Nginx 就會丟掉繼承的標頭，所以每個這樣的 location 都要重複完整的標頭組。
+- API 與 Socket.IO 的觀察／限流 hook 由 ingress 為每個 route 產生，不屬於這個 repository。
+- 部署腳本只寫入應用程式、unit、設定與狀態，從不接觸 Nginx。
 
 ## 遷移既有狀態
 
