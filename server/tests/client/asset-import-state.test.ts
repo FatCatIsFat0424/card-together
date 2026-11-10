@@ -33,7 +33,8 @@ interface Reuse extends Omit<Publication, 'records' | 'report' | 'verifyInputs'>
   validateCatalog: (records: unknown) => void;
 }
 interface ImportState {
-  importOptions(args: readonly string[], defaultRoot: string): { root: string; noCache: boolean; profile: boolean };
+  importOptions(args: readonly string[], defaultRoot: string): { root: string; noCache: boolean; profile: boolean; inputsRoot?: string };
+  inputDirectory(options: { root: string; inputsRoot?: string }, kind: string): string;
   importProfile(enabled: boolean): Profile;
   assertSafePath(path: string): Promise<void>;
   safeDirectory(path: string): Promise<void>;
@@ -160,6 +161,24 @@ describe('shared asset import contracts', () => {
     expect(shared.importOptions([root, '--profile', '--no-cache'], repository)).toEqual({ root, noCache: true, profile: true });
     expect(() => shared.importOptions(['--unknown'], root)).toThrow('Usage:');
     expect(() => shared.importOptions([root, repository], root)).toThrow('Usage:');
+  });
+
+  it('reads owner media from LCM_INPUTS_DIR only for the default root', () => {
+    const root = temporaryRoot();
+    const inputs = temporaryRoot();
+    const local = shared.importOptions([], root);
+    expect(shared.inputDirectory(local, 'music')).toBe(join(root, 'local-music'));
+    vi.stubEnv('LCM_INPUTS_DIR', inputs);
+    try {
+      const configured = shared.importOptions([], root);
+      expect(['music', 'emoji', 'demos'].map((kind) => shared.inputDirectory(configured, kind)))
+        .toEqual(['music', 'emoji', 'demos'].map((kind) => join(inputs, kind)));
+      expect(shared.inputDirectory(shared.importOptions([root], repository), 'emoji')).toBe(join(root, 'local-emoji'));
+      vi.stubEnv('LCM_INPUTS_DIR', 'relative/inputs');
+      expect(() => shared.importOptions([], root)).toThrow('LCM_INPUTS_DIR must be an absolute path');
+      vi.stubEnv('LCM_INPUTS_DIR', '');
+      expect(shared.inputDirectory(shared.importOptions([], root), 'demos')).toBe(join(root, 'local-demos'));
+    } finally { vi.unstubAllEnvs(); }
   });
 
   it('hashes bytes independently of mtime, records renames/deletions, and ignores unsupported files', async () => {

@@ -3,7 +3,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
 import { lstat, mkdir, open, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
-import { basename, dirname, extname, join, parse, relative, resolve, sep } from 'node:path';
+import { basename, dirname, extname, isAbsolute, join, parse, relative, resolve, sep } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -32,7 +32,24 @@ export function importOptions(args, defaultRoot) {
   if (roots.length > 1 || args.some((arg) => arg.startsWith('--') && !['--no-cache', '--profile'].includes(arg))) {
     throw new Error('Usage: import-provided-assets.mjs [root] [--no-cache] [--profile]');
   }
-  return { root: resolve(roots[0] ?? defaultRoot), noCache: args.includes('--no-cache'), profile: args.includes('--profile') };
+  return {
+    root: resolve(roots[0] ?? defaultRoot), noCache: args.includes('--no-cache'), profile: args.includes('--profile'),
+    // An explicit root names a self-contained tree (tests); only the default root honors the build host's inputs.
+    inputsRoot: roots[0] === undefined ? inputsRoot(process.env) : undefined,
+  };
+}
+
+/** `LCM_INPUTS_DIR` holds the owner media outside Git as `music`, `emoji` and `demos`; unset keeps `local-*`. */
+function inputsRoot(environment) {
+  const value = environment.LCM_INPUTS_DIR;
+  if (value === undefined || value === '') return undefined;
+  if (!isAbsolute(value)) throw new Error('LCM_INPUTS_DIR must be an absolute path.');
+  return resolve(value);
+}
+
+/** Directory with the owner's originals of one kind: `music`, `emoji` or `demos`. */
+export function inputDirectory(options, kind) {
+  return options.inputsRoot === undefined ? join(options.root, `local-${kind}`) : join(options.inputsRoot, kind);
 }
 
 export function importProfile(enabled) {

@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  assertManagedFiles, assertSafePath, cleanupInterrupted, ensureTypeScriptSupport, importOptions, importProfile, inputFingerprint, publishImport, readSafeFile,
+  assertManagedFiles, assertSafePath, cleanupInterrupted, ensureTypeScriptSupport, importOptions, importProfile, inputDirectory, inputFingerprint, publishImport, readSafeFile,
   reusableImport, safeDirectory, scanSources, withImportLock,
 } from '../assets/import-state.mjs';
 
@@ -72,7 +72,7 @@ function printReport(input, records, details, reused) {
 async function main() {
   const options = importOptions(process.argv.slice(2), join(dirname(script), '../..'));
   const profile = importProfile(options.profile);
-  const input = join(options.root, 'local-demos');
+  const input = inputDirectory(options, 'demos');
   const output = join(options.root, 'client/public/game-demos');
   const catalog = join(options.root, 'client/src/game-demo-videos.generated.json');
   const validateCatalog = (records) => parseDemoVideoCatalog(records, GAMES);
@@ -98,7 +98,7 @@ async function main() {
     for (const source of sources) {
       const game = basename(source.relativePath, extname(source.relativePath));
       if (source.relativePath.includes('/') || !GAMES.includes(game)) {
-        skipped.push(`${source.relativePath}: expected local-demos/<game>.mp4 for a mode in DEMO_GAME_TYPES`);
+        skipped.push(`${source.relativePath}: expected <game>.mp4 in the demos input for a mode in DEMO_GAME_TYPES`);
         continue;
       }
       if (source.error) throw new Error(`${source.relativePath} is unreadable (${source.error}).`);

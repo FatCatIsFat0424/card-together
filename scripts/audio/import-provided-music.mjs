@@ -3,7 +3,7 @@ import process from 'node:process';
 import { basename, dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  assertManagedFiles, assertSafePath, cleanupInterrupted, ensureTypeScriptSupport, importOptions, importProfile, inputFingerprint, publishImport,
+  assertManagedFiles, assertSafePath, cleanupInterrupted, ensureTypeScriptSupport, importOptions, importProfile, inputDirectory, inputFingerprint, publishImport,
   readSafeFile, reusableImport, safeDirectory, scanSources, sha256, withImportLock,
 } from '../assets/import-state.mjs';
 import { extractEmbeddedCover } from './cover-art.mjs';
@@ -105,7 +105,7 @@ async function scanFolderCovers(input, profile) {
 async function main() {
   const options = importOptions(process.argv.slice(2), join(dirname(script), '../..'));
   const profile = importProfile(options.profile);
-  const input = join(options.root, 'local-music');
+  const input = inputDirectory(options, 'music');
   const output = join(options.root, 'client/public/provided-music');
   const catalog = join(options.root, 'client/src/audio/provided-music.generated.json');
   await safeDirectory(input);

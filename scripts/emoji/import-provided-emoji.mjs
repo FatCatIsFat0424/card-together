@@ -3,7 +3,7 @@ import process from 'node:process';
 import { basename, dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  assertManagedFiles, assertSafePath, cleanupInterrupted, ensureTypeScriptSupport, importOptions, importProfile, inputFingerprint, publishImport, readSafeFile,
+  assertManagedFiles, assertSafePath, cleanupInterrupted, ensureTypeScriptSupport, importOptions, importProfile, inputDirectory, inputFingerprint, publishImport, readSafeFile,
   reusableImport, safeDirectory, scanSources, sha256, withImportLock,
 } from '../assets/import-state.mjs';
 
@@ -157,7 +157,7 @@ function printReport(input, records, details, reused) {
 async function main() {
   const options = importOptions(process.argv.slice(2), join(dirname(script), '../..'));
   const profile = importProfile(options.profile);
-  const input = join(options.root, 'local-emoji');
+  const input = inputDirectory(options, 'emoji');
   const output = join(options.root, 'client/public/provided-emoji');
   const catalog = join(options.root, 'shared/src/provided-emoji.generated.json');
   await safeDirectory(input);
