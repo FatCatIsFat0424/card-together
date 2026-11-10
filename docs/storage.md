@@ -266,9 +266,9 @@
 
 ## 備份與還原
 
-**備份**：停止所有寫入者，再複製整個狀態目錄（`database.json` 或 `database.sqlite`，連同存在時的 `-wal`、`-shm`，以及 `media/` 與 `replays/`）。服務執行時，只能用[每日備份](deployment.md#備份)的方式：JSON 讀取一次完整檔案，SQLite 以 `VACUUM INTO` 複製；絕對不要在服務執行時直接複製 `.sqlite` 與它的 `-wal`。備份包含密碼雜湊與私人手牌：請妥善保密，並在另一台主機保留一份副本。
+**備份**：停止所有寫入者，再複製整個狀態目錄（`database.json` 或 `database.sqlite`，連同存在時的 `-wal`、`-shm`，以及 `media/` 與 `replays/`）。服務執行時，只能用 LCM 的[備份](deployment.md#備份)方式：JSON 讀取一次完整檔案，SQLite 以 `VACUUM INTO` 複製；絕對不要在服務執行時直接複製 `.sqlite` 與它的 `-wal`。備份包含密碼雜湊與私人手牌：請妥善保密，並在另一台主機保留一份副本。
 
-**還原**（正式環境使用 [`restore-data.sh`](deployment.md#還原資料)，它會執行以下每一步）：
+**還原**（正式環境使用 LCM 的 `restore` 動作，見[備份](deployment.md#備份)；手動還原要執行以下每一步）：
 
 1. 停止所有可能的寫入者，並另外保存目前的完整狀態。
 2. 確認快照的引擎與設定相符、schema 相容並通過驗證，再以嚴格的權限與正確的擁有者還原資料庫、媒體與回放；被取代的 SQLite 檔的 `-wal`、`-shm` 必須一起移除，否則會被套用到還原後的檔案。
@@ -299,11 +299,11 @@
    npm run admin:reset-password -- /absolute/path/database.json alice --apply --writers-stopped
    ```
 
-   正式環境，從已安裝的目錄執行（[切換到 SQLite](deployment.md#切換到-sqlite)後改用 `database.sqlite`）：
+   正式環境，從目前的 release 以服務帳號執行（`$node` 是 LCM runtime 的 `node`，見[切換到 SQLite](deployment.md#切換到-sqlite)；之後改用 `database.sqlite`）：
 
    ```sh
-   sudo -u card-together sh -c 'cd /opt/card-together/server && ../node --import tsx src/auth/reset-password-cli.ts /var/lib/card-together/database.json alice'
-   sudo -u card-together sh -c 'cd /opt/card-together/server && ../node --import tsx src/auth/reset-password-cli.ts /var/lib/card-together/database.json alice --apply --writers-stopped'
+   sudo -u card-together env -C /opt/card-together/current/server "$node" --import tsx src/auth/reset-password-cli.ts /var/lib/card-together/database.json alice
+   sudo -u card-together env -C /opt/card-together/current/server "$node" --import tsx src/auth/reset-password-cli.ts /var/lib/card-together/database.json alice --apply --writers-stopped
    ```
 
 3. 在隱藏輸入的提示中輸入新密碼兩次。密碼從不接受以參數、環境變數或重新導向的輸入傳入。
@@ -364,8 +364,8 @@ npm run admin:export-json -- /absolute/path/database.sqlite /absolute/path/datab
 ## SQLite 切換
 
 - 第一階段：SQLite adapter、匯入函式，以及在兩種引擎上執行的 repository、auth、social、runtime、持久化與金幣測試。
-- 第二階段：[擁有者鎖定檔](#單一擁有者鎖定)、[遷移](#遷移到-sqlite)與[匯出](#匯出-sqlite-為-json)工具、兩種引擎的維護工具、SQLite 線上備份與[還原](deployment.md#還原資料)，以及[切換 runbook](deployment.md#切換到-sqlite)。
-- 正式環境已於 2026-10-27 切換到 SQLite；`server.env.example` 與開發環境的預設值仍是 JSON。重新切換需經核准並依 runbook 進行，不要只修改 `DATABASE_ENGINE` 而跳過遷移。
+- 第二階段：[擁有者鎖定檔](#單一擁有者鎖定)、[遷移](#遷移到-sqlite)與[匯出](#匯出-sqlite-為-json)工具、兩種引擎的維護工具、SQLite 線上備份與[還原](deployment.md#備份)，以及[切換 runbook](deployment.md#切換到-sqlite)。
+- 正式環境已於 2026-10-27 切換到 SQLite；開發環境的預設值仍是 JSON。重新切換需經核准並依 runbook 進行，不要只修改 `DATABASE_ENGINE` 而跳過遷移。
 - JSON adapter 至少再保留一個版本，作為回復與開發用的引擎。
 - SQLite 開始接受寫入後，JSON 檔就已過時：回復時必須用匯出工具帶出較新的資料。不要加入雙重寫入。
 - 多程序的房間協調需要另外設計。

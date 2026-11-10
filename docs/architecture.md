@@ -8,7 +8,7 @@
 | Socket.IO | 經過驗證的房間、遊戲、聊天操作；語音 signaling |
 | WebRTC | 瀏覽器之間的語音音訊 |
 
-正式環境在主機的 LCM ingress 後方執行一個 systemd 後端，狀態存放在應用程式目錄之外（[部署](deployment.md)）。
+正式環境由 LCM 部署並執行一個後端（`managed` 服務），在主機的 LCM ingress 後方；release 唯讀，狀態存放在應用程式目錄之外（[部署](deployment.md)）。
 
 ## 模組
 
@@ -30,7 +30,7 @@
 | `client/src/games/` | 共用牌桌外框，以及各遊戲資料夾；`registry.ts`（輕量的純資料與函式）與 `ui-registry.ts`（元件、牌桌）依遊戲型別查詢；`board/` 是棋類共用的棋盤牌桌元件 |
 | `client/src/cosmetics/` | 各裝備類型的商店商品繪製、預覽與翻譯：牌面、籌碼、音效包、座位框、聊天框、勝利特效，以及棋子（`piece-styles/`）、棋盤（`board-styles/`）與骰子（`dice-styles/`）造型；`series-tokens.ts` 提供 15 個系列的共用主題參數，`art-layers/` 是動態圖案的合成圖層 |
 | `client/src/audio/`、`voice/` | 音樂、輪到提醒、WebRTC |
-| `deploy/` | 執行環境準備、安裝、備份、migration、發布 |
+| `server/start.mjs`、`scripts/release/` | 正式環境進入點；組裝 `.release/`（[部署](deployment.md#建置)） |
 
 - 相依方向是 **transport → runtime/managers → 純 engine 與 shared 規則**。
 - engine 不存取 manager、儲存或網路。
@@ -199,5 +199,5 @@
 - **宣告**：`search: { strategy, budgetMs, maxDepth? }`。`strategy` 以 `searchStrategy(new URL('./x-search.ts', import.meta.url), 'exportName')` 指向一個模組與其匯出的純函式 `(可見視角, { random, budget }) => BotAction | null`。函式只能讀自己的過濾後視角，不得碰 manager 狀態或 I/O；`budget.expired()`、`budget.timeLeftMs()` 與 `budget.maxDepth` 供迭代加深使用。`random` 是以種子產生的亂數；只受深度限制（不受時鐘限制）的搜尋，相同視角與種子會得到相同結果。
 - **流程**：bot 計時器到期後，在 runtime 佇列內取得該座位的視角並交給 pool，然後釋放佇列；結果回來時再開一次佇列內的 mutation，確認同一局、階段、log 長度與座位（即計時器的回合 key）仍是待處理的回合，且沒有呈現進行中，才套用，之後的 commit、發布與失敗重試與同步 bot 完全相同。狀態已前進則丟棄結果。回合改變、對局中止或關閉時，執行中的任務會被取消。種子由回合 key 雜湊得出，所以同一回合重試時相同。
 - **回退**：逾時（`budgetMs` 加 250 ms 寬限）、worker 當機（含超過記憶體上限）、策略丟出例外、佇列已滿、等候空閒 worker 超過 3 秒、pool 關閉或 `BOT_WORKERS=0`，一律改用簡單策略的同步決定；之後仍失敗則走既有的「第一個合法動作」流程。簡單難度的 bot 不搜尋。搜尋型遊戲的 `hard` 仍要保持便宜，因為它只服務玩家逾時與共用截止時間。
-- **Pool**：`createSearchPool` 依設定建立固定數量的 slot，worker 在第一次使用時才啟動（啟動約 100 ms，沒有搜尋型遊戲就不花資源）。每個任務獨占一個 worker；逾時、取消與當機都會終止該 worker，下一個任務在該 slot 啟動新的 worker（不會自動重啟迴圈）。Worker 使用空的 `execArgv`，由 `search-worker-entry.mjs` 自行註冊 `tsx`，所以開發（`tsx watch`）、測試（vitest）與正式環境（`node --import tsx`）行為相同，並沿用 `server/tsconfig.json` 的 `@shared` 別名。
+- **Pool**：`createSearchPool` 依設定建立固定數量的 slot，worker 在第一次使用時才啟動（啟動約 100 ms，沒有搜尋型遊戲就不花資源）。每個任務獨占一個 worker；逾時、取消與當機都會終止該 worker，下一個任務在該 slot 啟動新的 worker（不會自動重啟迴圈）。Worker 使用空的 `execArgv`，由 `search-worker-entry.mjs` 自行註冊 `tsx`，所以開發（`tsx watch`）、測試（vitest）與正式環境（`server/start.mjs`）行為相同，並沿用 `server/tsconfig.json` 的 `@shared` 別名。
 - **設定與記憶體**：`BOT_WORKERS`、`BOT_WORKER_MEMORY_MB`、`BOT_SEARCH_QUEUE`（[開發](development.md#設定)；記憶體估算見[部署](deployment.md#執行環境設定)）。

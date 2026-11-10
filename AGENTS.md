@@ -25,9 +25,9 @@ Authoritative project rule set; `CLAUDE.md` references it.
 | `client/src/games/` | Table shell and one folder per game (`<game>-client.ts`, `<game>-ui.ts`, table); `board/` is the shared board table kit; `registry.ts` (eager data) and `ui-registry.ts` (components, lazy tables) |
 | `client/src/cosmetics/` | Shop product renderers, previews, and translations per equippable type (card faces, chips, sound packs, piece, board, and dice styles, and others) |
 | `client/src/audio/`, `voice/` | Music playback, turn reminders, WebRTC |
-| `server/tests/`, `deploy/tests/` | Vitest and Python standard-library tests |
-| `scripts/` | Check runner, asset importers, dev preview, and the Vite artwork-layer plugin |
-| `deploy/` | Production build, install, and operation scripts |
+| `server/tests/` | Vitest tests |
+| `scripts/` | Check runner, asset importers, `release/` (the `.release/` build), dev preview, and the Vite artwork-layer plugin |
+| `server/start.mjs` | Production entry point (registers tsx, loads `src/index.ts`) |
 | `android/` | Android APK wrapper settings and build script ([Android app](docs/android.md)) |
 | `docs/`, `docs/games/` | Authoritative guides (index in [README](README.md#documentation)); game rules split by category |
 
@@ -78,7 +78,7 @@ npm run check -- full
 - Integrating parallel branches: after a conflict-free rebase whose files do not overlap the newly merged work, run
   the focused check on the branch's changes and let CI run the full gate. Run `full` locally when the rebase had
   conflicts or touched `shared/`, persistence, or check configuration.
-- Deployment builds use `release` mode with explicit production paths.
+- Deployment is owned by LCM (a generic `managed` service); the repository holds no deploy or backup code. The host builds with `npm run build:release` and runs `node server/start.mjs` from `.release/` ([deployment](docs/deployment.md)).
 - No formatter or secret scanner is configured: match adjacent formatting and review
   staged content manually.
 - Modes, selection, and caches: [testing](docs/testing.md).
@@ -92,6 +92,6 @@ npm run check -- full
   commands in English. `AGENTS.md` and `README.md` stay in English.
 - Temporary task plans go in the Git-ignored `.plan/`.
 - Data changes follow [deployment](docs/deployment.md) and [storage](docs/storage.md):
-  stop writers, keep complete database, media, and replay backups, and confirm schema
-  compatibility before restoring.
+  stop writers, keep complete database, media, and replay backups (declared as LCM backup
+  sources), and confirm schema compatibility before restoring.
 - Keep the card graphics' notices and license texts.

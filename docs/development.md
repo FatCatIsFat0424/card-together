@@ -8,9 +8,9 @@
 2. 在 repository 根目錄執行 `npm ci`。所有 workspace 共用根目錄的 TypeScript。
 3. 啟動 `npm run dev:server` 與 `npm run dev:client`，再開啟 <http://localhost:5173>。
 
-client 的 `predev` 與 `prebuild` 會從被忽略的 `local-music/`、`local-emoji/` 與 `local-demos/` 資料夾匯入站長的音樂、站方表情符號與入門展示影片；見[媒體](media.md)與[對局展示製作](game-demos.md#影片檔)。
+client 的 `predev` 與 `prebuild` 會從被忽略的 `local-music/`、`local-emoji/` 與 `local-demos/` 資料夾匯入站長的音樂、站方表情符號與入門展示影片（設定 `LCM_INPUTS_DIR` 時改讀其下的 `music/`、`emoji/`、`demos/`，供建置主機使用）；見[媒體](media.md)與[對局展示製作](game-demos.md#影片檔)。
 
-專案使用 Node.js 與 npm，不需要 Conda。`npm ci` 會把鎖定版本的相依套件安裝到這個 checkout 的 `node_modules/`；另一個 checkout 有自己的相依套件。Node.js 版本管理工具是選用的。在支援的 Linux 主機上，也可以用[官方 Node.js bootstrap](deployment.md#建置與部署)，以固定版本與內附的 npm 執行開發指令，而不變更系統的執行環境。正式環境使用複製的 Node 執行檔與專用的 systemd 帳號；應用程式、設定與狀態的路徑記錄在[部署](deployment.md)中。
+專案使用 Node.js 與 npm，不需要 Conda。`npm ci` 會把鎖定版本的相依套件安裝到這個 checkout 的 `node_modules/`；另一個 checkout 有自己的相依套件。Node.js 版本管理工具是選用的。正式環境由 LCM 建置與執行，應用程式對主機的需求記錄在[部署](deployment.md)中。
 
 ## 設定
 
@@ -49,8 +49,6 @@ PORT=3002 HOST=127.0.0.1 npm run dev:server
 ```
 
 在 `client/.env.local` 設定 `VITE_DEV_PROXY_TARGET=http://127.0.0.1:3002`，再啟動 `npm run dev:client`。預設的開發資料庫仍是 `server/data/database.json`；絕對不要指向 `/var/lib/card-together/` 中的資料庫。同一個資料庫只能由一個程序開啟，第二個開發伺服器或工具會因[擁有者鎖定檔](storage.md#單一擁有者鎖定)立即失敗；程序結束後留下的鎖定檔，會在確認該 PID 已不存在後自動取代，所以 `tsx watch` 重新啟動不受影響。API 與 Socket.IO 的 proxy 請求都使用設定的開發目標。這個變數只用於 Vite 的開發伺服器，不會改變正式環境的 ingress upstream。
-
-選用的[自動部署服務](deployment.md#ci-通過後自動部署)使用獨立的 detached worktree 與站長輸入快照。你目前的分支、尚未 commit 的變更與只存在本機的 commit 都不會進入它的正式環境建置。
 
 ## UI 慣例
 
@@ -95,7 +93,7 @@ npm run bench:load       # 120 scripted players against a separate server proces
 | 規則或伺服器邏輯，沒有 UI 變更 | 不需要，除非整合狀況仍不確定 |
 | 在地化 UI 或遊戲選項 | 一次真實的用戶端／伺服器流程，加上受影響畫面在 1366×768 與 360×640 的檢查；矮的橫向畫面再加 844×390、780×360 與 706×336 |
 | 共用版面、導覽、斷點 | 受影響的頁面在 2560×1440、1920×1080、1366×768、390×844、375×667、360×640、844×390、780×360、706×336，以及變更的斷點附近 |
-| 驗證、成員資格、傳輸、私人資料、部署 | 以不同帳號檢查登入／登出、建立／加入房間與聊天、重新整理／重新連線，以及受影響的遊戲流程；migration 請依照[部署](deployment.md) |
+| 驗證、成員資格、傳輸、私人資料、部署 | 以不同帳號檢查登入／登出、建立／加入房間與聊天、重新整理／重新連線，以及受影響的遊戲流程；migration 請依照[儲存](storage.md)與[部署](deployment.md) |
 
 | 受影響區域 | 另外檢查 |
 | --- | --- |

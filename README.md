@@ -36,7 +36,7 @@ which creates the Git-ignored `server/data/database.json`.
 - Setup, configuration, and checks: [development](docs/development.md), [testing](docs/testing.md).
 - A fresh checkout has no music or site emoji: see [media](docs/media.md).
 - Production: <https://acserver.csie.org/card-together/>, deployed with the
-  [deployment guide](docs/deployment.md).
+  [deployment guide](docs/deployment.md) (managed by LCM; the repository holds no deploy code).
 
 ## Documentation
 
@@ -53,7 +53,7 @@ Guides in `docs/` are written in Traditional Chinese.
 | [Media](docs/media.md) | Music, uploads, emoji, chat, and voice |
 | [Development](docs/development.md) | Environment, configuration, benchmarks, browser checks |
 | [Testing](docs/testing.md) | Check runner, gates, caches, coverage |
-| [Deployment](docs/deployment.md) | Build, install, ingress route, backups, rollback |
+| [Deployment](docs/deployment.md) | `build:release`, runtime environment, state directory, ingress route, backup sources, SQLite cutover |
 | [Android app](docs/android.md) | APK wrapper, signing key, release steps |
 | [Roadmap](docs/roadmap.md) | Public launch gates, monetization, operations, and development priorities |
 

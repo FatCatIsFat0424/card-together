@@ -51,10 +51,9 @@ VITE_BASE_PATH=/card-together/ VITE_SERVER_URL='' \
 1. 準備音樂與表情符號匯入。
 2. 對 shared、server、server 測試、client app 與 client Node 設定做型別檢查。
 3. 具型別資訊的 lint、字級檢查（`client/src` 的 CSS 不得寫死小於 12 px 的 `font-size`）、所有 Vitest 測試、Vite 建置與建置產物驗證。
-4. 對每個部署 shell 腳本做語法檢查，並執行 Python unittest discovery。
-5. 檢查 Markdown 的空白、相對連結目標，以及依 GitHub 標題 slug 規則的 `#anchor` 目標。
+4. 檢查 Markdown 的空白、相對連結目標，以及依 GitHub 標題 slug 規則的 `#anchor` 目標。
 
-`release` 會加上明確的正式環境 base 與 Socket 路徑，並驗證 index 連結、目錄、內容雜湊，以及原始檔與建置結果的位元組。它不會安裝、發布或重新載入服務，也不保證線上 proxy 或 TLS；見[部署](deployment.md#驗證)。
+`release` 會加上明確的正式環境 base 與 Socket 路徑，並驗證 index 連結、目錄、內容雜湊，以及原始檔與建置結果的位元組。它不會安裝、發布或重新載入服務，也不保證線上 proxy 或 TLS；見[部署](deployment.md#驗證)。正式環境的建置是 `npm run build:release`（匯入、client 建置、產物驗證、組出 `.release/`，不執行測試）；測試由 GitHub CI 的 `full` 把關（[部署](deployment.md#建置)）。
 
 | 快取 | 行為 |
 | --- | --- |
@@ -77,15 +76,14 @@ npm run typecheck
 npm run lint
 npm test                 # npm run test:watch for repeated runs
 npm run build:client
-for script in deploy/*.sh; do bash -n "$script"; done
-python3 -B -m unittest discover -s deploy/tests
+npm run build:release    # production tree in .release/ (LCM_INPUTS_DIR overrides local-*)
 ```
 
 根目錄的 `typecheck` 與 `lint` 也涵蓋 `server/tests`、基準測試、`scripts/`，以及 Vite 與 Vitest 設定。lint 把 floating promise 視為錯誤，並保留既有的 React hooks 警告。Vitest 會找出 `server/tests/**/*.test.ts`。
 
 ## 涵蓋範圍
 
-來源：[server/tests](../server/tests)、[deploy/tests](../deploy/tests)。
+來源：[server/tests](../server/tests)。
 
 | 範圍 | 涵蓋的行為 |
 | --- | --- |
@@ -95,7 +93,7 @@ python3 -B -m unittest discover -s deploy/tests
 | 媒體 | 真實的動態 GIF 上傳與提供的位元組；寫入、重新命名與擁有權失敗；配額；佇列復原 |
 | 匯入與建置產物 | 各匯入工具的輸入、輸出、旗標、鎖與安全性；真實的 GIF 與動態 WebP 壓縮，包括無法壓進上限的輸入；失效處理；拒絕符號連結與 FIFO；SIGKILL 後復原；建置雜湊與 base 驗證 |
 | 用戶端 | 帳號 generation 競態、API 失敗與 401 epoch、canvas 裁切與清理、零尺寸幾何、雙語規則、好友排序 |
-| 部署 | 備份鎖與擁有權、受保護的安裝與發布、精確 SHA 的 CI 把關、開發／worktree 隔離、持久的自動部署停止、目錄防護、失敗與訊號復原、timer 順序、migration 與設定、unit 的寫入範圍。SQLite 線上備份與還原以真實的 Node.js 工具執行；`PATH` 上（或 `CARD_TOGETHER_NODE`）沒有 Node.js 24 與已安裝的相依套件時，這些測試會被略過 |
+| 發布組裝 | `.release/` 只含執行所需的內容、workspace 連結維持相對且有效，並拒絕絕對、失效或指向 release 外的連結；`LCM_INPUTS_DIR` 取代 `local-*` 輸入目錄 |
 
 - 伺服器啟動時會讀取產生的[表情符號目錄](media.md#站方表情符號)；測試會注入目錄，而不需要站長的原始檔。
 - 部署測試使用暫存路徑與允許清單內的指令替身；正式環境的進入點保留權限檢查。
