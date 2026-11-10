@@ -43,7 +43,7 @@ const TYPE_CACHE: Readonly<Record<Selection['types'][number], string>> = {
   'client-node': 'client/node_modules/.tmp/tsconfig.node.tsbuildinfo',
 };
 
-export function planGates(root: string, selection: Selection, options: CheckOptions): Gate[] {
+export function planGates(selection: Selection, options: CheckOptions): Gate[] {
   if (selection.scope === 'documentation') return [{ id: 'documentation', internal: 'documentation' }];
   const full = selection.scope === 'full' || selection.scope === 'release';
   const gates: Gate[] = [];
@@ -63,13 +63,6 @@ export function planGates(root: string, selection: Selection, options: CheckOpti
   if (full || selection.build) {
     gates.push({ id: 'bundle', command: 'npx', args: ['vite', 'build'], cwd: 'client' });
     gates.push({ id: 'artifacts', internal: 'artifacts' });
-  }
-  const scripts = full ? collectFiles(root, ['deploy']).filter((path) => path.endsWith('.sh')) : selection.shell;
-  for (const script of scripts) gates.push({ id: `syntax:${script}`, command: 'bash', args: ['-n', script] });
-  if (full || selection.python.length) {
-    gates.push({ id: 'python', command: 'python3', args: ['-B', '-m', 'unittest',
-      ...(full || selection.python.includes('*') ? ['discover', '-s', 'deploy/tests'] : selection.python)],
-    cwd: full || selection.python.includes('*') ? '.' : 'deploy/tests' });
   }
   if (full) gates.push({ id: 'documentation', internal: 'documentation' });
   return gates;
@@ -99,7 +92,7 @@ function fingerprintFiles(root: string, roots: readonly string[], cache: Map<str
 }
 
 export function inputFingerprint(root: string, selection: Selection, cache = new Map<string, FingerprintEntry>(), excludeGenerated = false): string {
-  const roots = ['shared/src', 'server/src', 'server/tests', 'server/benchmarks', 'client/src', 'scripts', 'deploy',
+  const roots = ['shared/src', 'server/src', 'server/tests', 'server/benchmarks', 'client/src', 'scripts', 'server/start.mjs',
     'package.json', 'package-lock.json', '.node-version', 'AGENTS.md', 'eslint.config.cjs', 'tsconfig.json',
     'shared/tsconfig.json', 'shared/package.json', 'server/tsconfig.json', 'server/tsconfig.test.json', 'server/vitest.config.ts', 'server/package.json',
     'client/index.html', 'client/tsconfig.json', 'client/tsconfig.app.json', 'client/tsconfig.node.json', 'client/vite.config.ts', 'client/package.json', '.github',
@@ -172,7 +165,7 @@ async function main(): Promise<number> {
   const originalInputs = preparationFingerprint(root, cache);
   const selection = selectChecks(root, options);
   const environment = selection.build ? buildEnvironment(root, selection.scope === 'release') : undefined;
-  const gates = planGates(root, selection, options);
+  const gates = planGates(selection, options);
   process.stdout.write(`${JSON.stringify({ scope: selection.scope, paths: selection.paths, reasons: selection.reasons,
     browser: selection.browser, recommendedBenchmarks: selection.benchmark,
     environment, gates, dryRun: options.dryRun }, null, 2)}\n`);

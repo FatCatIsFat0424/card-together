@@ -100,12 +100,11 @@ describe('dependency and risk selection', () => {
     expect(selectChecks(root, parseOptions(['focused', '--files', 'server/src/engine/dynamic.ts'])).scope).toBe('full');
   });
 
-  it('maps deployment sources and conservatively expands unknown helpers', async () => {
-    const root = await fixture({ 'deploy/start-service.sh': '', 'deploy/new-helper.py': '' });
-    expect(selectChecks(root, parseOptions(['focused', '--files', 'deploy/start-service.sh'])).python).toEqual(['test_start_service']);
-    const unknown = selectChecks(root, parseOptions(['focused', '--files', 'deploy/new-helper.py']));
-    expect(unknown.python).toEqual(['*']);
-    expect(unknown.tests).toEqual([]);
+  it('requires full validation for the production entry point', async () => {
+    const root = await fixture({ 'server/start.mjs': '' });
+    const selection = selectChecks(root, parseOptions(['focused', '--files', 'server/start.mjs']));
+    expect(selection.scope).toBe('full');
+    expect(selection.reasons).toEqual(['Unmapped input requires full validation.']);
   });
 
   it('labels documentation separately from full runtime success', async () => {

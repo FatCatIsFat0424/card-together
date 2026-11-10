@@ -13,7 +13,7 @@ describe('validation gate execution', () => {
   it('prepares catalogs before five type environments and has only one client app check', async () => {
     const root = await mkdtemp(join(tmpdir(), 'card-validation-gates-')); directories.push(root);
     const options = parseOptions(['full', '--no-cache']);
-    const gates = planGates(root, selectChecks(root, options), options);
+    const gates = planGates(selectChecks(root, options), options);
     const ids = gates.map((gate) => gate.id);
     expect(ids.slice(0, 3)).toEqual(['import-music', 'import-emoji', 'import-demos']);
     expect(ids.filter((id) => id.startsWith('type-'))).toEqual(['type-shared', 'type-server', 'type-tests', 'type-client', 'type-client-node']);
@@ -21,7 +21,7 @@ describe('validation gate execution', () => {
     expect(ids.indexOf('type-client')).toBeLessThan(ids.indexOf('bundle'));
     expect(gates[0].args).toContain('--no-cache');
     expect(ids).toContain('clear-type-cache');
-    expect(ids).toContain('lint'); expect(ids).toContain('vitest'); expect(ids).toContain('python');
+    expect(ids).toContain('lint'); expect(ids).toContain('vitest'); expect(ids.some((id) => id === 'python' || id.startsWith('syntax:'))).toBe(false);
   });
 
   it('propagates importer failure and marks every downstream gate not-run', async () => {

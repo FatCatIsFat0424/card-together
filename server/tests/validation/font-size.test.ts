@@ -87,7 +87,7 @@ describe('font size gate', () => {
     const root = await fixture({ 'client/src/a.css': '.a { color: red; }\n', 'server/src/a.ts': 'export {};\n' });
     const ids = (args: string[]): string[] => {
       const options = parseOptions(args);
-      return planGates(root, selectChecks(root, options), options).map((gate) => gate.id);
+      return planGates(selectChecks(root, options), options).map((gate) => gate.id);
     };
     expect(ids(['full'])).toContain('font-size');
     expect(ids(['focused', '--files', 'client/src/a.css'])).toContain('font-size');

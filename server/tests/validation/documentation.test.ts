@@ -63,9 +63,9 @@ describe('documentation link validation', () => {
     const root = await fixture({ 'README.md': '# Card Together\n', 'docs/games/cards.md': '# 撲克牌遊戲\n', 'docs/a.txt': '' });
     expect(documentationPaths(root)).toEqual(['README.md', 'docs/games/cards.md']);
     const full = parseOptions(['full']);
-    expect(planGates(root, selectChecks(root, full), full).map((gate) => gate.id)).toContain('documentation');
+    expect(planGates(selectChecks(root, full), full).map((gate) => gate.id)).toContain('documentation');
     const focused = parseOptions(['focused', '--files', 'docs/games/cards.md']);
-    expect(planGates(root, selectChecks(root, focused), focused)).toEqual([{ id: 'documentation', internal: 'documentation' }]);
+    expect(planGates(selectChecks(root, focused), focused)).toEqual([{ id: 'documentation', internal: 'documentation' }]);
   });
 
   it('validates only selected Markdown files, not code or directory symlinks', async () => {

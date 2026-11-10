@@ -14,7 +14,6 @@ concurrency:
 
 jobs:
   checks:
-    # Matches the production host (Ubuntu 24.04) so deployment helpers run on the same system tools.
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
