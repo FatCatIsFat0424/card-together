@@ -3,7 +3,7 @@ import { snapshotSqliteDatabase, verifyDatabaseSnapshot } from './sqlite-snapsho
 
 const USAGE = 'Usage: sqlite-snapshot-cli.ts backup <database.sqlite> <new-snapshot.sqlite> | verify <database.sqlite|database.json>';
 
-/** Used by deploy/backup-data.sh and deploy/restore-data.sh; prints one JSON summary line. */
+/** Offline snapshot checks, used by the runbooks in docs/deployment.md; prints one JSON summary line. */
 runOfflineCli(async () => {
   const [command, ...paths] = process.argv.slice(2);
   let result: unknown;

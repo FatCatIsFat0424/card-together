@@ -26,7 +26,7 @@ async function freePort(): Promise<number> {
   return address.port;
 }
 
-/** Starts the real server entry point, as systemd does, on a private database and port. */
+/** Starts the real server entry point, as the service manager does, on a private database and port. */
 async function startServer(engine: string, path: string): Promise<ServerProcess> {
   const { NODE_ENV: _environment, ...environment } = process.env;
   const child = spawn(process.execPath, ['--import', 'tsx', resolve('src/index.ts')], {
