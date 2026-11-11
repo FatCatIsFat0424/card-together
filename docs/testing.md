@@ -3,7 +3,7 @@
 ## 前置需求
 
 - [`.node-version`](../.node-version) 中完全相同的 Node.js 版本，以及 `npm ci`。
-- 資源匯入需要 Linux 的 `flock`（util-linux）；部署 fixture 需要 Bash 與 GNU `realpath`，和 CI 相同。部署 bootstrap 測試需要 Python 3.12+。
+- 資源匯入需要 Linux 的 `flock`（util-linux）；密碼重設的終端機測試需要 Python 3（`pty`）。
 
 ## 檢查工具
 
@@ -39,7 +39,6 @@ VITE_BASE_PATH=/card-together/ VITE_SERVER_URL='' \
 | `--files` | 只檢查列出的檔案，其他一律不保證；無效、不安全或空的選擇會失敗 |
 | 相依關係 | 追蹤遞移的 import、export、字面的動態 import 與 shared alias；Vite 的 `?query` 匯入視為同一個檔案，來源目錄以外的既有檔案（資源、建置設定）不再展開。runtime、安全性與持久化的變更會加入對應的邊界測試 |
 | 擴大為 full | shared 介面、`AGENTS.md`、相依套件或設定、已刪除或未知的路徑、無法解析或動態的 import |
-| 部署檔案 | 執行相關的 Python 模組；未對應的輔助程式與範本會執行所有模組 |
 | 用戶端資源 | 需要建置與建置產物驗證 |
 | 只有文件 | `docs/**/*.md`、`README.md`：只檢查所有 repository Markdown 的空白、本地連結目標與標題錨點；回報為 `documentation`，不代表執行期驗證 |
 | 建議 | UI 變更會列出[瀏覽器檢查](development.md#瀏覽器驗證)；資料庫、Socket 與排牌變更會列出[基準測試](development.md#效能基準測試) |
@@ -101,7 +100,6 @@ npm run build:release    # production tree in .release/ (LCM_INPUTS_DIR override
 | 發布組裝 | `.release/` 只含執行所需的內容、workspace 連結維持相對且有效，並拒絕絕對、失效或指向 release 外的連結；`LCM_INPUTS_DIR` 取代 `local-*` 輸入目錄 |
 
 - 伺服器啟動時會讀取產生的[表情符號目錄](media.md#站方表情符號)；測試會注入目錄，而不需要站長的原始檔。
-- 部署測試使用暫存路徑與允許清單內的指令替身；正式環境的進入點保留權限檢查。
 - Node 測試無法取代瀏覽器渲染、真實的 codec 或線上服務。
 - 合併等價的設定與斷言，但保留每個獨立的行為檢查。
 

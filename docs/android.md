@@ -21,7 +21,7 @@ APK 是 Trusted Web Activity：一個在手機的 Chrome 中以全螢幕開啟 `
 
 ## Asset links
 
-`/.well-known/assetlinks.json` 是整個網域共用的檔案，不在這個 repository 內，也不由部署腳本寫入。內容由主機 ingress 的 well-known 設定提供（LCM 的 `components.ingress.wellKnown`，指向一個 root 擁有的檔案），必須與 `twa-manifest.json` 一致：
+`/.well-known/assetlinks.json` 是整個網域共用的檔案，不在這個 repository 內，也不由部署流程寫入。內容由主機 ingress 的 well-known 設定提供（LCM 的 `components.ingress.wellKnown`，指向一個 root 擁有的檔案），必須與 `twa-manifest.json` 一致：
 
 ```json
 [{"relation":["delegate_permission/common.handle_all_urls"],
