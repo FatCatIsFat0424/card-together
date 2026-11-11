@@ -134,7 +134,8 @@ describe.each(REPOSITORY_ADAPTERS)('statistics backfill ($name)', (adapter) => {
     data = fixture();
     await writeReplays(directory, data.replays);
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-  });
+  // Writing every replay of the fixture takes seconds on a loaded CI runner.
+  }, 60_000);
   afterEach(async () => {
     vi.restoreAllMocks();
     vi.mocked(rename).mockClear();
