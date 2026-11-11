@@ -23,6 +23,7 @@ describe('validation selection input', () => {
     [], ['focused'], ['focused', '--files'], ['focused', '--base', '--dry-run'],
     ['focused', '--base', 'main', '--files', 'a.ts'], ['full', '--files', 'a.ts'],
     ['release', '--base', 'main'], ['focused', '--unknown'], ['full', '--wat'],
+    ['full', '--part'], ['full', '--part', 'lint'], ['full', '--part', 'tests', '--part', 'static'], ['focused', '--files', 'a.ts', '--part', 'tests'],
   ].map((args) => ({ args })))('rejects invalid arguments $args before verification', ({ args }) => {
     expect(() => parseOptions(args)).toThrow();
   });

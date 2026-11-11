@@ -13,9 +13,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # A full check split in two parallel jobs; the tests take the longest.
   checks:
+    name: checks (${{ matrix.part }})
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [static, tests]
     steps:
       - uses: actions/checkout@v7
 
@@ -29,5 +35,5 @@ jobs:
 
       # The owner's music, site emoji and walkthrough videos are not in the repository; the
       # import steps run against empty local-music, local-emoji and local-demos directories.
-      - name: Validate all checks and build artifacts
-        run: npm run check -- full
+      - name: Validate the ${{ matrix.part }} part of the full check
+        run: npm run check -- full --part ${{ matrix.part }}

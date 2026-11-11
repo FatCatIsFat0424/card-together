@@ -24,6 +24,21 @@ describe('validation gate execution', () => {
     expect(ids).toContain('lint'); expect(ids).toContain('vitest'); expect(ids.some((id) => id === 'python' || id.startsWith('syntax:'))).toBe(false);
   });
 
+  it('splits a full check into a tests part and a static part that together run every gate once', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'card-validation-parts-')); directories.push(root);
+    const ids = (args: string[]): string[] => {
+      const options = parseOptions(args);
+      return planGates(selectChecks(root, options), options).map((gate) => gate.id);
+    };
+    const all = ids(['full']);
+    const tests = ids(['full', '--part', 'tests']);
+    const rest = ids(['full', '--part', 'static']);
+    expect(tests).toEqual(['import-music', 'import-emoji', 'import-demos', 'vitest']);
+    expect(rest).not.toContain('vitest');
+    expect(rest.slice(0, 3)).toEqual(['import-music', 'import-emoji', 'import-demos']);
+    expect([...new Set([...tests, ...rest])].sort()).toEqual([...all].sort());
+  });
+
   it('propagates importer failure and marks every downstream gate not-run', async () => {
     const execute = vi.fn(async () => 1);
     const fingerprint = vi.fn(() => 'inputs');
