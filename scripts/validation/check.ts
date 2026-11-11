@@ -59,13 +59,14 @@ export function planGates(selection: Selection, options: CheckOptions): Gate[] {
   if (full) gates.push({ id: 'lint', command: 'npm', args: ['run', 'lint'] });
   else if (selection.lint.length) gates.push({ id: 'lint', command: 'npx', args: ['eslint', ...selection.lint] });
   if (full || selection.tests.length) gates.push({ id: 'vitest', command: 'npx', cwd: 'server',
-    args: ['vitest', 'run', ...(full ? [] : selection.tests.map((path) => path.slice('server/'.length)))] });
+    args: ['vitest', 'run', ...(full ? [] : selection.tests.map((path) => path.slice('server/'.length))),
+      ...(options.shard ? [`--shard=${options.shard}`] : [])] });
   if (full || selection.build) {
     gates.push({ id: 'bundle', command: 'npx', args: ['vite', 'build'], cwd: 'client' });
     gates.push({ id: 'artifacts', internal: 'artifacts' });
   }
   if (full) gates.push({ id: 'documentation', internal: 'documentation' });
-  // The parts split a full check into two CI jobs; both prepare the catalogs the tests import.
+  // The parts split a full check into CI jobs; both prepare the catalogs the tests import.
   if (options.part === 'tests') return gates.filter((gate) => gate.preparation || gate.id === 'vitest');
   if (options.part === 'static') return gates.filter((gate) => gate.id !== 'vitest');
   return gates;

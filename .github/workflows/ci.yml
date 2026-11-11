@@ -13,15 +13,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # A full check split in two parallel jobs; the tests take the longest.
+  # A full check split in parallel jobs; the tests take the longest, so they run in two shards.
   checks:
-    name: checks (${{ matrix.part }})
+    name: checks (${{ matrix.part }}${{ matrix.shard && format(' {0}', matrix.shard) || '' }})
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        part: [static, tests]
+        include:
+          - part: static
+          - part: tests
+            shard: 1/2
+          - part: tests
+            shard: 2/2
     steps:
       - uses: actions/checkout@v7
 
@@ -36,4 +41,4 @@ jobs:
       # The owner's music, site emoji and walkthrough videos are not in the repository; the
       # import steps run against empty local-music, local-emoji and local-demos directories.
       - name: Validate the ${{ matrix.part }} part of the full check
-        run: npm run check -- full --part ${{ matrix.part }}
+        run: npm run check -- full --part ${{ matrix.part }} ${{ matrix.shard && format('--shard {0}', matrix.shard) || '' }}
