@@ -11,6 +11,8 @@ export interface CheckOptions {
   noCache: boolean;
   /** Runs only the tests (`tests`) or everything else (`static`) of a full or release check. */
   part?: 'static' | 'tests';
+  /** Runs one shard (`index/count`) of the test files; only with the tests part. */
+  shard?: string;
 }
 
 export interface Selection {
@@ -51,12 +53,20 @@ export function parseOptions(args: readonly string[]): CheckOptions {
       const value = rest[++index];
       if ((value !== 'static' && value !== 'tests') || options.part) throw new Error('Provide one --part: static or tests.');
       options.part = value;
+    } else if (arg === '--shard') {
+      const value = rest[++index];
+      const [shard, count] = (value ?? '').split('/').map(Number);
+      if (!/^[1-9]\d*\/[1-9]\d*$/.test(value ?? '') || shard > count || options.shard) {
+        throw new Error('Provide one --shard index/count, such as 1/2.');
+      }
+      options.shard = value;
     } else throw new Error(`Unknown argument: ${arg}`);
   }
   if (mode === 'focused' ? Boolean(options.base) === Boolean(options.files) : options.base || options.files) {
     throw new Error('Focused requires exactly one of --base or --files; full/release accept neither.');
   }
   if (mode === 'focused' && options.part) throw new Error('--part applies to full and release checks only.');
+  if (options.shard && options.part !== 'tests') throw new Error('--shard applies to --part tests only.');
   return options;
 }
 

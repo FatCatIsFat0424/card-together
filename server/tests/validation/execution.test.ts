@@ -39,6 +39,13 @@ describe('validation gate execution', () => {
     expect([...new Set([...tests, ...rest])].sort()).toEqual([...all].sort());
   });
 
+  it('passes a shard of the tests part to vitest', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'card-validation-shard-')); directories.push(root);
+    const options = parseOptions(['full', '--part', 'tests', '--shard', '2/2']);
+    const vitest = planGates(selectChecks(root, options), options).find((gate) => gate.id === 'vitest');
+    expect(vitest?.args).toEqual(['vitest', 'run', '--shard=2/2']);
+  });
+
   it('propagates importer failure and marks every downstream gate not-run', async () => {
     const execute = vi.fn(async () => 1);
     const fingerprint = vi.fn(() => 'inputs');
