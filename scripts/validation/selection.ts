@@ -9,6 +9,8 @@ export interface CheckOptions {
   files?: readonly string[];
   dryRun: boolean;
   noCache: boolean;
+  /** Runs only the tests (`tests`) or everything else (`static`) of a full or release check. */
+  part?: 'static' | 'tests';
 }
 
 export interface Selection {
@@ -45,11 +47,16 @@ export function parseOptions(args: readonly string[]): CheckOptions {
       while (rest[index + 1] && !rest[index + 1].startsWith('--')) files.push(rest[++index]);
       if (!files.length) throw new Error('--files requires at least one repository-relative path.');
       options.files = files;
+    } else if (arg === '--part') {
+      const value = rest[++index];
+      if ((value !== 'static' && value !== 'tests') || options.part) throw new Error('Provide one --part: static or tests.');
+      options.part = value;
     } else throw new Error(`Unknown argument: ${arg}`);
   }
   if (mode === 'focused' ? Boolean(options.base) === Boolean(options.files) : options.base || options.files) {
     throw new Error('Focused requires exactly one of --base or --files; full/release accept neither.');
   }
+  if (mode === 'focused' && options.part) throw new Error('--part applies to full and release checks only.');
   return options;
 }
 

@@ -15,8 +15,12 @@ npm run check -- focused --base main
 # While editing: check specific repository-relative files.
 npm run check -- focused --files client/src/stores/theme-store.ts
 
-# Required before completing behavior changes; CI runs this.
+# Required before completing behavior changes.
 npm run check -- full
+
+# CI runs full as two parallel jobs; together the parts run every gate once.
+npm run check -- full --part static
+npm run check -- full --part tests
 
 # Full gate with real imports and cleared compiler state.
 npm run check -- full --no-cache

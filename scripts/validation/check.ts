@@ -65,6 +65,9 @@ export function planGates(selection: Selection, options: CheckOptions): Gate[] {
     gates.push({ id: 'artifacts', internal: 'artifacts' });
   }
   if (full) gates.push({ id: 'documentation', internal: 'documentation' });
+  // The parts split a full check into two CI jobs; both prepare the catalogs the tests import.
+  if (options.part === 'tests') return gates.filter((gate) => gate.preparation || gate.id === 'vitest');
+  if (options.part === 'static') return gates.filter((gate) => gate.id !== 'vitest');
   return gates;
 }
 
