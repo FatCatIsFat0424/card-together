@@ -6,6 +6,15 @@ import type { BidSuit, MatchResult, PlayerVisibleGameState, PlayingState, GameSe
 
 export const AUCTION_COLUMNS: readonly GameSeat[] = ['W', 'N', 'E', 'S'];
 
+/**
+ * Per-seat grid columns (trick history, auction) in seating order, starting from the viewer's own seat when they
+ * hold one, so every grid lines up with the table.
+ */
+export function viewerFirstSeats(seats: readonly GameSeat[], viewer: GameSeat | null): GameSeat[] {
+  const start = viewer ? Math.max(0, seats.indexOf(viewer)) : 0;
+  return [...seats.slice(start), ...seats.slice(0, start)];
+}
+
 /** A Bridge (levels 1–7) or Napoleon (levels 9–16) call. */
 export interface AuctionCall {
   readonly seat: GameSeat;

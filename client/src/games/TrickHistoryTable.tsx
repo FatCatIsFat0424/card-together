@@ -1,8 +1,10 @@
-// ─── TrickHistoryTable: one row per trick, one fixed column per player ───
+// ─── TrickHistoryTable: one row per trick (after the auction, if any), one fixed column per player ───
 
 import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { isJoker } from '@shared/rules/cards';
+import { AuctionRows } from '../components/AuctionTable';
+import type { AuctionCall } from '../game-view';
 import type { CardOrJoker, GameSeat } from '@shared/types';
 import { useI18nStore } from '../stores/i18n-store';
 import { CardLabel } from './CardLabel';
@@ -29,15 +31,17 @@ export interface TrickHistoryRole {
   readonly ink: string;
 }
 
-/** History columns in seating order, starting from the viewer's own seat when they hold one. */
-export function trickHistoryColumns(seats: readonly GameSeat[], viewer: GameSeat | null): GameSeat[] {
-  const start = viewer ? Math.max(0, seats.indexOf(viewer)) : 0;
-  return [...seats.slice(start), ...seats.slice(0, start)];
+/** The deal's auction, listed above the tricks under the same columns. */
+export interface TrickHistoryAuction {
+  readonly calls: readonly AuctionCall[];
+  readonly toAct: GameSeat | null;
+  /** Bidding is over: the calls fold behind a toggle, since the contract and its holder show elsewhere */
+  readonly finished: boolean;
 }
 
 export function TrickHistoryTable({
-  rows, columns, mySeat, roles = [], cardText, columnLabel, seatName, className, summaryClassName, defaultOpen = true,
-  bare = false,
+  rows, columns, mySeat, roles = [], cardText, columnLabel, seatName, auction, className, summaryClassName,
+  defaultOpen = true, bare = false,
 }: {
   rows: readonly TrickHistoryRow[];
   columns: readonly GameSeat[];
@@ -49,6 +53,7 @@ export function TrickHistoryTable({
   columnLabel?: (seat: GameSeat) => string;
   /** Historical views resolve seats from their recorded participants instead of the live room. */
   seatName?: (seat: GameSeat) => string;
+  auction?: TrickHistoryAuction;
   className?: string;
   summaryClassName?: string;
   defaultOpen?: boolean;
@@ -56,10 +61,11 @@ export function TrickHistoryTable({
   bare?: boolean;
 }): ReactNode {
   const [open, setOpen] = useState(defaultOpen);
+  const [auctionOpen, setAuctionOpen] = useState(false);
   const { t } = useI18nStore();
   const liveName = useSeatName();
   const name = seatName ?? liveName;
-  if (rows.length === 0) return null;
+  if (rows.length === 0 && !auction) return null;
   const roleOf = (seat: GameSeat): TrickHistoryRole | undefined => roles.find((role) => role.seat === seat);
 
   const content = <>
@@ -74,6 +80,19 @@ export function TrickHistoryTable({
           </th>)}
         </tr>
       </thead>
+      {auction && <tbody className={styles.auction}>
+        {auction.finished && <tr>
+          <th scope="row" className={styles.number} />
+          <td colSpan={columns.length}>
+            <button type="button" className={styles.auctionToggle} aria-expanded={auctionOpen}
+              onClick={() => setAuctionOpen(!auctionOpen)}>
+              <span>{t('table.auction')}</span><span aria-hidden="true">{auctionOpen ? '▾' : '▸'}</span>
+            </button>
+          </td>
+        </tr>}
+        {(!auction.finished || auctionOpen) && <AuctionRows calls={auction.calls} toAct={auction.toAct} columns={columns}
+          marked={!auction.finished} />}
+      </tbody>}
       {rows.map((row) => <tbody key={row.number} className={styles.trick}>
         <tr>
           <th scope="row" className={styles.number}>{row.number}</th>
@@ -94,19 +113,21 @@ export function TrickHistoryTable({
         </tr>}
       </tbody>)}
     </table>
-    <p className={styles.legend}>
+    {rows.length > 0 && <p className={styles.legend}>
       <span className={styles.legendLead}>{t('table.lead')}</span>
       <span className={styles.legendWon}>{t('table.winner')}</span>
       {roles.map((role) => <span key={role.seat} className={styles.badge}
         style={{ background: role.color, color: role.ink }}>{role.label}</span>)}
-    </p>
+    </p>}
   </>;
   // The result dialog shows and hides the table with its own button.
   if (bare) return <div className={`${styles.history} ${className ?? ''}`}>{content}</div>;
   return (
     <details className={`${styles.history} ${className ?? ''}`} open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}>
-      <summary className={summaryClassName}>{t('table.trickHistory')} ({rows.length})</summary>
+      <summary className={summaryClassName}>
+        {auction ? t('table.gameRecord') : `${t('table.trickHistory')} (${rows.length})`}
+      </summary>
       {open && content}
     </details>
   );

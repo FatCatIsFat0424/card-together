@@ -102,16 +102,3 @@
 .pip.ns { background: var(--color-primary); border-color: var(--color-primary); }
 .pip.ew { background: var(--badge-declarer); border-color: var(--badge-declarer); }
 
-.auction {
-  flex: 1 1 auto;
-  min-height: 6rem;
-  display: flex;
-  flex-direction: column;
-}
-
-.scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  margin-top: 4px;
-}

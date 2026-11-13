@@ -1,38 +1,25 @@
 /* ─── AuctionTable styles ─── */
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
+.calls td {
   font-size: var(--text-sm);
+  font-weight: 600;
 }
 
-.table th {
-  font-size: var(--text-xs);
-  font-weight: 700;
+.calls th {
   color: var(--text-muted);
-  padding: 4px 0;
-  border-bottom: 1px solid var(--rail-border);
+  font-weight: 600;
 }
 
-.table th.me { color: var(--turn-glow); }
+.calls th abbr,
+.calls td.pass abbr { text-decoration: none; }
 
 /* Six players share the narrow info rail: a slightly smaller, tighter call keeps 10NT inside its column. */
 .dense td { font-size: 0.78rem; letter-spacing: -0.03em; }
 
-.table td {
-  text-align: center;
-  padding: 4px 0;
-  font-weight: 600;
-  border-bottom: 1px solid color-mix(in srgb, var(--rail-border) 50%, transparent);
-}
-
-.table td.pass {
+.calls td.pass {
   color: var(--text-muted);
   font-weight: 500;
 }
-
-.table td.pass abbr { text-decoration: none; }
 
 .wait {
   display: inline-block;

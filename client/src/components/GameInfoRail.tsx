@@ -1,5 +1,5 @@
 import { isCompassSeat } from '@shared/rules/seats';
-// ─── GameInfoRail: left info rail (contract, tricks, trick history, auction) ───
+// ─── GameInfoRail: left info rail (contract, tricks, and the game record: auction and trick history) ───
 
 import type { ReactNode } from 'react';
 import { useShallow } from 'zustand/react/shallow';
@@ -9,7 +9,7 @@ import type { AuctionCall } from '../game-view';
 import { useGameStore } from '../stores/game-store';
 import { useI18nStore } from '../stores/i18n-store';
 import { useRoomStore } from '../stores/room-store';
-import { AuctionTable, BidLabel } from './AuctionTable';
+import { BidLabel } from './AuctionTable';
 import styles from './GameInfoRail.module.css';
 import { TrickHistory } from '../games/bridge/TrickHistory';
 
@@ -73,15 +73,12 @@ export function GameInfoRail(): ReactNode {
       </section>
 
       <TrickHistory tricks={playing?.completedTricks ?? []} mySeat={mySeat} declarer={contract?.declarer ?? null}
+        auction={{
+          calls,
+          toAct: phase === 'bidding' && currentTurnSeat && isCompassSeat(currentTurnSeat) ? currentTurnSeat : null,
+          finished: contract !== null,
+        }}
         className={styles.box} summaryClassName={styles.caption} />
-
-      <section className={`${styles.box} ${styles.auction}`}>
-        <h2 className={styles.caption}>{t('table.auction')}</h2>
-        <div className={styles.scroll}>
-          <AuctionTable calls={calls} mySeat={mySeat}
-            toAct={phase === 'bidding' && currentTurnSeat && isCompassSeat(currentTurnSeat) ? currentTurnSeat : null} />
-        </div>
-      </section>
     </aside>
   );
 }

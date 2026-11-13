@@ -1,16 +1,16 @@
-// ─── NapoleonInfoRail: contract, side progress, discards, tricks, and the auction ───
+// ─── NapoleonInfoRail: contract, side progress, discards, and the game record (auction and tricks) ───
 
 import type { ReactNode } from 'react';
 import { NAPOLEON_MIN_LEVEL, NAPOLEON_POINT_CARDS } from '@shared/rules/napoleon';
 import type { NapoleonVisibleState } from '@shared/types';
-import { AuctionTable, BidLabel } from '../../components/AuctionTable';
+import { BidLabel } from '../../components/AuctionTable';
 import railStyles from '../../components/GameInfoRail.module.css';
 import { useI18nStore } from '../../stores/i18n-store';
 import { CardLabel } from '../CardLabel';
 import { useSeatName } from '../seat-names';
 import { useGamePresentation } from '../use-game-presentation';
 import { useNapoleonCardImageUrl } from './napoleon-card-art';
-import { napoleonAuctionColumns, napoleonCardText, napoleonFinalTricks, napoleonPresentedSidePoints } from './napoleon-view';
+import { napoleonCardText, napoleonFinalTricks, napoleonPresentedSidePoints } from './napoleon-view';
 import { NapoleonTrickHistory } from './NapoleonTrickHistory';
 import styles from './NapoleonTable.module.css';
 import infoStyles from './NapoleonInfoRail.module.css';
@@ -90,15 +90,6 @@ export function NapoleonInfoRail({ game }: { game: NapoleonVisibleState }): Reac
       </section>}
 
       <NapoleonTrickHistory game={game} />
-
-      <section className={`${railStyles.box} ${railStyles.auction}`}>
-        <h2 className={railStyles.caption}>{t('table.auction')}</h2>
-        <div className={railStyles.scroll}>
-          <AuctionTable calls={game.bidding?.bids ?? []} columns={napoleonAuctionColumns(game)}
-            mySeat={game.observer === 'spectator' ? null : game.mySeat}
-            toAct={game.phase === 'bidding' ? game.bidding?.currentBidderSeat ?? null : null} />
-        </div>
-      </section>
     </aside>
   );
 }

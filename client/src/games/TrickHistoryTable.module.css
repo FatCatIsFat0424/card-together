@@ -48,7 +48,28 @@
   font-weight: 600;
 }
 
+.auction,
 .trick { border-top: 1px solid var(--rail-border); }
+
+.auctionToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auctionToggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
 
 .trick td {
   /* A card such as ♠10 (suit at 0.85em) is about 1.5em wide; with ~0.45em between columns each column

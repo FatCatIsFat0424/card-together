@@ -11,6 +11,7 @@ import {
 import type {
   BidSuit, GameSeat, NapoleonCard, NapoleonJoker, NapoleonLogEntry, NapoleonSummon, NapoleonVisibleState, Suit,
 } from '@shared/types';
+import { viewerFirstSeats } from '../../game-view';
 
 /** Suit of the secretary picker; jokers are grouped as their own pseudo-suit. */
 export type NapoleonPickerGroup = Suit | 'joker';
@@ -330,7 +331,7 @@ export function napoleonReviewState(
   return 'review';
 }
 
-/** Auction columns: the seats taking part, in clockwise order. */
-export function napoleonAuctionColumns(game: Pick<NapoleonVisibleState, 'seats'>): readonly GameSeat[] {
-  return game.seats;
+/** Columns shared by the trick history and the auction: the seats taking part, clockwise from the viewer. */
+export function napoleonSeatColumns(game: Pick<NapoleonVisibleState, 'seats' | 'mySeat'>): readonly GameSeat[] {
+  return viewerFirstSeats(game.seats, game.mySeat);
 }

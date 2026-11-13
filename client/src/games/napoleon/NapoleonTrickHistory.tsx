@@ -1,4 +1,4 @@
-// ─── NapoleonTrickHistory: the deal's tricks with Napoleon roles marked ───
+// ─── NapoleonTrickHistory: the deal's auction and tricks with Napoleon roles marked ───
 
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
@@ -8,10 +8,12 @@ import railStyles from '../../components/GameInfoRail.module.css';
 import { useI18nStore } from '../../stores/i18n-store';
 import { suitClass } from '../CardLabel';
 import { compactSeatLabel } from '../seat-names';
-import { TrickHistoryTable, trickHistoryColumns } from '../TrickHistoryTable';
+import { TrickHistoryTable } from '../TrickHistoryTable';
 import type { TrickHistoryRole, TrickHistoryRow } from '../TrickHistoryTable';
 import { useGamePresentation } from '../use-game-presentation';
-import { napoleonCardText, napoleonPresentedEnd, napoleonSeatLabels, napoleonTrickHistory } from './napoleon-view';
+import {
+  napoleonCardText, napoleonPresentedEnd, napoleonSeatColumns, napoleonSeatLabels, napoleonTrickHistory,
+} from './napoleon-view';
 
 const SUMMON_KEYS = {
   secretary: 'napoleon.secretary', bigJoker: 'cards.joker.big', smallJoker: 'cards.joker.small',
@@ -41,9 +43,14 @@ export function NapoleonTrickHistory({ game }: { game: NapoleonVisibleState }): 
       color: 'var(--badge-secretary)', ink: 'var(--badge-secretary-ink)' }] : [],
   ];
 
-  return <TrickHistoryTable rows={rows} columns={trickHistoryColumns(game.seats, game.mySeat)} mySeat={game.mySeat}
+  return <TrickHistoryTable rows={rows} columns={napoleonSeatColumns(game)} mySeat={game.mySeat}
     roles={roles} cardText={(card) => napoleonCardText(card, (joker) => t(`cards.joker.${joker}`))}
     // Seat numbers, like the seat badges and the auction, so six columns fit the rail.
     columnLabel={(seat) => compactSeatLabel(t, 'napoleon', seat)}
+    auction={{
+      calls: game.bidding?.bids ?? [],
+      toAct: game.phase === 'bidding' ? game.bidding?.currentBidderSeat ?? null : null,
+      finished: game.contract !== null,
+    }}
     className={railStyles.box} summaryClassName={railStyles.caption} />;
 }
