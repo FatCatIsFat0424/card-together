@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # A full check split in parallel jobs; the tests take the longest, so they run in two shards.
+  # A full check split in parallel jobs; the tests take the longest, so they run in four shards.
   checks:
     name: checks (${{ matrix.part }}${{ matrix.shard && format(' {0}', matrix.shard) || '' }})
     runs-on: ubuntu-24.04
@@ -24,9 +24,13 @@ jobs:
         include:
           - part: static
           - part: tests
-            shard: 1/2
+            shard: 1/4
           - part: tests
-            shard: 2/2
+            shard: 2/4
+          - part: tests
+            shard: 3/4
+          - part: tests
+            shard: 4/4
     steps:
       - uses: actions/checkout@v7
 

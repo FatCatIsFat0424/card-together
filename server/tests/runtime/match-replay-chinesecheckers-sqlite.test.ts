@@ -1,3 +1,3 @@
 import { describeMatchRecordings } from '../helpers/match-recording';
 
-describeMatchRecordings(['spades']);
+describeMatchRecordings(['chinesecheckers'], 'sqlite');

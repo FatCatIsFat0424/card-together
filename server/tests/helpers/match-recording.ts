@@ -10,6 +10,7 @@ import type { AnyGameState, Card, GameType, ReplayRecording, ReplaySnapshot, Sea
 import { REPOSITORY_ADAPTERS } from './repository-adapters';
 import { isMatchReplay } from '../../src/database/match-replay';
 import type { AccountRecord, Repository } from '../../src/database/repository';
+import type { DatabaseEngine } from '../../src/config';
 import * as games from '../../src/managers/game-manager';
 import * as players from '../../src/managers/player-manager';
 import * as rooms from '../../src/managers/room-manager';
@@ -167,11 +168,14 @@ export const SLOW_RECORDED_GAMES: readonly GameType[] = ['spades', 'hearts', 'ch
 export const OTHER_RECORDED_GAMES: readonly GameType[] = GAME_TYPES.filter((type) => !SLOW_RECORDED_GAMES.includes(type));
 
 /**
- * Plays whole recorded matches of `gameTypes` on every storage engine; `legacy` adds the checks of
- * unrecorded games, which need to run once only.
+ * Plays whole recorded matches of `gameTypes` on one storage engine; `legacy` adds the checks of
+ * unrecorded games, which need to run once per engine. Each engine gets its own test file so that the
+ * slowest suites split across parallel workers and CI shards.
  */
-export function describeMatchRecordings(gameTypes: readonly GameType[], options: { legacy?: boolean } = {}): void {
-  describe.each(REPOSITORY_ADAPTERS)('live-table match recordings ($name)', (adapter) => {
+export function describeMatchRecordings(
+  gameTypes: readonly GameType[], engine: DatabaseEngine, options: { legacy?: boolean } = {},
+): void {
+  describe.each(REPOSITORY_ADAPTERS.filter((adapter) => adapter.name === engine))('live-table match recordings ($name)', (adapter) => {
     afterEach(() => {
       vi.restoreAllMocks();
       rooms.restoreRooms([]);

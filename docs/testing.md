@@ -21,7 +21,7 @@ npm run check -- full
 # CI runs full as parallel jobs; together the parts run every gate once, and the tests
 # part can run one shard of the test files.
 npm run check -- full --part static
-npm run check -- full --part tests --shard 1/2
+npm run check -- full --part tests --shard 1/4
 
 # Full gate with real imports and cleared compiler state.
 npm run check -- full --no-cache
@@ -30,6 +30,8 @@ npm run check -- full --no-cache
 VITE_BASE_PATH=/card-together/ VITE_SERVER_URL='' \
   VITE_SOCKET_PATH=/card-together/socket.io npm run check -- release
 ```
+
+CI 把測試分成四片平行執行。分片依 [`shard-sequencer.ts`](../server/tests/helpers/shard-sequencer.ts) 列出的慢速測試檔預估秒數平衡，不採用 Vitest 預設的路徑雜湊；慢速測試檔新增、改名或耗時明顯改變時，一併更新該清單。
 
 **Focused 選擇**
 
