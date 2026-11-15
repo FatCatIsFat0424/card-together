@@ -34,7 +34,8 @@
     "typecheck:client": "cd client && npx tsc -p tsconfig.app.json --noEmit && npx tsc -p tsconfig.node.json --noEmit",
     "music:import": "node scripts/audio/import-provided-music.mjs",
     "emoji:import": "node scripts/emoji/import-provided-emoji.mjs",
-    "demos:import": "node scripts/demos/import-demo-videos.mjs"
+    "demos:import": "node scripts/demos/import-demo-videos.mjs",
+    "demos:record": "tsx --tsconfig server/tsconfig.json scripts/game-demos/record-videos.ts"
   },
   "engines": {
     "node": ">=24.0.0"

@@ -59,6 +59,7 @@
 - bot 與逾時動作只產生合法動作，且只用自己看得到的資訊；搜尋型 bot 有時間上限測試。
 - 回放、觀戰、重啟恢復與中止投票正常；每日任務與統計同步登錄。
 - 中英文字典、規則說明與 `docs/games/` 的繁體中文規則一起更新。
+- 入門影片：加入 `DEMO_GAME_TYPES`，補 fixture、短版課程與字幕，再用 `npm run demos:record` 錄製（[對局展示製作](game-demos.md)）；測試要求每個模式都有課程。
 - 大廳類別（`cards`、`dice`、`board`、`puzzle`）取自定義；`GAME_BACKGROUNDS` 與 `GAME_CARD_ART` 是 `Partial`，缺圖的遊戲退回純色底板。
 - 介面沿用現行設計：電腦版只有左側欄與頁面標題列；理牌與代打用牌桌浮動工具，手牌一律大牌在左（`HandSortRules.initial`）；彈窗用共用尺寸；手機橫向 706×336 不得溢出或重疊。
 
