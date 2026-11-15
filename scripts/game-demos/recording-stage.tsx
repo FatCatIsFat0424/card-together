@@ -8,13 +8,16 @@ import { getPresentationFrames } from '@shared/game-presentation';
 import { LB_PRESETS, lbSwapSlots } from '@shared/rules/landbattle';
 import type { LbRank } from '@shared/rules/landbattle';
 import { draftPieces } from '../../client/src/games/landbattle/landbattle-view';
+import { dmEnds, dmFittingSides } from '@shared/rules/dominoes';
+import type { DominoTile } from '@shared/games/dominoes/types';
+import { YACHT_MAX_ROLLS, isYachtBox } from '@shared/rules/yacht';
+import { boxLabel } from '../../client/src/games/yacht/yacht-view';
 import type { PresentationFrame } from '@shared/game-presentation';
 import fixturesData from './fixtures.json';
 import { expandDemoFixture } from './demo-fixture';
 import type { ExpandedDemoStep } from './demo-fixture';
 import type { DemoFixture } from './demo-fixture-types';
 import { DEMO_SCENES, isDemoGameType } from '../../client/src/game-demos';
-import { gameDemoTranslations } from '../../client/src/game-demo-i18n';
 import { createTableStores, TableStoreScope } from '../../client/src/games/TableStoreScope';
 import { gameUi } from '../../client/src/games/ui-registry';
 import { useI18nStore } from '../../client/src/stores/i18n-store';
@@ -23,14 +26,9 @@ import { applyTheme } from '../../client/src/stores/theme-store';
 import '../../client/src/styles/global.css';
 import './recording-stage.css';
 
-interface RecordingScene {
-  readonly title: string;
-  readonly caption: string;
-  readonly step: number;
-  readonly rule?: string;
-}
 interface RecordingDriver {
-  show: (scene: RecordingScene) => void;
+  /** Restores a fixture step for manual inspection without running the timeline. */
+  show: (step: number) => void;
   run: (rate?: number) => void;
   readonly ready: boolean;
   done: boolean;
@@ -177,10 +175,75 @@ async function selectCard(card: { rank?: number; suit?: string; joker?: string }
   point(element); element.click(); await wait(500);
 }
 
+/** An enabled button by its exact accessible name or text. */
+function namedButton(label: string): HTMLButtonElement {
+  const found = [...document.querySelectorAll<HTMLButtonElement>('button')].find((element) =>
+    element.getAttribute('aria-label') === label || element.textContent?.trim() === label);
+  if (!found || found.disabled) throw new Error(`Missing recording control: ${label}`);
+  return found;
+}
+
+/**
+ * Yacht, Dominoes and Code Breaker: points at the controls and makes only local selections (picking a box,
+ * a tile waiting for its end, the guess entry); dice holds and every request are left to the snapshots.
+ */
+async function prepareDiceAction(step: ExpandedDemoStep, action: Record<string, unknown>): Promise<void> {
+  const { t } = useI18nStore.getState();
+  const seat = fixture!.focusSeat;
+  const before = step.index === 1 ? fixture!.initial : fixture!.steps[step.index - 2].after;
+  if (before.gameType === 'yacht' && step.after.gameType === 'yacht') {
+    const turn = before.turns[seat];
+    if (!turn) throw new Error('Missing own yacht turn.');
+    if (action.type === 'hold' && Array.isArray(action.held)) {
+      for (const [index, held] of action.held.entries()) {
+        if (held === turn.held[index]) continue;
+        point(namedButton(t('yacht.dieLabel', { n: String(index + 1), face: String(turn.dice[index]) })));
+        await wait(700);
+      }
+    } else if (action.type === 'roll') {
+      point(namedButton(t('yacht.rollLeft', { n: String(YACHT_MAX_ROLLS - turn.rolls) })));
+      await wait(800);
+    } else if (action.type === 'score' && isYachtBox(action.box)) {
+      const box = t(boxLabel(action.box));
+      const n = String(step.after.cards[seat]?.boxes[action.box]);
+      const cell = namedButton(t('yacht.boxState', { box, state: t('yacht.cellPotential', { n }) }));
+      point(cell); cell.click(); await wait(800);
+      point(namedButton(t('yacht.scoreBox', { box, n }))); await wait(800);
+    }
+  } else if (before.gameType === 'dominoes') {
+    if (action.type === 'draw') {
+      point(namedButton(t('dominoes.draw'))); await wait(800);
+    } else if (action.type === 'play' && Array.isArray(action.tile)) {
+      const tile = action.tile as unknown as DominoTile;
+      const control = namedButton(t('dominoes.tileLabel', { a: String(tile[0]), b: String(tile[1]) }));
+      const ends = dmEnds(before.line);
+      point(control);
+      // A tile that fits two different ends waits for the end to be tapped; any other tile plays at once.
+      if (ends && ends.left !== ends.right && dmFittingSides(tile, before.line).length === 2) {
+        control.click(); await wait(700);
+        const side = action.side === 'left' ? 'left' : 'right';
+        point(namedButton(t(side === 'left' ? 'dominoes.playLeft' : 'dominoes.playRight',
+          { n: String(side === 'left' ? ends.left : ends.right) })));
+      }
+      await wait(800);
+    }
+  } else if (before.gameType === 'codebreaker' && action.type === 'guess' && Array.isArray(action.code)) {
+    for (const digit of action.code) {
+      const key = namedButton(t('codebreaker.digitKey', { n: String(digit) }));
+      point(key); key.click(); await wait(500);
+    }
+    point(namedButton(t('codebreaker.submit'))); await wait(800);
+    // A submitted guess leaves an empty entry, as after the server accepts it.
+    namedButton(t('codebreaker.clear')).click();
+  }
+}
+
 async function prepareAction(step: ExpandedDemoStep): Promise<void> {
   if (step.actingSeat !== fixture!.focusSeat || !step.action || typeof step.action !== 'object') return;
   const action = step.action as Record<string, unknown>;
-  if (gameType === 'liarsdeck') {
+  if (gameType === 'yacht' || gameType === 'dominoes' || gameType === 'codebreaker') {
+    await prepareDiceAction(step, action);
+  } else if (gameType === 'liarsdeck') {
     if (action.type === 'challenge') { point(button('抓騙子！')); await wait(800); }
     else if (Array.isArray(action.cardIds)) {
       const source = step.index === 1 ? fixture!.initial : fixture!.steps[step.index - 2].after;
@@ -223,6 +286,16 @@ async function prepareAction(step: ExpandedDemoStep): Promise<void> {
     const cards = document.querySelectorAll('[class*="fan"] button');
     const target = cards[Number(action.index)];
     if (target) { point(target); await wait(800); }
+  } else if (gameType === 'doudizhu' && action.type === 'bid' && typeof action.score === 'number') {
+    const label = action.score === 0 ? '不叫' : `${action.score} 分`;
+    const target = [...document.querySelectorAll<HTMLButtonElement>('button')].find((element) => element.textContent?.trim() === label);
+    if (target) { point(target); await wait(800); }
+  } else if (gameType === 'doudizhu' && action.type === 'play' && Array.isArray(action.cards)) {
+    for (const card of action.cards) await selectCard(card);
+    const control = [...document.querySelectorAll<HTMLButtonElement>('button')].find((element) => element.textContent?.trim().startsWith('出牌'));
+    if (control) { point(control); await wait(800); }
+    const clear = [...document.querySelectorAll<HTMLButtonElement>('button')].find((element) => element.textContent?.trim() === '清除');
+    clear?.click();
   } else if (gameType === 'gofish' && action.type === 'ask') {
     const card = [...document.querySelectorAll<HTMLButtonElement>('button')].find((element) =>
       element.getAttribute('aria-label')?.startsWith(({ 11: 'J', 12: 'Q', 13: 'K', 14: 'A' } as Record<number, string>)[Number(action.rank)] ?? String(action.rank)));
@@ -280,7 +353,8 @@ async function prepareAction(step: ExpandedDemoStep): Promise<void> {
       .find((candidate) => candidate.textContent?.trim() === String(action.amount));
     if (chip) { point(chip); chip.click(); await wait(600); }
     const labels: Record<string, string> = { hit: '要牌', stand: '停牌', split: '分牌', double: '加倍', bet: '下注', call: '跟注', check: '過牌', fold: '棄牌' };
-    const label = labels[String(action.type)];
+    // Blackjack and ten-and-a-half wrap hit/stand/split/double in an `act` or `dealerAct` action.
+    const label = labels[String(action.action ?? action.type)];
     const control = label && [...document.querySelectorAll<HTMLButtonElement>('button')]
       .find((candidate) => candidate.textContent?.trim().startsWith(label) && !candidate.disabled);
     if (control) { point(control); await wait(800); }
@@ -322,42 +396,30 @@ async function prepareAction(step: ExpandedDemoStep): Promise<void> {
 }
 
 function RecordingStage(): ReactNode {
-  const opening = gameDemoTranslations['zh-TW'][DEMO_SCENES[gameType][0].text];
-  const [scene, setScene] = useState<RecordingScene>({ ...opening, step: 0 });
   const [reveal, setReveal] = useState<PresentationFrame | null>(null);
+  const [curtain, setCurtain] = useState(true);
   useEffect(() => {
     let running = false;
     const driver: RecordingDriver = {
       ready: true, done: false, error: null, startedAt: null, finishedAt: null, scene: '', currentStep: 0, timeline: [],
-      show: (next) => { restore(next.step); setScene(next); },
+      show: (step) => { restore(step); },
       run: (rate = 1) => {
         if (running) return;
         recordingRate = rate;
         running = true;
         driver.startedAt = Date.now();
+        setCurtain(false);
         void (async (): Promise<void> => {
           for (const part of DEMO_SCENES[gameType]) {
             const started = performance.now();
             const elapsed = (): number => (performance.now() - started) * recordingRate;
-            const copy = gameDemoTranslations['zh-TW'][part.text];
             driver.scene = part.text;
             driver.timeline.push(Date.now());
             restore(part.step);
-            const ruleCard = !part.until && !part.interaction;
-            setScene({ ...copy, rule: ruleCard ? copy.rule : undefined, step: part.step });
-            const supplement = copy.rule && !ruleCard ? setTimeout(() => {
-              setScene({ title: copy.title, caption: copy.rule!, step: part.step });
-            }, part.seconds * 550 / recordingRate) : null;
             await prepareScene(part.text);
             if (part.interaction) {
               await wait(1500);
-              if (part.interaction === 'edit') {
-                await click('2♣：收回手上'); await click('2♣'); await click('把選取的牌放到頭墩');
-                await click('自動擺牌');
-                await wait(1800);
-                await click('清空三墩');
-                await arrange('front'); await arrange('middle'); await arrange('back');
-              } else await arrange(part.interaction);
+              await arrange(part.interaction);
             }
             if (part.until) {
               const interval = (part.seconds * 1000 - 3500) / (part.until - part.step);
@@ -373,10 +435,8 @@ function RecordingStage(): ReactNode {
                   const frame = getPresentationFrames(game).find((candidate) => candidate.kind === 'diceReveal');
                   if (!frame) throw new Error('Missing public dice reveal.');
                   setReveal(frame);
-                  if (copy.outcome) setScene({ title: copy.title, caption: copy.outcome, step: index });
                   await wait(Math.min(7000, interval * .7));
                   setReveal(null);
-                  if (copy.rule) setScene({ title: copy.title, caption: copy.rule, step: index });
                 }
                 restore(index);
                 if (gameType !== 'liarsdice' && Frame) {
@@ -393,7 +453,6 @@ function RecordingStage(): ReactNode {
               }
             }
             await wait(Math.max(0, part.seconds * 1000 - elapsed()));
-            if (supplement !== null) clearTimeout(supplement);
           }
           driver.done = true;
           driver.finishedAt = Date.now();
@@ -403,18 +462,16 @@ function RecordingStage(): ReactNode {
     window.demoRecording = driver;
     return () => { delete window.demoRecording; };
   }, []);
+  // Subtitles carry every explanation, so the stage draws only the table and public reveals. The black
+  // curtain lifts when `run()` starts, marking the timeline's first frame for calibration.
   return <MemoryRouter><TableStoreScope stores={stores}>
-    <header className="lessonHeader">
-      <div className="lessonMeta">Card Together · 新手對局展示 · 固定範例 · {fixture!.focusSeat} 家視角</div>
-      <h1>{scene.title}</h1><p>{scene.caption}</p>
-    </header>
     <main className="lessonTable"><Suspense fallback={<p>載入牌桌…</p>}><Table /></Suspense></main>
-    {scene.rule && <aside className="lessonRule"><span>規則補充</span><p>{scene.rule}</p></aside>}
     {reveal && Frame && <aside className="lessonReveal"><div>
       <h2>{useI18nStore.getState().t(gameUi(gameType).presentation?.heading?.(reveal) ?? `presentation.${reveal.kind}`)}</h2>
       <Frame frame={reveal} name={(seat) => `${seat} · 示範玩家`} />
     </div></aside>}
     <div id="lessonPointer" />
+    {curtain && <div className="lessonCurtain" />}
   </TableStoreScope></MemoryRouter>;
 }
 createRoot(document.getElementById('root')!).render(<RecordingStage />);

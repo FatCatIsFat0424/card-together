@@ -1,0 +1,39 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:06.999 line:0
+Both players crack the same four-digit code,
+no digit repeated. Fewest guesses wins.
+
+00:00:06.999 --> 00:00:13.999 line:0
+Tap the digits 1234, then Submit guess.
+
+00:00:13.999 --> 00:00:16.999 line:0
+The round resolves once both have guessed.
+
+00:00:16.999 --> 00:00:25.999 line:0
+1A2B: one digit is in the right place,
+two more are right but in the wrong place.
+
+00:00:25.999 --> 00:00:32.999 line:0
+Guided by that, North tries 1452;
+nobody sees another player’s guesses.
+
+00:00:32.999 --> 00:00:35.998 line:0
+1452 scores 2A1B.
+
+00:00:35.998 --> 00:00:42.998 line:0
+Fast-forward: the third guess, 0129, is 2A1B too.
+
+00:00:42.998 --> 00:00:49.998 line:0
+North’s fourth guess is 1429.
+
+00:00:49.998 --> 00:00:52.998 line:0
+4A: North cracks the code and stops guessing.
+
+00:00:52.998 --> 00:00:59.997 line:0
+Play goes on until everyone cracks it or uses ten;
+East cracks it on the fifth guess.
+
+00:00:59.997 --> 00:01:10.000 line:0
+The code 1429 and every guess are revealed;
+North used the fewest, four, and wins.

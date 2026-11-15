@@ -1,52 +1,36 @@
 WEBVTT
 
-00:00:00.000 --> 00:00:12.700
-Start and controls
-Take a seat and press Ready. The host starts when everyone is ready. Your cards or dice are at the bottom.
+00:00:00.000 --> 00:00:06.999 line:0
+Spades: North–South vs East–West; spades are trump.
+Partners’ bids add up to the team contract.
 
-00:00:12.700 --> 00:00:19.000
-Follow the turn prompt. Wait for animations to finish; an expired turn is played automatically. Use Return to room after settlement.
+00:00:06.999 --> 00:00:13.099 line:0
+North bids 3 and clicks Confirm bid.
+A bid of 0 is Nil: take no tricks at all.
 
-00:00:19.000 --> 00:00:35.000
-Spades | North-South against East-West
-Four players receive thirteen cards each. Spades are always trump and opposite seats are partners. Compare team match totals.
+00:00:13.099 --> 00:00:20.999 line:0
+East, South and West each bid 3 as well;
+both teams’ contracts are 6 tricks.
 
-00:00:35.000 --> 00:00:48.200
-Select a bid and confirm
-Starting left of the dealer, bid zero to thirteen in order. Add the partners’ ordinary bids for the team contract.
+00:00:20.999 --> 00:00:28.998 line:0
+Fast-forward: North leads, the winner leads next.
+Follow the led suit; only a void may discard.
 
-00:00:48.200 --> 00:00:59.000
-Zero is Nil: take no tricks for +100, or lose 100 if any trick is taken. Blind Nil is not used.
+00:00:28.998 --> 00:00:35.098 line:0
+North leads ♦4; the others must follow diamonds.
 
-00:00:59.000 --> 00:01:19.000
-Play in order and follow suit
-The player left of the dealer leads. Click a legal card, or select and confirm on phones. The trick winner leads next.
+00:00:35.098 --> 00:00:42.998 line:0
+East has none and trumps with ♠3; South covers
+with the higher ♠5 and wins the trick.
 
-00:01:19.000 --> 00:01:30.000
-When void, discard or trump
-The highest spade wins; without spades, the highest card of the led suit wins. Always follow suit if possible.
+00:00:42.998 --> 00:00:57.998 line:0
+Fast-forward: every hand is bid and played anew.
+Making the contract: 10 per bid trick; failing: −10.
 
-00:01:30.000 --> 00:01:39.000
-Spades must be broken before leading them unless only spades remain. There are no other first-trick discard restrictions.
+00:00:57.998 --> 00:01:12.998 line:0
+Each overtrick is 1 point but also a bag;
+every 10 bags cost 100 points.
 
-00:01:39.000 --> 00:01:52.200
-Rule note | Contracts, Nil and bags
-Making the contract earns ten per bid trick; failing loses ten per bid trick. Every overtrick adds one point and one bag.
-
-00:01:52.200 --> 00:02:03.000
-Failed-Nil tricks cannot fulfill the partner’s contract, but each adds one point and one bag. Every ten bags cost 100 points; carry the remainder.
-
-00:02:03.000 --> 00:02:35.000
-Finish the first full hand
-Accelerate through thirteen tricks, then compare bids, tricks, Nil, bags and points. Rotate the dealer for the next hand.
-
-00:02:35.000 --> 00:03:35.000
-Accelerate until the match is decided
-Bid and finish every remaining hand while carrying scores and bags. Reaching the target is checked only after a completed hand.
-
-00:03:35.000 --> 00:03:44.900
-Spades | Reach five hundred
-When a team reaches 500, the higher total wins for both partners. Equal totals require another hand.
-
-00:03:44.900 --> 00:03:53.000
-Both partners receive a win. Return to the room to start a new match.
+00:01:12.998 --> 00:01:23.000 line:0
+North–South 503, East–West 474.
+North–South reach 500 and lead: both partners win.

@@ -2,6 +2,7 @@ import { generateCardsFixtures } from './cards-fixtures';
 import { generateTrickFixtures } from './trick-fixtures';
 import { generateBoardFixtures } from './boards-fixtures';
 import { generateBettingFixtures } from './betting-fixtures';
+import { generateDiceFixtures } from './dice-fixtures';
 import { writeFileSync } from 'node:fs';
 import { compactLegacyFixture } from './demo-fixture';
 import type {
@@ -284,6 +285,7 @@ function main(): void {
         napoleon: compactLegacyFixture(fixtures.games.napoleon),
         chinesepoker: compactLegacyFixture(fixtures.games.chinesepoker),
         liarsdice: compactLegacyFixture(fixtures.games.liarsdice),
+        ...generateDiceFixtures(),
       },
     };
     writeFileSync(new URL('./fixtures.json', import.meta.url), `${JSON.stringify(compact, null, 2)}\n`);
