@@ -4,9 +4,8 @@ import type {
 } from '@shared/types';
 import { gameDefinition } from '@shared/games/registry';
 import * as games from '../../src/managers/game-manager';
-import { getTurnSeat } from '../../src/managers/game-clock';
-import { pendingSeats as codeBreakerPendingSeats } from '../../src/managers/games/codebreaker-game';
 import { applyAutomatedAction, firstLegalAction } from '../../src/runtime/automated-action';
+import { pendingActionSeat, skipPresentation } from '../../src/runtime/headless-play';
 
 export const REPLAY_SEATS: readonly Seat[] = ['N', 'E', 'S', 'W'];
 
@@ -36,27 +35,8 @@ export function spectatorSnapshot(code: string): ReplaySnapshot {
 function act(code: string): void {
   const game = games.getGameState(code)!;
   // Presentations hold the next action back; the recording already holds this one.
-  delete game.presentation;
-  const seat = game.gameType === 'hearts' && game.phase === 'passing'
-    ? REPLAY_SEATS.find((pending) => !game.deals[game.hand - 1].passes[pending])
-    : game.gameType === 'chinesepoker'
-    ? REPLAY_SEATS.find((pending) => game.arrangements[pending] === null)
-    : game.gameType === 'blackjack' && game.phase === 'betting'
-      ? REPLAY_SEATS.find((pending) => game.players[pending] && game.bets[pending] === null && game.chips[pending] >= 10)
-      : game.gameType === 'tenhalf' && game.phase === 'betting'
-        ? REPLAY_SEATS.find((pending) => game.players[pending] && game.pendingBets[pending] === null
-          && pending !== game.banker && game.chips[pending] >= 10)
-      : game.gameType === 'napoleon' && game.phase === 'reviewing'
-        ? game.seats.find((pending) => pending !== game.contract?.napoleon && !game.reviewed.includes(pending))
-      : game.gameType === 'landbattle' && game.phase === 'deploying'
-        ? REPLAY_SEATS.find((pending) => game.players[pending] && !game.layouts[pending])
-      : game.gameType === 'codebreaker'
-        ? REPLAY_SEATS.find((pending) => game.players[pending] && codeBreakerPendingSeats(game).includes(pending))
-      : game.gameType === 'battleship' && game.phase === 'placing'
-        ? REPLAY_SEATS.find((pending) => game.players[pending] && !game.fleets[pending])
-        : game.gameType === 'go' && game.phase === 'marking'
-          ? REPLAY_SEATS.find((pending) => game.players[pending] && !game.confirmed.includes(pending))
-        : getTurnSeat(game);
+  skipPresentation(game);
+  const seat = pendingActionSeat(game);
   if (!seat) throw new Error('Expected a pending action.');
   if (game.gameType === 'bridge' && game.phase === 'bidding' && !game.bidding?.highestBid) {
     if (!games.handleBid(code, seat as Seat, { type: 'bid', level: 1, suit: 'clubs' }, true).success) throw new Error('Bid failed.');

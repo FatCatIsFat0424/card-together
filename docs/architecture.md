@@ -202,3 +202,12 @@
 - **回退**：逾時（`budgetMs` 加 250 ms 寬限）、worker 當機（含超過記憶體上限）、策略丟出例外、佇列已滿、等候空閒 worker 超過 3 秒、pool 關閉或 `BOT_WORKERS=0`，一律改用同一個 bot 的同步版本（`GameBot.decide`，淺層、有時間上限的搜尋或啟發式）；之後仍失敗則走既有的「第一個合法動作」流程。搜尋型遊戲的 `decide` 要保持便宜，因為它只在回退與共用截止時間時決定。
 - **Pool**：`createSearchPool` 依設定建立固定數量的 slot，worker 在第一次使用時才啟動（啟動約 100 ms，沒有搜尋型遊戲就不花資源）。每個任務獨占一個 worker；逾時、取消與當機都會終止該 worker，下一個任務在該 slot 啟動新的 worker（不會自動重啟迴圈）。Worker 使用空的 `execArgv`，由 `search-worker-entry.mjs` 自行註冊 `tsx`，所以開發（`tsx watch`）、測試（vitest）與正式環境（`server/start.mjs`）行為相同，並沿用 `server/tsconfig.json` 的 `@shared` 別名。
 - **設定與記憶體**：`BOT_WORKERS`、`BOT_WORKER_MEMORY_MB`、`BOT_SEARCH_QUEUE`（[開發](development.md#設定)；記憶體估算見[部署](deployment.md#執行環境設定)）。
+
+### 決定化搜尋
+
+隱藏資訊的牌類與牌塊遊戲共用 [`determinized.ts`](../server/src/bots/search/determinized.ts) 與 [`card-dealer.ts`](../server/src/bots/search/card-dealer.ts)，在搜尋策略（worker 內）中呼叫。橋牌與鬥地主仍用各自的實作。型別與預設值以程式碼註解為準。
+
+- **外掛**：`DeterminizedGame<S, M>` 包住座位自己的過濾後視角，提供 `sample`（發出一個完整狀態，可帶權重）、`copy`、`legalMoves`、`play`（原地套用）、`rolloutMove`（快速 rollout 策略，預設隨機合法步）、`isTerminal`、`utility`（遊戲本身的分數；搭檔遊戲回傳同隊共用的分數），可選 `evaluate`（精確評估，例如雙明手求解，取代 rollout）。
+- **候選**：由遊戲的啟發式產生，附 `prior` 分數。`determinizedSearch` 在每個樣本世界上，用同一組 rollout 種子評估所有候選（common random numbers），直到 `maxSamples` 或 `SearchContext.budget` 用完；沒評估完的樣本整個丟棄，所以每個候選都在相同的世界上比較。
+- **選擇**：樣本少於 `minSamples` 時沿用 prior 最高者。否則取平均效用最高者；與它的成對差距在 `tolerance` 加 `confidence` 個標準誤以內的候選視為相同，由 prior 決定。時鐘沒有用完時，結果只取決於種子。
+- **發牌**：`dealUnseen` 依確切張數發出未見的牌。硬限制一定遵守：`accepts`（缺門、不可能持有的牌）、`known`（已知持有的牌）。軟證據有兩種：`misfit`（試幾次取最貼近者）或 `logLikelihood`（轉為重要性權重）。
