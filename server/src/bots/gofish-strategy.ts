@@ -49,14 +49,6 @@ export function goFishFirstLegalAction(visible: GoFishVisibleState): BotAction |
     choices.ranks[Math.floor(step / choices.targets.length) % choices.ranks.length]);
 }
 
-/** A random rank from the hand asked of a random opponent that holds cards. */
-export function easyGoFishAction(visible: GoFishVisibleState, random: () => number = Math.random): BotAction | null {
-  const choices = turnChoices(visible);
-  if (!choices) return null;
-  const pick = <T>(items: readonly T[]): T => items[Math.min(items.length - 1, Math.floor(random() * items.length))];
-  return askAction(pick(choices.targets), pick(choices.ranks));
-}
-
 interface PublicKnowledge {
   /** Ranks a seat is known to hold: it asked for them and nobody has taken or booked them since */
   readonly holds: ReadonlyMap<GameSeat, ReadonlySet<Rank>>;

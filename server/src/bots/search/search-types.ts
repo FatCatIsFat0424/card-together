@@ -34,7 +34,7 @@ export interface SearchStrategyRef<K extends GameType = GameType> {
   readonly game?: K;
 }
 
-/** A game bot's opt-in to the worker pool for its hard difficulty. */
+/** A game bot's opt-in to the worker pool. */
 export interface SearchBotSpec<K extends GameType = GameType> {
   readonly strategy: SearchStrategyRef<K>;
   /** Wall-clock budget for one decision. */

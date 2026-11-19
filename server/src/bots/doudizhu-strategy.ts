@@ -7,9 +7,8 @@ import { ddzReplay } from '@shared/rules/doudizhu-table';
 import type { BotAction } from './bot-decisions';
 import { selectNearBest } from './selection';
 
-// Heuristic summary: bots bid from a count of jokers, 2s, aces and bombs. Easy plays the smallest legal
-// combination. Hard measures a hand by how many plays it needs to empty (rocket, bombs, chains, triples with
-// kickers, pairs, singles); it plays the move that leaves the fewest plays, spends control cards only when
+// Heuristic summary: bots bid from a count of jokers, 2s, aces and bombs, and measure a hand by how many plays
+// it needs to empty (rocket, bombs, chains, triples with kickers, pairs, singles); it plays the move that leaves the fewest plays, spends control cards only when
 // the table is close to ending, preserves a partner's control unless the landlord threatens to finish, and feeds
 // a partner who is about to go out. The search bot uses this evaluation to rank candidates.
 
@@ -223,15 +222,6 @@ export function getDouDizhuBotAction(visible: DouDizhuVisibleState, random: () =
   const urgent = opponents(state).some((seat) => state.counts[seat] <= 2);
   const chosen = selectNearBest(options.map((option) => ({ value: option.move, score: option.score })), random, urgent ? 0.4 : 0.65);
   return toAction(chosen);
-}
-
-/** Easy: bid on a high-card count, then always play the smallest legal combination. */
-export function easyDouDizhuAction(visible: DouDizhuVisibleState): BotAction | null {
-  if (visible.phase === 'calling') return auctionAction(visible, 4);
-  if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat) return null;
-  const move = ddzSmallestMove(visible.myHand, visible.lastPlay?.combo ?? null);
-  if (move) return toAction(move);
-  return visible.lastPlay ? asAction({ type: 'pass' }) : null;
 }
 
 /** Pass when allowed, otherwise the smallest legal play: the timeout action and the last-resort move. */

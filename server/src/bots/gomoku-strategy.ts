@@ -6,46 +6,9 @@ import {
   sideToPlace,
 } from './gomoku-search';
 
-/** Relative noise on a move's pattern score, so near-equal moves vary and a slightly worse one is sometimes played. */
-const EASY_NOISE = 0.35;
-
-/** Chance that the easy bot plays one of its better few moves at random, which can miss a block. */
-const EASY_SLIP = 0.18;
-
-/** Moves the easy bot weighs. */
-const EASY_BREADTH = 12;
-
-/** Easy: pattern score with randomness. Also the move a player gets after running out of time. */
-export function easyGomokuAction(visible: GomokuVisibleState, random: () => number): BotAction | null {
-  if (choosingTurn(visible)) {
-    // Take black when the three opening stones favour it, with enough noise to be unpredictable.
-    return chooseAction(new Position(visible.stones).score + (random() - 0.5) * 20 > 0);
-  }
-  if (!placingTurn(visible)) return null;
-  const side = sideToPlace(visible);
-  const renju = visible.options.renju;
-  const position = new Position(visible.stones);
-  // A winning stone is always taken.
-  const [win] = position.winningCells(side, renju);
-  if (win !== undefined) return placeAction(win);
-  const moves = position.candidates(side, renju, EASY_BREADTH);
-  if (moves.length === 0) return null;
-  if (random() < EASY_SLIP) return placeAction(moves[Math.floor(random() * Math.min(moves.length, 6))]);
-  let best = moves[0];
-  let bestScore = -Infinity;
-  for (const move of moves) {
-    const score = position.heuristic(move, side) * (1 - EASY_NOISE + 2 * EASY_NOISE * random());
-    if (score > bestScore) {
-      best = move;
-      bestScore = score;
-    }
-  }
-  return placeAction(best);
-}
-
 /**
- * Hard, synchronous: the same search as the worker with a small node budget. In a search game this only serves
- * seats that are not on a bot's own turn, so it must stay cheap.
+ * Synchronous fallback: the same search as the worker with a small node budget. It decides only when no pool
+ * runs or a search fails, so it must stay cheap for the event loop.
  */
 export function getGomokuBotAction(visible: GomokuVisibleState, random: () => number): BotAction | null {
   const options = { maxDepth: QUICK_DEPTH, expired: () => false, maxNodes: QUICK_NODES, random };

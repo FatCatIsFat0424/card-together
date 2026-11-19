@@ -88,12 +88,12 @@ describe('Big Two delayed automatic passing', () => {
   beforeEach(() => { vi.mocked(crypto.randomInt).mockReset().mockReturnValue(1500); vi.useFakeTimers(); vi.setSystemTime(10000); manager.restoreGames([]); });
   afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); manager.restoreGames([]); });
 
-  it.each([undefined, 'easy', 'hard'] as const)(
-    'lets forced passes own %s turns without spending the thinking bank or duplicating actions', async (difficulty) => {
+  it.each(['human', 'bot'] as const)(
+    'lets forced passes own %s turns without spending the thinking bank or duplicating actions', async (holder) => {
     restoreHands(singleHands());
-    if (difficulty) {
+    if (holder === 'bot') {
       game().players.W = { ...game().players.W, id: 'bot:00000000-0000-4000-8000-000000000001',
-        isBot: true, botDifficulty: difficulty };
+        isBot: true };
     }
     let saved = snapshot();
     const runtime = await createRuntimeCoordinator({
@@ -113,8 +113,8 @@ describe('Big Two delayed automatic passing', () => {
       const turn = game().clock!.turn!;
       expect(turn.seat).toBe('W');
       const deadline = game().pendingAutoPass!.executeAt;
-      expect(deadline).toBe(turn.startsAt + (difficulty ? 0 : 1500));
-      expect(crypto.randomInt).toHaveBeenCalledTimes(difficulty ? 0 : 1);
+      expect(deadline).toBe(turn.startsAt + (holder === 'bot' ? 0 : 1500));
+      expect(crypto.randomInt).toHaveBeenCalledTimes(holder === 'bot' ? 0 : 1);
       expect(deadline).toBeLessThanOrEqual(turn.startsAt + turn.baseRemainingMs);
       await vi.advanceTimersByTimeAsync(deadline - Date.now() - 1);
       expect(forced).not.toHaveBeenCalled();

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GAME_SEAT_ORDER } from '@shared/constants';
-import type { BotDifficulty, GameSeat, PlayerInfo } from '@shared/types';
+import type { GameSeat, PlayerInfo } from '@shared/types';
 import type { DominoesVisibleState, DominoTile } from '@shared/games/dominoes/types';
 import { dmSameTile, dmTurnOptions } from '@shared/rules/dominoes';
 import { getBotAction } from '../../src/bots/bot-decisions';
@@ -44,18 +44,7 @@ function act(action: BotAction | null): { type: string; tile?: DominoTile; side?
   return action.request.action;
 }
 
-describe('Dominoes easy and fallback bots', () => {
-  it('plays a random legal tile and end', () => {
-    const hand = [t(0, 1), t(2, 4), t(5, 6)];
-    const seen = new Set<string>();
-    for (const sample of [0, 0.2, 0.4, 0.6, 0.8, 0.9999]) {
-      const action = act(getBotAction(view(hand), () => sample, 'easy'));
-      expect(action.type).toBe('play');
-      seen.add(`${action.tile}-${action.side}`);
-    }
-    expect([...seen].sort()).toEqual(['2,4-left', '5,6-right']);
-  });
-
+describe('Dominoes fallback and turn guards', () => {
   it('plays the heaviest legal tile as the timeout fallback', () => {
     const action = act(firstLegalAction(view([t(2, 3), t(5, 6), t(0, 5), t(1, 2)])));
     expect(action).toMatchObject({ type: 'play', tile: t(5, 6), side: 'right' });
@@ -63,33 +52,27 @@ describe('Dominoes easy and fallback bots', () => {
 
   it('opens with the required tile', () => {
     const opening = view([t(3, 3), t(6, 6)], { line: [], openingTile: t(6, 6) });
-    for (const difficulty of ['easy', 'hard'] as const) {
-      expect(act(getBotAction(opening, () => 0.5, difficulty))).toEqual({ type: 'play', tile: t(6, 6) });
-    }
+    expect(act(getBotAction(opening, () => 0.5))).toEqual({ type: 'play', tile: t(6, 6) });
     expect(act(firstLegalAction(opening))).toEqual({ type: 'play', tile: t(6, 6) });
   });
 
   it('draws with nothing playable, and passes once the boneyard is empty', () => {
     const stuck = [t(0, 1), t(3, 4)];
-    for (const difficulty of ['easy', 'hard'] as const) {
-      expect(act(getBotAction(view(stuck), () => 0.5, difficulty)).type).toBe('draw');
-      expect(act(getBotAction(view(stuck, { boneyardCount: 0 }), () => 0.5, difficulty)).type).toBe('pass');
-    }
+    expect(act(getBotAction(view(stuck), () => 0.5)).type).toBe('draw');
+    expect(act(getBotAction(view(stuck, { boneyardCount: 0 }), () => 0.5)).type).toBe('pass');
     expect(act(firstLegalAction(view(stuck))).type).toBe('draw');
   });
 
   it('only acts on its own turn while the round is in play', () => {
     const hand = [t(2, 4)];
-    for (const difficulty of ['easy', 'hard'] as const) {
-      expect(getBotAction(view(hand, { currentTurnSeat: 'E' }), () => 0.5, difficulty)).toBeNull();
-      expect(getBotAction(view(hand, { phase: 'scoring' }), () => 0.5, difficulty)).toBeNull();
-    }
+    expect(getBotAction(view(hand, { currentTurnSeat: 'E' }), () => 0.5)).toBeNull();
+    expect(getBotAction(view(hand, { phase: 'scoring' }), () => 0.5)).toBeNull();
   });
 });
 
-describe('Dominoes hard bot', () => {
+describe('Dominoes bot', () => {
   it('sheds the heavy double before a light tile of the same end', () => {
-    const action = act(getBotAction(view([t(2, 2), t(2, 1), t(0, 5)], { line: [{ tile: t(2, 3), left: 3, right: 2 }] }), () => 0.5, 'hard'));
+    const action = act(getBotAction(view([t(2, 2), t(2, 1), t(0, 5)], { line: [{ tile: t(2, 3), left: 3, right: 2 }] }), () => 0.5));
     expect(action).toMatchObject({ type: 'play' });
   });
 
@@ -101,30 +84,42 @@ describe('Dominoes hard bot', () => {
       { type: 'round', round: 1, leader: 'N', counts: { ...empty, N: 5, E: 5 }, boneyard: 18, timestamp: 1 },
       { type: 'draw', seat: 'E', ends: { left: 3, right: 6 }, timestamp: 2 },
     ] as DominoesVisibleState['log'];
-    const action = act(getBotAction(view(hand, { line, log, boneyardCount: 17 }), () => 0.5, 'hard'));
+    const action = act(getBotAction(view(hand, { line, log, boneyardCount: 17 }), () => 0.5));
     expect(action).toMatchObject({ type: 'play', tile: t(1, 3), side: 'left' });
   });
 
   it('goes out when it can', () => {
-    const action = act(getBotAction(view([t(6, 6), t(2, 4)]), () => 0.5, 'hard'));
+    const action = act(getBotAction(view([t(6, 6), t(2, 4)]), () => 0.5));
     expect(action).toMatchObject({ type: 'play', tile: t(2, 4) });
-    const last = act(getBotAction(view([t(2, 4)]), () => 0.5, 'hard'));
+    const last = act(getBotAction(view([t(2, 4)]), () => 0.5));
     expect(last).toMatchObject({ type: 'play', tile: t(2, 4) });
   });
 });
 
-/** Plays one match; each seat is driven by the named difficulty through the visible state only. */
-function playMatch(seed: number, difficulties: readonly BotDifficulty[], targetScore: 50 | 100 | 150 = 100): GameSeat[] {
+type Policy = (visible: DominoesVisibleState, random: () => number) => ReturnType<typeof act>;
+
+const botPolicy: Policy = (visible, random) => act(getBotAction(visible, random));
+
+/** A seeded uniformly random legal move: the weak baseline the bot is measured against. */
+const randomPolicy: Policy = (visible, random) => {
+  const options = dmTurnOptions(visible.myHand, visible.line, visible.boneyardCount, visible.openingTile);
+  if (options.plays.length === 0) return { type: options.canDraw ? 'draw' : 'pass' };
+  const { tile, side } = options.plays[Math.floor(random() * options.plays.length)];
+  return side ? { type: 'play', tile, side } : { type: 'play', tile };
+};
+
+/** Plays one match; each seat is driven by its policy through the visible state only. */
+function playMatch(seed: number, policies: readonly Policy[], targetScore: 50 | 100 | 150 = 100): GameSeat[] {
   const random = seeded(seed);
   vi.spyOn(Math, 'random').mockImplementation(random);
-  const seats = GAME_SEAT_ORDER.slice(0, difficulties.length);
+  const seats = GAME_SEAT_ORDER.slice(0, policies.length);
   dm.startGame(CODE, playersOf(seats.length), undefined, { targetScore });
   runSeededGame(`dominoes seed ${seed}`, 4000, () => dm.getGameState(CODE)?.phase === 'scoring', () => {
     const game = dm.getGameState(CODE)!;
     const seat = game.currentTurnSeat;
     const visible = dm.getPlayerVisibleState(CODE, seat)!;
     const options = dmTurnOptions(game.hands[seat], game.line, game.boneyard.length, game.openingTile);
-    const action = act(getBotAction(visible, random, difficulties[seats.indexOf(seat)]));
+    const action = policies[seats.indexOf(seat)](visible, random);
     // Every decision must be one the rules allow.
     if (action.type === 'play') {
       expect(options.plays.some((play) => dmSameTile(play.tile, action.tile!) && (play.side ?? undefined) === (action.side as never))).toBe(true);
@@ -144,7 +139,7 @@ describe('Dominoes bot matches', () => {
   it('finishes seeded matches of every table size with only legal decisions', () => {
     for (const [index, size] of [2, 3, 4].entries()) {
       for (let seed = 1; seed <= 6; seed++) {
-        expect(playMatch(seed * 31 + index, Array(size).fill(seed % 2 ? 'hard' : 'easy'), 50).length).toBeGreaterThan(0);
+        expect(playMatch(seed * 31 + index, Array<Policy>(size).fill(seed % 2 ? botPolicy : randomPolicy), 50).length).toBeGreaterThan(0);
       }
     }
   });
@@ -153,21 +148,21 @@ describe('Dominoes bot matches', () => {
     dm.startGame(CODE, playersOf(2), undefined);
     const visible = dm.getPlayerVisibleState(CODE, dm.getGameState(CODE)!.currentTurnSeat)!;
     const started = performance.now();
-    for (let index = 0; index < 100; index++) getBotAction(visible, Math.random, 'hard');
+    for (let index = 0; index < 100; index++) getBotAction(visible, Math.random);
     expect((performance.now() - started) / 100).toBeLessThan(50);
   });
 
-  it('hard beats easy over seeded heads-up matches', () => {
-    let hard = 0;
-    let easy = 0;
+  it('beats a random legal player over seeded heads-up matches', () => {
+    let bot = 0;
+    let baseline = 0;
     for (let seed = 1; seed <= 120; seed++) {
-      const hardFirst = seed % 2 === 0;
-      const winners = playMatch(seed * 7919, hardFirst ? ['hard', 'easy'] : ['easy', 'hard']);
+      const botFirst = seed % 2 === 0;
+      const winners = playMatch(seed * 7919, botFirst ? [botPolicy, randomPolicy] : [randomPolicy, botPolicy]);
       if (winners.length !== 1) continue;
-      if ((winners[0] === 'N') === hardFirst) hard++;
-      else easy++;
+      if ((winners[0] === 'N') === botFirst) bot++;
+      else baseline++;
     }
-    expect(hard).toBeGreaterThan(easy * 2);
+    expect(bot).toBeGreaterThan(baseline * 2);
   });
 });
 
@@ -179,7 +174,7 @@ describe('Dominoes bots use only visible information', () => {
     dm.startGame(CODE, playersOf(3), undefined);
     const game = dm.getGameState(CODE)!;
     const seat = game.currentTurnSeat;
-    const before = getBotAction(dm.getPlayerVisibleState(CODE, seat)!, () => 0.4, 'hard');
+    const before = getBotAction(dm.getPlayerVisibleState(CODE, seat)!, () => 0.4);
     // Swap the other seats' hidden tiles with the boneyard's: counts stay, nothing the bot may see changes.
     const others = GAME_SEAT_ORDER.filter((other) => other !== seat && game.hands[other].length > 0);
     others.forEach((other, index) => {
@@ -188,7 +183,7 @@ describe('Dominoes bots use only visible information', () => {
       game.boneyard[index] = hidden;
     });
     expect(others.length).toBe(2);
-    expect(getBotAction(dm.getPlayerVisibleState(CODE, seat)!, () => 0.4, 'hard')).toEqual(before);
+    expect(getBotAction(dm.getPlayerVisibleState(CODE, seat)!, () => 0.4)).toEqual(before);
     vi.restoreAllMocks();
   });
 });

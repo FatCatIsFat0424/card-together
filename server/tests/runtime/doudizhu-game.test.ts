@@ -67,15 +67,15 @@ function apply(seat: GameSeat, action: BotAction, random: () => number = seeded(
   }
 }
 
-/** Plays the whole match with the given difficulty, checking stored state after every deal. */
-function playMatch(difficulty: 'easy' | 'hard', variant: 'score' | 'grab', seed: number): void {
+/** Plays the whole match with bots, checking stored state after every deal. */
+function playMatch(variant: 'score' | 'grab', seed: number): void {
   start(variant, seed);
   const random = seeded(seed + 100);
   let guard = 0;
   while (game().phase !== 'scoring') {
     if (guard++ > 3000) throw new Error('Match did not finish');
     const seat = game().currentTurnSeat;
-    const action = getBotAction(view(seat), random, difficulty) ?? firstLegalAction(view(seat));
+    const action = getBotAction(view(seat), random) ?? firstLegalAction(view(seat));
     expect(action, `${seat} has an action`).not.toBeNull();
     const before = game().log.length;
     expect(apply(seat, action!, random).success, JSON.stringify(action)).toBe(true);
@@ -266,10 +266,10 @@ describe('Dou Dizhu play', () => {
 });
 
 describe('Dou Dizhu match', () => {
-  it.each([['hard', 'score', 3], ['easy', 'score', 4], ['hard', 'grab', 5], ['easy', 'grab', 6]] as const)(
-    'plays %s bots through six deals (%s auction) with zero-sum scores',
-    (difficulty, variant, seed) => {
-      playMatch(difficulty, variant, seed);
+  it.each([['score', 3], ['score', 4], ['grab', 5], ['grab', 6]] as const)(
+    'plays bots through six deals (%s auction, seed %i) with zero-sum scores',
+    (variant, seed) => {
+      playMatch(variant, seed);
       const state = game();
       expect(state.phase).toBe('scoring');
       expect(state.log.filter((entry) => entry.type === 'deal_end')).toHaveLength(6);
@@ -289,7 +289,7 @@ describe('Dou Dizhu match', () => {
     let checked = 0;
     while (game().phase !== 'scoring') {
       const seat = game().currentTurnSeat;
-      apply(seat, getBotAction(view(seat), random, 'hard')!, random);
+      apply(seat, getBotAction(view(seat), random)!, random);
       if (checked++ % 7 === 0) {
         const copy = JSON.parse(JSON.stringify(game())) as DouDizhuGameState;
         expect(douDizhuGame(copy as never, () => true), `shape after ${checked}`).toBe(true);

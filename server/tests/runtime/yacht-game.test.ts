@@ -81,13 +81,13 @@ function snapshotOf(state: AnyGameState): RuntimeSnapshot {
   };
 }
 
-/** Plays every pending seat with the given difficulty until the match is over, checking each committed state. */
+/** Plays every pending seat with the bot until the match is over, checking each committed state. */
 function playOut(random: () => number, check?: (state: YachtGameState) => void): void {
   for (let step = 0; step < 3_000 && game().phase === 'playing'; step++) {
     const state = game();
     const seat = state.options.mode === 'turns' ? state.currentTurnSeat! : yacht.pendingSeats(state)[0];
     const visible = yacht.getPlayerVisibleState(CODE, seat)!;
-    const action = getBotAction(visible, random, GAME_SEAT_ORDER.indexOf(seat) % 2 === 0 ? 'hard' : 'easy');
+    const action = getBotAction(visible, random);
     if (action?.type !== 'game-action' || action.request.gameType !== 'yacht') throw new Error('Expected a Yacht Dice action');
     const move = action.request.action;
     const result = move.type === 'roll' ? yacht.roll(CODE, seat, move.held, random)

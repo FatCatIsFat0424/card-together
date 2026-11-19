@@ -197,7 +197,7 @@ describe('Battleship hidden fleets', () => {
       placeBoth(ROWS, opponent);
       for (let step = 0; step < 30 && game().phase === 'playing'; step++) {
         const seat = game().currentTurnSeat;
-        apply(seat, gameBot('battleship').easy(view(seat), seededRandom(step + 1)));
+        apply(seat, gameBot('battleship').decide(view(seat), seededRandom(step + 1)));
       }
       for (const seat of ['N', 'S'] as const) {
         const visible = view(seat);
@@ -240,11 +240,11 @@ describe('Battleship hidden fleets', () => {
       seen.push(structuredClone(visible));
       return visible;
     };
-    apply('N', strategy.hard(record(view('N')), seededRandom(1)));
-    apply('S', strategy.hard(record(view('S')), seededRandom(2)));
+    apply('N', strategy.decide(record(view('N')), seededRandom(1)));
+    apply('S', strategy.decide(record(view('S')), seededRandom(2)));
     for (let step = 0; step < 60 && game().phase === 'playing'; step++) {
       const seat = game().currentTurnSeat;
-      apply(seat, strategy.hard(record(view(seat)), seededRandom(step + 3)));
+      apply(seat, strategy.decide(record(view(seat)), seededRandom(step + 3)));
     }
     expect(seen.every(hiddenFleet)).toBe(true);
     expect(seen.every((visible) => !('replayRecording' in visible))).toBe(true);
@@ -267,15 +267,15 @@ describe('Battleship hidden fleets', () => {
 });
 
 describe('Battleship bots and stored state', () => {
-  it.each(['easy', 'hard'] as const)('places legal fleets and shoots only new cells to the end on %s', (difficulty) => {
+  it('places legal fleets and shoots only new cells to the end', () => {
     for (const options of [DEFAULT_BATTLESHIP_OPTIONS, { noTouching: true, hitAgain: true }]) {
       start(['N', 'S'], true, options);
-      const random = seededRandom(difficulty === 'easy' ? 11 : 12);
-      for (const seat of ['N', 'S'] as const) apply(seat, getBotAction(view(seat), random, difficulty));
+      const random = seededRandom(12);
+      for (const seat of ['N', 'S'] as const) apply(seat, getBotAction(view(seat), random));
       expect(bsFleetError(game().fleets.N, options)).toBeNull();
       for (let step = 0; step < 200 && game().phase === 'playing'; step++) {
         const seat = game().currentTurnSeat;
-        apply(seat, getBotAction(view(seat), random, difficulty));
+        apply(seat, getBotAction(view(seat), random));
       }
       expect(game().phase).toBe('scoring');
       expect(coherent()).toBe(true);
@@ -289,19 +289,19 @@ describe('Battleship bots and stored state', () => {
     const bot = gameBot('battleship');
     apply('N', bot.firstLegal(view('N')));
     expect(bot.firstLegal(view('N'))).toBeNull();
-    expect(bot.hard(view('N'), Math.random)).toBeNull();
+    expect(bot.decide(view('N'), Math.random)).toBeNull();
     apply('S', bot.firstLegal(view('S')));
-    expect(bot.easy(view('S'), Math.random)).toBeNull();
+    expect(bot.decide(view('S'), Math.random)).toBeNull();
     apply('N', bot.firstLegal(view('N')));
     expect(game().log).toHaveLength(1);
   });
 
   it('accepts a played game as stored state and rejects tampering', () => {
     start(['N', 'S'], true);
-    for (const seat of ['N', 'S'] as const) apply(seat, getBotAction(view(seat), seededRandom(5), 'easy'));
+    for (const seat of ['N', 'S'] as const) apply(seat, getBotAction(view(seat), seededRandom(5)));
     for (let step = 0; step < 60 && game().phase === 'playing'; step++) {
       const seat = game().currentTurnSeat;
-      apply(seat, getBotAction(view(seat), seededRandom(step), 'easy'));
+      apply(seat, getBotAction(view(seat), seededRandom(step)));
     }
     const validator = gameValidator('battleship');
     const stored = structuredClone(game());

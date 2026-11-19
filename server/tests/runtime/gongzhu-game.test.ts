@@ -15,7 +15,7 @@ import { createDeck, shuffleDeck } from '../../src/engine/deck';
 import * as game from '../../src/managers/games/gongzhu-game';
 import { gongZhuAdapter } from '../../src/managers/games/gongzhu-adapter';
 import { coherentGongZhuGame, gongZhuGame, isGongZhuResult } from '../../src/managers/games/gongzhu-validation';
-import { easyGongZhuAction, getGongZhuBotAction, gongZhuFirstLegalAction } from '../../src/bots/gongzhu-strategy';
+import { getGongZhuBotAction, gongZhuFirstLegalAction } from '../../src/bots/gongzhu-strategy';
 import { gameBot } from '../../src/bots/bot-registry';
 import type { ObjectValue } from '../../src/runtime/validation-helpers';
 import { recordMatch } from '../client/replay-fixtures';
@@ -87,11 +87,16 @@ describe('Gong Zhu runtime', () => {
     let steps = 0;
     while (!state().result) {
       const view = structuredClone(visible());
-      const strategy = steps % 2 ? getGongZhuBotAction(view) : easyGongZhuAction(view, random);
+      const strategy = getGongZhuBotAction(view, random);
       expect(strategy?.type).toBe('game-action');
       if (strategy?.type !== 'game-action' || strategy.request.gameType !== 'gongzhu') throw new Error('Expected Gong Zhu action.');
-      const timeout = gameBot('gongzhu').turnTimeout?.(view, { isBot: false, strategy: () => null });
-      expect(timeout).toEqual(gongZhuFirstLegalAction(view));
+      // A human who runs out of time gets the bot's decision, and the fallback stays a legal card too.
+      const bot = gameBot('gongzhu');
+      expect(bot.turnTimeout).toBeUndefined();
+      expect(bot.decide(view, seeded(steps))).toEqual(getGongZhuBotAction(view, seeded(steps)));
+      const fallback = gongZhuFirstLegalAction(view);
+      if (fallback?.type !== 'game-action' || fallback.request.gameType !== 'gongzhu') throw new Error('Expected Gong Zhu action.');
+      expect(view.validCards).toContainEqual(fallback.request.action.card);
       const before = structuredClone(view);
       const poisoned = { ...view, observedHands: gongZhuSeatMap(() => [{ suit: 'spades', rank: 14 } as Card]) };
       expect(getGongZhuBotAction(poisoned, seeded(steps))).toEqual(getGongZhuBotAction(view, seeded(steps)));

@@ -45,62 +45,54 @@ function kind(action: BotAction | null): string | null {
 
 const samples = [0, 0.3, 0.6, 0.9999];
 
-describe('Crazy Eights easy and fallback bots', () => {
-  it('plays the first legal card in hand order and names the 8 own suit', () => {
-    const visible = view([card('clubs', 3), card('hearts', 9), card('spades', 8), card('hearts', 2)]);
-    for (const difficulty of ['easy'] as const) {
-      expect(play(getBotAction(visible, () => 0.5, difficulty)).card).toEqual(card('hearts', 9));
-    }
+describe('Crazy Eights fallback and turn guards', () => {
+  it('names the own suit when the first legal action is an 8', () => {
     const wildFirst = view([card('spades', 8), card('hearts', 9), card('clubs', 3)]);
-    expect(play(getBotAction(wildFirst, () => 0.5, 'easy'))).toEqual({ type: 'play', card: card('spades', 8), suit: 'spades' });
     expect(play(firstLegalAction(wildFirst))).toEqual({ type: 'play', card: card('spades', 8), suit: 'spades' });
   });
 
   it('omits the suit for a last-card 8', () => {
     const last = view([card('spades', 8)], { handCounts: counts({ N: 1, E: 5, S: 5, W: 5 }) });
-    expect(play(getBotAction(last, () => 0.5, 'easy'))).toEqual({ type: 'play', card: card('spades', 8) });
+    expect(play(getBotAction(last, () => 0.5))).toEqual({ type: 'play', card: card('spades', 8) });
   });
 
   it('draws with nothing playable, and passes when the stock cannot supply a card', () => {
     const stuck = [card('clubs', 3), card('clubs', 4)];
-    expect(kind(getBotAction(view(stuck), () => 0.5, 'easy'))).toBe('draw');
-    expect(kind(getBotAction(view(stuck, { stockCount: 0, reserveCount: 0 }), () => 0.5, 'easy'))).toBe('pass');
-    expect(kind(getBotAction(view(stuck), () => 0.5, 'hard'))).toBe('draw');
-    expect(kind(getBotAction(view(stuck, { stockCount: 0, reserveCount: 3 }), () => 0.5, 'hard'))).toBe('draw');
+    expect(kind(getBotAction(view(stuck), () => 0.5))).toBe('draw');
+    expect(kind(getBotAction(view(stuck, { stockCount: 0, reserveCount: 0 }), () => 0.5))).toBe('pass');
+    expect(kind(getBotAction(view(stuck, { stockCount: 0, reserveCount: 3 }), () => 0.5))).toBe('draw');
   });
 
   it('only acts on its own turn while the hand is in play', () => {
     const hand = [card('hearts', 9)];
-    for (const difficulty of ['easy', 'hard'] as const) {
-      expect(getBotAction(view(hand, { currentTurnSeat: 'E' }), () => 0.5, difficulty)).toBeNull();
-      expect(getBotAction(view(hand, { phase: 'scoring' }), () => 0.5, difficulty)).toBeNull();
-    }
+    expect(getBotAction(view(hand, { currentTurnSeat: 'E' }), () => 0.5)).toBeNull();
+    expect(getBotAction(view(hand, { phase: 'scoring' }), () => 0.5)).toBeNull();
   });
 });
 
-describe('Crazy Eights hard bot', () => {
+describe('Crazy Eights bot', () => {
   it('keeps an 8 while another card is playable', () => {
     const visible = view([card('spades', 8), card('hearts', 3), card('clubs', 4), card('clubs', 5)]);
-    for (const sample of samples) expect(play(getBotAction(visible, () => sample, 'hard')).card).toEqual(card('hearts', 3));
+    for (const sample of samples) expect(play(getBotAction(visible, () => sample)).card).toEqual(card('hearts', 3));
   });
 
   it('dumps the heavier of two otherwise equal plays and favours the suit it holds most of', () => {
     const heavy = view([card('hearts', 13), card('hearts', 3), card('clubs', 4)]);
-    for (const sample of samples) expect(play(getBotAction(heavy, () => sample, 'hard')).card).toEqual(card('hearts', 13));
+    for (const sample of samples) expect(play(getBotAction(heavy, () => sample)).card).toEqual(card('hearts', 13));
     const steer = view([card('hearts', 9), card('clubs', 6), card('clubs', 4), card('clubs', 5), card('clubs', 7)]);
-    for (const sample of samples) expect(play(getBotAction(steer, () => sample, 'hard')).card).toEqual(card('clubs', 6));
+    for (const sample of samples) expect(play(getBotAction(steer, () => sample)).card).toEqual(card('clubs', 6));
   });
 
   it('declares its longest suit when an 8 is the only playable card', () => {
     const visible = view([card('spades', 8), card('diamonds', 3), card('diamonds', 4), card('diamonds', 9), card('clubs', 5)]);
     for (const sample of samples) {
-      expect(play(getBotAction(visible, () => sample, 'hard'))).toEqual({ type: 'play', card: card('spades', 8), suit: 'diamonds' });
+      expect(play(getBotAction(visible, () => sample))).toEqual({ type: 'play', card: card('spades', 8), suit: 'diamonds' });
     }
   });
 
   it('goes out whenever the last card is playable', () => {
     const visible = view([card('spades', 8)]);
-    for (const sample of samples) expect(play(getBotAction(visible, () => sample, 'hard')).card).toEqual(card('spades', 8));
+    for (const sample of samples) expect(play(getBotAction(visible, () => sample)).card).toEqual(card('spades', 8));
   });
 
   it('declares a suit the next seat just failed to follow', () => {
@@ -113,9 +105,9 @@ describe('Crazy Eights hard bot', () => {
     const hand = [card('spades', 8), card('hearts', 4), card('diamonds', 5)];
     const table = { lastPlayed: card('clubs', 9), activeSuit: 'clubs' as const };
     for (const sample of samples) {
-      expect(play(getBotAction(view(hand, { ...table, log }), () => sample, 'hard')).suit).toBe('diamonds');
+      expect(play(getBotAction(view(hand, { ...table, log }), () => sample)).suit).toBe('diamonds');
     }
-    const declared = samples.map((sample) => play(getBotAction(view(hand, table), () => sample, 'hard')).suit);
+    const declared = samples.map((sample) => play(getBotAction(view(hand, table), () => sample)).suit);
     expect(new Set(declared)).toEqual(new Set(['hearts', 'diamonds']));
   });
 
@@ -127,7 +119,7 @@ describe('Crazy Eights hard bot', () => {
     ];
     const hand = [card('spades', 8), card('hearts', 4), card('diamonds', 5)];
     const declared = samples.map((sample) => play(getBotAction(view(hand, {
-      lastPlayed: card('clubs', 9), activeSuit: 'clubs', log }), () => sample, 'hard')).suit);
+      lastPlayed: card('clubs', 9), activeSuit: 'clubs', log }), () => sample)).suit);
     expect(new Set(declared)).toEqual(new Set(['hearts', 'diamonds']));
   });
 
@@ -135,24 +127,24 @@ describe('Crazy Eights hard bot', () => {
     const base = view([card('hearts', 12), card('hearts', 9), card('clubs', 4)], { options: { actionCards: true } });
     // Counterclockwise from N the next seat is W.
     const threat = { ...base, handCounts: counts({ N: 3, E: 5, S: 5, W: 2 }) };
-    for (const sample of samples) expect(play(getBotAction(threat, () => sample, 'hard')).card).toEqual(card('hearts', 12));
+    for (const sample of samples) expect(play(getBotAction(threat, () => sample)).card).toEqual(card('hearts', 12));
     const draw = { ...threat, myHand: [card('hearts', 2), card('hearts', 10), card('clubs', 4)] };
-    for (const sample of samples) expect(play(getBotAction(draw, () => sample, 'hard')).card).toEqual(card('hearts', 2));
+    for (const sample of samples) expect(play(getBotAction(draw, () => sample)).card).toEqual(card('hearts', 2));
   });
 
   it('reverses only when the leader sits behind it, not when the leader is next', () => {
     const base = view([card('hearts', 14), card('hearts', 9), card('clubs', 4)], { options: { actionCards: true } });
     // Counterclockwise from N the order is W, S, E: E is the seat behind N.
     const behind = { ...base, handCounts: counts({ N: 3, E: 2, S: 5, W: 5 }) };
-    for (const sample of samples) expect(play(getBotAction(behind, () => sample, 'hard')).card).toEqual(card('hearts', 14));
+    for (const sample of samples) expect(play(getBotAction(behind, () => sample)).card).toEqual(card('hearts', 14));
     const next = { ...base, handCounts: counts({ N: 3, E: 5, S: 5, W: 2 }) };
-    for (const sample of samples) expect(play(getBotAction(next, () => sample, 'hard')).card).toEqual(card('hearts', 9));
+    for (const sample of samples) expect(play(getBotAction(next, () => sample)).card).toEqual(card('hearts', 9));
   });
 
   it('does not mutate the filtered view', () => {
     const visible = view([card('spades', 8), card('hearts', 3), card('clubs', 4)], { options: { actionCards: true } });
     const original = structuredClone(visible);
-    for (const sample of samples) getBotAction(visible, () => sample, 'hard');
+    for (const sample of samples) getBotAction(visible, () => sample);
     expect(visible).toEqual(original);
   });
 });
@@ -180,14 +172,11 @@ describe('Crazy Eights full matches between bots', () => {
     const code = `BOT${count}${actionCards ? 'A' : 'B'}`;
     const random = seeded(count * 31 + (actionCards ? 7 : 0));
     ce.startGame(code, playersOf(count), undefined, undefined, { actionCards });
-    const difficulties = ['hard', 'easy'] as const;
     const actions = runSeededGame(code, 20000, () => ce.getGameState(code)?.phase === 'scoring', () => {
       const game = ce.getGameState(code)!;
       const seat = game.currentTurnSeat;
       const visible = ce.getPlayerVisibleState(code, seat)!;
-      // Alternate difficulties by seat so hard and easy bots share every table.
-      const difficulty = difficulties[GAME_SEAT_ORDER.indexOf(seat) % 2];
-      const chosen = getBotAction(visible, random, difficulty);
+      const chosen = getBotAction(visible, random);
       apply(code, seat, chosen);
     });
     const game = ce.getGameState(code)!;
@@ -217,7 +206,7 @@ describe('Crazy Eights full matches between bots', () => {
       const game = ce.getGameState(code)!;
       const seat = game.currentTurnSeat;
       const visible = ce.getPlayerVisibleState(code, seat)!;
-      const action = getBotAction(visible, random, 'hard');
+      const action = getBotAction(visible, random);
       if (kind(action) === 'play') {
         const chosen = play(action).card;
         expect(visible.myHand.some((own) => own.suit === chosen.suit && own.rank === chosen.rank)).toBe(true);

@@ -4,10 +4,10 @@ import {
   xqApply, xqCell, xqIndex, xqInitialBoard, xqIsLegal, xqLegalMoves, xqMoveFacts, xqNode, xqOpponent, xqPlies, xqVerdict,
 } from '@shared/rules/xiangqi';
 import type { XqBoard, XqMove, XqPly, XqSide } from '@shared/rules/xiangqi';
-import { getBotAction, getEasyBotAction } from '../../src/bots/bot-decisions';
+import { getBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
-import { xiangqiBestMove, xiangqiEasyMove, xiangqiSearch } from '../../src/bots/xiangqi-search';
+import { xiangqiBestMove, xiangqiSearch } from '../../src/bots/xiangqi-search';
 import { createSearchPool } from '../../src/bots/search/search-worker-pool';
 import type { SearchPool } from '../../src/bots/search/search-worker-pool';
 import { seededRandom } from '../../src/bots/search/seeded-random';
@@ -30,6 +30,10 @@ const moveOf = (action: BotAction | null): XqMove | null => {
   if (action?.type !== 'game-action' || action.request.gameType !== 'xiangqi' || action.request.action.type !== 'move') return null;
   return { from: xqCell(action.request.action.from)!, to: xqCell(action.request.action.to)! };
 };
+const randomMove = (board: XqBoard, side: XqSide, random: () => number): XqMove | null => {
+  const moves = xqLegalMoves(board, side);
+  return moves.length > 0 ? moves[Math.floor(random() * moves.length)] : null;
+};
 const deep = { maxDepth: 4, expired: () => false, random: () => 0.5 };
 
 /** Plays `moves` from `board`, recording the plies the verdict and the bots read. */
@@ -49,29 +53,15 @@ function line(board: XqBoard, side: XqSide, moves: readonly [number, number][]):
 
 afterEach(() => xiangqi.abortGame(CODE));
 
-describe('Xiangqi Easy bot', () => {
-  it('plays only legal moves, varies with the random source, and stays out of turn', () => {
+describe('Xiangqi synchronous bot', () => {
+  it('plays only legal moves and stays out of turn', () => {
     start();
     const legal = new Set(xqLegalMoves(game().board, 0).map((move) => `${move.from}>${move.to}`));
-    const picks = new Set<string>();
-    for (let seed = 1; seed <= 30; seed++) {
-      const move = moveOf(getEasyBotAction(view('N'), seededRandom(seed)))!;
+    for (let seed = 1; seed <= 5; seed++) {
+      const move = moveOf(getBotAction(view('N'), seededRandom(seed)))!;
       expect(legal.has(`${move.from}>${move.to}`)).toBe(true);
-      picks.add(`${move.from}>${move.to}`);
     }
-    expect(picks.size).toBeGreaterThan(1);
-    expect(getEasyBotAction(view('S'))).toBeNull();
-  });
-
-  it('takes a mate in one and a hanging chariot', () => {
-    const mate = xqPosition(['....k....', '........R', '.........', '.........', '.........', 'R........', '.........',
-      '.........', '.........', '...K.....']);
-    // Checkmate and stalemate both win on the spot.
-    const win = xiangqiEasyMove(mate, 0, [], () => 0.99)!;
-    expect(xqVerdict(xqApply(mate, win.from, win.to), 1, [])).toMatchObject({ loser: 1 });
-    const hanging = xqPosition(['....k....', '.........', '.........', 'r........', '.........', '.........', '.........',
-      '.........', '.........', 'R..K.....']);
-    expect(xiangqiEasyMove(hanging, 0, [], () => 0)).toEqual({ from: at(0, 9), to: at(0, 3) });
+    expect(getBotAction(view('S'))).toBeNull();
   });
 });
 
@@ -106,7 +96,6 @@ describe('Xiangqi Hard search', () => {
     expect(xqVerdict(after.board, after.side, [...before.plies, ...after.plies])).toMatchObject({ reason: 'perpetual-check', loser: 0 });
     for (let seed = 1; seed <= 5; seed++) {
       expect(xiangqiBestMove(before.board, 0, before.plies, { ...deep, random: seededRandom(seed) })).not.toEqual(losing);
-      expect(xiangqiEasyMove(before.board, 0, before.plies, seededRandom(seed))).not.toEqual(losing);
     }
   });
 
@@ -114,7 +103,6 @@ describe('Xiangqi Hard search', () => {
     const stalemated = xqPosition(['....k....', '........R', '.........', '.........', '.........', '.....R...', '.........',
       '.........', '.........', '...K.....']);
     expect(xiangqiBestMove(stalemated, 1, [], deep)).toBeNull();
-    expect(xiangqiEasyMove(stalemated, 1, [], Math.random)).toBeNull();
   });
 
   it('stops within its time budget and still returns a legal move', () => {
@@ -138,27 +126,27 @@ describe('Xiangqi Hard search', () => {
     expect(gameBot('xiangqi').search).toMatchObject({ budgetMs: 1500, maxDepth: expect.any(Number) });
   });
 
-  it('plays only legal moves for a stretch of a match against the easy bot', () => {
+  it('plays only legal moves for a stretch of a match against itself', () => {
     start();
     for (let guard = 0; guard < 40 && game().phase === 'playing'; guard++) {
       const seat = game().currentTurnSeat;
-      const move = moveOf(getBotAction(view(seat), seededRandom(guard + 1), seat === 'N' ? 'hard' : 'easy'))!;
+      const move = moveOf(getBotAction(view(seat), seededRandom(guard + 1)))!;
       expect(xiangqi.move(CODE, seat, xqNode(move.from), xqNode(move.to))).toEqual({ success: true });
     }
     expect(xqPlies(game().log)).toHaveLength(game().log.length);
   });
 
-  it('beats the easy bot on material in short seeded games', () => {
+  it('beats a random mover on material in short seeded games', () => {
     let ahead = 0;
     for (let seed = 1; seed <= 3; seed++) {
       let board: XqBoard = xqInitialBoard();
       let side: XqSide = 0;
       const plies: XqPly[] = [];
-      const hard: XqSide = seed % 2 === 0 ? 0 : 1;
+      const botSide: XqSide = seed % 2 === 0 ? 0 : 1;
       for (let ply = 0; ply < 60; ply++) {
-        const move = side === hard
+        const move = side === botSide
           ? xiangqiBestMove(board, side, plies, { maxDepth: 3, expired: () => false, random: lcg(seed * 100 + ply) })
-          : xiangqiEasyMove(board, side, plies, lcg(seed * 100 + ply));
+          : randomMove(board, side, lcg(seed * 100 + ply));
         if (!move) break;
         const facts = xqMoveFacts(board, move.from, move.to);
         plies.push({ ...move, piece: facts.piece, captured: facts.captured ?? null, check: facts.check === true });
@@ -169,7 +157,7 @@ describe('Xiangqi Hard search', () => {
       const value: Record<string, number> = { r: 9, c: 4.5, h: 4, a: 2, e: 2, p: 1, k: 0 };
       const material = (owner: XqSide): number => board.reduce((total, cell) => total
         + (cell && (cell === cell.toUpperCase() ? 0 : 1) === owner ? value[cell.toLowerCase()] : 0), 0);
-      if (material(hard) > material(xqOpponent(hard))) ahead++;
+      if (material(botSide) > material(xqOpponent(botSide))) ahead++;
     }
     expect(ahead).toBeGreaterThanOrEqual(2);
   });

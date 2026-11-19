@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Card, GameSeat, PlayerInfo, TenHalfAction, TenHalfVisibleState } from '@shared/types';
 import { BJ_MAX_BET, BJ_MIN_BET } from '@shared/rules/blackjack';
-import { getBotAction, getEasyBotAction } from '../../src/bots/bot-decisions';
+import { getBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { tenHalfDecision, unseenDraws } from '../../src/bots/tenhalf-strategy';
 import { createDeck } from '../../src/engine/deck';
@@ -39,37 +39,15 @@ function deal(top: readonly Card[]): void {
 const view = (seat: GameSeat): TenHalfVisibleState => tenhalf.getPlayerVisibleState(CODE, seat)!;
 const act = (type: BotAction | null): string | null => (type?.type === 'game-action' && type.request.gameType === 'tenhalf'
   && type.request.action.type === 'act' ? type.request.action.action : null);
-const decide = (seat: GameSeat, difficulty: 'easy' | 'hard'): TenHalfAction | null => act(getBotAction(view(seat), () => 0.5, difficulty)) as TenHalfAction | null;
+const decide = (seat: GameSeat): TenHalfAction | null => act(getBotAction(view(seat), () => 0.5)) as TenHalfAction | null;
 
 afterEach(() => tenhalf.abortGame(CODE));
 
-describe('Ten and a Half Easy bot', () => {
-  it('bets the minimum and draws below 7.5 points', () => {
-    tenhalf.startGame(CODE, { N: player('N'), E: player('E') }, 60_000, 1_000, () => 0);
-    expect(getEasyBotAction(view('E'))).toMatchObject({ request: { action: { type: 'bet', amount: BJ_MIN_BET } } });
-    expect(getEasyBotAction(view('N'))).toBeNull();
-  });
-
-  it('hits on a hole card worth less than 7.5 and stands from 7.5', () => {
-    deal([card(5), card(8), card(3)]);
-    expect(decide('E', 'easy')).toBe('stand');
-    tenhalf.abortGame(CODE);
-    deal([card(5), card(7), card(3)]);
-    expect(decide('E', 'easy')).toBe('hit');
-  });
-
-  it('stays quiet when it is not its turn', () => {
-    deal([card(5), card(7), card(8)]);
-    expect(decide('S', 'easy')).toBeNull();
-    expect(decide('N', 'easy')).toBeNull();
-  });
-});
-
-describe('Ten and a Half Hard bot', () => {
+describe('Ten and a Half bot', () => {
   it('bets within the table limits', () => {
     tenhalf.startGame(CODE, { N: player('N'), E: player('E') }, 60_000, 1_000, () => 0);
     for (const sample of [0, 0.5, 0.99]) {
-      const action = getBotAction(view('E'), () => sample, 'hard');
+      const action = getBotAction(view('E'), () => sample);
       const amount = action?.type === 'game-action' && action.request.action.type === 'bet' ? action.request.action.amount : 0;
       expect(amount).toBeGreaterThanOrEqual(BJ_MIN_BET);
       expect(amount).toBeLessThanOrEqual(BJ_MAX_BET);
@@ -79,24 +57,24 @@ describe('Ten and a Half Hard bot', () => {
 
   it('draws on a tiny hand and stands on a strong one', () => {
     deal([card(5), card(2), card(10)]);
-    expect(decide('E', 'hard')).toBe('hit');
+    expect(decide('E')).toBe('hit');
     tenhalf.abortGame(CODE);
     deal([card(5), card(10), card(2)]);
-    expect(decide('E', 'hard')).toBe('stand');
+    expect(decide('E')).toBe('stand');
   });
 
   it('stands on 10 points and never draws into a certain loss', () => {
     deal([card(4), card(10), card(9)]);
-    expect(decide('E', 'hard')).toBe('stand');
-    expect(decide('S', 'hard')).toBeNull();
+    expect(decide('E')).toBe('stand');
+    expect(decide('S')).toBeNull();
   });
 
   it('decides from its own view only: other face-down cards change nothing', () => {
     deal([card(5), card(6), card(10)]);
-    const first = decide('E', 'hard');
+    const first = decide('E');
     tenhalf.abortGame(CODE);
     deal([card(13, 'hearts'), card(6), card(2, 'clubs')]);
-    expect(decide('E', 'hard')).toBe(first);
+    expect(decide('E')).toBe(first);
   });
 
   it('counts the cards it can see out of the deck: its own hole card and every face-up card', () => {
@@ -114,7 +92,7 @@ describe('Ten and a Half Hard bot', () => {
     tenhalf.act(CODE, 'E', 'stand');
     tenhalf.act(CODE, 'S', 'stand');
     // A banker holding 3 must catch two likely 10-point players, so it draws.
-    expect(decide('N', 'hard')).toBe('hit');
+    expect(decide('N')).toBe('hit');
   });
 
   it('decides fast enough for a full table', () => {

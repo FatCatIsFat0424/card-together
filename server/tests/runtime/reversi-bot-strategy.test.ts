@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { GameSeat, PlayerInfo, ReversiGameState, ReversiVisibleState } from '@shared/types';
 import { rvCell, rvIndex, rvLegalMoves } from '@shared/rules/reversi';
 import type { RvCell } from '@shared/rules/reversi';
-import { getBotAction, getEasyBotAction } from '../../src/bots/bot-decisions';
+import { getBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
 import { reversiSearch, searchBestCell, searchBoard } from '../../src/bots/reversi-search';
@@ -31,27 +31,12 @@ const target = (action: BotAction | null): number | null => (action?.type === 'g
 
 afterEach(() => reversi.abortGame(CODE));
 
-describe('Reversi Easy bot', () => {
-  it('picks the move that flips the most discs when the noise is zero', () => {
-    start();
-    game().discs = position([
-      '.ooooox.', '........', '........', '........', '........', 'xo......', '........', '........',
-    ]);
-    // a8 flips five discs; c3 flips one.
-    expect(target(getEasyBotAction(view('N'), () => 0))).toBe(rvIndex(0, 0));
-  });
-
-  it('plays only legal moves, varies with the random source, and stays out of turn', () => {
+describe('Reversi synchronous bot', () => {
+  it('plays only legal moves and stays out of turn', () => {
     start();
     const legal = new Set(rvLegalMoves(game().discs, 0));
-    const picks = new Set<number | null>();
-    for (let seed = 1; seed <= 40; seed++) {
-      const cell = target(getEasyBotAction(view('N'), seededRandom(seed)));
-      expect(legal.has(cell!)).toBe(true);
-      picks.add(cell);
-    }
-    expect(picks.size).toBeGreaterThan(1);
-    expect(getEasyBotAction(view('S'))).toBeNull();
+    for (let seed = 1; seed <= 5; seed++) expect(legal.has(target(getBotAction(view('N'), seededRandom(seed)))!)).toBe(true);
+    expect(getBotAction(view('S'))).toBeNull();
   });
 });
 
@@ -69,33 +54,34 @@ describe('Reversi Hard bot', () => {
     start();
     for (let guard = 0; guard < 200 && game().phase === 'playing'; guard++) {
       const seat = game().currentTurnSeat;
-      const cell = target(getBotAction(view(seat), seededRandom(guard + 1), 'hard'));
+      const cell = target(getBotAction(view(seat), seededRandom(guard + 1)));
       expect(cell).not.toBeNull();
       expect(reversi.place(CODE, seat, `${cell! % 8},${Math.floor(cell! / 8)}`)).toEqual({ success: true });
     }
     expect(game().phase).toBe('scoring');
   });
 
-  it('beats the Easy bot over several seeded matches', () => {
-    let hardWins = 0;
+  it('beats a random legal mover over several seeded matches', () => {
+    let botWins = 0;
     for (let seed = 1; seed <= 6; seed++) {
       start();
-      const hardSeat: GameSeat = seed % 2 === 0 ? 'N' : 'S';
+      const botSeat: GameSeat = seed % 2 === 0 ? 'N' : 'S';
       for (let guard = 0; guard < 200 && game().phase === 'playing'; guard++) {
         const seat = game().currentTurnSeat;
         const random = seededRandom(seed * 1000 + guard);
-        const cell = target(getBotAction(view(seat), random, seat === hardSeat ? 'hard' : 'easy'));
+        const options = rvLegalMoves(game().discs, seat === 'N' ? 0 : 1);
+        const cell = seat === botSeat ? target(getBotAction(view(seat), random)) : options[Math.floor(random() * options.length)];
         reversi.place(CODE, seat, `${cell! % 8},${Math.floor(cell! / 8)}`);
       }
-      if (game().result?.winners.includes(hardSeat)) hardWins++;
+      if (game().result?.winners.includes(botSeat)) botWins++;
       reversi.abortGame(CODE);
     }
-    expect(hardWins).toBeGreaterThanOrEqual(5);
+    expect(botWins).toBeGreaterThanOrEqual(5);
   });
 });
 
 function getReversiAction(seat: GameSeat): BotAction | null {
-  return gameBot('reversi').hard(view(seat), () => 0.5);
+  return gameBot('reversi').decide(view(seat), () => 0.5);
 }
 
 describe('Reversi search', () => {

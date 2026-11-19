@@ -33,10 +33,10 @@ function pendingTurn(game: AnyGameState): BotTurn | null {
 /**
  * Rebuild timers from committed turns; bots use the same private view and rules as humans.
  *
- * A hard bot whose game declares `search` decides in the worker pool: the view is taken inside the
- * runtime queue, the search runs off the event loop, and the result is applied in a second queued
- * mutation only if the same turn is still pending. Without a pool, or when the search does not
- * produce an action, the easy strategy decides instead.
+ * A bot whose game declares `search` decides in the worker pool: the view is taken inside the runtime
+ * queue, the search runs off the event loop, and the result is applied in a second queued mutation
+ * only if the same turn is still pending. Without a pool, or when the search does not produce an
+ * action, the synchronous strategy decides instead.
  */
 export function startBotTurns(
   runtime: RuntimeCoordinator, publish: (code: RoomCode) => void, pool?: SearchRunner,
@@ -64,7 +64,7 @@ export function startBotTurns(
     if (searching.get(code)?.controller === controller) searching.delete(code);
     if (stopped || controller.signal.aborted) return;
     if (outcome.status !== 'ok') {
-      console.warn(`[bots] Search for ${code}/${turn.seat} ended as ${outcome.status}; using the easy strategy.`,
+      console.warn(`[bots] Search for ${code}/${turn.seat} ended as ${outcome.status}; using the synchronous strategy.`,
         outcome.reason ?? '');
     }
     let changed = false;
@@ -73,7 +73,7 @@ export function startBotTurns(
       // A newer state means this result answers a question that is no longer asked.
       if (!current || pendingTurn(current)?.key !== turn.key || gameManager.isPresentationActive(code)) return;
       performAutomatedTurn(code, turn.seat, failures.count(code, turn.key),
-        (visible) => (outcome.status === 'ok' && outcome.action) || getBotAction(visible, Math.random, 'easy'));
+        (visible) => (outcome.status === 'ok' && outcome.action) || getBotAction(visible));
       changed = true;
     }, commitOptions(code, () => changed)).catch((error: unknown) => commitFailed(code, turn.key, error));
   }
@@ -120,13 +120,9 @@ export function startBotTurns(
           if (stopped) return;
           const current = gameManager.getGameState(code);
           if (!current || pendingTurn(current)?.key !== turn.key || gameManager.isPresentationActive(code)) return;
-          const configured = gamePlayer(current, turn.seat)?.botDifficulty ?? 'hard';
-          const spec = configured === 'hard' ? gameBot(current.gameType).search : undefined;
+          const spec = gameBot(current.gameType).search;
           if (spec && failures.count(code, turn.key) === 0 && startSearch(code, turn, spec)) return;
-          // A search game's hard strategy is only the cheap timeout move; its bot turns fall back to easy.
-          const difficulty = spec ? 'easy' : configured;
-          performAutomatedTurn(code, turn.seat, failures.count(code, turn.key),
-            (visible) => getBotAction(visible, Math.random, difficulty));
+          performAutomatedTurn(code, turn.seat, failures.count(code, turn.key), (visible) => getBotAction(visible));
           changed = true;
         }, commitOptions(code, () => changed)).catch((error: unknown) => commitFailed(code, turn.key, error));
       }, delay);

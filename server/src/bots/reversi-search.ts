@@ -1,7 +1,8 @@
 // ─── Reversi search: iterative-deepening alpha-beta with positional weights and mobility ───
 //
-// Runs inside a bot worker (`GameBot.search`) and, at a shallow depth, as the cheap synchronous move that
-// serves player timeouts. It reads only the seat's own view, which for Reversi is the whole public board.
+// Runs inside a bot worker (`GameBot.search`) and, at a shallow depth, as the cheap synchronous
+// fallback when no pool runs or a search fails. It reads only the seat's own view, which for Reversi is the
+// whole public board.
 
 import type { ReversiVisibleState } from '@shared/types';
 import { RV_CELLS, RV_SIZE, rvNode } from '@shared/rules/reversi';

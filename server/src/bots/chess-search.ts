@@ -1,7 +1,7 @@
 // ─── Chess search: iterative-deepening alpha-beta with quiescence, MVV-LVA, killer, and history ordering ───
 //
-// Pure functions over the shared rules engine, so every move they return is one the server accepts. The hard bot
-// runs them inside a bot worker with the pool's `SearchBudget`; the easy bot is a two-ply look with noise.
+// Pure functions over the shared rules engine, so every move they return is one the server accepts. The bot
+// runs them inside a bot worker with the pool's `SearchBudget`.
 
 import {
   CHESS_BISHOP, CHESS_CELLS, CHESS_COL, CHESS_KING, CHESS_KNIGHT, CHESS_PAWN, CHESS_ROW,
@@ -414,49 +414,6 @@ export function chessBestMove(
     if (stopped || options.budget.expired() || Math.abs(ranked[0].score) >= MATE_BOUND) break;
   }
   return chessDecode(best);
-}
-
-/** Noise added to Easy's two-ply scores: about one and a half pawns. */
-const EASY_NOISE = 150;
-
-/**
- * Easy: each move is scored by the opponent's best static reply (two plies, no quiescence), plus noise, so it
- * avoids leaving pieces hanging to a single capture but misses deeper tactics. It still takes a mate in one and
- * does not walk into a draw by the rules while a better move exists.
- */
-export function chessEasyMove(
-  position: ChessPosition, side: ChessSide, history: readonly string[], random: () => number,
-): ChessMove | null {
-  if (side !== position.turn) return null;
-  const roots = rootMoves(position, history);
-  if (roots.length === 0) return null;
-  const win = roots.find((entry) => entry.kind === 'win');
-  if (win) return chessDecode(win.move);
-  const engine = chessEngine(position);
-  let best: { move: number; score: number } | null = null;
-  for (const { move, kind } of roots) {
-    let score = 0;
-    if (kind !== 'draw') {
-      const undo = chessMake(engine, move);
-      const replies = chessLegalEngineMoves(engine);
-      if (replies.length === 0) {
-        score = chessInCheckEngine(engine, engine.turn) ? MATE : 0;
-      } else {
-        let reply = Infinity;
-        for (const answer of replies) {
-          const taken = chessMake(engine, answer);
-          // After the reply it is this side's turn again, so the evaluation is already from its point of view.
-          reply = Math.min(reply, evaluate(engine.board, engine.turn));
-          chessUnmake(engine, answer, taken);
-        }
-        score = reply;
-      }
-      chessUnmake(engine, move, undo);
-    }
-    score += random() * EASY_NOISE;
-    if (!best || score > best.score) best = { move, score };
-  }
-  return best ? chessDecode(best.move) : null;
 }
 
 // ─── Bot actions from a view ───

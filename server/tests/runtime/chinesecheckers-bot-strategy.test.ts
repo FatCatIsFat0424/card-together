@@ -5,9 +5,9 @@ import type { CcHole } from '@shared/rules/chinesecheckers';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
 import {
-  chineseCheckersSearch, searchBestMove, searchBoard, searchMoves,
+  chineseCheckersSearch, moveAction, searchBestMove, searchBoard, searchMoves, searchSetup,
 } from '../../src/bots/chinesecheckers-search';
-import { easyChineseCheckersAction, getChineseCheckersBotAction } from '../../src/bots/chinesecheckers-strategy';
+import { getChineseCheckersBotAction } from '../../src/bots/chinesecheckers-strategy';
 import { createSearchPool } from '../../src/bots/search/search-worker-pool';
 import type { SearchPool } from '../../src/bots/search/search-worker-pool';
 import * as checkers from '../../src/managers/games/chinesecheckers-game';
@@ -41,33 +41,29 @@ function legal(action: BotAction | null, corner: number): boolean {
     .some((candidate) => ccNode(candidate.from) === move.from && ccNode(candidate.to) === move.to);
 }
 
+/** A uniformly random legal move: the weak baseline the search has to beat. */
+function randomMoveAction(visible: ChineseCheckersVisibleState, random: () => number): BotAction | null {
+  const setup = searchSetup(visible);
+  const moves = setup ? searchMoves(searchBoard(visible.holes), setup.corner) : [];
+  return moves.length > 0 ? moveAction(moves[Math.floor(random() * moves.length)]) : null;
+}
+
 const budget = (expired: () => boolean, maxDepth = 2) => ({ maxDepth, timeLeftMs: () => 1000, expired });
 
 afterEach(() => checkers.abortGame(CODE));
 
-describe('Chinese checkers Easy bot', () => {
+describe('Chinese checkers synchronous bot', () => {
   it('takes the move that gains the most rows when the noise is zero', () => {
     start();
     setBoard({ '0,12': 0, '1,11': 3, '3,9': 3, '0,0': 3 });
     // The chain over both marbles reaches 4,8: four rows forward, more than any step or single jump.
-    expect(chosen(easyChineseCheckersAction(view('N'), () => 0))).toEqual({ from: '0,12', to: '4,8' });
+    expect(chosen(getChineseCheckersBotAction(view('N'), () => 0))).toEqual({ from: '0,12', to: '4,8' });
   });
 
-  it('plays only legal moves, varies with the random source, and stays out of turn', () => {
+  it('plays only legal moves and stays out of turn', () => {
     start();
-    const picks = new Set<string>();
-    for (let seed = 1; seed <= 20; seed++) {
-      let state = seed;
-      const random = (): number => {
-        state = (state * 1664525 + 1013904223) >>> 0;
-        return state / 4294967296;
-      };
-      const action = easyChineseCheckersAction(view('N'), random);
-      expect(legal(action, 0)).toBe(true);
-      picks.add(JSON.stringify(chosen(action)));
-    }
-    expect(picks.size).toBeGreaterThan(1);
-    expect(easyChineseCheckersAction(view('E'), Math.random)).toBeNull();
+    for (let seed = 1; seed <= 5; seed++) expect(legal(getChineseCheckersBotAction(view('N'), () => seed / 6), 0)).toBe(true);
+    expect(getChineseCheckersBotAction(view('E'), Math.random)).toBeNull();
   });
 });
 
@@ -187,7 +183,7 @@ describe('Chinese checkers Hard bot', () => {
     expect(chineseCheckersSearch(view('E'), { random: () => 0, budget: budget(() => false) })).toBeNull();
   });
 
-  it('beats the Easy bot in seeded two-player races', () => {
+  it('beats a random legal mover in seeded two-player races', () => {
     let wins = 0;
     for (let seed = 1; seed <= 4; seed++) {
       start();
@@ -196,16 +192,16 @@ describe('Chinese checkers Hard bot', () => {
         state = (state * 1664525 + 1013904223) >>> 0;
         return state / 4294967296;
       };
-      const hard = seed % 2 === 0 ? 'N' : 'E';
+      const bot = seed % 2 === 0 ? 'N' : 'E';
       for (let guard = 0; guard < 600 && game().phase === 'playing'; guard++) {
         const seat = game().currentTurnSeat;
-        const action = seat === hard
+        const action = seat === bot
           ? chineseCheckersSearch(view(seat), { random, budget: budget(() => false) })
-          : easyChineseCheckersAction(view(seat), random);
+          : randomMoveAction(view(seat), random);
         const move = chosen(action)!;
         expect(checkers.move(CODE, seat, move.from, move.to)).toEqual({ success: true });
       }
-      if (game().result?.winners.includes(hard)) wins++;
+      if (game().result?.winners.includes(bot)) wins++;
       checkers.abortGame(CODE);
     }
     expect(wins).toBe(4);

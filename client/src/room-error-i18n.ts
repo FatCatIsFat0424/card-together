@@ -74,7 +74,6 @@ const errorKeys = new Map<string, RoomErrorTranslationKey>([
   ['Cannot manage seats during game', 'room.error.playing'],
   ['Cannot remove players during game', 'room.error.playing'],
   ['Invalid time control', 'room.error.invalidSettings'],
-  ['Invalid bot difficulty', 'room.error.invalidSettings'],
   ['Invalid game options', 'room.error.invalidSettings'],
   ['The room game has changed. Refresh your page', 'room.error.wrongGame'],
   ['Invalid Sevens options', 'room.error.invalidSettings'],

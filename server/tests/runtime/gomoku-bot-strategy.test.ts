@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { GameSeat, GomokuGameState, GomokuVisibleState, PlayerInfo } from '@shared/types';
 import { GM_CELLS, gmCell, gmForbidden, gmLegalMoves, gmNode, gmStoneCount } from '@shared/rules/gomoku';
 import type { GmCell, GomokuOptions } from '@shared/rules/gomoku';
-import { getBotAction, getEasyBotAction } from '../../src/bots/bot-decisions';
+import { getBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
 import { Position, gomokuSearch, searchBestMove } from '../../src/bots/gomoku-search';
@@ -53,57 +53,30 @@ const choice = (action: BotAction | null): boolean | null => (action?.type === '
 
 afterEach(() => gomoku.abortGame(CODE));
 
-describe('Gomoku Easy bot', () => {
+describe('Gomoku synchronous bot', () => {
   it('opens in the centre', () => {
     start();
-    expect(target(getEasyBotAction(view('N'), () => 0.5))).toBe(at('h8'));
+    expect(target(getBotAction(view('N'), () => 0.5))).toBe(at('h8'));
   });
 
-  it('completes five when it can, and blocks a four when nothing else wins', () => {
-    start();
-    setPosition('d4 e4 f4 g4 a1', 'e5 f5 g5 a15 o15');
-    // Black (N) to move: an end of its four wins, even though white also has three in a row.
-    expect([at('c4'), at('h4')]).toContain(target(getEasyBotAction(view('N'), () => 0.5)));
-    gomoku.abortGame(CODE);
-    start();
-    // Black threatens five at i5 (d5 is white); white has nothing in line, so easy white blocks.
-    setPosition('e5 f5 g5 h5 o1', 'd5 a15 o15 a1');
-    expect(target(getEasyBotAction(view('S'), () => 0.5))).toBe(at('i5'));
-  });
-
-  it('plays only legal points, varies with the random source, and stays out of turn', () => {
+  it('plays only legal points and stays out of turn', () => {
     start();
     setPosition('h8 i9 j10', 'h9 i8');
     const empties = new Set(gmLegalMoves(game().stones, 1, false));
-    const picks = new Set<number | null>();
-    for (let seed = 1; seed <= 60; seed++) {
-      const cell = target(getEasyBotAction(view('S'), seededRandom(seed)));
-      expect(empties.has(cell!)).toBe(true);
-      picks.add(cell);
-    }
-    expect(picks.size).toBeGreaterThan(1);
-    expect(getEasyBotAction(view('N'))).toBeNull();
-  });
-
-  it('never plays a forbidden point as black under Renju', () => {
-    start({ renju: true, swap: false });
-    setPosition('f8 g8 h9 h10 o15', 'a1 a3 a5 a7');
-    expect(gmForbidden(game().stones, at('h8'))).toBe(true);
-    for (let seed = 1; seed <= 80; seed++) {
-      expect(target(getEasyBotAction(view('N'), seededRandom(seed)))).not.toBe(at('h8'));
-    }
+    for (let seed = 1; seed <= 5; seed++) expect(empties.has(target(getBotAction(view('S'), seededRandom(seed)))!)).toBe(true);
+    expect(getBotAction(view('N'))).toBeNull();
   });
 
   it('places the opening stones, then picks a colour by the position', () => {
     start({ renju: false, swap: true });
-    const first = target(getEasyBotAction(view('N'), () => 0.5));
+    const first = target(getBotAction(view('N'), () => 0.5));
     expect(first).toBe(at('h8'));
     setPosition('h8 h9', 'h10');
     game().currentTurnSeat = 'S';
     // Black holds a strong pair and a free move to come: the second seat takes black.
-    expect(choice(getEasyBotAction(view('S'), () => 0.5))).toBe(true);
+    expect(choice(getBotAction(view('S'), () => 0.5))).toBe(true);
     setPosition('a1 o15', 'h8');
-    expect(choice(getEasyBotAction(view('S'), () => 0.5))).toBe(false);
+    expect(choice(getBotAction(view('S'), () => 0.5))).toBe(false);
   });
 });
 
@@ -111,17 +84,17 @@ describe('Gomoku Hard bot', () => {
   it('wins in one move over blocking, and blocks a four it cannot win against', () => {
     start();
     setPosition('d4 e4 f4 g4 o1', 'e5 f5 g5 h5 a15');
-    expect([at('c4'), at('h4')]).toContain(target(getBotAction(view('N'), seededRandom(1), 'hard')));
+    expect([at('c4'), at('h4')]).toContain(target(getBotAction(view('N'), seededRandom(1))));
     gomoku.abortGame(CODE);
     start();
     setPosition('e5 f5 g5 h5 o1', 'd5 a15 o15 a1');
-    expect(target(getBotAction(view('S'), seededRandom(1), 'hard'))).toBe(at('i5'));
+    expect(target(getBotAction(view('S'), seededRandom(1)))).toBe(at('i5'));
   });
 
   it('makes an open four from an open three instead of a weaker move', () => {
     start();
     setPosition('f8 g8 h8 a1', 'f12 l3 n10 a15');
-    const found = target(getBotAction(view('N'), seededRandom(2), 'hard'));
+    const found = target(getBotAction(view('N'), seededRandom(2)));
     expect([at('e8'), at('i8')]).toContain(found);
   });
 
@@ -129,8 +102,9 @@ describe('Gomoku Hard bot', () => {
     start({ renju: true, swap: false });
     setPosition('f8 g8 h9 h10 o15', 'a1 a3 a5 a7');
     const forbidden = at('h8');
+    expect(gmForbidden(game().stones, forbidden)).toBe(true);
     for (let seed = 1; seed <= 6; seed++) {
-      expect(target(getBotAction(view('N'), seededRandom(seed), 'hard'))).not.toBe(forbidden);
+      expect(target(getBotAction(view('N'), seededRandom(seed)))).not.toBe(forbidden);
     }
     const search = new Position(game().stones);
     const best = searchBestMove(search, 0, true, { maxDepth: 3, expired: () => false, maxNodes: 4000, random: seededRandom(3) });
@@ -141,7 +115,7 @@ describe('Gomoku Hard bot', () => {
     start({ renju: true, swap: true });
     for (let guard = 0; guard < 260 && game().phase === 'playing'; guard++) {
       const seat = game().currentTurnSeat;
-      const action = getBotAction(view(seat), seededRandom(guard + 1), 'hard');
+      const action = getBotAction(view(seat), seededRandom(guard + 1));
       expect(action).not.toBeNull();
       if (choice(action) !== null) {
         expect(gomoku.chooseSide(CODE, seat, choice(action)!)).toEqual({ success: true });
@@ -153,20 +127,25 @@ describe('Gomoku Hard bot', () => {
     expect(gmStoneCount(game().stones)).toBeLessThanOrEqual(GM_CELLS);
   }, 60_000);
 
-  it('beats the Easy bot over several seeded matches', () => {
-    let hardWins = 0;
+  it('beats a random legal mover over several seeded matches', () => {
+    let botWins = 0;
     for (let seed = 1; seed <= 6; seed++) {
       start();
-      const hardSeat: GameSeat = seed % 2 === 0 ? 'N' : 'S';
+      const botSeat: GameSeat = seed % 2 === 0 ? 'N' : 'S';
+      const rolls = seededRandom(seed * 1000);
       for (let guard = 0; guard < 260 && game().phase === 'playing'; guard++) {
         const seat = game().currentTurnSeat;
-        const action = getBotAction(view(seat), seededRandom(seed * 1000 + guard), seat === hardSeat ? 'hard' : 'easy');
-        gomoku.place(CODE, seat, gmNode(target(action)!));
+        if (seat === botSeat) {
+          gomoku.place(CODE, seat, gmNode(target(getBotAction(view(seat), seededRandom(seed * 1000 + guard)))!));
+        } else {
+          const open = gmLegalMoves(game().stones, seat === 'N' ? 0 : 1, false);
+          gomoku.place(CODE, seat, gmNode(open[Math.floor(rolls() * open.length)]));
+        }
       }
-      if (game().result?.winners.includes(hardSeat)) hardWins++;
+      if (game().result?.winners.includes(botSeat)) botWins++;
       gomoku.abortGame(CODE);
     }
-    expect(hardWins).toBeGreaterThanOrEqual(5);
+    expect(botWins).toBeGreaterThanOrEqual(5);
   }, 120_000);
 });
 
@@ -223,28 +202,28 @@ describe('Gomoku search', () => {
 describe('Gomoku fallbacks', () => {
   it('returns nothing off turn or after the end, and the first legal fallback is a legal placement near the centre', () => {
     start();
-    expect(getBotAction(view('S'), Math.random, 'easy')).toBeNull();
+    expect(getBotAction(view('S'), Math.random)).toBeNull();
     const bot = gameBot('gomoku');
     expect(bot.firstLegal(view('S'))).toBeNull();
     expect(target(bot.firstLegal(view('N')))).toBe(at('h8'));
     gomoku.control(CODE, 'N', { type: 'resign' });
-    expect(getBotAction(view('S'), Math.random, 'hard')).toBeNull();
+    expect(getBotAction(view('S'), Math.random)).toBeNull();
   });
 
-  it('chooses a colour in the opening and the timeout move follows the easy policy', () => {
+  it('chooses a colour in the opening, and a timeout follows the decision of the bot', () => {
     start({ renju: false, swap: true });
     setPosition('h8 g9', 'h9');
     game().currentTurnSeat = 'S';
     const bot = gameBot('gomoku');
     expect(bot.firstLegal(view('S'))).toMatchObject({ request: { action: { type: 'choose-side', swap: false } } });
-    expect(typeof choice(bot.turnTimeout!(view('S'), { isBot: false, strategy: () => null }))).toBe('boolean');
-    expect(typeof choice(bot.hard(view('S'), seededRandom(4)))).toBe('boolean');
+    expect(bot.turnTimeout).toBeUndefined();
+    expect(typeof choice(getBotAction(view('S'), seededRandom(4)))).toBe('boolean');
+    expect(typeof choice(bot.decide(view('S'), seededRandom(4)))).toBe('boolean');
   });
 
-  it('timeout move is a legal placement', () => {
+  it('answers a timeout in the opening with a legal placement', () => {
     start();
-    const bot = gameBot('gomoku');
-    expect(target(bot.turnTimeout!(view('N'), { isBot: false, strategy: () => null }))).toBe(at('h8'));
+    expect(target(getBotAction(view('N'), seededRandom(6)))).toBe(at('h8'));
   });
 });
 

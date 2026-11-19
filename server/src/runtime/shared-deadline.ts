@@ -21,7 +21,7 @@ function pendingDeadline(code: RoomCode): PendingDeadline | null {
   return window && { key: window.key, gameId: game.id, deadline: window.deadline };
 }
 
-/** A seat that missed the deadline gets the game's expiry default, or else the hard strategy. */
+/** A seat that missed the deadline gets the game's expiry default, or else the bot's decision. */
 function expiredAction(visible: PlayerVisibleGameState, isBot: boolean): BotAction | null {
   const strategy = (): BotAction | null => getBotAction(visible);
   const expired = gameBot(visible.gameType).deadlineExpired;

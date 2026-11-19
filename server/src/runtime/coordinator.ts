@@ -3,6 +3,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { GAME_SEAT_ORDER } from '@shared/constants';
 import type { Repository, NewMatchRecord } from '../database/repository';
 import type { RuntimeSnapshot } from './types';
+import { upgradeLegacySnapshot } from './legacy-snapshot';
 import { captureMatchReplay } from './match-replay';
 import { recordReplayStep } from './replay-recording';
 import * as playerManager from '../managers/player-manager';
@@ -54,7 +55,7 @@ function restore(state: RuntimeSnapshot, restarting = false): void {
 /** Serializes game mutations and persists each before acknowledging or broadcasting it. */
 export async function createRuntimeCoordinator(repository: Pick<Repository, 'loadRuntime' | 'saveRuntime'>): Promise<RuntimeCoordinator> {
   const initial = await repository.loadRuntime();
-  restore(initial ?? { players: [], rooms: [], games: [], chat: [] }, true);
+  restore(initial ? upgradeLegacySnapshot(initial) : { players: [], rooms: [], games: [], chat: [] }, true);
   let queue = Promise.resolve();
   const listeners = new Set<() => void>();
   const coinListeners = new Set<(rewardedAccountIds: readonly string[]) => void>();

@@ -9,7 +9,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { GAME_SEAT_ORDER, MAX_SPECTATORS, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { EXPANDABLE_ROOM_GAMES, gameDefinition, gameTimeControl } from '@shared/games/registry';
 import type {
-  BotDifficulty, GameOptionsPayload, GameSeat, GameType, PlayerInfo, RoomInfo, RoomSeatTarget, Seat, TimeControl,
+  GameOptionsPayload, GameSeat, GameType, PlayerInfo, RoomInfo, RoomSeatTarget, Seat, TimeControl,
 } from '@shared/types';
 import type { TranslationKey } from '../i18n';
 import { socket } from '../socket';
@@ -317,11 +317,6 @@ export function RoomPage(): ReactNode {
     setError('');
     socket.timeout(10000).emit('room:removeBot', { seat }, handleResult);
   };
-  const setBotDifficulty = (seat: GameSeat, difficulty: BotDifficulty): void => {
-    setBusy(true);
-    setError('');
-    socket.timeout(10000).emit('room:setBotDifficulty', { seat, difficulty }, handleResult);
-  };
   const kick = (player: PlayerInfo): void => {
     if (!window.confirm(t('room.kickConfirm', { nickname: player.nickname }))) return;
     setBusy(true);
@@ -474,7 +469,6 @@ export function RoomPage(): ReactNode {
                   else if (seatCard.additionalIndex !== undefined) changeAdditionalSeat(seatCard.additionalIndex);
                 }}
                 onAddBot={() => addBot(seatCard.gameSeat)} onRemoveSeat={removeSeat}
-                onDifficulty={(difficulty) => setBotDifficulty(seatCard.gameSeat, difficulty)}
                 onRemoveBot={() => removeBot(seatCard.gameSeat)} />;
             })}
             {canAddSeat && <AddSeatSlot position={ovalPosition(seatCards.length, firstSeat, slotCount)}

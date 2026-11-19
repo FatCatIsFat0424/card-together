@@ -303,12 +303,12 @@ describe('Jungle adapter and stored state', () => {
 });
 
 describe('Jungle bots through the registry', () => {
-  it('plays only legal moves in a full bot match on both difficulties', () => {
+  it('plays only legal moves in a full bot match', () => {
     start();
     for (let guard = 0; guard < 400 && game().phase === 'playing'; guard++) {
       const seat = game().currentTurnSeat;
       const view = jungle.getPlayerVisibleState(CODE, seat)!;
-      const action = getBotAction(view, Math.random, seat === 'N' ? 'easy' : 'hard');
+      const action = getBotAction(view, Math.random);
       expect(action).toMatchObject({ type: 'game-action', request: { gameType: 'jungle', action: { type: 'move' } } });
       const request = (action as { request: { action: { from: string; to: string } } }).request.action;
       expect(jungle.move(CODE, seat, request.from, request.to)).toEqual({ success: true });
@@ -318,7 +318,7 @@ describe('Jungle bots through the registry', () => {
 
   it('returns nothing off turn or after the end, and the first legal fallback is a legal move', () => {
     start();
-    expect(getBotAction(jungle.getPlayerVisibleState(CODE, 'S')!, Math.random, 'easy')).toBeNull();
+    expect(getBotAction(jungle.getPlayerVisibleState(CODE, 'S')!, Math.random)).toBeNull();
     const bot = gameBot('jungle');
     expect(bot.firstLegal(jungle.getPlayerVisibleState(CODE, 'S')!)).toBeNull();
     const first = bot.firstLegal(jungle.getPlayerVisibleState(CODE, 'N')!);
@@ -326,7 +326,7 @@ describe('Jungle bots through the registry', () => {
     const { from, to } = (first as { request: { action: { from: string; to: string } } }).request.action;
     expect(jungle.move(CODE, 'N', from, to)).toEqual({ success: true });
     jungle.control(CODE, 'N', { type: 'resign' });
-    expect(getBotAction(jungle.getPlayerVisibleState(CODE, 'S')!, Math.random, 'hard')).toBeNull();
+    expect(getBotAction(jungle.getPlayerVisibleState(CODE, 'S')!, Math.random)).toBeNull();
   });
 });
 

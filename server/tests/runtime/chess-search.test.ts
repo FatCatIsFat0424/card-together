@@ -4,7 +4,7 @@ import {
   chessVerdict,
 } from '@shared/rules/chess';
 import type { ChessMove, ChessPosition, ChessSide } from '@shared/rules/chess';
-import { chessBestMove, chessEasyMove } from '../../src/bots/chess-search';
+import { chessBestMove } from '../../src/bots/chess-search';
 import { seededRandom } from '../../src/bots/search/seeded-random';
 import { chessFen, chessMoveOf } from '../fixtures/chess-positions';
 
@@ -98,34 +98,7 @@ describe('chess hard search', () => {
   });
 });
 
-describe('chess easy search', () => {
-  it('takes a mate in one', () => {
-    const position = chessFen('6k1/5ppp/8/8/8/8/8/R3K3 w - - 0 1');
-    expect(chessSan(position, chessEasyMove(position, 0, [], seededRandom(2))!)).toBe('Ra8#');
-  });
-
-  it('does not leave its queen to a one-move capture', () => {
-    const position = chessFen('4k3/4p3/3p4/8/8/8/8/3QK3 w - - 0 1');
-    for (let seed = 1; seed <= 20; seed++) {
-      const after = chessApply(position, chessEasyMove(position, 0, [], seededRandom(seed))!);
-      expect(chessLegalMoves(after).some((reply) => after.board[reply.to] === 'Q')).toBe(false);
-    }
-  });
-
-  it('plays legal moves and varies with the seed', () => {
-    const start = chessInitialPosition();
-    const moves = new Set<string>();
-    for (let seed = 1; seed <= 12; seed++) {
-      const move = chessEasyMove(start, 0, [], seededRandom(seed))!;
-      expect(chessIsLegal(start, move)).toBe(true);
-      moves.add(`${move.from}-${move.to}`);
-    }
-    expect(moves.size).toBeGreaterThan(1);
-    expect(chessEasyMove(start, 1, [], seededRandom(1))).toBeNull();
-  });
-});
-
-describe('chess hard against easy', () => {
+describe('chess search against a random mover', () => {
   const PIECE_VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
   const PLY_LIMIT = 100;
 
@@ -139,25 +112,26 @@ describe('chess hard against easy', () => {
   }
 
   /** Plays one game; the winner is the checkmating side, or at the ply limit the side ahead by at least three pawns. */
-  function playGame(hardSide: ChessSide, seed: number): 'hard' | 'easy' | 'draw' {
+  function playGame(botSide: ChessSide, seed: number): 'bot' | 'random' | 'draw' {
     const random = seededRandom(seed);
     let position = chessInitialPosition();
     const history: string[] = [];
     for (let ply = 0; ply < PLY_LIMIT; ply++) {
       const verdict = chessVerdict(position, history);
-      if (verdict) return verdict.loser === null ? 'draw' : verdict.loser === hardSide ? 'easy' : 'hard';
-      const move = position.turn === hardSide
+      if (verdict) return verdict.loser === null ? 'draw' : verdict.loser === botSide ? 'random' : 'bot';
+      const replies = chessLegalMoves(position);
+      const move = position.turn === botSide
         ? chessBestMove(position, position.turn, history, { maxDepth: 3, budget: never, random })
-        : chessEasyMove(position, position.turn, history, random);
+        : replies[Math.floor(random() * replies.length)];
       history.push(chessPositionKey(position));
       position = chessApply(position, move!);
     }
-    const margin = lead(position, hardSide);
-    return margin >= 3 ? 'hard' : margin <= -3 ? 'easy' : 'draw';
+    const margin = lead(position, botSide);
+    return margin >= 3 ? 'bot' : margin <= -3 ? 'random' : 'draw';
   }
 
   it('wins at least eight of ten seeded games', () => {
     const results = Array.from({ length: 10 }, (_, game) => playGame(game % 2 === 0 ? 0 : 1, 100 + game));
-    expect(results.filter((result) => result === 'hard').length, results.join(',')).toBeGreaterThanOrEqual(8);
+    expect(results.filter((result) => result === 'bot').length, results.join(',')).toBeGreaterThanOrEqual(8);
   }, 60_000);
 });

@@ -88,12 +88,12 @@ function persists(state: AnyGameState): boolean {
   return isRuntimeSnapshot(snapshot);
 }
 
-/** Plays with the hard bot, or the easy one for odd seats, until the match ends. */
+/** Plays with the bot until the match ends. */
 function playOut(random: () => number, onStep?: () => void): void {
   for (let step = 0; step < 5_000 && game().phase === 'playing'; step++) {
     const seat = game().currentTurnSeat;
     const visible = oldmaid.getPlayerVisibleState(CODE, seat)!;
-    const action = getBotAction(visible, random, GAME_SEAT_ORDER.indexOf(seat) % 2 === 0 ? 'hard' : 'easy');
+    const action = getBotAction(visible, random);
     if (action?.type !== 'game-action' || action.request.gameType !== 'oldmaid') throw new Error('Expected an Old Maid action');
     const move = action.request.action;
     if (move.type !== 'draw') throw new Error('Bots only draw');
@@ -314,7 +314,7 @@ describe('Old Maid gameplay', () => {
         while (game().phase === 'playing') {
           const seat = game().currentTurnSeat;
           const visible = oldmaid.getPlayerVisibleState(CODE, seat)!;
-          const action = getBotAction(visible, random, 'easy');
+          const action = getBotAction(visible, random);
           if (action?.type !== 'game-action' || action.request.gameType !== 'oldmaid' || action.request.action.type !== 'draw') {
             throw new Error('Expected a draw');
           }

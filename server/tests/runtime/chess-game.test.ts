@@ -320,12 +320,12 @@ describe('Chess adapter and stored state', () => {
 });
 
 describe('Chess bots through the registry', () => {
-  it('play only legal moves on both difficulties and return nothing off turn', () => {
+  it('play only legal moves and return nothing off turn', () => {
     start();
-    expect(getBotAction(chess.getPlayerVisibleState(CODE, 'S')!, Math.random, 'easy')).toBeNull();
+    expect(getBotAction(chess.getPlayerVisibleState(CODE, 'S')!, Math.random)).toBeNull();
     for (let guard = 0; guard < 12 && game().phase === 'playing'; guard++) {
       const seat = game().currentTurnSeat;
-      const action = getBotAction(chess.getPlayerVisibleState(CODE, seat)!, lcg(guard + 1), seat === 'N' ? 'easy' : 'hard');
+      const action = getBotAction(chess.getPlayerVisibleState(CODE, seat)!, lcg(guard + 1));
       expect(action).toMatchObject({ type: 'game-action', request: { gameType: 'chess', action: { type: 'move' } } });
       const request = (action as { request: { action: { from: string; to: string; promotion?: never } } }).request.action;
       expect(chess.move(CODE, seat, request.from, request.to, request.promotion)).toEqual({ success: true });
@@ -333,20 +333,19 @@ describe('Chess bots through the registry', () => {
     expect(coherent()).toBe(true);
   });
 
-  it('names a promotion piece, falls back to the first legal move, and uses the easy policy on timeouts', () => {
+  it('names a promotion piece, falls back to the first legal move, and answers a timeout with a move of the bot', () => {
     start();
     const bot = gameBot('chess');
     expect(bot.firstLegal(chess.getPlayerVisibleState(CODE, 'S')!)).toBeNull();
     const first = bot.firstLegal(chess.getPlayerVisibleState(CODE, 'N')!) as { request: { action: { from: string; to: string } } };
     expect(chess.move(CODE, 'N', first.request.action.from, first.request.action.to)).toEqual({ success: true });
-    const timeout = bot.turnTimeout!(chess.getPlayerVisibleState(CODE, 'S')!, { isBot: false, strategy: () => null }) as
-      { request: { action: { from: string; to: string } } };
+    const timeout = getBotAction(chess.getPlayerVisibleState(CODE, 'S')!, lcg(3)) as { request: { action: { from: string; to: string } } };
     expect(chess.move(CODE, 'S', timeout.request.action.from, timeout.request.action.to)).toEqual({ success: true });
 
     chess.abortGame(CODE);
     start();
     setPosition(chessFen('4k3/P6p/8/8/8/8/8/4K3 w - -'));
-    for (const strategy of [bot.easy, bot.firstLegal]) {
+    for (const strategy of [bot.decide, bot.firstLegal]) {
       const action = (strategy as (visible: never, random: () => number) => { request: { action: { promotion?: string } } } | null)(
         chess.getPlayerVisibleState(CODE, 'N') as never, lcg(5),
       );

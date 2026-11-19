@@ -33,18 +33,6 @@ export function dominoesFirstLegalAction(visible: DominoesVisibleState): BotActi
   return heaviest ? playAction(heaviest) : drawOrPass(options);
 }
 
-/** A random legal tile and end. */
-export function easyDominoesAction(visible: DominoesVisibleState, random: () => number): BotAction | null {
-  const options = turnOptions(visible);
-  if (!options) return null;
-  if (options.plays.length === 0) return drawOrPass(options);
-  const sample = random();
-  if (!Number.isFinite(sample) || sample < 0 || sample >= 1) {
-    throw new RangeError('Bot random source must return a number in [0, 1).');
-  }
-  return playAction(options.plays[Math.floor(sample * options.plays.length)]);
-}
-
 /** Tiles holding `pip` that this seat can neither see in its hand nor on the line. */
 function unseenWith(visible: DominoesVisibleState, pip: DominoPip): number {
   const seen = new Set<string>([...visible.myHand, ...visible.line.map((placed) => placed.tile)]

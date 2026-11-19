@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getPresentationEndsAt } from '@shared/game-presentation';
-import type { BotDifficulty, PlayerInfo } from '@shared/types';
+import type { PlayerInfo } from '@shared/types';
 import * as games from '../../src/managers/game-manager';
 import * as rooms from '../../src/managers/room-manager';
 import * as players from '../../src/managers/player-manager';
@@ -17,7 +17,7 @@ const human: PlayerInfo = {
   id: 'human', username: 'human', nickname: 'Human', color: '#123456', avatar: 'cat', avatarImage: null,
 };
 
-async function fixture(difficulty: BotDifficulty = 'hard') {
+async function fixture() {
   let saved: RuntimeSnapshot | null = null;
   const repository = {
     loadRuntime: async (): Promise<RuntimeSnapshot | null> => structuredClone(saved),
@@ -34,7 +34,6 @@ async function fixture(difficulty: BotDifficulty = 'hard') {
     players.setPlayerRoom(human.id, code);
     rooms.changeSeat(code, human, 'N');
     rooms.fillBots(code, human.id);
-    rooms.setBotDifficulty(code, human.id, 'S', difficulty);
     rooms.setReady(code, human.id, true);
     rooms.setRoomStatus(code, 'playing');
     games.startGame(code, 'redpoints', rooms.getSeatPlayers(code)!);
@@ -158,15 +157,20 @@ describe('server bot turn scheduling', () => {
     expect(publish).toHaveBeenCalledTimes(1);
   });
 
-  it.each(['easy', 'hard'] as const)('uses the saved %s strategy after restart', async (difficulty) => {
-    const { repository } = await fixture(difficulty);
-    const runtime = await createRuntimeCoordinator(repository);
+  it('plays a bot saved with the retired easy difficulty with the one strategy after restart', async () => {
+    const { repository } = await fixture();
+    const legacy = (await repository.loadRuntime())!;
+    const easy = (info: PlayerInfo): PlayerInfo => ({ ...info, botDifficulty: 'easy' } as PlayerInfo);
+    legacy.rooms[0].info.seats.S = { ...legacy.rooms[0].info.seats.S, player: easy(legacy.rooms[0].info.seats.S.player!) };
+    const gamePlayers = legacy.games[0].players as Record<string, PlayerInfo>;
+    gamePlayers.S = easy(gamePlayers.S);
+    const runtime = await createRuntimeCoordinator({ ...repository, loadRuntime: async () => structuredClone(legacy) });
     const strategy = vi.spyOn(decisions, 'getBotAction');
     const publish = vi.fn();
     stops.push(startBotTurns(runtime, publish));
     await vi.advanceTimersByTimeAsync(BOT_ACTION_DELAY_MS);
     await runtime.idle();
-    expect(strategy).toHaveBeenCalledWith(expect.objectContaining({ mySeat: 'S' }), Math.random, difficulty);
+    expect(strategy).toHaveBeenCalledWith(expect.objectContaining({ mySeat: 'S' }));
     expect(publish).toHaveBeenCalledTimes(1);
   });
 

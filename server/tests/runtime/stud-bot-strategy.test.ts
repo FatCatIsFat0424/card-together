@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { BotDifficulty, Card, GameSeat, PlayerInfo, StudAction, StudVisibleState } from '@shared/types';
+import type { Card, GameSeat, PlayerInfo, StudAction, StudVisibleState } from '@shared/types';
 import { GAME_SEAT_ORDER } from '@shared/constants';
 import { getBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
@@ -30,15 +30,15 @@ function studAction(action: BotAction | null): StudAction {
   return action.request.action;
 }
 
-/** Plays a whole match where every seat is a bot of the given difficulty, using only each seat's own view. */
-function botMatch(seed: number, seats: readonly GameSeat[], difficulty: (seat: GameSeat) => BotDifficulty): number {
+/** Plays a whole match, with each seat on the bot or on the passive check-or-fold fallback, using only its own view. */
+function botMatch(seed: number, seats: readonly GameSeat[], passive: (seat: GameSeat) => boolean = () => false): number {
   const random = seeded(seed);
   stud.startGame(CODE, players(seats), random, 0);
   let decisions = 0;
   for (let step = 0; step < 4000 && stud.getGameState(CODE)!.phase !== 'scoring'; step++) {
     const seat = stud.getGameState(CODE)!.currentTurnSeat;
     const view = stud.getPlayerVisibleState(CODE, seat)!;
-    const action = getBotAction(view, random, difficulty(seat));
+    const action = passive(seat) ? gameBot('stud').firstLegal(view) : getBotAction(view, random);
     expect(action).not.toBeNull();
     expect(stud.act(CODE, seat, studAction(action), 0, random)).toEqual({ success: true });
     decisions += 1;
@@ -50,19 +50,12 @@ function botMatch(seed: number, seats: readonly GameSeat[], difficulty: (seat: G
 describe('stud bot strategies', () => {
   beforeEach(() => stud.restoreGames([]));
 
-  it('plays only legal actions as Easy bots at 2, 4, and 8 seats', () => {
-    const rosters: readonly (readonly GameSeat[])[] = [['N', 'S'], ['N', 'E', 'S', 'W'], GAME_SEAT_ORDER];
+  it('plays only legal actions as bots, and mixed with passive seats, at several table sizes', () => {
+    const rosters: readonly (readonly GameSeat[])[] = [['N', 'E'], ['N', 'E', 'S'], ['N', 'E', 'S', 'W'], GAME_SEAT_ORDER];
     for (const [index, seats] of rosters.entries()) {
-      expect(botMatch(10 + index, seats, () => 'easy')).toBeGreaterThan(0);
-    }
-  });
-
-  it('plays only legal actions as Hard bots, and mixed with Easy bots, at several table sizes', () => {
-    const rosters: readonly (readonly GameSeat[])[] = [['N', 'E'], ['N', 'E', 'S'], GAME_SEAT_ORDER];
-    for (const [index, seats] of rosters.entries()) {
-      expect(botMatch(20 + index, seats, () => 'hard')).toBeGreaterThan(0);
+      expect(botMatch(20 + index, seats)).toBeGreaterThan(0);
       stud.restoreGames([]);
-      expect(botMatch(30 + index, seats, (seat) => (GAME_SEAT_ORDER.indexOf(seat) % 2 === 0 ? 'hard' : 'easy'))).toBeGreaterThan(0);
+      expect(botMatch(30 + index, seats, (seat) => GAME_SEAT_ORDER.indexOf(seat) % 2 === 1)).toBeGreaterThan(0);
       stud.restoreGames([]);
     }
   });
@@ -71,10 +64,9 @@ describe('stud bot strategies', () => {
     stud.startGame(CODE, players(['N', 'E']), seeded(5), 0);
     const waiting = GAME_SEAT_ORDER.find((seat) => seat !== stud.getGameState(CODE)!.currentTurnSeat && seat in stud.getGameState(CODE)!.players)!;
     const view = stud.getPlayerVisibleState(CODE, waiting)!;
-    expect(getBotAction(view, seeded(1), 'hard')).toBeNull();
-    expect(getBotAction(view, seeded(1), 'easy')).toBeNull();
+    expect(getBotAction(view, seeded(1))).toBeNull();
     const { phase: _phase, ...rest } = view;
-    expect(getBotAction({ ...rest, phase: 'scoring' } as StudVisibleState, seeded(1), 'hard')).toBeNull();
+    expect(getBotAction({ ...rest, phase: 'scoring' } as StudVisibleState, seeded(1))).toBeNull();
   });
 
   it('answers a human timeout and a repeated bot failure with check or fold', () => {
@@ -90,13 +82,13 @@ describe('stud bot strategies', () => {
     expect(studAction(bot.firstLegal(stud.getPlayerVisibleState(CODE, next)!))).toEqual({ type: 'fold' });
   });
 
-  it('decides each Hard turn within a small time budget, even at a full table', () => {
+  it('decides each turn within a small time budget, even at a full table', () => {
     const seats = GAME_SEAT_ORDER;
     const random = seeded(99);
     stud.startGame(CODE, players(seats), random, 0);
     const view = stud.getPlayerVisibleState(CODE, stud.getGameState(CODE)!.currentTurnSeat)!;
     const start = performance.now();
-    for (let run = 0; run < 20; run++) getBotAction(view, random, 'hard');
+    for (let run = 0; run < 20; run++) getBotAction(view, random);
     expect((performance.now() - start) / 20).toBeLessThan(50);
   });
 });

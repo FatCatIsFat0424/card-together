@@ -4,7 +4,7 @@
 // from the pieces the seat has not seen (the full set minus the face-up pieces and the captures in the public
 // log). Both players are equally
 // uncertain, so the opponent is modelled with the same distribution. Runs inside a bot worker
-// (`GameBot.search`) and, with a tiny node budget, as the synchronous move that serves player timeouts.
+// (`GameBot.search`) and, with a tiny node budget, as the synchronous fallback when no pool runs.
 
 import type { BanqiVisibleState } from '@shared/games/banqi/types';
 import { banqiRules } from '@shared/banqi-options';

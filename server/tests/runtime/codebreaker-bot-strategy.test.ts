@@ -9,7 +9,7 @@ import { getBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
 import {
-  codeBreakerFirstLegalAction, consistentCodes, easyCodeBreakerAction, getCodeBreakerBotAction, knownGuesses,
+  codeBreakerFirstLegalAction, consistentCodes, getCodeBreakerBotAction, knownGuesses,
 } from '../../src/bots/codebreaker-strategy';
 import { seededRandom } from '../../src/bots/search/seeded-random';
 
@@ -35,13 +35,23 @@ function soloView(variant: CbVariant, history: readonly { code: CbCode; exact: n
   };
 }
 
+type Guesser = (visible: CodeBreakerVisibleState, random: () => number) => CbCode;
+
+const botGuess: Guesser = (visible, random) => codeOf(getBotAction(visible, random));
+
+/** A random code that fits the seat's own feedback: the weak baseline the bot is measured against. */
+const randomConsistentGuess: Guesser = (visible, random) => {
+  const candidates = consistentCodes(visible);
+  return candidates.length > 0
+    ? candidates[Math.min(candidates.length - 1, Math.floor(random() * candidates.length))]
+    : cbRandomCode(visible.options.variant, random);
+};
+
 /** Guesses to crack `secret` alone with a strategy, or null when it needs more than the cap. */
-function solveAlone(
-  variant: CbVariant, secret: CbCode, difficulty: 'easy' | 'hard', random: () => number,
-): number | null {
+function solveAlone(variant: CbVariant, secret: CbCode, guesser: Guesser, random: () => number): number | null {
   const history: { code: CbCode; exact: number; partial: number }[] = [];
   for (let used = 1; used <= CB_MAX_GUESSES; used++) {
-    const code = codeOf(getBotAction(soloView(variant, history), random, difficulty));
+    const code = guesser(soloView(variant, history), random);
     expect(isCbCode(code, variant)).toBe(true);
     const feedback = cbFeedback(secret, code);
     if (feedback.exact === 4) return used;
@@ -57,12 +67,9 @@ describe('Code Breaker bot legality', () => {
       const secret = cbRandomCode(variant, random);
       const history: { code: CbCode; exact: number; partial: number }[] = [];
       for (let used = 1; used <= 6; used++) {
-        for (const difficulty of ['easy', 'hard'] as const) {
-          const code = codeOf(getBotAction(soloView(variant, history), random, difficulty));
-          expect(isCbCode(code, variant)).toBe(true);
-          if (difficulty === 'easy') expect(cbConsistent(code, history)).toBe(true);
-        }
-        const code = codeOf(easyCodeBreakerAction(soloView(variant, history), random));
+        expect(isCbCode(botGuess(soloView(variant, history), random), variant)).toBe(true);
+        const code = randomConsistentGuess(soloView(variant, history), random);
+        expect(cbConsistent(code, history)).toBe(true);
         history.push({ code, ...cbFeedback(secret, code) });
       }
     }
@@ -71,7 +78,7 @@ describe('Code Breaker bot legality', () => {
   it('returns nothing when the seat owes no guess and a legal fallback otherwise', () => {
     const base = soloView('digits', []);
     expect(getCodeBreakerBotAction({ ...base, pendingGuess: [0, 1, 2, 3] }, Math.random)).toBeNull();
-    expect(easyCodeBreakerAction({ ...base, phase: 'scoring' }, Math.random)).toBeNull();
+    expect(getCodeBreakerBotAction({ ...base, phase: 'scoring' }, Math.random)).toBeNull();
     expect(codeBreakerFirstLegalAction({ ...base, progress: { N: { used: 10, solved: false, submitted: false } } })).toBeNull();
     expect(codeBreakerFirstLegalAction({ ...base, progress: { N: { used: 2, solved: true, submitted: false } } })).toBeNull();
     expect(codeOf(codeBreakerFirstLegalAction(base))).toEqual([0, 1, 2, 3]);
@@ -80,11 +87,11 @@ describe('Code Breaker bot legality', () => {
     expect(gameBot('codebreaker').firstLegal(base)).not.toBeNull();
   });
 
-  it('keeps each hard decision well under the 50 ms budget, also right after a weak first guess', () => {
+  it('keeps each decision well under the 50 ms budget, also right after a weak first guess', () => {
     const random = seededRandom(5);
     for (const variant of ['digits', 'colors'] as const) {
       const secret = cbRandomCode(variant, random);
-      const first = codeOf(easyCodeBreakerAction(soloView(variant, []), random));
+      const first = randomConsistentGuess(soloView(variant, []), random);
       const view = soloView(variant, [{ code: first, ...cbFeedback(secret, first) }]);
       const started = performance.now();
       for (let index = 0; index < 5; index++) getCodeBreakerBotAction(view, random);
@@ -117,13 +124,13 @@ describe('Code Breaker bots see only their own feedback', () => {
 describe('Code Breaker bot strength', () => {
   const GAMES = 150;
 
-  function average(variant: CbVariant, difficulty: 'easy' | 'hard'): { mean: number; solved: number } {
+  function average(variant: CbVariant, guesser: Guesser): { mean: number; solved: number } {
     let total = 0;
     let solved = 0;
     for (let seed = 1; seed <= GAMES; seed++) {
       const random = seededRandom(seed * 7919 + (variant === 'digits' ? 1 : 2));
       const secret = cbRandomCode(variant, seededRandom(seed * 31 + 9));
-      const used = solveAlone(variant, secret, difficulty, random);
+      const used = solveAlone(variant, secret, guesser, random);
       if (used !== null) {
         solved++;
         total += used;
@@ -133,12 +140,12 @@ describe('Code Breaker bot strength', () => {
   }
 
   for (const variant of ['digits', 'colors'] as const) {
-    it(`solves ${variant} within ten guesses in a large majority of seeded games, and hard needs fewer than easy`, () => {
-      const easy = average(variant, 'easy');
-      const hard = average(variant, 'hard');
-      expect(easy.solved / GAMES).toBeGreaterThan(0.9);
-      expect(hard.solved / GAMES).toBeGreaterThan(0.97);
-      expect(hard.mean).toBeLessThan(easy.mean);
+    it(`solves ${variant} within ten guesses in a large majority of seeded games, and needs fewer than a random consistent guesser`, () => {
+      const baseline = average(variant, randomConsistentGuess);
+      const bot = average(variant, botGuess);
+      expect(baseline.solved / GAMES).toBeGreaterThan(0.9);
+      expect(bot.solved / GAMES).toBeGreaterThan(0.97);
+      expect(bot.mean).toBeLessThan(baseline.mean);
     }, 60_000);
   }
 });

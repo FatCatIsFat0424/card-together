@@ -1,8 +1,7 @@
 import type { GameActionEnvelope } from '@shared/games/actions';
 import type {
   BidAction, BlackjackAction, BlackjackDealerAction, Card, ChinesePokerArrangement, HoldemAction, NapoleonAction,
-  PlayerVisibleGameState,
-  BotDifficulty, GameSeat,
+  PlayerVisibleGameState, GameSeat,
 } from '@shared/types';
 import type { NnChoice } from '@shared/rules/ninetynine';
 import { gameBot } from './bot-registry';
@@ -29,18 +28,6 @@ export type BotAction =
   | { readonly type: 'napoleon-action'; readonly action: NapoleonAction };
 
 /** Decisions receive only filtered player information and injectable randomness. */
-export function getBotAction(
-  visible: PlayerVisibleGameState, random: () => number = Math.random,
-  difficulty: BotDifficulty = 'hard',
-): BotAction | null {
-  if (visible.phase === 'scoring') return null;
-  const bot = gameBot(visible.gameType);
-  return difficulty === 'easy' ? bot.easy(visible, random) : bot.hard(visible, random);
-}
-
-/** Basic decisions use only the current legal choices, without opponent inference or lookahead. */
-export function getEasyBotAction(
-  visible: PlayerVisibleGameState, random: () => number = Math.random,
-): BotAction | null {
-  return getBotAction(visible, random, 'easy');
+export function getBotAction(visible: PlayerVisibleGameState, random: () => number = Math.random): BotAction | null {
+  return visible.phase === 'scoring' ? null : gameBot(visible.gameType).decide(visible, random);
 }

@@ -291,13 +291,13 @@ describe('Ten and a Half match', () => {
     expect(game().result).toMatchObject({ hands: 1, winners: ['E'] });
   });
 
-  it.each(['easy', 'hard'] as const)('plays full %s-bot matches with only legal actions at 2 to 8 seats', (difficulty) => {
+  it('plays full bot matches with only legal actions at 2 to 8 seats', () => {
     for (const count of [2, 3, 4, 6, 8]) {
       const seats = GAME_SEAT_ORDER.slice(0, count);
       start(seats, seats[0], true);
       const random = seeded(count * 17);
       let steps = 0;
-      drive(seats, (seat) => getBotAction(tenhalf.getPlayerVisibleState(CODE, seat)!, random, difficulty), () => {
+      drive(seats, (seat) => getBotAction(tenhalf.getPlayerVisibleState(CODE, seat)!, random), () => {
         steps += 1;
         if (steps % 7 === 0) expect(coherent()).toBe(true);
       });

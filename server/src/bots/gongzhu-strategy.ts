@@ -12,10 +12,6 @@ function action(card: Card | undefined): BotAction | null {
   return card ? { type: 'game-action', request: { gameType: 'gongzhu', action: { type: 'play', card } } } : null;
 }
 export function gongZhuFirstLegalAction(visible: GongZhuVisibleState): BotAction | null { return action(legal(visible)[0]); }
-export function easyGongZhuAction(visible: GongZhuVisibleState, random: () => number): BotAction | null {
-  const cards = legal(visible);
-  return action(cards[Math.min(cards.length - 1, Math.floor(random() * cards.length))]);
-}
 
 /** Avoid negative tricks, seek positive ones, and shed dangerous cards when unable to win. No hidden hands are read. */
 export function getGongZhuBotAction(visible: GongZhuVisibleState, random: () => number = Math.random): BotAction | null {

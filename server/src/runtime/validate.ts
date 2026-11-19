@@ -1,5 +1,4 @@
 import { isMessageReply } from '../media/message-reply';
-import { isBotDifficulty } from '@shared/bot-difficulty';
 import {
   isAvatarBorderId, MAX_MESSAGE_EMOJIS, isEmojiName, isMediaId, isProvidedEmojiFile, ABORT_VOTE_THRESHOLD,
   MAX_ROOM_MEMBERS, MAX_ROOM_SEATS, isShopStickerId, MAX_SPECTATORS,
@@ -58,7 +57,8 @@ function player(value: unknown): boolean {
     object(value) &&
     text(value.id) &&
     (value.isBot === undefined || typeof value.isBot === 'boolean') &&
-    (value.botDifficulty === undefined || (value.isBot === true && isBotDifficulty(value.botDifficulty))) &&
+    // Retired per-bot difficulty: older snapshots and recorded frames still carry it; restoring drops it.
+    (value.botDifficulty === undefined || (value.isBot === true && oneOf(value.botDifficulty, ['easy', 'hard']))) &&
     (value.isBot === true
       ? /^bot:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.id)
       : !value.id.startsWith('bot:')) &&
@@ -399,9 +399,7 @@ export function isRuntimeSnapshot(value: unknown, options: RuntimeValidationOpti
       currentRoom.info.status !== 'playing' ||
       currentRoom.info.gameType !== entry.gameType ||
       !gameSeats.every((seat) => roomSeatInfo(currentRoom.info, seat)?.player?.id === (entry.players as Partial<Record<GameSeat, { id: string }>>)[seat]?.id
-        && (roomSeatInfo(currentRoom.info, seat)?.player?.isBot === true) === ((entry.players as Partial<Record<GameSeat, { isBot?: boolean }>>)[seat]?.isBot === true)
-        && (roomSeatInfo(currentRoom.info, seat)?.player?.botDifficulty ?? 'hard')
-          === ((entry.players as Partial<Record<GameSeat, { botDifficulty?: string }>>)[seat]?.botDifficulty ?? 'hard'))
+        && (roomSeatInfo(currentRoom.info, seat)?.player?.isBot === true) === ((entry.players as Partial<Record<GameSeat, { isBot?: boolean }>>)[seat]?.isBot === true))
     )
       return false;
   }

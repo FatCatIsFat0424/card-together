@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { BattleshipShot, BattleshipVisibleState, GameSeat, PlayerInfo } from '@shared/types';
 import {
-  BS_SHIPS, DEFAULT_BATTLESHIP_OPTIONS, bsCell, bsContacts, bsIndex, bsNode, bsOrthogonal, bsRandomFleet,
+  BS_CELLS, BS_SHIPS, DEFAULT_BATTLESHIP_OPTIONS, bsCell, bsContacts, bsIndex, bsNode, bsOrthogonal, bsRandomFleet,
 } from '@shared/rules/battleship';
 import type { BattleshipOptions } from '@shared/rules/battleship';
+import type { BattleshipGameAction } from '@shared/games/battleship/actions';
 import { NO_DRAW_OFFER } from '@shared/rules/board/match-controls';
 import * as battleship from '../../src/managers/games/battleship-game';
 import { getBotAction } from '../../src/bots/bot-decisions';
@@ -77,19 +78,29 @@ describe('Battleship hard bot', () => {
     expect((performance.now() - started) / 50).toBeLessThan(20);
   });
 
-  it('beats the easy bot over seeded matches', () => {
-    let hardWins = 0;
+  it('beats a random shooter over seeded matches', () => {
+    let botWins = 0;
     const games = 30;
     for (let match = 0; match < games; match++) {
       // Alternate who shoots first so the first-shot edge cancels out.
-      const hardSeat: GameSeat = match % 2 === 0 ? 'N' : 'S';
+      const botSeat: GameSeat = match % 2 === 0 ? 'N' : 'S';
       battleship.startGame(CODE, { N: player('N'), S: player('S') }, DEFAULT_BATTLESHIP_OPTIONS, 60_000, 0);
       const random = seededRandom(1_000 + match);
       const act = (seat: GameSeat): void => {
         const visible = battleship.getPlayerVisibleState(CODE, seat)!;
-        const action = getBotAction(visible, random, seat === hardSeat ? 'hard' : 'easy');
-        if (action?.type !== 'game-action' || action.request.gameType !== 'battleship') throw new Error('Expected an action');
-        const request = action.request.action;
+        let request: BattleshipGameAction;
+        if (seat === botSeat) {
+          const action = getBotAction(visible, random);
+          if (action?.type !== 'game-action' || action.request.gameType !== 'battleship') throw new Error('Expected an action');
+          request = action.request.action;
+        } else if (!visible.placed.includes(seat)) {
+          request = { type: 'place-fleet', fleet: bsRandomFleet(random, DEFAULT_BATTLESHIP_OPTIONS) };
+        } else {
+          // The baseline shoots any cell it has not fired at yet.
+          const fired = new Set(visible.log.filter((entry) => entry.seat === seat).map((entry) => entry.to));
+          const open = Array.from({ length: BS_CELLS }, (_, cell) => bsNode(cell)).filter((node) => !fired.has(node));
+          request = { type: 'fire', to: open[Math.floor(random() * open.length)] };
+        }
         const result = request.type === 'place-fleet' ? battleship.placeFleet(CODE, seat, request.fleet, true, 1)
           : request.type === 'fire' ? battleship.fire(CODE, seat, request.to, 1) : { success: false };
         expect(result.success).toBe(true);
@@ -99,10 +110,10 @@ describe('Battleship hard bot', () => {
       for (let step = 0; step < 300 && battleship.getGameState(CODE)?.phase === 'playing'; step++) {
         act(battleship.getGameState(CODE)!.currentTurnSeat);
       }
-      if (battleship.getGameState(CODE)?.result?.winners[0] === hardSeat) hardWins++;
+      if (battleship.getGameState(CODE)?.result?.winners[0] === botSeat) botWins++;
       battleship.abortGame(CODE);
     }
-    // Measured 30 of 30; the hard bot sinks a fleet in about 45 shots.
-    expect(hardWins).toBeGreaterThanOrEqual(24);
+    // Measured 30 of 30; the bot sinks a fleet in about 45 shots, a random shooter needs about 95.
+    expect(botWins).toBeGreaterThanOrEqual(24);
   });
 });

@@ -92,16 +92,6 @@ function partitionCost(guess: CbCode, targets: readonly CbCode[]): number {
 }
 
 /**
- * A random code that fits the seat's own feedback: what the easy bot guesses and what a seat that ran out
- * of time gets.
- */
-export function easyCodeBreakerAction(visible: CodeBreakerVisibleState, random: () => number): BotAction | null {
-  if (!owesGuess(visible)) return null;
-  const candidates = consistentCodes(visible);
-  return guessAction(candidates.length > 0 ? pick(candidates, random) : cbRandomCode(visible.options.variant, random));
-}
-
-/**
  * Hard bot: keeps every code consistent with its own feedback and guesses the one (or, while many remain, a
  * probe) whose feedback would split a sample of those codes most evenly. It sees nothing but its own guesses.
  */

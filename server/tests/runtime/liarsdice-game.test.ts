@@ -78,13 +78,13 @@ function persists(state: AnyGameState): boolean {
   return isRuntimeSnapshot(snapshot);
 }
 
-/** Plays with the hard bot, or the easy one for odd seats, until the last player stands. */
+/** Plays with the bot until the last player stands. */
 function playOut(random: () => number, onStep?: () => void): void {
   for (let step = 0; step < 3_000 && game().phase === 'playing'; step++) {
     const state = game();
     const seat = state.currentTurnSeat;
     const visible = liarsdice.getPlayerVisibleState(CODE, seat)!;
-    const action = getBotAction(visible, random, GAME_SEAT_ORDER.indexOf(seat) % 2 === 0 ? 'hard' : 'easy');
+    const action = getBotAction(visible, random);
     if (action?.type !== 'game-action' || action.request.gameType !== 'liarsdice') throw new Error('Expected a dice action');
     const move = action.request.action;
     const result = move.type === 'bid' ? liarsdice.bid(CODE, seat, move.quantity, move.face)

@@ -1,7 +1,8 @@
 // ─── Jungle search: iterative-deepening alpha-beta over material, advance toward the den, and captures ───
 //
-// Runs inside a bot worker (`GameBot.search`) and, at a shallow depth, as the cheap synchronous move that
-// serves player timeouts. It reads only the seat's own view, which for Jungle is the whole public board.
+// Runs inside a bot worker (`GameBot.search`) and, at a shallow depth, as the cheap synchronous
+// fallback when no pool runs or a search fails. It reads only the seat's own view, which for Jungle is the
+// whole public board.
 
 import type { JungleVisibleState } from '@shared/types';
 import {

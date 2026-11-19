@@ -1,11 +1,10 @@
 import { defaultGameOptions, isGameOptionsPayload, restoredGameOptions } from '@shared/games/room-options';
 import { DEFAULT_TIME_CONTROL, followDefaultTimeControl, isTimeControl } from '@shared/time-control';
-import { isBotDifficulty } from '@shared/bot-difficulty';
 import { isRoomReplayPlayback } from '@shared/replay-session';
 import { isDeepStrictEqual } from 'node:util';
 import { randomInt, randomUUID } from 'node:crypto';
 import type {
-  BotDifficulty, GameOptionsByType, GameOptionsPayload, GameType, PlayerInfo, RoomCode, RoomInfo,
+  GameOptionsByType, GameOptionsPayload, GameType, PlayerInfo, RoomCode, RoomInfo,
   RoomReplaySession, RoomSeatTarget, RoomStatus, Seat, SeatInfo, SeatMap, TimeControl,
 } from '@shared/types';
 import {
@@ -167,10 +166,9 @@ function tableChanged(room: PersistedRoom): void {
   if (room.info.status !== 'playing' && gameDefinition(room.info.gameType).seats.flexible) resetAllReady(room.info.code);
 }
 
-export function addBot(code: RoomCode, playerId: string, seat: GameSeat, difficulty: BotDifficulty = 'hard'): Result {
+export function addBot(code: RoomCode, playerId: string, seat: GameSeat): Result {
   const allowed = requireBotManagement(code, playerId);
   if (!allowed.success) return allowed;
-  if (!isBotDifficulty(difficulty)) return { success: false, reason: 'Invalid bot difficulty.' };
   const room = rooms.get(code)!;
   const entry = roomSeatInfo(room.info, seat);
   if (!entry || !roomSeats(room.info).includes(seat)) return { success: false, reason: 'Invalid seat.' };
@@ -180,24 +178,11 @@ export function addBot(code: RoomCode, playerId: string, seat: GameSeat, difficu
   }
   const bot: PlayerInfo = {
     id: `bot:${randomUUID()}`, username: `bot-${seat.toLowerCase()}`, nickname: botNickname(room.info.gameType, seat),
-    color: '#64748b', avatar: 'bot', avatarImage: null, isBot: true, botDifficulty: difficulty,
+    color: '#64748b', avatar: 'bot', avatarImage: null, isBot: true,
   };
   room.memberIds.push(bot.id);
   room.info = withSeat(room.info, seat, { player: bot, isReady: true });
   tableChanged(room);
-  return { success: true };
-}
-
-export function setBotDifficulty(code: RoomCode, playerId: string, seat: GameSeat, difficulty: BotDifficulty): Result {
-  const allowed = requireBotManagement(code, playerId);
-  if (!allowed.success) return allowed;
-  if (!isBotDifficulty(difficulty)) return { success: false, reason: 'Invalid bot difficulty.' };
-  const room = rooms.get(code)!;
-  const bot = roomSeatInfo(room.info, seat)?.player;
-  if (!bot?.isBot) return { success: false, reason: 'No bot in this seat.' };
-  if ((bot.botDifficulty ?? 'hard') === difficulty) return { success: true };
-  room.info = withSeat(room.info, seat, { player: { ...bot, botDifficulty: difficulty }, isReady: true });
-  resetAllReady(code);
   return { success: true };
 }
 

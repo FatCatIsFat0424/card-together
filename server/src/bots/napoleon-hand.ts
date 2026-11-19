@@ -90,17 +90,6 @@ export function chooseHardBid(
   return best?.action ?? { type: 'pass' };
 }
 
-/** Easy bids only an obviously strong hand, and only to open the auction. */
-export function chooseEasyBid(bidding: NapoleonBiddingState, hand: readonly NapoleonCard[], playerCount: number): NapoleonBidAction {
-  if (bidding.highestBid) return { type: 'pass' };
-  const strength = hand.filter(isNapoleonJoker).length * 2 + hand.filter(isNapoleonPointCard).length;
-  const threshold = playerCount === 4 ? 7 : playerCount === 5 ? 6 : 5;
-  if (strength < threshold) return { type: 'pass' };
-  const length = (suit: Suit): number => suitCards(hand, suit).length;
-  const longest = [...SUITS].reverse().reduce((top, suit) => length(suit) > length(top) ? suit : top);
-  return { type: 'bid', level: NAPOLEON_MIN_LEVEL, suit: longest };
-}
-
 /** How much the Napoleon wants to keep a card, given what remains of its suit. */
 function keepValue(card: NapoleonCard, kept: readonly NapoleonCard[], trump: Suit | null): number {
   if (isNapoleonJoker(card)) return 1000;

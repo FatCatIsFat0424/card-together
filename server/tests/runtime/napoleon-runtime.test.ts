@@ -251,20 +251,20 @@ describe('Napoleon seeded bot matches', () => {
   beforeEach(() => napoleon.restoreGames([]));
 
   it.each([
-    [4, 'hard', 11], [5, 'hard', 12], [6, 'hard', 13], [4, 'easy', 21], [5, 'easy', 22], [6, 'easy', 23],
-  ] as const)('%i %s bots finish a match from their own views', (count, difficulty, seed) => {
-    const code = `BOTN${count}${difficulty[0]}`;
+    [4, 11], [5, 12], [6, 13], [4, 21], [5, 22], [6, 23],
+  ] as const)('%i bots (seed %i) finish a match from their own views', (count, seed) => {
+    const code = `BOTN${count}S${seed}`;
     const seats = ALL_SEATS.slice(0, count);
     const random = seeded(seed);
     napoleon.startGame(code, Object.fromEntries(seats.map((seat) => [seat, human(seat)])), undefined,
       napoleon.shuffleNapoleonDeck(random), seats[0], 0);
     const state = (): NapoleonGameState => napoleon.getGameState(code)!;
-    runSeededGame(`Napoleon ${count} ${difficulty}`, 600, () => state().phase === 'scoring', () => {
+    runSeededGame(`Napoleon ${count} seed ${seed}`, 600, () => state().phase === 'scoring', () => {
       const current = state();
       const seat = current.phase === 'reviewing' ? napoleon.pendingReviewSeats(current)[0] : current.currentTurnSeat;
       if (!seat) throw new Error('Expected a seat to act');
       const visible = napoleon.getPlayerVisibleState(code, seat)!;
-      const action = getBotAction(visible, random, difficulty);
+      const action = getBotAction(visible, random);
       if (action?.type !== 'napoleon-action') throw new Error(`No Napoleon action for ${seat} in ${current.phase}`);
       const result = napoleon.act(code, seat, action.action, 30_000, 0, () => napoleon.shuffleNapoleonDeck(random));
       if (!result.success) throw new Error(`${seat} ${JSON.stringify(action.action)}: ${result.reason}`);

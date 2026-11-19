@@ -27,9 +27,9 @@ client 的 `predev` 與 `prebuild` 會從被忽略的 `local-music/`、`local-em
 | `CLIENT_ORIGIN` | 以逗號分隔、完全相符的 `http(s)://host[:port]` origin：不含路徑、結尾斜線或預設連接埠。正式環境必填；開發環境預設為 `localhost:5173` 與 `127.0.0.1:5173`。有無效項目時會停止啟動 |
 | `NODE_ENV` | `production` 會啟用 Secure cookie 並要求 HTTPS |
 | `TRUST_PROXY_LOOPBACK` | 預設 `false`。只在可信任、會覆寫轉送位址的本機 proxy 後方啟用 |
-| `BOT_WORKERS` | 搜尋型 bot 的 worker thread 數量，預設 `2`，範圍 0–8；`0` 關閉 worker pool，搜尋型 bot 改用簡單策略（[Bot worker pool](architecture.md#bot-worker-pool)）。不是範圍內的整數時會停止啟動 |
+| `BOT_WORKERS` | 搜尋型 bot 的 worker thread 數量，預設 `4`，範圍 0–8；`0` 關閉 worker pool，搜尋型 bot 與逾時代打改用同步的淺層決策（[Bot worker pool](architecture.md#bot-worker-pool)）。不是範圍內的整數時會停止啟動 |
 | `BOT_WORKER_MEMORY_MB` | 每個 worker 的 V8 old-generation 堆積上限（MiB），預設 `128`，範圍 32–1024；超過時該 worker 會被終止並視為當機 |
-| `BOT_SEARCH_QUEUE` | 等待空閒 worker 的任務上限，預設 `32`，範圍 0–1024；超過時直接改用簡單策略 |
+| `BOT_SEARCH_QUEUE` | 等待空閒 worker 的任務上限，預設 `32`，範圍 0–1024；超過時直接改用同步的淺層決策 |
 | `SEVENS_DEV_PRESET` | 只限開發環境。`near-slay` 會在 44 筆出牌紀錄後開始牌七，每個花色都已從 2 排到 Q，每個座位留下兩張 A 或 K。其他任何值，或正式環境中的任何值，都會停止啟動 |
 
 | Vite 變數 | 行為 |
@@ -79,7 +79,7 @@ npm run bench:load       # 120 scripted players against a separate server proces
 - 每個基準測試都會建立並移除自己的暫存資料庫。絕對不要讓它指向正式環境的 `DATABASE_PATH`。
 - Socket 結果：`payloadBytes` 與 `snapshotPayloadBytes` 計算快照，`chatPayloadBytes` 計算聊天。接受結果前，先確認 acknowledgement、接收者與工作負載都正確。
 - 排牌的時間預算需手動執行；它的正確性測資留在 Vitest 中。
-- 陸戰棋 bot：兩個策略依種子對戰，每局交換先後，輸出勝、負、和與各自的決策時間。選項：`-- --a search --b sync --games 20 --seed 1 --budget 100`；策略有 `search`（worker 搜尋）、`sync`（同步困難）、`easy`。`--budget` 是搜尋每步的毫秒數；`--samples N` 改為固定抽樣次數，結果只取決於種子。和舊版比較時，把舊版的 `landbattle-knowledge.ts`、`landbattle-search.ts`、`landbattle-strategy.ts` 放進同一個目錄（例如用 `git show <commit>:<path>` 取出），加上 `--baseline <目錄>`，即可使用 `base-search` 與 `base-sync`。CPU 負載會改變時間預算內的抽樣次數，所以要比較的兩方應在同一次執行中對戰。
+- 陸戰棋 bot：兩個策略依種子對戰，每局交換先後，輸出勝、負、和與各自的決策時間。選項：`-- --a search --b sync --games 20 --seed 1 --budget 100`；策略有 `search`（worker 搜尋）與 `sync`（同步的淺層決策）。`--budget` 是搜尋每步的毫秒數；`--samples N` 改為固定抽樣次數，結果只取決於種子。和舊版比較時，把舊版的 `landbattle-knowledge.ts`、`landbattle-search.ts`、`landbattle-strategy.ts` 放進同一個目錄（例如用 `git show <commit>:<path>` 取出），加上 `--baseline <目錄>`，即可使用 `base-search` 與 `base-sync`。CPU 負載會改變時間預算內的抽樣次數，所以要比較的兩方應在同一次執行中對戰。
 - Render：建置用戶端、啟動暫時的伺服器，並在 706x336（DPR 3）、4 倍 CPU 降速下，對每款遊戲與每組裝備各錄一次玩家回合的 5 秒 trace。預設的五款遊戲分別代表撲克牌、籌碼、骰子、棋類與跳棋星盤；每組裝備一次裝上該系列所有商品（含棋子、棋盤與骰子造型），讓動態系列的動畫同時出現在畫面上。選項：`-- --games liarsdeck,holdem,liarsdice,xiangqi,chinesecheckers --sets plain,starfleet,neoncity --samples 1 --mode idle`；`--games` 另外接受 `reversi`、`gomoku`、`banqi`。`--mode moves` 在開始錄製前讓 bot 代打玩家的座位，trace 期間持續有棋步落下，輸出多一個 `moves`（錄到的新紀錄數），用來量測棋子特效；每列也輸出 `svgPaints`（`svg` 元素的重繪次數）、`mainCpuMs`（主執行緒 CPU 時間，受其他程序負載的影響比 `mainTaskMs` 小）與 `stepMs`（主執行緒依 script、style、layout、paint、layerize 等步驟拆開的時間）。歸因成本時：`--slots pieceStyle,boardStyle,diceStyle` 只裝上系列中的這些欄位（欄位名稱同帳號的裝備欄位，另有 `avatarBorder`），`--reduced-motion on` 模擬減少動態效果（保留靜態造型、停掉所有動畫與特效），`--trace-dir <目錄>` 保留每次的原始 trace（`<game>-<set>-<sample>.json`，可用 DevTools 開啟）。需要 Chromium：`npx playwright install chromium-headless-shell`，或設定 `CHROME`（缺少系統函式庫時另設 `LD_LIBRARY_PATH`）。在同一次執行中拿 `mainTaskMs` 與 `paints` 和 `plain` 比較：絕對時間會隨機器負載變動，而且 headless 模式下 compositor（`VizCompositorThread`）在 CPU 上執行，和手機的 GPU 不同。
 - Load：產生達到保留上限的模擬資料庫（2,000 個帳號、每人 100 場對局、回放封存），在獨立程序中以空閒連接埠與暫存狀態目錄啟動伺服器，再驅動 150 個已登入的用戶端：房間依遊戲登錄順序輪流分配遊戲，預設每款遊戲一個房間（`--rooms` 預設為遊戲數，設得較少時只涵蓋前幾款），包含腳本化的真人與 bot、旁觀者、房間聊天、大廳 HTTP、私訊，以及定期重新連線。`--engine sqlite` 會以正式的匯入函式把產生的 JSON 匯入 SQLite 並回報匯入時間；預設為 `json`。選項：`-- --engine json --duration 600 --clients 150 --rooms 27 --accounts 2000 --matches 100 --replays 1000 --output report.json`。JSON 輸出到 stdout，摘要輸出到 stderr；請用 `npm run --silent`。執行前先確認主機負載，並和結果一起回報。
 - 只比較完全相同的工作負載與執行環境版本。前端啟動大小包括進入點 chunk **以及**預先載入的 chunk。

@@ -1,7 +1,8 @@
 // ─── Gomoku search: five-cell window scores, forced-move extensions, and iterative-deepening alpha-beta ───
 //
-// Runs inside a bot worker (`GameBot.search`) and, with a small node budget, as the cheap synchronous move that
-// serves player timeouts. It reads only the seat's own view, which for Gomoku is the whole public board.
+// Runs inside a bot worker (`GameBot.search`) and, with a small node budget, as the cheap synchronous
+// fallback when no pool runs or a search fails. It reads only the seat's own view, which for Gomoku is the
+// whole public board.
 
 import type { GomokuVisibleState } from '@shared/types';
 import {

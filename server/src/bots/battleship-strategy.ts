@@ -126,11 +126,11 @@ export function hardShot(knowledge: BsTargetKnowledge, random: () => number): nu
     }
   }
   // No placement fits what was seen (hits of ships lying side by side), so follow up the hits directly.
-  return best > 0 ? pick(choices, random) : easyShot(knowledge, random);
+  return best > 0 ? pick(choices, random) : followUpShot(knowledge, random);
 }
 
 /** A random unshot cell, except that after a hit it tries a random unshot neighbour of an open hit. */
-export function easyShot(knowledge: BsTargetKnowledge, random: () => number): number | null {
+function followUpShot(knowledge: BsTargetKnowledge, random: () => number): number | null {
   const follow = knowledge.openHits.flatMap(bsOrthogonal).filter((cell) => !knowledge.shot.has(cell));
   if (follow.length > 0) return pick(follow, random);
   const cells = openCells(knowledge);
@@ -146,14 +146,6 @@ export function spreadFleet(visible: Pick<BattleshipVisibleState, 'options'>, ra
     if (!best || contacts < best.contacts) best = { fleet, contacts };
   }
   return best!.fleet;
-}
-
-/** Easy: a random fleet, then random shots with a simple follow-up after a hit. Also a timed-out player's shot. */
-export function easyBattleshipAction(visible: BattleshipVisibleState, random: () => number): BotAction | null {
-  if (owesFleet(visible)) return fleetAction(bsRandomFleet(random, visible.options));
-  if (!onTurn(visible)) return null;
-  const cell = easyShot(targetKnowledge(visible), random);
-  return cell === null ? null : shootAction(cell);
 }
 
 /** Hard: a spread-out fleet, then probability-density hunting and target mode from its own shot results. */

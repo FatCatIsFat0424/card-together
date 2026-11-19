@@ -6,7 +6,7 @@ import {
 import type { LbRank, LbSide } from '@shared/rules/landbattle';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
-import { deploymentPrior, estimateOdds, landBattleKnowledge, movementKnowledge, sampleIdentities } from '../../src/bots/landbattle-knowledge';
+import { deploymentPrior, estimateOdds, landBattleKnowledge, sampleIdentities } from '../../src/bots/landbattle-knowledge';
 import type { LbBotCell, LbKnowledge } from '../../src/bots/landbattle-knowledge';
 import {
   flagOpenings, lbAttackers, landBattleSearch, recentMoves, scoreMove, searchMoves, templateLayout,
@@ -78,15 +78,13 @@ function samples(count: number): { maxDepth: undefined; timeLeftMs: () => number
 afterEach(() => landbattle.abortGame(CODE));
 
 describe('Land Battle Chess bot deployment', () => {
-  it('deploys legal templates on Hard and random legal layouts on Easy', () => {
+  it('deploys legal templates', () => {
     for (let seed = 1; seed <= 60; seed++) expect(lbLayoutError(templateLayout(seededRandom(seed)))).toBeNull();
     start([], []);
-    for (const difficulty of ['hard', 'easy'] as const) {
-      const action = gameBot('landbattle')[difficulty](view('N'), seededRandom(4));
-      expect(action).toMatchObject({ type: 'game-action', request: { action: { type: 'deploy' } } });
-      if (action?.type === 'game-action' && action.request.gameType === 'landbattle' && action.request.action.type === 'deploy') {
-        expect(lbLayoutError(action.request.action.layout)).toBeNull();
-      }
+    const action = gameBot('landbattle').decide(view('N'), seededRandom(4));
+    expect(action).toMatchObject({ type: 'game-action', request: { action: { type: 'deploy' } } });
+    if (action?.type === 'game-action' && action.request.gameType === 'landbattle' && action.request.action.type === 'deploy') {
+      expect(lbLayoutError(action.request.action.layout)).toBeNull();
     }
     // The worker strategy answers a deployment straight away.
     const search = landBattleSearch(view('S'), { random: seededRandom(2), budget: { maxDepth: undefined, timeLeftMs: () => 0, expired: () => true } });
@@ -109,7 +107,7 @@ describe('Land Battle Chess identity inference', () => {
     expect(knowledge.odds.get(lbIndex(0, 5))!.flag).toBe(0);
   });
 
-  it('learns from a published battle outcome and from movement, and never from the hidden state', () => {
+  it('learns from a published battle outcome and from movement', () => {
     start();
     // N's major-general meets S's piece on (0,5): both removed, so it was a major-general (no bomb on the front row).
     expect(landbattle.move(CODE, 'N', '0,6', '0,5').success).toBe(true);
@@ -122,8 +120,6 @@ describe('Land Battle Chess identity inference', () => {
     const moved = knowledge.allowed.get(lbIndex(2, 4))!;
     expect(moved.has('mine') || moved.has('flag')).toBe(false);
     expect(knowledge.board[lbIndex(2, 3)]).toMatchObject({ side: 1, token: lbIndex(2, 4) });
-    // The easy bot only uses movement: the battle tells it nothing.
-    expect(movementKnowledge(view('N'))!.allowed.get(lbIndex(0, 5))!.size).toBeGreaterThan(1);
   });
 
   it('pins the flag once the marshal falls', () => {
@@ -254,10 +250,10 @@ describe('Land Battle Chess Hard search', () => {
     ]);
   });
 
-  it('keeps the synchronous Hard move cheap and legal', () => {
+  it('keeps the synchronous move cheap and legal', () => {
     start();
     const started = performance.now();
-    const action = gameBot('landbattle').hard(view('N'), seededRandom(3));
+    const action = gameBot('landbattle').decide(view('N'), seededRandom(3));
     expect(performance.now() - started).toBeLessThan(400);
     expect(legal('N', action)).toBe(true);
   });

@@ -253,7 +253,7 @@ describe('Code Breaker hidden information', () => {
 
   it('feeds bots only their own filtered view and parses actions', () => {
     start(['N', 'E'], { variant: 'digits' }, true);
-    const action = getBotAction(view('N'), seededRandom(2), 'hard');
+    const action = getBotAction(view('N'), seededRandom(2));
     expect(action).toMatchObject({ type: 'game-action', request: { gameType: 'codebreaker', action: { type: 'guess' } } });
     expect(parseGameAction({ gameType: 'codebreaker', action: { type: 'guess', code: [1, 2, 3, 4] } }))
       .toEqual({ gameType: 'codebreaker', action: { type: 'guess', code: [1, 2, 3, 4] } });

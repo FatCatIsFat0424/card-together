@@ -17,12 +17,6 @@ export function spadesFirstLegalAction(view: SpadesVisibleState): BotAction | nu
   return view.phase === 'bidding' ? wrap({ type: 'bid', bid: estimate(view.myHand) })
     : view.validCards[0] ? wrap({ type: 'play', card: view.validCards[0] }) : null;
 }
-export function easySpadesAction(view: SpadesVisibleState, random: () => number = Math.random): BotAction | null {
-  if (!active(view)) return null;
-  if (view.phase === 'bidding') return wrap({ type: 'bid', bid: estimate(view.myHand) });
-  const cards = view.validCards;
-  return cards.length ? wrap({ type: 'play', card: cards[Math.min(cards.length - 1, Math.floor(random() * cards.length))] }) : null;
-}
 /** Partnership heuristics use only the player's hand, public bids, and the current trick. */
 export function getSpadesBotAction(view: SpadesVisibleState, random: () => number = Math.random): BotAction | null {
   if (!active(view)) return null;

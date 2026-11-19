@@ -84,9 +84,9 @@ export function estimateOdds(
  * its station allows (flag in a headquarters, mines in the last two rows, no bomb on the front row); moving
  * rules out mines and the flag, turning along a railway means an engineer, every battle keeps only the
  * identities that give its published outcome against the known own piece (and never the flag, since play
- * went on), and a shown flag or a fallen marshal pins the piece down. `inferBattles` false keeps only what movement shows (the easy bot).
+ * went on), and a shown flag or a fallen marshal pins the piece down.
  */
-export function landBattleKnowledge(visible: LandBattleVisibleState, inferBattles = true): LbKnowledge | null {
+export function landBattleKnowledge(visible: LandBattleVisibleState): LbKnowledge | null {
   const index = visible.seats.indexOf(visible.mySeat);
   const layout = visible.myLayout;
   if (index < 0 || !layout || visible.phase === 'deploying') return null;
@@ -131,11 +131,9 @@ export function landBattleKnowledge(visible: LandBattleVisibleState, inferBattle
     const opponentPiece = moverIsOpponent ? mover : defender;
     const ownPiece = moverIsOpponent ? defender : mover;
     const ownRank = ownPiece.rank!;
-    if (inferBattles) {
-      // A battle against the flag ends the match, so a piece that fought while play goes on is not the flag.
-      keep(opponentPiece.token, (rank) => rank !== 'flag'
-        && (moverIsOpponent ? lbBattle(rank, ownRank) : lbBattle(ownRank, rank)) === entry.battle);
-    }
+    // A battle against the flag ends the match, so a piece that fought while play goes on is not the flag.
+    keep(opponentPiece.token, (rank) => rank !== 'flag'
+      && (moverIsOpponent ? lbBattle(rank, ownRank) : lbBattle(ownRank, rank)) === entry.battle);
     const attackerWins = entry.battle === 'win';
     const removed = entry.battle === 'tie' ? [mover, defender] : attackerWins ? [defender] : [mover];
     board[to] = attackerWins ? mover : entry.battle === 'lose' ? defender : null;
@@ -168,12 +166,7 @@ export function landBattleKnowledge(visible: LandBattleVisibleState, inferBattle
       for (const token of tokens) if (!pinned.includes(token)) keep(token, (other) => other !== rank);
     }
   }
-  return { side, board, tokens, alive, allowed, odds: estimateOdds(tokens, allowed, inferBattles ? deploymentPrior : undefined), ownLost };
-}
-
-/** Plain prior knowledge, which ignores battle outcomes: the easy bot and the immediate fallback use it. */
-export function movementKnowledge(visible: LandBattleVisibleState): LbKnowledge | null {
-  return landBattleKnowledge(visible, false);
+  return { side, board, tokens, alive, allowed, odds: estimateOdds(tokens, allowed, deploymentPrior), ownLost };
 }
 
 /** The most likely identities of a token, most probable first. */

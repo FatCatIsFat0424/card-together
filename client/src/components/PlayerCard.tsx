@@ -72,7 +72,7 @@ export function PlayerCard({ player, gameType, anchor, onClose }: {
       <div className={styles.names}>
         <strong style={{ color: player.color }}>{player.nickname}</strong>
         {player.isBot
-          ? <span className={styles.muted}>{t('player.bot')} · {t(`room.botDifficulty.${player.botDifficulty ?? 'hard'}`)}</span>
+          ? <span className={styles.muted}>{t('player.bot')}</span>
           : <span className={styles.muted}>@{player.username}</span>}
         <Nameplate id={player.nameplate} />
       </div>

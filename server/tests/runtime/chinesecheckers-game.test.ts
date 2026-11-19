@@ -381,12 +381,12 @@ describe('Chinese checkers adapter and stored state', () => {
 });
 
 describe('Chinese checkers bots through the registry', () => {
-  it.each([2, 3, 6])('plays only legal moves in a full %i-player bot match on both difficulties', (count) => {
+  it.each([2, 3, 6])('plays only legal moves in a full %i-player bot match', (count) => {
     start(count);
     for (let guard = 0; guard < 2_000 && game().phase === 'playing'; guard++) {
       const seat = game().currentTurnSeat;
       const view = checkers.getPlayerVisibleState(CODE, seat)!;
-      const action = getBotAction(view, seeded(guard), ORDER.indexOf(seat) % 2 === 0 ? 'hard' : 'easy');
+      const action = getBotAction(view, seeded(guard));
       expect(action).toMatchObject({ type: 'game-action', request: { gameType: 'chinesecheckers', action: { type: 'move' } } });
       const request = (action as { request: { action: { from: string; to: string } } }).request.action;
       expect(checkers.move(CODE, seat, request.from, request.to)).toEqual({ success: true });
@@ -397,24 +397,24 @@ describe('Chinese checkers bots through the registry', () => {
 
   it('returns nothing off turn or after the end, and the fallbacks are legal moves', () => {
     start();
-    expect(getBotAction(checkers.getPlayerVisibleState(CODE, 'E')!, Math.random, 'easy')).toBeNull();
+    expect(getBotAction(checkers.getPlayerVisibleState(CODE, 'E')!, Math.random)).toBeNull();
     const bot = gameBot('chinesecheckers');
     expect(bot.firstLegal(checkers.getPlayerVisibleState(CODE, 'E')!)).toBeNull();
     const first = bot.firstLegal(checkers.getPlayerVisibleState(CODE, 'N')!);
     const request = (first as { request: { action: { from: string; to: string } } }).request.action;
     expect(checkers.move(CODE, 'N', request.from, request.to)).toEqual({ success: true });
-    const timeout = bot.turnTimeout!(checkers.getPlayerVisibleState(CODE, 'E')!, { isBot: false, strategy: () => null });
+    const timeout = getBotAction(checkers.getPlayerVisibleState(CODE, 'E')!, seeded(7));
     const timed = (timeout as { request: { action: { from: string; to: string } } }).request.action;
     expect(checkers.move(CODE, 'E', timed.from, timed.to)).toEqual({ success: true });
     checkers.control(CODE, 'N', { type: 'resign' });
-    expect(getBotAction(checkers.getPlayerVisibleState(CODE, 'E')!, Math.random, 'hard')).toBeNull();
+    expect(getBotAction(checkers.getPlayerVisibleState(CODE, 'E')!, Math.random)).toBeNull();
   });
 
   it('never moves for a seat that resigned', () => {
     start(3);
     checkers.control(CODE, 'N', { type: 'resign' });
     const view = checkers.getPlayerVisibleState(CODE, 'N')!;
-    expect(getBotAction({ ...view, currentTurnSeat: 'N' }, Math.random, 'hard')).toBeNull();
+    expect(getBotAction({ ...view, currentTurnSeat: 'N' }, Math.random)).toBeNull();
   });
 });
 

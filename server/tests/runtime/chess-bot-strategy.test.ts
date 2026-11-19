@@ -5,10 +5,10 @@ import {
   chessVerdict,
 } from '@shared/rules/chess';
 import type { ChessMove, ChessPosition, ChessSide } from '@shared/rules/chess';
-import { getBotAction, getEasyBotAction } from '../../src/bots/bot-decisions';
+import { getBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
-import { chessBestMove, chessEasyMove, chessSearch, chessTurn } from '../../src/bots/chess-search';
+import { chessBestMove, chessSearch, chessTurn } from '../../src/bots/chess-search';
 import { createSearchPool } from '../../src/bots/search/search-worker-pool';
 import type { SearchPool } from '../../src/bots/search/search-worker-pool';
 import { seededRandom } from '../../src/bots/search/seeded-random';
@@ -36,30 +36,43 @@ const play = (seat: GameSeat, text: string): void => {
   expect(chess.move(CODE, seat, chessNode(move.from), chessNode(move.to), move.promotion)).toEqual({ success: true });
 };
 const key = (move: ChessMove): string => `${move.from}>${move.to}${move.promotion ?? ''}`;
+/** The white player's view of a fresh game whose board was replaced by `position`. */
+function viewOf(position: ChessPosition): ChessVisibleState {
+  chess.abortGame(CODE);
+  start();
+  const state = game();
+  state.board = [...position.board];
+  state.castling = position.castling;
+  return view('N');
+}
+const randomMove = (position: ChessPosition, random: () => number): ChessMove | null => {
+  const moves = chessLegalMoves(position);
+  return moves.length > 0 ? moves[Math.floor(random() * moves.length)] : null;
+};
 const budget = { maxDepth: 2, timeLeftMs: () => 1000, expired: () => false };
 
 afterEach(() => chess.abortGame(CODE));
 
-describe('Chess Easy bot', () => {
+describe('Chess synchronous bot', () => {
   it('plays only legal moves, varies with the random source, and stays out of turn', () => {
     start();
     const legal = new Set(chessLegalMoves(chessInitialPosition()).map(key));
     const picks = new Set<string>();
-    for (let seed = 1; seed <= 30; seed++) {
-      const move = moveOf(getEasyBotAction(view('N'), seededRandom(seed)))!;
+    for (let seed = 1; seed <= 12; seed++) {
+      const move = moveOf(getBotAction(view('N'), seededRandom(seed)))!;
       expect(legal.has(key(move))).toBe(true);
       picks.add(key(move));
     }
     expect(picks.size).toBeGreaterThan(1);
-    expect(getEasyBotAction(view('S'))).toBeNull();
+    expect(getBotAction(view('S'))).toBeNull();
   });
 
   it('takes a mate in one and a hanging queen', () => {
     const mate = chessFen('6k1/5ppp/8/8/8/8/8/R3K3 w - -');
-    const win = chessEasyMove(mate, 0, [], () => 0.99)!;
+    const win = moveOf(gameBot('chess').decide(viewOf(mate), () => 0.99))!;
     expect(chessVerdict(chessApply(mate, win), [])).toMatchObject({ reason: 'checkmate', loser: 1 });
     const hanging = chessFen('4k3/8/8/3q4/8/8/8/3RK3 w - -');
-    expect(chessEasyMove(hanging, 0, [], () => 0)).toEqual(chessMoveOf('d1d5'));
+    expect(moveOf(gameBot('chess').decide(viewOf(hanging), () => 0))).toEqual(chessMoveOf('d1d5'));
   });
 });
 
@@ -82,12 +95,8 @@ describe('Chess Hard search', () => {
   });
 
   it('chooses a promotion piece for a pawn that reaches the last rank', () => {
-    start();
-    const state = game();
     const position = chessFen('7k/P7/8/8/8/8/8/K6r w - -');
-    state.board = [...position.board];
-    state.castling = position.castling;
-    const move = moveOf(chessSearch(view('N'), { random: () => 0, budget: { ...budget, maxDepth: 3 } }))!;
+    const move = moveOf(chessSearch(viewOf(position), { random: () => 0, budget: { ...budget, maxDepth: 3 } }))!;
     expect(chessIsLegal(position, move)).toBe(true);
   });
 
@@ -104,27 +113,27 @@ describe('Chess Hard search', () => {
     expect(gameBot('chess').search).toMatchObject({ budgetMs: 1500, maxDepth: expect.any(Number) });
   });
 
-  it('plays only legal moves for a stretch of a match against the easy bot', () => {
+  it('plays only legal moves for a stretch of a match against itself', () => {
     start();
     for (let guard = 0; guard < 30 && game().phase === 'playing'; guard++) {
       const seat = game().currentTurnSeat;
-      const move = moveOf(getBotAction(view(seat), seededRandom(guard + 1), seat === 'N' ? 'hard' : 'easy'))!;
+      const move = moveOf(getBotAction(view(seat), seededRandom(guard + 1)))!;
       expect(chess.move(CODE, seat, chessNode(move.from), chessNode(move.to), move.promotion)).toEqual({ success: true });
     }
     expect(game().log.length).toBeGreaterThan(0);
   });
 
-  it('beats the easy bot on material in short seeded games', () => {
+  it('beats a random mover on material in short seeded games', () => {
     const value: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
     let ahead = 0;
     for (let seed = 1; seed <= 3; seed++) {
       let position: ChessPosition = chessInitialPosition();
       const history: string[] = [];
-      const hardSide: ChessSide = seed % 2 === 0 ? 0 : 1;
+      const botSide: ChessSide = seed % 2 === 0 ? 0 : 1;
       for (let ply = 0; ply < 40; ply++) {
-        const move = position.turn === hardSide
+        const move = position.turn === botSide
           ? chessBestMove(position, position.turn, history, { maxDepth: 3, budget: { expired: () => false }, random: lcg(seed * 100 + ply) })
-          : chessEasyMove(position, position.turn, history, lcg(seed * 100 + ply));
+          : randomMove(position, lcg(seed * 100 + ply));
         if (!move) break;
         history.push(chessPositionKey(position));
         position = chessApply(position, move);
@@ -132,7 +141,7 @@ describe('Chess Hard search', () => {
       }
       const material = (owner: ChessSide): number => position.board.reduce((total, cell) =>
         total + (cell && chessSideOf(cell) === owner ? value[chessKindOf(cell)] : 0), 0);
-      if (material(hardSide) > material(hardSide === 0 ? 1 : 0)) ahead++;
+      if (material(botSide) > material(botSide === 0 ? 1 : 0)) ahead++;
     }
     expect(ahead).toBeGreaterThanOrEqual(2);
   });

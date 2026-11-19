@@ -320,20 +320,6 @@ button.identity:disabled { cursor: default; }
 }
 .menu > button { justify-content: flex-start; min-height: var(--hit-size); }
 
-.difficulty { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: var(--text-sm); }
-.select.select {
-  min-width: 96px;
-  border-radius: var(--radius-md);
-  background: var(--surface-2);
-  color: var(--text-primary);
-  font: inherit;
-}
-.select :global(.MuiOutlinedInput-notchedOutline) { border: 0; }
-.select :global(.MuiSelect-icon) { color: var(--text-secondary); }
-.select :global(.MuiSelect-select.Mui-disabled) { -webkit-text-fill-color: var(--text-secondary); }
-.select[data-pending-disabled] :global(.MuiSelect-select.Mui-disabled) { -webkit-text-fill-color: var(--text-primary); }
-.selectMenu.selectMenu { background: var(--bg-surface); color: var(--text-primary); }
-
 .srOnly {
   position: absolute;
   width: 1px;

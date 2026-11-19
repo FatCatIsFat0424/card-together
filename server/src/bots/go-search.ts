@@ -1,10 +1,10 @@
-// ─── Go search: UCT with RAVE over light playouts, a tactical easy move, and the scoring-phase marking check ───
+// ─── Go search: UCT with RAVE over light playouts, and the scoring-phase marking check ───
 //
-// Pure and synchronous: the hard move runs inside a bot worker for its wall-clock budget; the easy move and the
-// marking check are cheap enough for the event loop. Playouts never fill their own single-point eyes, prefer
+// Pure and synchronous: the move search runs inside a bot worker for its wall-clock budget; the marking check is
+// cheap enough for the event loop. Playouts never fill their own single-point eyes, prefer
 // capturing or rescuing chains recently left in atari, and are otherwise random (see `go-ownership.ts`).
 
-import { goChain, goLegalPoints, goLiberties, goMoveLimit, goNode, goOpponent, goScore } from '@shared/rules/go';
+import { goLegalPoints, goMoveLimit, goNode, goScore } from '@shared/rules/go';
 import type { GoHash, GoMove, GoPosition, GoSide, GoSize } from '@shared/rules/go';
 import { goMovesOfLog, goReplayLog } from '@shared/rules/go-match';
 import {
@@ -261,74 +261,6 @@ function updateRave(node: TreeNode, firstColour: Uint8Array, blackWins: boolean)
     child.raveVisits++;
     if ((child.colour === 1) === blackWins) child.raveWins++;
   }
-}
-
-// ─── Easy ───
-
-/** Chebyshev distance from an existing stone within which the easy bot plays its random moves. */
-const EASY_REACH = 2;
-
-const pickRandom = <T>(items: readonly T[], random: () => number): T => items[Math.floor(random() * items.length)];
-
-/**
- * Easy: capture the most stones it can, else save its largest chain in atari, else a random move that neither
- * fills its own eye nor puts itself in atari, near the stones already down when it can, else pass. Also serves
- * a player's timeout, so it passes only when no such move is left.
- */
-export function goEasyMove(position: GoPosition, history: readonly GoHash[], random: () => number): GoMove {
-  if (position.passes >= 2) return 'pass';
-  const { size, stones, toMove } = position;
-  const board = goPlayoutBoard(position);
-  const { toPoint } = board.layout;
-  const legal = goLegalPoints(position, history).filter((index) => !goBoardIsEye(board, toPoint[index], board.toMove));
-  if (legal.length === 0) return 'pass';
-  const legalSet = new Set(legal);
-
-  const chains: number[][] = [];
-  const inChain = new Uint8Array(stones.length);
-  for (let index = 0; index < stones.length; index++) {
-    if (stones[index] === null || inChain[index]) continue;
-    const chain = goChain(size, stones, index);
-    for (const stone of chain) inChain[stone] = 1;
-    chains.push(chain);
-  }
-  let capture: { point: number; size: number } | null = null;
-  let escape: { point: number; size: number } | null = null;
-  for (const chain of chains) {
-    const liberties = goLiberties(size, stones, chain);
-    if (liberties.length !== 1 || !legalSet.has(liberties[0])) continue;
-    const point = liberties[0];
-    if (stones[chain[0]] === goOpponent(toMove)) {
-      if (!capture || chain.length > capture.size) capture = { point, size: chain.length };
-    } else if (goSelfAtariSize(board, toPoint[point]) === 0) {
-      if (!escape || chain.length > escape.size) escape = { point, size: chain.length };
-    }
-  }
-  if (capture) return capture.point;
-  if (escape) return escape.point;
-
-  const quiet = legal.filter((index) => goSelfAtariSize(board, toPoint[index]) === 0);
-  const near = quiet.filter((index) => {
-    const col = index % size;
-    const row = Math.floor(index / size);
-    for (let dr = -EASY_REACH; dr <= EASY_REACH; dr++) {
-      for (let dc = -EASY_REACH; dc <= EASY_REACH; dc++) {
-        const c = col + dc;
-        const r = row + dr;
-        if (c >= 0 && c < size && r >= 0 && r < size && stones[r * size + c] !== null) return true;
-      }
-    }
-    return false;
-  });
-  if (near.length > 0) return pickRandom(near, random);
-  if (quiet.length === 0) return 'pass';
-  // Nothing down yet (or nothing near): start away from the edge rather than anywhere.
-  const inner = quiet.filter((index) => {
-    const col = index % size;
-    const row = Math.floor(index / size);
-    return Math.min(col, row, size - 1 - col, size - 1 - row) >= 2;
-  });
-  return pickRandom(inner.length > 0 ? inner : quiet, random);
 }
 
 // ─── Scoring phase ───

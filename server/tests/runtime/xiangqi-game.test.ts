@@ -285,12 +285,12 @@ describe('Xiangqi adapter and stored state', () => {
 });
 
 describe('Xiangqi bots through the registry', () => {
-  it('play only legal moves on both difficulties and return nothing off turn', () => {
+  it('play only legal moves and return nothing off turn', () => {
     start();
-    expect(getBotAction(xiangqi.getPlayerVisibleState(CODE, 'S')!, Math.random, 'easy')).toBeNull();
+    expect(getBotAction(xiangqi.getPlayerVisibleState(CODE, 'S')!, Math.random)).toBeNull();
     for (let guard = 0; guard < 16 && game().phase === 'playing'; guard++) {
       const seat = game().currentTurnSeat;
-      const action = getBotAction(xiangqi.getPlayerVisibleState(CODE, seat)!, lcg(guard + 1), seat === 'N' ? 'easy' : 'hard');
+      const action = getBotAction(xiangqi.getPlayerVisibleState(CODE, seat)!, lcg(guard + 1));
       expect(action).toMatchObject({ type: 'game-action', request: { gameType: 'xiangqi', action: { type: 'move' } } });
       const request = (action as { request: { action: { from: string; to: string } } }).request.action;
       expect(xiangqi.move(CODE, seat, request.from, request.to)).toEqual({ success: true });
@@ -298,14 +298,13 @@ describe('Xiangqi bots through the registry', () => {
     expect(coherent()).toBe(true);
   });
 
-  it('falls back to the first legal move and uses the easy policy on timeouts', () => {
+  it('falls back to the first legal move and answers a timeout with a move of the bot', () => {
     start();
     const bot = gameBot('xiangqi');
     expect(bot.firstLegal(xiangqi.getPlayerVisibleState(CODE, 'S')!)).toBeNull();
     const first = bot.firstLegal(xiangqi.getPlayerVisibleState(CODE, 'N')!) as { request: { action: { from: string; to: string } } };
     expect(xiangqi.move(CODE, 'N', first.request.action.from, first.request.action.to)).toEqual({ success: true });
-    const timeout = bot.turnTimeout!(xiangqi.getPlayerVisibleState(CODE, 'S')!, { isBot: false, strategy: () => null }) as
-      { request: { action: { from: string; to: string } } };
+    const timeout = getBotAction(xiangqi.getPlayerVisibleState(CODE, 'S')!, lcg(3)) as { request: { action: { from: string; to: string } } };
     expect(xiangqi.move(CODE, 'S', timeout.request.action.from, timeout.request.action.to)).toEqual({ success: true });
   });
 });

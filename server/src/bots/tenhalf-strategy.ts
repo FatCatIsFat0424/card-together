@@ -7,17 +7,14 @@ import { createDeck } from '../engine/deck';
 import { blackjackBet } from './blackjack-strategy';
 import type { BotAction } from './bot-decisions';
 
-// Heuristic summary: Easy bets the minimum and draws while its hand is below 7.5 points. Hard bets like the
-// Blackjack bot (a few percent of its chips, following the standings in the last two hands) and decides every
-// draw from the cards it cannot see: its own hole card and every face-up card leave the deck, and each draw,
+// Heuristic summary: the bot bets like the Blackjack bot (a few percent of its chips, following the standings in
+// the last two hands) and decides every draw from the cards it cannot see: its own hole card and every face-up card leave the deck, and each draw,
 // including the hidden hole cards of opponents, comes from what remains. A player compares standing with
 // drawing (and with drawing on) against the banker's likely final hand, who is assumed to draw below 7.5.
 // The banker compares the chips it would win from every player's hand, whose hole card is still unknown.
 
 /** The banker draws below this many half points (7.5). */
 const BANKER_STANDS = 15;
-/** Easy bots draw below this many half points (7.5). */
-const EASY_STANDS = 15;
 
 /** A hand as its half points and card count, which decide its kind, strength, and multiple. */
 interface Hand {
@@ -169,13 +166,6 @@ function myTurn(visible: TenHalfVisibleState): boolean {
 export function getTenHalfBotAction(visible: TenHalfVisibleState, random: () => number): BotAction | null {
   if (visible.phase === 'betting') return bettingOpen(visible) ? betOf(blackjackBet(visible, random)) : null;
   return myTurn(visible) ? actionOf(tenHalfDecision(visible)) : null;
-}
-
-export function easyTenHalfAction(visible: TenHalfVisibleState): BotAction | null {
-  if (visible.phase === 'betting') return bettingOpen(visible) ? betOf(BJ_MIN_BET) : null;
-  if (!myTurn(visible)) return null;
-  const halves = thHalves([visible.holes[visible.mySeat] as Card, ...visible.ups[visible.mySeat]]);
-  return actionOf(halves < EASY_STANDS ? 'hit' : 'stand');
 }
 
 /** Minimum bet when betting, otherwise stand: the timeout action and the last-resort legal move. */

@@ -1,7 +1,7 @@
 // ─── Xiangqi search: iterative-deepening alpha-beta with quiescence, MVV-LVA and killer ordering ───
 //
-// Runs inside a bot worker (`GameBot.search`) and, shallow and time-capped, as the synchronous move that serves
-// other seats' timeouts. It reads only the seat's own view, which for Xiangqi is the whole public game, and uses
+// Runs inside a bot worker (`GameBot.search`) and, shallow and time-capped, as the synchronous fallback when no
+// pool runs or a search fails. It reads only the seat's own view, which for Xiangqi is the whole public game, and uses
 // the shared rules engine, so every move it can return is one the server accepts.
 
 import type { XiangqiVisibleState } from '@shared/types';
@@ -360,52 +360,6 @@ export function xiangqiBestMove(board: XqBoard, side: XqSide, plies: readonly Xq
     if (stopped || options.expired() || Math.abs(ranked[0].score) >= MATE_BOUND) break;
   }
   return decode(best);
-}
-
-/** Noise added to Easy's two-ply scores: about one and a half soldiers. */
-const EASY_NOISE = 150;
-
-/**
- * Easy: each move is scored by the opponent's best static reply (two plies, no quiescence), plus noise, so it
- * avoids leaving pieces hanging to a single capture but misses deeper tactics. It still takes a mate in one and
- * never loses by perpetual check while another move exists.
- */
-export function xiangqiEasyMove(board: XqBoard, side: XqSide, plies: readonly XqPly[], random: () => number): XqMove | null {
-  const roots = rootMoves(board, side, plies);
-  if (roots.length === 0) return null;
-  const win = roots.find((entry) => entry.kind === 'win');
-  const decode = (move: number): XqMove => ({ from: xqFrom(move), to: xqTo(move) });
-  if (win) return decode(win.move);
-  const engine = xqEngineBoard(board);
-  let total = 0;
-  for (let cell = 0; cell < XQ_CELLS; cell++) total += value(engine[cell], cell);
-  const searcher: Searcher = {
-    board: engine, side, score: total, hash: hashOf(engine, side), nodes: 0, path: [], history: new Set(),
-    killers: new Int32Array(8), expired: () => false,
-  };
-  let best: { move: number; score: number } | null = null;
-  for (const { move, kind } of roots) {
-    let score = 0;
-    if (kind !== 'draw') {
-      const hash = searcher.hash;
-      const before = searcher.score;
-      const captured = make(searcher, move);
-      let reply = -Infinity;
-      for (const answer of xqLegalEngineMoves(searcher.board, searcher.side)) {
-        const answerHash = searcher.hash;
-        const answerScore = searcher.score;
-        const taken = make(searcher, answer);
-        // After the reply it is this side's turn again, so the evaluation is already from its point of view.
-        reply = Math.max(reply, -evaluate(searcher));
-        unmake(searcher, answer, taken, answerHash, answerScore);
-      }
-      unmake(searcher, move, captured, hash, before);
-      score = reply === -Infinity ? MATE : -reply;
-    }
-    score += random() * EASY_NOISE;
-    if (!best || score > best.score) best = { move, score };
-  }
-  return best ? decode(best.move) : null;
 }
 
 // ─── Bot actions from a view ───

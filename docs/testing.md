@@ -109,9 +109,9 @@ npm run build:release    # production tree in .release/ (LCM_INPUTS_DIR override
 
 ### 牌類 bot 比較
 
-在 `server/` 執行 `npx tsx benchmarks/trick-bot-benchmark.ts --deals 128 --seed 1`，比較紅心、拱豬、黑桃王的困難與簡單策略。加上 `--game hearts|gongzhu|spades` 可只測一款；`--baseline /tmp/older-bots` 可改與舊版 `server/src/bots/` 比較；`--candidate` 可指定另一份待測策略。這些目錄須保留相依策略模組及相對路徑。
+在 `server/` 執行 `npx tsx benchmarks/trick-bot-benchmark.ts --deals 128 --seed 1`，比較紅心、拱豬、黑桃王的 bot 與只出第一張合法牌的對手。加上 `--game hearts|gongzhu|spades` 可只測一款；`--baseline /tmp/older-bots` 可改與舊版 `server/src/bots/` 比較；`--candidate` 可指定另一份待測策略。這些目錄須保留相依策略模組及相對路徑。
 
-每個牌序輪換所有受測座位；黑桃王以兩組搭檔輪換，另兩款以單一困難 bot 對三個對手。僅計第一手，使用實際 manager、各行動者自己的過濾視角及獨立的種子亂數。輸出含平手分攤勝率、平均分差（正數有利受測策略）與決策耗時。這是固定工作負載的策略比較，不能當成整場勝率或真人棋力評級；應另用其他種子檢查，並搭配必要戰術、合作與合法完整對局測試。
+每個牌序輪換所有受測座位；黑桃王以兩組搭檔輪換，另兩款以單一受測 bot 對三個對手。僅計第一手，使用實際 manager、各行動者自己的過濾視角及獨立的種子亂數。輸出含平手分攤勝率、平均分差（正數有利受測策略）與決策耗時。這是固定工作負載的策略比較，不能當成整場勝率或真人棋力評級；應另用其他種子檢查，並搭配必要戰術、合作與合法完整對局測試。
 
 ### 量測原則
 

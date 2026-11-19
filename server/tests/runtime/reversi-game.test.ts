@@ -270,12 +270,12 @@ describe('Reversi adapter and stored state', () => {
 });
 
 describe('Reversi bots through the registry', () => {
-  it('plays only legal moves in a full bot match on both difficulties', () => {
+  it('plays only legal moves in a full bot match', () => {
     start();
     for (let guard = 0; guard < 200 && game().phase === 'playing'; guard++) {
       const seat = game().currentTurnSeat;
       const view = reversi.getPlayerVisibleState(CODE, seat)!;
-      const action = getBotAction(view, Math.random, seat === 'N' ? 'easy' : 'hard');
+      const action = getBotAction(view, Math.random);
       expect(action).toMatchObject({ type: 'game-action', request: { gameType: 'reversi', action: { type: 'place' } } });
       const request = (action as { request: { action: { to: string } } }).request.action;
       expect(reversi.place(CODE, seat, request.to)).toEqual({ success: true });
@@ -286,14 +286,14 @@ describe('Reversi bots through the registry', () => {
 
   it('returns nothing off turn or after the end, and the first legal fallback is a legal placement', () => {
     start();
-    expect(getBotAction(reversi.getPlayerVisibleState(CODE, 'S')!, Math.random, 'easy')).toBeNull();
+    expect(getBotAction(reversi.getPlayerVisibleState(CODE, 'S')!, Math.random)).toBeNull();
     const bot = gameBot('reversi');
     expect(bot.firstLegal(reversi.getPlayerVisibleState(CODE, 'S')!)).toBeNull();
     const first = bot.firstLegal(reversi.getPlayerVisibleState(CODE, 'N')!);
     expect(first).toMatchObject({ request: { action: { type: 'place' } } });
     expect(reversi.place(CODE, 'N', (first as { request: { action: { to: string } } }).request.action.to)).toEqual({ success: true });
     reversi.control(CODE, 'N', { type: 'resign' });
-    expect(getBotAction(reversi.getPlayerVisibleState(CODE, 'S')!, Math.random, 'hard')).toBeNull();
+    expect(getBotAction(reversi.getPlayerVisibleState(CODE, 'S')!, Math.random)).toBeNull();
   });
 });
 

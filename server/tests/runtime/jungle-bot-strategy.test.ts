@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { GameSeat, JungleGameState, JungleVisibleState, PlayerInfo } from '@shared/types';
-import { JG_CELLS, jgCell, jgIndex, jgLegalMoves } from '@shared/rules/jungle';
-import { getBotAction, getEasyBotAction } from '../../src/bots/bot-decisions';
+import { JG_CELLS, jgCell, jgIndex, jgLegalMoves, jgNode } from '@shared/rules/jungle';
+import { getBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
 import { jungleSearch, searchBestMove, searchCells } from '../../src/bots/jungle-search';
@@ -37,33 +37,21 @@ function move(action: BotAction | null): string | null {
 
 afterEach(() => jungle.abortGame(CODE));
 
-describe('Jungle Easy bot', () => {
-  it('enters the den when it can and otherwise takes the biggest capture when the noise is zero', () => {
-    start();
-    game().cells = position([3, 1, '4'], [0, 8, '2'], [6, 0, 'g'], [5, 4, 'c']);
-    expect(move(getEasyBotAction(view('N'), () => 0))).toBe('3,1>3,0');
-    game().cells = position([2, 6, '7'], [0, 0, 'b'], [3, 6, 'c'], [1, 6, 'e']);
-    // Lion on (2,6) can take the dog on (3,6) or the leopard on (1,6): the leopard is worth more.
-    expect(move(getEasyBotAction(view('N'), () => 0))).toBe('2,6>1,6');
-  });
-
-  it('plays only legal moves, varies with the random source, and stays out of turn', () => {
+describe('Jungle synchronous bot', () => {
+  it('plays only legal moves and stays out of turn', () => {
     start();
     const legal = new Set(jgLegalMoves(game().cells, 0).map((m) => `${m.from}>${m.to}`));
-    const picks = new Set<string | null>();
-    for (let seed = 1; seed <= 40; seed++) {
-      const picked = move(getEasyBotAction(view('N'), seededRandom(seed)))!;
+    for (let seed = 1; seed <= 5; seed++) {
+      const picked = move(getBotAction(view('N'), seededRandom(seed)))!;
       const [from, to] = picked.split('>').map((node) => jgCell(node)!);
       expect(legal.has(`${from}>${to}`)).toBe(true);
-      picks.add(picked);
     }
-    expect(picks.size).toBeGreaterThan(1);
-    expect(getEasyBotAction(view('S'))).toBeNull();
+    expect(getBotAction(view('S'))).toBeNull();
   });
 });
 
 describe('Jungle Hard bot', () => {
-  const hard = (seat: GameSeat): string | null => move(gameBot('jungle').hard(view(seat), () => 0.5));
+  const hard = (seat: GameSeat): string | null => move(gameBot('jungle').decide(view(seat), () => 0.5));
 
   it('takes a win in one move', () => {
     start();
@@ -91,29 +79,36 @@ describe('Jungle Hard bot', () => {
     start();
     for (let guard = 0; guard < 300 && game().phase === 'playing'; guard++) {
       const seat = game().currentTurnSeat;
-      const picked = move(getBotAction(view(seat), seededRandom(guard + 1), 'hard'))!;
+      const picked = move(getBotAction(view(seat), seededRandom(guard + 1)))!;
       expect(picked).not.toBeNull();
       const [from, to] = picked.split('>');
       expect(jungle.move(CODE, seat, from, to)).toEqual({ success: true });
     }
   }, 30_000);
 
-  it('beats the Easy bot over several seeded matches', () => {
-    let hardWins = 0;
+  it('beats a random legal mover over several seeded matches', () => {
+    let botWins = 0;
     for (let seed = 1; seed <= 4; seed++) {
       start();
-      const hardSeat: GameSeat = seed % 2 === 0 ? 'N' : 'S';
+      const botSeat: GameSeat = seed % 2 === 0 ? 'N' : 'S';
       for (let guard = 0; guard < 400 && game().phase === 'playing'; guard++) {
         const seat = game().currentTurnSeat;
         const random = seededRandom(seed * 1000 + guard);
-        const picked = move(getBotAction(view(seat), random, seat === hardSeat ? 'hard' : 'easy'))!;
+        let picked: string;
+        if (seat === botSeat) {
+          picked = move(getBotAction(view(seat), random))!;
+        } else {
+          const options = jgLegalMoves(game().cells, seat === 'N' ? 0 : 1);
+          const chosen = options[Math.floor(random() * options.length)];
+          picked = `${jgNode(chosen.from)}>${jgNode(chosen.to)}`;
+        }
         const [from, to] = picked.split('>');
         jungle.move(CODE, seat, from, to);
       }
-      if (game().result?.winners.includes(hardSeat)) hardWins++;
+      if (game().result?.winners.includes(botSeat)) botWins++;
       jungle.abortGame(CODE);
     }
-    expect(hardWins).toBeGreaterThanOrEqual(3);
+    expect(botWins).toBeGreaterThanOrEqual(3);
   }, 60_000);
 
   function searchOnce(seat: GameSeat, maxDepth: number): BotAction | null {

@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type {
-  BidSuit, BotDifficulty, Card, GameSeat, NapoleonAction, NapoleonBiddingState, NapoleonCard, NapoleonContract,
+  BidSuit, Card, GameSeat, NapoleonAction, NapoleonBiddingState, NapoleonCard, NapoleonContract,
   NapoleonOptions, NapoleonTrick, NapoleonTrickRecord, NapoleonVisibleState, Suit,
 } from '@shared/types';
 import {
   applyNapoleonBid, applyNapoleonPlay, createNapoleonBidding, createNapoleonDeck, dealNapoleon, hasNapoleonCard,
-  isNapoleonFinalTrick, isNapoleonJoker, napoleonBidError, napoleonBiddingEnd, napoleonContract, napoleonDealSize,
+  isNapoleonFinalTrick, isNapoleonFreeCard, isNapoleonJoker, napoleonBidError, napoleonBiddingEnd, napoleonContract, napoleonDealSize,
   napoleonDiscardError, napoleonDiscardsPublic, napoleonOutcome, napoleonPlayedCards, napoleonPlayError,
-  napoleonTrickWinner, napoleonValidCards, removeNapoleonCards,
+  napoleonTrickWinner, napoleonValidBids, napoleonValidCards, removeNapoleonCards,
 } from '@shared/rules/napoleon';
 import { getNapoleonBotAction } from '../../src/bots/napoleon-strategy';
 import { seededRandom } from '../../src/bots/search/seeded-random';
@@ -198,6 +198,54 @@ function actingSeats(sim: Sim): GameSeat[] {
   return sim.currentTurnSeat ? [sim.currentTurnSeat] : [];
 }
 
+type NapoleonPolicy = (visible: NapoleonVisibleState, random: () => number) => NapoleonAction | null;
+
+const botPolicy: NapoleonPolicy = (visible, random) => getNapoleonBotAction(visible, random);
+
+const LEAD_SUITS: readonly Suit[] = ['clubs', 'diamonds', 'hearts', 'spades'];
+
+function pickOne<T>(items: readonly T[], rng: () => number): T {
+  return items[Math.min(items.length - 1, Math.floor(rng() * items.length))];
+}
+
+/** A seeded random legal player: the weak baseline the bot is measured against. Rarely bids, never discards a joker. */
+const randomPolicy: NapoleonPolicy = (visible, rng) => {
+  const seat = visible.mySeat;
+  const napoleon = visible.contract?.napoleon === seat;
+  switch (visible.phase) {
+    case 'bidding': {
+      if (visible.bidding?.currentBidderSeat !== seat) return null;
+      const bids = napoleonValidBids(visible.bidding).filter((bid) => bid.type === 'bid');
+      return { type: 'bid', action: rng() < 0.1 && bids.length > 0 ? pickOne(bids, rng) : { type: 'pass' } };
+    }
+    case 'exchanging': {
+      if (!napoleon) return null;
+      const pool = [...visible.myHand];
+      for (const taken of visible.pickedUp ?? []) if (!hasNapoleonCard(pool, taken)) pool.push(taken);
+      const { kitty } = napoleonDealSize(visible.seats.length);
+      const ordinary = pool.filter((held) => !isNapoleonJoker(held));
+      const source = ordinary.length >= kitty ? ordinary : pool;
+      const cards: NapoleonCard[] = [];
+      while (cards.length < kitty) cards.push(...source.splice(Math.floor(rng() * source.length), 1));
+      return { type: 'discard', cards };
+    }
+    case 'reviewing':
+      return !napoleon && !visible.reviewed.includes(seat) ? { type: 'review' } : null;
+    case 'calling': {
+      if (!napoleon) return null;
+      return { type: 'call', card: pickOne(createNapoleonDeck().filter((candidate) => !hasNapoleonCard(visible.myHand, candidate)), rng) };
+    }
+    case 'playing': {
+      if (visible.currentTurnSeat !== seat || visible.validCards.length === 0) return null;
+      const picked = pickOne(visible.validCards, rng);
+      const leading = (visible.trick?.plays.length ?? 0) === 0;
+      return leading && isNapoleonFreeCard(visible, picked)
+        ? { type: 'play', card: picked, leadSuit: pickOne(LEAD_SUITS, rng) } : { type: 'play', card: picked };
+    }
+    default: return null;
+  }
+};
+
 interface DealResult {
   readonly sim: Sim;
   readonly redeals: number;
@@ -206,7 +254,7 @@ interface DealResult {
 
 /** Plays complete deals with bots until a contract is reached (or too many redeals) and settles it. */
 function playDeal(
-  playerCount: number, seed: number, difficulty: (seat: GameSeat) => BotDifficulty,
+  playerCount: number, seed: number, policy: (seat: GameSeat) => NapoleonPolicy,
   options: NapoleonOptions = { jokerSummon: true }, mergedExchange = false,
 ): DealResult {
   const seats = ALL_SEATS.slice(0, playerCount);
@@ -218,10 +266,10 @@ function playDeal(
       const seat = actingSeats(sim)[0];
       for (const other of seats) {
         if (other !== seat && actingSeats(sim).includes(other) === false) {
-          expect(getNapoleonBotAction(visibleFor(sim, other, mergedExchange), botRandom, difficulty(other))).toBeNull();
+          expect(policy(other)(visibleFor(sim, other, mergedExchange), botRandom)).toBeNull();
         }
       }
-      const action = getNapoleonBotAction(visibleFor(sim, seat, mergedExchange), botRandom, difficulty(seat));
+      const action = policy(seat)(visibleFor(sim, seat, mergedExchange), botRandom);
       if (!action) throw new Error(`${seat} returned no action in ${sim.phase}.`);
       apply(sim, seat, action);
     });
@@ -276,37 +324,37 @@ function filler(count: number, seats: GameSeat[] = ['N', 'E', 'S', 'W']): Napole
   return records;
 }
 
-function playFor(sim: Sim, seed = 1, difficulty: BotDifficulty = 'hard'): Extract<NapoleonAction, { type: 'play' }> {
-  const action = getNapoleonBotAction(visibleFor(sim, sim.currentTurnSeat!), random(seed), difficulty);
+function playFor(sim: Sim, seed = 1): Extract<NapoleonAction, { type: 'play' }> {
+  const action = getNapoleonBotAction(visibleFor(sim, sim.currentTurnSeat!), random(seed));
   if (action?.type !== 'play') throw new Error('Expected a play');
   return action;
 }
 
 describe('Napoleon bot legality', () => {
-  it.each([4, 5, 6])('Hard bots finish %i-player deals with only legal actions', (players) => {
+  it.each([4, 5, 6])('Bots finish %i-player deals with only legal actions', (players) => {
     for (let seed = 1; seed <= 30; seed++) {
-      expect(playDeal(players, seed * 101 + players, () => 'hard').outcome).not.toBeNull();
+      expect(playDeal(players, seed * 101 + players, () => botPolicy).outcome).not.toBeNull();
     }
   });
 
-  it.each([4, 5, 6])('Easy and mixed tables finish %i-player deals with only legal actions', (players) => {
+  it.each([4, 5, 6])('Bots at a table with random legal players finish %i-player deals', (players) => {
     for (let seed = 1; seed <= 20; seed++) {
-      const mixed = (seat: GameSeat): BotDifficulty => (ALL_SEATS.indexOf(seat) + seed) % 2 === 0 ? 'easy' : 'hard';
-      expect(playDeal(players, seed * 37 + players, seed % 3 === 0 ? () => 'easy' : mixed).outcome).not.toBeNull();
+      const mixed = (seat: GameSeat): NapoleonPolicy => (ALL_SEATS.indexOf(seat) + seed) % 2 === 0 ? randomPolicy : botPolicy;
+      expect(playDeal(players, seed * 37 + players, seed % 3 === 0 ? () => randomPolicy : mixed).outcome).not.toBeNull();
     }
   });
 
   it('plays legally without joker summons and with a merged exchange hand', () => {
     for (let seed = 1; seed <= 6; seed++) {
-      expect(playDeal(4 + (seed % 3), seed * 13, () => 'hard', { jokerSummon: false }, true).outcome).not.toBeNull();
+      expect(playDeal(4 + (seed % 3), seed * 13, () => botPolicy, { jokerSummon: false }, true).outcome).not.toBeNull();
     }
   });
 
   it('returns null when the seat has nothing to do', () => {
     const sim = deal(['N', 'E', 'S', 'W'], random(3), { jokerSummon: true }, 'W');
-    expect(getNapoleonBotAction(visibleFor(sim, 'E'), random(1), 'hard')).toBeNull();
+    expect(getNapoleonBotAction(visibleFor(sim, 'E'), random(1))).toBeNull();
     sim.phase = 'scoring';
-    expect(getNapoleonBotAction(visibleFor(sim, 'N'), random(1), 'hard')).toBeNull();
+    expect(getNapoleonBotAction(visibleFor(sim, 'N'), random(1))).toBeNull();
   });
 });
 
@@ -314,32 +362,21 @@ describe('Napoleon bidding', () => {
   const seats: GameSeat[] = ['N', 'E', 'S', 'W'];
   const strong = hand('BJ SJ SAKQJ93 HA DA C7 C5');
 
-  it('Hard bids a strong trump hand at the lowest winning level', () => {
-    expect(getNapoleonBotAction(biddingView(seats, 'N', strong, createNapoleonBidding('N')), random(1), 'hard'))
+  it('bids a strong trump hand at the lowest winning level', () => {
+    expect(getNapoleonBotAction(biddingView(seats, 'N', strong, createNapoleonBidding('N')), random(1)))
       .toEqual({ type: 'bid', action: { type: 'bid', level: 9, suit: 'spades' } });
     const bidding = applyNapoleonBid(createNapoleonBidding('W'), seats, 'W', { type: 'bid', level: 10, suit: 'hearts' });
-    expect(getNapoleonBotAction(biddingView(seats, 'N', strong, bidding), random(1), 'hard'))
+    expect(getNapoleonBotAction(biddingView(seats, 'N', strong, bidding), random(1)))
       .toEqual({ type: 'bid', action: { type: 'bid', level: 10, suit: 'spades' } });
   });
 
-  it('Hard passes a weak hand and stops competing beyond its estimate', () => {
+  it('passes a weak hand and stops competing beyond its estimate', () => {
     const weak = hand('S9 S4 S2 H8 H6 H2 D9 D7 D3 C8 C6 C4 C3');
-    expect(getNapoleonBotAction(biddingView(seats, 'N', weak, createNapoleonBidding('N')), random(1), 'hard'))
+    expect(getNapoleonBotAction(biddingView(seats, 'N', weak, createNapoleonBidding('N')), random(1)))
       .toEqual({ type: 'bid', action: { type: 'pass' } });
     const fair = hand('SJ SA S9 S6 S3 HA H7 D8 D4 C9 C6 C3 C2');
     const bidding = applyNapoleonBid(createNapoleonBidding('W'), seats, 'W', { type: 'bid', level: 14, suit: 'spades' });
-    expect(getNapoleonBotAction(biddingView(seats, 'N', fair, bidding), random(1), 'hard'))
-      .toEqual({ type: 'bid', action: { type: 'pass' } });
-  });
-
-  it('Easy opens only an obviously strong hand and never competes', () => {
-    expect(getNapoleonBotAction(biddingView(seats, 'N', strong, createNapoleonBidding('N')), random(1), 'easy'))
-      .toEqual({ type: 'bid', action: { type: 'bid', level: 9, suit: 'spades' } });
-    const average = hand('SA S9 S6 S3 HK H7 D8 D4 C9 C6 C3 C2 H2');
-    expect(getNapoleonBotAction(biddingView(seats, 'N', average, createNapoleonBidding('N')), random(1), 'easy'))
-      .toEqual({ type: 'bid', action: { type: 'pass' } });
-    const bidding = applyNapoleonBid(createNapoleonBidding('W'), seats, 'W', { type: 'bid', level: 9, suit: 'clubs' });
-    expect(getNapoleonBotAction(biddingView(seats, 'N', strong, bidding), random(1), 'easy'))
+    expect(getNapoleonBotAction(biddingView(seats, 'N', fair, bidding), random(1)))
       .toEqual({ type: 'bid', action: { type: 'pass' } });
   });
 });
@@ -359,54 +396,44 @@ describe('Napoleon exchange and call', () => {
     return action.cards;
   };
 
-  it('Hard keeps jokers, trumps, and points while emptying a short side suit', () => {
+  it('keeps jokers, trumps, and points while emptying a short side suit', () => {
     const sim = exchangeSim(hand('BJ SAKQ86 HA HK D9 D4 C7 C5 C3'), hand('SJ D2'), 'spades');
-    const discards = discardsOf(getNapoleonBotAction(visibleFor(sim, 'N'), random(1), 'hard'));
+    const discards = discardsOf(getNapoleonBotAction(visibleFor(sim, 'N'), random(1)));
     expect(discards).toHaveLength(2);
     expect(discards.every((discarded) => !isNapoleonJoker(discarded) && discarded.suit === 'diamonds')).toBe(true);
   });
 
-  it('Hard discards low side cards from a merged five-player hand', () => {
+  it('discards low side cards from a merged five-player hand', () => {
     const sim = exchangeSim(hand('BJ HAKQ86 SA C9 C4 D7'), hand('SJ D2 D5 HJ'), 'hearts', ['N', 'E', 'S', 'W', 'P5']);
-    const discards = discardsOf(getNapoleonBotAction(visibleFor(sim, 'N', true), random(1), 'hard'));
+    const discards = discardsOf(getNapoleonBotAction(visibleFor(sim, 'N', true), random(1)));
     expect(discards).toHaveLength(4);
     expect(discards.every((discarded) => !isNapoleonJoker(discarded) && ['clubs', 'diamonds'].includes(discarded.suit))).toBe(true);
     expect(discards.filter((discarded) => !isNapoleonJoker(discarded) && discarded.suit === 'diamonds')).toHaveLength(3);
   });
 
-  it('Easy discards legally and keeps its jokers', () => {
-    for (let seed = 1; seed <= 20; seed++) {
-      const sim = exchangeSim(hand('BJ HAKQ86 SA C9 C4 D7'), hand('SJ D2 D5 HJ'), 'hearts', ['N', 'E', 'S', 'W', 'P5']);
-      const discards = discardsOf(getNapoleonBotAction(visibleFor(sim, 'N'), random(seed), 'easy'));
-      expect(napoleonDiscardError([...sim.hands.N!, ...sim.pickedUp], discards, 4)).toBeNull();
-      expect(discards.some(isNapoleonJoker)).toBe(false);
-    }
-  });
-
-  it('Hard calls the strongest card it lacks and skips its discards; Easy only skips its hand', () => {
+  it('calls the strongest card it lacks and skips its discards', () => {
     const sim = exchangeSim([], [], 'hearts');
     sim.phase = 'calling';
     sim.hands.N = hand('BJ HAK97 SA');
     sim.discards = hand('SJ');
-    expect(getNapoleonBotAction(visibleFor(sim, 'N'), random(1), 'hard')).toEqual({ type: 'call', card: card('hearts', 12) });
-    expect(getNapoleonBotAction(visibleFor(sim, 'N'), random(1), 'easy')).toEqual({ type: 'call', card: SMALL });
+    expect(getNapoleonBotAction(visibleFor(sim, 'N'), random(1))).toEqual({ type: 'call', card: card('hearts', 12) });
     sim.hands.N = hand('HA');
     sim.discards = [];
-    expect(getNapoleonBotAction(visibleFor(sim, 'N'), random(1), 'hard')).toEqual({ type: 'call', card: BIG });
+    expect(getNapoleonBotAction(visibleFor(sim, 'N'), random(1))).toEqual({ type: 'call', card: BIG });
   });
 
   it('acknowledges public discards once and only as a non-Napoleon', () => {
     const sim = exchangeSim([], [], 'hearts');
     sim.phase = 'reviewing';
     sim.currentTurnSeat = null;
-    expect(getNapoleonBotAction(visibleFor(sim, 'E'), random(1), 'easy')).toEqual({ type: 'review' });
-    expect(getNapoleonBotAction(visibleFor(sim, 'N'), random(1), 'hard')).toBeNull();
+    expect(getNapoleonBotAction(visibleFor(sim, 'E'), random(1))).toEqual({ type: 'review' });
+    expect(getNapoleonBotAction(visibleFor(sim, 'N'), random(1))).toBeNull();
     sim.reviewed = ['E'];
-    expect(getNapoleonBotAction(visibleFor(sim, 'E'), random(1), 'hard')).toBeNull();
+    expect(getNapoleonBotAction(visibleFor(sim, 'E'), random(1))).toBeNull();
   });
 });
 
-describe('Napoleon Hard play', () => {
+describe('Napoleon play', () => {
   const heartsTrick = (plays: [GameSeat, NapoleonCard][]): NapoleonTrick => ({
     leadSeat: plays[0][0], leadSuit: 'hearts', summon: null, plays: plays.map(([seat, played]) => ({ seat, card: played })),
   });
@@ -428,7 +455,7 @@ describe('Napoleon Hard play', () => {
     });
     const visible = visibleFor(sim, 'E');
     const before = structuredClone(visible);
-    const choices = Array.from({ length: 64 }, (_, index) => getNapoleonBotAction(visible, seededRandom(index + 1), 'hard'));
+    const choices = Array.from({ length: 64 }, (_, index) => getNapoleonBotAction(visible, seededRandom(index + 1)));
     const ranks = new Set<number>();
     for (const choice of choices) {
       if (choice?.type !== 'play' || isNapoleonJoker(choice.card)) throw new Error('Expected an ordinary point card.');
@@ -499,14 +526,14 @@ describe('Napoleon Hard play', () => {
     const plain = visibleFor(sim, 'N');
     const leaked: NapoleonVisibleState = { ...plain, observedHands: { E: hand('SA'), S: [], W: [] } };
     for (let seed = 1; seed <= 5; seed++) {
-      expect(getNapoleonBotAction(leaked, random(seed), 'hard')).toEqual(getNapoleonBotAction(plain, random(seed), 'hard'));
+      expect(getNapoleonBotAction(leaked, random(seed))).toEqual(getNapoleonBotAction(plain, random(seed)));
     }
   });
 });
 
 describe('Napoleon bot strength', () => {
   /** Napoleon N plays its longest suit at level 9; returns the side's point cards. */
-  function forcedDeal(players: number, seed: number, side: BotDifficulty, defense: BotDifficulty): number {
+  function forcedDeal(players: number, seed: number, side: NapoleonPolicy, defense: NapoleonPolicy): number {
     const seats = ALL_SEATS.slice(0, players);
     const sim = deal(seats, random(seed), { jokerSummon: true }, seats[seats.length - 1]);
     const suits: Suit[] = ['clubs', 'diamonds', 'hearts', 'spades'];
@@ -519,19 +546,19 @@ describe('Napoleon bot strength', () => {
     const botRandom = random(seed + 1);
     runSeededGame(`forced ${seed}`, 400, () => sim.phase === 'scoring', () => {
       const seat = actingSeats(sim)[0];
-      const level = seat === 'N' || seat === sim.secretarySeat ? side : defense;
-      apply(sim, seat, getNapoleonBotAction(visibleFor(sim, seat), botRandom, level)!);
+      const policy = seat === 'N' || seat === sim.secretarySeat ? side : defense;
+      apply(sim, seat, policy(visibleFor(sim, seat), botRandom)!);
     });
     return napoleonOutcome(seats, sim.contract, sim.secretarySeat, sim.tricks, sim.discards).napoleonPoints;
   }
 
-  it.each([4, 6])('Hard outplays Easy on both sides with %i players', (players) => {
-    let hardSide = 0;
-    let easySide = 0;
+  it.each([4, 6])('outplays a random legal player on both sides with %i players', (players) => {
+    let botSide = 0;
+    let baselineSide = 0;
     for (let seed = 1; seed <= 30; seed++) {
-      hardSide += forcedDeal(players, seed * 17 + players, 'hard', 'easy');
-      easySide += forcedDeal(players, seed * 17 + players, 'easy', 'hard');
+      botSide += forcedDeal(players, seed * 17 + players, botPolicy, randomPolicy);
+      baselineSide += forcedDeal(players, seed * 17 + players, randomPolicy, botPolicy);
     }
-    expect((hardSide - easySide) / 30).toBeGreaterThan(3);
+    expect((botSide - baselineSide) / 30).toBeGreaterThan(3);
   });
 });

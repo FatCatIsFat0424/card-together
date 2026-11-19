@@ -24,10 +24,10 @@ function start(seed = 1): () => Card[] {
   hearts.startGame(CODE, HEARTS_PLAYERS, 30000, shuffle(), 1000);
   return shuffle;
 }
-function step(shuffle: () => Card[], index: number, difficulty: 'easy' | 'hard' = 'hard'): void {
+function step(shuffle: () => Card[], index: number): void {
   const seat = heartsActor(state());
   const view = hearts.getPlayerVisibleState(CODE, seat)!;
-  const action = heartsAction(getBotAction(view, heartsRandom(index + 1), difficulty));
+  const action = heartsAction(getBotAction(view, heartsRandom(index + 1)));
   expect(hearts.act(CODE, seat, action, 1001 + index, shuffle)).toEqual({ success: true });
 }
 afterEach(() => { hearts.restoreGames([]); vi.restoreAllMocks(); });
@@ -78,7 +78,7 @@ describe('Hearts manager privacy and lifecycle', () => {
     for (const seat of HEARTS_SEATS) {
       const view = hearts.getPlayerVisibleState(CODE, seat)!;
       const bot = gameBot('hearts');
-      const context = { isBot: false, strategy: () => bot.hard(view, () => 0) };
+      const context = { isBot: false, strategy: () => bot.decide(view, () => 0) };
       const action = heartsAction(bot.deadlineExpired?.(view, context) ?? context.strategy());
       expect(hearts.act(CODE, seat, action).success).toBe(true);
     }
@@ -86,7 +86,7 @@ describe('Hearts manager privacy and lifecycle', () => {
     const seat = game.currentTurnSeat!;
     const view = hearts.getPlayerVisibleState(CODE, seat)!;
     const bot = gameBot('hearts');
-    const action = heartsAction(bot.turnTimeout?.(view, { isBot: false, strategy: () => bot.hard(view, () => 0) }) ?? bot.hard(view, () => 0));
+    const action = heartsAction(bot.turnTimeout?.(view, { isBot: false, strategy: () => bot.decide(view, () => 0) }) ?? bot.decide(view, () => 0));
     expect(action).toEqual({ type: 'play', card: { suit: 'clubs', rank: 2 } });
     expect(hearts.act(CODE, seat, action).success).toBe(true);
   });
@@ -139,7 +139,7 @@ describe('Hearts manager privacy and lifecycle', () => {
         hearts.restoreGames(records);
         expect(state()).toEqual(before);
       }
-      step(shuffle, moves++, seed % 2 ? 'hard' : 'easy');
+      step(shuffle, moves++);
       if (state().hand !== before.hand) {
         const clock = heartsAdapter.clockBeforeAction?.(before, 'N');
         expect(clock?.(state()).redealt).toBe(true);

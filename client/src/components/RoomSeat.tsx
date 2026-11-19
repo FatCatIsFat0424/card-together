@@ -1,12 +1,9 @@
 import { useId, useState } from 'react';
 import type { CSSProperties, PointerEvent, ReactNode } from 'react';
-import MenuItem from '@mui/material/MenuItem';
 import Popover from '@mui/material/Popover';
-import Select from '@mui/material/Select';
 import { Link } from 'react-router-dom';
-import { BOT_DIFFICULTIES, isBotDifficulty } from '@shared/bot-difficulty';
 import { isSeatReady } from '@shared/rules/seats';
-import type { BotDifficulty, PlayerInfo, SeatInfo } from '@shared/types';
+import type { PlayerInfo, SeatInfo } from '@shared/types';
 import { SeatFrame, seatFrameHostClass } from '../cosmetics/seat-frames/SeatFrame';
 import { useI18nStore } from '../stores/i18n-store';
 import { Avatar } from './Avatar';
@@ -51,7 +48,6 @@ export interface RoomSeatProps {
   readonly onSit: () => void;
   readonly onAddBot: () => void;
   readonly onRemoveSeat: () => void;
-  readonly onDifficulty: (difficulty: BotDifficulty) => void;
   readonly onRemoveBot: () => void;
 }
 
@@ -114,33 +110,16 @@ function EmptySeat(props: RoomSeatProps): ReactNode {
   </div>;
 }
 
-/** Bot management: difficulty and removal. */
-export function BotControls({ player, disabled, blocked, pending, onDifficulty, onRemove }: {
-  readonly player: PlayerInfo;
+/** Bot management for the host. */
+export function BotControls({ blocked, pending, onRemove }: {
   /** The room no longer waits or the connection is down. */
-  readonly disabled: boolean;
   readonly blocked: boolean;
   readonly pending: boolean;
-  readonly onDifficulty: (difficulty: BotDifficulty) => void;
   readonly onRemove: () => void;
 }): ReactNode {
   const { t } = useI18nStore();
-  return <>
-    <label className={styles.difficulty}>
-      <span>{t('room.botDifficulty')}</span>
-      <Select size="small" className={styles.select} value={player.botDifficulty ?? 'hard'} disabled={disabled}
-        data-pending-disabled={pending && !blocked || undefined}
-        inputProps={{ 'aria-label': t('room.botDifficultyFor', { nickname: player.nickname }) }}
-        MenuProps={{ slotProps: { paper: { className: styles.selectMenu } } }}
-        onChange={(event) => { if (isBotDifficulty(event.target.value)) onDifficulty(event.target.value); }}>
-        {BOT_DIFFICULTIES.map((difficulty) => <MenuItem key={difficulty} value={difficulty}>
-          {t(`room.botDifficulty.${difficulty}`)}
-        </MenuItem>)}
-      </Select>
-    </label>
-    <Button variant="danger-text" disabled={blocked} data-pending-disabled={pending || undefined}
-      onClick={onRemove}>{t('room.removeBot')}</Button>
-  </>;
+  return <Button variant="danger-text" disabled={blocked} data-pending-disabled={pending || undefined}
+    onClick={onRemove}>{t('room.removeBot')}</Button>;
 }
 
 function BotMenu({ player, anchor, props, onClose }: {
@@ -155,8 +134,7 @@ function BotMenu({ player, anchor, props, onClose }: {
   return <Popover open={Boolean(anchor)} anchorEl={anchor} onClose={onClose}
     anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} transformOrigin={{ vertical: 'top', horizontal: 'center' }}
     slotProps={{ paper: { className: styles.menu, id, role: 'dialog', 'aria-label': label } }}>
-    <BotControls player={player} disabled={props.blocked || !props.waiting} blocked={props.blocked}
-      pending={props.pending && props.waiting} onDifficulty={props.onDifficulty}
+    <BotControls blocked={props.blocked} pending={props.pending && props.waiting}
       onRemove={() => { onClose(); props.onRemoveBot(); }} />
   </Popover>;
 }
@@ -168,7 +146,7 @@ function OccupiedSeat(props: RoomSeatProps & { readonly player: PlayerInfo }): R
   const isMe = player.id === props.playerId;
   const ready = isSeatReady({ hostId: props.hostId }, info);
   const manageBot = props.isHost && Boolean(player.isBot);
-  const status = props.moving ? t('room.dragOrigin') : player.isBot ? t(`room.botDifficulty.${player.botDifficulty ?? 'hard'}`)
+  const status = props.moving ? t('room.dragOrigin') : player.isBot ? t('player.bot')
     : t(ready ? 'room.ready.status' : 'room.notReady');
   const frame = seatFrameHostClass(player.seatFrame);
   const identity = <>

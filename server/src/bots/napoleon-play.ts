@@ -1,7 +1,7 @@
 import type { GameSeat, NapoleonCard, NapoleonSummon, NapoleonTrick, NapoleonVisibleState, Suit } from '@shared/types';
 import {
   applyNapoleonPlay, isNapoleonFreeCard, isNapoleonPointCard, napoleonPlayError, napoleonPoints,
-  napoleonJokerSummon, napoleonSummonOptions, napoleonSummonedCard, sameNapoleonCard,
+  napoleonJokerSummon, napoleonSummonOptions, napoleonSummonedCard,
 } from '@shared/rules/napoleon';
 import {
   allyOf, cardPoints, holdChance, holdValue, pointsPerTrick, readTable, secretaryKeepValue, seatsAfter, sideWinChance,
@@ -141,22 +141,4 @@ export function chooseHardPlay(visible: NapoleonVisibleState, random: () => numb
   }));
   // Less than an eighth of a point keeps tactical wins and feeding ahead of variety.
   return selectNearBest(scored, random, 0.12);
-}
-
-function pick<T>(options: readonly T[], random: () => number): T | null {
-  return options.length === 0 ? null : options[Math.min(options.length - 1, Math.floor(random() * options.length))];
-}
-
-/** A random legal card; a led free card names a random suit, and summons are used half the time. */
-export function chooseEasyPlay(visible: NapoleonVisibleState, random: () => number): NapoleonPlayChoice | null {
-  const choices = legalNapoleonPlays(visible);
-  const cards = choices.filter((choice, index) => choices.findIndex((other) => sameNapoleonCard(other.card, choice.card)) === index)
-    .map((choice) => choice.card);
-  const card = pick(cards, random);
-  if (!card) return null;
-  const forCard = choices.filter((choice) => sameNapoleonCard(choice.card, card));
-  const summoned = forCard.filter((choice) => choice.summon);
-  const plain = forCard.filter((choice) => !choice.summon);
-  const pool = summoned.length > 0 && (plain.length === 0 || random() < 0.5) ? summoned : plain;
-  return pick(pool, random);
 }

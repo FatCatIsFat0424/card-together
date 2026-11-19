@@ -1,18 +1,11 @@
 import type { XiangqiVisibleState } from '@shared/types';
 import { xqLegalMoves } from '@shared/rules/xiangqi';
 import type { BotAction } from './bot-decisions';
-import { QUICK_BUDGET_MS, QUICK_DEPTH, moveAction, xiangqiBestMove, xiangqiEasyMove, xiangqiTurn } from './xiangqi-search';
-
-/** Easy: two plies with noise (see `xiangqiEasyMove`). Also the move a player gets after running out of time. */
-export function easyXiangqiAction(visible: XiangqiVisibleState, random: () => number): BotAction | null {
-  const turn = xiangqiTurn(visible);
-  const move = turn && xiangqiEasyMove(turn.board, turn.side, turn.plies, random);
-  return move ? moveAction(move) : null;
-}
+import { QUICK_BUDGET_MS, QUICK_DEPTH, moveAction, xiangqiBestMove, xiangqiTurn } from './xiangqi-search';
 
 /**
- * Hard, synchronous: a shallow, time-capped search with the worker's evaluation. In a search game this only
- * serves seats that are not on a bot's own turn, so it must stay cheap.
+ * Synchronous fallback: a shallow, time-capped search with the worker's evaluation. It decides only when no
+ * pool runs or a search fails, so it must stay cheap for the event loop.
  */
 export function getXiangqiBotAction(visible: XiangqiVisibleState, random: () => number): BotAction | null {
   const turn = xiangqiTurn(visible);

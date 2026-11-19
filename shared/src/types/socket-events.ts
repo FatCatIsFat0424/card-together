@@ -1,5 +1,5 @@
 import type { GameActionEnvelope } from '../games/actions';
-import type { BotDifficulty, GameSeat, PlayerInfo, Seat } from './player';
+import type { GameSeat, PlayerInfo, Seat } from './player';
 import type {
   BlackjackOptions, GameOptionsPayload, NapoleonOptions, RoomCode, RoomInfo, RoomSeatTarget, GameType, NinetyNineOptions, SevensOptions, TimeControl,
 } from './room';
@@ -128,11 +128,10 @@ export interface ClientToServerEvents {
   'room:start': (callback: (response: ActionResult) => void) => void;
   'room:setShuffleSeats': (payload: { enabled: boolean }, callback: (response: ActionResult) => void) => void;
   'room:addBot': (
-    payload: { seat: GameSeat; difficulty?: BotDifficulty }, callback: (response: ActionResult) => void,
+    payload: { seat: GameSeat }, callback: (response: ActionResult) => void,
   ) => void;
-  'room:setBotDifficulty': (
-    payload: { seat: GameSeat; difficulty: BotDifficulty }, callback: (response: ActionResult) => void,
-  ) => void;
+  /** Retired with bot difficulty levels; older pages are told to refresh. */
+  'room:setBotDifficulty': (payload: unknown, callback: (response: ActionResult) => void) => void;
   'room:removeBot': (
     payload: { seat: GameSeat }, callback: (response: ActionResult) => void,
   ) => void;

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { CardOrJoker, DouDizhuVisibleState, GameSeat, PlayerInfo } from '@shared/types';
 import { cardKey, joker } from '@shared/rules/cards';
 import { createDdzDeck, ddzCanPlay, ddzResolve, sortDdzHand } from '@shared/rules/doudizhu';
-import { getBotAction, getEasyBotAction } from '../../src/bots/bot-decisions';
+import { getBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
 import { douDizhuSearch, sampleDouDizhuHands } from '../../src/bots/doudizhu-search';
@@ -78,36 +78,18 @@ describe('Dou Dizhu hand evaluation', () => {
   });
 });
 
-describe('Dou Dizhu Easy bot', () => {
-  it('leads the smallest combination and answers with the smallest play that beats the last', () => {
-    table('3 3 8 9 K', '4 5 6', '7 8 9');
-    expect(action(getEasyBotAction(view('N')))).toMatchObject({ type: 'play' });
-    expect(action(getEasyBotAction(view('N')))?.cards).toHaveLength(2);
-    doudizhu.abortGame(CODE);
-    table('4 4', '3 9 K', '5 7 A', { seat: 'N', cards: '8' });
-    expect(action(getEasyBotAction(view('E')))).toMatchObject({ type: 'play', cards: [expect.objectContaining({ rank: 9 })] });
-  });
-
-  it('passes when nothing beats the last play', () => {
-    table('A A', '3 4 5', '3 4 5 6', { seat: 'N', cards: '2' });
-    expect(action(getEasyBotAction(view('E')))).toEqual({ type: 'pass' });
-  });
-
+describe('Dou Dizhu bot', () => {
   it('bids from hand strength and never bids lower than the minimum', () => {
     doudizhu.startGame(CODE, Object.fromEntries(SEATS.map((seat) => [seat, bot(seat)])), { variant: 'score' }, 1_000, seeded(5));
-    for (const difficulty of ['easy', 'hard'] as const) {
-      const decided = action(getBotAction(view('N'), () => 0.5, difficulty));
-      expect(decided?.type).toBe('bid');
-      expect([0, 1, 2, 3]).toContain(decided?.score);
-    }
+    const decided = action(getBotAction(view('N'), () => 0.5));
+    expect(decided?.type).toBe('bid');
+    expect([0, 1, 2, 3]).toContain(decided?.score);
   });
-});
 
-describe('Dou Dizhu Hard bot', () => {
   it('goes out when it can', () => {
     table('9 9', '3 4', '5 6', undefined);
-    expect(action(getBotAction(view('N'), () => 0.5, 'hard'))).toMatchObject({ type: 'play' });
-    expect(action(getBotAction(view('N'), () => 0.5, 'hard'))?.cards).toHaveLength(2);
+    expect(action(getBotAction(view('N'), () => 0.5))).toMatchObject({ type: 'play' });
+    expect(action(getBotAction(view('N'), () => 0.5))?.cards).toHaveLength(2);
   });
 
   it('varies adjacent ordinary ranks while preserving the hand plan and high controls', () => {
@@ -116,13 +98,13 @@ describe('Dou Dizhu Hard bot', () => {
     const before = structuredClone(visible);
     const ranks = new Set<number>();
     for (let seed = 1; seed <= 64; seed++) {
-      const chosen = action(getBotAction(visible, seededRandom(seed), 'hard'));
+      const chosen = action(getBotAction(visible, seededRandom(seed)));
       expect(chosen?.type).toBe('play');
       expect(chosen?.cards).toHaveLength(1);
       const card = chosen!.cards![0];
       expect('rank' in card && [3, 4].includes(card.rank)).toBe(true);
       if ('rank' in card) ranks.add(card.rank);
-      expect(action(getBotAction(visible, seededRandom(seed), 'hard'))).toEqual(chosen);
+      expect(action(getBotAction(visible, seededRandom(seed)))).toEqual(chosen);
     }
     expect(ranks.size).toBe(2);
     expect(visible).toEqual(before);
@@ -131,7 +113,7 @@ describe('Dou Dizhu Hard bot', () => {
   it('does not beat its farmer partner’s play', () => {
     table('4 4 5 5 6 6 K', '3 3 4 6 8', '9 9 A A K J', { seat: 'E', cards: '7 7' });
     // S is a farmer after E's play: it could beat 7 7 with 9 9, but its partner E is winning the round.
-    const decided = action(getBotAction(view('S'), () => 0.5, 'hard'));
+    const decided = action(getBotAction(view('S'), () => 0.5));
     expect(decided).toEqual({ type: 'pass' });
   });
 
@@ -140,7 +122,7 @@ describe('Dou Dizhu Hard bot', () => {
     for (let seed = 1; seed <= 32; seed++) {
       const visible = view('S');
       const budget = { maxDepth: undefined, timeLeftMs: () => 900, expired: () => false };
-      expect(action(getBotAction(visible, seededRandom(seed), 'hard'))).toEqual({ type: 'pass' });
+      expect(action(getBotAction(visible, seededRandom(seed)))).toEqual({ type: 'pass' });
       expect(action(douDizhuSearch(visible, { random: seededRandom(seed), budget }))).toEqual({ type: 'pass' });
     }
     game().hands.S = hand('BJ');
@@ -157,7 +139,7 @@ describe('Dou Dizhu Hard bot', () => {
         type: 'play', seat: 'N', cards: [card], combo: ddzResolve([card], null)!, timestamp: 1,
       })) };
     for (let seed = 1; seed <= 32; seed++) {
-      const chosen = action(getBotAction(visible, seededRandom(seed), 'hard'));
+      const chosen = action(getBotAction(visible, seededRandom(seed)));
       expect(chosen?.type).toBe('play');
       expect(chosen?.cards).toEqual(hand('A'));
       const searched = action(douDizhuSearch(visible, { random: seededRandom(seed),
@@ -169,10 +151,10 @@ describe('Dou Dizhu Hard bot', () => {
 
   it('beats the landlord when it can do so cheaply', () => {
     table('3 3 4 5 6 K', '4 4 5 7 9', '9 9 A A K J', { seat: 'N', cards: '7 7' });
-    const decided = action(getBotAction(view('E'), () => 0.5, 'hard'));
+    const decided = action(getBotAction(view('E'), () => 0.5));
     expect(decided).toEqual({ type: 'pass' });
     game().currentTurnSeat = 'S';
-    const second = action(getBotAction(view('S'), () => 0.5, 'hard'));
+    const second = action(getBotAction(view('S'), () => 0.5));
     expect(second).toMatchObject({ type: 'play' });
   });
 
@@ -181,7 +163,7 @@ describe('Dou Dizhu Hard bot', () => {
     const state = game();
     state.currentTurnSeat = 'S';
     state.landlord = 'N';
-    const decided = action(getBotAction(view('S'), () => 0.5, 'hard'));
+    const decided = action(getBotAction(view('S'), () => 0.5));
     expect(decided).toMatchObject({ type: 'play' });
     expect(decided?.cards).toHaveLength(1);
     expect(decided?.cards?.[0]).toMatchObject({ rank: 4 });
@@ -197,7 +179,7 @@ describe('Dou Dizhu Hard bot', () => {
         const visible = view(seat);
         const chosen = guard % 5 === 0
           ? douDizhuSearch(visible, { random, budget: { maxDepth: undefined, timeLeftMs: () => 10, expired: () => true } })
-          : getBotAction(visible, random, guard % 2 ? 'hard' : 'easy');
+          : getBotAction(visible, random);
         const move = action(chosen);
         expect(move, `${seat} acts`).not.toBeNull();
         if (move?.type === 'play') expect(ddzCanPlay(visible.myHand, move.cards ?? [], visible.lastPlay?.combo ?? null)).toBe(true);

@@ -45,50 +45,48 @@ function chosen(action: BotAction | null): { target: GameSeat; rank: Rank } {
 
 const samples = [0, 0.3, 0.6, 0.9999];
 
-describe('Go Fish easy and fallback bots', () => {
+describe('Go Fish fallback and turn guards', () => {
   const hand = [card('clubs', 3), card('hearts', 9), card('spades', 9), card('hearts', 2)];
 
-  it('asks a random held rank of a random opponent with cards', () => {
+  it('asks only a held rank of an opponent with cards', () => {
     const visible = view(hand, { handCounts: counts({ N: 4, E: 5, S: 0, W: 3 }) });
-    const picks = samples.map((sample) => chosen(getBotAction(visible, () => sample, 'easy')));
-    for (const pick of picks) {
+    for (const sample of samples) {
+      const pick = chosen(getBotAction(visible, () => sample));
       expect([9, 3, 2]).toContain(pick.rank);
       expect(['E', 'W']).toContain(pick.target);
     }
-    expect(new Set(picks.map((pick) => pick.rank)).size).toBeGreaterThan(1);
-    expect(new Set(picks.map((pick) => pick.target)).size).toBe(2);
   });
 
   it('makes the timeout and fallback choices legal too', () => {
     const visible = view(hand, { handCounts: counts({ N: 4, E: 0, S: 2, W: 0 }) });
     expect(chosen(firstLegalAction(visible))).toEqual({ target: 'S', rank: 9 });
-    const timeout = gameBot('gofish').turnTimeout?.(visible, { isBot: false, strategy: () => null });
-    expect(chosen(timeout ?? null).target).toBe('S');
-    expect(hand.some((own) => own.rank === chosen(timeout ?? null).rank)).toBe(true);
+    const bot = gameBot('gofish');
+    expect(bot.turnTimeout).toBeUndefined();
+    const timeout = chosen(bot.decide(visible, () => 0.5));
+    expect(timeout.target).toBe('S');
+    expect(hand.some((own) => own.rank === timeout.rank)).toBe(true);
   });
 
   it('does nothing off turn or with nobody to ask', () => {
-    for (const difficulty of ['easy', 'hard'] as const) {
-      expect(getBotAction(view(hand, { currentTurnSeat: 'E' }), () => 0.5, difficulty)).toBeNull();
-      expect(getBotAction(view(hand, { handCounts: counts({ N: 4 }) }), () => 0.5, difficulty)).toBeNull();
-      expect(getBotAction(view([]), () => 0.5, difficulty)).toBeNull();
-    }
+    expect(getBotAction(view(hand, { currentTurnSeat: 'E' }), () => 0.5)).toBeNull();
+    expect(getBotAction(view(hand, { handCounts: counts({ N: 4 }) }), () => 0.5)).toBeNull();
+    expect(getBotAction(view([]), () => 0.5)).toBeNull();
     expect(firstLegalAction(view(hand, { currentTurnSeat: 'S' }))).toBeNull();
   });
 });
 
-describe('Go Fish hard bot', () => {
+describe('Go Fish bot', () => {
   const hand = [card('clubs', 4), card('hearts', 9), card('spades', 9), card('hearts', 2)];
 
   it('asks a seat known from the public log to hold the rank', () => {
     // E asked S for a 9 and was refused, so E still holds at least one 9.
     const visible = view(hand, { log: [ask('E', 'S', 9)] });
-    for (const sample of samples) expect(chosen(getBotAction(visible, () => sample, 'hard'))).toEqual({ target: 'E', rank: 9 });
+    for (const sample of samples) expect(chosen(getBotAction(visible, () => sample))).toEqual({ target: 'E', rank: 9 });
   });
 
   it('follows the cards: a taker holds the rank and the old holder no longer does', () => {
     const visible = view(hand, { log: [ask('E', 'S', 9), ask('W', 'E', 9, 1)] });
-    for (const sample of samples) expect(chosen(getBotAction(visible, () => sample, 'hard'))).toEqual({ target: 'W', rank: 9 });
+    for (const sample of samples) expect(chosen(getBotAction(visible, () => sample))).toEqual({ target: 'W', rank: 9 });
   });
 
   it('forgets a holder once the rank is booked or a new hand is dealt', () => {
@@ -96,7 +94,7 @@ describe('Go Fish hard bot', () => {
     const booked = view(hand, { log: [...base, { type: 'book', seat: 'E', rank: 9, timestamp: 2 }] });
     const dealt = view(hand, { log: [...base, { type: 'hand', hand: 2, first: 'N', timestamp: 2 }], hand: 2 });
     for (const visible of [booked, dealt]) {
-      const picks = samples.map((sample) => chosen(getBotAction(visible, () => sample, 'hard')));
+      const picks = samples.map((sample) => chosen(getBotAction(visible, () => sample)));
       expect(picks.every((pick) => pick.target === 'E' && pick.rank === 9)).toBe(false);
     }
   });
@@ -104,28 +102,28 @@ describe('Go Fish hard bot', () => {
   it('avoids seats found without the rank when no seat is known to hold it', () => {
     // S asked E for a 9; then the bot took S's 9. E and S both lack a 9 now, so only W could still hold one.
     const visible = view([card('clubs', 4), card('hearts', 9), card('spades', 9)], { log: [ask('S', 'E', 9), ask('N', 'S', 9, 1)] });
-    expect(chosen(getBotAction(visible, () => 0.5, 'hard'))).toEqual({ target: 'W', rank: 9 });
+    expect(chosen(getBotAction(visible, () => 0.5))).toEqual({ target: 'W', rank: 9 });
   });
 
   it('forgets what a seat lacked after it draws a card', () => {
     const lacked = view([card('hearts', 9), card('spades', 9)], { handCounts: counts({ N: 2, E: 20, S: 1, W: 1 }), stockCount: 5,
       log: [ask('S', 'E', 9), ask('N', 'S', 9, 1)] });
-    expect(chosen(getBotAction(lacked, () => 0.5, 'hard'))).toEqual({ target: 'W', rank: 9 });
+    expect(chosen(getBotAction(lacked, () => 0.5))).toEqual({ target: 'W', rank: 9 });
     // E drew a card since, so the earlier refusal says nothing about its large hand now.
     const redrawn = view([card('hearts', 9), card('spades', 9)], { handCounts: counts({ N: 2, E: 20, S: 1, W: 1 }), stockCount: 5,
       log: [...lacked.log, ask('E', 'W', 3, 0, 'miss')] });
-    expect(chosen(getBotAction(redrawn, () => 0.5, 'hard'))).toEqual({ target: 'E', rank: 9 });
+    expect(chosen(getBotAction(redrawn, () => 0.5))).toEqual({ target: 'E', rank: 9 });
   });
 
   it('prefers the rank it holds most of when nothing is known', () => {
     const visible = view([card('clubs', 7), card('hearts', 7), card('spades', 7), card('hearts', 2)]);
-    for (const sample of samples) expect(chosen(getBotAction(visible, () => sample, 'hard')).rank).toBe(7);
+    for (const sample of samples) expect(chosen(getBotAction(visible, () => sample)).rank).toBe(7);
   });
 
   it('does not mutate the filtered view', () => {
     const visible = view(hand, { log: [ask('E', 'S', 9), ask('W', 'E', 9, 1)] });
     const original = structuredClone(visible);
-    for (const sample of samples) getBotAction(visible, () => sample, 'hard');
+    for (const sample of samples) getBotAction(visible, () => sample);
     expect(visible).toEqual(original);
   });
 });
@@ -148,13 +146,11 @@ describe('Go Fish full matches between bots', () => {
     const code = `GFB${count}`;
     const random = seeded(count * 31);
     gf.startGame(code, playersOf(count));
-    const difficulties = ['hard', 'easy'] as const;
     const actions = runSeededGame(code, 20000, () => gf.getGameState(code)?.phase === 'scoring', () => {
       const game = gf.getGameState(code)!;
       const seat = game.currentTurnSeat;
       const visible = gf.getPlayerVisibleState(code, seat)!;
-      // Alternate difficulties by seat so hard and easy bots share every table.
-      const chosenAction = getBotAction(visible, random, difficulties[GAME_SEAT_ORDER.indexOf(seat) % 2]);
+      const chosenAction = getBotAction(visible, random);
       apply(code, seat, chosenAction);
     });
     const game = gf.getGameState(code)!;
@@ -184,7 +180,7 @@ describe('Go Fish full matches between bots', () => {
       const game = gf.getGameState(code)!;
       const seat = game.currentTurnSeat;
       const visible = gf.getPlayerVisibleState(code, seat)!;
-      const action = getBotAction(visible, random, 'hard');
+      const action = getBotAction(visible, random);
       const { target, rank } = chosen(action);
       expect(visible.myHand.some((own) => own.rank === rank)).toBe(true);
       expect(target).not.toBe(seat);

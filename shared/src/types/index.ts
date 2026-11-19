@@ -6,7 +6,6 @@ export type {
   GameSeat,
   AdditionalSeat,
   PlayerColor,
-  BotDifficulty,
   PlayerInfo,
   ConnectionStatus,
 } from './player';

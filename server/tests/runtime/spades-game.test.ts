@@ -8,7 +8,7 @@ import { createDeck, shuffleDeck } from '../../src/engine/deck';
 import * as spades from '../../src/managers/games/spades-game';
 import { spadesAdapter } from '../../src/managers/games/spades-adapter';
 import { coherentSpadesGame, isSpadesResult, spadesGame } from '../../src/managers/games/spades-validation';
-import { easySpadesAction, getSpadesBotAction, spadesFirstLegalAction } from '../../src/bots/spades-strategy';
+import { getSpadesBotAction, spadesFirstLegalAction } from '../../src/bots/spades-strategy';
 import { gameBot } from '../../src/bots/bot-registry';
 import { isRuntimeSnapshot } from '../../src/runtime/validate';
 import type { RuntimeSnapshot } from '../../src/runtime/types';
@@ -75,7 +75,7 @@ describe('Spades runtime and bots', () => {
     legal(view(state().position.currentTurnSeat!));
     expect(coherentSpadesGame(state())).toBe(true);
   });
-  it.each([17, 42, 123, 2026])('plays a complete seeded match %i with legal easy/hard/fallback/timeout actions', (seed) => {
+  it.each([17, 42, 123, 2026])('plays a complete seeded match %i with legal bot/fallback/timeout actions', (seed) => {
     let randomSeed = seed;
     const random = (): number => { randomSeed = (Math.imul(randomSeed, 1664525) + 1013904223) >>> 0; return randomSeed / 4294967296; };
     vi.spyOn(Math, 'random').mockImplementation(random);
@@ -83,7 +83,7 @@ describe('Spades runtime and bots', () => {
     for (let step = 0; step < 10_000 && !state().result; step++) {
       const current = view(state().position.currentTurnSeat!);
       const before = structuredClone(current);
-      const strategies = [getSpadesBotAction, (v: SpadesVisibleState) => easySpadesAction(v, random), spadesFirstLegalAction,
+      const strategies = [getSpadesBotAction, spadesFirstLegalAction,
         (v: SpadesVisibleState) => gameBot('spades').turnTimeout!(v, { isBot: false, strategy: () => null })];
       for (const strategy of strategies) {
         const action = strategy(current);
@@ -96,7 +96,7 @@ describe('Spades runtime and bots', () => {
       }
       expect(current).toEqual(before);
       for (const seat of SPADES_SEATS.filter((seat) => seat !== current.mySeat)) expect(getSpadesBotAction(view(seat))).toBeNull();
-      legal(current, step % 7 === 0 ? (v) => easySpadesAction(v, random) : getSpadesBotAction);
+      legal(current);
       if (step % 53 === 0) {
         expect(spadesGame(state() as unknown as Record<string, unknown>, () => true)).toBe(true);
         expect(coherentSpadesGame(state())).toBe(true);

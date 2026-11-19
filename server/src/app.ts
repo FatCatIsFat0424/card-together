@@ -155,22 +155,23 @@ export async function createApplication(repository: Repository, options: Applica
     }
   }
   const publish = (code: string): void => broadcastState(io, getRoomMemberIds(code));
+  // Workers start on the first search, so a server without search games never spawns one.
+  const botPool = options.botWorkers && options.botWorkers.workers > 0 ? createSearchPool(options.botWorkers) : undefined;
   let stopAutoPass: (() => void) | undefined;
   let stopTurnTimers: () => void;
   try {
     // Bind first so a second process cannot prune a database owned by the running server.
     await repository.pruneSocialHistory(Date.now());
     stopAutoPass = await startBigTwoAutoPass(runtime, publish);
-    stopTurnTimers = await startTurnTimers(runtime, publish);
+    stopTurnTimers = await startTurnTimers(runtime, publish, botPool);
   } catch (error) {
     stopCoinUpdates();
     stopAutoPass?.();
+    await botPool?.close();
     stopConnections();
     await new Promise<void>((resolve) => io.close(() => resolve()));
     throw error;
   }
-  // Workers start on the first search, so a server without search games never spawns one.
-  const botPool = options.botWorkers && options.botWorkers.workers > 0 ? createSearchPool(options.botWorkers) : undefined;
   const stopBots = startBotTurns(runtime, publish, botPool);
   const stopSharedDeadlines = startSharedDeadlines(runtime, publish);
   const socialCleanup = setInterval(() => {
@@ -187,8 +188,9 @@ export async function createApplication(repository: Repository, options: Applica
       stopCoinUpdates();
       stopSharedDeadlines();
       stopBots();
-      await botPool?.close();
+      // Stop every search client first, so the pool's closing outcomes are not taken as failed searches.
       stopTurnTimers();
+      await botPool?.close();
       stopAutoPass?.();
       stopConnections();
       await new Promise<void>((resolve) => io.close(() => resolve()));

@@ -8,7 +8,7 @@ import { getBotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
 import { firstLegalAction } from '../../src/runtime/automated-action';
 import {
-  atLeastMatches, bidHoldsChance, easyLiarsDiceAction, getLiarsDiceBotAction, liarsDiceFirstLegalAction,
+  atLeastMatches, bidHoldsChance, getLiarsDiceBotAction, liarsDiceFirstLegalAction,
   standingBidHoldsChance,
 } from '../../src/bots/liarsdice-strategy';
 
@@ -91,7 +91,7 @@ describe("Liar's Dice bot strategy", () => {
     });
   });
 
-  describe('hard bot', () => {
+  describe('bot', () => {
     it('should call a bid that cannot be true and accept one that is almost certain', () => {
       const absurd = view([2, 2, 3, 3, 5], { bid: bidBy('E', 15, 6) });
       for (const sample of samples) expect(move(getLiarsDiceBotAction(absurd, () => sample))).toEqual({ type: 'challenge' });
@@ -125,7 +125,7 @@ describe("Liar's Dice bot strategy", () => {
 
     it('should do nothing when it is not its turn or the match is over', () => {
       expect(getLiarsDiceBotAction(view([1, 2, 3, 4, 5], { currentTurnSeat: 'E' }), () => 0.5)).toBeNull();
-      expect(getBotAction(view([1, 2, 3, 4, 5], { phase: 'scoring' }), () => 0.5, 'hard')).toBeNull();
+      expect(getBotAction(view([1, 2, 3, 4, 5], { phase: 'scoring' }), () => 0.5)).toBeNull();
     });
 
     it('should decide from its own filtered view only', () => {
@@ -143,19 +143,16 @@ describe("Liar's Dice bot strategy", () => {
       for (let round = 0; round < 400; round++) {
         const visible = randomView(random);
         const total = ldiTotalDice(visible.diceCounts);
-        for (const difficulty of ['hard', 'easy'] as const) {
-          const choice = move(getBotAction(visible, random, difficulty));
-          if (choice.type === 'challenge') {
-            expect(visible.bid).not.toBeNull();
-            expect(visible.bid?.seat).not.toBe(visible.mySeat);
-          } else {
-            expect(ldiIsLegalBid(visible.bid, choice, total)).toBe(true);
-          }
+        const decided = move(getBotAction(visible, random));
+        if (decided.type === 'challenge') {
+          expect(visible.bid).not.toBeNull();
+          expect(visible.bid?.seat).not.toBe(visible.mySeat);
+        } else {
+          expect(ldiIsLegalBid(visible.bid, decided, total)).toBe(true);
         }
         const bot = gameBot('liarsdice');
-        for (const action of [bot.turnTimeout?.(visible, { isBot: false, strategy: () => null }), bot.firstLegal(visible),
-          firstLegalAction(visible)]) {
-          const choice = move(action ?? null);
+        for (const action of [bot.firstLegal(visible), firstLegalAction(visible)]) {
+          const choice = move(action);
           if (choice.type === 'bid') expect(ldiIsLegalBid(visible.bid, choice, total)).toBe(true);
           else expect(visible.bid && visible.bid.seat !== visible.mySeat).toBe(true);
         }
@@ -165,31 +162,17 @@ describe("Liar's Dice bot strategy", () => {
     it('should call when no raise exists', () => {
       const full = view([3], { bid: bidBy('E', 2, 1), others: { E: 1 } });
       expect(ldiLegalBids(full.bid, 2)).toEqual([]);
-      for (const action of [getLiarsDiceBotAction(full, () => 0.5), easyLiarsDiceAction(full), liarsDiceFirstLegalAction(full)]) {
+      for (const action of [getLiarsDiceBotAction(full, () => 0.5), liarsDiceFirstLegalAction(full)]) {
         expect(move(action)).toEqual({ type: 'challenge' });
       }
     });
   });
 
-  describe('easy bot', () => {
-    it('should call when the bid is more than one die above the expected count', () => {
-      // Expect 2 own 3s plus 10 unseen dice at one third each: about 5.3 dice.
-      const over = view([3, 3, 4, 5, 6], { bid: bidBy('E', 8, 3) });
-      expect(move(easyLiarsDiceAction(over))).toEqual({ type: 'challenge' });
-      const within = view([3, 3, 4, 5, 6], { bid: bidBy('E', 6, 3) });
-      expect(move(easyLiarsDiceAction(within))).toEqual({ type: 'bid', quantity: 6, face: 4 });
-    });
-
-    it('should raise by the least allowed and open on its strongest face', () => {
-      expect(move(easyLiarsDiceAction(view([2, 4, 4, 6, 6], { bid: bidBy('E', 3, 6) })))).toEqual({ type: 'bid', quantity: 3, face: 1 });
-      expect(move(easyLiarsDiceAction(view([2, 4, 4, 4, 6])))).toEqual({ type: 'bid', quantity: 3, face: 4 });
-      expect(move(easyLiarsDiceAction(view([1, 1, 3, 3, 3])))).toEqual({ type: 'bid', quantity: 5, face: 3 });
-    });
-
-    it('should be deterministic', () => {
+  describe('timeout', () => {
+    it('should decide a human timeout like a bot turn', () => {
       const own = view([1, 3, 5, 5, 6], { bid: bidBy('S', 3, 5) });
-      expect(easyLiarsDiceAction(own)).toEqual(easyLiarsDiceAction(structuredClone(own)));
-      expect(gameBot('liarsdice').turnTimeout?.(own, { isBot: false, strategy: () => null })).toEqual(easyLiarsDiceAction(own));
+      expect(gameBot('liarsdice').turnTimeout).toBeUndefined();
+      expect(gameBot('liarsdice').decide(own, () => 0.5)).toEqual(getLiarsDiceBotAction(own, () => 0.5));
     });
   });
 

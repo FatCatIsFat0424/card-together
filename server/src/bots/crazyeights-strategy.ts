@@ -37,10 +37,6 @@ export function crazyEightsFirstLegalAction(visible: CrazyEightsVisibleState): B
   return card ? playAction(visible, card, card.suit) : drawOrPass(options);
 }
 
-export function easyCrazyEightsAction(visible: CrazyEightsVisibleState): BotAction | null {
-  return crazyEightsFirstLegalAction(visible);
-}
-
 function suitCounts(cards: readonly Card[]): Record<Suit, number> {
   const counts: Record<Suit, number> = { spades: 0, hearts: 0, clubs: 0, diamonds: 0 };
   for (const card of cards) counts[card.suit]++;

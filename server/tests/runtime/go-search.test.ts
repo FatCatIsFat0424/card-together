@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { GO_KOMI, goHashOf, goParsePoint, goPlay, goScore, goStart } from '@shared/rules/go';
+import { GO_KOMI, goHashOf, goLegalPoints, goParsePoint, goPlay, goScore, goStart } from '@shared/rules/go';
 import type { GoCell, GoHash, GoMove, GoPosition, GoSide, GoSize } from '@shared/rules/go';
 import { goEstimateDead } from '@shared/rules/go-ownership';
-import { goBestMove, goEasyMove, goShouldContestMarking } from '../../src/bots/go-search';
+import { goBestMove, goShouldContestMarking } from '../../src/bots/go-search';
 import { seededRandom } from '../../src/bots/search/seeded-random';
 
 /** A position from rows drawn top to bottom: `X` black, `O` white, `.` empty. */
@@ -10,6 +10,12 @@ function position(rows: readonly string[], toMove: GoSide = 0, passes = 0): GoPo
   const size = rows.length as GoSize;
   const stones: GoCell[] = rows.flatMap((row) => [...row].map((char) => (char === 'X' ? 0 : char === 'O' ? 1 : null)));
   return { size, stones, toMove, komi: GO_KOMI, captures: [0, 0], passes, moves: 40 };
+}
+
+/** A uniformly random legal point, passing only when none is left: the weak baseline the search has to beat. */
+function randomMove(start: GoPosition, seen: readonly GoHash[], random: () => number): GoMove {
+  const points = goLegalPoints(start, seen);
+  return points.length > 0 ? points[Math.floor(random() * points.length)] : 'pass';
 }
 
 const at = (name: string): number => goParsePoint(9, name)!;
@@ -84,40 +90,28 @@ describe('Go hard search', () => {
   });
 });
 
-describe('Go easy move', () => {
-  it('captures, then escapes, and never fills its own eye', () => {
-    expect(goEasyMove(ATARI_TO_TAKE, history(ATARI_TO_TAKE), seededRandom(1))).toBe(at('D5'));
-    expect(goEasyMove(ATARI_TO_ESCAPE, history(ATARI_TO_ESCAPE), seededRandom(1))).toBe(at('E5'));
-    for (let seed = 0; seed < 20; seed++) {
-      const move = goEasyMove(EYES, history(EYES), seededRandom(seed));
-      expect([at('A9'), at('C9'), 'pass']).not.toContain(move);
-    }
-    expect(goEasyMove(FINISHED, history(FINISHED), seededRandom(1))).toBe('pass');
-  });
-});
-
-describe('Go hard against easy', () => {
+describe('Go search against a random mover', () => {
   it('wins a seeded 9 × 9 mini-match at least 8 games of 10', () => {
-    let hardWins = 0;
+    let botWins = 0;
     for (let game = 0; game < 10; game++) {
       const random = seededRandom(1_000 + game);
-      const hardSide: GoSide = game % 2 === 0 ? 0 : 1;
+      const botSide: GoSide = game % 2 === 0 ? 0 : 1;
       const start = goStart({ size: 9, handicap: 0 });
       let current = start.position;
       const seen = [...start.history];
       while (current.passes < 2 && current.moves < 243) {
-        const move = current.toMove === hardSide
-          ? goBestMove(current, seen, { random, maxIterations: 300 })
-          : goEasyMove(current, seen, random);
+        const move = current.toMove === botSide
+          ? goBestMove(current, seen, { random, maxIterations: 150 })
+          : randomMove(current, seen, random);
         const result = goPlay(current, move, seen);
         expect(result).not.toBeNull();
         if (move !== 'pass') seen.push(result!.hash);
         current = result!.position;
       }
       const score = goScore(9, current.stones, goEstimateDead(current), current.komi);
-      if (score.winner === hardSide) hardWins++;
+      if (score.winner === botSide) botWins++;
     }
-    expect(hardWins).toBeGreaterThanOrEqual(8);
+    expect(botWins).toBeGreaterThanOrEqual(8);
   }, 30_000);
 });
 

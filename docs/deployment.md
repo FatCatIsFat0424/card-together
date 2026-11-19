@@ -53,7 +53,7 @@ DATABASE_PATH=/var/lib/card-together/database.sqlite
 - `CLIENT_ORIGIN` 是完全相符的 origin，不含路徑或結尾斜線；正式環境缺少它時後端拒絕啟動。
 - `DATABASE_PATH` 必須明確設定在狀態目錄內：沒有設定時預設路徑在 release 內（`server/data/`），而 release 是唯讀的。`media/` 與 `replays/` 位於資料庫檔旁邊。
 - `DATABASE_ENGINE` 為 `sqlite`（正式環境）或 `json`（[儲存引擎](storage.md#儲存引擎)）；一個資料庫只能由一個程序開啟（擁有者鎖定檔）。
-- 搜尋型 bot 的 worker pool 由選填的 `BOT_WORKERS`（預設 2）、`BOT_WORKER_MEMORY_MB`（預設 128）與 `BOT_SEARCH_QUEUE`（預設 32）控制；沿用預設即可。Worker 在第一次搜尋時才啟動，每個閒置約增加 30 MB RSS，執行搜尋時再加上最多 `BOT_WORKER_MEMORY_MB` 的堆積。預設最壞約 400 MB，仍在 Resource 的 `limits.memoryMax: 1G` 內；增加 worker 數量或堆積上限前，必須先附量測數據提案調整記憶體上限（專案上限 4 GB）。
+- 搜尋型 bot 的 worker pool 由選填的 `BOT_WORKERS`（預設 4）、`BOT_WORKER_MEMORY_MB`（預設 128）與 `BOT_SEARCH_QUEUE`（預設 32）控制；沿用預設即可。Worker 在第一次搜尋時才啟動，每個閒置約增加 30–60 MB RSS，執行搜尋時再加上最多 `BOT_WORKER_MEMORY_MB` 的堆積。實測最重的是 19 路圍棋：每個 worker 搜尋時約佔 135 MB；4 個 worker 同時搜尋 19 路圍棋時整個行程約 700 MB，混合各種搜尋約 500 MB。依堆積上限推算的最壞情況約 850 MB，仍在 Resource 的 `limits.memoryMax: 1G` 內（6 個 worker 實測已接近 1 GB，所以預設取 4）；增加 worker 數量或堆積上限前，必須先附量測數據提案調整記憶體上限（專案上限 4 GB）。
 - 後端保持在 loopback 上。信任 loopback 時，ingress 必須覆寫 `X-Forwarded-For`。
 - 變更連接埠時，同時更新主機設定中服務的 port 與 Resource 的健康檢查網址。
 

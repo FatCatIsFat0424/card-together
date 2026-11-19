@@ -11,16 +11,6 @@ export function heartsFirstLegalAction(view: HeartsVisibleState): BotAction | nu
   if (passing(view)) return wrap({ type: 'pass', cards: view.myHand.slice(0, 3) });
   return view.validCards[0] ? wrap({ type: 'play', card: view.validCards[0] }) : null;
 }
-export function easyHeartsAction(view: HeartsVisibleState, random: () => number = Math.random): BotAction | null {
-  if (passing(view)) {
-    const cards = [...view.myHand];
-    const selected: Card[] = [];
-    while (selected.length < 3 && cards.length) selected.push(...cards.splice(Math.min(cards.length - 1, Math.floor(random() * cards.length)), 1));
-    return wrap({ type: 'pass', cards: selected });
-  }
-  if (view.validCards.length === 0) return null;
-  return wrap({ type: 'play', card: view.validCards[Math.min(view.validCards.length - 1, Math.floor(random() * view.validCards.length))] });
-}
 /** Shed dangerous high cards; play below the current winner, and dump penalties when void. */
 export function getHeartsBotAction(view: HeartsVisibleState, random: () => number = Math.random): BotAction | null {
   if (passing(view)) {

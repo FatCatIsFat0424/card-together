@@ -119,9 +119,9 @@
 | `room:standUp` | — | 等待中起身成為旁觀者 |
 | `room:movePlayer` | `{ accountId, target }` | 房主在等待中移動一位真人；`target` 是 [`RoomSeatTarget`](../shared/src/types/room.ts) |
 | `room:addSeat`、`room:removeSeat` | — | 房主加開一個額外座位（總共八個，拿破崙與釣魚為六個），或移除最後一個空的額外座位；只限等待中、人數彈性且可加開座位的遊戲（`seats.expandable`：99、瘋狂 8、釣魚、21 點、十點半、德州撲克、梭哈、拿破崙、吹牛骰、快艇骰子、抽鬼牌與跳棋） |
-| `room:addBot` | `{ seat, difficulty? }` | 房主在等待中把 bot 加到任何已設定的座位（`N`–`W`，或已加開的 `P5`–`P8`）；省略難度時為困難 |
+| `room:addBot` | `{ seat }` | 房主在等待中把 bot 加到任何已設定的座位（`N`–`W`，或已加開的 `P5`–`P8`）；舊版頁面多送的 `difficulty` 會被忽略 |
 | `room:removeBot` | `{ seat }` | 房主在等待中移除 bot |
-| `room:setBotDifficulty` | `{ seat, difficulty }` | 房主把等待中房間的一個 bot 改為簡單或困難；重設真人的準備狀態 |
+| `room:setBotDifficulty`（已停用） | — | bot 只有一種強度；一律回覆重新整理提示 |
 | `room:fillBots` | — | 房主以已準備的 bot 補滿所有空位（包括額外座位），不超過遊戲的人數上限 |
 | `room:ready`、`room:unready` | — | 等待中設定入座玩家的準備狀態，不論目前人數；從不會開始對局。房主永遠視為已準備，所以不需要呼叫（呼叫也不影響開始條件） |
 | `room:start` | — | 只有在房主以外所有有人的座位都已準備，且人數符合該遊戲時，房主才能開始 |
@@ -158,7 +158,7 @@
 | `game:abortVote:start` / `cast` | — / `{ agree }` | 發起或投票終止對局（[規則](games/common.md#房間流程)） |
 | `chat:send` | 一個[聊天輸入](../shared/src/types/socket-events.ts)，文字可附 `mentions`，或 `{ shopSticker }` 等貼圖輸入 | 文字，或一張個人／站方／商店貼圖；發送商店貼圖需要擁有該貼圖包 |
 
-房規保存在 `RoomInfo.gameOptions` 的遊戲鍵下，切換遊戲再切回時保留原本選擇。遊戲局內仍使用開局時固定的規則；房規只在等待中可改。舊版個別遊戲操作事件與四個 `room:set*Options` 事件只回覆重新整理提示，不會執行操作；部署後仍開啟舊版的玩家需重新整理。
+房規保存在 `RoomInfo.gameOptions` 的遊戲鍵下，切換遊戲再切回時保留原本選擇。遊戲局內仍使用開局時固定的規則；房規只在等待中可改。舊版個別遊戲操作事件、四個 `room:set*Options` 事件與 `room:setBotDifficulty` 只回覆重新整理提示，不會執行操作；部署後仍開啟舊版的玩家需重新整理。
 
 **權限**
 

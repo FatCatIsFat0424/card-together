@@ -3,7 +3,8 @@ import type { Card, Seat } from '@shared/types';
 import type { SpadesPlay, SpadesPosition, SpadesVisibleState } from '@shared/games/spades/types';
 import { applySpadesMove, newSpadesHand, scoreSpadesHand, SPADES_SEATS, spadesLegalCards, spadesSeatMap, spadesTeam,
   spadesTrickWinner } from '@shared/rules/spades';
-import { easySpadesAction, getSpadesBotAction } from '../../src/bots/spades-strategy';
+import type { BotAction } from '../../src/bots/bot-decisions';
+import { getSpadesBotAction } from '../../src/bots/spades-strategy';
 import { seededRandom } from '../../src/bots/search/seeded-random';
 import { createDeck, shuffleDeck } from '../../src/engine/deck';
 
@@ -26,7 +27,7 @@ function played(visible: SpadesVisibleState, seed: number): Card {
   return action.request.action.card;
 }
 
-describe('Spades hard bot variety and cooperation', () => {
+describe('Spades bot variety and cooperation', () => {
   it('varies equivalent low leads without spending a high card or reading spectator hands', () => {
     const visible = view([c('clubs', 2), c('diamonds', 2), c('hearts', 2), c('clubs', 12)]);
     const before = structuredClone(visible);
@@ -71,8 +72,16 @@ describe('Spades hard bot variety and cooperation', () => {
   });
 });
 
-/** Paired deals swap the hard partnership while keeping the same cards and bids. */
-function hardAdvantage(seed: number, hardTeam: 'NS' | 'EW'): number {
+/** A seeded uniformly random legal card: the weak baseline the bot is measured against. */
+function randomLegalPlay(visible: SpadesVisibleState, random: () => number): BotAction | null {
+  const cards = visible.validCards;
+  if (cards.length === 0) return null;
+  const card = cards[Math.min(cards.length - 1, Math.floor(random() * cards.length))];
+  return { type: 'game-action', request: { gameType: 'spades', action: { type: 'play', card } } };
+}
+
+/** Paired deals swap the bot partnership while keeping the same cards and bids. */
+function botAdvantage(seed: number, botTeam: 'NS' | 'EW'): number {
   const deck = shuffleDeck(createDeck(), seededRandom(seed));
   const hands = spadesSeatMap((seat) => deck.slice(SPADES_SEATS.indexOf(seat) * 13, (SPADES_SEATS.indexOf(seat) + 1) * 13));
   let position = newSpadesHand('W');
@@ -83,7 +92,7 @@ function hardAdvantage(seed: number, hardTeam: 'NS' | 'EW'): number {
       mySeat: seat, currentTurnSeat: seat, position,
       handCounts: spadesSeatMap((other) => hands[other].length),
       validCards: spadesLegalCards(hands[seat], position.trick, position.broken) };
-    const strategy = position.phase === 'bidding' || spadesTeam(seat) === hardTeam ? getSpadesBotAction : easySpadesAction;
+    const strategy = position.phase === 'bidding' || spadesTeam(seat) === botTeam ? getSpadesBotAction : randomLegalPlay;
     const action = strategy(visible, randoms[seat]);
     if (action?.type !== 'game-action' || action.request.gameType !== 'spades') throw new Error('Expected Spades action.');
     const move = action.request.action;
@@ -94,13 +103,13 @@ function hardAdvantage(seed: number, hardTeam: 'NS' | 'EW'): number {
   }
   expect(position.phase).toBe('complete');
   const score = scoreSpadesHand(position.bids as Record<Seat, number>, position.taken, { NS: 0, EW: 0 });
-  const other = hardTeam === 'NS' ? 'EW' : 'NS';
-  return score.teams[hardTeam].points - score.teams[other].points;
+  const other = botTeam === 'NS' ? 'EW' : 'NS';
+  return score.teams[botTeam].points - score.teams[other].points;
 }
 
 describe('Spades seeded strength', () => {
   it('outplays random legal opponents on paired deals with identical bidding', () => {
-    const advantages = seeds.flatMap((seed) => [hardAdvantage(seed, 'NS'), hardAdvantage(seed, 'EW')]);
+    const advantages = seeds.flatMap((seed) => [botAdvantage(seed, 'NS'), botAdvantage(seed, 'EW')]);
     expect(advantages.reduce((sum, value) => sum + value, 0) / advantages.length).toBeGreaterThan(0);
   });
 });

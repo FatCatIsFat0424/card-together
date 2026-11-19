@@ -14,20 +14,18 @@ import * as landbattle from '../../server/src/managers/games/landbattle-game';
 import * as battleship from '../../server/src/managers/games/battleship-game';
 import * as banqi from '../../server/src/managers/games/banqi-game';
 import * as chinesecheckers from '../../server/src/managers/games/chinesecheckers-game';
-import { easyReversiAction } from '../../server/src/bots/reversi-strategy';
-import { easyXiangqiAction } from '../../server/src/bots/xiangqi-strategy';
-import { easyJungleAction } from '../../server/src/bots/jungle-strategy';
-import { easyLandBattleAction } from '../../server/src/bots/landbattle-strategy';
 import { getBattleshipBotAction } from '../../server/src/bots/battleship-strategy';
-import { easyBanqiAction } from '../../server/src/bots/banqi-strategy';
 import { getChineseCheckersBotAction } from '../../server/src/bots/chinesecheckers-strategy';
 import type { BotAction } from '../../server/src/bots/bot-decisions';
 import { createDemoRecorder, DEMO_NOW } from './demo-recorder';
 import type { DemoFixture } from './demo-fixture-types';
+import boardScripts from './board-scripts.json';
 
 type AssignedGameType = 'reversi' | 'gomoku' | 'go' | 'xiangqi' | 'chess' | 'jungle' | 'landbattle' | 'battleship' | 'banqi' | 'chinesecheckers';
 /** Lessons scripted move by move instead of played by a bot. */
 type ScriptedGameType = 'gomoku' | 'go' | 'chess';
+/** Lessons replayed from a recorded move list, so the walkthrough stays fixed when the bot changes. */
+type RecordedGameType = keyof typeof boardScripts;
 type BoardView = Extract<PlayerVisibleGameState, { gameType: AssignedGameType }>;
 type BoardRequest = Extract<GameActionEnvelope, { gameType: Exclude<AssignedGameType, 'go' | 'chess'> }>;
 type ActionResult = { readonly success: boolean; readonly reason?: string };
@@ -56,16 +54,21 @@ function read(code: string, type: AssignedGameType, seat: GameSeat): BoardView {
   return required(managers[type].getPlayerVisibleState(code, seat), `${type} player view`);
 }
 
-function choose(view: BoardView, random: () => number): BotAction | null {
+function isRecorded(type: AssignedGameType): type is RecordedGameType {
+  return Object.hasOwn(boardScripts, type);
+}
+
+/** The recorded move for a replayed lesson, otherwise the bot's decision. */
+function choose(view: BoardView, seat: GameSeat, step: number, random: () => number): BotAction | null {
+  if (isRecorded(view.gameType)) {
+    const recorded = boardScripts[view.gameType][step];
+    if (recorded?.seat !== seat) throw new Error(`${view.gameType} script expected ${recorded?.seat ?? 'the end'} at step ${step}.`);
+    return { type: 'game-action', request: { gameType: view.gameType, action: recorded.action } as BoardRequest };
+  }
   switch (view.gameType) {
-    case 'reversi': return easyReversiAction(view, random);
-    case 'xiangqi': return easyXiangqiAction(view, random);
-    case 'jungle': return easyJungleAction(view, random);
-    case 'landbattle': return easyLandBattleAction(view, random);
     case 'battleship': return getBattleshipBotAction(view, random);
-    case 'banqi': return easyBanqiAction(view, random);
     case 'chinesecheckers': return getChineseCheckersBotAction(view, random);
-    case 'gomoku': case 'go': case 'chess': throw new Error(`${view.gameType} uses a scripted game.`);
+    default: throw new Error(`${view.gameType} uses a scripted game.`);
   }
 }
 
@@ -125,7 +128,7 @@ function automatedFixture(type: Exclude<AssignedGameType, ScriptedGameType>, see
         ? required(SEATS.find((other) => !visible.deployed.includes(other)), 'deployment seat')
         : visible.gameType === 'battleship' && visible.phase === 'placing'
           ? required(SEATS.find((other) => !visible.placed.includes(other)), 'placement seat') : visible.currentTurnSeat;
-      const decision = required(choose(read(code, type, seat), random), `${type} legal decision`);
+      const decision = required(choose(read(code, type, seat), seat, index, random), `${type} legal decision`);
       if (decision.type !== 'game-action' || decision.request.gameType !== type) throw new Error(`Wrong ${type} decision.`);
       const request = decision.request as BoardRequest;
       // Opponents' submitted identities and ship positions are never public actions.

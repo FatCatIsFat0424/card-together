@@ -7,6 +7,7 @@ import * as hearts from '../src/managers/games/hearts-game';
 import * as gongzhu from '../src/managers/games/gongzhu-game';
 import * as spades from '../src/managers/games/spades-game';
 import { getBotAction } from '../src/bots/bot-decisions';
+import { firstLegalAction } from '../src/runtime/automated-action';
 import type { BotAction } from '../src/bots/bot-decisions';
 import { seededRandom } from '../src/bots/search/seeded-random';
 
@@ -47,8 +48,11 @@ function options(args: readonly string[]): Options {
   return { game, deals, seed, baseline, candidate };
 }
 
-async function policy(game: TrickGame, directory: string | null, difficulty: 'hard' | 'easy'): Promise<Policy> {
-  if (!directory) return (view, random) => getBotAction(view, random, difficulty);
+/** Without a bots directory, the candidate is the current bot and the rival plays its first legal card. */
+async function policy(game: TrickGame, directory: string | null, role: 'candidate' | 'rival'): Promise<Policy> {
+  if (!directory) {
+    return role === 'candidate' ? (view, random) => getBotAction(view, random) : (view) => firstLegalAction(view);
+  }
   const exports = await import(pathToFileURL(`${directory}/${game}-strategy.ts`).href) as Record<string, unknown>;
   const name = game === 'hearts' ? 'getHeartsBotAction' : game === 'gongzhu' ? 'getGongZhuBotAction' : 'getSpadesBotAction';
   const policy = exports[name];
@@ -116,8 +120,8 @@ async function main(): Promise<void> {
   const config = options(process.argv.slice(2));
   const games: readonly TrickGame[] = config.game === 'all' ? ['hearts', 'gongzhu', 'spades'] : [config.game];
   for (const game of games) {
-    const candidate = await policy(game, config.candidate, 'hard');
-    const rival = await policy(game, config.baseline, 'easy');
+    const candidate = await policy(game, config.candidate, 'candidate');
+    const rival = await policy(game, config.baseline, 'rival');
     const sides = game === 'spades' ? SEATS.slice(0, 2) : SEATS;
     const outcomes = Array.from({ length: config.deals }, (_, index) => {
       const seed = config.seed + index;
@@ -126,11 +130,11 @@ async function main(): Promise<void> {
     }).flat();
     const total = outcomes.reduce((sum, result) => ({ margin: sum.margin + result.margin, share: sum.share + result.share,
       decisions: sum.decisions + result.decisions, ms: sum.ms + result.ms }), { margin: 0, share: 0, decisions: 0, ms: 0 });
-    process.stdout.write(`${JSON.stringify({ workload: 'trick-bot-hand', game, policy: 'hard', opponent: config.baseline ? 'baseline-hard' : 'easy',
+    process.stdout.write(`${JSON.stringify({ workload: 'trick-bot-hand', game, policy: 'bot', opponent: config.baseline ? 'baseline-bot' : 'first-legal',
       seeds: [config.seed, config.seed + config.deals - 1], deals: config.deals, seatRotations: sides.length, hands: outcomes.length,
       winShare: total.share / outcomes.length, meanPointMargin: total.margin / outcomes.length,
       decisions: total.decisions, averageDecisionMs: total.ms / total.decisions,
-      note: 'First-hand comparison with seat rotation; positive margins favor hard. Not a full-match or human-strength rating.' })}\n`);
+      note: 'First-hand comparison with seat rotation; positive margins favor the candidate bot. Not a full-match or human-strength rating.' })}\n`);
   }
 }
 

@@ -102,7 +102,7 @@ function playOut(
   return null;
 }
 
-/** Hard bot search for the worker pool; falls back to the heuristic outside the play phase. */
+/** Bot search for the worker pool; falls back to the heuristic outside the play phase. */
 export function douDizhuSearch(visible: DouDizhuVisibleState, context: SearchContext): BotAction | null {
   const { random, budget } = context;
   if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat || !visible.landlord) {

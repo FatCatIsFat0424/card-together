@@ -1,6 +1,5 @@
 import type { DiceFace, LiarsDiceBid, LiarsDiceVisibleState } from '@shared/types';
 import {
-  LDI_ALL_FACES,
   LDI_FACES,
   LDI_WILD_FACE,
   ldiCountFace,
@@ -25,7 +24,6 @@ const BIDDER_HOLDS_ONE = 0.5;
 const UNCALLED_VALUE = 0.5;
 const MIN_CALL_CHANCE = 0.05;
 const MARGIN = 0.02;
-const EASY_SLACK = 1;
 
 function action(request: { type: 'bid'; quantity: number; face: DiceFace } | { type: 'challenge' }): BotAction {
   return { type: 'game-action', request: { gameType: 'liarsdice', action: request } };
@@ -97,32 +95,6 @@ export function getLiarsDiceBotAction(visible: LiarsDiceVisibleState, random: ()
     options.push({ value: action({ type: 'challenge' }), score: 1 - standingBidHoldsChance(visible) });
   }
   return selectNearBest(options, random, MARGIN);
-}
-
-/** The face the bot holds most of, with ones counted while they are wild. */
-function strongestFace(visible: LiarsDiceVisibleState): DiceFace {
-  const faces = LDI_ALL_FACES.filter((face) => face !== LDI_WILD_FACE);
-  return faces.reduce((best, face) => (ldiCountFace(visible.myDice, face, visible.onesWild)
-    > ldiCountFace(visible.myDice, best, visible.onesWild) ? face : best), faces[0]);
-}
-
-/**
- * Fixed thresholds: challenge when the bid is more than one die above what the table should hold on average,
- * otherwise raise by the least allowed. Opens with the face the bot holds most. Deterministic, so it also serves
- * players whose turn clock ran out.
- */
-export function easyLiarsDiceAction(visible: LiarsDiceVisibleState): BotAction | null {
-  if (!myTurn(visible)) return null;
-  const total = ldiTotalDice(visible.diceCounts);
-  const standing = visible.bid;
-  if (!standing) {
-    const face = strongestFace(visible);
-    return bidAction({ quantity: Math.max(1, ldiCountFace(visible.myDice, face, visible.onesWild)), face });
-  }
-  const expected = ldiCountFace(visible.myDice, standing.face, visible.onesWild)
-    + unknownDice(visible) * matchChance(standing.face, visible.onesWild);
-  const raise = ldiMinimalBid(standing, total);
-  return raise && standing.quantity <= expected + EASY_SLACK ? bidAction(raise) : action({ type: 'challenge' });
 }
 
 /** A deliberately simple legal move: challenge any standing bid, otherwise open with the least bid. */

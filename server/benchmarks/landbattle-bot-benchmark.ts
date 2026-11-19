@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { performance } from 'node:perf_hooks';
 import type { GameSeat, LandBattleVisibleState, PlayerInfo } from '@shared/types';
 import type { BotAction } from '../src/bots/bot-decisions';
-import { easyLandBattleAction, getLandBattleBotAction } from '../src/bots/landbattle-strategy';
+import { getLandBattleBotAction } from '../src/bots/landbattle-strategy';
 import { landBattleSearch } from '../src/bots/landbattle-search';
 import type { SearchContext } from '../src/bots/search/search-types';
 import { seededRandom } from '../src/bots/search/seeded-random';
@@ -28,7 +28,7 @@ interface Options {
   baseline: string | null;
 }
 
-const POLICIES = ['search', 'sync', 'easy', 'base-search', 'base-sync'];
+const POLICIES = ['search', 'sync', 'base-search', 'base-sync'];
 /** Moves after which a match that never ends is scored a draw; the quiet-move limit normally ends it first. */
 const MOVE_CAP = 3_000;
 
@@ -75,7 +75,6 @@ async function policies(options: Options): Promise<Record<string, Policy>> {
   const table: Record<string, Policy> = {
     search: searchPolicy(landBattleSearch),
     sync: (visible, random) => getLandBattleBotAction(visible, random),
-    easy: (visible, random) => easyLandBattleAction(visible, random),
   };
   if (options.baseline) {
     const searchModule = await import(pathToFileURL(`${options.baseline}/landbattle-search.ts`).href) as { landBattleSearch: SearchFn };
@@ -116,10 +115,10 @@ function playMatch(
     const visible = landbattle.getPlayerVisibleState(code, seat)!;
     const random = seededRandom(seed * 100_003 + moves);
     let action = policyOf(seat)(visible, random, budget);
-    // Like the runtime, a search that returns nothing is answered by the easy policy.
+    // Like the runtime, a search that returns nothing is answered by the synchronous strategy.
     if (!action) {
       timingOf(seat).fallbacks++;
-      action = easyLandBattleAction(visible, random);
+      action = getLandBattleBotAction(visible, random);
     }
     const elapsed = performance.now() - started;
     const timing = timingOf(seat);

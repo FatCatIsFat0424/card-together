@@ -55,7 +55,7 @@ export function parseAllowedOrigins(value: string): string[] {
   return origins;
 }
 
-export const BOT_WORKER_DEFAULTS: BotWorkerConfig = { workers: 2, memoryMb: 128, queueLimit: 32 };
+export const BOT_WORKER_DEFAULTS: BotWorkerConfig = { workers: 4, memoryMb: 128, queueLimit: 32 };
 
 const BOT_WORKER_LIMITS = {
   BOT_WORKERS: { min: 0, max: 8 },

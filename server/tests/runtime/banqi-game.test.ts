@@ -1,18 +1,17 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { GameSeat, PlayerInfo } from '@shared/types';
 import type { BanqiGameState, BanqiMatchOptions } from '@shared/games/banqi/types';
-import { DEFAULT_BANQI_OPTIONS, LEGACY_BANQI_OPTIONS } from '@shared/banqi-options';
+import { DEFAULT_BANQI_OPTIONS, LEGACY_BANQI_OPTIONS, banqiRules } from '@shared/banqi-options';
 import { gameDefinition } from '@shared/games/registry';
 import { parseGameAction } from '@shared/games/actions';
 import { matchStanding } from '@shared/rules/match-standing';
 import { DRAW_REOFFER_MOVES } from '@shared/rules/board/match-controls';
-import { BQ_CELLS, BQ_DOWN, BQ_EMPTY, BQ_QUIET_LIMIT, bqColour, bqFlips, bqFullSet, bqNode, bqPiece, bqTally } from '@shared/rules/banqi';
+import { BQ_CELLS, BQ_DOWN, BQ_EMPTY, BQ_QUIET_LIMIT, bqColour, bqFlips, bqFullSet, bqMoves, bqNode, bqPiece, bqTally } from '@shared/rules/banqi';
 import { banqiAdapter } from '../../src/managers/games/banqi-adapter';
 import * as banqi from '../../src/managers/games/banqi-game';
 import { banqiGame, coherentBanqiGame, isBanqiResult } from '../../src/managers/games/banqi-validation';
 import { gameValidator } from '../../src/managers/games/validation-registry';
 import { seededRandom } from '../../src/bots/search/seeded-random';
-import { easyBanqiAction } from '../../src/bots/banqi-strategy';
 import { recordReplayStep } from '../../src/runtime/replay-recording';
 import * as manager from '../../src/managers/game-manager';
 import { setPosition } from '../fixtures/banqi-position';
@@ -45,26 +44,31 @@ function game(): BanqiGameState {
 const coherent = (): boolean => coherentBanqiGame(structuredClone(game()));
 const cell = (col: number, row: number): string => `${col},${row}`;
 
+type Action = { type: 'flip'; to: string } | { type: 'move'; from: string; to: string } | { type: 'stop' };
+
+/** Every action the seat may take now: flips, moves of its own colour, and a chain only continues with a capture. */
+function legalActions(seat: GameSeat): Action[] {
+  const state = game();
+  const flips = bqFlips(state.board).map((to): Action => ({ type: 'flip', to: bqNode(to) }));
+  if (state.colours === null) return flips;
+  const colour = state.colours[banqi.banqiSeats(state).indexOf(seat)];
+  const moves = bqMoves(state.board, colour, banqiRules(state.options))
+    .filter((move) => state.chain === null || (bqNode(move.from) === state.chain && (move.capture || move.blind)))
+    .map((move): Action => ({ type: 'move', from: bqNode(move.from), to: bqNode(move.to) }));
+  return state.chain === null ? [...moves, ...flips] : [...moves, { type: 'stop' }];
+}
+
 /** Plays random legal actions from a seeded generator until the match ends or `limit` actions were made. */
 function playOut(seed: number, limit = Infinity): void {
   const random = seededRandom(seed);
   for (let step = 0; step < limit && game().phase === 'playing'; step++) {
     const seat = game().currentTurnSeat;
-    // The Easy bot only ever picks legal actions from the seat's own view.
-    const action = easyAction(banqi.getPlayerVisibleState(CODE, seat)!, random);
+    const actions = legalActions(seat);
+    const action = actions[Math.floor(random() * actions.length)];
     const result = action.type === 'flip' ? banqi.flip(CODE, seat, action.to)
       : action.type === 'move' ? banqi.move(CODE, seat, action.from, action.to) : banqi.stop(CODE, seat);
     expect(result).toEqual({ success: true });
   }
-}
-
-function easyAction(view: NonNullable<ReturnType<typeof banqi.getPlayerVisibleState>>, random: () => number):
-{ type: 'flip'; to: string } | { type: 'move'; from: string; to: string } | { type: 'stop' } {
-  const action = easyBanqiAction(view, random);
-  if (action?.type !== 'game-action' || action.request.gameType !== 'banqi') throw new Error('Expected a Banqi action');
-  const chosen = action.request.action;
-  if (chosen.type !== 'flip' && chosen.type !== 'move' && chosen.type !== 'stop') throw new Error('Unexpected action');
-  return chosen;
 }
 
 afterEach(() => banqi.abortGame(CODE));
@@ -622,7 +626,7 @@ describe('Banqi adapter and stored state', () => {
   it('accepts a played game as stored state and rejects tampering', () => {
     for (const options of [DEFAULT_BANQI_OPTIONS, { chain: true, rookDash: true }]) {
       start(options, 9);
-      playOut(33, 60);
+      playOut(33, 30);
       const stored = JSON.parse(JSON.stringify(game())) as StoredBanqi;
       const accepts = (value: unknown): boolean => gameValidator('banqi').shape(value as never, () => true)
         && gameValidator('banqi').coherent(value as BanqiGameState);

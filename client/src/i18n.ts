@@ -135,11 +135,7 @@ type TranslationKeys = Record<
   'room.addBot': string;
   'room.removeBot': string;
   'room.fillBots': string;
-  'room.botDifficulty': string;
-  'room.botDifficultyFor': string;
   'room.botControlsFor': string;
-  'room.botDifficulty.easy': string;
-  'room.botDifficulty.hard': string;
   'player.bot': string;
   'player.botSeat': string;
   // Game
@@ -257,11 +253,7 @@ const translations: Record<Locale, TranslationKeys> = {
     'room.addBot': '加入 bot',
     'room.removeBot': '移除 bot',
     'room.fillBots': '用 bot 補滿空位',
-    'room.botDifficulty': '難度',
-    'room.botDifficultyFor': '{nickname} 的難度',
     'room.botControlsFor': '管理 {nickname}',
-    'room.botDifficulty.easy': '簡單',
-    'room.botDifficulty.hard': '困難',
     'player.bot': 'bot',
     'player.botSeat': 'bot（{seat}）',
     'game.redealPending': '倒牌確認',
@@ -370,11 +362,7 @@ const translations: Record<Locale, TranslationKeys> = {
     'room.addBot': 'Add bot',
     'room.removeBot': 'Remove bot',
     'room.fillBots': 'Fill empty seats with bots',
-    'room.botDifficulty': 'Difficulty',
-    'room.botDifficultyFor': 'Difficulty for {nickname}',
     'room.botControlsFor': 'Manage {nickname}',
-    'room.botDifficulty.easy': 'Easy',
-    'room.botDifficulty.hard': 'Hard',
     'player.bot': 'Bot',
     'player.botSeat': 'Bot ({seat})',
     'game.redealPending': 'Redeal Check',

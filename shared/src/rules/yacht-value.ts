@@ -52,7 +52,7 @@ export function yachtBestPlacement(card: YachtScorecard, dice: readonly YachtFac
   return best;
 }
 
-/** The box the timeout action and the easy bot write the dice into. */
+/** The box the timeout action writes the dice into. */
 export function yachtBestBox(card: YachtScorecard, dice: readonly YachtFace[]): YachtBox {
   return yachtBestPlacement(card, dice).box;
 }

@@ -4,7 +4,6 @@ import { getPresentationEndsAt, getPresentationFrames } from '@shared/game-prese
 import type { GameSeat, PlayerInfo, Seat } from '@shared/types';
 import type { GoFishGameState } from '@shared/games/gofish/types';
 import * as decisions from '../../src/bots/bot-decisions';
-import { GAME_BOTS } from '../../src/bots/bot-registry';
 import * as games from '../../src/managers/game-manager';
 import * as players from '../../src/managers/player-manager';
 import * as rooms from '../../src/managers/room-manager';
@@ -144,8 +143,8 @@ describe('Go Fish turn automation', () => {
     const { code, runtime, saved } = await fixture(false);
     const game = (): GoFishGameState => goFish(code);
     const turn = game().clock!.turn!;
-    // A human's timeout asks as the easy bot would, from the same filtered view a bot gets.
-    const timeout = vi.spyOn(GAME_BOTS.gofish as { turnTimeout: NonNullable<typeof GAME_BOTS.gofish.turnTimeout> }, 'turnTimeout');
+    // A human's timeout asks as a bot would, from the same filtered view a bot gets.
+    const timeout = vi.spyOn(decisions, 'getBotAction');
     const publish = vi.fn(() => expect(saved().games[0]).toEqual(game()));
     stops.push(await startTurnTimers(runtime, publish));
     await vi.advanceTimersByTimeAsync(turn.deadline - Date.now() - 1);

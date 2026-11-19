@@ -56,13 +56,13 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
       ['All 13 hearts', '+200 instead of −200'],
     ]),
     section('Transformer and grand slam', '♣10 doubles the sum of all other captured scoring cards. Alone, including with only zero-value ♥2–4, it scores +50. If other nonzero scoring cards cancel to zero, doubling gives zero, not +50.', 'Capturing all 13 hearts, ♠Q, ♦J and ♣10 scores +1000 total; do not double again. There are no exposed-card multipliers.'),
-    section('Settlement and controls', 'Captures, each hand’s scores and cumulative totals stay available in the history. The next hand starts automatically after settlement. Click a legal card to play; on touch screens tap once to lift it, then again to play. Hands initially sort from A to 2.', 'Easy bots pick a random legal card. Hard bots seek positive tricks, avoid penalties and shed dangerous cards using only their own hand and public captures. Timeouts play the first legal card.'),
+    section('Settlement and controls', 'Captures, each hand’s scores and cumulative totals stay available in the history. The next hand starts automatically after settlement. Click a legal card to play; on touch screens tap once to lift it, then again to play. Hands initially sort from A to 2.', 'Bots seek positive tricks, avoid penalties and shed dangerous cards using only their own hand and public captures. On timeout the bot plays for you.'),
   ],
   hearts: [
     section('Deal and passing', 'Four compass seats, a standard 52-card deck, 13 cards each. A is high and there is no trump. Expect about 20–40 minutes.', 'Pass exactly three different held cards in secret. The cycle is left (N → E → S → W), right, across, then no passing. All selections are committed before any cards move; timeout selects legal cards automatically.'),
     section('Tricks', 'The two of clubs starts the first trick. Play clockwise, following suit whenever possible; the highest card of the led suit wins and leads the next trick.', 'You cannot lead hearts until a heart has been played, unless your entire hand is hearts. The queen of spades does not break hearts.', 'When void in clubs on the first trick, you cannot discard hearts or the queen of spades if you hold any nonpenalty card. If all your cards are penalty cards, you may discard one.'),
     section('Scoring and finish', 'Every heart is 1 penalty point; the queen of spades is 13. Taking all 26 points shoots the moon: you add zero, each opponent adds 26.', 'After all 13 tricks, scores appear and the next hand starts automatically. Finish after a hand when anyone reaches at least 100; all players tied for the lowest total win.'),
-    section('Controls', 'Select three hand cards and confirm the pass. After passing, play a highlighted legal card; on touch screens tap it again to confirm. Submitted selections cannot be changed.', 'Both bot difficulties use only their own visible cards and public history. Timeouts select a legal pass or play. Spectators can inspect hands but cannot act.'),
+    section('Controls', 'Select three hand cards and confirm the pass. After passing, play a highlighted legal card; on touch screens tap it again to confirm. Submitted selections cannot be changed.', 'Bots use only their own visible cards and public history. Timeouts select a legal pass or play. Spectators can inspect hands but cannot act.'),
   ],
   bridge: [
     section('Goal and teams', 'North–South play East–West with 13 cards each. Ranks run A high to 2 low.', 'Declarer’s side needs 6 + contract level tricks (level 1 needs 7, level 7 all 13); otherwise the defenders win.', 'No doubles, vulnerability, bonus scoring, or exposed dummy.'),
@@ -70,7 +70,7 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Weak-hand redeal', 'High-card points (HCP): A 4, K 3, Q 2, J 1. A hand with at most 4 HCP may ask for a redeal, including a lone ace with no other points.', 'Eligible seats are asked clockwise from the auction starter. Accepting redeals every hand; a seat that declines is not asked again that deal.'),
     section('Playing a trick', 'The seat counterclockwise from declarer leads first; play goes clockwise and each trick winner leads the next.', 'Follow the led suit if you can; otherwise play anything, including trump.', 'The highest trump wins; with no trump played, the highest card of the led suit wins.', 'There are no claims; all 13 tricks are played.'),
     section('Controls', 'Pick a level and strain or Pass, then confirm; picking the same call again also confirms.', 'Touch: tap a card to lift it and tap it again to play.'),
-    section('Playing with bots', 'Hard bots use simplified natural bidding and interpret human calls with the same agreements. There are no artificial conventions such as Stayman or transfers; humans may still bid freely.', 'An opening of one heart or one spade shows at least five cards. Otherwise open the longer minor; one-level openings normally need 12 HCP, or 11 when HCP plus the lengths of the two longest suits reaches twenty. A weak fourth hand may pass and redeal.', 'A 1NT opening shows 15–17 HCP and 2NT 20–21, both balanced. A cheapest-level long-suit response to partner’s NT is a sign-off, not a transfer.', 'Support raises aim for an eight-card fit. A new-suit response by a hand that has not previously passed forces one round; a passed hand’s new suit does not. Once partner gives a nonforcing placement, extra points alone do not require another bid.', 'Reasonable equivalent plays may vary, while bid meanings stay consistent. Bots decline weak-hand redeals.'),
+    section('Playing with bots', 'Bots use simplified natural bidding and interpret human calls with the same agreements. There are no artificial conventions such as Stayman or transfers; humans may still bid freely.', 'An opening of one heart or one spade shows at least five cards. Otherwise open the longer minor; one-level openings normally need 12 HCP, or 11 when HCP plus the lengths of the two longest suits reaches twenty. A weak fourth hand may pass and redeal.', 'A 1NT opening shows 15–17 HCP and 2NT 20–21, both balanced. A cheapest-level long-suit response to partner’s NT is a sign-off, not a transfer.', 'Support raises aim for an eight-card fit. A new-suit response by a hand that has not previously passed forces one round; a passed hand’s new suit does not. Once partner gives a nonforcing placement, extra points alone do not require another bid.', 'Reasonable equivalent plays may vary, while bid meanings stay consistent. Bots decline weak-hand redeals.'),
   ],
   bigtwo: [
     section('Goal and first play', '13 cards each, counterclockwise. First to empty their hand wins.', 'The ♣3 holder leads, and the first play must include ♣3. A dragon (one of every rank 3–2) wins at once.', 'Order: 3 < 4 < … < K < A < 2 by rank, then ♣ < ♦ < ♥ < ♠ by suit.'),
@@ -256,7 +256,7 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Go fish', 'If the player has none, go fish: draw the top card of the stock. If it is the rank you asked for you go again; otherwise your turn passes. An unmatched draw stays hidden. With an empty stock the turn simply passes.'),
     section('Books', 'Four cards of one rank are laid down as a book at once, including when dealt or drawn. A hand ends when all 13 books are down.'),
     section('Running out of cards', 'A player with no cards draws one while the stock lasts. Once the stock is empty they sit out and cannot be asked.'),
-    section('Timer', 'On timeout a random legal ask is made for you. Each hand refills the reserve.'),
+    section('Timer', 'On timeout the bot asks for you. Each hand refills the reserve.'),
   ],
   doudizhu: [
     section('Match', 'Exactly three players, a 54-card deck with both jokers: 17 cards each and 3 face-down bottom cards. A match is 6 deals and scores add up; the highest total wins, ties share.', 'The opening caller rotates each deal. Order: 3 < … < K < A < 2 < small joker < big joker.'),
@@ -314,14 +314,14 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('The cannon', 'The cannon does not capture adjacent pieces. It captures by jumping over exactly one piece of any kind, face up or face down, along a row or column at any distance, landing on a face-up enemy piece of any rank. It moves one step like other pieces when not capturing.', 'With chain captures on, the cannon may also jump onto a face-down piece (see Optional rules).'),
     section('Optional rules', 'Chain and blind captures (連吃), on by default: after a capture, the same piece may capture again in the same turn, with any capture it could make from its new cell, and may stop at any time with End turn. Flips and plain moves cannot follow a capture.', 'With this rule a face-up piece may also attack a face-down piece it could reach by capturing (an adjacent cell, the cannon’s jump, or the dashing chariot’s line). The piece is turned over: an enemy the attacker could capture is taken, and the chain may go on; a bigger enemy or a piece of your own colour only stays face up, the attacker does not move, and the turn ends. A cannon takes any enemy it reveals. The very first action of the game is always a flip.', 'Chariot dash (車衝), off by default: the chariot moves any distance along a row or column over empty cells, and may capture the first piece in a line at a distance if it is a face-up enemy it outranks or equals, or attack it if it is face down and chain captures are on. Without this rule the chariot moves one step like the other pieces. The host sets both rules.'),
     section('Winning and drawing', 'Win by capturing every opposing piece (face-down ones included) or by leaving the opponent without a legal action on their turn. A player may always flip while any piece is face down.', 'A draw is declared after 50 moves in a row with no flip and no capture (each player’s move counts as one; attacking a face-down piece counts as a flip even when it takes nothing).', 'You may resign. On your own turn you may offer a draw: the opponent accepts to draw, and making a move counts as declining. After a decline you must make 3 more moves before offering again.'),
-    section('Timer', 'On timeout the easy bot policy acts for you: a safe capture if there is one, otherwise a random flip, step, or attack on a face-down piece. Each turn refills the base time.'),
+    section('Timer', 'On timeout the bot makes your move. Each turn refills the base time.'),
   ],
   chinesecheckers: [
     section('Board and players', 'A 121-hole star. Two, three, four, or six players with ten marbles each; five cannot play.', 'Two players start in opposite corners, three in alternating corners, four in two opposite pairs, six in every corner. The first seat starts at the bottom and moves first; play goes clockwise. Each player sees their own corner at the bottom.'),
     section('Moving', 'On your turn move one marble: a step into an empty neighbouring hole, or a jump over one adjacent marble (any colour) into the empty hole straight beyond. Jumps can chain in any directions in the same turn; a step cannot follow a jump.', 'Tap a marble, then its final hole: the server finds the jump chain. Marbles are never captured and may pass through any corner.'),
     section('Winning', 'Fill all ten holes of the opposite corner, at least one with your own marble, to win; the check runs after every move, so if the opponent fills the last hole of your target you win at once. Anti-spoiling: once every other hole of your target holds one of your marbles, opposing marbles still sitting there count as yours.', 'With three or more players the game ends as soon as the first player finishes; the others place by the rows their marbles still have to travel, fewer first, and equal distances share a place.'),
     section('Resigning, draws, and limits', 'You may resign at any time. With two players the opponent wins, and on your own turn you may offer a draw (after a decline, make 3 more moves before offering again). With three or more there are no draw offers; a player who resigns leaves with their marbles, places last, and the rest play on.', 'A player whose marbles are all blocked is skipped. After 150 turns each, or if nobody can move, the least distance left wins; a tie between everyone is a draw.'),
-    section('Timer', 'On timeout a marble moves as far forward as it can, with a little randomness.'),
+    section('Timer', 'On timeout the bot moves a marble for you.'),
   ],
   landbattle: [
     section('Board', 'Two players on 5 × 12 stations, six rows each. Thin lines are roads, thick lines railways; the front is crossed only on the left, middle, and right files, as mountains block the other two. Each side has 5 camps (ovals) and 2 headquarters.', 'The earlier seat plays Red and moves first. Each player sees their own side at the bottom; spectators start from Red.'),
@@ -346,11 +346,11 @@ const english: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('Sea and fleet', 'Two players, each with a 10 × 10 sea: columns A–J, rows 1–10 from the top. Each fleet has five ships: carrier 5, battleship 4, cruiser 3, submarine 3, destroyer 2 cells.', 'Each player sees their own sea with their ships and the shots fired at it, and the enemy sea with their own shots. Spectators see both fleets.'),
     section('Placing', 'Both players place their fleets at the same time before a shared deadline (the room timer’s turn time plus reserve, at least 60 seconds). Ships lie across or down inside the sea and may not overlap; they may touch unless the room rule 「Ships may not touch」 is on, which also forbids corners touching.', 'Pick a ship, then tap where its bow goes; tap a placed ship to pick it up, and tap it again to turn it. Rotate, Random, and Clear help; a placement that breaks a rule is refused with the reason. Confirming is final, and when the opponent confirms you see only that they are ready. If time runs out, a random fleet is placed for you.'),
     section('Firing', 'The earlier seat shoots first; players then take turns firing one shot at a cell of the enemy sea they have not shot before. Each shot is announced as a miss, a hit, or the sinking of a named ship, whose cells are then shown. A hit never says which ship it struck.', 'With the room rule 「A hit shoots again」 a hit or a sinking gives the shooter another shot.'),
-    section('Winning', 'Sink the whole enemy fleet to win. You may resign at any time, also while placing; there are no draw offers. Running out of time fires a shot for you (at random, or next to an earlier hit); it never loses the game.'),
+    section('Winning', 'Sink the whole enemy fleet to win. You may resign at any time, also while placing; there are no draw offers. Running out of time lets the bot fire a shot for you; it never loses the game.'),
   ],
   codebreaker: [
     section('The secret code', 'Two to six players race to crack the same secret code. The server draws a fresh code for every match; nobody, spectators included until the end, is told it before the match is over.', 'Room rule 「Code type」: Digits (default) is four different digits 0–9. Colours is four slots filled from six colours, each with its own shape, and repeats are allowed.'),
-    section('Rounds', 'Play runs in simultaneous rounds. Every player who is still guessing submits one guess per round; the round resolves when all of them have guessed or the round timer (the room timer’s turn time plus reserve, at least 20 seconds) runs out. Each player gets at most 10 guesses.', 'A guess must be well-formed (in Digits, four different digits) but need not agree with your earlier feedback. If time runs out, a random guess that fits your own feedback is made for you.'),
+    section('Rounds', 'Play runs in simultaneous rounds. Every player who is still guessing submits one guess per round; the round resolves when all of them have guessed or the round timer (the room timer’s turn time plus reserve, at least 20 seconds) runs out. Each player gets at most 10 guesses.', 'A guess must be well-formed (in Digits, four different digits) but need not agree with your earlier feedback. If time runs out, the bot guesses for you using your own feedback.'),
     table('Feedback', ['Mode', 'Meaning'], [
       ['Digits (nAmB)', 'A: a right digit in the right slot. B: a right digit in the wrong slot.'],
       ['Colours', 'Filled peg: right colour in the right slot. Ring: right colour in the wrong slot.'],
@@ -385,13 +385,13 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
       ['♥J／♥Q／♥K／♥A', '−20／−30／−40／−50'], ['13 張紅心全收', '由 −200 改為 +200'],
     ]),
     section('變壓器與全收', '♣10 將其他分數牌的總和加倍。單收 ♣10（含僅搭配零分的 ♥2–4）得 +50；若其他非零分數牌互相抵銷為 0，則加倍後仍為 0，不改得 +50。', '收齊 13 張紅心、♠Q、♦J 與 ♣10 共得 +1000，不再加倍。沒有亮牌倍數。'),
-    section('結算與操作', '吃牌、每手得分與累計分數都可從紀錄查看。結算呈現後自動開始下一手。桌機點合法牌出牌；觸控先點選抬牌，再點一次確認，預設由 A 排到 2。', '簡單 bot 隨機選合法牌；困難 bot 只用自己的手牌與公開吃牌，爭取正分墩、避開負分墩，並在無法贏墩時卸下危險牌。逾時出第一張合法牌。'),
+    section('結算與操作', '吃牌、每手得分與累計分數都可從紀錄查看。結算呈現後自動開始下一手。桌機點合法牌出牌；觸控先點選抬牌，再點一次確認，預設由 A 排到 2。', 'bot 只用自己的手牌與公開吃牌，爭取正分墩、避開負分墩，並在無法贏墩時卸下危險牌。逾時由 bot 代打。'),
   ],
   hearts: [
     section('發牌與交換', '四個方位座位使用標準 52 張牌，每人 13 張；A 最大，沒有王牌。目標遊玩時間約 20–40 分鐘。', '每副選三張不同的手牌秘密交換。依序傳左（北 → 東 → 南 → 西）、傳右、傳對家、不換牌，每四副循環。全部提交後才一起交換，不能修改已提交的選牌；逾時會自動選合法牌。'),
     section('出牌與贏墩', '梅花 2 首攻第一墩，順時針出牌；有首攻花色必須跟牌，首攻花色最大者贏墩並首攻下一墩。', '紅心被打出後才解禁；解禁前不能以紅心首攻，除非整手只剩紅心。黑桃 Q 不會讓紅心解禁。', '第一墩缺梅花時，只要有非罰分牌，就不能墊紅心或黑桃 Q。全手都只有罰分牌時可以墊一張。'),
     section('罰分與勝負', '每張紅心罰 1 分，黑桃 Q 罰 13 分。包辦全部 26 分為射月，自己加 0 分、其他三人各加 26 分。', '13 墩打完先呈現本副分數，再自動開始下一副。任一玩家累計達 100 分時，在該副結算後結束；累計最低分者獲勝，同分可並列。'),
-    section('操作與代打', '點三張手牌後確認交換；出牌時只能選亮起的合法牌，手機先點選、再點一次出牌。', '簡單與困難 bot 只看自己的手牌與公開紀錄。逾時自動交換或出合法牌；旁觀者可切換視角看手牌，不能操作。'),
+    section('操作與代打', '點三張手牌後確認交換；出牌時只能選亮起的合法牌，手機先點選、再點一次出牌。', 'bot 只看自己的手牌與公開紀錄。逾時自動交換或出合法牌；旁觀者可切換視角看手牌，不能操作。'),
   ],
   bridge: [
     section('目標與分隊', '南北對東西，每人 13 張。點數 A 最大、2 最小。', '莊家隊需取得「6＋合約線位」墩（1 線 7 墩、7 線全部 13 墩），未達標則防守隊獲勝。', '沒有賭倍、身價、超墩加分，也不攤明手。'),
@@ -399,7 +399,7 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('弱牌重發', '大牌點 HCP：A 4、K 3、Q 2、J 1。HCP ≤ 4 可要求重發，包含一張 A 且其餘牌沒有點數的手牌。', '從叫牌起始座位順時針詢問符合者；接受則全部重發，拒絕者本副牌不再被問。'),
     section('出牌與牌墩', '莊家逆時針鄰座首攻，之後順時針出牌，贏墩者先出下一墩。', '有首攻花色必須跟；沒有才可出其他牌，包括王牌。', '最大王牌贏墩；沒人出王牌時，首攻花色最大者贏。', '不能倒牌，13 墩都要打完。'),
     section('操作方式', '選線位與花色或 Pass 後按確認；再選一次相同叫牌也算確認。', '觸控：點一下抬起牌，再點一次出牌。'),
-    section('與 Bot 遊玩', '困難 Bot 採簡化自然叫牌，也按相同約定解讀真人叫品；不使用 Stayman、轉移叫等人為約定，真人仍可自由叫牌。', '一線紅心或黑桃開叫表示至少五張，否則開較長的低花。通常需 12 HCP；11 HCP 加上最長兩門的張數達 20 時亦可開叫。第四家弱牌可 Pass 重發。', '1NT 開叫為 15～17 HCP、2NT 為 20～21 HCP，皆為平均牌型。搭檔開 NT 後，以最低線位應叫長花色是止叫，不是轉移叫。', '支持加叫以合計八張配合為目標。尚未 Pass 過的手牌應叫新花色，會逼叫一輪；先前 Pass 過則不逼叫。搭檔已給出非逼叫的合約選擇時，不會只因點數較高就繼續推高。', '合理且相近的出牌可能不同，叫品含義維持一致。Bot 一律拒絕弱牌重發。'),
+    section('與 Bot 遊玩', 'Bot 採簡化自然叫牌，也按相同約定解讀真人叫品；不使用 Stayman、轉移叫等人為約定，真人仍可自由叫牌。', '一線紅心或黑桃開叫表示至少五張，否則開較長的低花。通常需 12 HCP；11 HCP 加上最長兩門的張數達 20 時亦可開叫。第四家弱牌可 Pass 重發。', '1NT 開叫為 15～17 HCP、2NT 為 20～21 HCP，皆為平均牌型。搭檔開 NT 後，以最低線位應叫長花色是止叫，不是轉移叫。', '支持加叫以合計八張配合為目標。尚未 Pass 過的手牌應叫新花色，會逼叫一輪；先前 Pass 過則不逼叫。搭檔已給出非逼叫的合約選擇時，不會只因點數較高就繼續推高。', '合理且相近的出牌可能不同，叫品含義維持一致。Bot 一律拒絕弱牌重發。'),
   ],
   bigtwo: [
     section('目標與首出', '每人 13 張，逆時針出牌，先出完者獲勝。', '持有 ♣3 者先出，第一手必須包含 ♣3。一條龍（3～2 各一張）直接獲勝。', '大小：點數 3 < 4 < … < K < A < 2，同點數再比花色 ♣ < ♦ < ♥ < ♠。'),
@@ -579,7 +579,7 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('釣魚', '對方沒有該點數就釣魚：摸牌堆頂一張。摸到你剛要的點數可以再問一次，否則換下一位；摸到的其他牌不公開。牌堆已空時直接換下一位。'),
     section('組', '手上湊齊同點數四張就立刻攤開成一組，發牌或摸牌湊成也一樣。13 組全部攤開時這一手結束。'),
     section('手牌用完', '手牌用完的人在牌堆還有牌時摸一張；牌堆已空就跳過，也不能被問。'),
-    section('計時', '逾時由系統代為隨機發問一次。每一手補滿保留時間。'),
+    section('計時', '逾時由 bot 代為發問一次。每一手補滿保留時間。'),
   ],
   doudizhu: [
     section('對局', '固定 3 位玩家，54 張牌（含大小王）：每人 17 張，另有 3 張蓋著的底牌。一場 6 副牌、分數累計，總分最高者獲勝，同分共同獲勝。', '每副的首位叫牌者輪流。牌序：3 < … < K < A < 2 < 小王 < 大王。'),
@@ -637,14 +637,14 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('炮的走法', '炮不能吃相鄰的棋子。它隔著剛好一顆棋子（蓋著或翻開、任何顏色都可以）沿橫線或直線跳過，吃掉遠處已翻開的敵子，距離不限，大小不拘。不吃子時和其他棋子一樣走一格。', '開啟連吃時，炮也可以跳吃蓋著的棋子（見房規）。'),
     section('房規', '連吃與吃暗子（預設開啟）：吃子後，同一顆棋子可以在同一回合繼續吃子（從新位置能吃的子都算），隨時可以按「結束回合」停手；吃子後不能再翻棋或單純移動。', '開啟這條房規時，翻開的棋子也可以吃蓋著的棋子，走法和吃子相同（相鄰一格、炮隔一子跳吃，或車衝的直線）。被攻擊的棋子會翻開：是攻擊方吃得下的敵子就吃掉，可以繼續連吃；較大的敵子或自己顏色的棋子只會翻開留在原位，攻擊方不移動，回合結束。炮翻出任何敵子都能吃。開局第一步一定是翻棋。', '車衝（預設關閉）：俥／車可沿橫線或直線走任意格數（中間必須是空格），也可以隔著空格吃線上第一顆已翻開、且大小相等或較小的敵子；開啟連吃時，線上第一顆若是蓋著的棋子也可以攻擊。沒有這條房規時，俥／車和其他棋子一樣只走一格。兩項房規都由房主設定。'),
     section('勝負與和局', '吃光對手所有棋子（包含蓋著的）、或讓對手在他的回合無棋可翻也無棋可走者獲勝。只要場上還有蓋著的棋子，玩家就一定有棋可翻。', '連續 50 步沒有翻棋也沒有吃子即和局（雙方各走一步各算一步；吃蓋著的棋子就算沒吃到也算翻棋）。', '可以認輸；輪到自己時可以提和，對手同意即和局，對手走子視為拒絕，被拒絕後需再走 3 手才能再次提和。'),
-    section('計時', '逾時由系統依簡單難度代走：有安全的吃子就吃，否則隨機翻棋、走一步或吃蓋著的棋子。每回合補滿單手時間。'),
+    section('計時', '逾時由 bot 代走一步。每回合補滿單手時間。'),
   ],
   chinesecheckers: [
     section('棋盤與人數', '121 孔星形棋盤。2、3、4 或 6 人，每人 10 顆彈珠；不支援 5 人。', '2 人坐對角，3 人隔一角而坐，4 人為兩組對角，6 人坐滿六個角。第一個座位從下方的角出發並先走，之後順時針輪流。每位玩家都看到自己的角在下方。'),
     section('走法', '每回合移動一顆彈珠：走到相鄰的空位，或跳過相鄰的一顆彈珠（任何顏色）落到正後方的空位。同一回合可以朝任意方向連續跳；跳完不能再走一步。', '點選彈珠後直接點最終落點，伺服器會自動找出連跳路徑。彈珠不會被吃，也可以經過任何一個角。'),
     section('勝負', '先填滿對角者獲勝：目標角十個孔都填滿，且至少一顆是自己的彈珠。每一步之後都會檢查，對手把彈珠走進你目標角的最後一個空孔時，你立即獲勝。防堵規則：目標角其餘空位都由自己的彈珠填滿時，仍留在那裡的對手彈珠視為已抵達。', '3 人以上時，第一位完成者出現即結束；其餘玩家依彈珠尚需前進的列數排名，越少越前面，相同則並列。'),
     section('認輸、和局與上限', '可以隨時認輸。2 人時由對手獲勝；輪到自己時可以提和，被拒絕後需再走 3 手才能再提。3 人以上不能提和；認輸的玩家連同彈珠離開棋盤、排在最後，其餘玩家繼續。', '所有彈珠都被堵住的玩家自動跳過。每人走滿 150 回合，或沒有人能走時，剩餘距離最少者獲勝；全員相同則為和局。'),
-    section('計時', '逾時由系統代走：讓一顆彈珠盡量往前，並加入少量隨機。'),
+    section('計時', '逾時由 bot 代走一步。'),
   ],
   landbattle: [
     section('棋盤', '雙人對局，5 × 12 個站點，每方 6 排。細線是公路，粗線是鐵路；前線只有左、中、右三路相通，另外兩路被山界擋住。每方有 5 個行營（橢圓）與 2 個大本營。', '座位順序在前的玩家執紅先走。每位玩家都看到自己在下方；旁觀者預設從紅方視角觀看。'),
@@ -669,11 +669,11 @@ const chinese: Readonly<Record<GameType, readonly GameRuleSection[]>> = {
     section('海域與艦隊', '雙人對局，每人一片 10 × 10 的海域：欄為 A～J，列由上而下為 1～10。每支艦隊有 5 艘船：航空母艦 5 格、戰艦 4 格、巡洋艦 3 格、潛艇 3 格、驅逐艦 2 格。', '每位玩家看到自己的海域（船隻與對手的射擊），以及敵方海域（自己的射擊結果）。旁觀者看得到雙方艦隊。'),
     section('擺放', '雙方在共同期限內同時擺放艦隊（房間計時的每手時間加保留時間，至少 60 秒）。船隻橫放或直放，必須在海域內且不能重疊；預設可以相鄰，房規「船隻不可相鄰」開啟時，連斜角相接也不行。', '先選一艘船，再點船首要放的位置；點已擺好的船可以拿起，再點一次就旋轉。也可以用「旋轉」、「隨機擺放」與「清除」；違反規則的擺法會被拒絕並說明原因。確認後不能更改；對手完成時你只看得到他已完成，看不到位置。時間到仍未確認時隨機擺放。'),
     section('射擊', '座位順序在前的玩家先射擊，之後雙方輪流朝敵方海域射擊一格，同一格不能射兩次。每發公布未中、命中，或擊沉哪一艘船（擊沉後公開該船位置）；命中不會透露是哪一艘船。', '房規「命中可再射」開啟時，命中或擊沉的玩家可以再射一發。'),
-    section('勝負', '擊沉敵方整支艦隊者獲勝。可以隨時認輸（擺放期間也可以），沒有提和。逾時由系統代射一發（隨機，或射在先前命中的旁邊），不會因超時判負。'),
+    section('勝負', '擊沉敵方整支艦隊者獲勝。可以隨時認輸（擺放期間也可以），沒有提和。逾時由 bot 代射一發，不會因超時判負。'),
   ],
   codebreaker: [
     section('密碼', '2～6 位玩家同時猜同一組密碼。每局由伺服器重新抽出一組，對局結束前沒有人知道答案（未入座的旁觀者除外）。', '房規「密碼種類」：預設為數字，四個不重複的 0–9 數字；顏色是四格、六種顏色（各有不同形狀），可以重複。'),
-    section('回合', '以同步回合進行。還在猜的玩家每輪各送出一次猜測；全部送出，或回合計時（房間計時的每手時間加保留時間，至少 20 秒）到了，就結算本輪。每人最多猜 10 次。', '猜測必須格式正確（數字模式為四個不重複的數字），但不必和先前的回應一致。時間到仍未送出時，系統會依你自己的回應，隨機代猜一組合理的密碼。'),
+    section('回合', '以同步回合進行。還在猜的玩家每輪各送出一次猜測；全部送出，或回合計時（房間計時的每手時間加保留時間，至少 20 秒）到了，就結算本輪。每人最多猜 10 次。', '猜測必須格式正確（數字模式為四個不重複的數字），但不必和先前的回應一致。時間到仍未送出時，由 bot 依你自己的回應代猜一組密碼。'),
     table('回應', ['模式', '意義'], [
       ['數字（nAmB）', 'A：數字對且位置對。B：數字對但位置不對。'],
       ['顏色', '實心：顏色與位置都對。空心圈：顏色對但位置不對。'],

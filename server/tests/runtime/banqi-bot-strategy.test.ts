@@ -54,78 +54,17 @@ function legal(seat: GameSeat): string[] {
   if (state.chain !== null) return [...list.filter((entry) => entry.startsWith('move')), 'stop'];
   return list;
 }
+/** A uniformly random legal action: the weak baseline the bot has to beat. */
+function randomAction(seat: GameSeat, random: () => number): Decoded {
+  const options = legal(seat);
+  const [type, from, to] = options[Math.floor(random() * options.length)].split(' ');
+  if (type === 'flip') return { type: 'flip', to: from };
+  return type === 'move' ? { type: 'move', from, to } : { type: 'stop' };
+}
 const key = (action: Decoded): string => (!action ? 'none' : action.type === 'flip' ? `flip ${action.to}`
   : action.type === 'move' ? `move ${action.from} ${action.to}` : 'stop');
 
 afterEach(() => banqi.abortGame(CODE));
-
-describe('Banqi Easy bot', () => {
-  it('flips a random covered piece before the colours are known, and stays out of turn', () => {
-    start();
-    const picks = new Set<string>();
-    for (let seed = 1; seed <= 40; seed++) {
-      const action = decode(gameBot('banqi').easy(view('N'), seededRandom(seed)));
-      expect(action?.type).toBe('flip');
-      picks.add(key(action));
-    }
-    expect(picks.size).toBeGreaterThan(5);
-    expect(gameBot('banqi').easy(view('S'), Math.random)).toBeNull();
-  });
-
-  it('takes a safe capture over a flip or a step', () => {
-    start();
-    setPosition(game(), ['Rh.....#', '........', '........', '#......k']);
-    for (let seed = 1; seed <= 10; seed++) {
-      expect(decode(gameBot('banqi').easy(view('N'), seededRandom(seed)))).toEqual({ type: 'move', from: '0,0', to: '1,0' });
-    }
-  });
-
-  it('prefers the most valuable safe capture', () => {
-    start();
-    setPosition(game(), ['pR.....#', '.h......', '........', '#......k']);
-    // The chariot can take the soldier on its left or the horse below; the horse is worth more.
-    expect(decode(gameBot('banqi').easy(view('N'), () => 0))).toEqual({ type: 'move', from: '1,0', to: '1,1' });
-  });
-
-  it('skips a capture that loses the capturer when it has another option, and takes it when it has none', () => {
-    start();
-    // Capturing the soldier at 1,0 lands the horse next to a black chariot that takes it back.
-    setPosition(game(), ['Hpr.....', '........', '........', '........']);
-    const picks = new Set<string>();
-    for (let seed = 1; seed <= 30; seed++) picks.add(key(decode(gameBot('banqi').easy(view('N'), seededRandom(seed)))));
-    expect(picks.has('move 0,0 1,0')).toBe(false);
-    setPosition(game(), ['Hpr.....', 'k.......', '........', '........']);
-    expect(decode(gameBot('banqi').easy(view('N'), () => 0))).toEqual({ type: 'move', from: '0,0', to: '1,0' });
-  });
-
-  it('continues a chain with a safe capture and otherwise stops', () => {
-    start({ chain: true, rookDash: false });
-    setPosition(game(), ['Rpp....#', '........', '........', '#......k']);
-    banqi.move(CODE, 'N', '0,0', '1,0');
-    expect(decode(gameBot('banqi').easy(view('N'), () => 0))).toEqual({ type: 'move', from: '1,0', to: '2,0' });
-    banqi.abortGame(CODE);
-    start({ chain: true, rookDash: false });
-    // The second capture lands next to a black chariot that takes it back, so the bot ends its turn instead.
-    setPosition(game(), ['Rppr....', '........', '........', '#......k']);
-    banqi.move(CODE, 'N', '0,0', '1,0');
-    expect(game().chain).toBe('1,0');
-    expect(decode(gameBot('banqi').easy(view('N'), () => 0))).toEqual({ type: 'stop' });
-  });
-
-  it('plays only legal actions through a whole match', () => {
-    for (const options of [DEFAULT_BANQI_OPTIONS, { chain: true, rookDash: true }]) {
-      start(options, 4);
-      for (let guard = 0; guard < 6000 && game().phase === 'playing'; guard++) {
-        const seat = game().currentTurnSeat;
-        const action = decode(getBotAction(view(seat), seededRandom(guard + 1), 'easy'));
-        expect(legal(seat)).toContain(key(action));
-        expect(apply(seat, action)).toEqual({ success: true });
-      }
-      expect(game().phase).toBe('scoring');
-      banqi.abortGame(CODE);
-    }
-  });
-});
 
 describe('Banqi Hard bot', () => {
   it('captures the general with a soldier rather than wandering', () => {
@@ -181,12 +120,12 @@ describe('Banqi Hard bot', () => {
     expect(searchBanqi(view('S'), { maxDepth: 3, expired: () => false, random: () => 0 })).toBeNull();
   });
 
-  it('plays only legal actions on both difficulties, including with the room variants', () => {
+  it('plays only legal actions for a whole match, including with the room variants', () => {
     for (const options of [DEFAULT_BANQI_OPTIONS, { chain: true, rookDash: true }]) {
       start(options, 8);
       for (let guard = 0; guard < 6000 && game().phase === 'playing'; guard++) {
         const seat = game().currentTurnSeat;
-        const action = decode(getBotAction(view(seat), seededRandom(guard + 7), seat === 'N' ? 'hard' : 'easy'));
+        const action = decode(getBotAction(view(seat), seededRandom(guard + 7)));
         expect(legal(seat)).toContain(key(action));
         expect(apply(seat, action)).toEqual({ success: true });
       }
@@ -195,28 +134,27 @@ describe('Banqi Hard bot', () => {
     }
   }, 60_000);
 
-  it('beats the Easy bot over several seeded matches', () => {
-    let hard = 0;
-    let easy = 0;
+  it('beats a random legal mover over several seeded matches', () => {
+    let bot = 0;
+    let random = 0;
     for (let seed = 1; seed <= 8; seed++) {
       start(DEFAULT_BANQI_OPTIONS, seed);
-      const hardSeat: GameSeat = seed % 2 === 0 ? 'N' : 'S';
+      const botSeat: GameSeat = seed % 2 === 0 ? 'N' : 'S';
+      const rolls = seededRandom(seed * 10_000);
       for (let guard = 0; guard < 6000 && game().phase === 'playing'; guard++) {
         const seat = game().currentTurnSeat;
-        apply(seat, decode(getBotAction(view(seat), seededRandom(seed * 10_000 + guard), seat === hardSeat ? 'hard' : 'easy')));
+        apply(seat, seat === botSeat ? decode(getBotAction(view(seat), seededRandom(seed * 10_000 + guard))) : randomAction(seat, rolls));
       }
-      if (game().result?.winners.includes(hardSeat)) hard++;
-      else if (game().result?.winners.length === 1) easy++;
+      if (game().result?.winners.includes(botSeat)) bot++;
+      else if (game().result?.winners.length === 1) random++;
       banqi.abortGame(CODE);
     }
-    expect(hard).toBeGreaterThan(easy);
+    expect(bot).toBeGreaterThan(random);
   }, 120_000);
 
-  it('serves a timed-out player with a legal Easy-policy action', () => {
+  it('serves a timed-out player with a legal decision of the bot', () => {
     start();
-    const timeout = gameBot('banqi').turnTimeout!;
-    const action = decode(timeout(view('N'), { isBot: false, strategy: () => null }));
-    expect(legal('N')).toContain(key(action));
+    expect(legal('N')).toContain(key(decode(getBotAction(view('N'), seededRandom(9)))));
     expect(gameBot('banqi').firstLegal(view('S'))).toBeNull();
     expect(legal('N')).toContain(key(decode(gameBot('banqi').firstLegal(view('N')))));
   });
@@ -237,7 +175,7 @@ describe('Banqi search budget', () => {
     start(DEFAULT_BANQI_OPTIONS, 3);
     for (let step = 0; step < 14; step++) {
       const seat = game().currentTurnSeat;
-      apply(seat, decode(getBotAction(view(seat), seededRandom(step + 1), 'easy')));
+      apply(seat, decode(getBotAction(view(seat), seededRandom(step + 1))));
     }
   }
 
@@ -259,11 +197,11 @@ describe('Banqi search budget', () => {
     expect(banqiSearch(view(seat === 'N' ? 'S' : 'N'), context)).toBeNull();
   });
 
-  it('keeps the synchronous hard decision cheap', () => {
+  it('keeps the synchronous decision cheap', () => {
     midGame();
     const seat = game().currentTurnSeat;
     const started = performance.now();
-    gameBot('banqi').hard(view(seat), () => 0.4);
+    gameBot('banqi').decide(view(seat), () => 0.4);
     expect(performance.now() - started).toBeLessThan(250);
   });
 
@@ -282,7 +220,7 @@ describe('Banqi search in the bot worker pool', () => {
     start(DEFAULT_BANQI_OPTIONS, 3);
     for (let step = 0; step < 10; step++) {
       const seat = game().currentTurnSeat;
-      apply(seat, decode(getBotAction(view(seat), seededRandom(step + 1), 'easy')));
+      apply(seat, decode(getBotAction(view(seat), seededRandom(step + 1))));
     }
     const seat = game().currentTurnSeat;
     const pool = createSearchPool({ workers: 1, memoryMb: 256, queueLimit: 2 });

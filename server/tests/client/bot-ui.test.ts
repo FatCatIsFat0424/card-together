@@ -73,7 +73,7 @@ const buttonTag = (html: string, marker: string): string | undefined =>
 const FILL = 'aria-label="Fill empty seats with bots"';
 const noop = (): void => undefined;
 const botControls = (extra: Partial<Parameters<typeof BotControls>[0]> = {}): string => render(createElement(BotControls, {
-  player: bot, disabled: false, blocked: false, pending: false, onDifficulty: noop, onRemove: noop, ...extra,
+  blocked: false, pending: false, onRemove: noop, ...extra,
 }));
 
 describe('bot player interface', () => {
@@ -171,28 +171,26 @@ describe('bot player interface', () => {
     }
   });
 
-  it('shows per-bot difficulty, defaults legacy bots to hard, and restricts editing to connected hosts', () => {
+  it('labels bot seats as bots and offers only removal to connected hosts', () => {
     const html = render(createElement(RoomPage));
-    expect(html).toMatch(/>Hard<\/span>/);
-    expect(botControls()).toContain('aria-label="Difficulty for Bot East"');
-    expect(botControls()).toMatch(/role="combobox"[^>]*>Hard<\/div>/);
-    expect(botControls({ player: { ...bot, botDifficulty: 'easy' } })).toMatch(/role="combobox"[^>]*>Easy<\/div>/);
-    // A lost connection or a room that no longer waits locks the select.
-    expect(botControls({ disabled: true, blocked: true })).toMatch(/role="combobox"[^>]*aria-disabled="true"[^>]*aria-label="Difficulty for Bot East"/);
-    expect(botControls({ disabled: true })).toMatch(/role="combobox"[^>]*aria-disabled="true"/);
+    expect(html).toMatch(/>Bot<\/span>/);
+    expect(html).not.toMatch(/>(Easy|Hard)</);
+    expect(botControls()).toContain('>Remove bot<');
+    expect(botControls()).not.toContain('combobox');
+    expect(buttonTag(botControls({ blocked: true }), 'disabled')).toBeDefined();
+    expect(buttonTag(botControls(), 'disabled')).toBeUndefined();
     state.connection = 'connecting';
     expect(buttonTag(render(createElement(RoomPage)), 'aria-label="Manage Bot East"')).toBeDefined();
     state.connection = 'ready';
     state.room = { ...state.room!, status: 'playing' };
     expect(buttonTag(render(createElement(RoomPage)), 'aria-label="Manage Bot East"')).toContain('disabled=""');
     state.room = { ...state.room, status: 'waiting' };
-    state.room!.seats.E = { player: { ...bot, botDifficulty: 'easy' }, isReady: true };
     state.playerId = 'visitor';
     const visitorHtml = render(createElement(RoomPage));
     expect(visitorHtml).not.toContain('Manage Bot East');
-    expect(visitorHtml).toMatch(/>Easy<\/span>/);
+    expect(visitorHtml).toMatch(/>Bot<\/span>/);
     useI18nStore.getState().setLocale('zh-TW');
-    expect(render(createElement(RoomPage))).toMatch(/>簡單<\/span>/);
+    expect(render(createElement(RoomPage))).not.toMatch(/>(簡單|困難)</);
   });
 
   it('disables room actions until the connection is ready', () => {
@@ -400,7 +398,7 @@ describe('bot player interface', () => {
     const html = render(createElement(RoomPage));
     expect(html).toContain('用 bot 補滿空位');
     expect(html).toContain('>bot 補滿<');
-    expect(html).toMatch(/>困難<\/span>/);
+    expect(html).toMatch(/>bot<\/span>/);
     expect(botControls()).toContain('移除 bot');
     expect(render(createElement(EmptySeatActions, { removable: false, onSit: noop, onAddBot: noop, onRemoveSeat: noop })))
       .toContain('加入 bot');
