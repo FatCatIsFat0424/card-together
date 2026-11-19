@@ -276,6 +276,7 @@ export function getPlayerVisibleState(
     result: game.result,
     log: game.log,
     redealPendingSeat: game.redealPendingSeat,
+    botSeats: SEAT_ORDER_CLOCKWISE.filter((other) => game.players[other]?.isBot === true),
   };
 }
 

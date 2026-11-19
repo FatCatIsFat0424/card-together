@@ -173,7 +173,7 @@ describe('filtered bot decisions', () => {
     },
   );
 
-  it('should pass with a weak hand even after three passes and decline a pending redeal', () => {
+  it('should pass with a weak hand even after three passes and accept a pending redeal', () => {
     const hand = [card('clubs', 2), card('clubs', 3), card('hearts', 4)];
     expect(getBotAction(bridgeState({ myHand: hand }))).toEqual({ type: 'bridge-bid', action: { type: 'pass' } });
     expect(getBotAction(bridgeState({ myHand: hand,
@@ -182,7 +182,7 @@ describe('filtered bot decisions', () => {
       type: 'bridge-bid', action: { type: 'pass' },
     });
     expect(getBotAction(bridgeState({ phase: 'redeal_pending', redealPendingSeat: 'N' }))).toEqual({
-      type: 'bridge-redeal', accept: false,
+      type: 'bridge-redeal', accept: true,
     });
     expect(getBotAction(bridgeState({ phase: 'redeal_pending', redealPendingSeat: 'E' }))).toBeNull();
   });

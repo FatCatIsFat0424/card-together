@@ -1,4 +1,4 @@
-import type { BidAction, BidLevel, BidSuit, Card, Seat, Suit } from '@shared/types';
+import type { BidAction, BidLevel, BidSuit, BridgeVisibleState, Card, Seat, Suit } from '@shared/types';
 import { BID_SUIT_ORDER, HIGH_CARD_POINTS, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 
 export const BRIDGE_SUITS: readonly Suit[] = ['clubs', 'diamonds', 'hearts', 'spades'];
@@ -398,14 +398,50 @@ function applyMeaning(profile: MutableProfile, meaning: CallMeaning, action: Bid
   if (isBid(action) && action.suit !== 'nt' && !profile.bidSuits.includes(action.suit)) profile.bidSuits.push(action.suit);
 }
 
-/** Replays the public auction with the bot agreements; human calls become estimates. */
-export function analyzeAuction(bids: readonly AuctionEntry[]): AuctionAnalysis {
+/** Seats held by people, from the public list of bot seats; a view without the list treats all seats as bots. */
+export function humanSeats(visible: BridgeVisibleState): ReadonlySet<Seat> {
+  const bots = visible.botSeats;
+  return new Set(bots ? SEAT_ORDER_CLOCKWISE.filter((seat) => seat !== visible.mySeat && !bots.includes(seat)) : []);
+}
+
+/** Margins for reading a person's call, who need not share the bot agreements. */
+const HUMAN_POINTS_BELOW = 2;
+const HUMAN_POINTS_ABOVE = 3;
+
+/**
+ * A person's call shows the same direction with wider margins: a couple of points either way, one card
+ * either way of the promised lengths, no promise of a balanced shape, and never a force partner must answer.
+ */
+function humanMeaning(meaning: CallMeaning): CallMeaning {
+  const minLength = meaning.minLength
+    ? Object.fromEntries(Object.entries(meaning.minLength).map(([suit, length]) => [suit, Math.max(0, (length ?? 0) - 1)]))
+    : undefined;
+  const maxLength = meaning.maxLength
+    ? Object.fromEntries(Object.entries(meaning.maxLength).map(([suit, length]) => [suit, Math.min(13, (length ?? 13) + 1)]))
+    : undefined;
+  return {
+    ...meaning,
+    maxLength,
+    minPoints: meaning.minPoints === undefined ? undefined : Math.max(0, meaning.minPoints - HUMAN_POINTS_BELOW),
+    maxPoints: meaning.maxPoints === undefined ? undefined : meaning.maxPoints + HUMAN_POINTS_ABOVE,
+    minLength,
+    balanced: undefined,
+    forcing: undefined,
+  };
+}
+
+/**
+ * Replays the public auction with the bot agreements; calls are estimates, never disclosures, and the calls
+ * of `humans` are read with wider margins.
+ */
+export function analyzeAuction(bids: readonly AuctionEntry[], humans: ReadonlySet<Seat> = new Set()): AuctionAnalysis {
   const profiles = Object.fromEntries(SEAT_ORDER_CLOCKWISE.map((seat) => [seat, emptyProfile()])) as Record<Seat, MutableProfile>;
   const meanings: CallMeaning[] = [];
   bids.forEach((entry, index) => {
     const prior = bids.slice(0, index);
     const ctx = callContext(prior, entry.seat, meanings);
-    const meaning = describeCall(ctx, entry.action, prior.length, profiles);
+    const described = describeCall(ctx, entry.action, prior.length, profiles);
+    const meaning = humans.has(entry.seat) ? humanMeaning(described) : described;
     meanings.push(meaning);
     applyMeaning(profiles[entry.seat], meaning, entry.action);
   });

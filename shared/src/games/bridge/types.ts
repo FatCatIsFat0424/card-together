@@ -115,6 +115,8 @@ export interface BridgeVisibleState extends ObserverView<Card> {
   readonly result: GameResult | null;
   readonly log: readonly GameLogEntry[];
   readonly redealPendingSeat: Seat | null;
+  /** Seats played by bots, which the room already shows publicly; absent means every seat is treated as a bot. */
+  readonly botSeats?: readonly Seat[];
 }
 
 export interface BridgeGameContract {

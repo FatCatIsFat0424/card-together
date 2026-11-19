@@ -22,7 +22,7 @@ function pick<T>(options: readonly T[], random: () => number): T | null {
 
 export function easyBridgeAction(visible: BridgeVisibleState, random: () => number): BotAction | null {
   if (visible.phase === 'redeal_pending' && visible.redealPendingSeat === visible.mySeat) {
-    return { type: 'bridge-redeal', accept: false };
+    return { type: 'bridge-redeal', accept: true };
   }
   if (visible.phase === 'bidding' && visible.bidding?.currentBidderSeat === visible.mySeat) {
     const bidding = visible.bidding;

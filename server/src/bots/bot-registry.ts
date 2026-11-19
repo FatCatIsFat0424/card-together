@@ -100,7 +100,18 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
   spades: { hard: getSpadesBotAction, easy: easySpadesAction, firstLegal: spadesFirstLegalAction,
     turnTimeout: (visible) => getSpadesBotAction(visible) },
   hearts: { hard: getHeartsBotAction, easy: easyHeartsAction, firstLegal: heartsFirstLegalAction },
-  bridge: { hard: getBridgeBotAction, easy: easyBridgeAction, firstLegal: bridgeFirstLegalAction },
+  bridge: {
+    // The synchronous heuristic serves human timeouts; bots sample hidden hands and solve them in the worker pool.
+    hard: getBridgeBotAction,
+    easy: easyBridgeAction,
+    firstLegal: bridgeFirstLegalAction,
+    search: { strategy: searchStrategy<'bridge'>(new URL('./bridge-search.ts', import.meta.url), 'bridgeSearch'), budgetMs: 1500 },
+    // A human who lets a redeal offer time out keeps the deal; bots accept with their weak hand.
+    turnTimeout: (_visible, { isBot, strategy }) => {
+      const action = strategy();
+      return !isBot && action?.type === 'bridge-redeal' ? { type: 'bridge-redeal', accept: false } : action;
+    },
+  },
   bigtwo: { hard: getBigTwoBotAction, easy: easyBigTwoAction, firstLegal: bigTwoFirstLegalAction },
   redpoints: { hard: getRedPointsBotAction, easy: easyRedPointsAction, firstLegal: redPointsFirstLegalAction },
   ninetynine: { hard: getNinetyNineBotAction, easy: easyNinetyNineAction, firstLegal: ninetyNineFirstLegalAction },

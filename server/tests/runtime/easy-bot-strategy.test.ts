@@ -175,13 +175,13 @@ describe('easy bot decisions', () => {
     },
   );
 
-  it('should open only a basic one-level bid and prevent repeated all-pass redeals', () => {
+  it('should open only a basic one-level bid, prevent repeated all-pass redeals, and accept an offered redeal', () => {
     const myHand = [card('clubs', 2), card('clubs', 3), card('hearts', 4)];
     expect(getEasyBotAction(bridgeState({ myHand }))).toEqual({ type: 'bridge-bid', action: { type: 'pass' } });
     expect(getEasyBotAction(bridgeState({ myHand, bidding: { ...createBiddingState('N'), consecutivePassCount: 3 } })))
       .toEqual({ type: 'bridge-bid', action: { type: 'bid', level: 1, suit: 'clubs' } });
     expect(getEasyBotAction(bridgeState({ phase: 'redeal_pending', redealPendingSeat: 'N' })))
-      .toEqual({ type: 'bridge-redeal', accept: false });
+      .toEqual({ type: 'bridge-redeal', accept: true });
     expect(getEasyBotAction(bridgeState({ phase: 'redeal_pending', redealPendingSeat: 'E' }))).toBeNull();
   });
 

@@ -1,7 +1,9 @@
 import type { BridgeVisibleState, Card, Seat, Suit } from '@shared/types';
 import { SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { getNaturalBridgeBid } from './bridge-bidding';
-import { analyzeAuction, distribute, partnerOf } from './bridge-auction';
+import { analyzeAuction, distribute, humanSeats, partnerOf } from './bridge-auction';
+import { shownVoids } from './bridge-sampling';
+import { readPartnerSignals, signalBonus } from './bridge-signals';
 import type { SeatProfile } from './bridge-auction';
 import { compareCards } from '../engine/playing';
 import type { BotAction } from './bot-decisions';
@@ -26,26 +28,6 @@ function outstandingHigher(card: Card, visible: BridgeVisibleState, played: read
     if (!known.some((other) => other.suit === card.suit && other.rank === rank)) count++;
   }
   return count;
-}
-
-/** Seats that failed to follow a led suit hold none of it. */
-function knownVoids(visible: BridgeVisibleState): Record<Seat, Set<Suit>> {
-  const voids: Record<Seat, Set<Suit>> = { N: new Set(), E: new Set(), S: new Set(), W: new Set() };
-  const playing = visible.playing;
-  if (!playing) return voids;
-  const tricks = [
-    ...playing.completedTricks.map((trick) => ({ leadSeat: trick.leadSeat, cards: trick.cards as Partial<Record<Seat, Card>> })),
-    { leadSeat: playing.trickLeadSeat, cards: playing.currentTrick },
-  ];
-  for (const trick of tricks) {
-    const led = trick.cards[trick.leadSeat];
-    if (!led) continue;
-    for (const seat of SEAT_ORDER_CLOCKWISE) {
-      const card = trick.cards[seat];
-      if (card && card.suit !== led.suit) voids[seat].add(led.suit);
-    }
-  }
-  return voids;
 }
 
 function playedBy(visible: BridgeVisibleState, seat: Seat, suit: Suit): number {
@@ -97,15 +79,20 @@ function equivalentRank(card: Card, visible: BridgeVisibleState, played: readonl
   return rank;
 }
 
-function play(visible: BridgeVisibleState, random: () => number): Card | null {
+/**
+ * Heuristic scores for the cards worth considering, higher first in preference. While partner already
+ * holds the trick securely only the cards that duck it are listed.
+ */
+export function scoredBridgePlays(visible: BridgeVisibleState): { value: Card; score: number }[] {
   const playing = visible.playing;
   const contract = visible.contract;
-  if (!playing || !contract || visible.validCards.length === 0) return null;
+  if (!playing || !contract || visible.validCards.length === 0) return [];
   const played = publicCards(visible);
   const lead = playing.currentTrick[playing.trickLeadSeat];
   if (!lead) {
-    const profiles = analyzeAuction(visible.bidding?.bids ?? []).profiles;
-    const voids = knownVoids(visible);
+    const profiles = analyzeAuction(visible.bidding?.bids ?? [], humanSeats(visible)).profiles;
+    const signals = readPartnerSignals(visible);
+    const voids = shownVoids(visible);
     const partner = partnerOf(visible.mySeat);
     const opponents = SEAT_ORDER_CLOCKWISE.filter((seat) => seat !== visible.mySeat && seat !== partner);
     const trumpSuit = contract.suit === 'nt' ? null : contract.suit;
@@ -119,7 +106,8 @@ function play(visible: BridgeVisibleState, random: () => number): Card | null {
     const opponentTrumps = trumpsDrawn ? 0 : unseenTrump - partnerTrumps;
     const drawTrumps = declarerTeam && opponentTrumps > 0.5 && (trumpCount >= 4 || (trumpCount >= 3 && trumpCount + partnerTrumps >= 7.5));
     const openingLead = playing.completedTricks.length === 0;
-    const partnerSuits = profiles[partner].bidSuits.filter((suit) => suit !== trumpSuit);
+    // Partner's bid suits and the suits partner's signals asked for are the natural leads.
+    const partnerSuits = [...new Set([...profiles[partner].bidSuits, ...signals.wanted])].filter((suit) => suit !== trumpSuit);
     const opponentSuits = opponents.flatMap((seat) => profiles[seat].bidSuits).filter((suit) => suit !== trumpSuit);
     const options = visible.validCards.map((card) => {
       const length = visible.myHand.filter((other) => other.suit === card.suit).length;
@@ -137,11 +125,12 @@ function play(visible: BridgeVisibleState, random: () => number): Card | null {
       }
       // Leading into an opponent's bid suit usually gives a trick to their honors.
       if (opponentSuits.includes(card.suit) && !master) score -= 3;
+      if (signals.unwanted.includes(card.suit) && !partnerSuits.includes(card.suit) && !master) score -= 2;
       const knownRuff = trumpSuit !== null && !trump && unseenTrump > 0 && opponents.some((seat) => voids[seat].has(card.suit) && !voids[seat].has(trumpSuit));
       if (knownRuff) score -= 7;
       return { value: card, score };
     });
-    return selectNearBest(options, random, 0.6);
+    return options;
   }
 
   let winnerSeat = playing.trickLeadSeat;
@@ -155,7 +144,7 @@ function play(visible: BridgeVisibleState, random: () => number): Card | null {
   }
   const partnerWinning = isPartner(visible.mySeat, winnerSeat);
   const cardsPlayed = Object.keys(playing.currentTrick).length;
-  const voids = knownVoids(visible);
+  const voids = shownVoids(visible);
   const partner = partnerOf(visible.mySeat);
   const remainingOpponents = SEAT_ORDER_CLOCKWISE.filter((seat) => seat !== visible.mySeat && seat !== partner && !playing.currentTrick[seat]);
   const secure = (card: Card): boolean => remainingOpponents.every((seat) => !canOvertake(card, seat, lead.suit, visible, played, voids));
@@ -181,14 +170,23 @@ function play(visible: BridgeVisibleState, random: () => number): Card | null {
         if (!duckHonor) score += secured ? 40 : 24 - higher * 0.35;
       }
     }
+    score += signalBonus(visible, card);
     return { value: card, score };
   });
-  return selectNearBest(options, random, 0.5);
+  return options;
+}
+
+function play(visible: BridgeVisibleState, random: () => number): Card | null {
+  const options = scoredBridgePlays(visible);
+  if (options.length === 0) return null;
+  const leading = visible.playing?.trickLeadSeat !== undefined && !visible.playing.currentTrick[visible.playing.trickLeadSeat];
+  return selectNearBest(options, random, leading ? 0.6 : 0.5);
 }
 
 export function getBridgeBotAction(visible: BridgeVisibleState, random: () => number): BotAction | null {
+  // Only a weak hand (4 HCP or fewer) is offered a redeal, and a weak hand favours the opponents.
   if (visible.phase === 'redeal_pending' && visible.redealPendingSeat === visible.mySeat) {
-    return { type: 'bridge-redeal', accept: false };
+    return { type: 'bridge-redeal', accept: true };
   }
   if (visible.phase === 'bidding' && visible.bidding?.currentBidderSeat === visible.mySeat) {
     return { type: 'bridge-bid', action: getNaturalBridgeBid(visible) };

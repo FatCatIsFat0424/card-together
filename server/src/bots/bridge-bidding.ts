@@ -1,9 +1,11 @@
 import type { BidAction, BidLevel, BidSuit, BridgeVisibleState, Card, Seat, Suit } from '@shared/types';
-import { BID_SUIT_ORDER, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
+import { BID_SUIT_ORDER } from '@shared/constants';
 import {
-  BRIDGE_RANGES, BRIDGE_SUITS, analyzeAuction, callContext, cheapestLevel, estimateHands, handPoints,
+  BRIDGE_RANGES, BRIDGE_SUITS, analyzeAuction, callContext, cheapestLevel, estimateHands, handPoints, humanSeats,
   isBalancedShape, isMajor, suitLengths,
 } from './bridge-auction';
+import { dealConstraints, sampleDeal, seatIndex, SUIT_INDEX } from './bridge-sampling';
+import { makeChance, NT_STRAIN } from './bridge-tricks';
 import type { CallContext, HandEstimate, NaturalBid, SeatProfile, SuitCounts } from './bridge-auction';
 
 const PASS: BidAction = { type: 'pass' };
@@ -26,11 +28,14 @@ interface Situation {
   readonly ctx: CallContext;
   readonly profiles: Readonly<Record<Seat, SeatProfile>>;
   readonly estimate: HandEstimate;
+  /** Simulated make chance of a contract for our side or the opponents. */
+  readonly chance: (team: 'us' | 'them', level: number, strain: BidSuit) => number;
 }
 
 /**
  * Trick expectations fitted to bot-vs-bot play: tricks grow about 0.24 per combined HCP in a
- * suit and 0.29 in NT, and each trump beyond eight adds less than one trick.
+ * suit and 0.29 in NT, and each trump beyond eight adds less than one trick. The descriptive bids are tuned
+ * to this estimate from partner's shown minimum; competitive and placement judgments simulate instead.
  */
 const FIT_TRICKS: readonly (readonly [number, number])[] = [
   [4, -4.4], [5, -3.2], [6, -2], [7, -0.9], [8, 0], [9, 0.7], [10, 1.15], [11, 1.5], [12, 1.8], [13, 2],
@@ -54,6 +59,50 @@ function makeProbability(level: number, strain: BidSuit, points: number, fit: nu
   const spread = strain === 'nt' ? 1.6 : 1.15;
   const z = (expected - (6 + level) + 0.5) / spread;
   return 1 / (1 + Math.exp(-1.702 * z));
+}
+
+/** Sampled deals consistent with the auction, generated once per decision when a judgment needs them. */
+const SIMULATION_DEALS = 24;
+
+function seededRandom(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Same hand and auction give the same deals, so a decision is reproducible. */
+function decisionSeed(visible: BridgeVisibleState): number {
+  const text = `${visible.mySeat}|${visible.myHand.map((card) => `${card.suit[0]}${card.rank}`).join('')}|${
+    (visible.bidding?.bids ?? []).map((entry) => (entry.action.type === 'bid' ? `${entry.action.level}${entry.action.suit[0]}` : 'p')).join('')}`;
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index++) hash = Math.imul(hash ^ text.charCodeAt(index), 16777619);
+  return hash >>> 0;
+}
+
+/** Average make chance of a contract over deals that fit the auction, for our side or theirs. */
+function simulation(visible: BridgeVisibleState): (team: 'us' | 'them', level: number, strain: BidSuit) => number {
+  let deals: Int32Array[] | null = null;
+  const side = seatIndex(visible.mySeat) & 1;
+  return (team, level, strain) => {
+    if (!deals) {
+      const constraints = dealConstraints(visible);
+      const random = seededRandom(decisionSeed(visible));
+      deals = [];
+      for (let index = 0; index < SIMULATION_DEALS; index++) {
+        const deal = sampleDeal(constraints, random);
+        if (deal) deals.push(deal);
+      }
+    }
+    if (deals.length === 0) return 0;
+    const strainIndex = strain === 'nt' ? NT_STRAIN : SUIT_INDEX[strain];
+    const declaring = team === 'us' ? side : 1 - side;
+    return deals.reduce((sum, deal) => sum + makeChance(deal, declaring, strainIndex, level), 0) / deals.length;
+  };
 }
 
 function describeHand(cards: readonly Card[]): HandInfo {
@@ -381,32 +430,23 @@ function bestOption(options: readonly Option[]): Option | null {
   return options.reduce<Option | null>((best, option) => (!best || option.chance > best.chance ? option : best), null);
 }
 
-function ourPoints(s: Situation): number {
-  return s.hand.points + s.estimate.points[s.ctx.partner];
-}
-
 function fitWithPartner(s: Situation, suit: Suit): number {
   return s.hand.lengths[suit] + s.estimate.lengths[s.ctx.partner][suit];
 }
 
-/** Chance that the opponents make their current contract, judged from our estimated share. */
+/** Chance that the opponents make their current contract, simulated over deals that fit the auction. */
 function theirChance(s: Situation): number {
-  const { ctx, estimate } = s;
-  const highest = ctx.highest!;
-  const [left, right] = SEAT_ORDER_CLOCKWISE.filter((seat) => seat !== ctx.seat && seat !== ctx.partner);
-  const theirFit = highest.suit === 'nt' ? 0 : estimate.lengths[left][highest.suit] + estimate.lengths[right][highest.suit];
-  return makeProbability(highest.level, highest.suit, 40 - ourPoints(s), theirFit);
+  const highest = s.ctx.highest!;
+  return s.chance('them', highest.level, highest.suit);
 }
 
 function outbids(s: Situation, level: number, suit: BidSuit): boolean {
-  const fit = suit === 'nt' ? 0 : fitWithPartner(s, suit);
-  return makeProbability(level, suit, ourPoints(s), fit) > 1 - theirChance(s) + COMPETE_MARGIN;
+  return s.chance('us', level, suit) > 1 - theirChance(s) + COMPETE_MARGIN;
 }
 
 /** Compete only when our contract is clearly likelier to make than theirs is to fail. */
 function competitiveCall(s: Situation): BidAction {
   const { hand, ctx } = s;
-  const points = ourPoints(s);
   const options: Option[] = [];
   for (const suit of BRIDGE_SUITS) {
     if (ctx.opponentSuits.includes(suit)) continue;
@@ -417,12 +457,12 @@ function competitiveCall(s: Situation): BidAction {
     if (partnerNamed ? shownFit < 8 : hand.lengths[suit] < 6 || fit < 8 || hand.points < 5) continue;
     const level = cheapest(s, suit);
     // Law of Total Tricks: compete no higher than the known trump count minus six.
-    if (level <= Math.min(7, shownFit - 6)) options.push({ bid: bid(level, suit), chance: makeProbability(level, suit, points, fit) });
+    if (level <= Math.min(7, shownFit - 6)) options.push({ bid: bid(level, suit), chance: s.chance('us', level, suit) });
   }
   const ntNamed = ctx.partnerBids.some((item) => item.suit === 'nt') || ctx.ownBids.some((item) => item.suit === 'nt');
   const ntLevel = cheapest(s, 'nt');
   if (ntLevel <= 7 && stopsAll(hand, ctx.opponentSuits) && (ntNamed || (hand.balanced && hand.points >= 15))) {
-    options.push({ bid: bid(ntLevel, 'nt'), chance: makeProbability(ntLevel, 'nt', points, 0) });
+    options.push({ bid: bid(ntLevel, 'nt'), chance: s.chance('us', ntLevel, 'nt') });
   }
   const best = bestOption(options);
   return best && best.chance > 1 - theirChance(s) + COMPETE_MARGIN ? best.bid : PASS;
@@ -434,7 +474,6 @@ function placementCall(s: Situation): BidAction {
   const current = ctx.highest!;
   const forced = ctx.partnerForcing;
   if (!forced && ctx.ownBids.length >= 3) return PASS;
-  const points = ourPoints(s);
   const options: Option[] = [];
   for (const suit of BRIDGE_SUITS) {
     if (ctx.opponentSuits.includes(suit) || suit === current.suit) continue;
@@ -444,17 +483,16 @@ function placementCall(s: Situation): BidAction {
     const natural = (partnerNamed && length >= 2) || (ownNamed && length >= 6)
       || (!partnerNamed && !ownNamed && length >= (forced ? 4 : 5) && ctx.ownBids.length <= 1);
     const level = cheapest(s, suit);
-    if (natural && level <= 4) options.push({ bid: bid(level, suit), chance: makeProbability(level, suit, points, fitWithPartner(s, suit)) });
+    if (natural && level <= 4) options.push({ bid: bid(level, suit), chance: s.chance('us', level, suit) });
   }
   const ntLevel = cheapest(s, 'nt');
   if (current.suit !== 'nt' && ntLevel <= 3 && hand.balanced && stopsAll(hand, ctx.opponentSuits)
     && hand.lengths[current.suit as Suit] <= 2) {
-    options.push({ bid: bid(ntLevel, 'nt'), chance: makeProbability(ntLevel, 'nt', points, 0) });
+    options.push({ bid: bid(ntLevel, 'nt'), chance: s.chance('us', ntLevel, 'nt') });
   }
   const best = bestOption(options);
   if (forced) return best?.bid ?? legal(s, ntLevel, 'nt') ?? PASS;
-  const currentFit = current.suit === 'nt' ? 0 : fitWithPartner(s, current.suit);
-  const currentChance = makeProbability(current.level, current.suit, points, currentFit);
+  const currentChance = s.chance('us', current.level, current.suit);
   return best && best.chance >= currentChance + CORRECTION_MARGIN ? best.bid : PASS;
 }
 
@@ -481,11 +519,11 @@ function chooseCall(s: Situation, passesBefore: number): BidAction {
 export function getNaturalBridgeBid(visible: BridgeVisibleState): BidAction {
   const bidding = visible.bidding;
   if (!bidding) return PASS;
-  const analysis = analyzeAuction(bidding.bids);
+  const analysis = analyzeAuction(bidding.bids, humanSeats(visible));
   const ctx = callContext(bidding.bids, visible.mySeat, analysis.meanings);
   const situation: Situation = {
     hand: describeHand(visible.myHand), ctx, profiles: analysis.profiles,
-    estimate: estimateHands(analysis.profiles, visible.mySeat, visible.myHand),
+    estimate: estimateHands(analysis.profiles, visible.mySeat, visible.myHand), chance: simulation(visible),
   };
   // Before any bid every call is a pass, so the pass streak counts the openers who declined.
   const call = chooseCall(situation, bidding.consecutivePassCount);
