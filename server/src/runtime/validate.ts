@@ -224,7 +224,8 @@ function room(value: unknown): boolean {
   const humans = members.filter((id) => !id.startsWith('bot:'));
   if (info.additionalSeats !== undefined && (!Array.isArray(info.additionalSeats)
     || info.additionalSeats.length > MAX_ROOM_SEATS - 4
-    || (isGameType(info.gameType) && info.additionalSeats.length > maxPlayers(info.gameType) - 4)
+    // Games for fewer than four players allow none, but a room that once had additional seats keeps an empty list.
+    || (isGameType(info.gameType) && info.additionalSeats.length > Math.max(0, maxPlayers(info.gameType) - 4))
     || (info.additionalSeats.length > 0 && !(isGameType(info.gameType) && gameDefinition(info.gameType).seats.expandable))
     || !info.additionalSeats.every((entry: unknown) => object(entry) && typeof entry.isReady === 'boolean'
       && ((entry.player === null && !entry.isReady) || (player(entry.player) && object(entry.player)

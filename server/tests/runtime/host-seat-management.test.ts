@@ -103,6 +103,22 @@ describe('host seat management', () => {
     expect(isRuntimeSnapshot(await app.repository.loadRuntime())).toBe(true);
   });
 
+  it('switches a room whose additional seats were all removed to games for fewer than four players', async () => {
+    const app = await (harness = await createSocketHarness(1));
+    const host = app.clients[0][0];
+    const code = app.roomCodes[0];
+    expect(await host.emitWithAck('room:setGameType', { gameType: 'holdem' })).toEqual({ success: true });
+    expect(await host.emitWithAck('room:addSeat')).toEqual({ success: true });
+    expect(await host.emitWithAck('room:removeSeat')).toEqual({ success: true });
+    expect(await host.emitWithAck('room:setGameType', { gameType: 'bridge' })).toEqual({ success: true });
+    expect(rooms.getRoomInfo(code)?.additionalSeats).toEqual([]);
+    for (const gameType of ['doudizhu', 'reversi'] as const) {
+      expect(await host.emitWithAck('room:setGameType', { gameType })).toEqual({ success: true });
+      expect(rooms.getRoomInfo(code)?.gameType).toBe(gameType);
+    }
+    expect(isRuntimeSnapshot(await app.repository.loadRuntime())).toBe(true);
+  });
+
   it('keeps spectator capacity while allowing a spectator to swap with a seated player', async () => {
     const app = await (harness = await createSocketHarness(3));
     const host = app.clients[0][0];
