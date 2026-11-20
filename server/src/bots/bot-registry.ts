@@ -194,13 +194,13 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     search: { strategy: searchStrategy<'liarsdice'>(new URL('./liarsdice-search.ts', import.meta.url), 'liarsDiceSearch'), budgetMs: 1200 },
   },
   reversi: {
-    // The cheap synchronous move is the fallback; bot turns and timeouts search in the worker pool.
+    // The cheap synchronous move is the fallback; bot turns and timeouts search in the worker pool (opening book,
+    // iterative deepening for the whole budget, an endgame solve near the end).
     decide: getReversiBotAction,
     firstLegal: reversiFirstLegalAction,
     search: {
       strategy: searchStrategy<'reversi'>(new URL('./reversi-search.ts', import.meta.url), 'reversiSearch'),
-      budgetMs: 1000,
-      maxDepth: 10,
+      budgetMs: 2000,
     },
   },
   jungle: {

@@ -5,7 +5,7 @@ import type { RvCell } from '@shared/rules/reversi';
 import { getBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
-import { reversiSearch, searchBestCell, searchBoard } from '../../src/bots/reversi-search';
+import { quickCell, reversiSearch } from '../../src/bots/reversi-search';
 import { createSearchPool } from '../../src/bots/search/search-worker-pool';
 import type { SearchPool } from '../../src/bots/search/search-worker-pool';
 import { seededRandom } from '../../src/bots/search/seeded-random';
@@ -40,7 +40,7 @@ describe('Reversi synchronous bot', () => {
   });
 });
 
-describe('Reversi Hard bot', () => {
+describe('Reversi bot', () => {
   it('takes a free corner over a bigger flip elsewhere', () => {
     start();
     game().discs = position([
@@ -86,41 +86,63 @@ function getReversiAction(seat: GameSeat): BotAction | null {
 
 describe('Reversi search', () => {
   it('takes the only legal move without searching', () => {
-    const board = searchBoard(position([
+    const discs = position([
       'xxxxxxxx', 'xxxxxxxx', 'xxxxxxxx', 'xxxxxxxx', 'xxxxxxxx', 'xxxxxxxx', 'xxxxxxxx', 'xooooo..',
-    ]));
-    expect(searchBestCell(board, 1, { maxDepth: 10, expired: () => true, random: () => 0 })).toBe(rvIndex(6, 7));
+    ]);
+    expect(quickCell(discs, 0)).toBe(rvIndex(6, 7));
   });
 
-  it('returns null with no legal move and the only move without searching', () => {
-    const empty = searchBoard(position(Array(8).fill('........')));
-    expect(searchBestCell(empty, 1, { maxDepth: 4, expired: () => false, random: () => 0 })).toBeNull();
+  it('returns null with no legal move', () => {
+    expect(quickCell(position(Array(8).fill('........')), 0)).toBeNull();
   });
 
-  it('stops within its time budget and still returns a legal move', () => {
+  it('does not change the view it reads', () => {
     start();
+    reversi.place(CODE, 'N', '3,2');
+    const visible = view('S');
+    const before = JSON.stringify(visible);
+    getBotAction(visible, seededRandom(3));
+    reversiSearch(visible, { random: () => 0, budget: { maxDepth: 3, timeLeftMs: () => 1000, expired: () => false } });
+    expect(JSON.stringify(visible)).toBe(before);
+  });
+
+  it('finishes the synchronous decision quickly in a busy midgame', () => {
+    start();
+    for (let guard = 0; guard < 24 && game().phase === 'playing'; guard++) {
+      const seat = game().currentTurnSeat;
+      const legal = rvLegalMoves(game().discs, seat === 'N' ? 0 : 1);
+      const cell = legal[(guard * 7) % legal.length];
+      reversi.place(CODE, seat, `${cell % 8},${Math.floor(cell / 8)}`);
+    }
+    const seat = game().currentTurnSeat;
     const started = performance.now();
-    const limit = started + 150;
-    const cell = searchBestCell(searchBoard(game().discs), 1, {
-      maxDepth: 30, expired: () => performance.now() >= limit, random: () => 0.3,
-    });
-    expect(performance.now() - started).toBeLessThan(400);
-    expect(rvLegalMoves(game().discs, 0)).toContain(cell);
+    expect(getBotAction(view(seat), seededRandom(1))).not.toBeNull();
+    expect(performance.now() - started).toBeLessThan(250);
   });
 
-  it('respects the depth cap from the search context', () => {
+  it('answers within its budget from the worker strategy', () => {
     start();
+    reversi.place(CODE, 'N', '3,2');
+    reversi.place(CODE, 'S', '2,2');
+    const started = performance.now();
+    const deadline = started + 300;
     const action = reversiSearch(view('N'), {
-      random: () => 0, budget: { maxDepth: 2, timeLeftMs: () => 1000, expired: () => false },
+      random: () => 0,
+      budget: {
+        maxDepth: undefined,
+        timeLeftMs: () => Math.max(0, deadline - performance.now()),
+        expired: () => performance.now() >= deadline,
+      },
     });
+    expect(performance.now() - started).toBeLessThan(600);
     expect(rvLegalMoves(game().discs, 0)).toContain(target(action)!);
     expect(reversiSearch(view('S'), {
       random: () => 0, budget: { maxDepth: 2, timeLeftMs: () => 1000, expired: () => false },
     })).toBeNull();
   });
 
-  it('declares the worker search with a one-second budget and a depth cap', () => {
-    expect(gameBot('reversi').search).toMatchObject({ budgetMs: 1000, maxDepth: expect.any(Number) });
+  it('declares a worker search of about two seconds', () => {
+    expect(gameBot('reversi').search).toMatchObject({ budgetMs: 2000 });
   });
 });
 
