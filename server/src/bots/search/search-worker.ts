@@ -28,7 +28,9 @@ port.on('message', (request: WorkerRequest) => {
     const { id, task } = request;
     try {
       const strategy = await loadStrategy(task.strategy);
-      // The budget starts when the strategy does, so loading its module is not charged to it.
+      // The budget starts when the strategy does, so loading its module is not charged to it; the pool
+      // restarts its own deadline on this message for the same reason.
+      post({ type: 'started', id });
       const deadline = performance.now() + task.budgetMs;
       const context: SearchContext = {
         random: seededRandom(task.seed),

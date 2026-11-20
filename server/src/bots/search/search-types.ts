@@ -81,5 +81,7 @@ export interface WorkerRequest {
 
 export type WorkerMessage =
   | { readonly type: 'ready' }
+  /** The strategy's module is loaded and its budget has started. */
+  | { readonly type: 'started'; readonly id: number }
   | { readonly type: 'result'; readonly id: number; readonly action: BotAction | null }
   | { readonly type: 'error'; readonly id: number; readonly reason: string };

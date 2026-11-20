@@ -66,6 +66,15 @@ describe('search worker pool', () => {
     expect(pool.stats()).toMatchObject({ alive: 1, completed: 1 });
   });
 
+  it('does not charge a slow strategy load to the budget, but bounds the load itself', async () => {
+    const slow = searchStrategy(new URL('../fixtures/slow-loading-strategy.ts', import.meta.url), 'slowLoadingSearch');
+    const pool = open({ graceMs: 50 });
+    await expect(pool.run({ strategy: slow, visible: {}, budgetMs: 100, seed: 1 })).resolves.toMatchObject({ status: 'ok' });
+    expect(pool.stats()).toMatchObject({ timeouts: 0, completed: 1 });
+    const strict = open({ graceMs: 50, loadMs: 100 });
+    await expect(strict.run({ strategy: slow, visible: {}, budgetMs: 100, seed: 1 })).resolves.toMatchObject({ status: 'timeout' });
+  });
+
   it('respawns after a crash and reports it to the caller only', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const pool = open();

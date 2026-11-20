@@ -17,6 +17,8 @@ export interface SearchPoolOptions extends BotWorkerConfig {
   readonly maxWaitMs?: number;
   /** Longest a new worker may take to report ready. */
   readonly startupMs?: number;
+  /** Longest a worker may take to load a task's strategy module before its budget starts. */
+  readonly loadMs?: number;
   readonly workerUrl?: URL;
 }
 
@@ -37,6 +39,11 @@ export interface SearchPool extends SearchRunner {
 }
 
 export const DEFAULT_SEARCH_GRACE_MS = 250;
+/**
+ * Longest a worker may take to load a strategy's module before the task's budget starts. A cold load of a
+ * search module transpiles it and can take several hundred milliseconds, more than the grace.
+ */
+export const DEFAULT_STRATEGY_LOAD_MS = 10_000;
 export const DEFAULT_SEARCH_MAX_WAIT_MS = 3_000;
 export const DEFAULT_WORKER_STARTUP_MS = 15_000;
 
@@ -73,6 +80,7 @@ interface Slot {
  */
 export function createSearchPool(options: SearchPoolOptions): SearchPool {
   const graceMs = options.graceMs ?? DEFAULT_SEARCH_GRACE_MS;
+  const loadMs = options.loadMs ?? DEFAULT_STRATEGY_LOAD_MS;
   const maxWaitMs = options.maxWaitMs ?? DEFAULT_SEARCH_MAX_WAIT_MS;
   const startupMs = options.startupMs ?? DEFAULT_WORKER_STARTUP_MS;
   const workerUrl = options.workerUrl ?? DEFAULT_WORKER_URL;
@@ -151,6 +159,10 @@ export function createSearchPool(options: SearchPoolOptions): SearchPool {
       }
       const running = slot.running;
       if (!running || running.id !== message.id) return;
+      if (message.type === 'started') {
+        arm(slot, running, running.task.budgetMs + graceMs, `No result within ${running.task.budgetMs + graceMs} ms.`);
+        return;
+      }
       if (message.type === 'result') {
         counters.completed += 1;
         finish(slot, { status: 'ok', action: message.action, elapsedMs: Date.now() - running.startedAt }, false);
@@ -170,14 +182,23 @@ export function createSearchPool(options: SearchPoolOptions): SearchPool {
     worker.on('exit', (code) => crashed(`exit code ${code}`));
   }
 
-  /** Starts the budget clock once the worker can actually receive the task. */
-  function post(slot: Slot, running: Running): void {
-    running.startedAt = Date.now();
+  /** (Re)starts the deadline after which the task's worker is terminated. */
+  function arm(slot: Slot, running: Running, ms: number, reason: string): void {
+    if (running.timer) clearTimeout(running.timer);
     running.timer = setTimeout(() => {
       counters.timeouts += 1;
-      finish(slot, { status: 'timeout', reason: `No result within ${running.task.budgetMs + graceMs} ms.` }, true);
-    }, running.task.budgetMs + graceMs);
+      finish(slot, { status: 'timeout', reason }, true);
+    }, ms);
     running.timer.unref();
+  }
+
+  /**
+   * Hands the task to a ready worker. Until the worker reports the strategy loaded, only the load limit
+   * applies; the budget plus grace starts with that report.
+   */
+  function post(slot: Slot, running: Running): void {
+    running.startedAt = Date.now();
+    arm(slot, running, loadMs + running.task.budgetMs + graceMs, `The strategy did not load within ${loadMs} ms.`);
     const request: WorkerRequest = { id: running.id, task: running.task };
     slot.worker?.postMessage(request);
   }

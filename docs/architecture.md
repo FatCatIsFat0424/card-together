@@ -199,7 +199,7 @@
 
 - **宣告**：`search: { strategy, budgetMs, maxDepth? }`。`strategy` 以 `searchStrategy(new URL('./x-search.ts', import.meta.url), 'exportName')` 指向一個模組與其匯出的純函式 `(可見視角, { random, budget }) => BotAction | null`。函式只能讀自己的過濾後視角，不得碰 manager 狀態或 I/O；`budget.expired()`、`budget.timeLeftMs()` 與 `budget.maxDepth` 供迭代加深使用。`random` 是以種子產生的亂數；只受深度限制（不受時鐘限制）的搜尋，相同視角與種子會得到相同結果。
 - **流程**：bot 計時器（或真人的回合逾時）到期後，在 runtime 佇列內取得該座位的視角並交給 pool，然後釋放佇列；結果回來時再開一次佇列內的 mutation，確認同一局、階段、log 長度與座位（即計時器的回合 key）仍是待處理的回合，且沒有呈現進行中，才套用，之後的 commit、發布與失敗重試與同步 bot 完全相同。狀態已前進則丟棄結果；代打座位與 bot 座位排程相同，使用同一個 bot。回合改變、對局中止或關閉時，執行中的任務會被取消。種子由回合 key 雜湊得出，所以同一回合重試時相同。
-- **回退**：逾時（`budgetMs` 加 250 ms 寬限）、worker 當機（含超過記憶體上限）、策略丟出例外、佇列已滿、等候空閒 worker 超過 3 秒、pool 關閉或 `BOT_WORKERS=0`，一律改用同一個 bot 的同步版本（`GameBot.decide`，淺層、有時間上限的搜尋或啟發式）；之後仍失敗則走既有的「第一個合法動作」流程。搜尋型遊戲的 `decide` 要保持便宜，因為它只在回退與共用截止時間時決定。
+- **回退**：逾時（`budgetMs` 加 250 ms 寬限，從 worker 回報策略模組已載入時起算；冷載入會轉譯模組、可能超過寬限，所以另有 10 秒的載入上限）、worker 當機（含超過記憶體上限）、策略丟出例外、佇列已滿、等候空閒 worker 超過 3 秒、pool 關閉或 `BOT_WORKERS=0`，一律改用同一個 bot 的同步版本（`GameBot.decide`，淺層、有時間上限的搜尋或啟發式）；之後仍失敗則走既有的「第一個合法動作」流程。搜尋型遊戲的 `decide` 要保持便宜，因為它只在回退與共用截止時間時決定。
 - **Pool**：`createSearchPool` 依設定建立固定數量的 slot，worker 在第一次使用時才啟動（啟動約 100 ms，沒有搜尋型遊戲就不花資源）。每個任務獨占一個 worker；逾時、取消與當機都會終止該 worker，下一個任務在該 slot 啟動新的 worker（不會自動重啟迴圈）。Worker 使用空的 `execArgv`，由 `search-worker-entry.mjs` 自行註冊 `tsx`，所以開發（`tsx watch`）、測試（vitest）與正式環境（`server/start.mjs`）行為相同，並沿用 `server/tsconfig.json` 的 `@shared` 別名。
 - **設定與記憶體**：`BOT_WORKERS`、`BOT_WORKER_MEMORY_MB`、`BOT_SEARCH_QUEUE`（[開發](development.md#設定)；記憶體估算見[部署](deployment.md#執行環境設定)）。
 
