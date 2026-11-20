@@ -157,20 +157,39 @@ function scoreCover(visible: SevensVisibleState, knowledge: SevensKnowledge, car
   return -loss + BLOCK_BONUS * blocked / Math.max(1, activeOpponents(visible).length);
 }
 
+export interface SevensOption {
+  readonly card: Card;
+  readonly cover: boolean;
+  /** A cover of a card nobody can ever play; every such card ends up covered anyway. */
+  readonly dead: boolean;
+  readonly score: number;
+}
+
+/**
+ * Every move the bot considers, scored: the legal plays, or when none exists, the covers worth taking
+ * (known dead cards first unless blocking pays clearly). Empty when it is not the bot's turn.
+ */
+export function sevensOptions(visible: SevensVisibleState, knowledge: SevensKnowledge = buildSevensKnowledge(visible)): SevensOption[] {
+  if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat) return [];
+  if (visible.validCards.length > 0) {
+    return visible.validCards.map((card) => ({ card, cover: false, dead: false, score: scorePlay(visible, knowledge, card) }));
+  }
+  const options = visible.myHand.map((card) => ({
+    card, cover: true, dead: reachableProbability(visible, knowledge, card) === 0, score: scoreCover(visible, knowledge, card),
+  }));
+  // Preserve live cards when a forced cover can consume a known dead card, unless blocking has a clear benefit.
+  return options.some((entry) => entry.dead) ? options.filter((entry) => entry.dead || entry.score > COVER_MARGIN) : options;
+}
+
+export function sevensAction(option: Pick<SevensOption, 'card' | 'cover'>): BotAction {
+  return { type: option.cover ? 'sevens-cover' : 'sevens-play', card: option.card };
+}
+
 export function getSevensBotAction(visible: SevensVisibleState, random: () => number): BotAction | null {
   if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat) return null;
   if (visible.validCards.length === 1) return { type: 'sevens-play', card: visible.validCards[0] };
-  const knowledge = buildSevensKnowledge(visible);
-  if (visible.validCards.length > 0) {
-    const card = selectNearBest(
-      visible.validCards.map((entry) => ({ value: entry, score: scorePlay(visible, knowledge, entry) })), random, PLAY_MARGIN,
-    );
-    return card ? { type: 'sevens-play', card } : null;
-  }
-  const options = visible.myHand.map((entry) => ({ value: entry, score: scoreCover(visible, knowledge, entry) }));
-  const dead = options.filter((entry) => reachableProbability(visible, knowledge, entry.value) === 0);
-  // Preserve live cards when a forced cover can consume a known dead card, unless blocking has a clear benefit.
-  const candidates = dead.length > 0 ? options.filter((entry) => dead.includes(entry) || entry.score > COVER_MARGIN) : options;
-  const card = selectNearBest(candidates, random, COVER_MARGIN);
-  return card ? { type: 'sevens-cover', card } : null;
+  const covering = visible.validCards.length === 0;
+  const chosen = selectNearBest(sevensOptions(visible).map((option) => ({ value: option, score: option.score })), random,
+    covering ? COVER_MARGIN : PLAY_MARGIN);
+  return chosen ? sevensAction(chosen) : null;
 }

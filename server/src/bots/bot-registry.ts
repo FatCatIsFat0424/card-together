@@ -117,8 +117,20 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     firstLegal: redPointsFirstLegalAction,
     search: { strategy: searchStrategy<'redpoints'>(new URL('./redpoints-search.ts', import.meta.url), 'redPointsSearch'), budgetMs: 1200 },
   },
-  ninetynine: { decide: getNinetyNineBotAction, firstLegal: ninetyNineFirstLegalAction },
-  sevens: { decide: getSevensBotAction, firstLegal: sevensFirstLegalAction },
+  ninetynine: {
+    // The synchronous heuristic is the fallback; bots and timeouts sample hidden hands and the stock in the worker pool.
+    decide: getNinetyNineBotAction,
+    firstLegal: ninetyNineFirstLegalAction,
+    search: {
+      strategy: searchStrategy<'ninetynine'>(new URL('./ninetynine-search.ts', import.meta.url), 'ninetyNineSearch'), budgetMs: 1200,
+    },
+  },
+  sevens: {
+    // The synchronous heuristic is the fallback; bots and timeouts sample hidden hands and covers in the worker pool.
+    decide: getSevensBotAction,
+    firstLegal: sevensFirstLegalAction,
+    search: { strategy: searchStrategy<'sevens'>(new URL('./sevens-search.ts', import.meta.url), 'sevensSearch'), budgetMs: 1200 },
+  },
   chinesepoker: { decide: getChinesePokerBotAction, firstLegal: chinesePokerFirstLegalAction },
   liarsdeck: { decide: getLiarsDeckBotAction, firstLegal: liarsDeckFirstLegalAction },
   blackjack: {
@@ -182,7 +194,14 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
       maxDepth: 10,
     },
   },
-  crazyeights: { decide: getCrazyEightsBotAction, firstLegal: crazyEightsFirstLegalAction },
+  crazyeights: {
+    // The synchronous heuristic is the fallback; bots and timeouts sample hidden hands and the stock in the worker pool.
+    decide: getCrazyEightsBotAction,
+    firstLegal: crazyEightsFirstLegalAction,
+    search: {
+      strategy: searchStrategy<'crazyeights'>(new URL('./crazyeights-search.ts', import.meta.url), 'crazyEightsSearch'), budgetMs: 1200,
+    },
+  },
   stud: {
     decide: getStudBotAction,
     firstLegal: studPassiveAction,

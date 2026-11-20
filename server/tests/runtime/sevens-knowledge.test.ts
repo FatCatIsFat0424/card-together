@@ -20,24 +20,30 @@ function state(overrides: Partial<SevensVisibleState> = {}): SevensVisibleState 
 }
 
 describe('Sevens public-history knowledge', () => {
-  it('uses remaining hand counts and hidden covers as the unknown-card prior', () => {
+  it('spreads unseen cards over hands by count and leans hidden covers toward low cards', () => {
     const knowledge = buildSevensKnowledge(state());
     const unknown = card('diamonds', 13);
-    expect(sevensLiveProbability(knowledge, unknown)).toBeCloseTo(10 / 15);
-    expect(sevensLiveProbabilityAt(knowledge, unknown, 'E')).toBeCloseTo(6 / 15);
-    expect(sevensLiveProbabilityAt(knowledge, unknown, 'S')).toBeCloseTo(3 / 15);
-    expect(sevensLiveProbabilityAt(knowledge, unknown, 'W')).toBeCloseTo(1 / 15);
-    expect(sevensLiveProbabilityAt(knowledge, unknown, 'N')).toBe(0);
+    const at = (seat: Seat): number => sevensLiveProbabilityAt(knowledge, unknown, seat);
+    expect(at('E') / at('S')).toBeCloseTo(2);
+    expect(at('S') / at('W')).toBeCloseTo(3);
+    expect(at('N')).toBe(0);
+    const king = sevensLiveProbability(knowledge, unknown);
+    const ace = sevensLiveProbability(knowledge, card('diamonds', 14));
+    expect(king).toBeGreaterThan(ace);
+    expect(king).toBeLessThan(1);
+    expect(ace).toBeGreaterThan(0);
   });
 
   it('excludes all then-playable frontier cards from a seat that covered', () => {
     const knowledge = buildSevensKnowledge(state({ log: [play('N', 'spades', 7), cover('E')] }));
     for (const frontier of [card('spades', 6), card('spades', 8), card('hearts', 7), card('clubs', 7), card('diamonds', 7)]) {
       expect(sevensLiveProbabilityAt(knowledge, frontier, 'E')).toBe(0);
-      expect(sevensLiveProbabilityAt(knowledge, frontier, 'S')).toBeCloseTo(3 / 9);
-      expect(sevensLiveProbability(knowledge, frontier)).toBeCloseTo(4 / 9);
+      // The excluded seat's share moves to the others, in proportion to their hands.
+      const south = sevensLiveProbabilityAt(knowledge, frontier, 'S');
+      expect(south / sevensLiveProbabilityAt(knowledge, frontier, 'W')).toBeCloseTo(3);
+      expect(south).toBeGreaterThan(sevensLiveProbabilityAt(knowledge, card('hearts', 9), 'S'));
     }
-    expect(sevensLiveProbabilityAt(knowledge, card('spades', 5), 'E')).toBeCloseTo(6 / 15);
+    expect(sevensLiveProbabilityAt(knowledge, card('spades', 5), 'E')).toBeGreaterThan(0);
   });
 
   it('keeps cover exclusions after the frontier moves and applies them only from that time', () => {
@@ -52,8 +58,11 @@ describe('Sevens public-history knowledge', () => {
 
   it('does not infer absence from choosing another legal play', () => {
     const knowledge = buildSevensKnowledge(state({ log: [play('N', 'spades', 7), play('E', 'hearts', 7)] }));
-    expect(sevensLiveProbabilityAt(knowledge, card('spades', 6), 'E')).toBeCloseTo(6 / 15);
-    expect(sevensLiveProbabilityAt(knowledge, card('spades', 8), 'E')).toBeCloseTo(6 / 15);
+    // Same as an untouched card of the same rank in another suit.
+    expect(sevensLiveProbabilityAt(knowledge, card('spades', 6), 'E'))
+      .toBeCloseTo(sevensLiveProbabilityAt(knowledge, card('diamonds', 6), 'E'));
+    expect(sevensLiveProbabilityAt(knowledge, card('spades', 8), 'E'))
+      .toBeCloseTo(sevensLiveProbabilityAt(knowledge, card('diamonds', 8), 'E'));
   });
 
   it('assigns zero live probability when every possible opponent was excluded', () => {
@@ -70,7 +79,9 @@ describe('Sevens public-history knowledge', () => {
     log.push(cover('E'));
     const closed = buildSevensKnowledge(state({ log, options: { closeOnEnd: true } }));
     const standard = buildSevensKnowledge(state({ log, options: { closeOnEnd: false } }));
-    expect(sevensLiveProbabilityAt(closed, card('spades', 8), 'E')).toBeCloseTo(6 / 15);
+    expect(sevensLiveProbabilityAt(closed, card('spades', 8), 'E'))
+      .toBeCloseTo(sevensLiveProbabilityAt(closed, card('hearts', 8), 'E'));
+    expect(sevensLiveProbabilityAt(closed, card('spades', 8), 'E')).toBeGreaterThan(0);
     expect(sevensLiveProbabilityAt(standard, card('spades', 8), 'E')).toBe(0);
   });
 

@@ -50,6 +50,7 @@ function turnsUntilMine(visible: NinetyNineVisibleState, first: GameSeat, direct
 }
 
 type PlayEntry = Extract<NinetyNineLogEntry, { type: 'play' }>;
+export type NinetyNinePlay = Extract<BotAction, { type: 'ninetynine-play' }>;
 
 /**
  * A rescue card spent while every number card was still safe suggests a hand without number cards,
@@ -106,6 +107,9 @@ function allFrom(size: number, pool: number, draws: number): number {
  */
 const PRESSURE_WEIGHT = 70;
 const TWO_DECK_PRESSURE_WEIGHT = 45;
+/** Typical rise of the total per opponent turn, and the chance an opponent holding a K uses it to set 99. */
+const RISE_PER_TURN = 5;
+const KING_ATTACK = 0.35;
 
 interface Outcome {
   readonly total: number;
@@ -129,11 +133,17 @@ function scorePlay(visible: NinetyNineVisibleState, unseen: readonly Card[], ind
   const actsAgain = outcome.turnsUntilMine < playsLeft;
   let score = actsAgain ? remaining.reduce((sum, card) => sum + keepValue(card), 0) : 0;
 
-  // Each intervening turn tends to raise the total; with no safe card left, survival rests on the next draw.
-  const returnHeadroom = NN_MAX - Math.min(NN_MAX, total + 5 * outcome.turnsUntilMine);
-  if (actsAgain && !remaining.some((card) => fits(card, returnHeadroom))) {
-    const unsafeDraw = unseen.filter((card) => !fits(card, returnHeadroom)).length / Math.max(1, unseen.length);
-    score -= unsafeDraw * (aliveCount === 2 ? 50 : 40);
+  // Each intervening turn tends to raise the total, and any opponent holding a K may set 99 on the way back;
+  // with no safe card left, survival rests on the next draw.
+  if (actsAgain) {
+    const kings = unseen.filter((card) => card.rank === 13).length;
+    const attack = KING_ATTACK * (1 - allFrom(unseen.length - kings, unseen.length, NN_HAND_SIZE));
+    const calm = (1 - attack) ** outcome.turnsUntilMine;
+    const risk = (headroom: number): number => (remaining.some((card) => fits(card, headroom)) ? 0
+      : unseen.filter((card) => !fits(card, headroom)).length / Math.max(1, unseen.length));
+    const returnRisk = calm * risk(NN_MAX - Math.min(NN_MAX, total + RISE_PER_TURN * outcome.turnsUntilMine))
+      + (1 - calm) * risk(0);
+    score -= returnRisk * (aliveCount === 2 ? 50 : 40);
   }
 
   // Only near 99 can number cards stop fitting, so the next player's risk is modeled only there.
@@ -153,12 +163,17 @@ function scorePlay(visible: NinetyNineVisibleState, unseen: readonly Card[], ind
 
 /** Keeps rescue cards for high totals and pressures the next player near 99, using only public cards. */
 export function getNinetyNineBotAction(visible: NinetyNineVisibleState, random: () => number): BotAction | null {
+  return selectNearBest(ninetyNineOptions(visible), random, 2.5);
+}
+
+/** Every legal play with its heuristic score; empty when it is not the bot's turn. */
+export function ninetyNineOptions(visible: NinetyNineVisibleState): { value: NinetyNinePlay; score: number }[] {
   if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat
-    || visible.eliminated.includes(visible.mySeat)) return null;
+    || visible.eliminated.includes(visible.mySeat)) return [];
   const opponents: GameSeat[] = (visible.seats ?? SEAT_ORDER_CLOCKWISE)
     .filter((seat) => seat !== visible.mySeat && !visible.eliminated.includes(seat));
   const unseen = unseenCards(visible);
-  const options: { value: BotAction; score: number }[] = [];
+  const options: { value: NinetyNinePlay; score: number }[] = [];
   visible.myHand.forEach((card, index) => {
     const choices: readonly (NnChoice | undefined)[] = nnRequiresChoice(card) ? ['plus', 'minus'] : [undefined];
     for (const choice of choices) {
@@ -176,5 +191,5 @@ export function getNinetyNineBotAction(visible: NinetyNineVisibleState, random: 
       }
     }
   });
-  return selectNearBest(options, random, 2.5);
+  return options;
 }
