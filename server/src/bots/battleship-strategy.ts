@@ -1,12 +1,10 @@
 import type { BattleshipVisibleState, GameSeat } from '@shared/types';
 import {
-  BS_CELLS, BS_SHIPS, bsAround, bsCell, bsCol, bsContacts, bsNode, bsOrthogonal, bsRandomFleet, bsRow, bsShipCells,
+  BS_CELLS, BS_SHIPS, bsAround, bsCell, bsCol, bsNode, bsOrthogonal, bsRandomFleet, bsRow, bsShipCells,
 } from '@shared/rules/battleship';
 import type { BsPlacement, BsShip } from '@shared/rules/battleship';
 import type { BotAction } from './bot-decisions';
-
-/** Random fleets the hard bot compares, keeping the most spread out. */
-const SPREAD_SAMPLES = 12;
+import { mixedFleet } from './battleship-fleet';
 
 /** How much more a placement counts for each unresolved hit it covers. */
 const HIT_WEIGHT = 40;
@@ -29,11 +27,11 @@ export interface BsTargetKnowledge {
   readonly afloat: readonly BsShip[];
 }
 
-function shootAction(cell: number): BotAction {
+export function shootAction(cell: number): BotAction {
   return { type: 'game-action', request: { gameType: 'battleship', action: { type: 'fire', to: bsNode(cell) } } };
 }
 
-function fleetAction(fleet: readonly BsPlacement[]): BotAction {
+export function fleetAction(fleet: readonly BsPlacement[]): BotAction {
   return { type: 'game-action', request: { gameType: 'battleship', action: { type: 'place-fleet', fleet: fleet.map((ship) => ({ ...ship })) } } };
 }
 
@@ -41,11 +39,11 @@ function seated(visible: BattleshipVisibleState): boolean {
   return visible.seats.includes(visible.mySeat);
 }
 
-function owesFleet(visible: BattleshipVisibleState): boolean {
+export function owesFleet(visible: BattleshipVisibleState): boolean {
   return visible.phase === 'placing' && seated(visible) && !visible.placed.includes(visible.mySeat);
 }
 
-function onTurn(visible: BattleshipVisibleState): boolean {
+export function onTurn(visible: BattleshipVisibleState): boolean {
   return visible.phase === 'playing' && seated(visible) && visible.currentTurnSeat === visible.mySeat;
 }
 
@@ -137,20 +135,9 @@ function followUpShot(knowledge: BsTargetKnowledge, random: () => number): numbe
   return cells.length > 0 ? pick(cells, random) : null;
 }
 
-/** The most spread-out of a few random fleets, so a hit rarely leads straight to a neighbouring ship. */
-export function spreadFleet(visible: Pick<BattleshipVisibleState, 'options'>, random: () => number): BsPlacement[] {
-  let best: { fleet: BsPlacement[]; contacts: number } | null = null;
-  for (let sample = 0; sample < SPREAD_SAMPLES; sample++) {
-    const fleet = bsRandomFleet(random, visible.options);
-    const contacts = bsContacts(fleet);
-    if (!best || contacts < best.contacts) best = { fleet, contacts };
-  }
-  return best!.fleet;
-}
-
-/** Hard: a spread-out fleet, then probability-density hunting and target mode from its own shot results. */
+/** Mixed-strategy fleet, then probability-density hunting and target mode from its own shot results. */
 export function getBattleshipBotAction(visible: BattleshipVisibleState, random: () => number): BotAction | null {
-  if (owesFleet(visible)) return fleetAction(spreadFleet(visible, random));
+  if (owesFleet(visible)) return fleetAction(mixedFleet(visible.options, random));
   if (!onTurn(visible)) return null;
   const cell = hardShot(targetKnowledge(visible), random);
   return cell === null ? null : shootAction(cell);

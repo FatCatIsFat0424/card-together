@@ -45,7 +45,8 @@ const ANCHOR_POINTS: Record<ChinesePokerRow, readonly (readonly [number, number]
   back: STRENGTH_ANCHORS.back.map(([category, rank, p]) => [coordinate(category, rank), p]),
 };
 
-function winProbability(row: ChinesePokerRow, evaluation: CpEvaluation): number {
+/** Estimated chance that a row of this strength beats a random opponent's same row. */
+export function cpRowWinProbability(row: ChinesePokerRow, evaluation: CpEvaluation): number {
   const x = coordinate(evaluation.category, evaluation.ranks[0]) + ((evaluation.ranks[1] ?? 2) - 2) / 13;
   const points = ANCHOR_POINTS[row];
   if (x <= points[0][0]) return points[0][1];
@@ -63,7 +64,7 @@ function winProbability(row: ChinesePokerRow, evaluation: CpEvaluation): number 
  * Expected points against one opponent who wins a lost row for about one point. Rows are treated as
  * independent, which also prices the shoot doubling as winning or losing all three rows.
  */
-function expectedPoints(pFront: number, vFront: number, pMiddle: number, vMiddle: number,
+export function cpExpectedPoints(pFront: number, vFront: number, pMiddle: number, vMiddle: number,
   pBack: number, vBack: number): number {
   const rows = pFront * vFront + pMiddle * vMiddle + pBack * vBack - (3 - pFront - pMiddle - pBack);
   const shoot = pFront * pMiddle * pBack * (vFront + vMiddle + vBack);
@@ -76,10 +77,10 @@ export function cpArrangementScore(arrangement: ChinesePokerArrangement): number
   const front = cpEvaluate(arrangement.front);
   const middle = cpEvaluate(arrangement.middle);
   const back = cpEvaluate(arrangement.back);
-  return expectedPoints(
-    winProbability('front', front), cpRowValue('front', front),
-    winProbability('middle', middle), cpRowValue('middle', middle),
-    winProbability('back', back), cpRowValue('back', back),
+  return cpExpectedPoints(
+    cpRowWinProbability('front', front), cpRowValue('front', front),
+    cpRowWinProbability('middle', middle), cpRowValue('middle', middle),
+    cpRowWinProbability('back', back), cpRowValue('back', back),
   );
 }
 
@@ -122,11 +123,11 @@ function subsetTables(hand: readonly Card[]): SubsetTables {
     const evaluation = cpEvaluate(cardsOf(hand, mask));
     tables.key[mask] = packKey(evaluation);
     const low: ChinesePokerRow = count === 3 ? 'front' : 'middle';
-    tables.pLow[mask] = winProbability(low, evaluation);
+    tables.pLow[mask] = cpRowWinProbability(low, evaluation);
     tables.vLow[mask] = cpRowValue(low, evaluation);
     if (count === 5) {
       tables.fives.push(mask);
-      tables.pBack[mask] = winProbability('back', evaluation);
+      tables.pBack[mask] = cpRowWinProbability('back', evaluation);
       tables.vBack[mask] = cpRowValue('back', evaluation);
     }
   }
@@ -192,7 +193,7 @@ export function cpRankArrangements(hand: readonly Card[], limit: number): CpRank
       if (BIT_COUNTS[middle] !== 5 || key[middle] > key[back]) continue;
       const front = rest ^ middle;
       if (key[front] > key[middle]) continue;
-      const score = expectedPoints(pLow[front], vLow[front], pLow[middle], vLow[middle], pBack[back], vBack[back]);
+      const score = cpExpectedPoints(pLow[front], vLow[front], pLow[middle], vLow[middle], pBack[back], vBack[back]);
       if (top.length === count && score <= top[count - 1].score) continue;
       let index = top.length < count ? top.length : count - 1;
       while (index > 0 && top[index - 1].score < score) index--;

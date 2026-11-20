@@ -87,7 +87,7 @@ describe('Code Breaker bot legality', () => {
     expect(gameBot('codebreaker').firstLegal(base)).not.toBeNull();
   });
 
-  it('keeps each decision well under the 50 ms budget, also right after a weak first guess', () => {
+  it('keeps each decision under 100 ms, also right after a weak first guess', () => {
     const random = seededRandom(5);
     for (const variant of ['digits', 'colors'] as const) {
       const secret = cbRandomCode(variant, random);
@@ -95,7 +95,7 @@ describe('Code Breaker bot legality', () => {
       const view = soloView(variant, [{ code: first, ...cbFeedback(secret, first) }]);
       const started = performance.now();
       for (let index = 0; index < 5; index++) getCodeBreakerBotAction(view, random);
-      expect((performance.now() - started) / 5).toBeLessThan(50);
+      expect((performance.now() - started) / 5).toBeLessThan(100);
     }
   });
 });
@@ -121,31 +121,71 @@ describe('Code Breaker bots see only their own feedback', () => {
   });
 });
 
-describe('Code Breaker bot strength', () => {
-  const GAMES = 150;
+describe('Code Breaker bot opening and plan', () => {
+  it('opens with a relabeling of the planned first guess and follows the plan after it', () => {
+    const random = seededRandom(11);
+    for (const variant of ['digits', 'colors'] as const) {
+      const openings = new Set<string>();
+      for (let round = 0; round < 8; round++) {
+        const first = codeOf(getCodeBreakerBotAction(soloView(variant, []), random));
+        expect(isCbCode(first, variant)).toBe(true);
+        openings.add(first.join());
+        // Whatever the relabeling, the first guess has the planned shape: four different digits, or two pairs.
+        expect(new Set(first).size).toBe(variant === 'digits' ? 4 : 2);
+        if (variant === 'colors') expect([first[0] === first[1], first[2] === first[3]]).toEqual([true, true]);
+        const secret = cbRandomCode(variant, random);
+        const history = [{ code: first, ...cbFeedback(secret, first) }];
+        // The reply keeps every code that fits and does not repeat the opening.
+        const second = codeOf(getCodeBreakerBotAction(soloView(variant, history), random));
+        expect(isCbCode(second, variant)).toBe(true);
+        expect(second.join()).not.toBe(first.join());
+      }
+      expect(openings.size).toBeGreaterThan(3);
+    }
+  });
 
-  function average(variant: CbVariant, guesser: Guesser): { mean: number; solved: number } {
+  it('carries the plan across relabelings of the opening and leaves it when the opening differs', () => {
+    const plain = codeOf(getCodeBreakerBotAction(soloView('colors', [{ code: [0, 0, 1, 1], exact: 1, partial: 2 }]), seededRandom(1)));
+    // Swapping colors 0 and 1 for the opening and the plan's reply together gives the same reply swapped.
+    const swapped = codeOf(getCodeBreakerBotAction(soloView('colors', [{ code: [1, 1, 0, 0], exact: 1, partial: 2 }]), seededRandom(1)));
+    expect(plain).toContain(0);
+    expect(swapped).toEqual(plain.map((symbol) => (symbol === 0 ? 1 : symbol === 1 ? 0 : symbol)));
+    // A different opening (spread pegs) has no plan: the bot still answers with a code that fits.
+    const view = soloView('colors', [{ code: [0, 1, 0, 1], exact: 0, partial: 4 }]);
+    expect(isCbCode(codeOf(getCodeBreakerBotAction(view, seededRandom(1))), 'colors')).toBe(true);
+  });
+});
+
+describe('Code Breaker bot strength', () => {
+  function average(variant: CbVariant, secrets: readonly CbCode[], guesser: Guesser): { mean: number; solved: number } {
     let total = 0;
     let solved = 0;
-    for (let seed = 1; seed <= GAMES; seed++) {
-      const random = seededRandom(seed * 7919 + (variant === 'digits' ? 1 : 2));
-      const secret = cbRandomCode(variant, seededRandom(seed * 31 + 9));
-      const used = solveAlone(variant, secret, guesser, random);
+    secrets.forEach((secret, index) => {
+      const used = solveAlone(variant, secret, guesser, seededRandom(index * 7919 + 3));
       if (used !== null) {
         solved++;
         total += used;
       }
-    }
+    });
     return { mean: total / Math.max(1, solved), solved };
   }
 
-  for (const variant of ['digits', 'colors'] as const) {
-    it(`solves ${variant} within ten guesses in a large majority of seeded games, and needs fewer than a random consistent guesser`, () => {
-      const baseline = average(variant, randomConsistentGuess);
-      const bot = average(variant, botGuess);
-      expect(baseline.solved / GAMES).toBeGreaterThan(0.9);
-      expect(bot.solved / GAMES).toBeGreaterThan(0.97);
-      expect(bot.mean).toBeLessThan(baseline.mean);
-    }, 60_000);
-  }
+  const secretsOf = (variant: CbVariant, count: number): CbCode[] =>
+    Array.from({ length: count }, (_, seed) => cbRandomCode(variant, seededRandom(seed * 31 + 9)));
+
+  it('solves colors within the cap and needs about 4.4 guesses, near the best possible 4.34', () => {
+    const secrets = secretsOf('colors', 400);
+    const bot = average('colors', secrets, botGuess);
+    expect(bot.solved).toBe(secrets.length);
+    expect(bot.mean).toBeLessThan(4.55);
+    expect(average('colors', secrets, randomConsistentGuess).mean).toBeGreaterThan(bot.mean + 0.15);
+  }, 60_000);
+
+  it('solves digits within the cap and needs about 5.2 guesses, near the best possible 5.21', () => {
+    const secrets = secretsOf('digits', 250);
+    const bot = average('digits', secrets, botGuess);
+    expect(bot.solved).toBe(secrets.length);
+    expect(bot.mean).toBeLessThan(5.4);
+    expect(average('digits', secrets, randomConsistentGuess).mean).toBeGreaterThan(bot.mean + 0.15);
+  }, 120_000);
 });

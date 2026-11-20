@@ -27,7 +27,7 @@
 - 錄影記錄：`game-demo-recordings.json` 存放起點 `leadIn`、影片長度 `duration`，以及實測的各場景起點 `starts`。尚未錄製的模式以暫代值佔位（起點 0 秒、長度為課程總長，沒有 `starts`），測試會檢查暫代值與課程同步。
 - [`subtitles.ts`](../scripts/game-demos/subtitles.ts) 依場景與起點產生字幕：第一則從 0 秒開始，最後一則延續到片尾。[`write-subtitles.ts`](../scripts/game-demos/write-subtitles.ts) 寫出 `client/public/game-demos/<game>.<locale>.vtt`；測試要求檔案與產生結果一致。
 - [`generate-fixtures.ts`](../scripts/game-demos/generate-fixtures.ts) 整合 `cards-fixtures.ts`、`betting-fixtures.ts`、`boards-fixtures.ts`、`trick-fixtures.ts` 與 `dice-fixtures.ts`（快艇骰子、骨牌接龍、密碼推理），以固定牌序／骰序或亂數種子呼叫正式 manager，驗證每一步合法並完成對局。產出僅包含固定玩家視角；他人未公開的排牌、蓋牌、布陣、船位與密碼猜測提交內容也會移除；長局以差異快照儲存。
-- 牌類與吃墩教學使用 [`card-recipes.json`](../scripts/game-demos/card-recipes.json) 的固定動作及亂數消耗次數；黑白棋、象棋、鬥獸棋、陸戰棋與暗棋重播 [`board-scripts.json`](../scripts/game-demos/board-scripts.json) 的固定棋步（含雙方布陣）。兩者都與即時 bot 策略分開，避免策略更新改變已錄影片。改腳本時須重新驗證整場、字幕與對應影片。
+- 牌類與吃墩教學使用 [`card-recipes.json`](../scripts/game-demos/card-recipes.json) 的固定動作及亂數消耗次數；黑白棋、象棋、鬥獸棋、陸戰棋、海戰棋與暗棋重播 [`board-scripts.json`](../scripts/game-demos/board-scripts.json) 的固定棋步（含雙方布陣）。兩者都與即時 bot 策略分開，避免策略更新改變已錄影片。改腳本時須重新驗證整場、字幕與對應影片。
 - [`recording-stage.tsx`](../scripts/game-demos/recording-stage.tsx) 使用正式牌桌與隔離的 store，按時間軸示範合成資料；每個步驟在場景開始 3.5 秒後依序呈現，間隔超過 2.5 秒時才用正式控制項示範自己的操作（選牌、排牌、叫品），提交後的狀態來自已驗證快照，不連線操作真實房間。
 - 開發用入口 `client/demo-recording.html` 不在正式 build 的 HTML entry 中；fixtures 與錄製工具不會打包進正式網站。
 

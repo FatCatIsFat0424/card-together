@@ -131,7 +131,16 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     firstLegal: sevensFirstLegalAction,
     search: { strategy: searchStrategy<'sevens'>(new URL('./sevens-search.ts', import.meta.url), 'sevensSearch'), budgetMs: 1200 },
   },
-  chinesepoker: { decide: getChinesePokerBotAction, firstLegal: chinesePokerFirstLegalAction },
+  chinesepoker: {
+    // The synchronous sampler is the fallback; bots and a missed arrange deadline's search deal the unseen cards to
+    // the opponents and score the candidate arrangements against them in the worker pool.
+    decide: getChinesePokerBotAction,
+    firstLegal: chinesePokerFirstLegalAction,
+    search: {
+      strategy: searchStrategy<'chinesepoker'>(new URL('./chinesepoker-search.ts', import.meta.url), 'chinesePokerSearch'),
+      budgetMs: 1200,
+    },
+  },
   liarsdeck: { decide: getLiarsDeckBotAction, firstLegal: liarsDeckFirstLegalAction },
   blackjack: {
     decide: getBlackjackBotAction,
@@ -293,14 +302,15 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     deadlineExpired: (visible, { isBot, strategy }) => (isBot ? strategy() : autoDeployAction(visible, Math.random)),
   },
   battleship: {
-    // The density search covers at most a few thousand ship placements, so it runs on the event loop.
+    // The synchronous density count is the fallback; bots sample whole consistent fleets in the worker pool.
     decide: getBattleshipBotAction,
     firstLegal: battleshipFirstLegalAction,
+    search: { strategy: searchStrategy<'battleship'>(new URL('./battleship-search.ts', import.meta.url), 'battleshipSearch'), budgetMs: 1000 },
     // A human who missed the placement deadline gets a random fleet; bots keep their own.
     deadlineExpired: (visible, { isBot, strategy }) => (isBot ? strategy() : autoPlaceAction(visible, Math.random)),
   },
   codebreaker: {
-    // Deduction over at most a few thousand codes with sampled scoring, cheap enough for the event loop.
+    // A planned opening, then exact scoring over every code: a few milliseconds, cheap enough for the event loop.
     decide: getCodeBreakerBotAction,
     firstLegal: codeBreakerFirstLegalAction,
   },

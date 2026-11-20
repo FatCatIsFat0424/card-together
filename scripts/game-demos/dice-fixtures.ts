@@ -1,4 +1,4 @@
-import type { CodeBreakerVisibleState, GameSeat, PlayerInfo } from '../../shared/src/types';
+import type { GameSeat, PlayerInfo } from '../../shared/src/types';
 import type { DominoesAction } from '../../shared/src/games/dominoes/actions';
 import type { YachtGameAction } from '../../shared/src/games/yacht/actions';
 import type { YachtVisibleState } from '../../shared/src/games/yacht/types';
@@ -10,7 +10,6 @@ import * as codebreaker from '../../server/src/managers/games/codebreaker-game';
 import { getYachtBotAction } from '../../server/src/bots/yacht-strategy';
 import { scoreDominoesPlays } from '../../server/src/bots/dominoes-strategy';
 import { selectNearBest } from '../../server/src/bots/selection';
-import { getCodeBreakerBotAction } from '../../server/src/bots/codebreaker-strategy';
 import type { BotAction } from '../../server/src/bots/bot-decisions';
 import type { DemoFixture } from './demo-fixture-types';
 import { createDemoRecorder, DEMO_NOW } from './demo-recorder';
@@ -26,8 +25,8 @@ const PLAYERS: Partial<Record<GameSeat, PlayerInfo>> = Object.fromEntries(SEATS.
 /** Shuffle and bot seed of the Dominoes lesson, and the points N scores by going out. */
 const DOMINOES_SEED = 14_997;
 const DOMINOES_POINTS = 56;
-/** Seed of E's hard-bot guesses in the Code Breaker lesson. */
-const CODEBREAKER_SEED = 1;
+/** E's five guesses in the Code Breaker lesson, recorded from the bot once so the walkthrough stays fixed when it changes. */
+const CODEBREAKER_BOT_GUESSES = [[2, 3, 5, 7], [8, 9, 4, 5], [4, 7, 3, 8], [9, 4, 2, 0], [1, 4, 2, 9]] as const;
 
 function seededRandom(seed: number): () => number {
   let state = seed >>> 0;
@@ -151,22 +150,19 @@ function dominoesFixture(): DemoFixture {
     dominoes.abortGame(code);
   }
 }
-/** Both seats crack 1429 in digits mode: N with four scripted guesses, E with the hard bot one guess later. */
+/** Both seats crack 1429 in digits mode: N with four scripted guesses, E with the recorded bot guesses one guess later. */
 function codeBreakerFixture(): DemoFixture {
   const code = 'DEMOCB';
   const options = { variant: 'digits' } as const;
   codebreaker.startGame(code, PLAYERS, options, 60_000, DEMO_NOW, rolls([1, 4, 2, 9], 10, 0));
   try {
     const recorder = createDemoRecorder(code, 'N', SEATS, () => codebreaker.getPlayerVisibleState(code, 'N'));
-    const random = seededRandom(CODEBREAKER_SEED);
     const own = [[1, 2, 3, 4], [1, 4, 5, 2], [0, 1, 2, 9], [1, 4, 2, 9]];
     for (let round = 0; round < 10; round++) {
       for (const seat of SEATS) {
         const game = required(codebreaker.getGameState(code), 'Code Breaker game');
         if (game.phase !== 'playing' || !codebreaker.pendingSeats(game).includes(seat)) continue;
-        const view: CodeBreakerVisibleState = required(codebreaker.getPlayerVisibleState(code, seat), 'Code Breaker player view');
-        const guess = seat === 'N' ? required(own[round], 'scripted guess')
-          : botRequest<{ code: number[] }>(getCodeBreakerBotAction(view, random), 'codebreaker').code;
+        const guess = [...required(seat === 'N' ? own[round] : CODEBREAKER_BOT_GUESSES[round], 'scripted guess')];
         // Another seat's guesses stay private until the match ends.
         const action = seat === 'N' ? { type: 'guess', code: guess } : { type: 'guess' };
         recorder.act(seat, action, 'codebreaker-guess', () => codebreaker.guess(code, seat, guess, false, DEMO_NOW));

@@ -1,17 +1,20 @@
+import { performance } from 'node:perf_hooks';
 import type { ChinesePokerVisibleState } from '@shared/types';
-import { cpRankArrangements } from '@shared/rules/chinesepoker-arrange';
 import type { BotAction } from './bot-decisions';
-import { selectNearBest } from './selection';
+import { arrangeBySampling } from './chinesepoker-search';
 
-const CANDIDATES = 6;
-/** Estimated points per opponent; close arrangements usually differ only in kicker placement. */
-const MARGIN = 0.05;
+/** Clock limit of the synchronous version: a few dozen samples, enough to beat the static ranking alone. */
+const SYNC_BUDGET_MS = 40;
 
-/** Arranges once while the table is arranging; every candidate is a non-foul arrangement. */
+/**
+ * Arranges once while the table is arranging. The pool search runs for a second or so; this version, used when the
+ * pool is unavailable and at a missed shared deadline, samples opponents for a short time before it answers.
+ */
 export function getChinesePokerBotAction(visible: ChinesePokerVisibleState, random: () => number): BotAction | null {
   if (visible.phase !== 'arranging' || visible.submitted[visible.mySeat] || visible.myArrangement) return null;
-  const options = cpRankArrangements(visible.myHand, CANDIDATES)
-    .map(({ arrangement, score }) => ({ value: arrangement, score }));
-  const arrangement = selectNearBest(options, random, MARGIN);
-  return arrangement ? { type: 'chinesepoker-arrange', arrangement } : null;
+  const deadline = performance.now() + SYNC_BUDGET_MS;
+  return {
+    type: 'chinesepoker-arrange',
+    arrangement: arrangeBySampling(visible.myHand, random, () => performance.now() >= deadline),
+  };
 }

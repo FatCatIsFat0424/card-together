@@ -1,33 +1,13 @@
+import { performance } from 'node:perf_hooks';
 import type { CodeBreakerVisibleState } from '@shared/types';
-import {
-  CB_MAX_GUESSES, CB_SLOTS, cbAllCodes, cbConsistent, cbFeedback, cbRandomCode, cbSymbolCount,
-} from '@shared/rules/codebreaker';
+import { CB_MAX_GUESSES, cbConsistent, cbRandomCode, cbSymbolCount } from '@shared/rules/codebreaker';
 import type { CbCode, CbKnownGuess, CbVariant } from '@shared/rules/codebreaker';
 import type { BotAction } from './bot-decisions';
+import { CODEBREAKER_OPENING, CODEBREAKER_PLAN } from './codebreaker-openings';
+import { chooseGuessIndex, codeSpace, consistentIndices } from './codebreaker-solver';
 
-/** Consistent codes the hard bot considers guessing. */
-const POOL_SIZE = 80;
-
-/** Codes outside the consistent set tried as pure probes while the set is still large. */
-const PROBE_SIZE = 80;
-
-/** Consistent codes the hard bot scores each guess against. */
-const TARGET_SIZE = 400;
-
-/** Below this many consistent codes every guess is a candidate: probes cannot beat a direct try. */
-const PROBE_THRESHOLD = 8;
-
-const allCodesCache = new Map<CbVariant, readonly CbCode[]>();
-
-/** Every code of a variant, built on first use because 5,040 arrays are not worth creating at import. */
-function allCodes(variant: CbVariant): readonly CbCode[] {
-  let codes = allCodesCache.get(variant);
-  if (!codes) {
-    codes = cbAllCodes(variant);
-    allCodesCache.set(variant, codes);
-  }
-  return codes;
-}
+/** Longest the exact search may run before the one-step estimate answers; typical decisions take a few ms. */
+const SOLVE_LIMIT_MS = 150;
 
 function guessAction(code: CbCode): BotAction {
   return { type: 'game-action', request: { gameType: 'codebreaker', action: { type: 'guess', code: [...code] } } };
@@ -48,79 +28,90 @@ export function owesGuess(visible: CodeBreakerVisibleState): boolean {
 /** Codes that could still be the secret given the seat's own feedback. */
 export function consistentCodes(visible: CodeBreakerVisibleState): readonly CbCode[] {
   const known = knownGuesses(visible);
-  const codes = allCodes(visible.options.variant);
+  const { codes } = codeSpace(visible.options.variant);
   return known.length === 0 ? codes : codes.filter((code) => cbConsistent(code, known));
 }
 
-/** Up to `count` distinct items of `items`, chosen uniformly. */
-function sample<T>(items: readonly T[], count: number, random: () => number): T[] {
-  if (items.length <= count) return [...items];
-  const copy = [...items];
-  for (let index = 0; index < count; index++) {
-    const swap = index + Math.min(copy.length - index - 1, Math.floor(random() * (copy.length - index)));
-    [copy[index], copy[swap]] = [copy[swap], copy[index]];
-  }
-  return copy.slice(0, count);
-}
-
-function pick<T>(items: readonly T[], random: () => number): T {
-  return items[Math.min(items.length - 1, Math.floor(random() * items.length))];
-}
-
-/** Colour codes open best with two pairs (1122); any symbols will do since colours are interchangeable. */
-function openingCode(variant: CbVariant, random: () => number): CbCode {
-  if (variant === 'digits') return cbRandomCode(variant, random);
-  const [first, second] = sample(Array.from({ length: cbSymbolCount(variant) }, (_, symbol) => symbol), 2, random);
-  return [first, first, second, second];
-}
+/** A symbol relabeling that carries the canonical opening onto the opening the seat actually played. */
+type Relabeling = readonly number[];
 
 /**
- * Sum of squared bucket sizes of the feedback each target would give; smaller means the guess splits the
- * remaining candidates more evenly. The bucket that wins outright costs nothing.
+ * The relabeling taking `CODEBREAKER_OPENING` to `first`, or null when `first` is not such a relabeling. Symbols the
+ * opening does not use are matched in ascending order: they are interchangeable, so any bijection serves.
  */
-function partitionCost(guess: CbCode, targets: readonly CbCode[]): number {
-  const buckets = new Map<number, number>();
-  for (const target of targets) {
-    const feedback = cbFeedback(target, guess);
-    if (feedback.exact === CB_SLOTS) continue;
-    const key = feedback.exact * (CB_SLOTS + 1) + feedback.partial;
-    buckets.set(key, (buckets.get(key) ?? 0) + 1);
+function relabelingTo(variant: CbVariant, first: CbCode): Relabeling | null {
+  const canonical = CODEBREAKER_OPENING[variant];
+  const map = new Map<number, number>();
+  for (let slot = 0; slot < canonical.length; slot++) {
+    const from = canonical[slot];
+    const to = first[slot];
+    if (map.has(from) ? map.get(from) !== to : [...map.values()].includes(to)) return null;
+    map.set(from, to);
   }
-  let cost = 0;
-  for (const size of buckets.values()) cost += size * size;
-  return cost;
+  const symbols = cbSymbolCount(variant);
+  const spare = Array.from({ length: symbols }, (_, symbol) => symbol).filter((symbol) => ![...map.values()].includes(symbol));
+  const result: number[] = [];
+  for (let symbol = 0; symbol < symbols; symbol++) result.push(map.get(symbol) ?? spare.shift()!);
+  return result;
+}
+
+const relabel = (code: CbCode, labeling: Relabeling): CbCode => code.map((symbol) => labeling[symbol]);
+
+/** A random relabeling, so that bots do not all open alike. */
+function randomRelabeling(variant: CbVariant, random: () => number): Relabeling {
+  const symbols = Array.from({ length: cbSymbolCount(variant) }, (_, symbol) => symbol);
+  for (let index = symbols.length - 1; index > 0; index--) {
+    const other = Math.min(index, Math.floor(random() * (index + 1)));
+    [symbols[index], symbols[other]] = [symbols[other], symbols[index]];
+  }
+  return symbols;
 }
 
 /**
- * Hard bot: keeps every code consistent with its own feedback and guesses the one (or, while many remain, a
- * probe) whose feedback would split a sample of those codes most evenly. It sees nothing but its own guesses.
+ * The planned reply for the feedback so far, when every earlier guess followed the plan under one relabeling of
+ * the opening; null once the seat has strayed (for example after a substituted guess) or the plan ends.
+ */
+function plannedGuess(variant: CbVariant, known: readonly CbKnownGuess[]): CbCode | null {
+  const labeling = relabelingTo(variant, known[0].code);
+  if (!labeling) return null;
+  const plan = CODEBREAKER_PLAN[variant];
+  const path: number[] = [];
+  for (let step = 0; step < known.length; step++) {
+    path.push(known[step].exact * 5 + known[step].partial);
+    if (step === known.length - 1) break;
+    const expected = plan[path.join('.')];
+    if (expected === undefined || relabel(Array.from(expected, Number), labeling).join() !== known[step + 1].code.join()) return null;
+  }
+  const next = plan[path.join('.')];
+  return next === undefined ? null : relabel(Array.from(next, Number), labeling);
+}
+
+/**
+ * Plays the guess with the fewest expected guesses to the end. The opening is fixed, the next replies come from
+ * a table computed offline over every possible secret (`scripts/codebreaker-openings.ts`), and the rest is
+ * solved here: a lookahead estimate over every code for large candidate sets and exact search for small ones.
+ * Rivals' progress cannot change the choice: every unsolved seat guesses once per round, so a seat that sees a
+ * rival solved has already lost the race.
  */
 export function getCodeBreakerBotAction(visible: CodeBreakerVisibleState, random: () => number): BotAction | null {
   if (!owesGuess(visible)) return null;
   const variant = visible.options.variant;
-  const candidates = consistentCodes(visible);
+  const known = knownGuesses(visible);
+  if (known.length === 0) return guessAction(relabel(CODEBREAKER_OPENING[variant], randomRelabeling(variant, random)));
+  const planned = plannedGuess(variant, known);
+  if (planned) return guessAction(planned);
+  const space = codeSpace(variant);
+  const candidates = consistentIndices(space, known);
   if (candidates.length === 0) return guessAction(cbRandomCode(variant, random));
-  if (knownGuesses(visible).length === 0) return guessAction(openingCode(variant, random));
-  if (candidates.length <= 2) return guessAction(pick(candidates, random));
-
-  const targets = sample(candidates, TARGET_SIZE, random);
-  const pool = sample(candidates, POOL_SIZE, random);
-  if (candidates.length > PROBE_THRESHOLD) pool.push(...sample(allCodes(variant), PROBE_SIZE, random));
-  let best = pool[0];
-  let bestCost = Infinity;
-  for (const guess of pool) {
-    const cost = partitionCost(guess, targets);
-    if (cost < bestCost) {
-      best = guess;
-      bestCost = cost;
-    }
-  }
-  return guessAction(best);
+  if (candidates.length <= 2) return guessAction(space.codes[candidates[Math.min(candidates.length - 1, Math.floor(random() * candidates.length))]]);
+  const deadline = performance.now() + SOLVE_LIMIT_MS;
+  const guess = chooseGuessIndex(space, candidates, { expired: () => performance.now() > deadline });
+  return guessAction(space.codes[guess]);
 }
 
 /** The smallest code that fits the seat's feedback: the last resort when the strategies keep failing. */
 export function codeBreakerFirstLegalAction(visible: CodeBreakerVisibleState): BotAction | null {
   if (!owesGuess(visible)) return null;
   const [first] = consistentCodes(visible);
-  return guessAction(first ?? allCodes(visible.options.variant)[0]);
+  return guessAction(first ?? codeSpace(visible.options.variant).codes[0]);
 }

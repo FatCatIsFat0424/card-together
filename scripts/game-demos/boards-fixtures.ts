@@ -14,7 +14,6 @@ import * as landbattle from '../../server/src/managers/games/landbattle-game';
 import * as battleship from '../../server/src/managers/games/battleship-game';
 import * as banqi from '../../server/src/managers/games/banqi-game';
 import * as chinesecheckers from '../../server/src/managers/games/chinesecheckers-game';
-import { getBattleshipBotAction } from '../../server/src/bots/battleship-strategy';
 import { getChineseCheckersBotAction } from '../../server/src/bots/chinesecheckers-strategy';
 import type { BotAction } from '../../server/src/bots/bot-decisions';
 import { createDemoRecorder, DEMO_NOW } from './demo-recorder';
@@ -66,7 +65,6 @@ function choose(view: BoardView, seat: GameSeat, step: number, random: () => num
     return { type: 'game-action', request: { gameType: view.gameType, action: recorded.action } as BoardRequest };
   }
   switch (view.gameType) {
-    case 'battleship': return getBattleshipBotAction(view, random);
     case 'chinesecheckers': return getChineseCheckersBotAction(view, random);
     default: throw new Error(`${view.gameType} uses a scripted game.`);
   }
