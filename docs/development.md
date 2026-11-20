@@ -93,8 +93,8 @@ npm run --silent bots:arena -- --game hearts --matches 400 --parallel 10
 ```
 
 - **選項**：`--game`（必填）、`--matches`（預設 40，補成偶數）、`--baseline <ref>`、`--budget <ms>`（兩邊搜尋型 bot 每步的預算；預設用 registry 的 `budgetMs`）、`--seed`（預設 1）、`--parallel N`（分給 N 個子程序）、`--players N`（人數可變的遊戲；預設是 4 以內的最大合法人數）、`--json`（輸出機器可讀的摘要）。
-- **基準版本**：用 `git archive` 把該 ref 的 `server/`、`shared/` 原始碼匯出到暫存目錄，結束或中斷時刪除。基準 bot 的 `@shared/*` 匯入會導向它自己的 shared 原始碼；game manager 與規則則一律用候選版本。基準 bot 若依賴已改變的視角或規則，會以回退的形式出現在報告中。Registry 依結構讀取，只需要 `GAME_BOTS.<game>` 的 `hard`、`firstLegal`，以及可選的 `search`。
-- **對局**：經由正式 game manager 進行，bot 只讀 `getPlayerVisibleState`（結構化複製，和 worker 收到的一樣）。有 `search` 的遊戲直接呼叫搜尋策略並給予相同預算，所以量到的是正式環境的下法；其他遊戲呼叫 hard 策略。搜尋在子程序的主執行緒內執行，沒有 worker pool 的逾時與簡單策略回退。呈現時間會略過，大老二的強制 pass 直接套用。
+- **基準版本**：用 `git archive` 把該 ref 的 `server/`、`shared/` 原始碼匯出到暫存目錄，結束或中斷時刪除。基準 bot 的 `@shared/*` 匯入會導向它自己的 shared 原始碼；game manager 與規則則一律用候選版本。基準 bot 若依賴已改變的視角或規則，會以回退的形式出現在報告中。Registry 依結構讀取，只需要 `GAME_BOTS.<game>` 的 `decide`（舊版本叫 `hard`）、`firstLegal`，以及可選的 `search`。
+- **對局**：經由正式 game manager 進行，bot 只讀 `getPlayerVisibleState`（結構化複製，和 worker 收到的一樣）。有 `search` 的遊戲直接呼叫搜尋策略並給予相同預算，所以量到的是正式環境的下法；其他遊戲呼叫同步策略（`decide`）。搜尋在子程序的主執行緒內執行，沒有 worker pool 的逾時與同步策略回退。呈現時間會略過，大老二的強制 pass 直接套用。
 - **座位**：固定搭檔（橋牌、黑桃王）兩邊各坐一隊；其他遊戲兩邊交錯入座，每組再往下輪轉一個座位，兩人遊戲因此會交換先後手。
 - **複式對局**：每組用同一個種子打兩場，第二場兩邊交換所有座位。`Math.random` 與 `node:crypto` 的 `randomInt` 都改用種子亂數，bot 決策另有依步數與座位決定的種子，所以同一組兩場的發牌相同，手氣大致抵銷；兩邊相同時兩場剛好互為鏡像（搜尋受時鐘限制時例外）。遊戲過程消耗亂數的次數不同（例如抽牌、擲骰次數）時，之後的牌局才會分歧。
 
