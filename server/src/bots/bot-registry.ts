@@ -215,7 +215,12 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     firstLegal: gongZhuFirstLegalAction,
     search: { strategy: searchStrategy<'gongzhu'>(new URL('./gongzhu-search.ts', import.meta.url), 'gongZhuSearch'), budgetMs: 1200 },
   },
-  gofish: { decide: getGoFishBotAction, firstLegal: goFishFirstLegalAction },
+  gofish: {
+    // The synchronous estimate is the fallback; bots and timeouts play the hand out on sampled deals in the worker pool.
+    decide: getGoFishBotAction,
+    firstLegal: goFishFirstLegalAction,
+    search: { strategy: searchStrategy<'gofish'>(new URL('./gofish-search.ts', import.meta.url), 'goFishSearch'), budgetMs: 1200 },
+  },
   doudizhu: {
     // The synchronous heuristic is the fallback; bots search in the worker pool.
     decide: getDouDizhuBotAction,
@@ -308,8 +313,10 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     deadlineExpired: yachtTimeoutAction,
   },
   dominoes: {
+    // Bot turns search sampled deals in the worker pool; the synchronous fallback runs the same search on a few deals.
     decide: getDominoesBotAction,
     firstLegal: dominoesFirstLegalAction,
+    search: { strategy: searchStrategy<'dominoes'>(new URL('./dominoes-search.ts', import.meta.url), 'dominoesSearch'), budgetMs: 1200 },
     // A player who runs out of time plays the heaviest legal tile, or draws or passes.
     turnTimeout: dominoesFirstLegalAction,
   },

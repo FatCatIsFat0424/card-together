@@ -1,38 +1,44 @@
 import type { GameSeat, Rank } from '@shared/types';
 import type { GoFishVisibleState } from '@shared/games/gofish/types';
-import { gfCount, gfRanks, gfTargets } from '@shared/rules/gofish';
+import { gfRanks, gfTargets } from '@shared/rules/gofish';
 import type { BotAction } from './bot-decisions';
-import { selectNearBest } from './selection';
+import { certainHolder, GF_RANKS, goFishKnowledge, goFishPublicKnowledge, rankIndex, sampleGoFishWorld } from './gofish-knowledge';
+import type { GoFishKnowledge } from './gofish-knowledge';
 
-/** Value of asking a seat known to hold the rank: the ask is certain to succeed. */
-const KNOWN_HOLDER = 100;
-/** Value of a certain miss; fishing can still draw the rank, so it is a poor choice rather than an impossible one. */
-const KNOWN_LACK = -50;
-/** Value scaled by the chance an unknown seat holds the rank. */
-const GUESS_WEIGHT = 40;
-/** Each card of the rank already in hand moves a book closer. */
-const OWNED_WEIGHT = 6;
-const MARGIN = 0.5;
+/** Deals of the hidden cards behind the synchronous estimate of who holds what. */
+const ESTIMATE_DEALS = 48;
+/** Weight of the chance the ask succeeds; a success also keeps the turn. */
+const SUCCESS_WEIGHT = 10;
+/** Weight of the cards a success is expected to bring, counted together with the cards already held. */
+const BOOK_WEIGHT = 2;
+/** Each card of the rank already held moves a book closer, whatever the ask brings. */
+const OWNED_WEIGHT = 20;
+/** A certain ask comes first: it keeps the turn and takes cards before anyone else can. */
+const CERTAIN_BONUS = 1000;
+/** Small preference for a rank the table already knows this seat holds: asking it reveals nothing new. */
+const PUBLIC_BONUS = 0.5;
 
-function askAction(target: GameSeat, rank: Rank): BotAction {
+export interface GoFishAsk {
+  readonly target: GameSeat;
+  readonly rank: Rank;
+}
+
+export interface ScoredAsk extends GoFishAsk {
+  /** Larger is better */
+  readonly score: number;
+  /** The log proves the target holds the rank */
+  readonly certain: boolean;
+}
+
+export function askAction(target: GameSeat, rank: Rank): BotAction {
   return { type: 'game-action', request: { gameType: 'gofish', action: { type: 'ask', target, rank } } };
 }
 
-function turnChoices(visible: GoFishVisibleState): { ranks: Rank[]; targets: GameSeat[] } | null {
+export function turnChoices(visible: GoFishVisibleState): { ranks: Rank[]; targets: GameSeat[] } | null {
   if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat) return null;
   const ranks = gfRanks(visible.myHand);
   const targets = gfTargets(visible.seats, visible.handCounts, visible.mySeat);
   return ranks.length > 0 && targets.length > 0 ? { ranks, targets } : null;
-}
-
-/** Ranks and seats the log shows a seat holding, for the fallback to ask first. */
-function knownAsk(visible: GoFishVisibleState, choices: { ranks: Rank[]; targets: GameSeat[] }): { target: GameSeat; rank: Rank } | null {
-  const { holds } = publicKnowledge(visible);
-  for (const rank of choices.ranks) {
-    const target = choices.targets.find((seat) => holds.get(seat)?.has(rank));
-    if (target) return { target, rank };
-  }
-  return null;
 }
 
 /**
@@ -42,82 +48,70 @@ function knownAsk(visible: GoFishVisibleState, choices: { ranks: Rank[]; targets
 export function goFishFirstLegalAction(visible: GoFishVisibleState): BotAction | null {
   const choices = turnChoices(visible);
   if (!choices) return null;
-  const known = knownAsk(visible, choices);
-  if (known) return askAction(known.target, known.rank);
+  const knowledge = goFishKnowledge(visible);
+  for (const rank of choices.ranks) {
+    const target = choices.targets.find((seat) => knowledge.hands[knowledge.seats.indexOf(seat)].known[rankIndex(rank)] > 0);
+    if (target) return askAction(target, rank);
+  }
   const step = visible.log.length;
   return askAction(choices.targets[step % choices.targets.length],
     choices.ranks[Math.floor(step / choices.targets.length) % choices.ranks.length]);
 }
 
-interface PublicKnowledge {
-  /** Ranks a seat is known to hold: it asked for them and nobody has taken or booked them since */
-  readonly holds: ReadonlyMap<GameSeat, ReadonlySet<Rank>>;
-  /** Ranks a seat was found without when asked, valid until it draws a card */
-  readonly lacks: ReadonlyMap<GameSeat, ReadonlySet<Rank>>;
-}
-
-/** Replays the public ask log: every ask shows the asker holds the rank, and who received what. */
-function publicKnowledge(visible: GoFishVisibleState): PublicKnowledge {
-  const holds = new Map<GameSeat, Set<Rank>>();
-  const lacks = new Map<GameSeat, Set<Rank>>();
-  const of = (map: Map<GameSeat, Set<Rank>>, seat: GameSeat): Set<Rank> => {
-    const found = map.get(seat) ?? new Set<Rank>();
-    map.set(seat, found);
-    return found;
-  };
-  for (const entry of visible.log) {
-    switch (entry.type) {
-      case 'hand':
-        holds.clear();
-        lacks.clear();
-        break;
-      case 'ask':
-        of(holds, entry.seat).add(entry.rank);
-        // Whether the target handed cards over or had none, it holds none of the rank afterwards.
-        of(holds, entry.target).delete(entry.rank);
-        of(lacks, entry.target).add(entry.rank);
-        // A fished card is unknown unless it was the asked rank, so earlier "lacks" no longer hold.
-        if (entry.fished === 'lucky' || entry.fished === 'miss') of(lacks, entry.seat).clear();
-        break;
-      case 'book':
-        for (const ranks of holds.values()) ranks.delete(entry.rank);
-        break;
-      case 'refill':
-        of(lacks, entry.seat).clear();
-        break;
-      case 'handEnd':
-        break;
+/**
+ * Scores every legal ask by the chance the target holds the rank and the cards it would bring, estimated over
+ * deals of the hidden cards that fit everything the log shows (the four copies of each rank included).
+ */
+export function scoreGoFishAsks(
+  visible: GoFishVisibleState, knowledge: GoFishKnowledge, random: () => number, deals = ESTIMATE_DEALS,
+): ScoredAsk[] {
+  const choices = turnChoices(visible);
+  if (!choices) return [];
+  const { seats } = knowledge;
+  const held = new Float64Array(seats.length * GF_RANKS);
+  const cards = new Float64Array(seats.length * GF_RANKS);
+  let dealt = 0;
+  for (let attempt = 0; attempt < deals; attempt++) {
+    const world = sampleGoFishWorld(knowledge, random);
+    if (!world) continue;
+    dealt++;
+    for (let index = 0; index < world.counts.length; index++) {
+      if (world.counts[index] > 0) held[index]++;
+      cards[index] += world.counts[index];
     }
   }
-  return { holds, lacks };
+  const publicView = goFishPublicKnowledge(visible);
+  const mineInPublic = publicView.hands[publicView.seats.indexOf(visible.mySeat)];
+  const asks: ScoredAsk[] = [];
+  for (const rank of choices.ranks) {
+    const index = rankIndex(rank);
+    const owned = knowledge.own[index];
+    for (const target of choices.targets) {
+      const seat = seats.indexOf(target);
+      const certain = certainHolder(knowledge, seat, index);
+      const chance = certain ? 1 : dealt > 0 ? held[seat * GF_RANKS + index] / dealt : 0;
+      const gain = dealt > 0 ? cards[seat * GF_RANKS + index] / dealt : knowledge.hands[seat].known[index];
+      const revealed = mineInPublic && mineInPublic.known[index] > 0 ? PUBLIC_BONUS : 0;
+      const score = chance * (SUCCESS_WEIGHT + BOOK_WEIGHT * (owned + gain)) + owned * OWNED_WEIGHT + revealed
+        + (certain ? CERTAIN_BONUS : 0);
+      asks.push({ target, rank, score, certain });
+    }
+  }
+  return asks;
+}
+
+/** The best-scored ask; ties keep the first (highest rank, earliest seat), so the choice is deterministic. */
+export function bestAsk(asks: readonly ScoredAsk[]): ScoredAsk | null {
+  return asks.reduce<ScoredAsk | null>((best, ask) => (!best || ask.score > best.score ? ask : best), null);
 }
 
 /**
- * Asks known holders first: a seat that asked for a rank holds it until someone takes it, so the ask is certain.
- * Otherwise it prefers ranks it already holds several of and seats with many cards, and avoids seats that were
- * lately found without the rank. Only public information is used.
+ * Asks a seat the log proves holds the rank when there is one; otherwise the ask most likely to succeed and
+ * bring the most cards, by deals of the hidden cards that fit the log. Only public information and the
+ * seat's own hand are used.
  */
 export function getGoFishBotAction(visible: GoFishVisibleState, random: () => number): BotAction | null {
-  const choices = turnChoices(visible);
-  if (!choices) return null;
-  const { holds, lacks } = publicKnowledge(visible);
-  const unseen = choices.targets.reduce((sum, seat) => sum + visible.handCounts[seat], 0) + visible.stockCount;
-  const options: { value: { target: GameSeat; rank: Rank }; score: number }[] = [];
-  for (const rank of choices.ranks) {
-    const owned = gfCount(visible.myHand, rank);
-    // Copies of the rank still unaccounted for sit in other hands or the stock.
-    const missing = 4 - owned;
-    for (const target of choices.targets) {
-      let score = owned * OWNED_WEIGHT;
-      if (holds.get(target)?.has(rank)) score += KNOWN_HOLDER;
-      else if (lacks.get(target)?.has(rank)) score += KNOWN_LACK;
-      else {
-        const share = unseen > 0 ? visible.handCounts[target] / unseen : 0;
-        score += GUESS_WEIGHT * (1 - (1 - share) ** missing);
-      }
-      options.push({ value: { target, rank }, score });
-    }
-  }
-  const chosen = selectNearBest(options, random, MARGIN);
+  if (!turnChoices(visible)) return null;
+  const chosen = bestAsk(scoreGoFishAsks(visible, goFishKnowledge(visible), random));
   return chosen ? askAction(chosen.target, chosen.rank) : null;
 }

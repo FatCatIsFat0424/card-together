@@ -2,12 +2,14 @@ import type { CodeBreakerVisibleState, GameSeat, PlayerInfo } from '../../shared
 import type { DominoesAction } from '../../shared/src/games/dominoes/actions';
 import type { YachtGameAction } from '../../shared/src/games/yacht/actions';
 import type { YachtVisibleState } from '../../shared/src/games/yacht/types';
-import { dmAllTiles } from '../../shared/src/rules/dominoes';
+import type { DominoesVisibleState } from '../../shared/src/games/dominoes/types';
+import { dmAllTiles, dmTurnOptions } from '../../shared/src/rules/dominoes';
 import * as yacht from '../../server/src/managers/games/yacht-game';
 import * as dominoes from '../../server/src/managers/games/dominoes-game';
 import * as codebreaker from '../../server/src/managers/games/codebreaker-game';
 import { getYachtBotAction } from '../../server/src/bots/yacht-strategy';
-import { getDominoesBotAction } from '../../server/src/bots/dominoes-strategy';
+import { scoreDominoesPlays } from '../../server/src/bots/dominoes-strategy';
+import { selectNearBest } from '../../server/src/bots/selection';
 import { getCodeBreakerBotAction } from '../../server/src/bots/codebreaker-strategy';
 import type { BotAction } from '../../server/src/bots/bot-decisions';
 import type { DemoFixture } from './demo-fixture-types';
@@ -101,6 +103,17 @@ function yachtFixture(): DemoFixture {
   }
 }
 
+/**
+ * The lesson's scripted player: the heuristic play scores with close choices varied by the seeded generator, so
+ * the recorded lesson stays fixed when the search bot changes.
+ */
+function lessonDominoesAction(view: DominoesVisibleState, random: () => number): DominoesAction {
+  const options = dmTurnOptions(view.myHand, view.line, view.boneyardCount, view.openingTile);
+  if (options.plays.length === 0) return { type: options.canDraw ? 'draw' : 'pass' };
+  const play = selectNearBest(scoreDominoesPlays(view, options).map(({ play: value, score }) => ({ value, score })), random, 0.25)!;
+  return { type: 'play', tile: play.tile, ...(play.side ? { side: play.side } : {}) };
+}
+
 /** One heads-up round to 50 points: N opens with the highest double and goes out while E holds many pips. */
 function dominoesFixture(): DemoFixture {
   const code = 'DEMODO';
@@ -119,7 +132,7 @@ function dominoesFixture(): DemoFixture {
       if (game.phase !== 'playing') break;
       const seat = game.currentTurnSeat;
       const view = required(dominoes.getPlayerVisibleState(code, seat), 'Dominoes player view');
-      const action = botRequest<DominoesAction>(getDominoesBotAction(view, random), 'dominoes');
+      const action = lessonDominoesAction(view, random);
       recorder.act(seat, action, `dominoes-${action.type}`, () => {
         switch (action.type) {
           case 'play': return dominoes.play(code, seat, action.tile, action.side, DEMO_NOW);

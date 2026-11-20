@@ -84,14 +84,14 @@ describe('bot arena matches', () => {
 
   beforeAll(async () => {
     restore = installSeededRandom();
-    const bot = await loadArenaBot(REPO_ROOT, 'gofish');
+    const bot = await loadArenaBot(REPO_ROOT, 'crazyeights');
     bots = { candidate: bot, baseline: bot };
   });
   afterAll(() => restore());
 
   it('replays the same deal with the sides exchanged', () => {
-    const seats = arenaSeats('gofish');
-    const plan = { gameType: 'gofish' as const, seats, pair: 0, seed: 42 };
+    const seats = arenaSeats('crazyeights');
+    const plan = { gameType: 'crazyeights' as const, seats, pair: 0, seed: 42 };
     const first = playMatch({ ...plan, swapped: false }, bots);
     const second = playMatch({ ...plan, swapped: true }, bots);
     expect(first.error).toBeUndefined();
