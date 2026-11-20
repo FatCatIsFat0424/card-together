@@ -1,17 +1,20 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { GameSeat, LandBattleGameState, LandBattleVisibleState, PlayerInfo } from '@shared/types';
 import {
-  LB_COUNTS, LB_NODES, LB_PRESETS, LB_QUIET_LIMIT, LB_RANKS, lbCell, lbIndex, lbLayoutError, lbLegalMoves, lbSwapSlots,
+  LB_COUNTS, LB_NODES, LB_PRESETS, LB_QUIET_LIMIT, LB_RANKS, lbApplyMove, lbBoardFromLayouts, lbCell, lbIndex, lbLayoutError,
+  lbLegalMoves, lbRandomLayout, lbSlotIndex, lbSwapSlots,
 } from '@shared/rules/landbattle';
-import type { LbRank, LbSide } from '@shared/rules/landbattle';
+import type { LbPiece, LbRank, LbSide } from '@shared/rules/landbattle';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
-import { deploymentPrior, estimateOdds, landBattleKnowledge, sampleIdentities } from '../../src/bots/landbattle-knowledge';
-import type { LbBotCell, LbKnowledge } from '../../src/bots/landbattle-knowledge';
+import { botLayout } from '../../src/bots/landbattle-deploy';
+import { createInference, estimateMarginals, sampleAssignment } from '../../src/bots/landbattle-inference';
+import { landBattleKnowledge } from '../../src/bots/landbattle-knowledge';
+import type { LbBehaviour, LbBotCell, LbKnowledge, LbOwnPublic } from '../../src/bots/landbattle-knowledge';
+import { defaultParams, landBattleDecision, landBattleSearch, quickParams, recentMoves, searchMoves } from '../../src/bots/landbattle-search';
 import {
-  flagOpenings, lbAttackers, landBattleSearch, recentMoves, scoreMove, searchMoves, templateLayout,
-} from '../../src/bots/landbattle-search';
-import type { World } from '../../src/bots/landbattle-search';
+  createWorld, defaultWeights, evaluate, generateMoves, makeMove, placePiece, unmakeMove,
+} from '../../src/bots/landbattle-world';
 import { createSearchPool } from '../../src/bots/search/search-worker-pool';
 import type { SearchPool } from '../../src/bots/search/search-worker-pool';
 import { seededRandom } from '../../src/bots/search/seeded-random';
@@ -52,34 +55,56 @@ function knowledgeOf(
   own: readonly [node: string, rank: LbRank][], opponents: readonly [node: string, allowed: readonly LbRank[]][],
 ): LbKnowledge {
   const board: (LbBotCell | null)[] = new Array(LB_NODES).fill(null);
-  for (const [node, rank] of own) board[lbCell(node)!] = { side: 0, rank, token: -1 };
+  const ownPublic = new Map<number, LbOwnPublic>();
+  for (const [node, rank] of own) {
+    board[lbCell(node)!] = { side: 0, rank, token: lbCell(node)! };
+    ownPublic.set(lbCell(node)!, { moved: false, turned: false, battles: [] });
+  }
   const allowed = new Map<number, Set<LbRank>>();
+  const behaviour = new Map<number, LbBehaviour>();
   for (const [node, ranks] of opponents) {
     board[lbCell(node)!] = { side: 1, token: lbCell(node)! };
     allowed.set(lbCell(node)!, new Set(ranks));
+    behaviour.set(lbCell(node)!, { attacks: 0, moved: false, approached: [], fled: [] });
   }
   const tokens = [...allowed.keys()];
-  return { side: 0, board, tokens, alive: new Set(tokens), allowed, odds: estimateOdds(tokens, allowed), ownLost: [] };
+  return { side: 0, board, tokens, alive: new Set(tokens), allowed, behaviour, ownPublic, ownLost: [], opponentMoves: 0 };
 }
 
-/** A fully known world for the search's own helpers. */
-function worldOf(pieces: readonly [node: string, side: LbSide, rank: LbRank][]): World {
-  const world: World = new Array(LB_NODES).fill(null);
-  for (const [node, side, rank] of pieces) world[lbCell(node)!] = { side, rank };
-  return world;
+/** A search clock that runs out after a fixed number of checks, so decisions depend only on the seed. */
+function checks(count: number): () => boolean {
+  let used = 0;
+  return () => ++used >= count;
 }
 
-/** A search budget that stops after a fixed number of sampled worlds, so decisions depend only on the seed. */
-function samples(count: number): { maxDepth: undefined; timeLeftMs: () => number; expired: () => boolean } {
-  let checks = 0;
-  return { maxDepth: undefined, timeLeftMs: () => 1_000, expired: () => ++checks >= count };
+/** Plays `moves` moves of a seeded bot-against-bot match with a cheap search, from the given formations. */
+function playSeeded(seed: number, moves: number, layouts?: readonly [readonly LbRank[], readonly LbRank[]]): void {
+  const random = seededRandom(seed);
+  start(layouts?.[0] ?? lbRandomLayout(random), layouts?.[1] ?? botLayout(random));
+  const params = { ...quickParams(), depth: 1, quiescence: 1 };
+  for (let move = 0; move < moves && game().phase === 'playing'; move++) {
+    const seat = game().currentTurnSeat;
+    const target = moveOf(landBattleDecision(view(seat), seededRandom(seed * 1_000 + move), checks(40), params));
+    expect(target).not.toBeNull();
+    const node = (index: number): string => `${index % 5},${Math.floor(index / 5)}`;
+    expect(landbattle.move(CODE, seat, node(target!.from), node(target!.to)).success).toBe(true);
+  }
 }
 
 afterEach(() => landbattle.abortGame(CODE));
 
 describe('Land Battle Chess bot deployment', () => {
-  it('deploys legal templates', () => {
-    for (let seed = 1; seed <= 60; seed++) expect(lbLayoutError(templateLayout(seededRandom(seed)))).toBeNull();
+  it('deploys varied legal formations from both headquarters', () => {
+    const seen = new Set<string>();
+    const flags = new Set<number>();
+    for (let seed = 1; seed <= 200; seed++) {
+      const layout = botLayout(seededRandom(seed));
+      expect(lbLayoutError(layout)).toBeNull();
+      seen.add(layout.join());
+      flags.add(layout.indexOf('flag'));
+    }
+    expect(seen.size).toBe(200);
+    expect(flags.size).toBe(2);
     start([], []);
     const action = gameBot('landbattle').decide(view('N'), seededRandom(4));
     expect(action).toMatchObject({ type: 'game-action', request: { action: { type: 'deploy' } } });
@@ -92,6 +117,48 @@ describe('Land Battle Chess bot deployment', () => {
   });
 });
 
+describe('Land Battle Chess search worlds', () => {
+  it('generates exactly the rules\' moves and restores every move it unmakes', () => {
+    const world = createWorld();
+    const out = new Int16Array(512);
+    for (let seed = 1; seed <= 12; seed++) {
+      const random = seededRandom(seed);
+      let board: (LbPiece | null)[] = lbBoardFromLayouts([lbRandomLayout(random), botLayout(random)]);
+      let side: LbSide = 0;
+      for (let ply = 0; ply < 150; ply++) {
+        world.rank.fill(-1);
+        world.side.fill(-1);
+        world.origin.fill(-1);
+        world.flag.fill(-1);
+        board.forEach((cell, at) => { if (cell) placePiece(world, at, cell.side, LB_RANKS.indexOf(cell.rank), cell.origin); });
+        const expected = lbLegalMoves(board, side).map((move) => move.from | (move.to << 6)).sort((a, b) => a - b);
+        const count = generateMoves(world, side, out, 0);
+        expect(Array.from(out.subarray(0, count)).sort((a, b) => a - b)).toEqual(expected);
+        if (expected.length === 0) break;
+        const move = expected[Math.floor(random() * expected.length)];
+        const before = [world.rank.join(), world.side.join(), world.origin.join(), world.flag.join()];
+        makeMove(world, move);
+        const applied = lbApplyMove(board, move & 63, move >> 6)!;
+        expect(Array.from(world.rank)).toEqual(applied.board.map((cell) => (cell ? LB_RANKS.indexOf(cell.rank) : -1)));
+        unmakeMove(world);
+        expect([world.rank.join(), world.side.join(), world.origin.join(), world.flag.join()]).toEqual(before);
+        if (applied.flagCaptured) break;
+        board = applied.board;
+        side = side === 0 ? 1 : 0;
+      }
+    }
+  }, 30_000);
+
+  it('evaluates symmetrically', () => {
+    const world = createWorld();
+    lbBoardFromLayouts([BALANCED, ASSAULT]).forEach((cell, at) => {
+      if (cell) placePiece(world, at, cell.side, LB_RANKS.indexOf(cell.rank), cell.origin);
+    });
+    const weights = defaultWeights();
+    expect(evaluate(world, 0, weights)).toBeCloseTo(-evaluate(world, 1, weights), 6);
+  });
+});
+
 describe('Land Battle Chess identity inference', () => {
   it('starts from the deployment rules: no mine, bomb or flag on the front row, flags only in headquarters', () => {
     start();
@@ -101,10 +168,6 @@ describe('Land Battle Chess identity inference', () => {
     expect(knowledge.allowed.get(lbIndex(1, 0))!.has('flag')).toBe(true);
     expect(knowledge.allowed.get(lbIndex(0, 0))!.has('flag')).toBe(false);
     expect(knowledge.allowed.get(lbIndex(0, 0))!.has('mine')).toBe(true);
-    for (const odds of knowledge.odds.values()) {
-      expect(LB_RANKS.reduce((sum, rank) => sum + odds[rank], 0)).toBeCloseTo(1, 6);
-    }
-    expect(knowledge.odds.get(lbIndex(0, 5))!.flag).toBe(0);
   });
 
   it('learns from a published battle outcome and from movement', () => {
@@ -116,9 +179,11 @@ describe('Land Battle Chess identity inference', () => {
     expect([...knowledge.allowed.get(lbIndex(0, 5))!]).toEqual(['major-general']);
     expect(knowledge.alive.has(lbIndex(0, 5))).toBe(false);
     expect(knowledge.ownLost).toEqual(['major-general']);
+    expect(knowledge.ownPublic.get(lbIndex(0, 6))).toMatchObject({ moved: true, battles: [{ token: lbIndex(0, 5), attacked: true, outcome: 'tie' }] });
     // S's piece from (2,4) moved, so it is neither a mine nor the flag.
     const moved = knowledge.allowed.get(lbIndex(2, 4))!;
     expect(moved.has('mine') || moved.has('flag')).toBe(false);
+    expect(knowledge.behaviour.get(lbIndex(2, 4))).toMatchObject({ moved: true, attacks: 0 });
     expect(knowledge.board[lbIndex(2, 3)]).toMatchObject({ side: 1, token: lbIndex(2, 4) });
   });
 
@@ -129,29 +194,56 @@ describe('Land Battle Chess identity inference', () => {
     expect([...knowledge.allowed.get(lbIndex(2, 5))!]).toEqual(['marshal']);
     expect([...knowledge.allowed.get(lbIndex(1, 0))!]).toEqual(['flag']);
     expect(knowledge.allowed.get(lbIndex(3, 0))!.has('flag')).toBe(false);
-    const sample = sampleIdentities(knowledge, seededRandom(3))!;
-    expect(sample.get(lbIndex(1, 0))).toBe('flag');
-    expect([...sample.values()].filter((rank) => rank === 'marshal')).toHaveLength(1);
-  });
-
-  it('expects mines around the headquarters and draws complete identities that respect every constraint', () => {
-    start();
-    const knowledge = landBattleKnowledge(view('N'))!;
-    // (0,0) touches S's headquarters at (1,0); (0,1) is also in the last two rows but touches none.
-    expect(deploymentPrior(lbIndex(0, 0), 'mine')).toBeGreaterThan(1);
-    expect(deploymentPrior(lbIndex(0, 1), 'mine')).toBe(1);
-    expect(knowledge.odds.get(lbIndex(0, 0))!.mine).toBeGreaterThan(knowledge.odds.get(lbIndex(0, 1))!.mine);
-    // Once one headquarters is ruled out, every sample puts the flag in the other.
-    const allowed = new Map(knowledge.allowed);
-    allowed.set(lbIndex(3, 0), new Set([...allowed.get(lbIndex(3, 0))!].filter((rank) => rank !== 'flag')));
-    const narrowed: LbKnowledge = { ...knowledge, allowed, odds: estimateOdds(knowledge.tokens, allowed, deploymentPrior) };
-    for (let seed = 1; seed <= 20; seed++) {
-      const sample = sampleIdentities(narrowed, seededRandom(seed))!;
-      expect(sample.get(lbIndex(1, 0))).toBe('flag');
-      for (const rank of LB_RANKS) expect([...sample.values()].filter((other) => other === rank)).toHaveLength(LB_COUNTS[rank]);
-      for (const [token, rank] of sample) expect(narrowed.allowed.get(token)!.has(rank)).toBe(true);
+    const inference = createInference(knowledge);
+    for (let draw = 0; draw < 10; draw++) {
+      const sample = sampleAssignment(inference, seededRandom(draw))!;
+      expect(sample[knowledge.tokens.indexOf(lbIndex(1, 0))]).toBe(LB_RANKS.indexOf('flag'));
+      expect([...sample].filter((rank) => rank === 0)).toHaveLength(1);
     }
   });
+
+  it('recognises a screen preset from a few battles and expects mines around the flag', () => {
+    start(BALANCED, BALANCED);
+    const knowledge = landBattleKnowledge(view('N'))!;
+    const inference = createInference(knowledge);
+    const odds = estimateMarginals(inference, seededRandom(1), 200)!;
+    const index = (node: string): number => knowledge.tokens.indexOf(lbCell(node)!);
+    const mine = LB_RANKS.indexOf('mine');
+    // (0,0) touches a headquarters; (4,1) does not.
+    expect(odds[index('0,0') * LB_RANKS.length + mine]).toBeGreaterThan(odds[index('4,1') * LB_RANKS.length + mine]);
+  });
+
+  it('draws joint identities that keep every count and constraint, and the truth stays possible, over seeded games', () => {
+    let truthOdds = 0;
+    let truthCount = 0;
+    for (let seed = 1; seed <= 3; seed++) {
+      playSeeded(seed, 50);
+      for (const seat of ['N', 'S'] as const) {
+        const visible = view(seat);
+        if (visible.phase !== 'playing') continue;
+        const knowledge = landBattleKnowledge(visible)!;
+        const opponentSeat = seat === 'N' ? 'S' : 'N';
+        const opponentSide: LbSide = seat === 'N' ? 1 : 0;
+        const truth = game().layouts[opponentSeat]!;
+        const trueRank = (token: number): LbRank => truth[truth.findIndex((_, slot) => lbSlotIndex(opponentSide, slot) === token)];
+        for (const token of knowledge.tokens) expect(knowledge.allowed.get(token)!.has(trueRank(token))).toBe(true);
+        const inference = createInference(knowledge);
+        for (let draw = 0; draw < 10; draw++) {
+          const sample = sampleAssignment(inference, seededRandom(seed * 100 + draw))!;
+          LB_RANKS.forEach((rank, index) => expect([...sample].filter((other) => other === index)).toHaveLength(LB_COUNTS[rank]));
+          knowledge.tokens.forEach((token, index) => expect(knowledge.allowed.get(token)!.has(LB_RANKS[sample[index]])).toBe(true));
+        }
+        const odds = estimateMarginals(inference, seededRandom(seed), 100)!;
+        knowledge.tokens.forEach((token, index) => {
+          truthOdds += odds[index * LB_RANKS.length + LB_RANKS.indexOf(trueRank(token))];
+          truthCount++;
+        });
+      }
+      landbattle.abortGame(CODE);
+    }
+    // A uniform guess among the 12 identities would give 1/12 on average.
+    expect(truthOdds / truthCount).toBeGreaterThan(0.2);
+  }, 60_000);
 
   it('decides the same way whatever the hidden identities behind the same public history', () => {
     const [first, second] = [ASSAULT, lbSwapSlots(ASSAULT, 9, 10)!];
@@ -163,8 +255,8 @@ describe('Land Battle Chess identity inference', () => {
       const visible = view('N');
       const result = {
         view: JSON.stringify(visible),
-        search: landBattleSearch(visible, { random: seededRandom(7), budget: samples(12) }),
-        quick: searchMoves(landBattleKnowledge(visible)!, seededRandom(8), () => false, 6)?.move,
+        search: landBattleDecision(visible, seededRandom(7), checks(120), defaultParams()),
+        quick: searchMoves(landBattleKnowledge(visible)!, seededRandom(8), checks(40), quickParams())?.move,
       };
       landbattle.abortGame(CODE);
       return result;
@@ -176,67 +268,39 @@ describe('Land Battle Chess identity inference', () => {
     expect(opponents.every((piece) => piece.rank === undefined)).toBe(true);
     expect(a.search).toEqual(b.search);
     expect(a.quick).toEqual(b.quick);
-  });
+  }, 30_000);
 });
 
-describe('Land Battle Chess Hard search', () => {
+describe('Land Battle Chess search', () => {
   it('captures a known flag and avoids attacking a known stronger piece', () => {
     const knowledge = knowledgeOf(
       [['3,1', 'engineer'], ['1,6', 'captain'], ['1,11', 'flag'], ['0,11', 'mine']],
       [['3,0', ['flag']], ['1,5', ['marshal']], ['4,4', ['lieutenant']]],
     );
-    expect(searchMoves(knowledge, seededRandom(1), () => false, 8)?.move).toMatchObject({ from: lbIndex(3, 1), to: lbIndex(3, 0) });
+    expect(searchMoves(knowledge, seededRandom(1), checks(200))?.move).toMatchObject({ from: lbIndex(3, 1), to: lbIndex(3, 0) });
     const noFlag = knowledgeOf(
       [['2,6', 'captain'], ['1,11', 'flag'], ['4,9', 'major']],
       [['2,5', ['marshal']], ['0,0', ['flag']], ['0,1', ['mine']]],
     );
-    const choice = searchMoves(noFlag, seededRandom(2), () => false, 8)?.move;
-    expect(choice?.to).not.toBe(lbIndex(2, 5));
-  });
+    expect(searchMoves(noFlag, seededRandom(2), checks(200))?.move.to).not.toBe(lbIndex(2, 5));
+  }, 20_000);
 
-  it('finds the pieces that reach a station by step, straight railway, or an engineer turning along it', () => {
-    const world = worldOf([
-      ['4,10', 0, 'colonel'], ['0,9', 0, 'engineer'], ['0,8', 0, 'captain'], ['2,9', 0, 'lieutenant'], ['2,11', 0, 'mine'],
-      ['1,9', 1, 'general'],
-    ]);
-    const sorted = (stations: number[]): number[] => [...stations].sort((a, b) => a - b);
-    expect(sorted(lbAttackers(world, lbIndex(2, 10), 0))).toEqual(sorted([lbIndex(4, 10), lbIndex(0, 9), lbIndex(2, 9)]));
-    expect(lbAttackers(world, lbIndex(2, 10), 1)).toEqual([lbIndex(1, 9)]);
-  });
-
-  it('keeps an engineer from clearing a mine beside its flag while an officer waits in the camp behind it', () => {
-    const own: [string, LbRank][] = [
-      ['1,11', 'flag'], ['0,11', 'mine'], ['2,11', 'mine'], ['1,10', 'mine'], ['0,10', 'lieutenant'], ['4,11', 'captain'],
-      ['2,7', 'colonel'],
-    ];
-    const opponents: [string, LbRank[]][] = [
-      ['4,6', ['engineer']], ['1,9', ['general']], ['1,0', ['flag']], ['0,0', ['mine']], ['2,0', ['mine']], ['1,1', ['mine']],
-      ['3,3', ['major']],
-    ];
-    const world = worldOf([
-      ...own.map(([node, rank]): [string, LbSide, LbRank] => [node, 0, rank]),
-      ...opponents.map(([node, [rank]]): [string, LbSide, LbRank] => [node, 1, rank]),
-    ]);
-    // The engineer clears (1,10), the lieutenant takes it, and the general in the camp takes the lieutenant.
-    expect(flagOpenings(world, lbIndex(1, 11), 0)).toBe(1);
-    const choice = searchMoves(knowledgeOf(own, opponents), seededRandom(1), () => false, 6)!.move;
-    const after = [...world];
-    after[choice.to] = after[choice.from];
-    after[choice.from] = null;
-    expect(flagOpenings(after, lbIndex(1, 11), 0)).toBe(0);
+  it('removes a piece that stands next to its flag', () => {
+    const knowledge = knowledgeOf(
+      [['1,11', 'flag'], ['0,11', 'mine'], ['2,11', 'mine'], ['2,10', 'general'], ['4,6', 'captain']],
+      [['1,10', ['colonel']], ['3,0', ['flag']], ['0,0', ['mine']], ['4,0', ['major']]],
+    );
+    expect(searchMoves(knowledge, seededRandom(3), checks(200))?.move).toMatchObject({ from: lbIndex(2, 10), to: lbIndex(1, 10) });
   });
 
   it('scores a quiet move that reaches the quiet-move limit as a draw', () => {
-    const world = worldOf([
-      ['1,11', 0, 'flag'], ['2,6', 0, 'marshal'], ['0,9', 0, 'captain'], ['4,9', 0, 'captain'], ['0,8', 0, 'lieutenant'],
-      ['1,0', 1, 'flag'], ['2,4', 1, 'lieutenant'], ['2,5', 1, 'captain'], ['0,2', 1, 'lieutenant'], ['4,2', 1, 'major'],
-    ]);
-    const quiet = { from: lbIndex(2, 6), to: lbIndex(1, 6), path: [] };
-    const capture = { from: lbIndex(2, 6), to: lbIndex(2, 5), path: [] };
-    expect(scoreMove(world, quiet, 0, LB_QUIET_LIMIT - 1)).toBe(0);
-    expect(scoreMove(world, quiet, 0, 0)).not.toBe(0);
-    // A battle restarts the count, so the limit does not touch it.
-    expect(scoreMove(world, capture, 0, LB_QUIET_LIMIT - 1)).toBe(scoreMove(world, capture, 0, 0));
+    const knowledge = knowledgeOf(
+      [['1,11', 'flag'], ['2,6', 'captain'], ['0,9', 'lieutenant']],
+      [['1,0', ['flag']], ['2,2', ['marshal']], ['4,2', ['general']]],
+    );
+    // Material is behind, so the bot heads for the draw when the limit is one quiet move away.
+    const found = searchMoves(knowledge, seededRandom(4), checks(200), defaultParams(), LB_QUIET_LIMIT - 1);
+    expect(found?.score).toBe(0);
   });
 
   it('lists its own last moves, newest first, so it does not shuffle a piece back and forth', () => {
@@ -250,28 +314,36 @@ describe('Land Battle Chess Hard search', () => {
     ]);
   });
 
-  it('keeps the synchronous move cheap and legal', () => {
+  it('keeps the synchronous move cheap and legal and leaves the view untouched', () => {
     start();
+    const visible = view('N');
+    const before = JSON.stringify(visible);
     const started = performance.now();
-    const action = gameBot('landbattle').decide(view('N'), seededRandom(3));
+    const action = gameBot('landbattle').decide(visible, seededRandom(3));
     expect(performance.now() - started).toBeLessThan(400);
     expect(legal('N', action)).toBe(true);
+    expect(JSON.stringify(visible)).toBe(before);
   });
 
-  it('stops within its time budget and still returns a legal move', () => {
-    start();
+  it('plays legal moves deep into a seeded match within its time budget', () => {
+    playSeeded(11, 40);
+    const seat = game().currentTurnSeat;
+    const visible = view(seat);
+    const before = JSON.stringify(visible);
     const started = performance.now();
-    const action = landBattleSearch(view('N'), {
+    const action = landBattleSearch(visible, {
       random: seededRandom(9),
       budget: { maxDepth: undefined, timeLeftMs: () => 150, expired: () => performance.now() >= started + 150 },
     });
     expect(performance.now() - started).toBeLessThan(600);
-    expect(legal('N', action)).toBe(true);
-    expect(landBattleSearch(view('S'), { random: seededRandom(1), budget: { maxDepth: undefined, timeLeftMs: () => 0, expired: () => true } })).toBeNull();
-  });
+    expect(legal(seat, action)).toBe(true);
+    expect(JSON.stringify(visible)).toBe(before);
+    const other = seat === 'N' ? 'S' : 'N';
+    expect(landBattleSearch(view(other), { random: seededRandom(1), budget: { maxDepth: undefined, timeLeftMs: () => 0, expired: () => true } })).toBeNull();
+  }, 30_000);
 
-  it('declares the worker search with a one-second budget', () => {
-    expect(gameBot('landbattle').search).toMatchObject({ budgetMs: 1000 });
+  it('declares the worker search with a two-second budget', () => {
+    expect(gameBot('landbattle').search).toMatchObject({ budgetMs: 2000 });
   });
 });
 
@@ -287,7 +359,7 @@ describe('Land Battle Chess search in the bot worker pool', () => {
     pools.push(pool);
     const spec = gameBot('landbattle').search!;
     const started = Date.now();
-    const outcome = await pool.run({ strategy: spec.strategy, visible: JSON.parse(JSON.stringify(view('N'))), budgetMs: 400, seed: 5 });
+    const outcome = await pool.run({ strategy: spec.strategy, visible: JSON.parse(JSON.stringify(view('N'))), budgetMs: spec.budgetMs, seed: 5 });
     expect(outcome.status).toBe('ok');
     expect(Date.now() - started).toBeLessThan(5_000);
     expect(legal('N', outcome.status === 'ok' ? outcome.action : null)).toBe(true);

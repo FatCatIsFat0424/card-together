@@ -313,12 +313,13 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     },
   },
   landbattle: {
-    // Bots deploy from a template; bot turns and timeouts sample hidden identities in the worker pool.
+    // Bots deploy a varied formation; bot turns and timeouts search jointly sampled hidden identities in the
+    // worker pool.
     decide: getLandBattleBotAction,
     firstLegal: landBattleFirstLegalAction,
     search: {
       strategy: searchStrategy<'landbattle'>(new URL('./landbattle-search.ts', import.meta.url), 'landBattleSearch'),
-      budgetMs: 1000,
+      budgetMs: 2000,
     },
     // A human who missed the deployment deadline gets the automatic deployment; bots keep their own.
     deadlineExpired: (visible, { isBot, strategy }) => (isBot ? strategy() : autoDeployAction(visible, Math.random)),

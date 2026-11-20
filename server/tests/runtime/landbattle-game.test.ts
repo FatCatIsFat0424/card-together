@@ -334,7 +334,7 @@ describe('Land Battle Chess bots and stored state', () => {
         ? { ...entry, battle: entry.battle === 'win' ? 'lose' : 'win' } : entry)) },
       { ...structuredClone(stored), pieces: stored.pieces.map((piece, index) => (index === 0 ? { ...piece, rank: piece.rank === 'marshal' ? 'general' : 'marshal' } : piece)) },
       { ...structuredClone(stored), quietMoves: stored.quietMoves + 1 },
-      { ...structuredClone(stored), flagsShown: ['N'] },
+      { ...structuredClone(stored), flagsShown: stored.flagsShown.includes('N') ? [] : ['N'] },
       { ...structuredClone(stored), layouts: { N: [...ASSAULT], S: stored.layouts.S } },
     ];
     for (const state of tampered) expect(validator.coherent(state)).toBe(false);

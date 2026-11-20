@@ -1,306 +1,438 @@
-// ─── Land Battle Chess search: sampled opponent identities, a two-ply look, and a positional evaluation ───
+// ─── Land Battle Chess search: perfect-information Monte Carlo over jointly sampled hidden identities ───
 //
-// Runs inside a bot worker (`GameBot.search`). It reads only the seat's own view: hidden opponent pieces get
-// identities drawn from the knowledge built from public battle outcomes and movement, many times over, and
-// each own move is scored by its average over those samples.
+// Runs inside a bot worker (`GameBot.search`) and reads only the seat's own view. Each sampled world gives
+// the opponent's pieces identities drawn from `landbattle-inference.ts`; every root move is then searched
+// with alpha-beta and a battle quiescence search in that world, and the move with the best average wins.
+// Inside the tree neither side is clairvoyant about battles: a side only starts a battle its own belief
+// rates as acceptable (ours: the sampled marginals; the opponent's: what is public about our pieces given
+// that world's identities), so the search does not assume the opponent can see through our pieces.
 
 import type { LandBattleVisibleState } from '@shared/types';
-import {
-  LB_NODES, LB_POWER, LB_PRESETS, LB_QUIET_LIMIT, lbBattle, lbCell, lbHasMove, lbIsCamp, lbIsHq, lbLegalMoves, lbMirrorLayout, lbMobile, lbNode,
-  lbRailSteps, lbSteps, lbSwapSlots,
-} from '@shared/rules/landbattle';
+import { LB_NODES, LB_QUIET_LIMIT, LB_RANKS, lbCell, lbNode, lbSlotOf } from '@shared/rules/landbattle';
 import type { LbMove, LbRank, LbSide } from '@shared/rules/landbattle';
 import type { BotAction } from './bot-decisions';
 import type { SearchContext } from './search/search-types';
-import { landBattleKnowledge, sampleIdentities } from './landbattle-knowledge';
+import { botLayout } from './landbattle-deploy';
+import { createInference, deploymentPrior, estimateMarginals, sampleAssignment, slotMask } from './landbattle-inference';
+import type { Inference } from './landbattle-inference';
+import { landBattleKnowledge } from './landbattle-knowledge';
 import type { LbKnowledge } from './landbattle-knowledge';
+import {
+  CAPTAIN, ENGINEER, FLAG, HQ, LIEUTENANT, LOSE_BATTLE, MADE_FLAG, MAJOR, MINE, OUTCOME, RANK_COUNT, TIE_BATTLE, WIN_BATTLE,
+  clearWorld, createWorld, defaultWeights, evaluate, generateMoves, hasMove, makeMove, moveFrom, moveTo, placePiece, stepsOf,
+  unmakeMove,
+} from './landbattle-world';
+import type { EvalWeights, World } from './landbattle-world';
 
-/** A fully known piece in one sampled world. */
-interface Known {
-  readonly side: LbSide;
-  readonly rank: LbRank;
+/** Score of a captured flag or of an opponent left without a move. */
+export const WIN = 10_000;
+/** What a side believes a captured flag is worth when weighing a battle. */
+const PERCEIVED_FLAG = 1_000;
+
+export interface SearchParams {
+  /** Plies searched from the root, the root move included */
+  readonly depth: number;
+  /** Battles searched beyond the depth */
+  readonly quiescence: number;
+  /** Worlds sampled at most */
+  readonly maxWorlds: number;
+  /** A side starts a battle (below the root) only when it expects to lose at most this much material */
+  readonly tolerance: number;
+  /** Bonus per nat of uncertainty about the target for battles started by low officers */
+  readonly probe: number;
+  /** Penalty for moving a piece straight back to where it just came from */
+  readonly shuffle: number;
+  readonly weights: EvalWeights;
 }
 
-export type World = (Known | null)[];
-
-/** Material values; the flag is decided by the terminal score instead. */
-export const LB_VALUE: Readonly<Record<LbRank, number>> = {
-  marshal: 100, general: 80, 'major-general': 60, brigadier: 45, colonel: 34, major: 25, captain: 16,
-  lieutenant: 11, engineer: 20, mine: 22, bomb: 46, flag: 0,
-};
-
-/**
- * A captured flag against material: worth more than a whole army, yet low enough that a slim chance of a
- * flag in one sampled world does not justify throwing an officer onto a likely mine.
- */
-const WIN = 2_000;
-
-/**
- * Worth of a mobile piece by its road distance to the opposing flag. It falls off slowly, so pieces far
- * from the flag still have a reason to advance instead of shuffling back and forth.
- */
-const FLAG_PRESSURE: readonly number[] = [0, 60, 28, 14, 9, 6, 4, 3, 2, 1];
-
-/** Score of a piece standing next to the opposing flag that the defender cannot remove: the flag falls next. */
-const UNSTOPPABLE = WIN * 0.8;
-
-/** Penalty for a flag threat the defender can still answer: it ties down a move and a defender. */
-const ANSWERED_THREAT = 40;
-
-/** Worth of each station next to a flag that the attacker can break into and the defender cannot retake. */
-const OPENING = 90;
-
-/** Share of the best recapture counted after an opponent capture: the exchange may not end there. */
-const RECAPTURE = 0.7;
-
-/** Penalty for each station next to the own flag that no own piece can reach in one move. */
-const GUARD = 25;
-
-/** Worth of each movable piece a side has fewer than `SCARCE_BELOW`. */
-const SCARCE = 60;
-const SCARCE_BELOW = 4;
-
-/** Penalty for moving a piece straight back to where it just came from. */
-const SHUFFLE = 6;
-
-/**
- * Reward for attacking at all: low officers probe unknown pieces (a published outcome narrows them down), and
- * the closer the quiet-move limit, the more any battle is worth, so bots do not drift into the draw.
- */
-function attackBonus(rank: LbRank, quietMoves: number): number {
-  const probe = rank === 'lieutenant' || rank === 'captain' || rank === 'major' ? 8 : 0;
-  return probe + 40 * Math.max(0, quietMoves - LB_QUIET_LIMIT / 3) / LB_QUIET_LIMIT;
+export function defaultParams(): SearchParams {
+  return { depth: 3, quiescence: 3, maxWorlds: 400, tolerance: 12, probe: 6, shuffle: 6, weights: defaultWeights() };
 }
 
-/** Road distances between stations, ignoring pieces. */
-const DISTANCE: readonly (readonly number[])[] = Array.from({ length: LB_NODES }, (_, start) => {
-  const distance = new Array<number>(LB_NODES).fill(99);
-  distance[start] = 0;
-  const queue = [start];
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    for (const next of lbSteps(current)) {
-      if (distance[next] > distance[current] + 1) {
-        distance[next] = distance[current] + 1;
-        queue.push(next);
-      }
+/** Parameters of the synchronous fallback, which runs on the event loop. */
+export function quickParams(): SearchParams {
+  return { ...defaultParams(), depth: 2, quiescence: 2, maxWorlds: 8 };
+}
+
+const MAX_PLY = 24;
+const MOVES_PER_PLY = 512;
+const NEG_INFINITY = -1e9;
+
+/** Material won or lost by an attacker of rank `a` against a defender of rank `d`, as the attacker sees it. */
+function battleGain(values: Float64Array, a: number, d: number): number {
+  if (d === FLAG) return PERCEIVED_FLAG;
+  const outcome = OUTCOME[a * RANK_COUNT + d];
+  return outcome === WIN_BATTLE ? values[d] : outcome === LOSE_BATTLE ? -values[a] : values[d] - values[a];
+}
+
+/** Everything one decision's search shares between worlds. */
+interface SearchState {
+  readonly world: World;
+  readonly me: LbSide;
+  readonly them: LbSide;
+  readonly params: SearchParams;
+  readonly moves: Int16Array;
+  readonly scores: Float64Array;
+  /** Our expected battle gain by `token index * RANK_COUNT + attacker rank`, from the marginals */
+  readonly ourGain: Float64Array;
+  /** The opponent's expected battle gain against our pieces, by `own origin * RANK_COUNT + attacker rank` */
+  readonly theirGain: Float64Array;
+  /** Index into the inference tokens by opponent origin station, -1 for own pieces */
+  readonly tokenIndex: Int8Array;
+  /** Last quiet move that caused a cutoff, by ply */
+  readonly killers: Int32Array;
+  /** Cutoff counts of quiet moves by packed move, shared across worlds */
+  readonly history: Float64Array;
+  /** The clock; checked every `CLOCK_INTERVAL` nodes once the first world is done */
+  readonly expired: () => boolean;
+  /** Plies searched from the root in the current world */
+  depth: number;
+  /** Whether the clock may stop the current world */
+  interruptible: boolean;
+  /** Set when the clock stopped the current world, whose values are then discarded */
+  stopped: boolean;
+  nodes: number;
+}
+
+const CLOCK_INTERVAL = 512;
+
+/** Counts a node; true when the search must unwind because the clock ran out. */
+function tick(state: SearchState): boolean {
+  state.nodes++;
+  if (state.stopped) return true;
+  if (state.interruptible && (state.nodes & (CLOCK_INTERVAL - 1)) === 0 && state.expired()) state.stopped = true;
+  return state.stopped;
+}
+
+/** Whether the side to move would start this battle, judged by its own belief. */
+function willAttack(state: SearchState, mover: number, from: number, to: number): boolean {
+  const { world } = state;
+  const attacker = world.rank[from];
+  const origin = world.origin[to];
+  const gain = mover === state.me
+    ? state.ourGain[state.tokenIndex[origin] * RANK_COUNT + attacker]
+    : state.theirGain[origin * RANK_COUNT + attacker];
+  return gain >= -state.params.tolerance;
+}
+
+/**
+ * Orders the moves in `[start, end)`: winning battles by gain, then the ply's killer moves, then quiet moves
+ * by their cutoff history, then losing battles.
+ */
+function orderMoves(state: SearchState, start: number, end: number, ply: number): void {
+  const { world, moves, scores, history } = state;
+  const values = state.params.weights.value;
+  const killer = state.killers[ply];
+  for (let index = start; index < end; index++) {
+    const move = moves[index];
+    const from = moveFrom(move);
+    const to = moveTo(move);
+    if (world.rank[to] >= 0) {
+      const gain = battleGain(values, world.rank[from], world.rank[to]);
+      scores[index] = gain >= 0 ? 100_000 + gain : -100_000 + gain;
+    } else scores[index] = move === killer ? 50_000 : history[move];
+  }
+  // Insertion sort: move lists are short.
+  for (let index = start + 1; index < end; index++) {
+    const move = moves[index];
+    const score = scores[index];
+    let at = index - 1;
+    while (at >= start && scores[at] < score) {
+      moves[at + 1] = moves[at];
+      scores[at + 1] = scores[at];
+      at--;
     }
+    moves[at + 1] = move;
+    scores[at + 1] = score;
   }
-  return distance;
-});
-
-const rowOf = (index: number): number => Math.floor(index / 5);
-
-/** How far a side's piece has advanced, from 0 at its own back row to 1 at the opponent's. */
-const advance = (side: LbSide, index: number): number => (side === 0 ? 11 - rowOf(index) : rowOf(index)) / 11;
-
-function flagOf(world: World, side: LbSide): number {
-  for (let index = 0; index < LB_NODES; index++) {
-    const cell = world[index];
-    if (cell?.side === side && cell.rank === 'flag') return index;
-  }
-  return -1;
 }
 
-/** The station one railway step beyond `current` in the direction from `previous`, or -1. */
-function straightOn(previous: number, current: number): number {
-  const col = 2 * (current % 5) - (previous % 5);
-  const row = 2 * rowOf(current) - rowOf(previous);
-  const next = row * 5 + col;
-  return col >= 0 && col < 5 && row >= 0 && row < 12 && lbRailSteps(current).includes(next) ? next : -1;
-}
-
-/**
- * Stations of `side`'s pieces that can move onto `to` in one move: a step, a straight railway run through
- * empty stations, or an engineer's railway route with turns. The occupant of `to` is not checked.
- */
-export function lbAttackers(world: World, to: number, side: LbSide): number[] {
-  const found: number[] = [];
-  const consider = (at: number, engineerOnly: boolean): void => {
-    const cell = world[at];
-    if (!cell || cell.side !== side || !lbMobile(cell.rank) || lbIsHq(at) || found.includes(at)) return;
-    if (!engineerOnly || cell.rank === 'engineer') found.push(at);
-  };
-  for (const at of lbSteps(to)) consider(at, false);
-  const rails = lbRailSteps(to);
-  if (rails.length === 0) return found;
-  for (const first of rails) {
-    let previous = to;
-    let current = first;
-    while (current >= 0 && !world[current]) {
-      const next = straightOn(previous, current);
-      previous = current;
-      current = next;
+function quiesce(state: SearchState, mover: LbSide, alpha: number, beta: number, ply: number, left: number): number {
+  if (tick(state)) return 0;
+  const { world } = state;
+  const stand = evaluateFor(state, mover);
+  if (left <= 0 || stand >= beta || ply >= MAX_PLY - 1) return stand;
+  let best = stand;
+  if (stand > alpha) alpha = stand;
+  const start = ply * MOVES_PER_PLY;
+  const end = generateMoves(world, mover, state.moves, start, true);
+  orderMoves(state, start, end, ply);
+  const next: LbSide = mover === 0 ? 1 : 0;
+  for (let index = start; index < end; index++) {
+    const move = state.moves[index];
+    if (!willAttack(state, mover, moveFrom(move), moveTo(move))) continue;
+    const made = makeMove(world, move);
+    const score = (made & MADE_FLAG) !== 0 ? WIN - ply : -quiesce(state, next, -beta, -alpha, ply + 1, left - 1);
+    unmakeMove(world);
+    if (score > best) {
+      best = score;
+      if (score > alpha) alpha = score;
+      if (alpha >= beta) break;
     }
-    if (current >= 0) consider(current, false);
-  }
-  const seen = new Set<number>([to]);
-  const queue = [to];
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    for (const next of lbRailSteps(current)) {
-      if (seen.has(next)) continue;
-      seen.add(next);
-      if (world[next]) consider(next, true);
-      else queue.push(next);
-    }
-  }
-  return found;
-}
-
-/** Best material gain of `side` removing the opponent piece on `at` (0 when nothing profitable can). */
-function removalGain(world: World, at: number, side: LbSide): number {
-  const target = world[at];
-  if (!target || target.side === side || lbIsCamp(at)) return 0;
-  let best = 0;
-  for (const from of lbAttackers(world, at, side)) {
-    const rank = world[from]!.rank;
-    const outcome = lbBattle(rank, target.rank);
-    const gain = outcome === 'win' ? LB_VALUE[target.rank] : outcome === 'tie' ? LB_VALUE[target.rank] - LB_VALUE[rank] : -1;
-    best = Math.max(best, gain);
   }
   return best;
 }
 
-/** Whether `side` can remove the opponent piece on `at` this move, by winning or trading. */
-function removable(world: World, at: number, side: LbSide): boolean {
-  const target = world[at]!;
-  return lbAttackers(world, at, side).some((from) => lbBattle(world[from]!.rank, target.rank) !== 'lose');
-}
-
-/**
- * Stations next to `side`'s flag that the opponent can break into and hold: one of its pieces reaches the
- * station and beats what stands there (only an engineer clears a mine), and no piece of `side` that reaches
- * the station removes the strongest opponent piece that does.
- */
-export function flagOpenings(world: World, flag: number, side: LbSide): number {
-  if (flag < 0) return 0;
-  const them: LbSide = side === 0 ? 1 : 0;
-  let open = 0;
-  for (const at of lbSteps(flag)) {
-    const occupant = world[at];
-    if (occupant?.side === them) continue;
-    const raiders = lbAttackers(world, at, them);
-    if (raiders.length === 0) continue;
-    if (occupant && !raiders.some((from) => lbBattle(world[from]!.rank, occupant.rank) !== 'lose')) continue;
-    let strongest = world[raiders[0]]!.rank;
-    for (const from of raiders) if (LB_POWER[world[from]!.rank] > LB_POWER[strongest]) strongest = world[from]!.rank;
-    if (!lbAttackers(world, at, side).some((from) => lbBattle(world[from]!.rank, strongest) !== 'lose')) open++;
-  }
-  return open;
-}
-
-/**
- * Pieces of `attacker` next to the defender's flag decide the match: on the attacker's move the flag falls;
- * on the defender's move it falls unless the single threat can be removed.
- */
-function flagThreat(world: World, flag: number, attacker: LbSide, toMove: LbSide): number {
-  if (flag < 0) return 0;
-  const threats = lbSteps(flag).filter((at) => {
-    const cell = world[at];
-    return cell?.side === attacker && lbMobile(cell.rank);
-  });
-  if (threats.length === 0) return 0;
-  if (toMove === attacker) return WIN * 0.9;
-  const defender: LbSide = attacker === 0 ? 1 : 0;
-  return threats.length === 1 && removable(world, threats[0], defender) ? ANSWERED_THREAT : UNSTOPPABLE;
-}
-
-/**
- * Score of a world for `me` with `toMove` to play: material, advanced and camped officers, pressure on both
- * flags, and pieces standing next to a flag.
- */
-export function evaluateWorld(world: World, me: LbSide, toMove: LbSide = me === 0 ? 1 : 0): number {
-  const them: LbSide = me === 0 ? 1 : 0;
-  const myFlag = flagOf(world, me);
-  const theirFlag = flagOf(world, them);
-  let score = 0;
-  const movers = [0, 0];
-  for (let index = 0; index < LB_NODES; index++) {
-    const cell = world[index];
-    if (!cell) continue;
-    const sign = cell.side === me ? 1 : -1;
-    let value = LB_VALUE[cell.rank];
-    if (cell.rank !== 'mine' && cell.rank !== 'flag') {
-      if (!lbIsHq(index)) movers[cell.side]++;
-      value += advance(cell.side, index) * (cell.rank === 'engineer' ? 3 : 5);
-      if (lbIsCamp(index)) value += 3;
-      if (lbIsHq(index)) value -= 6;
-      const enemyFlag = cell.side === me ? theirFlag : myFlag;
-      if (enemyFlag >= 0 && cell.rank !== 'bomb') {
-        value += FLAG_PRESSURE[Math.min(DISTANCE[index][enemyFlag], FLAG_PRESSURE.length - 1)];
+function negamax(state: SearchState, mover: LbSide, depth: number, alpha: number, beta: number, ply: number): number {
+  if (depth <= 0) return quiesce(state, mover, alpha, beta, ply, state.params.quiescence);
+  if (tick(state)) return 0;
+  const { world } = state;
+  const start = ply * MOVES_PER_PLY;
+  const end = generateMoves(world, mover, state.moves, start);
+  if (end === start) return -WIN + ply;
+  orderMoves(state, start, end, ply);
+  const next: LbSide = mover === 0 ? 1 : 0;
+  let best = NEG_INFINITY;
+  for (let index = start; index < end; index++) {
+    const move = state.moves[index];
+    const to = moveTo(move);
+    if (world.rank[to] >= 0 && !willAttack(state, mover, moveFrom(move), to)) continue;
+    const made = makeMove(world, move);
+    let score: number;
+    if ((made & MADE_FLAG) !== 0) score = WIN - ply;
+    else if (world.quiet >= LB_QUIET_LIMIT) score = 0;
+    else score = -negamax(state, next, depth - 1, -beta, -alpha, ply + 1);
+    unmakeMove(world);
+    if (score > best) {
+      best = score;
+      if (score > alpha) alpha = score;
+      if (alpha >= beta) {
+        if (world.rank[to] < 0) {
+          state.killers[ply] = move;
+          state.history[move] += depth * depth;
+        }
+        break;
       }
     }
-    score += sign * value;
   }
-  // A side whose last pieces cannot move loses, so the last few movable pieces are worth more.
-  score += SCARCE * (Math.max(0, SCARCE_BELOW - movers[them]) - Math.max(0, SCARCE_BELOW - movers[me]));
-  return score + flagThreat(world, theirFlag, me, toMove) - flagThreat(world, myFlag, them, toMove);
-}
-
-/** Applies a generated move in a fully known world. */
-function play(world: World, move: LbMove): { world: World; flag: boolean } {
-  const next = [...world];
-  const attacker = world[move.from]!;
-  const defender = world[move.to];
-  next[move.from] = null;
-  if (!defender) {
-    next[move.to] = attacker;
-    return { world: next, flag: false };
-  }
-  const outcome = lbBattle(attacker.rank, defender.rank);
-  next[move.to] = outcome === 'win' ? attacker : outcome === 'lose' ? defender : null;
-  return { world: next, flag: defender.rank === 'flag' };
+  // Every move was a battle the side would not start: it stands still in effect.
+  return best === NEG_INFINITY ? evaluateFor(state, mover) : best;
 }
 
 /**
- * Score of `move` for `me` in one world: the position after it, pulled toward the opponent's most damaging
- * reply. Replies are the opponent's battles and its moves next to our flag; after a capture our best
- * recapture partly counts, and a move that reaches the quiet-move limit is a draw (0).
+ * The evaluation for the side to move, plus the immediate flag threats the quiescence search may not reach:
+ * a mobile piece next to the opposing flag takes it on its side's move.
  */
-export function scoreMove(world: World, move: LbMove, me: LbSide, quietMoves = 0): number {
-  const them: LbSide = me === 0 ? 1 : 0;
-  const battle = world[move.to] !== null;
-  const after = play(world, move);
-  if (after.flag || !lbHasMove(after.world, them)) return WIN;
-  const quiet = battle ? 0 : quietMoves + 1;
-  if (quiet >= LB_QUIET_LIMIT) return 0;
-  const myFlag = flagOf(after.world, me);
-  // Control of the stations around both flags, judged once after our move and carried into every reply.
-  const unguarded = myFlag >= 0 ? lbSteps(myFlag).filter((at) => lbAttackers(after.world, at, me).length === 0).length : 0;
-  const control = OPENING * (flagOpenings(after.world, flagOf(after.world, them), them) - flagOpenings(after.world, myFlag, me))
-    - GUARD * unguarded;
-  const base = evaluateWorld(after.world, me, them) + control;
-  const guarded = myFlag >= 0 ? lbSteps(myFlag) : [];
-  let worst = base;
-  for (const reply of lbLegalMoves(after.world, them)) {
-    const target = after.world[reply.to];
-    if (!target && !guarded.includes(reply.to)) continue;
-    const answered = play(after.world, reply);
-    if (answered.flag) return -WIN;
-    let value: number;
-    if (!target && quiet + 1 >= LB_QUIET_LIMIT) value = 0;
-    else {
-      value = evaluateWorld(answered.world, me, me) + control;
-      if (target && !lbHasMove(answered.world, me)) value = -WIN;
-      else if (target && answered.world[reply.to]?.side === them) value += RECAPTURE * removalGain(answered.world, reply.to, me);
-    }
-    worst = Math.min(worst, value);
-  }
-  // The opponent cannot see our identities either, so its best reply is only partly expected.
-  return base - 0.6 * (base - worst);
+function evaluateFor(state: SearchState, mover: LbSide): number {
+  const { world } = state;
+  const enemyFlag = world.flag[mover === 0 ? 1 : 0];
+  if (enemyFlag >= 0 && adjacentMobile(world, enemyFlag, mover)) return WIN * 0.9;
+  return evaluate(world, mover, state.params.weights);
 }
 
-/** One sampled world: own pieces as they are, opponent pieces with drawn identities. */
-export function sampleWorld(knowledge: LbKnowledge, random: () => number): World | null {
-  const identities = sampleIdentities(knowledge, random);
-  if (!identities) return null;
-  return knowledge.board.map((cell) => {
-    if (!cell) return null;
-    if (cell.side === knowledge.side) return { side: cell.side, rank: cell.rank! };
-    return { side: cell.side, rank: identities.get(cell.token)! };
+const NEIGHBOURS: readonly (readonly number[])[] = Array.from({ length: LB_NODES }, (_, index) => stepsOf(index));
+
+function adjacentMobile(world: World, at: number, side: number): boolean {
+  for (const next of NEIGHBOURS[at]) {
+    if (world.side[next] === side && world.rank[next] !== MINE && world.rank[next] !== FLAG && HQ[next] === 0) return true;
+  }
+  return false;
+}
+
+/** Score of one root move in the current world, for the side `state.me`. */
+function rootValue(state: SearchState, move: number): number {
+  const { world } = state;
+  const made = makeMove(world, move);
+  let score: number;
+  if ((made & MADE_FLAG) !== 0 || !hasMove(world, state.them)) score = WIN;
+  else if (world.quiet >= LB_QUIET_LIMIT) score = 0;
+  else score = -negamax(state, state.them, state.depth - 1, NEG_INFINITY, -NEG_INFINITY, 1);
+  unmakeMove(world);
+  return score;
+}
+
+// ─── Belief tables ───
+
+/** Our expected gain attacking each opponent token with each own rank, from the identity marginals. */
+function ourGainTable(marginals: Float64Array, tokens: number, values: Float64Array): Float64Array {
+  const table = new Float64Array(tokens * RANK_COUNT);
+  for (let token = 0; token < tokens; token++) {
+    for (let attacker = 0; attacker < RANK_COUNT; attacker++) {
+      let gain = 0;
+      for (let rank = 0; rank < RANK_COUNT; rank++) {
+        const odds = marginals[token * RANK_COUNT + rank];
+        if (odds > 0) gain += odds * battleGain(values, attacker, rank);
+      }
+      table[token * RANK_COUNT + attacker] = gain;
+    }
+  }
+  return table;
+}
+
+/**
+ * What the opponent can tell about each of our pieces in this world: our deployment rules, movement,
+ * turning, and every battle outcome against its own (here sampled) identities, weighted by the broad
+ * deployment prior. Fills the opponent's expected battle gain against each of our pieces.
+ */
+function fillTheirGain(state: SearchState, knowledge: LbKnowledge, assignment: Int8Array, ownFlagShown: boolean): void {
+  const broad = deploymentPrior().broad;
+  const values = state.params.weights.value;
+  const odds = new Float64Array(RANK_COUNT);
+  for (const cell of knowledge.board) {
+    if (!cell || cell.side !== state.me) continue;
+    const slot = lbSlotOf(state.me, cell.token);
+    const record = knowledge.ownPublic.get(cell.token);
+    let mask = slot >= 0 ? slotMask(slot) : 0xfff;
+    if (record?.moved) mask &= ~((1 << MINE) | (1 << FLAG));
+    if (record?.turned) mask &= 1 << ENGINEER;
+    if (ownFlagShown) mask = cell.rank === 'flag' ? 1 << FLAG : mask & ~(1 << FLAG);
+    for (const battle of record?.battles ?? []) {
+      const index = state.tokenIndex[battle.token];
+      const theirs = index >= 0 ? assignment[index] : -1;
+      mask &= ~(1 << FLAG);
+      if (theirs < 0) continue;
+      const expected = battle.outcome === 'win' ? WIN_BATTLE : battle.outcome === 'lose' ? LOSE_BATTLE : TIE_BATTLE;
+      for (let rank = 0; rank < RANK_COUNT; rank++) {
+        const outcome = battle.attacked ? OUTCOME[rank * RANK_COUNT + theirs] : OUTCOME[theirs * RANK_COUNT + rank];
+        if (outcome !== expected) mask &= ~(1 << rank);
+      }
+    }
+    // A contradiction (the sampled identities cannot explain a battle) falls back to the real identity.
+    if (mask === 0) mask = 1 << LB_RANKS.indexOf(cell.rank!);
+    let total = 0;
+    for (let rank = 0; rank < RANK_COUNT; rank++) {
+      odds[rank] = (mask & (1 << rank)) !== 0 ? (slot >= 0 ? broad[slot * RANK_COUNT + rank] : 1) + 1e-6 : 0;
+      total += odds[rank];
+    }
+    for (let attacker = 0; attacker < RANK_COUNT; attacker++) {
+      let gain = 0;
+      for (let rank = 0; rank < RANK_COUNT; rank++) if (odds[rank] > 0) gain += (odds[rank] / total) * battleGain(values, attacker, rank);
+      state.theirGain[cell.token * RANK_COUNT + attacker] = gain;
+    }
+  }
+}
+
+// ─── Root ───
+
+export interface SearchResult {
+  readonly move: LbMove;
+  readonly score: number;
+  readonly worlds: number;
+  /** Search nodes visited */
+  readonly nodes: number;
+}
+
+/** Low officers learn the most for the least when they attack an uncertain piece. */
+const PROBE_WEIGHT: Readonly<Record<number, number>> = { [LIEUTENANT]: 1, [CAPTAIN]: 0.8, [MAJOR]: 0.4 };
+
+/** World counts after which the weaker half of the root moves stops being searched. */
+const PRUNE_AT: readonly number[] = [3, 6, 12, 24, 48];
+
+/**
+ * Averages each own move's search value over sampled worlds until the budget runs out or `maxWorlds` are
+ * done. `recent` lists the seat's last moves: undoing one of them costs a little, which breaks idle shuffles.
+ */
+export function searchMoves(
+  knowledge: LbKnowledge, random: () => number, expired: () => boolean, params: SearchParams = defaultParams(), quietMoves = 0,
+  recent: readonly { from: number; to: number }[] = [],
+): SearchResult | null {
+  const me = knowledge.side;
+  const them: LbSide = me === 0 ? 1 : 0;
+  const world = createWorld();
+  fillWorld(world, knowledge, null, null);
+  world.quiet = quietMoves;
+  const rootMoves = new Int16Array(MOVES_PER_PLY);
+  const count = generateMoves(world, me, rootMoves, 0);
+  if (count === 0) return null;
+  const moves = Array.from(rootMoves.subarray(0, count));
+  const toMove = (move: number): LbMove => ({ from: moveFrom(move), to: moveTo(move), path: [] });
+  if (moves.length === 1) return { move: toMove(moves[0]), score: 0, worlds: 0, nodes: 0 };
+
+  const inference = createInference(knowledge);
+  const tokenIndex = new Int8Array(LB_NODES).fill(-1);
+  inference.tokens.forEach((token, index) => { tokenIndex[token] = index; });
+  const marginals = estimateMarginals(inference, random, 48);
+  if (!marginals) return null;
+  const values = params.weights.value;
+  const state: SearchState = {
+    world, me, them, params, moves: new Int16Array(MAX_PLY * MOVES_PER_PLY), scores: new Float64Array(MAX_PLY * MOVES_PER_PLY),
+    ourGain: ourGainTable(marginals, inference.tokens.length, values), theirGain: new Float64Array(LB_NODES * RANK_COUNT),
+    tokenIndex, killers: new Int32Array(MAX_PLY).fill(-1), history: new Float64Array(1 << 12), expired, depth: params.depth, interruptible: true, stopped: false, nodes: 0,
+  };
+  const bonus = moves.map((move) => rootBonus(knowledge, move, marginals, tokenIndex, params, recent));
+  const totals = new Float64Array(moves.length);
+  const current = new Float64Array(moves.length);
+  let active = moves.map((_, index) => index);
+  const ownFlagShown = knowledge.ownLost.includes('marshal');
+  let worlds = 0;
+  while (worlds < params.maxWorlds && (worlds === 0 || !expired())) {
+    const assignment = sampleAssignment(inference, random);
+    if (!assignment) break;
+    fillWorld(world, knowledge, inference, assignment);
+    world.quiet = quietMoves;
+    fillTheirGain(state, knowledge, assignment, ownFlagShown);
+    for (const index of active) current[index] = rootValue(state, moves[index]);
+    if (state.stopped && worlds === 0) {
+      // Out of time before a single world: a one-ply look at this world still gives an informed move.
+      state.stopped = false;
+      state.interruptible = false;
+      state.depth = 1;
+      for (const index of active) current[index] = rootValue(state, moves[index]);
+    }
+    // Only complete worlds count.
+    if (state.stopped) break;
+    for (const index of active) totals[index] += current[index];
+    worlds++;
+    if (PRUNE_AT.includes(worlds) && active.length > 4) {
+      active.sort((a, b) => totals[b] + bonus[b] * worlds - (totals[a] + bonus[a] * worlds));
+      active = active.slice(0, Math.max(4, Math.ceil(active.length / 2)));
+    }
+  }
+  if (worlds === 0) return null;
+  let best = active[0];
+  for (const index of active) {
+    // Tiny noise keeps equal moves from always resolving the same way.
+    const score = totals[index] / worlds + bonus[index] + random() * 1e-3;
+    if (score > totals[best] / worlds + bonus[best]) best = index;
+  }
+  return { move: toMove(moves[best]), score: totals[best] / worlds + bonus[best], worlds, nodes: state.nodes };
+}
+
+/** Bonuses outside the search: probing uncertain pieces with low officers, and not undoing the last move. */
+function rootBonus(
+  knowledge: LbKnowledge, move: number, marginals: Float64Array, tokenIndex: Int8Array, params: SearchParams,
+  recent: readonly { from: number; to: number }[],
+): number {
+  const from = moveFrom(move);
+  const to = moveTo(move);
+  let bonus = 0;
+  if (recent.some((last) => last.to === from && last.from === to)) bonus -= params.shuffle;
+  const target = knowledge.board[to];
+  const attacker = knowledge.board[from]?.rank;
+  if (target && target.side !== knowledge.side && attacker) {
+    const weight = PROBE_WEIGHT[LB_RANKS.indexOf(attacker)] ?? 0;
+    const index = tokenIndex[target.token];
+    if (weight > 0 && index >= 0) {
+      let entropy = 0;
+      for (let rank = 0; rank < RANK_COUNT; rank++) {
+        const odds = marginals[index * RANK_COUNT + rank];
+        if (odds > 0) entropy -= odds * Math.log(odds);
+      }
+      bonus += params.probe * weight * entropy;
+    }
+  }
+  return bonus;
+}
+
+/**
+ * Puts the knowledge's pieces into `world`: own pieces with their ranks, opponent pieces with the sampled
+ * identities, or a placeholder officer when only legality matters.
+ */
+function fillWorld(world: World, knowledge: LbKnowledge, inference: Inference | null, assignment: Int8Array | null): void {
+  clearWorld(world);
+  const placeholder = LB_RANKS.indexOf('lieutenant');
+  knowledge.board.forEach((cell, at) => {
+    if (!cell) return;
+    if (cell.side === knowledge.side) {
+      placePiece(world, at, cell.side, LB_RANKS.indexOf(cell.rank!), cell.token);
+      return;
+    }
+    const index = inference ? inference.tokens.indexOf(cell.token) : -1;
+    placePiece(world, at, cell.side, assignment && index >= 0 ? assignment[index] : placeholder, cell.token);
   });
 }
+
+// ─── Actions ───
 
 export function moveAction(move: Pick<LbMove, 'from' | 'to'>): BotAction {
   return { type: 'game-action', request: { gameType: 'landbattle', action: { type: 'move', from: lbNode(move.from), to: lbNode(move.to) } } };
@@ -323,73 +455,21 @@ export function recentMoves(visible: LandBattleVisibleState, count = 2): { from:
   return own;
 }
 
-/**
- * Average scores of the own moves over sampled worlds until the budget runs out or `samples` are done.
- * `recent` lists the seat's last moves: undoing one of them costs a little, which breaks idle shuffles.
- */
-export function searchMoves(
-  knowledge: LbKnowledge, random: () => number, expired: () => boolean, samples: number, quietMoves = 0,
-  recent: readonly { from: number; to: number }[] = [],
-): { move: LbMove; score: number } | null {
-  const moves = lbLegalMoves(knowledge.board, knowledge.side);
-  if (moves.length === 0) return null;
-  const bonus = moves.map((move) => {
-    const attack = knowledge.board[move.to] ? attackBonus(knowledge.board[move.from]!.rank!, quietMoves) : 0;
-    const undo = recent.some((last) => last.to === move.from && last.from === move.to) ? SHUFFLE : 0;
-    return attack - undo;
-  });
-  const totals = new Array<number>(moves.length).fill(0);
-  let done = 0;
-  while (done < samples && (done === 0 || !expired())) {
-    const world = sampleWorld(knowledge, random);
-    if (!world) break;
-    moves.forEach((move, index) => { totals[index] += scoreMove(world, move, knowledge.side, quietMoves) + bonus[index]; });
-    done++;
-  }
-  if (done === 0) return null;
-  let best = 0;
-  for (let index = 1; index < moves.length; index++) {
-    // Tiny noise keeps equal moves from always resolving the same way.
-    if (totals[index] + random() * 1e-3 > totals[best]) best = index;
-  }
-  return { move: moves[best], score: totals[best] / done };
+/** Search strategy for the bot worker pool; deploying returns a fresh formation straight away. */
+export function landBattleSearch(visible: LandBattleVisibleState, context: SearchContext): BotAction | null {
+  return landBattleDecision(visible, context.random, context.budget.expired, defaultParams());
 }
 
-/**
- * Samples the hard bot draws at most. Bot matches showed more samples playing worse (400 lost to 24), since
- * the evaluation's rare-world errors then decide every move, so the search stops well inside its budget.
- */
-const MAX_SAMPLES = 40;
-
-/** Search strategy for the bot worker pool; deploying returns the template deployment straight away. */
-export function landBattleSearch(visible: LandBattleVisibleState, context: SearchContext): BotAction | null {
+/** The decision for any search budget: a formation while deploying, otherwise the sampled search. */
+export function landBattleDecision(
+  visible: LandBattleVisibleState, random: () => number, expired: () => boolean, params: SearchParams,
+): BotAction | null {
   const side = visible.seats.indexOf(visible.mySeat);
   if (side < 0) return null;
-  if (visible.phase === 'deploying') return visible.myLayout ? null : deployAction(templateLayout(context.random));
+  if (visible.phase === 'deploying') return visible.myLayout ? null : deployAction(botLayout(random));
   if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat) return null;
   const knowledge = landBattleKnowledge(visible);
   if (!knowledge) return null;
-  const found = searchMoves(knowledge, context.random, context.budget.expired, MAX_SAMPLES, visible.quietMoves, recentMoves(visible));
+  const found = searchMoves(knowledge, random, expired, params, visible.quietMoves, recentMoves(visible));
   return found ? moveAction(found.move) : null;
-}
-
-/** Ranks a template may trade places with without changing its character. */
-const PEERS: readonly (readonly LbRank[])[] = [
-  ['major-general', 'brigadier', 'general'], ['colonel', 'major', 'brigadier'], ['captain', 'lieutenant', 'major'],
-  ['engineer', 'lieutenant', 'captain'],
-];
-
-/** A preset formation, mirrored at random, with a few exchanges between pieces of similar strength. */
-export function templateLayout(random: () => number): LbRank[] {
-  const base = LB_PRESETS[Math.min(LB_PRESETS.length - 1, Math.floor(random() * LB_PRESETS.length))];
-  let layout = random() < 0.5 ? lbMirrorLayout(base) : [...base];
-  for (let swap = 0; swap < 4; swap++) {
-    const a = Math.floor(random() * layout.length);
-    const peers = PEERS.find((group) => group.includes(layout[a]));
-    if (!peers) continue;
-    const options = layout.flatMap((rank, slot) => (slot !== a && peers.includes(rank) && rank !== layout[a] ? [slot] : []));
-    if (options.length === 0) continue;
-    layout = lbSwapSlots(layout, a, options[Math.floor(random() * options.length)]) ?? layout;
-  }
-  return layout;
 }
