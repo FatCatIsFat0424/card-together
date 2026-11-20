@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { ChineseCheckersGameState, ChineseCheckersVisibleState, GameSeat, PlayerInfo } from '@shared/types';
-import { CC_HOLES, CC_NEIGHBOURS, CC_TRIANGLES, ccIndex, ccMoves, ccNode, ccTarget } from '@shared/rules/chinesecheckers';
+import {
+  CC_HOLES, CC_NEIGHBOURS, CC_TIP_DISTANCE, CC_TRIANGLES, CC_TURN_LIMIT, ccIndex, ccMoves, ccNode, ccTarget,
+} from '@shared/rules/chinesecheckers';
 import type { CcHole } from '@shared/rules/chinesecheckers';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
@@ -48,7 +50,7 @@ function randomMoveAction(visible: ChineseCheckersVisibleState, random: () => nu
   return moves.length > 0 ? moveAction(moves[Math.floor(random() * moves.length)]) : null;
 }
 
-const budget = (expired: () => boolean, maxDepth = 2) => ({ maxDepth, timeLeftMs: () => 1000, expired });
+const budget = (expired: () => boolean, maxDepth?: number) => ({ maxDepth, timeLeftMs: () => 1000, expired });
 
 afterEach(() => checkers.abortGame(CODE));
 
@@ -77,11 +79,11 @@ describe('Chinese checkers Hard bot', () => {
       .toEqual({ from: '4,4', to: '3,3' });
   });
 
-  it('brings a straggler forward before pushing a front marble further', () => {
+  it('brings a marble that is far behind forward before a front marble that is already close', () => {
     start();
-    // Equal one-row steps: the marble far behind gains more because the cost grows with the square of the rows.
+    // Equal one-row steps: the marble far behind costs more rows, so moving it first is the better race.
     setBoard({ '0,14': 0, '0,4': 0, '0,0': 3 });
-    const action = getChineseCheckersBotAction(view('N'), () => 0);
+    const action = chineseCheckersSearch(view('N'), { random: () => 0, budget: budget(() => false, 4) });
     expect(chosen(action)?.from).toBe('0,14');
   });
 
@@ -90,8 +92,8 @@ describe('Chinese checkers Hard bot', () => {
 
     const strategies: readonly [string, () => BotAction | null][] = [
       ['synchronous', () => getChineseCheckersBotAction(view('N'), () => 0)],
-      ['one-move search', () => chineseCheckersSearch(view('N'), { random: () => 0, budget: budget(() => false, 1) })],
-      ['two-move search', () => chineseCheckersSearch(view('N'), { random: () => 0, budget: budget(() => false, 2) })],
+      ['one-ply search', () => chineseCheckersSearch(view('N'), { random: () => 0, budget: budget(() => false, 1) })],
+      ['deep search', () => chineseCheckersSearch(view('N'), { random: () => 0, budget: budget(() => false, 4) })],
     ];
 
     /**
@@ -146,7 +148,7 @@ describe('Chinese checkers Hard bot', () => {
     start(3);
     setBoard({ '0,16': 0, '-1,15': 2, '1,15': 2, '-2,14': 2, '2,14': 2, '0,0': 4 });
     const board = searchBoard(game().holes);
-    const options = { previous: null, opponents: [2, 4], expired: () => true, random: () => 0, depth: 2 as const };
+    const options = { previous: null, opponents: [2, 4], expired: () => true, random: () => 0 };
     expect(searchBestMove(board, 0, options)).toBeNull();
     setBoard({ '0,16': 0, '-1,15': 2, '1,15': 2, '-2,14': 2, '0,0': 4 });
     expect(searchBestMove(searchBoard(game().holes), 0, options)).toEqual({ from: ccIndex('0,16'), to: ccIndex('2,14') });
@@ -173,11 +175,62 @@ describe('Chinese checkers Hard bot', () => {
     const action = chineseCheckersSearch(view('N'), { random: () => 0.3, budget: budget(() => performance.now() >= limit) });
     expect(performance.now() - started).toBeLessThan(400);
     expect(legal(action, 0)).toBe(true);
-    // An already expired budget still refines one move and answers.
+    // An already expired budget still answers with a one-ply move.
     expect(legal(chineseCheckersSearch(view('N'), { random: () => 0.3, budget: budget(() => true) }), 0)).toBe(true);
   });
 
-  it('respects a one-ply cap and stays out of turn', () => {
+  it.each([2, 3, 6])('stays within its budget and plays a legal move with %i players', (count) => {
+    start(count);
+    const started = performance.now();
+    const limit = started + 100;
+    const action = chineseCheckersSearch(view('N'), { random: () => 0.3, budget: budget(() => performance.now() >= limit) });
+    expect(performance.now() - started).toBeLessThan(500);
+    expect(legal(action, 0)).toBe(true);
+  });
+
+  it('caps the search at eight plies with three or more seats but not with two', () => {
+    start(4);
+    const deepest = (opponents: number[]): number => {
+      let reached = 0;
+      searchBestMove(searchBoard(game().holes), 0, {
+        previous: null, opponents, expired: () => false, random: () => 0, maxNodes: 600_000, onDepth: (depth) => { reached = depth; },
+      });
+      return reached;
+    };
+    expect(deepest([1, 3, 4])).toBe(8);
+    expect(deepest([3])).toBeGreaterThan(8);
+  });
+
+  it('does not change the board it searches', () => {
+    start(4);
+    const visible = JSON.parse(JSON.stringify(view('N'))) as ChineseCheckersVisibleState;
+    chineseCheckersSearch(visible, { random: () => 0.1, budget: budget(() => false, 3) });
+    expect(visible).toEqual(JSON.parse(JSON.stringify(view('N'))));
+    const board = searchBoard(game().holes);
+    const copy = Int8Array.from(board);
+    searchBestMove(board, 0, { previous: null, opponents: [1, 3, 4], expired: () => false, random: () => 0, maxDepth: 3 });
+    expect(board).toEqual(copy);
+  });
+
+  it('counts the turns left before the limit, passes included, and then plays for plain rows', () => {
+    start();
+    const move = (seat: GameSeat) => ({ seat, from: '0,16', to: '1,15', timestamp: 1 });
+    const early = { ...view('N'), log: [...Array.from({ length: 10 }, () => move('N')), { seat: 'E' as GameSeat, timestamp: 1 }] };
+    expect(searchSetup(early)?.turnsLeft).toBe(CC_TURN_LIMIT - 10);
+    const late = { ...view('N'), log: Array.from({ length: CC_TURN_LIMIT - 1 }, () => move('N')) };
+    expect(searchSetup(late)?.turnsLeft).toBe(1);
+    // With one turn left only the rows count: the marble far from home jumps as far as it can.
+    setBoard({ '0,12': 0, '1,11': 3, '3,9': 3, '4,12': 0, '0,0': 3 });
+    const holes = game().holes;
+    const rows = (from: number, to: number): number => CC_TIP_DISTANCE[ccTarget(0)][from] - CC_TIP_DISTANCE[ccTarget(0)][to];
+    const best = Math.max(...ccMoves(holes, 0).map((m) => rows(m.from, m.to)));
+    const picked = searchBestMove(searchBoard(holes), 0, {
+      previous: null, opponents: [3], expired: () => false, random: () => 0, turnsLeft: 1, maxDepth: 1,
+    })!;
+    expect(rows(picked.from, picked.to)).toBe(best);
+  });
+
+  it('respects a depth cap and stays out of turn', () => {
     start();
     expect(legal(chineseCheckersSearch(view('N'), { random: () => 0, budget: budget(() => false, 1) }), 0)).toBe(true);
     expect(chineseCheckersSearch(view('E'), { random: () => 0, budget: budget(() => false) })).toBeNull();
@@ -196,7 +249,7 @@ describe('Chinese checkers Hard bot', () => {
       for (let guard = 0; guard < 600 && game().phase === 'playing'; guard++) {
         const seat = game().currentTurnSeat;
         const action = seat === bot
-          ? chineseCheckersSearch(view(seat), { random, budget: budget(() => false) })
+          ? chineseCheckersSearch(view(seat), { random, budget: budget(() => false, 3) })
           : randomMoveAction(view(seat), random);
         const move = chosen(action)!;
         expect(checkers.move(CODE, seat, move.from, move.to)).toEqual({ success: true });
@@ -207,8 +260,19 @@ describe('Chinese checkers Hard bot', () => {
     expect(wins).toBe(4);
   });
 
-  it('declares the worker search with a budget and a two-ply cap', () => {
-    expect(gameBot('chinesecheckers').search).toMatchObject({ budgetMs: 800, maxDepth: 2 });
+  it('plays a legal four-player match to its end against itself', () => {
+    start(4);
+    for (let guard = 0; guard < 700 && game().phase === 'playing'; guard++) {
+      const seat = game().currentTurnSeat;
+      const action = getChineseCheckersBotAction(view(seat), () => 0.5);
+      const move = chosen(action)!;
+      expect(checkers.move(CODE, seat, move.from, move.to)).toEqual({ success: true });
+    }
+    expect(game().phase).toBe('scoring');
+  }, 60_000);
+
+  it('declares the worker search with a budget of about two seconds', () => {
+    expect(gameBot('chinesecheckers').search).toMatchObject({ budgetMs: 2000 });
   });
 });
 
@@ -225,7 +289,7 @@ describe('Chinese checkers search in the bot worker pool', () => {
     const spec = gameBot('chinesecheckers').search!;
     const started = Date.now();
     const outcome = await pool.run({
-      strategy: spec.strategy, visible: JSON.parse(JSON.stringify(view('N'))), budgetMs: 400, maxDepth: spec.maxDepth, seed: 5,
+      strategy: spec.strategy, visible: JSON.parse(JSON.stringify(view('N'))), budgetMs: 1000, maxDepth: spec.maxDepth, seed: 5,
     });
     expect(outcome.status).toBe('ok');
     expect(Date.now() - started).toBeLessThan(5_000);

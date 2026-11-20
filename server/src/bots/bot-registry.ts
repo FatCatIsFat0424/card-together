@@ -209,8 +209,7 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     firstLegal: jungleFirstLegalAction,
     search: {
       strategy: searchStrategy<'jungle'>(new URL('./jungle-search.ts', import.meta.url), 'jungleSearch'),
-      budgetMs: 1000,
-      maxDepth: 12,
+      budgetMs: 2000,
     },
   },
   gomoku: {
@@ -303,13 +302,12 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     },
   },
   chinesecheckers: {
-    // The cheap one-move evaluation is the fallback; bot turns and timeouts look two moves ahead in the worker pool.
+    // The cheap two-ply search is the fallback; bot turns and timeouts search for the whole budget in the worker pool.
     decide: getChineseCheckersBotAction,
     firstLegal: chineseCheckersFirstLegalAction,
     search: {
       strategy: searchStrategy<'chinesecheckers'>(new URL('./chinesecheckers-search.ts', import.meta.url), 'chineseCheckersSearch'),
-      budgetMs: 800,
-      maxDepth: 2,
+      budgetMs: 2000,
     },
   },
   landbattle: {

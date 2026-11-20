@@ -14,7 +14,6 @@ import * as landbattle from '../../server/src/managers/games/landbattle-game';
 import * as battleship from '../../server/src/managers/games/battleship-game';
 import * as banqi from '../../server/src/managers/games/banqi-game';
 import * as chinesecheckers from '../../server/src/managers/games/chinesecheckers-game';
-import { getChineseCheckersBotAction } from '../../server/src/bots/chinesecheckers-strategy';
 import type { BotAction } from '../../server/src/bots/bot-decisions';
 import { createDemoRecorder, DEMO_NOW } from './demo-recorder';
 import type { DemoFixture } from './demo-fixture-types';
@@ -58,16 +57,13 @@ function isRecorded(type: AssignedGameType): type is RecordedGameType {
 }
 
 /** The recorded move for a replayed lesson, otherwise the bot's decision. */
-function choose(view: BoardView, seat: GameSeat, step: number, random: () => number): BotAction | null {
+function choose(view: BoardView, seat: GameSeat, step: number): BotAction | null {
   if (isRecorded(view.gameType)) {
     const recorded = boardScripts[view.gameType][step];
     if (recorded?.seat !== seat) throw new Error(`${view.gameType} script expected ${recorded?.seat ?? 'the end'} at step ${step}.`);
     return { type: 'game-action', request: { gameType: view.gameType, action: recorded.action } as BoardRequest };
   }
-  switch (view.gameType) {
-    case 'chinesecheckers': return getChineseCheckersBotAction(view, random);
-    default: throw new Error(`${view.gameType} uses a scripted game.`);
-  }
+  throw new Error(`${view.gameType} uses a scripted game.`);
 }
 
 function apply(code: string, seat: GameSeat, request: BoardRequest): ActionResult {
@@ -126,7 +122,7 @@ function automatedFixture(type: Exclude<AssignedGameType, ScriptedGameType>, see
         ? required(SEATS.find((other) => !visible.deployed.includes(other)), 'deployment seat')
         : visible.gameType === 'battleship' && visible.phase === 'placing'
           ? required(SEATS.find((other) => !visible.placed.includes(other)), 'placement seat') : visible.currentTurnSeat;
-      const decision = required(choose(read(code, type, seat), seat, index, random), `${type} legal decision`);
+      const decision = required(choose(read(code, type, seat), seat, index), `${type} legal decision`);
       if (decision.type !== 'game-action' || decision.request.gameType !== type) throw new Error(`Wrong ${type} decision.`);
       const request = decision.request as BoardRequest;
       // Opponents' submitted identities and ship positions are never public actions.

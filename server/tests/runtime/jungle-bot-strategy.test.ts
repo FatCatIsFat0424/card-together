@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { GameSeat, JungleGameState, JungleVisibleState, PlayerInfo } from '@shared/types';
-import { JG_CELLS, jgCell, jgIndex, jgLegalMoves, jgNode } from '@shared/rules/jungle';
+import {
+  JG_CELLS, JG_NO_CAPTURE_LIMIT, jgApply, jgCell, jgIndex, jgInitialCells, jgLegalMoves, jgNode, jgOpponent, jgOutcome,
+} from '@shared/rules/jungle';
+import type { JgSide } from '@shared/rules/jungle';
 import { getBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
-import { jungleSearch, searchBestMove, searchCells } from '../../src/bots/jungle-search';
+import { MAX_MOVES, boardFrom, generate } from '../../src/bots/jungle-board';
+import { gameHistory, jungleSearch, searchBestMove, searchCells } from '../../src/bots/jungle-search';
 import { createSearchPool } from '../../src/bots/search/search-worker-pool';
 import type { SearchPool } from '../../src/bots/search/search-worker-pool';
 import { seededRandom } from '../../src/bots/search/seeded-random';
@@ -146,8 +150,96 @@ describe('Jungle search', () => {
     expect(jungleSearch(view('S'), context)).toBeNull();
   });
 
-  it('declares the worker search with a one-second budget and a depth cap', () => {
-    expect(gameBot('jungle').search).toMatchObject({ budgetMs: 1000, maxDepth: expect.any(Number) });
+  it('declares the worker search with a budget of about two seconds', () => {
+    expect(gameBot('jungle').search).toMatchObject({ budgetMs: 2000 });
+  });
+});
+
+describe('Jungle search engine', () => {
+  const random = () => 0;
+  const search = (cells: number[], side: JgSide, extra: Partial<Parameters<typeof searchBestMove>[2]> = {}) =>
+    searchBestMove(cells, side, { maxDepth: 10, expired: () => false, random, maxNodes: 300_000, tableBits: 16, ...extra });
+
+  it('generates exactly the moves of the shared rules over random games', () => {
+    let state = 7;
+    const next = (): number => {
+      state = (state * 1664525 + 1013904223) >>> 0;
+      return state / 4294967296;
+    };
+    const out = new Int16Array(MAX_MOVES);
+    for (let match = 0; match < 40; match++) {
+      let cells = jgInitialCells();
+      let side: JgSide = 0;
+      for (let ply = 0; ply < 200; ply++) {
+        const rules = jgLegalMoves(cells, side);
+        const count = generate(boardFrom(cells), side, out, 0, false);
+        expect(Array.from(out.subarray(0, count)).sort((a, b) => a - b))
+          .toEqual(rules.map(({ from, to }) => from * 64 + to).sort((a, b) => a - b));
+        if (rules.length === 0) break;
+        const move = rules[Math.floor(next() * rules.length)];
+        const quiet = cells[move.to] === 0 ? 1 : 0;
+        cells = jgApply(cells, move);
+        if (jgOutcome(cells, side, move.to, quiet)) break;
+        side = jgOpponent(side);
+      }
+    }
+  });
+
+  it('does not change the position it searches', () => {
+    const cells = jgInitialCells();
+    const before = [...cells];
+    search(cells, 0);
+    expect(cells).toEqual(before);
+    start();
+    const visible = JSON.parse(JSON.stringify(view('N'))) as JungleVisibleState;
+    jungleSearch(visible, { random, budget: { maxDepth: 5, timeLeftMs: () => 1000, expired: () => false } });
+    expect(visible).toEqual(JSON.parse(JSON.stringify(view('N'))));
+  });
+
+  it('takes the river jump that wins the race to the den', () => {
+    // The lion is five moves from the den across the river; the lone enemy rat is too far to stop it.
+    const cells = position([1, 6, '7'], [6, 0, 'a'], [6, 8, '1']);
+    expect(search(cells, 0)).toEqual({ from: jgIndex(1, 6), to: jgIndex(1, 2) });
+  });
+
+  it('captures a piece standing in its own trap with anything', () => {
+    // Blue's elephant stands in red's trap, so even the red cat takes it.
+    const cells = position([3, 6, '2'], [3, 7, 'h'], [0, 0, 'b'], [6, 8, '5']);
+    expect(search(cells, 0)).toEqual({ from: jgIndex(3, 6), to: jgIndex(3, 7) });
+  });
+
+  it('sees the no-capture draw: a race that cannot finish before the limit is worth nothing', () => {
+    const cells = position([1, 6, '7'], [6, 0, 'a'], [6, 8, '1']);
+    const score = (quiet: number): number => {
+      let last = Number.NaN;
+      search(cells, 0, { quiet, maxDepth: 12, onDepth: (_depth, value) => { last = value; } });
+      return last;
+    };
+    expect(score(0)).toBeGreaterThan(50_000);
+    expect(Math.abs(score(JG_NO_CAPTURE_LIMIT - 3))).toBeLessThan(5_000);
+  });
+
+  it('rebuilds the no-capture count and the positions since the last capture from the log', () => {
+    start();
+    const first = [...game().cells];
+    for (let ply = 0; ply < 4; ply++) {
+      const seat = game().currentTurnSeat;
+      const [pick] = jgLegalMoves(game().cells, seat === 'N' ? 0 : 1).filter((m) => game().cells[m.to] === 0);
+      expect(jungle.move(CODE, seat, jgNode(pick.from), jgNode(pick.to))).toEqual({ success: true });
+    }
+    const { quiet, history } = gameHistory(view('N'));
+    expect(quiet).toBe(4);
+    expect(history).toHaveLength(4);
+    expect([...history[0]]).toEqual(first);
+    expect([...history[3]]).not.toEqual(game().cells);
+  });
+
+  it('stays close to its time budget with the table and move stacks in use', () => {
+    const started = performance.now();
+    const limit = started + 100;
+    const cells = position([1, 6, '7'], [3, 6, '8'], [5, 6, '3'], [6, 8, '1'], [0, 0, 'g'], [6, 2, 'h'], [2, 2, 'e'], [4, 0, 'c']);
+    expect(search(cells, 0, { maxDepth: 40, maxNodes: Infinity, expired: () => performance.now() >= limit })).not.toBeNull();
+    expect(performance.now() - started).toBeLessThan(400);
   });
 });
 
@@ -164,7 +256,7 @@ describe('Jungle search in the bot worker pool', () => {
     const spec = gameBot('jungle').search!;
     const started = Date.now();
     const outcome = await pool.run({
-      strategy: spec.strategy, visible: JSON.parse(JSON.stringify(view('N'))), budgetMs: 400, maxDepth: spec.maxDepth, seed: 5,
+      strategy: spec.strategy, visible: JSON.parse(JSON.stringify(view('N'))), budgetMs: 1000, maxDepth: spec.maxDepth, seed: 5,
     });
     expect(outcome.status).toBe('ok');
     expect(Date.now() - started).toBeLessThan(5_000);
