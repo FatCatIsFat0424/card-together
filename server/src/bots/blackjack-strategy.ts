@@ -2,10 +2,11 @@ import type {
   BlackjackAction, BlackjackDealerAction, BlackjackHand, BlackjackVisibleState, Card, Seat,
 } from '@shared/types';
 import {
-  BJ_BET_STEP, BJ_DEALER_STANDS, BJ_MIN_BET, bjCardValue, bjDealerActions, bjIsBust, bjIsNatural, bjLegalActions,
-  bjMaxBet, bjSitsIn, bjTotal,
+  BJ_DEALER_STANDS, BJ_MIN_BET, bjCardValue, bjDealerActions, bjIsBust, bjIsNatural, bjLegalActions, bjSitsIn, bjTotal,
 } from '@shared/rules/blackjack';
 import { createDeck } from '../engine/deck';
+import { planRace, raceInput, SYNC_RACE } from './chip-race';
+import type { Atom, RaceOptions } from './chip-race';
 import type { BotAction } from './bot-decisions';
 
 // Heuristic summary: plays follow the standard basic strategy for a dealer who stands on soft 17, peeks for
@@ -15,14 +16,6 @@ import type { BotAction } from './bot-decisions';
 // dealer the bot must hit below 17; from 17 it compares the chips standing wins or loses against every live
 // player hand with the expected result of drawing, estimated from the cards not yet seen this hand and
 // assuming it keeps choosing the better option after each draw. Short-bank proportional payouts are ignored.
-
-const MIN_BET_SHARE = 0.03;
-const MAX_BET_SHARE = 0.08;
-/** Hands before the match end, including the current one, in which bets follow the standings. */
-const STANDINGS_HANDS = 2;
-/** Two hands from the end, a lead shrinks the bet by `lead / LEAD_SCALE`, at most by `MAX_LEAD_CUT`. */
-const LEAD_SCALE = 400;
-const MAX_LEAD_CUT = 0.6;
 
 function between(value: number, low: number, high: number): boolean {
   return value >= low && value <= high;
@@ -70,23 +63,43 @@ export function blackjackBasicStrategy(
   return decision === 'doubleOrStand' ? 'stand' : 'hit';
 }
 
-/** Also bets for other chip games whose view carries the same standings fields. */
+/**
+ * Net chips per chip staked over a whole hand under basic strategy, from simulating two million hands with a
+ * fresh single deck: mean +0.3%, standard deviation 1.14. Splits and doubles give the long tails.
+ */
+export const BLACKJACK_PLAYER: readonly Atom[] = [
+  { x: -4, p: 0.00019 }, { x: -3, p: 0.00139 }, { x: -2, p: 0.03955 }, { x: -1, p: 0.43718 }, { x: 0, p: 0.08519 },
+  { x: 1, p: 0.32895 }, { x: 1.5, p: 0.04655 }, { x: 2, p: 0.0584 }, { x: 3, p: 0.00216 }, { x: 4, p: 0.00044 },
+];
+
+/**
+ * The same results by the dealer's final total (17, 18, 19, 20, 21, bust) for a hand whose play has not been seen,
+ * from the same simulation; a hand beaten by a dealer natural is excluded because the dealer peeks.
+ */
+export const BLACKJACK_BY_DEALER: readonly (readonly Atom[])[] = [
+  [[-4, 0.0001], [-3, 0.001], [-2, 0.042], [-1, 0.3244], [0, 0.122], [1, 0.4062], [1.5, 0.0486], [2, 0.0545], [3, 0.001], [4, 0.0002]],
+  [[-4, 0.0002], [-3, 0.0013], [-2, 0.0495], [-1, 0.4333], [0, 0.1157], [1, 0.3068], [1.5, 0.0492], [2, 0.0434], [3, 0.0004], [4, 0.0002]],
+  [[-4, 0.0003], [-3, 0.0022], [-2, 0.0596], [-1, 0.5402], [0, 0.122], [1, 0.1935], [1.5, 0.0493], [2, 0.0328], [3, 0.0001]],
+  [[-4, 0.0003], [-3, 0.0021], [-2, 0.0594], [-1, 0.6571], [0, 0.1661], [1, 0.0505], [1.5, 0.0472], [2, 0.0173]],
+  [[-4, 0.0009], [-3, 0.0053], [-2, 0.1093], [-1, 0.7871], [0, 0.0477], [1.5, 0.0496]],
+  [[-2, 0.0003], [-1, 0.1313], [0, 0.0019], [1, 0.6784], [1.5, 0.0496], [2, 0.1304], [3, 0.0069], [4, 0.0013]],
+].map((atoms) => atoms.map(([x, p]) => ({ x, p })));
+
+const DEALER_CHANCES = [0.1456, 0.1379, 0.1346, 0.1758, 0.0738, 0.2839];
+
+/** Every dealer outcome with its chance, for results that share the dealer: totals 17 to 21, a bust, a natural. */
+export const BLACKJACK_CLASSES: readonly { readonly chance: number; readonly atoms: readonly Atom[] }[] = [
+  ...BLACKJACK_BY_DEALER.map((atoms, index) => ({ chance: DEALER_CHANCES[index], atoms })),
+  { chance: 0.0484, atoms: [{ x: -1, p: 0.9629 }, { x: 0, p: 0.0371 }] },
+];
+
+/** The stake with the best chance of finishing first; see `chip-race`. */
 export function blackjackBet(
-  visible: Pick<BlackjackVisibleState, 'chips' | 'mySeat' | 'totalHands' | 'hand' | 'seats'>, random: () => number,
+  visible: Pick<BlackjackVisibleState, 'chips' | 'mySeat' | 'totalHands' | 'hand' | 'seats' | 'dealerSeat'>,
+  random: () => number, options: RaceOptions = SYNC_RACE,
 ): number {
-  const chips = visible.chips[visible.mySeat];
-  const share = MIN_BET_SHARE + random() * (MAX_BET_SHARE - MIN_BET_SHARE);
-  let amount = chips * share;
-  const handsLeft = visible.totalHands - visible.hand;
-  const rivals = visible.seats.filter((seat) => seat !== visible.mySeat).map((seat) => visible.chips[seat]);
-  if (handsLeft <= STANDINGS_HANDS && rivals.length > 0) {
-    const deficit = Math.max(...rivals) - chips;
-    // Trailing needs variance to catch up; leading protects the stack.
-    if (deficit > 0) amount = handsLeft <= 1 ? bjMaxBet(chips) : Math.max(amount, deficit / handsLeft);
-    else amount = handsLeft <= 1 ? BJ_MIN_BET : amount * (1 - Math.min(MAX_LEAD_CUT, -deficit / LEAD_SCALE));
-  }
-  const stepped = Math.round(amount / BJ_BET_STEP) * BJ_BET_STEP;
-  return Math.max(BJ_MIN_BET, Math.min(bjMaxBet(chips), stepped));
+  const plan = planRace(raceInput(visible, visible.dealerSeat, BLACKJACK_PLAYER), random, options);
+  return plan.bet ?? BJ_MIN_BET;
 }
 
 /** Chips the dealer wins (positive) or pays against live hands when it finishes on `total`. */

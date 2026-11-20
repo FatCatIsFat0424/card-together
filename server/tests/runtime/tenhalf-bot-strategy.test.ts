@@ -3,7 +3,12 @@ import type { Card, GameSeat, PlayerInfo, TenHalfAction, TenHalfVisibleState } f
 import { BJ_MAX_BET, BJ_MIN_BET } from '@shared/rules/blackjack';
 import { getBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
-import { tenHalfDecision, unseenDraws } from '../../src/bots/tenhalf-strategy';
+import { finalHands, tenHalfBet, tenHalfDecision, unseenDraws } from '../../src/bots/tenhalf-strategy';
+import { tenHalfSearch } from '../../src/bots/tenhalf-search';
+import { GAME_BOTS } from '../../src/bots/bot-registry';
+import { seededRandom } from '../../src/bots/search/seeded-random';
+import type { SearchContext } from '../../src/bots/search/search-types';
+import { runSeededGame } from './seeded-game-runner';
 import { createDeck } from '../../src/engine/deck';
 import * as tenhalf from '../../src/managers/games/tenhalf-game';
 
@@ -95,10 +100,75 @@ describe('Ten and a Half bot', () => {
     expect(decide('N')).toBe('hit');
   });
 
+  it('reads a seat that drew and then stood as holding a hand that was worth standing on', () => {
+    deal([card(3), card(5), card(10)]);
+    const draws = unseenDraws(view('N'));
+    const mass = (hands: ReturnType<typeof finalHands>, test: (halves: number) => boolean): number =>
+      [...hands.values()].filter((entry) => test(entry.hand.halves)).reduce((sum, entry) => sum + entry.chance, 0);
+    const drew = finalHands([card(2)], false, draws);
+    const stood = finalHands([card(2)], true, draws);
+    expect(mass(stood, () => true)).toBeCloseTo(1);
+    // A seat that stood after its draw does not hold a few points, and one that drew first did not start high.
+    expect(mass(stood, (halves) => halves <= 8)).toBeLessThan(mass(drew, (halves) => halves <= 8));
+    expect(mass(stood, (halves) => halves >= 10)).toBeGreaterThan(mass(drew, (halves) => halves >= 10));
+    expect(mass(drew, (halves) => halves >= 17)).toBeLessThan(mass(finalHands([], false, draws), (halves) => halves >= 17));
+  });
+
+  it('bets for the standings: all in when trailing late, minimal when far ahead', () => {
+    const late = (mine: number): TenHalfVisibleState => ({
+      ...view('E'), hand: 7, totalHands: 8, banker: 'N', chips: { N: 1000, E: mine, S: 1000, P5: 0, P6: 0, P7: 0, P8: 0, W: 0 },
+    }) as TenHalfVisibleState;
+    tenhalf.startGame(CODE, { N: player('N'), E: player('E'), S: player('S') }, 60_000, 1_000, () => 0);
+    expect(tenHalfBet(late(700), seededRandom(1))).toBe(BJ_MAX_BET);
+    expect(tenHalfBet(late(1600), seededRandom(1))).toBe(BJ_MIN_BET);
+  });
+
   it('decides fast enough for a full table', () => {
     deal([card(2), card(2, 'hearts'), card(3)]);
     const started = performance.now();
     for (let run = 0; run < 50; run++) tenHalfDecision(view('E'));
     expect(performance.now() - started).toBeLessThan(2_000);
   });
+});
+
+const context = (seed: number): SearchContext => ({
+  random: seededRandom(seed), budget: { maxDepth: undefined, timeLeftMs: () => 1_000, expired: () => false },
+});
+
+function deepFreeze<T>(value: T): T {
+  if (typeof value === 'object' && value !== null && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const inner of Object.values(value)) deepFreeze(inner);
+  }
+  return value;
+}
+
+describe('Ten and a Half search bot', () => {
+  it('is registered for the worker pool with the synchronous bot as fallback', () => {
+    expect(GAME_BOTS.tenhalf.search?.strategy.exportName).toBe('tenHalfSearch');
+    expect(GAME_BOTS.tenhalf.search?.budgetMs).toBeLessThanOrEqual(1500);
+  });
+
+  it.each([1, 2])('plays whole matches with legal actions, never mutating its view (seed %i)', (seed) => {
+    const random = seededRandom(seed);
+    tenhalf.startGame(CODE, { N: player('N'), E: player('E'), S: player('S'), W: player('W') }, 60_000, 1_000, random);
+    let step = 0;
+    const act = (seat: GameSeat): void => {
+      const frozen = deepFreeze(structuredClone(view(seat)));
+      const action = tenHalfSearch(frozen, context(seed * 1000 + step++));
+      if (action?.type !== 'game-action' || action.request.gameType !== 'tenhalf') throw new Error(`${seat} has no action`);
+      const request = action.request.action;
+      const result = request.type === 'bet' ? tenhalf.bet(CODE, seat, request.amount, true, 1_500, random)
+        : tenhalf.act(CODE, seat, request.type === 'act' ? request.action : 'stand', 2_000);
+      expect(result).toEqual({ success: true });
+    };
+    runSeededGame('tenhalf-search/full', 600, () => tenhalf.getGameState(CODE)?.phase === 'scoring', () => {
+      const game = tenhalf.getGameState(CODE)!;
+      if (game.phase === 'betting') {
+        tenhalf.openBetting(CODE, 1_000);
+        for (const seat of tenhalf.pendingBetSeats(game)) act(seat);
+      } else act(game.currentTurnSeat);
+    });
+    expect(tenhalf.getGameState(CODE)?.result).not.toBeNull();
+  }, 90_000);
 });

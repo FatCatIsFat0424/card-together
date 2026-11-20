@@ -1,8 +1,9 @@
 import { gameSeatValues } from '../helpers/game-seat-values';
 import { describe, expect, it } from 'vitest';
 import type { BlackjackHand, BlackjackVisibleState, Card } from '@shared/types';
-import { bjLegalActions } from '@shared/rules/blackjack';
+import { BJ_BET_STEP, BJ_MAX_BET, BJ_MIN_BET, bjLegalActions } from '@shared/rules/blackjack';
 import { blackjackBasicStrategy, blackjackBet, getBlackjackBotAction } from '../../src/bots/blackjack-strategy';
+import { seededRandom } from '../../src/bots/search/seeded-random';
 
 const card = (rank: Card['rank'], suit: Card['suit'] = 'spades'): Card => ({ suit, rank });
 const hand = (cards: Card[]): BlackjackHand => ({ cards, bet: 50, doubled: false, split: false, done: false });
@@ -54,28 +55,34 @@ describe('Blackjack bot strategy', () => {
     expect(decide([card(4), card(4, 'clubs')], 5)).toBe('split');
   });
 
-  it('bets 3–8% of its chips in table steps within the limits', () => {
-    const betting = (chips: number): BlackjackVisibleState => visible(gameSeatValues({ phase: 'betting', chips: { N: chips, E: chips, S: chips, W: chips } }));
-    expect(blackjackBet(betting(1000), () => 0)).toBe(30);
-    expect(blackjackBet(betting(1000), () => 0.999)).toBe(80);
-    expect(blackjackBet(betting(5000), () => 0.999)).toBe(200);
-    expect(blackjackBet(betting(40), () => 0)).toBe(10);
+  it('bets legal amounts in table steps whatever the standings', () => {
+    for (const [mine, hand, random] of [[1000, 0, 0], [1000, 4, 0.5], [35, 7, 0.9], [5000, 0, 0.999], [10, 3, 0.2]] as const) {
+      const betting = visible(gameSeatValues({ phase: 'betting', hand, chips: { N: mine, E: 1000, S: 900, W: 1200 } }));
+      const amount = blackjackBet(betting, () => random);
+      expect(amount % BJ_BET_STEP).toBe(0);
+      expect(amount).toBeGreaterThanOrEqual(BJ_MIN_BET);
+      expect(amount).toBeLessThanOrEqual(Math.min(BJ_MAX_BET, mine));
+    }
   });
 
-  it('bets for the standings near the end of the match', () => {
+  it('bets big early, bold when trailing and small when leading on the last hand', () => {
     const late = (hand: number, mine: number): BlackjackVisibleState =>
       visible(gameSeatValues({ phase: 'betting', hand, chips: { N: mine, E: 1000, S: 900, W: 800 } }));
-    expect(blackjackBet(late(7, 900), () => 0)).toBe(200);
-    expect(blackjackBet(late(7, 1100), () => 0.999)).toBe(10);
-    expect(blackjackBet(late(6, 700), () => 0)).toBe(150);
-    expect(blackjackBet(late(6, 1400), () => 0.999)).toBe(40);
-    expect(blackjackBet(late(5, 700), () => 0)).toBe(20);
+    // Only the largest final stack wins, so variance is worth more than the small edge it costs.
+    expect(blackjackBet(late(0, 1000), seededRandom(1))).toBeGreaterThanOrEqual(100);
+    expect(blackjackBet(late(7, 900), seededRandom(1))).toBe(200);
+    expect(blackjackBet(late(7, 1500), seededRandom(1))).toBe(10);
+  });
+
+  it('plans the same stake from the same view and seed', () => {
+    const betting = visible(gameSeatValues({ phase: 'betting', hand: 3, chips: { N: 880, E: 1000, S: 900, W: 1100 } }));
+    expect(blackjackBet(betting, seededRandom(4))).toBe(blackjackBet(betting, seededRandom(4)));
   });
 
   it('acts only on its own turn or its own pending bet', () => {
     expect(getBlackjackBotAction(visible(), () => 0.5)).toEqual({ type: 'blackjack-action', action: 'hit' });
     expect(getBlackjackBotAction(visible({ currentTurnSeat: 'E' }), () => 0.5)).toBeNull();
-    expect(getBlackjackBotAction(visible({ phase: 'betting' }), () => 0)).toEqual({ type: 'blackjack-bet', amount: 30 });
+    expect(getBlackjackBotAction(visible({ phase: 'betting' }), () => 0)).toMatchObject({ type: 'blackjack-bet' });
     expect(getBlackjackBotAction(visible({ phase: 'betting', myBet: 30 }), () => 0)).toBeNull();
     expect(getBlackjackBotAction(visible(gameSeatValues({ phase: 'betting', chips: { N: 5, E: 0, S: 0, W: 0 } })), () => 0)).toBeNull();
   });

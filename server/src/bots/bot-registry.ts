@@ -143,8 +143,11 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
   },
   liarsdeck: { decide: getLiarsDeckBotAction, firstLegal: liarsDeckFirstLegalAction },
   blackjack: {
+    // The synchronous basic strategy and race bet are the fallback; bots and timeouts plan the bet and every play
+    // for the chance of finishing first in the worker pool.
     decide: getBlackjackBotAction,
     firstLegal: blackjackFirstLegalAction,
+    search: { strategy: searchStrategy<'blackjack'>(new URL('./blackjack-search.ts', import.meta.url), 'blackjackSearch'), budgetMs: 1200 },
     // A player dealer plays the house rule rather than the bot's judgement.
     turnTimeout: (visible, { strategy }) => (visible.dealerSeat === visible.mySeat ? blackjackDealerDefault(visible) : strategy()),
     // A human who missed the betting window stakes the minimum; bots keep their own decision.
@@ -165,8 +168,10 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     deadlineExpired: () => ({ type: 'napoleon-action', action: { type: 'review' } }),
   },
   tenhalf: {
+    // The synchronous bot is the fallback; bots and timeouts plan the stake by replaying the match in the worker pool.
     decide: getTenHalfBotAction,
     firstLegal: tenHalfFirstLegalAction,
+    search: { strategy: searchStrategy<'tenhalf'>(new URL('./tenhalf-search.ts', import.meta.url), 'tenHalfSearch'), budgetMs: 1200 },
     // A human who runs out of time stands rather than letting a bot draw for them.
     turnTimeout: (visible, { isBot, strategy }) => (isBot ? strategy() : tenHalfFirstLegalAction(visible)),
     // A human who missed the betting window stakes the minimum; bots keep their own decision.

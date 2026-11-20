@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { GameSeat } from '@shared/types';
 import { loadArenaBot } from '../../../scripts/bot-arena/arena-bots';
 import type { ArenaBot } from '../../../scripts/bot-arena/arena-bots';
+import { parseGameOptions } from '../../../scripts/bot-arena/arena';
 import { arenaSeats, playMatch, seatSides } from '../../../scripts/bot-arena/arena-match';
 import type { MatchRecord, Side } from '../../../scripts/bot-arena/arena-match';
 import { installSeededRandom } from '../../../scripts/bot-arena/arena-random';
@@ -55,6 +56,15 @@ describe('bot arena seating', () => {
   });
 });
 
+describe('bot arena room options', () => {
+  it('keys the JSON of one game by that game', () => {
+    expect(parseGameOptions('blackjack', undefined)).toEqual({});
+    expect(parseGameOptions('blackjack', '{"playerDealer":true}')).toEqual({ blackjack: { playerDealer: true } });
+    expect(() => parseGameOptions('blackjack', '{playerDealer')).toThrow('valid JSON');
+    expect(() => parseGameOptions('blackjack', '[true]')).toThrow('JSON object');
+  });
+});
+
 describe('bot arena report', () => {
   it('computes an exact two-sided sign test', () => {
     expect(signTestPValue(0, 0)).toBe(1);
@@ -103,4 +113,16 @@ describe('bot arena matches', () => {
     expect(second.seats!.map((seat) => seat.side)).toEqual(first.seats!.map((seat) => (seat.side === 'candidate' ? 'baseline' : 'candidate')));
     expect(summarize([first, second]).candidateShare).toBe(0.5);
   });
+
+  it('starts the match with the room options', async () => {
+    const bot = await loadArenaBot(REPO_ROOT, 'blackjack');
+    const seats = arenaSeats('blackjack');
+    // A player dealer deals two full rotations and never bets, which the house dealer's eight hands do not.
+    const options = { gameType: 'blackjack' as const, seats, pair: 0, swapped: false, seed: 7 };
+    const house = playMatch(options, { candidate: bot, baseline: bot });
+    const dealing = playMatch({ ...options, options: { blackjack: { playerDealer: true } } }, { candidate: bot, baseline: bot });
+    expect(house.error).toBeUndefined();
+    expect(dealing.error).toBeUndefined();
+    expect(dealing.steps).not.toBe(house.steps);
+  }, 60_000);
 });

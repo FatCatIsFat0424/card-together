@@ -307,7 +307,7 @@ describe('Ten and a Half match', () => {
       expect(isTenHalfResult(structuredClone(game().result))).toBe(true);
       tenhalf.abortGame(CODE);
     }
-  });
+  }, 30_000);
 
   it('times out to the minimum bet and to standing', () => {
     start(['N', 'E', 'S']);

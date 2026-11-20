@@ -3,7 +3,7 @@ import { GAME_SEAT_ORDER, SEAT_ORDER_CLOCKWISE } from '@shared/constants';
 import { gameDefinition } from '@shared/games/registry';
 import { matchStanding } from '@shared/rules/match-standing';
 import { botNickname, playerCountAllowed } from '@shared/rules/seats';
-import type { GameSeat, GameType, PlayerInfo } from '@shared/types';
+import type { GameOptions, GameSeat, GameType, PlayerInfo } from '@shared/types';
 import type { BotAction } from '../../server/src/bots/bot-decisions';
 import { seededRandom, seedFromText } from '../../server/src/bots/search/seeded-random';
 import * as games from '../../server/src/managers/game-manager';
@@ -91,6 +91,8 @@ export interface MatchPlan {
   readonly swapped: boolean;
   /** Seeds the deals; both matches of a pair share it. */
   readonly seed: number;
+  /** Room options passed to `startGame`. */
+  readonly options?: GameOptions;
 }
 
 /**
@@ -110,7 +112,7 @@ export function playMatch(plan: MatchPlan, bots: Readonly<Record<Side, ArenaBot>
 
   setRandomSource(seededRandom(seed));
   const players = Object.fromEntries(seats.map((seat) => [seat, botPlayer(gameType, seat)]));
-  const started = games.startGame(code, gameType, players);
+  const started = games.startGame(code, gameType, players, undefined, plan.options);
   if (!started.success) return record({ seats: null, error: `Start failed: ${started.reason}` });
   try {
     for (; steps < MAX_STEPS; steps++) {

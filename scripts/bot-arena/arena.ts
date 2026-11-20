@@ -8,7 +8,7 @@ import { resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { GAME_TYPES } from '@shared/constants';
-import type { GameSeat, GameType } from '@shared/types';
+import type { GameOptions, GameSeat, GameType } from '@shared/types';
 import { seedFromText } from '../../server/src/bots/search/seeded-random';
 import { loadArenaBot } from './arena-bots';
 import type { ArenaBot } from './arena-bots';
@@ -19,7 +19,7 @@ import { formatSummary, summarize } from './arena-report';
 import { checkoutBaseline, removeBaseline, useBaselineShared } from './baseline-checkout';
 
 const USAGE = 'Usage: npm run bots:arena -- --game <type> [--matches 40] [--baseline main] [--budget <ms>] '
-  + '[--seed 1] [--parallel 1] [--players <n>] [--json]';
+  + '[--seed 1] [--parallel 1] [--players <n>] [--options <json>] [--json]';
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 
 interface WorkerConfig {
@@ -28,6 +28,7 @@ interface WorkerConfig {
   readonly baselineRoot: string;
   readonly budgetMs?: number;
   readonly seed: number;
+  readonly options: GameOptions;
   readonly pairs: readonly number[];
 }
 
@@ -44,6 +45,8 @@ interface Options {
   readonly seed: number;
   readonly parallel: number;
   readonly players?: number;
+  /** Room options of the chosen game, keyed by its type as `startGame` expects. */
+  readonly options: GameOptions;
   readonly json: boolean;
 }
 
@@ -56,12 +59,25 @@ function positiveInteger(value: string | undefined, name: string, fallback?: num
   return number;
 }
 
+/** The `--options` JSON is one game's own option object; the game manager validates its fields. */
+export function parseGameOptions(gameType: GameType, text: string | undefined): GameOptions {
+  if (text === undefined) return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error('--options must be valid JSON.');
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new Error('--options must be a JSON object.');
+  return { [gameType]: parsed } as GameOptions;
+}
+
 function parseOptions(argv: readonly string[]): Options {
   const { values } = parseArgs({
     args: [...argv],
     options: {
       game: { type: 'string' }, matches: { type: 'string' }, baseline: { type: 'string' }, budget: { type: 'string' },
-      seed: { type: 'string' }, parallel: { type: 'string' }, players: { type: 'string' }, json: { type: 'boolean' },
+      seed: { type: 'string' }, parallel: { type: 'string' }, players: { type: 'string' }, options: { type: 'string' }, json: { type: 'boolean' },
     },
     strict: true,
   });
@@ -75,6 +91,7 @@ function parseOptions(argv: readonly string[]): Options {
     seed: positiveInteger(values.seed, 'seed', 1)!,
     parallel: Math.min(positiveInteger(values.parallel, 'parallel', 1)!, availableParallelism()),
     players: positiveInteger(values.players, 'players'),
+    options: parseGameOptions(gameType, values.options),
     json: values.json ?? false,
   };
 }
@@ -94,7 +111,7 @@ async function loadBots(config: WorkerConfig): Promise<Record<Side, ArenaBot>> {
 function* playPairs(config: WorkerConfig, bots: Readonly<Record<Side, ArenaBot>>): Generator<MatchRecord> {
   for (const pair of config.pairs) {
     for (const swapped of [false, true]) {
-      yield playMatch({ gameType: config.gameType, seats: config.seats, pair, swapped,
+      yield playMatch({ gameType: config.gameType, seats: config.seats, pair, swapped, options: config.options,
         seed: pairSeed(config.seed, config.gameType, pair) }, bots);
     }
   }
@@ -154,7 +171,7 @@ async function main(): Promise<void> {
   process.once('SIGINT', interrupt);
   const config: WorkerConfig = {
     gameType: options.gameType, seats, baselineRoot: checkout.root, budgetMs: options.budgetMs, seed: options.seed,
-    pairs: Array.from({ length: pairs }, (_, pair) => pair),
+    options: options.options, pairs: Array.from({ length: pairs }, (_, pair) => pair),
   };
   const records: MatchRecord[] = [];
   let budgets: Readonly<Record<Side, number | null>> | null = null;
@@ -178,12 +195,13 @@ async function main(): Promise<void> {
   records.sort((a, b) => a.pair - b.pair || Number(a.swapped) - Number(b.swapped));
   const summary = summarize(records);
   if (options.json) {
-    process.stdout.write(`${JSON.stringify({ game: options.gameType, seats, seed: options.seed,
+    process.stdout.write(`${JSON.stringify({ game: options.gameType, seats, seed: options.seed, options: options.options,
       baseline: { ref: options.baseline, commit: checkout.commit }, budgets, summary }, null, 2)}\n`);
     return;
   }
   process.stdout.write(formatSummary(summary, [
-    `game      ${options.gameType}, seats ${seats.join(' ')}, ${pairs} duplicate pairs, seed ${options.seed}`,
+    `game      ${options.gameType}, seats ${seats.join(' ')}, ${pairs} duplicate pairs, seed ${options.seed}${
+      Object.keys(options.options).length > 0 ? `, options ${JSON.stringify(options.options[options.gameType])}` : ''}`,
     `candidate working tree (${describeBudget(budgets?.candidate ?? null)})`,
     `baseline  ${options.baseline} ${checkout.commit.slice(0, 8)} (${describeBudget(budgets?.baseline ?? null)})`,
   ]));
