@@ -29,7 +29,7 @@
   "hearts": { "leadIn": 0, "duration": 86, "starts": [0, 7, 22, 36, 50, 76] },
   "gongzhu": { "leadIn": 0, "duration": 66, "starts": [0, 8, 22, 35.999, 55.999] },
   "spades": { "leadIn": 0, "duration": 83, "starts": [0, 6.999, 20.999, 28.998, 42.998, 72.998] },
-  "yacht": { "leadIn": 0, "duration": 64, "starts": [0, 7, 14, 24, 33, 41, 54.999] },
+  "yacht": { "leadIn": 0, "duration": 64, "starts": [0, 7, 14, 23.999, 32.999, 40.999, 54.998] },
   "dominoes": { "leadIn": 0, "duration": 71, "starts": [0, 6.999, 13.999, 23.998, 36.998, 50.998, 61.998] },
   "codebreaker": { "leadIn": 0, "duration": 70, "starts": [0, 6.999, 16.999, 25.999, 35.998, 42.998, 52.998, 59.997] }
 }
