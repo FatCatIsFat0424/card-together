@@ -323660,7 +323660,7 @@
               false,
               false,
               false,
-              true,
+              false,
               true
             ]
           },
@@ -323677,7 +323677,7 @@
                 2,
                 3,
                 6,
-                5,
+                3,
                 6
               ]
             },
@@ -323692,7 +323692,7 @@
                 false,
                 false,
                 false,
-                true,
+                false,
                 true
               ]
             },
@@ -323716,7 +323716,7 @@
               false,
               false,
               true,
-              true,
+              false,
               true
             ]
           },
@@ -323730,10 +323730,10 @@
                 "dice"
               ],
               "value": [
-                3,
                 4,
+                3,
                 6,
-                5,
+                6,
                 6
               ]
             },
@@ -323748,7 +323748,7 @@
                 false,
                 false,
                 true,
-                true,
+                false,
                 true
               ]
             },
@@ -323768,7 +323768,7 @@
           "actingSeat": "E",
           "action": {
             "type": "score",
-            "box": "chance"
+            "box": "threeKind"
           },
           "chapter": "yacht-rest",
           "patch": [
@@ -323867,9 +323867,9 @@
                 "cards",
                 "E",
                 "boxes",
-                "chance"
+                "threeKind"
               ],
-              "value": 24
+              "value": 25
             },
             {
               "op": "append",
@@ -323881,14 +323881,14 @@
                   "type": "score",
                   "round": 3,
                   "seat": "E",
-                  "box": "chance",
-                  "score": 24,
+                  "box": "threeKind",
+                  "score": 25,
                   "bonus": false,
                   "dice": [
-                    3,
                     4,
+                    3,
                     6,
-                    5,
+                    6,
                     6
                   ],
                   "rolls": 3,
@@ -323914,11 +323914,11 @@
                 "dice"
               ],
               "values": [
-                3,
-                6,
                 6,
                 5,
-                6
+                6,
+                6,
+                1
               ]
             },
             {
@@ -323938,11 +323938,11 @@
           "action": {
             "type": "roll",
             "held": [
+              true,
               false,
               true,
               true,
-              false,
-              true
+              false
             ]
           },
           "chapter": "yacht-rest",
@@ -323956,10 +323956,10 @@
               ],
               "value": [
                 6,
+                3,
                 6,
                 6,
-                1,
-                6
+                5
               ]
             },
             {
@@ -323970,11 +323970,11 @@
                 "held"
               ],
               "value": [
+                true,
                 false,
                 true,
                 true,
-                false,
-                true
+                false
               ]
             },
             {
@@ -323995,10 +323995,10 @@
             "type": "roll",
             "held": [
               true,
-              true,
-              true,
               false,
-              true
+              true,
+              true,
+              false
             ]
           },
           "chapter": "yacht-rest",
@@ -324012,25 +324012,10 @@
               ],
               "value": [
                 6,
+                1,
                 6,
                 6,
-                3,
-                6
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "held"
-              ],
-              "value": [
-                true,
-                true,
-                true,
-                false,
-                true
+                3
               ]
             },
             {
@@ -324049,7 +324034,7 @@
           "actingSeat": "N",
           "action": {
             "type": "score",
-            "box": "fourKind"
+            "box": "threeKind"
           },
           "chapter": "yacht-rest",
           "patch": [
@@ -324075,9 +324060,9 @@
                 "cards",
                 "N",
                 "boxes",
-                "fourKind"
+                "threeKind"
               ],
-              "value": 27
+              "value": 22
             },
             {
               "op": "append",
@@ -324089,15 +324074,15 @@
                   "type": "score",
                   "round": 4,
                   "seat": "N",
-                  "box": "fourKind",
-                  "score": 27,
+                  "box": "threeKind",
+                  "score": 22,
                   "bonus": false,
                   "dice": [
                     6,
+                    1,
                     6,
                     6,
-                    3,
-                    6
+                    3
                   ],
                   "rolls": 3,
                   "timestamp": 1800000000000
@@ -324122,11 +324107,11 @@
                 "dice"
               ],
               "values": [
-                5,
-                1,
-                3,
                 2,
-                4
+                4,
+                6,
+                2,
+                1
               ]
             },
             {
@@ -324149,7 +324134,7 @@
               true,
               false,
               false,
-              false,
+              true,
               false
             ]
           },
@@ -324163,11 +324148,11 @@
                 "dice"
               ],
               "value": [
-                5,
+                2,
                 6,
                 2,
-                1,
-                6
+                2,
+                5
               ]
             },
             {
@@ -324181,7 +324166,7 @@
                 true,
                 false,
                 false,
-                false,
+                true,
                 false
               ]
             },
@@ -324202,11 +324187,11 @@
           "action": {
             "type": "roll",
             "held": [
-              false,
               true,
               false,
-              false,
-              true
+              true,
+              true,
+              false
             ]
           },
           "chapter": "yacht-rest",
@@ -324220,10 +324205,10 @@
               ],
               "value": [
                 2,
-                6,
-                5,
                 1,
-                6
+                2,
+                2,
+                3
               ]
             },
             {
@@ -324234,11 +324219,11 @@
                 "held"
               ],
               "value": [
-                false,
                 true,
                 false,
-                false,
-                true
+                true,
+                true,
+                false
               ]
             },
             {
@@ -324257,7 +324242,7 @@
           "actingSeat": "E",
           "action": {
             "type": "score",
-            "box": "ones"
+            "box": "twos"
           },
           "chapter": "yacht-rest",
           "patch": [
@@ -324356,9 +324341,9 @@
                 "cards",
                 "E",
                 "boxes",
-                "ones"
+                "twos"
               ],
-              "value": 1
+              "value": 6
             },
             {
               "op": "append",
@@ -324370,15 +324355,15 @@
                   "type": "score",
                   "round": 4,
                   "seat": "E",
-                  "box": "ones",
-                  "score": 1,
+                  "box": "twos",
+                  "score": 6,
                   "bonus": false,
                   "dice": [
                     2,
-                    6,
-                    5,
                     1,
-                    6
+                    2,
+                    2,
+                    3
                   ],
                   "rolls": 3,
                   "timestamp": 1800000000000
@@ -324403,11 +324388,11 @@
                 "dice"
               ],
               "values": [
-                3,
                 1,
                 3,
                 1,
-                5
+                5,
+                3
               ]
             },
             {
@@ -324430,8 +324415,8 @@
               false,
               true,
               false,
-              true,
-              false
+              false,
+              true
             ]
           },
           "chapter": "yacht-rest",
@@ -324444,11 +324429,11 @@
                 "dice"
               ],
               "value": [
+                1,
                 3,
-                1,
-                1,
-                1,
-                4
+                4,
+                5,
+                3
               ]
             },
             {
@@ -324462,8 +324447,8 @@
                 false,
                 true,
                 false,
-                true,
-                false
+                false,
+                true
               ]
             },
             {
@@ -324485,9 +324470,9 @@
             "held": [
               false,
               true,
-              true,
-              true,
-              false
+              false,
+              false,
+              true
             ]
           },
           "chapter": "yacht-rest",
@@ -324500,26 +324485,11 @@
                 "dice"
               ],
               "value": [
-                5,
+                6,
+                3,
                 1,
                 1,
-                1,
-                6
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "held"
-              ],
-              "value": [
-                false,
-                true,
-                true,
-                true,
-                false
+                3
               ]
             },
             {
@@ -324566,7 +324536,7 @@
                 "boxes",
                 "ones"
               ],
-              "value": 3
+              "value": 2
             },
             {
               "op": "append",
@@ -324579,14 +324549,14 @@
                   "round": 5,
                   "seat": "N",
                   "box": "ones",
-                  "score": 3,
+                  "score": 2,
                   "bonus": false,
                   "dice": [
-                    5,
+                    6,
+                    3,
                     1,
                     1,
-                    1,
-                    6
+                    3
                   ],
                   "rolls": 3,
                   "timestamp": 1800000000000
@@ -324611,11 +324581,11 @@
                 "dice"
               ],
               "values": [
-                1,
-                1,
                 6,
                 5,
-                3
+                3,
+                3,
+                5
               ]
             },
             {
@@ -324636,10 +324606,10 @@
             "type": "roll",
             "held": [
               false,
-              false,
               true,
               false,
-              false
+              false,
+              true
             ]
           },
           "chapter": "yacht-rest",
@@ -324652,10 +324622,10 @@
                 "dice"
               ],
               "value": [
-                3,
+                6,
                 5,
-                6,
-                6,
+                5,
+                3,
                 5
               ]
             },
@@ -324668,10 +324638,10 @@
               ],
               "value": [
                 false,
-                false,
                 true,
                 false,
-                false
+                false,
+                true
               ]
             },
             {
@@ -324692,10 +324662,10 @@
             "type": "roll",
             "held": [
               false,
+              true,
+              true,
               false,
-              true,
-              true,
-              false
+              true
             ]
           },
           "chapter": "yacht-rest",
@@ -324709,10 +324679,10 @@
               ],
               "value": [
                 3,
-                3,
-                6,
-                6,
-                1
+                5,
+                5,
+                1,
+                5
               ]
             },
             {
@@ -324724,10 +324694,10 @@
               ],
               "value": [
                 false,
+                true,
+                true,
                 false,
-                true,
-                true,
-                false
+                true
               ]
             },
             {
@@ -324746,7 +324716,7 @@
           "actingSeat": "E",
           "action": {
             "type": "score",
-            "box": "threes"
+            "box": "fives"
           },
           "chapter": "yacht-rest",
           "patch": [
@@ -324845,9 +324815,9 @@
                 "cards",
                 "E",
                 "boxes",
-                "threes"
+                "fives"
               ],
-              "value": 6
+              "value": 15
             },
             {
               "op": "append",
@@ -324859,15 +324829,15 @@
                   "type": "score",
                   "round": 5,
                   "seat": "E",
-                  "box": "threes",
-                  "score": 6,
+                  "box": "fives",
+                  "score": 15,
                   "bonus": false,
                   "dice": [
                     3,
-                    3,
-                    6,
-                    6,
-                    1
+                    5,
+                    5,
+                    1,
+                    5
                   ],
                   "rolls": 3,
                   "timestamp": 1800000000000
@@ -325163,6 +325133,928 @@
           "index": 43,
           "actingSeat": "E",
           "action": {
+            "type": "roll",
+            "held": [
+              true,
+              true,
+              true,
+              false,
+              false
+            ]
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "dice"
+              ],
+              "value": [
+                3,
+                3,
+                3,
+                1,
+                4
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "held"
+              ],
+              "value": [
+                true,
+                true,
+                true,
+                false,
+                false
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "rolls"
+              ],
+              "value": 3
+            }
+          ]
+        },
+        {
+          "index": 44,
+          "actingSeat": "E",
+          "action": {
+            "type": "score",
+            "box": "threes"
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "round"
+              ],
+              "value": 7
+            },
+            {
+              "op": "set",
+              "path": [
+                "currentTurnSeat"
+              ],
+              "value": "N"
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "dice"
+              ],
+              "value": []
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "held"
+              ],
+              "value": [
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "rolls"
+              ],
+              "value": 0
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "done"
+              ],
+              "value": false
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "dice"
+              ],
+              "value": []
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "held"
+              ],
+              "value": [
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "rolls"
+              ],
+              "value": 0
+            },
+            {
+              "op": "set",
+              "path": [
+                "cards",
+                "E",
+                "boxes",
+                "threes"
+              ],
+              "value": 9
+            },
+            {
+              "op": "append",
+              "path": [
+                "log"
+              ],
+              "values": [
+                {
+                  "type": "score",
+                  "round": 6,
+                  "seat": "E",
+                  "box": "threes",
+                  "score": 9,
+                  "bonus": false,
+                  "dice": [
+                    3,
+                    3,
+                    3,
+                    1,
+                    4
+                  ],
+                  "rolls": 3,
+                  "timestamp": 1800000000000
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 45,
+          "actingSeat": "N",
+          "action": {
+            "type": "roll"
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "append",
+              "path": [
+                "turns",
+                "N",
+                "dice"
+              ],
+              "values": [
+                5,
+                3,
+                3,
+                6,
+                2
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "rolls"
+              ],
+              "value": 1
+            }
+          ]
+        },
+        {
+          "index": 46,
+          "actingSeat": "N",
+          "action": {
+            "type": "roll",
+            "held": [
+              false,
+              true,
+              true,
+              false,
+              false
+            ]
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "dice"
+              ],
+              "value": [
+                1,
+                3,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "held"
+              ],
+              "value": [
+                false,
+                true,
+                true,
+                false,
+                false
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "rolls"
+              ],
+              "value": 2
+            }
+          ]
+        },
+        {
+          "index": 47,
+          "actingSeat": "N",
+          "action": {
+            "type": "roll",
+            "held": [
+              false,
+              true,
+              true,
+              true,
+              false
+            ]
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "dice"
+              ],
+              "value": [
+                1,
+                3,
+                3,
+                3,
+                2
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "held"
+              ],
+              "value": [
+                false,
+                true,
+                true,
+                true,
+                false
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "rolls"
+              ],
+              "value": 3
+            }
+          ]
+        },
+        {
+          "index": 48,
+          "actingSeat": "N",
+          "action": {
+            "type": "score",
+            "box": "threes"
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "currentTurnSeat"
+              ],
+              "value": "E"
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "done"
+              ],
+              "value": true
+            },
+            {
+              "op": "set",
+              "path": [
+                "cards",
+                "N",
+                "boxes",
+                "threes"
+              ],
+              "value": 9
+            },
+            {
+              "op": "append",
+              "path": [
+                "log"
+              ],
+              "values": [
+                {
+                  "type": "score",
+                  "round": 7,
+                  "seat": "N",
+                  "box": "threes",
+                  "score": 9,
+                  "bonus": false,
+                  "dice": [
+                    1,
+                    3,
+                    3,
+                    3,
+                    2
+                  ],
+                  "rolls": 3,
+                  "timestamp": 1800000000000
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 49,
+          "actingSeat": "E",
+          "action": {
+            "type": "roll"
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "append",
+              "path": [
+                "turns",
+                "E",
+                "dice"
+              ],
+              "values": [
+                2,
+                2,
+                5,
+                4,
+                4
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "rolls"
+              ],
+              "value": 1
+            }
+          ]
+        },
+        {
+          "index": 50,
+          "actingSeat": "E",
+          "action": {
+            "type": "roll",
+            "held": [
+              false,
+              false,
+              false,
+              true,
+              true
+            ]
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "dice"
+              ],
+              "value": [
+                4,
+                6,
+                3,
+                4,
+                4
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "held"
+              ],
+              "value": [
+                false,
+                false,
+                false,
+                true,
+                true
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "rolls"
+              ],
+              "value": 2
+            }
+          ]
+        },
+        {
+          "index": 51,
+          "actingSeat": "E",
+          "action": {
+            "type": "roll",
+            "held": [
+              true,
+              false,
+              false,
+              true,
+              true
+            ]
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "dice"
+              ],
+              "value": [
+                4,
+                2,
+                6,
+                4,
+                4
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "held"
+              ],
+              "value": [
+                true,
+                false,
+                false,
+                true,
+                true
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "rolls"
+              ],
+              "value": 3
+            }
+          ]
+        },
+        {
+          "index": 52,
+          "actingSeat": "E",
+          "action": {
+            "type": "score",
+            "box": "chance"
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "round"
+              ],
+              "value": 8
+            },
+            {
+              "op": "set",
+              "path": [
+                "currentTurnSeat"
+              ],
+              "value": "N"
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "dice"
+              ],
+              "value": []
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "held"
+              ],
+              "value": [
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "rolls"
+              ],
+              "value": 0
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "done"
+              ],
+              "value": false
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "dice"
+              ],
+              "value": []
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "held"
+              ],
+              "value": [
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "rolls"
+              ],
+              "value": 0
+            },
+            {
+              "op": "set",
+              "path": [
+                "cards",
+                "E",
+                "boxes",
+                "chance"
+              ],
+              "value": 20
+            },
+            {
+              "op": "append",
+              "path": [
+                "log"
+              ],
+              "values": [
+                {
+                  "type": "score",
+                  "round": 7,
+                  "seat": "E",
+                  "box": "chance",
+                  "score": 20,
+                  "bonus": false,
+                  "dice": [
+                    4,
+                    2,
+                    6,
+                    4,
+                    4
+                  ],
+                  "rolls": 3,
+                  "timestamp": 1800000000000
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 53,
+          "actingSeat": "N",
+          "action": {
+            "type": "roll"
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "append",
+              "path": [
+                "turns",
+                "N",
+                "dice"
+              ],
+              "values": [
+                5,
+                4,
+                3,
+                4,
+                1
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "rolls"
+              ],
+              "value": 1
+            }
+          ]
+        },
+        {
+          "index": 54,
+          "actingSeat": "N",
+          "action": {
+            "type": "roll",
+            "held": [
+              true,
+              true,
+              true,
+              false,
+              false
+            ]
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "dice"
+              ],
+              "value": [
+                5,
+                4,
+                3,
+                6,
+                5
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "held"
+              ],
+              "value": [
+                true,
+                true,
+                true,
+                false,
+                false
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "rolls"
+              ],
+              "value": 2
+            }
+          ]
+        },
+        {
+          "index": 55,
+          "actingSeat": "N",
+          "action": {
+            "type": "score",
+            "box": "smallStraight"
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "currentTurnSeat"
+              ],
+              "value": "E"
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "done"
+              ],
+              "value": true
+            },
+            {
+              "op": "set",
+              "path": [
+                "cards",
+                "N",
+                "boxes",
+                "smallStraight"
+              ],
+              "value": 30
+            },
+            {
+              "op": "append",
+              "path": [
+                "log"
+              ],
+              "values": [
+                {
+                  "type": "score",
+                  "round": 8,
+                  "seat": "N",
+                  "box": "smallStraight",
+                  "score": 30,
+                  "bonus": false,
+                  "dice": [
+                    5,
+                    4,
+                    3,
+                    6,
+                    5
+                  ],
+                  "rolls": 2,
+                  "timestamp": 1800000000000
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 56,
+          "actingSeat": "E",
+          "action": {
+            "type": "roll"
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "append",
+              "path": [
+                "turns",
+                "E",
+                "dice"
+              ],
+              "values": [
+                1,
+                2,
+                4,
+                1,
+                4
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "rolls"
+              ],
+              "value": 1
+            }
+          ]
+        },
+        {
+          "index": 57,
+          "actingSeat": "E",
+          "action": {
+            "type": "roll",
+            "held": [
+              true,
+              false,
+              false,
+              true,
+              false
+            ]
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "dice"
+              ],
+              "value": [
+                1,
+                3,
+                3,
+                1,
+                3
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "held"
+              ],
+              "value": [
+                true,
+                false,
+                false,
+                true,
+                false
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "rolls"
+              ],
+              "value": 2
+            }
+          ]
+        },
+        {
+          "index": 58,
+          "actingSeat": "E",
+          "action": {
             "type": "score",
             "box": "fullHouse"
           },
@@ -325173,7 +326065,7 @@
               "path": [
                 "round"
               ],
-              "value": 7
+              "value": 9
             },
             {
               "op": "set",
@@ -325275,17 +326167,17 @@
               "values": [
                 {
                   "type": "score",
-                  "round": 6,
+                  "round": 8,
                   "seat": "E",
                   "box": "fullHouse",
                   "score": 25,
                   "bonus": false,
                   "dice": [
+                    1,
                     3,
                     3,
-                    3,
-                    6,
-                    6
+                    1,
+                    3
                   ],
                   "rolls": 2,
                   "timestamp": 1800000000000
@@ -325295,935 +326187,36 @@
           ]
         },
         {
-          "index": 44,
-          "actingSeat": "N",
-          "action": {
-            "type": "roll"
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "append",
-              "path": [
-                "turns",
-                "N",
-                "dice"
-              ],
-              "values": [
-                1,
-                4,
-                5,
-                3,
-                3
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "rolls"
-              ],
-              "value": 1
-            }
-          ]
-        },
-        {
-          "index": 45,
-          "actingSeat": "N",
-          "action": {
-            "type": "roll",
-            "held": [
-              false,
-              false,
-              false,
-              true,
-              true
-            ]
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "dice"
-              ],
-              "value": [
-                6,
-                2,
-                1,
-                3,
-                3
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "held"
-              ],
-              "value": [
-                false,
-                false,
-                false,
-                true,
-                true
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "rolls"
-              ],
-              "value": 2
-            }
-          ]
-        },
-        {
-          "index": 46,
-          "actingSeat": "N",
-          "action": {
-            "type": "roll",
-            "held": [
-              false,
-              false,
-              false,
-              true,
-              true
-            ]
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "dice"
-              ],
-              "value": [
-                3,
-                4,
-                1,
-                3,
-                3
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "rolls"
-              ],
-              "value": 3
-            }
-          ]
-        },
-        {
-          "index": 47,
-          "actingSeat": "N",
-          "action": {
-            "type": "score",
-            "box": "threes"
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "set",
-              "path": [
-                "currentTurnSeat"
-              ],
-              "value": "E"
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "done"
-              ],
-              "value": true
-            },
-            {
-              "op": "set",
-              "path": [
-                "cards",
-                "N",
-                "boxes",
-                "threes"
-              ],
-              "value": 9
-            },
-            {
-              "op": "append",
-              "path": [
-                "log"
-              ],
-              "values": [
-                {
-                  "type": "score",
-                  "round": 7,
-                  "seat": "N",
-                  "box": "threes",
-                  "score": 9,
-                  "bonus": false,
-                  "dice": [
-                    3,
-                    4,
-                    1,
-                    3,
-                    3
-                  ],
-                  "rolls": 3,
-                  "timestamp": 1800000000000
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "index": 48,
-          "actingSeat": "E",
-          "action": {
-            "type": "roll"
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "append",
-              "path": [
-                "turns",
-                "E",
-                "dice"
-              ],
-              "values": [
-                2,
-                2,
-                2,
-                5,
-                4
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "rolls"
-              ],
-              "value": 1
-            }
-          ]
-        },
-        {
-          "index": 49,
-          "actingSeat": "E",
-          "action": {
-            "type": "roll",
-            "held": [
-              true,
-              true,
-              true,
-              false,
-              false
-            ]
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "dice"
-              ],
-              "value": [
-                2,
-                2,
-                2,
-                4,
-                4
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "held"
-              ],
-              "value": [
-                true,
-                true,
-                true,
-                false,
-                false
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "rolls"
-              ],
-              "value": 2
-            }
-          ]
-        },
-        {
-          "index": 50,
-          "actingSeat": "E",
-          "action": {
-            "type": "roll",
-            "held": [
-              true,
-              true,
-              true,
-              false,
-              false
-            ]
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "dice"
-              ],
-              "value": [
-                2,
-                2,
-                2,
-                6,
-                3
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "rolls"
-              ],
-              "value": 3
-            }
-          ]
-        },
-        {
-          "index": 51,
-          "actingSeat": "E",
-          "action": {
-            "type": "score",
-            "box": "twos"
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "set",
-              "path": [
-                "round"
-              ],
-              "value": 8
-            },
-            {
-              "op": "set",
-              "path": [
-                "currentTurnSeat"
-              ],
-              "value": "N"
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "dice"
-              ],
-              "value": []
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "held"
-              ],
-              "value": [
-                false,
-                false,
-                false,
-                false,
-                false
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "rolls"
-              ],
-              "value": 0
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "done"
-              ],
-              "value": false
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "dice"
-              ],
-              "value": []
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "held"
-              ],
-              "value": [
-                false,
-                false,
-                false,
-                false,
-                false
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "rolls"
-              ],
-              "value": 0
-            },
-            {
-              "op": "set",
-              "path": [
-                "cards",
-                "E",
-                "boxes",
-                "twos"
-              ],
-              "value": 6
-            },
-            {
-              "op": "append",
-              "path": [
-                "log"
-              ],
-              "values": [
-                {
-                  "type": "score",
-                  "round": 7,
-                  "seat": "E",
-                  "box": "twos",
-                  "score": 6,
-                  "bonus": false,
-                  "dice": [
-                    2,
-                    2,
-                    2,
-                    6,
-                    3
-                  ],
-                  "rolls": 3,
-                  "timestamp": 1800000000000
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "index": 52,
-          "actingSeat": "N",
-          "action": {
-            "type": "roll"
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "append",
-              "path": [
-                "turns",
-                "N",
-                "dice"
-              ],
-              "values": [
-                2,
-                6,
-                5,
-                4,
-                3
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "rolls"
-              ],
-              "value": 1
-            }
-          ]
-        },
-        {
-          "index": 53,
-          "actingSeat": "N",
-          "action": {
-            "type": "roll",
-            "held": [
-              false,
-              false,
-              true,
-              false,
-              false
-            ]
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "dice"
-              ],
-              "value": [
-                4,
-                1,
-                5,
-                6,
-                5
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "held"
-              ],
-              "value": [
-                false,
-                false,
-                true,
-                false,
-                false
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "rolls"
-              ],
-              "value": 2
-            }
-          ]
-        },
-        {
-          "index": 54,
-          "actingSeat": "N",
-          "action": {
-            "type": "roll",
-            "held": [
-              false,
-              false,
-              true,
-              false,
-              true
-            ]
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "dice"
-              ],
-              "value": [
-                1,
-                2,
-                5,
-                4,
-                5
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "held"
-              ],
-              "value": [
-                false,
-                false,
-                true,
-                false,
-                true
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "rolls"
-              ],
-              "value": 3
-            }
-          ]
-        },
-        {
-          "index": 55,
-          "actingSeat": "N",
-          "action": {
-            "type": "score",
-            "box": "twos"
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "set",
-              "path": [
-                "currentTurnSeat"
-              ],
-              "value": "E"
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "done"
-              ],
-              "value": true
-            },
-            {
-              "op": "set",
-              "path": [
-                "cards",
-                "N",
-                "boxes",
-                "twos"
-              ],
-              "value": 2
-            },
-            {
-              "op": "append",
-              "path": [
-                "log"
-              ],
-              "values": [
-                {
-                  "type": "score",
-                  "round": 8,
-                  "seat": "N",
-                  "box": "twos",
-                  "score": 2,
-                  "bonus": false,
-                  "dice": [
-                    1,
-                    2,
-                    5,
-                    4,
-                    5
-                  ],
-                  "rolls": 3,
-                  "timestamp": 1800000000000
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "index": 56,
-          "actingSeat": "E",
-          "action": {
-            "type": "roll"
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "append",
-              "path": [
-                "turns",
-                "E",
-                "dice"
-              ],
-              "values": [
-                1,
-                4,
-                3,
-                3,
-                3
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "rolls"
-              ],
-              "value": 1
-            }
-          ]
-        },
-        {
-          "index": 57,
-          "actingSeat": "E",
-          "action": {
-            "type": "roll",
-            "held": [
-              false,
-              false,
-              true,
-              true,
-              true
-            ]
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "dice"
-              ],
-              "value": [
-                1,
-                5,
-                3,
-                3,
-                3
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "held"
-              ],
-              "value": [
-                false,
-                false,
-                true,
-                true,
-                true
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "rolls"
-              ],
-              "value": 2
-            }
-          ]
-        },
-        {
-          "index": 58,
-          "actingSeat": "E",
-          "action": {
-            "type": "roll",
-            "held": [
-              false,
-              false,
-              true,
-              true,
-              true
-            ]
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "dice"
-              ],
-              "value": [
-                6,
-                5,
-                3,
-                3,
-                3
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "rolls"
-              ],
-              "value": 3
-            }
-          ]
-        },
-        {
           "index": 59,
-          "actingSeat": "E",
+          "actingSeat": "N",
           "action": {
-            "type": "score",
-            "box": "threeKind"
+            "type": "roll"
           },
           "chapter": "yacht-rest",
           "patch": [
             {
-              "op": "set",
-              "path": [
-                "round"
-              ],
-              "value": 9
-            },
-            {
-              "op": "set",
-              "path": [
-                "currentTurnSeat"
-              ],
-              "value": "N"
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "dice"
-              ],
-              "value": []
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "held"
-              ],
-              "value": [
-                false,
-                false,
-                false,
-                false,
-                false
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "rolls"
-              ],
-              "value": 0
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "done"
-              ],
-              "value": false
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "dice"
-              ],
-              "value": []
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "held"
-              ],
-              "value": [
-                false,
-                false,
-                false,
-                false,
-                false
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "rolls"
-              ],
-              "value": 0
-            },
-            {
-              "op": "set",
-              "path": [
-                "cards",
-                "E",
-                "boxes",
-                "threeKind"
-              ],
-              "value": 20
-            },
-            {
               "op": "append",
               "path": [
-                "log"
+                "turns",
+                "N",
+                "dice"
               ],
               "values": [
-                {
-                  "type": "score",
-                  "round": 8,
-                  "seat": "E",
-                  "box": "threeKind",
-                  "score": 20,
-                  "bonus": false,
-                  "dice": [
-                    6,
-                    5,
-                    3,
-                    3,
-                    3
-                  ],
-                  "rolls": 3,
-                  "timestamp": 1800000000000
-                }
+                1,
+                5,
+                6,
+                5,
+                4
               ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "rolls"
+              ],
+              "value": 1
             }
           ]
         },
@@ -326231,23 +326224,45 @@
           "index": 60,
           "actingSeat": "N",
           "action": {
-            "type": "roll"
+            "type": "roll",
+            "held": [
+              false,
+              true,
+              false,
+              true,
+              false
+            ]
           },
           "chapter": "yacht-rest",
           "patch": [
             {
-              "op": "append",
+              "op": "set",
               "path": [
                 "turns",
                 "N",
                 "dice"
               ],
-              "values": [
-                4,
+              "value": [
+                5,
                 5,
                 3,
-                4,
-                6
+                5,
+                4
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "held"
+              ],
+              "value": [
+                false,
+                true,
+                false,
+                true,
+                false
               ]
             },
             {
@@ -326257,7 +326272,7 @@
                 "N",
                 "rolls"
               ],
-              "value": 1
+              "value": 2
             }
           ]
         },
@@ -326267,10 +326282,10 @@
           "action": {
             "type": "roll",
             "held": [
-              false,
+              true,
               true,
               false,
-              false,
+              true,
               false
             ]
           },
@@ -326284,11 +326299,11 @@
                 "dice"
               ],
               "value": [
-                2,
                 5,
                 5,
-                4,
-                4
+                6,
+                5,
+                2
               ]
             },
             {
@@ -326299,66 +326314,10 @@
                 "held"
               ],
               "value": [
-                false,
-                true,
-                false,
-                false,
-                false
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "rolls"
-              ],
-              "value": 2
-            }
-          ]
-        },
-        {
-          "index": 62,
-          "actingSeat": "N",
-          "action": {
-            "type": "roll",
-            "held": [
-              false,
-              true,
-              true,
-              false,
-              false
-            ]
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "dice"
-              ],
-              "value": [
-                1,
-                5,
-                5,
-                1,
-                4
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "held"
-              ],
-              "value": [
-                false,
                 true,
                 true,
                 false,
+                true,
                 false
               ]
             },
@@ -326374,7 +326333,7 @@
           ]
         },
         {
-          "index": 63,
+          "index": 62,
           "actingSeat": "N",
           "action": {
             "type": "score",
@@ -326406,7 +326365,7 @@
                 "boxes",
                 "fives"
               ],
-              "value": 10
+              "value": 15
             },
             {
               "op": "append",
@@ -326419,14 +326378,14 @@
                   "round": 9,
                   "seat": "N",
                   "box": "fives",
-                  "score": 10,
+                  "score": 15,
                   "bonus": false,
                   "dice": [
-                    1,
                     5,
                     5,
-                    1,
-                    4
+                    6,
+                    5,
+                    2
                   ],
                   "rolls": 3,
                   "timestamp": 1800000000000
@@ -326436,7 +326395,7 @@
           ]
         },
         {
-          "index": 64,
+          "index": 63,
           "actingSeat": "E",
           "action": {
             "type": "roll"
@@ -326451,11 +326410,11 @@
                 "dice"
               ],
               "values": [
-                6,
+                5,
+                4,
+                4,
                 1,
-                1,
-                6,
-                2
+                1
               ]
             },
             {
@@ -326470,16 +326429,16 @@
           ]
         },
         {
-          "index": 65,
+          "index": 64,
           "actingSeat": "E",
           "action": {
             "type": "roll",
             "held": [
-              true,
               false,
               false,
+              false,
               true,
-              false
+              true
             ]
           },
           "chapter": "yacht-rest",
@@ -326492,11 +326451,11 @@
                 "dice"
               ],
               "value": [
+                4,
                 6,
-                2,
-                2,
-                6,
-                3
+                1,
+                1,
+                1
               ]
             },
             {
@@ -326507,11 +326466,11 @@
                 "held"
               ],
               "value": [
-                true,
                 false,
                 false,
+                false,
                 true,
-                false
+                true
               ]
             },
             {
@@ -326526,16 +326485,16 @@
           ]
         },
         {
-          "index": 66,
+          "index": 65,
           "actingSeat": "E",
           "action": {
             "type": "roll",
             "held": [
-              true,
               false,
               false,
               true,
-              false
+              true,
+              true
             ]
           },
           "chapter": "yacht-rest",
@@ -326548,11 +326507,26 @@
                 "dice"
               ],
               "value": [
+                1,
                 6,
-                5,
-                2,
-                6,
-                2
+                1,
+                1,
+                1
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "held"
+              ],
+              "value": [
+                false,
+                false,
+                true,
+                true,
+                true
               ]
             },
             {
@@ -326567,11 +326541,11 @@
           ]
         },
         {
-          "index": 67,
+          "index": 66,
           "actingSeat": "E",
           "action": {
             "type": "score",
-            "box": "sixes"
+            "box": "ones"
           },
           "chapter": "yacht-rest",
           "patch": [
@@ -326670,9 +326644,9 @@
                 "cards",
                 "E",
                 "boxes",
-                "sixes"
+                "ones"
               ],
-              "value": 12
+              "value": 4
             },
             {
               "op": "append",
@@ -326684,15 +326658,15 @@
                   "type": "score",
                   "round": 9,
                   "seat": "E",
-                  "box": "sixes",
-                  "score": 12,
+                  "box": "ones",
+                  "score": 4,
                   "bonus": false,
                   "dice": [
+                    1,
                     6,
-                    5,
-                    2,
-                    6,
-                    2
+                    1,
+                    1,
+                    1
                   ],
                   "rolls": 3,
                   "timestamp": 1800000000000
@@ -326702,7 +326676,7 @@
           ]
         },
         {
-          "index": 68,
+          "index": 67,
           "actingSeat": "N",
           "action": {
             "type": "roll"
@@ -326717,11 +326691,11 @@
                 "dice"
               ],
               "values": [
-                1,
-                5,
-                5,
-                4,
-                3
+                2,
+                2,
+                2,
+                3,
+                5
               ]
             },
             {
@@ -326736,16 +326710,16 @@
           ]
         },
         {
-          "index": 69,
+          "index": 68,
           "actingSeat": "N",
           "action": {
             "type": "roll",
             "held": [
-              false,
+              true,
+              true,
               true,
               false,
-              true,
-              true
+              false
             ]
           },
           "chapter": "yacht-rest",
@@ -326758,11 +326732,11 @@
                 "dice"
               ],
               "value": [
-                3,
-                5,
-                1,
-                4,
-                3
+                2,
+                2,
+                2,
+                2,
+                2
               ]
             },
             {
@@ -326773,11 +326747,11 @@
                 "held"
               ],
               "value": [
-                false,
+                true,
+                true,
                 true,
                 false,
-                true,
-                true
+                false
               ]
             },
             {
@@ -326792,63 +326766,7 @@
           ]
         },
         {
-          "index": 70,
-          "actingSeat": "N",
-          "action": {
-            "type": "roll",
-            "held": [
-              true,
-              true,
-              false,
-              true,
-              false
-            ]
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "dice"
-              ],
-              "value": [
-                3,
-                5,
-                5,
-                4,
-                1
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "held"
-              ],
-              "value": [
-                true,
-                true,
-                false,
-                true,
-                false
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "rolls"
-              ],
-              "value": 3
-            }
-          ]
-        },
-        {
-          "index": 71,
+          "index": 69,
           "actingSeat": "N",
           "action": {
             "type": "score",
@@ -326880,7 +326798,7 @@
                 "boxes",
                 "yacht"
               ],
-              "value": 0
+              "value": 50
             },
             {
               "op": "append",
@@ -326893,16 +326811,16 @@
                   "round": 10,
                   "seat": "N",
                   "box": "yacht",
-                  "score": 0,
+                  "score": 50,
                   "bonus": false,
                   "dice": [
-                    3,
-                    5,
-                    5,
-                    4,
-                    1
+                    2,
+                    2,
+                    2,
+                    2,
+                    2
                   ],
-                  "rolls": 3,
+                  "rolls": 2,
                   "timestamp": 1800000000000
                 }
               ]
@@ -326910,7 +326828,7 @@
           ]
         },
         {
-          "index": 72,
+          "index": 70,
           "actingSeat": "E",
           "action": {
             "type": "roll"
@@ -326925,11 +326843,11 @@
                 "dice"
               ],
               "values": [
-                6,
+                1,
+                5,
+                5,
                 4,
-                4,
-                3,
-                5
+                3
               ]
             },
             {
@@ -326944,11 +326862,123 @@
           ]
         },
         {
+          "index": 71,
+          "actingSeat": "E",
+          "action": {
+            "type": "roll",
+            "held": [
+              false,
+              true,
+              false,
+              true,
+              true
+            ]
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "dice"
+              ],
+              "value": [
+                3,
+                5,
+                1,
+                4,
+                3
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "held"
+              ],
+              "value": [
+                false,
+                true,
+                false,
+                true,
+                true
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "rolls"
+              ],
+              "value": 2
+            }
+          ]
+        },
+        {
+          "index": 72,
+          "actingSeat": "E",
+          "action": {
+            "type": "roll",
+            "held": [
+              true,
+              true,
+              false,
+              true,
+              false
+            ]
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "dice"
+              ],
+              "value": [
+                3,
+                5,
+                5,
+                4,
+                1
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "held"
+              ],
+              "value": [
+                true,
+                true,
+                false,
+                true,
+                false
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "rolls"
+              ],
+              "value": 3
+            }
+          ]
+        },
+        {
           "index": 73,
           "actingSeat": "E",
           "action": {
             "type": "score",
-            "box": "smallStraight"
+            "box": "yacht"
           },
           "chapter": "yacht-rest",
           "patch": [
@@ -327022,6 +327052,21 @@
               "path": [
                 "turns",
                 "E",
+                "held"
+              ],
+              "value": [
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
                 "rolls"
               ],
               "value": 0
@@ -327032,9 +327077,9 @@
                 "cards",
                 "E",
                 "boxes",
-                "smallStraight"
+                "yacht"
               ],
-              "value": 30
+              "value": 0
             },
             {
               "op": "append",
@@ -327046,17 +327091,17 @@
                   "type": "score",
                   "round": 10,
                   "seat": "E",
-                  "box": "smallStraight",
-                  "score": 30,
+                  "box": "yacht",
+                  "score": 0,
                   "bonus": false,
                   "dice": [
-                    6,
-                    4,
-                    4,
                     3,
-                    5
+                    5,
+                    5,
+                    4,
+                    1
                   ],
-                  "rolls": 1,
+                  "rolls": 3,
                   "timestamp": 1800000000000
                 }
               ]
@@ -327079,11 +327124,11 @@
                 "dice"
               ],
               "values": [
-                2,
-                5,
+                6,
+                4,
+                4,
                 3,
-                3,
-                4
+                5
               ]
             },
             {
@@ -327101,108 +327146,12 @@
           "index": 75,
           "actingSeat": "N",
           "action": {
-            "type": "score",
-            "box": "smallStraight"
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "set",
-              "path": [
-                "currentTurnSeat"
-              ],
-              "value": "E"
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "done"
-              ],
-              "value": true
-            },
-            {
-              "op": "set",
-              "path": [
-                "cards",
-                "N",
-                "boxes",
-                "smallStraight"
-              ],
-              "value": 30
-            },
-            {
-              "op": "append",
-              "path": [
-                "log"
-              ],
-              "values": [
-                {
-                  "type": "score",
-                  "round": 11,
-                  "seat": "N",
-                  "box": "smallStraight",
-                  "score": 30,
-                  "bonus": false,
-                  "dice": [
-                    2,
-                    5,
-                    3,
-                    3,
-                    4
-                  ],
-                  "rolls": 1,
-                  "timestamp": 1800000000000
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "index": 76,
-          "actingSeat": "E",
-          "action": {
-            "type": "roll"
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "append",
-              "path": [
-                "turns",
-                "E",
-                "dice"
-              ],
-              "values": [
-                5,
-                5,
-                6,
-                5,
-                2
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "rolls"
-              ],
-              "value": 1
-            }
-          ]
-        },
-        {
-          "index": 77,
-          "actingSeat": "E",
-          "action": {
             "type": "roll",
             "held": [
+              false,
               true,
               true,
               false,
-              true,
               false
             ]
           },
@@ -327212,29 +327161,29 @@
               "op": "set",
               "path": [
                 "turns",
-                "E",
+                "N",
                 "dice"
               ],
               "value": [
+                2,
+                4,
+                4,
                 5,
-                5,
-                6,
-                5,
-                1
+                3
               ]
             },
             {
               "op": "set",
               "path": [
                 "turns",
-                "E",
+                "N",
                 "held"
               ],
               "value": [
+                false,
                 true,
                 true,
                 false,
-                true,
                 false
               ]
             },
@@ -327242,7 +327191,7 @@
               "op": "set",
               "path": [
                 "turns",
-                "E",
+                "N",
                 "rolls"
               ],
               "value": 2
@@ -327250,210 +327199,15 @@
           ]
         },
         {
-          "index": 78,
-          "actingSeat": "E",
-          "action": {
-            "type": "roll",
-            "held": [
-              true,
-              true,
-              false,
-              true,
-              false
-            ]
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "dice"
-              ],
-              "value": [
-                5,
-                5,
-                4,
-                5,
-                1
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "rolls"
-              ],
-              "value": 3
-            }
-          ]
-        },
-        {
-          "index": 79,
-          "actingSeat": "E",
-          "action": {
-            "type": "score",
-            "box": "fives"
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "set",
-              "path": [
-                "round"
-              ],
-              "value": 12
-            },
-            {
-              "op": "set",
-              "path": [
-                "currentTurnSeat"
-              ],
-              "value": "N"
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "dice"
-              ],
-              "value": []
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "rolls"
-              ],
-              "value": 0
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "done"
-              ],
-              "value": false
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "dice"
-              ],
-              "value": []
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "held"
-              ],
-              "value": [
-                false,
-                false,
-                false,
-                false,
-                false
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "rolls"
-              ],
-              "value": 0
-            },
-            {
-              "op": "set",
-              "path": [
-                "cards",
-                "E",
-                "boxes",
-                "fives"
-              ],
-              "value": 15
-            },
-            {
-              "op": "append",
-              "path": [
-                "log"
-              ],
-              "values": [
-                {
-                  "type": "score",
-                  "round": 11,
-                  "seat": "E",
-                  "box": "fives",
-                  "score": 15,
-                  "bonus": false,
-                  "dice": [
-                    5,
-                    5,
-                    4,
-                    5,
-                    1
-                  ],
-                  "rolls": 3,
-                  "timestamp": 1800000000000
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "index": 80,
-          "actingSeat": "N",
-          "action": {
-            "type": "roll"
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "append",
-              "path": [
-                "turns",
-                "N",
-                "dice"
-              ],
-              "values": [
-                1,
-                2,
-                5,
-                2,
-                4
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "rolls"
-              ],
-              "value": 1
-            }
-          ]
-        },
-        {
-          "index": 81,
+          "index": 76,
           "actingSeat": "N",
           "action": {
             "type": "roll",
             "held": [
               false,
               true,
-              false,
               true,
+              false,
               false
             ]
           },
@@ -327467,10 +327221,10 @@
                 "dice"
               ],
               "value": [
-                6,
-                2,
                 3,
-                2,
+                4,
+                4,
+                4,
                 5
               ]
             },
@@ -327479,62 +327233,6 @@
               "path": [
                 "turns",
                 "N",
-                "held"
-              ],
-              "value": [
-                false,
-                true,
-                false,
-                true,
-                false
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "rolls"
-              ],
-              "value": 2
-            }
-          ]
-        },
-        {
-          "index": 82,
-          "actingSeat": "N",
-          "action": {
-            "type": "roll",
-            "held": [
-              false,
-              true,
-              false,
-              true,
-              false
-            ]
-          },
-          "chapter": "yacht-rest",
-          "patch": [
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
-                "dice"
-              ],
-              "value": [
-                3,
-                2,
-                4,
-                2,
-                1
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "N",
                 "rolls"
               ],
               "value": 3
@@ -327542,11 +327240,11 @@
           ]
         },
         {
-          "index": 83,
+          "index": 77,
           "actingSeat": "N",
           "action": {
             "type": "score",
-            "box": "threeKind"
+            "box": "fourKind"
           },
           "chapter": "yacht-rest",
           "patch": [
@@ -327572,7 +327270,7 @@
                 "cards",
                 "N",
                 "boxes",
-                "threeKind"
+                "fourKind"
               ],
               "value": 0
             },
@@ -327584,17 +327282,17 @@
               "values": [
                 {
                   "type": "score",
-                  "round": 12,
+                  "round": 11,
                   "seat": "N",
-                  "box": "threeKind",
+                  "box": "fourKind",
                   "score": 0,
                   "bonus": false,
                   "dice": [
                     3,
-                    2,
                     4,
-                    2,
-                    1
+                    4,
+                    4,
+                    5
                   ],
                   "rolls": 3,
                   "timestamp": 1800000000000
@@ -327604,7 +327302,7 @@
           ]
         },
         {
-          "index": 84,
+          "index": 78,
           "actingSeat": "E",
           "action": {
             "type": "roll"
@@ -327619,11 +327317,11 @@
                 "dice"
               ],
               "values": [
-                4,
+                5,
+                6,
+                5,
                 2,
-                3,
-                1,
-                1
+                6
               ]
             },
             {
@@ -327638,15 +327336,15 @@
           ]
         },
         {
-          "index": 85,
+          "index": 79,
           "actingSeat": "E",
           "action": {
             "type": "roll",
             "held": [
               false,
-              false,
-              false,
               true,
+              false,
+              false,
               true
             ]
           },
@@ -327662,9 +327360,9 @@
               "value": [
                 1,
                 6,
-                3,
+                4,
                 1,
-                1
+                6
               ]
             },
             {
@@ -327676,9 +327374,9 @@
               ],
               "value": [
                 false,
-                false,
-                false,
                 true,
+                false,
+                false,
                 true
               ]
             },
@@ -327694,15 +327392,15 @@
           ]
         },
         {
-          "index": 86,
+          "index": 80,
           "actingSeat": "E",
           "action": {
             "type": "roll",
             "held": [
+              false,
               true,
               false,
               false,
-              true,
               true
             ]
           },
@@ -327717,25 +327415,10 @@
               ],
               "value": [
                 1,
-                4,
-                4,
-                1,
-                1
-              ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "turns",
-                "E",
-                "held"
-              ],
-              "value": [
-                true,
-                false,
-                false,
-                true,
-                true
+                6,
+                2,
+                5,
+                6
               ]
             },
             {
@@ -327750,7 +327433,7 @@
           ]
         },
         {
-          "index": 87,
+          "index": 81,
           "actingSeat": "E",
           "action": {
             "type": "score",
@@ -327763,7 +327446,7 @@
               "path": [
                 "round"
               ],
-              "value": 13
+              "value": 12
             },
             {
               "op": "set",
@@ -327865,17 +327548,17 @@
               "values": [
                 {
                   "type": "score",
-                  "round": 12,
+                  "round": 11,
                   "seat": "E",
                   "box": "fourKind",
                   "score": 0,
                   "bonus": false,
                   "dice": [
                     1,
-                    4,
-                    4,
-                    1,
-                    1
+                    6,
+                    2,
+                    5,
+                    6
                   ],
                   "rolls": 3,
                   "timestamp": 1800000000000
@@ -327885,7 +327568,7 @@
           ]
         },
         {
-          "index": 88,
+          "index": 82,
           "actingSeat": "N",
           "action": {
             "type": "roll"
@@ -327901,10 +327584,10 @@
               ],
               "values": [
                 2,
-                3,
+                4,
                 6,
-                1,
-                2
+                3,
+                5
               ]
             },
             {
@@ -327919,7 +327602,7 @@
           ]
         },
         {
-          "index": 89,
+          "index": 83,
           "actingSeat": "N",
           "action": {
             "type": "roll",
@@ -327928,7 +327611,7 @@
               false,
               false,
               false,
-              true
+              false
             ]
           },
           "chapter": "yacht-rest",
@@ -327942,10 +327625,10 @@
               ],
               "value": [
                 2,
-                5,
                 3,
-                3,
-                2
+                4,
+                1,
+                4
               ]
             },
             {
@@ -327960,6 +327643,480 @@
                 false,
                 false,
                 false,
+                false
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "rolls"
+              ],
+              "value": 2
+            }
+          ]
+        },
+        {
+          "index": 84,
+          "actingSeat": "N",
+          "action": {
+            "type": "roll",
+            "held": [
+              true,
+              false,
+              false,
+              false,
+              false
+            ]
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "dice"
+              ],
+              "value": [
+                2,
+                2,
+                3,
+                1,
+                1
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "rolls"
+              ],
+              "value": 3
+            }
+          ]
+        },
+        {
+          "index": 85,
+          "actingSeat": "N",
+          "action": {
+            "type": "score",
+            "box": "twos"
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "currentTurnSeat"
+              ],
+              "value": "E"
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "done"
+              ],
+              "value": true
+            },
+            {
+              "op": "set",
+              "path": [
+                "cards",
+                "N",
+                "boxes",
+                "twos"
+              ],
+              "value": 4
+            },
+            {
+              "op": "append",
+              "path": [
+                "log"
+              ],
+              "values": [
+                {
+                  "type": "score",
+                  "round": 12,
+                  "seat": "N",
+                  "box": "twos",
+                  "score": 4,
+                  "bonus": false,
+                  "dice": [
+                    2,
+                    2,
+                    3,
+                    1,
+                    1
+                  ],
+                  "rolls": 3,
+                  "timestamp": 1800000000000
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 86,
+          "actingSeat": "E",
+          "action": {
+            "type": "roll"
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "append",
+              "path": [
+                "turns",
+                "E",
+                "dice"
+              ],
+              "values": [
+                1,
+                6,
+                3,
+                4,
+                4
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "rolls"
+              ],
+              "value": 1
+            }
+          ]
+        },
+        {
+          "index": 87,
+          "actingSeat": "E",
+          "action": {
+            "type": "roll",
+            "held": [
+              false,
+              true,
+              false,
+              false,
+              false
+            ]
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "dice"
+              ],
+              "value": [
+                2,
+                6,
+                3,
+                6,
+                1
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "held"
+              ],
+              "value": [
+                false,
+                true,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "rolls"
+              ],
+              "value": 2
+            }
+          ]
+        },
+        {
+          "index": 88,
+          "actingSeat": "E",
+          "action": {
+            "type": "roll",
+            "held": [
+              false,
+              true,
+              false,
+              true,
+              false
+            ]
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "dice"
+              ],
+              "value": [
+                2,
+                6,
+                5,
+                6,
+                3
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "held"
+              ],
+              "value": [
+                false,
+                true,
+                false,
+                true,
+                false
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "rolls"
+              ],
+              "value": 3
+            }
+          ]
+        },
+        {
+          "index": 89,
+          "actingSeat": "E",
+          "action": {
+            "type": "score",
+            "box": "smallStraight"
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "round"
+              ],
+              "value": 13
+            },
+            {
+              "op": "set",
+              "path": [
+                "currentTurnSeat"
+              ],
+              "value": "N"
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "dice"
+              ],
+              "value": []
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "held"
+              ],
+              "value": [
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "rolls"
+              ],
+              "value": 0
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "done"
+              ],
+              "value": false
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "dice"
+              ],
+              "value": []
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "held"
+              ],
+              "value": [
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "E",
+                "rolls"
+              ],
+              "value": 0
+            },
+            {
+              "op": "set",
+              "path": [
+                "cards",
+                "E",
+                "boxes",
+                "smallStraight"
+              ],
+              "value": 0
+            },
+            {
+              "op": "append",
+              "path": [
+                "log"
+              ],
+              "values": [
+                {
+                  "type": "score",
+                  "round": 12,
+                  "seat": "E",
+                  "box": "smallStraight",
+                  "score": 0,
+                  "bonus": false,
+                  "dice": [
+                    2,
+                    6,
+                    5,
+                    6,
+                    3
+                  ],
+                  "rolls": 3,
+                  "timestamp": 1800000000000
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 90,
+          "actingSeat": "N",
+          "action": {
+            "type": "roll"
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "append",
+              "path": [
+                "turns",
+                "N",
+                "dice"
+              ],
+              "values": [
+                3,
+                5,
+                6,
+                3,
+                5
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "rolls"
+              ],
+              "value": 1
+            }
+          ]
+        },
+        {
+          "index": 91,
+          "actingSeat": "N",
+          "action": {
+            "type": "roll",
+            "held": [
+              true,
+              true,
+              false,
+              true,
+              true
+            ]
+          },
+          "chapter": "yacht-rest",
+          "patch": [
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "dice"
+              ],
+              "value": [
+                3,
+                5,
+                2,
+                3,
+                5
+              ]
+            },
+            {
+              "op": "set",
+              "path": [
+                "turns",
+                "N",
+                "held"
+              ],
+              "value": [
+                true,
+                true,
+                false,
+                true,
                 true
               ]
             },
@@ -327975,14 +328132,14 @@
           ]
         },
         {
-          "index": 90,
+          "index": 92,
           "actingSeat": "N",
           "action": {
             "type": "roll",
             "held": [
               true,
-              false,
               true,
+              false,
               true,
               true
             ]
@@ -327994,14 +328151,14 @@
               "path": [
                 "turns",
                 "N",
-                "held"
+                "dice"
               ],
               "value": [
-                true,
-                false,
-                true,
-                true,
-                true
+                3,
+                5,
+                4,
+                3,
+                5
               ]
             },
             {
@@ -328016,7 +328173,7 @@
           ]
         },
         {
-          "index": 91,
+          "index": 93,
           "actingSeat": "N",
           "action": {
             "type": "score",
@@ -328064,11 +328221,11 @@
                   "score": 0,
                   "bonus": false,
                   "dice": [
-                    2,
+                    3,
                     5,
+                    4,
                     3,
-                    3,
-                    2
+                    5
                   ],
                   "rolls": 3,
                   "timestamp": 1800000000000
@@ -328078,7 +328235,7 @@
           ]
         },
         {
-          "index": 92,
+          "index": 94,
           "actingSeat": "E",
           "action": {
             "type": "roll"
@@ -328093,11 +328250,11 @@
                 "dice"
               ],
               "values": [
+                1,
                 6,
                 3,
-                5,
                 2,
-                4
+                2
               ]
             },
             {
@@ -328112,13 +328269,13 @@
           ]
         },
         {
-          "index": 93,
+          "index": 95,
           "actingSeat": "E",
           "action": {
             "type": "roll",
             "held": [
-              true,
               false,
+              true,
               false,
               false,
               false
@@ -328134,11 +328291,11 @@
                 "dice"
               ],
               "value": [
-                6,
                 1,
                 6,
+                2,
                 3,
-                2
+                6
               ]
             },
             {
@@ -328149,8 +328306,8 @@
                 "held"
               ],
               "value": [
-                true,
                 false,
+                true,
                 false,
                 false,
                 false
@@ -328168,16 +328325,16 @@
           ]
         },
         {
-          "index": 94,
+          "index": 96,
           "actingSeat": "E",
           "action": {
             "type": "roll",
             "held": [
-              true,
               false,
               true,
               false,
-              false
+              false,
+              true
             ]
           },
           "chapter": "yacht-rest",
@@ -328190,11 +328347,11 @@
                 "dice"
               ],
               "value": [
-                6,
-                2,
+                5,
                 6,
                 1,
-                2
+                5,
+                6
               ]
             },
             {
@@ -328205,11 +328362,11 @@
                 "held"
               ],
               "value": [
-                true,
                 false,
                 true,
                 false,
-                false
+                false,
+                true
               ]
             },
             {
@@ -328224,11 +328381,11 @@
           ]
         },
         {
-          "index": 95,
+          "index": 97,
           "actingSeat": "E",
           "action": {
             "type": "score",
-            "box": "yacht"
+            "box": "sixes"
           },
           "chapter": "yacht-rest",
           "patch": [
@@ -328261,9 +328418,9 @@
                 "cards",
                 "E",
                 "boxes",
-                "yacht"
+                "sixes"
               ],
-              "value": 0
+              "value": 12
             },
             {
               "op": "append",
@@ -328275,15 +328432,15 @@
                   "type": "score",
                   "round": 13,
                   "seat": "E",
-                  "box": "yacht",
-                  "score": 0,
+                  "box": "sixes",
+                  "score": 12,
                   "bonus": false,
                   "dice": [
-                    6,
-                    2,
+                    5,
                     6,
                     1,
-                    2
+                    5,
+                    6
                   ],
                   "rolls": 3,
                   "timestamp": 1800000000000
@@ -328306,15 +328463,15 @@
                   "N"
                 ],
                 "totals": {
-                  "N": 216,
-                  "E": 191
+                  "N": 267,
+                  "E": 168
                 },
                 "upperBonus": {
                   "N": true,
                   "E": false
                 },
                 "yachts": {
-                  "N": 0,
+                  "N": 1,
                   "E": 0
                 }
               }
@@ -328333,15 +328490,15 @@
           "N"
         ],
         "totals": {
-          "N": 216,
-          "E": 191
+          "N": 267,
+          "E": 168
         },
         "upperBonus": {
           "N": true,
           "E": false
         },
         "yachts": {
-          "N": 0,
+          "N": 1,
           "E": 0
         }
       },

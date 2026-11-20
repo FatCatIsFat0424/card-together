@@ -147,7 +147,8 @@ describe('Yacht Dice bots', () => {
     const plan = yachtPlan(EMPTY_YACHT_SCORECARD, dice(5, 5, 5, 5, 2), 1);
     expect(plan.stop).toBe(false);
     expect(plan.held).toEqual([true, true, true, true, false]);
-    expect(plan.box).toBe('fourKind');
+    // Four fives bank 20 in the upper section, five above par, which is worth more than 22 in Four of a Kind.
+    expect(plan.box).toBe('fives');
   });
 
   it('follows the joker rule when it writes an extra Yacht', () => {

@@ -93,8 +93,8 @@ function yachtFixture(): DemoFixture {
     }
     const fixture = recorder.finish();
     const result = required(yacht.getGameState(code)?.result, 'Yacht result');
-    if (result.winners.join() !== 'N' || result.totals.N !== 216 || result.totals.E !== 191 || !result.upperBonus.N) {
-      throw new Error('The Yacht lesson no longer ends 216:191 with the upper bonus for N.');
+    if (result.winners.join() !== 'N' || result.totals.N !== 267 || result.totals.E !== 168 || !result.upperBonus.N) {
+      throw new Error('The Yacht lesson no longer ends 267:168 with the upper bonus for N.');
     }
     return { ...fixture, roomOptions: { yacht: { mode: 'turns' } } };
   } finally {

@@ -10,8 +10,8 @@ export const diceDemoScenes: Record<AssignedGameType, readonly DemoScene<keyof t
     { text: 'yacht-hold', seconds: 10, step: 1, until: 3, split: 7 },
     { text: 'yacht-score', seconds: 9, step: 3, until: 4 },
     { text: 'yacht-straight', seconds: 8, step: 4, until: 6 },
-    { text: 'yacht-rest', seconds: 14, step: 6, until: 95 },
-    { text: 'yacht-end', seconds: 8, step: 95 },
+    { text: 'yacht-rest', seconds: 14, step: 6, until: 97 },
+    { text: 'yacht-end', seconds: 8, step: 97 },
   ],
   dominoes: [
     { text: 'dominoes-goal', seconds: 7, step: 0 },

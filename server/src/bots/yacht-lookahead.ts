@@ -1,78 +1,16 @@
 // ─── Yacht Dice lookahead: the best dice to keep, valued by exact expectation over the rolls left ───
 
-import { YACHT_DICE } from '@shared/rules/yacht';
+import { YACHT_BOXES, yachtTotals } from '@shared/rules/yacht';
 import type { YachtBox, YachtFace, YachtScorecard } from '@shared/rules/yacht';
-import { yachtBestPlacement } from '@shared/rules/yacht-value';
+import { yachtDiceTables } from './yacht-dice';
+import { cardState, forEachPlacement, stateIndex } from './yacht-states';
+import { yachtTable } from './yacht-table';
+import { yachtWinChance } from './yacht-win';
+import type { YachtRival } from './yacht-win';
 
-/** A multiset of dice as how many dice show each face 1 to 6. */
-type Counts = readonly number[];
+export type { YachtRival } from './yacht-win';
 
-interface Tables {
-  /** Every multiset of up to five dice a player can keep */
-  readonly holds: readonly Counts[];
-  /** Hold id of each five-dice multiset */
-  readonly full: readonly number[];
-  readonly holdId: ReadonlyMap<number, number>;
-  /** Per hold: the five-dice multisets its reroll can reach, and their probabilities */
-  readonly reach: readonly { readonly ids: Int32Array; readonly chance: Float64Array }[];
-  /** Per hold id of a five-dice multiset: the smaller holds it contains, without itself; empty for other ids */
-  readonly keeps: readonly Int32Array[];
-}
-
-const key = (counts: Counts): number => counts.reduce((total, count) => total * 6 + count, 0);
-
-/** Every way to give `total` dice to the faces from `from` on. */
-function distributions(total: number, from = 0): number[][] {
-  if (from === 5) return [[...Array(5).fill(0), total]];
-  const result: number[][] = [];
-  for (let count = 0; count <= total; count += 1) {
-    for (const rest of distributions(total - count, from + 1)) {
-      rest[from] = count;
-      result.push(rest);
-    }
-  }
-  return result;
-}
-
-const FACTORIAL = [1, 1, 2, 6, 24, 120];
-
-let cached: Tables | null = null;
-
-function tables(): Tables {
-  if (cached) return cached;
-  const holds: Counts[] = [];
-  for (let size = 0; size <= YACHT_DICE; size += 1) holds.push(...distributions(size));
-  const holdId = new Map(holds.map((counts, id) => [key(counts), id]));
-  const full = holds.flatMap((counts, id) => (counts.reduce((a, b) => a + b, 0) === YACHT_DICE ? [id] : []));
-  const reach = holds.map((counts) => {
-    const rolled = YACHT_DICE - counts.reduce((a, b) => a + b, 0);
-    const outcomes = distributions(rolled);
-    const ids = new Int32Array(outcomes.length);
-    const chance = new Float64Array(outcomes.length);
-    outcomes.forEach((outcome, index) => {
-      ids[index] = holdId.get(key(counts.map((count, face) => count + outcome[face])))!;
-      chance[index] = FACTORIAL[rolled] / outcome.reduce((product, count) => product * FACTORIAL[count], 1) / 6 ** rolled;
-    });
-    return { ids, chance };
-  });
-  const keeps = holds.map((counts, id) => {
-    const kept: number[] = [];
-    if (full.includes(id)) {
-      for (let size = 0; size < YACHT_DICE; size += 1) {
-        for (const subset of distributions(size)) {
-          if (subset.every((count, face) => count <= counts[face])) kept.push(holdId.get(key(subset))!);
-        }
-      }
-    }
-    return Int32Array.from(kept);
-  });
-  cached = { holds, full, holdId, reach, keeps };
-  return cached;
-}
-
-function toDice(counts: Counts): YachtFace[] {
-  return counts.flatMap((count, face) => Array<YachtFace>(count).fill((face + 1) as YachtFace));
-}
+const TIE_BREAK = 1e-6;
 
 export interface YachtPlan {
   /** Write the dice now rather than rolling again */
@@ -84,16 +22,41 @@ export interface YachtPlan {
 }
 
 /**
- * Chooses between writing `dice` now and rolling again, for `rollsLeft` rolls (1 or 2). Every box is valued
- * by `yachtPlacementValue`; keeping a hold is worth the average value of its best continuation over every
- * possible reroll, so the plan is the exact expectimax of that value, not a rule of thumb.
+ * Chooses between writing `dice` now and rolling again, for `rollsLeft` rolls (0 to 2). Writing a box is worth
+ * its points plus the solved value of the card it leaves (`yacht-table.ts`), and keeping a hold is worth the
+ * average of its best continuation over every possible reroll, so each turn is played exactly. Alone the value
+ * is the expected final score; against rivals it is the chance of finishing ahead of them (`yacht-win.ts`).
  */
-export function yachtPlan(card: YachtScorecard, dice: readonly YachtFace[], rollsLeft: number): YachtPlan {
-  const { holds, holdId, reach, keeps } = tables();
+export function yachtPlan(
+  card: YachtScorecard,
+  dice: readonly YachtFace[],
+  rollsLeft: number,
+  rivals: readonly YachtRival[] = [],
+): YachtPlan {
+  const tables = yachtDiceTables();
+  const { holds, holdId, reach, keeps } = tables;
+  const { mean, spread } = yachtTable();
+  const { mask, flag, subtotal } = cardState(card);
+  const winChance = rivals.length > 0 ? yachtWinChance(rivals) : null;
+  const banked = yachtTotals(card).total;
+
   const stopValue = new Float64Array(holds.length).fill(Number.NaN);
+  const stopBox = new Int32Array(holds.length).fill(-1);
   const stopAt = (id: number): number => {
-    if (Number.isNaN(stopValue[id])) stopValue[id] = yachtBestPlacement(card, toDice(holds[id])).value;
-    return stopValue[id];
+    if (!Number.isNaN(stopValue[id])) return stopValue[id];
+    let best = Number.NEGATIVE_INFINITY;
+    forEachPlacement(tables, id, mask, flag, subtotal, (box, points, nextMask, nextFlag, nextSubtotal) => {
+      const next = stateIndex(nextMask, nextFlag, nextSubtotal);
+      const expected = points + mean[next];
+      // The expected score breaks ties between lines whose win chance is the same, such as once the match is decided.
+      const value = winChance ? winChance(banked + expected, spread[next]) + expected * TIE_BREAK : expected;
+      if (value > best) {
+        best = value;
+        stopBox[id] = box;
+      }
+    });
+    stopValue[id] = best;
+    return best;
   };
   const average = (hold: number, next: (id: number) => number): number => {
     const { ids, chance } = reach[hold];
@@ -121,8 +84,13 @@ export function yachtPlan(card: YachtScorecard, dice: readonly YachtFace[], roll
 
   const counts = [0, 0, 0, 0, 0, 0];
   for (const die of dice) counts[die - 1] += 1;
-  const current = holdId.get(key(counts))!;
-  const placement = yachtBestPlacement(card, dice);
+  const current = holdId[counts.reduce((total, count) => total * 6 + count, 0)];
+  const stopNow = stopAt(current);
+  const boxOf = (): YachtBox => {
+    if (stopBox[current] < 0) throw new Error('A full scorecard has no box left.');
+    return YACHT_BOXES[stopBox[current]];
+  };
+  if (rollsLeft <= 0) return { stop: true, box: boxOf(), held: dice.map(() => true) };
   let bestHold = -1;
   let bestValue = Number.NEGATIVE_INFINITY;
   for (const hold of keeps[current]) {
@@ -132,14 +100,15 @@ export function yachtPlan(card: YachtScorecard, dice: readonly YachtFace[], roll
       bestHold = hold;
     }
   }
-  const remaining = [...holds[bestHold]];
+  const remaining = bestHold >= 0 ? [...holds[bestHold]] : [];
   const held = dice.map((die) => {
-    if (remaining[die - 1] === 0) return false;
+    if (!remaining[die - 1]) return false;
     remaining[die - 1] -= 1;
     return true;
   });
-  return { stop: placement.value >= bestValue, box: placement.box, held };
+  return { stop: stopNow >= bestValue, box: boxOf(), held };
 }
 
-// Built at startup so no bot decision pays for it.
-tables();
+// Loaded at startup so no bot decision pays for it, and a missing table fails fast.
+yachtDiceTables();
+yachtTable();
