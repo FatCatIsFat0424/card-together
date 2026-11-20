@@ -2,27 +2,31 @@ import type { HoldemVisibleState } from '@shared/types';
 import { heLegalActions } from '@shared/rules/holdem';
 import type { BotAction } from './bot-decisions';
 import { buildContext } from './holdem-context';
-import { readHistory } from './holdem-history';
+import { FAST_EFFORT } from './holdem-equity';
+import type { Effort } from './holdem-equity';
 import { postflopAction } from './holdem-postflop';
 import { preflopAction } from './holdem-preflop';
 
 export { holdemEquity } from './holdem-equity';
 
-// Heuristic summary: preflop hands are ranked by a precomputed equity table and played by position, stack depth in
-// big blinds and price. Raisers are assumed to hold the top slice of hands that matches how often they have raised
-// or shoved earlier in the match (read from the public log, with a prior that dominates the first hands). After the
-// flop the bot simulates its equity against ranges that narrow when opponents bet, mixes slowplays, check-raises and
-// bluffs, and keeps bet sizes independent of hand strength. The match clock widens the bot's ranges in the last
-// hands when it trails and tightens them when it leads. See the sibling holdem-* modules for each part.
+// Summary: short stacks play offline push/fold equilibrium charts; deeper stacks open by position and answer raises
+// by chip expectation against generic ranges for the action taken. After the flop each opponent's range narrows with
+// every action and bet size it chose this hand (the same model for every player; nothing is learned about a
+// particular opponent), and bets, raises, calls and bluffs are chosen by chip expectation, which ties bet size to hand
+// strength. The match clock widens ranges in the last hands when trailing and tightens them when leading. The worker
+// pool runs the same plan with more equity samples and exact turn and river enumeration (holdem-search).
 
-export function getHoldemBotAction(visible: HoldemVisibleState, random: () => number): BotAction | null {
+/** The decision for `visible` with the given estimation effort. */
+export function decideHoldem(visible: HoldemVisibleState, random: () => number, effort: Effort): BotAction | null {
   if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat) return null;
   const legal = heLegalActions(visible, visible.mySeat);
   if (!legal) return null;
-  const context = buildContext(visible, legal);
-  const history = readHistory(visible.log, visible.mySeat);
-  const action = visible.street === 'preflop'
-    ? preflopAction(visible, legal, context, history, random)
-    : postflopAction(visible, legal, context, history, random);
+  const context = buildContext(visible, legal, random, effort);
+  const action = visible.street === 'preflop' ? preflopAction(legal, context) : postflopAction(visible, legal, context);
   return { type: 'holdem-action', action };
+}
+
+/** The synchronous fallback: the same plan with a small sampling budget. */
+export function getHoldemBotAction(visible: HoldemVisibleState, random: () => number): BotAction | null {
+  return decideHoldem(visible, random, FAST_EFFORT);
 }

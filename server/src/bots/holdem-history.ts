@@ -1,144 +1,174 @@
 import type { GameSeat, HoldemLogEntry, HoldemStreet } from '@shared/types';
+import { heBlindSeats, heNextSeat } from '@shared/rules/holdem';
 
-// Reads the public log (every action of the match so far) into per-seat tendencies and a summary of the current
-// hand. Hole cards never enter the log before a showdown, so nothing here depends on private information.
+// Reads the current hand from the public log: what each seat did, from where, and how large each bet was relative
+// to the pot. Nothing carries over from earlier hands, so ranges depend on the action and its size, never on a
+// particular player's habits. Hole cards never enter the log before a showdown.
 
-export interface Rate {
-  readonly hits: number;
-  readonly trials: number;
+export type PreflopKind = 'none' | 'limp' | 'call' | 'open' | 'reraise' | 'shove' | 'callShove';
+
+export interface PreflopRead {
+  readonly kind: PreflopKind;
+  /** Seats still to act behind a first-in raise or all-in; for a call of a first-in all-in, that all-in's count. */
+  readonly behind: number;
+  /** For a call of a first-in all-in: the caller's place among the seats behind it (1 = next). */
+  readonly place: number;
+  /** Effective stack in big blinds when the seat acted. */
+  readonly stackBlinds: number;
+  /** Raises before this seat's latest raise. */
+  readonly raisesBefore: number;
 }
 
-/** Posterior mean of a rate when `weight` imaginary observations at `prior` back the real ones. */
-export function blendRate(rate: Rate, prior: number, weight: number): number {
-  return (rate.hits + prior * weight) / (rate.trials + weight);
+export interface PostflopRead {
+  readonly street: Exclude<HoldemStreet, 'preflop'>;
+  readonly kind: 'check' | 'call' | 'bet' | 'raise';
+  /** A bet or raise: the increment over the current bet as a share of the pot after calling; a call: the bet called. */
+  readonly fraction: number;
 }
 
-export interface SeatStats {
-  /** Raised preflop when nobody had raised yet. */
-  open: Rate;
-  /** Raised preflop facing a raise. */
-  reraise: Rate;
-  /** Went all-in with a raise, per preflop decision. */
-  shove: Rate;
-  /** Folded preflop to the first raise of a hand. */
-  foldToOpen: Rate;
-  /** Bet after the flop when checked to. */
-  bet: Rate;
-  /** Raised a bet after the flop. */
-  raise: Rate;
-  /** Folded to a bet after the flop. */
-  foldToBet: Rate;
+export interface SeatRead {
+  readonly preflop: PreflopRead;
+  readonly postflop: readonly PostflopRead[];
 }
 
-export type RaiseKind = 'open' | 'reraise' | 'shove';
-
-export interface SeatHand {
-  /** Latest preflop raise, or null when the seat never raised this hand. */
-  raiseKind: RaiseKind | null;
-  /** Called a raise preflop. */
-  calledRaise: boolean;
-  /** Latest bet or raise on each street. */
-  aggression: Partial<Record<HoldemStreet, 'bet' | 'raise'>>;
-}
-
-export interface HandSummary {
-  preflopRaises: number;
+export interface HandRead {
+  readonly seats: ReadonlyMap<GameSeat, SeatRead>;
+  readonly preflopRaises: number;
   /** Seats that only called the big blind before any raise. */
-  limpers: number;
+  readonly limpers: number;
   /** Raises the viewer made preflop this hand. */
-  ownPreflopRaises: number;
+  readonly ownPreflopRaises: number;
+  /** The seat that made the last preflop raise. */
+  readonly preflopAggressor: GameSeat | null;
   /** The viewer already checked on the current street. */
-  checkedThisStreet: boolean;
-  seats: Map<GameSeat, SeatHand>;
+  readonly checkedThisStreet: boolean;
+  /** Bets and raises on the current street. */
+  readonly streetRaises: number;
 }
 
-export interface MatchHistory {
-  stats: Map<GameSeat, SeatStats>;
-  hand: HandSummary;
+const NO_PREFLOP: PreflopRead = { kind: 'none', behind: 0, place: 0, stackBlinds: 0, raisesBefore: 0 };
+
+export const seatRead = (read: HandRead, seat: GameSeat): SeatRead => read.seats.get(seat) ?? { preflop: NO_PREFLOP, postflop: [] };
+
+/** Preflop acting order: the seat after the big blind first, the big blind last. */
+export function preflopOrder(dealt: readonly GameSeat[], button: GameSeat): GameSeat[] {
+  const { big } = heBlindSeats(dealt, button);
+  const order: GameSeat[] = [];
+  let seat: GameSeat | null = big;
+  for (let step = 0; step < dealt.length; step++) {
+    seat = heNextSeat(seat ?? big, (candidate) => dealt.includes(candidate));
+    if (seat) order.push(seat);
+  }
+  return order;
 }
 
-const emptyRate = (): Rate => ({ hits: 0, trials: 0 });
-
-function emptyStats(): SeatStats {
-  return {
-    open: emptyRate(), reraise: emptyRate(), shove: emptyRate(), foldToOpen: emptyRate(),
-    bet: emptyRate(), raise: emptyRate(), foldToBet: emptyRate(),
-  };
+/** The current hand's table: who was dealt in, the button, the big blind, and each seat's chips when it began. */
+export interface HandTable {
+  readonly dealt: readonly GameSeat[];
+  readonly button: GameSeat;
+  readonly bigBlind: number;
+  readonly stacks: Readonly<Record<GameSeat, number>>;
 }
 
-function emptyHand(): HandSummary {
-  return { preflopRaises: 0, limpers: 0, ownPreflopRaises: 0, checkedThisStreet: false, seats: new Map() };
-}
-
-function count(stats: SeatStats, key: keyof SeatStats, hit: boolean): void {
-  const rate = stats[key];
-  stats[key] = { hits: rate.hits + (hit ? 1 : 0), trials: rate.trials + 1 };
-}
-
-export function readHistory(log: readonly HoldemLogEntry[], viewer: GameSeat): MatchHistory {
-  const stats = new Map<GameSeat, SeatStats>();
-  let hand = emptyHand();
-  let street: HoldemStreet = 'preflop';
-  let currentBet = 0;
-  const statsOf = (seat: GameSeat): SeatStats => {
-    const found = stats.get(seat) ?? emptyStats();
-    stats.set(seat, found);
+/** Reads the hand in progress from the log entries after its last `hand` entry. */
+export function readHand(log: readonly HoldemLogEntry[], viewer: GameSeat, { dealt, button, bigBlind, stacks }: HandTable): HandRead {
+  const start = log.reduce((found, entry, index) => (entry.type === 'hand' ? index : found), -1);
+  const hand = start >= 0 ? log[start] : null;
+  const order = preflopOrder(dealt, button);
+  const reads = new Map<GameSeat, { preflop: PreflopRead; postflop: PostflopRead[] }>();
+  const readOf = (seat: GameSeat): { preflop: PreflopRead; postflop: PostflopRead[] } => {
+    const found = reads.get(seat) ?? { preflop: NO_PREFLOP, postflop: [] };
+    reads.set(seat, found);
     return found;
   };
-  const handOf = (seat: GameSeat): SeatHand => {
-    const found = hand.seats.get(seat) ?? { raiseKind: null, calledRaise: false, aggression: {} };
-    hand.seats.set(seat, found);
-    return found;
-  };
-
-  for (const entry of log) {
-    if (entry.type === 'hand') {
-      hand = emptyHand();
-      street = 'preflop';
-      currentBet = entry.bigBlind;
-    } else if (entry.type === 'street') {
-      street = entry.street;
-      currentBet = 0;
-      hand.checkedThisStreet = false;
-    } else if (entry.type === 'action') {
-      const { seat, action } = entry;
-      const mine = statsOf(seat);
-      const seatHand = handOf(seat);
-      const aggressive = action === 'bet' || action === 'raise';
-      if (street === 'preflop') {
-        count(mine, 'shove', aggressive && entry.allIn);
-        if (hand.preflopRaises === 0) {
-          count(mine, 'open', aggressive);
-          if (action === 'call') hand.limpers += 1;
-        } else {
-          count(mine, 'reraise', aggressive);
-          if (hand.preflopRaises === 1) count(mine, 'foldToOpen', action === 'fold');
-          if (action === 'call') seatHand.calledRaise = true;
-        }
-        if (aggressive) {
-          seatHand.raiseKind = entry.allIn ? 'shove' : hand.preflopRaises === 0 ? 'open' : 'reraise';
-          hand.preflopRaises += 1;
-          if (seat === viewer) hand.ownPreflopRaises += 1;
-        }
-      } else {
-        if (currentBet === 0) count(mine, 'bet', aggressive);
-        else {
-          count(mine, 'raise', aggressive);
-          count(mine, 'foldToBet', action === 'fold');
-        }
-        if (aggressive) seatHand.aggression[street] = currentBet === 0 ? 'bet' : 'raise';
-        if (action === 'check' && seat === viewer) hand.checkedThisStreet = true;
-      }
-      if (aggressive) currentBet = Math.max(currentBet, entry.to);
+  const stake = new Map<GameSeat, number>();
+  let pot = 0;
+  if (hand?.type === 'hand') {
+    for (const seat of dealt) {
+      const blind = hand.blinds[seat] ?? 0;
+      stake.set(seat, blind);
+      pot += blind;
     }
   }
-  return { stats, hand };
-}
+  const folded = new Set<GameSeat>();
+  let street: HoldemStreet = 'preflop';
+  let currentBet = bigBlind;
+  let lastFraction = 0;
+  let preflopRaises = 0;
+  let limpers = 0;
+  let ownPreflopRaises = 0;
+  let preflopAggressor: GameSeat | null = null;
+  let checkedThisStreet = false;
+  let streetRaises = 0;
+  /** The first raise was an all-in from a seat that nobody had limped in front of. */
+  let firstShove: { seat: GameSeat; behind: number } | null = null;
 
-export function statsOfSeat(history: MatchHistory, seat: GameSeat): SeatStats {
-  return history.stats.get(seat) ?? emptyStats();
-}
+  const effectiveBlinds = (seat: GameSeat): number => {
+    const others = dealt.filter((other) => other !== seat && !folded.has(other)).map((other) => stacks[other] ?? 0);
+    return Math.min(stacks[seat] ?? 0, Math.max(0, ...others)) / bigBlind;
+  };
+  const behindOf = (seat: GameSeat): number => {
+    const index = order.indexOf(seat);
+    return order.slice(index + 1).filter((other) => !folded.has(other)).length;
+  };
 
-export function handOfSeat(history: MatchHistory, seat: GameSeat): SeatHand {
-  return history.hand.seats.get(seat) ?? { raiseKind: null, calledRaise: false, aggression: {} };
+  for (const entry of log.slice(start + 1)) {
+    if (entry.type === 'street') {
+      street = entry.street;
+      currentBet = 0;
+      lastFraction = 0;
+      streetRaises = 0;
+      checkedThisStreet = false;
+      stake.clear();
+      continue;
+    }
+    if (entry.type !== 'action') continue;
+    const { seat, action } = entry;
+    const read = readOf(seat);
+    const before = stake.get(seat) ?? 0;
+    const aggressive = action === 'bet' || action === 'raise';
+    const added = action === 'call' || aggressive ? Math.max(0, entry.to - before) : 0;
+    if (street === 'preflop') {
+      if (aggressive) {
+        const firstIn = preflopRaises === 0;
+        const kind: PreflopKind = entry.allIn ? 'shove' : firstIn ? 'open' : 'reraise';
+        if (firstIn && entry.allIn && limpers === 0) firstShove = { seat, behind: behindOf(seat) };
+        read.preflop = {
+          kind, behind: firstIn ? behindOf(seat) : 0, place: 0, stackBlinds: effectiveBlinds(seat), raisesBefore: preflopRaises,
+        };
+        preflopRaises += 1;
+        preflopAggressor = seat;
+        if (seat === viewer) ownPreflopRaises += 1;
+      } else if (action === 'call') {
+        if (preflopRaises === 0) {
+          limpers += 1;
+          read.preflop = { ...NO_PREFLOP, kind: 'limp', stackBlinds: effectiveBlinds(seat) };
+        } else if (firstShove && preflopRaises === 1) {
+          const place = order.indexOf(seat) - order.indexOf(firstShove.seat);
+          read.preflop = {
+            kind: place > 0 ? 'callShove' : 'call', behind: firstShove.behind, place, stackBlinds: effectiveBlinds(firstShove.seat),
+            raisesBefore: preflopRaises,
+          };
+        } else if (read.preflop.kind === 'none' || read.preflop.kind === 'limp') {
+          read.preflop = { ...NO_PREFLOP, kind: 'call', stackBlinds: effectiveBlinds(seat), raisesBefore: preflopRaises };
+        }
+      }
+    } else if (action !== 'fold') {
+      const owed = Math.max(0, currentBet - before);
+      if (aggressive) {
+        const fraction = (entry.to - currentBet) / Math.max(1, pot + owed);
+        read.postflop.push({ street, kind: currentBet === 0 ? 'bet' : 'raise', fraction });
+        lastFraction = fraction;
+        streetRaises += 1;
+      } else {
+        read.postflop.push({ street, kind: action === 'call' ? 'call' : 'check', fraction: action === 'call' ? lastFraction : 0 });
+        if (action === 'check' && seat === viewer) checkedThisStreet = true;
+      }
+    }
+    if (action === 'fold') folded.add(seat);
+    pot += added;
+    stake.set(seat, before + added);
+    if (aggressive) currentBet = Math.max(currentBet, entry.to);
+  }
+  return { seats: reads, preflopRaises, limpers, ownPreflopRaises, preflopAggressor, checkedThisStreet, streetRaises };
 }

@@ -1,124 +1,218 @@
 import { gameSeatValues } from '../helpers/game-seat-values';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { GAME_SEAT_ORDER } from '@shared/constants';
 import type { Card, GameSeat, HoldemAction, HoldemLogEntry, HoldemVisibleState, PlayerInfo, Seat } from '@shared/types';
 import { heLegalActions } from '@shared/rules/holdem';
 import { createDeck } from '../../src/engine/deck';
 import * as holdem from '../../src/managers/games/holdem-game';
+import { GAME_BOTS } from '../../src/bots/bot-registry';
+import { buildContext } from '../../src/bots/holdem-context';
+import { FAST_EFFORT } from '../../src/bots/holdem-equity';
+import { opponentModels } from '../../src/bots/holdem-opponents';
+import { holdemSearch } from '../../src/bots/holdem-search';
 import { getHoldemBotAction, holdemEquity } from '../../src/bots/holdem-strategy';
+import type { SearchContext } from '../../src/bots/search/search-types';
+import { seededRandom } from '../../src/bots/search/seeded-random';
+import { runSeededGame } from './seeded-game-runner';
 
 const card = (rank: Card['rank'], suit: Card['suit'] = 'spades'): Card => ({ suit, rank });
 const seats = <T>(value: T): Record<Seat, T> => ({ N: value, E: value, S: value, W: value });
+const blinds = { N: 10, E: 20, S: 0, W: 0, P5: 0, P6: 0, P7: 0, P8: 0 };
+const handEntry = (hand: number, bigBlind = 20): HoldemLogEntry =>
+  ({ type: 'hand', hand, button: 'W', smallBlind: bigBlind / 2, bigBlind, blinds: { ...blinds, N: bigBlind / 2, E: bigBlind }, timestamp: 0 });
+const actionEntry = (seat: GameSeat, kind: 'fold' | 'check' | 'call' | 'bet' | 'raise', to: number, allIn = false): HoldemLogEntry =>
+  ({ type: 'action', seat, action: kind, to, allIn, timestamp: 0 });
+const streetEntry = (street: 'flop' | 'turn' | 'river', cards: Card[]): HoldemLogEntry => ({ type: 'street', street, cards, timestamp: 0 });
 
-function seeded(seed: number): () => number {
-  let state = seed;
-  return () => {
-    state = (state * 1664525 + 1013904223) >>> 0;
-    return state / 4294967296;
-  };
-}
-
-/** Plays back fixed values, then repeats the last one. */
-function scripted(...values: number[]): () => number {
-  let index = 0;
-  return () => values[Math.min(index++, values.length - 1)];
-}
-
-/** Preflop with N to act facing the big blind; W is the button, so E and S posted the blinds. */
+/**
+ * Preflop with W on the button: N posted the small blind, E the big blind, and S acts first with three seats behind.
+ */
 function visible(overrides: Partial<HoldemVisibleState> = {}): HoldemVisibleState {
   return gameSeatValues({
-    gameType: 'holdem', phase: 'playing', mySeat: 'N', seats: ['N', 'E', 'S', 'W'], myHand: [card(2), card(7, 'hearts')], hand: 1, button: 'W',
-    smallBlind: 10, bigBlind: 20, chips: { N: 1000, E: 990, S: 980, W: 1000 },
-    streetBets: { N: 0, E: 10, S: 20, W: 0 }, totalBets: { N: 0, E: 10, S: 20, W: 0 },
-    dealt: ['N', 'E', 'S', 'W'], folded: ['W'], street: 'preflop', board: [], currentBet: 20, minRaise: 20, acted: ['W'],
-    revealed: seats([]), eliminated: [], currentTurnSeat: 'N', log: [], result: null, ...overrides,
+    gameType: 'holdem', phase: 'playing', mySeat: 'S', seats: ['N', 'E', 'S', 'W'], myHand: [card(2), card(7, 'hearts')], hand: 1, button: 'W',
+    smallBlind: 10, bigBlind: 20, chips: { N: 990, E: 980, S: 1000, W: 1000 },
+    streetBets: { N: 10, E: 20, S: 0, W: 0 }, totalBets: { N: 10, E: 20, S: 0, W: 0 },
+    dealt: ['N', 'E', 'S', 'W'], folded: [], street: 'preflop', board: [], currentBet: 20, minRaise: 20, acted: [],
+    revealed: seats([]), eliminated: [], currentTurnSeat: 'S', log: [handEntry(1)], result: null, ...overrides,
   });
 }
 
-function action(state: HoldemVisibleState, random: () => number): HoldemAction | null {
+function action(state: HoldemVisibleState, random: () => number = seededRandom(1)): HoldemAction | null {
   const decided = getHoldemBotAction(state, random);
   return decided?.type === 'holdem-action' ? decided.action : null;
 }
 
-/** Share of calls over several seeds, which smooths the sampling noise of close decisions. */
-function callShare(state: HoldemVisibleState): number {
-  const seedsUsed = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-  return seedsUsed.filter((seed) => action(state, seeded(seed))?.type === 'call').length / seedsUsed.length;
-}
+const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];
+const shareOf = (state: HoldemVisibleState, type: HoldemAction['type']): number =>
+  SEEDS.filter((seed) => action(state, seededRandom(seed))?.type === type).length / SEEDS.length;
 
-const handEntry = (hand: number, button: GameSeat, smallBlind: number, bigBlind: number, blinds: Record<GameSeat, number>): HoldemLogEntry =>
-  ({ type: 'hand', hand, button, smallBlind, bigBlind, blinds, timestamp: 0 });
-const actionEntry = (seat: GameSeat, kind: 'fold' | 'check' | 'call' | 'bet' | 'raise', to: number, allIn = false): HoldemLogEntry =>
-  ({ type: 'action', seat, action: kind, to, allIn, timestamp: 0 });
+/** Hands from strong to weak, used to compare how wide two situations play. */
+const SAMPLE_HANDS: readonly (readonly [Card, Card])[] = [
+  [card(14), card(10, 'hearts')], [card(14), card(6, 'hearts')], [card(14), card(2, 'hearts')], [card(13), card(11, 'hearts')],
+  [card(13), card(8, 'hearts')], [card(13), card(4)], [card(12), card(10)], [card(12), card(7, 'hearts')], [card(11), card(9)],
+  [card(11), card(6, 'hearts')], [card(10), card(8)], [card(9), card(9, 'hearts')], [card(6), card(6, 'hearts')], [card(3), card(3, 'hearts')],
+  [card(9), card(7)], [card(8), card(6)], [card(7), card(5)], [card(10), card(7, 'hearts')], [card(9), card(5, 'hearts')],
+  [card(8), card(4, 'hearts')], [card(6), card(3, 'hearts')], [card(5), card(4)], [card(12), card(3)], [card(13), card(2, 'hearts')],
+];
+
+const countOf = (build: (hand: readonly Card[]) => HoldemVisibleState, type: HoldemAction['type']): number =>
+  SAMPLE_HANDS.filter((hand) => action(build(hand))?.type === type).length;
+
+function searchContext(seed: number, budgetMs: number): SearchContext {
+  const began = performance.now();
+  const timeLeftMs = (): number => Math.max(0, budgetMs - (performance.now() - began));
+  return { random: seededRandom(seed), budget: { maxDepth: undefined, timeLeftMs, expired: () => timeLeftMs() === 0 } };
+}
 
 describe("Hold'em bot strategy", () => {
   it('estimates equity from random opponents and boards', () => {
-    const random = seeded(5);
+    const random = seededRandom(5);
     expect(holdemEquity([card(14), card(14, 'hearts')], [], 1, random, 400)).toBeGreaterThan(0.75);
     expect(holdemEquity([card(7, 'hearts'), card(2)], [], 3, random, 400)).toBeLessThan(0.2);
-    const nuts = [card(14), card(13)];
     const board = [card(12), card(11), card(10), card(2, 'hearts'), card(3, 'clubs')];
-    expect(holdemEquity(nuts, board, 3, random, 50)).toBe(1);
+    expect(holdemEquity([card(14), card(13)], board, 3, random, 50)).toBe(1);
   });
 
-  it('folds trash to a bet, raises premium hands, and checks for free', () => {
-    expect(action(visible(), seeded(1))).toEqual({ type: 'fold' });
-    expect(action(visible({ myHand: [card(14), card(14, 'hearts')] }), seeded(1))).toEqual({ type: 'raise', to: 60 });
-    expect(action(visible(gameSeatValues({ mySeat: 'S', currentTurnSeat: 'S', streetBets: { N: 20, E: 20, S: 20, W: 0 },
-      acted: ['W', 'N', 'E'] })), seeded(1))).toEqual({ type: 'check' });
+  it('runs in the worker pool and lets a human who times out only check or fold', () => {
+    expect(GAME_BOTS.holdem.search?.strategy.exportName).toBe('holdemSearch');
+    expect(GAME_BOTS.holdem.search?.budgetMs).toBeLessThanOrEqual(1500);
+    const strategy = (): ReturnType<typeof getHoldemBotAction> => ({ type: 'holdem-action', action: { type: 'call' } });
+    expect(GAME_BOTS.holdem.turnTimeout?.(visible({ myHand: [card(14), card(14, 'hearts')] }), { isBot: false, strategy }))
+      .toEqual({ type: 'holdem-action', action: { type: 'fold' } });
   });
 
-  it('opens wider with fewer players left to act', () => {
-    const hand = [card(10, 'hearts'), card(9, 'hearts')];
-    // Three seats still to act, including the button.
-    expect(action(visible(gameSeatValues({ myHand: hand, folded: [], acted: [] })), seeded(1))).toEqual({ type: 'fold' });
-    // With the button already folded only the blinds remain, so the same hand opens.
-    expect(action(visible({ myHand: hand }), seeded(1))).toEqual({ type: 'raise', to: 60 });
+  it('acts only on its own turn while playing', () => {
+    expect(getHoldemBotAction(visible({ currentTurnSeat: 'E' }), seededRandom(1))).toBeNull();
+    expect(getHoldemBotAction(visible({ phase: 'scoring' }), seededRandom(1))).toBeNull();
   });
 
-  it('shoves strong hands when short-stacked and acts only on its own turn', () => {
-    expect(action(visible(gameSeatValues({ myHand: [card(10), card(10, 'hearts')], chips: { N: 150, E: 990, S: 980, W: 1000 } })),
-      seeded(1))).toEqual({ type: 'raise', to: 150 });
-    expect(getHoldemBotAction(visible({ currentTurnSeat: 'E' }), seeded(1))).toBeNull();
-    expect(getHoldemBotAction(visible({ phase: 'scoring' }), seeded(1))).toBeNull();
+  describe('preflop with deep stacks', () => {
+    it('folds trash, opens premium hands small, and checks its option for free', () => {
+      expect(action(visible())).toEqual({ type: 'fold' });
+      expect(action(visible({ myHand: [card(14), card(14, 'hearts')] }))).toEqual({ type: 'raise', to: 50 });
+      const option = visible(gameSeatValues({ mySeat: 'E', currentTurnSeat: 'E', streetBets: { N: 20, E: 20, S: 20, W: 20 },
+        acted: ['S', 'W', 'N'], log: [handEntry(1), actionEntry('S', 'call', 20), actionEntry('W', 'call', 20), actionEntry('N', 'call', 20)] }));
+      expect(action(option)).toEqual({ type: 'check' });
+    });
+
+    it('opens wider with fewer seats left to act', () => {
+      const first = countOf((hand) => visible({ myHand: hand }), 'raise');
+      const button = countOf((hand) => visible(gameSeatValues({
+        myHand: hand, mySeat: 'W', currentTurnSeat: 'W', folded: ['S'], acted: ['S'], log: [handEntry(1), actionEntry('S', 'fold', 0)],
+      })), 'raise');
+      expect(button).toBeGreaterThan(first);
+    });
   });
 
-  it('bets made hands after the flop and folds weak ones to a large bet', () => {
-    const flop = gameSeatValues({ street: 'flop' as const, board: [card(14, 'hearts'), card(14, 'clubs'), card(7, 'diamonds')],
-      currentBet: 0, minRaise: 20, streetBets: seats(0), acted: [] as Seat[], totalBets: { N: 20, E: 20, S: 20, W: 0 } });
-    const strong = action(visible({ ...flop, myHand: [card(14), card(13)] }), scripted(0.9, 0.5));
-    expect(strong?.type).toBe('raise');
-    const facing = gameSeatValues({ ...flop, currentBet: 200, streetBets: { N: 0, E: 200, S: 0, W: 0 }, totalBets: { N: 20, E: 220, S: 20, W: 0 } });
-    expect(action(visible({ ...facing, myHand: [card(2), card(3, 'hearts')] }), seeded(2))).toEqual({ type: 'fold' });
-  });
+  describe('short stacks', () => {
+    /** Every seat holds `stack` chips at `bigBlind`; S acts first in. */
+    const short = (hand: readonly Card[], stack: number, overrides: Partial<HoldemVisibleState> = {}): HoldemVisibleState => visible(gameSeatValues({
+      myHand: hand, chips: { N: stack - 10, E: stack - 20, S: stack, W: stack }, ...overrides,
+    }));
 
-  describe('defending against raises', () => {
-    /** W, the button, shoves its whole stack of `to` chips; N acts next with both blinds still to act. */
-    const shoveBy = (to: number, hand: readonly Card[], log: readonly HoldemLogEntry[] = []): HoldemVisibleState =>
+    it('pushes or folds from the chart', () => {
+      expect(action(short([card(10), card(10, 'hearts')], 150))).toEqual({ type: 'raise', to: 150 });
+      expect(action(short([card(7), card(2, 'hearts')], 150))).toEqual({ type: 'fold' });
+      // Less than a minimum raise still goes all-in.
+      expect(action(short([card(14), card(14, 'hearts')], 30))).toEqual({ type: 'raise', to: 30 });
+    });
+
+    it('pushes wider when trailing on the last hand and tighter when leading', () => {
+      /** Last hand at 60/120 with S holding `mine` chips and the other seats `rival`. */
+      const lastHand = (mine: number, rival: number) => (hand: readonly Card[]): HoldemVisibleState => visible(gameSeatValues({
+        myHand: hand, hand: 20, smallBlind: 60, bigBlind: 120, currentBet: 120, minRaise: 120, log: [handEntry(20, 120)],
+        chips: { N: rival - 60, E: rival - 120, S: mine, W: rival }, streetBets: { N: 60, E: 120, S: 0, W: 0 }, totalBets: { N: 60, E: 120, S: 0, W: 0 },
+      }));
+      // The effective stack is 1,500 chips in every case.
+      const trailing = countOf(lastHand(1500, 2000), 'raise');
+      const level = countOf(lastHand(1500, 1500), 'raise');
+      const leading = countOf(lastHand(2000, 1500), 'raise');
+      expect(trailing).toBeGreaterThan(level);
+      expect(level).toBeGreaterThan(leading);
+    });
+
+    /** S moved all-in for `stack` chips first in; `seat` acts next with the given seats folded before it. */
+    const facingShove = (seat: GameSeat, hand: readonly Card[], stack: number, folded: GameSeat[], earlier: HoldemLogEntry[] = []): HoldemVisibleState =>
       visible(gameSeatValues({
-        myHand: hand, folded: [], acted: ['W'], currentBet: to, minRaise: to - 20, streetBets: { N: 0, E: 10, S: 20, W: to },
-        totalBets: { N: 0, E: 10, S: 20, W: to }, chips: { N: 1000, E: 990, S: 980, W: 0 }, hand: log.length > 0 ? 10 : 1,
-        log: [...log, handEntry(log.length > 0 ? 10 : 1, 'W', 10, 20, { N: 0, E: 10, S: 20, W: 0, P5: 0, P6: 0, P7: 0, P8: 0 }),
-          actionEntry('W', 'raise', to, true)],
+        mySeat: seat, currentTurnSeat: seat, myHand: hand, currentBet: stack, minRaise: stack - 20, acted: ['S', ...folded], folded,
+        chips: { N: 990, E: 980, S: 0, W: 1000 }, streetBets: { N: 10, E: 20, S: stack, W: 0 }, totalBets: { N: 10, E: 20, S: stack, W: 0 },
+        log: [...earlier, handEntry(earlier.length > 0 ? 9 : 1), actionEntry('S', 'raise', stack, true), ...folded.map((other) => actionEntry(other, 'fold', 0))],
+        hand: earlier.length > 0 ? 9 : 1,
       }));
 
-    it('calls a shove at a good price with a hand that beats a typical shoving range', () => {
-      expect(callShare(shoveBy(60, [card(14), card(12, 'hearts')]))).toBe(1);
-      expect(callShare(shoveBy(60, [card(7), card(2, 'hearts')]))).toBe(0);
+    it('calls a first-in all-in from the call chart, widest from the big blind', () => {
+      expect(action(facingShove('W', [card(14), card(14, 'hearts')], 200, []))).toEqual({ type: 'call' });
+      expect(action(facingShove('E', [card(7), card(2, 'hearts')], 200, ['W', 'N']))).toEqual({ type: 'fold' });
+      const nextSeat = countOf((hand) => facingShove('W', hand, 200, []), 'call');
+      const bigBlind = countOf((hand) => facingShove('E', hand, 200, ['W', 'N']), 'call');
+      expect(bigBlind).toBeGreaterThan(nextSeat);
+      expect(countOf((hand) => facingShove('E', hand, 1000, ['W', 'N']), 'call')).toBeLessThan(bigBlind);
     });
 
-    it('folds the same hand when the shove is expensive', () => {
-      expect(callShare(shoveBy(1000, [card(13), card(9, 'hearts')]))).toBe(0);
-    });
-
-    it('calls a shove wider once the seat has shoved hand after hand', () => {
-      const blinds = { N: 0, E: 10, S: 20, W: 0, P5: 0, P6: 0, P7: 0, P8: 0 };
-      const earlier: HoldemLogEntry[] = [1, 2, 3, 4, 5, 6, 7, 8, 9].flatMap((hand) => [
-        handEntry(hand, 'W', 10, 20, blinds), actionEntry('W', 'raise', 1000, true), actionEntry('N', 'fold', 0),
-        actionEntry('E', 'fold', 10), actionEntry('S', 'fold', 20),
+    it('reads an all-in the same way however often that seat shoved before', () => {
+      const earlier: HoldemLogEntry[] = [1, 2, 3, 4, 5, 6, 7, 8].flatMap((hand) => [
+        handEntry(hand), actionEntry('S', 'raise', 1000, true), actionEntry('W', 'fold', 0), actionEntry('N', 'fold', 10), actionEntry('E', 'fold', 20),
       ]);
-      const hand = [card(13), card(11, 'hearts')];
-      expect(callShare(shoveBy(1000, hand))).toBeLessThan(0.4);
-      expect(callShare(shoveBy(1000, hand, earlier))).toBeGreaterThan(0.6);
+      for (const hand of SAMPLE_HANDS.slice(0, 12)) {
+        expect(action(facingShove('E', hand, 1000, ['W', 'N'], earlier))).toEqual(action(facingShove('E', hand, 1000, ['W', 'N'])));
+      }
+    });
+  });
+
+  describe('after the flop', () => {
+    /** Heads-up flop on K-7-2 rainbow after S raised and E called; S acts first into a pot of 120. */
+    const flop = (hand: readonly Card[], overrides: Partial<HoldemVisibleState> = {}): HoldemVisibleState => visible(gameSeatValues({
+      myHand: hand, street: 'flop', board: [card(13, 'hearts'), card(7, 'diamonds'), card(2, 'clubs')], folded: ['W', 'N'],
+      currentBet: 0, minRaise: 20, streetBets: seats(0), acted: [], chips: { N: 990, E: 940, S: 940, W: 1000 },
+      totalBets: { N: 10, E: 60, S: 60, W: 0 },
+      log: [handEntry(1), actionEntry('S', 'raise', 60), actionEntry('W', 'fold', 0), actionEntry('N', 'fold', 10), actionEntry('E', 'call', 60),
+        streetEntry('flop', [card(13, 'hearts'), card(7, 'diamonds'), card(2, 'clubs')])],
+      ...overrides,
+    }));
+    const betSize = (state: HoldemVisibleState): number => {
+      const sizes = SEEDS.map((seed) => action(state, seededRandom(seed))).map((chosen) => (chosen?.type === 'raise' ? chosen.to : 0));
+      return sizes.reduce((sum, value) => sum + value, 0) / sizes.length;
+    };
+
+    it('bets more with stronger hands', () => {
+      const set = betSize(flop([card(13), card(13, 'diamonds')]));
+      const middlePair = betSize(flop([card(7), card(6)]));
+      expect(set).toBeGreaterThan(0);
+      expect(set).toBeGreaterThan(middlePair);
+    });
+
+    /** S checked, E bet `bet` chips into the pot of 125. */
+    const facing = (hand: readonly Card[], bet: number): HoldemVisibleState => {
+      const base = flop(hand);
+      return visible({
+        ...base, currentBet: bet, minRaise: bet, acted: ['E'] as Seat[],
+        streetBets: { ...base.streetBets, E: bet }, totalBets: { ...base.totalBets, E: 60 + bet }, chips: { ...base.chips, E: 940 - bet },
+        log: [...base.log, actionEntry('S', 'check', 0), actionEntry('E', 'bet', bet)],
+      });
+    };
+
+    it('calls a small bet with a middle pair and folds it to an overbet', () => {
+      const middlePair = [card(7), card(6, 'hearts')];
+      expect(shareOf(facing(middlePair, 30), 'fold')).toBe(0);
+      expect(shareOf(facing(middlePair, 400), 'fold')).toBe(1);
+      expect(action(facing([card(3), card(4, 'hearts')], 120))).toEqual({ type: 'fold' });
+    });
+
+    it('reads a larger bet as a stronger range', () => {
+      const strength = (bet: number): number => {
+        const state = facing([card(7), card(6, 'hearts')], bet);
+        const [model] = opponentModels(buildContext(state, heLegalActions(state, 'S')!, seededRandom(1), FAST_EFFORT));
+        let weighted = 0;
+        model.range.weights.forEach((weight, index) => { weighted += weight * model.strength[index]; });
+        return weighted / model.range.total;
+      };
+      expect(strength(200)).toBeGreaterThan(strength(30));
+    });
+
+    it('enumerates the river in the worker pool', () => {
+      const river = flop([card(13), card(12)], gameSeatValues({ street: 'river', board: [card(13, 'hearts'), card(7, 'diamonds'), card(2, 'clubs'), card(9), card(4, 'hearts')] }));
+      const first = holdemSearch(river, searchContext(1, 1000));
+      expect(first?.type).toBe('holdem-action');
     });
   });
 
@@ -153,7 +247,7 @@ describe("Hold'em bot strategy", () => {
       let drawn = 0;
       holdem.restoreGames([]);
       holdem.startGame(CODE, PLAYERS, () => draws[drawn++] ?? 0.5, 0);
-      const bot = seeded(11);
+      const bot = seededRandom(11);
       while (holdem.getGameState(CODE)?.street === 'preflop' && holdem.getGameState(CODE)?.hand === 1) {
         const state = holdem.getGameState(CODE)!;
         const seat = state.currentTurnSeat;
@@ -184,119 +278,58 @@ describe("Hold'em bot strategy", () => {
   });
 
   describe('re-raise limits', () => {
-    const blinds = { N: 10, E: 20, S: 0, W: 0, P5: 0, P6: 0, P7: 0, P8: 0 };
     const openedAndThreeBet = [
-      handEntry(1, 'W', 10, 20, blinds), actionEntry('S', 'fold', 0), actionEntry('W', 'fold', 0),
-      actionEntry('N', 'raise', 60), actionEntry('E', 'raise', 180),
+      handEntry(1), actionEntry('S', 'fold', 0), actionEntry('W', 'fold', 0), actionEntry('N', 'raise', 60), actionEntry('E', 'raise', 180),
     ];
     const aces = [card(14), card(14, 'hearts')];
     const afterThreeBet = (log: readonly HoldemLogEntry[], stakes: { N: number; E: number }): HoldemVisibleState => visible(gameSeatValues({
-      myHand: aces, hand: 1, folded: ['S', 'W'], acted: ['E'], currentBet: stakes.E, minRaise: stakes.E - stakes.N,
+      mySeat: 'N', currentTurnSeat: 'N', myHand: aces, folded: ['S', 'W'], acted: ['E'], currentBet: stakes.E, minRaise: stakes.E - stakes.N,
       streetBets: { N: stakes.N, E: stakes.E, S: 0, W: 0 }, totalBets: { N: stakes.N, E: stakes.E, S: 0, W: 0 },
       chips: { N: 1000 - stakes.N, E: 1000 - stakes.E, S: 1000, W: 1000 }, log: [...log],
     }));
 
     it('raises premium hands once more after a three-bet', () => {
-      expect(action(afterThreeBet(openedAndThreeBet, { N: 60, E: 180 }), seeded(4))?.type).toBe('raise');
+      expect(action(afterThreeBet(openedAndThreeBet, { N: 60, E: 180 }))?.type).toBe('raise');
     });
 
     it('only calls once the seat has made two preflop raises', () => {
       const fiveBet = [...openedAndThreeBet, actionEntry('N', 'raise', 420), actionEntry('E', 'raise', 700)];
-      expect(action(afterThreeBet(fiveBet, { N: 420, E: 700 }), seeded(4))).toEqual({ type: 'call' });
+      expect(action(afterThreeBet(fiveBet, { N: 420, E: 700 }))).toEqual({ type: 'call' });
     });
   });
 
-  describe('match awareness', () => {
-    /** Last hand at 60/120 where N holds 1,000 chips and every other seat holds `rival`. */
-    const lastHand = (hand: readonly Card[], rival: number): HoldemVisibleState => visible(gameSeatValues({
-      myHand: hand, hand: 20, smallBlind: 60, bigBlind: 120, currentBet: 120, minRaise: 120,
-      chips: { N: 1000, E: rival - 60, S: rival - 120, W: rival }, streetBets: { N: 0, E: 60, S: 120, W: 0 }, totalBets: { N: 0, E: 60, S: 120, W: 0 },
-    }));
-    const sixFiveSuited = [card(6, 'hearts'), card(5, 'hearts')];
-    const tenNine = [card(10), card(9, 'hearts')];
+  describe('whole matches', () => {
+    function playersOf(count: number): Partial<Record<GameSeat, PlayerInfo>> {
+      return Object.fromEntries(GAME_SEAT_ORDER.slice(0, count).map((seat) => [seat, {
+        id: seat, username: seat, nickname: seat, color: '#123456', avatar: 'cat', avatarImage: null,
+      }]));
+    }
 
-    it('pushes marginal hands when trailing on the last hand', () => {
-      expect(action(lastHand(sixFiveSuited, 1000), seeded(5))).toEqual({ type: 'fold' });
-      expect(action(lastHand(sixFiveSuited, 2500), seeded(5))).toEqual({ type: 'raise', to: 1000 });
+    afterEach(() => {
+      holdem.restoreGames([]);
+      vi.restoreAllMocks();
     });
 
-    it('folds marginal hands when comfortably ahead on the last hand', () => {
-      expect(action(lastHand(tenNine, 1000), seeded(5))).toEqual({ type: 'raise', to: 1000 });
-      expect(action(lastHand(tenNine, 600), seeded(5))).toEqual({ type: 'fold' });
-    });
-  });
-
-  describe('postflop mixing', () => {
-    const quads = [card(14), card(14, 'hearts')];
-    const turn = gameSeatValues({
-      street: 'turn' as const, board: [card(14, 'diamonds'), card(14, 'clubs'), card(13, 'hearts'), card(7)], myHand: quads,
-      folded: ['S', 'W'], currentBet: 0, minRaise: 20, streetBets: seats(0), acted: [] as Seat[], totalBets: { N: 100, E: 100, S: 0, W: 0 },
-      chips: { N: 900, E: 900, S: 1000, W: 1000 },
-    });
-
-    it('slows down with a monster on a fixed share of draws and bets otherwise', () => {
-      expect(action(visible(turn), () => 0.05)).toEqual({ type: 'check' });
-      expect(action(visible(turn), () => 0.9)?.type).toBe('raise');
-    });
-
-    it('check-raises more often than it raises without having checked', () => {
-      const facing = gameSeatValues({ ...turn, currentBet: 60, minRaise: 60, streetBets: { N: 0, E: 60, S: 0, W: 0 }, acted: ['E'] as Seat[],
-        totalBets: { N: 100, E: 160, S: 0, W: 0 }, chips: { N: 900, E: 840, S: 1000, W: 1000 } });
-      const blinds = { N: 10, E: 20, S: 0, W: 0, P5: 0, P6: 0, P7: 0, P8: 0 };
-      const street: HoldemLogEntry = { type: 'street', street: 'turn', cards: [card(7)], timestamp: 0 };
-      const afterCheck = [handEntry(1, 'W', 10, 20, blinds), street, actionEntry('N', 'check', 0), actionEntry('E', 'bet', 60)];
-      const withoutCheck = [handEntry(1, 'W', 10, 20, blinds), street, actionEntry('E', 'bet', 60)];
-      expect(action(visible({ ...facing, log: afterCheck }), () => 0.7)?.type).toBe('raise');
-      expect(action(visible({ ...facing, log: withoutCheck }), () => 0.7)).toEqual({ type: 'call' });
-      expect(action(visible({ ...facing, log: afterCheck }), () => 0.9)).toEqual({ type: 'call' });
-    });
-
-    it('draws the bet size independently of the hand', () => {
-      const small = action(visible(turn), () => 0.9);
-      const large = action(visible({ ...turn, myHand: [card(14, 'spades'), card(14, 'hearts')] }), () => 0.9);
-      expect(small).toEqual(large);
-      const sizes = [0.9, 0.99].map((value) => action(visible(turn), () => value));
-      expect(sizes[0]).not.toEqual(sizes[1]);
-    });
-  });
-
-  describe('legal action clamping', () => {
-    it('shoves a short stack for less than the minimum raise', () => {
-      const short = visible(gameSeatValues({ myHand: [card(14), card(14, 'hearts')], chips: { N: 30, E: 990, S: 980, W: 1000 } }));
-      expect(action(short, seeded(6))).toEqual({ type: 'raise', to: 30 });
-    });
-
-    it('always returns an action the rules allow', () => {
-      const random = seeded(99);
-      const deck = createDeck();
-      const flop = [card(9, 'hearts'), card(5, 'clubs'), card(2, 'diamonds')];
-      for (let run = 0; run < 150; run++) {
-        const shuffled = [...deck].sort(() => random() - 0.5);
-        const hole = shuffled.slice(0, 2);
-        const stack = [30, 90, 400, 1000][run % 4];
-        const shapes: Partial<HoldemVisibleState>[] = [
-          gameSeatValues({ chips: { N: stack, E: 990, S: 980, W: 1000 } }),
-          gameSeatValues({ chips: { N: stack, E: 800, S: 980, W: 1000 }, currentBet: 200, minRaise: 180, streetBets: { N: 0, E: 200, S: 20, W: 0 },
-            totalBets: { N: 0, E: 200, S: 20, W: 0 }, acted: ['E'] }),
-          gameSeatValues({ street: 'flop', board: flop, currentBet: 0, minRaise: 20, streetBets: seats(0), acted: [], chips: { N: stack, E: 900, S: 900, W: 900 },
-            totalBets: { N: 100, E: 100, S: 100, W: 0 } }),
-          gameSeatValues({ street: 'flop', board: flop, currentBet: 150, minRaise: 150, streetBets: { N: 0, E: 150, S: 0, W: 0 }, acted: ['E'],
-            chips: { N: stack, E: 750, S: 900, W: 900 }, totalBets: { N: 100, E: 250, S: 100, W: 0 } }),
-        ];
-        for (const shape of shapes) {
-          const state = visible({ ...shape, myHand: hole });
-          const legal = heLegalActions(state, 'N')!;
-          const chosen = action(state, random);
-          expect(chosen).not.toBeNull();
-          if (chosen?.type === 'check') expect(legal.check).toBe(true);
-          if (chosen?.type === 'call') expect(legal.call).toBeGreaterThan(0);
-          if (chosen?.type === 'raise') {
-            expect(legal.raise).not.toBeNull();
-            expect(chosen.to).toBeGreaterThanOrEqual(legal.raise!.min);
-            expect(chosen.to).toBeLessThanOrEqual(legal.raise!.max);
-          }
+    it.each([2, 4, 6])('plays legally without mutating the view (%i players, search every few turns)', (count) => {
+      const code = `HESR${count}`;
+      holdem.startGame(code, playersOf(count), seededRandom(count * 7), 0);
+      const random = seededRandom(count);
+      runSeededGame(`holdem/${count}`, 3000, () => holdem.getGameState(code)?.phase === 'scoring', (step) => {
+        const seat = holdem.getGameState(code)!.currentTurnSeat;
+        const view = holdem.getPlayerVisibleState(code, seat)!;
+        const before = structuredClone(view);
+        const decided = step % 4 === 0 ? holdemSearch(view, searchContext(step, 40)) : getHoldemBotAction(view, random);
+        expect(view).toEqual(before);
+        if (decided?.type !== 'holdem-action') throw new Error('Expected a Hold\'em action');
+        const legal = heLegalActions(view, seat)!;
+        if (decided.action.type === 'check') expect(legal.check).toBe(true);
+        if (decided.action.type === 'raise') {
+          expect(decided.action.to).toBeGreaterThanOrEqual(legal.raise!.min);
+          expect(decided.action.to).toBeLessThanOrEqual(legal.raise!.max);
         }
-      }
+        expect(holdem.act(code, seat, decided.action, 0, random)).toEqual({ success: true });
+      });
+      expect(holdem.getGameState(code)?.result).not.toBeNull();
     });
   });
 });

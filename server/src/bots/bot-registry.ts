@@ -154,8 +154,11 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     deadlineExpired: (_visible, { isBot, strategy }) => (isBot ? strategy() : { type: 'blackjack-bet', amount: BJ_MIN_BET }),
   },
   holdem: {
+    // The synchronous plan with a small sampling budget is the fallback; bots estimate equity with many more samples
+    // and exact turn and river enumeration in the worker pool.
     decide: getHoldemBotAction,
     firstLegal: holdemPassiveAction,
+    search: { strategy: searchStrategy<'holdem'>(new URL('./holdem-search.ts', import.meta.url), 'holdemSearch'), budgetMs: 1200 },
     // A player who runs out of time checks or folds rather than letting a bot stake their chips.
     turnTimeout: (visible) => holdemPassiveAction(visible),
   },

@@ -63,3 +63,14 @@ export function preflopRankFractionOf(rankA: number, rankB: number, suited: bool
   const [row, column] = classCell(rankA, rankB, suited);
   return RANK_FRACTION[row][column];
 }
+
+/** Starting-hand class index `row * 13 + column` in 0..168 for two card ids (`(rank - 2) * 4 + suit`). */
+export function classIndexOfIds(first: number, second: number): number {
+  const [row, column] = classCell((first >> 2) + 2, (second >> 2) + 2, (first & 3) === (second & 3));
+  return row * 13 + column;
+}
+
+/** Rank fraction (see {@link preflopRankFraction}) by class index. */
+export function rankFractionOfClass(index: number): number {
+  return RANK_FRACTION[Math.floor(index / 13)][index % 13];
+}
