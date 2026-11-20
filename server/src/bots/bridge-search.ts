@@ -13,14 +13,21 @@ import type { TrickCard } from './bridge-solver';
 // and partner's signals are soft). Each
 // candidate card is then solved double-dummy on every deal, and the card that makes (declarer's side) or
 // defeats (defenders) the contract on the most deals is played. Candidates within sampling noise of the
-// best are separated by the heuristic strategy.
+// best are separated by the heuristic strategy. Early in the play, when the budget fits only a few deals
+// for every candidate, the candidates doing worst so far are dropped after each deal.
 
 /** Deals examined per decision at most; late in the play the solves are fast and this cap ends the search. */
 const MAX_SAMPLES = 96;
 /** Fewer deals than this are too noisy to overrule the heuristic. */
-const MIN_SAMPLES = 6;
+const MIN_SAMPLES = 4;
 /** Fraction of the deals within which two candidates count as equal. */
 const NOISE = 0.05;
+/** Below this many deals one more deal also counts as noise. */
+const FEW_SAMPLES = 10;
+/** Deals the remaining candidates should get; fewer projected deals drop the weakest candidate. */
+const TARGET_SAMPLES = 12;
+/** Candidates never dropped below this count. */
+const MIN_CANDIDATES = 4;
 /** Time kept back for returning the result; new deals stop earlier than the solver's own deadline. */
 const RESERVE_MS = 60;
 const NEW_SAMPLE_RESERVE_MS = 150;
@@ -81,31 +88,48 @@ export function chooseBridgePlay(visible: BridgeVisibleState, context: SearchCon
     if (!card) break;
     trick.push({ seat: (leader + step) % 4, suit: SUIT_INDEX[card.suit], rank: card.rank - 2 });
   }
+  const mine = (seatIndex(visible.mySeat) & 1) === declarerSide;
+  // Candidates in heuristic order, so that ties and drops favour the heuristic's choice.
+  const order = groups.map((card, index) => ({ card, index })).sort((a, b) => heuristic(b.card) - heuristic(a.card));
+  let active = order.map(({ index }) => index);
   const makes = groups.map(() => 0);
+  const value = (index: number, deals: number): number => (mine ? makes[index] : deals - makes[index]);
+  const startLeft = budget.timeLeftMs();
+  let solves = 0;
   let samples = 0;
   try {
     while (samples < MAX_SAMPLES && budget.timeLeftMs() > NEW_SAMPLE_RESERVE_MS) {
       const hands = sampleDeal(facts, random);
       if (!hands) break;
-      const results = groups.map((card) => {
+      const results = active.map((index) => {
+        const card = groups[index];
         const suit = SUIT_INDEX[card.suit];
         const after = new Int32Array(hands);
         after[facts.me * 4 + suit] &= ~(1 << (card.rank - 2));
         return solver.canReach({ hands: after, leader, trick: [...trick, { seat: facts.me, suit, rank: card.rank - 2 }] }, need);
       });
-      results.forEach((made, index) => { if (made) makes[index]++; });
+      results.forEach((made, position) => { if (made) makes[active[position]]++; });
+      solves += active.length;
       samples++;
+      // Successive rejection: while the time left fits too few deals for every candidate, drop the one
+      // doing worst (the later one in heuristic order on ties).
+      const perSolve = (startLeft - budget.timeLeftMs()) / solves;
+      while (active.length > MIN_CANDIDATES && samples + budget.timeLeftMs() / (perSolve * active.length) < TARGET_SAMPLES) {
+        let worst = active.length - 1;
+        for (let position = active.length - 2; position >= 0; position--) {
+          if (value(active[position], samples) < value(active[worst], samples)) worst = position;
+        }
+        active = active.filter((_, position) => position !== worst);
+      }
     }
   } catch (error) {
     if (!isSolverAborted(error)) throw error;
   }
   if (samples < MIN_SAMPLES) return null;
-  const mine = (seatIndex(visible.mySeat) & 1) === declarerSide;
-  const values = makes.map((count) => (mine ? count : samples - count));
-  const best = Math.max(...values);
-  const tolerance = Math.floor(samples * NOISE);
-  return groups.filter((_, index) => values[index] >= best - tolerance)
-    .reduce((chosen, card) => (heuristic(card) > heuristic(chosen) ? card : chosen));
+  const best = Math.max(...active.map((index) => value(index, samples)));
+  const tolerance = Math.floor(samples * NOISE) + (samples < FEW_SAMPLES ? 1 : 0);
+  // `active` keeps heuristic order, so the first candidate within the tolerance is the heuristic's pick.
+  return groups[active.find((index) => value(index, samples) >= best - tolerance)!];
 }
 
 /**
