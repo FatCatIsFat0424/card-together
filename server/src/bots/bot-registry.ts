@@ -225,7 +225,7 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     // The synchronous heuristic is the fallback; bots search in the worker pool.
     decide: getDouDizhuBotAction,
     firstLegal: douDizhuFirstLegalAction,
-    search: { strategy: searchStrategy<'doudizhu'>(new URL('./doudizhu-search.ts', import.meta.url), 'douDizhuSearch'), budgetMs: 900 },
+    search: { strategy: searchStrategy<'doudizhu'>(new URL('./doudizhu-search.ts', import.meta.url), 'douDizhuSearch'), budgetMs: 1200 },
     // A human who runs out of time passes the auction, passes a trick, or leads the smallest play.
     turnTimeout: (visible, { isBot, strategy }) => (isBot ? strategy() : douDizhuFirstLegalAction(visible)),
   },

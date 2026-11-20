@@ -1,146 +1,203 @@
-import type { CardOrJoker, DouDizhuVisibleState, GameSeat } from '@shared/types';
-import { cardKey } from '@shared/rules/cards';
-import { ddzIsBomb, ddzNextSeat, ddzResolve, ddzSmallestMove, sortDdzHand } from '@shared/rules/doudizhu';
-import type { DdzCombo, DdzMove } from '@shared/rules/doudizhu';
+import type { DouDizhuVisibleState } from '@shared/types';
+import type { DouDizhuAction } from '@shared/games/doudizhu/actions';
+import { ddzReplay } from '@shared/rules/doudizhu-table';
 import type { BotAction } from './bot-decisions';
-import { getDouDizhuBotAction, partnerOf, scoreOptions, unseenCards } from './doudizhu-strategy';
-import type { SearchContext } from './search/search-types';
-import { selectNearBest } from './selection';
+import { cardTotal, rankMoves } from './doudizhu-hand';
+import type { Counts, RankMove } from './doudizhu-hand';
+import { DEFAULT_ENDGAME, solveEndgame } from './doudizhu-endgame';
+import type { EndgameTable } from './doudizhu-endgame';
+import { dealGuesser } from './doudizhu-inference';
+import { dealValue, matchValue } from './doudizhu-match';
+import { getDouDizhuBotAction, playable, viewWorld } from './doudizhu-strategy';
+import { applyMove, copyWorld, dealEnd, policyMove, rolloutWorld, scoreChoices } from './doudizhu-world';
+import type { DealEnd, World } from './doudizhu-world';
+import { determinizedSearch } from './search/determinized';
+import type { Candidate, DeterminizedGame } from './search/determinized';
+import type { SearchBudget, SearchContext } from './search/search-types';
 
-// Determinized rollouts: the hidden cards are dealt at random to the two other hands, every candidate play is
-// followed by a quick greedy game to the end, and the play whose side wins most often is chosen. All
-// candidates share each deal of the hidden cards, so their results compare directly. The heuristic ranks
-// the candidates; close rollout results share the choice without overruling a clear win-rate advantage.
+// The Dou Dizhu search bot. Every decision guesses the hidden cards many times from the seat's own view
+// (doudizhu-inference.ts) and scores its options on each guess in match terms: the chance of finishing the
+// six deals on top, given the running totals, the stake (bid, grabs, bombs, spring), and the deals left.
+// Play: every legal play with every kicker choice is ranked by the rollout policy, the best are searched,
+// each guess is played out by the policy or, once few cards remain, solved exactly. Auction: each guess
+// deals the bottom too, and the deal is played out with this seat as landlord to price every bid or claim.
 
-/** Candidates examined per decision. */
-const CANDIDATES = 6;
-/** Hidden-card deals per decision at most. */
-const MAX_ROUNDS = 60;
-/** Plies a rollout may take before it is scored as a loss for the mover. */
-const MAX_PLIES = 240;
+const asAction = (action: DouDizhuAction): BotAction => ({ type: 'game-action', request: { gameType: 'doudizhu', action } });
 
-interface Rollout {
-  readonly hands: Map<GameSeat, CardOrJoker[]>;
-  turn: GameSeat;
-  last: { readonly seat: GameSeat; readonly combo: DdzCombo } | null;
-  passes: number;
+function seatTotals(visible: DouDizhuVisibleState): number[] {
+  return visible.seats.map((seat) => visible.totals[seat] ?? 0);
 }
 
-function shuffled<T>(items: readonly T[], random: () => number): T[] {
-  const copy = [...items];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
+const dealsLeft = (visible: DouDizhuVisibleState): number => Math.max(0, visible.totalDeals - visible.deal);
+
+/** A budget that also ends at `fraction` of the time left now. */
+function stage(budget: SearchBudget, fraction: number): SearchBudget {
+  const end = Date.now() + budget.timeLeftMs() * fraction;
+  return {
+    maxDepth: budget.maxDepth,
+    timeLeftMs: () => Math.max(0, Math.min(budget.timeLeftMs(), end - Date.now())),
+    expired: () => budget.expired() || Date.now() >= end,
+  };
+}
+
+// ─── Play ───
+
+/** Searched candidates at most, and kicker variants kept per main group. */
+const MAX_CANDIDATES = 12;
+const KICKER_VARIANTS = 2;
+/** Candidates kept for the second half of the budget. */
+const FINALISTS = 4;
+/** A first-half lead (in match-win chance) that ends the search early. */
+const CLEAR_LEAD = 0.2;
+/** Total cards in all hands at which a guessed world is solved exactly rather than played out. */
+const ENDGAME_LIMITS = DEFAULT_ENDGAME;
+/** No new guess starts with less time left than this, so one slow evaluation cannot overrun the budget. */
+const RESERVE_MS = 60;
+
+const familyKey = (move: RankMove): string => `${move.combo.type}:${move.combo.power}:${move.combo.length}`;
+
+function playSearch(visible: DouDizhuVisibleState, context: SearchContext): BotAction | null {
+  const view = viewWorld(visible);
+  if (!view) return getDouDizhuBotAction(visible, context.random);
+  const me = view.turn;
+  const hand = view.hands[me];
+  const previous = visible.lastPlay?.combo ?? null;
+  const options: (RankMove | null)[] = [];
+  const cardsOf = new Map<RankMove, ReturnType<typeof playable>>();
+  for (const raw of rankMoves(hand, previous, 'all')) {
+    const play = playable(visible, raw);
+    if (!play) continue;
+    if (play.move.ranks.length === cardTotal(hand)) return asAction({ type: 'play', cards: play.cards });
+    cardsOf.set(play.move, play);
+    options.push(play.move);
   }
-  return copy;
-}
+  if (previous) options.push(null);
+  if (options.length === 0) return getDouDizhuBotAction(visible, context.random);
+  const finish = (move: RankMove | null): BotAction => (move
+    ? asAction({ type: 'play', cards: cardsOf.get(move)!.cards })
+    : asAction({ type: 'pass' }));
+  if (options.length === 1) return finish(options[0]);
 
-/** Public bottom cards that have not been played still belong to the landlord. */
-export function sampleDouDizhuHands(visible: DouDizhuVisibleState, random: () => number): Map<GameSeat, CardOrJoker[]> {
-  const unseen = unseenCards(visible);
-  const keys = new Set(unseen.map(cardKey));
-  const fixed = visible.landlord !== visible.mySeat ? (visible.bottom ?? []).filter((card) => keys.has(cardKey(card))) : [];
-  const fixedKeys = new Set(fixed.map(cardKey));
-  const deck = shuffled(unseen.filter((card) => !fixedKeys.has(cardKey(card))), random);
-  const hands = new Map<GameSeat, CardOrJoker[]>([[visible.mySeat, [...visible.myHand]]]);
-  let offset = 0;
-  for (const seat of visible.seats.filter((seat) => seat !== visible.mySeat)) {
-    const known = seat === visible.landlord ? fixed : [];
-    const count = Math.max(0, visible.handCounts[seat] - known.length);
-    hands.set(seat, sortDdzHand([...known, ...deck.slice(offset, offset + count)]));
-    offset += count;
-  }
-  return hands;
-}
-
-/** Plays on greedily; returns the seat that went out first, or null when the rollout ran too long. */
-function playOut(
-  state: Rollout, seats: readonly GameSeat[], landlord: GameSeat, apply: DdzMove | null, first: boolean,
-): GameSeat | null {
-  let pending: DdzMove | null | undefined = first ? apply : undefined;
-  for (let ply = 0; ply < MAX_PLIES; ply++) {
-    const seat = state.turn;
-    const hand = state.hands.get(seat)!;
-    let move: DdzMove | null;
-    if (pending !== undefined) {
-      move = pending;
-      pending = undefined;
-    } else {
-      const friends = seat === landlord ? [] : seats.filter((other) => other !== seat && other !== landlord);
-      const partnerLed = state.last !== null && friends.includes(state.last.seat);
-      const landlordCards = state.hands.get(landlord)!.length;
-      const threatened = partnerLed && landlordCards <= 2 && state.last!.combo.size === landlordCards;
-      const finish = ddzResolve(hand, state.last?.combo ?? null);
-      move = finish ? { cards: hand, combo: finish } : partnerLed && !threatened ? null : ddzSmallestMove(hand, state.last?.combo ?? null);
-      // A bomb is not worth it while every opponent still holds a lot of cards.
-      if (!finish && move && ddzIsBomb(move.combo) && state.last && !ddzIsBomb(state.last.combo)
-        && seats.every((other) => other === seat || friends.includes(other) || (state.hands.get(other)?.length ?? 0) > 4)) move = null;
+  // Candidates: the policy's ranking, with at most two kicker choices per main group.
+  const priors = scoreChoices(view, options);
+  const ranked = options.map((move, index) => ({ move, prior: priors[index] })).sort((a, b) => b.prior - a.prior);
+  const perFamily = new Map<string, number>();
+  const candidates: Candidate<RankMove | null>[] = [];
+  for (const option of ranked) {
+    if (candidates.length >= MAX_CANDIDATES) break;
+    if (option.move) {
+      const key = familyKey(option.move);
+      const seen = perFamily.get(key) ?? 0;
+      if (seen >= KICKER_VARIANTS) continue;
+      perFamily.set(key, seen + 1);
     }
-    if (move === null) {
-      if (state.last === null) {
-        // Leading cannot pass; the smallest play always exists.
-        move = ddzSmallestMove(hand, null);
+    candidates.push(option);
+  }
+  if (previous && !candidates.some((candidate) => candidate.move === null)) {
+    candidates[candidates.length - 1] = ranked.find((option) => option.move === null)!;
+  }
+
+  const landlord = view.landlord;
+  const match = matchValue(seatTotals(visible), me, dealsLeft(visible), context.random);
+  const value = dealValue(match, 3, landlord, visible.base, visible.grabs);
+  const guesser = dealGuesser(visible);
+  const table: EndgameTable = new Map();
+  const template = view;
+  const game: DeterminizedGame<World, RankMove | null> = {
+    seat: visible.mySeat,
+    sample: (random) => {
+      const deal = guesser.guess(random);
+      if (!deal) return null;
+      return { state: { ...copyWorld(template), hands: deal.hands } };
+    },
+    copy: copyWorld,
+    legalMoves: (state) => {
+      const moves: (RankMove | null)[] = rankMoves(state.hands[state.turn], state.last && state.lastSeat !== state.turn ? state.last.combo : null);
+      if (state.last && state.lastSeat !== state.turn) moves.push(null);
+      return moves;
+    },
+    play: applyMove,
+    rolloutMove: (state) => policyMove(state),
+    isTerminal: (state) => state.winner >= 0,
+    utility: (state) => value(dealEnd(state)),
+    evaluate: (state) => {
+      const solved = solveEndgame(state, table, ENDGAME_LIMITS, context.budget.expired);
+      if (solved !== null) return value({ landlordWins: solved, doublings: state.bombs });
+      // A solve cut short by the clock drops the whole guess.
+      if (context.budget.expired()) return null;
+      rolloutWorld(state);
+      return value(dealEnd(state));
+    },
+  };
+  const first = determinizedSearch(game, candidates, { random: context.random, budget: stage(context.budget, 0.5) },
+    { maxSamples: 4000, minSamples: 8, reserveMs: RESERVE_MS });
+  if (first.reason !== 'searched') return finish(first.move);
+  const means = first.stats.map((stats) => stats.mean).sort((a, b) => b - a);
+  if (first.stats.length <= 2 || means[0] - means[1] >= CLEAR_LEAD) return finish(first.move);
+  const finalists = [...first.stats].sort((a, b) => b.mean - a.mean).slice(0, FINALISTS)
+    .map((stats) => ({ move: stats.move, prior: stats.prior }));
+  const second = determinizedSearch(game, finalists, context, { maxSamples: 4000, minSamples: 8, reserveMs: RESERVE_MS });
+  return finish(second.reason === 'searched' ? second.move : first.move);
+}
+
+// ─── Auction ───
+
+/** Simulated deals per auction decision at most. */
+const AUCTION_SAMPLES = 600;
+/**
+ * Match value a pass is worth beyond standing still: a farmer facing a landlord who outbid it usually
+ * loses a little, but a bid is only as good as its estimate.
+ */
+const PASS_MARGIN = 0.004;
+
+function auctionSearch(visible: DouDizhuVisibleState, context: SearchContext): BotAction | null {
+  const auction = ddzReplay(visible.options.variant, visible.seats, visible.log).auction;
+  if (!auction || auction.done) return getDouDizhuBotAction(visible, context.random);
+  const seats = visible.seats;
+  const me = seats.indexOf(visible.mySeat);
+  const guesser = dealGuesser(visible);
+  const outcomes: DealEnd[] = [];
+  while (outcomes.length < AUCTION_SAMPLES && (outcomes.length === 0 || context.budget.timeLeftMs() > RESERVE_MS)) {
+    const deal = guesser.guess(context.random);
+    if (!deal || !deal.bottom) break;
+    const hands: Counts[] = deal.hands.map((hand) => new Uint8Array(hand));
+    for (let rank = 0; rank < hands[me].length; rank++) hands[me][rank] += deal.bottom[rank];
+    const world: World = {
+      hands, sizes: hands.map(cardTotal), landlord: me, turn: me, last: null, lastSeat: me, passes: 0, bombs: 0,
+      plays: [0, 0, 0], winner: -1,
+    };
+    if (rolloutWorld(world)) outcomes.push(dealEnd(world));
+  }
+  if (outcomes.length === 0) return getDouDizhuBotAction(visible, context.random);
+  const match = matchValue(seatTotals(visible), me, dealsLeft(visible), context.random);
+  const standStill = match([0, 0, 0]) + PASS_MARGIN;
+  const asLandlord = (base: number, grabs: number): number => {
+    const value = dealValue(match, 3, me, base, grabs);
+    return outcomes.reduce((sum, end) => sum + value(end), 0) / outcomes.length;
+  };
+  if (visible.options.variant === 'score') {
+    let best = 0;
+    let bestValue = standStill;
+    for (let score = Math.max(1, auction.minScore); score <= 3; score++) {
+      const value = asLandlord(score, 0);
+      if (value > bestValue) {
+        best = score;
+        bestValue = value;
       }
     }
-    if (move === null) {
-      state.passes += 1;
-      if (state.passes >= seats.length - 1 && state.last) {
-        state.turn = state.last.seat;
-        state.last = null;
-        state.passes = 0;
-      } else state.turn = ddzNextSeat(seats, seat);
-      continue;
-    }
-    const played = new Set(move.cards.map(cardKey));
-    const rest = hand.filter((card) => !played.has(cardKey(card)));
-    state.hands.set(seat, rest);
-    if (rest.length === 0) return seat;
-    state.last = { seat, combo: move.combo };
-    state.passes = 0;
-    state.turn = ddzNextSeat(seats, seat);
+    return asAction({ type: 'bid', score: best as 0 | 1 | 2 | 3 });
   }
-  return null;
+  // A grab doubles the stake for whoever ends up landlord.
+  const callerIndex = visible.bids.findIndex((entry) => entry.kind === 'claim' && entry.take);
+  const grabs = callerIndex < 0 ? 0
+    : visible.bids.slice(callerIndex + 1).filter((entry) => entry.kind === 'claim' && entry.take).length;
+  const taking = asLandlord(1, auction.mode === 'grab' ? grabs + 1 : 0);
+  return asAction({ type: 'claim', take: taking > standStill });
 }
 
-/** Bot search for the worker pool; falls back to the heuristic outside the play phase. */
+/** Bot search for the worker pool. */
 export function douDizhuSearch(visible: DouDizhuVisibleState, context: SearchContext): BotAction | null {
-  const { random, budget } = context;
-  if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat || !visible.landlord) {
-    return getDouDizhuBotAction(visible, random);
-  }
-  const landlord = visible.landlord;
-  const me = visible.mySeat;
-  const seats = visible.seats;
-  const options = scoreOptions({
-    hand: visible.myHand, previous: visible.lastPlay?.combo ?? null, lastSeat: visible.lastPlay?.seat ?? null,
-    partner: partnerOf(visible), counts: visible.handCounts, me, seats, landlord,
-  }).sort((a, b) => b.score - a.score);
-  if (options.length <= 1 || options[0].score >= 1000) return getDouDizhuBotAction(visible, random);
-  const candidates = options.slice(0, CANDIDATES);
-  const wins = candidates.map(() => 0);
-  let rounds = 0;
-  while (rounds < MAX_ROUNDS && (rounds === 0 || !budget.expired())) {
-    const dealt = sampleDouDizhuHands(visible, random);
-    candidates.forEach((candidate, index) => {
-      const hands = new Map<GameSeat, CardOrJoker[]>([[me, [...visible.myHand]]]);
-      for (const [seat, cards] of dealt) hands.set(seat, sortDdzHand(cards));
-      const state: Rollout = {
-        hands, turn: me, last: visible.lastPlay ? { seat: visible.lastPlay.seat, combo: visible.lastPlay.combo } : null,
-        passes: visible.passes,
-      };
-      const winner = playOut(state, seats, landlord, candidate.move, true);
-      if (winner !== null && (winner === landlord) === (me === landlord)) wins[index] += 1;
-    });
-    rounds += 1;
-  }
-  // The heuristic breaks close ties, but its influence is capped at one percentage point.
-  const topScore = candidates[0].score;
-  const chosen = selectNearBest(candidates.map((candidate, index) => ({
-    value: candidate,
-    score: wins[index] / rounds - Math.min(0.01, Math.max(0, topScore - candidate.score) * 0.001),
-  })), random, 0.015)!;
-  const move = chosen.move;
-  return move
-    ? { type: 'game-action', request: { gameType: 'doudizhu', action: { type: 'play', cards: move.cards } } }
-    : { type: 'game-action', request: { gameType: 'doudizhu', action: { type: 'pass' } } };
+  if (visible.currentTurnSeat !== visible.mySeat) return null;
+  if (visible.phase === 'calling') return auctionSearch(visible, context);
+  return playSearch(visible, context);
 }

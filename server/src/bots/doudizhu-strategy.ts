@@ -1,30 +1,31 @@
 import type { CardOrJoker, DouDizhuVisibleState, GameSeat } from '@shared/types';
 import type { DouDizhuAction } from '@shared/games/doudizhu/actions';
 import { cardKey } from '@shared/rules/cards';
-import { createDdzDeck, ddzIsBomb, ddzMoves, ddzPower, ddzSmallestMove } from '@shared/rules/doudizhu';
-import type { DdzCombo, DdzMove } from '@shared/rules/doudizhu';
+import { createDdzDeck, ddzPower, ddzResolve, ddzSmallestMove } from '@shared/rules/doudizhu';
+import type { DdzMove } from '@shared/rules/doudizhu';
 import { ddzReplay } from '@shared/rules/doudizhu-table';
 import type { BotAction } from './bot-decisions';
+import { cardsFor, cardTotal, rankMoves, rankOf, toCounts } from './doudizhu-hand';
+import type { RankMove } from './doudizhu-hand';
+import { scoreChoices } from './doudizhu-world';
+import type { World } from './doudizhu-world';
 import { selectNearBest } from './selection';
 
-// Heuristic summary: bots bid from a count of jokers, 2s, aces and bombs, and measure a hand by how many plays
-// it needs to empty (rocket, bombs, chains, triples with kickers, pairs, singles); it plays the move that leaves the fewest plays, spends control cards only when
-// the table is close to ending, preserves a partner's control unless the landlord threatens to finish, and feeds
-// a partner who is about to go out. The search bot uses this evaluation to rank candidates.
+// The synchronous Dou Dizhu bot, also the fallback of the search: it bids from a count of jokers, 2s, aces
+// and bombs, and plays with the rollout policy of doudizhu-world.ts on a table where each opponent might
+// hold any unseen card (so "nobody can beat this" is judged cautiously). The policy plans the hand into the
+// fewest plays, leads its weakest group, keeps controls until they are needed, leaves a partner's play
+// alone unless the landlord could go out over it, feeds a partner about to go out, and bombs when the hand
+// can then finish or an opponent is close.
 
 const asAction = (action: DouDizhuAction): BotAction => ({ type: 'game-action', request: { gameType: 'doudizhu', action } });
 
 // ─── Hand evaluation ───
 
-function countsOf(hand: readonly CardOrJoker[]): Map<number, number> {
-  const counts = new Map<number, number>();
-  for (const card of hand) counts.set(ddzPower(card), (counts.get(ddzPower(card)) ?? 0) + 1);
-  return counts;
-}
-
 /** How strong a 17-card hand is for the landlord: high cards, bombs, and the rocket. */
 export function handStrength(hand: readonly CardOrJoker[]): number {
-  const counts = countsOf(hand);
+  const counts = new Map<number, number>();
+  for (const card of hand) counts.set(ddzPower(card), (counts.get(ddzPower(card)) ?? 0) + 1);
   let strength = 0;
   if (counts.has(16) && counts.has(17)) strength += 4;
   else if (counts.has(17)) strength += 2;
@@ -32,61 +33,6 @@ export function handStrength(hand: readonly CardOrJoker[]): number {
   strength += (counts.get(15) ?? 0) * 1.4 + (counts.get(14) ?? 0) * 0.5;
   for (const [power, count] of counts) if (count === 4 && power < 16) strength += 2.5;
   return strength;
-}
-
-function removeRun(counts: Map<number, number>, minimum: number, minimumLength: number): number {
-  let best: number[] = [];
-  for (let start = 3; start <= 14; start++) {
-    const run: number[] = [];
-    for (let power = start; power <= 14 && (counts.get(power) ?? 0) >= minimum; power++) run.push(power);
-    if (run.length >= minimumLength && run.length > best.length) best = run;
-  }
-  for (const power of best) counts.set(power, counts.get(power)! - (minimum === 1 ? 1 : minimum));
-  return best.length;
-}
-
-function planTurns(source: ReadonlyMap<number, number>, chains: boolean): number {
-  const counts = new Map(source);
-  let turns = 0;
-  if (chains) {
-    while (removeRun(counts, 2, 3) > 0) turns += 1;
-    while (removeRun(counts, 1, 5) > 0) turns += 1;
-  }
-  let triples = 0;
-  let small = 0;
-  for (let power = 3; power <= 17; power++) {
-    const count = counts.get(power) ?? 0;
-    if (count >= 3) triples += 1;
-    else if (count > 0) small += 1;
-  }
-  // Consecutive triples fly together, and a triple or airplane takes along one small group per triple.
-  let planes = 0;
-  for (let power = 3; power <= 13; power++) {
-    if ((counts.get(power) ?? 0) >= 3 && (counts.get(power + 1) ?? 0) >= 3) {
-      planes += 1;
-      while ((counts.get(power + 1) ?? 0) >= 3) power += 1;
-    }
-  }
-  const absorbed = Math.min(triples, small);
-  return turns + triples - planes + small - absorbed;
-}
-
-/** Rough minimum number of plays to empty the hand. */
-export function handTurns(hand: readonly CardOrJoker[]): number {
-  const counts = countsOf(hand);
-  let turns = 0;
-  if (counts.has(16) && counts.has(17)) {
-    turns += 1;
-    counts.delete(16);
-    counts.delete(17);
-  }
-  for (const [power, count] of [...counts]) {
-    if (count === 4) {
-      turns += 1;
-      counts.delete(power);
-    }
-  }
-  return turns + Math.min(planTurns(counts, false), planTurns(counts, true));
 }
 
 // ─── What the seat can know ───
@@ -98,7 +44,7 @@ export function dealPlays(visible: DouDizhuVisibleState): CardOrJoker[] {
   return visible.log.slice(Math.max(0, start)).flatMap((entry) => (entry.type === 'play' ? entry.cards : []));
 }
 
-/** Cards that are neither in this hand nor already played: split between the two other hands. */
+/** Cards that are neither in this hand nor already played: split between the two other hands (and the bottom). */
 export function unseenCards(visible: DouDizhuVisibleState): CardOrJoker[] {
   const known = new Set([...visible.myHand, ...dealPlays(visible)].map(cardKey));
   // The bottom cards are open once the landlord holds them; before that they are unseen like any other card.
@@ -110,13 +56,62 @@ export function partnerOf(visible: DouDizhuVisibleState): GameSeat | null {
   return visible.seats.find((seat) => seat !== visible.mySeat && seat !== visible.landlord) ?? null;
 }
 
+/** Plays per seat (play order) in the current deal. */
+export function dealPlayCounts(visible: DouDizhuVisibleState): number[] {
+  let start = visible.log.length - 1;
+  while (start >= 0 && visible.log[start].type !== 'deal') start -= 1;
+  const plays = visible.seats.map(() => 0);
+  for (const entry of visible.log.slice(Math.max(0, start))) {
+    if (entry.type === 'play') plays[visible.seats.indexOf(entry.seat)] += 1;
+  }
+  return plays;
+}
+
+/**
+ * The table as the seat to act sees it, on rank counts: its own hand, and for each other seat every unseen
+ * card it might hold (sizes stay the real ones). Null outside the seat's turn in the play phase.
+ */
+export function viewWorld(visible: DouDizhuVisibleState): World | null {
+  if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat || !visible.landlord) return null;
+  const seats = visible.seats;
+  const me = seats.indexOf(visible.mySeat);
+  const pool = toCounts(unseenCards(visible));
+  const last = visible.lastPlay;
+  return {
+    hands: seats.map((_, seat) => (seat === me ? toCounts(visible.myHand) : new Uint8Array(pool))),
+    sizes: seats.map((seat) => visible.handCounts[seat]),
+    landlord: seats.indexOf(visible.landlord),
+    turn: me,
+    last: last ? { combo: last.combo, ranks: last.cards.map(rankOf) } : null,
+    lastSeat: last ? seats.indexOf(last.seat) : me,
+    passes: visible.passes,
+    bombs: visible.bombs,
+    plays: dealPlayCounts(visible),
+    winner: -1,
+  };
+}
+
+/**
+ * Real cards for a rank move from `hand`, read the way the server will read them after `visible`'s last
+ * play; null when they cannot be played.
+ */
+export function playable(visible: DouDizhuVisibleState, move: RankMove): { cards: CardOrJoker[]; move: RankMove } | null {
+  const cards = cardsFor(visible.myHand, move);
+  if (!cards) return null;
+  const combo = ddzResolve(cards, visible.lastPlay?.combo ?? null);
+  return combo ? { cards, move: { combo, ranks: move.ranks } } : null;
+}
+
 // ─── Auction ───
 
 function auctionAction(visible: DouDizhuVisibleState, strong: number): BotAction | null {
   if (visible.phase !== 'calling' || visible.currentTurnSeat !== visible.mySeat) return null;
   const strength = handStrength(visible.myHand);
   const auction = ddzReplay(visible.options.variant, visible.seats, visible.log).auction;
-  if (visible.options.variant === 'grab') return asAction({ type: 'claim', take: strength >= strong });
+  if (visible.options.variant === 'grab') {
+    const grabbing = auction && !auction.done && auction.mode === 'grab';
+    return asAction({ type: 'claim', take: strength >= (grabbing ? strong + 1.5 : strong) });
+  }
   const wanted = strength >= strong + 3 ? 3 : strength >= strong + 1.5 ? 2 : strength >= strong ? 1 : 0;
   const minimum = auction && !auction.done ? auction.minScore : 1;
   return asAction({ type: 'bid', score: wanted >= minimum ? (wanted as 1 | 2 | 3) : 0 });
@@ -124,104 +119,34 @@ function auctionAction(visible: DouDizhuVisibleState, strong: number): BotAction
 
 // ─── Play ───
 
-export interface Situation {
-  readonly hand: readonly CardOrJoker[];
-  readonly previous: DdzCombo | null;
-  readonly lastSeat: GameSeat | null;
-  readonly partner: GameSeat | null;
-  readonly counts: Readonly<Record<GameSeat, number>>;
-  readonly me: GameSeat;
-  readonly seats: readonly GameSeat[];
-  readonly landlord: GameSeat;
+function toAction(cards: CardOrJoker[] | null): BotAction {
+  return cards ? asAction({ type: 'play', cards }) : asAction({ type: 'pass' });
 }
 
-function situation(visible: DouDizhuVisibleState): Situation | null {
-  if (visible.phase !== 'playing' || visible.currentTurnSeat !== visible.mySeat || !visible.landlord) return null;
-  return {
-    hand: visible.myHand, previous: visible.lastPlay?.combo ?? null, lastSeat: visible.lastPlay?.seat ?? null,
-    partner: partnerOf(visible), counts: visible.handCounts, me: visible.mySeat, seats: visible.seats,
-    landlord: visible.landlord,
-  };
-}
-
-/** Cards that win rounds later, so spending them early costs tempo. */
-function controlCost(move: DdzMove): number {
-  let cost = 0;
-  for (const card of move.cards) {
-    const power = ddzPower(card);
-    cost += power >= 16 ? 5 : power === 15 ? 4 : power === 14 ? 1.5 : 0;
-  }
-  return cost;
-}
-
-function opponents(state: Situation): GameSeat[] {
-  return state.seats.filter((seat) => seat !== state.me && seat !== state.partner);
-}
-
-/** Scores every legal play and the pass, higher is better. */
-export function scoreOptions(state: Situation): { move: DdzMove | null; score: number }[] {
-  const moves = ddzMoves(state.hand, state.previous);
-  const finish = moves.find((move) => move.cards.length === state.hand.length);
-  if (finish) return [{ move: finish, score: 1000 }];
-  // Preserve a partner's last round of control when the landlord has no immediate finish threat.
-  if (state.previous && state.partner !== null && state.lastSeat === state.partner && state.counts[state.partner] <= 2
-    && state.counts[state.landlord] > 2) {
-    return [{ move: null, score: 100 }];
-  }
-  const opposing = opponents(state);
-  const nearEnd = opposing.some((seat) => state.counts[seat] <= 2);
-  const turnsNow = handTurns(state.hand);
-  const options: { move: DdzMove | null; score: number }[] = [];
-  for (const move of moves) {
-    const rest = state.hand.filter((card) => !move.cards.some((played) => cardKey(played) === cardKey(card)));
-    let score = -12 * handTurns(rest) - 0.6 * (move.combo.power - 3);
-    if (!nearEnd) score -= controlCost(move) * (state.previous ? 1.2 : 2);
-    if (ddzIsBomb(move.combo) && !nearEnd) score -= 14;
-    // A following farmer must cover a low partner single before a last-card landlord acts.
-    if (state.previous?.type === 'single' && opposing.some((seat) => state.counts[seat] === 1)
-      && move.combo.type === 'single') score += 2 * move.combo.power;
-    // An opponent one card from winning must not be handed an easy single or pair.
-    if (!state.previous && opposing.some((seat) => state.counts[seat] === 1) && move.combo.type === 'single') {
-      score += move.combo.power * 0.8 - 8;
-    }
-    if (!state.previous && opposing.some((seat) => state.counts[seat] === 2) && move.combo.type === 'pair') {
-      score += move.combo.power * 0.5 - 4;
-    }
-    // Feed the partner: low singles and pairs let them go out.
-    const partnerCards = state.partner ? state.counts[state.partner] : 0;
-    if (!state.previous && partnerCards > 0 && partnerCards <= 2 && !nearEnd) {
-      const feeds = (partnerCards === 1 && move.combo.type === 'single')
-        || (partnerCards === 2 && (move.combo.type === 'pair' || move.combo.type === 'single'));
-      if (feeds) score += 10 - (move.combo.power - 3) * 0.6;
-    }
-    options.push({ move, score });
-  }
-  if (state.previous) {
-    const partnerLead = state.partner !== null && state.lastSeat === state.partner;
-    let pass = -12 * turnsNow - 1;
-    const exposedFinish = nearEnd && opposing.some((seat) => state.counts[seat] === state.previous!.size);
-    if (partnerLead && !exposedFinish) pass += 40;
-    else if (nearEnd) pass -= 60;
-    options.push({ move: null, score: pass });
-  }
-  return options;
-}
-
-function toAction(move: DdzMove | null): BotAction {
-  return move ? asAction({ type: 'play', cards: move.cards }) : asAction({ type: 'pass' });
-}
-
-/** Hard decision from the heuristic alone; cheap enough to run on the event loop. */
+/** Decision from the policy alone; cheap enough to run on the event loop. */
 export function getDouDizhuBotAction(visible: DouDizhuVisibleState, random: () => number): BotAction | null {
   if (visible.phase === 'calling') return auctionAction(visible, 3.5);
-  const state = situation(visible);
-  if (!state) return null;
-  const options = scoreOptions(state);
+  const world = viewWorld(visible);
+  if (!world) return null;
+  const hand = world.hands[world.turn];
+  const previous = visible.lastPlay?.combo ?? null;
+  const options: (RankMove | null)[] = [];
+  for (const move of rankMoves(hand, previous, 'cheap')) {
+    if (move.ranks.length === cardTotal(hand)) {
+      const finish = playable(visible, move);
+      if (finish) return toAction(finish.cards);
+    }
+    options.push(move);
+  }
+  if (previous) options.push(null);
   if (options.length === 0) return null;
-  // One ordinary rank step costs 0.6; vary it before the endgame without sacrificing a planned turn.
-  const urgent = opponents(state).some((seat) => state.counts[seat] <= 2);
-  const chosen = selectNearBest(options.map((option) => ({ value: option.move, score: option.score })), random, urgent ? 0.4 : 0.65);
-  return toAction(chosen);
+  const scores = scoreChoices(world, options);
+  // Vary among plays the policy rates about one rank step apart, never across a planned play.
+  const urgent = world.sizes.some((size, seat) => seat !== world.turn && size <= 2);
+  const chosen = selectNearBest(options.map((move, index) => ({ value: move, score: scores[index] })), random, urgent ? 0.4 : 1.05);
+  if (!chosen) return toAction(null);
+  const play = playable(visible, chosen);
+  return play ? toAction(play.cards) : douDizhuFirstLegalAction(visible);
 }
 
 /** Pass when allowed, otherwise the smallest legal play: the timeout action and the last-resort move. */
@@ -232,6 +157,6 @@ export function douDizhuFirstLegalAction(visible: DouDizhuVisibleState): BotActi
   }
   if (visible.phase !== 'playing') return null;
   if (visible.lastPlay) return asAction({ type: 'pass' });
-  const move = ddzSmallestMove(visible.myHand, null);
-  return move ? toAction(move) : null;
+  const move: DdzMove | null = ddzSmallestMove(visible.myHand, null);
+  return move ? toAction(move.cards) : null;
 }
