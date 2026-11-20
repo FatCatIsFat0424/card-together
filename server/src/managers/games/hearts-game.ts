@@ -94,7 +94,8 @@ export function getPlayerVisibleState(roomCode: RoomCode, seat: GameSeat): Heart
     handCounts: { N: game.hands.N.length, E: game.hands.E.length, S: game.hands.S.length, W: game.hands.W.length },
     hand: game.hand, passDirection: heartsPassDirection(game.hand),
     passedSeats: HEARTS_SEATS.filter((other) => game.deals[game.hand - 1].passes[other]),
-    myPass: game.phase === 'passing' ? game.deals[game.hand - 1].passes[mySeat] ?? [] : [],
+    // The passer still knows its own pass while the hand is played.
+    myPass: game.phase === 'scoring' ? [] : game.deals[game.hand - 1]?.passes[mySeat] ?? [],
     passDeadline: game.passDeadline, heartsBroken: game.heartsBroken, currentTurnSeat: game.currentTurnSeat,
     trick: game.trick, tricks: game.tricks, scores: game.scores,
     validCards: game.phase === 'playing' && game.currentTurnSeat === mySeat && game.trick

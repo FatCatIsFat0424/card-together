@@ -50,6 +50,8 @@ describe('Hearts manager privacy and lifecycle', () => {
       expect(state().hands[receiver]).toEqual([...removeCards(original[receiver], sent[receiver]), ...sent[seat]]);
     }
     expect(state().hands[state().currentTurnSeat!]).toContainEqual({ suit: 'clubs', rank: 2 });
+    // Each passer keeps seeing only its own pass while the hand is played.
+    for (const seat of HEARTS_SEATS) expect(hearts.getPlayerVisibleState(CODE, seat)?.myPass).toEqual(sent[seat]);
     expect(state().log.filter((entry) => entry.type === 'pass')).toEqual(HEARTS_SEATS.map((seat) => ({ type: 'pass', seat, timestamp: 1001 })));
   });
   it('filters hands and all other pass selections from participants, bots and observers', () => {

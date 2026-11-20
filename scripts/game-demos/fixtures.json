@@ -162269,13 +162269,6 @@
             {
               "op": "set",
               "path": [
-                "myPass"
-              ],
-              "value": []
-            },
-            {
-              "op": "set",
-              "path": [
                 "passDeadline"
               ],
               "value": null
@@ -167350,6 +167343,13 @@
             {
               "op": "set",
               "path": [
+                "myPass"
+              ],
+              "value": []
+            },
+            {
+              "op": "set",
+              "path": [
                 "passDeadline"
               ],
               "value": 1800000030000
@@ -167715,13 +167715,6 @@
               "values": [
                 "W"
               ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "myPass"
-              ],
-              "value": []
             },
             {
               "op": "set",
@@ -172832,6 +172825,13 @@
             {
               "op": "set",
               "path": [
+                "myPass"
+              ],
+              "value": []
+            },
+            {
+              "op": "set",
+              "path": [
                 "passDeadline"
               ],
               "value": 1800000030000
@@ -173196,13 +173196,6 @@
               "values": [
                 "W"
               ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "myPass"
-              ],
-              "value": []
             },
             {
               "op": "set",
@@ -178213,6 +178206,13 @@
               "op": "set",
               "path": [
                 "passedSeats"
+              ],
+              "value": []
+            },
+            {
+              "op": "set",
+              "path": [
+                "myPass"
               ],
               "value": []
             },
@@ -183678,13 +183678,6 @@
             {
               "op": "set",
               "path": [
-                "myPass"
-              ],
-              "value": []
-            },
-            {
-              "op": "set",
-              "path": [
                 "passDeadline"
               ],
               "value": null
@@ -188678,6 +188671,13 @@
             {
               "op": "set",
               "path": [
+                "myPass"
+              ],
+              "value": []
+            },
+            {
+              "op": "set",
+              "path": [
                 "passDeadline"
               ],
               "value": 1800000030000
@@ -189027,13 +189027,6 @@
               "values": [
                 "W"
               ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "myPass"
-              ],
-              "value": []
             },
             {
               "op": "set",
@@ -194026,6 +194019,13 @@
             {
               "op": "set",
               "path": [
+                "myPass"
+              ],
+              "value": []
+            },
+            {
+              "op": "set",
+              "path": [
                 "passDeadline"
               ],
               "value": 1800000030000
@@ -194383,13 +194383,6 @@
               "values": [
                 "W"
               ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "myPass"
-              ],
-              "value": []
             },
             {
               "op": "set",
@@ -199423,6 +199416,13 @@
               "op": "set",
               "path": [
                 "passedSeats"
+              ],
+              "value": []
+            },
+            {
+              "op": "set",
+              "path": [
+                "myPass"
               ],
               "value": []
             },
@@ -204892,13 +204892,6 @@
             {
               "op": "set",
               "path": [
-                "myPass"
-              ],
-              "value": []
-            },
-            {
-              "op": "set",
-              "path": [
                 "passDeadline"
               ],
               "value": null
@@ -209920,6 +209913,13 @@
             {
               "op": "set",
               "path": [
+                "myPass"
+              ],
+              "value": []
+            },
+            {
+              "op": "set",
+              "path": [
                 "passDeadline"
               ],
               "value": 1800000030000
@@ -210269,13 +210269,6 @@
               "values": [
                 "W"
               ]
-            },
-            {
-              "op": "set",
-              "path": [
-                "myPass"
-              ],
-              "value": []
             },
             {
               "op": "set",
@@ -215167,6 +215160,13 @@
                 "S"
               ],
               "value": 0
+            },
+            {
+              "op": "set",
+              "path": [
+                "myPass"
+              ],
+              "value": []
             },
             {
               "op": "set",
@@ -309938,7 +309938,8 @@
         "playing": null,
         "result": null,
         "log": [],
-        "redealPendingSeat": "E"
+        "redealPendingSeat": "E",
+        "botSeats": []
       },
       "steps": [
         {

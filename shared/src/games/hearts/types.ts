@@ -66,6 +66,7 @@ export interface HeartsVisibleState extends ObserverView<Card> {
   readonly hand: number;
   readonly passDirection: HeartsPass;
   readonly passedSeats: readonly Seat[];
+  /** The seat's own pass this hand, kept while the hand is played; empty before it passes. */
   readonly myPass: readonly Card[];
   readonly passDeadline: number | null;
   readonly heartsBroken: boolean;

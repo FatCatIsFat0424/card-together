@@ -82,7 +82,12 @@ function napoleonAction(action: NapoleonAction | null): BotAction | null {
 export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
   spades: { decide: getSpadesBotAction, firstLegal: spadesFirstLegalAction,
     turnTimeout: (visible) => getSpadesBotAction(visible) },
-  hearts: { decide: getHeartsBotAction, firstLegal: heartsFirstLegalAction },
+  hearts: {
+    // The synchronous heuristic is the fallback; bots and timeouts sample hidden hands and play them out in the worker pool.
+    decide: getHeartsBotAction,
+    firstLegal: heartsFirstLegalAction,
+    search: { strategy: searchStrategy<'hearts'>(new URL('./hearts-search.ts', import.meta.url), 'heartsSearch'), budgetMs: 1200 },
+  },
   bridge: {
     // The synchronous heuristic is the fallback; bots and timeouts sample hidden hands and solve them in the worker pool.
     decide: getBridgeBotAction,
@@ -167,7 +172,12 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     turnTimeout: (visible) => studPassiveAction(visible),
   },
   oldmaid: { decide: getOldMaidBotAction, firstLegal: oldMaidFirstLegalAction },
-  gongzhu: { decide: getGongZhuBotAction, firstLegal: gongZhuFirstLegalAction },
+  gongzhu: {
+    // The synchronous heuristic is the fallback; bots and timeouts sample hidden hands and play them out in the worker pool.
+    decide: getGongZhuBotAction,
+    firstLegal: gongZhuFirstLegalAction,
+    search: { strategy: searchStrategy<'gongzhu'>(new URL('./gongzhu-search.ts', import.meta.url), 'gongZhuSearch'), budgetMs: 1200 },
+  },
   gofish: { decide: getGoFishBotAction, firstLegal: goFishFirstLegalAction },
   doudizhu: {
     // The synchronous heuristic is the fallback; bots search in the worker pool.
