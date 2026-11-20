@@ -141,7 +141,13 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
       budgetMs: 1200,
     },
   },
-  liarsdeck: { decide: getLiarsDeckBotAction, firstLegal: liarsDeckFirstLegalAction },
+  liarsdeck: {
+    // The synchronous bot is the same search with a few worlds; bot turns and timeouts deal the unseen truths and
+    // lies from the plays so far and play the round out in the worker pool.
+    decide: getLiarsDeckBotAction,
+    firstLegal: liarsDeckFirstLegalAction,
+    search: { strategy: searchStrategy<'liarsdeck'>(new URL('./liarsdeck-search.ts', import.meta.url), 'liarsDeckSearch'), budgetMs: 1200 },
+  },
   blackjack: {
     // The synchronous basic strategy and race bet are the fallback; bots and timeouts plan the bet and every play
     // for the chance of finishing first in the worker pool.
@@ -180,7 +186,13 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     // A human who missed the betting window stakes the minimum; bots keep their own decision.
     deadlineExpired: (visible, { isBot, strategy }) => (isBot ? strategy() : tenHalfFirstLegalAction(visible)),
   },
-  liarsdice: { decide: getLiarsDiceBotAction, firstLegal: liarsDiceFirstLegalAction },
+  liarsdice: {
+    // The synchronous bot is the same search with a few worlds; bot turns and timeouts sample the other cups from the
+    // bids so far and play the round out in the worker pool.
+    decide: getLiarsDiceBotAction,
+    firstLegal: liarsDiceFirstLegalAction,
+    search: { strategy: searchStrategy<'liarsdice'>(new URL('./liarsdice-search.ts', import.meta.url), 'liarsDiceSearch'), budgetMs: 1200 },
+  },
   reversi: {
     // The cheap synchronous move is the fallback; bot turns and timeouts search in the worker pool.
     decide: getReversiBotAction,
