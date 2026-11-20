@@ -1,7 +1,7 @@
 import type { BanqiVisibleState } from '@shared/games/banqi/types';
 import { bqCell, bqFlips, bqMoves, bqMovesFrom } from '@shared/rules/banqi';
 import type { BotAction } from './bot-decisions';
-import { QUICK_CHECKS, QUICK_DEPTH, banqiAction, banqiState, searchBanqi } from './banqi-search';
+import { QUICK_CHECKS, QUICK_DEPTH, QUICK_TABLE_BITS, banqiAction, banqiState, searchBanqi } from './banqi-search';
 import type { Choice } from './banqi-search';
 
 type Pick = Choice;
@@ -27,7 +27,9 @@ function legalPicks(visible: BanqiVisibleState): Pick[] {
  */
 export function getBanqiBotAction(visible: BanqiVisibleState, random: () => number): BotAction | null {
   let checks = 0;
-  return searchBanqi(visible, { maxDepth: QUICK_DEPTH, expired: () => ++checks > QUICK_CHECKS, random });
+  return searchBanqi(visible, {
+    maxDepth: QUICK_DEPTH, expired: () => ++checks > QUICK_CHECKS, random, tableBits: QUICK_TABLE_BITS,
+  });
 }
 
 /** The first legal action: the last resort when the strategies keep failing. */

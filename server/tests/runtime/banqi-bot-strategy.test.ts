@@ -79,7 +79,7 @@ describe('Banqi Hard bot', () => {
     const rows = ['R#######', '########', '########', '#######k'];
     start();
     setPosition(game(), rows);
-    const blind = decode(searchBanqi(view('N'), { maxDepth: 2, expired: () => false, random: () => 0 }));
+    const blind = decode(searchBanqi(view('N'), { maxDepth: 1, expired: () => false, random: () => 0 }));
     expect(blind).toMatchObject({ type: 'move', from: '0,0' });
     // Matches without blind attacks never offer one: the boxed-in chariot can only flip.
     start({ chain: false, rookDash: false });
@@ -205,8 +205,8 @@ describe('Banqi search budget', () => {
     expect(performance.now() - started).toBeLessThan(250);
   });
 
-  it('declares the worker search with a one-second budget and a depth cap', () => {
-    expect(gameBot('banqi').search).toMatchObject({ budgetMs: 1000, maxDepth: expect.any(Number) });
+  it('declares the worker search with a 1.8-second budget and a depth cap', () => {
+    expect(gameBot('banqi').search).toMatchObject({ budgetMs: 1800, maxDepth: expect.any(Number) });
   });
 });
 
@@ -223,7 +223,7 @@ describe('Banqi search in the bot worker pool', () => {
       apply(seat, decode(getBotAction(view(seat), seededRandom(step + 1))));
     }
     const seat = game().currentTurnSeat;
-    const pool = createSearchPool({ workers: 1, memoryMb: 256, queueLimit: 2 });
+    const pool = createSearchPool({ workers: 1, memoryMb: 256, queueLimit: 2, graceMs: 4_000 });
     pools.push(pool);
     const spec = gameBot('banqi').search!;
     const started = Date.now();

@@ -298,8 +298,8 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     firstLegal: banqiFirstLegalAction,
     search: {
       strategy: searchStrategy<'banqi'>(new URL('./banqi-search.ts', import.meta.url), 'banqiSearch'),
-      budgetMs: 1000,
-      maxDepth: 6,
+      budgetMs: 1800,
+      maxDepth: 16,
     },
   },
   chinesecheckers: {
