@@ -278,8 +278,8 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     firstLegal: xiangqiFirstLegalAction,
     search: {
       strategy: searchStrategy<'xiangqi'>(new URL('./xiangqi-search.ts', import.meta.url), 'xiangqiSearch'),
-      budgetMs: 1500,
-      maxDepth: 12,
+      budgetMs: 2000,
+      maxDepth: 64,
     },
   },
   chess: {
@@ -288,8 +288,8 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     firstLegal: chessFirstLegalAction,
     search: {
       strategy: searchStrategy<'chess'>(new URL('./chess-search.ts', import.meta.url), 'chessSearch'),
-      budgetMs: 1500,
-      maxDepth: 12,
+      budgetMs: 2000,
+      maxDepth: 64,
     },
   },
   banqi: {

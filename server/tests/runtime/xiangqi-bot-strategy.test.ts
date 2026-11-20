@@ -7,7 +7,7 @@ import type { XqBoard, XqMove, XqPly, XqSide } from '@shared/rules/xiangqi';
 import { getBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
-import { xiangqiBestMove, xiangqiSearch } from '../../src/bots/xiangqi-search';
+import { xiangqiAnalyse, xiangqiBestMove, xiangqiSearch } from '../../src/bots/xiangqi-search';
 import { createSearchPool } from '../../src/bots/search/search-worker-pool';
 import type { SearchPool } from '../../src/bots/search/search-worker-pool';
 import { seededRandom } from '../../src/bots/search/seeded-random';
@@ -99,6 +99,29 @@ describe('Xiangqi Hard search', () => {
     }
   });
 
+  it('does not start the second round of a perpetual check, which the house rules make a loss', () => {
+    // Red stands worse (about −2 pawns), so scoring the cycle as a draw would make the check look like a rescue.
+    const board = xqPosition(['....k....', '.........', '.h.....c.', '........r', '.........', 'R........', '.........',
+      '.........', '....A....', '..EK..E..']);
+    const before = line(board, 0, [[at(0, 5), at(0, 0)], [at(4, 0), at(4, 1)], [at(0, 0), at(0, 1)], [at(4, 1), at(4, 0)]]);
+    expect(before.plies.filter((ply) => ply.piece === 'R').every((ply) => ply.check)).toBe(true);
+    const again = { from: at(0, 1), to: at(0, 0) };
+    for (let seed = 1; seed <= 3; seed++) {
+      const result = xiangqiAnalyse(before.board, 0, before.plies, { ...deep, random: seededRandom(seed), book: false })!;
+      expect(result.move).not.toEqual(again);
+      expect(result.score).toBeGreaterThan(-90_000);
+    }
+  });
+
+  it('leaves its inputs untouched', () => {
+    const board = Object.freeze(xqInitialBoard());
+    const plies = Object.freeze(line(xqInitialBoard(), 0, [[at(7, 7), at(4, 7)]]).plies);
+    const after = xqApply(board, at(7, 7), at(4, 7));
+    const copy = JSON.stringify([after, plies]);
+    expect(xiangqiBestMove(after, 1, plies, { ...deep, book: false })).not.toBeNull();
+    expect(JSON.stringify([after, plies])).toBe(copy);
+  });
+
   it('returns null without a legal move and the only move without searching', () => {
     const stalemated = xqPosition(['....k....', '........R', '.........', '.........', '.........', '.....R...', '.........',
       '.........', '.........', '...K.....']);
@@ -122,8 +145,8 @@ describe('Xiangqi Hard search', () => {
     expect(xiangqiSearch(view('S'), { random: () => 0, budget })).toBeNull();
   });
 
-  it('declares the worker search with a 1.5-second budget and a depth cap', () => {
-    expect(gameBot('xiangqi').search).toMatchObject({ budgetMs: 1500, maxDepth: expect.any(Number) });
+  it('declares the worker search with a 2-second budget and a depth cap', () => {
+    expect(gameBot('xiangqi').search).toMatchObject({ budgetMs: 2000, maxDepth: expect.any(Number) });
   });
 
   it('plays only legal moves for a stretch of a match against itself', () => {

@@ -55,6 +55,21 @@ describe('chess hard search', () => {
     }
   });
 
+  it('finds a knight fork and a forced mate in three', () => {
+    const fork = chessFen('r3k3/7p/8/1N6/8/8/7P/7K w - - 0 1');
+    for (let seed = 1; seed <= 3; seed++) expect(chessSan(fork, hard(fork, 5, seed)!)).toBe('Nc7+');
+    const ladder = chessFen('8/8/7k/8/8/8/R7/1R5K w - - 0 1');
+    expect(forcesMate(ladder, 3, (current) => hard(current, 6))).toBe(true);
+  });
+
+  it('leaves its inputs untouched', () => {
+    const position = Object.freeze({ ...KIWIPETE, board: Object.freeze([...KIWIPETE.board]), castling: Object.freeze({ ...KIWIPETE.castling }) });
+    const history = Object.freeze([chessPositionKey(chessInitialPosition())]);
+    const copy = JSON.stringify([position, history]);
+    expect(chessBestMove(position, 0, history, { maxDepth: 3, budget: never, random: seededRandom(1), book: false })).not.toBeNull();
+    expect(JSON.stringify([position, history])).toBe(copy);
+  });
+
   it('takes a free queen', () => {
     const position = chessFen('4k3/8/8/3q4/8/8/8/3RK3 w - - 0 1');
     expect(chessSan(position, hard(position, 3)!)).toBe('Rxd5');

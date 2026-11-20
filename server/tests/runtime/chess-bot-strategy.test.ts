@@ -109,8 +109,8 @@ describe('Chess Hard search', () => {
     expect(move && chessIsLegal(position, move)).toBe(true);
   });
 
-  it('declares the worker search with a 1.5-second budget and a depth cap', () => {
-    expect(gameBot('chess').search).toMatchObject({ budgetMs: 1500, maxDepth: expect.any(Number) });
+  it('declares the worker search with a 2-second budget and a depth cap', () => {
+    expect(gameBot('chess').search).toMatchObject({ budgetMs: 2000, maxDepth: expect.any(Number) });
   });
 
   it('plays only legal moves for a stretch of a match against itself', () => {

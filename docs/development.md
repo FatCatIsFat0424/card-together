@@ -106,6 +106,21 @@ npm run --silent bots:arena -- --game hearts --matches 400 --parallel 10
 - `sign test`：只看有淨勝方的組，做雙尾符號檢定；p < 0.05 才視為有顯著差異。小幅改進需要數百組才看得出來。
 - 搜尋型遊戲的決策時間應接近預算。`--parallel` 超過實體核心數時，每步的搜尋量會下降，兩邊都會變弱。
 
+## 棋類評估調校
+
+西洋棋與象棋 bot 的評估權重由離線腳本調校（Texel 法），結果寫入已 commit 的 [`chess-eval-weights.ts`](../server/src/bots/chess-eval-weights.ts) 與 [`xiangqi-eval-weights.ts`](../server/src/bots/xiangqi-eval-weights.ts)；空陣列代表沿用評估檔內手設的初始權重。
+
+```sh
+npm run --silent bots:tune -- selfplay --game chess --games 1200 --nodes 6000 --parallel 3 --out /tmp/chess.jsonl
+npm run --silent bots:tune -- fit --game chess --data /tmp/chess.jsonl --write
+```
+
+- **selfplay**：bot 自己對下，開局先隨機走 4–8 手增加變化，之後每步搜尋約 `--nodes` 個節點；雙方評估都超過 ±1200 連續 6 手時判勝，300 手未分判和。每局一行 JSON（結果與局面），資料不放進 repository。
+- **fit**：只取沒被將軍、靜態搜尋等於靜態評估的局面，先找讓勝率曲線最貼合的比例，再以 Adam 最小化預測勝率與實際結果的平方誤差（加上拉回起始權重的 L2 項）。不加 `--write` 只回報誤差。
+- 只在 [bot 對戰場](#bot-對戰場)顯示調校後較強時才 commit 新權重（以清空權重的版本為基準）；目前象棋採用調校權重，西洋棋調校後與手設值打平，維持手設值。
+- 改動評估項目後權重排列會變：先清空權重檔、重新 fit，再比較。
+- `--pull` 預設依遊戲而定（西洋棋 2e-6、象棋 1e-8），是依保留局面的誤差選出的。
+
 ## 瀏覽器驗證
 
 依受影響的行為選擇範圍。自動化測試已涵蓋規則邊界、完整對局、授權、寫入失敗與重新啟動後的復原。

@@ -28,6 +28,7 @@
     "bench:load": "cd server && npx tsx benchmarks/load/load-benchmark.ts",
     "yacht:table": "tsx --tsconfig server/tsconfig.json scripts/yacht-table/generate.ts",
     "bots:arena": "tsx --tsconfig server/tsconfig.json scripts/bot-arena/arena.ts",
+    "bots:tune": "tsx --tsconfig server/tsconfig.json scripts/board-bot-tuning/tune.ts",
     "bench:render": "npm run music:import && npm run emoji:import && cd server && npx tsx benchmarks/render-benchmark.ts",
     "lint": "eslint \"shared/src/**/*.ts\" \"server/src/**/*.ts\" \"server/tests/**/*.ts\" \"server/benchmarks/**/*.ts\" \"client/src/**/*.{ts,tsx}\" \"scripts/**/*.{ts,mjs}\" client/vite.config.ts server/vitest.config.ts server/start.mjs",
     "typecheck": "npm run typecheck:shared && npm run typecheck:server && npm run typecheck:client",
