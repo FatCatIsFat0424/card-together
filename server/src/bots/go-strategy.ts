@@ -2,21 +2,19 @@ import type { GoVisibleState } from '@shared/types';
 import { goLegalPoints } from '@shared/rules/go';
 import type { BotAction } from './bot-decisions';
 import {
-  GO_QUICK_ITERATIONS, goBestMove, goConfirmAction, goMarkingAction, goMarkingTurn, goMoveAction, goPassAction,
-  goPlaceAction, goPlayingTurn, goSeatView,
+  GO_QUICK_ITERATIONS, GO_QUICK_MS, goConfirmAction, goMarkingAction, goMarkingTurn, goPassAction, goPlaceAction,
+  goPlayingTurn, goSeatView, goTurnAction,
 } from './go-search';
 
 /**
- * Synchronous fallback: the same search as the worker with a small iteration cap. It decides only when no
+ * Synchronous fallback: the same search as the worker with a small iteration and time cap. It decides only when no
  * pool runs, a search fails, or a marking deadline passes, so it must stay cheap for the event loop.
  */
 export function getGoBotAction(visible: GoVisibleState, random: () => number): BotAction | null {
-  if (goMarkingTurn(visible)) return goMarkingAction(visible, random);
+  if (goMarkingTurn(visible)) return goMarkingAction(visible, random, GO_QUICK_MS);
   if (!goPlayingTurn(visible)) return null;
-  const view = goSeatView(visible);
-  return view
-    ? goMoveAction(visible, goBestMove(view.position, view.history, { random, maxIterations: GO_QUICK_ITERATIONS }))
-    : null;
+  const started = performance.now();
+  return goTurnAction(visible, random, { expired: () => performance.now() - started >= GO_QUICK_MS }, GO_QUICK_ITERATIONS);
 }
 
 /** The legal point nearest the centre, else a pass: the last resort when the strategies keep failing. */

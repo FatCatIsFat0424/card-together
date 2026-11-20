@@ -5,7 +5,7 @@ import type { GoSize } from '@shared/rules/go';
 import { getBotAction } from '../../src/bots/bot-decisions';
 import type { BotAction } from '../../src/bots/bot-decisions';
 import { gameBot } from '../../src/bots/bot-registry';
-import { GO_MAX_CONTESTS, GO_SEARCH_ITERATIONS, goSearch } from '../../src/bots/go-search';
+import { GO_MAX_CONTESTS, GO_QUICK_MS, goSearch } from '../../src/bots/go-search';
 import { goFirstLegalAction } from '../../src/bots/go-strategy';
 import { seededRandom } from '../../src/bots/search/seeded-random';
 import * as go from '../../src/managers/games/go-game';
@@ -73,10 +73,17 @@ describe('Go bot registry', () => {
     expect(bot.deadlineExpired).toBeDefined();
   });
 
-  it('caps the search by board size so the 19 × 19 search still ends within the budget', () => {
-    expect(GO_SEARCH_ITERATIONS[9]).toBeGreaterThanOrEqual(6_000);
-    expect(GO_SEARCH_ITERATIONS[13]).toBeGreaterThanOrEqual(6_000);
-    expect(GO_SEARCH_ITERATIONS[19]).toBeGreaterThanOrEqual(6_000);
+  it('keeps the synchronous fallback within a short slice of the event loop', () => {
+    expect(GO_QUICK_MS).toBeLessThanOrEqual(100);
+    go.abortGame(CODE);
+    start({ size: 19, handicap: 0 });
+    // Past the opening book, so the fallback searches.
+    for (const [seat, point] of [['N', '3,3'], ['S', '15,15'], ['N', '15,3'], ['S', '3,15']] as const) {
+      expect(go.place(CODE, seat, point, MARK_MS, 2_000)).toEqual({ success: true });
+    }
+    const began = performance.now();
+    expect(kind(getBotAction(view('N'), seededRandom(4)))).toBe('place');
+    expect(performance.now() - began).toBeLessThan(GO_QUICK_MS + 250);
   });
 });
 
@@ -116,14 +123,17 @@ describe('Go bots on their turn', () => {
     expect(goSearch(view('S'), context)).toBeNull();
   });
 
-  it('saves a group in atari within its iteration cap on a 9 × 9 board', () => {
+  it('saves a group in atari within its budget on a 9 × 9 board', () => {
     start();
     for (const [seat, point] of [['N', 'D4'], ['S', 'D5'], ['N', 'C5'], ['S', 'A1'], ['N', 'D6']] as const) {
       expect(go.place(CODE, seat, node(point), MARK_MS, 2_000)).toEqual({ success: true });
     }
-    const context = { random: seededRandom(8), budget: { maxDepth: undefined, timeLeftMs: () => 5_000, expired: () => false } };
+    const began = performance.now();
+    const left = (): number => Math.max(0, 1_500 - (performance.now() - began));
+    const context = { random: seededRandom(8), budget: { maxDepth: undefined, timeLeftMs: left, expired: () => left() === 0 } };
     expect(target(goSearch(view('S'), context))).toBe(name('E5'));
-  });
+    expect(performance.now() - began).toBeLessThan(3_000);
+  }, 10_000);
 });
 
 describe('Go bots in the marking', () => {

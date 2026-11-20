@@ -261,8 +261,8 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     turnTimeout: (visible, { isBot, strategy }) => (isBot ? strategy() : douDizhuFirstLegalAction(visible)),
   },
   go: {
-    // The cheap synchronous move is the fallback; bot turns and timeouts search in the worker pool (UCT with RAVE,
-    // capped by iterations per board size). The same strategy answers the marking of dead stones.
+    // The cheap synchronous move is the fallback; bot turns and timeouts search in the worker pool (UCT with RAVE
+    // over heavy playouts, for the whole budget). The same strategy answers the marking of dead stones.
     decide: getGoBotAction,
     firstLegal: goFirstLegalAction,
     search: {
