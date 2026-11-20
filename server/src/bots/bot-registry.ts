@@ -220,8 +220,10 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     },
   },
   stud: {
+    // The synchronous evaluation is the fallback; bots and timeouts sample whole hands against the opponents' betting lines in the worker pool.
     decide: getStudBotAction,
     firstLegal: studPassiveAction,
+    search: { strategy: searchStrategy<'stud'>(new URL('./stud-search.ts', import.meta.url), 'studSearch'), budgetMs: 1200 },
     // A player who runs out of time checks or folds rather than letting a bot stake their chips.
     turnTimeout: (visible) => studPassiveAction(visible),
   },
