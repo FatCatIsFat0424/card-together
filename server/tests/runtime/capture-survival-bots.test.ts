@@ -72,7 +72,7 @@ describe('capture and survival bot strategies', () => {
 
   it('takes a safe black capture instead of discarding a red card to the table', () => {
     const state = redPointsState({
-      myHand: [card('spades', 8), card('hearts', 14), card('hearts', 9)],
+      myHand: [card('spades', 8), card('hearts', 13), card('hearts', 9)],
       table: [card('clubs', 2), card('hearts', 10), card('hearts', 4), card('spades', 12)],
       handCounts: { N: 3, E: 3, S: 3, W: 3 }, stockCount: 20,
     });

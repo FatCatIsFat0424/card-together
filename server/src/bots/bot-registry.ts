@@ -103,8 +103,20 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
       return !isBot && action?.type === 'bridge-redeal' ? { type: 'bridge-redeal', accept: false } : action;
     },
   },
-  bigtwo: { decide: getBigTwoBotAction, firstLegal: bigTwoFirstLegalAction },
-  redpoints: { decide: getRedPointsBotAction, firstLegal: redPointsFirstLegalAction },
+  bigtwo: {
+    // The synchronous heuristic is the fallback; bots and timeouts deal the unseen cards and play them out in the
+    // worker pool. Forced passes never reach the bot: the adapter's forced-pass scheduler owns those turns.
+    decide: getBigTwoBotAction,
+    firstLegal: bigTwoFirstLegalAction,
+    search: { strategy: searchStrategy<'bigtwo'>(new URL('./bigtwo-search.ts', import.meta.url), 'bigTwoSearch'), budgetMs: 1200 },
+  },
+  redpoints: {
+    // The synchronous heuristic is the fallback; bots and timeouts deal the unseen cards and the stock and play
+    // them out in the worker pool.
+    decide: getRedPointsBotAction,
+    firstLegal: redPointsFirstLegalAction,
+    search: { strategy: searchStrategy<'redpoints'>(new URL('./redpoints-search.ts', import.meta.url), 'redPointsSearch'), budgetMs: 1200 },
+  },
   ninetynine: { decide: getNinetyNineBotAction, firstLegal: ninetyNineFirstLegalAction },
   sevens: { decide: getSevensBotAction, firstLegal: sevensFirstLegalAction },
   chinesepoker: { decide: getChinesePokerBotAction, firstLegal: chinesePokerFirstLegalAction },
