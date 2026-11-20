@@ -219,8 +219,8 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     firstLegal: gomokuFirstLegalAction,
     search: {
       strategy: searchStrategy<'gomoku'>(new URL('./gomoku-search.ts', import.meta.url), 'gomokuSearch'),
-      budgetMs: 1000,
-      maxDepth: 10,
+      budgetMs: 2000,
+      maxDepth: 24,
     },
   },
   crazyeights: {

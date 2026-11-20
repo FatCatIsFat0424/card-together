@@ -3,7 +3,7 @@ import { gmLegalMoves } from '@shared/rules/gomoku';
 import type { BotAction } from './bot-decisions';
 import {
   Position, QUICK_DEPTH, QUICK_NODES, chooseAction, chooseBySearch, choosingTurn, placeAction, placingTurn, searchBestMove,
-  sideToPlace,
+  sideToPlace, swapOpeningStone,
 } from './gomoku-search';
 
 /**
@@ -14,7 +14,9 @@ export function getGomokuBotAction(visible: GomokuVisibleState, random: () => nu
   const options = { maxDepth: QUICK_DEPTH, expired: () => false, maxNodes: QUICK_NODES, random };
   if (choosingTurn(visible)) return chooseBySearch(visible, options);
   if (!placingTurn(visible)) return null;
-  const choice = searchBestMove(new Position(visible.stones), sideToPlace(visible), visible.options.renju, options);
+  const opening = swapOpeningStone(visible, options);
+  if (opening !== null) return placeAction(opening);
+  const choice = searchBestMove(new Position(visible.stones, visible.options.renju), sideToPlace(visible), visible.options.renju, options);
   return choice === null ? null : placeAction(choice.index);
 }
 

@@ -1,232 +1,227 @@
-// ─── Gomoku search: five-cell window scores, forced-move extensions, and iterative-deepening alpha-beta ───
+// ─── Gomoku search: threat-space search, then iterative-deepening alpha-beta over line shapes ───
 //
 // Runs inside a bot worker (`GameBot.search`) and, with a small node budget, as the cheap synchronous
 // fallback when no pool runs or a search fails. It reads only the seat's own view, which for Gomoku is the
-// whole public board.
+// whole public board. Line shapes, threat sets, and the hash live in `gomoku-position`; forced wins by fours
+// and open threes in `gomoku-threats`.
 
 import type { GomokuVisibleState } from '@shared/types';
-import {
-  GM_AXES, GM_CELLS, GM_SIZE, gmForbiddenInPlace, gmIndex, gmNode, gmSideOfStone, gmStage, gmStoneCount, gmWins,
-} from '@shared/rules/gomoku';
-import type { GmCell, GmSide } from '@shared/rules/gomoku';
-import type { SearchContext } from './search/search-types';
+import { GM_SIZE, gmIndex, gmNode, gmSideOfStone, gmStage, gmStoneCount } from '@shared/rules/gomoku';
+import type { GmSide } from '@shared/rules/gomoku';
+import type { SearchContext as BotSearchContext } from './search/search-types';
 import type { BotAction } from './bot-decisions';
+import { OPEN_THREE } from './gomoku-patterns';
+import { AREA, INDEX_OF, Position, SIDE_HASH } from './gomoku-position';
+import { SearchContext, WIN, moveValue, vcf, vct, winThreat } from './gomoku-threats';
 
-/** What a stone is worth in a five-cell window that holds none of the opponent's: index = own stones there. */
-const LINE_VALUE: readonly number[] = [0, 1, 10, 100, 1200, 100_000];
-
-/** Score of a certain win; a sooner win scores higher. */
-const WIN = 1_000_000;
+export { Position } from './gomoku-position';
 
 const CENTRE = gmIndex((GM_SIZE - 1) / 2, (GM_SIZE - 1) / 2);
 
-/** Every run of five intersections on the board. */
-const WINDOWS: readonly (readonly number[])[] = (() => {
-  const windows: number[][] = [];
-  for (const [dx, dy] of GM_AXES) {
-    for (let row = 0; row < GM_SIZE; row++) {
-      for (let col = 0; col < GM_SIZE; col++) {
-        const endCol = col + 4 * dx;
-        const endRow = row + 4 * dy;
-        if (endCol < 0 || endCol >= GM_SIZE || endRow < 0 || endRow >= GM_SIZE) continue;
-        windows.push([0, 1, 2, 3, 4].map((step) => gmIndex(col + step * dx, row + step * dy)));
-      }
-    }
-  }
-  return windows;
-})();
-
-const CELL_WINDOWS: readonly (readonly number[])[] = (() => {
-  const byCell: number[][] = Array.from({ length: GM_CELLS }, () => []);
-  WINDOWS.forEach((cells, id) => cells.forEach((cell) => byCell[cell].push(id)));
-  return byCell;
-})();
-
-/** Intersections within two steps of each cell: where a sensible next stone can go. */
-const NEAR: readonly (readonly number[])[] = Array.from({ length: GM_CELLS }, (_, index) => {
-  const col = index % GM_SIZE;
-  const row = Math.floor(index / GM_SIZE);
-  const near: number[] = [];
-  for (let dr = -2; dr <= 2; dr++) {
-    for (let dc = -2; dc <= 2; dc++) {
-      const c = col + dc;
-      const r = row + dr;
-      if ((dc !== 0 || dr !== 0) && c >= 0 && c < GM_SIZE && r >= 0 && r < GM_SIZE) near.push(gmIndex(c, r));
-    }
-  }
-  return near;
-});
-
-/** Distance from the centre, so equally good moves prefer the middle. */
-const CENTRE_BIAS: readonly number[] = Array.from({ length: GM_CELLS }, (_, index) =>
-  -Math.max(Math.abs((index % GM_SIZE) - 7), Math.abs(Math.floor(index / GM_SIZE) - 7)) * 0.1);
-
-const windowValue = (black: number, white: number): number =>
-  white === 0 ? LINE_VALUE[black] : black === 0 ? -LINE_VALUE[white] : 0;
-
-/** A board with incremental window counts, so a move costs a few dozen updates rather than a rescan. */
-export class Position {
-  readonly stones: GmCell[];
-  /** Stones per window, by side */
-  private readonly counts: readonly [Uint8Array, Uint8Array] = [new Uint8Array(WINDOWS.length), new Uint8Array(WINDOWS.length)];
-  /** Windows holding four stones of a side and none of the other: that side wins by filling the gap */
-  readonly fours: [number, number] = [0, 0];
-  /** How many stones sit within two steps of each cell */
-  private readonly near = new Uint8Array(GM_CELLS);
-  /** Black's window value minus white's */
-  score = 0;
-  stoneCount = 0;
-
-  constructor(stones: readonly GmCell[]) {
-    this.stones = new Array<GmCell>(GM_CELLS).fill(null);
-    stones.forEach((cell, index) => {
-      if (cell !== null) this.make(index, cell);
-    });
-  }
-
-  private shift(index: number, side: GmSide, delta: 1 | -1): void {
-    for (const id of CELL_WINDOWS[index]) {
-      const black = this.counts[0][id];
-      const white = this.counts[1][id];
-      this.score -= windowValue(black, white);
-      if (white === 0 && black === 4) this.fours[0]--;
-      if (black === 0 && white === 4) this.fours[1]--;
-      this.counts[side][id] += delta;
-      const nextBlack = this.counts[0][id];
-      const nextWhite = this.counts[1][id];
-      this.score += windowValue(nextBlack, nextWhite);
-      if (nextWhite === 0 && nextBlack === 4) this.fours[0]++;
-      if (nextBlack === 0 && nextWhite === 4) this.fours[1]++;
-    }
-  }
-
-  make(index: number, side: GmSide): void {
-    this.stones[index] = side;
-    this.stoneCount++;
-    this.shift(index, side, 1);
-    for (const cell of NEAR[index]) this.near[cell]++;
-  }
-
-  unmake(index: number, side: GmSide): void {
-    this.stones[index] = null;
-    this.stoneCount--;
-    this.shift(index, side, -1);
-    for (const cell of NEAR[index]) this.near[cell]--;
-  }
-
-  isCandidate(index: number): boolean {
-    return this.stones[index] === null && this.near[index] > 0;
-  }
-
-  /** Window value gained by `side` playing `index`, plus the opponent's value there that the stone cuts off. */
-  heuristic(index: number, side: GmSide): number {
-    const mine = this.counts[side];
-    const theirs = this.counts[side === 0 ? 1 : 0];
-    let total = CENTRE_BIAS[index];
-    for (const id of CELL_WINDOWS[index]) {
-      if (theirs[id] === 0) total += LINE_VALUE[mine[id] + 1] - LINE_VALUE[mine[id]];
-      else if (mine[id] === 0) total += LINE_VALUE[theirs[id]] * 0.9;
-    }
-    return total;
-  }
-
-  /** Empty cells where `side` completes a winning line. */
-  winningCells(side: GmSide, renju: boolean): number[] {
-    if (this.fours[side] === 0) return [];
-    const found: number[] = [];
-    const mine = this.counts[side];
-    const theirs = this.counts[side === 0 ? 1 : 0];
-    WINDOWS.forEach((cells, id) => {
-      if (mine[id] !== 4 || theirs[id] !== 0) return;
-      const gap = cells.find((cell) => this.stones[cell] === null);
-      if (gap !== undefined && !found.includes(gap) && gmWins(this.stones, gap, side, renju)) found.push(gap);
-    });
-    return found;
-  }
-
-  /** Whether `side` may play the empty cell: black avoids forbidden points under Renju. */
-  allows(index: number, side: GmSide, renju: boolean): boolean {
-    return this.stones[index] === null && !(renju && side === 0 && gmForbiddenInPlace(this.stones, index));
-  }
-
-  /** The `limit` best legal moves near the stones, strongest first; the centre when the board is empty. */
-  candidates(side: GmSide, renju: boolean, limit: number): number[] {
-    if (this.stoneCount === 0) return [CENTRE];
-    const scored: { index: number; value: number }[] = [];
-    for (let index = 0; index < GM_CELLS; index++) {
-      if (this.isCandidate(index)) scored.push({ index, value: this.heuristic(index, side) });
-    }
-    scored.sort((a, b) => b.value - a.value || a.index - b.index);
-    const moves: number[] = [];
-    for (const { index } of scored) {
-      if (!this.allows(index, side, renju)) continue;
-      moves.push(index);
-      if (moves.length >= limit) break;
-    }
-    return moves;
-  }
-}
-
-class Stop extends Error {}
-
-interface SearchState {
-  readonly position: Position;
-  readonly renju: boolean;
-  readonly expired: () => boolean;
-  readonly maxNodes: number;
-  nodes: number;
-}
-
-/** Moves tried at each ply from the root: wide where the choice matters, narrow deeper down. */
-const BREADTH = [14, 10, 8, 6, 5, 4];
-
-/** Plies a chain of forced replies may add beyond the depth, so a run of fours is read to its end. */
-const FORCED_EXTENSION = 24;
+/** Deepest ply (forced replies included) the per-ply buffers hold. */
+const MAX_PLY = 96;
+const STRIDE = 232;
 
 const opponentOf = (side: GmSide): GmSide => (side === 0 ? 1 : 0);
 
-function evaluate(position: Position, side: GmSide): number {
-  return side === 0 ? position.score : -position.score;
+// ─── Transposition table ───
+
+const TT_BITS = 19;
+const TT_MASK = (1 << TT_BITS) - 1;
+const EXACT = 1;
+const LOWER = 2;
+const UPPER = 3;
+const NO_MOVE = 1023;
+
+/** Shared by every search in the worker: positions hash the same, so one move's search helps the next. */
+let ttKey: Int32Array | null = null;
+let ttScore: Int32Array | null = null;
+let ttInfo: Int32Array | null = null;
+let ttGeneration = 0;
+let ttRenju = false;
+
+function prepareTable(renju: boolean): void {
+  if (ttKey === null || ttScore === null || ttInfo === null) {
+    ttKey = new Int32Array(1 << TT_BITS);
+    ttScore = new Int32Array(1 << TT_BITS);
+    ttInfo = new Int32Array(1 << TT_BITS);
+  } else if (renju !== ttRenju) {
+    ttInfo.fill(0);
+  }
+  ttRenju = renju;
+  ttGeneration = (ttGeneration + 1) & 255;
 }
 
-function negamax(
-  state: SearchState, side: GmSide, depth: number, alpha: number, beta: number, ply: number, extension: number,
-): number {
-  if (++state.nodes > state.maxNodes || ((state.nodes & 127) === 0 && state.expired())) throw new Stop();
-  const { position, renju } = state;
-  if (position.winningCells(side, renju).length > 0) return WIN - ply;
+const toTable = (score: number, ply: number): number => (score > WIN - 1000 ? score + ply : score < -WIN + 1000 ? score - ply : score);
+const fromTable = (score: number, ply: number): number => (score > WIN - 1000 ? score - ply : score < -WIN + 1000 ? score + ply : score);
+
+// ─── Search state ───
+
+class Search extends SearchContext {
+  readonly moves = new Int16Array(MAX_PLY * STRIDE);
+  readonly killers = new Int16Array(MAX_PLY * 2).fill(-1);
+  readonly history = new Int32Array(2 * AREA);
+  readonly order = new Float64Array(AREA);
+  readonly seen = new Int32Array(AREA);
+  stamp = 0;
+}
+
+/** Plies of open-three attack a threat search may spend. */
+const THREAT_THREES = 4;
+/** Fours a leaf's continuous-four search may play, and the nodes it may use. */
+const LEAF_FOURS = 6;
+const LEAF_NODES = 400;
+
+/**
+ * Fills the ply's move list best first and returns how many moves it holds. When the opponent threatens to win
+ * by force, only cells that make a four for either side are tried, which includes every defence. Otherwise
+ * every cell that makes or stops a three or four is kept, plus the `quietLimit` best of the rest.
+ */
+function generate(search: Search, side: GmSide, ply: number, ttMove: number, quietLimit: number): number {
+  const position = search.position;
   const other = opponentOf(side);
-  let moves: number[];
-  let forced = false;
-  const threats = position.winningCells(other, renju);
-  if (threats.length >= 2) return -(WIN - ply - 1);
-  if (threats.length === 1) {
-    // The only defence is to fill the gap, which black may not do if it is forbidden.
-    if (!position.allows(threats[0], side, renju)) return -(WIN - ply - 1);
-    moves = [threats[0]];
-    forced = true;
-  } else {
-    if (depth <= 0) return evaluate(position, side);
-    moves = position.candidates(side, renju, BREADTH[Math.min(ply, BREADTH.length - 1)]);
-    if (moves.length === 0) return 0;
-  }
-  // A forced reply costs no depth while the extension lasts.
-  const free = forced && extension > 0;
-  let best = -Infinity;
-  for (const move of moves) {
-    position.make(move, side);
-    let value: number;
-    try {
-      value = -negamax(state, other, free ? depth : depth - 1, -beta, -alpha, ply + 1, free ? extension - 1 : extension);
-    } finally {
-      position.unmake(move, side);
+  const base = ply * STRIDE;
+  const order = search.order;
+  let count = 0;
+  const restricted = winThreat(position, other);
+  const killerA = search.killers[ply * 2];
+  const killerB = search.killers[ply * 2 + 1];
+  const add = (cell: number): void => {
+    let value = moveValue(position, cell, side);
+    if (cell === ttMove) value += 1e7;
+    else if (cell === killerA) value += 2500;
+    else if (cell === killerB) value += 2000;
+    else value += Math.min(search.history[side * AREA + cell] / 8, 1500);
+    order[count++] = Math.floor((value + 4) * 4) * 1024 + cell;
+  };
+  if (restricted) {
+    search.stamp++;
+    for (const set of [position.fours[other], position.fours[side]]) {
+      for (let i = 0; i < set.size; i++) {
+        const cell = set.list[i];
+        if (search.seen[cell] === search.stamp) continue;
+        search.seen[cell] = search.stamp;
+        add(cell);
+      }
     }
-    if (value > best) best = value;
-    if (best > alpha) alpha = best;
-    if (alpha >= beta) break;
+  } else {
+    const set = position.candidates;
+    for (let i = 0; i < set.size; i++) add(set.list[i]);
+  }
+  order.subarray(0, count).sort();
+  let kept = 0;
+  let quiet = 0;
+  for (let i = count - 1; i >= 0; i--) {
+    const cell = order[i] % 1024;
+    const tactical = restricted || position.best[side * AREA + cell] >= OPEN_THREE || position.best[other * AREA + cell] >= OPEN_THREE;
+    if (!tactical && cell !== ttMove && quiet >= quietLimit) continue;
+    if (!position.legal(cell, side)) continue;
+    if (!tactical) quiet++;
+    search.moves[base + kept++] = cell;
+  }
+  return kept;
+}
+
+/** Quiet moves tried at a node by remaining depth. */
+const QUIET_BY_DEPTH = [4, 5, 7, 8, 9, 10, 10, 12];
+
+function negamax(search: Search, side: GmSide, depth: number, alpha: number, beta: number, ply: number): number {
+  if (search.tick()) return 0;
+  const position = search.position;
+  const other = opponentOf(side);
+  if (position.winCells(side) > 0) return WIN - ply;
+  const threats = position.winCells(other);
+  if (threats >= 2) return -(WIN - ply - 1);
+  let forced = -1;
+  if (threats === 1) {
+    forced = position.wins[0];
+    if (!position.legal(forced, side)) return -(WIN - ply - 1);
+  }
+  if (ply >= MAX_PLY - 2) return position.evaluate(side);
+  if (forced < 0 && depth <= 0) {
+    if (position.fours[side].size > 0) {
+      search.limit = search.nodes + LEAF_NODES;
+      const win = vcf(search, side, LEAF_FOURS);
+      search.limit = Infinity;
+      if (search.stopped) return 0;
+      if (win >= 0) return WIN - ply - 9;
+    }
+    return position.evaluate(side);
+  }
+
+  const base = ply * STRIDE;
+  let ttMove = NO_MOVE;
+  let slot = 0;
+  let check = 0;
+  let count: number;
+  const originalAlpha = alpha;
+  if (forced >= 0) {
+    search.moves[base] = forced;
+    count = 1;
+  } else {
+    slot = (position.hashA ^ (side * 0x1b873593)) & TT_MASK;
+    check = side === 0 ? position.hashB : position.hashB ^ SIDE_HASH;
+    const info = ttInfo![slot];
+    if (info !== 0 && ttKey![slot] === check) {
+      ttMove = info & 1023;
+      if (((info >> 10) & 63) >= depth) {
+        const score = fromTable(ttScore![slot], ply);
+        const flag = (info >> 16) & 3;
+        if (flag === EXACT) return score;
+        if (flag === LOWER && score >= beta) return score;
+        if (flag === UPPER && score <= alpha) return score;
+      }
+    }
+    count = generate(search, side, ply, ttMove === NO_MOVE ? -1 : ttMove, QUIET_BY_DEPTH[Math.min(depth, QUIET_BY_DEPTH.length - 1)]);
+    if (count === 0) return 0;
+  }
+
+  let best = -Infinity;
+  let bestMove = NO_MOVE;
+  for (let i = 0; i < count; i++) {
+    const cell = search.moves[base + i];
+    const quiet = forced < 0 && position.best[side * AREA + cell] < OPEN_THREE && position.best[other * AREA + cell] < OPEN_THREE;
+    const childDepth = forced >= 0 ? depth : depth - 1;
+    position.makeCell(cell, side);
+    let value: number;
+    if (i === 0) {
+      value = -negamax(search, other, childDepth, -beta, -alpha, ply + 1);
+    } else {
+      const reduction = quiet && i >= 4 && depth >= 3 ? 1 : 0;
+      value = -negamax(search, other, childDepth - reduction, -alpha - 1, -alpha, ply + 1);
+      if (value > alpha && (reduction > 0 || value < beta)) value = -negamax(search, other, childDepth, -beta, -alpha, ply + 1);
+    }
+    position.unmakeCell(cell, side);
+    if (search.stopped) return 0;
+    if (value > best) {
+      best = value;
+      bestMove = cell;
+      if (value > alpha) alpha = value;
+      if (alpha >= beta) {
+        if (quiet) {
+          if (search.killers[ply * 2] !== cell) {
+            search.killers[ply * 2 + 1] = search.killers[ply * 2];
+            search.killers[ply * 2] = cell;
+          }
+          search.history[side * AREA + cell] += depth * depth;
+        }
+        break;
+      }
+    }
+  }
+  if (forced < 0) {
+    const flag = best <= originalAlpha ? UPPER : best >= beta ? LOWER : EXACT;
+    const old = ttInfo![slot];
+    if (old === 0 || ((old >> 18) & 255) !== ttGeneration || ((old >> 10) & 63) <= depth) {
+      ttKey![slot] = check;
+      ttScore![slot] = toTable(best, ply);
+      ttInfo![slot] = bestMove | (Math.min(Math.max(depth, 0), 63) << 10) | (flag << 16) | (ttGeneration << 18);
+    }
   }
   return best;
 }
+
+// ─── Root ───
 
 export interface GomokuSearchOptions {
   /** Deepest ply to search */
@@ -234,6 +229,8 @@ export interface GomokuSearchOptions {
   readonly expired: () => boolean;
   /** Node budget for the cheap synchronous search; unlimited in the worker */
   readonly maxNodes?: number;
+  /** Milliseconds left of the wall-clock budget, which sizes the threat searches; unknown for the synchronous move */
+  readonly timeLeftMs?: () => number;
   readonly random: () => number;
 }
 
@@ -243,63 +240,173 @@ export interface GomokuChoice {
   readonly score: number;
 }
 
-/** Number of moves tried at the root. */
-const ROOT_BREADTH = 16;
+/** Moves tried at the root besides the tactical ones. */
+const ROOT_QUIET = 14;
+/** Opening moves within this value of the best are all played at random, for variety. */
+const OPENING_MARGIN = 18;
+/** Stones on the board up to which the opening choice varies. */
+const OPENING_STONES = 5;
+
+const choice = (cell: number, score: number): GomokuChoice => ({ index: INDEX_OF[cell], score });
+
+/** Nodes the threat searches before the main search may use, from the time left. */
+function threatNodes(options: GomokuSearchOptions): number {
+  if (options.maxNodes !== undefined) return Math.max(200, Math.floor(options.maxNodes / 3));
+  const left = options.timeLeftMs?.() ?? 1000;
+  return Math.min(60_000, Math.max(1500, Math.floor(left * 20)));
+}
+
+/** A random empty point next to the lone stone: the reply a first move gets. */
+function adjacentReply(position: Position, random: () => number): number | null {
+  const stone = position.stones.findIndex((cell) => cell !== null);
+  if (stone < 0) return null;
+  const options: number[] = [];
+  const col = stone % GM_SIZE;
+  const row = Math.floor(stone / GM_SIZE);
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      const c = col + dc;
+      const r = row + dr;
+      if ((dr !== 0 || dc !== 0) && c >= 0 && c < GM_SIZE && r >= 0 && r < GM_SIZE) options.push(gmIndex(c, r));
+    }
+  }
+  return options[Math.floor(random() * options.length)] ?? null;
+}
 
 /**
- * Iterative deepening from the shallowest ply: the best move of the last fully searched depth wins, and equal
- * moves are chosen between at random. A move that wins, or a forced block, is returned without searching.
+ * Plays the cheapest forced results first (own five, the one block, a forced win by threats), then iterative
+ * deepening alpha-beta: the best move of the last completed depth wins. In the first few moves, near-equal
+ * moves are chosen between at random so games differ.
  */
 export function searchBestMove(
   position: Position, side: GmSide, renju: boolean, options: GomokuSearchOptions,
 ): GomokuChoice | null {
-  const wins = position.winningCells(side, renju);
-  if (wins.length > 0) return { index: wins[0], score: WIN };
-  const threats = position.winningCells(opponentOf(side), renju);
-  if (threats.length > 0) {
+  position.renju = renju;
+  if (position.stoneCount === 0) return { index: CENTRE, score: 0 };
+  const other = opponentOf(side);
+  if (position.winCells(side) > 0) return choice(position.wins[0], WIN);
+  const threats = position.winCells(other);
+  if (threats > 0) {
     // One threat has one defence; two (or a forbidden defence) lose whatever is played.
-    const block = threats.find((cell) => position.allows(cell, side, renju)) ?? position.candidates(side, renju, 1)[0];
+    const open: number[] = [];
+    for (let i = 0; i < threats; i++) if (position.legal(position.wins[i], side)) open.push(position.wins[i]);
+    const block = open[0] ?? position.candidates.list[0];
     if (block === undefined) return null;
-    return { index: block, score: threats.length === 1 && position.allows(threats[0], side, renju) ? 0 : -WIN };
+    return choice(block, threats === 1 && open.length === 1 ? 0 : -WIN);
   }
-  const first = position.candidates(side, renju, ROOT_BREADTH);
-  if (first.length === 0) return null;
-  let ordered = first;
-  let best: GomokuChoice = { index: first[0], score: 0 };
-  if (first.length === 1) return best;
-  const state: SearchState = {
-    position, renju, expired: options.expired, maxNodes: options.maxNodes ?? Infinity, nodes: 0,
-  };
-  for (let depth = 1; depth <= options.maxDepth; depth++) {
-    const scores: { index: number; score: number }[] = [];
+  if (position.stoneCount === 1 && position.stones[CENTRE] !== null) {
+    const reply = adjacentReply(position, options.random);
+    if (reply !== null) return { index: reply, score: 0 };
+  }
+
+  prepareTable(renju);
+  const search = new Search(position, options.expired, options.maxNodes ?? Infinity);
+  const allowance = threatNodes(options);
+  let rootClock: (() => boolean) | null = null;
+  if (options.timeLeftMs !== undefined) {
+    // The threat searches may use a third of the time, however many nodes that is.
+    const cutoff = options.timeLeftMs() * 0.67;
+    const left = options.timeLeftMs;
+    rootClock = () => left() < cutoff;
+  }
+  search.threatClock = rootClock;
+
+  // A forced win by fours, then by fours and open threes.
+  search.limit = search.nodes + Math.floor(allowance / 3);
+  let win = vcf(search, side, 16);
+  if (win < 0 && !search.stopped) {
+    search.limit = search.nodes + allowance;
+    win = vct(search, side, THREAT_THREES);
+  }
+  search.limit = Infinity;
+  if (win >= 0) return choice(win, WIN - 20);
+  if (search.stopped) {
+    search.threatClock = null;
+    return fallbackChoice(search, side);
+  }
+
+  const count = generate(search, side, 0, -1, ROOT_QUIET);
+  if (count === 0) return null;
+  let moves = Array.from(search.moves.subarray(0, count));
+  if (count === 1) return choice(moves[0], 0);
+  // A move that leaves the opponent a forced win by threats loses however the shallow search sees it.
+  const share = Math.max(200, Math.floor(allowance / (2 * moves.length)));
+  const safe = moves.filter((cell) => !opponentForcesWin(search, side, cell, share));
+  if (safe.length > 0) moves = safe;
+  search.threatClock = null;
+  return iterate(search, side, moves, options);
+}
+
+/** Whether, after `side` plays `cell`, the opponent wins by fours and open threes within `nodes` nodes. */
+function opponentForcesWin(search: Search, side: GmSide, cell: number, nodes: number): boolean {
+  const position = search.position;
+  const other = opponentOf(side);
+  position.makeCell(cell, side);
+  search.limit = search.nodes + nodes;
+  let wins = vcf(search, other, 10) >= 0;
+  if (!wins && !search.stopped) {
+    search.limit = search.nodes + nodes;
+    wins = vct(search, other, THREAT_THREES) >= 0;
+  }
+  search.limit = Infinity;
+  position.unmakeCell(cell, side);
+  return wins && !search.stopped;
+}
+
+/** The most promising move by its shape alone, when no time is left to search. */
+function fallbackChoice(search: Search, side: GmSide): GomokuChoice | null {
+  search.stopped = false;
+  search.nodes = 0;
+  const count = generate(search, side, 0, -1, 1);
+  return count === 0 ? null : choice(search.moves[0], 0);
+}
+
+function iterate(search: Search, side: GmSide, ordered: number[], options: GomokuSearchOptions): GomokuChoice {
+  const position = search.position;
+  const other = opponentOf(side);
+  const varied = position.stoneCount <= OPENING_STONES;
+  let moves = ordered;
+  let best = choice(moves[0], 0);
+  const maxDepth = varied ? Math.min(options.maxDepth, 6) : options.maxDepth;
+  for (let depth = 1; depth <= maxDepth; depth++) {
+    const scores = new Map<number, number>();
     let alpha = -Infinity;
-    try {
-      for (const move of ordered) {
-        position.make(move, side);
-        let value: number;
-        try {
-          // Equal scores are all kept, so the window may only cut moves that are strictly worse.
-          value = -negamax(state, opponentOf(side), depth - 1, -Infinity, -alpha + 1, 1, FORCED_EXTENSION);
-        } finally {
-          position.unmake(move, side);
-        }
-        scores.push({ index: move, score: value });
-        if (value > alpha) alpha = value;
+    let improved: GomokuChoice | null = null;
+    for (let i = 0; i < moves.length; i++) {
+      const cell = moves[i];
+      position.makeCell(cell, side);
+      let value: number;
+      if (i === 0 || varied) {
+        value = -negamax(search, other, depth - 1, -Infinity, varied ? Infinity : -alpha, 1);
+      } else {
+        value = -negamax(search, other, depth - 1, -alpha - 1, -alpha, 1);
+        if (value > alpha && !search.stopped) value = -negamax(search, other, depth - 1, -Infinity, -alpha, 1);
       }
-    } catch (error) {
-      if (error instanceof Stop) break;
-      throw error;
+      position.unmakeCell(cell, side);
+      if (search.stopped) break;
+      scores.set(cell, value);
+      if (value > alpha) {
+        alpha = value;
+        improved = choice(cell, value);
+      }
     }
-    scores.sort((a, b) => b.score - a.score);
-    const top = scores.filter((entry) => entry.score === scores[0].score);
-    const pick = top[Math.floor(options.random() * top.length)];
-    best = { index: pick.index, score: pick.score };
-    ordered = scores.map((entry) => entry.index);
+    if (improved === null && !search.stopped) improved = best;
+    if (improved !== null) best = improved;
+    if (search.stopped) break;
+    moves = [...moves].sort((a, b) => (scores.get(b) ?? -Infinity) - (scores.get(a) ?? -Infinity));
+    if (varied && depth === maxDepth) {
+      const top = scores.get(moves[0]) ?? 0;
+      const near = moves.filter((cell) => (scores.get(cell) ?? -Infinity) >= top - OPENING_MARGIN);
+      const pick = near[Math.floor(options.random() * near.length)];
+      best = choice(pick, scores.get(pick) ?? 0);
+    }
     // A decided position needs no more depth.
     if (Math.abs(best.score) > WIN / 2 || options.expired()) break;
   }
   return best;
 }
+
+// ─── Opening stones and colour choice ───
 
 /** The side whose stone goes down next, from the stones on the board. */
 export const sideToPlace = (visible: GomokuVisibleState): GmSide => gmSideOfStone(gmStoneCount(visible.stones));
@@ -327,24 +434,78 @@ export function chooseAction(swap: boolean): BotAction {
 export const QUICK_DEPTH = 4;
 export const QUICK_NODES = 2500;
 
+/** Milliseconds before the deadline at which a worker search stops. */
+const SAFETY_MS = 100;
+
+/** Values this close to even are a coin flip when choosing a colour or balancing an opening. */
+const EVEN = 12;
+
 /**
  * Colour choice in the swap opening: the second seat takes black when white, to move on this position, stands
  * worse. `random` breaks an even position.
  */
 export function chooseBySearch(visible: GomokuVisibleState, options: GomokuSearchOptions): BotAction {
-  const position = new Position(visible.stones);
-  const choice = searchBestMove(position, 1, visible.options.renju, options);
-  const score = choice?.score ?? 0;
-  return chooseAction(score === 0 ? options.random() < 0.5 : score < 0);
+  const position = new Position(visible.stones, visible.options.renju);
+  const result = searchBestMove(position, 1, visible.options.renju, options);
+  const score = result?.score ?? 0;
+  return chooseAction(Math.abs(score) <= EVEN ? options.random() < 0.5 : score < 0);
+}
+
+/**
+ * The third opening stone of the swap rule, laid by the first seat: the black stone that leaves white to move
+ * in the most even position, since the second seat will take whichever side stands better.
+ */
+function balancedOpeningStone(visible: GomokuVisibleState, options: GomokuSearchOptions): number {
+  const renju = visible.options.renju;
+  const position = new Position(visible.stones, renju);
+  const candidates: number[] = [];
+  for (let dr = -2; dr <= 2; dr++) {
+    for (let dc = -2; dc <= 2; dc++) {
+      const index = gmIndex(7 + dc, 7 + dr);
+      if (visible.stones[index] === null) candidates.push(index);
+    }
+  }
+  const started = performance.now();
+  const total = options.maxNodes !== undefined ? 0 : (options.timeLeftMs?.() ?? 600) * 0.8;
+  const scored: { index: number; value: number }[] = [];
+  candidates.forEach((index, slot) => {
+    position.make(index, 0);
+    const deadline = started + (total * (slot + 1)) / candidates.length;
+    const result = searchBestMove(position, 1, renju, {
+      maxDepth: 5,
+      expired: () => options.expired() || (total > 0 && performance.now() >= deadline),
+      maxNodes: options.maxNodes === undefined ? undefined : Math.floor(options.maxNodes / candidates.length),
+      random: options.random,
+    });
+    position.unmake(index, 0);
+    scored.push({ index, value: Math.abs(result?.score ?? 0) });
+  });
+  scored.sort((a, b) => a.value - b.value);
+  const even = scored.filter((entry) => entry.value <= scored[0].value + EVEN);
+  return even[Math.floor(options.random() * even.length)].index;
+}
+
+/** The opening stone for the first seat under the swap rule, or null when the position needs the normal search. */
+export function swapOpeningStone(visible: GomokuVisibleState, options: GomokuSearchOptions): number | null {
+  if (!visible.options.swap || gmStage(visible.options, visible.log) !== 'placing') return null;
+  const placed = gmStoneCount(visible.stones);
+  if (placed === 0) return CENTRE;
+  if (placed === 1) return adjacentReply(new Position(visible.stones), options.random);
+  return placed === 2 ? balancedOpeningStone(visible, options) : null;
 }
 
 /** Search strategy for the bot worker pool. */
-export function gomokuSearch(visible: GomokuVisibleState, context: SearchContext): BotAction | null {
+export function gomokuSearch(visible: GomokuVisibleState, context: BotSearchContext): BotAction | null {
+  // Stops a little early: the first search of a worker also pays for loading this module.
+  const margin = Math.min(SAFETY_MS, context.budget.timeLeftMs() * 0.06);
   const options: GomokuSearchOptions = {
-    maxDepth: context.budget.maxDepth ?? 10, expired: context.budget.expired, random: context.random,
+    maxDepth: context.budget.maxDepth ?? 10, expired: () => context.budget.timeLeftMs() <= margin,
+    timeLeftMs: () => Math.max(0, context.budget.timeLeftMs() - margin), random: context.random,
   };
   if (choosingTurn(visible)) return chooseBySearch(visible, options);
   if (!placingTurn(visible)) return null;
-  const choice = searchBestMove(new Position(visible.stones), sideToPlace(visible), visible.options.renju, options);
-  return choice === null ? null : placeAction(choice.index);
+  const opening = swapOpeningStone(visible, options);
+  if (opening !== null) return placeAction(opening);
+  const result = searchBestMove(new Position(visible.stones, visible.options.renju), sideToPlace(visible), visible.options.renju, options);
+  return result === null ? null : placeAction(result.index);
 }

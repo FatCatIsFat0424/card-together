@@ -80,6 +80,31 @@ describe('Gomoku synchronous bot', () => {
   });
 });
 
+describe('Gomoku swap opening', () => {
+  it('lays a centre stone, a stone beside it, then a third stone near the centre that keeps the position even', () => {
+    start({ renju: false, swap: true });
+    expect(target(getBotAction(view('N'), seededRandom(1)))).toBe(at('h8'));
+    setPosition('h8', 'i9');
+    const second = target(getBotAction(view('N'), seededRandom(2)))!;
+    expect(game().stones[second]).toBeNull();
+    expect(Math.max(Math.abs((second % 15) - 7), Math.abs(Math.floor(second / 15) - 7))).toBeLessThanOrEqual(2);
+    setPosition('h8', 'h9');
+    expect(target(getBotAction(view('N'), seededRandom(3)))).not.toBeNull();
+  });
+
+  it('does not offer an opening it would hand over for free', () => {
+    start({ renju: false, swap: true });
+    for (let seed = 1; seed <= 4; seed++) {
+      setPosition('h8', 'i9');
+      const stone = target(getBotAction(view('N'), seededRandom(seed)))!;
+      const position = new Position(game().stones);
+      position.make(stone, 0);
+      const result = searchBestMove(position, 1, false, { maxDepth: 4, expired: () => false, maxNodes: 20_000, random: seededRandom(seed) });
+      expect(Math.abs(result!.score)).toBeLessThan(300);
+    }
+  }, 30_000);
+});
+
 describe('Gomoku Hard bot', () => {
   it('wins in one move over blocking, and blocks a four it cannot win against', () => {
     start();
@@ -180,22 +205,33 @@ describe('Gomoku search', () => {
     expect(gomokuSearch(view('S'), context)).toBeNull();
   });
 
-  it('declares the worker search with a one-second budget and a depth cap', () => {
-    expect(gameBot('gomoku').search).toMatchObject({ budgetMs: 1000, maxDepth: expect.any(Number) });
+  it('declares the worker search with a two-second budget and a depth cap', () => {
+    expect(gameBot('gomoku').search).toMatchObject({ budgetMs: 2000, maxDepth: expect.any(Number) });
   });
 
-  it('keeps its window counts exact through make and unmake', () => {
+  it('keeps its shape tables exact through make and unmake', () => {
     start();
     setPosition('h8 g9 i9', 'g8 i8 h9');
     const position = new Position(game().stones);
-    const score = position.score;
-    const fours = [...position.fours];
+    const fresh = new Position(game().stones);
+    const summary = (value: Position): unknown => ({
+      counts: [...value.counts], hash: [value.hashA, value.hashB], stones: value.stoneCount, best: [...value.best],
+      sets: [value.fives, value.fours, value.threes].flatMap((pair) => pair.map((set) => [...set.list.subarray(0, set.size)].sort())),
+      candidates: [...value.candidates.list.subarray(0, value.candidates.size)].sort(),
+    });
+    const before = JSON.stringify(summary(position));
     position.make(at('h10'), 0);
     position.make(at('h7'), 1);
+    expect(JSON.stringify(summary(position))).not.toBe(before);
     position.unmake(at('h7'), 1);
     position.unmake(at('h10'), 0);
-    expect([position.score, position.fours]).toEqual([score, fours]);
+    expect(JSON.stringify(summary(position))).toBe(before);
     expect(position.stoneCount).toBe(6);
+    // The incremental state of a played-out position equals a position built from its stones.
+    position.make(at('h10'), 0);
+    fresh.make(at('h10'), 0);
+    expect([...position.counts]).toEqual([...fresh.counts]);
+    expect([position.hashA, position.hashB]).toEqual([fresh.hashA, fresh.hashB]);
   });
 });
 
@@ -237,7 +273,7 @@ describe('Gomoku search in the bot worker pool', () => {
     start();
     setPosition('h8 g9 i9', 'g8 i8 h9');
     game().currentTurnSeat = 'N';
-    const pool = createSearchPool({ workers: 1, memoryMb: 256, queueLimit: 2 });
+    const pool = createSearchPool({ workers: 1, memoryMb: 128, queueLimit: 2 });
     pools.push(pool);
     const spec = gameBot('gomoku').search!;
     const started = Date.now();
