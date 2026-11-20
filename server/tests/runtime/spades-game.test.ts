@@ -9,7 +9,8 @@ import * as spades from '../../src/managers/games/spades-game';
 import { spadesAdapter } from '../../src/managers/games/spades-adapter';
 import { coherentSpadesGame, isSpadesResult, spadesGame } from '../../src/managers/games/spades-validation';
 import { getSpadesBotAction, spadesFirstLegalAction } from '../../src/bots/spades-strategy';
-import { gameBot } from '../../src/bots/bot-registry';
+import { spadesSearch } from '../../src/bots/spades-search';
+import { seededRandom } from '../../src/bots/search/seeded-random';
 import { isRuntimeSnapshot } from '../../src/runtime/validate';
 import type { RuntimeSnapshot } from '../../src/runtime/types';
 
@@ -83,8 +84,10 @@ describe('Spades runtime and bots', () => {
     for (let step = 0; step < 10_000 && !state().result; step++) {
       const current = view(state().position.currentTurnSeat!);
       const before = structuredClone(current);
-      const strategies = [getSpadesBotAction, spadesFirstLegalAction,
-        (v: SpadesVisibleState) => gameBot('spades').turnTimeout!(v, { isBot: false, strategy: () => null })];
+      // The search (also the timeout decision) is sampled on a share of the steps to keep the match quick.
+      const strategies = [getSpadesBotAction, spadesFirstLegalAction, ...(step % 6 === 0 ? [
+        (v: SpadesVisibleState) => spadesSearch(v, { random: seededRandom(step),
+          budget: { maxDepth: undefined, timeLeftMs: () => 1000, expired: () => false } }, { maxSamples: 8 })] : [])];
       for (const strategy of strategies) {
         const action = strategy(current);
         expect(action?.type).toBe('game-action');

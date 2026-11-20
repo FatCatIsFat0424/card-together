@@ -7,9 +7,18 @@ import {
   applyNapoleonBid, applyNapoleonPlay, createNapoleonBidding, createNapoleonDeck, dealNapoleon, hasNapoleonCard,
   isNapoleonFinalTrick, isNapoleonFreeCard, isNapoleonJoker, napoleonBidError, napoleonBiddingEnd, napoleonContract, napoleonDealSize,
   napoleonDiscardError, napoleonDiscardsPublic, napoleonOutcome, napoleonPlayedCards, napoleonPlayError,
-  napoleonTrickWinner, napoleonValidBids, napoleonValidCards, removeNapoleonCards,
+  napoleonSeatPoints, napoleonTrickWinner, napoleonValidBids, napoleonValidCards, removeNapoleonCards,
+  withNapoleonJokerSummon,
 } from '@shared/rules/napoleon';
+import { readTable } from '../../src/bots/napoleon-knowledge';
+import { legalNapoleonPlays } from '../../src/bots/napoleon-play';
+import type { NapoleonPlayChoice } from '../../src/bots/napoleon-play';
+import {
+  chooseNapoleonSearchPlay, napoleonCardCode, napoleonContractValue, napoleonSearch, napoleonSearchInternals,
+} from '../../src/bots/napoleon-search';
+import type { NapoleonWorld } from '../../src/bots/napoleon-search';
 import { getNapoleonBotAction } from '../../src/bots/napoleon-strategy';
+import type { SearchContext } from '../../src/bots/search/search-types';
 import { seededRandom } from '../../src/bots/search/seeded-random';
 import { runSeededGame } from './seeded-game-runner';
 
@@ -560,5 +569,102 @@ describe('Napoleon bot strength', () => {
       baselineSide += forcedDeal(players, seed * 17 + players, randomPolicy, botPolicy);
     }
     expect((botSide - baselineSide) / 30).toBeGreaterThan(3);
+  });
+});
+
+describe('Napoleon search', () => {
+  const { buildBelief, legalMoves, playMove, copyWorld, encodeMove } = napoleonSearchInternals;
+
+  function searchContext(seed: number, budgetMs: number): SearchContext {
+    const began = performance.now();
+    const timeLeftMs = (): number => Math.max(0, budgetMs - (performance.now() - began));
+    return { random: seededRandom(seed), budget: { maxDepth: undefined, timeLeftMs, expired: () => timeLeftMs() === 0 } };
+  }
+
+  /** The search strategy with a short budget, checked never to change its view or read spectator data. */
+  function searchPolicy(budgetMs: number): NapoleonPolicy {
+    return (visible, rng) => {
+      const before = structuredClone(visible);
+      Object.defineProperty(visible, 'observedHands', { get: () => { throw new Error('Spectator data read.'); } });
+      const action = napoleonSearch(visible, searchContext(Math.floor(rng() * 2 ** 32), budgetMs));
+      expect({ ...visible }).toEqual(before);
+      if (action && action.type !== 'napoleon-action') throw new Error('Expected a Napoleon action.');
+      return action?.action ?? null;
+    };
+  }
+
+  /** A deal bid, exchanged, and called by the heuristic bots, stopped at the first lead; null on all passes. */
+  function playingDeal(players: number, seed: number, jokerSummon: boolean): { sim: Sim; rng: () => number } | null {
+    const seats = ALL_SEATS.slice(0, players);
+    const rng = random(seed);
+    const sim = deal(seats, rng, { jokerSummon }, seats[seed % players]);
+    runSeededGame('auction', 100, () => sim.phase === 'playing' || sim.phase === 'scoring', () => {
+      const seat = actingSeats(sim)[0];
+      apply(sim, seat, botPolicy(visibleFor(sim, seat), rng)!);
+    });
+    return sim.phase === 'playing' ? { sim, rng } : null;
+  }
+
+  const moveOf = (leading: boolean, play: NapoleonPlayChoice): number => {
+    const code = napoleonCardCode(play.card);
+    if (!leading) return code;
+    const summon = play.summon === 'secretary' ? 1 : play.summon === 'bigJoker' ? 2 : play.summon === 'smallJoker' ? 3 : 0;
+    return encodeMove(code, play.leadSuit ? LEAD_SUITS.indexOf(play.leadSuit) : -1, summon);
+  };
+
+  it.each([4, 5, 6])('models %i-player play exactly as the shared rules do', (players) => {
+    let deals = 0;
+    for (let seed = 1; deals < 10; seed++) {
+      const started = playingDeal(players, seed * 211 + players, seed % 4 !== 0);
+      if (!started) continue;
+      deals++;
+      const { sim, rng } = started;
+      runSeededGame('play', 100, () => sim.phase === 'scoring', () => {
+        const seat = sim.currentTurnSeat!;
+        const visible = visibleFor(sim, seat);
+        // The seat's belief supplies the public part of the world; the server-side hands complete it.
+        const belief = buildBelief(visible, readTable(visible)!);
+        const world: NapoleonWorld = copyWorld(belief.base);
+        sim.seats.forEach((other, index) => { world.hands[index] = sim.hands[other]!.map(napoleonCardCode); });
+        world.holder = sim.secretarySeat ? sim.seats.indexOf(sim.secretarySeat) : -1;
+        const leading = sim.trick!.plays.length === 0;
+        const modeled = legalMoves(belief.rules, world).sort((a, b) => a - b);
+        const shared = legalNapoleonPlays(visible).map((play) => moveOf(leading, play)).sort((a, b) => a - b);
+        expect(modeled).toEqual(shared);
+        const action = (rng() < 0.3 ? randomPolicy : botPolicy)(visible, rng);
+        if (action?.type !== 'play') throw new Error('Expected a play.');
+        playMove(belief.rules, world, moveOf(leading, withNapoleonJokerSummon(visible, sim.hands[seat]!, action)));
+        apply(sim, seat, action);
+        const points = napoleonSeatPoints(sim.seats, sim.tricks);
+        expect(world.points).toEqual(sim.seats.map((other) => points[other]));
+        if (sim.currentTurnSeat) expect(sim.seats[world.turn]).toBe(sim.currentTurnSeat);
+      });
+    }
+  });
+
+  it.each([4, 5, 6])('finishes %i-player deals legally beside heuristic and random seats', (players) => {
+    for (let seed = 1; seed <= 4; seed++) {
+      const search = searchPolicy(15);
+      const mixed = (seat: GameSeat): NapoleonPolicy => [search, botPolicy, randomPolicy][(ALL_SEATS.indexOf(seat) + seed) % 3];
+      expect(playDeal(players, seed * 53 + players, seed % 2 === 0 ? () => search : mixed).outcome).not.toBeNull();
+    }
+  });
+
+  it('keeps to its budget on an opening lead', () => {
+    const started = playingDeal(4, 5, true)!;
+    const visible = visibleFor(started.sim, started.sim.currentTurnSeat!);
+    for (const budget of [50, 250]) {
+      const began = performance.now();
+      expect(chooseNapoleonSearchPlay(visible, searchContext(3, budget))).not.toBeNull();
+      expect(performance.now() - began).toBeLessThan(budget + 60);
+    }
+  });
+
+  it('values reaching the contract level far above extra point cards', () => {
+    const gain = (points: number): number => napoleonContractValue(points + 1, 12) - napoleonContractValue(points, 12);
+    expect(gain(11)).toBeGreaterThan(0.4);
+    expect(gain(14)).toBeLessThan(0.05);
+    expect(gain(8)).toBeLessThan(0.05);
+    expect(gain(14)).toBeGreaterThan(0);
   });
 });

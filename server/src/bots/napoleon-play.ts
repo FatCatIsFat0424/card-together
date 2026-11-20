@@ -128,17 +128,23 @@ function scoreFollow(table: NapoleonTable, choice: NapoleonPlayChoice): number {
   return win * points - holdValue(table, choice.card);
 }
 
-/** Heuristic play from the seat's own view; slight randomness among near-equal choices. */
-export function chooseHardPlay(visible: NapoleonVisibleState, random: () => number): NapoleonPlayChoice | null {
+/** Every legal play scored by the heuristic, in expected point cards for this seat's side; empty when none. */
+export function scoredNapoleonPlays(visible: NapoleonVisibleState): { value: NapoleonPlayChoice; score: number }[] {
   const choices = legalNapoleonPlays(visible);
-  if (choices.length <= 1) return choices[0] ?? null;
+  if (choices.length <= 1) return choices.map((value) => ({ value, score: 0 }));
   const table = readTable(visible);
-  if (!table) return choices[0];
+  if (!table) return choices.map((value) => ({ value, score: 0 }));
   const leading = visible.trick!.plays.length === 0;
-  const scored = choices.map((choice) => ({
+  return choices.map((choice) => ({
     value: choice,
     score: leading ? scoreLead(table, choice) : scoreFollow(table, choice),
   }));
+}
+
+/** Heuristic play from the seat's own view; slight randomness among near-equal choices. */
+export function chooseHardPlay(visible: NapoleonVisibleState, random: () => number): NapoleonPlayChoice | null {
+  const scored = scoredNapoleonPlays(visible);
+  if (scored.length <= 1) return scored[0]?.value ?? null;
   // Less than an eighth of a point keeps tactical wins and feeding ahead of variety.
   return selectNearBest(scored, random, 0.12);
 }

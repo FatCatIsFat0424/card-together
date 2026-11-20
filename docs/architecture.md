@@ -205,7 +205,7 @@
 
 ### 決定化搜尋
 
-隱藏資訊的牌類與牌塊遊戲共用 [`determinized.ts`](../server/src/bots/search/determinized.ts) 與 [`card-dealer.ts`](../server/src/bots/search/card-dealer.ts)，在搜尋策略（worker 內）中呼叫。橋牌與鬥地主仍用各自的實作。型別與預設值以程式碼註解為準。
+隱藏資訊的牌類與牌塊遊戲共用 [`determinized.ts`](../server/src/bots/search/determinized.ts) 與 [`card-dealer.ts`](../server/src/bots/search/card-dealer.ts)，在搜尋策略（worker 內）中呼叫：[黑桃王](games/spades.md#bot)（叫牌與出牌）與[拿破崙](games/cards.md#bot-策略)（出牌）使用它；橋牌與鬥地主仍用各自的實作。型別與預設值以程式碼註解為準。
 
 - **外掛**：`DeterminizedGame<S, M>` 包住座位自己的過濾後視角，提供 `sample`（發出一個完整狀態，可帶權重）、`copy`、`legalMoves`、`play`（原地套用）、`rolloutMove`（快速 rollout 策略，預設隨機合法步）、`isTerminal`、`utility`（遊戲本身的分數；搭檔遊戲回傳同隊共用的分數），可選 `evaluate`（精確評估，例如雙明手求解，取代 rollout）。
 - **候選**：由遊戲的啟發式產生，附 `prior` 分數。`determinizedSearch` 在每個樣本世界上，用同一組 rollout 種子評估所有候選（common random numbers），直到 `maxSamples` 或 `SearchContext.budget` 用完；沒評估完的樣本整個丟棄，所以每個候選都在相同的世界上比較。

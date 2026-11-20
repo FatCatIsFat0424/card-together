@@ -80,8 +80,12 @@ function napoleonAction(action: NapoleonAction | null): BotAction | null {
 
 /** Every game type maps to its own bot; a missing or mismatched entry fails to compile. */
 export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
-  spades: { decide: getSpadesBotAction, firstLegal: spadesFirstLegalAction,
-    turnTimeout: (visible) => getSpadesBotAction(visible) },
+  spades: {
+    // The synchronous heuristic is the fallback; bots and timeouts sample hidden hands and play them out in the worker pool.
+    decide: getSpadesBotAction,
+    firstLegal: spadesFirstLegalAction,
+    search: { strategy: searchStrategy<'spades'>(new URL('./spades-search.ts', import.meta.url), 'spadesSearch'), budgetMs: 1200 },
+  },
   hearts: {
     // The synchronous heuristic is the fallback; bots and timeouts sample hidden hands and play them out in the worker pool.
     decide: getHeartsBotAction,
@@ -120,8 +124,10 @@ export const GAME_BOTS: { readonly [K in GameType]: GameBot<K> } = {
     turnTimeout: (visible) => holdemPassiveAction(visible),
   },
   napoleon: {
+    // The synchronous heuristic is the fallback; bots and timeouts search sampled deals in the worker pool.
     decide: (visible, random) => napoleonAction(getNapoleonBotAction(visible, random)),
     firstLegal: napoleonFirstLegalAction,
+    search: { strategy: searchStrategy<'napoleon'>(new URL('./napoleon-search.ts', import.meta.url), 'napoleonSearch'), budgetMs: 1200 },
     // Everyone who left the discards open acknowledges them.
     deadlineExpired: () => ({ type: 'napoleon-action', action: { type: 'review' } }),
   },
